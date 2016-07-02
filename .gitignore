@@ -13,3 +13,4 @@ erl_crash.dump
 .rebar
 logs
 _build
+src/potion_tokenizer.erl
