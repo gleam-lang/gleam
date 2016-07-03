@@ -1,8 +1,13 @@
--module(potion_lexer_test).
+-module(potion_tokenizer_test).
 -include_lib("eunit/include/eunit.hrl").
 
 -define(assertTokens(Code, Tokens),
         ?assertMatch(Tokens, element(2, potion_tokenizer:string(Code)))).
+
+keyword_test() ->
+  ?assertTokens("module",  [{module, _}]),
+  ?assertTokens("private", [{private, _}]),
+  ?assertTokens("public",  [{public, _}]).
 
 numbers_test() ->
   ?assertTokens("1",     [{num, _, 1}]),
@@ -26,6 +31,30 @@ atom_test() ->
   ?assertTokens(":123",        [{atom, _, '123'}]),
   ?assertTokens(":WHAT_UP?",   [{atom, _, 'WHAT_UP?'}]),
   ?assertTokens(":Hey-there!", [{atom, _, 'Hey-there!'}]).
+
+param_test() ->
+  ?assertTokens("(",   [{'(', _}]),
+  ?assertTokens(")",   [{')', _}]),
+  ?assertTokens("(1)", [{'(', _}, {num, _, 1}, {')', _}]).
+
+square_test() ->
+  ?assertTokens("[",   [{'[', _}]),
+  ?assertTokens("]",   [{']', _}]),
+  ?assertTokens("[0]", [{'[', _}, {num, _, 0}, {']', _}]).
+
+comma_test() ->
+  ?assertTokens(",", [{',', _}]),
+  ?assertTokens("[1, 2]",
+                [{'[', _}, {num, _, 1}, {',', _}, {num, _, 2}, {']', _}]).
+
+brace_test() ->
+  ?assertTokens("{",     [{'{', _}]),
+  ?assertTokens("}",     [{'}', _}]),
+  ?assertTokens("{ 5 }", [{'{', _}, {num, _, 5}, {'}', _}]).
+
+newline_test() ->
+  ?assertTokens("\n",   [{nl, 1}]),
+  ?assertTokens("\n\n", [{nl, 1}, {nl, 2}]).
 
 dot_test() ->
   ?assertTokens(".", [{'.', _}]),

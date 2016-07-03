@@ -9,14 +9,23 @@ Atom   = \:[a-zA-Z0-9!\?_-]+
 
 Rules.
 
-\(         : {token, {'(',        []}}.
-\)         : {token, {')',        []}}.
-\.         : {token, {'.',        []}}.
-{Int}      : {token, {num,        [], int(TokenChars)}}.
-{Float}    : {token, {num,        [], flt(TokenChars)}}.
-{String}   : {token, {string,     [], strValue(TokenChars)}}.
-{Ident}    : {token, {identifier, [], list_to_atom(TokenChars)}}.
-{Atom}     : {token, {atom,       [], atomValue(TokenChars)}}.
+module     : {token, {module,     TokenLine}}.
+private    : {token, {private,    TokenLine}}.
+public     : {token, {public,     TokenLine}}.
+\(         : {token, {'(',        TokenLine}}.
+\)         : {token, {')',        TokenLine}}.
+\{         : {token, {'{',        TokenLine}}.
+\}         : {token, {'}',        TokenLine}}.
+\[         : {token, {'[',        TokenLine}}.
+\]         : {token, {']',        TokenLine}}.
+\.         : {token, {'.',        TokenLine}}.
+\,         : {token, {',',        TokenLine}}.
+\n         : {token, {'nl',       TokenLine}}.
+{Int}      : {token, {num,        TokenLine, int(TokenChars)}}.
+{Float}    : {token, {num,        TokenLine, flt(TokenChars)}}.
+{String}   : {token, {string,     TokenLine, strValue(TokenChars)}}.
+{Ident}    : {token, {identifier, TokenLine, list_to_atom(TokenChars)}}.
+{Atom}     : {token, {atom,       TokenLine, atomValue(TokenChars)}}.
 {WS}       : skip_token.
 
 
