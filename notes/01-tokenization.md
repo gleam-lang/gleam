@@ -1,9 +1,21 @@
 Tokenization
 ============
 
-The Elixir tokenizer is there for us to use. Let's check it out.
+Tokenization is breaking down a body of text into the smallest possible parts.
 
-```elixir
-iex(1)> :elixir_tokenizer.tokenize 'hi', 1, []
-{:ok, 1, 3, [{:identifier, {1, 1, 3}, :hi}]}
-```
+If we were tokenizing English "Hello, world!" could become
+
+- word "Hello"
+- comma ","
+- space " "
+- word "world"
+- bang "!"
+
+Potion will have various different types of token:
+
+- keywords: `module`, `public`, `private`
+- delimiters: `(`, `)`, `{`, `}`, `[`, `]`, `.`, `,`
+- numbers: `10`, `43.21`
+- strings: `"Hello!"`
+- indetifiers: `lists`, `maps`
+- atoms: `:ok`, `:error`
