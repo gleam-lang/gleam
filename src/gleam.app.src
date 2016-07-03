@@ -1,4 +1,4 @@
-{application, potion,
+{application, gleam,
  [{description, "An OTP library"},
   {vsn, "0.1.0"},
   {registered, []},

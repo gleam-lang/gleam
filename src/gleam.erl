@@ -1,4 +1,4 @@
--module(potion).
+-module(gleam).
 
 %% API exports
 -export([]).

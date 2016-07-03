@@ -1,8 +1,8 @@
--module(potion_tokenizer_test).
+-module(gleam_tokenizer_test).
 -include_lib("eunit/include/eunit.hrl").
 
 -define(assertTokens(Code, Tokens),
-        ?assertMatch(Tokens, element(2, potion_tokenizer:string(Code)))).
+        ?assertMatch(Tokens, element(2, gleam_tokenizer:string(Code)))).
 
 keyword_test() ->
   ?assertTokens("module",  [{module, _}]),
