@@ -3,7 +3,7 @@ Build Your Own Elixir
 
 Creating an Elixir-like language from scratch. For fun. :)
 
-It's called Potion!
+It's called Gleam!
 
 ```sh
 # Build the project
