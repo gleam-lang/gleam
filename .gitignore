@@ -14,3 +14,4 @@ erl_crash.dump
 logs
 _build
 src/gleam_tokenizer.erl
+src/gleam_parser.erl
