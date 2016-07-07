@@ -59,3 +59,7 @@ module_test() ->
              [{module, [{line, 1}], my_mod}]),
   ?assertAST("module ppool",
              [{module, [{line, 1}], ppool}]).
+
+multiple_statement_test() ->
+  ?assertAST("1 2 3",
+             [1, 2, 3]).

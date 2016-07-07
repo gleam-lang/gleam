@@ -1,16 +1,22 @@
 Nonterminals
-document literal tuple list elements element call module_def.
+document literal tuple list elements element call module_def
+expression expressions.
 
 Terminals
 '[' ']' '(' ')' ',' '.' identifier num atom string module.
 
 Rootsymbol document.
 
-document -> module_def    : ['$1'].
-document -> literal       : ['$1'].
-document -> list          : ['$1'].
-document -> tuple         : ['$1'].
-document -> call          : ['$1'].
+document -> expressions : '$1'.
+
+expressions -> expression             : ['$1'].
+expressions -> expression expressions : ['$1'|'$2'].
+
+expression -> module_def    : '$1'.
+expression -> literal       : '$1'.
+expression -> list          : '$1'.
+expression -> tuple         : '$1'.
+expression -> call          : '$1'.
 
 module_def -> module identifier : {module, [l('$2')], v('$2')}.
 
