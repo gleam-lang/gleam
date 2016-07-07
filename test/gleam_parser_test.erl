@@ -47,9 +47,15 @@ call_test() ->
              [{parse, _, [{tokens, _, [ok]}]}]).
 
 mod_call_test() ->
-  ?assertAST(":erlang.time()",
+  ?assertAST("erlang.time()",
              [{'.', [{line, 1}], [erlang, time], []}]),
-  ?assertAST(":gen_server.module_info()",
+  ?assertAST("gen_server.module_info()",
              [{'.', _, [gen_server, module_info], []}]),
-  ?assertAST(":lists.max([5, 10])",
+  ?assertAST("lists.max([5, 10])",
              [{'.', _, [lists, max], [[5, 10]]}]).
+
+module_test() ->
+  ?assertAST("module my_mod",
+             [{module, [{line, 1}], my_mod}]),
+  ?assertAST("module ppool",
+             [{module, [{line, 1}], ppool}]).
