@@ -56,6 +56,9 @@ newline_test() ->
   ?assertTokens("\n",   [{nl, 1}]),
   ?assertTokens("\n\n", [{nl, 1}, {nl, 2}]).
 
+equal_test() ->
+  ?assertTokens("=", [{'=', 1}]).
+
 dot_test() ->
   ?assertTokens(".", [{'.', _}]),
   ?assertTokens(

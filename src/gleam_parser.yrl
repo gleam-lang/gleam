@@ -1,9 +1,10 @@
 Nonterminals
 document literal tuple list elements element call module_def
-expression expressions.
+expression expressions assignment.
 
 Terminals
-'[' ']' '(' ')' ',' '.' identifier num atom string module.
+'[' ']' '(' ')' ',' '.' '='
+identifier num atom string module.
 
 Rootsymbol document.
 
@@ -12,18 +13,23 @@ document -> expressions : '$1'.
 expressions -> expression             : ['$1'].
 expressions -> expression expressions : ['$1'|'$2'].
 
-expression -> module_def    : '$1'.
-expression -> literal       : '$1'.
-expression -> list          : '$1'.
-expression -> tuple         : '$1'.
-expression -> call          : '$1'.
+expression -> module_def : '$1'.
+expression -> assignment : '$1'.
+expression -> literal    : '$1'.
+expression -> list       : '$1'.
+expression -> tuple      : '$1'.
+expression -> call       : '$1'.
 
-module_def -> module identifier : {module, [l('$2')], v('$2')}.
+assignment -> identifier '=' expression
+              : {'=', m('$1'), [v('$1'), '$3']}.
+
+module_def -> module identifier
+              : {module, m('$2'), v('$2')}.
 
 call -> identifier tuple
-        : {v('$1'), [l('$1')], tuple_to_list('$2')}.
+        : {v('$1'), m('$1'), tuple_to_list('$2')}.
 call -> identifier '.' identifier tuple
-        : {'.', [l('$1')], [v('$1'), v('$3')], tuple_to_list('$4')}.
+        : {'.', m('$1'), [v('$1'), v('$3')], tuple_to_list('$4')}.
 
 list -> '[' ']'          : [].
 list -> '[' elements ']' : '$2'.
@@ -46,8 +52,10 @@ literal -> atom   : v('$1').
 
 Erlang code.
 
+% Value from terminal
 v({_, _, V}) ->
   V.
 
-l({_, L, _})->
-  {line, L}.
+% Meta from terminal
+m({_, L, _})->
+  [{line, L}].

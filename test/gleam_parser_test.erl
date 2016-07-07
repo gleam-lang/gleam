@@ -60,6 +60,12 @@ module_test() ->
   ?assertAST("module ppool",
              [{module, [{line, 1}], ppool}]).
 
+assignment_test() ->
+  ?assertAST("x = 1",
+             [{'=', _, [x, 1]}]),
+  ?assertAST("my_var = wrangle(555)",
+             [{'=', _, [my_var, {wrangle, _, [555]}]}]).
+
 multiple_statement_test() ->
   ?assertAST("1 2 3",
              [1, 2, 3]).
