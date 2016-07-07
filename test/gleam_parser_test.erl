@@ -18,13 +18,15 @@ list_test() ->
   ?assertAST("[100]",     [[100]]),
   ?assertAST("[  200,]",  [[200]]),
   ?assertAST("[2, 4, 8]", [[2, 4, 8]]),
+  ?assertAST("[self()]",  [[{self, _, []}]]),
   ?assertAST("[2,10, ]",  [[2, 10]]).
 
 tuple_test() ->
-  ?assertAST("()",          [{}]),
-  ?assertAST("(:54)",       [{'54'}]),
-  ?assertAST("(  200,)",    [{200}]),
-  ?assertAST("(:ok, 8)",    [{ok, 8}]),
+  ?assertAST("()",            [{}]),
+  ?assertAST("(:54)",         [{'54'}]),
+  ?assertAST("(  200,)",      [{200}]),
+  ?assertAST("(:ok, 8)",      [{ok, 8}]),
+  ?assertAST("(self())",      [{{self, _, []}}]),
   ?assertAST("(\"i\", 10, )", [{<<"i">>, 10}]).
 
 nesting_test() ->
@@ -33,3 +35,13 @@ nesting_test() ->
   ?assertAST("((), ())", [{{}, {}}]),
   ?assertAST("[(:ok, 1), (:error, [()])]",
              [[{ok, 1}, {error, [{}]}]]).
+
+call_test() ->
+  ?assertAST("self()",
+             [{self, [{line, 1}], []}]),
+  ?assertAST("list_to_tuple([1, 2, 3])",
+             [{list_to_tuple, _, [[1, 2, 3]]}]),
+  ?assertAST("add(4, 3, 2)",
+             [{add, _, [4, 3, 2]}]),
+  ?assertAST("parse(tokens(:ok))",
+             [{parse, _, [{tokens, _, [ok]}]}]).
