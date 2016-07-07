@@ -7,7 +7,8 @@
 keyword_test() ->
   ?assertTokens("module",  [{module, _}]),
   ?assertTokens("private", [{private, _}]),
-  ?assertTokens("public",  [{public, _}]).
+  ?assertTokens("public",  [{public, _}]),
+  ?assertTokens("def",     [{def, _}]).
 
 numbers_test() ->
   ?assertTokens("1",     [{num, _, 1}]),

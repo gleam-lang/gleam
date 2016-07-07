@@ -79,3 +79,17 @@ multiple_statement_test() ->
              [{print, _, [1]}, {print, _, [2]}]),
   ?assertAST("1 2 3",
              [1, 2, 3]).
+
+function_test() ->
+  ?assertAST("public id { def (x) { x } }",
+             [{function, _, public, id,
+               [{def, _, {{variable, _, x}},
+                 [{variable, _, x}]}]}]),
+  ?assertAST("private wrap { def (x) { [x] } }",
+             [{function, _, private, wrap,
+               [{def, _, {{variable, _, x}},
+                 [[{variable, _, x}]]}]}]),
+  ?assertAST("public inspect { def (e) { print(e) e } }",
+             [{function, _, public, inspect,
+               [{def, _, {{variable, _, e}},
+                 [{print, _, [{variable, _, e}]}, {variable, _, e}]}]}]).

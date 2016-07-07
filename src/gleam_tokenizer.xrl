@@ -12,6 +12,7 @@ Rules.
 module     : {token, {module,     TokenLine}}.
 private    : {token, {private,    TokenLine}}.
 public     : {token, {public,     TokenLine}}.
+def        : {token, {def,        TokenLine}}.
 \(         : {token, {'(',        TokenLine}}.
 \)         : {token, {')',        TokenLine}}.
 \{         : {token, {'{',        TokenLine}}.
