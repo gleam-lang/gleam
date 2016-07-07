@@ -11,7 +11,7 @@ literal_test() ->
   ?assertAST("1",   [1]),
   ?assertAST("1.2", [1.2]),
   ?assertAST(":ok", [ok]),
-  ?assertAST("\"Hello world\"",  [<<"Hello world">>]).
+  ?assertAST("\"Hello world\"", [<<"Hello world">>]).
 
 list_test() ->
   ?assertAST("[]",        [[]]),
@@ -26,3 +26,10 @@ tuple_test() ->
   ?assertAST("(  200,)",    [{200}]),
   ?assertAST("(:ok, 8)",    [{ok, 8}]),
   ?assertAST("(\"i\", 10, )", [{<<"i">>, 10}]).
+
+nesting_test() ->
+  ?assertAST("[(), ()]", [[{}, {}]]),
+  ?assertAST("[[], []]", [[[], []]]),
+  ?assertAST("((), ())", [{{}, {}}]),
+  ?assertAST("[(:ok, 1), (:error, [()])]",
+             [[{ok, 1}, {error, [{}]}]]).
