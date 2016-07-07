@@ -66,6 +66,16 @@ assignment_test() ->
   ?assertAST("my_var = wrangle(555)",
              [{'=', _, [my_var, {wrangle, _, [555]}]}]).
 
+variable_test() ->
+  ?assertAST("value",
+             [{variable, _, value}]),
+  ?assertAST("add(x, y)",
+             [{add, _, [{variable, _, x}, {variable, _, y}]}]).
+
 multiple_statement_test() ->
+  ?assertAST("print(1)print(2)",
+             [{print, _, [1]}, {print, _, [2]}]),
+  ?assertAST("print(1)\nprint(2)",
+             [{print, _, [1]}, {print, _, [2]}]),
   ?assertAST("1 2 3",
              [1, 2, 3]).
