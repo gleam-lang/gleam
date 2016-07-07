@@ -2,7 +2,7 @@ Nonterminals
 document literal tuple list elements element call.
 
 Terminals
-'[' ']' '(' ')' ',' identifier num atom string.
+'[' ']' '(' ')' ',' '.' identifier num atom string.
 
 Rootsymbol document.
 
@@ -11,13 +11,16 @@ document -> list    : ['$1'].
 document -> tuple   : ['$1'].
 document -> call    : ['$1'].
 
-call -> identifier tuple : {v('$1'), [l('$1')], tuple_to_list('$2')}.
+call -> identifier tuple
+        : {v('$1'), [l('$1')], tuple_to_list('$2')}.
+call -> atom '.' identifier tuple
+        : {'.', [l('$1')], [v('$1'), v('$3')], tuple_to_list('$4')}.
 
-list -> '[' ']'              : [].
-list -> '[' elements ']'     : '$2'.
+list -> '[' ']'          : [].
+list -> '[' elements ']' : '$2'.
 
-tuple -> '(' ')'              : {}.
-tuple -> '(' elements ')'     : list_to_tuple('$2').
+tuple -> '(' ')'          : {}.
+tuple -> '(' elements ')' : list_to_tuple('$2').
 
 elements -> element              : ['$1'].
 elements -> element ','          : ['$1'].

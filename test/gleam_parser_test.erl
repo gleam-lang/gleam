@@ -45,3 +45,11 @@ call_test() ->
              [{add, _, [4, 3, 2]}]),
   ?assertAST("parse(tokens(:ok))",
              [{parse, _, [{tokens, _, [ok]}]}]).
+
+mod_call_test() ->
+  ?assertAST(":erlang.time()",
+             [{'.', [{line, 1}], [erlang, time], []}]),
+  ?assertAST(":gen_server.module_info()",
+             [{'.', _, [gen_server, module_info], []}]),
+  ?assertAST(":lists.max([5, 10])",
+             [{'.', _, [lists, max], [[5, 10]]}]).
