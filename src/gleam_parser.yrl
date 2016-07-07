@@ -1,16 +1,20 @@
 Nonterminals
-document literal list elements element.
+document literal tuple list elements element.
 
 Terminals
-'[' ']' ',' num atom string.
+'[' ']' '(' ')' ',' num atom string.
 
 Rootsymbol document.
 
 document -> literal : ['$1'].
 document -> list    : ['$1'].
+document -> tuple   : ['$1'].
 
 list -> '[' ']'              : [].
 list -> '[' elements ']'     : '$2'.
+
+tuple -> '(' ')'              : {}.
+tuple -> '(' elements ')'     : list_to_tuple('$2').
 
 elements -> element              : ['$1'].
 elements -> element ','          : ['$1'].

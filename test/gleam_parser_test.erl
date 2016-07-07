@@ -19,3 +19,10 @@ list_test() ->
   ?assertAST("[  200,]",  [[200]]),
   ?assertAST("[2, 4, 8]", [[2, 4, 8]]),
   ?assertAST("[2,10, ]",  [[2, 10]]).
+
+tuple_test() ->
+  ?assertAST("()",          [{}]),
+  ?assertAST("(:54)",       [{'54'}]),
+  ?assertAST("(  200,)",    [{200}]),
+  ?assertAST("(:ok, 8)",    [{ok, 8}]),
+  ?assertAST("(\"i\", 10, )", [{<<"i">>, 10}]).
