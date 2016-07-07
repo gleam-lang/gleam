@@ -21,7 +21,6 @@ public     : {token, {public,     TokenLine}}.
 \.         : {token, {'.',        TokenLine}}.
 \,         : {token, {',',        TokenLine}}.
 \=         : {token, {'=',        TokenLine}}.
-\n         : {token, {'nl',       TokenLine}}.
 {Int}      : {token, {num,        TokenLine, int(TokenChars)}}.
 {Float}    : {token, {num,        TokenLine, flt(TokenChars)}}.
 {String}   : {token, {string,     TokenLine, strValue(TokenChars)}}.

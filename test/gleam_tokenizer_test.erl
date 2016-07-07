@@ -52,10 +52,6 @@ brace_test() ->
   ?assertTokens("}",     [{'}', _}]),
   ?assertTokens("{ 5 }", [{'{', _}, {num, _, 5}, {'}', _}]).
 
-newline_test() ->
-  ?assertTokens("\n",   [{nl, 1}]),
-  ?assertTokens("\n\n", [{nl, 1}, {nl, 2}]).
-
 equal_test() ->
   ?assertTokens("=", [{'=', 1}]).
 
