@@ -5,3 +5,12 @@
      , exports = []
      }
   ).
+
+-record(
+   gleam_function
+   , { name = undefined
+     , arity = undefined
+     , publicity = undefined
+     , clauses = []
+     }
+  ).
