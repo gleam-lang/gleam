@@ -4,5 +4,5 @@ public speak {
   def (1) { "one" }
   def (2) { "two" }
   def (3) { "three" }
-  def (_) { "Er?" }
+  def (_) { "eh?" }
 }
