@@ -36,3 +36,41 @@ expression_discarding_test() ->
   { name = expr
   },
   ?assertEqual(Expected, Mod).
+
+private_function_test() ->
+  AST = [{module, [{line, 1}], expr},
+         {function, [{line, 1}], private, one,
+          [{def, {1}, [1]}]}],
+  {ok, Mod} = gleam_module:from_ast(AST),
+  Expected = #gleam_module
+  { name = expr
+  , exports = []
+  , functions =
+    [ #gleam_function
+      { name = one
+      , arity = 1
+      , publicity = private
+      , clauses = [{{1}, [1]}]
+      }
+    ]
+  },
+  ?assertEqual(Expected, Mod).
+
+public_function_test() ->
+  AST = [{module, [{line, 1}], expr},
+         {function, [{line, 1}], public, one,
+          [{def, {1}, [1]}]}],
+  {ok, Mod} = gleam_module:from_ast(AST),
+  Expected = #gleam_module
+  { name = expr
+  , exports = [{one, 1}]
+  , functions =
+    [ #gleam_function
+      { name = one
+      , arity = 1
+      , publicity = public
+      , clauses = [{{1}, [1]}]
+      }
+    ]
+  },
+  ?assertEqual(Expected, Mod).
