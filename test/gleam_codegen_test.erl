@@ -16,4 +16,5 @@ empty_module_test() ->
   Binary = compile(Code),
   {module, Name} = code:load_binary(Name, Path, Binary),
   ?assertEqual({file, Path}, code:is_loaded(Name)),
+  code:purge(Name),
   ?assert(code:delete(Name)).
