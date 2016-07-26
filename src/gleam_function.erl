@@ -4,7 +4,8 @@
 -export([from_ast/1]).
 
 from_ast({function, _, Publicity, Name, RawClauses})
-  when Publicity == public; Publicity == private ->
+  when Publicity == public;
+       Publicity == private ->
   case clauses(RawClauses) of
     {ok, Arity, Clauses} ->
       Func = #gleam_function
@@ -25,15 +26,14 @@ from_ast({function, _, Publicity, Name, RawClauses})
 clauses(Clauses) ->
   clauses(Clauses, undefined, []).
 
-
-clauses([{def, Args, Body}|Tail], undefined, Acc) ->
-  Arity = tuple_size(Args),
+clauses([{def, _Meta, Args, Body}|Tail], undefined, Acc) ->
+  Arity = length(Args),
   Clauses = [{Args, Body}|Acc],
   clauses(Tail, Arity, Clauses);
 
-clauses([{def, Args, Body}|Tail], Arity, Acc) ->
+clauses([{def, _Meta, Args, Body}|Tail], Arity, Acc) ->
   if
-    tuple_size(Args) == Arity ->
+    length(Args) == Arity ->
       Clauses = [{Args, Body}|Acc],
       clauses(Tail, Arity, Clauses);
 

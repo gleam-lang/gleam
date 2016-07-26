@@ -40,7 +40,7 @@ expression_discarding_test() ->
 private_function_test() ->
   AST = [{module, [{line, 1}], expr},
          {function, [{line, 1}], private, one,
-          [{def, {1}, [1]}]}],
+          [{def, [], [1], [1]}]}],
   {ok, Mod} = gleam_module:from_ast(AST),
   Expected = #gleam_module
   { name = expr
@@ -50,7 +50,7 @@ private_function_test() ->
       { name = one
       , arity = 1
       , publicity = private
-      , clauses = [{{1}, [1]}]
+      , clauses = [{[1], [1]}]
       }
     ]
   },
@@ -59,7 +59,7 @@ private_function_test() ->
 public_function_test() ->
   AST = [{module, [{line, 1}], expr},
          {function, [{line, 1}], public, one,
-          [{def, {1}, [1]}]}],
+          [{def, [], [1], [1]}]}],
   {ok, Mod} = gleam_module:from_ast(AST),
   Expected = #gleam_module
   { name = expr
@@ -69,7 +69,7 @@ public_function_test() ->
       { name = one
       , arity = 1
       , publicity = public
-      , clauses = [{{1}, [1]}]
+      , clauses = [{[1], [1]}]
       }
     ]
   },

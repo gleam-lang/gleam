@@ -46,7 +46,7 @@ fn_statements -> fn_statement               : ['$1'].
 fn_statements -> fn_statement fn_statements : ['$1'|'$2'].
 
 fn_statement -> def tuple clause_block
-                : {def, m('$1'), '$2', '$3'}.
+                : {def, m('$1'), tuple_to_list('$2'), '$3'}.
 
 clause_block -> '{' expressions '}' : '$2'.
 

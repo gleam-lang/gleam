@@ -83,13 +83,21 @@ multiple_statement_test() ->
 function_test() ->
   ?assertAST("public id { def (x) { x } }",
              [{function, _, public, id,
-               [{def, _, {{variable, _, x}},
+               [{def, _, [{variable, _, x}],
                  [{variable, _, x}]}]}]),
   ?assertAST("private wrap { def (x) { [x] } }",
              [{function, _, private, wrap,
-               [{def, _, {{variable, _, x}},
+               [{def, _, [{variable, _, x}],
                  [[{variable, _, x}]]}]}]),
   ?assertAST("public inspect { def (e) { print(e) e } }",
              [{function, _, public, inspect,
-               [{def, _, {{variable, _, e}},
+               [{def, _, [{variable, _, e}],
                  [{print, _, [{variable, _, e}]}, {variable, _, e}]}]}]).
+
+full_module_test() ->
+  ?assertAST("module my_module\n"
+             "public id { def (x) { x } }",
+             [{module, _, my_module},
+              {function, _, public, id,
+               [{def, _, [{variable, _, x}],
+                 [{variable, _, x}]}]}]).
