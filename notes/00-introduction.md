@@ -16,9 +16,11 @@ such as the style linter Rubocop. Elixir being a young language we didn't an
 equivilent tool, so I decided to take a shot at making one myself. Linters
 kind of look like this:
 
-    Source code -> Abstract Syntax Tree -> Errors
+```
+Source code -> Abstract Syntax Tree -> Errors
 
-    Source code -> Tokens -> Errors
+Source code -> Tokens -> Errors
+```
 
 They take source code, convert them to intemediary forms such as an abstract
 syntax tree and tokens, and then analyse those forms to find any errors to
@@ -108,6 +110,61 @@ If in the linter I wanted to ban use of semicolons I could do it by iterating
 over the list of tokens and returning an error if we find any semicolons
 tokens. This is really simple example, but one that can't be done by
 inspecting the AST.
+
+As we can see, in Elixir it's trivial to access and study both the AST and the
+tokens that make up Elixir. Building a linter is just a simple matter of
+pattern matching on them, and then doing some plumbing so that errors are
+presented to the user in a tasteful fashion. Easy. If you would like to see
+how the linter project turned out it can be found on GitHub and Hex under the
+name "Dogma".
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Build Your Own Elixir
+    </title>
+    link
+  </head>
+  <body>
+    <h1 id="conf">
+      An Elixir LDN talk
+    </h1>
+  </body>
+</html>
+```
+
+```pug
+html
+  head
+    title Build Your Own Elixir
+  body
+    h1#conf An Elixir LDN talk
+```
+
+After a while of writing tools and libraries in Elixir I found myself needing
+to make a fairly standard web application that generated web pages. Naturally
+I thought I'd use Elixir, and try out the Phoenix framework. Pretty much
+immediately I realised that I'd be spoilt by the HTML templating libraries of
+Ruby and Javascript. Instead of having to write HTML and all its angle
+brackets I could write something more lightweight as above, and then get back
+to writing real code as soon as possible.
+
+In the end this bugged me enough to want to have a go at making a templating
+language like this for Elixir.
+
+```
+Template -> HTML AST -> Elixir function
+```
+```
+Data -> Elixir function -> HTML string
+```
+
+The compilation process of a HTML templating library would look something like
+this. It takes a template, parses it into an AST that represents some HTML,
+and from that builds a super fast Elixir function. That function takes some
+arbitrary Elixir data, and then outputs a string of HTML.
 
 ---
 
