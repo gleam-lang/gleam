@@ -1,21 +1,24 @@
 Introduction
 ============
 
-Hi. I'm Louis Pilfold. I'd like to talk today a bit about my experience with
-Elixir and some of the things I learnt about compilers and the BEAM along the
-way.
+Hi. I'm Louis Pilfold. I discovered Elixir and Erlang nearly two years ago,
+and now I'd like to share with you some of the things I learnt along that
+journey. Specifically I'd like to talk about linters, parsers, compilers and
+the BEAM.
 
-I've been writing Elixir for about a year and a half, prior to that I had been
-playing with Clojure and Haskell, and professionally I was writing Ruby.
-Perhaps it's due to the combination of the functional style of problem solving
-and the Ruby-esc community but Elixir instantly resonated with me and quickly
-became the language I wanted to write every day.
+Prior to discovering Elixir I had been enthusiastically exploring Haskell, but
+professionally I was writing Ruby. Perhaps due to the combination of the
+functional style of problem solving and the Ruby-esc community Elixir
+instantly resonated with me and quickly became the language I wanted to write
+every day. With Haskell I was solving puzzles and coding challenges, but with
+Elixir I found myself wanting to be constructive and productive, I wanted to
+build tools.
 
-Back in the Ruby world I had developed a soft spot for static analysis tools,
-such as the style linter Rubocop, which is a program that inspects your
-codebase for style errors and common mistakes. Elixir being a young language
-we didn't an equivilent tool, so I decided to take a shot at making one
-myself.
+Back in the Ruby world I had developed a soft spot for static analysis
+programs. One such tool was the style linter Rubocop, which is a program that
+inspects your codebase for style errors and common mistakes. Elixir being a
+young language we didn't an equivilent tool, so I decided to take a shot at
+making one myself.
 
 ```
 Source code -> Errors
@@ -39,7 +42,6 @@ would now be patterns in the data that we could match against.
 ```
 Source code -> Tokens -> Errors
 ```
-
 
 The first data structure we can create from source code is a list of tokens.
 Tokens represents the smallest elemental parts of the source code we type, the
@@ -101,12 +103,13 @@ work for me. As the Elixir compiler is written in Erlang we can reuse the
 tokenizer for for language itself.
 
 ```elixir
-iex(3)> :elixir_tokenizer.tokenize 'add 1, 2 ', [], []
-{:ok, [], 10,
- [{:identifier, {[], 1, 4}, :add},
-  {:number, {[], 5, 6}, 1},
-  {:",", {[], 6, 7}},
-  {:number, {[], 8, 9}, 2},
+iex(3)> :elixir_tokenizer.tokenize '1 |> add 2 ', [], []
+
+{:ok, [], 12,
+ [{:number, {[], 1, 2}, 1},
+  {:arrow_op, {[], 3, 5}, :|>},
+  {:identifier, {[], 6, 9}, :add},
+  {:number, {[], 10, 11}, 2}]}
 ```
 
 It's just a "tokenize" function in an Erlang module named "elixir_tokenizer"
@@ -148,6 +151,27 @@ if any semicolon tokens are found. Here I'm just using the `any?/2` function,
 in the linter I'd filter for the offending tokens and return a message to the
 user for each one.
 
+Tokens are the first data structure representation of source code that can be
+analysed, a second (more useful) data structure is an abstract syntax tree.
+
+```
+"add 1, 2"
+
+function_call add
+  ├─ number 1
+  └─ number 2
+```
+
+While tokens were the linear sequence of all the elemental components of source
+code, an abstract syntax tree is a representation of the the syntactic
+structure of the source code.
+
+For example, this piece of code in which I call a function "add" with the
+arguments 1 and 2 would result in the three pictured.
+
+The root node is a call to the function "add".
+This call node has 2 leaf node children.
+The first is the number 1, the second is the number 2.
 
 ------------------------------------------------------------------------------
 
