@@ -12,21 +12,158 @@ and the Ruby-esc community but Elixir instantly resonated with me and quickly
 became the language I wanted to write every day.
 
 Back in the Ruby world I had developed a soft spot for static analysis tools,
-such as the style linter Rubocop. Elixir being a young language we didn't an
-equivilent tool, so I decided to take a shot at making one myself. Linters
-kind of look like this:
+such as the style linter Rubocop, which is a program that inspects your
+codebase for style errors and common mistakes. Elixir being a young language
+we didn't an equivilent tool, so I decided to take a shot at making one
+myself.
 
 ```
-Source code -> Abstract Syntax Tree -> Errors
+Source code -> Errors
+```
 
+Linters are effectvely simple functions that take source code files as an
+input, and return a number of errors to the user, so I figure it shouldn't be
+too hard. I didn't know exactly how they worked so I looked at source for
+Rubocop and a Javascript linter called JSCS and discovered that if you look a
+little closer they look like this.
+
+
+```
+Source code -> Data structure -> Errors
+```
+
+They take source code, convert them to one or more different data structures,
+and then analyse those forms to find any errors to present to the user which
+would now be patterns in the data that we could match against.
+
+```
 Source code -> Tokens -> Errors
 ```
 
-They take source code, convert them to intemediary forms such as an abstract
-syntax tree and tokens, and then analyse those forms to find any errors to
-present to the user. The hard bit here is typically getting the intemediary
-forms, but in Elixir we have the `quote` special form, which gives us back the
-AST of any code we pass to it.
+
+The first data structure we can create from source code is a list of tokens.
+Tokens represents the smallest elemental parts of the source code we type, the
+basic textual building blocks of code.
+
+```
+"Hello, world!"
+
+- word "Hello"
+- punctuation ","
+- space " "
+- word "world"
+- punctuation "!"
+```
+
+For example, if we took the English sentence "Hello, world!" and tokenize it
+we might end up with something like this.
+
+We have 5 tokens, the first one is a word with a value of "Hello".
+The second is a piece of punctuation with a value of a comma.
+The third is a space.
+The fourth is word with a value of "world".
+And lastly we have another punctuation token with the value of an exclaimation mark.
+
+```
+"1 |> add 2"
+
+- number 1
+- arrow_op |>
+- identifier add
+- number 2
+```
+
+Here we can do the same with Elixir code. Here's a snippet of code in which I
+pipe the number one into a function called "add" that takes an additional
+variable of 2. When tokenized it becomes this a list of 4 tokens:
+
+A number token with a value of 1.
+An arrow_op token with a value of the characters that make up the pipe operator.
+An identifier token of the value add.
+And another number token with the value of 2.
+
+```elixir
+"1 |> add 2"
+
+[{:number, 1},
+ {:arrow_op, :|>},
+ {:identifier, :add},
+ {:number, 2}]
+```
+
+This data in Elixir terms would look like this. Each token is a tuple where the
+first element is the name of the token type as an atom, and the last element
+is the value of the token, so the atom "add", or the number 2.
+
+In the Ruby and Javascript linters I looked at the Tokenization process was
+quite long and complex, but as often the case I found Elixir did all the hard
+work for me. As the Elixir compiler is written in Erlang we can reuse the
+tokenizer for for language itself.
+
+```elixir
+iex(3)> :elixir_tokenizer.tokenize 'add 1, 2 ', [], []
+{:ok, [], 10,
+ [{:identifier, {[], 1, 4}, :add},
+  {:number, {[], 5, 6}, 1},
+  {:",", {[], 6, 7}},
+  {:number, {[], 8, 9}, 2},
+```
+
+It's just a "tokenize" function in an Erlang module named "elixir_tokenizer"
+which when given a char list of source code it gives us back tokens. These
+tokens also contain a middle value of some metadata which I'm ignoring for
+now.
+
+That was easy. So how might these tokens be used in a linter?
+
+```elixir
+IO.puts("Hello"); # Bad
+IO.puts("World")  # Good
+```
+
+One simple thing an Elixir linter might do is forbid the use of semicolons to
+separate expressions. Each expression should instead be seperated by newlines,
+as is more common.
+
+```elixir
+def semicolon?({:";", _, _}),
+  do: true
+def semicolon?(_),
+  do: false
+
+if tokens |> Enum.any?(&semicolon?/1) do
+  :error
+else
+  :ok
+end
+```
+
+To make the linter detect violations of this rule I first defined a function
+called "semicolons?" (question mark). It returns true if passed a semicolon
+token, and false otherwise, which it detects by pattern matching on the first
+element of the token tuple, the type atom.
+
+Now with this function I can just iterate over the list, and return an error
+if any semicolon tokens are found. Here I'm just using the `any?/2` function,
+in the linter I'd filter for the offending tokens and return a message to the
+user for each one.
+
+
+------------------------------------------------------------------------------
+
+                            More stuff to come...
+
+------------------------------------------------------------------------------
+
+
+```
+Source code -> Tokens               -> Errors
+               Abstract Syntax Tree -----^
+```
+
+The hard bit here is typically getting the intemediary forms, but in Elixir
+there is have the `quote` special form, which gives us back the AST of any
+code we pass to it.
 
 ```elixir
 iex(1)> quote do add 1, 2  end
@@ -103,7 +240,6 @@ if tokens |> Enum.any?(is_semicolon) do
 else
   :ok
 end
-
 ```
 
 If in the linter I wanted to ban use of semicolons I could do it by iterating
