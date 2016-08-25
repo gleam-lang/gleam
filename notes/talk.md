@@ -173,6 +173,29 @@ The root node is a call to the function "add".
 This call node has 2 leaf node children.
 The first is the number 1, the second is the number 2.
 
+```
+"send self(), {:compare 1, 2 + 2}"
+
+function_call send
+  ├─ function_call self
+  └─ tuple
+     ├─ atom compare
+     ├─ function_call +
+     │  ├─ number 2
+     │  └─ number 2
+     └─ number 1
+```
+
+Here's a more complex example.
+
+At the root of the tree there's a call to the "send" function, which has 2
+arguments, and thus 2 children. The first is a call to the zero arity function
+"self", and the second is a tuple. The tuple has 3 children, the atom
+"compare", a function call, and the number 1. The function call is to the plus
+operator, and has 2 children, each the number 2.
+
+
+
 ------------------------------------------------------------------------------
 
                             More stuff to come...
