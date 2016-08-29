@@ -194,6 +194,82 @@ arguments, and thus 2 children. The first is a call to the zero arity function
 "compare", a function call, and the number 1. The function call is to the plus
 operator, and has 2 children, each the number 2.
 
+```elixir
+quote do
+  add 1, 2
+end
+
+{:add, [], [1, 2]}
+```
+
+```
+Code.string_to_quoted "add 1, 2"
+
+{:ok, {:add, [line: 1], [1, 2]}}
+```
+
+Getting the abstract syntax tree of Elixir code is even easier than getting
+the tokens thanks to its Lisp style macro system. If we want to get the AST
+from an expression we can just pass it to the `quote` special form, or if it's
+a string we can use `Code.string_to_quoted`.
+
+Elixir's AST is consise and simple. Everything that is not a literal in the
+AST is a three item tuple where the first element is the name of the function
+or constructor, the second item is some metadata, and the third item is a list
+of that node's children.
+
+Here is the add function again. The root is a function call, so it's a three
+item tuple. The first element is the atom "add" as that is the name of the
+function, and it's children are the literal numbers 1 and 2 in the third
+position. This is a nice AST to work with, it's relatively readable and can be
+pattern matched on easily.
+
+```elixir
+# Forbidden expression
+unless true do
+  1
+else
+  2
+end
+
+# AST
+{:unless, [], [true, [do: 1, else: 2]]}
+```
+
+Now I've learnt about the AST and how to obtain it I can use it in the linter.
+Say I want to forbid use of the `unless` macro with an `else` block as I think
+it should be written with the `if` macro, to prevent the hard-to-read double
+negative.
+
+
+With an AST I can do this by walking the tree until I come across a node with
+the atom `unless` in the first position, and then checking to see whether the
+children includes an `else` block.
+
+```elixir
+defp check_unless({:unless, _, [_, [do: _, else: _]]}, status) do
+  {node, :error}
+end
+defp check_unless(node, status) do
+  {node, status}
+end
+
+Macro.prewalk(ast, :ok, &check_unless/2)
+# {:ok, :error}
+```
+
+Traversing the AST is easy thanks to the `Macro.preawalk` function, which
+takes an AST, an accumulator, and a callback that will receive each node. My
+`check_unless/2` callback has two clauses. The first one pattern matches
+against offending nodes and returns the atom `:error` in place of the
+accumulator, and the other clause is a catch all for all other nodes.
+
+And just like that I had a working linter. All that was left was to write more
+rules and to do some plumbing to run them and present errors to the user. I
+couldn't believe how easy Elixir had made this task for me. If you'd like to
+see what came of this project it can be found on GitHub and Hex under the name
+`dogma`.
+
 
 
 ------------------------------------------------------------------------------
@@ -202,104 +278,6 @@ operator, and has 2 children, each the number 2.
 
 ------------------------------------------------------------------------------
 
-
-```
-Source code -> Tokens               -> Errors
-               Abstract Syntax Tree -----^
-```
-
-The hard bit here is typically getting the intemediary forms, but in Elixir
-there is have the `quote` special form, which gives us back the AST of any
-code we pass to it.
-
-```elixir
-iex(1)> quote do add 1, 2  end
-{:add, [], [1, 2]}
-```
-
-In case you're not familiar, here's an example of the Elixir abstract syntax
-tree (or AST). It's deliberately simple and uniform so that it's easy to read
-and manipulate. Everything in the Elixir AST that isn't one of the primitive
-types is a functional call, and a function call is a three item tuple. The
-first item is the name of the function being called, which is an atom or an
-expression. The second item in the tuple is a list of metadata that may
-include line numbers or information on imports so that we can resolve the
-function name if we need to. Lastly the third item in the tuple is a list of
-arguments. Here I'm calling a fictional function called "add" with two
-arguments, 1 and 2, so my AST has the atom `:add` as the name, and a list
-containing 1 and 2 as arguments.
-
-```elixir
-iex(6)> Code.string_to_quoted "add 1, 2"
-{:ok, {:add, [line: 1], [1, 2]}}
-```
-
-And if we want to do the same with a string of code rather than an expression
-we can use the `string_to_quoted` function in the Elixir `Code` module.
-
-After this it's just a matter of pattern matching on these forms to detect
-errors.
-
-TODO: Give an example of usage. Unless else.
-      Can show how everything in Elixir can be expressed using this highly
-      regular function call syntax.
-
-So there's an easy way to get the AST, but what about getting the tokens? It
-turns out that the Elixir standard library contains an Erlang module called
-`:elixir_tokenizer`, which exposes a function that offers a way to get
-those tokens from a source code string.
-
-
-```elixir
-iex(3)> :elixir_tokenizer.tokenize 'add 1, 2 ', [], []
-{:ok, [], 10,
- [{:identifier, {[], 1, 4}, :add},
-  {:number, {[], 5, 6}, 1},
-  {:",", {[], 6, 7}},
-  {:number, {[], 8, 9}, 2},
-```
-
-Here's the function in action. It's certainly not one of the modules you're
-encouraged to use by the Elixir core team, and it's maybe a little unstable as
-in a previous version of Elixir the tokens returned were subtly different for
-some inputs, but it's good enough for my use case here.
-
-The format is a little less regular than that of the Elixir AST as it's not
-something Elixir developers are expected to encounter when using the language.
-Like with the AST each item is a tuple, though this time it is a flat list of
-tuples rather than a nested tree structure. The first element is the type of
-token. Here we have the token types of `identifier`, number and comma. The
-second element in the tuple is just some information about where the token is
-in the source code, and then after that we have optional fields for additional
-data. For example here with the `identifier` token we have "add", the
-identifier name as a third value.
-
-```elixir
-IO.puts("Hello"); # Bad
-IO.puts("World")  # Good
-```
-
-```elixir
-is_semicolon = fn(t) -> elem(t, 0) == :";" end
-
-if tokens |> Enum.any?(is_semicolon) do
-  :error
-else
-  :ok
-end
-```
-
-If in the linter I wanted to ban use of semicolons I could do it by iterating
-over the list of tokens and returning an error if we find any semicolons
-tokens. This is really simple example, but one that can't be done by
-inspecting the AST.
-
-As we can see, in Elixir it's trivial to access and study both the AST and the
-tokens that make up Elixir. Building a linter is just a simple matter of
-pattern matching on them, and then doing some plumbing so that errors are
-presented to the user in a tasteful fashion. Easy. If you would like to see
-how the linter project turned out it can be found on GitHub and Hex under the
-name "Dogma".
 
 ```html
 <!DOCTYPE html>
