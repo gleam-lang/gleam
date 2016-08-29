@@ -270,15 +270,6 @@ couldn't believe how easy Elixir had made this task for me. If you'd like to
 see what came of this project it can be found on GitHub and Hex under the name
 `dogma`.
 
-
-
-------------------------------------------------------------------------------
-
-                            More stuff to come...
-
-------------------------------------------------------------------------------
-
-
 ```html
 <!DOCTYPE html>
 <html>
@@ -296,6 +287,16 @@ see what came of this project it can be found on GitHub and Hex under the name
 </html>
 ```
 
+Some time late I found myself making a simple web app in Elixir. Nothing
+exciting, it rendered a few HTML pages to a user and let them record some
+information in a database using forms. While I was writing the HTML views I
+found myself getting a little fed up of Elixir default templating language for
+making web pages. EEx is fast and easy to use, but with it I still have to
+write regular HTML, and let's be honest, HTML is not fun. It has all these
+superfluous angle brackets, a rather verbose syntax for closing tags, and you
+have to manually escape certain characters. I would rather avoid doing all
+this typing, and when working with Ruby and Javascript I can.
+
 ```pug
 html
   head
@@ -304,39 +305,18 @@ html
     h1#conf An Elixir LDN talk
 ```
 
-After a while of writing tools and libraries in Elixir I found myself needing
-to make a fairly standard web application that generated web pages. Naturally
-I thought I'd use Elixir, and try out the Phoenix framework. Pretty much
-immediately I realised that I'd be spoilt by the HTML templating libraries of
-Ruby and Javascript. Instead of having to write HTML and all its angle
-brackets I could write something more lightweight as above, and then get back
-to writing real code as soon as possible.
-
-In the end this bugged me enough to want to have a go at making a templating
-language like this for Elixir.
+There's a templating system for Ruby called Slim and another for Javascript
+called Pug which allow me to write HTML like this. All the superfluous syntax
+is gone, and the delimeters have been replaced with indentation. Granted, this
+isn't everyone's cup of tea, but I've become accustomed to it, and again I
+found myself missing something in Elixir that I had elsewhere. Armed with my
+new-found knowledge of tokenization and parsing I decided to make a similar
+library for Elixir.
 
 ```
-Template -> HTML AST -> Elixir function
-```
-```
-Data -> Elixir function -> HTML string
+HTML Template -> (data -> HTML String)
 ```
 
-The compilation process of a HTML templating library would look something like
-this. It takes a template, parses it into an AST that represents some HTML,
-and from that builds a super fast Elixir function. That function takes some
-arbitrary Elixir data, and then outputs a string of HTML.
-
----
-
-- Talk about Jot
-  - Parsing
-  - Transforming and optimising the data structure
-  - Outputting Elixir AST
-
-- Talk about mix test.watch
-  - Reloading modules
-  - Reading the internals of the compiler, etc
-
-- Talk about how together all these skills kind of look like a compiler. Could
-  I make a compiler?
+A templating library is effectvely a function that takes a template of
+alternative HTML syntax, and returns a function that given data produces a
+string of HTML.
