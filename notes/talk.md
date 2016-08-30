@@ -320,3 +320,95 @@ HTML Template -> (data -> HTML String)
 A templating library is effectvely a function that takes a template of
 alternative HTML syntax, and returns a function that given data produces a
 string of HTML.
+
+```
+HTML Template -> Tokens -> AST -> (data -> HTML String)
+```
+
+In order to know what HTML to generate from the lightweight syntax I need to
+yet again do some analysis on the source code, so like with the linter I need
+to generate an AST to inspect.
+
+Unlike with the linter I don't have a pre-built function for getting tokens
+from my html templates, so I'll have to build my own. After a little digging I
+discovered that the Erlang standard library includes a module called Leex
+which offers a DSL for creating tokenizers. It's the module that the LFE
+language uses for tokenization, which is a pretty good endorsement in my
+books. It might be a little over the top as I could probably easily parse this
+string by iterating over it, but this is a excuse to learn something new while
+doing something useful, so lets get started.
+
+```pug
+html
+  head
+    title Build Your Own Elixir
+  body
+    h1(id="conf") Elixir LDN 2016!
+```
+
+One line is one element in my syntax, so I'll split on newlines and trim the
+intendation, leaving me with just the element syntax that I want to parse.
+
+```pug
+h1#an-id
+h2.class_a
+h3.classB
+h4(style="color: hotpink")
+h5 Elixir LDN 2016!
+```
+
+Looking at these elements I can see a few token types.
+
+There is one for names, which are element names, class names, or ID names,
+such as "h1" or "classB" used here.
+
+There are dots and hashes which are used to denote classes and IDs
+respectively.
+
+There are strings, which is a series of characters surrounded by double
+quotes.
+
+The syntax for attributes includes open paren tokens, close paren tokens,
+and then an equals token between the attribute name and the value.
+
+Lastly there's whitespace tokens, and word tokens, which are any
+non-whitespace characters that are not covered by the other tokens.
+
+Now I need to teach Leex what my tokens are so it can create the tokenizer.
+
+```erlang
+%%% my_tokenizer.xrl
+
+Definitions.
+
+% Token patterns here...
+
+Rules.
+
+% Mappings of patterns into token structures here...
+
+Erlang code.
+
+% Erlang helper functions here...
+```
+
+A Leex module is file that contains almost Erlang code and has the file
+extension `.xrl`. Within it it has three sections: "Definitions" in which the
+author uses reggular expressions to define each type of token, "Rules", in
+which the author declares what data structure if any should result from each
+token pattern being matched, and "Erlang code", which contains any helper
+functions that might be used in the "Rules" section.
+
+```erlang
+Definitions.
+
+Dot    = \.
+Hash   = #
+EQ     = =
+OpenP  = \(
+CloseP = \)
+String = "([^\\""]|\\.)*"
+Name   = [A-Za-z][A-Za-z0-9_-]*
+Word   = [^\(\)\t\s\n\.#=]+
+WS     = [\s\t]+
+```
