@@ -409,6 +409,88 @@ OpenP  = \(
 CloseP = \)
 String = "([^\\""]|\\.)*"
 Name   = [A-Za-z][A-Za-z0-9_-]*
-Word   = [^\(\)\t\s\n\.#=]+
 WS     = [\s\t]+
+Word   = [^\(\)\t\s\n\.#=]+
+```
+
+Here is my Leex "Definitions" section, containing all my various types of
+tokens. Dot, Hash, EQ, OpenP and CloseP are all literals. Pattern names are
+capitalized and go on the left hand side of the match operator, patterns go on
+the right.
+
+The string pattern is a pair of double quotes with zero or more characters
+between them, where the characters are any non-double quote character, or any
+character preceeded by an escaping slash.
+
+A name is any letter, followed by any mix of letters, numbers, underscores and
+dashs.
+
+Whitespace is one or more spaces and tabs, and lastly a word is one or more or
+anything else.
+
+<!-- TODO: maybe remove? -->
+The regex for "word" will match any text that also matches a name, it's less
+specific. As a result whichever regex is checked with first will be the one
+that matches, and because of this we need to control the order in which the
+regexes are run. This isn't a problem with Leex, the definitions are checked
+from top to bottom, and the first pattern that matches is used, much like a
+case statement.
+
+```erlang
+Rules.
+
+{String} : {token, {string, TokenChars}}.
+{Name}   : {token, {name,   TokenChars}}.
+{Word}   : {token, {word,   TokenChars}}.
+{Hash}   : {token, {hash,   TokenChars}}.
+{Dot}    : {token, {dot,    TokenChars}}.
+{EQ}     : {token, {eq,     TokenChars}}.
+{WS}     : {token, {ws,     TokenChars}}.
+{OpenP}  : {token, {'(',    TokenChars}}.
+{CloseP} : {token, {')',    TokenChars}}.
+
+Erlang code.
+```
+
+After the "Definitions" section comes the "Rules" section, which is the
+mapping between a token definition and a token data structure. The syntax for
+a rule is the name of a definition in curly braces on the left, an instruction
+tuple on the right, and a colon in the middle. Each rule ends with a full
+stop, like in regular Erlang.
+
+The first element in the tuple is the atom "token", which is an instruction to
+output a token when this definition matches. The second item is the data
+structure to be formed for this token. Here I'm always forming 2 item tuples
+which the atom name of the token in the first position, and the matched
+characters in the second position, which I access through the magic variable
+"TokenChars".
+
+```elixir
+:my_tokenizer.string('div I\'m spartacus')
+```
+```elixir
+{:ok, [
+  name: 'div',
+  ws:   ' ',
+  word: 'I\'m',
+  ws:   ' ',
+  name: 'spartacus',
+], _}
+```
+
+And with that I have a working tokenizer! If I place this in the `src`
+directory Mix will compile this to an Erlang module which exposes a `string/1`
+function that takes a charlist of code and returns a list of tokens. Because
+I used tuples with an atom as the first element for my tokens I get back an
+Elixir keyword list like so.
+
+
+<!-- TODO: explain the need for helper functions -->
+
+```erlang
+{String} : {token, {string, strValue(TokenChars)}}.
+```
+
+```erlang
+Erlang code.
 ```
