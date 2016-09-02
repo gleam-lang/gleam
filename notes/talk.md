@@ -497,7 +497,7 @@ token, and a name token with a value of "spartacus". Great.
   "(":    '(',
   word:   'href',
   eq:     '=',
-  string: '"/about"',
+  string: '"/about"', # <-- Quotes
   ")":    ')',
 ], _}
 ```
@@ -506,13 +506,181 @@ At first this seemed enough, but when tokenizing another line I discovered a
 problem. When I receive a string token the value is the string as written in
 the source code, when I actually want the value of the string.
 
-This brings us onto the final part of a Leex module, the "Erlang code"
-section, which is were we write helper functions.
+To resolve this I make use of the final part of a Leex module.
 
 ```erlang
 {String} : {token, {string, strValue(TokenChars)}}.
+% ...snip...
+
+Erlang code.
+
+strValue(S) ->
+  tl(lists:droplast(S)).
 ```
 
+Here the token tuple for the string token has been updated to call a
+function called "strValue" on the TokenChars before inserting it into the
+tuple.
+
+The definition of this helper function goes in the "Erlang code" section. It
+simply drops the trailing quote from the charlist with the droplast function,
+and then takes the tail from that to remove the preceeding quote.
+
+```elixir
+:my_tokenizer.string('a(href="/about")')
+```
+```elixir
+{:ok, [
+  name:   'a',
+  "(":    '(',
+  word:   'href',
+  eq:     '=',
+  string: '/about', # <-- No quotes
+  ")":    ')',
+], _}
+```
+
+Now I get the value I want for string tokens. Later I'll probably also want to
+add helper functions for parsing numbers, handling escaped characters in
+strings, and so on.
+
+And with that I have a working tokenizer, so I can move onto building a super
+simple AST. In the same way that Erlang tokenization supplies a tool for
+tokenization it also supplies a tool for parsing, the Yecc module. Like Leex
+it's used by writing a module with a specific syntax and file extension, which
+it then compiles into an Erlang module. This module contains a grammar, which
+is a set of rules that describe the syntax of a language.
+
+
 ```erlang
+%%% my_parser.yrl
+
+Nonterminals
+.
+
+Terminals
+.
+
+Rootsymbol
+.
+
+%% Grammar rules here...
+
 Erlang code.
+
+%% Helper functions here...
+```
+
+The file consists of 5 main sections. Nonterminals, Terminals, Rootsymbol,
+grammar rules, and another Erlang code section for helper functions.
+
+Terminals are the the most basic symbols recognised by the grammar, they
+cannot be broken down into smaller parts. In this case these are all the
+token types my Leex tokenizer can create.
+
+
+```erlang
+%%% my_parser.yrl
+
+Nonterminals
+.
+
+Terminals
+'(' ')' name word dot hash string eq ws.
+
+Rootsymbol
+.
+
+%% Grammar rules here...
+
+Erlang code.
+
+%% Helper functions here...
+```
+
+Nonterminals are higher level symbols that are formed by composing
+nonterminals or other terminals.
+
+The Rootsymbol is the highest level nonterminal symbol that composes all the
+others.
+
+Grammar rules are definitions about what symbols compose other symbols, and in
+what context, and Erlang code is again where we keep helper functions.
+
+Lets take a look at Nonterminals.
+
+```pug
+h1.jumbo
+```
+
+```elixir
+nonterminal name: 'h1'
+nonterminal dot:  '.'
+nonterminal name: 'jumbo'
+```
+
+```elixir
+nonterminal name:  'h1'
+terminal    class: 'jumbo'
+```
+
+An example nonterminal in my grammar would be a class literal.
+
+In my syntax this is a h1 element with the class of "jumbo".
+
+It tokenizes to three nonterminal, the name "h1", a dot, and the name "jumbo".
+
+In this context the "dot" nonterminal followed by the "name" nonterminal can be
+composed together to form the "class" terminal.
+
+```erlang
+class -> dot name  % .btn
+id    -> hash name % #jumbo
+```
+
+Lets quickly go through some nonterminals.
+
+A class is a dot then a name.
+An id is a hash then a name.
+
+```erlang
+classes -> class         % .big
+classes -> class classes % .small.tiny.timid
+```
+
+Elements can have as many class literals on them as the user likes, so we need
+a classes nonterminal.
+
+classes are either a single class, or many classes. A repeating symbol is
+defined recursively, so here classes can be a class followed by classes.
+
+```erlang
+names -> name            % div
+names -> name id         % div#header
+names -> name classes    % div.btn
+names -> name id classes % div#submit.btn
+names -> classes         % .grey.small
+names -> id              % #jumbo
+names -> id classes      % #jumbo.bordered
+```
+
+Names is the head of an element in the HTML shorthand syntax.
+
+It can be a name
+A name then an id
+A name then classes
+A name then an id then classes
+Just classes
+Just an id
+Or an id then classes.
+
+These declaritive rules continue. There's rules defining an attribute, many
+attributes, pieces of text, and content that is composed of many pieces of
+text and whitespace, until finally we reach the Rootsymbol, an element.
+
+```erlang
+element -> names
+element -> names attributes
+element -> names attributes content
+element -> names content
 ```
