@@ -484,8 +484,30 @@ function that takes a charlist of code and returns a list of tokens. Because
 I used tuples with an atom as the first element for my tokens I get back an
 Elixir keyword list like so.
 
+Here I tokenize this line of code, and back I get a name token with a value of
+"div", a whitespace token, a word token with a value of "I'm", a whitespace
+token, and a name token with a value of "spartacus". Great.
 
-<!-- TODO: explain the need for helper functions -->
+```elixir
+:my_tokenizer.string('a(href="/about")')
+```
+```elixir
+{:ok, [
+  name:   'a',
+  "(":    '(',
+  word:   'href',
+  eq:     '=',
+  string: '"/about"',
+  ")":    ')',
+], _}
+```
+
+At first this seemed enough, but when tokenizing another line I discovered a
+problem. When I receive a string token the value is the string as written in
+the source code, when I actually want the value of the string.
+
+This brings us onto the final part of a Leex module, the "Erlang code"
+section, which is were we write helper functions.
 
 ```erlang
 {String} : {token, {string, strValue(TokenChars)}}.
