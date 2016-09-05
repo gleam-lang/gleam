@@ -679,8 +679,109 @@ attributes, pieces of text, and content that is composed of many pieces of
 text and whitespace, until finally we reach the Rootsymbol, an element.
 
 ```erlang
-element -> names
-element -> names attributes
-element -> names attributes content
-element -> names content
+element -> names                    % a.btn
+element -> names attributes         % a.btn(href="/about")
+element -> names attributes content % a.btn(href="/about") About
+element -> names content            % a.btn About
 ```
+
+An element can be just a set of names,
+or it can be a set of names followed by attributes,
+or it can be names, then attributes, then content,
+or it can be just names followed by content.
+
+And now that there are definitions for all the different symbols, from the
+lowest terminals to the rootsymbol nonterminal Yecc has enough information to
+parse an element from a set of tokens. The only thing left to do before it is
+capable of generating an abstract syntax tree is instructing it how to build
+a data structure for each nonterminal.
+
+```erlang
+class -> dot name % '$1' is the dot symbol
+                  % '$2' is the name symbol
+```
+
+In my mini AST I want the class token to be represented by a string with the
+same value as the token.
+
+To achieve this I need to be able to refer to the tuple that makes up the name
+token, and then extract the second value from it.
+
+Helpfully Yecc assigns pseudo variables in the form of atoms for each symbol
+used in the symbol definition. If class is a dot then a name, atom dollar one
+refers to the dollar token, and atom dollar two refers to the name token.
+
+```erlang
+% .btn
+'$1' = {dot,  "."}
+'$2' = {name, "btn"}
+```
+```erlang
+class -> dot name : element(2, '$2'). % "btn"
+```
+
+The string I want is the second element in the tuple, so I can call the
+`element` function on dollar two to get it. This code is placed after a colon
+and before a full stop for each definition.
+
+```erlang
+class -> dot  name : element(2, '$2').
+id    -> hash name : element(2, '$2').
+
+classes -> class         : ['$1'].
+classes -> class classes : ['$1' | '$2'].
+```
+
+Now I've defined a data structure for class I can do the same for ID.
+
+Some nodes in my AST will be collections represented with a list, one such
+example is the "classes" symbol, which is one or many class symbols.
+
+For the base case of just one class I wrap the class, which is a string as
+defined above, in a list.
+
+For the case of a class followed by classes we prepend the value of the class
+to the value of classes, which unfolds recursively until we only have one
+class, which is the list case we just defined.
+
+Other symbols more complex than simple values or lists. The "names" symbol
+consisted of a combination of a type value such as "div" or "body", an id, and
+one or more classes. This could be represented as a three item tuple, but then
+it's really hard to remember which field is which with tuples, so I'd like to
+avoid having to.
+
+```erlang
+% records.hrl
+-record(
+  names,
+  { type    = "div"
+  , id      = nil
+  , classes = []
+  }
+).
+```
+
+Since we're in Erlang land a record felt like the right tool for the job here.
+If you're not familiar with Erlang records they're tuples with named fields,
+and each field can be set and accessed by name, much easier than remembering
+indexes.
+
+Like Elixir structs each field in a record definition gets a default value.
+I've got for the string "div" for the type, as the div element is a good HTML
+element to fall back to, and some suitable bottom values for id and classes.
+
+
+```erlang
+names -> classes      : #names{ classes = '$1' }.
+names -> name classes : #names{ classes = '$2', type = '$1' }.
+names -> id   classes : #names{ classes = '$2', id   = '$1' }.
+names -> id           : #names{ id   = '$1' }.
+names -> name         : #names{ type = element(2, '$1') }.
+names -> name id      : #names{ type = element(2, '$1'), id = '$2' }.
+names -> name id classes
+  : #names{ type = element(2, '$1'), class = '$3', id = '$2' }.
+```
+
+With this record I can use a nice named literal syntax for setting the various
+values, and any that I neglect to fill in will use the default value specified
+in the record definition.
