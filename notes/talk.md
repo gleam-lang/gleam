@@ -775,13 +775,75 @@ element to fall back to, and some suitable bottom values for id and classes.
 names -> classes      : #names{ classes = '$1' }.
 names -> name classes : #names{ classes = '$2', type = '$1' }.
 names -> id   classes : #names{ classes = '$2', id   = '$1' }.
-names -> id           : #names{ id   = '$1' }.
+names -> id           : #names{ id = '$1' }.
 names -> name         : #names{ type = element(2, '$1') }.
 names -> name id      : #names{ type = element(2, '$1'), id = '$2' }.
-names -> name id classes
-  : #names{ type = element(2, '$1'), class = '$3', id = '$2' }.
+names -> name id classes : #names{ type = element(2, '$1')
+                                 , class = '$3' , id = '$2' }.
 ```
 
 With this record I can use a nice named literal syntax for setting the various
 values, and any that I neglect to fill in will use the default value specified
 in the record definition.
+
+With methods for building simple values, more complex values, and collections
+of values I can work my way all the way up to the rootsymbol, the element.
+
+```pug
+a.profile(href="/me") User profile
+```
+
+```erlang
+#element
+{ type       = "a"
+, id         = nil
+, classes    = ["profile"]
+, attributes = [{"href", "/me"}]
+, content    = "User profile"
+}
+```
+
+And with that I can turn a line of HTML shorthand into a data structure I can
+use in Elixir! Now to turn this into a function.
+
+This was another point at which I wasn't sure how to implement the next step.
+I had a look on GitHub and discovered that other Elixir template libraries
+would from here build EEx template strings and run these through the EEx
+compiler. To me this felt like the wrong solution. EEx is written in Elixir,
+how does it solve this problem?
+
+I spent half an hour reading the EEx application in the Elixir lang repo, and
+was pleasantly surprised by what I found there. The code was easy to
+understand, and leveraged some of Elixir's metaprogramming features in a way
+that to me seemed really clever and also easy to imitate. Yet again I felt
+like Elixir was doing all the hard work for me.
+
+```eex
+Hello, <%= @name %>!
+```
+```elixir
+tmpl = "Hello, <%= @name %>!"
+
+EEx.eval_string(tmpl, assigns: [name: "world"])
+
+# => "Hello, world!"
+```
+
+This what an EEx template looks like. It's a load of text in any format, with
+these percent equals tags that contain Elixir code. The contents of the code
+is evaluated when the function is called, and the return value is inserted
+into the function.
+
+```eex
+Hello, <%= @name %>!
+```
+```elixir
+[ {:text, "Hello, "},
+  {:expr, " @name "},
+  {:text, "!"},
+]
+```
+
+EEx's parser splits the template into text and expressions. This template
+would be split into the text "Hello, ", an expression consisting of at
+variable name, and the text bang.
