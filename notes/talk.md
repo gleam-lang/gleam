@@ -835,15 +835,98 @@ is evaluated when the function is called, and the return value is inserted
 into the function.
 
 ```eex
-Hello, <%= @name %>!
+Hello, <%= name %>!
 ```
 ```elixir
-[ {:text, "Hello, "},
-  {:expr, " @name "},
-  {:text, "!"},
-]
+[ text: "Hello, ",
+  expr: " name ",
+  text: "!" ]
 ```
 
 EEx's parser splits the template into text and expressions. This template
-would be split into the text "Hello, ", an expression consisting of at
-variable name, and the text bang.
+would be split into the text "Hello, ", an expression consisting of variable
+name, and the text bang.
+
+This needs to be turned into an expression which can be the body of a
+function.
+
+```elixir
+def render(name) do
+  "" <> "Hello, " <> name <> "!"
+end
+```
+
+Here's a function that's equivilent to our template. It starts with an empty
+string, and then for each value in the list of text and expressions it
+concatenates it onto the value of the previous expression.
+
+In an ideal world a function like this would be constructed by EEx from this
+template. It also just so happens that this is more or less the function is
+constructs though some clever metaprogramming.
+
+As well as giving us `quote`, which turn expressions into abstract syntax
+trees, Elixir also supplies `unquote`, which turns abstract syntax trees into
+expressions at compile time. With `unquote` EEx can create this function by
+manually reconstructing it's AST. Let's look at how this could be done.
+
+```elixir
+concat = fn
+  ({:text, text}, buffer) ->
+    quote do
+      unquote(buffer) <> unquote(text)
+    end
+
+  ({:expr, text}, buffer) ->
+    ast = Code.string_to_quoted!(text)
+    quote do
+      unquote(buffer) <> unquote(ast)
+    end
+end
+
+compile = fn(list) ->
+  Enum.reduce(list, "", concat)
+end
+```
+
+At the bottom here is a compile function. It reduces over the list with a
+concat function, and an empty string as the starting value.
+
+The concat function has two clauses. The first is for text elements, which it
+concatenates onto the buffer. Doing it inside the quote block like this
+results in an AST being returned rather than the expression being evaluated.
+
+The other clause is for expressions. It works exactly the same way as the
+previous clause, except it calls the `Code.string_to_quoted!` function on the
+value first in order to transform it from a string of Elixir code into an
+AST to be injected into the quote block.
+
+```elixir
+compile.([text: "Hello ", expr: "name", text: "!"])
+
+
+# {:<>, [context: Elixir, import: Kernel],
+#  [{:<>, [context: Elixir, import: Kernel],
+#    [{:<>, [context: Elixir, import: Kernel], ["", "Hello "]},
+#     {:name, [line: 1], nil}]}, "!"]}
+```
+```elixir
+compile.([text: "Hello ", expr: "name", text: "!"])
+|> Macro.to_string
+# (("" <> "Hello ") <> name) <> "!"
+```
+
+Here it is called on the list before.
+
+As you can see it gets pretty hard to read these expressions pretty quickly,
+so I'm converting back into a string with the `Macro.to_string` function.
+
+```elixir
+def render(name) do
+  "" <> "Hello, " <> name <> "!"
+end
+```
+```elixir
+(("" <> "Hello ") <> name) <> "!"
+```
+
+It's pretty much exactly the same as the function I wanted to generate.
