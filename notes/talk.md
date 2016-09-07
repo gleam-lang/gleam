@@ -929,4 +929,44 @@ end
 (("" <> "Hello ") <> name) <> "!"
 ```
 
-It's pretty much exactly the same as the function I wanted to generate.
+It's pretty much exactly the same as the body function I wanted to generate.
+
+So how would this work for the HTML templating library?
+
+```pug
+h1#title = name
+```
+```elixir
+%Element{ type: "h1", id: "title", classes: [],
+  attributes: [], content: "= name", }
+```
+
+The parser is used to generate an Elixir data structure with all the required
+information from the template.
+
+```pug
+h1#title = name
+```
+```elixir
+[ text: "<h1 id='title'>",
+  expr: " name",
+  text: "</h1>" ]
+```
+
+From the data structure a list of text and expressions is formed. Each element
+consists of three parts, an opening tag, the contents, and a closing tag.
+
+
+```elixir
+defmodule View do
+  @ast compile.([ text: "<h1 id='title'>", expr: " name", text: "</h1>" ])
+  def render(name) do
+    unquote(ast)
+  end
+end
+
+view.render("Elixir")
+# <h1 id='title'>Elixir</h1>
+```
+
+The parser built earlier builds
