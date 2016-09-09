@@ -940,33 +940,104 @@ h1#title = name
 %Element{ type: "h1", id: "title", classes: [],
   attributes: [], content: "= name", }
 ```
-
-The parser is used to generate an Elixir data structure with all the required
-information from the template.
-
-```pug
-h1#title = name
-```
 ```elixir
 [ text: "<h1 id='title'>",
   expr: " name",
   text: "</h1>" ]
 ```
 
+The parser is used to generate an Elixir data structure with all the required
+information from the template.
+
 From the data structure a list of text and expressions is formed. Each element
 consists of three parts, an opening tag, the contents, and a closing tag.
 
+This list is put through the compile function, which results in an Elixir AST
+that builds the HTML string with the passed values injected into it.
+
+All that's left is turning it into a function.
 
 ```elixir
 defmodule View do
-  @ast compile.([ text: "<h1 id='title'>", expr: " name", text: "</h1>" ])
-  def render(name) do
-    unquote(ast)
-  end
+  @ast """
+  h1#title = name
+  """
+  |> Compiler.token()
+  |> Compiler.parse()
+  |> Compiler.compile()
+
+  def render(name), do: unquote(@ast)
 end
 
-view.render("Elixir")
+View.render("Elixir")
 # <h1 id='title'>Elixir</h1>
 ```
 
-The parser built earlier builds
+I want the AST I've generated to be the body of the function. How do I do
+that?
+
+`unquote` converts an AST back into an expression, so just write a function
+where the body is just calling `unquote` on the AST.
+
+And now I have a templating language that I can use in a real app.
+
+```pug
+ul
+  for user <- users
+    li = user.name
+```
+```pug
+case current_user
+  match %{ role: :admin }
+    p You're an admin
+
+  match %{ role: :user }
+    p You're a registered user
+
+  match _
+    p You're a guest
+```
+```pug
+if current_user
+  a(href="/log-out") Sign out
+else
+  a(href="/sign-in") Log in
+```
+
+It's missing a few things though.
+
+I'd want to add a looping construct so I can iterate over collections, and
+conditional expressions so I have have more dynamic templates. I would add
+these by adapting my tokenizer and parser to output a new type of node for each
+construct, and then I can build a suitable Elixir AST for each one.
+
+It was about at this point that I realised something. With relatively little
+effort I had created a program that takes some source code, parses it, and
+then generates some code that can be transformed and executed by the Erlang
+virtual machine. The output of my program is a set of runnable functions.
+
+Without knowing anything about compilers I've effectively written a compiler
+for a mini language on the BEAM.
+
+Getting this far was easy thanks to the excellent tools the Erlang ecosystem
+has to offer. Presumably it wouldn't be much harder to create an entirely new
+language using the same tools, so let's see how that might work.
+
+```js
+module clauses
+
+public speak {
+  def (1) { "one" }
+  def (2) { "two" }
+  def (3) { "three" }
+  def (_) { "eh?" }
+}
+```
+
+Here's my language. It's called Gleam.
+
+I believe that in order for a language to be worthwhile it needs to have a
+clear idea of the problem it's trying to solve, and the problem Gleam is
+trying to solve is the problem of there not being enough curly braces in the
+Erlang world. Without curly braces we'll never be able to convince people to
+come over from C++, Java, and Javascript.
