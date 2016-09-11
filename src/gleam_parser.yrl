@@ -1,39 +1,35 @@
 Nonterminals
-document literal tuple list elements call module_def
+literal tuple list elements call module_declaration
 expression expressions statement statements assignment variable
-function fn_block fn_statements fn_statement clause_block.
+function fn_block fn_statements fn_clause.
 
 Terminals
 '[' ']' '(' ')' '{' '}' ',' '.' '='
 public private def
 identifier num atom string module.
 
-Rootsymbol document.
+Rootsymbol statements.
 
 Expect 1.
-
-document -> statements : '$1'.
 
 statements -> statement            : ['$1'].
 statements -> statement statements : ['$1'|'$2'].
 
-statement -> module_def : '$1'.
-statement -> expression : '$1'.
-statement -> function   : '$1'.
+statement -> module_declaration : '$1'.
+statement -> expression         : '$1'.
+statement -> function           : '$1'.
 
 assignment -> identifier '=' expression
-              : {'=', m('$1'), [v('$1'), '$3']}.
+            : {'=', m('$1'), [v('$1'), '$3']}.
 
-module_def -> module identifier
-              : {module, m('$2'), v('$2')}.
+module_declaration -> module identifier : {module, m('$2'), v('$2')}.
 
 call -> identifier tuple
-        : {v('$1'), m('$1'), tuple_to_list('$2')}.
+      : {v('$1'), m('$1'), tuple_to_list('$2')}.
 call -> identifier '.' identifier tuple
-        : {'.', m('$1'), [v('$1'), v('$3')], tuple_to_list('$4')}.
+      : {'.', m('$1'), [v('$1'), v('$3')], tuple_to_list('$4')}.
 
-variable -> identifier
-            : {variable, m('$1'), v('$1')}.
+variable -> identifier : {variable, m('$1'), v('$1')}.
 
 function -> public identifier fn_block
           : {function, m('$1'), public, v('$2'), '$3'}.
@@ -42,13 +38,11 @@ function -> private identifier fn_block
 
 fn_block -> '{' fn_statements '}' : '$2'.
 
-fn_statements -> fn_statement               : ['$1'].
-fn_statements -> fn_statement fn_statements : ['$1'|'$2'].
+fn_statements -> fn_clause               : ['$1'].
+fn_statements -> fn_clause fn_statements : ['$1'|'$2'].
 
-fn_statement -> def tuple clause_block
-                : {def, m('$1'), tuple_to_list('$2'), '$3'}.
-
-clause_block -> '{' expressions '}' : '$2'.
+fn_clause -> def tuple '{' expressions '}'
+           : {def, m('$1'), tuple_to_list('$2'), '$4'}.
 
 list -> '[' ']'          : [].
 list -> '[' elements ']' : '$2'.

@@ -1097,12 +1097,11 @@ use of the magic `TokenChars` variable.
 
 After that comes the more complex tokens that use patterns from the
 `Definitions` section. The value of each of these tokens comes from calling a
-helper function on the matched characters, a function that will be defined in
-the `Erlang code` section. The `int` function converts the `Int` string to an
-an integer, the `flt` function converts to a float, and for identifier and
-atom I convert the value to an atom. For strings I get the contents of the
-string by dropping the quotes and removing any slashes used for escaping
-characters.
+helper function on the matched characters. The `int` function converts the
+`Int` string to an an integer, the `flt` function converts to a float, and for
+identifier and atom I convert the value to an atom. For strings I get the
+contents of the string by dropping the quotes and removing any slashes used
+for escaping characters.
 
 Also note how the `Int` pattern and the `Float` patterns are used to build a
 token of type `number`. Leex allows multiple rules to construct the same
@@ -1112,3 +1111,125 @@ Lastly there's the rule for the `whitespace` definition pattern. Instead of
 constructing a token the `skip_token` atom is used to signify that text
 matching this pattern is to be discarded. Whitespace has no syntactic meaning
 in Gleam, so it can be safely ignored.
+
+The `Erlang code` section contains helper functions used here. They're not
+very interesting, so I'll leave it up to your to imagine how they are defined.
+
+That's the basic tokenizer done. Later I'll probably want to extend it with
+mathematical operators and a pipe operator and such, but for now I can move
+onto the Yecc parser.
+
+```js
+module stack
+
+public new {
+  def () { [] }
+}
+
+public push {
+  def (stack, item) { list.prepend(stack, item) }
+}
+
+public pop {
+  def ([])    { (:error, :empty_stack) }
+  def (stack) { (:ok, hd(stack), tl(stack)) }
+}
+
+public peak {
+  def ([])    { (:error, :empty_stack) }
+  def (stack) { (:ok, hd(stack)) }
+}
+```
+
+Here's a Gleam module called "stack". It's made up of multiple statements, the
+module declaration at the top and each of the function definitions are
+statements.
+
+```erlang
+Rootsymbol statements.
+
+statements -> statement            : ['$1'].
+statements -> statement statements : ['$1'|'$2'].
+
+statement -> module_declaration : '$1'.
+statement -> function           : '$1'.
+```
+
+As modules are statements it seems like statements would make a good
+Rootsymbol. Statements is defined as one or more statement.
+
+A statement is either a module_declaration, or a function.
+
+```erlang
+% module stack
+module_declaration -> module identifier
+  : #module_declaration{ name = element(2, '$2') }.
+```
+```erlang
+-record(module_declaration, { name = {} }).
+```
+
+Module declarations are simple. They are always the `module` keyword, followed
+by an identifier. Both of these are tokens, making them terminal symbols, and
+leaf nodes of the AST.
+
+In order to making working with nodes a little easier I've use Erlang records
+rather than raw tuples. The module_declaration record has a name field, in
+which I place the value of the identifier.
+
+```js
+public peak {
+  def ([])    { (:error, :empty_stack) }
+  def (stack) { (:ok, hd(stack)) }
+}
+```
+```erlang
+function -> public identifier fn_block
+  : #function
+    { publicity = public
+    , name = element(2, '$2')
+    , clauses = '$3'
+    }
+function -> private identifier fn_block
+  : #function
+    { publicity = private
+    , name = element(2, '$2')
+    , clauses = '$3'#fn_block.clauses
+    }
+```
+
+A function is either the public or private keyword, followed by an identifier
+and a function block. From this we record the function publicity, name, and
+the clauses.
+
+```erlang
+fn_block -> '{' fn_statements '}' : '$2'.
+
+fn_statements -> fn_clause
+  : #fn_block
+    { clauses = ['$1']
+    }.
+fn_statements -> fn_clause fn_statements
+  : #fn_block
+    { clauses = ['$1'|'$2'#fn_block.clauses]
+    }.
+```
+
+A function block is a pair of curly braces around function statements.
+
+Function statements are clause, or a clause followed by more function
+statements. For both of these I collect the values into the function block
+record that was used to get the clauses for the function record.
+
+Later I imagine there would also be other function statement types, such as
+docstrings or unit tests, this is why I've used a record here over a plain
+list of clauses.
+
+```erlang
+fn_clause -> def tuple clause_block
+  : #fn_clause
+    { arity = length('$2')
+    , arguments = '$2'
+    , body = '$3'
+    }.
+```
