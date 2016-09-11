@@ -1189,13 +1189,13 @@ function -> public identifier fn_block
     { publicity = public
     , name = element(2, '$2')
     , clauses = '$3'
-    }
+    }.
 function -> private identifier fn_block
   : #function
     { publicity = private
     , name = element(2, '$2')
     , clauses = '$3'#fn_block.clauses
-    }
+    }.
 ```
 
 A function is either the public or private keyword, followed by an identifier
@@ -1233,3 +1233,16 @@ fn_clause -> def tuple clause_block
     , body = '$3'
     }.
 ```
+
+<!--
+  Every node in the AST will be a struct.
+  This makes it easier to pattern match on nodes.
+
+  I can compile to Elixir AST here, as we have done previously.
+  There is an alternative- compile to Core Erlang AST.
+
+  Unlike Elixir AST, Core Erlang AST does not have a fixed specification. It
+  may change between OTP versions.
+  The `cerl` module provides a series of functions for constructing and
+  manipulating Core Erlang AST, so we can get around this problem.
+  -->
