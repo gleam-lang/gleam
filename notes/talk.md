@@ -1041,3 +1041,74 @@ clear idea of the problem it's trying to solve, and the problem Gleam is
 trying to solve is the problem of there not being enough curly braces in the
 Erlang world. Without curly braces we'll never be able to convince people to
 come over from C++, Java, and Javascript.
+
+Right. On to the tokenizer. I've used Leex again here.
+
+```erlang
+Definitions.
+
+Float   = [0-9]+\.[0-9]+
+Int     = [0-9]+
+String  = "([^\\""]|\\.)*"
+Ident   = [a-z_][a-zA-Z0-9!\?_]*
+Atom    = \:[a-zA-Z0-9!\?_-]+
+WS      = [\n\s\r\t]
+```
+
+I've only a few definitions. A float and an int for numbers, a string, an
+identifier, an atom, an atom with quotes, and lastly whitespace.
+
+String use double quotes as delimiters.
+
+Identifiers are the names of functions or modules, and like Elixir they can
+include bangs and questionmarks. I've also borrowed the atom syntax, they
+start with a colon.
+
+On to the tokenizer rules.
+
+```erlang
+Rules.
+
+module     : {token, {module,     TokenChars}}.
+private    : {token, {private,    TokenChars}}.
+public     : {token, {public,     TokenChars}}.
+def        : {token, {def,        TokenChars}}.
+\(         : {token, {'(',        TokenChars}}.
+\)         : {token, {')',        TokenChars}}.
+\{         : {token, {'{',        TokenChars}}.
+\}         : {token, {'}',        TokenChars}}.
+\[         : {token, {'[',        TokenChars}}.
+\]         : {token, {']',        TokenChars}}.
+\.         : {token, {'.',        TokenChars}}.
+\,         : {token, {',',        TokenChars}}.
+\=         : {token, {'=',        TokenChars}}.
+{Int}      : {token, {number,     int(TokenChars)}}.
+{Float}    : {token, {number,     flt(TokenChars)}}.
+{String}   : {token, {string,     strValue(TokenChars)}}.
+{Ident}    : {token, {identifier, list_to_atom(TokenChars)}}.
+{Atom}     : {token, {atom,       atomValue(TokenChars)}}.
+{WS}       : skip_token.
+```
+
+The first rules are the keywords `module`, `private`, `public`, and `def`,
+then there are the various types of delimeters, a dot, a comma, and equals.
+The value of these tokens is just their sting literals, as specified by the
+use of the magic `TokenChars` variable.
+
+After that comes the more complex tokens that use patterns from the
+`Definitions` section. The value of each of these tokens comes from calling a
+helper function on the matched characters, a function that will be defined in
+the `Erlang code` section. The `int` function converts the `Int` string to an
+an integer, the `flt` function converts to a float, and for identifier and
+atom I convert the value to an atom. For strings I get the contents of the
+string by dropping the quotes and removing any slashes used for escaping
+characters.
+
+Also note how the `Int` pattern and the `Float` patterns are used to build a
+token of type `number`. Leex allows multiple rules to construct the same
+token, so we can have variations like this.
+
+Lastly there's the rule for the `whitespace` definition pattern. Instead of
+constructing a token the `skip_token` atom is used to signify that text
+matching this pattern is to be discarded. Whitespace has no syntactic meaning
+in Gleam, so it can be safely ignored.
