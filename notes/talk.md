@@ -1023,7 +1023,7 @@ Getting this far was easy thanks to the excellent tools the Erlang ecosystem
 has to offer. Presumably it wouldn't be much harder to create an entirely new
 language using the same tools, so let's see how that might work.
 
-```js
+```ruby
 module clauses
 
 public speak {
@@ -1119,7 +1119,7 @@ That's the basic tokenizer done. Later I'll probably want to extend it with
 mathematical operators and a pipe operator and such, but for now I can move
 onto the Yecc parser.
 
-```js
+```ruby
 module stack
 
 public new {
@@ -1177,7 +1177,7 @@ In order to making working with nodes a little easier I've use Erlang records
 rather than raw tuples. The module_declaration record has a name field, in
 which I place the value of the identifier.
 
-```js
+```ruby
 public peak {
   def ([])    { (:error, :empty_stack) }
   def (stack) { (:ok, hd(stack)) }
@@ -1225,6 +1225,9 @@ Later I imagine there would also be other function statement types, such as
 docstrings or unit tests, this is why I've used a record here over a plain
 list of clauses.
 
+```ruby
+def (stack) { (:ok, hd(stack)) }
+```
 ```erlang
 fn_clause -> def tuple clause_block
   : #fn_clause
@@ -1234,15 +1237,86 @@ fn_clause -> def tuple clause_block
     }.
 ```
 
-<!--
-  Every node in the AST will be a struct.
-  This makes it easier to pattern match on nodes.
+Next the function clause. It's the `def` keyword followed by an arguments
+tuple and a clause block. Again I'm constructing a record, this one has fields
+for arity, arguments, and the body.
 
-  I can compile to Elixir AST here, as we have done previously.
-  There is an alternative- compile to Core Erlang AST.
+And this continues for each parser symbol until I've defined a rule every one.
+
+```erlang
+module_declaration -> #module_declaration{}
+funtion            -> #function{}
+fn_clause          -> #fn_clause{}
+assignment         -> #assignment{}
+variable           -> #variable{}
+number             -> #number{}
+string             -> #string{}
+tuple              -> #tuple{}
+list               -> #list{}
+atom               -> #atom{}
+call               -> #call{}
+```
+
+There's all the nodes that make up the Gleam AST. Each one is a record. Not
+only does this make it easier to extract values from them, it also provides a
+method of pattern matching on each node, which will come in handy later.
+
+The next part of this simple compiler is to convert the Gleam abstract syntax
+tree into a format and can be readily fed into the virtual machine. With the
+templating language this format was Elixir AST, which would work again here.
+
+There are also other alternatives, after all, there are other languages on the
+BEAM and they do not require the Elixir compiler to function. Since we've come
+all this way using just the OTP standard library let's explore one of the
+alternatives, Core Erlang.
+
+```erlang
+f(X) ->
+  case X of
+    {foo, A} -> B = g(A);
+    {bar, A} -> B = h(A)
+  end,
+  {A, B}.
+```
+```erlang
+'f'/1 = fun (X) ->
+  let <X1, X2> =
+    case X of
+      {foo, A} when 'true' ->
+        let B = apply 'g'/1(A)
+        in <A, B>
+      {bar, A} when 'true' ->
+        let B = apply 'h'/1(A)
+        in <A, B>
+    end,
+  in {X1, X2}
+```
+
+Core Erlang is an intermediary language used by the Erlang compiler, meaning
+that regular Erlang code is compiled to Core Erlang code, before being
+optimised and converted into the bytecode that the virtual machine actually
+runs.
+
+Core Erlang has a textual representation which can be seen here. These code
+snippets are equivilent. The first is Erlang, the second is Core Erlang, which
+is much more verbose. You could quite happily write all your Erlang code like
+this, and providing you pass the right flags to the compiler it will compile
+just the same.
+
+<!--
+  Core Erlang also has an AST, which is more interesting to us.
 
   Unlike Elixir AST, Core Erlang AST does not have a fixed specification. It
   may change between OTP versions.
   The `cerl` module provides a series of functions for constructing and
   manipulating Core Erlang AST, so we can get around this problem.
   -->
+
+```erlang
+codegen(Node = #list{}) ->
+  % Generate list node code...
+codegen(Node = #string{}) ->
+  % Generate string node code...
+```
+
+
