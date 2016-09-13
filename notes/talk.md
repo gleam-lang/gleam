@@ -1303,20 +1303,83 @@ is much more verbose. You could quite happily write all your Erlang code like
 this, and providing you pass the right flags to the compiler it will compile
 just the same.
 
-<!--
-  Core Erlang also has an AST, which is more interesting to us.
+In addition to the textual form it also has an abstract syntax tree consisting
+of regular Erlang data structures, primarily records.
 
-  Unlike Elixir AST, Core Erlang AST does not have a fixed specification. It
-  may change between OTP versions.
-  The `cerl` module provides a series of functions for constructing and
-  manipulating Core Erlang AST, so we can get around this problem.
-  -->
+The official documentation states that the Core Erlang AST is subject to
+change without notice, so we cannot manually construct the data structures as
+we would with Elixir, where the AST is clearly defined.
+
+That is unless we want to run the risk of having to rewrite this part of the
+compiler with each new OTP release, which I imagine would get old very
+quickly.
 
 ```erlang
-codegen(Node = #list{}) ->
-  % Generate list node code...
-codegen(Node = #string{}) ->
-  % Generate string node code...
+cerl:c_atom(ok).     % => Core Erlang atom 'ok'
 ```
 
+If the AST format is not specified how can it be generated? The answer is to
+use the `cerl` Erlang module, which exposes functions for the
+composing and decomposing of this AST.
 
+The decomposition functions could possibly be useful for reflection in a
+fashion similar to how the Elixir linter worked, but for the job at hand I'm
+interested in the functions for constructing AST.
+
+Here we can see some of the simpler constructor functions being used.
+The first is `c_atom`, which takes an atom, and returns the Core Erlang AST
+that represents an atom. What exactly that looks like doesn't matter, so I've
+omitted it.
+
+```erlang
+c_alias/2            c_let/3
+c_apply/2            c_letrec/2
+c_atom/1             c_map/1
+c_binary/1           c_map_pair/2
+c_bitstr/3           c_map_pair_exact/2
+c_bitstr/4           c_map_pattern/1
+c_bitstr/5           c_module/3
+c_call/3             c_module/4
+c_case/2             c_nil/0
+c_catch/1            c_primop/2
+c_char/1             c_receive/1
+c_clause/2           c_receive/3
+c_clause/3           c_seq/2
+c_cons/2             c_string/1
+c_cons_skel/2        c_try/5
+c_float/1            c_tuple/1
+c_fname/2            c_tuple_skel/1
+c_fun/2              c_values/1
+c_int/1              c_var/1
+```
+
+There are similar functions for all the other nodes. With these I can convert
+the Gleam AST to the Core Erlang AST by traversing the tree and calling the
+appropriate constructor for that node.
+
+This is where the use of records comes in handy- I can create a function that
+takes a Gleam node and returns Core Erlang by defining a function clause for
+each record.
+
+```erlang
+codegen(Node = #string{}) ->
+  cerl:c_string(Node#string.value).
+```
+
+Here's the clause for the string record. It calls `c_string` on the value of
+the string record.
+
+```erlang
+codegen(#string{ value = Value }) ->
+  cerl:c_string(Value);
+
+codegen(#number{ value = Value }) when is_integer(Value) ->
+  cerl:c_integer(Value);
+
+codegen(#number{ value = Value }) when is_float(Value) ->
+  cerl:c_float(Value).
+```
+
+Here's the clauses for numbers. The Gleam AST doesn't match up perfectly with
+the Core Erlang one, so I've used a guard to differentiate between ints and
+floats.
