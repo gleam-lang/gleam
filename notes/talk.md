@@ -1303,20 +1303,30 @@ is much more verbose. You could quite happily write all your Erlang code like
 this, and providing you pass the right flags to the compiler it will compile
 just the same.
 
+<!-- Explain the Core Erlang syntax a bit
+     - Everything is explicit
+     - Functions have to assigned to a name
+     - Guard clauses are not optional
+     - function calling requires the `apply` keyword
+ -->
+
 In addition to the textual form it also has an abstract syntax tree consisting
 of regular Erlang data structures, primarily records.
 
 The official documentation states that the Core Erlang AST is subject to
 change without notice, so we cannot manually construct the data structures as
-we would with Elixir, where the AST is clearly defined.
+we would with Elixir, even though we could do so by looking at what the
+structure currently is.
 
-That is unless we want to run the risk of having to rewrite this part of the
-compiler with each new OTP release, which I imagine would get old very
-quickly.
+Unless we want to run the risk of having to rewrite this part of the
+compiler with each new OTP release, we need to find another way.
 
 ```erlang
-cerl:c_atom(ok).     % => Core Erlang atom 'ok'
+cerl:c_atom(ok). % => Core Erlang atom 'ok'
 ```
+<!-- show data structure on slide.
+     Explain this is not to be replied upon.
+  -->
 
 If the AST format is not specified how can it be generated? The answer is to
 use the `cerl` Erlang module, which exposes functions for the
@@ -1326,10 +1336,13 @@ The decomposition functions could possibly be useful for reflection in a
 fashion similar to how the Elixir linter worked, but for the job at hand I'm
 interested in the functions for constructing AST.
 
-Here we can see some of the simpler constructor functions being used.
-The first is `c_atom`, which takes an atom, and returns the Core Erlang AST
-that represents an atom. What exactly that looks like doesn't matter, so I've
-omitted it.
+Here we can see the `c_atom` constructor being used.
+It is a function takes an atom and returns the Core Erlang node that
+represents an atom. What exactly that looks like doesn't matter, as it may
+change in a later OTP version. The only thing that matters is that we trust
+that this function will return the correct node data structure, whatever that
+may be.
+
 
 ```erlang
 c_alias/2            c_let/3
@@ -1357,17 +1370,18 @@ There are similar functions for all the other nodes. With these I can convert
 the Gleam AST to the Core Erlang AST by traversing the tree and calling the
 appropriate constructor for that node.
 
-This is where the use of records comes in handy- I can create a function that
-takes a Gleam node and returns Core Erlang by defining a function clause for
-each record.
+This is where the Gleam parser's use of records comes in handy- I can create a
+function that takes a Gleam node and returns Core Erlang by defining a
+function clause for each record.
 
 ```erlang
 codegen(Node = #string{}) ->
   cerl:c_string(Node#string.value).
 ```
 
-Here's the clause for the string record. It calls `c_string` on the value of
-the string record.
+For example, here's the clause for the string record, and thus the string
+node. It just calls the `c_string` constructor on the value of the string
+record.
 
 ```erlang
 codegen(#string{ value = Value }) ->
@@ -1382,4 +1396,77 @@ codegen(#number{ value = Value }) when is_float(Value) ->
 
 Here's the clauses for numbers. The Gleam AST doesn't match up perfectly with
 the Core Erlang one, so I've used a guard to differentiate between ints and
-floats.
+floats. After that it's just the matter of calling the correct constructor for
+each type.
+
+```erlang
+#tuple
+{ elements = [ok, "Hello"]
+}
+```
+```erlang
+codegen(#tuple{ elements = Elements }) ->
+  Cerls = lists:map(fun codegen/1, Elements),
+  cerl:c_tuple(Cerls).
+```
+
+<!--
+  Tuples are more complex
+  They are not leaf nodes in the AST, they have children
+  They comprise multiple other nodes into one
+
+  *** Example of a tuple and the nodes it contains
+
+  The AST of a tuple has children, it contains the nodes that make up its
+  children.
+
+
+  As types get more complex it can be difficult to determine exactly how to
+  use the constructor functions.
+  - Read the docs
+  - Read the dialyzer type annotations
+  - Read the cerl module source code
+  - Read the source code for languages that use cerl (not Elixir! it does
+    something else)
+  -->
+
+
+<!--
+  *** Show module node construction.
+
+  ** explain module clause
+
+  ** Explain how to compiler Core Erlang and load the generated BEAM
+
+  And with that we have all the parts of a compiler.
+
+  *** Slide showing all the compiler functions plumbed together
+
+  Function A is piped into func B, func B is...
+    And then once loaded we have a module running on the BEAM that was
+    written in a brand new language!
+
+
+  ****
+
+  If you want to make a language it's easy. We have these tools A, B, C.
+
+  A does this
+  B does this
+  C does this
+  D does this
+
+  They can even be used by themselves for projects such as X, Y, Z.
+
+  I've really enjoyed working in this space, and I think it would be really
+  exciting to see more projects making use of what OTP gives us here.
+
+  So, go out and Build Your Own Elixir!
+
+  Thanks. xxx
+
+  *** Slide saying thank you everyone has worked on Erlang, Elixir, LFE,
+  MLFE, Joxa, Rubocop, Dogma, Slim, and EEx.
+
+  Love you mum
+  -->
