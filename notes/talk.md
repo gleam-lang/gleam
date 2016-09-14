@@ -1504,38 +1504,100 @@ When I still had problems after that I found a good trick was to turn to the
 source code of a BEAM language that uses this module, such as LFE, MLFE,
 and Joxa, and seeing how they use it.
 
-<!--
-  ** Explain how to compiler Core Erlang and load the generated BEAM
+```erlang
+-module(gleam).
+-export([load_file]).
 
-  And with that we have all the parts of a compiler.
+load_file(Path, ModuleName) ->
+  {ok, Binary} = file:read_file(Path),
+  Source = unicode:characters_to_list(Binary).
+  {ok, Tokens, _} = gleam_tokenizer:string(Source),
+  {ok, AST} = gleam_parser:parse(Tokens),
+  {ok, Cerl} = gleam_codegen:codegen(AST),
+  {ok, _, Beam} = compile:forms(Cerl, [report, verbose, from_core]),
+  {module, Name} = code:load_binary(Name, Path, Beam),
+  ok.
+```
 
-  *** Slide showing all the compiler functions plumbed together
+Right. With the codegen function finished I've all the basic parts of a BEAM
+language compiler. The only this that is left is to stick them all together.
 
-  Function A is piped into func B, func B is...
-    And then once loaded we have a module running on the BEAM that was
-    written in a brand new language!
+Here is the `gleam_compiler` module. It takes a path to a file of Gleam source
+code.
 
+It reads the file and converts the resulting unicode binary into an Erlang
+string.
 
-  ****
+The string is then fed into the tokenizer, which breaks the source code down
+into a list of it's atomic parts, such as strings, numbers, and punctuation.
 
-  If you want to make a language it's easy. We have these tools A, B, C.
+The tokens are fed into the parser which constructs an abstract syntax tree
+from them. This tree contains the syntactic information of the code. Lists
+contain elements, functions have clauses, and so on.
 
-  A does this
-  B does this
-  C does this
-  D does this
+This tree is then fed into the codegen function which converts it into a
+format that can be loaded into the BEAM. Here that format is the abstract
+syntax tree of Core Erlang, the intermediary language that Erlang compiles to.
 
-  They can even be used by themselves for projects such as X, Y, Z.
+That's all the Gleam specific code done. The Core Erlang is then compiled into
+BEAM bytecode using the `compile:forms` function, and then loaded into the
+virtual machine using `code:load_binary`.
 
-  I've really enjoyed working in this space, and I think it would be really
-  exciting to see more projects making use of what OTP gives us here.
+```ruby
+# src/first_module.gleam
 
-  So, go out and Build Your Own Elixir!
+module first_module
 
-  Thanks. xxx
+public hello {
+  def () { "Hello, world!" }
+}
+```
+```erlang
+gleam:load_file("src/first_module.gleam", first_module).
+% => ok
 
-  *** Slide saying thank you everyone has worked on Erlang, Elixir, LFE,
-  MLFE, Joxa, Rubocop, Dogma, Slim, and EEx.
+first_module:hello().
+% => "Hello, world!"
+```
 
-  Love you mum
-  -->
+And with that there's a new language running on the BEAM!
+
+If I call this function with a path to this "first_module" Gleam file the code
+is loaded, and I can call the function from Erlang, returning "Hello, world!".
+
+I can't explain how unreasonably happy I was when I successfully compiled my
+first module. It's such a small thing, but it was a really fun journey.
+
+The thing that really struck me was that with Erlang and Elixir this stuff is
+really easy, we are supplied with a range of excellent tools to use.
+
+Leex and Yecc give us an easy out-of-the-box way of doing tokenization and
+parsing of code, and with Elixir macros and Core Erlang we have an friendly
+way to generate code that can be loaded into the virtual machine. Coupled with
+Elixir and Erlang's excellent pattern matching and data handling these tasks
+become fun and easy.
+
+I think it would be really exciting to see more projects making use of what
+ecosystem gives us here.
+
+I'd love to see more static analysis tools, and a code formatter in the style
+of gofmt or elmformat. It could also be interesting to a language with a
+powerful ML style type system on the BEAM. Some work has been done here with
+the MLFE project, it'd be great to see it develop into something.
+
+I've really enjoyed working in this space. If you think you could also find it
+fun I encourage you to go and build your own Elixir. Perhaps you could create
+the next big thing!
+
+Thank you very much.
+
+```
+Thank you everyone has worked on Erlang, Elixir, LFE, MLFE, Joxa, Rubocop,
+Dogma, Slim, and EEx.
+
+                                     ---
+
+                                Louis Pilfold
+                                @louispilfold
+                               github.com/lpil
+```
