@@ -1146,7 +1146,9 @@ module declaration at the top and each of the function definitions are
 statements.
 
 ```erlang
-Rootsymbol statements.
+Rootsymbol module.
+
+module -> statements : '$1'.
 
 statements -> statement            : ['$1'].
 statements -> statement statements : ['$1'|'$2'].
@@ -1155,8 +1157,9 @@ statement -> module_declaration : '$1'.
 statement -> function           : '$1'.
 ```
 
-As modules are statements it seems like statements would make a good
-Rootsymbol. Statements is defined as one or more statement.
+The rootsymbol is a module. A module consists of a series of statements it
+seems like statements would make a good Rootsymbol. Statements is defined as
+one or more statement.
 
 A statement is either a module_declaration, or a function.
 
@@ -1244,6 +1247,7 @@ for arity, arguments, and the body.
 And this continues for each parser symbol until I've defined a rule every one.
 
 ```erlang
+module             -> #module{}
 module_declaration -> #module_declaration{}
 funtion            -> #function{}
 fn_clause          -> #fn_clause{}
@@ -1399,9 +1403,22 @@ the Core Erlang one, so I've used a guard to differentiate between ints and
 floats. After that it's just the matter of calling the correct constructor for
 each type.
 
+Now string and number are both leaf nodes in the syntax tree, meaning they are
+the smallest atomic components of the tree. They have no children.
+
+Branch nodes are nodes that have children, they consist of multiple nodes
+joined into one. Examples would be a list or a tuple that contains multiple
+elements, or a function which has multiple clauses.
+
+Converting these nodes is more more complex as not only do they themselves
+need to be converted to Core Erlang, but their children need to be converted
+as well.
+
 ```erlang
 #tuple
-{ elements = [ok, "Hello"]
+{ elements = [ #atom{ value = ok }
+             , #string{ value = "Hello" }
+             ]
 }
 ```
 ```erlang
@@ -1410,32 +1427,84 @@ codegen(#tuple{ elements = Elements }) ->
   cerl:c_tuple(Cerls).
 ```
 
+Here is a tuple node. It has child nodes, the elements the tuple contains.
+This tuple has a length of 2 that contained the atom "ok" and the string
+"hello" the child nodes would be the atom and the string nodes.
+
+In Gleam this tuple node is a record with an elements property, which is a list
+containing the list and the string.
+
+The codegen clause that handles converting tuples first maps the codegen
+function over the elements list to convert the contents to Core Erlang. Once
+the children are converted the `c_tuple` function is called on the new
+elements to create a Core Erlang tuple.
+
+Here the children are leaf nodes, but what if the children were also branch
+nodes? For example, what if the tuple contained another tuple, and that tuple
+contained a list, and on?
+
+Each clause that handles a branch node calls the codegen function on
+each of its children. Because of this when the codegen function is called on
+the root node of the tree, which is a module, the function is recursively
+called on the modules children, and their children, and so on until the entire
+tree has been converted.
+
+```erlang
+#module
+{ name = my_module
+, functions = [ #function{}, #function{}, #function{} ]
+}
+```
+```erlang
+codegen(#module{ name = Name, functions = Functions }) ->
+  CerlName = cerl:c_atom(Name),
+  CerlExports = gen_exports(Functions),
+  CerlFuncs = lists:map(fun codegen/1, Functions),
+  cerl:c_module(CerlName, CerlExports, CerlFuncs).
+```
+
+Jumping from the bottom of the tree to the top, here is the module record.
+It's quite considerably more complex than the previous nodes. The c_erl
+constructor takes 3 arguments. The module name, a list of functions to export,
+and a list of the module functions themselves. And of course, each one of
+these needs to be given in their Core Erlang form.
+
+The name is easy- it's just an atom, so `c_atom` is called on the name.
+
+For forming the list of exports I delegate to a `gen_exports` function. This
+just filters the list of functions for those that are public, and then
+constructs a Core Erlang export for each one.
+
+Lastly the functions are transformed into Core Erlang by mapping the `codegen`
+over them, which in turn recursively transforms their children, and their
+children, until the leaf nodes are reached. Now we have a full Core Erlang
+abstract syntax tree.
+
+
+```erlang
+%% @spec c_module(Name::cerl(), Exports, Definitions) -> cerl()
+%%
+%%     Exports = [cerl()]
+%%     Definitions = [{cerl(), cerl()}]
+%%
+%% @equiv c_module(Name, Exports, [], Definitions)
+
+-spec c_module(cerl(), [cerl()], [{cerl(), cerl()}]) -> c_module().
+
+c_module(Name, Exports, Es) ->
+    % ...
+```
+
+I found that with more complex nodes it's not immediately obvious how to use
+the constructor function. If you're going to play with `cerl` I recommend
+downloading a copy of the OTP source code and reading the documentation in the
+module itself, and also paying close attention to the type specifications.
+
+When I still had problems after that I found a good trick was to turn to the
+source code of a BEAM language that uses this module, such as LFE, MLFE,
+and Joxa, and seeing how they use it.
+
 <!--
-  Tuples are more complex
-  They are not leaf nodes in the AST, they have children
-  They comprise multiple other nodes into one
-
-  *** Example of a tuple and the nodes it contains
-
-  The AST of a tuple has children, it contains the nodes that make up its
-  children.
-
-
-  As types get more complex it can be difficult to determine exactly how to
-  use the constructor functions.
-  - Read the docs
-  - Read the dialyzer type annotations
-  - Read the cerl module source code
-  - Read the source code for languages that use cerl (not Elixir! it does
-    something else)
-  -->
-
-
-<!--
-  *** Show module node construction.
-
-  ** explain module clause
-
   ** Explain how to compiler Core Erlang and load the generated BEAM
 
   And with that we have all the parts of a compiler.
