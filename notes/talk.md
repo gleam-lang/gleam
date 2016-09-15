@@ -6,6 +6,7 @@ and now I'd like to share with you some of the things I learnt along that
 journey. Specifically I'd like to talk about linters, parsers, compilers and
 the BEAM.
 
+<!--
 Prior to discovering Elixir I had been enthusiastically exploring Haskell, but
 professionally I was writing Ruby. Perhaps due to the combination of the
 functional style of problem solving and the Ruby-esc community Elixir
@@ -13,22 +14,22 @@ instantly resonated with me and quickly became the language I wanted to write
 every day. With Haskell I was solving puzzles and coding challenges, but with
 Elixir I found myself wanting to be constructive and productive, I wanted to
 build tools.
+-->
 
 Back in the Ruby world I had developed a soft spot for static analysis
 programs. One such tool was the style linter Rubocop, which is a program that
-inspects your codebase for style errors and common mistakes. Elixir being a
-young language we didn't an equivilent tool, so I decided to take a shot at
-making one myself.
+inspects your codebase for style errors and common mistakes and notified you
+about them. Elixir being a young language we didn't an equivilent tool, so I
+decided to take a shot at making one myself.
 
 ```
 Source code -> Errors
 ```
 
 Linters are effectvely simple functions that take source code files as an
-input, and return a number of errors to the user, so I figure it shouldn't be
-too hard. I didn't know exactly how they worked so I looked at source for
-Rubocop and a Javascript linter called JSCS and discovered that if you look a
-little closer they look like this.
+input, and return a number of errors to the user. I didn't know exactly how
+they worked so I looked at source for Rubocop and a Javascript linter called
+JSCS and discovered that if you look a little closer they look like this.
 
 
 ```
@@ -97,6 +98,8 @@ This data in Elixir terms would look like this. Each token is a tuple where the
 first element is the name of the token type as an atom, and the last element
 is the value of the token, so the atom "add", or the number 2.
 
+
+<!-- TODO: why was this complex in Ruby and JS? Awkward Elixir wording. -->
 In the Ruby and Javascript linters I looked at the Tokenization process was
 quite long and complex, but as often the case I found Elixir did all the hard
 work for me. As the Elixir compiler is written in Erlang we can reuse the
@@ -112,12 +115,13 @@ iex(3)> :elixir_tokenizer.tokenize '1 |> add 2 ', [], []
   {:number, {[], 10, 11}, 2}]}
 ```
 
+<!-- TODO: This doesn't follow on cleanly from previous para -->
 It's just a "tokenize" function in an Erlang module named "elixir_tokenizer"
 which when given a char list of source code it gives us back tokens. These
 tokens also contain a middle value of some metadata which I'm ignoring for
 now.
 
-That was easy. So how might these tokens be used in a linter?
+So getting the tokens is easy.. So how might they be used them in a linter?
 
 ```elixir
 IO.puts("Hello"); # Bad
@@ -126,7 +130,7 @@ IO.puts("World")  # Good
 
 One simple thing an Elixir linter might do is forbid the use of semicolons to
 separate expressions. Each expression should instead be seperated by newlines,
-as is more common.
+as is more idiomatic..
 
 ```elixir
 def semicolon?({:";", _, _}),
@@ -143,39 +147,45 @@ end
 
 To make the linter detect violations of this rule I first defined a function
 called "semicolons?" (question mark). It returns true if passed a semicolon
-token, and false otherwise, which it detects by pattern matching on the first
-element of the token tuple, the type atom.
+token, and false if it is passed anything else. It detects the token type by
+pattern matching on the first element of the token tuple, the type atom.
 
 Now with this function I can just iterate over the list, and return an error
-if any semicolon tokens are found. Here I'm just using the `any?/2` function,
-in the linter I'd filter for the offending tokens and return a message to the
-user for each one.
+if any semicolon tokens are found. Here I'm doing this  using the `any?/2`
+function, which returns `true` if a predicate function returns `true` for any
+element in a given list.
 
-Tokens are the first data structure representation of source code that can be
-analysed, a second (more useful) data structure is an abstract syntax tree.
+So that's linting with tokens. It's simple and easy, but quite limited. In
+order to do more meaningful analysis on code another form needs to be used to
+represent the source code- an abstract syntax tree.
 
-```
-"add 1, 2"
+```ruby
+# Code
+add 1, 2
 
+# AST
 function_call add
   ├─ number 1
   └─ number 2
 ```
 
 While tokens were the linear sequence of all the elemental components of source
-code, an abstract syntax tree is a representation of the the syntactic
+code text, an abstract syntax tree is a representation of the the syntactic
 structure of the source code.
 
-For example, this piece of code in which I call a function "add" with the
-arguments 1 and 2 would result in the three pictured.
+Here's an example. On the first line is some code in which function
+"add" is called with the arguments 1 and 2. Below that is the tree this
+expression would form.
 
 The root node is a call to the function "add".
 This call node has 2 leaf node children.
 The first is the number 1, the second is the number 2.
 
-```
-"send self(), {:compare 1, 2 + 2}"
+```ruby
+# Code
+send self(), {:compare 1, 2 + 2}
 
+# AST
 function_call send
   ├─ function_call self
   └─ tuple
@@ -190,9 +200,13 @@ Here's a more complex example.
 
 At the root of the tree there's a call to the "send" function, which has 2
 arguments, and thus 2 children. The first is a call to the zero arity function
-"self", and the second is a tuple. The tuple has 3 children, the atom
-"compare", a function call, and the number 1. The function call is to the plus
-operator, and has 2 children, each the number 2.
+"self", and the second is a tuple.
+
+The tuple has 3 elements children, thus 3 children, the atom "compare", a
+function call, and the number 1.
+
+The final function call noed is to the plus operator, and has 2 children, each
+the number 2.
 
 ```elixir
 quote do
@@ -200,12 +214,6 @@ quote do
 end
 
 {:add, [], [1, 2]}
-```
-
-```
-Code.string_to_quoted "add 1, 2"
-
-{:ok, {:add, [line: 1], [1, 2]}}
 ```
 
 Getting the abstract syntax tree of Elixir code is even easier than getting
@@ -218,11 +226,13 @@ AST is a three item tuple where the first element is the name of the function
 or constructor, the second item is some metadata, and the third item is a list
 of that node's children.
 
-Here is the add function again. The root is a function call, so it's a three
-item tuple. The first element is the atom "add" as that is the name of the
-function, and it's children are the literal numbers 1 and 2 in the third
-position. This is a nice AST to work with, it's relatively readable and can be
-pattern matched on easily.
+Here is the add function again, only this time the `quote` macro is being
+used to get real Elixir AST.
+
+The root is a function call, so it's a three item tuple. The first element is
+the atom "add" as that is the name of the function, and it's children are the
+literal numbers 1 and 2 in the third position. This is a nice AST to work
+with, it's relatively readable and can be pattern matched on easily.
 
 ```elixir
 # Forbidden expression
@@ -241,10 +251,11 @@ Say I want to forbid use of the `unless` macro with an `else` block as I think
 it should be written with the `if` macro, to prevent the hard-to-read double
 negative.
 
+With an AST I can enforce this by walking the tree until I come across the
+offending pattern.
 
-With an AST I can do this by walking the tree until I come across a node with
-the atom `unless` in the first position, and then checking to see whether the
-children includes an `else` block.
+The offending pattern is a node with the atom `unless` in the first position
+and an `else` block as the second child of that node.
 
 ```elixir
 defp check_unless({:unless, _, [_, [do: _, else: _]]}, status) do
@@ -262,13 +273,15 @@ Traversing the AST is easy thanks to the `Macro.preawalk` function, which
 takes an AST, an accumulator, and a callback that will receive each node. My
 `check_unless/2` callback has two clauses. The first one pattern matches
 against offending nodes and returns the atom `:error` in place of the
-accumulator, and the other clause is a catch all for all other nodes.
+accumulator, and the other clause is a catch all for all other nodes. All
+other patterns are considered OK, so I just return the accumulator.
 
-And just like that I had a working linter. All that was left was to write more
-rules and to do some plumbing to run them and present errors to the user. I
-couldn't believe how easy Elixir had made this task for me. If you'd like to
-see what came of this project it can be found on GitHub and Hex under the name
-`dogma`.
+And with that I had the beginnings of a working linter, and I had also learnt
+about tokens, abstract syntax trees and parsing in general.
+
+All that was left was to write more rules and to do some plumbing to run them
+and present errors to the user. I couldn't believe how easy Elixir had made
+this task for me, and I had a lot of fun writing more rules afterwards.
 
 ```html
 <!DOCTYPE html>
@@ -287,7 +300,7 @@ see what came of this project it can be found on GitHub and Hex under the name
 </html>
 ```
 
-Some time late I found myself making a simple web app in Elixir. Nothing
+Some time later I found myself making a simple web app in Elixir. Nothing
 exciting, it rendered a few HTML pages to a user and let them record some
 information in a database using forms. While I was writing the HTML views I
 found myself getting a little fed up of Elixir default templating language for
@@ -295,7 +308,8 @@ making web pages. EEx is fast and easy to use, but with it I still have to
 write regular HTML, and let's be honest, HTML is not fun. It has all these
 superfluous angle brackets, a rather verbose syntax for closing tags, and you
 have to manually escape certain characters. I would rather avoid doing all
-this typing, and when working with Ruby and Javascript I can.
+this typing, especially since when working with Ruby and Javascript I already
+could.
 
 ```pug
 html
@@ -327,7 +341,7 @@ HTML Template -> Tokens -> AST -> (data -> HTML String)
 
 In order to know what HTML to generate from the lightweight syntax I need to
 yet again do some analysis on the source code, so like with the linter I need
-to generate an AST to inspect.
+to generate an AST, which I can inspect and do things with.
 
 Unlike with the linter I don't have a pre-built function for getting tokens
 from my html templates, so I'll have to build my own. After a little digging I
@@ -356,7 +370,9 @@ h3.classB
 h4(style="color: hotpink")
 h5 Elixir LDN 2016!
 ```
-
+<!-- this is confusing without examples. show an example of what tokens
+     would be generated.
+  -->
 Looking at these elements I can see a few token types.
 
 There is one for names, which are element names, class names, or ID names,
@@ -394,9 +410,9 @@ Erlang code.
 
 A Leex module is file that contains almost Erlang code and has the file
 extension `.xrl`. Within it it has three sections: "Definitions" in which the
-author uses reggular expressions to define each type of token, "Rules", in
+author uses regular expressions to define each type of token, "Rules", in
 which the author declares what data structure if any should result from each
-token pattern being matched, and "Erlang code", which contains any helper
+pattern being matched, and lastly "Erlang code", which contains any helper
 functions that might be used in the "Rules" section.
 
 ```erlang
@@ -414,13 +430,18 @@ Word   = [^\(\)\t\s\n\.#=]+
 ```
 
 Here is my Leex "Definitions" section, containing all my various types of
-tokens. Dot, Hash, EQ, OpenP and CloseP are all literals. Pattern names are
-capitalized and go on the left hand side of the match operator, patterns go on
-the right.
+tokens. Names are capitalized and go on the left hand side of the match
+operator, patterns go on the right.
+
+It has the simple literal patterns of Dot, Hash, EQ, OpenP and CloseP.
+
+After that are the more complex patterns of String, Name, whitespace, and
+Word. Regular expressions are not the easiest to read, let's go over them now.
 
 The string pattern is a pair of double quotes with zero or more characters
 between them, where the characters are any non-double quote character, or any
-character preceeded by an escaping slash.
+character preceeded by an escaping slash. This is how we get support for
+escaped quotes inside string bodies.
 
 A name is any letter, followed by any mix of letters, numbers, underscores and
 dashs.
@@ -428,7 +449,7 @@ dashs.
 Whitespace is one or more spaces and tabs, and lastly a word is one or more or
 anything else.
 
-<!-- TODO: maybe remove? -->
+<!-- TODO: reword -->
 The regex for "word" will match any text that also matches a name, it's less
 specific. As a result whichever regex is checked with first will be the one
 that matches, and because of this we need to control the order in which the
@@ -453,7 +474,7 @@ Erlang code.
 ```
 
 After the "Definitions" section comes the "Rules" section, which is the
-mapping between a token definition and a token data structure. The syntax for
+mapping between a pattern definition and a token data structure. The syntax for
 a rule is the name of a definition in curly braces on the left, an instruction
 tuple on the right, and a colon in the middle. Each rule ends with a full
 stop, like in regular Erlang.
@@ -461,7 +482,7 @@ stop, like in regular Erlang.
 The first element in the tuple is the atom "token", which is an instruction to
 output a token when this definition matches. The second item is the data
 structure to be formed for this token. Here I'm always forming 2 item tuples
-which the atom name of the token in the first position, and the matched
+with the token name as an atom in the first position, and the matched
 characters in the second position, which I access through the magic variable
 "TokenChars".
 
@@ -478,10 +499,10 @@ characters in the second position, which I access through the magic variable
 ], _}
 ```
 
-And with that I have a working tokenizer! If I place this in the `src`
-directory Mix will compile this to an Erlang module which exposes a `string/1`
-function that takes a charlist of code and returns a list of tokens. Because
-I used tuples with an atom as the first element for my tokens I get back an
+If I place this file in the `src` directory of an Elixir project Mix will
+compile this to an Erlang module which exposes a `string/1` function. This
+function takes a charlist of code and returns a list of tokens. Because I used
+two item tuples with an atom as the first element for my tokens I get back an
 Elixir keyword list like so.
 
 Here I tokenize this line of code, and back I get a name token with a value of
@@ -544,12 +565,12 @@ Now I get the value I want for string tokens. Later I'll probably also want to
 add helper functions for parsing numbers, handling escaped characters in
 strings, and so on.
 
-And with that I have a working tokenizer, so I can move onto building a super
-simple AST. In the same way that Erlang tokenization supplies a tool for
-tokenization it also supplies a tool for parsing, the Yecc module. Like Leex
-it's used by writing a module with a specific syntax and file extension, which
-it then compiles into an Erlang module. This module contains a grammar, which
-is a set of rules that describe the syntax of a language.
+Right. With a tokenizer I can move onto building an AST. In the same way that
+Erlang supplies a tool for tokenization it also supplies a tool for parsing,
+the Yecc module. Like Leex it's used by writing a module with a specific
+syntax and file extension, which it then compiles into an Erlang module. This
+module contains a grammar, which is a set of rules that describe the syntax of
+a language.
 
 
 ```erlang
@@ -599,13 +620,13 @@ Erlang code.
 ```
 
 Nonterminals are higher level symbols that are formed by composing
-nonterminals or other terminals.
+terminals, nonterminals or a mix both.
 
 The Rootsymbol is the highest level nonterminal symbol that composes all the
 others.
 
-Grammar rules are definitions about what symbols compose other symbols, and in
-what context, and Erlang code is again where we keep helper functions.
+And lastly grammar rules are definitions about what symbols compose other
+symbols, and in what context.
 
 Lets take a look at Nonterminals.
 
@@ -626,19 +647,17 @@ terminal    class: 'jumbo'
 
 An example nonterminal in my grammar would be a class literal.
 
-In my syntax this is a h1 element with the class of "jumbo".
+In the first code example is a h1 element with the class of "jumbo".
 
-It tokenizes to three nonterminal, the name "h1", a dot, and the name "jumbo".
+It tokenizes to three terminals, the name "h1", a dot, and the name "jumbo".
 
-In this context the "dot" nonterminal followed by the "name" nonterminal can be
-composed together to form the "class" terminal.
+In this context the "dot" terminal followed by the "name" terminal can be
+composed together to form the "class" nonterminal.
 
 ```erlang
 class -> dot name  % .btn
 id    -> hash name % #jumbo
 ```
-
-Lets quickly go through some nonterminals.
 
 A class is a dot then a name.
 An id is a hash then a name.
@@ -651,8 +670,9 @@ classes -> class classes % .small.tiny.timid
 Elements can have as many class literals on them as the user likes, so we need
 a classes nonterminal.
 
-classes are either a single class, or many classes. A repeating symbol is
-defined recursively, so here classes can be a class followed by classes.
+classes are either a single class, or many classes. A repeating symbol like
+this is defined recursively, so here classes can be a class, or a class
+followed by classes.
 
 ```erlang
 names -> name            % div
@@ -676,7 +696,8 @@ Or an id then classes.
 
 These declaritive rules continue. There's rules defining an attribute, many
 attributes, pieces of text, and content that is composed of many pieces of
-text and whitespace, until finally we reach the Rootsymbol, an element.
+text and whitespace, until finally the Rootsymbol is reached. My Rootsymbol is
+an element.
 
 ```erlang
 element -> names                    % a.btn
@@ -691,10 +712,12 @@ or it can be names, then attributes, then content,
 or it can be just names followed by content.
 
 And now that there are definitions for all the different symbols, from the
-lowest terminals to the rootsymbol nonterminal Yecc has enough information to
-parse an element from a set of tokens. The only thing left to do before it is
-capable of generating an abstract syntax tree is instructing it how to build
-a data structure for each nonterminal.
+lowest terminals to the rootsymbol nonterminal.
+
+With this Yecc has enough information to parse an element from a set of
+tokens. The only thing left to do before it is capable of generating an
+abstract syntax tree is instructing it how to build a data structure for each
+nonterminal.
 
 ```erlang
 class -> dot name % '$1' is the dot symbol
@@ -705,11 +728,11 @@ In my mini AST I want the class token to be represented by a string with the
 same value as the token.
 
 To achieve this I need to be able to refer to the tuple that makes up the name
-token, and then extract the second value from it.
+token, and then extract string value from it.
 
 Helpfully Yecc assigns pseudo variables in the form of atoms for each symbol
 used in the symbol definition. If class is a dot then a name, atom dollar one
-refers to the dollar token, and atom dollar two refers to the name token.
+refers to the dot token, and atom dollar two refers to the name token.
 
 ```erlang
 % .btn
@@ -731,7 +754,9 @@ id    -> hash name : element(2, '$2').
 classes -> class         : ['$1'].
 classes -> class classes : ['$1' | '$2'].
 ```
-
+<!-- this section is hard to read. Maybe just say that you form a list
+     for collections.
+  -->
 Now I've defined a data structure for class I can do the same for ID.
 
 Some nodes in my AST will be collections represented with a list, one such
@@ -744,12 +769,6 @@ For the case of a class followed by classes we prepend the value of the class
 to the value of classes, which unfolds recursively until we only have one
 class, which is the list case we just defined.
 
-Other symbols more complex than simple values or lists. The "names" symbol
-consisted of a combination of a type value such as "div" or "body", an id, and
-one or more classes. This could be represented as a three item tuple, but then
-it's really hard to remember which field is which with tuples, so I'd like to
-avoid having to.
-
 ```erlang
 % records.hrl
 -record(
@@ -761,14 +780,15 @@ avoid having to.
 ).
 ```
 
-Since we're in Erlang land a record felt like the right tool for the job here.
-If you're not familiar with Erlang records they're tuples with named fields,
-and each field can be set and accessed by name, much easier than remembering
-indexes.
+Other symbols more complex than simple values or lists. The "names" symbol
+consisted of a combination of an element `type` such as "div" or "body", an
+id, and one or more classes. This could be represented as a three item tuple,
+but then it's really hard to remember which field is which with tuples, so
+instead I've opted to use an Erlang record.
 
-Like Elixir structs each field in a record definition gets a default value.
-I've got for the string "div" for the type, as the div element is a good HTML
-element to fall back to, and some suitable bottom values for id and classes.
+Like Elixir structs each field in a record definition gets a name and default
+value. The default type is string "div", the default is atom "nil", and the
+default for classes is an empty list.
 
 
 ```erlang
@@ -782,11 +802,10 @@ names -> name id classes : #names{ type = element(2, '$1')
                                  , class = '$3' , id = '$2' }.
 ```
 
-With this record I can use a nice named literal syntax for setting the various
-values, and any that I neglect to fill in will use the default value specified
-in the record definition.
+With this record I can use a nice syntax for setting named values on a complex
+type.
 
-With methods for building simple values, more complex values, and collections
+Now that I can build simple values, more complex values, and collections
 of values I can work my way all the way up to the rootsymbol, the element.
 
 ```pug
@@ -794,80 +813,60 @@ a.profile(href="/me") User profile
 ```
 
 ```erlang
-#element
-{ type       = "a"
-, id         = nil
-, classes    = ["profile"]
-, attributes = [{"href", "/me"}]
-, content    = "User profile"
-}
+element -> names attributeList content :
+  #element{
+    type       = '$1'#names.type,
+    class      = '$1'#names.class,
+    id         = '$1'#names.id,
+    attributes = '$2',
+    content    = '$3'
+  }.
+%
+% ... other element definition clauses...
+%
 ```
 
-And with that I can turn a line of HTML shorthand into a data structure I can
-use in Elixir! Now to turn this into a function.
+An Element is a record with a type, an id, some classes, attributes, and
+content. With all the definitions in place I can place this file into the
+`src` directory, and Mix will compile it into an Erlang module.
 
-This was another point at which I wasn't sure how to implement the next step.
-I had a look on GitHub and discovered that other Elixir template libraries
-would from here build EEx template strings and run these through the EEx
-compiler. To me this felt like the wrong solution. EEx is written in Elixir,
-how does it solve this problem?
+I can now turn source code into tokens, and tokens into an AST. The next step
+is turning the AST into a function that produces HTML.
 
-I spent half an hour reading the EEx application in the Elixir lang repo, and
-was pleasantly surprised by what I found there. The code was easy to
-understand, and leveraged some of Elixir's metaprogramming features in a way
-that to me seemed really clever and also easy to imitate. Yet again I felt
-like Elixir was doing all the hard work for me.
+I wasn't sure how to do this, so I had a look at the source code for EEx on
+GitHub. The code I found was easy to understand, and leveraged some of
+Elixir's metaprogramming features in a way that to me seemed really clever and
+also easy to imitate. Yet again I felt like Elixir was doing all the hard work
+for me.
 
 ```eex
-Hello, <%= @name %>!
+Hello, <%= name %>
 ```
-```elixir
-tmpl = "Hello, <%= @name %>!"
-
-EEx.eval_string(tmpl, assigns: [name: "world"])
-
-# => "Hello, world!"
-```
-
-This what an EEx template looks like. It's a load of text in any format, with
-these percent equals tags that contain Elixir code. The contents of the code
-is evaluated when the function is called, and the return value is inserted
-into the function.
-
-```eex
-Hello, <%= name %>!
-```
-```elixir
-[ text: "Hello, ",
-  expr: " name ",
-  text: "!" ]
-```
-
-EEx's parser splits the template into text and expressions. This template
-would be split into the text "Hello, ", an expression consisting of variable
-name, and the text bang.
-
-This needs to be turned into an expression which can be the body of a
-function.
-
 ```elixir
 def render(name) do
   "" <> "Hello, " <> name <> "!"
 end
 ```
 
-Here's a function that's equivilent to our template. It starts with an empty
-string, and then for each value in the list of text and expressions it
-concatenates it onto the value of the previous expression.
+Here's an EEx template and the function that the EEx compiler would construct
+for this template. The function simply concatenates each part of the template
+together. Let's look at how this is done.
 
-In an ideal world a function like this would be constructed by EEx from this
-template. It also just so happens that this is more or less the function is
-constructs though some clever metaprogramming.
 
-As well as giving us `quote`, which turn expressions into abstract syntax
-trees, Elixir also supplies `unquote`, which turns abstract syntax trees into
-expressions at compile time. With `unquote` EEx can create this function by
-manually reconstructing it's AST. Let's look at how this could be done.
+```eex
+Hello, <%= name %>
+```
+```elixir
+[ text: "Hello, ",
+  expr: " name " ]
+```
+
+EEx's parser splits the template into text and expressions. The template
+in the first code snippet would be split into the text "Hello, ", an
+expression consisting of variable name.
+
+This list is then turned into an expression which can be the body of a
+function.
 
 ```elixir
 concat = fn
@@ -888,17 +887,18 @@ compile = fn(list) ->
 end
 ```
 
-At the bottom here is a compile function. It reduces over the list with a
-concat function, and an empty string as the starting value.
+At the bottom here is a compile function, which constructs the expression. It
+reduces the list with the concat function, and uses an empty string as the
+starting value.
 
 The concat function has two clauses. The first is for text elements, which it
 concatenates onto the buffer. Doing it inside the quote block like this
 results in an AST being returned rather than the expression being evaluated.
 
 The other clause is for expressions. It works exactly the same way as the
-previous clause, except it calls the `Code.string_to_quoted!` function on the
-value first in order to transform it from a string of Elixir code into an
-AST to be injected into the quote block.
+previous clause, except it calls `Code.string_to_quoted!` on the value first
+in order to transform it from a string of Elixir code into an expression to be
+injected into the quote block.
 
 ```elixir
 compile.([text: "Hello ", expr: "name", text: "!"])
@@ -915,10 +915,10 @@ compile.([text: "Hello ", expr: "name", text: "!"])
 # (("" <> "Hello ") <> name) <> "!"
 ```
 
-Here it is called on the list before.
+Here it is called on the list we had before.
 
-As you can see it gets pretty hard to read these expressions pretty quickly,
-so I'm converting back into a string with the `Macro.to_string` function.
+As you can see it gets pretty hard to read these expressions, so I'm
+converting back into a string with the `Macro.to_string` function.
 
 ```elixir
 def render(name) do
@@ -926,10 +926,13 @@ def render(name) do
 end
 ```
 ```elixir
+"""
 (("" <> "Hello ") <> name) <> "!"
+"""
 ```
 
-It's pretty much exactly the same as the body function I wanted to generate.
+On the top is the function from before, on the bottom is the string that was
+just returned. They're pretty much identical.
 
 So how would this work for the HTML templating library?
 
@@ -948,12 +951,11 @@ h1#title = name
 
 The parser is used to generate an Elixir data structure with all the required
 information from the template.
+From the data structure a list of fragments of HTML text and expressions is
+formed.
 
-From the data structure a list of text and expressions is formed. Each element
-consists of three parts, an opening tag, the contents, and a closing tag.
-
-This list is put through the compile function, which results in an Elixir AST
-that builds the HTML string with the passed values injected into it.
+This list is put through the same compile function, which results in an Elixir
+AST that builds the HTML string with the passed values injected into it.
 
 All that's left is turning it into a function.
 
@@ -976,8 +978,8 @@ View.render("Elixir")
 I want the AST I've generated to be the body of the function. How do I do
 that?
 
-`unquote` converts an AST back into an expression, so just write a function
-where the body is just calling `unquote` on the AST.
+I just write a function where the body is just calling `unquote` on the AST,
+injecting the expression back into the code.
 
 And now I have a templating language that I can use in a real app.
 
@@ -1020,8 +1022,9 @@ Without knowing anything about compilers I've effectively written a compiler
 for a mini language on the BEAM.
 
 Getting this far was easy thanks to the excellent tools the Erlang ecosystem
-has to offer. Presumably it wouldn't be much harder to create an entirely new
-language using the same tools, so let's see how that might work.
+has to offer. I thought presumably it wouldn't be much harder to create an
+entirely new language using the same tools. This idea excited me, so I jumped
+right in.
 
 ```ruby
 module clauses
@@ -1042,7 +1045,7 @@ trying to solve is the problem of there not being enough curly braces in the
 Erlang world. Without curly braces we'll never be able to convince people to
 come over from C++, Java, and Javascript.
 
-Right. On to the tokenizer. I've used Leex again here.
+The first step is to make a tokenizer with Leex.
 
 ```erlang
 Definitions.
@@ -1057,14 +1060,6 @@ WS      = [\n\s\r\t]
 
 I've only a few definitions. A float and an int for numbers, a string, an
 identifier, an atom, an atom with quotes, and lastly whitespace.
-
-String use double quotes as delimiters.
-
-Identifiers are the names of functions or modules, and like Elixir they can
-include bangs and questionmarks. I've also borrowed the atom syntax, they
-start with a colon.
-
-On to the tokenizer rules.
 
 ```erlang
 Rules.
@@ -1090,19 +1085,18 @@ def        : {token, {def,        TokenChars}}.
 {WS}       : skip_token.
 ```
 
-The first rules are the keywords `module`, `private`, `public`, and `def`,
-then there are the various types of delimeters, a dot, a comma, and equals.
-The value of these tokens is just their sting literals, as specified by the
-use of the magic `TokenChars` variable.
+The first parser rules are the keywords, delimeters, and punctuation tokens,
+which are straightforward.
 
 After that comes the more complex tokens that use patterns from the
 `Definitions` section. The value of each of these tokens comes from calling a
 helper function on the matched characters. The `int` function converts the
 `Int` string to an an integer, the `flt` function converts to a float, and for
 identifier and atom I convert the value to an atom. For strings I get the
-contents of the string by dropping the quotes and removing any slashes used
-for escaping characters.
+contents of the string by dropping the quotes as before. These functions are
+all defined in the Erlang Code section.
 
+<!-- maybe remove this para -->
 Also note how the `Int` pattern and the `Float` patterns are used to build a
 token of type `number`. Leex allows multiple rules to construct the same
 token, so we can have variations like this.
@@ -1111,9 +1105,6 @@ Lastly there's the rule for the `whitespace` definition pattern. Instead of
 constructing a token the `skip_token` atom is used to signify that text
 matching this pattern is to be discarded. Whitespace has no syntactic meaning
 in Gleam, so it can be safely ignored.
-
-The `Erlang code` section contains helper functions used here. They're not
-very interesting, so I'll leave it up to your to imagine how they are defined.
 
 That's the basic tokenizer done. Later I'll probably want to extend it with
 mathematical operators and a pipe operator and such, but for now I can move
@@ -1157,9 +1148,8 @@ statement -> module_declaration : '$1'.
 statement -> function           : '$1'.
 ```
 
-The rootsymbol is a module. A module consists of a series of statements it
-seems like statements would make a good Rootsymbol. Statements is defined as
-one or more statement.
+The rootsymbol of the grammar is a module. A module consists of a series of
+statements, which in tern are defined as one more more statement.
 
 A statement is either a module_declaration, or a function.
 
@@ -1176,9 +1166,9 @@ Module declarations are simple. They are always the `module` keyword, followed
 by an identifier. Both of these are tokens, making them terminal symbols, and
 leaf nodes of the AST.
 
-In order to making working with nodes a little easier I've use Erlang records
-rather than raw tuples. The module_declaration record has a name field, in
-which I place the value of the identifier.
+To make working with nodes a little easier I've use Erlang records for each
+one. The module_declaration record has a name field, in which I place the
+value of the identifier.
 
 ```ruby
 public peak {
@@ -1201,6 +1191,7 @@ function -> private identifier fn_block
     }.
 ```
 
+Moving on to the other type of statement-
 A function is either the public or private keyword, followed by an identifier
 and a function block. From this we record the function publicity, name, and
 the clauses.
@@ -1218,15 +1209,10 @@ fn_statements -> fn_clause fn_statements
     }.
 ```
 
-A function block is a pair of curly braces around function statements.
+A function block is a pair of curly braces around one or more function clauses.
 
-Function statements are clause, or a clause followed by more function
-statements. For both of these I collect the values into the function block
-record that was used to get the clauses for the function record.
-
-Later I imagine there would also be other function statement types, such as
-docstrings or unit tests, this is why I've used a record here over a plain
-list of clauses.
+Later I imagine there would also be other function block contents, such as
+docstrings or unit tests, this is why I've used a record for the block.
 
 ```ruby
 def (stack) { (:ok, hd(stack)) }
@@ -1269,10 +1255,9 @@ The next part of this simple compiler is to convert the Gleam abstract syntax
 tree into a format and can be readily fed into the virtual machine. With the
 templating language this format was Elixir AST, which would work again here.
 
-There are also other alternatives, after all, there are other languages on the
-BEAM and they do not require the Elixir compiler to function. Since we've come
-all this way using just the OTP standard library let's explore one of the
-alternatives, Core Erlang.
+However there are also other options. Since we've come all this way using
+just the OTP standard library let's explore one of the alternatives, Core
+Erlang.
 
 ```erlang
 f(X) ->
@@ -1295,6 +1280,9 @@ f(X) ->
     end,
   in {X1, X2}
 ```
+```
+erlang -> core erlang -> BEAM bytecode
+```
 
 Core Erlang is an intermediary language used by the Erlang compiler, meaning
 that regular Erlang code is compiled to Core Erlang code, before being
@@ -1303,27 +1291,14 @@ runs.
 
 Core Erlang has a textual representation which can be seen here. These code
 snippets are equivilent. The first is Erlang, the second is Core Erlang, which
-is much more verbose. You could quite happily write all your Erlang code like
-this, and providing you pass the right flags to the compiler it will compile
-just the same.
-
-<!-- Explain the Core Erlang syntax a bit
-     - Everything is explicit
-     - Functions have to assigned to a name
-     - Guard clauses are not optional
-     - function calling requires the `apply` keyword
- -->
+as you can see is much more verbose and explicit.
 
 In addition to the textual form it also has an abstract syntax tree consisting
 of regular Erlang data structures, primarily records.
 
 The official documentation states that the Core Erlang AST is subject to
 change without notice, so we cannot manually construct the data structures as
-we would with Elixir, even though we could do so by looking at what the
-structure currently is.
-
-Unless we want to run the risk of having to rewrite this part of the
-compiler with each new OTP release, we need to find another way.
+we would with Elixir.
 
 ```erlang
 cerl:c_atom(ok). % => Core Erlang atom 'ok'
@@ -1336,6 +1311,7 @@ If the AST format is not specified how can it be generated? The answer is to
 use the `cerl` Erlang module, which exposes functions for the
 composing and decomposing of this AST.
 
+<!-- maybe remove -->
 The decomposition functions could possibly be useful for reflection in a
 fashion similar to how the Elixir linter worked, but for the job at hand I'm
 interested in the functions for constructing AST.
@@ -1408,7 +1384,7 @@ the smallest atomic components of the tree. They have no children.
 
 Branch nodes are nodes that have children, they consist of multiple nodes
 joined into one. Examples would be a list or a tuple that contains multiple
-elements, or a function which has multiple clauses.
+elements, or a function which has a name and multiple clauses.
 
 Converting these nodes is more more complex as not only do they themselves
 need to be converted to Core Erlang, but their children need to be converted
@@ -1427,14 +1403,14 @@ codegen(#tuple{ elements = Elements }) ->
   cerl:c_tuple(Cerls).
 ```
 
-Here is a tuple node. It has child nodes, the elements the tuple contains.
-This tuple has a length of 2 that contained the atom "ok" and the string
-"hello" the child nodes would be the atom and the string nodes.
+Here is a tuple node. It's children are the elements of the tuple.
+This tuple contains the atom "ok" and the string "hello", so the children
+would be would be the atom node and the string node.
 
 In Gleam this tuple node is a record with an elements property, which is a list
-containing the list and the string.
+containing the atom and the string.
 
-The codegen clause that handles converting tuples first maps the codegen
+The clause that handles converting tuples first maps the codegen
 function over the elements list to convert the contents to Core Erlang. Once
 the children are converted the `c_tuple` function is called on the new
 elements to create a Core Erlang tuple.
@@ -1445,9 +1421,9 @@ contained a list, and on?
 
 Each clause that handles a branch node calls the codegen function on
 each of its children. Because of this when the codegen function is called on
-the root node of the tree, which is a module, the function is recursively
-called on the modules children, and their children, and so on until the entire
-tree has been converted.
+the root node of the tree, the function is recursively called on the modules
+children, and their children, and so on until the entire tree has been
+converted.
 
 ```erlang
 #module
@@ -1464,21 +1440,23 @@ codegen(#module{ name = Name, functions = Functions }) ->
 ```
 
 Jumping from the bottom of the tree to the top, here is the module record.
-It's quite considerably more complex than the previous nodes. The c_erl
-constructor takes 3 arguments. The module name, a list of functions to export,
-and a list of the module functions themselves. And of course, each one of
-these needs to be given in their Core Erlang form.
+It's quite considerably more complex than the previous nodes.
+
+The cerl constructor takes 3 arguments. The module name, a list of functions
+to export, and a list of the module functions themselves. And of course, each
+one of these needs to be given in their Core Erlang form.
 
 The name is easy- it's just an atom, so `c_atom` is called on the name.
 
-For forming the list of exports I delegate to a `gen_exports` function. This
-just filters the list of functions for those that are public, and then
+For forming the list of exports I've created a `gen_exports` function. This
+filters the list of functions for those that are public, and then
 constructs a Core Erlang export for each one.
 
 Lastly the functions are transformed into Core Erlang by mapping the `codegen`
 over them, which in turn recursively transforms their children, and their
-children, until the leaf nodes are reached. Now we have a full Core Erlang
-abstract syntax tree.
+children, until the leaf nodes are reached.
+
+Now the tree is entirely in Core Erlang.
 
 
 ```erlang
@@ -1500,9 +1478,9 @@ the constructor function. If you're going to play with `cerl` I recommend
 downloading a copy of the OTP source code and reading the documentation in the
 module itself, and also paying close attention to the type specifications.
 
-When I still had problems after that I found a good trick was to turn to the
-source code of a BEAM language that uses this module, such as LFE, MLFE,
-and Joxa, and seeing how they use it.
+When I still had problems I found a good trick was to turn to the source code
+of a BEAM language that uses this module, such as LFE, MLFE, and Joxa, and
+seeing how they use it.
 
 ```erlang
 -module(gleam).
@@ -1522,11 +1500,10 @@ load_file(Path, ModuleName) ->
 Right. With the codegen function finished I've all the basic parts of a BEAM
 language compiler. The only this that is left is to stick them all together.
 
-Here is the `gleam_compiler` module. It takes a path to a file of Gleam source
-code.
+Here is the `gleam_compiler` module, which defines a `load_file` function.
 
-It reads the file and converts the resulting unicode binary into an Erlang
-string.
+This function takes a path to a file of Gleam source code, reads the file and
+converts the resulting unicode binary into an Erlang string.
 
 The string is then fed into the tokenizer, which breaks the source code down
 into a list of it's atomic parts, such as strings, numbers, and punctuation.
@@ -1536,12 +1513,11 @@ from them. This tree contains the syntactic information of the code. Lists
 contain elements, functions have clauses, and so on.
 
 This tree is then fed into the codegen function which converts it into a
-format that can be loaded into the BEAM. Here that format is the abstract
-syntax tree of Core Erlang, the intermediary language that Erlang compiles to.
+format that can be loaded into the BEAM. Here that format is the Core Erlang,
+the intermediary language that Erlang compiles to.
 
-That's all the Gleam specific code done. The Core Erlang is then compiled into
-BEAM bytecode using the `compile:forms` function, and then loaded into the
-virtual machine using `code:load_binary`.
+The Core Erlang is then compiled into BEAM bytecode using the `compile:forms`
+function, and then loaded into the virtual machine using `code:load_binary`.
 
 ```ruby
 # src/first_module.gleam
@@ -1560,10 +1536,10 @@ first_module:hello().
 % => "Hello, world!"
 ```
 
-And with that there's a new language running on the BEAM!
+Here's a Gleam module. If I call the `load_file` function on it I can then
+call the Glean function from Erlang, returning "Hello, world!".
 
-If I call this function with a path to this "first_module" Gleam file the code
-is loaded, and I can call the function from Erlang, returning "Hello, world!".
+And with that there's a new language running on the BEAM!
 
 I can't explain how unreasonably happy I was when I successfully compiled my
 first module. It's such a small thing, but it was a really fun journey.
@@ -1575,7 +1551,7 @@ Leex and Yecc give us an easy out-of-the-box way of doing tokenization and
 parsing of code, and with Elixir macros and Core Erlang we have an friendly
 way to generate code that can be loaded into the virtual machine. Coupled with
 Elixir and Erlang's excellent pattern matching and data handling these tasks
-become fun and easy.
+become quite easy.
 
 I think it would be really exciting to see more projects making use of what
 ecosystem gives us here.
@@ -1586,8 +1562,8 @@ powerful ML style type system on the BEAM. Some work has been done here with
 the MLFE project, it'd be great to see it develop into something.
 
 I've really enjoyed working in this space. If you think you could also find it
-fun I encourage you to go and build your own Elixir. Perhaps you could create
-the next big thing!
+fun I encourage you to go and build your own Elixir. There's plenty of space
+on the BEAM for exciting new projects.
 
 Thank you very much.
 
