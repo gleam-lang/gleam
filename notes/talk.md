@@ -1,6 +1,7 @@
 Introduction
 ============
 
+<!-- rewrite intro -->
 Hi. I'm Louis Pilfold. I discovered Elixir and Erlang nearly two years ago,
 and now I'd like to share with you some of the things I learnt along that
 journey. Specifically I'd like to talk about linters, parsers, compilers and
@@ -37,8 +38,8 @@ Source code -> Data structure -> Errors
 ```
 
 They take source code, convert them to one or more different data structures,
-and then analyse those forms to find any errors to present to the user which
-would now be patterns in the data that we could match against.
+and then analyse those forms to find any errors. These errors would show up as
+patterns in the data that we could match against.
 
 ```
 Source code -> Tokens -> Errors
@@ -98,12 +99,9 @@ This data in Elixir terms would look like this. Each token is a tuple where the
 first element is the name of the token type as an atom, and the last element
 is the value of the token, so the atom "add", or the number 2.
 
-
-<!-- TODO: why was this complex in Ruby and JS? Awkward Elixir wording. -->
-In the Ruby and Javascript linters I looked at the Tokenization process was
-quite long and complex, but as often the case I found Elixir did all the hard
-work for me. As the Elixir compiler is written in Erlang we can reuse the
-tokenizer for for language itself.
+In the Ruby and Javascript linters I looked at the tokenization process was
+complex as the tokenizer had to be written from scratch. Luckily this wasn't
+the case in Elixir.
 
 ```elixir
 iex(3)> :elixir_tokenizer.tokenize '1 |> add 2 ', [], []
@@ -115,11 +113,9 @@ iex(3)> :elixir_tokenizer.tokenize '1 |> add 2 ', [], []
   {:number, {[], 10, 11}, 2}]}
 ```
 
-<!-- TODO: This doesn't follow on cleanly from previous para -->
-It's just a "tokenize" function in an Erlang module named "elixir_tokenizer"
-which when given a char list of source code it gives us back tokens. These
-tokens also contain a middle value of some metadata which I'm ignoring for
-now.
+The Elixir compiler is written in Erlang, and the modules are available in
+the Elixir standard library. Elixir tokenization is as simple as calling the
+`elixir_tokenizer` module's `tokenize` function.
 
 So getting the tokens is easy.. So how might they be used them in a linter?
 
@@ -130,7 +126,7 @@ IO.puts("World")  # Good
 
 One simple thing an Elixir linter might do is forbid the use of semicolons to
 separate expressions. Each expression should instead be seperated by newlines,
-as is more idiomatic..
+which is more idiomatic.
 
 ```elixir
 def semicolon?({:";", _, _}),
@@ -202,10 +198,11 @@ At the root of the tree there's a call to the "send" function, which has 2
 arguments, and thus 2 children. The first is a call to the zero arity function
 "self", and the second is a tuple.
 
-The tuple has 3 elements children, thus 3 children, the atom "compare", a
-function call, and the number 1.
+The tuple has 3 elements, thus 3 children.
 
-The final function call noed is to the plus operator, and has 2 children, each
+They are the atom "compare", a function call, and the number 1.
+
+The final function call node is to the plus operator, and has 2 children, each
 the number 2.
 
 ```elixir
@@ -216,10 +213,13 @@ end
 {:add, [], [1, 2]}
 ```
 
-Getting the abstract syntax tree of Elixir code is even easier than getting
-the tokens thanks to its Lisp style macro system. If we want to get the AST
-from an expression we can just pass it to the `quote` special form, or if it's
-a string we can use `Code.string_to_quoted`.
+Normally one would get this tree by first tokenizing the code, and then
+parsing the tokens to construct the tree. In Elixir there is an easier method,
+thanks to the macro system.
+
+When called on an expression the `quote` special form returns Elixir's AST.
+If it's a string of code instead of an expression, the `Code.string_to_quoted`
+function can be used instead.
 
 Elixir's AST is consise and simple. Everything that is not a literal in the
 AST is a three item tuple where the first element is the name of the function
