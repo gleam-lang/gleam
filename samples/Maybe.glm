@@ -1,0 +1,33 @@
+mod Maybe
+
+pub type Maybe(x)
+  = Just(x)
+  | Nothing
+
+pub is_some(maybe) =
+  match maybe
+  | Just(_) => true
+  | Nothing => false
+
+pub is_none(maybe) =
+  match maybe
+  | Just(_) => false
+  | Nothing => true
+
+pub map(maybe, fun) =
+  match maybe
+  | Just(x) => fun(x)
+  | Nothing => Nothing
+
+pub flatten(maybe) =
+  unwrap(maybe, Nothing)
+
+pub flat_map(maybe, fun) =
+  maybe
+  |> map(_, fun)
+  |> flatten()
+
+pub unwrap(maybe, fallback) =
+  match maybe
+  | Just(v) => v
+  | Nothing => fallback

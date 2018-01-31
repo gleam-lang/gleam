@@ -1,0 +1,53 @@
+mod Result
+
+/// Result represents the result of something that may succeed or fail.
+/// `Ok` means it was successful, `Err` means it failed.
+///
+pub type Result(error, value)
+  = Ok(value)
+  | Err(error)
+
+pub is_ok(result) =
+  match result
+  | Ok(_) => true
+  | Err(_) => false
+
+pub is_none(result) =
+  match result
+  | Ok(_) => false
+  | Err(_) => true
+
+pub map(result, fun) =
+  match result
+  | Ok(x) => fun(x)
+  | Err(_) => result
+
+pub map_error(result, fun) =
+  match result
+  | Ok(_) => result
+  | Err(error) => error |> fun() |> Err()
+
+pub flatten(result) =
+  match result
+  | Ok(x) => x
+  | Err(_) => result
+
+pub flat_map(result, fun) =
+  result
+  |> map(_, fun)
+  |> flatten()
+
+pub unwrap(result, default) =
+  match result
+  | Ok(v) => v
+  | Err(_) => default
+
+pub to_maybe(result) =
+  match result
+  | Ok(v) => Just(v)
+  | Err(_) => Nothing
+
+pub from_maybe(error, maybe) =
+  match maybe
+  | Just(v) => Ok(v)
+  | Nothing => Err(error)

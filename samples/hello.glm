@@ -1,7 +1,0 @@
-mod Hello
-
-let greet() = "Hello world!"
-
-let id(x) = x
-
-let ok(val) = (:ok, val)
