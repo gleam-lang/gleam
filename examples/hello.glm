@@ -1,5 +1,7 @@
-module hello
+module Hello
 
-public greet {
-  def () { "Hello world!" }
-}
+let greet() = "Hello world!"
+
+let id(x) = x
+
+let ok(val) = (:ok, val)

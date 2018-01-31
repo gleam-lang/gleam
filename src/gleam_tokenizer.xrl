@@ -1,33 +1,44 @@
 Definitions.
 
-Int    = [0-9]+
-Float  = [0-9]+\.[0-9]+
-WS     = [\n\s\r\t]
-String = "([^\\""]|\\.)*"
-Ident  = [a-z_][a-zA-Z0-9!\?_]*
-Atom   = \:[a-zA-Z0-9!\?_-]+
+Int     = [0-9]+
+Float   = [0-9]+\.[0-9]+
+WS      = [\n\s\r\t]
+Atom    = :[a-zA-Z0-9!\?_]*
+Name    = [a-z_][a-zA-Z0-9!\?_]*
+UpName  = [A-Z][a-zA-Z0-9!\?_]*
+String  = "([^\\""]|\\.)*"
+Comment = \/\/[^\n]*
 
 Rules.
 
-module     : {token, {module,     TokenLine}}.
-private    : {token, {private,    TokenLine}}.
-public     : {token, {public,     TokenLine}}.
-def        : {token, {def,        TokenLine}}.
-\(         : {token, {'(',        TokenLine}}.
-\)         : {token, {')',        TokenLine}}.
-\{         : {token, {'{',        TokenLine}}.
-\}         : {token, {'}',        TokenLine}}.
-\[         : {token, {'[',        TokenLine}}.
-\]         : {token, {']',        TokenLine}}.
-\.         : {token, {'.',        TokenLine}}.
-\,         : {token, {',',        TokenLine}}.
-\=         : {token, {'=',        TokenLine}}.
-{Int}      : {token, {num,        TokenLine, int(TokenChars)}}.
-{Float}    : {token, {num,        TokenLine, flt(TokenChars)}}.
-{String}   : {token, {string,     TokenLine, strValue(TokenChars)}}.
-{Ident}    : {token, {identifier, TokenLine, list_to_atom(TokenChars)}}.
-{Atom}     : {token, {atom,       TokenLine, atomValue(TokenChars)}}.
-{WS}       : skip_token.
+module    : {token, {kw_module, TokenLine}}.
+let       : {token, {kw_let, TokenLine}}.
+% if        : {token, {kw_if, TokenLine}}.
+% else      : {token, {kw_else, TokenLine}}.
+true      : {token, {true, TokenLine}}.
+false     : {token, {false, TokenLine}}.
+\==       : {token, {'==', TokenLine}}.
+\=        : {token, {'=', TokenLine}}.
+\+        : {token, {'+', TokenLine}}.
+\-        : {token, {'-', TokenLine}}.
+\<        : {token, {'<', TokenLine}}.
+\.        : {token, {'.', TokenLine}}.
+\|        : {token, {'|', TokenLine}}.
+\,        : {token, {',', TokenLine}}.
+\(        : {token, {'(', TokenLine}}.
+\)        : {token, {')', TokenLine}}.
+\[        : {token, {'[', TokenLine}}.
+\]        : {token, {']', TokenLine}}.
+\{        : {token, {'{', TokenLine}}.
+\}        : {token, {'}', TokenLine}}.
+{Int}     : {token, {int, TokenLine, int(TokenChars)}}.
+{Float}   : {token, {float, TokenLine, flt(TokenChars)}}.
+{Atom}    : {token, {atom, TokenLine, atom(TokenChars)}}.
+{Name}    : {token, {name, TokenLine, list_to_atom(TokenChars)}}.
+{UpName}  : {token, {upname, TokenLine, list_to_atom(TokenChars)}}.
+{String}  : {token, {string, TokenLine, str(TokenChars)}}.
+{Comment} : skip_token.
+{WS}      : skip_token.
 
 
 Erlang code.
@@ -40,11 +51,11 @@ flt(S) when is_list(S) ->
   {F, _} = string:to_float(S),
   F.
 
-atomValue(S) when is_list(S) ->
+atom(S) when is_list(S) ->
   Contents = tl(S),
   list_to_atom(Contents).
 
-strValue(S) when is_list(S) ->
+str(S) when is_list(S) ->
   Contents  = tl(lists:droplast(S)),
   Unescaped = deescape(Contents),
   list_to_binary(Unescaped).

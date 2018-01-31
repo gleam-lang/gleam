@@ -1,78 +1,83 @@
 Nonterminals
-literal tuple list elements call module_declaration
-expression expressions statement statements assignment variable
-function fn_block fn_statements fn_clause.
+source module functions function
+exprs expr literal args elems tuple.
 
 Terminals
-'[' ']' '(' ')' '{' '}' ',' '.' '='
-public private def
-identifier num atom string module.
+'(' ')' ',' '='
+int float true false atom string
+name upname
+kw_module kw_let.
 
-Rootsymbol statements.
+Rootsymbol source.
 
-Expect 1.
+% Left 300 '+'.
+% Left 300 '-'.
+% Right 100 '<'.
+% Nonassoc 200 '=='.
 
-statements -> statement            : ['$1'].
-statements -> statement statements : ['$1'|'$2'].
+source -> module      : '$1'.
+source -> exprs : '$1'.
 
-statement -> module_declaration : '$1'.
-statement -> expression         : '$1'.
-statement -> function           : '$1'.
+module -> kw_module upname functions : mk_module('$2', '$3').
 
-assignment -> identifier '=' expression
-            : {'=', m('$1'), [v('$1'), '$3']}.
+functions -> function           : ['$1'].
+functions -> function functions : ['$1'|'$2'].
 
-module_declaration -> module identifier : {module, m('$2'), v('$2')}.
+function -> kw_let name '(' args ')' '=' exprs : mk_function('$2', '$4', '$7').
 
-call -> identifier tuple
-      : {v('$1'), m('$1'), tuple_to_list('$2')}.
-call -> identifier '.' identifier tuple
-      : {'.', m('$1'), [v('$1'), v('$3')], tuple_to_list('$4')}.
+exprs -> expr       : ['$1'].
+exprs -> expr exprs : ['$1'|'$2'].
 
-variable -> identifier : {variable, m('$1'), v('$1')}.
+expr -> literal       : '$1'.
+expr -> name          : mk_var('$1').
+expr -> '(' ')'       : mk_tuple([]).
+expr -> '(' elems ')' : mk_tuple('$2').
+% expr -> expr '==' expr         : mk_eq('$1', '$3').
+% expr -> expr '-' expr          : mk_subtract('$1', '$3').
+% expr -> expr '+' expr          : mk_add('$1', '$3').
+% expr -> expr '<' expr          : mk_less_than('$1', '$3').
+% expr -> kw_let atom '=' expr   : mk_let('$2', '$4').
+% expr -> name '(' call_args ')' : mk_call('$1', '$3').
 
-function -> public identifier fn_block
-          : {function, m('$1'), public, v('$2'), '$3'}.
-function -> private identifier fn_block
-          : {function, m('$1'), private, v('$2'), '$3'}.
+% % if x { 1 } else { 2 }
+% expr -> kw_if expr '{' exprs '}'
+%                        kw_else '{' exprs '}' : mk_if('$2', '$4', '$8').
+% expr -> '|' args '|' '{' exprs '}' : mk_function('$2', '$5').
 
-fn_block -> '{' fn_statements '}' : '$2'.
+args -> name          : [mk_arg('$1')].
+args -> name ','      : [mk_arg('$1')].
+args -> name ',' args : [mk_arg('$1'), '$3'].
 
-fn_statements -> fn_clause               : ['$1'].
-fn_statements -> fn_clause fn_statements : ['$1'|'$2'].
+elems -> expr               : ['$1'].
+elems -> expr ','           : ['$1'].
+elems -> expr ',' elems     : ['$1' | '$3'].
 
-fn_clause -> def tuple '{' expressions '}'
-           : {def, m('$1'), tuple_to_list('$2'), '$4'}.
-
-list -> '[' ']'          : [].
-list -> '[' elements ']' : '$2'.
-
-tuple -> '(' ')'          : {}.
-tuple -> '(' elements ')' : list_to_tuple('$2').
-
-elements -> expression              : ['$1'].
-elements -> expression ','          : ['$1'].
-elements -> expression ',' elements : ['$1'|'$3'].
-
-expressions -> expression             : ['$1'].
-expressions -> expression expressions : ['$1'|'$2'].
-
-expression -> assignment : '$1'.
-expression -> variable   : '$1'.
-expression -> literal    : '$1'.
-expression -> tuple      : '$1'.
-expression -> list       : '$1'.
-expression -> call       : '$1'.
-
-literal -> num    : v('$1').
-literal -> string : v('$1').
-literal -> atom   : v('$1').
+literal -> atom   : mk_literal('$1').
+literal -> int    : mk_literal('$1').
+literal -> float  : mk_literal('$1').
+literal -> true   : mk_literal('$1').
+literal -> false  : mk_literal('$1').
+literal -> string : mk_literal('$1').
 
 Erlang code.
 
-% Value from terminal
-v({_, _, V}) -> V.
+-include("gleam_records.hrl").
 
-% Meta from terminal
-m({_, L, _}) -> [{line, L}];
-m({_, L})    -> [{line, L}].
+mk_module({upname, _, Name}, Functions) ->
+  #gleam_ast_module{name = Name, functions = Functions}.
+
+mk_function({name, _, Name}, Args, Body) ->
+  #gleam_ast_function{name = Name, args = Args, body = Body}.
+
+mk_arg({name, _Line, Name}) -> Name.
+
+mk_var({name, Line, Name}) -> #gleam_ast_var{line = Line, name = Name}.
+
+mk_tuple(Elems) -> #gleam_ast_tuple{elems = Elems}.
+
+mk_literal({atom, Line, Value})   -> #gleam_ast_atom{line = Line, value = Value};
+mk_literal({int, Line, Value})    -> #gleam_ast_int{line = Line, value = Value};
+mk_literal({float, Line, Value})  -> #gleam_ast_float{line = Line, value = Value};
+mk_literal({true, Line, Value})   -> #gleam_ast_bool{line = Line, value = Value};
+mk_literal({false, Line, Value})  -> #gleam_ast_bool{line = Line, value = Value};
+mk_literal({string, Line, Value}) -> #gleam_ast_string{line = Line, value = Value}.

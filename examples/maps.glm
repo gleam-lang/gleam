@@ -1,6 +1,0 @@
-my_map = {
-  "Jane": 33,
-  :robot: 02,
-  [1, 2]: :list
-  1:      "one"
-}

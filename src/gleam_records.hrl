@@ -1,16 +1,22 @@
 -record(
-   gleam_module
-   , { name = undefined
-     , functions = []
-     , exports = []
-     }
+  gleam_ast_module
+  , { name = undefined
+    , functions = []
+    }
   ).
 
 -record(
-   gleam_function
-   , { name = undefined
-     , arity = undefined
-     , publicity = undefined
-     , clauses = []
-     }
+  gleam_ast_function
+  , { name = undefined
+    , args = []
+    , body = []
+    }
   ).
+
+-record(gleam_ast_int,    { line = undefined, value = undefined }).
+-record(gleam_ast_float,  { line = undefined, value = undefined }).
+-record(gleam_ast_bool,   { line = undefined, value = undefined }).
+-record(gleam_ast_atom,   { line = undefined, value = undefined }).
+-record(gleam_ast_string, { line = undefined, value = undefined }).
+-record(gleam_ast_var,    { line = undefined, name = undefined }).
+-record(gleam_ast_tuple,  { elems = [] }).
