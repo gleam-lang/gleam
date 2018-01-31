@@ -1,4 +1,4 @@
-module Hello
+mod Hello
 
 let greet() = "Hello world!"
 

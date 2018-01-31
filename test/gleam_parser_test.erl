@@ -92,7 +92,7 @@ tuple_test() ->
 
 module_test() ->
   ?assertAST(
-    "module MyModule\n"
+    "mod MyModule\n"
     "let id(x) = x\n"
     "let ok(val) = (:ok, val)\n",
     #gleam_ast_module

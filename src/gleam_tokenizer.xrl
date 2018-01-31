@@ -11,7 +11,7 @@ Comment = \/\/[^\n]*
 
 Rules.
 
-module    : {token, {kw_module, TokenLine}}.
+mod       : {token, {kw_module, TokenLine}}.
 let       : {token, {kw_let, TokenLine}}.
 % if        : {token, {kw_if, TokenLine}}.
 % else      : {token, {kw_else, TokenLine}}.

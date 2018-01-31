@@ -1,0 +1,2 @@
+samples/* linguist-documentation=false
+*.glm linguist-language=Rust

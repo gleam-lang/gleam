@@ -5,8 +5,8 @@
         ?assertMatch(Tokens, element(2, gleam_tokenizer:string(Code)))).
 
 keyword_test() ->
-  ?assertTokens("module",  [{kw_module, _}]),
-  ?assertTokens("let",     [{kw_let, _}]).
+  ?assertTokens("mod",  [{kw_module, _}]),
+  ?assertTokens("let",  [{kw_let, _}]).
   % ?assertTokens("if",     [{kw_if, _}]),
   % ?assertTokens("else",     [{kw_else, _}]).
 
