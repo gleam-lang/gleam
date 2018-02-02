@@ -6,7 +6,7 @@ Terminals
 '(' ')' ',' '='
 int float true false atom string
 name upname
-kw_module kw_let.
+kw_module kw_let kw_pub.
 
 Rootsymbol source.
 
@@ -23,7 +23,8 @@ module -> kw_module upname functions : mk_module('$2', '$3').
 functions -> function           : ['$1'].
 functions -> function functions : ['$1'|'$2'].
 
-function -> kw_let name '(' args ')' '=' exprs : mk_function('$2', '$4', '$7').
+function -> kw_let name '(' args ')' '=' exprs : mk_function('$2', false, '$4', '$7').
+function -> kw_pub name '(' args ')' '=' exprs : mk_function('$2', true, '$4', '$7').
 
 exprs -> expr       : ['$1'].
 exprs -> expr exprs : ['$1'|'$2'].
@@ -66,8 +67,8 @@ Erlang code.
 mk_module({upname, _, Name}, Functions) ->
   #gleam_ast_module{name = Name, functions = Functions}.
 
-mk_function({name, _, Name}, Args, Body) ->
-  #gleam_ast_function{name = Name, args = Args, body = Body}.
+mk_function({name, _, Name}, Pub, Args, Body) ->
+  #gleam_ast_function{name = Name, public = Pub, args = Args, body = Body}.
 
 mk_arg({name, _Line, Name}) -> Name.
 

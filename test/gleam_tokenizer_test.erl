@@ -6,6 +6,7 @@
 
 keyword_test() ->
   ?assertTokens("mod",  [{kw_module, _}]),
+  ?assertTokens("pub",  [{kw_pub, _}]),
   ?assertTokens("let",  [{kw_let, _}]).
   % ?assertTokens("if",     [{kw_if, _}]),
   % ?assertTokens("else",     [{kw_else, _}]).

@@ -61,12 +61,6 @@ tuple_test() ->
 %   ?assertAST("lists.max([5, 10])",
 %              [{'.', _, [lists, max], [[5, 10]]}]).
 
-% module_test() ->
-%   ?assertAST("module my_mod",
-%              [{module, [{line, 1}], my_mod}]),
-%   ?assertAST("module ppool",
-%              [{module, [{line, 1}], ppool}]).
-
 % assignment_test() ->
 %   ?assertAST("x = 1",
 %              [{'=', _, [x, 1]}]),
@@ -93,18 +87,20 @@ tuple_test() ->
 module_test() ->
   ?assertAST(
     "mod MyModule\n"
-    "let id(x) = x\n"
+    "pub id(x) = x\n"
     "let ok(val) = (:ok, val)\n",
     #gleam_ast_module
     { name = 'MyModule'
     , functions =
       [ #gleam_ast_function
         { name = id
+        , public = true
         , args = [x]
         , body = [#gleam_ast_var{name = x}]
         }
       , #gleam_ast_function
         { name = ok
+        , public = false
         , args = [val]
         , body =
           [ #gleam_ast_tuple

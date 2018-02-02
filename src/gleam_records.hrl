@@ -8,6 +8,7 @@
 -record(
   gleam_ast_function
   , { name = undefined
+    , public = false
     , args = []
     , body = []
     }
