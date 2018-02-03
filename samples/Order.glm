@@ -1,0 +1,35 @@
+module Order
+
+export Order(..), reverse/1, to_int/1, compare/2, max/2, min/2
+
+type Order
+  = Less
+  | Equal
+  | Greater
+
+let reverse(order) =
+  match order
+  | Less => Greater
+  | Equal => Equal
+  | Greater => Less
+
+let to_int(order) =
+  match order
+  | Less => -1
+  | Equal => 0
+  | Greater => 1
+
+let compare(a, b) =
+  Int.compare(to_int(a), to_int(b) // Possible circular dep here.
+
+let max(a, b) =
+  match (a, b)
+  | (Greater, _) => Greater
+  | (Equal, Less) => Equal
+  | _ => b
+
+let min(a, b) =
+  match (a, b)
+  | (Less, _) => Less
+  | (Equal, Greater) => Equal
+  | _ => b

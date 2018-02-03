@@ -1,0 +1,31 @@
+module Bool
+
+export Bool(..), not/1, compare/2, max/2, min/2
+
+import Order exposing Order(..)
+
+type Bool
+  = True
+  | False
+
+let not(bool) =
+  match bool
+  | True => False
+  | False => True
+
+let compare(a, b) =
+  match (a, b)
+  | (True, True) => Equal
+  | (True, False) => Greater
+  | (False, False) => Less
+  | (False, True) => Greater
+
+let max(a, b) =
+  match a
+  | True => True
+  | False => b
+
+let min(a, b) =
+  match a
+  | False => False
+  | True => b

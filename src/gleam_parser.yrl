@@ -1,12 +1,12 @@
 Nonterminals
 source module functions function
-exprs expr literal args elems tuple.
+exprs expr literal args elems.
 
 Terminals
 '(' ')' ',' '='
 int float true false atom string
 name upname
-kw_module kw_let kw_pub.
+kw_module kw_let.
 
 Rootsymbol source.
 
@@ -23,8 +23,7 @@ module -> kw_module upname functions : mk_module('$2', '$3').
 functions -> function           : ['$1'].
 functions -> function functions : ['$1'|'$2'].
 
-function -> kw_let name '(' args ')' '=' exprs : mk_function('$2', false, '$4', '$7').
-function -> kw_pub name '(' args ')' '=' exprs : mk_function('$2', true, '$4', '$7').
+function -> kw_let name '(' args ')' '=' exprs : mk_function('$2', '$4', '$7').
 
 exprs -> expr       : ['$1'].
 exprs -> expr exprs : ['$1'|'$2'].
@@ -33,17 +32,6 @@ expr -> literal       : '$1'.
 expr -> name          : mk_var('$1').
 expr -> '(' ')'       : mk_tuple([]).
 expr -> '(' elems ')' : mk_tuple('$2').
-% expr -> expr '==' expr         : mk_eq('$1', '$3').
-% expr -> expr '-' expr          : mk_subtract('$1', '$3').
-% expr -> expr '+' expr          : mk_add('$1', '$3').
-% expr -> expr '<' expr          : mk_less_than('$1', '$3').
-% expr -> kw_let atom '=' expr   : mk_let('$2', '$4').
-% expr -> name '(' call_args ')' : mk_call('$1', '$3').
-
-% % if x { 1 } else { 2 }
-% expr -> kw_if expr '{' exprs '}'
-%                        kw_else '{' exprs '}' : mk_if('$2', '$4', '$8').
-% expr -> '|' args '|' '{' exprs '}' : mk_function('$2', '$5').
 
 args -> name          : [mk_arg('$1')].
 args -> name ','      : [mk_arg('$1')].
@@ -67,8 +55,8 @@ Erlang code.
 mk_module({upname, _, Name}, Functions) ->
   #gleam_ast_module{name = Name, functions = Functions}.
 
-mk_function({name, _, Name}, Pub, Args, Body) ->
-  #gleam_ast_function{name = Name, public = Pub, args = Args, body = Body}.
+mk_function({name, _, Name}, Args, Body) ->
+  #gleam_ast_function{name = Name, args = Args, body = Body}.
 
 mk_arg({name, _Line, Name}) -> Name.
 

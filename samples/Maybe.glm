@@ -1,33 +1,35 @@
-mod Maybe
+module Maybe
 
-pub type Maybe(x)
+export Maybe(..), some?/1, none?/1, map/2, flatten/1, then/2, unwrap/2
+
+type Maybe(x)
   = Just(x)
   | Nothing
 
-pub is_some(maybe) =
+let some?(maybe) =
   match maybe
-  | Just(_) => true
-  | Nothing => false
+  | Just(_) => True
+  | Nothing => False
 
-pub is_none(maybe) =
+let none?(maybe) =
   match maybe
-  | Just(_) => false
-  | Nothing => true
+  | Just(_) => False
+  | Nothing => True
 
-pub map(maybe, fun) =
+let map(maybe, fun) =
   match maybe
   | Just(x) => fun(x)
   | Nothing => Nothing
 
-pub flatten(maybe) =
+let flatten(maybe) =
   unwrap(maybe, Nothing)
 
-pub flat_map(maybe, fun) =
+let then(maybe, fun) =
   maybe
   |> map(_, fun)
-  |> flatten()
+  |> flatten
 
-pub unwrap(maybe, fallback) =
+let unwrap(maybe, fallback) =
   match maybe
   | Just(v) => v
   | Nothing => fallback

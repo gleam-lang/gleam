@@ -1,53 +1,58 @@
-mod Result
+module Result
+
+export Result(..), ok?/1, none?/1, map/2, map_error/2, flatten/1, then/2
+       unwrap/2, to_maybe/1, from_maybe/1
+
+import Maybe exposing Maybe(..)
 
 /// Result represents the result of something that may succeed or fail.
 /// `Ok` means it was successful, `Err` means it failed.
 ///
-pub type Result(error, value)
+type Result(error, value)
   = Ok(value)
   | Err(error)
 
-pub is_ok(result) =
+let ok?(result) =
   match result
-  | Ok(_) => true
-  | Err(_) => false
+  | Err(_) => False
+  | Ok(_) => True
 
-pub is_none(result) =
+let none?(result) =
   match result
-  | Ok(_) => false
-  | Err(_) => true
+  | Ok(_) => False
+  | Err(_) => True
 
-pub map(result, fun) =
+let map(result, fun) =
   match result
   | Ok(x) => fun(x)
   | Err(_) => result
 
-pub map_error(result, fun) =
+let map_error(result, fun) =
   match result
   | Ok(_) => result
   | Err(error) => error |> fun() |> Err()
 
-pub flatten(result) =
+let flatten(result) =
   match result
   | Ok(x) => x
   | Err(_) => result
 
-pub flat_map(result, fun) =
+let then(result, fun) =
   result
   |> map(_, fun)
   |> flatten()
 
-pub unwrap(result, default) =
+let unwrap(result, default) =
   match result
   | Ok(v) => v
   | Err(_) => default
 
-pub to_maybe(result) =
+let to_maybe(result) =
   match result
   | Ok(v) => Just(v)
   | Err(_) => Nothing
 
-pub from_maybe(error, maybe) =
+let from_maybe(error, maybe) =
   match maybe
   | Just(v) => Ok(v)
   | Nothing => Err(error)
