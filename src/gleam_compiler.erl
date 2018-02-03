@@ -1,10 +1,10 @@
 -module(gleam_compiler).
 -export([source_to_binary/1]).
+-include("gleam_records.hrl").
 
 source_to_binary(Source) ->
   {ok, Tokens, _} = gleam_tokenizer:string(Source),
-  {ok, AST} = gleam_parser:parse(Tokens),
-  {ok, Mod} = gleam_module:from_ast(AST),
-  {ok, Forms} = gleam_codegen:module(Mod),
+  {ok, #gleam_ast_module{} = AST} = gleam_parser:parse(Tokens),
+  {ok, Forms} = gleam_codegen:module(AST),
   {ok, _, Bin} = compile:forms(Forms, [report, verbose, from_core]),
   Bin.

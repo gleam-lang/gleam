@@ -5,8 +5,7 @@
         ?assertMatch(Tokens, element(2, gleam_tokenizer:string(Code)))).
 
 keyword_test() ->
-  ?assertTokens("mod",  [{kw_module, _}]),
-  ?assertTokens("pub",  [{kw_pub, _}]),
+  ?assertTokens("module",  [{kw_module, _}]),
   ?assertTokens("let",  [{kw_let, _}]).
   % ?assertTokens("if",     [{kw_if, _}]),
   % ?assertTokens("else",     [{kw_else, _}]).
@@ -56,10 +55,6 @@ brace_test() ->
   ?assertTokens("{",     [{'{', _}]),
   ?assertTokens("}",     [{'}', _}]),
   ?assertTokens("{ 5 }", [{'{', _}, {int, _, 5}, {'}', _}]).
-
-bool_test() ->
-  ?assertTokens("true",  [{'true', _}]),
-  ?assertTokens("false", [{'false', _}]).
 
 ops_test() ->
   ?assertTokens("+",  [{'+', _}]),

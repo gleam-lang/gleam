@@ -1,3 +1,5 @@
+-define(PRINT(Var), io:format("DEBUG: ~p:~p - ~p~n~n ~p~n~n", [?MODULE, ?LINE, ??Var, Var])).
+
 -record(
   gleam_ast_module
   , { name = undefined

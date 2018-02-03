@@ -1,9 +1,4 @@
-Build Your Own Elixir
-=====================
-
-Creating an Elixir-like language from scratch. For fun. :)
-
-It's called Gleam!
+# Gleam
 
 ```sh
 # Build the project

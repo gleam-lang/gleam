@@ -11,13 +11,8 @@ Comment = \/\/[^\n]*
 
 Rules.
 
-mod       : {token, {kw_module, TokenLine}}.
+module    : {token, {kw_module, TokenLine}}.
 let       : {token, {kw_let, TokenLine}}.
-pub       : {token, {kw_pub, TokenLine}}.
-% if        : {token, {kw_if, TokenLine}}.
-% else      : {token, {kw_else, TokenLine}}.
-true      : {token, {true, TokenLine}}.
-false     : {token, {false, TokenLine}}.
 \==       : {token, {'==', TokenLine}}.
 \=        : {token, {'=', TokenLine}}.
 \+        : {token, {'+', TokenLine}}.
