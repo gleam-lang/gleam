@@ -6,6 +6,7 @@
 
 keyword_test() ->
   ?assertTokens("module",  [{kw_module, _}]),
+  ?assertTokens("export",  [{kw_export, _}]),
   ?assertTokens("let",  [{kw_let, _}]).
   % ?assertTokens("if",     [{kw_if, _}]),
   % ?assertTokens("else",     [{kw_else, _}]).
@@ -63,6 +64,7 @@ ops_test() ->
   ?assertTokens("<",  [{'<', _}]),
   ?assertTokens("==", [{'==', _}]),
   ?assertTokens("=",  [{'=', _}]),
+  ?assertTokens("/",  [{'/', _}]),
   ?assertTokens("|",  [{'|', _}]).
 
 dot_test() ->

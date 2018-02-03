@@ -6,25 +6,35 @@
 
 -export([module/1]).
 
-module(#gleam_ast_module{functions = Funs} = Mod) ->
-  C_name = mod_name(Mod),
+module(#gleam_ast_module{name = Name, functions = Funs, exports = Exports}) ->
+  PrefixedName = list_to_atom("Gleam." ++ atom_to_list(Name)),
+  C_name = cerl:c_atom(PrefixedName),
   % TODO: use export statements
-  C_exports = lists:map(fun export/1, Funs),
-  C_definitions = lists:map(fun function/1, Funs),
+  C_exports =
+    [ cerl:c_fname(module_info, 0)
+    , cerl:c_fname(module_info, 1)
+    | lists:map(fun export/1, Exports)
+    ],
+  C_definitions =
+    [ module_info(PrefixedName, [])
+    , module_info(PrefixedName, [cerl:c_var(item)])
+    | lists:map(fun function/1, Funs)
+    ],
   Attributes = [],
   Core = cerl:c_module(C_name, C_exports, Attributes, C_definitions),
   {ok, Core}.
 
 
-mod_name(#gleam_ast_module{name = Name}) ->
-  Atom = list_to_atom("Gleam." ++ atom_to_list(Name)),
-  cerl:c_atom(Atom).
-
-
-export(#gleam_ast_function{name = Name, args = Args}) ->
-  Arity = length(Args),
+export({Name, Arity}) ->
   cerl:c_fname(Name, Arity).
 
+module_info(ModuleName, Params) ->
+  Body = cerl:c_call(cerl:c_atom(erlang),
+                     cerl:c_atom(get_module_info),
+                     [cerl:c_atom(ModuleName) | Params]),
+  C_fun = cerl:c_fun(Params, Body),
+  C_fname = cerl:c_fname(module_info, length(Params)),
+  {C_fname, C_fun}.
 
 function(#gleam_ast_function{name = Name, args = Args, body = Body}) ->
   Arity = length(Args),
@@ -42,10 +52,3 @@ body(Expressions) ->
 
 expression(#gleam_ast_var{name = Name}) ->
   cerl:c_var(Name).
-
-
--ifdef(TEST).
-mod_name_test() ->
-  Mod = #gleam_ast_module{name ='SomeModule'},
-  ?assertEqual(cerl:c_atom('Gleam.SomeModule'), mod_name(Mod)).
--endif.

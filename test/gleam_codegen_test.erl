@@ -17,9 +17,16 @@ with_module(Name, Source, Fun) ->
 module_identity_test() ->
   Source =
   "module CodegenModuleIdentity\n"
-  "let identity(x) = x\n",
+  "export identity/1\n"
+  "let identity(x) = x\n"
+  "let hidden(x) = x\n",
   with_module('Gleam.CodegenModuleIdentity', Source, fun() ->
     ?assert(erlang:function_exported('Gleam.CodegenModuleIdentity', identity, 1)),
+    ?assert(not erlang:function_exported('Gleam.CodegenModuleIdentity', hidden, 1)),
     ?assertEqual(ok, 'Gleam.CodegenModuleIdentity':identity(ok)),
-    ?assertEqual(42, 'Gleam.CodegenModuleIdentity':identity(42))
+    ?assertEqual(42, 'Gleam.CodegenModuleIdentity':identity(42)),
+    ?assert(erlang:function_exported('Gleam.CodegenModuleIdentity', module_info, 0)),
+    ?assert(erlang:function_exported('Gleam.CodegenModuleIdentity', module_info, 1)),
+    Info = 'Gleam.CodegenModuleIdentity':module_info(),
+    ?assertMatch([{module, 'Gleam.CodegenModuleIdentity'} | _], Info)
   end).

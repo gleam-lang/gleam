@@ -3,6 +3,7 @@
 -record(
   gleam_ast_module
   , { name = undefined
+    , exports = []
     , functions = []
     }
   ).

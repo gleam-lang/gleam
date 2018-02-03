@@ -12,6 +12,7 @@ Comment = \/\/[^\n]*
 Rules.
 
 module    : {token, {kw_module, TokenLine}}.
+export    : {token, {kw_export, TokenLine}}.
 let       : {token, {kw_let, TokenLine}}.
 \==       : {token, {'==', TokenLine}}.
 \=        : {token, {'=', TokenLine}}.
@@ -19,6 +20,7 @@ let       : {token, {kw_let, TokenLine}}.
 \-        : {token, {'-', TokenLine}}.
 \<        : {token, {'<', TokenLine}}.
 \.        : {token, {'.', TokenLine}}.
+\/        : {token, {'/', TokenLine}}.
 \|        : {token, {'|', TokenLine}}.
 \,        : {token, {',', TokenLine}}.
 \(        : {token, {'(', TokenLine}}.
