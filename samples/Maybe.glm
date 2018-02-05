@@ -1,6 +1,6 @@
 module Maybe
 
-export Maybe(..), some?/1, none?/1, map/2, flatten/1, then/2, unwrap/2
+export Maybe(_), some?/1, none?/1, map/2, flatten/1, flat_map/2, unwrap/2
 
 type Maybe(x)
   = Just(x)
@@ -22,12 +22,13 @@ let map(maybe, fun) =
   | Nothing => Nothing
 
 let flatten(maybe) =
-  unwrap(maybe, Nothing)
-
-let then(maybe, fun) =
   maybe
-  |> map(_, fun)
-  |> flatten
+    |> unwrap(_, Nothing)
+
+let flat_map(maybe, fun) =
+  maybe
+    |> map(_, fun)
+    |> flatten
 
 let unwrap(maybe, fallback) =
   match maybe

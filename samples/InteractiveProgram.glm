@@ -1,8 +1,8 @@
 module InteractiveProgram
 
 export run/0
-import Maybe exposing Maybe(Just, Nothing)
-import Order exposing Order(Less, Equal, Greater)
+import Maybe exposing Maybe(_)
+import Order exposing Order(_)
 
 let run() =
   let secret_number = Random.int(0, 100)
@@ -21,15 +21,15 @@ let loop(secret_number) =
 
 let compare(guess, secret_number) =
   match Int.compare(i, secret_number)
-  | Less => {
+  | LT => {
     IO.print("Too low!")
     loop(secret_number)
   }
-  | Greater => {
+  | GT => {
     IO.print("Too low!")
     loop(secret_number)
   }
-  | Equal => {
+  | EQ => {
     let i = Int.to_string(secret_number)
     IO.print("You got it! The number was" <> i)
   }

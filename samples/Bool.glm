@@ -1,8 +1,8 @@
 module Bool
 
-export Bool(..), not/1, compare/2, max/2, min/2
+export Bool(_), not/1, compare/2, max/2, min/2
 
-import Order exposing Order(..)
+import Order exposing Order(_)
 
 type Bool
   = True
@@ -15,10 +15,10 @@ let not(bool) =
 
 let compare(a, b) =
   match (a, b)
-  | (True, True) => Equal
-  | (True, False) => Greater
-  | (False, False) => Less
-  | (False, True) => Greater
+  | (True, True) => EQ
+  | (True, False) => GT
+  | (False, False) => LT
+  | (False, True) => GT
 
 let max(a, b) =
   match a
