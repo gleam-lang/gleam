@@ -13,7 +13,6 @@ with_module(Name, Source, Fun) ->
     ?assert(code:delete(Name))
   end.
 
-
 module_identity_test() ->
   Source =
   "module CodegenModuleIdentity\n"
@@ -29,4 +28,13 @@ module_identity_test() ->
     ?assert(erlang:function_exported('Gleam.CodegenModuleIdentity', module_info, 1)),
     Info = 'Gleam.CodegenModuleIdentity':module_info(),
     ?assertMatch([{module, 'Gleam.CodegenModuleIdentity'} | _], Info)
+  end).
+
+add_test() ->
+  Source =
+  "module CodegenAdd\n"
+  "export add/2\n"
+  "let add(x, y) = x + y\n",
+  with_module('Gleam.CodegenAdd', Source, fun() ->
+    ?assertEqual(2, 'Gleam.CodegenAdd':add(1, 1))
   end).

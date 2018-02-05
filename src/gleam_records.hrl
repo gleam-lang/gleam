@@ -16,6 +16,14 @@
     }
   ).
 
+-record(
+  gleam_ast_call
+  , { module = undefined
+    , name = undefined
+    , args = []
+    }
+  ).
+
 -record(gleam_ast_int,    { line = undefined, value = undefined }).
 -record(gleam_ast_float,  { line = undefined, value = undefined }).
 -record(gleam_ast_bool,   { line = undefined, value = undefined }).

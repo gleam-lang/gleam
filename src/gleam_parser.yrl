@@ -4,14 +4,14 @@ exprs expr literal args elems
 exports export export_names.
 
 Terminals
-'(' ')' ',' '=' '/'
+'(' ')' ',' '=' '/' '+'
 int float true false atom string
 name upname
 kw_module kw_let kw_export.
 
 Rootsymbol source.
 
-% Left 300 '+'.
+Left 300 '+'.
 % Left 300 '-'.
 % Right 100 '<'.
 % Nonassoc 200 '=='.
@@ -39,16 +39,17 @@ exprs -> expr exprs : ['$1'|'$2'].
 
 expr -> literal       : '$1'.
 expr -> name          : var('$1').
+expr -> expr '+' expr : call(erlang, '+', ['$1', '$3']).
 expr -> '(' ')'       : tuple([]).
 expr -> '(' elems ')' : tuple('$2').
 
 args -> name          : [arg('$1')].
 args -> name ','      : [arg('$1')].
-args -> name ',' args : [arg('$1'), '$3'].
+args -> name ',' args : [arg('$1') | '$3'].
 
-elems -> expr               : ['$1'].
-elems -> expr ','           : ['$1'].
-elems -> expr ',' elems     : ['$1' | '$3'].
+elems -> expr           : ['$1'].
+elems -> expr ','       : ['$1'].
+elems -> expr ',' elems : ['$1' | '$3'].
 
 literal -> atom   : literal('$1').
 literal -> int    : literal('$1').
@@ -63,6 +64,9 @@ Erlang code.
 
 module({upname, _, Name}, Exports, Functions) ->
   #gleam_ast_module{name = Name, exports = Exports, functions = Functions}.
+
+call(Mod, Name, Args) ->
+  #gleam_ast_call{module = Mod, name = Name, args = Args}.
 
 function({name, _, Name}, Args, Body) ->
   #gleam_ast_function{name = Name, args = Args, body = Body}.

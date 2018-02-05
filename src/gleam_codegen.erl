@@ -7,7 +7,7 @@
 -export([module/1]).
 
 module(#gleam_ast_module{name = Name, functions = Funs, exports = Exports}) ->
-  PrefixedName = list_to_atom("Gleam." ++ atom_to_list(Name)),
+  PrefixedName = prefix_module(Name),
   C_name = cerl:c_atom(PrefixedName),
   % TODO: use export statements
   C_exports =
@@ -23,7 +23,6 @@ module(#gleam_ast_module{name = Name, functions = Funs, exports = Exports}) ->
   Attributes = [],
   Core = cerl:c_module(C_name, C_exports, Attributes, C_definitions),
   {ok, Core}.
-
 
 export({Name, Arity}) ->
   cerl:c_fname(Name, Arity).
@@ -43,12 +42,18 @@ function(#gleam_ast_function{name = Name, args = Args, body = Body}) ->
   C_body = body(Body),
   {C_fname, cerl:c_fun(C_args, C_body)}.
 
-
 body(Expressions) ->
   % TODO: Support multiple expressions
   [Expression] = Expressions,
   expression(Expression).
 
-
 expression(#gleam_ast_var{name = Name}) ->
-  cerl:c_var(Name).
+  cerl:c_var(Name);
+expression(#gleam_ast_call{module = Mod, name = Name, args = Args}) ->
+  C_module = cerl:c_atom(prefix_module(Mod)),
+  C_fname = cerl:c_atom(Name),
+  C_args = lists:map(fun expression/1, Args),
+  cerl:c_call(C_module, C_fname, C_args).
+
+prefix_module(erlang) -> erlang;
+prefix_module(Name) -> list_to_atom("Gleam." ++ atom_to_list(Name)).

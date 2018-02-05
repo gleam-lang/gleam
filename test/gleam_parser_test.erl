@@ -57,6 +57,22 @@ module_test() ->
     }
   ).
 
+arity_2_test() ->
+  ?assertAST(
+    "module MyModule\n"
+    "let add(x, y) = x + y\n",
+    #gleam_ast_module
+    { name = 'MyModule'
+    , functions =
+      [  #gleam_ast_function
+        { name = add
+        , args = [x, y]
+        , body = [#gleam_ast_call{}]
+        }
+      ]
+    }
+  ).
+
 export_test() ->
   ?assertAST(
     "module MyModule\n"
