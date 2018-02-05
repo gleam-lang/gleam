@@ -6,36 +6,36 @@ export Result(..), ok?/1, none?/1, map/2, map_error/2, flatten/1, then/2
 import Maybe exposing Maybe(..)
 
 /// Result represents the result of something that may succeed or fail.
-/// `Ok` means it was successful, `Err` means it failed.
+/// `Ok` means it was successful, `Error` means it failed.
 ///
 type Result(error, value)
   = Ok(value)
-  | Err(error)
+  | Error(error)
 
 let ok?(result) =
   match result
-  | Err(_) => False
+  | Error(_) => False
   | Ok(_) => True
 
 let none?(result) =
   match result
   | Ok(_) => False
-  | Err(_) => True
+  | Error(_) => True
 
 let map(result, fun) =
   match result
   | Ok(x) => fun(x)
-  | Err(_) => result
+  | Error(_) => result
 
 let map_error(result, fun) =
   match result
   | Ok(_) => result
-  | Err(error) => error |> fun() |> Err()
+  | Error(error) => error |> fun |> Error
 
 let flatten(result) =
   match result
   | Ok(x) => x
-  | Err(_) => result
+  | Error(_) => result
 
 let then(result, fun) =
   result
@@ -45,14 +45,14 @@ let then(result, fun) =
 let unwrap(result, default) =
   match result
   | Ok(v) => v
-  | Err(_) => default
+  | Error(_) => default
 
 let to_maybe(result) =
   match result
   | Ok(v) => Just(v)
-  | Err(_) => Nothing
+  | Error(_) => Nothing
 
 let from_maybe(error, maybe) =
   match maybe
   | Just(v) => Ok(v)
-  | Nothing => Err(error)
+  | Nothing => Error(error)
