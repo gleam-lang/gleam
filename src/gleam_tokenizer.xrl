@@ -3,7 +3,7 @@ Definitions.
 Int     = [-+]?[0-9]+
 Float   = [-+]?[0-9]+\.[0-9]+
 WS      = [\n\s\r\t]
-Atom    = :[a-zA-Z0-9!\?_]*
+Atom    = :[a-zA-Z0-9!\?_]+
 Name    = [a-z_][a-zA-Z0-9!\?_]*
 UpName  = [A-Z][a-zA-Z0-9!\?_]*
 String  = "([^\\""]|\\.)*"
@@ -14,19 +14,20 @@ Rules.
 module    : {token, {kw_module, TokenLine}}.
 export    : {token, {kw_export, TokenLine}}.
 let       : {token, {kw_let, TokenLine}}.
-\==       : {token, {'==', TokenLine}}.
-\=        : {token, {'=', TokenLine}}.
+==        : {token, {'==', TokenLine}}.
+=         : {token, {'=', TokenLine}}.
 \+        : {token, {'+', TokenLine}}.
-\-        : {token, {'-', TokenLine}}.
+-         : {token, {'-', TokenLine}}.
 \*        : {token, {'*', TokenLine}}.
-\/        : {token, {'/', TokenLine}}.
+/         : {token, {'/', TokenLine}}.
 \+\.      : {token, {'+.', TokenLine}}.
-\-\.      : {token, {'-.', TokenLine}}.
+-\.       : {token, {'-.', TokenLine}}.
 \*\.      : {token, {'*.', TokenLine}}.
-\/\.      : {token, {'/.', TokenLine}}.
-\<=       : {token, {'<=', TokenLine}}.
-\<        : {token, {'<', TokenLine}}.
-\>=       : {token, {'>', TokenLine}}.
+/\.       : {token, {'/.', TokenLine}}.
+<=        : {token, {'<=', TokenLine}}.
+<         : {token, {'<', TokenLine}}.
+>=        : {token, {'>', TokenLine}}.
+::        : {token, {'::', TokenLine}}.
 \>        : {token, {'>=', TokenLine}}.
 \.        : {token, {'.', TokenLine}}.
 \|        : {token, {'|', TokenLine}}.

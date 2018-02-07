@@ -4,7 +4,7 @@ exprs expr literal args elems
 exports export export_names.
 
 Terminals
-'(' ')' '[' ']'
+'(' ')' '[' ']' '::'
 ',' '='
 '<=' '<' '>' '>='
 '/' '*' '+' '-' '/.' '*.' '+.' '-.'
@@ -18,6 +18,7 @@ Nonassoc 300 '+'.
 Nonassoc 300 '-'.
 Nonassoc 300 '+.'.
 Nonassoc 300 '-.'.
+Right 60 '::'.
 Left 220 '*'.
 Left 220 '/'.
 Left 220 '*.'.
@@ -38,7 +39,9 @@ module -> kw_module upname exports functions : module('$2', '$3', '$4').
 
 exports -> export         : '$1'.
 exports -> export exports : '$1' ++ '$2'.
+
 export -> kw_export export_names : '$2'.
+
 export_names -> name '/' int                  : [export('$1', '$3')].
 export_names -> name '/' int ',' export_names : [export('$1', '$3') | '$5'].
 
@@ -65,6 +68,7 @@ expr -> expr '<=' expr : call(erlang, '<=', ['$1', '$3']).
 expr -> expr '<'  expr : call(erlang, '<' , ['$1', '$3']).
 expr -> expr '>'  expr : call(erlang, '>' , ['$1', '$3']).
 expr -> expr '>=' expr : call(erlang, '>=', ['$1', '$3']).
+expr -> expr '::' expr : call(?bif_mod, '::', ['$1', '$3']).
 expr -> '(' ')'        : tuple([]).
 expr -> '(' elems ')'  : tuple('$2').
 expr -> '[' ']'        : list([]).

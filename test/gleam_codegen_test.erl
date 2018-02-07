@@ -160,13 +160,17 @@ tuple_test() ->
 list_test() ->
   Source =
     "module CodegenList\n"
-    "export empty/0, one/0, two/0\n"
+    "export empty/0, one/0, two/0, cons/2, unsugared_list/0\n"
     "let empty() = []\n"
     "let one() = [1]\n"
     "let two() = [1, 2]\n"
+    "let cons(head, tail) = head :: tail\n"
+    "let unsugared_list() = 1 :: 2 :: 3 :: 4 :: 5 :: 6 :: []\n"
   ,
   with_module('Gleam.CodegenList', Source, fun() ->
     ?assertEqual([], 'Gleam.CodegenList':empty()),
     ?assertEqual([1], 'Gleam.CodegenList':one()),
-    ?assertEqual([1, 2], 'Gleam.CodegenList':two())
+    ?assertEqual([1, 2], 'Gleam.CodegenList':two()),
+    ?assertEqual([1, 2, 3], 'Gleam.CodegenList':cons(1, [2, 3])),
+    ?assertEqual([1, 2, 3, 4, 5, 6], 'Gleam.CodegenList':unsugared_list())
   end).
