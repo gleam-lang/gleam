@@ -4,17 +4,24 @@ exprs expr literal args elems
 exports export export_names.
 
 Terminals
-'(' ')' ',' '=' '/' '+'
+'(' ')' ',' '='
+'<=' '<' '>' '>='
+'/' '*' '+' '-' '/.' '*.' '+.' '-.'
 int float true false atom string
 name upname
 kw_module kw_let kw_export.
 
 Rootsymbol source.
 
-Left 300 '+'.
-% Left 300 '-'.
-% Right 100 '<'.
-% Nonassoc 200 '=='.
+Nonassoc 300 '+'.
+Nonassoc 300 '-'.
+Nonassoc 300 '+.'.
+Nonassoc 300 '-.'.
+Left 220 '*'.
+Left 220 '/'.
+Left 220 '*.'.
+Left 220 '/.'.
+% Left 170 '|>'.
 
 source -> module      : '$1'.
 source -> exprs : '$1'.
@@ -37,11 +44,22 @@ function -> kw_let name '(' args ')' '=' exprs : function('$2', '$4', '$7').
 exprs -> expr       : ['$1'].
 exprs -> expr exprs : ['$1'|'$2'].
 
-expr -> literal       : '$1'.
-expr -> name          : var('$1').
-expr -> expr '+' expr : call(erlang, '+', ['$1', '$3']).
-expr -> '(' ')'       : tuple([]).
-expr -> '(' elems ')' : tuple('$2').
+expr -> literal        : '$1'.
+expr -> name           : var('$1').
+expr -> expr '+' expr  : call(erlang, '+', ['$1', '$3']).
+expr -> expr '-' expr  : call(erlang, '-', ['$1', '$3']).
+expr -> expr '*' expr  : call(erlang, '*', ['$1', '$3']).
+expr -> expr '/' expr  : call(erlang, '/', ['$1', '$3']).
+expr -> expr '+.' expr : call(erlang, '+.', ['$1', '$3']).
+expr -> expr '-.' expr : call(erlang, '-.', ['$1', '$3']).
+expr -> expr '*.' expr : call(erlang, '*.', ['$1', '$3']).
+expr -> expr '/.' expr : call(erlang, '/.', ['$1', '$3']).
+expr -> expr '<=' expr : call(erlang, '<=', ['$1', '$3']).
+expr -> expr '<'  expr : call(erlang, '<' , ['$1', '$3']).
+expr -> expr '>'  expr : call(erlang, '>' , ['$1', '$3']).
+expr -> expr '>=' expr : call(erlang, '>=', ['$1', '$3']).
+expr -> '(' ')'        : tuple([]).
+expr -> '(' elems ')'  : tuple('$2').
 
 args -> name          : [arg('$1')].
 args -> name ','      : [arg('$1')].

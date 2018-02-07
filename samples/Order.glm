@@ -37,7 +37,6 @@ let compare(a, b) =
   | (GT, GT) => EQ
   | (EQ, GT) => LT
   | _ => GT
-  Int.compare(to_int(a), to_int(b) // Circular dep here.
 
 test "compare/1" =
   compare(LT, LT) |> Assert.equal(_, EQ)
