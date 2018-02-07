@@ -49,6 +49,8 @@ body(Expressions) ->
 var(Atom) when is_atom(Atom) ->
   cerl:c_var(Atom).
 
+expression(#gleam_ast_int{value = Value}) when is_integer(Value) ->
+  cerl:c_int(Value);
 expression(#gleam_ast_var{name = Name}) when is_atom(Name) ->
   cerl:c_var(Name);
 expression(#gleam_ast_call{module = Mod, name = Name, args = Args}) when is_atom(Name) ->

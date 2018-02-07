@@ -35,26 +35,26 @@ module_identity_test() ->
 maths_test() ->
   Source =
     "module CodegenMaths\n"
-    "export intAdd/2, intSub/2, intMult/2, intDiv/2, floatAdd/2, floatSub/2,\n"
-    "       floatMult/2, floatDiv/2\n"
-    "let intAdd(x, y) = x + y\n"
-    "let intSub(x, y) = x - y\n"
-    "let intMult(x, y) = x * y\n"
-    "let intDiv(x, y) = x / y\n"
-    "let floatAdd(x, y) = x +. y\n"
-    "let floatSub(x, y) = x -. y\n"
-    "let floatMult(x, y) = x *. y\n"
-    "let floatDiv(x, y) = x /. y\n"
+    "export int_add/2, int_sub/2, int_mult/2, int_div/2, float_add/2,\n"
+    "       float_sub/2, float_mult/2, float_div/2\n"
+    "let int_add(x, y) = x + y\n"
+    "let int_sub(x, y) = x - y\n"
+    "let int_mult(x, y) = x * y\n"
+    "let int_div(x, y) = x / y\n"
+    "let float_add(x, y) = x +. y\n"
+    "let float_sub(x, y) = x -. y\n"
+    "let float_mult(x, y) = x *. y\n"
+    "let float_div(x, y) = x /. y\n"
   ,
   with_module('Gleam.CodegenMaths', Source, fun() ->
-    ?assertEqual(2, 'Gleam.CodegenMaths':intAdd(1, 1)),
-    ?assertEqual(9, 'Gleam.CodegenMaths':intSub(10, 1)),
-    ?assertEqual(8, 'Gleam.CodegenMaths':intMult(4, 2)),
-    ?assertEqual(4, 'Gleam.CodegenMaths':intDiv(9, 2)),
-    ?assertEqual(5.1, 'Gleam.CodegenMaths':floatAdd(4.0, 1.1)),
-    ?assertEqual(8.4, 'Gleam.CodegenMaths':floatSub(10.0, 1.6)),
-    ?assertEqual(7.5, 'Gleam.CodegenMaths':floatMult(3.0, 2.5)),
-    ?assertEqual(5.0, 'Gleam.CodegenMaths':floatDiv(10.0, 2.0))
+    ?assertEqual(2, 'Gleam.CodegenMaths':int_add(1, 1)),
+    ?assertEqual(9, 'Gleam.CodegenMaths':int_sub(10, 1)),
+    ?assertEqual(8, 'Gleam.CodegenMaths':int_mult(4, 2)),
+    ?assertEqual(4, 'Gleam.CodegenMaths':int_div(9, 2)),
+    ?assertEqual(5.1, 'Gleam.CodegenMaths':float_add(4.0, 1.1)),
+    ?assertEqual(8.4, 'Gleam.CodegenMaths':float_sub(10.0, 1.6)),
+    ?assertEqual(7.5, 'Gleam.CodegenMaths':float_mult(3.0, 2.5)),
+    ?assertEqual(5.0, 'Gleam.CodegenMaths':float_div(10.0, 2.0))
   end).
 
 comparison_test() ->
@@ -79,4 +79,23 @@ comparison_test() ->
     ?refute('Gleam.CodegenComparison':'gte?'(1, 2)),
     ?refute('Gleam.CodegenComparison':'gte?'(1, 1)),
     ?assert('Gleam.CodegenComparison':'gte?'(2, 1))
+  end).
+
+
+int_test() ->
+  Source =
+    "module CodegenInt\n"
+    "export one/0, two/0, inc/1, negative/0, positive/0"
+    "let one() = 1\n"
+    "let two() = 2\n"
+    "let inc(x) = x + 1\n"
+    "let negative() = -1\n"
+    "let positive() = +10\n"
+  ,
+  with_module('Gleam.CodegenInt', Source, fun() ->
+    ?assertEqual(1, 'Gleam.CodegenInt':one()),
+    ?assertEqual(2, 'Gleam.CodegenInt':two()),
+    ?assertEqual(2, 'Gleam.CodegenInt':inc(1)),
+    ?assertEqual(-1, 'Gleam.CodegenInt':negative()),
+    ?assertEqual(10, 'Gleam.CodegenInt':positive())
   end).

@@ -1,6 +1,6 @@
 Definitions.
 
-Int     = [0-9]+
+Int     = [-+]?[0-9]+
 Float   = [0-9]+\.[0-9]+
 WS      = [\n\s\r\t]
 Atom    = :[a-zA-Z0-9!\?_]*

@@ -21,10 +21,14 @@ Left 220 '*'.
 Left 220 '/'.
 Left 220 '*.'.
 Left 220 '/.'.
+Left 160 '<'.
+Left 160 '>'.
+Left 160 '<='.
+Left 160 '>='.
 % Left 170 '|>'.
 
-source -> module      : '$1'.
-source -> exprs : '$1'.
+source -> module : '$1'.
+source -> exprs  : '$1'.
 
 module -> kw_module upname                   : module('$2', [], []).
 module -> kw_module upname functions         : module('$2', [], '$3').
@@ -39,6 +43,8 @@ export_names -> name '/' int ',' export_names : [export('$1', '$3') | '$5'].
 
 functions -> function           : ['$1'].
 functions -> function functions : ['$1'|'$2'].
+
+function -> kw_let name '(' ')' '=' exprs      : function('$2', [], '$6').
 function -> kw_let name '(' args ')' '=' exprs : function('$2', '$4', '$7').
 
 exprs -> expr       : ['$1'].
