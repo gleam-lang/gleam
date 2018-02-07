@@ -1,0 +1,8 @@
+module List
+
+foreign type List(a)
+
+foreign native_map :lists :map :: ((a) -> b, List(a)) -> List(b)
+
+let map(list, fun) =
+  native_map(fun, list)

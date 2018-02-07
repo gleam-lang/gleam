@@ -81,7 +81,6 @@ comparison_test() ->
     ?assert('Gleam.CodegenComparison':'gte?'(2, 1))
   end).
 
-
 int_test() ->
   Source =
     "module CodegenInt\n"
@@ -98,4 +97,62 @@ int_test() ->
     ?assertEqual(2, 'Gleam.CodegenInt':inc(1)),
     ?assertEqual(-1, 'Gleam.CodegenInt':negative()),
     ?assertEqual(10, 'Gleam.CodegenInt':positive())
+  end).
+
+float_test() ->
+  Source =
+    "module CodegenFloat\n"
+    "export one/0, two/0, inc/1, negative/0, positive/0"
+    "let one() = 1.0\n"
+    "let two() = 2.0\n"
+    "let inc(x) = x + 1.0\n"
+    "let negative() = -1.0\n"
+    "let positive() = +10.0\n"
+  ,
+  with_module('Gleam.CodegenFloat', Source, fun() ->
+    ?assertEqual(1.0, 'Gleam.CodegenFloat':one()),
+    ?assertEqual(2.0, 'Gleam.CodegenFloat':two()),
+    ?assertEqual(2.0, 'Gleam.CodegenFloat':inc(1.0)),
+    ?assertEqual(-1.0, 'Gleam.CodegenFloat':negative()),
+    ?assertEqual(10.0, 'Gleam.CodegenFloat':positive())
+  end).
+
+string_test() ->
+  Source =
+    "module CodegenString\n"
+    "export empty/0, name/0"
+    "let empty() = \"\"\n"
+    "let name() = \"Louis\"\n"
+  ,
+  with_module('Gleam.CodegenString', Source, fun() ->
+    ?assertEqual(<<>>, 'Gleam.CodegenString':empty()),
+    ?assertEqual(<<"Louis">>, 'Gleam.CodegenString':name())
+  end).
+
+atom_test() ->
+  Source =
+    "module CodegenAtom\n"
+    "export one/0, caps/0, etc/0"
+    "let one() = :one\n"
+    "let caps() = :CAPS\n"
+    "let etc() = :\"Hello, world!\"\n"
+  ,
+  with_module('Gleam.CodegenAtom', Source, fun() ->
+    ?assertEqual(one, 'Gleam.CodegenAtom':one()),
+    ?assertEqual('CAPS', 'Gleam.CodegenAtom':caps()),
+    ?assertEqual('Hello, world!', 'Gleam.CodegenAtom':etc())
+  end).
+
+tuple_test() ->
+  Source =
+    "module CodegenTuple\n"
+    "export zero/0, ok/1, threeple/0\n"
+    "let zero() = ()\n"
+    "let ok(x) = (:ok, x)\n"
+    "let threeple() = (1, 2, 3)\n"
+  ,
+  with_module('Gleam.CodegenTuple', Source, fun() ->
+    ?assertEqual({}, 'Gleam.CodegenTuple':zero()),
+    ?assertEqual({ok, 1}, 'Gleam.CodegenTuple':ok(1)),
+    ?assertEqual({1, 2, 3}, 'Gleam.CodegenTuple':threeple())
   end).
