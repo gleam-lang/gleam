@@ -53,30 +53,43 @@ expression(#gleam_ast_string{value = Value}) when is_binary(Value) ->
   Chars = binary_to_list(Value),
   ByteSequence = lists:map(fun binary_string_byte/1, Chars),
   cerl:c_binary(ByteSequence);
+
+expression(#gleam_ast_list{elems = Elems}) ->
+  C_elems = lists:map(fun expression/1, Elems),
+  c_list(C_elems);
+
 expression(#gleam_ast_tuple{elems = Elems}) ->
   C_elems = lists:map(fun expression/1, Elems),
   cerl:c_tuple(C_elems);
+
 expression(#gleam_ast_atom{value = Value}) when is_atom(Value) ->
   cerl:c_atom(Value);
+
 expression(#gleam_ast_int{value = Value}) when is_integer(Value) ->
   cerl:c_int(Value);
+
 expression(#gleam_ast_float{value = Value}) when is_float(Value) ->
   cerl:c_float(Value);
+
 expression(#gleam_ast_var{name = Name}) when is_atom(Name) ->
   cerl:c_var(Name);
+
 expression(#gleam_ast_call{module = Mod, name = Name, args = Args}) when is_atom(Name) ->
   C_module = cerl:c_atom(prefix_module(Mod)),
   C_fname = call_fname(Name),
   C_args = lists:map(fun expression/1, Args),
   cerl:c_call(C_module, C_fname, C_args).
 
+c_list(Elems) ->
+  Rev = lists:reverse(Elems),
+  lists:foldl(fun cerl:c_cons/2, cerl:c_nil(), Rev).
+
 binary_string_byte(Char) ->
   cerl:c_bitstr(cerl:c_int(Char),
                 cerl:c_int(8),
                 cerl:c_int(1),
                 cerl:c_atom(integer),
-                cerl:c_cons(cerl:c_atom(unsigned),
-                            cerl:c_cons(cerl:c_atom(big), cerl:c_nil()))).
+                c_list([cerl:c_atom(unsigned), cerl:c_atom(big)])).
 
 call_fname('/') -> cerl:c_atom('div');
 call_fname('+.') -> cerl:c_atom('+');

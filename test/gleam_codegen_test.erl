@@ -156,3 +156,17 @@ tuple_test() ->
     ?assertEqual({ok, 1}, 'Gleam.CodegenTuple':ok(1)),
     ?assertEqual({1, 2, 3}, 'Gleam.CodegenTuple':threeple())
   end).
+
+list_test() ->
+  Source =
+    "module CodegenList\n"
+    "export empty/0, one/0, two/0\n"
+    "let empty() = []\n"
+    "let one() = [1]\n"
+    "let two() = [1, 2]\n"
+  ,
+  with_module('Gleam.CodegenList', Source, fun() ->
+    ?assertEqual([], 'Gleam.CodegenList':empty()),
+    ?assertEqual([1], 'Gleam.CodegenList':one()),
+    ?assertEqual([1, 2], 'Gleam.CodegenList':two())
+  end).

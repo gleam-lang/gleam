@@ -31,3 +31,4 @@
 -record(gleam_ast_string, { line = undefined, value = undefined }).
 -record(gleam_ast_var,    { line = undefined, name = undefined }).
 -record(gleam_ast_tuple,  { elems = [] }).
+-record(gleam_ast_list,   { elems = [] }).

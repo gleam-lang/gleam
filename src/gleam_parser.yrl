@@ -4,7 +4,8 @@ exprs expr literal args elems
 exports export export_names.
 
 Terminals
-'(' ')' ',' '='
+'(' ')' '[' ']'
+',' '='
 '<=' '<' '>' '>='
 '/' '*' '+' '-' '/.' '*.' '+.' '-.'
 int float true false atom string
@@ -66,6 +67,8 @@ expr -> expr '>'  expr : call(erlang, '>' , ['$1', '$3']).
 expr -> expr '>=' expr : call(erlang, '>=', ['$1', '$3']).
 expr -> '(' ')'        : tuple([]).
 expr -> '(' elems ')'  : tuple('$2').
+expr -> '[' ']'        : list([]).
+expr -> '[' elems ']'  : list('$2').
 
 args -> name          : [arg('$1')].
 args -> name ','      : [arg('$1')].
@@ -102,6 +105,8 @@ var({name, Line, Name}) -> #gleam_ast_var{line = Line, name = Name}.
 export({name, _, Name}, {int, _, Arity}) -> {Name, Arity}.
 
 tuple(Elems) -> #gleam_ast_tuple{elems = Elems}.
+
+list(Elems) -> #gleam_ast_list{elems = Elems}.
 
 literal({atom, Line, Value})   -> #gleam_ast_atom{line = Line, value = Value};
 literal({int, Line, Value})    -> #gleam_ast_int{line = Line, value = Value};
