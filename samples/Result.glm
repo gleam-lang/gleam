@@ -1,9 +1,9 @@
 module Result
 
-export Result(_), ok?/1, none?/1, map/2, map_error/2, flatten/1, flat_map/2,
+export Result(..), ok?/1, none?/1, map/2, map_error/2, flatten/1, flat_map/2,
        unwrap/2, to_maybe/1, from_maybe/1
 
-import Maybe exposing Maybe(_)
+import Maybe exposing Maybe(..)
 
 /// Result represents the result of something that may succeed or fail.
 /// `Ok` means it was successful, `Error` means it failed.
