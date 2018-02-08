@@ -4,6 +4,7 @@ export Bool(..), not/1, compare/2, max/2, min/2
 
 import Order exposing Order(_)
 
+
 type Bool
   = True
   | False

@@ -174,3 +174,15 @@ list_test() ->
     ?assertEqual([1, 2, 3], 'Gleam.CodegenList':cons(1, [2, 3])),
     ?assertEqual([1, 2, 3, 4, 5, 6], 'Gleam.CodegenList':unsugared_list())
   end).
+
+call_test() ->
+  Source =
+    "module CodegenCall\n"
+    "export double/1\n"
+    "let double(x) = ok(add(x, x))\n"
+    "let add(x, y) = x + y\n"
+    "let ok(x) = (:ok, x)\n"
+  ,
+  with_module('Gleam.CodegenCall', Source, fun() ->
+    ?assertEqual({ok, 10}, 'Gleam.CodegenCall':double(5))
+  end).

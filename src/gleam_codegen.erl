@@ -74,16 +74,19 @@ expression(#gleam_ast_float{value = Value}) when is_float(Value) ->
 expression(#gleam_ast_var{name = Name}) when is_atom(Name) ->
   cerl:c_var(Name);
 
-% Cons
-expression(#gleam_ast_call{module = ?bif_mod, name = '::', args = [H, T]}) ->
+expression(#gleam_ast_local_call{name = '::', args = [H, T]}) ->
   cerl:c_cons(expression(H), expression(T));
 
-% Other calls
+expression(#gleam_ast_local_call{name = Name, args = Args}) ->
+  C_fname = cerl:c_fname(Name, length(Args)),
+  C_args = lists:map(fun expression/1, Args),
+  cerl:c_apply(C_fname, C_args);
+
 expression(#gleam_ast_call{module = Mod, name = Name, args = Args}) ->
   C_module = cerl:c_atom(prefix_module(Mod)),
-  C_fname = call_fname(Name),
+  C_name = call_name(Name),
   C_args = lists:map(fun expression/1, Args),
-  cerl:c_call(C_module, C_fname, C_args).
+  cerl:c_call(C_module, C_name, C_args).
 
 c_list(Elems) ->
   Rev = lists:reverse(Elems),
@@ -96,13 +99,13 @@ binary_string_byte(Char) ->
                 cerl:c_atom(integer),
                 c_list([cerl:c_atom(unsigned), cerl:c_atom(big)])).
 
-call_fname('/') -> cerl:c_atom('div');
-call_fname('+.') -> cerl:c_atom('+');
-call_fname('-.') -> cerl:c_atom('-');
-call_fname('*.') -> cerl:c_atom('*');
-call_fname('/.') -> cerl:c_atom('/');
-call_fname('<=') -> cerl:c_atom('=<');
-call_fname(Name) when is_atom(Name) -> cerl:c_atom(Name).
+call_name('/') -> cerl:c_atom('div');
+call_name('+.') -> cerl:c_atom('+');
+call_name('-.') -> cerl:c_atom('-');
+call_name('*.') -> cerl:c_atom('*');
+call_name('/.') -> cerl:c_atom('/');
+call_name('<=') -> cerl:c_atom('=<');
+call_name(Name) when is_atom(Name) -> cerl:c_atom(Name).
 
 prefix_module(erlang) -> erlang;
 prefix_module(Name) when is_atom(Name) -> list_to_atom("Gleam." ++ atom_to_list(Name)).

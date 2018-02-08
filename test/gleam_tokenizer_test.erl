@@ -71,4 +71,4 @@ dot_test() ->
   ?assertTokens(".", [{'.', _}]),
   ?assertTokens(
      "Mod.f()",
-     [{upname, _, 'Mod'}, {'.', _}, {name, _, f}, {'(', _}, {')', _}]).
+     [{upname, _, 'Mod'}, {'.', _}, {call, _, f}, {')', _}]).

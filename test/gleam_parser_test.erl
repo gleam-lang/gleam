@@ -67,11 +67,34 @@ arity_2_test() ->
       [  #gleam_ast_function
         { name = add
         , args = [x, y]
-        , body = [#gleam_ast_call{}]
+        , body = [#gleam_ast_call{module = erlang, name = '+'}]
         }
       ]
     }
   ).
+
+call_test() ->
+  Code =
+    "module MyModule\n"
+    "let run() = print(20)\n"
+  ,
+  Tokens =
+    #gleam_ast_module
+    { name = 'MyModule'
+    , functions =
+      [  #gleam_ast_function
+        { name = run
+        , args = []
+        , body =
+          [ #gleam_ast_local_call
+            { name = print
+            , args = [#gleam_ast_int{value = 20, line = 2}]
+            }
+          ]
+        }
+      ]
+    },
+  ?assertEqual(Tokens, parse(tokens(Code))).
 
 export_test() ->
   ?assertAST(

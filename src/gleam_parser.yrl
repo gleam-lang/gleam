@@ -9,7 +9,7 @@ Terminals
 '<=' '<' '>' '>='
 '/' '*' '+' '-' '/.' '*.' '+.' '-.'
 int float true false atom string
-name upname
+name upname call
 kw_module kw_let kw_export.
 
 Rootsymbol source.
@@ -48,14 +48,16 @@ export_names -> name '/' int ',' export_names : [export('$1', '$3') | '$5'].
 functions -> function           : ['$1'].
 functions -> function functions : ['$1'|'$2'].
 
-function -> kw_let name '(' ')' '=' exprs      : function('$2', [], '$6').
-function -> kw_let name '(' args ')' '=' exprs : function('$2', '$4', '$7').
+function -> kw_let call ')' '=' exprs      : function('$2', [], '$5').
+function -> kw_let call args ')' '=' exprs : function('$2', '$3', '$6').
 
 exprs -> expr       : ['$1'].
 exprs -> expr exprs : ['$1'|'$2'].
 
 expr -> literal        : '$1'.
 expr -> name           : var('$1').
+expr -> call elems ')' : local_call('$1', '$2').
+expr -> expr '::' expr : local_call('::', ['$1', '$3']).
 expr -> expr '+' expr  : call(erlang, '+', ['$1', '$3']).
 expr -> expr '-' expr  : call(erlang, '-', ['$1', '$3']).
 expr -> expr '*' expr  : call(erlang, '*', ['$1', '$3']).
@@ -68,7 +70,6 @@ expr -> expr '<=' expr : call(erlang, '<=', ['$1', '$3']).
 expr -> expr '<'  expr : call(erlang, '<' , ['$1', '$3']).
 expr -> expr '>'  expr : call(erlang, '>' , ['$1', '$3']).
 expr -> expr '>=' expr : call(erlang, '>=', ['$1', '$3']).
-expr -> expr '::' expr : call(?bif_mod, '::', ['$1', '$3']).
 expr -> '(' ')'        : tuple([]).
 expr -> '(' elems ')'  : tuple('$2').
 expr -> '[' ']'        : list([]).
@@ -96,10 +97,15 @@ Erlang code.
 module({upname, _, Name}, Exports, Functions) ->
   #gleam_ast_module{name = Name, exports = Exports, functions = Functions}.
 
+local_call({call, _, Name}, Args) ->
+  #gleam_ast_local_call{name = Name, args = Args};
+local_call(Name, Args) when is_atom(Name) ->
+  #gleam_ast_local_call{name = Name, args = Args}.
+
 call(Mod, Name, Args) ->
   #gleam_ast_call{module = Mod, name = Name, args = Args}.
 
-function({name, _, Name}, Args, Body) ->
+function({call, _, Name}, Args, Body) ->
   #gleam_ast_function{name = Name, args = Args, body = Body}.
 
 arg({name, _Line, Name}) -> Name.

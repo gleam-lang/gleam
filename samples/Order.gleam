@@ -2,6 +2,7 @@ module Order
 
 export Order(..), reverse/1, to_int/1, compare/2, max/2, min/2
 
+
 type Order
   = LT
   | EQ

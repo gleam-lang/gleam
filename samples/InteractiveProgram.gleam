@@ -1,8 +1,10 @@
 module InteractiveProgram
 
 export run/0
+
 import Maybe exposing Maybe(..)
 import Order exposing Order(..)
+
 
 let run() =
   let secret_number = Random.int(0, 100)

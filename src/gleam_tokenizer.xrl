@@ -43,6 +43,7 @@ let       : {token, {kw_let, TokenLine}}.
 {Atom}    : {token, {atom, TokenLine, atom(TokenChars)}}.
 :{String} : {token, {atom, TokenLine, atom(TokenChars)}}.
 {Name}    : {token, {name, TokenLine, list_to_atom(TokenChars)}}.
+{Name}\(  : {token, {call, TokenLine, call(TokenChars)}}.
 {UpName}  : {token, {upname, TokenLine, list_to_atom(TokenChars)}}.
 {String}  : {token, {string, TokenLine, str(TokenChars)}}.
 {Comment} : skip_token.
@@ -61,6 +62,9 @@ flt(S) when is_list(S) ->
 
 atom([$:, $" | S]) -> list_to_atom(lists:droplast(S));
 atom([$: | S])     -> list_to_atom(S).
+
+call(S) ->
+  list_to_atom(lists:droplast(S)).
 
 str(S) when is_list(S) ->
   Contents  = tl(lists:droplast(S)),
