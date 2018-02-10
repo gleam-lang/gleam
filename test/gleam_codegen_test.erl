@@ -186,3 +186,13 @@ call_test() ->
   with_module('Gleam.CodegenCall', Source, fun() ->
     ?assertEqual({ok, 10}, 'Gleam.CodegenCall':double(5))
   end).
+
+seq_test() ->
+  Source =
+    "module CodegenSeq\n"
+    "export main/0\n"
+    "let main() = 1 2 3\n"
+  ,
+  with_module('Gleam.CodegenSeq', Source, fun() ->
+    ?assertEqual(3, 'Gleam.CodegenSeq':main())
+  end).

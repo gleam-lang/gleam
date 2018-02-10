@@ -38,13 +38,8 @@ function(#gleam_ast_function{name = Name, args = Args, body = Body}) ->
   Arity = length(Args),
   C_fname = cerl:c_fname(Name, Arity),
   C_args = lists:map(fun var/1, Args),
-  C_body = body(Body),
+  C_body = expression(Body),
   {C_fname, cerl:c_fun(C_args, C_body)}.
-
-body(Expressions) ->
-  % TODO: Support multiple expressions
-  [Expression] = Expressions,
-  expression(Expression).
 
 var(Atom) when is_atom(Atom) ->
   cerl:c_var(Atom).
@@ -86,7 +81,12 @@ expression(#gleam_ast_call{module = Mod, name = Name, args = Args}) ->
   C_module = cerl:c_atom(prefix_module(Mod)),
   C_name = call_name(Name),
   C_args = lists:map(fun expression/1, Args),
-  cerl:c_call(C_module, C_name, C_args).
+  cerl:c_call(C_module, C_name, C_args);
+
+expression(Expressions) when is_list(Expressions) ->
+  Rev = lists:reverse(Expressions),
+  [Head | Tail] = lists:map(fun expression/1, Rev),
+  lists:foldl(fun cerl:c_seq/2, Head, Tail).
 
 c_list(Elems) ->
   Rev = lists:reverse(Elems),
