@@ -67,7 +67,7 @@ arity_2_test() ->
       [  #gleam_ast_function
         { name = add
         , args = [x, y]
-        , body = [#gleam_ast_call{module = erlang, name = '+'}]
+        , body = [#gleam_ast_local_call{name = '+'}]
         }
       ]
     }

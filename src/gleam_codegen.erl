@@ -6,6 +6,11 @@
 
 -export([module/1]).
 
+-define(erlang_module_operator(N),
+        N =:= '+';  N =:= '-';  N =:= '*';  N =:= '/';  N =:= '+.'; N =:= '-.';
+        N =:= '*.'; N =:= '/.'; N =:= '<='; N =:= '<' ; N =:= '>' ; N =:= '>=';
+        N =:= '/').
+
 module(#gleam_ast_module{name = Name, functions = Funs, exports = Exports}) ->
   PrefixedName = prefix_module(Name),
   C_name = cerl:c_atom(PrefixedName),
@@ -72,6 +77,10 @@ expression(#gleam_ast_var{name = Name}) when is_atom(Name) ->
 expression(#gleam_ast_local_call{name = '::', args = [H, T]}) ->
   cerl:c_cons(expression(H), expression(T));
 
+expression(#gleam_ast_local_call{name = Name, args = Args}) when ?erlang_module_operator(Name) ->
+  ErlangName = erlang_operator_name(Name),
+  expression(#gleam_ast_call{module = erlang, name = ErlangName, args = Args});
+
 expression(#gleam_ast_local_call{name = Name, args = Args}) ->
   C_fname = cerl:c_fname(Name, length(Args)),
   C_args = lists:map(fun expression/1, Args),
@@ -79,7 +88,7 @@ expression(#gleam_ast_local_call{name = Name, args = Args}) ->
 
 expression(#gleam_ast_call{module = Mod, name = Name, args = Args}) ->
   C_module = cerl:c_atom(prefix_module(Mod)),
-  C_name = call_name(Name),
+  C_name = cerl:c_atom(Name),
   C_args = lists:map(fun expression/1, Args),
   cerl:c_call(C_module, C_name, C_args);
 
@@ -94,6 +103,14 @@ expression(Expressions) when is_list(Expressions) ->
   [Head | Tail] = lists:map(fun expression/1, Rev),
   lists:foldl(fun cerl:c_seq/2, Head, Tail).
 
+erlang_operator_name('/') -> 'div';
+erlang_operator_name('+.') -> '+';
+erlang_operator_name('-.') -> '-';
+erlang_operator_name('*.') -> '*';
+erlang_operator_name('/.') -> '/';
+erlang_operator_name('<=') -> '=<';
+erlang_operator_name(Name) -> Name.
+
 c_list(Elems) ->
   Rev = lists:reverse(Elems),
   lists:foldl(fun cerl:c_cons/2, cerl:c_nil(), Rev).
@@ -104,14 +121,6 @@ binary_string_byte(Char) ->
                 cerl:c_int(1),
                 cerl:c_atom(integer),
                 c_list([cerl:c_atom(unsigned), cerl:c_atom(big)])).
-
-call_name('/') -> cerl:c_atom('div');
-call_name('+.') -> cerl:c_atom('+');
-call_name('-.') -> cerl:c_atom('-');
-call_name('*.') -> cerl:c_atom('*');
-call_name('/.') -> cerl:c_atom('/');
-call_name('<=') -> cerl:c_atom('=<');
-call_name(Name) when is_atom(Name) -> cerl:c_atom(Name).
 
 prefix_module(erlang) -> erlang;
 prefix_module(Name) when is_atom(Name) -> list_to_atom("Gleam." ++ atom_to_list(Name)).

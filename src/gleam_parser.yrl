@@ -59,18 +59,18 @@ expr -> literal        : '$1'.
 expr -> name           : var('$1').
 expr -> call elems ')' : local_call('$1', '$2').
 expr -> expr '::' expr : local_call('::', ['$1', '$3']).
-expr -> expr '+' expr  : call(erlang, '+', ['$1', '$3']).
-expr -> expr '-' expr  : call(erlang, '-', ['$1', '$3']).
-expr -> expr '*' expr  : call(erlang, '*', ['$1', '$3']).
-expr -> expr '/' expr  : call(erlang, '/', ['$1', '$3']).
-expr -> expr '+.' expr : call(erlang, '+.', ['$1', '$3']).
-expr -> expr '-.' expr : call(erlang, '-.', ['$1', '$3']).
-expr -> expr '*.' expr : call(erlang, '*.', ['$1', '$3']).
-expr -> expr '/.' expr : call(erlang, '/.', ['$1', '$3']).
-expr -> expr '<=' expr : call(erlang, '<=', ['$1', '$3']).
-expr -> expr '<'  expr : call(erlang, '<' , ['$1', '$3']).
-expr -> expr '>'  expr : call(erlang, '>' , ['$1', '$3']).
-expr -> expr '>=' expr : call(erlang, '>=', ['$1', '$3']).
+expr -> expr '+' expr  : local_call('+', ['$1', '$3']).
+expr -> expr '-' expr  : local_call('-', ['$1', '$3']).
+expr -> expr '*' expr  : local_call('*', ['$1', '$3']).
+expr -> expr '/' expr  : local_call('/', ['$1', '$3']).
+expr -> expr '+.' expr : local_call('+.', ['$1', '$3']).
+expr -> expr '-.' expr : local_call('-.', ['$1', '$3']).
+expr -> expr '*.' expr : local_call('*.', ['$1', '$3']).
+expr -> expr '/.' expr : local_call('/.', ['$1', '$3']).
+expr -> expr '<=' expr : local_call('<=', ['$1', '$3']).
+expr -> expr '<'  expr : local_call('<' , ['$1', '$3']).
+expr -> expr '>'  expr : local_call('>' , ['$1', '$3']).
+expr -> expr '>=' expr : local_call('>=', ['$1', '$3']).
 
 args -> name          : [arg('$1')].
 args -> name ','      : [arg('$1')].
@@ -101,8 +101,8 @@ local_call({call, _, Name}, Args) ->
 local_call(Name, Args) when is_atom(Name) ->
   #gleam_ast_local_call{name = Name, args = Args}.
 
-call(Mod, Name, Args) ->
-  #gleam_ast_call{module = Mod, name = Name, args = Args}.
+% call(Mod, Name, Args) ->
+%   #gleam_ast_call{module = Mod, name = Name, args = Args}.
 
 function({call, _, Name}, Args, Body) ->
   #gleam_ast_function{name = Name, args = Args, body = Body}.
