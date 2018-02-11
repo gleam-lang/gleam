@@ -206,3 +206,15 @@ assignment_test() ->
   with_module('Gleam.CodegenAssignment', Source, fun() ->
     ?assertEqual(201, 'Gleam.CodegenAssignment':go())
   end).
+
+bool_adt_test() ->
+  Source =
+    "module CodegenBoolAdt\n"
+    "export true/0, false/0\n"
+    "let true() = True\n"
+    "let false() = False\n"
+  ,
+  with_module('Gleam.CodegenBoolAdt', Source, fun() ->
+    ?assertEqual(true, 'Gleam.CodegenBoolAdt':true()),
+    ?assertEqual(false, 'Gleam.CodegenBoolAdt':false())
+  end).

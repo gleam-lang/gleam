@@ -63,6 +63,12 @@ test "tail/1" =
 let filter(list, fun) =
   filter(list, fun, [])
 
+test "filter/2" =
+  filter([], |x| True) |> Assert.equal(_, [])
+  filter([0, 4, 5, 7, 3], |x| True) |> Assert.equal(_, [0, 4, 5, 7, 3])
+  filter([0, 4, 5, 7, 3], |x| x > 4) |> Assert.equal(_, [5, 7])
+  filter([0, 4, 5, 7, 3], |x| x < 4) |> Assert.equal(_, [0, 3])
+
 let filter(list, fun, acc) =
   match list
   | [] => reverse(acc)
@@ -73,6 +79,10 @@ let filter(list, fun, acc) =
 
 let map(list, fun) =
   map(list, fun, [])
+
+test "map/2" =
+  map([], |x| * 2) |> Assert.equal(_, [])
+  map([0, 4, 5, 7, 3], |x| x * 2) |> Assert.equal(_, [0, 8, 10, 14, 6])
 
 let map(list, fun, acc) =
   match list
@@ -88,6 +98,10 @@ let drop(list, n) =
     | _ :: xs => drop(xs, n - 1)
   }
 
+test "drop/2" =
+  drop([], 5) |> Assert.equal(_, [])
+  drop([1, 2, 3, 4, 5, 6, 7, 8], 5) |> Assert.equal(_, [6, 7, 8])
+
 let take(list, n) =
   take(list, n, [])
 
@@ -100,8 +114,19 @@ let take(list, n, acc) =
     | x :: xs => take(xs, n - 1, x :: acc)
   }
 
+test "take/2" =
+  take([], 5) |> Assert.equal(_, [])
+  take([1, 2, 3, 4, 5, 6, 7, 8], 5) |> Assert.equal(_, [1, 2, 3, 4, 5])
+
 let of(x) =
   [x]
 
+test "of/1" =
+  of([]) |> Assert.equal(_, [[]])
+  of(1) |> Assert.equal(_, [1])
+
 let new() =
   []
+
+test "new/1" =
+  new() |> Assert.equal(_, [])

@@ -1,6 +1,6 @@
 Nonterminals
 source module functions function
-exprs expr literal args elems
+exprs expr adt literal args elems
 exports export export_names.
 
 Terminals
@@ -56,6 +56,7 @@ exprs -> expr                : ['$1'].
 exprs -> expr exprs          : ['$1'|'$2'].
 
 expr -> literal        : '$1'.
+expr -> adt            : '$1'.
 expr -> name           : var('$1').
 expr -> call elems ')' : local_call('$1', '$2').
 expr -> expr '::' expr : local_call('::', ['$1', '$3']).
@@ -79,6 +80,8 @@ args -> name ',' args : [arg('$1') | '$3'].
 elems -> expr           : ['$1'].
 elems -> expr ','       : ['$1'].
 elems -> expr ',' elems : ['$1' | '$3'].
+
+adt -> upname : adt('$1', []).
 
 literal -> '(' ')'        : tuple([]).
 literal -> '(' elems ')'  : tuple('$2').
@@ -119,6 +122,9 @@ export({name, _, Name}, {int, _, Arity}) -> {Name, Arity}.
 tuple(Elems) -> #gleam_ast_tuple{elems = Elems}.
 
 list(Elems) -> #gleam_ast_list{elems = Elems}.
+
+adt({upname, Line, Name}, Elems) ->
+  #gleam_ast_adt{name = Name, line = Line, elems = Elems}.
 
 literal({atom, Line, Value})   -> #gleam_ast_atom{line = Line, value = Value};
 literal({int, Line, Value})    -> #gleam_ast_int{line = Line, value = Value};
