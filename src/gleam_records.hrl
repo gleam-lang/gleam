@@ -31,6 +31,14 @@
     }
   ).
 
+-record(
+  gleam_ast_assignment
+  , { name = undefined
+    , value = undefined
+    , then = undefined
+    }
+  ).
+
 -record(gleam_ast_int,    { line = undefined, value = undefined }).
 -record(gleam_ast_float,  { line = undefined, value = undefined }).
 -record(gleam_ast_bool,   { line = undefined, value = undefined }).

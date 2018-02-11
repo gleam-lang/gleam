@@ -8,8 +8,6 @@ keyword_test() ->
   ?assertTokens("module",  [{kw_module, _}]),
   ?assertTokens("export",  [{kw_export, _}]),
   ?assertTokens("let",  [{kw_let, _}]).
-  % ?assertTokens("if",     [{kw_if, _}]),
-  % ?assertTokens("else",     [{kw_else, _}]).
 
 int_test() ->
   ?assertTokens("1",    [{int, _, 1}]),
@@ -72,3 +70,7 @@ dot_test() ->
   ?assertTokens(
      "Mod.f()",
      [{upname, _, 'Mod'}, {'.', _}, {call, _, f}, {')', _}]).
+
+whitespace_test() ->
+  ?assertEqual({error,{2,gleam_tokenizer,{illegal,"\t"}},2},
+               gleam_tokenizer:string("module Foo\n\t")).

@@ -8,7 +8,7 @@ Terminals
 ',' '='
 '<=' '<' '>' '>='
 '/' '*' '+' '-' '/.' '*.' '+.' '-.'
-int float true false atom string
+int float atom string
 name upname call
 kw_module kw_let kw_export.
 
@@ -51,8 +51,9 @@ functions -> function functions : ['$1'|'$2'].
 function -> kw_let call ')' '=' exprs      : function('$2', [], '$5').
 function -> kw_let call args ')' '=' exprs : function('$2', '$3', '$6').
 
-exprs -> expr       : ['$1'].
-exprs -> expr exprs : ['$1'|'$2'].
+exprs -> name '=' expr exprs : [assignment('$1', '$3', '$4')].
+exprs -> expr                : ['$1'].
+exprs -> expr exprs          : ['$1'|'$2'].
 
 expr -> literal        : '$1'.
 expr -> name           : var('$1').
@@ -70,10 +71,6 @@ expr -> expr '<=' expr : call(erlang, '<=', ['$1', '$3']).
 expr -> expr '<'  expr : call(erlang, '<' , ['$1', '$3']).
 expr -> expr '>'  expr : call(erlang, '>' , ['$1', '$3']).
 expr -> expr '>=' expr : call(erlang, '>=', ['$1', '$3']).
-expr -> '(' ')'        : tuple([]).
-expr -> '(' elems ')'  : tuple('$2').
-expr -> '[' ']'        : list([]).
-expr -> '[' elems ']'  : list('$2').
 
 args -> name          : [arg('$1')].
 args -> name ','      : [arg('$1')].
@@ -83,12 +80,14 @@ elems -> expr           : ['$1'].
 elems -> expr ','       : ['$1'].
 elems -> expr ',' elems : ['$1' | '$3'].
 
-literal -> atom   : literal('$1').
-literal -> int    : literal('$1').
-literal -> float  : literal('$1').
-literal -> true   : literal('$1').
-literal -> false  : literal('$1').
-literal -> string : literal('$1').
+literal -> '(' ')'        : tuple([]).
+literal -> '(' elems ')'  : tuple('$2').
+literal -> '[' ']'        : list([]).
+literal -> '[' elems ']'  : list('$2').
+literal -> atom           : literal('$1').
+literal -> int            : literal('$1').
+literal -> float          : literal('$1').
+literal -> string         : literal('$1').
 
 Erlang code.
 
@@ -108,6 +107,9 @@ call(Mod, Name, Args) ->
 function({call, _, Name}, Args, Body) ->
   #gleam_ast_function{name = Name, args = Args, body = Body}.
 
+assignment({name, _, Name}, Value, Then) ->
+  #gleam_ast_assignment{name = Name, value = Value, then = Then}.
+
 arg({name, _Line, Name}) -> Name.
 
 var({name, Line, Name}) -> #gleam_ast_var{line = Line, name = Name}.
@@ -121,6 +123,4 @@ list(Elems) -> #gleam_ast_list{elems = Elems}.
 literal({atom, Line, Value})   -> #gleam_ast_atom{line = Line, value = Value};
 literal({int, Line, Value})    -> #gleam_ast_int{line = Line, value = Value};
 literal({float, Line, Value})  -> #gleam_ast_float{line = Line, value = Value};
-literal({true, Line, Value})   -> #gleam_ast_bool{line = Line, value = Value};
-literal({false, Line, Value})  -> #gleam_ast_bool{line = Line, value = Value};
 literal({string, Line, Value}) -> #gleam_ast_string{line = Line, value = Value}.

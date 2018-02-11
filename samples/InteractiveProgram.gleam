@@ -7,13 +7,13 @@ import Order exposing Order(..)
 
 
 let run() =
-  let secret_number = Random.int(0, 100)
+  secret_number = Random.int(0, 100)
   IO.print("Hello! I'm thinking of a number. Can you guess what it is?")
   loop(secret_number)
 
 let loop(secret_number) =
   IO.write("What's your guess? ")
-  let guess = IO.read_line() |> String.trim |> String.to_int
+  guess = IO.read_line() |> String.trim |> String.to_int
   match guess
   | Just(i) => compare(i, secret_number)
   | Nothing => {
@@ -32,6 +32,6 @@ let compare(guess, secret_number) =
     loop(secret_number)
   }
   | EQ => {
-    let i = Int.to_string(secret_number)
+    i = Int.to_string(secret_number)
     IO.print("You got it! The number was" <> i)
   }

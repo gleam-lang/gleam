@@ -2,7 +2,6 @@ module Maybe
 
 export Maybe(..), just?/1, nothing?/1, map/2, flatten/1, flat_map/2, unwrap/2
 
-
 type Maybe(x)
   = Just(x)
   | Nothing

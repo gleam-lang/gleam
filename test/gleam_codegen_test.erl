@@ -196,3 +196,13 @@ seq_test() ->
   with_module('Gleam.CodegenSeq', Source, fun() ->
     ?assertEqual(3, 'Gleam.CodegenSeq':main())
   end).
+
+assignment_test() ->
+  Source =
+    "module CodegenAssignment\n"
+    "export go/0\n"
+    "let go() = x = 100 y = x + 1 :unused z = x + y :unused z\n"
+  ,
+  with_module('Gleam.CodegenAssignment', Source, fun() ->
+    ?assertEqual(201, 'Gleam.CodegenAssignment':go())
+  end).

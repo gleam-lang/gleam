@@ -5,7 +5,6 @@ export length/1, reverse/1, empty?/1, member?/2, head/1, tail/1, filter/2,
 
 import Maybe exposing Maybe(..)
 
-
 // Using the Erlang implementations of these functions are they
 // are implemented as a BIF in C.
 //
@@ -38,7 +37,7 @@ let filter(list, fun, acc) =
   match list
   | [] => reverse(acc)
   | x :: xs => {
-    let new_acc = cond | fun(x) => x :: acc | true => acc
+    new_acc = cond | fun(x) => x :: acc | true => acc
     filter(xs, fun, new_acc)
   }
 

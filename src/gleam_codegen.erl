@@ -83,6 +83,12 @@ expression(#gleam_ast_call{module = Mod, name = Name, args = Args}) ->
   C_args = lists:map(fun expression/1, Args),
   cerl:c_call(C_module, C_name, C_args);
 
+expression(#gleam_ast_assignment{name = Name, value = Value, then = Then}) ->
+  C_var = cerl:c_var(Name),
+  C_value = expression(Value),
+  C_then = expression(Then),
+  cerl:c_let([C_var], C_value, C_then);
+
 expression(Expressions) when is_list(Expressions) ->
   Rev = lists:reverse(Expressions),
   [Head | Tail] = lists:map(fun expression/1, Rev),
