@@ -99,15 +99,21 @@ expression(#gleam_ast_assignment{name = Name, value = Value, then = Then}) ->
   cerl:c_let([C_var], C_value, C_then);
 
 expression(#gleam_ast_adt{name = Name, elems = []}) ->
-  cerl:c_atom(adt_name_to_atom(Name));
+  cerl:c_atom(adt_name_to_atom(atom_to_list(Name), []));
 
 expression(Expressions) when is_list(Expressions) ->
   Rev = lists:reverse(Expressions),
   [Head | Tail] = lists:map(fun expression/1, Rev),
   lists:foldl(fun cerl:c_seq/2, Head, Tail).
 
-adt_name_to_atom(Name) ->
-  list_to_atom(string:lowercase(atom_to_list(Name))).
+adt_name_to_atom([C | Chars], []) when C >= $A, C =< $Z ->
+  adt_name_to_atom(Chars, [C + 32]);
+adt_name_to_atom([C | Chars], Acc) when C >= $A, C =< $Z ->
+  adt_name_to_atom(Chars, [C + 32, $_ | Acc]);
+adt_name_to_atom([C | Chars], Acc) ->
+  adt_name_to_atom(Chars, [C | Acc]);
+adt_name_to_atom([], Acc) ->
+  list_to_atom(lists:reverse(Acc)).
 
 erlang_operator_name('/') -> 'div';
 erlang_operator_name('+.') -> '+';

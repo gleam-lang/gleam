@@ -218,3 +218,15 @@ bool_adt_test() ->
     ?assertEqual(true, 'Gleam.CodegenBoolAdt':true()),
     ?assertEqual(false, 'Gleam.CodegenBoolAdt':false())
   end).
+
+case_adt_test() ->
+  Source =
+    "module CodegenCaseAdt\n"
+    "export one/0, two/0\n"
+    "let one() = SomeLongName\n"
+    "let two() = ADT\n"
+  ,
+  with_module('Gleam.CodegenCaseAdt', Source, fun() ->
+    ?assertEqual(some_long_name, 'Gleam.CodegenCaseAdt':one()),
+    ?assertEqual(a_d_t, 'Gleam.CodegenCaseAdt':two())
+  end).
