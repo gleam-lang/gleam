@@ -4,7 +4,7 @@
 
 source_to_binary(Source) ->
   {ok, Tokens, _} = gleam_tokenizer:string(Source),
-  {ok, #gleam_ast_module{} = AST} = gleam_parser:parse(Tokens),
+  {ok, #ast_module{} = AST} = gleam_parser:parse(Tokens),
   {ok, Forms} = gleam_codegen:module(AST),
   {ok, _, Bin} = compile:forms(Forms, [report, verbose, from_core]),
   Bin.

@@ -9,8 +9,8 @@ type Quadrilateral
   = Square(Int)
   | Rectangle(Int, Int)
 
-let from_dimensions(width, height) =
-  match width
+fn from_dimensions(width, height) =
+  case width
   | height => Square(width)
   | _other => Rectangle(width, height)
 ```

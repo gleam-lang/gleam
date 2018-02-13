@@ -11,47 +11,49 @@ Comment = \/\/[^\n]*
 
 Rules.
 
-module     : {token, {kw_module, TokenLine}}.
-export     : {token, {kw_export, TokenLine}}.
-fn         : {token, {kw_fn, TokenLine}}.
-==         : {token, {'==', TokenLine}}.
-=          : {token, {'=', TokenLine}}.
-\+         : {token, {'+', TokenLine}}.
--          : {token, {'-', TokenLine}}.
-\*         : {token, {'*', TokenLine}}.
-/          : {token, {'/', TokenLine}}.
-\+\.       : {token, {'+.', TokenLine}}.
--\.        : {token, {'-.', TokenLine}}.
-\*\.       : {token, {'*.', TokenLine}}.
-/\.        : {token, {'/.', TokenLine}}.
-<=         : {token, {'<=', TokenLine}}.
-<          : {token, {'<', TokenLine}}.
->=         : {token, {'>', TokenLine}}.
-::         : {token, {'::', TokenLine}}.
-\>         : {token, {'>=', TokenLine}}.
-\.         : {token, {'.', TokenLine}}.
-\|         : {token, {'|', TokenLine}}.
-\,         : {token, {',', TokenLine}}.
-\(         : {token, {'(', TokenLine}}.
-\)         : {token, {')', TokenLine}}.
-\[         : {token, {'[', TokenLine}}.
-\]         : {token, {']', TokenLine}}.
-\{         : {token, {'{', TokenLine}}.
-\}         : {token, {'}', TokenLine}}.
-{Int}      : {token, {int, TokenLine, int(TokenChars)}}.
-{Float}    : {token, {float, TokenLine, flt(TokenChars)}}.
-{Atom}     : {token, {atom, TokenLine, atom(TokenChars)}}.
-:{String}  : {token, {atom, TokenLine, atom(TokenChars)}}.
-{Name}\(   : {token, {call, TokenLine, call(TokenChars)}}.
-{Name}     : {token, {name, TokenLine, list_to_atom(TokenChars)}}.
-{UpName}\( : {token, {upcall, TokenLine, call(TokenChars)}}.
-{UpName}   : {token, {upname, TokenLine, list_to_atom(TokenChars)}}.
-{String}   : {token, {string, TokenLine, str(TokenChars)}}.
+module     : {token, {kw_module, m(TokenLine)}}.
+export     : {token, {kw_export, m(TokenLine)}}.
+fn         : {token, {kw_fn, m(TokenLine)}}.
+==         : {token, {'==', m(TokenLine)}}.
+=          : {token, {'=', m(TokenLine)}}.
+\+         : {token, {'+', m(TokenLine)}}.
+-          : {token, {'-', m(TokenLine)}}.
+\*         : {token, {'*', m(TokenLine)}}.
+/          : {token, {'/', m(TokenLine)}}.
+\+\.       : {token, {'+.', m(TokenLine)}}.
+-\.        : {token, {'-.', m(TokenLine)}}.
+\*\.       : {token, {'*.', m(TokenLine)}}.
+/\.        : {token, {'/.', m(TokenLine)}}.
+<=         : {token, {'<=', m(TokenLine)}}.
+<          : {token, {'<', m(TokenLine)}}.
+>=         : {token, {'>', m(TokenLine)}}.
+::         : {token, {'::', m(TokenLine)}}.
+\>         : {token, {'>=', m(TokenLine)}}.
+\.         : {token, {'.', m(TokenLine)}}.
+\|         : {token, {'|', m(TokenLine)}}.
+\,         : {token, {',', m(TokenLine)}}.
+\(         : {token, {'(', m(TokenLine)}}.
+\)         : {token, {')', m(TokenLine)}}.
+\[         : {token, {'[', m(TokenLine)}}.
+\]         : {token, {']', m(TokenLine)}}.
+\{         : {token, {'{', m(TokenLine)}}.
+\}         : {token, {'}', m(TokenLine)}}.
+{Int}      : {token, {int, m(TokenLine), int(TokenChars)}}.
+{Float}    : {token, {float, m(TokenLine), flt(TokenChars)}}.
+{Atom}     : {token, {atom, m(TokenLine), atom(TokenChars)}}.
+:{String}  : {token, {atom, m(TokenLine), atom(TokenChars)}}.
+{Name}\(   : {token, {call, m(TokenLine), call(TokenChars)}}.
+{Name}     : {token, {name, m(TokenLine), list_to_atom(TokenChars)}}.
+{UpName}\( : {token, {upcall, m(TokenLine), call(TokenChars)}}.
+{UpName}   : {token, {upname, m(TokenLine), list_to_atom(TokenChars)}}.
+{String}   : {token, {string, m(TokenLine), str(TokenChars)}}.
 {Comment}  : skip_token.
 {WS}       : skip_token.
 
 
 Erlang code.
+
+-include("gleam_records.hrl").
 
 int(S) when is_list(S) ->
   {I, _} = string:to_integer(S),
@@ -81,3 +83,6 @@ deescape([C|Tail], Acc) ->
   deescape(Tail, [C|Acc]);
 deescape([], Acc) ->
   lists:reverse(Acc).
+
+m(Line) ->
+  #meta{line = Line}.

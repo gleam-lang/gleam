@@ -9,69 +9,84 @@ parse(Tokens) -> element(2, gleam_parser:parse(Tokens)).
         ?assertMatch(Tokens, parse(tokens(Code)))).
 
 literal_test() ->
-  ?assertAST("1",   [#gleam_ast_int{value = 1}]),
-  ?assertAST("1.2", [#gleam_ast_float{value = 1.2}]),
-  ?assertAST(":ok", [#gleam_ast_atom{value = ok}]),
-  ?assertAST("\"Hello world\"", [#gleam_ast_string{value = <<"Hello world">>}]).
+  ?assertAST("1",   [#ast_int{value = 1}]),
+  ?assertAST("1.2", [#ast_float{value = 1.2}]),
+  ?assertAST(":ok", [#ast_atom{value = ok}]),
+  ?assertAST("\"Hello world\"", [#ast_string{value = <<"Hello world">>}]).
 
 var_test() ->
-  ?assertAST("value", [#gleam_ast_var{name = value}]).
+  ?assertAST("value", [#ast_var{name = value}]).
 
 tuple_test() ->
   ?assertAST("()",
-             [#gleam_ast_tuple{elems = []}]),
+             [#ast_tuple{elems = []}]),
   ?assertAST("(:54)",
-             [#gleam_ast_tuple{elems = [#gleam_ast_atom{value = '54'}]}]),
+             [#ast_tuple{elems = [#ast_atom{value = '54'}]}]),
   ?assertAST("(  200,)",
-             [#gleam_ast_tuple{elems = [#gleam_ast_int{value = 200}]}]),
+             [#ast_tuple{elems = [#ast_int{value = 200}]}]),
   ?assertAST("(:ok, 7)",
-             [#gleam_ast_tuple{elems = [#gleam_ast_atom{value = ok}
-                                       ,#gleam_ast_int{value = 7}]}]).
+             [#ast_tuple{elems = [#ast_atom{value = ok},
+                                  #ast_int{value = 7}]}]).
 
 module_test() ->
-  ?assertAST(
+  Code =
     "module MyModule\n"
     "fn id(x) = x\n"
-    "fn ok(val) = (:ok, val)\n",
-    #gleam_ast_module
+    "fn ok(val) = (:ok, val)\n"
+  ,
+  AST =
+    #ast_module
     { name = 'MyModule'
     , functions =
-      [ #gleam_ast_function
-        { name = id
+      [ #ast_function
+        { meta = #meta{line = 2}
+        , name = id
         , args = [x]
-        , body = [#gleam_ast_var{name = x}]
+        , body = [#ast_var{name = x, meta = #meta{line = 2}}]
         }
-      , #gleam_ast_function
-        { name = ok
+      , #ast_function
+        { meta = #meta{line = 3}
+        , name = ok
         , args = [val]
         , body =
-          [ #gleam_ast_tuple
+          [ #ast_tuple
             {elems =
-              [ #gleam_ast_atom{value = ok}
-              , #gleam_ast_var{name = val}
+              [ #ast_atom{meta = #meta{line = 3}, value = ok}
+              , #ast_var{meta = #meta{line = 3}, name = val}
               ]
             }
           ]
         }
       ]
-    }
-  ).
+    },
+  ?assertEqual(AST, parse(tokens(Code))).
 
 arity_2_test() ->
-  ?assertAST(
+  Code =
     "module MyModule\n"
-    "fn add(x, y) = x + y\n",
-    #gleam_ast_module
+    "fn add(x, y) = x + y\n"
+  ,
+  AST =
+    #ast_module
     { name = 'MyModule'
     , functions =
-      [  #gleam_ast_function
-        { name = add
+      [ #ast_function
+        { meta = #meta{line = 2}
+        , name = add
         , args = [x, y]
-        , body = [#gleam_ast_local_call{name = '+'}]
+        , body =
+          [ #ast_local_call
+            { name = '+'
+            , args =
+              [ #ast_var{meta = #meta{line = 2}, name = x}
+              , #ast_var{meta = #meta{line = 2}, name = y}
+              ]
+            }
+          ]
         }
       ]
-    }
-  ).
+    },
+  ?assertEqual(AST, parse(tokens(Code))).
 
 call_test() ->
   Code =
@@ -79,16 +94,18 @@ call_test() ->
     "fn run() = print(20)\n"
   ,
   AST =
-    #gleam_ast_module
+    #ast_module
     { name = 'MyModule'
     , functions =
-      [  #gleam_ast_function
-        { name = run
+      [ #ast_function
+        { meta = #meta{line = 2}
+        , name = run
         , args = []
         , body =
-          [ #gleam_ast_local_call
+          [ #ast_local_call
             { name = print
-            , args = [#gleam_ast_int{value = 20, line = 2}]
+            , args =
+              [#ast_int{value = 20, meta = #meta{line = 2}}]
             }
           ]
         }
@@ -101,7 +118,7 @@ export_test() ->
     "module MyModule\n"
     "export id/1\n"
     "export foo/2, baz/8\n",
-    #gleam_ast_module
+    #ast_module
     { name = 'MyModule'
     , functions = []
     , exports = [{id, 1}, {foo, 2}, {baz, 8}]
@@ -114,17 +131,18 @@ adt_test() ->
     "fn ok() = Ok(1)"
   ,
   AST =
-    #gleam_ast_module
+    #ast_module
     { name = 'MyModule'
     , functions =
-      [ #gleam_ast_function
-        { name = ok
+      [ #ast_function
+        { meta = #meta{line = 2}
+        , name = ok
         , args = []
         , body =
-          [ #gleam_ast_adt
+          [ #ast_adt
             { name = 'Ok'
-            , line = 2
-            , elems = [#gleam_ast_int{line = 2, value = 1}]
+            , meta = #meta{line = 2}
+            , elems = [#ast_int{meta = #meta{line = 2}, value = 1}]
             }
           ]
         }

@@ -98,36 +98,36 @@ Erlang code.
 -include("gleam_records.hrl").
 
 module({upname, _, Name}, Exports, Functions) ->
-  #gleam_ast_module{name = Name, exports = Exports, functions = Functions}.
+  #ast_module{name = Name, exports = Exports, functions = Functions}.
 
 local_call({call, _, Name}, Args) ->
-  #gleam_ast_local_call{name = Name, args = Args};
+  #ast_local_call{name = Name, args = Args};
 local_call(Name, Args) when is_atom(Name) ->
-  #gleam_ast_local_call{name = Name, args = Args}.
+  #ast_local_call{name = Name, args = Args}.
 
 % call(Mod, Name, Args) ->
-%   #gleam_ast_call{module = Mod, name = Name, args = Args}.
+%   #ast_call{module = Mod, name = Name, args = Args}.
 
-function({call, _, Name}, Args, Body) ->
-  #gleam_ast_function{name = Name, args = Args, body = Body}.
+function({call, Meta, Name}, Args, Body) ->
+  #ast_function{meta = Meta, name = Name, args = Args, body = Body}.
 
 assignment({name, _, Name}, Value, Then) ->
-  #gleam_ast_assignment{name = Name, value = Value, then = Then}.
+  #ast_assignment{name = Name, value = Value, then = Then}.
 
-arg({name, _Line, Name}) -> Name.
+arg({name, _Meta, Name}) -> Name.
 
-var({name, Line, Name}) -> #gleam_ast_var{line = Line, name = Name}.
+var({name, Meta, Name}) -> #ast_var{meta = Meta, name = Name}.
 
 export({name, _, Name}, {int, _, Arity}) -> {Name, Arity}.
 
-tuple(Elems) -> #gleam_ast_tuple{elems = Elems}.
+tuple(Elems) -> #ast_tuple{elems = Elems}.
 
-list(Elems) -> #gleam_ast_list{elems = Elems}.
+list(Elems) -> #ast_list{elems = Elems}.
 
-adt({Type, Line, Name}, Elems) when Type =:= upname; Type =:= upcall  ->
-  #gleam_ast_adt{name = Name, line = Line, elems = Elems}.
+adt({Type, Meta, Name}, Elems) when Type =:= upname; Type =:= upcall ->
+  #ast_adt{name = Name, meta = Meta, elems = Elems}.
 
-literal({atom, Line, Value})   -> #gleam_ast_atom{line = Line, value = Value};
-literal({int, Line, Value})    -> #gleam_ast_int{line = Line, value = Value};
-literal({float, Line, Value})  -> #gleam_ast_float{line = Line, value = Value};
-literal({string, Line, Value}) -> #gleam_ast_string{line = Line, value = Value}.
+literal({atom, Meta, Value})   -> #ast_atom{meta = Meta, value = Value};
+literal({int, Meta, Value})    -> #ast_int{meta = Meta, value = Value};
+literal({float, Meta, Value})  -> #ast_float{meta = Meta, value = Value};
+literal({string, Meta, Value}) -> #ast_string{meta = Meta, value = Value}.

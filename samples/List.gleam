@@ -1,7 +1,7 @@
 module List
 
 export length/1, reverse/1, empty/1, member/2, head/1, tail/1, filter/2,
-       map/2, drop/2, take/2, of/1, new/0
+       foldl/3, foldr/3, map/2, flatten/1, drop/2, take/2, of/1, new/0
 
 import Maybe exposing Maybe(..)
 
@@ -121,12 +121,42 @@ test take =
 fn of(x) =
   [x]
 
-test of =
+test of() =
   of([]) |> Assert.equal(_, [[]])
   of(1) |> Assert.equal(_, [1])
 
 fn new() =
   []
 
-test new =
+test new() =
   new() |> Assert.equal(_, [])
+
+fn flatten(lists) =
+  flatten(lists, [])
+
+test flatten() =
+  flatten([]) |> Assert.equal(_, [])
+  flatten([[]]) |> Assert.equal(_, [])
+  flatten([[], [], []]) |> Assert.equal(_, [])
+  flatten([[1, 2], [], [3, 4]]) |> Assert.equal(_, [1, 2, 3, 4])
+
+fn flatten(lists, acc) =
+  case lists
+  | [] => acc
+  | l :: rest => flatten(rest, acc ++ l)
+
+fn foldl(list, acc, fun) =
+  case list
+  | [] => acc
+  | x :: rest => foldl(rest, fun(x, acc), fun)
+
+test foldl() =
+  foldl([1, 2, 3], [], |x, acc| x :: acc) |> Assert.equal(_, [3, 2, 1])
+
+fn foldr(list, acc, fun) =
+  case list
+  | [] => acc
+  | x :: rest => fun(x, foldl(rest, acc, fun))
+
+test foldr() =
+  foldr([1, 2, 3], [], |x, acc| x :: acc) |> Assert.equal(_, [1, 2, 3])
