@@ -5,9 +5,9 @@
         ?assertMatch(Tokens, element(2, gleam_tokenizer:string(Code)))).
 
 keyword_test() ->
-  ?assertTokens("module",  [{kw_module, _}]),
-  ?assertTokens("export",  [{kw_export, _}]),
-  ?assertTokens("let",  [{kw_let, _}]).
+  ?assertTokens("module", [{kw_module, _}]),
+  ?assertTokens("export", [{kw_export, _}]),
+  ?assertTokens("fn",     [{kw_fn, _}]).
 
 int_test() ->
   ?assertTokens("1",    [{int, _, 1}]),
@@ -25,9 +25,9 @@ string_test() ->
   ?assertTokens("\" \\\" \"", [{string, _, <<" \" ">>}]).
 
 name_test() ->
-  ?assertTokens("hi",       [{name, _, hi}]),
-  ?assertTokens("ok?",      [{name, _, 'ok?'}]),
-  ?assertTokens("do_exec!", [{name, _, 'do_exec!'}]).
+  ?assertTokens("hi",      [{name, _, hi}]),
+  ?assertTokens("ok",      [{name, _, 'ok'}]),
+  ?assertTokens("do_exec", [{name, _, 'do_exec'}]).
 
 atom_test() ->
   ?assertTokens(":hi",         [{atom, _, hi}]),

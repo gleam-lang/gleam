@@ -4,60 +4,59 @@ export Bool(..), not/1, compare/2, max/2, min/2
 
 import Order exposing Order(_)
 
-
 type Bool
   = True
   | False
 
-let not(bool) =
-  match bool
+fn not(bool) =
+  case bool
   | True => False
   | False => True
 
-test "not/1" =
+test not =
   not(True) |> Assert.false
   not(False) |> Assert.true
 
-let compare(a, b) =
-  match (a, b)
+fn compare(a, b) =
+  case (a, b)
   | (True, True) => EQ
   | (True, False) => GT
   | (False, False) => LT
   | (False, True) => GT
 
-test "compare/2" =
-  compare(True, True) |> Assert.equal(EQ)
-  compare(True, False) |> Assert.equal(GT)
-  compare(False, False) |> Assert.equal(LT)
-  compare(False, True) |> Assert.equal(GT)
+test compare =
+  compare(True, True) |> Assert.equal(_, EQ)
+  compare(True, False) |> Assert.equal(_, GT)
+  compare(False, False) |> Assert.equal(_, LT)
+  compare(False, True) |> Assert.equal(_, GT)
 
-let max(a, b) =
-  match a
+fn max(a, b) =
+  case a
   | True => True
   | False => b
 
-test "max/2" =
-  max(True, True) |> Assert.equal(True)
-  max(True, False) |> Assert.equal(True)
-  max(False, False) |> Assert.equal(False)
-  max(False, True) |> Assert.equal(True)
+test max =
+  max(True, True) |> Assert.equal(_, True)
+  max(True, False) |> Assert.equal(_, True)
+  max(False, False) |> Assert.equal(_, False)
+  max(False, True) |> Assert.equal(_, True)
 
-let min(a, b) =
-  match a
+fn min(a, b) =
+  case a
   | False => False
   | True => b
 
-test "min/2" =
-  min(True, True) |> Assert.equal(True)
-  min(True, False) |> Assert.equal(False)
-  min(False, False) |> Assert.equal(False)
-  min(False, True) |> Assert.equal(False)
+test min =
+  min(True, True) |> Assert.equal(_, True)
+  min(True, False) |> Assert.equal(_, False)
+  min(False, False) |> Assert.equal(_, False)
+  min(False, True) |> Assert.equal(_, False)
 
-let to_int(bool) =
-  match bool
+fn to_int(bool) =
+  case bool
   | False => 0
   | True => 1
 
-test "to_int/1" =
-  to_int(True) |> Assert.equal(1)
-  to_int(False) |> Assert.equal(0)
+test to_int =
+  to_int(True) |> Assert.equal(_, 1)
+  to_int(False) |> Assert.equal(_, 0)

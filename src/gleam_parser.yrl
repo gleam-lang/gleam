@@ -10,7 +10,7 @@ Terminals
 '/' '*' '+' '-' '/.' '*.' '+.' '-.'
 int float atom string
 name upname call
-kw_module kw_let kw_export.
+kw_module kw_fn kw_export.
 
 Rootsymbol source.
 
@@ -48,8 +48,8 @@ export_names -> name '/' int ',' export_names : [export('$1', '$3') | '$5'].
 functions -> function           : ['$1'].
 functions -> function functions : ['$1'|'$2'].
 
-function -> kw_let call ')' '=' exprs      : function('$2', [], '$5').
-function -> kw_let call args ')' '=' exprs : function('$2', '$3', '$6').
+function -> kw_fn call ')' '=' exprs      : function('$2', [], '$5').
+function -> kw_fn call args ')' '=' exprs : function('$2', '$3', '$6').
 
 exprs -> name '=' expr exprs : [assignment('$1', '$3', '$4')].
 exprs -> expr                : ['$1'].

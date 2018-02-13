@@ -2,36 +2,35 @@ module Order
 
 export Order(..), reverse/1, to_int/1, compare/2, max/2, min/2
 
-
 type Order
   = LT
   | EQ
   | GT
 
-let reverse(order) =
-  match order
+fn reverse(order) =
+  case order
   | LT => GT
   | EQ => EQ
   | GT => LT
 
-test "reverse/1" =
+test reverse =
   reverse(LT) |> Assert.equal(_, GT)
   reverse(EQ) |> Assert.equal(_, EQ)
   reverse(GT) |> Assert.equal(_, LT)
 
-let to_int(order) =
-  match order
+fn to_int(order) =
+  case order
   | LT => -1
   | EQ => 0
   | GT => 1
 
-test "to_int/1" =
+test to_int =
   to_int(LT) |> Assert.equal(_, -1)
   to_int(EQ) |> Assert.equal(_, 0)
   to_int(GT) |> Assert.equal(_, 1)
 
-let compare(a, b) =
-  match (a, b)
+fn compare(a, b) =
+  case (a, b)
   | (LT, LT) => EQ
   | (LT, _) => LT
   | (EQ, EQ) => EQ
@@ -39,7 +38,7 @@ let compare(a, b) =
   | (EQ, GT) => LT
   | _ => GT
 
-test "compare/1" =
+test compare =
   compare(LT, LT) |> Assert.equal(_, EQ)
   compare(LT, EQ) |> Assert.equal(_, LT)
   compare(LT, GT) |> Assert.equal(_, LT)
@@ -50,13 +49,13 @@ test "compare/1" =
   compare(GT, EQ) |> Assert.equal(_, GT)
   compare(GT, GT) |> Assert.equal(_, EQ)
 
-let max(a, b) =
-  match (a, b)
+fn max(a, b) =
+  case (a, b)
   | (GT, _) => GT
   | (EQ, LT) => EQ
   | _ => b
 
-test "max/1" =
+test max =
   max(LT, LT) |> Assert.equal(_, LT)
   max(LT, EQ) |> Assert.equal(_, EQ)
   max(LT, GT) |> Assert.equal(_, GT)
@@ -67,13 +66,13 @@ test "max/1" =
   max(GT, EQ) |> Assert.equal(_, GT)
   max(GT, GT) |> Assert.equal(_, GT)
 
-let min(a, b) =
-  match (a, b)
+fn min(a, b) =
+  case (a, b)
   | (LT, _) => LT
   | (EQ, GT) => EQ
   | _ => b
 
-test "min/1" =
+test min =
   min(LT, LT) |> Assert.equal(_, LT)
   min(LT, EQ) |> Assert.equal(_, LT)
   min(LT, GT) |> Assert.equal(_, LT)

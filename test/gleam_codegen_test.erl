@@ -18,8 +18,8 @@ module_identity_test() ->
   Source =
     "module CodegenModuleIdentity\n"
     "export identity/1\n"
-    "let identity(x) = x\n"
-    "let hidden(x) = x\n"
+    "fn identity(x) = x\n"
+    "fn hidden(x) = x\n"
   ,
   with_module('Gleam.CodegenModuleIdentity', Source, fun() ->
     ?assert(erlang:function_exported('Gleam.CodegenModuleIdentity', identity, 1)),
@@ -37,14 +37,14 @@ maths_test() ->
     "module CodegenMaths\n"
     "export int_add/2, int_sub/2, int_mult/2, int_div/2, float_add/2,\n"
     "       float_sub/2, float_mult/2, float_div/2\n"
-    "let int_add(x, y) = x + y\n"
-    "let int_sub(x, y) = x - y\n"
-    "let int_mult(x, y) = x * y\n"
-    "let int_div(x, y) = x / y\n"
-    "let float_add(x, y) = x +. y\n"
-    "let float_sub(x, y) = x -. y\n"
-    "let float_mult(x, y) = x *. y\n"
-    "let float_div(x, y) = x /. y\n"
+    "fn int_add(x, y) = x + y\n"
+    "fn int_sub(x, y) = x - y\n"
+    "fn int_mult(x, y) = x * y\n"
+    "fn int_div(x, y) = x / y\n"
+    "fn float_add(x, y) = x +. y\n"
+    "fn float_sub(x, y) = x -. y\n"
+    "fn float_mult(x, y) = x *. y\n"
+    "fn float_div(x, y) = x /. y\n"
   ,
   with_module('Gleam.CodegenMaths', Source, fun() ->
     ?assertEqual(2, 'Gleam.CodegenMaths':int_add(1, 1)),
@@ -60,36 +60,36 @@ maths_test() ->
 comparison_test() ->
   Source =
     "module CodegenComparison\n"
-    "export lt?/2, lte?/2, gt?/2, gte?/2"
-    "let lt?(x, y) = x < y\n"
-    "let lte?(x, y) = x <= y\n"
-    "let gt?(x, y) = x > y\n"
-    "let gte?(x, y) = x >= y\n"
+    "export lt/2, lte/2, gt/2, gte/2"
+    "fn lt(x, y) = x < y\n"
+    "fn lte(x, y) = x <= y\n"
+    "fn gt(x, y) = x > y\n"
+    "fn gte(x, y) = x >= y\n"
   ,
   with_module('Gleam.CodegenComparison', Source, fun() ->
-    ?assert('Gleam.CodegenComparison':'lt?'(1, 2)),
-    ?refute('Gleam.CodegenComparison':'lt?'(1, 1)),
-    ?refute('Gleam.CodegenComparison':'lt?'(2, 1)),
-    ?assert('Gleam.CodegenComparison':'lte?'(1, 2)),
-    ?assert('Gleam.CodegenComparison':'lte?'(1, 1)),
-    ?refute('Gleam.CodegenComparison':'lte?'(2, 1)),
-    ?refute('Gleam.CodegenComparison':'gt?'(1, 2)),
-    ?assert('Gleam.CodegenComparison':'gt?'(1, 1)),
-    ?assert('Gleam.CodegenComparison':'gt?'(2, 1)),
-    ?refute('Gleam.CodegenComparison':'gte?'(1, 2)),
-    ?refute('Gleam.CodegenComparison':'gte?'(1, 1)),
-    ?assert('Gleam.CodegenComparison':'gte?'(2, 1))
+    ?assert('Gleam.CodegenComparison':lt(1, 2)),
+    ?refute('Gleam.CodegenComparison':lt(1, 1)),
+    ?refute('Gleam.CodegenComparison':lt(2, 1)),
+    ?assert('Gleam.CodegenComparison':lte(1, 2)),
+    ?assert('Gleam.CodegenComparison':lte(1, 1)),
+    ?refute('Gleam.CodegenComparison':lte(2, 1)),
+    ?refute('Gleam.CodegenComparison':gt(1, 2)),
+    ?assert('Gleam.CodegenComparison':gt(1, 1)),
+    ?assert('Gleam.CodegenComparison':gt(2, 1)),
+    ?refute('Gleam.CodegenComparison':gte(1, 2)),
+    ?refute('Gleam.CodegenComparison':gte(1, 1)),
+    ?assert('Gleam.CodegenComparison':gte(2, 1))
   end).
 
 int_test() ->
   Source =
     "module CodegenInt\n"
     "export one/0, two/0, inc/1, negative/0, positive/0"
-    "let one() = 1\n"
-    "let two() = 2\n"
-    "let inc(x) = x + 1\n"
-    "let negative() = -1\n"
-    "let positive() = +10\n"
+    "fn one() = 1\n"
+    "fn two() = 2\n"
+    "fn inc(x) = x + 1\n"
+    "fn negative() = -1\n"
+    "fn positive() = +10\n"
   ,
   with_module('Gleam.CodegenInt', Source, fun() ->
     ?assertEqual(1, 'Gleam.CodegenInt':one()),
@@ -103,11 +103,11 @@ float_test() ->
   Source =
     "module CodegenFloat\n"
     "export one/0, two/0, inc/1, negative/0, positive/0"
-    "let one() = 1.0\n"
-    "let two() = 2.0\n"
-    "let inc(x) = x + 1.0\n"
-    "let negative() = -1.0\n"
-    "let positive() = +10.0\n"
+    "fn one() = 1.0\n"
+    "fn two() = 2.0\n"
+    "fn inc(x) = x + 1.0\n"
+    "fn negative() = -1.0\n"
+    "fn positive() = +10.0\n"
   ,
   with_module('Gleam.CodegenFloat', Source, fun() ->
     ?assertEqual(1.0, 'Gleam.CodegenFloat':one()),
@@ -121,8 +121,8 @@ string_test() ->
   Source =
     "module CodegenString\n"
     "export empty/0, name/0"
-    "let empty() = \"\"\n"
-    "let name() = \"Louis\"\n"
+    "fn empty() = \"\"\n"
+    "fn name() = \"Louis\"\n"
   ,
   with_module('Gleam.CodegenString', Source, fun() ->
     ?assertEqual(<<>>, 'Gleam.CodegenString':empty()),
@@ -133,9 +133,9 @@ atom_test() ->
   Source =
     "module CodegenAtom\n"
     "export one/0, caps/0, etc/0"
-    "let one() = :one\n"
-    "let caps() = :CAPS\n"
-    "let etc() = :\"Hello, world!\"\n"
+    "fn one() = :one\n"
+    "fn caps() = :CAPS\n"
+    "fn etc() = :\"Hello, world!\"\n"
   ,
   with_module('Gleam.CodegenAtom', Source, fun() ->
     ?assertEqual(one, 'Gleam.CodegenAtom':one()),
@@ -147,9 +147,9 @@ tuple_test() ->
   Source =
     "module CodegenTuple\n"
     "export zero/0, ok/1, threeple/0\n"
-    "let zero() = ()\n"
-    "let ok(x) = (:ok, x)\n"
-    "let threeple() = (1, 2, 3)\n"
+    "fn zero() = ()\n"
+    "fn ok(x) = (:ok, x)\n"
+    "fn threeple() = (1, 2, 3)\n"
   ,
   with_module('Gleam.CodegenTuple', Source, fun() ->
     ?assertEqual({}, 'Gleam.CodegenTuple':zero()),
@@ -161,11 +161,11 @@ list_test() ->
   Source =
     "module CodegenList\n"
     "export empty/0, one/0, two/0, cons/2, unsugared_list/0\n"
-    "let empty() = []\n"
-    "let one() = [1]\n"
-    "let two() = [1, 2]\n"
-    "let cons(head, tail) = head :: tail\n"
-    "let unsugared_list() = 1 :: 2 :: 3 :: 4 :: 5 :: 6 :: []\n"
+    "fn empty() = []\n"
+    "fn one() = [1]\n"
+    "fn two() = [1, 2]\n"
+    "fn cons(head, tail) = head :: tail\n"
+    "fn unsugared_list() = 1 :: 2 :: 3 :: 4 :: 5 :: 6 :: []\n"
   ,
   with_module('Gleam.CodegenList', Source, fun() ->
     ?assertEqual([], 'Gleam.CodegenList':empty()),
@@ -179,9 +179,9 @@ call_test() ->
   Source =
     "module CodegenCall\n"
     "export double/1\n"
-    "let double(x) = ok(add(x, x))\n"
-    "let add(x, y) = x + y\n"
-    "let ok(x) = (:ok, x)\n"
+    "fn double(x) = ok(add(x, x))\n"
+    "fn add(x, y) = x + y\n"
+    "fn ok(x) = (:ok, x)\n"
   ,
   with_module('Gleam.CodegenCall', Source, fun() ->
     ?assertEqual({ok, 10}, 'Gleam.CodegenCall':double(5))
@@ -191,7 +191,7 @@ seq_test() ->
   Source =
     "module CodegenSeq\n"
     "export main/0\n"
-    "let main() = 1 2 3\n"
+    "fn main() = 1 2 3\n"
   ,
   with_module('Gleam.CodegenSeq', Source, fun() ->
     ?assertEqual(3, 'Gleam.CodegenSeq':main())
@@ -201,7 +201,7 @@ assignment_test() ->
   Source =
     "module CodegenAssignment\n"
     "export go/0\n"
-    "let go() = x = 100 y = x + 1 :unused z = x + y :unused z\n"
+    "fn go() = x = 100 y = x + 1 :unused z = x + y :unused z\n"
   ,
   with_module('Gleam.CodegenAssignment', Source, fun() ->
     ?assertEqual(201, 'Gleam.CodegenAssignment':go())
@@ -211,8 +211,8 @@ bool_adt_test() ->
   Source =
     "module CodegenBoolAdt\n"
     "export true/0, false/0\n"
-    "let true() = True\n"
-    "let false() = False\n"
+    "fn true() = True\n"
+    "fn false() = False\n"
   ,
   with_module('Gleam.CodegenBoolAdt', Source, fun() ->
     ?assertEqual(true, 'Gleam.CodegenBoolAdt':true()),
@@ -223,8 +223,8 @@ case_adt_test() ->
   Source =
     "module CodegenCaseAdt\n"
     "export one/0, two/0\n"
-    "let one() = SomeLongName\n"
-    "let two() = ADT\n"
+    "fn one() = SomeLongName\n"
+    "fn two() = ADT\n"
   ,
   with_module('Gleam.CodegenCaseAdt', Source, fun() ->
     ?assertEqual(some_long_name, 'Gleam.CodegenCaseAdt':one()),

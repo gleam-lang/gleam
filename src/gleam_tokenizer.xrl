@@ -4,7 +4,7 @@ Int     = [-+]?[0-9]+
 Float   = [-+]?[0-9]+\.[0-9]+
 WS      = [\n\s]
 Atom    = :[a-zA-Z0-9!\?_]+
-Name    = [a-z_][a-zA-Z0-9!\?_]*
+Name    = [a-z_][a-zA-Z0-9_]*
 UpName  = [A-Z][a-zA-Z0-9!\?_]*
 String  = "([^\\""]|\\.)*"
 Comment = \/\/[^\n]*
@@ -13,7 +13,7 @@ Rules.
 
 module    : {token, {kw_module, TokenLine}}.
 export    : {token, {kw_export, TokenLine}}.
-let       : {token, {kw_let, TokenLine}}.
+fn        : {token, {kw_fn, TokenLine}}.
 ==        : {token, {'==', TokenLine}}.
 =         : {token, {'=', TokenLine}}.
 \+        : {token, {'+', TokenLine}}.

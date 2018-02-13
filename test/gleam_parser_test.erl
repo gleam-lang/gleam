@@ -31,8 +31,8 @@ tuple_test() ->
 module_test() ->
   ?assertAST(
     "module MyModule\n"
-    "let id(x) = x\n"
-    "let ok(val) = (:ok, val)\n",
+    "fn id(x) = x\n"
+    "fn ok(val) = (:ok, val)\n",
     #gleam_ast_module
     { name = 'MyModule'
     , functions =
@@ -60,7 +60,7 @@ module_test() ->
 arity_2_test() ->
   ?assertAST(
     "module MyModule\n"
-    "let add(x, y) = x + y\n",
+    "fn add(x, y) = x + y\n",
     #gleam_ast_module
     { name = 'MyModule'
     , functions =
@@ -76,7 +76,7 @@ arity_2_test() ->
 call_test() ->
   Code =
     "module MyModule\n"
-    "let run() = print(20)\n"
+    "fn run() = print(20)\n"
   ,
   Tokens =
     #gleam_ast_module
