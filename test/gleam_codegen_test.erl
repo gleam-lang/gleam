@@ -219,14 +219,24 @@ bool_adt_test() ->
     ?assertEqual(false, 'Gleam.CodegenBoolAdt':false())
   end).
 
-case_adt_test() ->
+lowercase_adt_test() ->
   Source =
-    "module CodegenCaseAdt\n"
+    "module CodegenLowercaseAdt\n"
     "export one/0, two/0\n"
     "fn one() = SomeLongName\n"
     "fn two() = ADT\n"
   ,
-  with_module('Gleam.CodegenCaseAdt', Source, fun() ->
-    ?assertEqual(some_long_name, 'Gleam.CodegenCaseAdt':one()),
-    ?assertEqual(a_d_t, 'Gleam.CodegenCaseAdt':two())
+  with_module('Gleam.CodegenLowercaseAdt', Source, fun() ->
+    ?assertEqual(some_long_name, 'Gleam.CodegenLowercaseAdt':one()),
+    ?assertEqual(a_d_t, 'Gleam.CodegenLowercaseAdt':two())
+  end).
+
+product_adt_test() ->
+  Source =
+    "module CodegenProductAdt\n"
+    "export ok/1\n"
+    "fn ok(x) = Ok(x)\n"
+  ,
+  with_module('Gleam.CodegenProductAdt', Source, fun() ->
+    ?assertEqual({ok, "Hi there"}, 'Gleam.CodegenProductAdt':ok("Hi there"))
   end).

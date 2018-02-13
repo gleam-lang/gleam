@@ -9,7 +9,7 @@ Terminals
 '<=' '<' '>' '>='
 '/' '*' '+' '-' '/.' '*.' '+.' '-.'
 int float atom string
-name upname call
+name upname call upcall
 kw_module kw_fn kw_export.
 
 Rootsymbol source.
@@ -81,7 +81,8 @@ elems -> expr           : ['$1'].
 elems -> expr ','       : ['$1'].
 elems -> expr ',' elems : ['$1' | '$3'].
 
-adt -> upname : adt('$1', []).
+adt -> upname           : adt('$1', []).
+adt -> upcall elems ')' : adt('$1', '$2').
 
 literal -> '(' ')'        : tuple([]).
 literal -> '(' elems ')'  : tuple('$2').
@@ -123,7 +124,7 @@ tuple(Elems) -> #gleam_ast_tuple{elems = Elems}.
 
 list(Elems) -> #gleam_ast_list{elems = Elems}.
 
-adt({upname, Line, Name}, Elems) ->
+adt({Type, Line, Name}, Elems) when Type =:= upname; Type =:= upcall  ->
   #gleam_ast_adt{name = Name, line = Line, elems = Elems}.
 
 literal({atom, Line, Value})   -> #gleam_ast_atom{line = Line, value = Value};

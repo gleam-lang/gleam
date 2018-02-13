@@ -101,6 +101,11 @@ expression(#gleam_ast_assignment{name = Name, value = Value, then = Then}) ->
 expression(#gleam_ast_adt{name = Name, elems = []}) ->
   cerl:c_atom(adt_name_to_atom(atom_to_list(Name), []));
 
+expression(#gleam_ast_adt{name = Name, elems = Elems}) ->
+  AtomValue = adt_name_to_atom(atom_to_list(Name), []),
+  Atom = #gleam_ast_atom{line = unknown_line, value = AtomValue},
+  expression(#gleam_ast_tuple{elems = [Atom | Elems]});
+
 expression(Expressions) when is_list(Expressions) ->
   Rev = lists:reverse(Expressions),
   [Head | Tail] = lists:map(fun expression/1, Rev),

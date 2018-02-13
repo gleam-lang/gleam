@@ -78,7 +78,7 @@ call_test() ->
     "module MyModule\n"
     "fn run() = print(20)\n"
   ,
-  Tokens =
+  AST =
     #gleam_ast_module
     { name = 'MyModule'
     , functions =
@@ -94,7 +94,7 @@ call_test() ->
         }
       ]
     },
-  ?assertEqual(Tokens, parse(tokens(Code))).
+  ?assertEqual(AST, parse(tokens(Code))).
 
 export_test() ->
   ?assertAST(
@@ -107,3 +107,27 @@ export_test() ->
     , exports = [{id, 1}, {foo, 2}, {baz, 8}]
     }
   ).
+
+adt_test() ->
+  Code =
+    "module MyModule\n"
+    "fn ok() = Ok(1)"
+  ,
+  AST =
+    #gleam_ast_module
+    { name = 'MyModule'
+    , functions =
+      [ #gleam_ast_function
+        { name = ok
+        , args = []
+        , body =
+          [ #gleam_ast_adt
+            { name = 'Ok'
+            , line = 2
+            , elems = [#gleam_ast_int{line = 2, value = 1}]
+            }
+          ]
+        }
+      ]
+    },
+  ?assertEqual(AST, parse(tokens(Code))).
