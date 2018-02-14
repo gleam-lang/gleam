@@ -14,19 +14,18 @@ kw_module kw_fn kw_export.
 
 Rootsymbol source.
 
-Nonassoc 300 '+'.
-Nonassoc 300 '-'.
-Nonassoc 300 '+.'.
-Nonassoc 300 '-.'.
-Right 60 '::'.
-Left 220 '*'.
-Left 220 '/'.
-Left 220 '*.'.
-Left 220 '/.'.
 Left 160 '<'.
-Left 160 '>'.
 Left 160 '<='.
+Left 160 '>'.
 Left 160 '>='.
+Left 210 '+'.
+Left 210 '+.'.
+Left 210 '-'.
+Left 210 '-.'.
+Left 220 '*'.
+Left 220 '*.'.
+Left 220 '/'.
+Left 220 '/.'.
 % Left 170 '|>'.
 
 source -> module : '$1'.

@@ -99,10 +99,10 @@ expression(#ast_assignment{name = Name, value = Value, then = Then}) ->
   cerl:c_let([C_var], C_value, C_then);
 
 expression(#ast_adt{name = Name, elems = []}) ->
-  cerl:c_atom(adt_name_to_atom(atom_to_list(Name), []));
+  cerl:c_atom(adt_name_to_atom(atom_to_list(Name)));
 
 expression(#ast_adt{name = Name, meta = Meta, elems = Elems}) ->
-  AtomValue = adt_name_to_atom(atom_to_list(Name), []),
+  AtomValue = adt_name_to_atom(atom_to_list(Name)),
   Atom = #ast_atom{meta = Meta, value = AtomValue},
   expression(#ast_tuple{elems = [Atom | Elems]});
 
@@ -110,6 +110,12 @@ expression(Expressions) when is_list(Expressions) ->
   Rev = lists:reverse(Expressions),
   [Head | Tail] = lists:map(fun expression/1, Rev),
   lists:foldl(fun cerl:c_seq/2, Head, Tail).
+
+adt_name_to_atom(Chars) ->
+  case string:uppercase(Chars) =:= Chars of
+    true -> Chars;
+    false -> adt_name_to_atom(Chars, [])
+  end.
 
 adt_name_to_atom([C | Chars], []) when C >= $A, C =< $Z ->
   adt_name_to_atom(Chars, [C + 32]);
