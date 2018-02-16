@@ -10,7 +10,7 @@ fn run() =
   IO.print("Hello! I'm thinking of a number. Can you guess what it is?")
   loop(secret_number)
 
-fn loop(secret_number) =
+fn loop(secret_number: Int) Unit =
   IO.write("What's your guess? ")
   guess = IO.read_line() |> String.trim |> String.to_int
   case guess
@@ -20,6 +20,10 @@ fn loop(secret_number) =
     loop(secret_number)
   }
 
+doc """
+Here is some documentation! Hooray!
+"""
+spec Int, Int -> ()
 fn compare(guess, secret_number) =
   case Int.compare(i, secret_number)
   | LT => {

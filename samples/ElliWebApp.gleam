@@ -23,6 +23,12 @@ type Method
   | TRACE
   | PATCH
 
+type alias Header =
+  (String, String)
+
+type alias Response =
+  (Int, List(Header), String)
+
 foreign type Request
 
 foreign method :elli_request :method :: Request -> Method
@@ -31,8 +37,10 @@ foreign path :elli_request :path :: Request -> List(String)
 
 foreign elli_start_link :elli :start_link :: List((Atom, Foreign)) -> Result(Foreign, Pid)
 
-/// The handle/2 callback is used by Elli to response to requests
-///
+doc """
+The handle/2 callback is used by Elli to response to requests
+"""
+spec Request, a -> Response
 fn handle(req, _args) =
   method = method(req)
   path = path(req)
@@ -58,9 +66,11 @@ fn reject_delete() =
 fn not_found() =
   (404, [], "Not found")
 
-/// The start_link/0 function can be used to create a new
-/// Elli web server process running this handler module.
-///
+doc """
+The start_link/0 function can be used to create a new
+Elli web server process running this handler module.
+"""
+spec () -> Result(Foreign, Pid)
 fn start_link() =
   elli_opts = [
     // A real module type would be nice.
