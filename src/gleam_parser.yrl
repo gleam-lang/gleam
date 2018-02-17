@@ -1,16 +1,17 @@
 Nonterminals
 source module functions function
-exprs expr adt literal args elems
-exports export export_names.
+exprs expr binary_call adt literal args elems
+exports export export_names pattern
+case_expr case_clauses case_clause.
 
 Terminals
 '(' ')' '[' ']' '::'
-',' '='
+',' '=' '|' '=>'
 '<=' '<' '>' '>='
 '/' '*' '+' '-' '/.' '*.' '+.' '-.'
 int float atom string
-name upname call upcall
-kw_module kw_fn kw_export.
+hole name upname call upcall
+kw_module kw_fn kw_export kw_case.
 
 Rootsymbol source.
 
@@ -27,7 +28,7 @@ Left 220 '*.'.
 Left 220 '/'.
 Left 220 '/.'.
 Right 60 '::'.
-% Left 170 '|>'.
+Right 70 '|'.
 
 source -> module : '$1'.
 source -> exprs  : '$1'.
@@ -57,21 +58,34 @@ exprs -> expr exprs          : ['$1'|'$2'].
 
 expr -> literal        : '$1'.
 expr -> adt            : '$1'.
+expr -> case_expr      : '$1'.
+expr -> binary_call    : '$1'.
 expr -> name           : var('$1').
 expr -> call elems ')' : local_call('$1', '$2').
-expr -> expr '::' expr : local_call('::', ['$1', '$3']).
-expr -> expr '+' expr  : local_call('+', ['$1', '$3']).
-expr -> expr '-' expr  : local_call('-', ['$1', '$3']).
-expr -> expr '*' expr  : local_call('*', ['$1', '$3']).
-expr -> expr '/' expr  : local_call('/', ['$1', '$3']).
-expr -> expr '+.' expr : local_call('+.', ['$1', '$3']).
-expr -> expr '-.' expr : local_call('-.', ['$1', '$3']).
-expr -> expr '*.' expr : local_call('*.', ['$1', '$3']).
-expr -> expr '/.' expr : local_call('/.', ['$1', '$3']).
-expr -> expr '<=' expr : local_call('<=', ['$1', '$3']).
-expr -> expr '<'  expr : local_call('<' , ['$1', '$3']).
-expr -> expr '>'  expr : local_call('>' , ['$1', '$3']).
-expr -> expr '>=' expr : local_call('>=', ['$1', '$3']).
+
+binary_call -> expr '::' expr : local_call('::', ['$1', '$3']).
+binary_call -> expr '+' expr  : local_call('+', ['$1', '$3']).
+binary_call -> expr '-' expr  : local_call('-', ['$1', '$3']).
+binary_call -> expr '*' expr  : local_call('*', ['$1', '$3']).
+binary_call -> expr '/' expr  : local_call('/', ['$1', '$3']).
+binary_call -> expr '+.' expr : local_call('+.', ['$1', '$3']).
+binary_call -> expr '-.' expr : local_call('-.', ['$1', '$3']).
+binary_call -> expr '*.' expr : local_call('*.', ['$1', '$3']).
+binary_call -> expr '/.' expr : local_call('/.', ['$1', '$3']).
+binary_call -> expr '<=' expr : local_call('<=', ['$1', '$3']).
+binary_call -> expr '<'  expr : local_call('<' , ['$1', '$3']).
+binary_call -> expr '>'  expr : local_call('>' , ['$1', '$3']).
+binary_call -> expr '>=' expr : local_call('>=', ['$1', '$3']).
+
+case_expr -> kw_case expr case_clauses : case_expr('$2', '$3').
+
+case_clauses -> case_clause              : ['$1'].
+case_clauses -> case_clause case_clauses : ['$1'|'$2'].
+
+case_clause -> '|' pattern '=>' expr : case_clause('$2', '$4').
+
+pattern -> literal : '$1'.
+pattern -> hole : hole().
 
 args -> name          : [arg('$1')].
 args -> name ','      : [arg('$1')].
@@ -127,6 +141,13 @@ list(Elems) -> #ast_list{elems = Elems}.
 adt({Type, Meta, Name}, Elems) when Type =:= upname; Type =:= upcall ->
   #ast_adt{name = Name, meta = Meta, elems = Elems}.
 
+case_expr(Subject, Clauses) ->
+  #ast_case{subject = Subject, clauses = Clauses}.
+
+case_clause(Pattern, Value) ->
+  #ast_clause{pattern = Pattern, value = Value}.
+
+hole() -> hole.
 literal({atom, Meta, Value})   -> #ast_atom{meta = Meta, value = Value};
 literal({int, Meta, Value})    -> #ast_int{meta = Meta, value = Value};
 literal({float, Meta, Value})  -> #ast_float{meta = Meta, value = Value};

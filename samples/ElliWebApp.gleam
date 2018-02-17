@@ -46,6 +46,7 @@ fn handle(req, _args) =
   path = path(req)
   case (method, path)
   | (GET, []) => home()
+  | (GET, ["hello"]) => greet("world")
   | (GET, ["hello", "jane"]) => greet_jane()
   | (GET, ["hello", name]) => greet(name)
   | (DELETE, _) => reject_delete()

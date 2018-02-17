@@ -240,3 +240,21 @@ product_adt_test() ->
   with_module('Gleam.CodegenProductAdt', Source, fun() ->
     ?assertEqual({ok, "Hi there"}, 'Gleam.CodegenProductAdt':ok("Hi there"))
   end).
+
+case_literal_test() ->
+  Source =
+    "module CodegenCaseLiteral\n"
+    "export go/1\n"
+    "fn go(x) =\n"
+    "  case x\n"
+    "  | 1 => :one\n"
+    "  | 2 => :two\n"
+    "  | 3 => :three\n"
+    "  | _ => :other\n"
+  ,
+  with_module('Gleam.CodegenCaseLiteral', Source, fun() ->
+    ?assertEqual(one, 'Gleam.CodegenCaseLiteral':go(1)),
+    ?assertEqual(two, 'Gleam.CodegenCaseLiteral':go(2)),
+    ?assertEqual(three, 'Gleam.CodegenCaseLiteral':go(3)),
+    ?assertEqual(other, 'Gleam.CodegenCaseLiteral':go(4))
+  end).

@@ -32,6 +32,14 @@
          name = undefined,
          elems = []}).
 
+-record(ast_case,
+        {subject = undefined,
+         clauses = []}).
+
+-record(ast_clause,
+        {pattern = undefined,
+         value = undefined}).
+
 -record(ast_int,    {meta = #meta{}, value = undefined}).
 -record(ast_float,  {meta = #meta{}, value = undefined}).
 -record(ast_bool,   {meta = #meta{}, value = undefined}).

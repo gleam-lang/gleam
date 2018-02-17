@@ -106,10 +106,23 @@ expression(#ast_adt{name = Name, meta = Meta, elems = Elems}) ->
   Atom = #ast_atom{meta = Meta, value = AtomValue},
   expression(#ast_tuple{elems = [Atom | Elems]});
 
+expression(#ast_case{subject = Subject, clauses = Clauses}) ->
+  C_subject = expression(Subject),
+  C_clauses = lists:map(fun clause/1, Clauses),
+  cerl:c_case(C_subject, C_clauses);
+
+expression(hole) ->
+  cerl:c_var('_1'); % We need to generate unique atoms here.
+
 expression(Expressions) when is_list(Expressions) ->
   Rev = lists:reverse(Expressions),
   [Head | Tail] = lists:map(fun expression/1, Rev),
   lists:foldl(fun cerl:c_seq/2, Head, Tail).
+
+clause(#ast_clause{pattern = Pattern, value = Value}) ->
+  C_pattern = expression(Pattern),
+  C_value = expression(Value),
+  cerl:c_clause([C_pattern], C_value).
 
 adt_name_to_atom(Chars) ->
   case string:uppercase(Chars) =:= Chars of

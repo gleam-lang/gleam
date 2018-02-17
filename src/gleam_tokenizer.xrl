@@ -4,7 +4,7 @@ Int     = [-+]?[0-9]+
 Float   = [-+]?[0-9]+\.[0-9]+
 WS      = [\n\s]
 Atom    = :[a-zA-Z0-9!\?_]+
-Name    = [a-z_][a-zA-Z0-9_]*
+Name    = [a-z][a-zA-Z0-9_]*
 UpName  = [A-Z][a-zA-Z0-9!\?_]*
 String  = "([^\\""]|\\.)*"
 Comment = \/\/[^\n]*
@@ -13,8 +13,10 @@ Rules.
 
 module     : {token, {kw_module, m(TokenLine)}}.
 export     : {token, {kw_export, m(TokenLine)}}.
+case       : {token, {kw_case, m(TokenLine)}}.
 fn         : {token, {kw_fn, m(TokenLine)}}.
 ==         : {token, {'==', m(TokenLine)}}.
+=>         : {token, {'=>', m(TokenLine)}}.
 =          : {token, {'=', m(TokenLine)}}.
 \+         : {token, {'+', m(TokenLine)}}.
 -          : {token, {'-', m(TokenLine)}}.
@@ -42,6 +44,8 @@ fn         : {token, {kw_fn, m(TokenLine)}}.
 {Float}    : {token, {float, m(TokenLine), flt(TokenChars)}}.
 {Atom}     : {token, {atom, m(TokenLine), atom(TokenChars)}}.
 :{String}  : {token, {atom, m(TokenLine), atom(TokenChars)}}.
+_          : {token, {hole, m(TokenLine)}}.
+_{Name}    : {token, {hole, m(TokenLine)}}.
 {Name}\(   : {token, {call, m(TokenLine), call(TokenChars)}}.
 {Name}     : {token, {name, m(TokenLine), list_to_atom(TokenChars)}}.
 {UpName}\( : {token, {upcall, m(TokenLine), call(TokenChars)}}.
