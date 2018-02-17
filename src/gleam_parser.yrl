@@ -26,6 +26,7 @@ Left 220 '*'.
 Left 220 '*.'.
 Left 220 '/'.
 Left 220 '/.'.
+Right 60 '::'.
 % Left 170 '|>'.
 
 source -> module : '$1'.
