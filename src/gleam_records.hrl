@@ -14,16 +14,19 @@
          body = []}).
 
 -record(ast_call,
-        {module = undefined,
+        {meta = #meta{},
+         module = undefined,
          name = undefined,
          args = []}).
 
 -record(ast_local_call,
-        {name = undefined,
+        {meta = #meta{},
+         name = undefined,
          args = []}).
 
 -record(ast_assignment,
-        {name = undefined,
+        {meta = #meta{},
+         name = undefined,
          value = undefined,
          then = undefined}).
 
@@ -33,11 +36,13 @@
          elems = []}).
 
 -record(ast_case,
-        {subject = undefined,
+        {meta = #meta{},
+         subject = undefined,
          clauses = []}).
 
 -record(ast_clause,
-        {pattern = undefined,
+        {meta = #meta{},
+         pattern = undefined,
          value = undefined}).
 
 -record(ast_int,    {meta = #meta{}, value = undefined}).
@@ -46,5 +51,5 @@
 -record(ast_atom,   {meta = #meta{}, value = undefined}).
 -record(ast_string, {meta = #meta{}, value = undefined}).
 -record(ast_var,    {meta = #meta{}, name = undefined}).
--record(ast_tuple,  {elems = []}).
--record(ast_list,   {elems = []}).
+-record(ast_tuple,  {meta = #meta{}, elems = []}).
+-record(ast_list,   {meta = #meta{}, elems = []}).

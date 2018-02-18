@@ -19,13 +19,17 @@ var_test() ->
 
 tuple_test() ->
   ?assertAST("()",
-             [#ast_tuple{elems = []}]),
+             [#ast_tuple{meta = #meta{line = 1},
+                         elems = []}]),
   ?assertAST("(:54)",
-             [#ast_tuple{elems = [#ast_atom{value = '54'}]}]),
-  ?assertAST("(  200,)",
-             [#ast_tuple{elems = [#ast_int{value = 200}]}]),
+             [#ast_tuple{meta = #meta{line = 1},
+                         elems = [#ast_atom{value = '54'}]}]),
+  ?assertAST("(\n  200,)",
+             [#ast_tuple{meta = #meta{line = 1},
+                         elems = [#ast_int{value = 200}]}]),
   ?assertAST("(:ok, 7)",
-             [#ast_tuple{elems = [#ast_atom{value = ok},
+             [#ast_tuple{meta = #meta{line = 1},
+                         elems = [#ast_atom{value = ok},
                                   #ast_int{value = 7}]}]).
 
 module_test() ->
@@ -50,7 +54,8 @@ module_test() ->
         , args = [val]
         , body =
           [ #ast_tuple
-            {elems =
+            {meta = #meta{line = 3},
+             elems =
               [ #ast_atom{meta = #meta{line = 3}, value = ok}
               , #ast_var{meta = #meta{line = 3}, name = val}
               ]
@@ -76,7 +81,8 @@ arity_2_test() ->
         , args = [x, y]
         , body =
           [ #ast_local_call
-            { name = '+'
+            { meta = #meta{line = 2}
+            , name = '+'
             , args =
               [ #ast_var{meta = #meta{line = 2}, name = x}
               , #ast_var{meta = #meta{line = 2}, name = y}
@@ -103,9 +109,10 @@ call_test() ->
         , args = []
         , body =
           [ #ast_local_call
-            { name = print
+            { meta = #meta{line = 2}
+            , name = print
             , args =
-              [#ast_int{value = 20, meta = #meta{line = 2}}]
+              [#ast_int{meta = #meta{line = 2}, value = 20}]
             }
           ]
         }
@@ -140,8 +147,8 @@ adt_test() ->
         , args = []
         , body =
           [ #ast_adt
-            { name = 'Ok'
-            , meta = #meta{line = 2}
+            { meta = #meta{line = 2}
+            , name = 'Ok'
             , elems = [#ast_int{meta = #meta{line = 2}, value = 1}]
             }
           ]

@@ -52,7 +52,7 @@ functions -> function functions : ['$1'|'$2'].
 function -> kw_fn call ')' '=' exprs      : function('$2', [], '$5').
 function -> kw_fn call args ')' '=' exprs : function('$2', '$3', '$6').
 
-exprs -> name '=' expr exprs : [assignment('$1', '$3', '$4')].
+exprs -> name '=' expr exprs : [assignment('$2', '$1', '$3', '$4')].
 exprs -> expr                : ['$1'].
 exprs -> expr exprs          : ['$1'|'$2'].
 
@@ -63,26 +63,26 @@ expr -> binary_call    : '$1'.
 expr -> name           : var('$1').
 expr -> call elems ')' : local_call('$1', '$2').
 
-binary_call -> expr '::' expr : local_call('::', ['$1', '$3']).
-binary_call -> expr '+' expr  : local_call('+', ['$1', '$3']).
-binary_call -> expr '-' expr  : local_call('-', ['$1', '$3']).
-binary_call -> expr '*' expr  : local_call('*', ['$1', '$3']).
-binary_call -> expr '/' expr  : local_call('/', ['$1', '$3']).
-binary_call -> expr '+.' expr : local_call('+.', ['$1', '$3']).
-binary_call -> expr '-.' expr : local_call('-.', ['$1', '$3']).
-binary_call -> expr '*.' expr : local_call('*.', ['$1', '$3']).
-binary_call -> expr '/.' expr : local_call('/.', ['$1', '$3']).
-binary_call -> expr '<=' expr : local_call('<=', ['$1', '$3']).
-binary_call -> expr '<'  expr : local_call('<' , ['$1', '$3']).
-binary_call -> expr '>'  expr : local_call('>' , ['$1', '$3']).
-binary_call -> expr '>=' expr : local_call('>=', ['$1', '$3']).
+binary_call -> expr '::' expr : local_call('$2', ['$1', '$3']).
+binary_call -> expr '+' expr  : local_call('$2', ['$1', '$3']).
+binary_call -> expr '-' expr  : local_call('$2', ['$1', '$3']).
+binary_call -> expr '*' expr  : local_call('$2', ['$1', '$3']).
+binary_call -> expr '/' expr  : local_call('$2', ['$1', '$3']).
+binary_call -> expr '+.' expr : local_call('$2', ['$1', '$3']).
+binary_call -> expr '-.' expr : local_call('$2', ['$1', '$3']).
+binary_call -> expr '*.' expr : local_call('$2', ['$1', '$3']).
+binary_call -> expr '/.' expr : local_call('$2', ['$1', '$3']).
+binary_call -> expr '<=' expr : local_call('$2', ['$1', '$3']).
+binary_call -> expr '<'  expr : local_call('$2', ['$1', '$3']).
+binary_call -> expr '>'  expr : local_call('$2', ['$1', '$3']).
+binary_call -> expr '>=' expr : local_call('$2', ['$1', '$3']).
 
-case_expr -> kw_case expr case_clauses : case_expr('$2', '$3').
+case_expr -> kw_case expr case_clauses : case_expr('$1', '$2', '$3').
 
 case_clauses -> case_clause              : ['$1'].
 case_clauses -> case_clause case_clauses : ['$1'|'$2'].
 
-case_clause -> '|' pattern '=>' expr : case_clause('$2', '$4').
+case_clause -> '|' pattern '=>' expr : case_clause('$1', '$2', '$4').
 
 pattern -> literal : '$1'.
 pattern -> hole : hole().
@@ -98,10 +98,10 @@ elems -> expr ',' elems : ['$1' | '$3'].
 adt -> upname           : adt('$1', []).
 adt -> upcall elems ')' : adt('$1', '$2').
 
-literal -> '(' ')'        : tuple([]).
-literal -> '(' elems ')'  : tuple('$2').
-literal -> '[' ']'        : list([]).
-literal -> '[' elems ']'  : list('$2').
+literal -> '(' ')'        : tuple('$1', []).
+literal -> '(' elems ')'  : tuple('$1', '$2').
+literal -> '[' ']'        : list('$1', []).
+literal -> '[' elems ']'  : list('$1', '$2').
 literal -> atom           : literal('$1').
 literal -> int            : literal('$1').
 literal -> float          : literal('$1').
@@ -114,42 +114,48 @@ Erlang code.
 module({upname, _, Name}, Exports, Functions) ->
   #ast_module{name = Name, exports = Exports, functions = Functions}.
 
-local_call({call, _, Name}, Args) ->
-  #ast_local_call{name = Name, args = Args};
-local_call(Name, Args) when is_atom(Name) ->
-  #ast_local_call{name = Name, args = Args}.
-
-% call(Mod, Name, Args) ->
-%   #ast_call{module = Mod, name = Name, args = Args}.
+local_call({Operator, Meta}, Args) ->
+  #ast_local_call{meta = Meta, name = Operator, args = Args};
+local_call({call, Meta, Name}, Args) ->
+  #ast_local_call{meta = Meta, name = Name, args = Args}.
 
 function({call, Meta, Name}, Args, Body) ->
   #ast_function{meta = Meta, name = Name, args = Args, body = Body}.
 
-assignment({name, _, Name}, Value, Then) ->
-  #ast_assignment{name = Name, value = Value, then = Then}.
+assignment({'=', Meta}, {name, _, Name}, Value, Then) ->
+  #ast_assignment{meta = Meta, name = Name, value = Value, then = Then}.
 
 arg({name, _Meta, Name}) -> Name.
 
-var({name, Meta, Name}) -> #ast_var{meta = Meta, name = Name}.
+var({name, Meta, Name}) ->
+  #ast_var{meta = Meta, name = Name}.
 
-export({name, _, Name}, {int, _, Arity}) -> {Name, Arity}.
+export({name, _, Name}, {int, _, Arity}) ->
+  {Name, Arity}.
 
-tuple(Elems) -> #ast_tuple{elems = Elems}.
+tuple({'(', Meta}, Elems) ->
+  #ast_tuple{meta = Meta, elems = Elems}.
 
-list(Elems) -> #ast_list{elems = Elems}.
+list({'[', Meta}, Elems) ->
+  #ast_list{meta = Meta, elems = Elems}.
 
 adt({Type, Meta, Name}, Elems) when Type =:= upname; Type =:= upcall ->
   #ast_adt{name = Name, meta = Meta, elems = Elems}.
 
-case_expr(Subject, Clauses) ->
-  #ast_case{subject = Subject, clauses = Clauses}.
+case_expr({kw_case, Meta}, Subject, Clauses) ->
+  #ast_case{meta = Meta, subject = Subject, clauses = Clauses}.
 
-case_clause(Pattern, Value) ->
-  #ast_clause{pattern = Pattern, value = Value}.
+case_clause({'|', Meta}, Pattern, Value) ->
+  #ast_clause{meta = Meta, pattern = Pattern, value = Value}.
 
-hole() -> hole.
+hole() ->
+  hole.
 
-literal({atom, Meta, Value})   -> #ast_atom{meta = Meta, value = Value};
-literal({int, Meta, Value})    -> #ast_int{meta = Meta, value = Value};
-literal({float, Meta, Value})  -> #ast_float{meta = Meta, value = Value};
-literal({string, Meta, Value}) -> #ast_string{meta = Meta, value = Value}.
+literal({atom, Meta, Value}) ->
+  #ast_atom{meta = Meta, value = Value};
+literal({int, Meta, Value}) ->
+  #ast_int{meta = Meta, value = Value};
+literal({float, Meta, Value}) ->
+  #ast_float{meta = Meta, value = Value};
+literal({string, Meta, Value}) ->
+  #ast_string{meta = Meta, value = Value}.
