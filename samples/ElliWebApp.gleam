@@ -18,7 +18,7 @@ The handle/2 callback is used by Elli to response to requests
 
 It serves as the router for our application.
 """
-spec Request, a -> Response
+spec |Request, a| -> Response
 fn handle(req, _args) =
   method = Elli.method(req)
   path = Elli.path(req)

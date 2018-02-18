@@ -33,14 +33,15 @@ foreign type Request
 doc """
 Get the request HTTP method.
 """
-foreign method :elli_request :method :: Request -> Method
+foreign method :elli_request :method :: |Request| -> Method
 
 doc """
 Get the request path segments as a list of strings.
 """
-foreign path :elli_request :path :: Request -> List(String)
+foreign path :elli_request :path :: |Request| -> List(String)
 
-foreign elli_start_link :elli :start_link :: List((Atom, Foreign)) -> Result(Foreign, Pid)
+foreign elli_start_link :elli :start_link ::
+  |List((Atom, Foreign))| -> Result(Foreign, Pid)
 
 type alias StartArguments = {
   // A real Module type instead of Atom would be nice.

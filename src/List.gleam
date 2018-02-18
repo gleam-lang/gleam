@@ -7,7 +7,7 @@ import Maybe exposing Maybe(..)
 
 // Using the Erlang C BIF implementation.
 //
-foreign length :erlang :length :: List(a) -> Int
+foreign length :erlang :length :: |List(a)| -> Int
 
 test length =
   length([]) |> Assert.equal(_, 0)
@@ -17,7 +17,7 @@ test length =
 
 // Using the Erlang C BIF implementation.
 //
-foreign reverse :erlang :reverse :: List(a) -> List(a)
+foreign reverse :erlang :reverse :: |List(a)| -> List(a)
 
 test reverse =
   length([]) |> Assert.equal(_, [])
