@@ -11,6 +11,9 @@
         N =:= '*.'; N =:= '/.'; N =:= '<='; N =:= '<' ; N =:= '>' ; N =:= '>=';
         N =:= '/').
 
+% Holds state used in code generation.
+-record(env, {uid = 0}).
+
 module(#ast_module{name = Name, functions = Funs, exports = Exports}) ->
   PrefixedName = prefix_module(Name),
   C_name = cerl:c_atom(PrefixedName),
@@ -40,89 +43,113 @@ module_info(ModuleName, Params) when is_atom(ModuleName) ->
   {C_fname, C_fun}.
 
 function(#ast_function{name = Name, args = Args, body = Body}) ->
+  Env = #env{},
   Arity = length(Args),
   C_fname = cerl:c_fname(Name, Arity),
   C_args = lists:map(fun var/1, Args),
-  C_body = expression(Body),
+  {C_body, _} = expression(Body, Env),
   {C_fname, cerl:c_fun(C_args, C_body)}.
 
 var(Atom) when is_atom(Atom) ->
   cerl:c_var(Atom).
 
-expression(#ast_string{value = Value}) when is_binary(Value) ->
+map_with_env(Nodes, Env, F) ->
+  Folder = fun(Node, {AccCore, AccEnv}) ->
+             {NewCore, NewEnv} = F(Node, AccEnv),
+             {[NewCore|AccCore], NewEnv}
+           end,
+  {Core, NewEnv} = lists:foldl(Folder, {[], Env}, Nodes),
+  {lists:reverse(Core), NewEnv}.
+
+map_clauses(Clauses, Env) ->
+  map_with_env(Clauses, Env, fun clause/2).
+
+map_expressions(Expressions, Env) ->
+  map_with_env(Expressions, Env, fun expression/2).
+
+expression(#ast_string{value = Value}, Env) when is_binary(Value) ->
   Chars = binary_to_list(Value),
   ByteSequence = lists:map(fun binary_string_byte/1, Chars),
-  cerl:c_binary(ByteSequence);
+  {cerl:c_binary(ByteSequence), Env};
 
-expression(#ast_list{elems = Elems}) ->
-  C_elems = lists:map(fun expression/1, Elems),
-  c_list(C_elems);
+expression(#ast_list{elems = Elems}, Env) ->
+  {C_elems, NewEnv} = map_expressions(Elems, Env),
+  {c_list(C_elems), NewEnv};
 
-expression(#ast_tuple{elems = Elems}) ->
-  C_elems = lists:map(fun expression/1, Elems),
-  cerl:c_tuple(C_elems);
+expression(#ast_tuple{elems = Elems}, Env) ->
+  {C_elems, NewEnv} = map_expressions(Elems, Env),
+  {cerl:c_tuple(C_elems), NewEnv};
 
-expression(#ast_atom{value = Value}) when is_atom(Value) ->
-  cerl:c_atom(Value);
+expression(#ast_atom{value = Value}, Env) when is_atom(Value) ->
+  {cerl:c_atom(Value), Env};
 
-expression(#ast_int{value = Value}) when is_integer(Value) ->
-  cerl:c_int(Value);
+expression(#ast_int{value = Value}, Env) when is_integer(Value) ->
+  {cerl:c_int(Value), Env};
 
-expression(#ast_float{value = Value}) when is_float(Value) ->
-  cerl:c_float(Value);
+expression(#ast_float{value = Value}, Env) when is_float(Value) ->
+  {cerl:c_float(Value), Env};
 
-expression(#ast_var{name = Name}) when is_atom(Name) ->
-  cerl:c_var(Name);
+expression(#ast_var{name = Name}, Env) when is_atom(Name) ->
+  {cerl:c_var(Name), Env};
 
-expression(#ast_local_call{name = '::', args = [H, T]}) ->
-  cerl:c_cons(expression(H), expression(T));
+expression(#ast_local_call{name = '::', args = [Head, Tail]}, Env) ->
+  {C_head, Env1} = expression(Head, Env),
+  {C_tail, Env2} = expression(Tail, Env1),
+  {cerl:c_cons(C_head, C_tail), Env2};
 
-expression(#ast_local_call{name = Name, args = Args}) when ?erlang_module_operator(Name) ->
+expression(#ast_local_call{name = Name, args = Args}, Env)
+when ?erlang_module_operator(Name) ->
   ErlangName = erlang_operator_name(Name),
-  expression(#ast_call{module = erlang, name = ErlangName, args = Args});
+  expression(#ast_call{module = erlang, name = ErlangName, args = Args}, Env);
 
-expression(#ast_local_call{name = Name, args = Args}) ->
+expression(#ast_local_call{name = Name, args = Args}, Env) ->
   C_fname = cerl:c_fname(Name, length(Args)),
-  C_args = lists:map(fun expression/1, Args),
-  cerl:c_apply(C_fname, C_args);
+  {C_args, NewEnv} = map_expressions(Args, Env),
+  {cerl:c_apply(C_fname, C_args), NewEnv};
 
-expression(#ast_call{module = Mod, name = Name, args = Args}) ->
+expression(#ast_call{module = Mod, name = Name, args = Args}, Env) ->
   C_module = cerl:c_atom(prefix_module(Mod)),
   C_name = cerl:c_atom(Name),
-  C_args = lists:map(fun expression/1, Args),
-  cerl:c_call(C_module, C_name, C_args);
+  {C_args, NewEnv} = map_expressions(Args, Env),
+  {cerl:c_call(C_module, C_name, C_args), NewEnv};
 
-expression(#ast_assignment{name = Name, value = Value, then = Then}) ->
+expression(#ast_assignment{name = Name, value = Value, then = Then}, Env) ->
   C_var = cerl:c_var(Name),
-  C_value = expression(Value),
-  C_then = expression(Then),
-  cerl:c_let([C_var], C_value, C_then);
+  {C_value, Env1} = expression(Value, Env),
+  {C_then, Env2} = expression(Then, Env1),
+  {cerl:c_let([C_var], C_value, C_then), Env2};
 
-expression(#ast_adt{name = Name, elems = []}) ->
-  cerl:c_atom(adt_name_to_atom(atom_to_list(Name)));
+expression(#ast_adt{name = Name, elems = []}, Env) ->
+  {cerl:c_atom(adt_name_to_atom(atom_to_list(Name))), Env};
 
-expression(#ast_adt{name = Name, meta = Meta, elems = Elems}) ->
+expression(#ast_adt{name = Name, meta = Meta, elems = Elems}, Env) ->
   AtomValue = adt_name_to_atom(atom_to_list(Name)),
   Atom = #ast_atom{meta = Meta, value = AtomValue},
-  expression(#ast_tuple{elems = [Atom | Elems]});
+  expression(#ast_tuple{elems = [Atom | Elems]}, Env);
 
-expression(#ast_case{subject = Subject, clauses = Clauses}) ->
-  C_subject = expression(Subject),
-  C_clauses = lists:map(fun clause/1, Clauses),
-  cerl:c_case(C_subject, C_clauses);
+expression(#ast_case{subject = Subject, clauses = Clauses}, Env) ->
+  {C_subject, Env1} = expression(Subject, Env),
+  {C_clauses, Env2} = map_clauses(Clauses, Env1),
+  {cerl:c_case(C_subject, C_clauses), Env2};
 
-expression(hole) ->
-  cerl:c_var('_1'); % We need to generate unique atoms here.
+% We generate a unique variable name for each hole to prevent
+% the BEAM thinking two holes are the same.
+expression(hole, #env{uid = UID} = Env) ->
+  NewEnv = Env#env{uid = UID + 1},
+  Name = list_to_atom([$_ | integer_to_list(UID)]),
+  {cerl:c_var(Name), NewEnv};
 
-expression(Expressions) when is_list(Expressions) ->
-  Rev = lists:reverse(Expressions),
-  [Head | Tail] = lists:map(fun expression/1, Rev),
-  lists:foldl(fun cerl:c_seq/2, Head, Tail).
+expression(Expressions, Env) when is_list(Expressions) ->
+  {C_exprs, Env1} = map_expressions(Expressions, Env),
+  [Head | Tail] = lists:reverse(C_exprs),
+  C_seq = lists:foldl(fun cerl:c_seq/2, Head, Tail),
+  {C_seq, Env1}.
 
-clause(#ast_clause{pattern = Pattern, value = Value}) ->
-  C_pattern = expression(Pattern),
-  C_value = expression(Value),
-  cerl:c_clause([C_pattern], C_value).
+clause(#ast_clause{pattern = Pattern, value = Value}, Env) ->
+  {C_pattern, Env1} = expression(Pattern, Env),
+  {C_value, Env2} = expression(Value, Env1),
+  C_clause = cerl:c_clause([C_pattern], C_value),
+  {C_clause, Env2}.
 
 adt_name_to_atom(Chars) ->
   case string:uppercase(Chars) =:= Chars of

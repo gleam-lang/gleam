@@ -148,6 +148,7 @@ case_clause(Pattern, Value) ->
   #ast_clause{pattern = Pattern, value = Value}.
 
 hole() -> hole.
+
 literal({atom, Meta, Value})   -> #ast_atom{meta = Meta, value = Value};
 literal({int, Meta, Value})    -> #ast_int{meta = Meta, value = Value};
 literal({float, Meta, Value})  -> #ast_float{meta = Meta, value = Value};
