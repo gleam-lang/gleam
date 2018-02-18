@@ -4,7 +4,8 @@ module RecordGenServer
 // get type safety for GenServers we can wrap the gen_server
 // module and pass records instead of module atoms.
 
-export Implementation, Sync(..), Async(..), Init(..), Caller
+export Implementation, Sync(..), Async(..), Init(..), Caller, StartError,
+       call/2, call/3, cast/2
 
 // Erlang gen_server behaviour callbacks
 export handle_cast/3, handle_call/2, handle_info/2, info/1
@@ -12,6 +13,19 @@ export handle_cast/3, handle_call/2, handle_info/2, info/1
 from Foreign import Foreign
 
 foreign type Caller
+
+foreign foreign_start_link :gen_server :start_link ::
+  |Atom, arg, List(Atom, Foreign)| -> Result(StartError, Pid)
+
+foreign call :gen_server :call :: |Process, msg| -> reply
+
+foreign call :gen_server :call :: |Process, msg, Int| -> reply
+
+foreign cast :gen_server :cast :: |Process, msg| -> ()
+
+// Need to add others here
+type StartError =
+  | AlreadyStarted(Pid)
 
 type StopReason =
   | Normal
@@ -38,16 +52,20 @@ type Init(state) =
   | Ignore
 
 type alias State(error, state) = {
-  impl_state :: state,
-  impl :: Implementation(error, state),
-}
+    impl_state :: state,
+    impl :: Implementation(error, state),
+  }
 
-type alias Implementation(arg, call, reply, cast, info, error, state) = {
-  handle_call :: |call, Caller, state| -> Sync(reply, state)
-  handle_cast :: |cast, state| -> Async(state),
-  handle_info :: |info, state| -> Async(state),
-  init :: |arg| -> Init(state),
-}
+type alias Impl(arg, call, reply, cast, info, error, state) = {
+    handle_call :: |call, Caller, state| -> Sync(reply, state)
+    handle_cast :: |cast, state| -> Async(state),
+    handle_info :: |info, state| -> Async(state),
+    init :: |arg| -> Init(state),
+  }
+
+spec |Impl(arg, _, _, _, _, _, _), arg| -> Result(Atom, Pid)
+fn start_link(implementation, arg) =
+
 
 nodoc
 fn handle_call(call, caller, state) =
