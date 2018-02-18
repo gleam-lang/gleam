@@ -1,49 +1,27 @@
 module ElliWebApp
 
-/// A very simple web application using the Elli web server.
-/// https://github.com/elli-lib/elli
-///
-/// Run the application with the `start_link/0` function.
+// A very simple web application using the Elli web server.
+// https://github.com/elli-lib/elli
+//
+// Run the application with the `start_link/0` function.
+//
+// This would use the Erlang behaviour :elli_handler.
+// Can we support this somehow?
 
 export start_link/0, handle/2
 
 from Foreign import Foreign
-
-// This would use the Erlang behaviour :elli_handler.
-// Can we support this somehow?
-
-type Method
-  = GET
-  | HEAD
-  | POST
-  | PUT
-  | DELETE
-  | CONNECT
-  | OPTIONS
-  | TRACE
-  | PATCH
-
-type alias Header =
-  (String, String)
-
-type alias Response =
-  (Int, List(Header), String)
-
-foreign type Request
-
-foreign method :elli_request :method :: Request -> Method
-
-foreign path :elli_request :path :: Request -> List(String)
-
-foreign elli_start_link :elli :start_link :: List((Atom, Foreign)) -> Result(Foreign, Pid)
+from Elli import Request, Response
 
 doc """
 The handle/2 callback is used by Elli to response to requests
+
+It serves as the router for our application.
 """
 spec Request, a -> Response
 fn handle(req, _args) =
-  method = method(req)
-  path = path(req)
+  method = Elli.method(req)
+  path = Elli.path(req)
   case (method, path)
   | (GET, []) => home()
   | (GET, ["hello"]) => greet("world")
@@ -51,6 +29,8 @@ fn handle(req, _args) =
   | (GET, ["hello", name]) => greet(name)
   | (DELETE, _) => reject_delete()
   | _ => not_found()
+
+// Response builder functions
 
 fn home() =
   (200, [], "Hello, world!")
@@ -67,15 +47,14 @@ fn reject_delete() =
 fn not_found() =
   (404, [], "Not found")
 
+// Lastly, a function to start the server.
+
 doc """
 The start_link/0 function can be used to create a new
 Elli web server process running this handler module.
 """
-spec () -> Result(Foreign, Pid)
 fn start_link() =
-  elli_opts = [
-    // A real module type would be nice.
-    (:callback, Foreign.new(:"Gleam.ElliWebApp")),
-    (:port, Foreign.new(4000)),
-  ]
-  elli_start_link(elli_opts)
+  Elli.start_link({
+    callback = :"Gleam.ElliWebApp",
+    port = 4000,
+  })

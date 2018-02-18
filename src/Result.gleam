@@ -5,9 +5,10 @@ export Result(..), is_ok/1, is_none/1, map/2, map_error/2, flatten/1, flat_map/2
 
 import Maybe exposing Maybe(..)
 
-/// Result represents the result of something that may succeed or fail.
-/// `Ok` means it was successful, `Error` means it failed.
-///
+doc """
+Result represents the result of something that may succeed or fail.
+`Ok` means it was successful, `Error` means it failed.
+"""
 type Result(error, value)
   = Ok(value)
   | Error(error)
