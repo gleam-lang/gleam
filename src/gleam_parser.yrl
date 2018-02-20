@@ -1,6 +1,7 @@
 Nonterminals
 source module functions function
 exprs expr binary_call adt literal args elems
+container container_pattern elems_pattern
 exports export export_names pattern
 case_expr case_clauses case_clause.
 
@@ -57,6 +58,7 @@ exprs -> expr                : ['$1'].
 exprs -> expr exprs          : ['$1'|'$2'].
 
 expr -> literal        : '$1'.
+expr -> container      : '$1'.
 expr -> adt            : '$1'.
 expr -> case_expr      : '$1'.
 expr -> binary_call    : '$1'.
@@ -84,9 +86,6 @@ case_clauses -> case_clause case_clauses : ['$1'|'$2'].
 
 case_clause -> '|' pattern '=>' expr : case_clause('$1', '$2', '$4').
 
-pattern -> literal : '$1'.
-pattern -> hole : hole().
-
 args -> name          : [arg('$1')].
 args -> name ','      : [arg('$1')].
 args -> name ',' args : [arg('$1') | '$3'].
@@ -98,10 +97,24 @@ elems -> expr ',' elems : ['$1' | '$3'].
 adt -> upname           : adt('$1', []).
 adt -> upcall elems ')' : adt('$1', '$2').
 
-literal -> '(' ')'        : tuple('$1', []).
-literal -> '(' elems ')'  : tuple('$1', '$2').
-literal -> '[' ']'        : list('$1', []).
-literal -> '[' elems ']'  : list('$1', '$2').
+container -> '(' ')'        : tuple('$1', []).
+container -> '(' elems ')'  : tuple('$1', '$2').
+container -> '[' ']'        : list('$1', []).
+container -> '[' elems ']'  : list('$1', '$2').
+
+pattern -> literal           : '$1'.
+pattern -> container_pattern : '$1'.
+pattern -> hole              : hole().
+
+container_pattern -> '(' ')'                : tuple('$1', []).
+container_pattern -> '(' elems_pattern ')'  : tuple('$1', '$2').
+container_pattern -> '[' ']'                : list('$1', []).
+container_pattern -> '[' elems_pattern ']'  : list('$1', '$2').
+
+elems_pattern -> pattern                   : ['$1'].
+elems_pattern -> pattern ','               : ['$1'].
+elems_pattern -> pattern ',' elems_pattern : ['$1' | '$3'].
+
 literal -> atom           : literal('$1').
 literal -> int            : literal('$1').
 literal -> float          : literal('$1').

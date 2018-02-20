@@ -241,9 +241,9 @@ product_adt_test() ->
     ?assertEqual({ok, "Hi there"}, 'Gleam.CodegenProductAdt':ok("Hi there"))
   end).
 
-case_literal_test() ->
+case_int_test() ->
   Source =
-    "module CodegenCaseLiteral\n"
+    "module CodegenCaseInt\n"
     "export go/1\n"
     "fn go(x) =\n"
     "  case x\n"
@@ -252,9 +252,75 @@ case_literal_test() ->
     "  | 3 => :three\n"
     "  | _ => :other\n"
   ,
-  with_module('Gleam.CodegenCaseLiteral', Source, fun() ->
-    ?assertEqual(one, 'Gleam.CodegenCaseLiteral':go(1)),
-    ?assertEqual(two, 'Gleam.CodegenCaseLiteral':go(2)),
-    ?assertEqual(three, 'Gleam.CodegenCaseLiteral':go(3)),
-    ?assertEqual(other, 'Gleam.CodegenCaseLiteral':go(4))
+  with_module('Gleam.CodegenCaseInt', Source, fun() ->
+    ?assertEqual(one, 'Gleam.CodegenCaseInt':go(1)),
+    ?assertEqual(two, 'Gleam.CodegenCaseInt':go(2)),
+    ?assertEqual(three, 'Gleam.CodegenCaseInt':go(3)),
+    ?assertEqual(other, 'Gleam.CodegenCaseInt':go(4))
+  end).
+
+case_float_test() ->
+  Source =
+    "module CodegenCaseFloat\n"
+    "export go/1\n"
+    "fn go(x) =\n"
+    "  case x\n"
+    "  | 1.0 => :one\n"
+    "  | 2.0 => :two\n"
+    "  | 3.0 => :three\n"
+    "  | _ => :other\n"
+  ,
+  with_module('Gleam.CodegenCaseFloat', Source, fun() ->
+    ?assertEqual(one, 'Gleam.CodegenCaseFloat':go(1.0)),
+    ?assertEqual(two, 'Gleam.CodegenCaseFloat':go(2.0)),
+    ?assertEqual(three, 'Gleam.CodegenCaseFloat':go(3.0)),
+    ?assertEqual(other, 'Gleam.CodegenCaseFloat':go(4.0))
+  end).
+
+case_string_test() ->
+  Source =
+    "module CodegenCaseString\n"
+    "export go/1\n"
+    "fn go(x) =\n"
+    "  case x\n"
+    "  | \"\" => :empty\n"
+    "  | _ => :non_empty\n"
+  ,
+  with_module('Gleam.CodegenCaseString', Source, fun() ->
+    ?assertEqual(empty, 'Gleam.CodegenCaseString':go(<<"">>)),
+    ?assertEqual(non_empty, 'Gleam.CodegenCaseString':go(<<"h">>))
+  end).
+
+case_list_test() ->
+  Source =
+    "module CodegenCaseList\n"
+    "export length/1\n"
+    "fn length(x) =\n"
+    "  case x\n"
+    "  | [] => 0\n"
+    "  | [[]] => 1\n"
+    "  | [_, _] => 2\n"
+    "  | _ => -1\n"
+  ,
+  with_module('Gleam.CodegenCaseList', Source, fun() ->
+    ?assertEqual(0, 'Gleam.CodegenCaseList':length([])),
+    ?assertEqual(1, 'Gleam.CodegenCaseList':length([[]])),
+    ?assertEqual(2, 'Gleam.CodegenCaseList':length([[], []])),
+    ?assertEqual(-1, 'Gleam.CodegenCaseList':length([[], [], []]))
+  end).
+
+case_tuple_test() ->
+  Source =
+    "module CodegenCaseTuple\n"
+    "export go/1\n"
+    "fn go(x) =\n"
+    "  case x\n"
+    "  | (:ok, (1, 1)) => :one\n"
+    "  | (:ok, (2, 2)) => :two\n"
+    "  | (_, _) => :eh\n"
+  ,
+  with_module('Gleam.CodegenCaseTuple', Source, fun() ->
+    ?assertEqual(one, 'Gleam.CodegenCaseTuple':go({ok, {1, 1}})),
+    ?assertEqual(two, 'Gleam.CodegenCaseTuple':go({ok, {2, 2}})),
+    ?assertEqual(eh, 'Gleam.CodegenCaseTuple':go({ok, 3}))
   end).
