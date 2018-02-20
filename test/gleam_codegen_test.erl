@@ -324,3 +324,17 @@ case_tuple_test() ->
     ?assertEqual(two, 'Gleam.CodegenCaseTuple':go({ok, {2, 2}})),
     ?assertEqual(eh, 'Gleam.CodegenCaseTuple':go({ok, 3}))
   end).
+
+case_var_test() ->
+  Source =
+    "module CodegenCaseVar\n"
+    "export unwrap/1\n"
+    "fn unwrap(x) =\n"
+    "  case x\n"
+    "  | (:ok, thing) => thing\n"
+    "  | _ => :default\n"
+  ,
+  with_module('Gleam.CodegenCaseVar', Source, fun() ->
+    ?assertEqual(one, 'Gleam.CodegenCaseVar':unwrap({ok, one})),
+    ?assertEqual(default, 'Gleam.CodegenCaseVar':unwrap(two))
+  end).

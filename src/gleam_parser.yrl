@@ -102,6 +102,7 @@ container -> '(' elems ')'  : tuple('$1', '$2').
 container -> '[' ']'        : list('$1', []).
 container -> '[' elems ']'  : list('$1', '$2').
 
+pattern -> name              : var('$1').
 pattern -> literal           : '$1'.
 pattern -> container_pattern : '$1'.
 pattern -> hole              : hole().
