@@ -19,6 +19,11 @@
          name = undefined,
          args = []}).
 
+-record(ast_cons,
+        {meta = #meta{},
+         head = undefined,
+         tail = undefined}).
+
 -record(ast_local_call,
         {meta = #meta{},
          name = undefined,

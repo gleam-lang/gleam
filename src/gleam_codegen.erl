@@ -92,7 +92,7 @@ expression(#ast_float{value = Value}, Env) when is_float(Value) ->
 expression(#ast_var{name = Name}, Env) when is_atom(Name) ->
   {cerl:c_var(Name), Env};
 
-expression(#ast_local_call{name = '::', args = [Head, Tail]}, Env) ->
+expression(#ast_cons{head = Head, tail = Tail}, Env) ->
   {C_head, Env1} = expression(Head, Env),
   {C_tail, Env2} = expression(Tail, Env1),
   {cerl:c_cons(C_head, C_tail), Env2};

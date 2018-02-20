@@ -1,6 +1,6 @@
 Nonterminals
 source module functions function
-exprs expr binary_call adt literal args elems
+exprs expr binary_call literal args elems
 container container_pattern elems_pattern
 exports export export_names pattern
 case_expr case_clauses case_clause.
@@ -59,13 +59,12 @@ exprs -> expr exprs          : ['$1'|'$2'].
 
 expr -> literal        : '$1'.
 expr -> container      : '$1'.
-expr -> adt            : '$1'.
 expr -> case_expr      : '$1'.
 expr -> binary_call    : '$1'.
 expr -> name           : var('$1').
 expr -> call elems ')' : local_call('$1', '$2').
 
-binary_call -> expr '::' expr : local_call('$2', ['$1', '$3']).
+binary_call -> expr '::' expr : cons('$2', '$1', '$3').
 binary_call -> expr '+' expr  : local_call('$2', ['$1', '$3']).
 binary_call -> expr '-' expr  : local_call('$2', ['$1', '$3']).
 binary_call -> expr '*' expr  : local_call('$2', ['$1', '$3']).
@@ -90,36 +89,37 @@ args -> name          : [arg('$1')].
 args -> name ','      : [arg('$1')].
 args -> name ',' args : [arg('$1') | '$3'].
 
+container -> upname           : adt('$1', []).
+container -> upcall elems ')' : adt('$1', '$2').
+container -> '(' ')'          : tuple('$1', []).
+container -> '(' elems ')'    : tuple('$1', '$2').
+container -> '[' ']'          : list('$1', []).
+container -> '[' elems ']'    : list('$1', '$2').
+
 elems -> expr           : ['$1'].
 elems -> expr ','       : ['$1'].
 elems -> expr ',' elems : ['$1' | '$3'].
 
-adt -> upname           : adt('$1', []).
-adt -> upcall elems ')' : adt('$1', '$2').
-
-container -> '(' ')'        : tuple('$1', []).
-container -> '(' elems ')'  : tuple('$1', '$2').
-container -> '[' ']'        : list('$1', []).
-container -> '[' elems ']'  : list('$1', '$2').
-
-pattern -> name              : var('$1').
 pattern -> literal           : '$1'.
 pattern -> container_pattern : '$1'.
+pattern -> name              : var('$1').
 pattern -> hole              : hole().
 
-container_pattern -> '(' ')'                : tuple('$1', []).
-container_pattern -> '(' elems_pattern ')'  : tuple('$1', '$2').
-container_pattern -> '[' ']'                : list('$1', []).
-container_pattern -> '[' elems_pattern ']'  : list('$1', '$2').
+container_pattern -> upname                   : adt('$1', []).
+container_pattern -> upcall elems_pattern ')' : adt('$1', '$2').
+container_pattern -> '(' ')'                  : tuple('$1', []).
+container_pattern -> '(' elems_pattern ')'    : tuple('$1', '$2').
+container_pattern -> '[' ']'                  : list('$1', []).
+container_pattern -> '[' elems_pattern ']'    : list('$1', '$2').
 
 elems_pattern -> pattern                   : ['$1'].
 elems_pattern -> pattern ','               : ['$1'].
 elems_pattern -> pattern ',' elems_pattern : ['$1' | '$3'].
 
-literal -> atom           : literal('$1').
-literal -> int            : literal('$1').
-literal -> float          : literal('$1').
-literal -> string         : literal('$1').
+literal -> atom   : literal('$1').
+literal -> int    : literal('$1').
+literal -> float  : literal('$1').
+literal -> string : literal('$1').
 
 Erlang code.
 
@@ -127,6 +127,9 @@ Erlang code.
 
 module({upname, _, Name}, Exports, Functions) ->
   #ast_module{name = Name, exports = Exports, functions = Functions}.
+
+cons({'::', Meta}, Head, Tail) ->
+  #ast_cons{meta = Meta, head = Head, tail = Tail}.
 
 local_call({Operator, Meta}, Args) ->
   #ast_local_call{meta = Meta, name = Operator, args = Args};
@@ -139,7 +142,8 @@ function({call, Meta, Name}, Args, Body) ->
 assignment({'=', Meta}, {name, _, Name}, Value, Then) ->
   #ast_assignment{meta = Meta, name = Name, value = Value, then = Then}.
 
-arg({name, _Meta, Name}) -> Name.
+arg({name, _Meta, Name}) ->
+  Name.
 
 var({name, Meta, Name}) ->
   #ast_var{meta = Meta, name = Name}.

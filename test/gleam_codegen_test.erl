@@ -338,3 +338,17 @@ case_var_test() ->
     ?assertEqual(one, 'Gleam.CodegenCaseVar':unwrap({ok, one})),
     ?assertEqual(default, 'Gleam.CodegenCaseVar':unwrap(two))
   end).
+
+case_adt_test() ->
+  Source =
+    "module CodegenCaseAdt\n"
+    "export unwrap/1\n"
+    "fn unwrap(x) =\n"
+    "  case x\n"
+    "  | Nothing => :default\n"
+    "  | Just(z) => z\n"
+  ,
+  with_module('Gleam.CodegenCaseAdt', Source, fun() ->
+    ?assertEqual(one, 'Gleam.CodegenCaseAdt':unwrap({just, one})),
+    ?assertEqual(default, 'Gleam.CodegenCaseAdt':unwrap(nothing))
+  end).
