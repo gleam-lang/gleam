@@ -57,6 +57,11 @@
          key = undefined,
          value = undefined}).
 
+-record(ast_record_access,
+        {meta = #meta{},
+         record = undefined,
+         key = undefined}).
+
 -record(ast_tuple,  {meta = #meta{}, elems = []}).
 -record(ast_list,   {meta = #meta{}, elems = []}).
 

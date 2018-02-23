@@ -382,3 +382,15 @@ case_record_test() ->
     ?assertEqual(#{value => 2}, 'Gleam.CodegenRecord':one(2)),
     ?assertEqual(#{val1 => ok, val2 => ok}, 'Gleam.CodegenRecord':two(ok))
   end).
+
+case_record_access_test() ->
+  Source =
+    "module CodegenRecord\n"
+    "export name/1, dig/1\n"
+    "fn name(x) = x.name\n"
+    "fn dig(x) = x.one.two.three\n"
+  ,
+  with_module('Gleam.CodegenRecord', Source, fun() ->
+    ?assertEqual(1, 'Gleam.CodegenRecord':name(#{name => 1})),
+    ?assertEqual(ok, 'Gleam.CodegenRecord':dig(#{one => #{two => #{three => ok}}}))
+  end).

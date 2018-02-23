@@ -9,6 +9,7 @@ Terminals
 '(' ')' '[' ']' '::' '{' '}'
 ',' '=' '|' '=>'
 '<=' '<' '>' '>='
+'.'
 '/' '*' '+' '-' '/.' '*.' '+.' '-.'
 int float atom string
 hole name upname call upcall
@@ -62,6 +63,7 @@ expr -> container      : '$1'.
 expr -> case_expr      : '$1'.
 expr -> binary_call    : '$1'.
 expr -> name           : var('$1').
+expr -> expr '.' name  : record_access('$2', '$1', '$3').
 expr -> call elems ')' : local_call('$1', '$2').
 
 binary_call -> expr '::' expr : cons('$2', '$1', '$3').
@@ -104,8 +106,9 @@ elems -> expr ',' elems : ['$1' | '$3'].
 
 fields -> field             : ['$1'].
 fields -> field ','         : ['$1'].
-fields -> field ',' fields : ['$1' | '$3'].
-field -> name '=' expr  : field('$1', '$3').
+fields -> field ',' fields  : ['$1' | '$3'].
+
+field -> name '=' expr      : record_field('$1', '$3').
 
 pattern -> literal              : '$1'.
 pattern -> container_pattern    : '$1'.
@@ -162,6 +165,12 @@ export({name, _, Name}, {int, _, Arity}) ->
 record({'{', Meta}, Fields) ->
   #ast_record{meta = Meta, fields = Fields}.
 
+record_field({name, Meta, Key}, Value) ->
+  #ast_record_field{meta = Meta, key = Key, value = Value}.
+
+record_access({'.', Meta}, Record, {name, _, Key}) ->
+  #ast_record_access{meta = Meta, record = Record, key = Key}.
+
 tuple({'(', Meta}, Elems) ->
   #ast_tuple{meta = Meta, elems = Elems}.
 
@@ -176,9 +185,6 @@ case_expr({kw_case, Meta}, Subject, Clauses) ->
 
 case_clause({'|', Meta}, Pattern, Value) ->
   #ast_clause{meta = Meta, pattern = Pattern, value = Value}.
-
-field({name, Meta, Key}, Value) ->
-  #ast_record_field{meta = Meta, key = Key, value = Value}.
 
 hole() ->
   hole.

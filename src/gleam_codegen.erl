@@ -128,6 +128,14 @@ expression(#ast_record{fields = Fields}, Env) ->
   Core = cerl:c_map(C_pairs),
   {Core, NewEnv};
 
+expression(#ast_record_access{meta = Meta, record = Record, key = Key}, Env) ->
+  Atom = #ast_atom{meta = Meta, value = Key},
+  Call = #ast_call{meta = Meta,
+                   module = maps,
+                   name = get,
+                   args = [Atom, Record]},
+  expression(Call, Env);
+
 expression(#ast_case{subject = Subject, clauses = Clauses}, Env) ->
   {C_subject, Env1} = expression(Subject, Env),
   {C_clauses, Env2} = map_clauses(Clauses, Env1),
@@ -193,4 +201,5 @@ binary_string_byte(Char) ->
                 c_list([cerl:c_atom(unsigned), cerl:c_atom(big)])).
 
 prefix_module(erlang) -> erlang;
+prefix_module(maps) -> maps;
 prefix_module(Name) when is_atom(Name) -> list_to_atom("Gleam." ++ atom_to_list(Name)).
