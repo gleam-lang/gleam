@@ -11,7 +11,12 @@
         {meta = #meta{},
          name = undefined,
          args = [],
-         body = []}).
+         body = undefined}).
+
+-record(ast_closure,
+        {meta = #meta{},
+         args = [],
+         body = undefined}).
 
 -record(ast_call,
         {meta = #meta{},
@@ -62,6 +67,11 @@
          record = undefined,
          key = undefined}).
 
+-record(ast_pipe,
+        {meta = #meta{},
+         lhs = undefined,
+         rhs = undefined}).
+
 -record(ast_tuple,  {meta = #meta{}, elems = []}).
 -record(ast_list,   {meta = #meta{}, elems = []}).
 
@@ -70,4 +80,5 @@
 -record(ast_bool,   {meta = #meta{}, value = undefined}).
 -record(ast_atom,   {meta = #meta{}, value = undefined}).
 -record(ast_string, {meta = #meta{}, value = undefined}).
--record(ast_var,    {meta = #meta{}, name = undefined}).
+
+-record(ast_var, {meta = #meta{}, name = undefined}).

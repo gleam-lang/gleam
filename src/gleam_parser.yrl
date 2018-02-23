@@ -1,13 +1,13 @@
 Nonterminals
 source module functions function
-exprs expr binary_call literal args elems
+exprs expr binary_call literal elems args call_args
 container container_pattern elems_pattern
 exports export export_names pattern
 case_expr case_clauses case_clause field fields.
 
 Terminals
 '(' ')' '[' ']' '::' '{' '}'
-',' '=' '|' '=>'
+',' '=' '|' '=>' '|>'
 '<=' '<' '>' '>='
 '.'
 '/' '*' '+' '-' '/.' '*.' '+.' '-.'
@@ -17,6 +17,7 @@ kw_module kw_fn kw_export kw_case.
 
 Rootsymbol source.
 
+Left 180 '|>'.
 Left 160 '<'.
 Left 160 '<='.
 Left 160 '>'.
@@ -58,13 +59,15 @@ exprs -> name '=' expr exprs : [assignment('$2', '$1', '$3', '$4')].
 exprs -> expr                : ['$1'].
 exprs -> expr exprs          : ['$1'|'$2'].
 
-expr -> literal        : '$1'.
-expr -> container      : '$1'.
-expr -> case_expr      : '$1'.
-expr -> binary_call    : '$1'.
-expr -> name           : var('$1').
-expr -> expr '.' name  : record_access('$2', '$1', '$3').
-expr -> call elems ')' : local_call('$1', '$2').
+expr -> literal            : '$1'.
+expr -> container          : '$1'.
+expr -> case_expr          : '$1'.
+expr -> binary_call        : '$1'.
+expr -> name               : var('$1').
+expr -> expr '.' name      : record_access('$2', '$1', '$3').
+expr -> call ')'           : local_call('$1', []).
+expr -> call call_args ')' : local_call('$1', '$2').
+expr -> expr '|>' expr         : pipe('$2', '$1', '$3').
 
 binary_call -> expr '::' expr : cons('$2', '$1', '$3').
 binary_call -> expr '+' expr  : local_call('$2', ['$1', '$3']).
@@ -86,6 +89,13 @@ case_clauses -> case_clause              : ['$1'].
 case_clauses -> case_clause case_clauses : ['$1'|'$2'].
 
 case_clause -> '|' pattern '=>' expr : case_clause('$1', '$2', '$4').
+
+call_args -> hole               : [hole()].
+call_args -> hole ','           : [hole()].
+call_args -> hole ',' call_args : [hole() | '$3'].
+call_args -> expr               : ['$1'].
+call_args -> expr ','           : ['$1'].
+call_args -> expr ',' call_args : ['$1' | '$3'].
 
 args -> name          : [arg('$1')].
 args -> name ','      : [arg('$1')].
@@ -127,10 +137,11 @@ elems_pattern -> pattern                   : ['$1'].
 elems_pattern -> pattern ','               : ['$1'].
 elems_pattern -> pattern ',' elems_pattern : ['$1' | '$3'].
 
-literal -> atom   : literal('$1').
-literal -> int    : literal('$1').
-literal -> float  : literal('$1').
-literal -> string : literal('$1').
+literal -> '|' args '|' expr : closure('$1', '$2', '$4').
+literal -> atom              : literal('$1').
+literal -> int               : literal('$1').
+literal -> float             : literal('$1').
+literal -> string            : literal('$1').
 
 Erlang code.
 
@@ -138,6 +149,9 @@ Erlang code.
 
 module({upname, _, Name}, Exports, Functions) ->
   #ast_module{name = Name, exports = Exports, functions = Functions}.
+
+closure({'|', Meta}, Args, Body) ->
+  #ast_closure{meta = Meta, args = Args, body = Body}.
 
 cons({'::', Meta}, Head, Tail) ->
   #ast_cons{meta = Meta, head = Head, tail = Tail}.
@@ -185,6 +199,9 @@ case_expr({kw_case, Meta}, Subject, Clauses) ->
 
 case_clause({'|', Meta}, Pattern, Value) ->
   #ast_clause{meta = Meta, pattern = Pattern, value = Value}.
+
+pipe({'|>', Meta}, Lhs, Rhs) ->
+  #ast_pipe{meta = Meta, lhs = Lhs, rhs = Rhs}.
 
 hole() ->
   hole.

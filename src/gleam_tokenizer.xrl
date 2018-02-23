@@ -15,6 +15,7 @@ module     : {token, {kw_module, m(TokenLine)}}.
 export     : {token, {kw_export, m(TokenLine)}}.
 case       : {token, {kw_case, m(TokenLine)}}.
 fn         : {token, {kw_fn, m(TokenLine)}}.
+\|>        : {token, {'|>', m(TokenLine)}}.
 ==         : {token, {'==', m(TokenLine)}}.
 =>         : {token, {'=>', m(TokenLine)}}.
 =          : {token, {'=', m(TokenLine)}}.

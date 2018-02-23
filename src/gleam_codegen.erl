@@ -22,7 +22,7 @@ module(#ast_module{name = Name, functions = Funs, exports = Exports}) ->
                lists:map(fun export/1, Exports)],
   C_definitions = [module_info(PrefixedName, []),
                    module_info(PrefixedName, [cerl:c_var(item)]) |
-                   lists:map(fun function/1, Funs)],
+                   lists:map(fun named_function/1, Funs)],
   Attributes = [],
   Core = cerl:c_module(C_name, C_exports, Attributes, C_definitions),
   {ok, Core}.
@@ -38,13 +38,18 @@ module_info(ModuleName, Params) when is_atom(ModuleName) ->
   C_fname = cerl:c_fname(module_info, length(Params)),
   {C_fname, C_fun}.
 
-function(#ast_function{name = Name, args = Args, body = Body}) ->
+named_function(#ast_function{name = Name, args = Args, body = Body}) ->
   Env = #env{},
   Arity = length(Args),
   C_fname = cerl:c_fname(Name, Arity),
+  {C_fun, _NewEnv} = function(Args, Body, Env),
+  {C_fname, C_fun}.
+
+function(Args, Body, Env) ->
   C_args = lists:map(fun var/1, Args),
-  {C_body, _} = expression(Body, Env),
-  {C_fname, cerl:c_fun(C_args, C_body)}.
+  {C_body, NewEnv} = expression(Body, Env),
+  C_fun = cerl:c_fun(C_args, C_body),
+  {C_fun, NewEnv}.
 
 var(Atom) when is_atom(Atom) ->
   cerl:c_var(Atom).
@@ -98,10 +103,19 @@ when ?erlang_module_operator(Name) ->
   ErlangName = erlang_operator_name(Name),
   expression(#ast_call{module = erlang, name = ErlangName, args = Args}, Env);
 
-expression(#ast_local_call{name = Name, args = Args}, Env) ->
-  C_fname = cerl:c_fname(Name, length(Args)),
-  {C_args, NewEnv} = map_expressions(Args, Env),
-  {cerl:c_apply(C_fname, C_args), NewEnv};
+expression(#ast_local_call{meta = Meta, name = Name, args = Args}, Env) ->
+  % TODO: hole record
+  NumHoles = length(lists:filter(fun(X) -> X =:= hole end, Args)),
+  case NumHoles of
+    0 ->
+      C_fname = cerl:c_fname(Name, length(Args)),
+      {C_args, NewEnv} = map_expressions(Args, Env),
+      {cerl:c_apply(C_fname, C_args), NewEnv};
+    1 ->
+      hole_closure(Meta, Name, Args, Env);
+    _ ->
+      throw({error, multiple_hole_closure})
+  end;
 
 expression(#ast_call{module = Mod, name = Name, args = Args}, Env) ->
   C_module = cerl:c_atom(prefix_module(Mod)),
@@ -141,6 +155,13 @@ expression(#ast_case{subject = Subject, clauses = Clauses}, Env) ->
   {C_clauses, Env2} = map_clauses(Clauses, Env1),
   {cerl:c_case(C_subject, C_clauses), Env2};
 
+% TODO
+expression(#ast_pipe{rhs = _Rhs, lhs = _Lhs}, _Env) ->
+  throw(not_implemented);
+
+expression(#ast_closure{args = Args, body = Body}, Env) ->
+  function(Args, Body, Env);
+
 % We generate a unique variable name for each hole to prevent
 % the BEAM thinking two holes are the same.
 expression(hole, #env{uid = UID} = Env) ->
@@ -153,6 +174,15 @@ expression(Expressions, Env) when is_list(Expressions) ->
   [Head | Tail] = lists:reverse(C_exprs),
   C_seq = lists:foldl(fun cerl:c_seq/2, Head, Tail),
   {C_seq, Env1}.
+
+hole_closure(Meta, Name, Args, #env{uid = UID} = Env) ->
+  NewEnv = Env#env{uid = UID + 1},
+  VarName = list_to_atom("$$gleam_hole_var" ++ integer_to_list(UID)),
+  Var = #ast_var{name = VarName},
+  NewArgs = lists:map(fun(hole) -> Var; (X) -> X end, Args),
+  Call = #ast_local_call{meta = Meta, name = Name, args = NewArgs},
+  Closure = #ast_closure{meta = Meta, args = [VarName], body = Call},
+  expression(Closure, NewEnv).
 
 record_field(#ast_record_field{key = Key, value = Val}, Env0) ->
   C_key = cerl:c_atom(Key),

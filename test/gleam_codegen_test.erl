@@ -368,7 +368,7 @@ case_adt_test() ->
     ?assertEqual(default, 'Gleam.CodegenCaseAdt':unwrap(nothing))
   end).
 
-case_record_test() ->
+record_test() ->
   Source =
     "module CodegenRecord\n"
     "export zero/0, one/1, two/1\n"
@@ -383,14 +383,68 @@ case_record_test() ->
     ?assertEqual(#{val1 => ok, val2 => ok}, 'Gleam.CodegenRecord':two(ok))
   end).
 
-case_record_access_test() ->
+record_access_test() ->
   Source =
-    "module CodegenRecord\n"
+    "module CodegenRecordAccess\n"
     "export name/1, dig/1\n"
     "fn name(x) = x.name\n"
     "fn dig(x) = x.one.two.three\n"
   ,
-  with_module('Gleam.CodegenRecord', Source, fun() ->
-    ?assertEqual(1, 'Gleam.CodegenRecord':name(#{name => 1})),
-    ?assertEqual(ok, 'Gleam.CodegenRecord':dig(#{one => #{two => #{three => ok}}}))
+  Mod = 'Gleam.CodegenRecordAccess',
+  with_module(Mod, Source, fun() ->
+    ?assertEqual(1, Mod:name(#{name => 1})),
+    ?assertEqual(ok, Mod:dig(#{one => #{two => #{three => ok}}}))
   end).
+
+zero_arity_call_test() ->
+  Source =
+    "module CodegenZeroArityCall\n"
+    "export one/0\n"
+    "fn one() = hidden()\n"
+    "fn hidden() = 100\n"
+  ,
+  Mod = 'Gleam.CodegenZeroArityCall',
+  with_module(Mod, Source, fun() ->
+    ?assertEqual(100, Mod:one())
+  end).
+
+% TODO: Check args to see if one is a hole. If it is make a closure
+closure_test() ->
+  Source =
+    "module CodegenClosure\n"
+    "export id_fun/0, double_fun/0\n"
+    "fn id_fun() = |x| x\n"
+    "fn double_fun() = double(_)\n"
+    "fn double(x) = x + x\n"
+  ,
+  Mod = 'Gleam.CodegenClosure',
+  with_module(Mod, Source, fun() ->
+    Identity = Mod:id_fun(),
+    ?assertEqual(1, Identity(1)),
+    Double = Mod:double_fun(),
+    ?assertEqual(8, Double(4))
+  end).
+
+% closure_call_test() ->
+%   Source =
+%     "module CodegenClosureCall\n"
+%     "export identity/0, call/1\n"
+%     "fn call(fun) = fun()\n"
+%   ,
+%   Mod = 'Gleam.CodegenClosureCall',
+%   with_module(Mod, Source, fun() ->
+%     ?assertEqual(ok, Mod:call(fun() -> ok end))
+%   end).
+
+% TODO
+% pipe_test() ->
+%   Source =
+%     "module CodegenPipe\n"
+%     "export one/1\n"
+%     "fn inc(x) = x + 1\n"
+%     "fn one(x) = x |> inc |> inc\n"
+%   ,
+%   Mod = 'Gleam.CodegenPipe',
+%   with_module(Mod, Source, fun() ->
+%     ?assertEqual(3, Mod:name(1))
+%   end).
