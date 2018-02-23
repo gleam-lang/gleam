@@ -17,16 +17,12 @@
 module(#ast_module{name = Name, functions = Funs, exports = Exports}) ->
   PrefixedName = prefix_module(Name),
   C_name = cerl:c_atom(PrefixedName),
-  C_exports =
-    [ cerl:c_fname(module_info, 0)
-    , cerl:c_fname(module_info, 1)
-    | lists:map(fun export/1, Exports)
-    ],
-  C_definitions =
-    [ module_info(PrefixedName, [])
-    , module_info(PrefixedName, [cerl:c_var(item)])
-    | lists:map(fun function/1, Funs)
-    ],
+  C_exports = [cerl:c_fname(module_info, 0),
+               cerl:c_fname(module_info, 1) |
+               lists:map(fun export/1, Exports)],
+  C_definitions = [module_info(PrefixedName, []),
+                   module_info(PrefixedName, [cerl:c_var(item)]) |
+                   lists:map(fun function/1, Funs)],
   Attributes = [],
   Core = cerl:c_module(C_name, C_exports, Attributes, C_definitions),
   {ok, Core}.
@@ -127,6 +123,11 @@ expression(#ast_adt{name = Name, meta = Meta, elems = Elems}, Env) ->
   Atom = #ast_atom{meta = Meta, value = AtomValue},
   expression(#ast_tuple{elems = [Atom | Elems]}, Env);
 
+expression(#ast_record{fields = Fields}, Env) ->
+  {C_pairs, NewEnv} = map_with_env(Fields, Env, fun record_field/2),
+  Core = cerl:c_map(C_pairs),
+  {Core, NewEnv};
+
 expression(#ast_case{subject = Subject, clauses = Clauses}, Env) ->
   {C_subject, Env1} = expression(Subject, Env),
   {C_clauses, Env2} = map_clauses(Clauses, Env1),
@@ -144,6 +145,12 @@ expression(Expressions, Env) when is_list(Expressions) ->
   [Head | Tail] = lists:reverse(C_exprs),
   C_seq = lists:foldl(fun cerl:c_seq/2, Head, Tail),
   {C_seq, Env1}.
+
+record_field(#ast_record_field{key = Key, value = Val}, Env0) ->
+  C_key = cerl:c_atom(Key),
+  {C_val, Env1} = expression(Val, Env0),
+  Core = cerl:c_map_pair(C_key, C_val),
+  {Core, Env1}.
 
 clause(#ast_clause{pattern = Pattern, value = Value}, Env) ->
   {C_pattern, Env1} = expression(Pattern, Env),

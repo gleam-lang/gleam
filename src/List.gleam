@@ -72,10 +72,12 @@ test filter =
 fn filter(list, fun, acc) =
   case list
   | [] => reverse(acc)
-  | x :: xs => {
-    new_acc = cond | fun(x) => x :: acc | True => acc
-    filter(xs, fun, new_acc)
-  }
+  | x :: xs => (
+      new_acc = case fun(x)
+        | True => x :: acc
+        | False => acc
+      filter(xs, fun, new_acc)
+    )
 
 fn map(list, fun) =
   map(list, fun, [])
@@ -90,13 +92,13 @@ fn map(list, fun, acc) =
   | x :: xs => map(xs, fun, fun(x) :: acc)
 
 fn drop(list, n) =
-  cond
-  | n <= 0 => list
-  | True => {
-    case list
-    | [] => []
-    | _ :: xs => drop(xs, n - 1)
-  }
+  case n <= 0
+  | True => list
+  | False => (
+      case list
+      | [] => []
+      | _ :: xs => drop(xs, n - 1)
+    )
 
 test drop/2 =
   drop([], 5) |> Assert.equal(_, [])
@@ -106,13 +108,13 @@ fn take(list, n) =
   take(list, n, [])
 
 fn take(list, n, acc) =
-  cond
-  | n <= 0 => reverse(acc)
-  | True => {
-    case list
-    | [] => reverse(acc)
-    | x :: xs => take(xs, n - 1, x :: acc)
-  }
+  case n <= 0
+  | True => reverse(acc)
+  | False => (
+      case list
+      | [] => reverse(acc)
+      | x :: xs => take(xs, n - 1, x :: acc)
+    )
 
 test take =
   take([], 5) |> Assert.equal(_, [])
@@ -151,7 +153,8 @@ fn foldl(list, acc, fun) =
   | x :: rest => foldl(rest, fun(x, acc), fun)
 
 test foldl() =
-  foldl([1, 2, 3], [], |x, acc| x :: acc) |> Assert.equal(_, [3, 2, 1])
+  foldl([1, 2, 3], [], |x, acc| x :: acc)
+    |> Assert.equal(_, [3, 2, 1])
 
 fn foldr(list, acc, fun) =
   case list
@@ -159,4 +162,5 @@ fn foldr(list, acc, fun) =
   | x :: rest => fun(x, foldl(rest, acc, fun))
 
 test foldr() =
-  foldr([1, 2, 3], [], |x, acc| x :: acc) |> Assert.equal(_, [1, 2, 3])
+  foldr([1, 2, 3], [], |x, acc| x :: acc)
+    |> Assert.equal(_, [1, 2, 3])

@@ -309,6 +309,21 @@ case_list_test() ->
     ?assertEqual(-1, 'Gleam.CodegenCaseList':length([[], [], []]))
   end).
 
+case_cons_test() ->
+  Source =
+    "module CodegenCaseCons\n"
+    "export head/1\n"
+    "fn head(x) =\n"
+    "  case x\n"
+    "  | x :: _ => Just(x)\n"
+    "  | _ => Nothing\n"
+  ,
+  with_module('Gleam.CodegenCaseCons', Source, fun() ->
+    ?assertEqual(nothing, 'Gleam.CodegenCaseCons':head([])),
+    ?assertEqual({just, 0}, 'Gleam.CodegenCaseCons':head([0])),
+    ?assertEqual({just, 1}, 'Gleam.CodegenCaseCons':head([1, 2]))
+  end).
+
 case_tuple_test() ->
   Source =
     "module CodegenCaseTuple\n"
@@ -351,4 +366,19 @@ case_adt_test() ->
   with_module('Gleam.CodegenCaseAdt', Source, fun() ->
     ?assertEqual(one, 'Gleam.CodegenCaseAdt':unwrap({just, one})),
     ?assertEqual(default, 'Gleam.CodegenCaseAdt':unwrap(nothing))
+  end).
+
+case_record_test() ->
+  Source =
+    "module CodegenRecord\n"
+    "export zero/0, one/1, two/1\n"
+    "fn zero() = {}\n"
+    "fn one(x) = {value = x}\n"
+    "fn two(x) = {val1 = x, val2 = x}\n"
+  ,
+  with_module('Gleam.CodegenRecord', Source, fun() ->
+    ?assertEqual(#{}, 'Gleam.CodegenRecord':zero()),
+    ?assertEqual(#{value => 1}, 'Gleam.CodegenRecord':one(1)),
+    ?assertEqual(#{value => 2}, 'Gleam.CodegenRecord':one(2)),
+    ?assertEqual(#{val1 => ok, val2 => ok}, 'Gleam.CodegenRecord':two(ok))
   end).

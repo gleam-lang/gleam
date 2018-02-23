@@ -3,10 +3,10 @@ source module functions function
 exprs expr binary_call literal args elems
 container container_pattern elems_pattern
 exports export export_names pattern
-case_expr case_clauses case_clause.
+case_expr case_clauses case_clause field fields.
 
 Terminals
-'(' ')' '[' ']' '::'
+'(' ')' '[' ']' '::' '{' '}'
 ',' '=' '|' '=>'
 '<=' '<' '>' '>='
 '/' '*' '+' '-' '/.' '*.' '+.' '-.'
@@ -95,15 +95,23 @@ container -> '(' ')'          : tuple('$1', []).
 container -> '(' elems ')'    : tuple('$1', '$2').
 container -> '[' ']'          : list('$1', []).
 container -> '[' elems ']'    : list('$1', '$2').
+container -> '{' '}'          : record('$1', []).
+container -> '{' fields '}'   : record('$1', '$2').
 
 elems -> expr           : ['$1'].
 elems -> expr ','       : ['$1'].
 elems -> expr ',' elems : ['$1' | '$3'].
 
-pattern -> literal           : '$1'.
-pattern -> container_pattern : '$1'.
-pattern -> name              : var('$1').
-pattern -> hole              : hole().
+fields -> field             : ['$1'].
+fields -> field ','         : ['$1'].
+fields -> field ',' fields : ['$1' | '$3'].
+field -> name '=' expr  : field('$1', '$3').
+
+pattern -> literal              : '$1'.
+pattern -> container_pattern    : '$1'.
+pattern -> name                 : var('$1').
+pattern -> hole                 : hole().
+pattern -> pattern '::' pattern : cons('$2', '$1', '$3').
 
 container_pattern -> upname                   : adt('$1', []).
 container_pattern -> upcall elems_pattern ')' : adt('$1', '$2').
@@ -151,6 +159,9 @@ var({name, Meta, Name}) ->
 export({name, _, Name}, {int, _, Arity}) ->
   {Name, Arity}.
 
+record({'{', Meta}, Fields) ->
+  #ast_record{meta = Meta, fields = Fields}.
+
 tuple({'(', Meta}, Elems) ->
   #ast_tuple{meta = Meta, elems = Elems}.
 
@@ -165,6 +176,9 @@ case_expr({kw_case, Meta}, Subject, Clauses) ->
 
 case_clause({'|', Meta}, Pattern, Value) ->
   #ast_clause{meta = Meta, pattern = Pattern, value = Value}.
+
+field({name, Meta, Key}, Value) ->
+  #ast_record_field{meta = Meta, key = Key, value = Value}.
 
 hole() ->
   hole.

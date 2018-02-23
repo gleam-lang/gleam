@@ -50,11 +50,19 @@
          pattern = undefined,
          value = undefined}).
 
+-record(ast_record, {meta = #meta{}, fields = []}).
+
+-record(ast_record_field,
+        {meta = #meta{},
+         key = undefined,
+         value = undefined}).
+
+-record(ast_tuple,  {meta = #meta{}, elems = []}).
+-record(ast_list,   {meta = #meta{}, elems = []}).
+
 -record(ast_int,    {meta = #meta{}, value = undefined}).
 -record(ast_float,  {meta = #meta{}, value = undefined}).
 -record(ast_bool,   {meta = #meta{}, value = undefined}).
 -record(ast_atom,   {meta = #meta{}, value = undefined}).
 -record(ast_string, {meta = #meta{}, value = undefined}).
 -record(ast_var,    {meta = #meta{}, name = undefined}).
--record(ast_tuple,  {meta = #meta{}, elems = []}).
--record(ast_list,   {meta = #meta{}, elems = []}).
