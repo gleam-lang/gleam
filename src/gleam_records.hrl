@@ -29,6 +29,11 @@
          head = undefined,
          tail = undefined}).
 
+-record(ast_closure_call,
+        {meta = #meta{},
+         closure = undefined,
+         args = []}).
+
 -record(ast_local_call,
         {meta = #meta{},
          name = undefined,

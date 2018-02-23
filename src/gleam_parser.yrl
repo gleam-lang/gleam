@@ -17,11 +17,11 @@ kw_module kw_fn kw_export kw_case.
 
 Rootsymbol source.
 
-Left 180 '|>'.
 Left 160 '<'.
 Left 160 '<='.
 Left 160 '>'.
 Left 160 '>='.
+Left 180 '|>'.
 Left 210 '+'.
 Left 210 '+.'.
 Left 210 '-'.
@@ -59,15 +59,17 @@ exprs -> name '=' expr exprs : [assignment('$2', '$1', '$3', '$4')].
 exprs -> expr                : ['$1'].
 exprs -> expr exprs          : ['$1'|'$2'].
 
-expr -> literal            : '$1'.
-expr -> container          : '$1'.
-expr -> case_expr          : '$1'.
-expr -> binary_call        : '$1'.
-expr -> name               : var('$1').
-expr -> expr '.' name      : record_access('$2', '$1', '$3').
-expr -> call ')'           : local_call('$1', []).
-expr -> call call_args ')' : local_call('$1', '$2').
-expr -> expr '|>' expr         : pipe('$2', '$1', '$3').
+expr -> literal                    : '$1'.
+expr -> container                  : '$1'.
+expr -> case_expr                  : '$1'.
+expr -> binary_call                : '$1'.
+expr -> name                       : var('$1').
+expr -> expr '.' name              : record_access('$2', '$1', '$3').
+expr -> call ')'                   : local_call('$1', []).
+expr -> call call_args ')'         : local_call('$1', '$2').
+expr -> expr '|>' expr             : pipe('$2', '$1', '$3').
+expr -> expr '.' '(' ')'           : closure_call('$2', '$1', []).
+expr -> expr '.' '(' call_args ')' : closure_call('$2', '$1', '$3').
 
 binary_call -> expr '::' expr : cons('$2', '$1', '$3').
 binary_call -> expr '+' expr  : local_call('$2', ['$1', '$3']).
@@ -137,6 +139,7 @@ elems_pattern -> pattern                   : ['$1'].
 elems_pattern -> pattern ','               : ['$1'].
 elems_pattern -> pattern ',' elems_pattern : ['$1' | '$3'].
 
+literal -> '|' '|' expr      : closure('$1', [], '$3').
 literal -> '|' args '|' expr : closure('$1', '$2', '$4').
 literal -> atom              : literal('$1').
 literal -> int               : literal('$1').
@@ -160,6 +163,9 @@ local_call({Operator, Meta}, Args) ->
   #ast_local_call{meta = Meta, name = Operator, args = Args};
 local_call({call, Meta, Name}, Args) ->
   #ast_local_call{meta = Meta, name = Name, args = Args}.
+
+closure_call({'.', Meta}, Closure, Args) ->
+  #ast_closure_call{meta = Meta, closure = Closure, args = Args}.
 
 function({call, Meta, Name}, Args, Body) ->
   #ast_function{meta = Meta, name = Name, args = Args, body = Body}.

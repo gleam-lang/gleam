@@ -408,43 +408,47 @@ zero_arity_call_test() ->
     ?assertEqual(100, Mod:one())
   end).
 
-% TODO: Check args to see if one is a hole. If it is make a closure
 closure_test() ->
   Source =
     "module CodegenClosure\n"
-    "export id_fun/0, double_fun/0\n"
+    "export id_fun/0, double_fun/0, close_over/1\n"
     "fn id_fun() = |x| x\n"
     "fn double_fun() = double(_)\n"
     "fn double(x) = x + x\n"
+    "fn close_over(x) = || x\n"
   ,
   Mod = 'Gleam.CodegenClosure',
   with_module(Mod, Source, fun() ->
     Identity = Mod:id_fun(),
     ?assertEqual(1, Identity(1)),
     Double = Mod:double_fun(),
-    ?assertEqual(8, Double(4))
+    ?assertEqual(8, Double(4)),
+    ClosedOver = Mod:close_over(50),
+    ?assertEqual(50, ClosedOver())
   end).
 
-% closure_call_test() ->
-%   Source =
-%     "module CodegenClosureCall\n"
-%     "export identity/0, call/1\n"
-%     "fn call(fun) = fun()\n"
-%   ,
-%   Mod = 'Gleam.CodegenClosureCall',
-%   with_module(Mod, Source, fun() ->
-%     ?assertEqual(ok, Mod:call(fun() -> ok end))
-%   end).
+closure_call_test() ->
+  Source =
+    "module CodegenClosureCall\n"
+    "export identity/0, call/1\n"
+    "fn call(fun) = fun.()\n"
+  ,
+  Mod = 'Gleam.CodegenClosureCall',
+  with_module(Mod, Source, fun() ->
+    ?assertEqual(ok, Mod:call(fun() -> ok end))
+  end).
 
-% TODO
 % pipe_test() ->
 %   Source =
 %     "module CodegenPipe\n"
-%     "export one/1\n"
+%     "export go/1, incer/0\n"
 %     "fn inc(x) = x + 1\n"
-%     "fn one(x) = x |> inc |> inc\n"
+%     "fn incer() = inc(_)\n"
+%     "fn go(x) = x |> inc(_) |> inc(_)\n"
 %   ,
 %   Mod = 'Gleam.CodegenPipe',
 %   with_module(Mod, Source, fun() ->
-%     ?assertEqual(3, Mod:name(1))
+%     Incer = Mod:incer(),
+%     ?assertEqual(2, Incer(1)),
+%     ?assertEqual(3, Mod:go(1))
 %   end).

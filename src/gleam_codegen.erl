@@ -104,7 +104,7 @@ when ?erlang_module_operator(Name) ->
   expression(#ast_call{module = erlang, name = ErlangName, args = Args}, Env);
 
 expression(#ast_local_call{meta = Meta, name = Name, args = Args}, Env) ->
-  % TODO: hole record
+  % TODO: use an Erlang record for hole instead of an atom
   NumHoles = length(lists:filter(fun(X) -> X =:= hole end, Args)),
   case NumHoles of
     0 ->
@@ -112,6 +112,7 @@ expression(#ast_local_call{meta = Meta, name = Name, args = Args}, Env) ->
       {C_args, NewEnv} = map_expressions(Args, Env),
       {cerl:c_apply(C_fname, C_args), NewEnv};
     1 ->
+      % It's a func(_) capture, convert it into a closure
       hole_closure(Meta, Name, Args, Env);
     _ ->
       throw({error, multiple_hole_closure})
@@ -150,22 +151,40 @@ expression(#ast_record_access{meta = Meta, record = Record, key = Key}, Env) ->
                    args = [Atom, Record]},
   expression(Call, Env);
 
+% DUPE: Dupe with let and local call.
+expression(#ast_closure_call{closure = Closure, args = Args}, Env0) ->
+  {C_closure, Env1} = expression(Closure, Env0),
+  {C_args, Env2} = map_expressions(Args, Env1),
+  {UID, Env3} = uid(Env2),
+  Name = list_to_atom("$$gleam_closure_var" ++ integer_to_list(UID)),
+  C_var = cerl:c_var(Name),
+  C_apply = cerl:c_apply(C_var, C_args),
+  C_let = cerl:c_let([C_var], C_closure, C_apply),
+  {C_let, Env3};
+
 expression(#ast_case{subject = Subject, clauses = Clauses}, Env) ->
   {C_subject, Env1} = expression(Subject, Env),
   {C_clauses, Env2} = map_clauses(Clauses, Env1),
   {cerl:c_case(C_subject, C_clauses), Env2};
 
-% TODO
-expression(#ast_pipe{rhs = _Rhs, lhs = _Lhs}, _Env) ->
-  throw(not_implemented);
+% % TODO: We can check the lhs here to see if it is a func(_)
+% % capture. If it is we can avoid the creation of the intermediary
+% % closure by directly rewriting the arguments.
+% expression(#ast_pipe{meta = Meta, rhs = Rhs, lhs = Lhs}, Env0) ->
+%   {UID, Env1} = uid(Env0),
+%   VarName = list_to_atom("$$gleam_closure_var" ++ integer_to_list(UID)),
+%   Var = #ast_var{name = VarName},
+%   Call = #ast_local_call{meta = Meta, name = Var, args = [Rhs]},
+%   Assignment = #ast_assignment{name = VarName, value = Lhs, then = Call},
+%   expression(Assignment, Env1);
 
 expression(#ast_closure{args = Args, body = Body}, Env) ->
   function(Args, Body, Env);
 
 % We generate a unique variable name for each hole to prevent
 % the BEAM thinking two holes are the same.
-expression(hole, #env{uid = UID} = Env) ->
-  NewEnv = Env#env{uid = UID + 1},
+expression(hole, Env) ->
+  {UID, NewEnv} = uid(Env),
   Name = list_to_atom([$_ | integer_to_list(UID)]),
   {cerl:c_var(Name), NewEnv};
 
@@ -175,8 +194,8 @@ expression(Expressions, Env) when is_list(Expressions) ->
   C_seq = lists:foldl(fun cerl:c_seq/2, Head, Tail),
   {C_seq, Env1}.
 
-hole_closure(Meta, Name, Args, #env{uid = UID} = Env) ->
-  NewEnv = Env#env{uid = UID + 1},
+hole_closure(Meta, Name, Args, Env) ->
+  {UID, NewEnv} = uid(Env),
   VarName = list_to_atom("$$gleam_hole_var" ++ integer_to_list(UID)),
   Var = #ast_var{name = VarName},
   NewArgs = lists:map(fun(hole) -> Var; (X) -> X end, Args),
@@ -233,3 +252,6 @@ binary_string_byte(Char) ->
 prefix_module(erlang) -> erlang;
 prefix_module(maps) -> maps;
 prefix_module(Name) when is_atom(Name) -> list_to_atom("Gleam." ++ atom_to_list(Name)).
+
+uid(#env{uid = UID} = Env) ->
+  {UID, Env#env{uid = UID + 1}}.
