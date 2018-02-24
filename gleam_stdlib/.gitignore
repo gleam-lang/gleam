@@ -13,3 +13,6 @@ erl_crash.dump
 .rebar
 logs
 _build
+.idea
+*.iml
+rebar3.crashdump

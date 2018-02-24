@@ -1,2 +1,2 @@
-samples/* linguist-documentation=false
+examples/* linguist-documentation=false
 *.gleam linguist-language=Elm

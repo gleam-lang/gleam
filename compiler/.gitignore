@@ -13,3 +13,5 @@ erl_crash.dump
 .rebar
 logs
 _build
+src/gleam_tokenizer.erl
+src/gleam_parser.erl
