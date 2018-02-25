@@ -8,15 +8,16 @@ export method/1, path/1, raw_path/1, query_string/1, headers/1, body/1
 from Foreign import Foreign
 
 type Method =
-  | GET
-  | HEAD
-  | POST
-  | PUT
-  | DELETE
-  | CONNECT
-  | OPTIONS
-  | TRACE
-  | PATCH
+  | Get
+  | Head
+  | Post
+  | Put
+  | Delete
+  | Connect
+  | Options
+  | Trace
+  | Patch
+  | Other(String)
 
 type alias Header =
   (String, String)
@@ -41,7 +42,7 @@ foreign type Request
 doc """
 Get the request HTTP method.
 """
-foreign method :elli_request :method :: |Request| -> Method
+foreign method :gleam_elli_native :method :: |Request| -> Method
 
 doc """
 Get the request path segments.

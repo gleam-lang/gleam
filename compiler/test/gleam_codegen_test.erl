@@ -228,7 +228,7 @@ word_case_adt_test() ->
   ,
   with_module('Gleam.CodegenWordCaseAdt', Source, fun() ->
     ?assertEqual(some_long_name, 'Gleam.CodegenWordCaseAdt':one()),
-    ?assertEqual('ADT', 'Gleam.CodegenWordCaseAdt':two())
+    ?assertEqual(a_d_t, 'Gleam.CodegenWordCaseAdt':two())
   end).
 
 product_adt_test() ->

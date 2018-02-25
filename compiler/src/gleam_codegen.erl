@@ -216,10 +216,7 @@ clause(#ast_clause{pattern = Pattern, value = Value}, Env) ->
   {C_clause, Env2}.
 
 adt_name_to_atom(Chars) ->
-  case string:uppercase(Chars) =:= Chars of
-    true -> Chars;
-    false -> adt_name_to_atom(Chars, [])
-  end.
+  adt_name_to_atom(Chars, []).
 
 adt_name_to_atom([C | Chars], []) when C >= $A, C =< $Z ->
   adt_name_to_atom(Chars, [C + 32]);

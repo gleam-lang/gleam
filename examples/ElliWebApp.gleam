@@ -23,11 +23,11 @@ fn handle(req, _args) =
   method = Elli.method(req)
   path = Elli.path(req)
   case (method, path)
-  | (GET, []) => home()
-  | (GET, ["hello"]) => greet("world")
-  | (GET, ["hello", "jane"]) => greet_jane()
-  | (GET, ["hello", name]) => greet(name)
-  | (DELETE, _) => reject_delete()
+  | (Get, []) => home()
+  | (Get, ["hello"]) => greet("world")
+  | (Get, ["hello", "jane"]) => greet_jane()
+  | (Get, ["hello", name]) => greet(name)
+  | (Delete, _) => reject_delete()
   | _ => not_found()
 
 // Response builder functions
