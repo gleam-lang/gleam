@@ -200,11 +200,13 @@ seq_test() ->
 assignment_test() ->
   Source =
     "module CodegenAssignment\n"
-    "export go/0\n"
+    "export go/0, reassign/0\n"
     "fn go() = x = 100 y = x + 1 :unused z = x + y :unused z\n"
+    "fn reassign() = x = 1 x = 2 x\n"
   ,
   with_module('Gleam.CodegenAssignment', Source, fun() ->
-    ?assertEqual(201, 'Gleam.CodegenAssignment':go())
+    ?assertEqual(201, 'Gleam.CodegenAssignment':go()),
+    ?assertEqual(2, 'Gleam.CodegenAssignment':reassign())
   end).
 
 bool_adt_test() ->
