@@ -21,7 +21,7 @@ fn compare(a, b) =
   case (a, b)
   | (True, True) => EQ
   | (True, False) => GT
-  | (False, False) => LT
+  | (False, False) => EQ
   | (False, True) => GT
 
 test compare =

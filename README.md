@@ -10,7 +10,7 @@ type Quadrilateral
   | Rectangle(Int, Int)
 
 fn from_dimensions(width, height) =
-  case width
-  | height => Square(width)
-  | _other => Rectangle(width, height)
+  case width == height
+  | True => Square(width)
+  | False => Rectangle(width, height)
 ```
