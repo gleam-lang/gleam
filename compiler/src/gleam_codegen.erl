@@ -151,7 +151,10 @@ expression(#ast_record_access{meta = Meta, record = Record, key = Key}, Env) ->
                    args = [Atom, Record]},
   expression(Call, Env);
 
-% DUPE: Dupe with let and local call.
+% TODO: We can check the lhs here to see if it is a func(_)
+% capture. If it is we can avoid the creation of the intermediary
+% closure by directly rewriting the arguments.
+% TODO: Avoid creating an extra var if the closure is already a var.
 expression(#ast_closure_call{closure = Closure, args = Args}, Env0) ->
   {C_closure, Env1} = expression(Closure, Env0),
   {C_args, Env2} = map_expressions(Args, Env1),
@@ -167,16 +170,9 @@ expression(#ast_case{subject = Subject, clauses = Clauses}, Env) ->
   {C_clauses, Env2} = map_clauses(Clauses, Env1),
   {cerl:c_case(C_subject, C_clauses), Env2};
 
-% % TODO: We can check the lhs here to see if it is a func(_)
-% % capture. If it is we can avoid the creation of the intermediary
-% % closure by directly rewriting the arguments.
-% expression(#ast_pipe{meta = Meta, rhs = Rhs, lhs = Lhs}, Env0) ->
-%   {UID, Env1} = uid(Env0),
-%   VarName = list_to_atom("$$gleam_closure_var" ++ integer_to_list(UID)),
-%   Var = #ast_var{name = VarName},
-%   Call = #ast_local_call{meta = Meta, name = Var, args = [Rhs]},
-%   Assignment = #ast_assignment{name = VarName, value = Lhs, then = Call},
-%   expression(Assignment, Env1);
+expression(#ast_pipe{meta = Meta, rhs = Rhs, lhs = Lhs}, Env) ->
+  Call = #ast_closure_call{meta = Meta, closure = Rhs, args = [Lhs]},
+  expression(Call, Env);
 
 expression(#ast_closure{args = Args, body = Body}, Env) ->
   function(Args, Body, Env);

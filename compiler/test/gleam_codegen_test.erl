@@ -440,17 +440,18 @@ closure_call_test() ->
     ?assertEqual(ok, Mod:call(fun() -> ok end))
   end).
 
-% pipe_test() ->
-%   Source =
-%     "module CodegenPipe\n"
-%     "export go/1, incer/0\n"
-%     "fn inc(x) = x + 1\n"
-%     "fn incer() = inc(_)\n"
-%     "fn go(x) = x |> inc(_) |> inc(_)\n"
-%   ,
-%   Mod = 'Gleam.CodegenPipe',
-%   with_module(Mod, Source, fun() ->
-%     Incer = Mod:incer(),
-%     ?assertEqual(2, Incer(1)),
-%     ?assertEqual(3, Mod:go(1))
-%   end).
+pipe_test() ->
+  Source =
+    "module CodegenPipe\n"
+    "export go/1, incer/0\n"
+    "fn add(x, y) = x + y\n"
+    "fn inc(x) = x + 1\n"
+    "fn incer() = inc(_)\n"
+    "fn go(x) = x |> inc(_) |> add(_, 10) |> add(_, 5)\n"
+  ,
+  Mod = 'Gleam.CodegenPipe',
+  with_module(Mod, Source, fun() ->
+    Incer = Mod:incer(),
+    ?assertEqual(2, Incer(1)),
+    ?assertEqual(17, Mod:go(1))
+  end).
