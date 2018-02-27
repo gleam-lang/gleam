@@ -1,0 +1,31 @@
+#!/usr/bin/env escript
+
+main(["compile" | Args]) -> compile(Args);
+main(_) -> print_help().
+
+compile([]) ->
+  exit_message("Usage: gleamc compile [files]\n");
+compile(Paths) ->
+  load_gleam_modules(),
+  Fun = fun(Path) ->
+            io:put_chars("Compiling " ++ Path ++ "..."),
+            gleam_compiler:compile_file(Path),
+            io:put_chars(" ok\n")
+        end,
+  lists:foreach(Fun, Paths).
+
+print_help() ->
+  exit_message(
+    "Usage: gleamc [SUBCOMMAND]\n"
+    "\n"
+    "SUBCOMMANDS:\n"
+    "    compile\tCompile .gleam files\n").
+
+load_gleam_modules() ->
+  BinDir = filename:dirname(escript:script_name()),
+  EBinDir = BinDir ++ "/../_build/default/lib/gleam/ebin",
+  true = code:add_pathz(EBinDir).
+
+exit_message(String) ->
+  io:put_chars(standard_error, String),
+  init:stop(1).
