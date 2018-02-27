@@ -6,10 +6,12 @@
 
 -export([module/2]).
 
+-define(is_uppercase_char(C), C >= $A andalso C =< $Z).
+
 -define(erlang_module_operator(N),
-        N =:= '+';  N =:= '-';  N =:= '*';  N =:= '/';  N =:= '+.'; N =:= '-.';
-        N =:= '*.'; N =:= '/.'; N =:= '<='; N =:= '<' ; N =:= '>' ; N =:= '>=';
-        N =:= '/').
+        N =:= "+";  N =:= "-";  N =:= "*";  N =:= "/";  N =:= "+."; N =:= "-.";
+        N =:= "*."; N =:= "/."; N =:= "<="; N =:= "<" ; N =:= ">" ; N =:= ">=";
+        N =:= "/").
 
 % Holds state used in code generation.
 -record(env, {uid = 0}).
@@ -39,21 +41,21 @@ module_test(PrefixedName) ->
   Body = cerl:c_call(cerl:c_atom(eunit), cerl:c_atom(test), [cerl:c_atom(PrefixedName)]),
   Name = cerl:c_fname(test, 0),
   Fun = cerl:c_fun([], Body),
-  {export({test, 0}), {Name, Fun}}.
+  {export({"test", 0}), {Name, Fun}}.
 
 test(#ast_test{name = Name, body = Body}) ->
-  TestName = list_to_atom(atom_to_list(Name) ++ "_test"),
+  TestName = Name ++ "_test",
   C_fun = named_function(#ast_function{name = TestName, args = [], body = Body}),
   C_export = export({TestName, 0}),
   {C_export, C_fun}.
 
-export({Name, Arity}) when is_atom(Name), is_integer(Arity) ->
-  cerl:c_fname(Name, Arity).
+export({Name, Arity}) when is_list(Name), is_integer(Arity) ->
+  cerl:c_fname(list_to_atom(Name), Arity).
 
-module_info(ModuleName, Params) when is_atom(ModuleName) ->
+module_info(ModuleName, Params) when is_list(ModuleName) ->
   Body = cerl:c_call(cerl:c_atom(erlang),
                      cerl:c_atom(get_module_info),
-                     [cerl:c_atom(ModuleName) | Params]),
+                     [cerl:c_atom(list_to_atom(ModuleName)) | Params]),
   C_fun = cerl:c_fun(Params, Body),
   C_fname = cerl:c_fname(module_info, length(Params)),
   {C_fname, C_fun}.
@@ -61,7 +63,7 @@ module_info(ModuleName, Params) when is_atom(ModuleName) ->
 named_function(#ast_function{name = Name, args = Args, body = Body}) ->
   Env = #env{},
   Arity = length(Args),
-  C_fname = cerl:c_fname(Name, Arity),
+  C_fname = cerl:c_fname(list_to_atom(Name), Arity),
   {C_fun, _NewEnv} = function(Args, Body, Env),
   {C_fname, C_fun}.
 
@@ -71,8 +73,8 @@ function(Args, Body, Env) ->
   C_fun = cerl:c_fun(C_args, C_body),
   {C_fun, NewEnv}.
 
-var(Atom) when is_atom(Atom) ->
-  cerl:c_var(Atom).
+var(Atom) ->
+  cerl:c_var(list_to_atom(Atom)).
 
 map_with_env(Nodes, Env, F) ->
   Folder = fun(Node, {AccCore, AccEnv}) ->
@@ -101,7 +103,7 @@ expression(#ast_tuple{elems = Elems}, Env) ->
   {C_elems, NewEnv} = map_expressions(Elems, Env),
   {cerl:c_tuple(C_elems), NewEnv};
 
-expression(#ast_atom{value = Value}, Env) when is_atom(Value) ->
+expression(#ast_atom{value = Value}, Env) when is_list(Value) ->
   {cerl:c_atom(Value), Env};
 
 expression(#ast_int{value = Value}, Env) when is_integer(Value) ->
@@ -110,8 +112,8 @@ expression(#ast_int{value = Value}, Env) when is_integer(Value) ->
 expression(#ast_float{value = Value}, Env) when is_float(Value) ->
   {cerl:c_float(Value), Env};
 
-expression(#ast_var{name = Name}, Env) when is_atom(Name) ->
-  {cerl:c_var(Name), Env};
+expression(#ast_var{name = Name}, Env) when is_list(Name) ->
+  {cerl:c_var(list_to_atom(Name)), Env};
 
 expression(#ast_cons{head = Head, tail = Tail}, Env) ->
   {C_head, Env1} = expression(Head, Env),
@@ -119,16 +121,16 @@ expression(#ast_cons{head = Head, tail = Tail}, Env) ->
   {cerl:c_cons(C_head, C_tail), Env2};
 
 expression(#ast_local_call{name = Name, args = Args}, Env)
-when ?erlang_module_operator(Name) ->
+when is_list(Name), ?erlang_module_operator(Name) ->
   ErlangName = erlang_operator_name(Name),
-  expression(#ast_call{module = erlang, name = ErlangName, args = Args}, Env);
+  expression(#ast_call{module = "erlang", name = ErlangName, args = Args}, Env);
 
 expression(#ast_local_call{meta = Meta, name = Name, args = Args}, Env) ->
   % TODO: use an Erlang record for hole instead of an atom
   NumHoles = length(lists:filter(fun(X) -> X =:= hole end, Args)),
   case NumHoles of
     0 ->
-      C_fname = cerl:c_fname(Name, length(Args)),
+      C_fname = cerl:c_fname(list_to_atom(Name), length(Args)),
       {C_args, NewEnv} = map_expressions(Args, Env),
       {cerl:c_apply(C_fname, C_args), NewEnv};
     1 ->
@@ -138,23 +140,24 @@ expression(#ast_local_call{meta = Meta, name = Name, args = Args}, Env) ->
       throw({error, multiple_hole_closure})
   end;
 
-expression(#ast_call{module = Mod, name = Name, args = Args}, Env) ->
+expression(#ast_call{module = Mod, name = Name, args = Args}, Env) when is_list(Name) ->
   C_module = cerl:c_atom(prefix_module(Mod)),
   C_name = cerl:c_atom(Name),
   {C_args, NewEnv} = map_expressions(Args, Env),
   {cerl:c_call(C_module, C_name, C_args), NewEnv};
 
-expression(#ast_assignment{name = Name, value = Value, then = Then}, Env) ->
-  C_var = cerl:c_var(Name),
+expression(#ast_assignment{name = Name, value = Value, then = Then}, Env) when is_list(Name) ->
+  C_var = cerl:c_var(list_to_atom(Name)),
   {C_value, Env1} = expression(Value, Env),
   {C_then, Env2} = expression(Then, Env1),
   {cerl:c_let([C_var], C_value, C_then), Env2};
 
-expression(#ast_adt{name = Name, elems = []}, Env) ->
-  {cerl:c_atom(adt_name_to_atom(atom_to_list(Name))), Env};
+expression(#ast_adt{name = Name, elems = []}, Env) when is_list(Name) ->
+  AtomName = list_to_atom(adt_name_value(Name)),
+  {cerl:c_atom(AtomName), Env};
 
-expression(#ast_adt{name = Name, meta = Meta, elems = Elems}, Env) ->
-  AtomValue = adt_name_to_atom(atom_to_list(Name)),
+expression(#ast_adt{name = Name, meta = Meta, elems = Elems}, Env) when is_list(Name) ->
+  AtomValue = adt_name_value(Name),
   Atom = #ast_atom{meta = Meta, value = AtomValue},
   expression(#ast_tuple{elems = [Atom | Elems]}, Env);
 
@@ -166,8 +169,8 @@ expression(#ast_record{fields = Fields}, Env) ->
 expression(#ast_record_access{meta = Meta, record = Record, key = Key}, Env) ->
   Atom = #ast_atom{meta = Meta, value = Key},
   Call = #ast_call{meta = Meta,
-                   module = maps,
-                   name = get,
+                   module = "maps",
+                   name = "get",
                    args = [Atom, Record]},
   expression(Call, Env);
 
@@ -210,16 +213,16 @@ expression(Expressions, Env) when is_list(Expressions) ->
   C_seq = lists:foldl(fun cerl:c_seq/2, Head, Tail),
   {C_seq, Env1}.
 
-hole_closure(Meta, Name, Args, Env) ->
+hole_closure(Meta, Name, Args, Env) when is_list(Name) ->
   {UID, NewEnv} = uid(Env),
-  VarName = list_to_atom("$$gleam_hole_var" ++ integer_to_list(UID)),
+  VarName = "$$gleam_hole_var" ++ integer_to_list(UID),
   Var = #ast_var{name = VarName},
   NewArgs = lists:map(fun(hole) -> Var; (X) -> X end, Args),
   Call = #ast_local_call{meta = Meta, name = Name, args = NewArgs},
   Closure = #ast_closure{meta = Meta, args = [VarName], body = Call},
   expression(Closure, NewEnv).
 
-record_field(#ast_record_field{key = Key, value = Val}, Env0) ->
+record_field(#ast_record_field{key = Key, value = Val}, Env0) when is_list(Key) ->
   C_key = cerl:c_atom(Key),
   {C_val, Env1} = expression(Val, Env0),
   Core = cerl:c_map_pair(C_key, C_val),
@@ -231,25 +234,25 @@ clause(#ast_clause{pattern = Pattern, value = Value}, Env) ->
   C_clause = cerl:c_clause([C_pattern], C_value),
   {C_clause, Env2}.
 
-adt_name_to_atom(Chars) ->
-  adt_name_to_atom(Chars, []).
+adt_name_value(Chars) when is_list(Chars) ->
+  adt_name_value(Chars, []).
 
-adt_name_to_atom([C | Chars], []) when C >= $A, C =< $Z ->
-  adt_name_to_atom(Chars, [C + 32]);
-adt_name_to_atom([C | Chars], Acc) when C >= $A, C =< $Z ->
-  adt_name_to_atom(Chars, [C + 32, $_ | Acc]);
-adt_name_to_atom([C | Chars], Acc) ->
-  adt_name_to_atom(Chars, [C | Acc]);
-adt_name_to_atom([], Acc) ->
-  list_to_atom(lists:reverse(Acc)).
+adt_name_value([C | Chars], []) when ?is_uppercase_char(C) ->
+  adt_name_value(Chars, [C + 32]);
+adt_name_value([C | Chars], Acc) when ?is_uppercase_char(C) ->
+  adt_name_value(Chars, [C + 32, $_ | Acc]);
+adt_name_value([C | Chars], Acc) ->
+  adt_name_value(Chars, [C | Acc]);
+adt_name_value([], Acc) ->
+  lists:reverse(Acc).
 
-erlang_operator_name('/') -> 'div';
-erlang_operator_name('+.') -> '+';
-erlang_operator_name('-.') -> '-';
-erlang_operator_name('*.') -> '*';
-erlang_operator_name('/.') -> '/';
-erlang_operator_name('<=') -> '=<';
-erlang_operator_name(Name) -> Name.
+erlang_operator_name("/") -> "div";
+erlang_operator_name("+.") -> "+";
+erlang_operator_name("-.") -> "-";
+erlang_operator_name("*.") -> "*";
+erlang_operator_name("/.") -> "/";
+erlang_operator_name("<=") -> "=<";
+erlang_operator_name(Name) when is_list(Name) -> Name.
 
 c_list(Elems) ->
   Rev = lists:reverse(Elems),
@@ -262,9 +265,10 @@ binary_string_byte(Char) ->
                 cerl:c_atom(integer),
                 c_list([cerl:c_atom(unsigned), cerl:c_atom(big)])).
 
-prefix_module(erlang) -> erlang;
-prefix_module(maps) -> maps;
-prefix_module(Name) when is_atom(Name) -> list_to_atom("Gleam." ++ atom_to_list(Name)).
+prefix_module(Name = [C | _]) when ?is_uppercase_char(C) ->
+  "Gleam." ++ Name;
+prefix_module(Name) when is_list(Name) ->
+  Name.
 
 uid(#env{uid = UID} = Env) ->
   {UID, Env#env{uid = UID + 1}}.

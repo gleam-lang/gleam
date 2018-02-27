@@ -177,7 +177,7 @@ cons({'::', Meta}, Head, Tail) ->
   #ast_cons{meta = Meta, head = Head, tail = Tail}.
 
 local_call({Operator, Meta}, Args) ->
-  #ast_local_call{meta = Meta, name = Operator, args = Args};
+  #ast_local_call{meta = Meta, name = atom_to_list(Operator), args = Args};
 local_call({call, Meta, Name}, Args) ->
   #ast_local_call{meta = Meta, name = Name, args = Args}.
 

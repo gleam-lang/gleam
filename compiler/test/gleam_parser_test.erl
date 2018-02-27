@@ -11,11 +11,11 @@ parse(Tokens) -> element(2, gleam_parser:parse(Tokens)).
 literal_test() ->
   ?assertAST("1",   [#ast_int{value = 1}]),
   ?assertAST("1.2", [#ast_float{value = 1.2}]),
-  ?assertAST(":ok", [#ast_atom{value = ok}]),
+  ?assertAST(":ok", [#ast_atom{value = "ok"}]),
   ?assertAST("\"Hello world\"", [#ast_string{value = <<"Hello world">>}]).
 
 var_test() ->
-  ?assertAST("value", [#ast_var{name = value}]).
+  ?assertAST("value", [#ast_var{name = "value"}]).
 
 tuple_test() ->
   ?assertAST("()",
@@ -23,13 +23,13 @@ tuple_test() ->
                          elems = []}]),
   ?assertAST("(:54)",
              [#ast_tuple{meta = #meta{line = 1},
-                         elems = [#ast_atom{value = '54'}]}]),
+                         elems = [#ast_atom{value = "54"}]}]),
   ?assertAST("(\n  200,)",
              [#ast_tuple{meta = #meta{line = 1},
                          elems = [#ast_int{value = 200}]}]),
   ?assertAST("(:ok, 7)",
              [#ast_tuple{meta = #meta{line = 1},
-                         elems = [#ast_atom{value = ok},
+                         elems = [#ast_atom{value = "ok"},
                                   #ast_int{value = 7}]}]).
 
 module_test() ->
@@ -40,25 +40,25 @@ module_test() ->
   ,
   AST =
     #ast_module
-    { name = 'MyModule'
+    { name = "MyModule"
     , tests = []
     , functions =
       [ #ast_function
         { meta = #meta{line = 2}
-        , name = id
-        , args = [x]
-        , body = [#ast_var{name = x, meta = #meta{line = 2}}]
+        , name = "id"
+        , args = ["x"]
+        , body = [#ast_var{name = "x", meta = #meta{line = 2}}]
         }
       , #ast_function
         { meta = #meta{line = 3}
-        , name = ok
-        , args = [val]
+        , name = "ok"
+        , args = ["val"]
         , body =
           [ #ast_tuple
             {meta = #meta{line = 3},
              elems =
-              [ #ast_atom{meta = #meta{line = 3}, value = ok}
-              , #ast_var{meta = #meta{line = 3}, name = val}
+              [ #ast_atom{meta = #meta{line = 3}, value = "ok"}
+              , #ast_var{meta = #meta{line = 3}, name = "val"}
               ]
             }
           ]
@@ -74,20 +74,20 @@ arity_2_test() ->
   ,
   AST =
     #ast_module
-    { name = 'MyModule'
+    { name = "MyModule"
     , tests = []
     , functions =
       [ #ast_function
         { meta = #meta{line = 2}
-        , name = add
-        , args = [x, y]
+        , name = "add"
+        , args = ["x", "y"]
         , body =
           [ #ast_local_call
             { meta = #meta{line = 2}
-            , name = '+'
+            , name = "+"
             , args =
-              [ #ast_var{meta = #meta{line = 2}, name = x}
-              , #ast_var{meta = #meta{line = 2}, name = y}
+              [ #ast_var{meta = #meta{line = 2}, name = "x"}
+              , #ast_var{meta = #meta{line = 2}, name = "y"}
               ]
             }
           ]
@@ -103,17 +103,17 @@ call_test() ->
   ,
   AST =
     #ast_module
-    { name = 'MyModule'
+    { name = "MyModule"
     , tests = []
     , functions =
       [ #ast_function
         { meta = #meta{line = 2}
-        , name = run
+        , name = "run"
         , args = []
         , body =
           [ #ast_local_call
             { meta = #meta{line = 2}
-            , name = print
+            , name = "print"
             , args =
               [#ast_int{meta = #meta{line = 2}, value = 20}]
             }
@@ -129,10 +129,10 @@ export_test() ->
     "export id/1\n"
     "export foo/2, baz/8\n",
     #ast_module
-    { name = 'MyModule'
+    { name = "MyModule"
     , tests = []
     , functions = []
-    , exports = [{id, 1}, {foo, 2}, {baz, 8}]
+    , exports = [{"id", 1}, {"foo", 2}, {"baz", 8}]
     }
   ).
 
@@ -143,17 +143,17 @@ adt_test() ->
   ,
   AST =
     #ast_module
-    { name = 'MyModule'
+    { name = "MyModule"
     , tests = []
     , functions =
       [ #ast_function
         { meta = #meta{line = 2}
-        , name = ok
+        , name = "ok"
         , args = []
         , body =
           [ #ast_adt
             { meta = #meta{line = 2}
-            , name = 'Ok'
+            , name = "Ok"
             , elems = [#ast_int{meta = #meta{line = 2}, value = 1}]
             }
           ]
@@ -169,10 +169,11 @@ test_test() ->
   ,
   AST =
     #ast_module
-    { name = 'MyModule'
-    , tests = [#ast_test{meta = #meta{line = 2},
-                         name = ok,
-                         body = [#ast_atom{meta = #meta{line = 2}, value = ok}]}]
+    { name = "MyModule"
+    , tests =
+      [#ast_test{meta = #meta{line = 2},
+                name = "ok",
+                body = [#ast_atom{meta = #meta{line = 2}, value = "ok"}]}]
     , functions = []
     },
   ?assertEqual(AST, parse(tokens(Code))).

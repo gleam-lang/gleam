@@ -25,15 +25,15 @@ string_test() ->
   ?assertTokens("\" \\\" \"", [{string, _, <<" \" ">>}]).
 
 name_test() ->
-  ?assertTokens("hi",      [{name, _, hi}]),
-  ?assertTokens("ok",      [{name, _, 'ok'}]),
-  ?assertTokens("do_exec", [{name, _, 'do_exec'}]).
+  ?assertTokens("hi",      [{name, _, "hi"}]),
+  ?assertTokens("ok",      [{name, _, "ok"}]),
+  ?assertTokens("do_exec", [{name, _, "do_exec"}]).
 
 atom_test() ->
-  ?assertTokens(":hi",         [{atom, _, hi}]),
-  ?assertTokens(":123",        [{atom, _, '123'}]),
-  ?assertTokens(":WHAT_UP?",   [{atom, _, 'WHAT_UP?'}]),
-  ?assertTokens(":Hey_there!", [{atom, _, 'Hey_there!'}]).
+  ?assertTokens(":hi",         [{atom, _, "hi"}]),
+  ?assertTokens(":123",        [{atom, _, "123"}]),
+  ?assertTokens(":WHAT_UP?",   [{atom, _, "WHAT_UP?"}]),
+  ?assertTokens(":Hey_there!", [{atom, _, "Hey_there!"}]).
 
 param_test() ->
   ?assertTokens("(",   [{'(', _}]),
@@ -69,7 +69,7 @@ dot_test() ->
   ?assertTokens(".", [{'.', _}]),
   ?assertTokens(
      "Mod.f()",
-     [{upname, _, 'Mod'}, {'.', _}, {call, _, f}, {')', _}]).
+     [{upname, _, "Mod"}, {'.', _}, {call, _, "f"}, {')', _}]).
 
 whitespace_test() ->
   ?assertEqual({error,{2,gleam_tokenizer,{illegal,"\t"}},2},

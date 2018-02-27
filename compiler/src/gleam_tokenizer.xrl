@@ -49,9 +49,9 @@ fn         : {token, {kw_fn, m(TokenLine)}}.
 _          : {token, {hole, m(TokenLine)}}.
 _{Name}    : {token, {hole, m(TokenLine)}}.
 {Name}\(   : {token, {call, m(TokenLine), call(TokenChars)}}.
-{Name}     : {token, {name, m(TokenLine), list_to_atom(TokenChars)}}.
+{Name}     : {token, {name, m(TokenLine), TokenChars}}.
 {UpName}\( : {token, {upcall, m(TokenLine), call(TokenChars)}}.
-{UpName}   : {token, {upname, m(TokenLine), list_to_atom(TokenChars)}}.
+{UpName}   : {token, {upname, m(TokenLine), TokenChars}}.
 {String}   : {token, {string, m(TokenLine), str(TokenChars)}}.
 {Comment}  : skip_token.
 {WS}       : skip_token.
@@ -69,11 +69,11 @@ flt(S) when is_list(S) ->
   {F, _} = string:to_float(S),
   F.
 
-atom([$:, $" | S]) -> list_to_atom(lists:droplast(S));
-atom([$: | S])     -> list_to_atom(S).
+atom([$:, $" | S]) -> lists:droplast(S);
+atom([$: | S])     -> S.
 
 call(S) ->
-  list_to_atom(lists:droplast(S)).
+  lists:droplast(S).
 
 str(S) when is_list(S) ->
   Contents  = tl(lists:droplast(S)),

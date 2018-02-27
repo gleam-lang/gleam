@@ -456,7 +456,6 @@ pipe_test() ->
     ?assertEqual(17, Mod:go(1))
   end).
 
-
 test_test() ->
   Source =
     "module CodegenPipe\n"
