@@ -13,3 +13,5 @@ erl_crash.dump
 .rebar
 logs
 _build
+node_modules
+package-lock.json
