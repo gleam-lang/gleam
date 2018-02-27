@@ -5,12 +5,18 @@
 -record(ast_module,
         {name = undefined,
          exports = [],
-         functions = []}).
+         functions = [],
+         tests = []}).
 
 -record(ast_function,
         {meta = #meta{},
          name = undefined,
          args = [],
+         body = undefined}).
+
+-record(ast_test,
+        {meta = #meta{},
+         name = undefined,
          body = undefined}).
 
 -record(ast_closure,

@@ -4,7 +4,7 @@
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
--export([module/1]).
+-export([module/2]).
 
 -define(erlang_module_operator(N),
         N =:= '+';  N =:= '-';  N =:= '*';  N =:= '/';  N =:= '+.'; N =:= '-.';
@@ -14,18 +14,38 @@
 % Holds state used in code generation.
 -record(env, {uid = 0}).
 
-module(#ast_module{name = Name, functions = Funs, exports = Exports}) ->
+module(#ast_module{name = Name, functions = Funs, exports = Exports, tests = Tests}, Options) ->
   PrefixedName = prefix_module(Name),
+  {TestExports, TestFuns} = case proplists:get_value(gen_tests, Options, false) of
+                              false -> {[], []};
+                              true -> tests(Tests, PrefixedName)
+                            end,
   C_name = cerl:c_atom(PrefixedName),
   C_exports = [cerl:c_fname(module_info, 0),
                cerl:c_fname(module_info, 1) |
-               lists:map(fun export/1, Exports)],
+               lists:map(fun export/1, Exports) ++ TestExports],
   C_definitions = [module_info(PrefixedName, []),
                    module_info(PrefixedName, [cerl:c_var(item)]) |
-                   lists:map(fun named_function/1, Funs)],
+                   lists:map(fun named_function/1, Funs) ++ TestFuns],
   Attributes = [],
   Core = cerl:c_module(C_name, C_exports, Attributes, C_definitions),
   {ok, Core}.
+
+tests(Tests, PrefixedName) ->
+  C_tests = lists:map(fun test/1, Tests),
+  lists:unzip([module_test(PrefixedName) | C_tests]).
+
+module_test(PrefixedName) ->
+  Body = cerl:c_call(cerl:c_atom(eunit), cerl:c_atom(test), [cerl:c_atom(PrefixedName)]),
+  Name = cerl:c_fname(test, 0),
+  Fun = cerl:c_fun([], Body),
+  {export({test, 0}), {Name, Fun}}.
+
+test(#ast_test{name = Name, body = Body}) ->
+  TestName = list_to_atom(atom_to_list(Name) ++ "_test"),
+  C_fun = named_function(#ast_function{name = TestName, args = [], body = Body}),
+  C_export = export({TestName, 0}),
+  {C_export, C_fun}.
 
 export({Name, Arity}) when is_atom(Name), is_integer(Arity) ->
   cerl:c_fname(Name, Arity).

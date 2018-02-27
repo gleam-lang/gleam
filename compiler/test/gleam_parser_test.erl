@@ -41,6 +41,7 @@ module_test() ->
   AST =
     #ast_module
     { name = 'MyModule'
+    , tests = []
     , functions =
       [ #ast_function
         { meta = #meta{line = 2}
@@ -74,6 +75,7 @@ arity_2_test() ->
   AST =
     #ast_module
     { name = 'MyModule'
+    , tests = []
     , functions =
       [ #ast_function
         { meta = #meta{line = 2}
@@ -102,6 +104,7 @@ call_test() ->
   AST =
     #ast_module
     { name = 'MyModule'
+    , tests = []
     , functions =
       [ #ast_function
         { meta = #meta{line = 2}
@@ -127,6 +130,7 @@ export_test() ->
     "export foo/2, baz/8\n",
     #ast_module
     { name = 'MyModule'
+    , tests = []
     , functions = []
     , exports = [{id, 1}, {foo, 2}, {baz, 8}]
     }
@@ -140,6 +144,7 @@ adt_test() ->
   AST =
     #ast_module
     { name = 'MyModule'
+    , tests = []
     , functions =
       [ #ast_function
         { meta = #meta{line = 2}
@@ -154,5 +159,20 @@ adt_test() ->
           ]
         }
       ]
+    },
+  ?assertEqual(AST, parse(tokens(Code))).
+
+test_test() ->
+  Code =
+    "module MyModule\n"
+    "test ok = :ok"
+  ,
+  AST =
+    #ast_module
+    { name = 'MyModule'
+    , tests = [#ast_test{meta = #meta{line = 2},
+                         name = ok,
+                         body = [#ast_atom{meta = #meta{line = 2}, value = ok}]}]
+    , functions = []
     },
   ?assertEqual(AST, parse(tokens(Code))).

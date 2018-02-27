@@ -4,7 +4,7 @@
 
 with_module(Name, Source, Fun) ->
   FileName = "Gleam." ++ atom_to_list(Name) ++ ".beam",
-  BeamBinary = gleam_compiler:source_to_binary(Source),
+  BeamBinary = gleam_compiler:source_to_binary(Source, [{gen_tests, true}]),
   {module, Name} = code:load_binary(Name, FileName, BeamBinary),
   ?assertEqual({file, FileName}, code:is_loaded(Name)),
   try Fun() of
@@ -454,4 +454,16 @@ pipe_test() ->
     Incer = Mod:incer(),
     ?assertEqual(2, Incer(1)),
     ?assertEqual(17, Mod:go(1))
+  end).
+
+
+test_test() ->
+  Source =
+    "module CodegenPipe\n"
+    "test thing = :ok\n"
+  ,
+  Mod = 'Gleam.CodegenPipe',
+  with_module(Mod, Source, fun() ->
+    ?assertEqual(ok, Mod:test()),
+    ?assertEqual(ok, Mod:thing_test())
   end).

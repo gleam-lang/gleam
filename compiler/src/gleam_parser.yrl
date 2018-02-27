@@ -1,8 +1,9 @@
 Nonterminals
-source module functions function
+source module
+module_members function test export export_names
 exprs expr binary_call literal elems args call_args
 container container_pattern elems_pattern
-exports export export_names pattern
+ pattern
 case_expr case_clauses case_clause field fields.
 
 Terminals
@@ -13,7 +14,7 @@ Terminals
 '/' '*' '+' '-' '/.' '*.' '+.' '-.'
 int float atom string
 hole name upname call upcall
-kw_module kw_fn kw_export kw_case.
+kw_module kw_fn kw_export kw_case kw_test.
 
 Rootsymbol source.
 
@@ -36,24 +37,25 @@ Right 70 '|'.
 source -> module : '$1'.
 source -> exprs  : '$1'.
 
-module -> kw_module upname                   : module('$2', [], []).
-module -> kw_module upname functions         : module('$2', [], '$3').
-module -> kw_module upname exports           : module('$2', '$3', []).
-module -> kw_module upname exports functions : module('$2', '$3', '$4').
+module -> kw_module upname                   : add_module_name('$2', #ast_module{}).
+module -> kw_module upname module_members    : add_module_name('$2', '$3').
 
-exports -> export         : '$1'.
-exports -> export exports : '$1' ++ '$2'.
+module_members -> function                : add_module_function('$1', #ast_module{}).
+module_members -> function module_members : add_module_function('$1', '$2').
+module_members -> export                  : add_module_exports('$1', #ast_module{}).
+module_members -> export module_members   : add_module_exports('$1', '$2').
+module_members -> test                    : add_module_test('$1', #ast_module{}).
+module_members -> test module_members     : add_module_test('$1', '$2').
 
 export -> kw_export export_names : '$2'.
 
 export_names -> name '/' int                  : [export('$1', '$3')].
 export_names -> name '/' int ',' export_names : [export('$1', '$3') | '$5'].
 
-functions -> function           : ['$1'].
-functions -> function functions : ['$1'|'$2'].
-
 function -> kw_fn call ')' '=' exprs      : function('$2', [], '$5').
 function -> kw_fn call args ')' '=' exprs : function('$2', '$3', '$6').
+
+test -> kw_test name '=' exprs : test('$2', '$4').
 
 exprs -> name '=' expr exprs : [assignment('$2', '$1', '$3', '$4')].
 exprs -> expr                : ['$1'].
@@ -150,8 +152,23 @@ Erlang code.
 
 -include("gleam_records.hrl").
 
-module({upname, _, Name}, Exports, Functions) ->
-  #ast_module{name = Name, exports = Exports, functions = Functions}.
+add_module_name({upname, _, Name}, Module) ->
+  Module#ast_module{name = Name}.
+
+add_module_function(Function, Module) ->
+  #ast_module{functions = Functions} = Module,
+  Module#ast_module{functions = [Function | Functions]}.
+
+add_module_test(Test, Module) ->
+  #ast_module{tests = Tests} = Module,
+  Module#ast_module{tests = [Test | Tests]}.
+
+add_module_exports(NewExports, Module) ->
+  #ast_module{exports = Exports} = Module,
+  Module#ast_module{exports = NewExports ++ Exports}.
+
+test({name, Meta, Name}, Body) ->
+  #ast_test{meta = Meta, name = Name, body = Body}.
 
 closure({'|', Meta}, Args, Body) ->
   #ast_closure{meta = Meta, args = Args, body = Body}.
