@@ -1,6 +1,4 @@
-module InteractiveProgram
-
-export run/0
+module InteractiveProgram exposing run/0
 
 import Maybe exposing Maybe(..)
 import Order exposing Order(..)

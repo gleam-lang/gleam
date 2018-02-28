@@ -12,7 +12,7 @@ Comment = \/\/[^\n]*
 Rules.
 
 module     : {token, {kw_module, m(TokenLine)}}.
-export     : {token, {kw_export, m(TokenLine)}}.
+exposing   : {token, {kw_exposing, m(TokenLine)}}.
 raise\(    : {token, {kw_raise, m(TokenLine)}}.
 throw\(    : {token, {kw_throw, m(TokenLine)}}.
 case       : {token, {kw_case, m(TokenLine)}}.

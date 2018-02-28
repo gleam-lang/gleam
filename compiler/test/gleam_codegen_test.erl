@@ -16,8 +16,7 @@ with_module(Name, Source, Fun) ->
 
 module_identity_test() ->
   Source =
-    "module CodegenModuleIdentity\n"
-    "export identity/1\n"
+    "module CodegenModuleIdentity exposing identity/1\n"
     "fn identity(x) = x\n"
     "fn hidden(x) = x\n"
   ,
@@ -35,8 +34,8 @@ module_identity_test() ->
 maths_test() ->
   Source =
     "module CodegenMaths\n"
-    "export int_add/2, int_sub/2, int_mult/2, int_div/2, float_add/2,\n"
-    "       float_sub/2, float_mult/2, float_div/2\n"
+    "  exposing int_add/2, int_sub/2, int_mult/2, int_div/2, float_add/2,\n"
+    "  float_sub/2, float_mult/2, float_div/2\n"
     "fn int_add(x, y) = x + y\n"
     "fn int_sub(x, y) = x - y\n"
     "fn int_mult(x, y) = x * y\n"
@@ -59,8 +58,7 @@ maths_test() ->
 
 comparison_test() ->
   Source =
-    "module CodegenComparison\n"
-    "export lt/2, lte/2, gt/2, gte/2"
+    "module CodegenComparison exposing lt/2, lte/2, gt/2, gte/2"
     "fn lt(x, y) = x < y\n"
     "fn lte(x, y) = x <= y\n"
     "fn gt(x, y) = x > y\n"
@@ -83,8 +81,7 @@ comparison_test() ->
 
 int_test() ->
   Source =
-    "module CodegenInt\n"
-    "export one/0, two/0, inc/1, negative/0, positive/0"
+    "module CodegenInt exposing one/0, two/0, inc/1, negative/0, positive/0\n"
     "fn one() = 1\n"
     "fn two() = 2\n"
     "fn inc(x) = x + 1\n"
@@ -101,8 +98,7 @@ int_test() ->
 
 float_test() ->
   Source =
-    "module CodegenFloat\n"
-    "export one/0, two/0, inc/1, negative/0, positive/0"
+    "module CodegenFloat exposing one/0, two/0, inc/1, negative/0, positive/0\n"
     "fn one() = 1.0\n"
     "fn two() = 2.0\n"
     "fn inc(x) = x + 1.0\n"
@@ -119,8 +115,7 @@ float_test() ->
 
 string_test() ->
   Source =
-    "module CodegenString\n"
-    "export empty/0, name/0"
+    "module CodegenString exposing empty/0, name/0\n"
     "fn empty() = \"\"\n"
     "fn name() = \"Louis\"\n"
   ,
@@ -131,8 +126,7 @@ string_test() ->
 
 atom_test() ->
   Source =
-    "module CodegenAtom\n"
-    "export one/0, caps/0, etc/0"
+    "module CodegenAtom exposing one/0, caps/0, etc/0\n"
     "fn one() = :one\n"
     "fn caps() = :CAPS\n"
     "fn etc() = :\"Hello, world!\"\n"
@@ -145,8 +139,7 @@ atom_test() ->
 
 tuple_test() ->
   Source =
-    "module CodegenTuple\n"
-    "export zero/0, ok/1, threeple/0\n"
+    "module CodegenTuple exposing zero/0, ok/1, threeple/0\n"
     "fn zero() = ()\n"
     "fn ok(x) = (:ok, x)\n"
     "fn threeple() = (1, 2, 3)\n"
@@ -159,8 +152,7 @@ tuple_test() ->
 
 list_test() ->
   Source =
-    "module CodegenList\n"
-    "export empty/0, one/0, two/0, cons/2, unsugared_list/0\n"
+    "module CodegenList exposing empty/0, one/0, two/0, cons/2, unsugared_list/0\n"
     "fn empty() = []\n"
     "fn one() = [1]\n"
     "fn two() = [1, 2]\n"
@@ -177,8 +169,7 @@ list_test() ->
 
 call_test() ->
   Source =
-    "module CodegenCall\n"
-    "export double/1\n"
+    "module CodegenCall exposing double/1\n"
     "fn double(x) = ok(add(x, x))\n"
     "fn add(x, y) = x + y\n"
     "fn ok(x) = (:ok, x)\n"
@@ -189,8 +180,7 @@ call_test() ->
 
 seq_test() ->
   Source =
-    "module CodegenSeq\n"
-    "export main/0\n"
+    "module CodegenSeq exposing main/0\n"
     "fn main() = 1 2 3\n"
   ,
   with_module('Gleam.CodegenSeq', Source, fun() ->
@@ -199,8 +189,7 @@ seq_test() ->
 
 assignment_test() ->
   Source =
-    "module CodegenAssignment\n"
-    "export go/0, reassign/0\n"
+    "module CodegenAssignment exposing go/0, reassign/0\n"
     "fn go() = x = 100 y = x + 1 :unused z = x + y :unused z\n"
     "fn reassign() = x = 1 x = 2 x\n"
   ,
@@ -211,8 +200,7 @@ assignment_test() ->
 
 bool_adt_test() ->
   Source =
-    "module CodegenBoolAdt\n"
-    "export true/0, false/0\n"
+    "module CodegenBoolAdt exposing true/0, false/0\n"
     "fn true() = True\n"
     "fn false() = False\n"
   ,
@@ -223,8 +211,7 @@ bool_adt_test() ->
 
 word_case_adt_test() ->
   Source =
-    "module CodegenWordCaseAdt\n"
-    "export one/0, two/0\n"
+    "module CodegenWordCaseAdt exposing one/0, two/0\n"
     "fn one() = SomeLongName\n"
     "fn two() = ADT\n"
   ,
@@ -235,8 +222,7 @@ word_case_adt_test() ->
 
 product_adt_test() ->
   Source =
-    "module CodegenProductAdt\n"
-    "export ok/1\n"
+    "module CodegenProductAdt exposing ok/1\n"
     "fn ok(x) = Ok(x)\n"
   ,
   with_module('Gleam.CodegenProductAdt', Source, fun() ->
@@ -245,8 +231,7 @@ product_adt_test() ->
 
 case_int_test() ->
   Source =
-    "module CodegenCaseInt\n"
-    "export go/1\n"
+    "module CodegenCaseInt exposing go/1\n"
     "fn go(x) =\n"
     "  case x\n"
     "  | 1 => :one\n"
@@ -263,8 +248,7 @@ case_int_test() ->
 
 case_float_test() ->
   Source =
-    "module CodegenCaseFloat\n"
-    "export go/1\n"
+    "module CodegenCaseFloat exposing go/1\n"
     "fn go(x) =\n"
     "  case x\n"
     "  | 1.0 => :one\n"
@@ -281,8 +265,7 @@ case_float_test() ->
 
 case_string_test() ->
   Source =
-    "module CodegenCaseString\n"
-    "export go/1\n"
+    "module CodegenCaseString exposing go/1\n"
     "fn go(x) =\n"
     "  case x\n"
     "  | \"\" => :empty\n"
@@ -295,8 +278,7 @@ case_string_test() ->
 
 case_list_test() ->
   Source =
-    "module CodegenCaseList\n"
-    "export length/1\n"
+    "module CodegenCaseList exposing length/1\n"
     "fn length(x) =\n"
     "  case x\n"
     "  | [] => 0\n"
@@ -313,8 +295,7 @@ case_list_test() ->
 
 case_cons_test() ->
   Source =
-    "module CodegenCaseCons\n"
-    "export head/1\n"
+    "module CodegenCaseCons exposing head/1\n"
     "fn head(x) =\n"
     "  case x\n"
     "  | x :: _ => Just(x)\n"
@@ -328,8 +309,7 @@ case_cons_test() ->
 
 case_tuple_test() ->
   Source =
-    "module CodegenCaseTuple\n"
-    "export go/1\n"
+    "module CodegenCaseTuple exposing go/1\n"
     "fn go(x) =\n"
     "  case x\n"
     "  | (:ok, (1, 1)) => :one\n"
@@ -344,8 +324,7 @@ case_tuple_test() ->
 
 case_var_test() ->
   Source =
-    "module CodegenCaseVar\n"
-    "export unwrap/1\n"
+    "module CodegenCaseVar exposing unwrap/1\n"
     "fn unwrap(x) =\n"
     "  case x\n"
     "  | (:ok, thing) => thing\n"
@@ -358,8 +337,7 @@ case_var_test() ->
 
 case_adt_test() ->
   Source =
-    "module CodegenCaseAdt\n"
-    "export unwrap/1\n"
+    "module CodegenCaseAdt exposing unwrap/1\n"
     "fn unwrap(x) =\n"
     "  case x\n"
     "  | Nothing => :default\n"
@@ -372,8 +350,7 @@ case_adt_test() ->
 
 record_test() ->
   Source =
-    "module CodegenRecord\n"
-    "export zero/0, one/1, two/1\n"
+    "module CodegenRecord exposing zero/0, one/1, two/1\n"
     "fn zero() = {}\n"
     "fn one(x) = {value = x}\n"
     "fn two(x) = {val1 = x, val2 = x}\n"
@@ -387,8 +364,7 @@ record_test() ->
 
 record_access_test() ->
   Source =
-    "module CodegenRecordAccess\n"
-    "export name/1, dig/1\n"
+    "module CodegenRecordAccess exposing name/1, dig/1\n"
     "fn name(x) = x.name\n"
     "fn dig(x) = x.one.two.three\n"
   ,
@@ -400,8 +376,7 @@ record_access_test() ->
 
 zero_arity_call_test() ->
   Source =
-    "module CodegenZeroArityCall\n"
-    "export one/0\n"
+    "module CodegenZeroArityCall exposing one/0\n"
     "fn one() = hidden()\n"
     "fn hidden() = 100\n"
   ,
@@ -412,8 +387,7 @@ zero_arity_call_test() ->
 
 closure_test() ->
   Source =
-    "module CodegenClosure\n"
-    "export id_fun/0, double_fun/0, close_over/1\n"
+    "module CodegenClosure exposing id_fun/0, double_fun/0, close_over/1\n"
     "fn id_fun() = |x| x\n"
     "fn double_fun() = double(_)\n"
     "fn double(x) = x + x\n"
@@ -431,8 +405,7 @@ closure_test() ->
 
 closure_call_test() ->
   Source =
-    "module CodegenClosureCall\n"
-    "export identity/0, call/1\n"
+    "module CodegenClosureCall exposing identity/0, call/1\n"
     "fn call(fun) = fun.()\n"
   ,
   Mod = 'Gleam.CodegenClosureCall',
@@ -442,8 +415,7 @@ closure_call_test() ->
 
 pipe_test() ->
   Source =
-    "module CodegenPipe\n"
-    "export go/1, incer/0\n"
+    "module CodegenPipe exposing go/1, incer/0\n"
     "fn add(x, y) = x + y\n"
     "fn inc(x) = x + 1\n"
     "fn incer() = inc(_)\n"
@@ -469,8 +441,7 @@ test_test() ->
 
 raise_test() ->
   Source =
-    "module CodegenRaise\n"
-    "export go/1\n"
+    "module CodegenRaise exposing go/1\n"
     "fn go(x) = raise(x)\n"
   ,
   Mod = 'Gleam.CodegenRaise',
@@ -481,8 +452,7 @@ raise_test() ->
 
 throw_test() ->
   Source =
-    "module CodegenThrow\n"
-    "export go/1\n"
+    "module CodegenThrow exposing go/1\n"
     "fn go(x) = throw(x)\n"
   ,
   Mod = 'Gleam.CodegenThrow',

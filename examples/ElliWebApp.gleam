@@ -1,4 +1,4 @@
-module ElliWebApp
+module ElliWebApp exposing start_link/0, handle/2
 
 // A very simple web application using the Elli web server.
 // https://github.com/elli-lib/elli
@@ -8,10 +8,8 @@ module ElliWebApp
 // This would use the Erlang behaviour :elli_handler.
 // Can we support this somehow?
 
-export start_link/0, handle/2
-
-from Foreign import Foreign
-from Elli import Request, Response
+import Foreign exposing Foreign
+import Elli exposing Request, Response
 
 doc """
 The handle/2 callback is used by Elli to response to requests

@@ -1,27 +1,24 @@
 module RecordGenServer
+  exposing Implementation, Sync(..), Async(..), Init(..), Caller, StartError,
+  call/2, call/3, cast/2
+  // Erlang gen_server behaviour callbacks
+  handle_cast/3, handle_call/2, handle_info/2, info/1
 
 // Gleam doesn't yet have a first-class module system, so to
 // get type safety for GenServers we can wrap the gen_server
 // module and pass records instead of module atoms.
 
-export Implementation, Sync(..), Async(..), Init(..), Caller, StartError,
-       call/2, call/3, cast/2
+import Foreign exposing Foreign
 
-// Erlang gen_server behaviour callbacks
-export handle_cast/3, handle_call/2, handle_info/2, info/1
+external type Caller
 
-from Foreign import Foreign
+external foreign_start_link
+  : |Atom, arg, List(Atom, Foreign)| -> Result(StartError, Pid)
+  = :gen_server.start_link
 
-foreign type Caller
+external call : |Process, msg| -> reply = :gen_server.call
 
-foreign foreign_start_link :gen_server :start_link ::
-  |Atom, arg, List(Atom, Foreign)| -> Result(StartError, Pid)
-
-foreign call :gen_server :call :: |Process, msg| -> reply
-
-foreign call :gen_server :call :: |Process, msg, Int| -> reply
-
-foreign cast :gen_server :cast :: |Process, msg| -> ()
+external cast : |Process, msg| -> () = :gen_server.cast
 
 // Need to add others here
 type StartError =

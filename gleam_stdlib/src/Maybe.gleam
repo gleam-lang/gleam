@@ -1,7 +1,6 @@
 module Maybe
-
-export Maybe(..), is_just/1, is_nothing/1, map/2, flatten/1, flat_map/2,
-       unwrap/2
+  exposing Maybe(..), is_just/1, is_nothing/1, map/2, flatten/1, flat_map/2,
+    unwrap/2
 
 type Maybe(x)
   = Just(x)

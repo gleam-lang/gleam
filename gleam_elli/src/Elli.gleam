@@ -1,11 +1,8 @@
 module Elli
+  exposing Method(..), Header, Response, Request, method/1, path/1, raw_path/1,
+    query_string/1, headers/1, body/1
 
-export Method(..), Header, Response, Request
-
-// Request introspection functions
-export method/1, path/1, raw_path/1, query_string/1, headers/1, body/1
-
-from Foreign import Foreign
+import Foreign exposing Foreign
 
 type Method =
   | Get
@@ -22,10 +19,11 @@ type Method =
 type alias Header =
   (String, String)
 
-foreign erl_query_string :elli_request :query_str :: |Request| -> String
+external erl_query_string : |Request| -> String = :elli_request.query_str
 
-foreign erl_start_link :elli :start_link ::
-  |List((Atom, Foreign))| -> Result(Foreign, Pid)
+external erl_start_link
+  : |List((Atom, Foreign))| -> Result(Foreign, Pid)
+  = :elli.start_link
 
 doc """
 The status code, headers and body to send back to the client.
@@ -37,32 +35,32 @@ doc """
 The Elli request object. Contains all information about the
 incoming HTTP request.
 """
-foreign type Request
+external type Request
 
 doc """
 Get the request HTTP method.
 """
-foreign method :gleam_elli_native :method :: |Request| -> Method
+external method : |Request| -> Method = :gleam_elli_native.method
 
 doc """
 Get the request path segments.
 """
-foreign path :elli_request :path :: |Request| -> List(String)
+external path : |Request| -> List(String) = :elli_request.path
 
 doc """
 Get the request `raw_path', i.e. not split or parsed for query params.
 """
-foreign raw_path :elli_request :raw_path :: |Request| -> String
+external raw_path : |Request| -> String = :elli_request.raw_path
 
 doc """
 Get the request headers.
 """
-foreign headers :elli_request :headers :: |Request| -> List((String, String))
+external headers : |Request| -> List((String, String)) = :elli_request.headers
 
 doc """
 Get the request body.
 """
-foreign body :elli_request :body :: |Request| -> String
+external body : |Request| -> String = :elli_request.body
 
 doc """
 Get the query string for the request. Returns empty string if there is none.

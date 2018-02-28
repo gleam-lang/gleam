@@ -1,7 +1,6 @@
 module GleamAst
-
-export Ast(..), Meta(..), Module(..), Function(..), Test(..), Expr(..),
-       Clause(..), RecordField(..), Export, Charlist
+  exposing Ast(..), Meta(..), Module(..), Function(..), Test(..), Expr(..),
+    Clause(..), RecordField(..), Export, Charlist
 
 type Meta =
   | Meta(Int)

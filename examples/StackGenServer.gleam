@@ -1,11 +1,9 @@
-module StackGenServer
+module StackGenServer exposing start_link/1
 
 // A GenServer example taken from the Elixir documentation
 // https://hexdocs.pm/elixir/GenServer.html#module-client-server-apis
 
-export start_link/1
-
-from RecordGenServer import Impl, Sync(..), Async(..), Init(..)
+import RecordGenServer exposing Impl, Sync(..), Async(..), Init(..)
 
 type Cast(item) =
   | Push(item)

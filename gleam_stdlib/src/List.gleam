@@ -1,13 +1,12 @@
 module List
-
-export length/1, reverse/1, empty/1, member/2, head/1, tail/1, filter/2,
-       foldl/3, foldr/3, map/2, flatten/1, drop/2, take/2, of/1, new/0
+  exposing length/1, reverse/1, empty/1, member/2, head/1, tail/1, filter/2,
+  foldl/3, foldr/3, map/2, flatten/1, drop/2, take/2, of/1, new/0
 
 import Maybe exposing Maybe(..)
 
 // Using the Erlang C BIF implementation.
 //
-foreign length :erlang :length :: |List(a)| -> Int
+external length : |List(a)| -> Int = :erlang.length
 
 test length =
   length([]) |> Assert.equal(_, 0)
@@ -17,7 +16,7 @@ test length =
 
 // Using the Erlang C BIF implementation.
 //
-foreign reverse :erlang :reverse :: |List(a)| -> List(a)
+external reverse : |List(a)| -> List(a) = :erlang.reverse
 
 test reverse =
   length([]) |> Assert.equal(_, [])

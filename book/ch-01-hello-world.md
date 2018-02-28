@@ -3,9 +3,7 @@
 :)
 
 ```elm
-module Shape
-
-export Quadrilateral(..), from_dimensions/2
+module Shape exposing Quadrilateral(..), from_dimensions/2
 
 type Quadrilateral =
   | Square(Int)

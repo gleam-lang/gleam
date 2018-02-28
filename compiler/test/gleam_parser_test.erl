@@ -125,9 +125,7 @@ call_test() ->
 
 export_test() ->
   ?assertAST(
-    "module MyModule\n"
-    "export id/1\n"
-    "export foo/2, baz/8\n",
+    "module MyModule exposing id/1, foo/2, baz/8\n",
     #ast_module
     { name = "MyModule"
     , tests = []
