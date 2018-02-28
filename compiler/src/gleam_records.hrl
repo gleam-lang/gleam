@@ -40,6 +40,10 @@
         {meta = #meta{} :: #meta{},
          value :: ast_expression()}).
 
+-record(ast_throw,
+        {meta = #meta{} :: #meta{},
+         value :: ast_expression()}).
+
 -record(ast_local_call,
         {meta = #meta{} :: #meta{},
          name :: string(),
@@ -121,5 +125,6 @@
       | #ast_record_access{}
       | #ast_record{}
       | #ast_string{}
+      | #ast_throw{}
       | #ast_tuple{}
       | #ast_var{}.

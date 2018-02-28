@@ -38,6 +38,7 @@ type Expr =
   | AstRecord(Meta, List(RecordField))
   | AstRecordAccess(Meta, Expr, Charlist)
   | AstString(Meta, String)
+  | AstThrow(Meta, Expr)
   | AstTuple(Meta, List(Expr))
   | AstVar(Meta, String)
 

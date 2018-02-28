@@ -200,6 +200,13 @@ expression(#ast_raise{meta = Meta, value = Value}, Env) ->
                    args = [Value]},
   expression(Call, Env);
 
+expression(#ast_throw{meta = Meta, value = Value}, Env) ->
+  Call = #ast_call{meta = Meta,
+                   module = "erlang",
+                   name = "throw",
+                   args = [Value]},
+  expression(Call, Env);
+
 expression(#ast_pipe{meta = Meta, rhs = Rhs, lhs = Lhs}, Env) ->
   Call = #ast_closure_call{meta = Meta, closure = Rhs, args = [Lhs]},
   expression(Call, Env);

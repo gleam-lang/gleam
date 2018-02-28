@@ -478,3 +478,15 @@ raise_test() ->
     ?assertEqual(caught, try Mod:go(1) catch error:1 -> caught end),
     ?assertEqual(caught, try Mod:go(2) catch error:2 -> caught end)
   end).
+
+throw_test() ->
+  Source =
+    "module CodegenThrow\n"
+    "export go/1\n"
+    "fn go(x) = throw(x)\n"
+  ,
+  Mod = 'Gleam.CodegenThrow',
+  with_module(Mod, Source, fun() ->
+    ?assertEqual(caught, try Mod:go(1) catch throw:1 -> caught end),
+    ?assertEqual(caught, try Mod:go(2) catch throw:2 -> caught end)
+  end).
