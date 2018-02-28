@@ -13,6 +13,7 @@ Rules.
 
 module     : {token, {kw_module, m(TokenLine)}}.
 export     : {token, {kw_export, m(TokenLine)}}.
+raise\(    : {token, {kw_raise, m(TokenLine)}}.
 case       : {token, {kw_case, m(TokenLine)}}.
 test       : {token, {kw_test, m(TokenLine)}}.
 fn         : {token, {kw_fn, m(TokenLine)}}.

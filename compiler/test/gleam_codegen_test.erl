@@ -466,3 +466,15 @@ test_test() ->
     ?assertEqual(ok, Mod:test()),
     ?assertEqual(ok, Mod:thing_test())
   end).
+
+raise_test() ->
+  Source =
+    "module CodegenRaise\n"
+    "export go/1\n"
+    "fn go(x) = raise(x)\n"
+  ,
+  Mod = 'Gleam.CodegenRaise',
+  with_module(Mod, Source, fun() ->
+    ?assertEqual(caught, try Mod:go(1) catch error:1 -> caught end),
+    ?assertEqual(caught, try Mod:go(2) catch error:2 -> caught end)
+  end).

@@ -36,6 +36,10 @@
          closure :: ast_expression(),
          args = [] :: [ast_expression()]}).
 
+-record(ast_raise,
+        {meta = #meta{} :: #meta{},
+         value :: ast_expression()}).
+
 -record(ast_local_call,
         {meta = #meta{} :: #meta{},
          name :: string(),
@@ -99,8 +103,23 @@
          tests = [] :: [#ast_test{}]}).
 
 -type ast_expression()
-        :: #ast_tuple{} | #ast_list{} | #ast_int{} | #ast_float{} | #ast_bool{}
-        | #ast_atom{} | #ast_string{} | #ast_var{} | #ast_closure{}
-        | #ast_call{} | #ast_cons{} | #ast_closure_call{} | #ast_local_call{}
-        | #ast_assignment{} | #ast_adt{} | #ast_case{} | #ast_record{}
-        | #ast_record_access{} | #ast_pipe{}.
+      :: #ast_adt{}
+      | #ast_assignment{}
+      | #ast_atom{}
+      | #ast_bool{}
+      | #ast_call{}
+      | #ast_case{}
+      | #ast_closure_call{}
+      | #ast_closure{}
+      | #ast_cons{}
+      | #ast_float{}
+      | #ast_int{}
+      | #ast_list{}
+      | #ast_local_call{}
+      | #ast_pipe{}
+      | #ast_raise{}
+      | #ast_record_access{}
+      | #ast_record{}
+      | #ast_string{}
+      | #ast_tuple{}
+      | #ast_var{}.

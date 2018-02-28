@@ -14,7 +14,8 @@ Terminals
 '/' '*' '+' '-' '/.' '*.' '+.' '-.'
 int float atom string
 hole name upname call upcall
-kw_module kw_fn kw_export kw_case kw_test.
+kw_module kw_fn kw_export kw_case kw_test
+kw_raise.
 
 Rootsymbol source.
 
@@ -72,6 +73,7 @@ expr -> call call_args ')'         : local_call('$1', '$2').
 expr -> expr '|>' expr             : pipe('$2', '$1', '$3').
 expr -> expr '.' '(' ')'           : closure_call('$2', '$1', []).
 expr -> expr '.' '(' call_args ')' : closure_call('$2', '$1', '$3').
+expr -> kw_raise expr ')'          : raise('$1', '$2').
 
 binary_call -> expr '::' expr : cons('$2', '$1', '$3').
 binary_call -> expr '+' expr  : local_call('$2', ['$1', '$3']).
@@ -166,6 +168,9 @@ add_module_test(Test, Module) ->
 add_module_exports(NewExports, Module) ->
   #ast_module{exports = Exports} = Module,
   Module#ast_module{exports = NewExports ++ Exports}.
+
+raise({kw_raise, Meta}, Value) ->
+  #ast_raise{meta = Meta, value = Value}.
 
 test({name, Meta, Name}, Body) ->
   #ast_test{meta = Meta, name = Name, body = Body}.
