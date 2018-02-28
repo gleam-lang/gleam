@@ -5,8 +5,8 @@ module Shape
 
 export Quadrilateral(..), from_dimensions/2
 
-type Quadrilateral
-  = Square(Int)
+type Quadrilateral =
+  | Square(Int)
   | Rectangle(Int, Int)
 
 fn from_dimensions(width, height) =
