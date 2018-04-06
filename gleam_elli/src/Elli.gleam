@@ -63,7 +63,7 @@ Get the request body.
 external body : |Request| -> String = :elli_request.body
 
 doc """
-Get the query string for the request. Returns empty string if there is none.
+Get the query string for the request. Returns `Nothing` string if request has no query.
 """
 fn query_string(req) =
   case erl_query_string(req)
