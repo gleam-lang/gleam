@@ -35,8 +35,8 @@ tuple_test() ->
 module_test() ->
   Code =
     "module MyModule\n"
-    "fn id(x) = x\n"
-    "fn ok(val) = (:ok, val)\n"
+    "fn id(x) { x }\n"
+    "fn ok(val) { (:ok, val) }\n"
   ,
   AST =
     #ast_module
@@ -70,7 +70,7 @@ module_test() ->
 arity_2_test() ->
   Code =
     "module MyModule\n"
-    "fn add(x, y) = x + y\n"
+    "fn add(x, y) { x + y }\n"
   ,
   AST =
     #ast_module
@@ -99,7 +99,7 @@ arity_2_test() ->
 call_test() ->
   Code =
     "module MyModule\n"
-    "fn run() = print(20)\n"
+    "fn run() { print(20) }\n"
   ,
   AST =
     #ast_module
@@ -137,7 +137,7 @@ export_test() ->
 adt_test() ->
   Code =
     "module MyModule\n"
-    "fn ok() = Ok(1)"
+    "fn ok() { Ok(1) }"
   ,
   AST =
     #ast_module
@@ -163,7 +163,7 @@ adt_test() ->
 test_test() ->
   Code =
     "module MyModule\n"
-    "test ok = :ok"
+    "test ok { :ok }"
   ,
   AST =
     #ast_module
