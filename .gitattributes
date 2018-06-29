@@ -1,2 +1,2 @@
 examples/* linguist-documentation=false
-*.gleam linguist-language=Elm
+*.gleam linguist-language=Rust
