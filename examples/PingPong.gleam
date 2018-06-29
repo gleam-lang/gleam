@@ -1,13 +1,16 @@
 module PingPong
 
-fn run(req, _args) =
-  pid = spawn(||
-    receive
+fn run() {
+  pid = spawn(fn() {
+    receive {
     | (:ping, sender) => send(sender, :pong)
     | _ => IO.print("Huh?")
-  )
+    }
+  })
   send(pid, (:ping, self()))
 
-  receive
+  receive {
   | :pong => :ok
   after 10 => :too_slow
+  }
+}

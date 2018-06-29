@@ -17,33 +17,40 @@ The handle/2 callback is used by Elli to response to requests
 It serves as the router for our application.
 """
 spec |Request, a| -> Response
-fn handle(req, _args) =
+fn handle(req, _args) {
   method = Elli.method(req)
   path = Elli.path(req)
-  case (method, path)
+  case (method, path) {
   | (Get, []) => home()
   | (Get, ["hello"]) => greet("world")
   | (Get, ["hello", "jane"]) => greet_jane()
   | (Get, ["hello", name]) => greet(name)
   | (Delete, _) => reject_delete()
   | _ => not_found()
+  }
+}
 
 // Response builder functions
 
-fn home() =
+fn home() {
   (200, [], "Hello, world!")
+}
 
-fn greet_jane() =
+fn greet_jane() {
   (200, [], "Jane, so good to see you!")
+}
 
-fn greet(name) =
+fn greet(name) {
   (200, [], "Hello, " <> name <> "!")
+}
 
-fn reject_delete() =
+fn reject_delete() {
   (405, [], "Sorry, no DELETE requests allowed.")
+}
 
-fn not_found() =
+fn not_found() {
   (404, [], "Not found")
+}
 
 // Lastly, a function to start the server.
 
@@ -51,8 +58,9 @@ doc """
 The start_link/0 function can be used to create a new
 Elli web server process running this handler module.
 """
-fn start_link() =
+fn start_link() {
   Elli.start_link({
     callback = :"Gleam.ElliWebApp",
     port = 4000,
   })
+}

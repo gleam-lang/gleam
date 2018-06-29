@@ -65,23 +65,27 @@ external body : |Request| -> String = :elli_request.body
 doc """
 Get the query string for the request. Returns `Nothing` string if request has no query.
 """
-fn query_string(req) =
-  case erl_query_string(req)
+fn query_string(req) {
+  case erl_query_string(req) {
   | "" => Nothing
   | s => Just(s)
-
-type alias StartArguments = {
-  // A real Module type instead of Atom would be nice.
-  callback :: Atom,
-  port :: Int,
+  }
 }
+
+type alias StartArguments =
+  {
+    // A real Module type instead of Atom would be nice.
+    callback :: Atom,
+    port :: Int,
+  }
 
 doc """
 Start the Elli web server process tree.
 """
 spec StartArguments -> Result(Foreign, Pid)
-fn start_link(args) =
+fn start_link(args) {
   erl_start_link([
     (:callback, Foreign.new(args.callback)),
     (:port, Foreign.new(args.port)),
   ])
+}

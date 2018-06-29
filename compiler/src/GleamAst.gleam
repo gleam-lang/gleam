@@ -41,11 +41,11 @@ type Expr =
   | AstTuple(Meta, List(Expr))
   | AstVar(Meta, String)
 
-type alias Charlist
-  = List(Int)
+type alias Charlist =
+  List(Int)
 
-type alias Export
-  = (Charlist, Int)
+type alias Export =
+  (Charlist, Int)
 
 type Clause =
   | AstClause(Meta, Expr, Expr)
