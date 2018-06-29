@@ -1,17 +1,14 @@
-module StackGenServer
-  implementing GenServer
-  exposing CallMsg, CastMsg, InfoMsg, State, Argument, Reply,
-    start_link, handle_call, handle_cast, handle_info, init
+module StackRecordGenServer exposing start_link/1
 
 // A GenServer example taken from the Elixir documentation
 // https://hexdocs.pm/elixir/GenServer.html#module-client-server-apis
 
-import GenServer exposing Sync(..), Async(..), Init(..)
+import RecordGenServer exposing Impl, Sync(..), Async(..), Init(..)
 
-type CastMsg(item) =
+type Cast(item) =
   | Push(item)
 
-type CallMsg =
+type Call =
   | Pop
 
 type Reply(item) =
@@ -21,7 +18,7 @@ type Reply(item) =
 // API
 
 fn start_link(items) {
-  RecordGenServer.start_link(self, items)
+  RecordGenServer.start_link(implementation(), items)
 }
 
 fn push(pid, item) {
@@ -32,7 +29,17 @@ fn pop(pid) {
   RecordGenServer.call(pid, Pop)
 }
 
-// callbacks
+// Server (callbacks)
+
+spec || -> Impl(List(item), Call, Reply, Cast, Never, Never, List(item))
+fn implementation() {
+  {
+    handle_call = handle_call/3,
+    handle_cast = handle_cast/2,
+    handle_info = handle_info/2,
+    init = init/1,
+  }
+}
 
 fn handle_call(call, _caller, items) =
   case (call, items) {

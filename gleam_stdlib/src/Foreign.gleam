@@ -11,3 +11,11 @@ doc """
 Convert any Gleam data into Foreign data.
 """
 external new : |a| -> Foreign = :gleam_native.identity
+
+doc """
+Unsafely cast any type into any other type.o
+
+This is an escape hatch for the type system that may be useful when wrapping
+native Erlang APIs. It is to be used as a last measure only.
+"""
+external unsafeCoerce : |a| -> b = :gleam_native.identity
