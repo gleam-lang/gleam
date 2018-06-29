@@ -53,10 +53,10 @@ mod_body -> test mod_body     : mod_test('$1', '$2').
 exports -> name '/' int             : [export('$1', '$3')].
 exports -> name '/' int ',' exports : [export('$1', '$3') | '$5'].
 
-function -> kw_fn call ')' '=' exprs      : function('$2', [], '$5').
-function -> kw_fn call args ')' '=' exprs : function('$2', '$3', '$6').
+function -> kw_fn call ')' '{' exprs '}'      : function('$2', [], '$5').
+function -> kw_fn call args ')' '{' exprs '}' : function('$2', '$3', '$6').
 
-test -> kw_test name '=' exprs : test('$2', '$4').
+test -> kw_test name '{' exprs '}' : test('$2', '$4').
 
 exprs -> name '=' expr exprs : [assignment('$2', '$1', '$3', '$4')].
 exprs -> expr                : ['$1'].
@@ -90,7 +90,7 @@ binary_call -> expr '<'  expr : local_call('$2', ['$1', '$3']).
 binary_call -> expr '>'  expr : local_call('$2', ['$1', '$3']).
 binary_call -> expr '>=' expr : local_call('$2', ['$1', '$3']).
 
-case_expr -> kw_case expr case_clauses : case_expr('$1', '$2', '$3').
+case_expr -> kw_case expr '{' case_clauses '}' : case_expr('$1', '$2', '$4').
 
 case_clauses -> case_clause              : ['$1'].
 case_clauses -> case_clause case_clauses : ['$1'|'$2'].
