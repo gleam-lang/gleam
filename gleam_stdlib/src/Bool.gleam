@@ -6,6 +6,8 @@ type Bool =
   | True
   | False
 
+; // Fix GitHub syntax highlighting
+
 fn not(bool) {
   case bool {
   | True => False

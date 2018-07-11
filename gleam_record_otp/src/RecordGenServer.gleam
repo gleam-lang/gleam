@@ -24,14 +24,20 @@ external cast : |Process, msg| -> () = :gen_server.cast
 type StartError =
   | AlreadyStarted(Pid)
 
+; // Fix GitHub syntax highlighting
+
 type StopReason =
   | Normal
   | Error(Atom)
+
+; // Fix GitHub syntax highlighting
 
 type Timeout =
   | Hibernate
   | Timeout(Int)
   | None
+
+; // Fix GitHub syntax highlighting
 
 type Sync(reply, state) =
   | Reply(reply, state, Timeout)
@@ -39,14 +45,20 @@ type Sync(reply, state) =
   | ReplyStop(StopReason, reply, state)
   | IgnoreStop(StopReason, state)
 
+; // Fix GitHub syntax highlighting
+
 type Async(state) =
   | Continue(state, Timeout)
   | Stop(StopReason, state)
+
+; // Fix GitHub syntax highlighting
 
 type Init(state) =
   | Start(state, Timeout)
   | NoStart(StopReason)
   | Ignore
+
+; // Fix GitHub syntax highlighting
 
 type alias State(error, state) {
   {

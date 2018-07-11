@@ -19,6 +19,8 @@ type Method =
 type alias Header =
   (String, String)
 
+; // Fix GitHub syntax highlighting
+
 external erl_query_string : |Request| -> String = :elli_request.query_str
 
 external erl_start_link
