@@ -1,5 +1,5 @@
 module Result
-  exposing Result(..), is_ok/1, is_none/1, map/2, map_error/2, flatten/1,
+  exposing Result(..), is_ok/1, map/2, map_error/2, flatten/1,
     flat_map/2, unwrap/2, to_maybe/1, from_maybe/1
 
 import Maybe exposing Maybe(..)
