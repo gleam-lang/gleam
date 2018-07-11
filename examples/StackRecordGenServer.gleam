@@ -15,6 +15,8 @@ type Reply(item) =
   | Item(item)
   | Empty
 
+; // Fix GitHub syntax highlighting
+
 // API
 
 fn start_link(items) {

@@ -12,6 +12,8 @@ type Result(error, value) {
   | Ok(value)
   | Error(error)
 
+; // Fix GitHub syntax highlighting
+
 fn is_ok(result) {
   case result {
   | Error(_) => False

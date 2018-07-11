@@ -19,6 +19,8 @@ behaviour type Reply
 
 behaviour type Pid = Process
 
+; // Fix GitHub syntax highlighting
+
 external call : |Pid, CallMsg| ->  = :gen_server :call
 
 external cast : |Pid, CastMsg| -> () = :gen_server :cast
@@ -27,9 +29,13 @@ external cast : |Pid, CastMsg| -> () = :gen_server :cast
 type StartError =
   | AlreadyStarted(Pid)
 
+; // Fix GitHub syntax highlighting
+
 type StopReason =
   | Normal
   | Error(Atom)
+
+; // Fix GitHub syntax highlighting
 
 type Sync =
   | Reply(Reply, State, Timeout)
@@ -37,14 +43,20 @@ type Sync =
   | ReplyStop(StopReason, Reply, State) tag :stop
   | IgnoreStop(StopReason, State) tag :stop
 
+; // Fix GitHub syntax highlighting
+
 type Async =
   | Continue(State, Timeout) tag :noreply
   | Stop(StopReason, State)
+
+; // Fix GitHub syntax highlighting
 
 type Init =
   | Start(State, Timeout) tag :ok
   | NoStart(StopReason) tag :stop
   | Ignore
+
+; // Fix GitHub syntax highlighting
 
 callback handle_call :: |CallMsg, Caller, State| -> Sync(Reply, State)
 

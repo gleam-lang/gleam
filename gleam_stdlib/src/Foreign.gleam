@@ -7,6 +7,8 @@ IO with the outside world.
 """
 external type Foreign
 
+; // Fix GitHub syntax highlighting
+
 doc """
 Convert any Gleam data into Foreign data.
 """

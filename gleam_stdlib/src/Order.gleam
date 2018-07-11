@@ -5,6 +5,8 @@ type Order =
   | EQ
   | GT
 
+; // Fix GitHub syntax highlighting
+
 fn reverse(order) {
   case order {
   | LT => GT

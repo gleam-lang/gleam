@@ -6,6 +6,8 @@ type Maybe(x) =
   | Just(x)
   | Nothing
 
+; // Fix GitHub syntax highlighting
+
 fn is_just(maybe) {
   case maybe {
   | Just(_) => True

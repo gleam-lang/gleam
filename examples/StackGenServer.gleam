@@ -11,12 +11,18 @@ import GenServer exposing Sync(..), Async(..), Init(..)
 type CastMsg(item) =
   | Push(item)
 
+; // Fix GitHub syntax highlighting
+
 type CallMsg =
   | Pop
+
+; // Fix GitHub syntax highlighting
 
 type Reply(item) =
   | Item(item)
   | Empty
+
+; // Fix GitHub syntax highlighting
 
 // API
 

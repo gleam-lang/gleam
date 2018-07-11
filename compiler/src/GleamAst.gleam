@@ -5,18 +5,28 @@ module GleamAst
 type Meta =
   | Meta(Int)
 
+; // Fix GitHub syntax highlighting
+
 type Ast =
   | Mod(Module)
   | Expr(Expr)
 
+; // Fix GitHub syntax highlighting
+
 type Module =
   | AstModule(Charlist, List(Export), List(Function), List(Test))
+
+; // Fix GitHub syntax highlighting
 
 type Function =
   | AstFunction(Meta, Charlist, List(Charlist), Expr)
 
+; // Fix GitHub syntax highlighting
+
 type Test =
   | AstFunction(Meta, Charlist, Expr)
+
+; // Fix GitHub syntax highlighting
 
 type Expr =
   | AstAdt(Meta, Charlist, List(Expr))
@@ -41,14 +51,22 @@ type Expr =
   | AstTuple(Meta, List(Expr))
   | AstVar(Meta, String)
 
+; // Fix GitHub syntax highlighting
+
 type alias Charlist =
   List(Int)
+
+; // Fix GitHub syntax highlighting
 
 type alias Export =
   (Charlist, Int)
 
+; // Fix GitHub syntax highlighting
+
 type Clause =
   | AstClause(Meta, Expr, Expr)
+
+; // Fix GitHub syntax highlighting
 
 type RecordField =
   | AstClause(Meta, Expr, Expr)
