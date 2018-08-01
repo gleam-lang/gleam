@@ -76,19 +76,11 @@ function(Args, Body, Env) ->
 var(Atom) ->
   cerl:c_var(list_to_atom(Atom)).
 
-map_with_env(Nodes, Env, F) ->
-  Folder = fun(Node, {AccCore, AccEnv}) ->
-             {NewCore, NewEnv} = F(Node, AccEnv),
-             {[NewCore|AccCore], NewEnv}
-           end,
-  {Core, NewEnv} = lists:foldl(Folder, {[], Env}, Nodes),
-  {lists:reverse(Core), NewEnv}.
-
 map_clauses(Clauses, Env) ->
-  map_with_env(Clauses, Env, fun clause/2).
+  gleam:thread_map(fun clause/2, Clauses, Env).
 
 map_expressions(Expressions, Env) ->
-  map_with_env(Expressions, Env, fun expression/2).
+  gleam:thread_map(fun expression/2, Expressions, Env).
 
 expression(#ast_string{value = Value}, Env) when is_binary(Value) ->
   Chars = binary_to_list(Value),
@@ -162,7 +154,7 @@ expression(#ast_adt{name = Name, meta = Meta, elems = Elems}, Env) when is_list(
   expression(#ast_tuple{elems = [Atom | Elems]}, Env);
 
 expression(#ast_record{fields = Fields}, Env) ->
-  {C_pairs, NewEnv} = map_with_env(Fields, Env, fun record_field/2),
+  {C_pairs, NewEnv} = gleam:thread_map(fun record_field/2,Fields, Env ),
   Core = cerl:c_map(C_pairs),
   {Core, NewEnv};
 

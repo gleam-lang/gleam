@@ -2,8 +2,13 @@ module GleamAst
   exposing Ast(..), Meta(..), Module(..), Function(..), Test(..), Expr(..),
     Clause(..), RecordField(..), Export, Charlist
 
+import Foreign exposing Foreign
+
 type Meta =
   | Meta(Int)
+
+type alias Type =
+  Foreign
 
 ; // Fix GitHub syntax highlighting
 
@@ -32,14 +37,13 @@ type Expr =
   | AstAdt(Meta, Charlist, List(Expr))
   | AstAssignment(Meta, Charlist, Expr, Expr)
   | AstAtom(Meta, Charlist)
-  | AstBool(Meta, Bool)
   | AstCall(Meta, String, String, List(Expr))
   | AstCase(Meta, Expr, Clause)
   | AstClosure(Meta, List(Charlist), Expr)
   | AstClosureCall(Meta, Expr, List(Expr))
   | AstCons(Meta, Expr, Expr)
   | AstFloat(Meta, Float)
-  | AstInt(Meta, Int)
+  | AstInt(Meta, Type, Int)
   | AstList(Meta, List(Expr))
   | AstLocalCall(Meta, Charlist, List(Expr))
   | AstPipe(Meta, Expr, Expr)

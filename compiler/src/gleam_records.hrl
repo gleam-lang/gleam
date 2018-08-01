@@ -3,15 +3,30 @@
 -record(meta, {line = 1 :: non_neg_integer()}).
 
 -type export() :: {string(), non_neg_integer()}.
+-type type_annotation() :: undefined | {ok, type()}.
 
 -record(ast_tuple,  {meta = #meta{}, elems = [] :: [ast_expression()]}).
 -record(ast_list,   {meta = #meta{}, elems = [] :: [ast_expression()]}).
 
--record(ast_int,    {meta = #meta{} :: #meta{}, value :: integer()}).
--record(ast_float,  {meta = #meta{} :: #meta{}, value :: float()}).
--record(ast_bool,   {meta = #meta{} :: #meta{}, value :: boolean()}).
--record(ast_atom,   {meta = #meta{} :: #meta{}, value :: string()}).
--record(ast_string, {meta = #meta{} :: #meta{}, value :: binary()}).
+-record(ast_int,
+        {meta = #meta{} :: #meta{},
+         type = undefined :: type_annotation(),
+         value :: integer()}).
+
+-record(ast_float,
+        {meta = #meta{} :: #meta{},
+         type = undefined :: type_annotation(),
+         value :: float()}).
+
+-record(ast_atom,
+        {meta = #meta{} :: #meta{},
+         type = undefined :: type_annotation(),
+         value :: string()}).
+
+-record(ast_string,
+        {meta = #meta{} :: #meta{},
+         type = undefined :: type_annotation(),
+         value :: binary()}).
 
 -record(ast_var, {meta = #meta{}, name :: string()}).
 
@@ -110,7 +125,6 @@
       :: #ast_adt{}
       | #ast_assignment{}
       | #ast_atom{}
-      | #ast_bool{}
       | #ast_call{}
       | #ast_case{}
       | #ast_closure_call{}
@@ -128,3 +142,28 @@
       | #ast_throw{}
       | #ast_tuple{}
       | #ast_var{}.
+
+%
+% Types
+%
+
+-type id() :: reference().
+-type level() :: integer().
+-type const_type() :: int | float | atom | string.
+
+-record(type_const, {type :: const_type()}).
+% -record(type_func, {args :: list(type()), return :: type()}).
+% -record(type_app, {type :: type(), args :: list(type())}).
+% -record(type_var, {var :: type_var_reference()}).
+
+-type type() :: #type_const{} . %| #type_app{} | #type_arrow{} | #type_var{}.
+
+%
+% Type variables
+%
+
+-record(type_var_unbound, {id :: id(), level :: level()}).
+-record(type_var_link, {type :: type()}).
+-record(type_var_generic, {id :: id()}).
+
+-type type_var() :: #type_var_unbound{} | #type_var_link{} | #type_var_generic{}.
