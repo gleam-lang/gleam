@@ -43,7 +43,7 @@ type Expr =
   | AstClosureCall(Meta, Expr, List(Expr))
   | AstCons(Meta, Expr, Expr)
   | AstFloat(Meta, Float)
-  | AstInt(Meta, Type, Int)
+  | AstInt(Meta, Int)
   | AstList(Meta, List(Expr))
   | AstLocalCall(Meta, Charlist, List(Expr))
   | AstPipe(Meta, Expr, Expr)

@@ -1,8 +1,11 @@
--module(gleam_infer).
+-module(gleam_type).
 
--export([infer/1]).
+-export([infer/1, fetch/1]).
 
 -include("gleam_records.hrl").
+
+-record(env, {level = 1 :: level(), vars = #{}}).
+-type env() :: #env{}.
 
 % let new_var level = TVar (ref (Unbound (next_id (), level)))
 
@@ -163,23 +166,35 @@
 
 -spec infer(ast_expression()) -> {ok, type()}.
 infer(Ast) ->
-  infer(new_env(), 1, Ast).
+  {NewAst, _Env} = infer(Ast, new_env()),
+  {ok, NewAst}.
 
-infer(_Env, _Level, Ast = #ast_int{}) ->
-  Type = #type_const{type = int},
-  {ok, Ast#ast_int{type = {ok, Type}}};
+-spec infer(ast_expression(), env()) -> {type(), env()}.
+infer(Ast = #ast_int{}, Env) ->
+  {Ast, Env};
 
-infer(_Env, _Level, Ast = #ast_float{}) ->
-  Type = #type_const{type = float},
-  {ok, Ast#ast_float{type = {ok, Type}}};
+infer(Ast = #ast_float{}, Env) ->
+  {Ast, Env};
 
-infer(_Env, _Level, Ast = #ast_string{}) ->
-  Type = #type_const{type = string},
-  {ok, Ast#ast_string{type = {ok, Type}}};
+infer(Ast = #ast_string{}, Env) ->
+  {Ast, Env};
 
-infer(_Env, _Level, Ast = #ast_atom{}) ->
-  Type = #type_const{type = atom},
-  {ok, Ast#ast_atom{type = {ok, Type}}}.
+infer(Ast = #ast_atom{}, Env) ->
+  {Ast, Env}.
 
+-spec fetch(ast_expression()) -> {ok, type()}.
+fetch(#ast_int{}) ->
+  {ok, #type_const{type = int}};
+
+fetch(#ast_atom{}) ->
+  {ok, #type_const{type = atom}};
+
+fetch(#ast_float{}) ->
+  {ok, #type_const{type = float}};
+
+fetch(#ast_string{}) ->
+  {ok, #type_const{type = string}}.
+
+-spec new_env() -> env().
 new_env() ->
-  #{}.
+  #env{}.

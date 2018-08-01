@@ -10,22 +10,18 @@
 
 -record(ast_int,
         {meta = #meta{} :: #meta{},
-         type = undefined :: type_annotation(),
          value :: integer()}).
 
 -record(ast_float,
         {meta = #meta{} :: #meta{},
-         type = undefined :: type_annotation(),
          value :: float()}).
 
 -record(ast_atom,
         {meta = #meta{} :: #meta{},
-         type = undefined :: type_annotation(),
          value :: string()}).
 
 -record(ast_string,
         {meta = #meta{} :: #meta{},
-         type = undefined :: type_annotation(),
          value :: binary()}).
 
 -record(ast_var, {meta = #meta{}, name :: string()}).
