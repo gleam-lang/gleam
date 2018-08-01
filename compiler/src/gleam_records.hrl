@@ -148,11 +148,12 @@
 -type const_type() :: int | float | atom | string.
 
 -record(type_const, {type :: const_type()}).
+-record(type_tuple, {elems :: [type()]}).
 % -record(type_func, {args :: list(type()), return :: type()}).
 % -record(type_app, {type :: type(), args :: list(type())}).
 % -record(type_var, {var :: type_var_reference()}).
 
--type type() :: #type_const{} . %| #type_app{} | #type_arrow{} | #type_var{}.
+-type type() :: #type_const{} | #type_tuple{}.
 
 %
 % Type variables

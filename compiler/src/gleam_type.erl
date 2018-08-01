@@ -170,6 +170,11 @@ infer(Ast) ->
   {ok, NewAst}.
 
 -spec infer(ast_expression(), env()) -> {type(), env()}.
+infer(Ast = #ast_tuple{elems = Elems}, Env) ->
+  {AnnotatedElems, NewEnv} = gleam:thread_map(fun infer/2, Elems, Env),
+  AnnotatedAst = Ast#ast_tuple{elems = AnnotatedElems},
+  {AnnotatedAst, NewEnv};
+
 infer(Ast = #ast_int{}, Env) ->
   {Ast, Env};
 
@@ -183,17 +188,21 @@ infer(Ast = #ast_atom{}, Env) ->
   {Ast, Env}.
 
 -spec fetch(ast_expression()) -> {ok, type()}.
+fetch(#ast_tuple{elems = Elems}) ->
+  ElemsTypes = lists:map(fun fetch/1, Elems),
+  #type_tuple{elems = ElemsTypes};
+
 fetch(#ast_int{}) ->
-  {ok, #type_const{type = int}};
+  #type_const{type = int};
 
 fetch(#ast_atom{}) ->
-  {ok, #type_const{type = atom}};
+  #type_const{type = atom};
 
 fetch(#ast_float{}) ->
-  {ok, #type_const{type = float}};
+  #type_const{type = float};
 
 fetch(#ast_string{}) ->
-  {ok, #type_const{type = string}}.
+  #type_const{type = string}.
 
 -spec new_env() -> env().
 new_env() ->
