@@ -164,12 +164,12 @@
 %         param_ty_list arg_list ;
 %       return_ty
 
--spec infer(ast_expression()) -> {ok, type()}.
+-spec infer(ast_expression()) -> {ok, ast_expression()}.
 infer(Ast) ->
   {NewAst, _Env} = infer(Ast, new_env()),
   {ok, NewAst}.
 
--spec infer(ast_expression(), env()) -> {type(), env()}.
+-spec infer(ast_expression(), env()) -> {ast_expression(), env()}.
 infer(Ast = #ast_tuple{elems = Elems}, Env) ->
   {AnnotatedElems, NewEnv} = gleam:thread_map(fun infer/2, Elems, Env),
   AnnotatedAst = Ast#ast_tuple{elems = AnnotatedElems},
@@ -187,7 +187,7 @@ infer(Ast = #ast_string{}, Env) ->
 infer(Ast = #ast_atom{}, Env) ->
   {Ast, Env}.
 
--spec fetch(ast_expression()) -> {ok, type()}.
+-spec fetch(ast_expression()) -> type().
 fetch(#ast_tuple{elems = Elems}) ->
   ElemsTypes = lists:map(fun fetch/1, Elems),
   #type_tuple{elems = ElemsTypes};
