@@ -6,32 +6,28 @@ import Foreign exposing Foreign
 
 type Meta =
   | Meta(Int)
+; // Fix GitHub syntax highlighting
 
 type alias Type =
   Foreign
-
-; // Fix GitHub syntax highlighting
+;
 
 type Ast =
   | Mod(Module)
   | Expr(Expr)
-
-; // Fix GitHub syntax highlighting
+;
 
 type Module =
   | AstModule(Charlist, List(Export), List(Function), List(Test))
-
-; // Fix GitHub syntax highlighting
+;
 
 type Function =
   | AstFunction(Meta, Charlist, List(Charlist), Expr)
-
-; // Fix GitHub syntax highlighting
+;
 
 type Test =
   | AstFunction(Meta, Charlist, Expr)
-
-; // Fix GitHub syntax highlighting
+;
 
 type Expr(type_) =
   | AstAdt(Meta, Charlist, List(Expr))
@@ -54,29 +50,28 @@ type Expr(type_) =
   | AstThrow(Meta, Expr)
   | AstTuple(Meta, List(Expr))
   | AstVar(Meta, String)
+;
 
 type alias UntypedExpr =
   Expr(Unit)
+;
 
 type alias TypedExpr =
   Expr(Type)
-
-; // Fix GitHub syntax highlighting
+;
 
 type alias Charlist =
   List(Int)
-
-; // Fix GitHub syntax highlighting
+;
 
 type alias Export =
   (Charlist, Int)
-
-; // Fix GitHub syntax highlighting
+;
 
 type Clause =
   | AstClause(Meta, Expr, Expr)
-
-; // Fix GitHub syntax highlighting
+;
 
 type RecordField =
   | AstClause(Meta, Expr, Expr)
+;
