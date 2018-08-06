@@ -4,8 +4,14 @@
 
 -include("gleam_records.hrl").
 
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+-endif.
+
+
 -record(env, {level = 1 :: level(), vars = #{}}).
 -type env() :: #env{}.
+-type var_name() :: string().
 
 % let new_var level = TVar (ref (Unbound (next_id (), level)))
 
@@ -44,7 +50,6 @@
 %   f ty
 
 % let rec unify ty1 ty2 =
-%   print_endline "unify" ;
 %   if ty1 == ty2 then ()
 %   else
 %     match (ty1, ty2) with
@@ -63,7 +68,6 @@
 %         (* There is only a single instance of a particular type variable. *)
 %     | TVar ({contents= Unbound (id, level)} as tvar), ty
 %      |ty, TVar ({contents= Unbound (id, level)} as tvar) ->
-%         print_endline "linking" ;
 %         occurs_check_adjust_levels id level ty ;
 %         tvar := Link ty
 %     | _, _ ->
@@ -71,51 +75,29 @@
 %           ( "cannot unify types " ^ string_of_ty ty1 ^ " and "
 %           ^ string_of_ty ty2 )
 
-% let rec generalize level tvar =
-%   match tvar with
-%   | TVar {contents= Unbound (id, other_level)} when other_level > level ->
-%       TVar (ref (Generic id))
-%   | TApp (ty, ty_arg_list) ->
-%       TApp (generalize level ty, List.map (generalize level) ty_arg_list)
-%   | TArrow (param_ty_list, return_ty) ->
-%       let params = List.map (generalize level) param_ty_list in
-%       let ret = generalize level return_ty in
-%       TArrow (params, ret)
-%   | TVar {contents= Link ty} -> generalize level ty
-%   | (TVar {contents= Generic _} | TVar {contents= Unbound _} | TConst _) as ty ->
-%       ty
-
 % let instantiate level ty =
-%   (* print_endline "instantiate_called" ; *)
 %   let id_var_map = Hashtbl.create 10 in
 %   let rec f ty =
 %     match ty with
 %     | TConst _ ->
-%         print_endline "instantiate_const" ;
 %         ty
 %     | TVar {contents= Link ty} ->
-%         print_endline "instantiate_link" ;
 %         f ty
 %     | TVar {contents= Generic id} -> (
-%         print_endline "instantiate_generic" ;
 %         try Hashtbl.find id_var_map id with Not_found ->
 %           let var = new_var level in
 %           Hashtbl.add id_var_map id var ;
 %           var )
 %     | TVar {contents= Unbound _} ->
-%         print_endline "instantiate_unbound" ;
 %         ty
 %     | TApp (ty, ty_arg_list) ->
-%         print_endline "instantiate_app" ;
 %         TApp (f ty, List.map f ty_arg_list)
 %     | TArrow (param_ty_list, return_ty) ->
-%         print_endline "instantiate_arrow" ;
 %         TArrow (List.map f param_ty_list, f return_ty)
 %   in
 %   f ty
 
 % let rec match_fun_ty num_params tvar =
-%   (* print_endline "match_fun_ty_called" ; *)
 %   match tvar with
 %   | TArrow (param_ty_list, return_ty) ->
 %       if List.length param_ty_list <> num_params then
@@ -133,14 +115,11 @@
 %   | _ -> error "expected a function"
 
 % let rec infer env level ast =
-%   (* print_endline "infer_called" ; *)
 %   match ast with
 %   | Var name -> (
-%       print_endline "infer_var" ;
 %       try instantiate level (Env.lookup env name) with Not_found ->
 %         error ("variable " ^ name ^ " not found") )
 %   | Fun (param_list, body_expr) ->
-%       print_endline "infer_fun" ;
 %       let param_ty_list = List.map (fun _ -> new_var level) param_list in
 %       let fn_env =
 %         List.fold_left2
@@ -150,12 +129,10 @@
 %       let return_ty = infer fn_env level body_expr in
 %       TArrow (param_ty_list, return_ty)
 %   | Let (var_name, value_expr, body_expr) ->
-%       print_endline ("{infer_let, " ^ var_name ^ "}") ;
 %       let var_ty = infer env (level + 1) value_expr in
 %       let generalized_ty = generalize level var_ty in
 %       infer (Env.extend env var_name generalized_ty) level body_expr
 %   | Call (fn_expr, arg_list) ->
-%       print_endline "infer_call" ;
 %       let param_ty_list, return_ty =
 %         match_fun_ty (List.length arg_list) (infer env level fn_expr)
 %       in
@@ -170,6 +147,17 @@ infer(Ast) ->
   {ok, NewAst}.
 
 -spec infer(ast_expression(), env()) -> {ast_expression(), env()}.
+% TODO: Replace list of sequences exprs with some sort of cons cell
+% style sequence type.
+infer([Ast], Env) ->
+  infer(Ast, Env);
+
+infer(#ast_assignment{name = Name, value = Value, then = Then}, Env) ->
+  {InferredValue, Env2} = infer(Value, increment_env_level(Env)),
+  GeneralizedType = generalize(Env#env.level, fetch(InferredValue)),
+  ExtendedEnv = env_extend(Name, GeneralizedType, Env2),
+  infer(Then, ExtendedEnv);
+
 infer(Ast = #ast_tuple{elems = Elems}, Env) ->
   {AnnotatedElems, NewEnv} = gleam:thread_map(fun infer/2, Elems, Env),
   AnnotatedAst = Ast#ast_tuple{elems = AnnotatedElems},
@@ -207,3 +195,38 @@ fetch(#ast_string{}) ->
 -spec new_env() -> env().
 new_env() ->
   #env{}.
+
+-spec increment_env_level(env()) -> env().
+increment_env_level(Env = #env{level = Level}) ->
+  Env#env{level = Level + 1}.
+
+-ifdef(TEST).
+increment_env_level_test() ->
+  Env = new_env(),
+  Env2 = Env#env{level = 42},
+  Env3 = increment_env_level(Env2),
+  ?assertEqual(43, Env3#env.level).
+-endif.
+
+-spec env_extend(var_name(), type(), env()) -> env().
+env_extend(Name, GeneralizedType, Env = #env{vars = Vars}) ->
+  NewVars = maps:put(Name, GeneralizedType, Vars),
+  Env#env{vars = NewVars}.
+
+% let rec generalize level tvar =
+%   match tvar with
+%   | TVar {contents= Unbound (id, other_level)} when other_level > level ->
+%       TVar (ref (Generic id))
+%   | TApp (ty, ty_arg_list) ->
+%       TApp (generalize level ty, List.map (generalize level) ty_arg_list)
+%   | TArrow (param_ty_list, return_ty) ->
+%       let params = List.map (generalize level) param_ty_list in
+%       let ret = generalize level return_ty in
+%       TArrow (params, ret)
+%   | TVar {contents= Link ty} -> generalize level ty
+%   | (TVar {contents= Generic _} | TVar {contents= Unbound _} | TConst _) as ty ->
+%       ty
+
+-spec generalize(level(), type()) -> type().
+generalize(_Level, Type) ->
+  Type.

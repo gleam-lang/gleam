@@ -33,9 +33,9 @@ type Test =
 
 ; // Fix GitHub syntax highlighting
 
-type Expr =
+type Expr(type_) =
   | AstAdt(Meta, Charlist, List(Expr))
-  | AstAssignment(Meta, Charlist, Expr, Expr)
+  | AstAssignment(Meta, type_, Charlist, Expr, Expr)
   | AstAtom(Meta, Charlist)
   | AstCall(Meta, String, String, List(Expr))
   | AstCase(Meta, Expr, Clause)
@@ -54,6 +54,12 @@ type Expr =
   | AstThrow(Meta, Expr)
   | AstTuple(Meta, List(Expr))
   | AstVar(Meta, String)
+
+type alias UntypedExpr =
+  Expr(Unit)
+
+type alias TypedExpr =
+  Expr(Type)
 
 ; // Fix GitHub syntax highlighting
 
