@@ -49,7 +49,12 @@ infer_unused_let_test() ->
   {ok, Ast3} = infer("x = :unused (:ok, 1)"),
   ?assertEqual(Type3, gleam_type:fetch(Ast3)).
 
-% infer_used_let_test() ->
-%   Type1 = #type_const{type = atom},
-%   {ok, Ast1} = infer("x = :ok x"),
-%   ?assertEqual(Type1, gleam_type:fetch(Ast1)).
+infer_used_let_test() ->
+  Type1 = #type_const{type = atom},
+  {ok, Ast1} = infer("x = :ok x"),
+  ?assertEqual(Type1, gleam_type:fetch(Ast1)).
+
+infer_unknown_var_test() ->
+  ?assertEqual({error, {var_not_found, #ast_var{name = "something"}}},
+               infer("something")).
+

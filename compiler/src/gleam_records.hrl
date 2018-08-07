@@ -1,113 +1,122 @@
 -define(print(Var), io:format("DEBUG: ~p:~p - ~p~n~n ~p~n~n", [?MODULE, ?LINE, ??Var, Var])).
 
 -record(meta, {line = 1 :: non_neg_integer()}).
+-type meta() :: #meta{}.
 
 -type export() :: {string(), non_neg_integer()}.
 -type type_annotation() :: undefined | {ok, type()}.
 
--record(ast_tuple,  {meta = #meta{}, elems = [] :: [ast_expression()]}).
--record(ast_list,   {meta = #meta{}, elems = [] :: [ast_expression()]}).
+-record(ast_tuple,
+        {meta = #meta{} :: meta(),
+         elems = [] :: [ast_expression()]}).
+
+-record(ast_list,
+        {meta = #meta{} :: meta(),
+         elems = [] :: [ast_expression()]}).
 
 -record(ast_int,
         {meta = #meta{} :: #meta{},
          value :: integer()}).
 
 -record(ast_float,
-        {meta = #meta{} :: #meta{},
+        {meta = #meta{} :: meta(),
          value :: float()}).
 
 -record(ast_atom,
-        {meta = #meta{} :: #meta{},
+        {meta = #meta{} :: meta(),
          value :: string()}).
 
 -record(ast_string,
-        {meta = #meta{} :: #meta{},
+        {meta = #meta{} :: meta(),
          value :: binary()}).
 
--record(ast_var, {meta = #meta{}, name :: string()}).
+-record(ast_var,
+        {meta = #meta{},
+         type :: type_annotation(),
+         name :: string()}).
 
 -record(ast_closure,
-        {meta = #meta{} :: #meta{},
+        {meta = #meta{} :: meta(),
          args = [] :: [string()],
          body :: ast_expression()}).
 
 -record(ast_call,
-        {meta = #meta{} :: #meta{},
+        {meta = #meta{} :: meta(),
          module :: string(),
          name :: string(),
          args = [] :: [ast_expression()]}).
 
 -record(ast_cons,
-        {meta = #meta{} :: #meta{},
+        {meta = #meta{} :: meta(),
          head :: ast_expression(),
          tail :: ast_expression()}).
 
 -record(ast_closure_call,
-        {meta = #meta{} :: #meta{},
+        {meta = #meta{} :: meta(),
          closure :: ast_expression(),
          args = [] :: [ast_expression()]}).
 
 -record(ast_raise,
-        {meta = #meta{} :: #meta{},
+        {meta = #meta{} :: meta(),
          value :: ast_expression()}).
 
 -record(ast_throw,
-        {meta = #meta{} :: #meta{},
+        {meta = #meta{} :: meta(),
          value :: ast_expression()}).
 
 -record(ast_local_call,
-        {meta = #meta{} :: #meta{},
+        {meta = #meta{} :: meta(),
          name :: string(),
          args = [] :: [ast_expression()]}).
 
 -record(ast_assignment,
-        {meta = #meta{} :: #meta{},
+        {meta = #meta{} :: meta(),
          name :: string(),
          value :: ast_expression(),
          then :: ast_expression()}).
 
 -record(ast_adt,
-        {meta = #meta{} :: #meta{},
+        {meta = #meta{} :: meta(),
          name :: string(),
          elems = [] :: [ast_expression()]}).
 
 -record(ast_clause,
-        {meta = #meta{} :: #meta{},
+        {meta = #meta{} :: meta(),
          pattern :: ast_expression(),
          value :: ast_expression()}).
 
 -record(ast_case,
-        {meta = #meta{} :: #meta{},
+        {meta = #meta{} :: meta(),
          subject :: ast_expression(),
          clauses = [#ast_clause{}]}).
 
 -record(ast_record_field,
-        {meta = #meta{} :: #meta{},
+        {meta = #meta{} :: meta(),
          key :: string(),
          value :: ast_expression()}).
 
 -record(ast_record,
-        {meta = #meta{} :: #meta{},
+        {meta = #meta{} :: meta(),
          fields = [#ast_record_field{}]}).
 
 -record(ast_record_access,
-        {meta = #meta{} :: #meta{},
+        {meta = #meta{} :: meta(),
          record :: ast_expression(),
          key :: string()}).
 
 -record(ast_pipe,
-        {meta = #meta{} :: #meta{},
+        {meta = #meta{} :: meta(),
          lhs :: ast_expression(),
          rhs :: ast_expression()}).
 
 -record(ast_function,
-        {meta = #meta{} :: #meta{},
+        {meta = #meta{} :: meta(),
          name :: string(),
          args = [] :: [string()],
          body :: ast_expression()}).
 
 -record(ast_test,
-        {meta = #meta{} :: #meta{},
+        {meta = #meta{} :: meta(),
          name :: string(),
          body :: ast_expression()}).
 
