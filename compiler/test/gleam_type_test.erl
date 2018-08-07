@@ -5,7 +5,7 @@
 
 infer(Source) ->
   {ok, Tokens, _} = gleam_tokenizer:string(Source),
-  {ok, [Ast]} = gleam_parser:parse(Tokens),
+  {ok, Ast} = gleam_parser:parse(Tokens),
   gleam_type:infer(Ast).
 
 infer_int_test() ->
@@ -48,3 +48,8 @@ infer_unused_let_test() ->
   Type3 = #type_tuple{elems = [#type_const{type = atom}, #type_const{type = int}]},
   {ok, Ast3} = infer("x = :unused (:ok, 1)"),
   ?assertEqual(Type3, gleam_type:fetch(Ast3)).
+
+% infer_used_let_test() ->
+%   Type1 = #type_const{type = atom},
+%   {ok, Ast1} = infer("x = :ok x"),
+%   ?assertEqual(Type1, gleam_type:fetch(Ast1)).

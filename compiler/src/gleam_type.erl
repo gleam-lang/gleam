@@ -147,11 +147,6 @@ infer(Ast) ->
   {ok, NewAst}.
 
 -spec infer(ast_expression(), env()) -> {ast_expression(), env()}.
-% TODO: Replace list of sequences exprs with some sort of cons cell
-% style sequence type.
-infer([Ast], Env) ->
-  infer(Ast, Env);
-
 infer(#ast_assignment{name = Name, value = Value, then = Then}, Env) ->
   {InferredValue, Env2} = infer(Value, increment_env_level(Env)),
   GeneralizedType = generalize(Env#env.level, fetch(InferredValue)),

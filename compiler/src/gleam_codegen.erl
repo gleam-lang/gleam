@@ -213,6 +213,12 @@ expression(hole, Env) ->
   Name = list_to_atom([$_ | integer_to_list(UID)]),
   {cerl:c_var(Name), NewEnv};
 
+expression(#ast_seq{first = First, then = Then}, Env) ->
+  {C_first, Env1} = expression(First, Env),
+  {C_then, Env2} = expression(Then, Env1),
+  C_seq = cerl:c_seq(C_first, C_then),
+  {C_seq, Env2};
+
 expression(Expressions, Env) when is_list(Expressions) ->
   {C_exprs, Env1} = map_expressions(Expressions, Env),
   [Head | Tail] = lists:reverse(C_exprs),

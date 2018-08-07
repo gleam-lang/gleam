@@ -58,9 +58,9 @@ function -> kw_fn call args ')' '{' exprs '}' : function('$2', '$3', '$6').
 
 test -> kw_test name '{' exprs '}' : test('$2', '$4').
 
-exprs -> name '=' expr exprs : [assignment('$2', '$1', '$3', '$4')].
-exprs -> expr                : ['$1'].
-exprs -> expr exprs          : ['$1'|'$2'].
+exprs -> name '=' expr exprs : assignment('$2', '$1', '$3', '$4').
+exprs -> expr                : '$1'.
+exprs -> expr exprs          : seq('$1', '$2').
 
 expr -> literal                    : '$1'.
 expr -> container                  : '$1'.
@@ -173,6 +173,9 @@ mod_fun(Function, Module) ->
 mod_test(Test, Module) ->
   #ast_module{tests = Tests} = Module,
   Module#ast_module{tests = [Test | Tests]}.
+
+seq(First, Then) ->
+  #ast_seq{first = First, then = Then}.
 
 raise({kw_raise, Meta}, Value) ->
   #ast_raise{meta = Meta, value = Value}.

@@ -9,28 +9,28 @@ parse(Tokens) -> element(2, gleam_parser:parse(Tokens)).
         ?assertMatch(Tokens, parse(tokens(Code)))).
 
 literal_test() ->
-  ?assertAST("1",   [#ast_int{value = 1}]),
-  ?assertAST("1.2", [#ast_float{value = 1.2}]),
-  ?assertAST(":ok", [#ast_atom{value = "ok"}]),
-  ?assertAST("\"Hello world\"", [#ast_string{value = <<"Hello world">>}]).
+  ?assertAST("1",   #ast_int{value = 1}),
+  ?assertAST("1.2", #ast_float{value = 1.2}),
+  ?assertAST(":ok", #ast_atom{value = "ok"}),
+  ?assertAST("\"Hello world\"", #ast_string{value = <<"Hello world">>}).
 
 var_test() ->
-  ?assertAST("value", [#ast_var{name = "value"}]).
+  ?assertAST("value", #ast_var{name = "value"}).
 
 tuple_test() ->
   ?assertAST("()",
-             [#ast_tuple{meta = #meta{line = 1},
-                         elems = []}]),
+             #ast_tuple{meta = #meta{line = 1},
+                        elems = []}),
   ?assertAST("(:54)",
-             [#ast_tuple{meta = #meta{line = 1},
-                         elems = [#ast_atom{value = "54"}]}]),
+             #ast_tuple{meta = #meta{line = 1},
+                        elems = [#ast_atom{value = "54"}]}),
   ?assertAST("(\n  200,)",
-             [#ast_tuple{meta = #meta{line = 1},
-                         elems = [#ast_int{value = 200}]}]),
+             #ast_tuple{meta = #meta{line = 1},
+                        elems = [#ast_int{value = 200}]}),
   ?assertAST("(:ok, 7)",
-             [#ast_tuple{meta = #meta{line = 1},
-                         elems = [#ast_atom{value = "ok"},
-                                  #ast_int{value = 7}]}]).
+             #ast_tuple{meta = #meta{line = 1},
+                        elems = [#ast_atom{value = "ok"},
+                                 #ast_int{value = 7}]}).
 
 module_test() ->
   Code =
@@ -47,21 +47,20 @@ module_test() ->
         { meta = #meta{line = 2}
         , name = "id"
         , args = ["x"]
-        , body = [#ast_var{name = "x", meta = #meta{line = 2}}]
+        , body = #ast_var{name = "x", meta = #meta{line = 2}}
         }
       , #ast_function
         { meta = #meta{line = 3}
         , name = "ok"
         , args = ["val"]
         , body =
-          [ #ast_tuple
-            {meta = #meta{line = 3},
-             elems =
-              [ #ast_atom{meta = #meta{line = 3}, value = "ok"}
-              , #ast_var{meta = #meta{line = 3}, name = "val"}
-              ]
-            }
-          ]
+          #ast_tuple
+          {meta = #meta{line = 3},
+           elems =
+            [ #ast_atom{meta = #meta{line = 3}, value = "ok"}
+            , #ast_var{meta = #meta{line = 3}, name = "val"}
+            ]
+          }
         }
       ]
     },
@@ -82,15 +81,14 @@ arity_2_test() ->
         , name = "add"
         , args = ["x", "y"]
         , body =
-          [ #ast_local_call
-            { meta = #meta{line = 2}
-            , name = "+"
-            , args =
-              [ #ast_var{meta = #meta{line = 2}, name = "x"}
-              , #ast_var{meta = #meta{line = 2}, name = "y"}
-              ]
-            }
-          ]
+          #ast_local_call
+          { meta = #meta{line = 2}
+          , name = "+"
+          , args =
+            [ #ast_var{meta = #meta{line = 2}, name = "x"}
+            , #ast_var{meta = #meta{line = 2}, name = "y"}
+            ]
+          }
         }
       ]
     },
@@ -111,13 +109,12 @@ call_test() ->
         , name = "run"
         , args = []
         , body =
-          [ #ast_local_call
-            { meta = #meta{line = 2}
-            , name = "print"
-            , args =
-              [#ast_int{meta = #meta{line = 2}, value = 20}]
-            }
-          ]
+          #ast_local_call
+          { meta = #meta{line = 2}
+          , name = "print"
+          , args =
+            [#ast_int{meta = #meta{line = 2}, value = 20}]
+          }
         }
       ]
     },
@@ -149,12 +146,11 @@ adt_test() ->
         , name = "ok"
         , args = []
         , body =
-          [ #ast_adt
-            { meta = #meta{line = 2}
-            , name = "Ok"
-            , elems = [#ast_int{meta = #meta{line = 2}, value = 1}]
-            }
-          ]
+          #ast_adt
+          { meta = #meta{line = 2}
+          , name = "Ok"
+          , elems = [#ast_int{meta = #meta{line = 2}, value = 1}]
+          }
         }
       ]
     },
@@ -171,7 +167,18 @@ test_test() ->
     , tests =
       [#ast_test{meta = #meta{line = 2},
                 name = "ok",
-                body = [#ast_atom{meta = #meta{line = 2}, value = "ok"}]}]
+                body = #ast_atom{meta = #meta{line = 2}, value = "ok"}}]
     , functions = []
     },
+  ?assertEqual(AST, parse(tokens(Code))).
+
+sequence_test() ->
+  Code =
+    "1 2 3"
+  ,
+  AST =
+    #ast_seq{first = #ast_int{value = 1},
+             then = #ast_seq{first = #ast_int{value = 2},
+                             then = #ast_int{value = 3}}}
+  ,
   ?assertEqual(AST, parse(tokens(Code))).

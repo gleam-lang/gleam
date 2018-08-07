@@ -117,6 +117,10 @@
          functions = [] :: [#ast_function{}],
          tests = [] :: [#ast_test{}]}).
 
+-record(ast_seq,
+        {first :: ast_expression(),
+         then :: ast_expression()}).
+
 -type ast_expression()
       :: #ast_adt{}
       | #ast_assignment{}
@@ -137,7 +141,8 @@
       | #ast_string{}
       | #ast_throw{}
       | #ast_tuple{}
-      | #ast_var{}.
+      | #ast_var{}
+      | #ast_seq{}.
 
 %
 % Types
