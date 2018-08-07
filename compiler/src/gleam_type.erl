@@ -13,6 +13,8 @@
 -type env() :: #env{}.
 -type var_name() :: string().
 
+-type error() :: {var_not_found, #ast_var{}}.
+
 % let new_var level = TVar (ref (Unbound (next_id (), level)))
 
 % let new_gen_var () = TVar (ref (Generic (next_id ())))
@@ -44,7 +46,7 @@
 %         param_ty_list arg_list ;
 %       return_ty
 
--spec infer(ast_expression()) -> {ok, ast_expression()}.
+-spec infer(ast_expression()) -> {ok, ast_expression()} | {error, error()}.
 infer(Ast) ->
   try
     {NewAst, _Env} = infer(Ast, new_env()),
