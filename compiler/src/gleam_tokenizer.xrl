@@ -2,7 +2,7 @@ Definitions.
 
 Int     = [-+]?[0-9]+
 Float   = [-+]?[0-9]+\.[0-9]+
-WS      = [\n\s]
+WS      = [\n\s;]
 Atom    = :[a-zA-Z0-9!\?_]+
 Name    = [a-z][a-zA-Z0-9_]*
 UpName  = [A-Z][a-zA-Z0-9!\?_]*

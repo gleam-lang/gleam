@@ -72,5 +72,7 @@ dot_test() ->
      [{upname, _, "Mod"}, {'.', _}, {call, _, "f"}, {')', _}]).
 
 whitespace_test() ->
+  ?assertTokens(";", []),
+
   ?assertEqual({error,{2,gleam_tokenizer,{illegal,"\t"}},2},
                gleam_tokenizer:string("module Foo\n\t")).
