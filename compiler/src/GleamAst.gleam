@@ -8,9 +8,27 @@ type Meta =
   | Meta(Int)
 ; // Fix GitHub syntax highlighting
 
-type alias Type =
-  Foreign
+type ConstType =
+  | ConstInt tag :int
+  | ConstFloat tag :float
+  | ConstAtom tag :atom
+  | ConstString tag :string
+
+type Type(var_type) =
+  | TypeConst(ConstType)
+  | TypeTuple(List(Type(var_type)))
+  | TypeFunc(List(Type(var_type)), Type(var_type))
+  | TypeVar(var_type)
 ;
+
+type alias TypeRef =
+  Reference
+
+type alias ResolvedType =
+  Type(Unit)
+
+type alias UnresolvedType =
+  Type(TypeRef)
 
 type Ast =
   | Mod(Module)
@@ -35,7 +53,7 @@ type Expr(type_) =
   | AstAtom(Meta, Charlist)
   | AstCall(Meta, String, String, List(Expr(type_)))
   | AstCase(Meta, Expr(type_), Clause)
-  | AstClosure(Meta, List(Charlist), Expr(type_))
+  | AstClosure(Meta, type_, List(Charlist), Expr(type_))
   | AstClosureCall(Meta, Expr(type_), List(Expr(type_)))
   | AstCons(Meta, Expr(type_), Expr(type_))
   | AstFloat(Meta, Float)

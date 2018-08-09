@@ -12,40 +12,48 @@ test_infer(Cases) ->
   TestCase =
     fun({Src, Type}) ->
       {ok, Ast} = infer(Src),
-      ?assertEqual(Type, gleam_type:fetch(Ast))
+      ActualType = gleam_type:fetch(Ast),
+      ?assertEqual(Type, gleam_type:type_to_string(ActualType))
     end,
   lists:foreach(TestCase, Cases).
 
 infer_const_test() ->
   Cases = [
-    {"1", #type_const{type = int}},
-    {":ok", #type_const{type = atom}},
-    {"1.0", #type_const{type = float}},
-    {"\"123\"", #type_const{type = string}}
+    {"1", "Int"},
+    {":ok", "Atom"},
+    {"1.0", "Float"},
+    {"\"123\"", "String"}
   ],
   test_infer(Cases).
 
 infer_tuple_test() ->
   Cases = [
-    {"(:ok, 1, (1.0, \"\"))",
-     #type_tuple{elems = [#type_const{type = atom},
-                          #type_const{type = int},
-                          #type_tuple{elems = [#type_const{type = float},
-                                               #type_const{type = string}]}]}}
+    {"(0.0)", "(Float)"},
+    {"(:ok, 1)", "(Atom, Int)"},
+    {"(:ok, 1, (1.0, \"\"))", "(Atom, Int, (Float, String))"}
   ],
   test_infer(Cases).
 
 infer_let_test() ->
   Cases = [
-    {"x = :unused 1", #type_const{type = int}},
-    {"x = :unused 1.1", #type_const{type = float}},
-    {"x = :unused (:ok, 1)",
-     #type_tuple{elems = [#type_const{type = atom}, #type_const{type = int}]}},
-    {"x = :ok x", #type_const{type = atom}},
-    {"x = 5 y = x y", #type_const{type = int}}
+    {"x = :unused 1", "Int"},
+    {"x = :unused 1.1", "Float"},
+    {"x = :unused (:ok, 1)", "(Atom, Int)"},
+    {"x = :ok x", "Atom"},
+    {"x = 5 y = x y", "Int"}
   ],
   test_infer(Cases).
 
 infer_unknown_var_test() ->
   ?assertEqual({error, {var_not_found, #ast_var{name = "something"}}},
                infer("something")).
+
+infer_closure_test() ->
+  Cases = [
+    {"fn() { 1 }", "fn() { Int }"},
+    {"fn() { 1.1 }", "fn() { Float }"},
+    {"fn(x) { 1.1 }", "fn(a) { Float }"}
+    % {"fn(x) { x }", "fn(a) { a }"}
+    % {"x = fn(x) { 1.1 } x", "fn(a) { Float }"}
+  ],
+  test_infer(Cases).

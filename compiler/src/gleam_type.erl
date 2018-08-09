@@ -1,6 +1,6 @@
 -module(gleam_type).
 
--export([infer/1, fetch/1]).
+-export([infer/1, fetch/1, type_to_string/1]).
 
 -include("gleam_records.hrl").
 
@@ -8,14 +8,26 @@
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
-
--record(env, {level = 1 :: level(), vars = #{}}).
--type env() :: #env{}.
 -type var_name() :: string().
+
+-record(env,
+        {level = 1 :: level(),
+         vars = #{} :: #{var_name() => type()},
+         type_refs = #{} :: #{reference() => type_var()}}).
+
+-type env() :: #env{}.
 
 -type error() :: {var_not_found, #ast_var{}}.
 
 % let new_var level = TVar (ref (Unbound (next_id (), level)))
+
+-spec new_var(env()) -> {type(), env()}.
+new_var(Env) ->
+  Ref = erlang:make_ref(),
+  Type = #type_var{type = Ref},
+  TypeVar = #type_var_unbound{id = make_ref(), level = env_level(Env)},
+  NewEnv = env_put_type_ref(Ref, TypeVar, Env),
+  {Type, NewEnv}.
 
 % let new_gen_var () = TVar (ref (Generic (next_id ())))
 
@@ -49,13 +61,28 @@
 -spec infer(ast_expression()) -> {ok, ast_expression()} | {error, error()}.
 infer(Ast) ->
   try
-    {NewAst, _Env} = infer(Ast, new_env()),
-    {ok, NewAst}
+    {NewAst, Env} = infer(Ast, new_env()),
+    ResolvedAst = resolve_type_vars(NewAst, Env),
+    {ok, ResolvedAst}
   catch
     throw:{gleam_type_error, Error} -> {error, Error}
   end.
 
 -spec infer(ast_expression(), env()) -> {ast_expression(), env()}.
+infer(Ast = #ast_closure{args = Args, body = Body}, Env) ->
+  {ArgTypes, ArgsEnv} = gleam:thread_map(fun(_, E) -> new_var(E) end, Args, Env),
+  Insert =
+    fun({Name, Type}, E) ->
+      env_extend(Name, Type, E)
+    end,
+  FnEnv = lists:foldl(Insert, ArgsEnv, lists:zip(Args, ArgTypes)),
+  {ReturnAst, ReturnEnv} = infer(Body, FnEnv),
+  ReturnType = fetch(ReturnAst),
+  Type = #type_func{args = ArgTypes, return = ReturnType},
+  AnnotatedAst = Ast#ast_closure{type = {ok, Type}},
+  FinalEnv = Env#env{type_refs = ReturnEnv#env.type_refs},
+  {AnnotatedAst, FinalEnv};
+
 infer(Ast = #ast_var{name = Name}, Env) ->
   case env_lookup(Name, Env) of
     {ok, Type} ->
@@ -90,7 +117,11 @@ infer(Ast = #ast_string{}, Env) ->
 infer(Ast = #ast_atom{}, Env) ->
   {Ast, Env}.
 
+
 -spec fetch(ast_expression()) -> type().
+fetch(#ast_closure{type = {ok, Type}}) ->
+  Type;
+
 fetch(#ast_var{type = {ok, Type}}) ->
   Type;
 
@@ -99,16 +130,53 @@ fetch(#ast_tuple{elems = Elems}) ->
   #type_tuple{elems = ElemsTypes};
 
 fetch(#ast_int{}) ->
-  #type_const{type = int};
+  #type_const{type = "Int"};
 
 fetch(#ast_atom{}) ->
-  #type_const{type = atom};
+  #type_const{type = "Atom"};
 
 fetch(#ast_float{}) ->
-  #type_const{type = float};
+  #type_const{type = "Float"};
 
 fetch(#ast_string{}) ->
-  #type_const{type = string}.
+  #type_const{type = "String"};
+
+fetch(Other) ->
+  error({unable_to_fetch_type, Other}).
+
+
+-spec resolve_type_vars(ast_expression(), env()) -> ast_expression().
+resolve_type_vars(Ast = #ast_closure{type = {ok, Type}}, Env) ->
+  NewType = do_resolve_type_vars(Type, Env),
+  Ast#ast_closure{type = {ok, NewType}};
+
+resolve_type_vars(Ast = #ast_var{type = {ok, Type}}, Env) ->
+  NewType = do_resolve_type_vars(Type, Env),
+  Ast#ast_var{type = {ok, NewType}};
+
+resolve_type_vars(Ast = #ast_tuple{elems = Elems}, Env) ->
+  NewElems = lists:map(fun(X) -> resolve_type_vars(X, Env) end, Elems),
+  Ast#ast_tuple{elems = NewElems};
+
+resolve_type_vars(Ast = #ast_int{}, _) -> Ast;
+resolve_type_vars(Ast = #ast_atom{}, _) -> Ast;
+resolve_type_vars(Ast = #ast_float{}, _) -> Ast;
+resolve_type_vars(Ast = #ast_string{}, _) -> Ast;
+resolve_type_vars(Ast, _) -> error({unable_to_resolve_type_vars_for, Ast}).
+
+
+-spec do_resolve_type_vars(type(), env()) -> type().
+do_resolve_type_vars(Type = #type_const{}, _) ->
+  Type;
+do_resolve_type_vars(#type_func{args = Args, return = Return}, Env) ->
+  NewArgs = lists:map(fun(X) -> do_resolve_type_vars(X, Env) end, Args),
+  NewReturn = do_resolve_type_vars(Return, Env),
+  #type_func{args = NewArgs, return = NewReturn};
+do_resolve_type_vars(#type_var{type = Ref}, Env) ->
+  case env_lookup_type_ref(Ref, Env) of
+    #type_var_unbound{id = Id} -> #type_var{type = Id}
+  end.
+
 
 -spec new_env() -> env().
 new_env() ->
@@ -142,6 +210,16 @@ env_extend(Name, GeneralizedType, Env = #env{vars = Vars}) ->
 -spec env_lookup(var_name(), env()) -> error | {ok, type()}.
 env_lookup(Name, #env{vars = Vars}) ->
   maps:find(Name, Vars).
+
+-spec env_lookup_type_ref(type_var_reference(), env()) -> type_var().
+env_lookup_type_ref(Name, #env{type_refs = Refs}) ->
+  {ok, TVar} = maps:find(Name, Refs),
+  TVar.
+
+-spec env_put_type_ref(type_var_reference(), type_var(), env()) -> env().
+env_put_type_ref(Ref, TypeVar, Env = #env{type_refs = Refs}) ->
+  NewRefs = maps:put(Ref, TypeVar, Refs),
+  Env#env{type_refs = NewRefs}.
 
 % let rec generalize level tvar =
 %   match tvar with
@@ -245,3 +323,54 @@ instantiate(Type = #type_const{}, Env) ->
 %       tvar := Link (TArrow (param_ty_list, return_ty)) ;
 %       (param_ty_list, return_ty)
 %   | _ -> error "expected a function"
+
+% TODO: Don't use process dictionary
+type_to_string(Type) ->
+  put(gleam_id_name_map, #{}),
+  put(gleam_type_to_string_count, 0),
+  NextName =
+    fun() ->
+      I = get(gleam_type_to_string_count),
+      put(gleam_type_to_string_count, I + 1),
+      [97 + I rem 26]
+    end,
+  ToString =
+    fun
+      (_, #type_const{type = Name}) ->
+        Name;
+
+      % (F, #type_app{type = AppType, args = TypeArgList}) ->
+      %   F(F, true, AppType)
+      %   ++ "["
+      %   ++ lists:map(fun(X) -> F(F, false, X) end, TypeArgList)
+      %   ++ "]";
+
+      (F, #type_tuple{elems = Elems}) ->
+        "("
+        ++ lists:concat(lists:join(", ", lists:map(fun(X) -> F(F, X) end, Elems)))
+        ++ ")";
+
+      (F, #type_func{args = ParamTypeList, return = ReturnType}) ->
+        "fn("
+        ++ lists:concat(lists:join(", ", lists:map(fun(X) -> F(F, X) end,
+                                                    ParamTypeList)))
+        ++ ") { "
+        ++ F(F, ReturnType)
+        ++ " }";
+
+      (_, #type_var{type = Id}) ->
+        Names = get(gleam_id_name_map),
+        case maps:find(Id, Names) of
+          {ok, Name} ->
+            Name;
+
+          error ->
+            Name = NextName(),
+            put(gleam_id_name_map, maps:put(Id, Name, Names)),
+            Name
+        end
+    end,
+  String = ToString(ToString, Type),
+  put(gleam_id_name_map, undefined),
+  put(gleam_type_to_string_count, undefined),
+  String.
