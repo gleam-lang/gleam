@@ -1,10 +1,6 @@
 -module(gleam).
 
--export([identity/1, thread_map/3]).
-
-%% Return the argument
-%%
-identity(X) -> X.
+-export([thread_map/3]).
 
 %% Both map over a list and reduce over it with some accumulator at
 %% the same time. Used for modeling mapping over a list with some
