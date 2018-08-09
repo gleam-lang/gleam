@@ -9,7 +9,6 @@ fn run() {
   loop(secret_number)
 }
 
-spec |Int| -> ()
 fn loop(secret_number) {
   IO.write("What's your guess? ")
   guess = IO.read_line() |> String.trim |> String.to_int
@@ -25,7 +24,6 @@ fn loop(secret_number) {
 doc """
 Here is some documentation! Hooray!
 """
-spec |Int, Int| -> ()
 fn compare(guess, secret_number) {
   case Int.compare(i, secret_number) {
   | LT =>

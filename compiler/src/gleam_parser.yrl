@@ -15,7 +15,7 @@ Terminals
 int float atom string
 hole name upname call upcall
 kw_module kw_exposing
-kw_fn kw_case kw_test
+kw_fn kw_fn_call kw_case kw_test
 kw_raise kw_throw.
 
 Rootsymbol source.
@@ -144,8 +144,8 @@ elems_pattern -> pattern                   : ['$1'].
 elems_pattern -> pattern ','               : ['$1'].
 elems_pattern -> pattern ',' elems_pattern : ['$1' | '$3'].
 
-literal -> '|' '|' expr      : closure('$1', [], '$3').
-literal -> '|' args '|' expr : closure('$1', '$2', '$4').
+literal -> kw_fn_call ')' '{' expr '}'      : closure('$1', [], '$4').
+literal -> kw_fn_call args ')' '{' expr '}' : closure('$1', '$2', '$5').
 literal -> atom              : literal('$1').
 literal -> int               : literal('$1').
 literal -> float             : literal('$1').
@@ -186,7 +186,7 @@ throw_({kw_throw, Meta}, Value) ->
 test({name, Meta, Name}, Body) ->
   #ast_test{meta = Meta, name = Name, body = Body}.
 
-closure({'|', Meta}, Args, Body) ->
+closure({_, Meta}, Args, Body) ->
   #ast_closure{meta = Meta, args = Args, body = Body}.
 
 cons({'::', Meta}, Head, Tail) ->

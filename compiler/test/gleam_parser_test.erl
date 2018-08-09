@@ -182,3 +182,40 @@ sequence_test() ->
                              then = #ast_int{value = 3}}}
   ,
   ?assertEqual(AST, parse(tokens(Code))).
+
+closure_test() ->
+  Code =
+    "module MyModule\n"
+    "fn thunk(x) { fn() { x } }"
+    "fn make_identity() { fn(x) { x } }"
+  ,
+  AST =
+    #ast_module
+    { name = "MyModule"
+    , tests = []
+    , functions =
+      [ #ast_function
+        { meta = #meta{line = 2}
+        , name = "thunk"
+        , args = ["x"]
+        , body =
+          #ast_closure
+          { meta = #meta{line = 2}
+          , args = []
+          , body = #ast_var{meta = #meta{line = 2}, name = "x"}
+          }
+        },
+        #ast_function
+        { meta = #meta{line = 2}
+        , name = "make_identity"
+        , args = []
+        , body =
+          #ast_closure
+          { meta = #meta{line = 2}
+          , args = ["x"]
+          , body = #ast_var{meta = #meta{line = 2}, name = "x"}
+          }
+        }
+      ]
+    },
+  ?assertEqual(AST, parse(tokens(Code))).

@@ -6,7 +6,7 @@ import Maybe exposing Maybe(..)
 
 // Using the Erlang C BIF implementation.
 //
-external length : |List(a)| -> Int = :erlang.length
+external length : fn(List(a)) { Int } = :erlang :length
 
 test length {
   length([]) |> Assert.equal(_, 0)
@@ -17,7 +17,7 @@ test length {
 
 // Using the Erlang C BIF implementation.
 //
-external reverse : |List(a)| -> List(a) = :erlang.reverse
+external reverse : fn(List(a)) { List(a) } = :erlang :reverse
 
 test reverse {
   length([]) |> Assert.equal(_, [])
@@ -77,10 +77,18 @@ fn filter(list, fun) {
 }
 
 test filter {
-  filter([], |x| True) |> Assert.equal(_, [])
-  filter([0, 4, 5, 7, 3], |x| True) |> Assert.equal(_, [0, 4, 5, 7, 3])
-  filter([0, 4, 5, 7, 3], |x| x > 4) |> Assert.equal(_, [5, 7])
-  filter([0, 4, 5, 7, 3], |x| x < 4) |> Assert.equal(_, [0, 3])
+  []
+    |> filter(_, fn(x) { True })
+    |> Assert.equal(_, [])
+  [0, 4, 5, 7, 3]
+    |> filter(_, fn(x) { True })
+    |> Assert.equal(_, [0, 4, 5, 7, 3])
+  [0, 4, 5, 7, 3]
+    |> filter(_, fn(x) { x > 4 })
+    |> Assert.equal(_, [5, 7])
+  [0, 4, 5, 7, 3]
+    |> filter(_, fn(x) { x < 4 })
+    |> Assert.equal(_, [0, 3])
 }
 
 fn filter(list, fun, acc) {
@@ -101,8 +109,12 @@ fn map(list, fun) {
 }
 
 test map {
-  map([], |x| * 2) |> Assert.equal(_, [])
-  map([0, 4, 5, 7, 3], |x| x * 2) |> Assert.equal(_, [0, 8, 10, 14, 6])
+  []
+    |> map(_, fn(x) { x * 2 })
+    |> Assert.equal(_, [])
+  [0, 4, 5, 7, 3]
+    |> map(_, fn(x) { x * 2 })
+    |> Assert.equal(_, [0, 8, 10, 14, 6])
 }
 
 fn map(list, fun, acc) {
@@ -124,8 +136,12 @@ fn drop(list, n) {
 }
 
 test drop/2 {
-  drop([], 5) |> Assert.equal(_, [])
-  drop([1, 2, 3, 4, 5, 6, 7, 8], 5) |> Assert.equal(_, [6, 7, 8])
+  []
+    |> drop(_, 5)
+    |> Assert.equal(_, [])
+  [1, 2, 3, 4, 5, 6, 7, 8]
+    |> drop(_, 5)
+    |> Assert.equal(_, [6, 7, 8])
 }
 
 fn take(list, n) {
@@ -144,8 +160,12 @@ fn take(list, n, acc) {
 }
 
 test take {
-  take([], 5) |> Assert.equal(_, [])
-  take([1, 2, 3, 4, 5, 6, 7, 8], 5) |> Assert.equal(_, [1, 2, 3, 4, 5])
+  []
+    |> take(_, 5)
+    |> Assert.equal(_, [])
+  [1, 2, 3, 4, 5, 6, 7, 8]
+    |> take(_, 5)
+    |> Assert.equal(_, [1, 2, 3, 4, 5])
 }
 
 fn of(x) {
@@ -191,7 +211,8 @@ fn foldl(list, acc, fun) {
 }
 
 test foldl() {
-  foldl([1, 2, 3], [], |x, acc| x :: acc)
+  [1, 2, 3]
+    |> foldl(_, [], fn(x, acc) { x :: acc })
     |> Assert.equal(_, [3, 2, 1])
 }
 
@@ -203,6 +224,7 @@ fn foldr(list, acc, fun) {
 }
 
 test foldr() {
-  foldr([1, 2, 3], [], |x, acc| x :: acc)
+  [1, 2, 3]
+    |> foldr(_, [], |x, acc| x :: acc)
     |> Assert.equal(_, [1, 2, 3])
 }

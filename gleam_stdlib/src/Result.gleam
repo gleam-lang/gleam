@@ -46,20 +46,28 @@ fn map(result, fun) {
 }
 
 test map {
-  map(Ok(1), |x| x + 1) |> Assert.equal(_, Ok(2))
-  map(Error(1), |x| x + 1) |> Assert.equal(Error(1))
+  Ok(1)
+    |> map(_, fn(x) { x + 1 })
+    |> Assert.equal(_, Ok(2))
+  Error(1)
+    |> map(_, fn(x) { x + 1 })
+    |> Assert.equal(Error(1))
 }
 
 fn map_error(result, fun) {
   case result {
   | Ok(_) => result
-  | Error(error) => error |> fun |> Error
+  | Error(error) => Error(fun(error))
   }
 }
 
 test map_error {
-  map_error(Ok(1), |x| x + 1) |> Assert.equal(_, Ok(1))
-  map_error(Error(1), |x| x + 1) |> Assert.equal(Error(2))
+  Ok(1)
+    |> map_error(_, fn(x) { x + 1 })
+    |> Assert.equal(_, Ok(1))
+  Error(1)
+    |> map_error(_, fn(x) { x + 1 })
+    |> Assert.equal(_, Error(2))
 }
 
 fn flatten(result) {
@@ -70,9 +78,12 @@ fn flatten(result) {
 }
 
 test flatten {
-  flatten(Ok(Ok(1))) |> Assert.equal(_, Ok(1))
-  flatten(Ok(Error(1))) |> Assert.equal(_, Error(1))
-  flatten(Error(1)) |> Assert.equal(_, Error(1))
+  flatten(Ok(Ok(1)))
+    |> Assert.equal(_, Ok(1))
+  flatten(Ok(Error(1)))
+    |> Assert.equal(_, Error(1))
+  flatten(Error(1))
+    |> Assert.equal(_, Error(1))
 }
 
 fn flat_map(result, fun) {
@@ -82,9 +93,15 @@ fn flat_map(result, fun) {
 }
 
 test flat_map {
-  flat_map(Error(1), |x| Ok(x + 1)) |> Assert.equal(_, Error(1))
-  flat_map(Ok(1), |x| Ok(x + 1)) |> Assert.equal(_, Ok(2))
-  flat_map(Ok(1), |_| Error(1)) |> Assert.equal(_, Error(1))
+  Error(1)
+    |> flat_map(_, fn(x) { Ok(x + 1) })
+    |> Assert.equal(_, Error(1))
+  Ok(1)
+    |> flat_map(_, fn(x) { Ok(x + 1) })
+    |> Assert.equal(_, Ok(2))
+  Ok(1)
+    |> flat_map(_, fn(_) { Error(1) })
+    |> Assert.equal(_, Error(1))
 }
 
 fn unwrap(result, default) {

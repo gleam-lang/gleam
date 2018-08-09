@@ -13,12 +13,12 @@ import Foreign exposing Foreign
 external type Caller
 
 external foreign_start_link
-  : |Atom, arg, List(Atom, Foreign)| -> Result(StartError, Pid)
-  = :gen_server.start_link
+  : fn(Atom, arg, List(Atom, Foreign)) { Result(StartError, Pid) }
+  = :gen_server :start_link
 
-external call : |Process, msg| -> reply = :gen_server.call
+external call : fn(Process, msg) { reply } = :gen_server :call
 
-external cast : |Process, msg| -> () = :gen_server.cast
+external cast : fn(Process, msg) { Unit } = :gen_server :cast
 
 // Need to add others here
 type StartError =
@@ -60,23 +60,20 @@ type Init(state) =
 
 ; // Fix GitHub syntax highlighting
 
-type alias State(error, state) {
+type alias State(error, state) =
   {
     impl_state :: state,
     impl :: Implementation(error, state),
   }
-}
 
-type alias Impl(arg, call, reply, cast, info, error, state) {
+type alias Impl(arg, call, reply, cast, info, error, state) =
   {
-    handle_call :: |call, Caller, state| -> Sync(reply, state)
-    handle_cast :: |cast, state| -> Async(state),
-    handle_info :: |info, state| -> Async(state),
-    init :: |arg| -> Init(state),
+    handle_call :: fn(call, Caller, state) { Sync(reply, state) },
+    handle_cast :: fn(cast, state) { Async(state) },
+    handle_info :: fn(info, state) { Async(state) },
+    init :: fn(arg) { Init(state) },
   }
-}
 
-spec |Impl(arg, _, _, _, _, _, _), arg| -> Result(Atom, Pid)
 fn start_link(implementation, arg) {
   Error(:not_implemented) // TODO
 }

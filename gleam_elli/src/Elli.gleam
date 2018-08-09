@@ -21,11 +21,11 @@ type alias Header =
 
 ; // Fix GitHub syntax highlighting
 
-external erl_query_string : |Request| -> String = :elli_request.query_str
+external erl_query_string : fn(Request) { String } = :elli_request :query_str
 
 external erl_start_link
-  : |List((Atom, Foreign))| -> Result(Foreign, Pid)
-  = :elli.start_link
+  : fn(List((Atom, Foreign))) { Result(Foreign, Pid) }
+  = :elli :start_link
 
 doc """
 The status code, headers and body to send back to the client.
@@ -42,30 +42,31 @@ external type Request
 doc """
 Get the request HTTP method.
 """
-external method : |Request| -> Method = :gleam_elli_native.method
+external method : fn(Request) { Method } = :gleam_elli_native :method
 
 doc """
 Get the request path segments.
 """
-external path : |Request| -> List(String) = :elli_request.path
+external path : fn(Request) { List(String) } = :elli_request :path
 
 doc """
 Get the request `raw_path', i.e. not split or parsed for query params.
 """
-external raw_path : |Request| -> String = :elli_request.raw_path
+external raw_path : fn(Request) { String } = :elli_request :raw_path
 
 doc """
 Get the request headers.
 """
-external headers : |Request| -> List((String, String)) = :elli_request.headers
+external headers : fn(Request) { List((String, String)) } = :elli_request :headers
 
 doc """
 Get the request body.
 """
-external body : |Request| -> String = :elli_request.body
+external body : fn(Request) { String } = :elli_request :body
 
 doc """
-Get the query string for the request. Returns `Nothing` string if request has no query.
+Get the query string for the request. Returns `Nothing` string if
+request has no query.
 """
 fn query_string(req) {
   case erl_query_string(req) {
@@ -84,7 +85,6 @@ type alias StartArguments =
 doc """
 Start the Elli web server process tree.
 """
-spec StartArguments -> Result(Foreign, Pid)
 fn start_link(args) {
   erl_start_link([
     (:callback, Foreign.new(args.callback)),

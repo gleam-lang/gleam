@@ -40,8 +40,8 @@ fn map(maybe, fun) {
 }
 
 test map() {
-  map(Just(1), |x| x + 1) |> Assert.equal(_, Just(2))
-  map(Nothing, |x| x + 1) |> Assert.equal(Nothing)
+  map(Just(1), fn(x) { x + 1 }) |> Assert.equal(_, Just(2))
+  map(Nothing, fn(x) { x + 1 }) |> Assert.equal(Nothing)
 }
 
 fn flatten(maybe) {
@@ -62,9 +62,12 @@ fn flat_map(maybe, fun) {
 }
 
 test flat_map() {
-  flat_map(Nothing, |x| Just(x + 1)) |> Assert.equal(Nothing)
-  flat_map(Just(1), |x| Just(x + 1)) |> Assert.equal(Just(2))
-  flat_map(Just(1), |_| Nothing) |> Assert.equal(Nothing)
+  flat_map(Nothing, fn(x) { Just(x + 1) })
+    |> Assert.equal(_, Nothing)
+  flat_map(Just(1), fn(x) { Just(x + 1) })
+    |> Assert.equal(_, Just(2))
+  flat_map(Just(1), fn(_) { Nothing })
+    |> Assert.equal(_, Nothing)
 }
 
 fn unwrap(maybe, fallback) {

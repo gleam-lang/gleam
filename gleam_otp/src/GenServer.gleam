@@ -21,9 +21,9 @@ behaviour type Pid = Process
 
 ; // Fix GitHub syntax highlighting
 
-external call : |Pid, CallMsg| ->  = :gen_server :call
+external call : fn(Pid, CallMsg) { a } = :gen_server :call
 
-external cast : |Pid, CastMsg| -> () = :gen_server :cast
+external cast : fn(Pid, CastMsg) { Unit } = :gen_server :cast
 
 // TODO: Need to add others here
 type StartError =
@@ -58,15 +58,14 @@ type Init =
 
 ; // Fix GitHub syntax highlighting
 
-callback handle_call :: |CallMsg, Caller, State| -> Sync(Reply, State)
+callback handle_call :: fn(CallMsg, Caller, State) { Sync(Reply, State) }
 
-callback handle_cast :: |CastMsg, State| -> Async(State)
+callback handle_cast :: fn(CastMsg, State) { Async(State) }
 
-callback handle_info :: |Foreign, State| -> Async(State)
+callback handle_info :: fn(Foreign, State) { Async(State) }
 
-callback init :: |Argument| -> Init(State)
+callback init :: fn(Argument) { Init(State) }
 
-spec |implementation(Self), Argument| -> Result(Atom, Pid)
-fn start_link(mod, arg) {
+fn start_link(mod: module Self, arg: Argument) {
   Error(:not_implemented) // TODO
 }

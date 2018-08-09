@@ -49,4 +49,3 @@ infer_let_test() ->
 infer_unknown_var_test() ->
   ?assertEqual({error, {var_not_found, #ast_var{name = "something"}}},
                infer("something")).
-
