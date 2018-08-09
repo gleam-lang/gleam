@@ -8,51 +8,43 @@ infer(Source) ->
   {ok, Ast} = gleam_parser:parse(Tokens),
   gleam_type:infer(Ast).
 
-infer_int_test() ->
-  Type = #type_const{type = int},
-  {ok, Ast} = infer("1"),
-  ?assertEqual(Type, gleam_type:fetch(Ast)).
+test_infer(Cases) ->
+  TestCase =
+    fun({Src, Type}) ->
+      {ok, Ast} = infer(Src),
+      ?assertEqual(Type, gleam_type:fetch(Ast))
+    end,
+  lists:foreach(TestCase, Cases).
 
-infer_atom_test() ->
-  Type = #type_const{type = atom},
-  {ok, Ast} = infer(":ok"),
-  ?assertEqual(Type, gleam_type:fetch(Ast)).
-
-infer_float_test() ->
-  Type = #type_const{type = float},
-  {ok, Ast} = infer("1.0"),
-  ?assertEqual(Type, gleam_type:fetch(Ast)).
-
-infer_string_test() ->
-  Type = #type_const{type = string},
-  {ok, Ast} = infer("\"123\""),
-  ?assertEqual(Type, gleam_type:fetch(Ast)).
+infer_const_test() ->
+  Cases = [
+    {"1", #type_const{type = int}},
+    {":ok", #type_const{type = atom}},
+    {"1.0", #type_const{type = float}},
+    {"\"123\"", #type_const{type = string}}
+  ],
+  test_infer(Cases).
 
 infer_tuple_test() ->
-  Type = #type_tuple{elems = [#type_const{type = atom},
-                              #type_const{type = int},
-                              #type_tuple{elems = [#type_const{type = float},
-                                                   #type_const{type = string}]}]},
-  {ok, Ast} = infer("(:ok, 1, (1.0, \"\"))"),
-  ?assertEqual(Type, gleam_type:fetch(Ast)).
+  Cases = [
+    {"(:ok, 1, (1.0, \"\"))",
+     #type_tuple{elems = [#type_const{type = atom},
+                          #type_const{type = int},
+                          #type_tuple{elems = [#type_const{type = float},
+                                               #type_const{type = string}]}]}}
+  ],
+  test_infer(Cases).
 
-infer_unused_let_test() ->
-  Type1 = #type_const{type = int},
-  {ok, Ast1} = infer("x = :unused 1"),
-  ?assertEqual(Type1, gleam_type:fetch(Ast1)),
-
-  Type2 = #type_const{type = float},
-  {ok, Ast2} = infer("x = :unused 1.1"),
-  ?assertEqual(Type2, gleam_type:fetch(Ast2)),
-
-  Type3 = #type_tuple{elems = [#type_const{type = atom}, #type_const{type = int}]},
-  {ok, Ast3} = infer("x = :unused (:ok, 1)"),
-  ?assertEqual(Type3, gleam_type:fetch(Ast3)).
-
-infer_used_let_test() ->
-  Type1 = #type_const{type = atom},
-  {ok, Ast1} = infer("x = :ok x"),
-  ?assertEqual(Type1, gleam_type:fetch(Ast1)).
+infer_let_test() ->
+  Cases = [
+    {"x = :unused 1", #type_const{type = int}},
+    {"x = :unused 1.1", #type_const{type = float}},
+    {"x = :unused (:ok, 1)",
+     #type_tuple{elems = [#type_const{type = atom}, #type_const{type = int}]}},
+    {"x = :ok x", #type_const{type = atom}},
+    {"x = 5 y = x y", #type_const{type = int}}
+  ],
+  test_infer(Cases).
 
 infer_unknown_var_test() ->
   ?assertEqual({error, {var_not_found, #ast_var{name = "something"}}},
