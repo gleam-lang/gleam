@@ -59,3 +59,10 @@ infer_closure_test() ->
     {"fn(x) { y = x y }", "fn(a) { a }"}
   ],
   test_infer(Cases).
+
+infer_closure_call_test() ->
+  Cases = [
+    {"id = fn(x) { x } id(1)", "Int"},
+    {"two = fn(x) { fn(y) { x } } fun = two(1) fun(:ok)", "Int"}
+  ],
+  test_infer(Cases).

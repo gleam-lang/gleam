@@ -17,7 +17,10 @@
 
 -type env() :: #env{}.
 
--type error() :: {var_not_found, #ast_var{}}.
+-type error()
+  :: {var_not_found, #ast_var{}}
+  | {cannot_unify, type(), type(), env()}
+  | {incorrect_number_of_arguments, type()}.
 
 % let new_var level = TVar (ref (Unbound (next_id (), level)))
 
@@ -69,6 +72,20 @@ infer(Ast) ->
   end.
 
 -spec infer(ast_expression(), env()) -> {ast_expression(), env()}.
+infer(Ast = #ast_local_call{name = Name, args = Args}, Env0) ->
+  {FunAst, Env1} = infer(#ast_var{name = Name}, Env0),
+  Arity = length(Args),
+  {ArgTypes, ReturnType, Env2} = match_fun_type(Arity, fetch(FunAst), Env1),
+  CheckArg =
+    fun({ArgType, ArgExpr}, CheckEnv0) ->
+      {AnnotatedExpr, CheckEnv1} = infer(ArgExpr, CheckEnv0),
+      ExprType = fetch(AnnotatedExpr),
+      unify(ArgType, ExprType, CheckEnv1)
+    end,
+  Env3 = lists:foldl(CheckArg, Env2, lists:zip(ArgTypes, Args)),
+  AnnotatedAst = Ast#ast_local_call{type = {ok, ReturnType}},
+  {AnnotatedAst, Env3};
+
 infer(Ast = #ast_closure{args = Args, body = Body}, Env) ->
   {ArgTypes, ArgsEnv} = gleam:thread_map(fun(_, E) -> new_var(E) end, Args, Env),
   Insert =
@@ -119,6 +136,9 @@ infer(Ast = #ast_atom{}, Env) ->
 
 
 -spec fetch(ast_expression()) -> type().
+fetch(#ast_local_call{type = {ok, Type}}) ->
+  Type;
+
 fetch(#ast_closure{type = {ok, Type}}) ->
   Type;
 
@@ -146,6 +166,10 @@ fetch(Other) ->
 
 
 -spec resolve_type_vars(ast_expression(), env()) -> ast_expression().
+resolve_type_vars(Ast = #ast_local_call{type = {ok, Type}}, Env) ->
+  NewType = do_resolve_type_vars(Type, Env),
+  Ast#ast_local_call{type = {ok, NewType}};
+
 resolve_type_vars(Ast = #ast_closure{type = {ok, Type}}, Env) ->
   NewType = do_resolve_type_vars(Type, Env),
   Ast#ast_closure{type = {ok, NewType}};
@@ -168,13 +192,19 @@ resolve_type_vars(Ast, _) -> error({unable_to_resolve_type_vars_for, Ast}).
 -spec do_resolve_type_vars(type(), env()) -> type().
 do_resolve_type_vars(Type = #type_const{}, _) ->
   Type;
+
 do_resolve_type_vars(#type_func{args = Args, return = Return}, Env) ->
   NewArgs = lists:map(fun(X) -> do_resolve_type_vars(X, Env) end, Args),
   NewReturn = do_resolve_type_vars(Return, Env),
   #type_func{args = NewArgs, return = NewReturn};
+
 do_resolve_type_vars(#type_var{type = Ref}, Env) ->
   case env_lookup_type_ref(Ref, Env) of
-    #type_var_unbound{id = Id} -> #type_var{type = Id}
+    #type_var_unbound{id = Id} ->
+      #type_var{type = Id};
+
+    #type_var_link{type = Type} ->
+      do_resolve_type_vars(Type, Env)
   end.
 
 
@@ -276,10 +306,13 @@ do_instantiate(#type_func{args = Args, return = Return}, State0) ->
   NewType = #type_func{args = NewArgs, return = NewReturn},
   {NewType, State2};
 
-do_instantiate(Type = #type_var{type = Ref}, {Env, IdVarMap}) ->
+do_instantiate(Type = #type_var{type = Ref}, State = {Env, _IdVarMap}) ->
   case env_lookup_type_ref(Ref, Env) of
     #type_var_unbound{} ->
-      {Type, {Env, IdVarMap}}
+      {Type, State};
+
+    #type_var_link{type = LinkedType} ->
+      do_instantiate(LinkedType, State)
   end.
 
 % let occurs_check_adjust_levels tvar_id tvar_level ty =
@@ -297,6 +330,11 @@ do_instantiate(Type = #type_var{type = Ref}, {Env, IdVarMap}) ->
 %     | TConst _ -> ()
 %   in
 %   f ty
+
+-spec occurs_check_adjust_levels(id(), type(), env()) -> env().
+occurs_check_adjust_levels(_Id, #type_const{}, Env) ->
+  Env.
+
 
 % let rec unify ty1 ty2 =
 %   if ty1 == ty2 then ()
@@ -324,6 +362,39 @@ do_instantiate(Type = #type_var{type = Ref}, {Env, IdVarMap}) ->
 %           ( "cannot unify types " ^ string_of_ty ty1 ^ " and "
 %           ^ string_of_ty ty2 )
 
+-spec unify(type(), type(), env()) -> env().
+unify(Same, Same, Env) ->
+  Env;
+unify(Type1, Type2, Env) ->
+  case {Type1, tvar_value(Type1, Env), Type2, tvar_value(Type2, Env)} of
+    {#type_const{type = Same}, _,
+     #type_const{type = Same}, _} ->
+      ok;
+
+    {_, {ok, #type_var_unbound{id = Same}},
+     _, {ok, #type_var_unbound{id = Same}}} ->
+      error(should_only_be_one_instance_of_a_particular_type_variable);
+
+    {#type_var{type = Ref}, {ok, #type_var_unbound{id = Id}},
+     Type, _} ->
+      Env1 = occurs_check_adjust_levels(Id, Type, Env),
+      env_put_type_ref(Ref, #type_var_link{type = Type}, Env1);
+
+    {Type, _,
+     #type_var{type = Ref}, {ok, #type_var_unbound{id = Id}}} ->
+      Env1 = occurs_check_adjust_levels(Id, Type, Env),
+      env_put_type_ref(Ref, #type_var_link{type = Type}, Env1);
+
+    _ ->
+      fail({cannot_unify, Type1, Type2, Env})
+  end.
+
+-spec tvar_value(type(), env()) -> type_var() | error.
+tvar_value(#type_var{type = Ref}, Env) ->
+  {ok, env_lookup_type_ref(Ref, Env)};
+tvar_value(_, _) ->
+  error.
+
 % let rec match_fun_ty num_params tvar =
 %   match tvar with
 %   | TArrow (param_ty_list, return_ty) ->
@@ -340,6 +411,14 @@ do_instantiate(Type = #type_var{type = Ref}, {Env, IdVarMap}) ->
 %       tvar := Link (TArrow (param_ty_list, return_ty)) ;
 %       (param_ty_list, return_ty)
 %   | _ -> error "expected a function"
+
+-spec match_fun_type(non_neg_integer(), type(), env()) -> {list(type()), type(), env()}.
+match_fun_type(Arity, Type = #type_func{args = Args, return = Return}, Env) ->
+  case Arity =:= length(Args) of
+    true -> {Args, Return, Env};
+    false -> fail({incorrect_number_of_arguments, Type})
+  end.
+  % {ArgTypes, ReturnType, Env2} = match_fun_type(Arity, FunAst, Env2),
 
 % TODO: Don't use process dictionary
 type_to_string(Type) ->

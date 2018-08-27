@@ -4,7 +4,7 @@
 -type meta() :: #meta{}.
 
 -type export() :: {string(), non_neg_integer()}.
--type type_annotation() :: undefined | {ok, type()}.
+-type type_annotation() :: type_not_annotated | {ok, type()}.
 
 -record(ast_tuple,
         {meta = #meta{} :: meta(),
@@ -32,12 +32,12 @@
 
 -record(ast_var,
         {meta = #meta{},
-         type :: type_annotation(),
+         type = type_not_annotated :: type_annotation(),
          name :: string()}).
 
 -record(ast_closure,
         {meta = #meta{} :: meta(),
-         type :: type_annotation(),
+         type = type_not_annotated :: type_annotation(),
          args = [] :: [string()],
          body :: ast_expression()}).
 
@@ -65,8 +65,13 @@
         {meta = #meta{} :: meta(),
          value :: ast_expression()}).
 
+% TODO: It sucks that the local call assumes that the local call
+% assumes that there is a variable name like so `my_fun()`, this
+% means we can't do things like this `get_fun()()` without writing
+% it as `x = get_fun(); x()`
 -record(ast_local_call,
         {meta = #meta{} :: meta(),
+         type = type_not_annotated :: type_annotation(),
          name :: string(),
          args = [] :: [ast_expression()]}).
 
