@@ -262,8 +262,25 @@ generalize(_Level, Type) ->
 %   f ty
 
 -spec instantiate(type(), env()) -> {type(), env()}.
-instantiate(Type = #type_const{}, Env) ->
-  {Type, Env}.
+instantiate(Type, Env) ->
+  {NewType, {NewEnv, _IdVarMap}} = do_instantiate(Type, {Env, #{}}),
+  {NewType, NewEnv}.
+
+-spec do_instantiate(type(), {env(), map()}) -> {type(), {env(), map()}}.
+do_instantiate(Type = #type_const{}, State) ->
+  {Type, State};
+
+do_instantiate(#type_func{args = Args, return = Return}, State0) ->
+  {NewArgs, State1} = gleam:thread_map(fun do_instantiate/2, Args, State0),
+  {NewReturn, State2} = do_instantiate(Return, State1),
+  NewType = #type_func{args = NewArgs, return = NewReturn},
+  {NewType, State2};
+
+do_instantiate(Type = #type_var{type = Ref}, {Env, IdVarMap}) ->
+  case env_lookup_type_ref(Ref, Env) of
+    #type_var_unbound{} ->
+      {Type, {Env, IdVarMap}}
+  end.
 
 % let occurs_check_adjust_levels tvar_id tvar_level ty =
 %   let rec f = function

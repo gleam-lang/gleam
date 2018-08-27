@@ -52,8 +52,8 @@ infer_closure_test() ->
   Cases = [
     {"fn() { 1 }", "fn() { Int }"},
     {"fn() { 1.1 }", "fn() { Float }"},
-    {"fn(x) { 1.1 }", "fn(a) { Float }"}
-    % {"fn(x) { x }", "fn(a) { a }"}
-    % {"x = fn(x) { 1.1 } x", "fn(a) { Float }"}
+    {"fn(x) { 1.1 }", "fn(a) { Float }"},
+    {"fn(x) { x }", "fn(a) { a }"},
+    {"x = fn(x) { 1.1 } x", "fn(a) { Float }"}
   ],
   test_infer(Cases).
