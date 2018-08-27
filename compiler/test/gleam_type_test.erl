@@ -54,6 +54,8 @@ infer_closure_test() ->
     {"fn() { 1.1 }", "fn() { Float }"},
     {"fn(x) { 1.1 }", "fn(a) { Float }"},
     {"fn(x) { x }", "fn(a) { a }"},
-    {"x = fn(x) { 1.1 } x", "fn(a) { Float }"}
+    {"x = fn(x) { 1.1 } x", "fn(a) { Float }"},
+    {"fn(x, y, z) { 1 }", "fn(a, b, c) { Int }"},
+    {"fn(x) { y = x y }", "fn(a) { a }"}
   ],
   test_infer(Cases).

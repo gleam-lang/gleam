@@ -144,8 +144,8 @@ elems_pattern -> pattern                   : ['$1'].
 elems_pattern -> pattern ','               : ['$1'].
 elems_pattern -> pattern ',' elems_pattern : ['$1' | '$3'].
 
-literal -> kw_fn_call ')' '{' expr '}'      : closure('$1', [], '$4').
-literal -> kw_fn_call args ')' '{' expr '}' : closure('$1', '$2', '$5').
+literal -> kw_fn_call ')' '{' exprs '}'      : closure('$1', [], '$4').
+literal -> kw_fn_call args ')' '{' exprs '}' : closure('$1', '$2', '$5').
 literal -> atom              : literal('$1').
 literal -> int               : literal('$1').
 literal -> float             : literal('$1').
