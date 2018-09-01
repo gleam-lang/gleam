@@ -166,7 +166,7 @@
 -type id() :: reference().
 -type type_var_reference() :: reference().
 -type level() :: integer().
--type const_type() :: int | float | atom | string.
+-type const_type() :: string().
 
 -record(type_const, {type :: const_type()}).
 -record(type_tuple, {elems :: [type()]}).

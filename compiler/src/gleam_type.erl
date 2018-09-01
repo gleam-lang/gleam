@@ -20,7 +20,8 @@
 -type error()
   :: {var_not_found, #ast_var{}}
   | {cannot_unify, type(), type(), env()}
-  | {incorrect_number_of_arguments, type()}.
+  | {incorrect_number_of_arguments, type()}
+  | recursive_types.
 
 % let new_var level = TVar (ref (Unbound (next_id (), level)))
 
@@ -193,10 +194,14 @@ resolve_type_vars(Ast, _) -> error({unable_to_resolve_type_vars_for, Ast}).
 do_resolve_type_vars(Type = #type_const{}, _) ->
   Type;
 
-do_resolve_type_vars(#type_func{args = Args, return = Return}, Env) ->
+do_resolve_type_vars(Type = #type_tuple{elems = Elems}, Env) ->
+  NewElems = lists:map(fun(X) -> do_resolve_type_vars(X, Env) end, Elems),
+  Type#type_tuple{elems = NewElems};
+
+do_resolve_type_vars(Type = #type_func{args = Args, return = Return}, Env) ->
   NewArgs = lists:map(fun(X) -> do_resolve_type_vars(X, Env) end, Args),
   NewReturn = do_resolve_type_vars(Return, Env),
-  #type_func{args = NewArgs, return = NewReturn};
+  Type#type_func{args = NewArgs, return = NewReturn};
 
 do_resolve_type_vars(#type_var{type = Ref}, Env) ->
   case env_lookup_type_ref(Ref, Env) of
@@ -223,6 +228,10 @@ increment_env_level(Env = #env{level = Level}) ->
 -spec env_level(env()) -> level().
 env_level(#env{level = Level}) ->
   Level.
+
+-spec put_env_level(level(), env()) -> env().
+put_env_level(Level, Env) ->
+  Env#env{level = Level}.
 
 -ifdef(TEST).
 increment_env_level_test() ->
@@ -332,6 +341,22 @@ do_instantiate(Type = #type_var{type = Ref}, State = {Env, _IdVarMap}) ->
 %   f ty
 
 -spec occurs_check_adjust_levels(id(), type(), env()) -> env().
+occurs_check_adjust_levels(Id, #type_var{type = Ref}, Env) ->
+  Level = env_level(Env),
+  case env_lookup_type_ref(Ref, Env) of
+    #type_var_link{type = Type} ->
+      occurs_check_adjust_levels(Id, Type, Env);
+
+    #type_var_unbound{id = Id} ->
+      fail(recursive_types);
+
+    V = #type_var_unbound{level = OtherLevel} when OtherLevel > Level ->
+      Var = V#type_var_unbound{level = Level},
+      env_put_type_ref(Ref, Var, Env);
+
+    #type_var_unbound{} ->
+      Env
+  end;
 occurs_check_adjust_levels(_Id, #type_const{}, Env) ->
   Env.
 
@@ -413,6 +438,30 @@ tvar_value(_, _) ->
 %   | _ -> error "expected a function"
 
 -spec match_fun_type(non_neg_integer(), type(), env()) -> {list(type()), type(), env()}.
+match_fun_type(Arity, #type_var{type = Ref}, Env) ->
+  case env_lookup_type_ref(Ref, Env) of
+    #type_var_unbound{level = Level} ->
+      PrevLevel = env_level(Env),
+      AdjustedEnv = put_env_level(Level, Env),
+      Expand = fun
+        (_, E, 0) ->
+          {[], E};
+
+        (F, E, N) ->
+          {Tail, TailEnv} = F(F, E, N - 1),
+          {Var, E1} = new_var(TailEnv),
+          {[Var | Tail], E1}
+      end,
+      {ArgsTypes, Env1} = Expand(Expand, AdjustedEnv, Arity),
+      {ReturnType, Env2} = new_var(Env1),
+      FnType = #type_func{return = ReturnType, args = ArgsTypes},
+      Link = #type_var_link{type = FnType},
+      Env3 = env_put_type_ref(Ref, Link, Env2),
+      Env4 = put_env_level(PrevLevel, Env3),
+      {ArgsTypes, ReturnType, Env4}
+    % false -> fail({incorrect_number_of_arguments, Type})
+  end;
+
 match_fun_type(Arity, Type = #type_func{args = Args, return = Return}, Env) ->
   case Arity =:= length(Args) of
     true -> {Args, Return, Env};
