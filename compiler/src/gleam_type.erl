@@ -215,7 +215,21 @@ do_resolve_type_vars(#type_var{type = Ref}, Env) ->
 
 -spec new_env() -> env().
 new_env() ->
-  #env{}.
+  Int = #type_const{type = "Int"},
+  Float = #type_const{type = "Float"},
+  MathOp = fun(T) -> #type_func{args = [T, T], return = T} end,
+  Core = [
+    {"+", MathOp(Int)},
+    {"-", MathOp(Int)},
+    {"/", MathOp(Int)},
+    {"*", MathOp(Int)},
+    {"+.", MathOp(Float)},
+    {"-.", MathOp(Float)},
+    {"/.", MathOp(Float)},
+    {"*.", MathOp(Float)}
+  ],
+  Insert = fun({Name, Type}, Env) -> env_extend(Name, Type, Env) end,
+  lists:foldl(Insert, #env{}, Core).
 
 -spec fail(tuple()) -> no_return().
 fail(Error) ->

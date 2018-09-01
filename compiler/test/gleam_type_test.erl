@@ -93,8 +93,20 @@ infer_closure_call_test() ->
   ],
   test_infer(Cases).
 
-% ; ("pair", OK "forall[a b] (a, b) -> pair[a, b]") *)
-% ; ("pair", OK "forall[z x] (x, z) -> pair[x, z]") *)
+math_operators_test() ->
+  Cases = [
+    {"1 + 1", "Int"},
+    {"1 - 1", "Int"},
+    {"1 * 1", "Int"},
+    {"1 / 1", "Int"},
+    {"1.0 +. 1.0", "Float"},
+    {"1.0 -. 1.0", "Float"},
+    {"1.0 *. 1.0", "Float"},
+    {"1.0 /. 1.0", "Float"},
+    {"fn(a, b) { a + b }", "fn(Int, Int) { Int }"}
+  ],
+  test_infer(Cases).
+
 % ; ("fun x -> let y = fun z -> z in y", OK "forall[a b] a -> b -> b") *)
 % ; ("let f = fun x -> x in let id = fun y -> y in eq(f, id)", OK "bool") *)
 % ; ("let f = fun x -> x in let id = fun y -> y in eq_curry(f)(id)", OK "bool") *)
