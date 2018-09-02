@@ -372,6 +372,12 @@ occurs_check_adjust_levels(Id, #type_var{type = Ref}, Env) ->
     #type_var_unbound{} ->
       Env
   end;
+occurs_check_adjust_levels(Id, #type_func{args = Args, return = Return}, Env0) ->
+  Check = fun(Arg, E) ->
+    occurs_check_adjust_levels(Id, Arg, E)
+  end,
+  Env1 = gleam:thread_map(Check, Args, Env0),
+  occurs_check_adjust_levels(Id, Return, Env1);
 occurs_check_adjust_levels(_Id, #type_const{}, Env) ->
   Env.
 
@@ -483,7 +489,7 @@ match_fun_type(Arity, Type = #type_func{args = Args, return = Return}, Env) ->
     false -> fail({incorrect_number_of_arguments, Type})
   end;
 
-match_fun_type(Arity, Type, Env) ->
+match_fun_type(_Arity, Type, _Env) ->
   fail({not_a_function, Type}).
 
 % TODO: Don't use process dictionary
@@ -500,12 +506,6 @@ type_to_string(Type) ->
     fun
       (_, #type_const{type = Name}) ->
         Name;
-
-      % (F, #type_app{type = AppType, args = TypeArgList}) ->
-      %   F(F, true, AppType)
-      %   ++ "["
-      %   ++ lists:map(fun(X) -> F(F, false, X) end, TypeArgList)
-      %   ++ "]";
 
       (F, #type_tuple{elems = Elems}) ->
         "("

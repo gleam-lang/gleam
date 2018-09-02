@@ -17,6 +17,19 @@ test_infer(Cases) ->
     end,
   lists:foreach(TestCase, Cases).
 
+cannot_unify_test() ->
+  Cases = [
+    "1 +. 1",
+    "(1, 1) + 1",
+    "1 + 2.0"
+  ],
+  Test =
+    fun(Src) ->
+      Result = infer(Src),
+      ?assertMatch({error, {cannot_unify, _, _, _}}, Result)
+    end,
+  lists:foreach(Test, Cases).
+
 infer_undefined_var_test() ->
   ?assertEqual(infer("one"),
                {error, {var_not_found, #ast_var{name = "one"}}}),
@@ -90,6 +103,9 @@ infer_closure_call_test() ->
     % Twice
     {"fn(f, x) { f(f(x)) }",
      "fn(fn(a) { a }, a) { a }"}
+    % % Recursive id
+    % {"id = fn(x) { x } id(id)",
+    %  "fn(a) { a }"}
   ],
   test_infer(Cases).
 
@@ -111,17 +127,18 @@ math_operators_test() ->
   ],
   test_infer(Cases).
 
-% ; ("fun x -> let y = fun z -> z in y", OK "forall[a b] a -> b -> b") *)
+% ; ("let f = fun x -> x in pair(f(one), f(true))", OK "pair[int, bool]") *)
+% ; ("fun f -> pair(f(one), f(true))", fail) *)
+
+% Depends on equality
 % ; ("let f = fun x -> x in let id = fun y -> y in eq_curry(f)(id)", OK "bool") *)
 % ; ("let f = fun x -> x in eq(f, succ)", OK "bool") *)
 % ; ("let f = fun x -> x in eq_curry(f)(succ)", OK "bool") *)
-% ; ("let f = fun x -> x in pair(f(one), f(true))", OK "pair[int, bool]") *)
-% ; ("fun f -> pair(f(one), f(true))", fail) *)
 % ; ( "let f = fun x y -> let a = eq(x, y) in eq(x, y) in f" *)
 %   , OK "forall[a] (a, a) -> bool" ) *)
 % ; ( "let f = fun x y -> let a = eq_curry(x)(y) in eq_curry(x)(y) in f" *)
 %   , OK "forall[a] (a, a) -> bool" ) *)
-% ; ("id(id)", OK "forall[a] a -> a") *)
+
 % ; ("choose(fun x y -> x, fun x y -> y)", OK "forall[a] (a, a) -> a") *)
 % ; ("choose_curry(fun x y -> x)(fun x y -> y)", OK "forall[a] (a, a) -> a") *)
 % ; ("let x = id in let y = let z = x(id) in z in y", OK "forall[a] a -> a") *)
