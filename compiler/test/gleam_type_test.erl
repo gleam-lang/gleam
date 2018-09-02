@@ -93,6 +93,10 @@ infer_closure_call_test() ->
   ],
   test_infer(Cases).
 
+infer_not_a_function_test() ->
+  ?assertEqual({error, {not_a_function, #type_const{type = "Int"}}},
+               infer("x = 1 x(2)")).
+
 math_operators_test() ->
   Cases = [
     {"1 + 1", "Int"},
@@ -108,7 +112,6 @@ math_operators_test() ->
   test_infer(Cases).
 
 % ; ("fun x -> let y = fun z -> z in y", OK "forall[a b] a -> b -> b") *)
-% ; ("let f = fun x -> x in let id = fun y -> y in eq(f, id)", OK "bool") *)
 % ; ("let f = fun x -> x in let id = fun y -> y in eq_curry(f)(id)", OK "bool") *)
 % ; ("let f = fun x -> x in eq(f, succ)", OK "bool") *)
 % ; ("let f = fun x -> x in eq_curry(f)(succ)", OK "bool") *)

@@ -21,6 +21,7 @@
   :: {var_not_found, #ast_var{}}
   | {cannot_unify, type(), type(), env()}
   | {incorrect_number_of_arguments, type()}
+  | {not_a_function, type()}
   | recursive_types.
 
 % let new_var level = TVar (ref (Unbound (next_id (), level)))
@@ -480,8 +481,10 @@ match_fun_type(Arity, Type = #type_func{args = Args, return = Return}, Env) ->
   case Arity =:= length(Args) of
     true -> {Args, Return, Env};
     false -> fail({incorrect_number_of_arguments, Type})
-  end.
-  % {ArgTypes, ReturnType, Env2} = match_fun_type(Arity, FunAst, Env2),
+  end;
+
+match_fun_type(Arity, Type, Env) ->
+  fail({not_a_function, Type}).
 
 % TODO: Don't use process dictionary
 type_to_string(Type) ->
