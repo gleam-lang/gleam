@@ -89,11 +89,17 @@ infer_closure_call_test() ->
     {"fn(x, y) { (x, y) }",
      "fn(a, b) { (a, b) }"},
     % Apply
+    {"fn(f, x) { f(x) }",
+    "fn(fn(a) { b }, a) { b }"},
+    % Apply curried
     {"fn(f) { fn(x) { f(x) } }",
     "fn(fn(a) { b }) { fn(a) { b } }"},
     % Curry
     {"fn(f) { fn(x) { fn(y) { f(x, y) } } }",
      "fn(fn(a, b) { c }) { fn(a) { fn(b) { c } } }"},
+    % Uncurry
+    {"fn(f) { fn(x, y) { ff = f(x) ff(y) } }",
+     "fn(fn(a) { fn(b) { c } }) { fn(a, b) { c } }"},
     % Const
     {"fn(x) { fn(y) { x } }",
      "fn(a) { fn(b) { a } }"},
@@ -102,16 +108,27 @@ infer_closure_call_test() ->
      "fn(fn() { a }) { a }"},
     % Twice
     {"fn(f, x) { f(f(x)) }",
-     "fn(fn(a) { a }, a) { a }"}
-    % % Recursive id
-    % {"id = fn(x) { x } id(id)",
-    %  "fn(a) { a }"}
+     "fn(fn(a) { a }, a) { a }"},
+    % Recursive id
+    {"fn(x) { y = fn(z) { z } y(y) }",
+     "fn(a) { fn(b) { b } }"}
   ],
   test_infer(Cases).
 
 infer_not_a_function_test() ->
   ?assertEqual({error, {not_a_function, #type_const{type = "Int"}}},
                infer("x = 1 x(2)")).
+
+infer_wrong_function_arity_test() ->
+  Error = {incorrect_number_of_arguments,
+           #type_func{args = [],
+                      return = #type_const{type = "Int"}}},
+  ?assertEqual({error, Error},
+               infer("f = fn() { 1 } f(2)")).
+
+infer_recursive_type_error_test() ->
+  ?assertEqual({error, recursive_types},
+               infer("fn(x) { y = x y(y) }")).
 
 math_operators_test() ->
   Cases = [
@@ -138,18 +155,26 @@ math_operators_test() ->
 %   , OK "forall[a] (a, a) -> bool" ) *)
 % ; ( "let f = fun x y -> let a = eq_curry(x)(y) in eq_curry(x)(y) in f" *)
 %   , OK "forall[a] (a, a) -> bool" ) *)
+% ; ( "fun f -> let x = fun g y -> let _ = g(y) in eq(f, g) in x" *)
+%   , OK "forall[a b] (a -> b) -> (a -> b, a) -> bool" ) *)
 
+% Depends on tuple destructuring
 % ; ("choose(fun x y -> x, fun x y -> y)", OK "forall[a] (a, a) -> a") *)
 % ; ("choose_curry(fun x y -> x)(fun x y -> y)", OK "forall[a] (a, a) -> a") *)
-% ; ("let x = id in let y = let z = x(id) in z in y", OK "forall[a] a -> a") *)
+
+% Depends on tuple destructuring
+
+% Depends on lists
 % ; ("cons(id, nil)", OK "forall[a] list[a -> a]") *)
 % ; ("cons_curry(id)(nil)", OK "forall[a] list[a -> a]") *)
 % ; ( "let lst1 = cons(id, nil) in let lst2 = cons(succ, lst1) in lst2" *)
 %   , OK "list[int -> int]" ) *)
 % ; ( "cons_curry(id)(cons_curry(succ)(cons_curry(id)(nil)))" *)
 %   , OK "list[int -> int]" ) *)
-% ; ("plus(one, true)", error "cannot unify types int and bool") *)
-% ; ("plus(one)", error "unexpected number of arguments") *)
+
+% Depends on functions already defined in env
+% ; ("let x = id in let y = let z = x(id) in z in y", OK "forall[a] a -> a") *)
+
 % ; ("fun x -> let y = x in y", OK "forall[a] a -> a") *)
 % ; ( "fun x -> let y = let z = x(fun x -> x) in z in y" *)
 %   , OK "forall[a b] ((a -> a) -> b) -> b" ) *)
@@ -159,13 +184,3 @@ math_operators_test() ->
 % ; ("fun x -> let y = fun z -> x in y", OK "forall[a b] a -> b -> a") *)
 % ; ( "fun x -> fun y -> let x = x(y) in fun x -> y(x)" *)
 %   , OK "forall[a b c] ((a -> b) -> c) -> (a -> b) -> a -> b" ) *)
-% ; ("fun x -> let y = x in y(y)", error "recursive types") *)
-% ; ("fun x -> let y = fun z -> z in y(y)", OK "forall[a b] a -> b -> b") *)
-% ; ("fun x -> x(x)", error "recursive types") *)
-% ; ("one(id)", error "expected a function") *)
-% ; ( "fun f -> let x = fun g y -> let _ = g(y) in eq(f, g) in x" *)
-%   , OK "forall[a b] (a -> b) -> (a -> b, a) -> bool" ) *)
-% ; ("let const = fun x -> fun y -> x in const", OK "forall[a b] a -> b -> a") *)
-% ; ("let apply = fun f x -> f(x) in apply", OK "forall[a b] (a -> b, a) -> b") *)
-% ; ( "let apply_curry = fun f -> fun x -> f(x) in apply_curry" *)
-%   , OK "forall[a b] (a -> b) -> a -> b" ) ] *)

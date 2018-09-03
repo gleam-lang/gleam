@@ -11,7 +11,7 @@
 -type var_name() :: string().
 
 -record(env,
-        {level = 1 :: level(),
+        {level = 0 :: level(),
          vars = #{} :: #{var_name() => type()},
          type_refs = #{} :: #{reference() => type_var()}}).
 
@@ -76,13 +76,14 @@ infer(Ast) ->
 -spec infer(ast_expression(), env()) -> {ast_expression(), env()}.
 infer(Ast = #ast_local_call{name = Name, args = Args}, Env0) ->
   {FunAst, Env1} = infer(#ast_var{name = Name}, Env0),
+  ExprType = fetch(FunAst),
   Arity = length(Args),
-  {ArgTypes, ReturnType, Env2} = match_fun_type(Arity, fetch(FunAst), Env1),
+  {ArgTypes, ReturnType, Env2} = match_fun_type(Arity, ExprType, Env1),
   CheckArg =
     fun({ArgType, ArgExpr}, CheckEnv0) ->
-      {AnnotatedExpr, CheckEnv1} = infer(ArgExpr, CheckEnv0),
-      ExprType = fetch(AnnotatedExpr),
-      unify(ArgType, ExprType, CheckEnv1)
+      {AnnotatedArgExpr, CheckEnv1} = infer(ArgExpr, CheckEnv0),
+      ArgExprType = fetch(AnnotatedArgExpr),
+      unify(ArgType, ArgExprType, CheckEnv1)
     end,
   Env3 = lists:foldl(CheckArg, Env2, lists:zip(ArgTypes, Args)),
   AnnotatedAst = Ast#ast_local_call{type = {ok, ReturnType}},
@@ -115,8 +116,9 @@ infer(Ast = #ast_var{name = Name}, Env) ->
 
 infer(#ast_assignment{name = Name, value = Value, then = Then}, Env) ->
   {InferredValue, Env2} = infer(Value, increment_env_level(Env)),
-  GeneralizedType = generalize(Env#env.level, fetch(InferredValue)),
-  ExtendedEnv = env_extend(Name, GeneralizedType, Env2),
+  Env3 = decrement_env_level(Env2),
+  {GeneralizedType, Env4} = generalize(fetch(InferredValue), Env3),
+  ExtendedEnv = env_extend(Name, GeneralizedType, Env4),
   infer(Then, ExtendedEnv);
 
 infer(Ast = #ast_tuple{elems = Elems}, Env) ->
@@ -240,6 +242,10 @@ fail(Error) ->
 increment_env_level(Env = #env{level = Level}) ->
   Env#env{level = Level + 1}.
 
+-spec decrement_env_level(env()) -> env().
+decrement_env_level(Env = #env{level = Level}) ->
+  Env#env{level = Level - 1}.
+
 -spec env_level(env()) -> level().
 env_level(#env{level = Level}) ->
   Level.
@@ -289,9 +295,32 @@ env_put_type_ref(Ref, TypeVar, Env = #env{type_refs = Refs}) ->
 %   | (TVar {contents= Generic _} | TVar {contents= Unbound _} | TConst _) as ty ->
 %       ty
 
--spec generalize(level(), type()) -> type().
-generalize(_Level, Type) ->
-  Type.
+-spec generalize(env(), type()) -> {type(), env()}.
+generalize(Type = #type_const{}, Env) ->
+  {Type, Env};
+generalize(Type = #type_func{args = Args, return = Return}, Env0) ->
+  {GeneralizedArgs, Env1} = gleam:thread_map(fun generalize/2, Args, Env0),
+  {GeneralizedReturn, Env2} = generalize(Return, Env1),
+  GeneralizedType = Type#type_func{args = GeneralizedArgs, return = GeneralizedReturn},
+  {GeneralizedType, Env2};
+
+generalize(Type = #type_var{type = Ref}, Env0) ->
+  Level = env_level(Env0),
+  case env_lookup_type_ref(Ref, Env0) of
+    #type_var_unbound{id = Id, level = OtherLevel} when OtherLevel > Level ->
+      GenericType = #type_var_generic{id = Id},
+      Env1 = env_put_type_ref(Ref, GenericType, Env0),
+      {Type, Env1};
+
+    #type_var_link{type = LinkedType} ->
+      generalize(LinkedType, Env0);
+
+    #type_var_unbound{} ->
+      {Type, Env0};
+
+    #type_var_generic{} ->
+      {Type, Env0}
+  end.
 
 % let instantiate level ty =
 %   let id_var_map = Hashtbl.create 10 in
@@ -330,13 +359,24 @@ do_instantiate(#type_func{args = Args, return = Return}, State0) ->
   NewType = #type_func{args = NewArgs, return = NewReturn},
   {NewType, State2};
 
-do_instantiate(Type = #type_var{type = Ref}, State = {Env, _IdVarMap}) ->
+do_instantiate(Type = #type_var{type = Ref}, State = {Env, IdVarMap}) ->
   case env_lookup_type_ref(Ref, Env) of
-    #type_var_unbound{} ->
-      {Type, State};
-
     #type_var_link{type = LinkedType} ->
-      do_instantiate(LinkedType, State)
+      do_instantiate(LinkedType, State);
+
+    #type_var_generic{id = Id} ->
+      case maps:find(Id, IdVarMap) of
+        {ok, FoundType} ->
+          {FoundType, State};
+
+        error ->
+          {Var, Env1} = new_var(Env),
+          IdVarMap1 = maps:put(Id, Var, IdVarMap),
+          {Var, {Env1, IdVarMap1}}
+      end;
+
+    #type_var_unbound{} ->
+      {Type, State}
   end.
 
 % let occurs_check_adjust_levels tvar_id tvar_level ty =
@@ -362,7 +402,7 @@ occurs_check_adjust_levels(Id, #type_var{type = Ref}, Env) ->
     #type_var_link{type = Type} ->
       occurs_check_adjust_levels(Id, Type, Env);
 
-    #type_var_unbound{id = Id} ->
+    #type_var_unbound{id = OtherId} when Id =:= OtherId ->
       fail(recursive_types);
 
     V = #type_var_unbound{level = OtherLevel} when OtherLevel > Level ->
@@ -376,7 +416,7 @@ occurs_check_adjust_levels(Id, #type_func{args = Args, return = Return}, Env0) -
   Check = fun(Arg, E) ->
     occurs_check_adjust_levels(Id, Arg, E)
   end,
-  Env1 = gleam:thread_map(Check, Args, Env0),
+  Env1 = lists:foldl(Check, Env0, Args),
   occurs_check_adjust_levels(Id, Return, Env1);
 occurs_check_adjust_levels(_Id, #type_const{}, Env) ->
   Env.
