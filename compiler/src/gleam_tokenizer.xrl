@@ -20,6 +20,7 @@ test       : {token, {kw_test, m(TokenLine)}}.
 fn         : {token, {kw_fn, m(TokenLine)}}.
 fn\(       : {token, {kw_fn_call, m(TokenLine)}}.
 \|>        : {token, {'|>', m(TokenLine)}}.
+!=         : {token, {'!=', m(TokenLine)}}.
 ==         : {token, {'==', m(TokenLine)}}.
 =>         : {token, {'=>', m(TokenLine)}}.
 =          : {token, {'=', m(TokenLine)}}.

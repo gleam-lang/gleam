@@ -476,3 +476,21 @@ throw_test() ->
     ?assertEqual(caught, try Mod:go(1) catch throw:1 -> caught end),
     ?assertEqual(caught, try Mod:go(2) catch throw:2 -> caught end)
   end).
+
+eq_test() ->
+  Source =
+    "module CodegenEq exposing eq/2, neq/2\n"
+    "fn eq(x, y) { x == y }\n"
+    "fn neq(x, y) { x != y }\n"
+  ,
+  Mod = 'Gleam.CodegenEq',
+  with_module(Mod, Source, fun() ->
+    ?assertEqual(true, Mod:eq(one, one)),
+    ?assertEqual(false, Mod:eq(two, one)),
+    ?assertEqual(true, Mod:eq(1, 1)),
+    ?assertEqual(false, Mod:eq(2, 1)),
+    ?assertEqual(false, Mod:neq(one, one)),
+    ?assertEqual(true, Mod:neq(two, one)),
+    ?assertEqual(false, Mod:neq(1, 1)),
+    ?assertEqual(true, Mod:neq(2, 1))
+  end).

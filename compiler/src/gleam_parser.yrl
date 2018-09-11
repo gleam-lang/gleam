@@ -9,7 +9,7 @@ case_expr case_clauses case_clause field fields.
 Terminals
 '(' ')' '[' ']' '::' '{' '}'
 ',' '=' '|' '=>' '|>'
-'<=' '<' '>' '>='
+'<=' '<' '>' '>=' '==' '!='
 '.'
 '/' '*' '+' '-' '/.' '*.' '+.' '-.'
 int float atom string
@@ -22,6 +22,8 @@ Rootsymbol source.
 
 Left 160 '<'.
 Left 160 '<='.
+Left 160 '=='. % TODO: Check correct value
+Left 160 '!='. % TODO: Check correct value
 Left 160 '>'.
 Left 160 '>='.
 Left 180 '|>'.
@@ -89,6 +91,8 @@ binary_call -> expr '<=' expr : local_call('$2', ['$1', '$3']).
 binary_call -> expr '<'  expr : local_call('$2', ['$1', '$3']).
 binary_call -> expr '>'  expr : local_call('$2', ['$1', '$3']).
 binary_call -> expr '>=' expr : local_call('$2', ['$1', '$3']).
+binary_call -> expr '==' expr : local_call('$2', ['$1', '$3']).
+binary_call -> expr '!=' expr : local_call('$2', ['$1', '$3']).
 
 case_expr -> kw_case expr '{' case_clauses '}' : case_expr('$1', '$2', '$4').
 

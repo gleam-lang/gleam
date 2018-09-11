@@ -36,6 +36,14 @@ new_var(Env) ->
 
 % let new_gen_var () = TVar (ref (Generic (next_id ())))
 
+-spec new_generic_var(env()) -> {type(), env()}.
+new_generic_var(Env) ->
+  Ref = erlang:make_ref(),
+  Type = #type_var{type = Ref},
+  TypeVar = #type_var_generic{id = make_ref()},
+  NewEnv = env_put_type_ref(Ref, TypeVar, Env),
+  {Type, NewEnv}.
+
 % let rec infer env level ast =
 %   match ast with
 %   | Var name -> (
@@ -219,20 +227,35 @@ do_resolve_type_vars(#type_var{type = Ref}, Env) ->
 -spec new_env() -> env().
 new_env() ->
   Int = #type_const{type = "Int"},
+  Bool = #type_const{type = "Bool"},
   Float = #type_const{type = "Float"},
-  MathOp = fun(T) -> #type_func{args = [T, T], return = T} end,
+  BinOp = fun(A, B, C) -> #type_func{args = [A, B], return = C} end,
+  EndoOp = fun(T) -> #type_func{args = [T, T], return = T} end,
+
+  E0 = #env{},
+
+  {V1, E1} = new_generic_var(E0),
+  Eq = BinOp(V1, V1, Bool),
+
+  {V2, E2} = new_generic_var(E1),
+  NEq = BinOp(V2, V2, Bool),
+
+  LastE = E2,
+
   Core = [
-    {"+", MathOp(Int)},
-    {"-", MathOp(Int)},
-    {"/", MathOp(Int)},
-    {"*", MathOp(Int)},
-    {"+.", MathOp(Float)},
-    {"-.", MathOp(Float)},
-    {"/.", MathOp(Float)},
-    {"*.", MathOp(Float)}
+    {"+", EndoOp(Int)},
+    {"-", EndoOp(Int)},
+    {"/", EndoOp(Int)},
+    {"*", EndoOp(Int)},
+    {"+.", EndoOp(Float)},
+    {"-.", EndoOp(Float)},
+    {"/.", EndoOp(Float)},
+    {"*.", EndoOp(Float)},
+    {"==", Eq},
+    {"!=", NEq}
   ],
   Insert = fun({Name, Type}, Env) -> env_extend(Name, Type, Env) end,
-  lists:foldl(Insert, #env{}, Core).
+  lists:foldl(Insert, LastE, Core).
 
 -spec fail(tuple()) -> no_return().
 fail(Error) ->
@@ -418,9 +441,13 @@ occurs_check_adjust_levels(Id, #type_func{args = Args, return = Return}, Env0) -
   end,
   Env1 = lists:foldl(Check, Env0, Args),
   occurs_check_adjust_levels(Id, Return, Env1);
+occurs_check_adjust_levels(Id, #type_tuple{elems = Elems}, Env) ->
+  Check = fun(Arg, E) ->
+    occurs_check_adjust_levels(Id, Arg, E)
+  end,
+  lists:foldl(Check, Env, Elems);
 occurs_check_adjust_levels(_Id, #type_const{}, Env) ->
   Env.
-
 
 % let rec unify ty1 ty2 =
 %   if ty1 == ty2 then ()
@@ -470,6 +497,14 @@ unify(Type1, Type2, Env) ->
      #type_var{type = Ref}, {ok, #type_var_unbound{id = Id}}} ->
       Env1 = occurs_check_adjust_levels(Id, Type, Env),
       env_put_type_ref(Ref, #type_var_link{type = Type}, Env1);
+
+    {#type_var{}, {ok, #type_var_link{type = LinkedType}},
+     Type, _} ->
+      unify(LinkedType, Type, Env);
+
+    {Type, _,
+     #type_var{}, {ok, #type_var_link{type = LinkedType}}} ->
+      unify(Type, LinkedType, Env);
 
     _ ->
       fail({cannot_unify, Type1, Type2, Env})

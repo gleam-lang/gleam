@@ -21,7 +21,8 @@ cannot_unify_test() ->
   Cases = [
     "1 +. 1",
     "(1, 1) + 1",
-    "1 + 2.0"
+    "1 + 2.0",
+    "1 == 2.0"
   ],
   Test =
     fun(Src) ->
@@ -141,6 +142,19 @@ math_operators_test() ->
     {"1.0 *. 1.0", "Float"},
     {"1.0 /. 1.0", "Float"},
     {"fn(a, b) { a + b }", "fn(Int, Int) { Int }"}
+  ],
+  test_infer(Cases).
+
+equality_test() ->
+  Cases = [
+    {"1 == 1", "Bool"},
+    {"1.0 == 2.0", "Bool"},
+    {":ok == :ko", "Bool"},
+    {"(:ok, 1) == (:ko, 2)", "Bool"},
+    {"1 != 1", "Bool"},
+    {"1.0 != 2.0", "Bool"},
+    {":ok != :ko", "Bool"},
+    {"(:ok, 1) != (:ko, 2)", "Bool"}
   ],
   test_infer(Cases).
 

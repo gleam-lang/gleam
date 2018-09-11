@@ -8,10 +8,11 @@
 
 -define(is_uppercase_char(C), C >= $A andalso C =< $Z).
 
--define(erlang_module_operator(N),
-        N =:= "+";  N =:= "-";  N =:= "*";  N =:= "/";  N =:= "+."; N =:= "-.";
-        N =:= "*."; N =:= "/."; N =:= "<="; N =:= "<" ; N =:= ">" ; N =:= ">=";
-        N =:= "/").
+-define(is_erlang_module_operator(N),
+        N =:= "+" orelse  N =:= "-" orelse  N =:= "*" orelse  N =:= "/" orelse
+        N =:= "+." orelse N =:= "-." orelse N =:= "*." orelse N =:= "/." orelse
+        N =:= "<=" orelse N =:= "<"  orelse N =:= ">"  orelse N =:= ">=" orelse
+        N =:= "/" orelse  N =:= "==" orelse N =:= "!=").
 
 % Holds state used in code generation.
 -record(env, {uid = 0}).
@@ -113,7 +114,7 @@ expression(#ast_cons{head = Head, tail = Tail}, Env) ->
   {cerl:c_cons(C_head, C_tail), Env2};
 
 expression(#ast_local_call{name = Name, args = Args}, Env)
-when is_list(Name), ?erlang_module_operator(Name) ->
+when ?is_erlang_module_operator(Name) ->
   ErlangName = erlang_operator_name(Name),
   expression(#ast_call{module = "erlang", name = ErlangName, args = Args}, Env);
 
@@ -258,12 +259,15 @@ adt_name_value([C | Chars], Acc) ->
 adt_name_value([], Acc) ->
   lists:reverse(Acc).
 
+% Also update ?is_erlang_module_operator/1
 erlang_operator_name("/") -> "div";
 erlang_operator_name("+.") -> "+";
 erlang_operator_name("-.") -> "-";
 erlang_operator_name("*.") -> "*";
 erlang_operator_name("/.") -> "/";
 erlang_operator_name("<=") -> "=<";
+erlang_operator_name("==") -> "=:=";
+erlang_operator_name("!=") -> "=/=";
 erlang_operator_name(Name) when is_list(Name) -> Name.
 
 c_list(Elems) ->
