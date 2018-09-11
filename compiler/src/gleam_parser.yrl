@@ -20,10 +20,10 @@ kw_raise kw_throw.
 
 Rootsymbol source.
 
+Left 150 '!='.
+Left 150 '=='.
 Left 160 '<'.
 Left 160 '<='.
-Left 160 '=='. % TODO: Check correct value
-Left 160 '!='. % TODO: Check correct value
 Left 160 '>'.
 Left 160 '>='.
 Left 180 '|>'.
