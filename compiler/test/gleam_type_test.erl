@@ -22,12 +22,15 @@ cannot_unify_test() ->
     "1 +. 1",
     "(1, 1) + 1",
     "1 + 2.0",
-    "1 == 2.0"
+    "1 == 2.0",
+    "[1, 2.0]",
+    "[1, 2, 3, 4, 5, :six]",
+    "(:ok, 1) != (:ok, 1, :extra)"
   ],
   Test =
     fun(Src) ->
       Result = infer(Src),
-      ?assertMatch({error, {cannot_unify, _, _, _}}, Result)
+      ?assertMatch({error, {cannot_unify, _}}, Result)
     end,
   lists:foreach(Test, Cases).
 
@@ -154,7 +157,28 @@ equality_test() ->
     {"1 != 1", "Bool"},
     {"1.0 != 2.0", "Bool"},
     {":ok != :ko", "Bool"},
-    {"(:ok, 1) != (:ko, 2)", "Bool"}
+    {"(:ok, 1) != (:ko, 2)", "Bool"},
+    {"x = 1 x == x", "Bool"}
+    % FIXME
+    % {"id = fn(x) { x } id == id", "Bool"}
+    % {"id1 = fn(x) { x } id2 = fn(x) { x } id1 == id2", "Bool"}
+  ],
+  test_infer(Cases).
+
+list_test() ->
+  Cases = [
+    {"[]", "List(a)"},
+    {"[1]", "List(Int)"},
+    {"[1, 2, 3]", "List(Int)"},
+    {"[[]]", "List(List(a))"},
+    {"[[1.0, 2.0]]", "List(List(Float))"},
+    {"[fn(x) { x }]", "List(fn(a) { a })"},
+    % FIXME
+    % {"[fn(x) { x + 1 }]", "List(fn(Int) { Int })"},
+    {"[([], [])]", "List((List(a), List(b)))"},
+    % FIXME
+    % {"[fn(x) { x }, fn(x) { x }]", "List(fn(a) { a })"},
+    {"[[], []]", "List(List(a))"}
   ],
   test_infer(Cases).
 

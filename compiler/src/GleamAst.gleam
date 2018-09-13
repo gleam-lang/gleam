@@ -8,14 +8,8 @@ type Meta =
   | Meta(Int)
 ; // Fix GitHub syntax highlighting
 
-type ConstType =
-  | ConstInt tag :int
-  | ConstFloat tag :float
-  | ConstAtom tag :atom
-  | ConstString tag :string
-
 type Type(var_type) =
-  | TypeConst(ConstType)
+  | TypeConst(String)
   | TypeTuple(List(Type(var_type)))
   | TypeFunc(List(Type(var_type)), Type(var_type))
   | TypeVar(var_type)

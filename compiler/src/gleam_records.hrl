@@ -45,11 +45,13 @@
 
 -record(ast_cons,
         {meta = #meta{} :: meta(),
+         type = type_not_annotated :: type_annotation(),
          head :: ast_expression(),
          tail :: ast_expression()}).
 
 -record(ast_nil,
-        {meta = #meta{} :: meta()}).
+        {meta = #meta{} :: meta(),
+         type = type_not_annotated :: type_annotation()}).
 
 -record(ast_hole,
         {meta = #meta{} :: meta()}).
@@ -170,14 +172,14 @@
 -type id() :: reference().
 -type type_var_reference() :: reference().
 -type level() :: integer().
--type const_type() :: string().
 
--record(type_const, {type :: const_type()}).
+-record(type_const, {type :: string()}).
 -record(type_tuple, {elems :: [type()]}).
 -record(type_func, {args :: list(type()), return :: type()}).
-% -record(type_app, {type :: type(), args :: list(type())}).
+-record(type_app, {type :: type(), args :: list(type())}).
 % TODO: Refine this type. Should be one type for with the id, one with the ref.
 % See the Gleam implementation for details.
+% What did I mean by this?
 -record(type_var, {type :: type_var_reference() | id()}).
 
 -type type() :: #type_const{} | #type_tuple{} | #type_func{} | #type_var{}.

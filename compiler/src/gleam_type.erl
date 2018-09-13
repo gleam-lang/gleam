@@ -19,7 +19,7 @@
 
 -type error()
   :: {var_not_found, #ast_var{}}
-  | {cannot_unify, type(), type(), env()}
+  | {cannot_unify, {type(), type_var() | error, type(), type_var() | error}}
   | {incorrect_number_of_arguments, type()}
   | {not_a_function, type()}
   | recursive_types.
@@ -134,6 +134,24 @@ infer(Ast = #ast_tuple{elems = Elems}, Env) ->
   AnnotatedAst = Ast#ast_tuple{elems = AnnotatedElems},
   {AnnotatedAst, NewEnv};
 
+infer(Ast = #ast_cons{head = Head, tail = Tail}, Env0) ->
+  {AnnotatedTail, Env1} = infer(Tail, Env0),
+  {AnnotatedHead, Env2} = infer(Head, Env1),
+  TailType = fetch(AnnotatedTail),
+  HeadType = fetch(AnnotatedHead),
+  Type = #type_app{type = "List", args = [HeadType]},
+  Env3 = unify(TailType, Type, Env2),
+  AnnotatedAst = Ast#ast_cons{type = {ok, Type},
+                              head = AnnotatedHead,
+                              tail = AnnotatedTail},
+  {AnnotatedAst, Env3};
+
+infer(Ast = #ast_nil{}, Env) ->
+  {Var, NewEnv} = new_var(Env),
+  Type = #type_app{type = "List", args = [Var]},
+  AnnotatedAst = Ast#ast_nil{type = {ok, Type}},
+  {AnnotatedAst, NewEnv};
+
 infer(Ast = #ast_int{}, Env) ->
   {Ast, Env};
 
@@ -157,9 +175,15 @@ fetch(#ast_closure{type = {ok, Type}}) ->
 fetch(#ast_var{type = {ok, Type}}) ->
   Type;
 
+fetch(#ast_nil{type = {ok, Type}}) ->
+  Type;
+
 fetch(#ast_tuple{elems = Elems}) ->
   ElemsTypes = lists:map(fun fetch/1, Elems),
   #type_tuple{elems = ElemsTypes};
+
+fetch(#ast_cons{type = {ok, Type}}) ->
+  Type;
 
 fetch(#ast_int{}) ->
   #type_const{type = "Int"};
@@ -194,10 +218,16 @@ resolve_type_vars(Ast = #ast_tuple{elems = Elems}, Env) ->
   NewElems = lists:map(fun(X) -> resolve_type_vars(X, Env) end, Elems),
   Ast#ast_tuple{elems = NewElems};
 
+resolve_type_vars(Ast = #ast_cons{head = Head, tail = Tail}, Env) ->
+  NewHead = resolve_type_vars(Head, Env),
+  NewTail = resolve_type_vars(Tail, Env),
+  Ast#ast_cons{head = NewHead, tail = NewTail};
+
 resolve_type_vars(Ast = #ast_int{}, _) -> Ast;
 resolve_type_vars(Ast = #ast_atom{}, _) -> Ast;
 resolve_type_vars(Ast = #ast_float{}, _) -> Ast;
 resolve_type_vars(Ast = #ast_string{}, _) -> Ast;
+resolve_type_vars(Ast = #ast_nil{}, _) -> Ast;
 resolve_type_vars(Ast, _) -> error({unable_to_resolve_type_vars_for, Ast}).
 
 
@@ -208,6 +238,10 @@ do_resolve_type_vars(Type = #type_const{}, _) ->
 do_resolve_type_vars(Type = #type_tuple{elems = Elems}, Env) ->
   NewElems = lists:map(fun(X) -> do_resolve_type_vars(X, Env) end, Elems),
   Type#type_tuple{elems = NewElems};
+
+do_resolve_type_vars(Type = #type_app{args = Args}, Env) ->
+  NewArgs = lists:map(fun(X) -> do_resolve_type_vars(X, Env) end, Args),
+  Type#type_app{args = NewArgs};
 
 do_resolve_type_vars(Type = #type_func{args = Args, return = Return}, Env) ->
   NewArgs = lists:map(fun(X) -> do_resolve_type_vars(X, Env) end, Args),
@@ -435,6 +469,11 @@ occurs_check_adjust_levels(Id, #type_var{type = Ref}, Env) ->
     #type_var_unbound{} ->
       Env
   end;
+occurs_check_adjust_levels(Id, #type_app{args = Args}, Env0) ->
+  Check = fun(Arg, E) ->
+    occurs_check_adjust_levels(Id, Arg, E)
+  end,
+  lists:foldl(Check, Env0, Args);
 occurs_check_adjust_levels(Id, #type_func{args = Args, return = Return}, Env0) ->
   Check = fun(Arg, E) ->
     occurs_check_adjust_levels(Id, Arg, E)
@@ -480,9 +519,16 @@ unify(Same, Same, Env) ->
   Env;
 unify(Type1, Type2, Env) ->
   case {Type1, tvar_value(Type1, Env), Type2, tvar_value(Type2, Env)} of
-    {#type_const{type = Same}, _,
-     #type_const{type = Same}, _} ->
-      ok;
+    {#type_app{type = Same, args = Args1}, _,
+     #type_app{type = Same, args = Args2}, _} ->
+      Check = fun({X, Y}, E) -> unify(X, Y, E) end,
+      lists:foldl(Check, Env, lists:zip(Args1, Args2));
+
+    {#type_func{args = Args1, return = Return1}, _,
+     #type_func{args = Args2, return = Return2}, _} ->
+      Check = fun({X, Y}, E) -> unify(X, Y, E) end,
+      NewEnv = lists:foldl(Check, Env, lists:zip(Args1, Args2)),
+      unify(Return1, Return2, NewEnv);
 
     {_, {ok, #type_var_unbound{id = Same}},
      _, {ok, #type_var_unbound{id = Same}}} ->
@@ -506,8 +552,8 @@ unify(Type1, Type2, Env) ->
      #type_var{}, {ok, #type_var_link{type = LinkedType}}} ->
       unify(Type, LinkedType, Env);
 
-    _ ->
-      fail({cannot_unify, Type1, Type2, Env})
+    Other ->
+      fail({cannot_unify, Other})
   end.
 
 -spec tvar_value(type(), env()) -> type_var() | error.
@@ -581,6 +627,12 @@ type_to_string(Type) ->
     fun
       (_, #type_const{type = Name}) ->
         Name;
+
+      (F, #type_app{type = AppType, args = Args}) ->
+        AppType
+        ++ "("
+        ++ lists:concat(lists:join(", ", lists:map(fun(X) -> F(F, X) end, Args)))
+        ++ ")";
 
       (F, #type_tuple{elems = Elems}) ->
         "("
