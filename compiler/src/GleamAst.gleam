@@ -57,18 +57,19 @@ type Expr(type_) =
   | AstClosureCall(Meta, Expr(type_), List(Expr(type_)))
   | AstCons(Meta, Expr(type_), Expr(type_))
   | AstFloat(Meta, Float)
+  | AstHole(Meta)
   | AstInt(Meta, Int)
-  | AstList(Meta, List(Expr(type_)))
   | AstLocalCall(Meta, Charlist, List(Expr(type_)))
+  | AstNil(Meta)
   | AstPipe(Meta, Expr(type_), Expr(type_))
   | AstRaise(Meta, Expr(type_))
   | AstRecord(Meta, List(RecordField))
   | AstRecordAccess(Meta, Expr(type_), Charlist)
+  | AstSeq(Meta, Expr(type_), Expr(type_))
   | AstString(Meta, String)
   | AstThrow(Meta, Expr(type_))
   | AstTuple(Meta, List(Expr(type_)))
   | AstVar(Meta, String)
-  | AstSeq(Meta, Expr(type_), Expr(type_))
 ;
 
 type alias UntypedExpr =

@@ -88,10 +88,6 @@ expression(#ast_string{value = Value}, Env) when is_binary(Value) ->
   ByteSequence = lists:map(fun binary_string_byte/1, Chars),
   {cerl:c_binary(ByteSequence), Env};
 
-expression(#ast_list{elems = Elems}, Env) ->
-  {C_elems, NewEnv} = map_expressions(Elems, Env),
-  {c_list(C_elems), NewEnv};
-
 expression(#ast_tuple{elems = Elems}, Env) ->
   {C_elems, NewEnv} = map_expressions(Elems, Env),
   {cerl:c_tuple(C_elems), NewEnv};
@@ -119,8 +115,7 @@ when ?is_erlang_module_operator(Name) ->
   expression(#ast_call{module = "erlang", name = ErlangName, args = Args}, Env);
 
 expression(#ast_local_call{meta = Meta, name = Name, args = Args}, Env) ->
-  % TODO: use an Erlang record for hole instead of an atom
-  NumHoles = length(lists:filter(fun(X) -> X =:= hole end, Args)),
+  NumHoles = length(lists:filter(fun(#ast_hole{}) -> true; (_) -> false end, Args)),
   case NumHoles of
     0 ->
       C_fname = cerl:c_fname(list_to_atom(Name), length(Args)),
@@ -207,9 +202,12 @@ expression(#ast_pipe{meta = Meta, rhs = Rhs, lhs = Lhs}, Env) ->
 expression(#ast_closure{args = Args, body = Body}, Env) ->
   function(Args, Body, Env);
 
+expression(#ast_nil{}, Env) ->
+  {cerl:c_nil(), Env};
+
 % We generate a unique variable name for each hole to prevent
 % the BEAM thinking two holes are the same.
-expression(hole, Env) ->
+expression(#ast_hole{}, Env) ->
   {UID, NewEnv} = uid(Env),
   Name = list_to_atom([$_ | integer_to_list(UID)]),
   {cerl:c_var(Name), NewEnv};
@@ -230,7 +228,7 @@ hole_closure(Meta, Name, Args, Env) when is_list(Name) ->
   {UID, NewEnv} = uid(Env),
   VarName = "$$gleam_hole_var" ++ integer_to_list(UID),
   Var = #ast_var{name = VarName},
-  NewArgs = lists:map(fun(hole) -> Var; (X) -> X end, Args),
+  NewArgs = lists:map(fun(#ast_hole{}) -> Var; (X) -> X end, Args),
   Call = #ast_local_call{meta = Meta, name = Name, args = NewArgs},
   Closure = #ast_closure{meta = Meta, args = [VarName], body = Call},
   expression(Closure, NewEnv).

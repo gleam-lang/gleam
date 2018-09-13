@@ -101,9 +101,9 @@ case_clauses -> case_clause case_clauses : ['$1'|'$2'].
 
 case_clause -> '|' pattern '=>' expr : case_clause('$1', '$2', '$4').
 
-call_args -> hole               : [hole()].
-call_args -> hole ','           : [hole()].
-call_args -> hole ',' call_args : [hole() | '$3'].
+call_args -> hole               : [hole('$1')].
+call_args -> hole ','           : [hole('$1')].
+call_args -> hole ',' call_args : [hole('$1') | '$3'].
 call_args -> expr               : ['$1'].
 call_args -> expr ','           : ['$1'].
 call_args -> expr ',' call_args : ['$1' | '$3'].
@@ -116,8 +116,8 @@ container -> upname           : adt('$1', []).
 container -> upcall elems ')' : adt('$1', '$2').
 container -> '(' ')'          : tuple('$1', []).
 container -> '(' elems ')'    : tuple('$1', '$2').
-container -> '[' ']'          : list('$1', []).
-container -> '[' elems ']'    : list('$1', '$2').
+container -> '[' ']'          : list('$2', []).
+container -> '[' elems ']'    : list('$3', '$2').
 container -> '{' '}'          : record('$1', []).
 container -> '{' fields '}'   : record('$1', '$2').
 
@@ -134,15 +134,15 @@ field -> name '=' expr      : record_field('$1', '$3').
 pattern -> literal              : '$1'.
 pattern -> container_pattern    : '$1'.
 pattern -> name                 : var('$1').
-pattern -> hole                 : hole().
+pattern -> hole                 : hole('$1').
 pattern -> pattern '::' pattern : cons('$2', '$1', '$3').
 
 container_pattern -> upname                   : adt('$1', []).
 container_pattern -> upcall elems_pattern ')' : adt('$1', '$2').
 container_pattern -> '(' ')'                  : tuple('$1', []).
 container_pattern -> '(' elems_pattern ')'    : tuple('$1', '$2').
-container_pattern -> '[' ']'                  : list('$1', []).
-container_pattern -> '[' elems_pattern ']'    : list('$1', '$2').
+container_pattern -> '[' ']'                  : list('$2', []).
+container_pattern -> '[' elems_pattern ']'    : list('$3', '$2').
 
 elems_pattern -> pattern                   : ['$1'].
 elems_pattern -> pattern ','               : ['$1'].
@@ -193,9 +193,6 @@ test({name, Meta, Name}, Body) ->
 closure({_, Meta}, Args, Body) ->
   #ast_closure{meta = Meta, args = Args, body = Body}.
 
-cons({'::', Meta}, Head, Tail) ->
-  #ast_cons{meta = Meta, head = Head, tail = Tail}.
-
 local_call({Operator, Meta}, Args) ->
   #ast_local_call{meta = Meta, name = atom_to_list(Operator), args = Args};
 local_call({call, Meta, Name}, Args) ->
@@ -231,8 +228,15 @@ record_access({'.', Meta}, Record, {name, _, Key}) ->
 tuple({'(', Meta}, Elems) ->
   #ast_tuple{meta = Meta, elems = Elems}.
 
-list({'[', Meta}, Elems) ->
-  #ast_list{meta = Meta, elems = Elems}.
+cons({'::', Meta}, Head, Tail) ->
+  #ast_cons{meta = Meta, head = Head, tail = Tail}.
+
+list({']', NilMeta}, Elems) ->
+  Cons = fun(Head, Tail) ->
+    Meta = #meta{} = element(2, Head),
+    #ast_cons{meta = Meta, head = Head, tail = Tail}
+  end,
+  lists:foldl(Cons, #ast_nil{meta = NilMeta}, lists:reverse(Elems)).
 
 adt({Type, Meta, Name}, Elems) when Type =:= upname; Type =:= upcall ->
   #ast_adt{name = Name, meta = Meta, elems = Elems}.
@@ -246,8 +250,8 @@ case_clause({'|', Meta}, Pattern, Value) ->
 pipe({'|>', Meta}, Lhs, Rhs) ->
   #ast_pipe{meta = Meta, lhs = Lhs, rhs = Rhs}.
 
-hole() ->
-  hole.
+hole({hole, Meta}) ->
+  #ast_hole{meta = Meta}.
 
 literal({atom, Meta, Value}) ->
   #ast_atom{meta = Meta, value = Value};

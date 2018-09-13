@@ -176,8 +176,6 @@ equality_test() ->
 % ; ("choose(fun x y -> x, fun x y -> y)", OK "forall[a] (a, a) -> a") *)
 % ; ("choose_curry(fun x y -> x)(fun x y -> y)", OK "forall[a] (a, a) -> a") *)
 
-% Depends on tuple destructuring
-
 % Depends on lists
 % ; ("cons(id, nil)", OK "forall[a] list[a -> a]") *)
 % ; ("cons_curry(id)(nil)", OK "forall[a] list[a -> a]") *)

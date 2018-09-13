@@ -230,7 +230,7 @@ new_env() ->
   Bool = #type_const{type = "Bool"},
   Float = #type_const{type = "Float"},
   BinOp = fun(A, B, C) -> #type_func{args = [A, B], return = C} end,
-  EndoOp = fun(T) -> #type_func{args = [T, T], return = T} end,
+  EndoOp = fun(T) -> BinOp(T, T, T) end,
 
   E0 = #env{},
 

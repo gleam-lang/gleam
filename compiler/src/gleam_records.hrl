@@ -10,10 +10,6 @@
         {meta = #meta{} :: meta(),
          elems = [] :: [ast_expression()]}).
 
--record(ast_list,
-        {meta = #meta{} :: meta(),
-         elems = [] :: [ast_expression()]}).
-
 -record(ast_int,
         {meta = #meta{} :: #meta{},
          value :: integer()}).
@@ -51,6 +47,12 @@
         {meta = #meta{} :: meta(),
          head :: ast_expression(),
          tail :: ast_expression()}).
+
+-record(ast_nil,
+        {meta = #meta{} :: meta()}).
+
+-record(ast_hole,
+        {meta = #meta{} :: meta()}).
 
 -record(ast_closure_call,
         {meta = #meta{} :: meta(),
@@ -146,18 +148,20 @@
       | #ast_closure{}
       | #ast_cons{}
       | #ast_float{}
+      | #ast_hole{}
       | #ast_int{}
-      | #ast_list{}
       | #ast_local_call{}
+      | #ast_nil{}
       | #ast_pipe{}
       | #ast_raise{}
       | #ast_record_access{}
       | #ast_record{}
+      | #ast_seq{}
       | #ast_string{}
       | #ast_throw{}
       | #ast_tuple{}
       | #ast_var{}
-      | #ast_seq{}.
+      .
 
 %
 % Types
