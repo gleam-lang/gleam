@@ -182,7 +182,7 @@
 % What did I mean by this?
 -record(type_var, {type :: type_var_reference() | id()}).
 
--type type() :: #type_const{} | #type_tuple{} | #type_func{} | #type_var{}.
+-type type() :: #type_const{} | #type_tuple{} | #type_func{} | #type_var{} | #type_app{}.
 
 %
 % Type variables
