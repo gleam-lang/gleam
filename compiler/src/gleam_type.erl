@@ -74,8 +74,8 @@ new_generic_var(Env) ->
 -spec infer(ast_expression()) -> {ok, ast_expression()} | {error, error()}.
 infer(Ast) ->
   try
-    {NewAst, Env} = infer(Ast, new_env()),
-    ResolvedAst = resolve_type_vars(NewAst, Env),
+    {InferredAst, Env} = infer(Ast, new_env()),
+    ResolvedAst = resolve_type_vars(InferredAst, Env),
     {ok, ResolvedAst}
   catch
     throw:{gleam_type_error, Error} -> {error, Error}
@@ -139,11 +139,8 @@ infer(Ast = #ast_cons{head = Head, tail = Tail}, Env0) ->
   {AnnotatedHead, Env2} = infer(Head, Env1),
   TailType = fetch(AnnotatedTail),
   HeadType = fetch(AnnotatedHead),
-  Type = #type_app{type = "List", args = [HeadType]},
-  Env3 = unify(TailType, Type, Env2),
-  AnnotatedAst = Ast#ast_cons{type = {ok, Type},
-                              head = AnnotatedHead,
-                              tail = AnnotatedTail},
+  Env3 = unify(TailType, #type_app{type = "List", args = [HeadType]}, Env2),
+  AnnotatedAst = Ast#ast_cons{head = AnnotatedHead, tail = AnnotatedTail},
   {AnnotatedAst, Env3};
 
 infer(Ast = #ast_nil{}, Env) ->
@@ -182,8 +179,8 @@ fetch(#ast_tuple{elems = Elems}) ->
   ElemsTypes = lists:map(fun fetch/1, Elems),
   #type_tuple{elems = ElemsTypes};
 
-fetch(#ast_cons{type = {ok, Type}}) ->
-  Type;
+fetch(#ast_cons{head = Head}) ->
+  #type_app{type = "List", args = [fetch(Head)]};
 
 fetch(#ast_int{}) ->
   #type_const{type = "Int"};
@@ -223,11 +220,14 @@ resolve_type_vars(Ast = #ast_cons{head = Head, tail = Tail}, Env) ->
   NewTail = resolve_type_vars(Tail, Env),
   Ast#ast_cons{head = NewHead, tail = NewTail};
 
+resolve_type_vars(Ast = #ast_nil{type = {ok, Type}}, Env) ->
+  NewType = do_resolve_type_vars(Type, Env),
+  Ast#ast_nil{type = {ok, NewType}};
+
 resolve_type_vars(Ast = #ast_int{}, _) -> Ast;
 resolve_type_vars(Ast = #ast_atom{}, _) -> Ast;
 resolve_type_vars(Ast = #ast_float{}, _) -> Ast;
 resolve_type_vars(Ast = #ast_string{}, _) -> Ast;
-resolve_type_vars(Ast = #ast_nil{}, _) -> Ast;
 resolve_type_vars(Ast, _) -> error({unable_to_resolve_type_vars_for, Ast}).
 
 

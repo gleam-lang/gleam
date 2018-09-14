@@ -178,7 +178,8 @@ list_test() ->
     {"[([], [])]", "List((List(a), List(b)))"},
     % FIXME
     % {"[fn(x) { x }, fn(x) { x }]", "List(fn(a) { a })"},
-    {"[[], []]", "List(List(a))"}
+    {"[[], []]", "List(List(a))"},
+    {"[[], [:ok]]", "List(List(Atom))"}
   ],
   test_infer(Cases).
 

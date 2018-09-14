@@ -45,7 +45,6 @@
 
 -record(ast_cons,
         {meta = #meta{} :: meta(),
-         type = type_not_annotated :: type_annotation(),
          head :: ast_expression(),
          tail :: ast_expression()}).
 
