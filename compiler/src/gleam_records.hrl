@@ -31,6 +31,9 @@
          type = type_not_annotated :: type_annotation(),
          name :: string()}).
 
+% TODO: Remove the type annotation so it's calculated by traversing the body
+% and the args. To do this we will need to turn the args into a list of
+% annotated vars rather than strings. We do this in the infer algorithm anyway.
 -record(ast_closure,
         {meta = #meta{} :: meta(),
          type = type_not_annotated :: type_annotation(),

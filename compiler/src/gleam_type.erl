@@ -355,6 +355,10 @@ env_put_type_ref(Ref, TypeVar, Env = #env{type_refs = Refs}) ->
 -spec generalize(env(), type()) -> {type(), env()}.
 generalize(Type = #type_const{}, Env) ->
   {Type, Env};
+generalize(Type = #type_app{args = Args}, Env0) ->
+  {GeneralizedArgs, Env1} = gleam:thread_map(fun generalize/2, Args, Env0),
+  GeneralizedType = Type#type_app{args = GeneralizedArgs},
+  {GeneralizedType, Env1};
 generalize(Type = #type_func{args = Args, return = Return}, Env0) ->
   {GeneralizedArgs, Env1} = gleam:thread_map(fun generalize/2, Args, Env0),
   {GeneralizedReturn, Env2} = generalize(Return, Env1),
@@ -409,6 +413,11 @@ instantiate(Type, Env) ->
 -spec do_instantiate(type(), {env(), map()}) -> {type(), {env(), map()}}.
 do_instantiate(Type = #type_const{}, State) ->
   {Type, State};
+
+do_instantiate(Type = #type_app{args = Args}, State0) ->
+  {NewArgs, State1} = gleam:thread_map(fun do_instantiate/2, Args, State0),
+  NewType = Type#type_app{args = NewArgs},
+  {NewType, State1};
 
 do_instantiate(#type_func{args = Args, return = Return}, State0) ->
   {NewArgs, State1} = gleam:thread_map(fun do_instantiate/2, Args, State0),

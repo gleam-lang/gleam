@@ -158,10 +158,11 @@ equality_test() ->
     {"1.0 != 2.0", "Bool"},
     {":ok != :ko", "Bool"},
     {"(:ok, 1) != (:ko, 2)", "Bool"},
-    {"x = 1 x == x", "Bool"}
+    {"x = 1 x == x", "Bool"},
     % FIXME
     % {"id = fn(x) { x } id == id", "Bool"}
     % {"id1 = fn(x) { x } id2 = fn(x) { x } id1 == id2", "Bool"}
+    {"id = fn(x) { x } inc = fn(x) { x + 1 } id == inc", "Bool"}
   ],
   test_infer(Cases).
 
@@ -173,13 +174,15 @@ list_test() ->
     {"[[]]", "List(List(a))"},
     {"[[1.0, 2.0]]", "List(List(Float))"},
     {"[fn(x) { x }]", "List(fn(a) { a })"},
-    % FIXME
-    % {"[fn(x) { x + 1 }]", "List(fn(Int) { Int })"},
+    {"[fn(x) { x + 1 }]", "List(fn(Int) { Int })"},
     {"[([], [])]", "List((List(a), List(b)))"},
-    % FIXME
-    % {"[fn(x) { x }, fn(x) { x }]", "List(fn(a) { a })"},
+    {"[fn(x) { x }, fn(x) { x + 1 }]", "List(fn(Int) { Int })"},
+    {"[fn(x) { x + 1 }, fn(x) { x }]", "List(fn(Int) { Int })"},
     {"[[], []]", "List(List(a))"},
-    {"[[], [:ok]]", "List(List(Atom))"}
+    {"[[], [:ok]]", "List(List(Atom))"},
+    {"1 :: 2 :: []", "List(Int)"},
+    {"fn(x) { x } :: []", "List(fn(a) { a })"},
+    {"x = 1 :: [] 2 :: x", "List(Int)"}
   ],
   test_infer(Cases).
 
@@ -200,14 +203,6 @@ list_test() ->
 % Depends on tuple destructuring
 % ; ("choose(fun x y -> x, fun x y -> y)", OK "forall[a] (a, a) -> a") *)
 % ; ("choose_curry(fun x y -> x)(fun x y -> y)", OK "forall[a] (a, a) -> a") *)
-
-% Depends on lists
-% ; ("cons(id, nil)", OK "forall[a] list[a -> a]") *)
-% ; ("cons_curry(id)(nil)", OK "forall[a] list[a -> a]") *)
-% ; ( "let lst1 = cons(id, nil) in let lst2 = cons(succ, lst1) in lst2" *)
-%   , OK "list[int -> int]" ) *)
-% ; ( "cons_curry(id)(cons_curry(succ)(cons_curry(id)(nil)))" *)
-%   , OK "list[int -> int]" ) *)
 
 % Depends on functions already defined in env
 % ; ("let x = id in let y = let z = x(id) in z in y", OK "forall[a] a -> a") *)
