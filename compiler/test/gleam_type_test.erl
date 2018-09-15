@@ -52,9 +52,9 @@ infer_const_test() ->
 
 infer_tuple_test() ->
   Cases = [
-    {"{0.0}", "{Float}"},
-    {"{:ok, 1}", "{Atom, Int}"},
-    {"{:ok, 1, {1.0, \"\"}}", "{Atom, Int, {Float, String}}"}
+    {"{0.0}", "Tuple(Float)"},
+    {"{:ok, 1}", "Tuple(Atom, Int)"},
+    {"{:ok, 1, {1.0, \"\"}}", "Tuple(Atom, Int, Tuple(Float, String))"}
   ],
   test_infer(Cases).
 
@@ -62,7 +62,7 @@ infer_let_test() ->
   Cases = [
     {"x = :unused 1", "Int"},
     {"x = :unused 1.1", "Float"},
-    {"x = :unused {:ok, 1}", "{Atom, Int}"},
+    {"x = :unused {:ok, 1}", "Tuple(Atom, Int)"},
     {"x = :ok x", "Atom"},
     {"x = 5 y = x y", "Int"}
   ],
@@ -81,7 +81,7 @@ infer_closure_test() ->
     {"x = fn(x) { 1.1 } x", "fn(a) { Float }"},
     {"fn(x, y, z) { 1 }", "fn(a, b, c) { Int }"},
     {"fn(x) { y = x y }", "fn(a) { a }"},
-    {"fn(x) { {:ok, x} }", "fn(a) { {Atom, a} }"}
+    {"fn(x) { {:ok, x} }", "fn(a) { Tuple(Atom, a) }"}
   ],
   test_infer(Cases).
 
@@ -115,10 +115,10 @@ infer_closure_call_test() ->
      "fn(a) { fn(b) { b } }"},
     % Pair
     {"fn(x, y) { {x, y} }",
-     "fn(a, b) { {a, b} }"},
+     "fn(a, b) { Tuple(a, b) }"},
     % Pair of one
     {"fn(x) { {x, x} }",
-     "fn(a) { {a, a} }"},
+     "fn(a) { Tuple(a, a) }"},
     % Really funky pointless thing
     {"id = fn(a) { a } fn(x) { x(id) }",
      "fn(fn(fn(a) { a }) { b }) { b }"}
@@ -182,7 +182,7 @@ list_test() ->
     {"[[1.0, 2.0]]", "List(List(Float))"},
     {"[fn(x) { x }]", "List(fn(a) { a })"},
     {"[fn(x) { x + 1 }]", "List(fn(Int) { Int })"},
-    {"[{[], []}]", "List({List(a), List(b)})"},
+    {"[{[], []}]", "List(Tuple(List(a), List(b)))"},
     {"[fn(x) { x }, fn(x) { x + 1 }]", "List(fn(Int) { Int })"},
     {"[fn(x) { x + 1 }, fn(x) { x }]", "List(fn(Int) { Int })"},
     {"[[], []]", "List(List(a))"},

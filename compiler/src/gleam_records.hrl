@@ -176,7 +176,6 @@
 -type level() :: integer().
 
 -record(type_const, {type :: string()}).
--record(type_tuple, {elems :: [type()]}).
 -record(type_func, {args :: list(type()), return :: type()}).
 -record(type_app, {type :: type(), args :: list(type())}).
 % TODO: Refine this type. Should be one type for with the id, one with the ref.
@@ -184,7 +183,7 @@
 % What did I mean by this?
 -record(type_var, {type :: type_var_reference() | id()}).
 
--type type() :: #type_const{} | #type_tuple{} | #type_func{} | #type_var{} | #type_app{}.
+-type type() :: #type_const{} | #type_func{} | #type_var{} | #type_app{}.
 
 %
 % Type variables

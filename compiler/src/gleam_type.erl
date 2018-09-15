@@ -146,7 +146,7 @@ fetch(#ast_nil{type = {ok, Type}}) ->
 
 fetch(#ast_tuple{elems = Elems}) ->
   ElemsTypes = lists:map(fun fetch/1, Elems),
-  #type_tuple{elems = ElemsTypes};
+  #type_app{type = "Tuple", args = ElemsTypes};
 
 fetch(#ast_cons{head = Head}) ->
   #type_app{type = "List", args = [fetch(Head)]};
@@ -203,10 +203,6 @@ resolve_type_vars(Ast, _) -> error({unable_to_resolve_type_vars_for, Ast}).
 -spec do_resolve_type_vars(type(), env()) -> type().
 do_resolve_type_vars(Type = #type_const{}, _) ->
   Type;
-
-do_resolve_type_vars(Type = #type_tuple{elems = Elems}, Env) ->
-  NewElems = lists:map(fun(X) -> do_resolve_type_vars(X, Env) end, Elems),
-  Type#type_tuple{elems = NewElems};
 
 do_resolve_type_vars(Type = #type_app{args = Args}, Env) ->
   NewArgs = lists:map(fun(X) -> do_resolve_type_vars(X, Env) end, Args),
@@ -415,12 +411,6 @@ occurs_check_adjust_levels(Id, #type_func{args = Args, return = Return}, Env0) -
   Env1 = lists:foldl(Check, Env0, Args),
   occurs_check_adjust_levels(Id, Return, Env1);
 
-occurs_check_adjust_levels(Id, #type_tuple{elems = Elems}, Env) ->
-  Check = fun(Arg, E) ->
-    occurs_check_adjust_levels(Id, Arg, E)
-  end,
-  lists:foldl(Check, Env, Elems);
-
 occurs_check_adjust_levels(_Id, #type_const{}, Env) ->
   Env.
 
@@ -431,7 +421,7 @@ unify(Same, Same, Env) ->
 unify(Type1, Type2, Env) ->
   case {Type1, tvar_value(Type1, Env), Type2, tvar_value(Type2, Env)} of
     {#type_app{type = Same, args = Args1}, _,
-     #type_app{type = Same, args = Args2}, _} ->
+     #type_app{type = Same, args = Args2}, _} when length(Args1) =:= length(Args2) ->
       Check = fun({X, Y}, E) -> unify(X, Y, E) end,
       lists:foldl(Check, Env, lists:zip(Args1, Args2));
 
@@ -532,11 +522,6 @@ type_to_string(Type) ->
         ++ "("
         ++ lists:concat(lists:join(", ", lists:map(fun(X) -> F(F, X) end, Args)))
         ++ ")";
-
-      (F, #type_tuple{elems = Elems}) ->
-        "{"
-        ++ lists:concat(lists:join(", ", lists:map(fun(X) -> F(F, X) end, Elems)))
-        ++ "}";
 
       (F, #type_func{args = ParamTypeList, return = ReturnType}) ->
         "fn("
