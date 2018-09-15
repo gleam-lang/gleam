@@ -115,9 +115,20 @@ infer_closure_call_test() ->
      "fn(fn(a) { a }, a) { a }"},
     % Recursive id
     {"fn(x) { y = fn(z) { z } y(y) }",
-     "fn(a) { fn(b) { b } }"}
+     "fn(a) { fn(b) { b } }"},
+    % Pair
+    {"fn(x, y) { (x, y) }",
+     "fn(a, b) { (a, b) }"},
+    % Pair of one
+    {"fn(x) { (x, x) }",
+     "fn(a) { (a, a) }"},
+    % Really funky pointless thing
+    {"id = fn(a) { a } fn(x) { x(id) }",
+     "fn(fn(fn(a) { a }) { b }) { b }"}
   ],
   test_infer(Cases).
+% ; ( "fun x -> let y = let z = x(fun x -> x) in z in y" *)
+%   , OK "forall[a b] ((a -> a) -> b) -> b" ) *)
 
 infer_not_a_function_test() ->
   ?assertEqual({error, {not_a_function, #type_const{type = "Int"}}},
@@ -159,9 +170,8 @@ equality_test() ->
     {":ok != :ko", "Bool"},
     {"(:ok, 1) != (:ko, 2)", "Bool"},
     {"x = 1 x == x", "Bool"},
-    % FIXME
-    % {"id = fn(x) { x } id == id", "Bool"}
-    % {"id1 = fn(x) { x } id2 = fn(x) { x } id1 == id2", "Bool"}
+    {"id = fn(x) { x } id == id", "Bool"},
+    {"id1 = fn(x) { x } id2 = fn(x) { x } id1 == id2", "Bool"},
     {"id = fn(x) { x } inc = fn(x) { x + 1 } id == inc", "Bool"}
   ],
   test_infer(Cases).
@@ -195,8 +205,6 @@ list_test() ->
 % ; ("let f = fun x -> x in eq_curry(f)(succ)", OK "bool") *)
 % ; ( "let f = fun x y -> let a = eq(x, y) in eq(x, y) in f" *)
 %   , OK "forall[a] (a, a) -> bool" ) *)
-% ; ( "let f = fun x y -> let a = eq_curry(x)(y) in eq_curry(x)(y) in f" *)
-%   , OK "forall[a] (a, a) -> bool" ) *)
 % ; ( "fun f -> let x = fun g y -> let _ = g(y) in eq(f, g) in x" *)
 %   , OK "forall[a b] (a -> b) -> (a -> b, a) -> bool" ) *)
 
@@ -207,9 +215,6 @@ list_test() ->
 % Depends on functions already defined in env
 % ; ("let x = id in let y = let z = x(id) in z in y", OK "forall[a] a -> a") *)
 
-% ; ("fun x -> let y = x in y", OK "forall[a] a -> a") *)
-% ; ( "fun x -> let y = let z = x(fun x -> x) in z in y" *)
-%   , OK "forall[a b] ((a -> a) -> b) -> b" ) *)
 % ; ( "fun x -> fun y -> let x = x(y) in x(y)" *)
 %   , OK "forall[a b] (a -> a -> b) -> a -> b" ) *)
 % ; ("fun x -> let y = fun z -> x(z) in y", OK "forall[a b] (a -> b) -> a -> b") *)
