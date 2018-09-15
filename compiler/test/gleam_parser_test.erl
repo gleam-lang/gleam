@@ -18,16 +18,13 @@ var_test() ->
   ?assertAST("value", #ast_var{name = "value"}).
 
 tuple_test() ->
-  ?assertAST("()",
-             #ast_tuple{meta = #meta{line = 1},
-                        elems = []}),
-  ?assertAST("(:54)",
+  ?assertAST("{:54}",
              #ast_tuple{meta = #meta{line = 1},
                         elems = [#ast_atom{value = "54"}]}),
-  ?assertAST("(\n  200,)",
+  ?assertAST("{\n  200,}",
              #ast_tuple{meta = #meta{line = 1},
                         elems = [#ast_int{value = 200}]}),
-  ?assertAST("(:ok, 7)",
+  ?assertAST("{:ok, 7}",
              #ast_tuple{meta = #meta{line = 1},
                         elems = [#ast_atom{value = "ok"},
                                  #ast_int{value = 7}]}).
@@ -36,7 +33,7 @@ module_test() ->
   Code =
     "module MyModule\n"
     "fn id(x) { x }\n"
-    "fn ok(val) { (:ok, val) }\n"
+    "fn ok(val) { {:ok, val} }\n"
   ,
   AST =
     #ast_module

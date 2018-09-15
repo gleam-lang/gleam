@@ -534,9 +534,9 @@ type_to_string(Type) ->
         ++ ")";
 
       (F, #type_tuple{elems = Elems}) ->
-        "("
+        "{"
         ++ lists:concat(lists:join(", ", lists:map(fun(X) -> F(F, X) end, Elems)))
-        ++ ")";
+        ++ "}";
 
       (F, #type_func{args = ParamTypeList, return = ReturnType}) ->
         "fn("

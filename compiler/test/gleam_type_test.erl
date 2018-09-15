@@ -20,12 +20,12 @@ test_infer(Cases) ->
 cannot_unify_test() ->
   Cases = [
     "1 +. 1",
-    "(1, 1) + 1",
+    "{1, 1} + 1",
     "1 + 2.0",
     "1 == 2.0",
     "[1, 2.0]",
     "[1, 2, 3, 4, 5, :six]",
-    "(:ok, 1) != (:ok, 1, :extra)"
+    "{:ok, 1} != {:ok, 1, :extra}"
   ],
   Test =
     fun(Src) ->
@@ -52,9 +52,9 @@ infer_const_test() ->
 
 infer_tuple_test() ->
   Cases = [
-    {"(0.0)", "(Float)"},
-    {"(:ok, 1)", "(Atom, Int)"},
-    {"(:ok, 1, (1.0, \"\"))", "(Atom, Int, (Float, String))"}
+    {"{0.0}", "{Float}"},
+    {"{:ok, 1}", "{Atom, Int}"},
+    {"{:ok, 1, {1.0, \"\"}}", "{Atom, Int, {Float, String}}"}
   ],
   test_infer(Cases).
 
@@ -62,7 +62,7 @@ infer_let_test() ->
   Cases = [
     {"x = :unused 1", "Int"},
     {"x = :unused 1.1", "Float"},
-    {"x = :unused (:ok, 1)", "(Atom, Int)"},
+    {"x = :unused {:ok, 1}", "{Atom, Int}"},
     {"x = :ok x", "Atom"},
     {"x = 5 y = x y", "Int"}
   ],
@@ -81,7 +81,7 @@ infer_closure_test() ->
     {"x = fn(x) { 1.1 } x", "fn(a) { Float }"},
     {"fn(x, y, z) { 1 }", "fn(a, b, c) { Int }"},
     {"fn(x) { y = x y }", "fn(a) { a }"},
-    {"fn(x) { (:ok, x) }", "fn(a) { (Atom, a) }"}
+    {"fn(x) { {:ok, x} }", "fn(a) { {Atom, a} }"}
   ],
   test_infer(Cases).
 
@@ -89,9 +89,6 @@ infer_closure_call_test() ->
   Cases = [
     {"id = fn(x) { x } id(1)", "Int"},
     {"two = fn(x) { fn(y) { x } } fun = two(1) fun(:ok)", "Int"},
-    % Pair
-    {"fn(x, y) { (x, y) }",
-     "fn(a, b) { (a, b) }"},
     % Apply
     {"fn(f, x) { f(x) }",
     "fn(fn(a) { b }, a) { b }"},
@@ -117,11 +114,11 @@ infer_closure_call_test() ->
     {"fn(x) { y = fn(z) { z } y(y) }",
      "fn(a) { fn(b) { b } }"},
     % Pair
-    {"fn(x, y) { (x, y) }",
-     "fn(a, b) { (a, b) }"},
+    {"fn(x, y) { {x, y} }",
+     "fn(a, b) { {a, b} }"},
     % Pair of one
-    {"fn(x) { (x, x) }",
-     "fn(a) { (a, a) }"},
+    {"fn(x) { {x, x} }",
+     "fn(a) { {a, a} }"},
     % Really funky pointless thing
     {"id = fn(a) { a } fn(x) { x(id) }",
      "fn(fn(fn(a) { a }) { b }) { b }"}
@@ -164,11 +161,11 @@ equality_test() ->
     {"1 == 1", "Bool"},
     {"1.0 == 2.0", "Bool"},
     {":ok == :ko", "Bool"},
-    {"(:ok, 1) == (:ko, 2)", "Bool"},
+    {"{:ok, 1} == {:ko, 2}", "Bool"},
     {"1 != 1", "Bool"},
     {"1.0 != 2.0", "Bool"},
     {":ok != :ko", "Bool"},
-    {"(:ok, 1) != (:ko, 2)", "Bool"},
+    {"{:ok, 1} != {:ko, 2}", "Bool"},
     {"x = 1 x == x", "Bool"},
     {"id = fn(x) { x } id == id", "Bool"},
     {"id1 = fn(x) { x } id2 = fn(x) { x } id1 == id2", "Bool"},
@@ -185,7 +182,7 @@ list_test() ->
     {"[[1.0, 2.0]]", "List(List(Float))"},
     {"[fn(x) { x }]", "List(fn(a) { a })"},
     {"[fn(x) { x + 1 }]", "List(fn(Int) { Int })"},
-    {"[([], [])]", "List((List(a), List(b)))"},
+    {"[{[], []}]", "List({List(a), List(b)})"},
     {"[fn(x) { x }, fn(x) { x + 1 }]", "List(fn(Int) { Int })"},
     {"[fn(x) { x + 1 }, fn(x) { x }]", "List(fn(Int) { Int })"},
     {"[[], []]", "List(List(a))"},

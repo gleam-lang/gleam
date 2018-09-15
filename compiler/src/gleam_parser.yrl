@@ -114,8 +114,9 @@ args -> name ',' args : [arg('$1') | '$3'].
 
 container -> upname           : adt('$1', []).
 container -> upcall elems ')' : adt('$1', '$2').
-container -> '(' ')'          : tuple('$1', []).
-container -> '(' elems ')'    : tuple('$1', '$2').
+% container -> '(' ')'          : tuple('$1', []).
+% container -> '(' elems ')'    : tuple('$1', '$2').
+container -> '{' elems '}'    : tuple('$1', '$2').
 container -> '[' ']'          : list('$2', []).
 container -> '[' elems ']'    : list('$3', '$2').
 container -> '{' '}'          : record('$1', []).
@@ -129,7 +130,7 @@ fields -> field             : ['$1'].
 fields -> field ','         : ['$1'].
 fields -> field ',' fields  : ['$1' | '$3'].
 
-field -> name '=' expr      : record_field('$1', '$3').
+field -> name '=>' expr      : record_field('$1', '$3').
 
 pattern -> literal              : '$1'.
 pattern -> container_pattern    : '$1'.
@@ -141,6 +142,7 @@ container_pattern -> upname                   : adt('$1', []).
 container_pattern -> upcall elems_pattern ')' : adt('$1', '$2').
 container_pattern -> '(' ')'                  : tuple('$1', []).
 container_pattern -> '(' elems_pattern ')'    : tuple('$1', '$2').
+container_pattern -> '{' elems_pattern '}'    : tuple('$1', '$2').
 container_pattern -> '[' ']'                  : list('$2', []).
 container_pattern -> '[' elems_pattern ']'    : list('$3', '$2').
 
@@ -225,7 +227,7 @@ record_field({name, Meta, Key}, Value) ->
 record_access({'.', Meta}, Record, {name, _, Key}) ->
   #ast_record_access{meta = Meta, record = Record, key = Key}.
 
-tuple({'(', Meta}, Elems) ->
+tuple({_, Meta}, Elems) ->
   #ast_tuple{meta = Meta, elems = Elems}.
 
 cons({'::', Meta}, Head, Tail) ->

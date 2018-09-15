@@ -36,12 +36,12 @@ test to_int {
 }
 
 fn compare(a, b) {
-  case (a, b) {
-  | (LT, LT) => EQ
-  | (LT, _) => LT
-  | (EQ, EQ) => EQ
-  | (GT, GT) => EQ
-  | (EQ, GT) => LT
+  case {a, b} {
+  | {LT, LT} => EQ
+  | {LT, _} => LT
+  | {EQ, EQ} => EQ
+  | {GT, GT} => EQ
+  | {EQ, GT} => LT
   | _ => GT
   }
 }
@@ -59,9 +59,9 @@ test compare {
 }
 
 fn max(a, b) {
-  case (a, b) {
-  | (GT, _) => GT
-  | (EQ, LT) => EQ
+  case {a, b} {
+  | {GT, _} => GT
+  | {EQ, LT} => EQ
   | _ => b
   }
 }
@@ -79,9 +79,9 @@ test max {
 }
 
 fn min(a, b) {
-  case (a, b) {
-  | (LT, _) => LT
-  | (EQ, GT) => EQ
+  case {a, b} {
+  | {LT, _} => LT
+  | {EQ, GT} => EQ
   | _ => b
   }
 }

@@ -24,6 +24,7 @@ fn\(       : {token, {kw_fn_call, m(TokenLine)}}.
 ==         : {token, {'==', m(TokenLine)}}.
 =>         : {token, {'=>', m(TokenLine)}}.
 =          : {token, {'=', m(TokenLine)}}.
+=>         : {token, {'=>', m(TokenLine)}}.
 \+         : {token, {'+', m(TokenLine)}}.
 -          : {token, {'-', m(TokenLine)}}.
 \*         : {token, {'*', m(TokenLine)}}.

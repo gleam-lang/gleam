@@ -140,12 +140,10 @@ atom_test() ->
 tuple_test() ->
   Source =
     "module CodegenTuple exposing zero/0, ok/1, threeple/0\n"
-    "fn zero() { () }\n"
-    "fn ok(x) { (:ok, x) }\n"
-    "fn threeple() { (1, 2, 3) }\n"
+    "fn ok(x) { {:ok, x} }\n"
+    "fn threeple() { {1, 2, 3} }\n"
   ,
   with_module('Gleam.CodegenTuple', Source, fun() ->
-    ?assertEqual({}, 'Gleam.CodegenTuple':zero()),
     ?assertEqual({ok, 1}, 'Gleam.CodegenTuple':ok(1)),
     ?assertEqual({1, 2, 3}, 'Gleam.CodegenTuple':threeple())
   end).
@@ -172,7 +170,7 @@ call_test() ->
     "module CodegenCall exposing double/1\n"
     "fn double(x) { ok(add(x, x)) }\n"
     "fn add(x, y) { x + y }\n"
-    "fn ok(x) { (:ok, x) }\n"
+    "fn ok(x) { {:ok, x} }\n"
   ,
   with_module('Gleam.CodegenCall', Source, fun() ->
     ?assertEqual({ok, 10}, 'Gleam.CodegenCall':double(5))
@@ -322,9 +320,9 @@ case_tuple_test() ->
     "module CodegenCaseTuple exposing go/1\n"
     "fn go(x) {\n"
     "  case x {\n"
-    "  | (:ok, (1, 1)) => :one\n"
-    "  | (:ok, (2, 2)) => :two\n"
-    "  | (_, _) => :eh\n"
+    "  | {:ok, {1, 1}} => :one\n"
+    "  | {:ok, {2, 2}} => :two\n"
+    "  | {_, _} => :eh\n"
     "  }\n"
     "}\n"
   ,
@@ -339,7 +337,7 @@ case_var_test() ->
     "module CodegenCaseVar exposing unwrap/1\n"
     "fn unwrap(x) {\n"
     "  case x {\n"
-    "  | (:ok, thing) => thing\n"
+    "  | {:ok, thing} => thing\n"
     "  | _ => :default\n"
     "  }\n"
     "}\n"
@@ -368,8 +366,8 @@ record_test() ->
   Source =
     "module CodegenRecord exposing zero/0, one/1, two/1\n"
     "fn zero() { {} }\n"
-    "fn one(x) { {value = x} }\n"
-    "fn two(x) { {val1 = x, val2 = x} }\n"
+    "fn one(x) { {value => x} }\n"
+    "fn two(x) { {val1 => x, val2 => x} }\n"
   ,
   with_module('Gleam.CodegenRecord', Source, fun() ->
     ?assertEqual(#{}, 'Gleam.CodegenRecord':zero()),
