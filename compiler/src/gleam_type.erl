@@ -255,7 +255,12 @@ new_env() ->
   {V2, E2} = new_generic_var(E1),
   NEq = BinOp(V2, V2, Bool),
 
-  LastE = E2,
+  {PipeIn, E3} = new_generic_var(E2),
+  {PipeOut, E4} = new_generic_var(E3),
+  PipeFn = #type_fn{args = [PipeIn], return = PipeOut},
+  Pipe = BinOp(PipeIn, PipeFn, PipeOut),
+
+  LastE = E4,
 
   Core = [
     {"+", EndoOp(Int)},
@@ -267,7 +272,8 @@ new_env() ->
     {"/.", EndoOp(Float)},
     {"*.", EndoOp(Float)},
     {"==", Eq},
-    {"!=", NEq}
+    {"!=", NEq},
+    {"|>", Pipe}
   ],
   Insert = fun({Name, Type}, Env) -> env_extend(Name, Type, Env) end,
   lists:foldl(Insert, LastE, Core).

@@ -118,11 +118,6 @@
          record :: ast_expression(),
          key :: string()}).
 
--record(ast_pipe,
-        {meta = #meta{} :: meta(),
-         lhs :: ast_expression(),
-         rhs :: ast_expression()}).
-
 -record(ast_mod_fn,
         {meta = #meta{} :: meta(),
          name :: string(),
@@ -159,7 +154,6 @@
       | #ast_local_call{}
       | #ast_nil{}
       | #ast_operator{}
-      | #ast_pipe{}
       | #ast_raise{}
       | #ast_record_access{}
       | #ast_record{}

@@ -142,7 +142,7 @@ infer_recursive_type_error_test() ->
   ?assertEqual({error, recursive_types},
                infer("fn(x) { y = x y(y) }")).
 
-math_operators_test() ->
+operators_test() ->
   Cases = [
     {"1 + 1", "Int"},
     {"1 - 1", "Int"},
@@ -152,7 +152,8 @@ math_operators_test() ->
     {"1.0 -. 1.0", "Float"},
     {"1.0 *. 1.0", "Float"},
     {"1.0 /. 1.0", "Float"},
-    {"fn(a, b) { a + b }", "fn(Int, Int) { Int }"}
+    {"fn(a, b) { a + b }", "fn(Int, Int) { Int }"},
+    {"inc = fn(a) { a + 1 } 1 |> inc |> inc", "Int"}
   ],
   test_infer(Cases).
 

@@ -72,12 +72,12 @@ expr -> name                       : var('$1').
 expr -> expr '.' name              : record_access('$2', '$1', '$3').
 expr -> name '(' ')'               : local_call('$1', []).
 expr -> name '(' call_args ')'     : local_call('$1', '$3').
-expr -> expr '|>' expr             : pipe('$2', '$1', '$3').
 expr -> expr '.' '(' ')'           : fn_call('$2', '$1', []).
 expr -> expr '.' '(' call_args ')' : fn_call('$2', '$1', '$3').
 expr -> kw_raise expr ')'          : raise('$1', '$2').
 expr -> kw_throw expr ')'          : throw_('$1', '$2').
 
+operator -> expr '|>' expr : operator('$2', ['$1', '$3']).
 operator -> expr '::' expr : cons('$2', '$1', '$3').
 operator -> expr '+' expr  : operator('$2', ['$1', '$3']).
 operator -> expr '-' expr  : operator('$2', ['$1', '$3']).
@@ -251,9 +251,6 @@ case_expr({kw_case, Meta}, Subject, Clauses) ->
 
 case_clause({'|', Meta}, Pattern, Value) ->
   #ast_clause{meta = Meta, pattern = Pattern, value = Value}.
-
-pipe({'|>', Meta}, Lhs, Rhs) ->
-  #ast_pipe{meta = Meta, lhs = Lhs, rhs = Rhs}.
 
 hole({hole, Meta}) ->
   #ast_hole{meta = Meta}.

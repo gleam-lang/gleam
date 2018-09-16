@@ -104,6 +104,10 @@ expression(#ast_cons{head = Head, tail = Tail}, Env) ->
   {C_tail, Env2} = expression(Tail, Env1),
   {cerl:c_cons(C_head, C_tail), Env2};
 
+expression(#ast_operator{meta = Meta, name = "|>", args = [Lhs, Rhs]}, Env) ->
+  Call = #ast_fn_call{meta = Meta, fn = Rhs, args = [Lhs]},
+  expression(Call, Env);
+
 expression(#ast_operator{name = Name, args = Args}, Env) ->
   ErlangName = case Name of
     "/" -> "div";
@@ -197,10 +201,6 @@ expression(#ast_throw{meta = Meta, value = Value}, Env) ->
                    module = "erlang",
                    name = "throw",
                    args = [Value]},
-  expression(Call, Env);
-
-expression(#ast_pipe{meta = Meta, rhs = Rhs, lhs = Lhs}, Env) ->
-  Call = #ast_fn_call{meta = Meta, fn = Rhs, args = [Lhs]},
   expression(Call, Env);
 
 expression(#ast_fn{args = Args, body = Body}, Env) ->
