@@ -69,7 +69,7 @@ dot_test() ->
   ?assertTokens(".", [{'.', _}]),
   ?assertTokens(
      "Mod.f()",
-     [{upname, _, "Mod"}, {'.', _}, {call, _, "f"}, {')', _}]).
+     [{upname, _, "Mod"}, {'.', _}, {name, _, "f"}, {'(', _}, {')', _}]).
 
 whitespace_test() ->
   ?assertTokens(";", []),

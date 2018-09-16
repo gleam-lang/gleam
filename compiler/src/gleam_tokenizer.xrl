@@ -53,7 +53,6 @@ fn\(       : {token, {kw_fn_call, m(TokenLine)}}.
 :{String}  : {token, {atom, m(TokenLine), atom(TokenChars)}}.
 _          : {token, {hole, m(TokenLine)}}.
 _{Name}    : {token, {hole, m(TokenLine)}}.
-{Name}\(   : {token, {call, m(TokenLine), call(TokenChars)}}.
 {Name}     : {token, {name, m(TokenLine), TokenChars}}.
 {UpName}\( : {token, {upcall, m(TokenLine), call(TokenChars)}}.
 {UpName}   : {token, {upname, m(TokenLine), TokenChars}}.

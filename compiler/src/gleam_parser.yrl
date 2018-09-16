@@ -13,7 +13,7 @@ Terminals
 '.'
 '/' '*' '+' '-' '/.' '*.' '+.' '-.'
 int float atom string
-hole name upname call upcall
+hole name upname upcall
 kw_module kw_exposing
 kw_fn kw_fn_call kw_case kw_test
 kw_raise kw_throw.
@@ -55,8 +55,8 @@ mod_body -> test mod_body     : mod_test('$1', '$2').
 exports -> name '/' int             : [export('$1', '$3')].
 exports -> name '/' int ',' exports : [export('$1', '$3') | '$5'].
 
-function -> kw_fn call ')' '{' exprs '}'      : function('$2', [], '$5').
-function -> kw_fn call args ')' '{' exprs '}' : function('$2', '$3', '$6').
+function -> kw_fn name '(' ')' '{' exprs '}'      : function('$2', [], '$6').
+function -> kw_fn name '(' args ')' '{' exprs '}' : function('$2', '$4', '$7').
 
 test -> kw_test name '{' exprs '}' : test('$2', '$4').
 
@@ -70,8 +70,8 @@ expr -> case_expr                  : '$1'.
 expr -> binary_call                : '$1'.
 expr -> name                       : var('$1').
 expr -> expr '.' name              : record_access('$2', '$1', '$3').
-expr -> call ')'                   : local_call('$1', []).
-expr -> call call_args ')'         : local_call('$1', '$2').
+expr -> name '(' ')'               : local_call('$1', []).
+expr -> name '(' call_args ')'     : local_call('$1', '$3').
 expr -> expr '|>' expr             : pipe('$2', '$1', '$3').
 expr -> expr '.' '(' ')'           : fn_call('$2', '$1', []).
 expr -> expr '.' '(' call_args ')' : fn_call('$2', '$1', '$3').
@@ -197,13 +197,15 @@ fn({_, Meta}, Args, Body) ->
 
 local_call({Operator, Meta}, Args) ->
   #ast_local_call{meta = Meta, name = atom_to_list(Operator), args = Args};
+local_call({name, Meta, Name}, Args) ->
+  #ast_local_call{meta = Meta, name = Name, args = Args};
 local_call({call, Meta, Name}, Args) ->
   #ast_local_call{meta = Meta, name = Name, args = Args}.
 
 fn_call({'.', Meta}, Closure, Args) ->
   #ast_fn_call{meta = Meta, fn = Closure, args = Args}.
 
-function({call, Meta, Name}, Args, Body) ->
+function({name, Meta, Name}, Args, Body) ->
   #ast_function{meta = Meta, name = Name, args = Args, body = Body}.
 
 assignment({'=', Meta}, {name, _, Name}, Value, Then) ->
