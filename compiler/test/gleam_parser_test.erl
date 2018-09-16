@@ -78,7 +78,7 @@ arity_2_test() ->
         , name = "add"
         , args = ["x", "y"]
         , body =
-          #ast_local_call
+          #ast_operator
           { meta = #meta{line = 2}
           , name = "+"
           , args =

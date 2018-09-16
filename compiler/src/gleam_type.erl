@@ -50,12 +50,11 @@ infer(Ast) ->
     throw:{gleam_type_error, Error} -> {error, Error}
   end.
 
--spec infer(ast_expression(), env()) -> {ast_expression(), env()}.
-infer(Ast = #ast_local_call{name = Name, args = Args}, Env0) ->
-  {FunAst, Env1} = infer(#ast_var{name = Name}, Env0),
-  ExprType = fetch(FunAst),
+infer_call(FunAst, Args, Env0) ->
+  {AnnotatedFunAst, Env1} = infer(FunAst, Env0),
+  FunType = fetch(AnnotatedFunAst),
   Arity = length(Args),
-  {ArgTypes, ReturnType, Env2} = match_fun_type(Arity, ExprType, Env1),
+  {ArgTypes, ReturnType, Env2} = match_fun_type(Arity, FunType, Env1),
   CheckArg =
     fun({ArgType, ArgExpr}, CheckEnv0) ->
       {AnnotatedArgExpr, CheckEnv1} = infer(ArgExpr, CheckEnv0),
@@ -63,8 +62,18 @@ infer(Ast = #ast_local_call{name = Name, args = Args}, Env0) ->
       unify(ArgType, ArgExprType, CheckEnv1)
     end,
   Env3 = lists:foldl(CheckArg, Env2, lists:zip(ArgTypes, Args)),
+  {ReturnType, Env3}.
+
+-spec infer(ast_expression(), env()) -> {ast_expression(), env()}.
+infer(Ast = #ast_operator{name = Name, args = Args}, Env0) ->
+  {ReturnType, Env1} = infer_call(#ast_var{name = Name}, Args, Env0),
+  AnnotatedAst = Ast#ast_operator{type = {ok, ReturnType}},
+  {AnnotatedAst, Env1};
+
+infer(Ast = #ast_local_call{name = Name, args = Args}, Env0) ->
+  {ReturnType, Env1} = infer_call(#ast_var{name = Name}, Args, Env0),
   AnnotatedAst = Ast#ast_local_call{type = {ok, ReturnType}},
-  {AnnotatedAst, Env3};
+  {AnnotatedAst, Env1};
 
 infer(Ast = #ast_fn{args = Args, body = Body}, Env) ->
   {ArgTypes, ArgsEnv} = gleam:thread_map(fun(_, E) -> new_var(E) end, Args, Env),
@@ -132,6 +141,9 @@ infer(Ast = #ast_atom{}, Env) ->
 
 
 -spec fetch(ast_expression()) -> type().
+fetch(#ast_operator{type = {ok, Type}}) ->
+  Type;
+
 fetch(#ast_local_call{type = {ok, Type}}) ->
   Type;
 
@@ -168,6 +180,10 @@ fetch(Other) ->
 
 
 -spec resolve_type_vars(ast_expression(), env()) -> ast_expression().
+resolve_type_vars(Ast = #ast_operator{type = {ok, Type}}, Env) ->
+  NewType = do_resolve_type_vars(Type, Env),
+  Ast#ast_operator{type = {ok, NewType}};
+
 resolve_type_vars(Ast = #ast_local_call{type = {ok, Type}}, Env) ->
   NewType = do_resolve_type_vars(Type, Env),
   Ast#ast_local_call{type = {ok, NewType}};

@@ -77,6 +77,12 @@
          name :: string(),
          args = [] :: [ast_expression()]}).
 
+-record(ast_operator,
+        {meta = #meta{} :: meta(),
+         type = type_not_annotated :: type_annotation(),
+         name :: string(),
+         args = [] :: [ast_expression()]}).
+
 -record(ast_assignment,
         {meta = #meta{} :: meta(),
          name :: string(),
@@ -144,14 +150,15 @@
       | #ast_atom{}
       | #ast_call{}
       | #ast_case{}
-      | #ast_fn_call{}
-      | #ast_fn{}
       | #ast_cons{}
       | #ast_float{}
+      | #ast_fn_call{}
+      | #ast_fn{}
       | #ast_hole{}
       | #ast_int{}
       | #ast_local_call{}
       | #ast_nil{}
+      | #ast_operator{}
       | #ast_pipe{}
       | #ast_raise{}
       | #ast_record_access{}

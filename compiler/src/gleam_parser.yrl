@@ -1,7 +1,7 @@
 Nonterminals
 source module mod_header mod_body
 function test exports
-exprs expr binary_call literal elems args call_args
+exprs expr operator literal elems args call_args
 container container_pattern elems_pattern
 pattern
 case_expr case_clauses case_clause field fields.
@@ -67,7 +67,7 @@ exprs -> expr exprs          : seq('$1', '$2').
 expr -> literal                    : '$1'.
 expr -> container                  : '$1'.
 expr -> case_expr                  : '$1'.
-expr -> binary_call                : '$1'.
+expr -> operator                   : '$1'.
 expr -> name                       : var('$1').
 expr -> expr '.' name              : record_access('$2', '$1', '$3').
 expr -> name '(' ')'               : local_call('$1', []).
@@ -78,21 +78,21 @@ expr -> expr '.' '(' call_args ')' : fn_call('$2', '$1', '$3').
 expr -> kw_raise expr ')'          : raise('$1', '$2').
 expr -> kw_throw expr ')'          : throw_('$1', '$2').
 
-binary_call -> expr '::' expr : cons('$2', '$1', '$3').
-binary_call -> expr '+' expr  : local_call('$2', ['$1', '$3']).
-binary_call -> expr '-' expr  : local_call('$2', ['$1', '$3']).
-binary_call -> expr '*' expr  : local_call('$2', ['$1', '$3']).
-binary_call -> expr '/' expr  : local_call('$2', ['$1', '$3']).
-binary_call -> expr '+.' expr : local_call('$2', ['$1', '$3']).
-binary_call -> expr '-.' expr : local_call('$2', ['$1', '$3']).
-binary_call -> expr '*.' expr : local_call('$2', ['$1', '$3']).
-binary_call -> expr '/.' expr : local_call('$2', ['$1', '$3']).
-binary_call -> expr '<=' expr : local_call('$2', ['$1', '$3']).
-binary_call -> expr '<'  expr : local_call('$2', ['$1', '$3']).
-binary_call -> expr '>'  expr : local_call('$2', ['$1', '$3']).
-binary_call -> expr '>=' expr : local_call('$2', ['$1', '$3']).
-binary_call -> expr '==' expr : local_call('$2', ['$1', '$3']).
-binary_call -> expr '!=' expr : local_call('$2', ['$1', '$3']).
+operator -> expr '::' expr : cons('$2', '$1', '$3').
+operator -> expr '+' expr  : operator('$2', ['$1', '$3']).
+operator -> expr '-' expr  : operator('$2', ['$1', '$3']).
+operator -> expr '*' expr  : operator('$2', ['$1', '$3']).
+operator -> expr '/' expr  : operator('$2', ['$1', '$3']).
+operator -> expr '+.' expr : operator('$2', ['$1', '$3']).
+operator -> expr '-.' expr : operator('$2', ['$1', '$3']).
+operator -> expr '*.' expr : operator('$2', ['$1', '$3']).
+operator -> expr '/.' expr : operator('$2', ['$1', '$3']).
+operator -> expr '<=' expr : operator('$2', ['$1', '$3']).
+operator -> expr '<'  expr : operator('$2', ['$1', '$3']).
+operator -> expr '>'  expr : operator('$2', ['$1', '$3']).
+operator -> expr '>=' expr : operator('$2', ['$1', '$3']).
+operator -> expr '==' expr : operator('$2', ['$1', '$3']).
+operator -> expr '!=' expr : operator('$2', ['$1', '$3']).
 
 case_expr -> kw_case expr '{' case_clauses '}' : case_expr('$1', '$2', '$4').
 
@@ -195,8 +195,9 @@ test({name, Meta, Name}, Body) ->
 fn({_, Meta}, Args, Body) ->
   #ast_fn{meta = Meta, args = Args, body = Body}.
 
-local_call({Operator, Meta}, Args) ->
-  #ast_local_call{meta = Meta, name = atom_to_list(Operator), args = Args};
+operator({Operator, Meta}, Args) ->
+  #ast_operator{meta = Meta, name = atom_to_list(Operator), args = Args}.
+
 local_call({name, Meta, Name}, Args) ->
   #ast_local_call{meta = Meta, name = Name, args = Args};
 local_call({call, Meta, Name}, Args) ->

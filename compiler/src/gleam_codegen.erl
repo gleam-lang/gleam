@@ -8,12 +8,6 @@
 
 -define(is_uppercase_char(C), C >= $A andalso C =< $Z).
 
--define(is_erlang_module_operator(N),
-        N =:= "+" orelse  N =:= "-" orelse  N =:= "*" orelse  N =:= "/" orelse
-        N =:= "+." orelse N =:= "-." orelse N =:= "*." orelse N =:= "/." orelse
-        N =:= "<=" orelse N =:= "<"  orelse N =:= ">"  orelse N =:= ">=" orelse
-        N =:= "/" orelse  N =:= "==" orelse N =:= "!=").
-
 % Holds state used in code generation.
 -record(env, {uid = 0}).
 
@@ -83,6 +77,7 @@ map_clauses(Clauses, Env) ->
 map_expressions(Expressions, Env) ->
   gleam:thread_map(fun expression/2, Expressions, Env).
 
+
 expression(#ast_string{value = Value}, Env) when is_binary(Value) ->
   Chars = binary_to_list(Value),
   ByteSequence = lists:map(fun binary_string_byte/1, Chars),
@@ -109,9 +104,18 @@ expression(#ast_cons{head = Head, tail = Tail}, Env) ->
   {C_tail, Env2} = expression(Tail, Env1),
   {cerl:c_cons(C_head, C_tail), Env2};
 
-expression(#ast_local_call{name = Name, args = Args}, Env)
-when ?is_erlang_module_operator(Name) ->
-  ErlangName = erlang_operator_name(Name),
+expression(#ast_operator{name = Name, args = Args}, Env) ->
+  ErlangName = case Name of
+    "/" -> "div";
+    "+." -> "+";
+    "-." -> "-";
+    "*." -> "*";
+    "/." -> "/";
+    "<=" -> "=<";
+    "==" -> "=:=";
+    "!=" -> "=/=";
+    _ -> Name
+  end,
   expression(#ast_call{module = "erlang", name = ErlangName, args = Args}, Env);
 
 expression(#ast_local_call{meta = Meta, name = Name, args = Args}, Env) ->
@@ -256,17 +260,6 @@ adt_name_value([C | Chars], Acc) ->
   adt_name_value(Chars, [C | Acc]);
 adt_name_value([], Acc) ->
   lists:reverse(Acc).
-
-% Also update ?is_erlang_module_operator/1
-erlang_operator_name("/") -> "div";
-erlang_operator_name("+.") -> "+";
-erlang_operator_name("-.") -> "-";
-erlang_operator_name("*.") -> "*";
-erlang_operator_name("/.") -> "/";
-erlang_operator_name("<=") -> "=<";
-erlang_operator_name("==") -> "=:=";
-erlang_operator_name("!=") -> "=/=";
-erlang_operator_name(Name) when is_list(Name) -> Name.
 
 c_list(Elems) ->
   Rev = lists:reverse(Elems),
