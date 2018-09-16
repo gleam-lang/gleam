@@ -40,13 +40,13 @@ module_test() ->
     { name = "MyModule"
     , tests = []
     , functions =
-      [ #ast_function
+      [ #ast_mod_fn
         { meta = #meta{line = 2}
         , name = "id"
         , args = ["x"]
         , body = #ast_var{name = "x", meta = #meta{line = 2}}
         }
-      , #ast_function
+      , #ast_mod_fn
         { meta = #meta{line = 3}
         , name = "ok"
         , args = ["val"]
@@ -73,7 +73,7 @@ arity_2_test() ->
     { name = "MyModule"
     , tests = []
     , functions =
-      [ #ast_function
+      [ #ast_mod_fn
         { meta = #meta{line = 2}
         , name = "add"
         , args = ["x", "y"]
@@ -101,7 +101,7 @@ call_test() ->
     { name = "MyModule"
     , tests = []
     , functions =
-      [ #ast_function
+      [ #ast_mod_fn
         { meta = #meta{line = 2}
         , name = "run"
         , args = []
@@ -138,7 +138,7 @@ adt_test() ->
     { name = "MyModule"
     , tests = []
     , functions =
-      [ #ast_function
+      [ #ast_mod_fn
         { meta = #meta{line = 2}
         , name = "ok"
         , args = []
@@ -162,9 +162,9 @@ test_test() ->
     #ast_module
     { name = "MyModule"
     , tests =
-      [#ast_test{meta = #meta{line = 2},
-                name = "ok",
-                body = #ast_atom{meta = #meta{line = 2}, value = "ok"}}]
+      [#ast_mod_test{meta = #meta{line = 2},
+                     name = "ok",
+                     body = #ast_atom{meta = #meta{line = 2}, value = "ok"}}]
     , functions = []
     },
   ?assertEqual(AST, parse(tokens(Code))).
@@ -191,7 +191,7 @@ fn_test() ->
     { name = "MyModule"
     , tests = []
     , functions =
-      [ #ast_function
+      [ #ast_mod_fn
         { meta = #meta{line = 2}
         , name = "thunk"
         , args = ["x"]
@@ -202,7 +202,7 @@ fn_test() ->
           , body = #ast_var{meta = #meta{line = 2}, name = "x"}
           }
         },
-        #ast_function
+        #ast_mod_fn
         { meta = #meta{line = 2}
         , name = "make_identity"
         , args = []

@@ -71,10 +71,6 @@
         {meta = #meta{} :: meta(),
          value :: ast_expression()}).
 
-% TODO: It sucks that the local call assumes that the local call
-% assumes that there is a variable name like so `my_fun()`, this
-% means we can't do things like this `get_fun()()` without writing
-% it as `x = get_fun(); x()`
 -record(ast_local_call,
         {meta = #meta{} :: meta(),
          type = type_not_annotated :: type_annotation(),
@@ -121,13 +117,13 @@
          lhs :: ast_expression(),
          rhs :: ast_expression()}).
 
--record(ast_function,
+-record(ast_mod_fn,
         {meta = #meta{} :: meta(),
          name :: string(),
          args = [] :: [string()],
          body :: ast_expression()}).
 
--record(ast_test,
+-record(ast_mod_test,
         {meta = #meta{} :: meta(),
          name :: string(),
          body :: ast_expression()}).
@@ -135,8 +131,8 @@
 -record(ast_module,
         {name = "" :: string(),
          exports = [] :: [export()],
-         functions = [] :: [#ast_function{}],
-         tests = [] :: [#ast_test{}]}).
+         functions = [] :: [#ast_mod_fn{}],
+         tests = [] :: [#ast_mod_test{}]}).
 
 -record(ast_seq,
         {first :: ast_expression(),
@@ -178,10 +174,7 @@
 -record(type_const, {type :: string()}).
 -record(type_fn, {args :: list(type()), return :: type()}).
 -record(type_app, {type :: type(), args :: list(type())}).
-% TODO: Refine this type. Should be one type for with the id, one with the ref.
-% See the Gleam implementation for details.
-% What did I mean by this?
--record(type_var, {type :: type_var_reference() | id()}).
+-record(type_var, {type :: type_var_reference()}).
 
 -type type() :: #type_const{} | #type_fn{} | #type_var{} | #type_app{}.
 

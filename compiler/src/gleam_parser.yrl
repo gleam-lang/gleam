@@ -190,7 +190,7 @@ throw_({kw_throw, Meta}, Value) ->
   #ast_throw{meta = Meta, value = Value}.
 
 test({name, Meta, Name}, Body) ->
-  #ast_test{meta = Meta, name = Name, body = Body}.
+  #ast_mod_test{meta = Meta, name = Name, body = Body}.
 
 fn({_, Meta}, Args, Body) ->
   #ast_fn{meta = Meta, args = Args, body = Body}.
@@ -206,7 +206,7 @@ fn_call({'.', Meta}, Closure, Args) ->
   #ast_fn_call{meta = Meta, fn = Closure, args = Args}.
 
 function({name, Meta, Name}, Args, Body) ->
-  #ast_function{meta = Meta, name = Name, args = Args, body = Body}.
+  #ast_mod_fn{meta = Meta, name = Name, args = Args, body = Body}.
 
 assignment({'=', Meta}, {name, _, Name}, Value, Then) ->
   #ast_assignment{meta = Meta, name = Name, value = Value, then = Then}.

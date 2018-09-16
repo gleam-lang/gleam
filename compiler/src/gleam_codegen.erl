@@ -44,9 +44,9 @@ module_test(PrefixedName) ->
   Fun = cerl:c_fun([], Body),
   {export({"test", 0}), {Name, Fun}}.
 
-test(#ast_test{name = Name, body = Body}) ->
+test(#ast_mod_test{name = Name, body = Body}) ->
   TestName = Name ++ "_test",
-  C_fun = named_function(#ast_function{name = TestName, args = [], body = Body}),
+  C_fun = named_function(#ast_mod_fn{name = TestName, args = [], body = Body}),
   C_export = export({TestName, 0}),
   {C_export, C_fun}.
 
@@ -61,7 +61,7 @@ module_info(ModuleName, Params) when is_list(ModuleName) ->
   C_fname = cerl:c_fname(module_info, length(Params)),
   {C_fname, C_fun}.
 
-named_function(#ast_function{name = Name, args = Args, body = Body}) ->
+named_function(#ast_mod_fn{name = Name, args = Args, body = Body}) ->
   Env = #env{},
   Arity = length(Args),
   C_fname = cerl:c_fname(list_to_atom(Name), Arity),
