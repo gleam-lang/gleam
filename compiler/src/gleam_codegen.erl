@@ -122,7 +122,7 @@ expression(#ast_local_call{meta = Meta, name = Name, args = Args}, Env) ->
       {C_args, NewEnv} = map_expressions(Args, Env),
       {cerl:c_apply(C_fname, C_args), NewEnv};
     1 ->
-      % It's a func(_) capture, convert it into a closure
+      % It's a fn(_) capture, convert it into a closure
       hole_closure(Meta, Name, Args, Env);
     _ ->
       throw({error, multiple_hole_closure})
@@ -162,7 +162,7 @@ expression(#ast_record_access{meta = Meta, record = Record, key = Key}, Env) ->
                    args = [Atom, Record]},
   expression(Call, Env);
 
-% TODO: We can check the lhs here to see if it is a func(_)
+% TODO: We can check the lhs here to see if it is a fn(_)
 % capture. If it is we can avoid the creation of the intermediary
 % closure by directly rewriting the arguments.
 % TODO: Avoid creating an extra var if the closure is already a var.

@@ -133,7 +133,7 @@ infer_not_a_function_test() ->
 
 infer_wrong_function_arity_test() ->
   Error = {incorrect_number_of_arguments,
-           #type_func{args = [],
+           #type_fn{args = [],
                       return = #type_const{type = "Int"}}},
   ?assertEqual({error, Error},
                infer("f = fn() { 1 } f(2)")).

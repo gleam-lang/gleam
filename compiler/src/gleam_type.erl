@@ -75,7 +75,7 @@ infer(Ast = #ast_closure{args = Args, body = Body}, Env) ->
   FnEnv = lists:foldl(Insert, ArgsEnv, lists:zip(Args, ArgTypes)),
   {ReturnAst, ReturnEnv} = infer(Body, FnEnv),
   ReturnType = fetch(ReturnAst),
-  Type = #type_func{args = ArgTypes, return = ReturnType},
+  Type = #type_fn{args = ArgTypes, return = ReturnType},
   AnnotatedAst = Ast#ast_closure{type = {ok, Type}},
   FinalEnv = Env#env{type_refs = ReturnEnv#env.type_refs},
   {AnnotatedAst, FinalEnv};
@@ -208,10 +208,10 @@ do_resolve_type_vars(Type = #type_app{args = Args}, Env) ->
   NewArgs = lists:map(fun(X) -> do_resolve_type_vars(X, Env) end, Args),
   Type#type_app{args = NewArgs};
 
-do_resolve_type_vars(Type = #type_func{args = Args, return = Return}, Env) ->
+do_resolve_type_vars(Type = #type_fn{args = Args, return = Return}, Env) ->
   NewArgs = lists:map(fun(X) -> do_resolve_type_vars(X, Env) end, Args),
   NewReturn = do_resolve_type_vars(Return, Env),
-  Type#type_func{args = NewArgs, return = NewReturn};
+  Type#type_fn{args = NewArgs, return = NewReturn};
 
 do_resolve_type_vars(#type_var{type = Ref}, Env) ->
   case env_lookup_type_ref(Ref, Env) of
@@ -228,7 +228,7 @@ new_env() ->
   Int = #type_const{type = "Int"},
   Bool = #type_const{type = "Bool"},
   Float = #type_const{type = "Float"},
-  BinOp = fun(A, B, C) -> #type_func{args = [A, B], return = C} end,
+  BinOp = fun(A, B, C) -> #type_fn{args = [A, B], return = C} end,
   EndoOp = fun(T) -> BinOp(T, T, T) end,
 
   E0 = #env{},
@@ -312,10 +312,10 @@ generalize(Type = #type_app{args = Args}, Env0) ->
   GeneralizedType = Type#type_app{args = GeneralizedArgs},
   {GeneralizedType, Env1};
 
-generalize(Type = #type_func{args = Args, return = Return}, Env0) ->
+generalize(Type = #type_fn{args = Args, return = Return}, Env0) ->
   {GeneralizedArgs, Env1} = gleam:thread_map(fun generalize/2, Args, Env0),
   {GeneralizedReturn, Env2} = generalize(Return, Env1),
-  GeneralizedType = Type#type_func{args = GeneralizedArgs, return = GeneralizedReturn},
+  GeneralizedType = Type#type_fn{args = GeneralizedArgs, return = GeneralizedReturn},
   {GeneralizedType, Env2};
 
 generalize(Type = #type_var{type = Ref}, Env0) ->
@@ -350,10 +350,10 @@ do_instantiate(Type = #type_app{args = Args}, State0) ->
   NewType = Type#type_app{args = NewArgs},
   {NewType, State1};
 
-do_instantiate(#type_func{args = Args, return = Return}, State0) ->
+do_instantiate(#type_fn{args = Args, return = Return}, State0) ->
   {NewArgs, State1} = gleam:thread_map(fun do_instantiate/2, Args, State0),
   {NewReturn, State2} = do_instantiate(Return, State1),
-  NewType = #type_func{args = NewArgs, return = NewReturn},
+  NewType = #type_fn{args = NewArgs, return = NewReturn},
   {NewType, State2};
 
 do_instantiate(Type = #type_var{type = Ref}, State = {Env, IdVarMap}) ->
@@ -404,7 +404,7 @@ occurs_check_adjust_levels(Id, #type_app{args = Args}, Env0) ->
   end,
   lists:foldl(Check, Env0, Args);
 
-occurs_check_adjust_levels(Id, #type_func{args = Args, return = Return}, Env0) ->
+occurs_check_adjust_levels(Id, #type_fn{args = Args, return = Return}, Env0) ->
   Check = fun(Arg, E) ->
     occurs_check_adjust_levels(Id, Arg, E)
   end,
@@ -425,8 +425,8 @@ unify(Type1, Type2, Env) ->
       Check = fun({X, Y}, E) -> unify(X, Y, E) end,
       lists:foldl(Check, Env, lists:zip(Args1, Args2));
 
-    {#type_func{args = Args1, return = Return1}, _,
-     #type_func{args = Args2, return = Return2}, _} ->
+    {#type_fn{args = Args1, return = Return1}, _,
+     #type_fn{args = Args2, return = Return2}, _} ->
       Check = fun({X, Y}, E) -> unify(X, Y, E) end,
       NewEnv = lists:foldl(Check, Env, lists:zip(Args1, Args2)),
       unify(Return1, Return2, NewEnv);
@@ -482,7 +482,7 @@ match_fun_type(Arity, #type_var{type = Ref}, Env) ->
       end,
       {ArgsTypes, Env1} = Expand(Expand, AdjustedEnv, Arity),
       {ReturnType, Env2} = new_var(Env1),
-      FnType = #type_func{return = ReturnType, args = ArgsTypes},
+      FnType = #type_fn{return = ReturnType, args = ArgsTypes},
       Link = #type_var_link{type = FnType},
       Env3 = env_put_type_ref(Ref, Link, Env2),
       Env4 = put_env_level(PrevLevel, Env3),
@@ -493,7 +493,7 @@ match_fun_type(Arity, #type_var{type = Ref}, Env) ->
       match_fun_type(Arity, LinkedType, Env)
   end;
 
-match_fun_type(Arity, Type = #type_func{args = Args, return = Return}, Env) ->
+match_fun_type(Arity, Type = #type_fn{args = Args, return = Return}, Env) ->
   case Arity =:= length(Args) of
     true -> {Args, Return, Env};
     false -> fail({incorrect_number_of_arguments, Type})
@@ -523,7 +523,7 @@ type_to_string(Type) ->
         ++ lists:concat(lists:join(", ", lists:map(fun(X) -> F(F, X) end, Args)))
         ++ ")";
 
-      (F, #type_func{args = ParamTypeList, return = ReturnType}) ->
+      (F, #type_fn{args = ParamTypeList, return = ReturnType}) ->
         "fn("
         ++ lists:concat(lists:join(", ", lists:map(fun(X) -> F(F, X) end,
                                                     ParamTypeList)))
