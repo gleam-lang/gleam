@@ -34,7 +34,7 @@
 % TODO: Remove the type annotation so it's calculated by traversing the body
 % and the args. To do this we will need to turn the args into a list of
 % annotated vars rather than strings. We do this in the infer algorithm anyway.
--record(ast_closure,
+-record(ast_fn,
         {meta = #meta{} :: meta(),
          type = type_not_annotated :: type_annotation(),
          args = [] :: [string()],
@@ -58,9 +58,9 @@
 -record(ast_hole,
         {meta = #meta{} :: meta()}).
 
--record(ast_closure_call,
+-record(ast_fn_call,
         {meta = #meta{} :: meta(),
-         closure :: ast_expression(),
+         fn :: ast_expression(),
          args = [] :: [ast_expression()]}).
 
 -record(ast_raise,
@@ -148,8 +148,8 @@
       | #ast_atom{}
       | #ast_call{}
       | #ast_case{}
-      | #ast_closure_call{}
-      | #ast_closure{}
+      | #ast_fn_call{}
+      | #ast_fn{}
       | #ast_cons{}
       | #ast_float{}
       | #ast_hole{}

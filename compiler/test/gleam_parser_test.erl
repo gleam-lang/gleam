@@ -180,7 +180,7 @@ sequence_test() ->
   ,
   ?assertEqual(AST, parse(tokens(Code))).
 
-closure_test() ->
+fn_test() ->
   Code =
     "module MyModule\n"
     "fn thunk(x) { fn() { x } }"
@@ -196,7 +196,7 @@ closure_test() ->
         , name = "thunk"
         , args = ["x"]
         , body =
-          #ast_closure
+          #ast_fn
           { meta = #meta{line = 2}
           , args = []
           , body = #ast_var{meta = #meta{line = 2}, name = "x"}
@@ -207,7 +207,7 @@ closure_test() ->
         , name = "make_identity"
         , args = []
         , body =
-          #ast_closure
+          #ast_fn
           { meta = #meta{line = 2}
           , args = ["x"]
           , body = #ast_var{meta = #meta{line = 2}, name = "x"}

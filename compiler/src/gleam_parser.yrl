@@ -73,8 +73,8 @@ expr -> expr '.' name              : record_access('$2', '$1', '$3').
 expr -> call ')'                   : local_call('$1', []).
 expr -> call call_args ')'         : local_call('$1', '$2').
 expr -> expr '|>' expr             : pipe('$2', '$1', '$3').
-expr -> expr '.' '(' ')'           : closure_call('$2', '$1', []).
-expr -> expr '.' '(' call_args ')' : closure_call('$2', '$1', '$3').
+expr -> expr '.' '(' ')'           : fn_call('$2', '$1', []).
+expr -> expr '.' '(' call_args ')' : fn_call('$2', '$1', '$3').
 expr -> kw_raise expr ')'          : raise('$1', '$2').
 expr -> kw_throw expr ')'          : throw_('$1', '$2').
 
@@ -150,8 +150,8 @@ elems_pattern -> pattern                   : ['$1'].
 elems_pattern -> pattern ','               : ['$1'].
 elems_pattern -> pattern ',' elems_pattern : ['$1' | '$3'].
 
-literal -> kw_fn_call ')' '{' exprs '}'      : closure('$1', [], '$4').
-literal -> kw_fn_call args ')' '{' exprs '}' : closure('$1', '$2', '$5').
+literal -> kw_fn_call ')' '{' exprs '}'      : fn('$1', [], '$4').
+literal -> kw_fn_call args ')' '{' exprs '}' : fn('$1', '$2', '$5').
 literal -> atom              : literal('$1').
 literal -> int               : literal('$1').
 literal -> float             : literal('$1').
@@ -192,16 +192,16 @@ throw_({kw_throw, Meta}, Value) ->
 test({name, Meta, Name}, Body) ->
   #ast_test{meta = Meta, name = Name, body = Body}.
 
-closure({_, Meta}, Args, Body) ->
-  #ast_closure{meta = Meta, args = Args, body = Body}.
+fn({_, Meta}, Args, Body) ->
+  #ast_fn{meta = Meta, args = Args, body = Body}.
 
 local_call({Operator, Meta}, Args) ->
   #ast_local_call{meta = Meta, name = atom_to_list(Operator), args = Args};
 local_call({call, Meta, Name}, Args) ->
   #ast_local_call{meta = Meta, name = Name, args = Args}.
 
-closure_call({'.', Meta}, Closure, Args) ->
-  #ast_closure_call{meta = Meta, closure = Closure, args = Args}.
+fn_call({'.', Meta}, Closure, Args) ->
+  #ast_fn_call{meta = Meta, fn = Closure, args = Args}.
 
 function({call, Meta, Name}, Args, Body) ->
   #ast_function{meta = Meta, name = Name, args = Args, body = Body}.

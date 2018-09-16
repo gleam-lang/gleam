@@ -399,7 +399,7 @@ zero_arity_call_test() ->
     ?assertEqual(100, Mod:one())
   end).
 
-closure_test() ->
+fn_test() ->
   Source =
     "module CodegenClosure exposing id_fun/0, double_fun/0, close_over/1\n"
     "fn id_fun() { fn(x) { x } }\n"
@@ -417,7 +417,7 @@ closure_test() ->
     ?assertEqual(50, ClosedOver())
   end).
 
-closure_call_test() ->
+fn_call_test() ->
   Source =
     "module CodegenClosureCall exposing identity/0, call/1\n"
     "fn call(fun) { fun.() }\n"

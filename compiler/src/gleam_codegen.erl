@@ -122,10 +122,10 @@ expression(#ast_local_call{meta = Meta, name = Name, args = Args}, Env) ->
       {C_args, NewEnv} = map_expressions(Args, Env),
       {cerl:c_apply(C_fname, C_args), NewEnv};
     1 ->
-      % It's a fn(_) capture, convert it into a closure
-      hole_closure(Meta, Name, Args, Env);
+      % It's a fn(_) capture, convert it into a fn
+      hole_fn(Meta, Name, Args, Env);
     _ ->
-      throw({error, multiple_hole_closure})
+      throw({error, multiple_hole_fn})
   end;
 
 expression(#ast_call{module = Mod, name = Name, args = Args}, Env) when is_list(Name) ->
@@ -164,16 +164,16 @@ expression(#ast_record_access{meta = Meta, record = Record, key = Key}, Env) ->
 
 % TODO: We can check the lhs here to see if it is a fn(_)
 % capture. If it is we can avoid the creation of the intermediary
-% closure by directly rewriting the arguments.
-% TODO: Avoid creating an extra var if the closure is already a var.
-expression(#ast_closure_call{closure = Closure, args = Args}, Env0) ->
-  {C_closure, Env1} = expression(Closure, Env0),
+% fn by directly rewriting the arguments.
+% TODO: Avoid creating an extra var if the fn is already a var.
+expression(#ast_fn_call{fn = Closure, args = Args}, Env0) ->
+  {C_fn, Env1} = expression(Closure, Env0),
   {C_args, Env2} = map_expressions(Args, Env1),
   {UID, Env3} = uid(Env2),
-  Name = list_to_atom("$$gleam_closure_var" ++ integer_to_list(UID)),
+  Name = list_to_atom("$$gleam_fn_var" ++ integer_to_list(UID)),
   C_var = cerl:c_var(Name),
   C_apply = cerl:c_apply(C_var, C_args),
-  C_let = cerl:c_let([C_var], C_closure, C_apply),
+  C_let = cerl:c_let([C_var], C_fn, C_apply),
   {C_let, Env3};
 
 expression(#ast_case{subject = Subject, clauses = Clauses}, Env) ->
@@ -196,10 +196,10 @@ expression(#ast_throw{meta = Meta, value = Value}, Env) ->
   expression(Call, Env);
 
 expression(#ast_pipe{meta = Meta, rhs = Rhs, lhs = Lhs}, Env) ->
-  Call = #ast_closure_call{meta = Meta, closure = Rhs, args = [Lhs]},
+  Call = #ast_fn_call{meta = Meta, fn = Rhs, args = [Lhs]},
   expression(Call, Env);
 
-expression(#ast_closure{args = Args, body = Body}, Env) ->
+expression(#ast_fn{args = Args, body = Body}, Env) ->
   function(Args, Body, Env);
 
 expression(#ast_nil{}, Env) ->
@@ -224,13 +224,13 @@ expression(Expressions, Env) when is_list(Expressions) ->
   C_seq = lists:foldl(fun cerl:c_seq/2, Head, Tail),
   {C_seq, Env1}.
 
-hole_closure(Meta, Name, Args, Env) when is_list(Name) ->
+hole_fn(Meta, Name, Args, Env) when is_list(Name) ->
   {UID, NewEnv} = uid(Env),
   VarName = "$$gleam_hole_var" ++ integer_to_list(UID),
   Var = #ast_var{name = VarName},
   NewArgs = lists:map(fun(#ast_hole{}) -> Var; (X) -> X end, Args),
   Call = #ast_local_call{meta = Meta, name = Name, args = NewArgs},
-  Closure = #ast_closure{meta = Meta, args = [VarName], body = Call},
+  Closure = #ast_fn{meta = Meta, args = [VarName], body = Call},
   expression(Closure, NewEnv).
 
 record_field(#ast_record_field{key = Key, value = Val}, Env0) when is_list(Key) ->

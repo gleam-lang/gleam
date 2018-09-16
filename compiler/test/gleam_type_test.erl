@@ -72,7 +72,7 @@ infer_unknown_var_test() ->
   ?assertEqual({error, {var_not_found, #ast_var{name = "something"}}},
                infer("something")).
 
-infer_closure_test() ->
+infer_fn_test() ->
   Cases = [
     {"fn() { 1 }", "fn() { Int }"},
     {"fn() { 1.1 }", "fn() { Float }"},
@@ -85,7 +85,7 @@ infer_closure_test() ->
   ],
   test_infer(Cases).
 
-infer_closure_call_test() ->
+infer_fn_call_test() ->
   Cases = [
     {"id = fn(x) { x } id(1)", "Int"},
     {"two = fn(x) { fn(y) { x } } fun = two(1) fun(:ok)", "Int"},

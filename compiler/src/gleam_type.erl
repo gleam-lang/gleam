@@ -66,7 +66,7 @@ infer(Ast = #ast_local_call{name = Name, args = Args}, Env0) ->
   AnnotatedAst = Ast#ast_local_call{type = {ok, ReturnType}},
   {AnnotatedAst, Env3};
 
-infer(Ast = #ast_closure{args = Args, body = Body}, Env) ->
+infer(Ast = #ast_fn{args = Args, body = Body}, Env) ->
   {ArgTypes, ArgsEnv} = gleam:thread_map(fun(_, E) -> new_var(E) end, Args, Env),
   Insert =
     fun({Name, Type}, E) ->
@@ -76,7 +76,7 @@ infer(Ast = #ast_closure{args = Args, body = Body}, Env) ->
   {ReturnAst, ReturnEnv} = infer(Body, FnEnv),
   ReturnType = fetch(ReturnAst),
   Type = #type_fn{args = ArgTypes, return = ReturnType},
-  AnnotatedAst = Ast#ast_closure{type = {ok, Type}},
+  AnnotatedAst = Ast#ast_fn{type = {ok, Type}},
   FinalEnv = Env#env{type_refs = ReturnEnv#env.type_refs},
   {AnnotatedAst, FinalEnv};
 
@@ -135,7 +135,7 @@ infer(Ast = #ast_atom{}, Env) ->
 fetch(#ast_local_call{type = {ok, Type}}) ->
   Type;
 
-fetch(#ast_closure{type = {ok, Type}}) ->
+fetch(#ast_fn{type = {ok, Type}}) ->
   Type;
 
 fetch(#ast_var{type = {ok, Type}}) ->
@@ -172,9 +172,9 @@ resolve_type_vars(Ast = #ast_local_call{type = {ok, Type}}, Env) ->
   NewType = do_resolve_type_vars(Type, Env),
   Ast#ast_local_call{type = {ok, NewType}};
 
-resolve_type_vars(Ast = #ast_closure{type = {ok, Type}}, Env) ->
+resolve_type_vars(Ast = #ast_fn{type = {ok, Type}}, Env) ->
   NewType = do_resolve_type_vars(Type, Env),
-  Ast#ast_closure{type = {ok, NewType}};
+  Ast#ast_fn{type = {ok, NewType}};
 
 resolve_type_vars(Ast = #ast_var{type = {ok, Type}}, Env) ->
   NewType = do_resolve_type_vars(Type, Env),
