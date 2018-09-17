@@ -35,6 +35,7 @@ Left 220 '*'.
 Left 220 '*.'.
 Left 220 '/'.
 Left 220 '/.'.
+Left 300 '('.
 Right 60 '::'.
 Right 70 '|'.
 
@@ -70,10 +71,10 @@ expr -> case_expr                  : '$1'.
 expr -> operator                   : '$1'.
 expr -> name                       : var('$1').
 expr -> expr '.' name              : record_access('$2', '$1', '$3').
-expr -> name '(' ')'               : local_call('$1', []).
-expr -> name '(' call_args ')'     : local_call('$1', '$3').
+expr -> expr '(' ')'               : local_call('$2', '$1', []).
+expr -> expr '(' call_args ')'     : local_call('$2', '$1', '$3').
 expr -> expr '.' '(' ')'           : fn_call('$2', '$1', []).
-expr -> expr '.' '(' call_args ')' : fn_call('$2', '$1', '$3').
+expr -> expr '.' '(' call_args ')' : fn_call('$2', '$1', '$4').
 expr -> kw_raise expr ')'          : raise('$1', '$2').
 expr -> kw_throw expr ')'          : throw_('$1', '$2').
 
@@ -198,13 +199,11 @@ fn({_, Meta}, Args, Body) ->
 operator({Operator, Meta}, Args) ->
   #ast_operator{meta = Meta, name = atom_to_list(Operator), args = Args}.
 
-local_call({name, Meta, Name}, Args) ->
-  #ast_local_call{meta = Meta, name = Name, args = Args};
-local_call({call, Meta, Name}, Args) ->
-  #ast_local_call{meta = Meta, name = Name, args = Args}.
+local_call({'(', Meta}, Fn, Args) ->
+  #ast_local_call{meta = Meta, fn = Fn, args = Args}.
 
-fn_call({'.', Meta}, Closure, Args) ->
-  #ast_fn_call{meta = Meta, fn = Closure, args = Args}.
+fn_call({'.', Meta}, Fn, Args) ->
+  #ast_fn_call{meta = Meta, fn = Fn, args = Args}.
 
 function({name, Meta, Name}, Args, Body) ->
   #ast_mod_fn{meta = Meta, name = Name, args = Args, body = Body}.

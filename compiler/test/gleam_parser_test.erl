@@ -108,7 +108,7 @@ call_test() ->
         , body =
           #ast_local_call
           { meta = #meta{line = 2}
-          , name = "print"
+          , fn = #ast_var{meta = #meta{line = 2}, name = "print"}
           , args =
             [#ast_int{meta = #meta{line = 2}, value = 20}]
           }
@@ -216,3 +216,27 @@ fn_test() ->
       ]
     },
   ?assertEqual(AST, parse(tokens(Code))).
+
+curried_test() ->
+  Code = "f(1)(2)",
+  AST =
+    #ast_local_call
+    { fn =
+      #ast_local_call
+      { fn = #ast_var{name = "f"}
+      , args = [#ast_int{value = 1}]
+      }
+    , args = [#ast_int{value = 2}]
+    },
+  ?assertEqual(AST, parse(tokens(Code))),
+  Code2 = "f.(1)(2)",
+  AST2 =
+    #ast_local_call
+    { fn =
+      #ast_fn_call
+      { fn = #ast_var{name = "f"}
+      , args = [#ast_int{value = 1}]
+      }
+    , args = [#ast_int{value = 2}]
+    },
+  ?assertEqual(AST2, parse(tokens(Code2))).

@@ -442,6 +442,19 @@ pipe_test() ->
     ?assertEqual(17, Mod:go(1))
   end).
 
+curried_test() ->
+  Source =
+    "module CodegenCurry exposing named/0, anon/1\n"
+    "fn anon(f) { f.(1)(2) }\n"
+    "fn named() { f(1)(2) }\n"
+    "fn f(x) { fn(y) { {x, y} } }\n"
+  ,
+  Mod = 'Gleam.CodegenCurry',
+  with_module(Mod, Source, fun() ->
+    ?assertEqual(Mod:anon(fun(X) -> fun(Y) -> {X, Y} end end), {1, 2}),
+    ?assertEqual(Mod:named(), {1, 2})
+  end).
+
 test_test() ->
   Source =
     "module CodegenPipe\n"

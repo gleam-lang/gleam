@@ -78,6 +78,15 @@ map_expressions(Expressions, Env) ->
   gleam:thread_map(fun expression/2, Expressions, Env).
 
 
+fn_call(#ast_var{name = Name}, Args, Env) ->
+  C_fname = cerl:c_fname(list_to_atom(Name), length(Args)),
+  {C_args, NewEnv} = map_expressions(Args, Env),
+  {cerl:c_apply(C_fname, C_args), NewEnv};
+
+fn_call(Fn, Args, Env0) ->
+  expression(#ast_fn_call{fn = Fn, args = Args}, Env0).
+
+
 expression(#ast_string{value = Value}, Env) when is_binary(Value) ->
   Chars = binary_to_list(Value),
   ByteSequence = lists:map(fun binary_string_byte/1, Chars),
@@ -122,16 +131,16 @@ expression(#ast_operator{name = Name, args = Args}, Env) ->
   end,
   expression(#ast_call{module = "erlang", name = ErlangName, args = Args}, Env);
 
-expression(#ast_local_call{meta = Meta, name = Name, args = Args}, Env) ->
+expression(#ast_local_call{meta = Meta, fn = Fn, args = Args}, Env) ->
   NumHoles = length(lists:filter(fun(#ast_hole{}) -> true; (_) -> false end, Args)),
   case NumHoles of
     0 ->
-      C_fname = cerl:c_fname(list_to_atom(Name), length(Args)),
-      {C_args, NewEnv} = map_expressions(Args, Env),
-      {cerl:c_apply(C_fname, C_args), NewEnv};
+      fn_call(Fn, Args, Env);
+
     1 ->
       % It's a fn(_) capture, convert it into a fn
-      hole_fn(Meta, Name, Args, Env);
+      hole_fn(Meta, Fn, Args, Env);
+
     _ ->
       throw({error, multiple_hole_fn})
   end;
@@ -174,8 +183,8 @@ expression(#ast_record_access{meta = Meta, record = Record, key = Key}, Env) ->
 % capture. If it is we can avoid the creation of the intermediary
 % fn by directly rewriting the arguments.
 % TODO: Avoid creating an extra var if the fn is already a var.
-expression(#ast_fn_call{fn = Closure, args = Args}, Env0) ->
-  {C_fn, Env1} = expression(Closure, Env0),
+expression(#ast_fn_call{fn = Fn, args = Args}, Env0) ->
+  {C_fn, Env1} = expression(Fn, Env0),
   {C_args, Env2} = map_expressions(Args, Env1),
   {UID, Env3} = uid(Env2),
   Name = list_to_atom("$$gleam_fn_var" ++ integer_to_list(UID)),
@@ -228,12 +237,12 @@ expression(Expressions, Env) when is_list(Expressions) ->
   C_seq = lists:foldl(fun cerl:c_seq/2, Head, Tail),
   {C_seq, Env1}.
 
-hole_fn(Meta, Name, Args, Env) when is_list(Name) ->
+hole_fn(Meta, Fn, Args, Env) ->
   {UID, NewEnv} = uid(Env),
   VarName = "$$gleam_hole_var" ++ integer_to_list(UID),
   Var = #ast_var{name = VarName},
   NewArgs = lists:map(fun(#ast_hole{}) -> Var; (X) -> X end, Args),
-  Call = #ast_local_call{meta = Meta, name = Name, args = NewArgs},
+  Call = #ast_local_call{meta = Meta, fn = Fn, args = NewArgs},
   Closure = #ast_fn{meta = Meta, args = [VarName], body = Call},
   expression(Closure, NewEnv).
 

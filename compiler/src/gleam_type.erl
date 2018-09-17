@@ -70,8 +70,8 @@ infer(Ast = #ast_operator{name = Name, args = Args}, Env0) ->
   AnnotatedAst = Ast#ast_operator{type = {ok, ReturnType}},
   {AnnotatedAst, Env1};
 
-infer(Ast = #ast_local_call{name = Name, args = Args}, Env0) ->
-  {ReturnType, Env1} = infer_call(#ast_var{name = Name}, Args, Env0),
+infer(Ast = #ast_local_call{fn = Fn, args = Args}, Env0) ->
+  {ReturnType, Env1} = infer_call(Fn, Args, Env0),
   AnnotatedAst = Ast#ast_local_call{type = {ok, ReturnType}},
   {AnnotatedAst, Env1};
 

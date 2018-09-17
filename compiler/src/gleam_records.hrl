@@ -74,7 +74,7 @@
 -record(ast_local_call,
         {meta = #meta{} :: meta(),
          type = type_not_annotated :: type_annotation(),
-         name :: string(),
+         fn :: ast_expression(),
          args = [] :: [ast_expression()]}).
 
 -record(ast_operator,
