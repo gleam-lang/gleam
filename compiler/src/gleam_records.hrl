@@ -131,12 +131,17 @@
 
 -record(ast_module,
         {exports = [] :: [export()],
-         functions = [] :: [#ast_mod_fn{}],
-         tests = [] :: [#ast_mod_test{}]}).
+         statements = [] :: [mod_statement()]}).
+
 
 -record(ast_seq,
         {first :: ast_expression(),
          then :: ast_expression()}).
+
+-type mod_statement()
+      :: #ast_mod_fn{}
+      | #ast_mod_test{}
+      .
 
 -type ast_expression()
       :: #ast_adt{}

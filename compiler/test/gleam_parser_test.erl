@@ -36,8 +36,7 @@ module_test() ->
   ,
   AST =
     #ast_module
-    { tests = []
-    , functions =
+    { statements =
       [ #ast_mod_fn
         { meta = #meta{line = 1}
         , name = "id"
@@ -67,8 +66,7 @@ arity_2_test() ->
   ,
   AST =
     #ast_module
-    { tests = []
-    , functions =
+    { statements =
       [ #ast_mod_fn
         { meta = #meta{line = 1}
         , name = "add"
@@ -93,8 +91,7 @@ call_test() ->
   ,
   AST =
     #ast_module
-    { tests = []
-    , functions =
+    { statements =
       [ #ast_mod_fn
         { meta = #meta{line = 1}
         , name = "run"
@@ -115,9 +112,8 @@ pub_test() ->
   ?assertAST(
     "pub fn id(x) { x }\n",
     #ast_module
-    { tests = []
-    , exports = [{"id", 1}]
-    , functions =
+    { exports = [{"id", 1}]
+    , statements =
       [ #ast_mod_fn
         { meta = #meta{line = 1}
         , name = "id"
@@ -138,8 +134,7 @@ adt_test() ->
   ,
   AST =
     #ast_module
-    { tests = []
-    , functions =
+    { statements =
       [ #ast_mod_fn
         { meta = #meta{line = 1}
         , name = "ok"
@@ -161,8 +156,7 @@ test_test() ->
   ,
   AST =
     #ast_module
-    { tests = [#ast_mod_test{name = "ok", body = #ast_atom{value = "ok"}}]
-    , functions = []
+    { statements = [#ast_mod_test{name = "ok", body = #ast_atom{value = "ok"}}]
     },
   ?assertEqual(AST, parse(tokens(Code))).
 
@@ -184,8 +178,7 @@ fn_test() ->
   ,
   AST =
     #ast_module
-    { tests = []
-    , functions =
+    { statements =
       [ #ast_mod_fn
         { meta = #meta{line = 1}
         , name = "thunk"

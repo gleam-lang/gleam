@@ -11,32 +11,62 @@
 % Holds state used in code generation.
 -record(env, {uid = 0}).
 
-module(#ast_module{functions = Funs, exports = Exports, tests = Tests}, ModName, Options) ->
+% TODO: Remove exports from module struct and instead check each statement to
+% see if it is `pub` or not. Also use the record below to store an export so
+% that we can expose type information.
+% -record(export, {name, arity, type}).
+
+-record(module_acc, {gen_tests = false, definitions = [], exports = []}).
+
+module(#ast_module{statements = Statements, exports = Exports}, ModName, Options) ->
   PrefixedName = prefix_module(ModName),
-  {TestExports, TestFuns} = case proplists:get_value(gen_tests, Options, false) of
-                              false -> {[], []};
-                              true -> tests(Tests, PrefixedName)
-                            end,
+  GenTests = proplists:get_value(gen_tests, Options, false),
+  Acc0 = lists:foldl(fun module_statement/2,
+                    #module_acc{gen_tests = GenTests},
+                    Statements),
+
+  Acc1 = add_main_test(Acc0, PrefixedName),
+  Acc2 = add_module_info(Acc1, PrefixedName),
+  Acc = Acc2,
+
+  C_exports = lists:map(fun export/1, Exports) ++ Acc#module_acc.exports,
+  C_definitions = Acc#module_acc.definitions,
+
+  Attributes = [], % What are these?
   C_name = cerl:c_atom(PrefixedName),
-  C_exports = [cerl:c_fname(module_info, 0),
-               cerl:c_fname(module_info, 1) |
-               lists:map(fun export/1, Exports) ++ TestExports],
-  C_definitions = [module_info(PrefixedName, []),
-                   module_info(PrefixedName, [cerl:c_var(item)]) |
-                   lists:map(fun named_function/1, Funs) ++ TestFuns],
-  Attributes = [],
   Core = cerl:c_module(C_name, C_exports, Attributes, C_definitions),
   {ok, Core}.
 
-tests(Tests, PrefixedName) ->
-  C_tests = lists:map(fun test/1, Tests),
-  lists:unzip([module_test(PrefixedName) | C_tests]).
+add_module_info(Acc0, Name) ->
+  Acc1 = add_definition(Acc0, module_info(Name, [])),
+  Acc2 = add_definition(Acc1, module_info(Name, [cerl:c_var(item)])),
+  Acc3 = add_export(Acc2, export({"module_info", 0})),
+  Acc4 = add_export(Acc3, export({"module_info", 1})),
+  Acc4.
 
-module_test(PrefixedName) ->
+add_main_test(#module_acc{gen_tests = false} = Acc, _PrefixedName) ->
+  Acc;
+add_main_test(#module_acc{gen_tests = true} = Acc, PrefixedName) ->
   Body = cerl:c_call(cerl:c_atom(eunit), cerl:c_atom(test), [cerl:c_atom(PrefixedName)]),
   Name = cerl:c_fname(test, 0),
   Fun = cerl:c_fun([], Body),
-  {export({"test", 0}), {Name, Fun}}.
+  Export = export({"test", 0}),
+  C_fun = {Name, Fun},
+  add_export(add_definition(Acc, C_fun), Export).
+
+add_definition(Acc = #module_acc{definitions = Defs}, Def) ->
+  Acc#module_acc{definitions = [Def | Defs]}.
+
+add_export(Acc = #module_acc{exports = Exports}, Export) ->
+  Acc#module_acc{exports = [Export | Exports]}.
+
+module_statement(#ast_mod_fn{} = Fn, Acc) ->
+  add_definition(Acc, named_function(Fn));
+module_statement(#ast_mod_test{} = Test, #module_acc{gen_tests = true} = Acc) ->
+  {C_export, C_test} = test(Test),
+  add_export(add_definition(Acc, C_test), C_export);
+module_statement(#ast_mod_test{}, #module_acc{gen_tests = false} = Acc) ->
+  Acc.
 
 test(#ast_mod_test{name = Name, body = Body}) ->
   TestName = Name ++ "_test",

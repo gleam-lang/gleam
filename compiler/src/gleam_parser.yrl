@@ -153,17 +153,17 @@ Erlang code.
 -include("gleam_records.hrl").
 
 mod_fun(true, Function, Module) ->
-  #ast_module{functions = Functions, exports = Exports} = Module,
+  #ast_module{statements = Statements, exports = Exports} = Module,
   #ast_mod_fn{name = Name, args = Args} = Function,
-  Module#ast_module{functions = [Function | Functions],
+  Module#ast_module{statements = [Function | Statements],
                     exports = [{Name, length(Args)} | Exports]};
 mod_fun(false, Function, Module) ->
-  #ast_module{functions = Functions} = Module,
-  Module#ast_module{functions = [Function | Functions]}.
+  #ast_module{statements = Statements} = Module,
+  Module#ast_module{statements = [Function | Statements]}.
 
 mod_test(Test, Module) ->
-  #ast_module{tests = Tests} = Module,
-  Module#ast_module{tests = [Test | Tests]}.
+  #ast_module{statements = Statements} = Module,
+  Module#ast_module{statements = [Test | Statements]}.
 
 seq(First, Then) ->
   #ast_seq{first = First, then = Then}.
