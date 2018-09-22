@@ -130,8 +130,7 @@
          body :: ast_expression()}).
 
 -record(ast_module,
-        {name = "" :: string(),
-         exports = [] :: [export()],
+        {exports = [] :: [export()],
          functions = [] :: [#ast_mod_fn{}],
          tests = [] :: [#ast_mod_test{}]}).
 

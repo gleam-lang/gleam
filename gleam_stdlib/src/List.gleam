@@ -1,5 +1,3 @@
-module List
-
 import Result:Result:*
 
 pub type Err =

@@ -1,5 +1,3 @@
-module Bool
-
 import Order:Order
 
 pub type Bool =

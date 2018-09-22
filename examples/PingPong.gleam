@@ -1,5 +1,3 @@
-module PingPong
-
 fn run() {
   pid = spawn(fn() {
     receive {

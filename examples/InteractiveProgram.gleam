@@ -1,5 +1,3 @@
-module InteractiveProgram exposing run/0
-
 import IO
 import Result:Result:*
 import Order:Order

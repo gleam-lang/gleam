@@ -1,8 +1,4 @@
-module GleamAst
-  exposing Ast(..), Meta(..), Module(..), Function(..), Test(..), Expr(..),
-    Clause(..), RecordField(..), Export, Charlist
-
-import Foreign exposing Foreign
+import Foreign:Foreign
 
 type Meta =
   | Meta(Int)

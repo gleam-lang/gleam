@@ -4,10 +4,6 @@
 -define(assertTokens(Code, Tokens),
         ?assertMatch(Tokens, element(2, gleam_tokenizer:string(Code)))).
 
-keyword_test() ->
-  ?assertTokens("module",   [{kw_module, _}]),
-  ?assertTokens("fn",       [{kw_fn, _}]).
-
 int_test() ->
   ?assertTokens("1",    [{int, _, 1}]),
   ?assertTokens("11",   [{int, _, 11}]),

@@ -3,8 +3,6 @@
 A statically typed language for the Erlang VM.
 
 ```elm
-module Shape
-
 pub type Quadrilateral =
   | Square(Int)
   | Rectangle(Int, Int)

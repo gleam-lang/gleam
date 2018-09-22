@@ -3,8 +3,10 @@
 -define(refute(Value), ?assert(not Value)).
 
 with_module(Name, Source, Fun) ->
-  FileName = "Gleam." ++ atom_to_list(Name) ++ ".beam",
-  BeamBinary = gleam_compiler:source_to_binary(Source, [{gen_tests, true}]),
+  StrName = atom_to_list(Name),
+  FileName = StrName ++ ".beam",
+  "Gleam." ++ ModName = StrName,
+  BeamBinary = gleam_compiler:source_to_binary(Source, ModName, [{gen_tests, true}]),
   {module, Name} = code:load_binary(Name, FileName, BeamBinary),
   ?assertEqual({file, FileName}, code:is_loaded(Name)),
   try Fun() of
@@ -16,7 +18,6 @@ with_module(Name, Source, Fun) ->
 
 module_identity_test() ->
   Source =
-    "module CodegenModuleIdentity\n"
     "pub fn identity(x) { x }\n"
     "fn hidden(x) { x }\n"
   ,
@@ -33,7 +34,6 @@ module_identity_test() ->
 
 maths_test() ->
   Source =
-    "module CodegenMaths\n"
     "pub fn int_add(x, y) { x + y }\n"
     "pub fn int_sub(x, y) { x - y }\n"
     "pub fn int_mult(x, y) { x * y }\n"
@@ -56,7 +56,6 @@ maths_test() ->
 
 comparison_test() ->
   Source =
-    "module CodegenComparison\n"
     "pub fn lt(x, y) { x < y }\n"
     "pub fn lte(x, y) { x <= y }\n"
     "pub fn gt(x, y) { x > y }\n"
@@ -79,7 +78,6 @@ comparison_test() ->
 
 int_test() ->
   Source =
-    "module CodegenInt\n"
     "pub fn one() { 1 }\n"
     "pub fn two() { 2 }\n"
     "pub fn inc(x) { x + 1 }\n"
@@ -96,7 +94,6 @@ int_test() ->
 
 float_test() ->
   Source =
-    "module CodegenFloat\n"
     "pub fn one() { 1.0 }\n"
     "pub fn two() { 2.0 }\n"
     "pub fn inc(x) { x + 1.0 }\n"
@@ -113,7 +110,6 @@ float_test() ->
 
 string_test() ->
   Source =
-    "module CodegenString\n"
     "pub fn empty() { \"\" }\n"
     "pub fn name() { \"Louis\" }\n"
   ,
@@ -124,7 +120,6 @@ string_test() ->
 
 atom_test() ->
   Source =
-    "module CodegenAtom\n"
     "pub fn one() { 'one' }\n"
     "pub fn caps() { 'CAPS' }\n"
     "pub fn etc() { 'Hello, world!' }\n"
@@ -137,7 +132,6 @@ atom_test() ->
 
 tuple_test() ->
   Source =
-    "module CodegenTuple\n"
     "pub fn ok(x) { {'ok', x} }\n"
     "pub fn threeple() { {1, 2, 3} }\n"
   ,
@@ -148,7 +142,6 @@ tuple_test() ->
 
 list_test() ->
   Source =
-    "module CodegenList\n"
     "pub fn empty() { [] }\n"
     "pub fn one() { [1] }\n"
     "pub fn two() { [1, 2] }\n"
@@ -165,7 +158,6 @@ list_test() ->
 
 call_test() ->
   Source =
-    "module CodegenCall\n"
     "pub fn double(x) { ok(add(x, x)) }\n"
     "fn add(x, y) { x + y }\n"
     "fn ok(x) { {'ok', x} }\n"
@@ -176,7 +168,6 @@ call_test() ->
 
 seq_test() ->
   Source =
-    "module CodegenSeq\n"
     "pub fn main() { 1 2 3 }\n"
   ,
   with_module('Gleam.CodegenSeq', Source, fun() ->
@@ -185,7 +176,6 @@ seq_test() ->
 
 assignment_test() ->
   Source =
-    "module CodegenAssignment\n"
     "pub fn go() { x = 100 y = x + 1 'unused' z = x + y 'unused' z }\n"
     "pub fn reassign() { x = 1 x = 2 x }\n"
   ,
@@ -196,7 +186,6 @@ assignment_test() ->
 
 bool_adt_test() ->
   Source =
-    "module CodegenBoolAdt\n"
     "pub fn true() { True }\n"
     "pub fn false() { False }\n"
   ,
@@ -207,7 +196,6 @@ bool_adt_test() ->
 
 word_case_adt_test() ->
   Source =
-    "module CodegenWordCaseAdt\n"
     "pub fn one() { SomeLongName }\n"
     "pub fn two() { ADT }\n"
   ,
@@ -218,7 +206,6 @@ word_case_adt_test() ->
 
 product_adt_test() ->
   Source =
-    "module CodegenProductAdt\n"
     "pub fn ok(x) { Ok(x) }\n"
   ,
   with_module('Gleam.CodegenProductAdt', Source, fun() ->
@@ -227,7 +214,6 @@ product_adt_test() ->
 
 case_int_test() ->
   Source =
-    "module CodegenCaseInt\n"
     "pub fn go(x) {\n"
     "  case x {\n"
     "  | 1 => 'one'\n"
@@ -246,7 +232,6 @@ case_int_test() ->
 
 case_float_test() ->
   Source =
-    "module CodegenCaseFloat\n"
     "pub fn go(x) {\n"
     "  case x {\n"
     "  | 1.0 => 'one'\n"
@@ -265,7 +250,6 @@ case_float_test() ->
 
 case_string_test() ->
   Source =
-    "module CodegenCaseString\n"
     "pub fn go(x) {\n"
     "  case x {\n"
     "  | \"\" => 'empty'\n"
@@ -280,7 +264,6 @@ case_string_test() ->
 
 case_list_test() ->
   Source =
-    "module CodegenCaseList\n"
     "pub fn length(x) {\n"
     "  case x {\n"
     "  | [] => 0\n"
@@ -299,7 +282,6 @@ case_list_test() ->
 
 case_cons_test() ->
   Source =
-    "module CodegenCaseCons\n"
     "pub fn head(x) {\n"
     "  case x {\n"
     "  | x :: _ => Just(x)\n"
@@ -315,7 +297,6 @@ case_cons_test() ->
 
 case_tuple_test() ->
   Source =
-    "module CodegenCaseTuple\n"
     "pub fn go(x) {\n"
     "  case x {\n"
     "  | {'ok', {1, 1}} => 'one'\n"
@@ -332,7 +313,6 @@ case_tuple_test() ->
 
 case_var_test() ->
   Source =
-    "module CodegenCaseVar\n"
     "pub fn unwrap(x) {\n"
     "  case x {\n"
     "  | {'ok', thing} => thing\n"
@@ -347,7 +327,6 @@ case_var_test() ->
 
 case_adt_test() ->
   Source =
-    "module CodegenCaseAdt\n"
     "pub fn unwrap(x) {\n"
     "  case x {\n"
     "  | Nothing => 'default'\n"
@@ -362,7 +341,6 @@ case_adt_test() ->
 
 record_test() ->
   Source =
-    "module CodegenRecord\n"
     "pub fn zero() { {} }\n"
     "pub fn one(x) { {value => x} }\n"
     "pub fn two(x) { {val1 => x, val2 => x} }\n"
@@ -376,7 +354,6 @@ record_test() ->
 
 record_access_test() ->
   Source =
-    "module CodegenRecordAccess\n"
     "pub fn name(x) { x.name }\n"
     "pub fn dig(x) { x.one.two.three }\n"
   ,
@@ -388,7 +365,6 @@ record_access_test() ->
 
 zero_arity_call_test() ->
   Source =
-    "module CodegenZeroArityCall\n"
     "pub fn one() { hidden() }\n"
     "fn hidden() { 100 }\n"
   ,
@@ -399,7 +375,6 @@ zero_arity_call_test() ->
 
 fn_test() ->
   Source =
-    "module CodegenClosure\n"
     "pub fn id_fun() { fn(x) { x } }\n"
     "fn double(x) { x + x }\n"
     "pub fn double_fun() { double(_) }\n"
@@ -417,7 +392,6 @@ fn_test() ->
 
 fn_call_test() ->
   Source =
-    "module CodegenClosureCall\n"
     "pub fn call(fun) { fun.() }\n"
   ,
   Mod = 'Gleam.CodegenClosureCall',
@@ -427,7 +401,6 @@ fn_call_test() ->
 
 pipe_test() ->
   Source =
-    "module CodegenPipe\n"
     "fn add(x, y) { x + y }\n"
     "fn inc(x) { x + 1 }\n"
     "pub fn incer() { inc(_) }\n"
@@ -442,7 +415,6 @@ pipe_test() ->
 
 curried_test() ->
   Source =
-    "module CodegenCurry\n"
     "fn f(x) { fn(y) { {x, y} } }\n"
     "pub fn anon(f) { f.(1)(2) }\n"
     "pub fn named() { f(1)(2) }\n"
@@ -455,7 +427,6 @@ curried_test() ->
 
 test_test() ->
   Source =
-    "module CodegenPipe\n"
     "test thing { 'ok' }\n"
   ,
   Mod = 'Gleam.CodegenPipe',
@@ -466,7 +437,6 @@ test_test() ->
 
 raise_test() ->
   Source =
-    "module CodegenRaise\n"
     "pub fn go(x) { raise(x) }\n"
   ,
   Mod = 'Gleam.CodegenRaise',
@@ -477,7 +447,6 @@ raise_test() ->
 
 throw_test() ->
   Source =
-    "module CodegenThrow\n"
     "pub fn go(x) { throw(x) }\n"
   ,
   Mod = 'Gleam.CodegenThrow',
@@ -488,7 +457,6 @@ throw_test() ->
 
 eq_test() ->
   Source =
-    "module CodegenEq\n"
     "pub fn eq(x, y) { x == y }\n"
     "pub fn neq(x, y) { x != y }\n"
   ,

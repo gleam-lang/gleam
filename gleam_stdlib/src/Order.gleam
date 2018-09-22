@@ -1,5 +1,3 @@
-module Order
-
 type Order =
   | LT
   | EQ

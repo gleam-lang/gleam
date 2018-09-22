@@ -1,5 +1,3 @@
-module Result
-
 doc """
 Result represents the result of something that may succeed or fail.
 `Ok` means it was successful, `Error` means it failed.

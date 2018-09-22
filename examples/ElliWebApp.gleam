@@ -1,5 +1,3 @@
-module ElliWebApp
-
 // A very simple web application using the Elli web server.
 // https://github.com/elli-lib/elli
 //

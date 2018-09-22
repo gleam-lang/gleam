@@ -1,5 +1,3 @@
-module StackGenServer
-
 // A GenServer example taken from the Elixir documentation
 // https://hexdocs.pm/elixir/GenServer.html#module-client-server-apis
 

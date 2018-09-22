@@ -4,15 +4,15 @@
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
--export([module/2]).
+-export([module/3]).
 
 -define(is_uppercase_char(C), C >= $A andalso C =< $Z).
 
 % Holds state used in code generation.
 -record(env, {uid = 0}).
 
-module(#ast_module{name = Name, functions = Funs, exports = Exports, tests = Tests}, Options) ->
-  PrefixedName = prefix_module(Name),
+module(#ast_module{functions = Funs, exports = Exports, tests = Tests}, ModName, Options) ->
+  PrefixedName = prefix_module(ModName),
   {TestExports, TestFuns} = case proplists:get_value(gen_tests, Options, false) of
                               false -> {[], []};
                               true -> tests(Tests, PrefixedName)

@@ -1,5 +1,3 @@
-module Foreign
-
 doc """
 Foreign data is data that we don't know the type of yet.
 We likely get data like this from interop with Erlang, or from

@@ -1,5 +1,3 @@
-module Timeout
-
 import Foreign
 
 pub external type Timeout

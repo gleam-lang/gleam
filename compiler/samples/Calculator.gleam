@@ -1,18 +1,15 @@
-module Calculator
-  exposing add/2, sub/2, div/2, mult/2
-
-fn add(a, b) {
+pub fn add(a, b) {
   a + b
 }
 
-fn sub(a, b) {
+pub fn sub(a, b) {
   a - b
 }
 
-fn div(a, b) {
+pub fn div(a, b) {
   a / b
 }
 
-fn mult(a, b) {
+pub fn mult(a, b) {
   a * b
 }

@@ -1,5 +1,3 @@
-module GenServer
-
 import Timeout:Timeout
 import Foreign:Foreign
 import Process:Pid

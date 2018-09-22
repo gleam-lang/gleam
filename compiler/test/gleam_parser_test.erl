@@ -31,31 +31,29 @@ tuple_test() ->
 
 module_test() ->
   Code =
-    "module MyModule\n"
     "fn id(x) { x }\n"
     "fn ok(val) { {'ok', val} }\n"
   ,
   AST =
     #ast_module
-    { name = "MyModule"
-    , tests = []
+    { tests = []
     , functions =
       [ #ast_mod_fn
-        { meta = #meta{line = 2}
+        { meta = #meta{line = 1}
         , name = "id"
         , args = ["x"]
-        , body = #ast_var{name = "x", meta = #meta{line = 2}}
+        , body = #ast_var{name = "x", meta = #meta{line = 1}}
         }
       , #ast_mod_fn
-        { meta = #meta{line = 3}
+        { meta = #meta{line = 2}
         , name = "ok"
         , args = ["val"]
         , body =
           #ast_tuple
-          {meta = #meta{line = 3},
+          {meta = #meta{line = 2},
            elems =
-            [ #ast_atom{meta = #meta{line = 3}, value = "ok"}
-            , #ast_var{meta = #meta{line = 3}, name = "val"}
+            [ #ast_atom{meta = #meta{line = 2}, value = "ok"}
+            , #ast_var{meta = #meta{line = 2}, name = "val"}
             ]
           }
         }
@@ -65,25 +63,23 @@ module_test() ->
 
 arity_2_test() ->
   Code =
-    "module MyModule\n"
     "fn add(x, y) { x + y }\n"
   ,
   AST =
     #ast_module
-    { name = "MyModule"
-    , tests = []
+    { tests = []
     , functions =
       [ #ast_mod_fn
-        { meta = #meta{line = 2}
+        { meta = #meta{line = 1}
         , name = "add"
         , args = ["x", "y"]
         , body =
           #ast_operator
-          { meta = #meta{line = 2}
+          { meta = #meta{line = 1}
           , name = "+"
           , args =
-            [ #ast_var{meta = #meta{line = 2}, name = "x"}
-            , #ast_var{meta = #meta{line = 2}, name = "y"}
+            [ #ast_var{meta = #meta{line = 1}, name = "x"}
+            , #ast_var{meta = #meta{line = 1}, name = "y"}
             ]
           }
         }
@@ -93,24 +89,22 @@ arity_2_test() ->
 
 call_test() ->
   Code =
-    "module MyModule\n"
     "fn run() { print(20) }\n"
   ,
   AST =
     #ast_module
-    { name = "MyModule"
-    , tests = []
+    { tests = []
     , functions =
       [ #ast_mod_fn
-        { meta = #meta{line = 2}
+        { meta = #meta{line = 1}
         , name = "run"
         , args = []
         , body =
           #ast_local_call
-          { meta = #meta{line = 2}
-          , fn = #ast_var{meta = #meta{line = 2}, name = "print"}
+          { meta = #meta{line = 1}
+          , fn = #ast_var{meta = #meta{line = 1}, name = "print"}
           , args =
-            [#ast_int{meta = #meta{line = 2}, value = 20}]
+            [#ast_int{meta = #meta{line = 1}, value = 20}]
           }
         }
       ]
@@ -119,20 +113,18 @@ call_test() ->
 
 pub_test() ->
   ?assertAST(
-    "module MyModule\n"
     "pub fn id(x) { x }\n",
     #ast_module
-    { name = "MyModule"
-    , tests = []
+    { tests = []
     , exports = [{"id", 1}]
     , functions =
       [ #ast_mod_fn
-        { meta = #meta{line = 2}
+        { meta = #meta{line = 1}
         , name = "id"
         , args = ["x"]
         , body =
           #ast_var
-          { meta = #meta{line = 2}
+          { meta = #meta{line = 1}
           , name = "x"
           }
         }
@@ -142,23 +134,21 @@ pub_test() ->
 
 adt_test() ->
   Code =
-    "module MyModule\n"
     "fn ok() { Ok(1) }"
   ,
   AST =
     #ast_module
-    { name = "MyModule"
-    , tests = []
+    { tests = []
     , functions =
       [ #ast_mod_fn
-        { meta = #meta{line = 2}
+        { meta = #meta{line = 1}
         , name = "ok"
         , args = []
         , body =
           #ast_adt
-          { meta = #meta{line = 2}
+          { meta = #meta{line = 1}
           , name = "Ok"
-          , elems = [#ast_int{meta = #meta{line = 2}, value = 1}]
+          , elems = [#ast_int{meta = #meta{line = 1}, value = 1}]
           }
         }
       ]
@@ -167,16 +157,11 @@ adt_test() ->
 
 test_test() ->
   Code =
-    "module MyModule\n"
     "test ok { 'ok' }"
   ,
   AST =
     #ast_module
-    { name = "MyModule"
-    , tests =
-      [#ast_mod_test{meta = #meta{line = 2},
-                     name = "ok",
-                     body = #ast_atom{meta = #meta{line = 2}, value = "ok"}}]
+    { tests = [#ast_mod_test{name = "ok", body = #ast_atom{value = "ok"}}]
     , functions = []
     },
   ?assertEqual(AST, parse(tokens(Code))).
@@ -194,35 +179,33 @@ sequence_test() ->
 
 fn_test() ->
   Code =
-    "module MyModule\n"
     "fn thunk(x) { fn() { x } }"
     "fn make_identity() { fn(x) { x } }"
   ,
   AST =
     #ast_module
-    { name = "MyModule"
-    , tests = []
+    { tests = []
     , functions =
       [ #ast_mod_fn
-        { meta = #meta{line = 2}
+        { meta = #meta{line = 1}
         , name = "thunk"
         , args = ["x"]
         , body =
           #ast_fn
-          { meta = #meta{line = 2}
+          { meta = #meta{line = 1}
           , args = []
-          , body = #ast_var{meta = #meta{line = 2}, name = "x"}
+          , body = #ast_var{meta = #meta{line = 1}, name = "x"}
           }
         },
         #ast_mod_fn
-        { meta = #meta{line = 2}
+        { meta = #meta{line = 1}
         , name = "make_identity"
         , args = []
         , body =
           #ast_fn
-          { meta = #meta{line = 2}
+          { meta = #meta{line = 1}
           , args = ["x"]
-          , body = #ast_var{meta = #meta{line = 2}, name = "x"}
+          , body = #ast_var{meta = #meta{line = 1}, name = "x"}
           }
         }
       ]

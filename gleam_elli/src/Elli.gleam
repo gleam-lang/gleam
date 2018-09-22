@@ -1,5 +1,3 @@
-module Elli
-
 import Foreign:Foreign
 import Result:Result:*
 

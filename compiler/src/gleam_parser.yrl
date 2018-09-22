@@ -1,5 +1,5 @@
 Nonterminals
-source module mod_header mod_body
+source module
 function test
 exprs expr operator literal elems args call_args
 container container_pattern elems_pattern
@@ -14,7 +14,6 @@ Terminals
 '/' '*' '+' '-' '/.' '*.' '+.' '-.'
 int float atom string
 hole name upname upcall
-kw_module
 kw_fn kw_fn_call kw_case kw_test
 kw_raise kw_throw kw_pub.
 
@@ -42,17 +41,12 @@ Right 70 '|'.
 source -> module : '$1'.
 source -> exprs  : '$1'.
 
-module -> mod_header          : '$1'.
-module -> mod_header mod_body : module('$1', '$2').
-
-mod_header -> kw_module upname                     : mod_header('$2', []).
-
-mod_body -> kw_pub function          : mod_fun(true, '$2', #ast_module{}).
-mod_body -> kw_pub function mod_body : mod_fun(true, '$2', '$3').
-mod_body -> function                 : mod_fun(false, '$1', #ast_module{}).
-mod_body -> function mod_body        : mod_fun(false, '$1', '$2').
-mod_body -> test                     : mod_test('$1', #ast_module{}).
-mod_body -> test mod_body            : mod_test('$1', '$2').
+module -> kw_pub function        : mod_fun(true, '$2', #ast_module{}).
+module -> kw_pub function module : mod_fun(true, '$2', '$3').
+module -> function               : mod_fun(false, '$1', #ast_module{}).
+module -> function module        : mod_fun(false, '$1', '$2').
+module -> test                   : mod_test('$1', #ast_module{}).
+module -> test module            : mod_test('$1', '$2').
 
 function -> kw_fn name '(' ')' '{' exprs '}'      : function('$2', [], '$6').
 function -> kw_fn name '(' args ')' '{' exprs '}' : function('$2', '$4', '$7').
@@ -157,12 +151,6 @@ literal -> string            : literal('$1').
 Erlang code.
 
 -include("gleam_records.hrl").
-
-module(Header, Body) ->
-  Body#ast_module{name = Header#ast_module.name}.
-
-mod_header({upname, _, Name}, Exports) ->
-  #ast_module{name = Name, exports = Exports}.
 
 mod_fun(true, Function, Module) ->
   #ast_module{functions = Functions, exports = Exports} = Module,
