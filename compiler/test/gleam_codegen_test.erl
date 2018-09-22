@@ -125,9 +125,9 @@ string_test() ->
 atom_test() ->
   Source =
     "module CodegenAtom\n"
-    "pub fn one() { :one }\n"
-    "pub fn caps() { :CAPS }\n"
-    "pub fn etc() { :\"Hello, world!\" }\n"
+    "pub fn one() { 'one' }\n"
+    "pub fn caps() { 'CAPS' }\n"
+    "pub fn etc() { 'Hello, world!' }\n"
   ,
   with_module('Gleam.CodegenAtom', Source, fun() ->
     ?assertEqual(one, 'Gleam.CodegenAtom':one()),
@@ -138,7 +138,7 @@ atom_test() ->
 tuple_test() ->
   Source =
     "module CodegenTuple\n"
-    "pub fn ok(x) { {:ok, x} }\n"
+    "pub fn ok(x) { {'ok', x} }\n"
     "pub fn threeple() { {1, 2, 3} }\n"
   ,
   with_module('Gleam.CodegenTuple', Source, fun() ->
@@ -168,7 +168,7 @@ call_test() ->
     "module CodegenCall\n"
     "pub fn double(x) { ok(add(x, x)) }\n"
     "fn add(x, y) { x + y }\n"
-    "fn ok(x) { {:ok, x} }\n"
+    "fn ok(x) { {'ok', x} }\n"
   ,
   with_module('Gleam.CodegenCall', Source, fun() ->
     ?assertEqual({ok, 10}, 'Gleam.CodegenCall':double(5))
@@ -186,7 +186,7 @@ seq_test() ->
 assignment_test() ->
   Source =
     "module CodegenAssignment\n"
-    "pub fn go() { x = 100 y = x + 1 :unused z = x + y :unused z }\n"
+    "pub fn go() { x = 100 y = x + 1 'unused' z = x + y 'unused' z }\n"
     "pub fn reassign() { x = 1 x = 2 x }\n"
   ,
   with_module('Gleam.CodegenAssignment', Source, fun() ->
@@ -230,10 +230,10 @@ case_int_test() ->
     "module CodegenCaseInt\n"
     "pub fn go(x) {\n"
     "  case x {\n"
-    "  | 1 => :one\n"
-    "  | 2 => :two\n"
-    "  | 3 => :three\n"
-    "  | _ => :other\n"
+    "  | 1 => 'one'\n"
+    "  | 2 => 'two'\n"
+    "  | 3 => 'three'\n"
+    "  | _ => 'other'\n"
     "  }\n"
     "}\n"
   ,
@@ -249,10 +249,10 @@ case_float_test() ->
     "module CodegenCaseFloat\n"
     "pub fn go(x) {\n"
     "  case x {\n"
-    "  | 1.0 => :one\n"
-    "  | 2.0 => :two\n"
-    "  | 3.0 => :three\n"
-    "  | _ => :other\n"
+    "  | 1.0 => 'one'\n"
+    "  | 2.0 => 'two'\n"
+    "  | 3.0 => 'three'\n"
+    "  | _ => 'other'\n"
     "  }\n"
     "}\n"
   ,
@@ -268,8 +268,8 @@ case_string_test() ->
     "module CodegenCaseString\n"
     "pub fn go(x) {\n"
     "  case x {\n"
-    "  | \"\" => :empty\n"
-    "  | _ => :non_empty\n"
+    "  | \"\" => 'empty'\n"
+    "  | _ => 'non_empty'\n"
     "  }\n"
     "}\n"
   ,
@@ -318,9 +318,9 @@ case_tuple_test() ->
     "module CodegenCaseTuple\n"
     "pub fn go(x) {\n"
     "  case x {\n"
-    "  | {:ok, {1, 1}} => :one\n"
-    "  | {:ok, {2, 2}} => :two\n"
-    "  | {_, _} => :eh\n"
+    "  | {'ok', {1, 1}} => 'one'\n"
+    "  | {'ok', {2, 2}} => 'two'\n"
+    "  | {_, _} => 'eh'\n"
     "  }\n"
     "}\n"
   ,
@@ -335,8 +335,8 @@ case_var_test() ->
     "module CodegenCaseVar\n"
     "pub fn unwrap(x) {\n"
     "  case x {\n"
-    "  | {:ok, thing} => thing\n"
-    "  | _ => :default\n"
+    "  | {'ok', thing} => thing\n"
+    "  | _ => 'default'\n"
     "  }\n"
     "}\n"
   ,
@@ -350,7 +350,7 @@ case_adt_test() ->
     "module CodegenCaseAdt\n"
     "pub fn unwrap(x) {\n"
     "  case x {\n"
-    "  | Nothing => :default\n"
+    "  | Nothing => 'default'\n"
     "  | Just(z) => z\n"
     "  }\n"
     "}\n"
@@ -456,7 +456,7 @@ curried_test() ->
 test_test() ->
   Source =
     "module CodegenPipe\n"
-    "test thing { :ok }\n"
+    "test thing { 'ok' }\n"
   ,
   Mod = 'Gleam.CodegenPipe',
   with_module(Mod, Source, fun() ->

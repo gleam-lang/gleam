@@ -24,8 +24,8 @@ cannot_unify_test() ->
     "1 + 2.0",
     "1 == 2.0",
     "[1, 2.0]",
-    "[1, 2, 3, 4, 5, :six]",
-    "{:ok, 1} != {:ok, 1, :extra}"
+    "[1, 2, 3, 4, 5, 'six']",
+    "{'ok', 1} != {'ok', 1, 'extra'}"
   ],
   Test =
     fun(Src) ->
@@ -43,7 +43,7 @@ infer_undefined_var_test() ->
 infer_const_test() ->
   Cases = [
     {"1", "Int"},
-    {":ok", "Atom"},
+    {"'ok'", "Atom"},
     {"1.0", "Float"},
     {"\"123\"", "String"},
     {"one = 1 one", "Int"}
@@ -53,17 +53,17 @@ infer_const_test() ->
 infer_tuple_test() ->
   Cases = [
     {"{0.0}", "Tuple(Float)"},
-    {"{:ok, 1}", "Tuple(Atom, Int)"},
-    {"{:ok, 1, {1.0, \"\"}}", "Tuple(Atom, Int, Tuple(Float, String))"}
+    {"{'ok', 1}", "Tuple(Atom, Int)"},
+    {"{'ok', 1, {1.0, \"\"}}", "Tuple(Atom, Int, Tuple(Float, String))"}
   ],
   test_infer(Cases).
 
 infer_let_test() ->
   Cases = [
-    {"x = :unused 1", "Int"},
-    {"x = :unused 1.1", "Float"},
-    {"x = :unused {:ok, 1}", "Tuple(Atom, Int)"},
-    {"x = :ok x", "Atom"},
+    {"x = 'unused' 1", "Int"},
+    {"x = 'unused' 1.1", "Float"},
+    {"x = 'unused' {'ok', 1}", "Tuple(Atom, Int)"},
+    {"x = 'ok' x", "Atom"},
     {"x = 5 y = x y", "Int"}
   ],
   test_infer(Cases).
@@ -81,14 +81,14 @@ infer_fn_test() ->
     {"x = fn(x) { 1.1 } x", "fn(a) { Float }"},
     {"fn(x, y, z) { 1 }", "fn(a, b, c) { Int }"},
     {"fn(x) { y = x y }", "fn(a) { a }"},
-    {"fn(x) { {:ok, x} }", "fn(a) { Tuple(Atom, a) }"}
+    {"fn(x) { {'ok', x} }", "fn(a) { Tuple(Atom, a) }"}
   ],
   test_infer(Cases).
 
 infer_fn_call_test() ->
   Cases = [
     {"id = fn(x) { x } id(1)", "Int"},
-    {"two = fn(x) { fn(y) { x } } fun = two(1) fun(:ok)", "Int"},
+    {"two = fn(x) { fn(y) { x } } fun = two(1) fun('ok')", "Int"},
     % Apply
     {"fn(f, x) { f(x) }",
     "fn(fn(a) { b }, a) { b }"},
@@ -161,12 +161,12 @@ equality_test() ->
   Cases = [
     {"1 == 1", "Bool"},
     {"1.0 == 2.0", "Bool"},
-    {":ok == :ko", "Bool"},
-    {"{:ok, 1} == {:ko, 2}", "Bool"},
+    {"'ok' == 'ko'", "Bool"},
+    {"{'ok', 1} == {'ko', 2}", "Bool"},
     {"1 != 1", "Bool"},
     {"1.0 != 2.0", "Bool"},
-    {":ok != :ko", "Bool"},
-    {"{:ok, 1} != {:ko, 2}", "Bool"},
+    {"'ok' != 'ko'", "Bool"},
+    {"{'ok', 1} != {'ko', 2}", "Bool"},
     {"x = 1 x == x", "Bool"},
     {"id = fn(x) { x } id == id", "Bool"},
     {"id1 = fn(x) { x } id2 = fn(x) { x } id1 == id2", "Bool"},
@@ -187,7 +187,7 @@ list_test() ->
     {"[fn(x) { x }, fn(x) { x + 1 }]", "List(fn(Int) { Int })"},
     {"[fn(x) { x + 1 }, fn(x) { x }]", "List(fn(Int) { Int })"},
     {"[[], []]", "List(List(a))"},
-    {"[[], [:ok]]", "List(List(Atom))"},
+    {"[[], ['ok']]", "List(List(Atom))"},
     {"1 :: 2 :: []", "List(Int)"},
     {"fn(x) { x } :: []", "List(fn(a) { a })"},
     {"x = 1 :: [] 2 :: x", "List(Int)"}

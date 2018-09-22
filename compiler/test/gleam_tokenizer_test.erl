@@ -29,10 +29,10 @@ name_test() ->
   ?assertTokens("do_exec", [{name, _, "do_exec"}]).
 
 atom_test() ->
-  ?assertTokens(":hi",         [{atom, _, "hi"}]),
-  ?assertTokens(":123",        [{atom, _, "123"}]),
-  ?assertTokens(":WHAT_UP?",   [{atom, _, "WHAT_UP?"}]),
-  ?assertTokens(":Hey_there!", [{atom, _, "Hey_there!"}]).
+  ?assertTokens("'hi'",         [{atom, _, "hi"}]),
+  ?assertTokens("'123'",        [{atom, _, "123"}]),
+  ?assertTokens("'WHAT_UP?'",   [{atom, _, "WHAT_UP?"}]),
+  ?assertTokens("'Hey_there!'", [{atom, _, "Hey_there!"}]).
 
 param_test() ->
   ?assertTokens("(",   [{'(', _}]),

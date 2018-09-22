@@ -7,7 +7,7 @@ pub type Err =
 
 // Using the Erlang C BIF implementation.
 //
-external length : fn(List(a)) { Int } = :erlang :length
+external fn length(List(a)) { Int } = 'erlang' 'length'
 
 test length {
   length([]) |> Assert.equal(_, 0)
@@ -18,7 +18,7 @@ test length {
 
 // Using the Erlang C BIF implementation.
 //
-pub external fn reverse(List(a)) { List(a) } = :erlang :reverse
+pub external fn reverse(List(a)) { List(a) } = 'erlang' 'reverse'
 
 test reverse {
   length([]) |> Assert.equal(_, [])

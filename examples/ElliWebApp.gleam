@@ -59,7 +59,7 @@ Elli web server process running this handler module.
 """
 pub fn start_link() {
   Elli.start_link({
-    callback = :"Gleam.ElliWebApp",
+    callback = 'Gleam.ElliWebApp',
     port = 4000,
   })
 }

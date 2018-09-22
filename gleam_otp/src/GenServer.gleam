@@ -27,9 +27,9 @@ behaviour GenServer {
   fn init(Argument) { Init(State) }
 }
 
-pub external fn call(Pid, CallMsg) { a } = :gen_server :call
+pub external fn call(Pid, CallMsg) { a } = 'gen_server' 'call'
 
-pub external fn cast(Pid, CastMsg) { Unit } = :gen_server :cast
+pub external fn cast(Pid, CastMsg) { Unit } = 'gen_server' 'cast'
 
 // TODO: Need to add others here
 pub type StartError =
@@ -59,5 +59,5 @@ pub type Init =
 ;
 
 fn start_link(mod: GenServer, arg: Argument) {
-  Error(:not_implemented) // TODO
+  throw('not_implemented') // TODO
 }

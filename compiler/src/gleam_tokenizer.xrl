@@ -3,10 +3,10 @@ Definitions.
 Int     = [-+]?[0-9]+
 Float   = [-+]?[0-9]+\.[0-9]+
 WS      = [\n\s;]
-Atom    = :[a-zA-Z0-9!\?_]+
 Name    = [a-z][a-zA-Z0-9_]*
 UpName  = [A-Z][a-zA-Z0-9!\?_]*
 String  = "([^\\""]|\\.)*"
+Atom    = '([^\\'']|\\.)*'
 Comment = \/\/[^\n]*
 
 Rules.
@@ -50,7 +50,6 @@ fn\(       : {token, {kw_fn_call, m(TokenLine)}}.
 {Int}      : {token, {int, m(TokenLine), int(TokenChars)}}.
 {Float}    : {token, {float, m(TokenLine), flt(TokenChars)}}.
 {Atom}     : {token, {atom, m(TokenLine), atom(TokenChars)}}.
-:{String}  : {token, {atom, m(TokenLine), atom(TokenChars)}}.
 _          : {token, {hole, m(TokenLine)}}.
 _{Name}    : {token, {hole, m(TokenLine)}}.
 {Name}     : {token, {name, m(TokenLine), TokenChars}}.
@@ -73,11 +72,12 @@ flt(S) when is_list(S) ->
   {F, _} = string:to_float(S),
   F.
 
-atom([$:, $" | S]) -> lists:droplast(S);
-atom([$: | S])     -> S.
-
 call(S) ->
   lists:droplast(S).
+
+atom(S) when is_list(S) ->
+  Contents  = tl(lists:droplast(S)),
+  deescape(Contents).
 
 str(S) when is_list(S) ->
   Contents  = tl(lists:droplast(S)),
