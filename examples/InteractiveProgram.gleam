@@ -1,7 +1,8 @@
 module InteractiveProgram exposing run/0
 
-import Maybe exposing Maybe(..)
-import Order exposing Order(..)
+import IO
+import Result:Result:*
+import Order:Order
 
 fn run() {
   secret_number = Random.int(0, 100)
@@ -13,9 +14,9 @@ fn loop(secret_number) {
   IO.write("What's your guess? ")
   guess = IO.read_line() |> String.trim |> String.to_int
   case guess {
-  | Just(i) =>
+  | Ok(i) =>
       compare(i, secret_number)
-  | Nothing =>
+  | Error(_) =>
       IO.print("That doesn't look like a number to me... Try again")
       loop(secret_number)
   }
@@ -26,13 +27,13 @@ Here is some documentation! Hooray!
 """
 fn compare(guess, secret_number) {
   case Int.compare(i, secret_number) {
-  | LT =>
+  | Order:LT =>
       IO.print("Too low!")
       loop(secret_number)
-  | GT =>
+  | Order:GT =>
       IO.print("Too low!")
       loop(secret_number)
-  | EQ =>
+  | Order:EQ =>
       i = Int.to_string(secret_number)
       IO.print("You got it! The number was" <> i)
   }

@@ -1,71 +1,63 @@
 module GenServer
-  exposing Sync(..), Async(..), Init(..), Caller, StartError,
-    call/2, call/3, cast/2
 
-import Timeout exposing Timeout
-import Foreign exposing Foreign
+import Timeout:Timeout
+import Foreign:Foreign
+import Process:Pid
 
-external type Caller
+pub external type Caller
 
-behaviour type CallMsg
+behaviour GenServer {
+  type CallMsg
 
-behaviour type CastMsg
+  type CastMsg
 
-behaviour type State
+  type State
 
-behaviour type Argument
+  type Argument
 
-behaviour type Reply
+  type Reply
+  ;
 
-behaviour type Pid = Process
+  fn handle_call(CallMsg, Caller, State) { Call(Reply, State) }
 
-; // Fix GitHub syntax highlighting
+  fn handle_cast(CastMsg, State) { Cast(State) }
 
-external call : fn(Pid, CallMsg) { a } = :gen_server :call
+  fn handle_info(Foreign, State) { Cast(State) }
 
-external cast : fn(Pid, CastMsg) { Unit } = :gen_server :cast
+  fn init(Argument) { Init(State) }
+}
+
+pub external fn call(Pid, CallMsg) { a } = :gen_server :call
+
+pub external fn cast(Pid, CastMsg) { Unit } = :gen_server :cast
 
 // TODO: Need to add others here
-type StartError =
+pub type StartError =
   | AlreadyStarted(Pid)
+;
 
-; // Fix GitHub syntax highlighting
-
-type StopReason =
+pub type StopReason =
   | Normal
   | Error(Atom)
+;
 
-; // Fix GitHub syntax highlighting
-
-type Sync =
+pub type Call =
   | Reply(Reply, State, Timeout)
-  | Ignore(State, Timeout) tag :noreply
-  | ReplyStop(StopReason, Reply, State) tag :stop
-  | IgnoreStop(StopReason, State) tag :stop
+  | Noreply(State, Timeout)
+  | Ignore(StopReason, State)
+;
 
-; // Fix GitHub syntax highlighting
-
-type Async =
-  | Continue(State, Timeout) tag :noreply
+pub type Cast =
+  | Noreply(State, Timeout)
   | Stop(StopReason, State)
+;
 
-; // Fix GitHub syntax highlighting
-
-type Init =
-  | Start(State, Timeout) tag :ok
-  | NoStart(StopReason) tag :stop
+pub type Init =
+  | Ok(State, Timeout)
+  | Stop(StopReason)
   | Ignore
+;
 
-; // Fix GitHub syntax highlighting
-
-callback handle_call :: fn(CallMsg, Caller, State) { Sync(Reply, State) }
-
-callback handle_cast :: fn(CastMsg, State) { Async(State) }
-
-callback handle_info :: fn(Foreign, State) { Async(State) }
-
-callback init :: fn(Argument) { Init(State) }
-
-fn start_link(mod: module Self, arg: Argument) {
+fn start_link(mod: GenServer, arg: Argument) {
   Error(:not_implemented) // TODO
 }

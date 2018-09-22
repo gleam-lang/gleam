@@ -1,10 +1,9 @@
 module Elli
-  exposing Method(..), Header, Response, Request, method/1, path/1, raw_path/1,
-    query_string/1, headers/1, body/1
 
-import Foreign exposing Foreign
+import Foreign:Foreign
+import Result:Result:*
 
-type Method =
+pub type Method =
   | Get
   | Head
   | Post
@@ -16,66 +15,64 @@ type Method =
   | Patch
   | Other(String)
 
-type alias Header =
+pub type alias Header =
   (String, String)
-
-; // Fix GitHub syntax highlighting
-
-external erl_query_string : fn(Request) { String } = :elli_request :query_str
-
-external erl_start_link
-  : fn(List((Atom, Foreign))) { Result(Foreign, Pid) }
-  = :elli :start_link
-
-doc """
-The status code, headers and body to send back to the client.
-"""
-type alias Response =
-  (Int, List(Header), String)
+;
 
 doc """
 The Elli request object. Contains all information about the
 incoming HTTP request.
 """
-external type Request
+pub external type Request
+
+external fn erl_query_string(Request) { String } = :elli_request :query_str
+
+external fn erl_start_link(List((Atom, Foreign))) { Result(Foreign, Pid) }
+  = :elli :start_link
+
+doc """
+The status code, headers and body to send back to the client.
+"""
+pub type alias Response =
+  (Int, List(Header), String)
 
 doc """
 Get the request HTTP method.
 """
-external method : fn(Request) { Method } = :gleam_elli_native :method
+pub external fn method(Request) { Method } = :gleam_elli_native :method
 
 doc """
 Get the request path segments.
 """
-external path : fn(Request) { List(String) } = :elli_request :path
+pub external fn path(Request) { List(String) } = :elli_request :path
 
 doc """
 Get the request `raw_path', i.e. not split or parsed for query params.
 """
-external raw_path : fn(Request) { String } = :elli_request :raw_path
+pub external fn raw_path(Request) { String } = :elli_request :raw_path
 
 doc """
 Get the request headers.
 """
-external headers : fn(Request) { List((String, String)) } = :elli_request :headers
+pub external fn headers(Request) { List((String, String)) } = :elli_request :headers
 
 doc """
 Get the request body.
 """
-external body : fn(Request) { String } = :elli_request :body
+pub external fn body(Request) { String } = :elli_request :body
 
 doc """
-Get the query string for the request. Returns `Nothing` string if
+Get the query string for the request. Returns `Error` string if
 request has no query.
 """
-fn query_string(req) {
+pub fn query_string(req) {
   case erl_query_string(req) {
-  | "" => Nothing
-  | s => Just(s)
+  | "" => Error(())
+  | s => Ok(s)
   }
 }
 
-type alias StartArguments =
+pub type alias StartArguments =
   {
     // A real Module type instead of Atom would be nice.
     callback :: Atom,
@@ -85,7 +82,7 @@ type alias StartArguments =
 doc """
 Start the Elli web server process tree.
 """
-fn start_link(args) {
+pub fn start_link(args) {
   erl_start_link([
     (:callback, Foreign.new(args.callback)),
     (:port, Foreign.new(args.port)),

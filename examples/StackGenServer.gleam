@@ -1,28 +1,24 @@
 module StackGenServer
-  implementing GenServer
-  exposing CallMsg, CastMsg, InfoMsg, State, Argument, Reply,
-    start_link, handle_call, handle_cast, handle_info, init
 
 // A GenServer example taken from the Elixir documentation
 // https://hexdocs.pm/elixir/GenServer.html#module-client-server-apis
 
-import GenServer exposing Sync(..), Async(..), Init(..)
+import GenServer:Call
+import GenServer:Cast
+import GenServer:Init
 
 type CastMsg(item) =
   | Push(item)
-
-; // Fix GitHub syntax highlighting
+;
 
 type CallMsg =
   | Pop
-
-; // Fix GitHub syntax highlighting
+;
 
 type Reply(item) =
   | Item(item)
   | Empty
-
-; // Fix GitHub syntax highlighting
+;
 
 // API
 
@@ -42,20 +38,20 @@ fn pop(pid) {
 
 fn handle_call(call, _caller, items) =
   case (call, items) {
-  | (Pop, x :: xs) => Reply(Item(x), xs, None)
-  | (Pop, []) => Reply(Empty, [], None)
+  | (Pop, x :: xs) => Call:Reply(Item(x), xs, None)
+  | (Pop, []) => Call:Reply(Empty, [], None)
   }
 
 fn handle_cast(cast, items) {
   case cast {
-  | Push(item) => Continue(item :: items, None)
+  | Push(item) => Cast:Continue(item :: items, None)
   }
 }
 
 fn handle_info(_info, items) {
-  Continue(items, None)
+  Cast:Continue(items, None)
 }
 
 fn init(items) {
-  Start(items, None)
+  Init:Start(items, None)
 }

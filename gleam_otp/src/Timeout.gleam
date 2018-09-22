@@ -1,18 +1,17 @@
 module Timeout
-  exposing Timeout, hibernate/0, infinity/0, milliseconds/1
 
 import Foreign
 
-external type Timeout
+pub external type Timeout
 
-fn hibernate() {
+pub fn hibernate() {
   Foreign.unsafeCoerce(:hibernate)
 }
 
-fn infinity() {
+pub fn infinity() {
   Foreign.unsafeCoerce(:infinity)
 }
 
-fn milliseconds(ms) {
+pub fn milliseconds(ms) {
   Foreign.unsafeCoerce(ms)
 }

@@ -11,6 +11,7 @@ fn run() {
 
   receive {
   | :pong => :ok
+  | _ => IO.print("Huh?")
   after 10 => :too_slow
   }
 }
