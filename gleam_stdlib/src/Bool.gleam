@@ -1,14 +1,15 @@
-module Bool exposing Bool(..), not/1, compare/2, max/2, min/2
+module Bool
 
-import Order exposing Order(_)
+import Order:Order
 
-type Bool =
+pub type Bool =
   | True
   | False
+;
 
-; // Fix GitHub syntax highlighting
+import Bool:*
 
-fn not(bool) {
+pub fn not(bool) {
   case bool {
   | True => False
   | False => True
@@ -16,27 +17,37 @@ fn not(bool) {
 }
 
 test not {
-  not(True) |> Assert.false
-  not(False) |> Assert.true
+  not(True)
+    |> Assert.false
+
+  not(False)
+    |> Assert.true
 }
 
-fn compare(a, b) {
+pub fn compare(a, b) {
   case (a, b) {
-  | (True, True) => EQ
-  | (True, False) => GT
-  | (False, False) => EQ
-  | (False, True) => GT
+  | (True, True) => Order:EQ
+  | (True, False) => Order:GT
+  | (False, False) => Order:EQ
+  | (False, True) => Order:GT
   }
 }
 
 test compare {
-  compare(True, True) |> Assert.equal(_, EQ)
-  compare(True, False) |> Assert.equal(_, GT)
-  compare(False, False) |> Assert.equal(_, LT)
-  compare(False, True) |> Assert.equal(_, GT)
+  compare(True, True)
+    |> Assert.equal(_, Order:EQ)
+
+  compare(True, False)
+    |> Assert.equal(_, Order:GT)
+
+  compare(False, False)
+    |> Assert.equal(_, Order:LT)
+
+  compare(False, True)
+    |> Assert.equal(_, Order:GT)
 }
 
-fn max(a, b) {
+pub fn max(a, b) {
   case a {
   | True => True
   | False => b
@@ -44,13 +55,20 @@ fn max(a, b) {
 }
 
 test max {
-  max(True, True) |> Assert.equal(_, True)
-  max(True, False) |> Assert.equal(_, True)
-  max(False, False) |> Assert.equal(_, False)
-  max(False, True) |> Assert.equal(_, True)
+  max(True, True)
+    |> Assert.equal(_, True)
+
+  max(True, False)
+    |> Assert.equal(_, True)
+
+  max(False, False)
+    |> Assert.equal(_, False)
+
+  max(False, True)
+    |> Assert.equal(_, True)
 }
 
-fn min(a, b) {
+pub fn min(a, b) {
   case a {
   | False => False
   | True => b
@@ -58,13 +76,20 @@ fn min(a, b) {
 }
 
 test min {
-  min(True, True) |> Assert.equal(_, True)
-  min(True, False) |> Assert.equal(_, False)
-  min(False, False) |> Assert.equal(_, False)
-  min(False, True) |> Assert.equal(_, False)
+  min(True, True)
+    |> Assert.equal(_, True)
+
+  min(True, False)
+    |> Assert.equal(_, False)
+
+  min(False, False)
+    |> Assert.equal(_, False)
+
+  min(False, True)
+    |> Assert.equal(_, False)
 }
 
-fn to_int(bool) {
+pub fn to_int(bool) {
   case bool {
   | False => 0
   | True => 1
@@ -72,6 +97,9 @@ fn to_int(bool) {
 }
 
 test to_int {
-  to_int(True) |> Assert.equal(_, 1)
-  to_int(False) |> Assert.equal(_, 0)
+  to_int(True)
+    |> Assert.equal(_, 1)
+
+  to_int(False)
+    |> Assert.equal(_, 0)
 }

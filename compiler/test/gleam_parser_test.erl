@@ -117,14 +117,26 @@ call_test() ->
     },
   ?assertEqual(AST, parse(tokens(Code))).
 
-export_test() ->
+pub_test() ->
   ?assertAST(
-    "module MyModule exposing id/1, foo/2, baz/8\n",
+    "module MyModule\n"
+    "pub fn id(x) { x }\n",
     #ast_module
     { name = "MyModule"
     , tests = []
-    , functions = []
-    , exports = [{"id", 1}, {"foo", 2}, {"baz", 8}]
+    , exports = [{"id", 1}]
+    , functions =
+      [ #ast_mod_fn
+        { meta = #meta{line = 2}
+        , name = "id"
+        , args = ["x"]
+        , body =
+          #ast_var
+          { meta = #meta{line = 2}
+          , name = "x"
+          }
+        }
+      ]
     }
   ).
 

@@ -1,6 +1,6 @@
 Nonterminals
 source module mod_header mod_body
-function test exports
+function test
 exprs expr operator literal elems args call_args
 container container_pattern elems_pattern
 pattern
@@ -14,9 +14,9 @@ Terminals
 '/' '*' '+' '-' '/.' '*.' '+.' '-.'
 int float atom string
 hole name upname upcall
-kw_module kw_exposing
+kw_module
 kw_fn kw_fn_call kw_case kw_test
-kw_raise kw_throw.
+kw_raise kw_throw kw_pub.
 
 Rootsymbol source.
 
@@ -46,15 +46,13 @@ module -> mod_header          : '$1'.
 module -> mod_header mod_body : module('$1', '$2').
 
 mod_header -> kw_module upname                     : mod_header('$2', []).
-mod_header -> kw_module upname kw_exposing exports : mod_header('$2', '$4').
 
-mod_body -> function          : mod_fun('$1', #ast_module{}).
-mod_body -> function mod_body : mod_fun('$1', '$2').
-mod_body -> test              : mod_test('$1', #ast_module{}).
-mod_body -> test mod_body     : mod_test('$1', '$2').
-
-exports -> name '/' int             : [export('$1', '$3')].
-exports -> name '/' int ',' exports : [export('$1', '$3') | '$5'].
+mod_body -> kw_pub function          : mod_fun(true, '$2', #ast_module{}).
+mod_body -> kw_pub function mod_body : mod_fun(true, '$2', '$3').
+mod_body -> function                 : mod_fun(false, '$1', #ast_module{}).
+mod_body -> function mod_body        : mod_fun(false, '$1', '$2').
+mod_body -> test                     : mod_test('$1', #ast_module{}).
+mod_body -> test mod_body            : mod_test('$1', '$2').
 
 function -> kw_fn name '(' ')' '{' exprs '}'      : function('$2', [], '$6').
 function -> kw_fn name '(' args ')' '{' exprs '}' : function('$2', '$4', '$7').
@@ -115,8 +113,6 @@ args -> name ',' args : [arg('$1') | '$3'].
 
 container -> upname           : adt('$1', []).
 container -> upcall elems ')' : adt('$1', '$2').
-% container -> '(' ')'          : tuple('$1', []).
-% container -> '(' elems ')'    : tuple('$1', '$2').
 container -> '{' elems '}'    : tuple('$1', '$2').
 container -> '[' ']'          : list('$2', []).
 container -> '[' elems ']'    : list('$3', '$2').
@@ -163,17 +159,17 @@ Erlang code.
 -include("gleam_records.hrl").
 
 module(Header, Body) ->
-  #ast_module{name = Name, exports = Exports} = Header,
-  #ast_module{functions = Functions, tests = Tests} = Body,
-  #ast_module{name = Name,
-              exports = Exports,
-              functions = Functions,
-              tests = Tests}.
+  Body#ast_module{name = Header#ast_module.name}.
 
 mod_header({upname, _, Name}, Exports) ->
   #ast_module{name = Name, exports = Exports}.
 
-mod_fun(Function, Module) ->
+mod_fun(true, Function, Module) ->
+  #ast_module{functions = Functions, exports = Exports} = Module,
+  #ast_mod_fn{name = Name, args = Args} = Function,
+  Module#ast_module{functions = [Function | Functions],
+                    exports = [{Name, length(Args)} | Exports]};
+mod_fun(false, Function, Module) ->
   #ast_module{functions = Functions} = Module,
   Module#ast_module{functions = [Function | Functions]}.
 
@@ -216,9 +212,6 @@ arg({name, _Meta, Name}) ->
 
 var({name, Meta, Name}) ->
   #ast_var{meta = Meta, name = Name}.
-
-export({name, _, Name}, {int, _, Arity}) ->
-  {Name, Arity}.
 
 record({'{', Meta}, Fields) ->
   #ast_record{meta = Meta, fields = Fields}.

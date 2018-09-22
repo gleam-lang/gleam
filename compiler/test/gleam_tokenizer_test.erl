@@ -6,7 +6,6 @@
 
 keyword_test() ->
   ?assertTokens("module",   [{kw_module, _}]),
-  ?assertTokens("exposing", [{kw_exposing, _}]),
   ?assertTokens("fn",       [{kw_fn, _}]).
 
 int_test() ->

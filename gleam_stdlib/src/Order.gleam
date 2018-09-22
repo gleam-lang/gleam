@@ -1,13 +1,15 @@
-module Order exposing Order(..), reverse/1, to_int/1, compare/2, max/2, min/2
+module Order
 
 type Order =
   | LT
   | EQ
   | GT
 
+import Order:*
+
 ; // Fix GitHub syntax highlighting
 
-fn reverse(order) {
+pub fn reverse(order) {
   case order {
   | LT => GT
   | EQ => EQ
@@ -21,7 +23,7 @@ test reverse {
   reverse(GT) |> Assert.equal(_, LT)
 }
 
-fn to_int(order) {
+pub fn to_int(order) {
   case order {
   | LT => -1
   | EQ => 0
@@ -35,7 +37,7 @@ test to_int {
   to_int(GT) |> Assert.equal(_, 1)
 }
 
-fn compare(a, b) {
+pub fn compare(a, b) {
   case {a, b} {
   | {LT, LT} => EQ
   | {LT, _} => LT
@@ -58,7 +60,7 @@ test compare {
   compare(GT, GT) |> Assert.equal(_, EQ)
 }
 
-fn max(a, b) {
+pub fn max(a, b) {
   case {a, b} {
   | {GT, _} => GT
   | {EQ, LT} => EQ
@@ -78,7 +80,7 @@ test max {
   max(GT, GT) |> Assert.equal(_, GT)
 }
 
-fn min(a, b) {
+pub fn min(a, b) {
   case {a, b} {
   | {LT, _} => LT
   | {EQ, GT} => EQ

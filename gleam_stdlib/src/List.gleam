@@ -1,8 +1,9 @@
 module List
-  exposing length/1, reverse/1, empty/1, member/2, head/1, tail/1, filter/2,
-  foldl/3, foldr/3, map/2, flatten/1, drop/2, take/2, of/1, new/0
 
-import Maybe exposing Maybe(..)
+import Result:Result:*
+
+pub type Err =
+  | Empty
 
 // Using the Erlang C BIF implementation.
 //
@@ -17,14 +18,14 @@ test length {
 
 // Using the Erlang C BIF implementation.
 //
-external reverse : fn(List(a)) { List(a) } = :erlang :reverse
+pub external fn reverse(List(a)) { List(a) } = :erlang :reverse
 
 test reverse {
   length([]) |> Assert.equal(_, [])
   length([1, 2, 3, 4, 5]) |> Assert.equal(_, [5, 4, 3, 2, 1])
 }
 
-fn is_empty(list) {
+pub fn is_empty(list) {
   list == []
 }
 
@@ -33,7 +34,7 @@ test is_empty {
   is_empty([1]) |> Assert.false
 }
 
-fn member(list, elem) {
+pub fn member(list, elem) {
   case list {
   | [] => False
   | elem :: _ => True
@@ -47,32 +48,40 @@ test is_member {
   is_member([], 1) |> Assert.false
 }
 
-fn head(list) {
+pub fn head(list) {
   case list {
-  | [] => Nothing
-  | elem :: _ => Just(elem)
+  | [] => Error(Err:Empty)
+  | elem :: _ => Ok(elem)
   }
 }
 
 test head {
-  head([0, 4, 5, 7]) |> Assert.equal(_, Just(0))
-  head([]) |> Assert.equal(_, Nothing)
+  head([0, 4, 5, 7])
+    |> Assert.equal(_, Ok(0))
+
+  head([])
+    |> Assert.equal(_, Error(Err:Empty))
 }
 
-fn tail(list) {
+pub fn tail(list) {
   case list {
-  | [] => Nothing
-  | _ :: rest => Just(rest)
+  | [] => Error(Err:Empty)
+  | _ :: rest => Ok(rest)
   }
 }
 
 test tail {
-  tail([0, 4, 5, 7]) |> Assert.equal(_, Just([4, 5, 7]))
-  tail([0]) |> Assert.equal(_, Just([]))
-  tail([]) |> Assert.equal(_, Nothing)
+  tail([0, 4, 5, 7])
+    |> Assert.equal(_, Ok([4, 5, 7]))
+
+  tail([0])
+    |> Assert.equal(_, Ok([]))
+
+  tail([])
+    |> Assert.equal(_, Error(Err:Empty))
 }
 
-fn filter(list, fun) {
+pub fn filter(list, fun) {
   filter(list, fun, [])
 }
 
@@ -80,18 +89,21 @@ test filter {
   []
     |> filter(_, fn(x) { True })
     |> Assert.equal(_, [])
+
   [0, 4, 5, 7, 3]
     |> filter(_, fn(x) { True })
     |> Assert.equal(_, [0, 4, 5, 7, 3])
+
   [0, 4, 5, 7, 3]
     |> filter(_, fn(x) { x > 4 })
     |> Assert.equal(_, [5, 7])
+
   [0, 4, 5, 7, 3]
     |> filter(_, fn(x) { x < 4 })
     |> Assert.equal(_, [0, 3])
 }
 
-fn filter(list, fun, acc) {
+fn do_filter(list, fun, acc) {
   case list {
   | [] => reverse(acc)
   | x :: xs =>
@@ -100,31 +112,32 @@ fn filter(list, fun, acc) {
         | True => x :: acc
         | False => acc
         }
-      filter(xs, fun, new_acc)
+      do_filter(xs, fun, new_acc)
   }
 }
 
-fn map(list, fun) {
-  map(list, fun, [])
+pub fn map(list, fun) {
+  do_map(list, fun, [])
 }
 
 test map {
   []
     |> map(_, fn(x) { x * 2 })
     |> Assert.equal(_, [])
+
   [0, 4, 5, 7, 3]
     |> map(_, fn(x) { x * 2 })
     |> Assert.equal(_, [0, 8, 10, 14, 6])
 }
 
-fn map(list, fun, acc) {
+fn do_map(list, fun, acc) {
   case list {
   | [] => reverse(acc)
-  | x :: xs => map(xs, fun, fun(x) :: acc)
+  | x :: xs => do_map(xs, fun, fun(x) :: acc)
   }
 }
 
-fn drop(list, n) {
+pub fn drop(list, n) {
   case n <= 0 {
   | True => list
   | False =>
@@ -144,11 +157,11 @@ test drop/2 {
     |> Assert.equal(_, [6, 7, 8])
 }
 
-fn take(list, n) {
-  take(list, n, [])
+pub fn take(list, n) {
+  do_take(list, n, [])
 }
 
-fn take(list, n, acc) {
+fn do_take(list, n, acc) {
   case n <= 0 {
   | True => reverse(acc)
   | False =>
@@ -168,7 +181,7 @@ test take {
     |> Assert.equal(_, [1, 2, 3, 4, 5])
 }
 
-fn of(x) {
+pub fn of(x) {
   [x]
 }
 
@@ -177,7 +190,7 @@ test of() {
   of(1) |> Assert.equal(_, [1])
 }
 
-fn new() {
+pub fn new() {
   []
 }
 
@@ -185,8 +198,8 @@ test new() {
   new() |> Assert.equal(_, [])
 }
 
-fn flatten(lists) {
-  flatten(lists, [])
+pub fn flatten(lists) {
+  do_flatten(lists, [])
 }
 
 test flatten() {
@@ -196,14 +209,14 @@ test flatten() {
   flatten([[1, 2], [], [3, 4]]) |> Assert.equal(_, [1, 2, 3, 4])
 }
 
-fn flatten(lists, acc) {
+fn do_flatten(lists, acc) {
   case lists {
   | [] => acc
   | l :: rest => flatten(rest, acc ++ l)
   }
 }
 
-fn foldl(list, acc, fun) {
+pub fn foldl(list, acc, fun) {
   case list {
   | [] => acc
   | x :: rest => foldl(rest, fun(x, acc), fun)
@@ -216,7 +229,7 @@ test foldl() {
     |> Assert.equal(_, [3, 2, 1])
 }
 
-fn foldr(list, acc, fun) {
+pub fn foldr(list, acc, fun) {
   case list {
   | [] => acc
   | x :: rest => fun(x, foldl(rest, acc, fun))

@@ -1,13 +1,13 @@
 # Gleam
 
 ```elm
-module Shape exposing Quadrilateral(..), from_dimensions/2
+module Shape
 
-type Quadrilateral =
+pub type Quadrilateral =
   | Square(Int)
   | Rectangle(Int, Int)
 
-fn from_dimensions(width, height) {
+pub fn from_dimensions(width, height) {
   case width == height {
   | True => Square(width)
   | False => Rectangle(width, height)
