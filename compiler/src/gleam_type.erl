@@ -536,6 +536,9 @@ type_to_string(Type) ->
     end,
   ToString =
     fun
+      (F, #type_record{row = Row}) ->
+        "{" ++ F(F, Row) ++ "}";
+
       (_, #type_const{type = Name}) ->
         Name;
 

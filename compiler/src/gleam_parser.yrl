@@ -62,7 +62,7 @@ expr -> container                  : '$1'.
 expr -> case_expr                  : '$1'.
 expr -> operator                   : '$1'.
 expr -> name                       : var('$1').
-expr -> expr '.' name              : record_access('$2', '$1', '$3').
+expr -> expr '.' name              : record_select('$2', '$1', '$3').
 expr -> expr '(' ')'               : local_call('$2', '$1', []).
 expr -> expr '(' call_args ')'     : local_call('$2', '$1', '$3').
 expr -> expr '.' '(' ')'           : fn_call('$2', '$1', []).
@@ -110,7 +110,7 @@ container -> upcall elems ')' : adt('$1', '$2').
 container -> '{' elems '}'    : tuple('$1', '$2').
 container -> '[' ']'          : list('$2', []).
 container -> '[' elems ']'    : list('$3', '$2').
-container -> '{' '}'          : record('$1', []).
+container -> '{' '}'          : #ast_record_empty{}.
 container -> '{' fields '}'   : record('$1', '$2').
 
 elems -> expr           : ['$1'].
@@ -201,14 +201,23 @@ arg({name, _Meta, Name}) ->
 var({name, Meta, Name}) ->
   #ast_var{meta = Meta, name = Name}.
 
-record({'{', Meta}, Fields) ->
-  #ast_record{meta = Meta, fields = Fields}.
+record({'{', EmptyMeta}, Fields) ->
+  Extend = fun({Label, Value}, Parent) ->
+    Meta = #meta{} = element(2, Value),
+    #ast_record_extend{meta = Meta,
+                       label = Label,
+                       value = Value,
+                       parent = Parent}
+  end,
+  lists:foldl(Extend,
+              #ast_record_empty{meta = EmptyMeta},
+              lists:reverse(Fields)).
 
-record_field({name, Meta, Key}, Value) ->
-  #ast_record_field{meta = Meta, key = Key, value = Value}.
+record_field({name, _Meta, Key}, Value) ->
+  {Key, Value}.
 
-record_access({'.', Meta}, Record, {name, _, Key}) ->
-  #ast_record_access{meta = Meta, record = Record, key = Key}.
+record_select({'.', Meta}, Record, {name, _, Key}) ->
+  #ast_record_select{meta = Meta, record = Record, key = Key}.
 
 tuple({_, Meta}, Elems) ->
   #ast_tuple{meta = Meta, elems = Elems}.

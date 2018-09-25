@@ -196,12 +196,18 @@ expression(#ast_adt{name = Name, meta = Meta, elems = Elems}, Env) when is_list(
   Atom = #ast_atom{meta = Meta, value = AtomValue},
   expression(#ast_tuple{elems = [Atom | Elems]}, Env);
 
-expression(#ast_record{fields = Fields}, Env) ->
-  {C_pairs, NewEnv} = gleam:thread_map(fun record_field/2,Fields, Env ),
-  Core = cerl:c_map(C_pairs),
-  {Core, NewEnv};
+expression(#ast_record_empty{}, Env) ->
+  {cerl:c_map([]), Env};
 
-expression(#ast_record_access{meta = Meta, record = Record, key = Key}, Env) ->
+expression(#ast_record_extend{} = Ast, Env) ->
+  case flatten_record(Ast) of
+    {flat, FlatFields} ->
+      {C_pairs, NewEnv} = gleam:thread_map(fun record_field/2, FlatFields, Env),
+      Core = cerl:c_map(C_pairs),
+      {Core, NewEnv}
+  end;
+
+expression(#ast_record_select{meta = Meta, record = Record, key = Key}, Env) ->
   Atom = #ast_atom{meta = Meta, value = Key},
   Call = #ast_call{meta = Meta,
                    module = "maps",
@@ -267,6 +273,23 @@ expression(Expressions, Env) when is_list(Expressions) ->
   C_seq = lists:foldl(fun cerl:c_seq/2, Head, Tail),
   {C_seq, Env1}.
 
+-spec flatten_record(ast_expression())
+      -> {flat, [{string(), ast_expression()}]}.
+flatten_record(#ast_record_empty{}) ->
+  {flat, []};
+flatten_record(#ast_record_extend{parent = Parent, label = Label, value = Value}) ->
+  case flatten_record(Parent) of
+    % The record has been completely flattened to a list of fields
+    {flat, Fields} ->
+      {flat, [{Label, Value} | Fields]}
+
+    % The record could not be completely flattened. This is because at some
+    % point the update syntax has been used, it is a not a record literal.
+    % {parent, NewParent, Fields} ->
+
+    % Not a record
+  end.
+
 hole_fn(Meta, Fn, Args, Env) ->
   {UID, NewEnv} = uid(Env),
   VarName = "$$gleam_hole_var" ++ integer_to_list(UID),
@@ -276,7 +299,7 @@ hole_fn(Meta, Fn, Args, Env) ->
   Closure = #ast_fn{meta = Meta, args = [VarName], body = Call},
   expression(Closure, NewEnv).
 
-record_field(#ast_record_field{key = Key, value = Val}, Env0) when is_list(Key) ->
+record_field({Key, Val}, Env0) when is_list(Key) ->
   C_key = cerl:c_atom(Key),
   {C_val, Env1} = expression(Val, Env0),
   Core = cerl:c_map_pair(C_key, C_val),

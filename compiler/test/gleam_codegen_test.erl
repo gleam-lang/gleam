@@ -339,11 +339,12 @@ case_adt_test() ->
     ?assertEqual(default, 'Gleam.CodegenCaseAdt':unwrap(nothing))
   end).
 
+% TODO: nested record updating
 record_test() ->
   Source =
     "pub fn zero() { {} }\n"
-    "pub fn one(x) { {value => x} }\n"
-    "pub fn two(x) { {val1 => x, val2 => x} }\n"
+    "pub fn one(x) { { value => x } }\n"
+    "pub fn two(x) { { val1 => x, val2 => x } }\n"
   ,
   with_module('Gleam.CodegenRecord', Source, fun() ->
     ?assertEqual(#{}, 'Gleam.CodegenRecord':zero()),

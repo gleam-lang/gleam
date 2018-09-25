@@ -104,16 +104,16 @@
          subject :: ast_expression(),
          clauses = [#ast_clause{}]}).
 
--record(ast_record_field,
+-record(ast_record_empty,
+        {meta = #meta{} :: meta()}).
+
+-record(ast_record_extend,
         {meta = #meta{} :: meta(),
-         key :: string(),
+         parent :: ast_expression(),
+         label :: string(),
          value :: ast_expression()}).
 
--record(ast_record,
-        {meta = #meta{} :: meta(),
-         fields = [#ast_record_field{}]}).
-
--record(ast_record_access,
+-record(ast_record_select,
         {meta = #meta{} :: meta(),
          record :: ast_expression(),
          key :: string()}).
@@ -132,7 +132,6 @@
 -record(ast_module,
         {exports = [] :: [export()],
          statements = [] :: [mod_statement()]}).
-
 
 -record(ast_seq,
         {first :: ast_expression(),
@@ -159,8 +158,9 @@
       | #ast_nil{}
       | #ast_operator{}
       | #ast_raise{}
-      | #ast_record_access{}
-      | #ast_record{}
+      | #ast_record_empty{}
+      | #ast_record_extend{}
+      | #ast_record_select{}
       | #ast_seq{}
       | #ast_string{}
       | #ast_throw{}
@@ -180,8 +180,20 @@
 -record(type_fn, {args :: list(type()), return :: type()}).
 -record(type_app, {type :: type(), args :: list(type())}).
 -record(type_var, {type :: type_var_reference()}).
+-record(type_record, {row :: type()}).
+-record(type_row_empty, {}).
+-record(type_row_extend, {name :: string(), value :: type(), parent :: type()}).
 
--type type() :: #type_const{} | #type_fn{} | #type_var{} | #type_app{}.
+-type type()
+      ::
+      #type_app{}
+      | #type_const{}
+      | #type_fn{}
+      | #type_var{}
+      | #type_record{}
+      | #type_row_empty{}
+      | #type_row_extend{}
+      .
 
 %
 % Type variables
