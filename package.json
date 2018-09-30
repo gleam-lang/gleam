@@ -1,6 +1,0 @@
-{
-  "license": "Apache-2.0",
-  "dependencies": {
-    "gitbook-cli": "^2.3.2"
-  }
-}
