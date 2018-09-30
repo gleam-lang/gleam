@@ -194,11 +194,12 @@ list_test() ->
   ],
   test_infer(Cases).
 
-% record_test() ->
-%   Cases = [
-%     {"{}", "{}"}
-%   ],
-%   test_infer(Cases).
+record_test() ->
+  Cases = [
+    {"{}", "{}"},
+    {"{a => 1}", "{a : int}"}
+  ],
+  test_infer(Cases).
 
 % ; ("let f = fun x -> x in pair(f(one), f(true))", OK "pair[int, bool]") *)
 % ; ("fun f -> pair(f(one), f(true))", fail) *)

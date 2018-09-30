@@ -50,20 +50,6 @@ infer(Ast) ->
     throw:{gleam_type_error, Error} -> {error, Error}
   end.
 
-infer_call(FunAst, Args, Env0) ->
-  {AnnotatedFunAst, Env1} = infer(FunAst, Env0),
-  FunType = fetch(AnnotatedFunAst),
-  Arity = length(Args),
-  {ArgTypes, ReturnType, Env2} = match_fun_type(Arity, FunType, Env1),
-  CheckArg =
-    fun({ArgType, ArgExpr}, CheckEnv0) ->
-      {AnnotatedArgExpr, CheckEnv1} = infer(ArgExpr, CheckEnv0),
-      ArgExprType = fetch(AnnotatedArgExpr),
-      unify(ArgType, ArgExprType, CheckEnv1)
-    end,
-  Env3 = lists:foldl(CheckArg, Env2, lists:zip(ArgTypes, Args)),
-  {ReturnType, Env3}.
-
 -spec infer(ast_expression(), env()) -> {ast_expression(), env()}.
 infer(Ast = #ast_operator{name = Name, args = Args}, Env0) ->
   {ReturnType, Env1} = infer_call(#ast_var{name = Name}, Args, Env0),
@@ -127,6 +113,31 @@ infer(Ast = #ast_nil{}, Env) ->
   AnnotatedAst = Ast#ast_nil{type = {ok, Type}},
   {AnnotatedAst, NewEnv};
 
+% | RecordExtend(label, expr, record_expr) ->
+% 		(* inlined code for Call of function with type "forall r a. a -> {r} -> {r | label : a}" *)
+% 		let rest_row_ty = new_var level in
+% 		let field_ty = new_var level in
+% 		let param1_ty = field_ty in
+% 		let param2_ty = TRecord rest_row_ty in
+% 		let return_ty = TRecord (TRowExtend(label, field_ty, rest_row_ty)) in
+% 		unify param1_ty (infer env level expr) ;
+% 		unify param2_ty (infer env level record_expr) ;
+% 		return_ty
+infer(Ast = #ast_record_extend{parent = Parent, label = Label, value = Value}, Env0) ->
+  {RestRowType, Env1} = new_var(Env0),
+  {FieldType, Env2} = new_var(Env1),
+  ParentType = #type_record{row = RestRowType},
+  SelfType = #type_record{row = #type_row_extend{label = Label,
+                                                 value = FieldType,
+                                                 parent = RestRowType}},
+  {AnnotatedValue, Env3} = infer(Value, Env2),
+  {AnnotatedParent, Env4} = infer(Parent, Env3),
+  % MORE HERE
+  {Ast, Env};
+
+infer(Ast = #ast_record_empty{}, Env) ->
+  {Ast, Env};
+
 infer(Ast = #ast_int{}, Env) ->
   {Ast, Env};
 
@@ -139,6 +150,19 @@ infer(Ast = #ast_string{}, Env) ->
 infer(Ast = #ast_atom{}, Env) ->
   {Ast, Env}.
 
+infer_call(FunAst, Args, Env0) ->
+  {AnnotatedFunAst, Env1} = infer(FunAst, Env0),
+  FunType = fetch(AnnotatedFunAst),
+  Arity = length(Args),
+  {ArgTypes, ReturnType, Env2} = match_fun_type(Arity, FunType, Env1),
+  CheckArg =
+    fun({ArgType, ArgExpr}, CheckEnv0) ->
+      {AnnotatedArgExpr, CheckEnv1} = infer(ArgExpr, CheckEnv0),
+      ArgExprType = fetch(AnnotatedArgExpr),
+      unify(ArgType, ArgExprType, CheckEnv1)
+    end,
+  Env3 = lists:foldl(CheckArg, Env2, lists:zip(ArgTypes, Args)),
+  {ReturnType, Env3}.
 
 -spec fetch(ast_expression()) -> type().
 fetch(#ast_operator{type = {ok, Type}}) ->
@@ -175,6 +199,9 @@ fetch(#ast_float{}) ->
 fetch(#ast_string{}) ->
   #type_const{type = "String"};
 
+fetch(#ast_record_empty{}) ->
+  #type_record{row = #type_row_empty{}};
+
 fetch(Other) ->
   error({unable_to_fetch_type, Other}).
 
@@ -209,6 +236,7 @@ resolve_type_vars(Ast = #ast_nil{type = {ok, Type}}, Env) ->
   NewType = do_resolve_type_vars(Type, Env),
   Ast#ast_nil{type = {ok, NewType}};
 
+resolve_type_vars(Ast = #ast_record_empty{}, _) -> Ast;
 resolve_type_vars(Ast = #ast_int{}, _) -> Ast;
 resolve_type_vars(Ast = #ast_atom{}, _) -> Ast;
 resolve_type_vars(Ast = #ast_float{}, _) -> Ast;
@@ -536,6 +564,9 @@ type_to_string(Type) ->
     end,
   ToString =
     fun
+      (F, #type_row_empty{}) ->
+        "";
+
       (F, #type_record{row = Row}) ->
         "{" ++ F(F, Row) ++ "}";
 
