@@ -2,10 +2,9 @@ type Order =
   | LT
   | EQ
   | GT
+;
 
 import Order:*
-
-; // Fix GitHub syntax highlighting
 
 pub fn reverse(order) {
   case order {

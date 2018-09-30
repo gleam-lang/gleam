@@ -1,11 +1,13 @@
 import Result:Result:*
+import Bool:Bool:*
 
 pub type Err =
   | Empty
+;
 
 // Using the Erlang C BIF implementation.
 //
-external fn length(List(a)) { Int } = 'erlang' 'length'
+pub external fn length(List(a)) { Int } = 'erlang' 'length'
 
 test length {
   length([]) |> Assert.equal(_, 0)
@@ -150,6 +152,7 @@ test drop/2 {
   []
     |> drop(_, 5)
     |> Assert.equal(_, [])
+
   [1, 2, 3, 4, 5, 6, 7, 8]
     |> drop(_, 5)
     |> Assert.equal(_, [6, 7, 8])
@@ -201,10 +204,17 @@ pub fn flatten(lists) {
 }
 
 test flatten() {
-  flatten([]) |> Assert.equal(_, [])
-  flatten([[]]) |> Assert.equal(_, [])
-  flatten([[], [], []]) |> Assert.equal(_, [])
-  flatten([[1, 2], [], [3, 4]]) |> Assert.equal(_, [1, 2, 3, 4])
+  flatten([])
+    |> Assert.equal(_, [])
+
+  flatten([[]])
+    |> Assert.equal(_, [])
+
+  flatten([[], [], []])
+    |> Assert.equal(_, [])
+
+  flatten([[1, 2], [], [3, 4]])
+    |> Assert.equal(_, [1, 2, 3, 4])
 }
 
 fn do_flatten(lists, acc) {
@@ -236,6 +246,6 @@ pub fn foldr(list, acc, fun) {
 
 test foldr() {
   [1, 2, 3]
-    |> foldr(_, [], |x, acc| x :: acc)
+    |> foldr(_, [], fn(x, acc) { x :: acc })
     |> Assert.equal(_, [1, 2, 3])
 }

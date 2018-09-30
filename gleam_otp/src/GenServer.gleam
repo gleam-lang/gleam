@@ -3,6 +3,7 @@ import Foreign:Foreign
 import Process:Pid
 
 pub external type Caller
+;
 
 behaviour GenServer {
   type CallMsg

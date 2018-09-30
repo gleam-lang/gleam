@@ -33,6 +33,7 @@ The status code, headers and body to send back to the client.
 """
 pub type alias Response =
   (Int, List(Header), String)
+;
 
 doc """
 Get the request HTTP method.
