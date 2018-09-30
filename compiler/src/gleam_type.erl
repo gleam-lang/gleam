@@ -113,27 +113,23 @@ infer(Ast = #ast_nil{}, Env) ->
   AnnotatedAst = Ast#ast_nil{type = {ok, Type}},
   {AnnotatedAst, NewEnv};
 
-% | RecordExtend(label, expr, record_expr) ->
-% 		(* inlined code for Call of function with type "forall r a. a -> {r} -> {r | label : a}" *)
-% 		let rest_row_ty = new_var level in
-% 		let field_ty = new_var level in
-% 		let param1_ty = field_ty in
-% 		let param2_ty = TRecord rest_row_ty in
-% 		let return_ty = TRecord (TRowExtend(label, field_ty, rest_row_ty)) in
-% 		unify param1_ty (infer env level expr) ;
-% 		unify param2_ty (infer env level record_expr) ;
-% 		return_ty
 infer(Ast = #ast_record_extend{parent = Parent, label = Label, value = Value}, Env0) ->
   {RestRowType, Env1} = new_var(Env0),
   {FieldType, Env2} = new_var(Env1),
   ParentType = #type_record{row = RestRowType},
-  SelfType = #type_record{row = #type_row_extend{label = Label,
-                                                 value = FieldType,
-                                                 parent = RestRowType}},
   {AnnotatedValue, Env3} = infer(Value, Env2),
   {AnnotatedParent, Env4} = infer(Parent, Env3),
-  % MORE HERE
-  {Ast, Env};
+  TypeOfValue = fetch(AnnotatedValue),
+  TypeOfParent = fetch(AnnotatedParent),
+  Env5 = unify(FieldType, TypeOfValue, Env4),
+  Env6 = unify(ParentType, TypeOfParent, Env5),
+  Type = #type_record{row = #type_row_extend{label = Label,
+                                             value = FieldType,
+                                             parent = RestRowType}},
+  AnnotatedAst = Ast#ast_record_extend{type = {ok, Type},
+                                       parent = AnnotatedParent,
+                                       value = AnnotatedValue},
+  {AnnotatedAst, Env6};
 
 infer(Ast = #ast_record_empty{}, Env) ->
   {Ast, Env};
@@ -178,6 +174,9 @@ fetch(#ast_var{type = {ok, Type}}) ->
   Type;
 
 fetch(#ast_nil{type = {ok, Type}}) ->
+  Type;
+
+fetch(#ast_record_extend{type = {ok, Type}}) ->
   Type;
 
 fetch(#ast_tuple{elems = Elems}) ->
@@ -236,6 +235,16 @@ resolve_type_vars(Ast = #ast_nil{type = {ok, Type}}, Env) ->
   NewType = do_resolve_type_vars(Type, Env),
   Ast#ast_nil{type = {ok, NewType}};
 
+resolve_type_vars(Ast = #ast_record_extend{type = {ok, Type},
+                                           parent = Parent,
+                                           value = Value}, Env) ->
+  NewType = do_resolve_type_vars(Type, Env),
+  NewParent = resolve_type_vars(Parent, Env),
+  NewValue = resolve_type_vars(Value, Env),
+  Ast#ast_record_extend{type = {ok, NewType},
+                        parent = NewParent,
+                        value = NewValue};
+
 resolve_type_vars(Ast = #ast_record_empty{}, _) -> Ast;
 resolve_type_vars(Ast = #ast_int{}, _) -> Ast;
 resolve_type_vars(Ast = #ast_atom{}, _) -> Ast;
@@ -247,6 +256,16 @@ resolve_type_vars(Ast, _) -> error({unable_to_resolve_type_vars_for, Ast}).
 -spec do_resolve_type_vars(type(), env()) -> type().
 do_resolve_type_vars(Type = #type_const{}, _) ->
   Type;
+
+do_resolve_type_vars(Type = #type_row_empty{}, _) ->
+  Type;
+
+do_resolve_type_vars(Type = #type_record{row = Row}, Env) ->
+  Type#type_record{row = do_resolve_type_vars(Row, Env)};
+
+do_resolve_type_vars(Type = #type_row_extend{parent = Parent, value = Value}, Env) ->
+  Type#type_row_extend{parent = do_resolve_type_vars(Parent, Env),
+                       value = do_resolve_type_vars(Value, Env)};
 
 do_resolve_type_vars(Type = #type_app{args = Args}, Env) ->
   NewArgs = lists:map(fun(X) -> do_resolve_type_vars(X, Env) end, Args),
@@ -461,6 +480,16 @@ occurs_check_adjust_levels(Id, #type_fn{args = Args, return = Return}, Env0) ->
   Env1 = lists:foldl(Check, Env0, Args),
   occurs_check_adjust_levels(Id, Return, Env1);
 
+occurs_check_adjust_levels(Id, #type_record{row = Row}, Env) ->
+  occurs_check_adjust_levels(Id, Row, Env);
+
+occurs_check_adjust_levels(Id, #type_row_extend{parent = Parent, value = Value}, Env0) ->
+  Env1 = occurs_check_adjust_levels(Id, Value, Env0),
+  occurs_check_adjust_levels(Id, Parent, Env1);
+
+occurs_check_adjust_levels(_Id, #type_row_empty{}, Env) ->
+  Env;
+
 occurs_check_adjust_levels(_Id, #type_const{}, Env) ->
   Env.
 
@@ -502,6 +531,23 @@ unify(Type1, Type2, Env) ->
      #type_var{type = Ref}, {ok, #type_var_unbound{id = Id}}} ->
       Env1 = occurs_check_adjust_levels(Id, Type, Env),
       env_put_type_ref(Ref, #type_var_link{type = Type}, Env1);
+
+    {#type_record{row = Row1}, _,
+     #type_record{row = Row2}, _} ->
+      unify(Row1, Row2, Env);
+
+    % | TRowExtend(label1, field_ty1, rest_row1), (TRowExtend _ as row2) -> begin
+    % 	let rest_row1_tvar_ref_option = match rest_row1 with
+    % 		| TVar ({contents = Unbound _} as tvar_ref) -> Some tvar_ref
+    % 		| _ -> None
+    % 	in
+    % 	let rest_row2 = rewrite_row row2 label1 field_ty1 in
+    % 	begin match rest_row1_tvar_ref_option with
+    % 		| Some {contents = Link _} -> error "recursive row types"
+    % 		| _ -> ()
+    % 	end ;
+    % 	unify rest_row1 rest_row2
+    % end
 
     Other ->
       fail({cannot_unify, Other})
@@ -568,7 +614,24 @@ type_to_string(Type) ->
         "";
 
       (F, #type_record{row = Row}) ->
-        "{" ++ F(F, Row) ++ "}";
+        FieldsString =
+          fun
+            (FS, [{Label, ValueType}]) ->
+              Label ++ " => " ++ F(F, ValueType);
+
+            (FS, [{Label, ValueType} | Rest]) ->
+              Label ++ " => " ++ F(F, ValueType) ++ ", " ++ FS(FS, Rest);
+
+            (_, []) ->
+              ""
+          end,
+        case collect_row_fields(Row) of
+          {Parent, Fields} ->
+            "not yet";
+
+          Fields ->
+            "{" ++ FieldsString(FieldsString, Fields) ++ "}"
+        end;
 
       (_, #type_const{type = Name}) ->
         Name;
@@ -603,3 +666,23 @@ type_to_string(Type) ->
   put(gleam_id_name_map, undefined),
   put(gleam_type_to_string_count, undefined),
   String.
+
+collect_row_fields(Row) ->
+  case collect_row_fields(Row, []) of
+    {Parent, Fields} ->
+      {Parent, lists:sort(Fields)};
+
+    Fields ->
+      lists:sort(Fields)
+  end.
+
+collect_row_fields(#type_row_empty{}, Fields) ->
+  Fields;
+collect_row_fields(#type_var{}, Fields) ->
+  Fields;
+collect_row_fields(#type_row_extend{parent = Parent, label = Label, value = Value},
+                   Fields) ->
+  NewFields = [{Label, Value} | Fields],
+  collect_row_fields(Parent, NewFields);
+collect_row_fields(Other, Fields) ->
+  {Other, Fields}.

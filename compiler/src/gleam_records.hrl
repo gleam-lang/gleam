@@ -109,6 +109,7 @@
 
 -record(ast_record_extend,
         {meta = #meta{} :: meta(),
+         type = type_not_annotated :: type_annotation(),
          parent :: ast_expression(),
          label :: string(),
          value :: ast_expression()}).
