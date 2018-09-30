@@ -4,6 +4,7 @@
 import GenServer:Call
 import GenServer:Cast
 import GenServer:Init
+import Timeout:never
 
 type CastMsg(item) =
   | Push(item)
@@ -36,20 +37,20 @@ fn pop(pid) {
 
 fn handle_call(call, _caller, items) =
   case (call, items) {
-  | (Pop, x :: xs) => Call:Reply(Item(x), xs, None)
-  | (Pop, []) => Call:Reply(Empty, [], None)
+  | (Pop, x :: xs) => Call:Reply(Item(x), xs, never())
+  | (Pop, []) => Call:Reply(Empty, [], never())
   }
 
 fn handle_cast(cast, items) {
   case cast {
-  | Push(item) => Cast:Continue(item :: items, None)
+  | Push(item) => Cast:Ok(item :: items, never())
   }
 }
 
 fn handle_info(_info, items) {
-  Cast:Continue(items, None)
+  Cast:Noreply(items, never())
 }
 
 fn init(items) {
-  Init:Start(items, None)
+  Init:Ok(items, never())
 }

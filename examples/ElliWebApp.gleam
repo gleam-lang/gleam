@@ -2,11 +2,7 @@
 // https://github.com/elli-lib/elli
 //
 // Run the application with the `start_link/0` function.
-//
-// This would use the Erlang behaviour :elli_handler.
-// Can we support this somehow?
 
-import Foreign:Foreign
 import Elli
 
 doc """
@@ -15,8 +11,8 @@ The handle/2 callback is used by Elli to response to requests
 It serves as the router for our application.
 """
 pub fn handle(req, _args) {
-  method = Elli.method(req)
-  path = Elli.path(req)
+  method = Elli:method(req)
+  path = Elli:path(req)
   case (method, path) {
   | (Get, []) => home()
   | (Get, ["hello"]) => greet("world")
@@ -56,8 +52,8 @@ The start_link/0 function can be used to create a new
 Elli web server process running this handler module.
 """
 pub fn start_link() {
-  Elli.start_link({
-    callback = 'Gleam.ElliWebApp',
-    port = 4000,
+  Elli:start_link({
+    callback => ElliWebApp,
+    port => 4000,
   })
 }
