@@ -109,6 +109,7 @@
 
 -record(ast_record_extend,
         {meta = #meta{} :: meta(),
+         type = type_not_annotated :: type_annotation(),
          parent :: ast_expression(),
          label :: string(),
          value :: ast_expression()}).
@@ -182,11 +183,10 @@
 -record(type_var, {type :: type_var_reference()}).
 -record(type_record, {row :: type()}).
 -record(type_row_empty, {}).
--record(type_row_extend, {name :: string(), value :: type(), parent :: type()}).
+-record(type_row_extend, {label :: string(), value :: type(), parent :: type()}).
 
 -type type()
-      ::
-      #type_app{}
+      :: #type_app{}
       | #type_const{}
       | #type_fn{}
       | #type_var{}

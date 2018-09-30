@@ -194,14 +194,45 @@ list_test() ->
   ],
   test_infer(Cases).
 
-% record_test() ->
-%   Cases = [
-%     {"{}", "{}"}
-%   ],
-%   test_infer(Cases).
+record_test() ->
+  Cases = [
+    {"{}", "{}"},
+    {"{a => 1}", "{a => Int}"},
+    {"{a => 1, b => 2}", "{a => Int, b => Int}"},
+    {"{a => 1, b => 2.0, c => -1}", "{a => Int, b => Float, c => Int}"}
+  ],
+  test_infer(Cases).
 
 % ; ("let f = fun x -> x in pair(f(one), f(true))", OK "pair[int, bool]") *)
 % ; ("fun f -> pair(f(one), f(true))", fail) *)
+
+% Depends on records
+% 	("{}.x", fail);
+% 	("{a = one, b = true}", OK "{a : int, b : bool}");
+% 	("{b = true, a = one}", OK "{b : bool, a : int}");
+% 	("{a = one, b = true}.a", OK "int");
+% 	("{a = one, b = true}.b", OK "bool");
+% 	("{a = one, b = true}.c", error "row does not contain label c");
+% 	("{f = fun x -> x}", OK "forall[a] {f : a -> a}");
+% 	("let r = {a = id, b = succ} in choose(r.a, r.b)", OK "int -> int");
+% 	("let r = {a = id, b = fun x -> x} in choose(r.a, r.b)", OK "forall[a] a -> a");
+% 	("choose({a = one}, {})", fail);
+% 	("{ x = zero | { y = one | {} } }", OK "{x : int, y : int}");
+% 	("choose({ x = zero | { y = one | {} } }, {x = one, y = zero})", OK "{x : int, y : int}");
+% 	("{ x = true | {x = one}}", OK "{x : bool, x : int}");
+% 	("let a = {} in {b = one | a}", OK "{b : int}");
+% 	("let a = {x = one} in {x = true | a}.x", OK "bool");
+% 	("let a = {x = one} in a.y", error "row does not contain label y");
+% 	("fun r -> {x = one | r}", OK "forall[r] {r} -> {x : int | r}");
+% 	("fun r -> r.x", OK "forall[r a] {x : a | r} -> a");
+% 	("let get_x = fun r -> r.x in get_x({y = one, x = zero})", OK "int");
+% 	("let get_x = fun r -> r.x in get_x({y = one, z = true})", error "row does not contain label x");
+% 	("fun r -> choose({x = zero | r}, {x = one | {}})", OK "{} -> {x : int}");
+% 	("fun r -> choose({x = zero | r}, {x = one})", OK "{} -> {x : int}");
+% 	("fun r -> choose({x = zero | r}, {x = one | r})", OK "forall[r] {r} -> {x : int | r}");
+% 	("fun r -> choose({x = zero | r}, {y = one | r})", error "recursive row types");
+% 	("let f = fun x -> x.t(one) in f({t = succ})", OK "int");
+% 	("let f = fun x -> x.t(one) in f({t = id})", OK "int");
 
 % Depends on equality
 % ; ("let f = fun x -> x in let id = fun y -> y in eq_curry(f)(id)", OK "bool") *)
