@@ -24,7 +24,7 @@ doc """
 Here is some documentation! Hooray!
 """
 fn compare(guess, secret_number) {
-  case Int.compare(i, secret_number) {
+  case Int:compare(i, secret_number) {
   | Order:LT =>
       IO:print("Too low!")
       loop(secret_number)
@@ -32,7 +32,7 @@ fn compare(guess, secret_number) {
       IO:print("Too low!")
       loop(secret_number)
   | Order:EQ =>
-      i = Int.to_string(secret_number)
+      i = Int:to_string(secret_number)
       IO:print("You got it! The number was" <> i)
   }
 }
