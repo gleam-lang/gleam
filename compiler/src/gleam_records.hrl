@@ -183,7 +183,7 @@
 -record(type_var, {type :: type_var_reference()}).
 -record(type_record, {row :: type()}).
 -record(type_row_empty, {}).
--record(type_row_extend, {label :: string(), value :: type(), parent :: type()}).
+-record(type_row_extend, {label :: string(), type :: type(), parent :: type()}).
 
 -type type()
       :: #type_app{}
