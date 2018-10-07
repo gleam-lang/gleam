@@ -1,7 +1,7 @@
 import Foreign:Foreign
 import Result:Result:*
 
-pub type Method =
+pub enum Method =
   | Get
   | Head
   | Post
@@ -13,7 +13,7 @@ pub type Method =
   | Patch
   | Other(String)
 
-pub type alias Header =
+pub type Header =
   (String, String)
 ;
 
@@ -31,7 +31,7 @@ external fn erl_start_link(List((Atom, Foreign))) { Result(Foreign, Pid) }
 doc """
 The status code, headers and body to send back to the client.
 """
-pub type alias Response =
+pub type Response =
   (Int, List(Header), String)
 ;
 
@@ -71,7 +71,7 @@ pub fn query_string(req) {
   }
 }
 
-pub type alias StartArguments =
+pub type StartArguments =
   {
     // A real Module type instead of Atom would be nice.
     callback :: Atom,

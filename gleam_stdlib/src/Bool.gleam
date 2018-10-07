@@ -1,6 +1,6 @@
 import Order:Order
 
-pub type Bool =
+pub enum Bool =
   | True
   | False
 ;

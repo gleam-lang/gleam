@@ -31,27 +31,27 @@ pub external fn call(Pid, CallMsg) { a } = 'gen_server' 'call'
 pub external fn cast(Pid, CastMsg) { Unit } = 'gen_server' 'cast'
 
 // TODO: Need to add others here
-pub type StartError =
+pub enum StartError =
   | AlreadyStarted(Pid)
 ;
 
-pub type StopReason =
+pub enum StopReason =
   | Normal
   | Error(Atom)
 ;
 
-pub type Call =
+pub enum Call =
   | Reply(Reply, State, Timeout)
   | Noreply(State, Timeout)
   | Ignore(StopReason, State)
 ;
 
-pub type Cast =
+pub enum Cast =
   | Noreply(State, Timeout)
   | Stop(StopReason, State)
 ;
 
-pub type Init =
+pub enum Init =
   | Ok(State, Timeout)
   | Stop(StopReason)
   | Ignore

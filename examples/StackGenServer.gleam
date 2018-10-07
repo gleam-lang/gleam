@@ -6,51 +6,51 @@ import GenServer:Cast
 import GenServer:Init
 import Timeout:never
 
-type CastMsg(item) =
+pub enum CastMsg(item) =
   | Push(item)
 ;
 
-type CallMsg =
+pub enum CallMsg =
   | Pop
 ;
 
-type Reply(item) =
+pub enum Reply(item) =
   | Item(item)
   | Empty
 ;
 
 // API
 
-fn start_link(items) {
+pub fn start_link(items) {
   RecordGenServer.start_link(self, items)
 }
 
-fn push(pid, item) {
+pub fn push(pid, item) {
   RecordGenServer.cast(pid, Push(item))
 }
 
-fn pop(pid) {
+pub fn pop(pid) {
   RecordGenServer.call(pid, Pop)
 }
 
 // callbacks
 
-fn handle_call(call, _caller, items) =
+pub fn handle_call(call, _caller, items) =
   case (call, items) {
   | (Pop, x :: xs) => Call:Reply(Item(x), xs, never())
   | (Pop, []) => Call:Reply(Empty, [], never())
   }
 
-fn handle_cast(cast, items) {
+pub fn handle_cast(cast, items) {
   case cast {
   | Push(item) => Cast:Ok(item :: items, never())
   }
 }
 
-fn handle_info(_info, items) {
+pub fn handle_info(_info, items) {
   Cast:Noreply(items, never())
 }
 
-fn init(items) {
+pub fn init(items) {
   Init:Ok(items, never())
 }

@@ -1,43 +1,43 @@
 import Foreign:Foreign
 
-type Meta =
+pub enum Meta =
   | Meta(Int)
 ; // Fix GitHub syntax highlighting
 
-type Type(var_type) =
+pub enum Type(var_type) =
   | TypeConst(String)
   | TypeTuple(List(Type(var_type)))
   | TypeFunc(List(Type(var_type)), Type(var_type))
   | TypeVar(var_type)
 ;
 
-type alias TypeRef =
+pub type TypeRef =
   Reference
 
-type alias ResolvedType =
+pub type ResolvedType =
   Type(Unit)
 
-type alias UnresolvedType =
+pub type UnresolvedType =
   Type(TypeRef)
 
-type Ast =
+pub enum Ast =
   | Mod(Module)
   | Expr(Expr)
 ;
 
-type Module =
+pub enum Module =
   | AstModule(Charlist, List(Export), List(Function), List(Test))
 ;
 
-type Function =
+pub enum Function =
   | AstFunction(Meta, Charlist, List(Charlist), Expr)
 ;
 
-type Test =
+pub enum Test =
   | AstFunction(Meta, Charlist, Expr)
 ;
 
-type Expr(type_) =
+pub enum Expr(type_) =
   | AstAdt(Meta, Charlist, List(Expr))
   | AstAssignment(Meta, type_, Charlist, Expr(type_), Expr(type_))
   | AstAtom(Meta, Charlist)
@@ -62,26 +62,26 @@ type Expr(type_) =
   | AstVar(Meta, String)
 ;
 
-type alias UntypedExpr =
+pub type UntypedExpr =
   Expr(Unit)
 ;
 
-type alias TypedExpr =
+pub type TypedExpr =
   Expr(Type)
 ;
 
-type alias Charlist =
+pub type Charlist =
   List(Int)
 ;
 
-type alias Export =
+pub type Export =
   (Charlist, Int)
 ;
 
-type Clause =
+pub enum Clause =
   | AstClause(Meta, Expr, Expr)
 ;
 
-type RecordField =
+pub enum RecordField =
   | AstClause(Meta, Expr, Expr)
 ;

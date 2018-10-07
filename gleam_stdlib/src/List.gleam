@@ -1,7 +1,7 @@
 import Result:Result:*
 import Bool:Bool:*
 
-pub type Err =
+pub enum Err =
   | Empty
 ;
 

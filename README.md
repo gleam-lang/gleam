@@ -3,9 +3,9 @@
 A statically typed language for the Erlang VM.
 
 ```rust
-pub type Quadrilateral =
+pub enum Quadrilateral =
   | Square(Int)
-  | Rectangle(Int, Int);
+  | Rectangle(Int, Int)
 
 pub fn from_dimensions(width, height) {
   case width == height {

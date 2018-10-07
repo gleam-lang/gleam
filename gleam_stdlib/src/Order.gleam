@@ -1,4 +1,4 @@
-type Order =
+pub enum Order =
   | LT
   | EQ
   | GT
