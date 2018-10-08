@@ -134,6 +134,17 @@ infer(Ast = #ast_record_extend{parent = Parent, label = Label, value = Value}, E
                                        value = AnnotatedValue},
   {AnnotatedAst, Env6};
 
+infer(Ast = #ast_record_select{record = Record, label = Label}, Env0) ->
+  {RowParentType, Env1} = new_var(Env0),
+  {FieldType, Env2} = new_var(Env1),
+  RowType = #type_row_extend{label = Label, type = FieldType, parent = RowParentType},
+  ParamType = #type_record{row = RowType},
+  {AnnotatedRecord, Env3} = infer(Record, Env2),
+  RecordType = fetch(AnnotatedRecord),
+  Env4 = unify(ParamType, RecordType, Env3),
+  AnnotatedAst = Ast#ast_record_select{type = {ok, FieldType}, record = AnnotatedRecord},
+  {AnnotatedAst, Env4};
+
 infer(Ast = #ast_record_empty{}, Env) ->
   {Ast, Env};
 
@@ -148,6 +159,7 @@ infer(Ast = #ast_string{}, Env) ->
 
 infer(Ast = #ast_atom{}, Env) ->
   {Ast, Env}.
+
 
 infer_call(FunAst, Args, Env0) ->
   {AnnotatedFunAst, Env1} = infer(FunAst, Env0),
@@ -182,6 +194,12 @@ fetch(#ast_nil{type = {ok, Type}}) ->
 fetch(#ast_record_extend{type = {ok, Type}}) ->
   Type;
 
+fetch(#ast_record_select{type = {ok, Type}}) ->
+  Type;
+
+fetch(#ast_record_empty{}) ->
+  #type_record{row = #type_row_empty{}};
+
 fetch(#ast_tuple{elems = Elems}) ->
   ElemsTypes = lists:map(fun fetch/1, Elems),
   #type_app{type = "Tuple", args = ElemsTypes};
@@ -200,9 +218,6 @@ fetch(#ast_float{}) ->
 
 fetch(#ast_string{}) ->
   #type_const{type = "String"};
-
-fetch(#ast_record_empty{}) ->
-  #type_record{row = #type_row_empty{}};
 
 fetch(Other) ->
   error({unable_to_fetch_type, Other}).
@@ -247,6 +262,11 @@ resolve_type_vars(Ast = #ast_record_extend{type = {ok, Type},
   Ast#ast_record_extend{type = {ok, NewType},
                         parent = NewParent,
                         value = NewValue};
+
+resolve_type_vars(Ast = #ast_record_select{type = {ok, Type}, record = Record}, Env) ->
+  NewType = do_resolve_type_vars(Type, Env),
+  NewRecord = resolve_type_vars(Record, Env),
+  Ast#ast_record_select{type = {ok, NewType}, record = NewRecord};
 
 resolve_type_vars(Ast = #ast_record_empty{}, _) -> Ast;
 resolve_type_vars(Ast = #ast_int{}, _) -> Ast;
@@ -375,6 +395,7 @@ env_put_type_ref(Ref, TypeVar, Env = #env{type_refs = Refs}) ->
   NewRefs = maps:put(Ref, TypeVar, Refs),
   Env#env{type_refs = NewRefs}.
 
+
 -spec generalize(env(), type()) -> {type(), env()}.
 generalize(Type = #type_const{}, Env) ->
   {Type, Env};
@@ -389,6 +410,26 @@ generalize(Type = #type_fn{args = Args, return = Return}, Env0) ->
   {GeneralizedReturn, Env2} = generalize(Return, Env1),
   GeneralizedType = Type#type_fn{args = GeneralizedArgs, return = GeneralizedReturn},
   {GeneralizedType, Env2};
+
+
+	% | TRowExtend(label, field_ty, row) ->
+	% 		TRowExtend(label, generalize level field_ty, generalize level row)
+generalize(Type = #type_row_extend{parent = Parent,
+                                   type = FieldType}, Env0) ->
+  {GeneralizedFieldType, Env1} = generalize(FieldType, Env0),
+  {GeneralizedParent, Env2} = generalize(Parent, Env1),
+  GeneralizedType = Type#type_row_extend{parent = GeneralizedParent,
+                                         type = GeneralizedFieldType},
+  {GeneralizedType, Env2};
+
+generalize(Type = #type_row_empty{}, Env0) ->
+  {Type, Env0};
+
+	% | TRecord row -> TRecord (generalize level row)
+generalize(Type = #type_record{row = Row}, Env0) ->
+  {GeneralizedRow, Env1} = generalize(Row, Env0),
+  GeneralizedType = Type#type_record{row = GeneralizedRow},
+  {GeneralizedType, Env1};
 
 generalize(Type = #type_var{type = Ref}, Env0) ->
   Level = env_level(Env0),
@@ -415,6 +456,20 @@ instantiate(Type, Env) ->
 
 -spec do_instantiate(type(), {env(), map()}) -> {type(), {env(), map()}}.
 do_instantiate(Type = #type_const{}, State) ->
+  {Type, State};
+
+do_instantiate(Type = #type_record{row = Row}, State) ->
+  {NewRow, NewState} = do_instantiate(Row, State),
+  NewType = Type#type_record{row = NewRow},
+  {NewType, NewState};
+
+do_instantiate(Type = #type_row_extend{parent = Parent, type = FieldType}, State) ->
+  {NewParent, State1} = do_instantiate(Parent, State),
+  {NewFieldType, State2} = do_instantiate(FieldType, State1),
+  NewType = Type#type_row_extend{parent = NewParent, type = NewFieldType},
+  {NewType, State2};
+
+do_instantiate(Type = #type_row_empty{}, State) ->
   {Type, State};
 
 do_instantiate(Type = #type_app{args = Args}, State0) ->
@@ -539,13 +594,6 @@ unify(Type1, Type2, Env) ->
      #type_record{row = Row2}, _} ->
       unify(Row1, Row2, Env);
 
-    % % An empty row can always unified with a non-empty row.
-    % % Because of this a function that takes a record or module can always take
-    % % a record or module with additional fields.
-    % {#type_row_empty{}, _,
-    %  #type_row_extend{}, _} ->
-    %   Env;
-
     % | TRowExtend(label1, field_ty1, rest_row1), (TRowExtend _ as row2) -> begin
     % 	let rest_row1_tvar_ref_option = match rest_row1 with
     % 		| TVar ({contents = Unbound _} as tvar_ref) -> Some tvar_ref
@@ -577,20 +625,6 @@ unify(Type1, Type2, Env) ->
       fail({cannot_unify, Other})
   end.
 
-% and rewrite_row row2 label1 field_ty1 = match row2 with
-% 	| TRowEmpty -> error ("row does not contain label " ^ label1)
-% 	| TRowExtend(label2, field_ty2, rest_row2) when label2 = label1 ->
-% 			unify field_ty1 field_ty2 ;
-% 			rest_row2
-% 	| TRowExtend(label2, field_ty2, rest_row2) ->
-% 			TRowExtend(label2, field_ty2, rewrite_row rest_row2 label1 field_ty1)
-% 	| TVar {contents = Link row2} -> rewrite_row row2 label1 field_ty1
-% 	| TVar ({contents = Unbound(id, level)} as tvar) ->
-% 			let rest_row2 = new_var level in
-% 			let ty2 = TRowExtend(label1, field_ty1, rest_row2) in
-% 			tvar := Link ty2 ;
-% 			rest_row2
-% 	| _ -> error "row type expected"
 
 -spec rewrite_row(type(), string(), type(), env()) -> {type(), env()}.
 rewrite_row(OtherRow, Label, Field, Env0) ->

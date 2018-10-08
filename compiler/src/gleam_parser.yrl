@@ -34,6 +34,7 @@ Left 220 '*'.
 Left 220 '*.'.
 Left 220 '/'.
 Left 220 '/.'.
+Left 230 '.'.
 Left 300 '('.
 Right 60 '::'.
 Right 70 '|'.
@@ -216,8 +217,8 @@ record({'{', EmptyMeta}, Fields) ->
 record_field({name, _Meta, Key}, Value) ->
   {Key, Value}.
 
-record_select({'.', Meta}, Record, {name, _, Key}) ->
-  #ast_record_select{meta = Meta, record = Record, key = Key}.
+record_select({'.', Meta}, Record, {name, _, Label}) ->
+  #ast_record_select{meta = Meta, record = Record, label = Label}.
 
 tuple({_, Meta}, Elems) ->
   #ast_tuple{meta = Meta, elems = Elems}.

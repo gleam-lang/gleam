@@ -73,9 +73,8 @@ pub fn query_string(req) {
 
 pub type StartArguments =
   {
-    // A real Module type instead of Atom would be nice.
-    callback :: Atom,
-    port :: Int,
+    callback => Atom,
+    port => Int,
   }
 
 doc """

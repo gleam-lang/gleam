@@ -25,7 +25,10 @@ cannot_unify_test() ->
     "1 == 2.0",
     "[1, 2.0]",
     "[1, 2, 3, 4, 5, 'six']",
-    "{'ok', 1} != {'ok', 1, 'extra'}"
+    "{'ok', 1} != {'ok', 1, 'extra'}",
+    "{} == {a => 1}",
+    "1 == {a => 1}",
+    "{a => 1} != 1"
   ],
   Test =
     fun(Src) ->
@@ -190,6 +193,7 @@ list_test() ->
     {"[[], ['ok']]", "List(List(Atom))"},
     {"1 :: 2 :: []", "List(Int)"},
     {"fn(x) { x } :: []", "List(fn(a) { a })"},
+    {"f = fn(x) { x } [f, f]", "List(fn(a) { a })"},
     {"x = 1 :: [] 2 :: x", "List(Int)"}
   ],
   test_infer(Cases).
@@ -214,20 +218,25 @@ record_test() ->
 
 record_failures_test() ->
   ?assertEqual({error, {row_does_not_contain_label, "a"}},
+               infer("{}.a")),
+  ?assertEqual({error, {row_does_not_contain_label, "a"}},
                infer("{b => 1, a => 1} == {b => 2}")).
 
-% Depends on records selection
-% 	("{a = one, b = true}.a", OK "int");
-% 	("{a = one, b = true}.b", OK "bool");
-% 	("{a = one, b = true}.c", error "row does not contain label c");
-% 	("{}.x", fail);
-% 	("let r = {a = id, b = succ} in choose(r.a, r.b)", OK "int -> int");
-% 	("let r = {a = id, b = fun x -> x} in choose(r.a, r.b)", OK "forall[a] a -> a");
-% 	("let a = {x = one} in a.y", error "row does not contain label y");
-% 	("let f = fun x -> x.t(one) in f({t = succ})", OK "int");
-% 	("let f = fun x -> x.t(one) in f({t = id})", OK "int");
-% 	("let get_x = fun r -> r.x in get_x({y = one, x = zero})", OK "int");
-% 	("let get_x = fun r -> r.x in get_x({y = one, z = true})", error "row does not contain label x");
+record_select_test() ->
+  Cases = [
+    {"{a => 1, b => 2.0}.b", "Float"},
+    {"r = {a => 1, b => 2} r.a", "Int"},
+    {"r = {a => 1, b => 2} r.a + r.b", "Int"},
+    {"fn(x) { x.t }", "fn({t => a}) { a }"},
+    {"f = fn(x) { x } r = {a => f} r.a", "fn(a) { a }"},
+    {"r = {a => fn(x) { x }} r.a", "fn(a) { a }"},
+    {"r = {a => fn(x) { x }, b => fn(x) { x }} [r.a, r.b]", "List(fn(a) { a })"},
+    {"f = fn(x) { x.t } f({ t => 1 })", "Int"},
+    {"f = fn(x) { x.t(1) } f({t => fn(x) { x + 1 } })", "Int"},
+    {"{a => 1, b => 2.0}.a", "Int"}
+  ],
+  test_infer(Cases).
+
 
 % Depends on records extension
 % 	("{ x = zero | { y = one | {} } }", OK "{x : int, y : int}");
