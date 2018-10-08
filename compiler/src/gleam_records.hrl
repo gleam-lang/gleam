@@ -116,8 +116,9 @@
 
 -record(ast_record_select,
         {meta = #meta{} :: meta(),
+         type = type_not_annotated :: type_annotation(),
          record :: ast_expression(),
-         key :: string()}).
+         label :: string()}).
 
 -record(ast_mod_fn,
         {meta = #meta{} :: meta(),

@@ -207,8 +207,8 @@ expression(#ast_record_extend{} = Ast, Env) ->
       {Core, NewEnv}
   end;
 
-expression(#ast_record_select{meta = Meta, record = Record, key = Key}, Env) ->
-  Atom = #ast_atom{meta = Meta, value = Key},
+expression(#ast_record_select{meta = Meta, record = Record, label = Label}, Env) ->
+  Atom = #ast_atom{meta = Meta, value = Label},
   Call = #ast_call{meta = Meta,
                    module = "maps",
                    name = "get",
