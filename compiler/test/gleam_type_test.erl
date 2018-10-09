@@ -237,6 +237,19 @@ record_select_test() ->
   ],
   test_infer(Cases).
 
+% module_test() ->
+%   Cases = [
+%     {
+%      "fn run() { 'ok' }"
+%      ,
+%      "module {\n"
+%      "  fn run() { Atom }\n"
+%      "}"
+%     }
+%   ],
+%   test_infer(Cases).
+
+
 
 % Depends on records extension
 % 	("{ x = zero | { y = one | {} } }", OK "{x : int, y : int}");

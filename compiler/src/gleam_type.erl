@@ -54,111 +54,114 @@ infer(Ast) ->
   end.
 
 -spec infer(ast_expression(), env()) -> {ast_expression(), env()}.
-infer(Ast = #ast_operator{name = Name, args = Args}, Env0) ->
-  {ReturnType, Env1} = infer_call(#ast_var{name = Name}, Args, Env0),
-  AnnotatedAst = Ast#ast_operator{type = {ok, ReturnType}},
-  {AnnotatedAst, Env1};
+infer(Ast, Env0) ->
+  case Ast of
+    #ast_operator{name = Name, args = Args} ->
+      {ReturnType, Env1} = infer_call(#ast_var{name = Name}, Args, Env0),
+      AnnotatedAst = Ast#ast_operator{type = {ok, ReturnType}},
+      {AnnotatedAst, Env1};
 
-infer(Ast = #ast_local_call{fn = Fn, args = Args}, Env0) ->
-  {ReturnType, Env1} = infer_call(Fn, Args, Env0),
-  AnnotatedAst = Ast#ast_local_call{type = {ok, ReturnType}},
-  {AnnotatedAst, Env1};
+    #ast_local_call{fn = Fn, args = Args} ->
+      {ReturnType, Env1} = infer_call(Fn, Args, Env0),
+      AnnotatedAst = Ast#ast_local_call{type = {ok, ReturnType}},
+      {AnnotatedAst, Env1};
 
-infer(Ast = #ast_fn{args = Args, body = Body}, Env) ->
-  {ArgTypes, ArgsEnv} = gleam:thread_map(fun(_, E) -> new_var(E) end, Args, Env),
-  Insert =
-    fun({Name, Type}, E) ->
-      env_extend(Name, Type, E)
-    end,
-  FnEnv = lists:foldl(Insert, ArgsEnv, lists:zip(Args, ArgTypes)),
-  {ReturnAst, ReturnEnv} = infer(Body, FnEnv),
-  ReturnType = fetch(ReturnAst),
-  Type = #type_fn{args = ArgTypes, return = ReturnType},
-  AnnotatedAst = Ast#ast_fn{type = {ok, Type}},
-  FinalEnv = Env#env{type_refs = ReturnEnv#env.type_refs},
-  {AnnotatedAst, FinalEnv};
+    #ast_fn{args = Args, body = Body} ->
+      {ArgTypes, ArgsEnv} = gleam:thread_map(fun(_, E) -> new_var(E) end, Args, Env0),
+      Insert =
+        fun({Name, Type}, E) ->
+          env_extend(Name, Type, E)
+        end,
+      FnEnv = lists:foldl(Insert, ArgsEnv, lists:zip(Args, ArgTypes)),
+      {ReturnAst, ReturnEnv} = infer(Body, FnEnv),
+      ReturnType = fetch(ReturnAst),
+      Type = #type_fn{args = ArgTypes, return = ReturnType},
+      AnnotatedAst = Ast#ast_fn{type = {ok, Type}},
+      FinalEnv = Env0#env{type_refs = ReturnEnv#env.type_refs},
+      {AnnotatedAst, FinalEnv};
 
-infer(Ast = #ast_var{name = Name}, Env) ->
-  case env_lookup(Name, Env) of
-    {ok, Type} ->
-      {InstantiatedType, NewEnv} = instantiate(Type, Env),
-      AnnotatedAst = Ast#ast_var{type = {ok, InstantiatedType}},
+    #ast_var{name = Name} ->
+      case env_lookup(Name, Env0) of
+        {ok, Type} ->
+          {InstantiatedType, NewEnv} = instantiate(Type, Env0),
+          AnnotatedAst = Ast#ast_var{type = {ok, InstantiatedType}},
+          {AnnotatedAst, NewEnv};
+
+        error ->
+          fail({var_not_found, Ast})
+      end;
+
+    #ast_assignment{name = Name, value = Value, then = Then} ->
+      {InferredValue, Env2} = infer(Value, increment_env_level(Env0)),
+      Env3 = decrement_env_level(Env2),
+      {GeneralizedType, Env4} = generalize(fetch(InferredValue), Env3),
+      ExtendedEnv = env_extend(Name, GeneralizedType, Env4),
+      infer(Then, ExtendedEnv);
+
+    #ast_tuple{elems = Elems} ->
+      {AnnotatedElems, NewEnv} = gleam:thread_map(fun infer/2, Elems, Env0),
+      AnnotatedAst = Ast#ast_tuple{elems = AnnotatedElems},
       {AnnotatedAst, NewEnv};
 
-    error ->
-      fail({var_not_found, Ast})
-  end;
+    #ast_cons{head = Head, tail = Tail} ->
+      {AnnotatedTail, Env1} = infer(Tail, Env0),
+      {AnnotatedHead, Env2} = infer(Head, Env1),
+      TailType = fetch(AnnotatedTail),
+      HeadType = fetch(AnnotatedHead),
+      Env3 = unify(TailType, #type_app{type = "List", args = [HeadType]}, Env2),
+      AnnotatedAst = Ast#ast_cons{head = AnnotatedHead, tail = AnnotatedTail},
+      {AnnotatedAst, Env3};
 
-infer(#ast_assignment{name = Name, value = Value, then = Then}, Env) ->
-  {InferredValue, Env2} = infer(Value, increment_env_level(Env)),
-  Env3 = decrement_env_level(Env2),
-  {GeneralizedType, Env4} = generalize(fetch(InferredValue), Env3),
-  ExtendedEnv = env_extend(Name, GeneralizedType, Env4),
-  infer(Then, ExtendedEnv);
+    #ast_nil{} ->
+      {Var, NewEnv} = new_var(Env0),
+      Type = #type_app{type = "List", args = [Var]},
+      AnnotatedAst = Ast#ast_nil{type = {ok, Type}},
+      {AnnotatedAst, NewEnv};
 
-infer(Ast = #ast_tuple{elems = Elems}, Env) ->
-  {AnnotatedElems, NewEnv} = gleam:thread_map(fun infer/2, Elems, Env),
-  AnnotatedAst = Ast#ast_tuple{elems = AnnotatedElems},
-  {AnnotatedAst, NewEnv};
+    #ast_record_extend{parent = Parent, label = Label, value = Value} ->
+      {RestRowType, Env1} = new_var(Env0),
+      {FieldType, Env2} = new_var(Env1),
+      ParentType = #type_record{row = RestRowType},
+      {AnnotatedValue, Env3} = infer(Value, Env2),
+      {AnnotatedParent, Env4} = infer(Parent, Env3),
+      TypeOfValue = fetch(AnnotatedValue),
+      TypeOfParent = fetch(AnnotatedParent),
+      Env5 = unify(FieldType, TypeOfValue, Env4),
+      Env6 = unify(ParentType, TypeOfParent, Env5),
+      Type = #type_record{row = #type_row_extend{label = Label,
+                                                 type = FieldType,
+                                                 parent = RestRowType}},
+      AnnotatedAst = Ast#ast_record_extend{type = {ok, Type},
+                                           parent = AnnotatedParent,
+                                           value = AnnotatedValue},
+      {AnnotatedAst, Env6};
 
-infer(Ast = #ast_cons{head = Head, tail = Tail}, Env0) ->
-  {AnnotatedTail, Env1} = infer(Tail, Env0),
-  {AnnotatedHead, Env2} = infer(Head, Env1),
-  TailType = fetch(AnnotatedTail),
-  HeadType = fetch(AnnotatedHead),
-  Env3 = unify(TailType, #type_app{type = "List", args = [HeadType]}, Env2),
-  AnnotatedAst = Ast#ast_cons{head = AnnotatedHead, tail = AnnotatedTail},
-  {AnnotatedAst, Env3};
+    #ast_record_select{record = Record, label = Label} ->
+      {RowParentType, Env1} = new_var(Env0),
+      {FieldType, Env2} = new_var(Env1),
+      RowType = #type_row_extend{label = Label, type = FieldType, parent = RowParentType},
+      ParamType = #type_record{row = RowType},
+      {AnnotatedRecord, Env3} = infer(Record, Env2),
+      RecordType = fetch(AnnotatedRecord),
+      Env4 = unify(ParamType, RecordType, Env3),
+      AnnotatedAst = Ast#ast_record_select{type = {ok, FieldType}, record = AnnotatedRecord},
+      {AnnotatedAst, Env4};
 
-infer(Ast = #ast_nil{}, Env) ->
-  {Var, NewEnv} = new_var(Env),
-  Type = #type_app{type = "List", args = [Var]},
-  AnnotatedAst = Ast#ast_nil{type = {ok, Type}},
-  {AnnotatedAst, NewEnv};
+    #ast_record_empty{} ->
+      {Ast, Env0};
 
-infer(Ast = #ast_record_extend{parent = Parent, label = Label, value = Value}, Env0) ->
-  {RestRowType, Env1} = new_var(Env0),
-  {FieldType, Env2} = new_var(Env1),
-  ParentType = #type_record{row = RestRowType},
-  {AnnotatedValue, Env3} = infer(Value, Env2),
-  {AnnotatedParent, Env4} = infer(Parent, Env3),
-  TypeOfValue = fetch(AnnotatedValue),
-  TypeOfParent = fetch(AnnotatedParent),
-  Env5 = unify(FieldType, TypeOfValue, Env4),
-  Env6 = unify(ParentType, TypeOfParent, Env5),
-  Type = #type_record{row = #type_row_extend{label = Label,
-                                             type = FieldType,
-                                             parent = RestRowType}},
-  AnnotatedAst = Ast#ast_record_extend{type = {ok, Type},
-                                       parent = AnnotatedParent,
-                                       value = AnnotatedValue},
-  {AnnotatedAst, Env6};
+    #ast_int{} ->
+      {Ast, Env0};
 
-infer(Ast = #ast_record_select{record = Record, label = Label}, Env0) ->
-  {RowParentType, Env1} = new_var(Env0),
-  {FieldType, Env2} = new_var(Env1),
-  RowType = #type_row_extend{label = Label, type = FieldType, parent = RowParentType},
-  ParamType = #type_record{row = RowType},
-  {AnnotatedRecord, Env3} = infer(Record, Env2),
-  RecordType = fetch(AnnotatedRecord),
-  Env4 = unify(ParamType, RecordType, Env3),
-  AnnotatedAst = Ast#ast_record_select{type = {ok, FieldType}, record = AnnotatedRecord},
-  {AnnotatedAst, Env4};
+    #ast_float{} ->
+      {Ast, Env0};
 
-infer(Ast = #ast_record_empty{}, Env) ->
-  {Ast, Env};
+    #ast_string{} ->
+      {Ast, Env0};
 
-infer(Ast = #ast_int{}, Env) ->
-  {Ast, Env};
-
-infer(Ast = #ast_float{}, Env) ->
-  {Ast, Env};
-
-infer(Ast = #ast_string{}, Env) ->
-  {Ast, Env};
-
-infer(Ast = #ast_atom{}, Env) ->
-  {Ast, Env}.
+    #ast_atom{} ->
+      {Ast, Env0}
+  end.
 
 
 infer_call(FunAst, Args, Env0) ->
@@ -176,136 +179,151 @@ infer_call(FunAst, Args, Env0) ->
   {ReturnType, Env3}.
 
 -spec fetch(ast_expression()) -> type().
-fetch(#ast_operator{type = {ok, Type}}) ->
-  Type;
+fetch(Ast) ->
+  case Ast of
+    #ast_operator{type = {ok, Type}} ->
+      Type;
 
-fetch(#ast_local_call{type = {ok, Type}}) ->
-  Type;
+    #ast_local_call{type = {ok, Type}} ->
+      Type;
 
-fetch(#ast_fn{type = {ok, Type}}) ->
-  Type;
+    #ast_fn{type = {ok, Type}} ->
+      Type;
 
-fetch(#ast_var{type = {ok, Type}}) ->
-  Type;
+    #ast_var{type = {ok, Type}} ->
+      Type;
 
-fetch(#ast_nil{type = {ok, Type}}) ->
-  Type;
+    #ast_nil{type = {ok, Type}} ->
+      Type;
 
-fetch(#ast_record_extend{type = {ok, Type}}) ->
-  Type;
+    #ast_record_extend{type = {ok, Type}} ->
+      Type;
 
-fetch(#ast_record_select{type = {ok, Type}}) ->
-  Type;
+    #ast_record_select{type = {ok, Type}} ->
+      Type;
 
-fetch(#ast_record_empty{}) ->
-  #type_record{row = #type_row_empty{}};
+    #ast_record_empty{} ->
+      #type_record{row = #type_row_empty{}};
 
-fetch(#ast_tuple{elems = Elems}) ->
-  ElemsTypes = lists:map(fun fetch/1, Elems),
-  #type_app{type = "Tuple", args = ElemsTypes};
+    #ast_tuple{elems = Elems} ->
+      ElemsTypes = lists:map(fun fetch/1, Elems),
+      #type_app{type = "Tuple", args = ElemsTypes};
 
-fetch(#ast_cons{head = Head}) ->
-  #type_app{type = "List", args = [fetch(Head)]};
+    #ast_cons{head = Head} ->
+      #type_app{type = "List", args = [fetch(Head)]};
 
-fetch(#ast_int{}) ->
-  #type_const{type = "Int"};
+    #ast_int{} ->
+      #type_const{type = "Int"};
 
-fetch(#ast_atom{}) ->
-  #type_const{type = "Atom"};
+    #ast_atom{} ->
+      #type_const{type = "Atom"};
 
-fetch(#ast_float{}) ->
-  #type_const{type = "Float"};
+    #ast_float{} ->
+      #type_const{type = "Float"};
 
-fetch(#ast_string{}) ->
-  #type_const{type = "String"};
+    #ast_string{} ->
+      #type_const{type = "String"};
 
-fetch(Other) ->
-  error({unable_to_fetch_type, Other}).
+    Other ->
+      error({unable_to_fetch_type, Other})
+  end.
 
 
 -spec resolve_type_vars(ast_expression(), env()) -> ast_expression().
-resolve_type_vars(Ast = #ast_operator{type = {ok, Type}}, Env) ->
-  NewType = do_resolve_type_vars(Type, Env),
-  Ast#ast_operator{type = {ok, NewType}};
+resolve_type_vars(Ast, Env) ->
+  case Ast of
+    #ast_operator{type = {ok, Type}} ->
+      NewType = do_resolve_type_vars(Type, Env),
+      Ast#ast_operator{type = {ok, NewType}};
 
-resolve_type_vars(Ast = #ast_local_call{type = {ok, Type}}, Env) ->
-  NewType = do_resolve_type_vars(Type, Env),
-  Ast#ast_local_call{type = {ok, NewType}};
+    #ast_local_call{type = {ok, Type}} ->
+      NewType = do_resolve_type_vars(Type, Env),
+      Ast#ast_local_call{type = {ok, NewType}};
 
-resolve_type_vars(Ast = #ast_fn{type = {ok, Type}}, Env) ->
-  NewType = do_resolve_type_vars(Type, Env),
-  Ast#ast_fn{type = {ok, NewType}};
+    #ast_fn{type = {ok, Type}} ->
+      NewType = do_resolve_type_vars(Type, Env),
+      Ast#ast_fn{type = {ok, NewType}};
 
-resolve_type_vars(Ast = #ast_var{type = {ok, Type}}, Env) ->
-  NewType = do_resolve_type_vars(Type, Env),
-  Ast#ast_var{type = {ok, NewType}};
+    #ast_var{type = {ok, Type}} ->
+      NewType = do_resolve_type_vars(Type, Env),
+      Ast#ast_var{type = {ok, NewType}};
 
-resolve_type_vars(Ast = #ast_tuple{elems = Elems}, Env) ->
-  NewElems = lists:map(fun(X) -> resolve_type_vars(X, Env) end, Elems),
-  Ast#ast_tuple{elems = NewElems};
+    #ast_tuple{elems = Elems} ->
+      NewElems = lists:map(fun(X) -> resolve_type_vars(X, Env) end, Elems),
+      Ast#ast_tuple{elems = NewElems};
 
-resolve_type_vars(Ast = #ast_cons{head = Head, tail = Tail}, Env) ->
-  NewHead = resolve_type_vars(Head, Env),
-  NewTail = resolve_type_vars(Tail, Env),
-  Ast#ast_cons{head = NewHead, tail = NewTail};
+    #ast_cons{head = Head, tail = Tail} ->
+      NewHead = resolve_type_vars(Head, Env),
+      NewTail = resolve_type_vars(Tail, Env),
+      Ast#ast_cons{head = NewHead, tail = NewTail};
 
-resolve_type_vars(Ast = #ast_nil{type = {ok, Type}}, Env) ->
-  NewType = do_resolve_type_vars(Type, Env),
-  Ast#ast_nil{type = {ok, NewType}};
+    #ast_nil{type = {ok, Type}} ->
+      NewType = do_resolve_type_vars(Type, Env),
+      Ast#ast_nil{type = {ok, NewType}};
 
-resolve_type_vars(Ast = #ast_record_extend{type = {ok, Type},
-                                           parent = Parent,
-                                           value = Value}, Env) ->
-  NewType = do_resolve_type_vars(Type, Env),
-  NewParent = resolve_type_vars(Parent, Env),
-  NewValue = resolve_type_vars(Value, Env),
-  Ast#ast_record_extend{type = {ok, NewType},
-                        parent = NewParent,
-                        value = NewValue};
+    #ast_record_extend{type = {ok, Type}, parent = Parent, value = Value} ->
+      NewType = do_resolve_type_vars(Type, Env),
+      NewParent = resolve_type_vars(Parent, Env),
+      NewValue = resolve_type_vars(Value, Env),
+      Ast#ast_record_extend{type = {ok, NewType},
+                            parent = NewParent,
+                            value = NewValue};
 
-resolve_type_vars(Ast = #ast_record_select{type = {ok, Type}, record = Record}, Env) ->
-  NewType = do_resolve_type_vars(Type, Env),
-  NewRecord = resolve_type_vars(Record, Env),
-  Ast#ast_record_select{type = {ok, NewType}, record = NewRecord};
+    #ast_record_select{type = {ok, Type}, record = Record} ->
+      NewType = do_resolve_type_vars(Type, Env),
+      NewRecord = resolve_type_vars(Record, Env),
+      Ast#ast_record_select{type = {ok, NewType}, record = NewRecord};
 
-resolve_type_vars(Ast = #ast_record_empty{}, _) -> Ast;
-resolve_type_vars(Ast = #ast_int{}, _) -> Ast;
-resolve_type_vars(Ast = #ast_atom{}, _) -> Ast;
-resolve_type_vars(Ast = #ast_float{}, _) -> Ast;
-resolve_type_vars(Ast = #ast_string{}, _) -> Ast;
-resolve_type_vars(Ast, _) -> error({unable_to_resolve_type_vars_for, Ast}).
+    #ast_record_empty{} ->
+      Ast;
+
+    #ast_int{} ->
+      Ast;
+
+    #ast_atom{} ->
+      Ast;
+
+    #ast_float{} ->
+      Ast;
+
+    #ast_string{} ->
+      Ast
+  end.
 
 
 -spec do_resolve_type_vars(type(), env()) -> type().
-do_resolve_type_vars(Type = #type_const{}, _) ->
-  Type;
+do_resolve_type_vars(Type, Env) ->
+  case Type of
+    #type_const{} ->
+      Type;
 
-do_resolve_type_vars(Type = #type_row_empty{}, _) ->
-  Type;
+    #type_row_empty{} ->
+      Type;
 
-do_resolve_type_vars(Type = #type_record{row = Row}, Env) ->
-  Type#type_record{row = do_resolve_type_vars(Row, Env)};
+    #type_record{row = Row} ->
+      Type#type_record{row = do_resolve_type_vars(Row, Env)};
 
-do_resolve_type_vars(Type = #type_row_extend{parent = Parent, type = Value}, Env) ->
-  Type#type_row_extend{parent = do_resolve_type_vars(Parent, Env),
-                       type = do_resolve_type_vars(Value, Env)};
+    #type_row_extend{parent = Parent, type = Value} ->
+      Type#type_row_extend{parent = do_resolve_type_vars(Parent, Env),
+                          type = do_resolve_type_vars(Value, Env)};
 
-do_resolve_type_vars(Type = #type_app{args = Args}, Env) ->
-  NewArgs = lists:map(fun(X) -> do_resolve_type_vars(X, Env) end, Args),
-  Type#type_app{args = NewArgs};
+    #type_app{args = Args} ->
+      NewArgs = lists:map(fun(X) -> do_resolve_type_vars(X, Env) end, Args),
+      Type#type_app{args = NewArgs};
 
-do_resolve_type_vars(Type = #type_fn{args = Args, return = Return}, Env) ->
-  NewArgs = lists:map(fun(X) -> do_resolve_type_vars(X, Env) end, Args),
-  NewReturn = do_resolve_type_vars(Return, Env),
-  Type#type_fn{args = NewArgs, return = NewReturn};
+    #type_fn{args = Args, return = Return} ->
+      NewArgs = lists:map(fun(X) -> do_resolve_type_vars(X, Env) end, Args),
+      NewReturn = do_resolve_type_vars(Return, Env),
+      Type#type_fn{args = NewArgs, return = NewReturn};
 
-do_resolve_type_vars(#type_var{type = Ref}, Env) ->
-  case env_lookup_type_ref(Ref, Env) of
-    #type_var_unbound{id = Id} ->
-      #type_var{type = Id};
+    #type_var{type = Ref} ->
+      case env_lookup_type_ref(Ref, Env) of
+        #type_var_unbound{id = Id} ->
+          #type_var{type = Id};
 
-    #type_var_link{type = Type} ->
-      do_resolve_type_vars(Type, Env)
+        #type_var_link{type = InnerType} ->
+          do_resolve_type_vars(InnerType, Env)
+      end
   end.
 
 
@@ -397,56 +415,54 @@ env_put_type_ref(Ref, TypeVar, Env = #env{type_refs = Refs}) ->
 
 
 -spec generalize(env(), type()) -> {type(), env()}.
-generalize(Type = #type_const{}, Env) ->
-  {Type, Env};
-
-generalize(Type = #type_app{args = Args}, Env0) ->
-  {GeneralizedArgs, Env1} = gleam:thread_map(fun generalize/2, Args, Env0),
-  GeneralizedType = Type#type_app{args = GeneralizedArgs},
-  {GeneralizedType, Env1};
-
-generalize(Type = #type_fn{args = Args, return = Return}, Env0) ->
-  {GeneralizedArgs, Env1} = gleam:thread_map(fun generalize/2, Args, Env0),
-  {GeneralizedReturn, Env2} = generalize(Return, Env1),
-  GeneralizedType = Type#type_fn{args = GeneralizedArgs, return = GeneralizedReturn},
-  {GeneralizedType, Env2};
-
-
-	% | TRowExtend(label, field_ty, row) ->
-	% 		TRowExtend(label, generalize level field_ty, generalize level row)
-generalize(Type = #type_row_extend{parent = Parent,
-                                   type = FieldType}, Env0) ->
-  {GeneralizedFieldType, Env1} = generalize(FieldType, Env0),
-  {GeneralizedParent, Env2} = generalize(Parent, Env1),
-  GeneralizedType = Type#type_row_extend{parent = GeneralizedParent,
-                                         type = GeneralizedFieldType},
-  {GeneralizedType, Env2};
-
-generalize(Type = #type_row_empty{}, Env0) ->
-  {Type, Env0};
-
-	% | TRecord row -> TRecord (generalize level row)
-generalize(Type = #type_record{row = Row}, Env0) ->
-  {GeneralizedRow, Env1} = generalize(Row, Env0),
-  GeneralizedType = Type#type_record{row = GeneralizedRow},
-  {GeneralizedType, Env1};
-
-generalize(Type = #type_var{type = Ref}, Env0) ->
-  Level = env_level(Env0),
-  case env_lookup_type_ref(Ref, Env0) of
-    #type_var_unbound{id = Id, level = OtherLevel} when OtherLevel > Level ->
-      GenericType = #type_var_generic{id = Id},
-      Env1 = env_put_type_ref(Ref, GenericType, Env0),
-      {Type, Env1};
-
-    #type_var_link{type = LinkedType} ->
-      generalize(LinkedType, Env0);
-
-    #type_var_unbound{} ->
+generalize(Type, Env0) ->
+  case Type of
+    #type_const{} ->
       {Type, Env0};
 
-    #type_var_generic{} ->
-      {Type, Env0}
+    #type_app{args = Args} ->
+      {GeneralizedArgs, Env1} = gleam:thread_map(fun generalize/2, Args, Env0),
+      GeneralizedType = Type#type_app{args = GeneralizedArgs},
+      {GeneralizedType, Env1};
+
+    #type_fn{args = Args, return = Return} ->
+      {GeneralizedArgs, Env1} = gleam:thread_map(fun generalize/2, Args, Env0),
+      {GeneralizedReturn, Env2} = generalize(Return, Env1),
+      GeneralizedType = Type#type_fn{args = GeneralizedArgs, return = GeneralizedReturn},
+      {GeneralizedType, Env2};
+
+    #type_row_extend{parent = Parent, type = FieldType} ->
+      {GeneralizedFieldType, Env1} = generalize(FieldType, Env0),
+      {GeneralizedParent, Env2} = generalize(Parent, Env1),
+      GeneralizedType = Type#type_row_extend{parent = GeneralizedParent,
+                                             type = GeneralizedFieldType},
+      {GeneralizedType, Env2};
+
+    #type_row_empty{} ->
+      {Type, Env0};
+
+    #type_record{row = Row} ->
+      {GeneralizedRow, Env1} = generalize(Row, Env0),
+      GeneralizedType = Type#type_record{row = GeneralizedRow},
+      {GeneralizedType, Env1};
+
+    #type_var{type = Ref} ->
+      Level = env_level(Env0),
+      case env_lookup_type_ref(Ref, Env0) of
+        #type_var_unbound{id = Id, level = OtherLevel} when OtherLevel > Level ->
+          GenericType = #type_var_generic{id = Id},
+          Env1 = env_put_type_ref(Ref, GenericType, Env0),
+          {Type, Env1};
+
+        #type_var_link{type = LinkedType} ->
+          generalize(LinkedType, Env0);
+
+        #type_var_unbound{} ->
+          {Type, Env0};
+
+        #type_var_generic{} ->
+          {Type, Env0}
+      end
   end.
 
 -spec instantiate(type(), env()) -> {type(), env()}.
@@ -455,101 +471,108 @@ instantiate(Type, Env) ->
   {NewType, NewEnv}.
 
 -spec do_instantiate(type(), {env(), map()}) -> {type(), {env(), map()}}.
-do_instantiate(Type = #type_const{}, State) ->
-  {Type, State};
+do_instantiate(Type, State0) ->
+  case Type of
+    #type_const{} ->
+      {Type, State0};
 
-do_instantiate(Type = #type_record{row = Row}, State) ->
-  {NewRow, NewState} = do_instantiate(Row, State),
-  NewType = Type#type_record{row = NewRow},
-  {NewType, NewState};
+    #type_record{row = Row} ->
+      {NewRow, NewState} = do_instantiate(Row, State0),
+      NewType = Type#type_record{row = NewRow},
+      {NewType, NewState};
 
-do_instantiate(Type = #type_row_extend{parent = Parent, type = FieldType}, State) ->
-  {NewParent, State1} = do_instantiate(Parent, State),
-  {NewFieldType, State2} = do_instantiate(FieldType, State1),
-  NewType = Type#type_row_extend{parent = NewParent, type = NewFieldType},
-  {NewType, State2};
+    #type_row_extend{parent = Parent, type = FieldType} ->
+      {NewParent, State1} = do_instantiate(Parent, State0),
+      {NewFieldType, State2} = do_instantiate(FieldType, State1),
+      NewType = Type#type_row_extend{parent = NewParent, type = NewFieldType},
+      {NewType, State2};
 
-do_instantiate(Type = #type_row_empty{}, State) ->
-  {Type, State};
+    #type_row_empty{} ->
+      {Type, State0};
 
-do_instantiate(Type = #type_app{args = Args}, State0) ->
-  {NewArgs, State1} = gleam:thread_map(fun do_instantiate/2, Args, State0),
-  NewType = Type#type_app{args = NewArgs},
-  {NewType, State1};
+    #type_app{args = Args} ->
+      {NewArgs, State1} = gleam:thread_map(fun do_instantiate/2, Args, State0),
+      NewType = Type#type_app{args = NewArgs},
+      {NewType, State1};
 
-do_instantiate(#type_fn{args = Args, return = Return}, State0) ->
-  {NewArgs, State1} = gleam:thread_map(fun do_instantiate/2, Args, State0),
-  {NewReturn, State2} = do_instantiate(Return, State1),
-  NewType = #type_fn{args = NewArgs, return = NewReturn},
-  {NewType, State2};
+    #type_fn{args = Args, return = Return} ->
+      {NewArgs, State1} = gleam:thread_map(fun do_instantiate/2, Args, State0),
+      {NewReturn, State2} = do_instantiate(Return, State1),
+      NewType = #type_fn{args = NewArgs, return = NewReturn},
+      {NewType, State2};
 
-do_instantiate(Type = #type_var{type = Ref}, State = {Env, IdVarMap}) ->
-  case env_lookup_type_ref(Ref, Env) of
-    #type_var_link{type = LinkedType} ->
-      do_instantiate(LinkedType, State);
+    #type_var{type = Ref} ->
+      {Env, IdVarMap} = State0,
+      case env_lookup_type_ref(Ref, Env) of
+        #type_var_link{type = LinkedType} ->
+          do_instantiate(LinkedType, State0);
 
-    #type_var_generic{id = Id} ->
-      case maps:find(Id, IdVarMap) of
-        {ok, FoundType} ->
-          {FoundType, State};
+        #type_var_generic{id = Id} ->
+          case maps:find(Id, IdVarMap) of
+            {ok, FoundType} ->
+              {FoundType, State0};
 
-        error ->
-          {Var, Env1} = new_var(Env),
-          IdVarMap1 = maps:put(Id, Var, IdVarMap),
-          {Var, {Env1, IdVarMap1}}
-      end;
+            error ->
+              {Var, Env1} = new_var(Env),
+              IdVarMap1 = maps:put(Id, Var, IdVarMap),
+              {Var, {Env1, IdVarMap1}}
+          end;
 
-    #type_var_unbound{} ->
-      {Type, State}
+        #type_var_unbound{} ->
+          {Type, State0}
+      end
   end.
 
 
 -spec occurs_check_adjust_levels(id(), type(), env()) -> env().
-occurs_check_adjust_levels(Id, #type_var{type = Ref}, Env) ->
-  Level = env_level(Env),
-  case env_lookup_type_ref(Ref, Env) of
-    #type_var_link{type = Type} ->
-      occurs_check_adjust_levels(Id, Type, Env);
+occurs_check_adjust_levels(Id, Type, Env) ->
+  case Type of
+    #type_var{type = Ref} ->
+      Level = env_level(Env),
+      case env_lookup_type_ref(Ref, Env) of
+        #type_var_link{type = InnerType} ->
+          occurs_check_adjust_levels(Id, InnerType, Env);
 
-    #type_var_unbound{id = OtherId} when Id =:= OtherId ->
-      fail(recursive_types);
+        #type_var_unbound{id = OtherId} when Id =:= OtherId ->
+          fail(recursive_types);
 
-    V = #type_var_unbound{level = OtherLevel} when OtherLevel > Level ->
-      Var = V#type_var_unbound{level = Level},
-      env_put_type_ref(Ref, Var, Env);
+        V = #type_var_unbound{level = OtherLevel} when OtherLevel > Level ->
+          Var = V#type_var_unbound{level = Level},
+          env_put_type_ref(Ref, Var, Env);
 
-    #type_var_unbound{} ->
+        #type_var_unbound{} ->
+          Env
+
+        % This should never hapen.
+        % #type_var_generic{} ->
+      end;
+
+    #type_app{args = Args} ->
+      Check = fun(Arg, E) ->
+        occurs_check_adjust_levels(Id, Arg, E)
+      end,
+      lists:foldl(Check, Env, Args);
+
+    #type_fn{args = Args, return = Return} ->
+      Check = fun(Arg, E) ->
+        occurs_check_adjust_levels(Id, Arg, E)
+      end,
+      Env1 = lists:foldl(Check, Env, Args),
+      occurs_check_adjust_levels(Id, Return, Env1);
+
+    #type_record{row = Row} ->
+      occurs_check_adjust_levels(Id, Row, Env);
+
+    #type_row_extend{parent = Parent, type = InnerType} ->
+      Env1 = occurs_check_adjust_levels(Id, InnerType, Env),
+      occurs_check_adjust_levels(Id, Parent, Env1);
+
+    #type_row_empty{} ->
+      Env;
+
+    #type_const{} ->
       Env
-
-    % This should never hapen.
-    % #type_var_generic{} ->
-  end;
-
-occurs_check_adjust_levels(Id, #type_app{args = Args}, Env0) ->
-  Check = fun(Arg, E) ->
-    occurs_check_adjust_levels(Id, Arg, E)
-  end,
-  lists:foldl(Check, Env0, Args);
-
-occurs_check_adjust_levels(Id, #type_fn{args = Args, return = Return}, Env0) ->
-  Check = fun(Arg, E) ->
-    occurs_check_adjust_levels(Id, Arg, E)
-  end,
-  Env1 = lists:foldl(Check, Env0, Args),
-  occurs_check_adjust_levels(Id, Return, Env1);
-
-occurs_check_adjust_levels(Id, #type_record{row = Row}, Env) ->
-  occurs_check_adjust_levels(Id, Row, Env);
-
-occurs_check_adjust_levels(Id, #type_row_extend{parent = Parent, type = Type}, Env0) ->
-  Env1 = occurs_check_adjust_levels(Id, Type, Env0),
-  occurs_check_adjust_levels(Id, Parent, Env1);
-
-occurs_check_adjust_levels(_Id, #type_row_empty{}, Env) ->
-  Env;
-
-occurs_check_adjust_levels(_Id, #type_const{}, Env) ->
-  Env.
+  end.
 
 
 -spec unify(type(), type(), env()) -> env().
@@ -689,14 +712,17 @@ match_fun_type(Arity, #type_var{type = Ref}, Env) ->
       match_fun_type(Arity, LinkedType, Env)
   end;
 
-match_fun_type(Arity, Type = #type_fn{args = Args, return = Return}, Env) ->
-  case Arity =:= length(Args) of
-    true -> {Args, Return, Env};
-    false -> fail({incorrect_number_of_arguments, Type})
-  end;
+match_fun_type(Arity, Type, Env) ->
+  case Type of
+    #type_fn{args = Args, return = Return} ->
+      case Arity =:= length(Args) of
+        true -> {Args, Return, Env};
+        false -> fail({incorrect_number_of_arguments, Type})
+      end;
 
-match_fun_type(_Arity, Type, _Env) ->
-  fail({not_a_function, Type}).
+    _ ->
+      fail({not_a_function, Type})
+  end.
 
 % TODO: Don't use process dictionary
 type_to_string(Type) ->
