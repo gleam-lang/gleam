@@ -23,9 +23,9 @@ incoming HTTP request.
 """
 pub external type Request
 
-external fn erl_query_string(Request) { String } = 'elli_request' 'query_str'
+external fn erl_query_string(Request) => String = 'elli_request' 'query_str'
 
-external fn erl_start_link(List((Atom, Foreign))) { Result(Foreign, Pid) }
+external fn erl_start_link(List((Atom, Foreign))) => Result(Foreign, Pid)
   = 'elli' 'start_link'
 
 doc """
@@ -38,22 +38,22 @@ pub type Response =
 doc """
 Get the request HTTP method.
 """
-pub external fn method(Request) { Method } = 'gleam_elli_native' 'method'
+pub external fn method(Request) => Method = 'gleam_elli_native' 'method'
 
 doc """
 Get the request path segments.
 """
-pub external fn path(Request) { List(String) } = 'elli_request' 'path'
+pub external fn path(Request) => List(String) = 'elli_request' 'path'
 
 doc """
 Get the request `raw_path', i.e. not split or parsed for query params.
 """
-pub external fn raw_path(Request) { String } = 'elli_request' 'raw_path'
+pub external fn raw_path(Request) => String = 'elli_request' 'raw_path'
 
 doc """
 Get the request headers.
 """
-pub external fn headers(Request) { List((String, String)) } = 'elli_request' 'headers'
+pub external fn headers(Request) => List((String, String)) = 'elli_request' 'headers'
 
 doc """
 Get the request body.

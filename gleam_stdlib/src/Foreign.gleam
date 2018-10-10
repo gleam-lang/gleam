@@ -9,7 +9,7 @@ pub external type Foreign
 doc """
 Convert any Gleam data into Foreign data.
 """
-pub external fn new(a) { Foreign } = 'Gleam.Foreign' 'identity'
+pub external fn new(a) => Foreign = 'Gleam.Foreign' 'identity'
 
 doc """
 Unsafely cast any type into any other type.o
@@ -17,7 +17,7 @@ Unsafely cast any type into any other type.o
 This is an escape hatch for the type system that may be useful when wrapping
 native Erlang APIs. It is to be used as a last measure only.
 """
-pub external fn unsafeCoerce(a) { b } = 'Gleam.Foreign' 'identity'
+pub external fn unsafeCoerce(a) => b = 'Gleam.Foreign' 'identity'
 
 fn identity(x) {
   x

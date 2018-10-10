@@ -772,9 +772,8 @@ type_to_string(Type) ->
         "fn("
         ++ lists:concat(lists:join(", ", lists:map(fun(X) -> F(F, X) end,
                                                     ParamTypeList)))
-        ++ ") { "
-        ++ F(F, ReturnType)
-        ++ " }";
+        ++ ") => "
+        ++ F(F, ReturnType);
 
       (_, #type_var{type = Id}) ->
         Names = get(gleam_id_name_map),

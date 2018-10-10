@@ -1,13 +1,14 @@
 import Result:Result:*
 import Bool:Bool:*
 
-pub enum Err =
+pub enum Error =
   | Empty
-;
+
+import Error:*
 
 // Using the Erlang C BIF implementation.
 //
-pub external fn length(List(a)) { Int } = 'erlang' 'length'
+pub external fn length(List(a)) => Int = 'erlang' 'length'
 
 test length {
   length([]) |> Assert:equal(_, 0)
@@ -18,7 +19,7 @@ test length {
 
 // Using the Erlang C BIF implementation.
 //
-pub external fn reverse(List(a)) { List(a) } = 'erlang' 'reverse'
+pub external fn reverse(List(a)) => List(a) = 'erlang' 'reverse'
 
 test reverse {
   length([]) |> Assert:equal(_, [])
@@ -50,7 +51,7 @@ test is_member {
 
 pub fn head(list) {
   case list {
-  | [] => Error(Err:Empty)
+  | [] => Error(Empty)
   | elem :: _ => Ok(elem)
   }
 }
@@ -60,12 +61,12 @@ test head {
     |> Assert:equal(_, Ok(0))
 
   head([])
-    |> Assert:equal(_, Error(Err:Empty))
+    |> Assert:equal(_, Error(Empty))
 }
 
 pub fn tail(list) {
   case list {
-  | [] => Error(Err:Empty)
+  | [] => Error(Empty)
   | _ :: rest => Ok(rest)
   }
 }
@@ -78,7 +79,7 @@ test tail {
     |> Assert:equal(_, Ok([]))
 
   tail([])
-    |> Assert:equal(_, Error(Err:Empty))
+    |> Assert:equal(_, Error(Empty))
 }
 
 pub fn filter(list, fun) {

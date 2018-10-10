@@ -2,14 +2,12 @@ import Foreign:Foreign
 
 pub enum Meta =
   | Meta(Int)
-; // Fix GitHub syntax highlighting
 
 pub enum Type(var_type) =
   | TypeConst(String)
   | TypeTuple(List(Type(var_type)))
   | TypeFunc(List(Type(var_type)), Type(var_type))
   | TypeVar(var_type)
-;
 
 pub type TypeRef =
   Reference
@@ -23,19 +21,15 @@ pub type UnresolvedType =
 pub enum Ast =
   | Mod(Module)
   | Expr(Expr)
-;
 
 pub enum Module =
   | AstModule(Charlist, List(Export), List(Function), List(Test))
-;
 
 pub enum Function =
   | AstFunction(Meta, Charlist, List(Charlist), Expr)
-;
 
 pub enum Test =
   | AstFunction(Meta, Charlist, Expr)
-;
 
 pub enum Expr(type_) =
   | AstAdt(Meta, Charlist, List(Expr))
@@ -60,28 +54,21 @@ pub enum Expr(type_) =
   | AstThrow(Meta, Expr(type_))
   | AstTuple(Meta, List(Expr(type_)))
   | AstVar(Meta, String)
-;
 
 pub type UntypedExpr =
   Expr(Unit)
-;
 
 pub type TypedExpr =
   Expr(Type)
-;
 
 pub type Charlist =
   List(Int)
-;
 
 pub type Export =
   (Charlist, Int)
-;
 
 pub enum Clause =
   | AstClause(Meta, Expr, Expr)
-;
 
 pub enum RecordField =
   | AstClause(Meta, Expr, Expr)
-;

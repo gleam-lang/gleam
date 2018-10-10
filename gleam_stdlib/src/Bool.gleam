@@ -3,7 +3,6 @@ import Order:Order
 pub enum Bool =
   | True
   | False
-;
 
 import Bool:*
 
