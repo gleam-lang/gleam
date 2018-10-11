@@ -73,8 +73,8 @@ pub fn query_string(req) {
 
 pub type StartArguments =
   {
-    callback => Atom,
-    port => Int,
+    callback = Atom,
+    port = Int,
   }
 
 doc """

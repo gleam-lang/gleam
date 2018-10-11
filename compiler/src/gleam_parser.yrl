@@ -121,7 +121,7 @@ fields -> field             : ['$1'].
 fields -> field ','         : ['$1'].
 fields -> field ',' fields  : ['$1' | '$3'].
 
-field -> name '=>' expr      : record_field('$1', '$3').
+field -> name '=' expr      : record_field('$1', '$3').
 
 pattern -> literal              : '$1'.
 pattern -> container_pattern    : '$1'.

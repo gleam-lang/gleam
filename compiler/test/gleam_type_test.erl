@@ -26,9 +26,9 @@ cannot_unify_test() ->
     "[1, 2.0]",
     "[1, 2, 3, 4, 5, 'six']",
     "{'ok', 1} != {'ok', 1, 'extra'}",
-    "{} == {a => 1}",
-    "1 == {a => 1}",
-    "{a => 1} != 1"
+    "{} == {a = 1}",
+    "1 == {a = 1}",
+    "{a = 1} != 1"
   ],
   Test =
     fun(Src) ->
@@ -201,18 +201,18 @@ list_test() ->
 record_test() ->
   Cases = [
     {"{}", "{}"},
-    {"{a => 1}", "{a => Int}"},
-    {"{a => 1, b => 2}", "{a => Int, b => Int}"},
-    {"{a => 1, b => 2.0, c => -1}", "{a => Int, b => Float, c => Int}"},
-    {"{a => {a => 'ok'}}", "{a => {a => Atom}}"},
+    {"{a = 1}", "{a = Int}"},
+    {"{a = 1, b = 2}", "{a = Int, b = Int}"},
+    {"{a = 1, b = 2.0, c = -1}", "{a = Int, b = Float, c = Int}"},
+    {"{a = {a = 'ok'}}", "{a = {a = Atom}}"},
     {"{} == {}", "Bool"},
-    {"{a => 1} == {a => 2}", "Bool"},
-    {"{a => 1, b => 1} == {a => 1, b => 1}", "Bool"},
-    {"{a => fn(x) { x }} == {a => fn(a) { a }}", "Bool"},
+    {"{a = 1} == {a = 2}", "Bool"},
+    {"{a = 1, b = 1} == {a = 1, b = 1}", "Bool"},
+    {"{a = fn(x) { x }} == {a = fn(a) { a }}", "Bool"},
     % Different field order
-    {"{b => 1, a => 1} == {a => 1, b => 1}", "Bool"}
+    {"{b = 1, a = 1} == {a = 1, b = 1}", "Bool"}
     % % Additional fields on the right hand side
-    % {"{b => 1, a => 1} == {a => 1, b => 1, c => 1}", "Bool"}
+    % {"{b = 1, a = 1} == {a = 1, b = 1, c = 1}", "Bool"}
   ],
   test_infer(Cases).
 
@@ -220,29 +220,29 @@ record_failures_test() ->
   ?assertEqual({error, {row_does_not_contain_label, "a"}},
                infer("{}.a")),
   ?assertEqual({error, {row_does_not_contain_label, "a"}},
-               infer("{b => 1, a => 1} == {b => 2}")).
+               infer("{b = 1, a = 1} == {b = 2}")).
 
 record_select_test() ->
   Cases = [
-    {"{a => 1, b => 2.0}.b",
+    {"{a = 1, b = 2.0}.b",
      "Float"},
-    {"r = {a => 1, b => 2} r.a",
+    {"r = {a = 1, b = 2} r.a",
      "Int"},
-    {"r = {a => 1, b => 2} r.a + r.b",
+    {"r = {a = 1, b = 2} r.a + r.b",
      "Int"},
     {"fn(x) { x.t }",
-     "fn({a | t => b}) => b"},
-    {"f = fn(x) { x } r = {a => f} r.a",
+     "fn({a | t = b}) => b"},
+    {"f = fn(x) { x } r = {a = f} r.a",
      "fn(a) => a"},
-    {"r = {a => fn(x) { x }} r.a",
+    {"r = {a = fn(x) { x }} r.a",
      "fn(a) => a"},
-    {"r = {a => fn(x) { x }, b => fn(x) { x }} [r.a, r.b]",
+    {"r = {a = fn(x) { x }, b = fn(x) { x }} [r.a, r.b]",
      "List(fn(a) => a)"},
-    {"f = fn(x) { x.t } f({ t => 1 })",
+    {"f = fn(x) { x.t } f({ t = 1 })",
      "Int"},
-    {"f = fn(x) { x.t(1) } f({t => fn(x) { x + 1 }})",
+    {"f = fn(x) { x.t(1) } f({t = fn(x) { x + 1 }})",
      "Int"},
-    {"{a => 1, b => 2.0}.a",
+    {"{a = 1, b = 2.0}.a",
      "Int"}
   ],
   test_infer(Cases).
@@ -250,32 +250,32 @@ record_select_test() ->
 record_extend_test() ->
   Cases = [
     {
-     "{ {a => 1.0} | a => 1}",
-     "{a => Float, a => Int}" % FIXME: errrr
+     "{ {a = 1.0} | a = 1}",
+     "{a = Float, a = Int}" % FIXME: errrr
     },
     {
-     "a = {} {a | b => 1}",
-     "{b => Int}"
+     "a = {} {a | b = 1}",
+     "{b = Int}"
     },
     {
-     "a = {b => 1} {a | b => 1.0}.b",
+     "a = {b = 1} {a | b = 1.0}.b",
      "Float"
     },
     {
-     "fn(r) { { r | x => 1 } }",
-     "fn({ a }) => {a | x => Int}"
+     "fn(r) { { r | x = 1 } }",
+     "fn({ a }) => {a | x = Int}"
     },
     {
      "fn(r) { r.x }",
-     "fn({a | x => b}) => b"
+     "fn({a | x = b}) => b"
     },
     {
      "fn(r) { r.x + 1 }",
-     "fn({a | x => Int}) => Int"
+     "fn({a | x = Int}) => Int"
     },
     {
-     "{ {} | a => 1}",
-     "{a => Int}"
+     "{ {} | a = 1}",
+     "{a = Int}"
     }
   ],
   test_infer(Cases).
@@ -290,31 +290,12 @@ module_test() ->
      "module {"
      " fn status() => Atom"
      " fn list_of(a) => List(a)"
-     " fn get_age({b | age => c}) => c"
+     " fn get_age({b | age = c}) => c"
      "}"
     }
   ],
   test_infer(Cases).
 
-% Depends on equality
-% ; ("let f = fun x -> x in let id = fun y -> y in eq_curry(f)(id)", OK "bool") *)
-% ; ("let f = fun x -> x in eq(f, succ)", OK "bool") *)
-% ; ("let f = fun x -> x in eq_curry(f)(succ)", OK "bool") *)
-% ; ( "let f = fun x y -> let a = eq(x, y) in eq(x, y) in f" *)
-%   , OK "forall[a] (a, a) -> bool" ) *)
-% ; ( "fun f -> let x = fun g y -> let _ = g(y) in eq(f, g) in x" *)
-%   , OK "forall[a b] (a -> b) -> (a -> b, a) -> bool" ) *)
-
 % Depends on tuple destructuring
 % ; ("choose(fun x y -> x, fun x y -> y)", OK "forall[a] (a, a) -> a") *)
 % ; ("choose_curry(fun x y -> x)(fun x y -> y)", OK "forall[a] (a, a) -> a") *)
-
-% Depends on functions already defined in env
-% ; ("let x = id in let y = let z = x(id) in z in y", OK "forall[a] a -> a") *)
-
-% ; ( "fun x -> fun y -> let x = x(y) in x(y)" *)
-%   , OK "forall[a b] (a -> a -> b) -> a -> b" ) *)
-% ; ("fun x -> let y = fun z -> x(z) in y", OK "forall[a b] (a -> b) -> a -> b") *)
-% ; ("fun x -> let y = fun z -> x in y", OK "forall[a b] a -> b -> a") *)
-% ; ( "fun x -> fun y -> let x = x(y) in fun x -> y(x)" *)
-%   , OK "forall[a b c] ((a -> b) -> c) -> (a -> b) -> a -> b" ) *)

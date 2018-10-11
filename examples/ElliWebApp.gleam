@@ -53,7 +53,7 @@ Elli web server process running this handler module.
 """
 pub fn start_link() {
   Elli:start_link({
-    callback => ElliWebApp,
-    port => 4000,
+    callback = ElliWebApp,
+    port = 4000,
   })
 }

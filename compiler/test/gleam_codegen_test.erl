@@ -342,8 +342,8 @@ case_adt_test() ->
 record_test() ->
   Source =
     "pub fn zero() { {} }\n"
-    "pub fn one(x) { { value => x } }\n"
-    "pub fn two(x) { { val1 => x, val2 => x } }\n"
+    "pub fn one(x) { { value = x } }\n"
+    "pub fn two(x) { { val1 = x, val2 = x } }\n"
   ,
   with_module('Gleam.CodegenRecord', Source, fun() ->
     ?assertEqual(#{}, 'Gleam.CodegenRecord':zero()),
@@ -354,8 +354,8 @@ record_test() ->
 
 record_extend_test() ->
   Source =
-    "pub fn add_name(r) { { r | name => \"Sara\" } }\n"
-    "pub fn silly() { { { { {} | a => 1 } | a => 2 } | b => 3 } }\n"
+    "pub fn add_name(r) { { r | name = \"Sara\" } }\n"
+    "pub fn silly() { { { { {} | a = 1 } | a = 2 } | b = 3 } }\n"
   ,
   Mod = 'Gleam.CodegenRecord',
   with_module(Mod, Source, fun() ->

@@ -230,7 +230,7 @@ curried_test() ->
   ?assertEqual(AST2, parse(tokens(Code2))).
 
 record_select_test() ->
-  Code = "r = {a => 1} r.a + r.b",
+  Code = "r = {a = 1} r.a + r.b",
   AST =
     #ast_assignment
     { name = "r"
@@ -256,7 +256,7 @@ record_select_test() ->
   ?assertEqual(AST2, parse(tokens(Code2))).
 
 record_extend_test() ->
-  Code = "{r | a => 1}",
+  Code = "{r | a = 1}",
   AST =
     #ast_record_extend
     { label = "a"

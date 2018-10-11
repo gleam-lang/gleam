@@ -789,10 +789,10 @@ type_to_string(Type) ->
         FieldsString =
           fun
             (_, [{Label, ValueType}]) ->
-              Label ++ " => " ++ F(F, ValueType);
+              Label ++ " = " ++ F(F, ValueType);
 
             (FS, [{Label, ValueType} | Rest]) ->
-              Label ++ " => " ++ F(F, ValueType) ++ ", " ++ FS(FS, Rest);
+              Label ++ " = " ++ F(F, ValueType) ++ ", " ++ FS(FS, Rest);
 
             (_, []) ->
               ""
