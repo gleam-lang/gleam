@@ -202,9 +202,23 @@ expression(#ast_record_empty{}, Env) ->
 expression(#ast_record_extend{} = Ast, Env) ->
   case flatten_record(Ast) of
     {flat, FlatFields} ->
-      {C_pairs, NewEnv} = gleam:thread_map(fun record_field/2, FlatFields, Env),
+      {C_pairs, NewEnv} = gleam:thread_map(fun record_field/2,
+                                           maps:to_list(FlatFields),
+                                           Env),
       Core = cerl:c_map(C_pairs),
-      {Core, NewEnv}
+      {Core, NewEnv};
+
+    {extending, Parent, FlatFields} ->
+      {C_pairs, Env1} = gleam:thread_map(fun record_field/2,
+                                         maps:to_list(FlatFields),
+                                         Env),
+      C_extension = cerl:c_map(C_pairs),
+      C_module = cerl:c_atom(maps),
+      C_name = cerl:c_atom(merge),
+      {C_parent, Env2} = expression(Parent, Env1),
+      C_args = [C_parent, C_extension],
+      Core = cerl:c_call(C_module, C_name, C_args),
+      {Core, Env2}
   end;
 
 expression(#ast_record_select{meta = Meta, record = Record, label = Label}, Env) ->
@@ -273,22 +287,24 @@ expression(Expressions, Env) when is_list(Expressions) ->
   C_seq = lists:foldl(fun cerl:c_seq/2, Head, Tail),
   {C_seq, Env1}.
 
--spec flatten_record(ast_expression())
-      -> {flat, [{string(), ast_expression()}]}.
 flatten_record(#ast_record_empty{}) ->
-  {flat, []};
+  {flat, #{}};
 flatten_record(#ast_record_extend{parent = Parent, label = Label, value = Value}) ->
   case flatten_record(Parent) of
     % The record has been completely flattened to a list of fields
     {flat, Fields} ->
-      {flat, [{Label, Value} | Fields]}
+      {flat, maps:put(Label, Value, Fields)};
 
     % The record could not be completely flattened. This is because at some
     % point the update syntax has been used, it is a not a record literal.
-    % {parent, NewParent, Fields} ->
+    {extending, TopParent, Fields} ->
+      {extending, TopParent, maps:put(Label, Value, Fields)};
 
-    % Not a record
-  end.
+    {parent, TopParent} ->
+      {extending, TopParent, #{Label => Value}}
+  end;
+flatten_record(NotRecord) ->
+  {parent, NotRecord}.
 
 hole_fn(Meta, Fn, Args, Env) ->
   {UID, NewEnv} = uid(Env),

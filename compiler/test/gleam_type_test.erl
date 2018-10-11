@@ -231,7 +231,7 @@ record_select_test() ->
     {"r = {a => 1, b => 2} r.a + r.b",
      "Int"},
     {"fn(x) { x.t }",
-     "fn({t => a}) => a"},
+     "fn({a | t => b}) => b"},
     {"f = fn(x) { x } r = {a => f} r.a",
      "fn(a) => a"},
     {"r = {a => fn(x) { x }} r.a",
@@ -247,6 +247,39 @@ record_select_test() ->
   ],
   test_infer(Cases).
 
+record_extend_test() ->
+  Cases = [
+    {
+     "{ {a => 1.0} | a => 1}",
+     "{a => Float, a => Int}" % FIXME: errrr
+    },
+    {
+     "a = {} {a | b => 1}",
+     "{b => Int}"
+    },
+    {
+     "a = {b => 1} {a | b => 1.0}.b",
+     "Float"
+    },
+    {
+     "fn(r) { { r | x => 1 } }",
+     "fn({ a }) => {a | x => Int}"
+    },
+    {
+     "fn(r) { r.x }",
+     "fn({a | x => b}) => b"
+    },
+    {
+     "fn(r) { r.x + 1 }",
+     "fn({a | x => Int}) => Int"
+    },
+    {
+     "{ {} | a => 1}",
+     "{a => Int}"
+    }
+  ],
+  test_infer(Cases).
+
 % module_test() ->
 %   Cases = [
 %     {
@@ -258,21 +291,6 @@ record_select_test() ->
 %     }
 %   ],
 %   test_infer(Cases).
-
-
-
-% Depends on records extension
-% 	("{ x = zero | { y = one | {} } }", OK "{x : int, y : int}");
-% 	("choose({ x = zero | { y = one | {} } }, {x = one, y = zero})", OK "{x : int, y : int}");
-% 	("{ x = true | {x = one}}", OK "{x : bool, x : int}");
-% 	("let a = {} in {b = one | a}", OK "{b : int}");
-% 	("let a = {x = one} in {x = true | a}.x", OK "bool");
-% 	("fun r -> {x = one | r}", OK "forall[r] {r} -> {x : int | r}");
-% 	("fun r -> r.x", OK "forall[r a] {x : a | r} -> a");
-% 	("fun r -> choose({x = zero | r}, {x = one | {}})", OK "{} -> {x : int}");
-% 	("fun r -> choose({x = zero | r}, {x = one})", OK "{} -> {x : int}");
-% 	("fun r -> choose({x = zero | r}, {x = one | r})", OK "forall[r] {r} -> {x : int | r}");
-% 	("fun r -> choose({x = zero | r}, {y = one | r})", error "recursive row types");
 
 % Depends on equality
 % ; ("let f = fun x -> x in let id = fun y -> y in eq_curry(f)(id)", OK "bool") *)

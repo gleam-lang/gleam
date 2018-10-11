@@ -2,7 +2,7 @@ Nonterminals
 source module
 function test
 exprs expr operator literal elems args call_args
-container container_pattern elems_pattern
+container_pattern elems_pattern
 pattern
 case_expr case_clauses case_clause field fields.
 
@@ -59,7 +59,14 @@ exprs -> expr                : '$1'.
 exprs -> expr exprs          : seq('$1', '$2').
 
 expr -> literal                    : '$1'.
-expr -> container                  : '$1'.
+expr -> upname                     : adt('$1', []).
+expr -> upcall elems ')'           : adt('$1', '$2').
+expr -> '{' elems '}'              : tuple('$1', '$2').
+expr -> '[' ']'                    : list('$2', []).
+expr -> '[' elems ']'              : list('$3', '$2').
+expr -> '{' '}'                    : #ast_record_empty{}.
+expr -> '{' fields '}'             : record('$1', '$2').
+expr -> '{' expr '|' fields '}'    : record_extend('$2', '$4').
 expr -> case_expr                  : '$1'.
 expr -> operator                   : '$1'.
 expr -> name                       : var('$1').
@@ -105,14 +112,6 @@ call_args -> expr ',' call_args : ['$1' | '$3'].
 args -> name          : [arg('$1')].
 args -> name ','      : [arg('$1')].
 args -> name ',' args : [arg('$1') | '$3'].
-
-container -> upname           : adt('$1', []).
-container -> upcall elems ')' : adt('$1', '$2').
-container -> '{' elems '}'    : tuple('$1', '$2').
-container -> '[' ']'          : list('$2', []).
-container -> '[' elems ']'    : list('$3', '$2').
-container -> '{' '}'          : #ast_record_empty{}.
-container -> '{' fields '}'   : record('$1', '$2').
 
 elems -> expr           : ['$1'].
 elems -> expr ','       : ['$1'].
@@ -203,16 +202,17 @@ var({name, Meta, Name}) ->
   #ast_var{meta = Meta, name = Name}.
 
 record({'{', EmptyMeta}, Fields) ->
+  record_extend(#ast_record_empty{meta = EmptyMeta}, Fields).
+
+record_extend(Record, Fields) ->
   Extend = fun({Label, Value}, Parent) ->
-    Meta = #meta{} = element(2, Value),
+    Meta = #meta{} = element(2, Value), % HACK
     #ast_record_extend{meta = Meta,
                        label = Label,
                        value = Value,
                        parent = Parent}
   end,
-  lists:foldl(Extend,
-              #ast_record_empty{meta = EmptyMeta},
-              lists:reverse(Fields)).
+  lists:foldl(Extend, Record, lists:reverse(Fields)).
 
 record_field({name, _Meta, Key}, Value) ->
   {Key, Value}.

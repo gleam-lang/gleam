@@ -752,8 +752,11 @@ type_to_string(Type) ->
               ""
           end,
         case collect_row_fields(Row) of
-          {_Parent, _Fields} ->
-            "not yet";
+          {Parent, []} ->
+            "{ " ++ F(F, Parent) ++ " }";
+
+          {Parent, Fields} ->
+            "{" ++ F(F, Parent) ++ " | " ++ FieldsString(FieldsString, Fields) ++ "}";
 
           Fields ->
             "{" ++ FieldsString(FieldsString, Fields) ++ "}"
@@ -802,8 +805,6 @@ collect_row_fields(Row) ->
   end.
 
 collect_row_fields(#type_row_empty{}, Fields) ->
-  Fields;
-collect_row_fields(#type_var{}, Fields) ->
   Fields;
 collect_row_fields(#type_row_extend{parent = Parent, label = Label, type = Type}, Fields) ->
   NewFields = [{Label, Type} | Fields],

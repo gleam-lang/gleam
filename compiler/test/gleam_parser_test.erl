@@ -254,3 +254,24 @@ record_select_test() ->
     , args = [#ast_int{value = 2}]
     },
   ?assertEqual(AST2, parse(tokens(Code2))).
+
+record_extend_test() ->
+  Code = "{r | a => 1}",
+  AST =
+    #ast_record_extend
+    { label = "a"
+    , value = #ast_int{value = 1}
+    , parent = #ast_var{name = "r"}
+    },
+  ?assertEqual(AST, parse(tokens(Code))),
+  Code2 = "f.(1)(2)",
+  AST2 =
+    #ast_local_call
+    { fn =
+      #ast_fn_call
+      { fn = #ast_var{name = "f"}
+      , args = [#ast_int{value = 1}]
+      }
+    , args = [#ast_int{value = 2}]
+    },
+  ?assertEqual(AST2, parse(tokens(Code2))).

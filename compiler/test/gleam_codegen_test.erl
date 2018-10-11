@@ -339,7 +339,6 @@ case_adt_test() ->
     ?assertEqual(default, 'Gleam.CodegenCaseAdt':unwrap(nothing))
   end).
 
-% TODO: nested record updating
 record_test() ->
   Source =
     "pub fn zero() { {} }\n"
@@ -351,6 +350,18 @@ record_test() ->
     ?assertEqual(#{value => 1}, 'Gleam.CodegenRecord':one(1)),
     ?assertEqual(#{value => 2}, 'Gleam.CodegenRecord':one(2)),
     ?assertEqual(#{val1 => ok, val2 => ok}, 'Gleam.CodegenRecord':two(ok))
+  end).
+
+record_extend_test() ->
+  Source =
+    "pub fn add_name(r) { { r | name => \"Sara\" } }\n"
+    "pub fn silly() { { { { {} | a => 1 } | a => 2 } | b => 3 } }\n"
+  ,
+  Mod = 'Gleam.CodegenRecord',
+  with_module(Mod, Source, fun() ->
+    ?assertEqual(#{name => <<"Sara">>}, Mod:add_name(#{})),
+    ?assertEqual(#{cool => true, name => <<"Sara">>}, Mod:add_name(#{cool => true})),
+    ?assertEqual(#{a => 2, b => 3}, Mod:silly())
   end).
 
 record_access_test() ->
