@@ -53,9 +53,29 @@ infer(Ast) ->
     throw:{gleam_type_error, Error} -> {error, Error}
   end.
 
+-spec module_statement(ast_expression(), {type(), env()}) -> {ast_expression(), {type(), env()}}.
+module_statement(Statement, {Row, Env0}) ->
+  case Statement of
+    #ast_mod_fn{name = Name, args = Args, body = Body} ->
+      Fn = #ast_fn{args = Args, body = Body},
+      {AnnotatedFn, Env1} = infer(Fn, Env0),
+      FnType = fetch(AnnotatedFn),
+      NewRow = #type_row_extend{label = Name, type = FnType, parent = Row},
+      NewState = {NewRow, Env1},
+      {AnnotatedFn, NewState}
+  end.
+
 -spec infer(ast_expression(), env()) -> {ast_expression(), env()}.
 infer(Ast, Env0) ->
   case Ast of
+    #ast_module{statements = Statements} ->
+      {NewStatements, {Row, Env1}} = gleam:thread_map(fun module_statement/2,
+                                                      Statements,
+                                                      {#type_row_empty{}, Env0}),
+      ModuleType = #type_module{row = Row},
+      AnnotatedAst = Ast#ast_module{type = {ok, ModuleType}, statements = NewStatements},
+      {AnnotatedAst, Env1};
+
     #ast_operator{name = Name, args = Args} ->
       {ReturnType, Env1} = infer_call(#ast_var{name = Name}, Args, Env0),
       AnnotatedAst = Ast#ast_operator{type = {ok, ReturnType}},
@@ -178,6 +198,7 @@ infer_call(FunAst, Args, Env0) ->
   Env3 = lists:foldl(CheckArg, Env2, lists:zip(ArgTypes, Args)),
   {ReturnType, Env3}.
 
+
 -spec fetch(ast_expression()) -> type().
 fetch(Ast) ->
   case Ast of
@@ -194,6 +215,9 @@ fetch(Ast) ->
       Type;
 
     #ast_nil{type = {ok, Type}} ->
+      Type;
+
+    #ast_module{type = {ok, Type}} ->
       Type;
 
     #ast_record_extend{type = {ok, Type}} ->
@@ -222,30 +246,33 @@ fetch(Ast) ->
       #type_const{type = "Float"};
 
     #ast_string{} ->
-      #type_const{type = "String"};
-
-    Other ->
-      error({unable_to_fetch_type, Other})
+      #type_const{type = "String"}
   end.
 
 
 -spec resolve_type_vars(ast_expression(), env()) -> ast_expression().
 resolve_type_vars(Ast, Env) ->
   case Ast of
+    #ast_module{type = {ok, Type}, statements = Statements} ->
+      NewType = type_resolve_type_vars(Type, Env),
+      NewStatements = lists:map(fun(X) -> resolve_type_vars(X, Env) end, Statements),
+      Ast#ast_module{type = {ok, NewType}, statements = NewStatements};
+
     #ast_operator{type = {ok, Type}} ->
-      NewType = do_resolve_type_vars(Type, Env),
+      NewType = type_resolve_type_vars(Type, Env),
       Ast#ast_operator{type = {ok, NewType}};
 
     #ast_local_call{type = {ok, Type}} ->
-      NewType = do_resolve_type_vars(Type, Env),
+      NewType = type_resolve_type_vars(Type, Env),
       Ast#ast_local_call{type = {ok, NewType}};
 
+    % TODO: resolve type vars in args and body?
     #ast_fn{type = {ok, Type}} ->
-      NewType = do_resolve_type_vars(Type, Env),
+      NewType = type_resolve_type_vars(Type, Env),
       Ast#ast_fn{type = {ok, NewType}};
 
     #ast_var{type = {ok, Type}} ->
-      NewType = do_resolve_type_vars(Type, Env),
+      NewType = type_resolve_type_vars(Type, Env),
       Ast#ast_var{type = {ok, NewType}};
 
     #ast_tuple{elems = Elems} ->
@@ -258,11 +285,11 @@ resolve_type_vars(Ast, Env) ->
       Ast#ast_cons{head = NewHead, tail = NewTail};
 
     #ast_nil{type = {ok, Type}} ->
-      NewType = do_resolve_type_vars(Type, Env),
+      NewType = type_resolve_type_vars(Type, Env),
       Ast#ast_nil{type = {ok, NewType}};
 
     #ast_record_extend{type = {ok, Type}, parent = Parent, value = Value} ->
-      NewType = do_resolve_type_vars(Type, Env),
+      NewType = type_resolve_type_vars(Type, Env),
       NewParent = resolve_type_vars(Parent, Env),
       NewValue = resolve_type_vars(Value, Env),
       Ast#ast_record_extend{type = {ok, NewType},
@@ -270,7 +297,7 @@ resolve_type_vars(Ast, Env) ->
                             value = NewValue};
 
     #ast_record_select{type = {ok, Type}, record = Record} ->
-      NewType = do_resolve_type_vars(Type, Env),
+      NewType = type_resolve_type_vars(Type, Env),
       NewRecord = resolve_type_vars(Record, Env),
       Ast#ast_record_select{type = {ok, NewType}, record = NewRecord};
 
@@ -291,8 +318,21 @@ resolve_type_vars(Ast, Env) ->
   end.
 
 
--spec do_resolve_type_vars(type(), env()) -> type().
-do_resolve_type_vars(Type, Env) ->
+% TODO: We don't seem to be actually resolving type vars in the statements
+% themselves yet. This seems like a problem, but I've not found any tests that
+% fail yet.
+% -spec statement_resolve_type_vars(ast_expression(), env()) -> ast_expression().
+% statement_resolve_type_vars(Statement, Env) ->
+%   case Statement of
+%     % TODO: resolve type vars in args and body?
+%     #ast_mod_fn{type = {ok, Type}} ->
+%       NewType = type_resolve_type_vars(Type, Env),
+%       Statement#ast_mod_fn{type = {ok, NewType}}
+%   end.
+
+
+-spec type_resolve_type_vars(type(), env()) -> type().
+type_resolve_type_vars(Type, Env) ->
   case Type of
     #type_const{} ->
       Type;
@@ -301,19 +341,25 @@ do_resolve_type_vars(Type, Env) ->
       Type;
 
     #type_record{row = Row} ->
-      Type#type_record{row = do_resolve_type_vars(Row, Env)};
+      Type#type_record{row = type_resolve_type_vars(Row, Env)};
+
+    #type_module{row = Row} ->
+      % TODO: We don't seem to be actually resolving type vars in the
+      % statements themselves yet. This seems like a problem, but I've not
+      % found any tests that fail yet.
+      Type#type_module{row = type_resolve_type_vars(Row, Env)};
 
     #type_row_extend{parent = Parent, type = Value} ->
-      Type#type_row_extend{parent = do_resolve_type_vars(Parent, Env),
-                          type = do_resolve_type_vars(Value, Env)};
+      Type#type_row_extend{parent = type_resolve_type_vars(Parent, Env),
+                           type = type_resolve_type_vars(Value, Env)};
 
     #type_app{args = Args} ->
-      NewArgs = lists:map(fun(X) -> do_resolve_type_vars(X, Env) end, Args),
+      NewArgs = lists:map(fun(X) -> type_resolve_type_vars(X, Env) end, Args),
       Type#type_app{args = NewArgs};
 
     #type_fn{args = Args, return = Return} ->
-      NewArgs = lists:map(fun(X) -> do_resolve_type_vars(X, Env) end, Args),
-      NewReturn = do_resolve_type_vars(Return, Env),
+      NewArgs = lists:map(fun(X) -> type_resolve_type_vars(X, Env) end, Args),
+      NewReturn = type_resolve_type_vars(Return, Env),
       Type#type_fn{args = NewArgs, return = NewReturn};
 
     #type_var{type = Ref} ->
@@ -322,7 +368,7 @@ do_resolve_type_vars(Type, Env) ->
           #type_var{type = Id};
 
         #type_var_link{type = InnerType} ->
-          do_resolve_type_vars(InnerType, Env)
+          type_resolve_type_vars(InnerType, Env)
       end
   end.
 
@@ -760,6 +806,35 @@ type_to_string(Type) ->
 
           Fields ->
             "{" ++ FieldsString(FieldsString, Fields) ++ "}"
+        end;
+
+      (F, #type_module{row = Row}) ->
+        FieldsString =
+          fun
+            (FS, [{Label, ValueType} | Rest]) ->
+              case F(F, ValueType) of
+                [$f, $n | FnString] ->
+                  " fn " ++ Label ++ FnString ++ FS(FS, Rest)
+              end;
+
+            (_, []) ->
+              ""
+          end,
+        case collect_row_fields(Row) of
+          {Parent, []} ->
+            "module { " ++ F(F, Parent) ++ " }";
+
+          {Parent, Fields} ->
+            "module {"
+            ++ F(F, Parent)
+            ++ " | "
+            ++ FieldsString(FieldsString, lists:reverse(Fields))
+            ++ "}";
+
+          Fields ->
+            "module {"
+            ++ FieldsString(FieldsString, lists:reverse(Fields))
+            ++ "}"
         end;
 
       (_, #type_const{type = Name}) ->

@@ -122,6 +122,7 @@
 
 -record(ast_mod_fn,
         {meta = #meta{} :: meta(),
+         type = type_not_annotated :: type_annotation(),
          name :: string(),
          args = [] :: [string()],
          body :: ast_expression()}).
@@ -133,6 +134,7 @@
 
 -record(ast_module,
         {exports = [] :: [export()],
+         type = type_not_annotated :: type_annotation(),
          statements = [] :: [mod_statement()]}).
 
 -record(ast_seq,
@@ -178,11 +180,13 @@
 -type type_var_reference() :: reference().
 -type level() :: integer().
 
+
 -record(type_const, {type :: string()}).
 -record(type_fn, {args :: list(type()), return :: type()}).
 -record(type_app, {type :: type(), args :: list(type())}).
 -record(type_var, {type :: type_var_reference()}).
 -record(type_record, {row :: type()}).
+-record(type_module, {row :: type()}).
 -record(type_row_empty, {}).
 -record(type_row_extend, {label :: string(), type :: type(), parent :: type()}).
 
@@ -192,6 +196,7 @@
       | #type_fn{}
       | #type_var{}
       | #type_record{}
+      | #type_module{}
       | #type_row_empty{}
       | #type_row_extend{}
       .

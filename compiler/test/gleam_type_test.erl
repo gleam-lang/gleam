@@ -280,17 +280,21 @@ record_extend_test() ->
   ],
   test_infer(Cases).
 
-% module_test() ->
-%   Cases = [
-%     {
-%      "fn run() { 'ok' }"
-%      ,
-%      "module {\n"
-%      "  fn run() { Atom }\n"
-%      "}"
-%     }
-%   ],
-%   test_infer(Cases).
+module_test() ->
+  Cases = [
+    {
+     "fn status() { 'ok' }"
+     "fn list_of(x) { [x] }"
+     "fn get_age(person) { person.age }"
+     ,
+     "module {"
+     " fn status() => Atom"
+     " fn list_of(a) => List(a)"
+     " fn get_age({b | age => c}) => c"
+     "}"
+    }
+  ],
+  test_infer(Cases).
 
 % Depends on equality
 % ; ("let f = fun x -> x in let id = fun y -> y in eq_curry(f)(id)", OK "bool") *)
