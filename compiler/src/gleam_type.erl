@@ -75,6 +75,11 @@ infer(Ast, Env0) ->
       AnnotatedAst = Ast#ast_operator{type = {ok, ReturnType}},
       {AnnotatedAst, Env1};
 
+    #ast_fn_call{fn = Fn, args = Args} ->
+      {ReturnType, Env1} = infer_call(Fn, Args, Env0),
+      AnnotatedAst = Ast#ast_fn_call{type = {ok, ReturnType}},
+      {AnnotatedAst, Env1};
+
     #ast_local_call{fn = Fn, args = Args} ->
       {ReturnType, Env1} = infer_call(Fn, Args, Env0),
       AnnotatedAst = Ast#ast_local_call{type = {ok, ReturnType}},
@@ -237,6 +242,9 @@ fetch(Ast) ->
     #ast_local_call{type = {ok, Type}} ->
       Type;
 
+    #ast_fn_call{type = {ok, Type}} ->
+      Type;
+
     #ast_fn{type = {ok, Type}} ->
       Type;
 
@@ -308,6 +316,10 @@ resolve_type_vars(Ast, Env) ->
     #ast_local_call{type = {ok, Type}} ->
       NewType = type_resolve_type_vars(Type, Env),
       Ast#ast_local_call{type = {ok, NewType}};
+
+    #ast_fn_call{type = {ok, Type}} ->
+      NewType = type_resolve_type_vars(Type, Env),
+      Ast#ast_fn_call{type = {ok, NewType}};
 
     % TODO: resolve type vars in args and body?
     #ast_fn{type = {ok, Type}} ->

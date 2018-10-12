@@ -60,6 +60,7 @@
 
 -record(ast_fn_call,
         {meta = #meta{} :: meta(),
+         type = type_not_annotated :: type_annotation(),
          fn :: ast_expression(),
          args = [] :: [ast_expression()]}).
 

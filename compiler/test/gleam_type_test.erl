@@ -290,6 +290,15 @@ sequence_test() ->
   ],
   test_infer(Cases).
 
+fn_call_test() ->
+  Cases = [
+    {
+     "inc = fn(x) { x + 1 } inc.(1)",
+     "Int"
+    }
+  ],
+  test_infer(Cases).
+
 throw_raise_test() ->
   Cases = [
     {
