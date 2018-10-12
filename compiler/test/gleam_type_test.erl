@@ -289,6 +289,26 @@ sequence_test() ->
   ],
   test_infer(Cases).
 
+throw_raise_test() ->
+  Cases = [
+    {
+    "throw(1)",
+     "a"
+    },
+    {
+     "raise('ok')",
+     "a"
+    },
+    {
+    "fn() { throw(1) }",
+     "fn() => a"
+    },
+    {
+    "x = fn() { throw(1) } x",
+     "fn() => a"
+    }
+  ],
+  test_infer(Cases).
 
 module_test() ->
   Cases = [

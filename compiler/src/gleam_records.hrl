@@ -65,10 +65,12 @@
 
 -record(ast_raise,
         {meta = #meta{} :: meta(),
+         type = type_not_annotated :: type_annotation(),
          value :: ast_expression()}).
 
 -record(ast_throw,
         {meta = #meta{} :: meta(),
+         type = type_not_annotated :: type_annotation(),
          value :: ast_expression()}).
 
 -record(ast_local_call,
