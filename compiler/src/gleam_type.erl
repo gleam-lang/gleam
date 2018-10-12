@@ -53,18 +53,6 @@ infer(Ast) ->
     throw:{gleam_type_error, Error} -> {error, Error}
   end.
 
--spec module_statement(ast_expression(), {type(), env()}) -> {ast_expression(), {type(), env()}}.
-module_statement(Statement, {Row, Env0}) ->
-  case Statement of
-    #ast_mod_fn{name = Name, args = Args, body = Body} ->
-      Fn = #ast_fn{args = Args, body = Body},
-      {AnnotatedFn, Env1} = infer(Fn, Env0),
-      FnType = fetch(AnnotatedFn),
-      NewRow = #type_row_extend{label = Name, type = FnType, parent = Row},
-      NewState = {NewRow, Env1},
-      {AnnotatedFn, NewState}
-  end.
-
 -spec infer(ast_expression(), env()) -> {ast_expression(), env()}.
 infer(Ast, Env0) ->
   case Ast of
@@ -75,6 +63,12 @@ infer(Ast, Env0) ->
       ModuleType = #type_module{row = Row},
       AnnotatedAst = Ast#ast_module{type = {ok, ModuleType}, statements = NewStatements},
       {AnnotatedAst, Env1};
+
+    #ast_seq{first = First, then = Then} ->
+      {AnnotatedFirst, Env1} = infer(First, Env0),
+      {AnnotatedThen, Env2} = infer(Then, Env1),
+      AnnotatedAst = Ast#ast_seq{first = AnnotatedFirst, then = AnnotatedThen},
+      {AnnotatedAst, Env2};
 
     #ast_operator{name = Name, args = Args} ->
       {ReturnType, Env1} = infer_call(#ast_var{name = Name}, Args, Env0),
@@ -184,6 +178,19 @@ infer(Ast, Env0) ->
   end.
 
 
+-spec module_statement(ast_expression(), {type(), env()}) -> {ast_expression(), {type(), env()}}.
+module_statement(Statement, {Row, Env0}) ->
+  case Statement of
+    #ast_mod_fn{name = Name, args = Args, body = Body} ->
+      Fn = #ast_fn{args = Args, body = Body},
+      {AnnotatedFn, Env1} = infer(Fn, Env0),
+      FnType = fetch(AnnotatedFn),
+      NewRow = #type_row_extend{label = Name, type = FnType, parent = Row},
+      NewState = {NewRow, Env1},
+      {AnnotatedFn, NewState}
+  end.
+
+
 infer_call(FunAst, Args, Env0) ->
   {AnnotatedFunAst, Env1} = infer(FunAst, Env0),
   FunType = fetch(AnnotatedFunAst),
@@ -226,6 +233,9 @@ fetch(Ast) ->
     #ast_record_select{type = {ok, Type}} ->
       Type;
 
+    #ast_seq{then = Then} ->
+      fetch(Then);
+
     #ast_record_empty{} ->
       #type_record{row = #type_row_empty{}};
 
@@ -257,6 +267,10 @@ resolve_type_vars(Ast, Env) ->
       NewType = type_resolve_type_vars(Type, Env),
       NewStatements = lists:map(fun(X) -> resolve_type_vars(X, Env) end, Statements),
       Ast#ast_module{type = {ok, NewType}, statements = NewStatements};
+
+    #ast_seq{first = First, then = Then} ->
+      Ast#ast_seq{first = resolve_type_vars(First, Env),
+                  then = resolve_type_vars(Then, Env)};
 
     #ast_operator{type = {ok, Type}} ->
       NewType = type_resolve_type_vars(Type, Env),

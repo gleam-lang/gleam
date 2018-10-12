@@ -280,6 +280,16 @@ record_extend_test() ->
   ],
   test_infer(Cases).
 
+sequence_test() ->
+  Cases = [
+    {
+     "1.0 2 'three'",
+     "Atom"
+    }
+  ],
+  test_infer(Cases).
+
+
 module_test() ->
   Cases = [
     {
