@@ -22,6 +22,7 @@ The Elli request object. Contains all information about the
 incoming HTTP request.
 """
 pub external type Request
+;
 
 external fn erl_query_string(Request) => String = 'elli_request' 'query_str'
 
@@ -76,6 +77,7 @@ pub type StartArguments =
     callback = Atom,
     port = Int,
   }
+;
 
 doc """
 Start the Elli web server process tree.
