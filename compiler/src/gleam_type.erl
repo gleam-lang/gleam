@@ -188,16 +188,28 @@ infer(Ast, Env0) ->
   end.
 
 
--spec module_statement(ast_expression(), {type(), env()}) -> {ast_expression(), {type(), env()}}.
+-spec module_statement(ast_expression(), {type(), env()})
+      -> {ast_expression(), {type(), env()}}.
 module_statement(Statement, {Row, Env0}) ->
   case Statement of
     #ast_mod_fn{name = Name, args = Args, body = Body} ->
       Fn = #ast_fn{args = Args, body = Body},
       {AnnotatedFn, Env1} = infer(Fn, Env0),
+      #ast_fn{args = NewArgs, body = NewBody} = AnnotatedFn,
       FnType = fetch(AnnotatedFn),
       NewRow = #type_row_extend{label = Name, type = FnType, parent = Row},
       NewState = {NewRow, Env1},
-      {AnnotatedFn, NewState}
+      AnnotatedStatement = #ast_mod_fn{type = {ok, FnType},
+                                       args = NewArgs,
+                                       body = NewBody},
+      {AnnotatedStatement, NewState};
+
+    #ast_mod_test{body = Body} ->
+      Fn = #ast_fn{args = [], body = Body},
+      {AnnotatedFn, Env1} = infer(Fn, Env0),
+      AnnotatedAst = #ast_mod_test{body = AnnotatedFn#ast_fn.body},
+      NewState = {Row, Env1},
+      {AnnotatedAst, NewState}
   end.
 
 
@@ -281,7 +293,8 @@ resolve_type_vars(Ast, Env) ->
   case Ast of
     #ast_module{type = {ok, Type}, statements = Statements} ->
       NewType = type_resolve_type_vars(Type, Env),
-      NewStatements = lists:map(fun(X) -> resolve_type_vars(X, Env) end, Statements),
+      NewStatements = lists:map(fun(X) -> statement_resolve_type_vars(X, Env) end,
+                                Statements),
       Ast#ast_module{type = {ok, NewType}, statements = NewStatements};
 
     #ast_seq{first = First, then = Then} ->
@@ -354,17 +367,20 @@ resolve_type_vars(Ast, Env) ->
   end.
 
 
-% TODO: We don't seem to be actually resolving type vars in the statements
-% themselves yet. This seems like a problem, but I've not found any tests that
-% fail yet.
-% -spec statement_resolve_type_vars(ast_expression(), env()) -> ast_expression().
-% statement_resolve_type_vars(Statement, Env) ->
-%   case Statement of
-%     % TODO: resolve type vars in args and body?
-%     #ast_mod_fn{type = {ok, Type}} ->
-%       NewType = type_resolve_type_vars(Type, Env),
-%       Statement#ast_mod_fn{type = {ok, NewType}}
-%   end.
+-spec statement_resolve_type_vars(ast_expression(), env()) -> ast_expression().
+statement_resolve_type_vars(Statement, Env) ->
+  case Statement of
+    % % TODO: resolve type vars in args and body?
+    #ast_mod_fn{type = {ok, Type}} ->
+      NewType = type_resolve_type_vars(Type, Env),
+      Statement#ast_mod_fn{type = {ok, NewType}};
+
+    % TODO: resolve type vars in body?
+    #ast_mod_test{} ->
+      % NewType = type_resolve_type_vars(Type, Env),
+      % Statement#ast_mod_fn{type = {ok, NewType}}
+      Statement
+  end.
 
 
 -spec type_resolve_type_vars(type(), env()) -> type().

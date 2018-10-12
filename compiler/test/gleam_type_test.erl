@@ -28,7 +28,8 @@ cannot_unify_test() ->
     "{'ok', 1} != {'ok', 1, 'extra'}",
     "{} == {a = 1}",
     "1 == {a = 1}",
-    "{a = 1} != 1"
+    "{a = 1} != 1",
+    "test whatever { 1 == '1' }"
   ],
   Test =
     fun(Src) ->
@@ -316,6 +317,7 @@ module_test() ->
      "fn status() { 'ok' }"
      "fn list_of(x) { [x] }"
      "fn get_age(person) { person.age }"
+     "test whatever { 'ok' }"
      ,
      "module {"
      " fn status() => Atom"
