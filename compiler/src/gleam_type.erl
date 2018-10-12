@@ -53,6 +53,24 @@ infer(Ast) ->
     throw:{gleam_type_error, Error} -> {error, Error}
   end.
 
+-spec unify_clauses([#ast_clause{}], type(), env()) -> {type(), env()}.
+unify_clauses(AnnotatedClauses, SubjectType, Env0) ->
+  % Unify the SubjectType with the type of the first clause's subject's type
+
+  % Unify each clause with the following clause
+  % - subject == subject
+  % - value == value
+
+  % Return {ValueType, NewEnv}
+  todo.
+
+-spec infer_clause(#ast_clause{}, env()) -> {#ast_clause{}, env()}.
+infer_clause(#ast_clause{pattern = Pattern, value = Value}, Env0) ->
+  % Infer type of pattern
+  % Infer type of value
+  todo.
+
+
 -spec infer(ast_expression(), env()) -> {ast_expression(), env()}.
 infer(Ast, Env0) ->
   case Ast of
@@ -63,6 +81,16 @@ infer(Ast, Env0) ->
       ModuleType = #type_module{row = Row},
       AnnotatedAst = Ast#ast_module{type = {ok, ModuleType}, statements = NewStatements},
       {AnnotatedAst, Env1};
+
+    #ast_case{subject = Subject, clauses = Clauses} ->
+      {AnnotatedSubject, Env1} = infer(Subject, Env0),
+      {AnnotatedClauses, Env2} = gleam:thread_map(fun infer_clause/2, Clauses, Env1),
+      SubjectType = fetch(AnnotatedSubject),
+      {ReturnType, Env3} = unify_clauses(AnnotatedClauses, SubjectType, Env2),
+      AnnotatedAst = #ast_case{type = {ok, ReturnType},
+                               subject = AnnotatedSubject,
+                               clauses = AnnotatedClauses},
+      {AnnotatedAst, Env3};
 
     #ast_seq{first = First, then = Then} ->
       {AnnotatedFirst, Env1} = infer(First, Env0),
@@ -727,18 +755,6 @@ unify(Type1, Type2, Env) ->
      #type_record{row = Row2}, _} ->
       unify(Row1, Row2, Env);
 
-    % | TRowExtend(label1, field_ty1, rest_row1), (TRowExtend _ as row2) -> begin
-    % 	let rest_row1_tvar_ref_option = match rest_row1 with
-    % 		| TVar ({contents = Unbound _} as tvar_ref) -> Some tvar_ref
-    % 		| _ -> None
-    % 	in
-    % 	let rest_row2 = rewrite_row row2 label1 field_ty1 in
-    % 	begin match rest_row1_tvar_ref_option with
-    % 		| Some {contents = Link _} -> error "recursive row types"
-    % 		| _ -> ()
-    % 	end ;
-    % 	unify rest_row1 rest_row2
-    % end
     {#type_row_extend{label = Label, type = FieldType, parent = Parent} = Row,
      _,
      OtherRow,

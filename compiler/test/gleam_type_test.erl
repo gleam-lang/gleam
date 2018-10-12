@@ -320,6 +320,15 @@ throw_raise_test() ->
   ],
   test_infer(Cases).
 
+cast_test() ->
+  Cases = [
+    {
+    "case 1 { | a => a }",
+     "Int"
+    }
+  ],
+  test_infer(Cases).
+
 module_test() ->
   Cases = [
     {

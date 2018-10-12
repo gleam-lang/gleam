@@ -99,11 +99,13 @@
 
 -record(ast_clause,
         {meta = #meta{} :: meta(),
+         type = type_not_annotated :: type_annotation(),
          pattern :: ast_expression(),
          value :: ast_expression()}).
 
 -record(ast_case,
         {meta = #meta{} :: meta(),
+         type = type_not_annotated :: type_annotation(),
          subject :: ast_expression(),
          clauses = [#ast_clause{}]}).
 
