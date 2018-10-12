@@ -1,6 +1,6 @@
-import Timeout:Timeout
-import Foreign:Foreign
-import Process:Pid
+import timeout:Timeout
+import foreign:Foreign
+import process:Pid
 
 pub external type Caller
 ;

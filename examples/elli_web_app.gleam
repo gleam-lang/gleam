@@ -3,7 +3,7 @@
 //
 // Run the application with the `start_link/0` function.
 
-import Elli
+import elli
 
 doc """
 The handle/2 callback is used by Elli to response to requests
@@ -11,8 +11,8 @@ The handle/2 callback is used by Elli to response to requests
 It serves as the router for our application.
 """
 pub fn handle(req, _args) {
-  method = Elli:method(req)
-  path = Elli:path(req)
+  method = elli:method(req)
+  path = elli:path(req)
   case (method, path) {
   | (Get, []) => home()
   | (Get, ["hello"]) => greet("world")
@@ -53,7 +53,7 @@ Elli web server process running this handler module.
 """
 pub fn start_link() {
   Elli:start_link({
-    callback = ElliWebApp,
+    callback = self,
     port = 4000,
   })
 }

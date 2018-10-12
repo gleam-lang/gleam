@@ -1,10 +1,11 @@
 // A GenServer example taken from the Elixir documentation
 // https://hexdocs.pm/elixir/GenServer.html#module-client-server-apis
 
-import GenServer:Call
-import GenServer:Cast
-import GenServer:Init
-import Timeout:never
+import gen_server
+import gen_server:Call
+import gen_server:Cast
+import gen_server:Init
+import timeout:never
 
 pub enum CastMsg(item) =
   | Push(item)
@@ -22,15 +23,15 @@ pub enum Reply(item) =
 // API
 
 pub fn start_link(items) {
-  RecordGenServer.start_link(self, items)
+  gen_server:start_link(self, items)
 }
 
 pub fn push(pid, item) {
-  RecordGenServer.cast(pid, Push(item))
+  gen_server:cast(pid, Push(item))
 }
 
 pub fn pop(pid) {
-  RecordGenServer.call(pid, Pop)
+  gen_server:call(pid, Pop)
 }
 
 // callbacks

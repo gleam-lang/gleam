@@ -1,5 +1,5 @@
-import Foreign:Foreign
-import Result:Result:*
+import foreign:Foreign
+import result:Result:*
 
 pub enum Method =
   | Get
@@ -84,7 +84,7 @@ Start the Elli web server process tree.
 """
 pub fn start_link(args) {
   erl_start_link([
-    ('callback', Foreign.new(args.callback)),
-    ('port', Foreign.new(args.port)),
+    ('callback', foreign:new(args.callback)),
+    ('port', foreign:new(args.port)),
   ])
 }

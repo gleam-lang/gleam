@@ -1,4 +1,4 @@
-import Order:Order
+import order:Order
 
 pub enum Bool =
   | True
@@ -15,10 +15,10 @@ pub fn not(bool) {
 
 test not {
   not(True)
-    |> Assert:false
+    |> assert:false
 
   not(False)
-    |> Assert:true
+    |> assert:true
 }
 
 pub fn compare(a, b) {
@@ -32,16 +32,16 @@ pub fn compare(a, b) {
 
 test compare {
   compare(True, True)
-    |> Assert:equal(_, Order:EQ)
+    |> assert:equal(_, Order:EQ)
 
   compare(True, False)
-    |> Assert:equal(_, Order:GT)
+    |> assert:equal(_, Order:GT)
 
   compare(False, False)
-    |> Assert:equal(_, Order:LT)
+    |> assert:equal(_, Order:LT)
 
   compare(False, True)
-    |> Assert:equal(_, Order:GT)
+    |> assert:equal(_, Order:GT)
 }
 
 pub fn max(a, b) {
@@ -53,16 +53,16 @@ pub fn max(a, b) {
 
 test max {
   max(True, True)
-    |> Assert:equal(_, True)
+    |> assert:equal(_, True)
 
   max(True, False)
-    |> Assert:equal(_, True)
+    |> assert:equal(_, True)
 
   max(False, False)
-    |> Assert:equal(_, False)
+    |> assert:equal(_, False)
 
   max(False, True)
-    |> Assert:equal(_, True)
+    |> assert:equal(_, True)
 }
 
 pub fn min(a, b) {
@@ -74,16 +74,16 @@ pub fn min(a, b) {
 
 test min {
   min(True, True)
-    |> Assert:equal(_, True)
+    |> assert:equal(_, True)
 
   min(True, False)
-    |> Assert:equal(_, False)
+    |> assert:equal(_, False)
 
   min(False, False)
-    |> Assert:equal(_, False)
+    |> assert:equal(_, False)
 
   min(False, True)
-    |> Assert:equal(_, False)
+    |> assert:equal(_, False)
 }
 
 pub fn to_int(bool) {
@@ -95,8 +95,8 @@ pub fn to_int(bool) {
 
 test to_int {
   to_int(True)
-    |> Assert:equal(_, 1)
+    |> assert:equal(_, 1)
 
   to_int(False)
-    |> Assert:equal(_, 0)
+    |> assert:equal(_, 0)
 }

@@ -1,6 +1,6 @@
 // https://mads-hartmann.com/ocaml/2015/01/05/gadt-ocaml.html
 
-import Bool:Bool
+import bool:Bool
 
 // With ADTs
 //

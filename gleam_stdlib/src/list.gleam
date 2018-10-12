@@ -1,5 +1,6 @@
-import Result:Result:*
-import Bool:Bool:*
+import assert
+import result:Result:*
+import bool:Bool:*
 
 pub enum Error =
   | Empty
@@ -11,10 +12,10 @@ import Error:*
 pub external fn length(List(a)) => Int = 'erlang' 'length'
 
 test length {
-  length([]) |> Assert:equal(_, 0)
-  length([1]) |> Assert:equal(_, 1)
-  length([1, 1]) |> Assert:equal(_, 2)
-  length([1, 1, 1]) |> Assert:equal(_, 3)
+  length([]) |> assert:equal(_, 0)
+  length([1]) |> assert:equal(_, 1)
+  length([1, 1]) |> assert:equal(_, 2)
+  length([1, 1, 1]) |> assert:equal(_, 3)
 }
 
 // Using the Erlang C BIF implementation.
@@ -22,8 +23,8 @@ test length {
 pub external fn reverse(List(a)) => List(a) = 'erlang' 'reverse'
 
 test reverse {
-  length([]) |> Assert:equal(_, [])
-  length([1, 2, 3, 4, 5]) |> Assert:equal(_, [5, 4, 3, 2, 1])
+  length([]) |> assert:equal(_, [])
+  length([1, 2, 3, 4, 5]) |> assert:equal(_, [5, 4, 3, 2, 1])
 }
 
 pub fn is_empty(list) {
@@ -31,8 +32,8 @@ pub fn is_empty(list) {
 }
 
 test is_empty {
-  is_empty([]) |> Assert:true
-  is_empty([1]) |> Assert:false
+  is_empty([]) |> assert:true
+  is_empty([1]) |> assert:false
 }
 
 pub fn member(list, elem) {
@@ -44,9 +45,9 @@ pub fn member(list, elem) {
 }
 
 test is_member {
-  is_member([0, 4, 5, 1], 1) |> Assert:true
-  is_member([0, 4, 5, 7], 1) |> Assert:false
-  is_member([], 1) |> Assert:false
+  is_member([0, 4, 5, 1], 1) |> assert:true
+  is_member([0, 4, 5, 7], 1) |> assert:false
+  is_member([], 1) |> assert:false
 }
 
 pub fn head(list) {
@@ -58,10 +59,10 @@ pub fn head(list) {
 
 test head {
   head([0, 4, 5, 7])
-    |> Assert:equal(_, Ok(0))
+    |> assert:equal(_, Ok(0))
 
   head([])
-    |> Assert:equal(_, Error(Empty))
+    |> assert:equal(_, Error(Empty))
 }
 
 pub fn tail(list) {
@@ -73,13 +74,13 @@ pub fn tail(list) {
 
 test tail {
   tail([0, 4, 5, 7])
-    |> Assert:equal(_, Ok([4, 5, 7]))
+    |> assert:equal(_, Ok([4, 5, 7]))
 
   tail([0])
-    |> Assert:equal(_, Ok([]))
+    |> assert:equal(_, Ok([]))
 
   tail([])
-    |> Assert:equal(_, Error(Empty))
+    |> assert:equal(_, Error(Empty))
 }
 
 pub fn filter(list, fun) {
@@ -89,19 +90,19 @@ pub fn filter(list, fun) {
 test filter {
   []
     |> filter(_, fn(x) { True })
-    |> Assert:equal(_, [])
+    |> assert:equal(_, [])
 
   [0, 4, 5, 7, 3]
     |> filter(_, fn(x) { True })
-    |> Assert:equal(_, [0, 4, 5, 7, 3])
+    |> assert:equal(_, [0, 4, 5, 7, 3])
 
   [0, 4, 5, 7, 3]
     |> filter(_, fn(x) { x > 4 })
-    |> Assert:equal(_, [5, 7])
+    |> assert:equal(_, [5, 7])
 
   [0, 4, 5, 7, 3]
     |> filter(_, fn(x) { x < 4 })
-    |> Assert:equal(_, [0, 3])
+    |> assert:equal(_, [0, 3])
 }
 
 fn do_filter(list, fun, acc) {
@@ -124,11 +125,11 @@ pub fn map(list, fun) {
 test map {
   []
     |> map(_, fn(x) { x * 2 })
-    |> Assert:equal(_, [])
+    |> assert:equal(_, [])
 
   [0, 4, 5, 7, 3]
     |> map(_, fn(x) { x * 2 })
-    |> Assert:equal(_, [0, 8, 10, 14, 6])
+    |> assert:equal(_, [0, 8, 10, 14, 6])
 }
 
 fn do_map(list, fun, acc) {
@@ -152,11 +153,11 @@ pub fn drop(list, n) {
 test drop/2 {
   []
     |> drop(_, 5)
-    |> Assert:equal(_, [])
+    |> assert:equal(_, [])
 
   [1, 2, 3, 4, 5, 6, 7, 8]
     |> drop(_, 5)
-    |> Assert:equal(_, [6, 7, 8])
+    |> assert:equal(_, [6, 7, 8])
 }
 
 pub fn take(list, n) {
@@ -177,10 +178,10 @@ fn do_take(list, n, acc) {
 test take {
   []
     |> take(_, 5)
-    |> Assert:equal(_, [])
+    |> assert:equal(_, [])
   [1, 2, 3, 4, 5, 6, 7, 8]
     |> take(_, 5)
-    |> Assert:equal(_, [1, 2, 3, 4, 5])
+    |> assert:equal(_, [1, 2, 3, 4, 5])
 }
 
 pub fn of(x) {
@@ -188,8 +189,8 @@ pub fn of(x) {
 }
 
 test of() {
-  of([]) |> Assert:equal(_, [[]])
-  of(1) |> Assert:equal(_, [1])
+  of([]) |> assert:equal(_, [[]])
+  of(1) |> assert:equal(_, [1])
 }
 
 pub fn new() {
@@ -197,7 +198,7 @@ pub fn new() {
 }
 
 test new() {
-  new() |> Assert:equal(_, [])
+  new() |> assert:equal(_, [])
 }
 
 pub fn flatten(lists) {
@@ -206,16 +207,16 @@ pub fn flatten(lists) {
 
 test flatten() {
   flatten([])
-    |> Assert:equal(_, [])
+    |> assert:equal(_, [])
 
   flatten([[]])
-    |> Assert:equal(_, [])
+    |> assert:equal(_, [])
 
   flatten([[], [], []])
-    |> Assert:equal(_, [])
+    |> assert:equal(_, [])
 
   flatten([[1, 2], [], [3, 4]])
-    |> Assert:equal(_, [1, 2, 3, 4])
+    |> assert:equal(_, [1, 2, 3, 4])
 }
 
 fn do_flatten(lists, acc) {
@@ -235,7 +236,7 @@ pub fn foldl(list, acc, fun) {
 test foldl() {
   [1, 2, 3]
     |> foldl(_, [], fn(x, acc) { x :: acc })
-    |> Assert:equal(_, [3, 2, 1])
+    |> assert:equal(_, [3, 2, 1])
 }
 
 pub fn foldr(list, acc, fun) {
@@ -248,5 +249,5 @@ pub fn foldr(list, acc, fun) {
 test foldr() {
   [1, 2, 3]
     |> foldr(_, [], fn(x, acc) { x :: acc })
-    |> Assert:equal(_, [1, 2, 3])
+    |> assert:equal(_, [1, 2, 3])
 }

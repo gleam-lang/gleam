@@ -4,15 +4,15 @@ pub external type Timeout
 ;
 
 pub fn hibernate() => Timeout {
-  Foreign:unsafeCoerce('hibernate')
+  foreign:unsafeCoerce('hibernate')
 }
 
 pub fn never() => Timeout {
-  Foreign:unsafeCoerce('infinity')
+  foreign:unsafeCoerce('infinity')
 }
 
 pub fn milliseconds(ms: Int) => Timeout {
-  Foreign:unsafeCoerce(ms)
+  foreign:unsafeCoerce(ms)
 }
 
 pub external fn seconds(Int) => Timeout = 'timer' 'seconds'

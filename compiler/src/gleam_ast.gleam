@@ -1,5 +1,3 @@
-import Foreign:Foreign
-
 pub enum Meta =
   | Meta(Int)
 
