@@ -216,10 +216,10 @@ case_int_test() ->
   Source =
     "pub fn go(x) {\n"
     "  case x {\n"
-    "  | 1 => 'one'\n"
-    "  | 2 => 'two'\n"
-    "  | 3 => 'three'\n"
-    "  | _ => 'other'\n"
+    "  | 1 -> 'one'\n"
+    "  | 2 -> 'two'\n"
+    "  | 3 -> 'three'\n"
+    "  | _ -> 'other'\n"
     "  }\n"
     "}\n"
   ,
@@ -234,10 +234,10 @@ case_float_test() ->
   Source =
     "pub fn go(x) {\n"
     "  case x {\n"
-    "  | 1.0 => 'one'\n"
-    "  | 2.0 => 'two'\n"
-    "  | 3.0 => 'three'\n"
-    "  | _ => 'other'\n"
+    "  | 1.0 -> 'one'\n"
+    "  | 2.0 -> 'two'\n"
+    "  | 3.0 -> 'three'\n"
+    "  | _ -> 'other'\n"
     "  }\n"
     "}\n"
   ,
@@ -252,8 +252,8 @@ case_string_test() ->
   Source =
     "pub fn go(x) {\n"
     "  case x {\n"
-    "  | \"\" => 'empty'\n"
-    "  | _ => 'non_empty'\n"
+    "  | \"\" -> 'empty'\n"
+    "  | _ -> 'non_empty'\n"
     "  }\n"
     "}\n"
   ,
@@ -266,10 +266,10 @@ case_list_test() ->
   Source =
     "pub fn length(x) {\n"
     "  case x {\n"
-    "  | [] => 0\n"
-    "  | [[]] => 1\n"
-    "  | [_, _] => 2\n"
-    "  | _ => -1\n"
+    "  | [] -> 0\n"
+    "  | [[]] -> 1\n"
+    "  | [_, _] -> 2\n"
+    "  | _ -> -1\n"
     "  }\n"
     "}\n"
   ,
@@ -284,8 +284,8 @@ case_cons_test() ->
   Source =
     "pub fn head(x) {\n"
     "  case x {\n"
-    "  | x :: _ => Just(x)\n"
-    "  | _ => Nothing\n"
+    "  | x :: _ -> Just(x)\n"
+    "  | _ -> Nothing\n"
     "  }\n"
     "}\n"
   ,
@@ -299,9 +299,9 @@ case_tuple_test() ->
   Source =
     "pub fn go(x) {\n"
     "  case x {\n"
-    "  | {'ok', {1, 1}} => 'one'\n"
-    "  | {'ok', {2, 2}} => 'two'\n"
-    "  | {_, _} => 'eh'\n"
+    "  | {'ok', {1, 1}} -> 'one'\n"
+    "  | {'ok', {2, 2}} -> 'two'\n"
+    "  | {_, _} -> 'eh'\n"
     "  }\n"
     "}\n"
   ,
@@ -315,8 +315,8 @@ case_var_test() ->
   Source =
     "pub fn unwrap(x) {\n"
     "  case x {\n"
-    "  | {'ok', thing} => thing\n"
-    "  | _ => 'default'\n"
+    "  | {'ok', thing} -> thing\n"
+    "  | _ -> 'default'\n"
     "  }\n"
     "}\n"
   ,
@@ -329,8 +329,8 @@ case_adt_test() ->
   Source =
     "pub fn unwrap(x) {\n"
     "  case x {\n"
-    "  | Nothing => 'default'\n"
-    "  | Just(z) => z\n"
+    "  | Nothing -> 'default'\n"
+    "  | Just(z) -> z\n"
     "  }\n"
     "}\n"
   ,
