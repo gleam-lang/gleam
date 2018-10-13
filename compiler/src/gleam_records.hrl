@@ -100,7 +100,7 @@
 -record(ast_clause,
         {meta = #meta{} :: meta(),
          type = type_not_annotated :: type_annotation(),
-         pattern :: ast_expression(),
+         pattern :: ast_pattern(),
          value :: ast_expression()}).
 
 -record(ast_case,
@@ -176,6 +176,8 @@
       | #ast_tuple{}
       | #ast_var{}
       .
+
+-type ast_pattern() :: ast_expression(). % TODO: Refine.
 
 %
 % Types

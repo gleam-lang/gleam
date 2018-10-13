@@ -53,23 +53,81 @@ infer(Ast) ->
     throw:{gleam_type_error, Error} -> {error, Error}
   end.
 
--spec unify_clauses([#ast_clause{}], type(), env()) -> {type(), env()}.
-unify_clauses(AnnotatedClauses, SubjectType, Env0) ->
-  % Unify the SubjectType with the type of the first clause's subject's type
+-spec unify_clauses([#ast_clause{}], type(), env()) -> env().
+unify_clauses(Clauses, SubjectType, Env0) ->
+  [#ast_clause{pattern = FirstPattern} = First | Rest] = Clauses,
+  Env1 = unify(SubjectType, pattern_fetch(FirstPattern), Env0),
+  Unify =
+    fun(#ast_clause{pattern = P2, value = V2} = Clause2,
+        {#ast_clause{pattern = P1, value = V1}, E0}) ->
+      E1 = unify(pattern_fetch(P1), pattern_fetch(P2), E0),
+      E2 = unify(fetch(V1), fetch(V2), E1),
+      {Clause2, E2}
+    end,
+  {_, Env2} = lists:foldl(Unify, {First, Env1}, Rest),
+  Env2.
 
-  % Unify each clause with the following clause
-  % - subject == subject
-  % - value == value
+pattern_fetch(Pattern) ->
+  case Pattern of
+    #ast_var{type = {ok, Type}} ->
+      Type;
 
-  % Return {ValueType, NewEnv}
-  todo.
+    #ast_nil{type = {ok, Type}} ->
+      Type;
+
+    #ast_record_empty{} ->
+      #type_record{row = #type_row_empty{}};
+
+    #ast_tuple{elems = Elems} ->
+      ElemsTypes = lists:map(fun pattern_fetch/1, Elems),
+      #type_app{type = "Tuple", args = ElemsTypes};
+
+    #ast_cons{head = Head} ->
+      #type_app{type = "List", args = [pattern_fetch(Head)]};
+
+    #ast_int{} ->
+      #type_const{type = "Int"};
+
+    #ast_atom{} ->
+      #type_const{type = "Atom"};
+
+    #ast_float{} ->
+      #type_const{type = "Float"};
+
+    #ast_string{} ->
+      #type_const{type = "String"}
+  end.
+
 
 -spec infer_clause(#ast_clause{}, env()) -> {#ast_clause{}, env()}.
-infer_clause(#ast_clause{pattern = Pattern, value = Value}, Env0) ->
-  % Infer type of pattern
-  % Infer type of value
-  todo.
+infer_clause(#ast_clause{pattern = Pattern, value = Value} = Clause, Env0) ->
+  {AnnotatedPattern, Env1} = infer_pattern(Pattern, Env0),
+  {AnnotatedValue, Env2} = infer(Value, Env1),
+  NewClause = Clause#ast_clause{pattern = AnnotatedPattern, value = AnnotatedValue},
+  {NewClause, Env2}.
 
+
+-spec infer_pattern(ast_pattern(), env()) -> {ast_pattern(), env()}.
+infer_pattern(Pattern, Env0) ->
+  case Pattern of
+    #ast_var{name = Name} ->
+      {Var, Env1} = new_var(Env0),
+      Env2 = env_extend(Name, Var, Env1),
+      AnnotatedPattern = Pattern#ast_var{type = {ok, Var}},
+      {AnnotatedPattern, Env2};
+
+    #ast_int{} ->
+      {Pattern, Env0};
+
+    #ast_float{} ->
+      {Pattern, Env0};
+
+    #ast_string{} ->
+      {Pattern, Env0};
+
+    #ast_atom{} ->
+      {Pattern, Env0}
+  end.
 
 -spec infer(ast_expression(), env()) -> {ast_expression(), env()}.
 infer(Ast, Env0) ->
@@ -86,8 +144,9 @@ infer(Ast, Env0) ->
       {AnnotatedSubject, Env1} = infer(Subject, Env0),
       {AnnotatedClauses, Env2} = gleam:thread_map(fun infer_clause/2, Clauses, Env1),
       SubjectType = fetch(AnnotatedSubject),
-      {ReturnType, Env3} = unify_clauses(AnnotatedClauses, SubjectType, Env2),
-      AnnotatedAst = #ast_case{type = {ok, ReturnType},
+      Env3 = unify_clauses(AnnotatedClauses, SubjectType, Env2),
+      Type = fetch_clause_type(hd(AnnotatedClauses)),
+      AnnotatedAst = #ast_case{type = {ok, Type},
                                subject = AnnotatedSubject,
                                clauses = AnnotatedClauses},
       {AnnotatedAst, Env3};
@@ -186,12 +245,15 @@ infer(Ast, Env0) ->
     #ast_record_select{record = Record, label = Label} ->
       {RowParentType, Env1} = new_var(Env0),
       {FieldType, Env2} = new_var(Env1),
-      RowType = #type_row_extend{label = Label, type = FieldType, parent = RowParentType},
+      RowType = #type_row_extend{label = Label,
+                                 type = FieldType,
+                                 parent = RowParentType},
       ParamType = #type_record{row = RowType},
       {AnnotatedRecord, Env3} = infer(Record, Env2),
       RecordType = fetch(AnnotatedRecord),
       Env4 = unify(ParamType, RecordType, Env3),
-      AnnotatedAst = Ast#ast_record_select{type = {ok, FieldType}, record = AnnotatedRecord},
+      AnnotatedAst = Ast#ast_record_select{type = {ok, FieldType},
+                                           record = AnnotatedRecord},
       {AnnotatedAst, Env4};
 
     #ast_raise{} ->
@@ -261,10 +323,18 @@ infer_call(FunAst, Args, Env0) ->
   {ReturnType, Env3}.
 
 
+-spec fetch_clause_type(#ast_clause{}) -> type().
+fetch_clause_type(#ast_clause{value = Value}) ->
+  fetch(Value).
+
+
 -spec fetch(ast_expression()) -> type().
 fetch(Ast) ->
   case Ast of
     #ast_operator{type = {ok, Type}} ->
+      Type;
+
+    #ast_case{type = {ok, Type}} ->
       Type;
 
     #ast_local_call{type = {ok, Type}} ->
@@ -332,6 +402,15 @@ resolve_type_vars(Ast, Env) ->
       NewStatements = lists:map(fun(X) -> statement_resolve_type_vars(X, Env) end,
                                 Statements),
       Ast#ast_module{type = {ok, NewType}, statements = NewStatements};
+
+    #ast_case{type = {ok, Type}, clauses = Clauses} ->
+      Resolve =
+        fun(#ast_clause{value = Value} = Clause) ->
+          Clause#ast_clause{value = resolve_type_vars(Value, Env)}
+        end,
+      NewClauses = lists:map(Resolve, Clauses),
+      NewType = type_resolve_type_vars(Type, Env),
+      Ast#ast_case{type = {ok, NewType}, clauses = NewClauses};
 
     #ast_seq{first = First, then = Then} ->
       Ast#ast_seq{first = resolve_type_vars(First, Env),
