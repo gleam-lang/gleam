@@ -1,10 +1,4 @@
-import order:Order
-
-pub enum Bool =
-  | True
-  | False
-
-import Bool:*
+import order:[GT, EQ, LT]
 
 pub fn not(bool) {
   case bool {
@@ -23,25 +17,25 @@ test not {
 
 pub fn compare(a, b) {
   case (a, b) {
-  | (True, True) => Order:EQ
-  | (True, False) => Order:GT
-  | (False, False) => Order:EQ
-  | (False, True) => Order:GT
+  | (True, True) => EQ
+  | (True, False) => GT
+  | (False, False) => EQ
+  | (False, True) => GT
   }
 }
 
 test compare {
   compare(True, True)
-    |> assert:equal(_, Order:EQ)
+    |> assert:equal(_, EQ)
 
   compare(True, False)
-    |> assert:equal(_, Order:GT)
+    |> assert:equal(_, GT)
 
   compare(False, False)
-    |> assert:equal(_, Order:LT)
+    |> assert:equal(_, LT)
 
   compare(False, True)
-    |> assert:equal(_, Order:GT)
+    |> assert:equal(_, GT)
 }
 
 pub fn max(a, b) {

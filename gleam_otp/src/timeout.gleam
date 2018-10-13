@@ -1,4 +1,4 @@
-import Foreign
+import foreign
 
 pub external type Timeout
 ;

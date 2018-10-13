@@ -9,8 +9,6 @@ pub enum Result(error, value) =
   | Error(error)
 ;
 
-import Result:*
-
 pub fn is_ok(result) {
   case result {
   | Error(_) => False

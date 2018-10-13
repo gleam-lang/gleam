@@ -3,7 +3,7 @@
 //
 // Run the application with the `start_link/0` function.
 
-import elli
+import elli:[Get, Delete]
 
 doc """
 The handle/2 callback is used by Elli to response to requests
@@ -52,7 +52,7 @@ The start_link/0 function can be used to create a new
 Elli web server process running this handler module.
 """
 pub fn start_link() {
-  Elli:start_link({
+  elli:start_link({
     callback = self,
     port = 4000,
   })

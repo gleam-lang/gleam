@@ -1,5 +1,5 @@
 import foreign:Foreign
-import result:Result:*
+import result:[Ok, Error]
 
 pub enum Method =
   | Get
@@ -67,7 +67,7 @@ request has no query.
 """
 pub fn query_string(req) {
   case erl_query_string(req) {
-  | "" => Error(())
+  | "" => Error('none')
   | s => Ok(s)
   }
 }

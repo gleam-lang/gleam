@@ -6,8 +6,6 @@ pub enum Order =
   | GT
 ;
 
-import Order:*
-
 pub fn reverse(order) {
   case order {
   | LT => GT

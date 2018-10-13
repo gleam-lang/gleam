@@ -1,11 +1,8 @@
 import assert
-import result:Result:*
-import bool:Bool:*
+import result:[Ok, Error]
 
 pub enum Error =
   | Empty
-
-import Error:*
 
 // Using the Erlang C BIF implementation.
 //
@@ -197,7 +194,7 @@ pub fn new() {
   []
 }
 
-test new() {
+test new {
   new() |> assert:equal(_, [])
 }
 
@@ -205,7 +202,7 @@ pub fn flatten(lists) {
   do_flatten(lists, [])
 }
 
-test flatten() {
+test flatten {
   flatten([])
     |> assert:equal(_, [])
 
@@ -233,7 +230,7 @@ pub fn foldl(list, acc, fun) {
   }
 }
 
-test foldl() {
+test foldl {
   [1, 2, 3]
     |> foldl(_, [], fn(x, acc) { x :: acc })
     |> assert:equal(_, [3, 2, 1])
@@ -246,7 +243,7 @@ pub fn foldr(list, acc, fun) {
   }
 }
 
-test foldr() {
+test foldr {
   [1, 2, 3]
     |> foldr(_, [], fn(x, acc) { x :: acc })
     |> assert:equal(_, [1, 2, 3])
