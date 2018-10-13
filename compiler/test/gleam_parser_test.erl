@@ -128,7 +128,7 @@ pub_test() ->
     }
   ).
 
-adt_test() ->
+enum_test() ->
   Code =
     "fn ok() { Ok(1) }"
   ,
@@ -140,7 +140,7 @@ adt_test() ->
         , name = "ok"
         , args = []
         , body =
-          #ast_adt
+          #ast_enum
           { meta = #meta{line = 1}
           , name = "Ok"
           , elems = [#ast_int{meta = #meta{line = 1}, value = 1}]

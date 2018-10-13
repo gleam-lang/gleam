@@ -184,32 +184,32 @@ assignment_test() ->
     ?assertEqual(2, 'Gleam.CodegenAssignment':reassign())
   end).
 
-bool_adt_test() ->
+bool_enum_test() ->
   Source =
     "pub fn true() { True }\n"
     "pub fn false() { False }\n"
   ,
-  with_module('Gleam.CodegenBoolAdt', Source, fun() ->
-    ?assertEqual(true, 'Gleam.CodegenBoolAdt':true()),
-    ?assertEqual(false, 'Gleam.CodegenBoolAdt':false())
+  with_module('Gleam.CodegenBoolEnum', Source, fun() ->
+    ?assertEqual(true, 'Gleam.CodegenBoolEnum':true()),
+    ?assertEqual(false, 'Gleam.CodegenBoolEnum':false())
   end).
 
-word_case_adt_test() ->
+word_case_enum_test() ->
   Source =
     "pub fn one() { SomeLongName }\n"
     "pub fn two() { ADT }\n"
   ,
-  with_module('Gleam.CodegenWordCaseAdt', Source, fun() ->
-    ?assertEqual(some_long_name, 'Gleam.CodegenWordCaseAdt':one()),
-    ?assertEqual(a_d_t, 'Gleam.CodegenWordCaseAdt':two())
+  with_module('Gleam.CodegenWordCaseEnum', Source, fun() ->
+    ?assertEqual(some_long_name, 'Gleam.CodegenWordCaseEnum':one()),
+    ?assertEqual(a_d_t, 'Gleam.CodegenWordCaseEnum':two())
   end).
 
-product_adt_test() ->
+product_enum_test() ->
   Source =
     "pub fn ok(x) { Ok(x) }\n"
   ,
-  with_module('Gleam.CodegenProductAdt', Source, fun() ->
-    ?assertEqual({ok, "Hi there"}, 'Gleam.CodegenProductAdt':ok("Hi there"))
+  with_module('Gleam.CodegenProductEnum', Source, fun() ->
+    ?assertEqual({ok, "Hi there"}, 'Gleam.CodegenProductEnum':ok("Hi there"))
   end).
 
 case_int_test() ->
@@ -325,7 +325,7 @@ case_var_test() ->
     ?assertEqual(default, 'Gleam.CodegenCaseVar':unwrap(two))
   end).
 
-case_adt_test() ->
+case_enum_test() ->
   Source =
     "pub fn unwrap(x) {\n"
     "  case x {\n"
@@ -334,9 +334,9 @@ case_adt_test() ->
     "  }\n"
     "}\n"
   ,
-  with_module('Gleam.CodegenCaseAdt', Source, fun() ->
-    ?assertEqual(one, 'Gleam.CodegenCaseAdt':unwrap({just, one})),
-    ?assertEqual(default, 'Gleam.CodegenCaseAdt':unwrap(nothing))
+  with_module('Gleam.CodegenCaseEnum', Source, fun() ->
+    ?assertEqual(one, 'Gleam.CodegenCaseEnum':unwrap({just, one})),
+    ?assertEqual(default, 'Gleam.CodegenCaseEnum':unwrap(nothing))
   end).
 
 record_test() ->

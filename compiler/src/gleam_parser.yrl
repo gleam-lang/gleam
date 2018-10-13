@@ -59,8 +59,8 @@ exprs -> expr                : '$1'.
 exprs -> expr exprs          : seq('$1', '$2').
 
 expr -> literal                    : '$1'.
-expr -> upname                     : adt('$1', []).
-expr -> upcall elems ')'           : adt('$1', '$2').
+expr -> upname                     : enum('$1', []).
+expr -> upcall elems ')'           : enum('$1', '$2').
 expr -> '{' elems '}'              : tuple('$1', '$2').
 expr -> '[' ']'                    : list('$2', []).
 expr -> '[' elems ']'              : list('$3', '$2').
@@ -129,8 +129,8 @@ pattern -> name                 : var('$1').
 pattern -> hole                 : hole('$1').
 pattern -> pattern '::' pattern : cons('$2', '$1', '$3').
 
-container_pattern -> upname                   : adt('$1', []).
-container_pattern -> upcall elems_pattern ')' : adt('$1', '$2').
+container_pattern -> upname                   : enum('$1', []).
+container_pattern -> upcall elems_pattern ')' : enum('$1', '$2').
 container_pattern -> '(' ')'                  : tuple('$1', []).
 container_pattern -> '(' elems_pattern ')'    : tuple('$1', '$2').
 container_pattern -> '{' elems_pattern '}'    : tuple('$1', '$2').
@@ -233,8 +233,8 @@ list({']', NilMeta}, Elems) ->
   end,
   lists:foldl(Cons, #ast_nil{meta = NilMeta}, lists:reverse(Elems)).
 
-adt({Type, Meta, Name}, Elems) when Type =:= upname; Type =:= upcall ->
-  #ast_adt{name = Name, meta = Meta, elems = Elems}.
+enum({Type, Meta, Name}, Elems) when Type =:= upname; Type =:= upcall ->
+  #ast_enum{name = Name, meta = Meta, elems = Elems}.
 
 case_expr({kw_case, Meta}, Subject, Clauses) ->
   #ast_case{meta = Meta, subject = Subject, clauses = Clauses}.

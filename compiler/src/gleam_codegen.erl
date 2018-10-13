@@ -187,12 +187,12 @@ expression(#ast_assignment{name = Name, value = Value, then = Then}, Env) when i
   {C_then, Env2} = expression(Then, Env1),
   {cerl:c_let([C_var], C_value, C_then), Env2};
 
-expression(#ast_adt{name = Name, elems = []}, Env) when is_list(Name) ->
-  AtomName = list_to_atom(adt_name_value(Name)),
+expression(#ast_enum{name = Name, elems = []}, Env) when is_list(Name) ->
+  AtomName = list_to_atom(enum_name_value(Name)),
   {cerl:c_atom(AtomName), Env};
 
-expression(#ast_adt{name = Name, meta = Meta, elems = Elems}, Env) when is_list(Name) ->
-  AtomValue = adt_name_value(Name),
+expression(#ast_enum{name = Name, meta = Meta, elems = Elems}, Env) when is_list(Name) ->
+  AtomValue = enum_name_value(Name),
   Atom = #ast_atom{meta = Meta, value = AtomValue},
   expression(#ast_tuple{elems = [Atom | Elems]}, Env);
 
@@ -327,16 +327,16 @@ clause(#ast_clause{pattern = Pattern, value = Value}, Env) ->
   C_clause = cerl:c_clause([C_pattern], C_value),
   {C_clause, Env2}.
 
-adt_name_value(Chars) when is_list(Chars) ->
-  adt_name_value(Chars, []).
+enum_name_value(Chars) when is_list(Chars) ->
+  enum_name_value(Chars, []).
 
-adt_name_value([C | Chars], []) when ?is_uppercase_char(C) ->
-  adt_name_value(Chars, [C + 32]);
-adt_name_value([C | Chars], Acc) when ?is_uppercase_char(C) ->
-  adt_name_value(Chars, [C + 32, $_ | Acc]);
-adt_name_value([C | Chars], Acc) ->
-  adt_name_value(Chars, [C | Acc]);
-adt_name_value([], Acc) ->
+enum_name_value([C | Chars], []) when ?is_uppercase_char(C) ->
+  enum_name_value(Chars, [C + 32]);
+enum_name_value([C | Chars], Acc) when ?is_uppercase_char(C) ->
+  enum_name_value(Chars, [C + 32, $_ | Acc]);
+enum_name_value([C | Chars], Acc) ->
+  enum_name_value(Chars, [C | Acc]);
+enum_name_value([], Acc) ->
   lists:reverse(Acc).
 
 c_list(Elems) ->

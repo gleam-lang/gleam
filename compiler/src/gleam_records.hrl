@@ -92,7 +92,7 @@
          value :: ast_expression(),
          then :: ast_expression()}).
 
--record(ast_adt,
+-record(ast_enum,
         {meta = #meta{} :: meta(),
          name :: string(),
          elems = [] :: [ast_expression()]}).
@@ -152,7 +152,7 @@
       .
 
 -type ast_expression()
-      :: #ast_adt{}
+      :: #ast_enum{}
       | #ast_assignment{}
       | #ast_atom{}
       | #ast_call{}
