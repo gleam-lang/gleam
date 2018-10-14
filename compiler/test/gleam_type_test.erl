@@ -78,14 +78,14 @@ infer_unknown_var_test() ->
 
 infer_fn_test() ->
   Cases = [
-    {"fn() { 1 }", "fn() => Int"},
-    {"fn() { 1.1 }", "fn() => Float"},
-    {"fn(x) { 1.1 }", "fn(a) => Float"},
-    {"fn(x) { x }", "fn(a) => a"},
-    {"x = fn(x) { 1.1 } x", "fn(a) => Float"},
-    {"fn(x, y, z) { 1 }", "fn(a, b, c) => Int"},
-    {"fn(x) { y = x y }", "fn(a) => a"},
-    {"fn(x) { {'ok', x} }", "fn(a) => Tuple(Atom, a)"}
+    {"fn() { 1 }", "fn() -> Int"},
+    {"fn() { 1.1 }", "fn() -> Float"},
+    {"fn(x) { 1.1 }", "fn(a) -> Float"},
+    {"fn(x) { x }", "fn(a) -> a"},
+    {"x = fn(x) { 1.1 } x", "fn(a) -> Float"},
+    {"fn(x, y, z) { 1 }", "fn(a, b, c) -> Int"},
+    {"fn(x) { y = x y }", "fn(a) -> a"},
+    {"fn(x) { {'ok', x} }", "fn(a) -> Tuple(Atom, a)"}
   ],
   test_infer(Cases).
 
@@ -95,37 +95,37 @@ infer_fn_call_test() ->
     {"two = fn(x) { fn(y) { x } } fun = two(1) fun('ok')", "Int"},
     % Apply
     {"fn(f, x) { f(x) }",
-    "fn(fn(a) => b, a) => b"},
+    "fn(fn(a) -> b, a) -> b"},
     % Apply curried
     {"fn(f) { fn(x) { f(x) } }",
-    "fn(fn(a) => b) => fn(a) => b"},
+    "fn(fn(a) -> b) -> fn(a) -> b"},
     % Curry
     {"fn(f) { fn(x) { fn(y) { f(x, y) } } }",
-     "fn(fn(a, b) => c) => fn(a) => fn(b) => c"},
+     "fn(fn(a, b) -> c) -> fn(a) -> fn(b) -> c"},
     % Uncurry
     {"fn(f) { fn(x, y) { ff = f(x) ff(y) } }",
-     "fn(fn(a) => fn(b) => c) => fn(a, b) => c"},
+     "fn(fn(a) -> fn(b) -> c) -> fn(a, b) -> c"},
     % Const
     {"fn(x) { fn(y) { x } }",
-     "fn(a) => fn(b) => a"},
+     "fn(a) -> fn(b) -> a"},
     % Call
     {"fn(f) { f() }",
-     "fn(fn() => a) => a"},
+     "fn(fn() -> a) -> a"},
     % Twice
     {"fn(f, x) { f(f(x)) }",
-     "fn(fn(a) => a, a) => a"},
+     "fn(fn(a) -> a, a) -> a"},
     % Recursive id
     {"fn(x) { y = fn(z) { z } y(y) }",
-     "fn(a) => fn(b) => b"},
+     "fn(a) -> fn(b) -> b"},
     % Pair
     {"fn(x, y) { {x, y} }",
-     "fn(a, b) => Tuple(a, b)"},
+     "fn(a, b) -> Tuple(a, b)"},
     % Pair of one
     {"fn(x) { {x, x} }",
-     "fn(a) => Tuple(a, a)"},
+     "fn(a) -> Tuple(a, a)"},
     % Really funky pointless thing
     {"id = fn(a) { a } fn(x) { x(id) }",
-     "fn(fn(fn(a) => a) => b) => b"}
+     "fn(fn(fn(a) -> a) -> b) -> b"}
   ],
   test_infer(Cases).
 % ; ( "fun x -> let y = let z = x(fun x -> x) in z in y" *)
@@ -156,7 +156,7 @@ operators_test() ->
     {"1.0 -. 1.0", "Float"},
     {"1.0 *. 1.0", "Float"},
     {"1.0 /. 1.0", "Float"},
-    {"fn(a, b) { a + b }", "fn(Int, Int) => Int"},
+    {"fn(a, b) { a + b }", "fn(Int, Int) -> Int"},
     {"inc = fn(a) { a + 1 } 1 |> inc |> inc", "Int"}
   ],
   test_infer(Cases).
@@ -185,16 +185,16 @@ list_test() ->
     {"[1, 2, 3]", "List(Int)"},
     {"[[]]", "List(List(a))"},
     {"[[1.0, 2.0]]", "List(List(Float))"},
-    {"[fn(x) { x }]", "List(fn(a) => a)"},
-    {"[fn(x) { x + 1 }]", "List(fn(Int) => Int)"},
+    {"[fn(x) { x }]", "List(fn(a) -> a)"},
+    {"[fn(x) { x + 1 }]", "List(fn(Int) -> Int)"},
     {"[{[], []}]", "List(Tuple(List(a), List(b)))"},
-    {"[fn(x) { x }, fn(x) { x + 1 }]", "List(fn(Int) => Int)"},
-    {"[fn(x) { x + 1 }, fn(x) { x }]", "List(fn(Int) => Int)"},
+    {"[fn(x) { x }, fn(x) { x + 1 }]", "List(fn(Int) -> Int)"},
+    {"[fn(x) { x + 1 }, fn(x) { x }]", "List(fn(Int) -> Int)"},
     {"[[], []]", "List(List(a))"},
     {"[[], ['ok']]", "List(List(Atom))"},
     {"1 :: 2 :: []", "List(Int)"},
-    {"fn(x) { x } :: []", "List(fn(a) => a)"},
-    {"f = fn(x) { x } [f, f]", "List(fn(a) => a)"},
+    {"fn(x) { x } :: []", "List(fn(a) -> a)"},
+    {"f = fn(x) { x } [f, f]", "List(fn(a) -> a)"},
     {"x = 1 :: [] 2 :: x", "List(Int)"}
   ],
   test_infer(Cases).
@@ -232,13 +232,13 @@ record_select_test() ->
     {"r = {a = 1, b = 2} r.a + r.b",
      "Int"},
     {"fn(x) { x.t }",
-     "fn({a | t = b}) => b"},
+     "fn({a | t = b}) -> b"},
     {"f = fn(x) { x } r = {a = f} r.a",
-     "fn(a) => a"},
+     "fn(a) -> a"},
     {"r = {a = fn(x) { x }} r.a",
-     "fn(a) => a"},
+     "fn(a) -> a"},
     {"r = {a = fn(x) { x }, b = fn(x) { x }} [r.a, r.b]",
-     "List(fn(a) => a)"},
+     "List(fn(a) -> a)"},
     {"f = fn(x) { x.t } f({ t = 1 })",
      "Int"},
     {"f = fn(x) { x.t(1) } f({t = fn(x) { x + 1 }})",
@@ -264,15 +264,15 @@ record_extend_test() ->
     },
     {
      "fn(r) { { r | x = 1 } }",
-     "fn({ a }) => {a | x = Int}"
+     "fn({ a }) -> {a | x = Int}"
     },
     {
      "fn(r) { r.x }",
-     "fn({a | x = b}) => b"
+     "fn({a | x = b}) -> b"
     },
     {
      "fn(r) { r.x + 1 }",
-     "fn({a | x = Int}) => Int"
+     "fn({a | x = Int}) -> Int"
     },
     {
      "{ {} | a = 1}",
@@ -311,11 +311,11 @@ throw_raise_test() ->
     },
     {
     "fn() { throw(1) }",
-     "fn() => a"
+     "fn() -> a"
     },
     {
     "x = fn() { throw(1) } x",
-     "fn() => a"
+     "fn() -> a"
     }
   ],
   test_infer(Cases).
@@ -358,9 +358,9 @@ module_test() ->
      "test whatever { 'ok' }"
      ,
      "module {"
-     " fn status() => Atom"
-     " fn list_of(a) => List(a)"
-     " fn get_age({b | age = c}) => c"
+     " fn status() -> Atom"
+     " fn list_of(a) -> List(a)"
+     " fn get_age({b | age = c}) -> c"
      "}"
     }
   ],

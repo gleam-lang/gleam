@@ -8,7 +8,7 @@ case_expr case_clauses case_clause field fields.
 
 Terminals
 '(' ')' '[' ']' '::' '{' '}'
-',' '=' '|' '=>' '|>'
+',' '=' '|' '|>' '->'
 '<=' '<' '>' '>=' '==' '!='
 '.'
 '/' '*' '+' '-' '/.' '*.' '+.' '-.'
@@ -100,7 +100,7 @@ case_expr -> kw_case expr '{' case_clauses '}' : case_expr('$1', '$2', '$4').
 case_clauses -> case_clause              : ['$1'].
 case_clauses -> case_clause case_clauses : ['$1'|'$2'].
 
-case_clause -> '|' pattern '=>' expr : case_clause('$1', '$2', '$4').
+case_clause -> '|' pattern '->' expr : case_clause('$1', '$2', '$4').
 
 call_args -> hole               : [hole('$1')].
 call_args -> hole ','           : [hole('$1')].
