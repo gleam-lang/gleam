@@ -350,10 +350,14 @@ binary_string_byte(Char) ->
                 cerl:c_atom(integer),
                 c_list([cerl:c_atom(unsigned), cerl:c_atom(big)])).
 
-prefix_module(Name = [C | _]) when ?is_uppercase_char(C) ->
-  "Gleam." ++ Name;
+% TODO: FIXME: Whether the module is an Erlang one should be specified in the
+% AST, we should not have a special list here.
 prefix_module(Name) when is_list(Name) ->
-  Name.
+  case Name of
+    "erlang" -> "erlang";
+    "maps" -> "maps";
+    _ -> "gleam_" ++ Name
+  end.
 
 uid(#env{uid = UID} = Env) ->
   {UID, Env#env{uid = UID + 1}}.

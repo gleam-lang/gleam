@@ -17,7 +17,7 @@ source_to_binary(Source, ModName, Options) ->
 compile_file(Path, ModName) ->
   {ok, Source} = file:read_file(Path),
   ListSource = binary_to_list(Source),
-  BeamFileName = "Gleam." ++ filename:basename(filename:rootname(Path)) ++ ".beam",
+  BeamFileName = "gleam_" ++ filename:basename(filename:rootname(Path)) ++ ".beam",
   BeamPath = filename:join(filename:dirname(Path), BeamFileName),
   Beam = source_to_binary(ListSource, ModName),
   ok = file:write_file(BeamPath, Beam).
