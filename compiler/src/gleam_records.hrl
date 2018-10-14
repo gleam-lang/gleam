@@ -56,7 +56,8 @@
          type = type_not_annotated :: type_annotation()}).
 
 -record(ast_hole,
-        {meta = #meta{} :: meta()}).
+        {meta = #meta{} :: meta(),
+         type = type_not_annotated :: type_annotation()}).
 
 -record(ast_fn_call,
         {meta = #meta{} :: meta(),

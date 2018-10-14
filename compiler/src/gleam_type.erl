@@ -75,6 +75,9 @@ pattern_fetch(Pattern) ->
     #ast_nil{type = {ok, Type}} ->
       Type;
 
+    #ast_hole{type = {ok, Type}} ->
+      Type;
+
     #ast_record_empty{} ->
       #type_record{row = #type_row_empty{}};
 
@@ -110,11 +113,21 @@ infer_clause(#ast_clause{pattern = Pattern, value = Value} = Clause, Env0) ->
 -spec infer_pattern(ast_pattern(), env()) -> {ast_pattern(), env()}.
 infer_pattern(Pattern, Env0) ->
   case Pattern of
+    #ast_tuple{elems = Elems} ->
+      {AnnotatedElems, NewEnv} = gleam:thread_map(fun infer_pattern/2, Elems, Env0),
+      AnnotatedPattern = Pattern#ast_tuple{elems = AnnotatedElems},
+      {AnnotatedPattern, NewEnv};
+
     #ast_var{name = Name} ->
       {Var, Env1} = new_var(Env0),
       Env2 = env_extend(Name, Var, Env1),
       AnnotatedPattern = Pattern#ast_var{type = {ok, Var}},
       {AnnotatedPattern, Env2};
+
+    #ast_hole{} ->
+      {Var, Env1} = new_var(Env0),
+      AnnotatedPattern = Pattern#ast_hole{type = {ok, Var}},
+      {AnnotatedPattern, Env1};
 
     #ast_int{} ->
       {Pattern, Env0};

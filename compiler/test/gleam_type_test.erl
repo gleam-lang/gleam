@@ -343,6 +343,10 @@ cast_test() ->
      "fn(Int, Tuple(Atom, Int)) -> Tuple(Atom, Int)"
     },
     {
+     "case {'ok', 1} { | {'ok', int} -> int | _other -> 0 }",
+     "Int"
+    },
+    {
      "case 1 { | 1 -> 'one' | 2 -> 'two' | 3 -> 'dunnno' }",
      "Atom"
     }
