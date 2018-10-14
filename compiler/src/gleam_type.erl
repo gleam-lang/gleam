@@ -67,6 +67,7 @@ unify_clauses(Clauses, SubjectType, Env0) ->
   {_, Env2} = lists:foldl(Unify, {First, Env1}, Rest),
   Env2.
 
+-spec pattern_fetch(ast_pattern()) -> type().
 pattern_fetch(Pattern) ->
   case Pattern of
     #ast_var{type = {ok, Type}} ->
@@ -113,6 +114,21 @@ infer_clause(#ast_clause{pattern = Pattern, value = Value} = Clause, Env0) ->
 -spec infer_pattern(ast_pattern(), env()) -> {ast_pattern(), env()}.
 infer_pattern(Pattern, Env0) ->
   case Pattern of
+    #ast_nil{} ->
+      {Var, NewEnv} = new_var(Env0),
+      Type = #type_app{type = "List", args = [Var]},
+      AnnotatedPattern = Pattern#ast_nil{type = {ok, Type}},
+      {AnnotatedPattern, NewEnv};
+
+    #ast_cons{head = Head, tail = Tail} ->
+      {AnnotatedTail, Env1} = infer_pattern(Tail, Env0),
+      {AnnotatedHead, Env2} = infer_pattern(Head, Env1),
+      TailType = pattern_fetch(AnnotatedTail),
+      HeadType = pattern_fetch(AnnotatedHead),
+      Env3 = unify(TailType, #type_app{type = "List", args = [HeadType]}, Env2),
+      AnnotatedPattern = Pattern#ast_cons{head = AnnotatedHead, tail = AnnotatedTail},
+      {AnnotatedPattern, Env3};
+
     #ast_tuple{elems = Elems} ->
       {AnnotatedElems, NewEnv} = gleam:thread_map(fun infer_pattern/2, Elems, Env0),
       AnnotatedPattern = Pattern#ast_tuple{elems = AnnotatedElems},

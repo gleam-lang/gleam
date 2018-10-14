@@ -347,6 +347,10 @@ cast_test() ->
      "Int"
     },
     {
+     "case [] { | [] -> 0 | x :: xs -> x }",
+     "Int"
+    },
+    {
      "case 1 { | 1 -> 'one' | 2 -> 'two' | 3 -> 'dunnno' }",
      "Atom"
     }
