@@ -239,7 +239,7 @@ test foldl {
 pub fn foldr(list, acc, fun) {
   case list {
   | [] => acc
-  | x :: rest => fun(x, foldl(rest, acc, fun))
+  | x :: rest => fun(x, foldr(rest, acc, fun))
   }
 }
 
