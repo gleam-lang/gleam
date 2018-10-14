@@ -11,8 +11,8 @@ pub enum Result(error, value) =
 
 pub fn is_ok(result) {
   case result {
-  | Error(_) => False
-  | Ok(_) => True
+  | Error(_) -> False
+  | Ok(_) -> True
   }
 }
 
@@ -23,8 +23,8 @@ test is_ok {
 
 pub fn is_error(result) {
   case result {
-  | Ok(_) => False
-  | Error(_) => True
+  | Ok(_) -> False
+  | Error(_) -> True
   }
 }
 
@@ -35,8 +35,8 @@ test is_error {
 
 pub fn map(result, fun) {
   case result {
-  | Ok(x) => fun(x)
-  | Error(_) => result
+  | Ok(x) -> fun(x)
+  | Error(_) -> result
   }
 }
 
@@ -51,8 +51,8 @@ test map {
 
 pub fn map_error(result, fun) {
   case result {
-  | Ok(_) => result
-  | Error(error) => Error(fun(error))
+  | Ok(_) -> result
+  | Error(error) -> Error(fun(error))
   }
 }
 
@@ -67,8 +67,8 @@ test map_error {
 
 pub fn flatten(result) {
   case result {
-  | Ok(x) => x
-  | Error(_) => result
+  | Ok(x) -> x
+  | Error(_) -> result
   }
 }
 
@@ -101,8 +101,8 @@ test flat_map {
 
 pub fn unwrap(result, default) {
   case result {
-  | Ok(v) => v
-  | Error(_) => default
+  | Ok(v) -> v
+  | Error(_) -> default
   }
 }
 

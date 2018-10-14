@@ -14,12 +14,12 @@ pub fn handle(req, _args) {
   method = elli:method(req)
   path = elli:path(req)
   case (method, path) {
-  | (Get, []) => home()
-  | (Get, ["hello"]) => greet("world")
-  | (Get, ["hello", "jane"]) => greet_jane()
-  | (Get, ["hello", name]) => greet(name)
-  | (Delete, _) => reject_delete()
-  | _ => not_found()
+  | (Get, []) -> home()
+  | (Get, ["hello"]) -> greet("world")
+  | (Get, ["hello", "jane"]) -> greet_jane()
+  | (Get, ["hello", name]) -> greet(name)
+  | (Delete, _) -> reject_delete()
+  | _ -> not_found()
   }
 }
 

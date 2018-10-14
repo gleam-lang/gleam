@@ -2,8 +2,8 @@ import order:[GT, EQ, LT]
 
 pub fn not(bool) {
   case bool {
-  | True => False
-  | False => True
+  | True -> False
+  | False -> True
   }
 }
 
@@ -17,10 +17,10 @@ test not {
 
 pub fn compare(a, b) {
   case (a, b) {
-  | (True, True) => EQ
-  | (True, False) => GT
-  | (False, False) => EQ
-  | (False, True) => GT
+  | (True, True) -> EQ
+  | (True, False) -> GT
+  | (False, False) -> EQ
+  | (False, True) -> GT
   }
 }
 
@@ -40,8 +40,8 @@ test compare {
 
 pub fn max(a, b) {
   case a {
-  | True => True
-  | False => b
+  | True -> True
+  | False -> b
   }
 }
 
@@ -61,8 +61,8 @@ test max {
 
 pub fn min(a, b) {
   case a {
-  | False => False
-  | True => b
+  | False -> False
+  | True -> b
   }
 }
 
@@ -82,8 +82,8 @@ test min {
 
 pub fn to_int(bool) {
   case bool {
-  | False => 0
-  | True => 1
+  | False -> 0
+  | True -> 1
   }
 }
 

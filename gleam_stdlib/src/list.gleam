@@ -6,7 +6,7 @@ pub enum Error =
 
 // Using the Erlang C BIF implementation.
 //
-pub external fn length(List(a)) => Int = 'erlang' 'length'
+pub external fn length(List(a)) -> Int = 'erlang' 'length'
 
 test length {
   length([]) |> assert:equal(_, 0)
@@ -17,7 +17,7 @@ test length {
 
 // Using the Erlang C BIF implementation.
 //
-pub external fn reverse(List(a)) => List(a) = 'erlang' 'reverse'
+pub external fn reverse(List(a)) -> List(a) = 'erlang' 'reverse'
 
 test reverse {
   length([]) |> assert:equal(_, [])
@@ -35,9 +35,9 @@ test is_empty {
 
 pub fn member(list, elem) {
   case list {
-  | [] => False
-  | elem :: _ => True
-  | _ :: rest => member(rest, elem)
+  | [] -> False
+  | elem :: _ -> True
+  | _ :: rest -> member(rest, elem)
   }
 }
 
@@ -49,8 +49,8 @@ test is_member {
 
 pub fn head(list) {
   case list {
-  | [] => Error(Empty)
-  | elem :: _ => Ok(elem)
+  | [] -> Error(Empty)
+  | elem :: _ -> Ok(elem)
   }
 }
 
@@ -64,8 +64,8 @@ test head {
 
 pub fn tail(list) {
   case list {
-  | [] => Error(Empty)
-  | _ :: rest => Ok(rest)
+  | [] -> Error(Empty)
+  | _ :: rest -> Ok(rest)
   }
 }
 
@@ -104,12 +104,12 @@ test filter {
 
 fn do_filter(list, fun, acc) {
   case list {
-  | [] => reverse(acc)
-  | x :: xs =>
+  | [] -> reverse(acc)
+  | x :: xs ->
       new_acc =
         case fun(x) {
-        | True => x :: acc
-        | False => acc
+        | True -> x :: acc
+        | False -> acc
         }
       do_filter(xs, fun, new_acc)
   }
@@ -131,18 +131,18 @@ test map {
 
 fn do_map(list, fun, acc) {
   case list {
-  | [] => reverse(acc)
-  | x :: xs => do_map(xs, fun, fun(x) :: acc)
+  | [] -> reverse(acc)
+  | x :: xs -> do_map(xs, fun, fun(x) :: acc)
   }
 }
 
 pub fn drop(list, n) {
   case n <= 0 {
-  | True => list
-  | False =>
+  | True -> list
+  | False ->
       case list {
-      | [] => []
-      | _ :: xs => drop(xs, n - 1)
+      | [] -> []
+      | _ :: xs -> drop(xs, n - 1)
       }
   }
 }
@@ -163,11 +163,11 @@ pub fn take(list, n) {
 
 fn do_take(list, n, acc) {
   case n <= 0 {
-  | True => reverse(acc)
-  | False =>
+  | True -> reverse(acc)
+  | False ->
       case list {
-      | [] => reverse(acc)
-      | x :: xs => take(xs, n - 1, x :: acc)
+      | [] -> reverse(acc)
+      | x :: xs -> take(xs, n - 1, x :: acc)
       }
   }
 }
@@ -218,15 +218,15 @@ test flatten {
 
 fn do_flatten(lists, acc) {
   case lists {
-  | [] => acc
-  | l :: rest => flatten(rest, acc ++ l)
+  | [] -> acc
+  | l :: rest -> flatten(rest, acc ++ l)
   }
 }
 
 pub fn foldl(list, acc, fun) {
   case list {
-  | [] => acc
-  | x :: rest => foldl(rest, fun(x, acc), fun)
+  | [] -> acc
+  | x :: rest -> foldl(rest, fun(x, acc), fun)
   }
 }
 
@@ -238,8 +238,8 @@ test foldl {
 
 pub fn foldr(list, acc, fun) {
   case list {
-  | [] => acc
-  | x :: rest => fun(x, foldr(rest, acc, fun))
+  | [] -> acc
+  | x :: rest -> fun(x, foldr(rest, acc, fun))
   }
 }
 

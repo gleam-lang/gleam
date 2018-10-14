@@ -16,10 +16,10 @@ fn loop(secret_number) {
   guess = io:read_line() |> string:trim |> string:to_int
 
   case guess {
-  | Ok(i) =>
+  | Ok(i) ->
       compare(i, secret_number)
 
-  | Error(_) =>
+  | Error(_) ->
       io:print("That doesn't look like a number to me... Try again")
       loop(secret_number)
   }
@@ -30,15 +30,15 @@ Here is some documentation! Hooray!
 """
 fn compare(guess, secret_number) {
   case int:compare(i, secret_number) {
-  | LT =>
+  | LT ->
     io:print("Too low!")
     loop(secret_number)
 
-  | GT =>
+  | GT ->
       io:print("Too low!")
       loop(secret_number)
 
-  | EQ =>
+  | EQ ->
       i = int:to_string(secret_number)
       io:print("You got it! The number was" <> i)
   }

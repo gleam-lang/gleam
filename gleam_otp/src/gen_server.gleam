@@ -17,18 +17,18 @@ behaviour GenServer {
   type Reply
   ;
 
-  fn handle_call(CallMsg, Caller, State) => Call(Reply, State)
+  fn handle_call(CallMsg, Caller, State) -> Call(Reply, State)
 
-  fn handle_cast(CastMsg, State) => Cast(State)
+  fn handle_cast(CastMsg, State) -> Cast(State)
 
-  fn handle_info(Foreign, State) => Cast(State)
+  fn handle_info(Foreign, State) -> Cast(State)
 
-  fn init(Argument) => Init(State)
+  fn init(Argument) -> Init(State)
 }
 
-pub external fn call(Pid, CallMsg) => a = 'gen_server' 'call'
+pub external fn call(Pid, CallMsg) -> a = 'gen_server' 'call'
 
-pub external fn cast(Pid, CastMsg) => Unit = 'gen_server' 'cast'
+pub external fn cast(Pid, CastMsg) -> Unit = 'gen_server' 'cast'
 
 // TODO: Need to add others here
 pub enum StartError =

@@ -9,8 +9,8 @@ pub enum Quadrilateral =
 
 pub fn from_dimensions(width, height) {
   case width == height {
-  | True => Square(width)
-  | False => Rectangle(width, height)
+  | True -> Square(width)
+  | False -> Rectangle(width, height)
   }
 }
 

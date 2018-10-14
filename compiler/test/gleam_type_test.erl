@@ -323,27 +323,27 @@ throw_raise_test() ->
 cast_test() ->
   Cases = [
     {
-     "case 1 { | a => a }",
+     "case 1 { | a -> a }",
      "Int"
     },
     {
-     "case \"\" { | a => 0.0 }",
+     "case \"\" { | a -> 0.0 }",
      "Float"
     },
     {
-     "case 'ok' { | 'ok' => 0 | 'error' => 1 }",
+     "case 'ok' { | 'ok' -> 0 | 'error' -> 1 }",
      "Int"
     },
     {
-     "fn(x) { case x { | 1 => 'ok' } }",
-     "fn(Int) => Atom"
+     "fn(x) { case x { | 1 -> 'ok' } }",
+     "fn(Int) -> Atom"
     },
     {
-     "fn(x, y) { case x { | 1 => y | a => {'ok', 2} } }",
-     "fn(Int, Tuple(Atom, Int)) => Tuple(Atom, Int)"
+     "fn(x, y) { case x { | 1 -> y | a -> {'ok', 2} } }",
+     "fn(Int, Tuple(Atom, Int)) -> Tuple(Atom, Int)"
     },
     {
-     "case 1 { | 1 => 'one' | 2 => 'two' | 3 => 'dunnno' }",
+     "case 1 { | 1 -> 'one' | 2 -> 'two' | 3 -> 'dunnno' }",
      "Atom"
     }
   ],

@@ -38,13 +38,13 @@ pub fn pop(pid) {
 
 pub fn handle_call(call, _caller, items) =
   case (call, items) {
-  | (Pop, x :: xs) => Call:Reply(Item(x), xs, never())
-  | (Pop, []) => Call:Reply(Empty, [], never())
+  | (Pop, x :: xs) -> Call:Reply(Item(x), xs, never())
+  | (Pop, []) -> Call:Reply(Empty, [], never())
   }
 
 pub fn handle_cast(cast, items) {
   case cast {
-  | Push(item) => Cast:Ok(item :: items, never())
+  | Push(item) -> Cast:Ok(item :: items, never())
   }
 }
 

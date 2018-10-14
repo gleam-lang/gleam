@@ -8,9 +8,9 @@ pub enum Order =
 
 pub fn reverse(order) {
   case order {
-  | LT => GT
-  | EQ => EQ
-  | GT => LT
+  | LT -> GT
+  | EQ -> EQ
+  | GT -> LT
   }
 }
 
@@ -22,9 +22,9 @@ test reverse {
 
 pub fn to_int(order) {
   case order {
-  | LT => -1
-  | EQ => 0
-  | GT => 1
+  | LT -> -1
+  | EQ -> 0
+  | GT -> 1
   }
 }
 
@@ -36,12 +36,12 @@ test to_int {
 
 pub fn compare(a, b) {
   case {a, b} {
-  | {LT, LT} => EQ
-  | {LT, _} => LT
-  | {EQ, EQ} => EQ
-  | {GT, GT} => EQ
-  | {EQ, GT} => LT
-  | _ => GT
+  | {LT, LT} -> EQ
+  | {LT, _} -> LT
+  | {EQ, EQ} -> EQ
+  | {GT, GT} -> EQ
+  | {EQ, GT} -> LT
+  | _ -> GT
   }
 }
 
@@ -59,9 +59,9 @@ test compare {
 
 pub fn max(a, b) {
   case {a, b} {
-  | {GT, _} => GT
-  | {EQ, LT} => EQ
-  | _ => b
+  | {GT, _} -> GT
+  | {EQ, LT} -> EQ
+  | _ -> b
   }
 }
 
@@ -79,9 +79,9 @@ test max {
 
 pub fn min(a, b) {
   case {a, b} {
-  | {LT, _} => LT
-  | {EQ, GT} => EQ
-  | _ => b
+  | {LT, _} -> LT
+  | {EQ, GT} -> EQ
+  | _ -> b
   }
 }
 
