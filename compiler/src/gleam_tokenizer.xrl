@@ -15,6 +15,7 @@ raise\(    : {token, {kw_raise, m(TokenLine)}}.
 throw\(    : {token, {kw_throw, m(TokenLine)}}.
 case       : {token, {kw_case, m(TokenLine)}}.
 test       : {token, {kw_test, m(TokenLine)}}.
+enum       : {token, {kw_enum, m(TokenLine)}}.
 pub        : {token, {kw_pub, m(TokenLine)}}.
 fn         : {token, {kw_fn, m(TokenLine)}}.
 fn\(       : {token, {kw_fn_call, m(TokenLine)}}.

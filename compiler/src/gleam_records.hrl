@@ -6,6 +6,37 @@
 -type export() :: {string(), non_neg_integer()}.
 -type type_annotation() :: type_not_annotated | {ok, type()}.
 
+-record(ast_type,
+        {meta = #meta{} :: meta(),
+         name :: string(),
+         args = [] :: [ast_type()]}).
+
+-type ast_type() :: #ast_type{}.
+
+-record(ast_mod_fn,
+        {meta = #meta{} :: meta(),
+         type = type_not_annotated :: type_annotation(),
+         public = false :: boolean(),
+         name :: string(),
+         args = [] :: [string()],
+         body :: ast_expression()}).
+
+-record(ast_mod_test,
+        {meta = #meta{} :: meta(),
+         name :: string(),
+         body :: ast_expression()}).
+
+-record(ast_mod_enum,
+        {meta = #meta{} :: meta(),
+         public = false :: boolean(),
+         name :: string(),
+         constructors = [] :: [ast_type()]}).
+
+-type mod_statement()
+      :: #ast_mod_fn{}
+      | #ast_mod_test{}
+      .
+
 -record(ast_tuple,
         {meta = #meta{} :: meta(),
          elems = [] :: [ast_expression()]}).
@@ -126,19 +157,6 @@
          record :: ast_expression(),
          label :: string()}).
 
--record(ast_mod_fn,
-        {meta = #meta{} :: meta(),
-         type = type_not_annotated :: type_annotation(),
-         public = false :: boolean(),
-         name :: string(),
-         args = [] :: [string()],
-         body :: ast_expression()}).
-
--record(ast_mod_test,
-        {meta = #meta{} :: meta(),
-         name :: string(),
-         body :: ast_expression()}).
-
 -record(ast_module,
         {type = type_not_annotated :: type_annotation(),
          statements = [] :: [mod_statement()]}).
@@ -146,12 +164,6 @@
 -record(ast_seq,
         {first :: ast_expression(),
          then :: ast_expression()}).
-
--type mod_statement()
-      :: #ast_mod_fn{}
-      | #ast_mod_test{}
-      .
-
 -type ast_expression()
       :: #ast_enum{}
       | #ast_assignment{}
