@@ -1,10 +1,10 @@
 Nonterminals
-source module
+source module statements
 function test
-exprs expr operator literal elems args call_args
+exprs expr literal elems args call_args
 container_pattern elems_pattern
 pattern
-case_expr case_clauses case_clause field fields.
+case_clauses case_clause field fields.
 
 Terminals
 '(' ')' '[' ']' '::' '{' '}'
@@ -42,10 +42,12 @@ Right 70 '|'.
 source -> module : '$1'.
 source -> exprs  : '$1'.
 
-module -> function               : mod_fun(false, '$1', #ast_module{}).
-module -> function module        : mod_fun(false, '$1', '$2').
-module -> test                   : mod_test('$1', #ast_module{}).
-module -> test module            : mod_test('$1', '$2').
+module -> statements : #ast_module{statements = '$1'}.
+
+statements -> function             : ['$1'].
+statements -> function statements  : ['$1' | '$2'].
+statements -> test                 : ['$1'].
+statements -> test statements      : ['$1' | '$2'].
 
 function -> kw_pub kw_fn name '('      ')' '{' exprs '}' : function(true, '$3', [], '$7').
 function -> kw_pub kw_fn name '(' args ')' '{' exprs '}' : function(true, '$3', '$5', '$8').
@@ -67,8 +69,6 @@ expr -> '[' elems ']'              : list('$3', '$2').
 expr -> '{' '}'                    : #ast_record_empty{}.
 expr -> '{' fields '}'             : record('$1', '$2').
 expr -> '{' expr '|' fields '}'    : record_extend('$2', '$4').
-expr -> case_expr                  : '$1'.
-expr -> operator                   : '$1'.
 expr -> name                       : var('$1').
 expr -> expr '.' name              : record_select('$2', '$1', '$3').
 expr -> expr '(' ')'               : local_call('$2', '$1', []).
@@ -77,25 +77,23 @@ expr -> expr '.' '(' ')'           : fn_call('$2', '$1', []).
 expr -> expr '.' '(' call_args ')' : fn_call('$2', '$1', '$4').
 expr -> kw_raise expr ')'          : raise('$1', '$2').
 expr -> kw_throw expr ')'          : throw_('$1', '$2').
-
-operator -> expr '|>' expr : operator('$2', ['$1', '$3']).
-operator -> expr '::' expr : cons('$2', '$1', '$3').
-operator -> expr '+' expr  : operator('$2', ['$1', '$3']).
-operator -> expr '-' expr  : operator('$2', ['$1', '$3']).
-operator -> expr '*' expr  : operator('$2', ['$1', '$3']).
-operator -> expr '/' expr  : operator('$2', ['$1', '$3']).
-operator -> expr '+.' expr : operator('$2', ['$1', '$3']).
-operator -> expr '-.' expr : operator('$2', ['$1', '$3']).
-operator -> expr '*.' expr : operator('$2', ['$1', '$3']).
-operator -> expr '/.' expr : operator('$2', ['$1', '$3']).
-operator -> expr '<=' expr : operator('$2', ['$1', '$3']).
-operator -> expr '<'  expr : operator('$2', ['$1', '$3']).
-operator -> expr '>'  expr : operator('$2', ['$1', '$3']).
-operator -> expr '>=' expr : operator('$2', ['$1', '$3']).
-operator -> expr '==' expr : operator('$2', ['$1', '$3']).
-operator -> expr '!=' expr : operator('$2', ['$1', '$3']).
-
-case_expr -> kw_case expr '{' case_clauses '}' : case_expr('$1', '$2', '$4').
+expr -> expr '|>' expr : operator('$2', ['$1', '$3']).
+expr -> expr '::' expr : cons('$2', '$1', '$3').
+expr -> expr '+' expr  : operator('$2', ['$1', '$3']).
+expr -> expr '-' expr  : operator('$2', ['$1', '$3']).
+expr -> expr '*' expr  : operator('$2', ['$1', '$3']).
+expr -> expr '/' expr  : operator('$2', ['$1', '$3']).
+expr -> expr '+.' expr : operator('$2', ['$1', '$3']).
+expr -> expr '-.' expr : operator('$2', ['$1', '$3']).
+expr -> expr '*.' expr : operator('$2', ['$1', '$3']).
+expr -> expr '/.' expr : operator('$2', ['$1', '$3']).
+expr -> expr '<=' expr : operator('$2', ['$1', '$3']).
+expr -> expr '<'  expr : operator('$2', ['$1', '$3']).
+expr -> expr '>'  expr : operator('$2', ['$1', '$3']).
+expr -> expr '>=' expr : operator('$2', ['$1', '$3']).
+expr -> expr '==' expr : operator('$2', ['$1', '$3']).
+expr -> expr '!=' expr : operator('$2', ['$1', '$3']).
+expr -> kw_case expr '{' case_clauses '}' : case_expr('$1', '$2', '$4').
 
 case_clauses -> case_clause              : ['$1'].
 case_clauses -> case_clause case_clauses : ['$1'|'$2'].
@@ -151,14 +149,6 @@ literal -> string            : literal('$1').
 Erlang code.
 
 -include("gleam_records.hrl").
-
-mod_fun(false, Function, Module) ->
-  #ast_module{statements = Statements} = Module,
-  Module#ast_module{statements = [Function | Statements]}.
-
-mod_test(Test, Module) ->
-  #ast_module{statements = Statements} = Module,
-  Module#ast_module{statements = [Test | Statements]}.
 
 seq(First, Then) ->
   #ast_seq{first = First, then = Then}.
