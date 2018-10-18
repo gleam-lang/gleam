@@ -35,11 +35,11 @@ enum Expr =
 //   | Lt : int expr * int expr -> bool expr
 
 enum Value(a) =
-  | VBool : fn(Bool) -> Value(Bool)
-  | VInt : fn(Int) -> Value(Int)
+  | VBool(Bool) -> Value(Bool)
+  | VInt(Int) -> Value(Int)
 
 enum Expr(a) =
-  | Val : fn(Value(a)) -> Expr(a)
-  | If : fn(Expr(Bool), Expr(a), Expr(a)) -> Expr(a)
-  | Eq : fn(Expr(a), Expr(a)) -> Expr(Bool)
-  | Lt : fn(Expr(Int), Expr(Int)) -> Expr(Bool)
+  | Val(Value(a)) -> Expr(a)
+  | If(Expr(Bool), Expr(a), Expr(a)) -> Expr(a)
+  | Eq(Expr(a), Expr(a)) -> Expr(Bool)
+  | Lt(Expr(Int), Expr(Int)) -> Expr(Bool)
