@@ -1,4 +1,4 @@
-import order:[GT, EQ, LT]
+import order:[Gt, Eq, Lt]
 
 pub fn not(bool) {
   case bool {
@@ -17,25 +17,25 @@ test not {
 
 pub fn compare(a, b) {
   case (a, b) {
-  | (True, True) -> EQ
-  | (True, False) -> GT
-  | (False, False) -> EQ
-  | (False, True) -> GT
+  | (True, True) -> Eq
+  | (True, False) -> Gt
+  | (False, False) -> Eq
+  | (False, True) -> Gt
   }
 }
 
 test compare {
   compare(True, True)
-    |> assert:equal(_, EQ)
+    |> assert:equal(_, Eq)
 
   compare(True, False)
-    |> assert:equal(_, GT)
+    |> assert:equal(_, Gt)
 
   compare(False, False)
-    |> assert:equal(_, LT)
+    |> assert:equal(_, Lt)
 
   compare(False, True)
-    |> assert:equal(_, GT)
+    |> assert:equal(_, Gt)
 }
 
 pub fn max(a, b) {

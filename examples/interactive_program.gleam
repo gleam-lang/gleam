@@ -3,7 +3,7 @@ import int
 import random
 import string
 import result:[Ok, Error]
-import order:[GT, EQ, LT]
+import order:[Gt, Eq, Lt]
 
 fn run() {
   secret_number = random:int(0, 100)
@@ -30,15 +30,15 @@ Here is some documentation! Hooray!
 """
 fn compare(guess, secret_number) {
   case int:compare(i, secret_number) {
-  | LT ->
+  | Lt ->
     io:print("Too low!")
     loop(secret_number)
 
-  | GT ->
+  | Gt ->
       io:print("Too low!")
       loop(secret_number)
 
-  | EQ ->
+  | Eq ->
       i = int:to_string(secret_number)
       io:print("You got it! The number was" <> i)
   }

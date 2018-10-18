@@ -1,98 +1,98 @@
 import assert
 
 pub enum Order =
-  | LT
-  | EQ
-  | GT
+  | Lt
+  | Eq
+  | Gt
 ;
 
 pub fn reverse(order) {
   case order {
-  | LT -> GT
-  | EQ -> EQ
-  | GT -> LT
+  | Lt -> Gt
+  | Eq -> Eq
+  | Gt -> Lt
   }
 }
 
 test reverse {
-  reverse(LT) |> assert:equal(_, GT)
-  reverse(EQ) |> assert:equal(_, EQ)
-  reverse(GT) |> assert:equal(_, LT)
+  reverse(Lt) |> assert:equal(_, Gt)
+  reverse(Eq) |> assert:equal(_, Eq)
+  reverse(Gt) |> assert:equal(_, Lt)
 }
 
 pub fn to_int(order) {
   case order {
-  | LT -> -1
-  | EQ -> 0
-  | GT -> 1
+  | Lt -> -1
+  | Eq -> 0
+  | Gt -> 1
   }
 }
 
 test to_int {
-  to_int(LT) |> assert:equal(_, -1)
-  to_int(EQ) |> assert:equal(_, 0)
-  to_int(GT) |> assert:equal(_, 1)
+  to_int(Lt) |> assert:equal(_, -1)
+  to_int(Eq) |> assert:equal(_, 0)
+  to_int(Gt) |> assert:equal(_, 1)
 }
 
 pub fn compare(a, b) {
   case {a, b} {
-  | {LT, LT} -> EQ
-  | {LT, _} -> LT
-  | {EQ, EQ} -> EQ
-  | {GT, GT} -> EQ
-  | {EQ, GT} -> LT
-  | _ -> GT
+  | {Lt, Lt} -> Eq
+  | {Lt, _} -> Lt
+  | {Eq, Eq} -> Eq
+  | {Gt, Gt} -> Eq
+  | {Eq, Gt} -> Lt
+  | _ -> Gt
   }
 }
 
 test compare {
-  compare(LT, LT) |> assert:equal(_, EQ)
-  compare(LT, EQ) |> assert:equal(_, LT)
-  compare(LT, GT) |> assert:equal(_, LT)
-  compare(EQ, LT) |> assert:equal(_, GT)
-  compare(EQ, EQ) |> assert:equal(_, EQ)
-  compare(EQ, GT) |> assert:equal(_, LT)
-  compare(GT, LT) |> assert:equal(_, GT)
-  compare(GT, EQ) |> assert:equal(_, GT)
-  compare(GT, GT) |> assert:equal(_, EQ)
+  compare(Lt, Lt) |> assert:equal(_, Eq)
+  compare(Lt, Eq) |> assert:equal(_, Lt)
+  compare(Lt, Gt) |> assert:equal(_, Lt)
+  compare(Eq, Lt) |> assert:equal(_, Gt)
+  compare(Eq, Eq) |> assert:equal(_, Eq)
+  compare(Eq, Gt) |> assert:equal(_, Lt)
+  compare(Gt, Lt) |> assert:equal(_, Gt)
+  compare(Gt, Eq) |> assert:equal(_, Gt)
+  compare(Gt, Gt) |> assert:equal(_, Eq)
 }
 
 pub fn max(a, b) {
   case {a, b} {
-  | {GT, _} -> GT
-  | {EQ, LT} -> EQ
+  | {Gt, _} -> Gt
+  | {Eq, Lt} -> Eq
   | _ -> b
   }
 }
 
 test max {
-  max(LT, LT) |> assert:equal(_, LT)
-  max(LT, EQ) |> assert:equal(_, EQ)
-  max(LT, GT) |> assert:equal(_, GT)
-  max(EQ, LT) |> assert:equal(_, EQ)
-  max(EQ, EQ) |> assert:equal(_, EQ)
-  max(EQ, GT) |> assert:equal(_, GT)
-  max(GT, LT) |> assert:equal(_, GT)
-  max(GT, EQ) |> assert:equal(_, GT)
-  max(GT, GT) |> assert:equal(_, GT)
+  max(Lt, Lt) |> assert:equal(_, Lt)
+  max(Lt, Eq) |> assert:equal(_, Eq)
+  max(Lt, Gt) |> assert:equal(_, Gt)
+  max(Eq, Lt) |> assert:equal(_, Eq)
+  max(Eq, Eq) |> assert:equal(_, Eq)
+  max(Eq, Gt) |> assert:equal(_, Gt)
+  max(Gt, Lt) |> assert:equal(_, Gt)
+  max(Gt, Eq) |> assert:equal(_, Gt)
+  max(Gt, Gt) |> assert:equal(_, Gt)
 }
 
 pub fn min(a, b) {
   case {a, b} {
-  | {LT, _} -> LT
-  | {EQ, GT} -> EQ
+  | {Lt, _} -> Lt
+  | {Eq, Gt} -> Eq
   | _ -> b
   }
 }
 
 test min {
-  min(LT, LT) |> assert:equal(_, LT)
-  min(LT, EQ) |> assert:equal(_, LT)
-  min(LT, GT) |> assert:equal(_, LT)
-  min(EQ, LT) |> assert:equal(_, LT)
-  min(EQ, EQ) |> assert:equal(_, EQ)
-  min(EQ, GT) |> assert:equal(_, EQ)
-  min(GT, LT) |> assert:equal(_, LT)
-  min(GT, EQ) |> assert:equal(_, EQ)
-  min(GT, GT) |> assert:equal(_, GT)
+  min(Lt, Lt) |> assert:equal(_, Lt)
+  min(Lt, Eq) |> assert:equal(_, Lt)
+  min(Lt, Gt) |> assert:equal(_, Lt)
+  min(Eq, Lt) |> assert:equal(_, Lt)
+  min(Eq, Eq) |> assert:equal(_, Eq)
+  min(Eq, Gt) |> assert:equal(_, Eq)
+  min(Gt, Lt) |> assert:equal(_, Lt)
+  min(Gt, Eq) |> assert:equal(_, Eq)
+  min(Gt, Gt) |> assert:equal(_, Gt)
 }
