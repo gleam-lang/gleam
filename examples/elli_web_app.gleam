@@ -5,6 +5,9 @@
 
 import elli:[Get, Delete]
 
+pub type Argument =
+  {}
+
 doc """
 The handle/2 callback is used by Elli to response to requests
 
@@ -26,23 +29,23 @@ pub fn handle(req, _args) {
 // Response builder functions
 
 fn home() {
-  (200, [], "Hello, world!")
+  {200, [], "Hello, world!"}
 }
 
 fn greet_jane() {
-  (200, [], "Jane, so good to see you!")
+  {200, [], "Jane, so good to see you!"}
 }
 
 fn greet(name) {
-  (200, [], "Hello, " <> name <> "!")
+  {200, [], "Hello, " <> name <> "!"}
 }
 
 fn reject_delete() {
-  (405, [], "Sorry, no DELETE requests allowed.")
+  {405, [], "Sorry, no DELETE requests allowed."}
 }
 
 fn not_found() {
-  (404, [], "Not found")
+  {404, [], "Not found"}
 }
 
 // Lastly, a function to start the server.

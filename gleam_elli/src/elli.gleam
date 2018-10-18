@@ -24,17 +24,24 @@ incoming HTTP request.
 pub external type Request
 ;
 
-external fn erl_query_string(Request) -> String = 'elli_request' 'query_str'
-
-external fn erl_start_link(List((Atom, Foreign))) -> Result(Foreign, Pid)
-  = 'elli' 'start_link'
-
 doc """
 The status code, headers and body to send back to the client.
 """
 pub type Response =
   (Int, List(Header), String)
 ;
+
+behaviour type Argument
+;
+
+behaviour fn handle(Request, Argument) -> Response
+
+// API
+
+external fn erl_query_string(Request) -> String = 'elli_request' 'query_str'
+
+external fn erl_start_link(List((Atom, Foreign))) -> Result(Foreign, Pid)
+  = 'elli' 'start_link'
 
 doc """
 Get the request HTTP method.
@@ -74,7 +81,7 @@ pub fn query_string(req) {
 
 pub type StartArguments =
   {
-    callback = Atom,
+    callback = self,
     port = Int,
   }
 ;
