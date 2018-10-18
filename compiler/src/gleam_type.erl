@@ -312,16 +312,20 @@ infer(Ast, Env0) ->
   end.
 
 
+
 -spec module_statement(ast_expression(), {type(), env()})
       -> {ast_expression(), {type(), env()}}.
 module_statement(Statement, {Row, Env0}) ->
   case Statement of
-    #ast_mod_fn{name = Name, args = Args, body = Body} ->
+    #ast_mod_fn{public = Public, name = Name, args = Args, body = Body} ->
       Fn = #ast_fn{args = Args, body = Body},
       {AnnotatedFn, Env1} = infer(Fn, Env0),
       #ast_fn{args = NewArgs, body = NewBody} = AnnotatedFn,
       FnType = fetch(AnnotatedFn),
-      NewRow = #type_row_extend{label = Name, type = FnType, parent = Row},
+      NewRow = case Public of
+        true -> #type_row_extend{label = Name, type = FnType, parent = Row};
+        false -> Row
+      end,
       NewState = {NewRow, Env1},
       AnnotatedStatement = #ast_mod_fn{type = {ok, FnType},
                                        args = NewArgs,
