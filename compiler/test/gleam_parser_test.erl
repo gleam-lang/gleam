@@ -275,3 +275,23 @@ record_extend_test() ->
     , args = [#ast_int{value = 2}]
     },
   ?assertEqual(AST2, parse(tokens(Code2))).
+
+enum_def_test() ->
+  Code = "enum Bearing = | North | East | South | West",
+  AST =
+    #ast_module
+    { statements =
+      [ #ast_mod_enum
+        { meta = #meta{}
+        , public = false
+        , name = "Bearing"
+        , constructors =
+          [ #ast_type{name = "North", args = []}
+          , #ast_type{name = "East", args = []}
+          , #ast_type{name = "South", args = []}
+          , #ast_type{name = "West", args = []}
+          ]
+        }
+      ]
+    },
+  ?assertEqual(AST, parse(tokens(Code))).

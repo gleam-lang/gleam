@@ -1,6 +1,6 @@
 Nonterminals
-source module statements
-function test
+source module statements statement
+function test enum enum_def_constructors enum_def_constructor
 exprs expr literal elems args call_args
 container_pattern elems_pattern
 pattern
@@ -13,9 +13,9 @@ Terminals
 '.'
 '/' '*' '+' '-' '/.' '*.' '+.' '-.'
 int float atom string
-hole name upname upcall
+hole name upname upcall % TODO: Remove upcall
 kw_fn kw_fn_call kw_case kw_test
-kw_raise kw_throw kw_pub.
+kw_raise kw_throw kw_pub kw_enum.
 
 Rootsymbol source.
 
@@ -44,10 +44,19 @@ source -> exprs  : '$1'.
 
 module -> statements : #ast_module{statements = '$1'}.
 
-statements -> function             : ['$1'].
-statements -> function statements  : ['$1' | '$2'].
-statements -> test                 : ['$1'].
-statements -> test statements      : ['$1' | '$2'].
+statements -> statement             : ['$1'].
+statements -> statement statements  : ['$1' | '$2'].
+
+statement -> function : '$1'.
+statement -> test     : '$1'.
+statement -> enum     : '$1'.
+
+enum -> kw_enum upname '=' enum_def_constructors : enum(false, '$2', '$4').
+
+enum_def_constructors -> enum_def_constructor                       : ['$1'].
+enum_def_constructors -> enum_def_constructor enum_def_constructors : ['$1' | '$2'].
+
+enum_def_constructor -> '|' upname : enum_def_constructor('$2').
 
 function -> kw_pub kw_fn name '('      ')' '{' exprs '}' : function(true, '$3', [], '$7').
 function -> kw_pub kw_fn name '(' args ')' '{' exprs '}' : function(true, '$3', '$5', '$8').
@@ -61,8 +70,8 @@ exprs -> expr                : '$1'.
 exprs -> expr exprs          : seq('$1', '$2').
 
 expr -> literal                    : '$1'.
-expr -> upname                     : enum('$1', []).
-expr -> upcall elems ')'           : enum('$1', '$2').
+expr -> upname                     : enum_constructor('$1', []).
+expr -> upcall elems ')'           : enum_constructor('$1', '$2').
 expr -> '{' elems '}'              : tuple('$1', '$2').
 expr -> '[' ']'                    : list('$2', []).
 expr -> '[' elems ']'              : list('$3', '$2').
@@ -127,8 +136,8 @@ pattern -> name                 : var('$1').
 pattern -> hole                 : hole('$1').
 pattern -> pattern '::' pattern : cons('$2', '$1', '$3').
 
-container_pattern -> upname                   : enum('$1', []).
-container_pattern -> upcall elems_pattern ')' : enum('$1', '$2').
+container_pattern -> upname                   : enum_constructor('$1', []).
+container_pattern -> upcall elems_pattern ')' : enum_constructor('$1', '$2').
 container_pattern -> '(' ')'                  : tuple('$1', []).
 container_pattern -> '(' elems_pattern ')'    : tuple('$1', '$2').
 container_pattern -> '{' elems_pattern '}'    : tuple('$1', '$2').
@@ -181,6 +190,17 @@ function(Public, {name, Meta, Name}, Args, Body) ->
               args = Args,
               body = Body}.
 
+enum(Public, {upname, Meta, Name}, Constructors) ->
+  #ast_mod_enum{meta = Meta,
+                public = Public,
+                name = Name,
+                constructors = Constructors}.
+
+enum_def_constructor({upname, Meta, Name}) ->
+  #ast_type{meta = Meta,
+            name = Name,
+            args = []}.
+
 assignment({'=', Meta}, {name, _, Name}, Value, Then) ->
   #ast_assignment{meta = Meta, name = Name, value = Value, then = Then}.
 
@@ -222,7 +242,7 @@ list({']', NilMeta}, Elems) ->
   end,
   lists:foldl(Cons, #ast_nil{meta = NilMeta}, lists:reverse(Elems)).
 
-enum({Type, Meta, Name}, Elems) when Type =:= upname; Type =:= upcall ->
+enum_constructor({Type, Meta, Name}, Elems) when Type =:= upname; Type =:= upcall ->
   #ast_enum{name = Name, meta = Meta, elems = Elems}.
 
 case_expr({kw_case, Meta}, Subject, Clauses) ->
