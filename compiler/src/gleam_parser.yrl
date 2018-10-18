@@ -42,15 +42,15 @@ Right 70 '|'.
 source -> module : '$1'.
 source -> exprs  : '$1'.
 
-module -> kw_pub function        : mod_fun(true, '$2', #ast_module{}).
-module -> kw_pub function module : mod_fun(true, '$2', '$3').
 module -> function               : mod_fun(false, '$1', #ast_module{}).
 module -> function module        : mod_fun(false, '$1', '$2').
 module -> test                   : mod_test('$1', #ast_module{}).
 module -> test module            : mod_test('$1', '$2').
 
-function -> kw_fn name '(' ')' '{' exprs '}'      : function('$2', [], '$6').
-function -> kw_fn name '(' args ')' '{' exprs '}' : function('$2', '$4', '$7').
+function -> kw_pub kw_fn name '('      ')' '{' exprs '}' : function(true, '$3', [], '$7').
+function -> kw_pub kw_fn name '(' args ')' '{' exprs '}' : function(true, '$3', '$5', '$8').
+function ->        kw_fn name '('      ')' '{' exprs '}' : function(false, '$2', [], '$6').
+function ->        kw_fn name '(' args ')' '{' exprs '}' : function(false, '$2', '$4', '$7').
 
 test -> kw_test name '{' exprs '}' : test('$2', '$4').
 
@@ -152,11 +152,6 @@ Erlang code.
 
 -include("gleam_records.hrl").
 
-mod_fun(true, Function, Module) ->
-  #ast_module{statements = Statements, exports = Exports} = Module,
-  #ast_mod_fn{name = Name, args = Args} = Function,
-  Module#ast_module{statements = [Function | Statements],
-                    exports = [{Name, length(Args)} | Exports]};
 mod_fun(false, Function, Module) ->
   #ast_module{statements = Statements} = Module,
   Module#ast_module{statements = [Function | Statements]}.
@@ -189,8 +184,12 @@ local_call({'(', Meta}, Fn, Args) ->
 fn_call({'.', Meta}, Fn, Args) ->
   #ast_fn_call{meta = Meta, fn = Fn, args = Args}.
 
-function({name, Meta, Name}, Args, Body) ->
-  #ast_mod_fn{meta = Meta, name = Name, args = Args, body = Body}.
+function(Public, {name, Meta, Name}, Args, Body) ->
+  #ast_mod_fn{public = Public,
+              meta = Meta,
+              name = Name,
+              args = Args,
+              body = Body}.
 
 assignment({'=', Meta}, {name, _, Name}, Value, Then) ->
   #ast_assignment{meta = Meta, name = Name, value = Value, then = Then}.

@@ -129,6 +129,7 @@
 -record(ast_mod_fn,
         {meta = #meta{} :: meta(),
          type = type_not_annotated :: type_annotation(),
+         public = false :: boolean(),
          name :: string(),
          args = [] :: [string()],
          body :: ast_expression()}).
@@ -139,8 +140,7 @@
          body :: ast_expression()}).
 
 -record(ast_module,
-        {exports = [] :: [export()],
-         type = type_not_annotated :: type_annotation(),
+        {type = type_not_annotated :: type_annotation(),
          statements = [] :: [mod_statement()]}).
 
 -record(ast_seq,

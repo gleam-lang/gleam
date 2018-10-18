@@ -360,9 +360,11 @@ cast_test() ->
 module_test() ->
   Cases = [
     {
-     "fn status() { 'ok' }"
-     "fn list_of(x) { [x] }"
-     "fn get_age(person) { person.age }"
+     "pub fn status() { 'ok' }"
+     "pub fn list_of(x) { [x] }"
+     "pub fn get_age(person) { person.age }"
+     % TODO
+     % "fn private() { 1 }"
      "test whatever { 'ok' }"
      ,
      "module {"

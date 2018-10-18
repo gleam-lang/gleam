@@ -112,10 +112,10 @@ pub_test() ->
   ?assertAST(
     "pub fn id(x) { x }\n",
     #ast_module
-    { exports = [{"id", 1}]
-    , statements =
+    { statements =
       [ #ast_mod_fn
         { meta = #meta{line = 1}
+        , public = true
         , name = "id"
         , args = ["x"]
         , body =

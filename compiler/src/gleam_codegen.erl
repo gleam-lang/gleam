@@ -11,14 +11,14 @@
 % Holds state used in code generation.
 -record(env, {uid = 0}).
 
-% TODO: Remove exports from module struct and instead check each statement to
-% see if it is `pub` or not. Also use the record below to store an export so
-% that we can expose type information.
+% TODO: Use the record below to store an export so that we can expose type
+% information.
+% Again, why did I want this?
 % -record(export, {name, arity, type}).
 
 -record(module_acc, {gen_tests = false, definitions = [], exports = []}).
 
-module(#ast_module{statements = Statements, exports = Exports}, ModName, Options) ->
+module(#ast_module{statements = Statements}, ModName, Options) ->
   PrefixedName = prefix_module(ModName),
   GenTests = proplists:get_value(gen_tests, Options, false),
   Acc0 = lists:foldl(fun module_statement/2,
@@ -29,7 +29,7 @@ module(#ast_module{statements = Statements, exports = Exports}, ModName, Options
   Acc2 = add_module_info(Acc1, PrefixedName),
   Acc = Acc2,
 
-  C_exports = lists:map(fun export/1, Exports) ++ Acc#module_acc.exports,
+  C_exports = Acc#module_acc.exports,
   C_definitions = Acc#module_acc.definitions,
 
   Attributes = [], % What are these?
@@ -60,13 +60,25 @@ add_definition(Acc = #module_acc{definitions = Defs}, Def) ->
 add_export(Acc = #module_acc{exports = Exports}, Export) ->
   Acc#module_acc{exports = [Export | Exports]}.
 
-module_statement(#ast_mod_fn{} = Fn, Acc) ->
-  add_definition(Acc, named_function(Fn));
-module_statement(#ast_mod_test{} = Test, #module_acc{gen_tests = true} = Acc) ->
-  {C_export, C_test} = test(Test),
-  add_export(add_definition(Acc, C_test), C_export);
-module_statement(#ast_mod_test{}, #module_acc{gen_tests = false} = Acc) ->
-  Acc.
+module_statement(Statement, Acc) ->
+  case Statement of
+    #ast_mod_fn{public = false} ->
+      add_definition(Acc, named_function(Statement));
+
+    #ast_mod_fn{name = Name, args = Args, public = true} ->
+      Acc1 = add_definition(Acc, named_function(Statement)),
+      add_export(Acc1, export(Name, length(Args)));
+
+    #ast_mod_test{} ->
+      case Acc#module_acc.gen_tests of
+        true ->
+          {C_export, C_test} = test(Statement),
+          add_export(add_definition(Acc, C_test), C_export);
+
+        false ->
+          Acc
+      end
+  end.
 
 test(#ast_mod_test{name = Name, body = Body}) ->
   TestName = Name ++ "_test",
@@ -75,6 +87,9 @@ test(#ast_mod_test{name = Name, body = Body}) ->
   {C_export, C_fun}.
 
 export({Name, Arity}) when is_list(Name), is_integer(Arity) ->
+  cerl:c_fname(list_to_atom(Name), Arity).
+
+export(Name, Arity) when is_list(Name), is_integer(Arity) ->
   cerl:c_fname(list_to_atom(Name), Arity).
 
 module_info(ModuleName, Params) when is_list(ModuleName) ->
