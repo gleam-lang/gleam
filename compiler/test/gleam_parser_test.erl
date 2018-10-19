@@ -277,21 +277,46 @@ record_extend_test() ->
   ?assertEqual(AST2, parse(tokens(Code2))).
 
 enum_def_test() ->
-  Code = "enum Bearing = | North | East | South | West",
-  AST =
-    #ast_module
-    { statements =
-      [ #ast_mod_enum
-        { meta = #meta{}
-        , public = false
-        , name = "Bearing"
-        , constructors =
-          [ #ast_type{name = "North", args = []}
-          , #ast_type{name = "East", args = []}
-          , #ast_type{name = "South", args = []}
-          , #ast_type{name = "West", args = []}
-          ]
-        }
-      ]
-    },
-  ?assertEqual(AST, parse(tokens(Code))).
+  Cases = [
+    {
+      "enum Bearing = | North | East | South | West",
+      #ast_module
+      { statements =
+        [ #ast_mod_enum
+          { meta = #meta{}
+          , public = false
+          , name = "Bearing"
+          , args = []
+          , constructors =
+            [ #ast_type_constructor{name = "North", args = []}
+            , #ast_type_constructor{name = "East", args = []}
+            , #ast_type_constructor{name = "South", args = []}
+            , #ast_type_constructor{name = "West", args = []}
+            ]
+          }
+        ]
+      }
+    % },
+    % {
+    %   "enum Maybe(a) = | Just(a) | Nothing",
+    %   #ast_module
+    %   { statements =
+    %     [ #ast_mod_enum
+    %       { meta = #meta{}
+    %       , public = false
+    %       , name = "Maybe"
+    %       , args = ["a"]
+    %       , constructors =
+    %         [ #ast_type_constructor{name = "Maybe", args = [#ast_type_var{name = "a"}]}
+    %         , #ast_type_constructor{name = "Nothing", args = []}
+    %         ]
+    %       }
+    %     ]
+    %   }
+    }
+  ],
+  test_cases(Cases).
+
+
+test_cases(Cases) ->
+  lists:map(fun({Code, Ast}) -> ?assertEqual(Ast, parse(tokens(Code))) end, Cases).

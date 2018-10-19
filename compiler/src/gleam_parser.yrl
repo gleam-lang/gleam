@@ -13,7 +13,7 @@ Terminals
 '.'
 '/' '*' '+' '-' '/.' '*.' '+.' '-.'
 int float atom string
-hole name upname upcall % TODO: Remove upcall
+hole name upname
 kw_fn kw_fn_call kw_case kw_test
 kw_raise kw_throw kw_pub kw_enum.
 
@@ -71,7 +71,7 @@ exprs -> expr exprs          : seq('$1', '$2').
 
 expr -> literal                    : '$1'.
 expr -> upname                     : enum_constructor('$1', []).
-expr -> upcall elems ')'           : enum_constructor('$1', '$2').
+expr -> upname '(' elems ')'       : enum_constructor('$1', '$3').
 expr -> '{' elems '}'              : tuple('$1', '$2').
 expr -> '[' ']'                    : list('$2', []).
 expr -> '[' elems ']'              : list('$3', '$2').
@@ -136,13 +136,13 @@ pattern -> name                 : var('$1').
 pattern -> hole                 : hole('$1').
 pattern -> pattern '::' pattern : cons('$2', '$1', '$3').
 
-container_pattern -> upname                   : enum_constructor('$1', []).
-container_pattern -> upcall elems_pattern ')' : enum_constructor('$1', '$2').
-container_pattern -> '(' ')'                  : tuple('$1', []).
-container_pattern -> '(' elems_pattern ')'    : tuple('$1', '$2').
-container_pattern -> '{' elems_pattern '}'    : tuple('$1', '$2').
-container_pattern -> '[' ']'                  : list('$2', []).
-container_pattern -> '[' elems_pattern ']'    : list('$3', '$2').
+container_pattern -> upname                       : enum_constructor('$1', []).
+container_pattern -> upname '(' elems_pattern ')' : enum_constructor('$1', '$3').
+container_pattern -> '(' ')'                      : tuple('$1', []).
+container_pattern -> '(' elems_pattern ')'        : tuple('$1', '$2').
+container_pattern -> '{' elems_pattern '}'        : tuple('$1', '$2').
+container_pattern -> '[' ']'                      : list('$2', []).
+container_pattern -> '[' elems_pattern ']'        : list('$3', '$2').
 
 elems_pattern -> pattern                   : ['$1'].
 elems_pattern -> pattern ','               : ['$1'].
@@ -197,9 +197,9 @@ enum(Public, {upname, Meta, Name}, Constructors) ->
                 constructors = Constructors}.
 
 enum_def_constructor({upname, Meta, Name}) ->
-  #ast_type{meta = Meta,
-            name = Name,
-            args = []}.
+  #ast_type_constructor{meta = Meta,
+                        name = Name,
+                        args = []}.
 
 assignment({'=', Meta}, {name, _, Name}, Value, Then) ->
   #ast_assignment{meta = Meta, name = Name, value = Value, then = Then}.
@@ -242,7 +242,7 @@ list({']', NilMeta}, Elems) ->
   end,
   lists:foldl(Cons, #ast_nil{meta = NilMeta}, lists:reverse(Elems)).
 
-enum_constructor({Type, Meta, Name}, Elems) when Type =:= upname; Type =:= upcall ->
+enum_constructor({upname, Meta, Name}, Elems) ->
   #ast_enum{name = Name, meta = Meta, elems = Elems}.
 
 case_expr({kw_case, Meta}, Subject, Clauses) ->
