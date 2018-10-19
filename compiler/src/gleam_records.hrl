@@ -6,12 +6,19 @@
 -type export() :: {string(), non_neg_integer()}.
 -type type_annotation() :: type_not_annotated | {ok, type()}.
 
--record(ast_type,
+-record(ast_type_constructor,
         {meta = #meta{} :: meta(),
          name :: string(),
          args = [] :: [ast_type()]}).
 
--type ast_type() :: #ast_type{}.
+-record(ast_type_var,
+        {meta = #meta{} :: meta(),
+         name :: string()}).
+
+-type ast_type()
+      :: #ast_type_constructor{}
+      | #ast_type_var{}
+      .
 
 -record(ast_mod_fn,
         {meta = #meta{} :: meta(),
@@ -29,6 +36,7 @@
 -record(ast_mod_enum,
         {meta = #meta{} :: meta(),
          public = false :: boolean(),
+         args = [] :: [string()],
          name :: string(),
          constructors = [] :: [ast_type()]}).
 
