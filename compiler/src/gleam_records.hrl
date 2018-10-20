@@ -139,8 +139,9 @@
 
 -record(ast_enum,
         {meta = #meta{} :: meta(),
+         type = type_not_annotated :: type_annotation(),
          name :: string(),
-         elems = [] :: [ast_expression()]}).
+         elems = [] :: [ast_expression()]}). % TODO: Rename to args
 
 -record(ast_clause,
         {meta = #meta{} :: meta(),
@@ -212,7 +213,6 @@
 -type id() :: reference().
 -type type_var_reference() :: reference().
 -type level() :: integer().
-
 
 -record(type_const, {type :: string()}).
 -record(type_fn, {args :: list(type()), return :: type()}).

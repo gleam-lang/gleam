@@ -201,6 +201,12 @@ infer(Ast, Env0) ->
       AnnotatedAst = Ast#ast_local_call{type = {ok, ReturnType}},
       {AnnotatedAst, Env1};
 
+    #ast_enum{name = Name, elems = Args} ->
+      Fn = #ast_var{name = Name},
+      {ReturnType, Env1} = infer_call(Fn, Args, Env0),
+      AnnotatedAst = Ast#ast_enum{type = {ok, ReturnType}},
+      {AnnotatedAst, Env1};
+
     #ast_fn{args = Args, body = Body} ->
       {ArgTypes, ArgsEnv} = gleam:thread_map(fun(_, E) -> new_var(E) end, Args, Env0),
       Insert =
@@ -312,11 +318,39 @@ infer(Ast, Env0) ->
   end.
 
 
+-spec ast_type(ast_type(), env()) -> type().
+ast_type(AstType, Env0) ->
+  case AstType of
+    % TODO: Check type exists.
+    #ast_type_constructor{name = Name, args = []} ->
+      T = #type_const{type = Name},
+      {T, Env0};
+
+    #ast_type_constructor{name = Name, args = Args} ->
+      {ArgsTypes, Env1} = gleam:thread_map(fun ast_type/2, Args, Env0),
+      T = #type_app{type = Name, args = ArgsTypes},
+      {T, Env1}
+  end.
+
 
 -spec module_statement(ast_expression(), {type(), env()})
       -> {ast_expression(), {type(), env()}}.
 module_statement(Statement, {Row, Env0}) ->
   case Statement of
+    #ast_mod_enum{public = _Public, name = Name, args = Args, constructors = Constructors} ->
+      Type = case Args of
+        [] -> #type_const{type = Name};
+        _ -> #type_app{type = Name, args = Args}
+      end,
+      % TODO: Exporting of public types
+      F = fun(#ast_enum_def{name = CName, args = CArgs}, InnerEnv0) ->
+        {CArgsTypes, InnerEnv1} = gleam:thread_map(fun ast_type/2, CArgs, InnerEnv0),
+        T = #type_fn{args = CArgsTypes, return = Type},
+        env_extend(CName, T, InnerEnv1)
+      end,
+      Env1 = lists:foldl(F, Env0, Constructors),
+      {Statement, {Row, Env1}};
+
     #ast_mod_fn{public = Public, name = Name, args = Args, body = Body} ->
       Fn = #ast_fn{args = Args, body = Body},
       {AnnotatedFn, Env1} = infer(Fn, Env0),
@@ -365,6 +399,9 @@ fetch_clause_type(#ast_clause{value = Value}) ->
 fetch(Ast) ->
   case Ast of
     #ast_operator{type = {ok, Type}} ->
+      Type;
+
+    #ast_enum{type = {ok, Type}} ->
       Type;
 
     #ast_case{type = {ok, Type}} ->
@@ -522,6 +559,9 @@ resolve_type_vars(Ast, Env) ->
 -spec statement_resolve_type_vars(ast_expression(), env()) -> ast_expression().
 statement_resolve_type_vars(Statement, Env) ->
   case Statement of
+    #ast_mod_enum{} ->
+      Statement;
+
     % % TODO: resolve type vars in args and body?
     #ast_mod_fn{type = {ok, Type}} ->
       NewType = type_resolve_type_vars(Type, Env),

@@ -96,22 +96,22 @@ expr -> expr '.' '(' ')'           : fn_call('$2', '$1', []).
 expr -> expr '.' '(' call_args ')' : fn_call('$2', '$1', '$4').
 expr -> kw_raise expr ')'          : raise('$1', '$2').
 expr -> kw_throw expr ')'          : throw_('$1', '$2').
-expr -> expr '|>' expr : operator('$2', ['$1', '$3']).
-expr -> expr '::' expr : cons('$2', '$1', '$3').
-expr -> expr '+' expr  : operator('$2', ['$1', '$3']).
-expr -> expr '-' expr  : operator('$2', ['$1', '$3']).
-expr -> expr '*' expr  : operator('$2', ['$1', '$3']).
-expr -> expr '/' expr  : operator('$2', ['$1', '$3']).
-expr -> expr '+.' expr : operator('$2', ['$1', '$3']).
-expr -> expr '-.' expr : operator('$2', ['$1', '$3']).
-expr -> expr '*.' expr : operator('$2', ['$1', '$3']).
-expr -> expr '/.' expr : operator('$2', ['$1', '$3']).
-expr -> expr '<=' expr : operator('$2', ['$1', '$3']).
-expr -> expr '<'  expr : operator('$2', ['$1', '$3']).
-expr -> expr '>'  expr : operator('$2', ['$1', '$3']).
-expr -> expr '>=' expr : operator('$2', ['$1', '$3']).
-expr -> expr '==' expr : operator('$2', ['$1', '$3']).
-expr -> expr '!=' expr : operator('$2', ['$1', '$3']).
+expr -> expr '::' expr             : cons('$2', '$1', '$3').
+expr -> expr '|>' expr             : op('$2', ['$1', '$3']).
+expr -> expr '+' expr              : op('$2', ['$1', '$3']).
+expr -> expr '-' expr              : op('$2', ['$1', '$3']).
+expr -> expr '*' expr              : op('$2', ['$1', '$3']).
+expr -> expr '/' expr              : op('$2', ['$1', '$3']).
+expr -> expr '+.' expr             : op('$2', ['$1', '$3']).
+expr -> expr '-.' expr             : op('$2', ['$1', '$3']).
+expr -> expr '*.' expr             : op('$2', ['$1', '$3']).
+expr -> expr '/.' expr             : op('$2', ['$1', '$3']).
+expr -> expr '<=' expr             : op('$2', ['$1', '$3']).
+expr -> expr '<'  expr             : op('$2', ['$1', '$3']).
+expr -> expr '>'  expr             : op('$2', ['$1', '$3']).
+expr -> expr '>=' expr             : op('$2', ['$1', '$3']).
+expr -> expr '==' expr             : op('$2', ['$1', '$3']).
+expr -> expr '!=' expr             : op('$2', ['$1', '$3']).
 expr -> kw_case expr '{' case_clauses '}' : case_expr('$1', '$2', '$4').
 
 case_clauses -> case_clause              : ['$1'].
@@ -184,7 +184,7 @@ test({name, Meta, Name}, Body) ->
 fn({_, Meta}, Args, Body) ->
   #ast_fn{meta = Meta, args = Args, body = Body}.
 
-operator({Operator, Meta}, Args) ->
+op({Operator, Meta}, Args) ->
   #ast_operator{meta = Meta, name = atom_to_list(Operator), args = Args}.
 
 local_call({'(', Meta}, Fn, Args) ->

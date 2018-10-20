@@ -367,6 +367,27 @@ module_test() ->
      " fn public() -> Int"
      "}"
     },
+
+    {
+     "enum Is = | Yes | No "
+     "pub fn yes() { Yes }"
+     "pub fn no() { No }"
+     ,
+     "module {"
+     " fn yes() -> Is"
+     " fn no() -> Is"
+     "}"
+    },
+
+    {
+     "enum Num = | I(Int) "
+     "pub fn num(n) { I(n) }"
+     ,
+     "module {"
+     " fn num(Int) -> Num"
+     "}"
+    },
+
     {
      "pub fn status() { 'ok' }"
      "pub fn list_of(x) { [x] }"
@@ -381,6 +402,8 @@ module_test() ->
     }
   ],
   test_infer(Cases).
+
+% TODO: Test enums that won't type check
 
 % Depends on tuple destructuring
 % ; ("choose(fun x y -> x, fun x y -> y)", OK "forall[a] (a, a) -> a") *)
