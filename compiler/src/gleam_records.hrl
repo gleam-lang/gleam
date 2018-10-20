@@ -6,6 +6,11 @@
 -type export() :: {string(), non_neg_integer()}.
 -type type_annotation() :: type_not_annotated | {ok, type()}.
 
+-record(ast_enum_def,
+        {meta = #meta{} :: meta(),
+         name :: string(),
+         args = [] :: [ast_type()]}).
+
 -record(ast_type_constructor,
         {meta = #meta{} :: meta(),
          name :: string(),
