@@ -1,9 +1,9 @@
 Nonterminals
 source module statements statement
-function test enum enum_def_constructors enum_def_constructor
+function test enum enum_defs enum_def
 exprs expr literal elems args call_args
-container_pattern elems_pattern
-pattern
+container_pattern elems_pattern pattern
+type type_args
 case_clauses case_clause field fields.
 
 Terminals
@@ -51,12 +51,22 @@ statement -> function : '$1'.
 statement -> test     : '$1'.
 statement -> enum     : '$1'.
 
-enum -> kw_enum upname '=' enum_def_constructors : enum(false, '$2', '$4').
+enum -> kw_pub kw_enum upname              '=' enum_defs : enum(true, '$3', [], '$5').
+enum -> kw_pub kw_enum upname '(' args ')' '=' enum_defs : enum(true, '$3', '$5', '$8').
+enum ->        kw_enum upname              '=' enum_defs : enum(false, '$2', [], '$4').
+enum ->        kw_enum upname '(' args ')' '=' enum_defs : enum(false, '$2', '$4', '$7').
 
-enum_def_constructors -> enum_def_constructor                       : ['$1'].
-enum_def_constructors -> enum_def_constructor enum_def_constructors : ['$1' | '$2'].
+enum_defs -> enum_def           : ['$1'].
+enum_defs -> enum_def enum_defs : ['$1' | '$2'].
 
-enum_def_constructor -> '|' upname : enum_def_constructor('$2').
+enum_def -> '|' upname                   : enum_def('$2', []).
+enum_def -> '|' upname '(' type_args ')' : enum_def('$2', '$4').
+
+type_args -> type               : ['$1'].
+type_args -> type ',' type_args : ['$1' | '$3'].
+
+type -> upname : type_constructor('$1', []).
+type -> name   : type_var('$1').
 
 function -> kw_pub kw_fn name '('      ')' '{' exprs '}' : function(true, '$3', [], '$7').
 function -> kw_pub kw_fn name '(' args ')' '{' exprs '}' : function(true, '$3', '$5', '$8').
@@ -190,16 +200,26 @@ function(Public, {name, Meta, Name}, Args, Body) ->
               args = Args,
               body = Body}.
 
-enum(Public, {upname, Meta, Name}, Constructors) ->
+enum(Public, {upname, Meta, Name}, Args, Constructors) ->
   #ast_mod_enum{meta = Meta,
                 public = Public,
                 name = Name,
+                args = Args,
                 constructors = Constructors}.
 
-enum_def_constructor({upname, Meta, Name}) ->
+enum_def({upname, Meta, Name}, Args) ->
+  #ast_enum_def{meta = Meta,
+                name = Name,
+                args = Args}.
+
+type_constructor({upname, Meta, Name}, Args) ->
   #ast_type_constructor{meta = Meta,
                         name = Name,
-                        args = []}.
+                        args = Args}.
+
+type_var({name, Meta, Name}) ->
+  #ast_type_var{meta = Meta,
+                name = Name}.
 
 assignment({'=', Meta}, {name, _, Name}, Value, Then) ->
   #ast_assignment{meta = Meta, name = Name, value = Value, then = Then}.

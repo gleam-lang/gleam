@@ -279,7 +279,12 @@ record_extend_test() ->
 enum_def_test() ->
   Cases = [
     {
-      "enum Bearing = | North | East | South | West",
+      "enum Bearing = "
+      "  | North"
+      "  | East"
+      "  | South"
+      "  | West"
+      ,
       #ast_module
       { statements =
         [ #ast_mod_enum
@@ -288,31 +293,78 @@ enum_def_test() ->
           , name = "Bearing"
           , args = []
           , constructors =
-            [ #ast_type_constructor{name = "North", args = []}
-            , #ast_type_constructor{name = "East", args = []}
-            , #ast_type_constructor{name = "South", args = []}
-            , #ast_type_constructor{name = "West", args = []}
+            [ #ast_enum_def{name = "North", args = []}
+            , #ast_enum_def{name = "East", args = []}
+            , #ast_enum_def{name = "South", args = []}
+            , #ast_enum_def{name = "West", args = []}
             ]
           }
         ]
       }
-    % },
-    % {
-    %   "enum Maybe(a) = | Just(a) | Nothing",
-    %   #ast_module
-    %   { statements =
-    %     [ #ast_mod_enum
-    %       { meta = #meta{}
-    %       , public = false
-    %       , name = "Maybe"
-    %       , args = ["a"]
-    %       , constructors =
-    %         [ #ast_type_constructor{name = "Maybe", args = [#ast_type_var{name = "a"}]}
-    %         , #ast_type_constructor{name = "Nothing", args = []}
-    %         ]
-    %       }
-    %     ]
-    %   }
+    },
+
+    {
+      "enum Maybe(a) ="
+      "  | Just(a) "
+      "  | Nothing"
+      ,
+      #ast_module
+      { statements =
+        [ #ast_mod_enum
+          { meta = #meta{}
+          , public = false
+          , name = "Maybe"
+          , args = ["a"]
+          , constructors =
+            [ #ast_enum_def{name = "Just", args = [#ast_type_var{name = "a"}]}
+            , #ast_enum_def{name = "Nothing", args = []}
+            ]
+          }
+        ]
+      }
+    },
+
+    {
+      "pub enum Ok ="
+      "  | Ok"
+      ,
+      #ast_module
+      { statements =
+        [ #ast_mod_enum
+          { meta = #meta{}
+          , public = true
+          , name = "Ok"
+          , args = []
+          , constructors =
+            [ #ast_enum_def{name = "Ok", args = []}
+            ]
+          }
+        ]
+      }
+    },
+
+    {
+      "enum Event(state, msg) ="
+      "  | Reply(state, msg)"
+      "  | NoReply(state)"
+      "  | ShutDown(Reason)"
+      ,
+      #ast_module
+      { statements =
+        [ #ast_mod_enum
+          { meta = #meta{}
+          , public = false
+          , name = "Event"
+          , args = ["state", "msg"]
+          , constructors =
+            [ #ast_enum_def{name = "Reply", args = [#ast_type_var{name = "state"},
+                                                    #ast_type_var{name = "msg"}]}
+            , #ast_enum_def{name = "NoReply", args = [#ast_type_var{name = "state"}]}
+            , #ast_enum_def{name = "ShutDown", args = [#ast_type_constructor{name = "Reason"}]}
+            ]
+          }
+        ]
+      }
     }
   ],
   test_cases(Cases).
