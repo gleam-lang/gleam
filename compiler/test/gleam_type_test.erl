@@ -20,16 +20,34 @@ test_infer(Cases) ->
 cannot_unify_test() ->
   Cases = [
     "1 +. 1",
+
     "{1, 1} + 1",
+
     "1 + 2.0",
+
     "1 == 2.0",
+
     "[1, 2.0]",
+
     "[1, 2, 3, 4, 5, 'six']",
+
     "{'ok', 1} != {'ok', 1, 'extra'}",
+
     "{} == {a = 1}",
+
     "1 == {a = 1}",
+
     "{a = 1} != 1",
-    "test whatever { 1 == '1' }"
+
+    "test whatever { 1 == '1' }",
+
+    "enum A = | A "
+    "enum B = | B "
+    "fn run() { A == B }"
+    ,
+
+    "enum A = | A(Int) "
+    "fn run() { A(1.0) }"
   ],
   Test =
     fun(Src) ->
@@ -369,6 +387,17 @@ module_test() ->
     },
 
     {
+     "fn id(x) { x }"
+     "pub fn int() { id(1) }"
+     "pub fn float() { id(1.0) }"
+     ,
+     "module {"
+     " fn int() -> Int"
+     " fn float() -> Float"
+     "}"
+    },
+
+    {
      "enum Is = | Yes | No "
      "pub fn yes() { Yes }"
      "pub fn no() { No }"
@@ -403,7 +432,23 @@ module_test() ->
   ],
   test_infer(Cases).
 
+enum_test() ->
+  Cases = [
+    {
+     "enum Box(a) = | Box(a) "
+     "pub fn int() { Box(1) }"
+     "pub fn float() { Box(1.0) }"
+     ,
+     "module {"
+     " fn int() -> Box(Int)"
+     " fn float() -> Box(Float)"
+     "}"
+    }
+  ],
+  test_infer(Cases).
+
 % TODO: Test enums that won't type check
+% TODO: Test that enum constructors with type vars must have the type vars at the top level
 
 % Depends on tuple destructuring
 % ; ("choose(fun x y -> x, fun x y -> y)", OK "forall[a] (a, a) -> a") *)

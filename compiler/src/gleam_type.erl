@@ -9,10 +9,12 @@
 -endif.
 
 -type var_name() :: string().
+-type type_name() :: string().
 
 -record(env,
         {level = 0 :: level(),
          vars = #{} :: #{var_name() => type()},
+         types = #{} :: #{type_name() => type()},
          type_refs = #{} :: #{reference() => type_var()}}).
 
 -type env() :: #env{}.
@@ -233,11 +235,10 @@ infer(Ast, Env0) ->
       end;
 
     #ast_assignment{name = Name, value = Value, then = Then} ->
-      {InferredValue, Env2} = infer(Value, increment_env_level(Env0)),
-      Env3 = decrement_env_level(Env2),
-      {GeneralizedType, Env4} = generalize(fetch(InferredValue), Env3),
-      ExtendedEnv = env_extend(Name, GeneralizedType, Env4),
-      infer(Then, ExtendedEnv);
+      {_ValueType, AnnotatedValue, Env1} = infer_assignment(Name, Value, Env0),
+      {AnnotatedThen, Env2} = infer(Then, Env1),
+      AnnotatedAst = Ast#ast_assignment{value = AnnotatedValue, then = AnnotatedThen},
+      {AnnotatedAst, Env2};
 
     #ast_tuple{elems = Elems} ->
       {AnnotatedElems, NewEnv} = gleam:thread_map(fun infer/2, Elems, Env0),
@@ -318,8 +319,8 @@ infer(Ast, Env0) ->
   end.
 
 
--spec ast_type(ast_type(), env()) -> type().
-ast_type(AstType, Env0) ->
+-spec ast_type_to_type(ast_type(), env()) -> {type(), env()}.
+ast_type_to_type(AstType, Env0) ->
   case AstType of
     % TODO: Check type exists.
     #ast_type_constructor{name = Name, args = []} ->
@@ -327,35 +328,73 @@ ast_type(AstType, Env0) ->
       {T, Env0};
 
     #ast_type_constructor{name = Name, args = Args} ->
-      {ArgsTypes, Env1} = gleam:thread_map(fun ast_type/2, Args, Env0),
+      {ArgsTypes, Env1} = gleam:thread_map(fun ast_type_to_type/2, Args, Env0),
       T = #type_app{type = Name, args = ArgsTypes},
-      {T, Env1}
+      {T, Env1};
+
+    #ast_type_var{name = Name} ->
+      case env_lookup_type(Name, Env0) of
+        {ok, Var} ->
+          {Var, Env0};
+
+        error ->
+          error(some_error_about_not_knowing_the_type) % TODO
+      end
   end.
 
 
--spec module_statement(ast_expression(), {type(), env()})
-      -> {ast_expression(), {type(), env()}}.
+-spec infer_assignment(string(), ast_expression(), env()) -> {type(), ast_expression(), env()}.
+infer_assignment(Name, Value, Env0) ->
+  {InferredValue, Env2} = infer(Value, increment_env_level(Env0)),
+  Env3 = decrement_env_level(Env2),
+  {GeneralizedType, Env4} = generalize(fetch(InferredValue), Env3),
+  Env5 = env_extend(Name, GeneralizedType, Env4),
+  {GeneralizedType, InferredValue, Env5}.
+
+
+-spec module_statement(mod_statement(), {type(), env()})
+      -> {mod_statement(), {type(), env()}}.
 module_statement(Statement, {Row, Env0}) ->
   case Statement of
     #ast_mod_enum{public = _Public, name = Name, args = Args, constructors = Constructors} ->
-      Type = case Args of
-        [] -> #type_const{type = Name};
-        _ -> #type_app{type = Name, args = Args}
-      end,
-      % TODO: Exporting of public types
-      F = fun(#ast_enum_def{name = CName, args = CArgs}, InnerEnv0) ->
-        {CArgsTypes, InnerEnv1} = gleam:thread_map(fun ast_type/2, CArgs, InnerEnv0),
-        T = #type_fn{args = CArgsTypes, return = Type},
-        env_extend(CName, T, InnerEnv1)
-      end,
-      Env1 = lists:foldl(F, Env0, Constructors),
-      {Statement, {Row, Env1}};
+      % Store the original types so the type vars in the enum definition
+      % (i.e. the a in Maybe(a)) do not leak outside the definition.
+      OriginalTypes = Env0#env.types,
+
+      % Register each type var in the env for later use in constructors.
+      NewVar =
+        fun(TypeVarName, E0) ->
+          {Var, E1} = new_generic_var(E0),
+          E2 = env_register_type(TypeVarName, Var, E1),
+          {Var, E2}
+        end,
+      {ArgsTypes, Env1} = gleam:thread_map(NewVar, Args, Env0),
+      Type =
+        case Args of
+          [] -> #type_const{type = Name};
+          _ -> #type_app{type = Name, args = ArgsTypes}
+        end,
+
+      % Create a function type for each constructor of the enum.
+      % Makes use of the type vars inserted in to the env previously.
+      RegisterConstructor =
+        fun(#ast_enum_def{name = CName, args = CArgs}, InnerEnv0) ->
+          {CArgsTypes, InnerEnv1} = gleam:thread_map(fun ast_type_to_type/2, CArgs, InnerEnv0),
+          T = #type_fn{args = CArgsTypes, return = Type},
+          env_extend(CName, T, InnerEnv1)
+        end,
+      Env2 = lists:foldl(RegisterConstructor, Env1, Constructors),
+
+      % Reset the env types to prevent the type vars leaking out.
+      Env3 = Env2#env{types = OriginalTypes},
+      % Register the new enum type
+      Env4 = env_register_type(Name, Type, Env3),
+      {Statement, {Row, Env4}};
 
     #ast_mod_fn{public = Public, name = Name, args = Args, body = Body} ->
       Fn = #ast_fn{args = Args, body = Body},
-      {AnnotatedFn, Env1} = infer(Fn, Env0),
+      {FnType, AnnotatedFn, Env1} = infer_assignment(Name, Fn, Env0),
       #ast_fn{args = NewArgs, body = NewBody} = AnnotatedFn,
-      FnType = fetch(AnnotatedFn),
       NewRow = case Public of
         true -> #type_row_extend{label = Name, type = FnType, parent = Row};
         false -> Row
@@ -440,6 +479,9 @@ fetch(Ast) ->
     #ast_seq{then = Then} ->
       fetch(Then);
 
+    #ast_assignment{then = Then} ->
+      fetch(Then);
+
     #ast_record_empty{} ->
       #type_record{row = #type_row_empty{}};
 
@@ -485,6 +527,10 @@ resolve_type_vars(Ast, Env) ->
     #ast_seq{first = First, then = Then} ->
       Ast#ast_seq{first = resolve_type_vars(First, Env),
                   then = resolve_type_vars(Then, Env)};
+
+    #ast_assignment{value = Value, then = Then} ->
+      Ast#ast_assignment{value = resolve_type_vars(Value, Env),
+                         then = resolve_type_vars(Then, Env)};
 
     #ast_operator{type = {ok, Type}} ->
       NewType = type_resolve_type_vars(Type, Env),
@@ -608,6 +654,9 @@ type_resolve_type_vars(Type, Env) ->
 
     #type_var{type = Ref} ->
       case env_lookup_type_ref(Ref, Env) of
+        #type_var_generic{id = Id} ->
+          #type_var{type = Id};
+
         #type_var_unbound{id = Id} ->
           #type_var{type = Id};
 
@@ -689,9 +738,19 @@ env_extend(Name, GeneralizedType, Env = #env{vars = Vars}) ->
   NewVars = maps:put(Name, GeneralizedType, Vars),
   Env#env{vars = NewVars}.
 
+% TODO: Raise if we attempt to overwrite an existing type.
+-spec env_register_type(type_name(), type(), env()) -> env().
+env_register_type(Name, Type, Env = #env{types = Types}) ->
+  NewTypes = maps:put(Name, Type, Types),
+  Env#env{types = NewTypes}.
+
 -spec env_lookup(var_name(), env()) -> error | {ok, type()}.
 env_lookup(Name, #env{vars = Vars}) ->
   maps:find(Name, Vars).
+
+-spec env_lookup_type(type_name(), env()) -> error | {ok, type()}.
+env_lookup_type(Name, #env{types = Types}) ->
+  maps:find(Name, Types).
 
 -spec env_lookup_type_ref(type_var_reference(), env()) -> type_var().
 env_lookup_type_ref(Name, #env{type_refs = Refs}) ->
