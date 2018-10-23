@@ -18,7 +18,6 @@ test       : {token, {kw_test, m(TokenLine)}}.
 enum       : {token, {kw_enum, m(TokenLine)}}.
 pub        : {token, {kw_pub, m(TokenLine)}}.
 fn         : {token, {kw_fn, m(TokenLine)}}.
-fn\(       : {token, {kw_fn_call, m(TokenLine)}}.
 \|>        : {token, {'|>', m(TokenLine)}}.
 !=         : {token, {'!=', m(TokenLine)}}.
 ==         : {token, {'==', m(TokenLine)}}.

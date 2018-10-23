@@ -2,7 +2,7 @@ Nonterminals
 source module statements statement
 function test enum enum_defs enum_def
 exprs expr literal elems args call_args
-container_pattern elems_pattern pattern
+elems_pattern pattern
 type type_args
 case_clauses case_clause field fields.
 
@@ -14,7 +14,7 @@ Terminals
 '/' '*' '+' '-' '/.' '*.' '+.' '-.'
 int float atom string
 hole name upname
-kw_fn kw_fn_call kw_case kw_test
+kw_fn kw_case kw_test
 kw_raise kw_throw kw_pub kw_enum.
 
 Rootsymbol source.
@@ -113,6 +113,8 @@ expr -> expr '>=' expr             : op('$2', ['$1', '$3']).
 expr -> expr '==' expr             : op('$2', ['$1', '$3']).
 expr -> expr '!=' expr             : op('$2', ['$1', '$3']).
 expr -> kw_case expr '{' case_clauses '}' : case_expr('$1', '$2', '$4').
+expr -> kw_fn '('      ')' '{' exprs '}'  : fn('$1', [], '$5').
+expr -> kw_fn '(' args ')' '{' exprs '}'  : fn('$1', '$3', '$6').
 
 case_clauses -> case_clause              : ['$1'].
 case_clauses -> case_clause case_clauses : ['$1'|'$2'].
@@ -140,26 +142,22 @@ fields -> field ',' fields  : ['$1' | '$3'].
 
 field -> name '=' expr      : record_field('$1', '$3').
 
-pattern -> literal              : '$1'.
-pattern -> container_pattern    : '$1'.
-pattern -> name                 : var('$1').
-pattern -> hole                 : hole('$1').
-pattern -> pattern '::' pattern : cons('$2', '$1', '$3').
-
-container_pattern -> upname                       : enum_constructor('$1', []).
-container_pattern -> upname '(' elems_pattern ')' : enum_constructor('$1', '$3').
-container_pattern -> '(' ')'                      : tuple('$1', []).
-container_pattern -> '(' elems_pattern ')'        : tuple('$1', '$2').
-container_pattern -> '{' elems_pattern '}'        : tuple('$1', '$2').
-container_pattern -> '[' ']'                      : list('$2', []).
-container_pattern -> '[' elems_pattern ']'        : list('$3', '$2').
+pattern -> literal                      : '$1'.
+pattern -> name                         : var('$1').
+pattern -> hole                         : hole('$1').
+pattern -> pattern '::' pattern         : cons('$2', '$1', '$3').
+pattern -> upname                       : enum_constructor('$1', []).
+pattern -> upname '(' elems_pattern ')' : enum_constructor('$1', '$3').
+pattern -> '(' ')'                      : tuple('$1', []).
+pattern -> '(' elems_pattern ')'        : tuple('$1', '$2').
+pattern -> '{' elems_pattern '}'        : tuple('$1', '$2').
+pattern -> '[' ']'                      : list('$2', []).
+pattern -> '[' elems_pattern ']'        : list('$3', '$2').
 
 elems_pattern -> pattern                   : ['$1'].
 elems_pattern -> pattern ','               : ['$1'].
 elems_pattern -> pattern ',' elems_pattern : ['$1' | '$3'].
 
-literal -> kw_fn_call ')' '{' exprs '}'      : fn('$1', [], '$4').
-literal -> kw_fn_call args ')' '{' exprs '}' : fn('$1', '$2', '$5').
 literal -> atom              : literal('$1').
 literal -> int               : literal('$1').
 literal -> float             : literal('$1').
