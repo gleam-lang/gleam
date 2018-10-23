@@ -317,14 +317,14 @@ fn_call_test() ->
   ],
   test_infer(Cases).
 
-% underscore_fn_test() ->
-%   Cases = [
-%     {
-%      "add = fn(x, y) { x + y } add(_, 2)",
-%      "fn(Int) { Int }"
-%     }
-%   ],
-%   test_infer(Cases).
+underscore_fn_test() ->
+  Cases = [
+    {
+     "add = fn(x, y) { x + y } add(_, 2)",
+     "fn(Int) -> Int"
+    }
+  ],
+  test_infer(Cases).
 
 throw_raise_test() ->
   Cases = [

@@ -1,4 +1,4 @@
--define(print(Var), io:format("DEBUG: ~p:~p - ~p~n~n ~p~n~n", [?MODULE, ?LINE, ??Var, Var])).
+-define(print(Var), io:format("DEBUG: ~p:~p - ~p~n ~p~n", [?MODULE, ?LINE, ??Var, Var])).
 
 -record(meta, {line = 1 :: non_neg_integer()}).
 -type meta() :: #meta{}.

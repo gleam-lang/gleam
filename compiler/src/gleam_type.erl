@@ -12,7 +12,8 @@
 -type type_name() :: string().
 
 -record(env,
-        {level = 0 :: level(),
+        {uid = 0,
+         level = 0 :: level(),
          vars = #{} :: #{var_name() => type()},
          types = #{} :: #{type_name() => type()},
          type_refs = #{} :: #{reference() => type_var()}}).
@@ -27,6 +28,7 @@
   | {recursive_row_type, type(), type()}
   | {not_a_row, type(), env()}
   | {row_does_not_contain_label, type(), env()}
+  | {multiple_hole_fn, ast_expression()}
   | recursive_types.
 
 -spec new_var(env()) -> {type(), env()}.
@@ -222,10 +224,26 @@ infer(Ast, Env0) ->
       AnnotatedAst = Ast#ast_fn_call{type = {ok, ReturnType}},
       {AnnotatedAst, Env1};
 
-    #ast_local_call{fn = Fn, args = Args} ->
-      {ReturnType, Env1} = infer_call(Fn, Args, Env0),
-      AnnotatedAst = Ast#ast_local_call{type = {ok, ReturnType}},
-      {AnnotatedAst, Env1};
+    #ast_local_call{meta = Meta, fn = Fn, args = Args} ->
+      NumHoles = length(lists:filter(fun(#ast_hole{}) -> true; (_) -> false end, Args)),
+      case NumHoles of
+        0 ->
+          {ReturnType, Env1} = infer_call(Fn, Args, Env0),
+          AnnotatedAst = Ast#ast_local_call{type = {ok, ReturnType}},
+          {AnnotatedAst, Env1};
+
+        1 ->
+          {UID, Env1} = uid(Env0),
+          VarName = "$$gleam_hole_var" ++ integer_to_list(UID),
+          Var = #ast_var{name = VarName},
+          NewArgs = lists:map(fun(#ast_hole{}) -> Var; (X) -> X end, Args),
+          Call = #ast_local_call{meta = Meta, fn = Fn, args = NewArgs},
+          NewFn = #ast_fn{meta = Meta, args = [VarName], body = Call},
+          infer(NewFn, Env1);
+
+        _ ->
+          fail({multiple_hole_fn, Ast})
+      end;
 
     #ast_enum{name = Name, elems = Args} ->
       Fn = #ast_var{name = Name},
@@ -1201,3 +1219,7 @@ collect_row_fields(#type_row_extend{parent = Parent, label = Label, type = Type}
   collect_row_fields(Parent, NewFields);
 collect_row_fields(Other, Fields) ->
   {Other, Fields}.
+
+-spec uid(env()) -> {integer(), env()}.
+uid(#env{uid = UID} = Env) ->
+  {UID, Env#env{uid = UID + 1}}.
