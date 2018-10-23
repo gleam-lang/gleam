@@ -121,6 +121,10 @@ case_clauses -> case_clause case_clauses : ['$1'|'$2'].
 
 case_clause -> '|' pattern '->' expr : case_clause('$1', '$2', '$4').
 
+% TODO: The hole in call args results in entirely different semantics- partial
+% application. Given this do we want to use different AST for the parent node?
+% Currently when we do anything with calls we have to check if they have a hole
+% or not. This is a bit fiddly.
 call_args -> hole               : [hole('$1')].
 call_args -> hole ','           : [hole('$1')].
 call_args -> hole ',' call_args : [hole('$1') | '$3'].

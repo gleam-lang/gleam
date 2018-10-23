@@ -317,6 +317,15 @@ fn_call_test() ->
   ],
   test_infer(Cases).
 
+% underscore_fn_test() ->
+%   Cases = [
+%     {
+%      "add = fn(x, y) { x + y } add(_, 2)",
+%      "fn(Int) { Int }"
+%     }
+%   ],
+%   test_infer(Cases).
+
 throw_raise_test() ->
   Cases = [
     {
@@ -442,6 +451,15 @@ enum_test() ->
      "module {"
      " fn int() -> Box(Int)"
      " fn float() -> Box(Float)"
+     "}"
+    },
+
+    {
+     "pub enum I = | I(Int)"
+     "pub fn open(x) { case x { | I(i) -> i  } }"
+     ,
+     "module {"
+     " fn open(I) -> Int"
      "}"
     }
   ],

@@ -75,6 +75,9 @@ pattern_fetch(Pattern) ->
     #ast_var{type = {ok, Type}} ->
       Type;
 
+    #ast_enum{type = {ok, Type}} ->
+      Type;
+
     #ast_nil{type = {ok, Type}} ->
       Type;
 
@@ -113,6 +116,21 @@ infer_clause(#ast_clause{pattern = Pattern, value = Value} = Clause, Env0) ->
   {NewClause, Env2}.
 
 
+infer_enum_pattern(FunAst, Args, Env0) ->
+  {AnnotatedFunAst, Env1} = infer(FunAst, Env0),
+  FunType = fetch(AnnotatedFunAst),
+  Arity = length(Args),
+  {ArgTypes, ReturnType, Env2} = match_fun_type(Arity, FunType, Env1),
+  CheckArg =
+    fun({ArgType, ArgExpr}, CheckEnv0) ->
+      {AnnotatedArgExpr, CheckEnv1} = infer_pattern(ArgExpr, CheckEnv0),
+      ArgExprType = pattern_fetch(AnnotatedArgExpr),
+      unify(ArgType, ArgExprType, CheckEnv1)
+    end,
+  Env3 = lists:foldl(CheckArg, Env2, lists:zip(ArgTypes, Args)),
+  {ReturnType, Env3}.
+
+
 -spec infer_pattern(ast_pattern(), env()) -> {ast_pattern(), env()}.
 infer_pattern(Pattern, Env0) ->
   case Pattern of
@@ -130,6 +148,12 @@ infer_pattern(Pattern, Env0) ->
       Env3 = unify(TailType, #type_app{type = "List", args = [HeadType]}, Env2),
       AnnotatedPattern = Pattern#ast_cons{head = AnnotatedHead, tail = AnnotatedTail},
       {AnnotatedPattern, Env3};
+
+    #ast_enum{name = Name, elems = Args} ->
+      Fn = #ast_var{name = Name},
+      {ReturnType, Env1} = infer_enum_pattern(Fn, Args, Env0),
+      AnnotatedPattern = Pattern#ast_enum{type = {ok, ReturnType}},
+      {AnnotatedPattern, Env1};
 
     #ast_tuple{elems = Elems} ->
       {AnnotatedElems, NewEnv} = gleam:thread_map(fun infer_pattern/2, Elems, Env0),
