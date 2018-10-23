@@ -8,6 +8,10 @@
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
+-record(var_data,
+        {type :: type(),
+         scope :: scope()}).
+
 -type var_name() :: string().
 -type type_name() :: string().
 
@@ -31,6 +35,7 @@
   | {multiple_hole_fn, ast_expression()}
   | recursive_types.
 
+
 -spec new_var(env()) -> {type(), env()}.
 new_var(Env) ->
   Ref = erlang:make_ref(),
@@ -39,6 +44,7 @@ new_var(Env) ->
   NewEnv = env_put_type_ref(Ref, TypeVar, Env),
   {Type, NewEnv}.
 
+
 -spec new_generic_var(env()) -> {type(), env()}.
 new_generic_var(Env) ->
   Ref = erlang:make_ref(),
@@ -46,6 +52,7 @@ new_generic_var(Env) ->
   TypeVar = #type_var_generic{id = make_ref()},
   NewEnv = env_put_type_ref(Ref, TypeVar, Env),
   {Type, NewEnv}.
+
 
 -spec infer(ast_expression()) -> {ok, ast_expression()} | {error, error()}.
 infer(Ast) ->
@@ -56,6 +63,7 @@ infer(Ast) ->
   catch
     throw:{gleam_type_error, Error} -> {error, Error}
   end.
+
 
 -spec unify_clauses([#ast_clause{}], type(), env()) -> env().
 unify_clauses(Clauses, SubjectType, Env0) ->
@@ -70,6 +78,7 @@ unify_clauses(Clauses, SubjectType, Env0) ->
     end,
   {_, Env2} = lists:foldl(Unify, {First, Env1}, Rest),
   Env2.
+
 
 -spec pattern_fetch(ast_pattern()) -> type().
 pattern_fetch(Pattern) ->
@@ -164,7 +173,7 @@ infer_pattern(Pattern, Env0) ->
 
     #ast_var{name = Name} ->
       {Var, Env1} = new_var(Env0),
-      Env2 = env_extend(Name, Var, Env1),
+      Env2 = env_extend(Name, Var, local, Env1),
       AnnotatedPattern = Pattern#ast_var{type = {ok, Var}},
       {AnnotatedPattern, Env2};
 
@@ -255,7 +264,7 @@ infer(Ast, Env0) ->
       {ArgTypes, ArgsEnv} = gleam:thread_map(fun(_, E) -> new_var(E) end, Args, Env0),
       Insert =
         fun({Name, Type}, E) ->
-          env_extend(Name, Type, E)
+          env_extend(Name, Type, local, E)
         end,
       FnEnv = lists:foldl(Insert, ArgsEnv, lists:zip(Args, ArgTypes)),
       {ReturnAst, ReturnEnv} = infer(Body, FnEnv),
@@ -267,7 +276,7 @@ infer(Ast, Env0) ->
 
     #ast_var{name = Name} ->
       case env_lookup(Name, Env0) of
-        {ok, Type} ->
+        {ok, #var_data{type = Type}} ->
           {InstantiatedType, NewEnv} = instantiate(Type, Env0),
           AnnotatedAst = Ast#ast_var{type = {ok, InstantiatedType}},
           {AnnotatedAst, NewEnv};
@@ -390,7 +399,7 @@ infer_assignment(Name, Value, Env0) ->
   {InferredValue, Env2} = infer(Value, increment_env_level(Env0)),
   Env3 = decrement_env_level(Env2),
   {GeneralizedType, Env4} = generalize(fetch(InferredValue), Env3),
-  Env5 = env_extend(Name, GeneralizedType, Env4),
+  Env5 = env_extend(Name, GeneralizedType, local, Env4),
   {GeneralizedType, InferredValue, Env5}.
 
 
@@ -423,7 +432,7 @@ module_statement(Statement, {Row, Env0}) ->
         fun(#ast_enum_def{name = CName, args = CArgs}, InnerEnv0) ->
           {CArgsTypes, InnerEnv1} = gleam:thread_map(fun ast_type_to_type/2, CArgs, InnerEnv0),
           T = #type_fn{args = CArgsTypes, return = Type},
-          env_extend(CName, T, InnerEnv1)
+          env_extend(CName, T, module, InnerEnv1)
         end,
       Env2 = lists:foldl(RegisterConstructor, Env1, Constructors),
 
@@ -442,20 +451,22 @@ module_statement(Statement, {Row, Env0}) ->
         false -> Row
       end,
       NewState = {NewRow, Env1},
-      AnnotatedStatement = #ast_mod_fn{type = {ok, FnType},
-                                       args = NewArgs,
-                                       body = NewBody},
+      AnnotatedStatement = Statement#ast_mod_fn{type = {ok, FnType},
+                                                args = NewArgs,
+                                                body = NewBody},
       {AnnotatedStatement, NewState};
 
     #ast_mod_test{body = Body} ->
       Fn = #ast_fn{args = [], body = Body},
       {AnnotatedFn, Env1} = infer(Fn, Env0),
-      AnnotatedAst = #ast_mod_test{body = AnnotatedFn#ast_fn.body},
+      AnnotatedAst = Statement#ast_mod_test{body = AnnotatedFn#ast_fn.body},
       NewState = {Row, Env1},
       {AnnotatedAst, NewState}
   end.
 
 
+% TODO: We need to return the args types from this so we can the args after
+% calling this.
 infer_call(FunAst, Args, Env0) ->
   {AnnotatedFunAst, Env1} = infer(FunAst, Env0),
   FunType = fetch(AnnotatedFunAst),
@@ -744,7 +755,7 @@ new_env() ->
     {"!=", NEq},
     {"|>", Pipe}
   ],
-  Insert = fun({Name, Type}, Env) -> env_extend(Name, Type, Env) end,
+  Insert = fun({Name, Type}, Env) -> env_extend(Name, Type, module, Env) end,
   lists:foldl(Insert, LastE, Core).
 
 -spec fail(tuple()) -> no_return().
@@ -775,9 +786,11 @@ increment_env_level_test() ->
   ?assertEqual(43, Env3#env.level).
 -endif.
 
--spec env_extend(var_name(), type(), env()) -> env().
-env_extend(Name, GeneralizedType, Env = #env{vars = Vars}) ->
-  NewVars = maps:put(Name, GeneralizedType, Vars),
+
+-spec env_extend(var_name(), type(), scope(), env()) -> env().
+env_extend(Name, Type, Scope, Env = #env{vars = Vars}) ->
+  VarData = #var_data{type = Type, scope = Scope},
+  NewVars = maps:put(Name, VarData, Vars),
   Env#env{vars = NewVars}.
 
 % TODO: Raise if we attempt to overwrite an existing type.

@@ -123,13 +123,17 @@ map_expressions(Expressions, Env) ->
   gleam:thread_map(fun expression/2, Expressions, Env).
 
 
-fn_call(#ast_var{name = Name}, Args, Env) ->
-  C_fname = cerl:c_fname(list_to_atom(Name), length(Args)),
-  {C_args, NewEnv} = map_expressions(Args, Env),
-  {cerl:c_apply(C_fname, C_args), NewEnv};
-
 fn_call(Fn, Args, Env0) ->
-  expression(#ast_fn_call{fn = Fn, args = Args}, Env0).
+  ?print(Fn),
+  case Fn of
+    #ast_var{name = Name, scope = local} ->
+      C_fname = cerl:c_fname(list_to_atom(Name), length(Args)),
+      {C_args, NewEnv} = map_expressions(Args, Env0),
+      {cerl:c_apply(C_fname, C_args), NewEnv};
+
+    Other ->
+      expression(#ast_fn_call{fn = Fn, args = Args}, Env0)
+  end.
 
 
 expression(#ast_string{value = Value}, Env) when is_binary(Value) ->

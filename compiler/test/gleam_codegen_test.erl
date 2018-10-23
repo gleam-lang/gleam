@@ -158,12 +158,15 @@ list_test() ->
 
 call_test() ->
   Source =
-    "pub fn double(x) { ok(add(x, x)) }\n"
-    "fn add(x, y) { x + y }\n"
     "fn ok(x) { {'ok', x} }\n"
+    "fn add(x, y) { x + y }\n"
+    "pub fn double(x) { ok(add(x, x)) }\n"
+    "pub fn call_this(x) { x() }\n"
   ,
-  with_module(gleam_codegen_call, Source, fun() ->
-    ?assertEqual({ok, 10}, gleam_codegen_call:double(5))
+  Mod = gleam_codegen_call,
+  with_module(Mod, Source, fun() ->
+    ?assertEqual({ok, 10}, Mod:double(5)),
+    ?assertEqual(ok, Mod:call_this(fun() -> ok end))
   end).
 
 seq_test() ->
