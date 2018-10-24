@@ -179,6 +179,7 @@
 -record(ast_seq,
         {first :: ast_expression(),
          then :: ast_expression()}).
+
 -type ast_expression()
       :: #ast_enum{}
       | #ast_assignment{}
@@ -217,7 +218,8 @@
 
 -record(type_const, {type :: string()}).
 -record(type_fn, {args :: list(type()), return :: type()}).
--record(type_app, {type :: type(), args :: list(type())}).
+% Should type be a type for type app? Possibly for aliases?
+-record(type_app, {type :: string(), args :: list(type())}).
 -record(type_var, {type :: type_var_reference()}).
 -record(type_record, {row :: type()}).
 -record(type_module, {row :: type()}).

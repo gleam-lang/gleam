@@ -807,7 +807,7 @@ env_register_type(Name, Type, Env = #env{types = Types}) ->
   NewTypes = maps:put(Name, Type, Types),
   Env#env{types = NewTypes}.
 
--spec env_lookup(var_name(), env()) -> error | {ok, type()}.
+-spec env_lookup(var_name(), env()) -> error | {ok, #var_data{}}.
 env_lookup(Name, #env{vars = Vars}) ->
   maps:find(Name, Vars).
 
