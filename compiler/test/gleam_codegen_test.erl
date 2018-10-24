@@ -158,13 +158,26 @@ list_test() ->
 
 call_test() ->
   Source =
-    "pub fn double(x) { ok(add(x, x)) }\n"
-    "fn add(x, y) { x + y }\n"
     "fn ok(x) { {'ok', x} }\n"
+    "fn add(x, y) { x + y }\n"
+    "pub fn double(x) { ok(add(x, x)) }\n"
   ,
-  with_module(gleam_codegen_call, Source, fun() ->
-    ?assertEqual({ok, 10}, gleam_codegen_call:double(5))
+  Mod = gleam_codegen_call,
+  with_module(Mod, Source, fun() ->
+    ?assertEqual({ok, 10}, Mod:double(5))
   end).
+
+call_local_test() ->
+  Source =
+    "pub fn call_this(x) { x() }\n"
+    "pub fn call_internal() { x = fn() { 1 } x() }\n"
+  ,
+  Mod = gleam_codegen_call_local,
+  with_module(Mod, Source, fun() ->
+    ?assertEqual(1, Mod:call_internal()),
+    ?assertEqual(2, Mod:call_this(fun() -> 2 end))
+  end).
+
 
 seq_test() ->
   Source =
@@ -377,8 +390,8 @@ record_access_test() ->
 
 zero_arity_call_test() ->
   Source =
-    "pub fn one() { hidden() }\n"
     "fn hidden() { 100 }\n"
+    "pub fn one() { hidden() }\n"
   ,
   Mod = gleam_codegen_zero_arity_call,
   with_module(Mod, Source, fun() ->

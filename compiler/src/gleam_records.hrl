@@ -2,7 +2,7 @@
 
 -record(meta, {line = 1 :: non_neg_integer()}).
 -type meta() :: #meta{}.
-
+-type scope() :: local | module.
 -type export() :: {string(), non_neg_integer()}.
 -type type_annotation() :: type_not_annotated | {ok, type()}.
 
@@ -73,6 +73,7 @@
 -record(ast_var,
         {meta = #meta{},
          type = type_not_annotated :: type_annotation(),
+         scope = local :: scope(),
          name :: string()}).
 
 % TODO: Remove the type annotation so it's calculated by traversing the body
