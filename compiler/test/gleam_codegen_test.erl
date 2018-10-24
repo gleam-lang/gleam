@@ -161,13 +161,22 @@ call_test() ->
     "fn ok(x) { {'ok', x} }\n"
     "fn add(x, y) { x + y }\n"
     "pub fn double(x) { ok(add(x, x)) }\n"
-    "pub fn call_this(x) { x() }\n"
   ,
   Mod = gleam_codegen_call,
   with_module(Mod, Source, fun() ->
-    ?assertEqual({ok, 10}, Mod:double(5)),
-    ?assertEqual(ok, Mod:call_this(fun() -> ok end))
+    ?assertEqual({ok, 10}, Mod:double(5))
   end).
+
+call_local_test() ->
+  Source =
+    % "pub fn call_this(x) { x() }\n"
+    "pub fn call_internal() { x = fn() { 1 } x() }\n"
+  ,
+  Mod = gleam_codegen_call_local,
+  with_module(Mod, Source, fun() ->
+    ?assertEqual(1, Mod:call_internal())
+  end).
+
 
 seq_test() ->
   Source =

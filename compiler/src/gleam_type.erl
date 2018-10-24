@@ -267,10 +267,12 @@ infer(Ast, Env0) ->
           env_extend(Name, Type, local, E)
         end,
       FnEnv = lists:foldl(Insert, ArgsEnv, lists:zip(Args, ArgTypes)),
-      {ReturnAst, ReturnEnv} = infer(Body, FnEnv),
-      ReturnType = fetch(ReturnAst),
+      {AnnotatedBody, ReturnEnv} = infer(Body, FnEnv),
+      % ?print(InferredBody),
+      ReturnType = fetch(AnnotatedBody),
       Type = #type_fn{args = ArgTypes, return = ReturnType},
-      AnnotatedAst = Ast#ast_fn{type = {ok, Type}},
+      ?print(AnnotatedBody),
+      AnnotatedAst = Ast#ast_fn{type = {ok, Type}, body = AnnotatedBody},
       FinalEnv = Env0#env{type_refs = ReturnEnv#env.type_refs},
       {AnnotatedAst, FinalEnv};
 
@@ -345,12 +347,12 @@ infer(Ast, Env0) ->
 
     #ast_raise{} ->
       {Var, Env1} = new_var(Env0),
-      AnnotatedAst = #ast_raise{type = {ok, Var}},
+      AnnotatedAst = Ast#ast_raise{type = {ok, Var}},
       {AnnotatedAst, Env1};
 
     #ast_throw{} ->
       {Var, Env1} = new_var(Env0),
-      AnnotatedAst = #ast_throw{type = {ok, Var}},
+      AnnotatedAst = Ast#ast_throw{type = {ok, Var}},
       {AnnotatedAst, Env1};
 
     #ast_record_empty{} ->

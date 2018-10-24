@@ -12,8 +12,8 @@ source_to_binary(Source, ModName, Options) ->
   {ok, Forms} =
     case gleam_type:infer(Ast) of
       {ok, AnnotatedAst} ->
-        ?print(Ast),
-        ?print(AnnotatedAst),
+        % ?print(Ast),
+        % ?print(AnnotatedAst),
         gleam_codegen:module(AnnotatedAst, ModName, Options);
 
       % TODO: Remove this clause. We want to error out.
