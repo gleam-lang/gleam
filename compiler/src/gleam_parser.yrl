@@ -190,7 +190,7 @@ op({Operator, Meta}, Args) ->
   #ast_operator{meta = Meta, name = atom_to_list(Operator), args = Args}.
 
 local_call({'(', Meta}, Fn, Args) ->
-  #ast_local_call{meta = Meta, fn = Fn, args = Args}.
+  #ast_call{meta = Meta, fn = Fn, args = Args}.
 
 fn_call({'.', Meta}, Fn, Args) ->
   #ast_fn_call{meta = Meta, fn = Fn, args = Args}.

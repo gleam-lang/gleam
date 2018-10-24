@@ -235,12 +235,12 @@ infer(Ast, Env0) ->
                                      args = AnnotatedArgs},
       {AnnotatedAst, Env1};
 
-    #ast_local_call{meta = Meta, fn = Fn, args = Args} ->
+    #ast_call{meta = Meta, fn = Fn, args = Args} ->
       NumHoles = length(lists:filter(fun(#ast_hole{}) -> true; (_) -> false end, Args)),
       case NumHoles of
         0 ->
           {ReturnType, AnnotatedFn, AnnotatedArgs, Env1} = infer_call(Fn, Args, Env0),
-          AnnotatedAst = Ast#ast_local_call{type = {ok, ReturnType},
+          AnnotatedAst = Ast#ast_call{type = {ok, ReturnType},
                                             fn = AnnotatedFn,
                                             args = AnnotatedArgs},
           {AnnotatedAst, Env1};
@@ -250,7 +250,7 @@ infer(Ast, Env0) ->
           VarName = "$$gleam_hole_var" ++ integer_to_list(UID),
           Var = #ast_var{name = VarName, scope = local},
           NewArgs = lists:map(fun(#ast_hole{}) -> Var; (X) -> X end, Args),
-          Call = #ast_local_call{meta = Meta, fn = Fn, args = NewArgs},
+          Call = #ast_call{meta = Meta, fn = Fn, args = NewArgs},
           NewFn = #ast_fn{meta = Meta, args = [VarName], body = Call},
           infer(NewFn, Env1);
 
@@ -507,7 +507,7 @@ fetch(Ast) ->
     #ast_case{type = {ok, Type}} ->
       Type;
 
-    #ast_local_call{type = {ok, Type}} ->
+    #ast_call{type = {ok, Type}} ->
       Type;
 
     #ast_fn_call{type = {ok, Type}} ->
@@ -597,9 +597,9 @@ resolve_type_vars(Ast, Env) ->
       NewType = type_resolve_type_vars(Type, Env),
       Ast#ast_operator{type = {ok, NewType}};
 
-    #ast_local_call{type = {ok, Type}} ->
+    #ast_call{type = {ok, Type}} ->
       NewType = type_resolve_type_vars(Type, Env),
-      Ast#ast_local_call{type = {ok, NewType}};
+      Ast#ast_call{type = {ok, NewType}};
 
     #ast_fn_call{type = {ok, Type}} ->
       NewType = type_resolve_type_vars(Type, Env),

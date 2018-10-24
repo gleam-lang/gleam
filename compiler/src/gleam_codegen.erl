@@ -130,7 +130,7 @@ fn_call(Fn, Args, Env0) ->
       {C_args, NewEnv} = map_expressions(Args, Env0),
       {cerl:c_apply(C_fname, C_args), NewEnv};
 
-    Other ->
+    _ ->
       expression(#ast_fn_call{fn = Fn, args = Args}, Env0)
   end.
 
@@ -177,9 +177,9 @@ expression(#ast_operator{name = Name, args = Args}, Env) ->
     "!=" -> "=/=";
     _ -> Name
   end,
-  expression(#ast_call{module = "erlang", name = ErlangName, args = Args}, Env);
+  expression(#ast_module_call{module = "erlang", name = ErlangName, args = Args}, Env);
 
-expression(#ast_local_call{meta = Meta, fn = Fn, args = Args}, Env) ->
+expression(#ast_call{meta = Meta, fn = Fn, args = Args}, Env) ->
   NumHoles = length(lists:filter(fun(#ast_hole{}) -> true; (_) -> false end, Args)),
   case NumHoles of
     0 ->
@@ -193,7 +193,7 @@ expression(#ast_local_call{meta = Meta, fn = Fn, args = Args}, Env) ->
       throw({error, multiple_hole_fn})
   end;
 
-expression(#ast_call{module = Mod, name = Name, args = Args}, Env) when is_list(Name) ->
+expression(#ast_module_call{module = Mod, name = Name, args = Args}, Env) when is_list(Name) ->
   C_module = cerl:c_atom(prefix_module(Mod)),
   C_name = cerl:c_atom(Name),
   {C_args, NewEnv} = map_expressions(Args, Env),
@@ -241,10 +241,10 @@ expression(#ast_record_extend{} = Ast, Env) ->
 
 expression(#ast_record_select{meta = Meta, record = Record, label = Label}, Env) ->
   Atom = #ast_atom{meta = Meta, value = Label},
-  Call = #ast_call{meta = Meta,
-                   module = "maps",
-                   name = "get",
-                   args = [Atom, Record]},
+  Call = #ast_module_call{meta = Meta,
+                          module = "maps",
+                          name = "get",
+                          args = [Atom, Record]},
   expression(Call, Env);
 
 % TODO: We can check the lhs here to see if it is a fn(_)
@@ -267,17 +267,17 @@ expression(#ast_case{subject = Subject, clauses = Clauses}, Env) ->
   {cerl:c_case(C_subject, C_clauses), Env2};
 
 expression(#ast_raise{meta = Meta, value = Value}, Env) ->
-  Call = #ast_call{meta = Meta,
-                   module = "erlang",
-                   name = "error",
-                   args = [Value]},
+  Call = #ast_module_call{meta = Meta,
+                          module = "erlang",
+                          name = "error",
+                          args = [Value]},
   expression(Call, Env);
 
 expression(#ast_throw{meta = Meta, value = Value}, Env) ->
-  Call = #ast_call{meta = Meta,
-                   module = "erlang",
-                   name = "throw",
-                   args = [Value]},
+  Call = #ast_module_call{meta = Meta,
+                          module = "erlang",
+                          name = "throw",
+                          args = [Value]},
   expression(Call, Env);
 
 expression(#ast_fn{args = Args, body = Body}, Env) ->
@@ -329,7 +329,7 @@ hole_fn(Meta, Fn, Args, Env) ->
   VarName = "$$gleam_hole_var" ++ integer_to_list(UID),
   Var = #ast_var{name = VarName},
   NewArgs = lists:map(fun(#ast_hole{}) -> Var; (X) -> X end, Args),
-  Call = #ast_local_call{meta = Meta, fn = Fn, args = NewArgs},
+  Call = #ast_call{meta = Meta, fn = Fn, args = NewArgs},
   Closure = #ast_fn{meta = Meta, args = [VarName], body = Call},
   expression(Closure, NewEnv).
 

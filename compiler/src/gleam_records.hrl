@@ -85,7 +85,7 @@
          args = [] :: [string()],
          body :: ast_expression()}).
 
--record(ast_call,
+-record(ast_module_call,
         {meta = #meta{} :: meta(),
          module :: string(),
          name :: string(),
@@ -120,7 +120,7 @@
          type = type_not_annotated :: type_annotation(),
          value :: ast_expression()}).
 
--record(ast_local_call,
+-record(ast_call,
         {meta = #meta{} :: meta(),
          type = type_not_annotated :: type_annotation(),
          fn :: ast_expression(),
@@ -184,7 +184,7 @@
       :: #ast_enum{}
       | #ast_assignment{}
       | #ast_atom{}
-      | #ast_call{}
+      | #ast_module_call{}
       | #ast_case{}
       | #ast_cons{}
       | #ast_float{}
@@ -192,7 +192,7 @@
       | #ast_fn{}
       | #ast_hole{}
       | #ast_int{}
-      | #ast_local_call{}
+      | #ast_call{}
       | #ast_nil{}
       | #ast_operator{}
       | #ast_raise{}

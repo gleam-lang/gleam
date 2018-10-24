@@ -97,7 +97,7 @@ call_test() ->
         , name = "run"
         , args = []
         , body =
-          #ast_local_call
+          #ast_call
           { meta = #meta{line = 1}
           , fn = #ast_var{meta = #meta{line = 1}, name = "print"}
           , args =
@@ -208,9 +208,9 @@ fn_test() ->
 curried_test() ->
   Code = "f(1)(2)",
   AST =
-    #ast_local_call
+    #ast_call
     { fn =
-      #ast_local_call
+      #ast_call
       { fn = #ast_var{name = "f"}
       , args = [#ast_int{value = 1}]
       }
@@ -219,7 +219,7 @@ curried_test() ->
   ?assertEqual(AST, parse(tokens(Code))),
   Code2 = "f.(1)(2)",
   AST2 =
-    #ast_local_call
+    #ast_call
     { fn =
       #ast_fn_call
       { fn = #ast_var{name = "f"}
@@ -245,7 +245,7 @@ record_select_test() ->
   ?assertEqual(AST, parse(tokens(Code))),
   Code2 = "f.(1)(2)",
   AST2 =
-    #ast_local_call
+    #ast_call
     { fn =
       #ast_fn_call
       { fn = #ast_var{name = "f"}
@@ -266,7 +266,7 @@ record_extend_test() ->
   ?assertEqual(AST, parse(tokens(Code))),
   Code2 = "f.(1)(2)",
   AST2 =
-    #ast_local_call
+    #ast_call
     { fn =
       #ast_fn_call
       { fn = #ast_var{name = "f"}
