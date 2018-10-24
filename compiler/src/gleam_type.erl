@@ -161,7 +161,7 @@ infer_pattern(Pattern, Env0) ->
       {AnnotatedPattern, Env3};
 
     #ast_enum{name = Name, elems = Args} ->
-      Fn = #ast_var{name = Name},
+      Fn = #ast_var{name = Name, scope = module},
       {ReturnType, Env1} = infer_enum_pattern(Fn, Args, Env0),
       AnnotatedPattern = Pattern#ast_enum{type = {ok, ReturnType}},
       {AnnotatedPattern, Env1};
@@ -174,7 +174,7 @@ infer_pattern(Pattern, Env0) ->
     #ast_var{name = Name} ->
       {Var, Env1} = new_var(Env0),
       Env2 = env_extend(Name, Var, local, Env1),
-      AnnotatedPattern = Pattern#ast_var{type = {ok, Var}},
+      AnnotatedPattern = Pattern#ast_var{type = {ok, Var}, scope = local},
       {AnnotatedPattern, Env2};
 
     #ast_hole{} ->
@@ -224,27 +224,31 @@ infer(Ast, Env0) ->
       {AnnotatedAst, Env2};
 
     #ast_operator{name = Name, args = Args} ->
-      {ReturnType, Env1} = infer_call(#ast_var{name = Name}, Args, Env0),
-      AnnotatedAst = Ast#ast_operator{type = {ok, ReturnType}},
+      {ReturnType, _, AnnotatedArgs, Env1} = infer_call(#ast_var{name = Name}, Args, Env0),
+      AnnotatedAst = Ast#ast_operator{type = {ok, ReturnType}, args = AnnotatedArgs},
       {AnnotatedAst, Env1};
 
     #ast_fn_call{fn = Fn, args = Args} ->
-      {ReturnType, Env1} = infer_call(Fn, Args, Env0),
-      AnnotatedAst = Ast#ast_fn_call{type = {ok, ReturnType}},
+      {ReturnType, AnnotatedFn, AnnotatedArgs, Env1} = infer_call(Fn, Args, Env0),
+      AnnotatedAst = Ast#ast_fn_call{type = {ok, ReturnType},
+                                     fn = AnnotatedFn,
+                                     args = AnnotatedArgs},
       {AnnotatedAst, Env1};
 
     #ast_local_call{meta = Meta, fn = Fn, args = Args} ->
       NumHoles = length(lists:filter(fun(#ast_hole{}) -> true; (_) -> false end, Args)),
       case NumHoles of
         0 ->
-          {ReturnType, Env1} = infer_call(Fn, Args, Env0),
-          AnnotatedAst = Ast#ast_local_call{type = {ok, ReturnType}},
+          {ReturnType, AnnotatedFn, AnnotatedArgs, Env1} = infer_call(Fn, Args, Env0),
+          AnnotatedAst = Ast#ast_local_call{type = {ok, ReturnType},
+                                            fn = AnnotatedFn,
+                                            args = AnnotatedArgs},
           {AnnotatedAst, Env1};
 
         1 ->
           {UID, Env1} = uid(Env0),
           VarName = "$$gleam_hole_var" ++ integer_to_list(UID),
-          Var = #ast_var{name = VarName},
+          Var = #ast_var{name = VarName, scope = local},
           NewArgs = lists:map(fun(#ast_hole{}) -> Var; (X) -> X end, Args),
           Call = #ast_local_call{meta = Meta, fn = Fn, args = NewArgs},
           NewFn = #ast_fn{meta = Meta, args = [VarName], body = Call},
@@ -255,9 +259,9 @@ infer(Ast, Env0) ->
       end;
 
     #ast_enum{name = Name, elems = Args} ->
-      Fn = #ast_var{name = Name},
-      {ReturnType, Env1} = infer_call(Fn, Args, Env0),
-      AnnotatedAst = Ast#ast_enum{type = {ok, ReturnType}},
+      Fn = #ast_var{name = Name, scope = module},
+      {ReturnType, _, AnnotatedArgs, Env1} = infer_call(Fn, Args, Env0),
+      AnnotatedAst = Ast#ast_enum{type = {ok, ReturnType}, elems = AnnotatedArgs},
       {AnnotatedAst, Env1};
 
     #ast_fn{args = Args, body = Body} ->
@@ -268,19 +272,17 @@ infer(Ast, Env0) ->
         end,
       FnEnv = lists:foldl(Insert, ArgsEnv, lists:zip(Args, ArgTypes)),
       {AnnotatedBody, ReturnEnv} = infer(Body, FnEnv),
-      % ?print(InferredBody),
       ReturnType = fetch(AnnotatedBody),
       Type = #type_fn{args = ArgTypes, return = ReturnType},
-      ?print(AnnotatedBody),
       AnnotatedAst = Ast#ast_fn{type = {ok, Type}, body = AnnotatedBody},
       FinalEnv = Env0#env{type_refs = ReturnEnv#env.type_refs},
       {AnnotatedAst, FinalEnv};
 
     #ast_var{name = Name} ->
       case env_lookup(Name, Env0) of
-        {ok, #var_data{type = Type}} ->
+        {ok, #var_data{type = Type, scope = Scope}} ->
           {InstantiatedType, NewEnv} = instantiate(Type, Env0),
-          AnnotatedAst = Ast#ast_var{type = {ok, InstantiatedType}},
+          AnnotatedAst = Ast#ast_var{type = {ok, InstantiatedType}, scope = Scope},
           {AnnotatedAst, NewEnv};
 
         error ->
@@ -288,7 +290,7 @@ infer(Ast, Env0) ->
       end;
 
     #ast_assignment{name = Name, value = Value, then = Then} ->
-      {_ValueType, AnnotatedValue, Env1} = infer_assignment(Name, Value, Env0),
+      {_ValueType, AnnotatedValue, Env1} = infer_assignment(Name, Value, local, Env0),
       {AnnotatedThen, Env2} = infer(Then, Env1),
       AnnotatedAst = Ast#ast_assignment{value = AnnotatedValue, then = AnnotatedThen},
       {AnnotatedAst, Env2};
@@ -396,12 +398,13 @@ ast_type_to_type(AstType, Env0) ->
   end.
 
 
--spec infer_assignment(string(), ast_expression(), env()) -> {type(), ast_expression(), env()}.
-infer_assignment(Name, Value, Env0) ->
+-spec infer_assignment(string(), ast_expression(), scope(), env())
+      -> {type(), ast_expression(), env()}.
+infer_assignment(Name, Value, Scope, Env0) ->
   {InferredValue, Env2} = infer(Value, increment_env_level(Env0)),
   Env3 = decrement_env_level(Env2),
   {GeneralizedType, Env4} = generalize(fetch(InferredValue), Env3),
-  Env5 = env_extend(Name, GeneralizedType, local, Env4),
+  Env5 = env_extend(Name, GeneralizedType, Scope, Env4),
   {GeneralizedType, InferredValue, Env5}.
 
 
@@ -446,7 +449,7 @@ module_statement(Statement, {Row, Env0}) ->
 
     #ast_mod_fn{public = Public, name = Name, args = Args, body = Body} ->
       Fn = #ast_fn{args = Args, body = Body},
-      {FnType, AnnotatedFn, Env1} = infer_assignment(Name, Fn, Env0),
+      {FnType, AnnotatedFn, Env1} = infer_assignment(Name, Fn, module, Env0),
       #ast_fn{args = NewArgs, body = NewBody} = AnnotatedFn,
       NewRow = case Public of
         true -> #type_row_extend{label = Name, type = FnType, parent = Row};
@@ -469,6 +472,8 @@ module_statement(Statement, {Row, Env0}) ->
 
 % TODO: We need to return the args types from this so we can the args after
 % calling this.
+-spec infer_call(ast_expression(), [ast_expression()], env())
+      -> {type(), ast_expression(), [ast_expression()], env()}.
 infer_call(FunAst, Args, Env0) ->
   {AnnotatedFunAst, Env1} = infer(FunAst, Env0),
   FunType = fetch(AnnotatedFunAst),
@@ -478,10 +483,11 @@ infer_call(FunAst, Args, Env0) ->
     fun({ArgType, ArgExpr}, CheckEnv0) ->
       {AnnotatedArgExpr, CheckEnv1} = infer(ArgExpr, CheckEnv0),
       ArgExprType = fetch(AnnotatedArgExpr),
-      unify(ArgType, ArgExprType, CheckEnv1)
+      CheckEnv2 = unify(ArgType, ArgExprType, CheckEnv1),
+      {AnnotatedArgExpr, CheckEnv2}
     end,
-  Env3 = lists:foldl(CheckArg, Env2, lists:zip(ArgTypes, Args)),
-  {ReturnType, Env3}.
+  {AnnotatedArgs, Env3} = gleam:thread_map(CheckArg, lists:zip(ArgTypes, Args), Env2),
+  {ReturnType, AnnotatedFunAst, AnnotatedArgs, Env3}.
 
 
 -spec fetch_clause_type(#ast_clause{}) -> type().

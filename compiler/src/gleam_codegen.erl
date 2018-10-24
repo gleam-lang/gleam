@@ -125,7 +125,7 @@ map_expressions(Expressions, Env) ->
 
 fn_call(Fn, Args, Env0) ->
   case Fn of
-    #ast_var{name = Name, scope = local} ->
+    #ast_var{name = Name, scope = module} ->
       C_fname = cerl:c_fname(list_to_atom(Name), length(Args)),
       {C_args, NewEnv} = map_expressions(Args, Env0),
       {cerl:c_apply(C_fname, C_args), NewEnv};
@@ -196,7 +196,6 @@ expression(#ast_local_call{meta = Meta, fn = Fn, args = Args}, Env) ->
 expression(#ast_call{module = Mod, name = Name, args = Args}, Env) when is_list(Name) ->
   C_module = cerl:c_atom(prefix_module(Mod)),
   C_name = cerl:c_atom(Name),
-  ?print(Args),
   {C_args, NewEnv} = map_expressions(Args, Env),
   {cerl:c_call(C_module, C_name, C_args), NewEnv};
 

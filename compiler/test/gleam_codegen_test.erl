@@ -169,12 +169,13 @@ call_test() ->
 
 call_local_test() ->
   Source =
-    % "pub fn call_this(x) { x() }\n"
+    "pub fn call_this(x) { x() }\n"
     "pub fn call_internal() { x = fn() { 1 } x() }\n"
   ,
   Mod = gleam_codegen_call_local,
   with_module(Mod, Source, fun() ->
-    ?assertEqual(1, Mod:call_internal())
+    ?assertEqual(1, Mod:call_internal()),
+    ?assertEqual(2, Mod:call_this(fun() -> 2 end))
   end).
 
 
@@ -389,8 +390,8 @@ record_access_test() ->
 
 zero_arity_call_test() ->
   Source =
-    "pub fn one() { hidden() }\n"
     "fn hidden() { 100 }\n"
+    "pub fn one() { hidden() }\n"
   ,
   Mod = gleam_codegen_zero_arity_call,
   with_module(Mod, Source, fun() ->
