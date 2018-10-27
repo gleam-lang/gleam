@@ -729,13 +729,13 @@ type_resolve_type_vars(Type, Env) ->
 
 -spec new_env() -> env().
 new_env() ->
+  E0 = #env{},
   Int = #type_const{type = "Int"},
   Bool = #type_const{type = "Bool"},
   Float = #type_const{type = "Float"},
   BinOp = fun(A, B, C) -> #type_fn{args = [A, B], return = C} end,
   EndoOp = fun(T) -> BinOp(T, T, T) end,
-
-  E0 = #env{},
+  ZeroFn = fun(A) -> #type_fn{args = [], return = A} end,
 
   {V1, E1} = new_generic_var(E0),
   Eq = BinOp(V1, V1, Bool),
@@ -748,7 +748,19 @@ new_env() ->
   PipeFn = #type_fn{args = [PipeIn], return = PipeOut},
   Pipe = BinOp(PipeIn, PipeFn, PipeOut),
 
-  LastE = E4,
+  {V3, E5} = new_generic_var(E4),
+  LT = BinOp(V3, V3, Bool),
+
+  {V4, E6} = new_generic_var(E5),
+  LET = BinOp(V4, V4, Bool),
+
+  {V5, E7} = new_generic_var(E6),
+  GT = BinOp(V5, V5, Bool),
+
+  {V6, E8} = new_generic_var(E7),
+  GET = BinOp(V6, V6, Bool),
+
+  LastE = E8,
 
   Core = [
     {"+", EndoOp(Int)},
@@ -759,9 +771,15 @@ new_env() ->
     {"-.", EndoOp(Float)},
     {"/.", EndoOp(Float)},
     {"*.", EndoOp(Float)},
+    {"<", LT},
+    {"<=", LET},
+    {">", GT},
+    {">=", GET},
     {"==", Eq},
     {"!=", NEq},
-    {"|>", Pipe}
+    {"|>", Pipe},
+    {"True", ZeroFn(Bool)},
+    {"False", ZeroFn(Bool)}
   ],
   Insert = fun({Name, Type}, Env) -> env_extend(Name, Type, module, Env) end,
   lists:foldl(Insert, LastE, Core).

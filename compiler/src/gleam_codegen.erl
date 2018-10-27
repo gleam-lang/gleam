@@ -69,6 +69,9 @@ module_statement(Statement, Acc) ->
       Acc1 = add_definition(Acc, named_function(Statement)),
       add_export(Acc1, export(Name, length(Args)));
 
+    #ast_mod_enum{} ->
+      Acc;
+
     #ast_mod_test{} ->
       case Acc#module_acc.gen_tests of
         true ->

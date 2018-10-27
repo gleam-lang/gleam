@@ -96,7 +96,7 @@ float_test() ->
   Source =
     "pub fn one() { 1.0 }\n"
     "pub fn two() { 2.0 }\n"
-    "pub fn inc(x) { x + 1.0 }\n"
+    "pub fn inc(x) { x +. 1.0 }\n"
     "pub fn negative() { -1.0 }\n"
     "pub fn positive() { +10.0 }\n"
   ,
@@ -209,6 +209,7 @@ bool_enum_test() ->
 
 word_case_enum_test() ->
   Source =
+    "pub enum X = | SomeLongName | ADT\n"
     "pub fn one() { SomeLongName }\n"
     "pub fn two() { ADT }\n"
   ,
@@ -219,6 +220,7 @@ word_case_enum_test() ->
 
 product_enum_test() ->
   Source =
+    "pub enum Ok(a) = | Ok(a)\n"
     "pub fn ok(x) { Ok(x) }\n"
   ,
   with_module(gleam_codegen_product_enum, Source, fun() ->
@@ -297,15 +299,16 @@ case_cons_test() ->
   Source =
     "pub fn head(x) {\n"
     "  case x {\n"
-    "  | x :: _ -> Just(x)\n"
-    "  | _ -> Nothing\n"
+    "  | x :: _ -> x\n"
+    "  | _ -> 0\n"
     "  }\n"
     "}\n"
   ,
   with_module(gleam_codegen_case_cons, Source, fun() ->
-    ?assertEqual(nothing, gleam_codegen_case_cons:head([])),
-    ?assertEqual({just, 0}, gleam_codegen_case_cons:head([0])),
-    ?assertEqual({just, 1}, gleam_codegen_case_cons:head([1, 2]))
+    ?assertEqual(0, gleam_codegen_case_cons:head([])),
+    ?assertEqual(a, gleam_codegen_case_cons:head([a])),
+    ?assertEqual(1, gleam_codegen_case_cons:head([1])),
+    ?assertEqual(1, gleam_codegen_case_cons:head([1, 2]))
   end).
 
 case_tuple_test() ->
@@ -340,6 +343,7 @@ case_var_test() ->
 
 case_enum_test() ->
   Source =
+    "pub enum Maybe(a) = | Nothing | Just(a)\n"
     "pub fn unwrap(x) {\n"
     "  case x {\n"
     "  | Nothing -> 'default'\n"
