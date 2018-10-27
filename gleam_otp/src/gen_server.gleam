@@ -1,5 +1,5 @@
 import timeout:Timeout
-import foreign:Foreign
+import any:Any
 import process:Pid
 
 pub external type Caller
@@ -21,7 +21,7 @@ behaviour GenServer {
 
   fn handle_cast(CastMsg, State) -> Cast(State)
 
-  fn handle_info(Foreign, State) -> Cast(State)
+  fn handle_info(Any, State) -> Cast(State)
 
   fn init(Argument) -> Init(State)
 }

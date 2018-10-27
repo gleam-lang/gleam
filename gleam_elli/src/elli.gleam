@@ -1,4 +1,4 @@
-import foreign:Foreign
+import any:Any
 import result:[Ok, Error]
 
 pub enum Method =
@@ -40,7 +40,7 @@ behaviour fn handle(Request, Argument) -> Response
 
 external fn erl_query_string(Request) -> String = 'elli_request' 'query_str'
 
-external fn erl_start_link(List((Atom, Foreign))) -> Result(Foreign, Pid)
+external fn erl_start_link(List((Atom, Any))) -> Result(Any, Pid)
   = 'elli' 'start_link'
 
 doc """
@@ -91,7 +91,7 @@ Start the Elli web server process tree.
 """
 pub fn start_link(args) {
   erl_start_link([
-    ('callback', foreign:new(args.callback)),
-    ('port', foreign:new(args.port)),
+    ('callback', any:new(args.callback)),
+    ('port', any:new(args.port)),
   ])
 }
