@@ -1,4 +1,4 @@
-import assert
+import expect
 import result:[Ok, Error]
 
 pub enum Error =
@@ -9,10 +9,10 @@ pub enum Error =
 pub external fn length(List(a)) -> Int = 'erlang' 'length'
 
 test length {
-  length([]) |> assert:equal(_, 0)
-  length([1]) |> assert:equal(_, 1)
-  length([1, 1]) |> assert:equal(_, 2)
-  length([1, 1, 1]) |> assert:equal(_, 3)
+  length([]) |> expect:equal(_, 0)
+  length([1]) |> expect:equal(_, 1)
+  length([1, 1]) |> expect:equal(_, 2)
+  length([1, 1, 1]) |> expect:equal(_, 3)
 }
 
 // Using the Erlang C BIF implementation.
@@ -20,8 +20,8 @@ test length {
 pub external fn reverse(List(a)) -> List(a) = 'erlang' 'reverse'
 
 test reverse {
-  length([]) |> assert:equal(_, [])
-  length([1, 2, 3, 4, 5]) |> assert:equal(_, [5, 4, 3, 2, 1])
+  length([]) |> expect:equal(_, [])
+  length([1, 2, 3, 4, 5]) |> expect:equal(_, [5, 4, 3, 2, 1])
 }
 
 pub fn is_empty(list) {
@@ -29,8 +29,8 @@ pub fn is_empty(list) {
 }
 
 test is_empty {
-  is_empty([]) |> assert:true
-  is_empty([1]) |> assert:false
+  is_empty([]) |> expect:true
+  is_empty([1]) |> expect:false
 }
 
 pub fn member(list, elem) {
@@ -42,9 +42,9 @@ pub fn member(list, elem) {
 }
 
 test is_member {
-  is_member([0, 4, 5, 1], 1) |> assert:true
-  is_member([0, 4, 5, 7], 1) |> assert:false
-  is_member([], 1) |> assert:false
+  is_member([0, 4, 5, 1], 1) |> expect:true
+  is_member([0, 4, 5, 7], 1) |> expect:false
+  is_member([], 1) |> expect:false
 }
 
 pub fn head(list) {
@@ -56,10 +56,10 @@ pub fn head(list) {
 
 test head {
   head([0, 4, 5, 7])
-    |> assert:equal(_, Ok(0))
+    |> expect:equal(_, Ok(0))
 
   head([])
-    |> assert:equal(_, Error(Empty))
+    |> expect:equal(_, Error(Empty))
 }
 
 pub fn tail(list) {
@@ -71,13 +71,13 @@ pub fn tail(list) {
 
 test tail {
   tail([0, 4, 5, 7])
-    |> assert:equal(_, Ok([4, 5, 7]))
+    |> expect:equal(_, Ok([4, 5, 7]))
 
   tail([0])
-    |> assert:equal(_, Ok([]))
+    |> expect:equal(_, Ok([]))
 
   tail([])
-    |> assert:equal(_, Error(Empty))
+    |> expect:equal(_, Error(Empty))
 }
 
 pub fn filter(list, fun) {
@@ -87,19 +87,19 @@ pub fn filter(list, fun) {
 test filter {
   []
     |> filter(_, fn(x) { True })
-    |> assert:equal(_, [])
+    |> expect:equal(_, [])
 
   [0, 4, 5, 7, 3]
     |> filter(_, fn(x) { True })
-    |> assert:equal(_, [0, 4, 5, 7, 3])
+    |> expect:equal(_, [0, 4, 5, 7, 3])
 
   [0, 4, 5, 7, 3]
     |> filter(_, fn(x) { x > 4 })
-    |> assert:equal(_, [5, 7])
+    |> expect:equal(_, [5, 7])
 
   [0, 4, 5, 7, 3]
     |> filter(_, fn(x) { x < 4 })
-    |> assert:equal(_, [0, 3])
+    |> expect:equal(_, [0, 3])
 }
 
 fn do_filter(list, fun, acc) {
@@ -122,11 +122,11 @@ pub fn map(list, fun) {
 test map {
   []
     |> map(_, fn(x) { x * 2 })
-    |> assert:equal(_, [])
+    |> expect:equal(_, [])
 
   [0, 4, 5, 7, 3]
     |> map(_, fn(x) { x * 2 })
-    |> assert:equal(_, [0, 8, 10, 14, 6])
+    |> expect:equal(_, [0, 8, 10, 14, 6])
 }
 
 fn do_map(list, fun, acc) {
@@ -150,11 +150,11 @@ pub fn drop(list, n) {
 test drop/2 {
   []
     |> drop(_, 5)
-    |> assert:equal(_, [])
+    |> expect:equal(_, [])
 
   [1, 2, 3, 4, 5, 6, 7, 8]
     |> drop(_, 5)
-    |> assert:equal(_, [6, 7, 8])
+    |> expect:equal(_, [6, 7, 8])
 }
 
 pub fn take(list, n) {
@@ -175,10 +175,10 @@ fn do_take(list, n, acc) {
 test take {
   []
     |> take(_, 5)
-    |> assert:equal(_, [])
+    |> expect:equal(_, [])
   [1, 2, 3, 4, 5, 6, 7, 8]
     |> take(_, 5)
-    |> assert:equal(_, [1, 2, 3, 4, 5])
+    |> expect:equal(_, [1, 2, 3, 4, 5])
 }
 
 pub fn of(x) {
@@ -186,8 +186,8 @@ pub fn of(x) {
 }
 
 test of() {
-  of([]) |> assert:equal(_, [[]])
-  of(1) |> assert:equal(_, [1])
+  of([]) |> expect:equal(_, [[]])
+  of(1) |> expect:equal(_, [1])
 }
 
 pub fn new() {
@@ -195,7 +195,7 @@ pub fn new() {
 }
 
 test new {
-  new() |> assert:equal(_, [])
+  new() |> expect:equal(_, [])
 }
 
 pub fn flatten(lists) {
@@ -204,16 +204,16 @@ pub fn flatten(lists) {
 
 test flatten {
   flatten([])
-    |> assert:equal(_, [])
+    |> expect:equal(_, [])
 
   flatten([[]])
-    |> assert:equal(_, [])
+    |> expect:equal(_, [])
 
   flatten([[], [], []])
-    |> assert:equal(_, [])
+    |> expect:equal(_, [])
 
   flatten([[1, 2], [], [3, 4]])
-    |> assert:equal(_, [1, 2, 3, 4])
+    |> expect:equal(_, [1, 2, 3, 4])
 }
 
 fn do_flatten(lists, acc) {
@@ -233,7 +233,7 @@ pub fn foldl(list, acc, fun) {
 test foldl {
   [1, 2, 3]
     |> foldl(_, [], fn(x, acc) { x :: acc })
-    |> assert:equal(_, [3, 2, 1])
+    |> expect:equal(_, [3, 2, 1])
 }
 
 pub fn foldr(list, acc, fun) {
@@ -246,5 +246,5 @@ pub fn foldr(list, acc, fun) {
 test foldr {
   [1, 2, 3]
     |> foldr(_, [], fn(x, acc) { x :: acc })
-    |> assert:equal(_, [1, 2, 3])
+    |> expect:equal(_, [1, 2, 3])
 }

@@ -9,10 +9,10 @@ pub fn not(bool) {
 
 test not {
   not(True)
-    |> assert:false
+    |> expect:false
 
   not(False)
-    |> assert:true
+    |> expect:true
 }
 
 pub fn compare(a, b) {
@@ -26,16 +26,16 @@ pub fn compare(a, b) {
 
 test compare {
   compare(True, True)
-    |> assert:equal(_, Eq)
+    |> expect:equal(_, Eq)
 
   compare(True, False)
-    |> assert:equal(_, Gt)
+    |> expect:equal(_, Gt)
 
   compare(False, False)
-    |> assert:equal(_, Lt)
+    |> expect:equal(_, Lt)
 
   compare(False, True)
-    |> assert:equal(_, Gt)
+    |> expect:equal(_, Gt)
 }
 
 pub fn max(a, b) {
@@ -47,16 +47,16 @@ pub fn max(a, b) {
 
 test max {
   max(True, True)
-    |> assert:equal(_, True)
+    |> expect:equal(_, True)
 
   max(True, False)
-    |> assert:equal(_, True)
+    |> expect:equal(_, True)
 
   max(False, False)
-    |> assert:equal(_, False)
+    |> expect:equal(_, False)
 
   max(False, True)
-    |> assert:equal(_, True)
+    |> expect:equal(_, True)
 }
 
 pub fn min(a, b) {
@@ -68,16 +68,16 @@ pub fn min(a, b) {
 
 test min {
   min(True, True)
-    |> assert:equal(_, True)
+    |> expect:equal(_, True)
 
   min(True, False)
-    |> assert:equal(_, False)
+    |> expect:equal(_, False)
 
   min(False, False)
-    |> assert:equal(_, False)
+    |> expect:equal(_, False)
 
   min(False, True)
-    |> assert:equal(_, False)
+    |> expect:equal(_, False)
 }
 
 pub fn to_int(bool) {
@@ -89,8 +89,8 @@ pub fn to_int(bool) {
 
 test to_int {
   to_int(True)
-    |> assert:equal(_, 1)
+    |> expect:equal(_, 1)
 
   to_int(False)
-    |> assert:equal(_, 0)
+    |> expect:equal(_, 0)
 }

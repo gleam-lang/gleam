@@ -1,4 +1,4 @@
-import assert
+import expect
 
 pub enum Order =
   | Lt
@@ -15,9 +15,9 @@ pub fn reverse(order) {
 }
 
 test reverse {
-  reverse(Lt) |> assert:equal(_, Gt)
-  reverse(Eq) |> assert:equal(_, Eq)
-  reverse(Gt) |> assert:equal(_, Lt)
+  reverse(Lt) |> expect:equal(_, Gt)
+  reverse(Eq) |> expect:equal(_, Eq)
+  reverse(Gt) |> expect:equal(_, Lt)
 }
 
 pub fn to_int(order) {
@@ -29,9 +29,9 @@ pub fn to_int(order) {
 }
 
 test to_int {
-  to_int(Lt) |> assert:equal(_, -1)
-  to_int(Eq) |> assert:equal(_, 0)
-  to_int(Gt) |> assert:equal(_, 1)
+  to_int(Lt) |> expect:equal(_, -1)
+  to_int(Eq) |> expect:equal(_, 0)
+  to_int(Gt) |> expect:equal(_, 1)
 }
 
 pub fn compare(a, b) {
@@ -46,15 +46,15 @@ pub fn compare(a, b) {
 }
 
 test compare {
-  compare(Lt, Lt) |> assert:equal(_, Eq)
-  compare(Lt, Eq) |> assert:equal(_, Lt)
-  compare(Lt, Gt) |> assert:equal(_, Lt)
-  compare(Eq, Lt) |> assert:equal(_, Gt)
-  compare(Eq, Eq) |> assert:equal(_, Eq)
-  compare(Eq, Gt) |> assert:equal(_, Lt)
-  compare(Gt, Lt) |> assert:equal(_, Gt)
-  compare(Gt, Eq) |> assert:equal(_, Gt)
-  compare(Gt, Gt) |> assert:equal(_, Eq)
+  compare(Lt, Lt) |> expect:equal(_, Eq)
+  compare(Lt, Eq) |> expect:equal(_, Lt)
+  compare(Lt, Gt) |> expect:equal(_, Lt)
+  compare(Eq, Lt) |> expect:equal(_, Gt)
+  compare(Eq, Eq) |> expect:equal(_, Eq)
+  compare(Eq, Gt) |> expect:equal(_, Lt)
+  compare(Gt, Lt) |> expect:equal(_, Gt)
+  compare(Gt, Eq) |> expect:equal(_, Gt)
+  compare(Gt, Gt) |> expect:equal(_, Eq)
 }
 
 pub fn max(a, b) {
@@ -66,15 +66,15 @@ pub fn max(a, b) {
 }
 
 test max {
-  max(Lt, Lt) |> assert:equal(_, Lt)
-  max(Lt, Eq) |> assert:equal(_, Eq)
-  max(Lt, Gt) |> assert:equal(_, Gt)
-  max(Eq, Lt) |> assert:equal(_, Eq)
-  max(Eq, Eq) |> assert:equal(_, Eq)
-  max(Eq, Gt) |> assert:equal(_, Gt)
-  max(Gt, Lt) |> assert:equal(_, Gt)
-  max(Gt, Eq) |> assert:equal(_, Gt)
-  max(Gt, Gt) |> assert:equal(_, Gt)
+  max(Lt, Lt) |> expect:equal(_, Lt)
+  max(Lt, Eq) |> expect:equal(_, Eq)
+  max(Lt, Gt) |> expect:equal(_, Gt)
+  max(Eq, Lt) |> expect:equal(_, Eq)
+  max(Eq, Eq) |> expect:equal(_, Eq)
+  max(Eq, Gt) |> expect:equal(_, Gt)
+  max(Gt, Lt) |> expect:equal(_, Gt)
+  max(Gt, Eq) |> expect:equal(_, Gt)
+  max(Gt, Gt) |> expect:equal(_, Gt)
 }
 
 pub fn min(a, b) {
@@ -86,13 +86,13 @@ pub fn min(a, b) {
 }
 
 test min {
-  min(Lt, Lt) |> assert:equal(_, Lt)
-  min(Lt, Eq) |> assert:equal(_, Lt)
-  min(Lt, Gt) |> assert:equal(_, Lt)
-  min(Eq, Lt) |> assert:equal(_, Lt)
-  min(Eq, Eq) |> assert:equal(_, Eq)
-  min(Eq, Gt) |> assert:equal(_, Eq)
-  min(Gt, Lt) |> assert:equal(_, Lt)
-  min(Gt, Eq) |> assert:equal(_, Eq)
-  min(Gt, Gt) |> assert:equal(_, Gt)
+  min(Lt, Lt) |> expect:equal(_, Lt)
+  min(Lt, Eq) |> expect:equal(_, Lt)
+  min(Lt, Gt) |> expect:equal(_, Lt)
+  min(Eq, Lt) |> expect:equal(_, Lt)
+  min(Eq, Eq) |> expect:equal(_, Eq)
+  min(Eq, Gt) |> expect:equal(_, Eq)
+  min(Gt, Lt) |> expect:equal(_, Lt)
+  min(Gt, Eq) |> expect:equal(_, Eq)
+  min(Gt, Gt) |> expect:equal(_, Gt)
 }
