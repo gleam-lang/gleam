@@ -133,14 +133,22 @@ fn_call(Fn, Args, Env0) ->
       {C_args, NewEnv} = map_expressions(Args, Env0),
       {cerl:c_apply(C_fname, C_args), NewEnv};
 
+    % A function assigned to a local variable can be immediately called
+    #ast_var{name = Name, scope = local} ->
+      {C_args, Env1} = map_expressions(Args, Env0),
+      C_var = cerl:c_var(list_to_atom(Name)),
+      C_apply = cerl:c_apply(C_var, C_args),
+      {C_apply, Env1};
+
+
+    % A function value must be assigned to a variable because it can be called
     _ ->
+      % TODO: We can check the lhs here to see if it is a fn(_)
       % capture. If it is we can avoid the creation of the intermediary
       % fn by directly rewriting the arguments.
-      % TODO: Avoid creating an extra var if the fn is already a var.
       {C_fn, Env1} = expression(Fn, Env0),
       {C_args, Env2} = map_expressions(Args, Env1),
       {UID, Env3} = uid(Env2),
-      % TODO: We can check the lhs here to see if it is a fn(_)
       Name = list_to_atom("$$gleam_fn_var" ++ integer_to_list(UID)),
       C_var = cerl:c_var(Name),
       C_apply = cerl:c_apply(C_var, C_args),
