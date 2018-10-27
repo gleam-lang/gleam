@@ -3,7 +3,7 @@
 A statically typed language for the Erlang VM.
 
 ```rust
-import assert
+import expect
 
 pub enum Quadrilateral =
   | Square(Int)
@@ -18,10 +18,10 @@ pub fn from_dimensions(width, height) {
 
 test from_dimensions {
   from_dimensions(100, 100)
-    |> assert:equal(_, Square(100))
+    |> expect:equal(_, Square(100))
 
   from_dimensions(100, 120)
-    |> assert:equal(_, Rectangle(100, 120))
+    |> expect:equal(_, Rectangle(100, 120))
 }
 ```
 
