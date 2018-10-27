@@ -104,12 +104,6 @@
         {meta = #meta{} :: meta(),
          type = type_not_annotated :: type_annotation()}).
 
--record(ast_fn_call,
-        {meta = #meta{} :: meta(),
-         type = type_not_annotated :: type_annotation(),
-         fn :: ast_expression(),
-         args = [] :: [ast_expression()]}).
-
 -record(ast_raise,
         {meta = #meta{} :: meta(),
          type = type_not_annotated :: type_annotation(),
@@ -188,7 +182,6 @@
       | #ast_case{}
       | #ast_cons{}
       | #ast_float{}
-      | #ast_fn_call{}
       | #ast_fn{}
       | #ast_hole{}
       | #ast_int{}

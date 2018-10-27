@@ -228,13 +228,6 @@ infer(Ast, Env0) ->
       AnnotatedAst = Ast#ast_operator{type = {ok, ReturnType}, args = AnnotatedArgs},
       {AnnotatedAst, Env1};
 
-    #ast_fn_call{fn = Fn, args = Args} ->
-      {ReturnType, AnnotatedFn, AnnotatedArgs, Env1} = infer_call(Fn, Args, Env0),
-      AnnotatedAst = Ast#ast_fn_call{type = {ok, ReturnType},
-                                     fn = AnnotatedFn,
-                                     args = AnnotatedArgs},
-      {AnnotatedAst, Env1};
-
     #ast_call{meta = Meta, fn = Fn, args = Args} ->
       NumHoles = length(lists:filter(fun(#ast_hole{}) -> true; (_) -> false end, Args)),
       case NumHoles of
@@ -510,9 +503,6 @@ fetch(Ast) ->
     #ast_call{type = {ok, Type}} ->
       Type;
 
-    #ast_fn_call{type = {ok, Type}} ->
-      Type;
-
     #ast_fn{type = {ok, Type}} ->
       Type;
 
@@ -600,10 +590,6 @@ resolve_type_vars(Ast, Env) ->
     #ast_call{type = {ok, Type}} ->
       NewType = type_resolve_type_vars(Type, Env),
       Ast#ast_call{type = {ok, NewType}};
-
-    #ast_fn_call{type = {ok, Type}} ->
-      NewType = type_resolve_type_vars(Type, Env),
-      Ast#ast_fn_call{type = {ok, NewType}};
 
     % TODO: resolve type vars in args and body?
     #ast_fn{type = {ok, Type}} ->

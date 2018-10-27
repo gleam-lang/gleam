@@ -216,18 +216,7 @@ curried_test() ->
       }
     , args = [#ast_int{value = 2}]
     },
-  ?assertEqual(AST, parse(tokens(Code))),
-  Code2 = "f.(1)(2)",
-  AST2 =
-    #ast_call
-    { fn =
-      #ast_fn_call
-      { fn = #ast_var{name = "f"}
-      , args = [#ast_int{value = 1}]
-      }
-    , args = [#ast_int{value = 2}]
-    },
-  ?assertEqual(AST2, parse(tokens(Code2))).
+  ?assertEqual(AST, parse(tokens(Code))).
 
 record_select_test() ->
   Code = "r = {a = 1} r.a + r.b",
@@ -242,18 +231,7 @@ record_select_test() ->
         #ast_record_select{label = "b", record = #ast_var{name = "r"}}
       ]}
     },
-  ?assertEqual(AST, parse(tokens(Code))),
-  Code2 = "f.(1)(2)",
-  AST2 =
-    #ast_call
-    { fn =
-      #ast_fn_call
-      { fn = #ast_var{name = "f"}
-      , args = [#ast_int{value = 1}]
-      }
-    , args = [#ast_int{value = 2}]
-    },
-  ?assertEqual(AST2, parse(tokens(Code2))).
+  ?assertEqual(AST, parse(tokens(Code))).
 
 record_extend_test() ->
   Code = "{r | a = 1}",
@@ -263,18 +241,7 @@ record_extend_test() ->
     , value = #ast_int{value = 1}
     , parent = #ast_var{name = "r"}
     },
-  ?assertEqual(AST, parse(tokens(Code))),
-  Code2 = "f.(1)(2)",
-  AST2 =
-    #ast_call
-    { fn =
-      #ast_fn_call
-      { fn = #ast_var{name = "f"}
-      , args = [#ast_int{value = 1}]
-      }
-    , args = [#ast_int{value = 2}]
-    },
-  ?assertEqual(AST2, parse(tokens(Code2))).
+  ?assertEqual(AST, parse(tokens(Code))).
 
 enum_def_test() ->
   Cases = [

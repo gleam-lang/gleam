@@ -90,10 +90,10 @@ expr -> '{' fields '}'             : record('$1', '$2').
 expr -> '{' expr '|' fields '}'    : record_extend('$2', '$4').
 expr -> name                       : var('$1').
 expr -> expr '.' name              : record_select('$2', '$1', '$3').
-expr -> expr '(' ')'               : local_call('$2', '$1', []).
-expr -> expr '(' call_args ')'     : local_call('$2', '$1', '$3').
-expr -> expr '.' '(' ')'           : fn_call('$2', '$1', []).
-expr -> expr '.' '(' call_args ')' : fn_call('$2', '$1', '$4').
+expr -> expr '(' ')'               : call('$2', '$1', []).
+expr -> expr '(' call_args ')'     : call('$2', '$1', '$3').
+expr -> expr '.' '(' ')'           : call('$3', '$1', []).
+expr -> expr '.' '(' call_args ')' : call('$3', '$1', '$4').
 expr -> kw_raise expr ')'          : raise('$1', '$2').
 expr -> kw_throw expr ')'          : throw_('$1', '$2').
 expr -> expr '::' expr             : cons('$2', '$1', '$3').
@@ -189,11 +189,8 @@ fn({_, Meta}, Args, Body) ->
 op({Operator, Meta}, Args) ->
   #ast_operator{meta = Meta, name = atom_to_list(Operator), args = Args}.
 
-local_call({'(', Meta}, Fn, Args) ->
+call({'(', Meta}, Fn, Args) ->
   #ast_call{meta = Meta, fn = Fn, args = Args}.
-
-fn_call({'.', Meta}, Fn, Args) ->
-  #ast_fn_call{meta = Meta, fn = Fn, args = Args}.
 
 function(Public, {name, Meta, Name}, Args, Body) ->
   #ast_mod_fn{public = Public,

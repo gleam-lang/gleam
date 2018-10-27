@@ -134,7 +134,18 @@ fn_call(Fn, Args, Env0) ->
       {cerl:c_apply(C_fname, C_args), NewEnv};
 
     _ ->
-      expression(#ast_fn_call{fn = Fn, args = Args}, Env0)
+      % capture. If it is we can avoid the creation of the intermediary
+      % fn by directly rewriting the arguments.
+      % TODO: Avoid creating an extra var if the fn is already a var.
+      {C_fn, Env1} = expression(Fn, Env0),
+      {C_args, Env2} = map_expressions(Args, Env1),
+      {UID, Env3} = uid(Env2),
+      % TODO: We can check the lhs here to see if it is a fn(_)
+      Name = list_to_atom("$$gleam_fn_var" ++ integer_to_list(UID)),
+      C_var = cerl:c_var(Name),
+      C_apply = cerl:c_apply(C_var, C_args),
+      C_let = cerl:c_let([C_var], C_fn, C_apply),
+      {C_let, Env3}
   end.
 
 
@@ -165,7 +176,7 @@ expression(#ast_cons{head = Head, tail = Tail}, Env) ->
   {cerl:c_cons(C_head, C_tail), Env2};
 
 expression(#ast_operator{meta = Meta, name = "|>", args = [Lhs, Rhs]}, Env) ->
-  Call = #ast_fn_call{meta = Meta, fn = Rhs, args = [Lhs]},
+  Call = #ast_call{meta = Meta, fn = Rhs, args = [Lhs]},
   expression(Call, Env);
 
 expression(#ast_operator{name = Name, args = Args}, Env) ->
@@ -249,20 +260,6 @@ expression(#ast_record_select{meta = Meta, record = Record, label = Label}, Env)
                           name = "get",
                           args = [Atom, Record]},
   expression(Call, Env);
-
-% TODO: We can check the lhs here to see if it is a fn(_)
-% capture. If it is we can avoid the creation of the intermediary
-% fn by directly rewriting the arguments.
-% TODO: Avoid creating an extra var if the fn is already a var.
-expression(#ast_fn_call{fn = Fn, args = Args}, Env0) ->
-  {C_fn, Env1} = expression(Fn, Env0),
-  {C_args, Env2} = map_expressions(Args, Env1),
-  {UID, Env3} = uid(Env2),
-  Name = list_to_atom("$$gleam_fn_var" ++ integer_to_list(UID)),
-  C_var = cerl:c_var(Name),
-  C_apply = cerl:c_apply(C_var, C_args),
-  C_let = cerl:c_let([C_var], C_fn, C_apply),
-  {C_let, Env3};
 
 expression(#ast_case{subject = Subject, clauses = Clauses}, Env) ->
   {C_subject, Env1} = expression(Subject, Env),
