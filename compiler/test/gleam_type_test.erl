@@ -80,13 +80,32 @@ infer_tuple_test() ->
   ],
   test_infer(Cases).
 
-infer_let_test() ->
+infer_assignment_test() ->
   Cases = [
     {"x = 'unused' 1", "Int"},
     {"x = 'unused' 1.1", "Float"},
     {"x = 'unused' {'ok', 1}", "Tuple(Atom, Int)"},
     {"x = 'ok' x", "Atom"},
     {"x = 5 y = x y", "Int"}
+  ],
+  test_infer(Cases).
+
+infer_pattern_assignment_test() ->
+  Cases = [
+    {
+     "pub enum Box = | Box(String) "
+     "pub fn go(x) { Box(s) = x s }"
+     ,
+     "module {"
+     " fn go(Box) -> String"
+     "}"
+    },
+
+    {
+     "fn(x) { {a, b} = x a + b }"
+     ,
+     "fn(Tuple(Int, Int)) -> Int"
+    }
   ],
   test_infer(Cases).
 
@@ -353,30 +372,37 @@ cast_test() ->
      "case 1 { | a -> a }",
      "Int"
     },
+
     {
      "case \"\" { | a -> 0.0 }",
      "Float"
     },
+
     {
      "case 'ok' { | 'ok' -> 0 | 'error' -> 1 }",
      "Int"
     },
+
     {
      "fn(x) { case x { | 1 -> 'ok' } }",
      "fn(Int) -> Atom"
     },
+
     {
      "fn(x, y) { case x { | 1 -> y | a -> {'ok', 2} } }",
      "fn(Int, Tuple(Atom, Int)) -> Tuple(Atom, Int)"
     },
+
     {
      "case {'ok', 1} { | {'ok', int} -> int | _other -> 0 }",
      "Int"
     },
+
     {
      "case [] { | [] -> 0 | x :: xs -> x }",
      "Int"
     },
+
     {
      "case 1 { | 1 -> 'one' | 2 -> 'two' | 3 -> 'dunnno' }",
      "Atom"

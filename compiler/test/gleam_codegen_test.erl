@@ -197,6 +197,15 @@ assignment_test() ->
     ?assertEqual(2, gleam_codegen_assignment:reassign())
   end).
 
+pattern_assignment_test() ->
+  Source =
+    "pub fn go(tup) { {a, b} = tup a + b }\n"
+  ,
+  Mod = gleam_codegen_pattern_assignment,
+  with_module(Mod, Source, fun() ->
+    ?assertEqual(15, Mod:go({10, 5}))
+  end).
+
 bool_enum_test() ->
   Source =
     "pub fn true() { True }\n"

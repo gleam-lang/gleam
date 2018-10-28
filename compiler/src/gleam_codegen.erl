@@ -44,15 +44,19 @@ add_module_info(Acc0, Name) ->
   Acc4 = add_export(Acc3, export({"module_info", 1})),
   Acc4.
 
-add_main_test(#module_acc{gen_tests = false} = Acc, _PrefixedName) ->
-  Acc;
-add_main_test(#module_acc{gen_tests = true} = Acc, PrefixedName) ->
-  Body = cerl:c_call(cerl:c_atom(eunit), cerl:c_atom(test), [cerl:c_atom(PrefixedName)]),
-  Name = cerl:c_fname(test, 0),
-  Fun = cerl:c_fun([], Body),
-  Export = export({"test", 0}),
-  C_fun = {Name, Fun},
-  add_export(add_definition(Acc, C_fun), Export).
+add_main_test(Acc, PrefixedName) ->
+  case Acc of
+    #module_acc{gen_tests = false} ->
+      Acc;
+
+    #module_acc{gen_tests = true} ->
+      Body = cerl:c_call(cerl:c_atom(eunit), cerl:c_atom(test), [cerl:c_atom(PrefixedName)]),
+      Name = cerl:c_fname(test, 0),
+      Fun = cerl:c_fun([], Body),
+      Export = export({"test", 0}),
+      C_fun = {Name, Fun},
+      add_export(add_definition(Acc, C_fun), Export)
+  end.
 
 add_definition(Acc = #module_acc{definitions = Defs}, Def) ->
   Acc#module_acc{definitions = [Def | Defs]}.
@@ -225,14 +229,15 @@ expression(#ast_assignment{pattern = Pattern, value = Value, then = Then}, Env) 
   {C_pattern, Env0} = expression(Pattern, Env),
   {C_value, Env1} = expression(Value, Env0),
   {C_then, Env2} = expression(Then, Env1),
+  % FIXME: This is invalid. We can't use a non-var pattern as the left hand side of c_let
   {cerl:c_let([C_pattern], C_value, C_then), Env2};
 
 expression(#ast_enum{name = Name, elems = []}, Env) when is_list(Name) ->
-  AtomName = list_to_atom(enum_name_value(Name)),
+  AtomName = list_to_atom(to_snake_case(Name)),
   {cerl:c_atom(AtomName), Env};
 
 expression(#ast_enum{name = Name, meta = Meta, elems = Elems}, Env) when is_list(Name) ->
-  AtomValue = enum_name_value(Name),
+  AtomValue = to_snake_case(Name),
   Atom = #ast_atom{meta = Meta, value = AtomValue},
   expression(#ast_tuple{elems = [Atom | Elems]}, Env);
 
@@ -353,17 +358,23 @@ clause(#ast_clause{pattern = Pattern, value = Value}, Env) ->
   C_clause = cerl:c_clause([C_pattern], C_value),
   {C_clause, Env2}.
 
-enum_name_value(Chars) when is_list(Chars) ->
-  enum_name_value(Chars, []).
+to_snake_case(Chars) when is_list(Chars) ->
+  to_snake_case(Chars, []).
 
-enum_name_value([C | Chars], []) when ?is_uppercase_char(C) ->
-  enum_name_value(Chars, [C + 32]);
-enum_name_value([C | Chars], Acc) when ?is_uppercase_char(C) ->
-  enum_name_value(Chars, [C + 32, $_ | Acc]);
-enum_name_value([C | Chars], Acc) ->
-  enum_name_value(Chars, [C | Acc]);
-enum_name_value([], Acc) ->
-  lists:reverse(Acc).
+to_snake_case(Input, Acc) ->
+  case {Input, Acc} of
+    {[C | Chars], []} when ?is_uppercase_char(C) ->
+      to_snake_case(Chars, [C + 32]);
+
+    {[C | Chars], _} when ?is_uppercase_char(C) ->
+      to_snake_case(Chars, [C + 32, $_ | Acc]);
+
+    {[C | Chars], _} ->
+      to_snake_case(Chars, [C | Acc]);
+
+    {[], _} ->
+      lists:reverse(Acc)
+  end.
 
 c_list(Elems) ->
   Rev = lists:reverse(Elems),
