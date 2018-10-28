@@ -222,7 +222,7 @@ record_select_test() ->
   Code = "r = {a = 1} r.a + r.b",
   AST =
     #ast_assignment
-    { name = "r"
+    { pattern = #ast_var{name = "r"}
     , value = #ast_record_extend{label = "a",
                                  value = #ast_int{value = 1},
                                  parent = #ast_record_empty{}}

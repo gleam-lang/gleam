@@ -282,8 +282,8 @@ infer(Ast, Env0) ->
           fail({var_not_found, Ast})
       end;
 
-    #ast_assignment{name = Name, value = Value, then = Then} ->
-      {_ValueType, AnnotatedValue, Env1} = infer_assignment(Name, Value, local, Env0),
+    #ast_assignment{pattern = Pattern, value = Value, then = Then} ->
+      {_ValueType, AnnotatedValue, Env1} = infer_assignment(Pattern, Value, local, Env0),
       {AnnotatedThen, Env2} = infer(Then, Env1),
       AnnotatedAst = Ast#ast_assignment{value = AnnotatedValue, then = AnnotatedThen},
       {AnnotatedAst, Env2};
@@ -391,9 +391,9 @@ ast_type_to_type(AstType, Env0) ->
   end.
 
 
--spec infer_assignment(string(), ast_expression(), scope(), env())
+-spec infer_assignment(ast_expression(), ast_expression(), scope(), env())
       -> {type(), ast_expression(), env()}.
-infer_assignment(Name, Value, Scope, Env0) ->
+infer_assignment(#ast_var{name = Name}, Value, Scope, Env0) ->
   {InferredValue, Env2} = infer(Value, increment_env_level(Env0)),
   Env3 = decrement_env_level(Env2),
   {GeneralizedType, Env4} = generalize(fetch(InferredValue), Env3),
@@ -440,9 +440,10 @@ module_statement(Statement, {Row, Env0}) ->
       Env4 = env_register_type(Name, Type, Env3),
       {Statement, {Row, Env4}};
 
-    #ast_mod_fn{public = Public, name = Name, args = Args, body = Body} ->
+    #ast_mod_fn{public = Public, name = Name, args = Args, body = Body, meta = Meta} ->
       Fn = #ast_fn{args = Args, body = Body},
-      {FnType, AnnotatedFn, Env1} = infer_assignment(Name, Fn, module, Env0),
+      Var = #ast_var{name = Name, meta = Meta},
+      {FnType, AnnotatedFn, Env1} = infer_assignment(Var, Fn, module, Env0),
       #ast_fn{args = NewArgs, body = NewBody} = AnnotatedFn,
       NewRow = case Public of
         true -> #type_row_extend{label = Name, type = FnType, parent = Row};

@@ -221,11 +221,11 @@ expression(#ast_module_call{module = Mod, name = Name, args = Args}, Env) when i
   {C_args, NewEnv} = map_expressions(Args, Env),
   {cerl:c_call(C_module, C_name, C_args), NewEnv};
 
-expression(#ast_assignment{name = Name, value = Value, then = Then}, Env) when is_list(Name) ->
-  C_var = cerl:c_var(list_to_atom(Name)),
-  {C_value, Env1} = expression(Value, Env),
+expression(#ast_assignment{pattern = Pattern, value = Value, then = Then}, Env) ->
+  {C_pattern, Env0} = expression(Pattern, Env),
+  {C_value, Env1} = expression(Value, Env0),
   {C_then, Env2} = expression(Then, Env1),
-  {cerl:c_let([C_var], C_value, C_then), Env2};
+  {cerl:c_let([C_pattern], C_value, C_then), Env2};
 
 expression(#ast_enum{name = Name, elems = []}, Env) when is_list(Name) ->
   AtomName = list_to_atom(enum_name_value(Name)),

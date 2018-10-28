@@ -74,7 +74,7 @@ function ->        kw_fn name '(' args ')' '{' exprs '}' : function(false, '$2',
 
 test -> kw_test name '{' exprs '}' : test('$2', '$4').
 
-exprs -> name '=' expr exprs : assignment('$2', '$1', '$3', '$4').
+exprs -> expr '=' expr exprs : assignment('$2', '$1', '$3', '$4').
 exprs -> expr                : '$1'.
 exprs -> expr exprs          : seq('$1', '$2').
 
@@ -199,8 +199,8 @@ type_var({name, Meta, Name}) ->
   #ast_type_var{meta = Meta,
                 name = Name}.
 
-assignment({'=', Meta}, {name, _, Name}, Value, Then) ->
-  #ast_assignment{meta = Meta, name = Name, value = Value, then = Then}.
+assignment({'=', Meta}, Pattern, Value, Then) ->
+  #ast_assignment{meta = Meta, pattern = Pattern, value = Value, then = Then}.
 
 arg({name, _Meta, Name}) ->
   Name.

@@ -128,7 +128,7 @@
 
 -record(ast_assignment,
         {meta = #meta{} :: meta(),
-         name :: string(),
+         pattern :: ast_expression(),
          value :: ast_expression(),
          then :: ast_expression()}).
 
