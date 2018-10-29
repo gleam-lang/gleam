@@ -83,7 +83,7 @@ test flatten {
 
 pub fn flat_map(result, fun) {
   result
-    |> unwrap(_, fun)
+    |> map(_, fun)
     |> flatten
 }
 

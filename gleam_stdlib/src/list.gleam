@@ -119,6 +119,13 @@ pub fn map(list, fun) {
   do_map(list, fun, [])
 }
 
+fn do_map(list, fun, acc) {
+  case list {
+  | [] -> reverse(acc)
+  | x :: xs -> do_map(xs, fun, fun(x) :: acc)
+  }
+}
+
 test map {
   []
     |> map(_, fn(x) { x * 2 })
@@ -129,12 +136,38 @@ test map {
     |> expect:equal(_, [0, 8, 10, 14, 6])
 }
 
-fn do_map(list, fun, acc) {
+pub fn traverse(list, fun) {
+  do_traverse(list, fun, [])
+}
+
+pub fn do_traverse(list, fun, acc) {
   case list {
-  | [] -> reverse(acc)
-  | x :: xs -> do_map(xs, fun, fun(x) :: acc)
+  | [] -> Ok(reverse(acc))
+  | x :: xs ->
+      case fun(x) {
+        Ok(y) -> do_traverse(xs, fun, y :: acc)
+        error -> error
+      }
   }
 }
+
+test traverse {
+  fun = fn(x) {
+    case x < 6 {
+      True -> Ok(x * 2)
+      False -> Error(x)
+    }
+  }
+
+  [0, 4, 5, 6, 3]
+    |> traverse(_, fun)
+    |> expect:equal(_, Ok([0, 8, 10, 12, 6]))
+
+  [0, 4, 5, 7, 3]
+    |> traverse(_, fun)
+    |> expect:equal(_, Error(7)))
+}
+
 
 pub fn drop(list, n) {
   case n <= 0 {

@@ -9,7 +9,7 @@ pub external type Any
 doc """
 Convert any Gleam data into `Any` data.
 """
-pub external fn new(a) -> Any = 'gleam_foreign' 'identity'
+pub external fn from(a) -> Any = 'gleam_foreign' 'identity'
 
 doc """
 Unsafely cast any type into any other type.o

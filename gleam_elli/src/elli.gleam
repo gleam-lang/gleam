@@ -91,7 +91,7 @@ Start the Elli web server process tree.
 """
 pub fn start_link(args) {
   erl_start_link([
-    ('callback', any:new(args.callback)),
-    ('port', any:new(args.port)),
+    ('callback', any:from(args.callback)),
+    ('port', any:from(args.port)),
   ])
 }
