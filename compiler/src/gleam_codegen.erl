@@ -225,12 +225,18 @@ expression(#ast_module_call{module = Mod, name = Name, args = Args}, Env) when i
   {C_args, NewEnv} = map_expressions(Args, Env),
   {cerl:c_call(C_module, C_name, C_args), NewEnv};
 
-expression(#ast_assignment{pattern = Pattern, value = Value, then = Then}, Env) ->
-  {C_pattern, Env0} = expression(Pattern, Env),
+expression(#ast_assignment{pattern = #ast_var{name = Name}, value = Value, then = Then}, Env0) ->
+  C_var = cerl:c_var(list_to_atom(Name)),
   {C_value, Env1} = expression(Value, Env0),
   {C_then, Env2} = expression(Then, Env1),
-  % FIXME: This is invalid. We can't use a non-var pattern as the left hand side of c_let
-  {cerl:c_let([C_pattern], C_value, C_then), Env2};
+  {cerl:c_let([C_var], C_value, C_then), Env2};
+
+expression(#ast_assignment{pattern = Pattern, value = Value, then = Then}, Env0) ->
+  {C_pattern, Env1} = expression(Pattern, Env0),
+  {C_value, Env2} = expression(Value, Env1),
+  {C_then, Env3} = expression(Then, Env2),
+  C_clause = cerl:c_clause([C_pattern], C_then),
+  {cerl:c_case(C_value, [C_clause]), Env3};
 
 expression(#ast_enum{name = Name, elems = []}, Env) when is_list(Name) ->
   AtomName = list_to_atom(to_snake_case(Name)),
@@ -318,24 +324,29 @@ expression(Expressions, Env) when is_list(Expressions) ->
   C_seq = lists:foldl(fun cerl:c_seq/2, Head, Tail),
   {C_seq, Env1}.
 
-flatten_record(#ast_record_empty{}) ->
-  {flat, #{}};
-flatten_record(#ast_record_extend{parent = Parent, label = Label, value = Value}) ->
-  case flatten_record(Parent) of
-    % The record has been completely flattened to a list of fields
-    {flat, Fields} ->
-      {flat, maps:put(Label, Value, Fields)};
+flatten_record(Record) ->
+  case Record of
+    #ast_record_empty{} ->
+      {flat, #{}};
 
-    % The record could not be completely flattened. This is because at some
-    % point the update syntax has been used, it is a not a record literal.
-    {extending, TopParent, Fields} ->
-      {extending, TopParent, maps:put(Label, Value, Fields)};
+    #ast_record_extend{parent = Parent, label = Label, value = Value} ->
+      case flatten_record(Parent) of
+        % The record has been completely flattened to a list of fields
+        {flat, Fields} ->
+          {flat, maps:put(Label, Value, Fields)};
 
-    {parent, TopParent} ->
-      {extending, TopParent, #{Label => Value}}
-  end;
-flatten_record(NotRecord) ->
-  {parent, NotRecord}.
+        % The record could not be completely flattened. This is because at some
+        % point the update syntax has been used, it is a not a record literal.
+        {extending, TopParent, Fields} ->
+          {extending, TopParent, maps:put(Label, Value, Fields)};
+
+        {parent, TopParent} ->
+          {extending, TopParent, #{Label => Value}}
+      end;
+
+    NotRecord ->
+      {parent, NotRecord}
+  end.
 
 hole_fn(Meta, Fn, Args, Env) ->
   {UID, NewEnv} = uid(Env),
