@@ -511,6 +511,18 @@ external_fn_test() ->
   ],
   test_infer(Cases).
 
+external_type_test() ->
+  Cases = [
+    {
+      "pub external type Connection\n"
+      "pub external fn is_open(Connection) -> Bool = '' ''"
+      ,
+      "module { fn is_open(Connection) -> Bool}"
+    }
+  ],
+  test_infer(Cases).
+
+
 % TODO: Test enums that won't type check
 % TODO: Test that enum constructors with type vars must have the type vars at the top level
 

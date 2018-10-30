@@ -522,3 +522,13 @@ external_fn_test() ->
     ?assertEqual(97, Mod:first(<<"abc">>)),
     ?assertEqual(98, Mod:first(<<"bcd">>))
   end).
+
+external_type_test() ->
+  Source =
+    "pub external type Thing\n"
+    "pub fn id(x) { x }\n"
+  ,
+  Mod = gleam_codegen_external_type,
+  with_module(Mod, Source, fun() ->
+    ?assertEqual(1, Mod:id(1))
+  end).

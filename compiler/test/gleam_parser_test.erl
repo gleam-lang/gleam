@@ -396,5 +396,35 @@ external_fn_test() ->
   ],
   test_cases(Cases).
 
+external_type_test() ->
+  Cases = [
+    {
+      "external type Connection"
+      ,
+      #ast_module
+      { statements =
+        [ #ast_mod_external_type
+          { public = false
+          , name = "Connection"
+          }
+        ]
+      }
+    },
+
+    {
+      "pub external type Connection"
+      ,
+      #ast_module
+      { statements =
+        [ #ast_mod_external_type
+          { public = true
+          , name = "Connection"
+          }
+        ]
+      }
+    }
+  ],
+  test_cases(Cases).
+
 test_cases(Cases) ->
   lists:map(fun({Code, Ast}) -> ?assertEqual(Ast, parse(tokens(Code))) end, Cases).

@@ -76,6 +76,9 @@ module_statement(Statement, Acc) ->
     #ast_mod_enum{} ->
       Acc;
 
+    #ast_mod_external_type{} ->
+      Acc;
+
     #ast_mod_external_fn{meta = Meta, public = Public, name = Name, args =
                          Args, target_fn = TargetFn, target_mod = TargetMod} ->
 

@@ -1,6 +1,6 @@
 Nonterminals
 source module statements statement
-function test enum enum_defs enum_def external_fn
+function test enum enum_defs enum_def external_fn external_type
 exprs expr elems args call_args
 type type_args
 case_clauses case_clause field fields.
@@ -13,8 +13,7 @@ Terminals
 '/' '*' '+' '-' '/.' '*.' '+.' '-.'
 int float atom string
 hole name upname
-kw_fn kw_case kw_test
-kw_raise kw_throw kw_pub kw_enum kw_external.
+kw_fn kw_case kw_test kw_raise kw_throw kw_pub kw_enum kw_external kw_type.
 
 Rootsymbol source.
 
@@ -46,10 +45,11 @@ module -> statements : #ast_module{statements = '$1'}.
 statements -> statement             : ['$1'].
 statements -> statement statements  : ['$1' | '$2'].
 
-statement -> function    : '$1'.
-statement -> test        : '$1'.
-statement -> enum        : '$1'.
-statement -> external_fn : '$1'.
+statement -> function      : '$1'.
+statement -> test          : '$1'.
+statement -> enum          : '$1'.
+statement -> external_fn   : '$1'.
+statement -> external_type : '$1'.
 
 enum -> kw_pub kw_enum upname              '=' enum_defs : enum(true, '$3', [], '$5').
 enum -> kw_pub kw_enum upname '(' args ')' '=' enum_defs : enum(true, '$3', '$5', '$8').
@@ -77,6 +77,9 @@ external_fn -> kw_external kw_fn name '(' type_args ')' '->' 'type' '=' atom ato
                : external_fn(false, '$1', '$3', '$5', '$8', '$10', '$11').
 external_fn -> kw_pub kw_external kw_fn name '(' type_args ')' '->' 'type' '=' atom atom
                : external_fn(true, '$2', '$4', '$6', '$9', '$11', '$12').
+
+external_type ->        kw_external kw_type upname : external_type(false, '$3').
+external_type -> kw_pub kw_external kw_type upname : external_type(true, '$4').
 
 function -> kw_pub kw_fn name '('      ')' '{' exprs '}' : function(true, '$3', [], '$7').
 function -> kw_pub kw_fn name '(' args ')' '{' exprs '}' : function(true, '$3', '$5', '$8').
@@ -205,6 +208,11 @@ external_fn(Public, {_, Meta}, {name, _, Name}, Args, Return, {atom, _, Mod}, {a
                        return = Return,
                        target_mod = Mod,
                        target_fn = Fn}.
+
+external_type(Public, {upname, Meta, Name}) ->
+  #ast_mod_external_type{meta = Meta,
+                         public = Public,
+                         name = Name}.
 
 type_constructor({upname, Meta, Name}, Args) ->
   #ast_type_constructor{meta = Meta,

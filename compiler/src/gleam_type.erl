@@ -479,7 +479,10 @@ module_statement(Statement, {Row, Env0}) ->
       {AnnotatedFn, Env1} = infer(Fn, Env0),
       AnnotatedAst = Statement#ast_mod_test{body = AnnotatedFn#ast_fn.body},
       NewState = {Row, Env1},
-      {AnnotatedAst, NewState}
+      {AnnotatedAst, NewState};
+
+    #ast_mod_external_type{} ->
+      {Statement, {Row, Env0}}
   end.
 
 
@@ -673,6 +676,9 @@ resolve_type_vars(Ast, Env) ->
 statement_resolve_type_vars(Statement, Env) ->
   case Statement of
     #ast_mod_enum{} ->
+      Statement;
+
+    #ast_mod_external_type{} ->
       Statement;
 
     % TODO: resolve type vars in args and body?

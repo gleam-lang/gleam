@@ -55,11 +55,17 @@
          target_mod = "mod",
          target_fn = "fun"}).
 
+-record(ast_mod_external_type,
+        {meta = #meta{} :: meta(),
+         public = false :: boolean(),
+         name :: string()}).
+
 -type mod_statement()
       :: #ast_mod_fn{}
       | #ast_mod_test{}
       | #ast_mod_enum{}
       | #ast_mod_external_fn{}
+      | #ast_mod_external_type{}
       .
 
 -record(ast_tuple,
