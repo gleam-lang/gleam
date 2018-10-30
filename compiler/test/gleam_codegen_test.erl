@@ -512,3 +512,13 @@ eq_test() ->
     ?assertEqual(false, Mod:neq(1, 1)),
     ?assertEqual(true, Mod:neq(2, 1))
   end).
+
+external_fn_test() ->
+  Source =
+    "pub external fn first(String) -> Int = 'binary' 'first'\n"
+  ,
+  Mod = gleam_codegen_external_fn,
+  with_module(Mod, Source, fun() ->
+    ?assertEqual(97, Mod:first(<<"abc">>)),
+    ?assertEqual(98, Mod:first(<<"bcd">>))
+  end).

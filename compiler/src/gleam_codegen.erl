@@ -76,6 +76,21 @@ module_statement(Statement, Acc) ->
     #ast_mod_enum{} ->
       Acc;
 
+    #ast_mod_external_fn{meta = Meta, public = Public, name = Name, args =
+                         Args, target_fn = TargetFn, target_mod = TargetMod} ->
+
+      FnArgs = lists:map(fun(X) -> [$a | integer_to_list(X)] end, lists:seq(1, length(Args))),
+      ArgsVars = lists:map(fun(X) -> #ast_var{meta = Meta, name = X} end, FnArgs),
+      Fn = #ast_mod_fn{meta = Meta,
+                       public = Public,
+                       name = Name,
+                       args = FnArgs,
+                       body = #ast_module_call{meta = Meta,
+                                               module = TargetMod,
+                                               name = TargetFn,
+                                               args = ArgsVars}},
+      module_statement(Fn, Acc);
+
     #ast_mod_test{} ->
       case Acc#module_acc.gen_tests of
         true ->
@@ -404,6 +419,7 @@ prefix_module(Name) when is_list(Name) ->
   case Name of
     "erlang" -> "erlang";
     "maps" -> "maps";
+    "binary" -> "binary";
     _ -> "gleam_" ++ Name
   end.
 
