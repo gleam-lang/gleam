@@ -6,10 +6,7 @@ import result:[Result, Ok, Error]
 import list
 import expect
 
-type DecodeError =
-  String;
-
-pub external fn string(Any) -> Result(DecodeError, String)
+pub external fn string(Any) -> Result(String, String)
   = 'gleam__decode_erl' 'string'
 
 test string {
@@ -59,7 +56,7 @@ test int {
     |> expect:is_error
 }
 
-pub external fn float(Any) -> Result(DecodeError, Float)
+pub external fn float(Any) -> Result(String, Float)
   = 'gleam__decode_erl' 'float'
 
 test float {
@@ -84,7 +81,7 @@ test float {
     |> expect:is_error
 }
 
-pub external fn atom(Any) -> Result(DecodeError, Atom)
+pub external fn atom(Any) -> Result(String, Atom)
   = 'gleam__decode_erl' 'atom'
 
 test atom {
@@ -109,7 +106,7 @@ test atom {
     |> expect:is_error
 }
 
-pub external fn bool(Any) -> Result(DecodeError, Bool)
+pub external fn bool(Any) -> Result(String, Bool)
   = 'gleam__decode_erl' 'bool'
 
 test bool {
@@ -134,7 +131,7 @@ test bool {
     |> expect:is_error
 }
 
-pub external fn pid(Any) -> Result(DecodeError, Pid)
+pub external fn pid(Any) -> Result(String, Pid)
   = 'gleam__decode_erl' 'pid'
 
 test pid {
@@ -154,7 +151,7 @@ test pid {
     |> expect:is_error
 }
 
-pub external fn reference(Any) -> Result(DecodeError, Reference)
+pub external fn reference(Any) -> Result(String, Reference)
   = 'gleam__decode_erl' 'reference'
 
 test reference {
@@ -176,7 +173,7 @@ test reference {
     |> expect:is_error
 }
 
-pub external fn thunk(Any) -> Result(DecodeError, fn() { Any })
+pub external fn thunk(Any) -> Result(String, fn() { Any })
   = 'gleam__decode_erl' 'thunk'
 
 test thunk {
@@ -201,7 +198,7 @@ test thunk {
     |> expect:is_error
 }
 
-external fn list_any(Any) -> Result(DecodeError, List(Any)) = 'gleam__decode_erl' 'list'
+external fn list_any(Any) -> Result(String, List(Any)) = 'gleam__decode_erl' 'list'
 
 pub fn list(any, decode) {
   any
@@ -251,56 +248,148 @@ test list {
     |> expect:is_error
 }
 
-external fn t2(Any) -> Result(DecodeError, Tuple(Any, Any))
+@doc("Attempt to decode a 2 element tuple.
+
+The the elements of the tuple can be decoded like so:
+
+    Ok({raw_elem1, raw_elem2}) <- decode:tuple(raw_data)
+    Ok(elem1) <- decode:atom(raw_elem1)
+    Ok(elem2) <- decode:int(raw_elem2)
+    Ok({elem1, elem2})
+
+See `tuple3`, `tuple4`, and `tuple5` for decoding of tuples of other lengths.
+")
+pub external fn tuple(Any) -> Result(String, Tuple(Any, Any))
   = 'gleam__decode_erl' 'tuple'
 
-pub fn tuple(any, elem1, elem2) {
-  Ok({e1, e2}) <- t2(any)
-  Ok(ok1) <- elem1(e1)
-  Ok(ok2) <- elem2(e2)
-  {ok1, ok2}
+test tuple {
+  {1, []}
+    |> any:from
+    |> tuple
+    |> expect:equal({any:from(1), any:from([])})
+
+  {'ok', "ok"}
+    |> any:from
+    |> tuple
+    |> expect:equal({any:from('ok'), any:from("ok")})
+
+  {1}
+    |> any:from
+    |> tuple
+    |> expect:is_error
+
+  {1, 2, 3}
+    |> any:from
+    |> tuple
+    |> expect:is_error
 }
 
-// TODO: tuple test
-
-external fn t3(Any) -> Result(DecodeError, Tuple(Any, Any, Any))
+pub external fn tuple3(Any) -> Result(String, Tuple(Any, Any, Any))
   = 'gleam__decode_erl' 'tuple3'
 
-pub fn tuple3(any, decode1, decode2, decode3) {
-  Ok({e1, e2, e3}) <- t3(any)
-  Ok(ok1) <- decode1(e1)
-  Ok(ok2) <- decode2(e2)
-  Ok(ok3) <- decode3(e3)
-  {ok1, ok2, ok3}
+test tuple3 {
+  {1, [], 3}
+    |> any:from
+    |> tuple3
+    |> expect:equal({any:from(1), any:from([]), any:from(3)})
+
+  {'ok', "ok", 3}
+    |> any:from
+    |> tuple3
+    |> expect:equal({any:from('ok'), any:from("ok"), any:from(3)})
+
+  {1}
+    |> any:from
+    |> tuple3
+    |> expect:is_error
+
+  {1, 2}
+    |> any:from
+    |> tuple3
+    |> expect:is_error
+
+  {1, 2, 3, 4}
+    |> any:from
+    |> tuple3
+    |> expect:is_error
 }
 
-// TODO: tuple3 test
 
-external fn t4(Any) -> Result(DecodeError, Tuple(Any, Any, Any, Any))
+pub external fn tuple4(Any) -> Result(String, Tuple(Any, Any, Any, Any))
   = 'gleam__decode_erl' 'tuple4'
 
-pub fn tuple4(any, decode1, decode2, decode3, decode4) {
-  Ok({e1, e2, e3, e4}) <- t4(any)
-  Ok(ok1) <- decode1(e1)
-  Ok(ok2) <- decode2(e2)
-  Ok(ok3) <- decode3(e3)
-  Ok(ok4) <- decode4(e4)
-  {ok1, ok2, ok3, ok4}
+test tuple4 {
+  {1, [], 3, 4}
+    |> any:from
+    |> tuple4
+    |> expect:equal({any:from(1), any:from([]), any:from(3), any:from(4)})
+
+  {'ok', "ok", 3, 4}
+    |> any:from
+    |> tuple4
+    |> expect:equal({any:from('ok'), any:from("ok"), any:from(3), any:from(4)})
+
+  {1}
+    |> any:from
+    |> tuple4
+    |> expect:is_error
+
+  {1, 2}
+    |> any:from
+    |> tuple4
+    |> expect:is_error
+
+  {1, 2, 3}
+    |> any:from
+    |> tuple4
+    |> expect:is_error
+
+  {1, 2, 3, 4, 5}
+    |> any:from
+    |> tuple4
+    |> expect:is_error
 }
 
-// TODO: tuple4 test
-
-external fn t5(Any) -> Result(DecodeError, Tuple(Any, Any, Any, Any, Any))
+pub external fn tuple5(Any) -> Result(String, Tuple(Any, Any, Any, Any, Any))
   = 'gleam__decode_erl' 'tuple5'
 
-pub fn tuple5(any, decode1, decode2, decode3, decode4, decode5) {
-  Ok({e1, e2, e3, e4, e5}) <- t5(any)
-  Ok(ok1) <- decode1(e1)
-  Ok(ok2) <- decode2(e2)
-  Ok(ok3) <- decode3(e3)
-  Ok(ok4) <- decode4(e4)
-  Ok(ok5) <- decode5(e5)
-  {ok1, ok2, ok3, ok4, ok5}
-}
+test tuple5 {
+  {1, [], 3, 4, 5}
+    |> any:from
+    |> tuple5
+    |> expect:equal(
+        {any:from(1), any:from([]), any:from(3), any:from(4), any:from(5)}
+      )
 
-// TODO: tuple5 test
+  {'ok', "ok", 3, 4, 5}
+    |> any:from
+    |> tuple5
+    |> expect:equal(
+        {any:from('ok'), any:from("ok"), any:from(3), any:from(4), any:from(5)}
+      )
+
+  {1}
+    |> any:from
+    |> tuple5
+    |> expect:is_error
+
+  {1, 2}
+    |> any:from
+    |> tuple5
+    |> expect:is_error
+
+  {1, 2, 3}
+    |> any:from
+    |> tuple5
+    |> expect:is_error
+
+  {1, 2, 3, 4}
+    |> any:from
+    |> tuple5
+    |> expect:is_error
+
+  {1, 2, 3, 4, 5, 6}
+    |> any:from
+    |> tuple5
+    |> expect:is_error
+}
