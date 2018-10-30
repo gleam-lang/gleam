@@ -367,8 +367,8 @@ infer(Ast, Env0) ->
   end.
 
 
--spec ast_type_to_type(ast_type(), env()) -> {type(), env()}.
-ast_type_to_type(AstType, Env0) ->
+-spec ast_type_to_type(ast_type(), boolean(), env()) -> {type(), env()}.
+ast_type_to_type(AstType, Create, Env0) ->
   case AstType of
     % TODO: Check type exists.
     #ast_type_constructor{name = Name, args = []} ->
@@ -376,18 +376,21 @@ ast_type_to_type(AstType, Env0) ->
       {T, Env0};
 
     #ast_type_constructor{name = Name, args = Args} ->
-      {ArgsTypes, Env1} = gleam:thread_map(fun ast_type_to_type/2, Args, Env0),
+      {ArgsTypes, Env1} = gleam:thread_map(fun(T, E) -> ast_type_to_type(T, Create, E) end,
+                                           Args, Env0),
       T = #type_app{type = Name, args = ArgsTypes},
       {T, Env1};
 
     #ast_type_var{name = Name} ->
-      case env_lookup_type(Name, Env0) of
-        {ok, Var} ->
+      case {Create, env_lookup_type(Name, Env0)} of
+        {_, {ok, Var}} ->
           {Var, Env0};
 
-        % TODO: optionally create a new var
-        error ->
-          error(some_error_about_not_knowing_the_type) % TODO
+        {false, error} ->
+          error(some_error_about_not_knowing_the_type); % TODO
+
+        {true, error} ->
+          new_var(Env0)
       end
   end.
 
@@ -430,7 +433,8 @@ module_statement(Statement, {Row, Env0}) ->
       % Makes use of the type vars inserted in to the env previously.
       RegisterConstructor =
         fun(#ast_enum_def{name = CName, args = CArgs}, InnerEnv0) ->
-          {CArgsTypes, InnerEnv1} = gleam:thread_map(fun ast_type_to_type/2, CArgs, InnerEnv0),
+          {CArgsTypes, InnerEnv1} = gleam:thread_map(fun(A, E) -> ast_type_to_type(A, false, E) end,
+                                                     CArgs, InnerEnv0),
           T = #type_fn{args = CArgsTypes, return = Type},
           env_extend(CName, T, module, InnerEnv1)
         end,
@@ -458,8 +462,9 @@ module_statement(Statement, {Row, Env0}) ->
       {AnnotatedStatement, NewState};
 
     #ast_mod_external_fn{public = Public, name = Name, args = Args, return = Return} ->
-      {ArgsTypes, Env1} = gleam:thread_map(fun ast_type_to_type/2, Args, Env0),
-      {ReturnType, Env2} = ast_type_to_type(Return, Env1),
+      {ArgsTypes, Env1} = gleam:thread_map(fun(A, E) -> ast_type_to_type(A, true, E) end,
+                                           Args, Env0),
+      {ReturnType, Env2} = ast_type_to_type(Return, false, Env1),
       Type = #type_fn{args = ArgsTypes, return = ReturnType},
       NewRow = case Public of
         true -> #type_row_extend{label = Name, type = Type, parent = Row};

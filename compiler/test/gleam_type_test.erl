@@ -499,6 +499,14 @@ external_fn_test() ->
      "module {"
      " fn go(String) -> String"
      "}"
+    },
+
+    {
+     "pub external fn len(List(a)) -> Int = '' ''"
+     ,
+     "module {"
+     " fn len(List(a)) -> Int"
+     "}"
     }
   ],
   test_infer(Cases).
