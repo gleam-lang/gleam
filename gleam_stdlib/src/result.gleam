@@ -29,13 +29,16 @@ pub fn is_error(result) {
 }
 
 test is_error {
-  is_error(Ok(1)) |> expect:false
-  is_error(Error(1)) |> expect:true
+  is_error(Ok(1))
+    |> expect:false
+
+  is_error(Error(1))
+    |> expect:true
 }
 
 pub fn map(result, fun) {
   case result {
-  | Ok(x) -> fun(x)
+  | Ok(x) -> Ok(fun(x))
   | Error(_) -> result
   }
 }
@@ -44,6 +47,7 @@ test map {
   Ok(1)
     |> map(_, fn(x) { x + 1 })
     |> expect:equal(_, Ok(2))
+
   Error(1)
     |> map(_, fn(x) { x + 1 })
     |> expect:equal(Error(1))
@@ -60,6 +64,7 @@ test map_error {
   Ok(1)
     |> map_error(_, fn(x) { x + 1 })
     |> expect:equal(_, Ok(1))
+
   Error(1)
     |> map_error(_, fn(x) { x + 1 })
     |> expect:equal(_, Error(2))
@@ -68,17 +73,31 @@ test map_error {
 pub fn flatten(result) {
   case result {
   | Ok(x) -> x
-  | Error(_) -> result
+  | Error(error) -> Error(error)
   }
 }
+
+// TODO: This one doesn't type check. I think because we don't generalize for
+// case expressions
+// pub fn flatten(result) {
+//   case result {
+//   | Ok(x) -> x
+//   | Error(_) -> result
+//   }
+// }
 
 test flatten {
   flatten(Ok(Ok(1)))
     |> expect:equal(_, Ok(1))
+
   flatten(Ok(Error(1)))
     |> expect:equal(_, Error(1))
+
   flatten(Error(1))
     |> expect:equal(_, Error(1))
+
+  flatten(Error(Error(1)))
+    |> expect:equal(_, Error(Error(1)))
 }
 
 pub fn flat_map(result, fun) {
@@ -91,9 +110,11 @@ test flat_map {
   Error(1)
     |> flat_map(_, fn(x) { Ok(x + 1) })
     |> expect:equal(_, Error(1))
+
   Ok(1)
     |> flat_map(_, fn(x) { Ok(x + 1) })
     |> expect:equal(_, Ok(2))
+
   Ok(1)
     |> flat_map(_, fn(_) { Error(1) })
     |> expect:equal(_, Error(1))
@@ -107,6 +128,9 @@ pub fn unwrap(result, default) {
 }
 
 test unwrap {
-  unwrap(Ok(1), 50) |> expect:equal(_, 1)
-  unwrap(Error("nope"), 50) |> expect:equal(_, 50)
+  unwrap(Ok(1), 50)
+    |> expect:equal(_, 1)
+
+  unwrap(Error("nope"), 50)
+    |> expect:equal(_, 50)
 }

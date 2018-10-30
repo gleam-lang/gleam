@@ -7,11 +7,13 @@ compile([]) ->
   exit_message("Usage: gleamc compile [files]\n");
 compile(Paths) ->
   load_gleam_modules(),
-  Fun = fun(Path) ->
-            io:put_chars("Compiling " ++ Path ++ "..."),
-            gleam_compiler:compile_file(Path),
-            io:put_chars(" ok\n")
-        end,
+  Fun =
+    fun(Path) ->
+      io:put_chars("Compiling " ++ Path ++ "..."),
+      ModName = filename:basename(Path, ".gleam"),
+      gleam_compiler:compile_file(Path, ModName),
+      io:put_chars(" ok\n")
+    end,
   lists:foreach(Fun, Paths).
 
 print_help() ->
