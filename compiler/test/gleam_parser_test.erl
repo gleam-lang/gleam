@@ -336,6 +336,65 @@ enum_def_test() ->
   ],
   test_cases(Cases).
 
+external_fn_test() ->
+  Cases = [
+    {
+      "external fn go() -> String = 'mod' 'fun'"
+      ,
+      #ast_module
+      { statements =
+        [ #ast_mod_external_fn
+          { meta = #meta{}
+          , public = false
+          , name = "go"
+          , args = []
+          , return = #ast_type_constructor{name = "String", args = []}
+          , target_mod = "mod"
+          , target_fn = "fun"
+          }
+        ]
+      }
+    },
+
+    {
+      "pub external fn tag(Atom, a) -> Tuple(Atom, a) = 'mod' 'tag'"
+      ,
+      #ast_module
+      { statements =
+        [ #ast_mod_external_fn
+          { meta = #meta{}
+          , public = true
+          , name = "tag"
+          , args = [#ast_type_constructor{name = "Atom"}, #ast_type_var{name = "a"}]
+          , return = #ast_type_constructor{name = "Tuple", args =
+                                           [#ast_type_constructor{name = "Atom"},
+                                            #ast_type_var{name = "a"}]}
+          , target_mod = "mod"
+          , target_fn = "tag"
+          }
+        ]
+      }
+    },
+
+    {
+      "pub external fn go() -> String = 'mod' 'fun'"
+      ,
+      #ast_module
+      { statements =
+        [ #ast_mod_external_fn
+          { meta = #meta{}
+          , public = true
+          , name = "go"
+          , args = []
+          , return = #ast_type_constructor{name = "String", args = []}
+          , target_mod = "mod"
+          , target_fn = "fun"
+          }
+        ]
+      }
+    }
+  ],
+  test_cases(Cases).
 
 test_cases(Cases) ->
   lists:map(fun({Code, Ast}) -> ?assertEqual(Ast, parse(tokens(Code))) end, Cases).

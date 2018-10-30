@@ -1,6 +1,6 @@
 Nonterminals
 source module statements statement
-function test enum enum_defs enum_def
+function test enum enum_defs enum_def external_fn
 exprs expr elems args call_args
 type type_args
 case_clauses case_clause field fields.
@@ -14,7 +14,7 @@ Terminals
 int float atom string
 hole name upname
 kw_fn kw_case kw_test
-kw_raise kw_throw kw_pub kw_enum.
+kw_raise kw_throw kw_pub kw_enum kw_external.
 
 Rootsymbol source.
 
@@ -46,9 +46,10 @@ module -> statements : #ast_module{statements = '$1'}.
 statements -> statement             : ['$1'].
 statements -> statement statements  : ['$1' | '$2'].
 
-statement -> function : '$1'.
-statement -> test     : '$1'.
-statement -> enum     : '$1'.
+statement -> function    : '$1'.
+statement -> test        : '$1'.
+statement -> enum        : '$1'.
+statement -> external_fn : '$1'.
 
 enum -> kw_pub kw_enum upname              '=' enum_defs : enum(true, '$3', [], '$5').
 enum -> kw_pub kw_enum upname '(' args ')' '=' enum_defs : enum(true, '$3', '$5', '$8').
@@ -64,8 +65,18 @@ enum_def -> '|' upname '(' type_args ')' : enum_def('$2', '$4').
 type_args -> type               : ['$1'].
 type_args -> type ',' type_args : ['$1' | '$3'].
 
-type -> upname : type_constructor('$1', []).
-type -> name   : type_var('$1').
+type -> upname '(' type_args ')' : type_constructor('$1', '$3').
+type -> upname                   : type_constructor('$1', []).
+type -> name                     : type_var('$1').
+
+external_fn -> kw_external kw_fn name '(' ')' '->' 'type' '=' atom atom
+               : external_fn(false, '$1', '$3', [], '$7', '$9', '$10').
+external_fn -> kw_pub kw_external kw_fn name '(' ')' '->' 'type' '=' atom atom
+               : external_fn(true, '$2', '$4', [], '$8', '$10', '$11').
+external_fn -> kw_external kw_fn name '(' type_args ')' '->' 'type' '=' atom atom
+               : external_fn(false, '$1', '$3', '$5', '$8', '$10', '$11').
+external_fn -> kw_pub kw_external kw_fn name '(' type_args ')' '->' 'type' '=' atom atom
+               : external_fn(true, '$2', '$4', '$6', '$9', '$11', '$12').
 
 function -> kw_pub kw_fn name '('      ')' '{' exprs '}' : function(true, '$3', [], '$7').
 function -> kw_pub kw_fn name '(' args ')' '{' exprs '}' : function(true, '$3', '$5', '$8').
@@ -124,10 +135,6 @@ case_clauses -> case_clause case_clauses : ['$1'|'$2'].
 
 case_clause -> '|' expr '->' expr : case_clause('$1', '$2', '$4').
 
-% TODO: The hole in call args results in entirely different semantics- partial
-% application. Given this do we want to use different AST for the parent node?
-% Currently when we do anything with calls we have to check if they have a hole
-% or not. This is a bit fiddly.
 call_args -> expr               : ['$1'].
 call_args -> expr ','           : ['$1'].
 call_args -> expr ',' call_args : ['$1' | '$3'].
@@ -189,6 +196,15 @@ enum_def({upname, Meta, Name}, Args) ->
   #ast_enum_def{meta = Meta,
                 name = Name,
                 args = Args}.
+
+external_fn(Public, {_, Meta}, {name, _, Name}, Args, Return, {atom, _, Mod}, {atom, _, Fn}) ->
+  #ast_mod_external_fn{public = Public,
+                       meta = Meta,
+                       name = Name,
+                       args = Args,
+                       return = Return,
+                       target_mod = Mod,
+                       target_fn = Fn}.
 
 type_constructor({upname, Meta, Name}, Args) ->
   #ast_type_constructor{meta = Meta,

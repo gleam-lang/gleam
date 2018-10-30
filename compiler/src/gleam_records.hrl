@@ -45,9 +45,20 @@
          name :: string(),
          constructors = [] :: [ast_type()]}).
 
+-record(ast_mod_external_fn,
+        {meta = #meta{} :: meta(),
+         public = false :: boolean(),
+         name :: string(),
+         args :: [ast_type()],
+         return :: ast_type(),
+         target_mod = "mod",
+         target_fn = "fun"}).
+
 -type mod_statement()
       :: #ast_mod_fn{}
       | #ast_mod_test{}
+      | #ast_mod_enum{}
+      | #ast_mod_external_fn{}
       .
 
 -record(ast_tuple,
