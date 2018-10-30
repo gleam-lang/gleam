@@ -393,3 +393,42 @@ test tuple5 {
     |> tuple5
     |> expect:is_error
 }
+
+@doc("Decode a field from a map, extracting a specified field.
+
+Multiple fields can be extracted and stored in a new record like so:
+
+    Ok(name) <- decode:field(raw_data, 'name') |> result:flat_map(_, decode:string)
+    Ok(size) <- decode:field(raw_data, 'size') |> result:flat_map(_, decode:int)
+    Ok({ name = name, size = size })
+
+")
+pub external fn field(Any, a) -> Result(String, Any)
+  = 'gleam__decode_erl' 'field'
+
+test field {
+  {ok = 1}
+    |> any:from
+    |> field('ok')
+    |> expect:equal(any:from(1))
+
+  {earlier = 2, ok = 3}
+    |> any:from
+    |> field('ok')
+    |> expect:equal(any:from(3))
+
+  {}
+    |> any:from
+    |> field('ok')
+    |> expect:is_error
+
+  1
+    |> any:from
+    |> field('ok')
+    |> expect:is_error
+
+  []
+    |> any:from
+    |> field('ok')
+    |> expect:is_error
+}

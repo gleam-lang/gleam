@@ -1,7 +1,7 @@
 -module(gleam__decode_erl).
 
 -export([any/1, string/1, int/1, float/1, atom/1, bool/1, pid/1, reference/1,
-         thunk/1, tuple/1, tuple3/1, tuple4/1, tuple5/1]).
+         thunk/1, tuple/1, tuple3/1, tuple4/1, tuple5/1, field/2]).
 
 err(Type, Data) ->
   {error, iolist_to_binary(io_lib:format("Expected ~s, got `~p`", [Type, Data]))}.
@@ -43,3 +43,12 @@ tuple4(Data) -> err("a 4 element tuple", Data).
 
 tuple5(Data = {_, _, _, _, _}) -> {ok, Data};
 tuple5(Data) -> err("a 5 element tuple", Data).
+
+field(Data, Key) ->
+  case Data of
+    #{Key := Value} ->
+      {ok, Value};
+
+    _ ->
+      err(io_lib:format("a map with key `~p`", [Key]), Data)
+  end.
