@@ -47,6 +47,7 @@
 
 -record(ast_mod_external_fn,
         {meta = #meta{} :: meta(),
+         type = type_not_annotated :: type_annotation(),
          public = false :: boolean(),
          name :: string(),
          args :: [ast_type()],

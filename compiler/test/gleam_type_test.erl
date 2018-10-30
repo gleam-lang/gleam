@@ -491,6 +491,18 @@ enum_test() ->
   ],
   test_infer(Cases).
 
+external_fn_test() ->
+  Cases = [
+    {
+     "pub external fn go(String) -> String = '' ''"
+     ,
+     "module {"
+     " fn go(String) -> String"
+     "}"
+    }
+  ],
+  test_infer(Cases).
+
 % TODO: Test enums that won't type check
 % TODO: Test that enum constructors with type vars must have the type vars at the top level
 

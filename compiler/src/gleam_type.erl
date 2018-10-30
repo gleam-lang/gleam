@@ -385,6 +385,7 @@ ast_type_to_type(AstType, Env0) ->
         {ok, Var} ->
           {Var, Env0};
 
+        % TODO: optionally create a new var
         error ->
           error(some_error_about_not_knowing_the_type) % TODO
       end
@@ -454,6 +455,18 @@ module_statement(Statement, {Row, Env0}) ->
       AnnotatedStatement = Statement#ast_mod_fn{type = {ok, FnType},
                                                 args = NewArgs,
                                                 body = NewBody},
+      {AnnotatedStatement, NewState};
+
+    #ast_mod_external_fn{public = Public, name = Name, args = Args, return = Return} ->
+      {ArgsTypes, Env1} = gleam:thread_map(fun ast_type_to_type/2, Args, Env0),
+      {ReturnType, Env2} = ast_type_to_type(Return, Env1),
+      Type = #type_fn{args = ArgsTypes, return = ReturnType},
+      NewRow = case Public of
+        true -> #type_row_extend{label = Name, type = Type, parent = Row};
+        false -> Row
+      end,
+      NewState = {NewRow, Env2},
+      AnnotatedStatement = Statement#ast_mod_external_fn{type = {ok, Type}},
       {AnnotatedStatement, NewState};
 
     #ast_mod_test{body = Body} ->
@@ -657,10 +670,15 @@ statement_resolve_type_vars(Statement, Env) ->
     #ast_mod_enum{} ->
       Statement;
 
-    % % TODO: resolve type vars in args and body?
+    % TODO: resolve type vars in args and body?
     #ast_mod_fn{type = {ok, Type}} ->
       NewType = type_resolve_type_vars(Type, Env),
       Statement#ast_mod_fn{type = {ok, NewType}};
+
+    % TODO: resolve type vars in args and body?
+    #ast_mod_external_fn{type = {ok, Type}} ->
+      NewType = type_resolve_type_vars(Type, Env),
+      Statement#ast_mod_external_fn{type = {ok, NewType}};
 
     % TODO: resolve type vars in body?
     #ast_mod_test{} ->
