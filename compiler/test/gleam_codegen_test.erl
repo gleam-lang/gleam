@@ -197,6 +197,18 @@ assignment_test() ->
     ?assertEqual(2, gleam_codegen_assignment:reassign())
   end).
 
+pattern_assignment_test() ->
+  Source =
+    "pub enum Box(a) = | Box(a)\n"
+    "pub fn go(tup) { {a, b} = tup a + b }\n"
+    "pub fn unbox(box) { Box(x) = box x }\n"
+  ,
+  Mod = gleam_codegen_pattern_assignment,
+  with_module(Mod, Source, fun() ->
+    ?assertEqual(15, Mod:go({10, 5})),
+    ?assertEqual(1, Mod:unbox({box, 1}))
+  end).
+
 bool_enum_test() ->
   Source =
     "pub fn true() { True }\n"

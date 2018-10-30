@@ -44,15 +44,19 @@ add_module_info(Acc0, Name) ->
   Acc4 = add_export(Acc3, export({"module_info", 1})),
   Acc4.
 
-add_main_test(#module_acc{gen_tests = false} = Acc, _PrefixedName) ->
-  Acc;
-add_main_test(#module_acc{gen_tests = true} = Acc, PrefixedName) ->
-  Body = cerl:c_call(cerl:c_atom(eunit), cerl:c_atom(test), [cerl:c_atom(PrefixedName)]),
-  Name = cerl:c_fname(test, 0),
-  Fun = cerl:c_fun([], Body),
-  Export = export({"test", 0}),
-  C_fun = {Name, Fun},
-  add_export(add_definition(Acc, C_fun), Export).
+add_main_test(Acc, PrefixedName) ->
+  case Acc of
+    #module_acc{gen_tests = false} ->
+      Acc;
+
+    #module_acc{gen_tests = true} ->
+      Body = cerl:c_call(cerl:c_atom(eunit), cerl:c_atom(test), [cerl:c_atom(PrefixedName)]),
+      Name = cerl:c_fname(test, 0),
+      Fun = cerl:c_fun([], Body),
+      Export = export({"test", 0}),
+      C_fun = {Name, Fun},
+      add_export(add_definition(Acc, C_fun), Export)
+  end.
 
 add_definition(Acc = #module_acc{definitions = Defs}, Def) ->
   Acc#module_acc{definitions = [Def | Defs]}.
@@ -221,18 +225,25 @@ expression(#ast_module_call{module = Mod, name = Name, args = Args}, Env) when i
   {C_args, NewEnv} = map_expressions(Args, Env),
   {cerl:c_call(C_module, C_name, C_args), NewEnv};
 
-expression(#ast_assignment{pattern = Pattern, value = Value, then = Then}, Env) ->
-  {C_pattern, Env0} = expression(Pattern, Env),
+expression(#ast_assignment{pattern = #ast_var{name = Name}, value = Value, then = Then}, Env0) ->
+  C_var = cerl:c_var(list_to_atom(Name)),
   {C_value, Env1} = expression(Value, Env0),
   {C_then, Env2} = expression(Then, Env1),
-  {cerl:c_let([C_pattern], C_value, C_then), Env2};
+  {cerl:c_let([C_var], C_value, C_then), Env2};
+
+expression(#ast_assignment{pattern = Pattern, value = Value, then = Then}, Env0) ->
+  {C_pattern, Env1} = expression(Pattern, Env0),
+  {C_value, Env2} = expression(Value, Env1),
+  {C_then, Env3} = expression(Then, Env2),
+  C_clause = cerl:c_clause([C_pattern], C_then),
+  {cerl:c_case(C_value, [C_clause]), Env3};
 
 expression(#ast_enum{name = Name, elems = []}, Env) when is_list(Name) ->
-  AtomName = list_to_atom(enum_name_value(Name)),
+  AtomName = list_to_atom(to_snake_case(Name)),
   {cerl:c_atom(AtomName), Env};
 
 expression(#ast_enum{name = Name, meta = Meta, elems = Elems}, Env) when is_list(Name) ->
-  AtomValue = enum_name_value(Name),
+  AtomValue = to_snake_case(Name),
   Atom = #ast_atom{meta = Meta, value = AtomValue},
   expression(#ast_tuple{elems = [Atom | Elems]}, Env);
 
@@ -313,24 +324,29 @@ expression(Expressions, Env) when is_list(Expressions) ->
   C_seq = lists:foldl(fun cerl:c_seq/2, Head, Tail),
   {C_seq, Env1}.
 
-flatten_record(#ast_record_empty{}) ->
-  {flat, #{}};
-flatten_record(#ast_record_extend{parent = Parent, label = Label, value = Value}) ->
-  case flatten_record(Parent) of
-    % The record has been completely flattened to a list of fields
-    {flat, Fields} ->
-      {flat, maps:put(Label, Value, Fields)};
+flatten_record(Record) ->
+  case Record of
+    #ast_record_empty{} ->
+      {flat, #{}};
 
-    % The record could not be completely flattened. This is because at some
-    % point the update syntax has been used, it is a not a record literal.
-    {extending, TopParent, Fields} ->
-      {extending, TopParent, maps:put(Label, Value, Fields)};
+    #ast_record_extend{parent = Parent, label = Label, value = Value} ->
+      case flatten_record(Parent) of
+        % The record has been completely flattened to a list of fields
+        {flat, Fields} ->
+          {flat, maps:put(Label, Value, Fields)};
 
-    {parent, TopParent} ->
-      {extending, TopParent, #{Label => Value}}
-  end;
-flatten_record(NotRecord) ->
-  {parent, NotRecord}.
+        % The record could not be completely flattened. This is because at some
+        % point the update syntax has been used, it is a not a record literal.
+        {extending, TopParent, Fields} ->
+          {extending, TopParent, maps:put(Label, Value, Fields)};
+
+        {parent, TopParent} ->
+          {extending, TopParent, #{Label => Value}}
+      end;
+
+    NotRecord ->
+      {parent, NotRecord}
+  end.
 
 hole_fn(Meta, Fn, Args, Env) ->
   {UID, NewEnv} = uid(Env),
@@ -353,17 +369,23 @@ clause(#ast_clause{pattern = Pattern, value = Value}, Env) ->
   C_clause = cerl:c_clause([C_pattern], C_value),
   {C_clause, Env2}.
 
-enum_name_value(Chars) when is_list(Chars) ->
-  enum_name_value(Chars, []).
+to_snake_case(Chars) when is_list(Chars) ->
+  to_snake_case(Chars, []).
 
-enum_name_value([C | Chars], []) when ?is_uppercase_char(C) ->
-  enum_name_value(Chars, [C + 32]);
-enum_name_value([C | Chars], Acc) when ?is_uppercase_char(C) ->
-  enum_name_value(Chars, [C + 32, $_ | Acc]);
-enum_name_value([C | Chars], Acc) ->
-  enum_name_value(Chars, [C | Acc]);
-enum_name_value([], Acc) ->
-  lists:reverse(Acc).
+to_snake_case(Input, Acc) ->
+  case {Input, Acc} of
+    {[C | Chars], []} when ?is_uppercase_char(C) ->
+      to_snake_case(Chars, [C + 32]);
+
+    {[C | Chars], _} when ?is_uppercase_char(C) ->
+      to_snake_case(Chars, [C + 32, $_ | Acc]);
+
+    {[C | Chars], _} ->
+      to_snake_case(Chars, [C | Acc]);
+
+    {[], _} ->
+      lists:reverse(Acc)
+  end.
 
 c_list(Elems) ->
   Rev = lists:reverse(Elems),

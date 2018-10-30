@@ -171,10 +171,10 @@ infer_pattern(Pattern, Env0) ->
       AnnotatedPattern = Pattern#ast_tuple{elems = AnnotatedElems},
       {AnnotatedPattern, NewEnv};
 
-    #ast_var{name = Name} ->
+    #ast_var{name = Name, scope = Scope} ->
       {Var, Env1} = new_var(Env0),
-      Env2 = env_extend(Name, Var, local, Env1),
-      AnnotatedPattern = Pattern#ast_var{type = {ok, Var}, scope = local},
+      Env2 = env_extend(Name, Var, Scope, Env1),
+      AnnotatedPattern = Pattern#ast_var{type = {ok, Var}, scope = Scope},
       {AnnotatedPattern, Env2};
 
     #ast_hole{} ->
@@ -283,7 +283,7 @@ infer(Ast, Env0) ->
       end;
 
     #ast_assignment{pattern = Pattern, value = Value, then = Then} ->
-      {_ValueType, AnnotatedValue, Env1} = infer_assignment(Pattern, Value, local, Env0),
+      {_ValueType, AnnotatedValue, Env1} = infer_assignment(Pattern, Value, Env0),
       {AnnotatedThen, Env2} = infer(Then, Env1),
       AnnotatedAst = Ast#ast_assignment{value = AnnotatedValue, then = AnnotatedThen},
       {AnnotatedAst, Env2};
@@ -391,14 +391,15 @@ ast_type_to_type(AstType, Env0) ->
   end.
 
 
--spec infer_assignment(ast_expression(), ast_expression(), scope(), env())
+-spec infer_assignment(ast_expression(), ast_expression(), env())
       -> {type(), ast_expression(), env()}.
-infer_assignment(#ast_var{name = Name}, Value, Scope, Env0) ->
+infer_assignment(Pattern, Value, Env0) ->
   {InferredValue, Env2} = infer(Value, increment_env_level(Env0)),
   Env3 = decrement_env_level(Env2),
   {GeneralizedType, Env4} = generalize(fetch(InferredValue), Env3),
-  Env5 = env_extend(Name, GeneralizedType, Scope, Env4),
-  {GeneralizedType, InferredValue, Env5}.
+  {AnnotatedPattern, Env5} = infer_pattern(Pattern, Env4),
+  Env6 = unify(fetch(AnnotatedPattern), GeneralizedType, Env5),
+  {GeneralizedType, InferredValue, Env6}.
 
 
 -spec module_statement(mod_statement(), {type(), env()})
@@ -442,8 +443,8 @@ module_statement(Statement, {Row, Env0}) ->
 
     #ast_mod_fn{public = Public, name = Name, args = Args, body = Body, meta = Meta} ->
       Fn = #ast_fn{args = Args, body = Body},
-      Var = #ast_var{name = Name, meta = Meta},
-      {FnType, AnnotatedFn, Env1} = infer_assignment(Var, Fn, module, Env0),
+      Var = #ast_var{name = Name, scope = module, meta = Meta},
+      {FnType, AnnotatedFn, Env1} = infer_assignment(Var, Fn, Env0),
       #ast_fn{args = NewArgs, body = NewBody} = AnnotatedFn,
       NewRow = case Public of
         true -> #type_row_extend{label = Name, type = FnType, parent = Row};
@@ -958,10 +959,12 @@ occurs_check_adjust_levels(Id, Type, Env) ->
           env_put_type_ref(Ref, Var, Env);
 
         #type_var_unbound{} ->
-          Env
+          Env;
 
-        % This should never hapen.
-        % #type_var_generic{} ->
+        % This is permitted due to patterns in assignments.
+        % It was not allowed in the original implementation. Is this correct?
+        #type_var_generic{} ->
+          Env
       end;
 
     #type_app{args = Args} ->
