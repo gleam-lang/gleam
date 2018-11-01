@@ -534,10 +534,18 @@ external_type_test() ->
   ],
   test_infer(Cases).
 
+module_select_test() ->
+  Cases = [
+    {
+      "fn(x) { x:run() }"
+      ,
+      "fn(module {a | fn run() -> b}) -> b"
+    },
 
-% TODO: Test enums that won't type check
-% TODO: Test that enum constructors with type vars must have the type vars at the top level
-
-% Depends on tuple destructuring
-% ; ("choose(fun x y -> x, fun x y -> y)", OK "forall[a] (a, a) -> a") *)
-% ; ("choose_curry(fun x y -> x)(fun x y -> y)", OK "forall[a] (a, a) -> a") *)
+    {
+      "fn(x) { x:go }"
+      ,
+      "fn(module {a | go = b}) -> b"
+    }
+  ],
+  test_infer(Cases).

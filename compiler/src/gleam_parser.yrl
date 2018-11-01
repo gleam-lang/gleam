@@ -9,7 +9,7 @@ Terminals
 '(' ')' '[' ']' '::' '{' '}'
 ',' '=' '|' '|>' '->'
 '<=' '<' '>' '>=' '==' '!='
-'.'
+'.' ':'
 '/' '*' '+' '-' '/.' '*.' '+.' '-.'
 int float atom string
 hole name upname
@@ -33,6 +33,7 @@ Left 220 '*.'.
 Left 220 '/'.
 Left 220 '/.'.
 Left 230 '.'.
+Left 240 ':'.
 Left 300 '('.
 Right 60 '::'.
 Right 70 '|'.
@@ -107,6 +108,7 @@ expr -> '{' fields '}'             : record('$1', '$2').
 expr -> '{' expr '|' fields '}'    : record_extend('$2', '$4').
 expr -> name                       : var('$1').
 expr -> expr '.' name              : record_select('$2', '$1', '$3').
+expr -> expr ':' name              : module_select('$2', '$1', '$3').
 expr -> expr '(' ')'               : call('$2', '$1', []).
 expr -> expr '(' call_args ')'     : call('$2', '$1', '$3').
 expr -> expr '.' '(' ')'           : call('$3', '$1', []).
@@ -250,6 +252,9 @@ record_field({name, _Meta, Key}, Value) ->
 
 record_select({'.', Meta}, Record, {name, _, Label}) ->
   #ast_record_select{meta = Meta, record = Record, label = Label}.
+
+module_select({':', Meta}, Module, {name, _, Label}) ->
+  #ast_module_select{meta = Meta, module = Module, label = Label}.
 
 tuple({_, Meta}, Elems) ->
   #ast_tuple{meta = Meta, elems = Elems}.

@@ -41,6 +41,7 @@ fn         : {token, {kw_fn, m(TokenLine)}}.
 ::         : {token, {'::', m(TokenLine)}}.
 \>         : {token, {'>=', m(TokenLine)}}.
 \.         : {token, {'.', m(TokenLine)}}.
+\:         : {token, {':', m(TokenLine)}}.
 \|         : {token, {'|', m(TokenLine)}}.
 \,         : {token, {',', m(TokenLine)}}.
 \(         : {token, {'(', m(TokenLine)}}.

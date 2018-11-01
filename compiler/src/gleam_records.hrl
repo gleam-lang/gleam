@@ -94,9 +94,6 @@
          scope = local :: scope(),
          name :: string()}).
 
-% TODO: Remove the type annotation so it's calculated by traversing the body
-% and the args. To do this we will need to turn the args into a list of
-% annotated vars rather than strings. We do this in the infer algorithm anyway.
 -record(ast_fn,
         {meta = #meta{} :: meta(),
          type = type_not_annotated :: type_annotation(),
@@ -188,6 +185,12 @@
         {type = type_not_annotated :: type_annotation(),
          statements = [] :: [mod_statement()]}).
 
+-record(ast_module_select,
+        {meta = #meta{} :: meta(),
+         type = type_not_annotated :: type_annotation(),
+         module :: ast_expression(),
+         label :: string()}).
+
 -record(ast_seq,
         {first :: ast_expression(),
          then :: ast_expression()}).
@@ -196,14 +199,16 @@
       :: #ast_enum{}
       | #ast_assignment{}
       | #ast_atom{}
-      | #ast_module_call{}
+      | #ast_call{}
       | #ast_case{}
       | #ast_cons{}
       | #ast_float{}
       | #ast_fn{}
       | #ast_hole{}
       | #ast_int{}
-      | #ast_call{}
+      | #ast_module_call{}
+      | #ast_module_select{}
+      | #ast_module{}
       | #ast_nil{}
       | #ast_operator{}
       | #ast_raise{}

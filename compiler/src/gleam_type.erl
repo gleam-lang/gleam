@@ -345,6 +345,20 @@ infer(Ast, Env0) ->
                                            record = AnnotatedRecord},
       {AnnotatedAst, Env4};
 
+    #ast_module_select{module = Module, label = Label} ->
+      {RowParentType, Env1} = new_var(Env0),
+      {FieldType, Env2} = new_var(Env1),
+      RowType = #type_row_extend{label = Label,
+                                 type = FieldType,
+                                 parent = RowParentType},
+      ParamType = #type_module{row = RowType},
+      {AnnotatedModule, Env3} = infer(Module, Env2),
+      ModuleType = fetch(AnnotatedModule),
+      Env4 = unify(ParamType, ModuleType, Env3),
+      AnnotatedAst = Ast#ast_module_select{type = {ok, FieldType},
+                                           module = AnnotatedModule},
+      {AnnotatedAst, Env4};
+
     #ast_raise{} ->
       {Var, Env1} = new_var(Env0),
       AnnotatedAst = Ast#ast_raise{type = {ok, Var}},
@@ -556,6 +570,9 @@ fetch(Ast) ->
       Type;
 
     #ast_module{type = {ok, Type}} ->
+      Type;
+
+    #ast_module_select{type = {ok, Type}} ->
       Type;
 
     #ast_record_extend{type = {ok, Type}} ->
@@ -1046,6 +1063,9 @@ occurs_check_adjust_levels(Id, Type, Env) ->
     #type_record{row = Row} ->
       occurs_check_adjust_levels(Id, Row, Env);
 
+    #type_module{row = Row} ->
+      occurs_check_adjust_levels(Id, Row, Env);
+
     #type_row_extend{parent = Parent, type = InnerType} ->
       Env1 = occurs_check_adjust_levels(Id, InnerType, Env),
       occurs_check_adjust_levels(Id, Parent, Env1);
@@ -1239,7 +1259,10 @@ type_to_string(Type) ->
             (FS, [{Label, ValueType} | Rest]) ->
               case F(F, ValueType) of
                 [$f, $n | FnString] ->
-                  " fn " ++ Label ++ FnString ++ FS(FS, Rest)
+                  " fn " ++ Label ++ FnString ++ FS(FS, Rest);
+
+                Other ->
+                  " " ++ Label ++ " = " ++ Other
               end;
 
             (_, []) ->
@@ -1252,7 +1275,7 @@ type_to_string(Type) ->
           {Parent, Fields} ->
             "module {"
             ++ F(F, Parent)
-            ++ " | "
+            ++ " |"
             ++ FieldsString(FieldsString, lists:reverse(Fields))
             ++ "}";
 
