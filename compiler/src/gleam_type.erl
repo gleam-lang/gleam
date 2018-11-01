@@ -12,6 +12,10 @@
         {type :: type(),
          scope :: scope()}).
 
+-record(type_data,
+        {type :: type(),
+         arity :: non_neg_integer()}).
+
 -type var_name() :: string().
 -type type_name() :: string().
 
@@ -33,6 +37,7 @@
   | {not_a_row, type(), env()}
   | {row_does_not_contain_label, type(), env()}
   | {multiple_hole_fn, ast_expression()}
+  | {unknown_type, meta(), env(), string()}
   | recursive_types.
 
 
@@ -371,27 +376,40 @@ infer(Ast, Env0) ->
 ast_type_to_type(AstType, Create, Env0) ->
   case AstType of
     % TODO: Check type exists.
-    #ast_type_constructor{name = Name, args = []} ->
+    #ast_type_constructor{meta = Meta, name = Name, args = []} ->
+      check_type_exists(Name, 0, Meta, Env0),
       T = #type_const{type = Name},
       {T, Env0};
 
-    #ast_type_constructor{name = Name, args = Args} ->
+    #ast_type_constructor{meta = Meta, name = Name, args = Args} ->
+      check_type_exists(Name, length(Args), Meta, Env0),
       {ArgsTypes, Env1} = gleam:thread_map(fun(T, E) -> ast_type_to_type(T, Create, E) end,
                                            Args, Env0),
       T = #type_app{type = Name, args = ArgsTypes},
       {T, Env1};
 
-    #ast_type_var{name = Name} ->
+    #ast_type_var{meta = Meta, name = Name} ->
       case {Create, env_lookup_type(Name, Env0)} of
-        {_, {ok, Var}} ->
+        {_, {ok, #type_data{type = Var}}} ->
           {Var, Env0};
 
         {false, error} ->
-          error(some_error_about_not_knowing_the_type); % TODO
+          fail({unknown_type, Meta, Env0, Name, 0});
 
         {true, error} ->
           new_var(Env0)
       end
+  end.
+
+
+-spec check_type_exists(string(), arity(), meta(), env()) -> ok.
+check_type_exists(Name, Arity, Meta, Env) ->
+  case env_lookup_type(Name, Env) of
+    {ok, #type_data{arity = Arity}} ->
+      ok;
+
+     _ ->
+      fail({unknown_type, Meta, Env, Name, Arity})
   end.
 
 
@@ -434,7 +452,8 @@ module_statement(Statement, {Row, Env0}) ->
       RegisterConstructor =
         fun(#ast_enum_def{name = CName, args = CArgs}, InnerEnv0) ->
           {CArgsTypes, InnerEnv1} = gleam:thread_map(fun(A, E) -> ast_type_to_type(A, false, E) end,
-                                                     CArgs, InnerEnv0),
+                                                     CArgs,
+                                                     InnerEnv0),
           T = #type_fn{args = CArgsTypes, return = Type},
           env_extend(CName, T, module, InnerEnv1)
         end,
@@ -481,8 +500,9 @@ module_statement(Statement, {Row, Env0}) ->
       NewState = {Row, Env1},
       {AnnotatedAst, NewState};
 
-    #ast_mod_external_type{} ->
-      {Statement, {Row, Env0}}
+    #ast_mod_external_type{name = Name} ->
+      Env1 = env_register_type(Name, #type_const{type = Name}, Env0),
+      {Statement, {Row, Env1}}
   end.
 
 
@@ -750,6 +770,7 @@ new_env() ->
   Int = #type_const{type = "Int"},
   Bool = #type_const{type = "Bool"},
   Float = #type_const{type = "Float"},
+  String = #type_const{type = "String"},
   BinOp = fun(A, B, C) -> #type_fn{args = [A, B], return = C} end,
   EndoOp = fun(T) -> BinOp(T, T, T) end,
   ZeroFn = fun(A) -> #type_fn{args = [], return = A} end,
@@ -777,7 +798,15 @@ new_env() ->
   {V6, E8} = new_generic_var(E7),
   GET = BinOp(V6, V6, Bool),
 
-  LastE = E8,
+  E9 = env_register_type("String", String, E8),
+  E10 = env_register_type("Int", Int, E9),
+  E11 = env_register_type("Bool", Bool, E10),
+
+  {V7, E12} = new_generic_var(E11),
+  List = #type_app{type = "List", args = [V7]},
+  E13 = env_register_type("List", List, E12),
+
+  LastE = E13,
 
   Core = [
     {"+", EndoOp(Int)},
@@ -839,7 +868,12 @@ env_extend(Name, Type, Scope, Env = #env{vars = Vars}) ->
 % TODO: Raise if we attempt to overwrite an existing type.
 -spec env_register_type(type_name(), type(), env()) -> env().
 env_register_type(Name, Type, Env = #env{types = Types}) ->
-  NewTypes = maps:put(Name, Type, Types),
+  Arity =
+    case Type of
+      #type_app{args = Args} -> length(Args);
+      _ -> 0
+    end,
+  NewTypes = maps:put(Name, #type_data{type = Type, arity = Arity}, Types),
   Env#env{types = NewTypes}.
 
 -spec env_lookup(var_name(), env()) -> error | {ok, #var_data{}}.

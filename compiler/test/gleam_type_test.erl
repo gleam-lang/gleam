@@ -491,6 +491,13 @@ enum_test() ->
   ],
   test_infer(Cases).
 
+invalid_enum_test() ->
+  {error, {unknown_type, _, _, "a", 0}} = infer("enum X = | X(a)"),
+  {error, {unknown_type, _, _, "List", 0}} = infer("enum X = | X(List)"),
+  {error, {unknown_type, _, _, "x", 0}} = infer("enum X = | X(List(x))"),
+  {error, {unknown_type, _, _, "String", 1}} = infer("enum X = | X(String(x))"),
+  {error, {unknown_type, _, _, "A", 0}} = infer("enum X = | X(A)").
+
 external_fn_test() ->
   Cases = [
     {
