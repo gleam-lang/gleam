@@ -509,6 +509,14 @@ external_fn_test() ->
     },
 
     {
+     "pub external fn go(Bool) -> b = '' ''"
+     ,
+     "module {"
+     " fn go(Bool) -> a"
+     "}"
+    },
+
+    {
      "pub external fn len(List(a)) -> Int = '' ''"
      ,
      "module {"
@@ -519,7 +527,6 @@ external_fn_test() ->
   test_infer(Cases).
 
 invalid_external_fn_test() ->
-  {error, {unknown_type, _, _, "b", 0}} = infer("external fn go(Bool) -> b = '' ''"),
   {error, {unknown_type, _, _, "List", 0}} = infer("external fn go(List) -> Int = '' ''"),
   {error, {unknown_type, _, _, "List", 2}} = infer("external fn go(List(a, b)) -> Int = '' ''").
 

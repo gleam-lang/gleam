@@ -389,7 +389,6 @@ infer(Ast, Env0) ->
 -spec ast_type_to_type(ast_type(), boolean(), env()) -> {type(), env()}.
 ast_type_to_type(AstType, Create, Env0) ->
   case AstType of
-    % TODO: Check type exists.
     #ast_type_constructor{meta = Meta, name = Name, args = []} ->
       check_type_exists(Name, 0, Meta, Env0),
       T = #type_const{type = Name},
@@ -497,7 +496,7 @@ module_statement(Statement, {Row, Env0}) ->
     #ast_mod_external_fn{public = Public, name = Name, args = Args, return = Return} ->
       {ArgsTypes, Env1} = gleam:thread_map(fun(A, E) -> ast_type_to_type(A, true, E) end,
                                            Args, Env0),
-      {ReturnType, Env2} = ast_type_to_type(Return, false, Env1),
+      {ReturnType, Env2} = ast_type_to_type(Return, true, Env1),
       Type = #type_fn{args = ArgsTypes, return = ReturnType},
       NewRow = case Public of
         true -> #type_row_extend{label = Name, type = Type, parent = Row};
