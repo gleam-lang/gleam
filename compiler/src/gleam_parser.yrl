@@ -1,5 +1,5 @@
 Nonterminals
-source module statements statement
+source module statements statement import
 function test enum enum_defs enum_def external_fn external_type
 exprs expr elems args call_args
 type type_args
@@ -13,7 +13,8 @@ Terminals
 '/' '*' '+' '-' '/.' '*.' '+.' '-.'
 int float atom string
 hole name upname
-kw_fn kw_case kw_test kw_raise kw_throw kw_pub kw_enum kw_external kw_type.
+kw_fn kw_case kw_test kw_raise kw_throw kw_pub kw_enum kw_external kw_type
+kw_import.
 
 Rootsymbol source.
 
@@ -46,9 +47,10 @@ module -> statements : #ast_module{statements = '$1'}.
 statements -> statement             : ['$1'].
 statements -> statement statements  : ['$1' | '$2'].
 
-statement -> function      : '$1'.
 statement -> test          : '$1'.
 statement -> enum          : '$1'.
+statement -> import        : '$1'.
+statement -> function      : '$1'.
 statement -> external_fn   : '$1'.
 statement -> external_type : '$1'.
 
@@ -62,6 +64,8 @@ enum_defs -> enum_def enum_defs : ['$1' | '$2'].
 
 enum_def -> '|' upname                   : enum_def('$2', []).
 enum_def -> '|' upname '(' type_args ')' : enum_def('$2', '$4').
+
+import -> kw_import name : import('$2', []).
 
 type_args -> type               : ['$1'].
 type_args -> type ',' type_args : ['$1' | '$3'].
@@ -161,6 +165,10 @@ field -> name '=' expr      : record_field('$1', '$3').
 Erlang code.
 
 -include("gleam_records.hrl").
+
+import({name, Meta, Module}, _members) ->
+  #ast_mod_import{meta = Meta,
+                  module = Module}.
 
 seq(First, Then) ->
   #ast_seq{first = First, then = Then}.

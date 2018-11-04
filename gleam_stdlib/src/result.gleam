@@ -1,9 +1,9 @@
 import expect
 
-doc """
-Result represents the result of something that may succeed or fail.
-`Ok` means it was successful, `Error` means it failed.
-"""
+// doc """
+// Result represents the result of something that may succeed or fail.
+// `Ok` means it was successful, `Error` means it failed.
+// """
 pub enum Result(error, value) =
   | Ok(value)
   | Error(error)
@@ -100,10 +100,21 @@ test flatten {
     |> expect:equal(_, Error(Error(1)))
 }
 
+// pub fn flat_map(result, fun) {
+//   result
+//     |> map(_, fun)
+//     |> flatten
+// }
+
 pub fn flat_map(result, fun) {
-  result
-    |> map(_, fun)
-    |> flatten
+  case result {
+  | Ok(x) ->
+      case fun(x) {
+      | Ok(y) -> Ok(y)
+      | Error(y) -> Error(y)
+      }
+  | Error(_) -> result
+  }
 }
 
 test flat_map {
@@ -116,7 +127,7 @@ test flat_map {
     |> expect:equal(_, Ok(2))
 
   Ok(1)
-    |> flat_map(_, fn(_) { Error(1) })
+    |> flat_map(_, fn(unused) { Error(1) })
     |> expect:equal(_, Error(1))
 }
 

@@ -73,6 +73,9 @@ module_statement(Statement, Acc) ->
       Acc1 = add_definition(Acc, named_function(Statement)),
       add_export(Acc1, export(Name, length(Args)));
 
+    #ast_mod_import{} ->
+      Acc;
+
     #ast_mod_enum{} ->
       Acc;
 
@@ -161,6 +164,13 @@ fn_call(Fn, Args, Env0) ->
       C_var = cerl:c_var(list_to_atom(Name)),
       C_apply = cerl:c_apply(C_var, C_args),
       {C_apply, Env1};
+
+    % A module that has been imported
+    #ast_module_select{label = FnName, module = #ast_var{scope = {constant, Constant}}} ->
+      {C_module, Env1} = expression(Constant, Env0),
+      C_FnName = cerl:c_atom(FnName),
+      {C_args, Env2} = map_expressions(Args, Env1),
+      {cerl:c_call(C_module, C_FnName, C_args), Env2};
 
     % A module:function call where the module is assigned to a variable
     #ast_module_select{label = FnName, module = #ast_var{} = ModVar} ->

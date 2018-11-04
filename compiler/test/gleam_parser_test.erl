@@ -426,5 +426,19 @@ external_type_test() ->
   ],
   test_cases(Cases).
 
+module_select_test() ->
+  Cases = [
+    {
+      "1 |> expect:true"
+      ,
+      #ast_operator
+      { name = "|>"
+      , args = [#ast_int{value = 1},
+                #ast_module_select{module = #ast_var{name = "expect"}, label = "true"}]
+      }
+    }
+  ],
+  test_cases(Cases).
+
 test_cases(Cases) ->
   lists:map(fun({Code, Ast}) -> ?assertEqual(Ast, parse(tokens(Code))) end, Cases).

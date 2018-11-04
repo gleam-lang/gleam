@@ -514,6 +514,15 @@ module_statement(Statement, {Row, Env0}) ->
       NewState = {Row, Env1},
       {AnnotatedAst, NewState};
 
+    % TODO: This should look up the actual module, instead it just assigns it
+    % as an unknown value
+    #ast_mod_import{module = Module} ->
+      {Var, Env1} = new_var(Env0),
+      Type = #type_module{row = Var},
+      Value = #ast_atom{value = "gleam_" ++ Module},
+      Env2 = env_extend(Module, Type, {constant, Value}, Env1),
+      {Statement, {Row, Env2}};
+
     #ast_mod_external_type{name = Name} ->
       Env1 = env_register_type(Name, #type_const{type = Name}, Env0),
       {Statement, {Row, Env1}}
@@ -712,6 +721,9 @@ resolve_type_vars(Ast, Env) ->
 -spec statement_resolve_type_vars(ast_expression(), env()) -> ast_expression().
 statement_resolve_type_vars(Statement, Env) ->
   case Statement of
+    #ast_mod_import{} ->
+      Statement;
+
     #ast_mod_enum{} ->
       Statement;
 
@@ -984,6 +996,11 @@ do_instantiate(Type, State0) ->
       NewType = Type#type_record{row = NewRow},
       {NewType, NewState};
 
+    #type_module{row = Row} ->
+      {NewRow, NewState} = do_instantiate(Row, State0),
+      NewType = Type#type_module{row = NewRow},
+      {NewType, NewState};
+
     #type_row_extend{parent = Parent, type = FieldType} ->
       {NewParent, State1} = do_instantiate(Parent, State0),
       {NewFieldType, State2} = do_instantiate(FieldType, State1),
@@ -1125,6 +1142,10 @@ unify(Type1, Type2, Env) ->
      #type_record{row = Row2}, _} ->
       unify(Row1, Row2, Env);
 
+    {#type_module{row = Row1}, _,
+     #type_module{row = Row2}, _} ->
+      unify(Row1, Row2, Env);
+
     {#type_row_extend{label = Label, type = FieldType, parent = Parent} = Row,
      _,
      OtherRow,
@@ -1167,11 +1188,15 @@ rewrite_row(OtherRow, Label, Field, Env0) ->
       rewrite_row(LinkedType, Label, Field, Env0);
 
     {_, {ok, #type_var_unbound{}}} ->
-      error(not_implemented);
+      {Parent, Env1} = new_var(Env0),
+      NewRow = #type_row_extend{label = Label, type = Field, parent = Parent},
+      Env2 = env_put_type_ref(OtherRow, #type_var_link{type = NewRow}, Env1),
+      {NewRow, Env2};
 
     _ ->
       fail({not_a_row, OtherRow, Env0})
   end.
+
 
 -spec tvar_value(type(), env()) -> {ok, type_var()} | error.
 tvar_value(#type_var{type = Ref}, Env) ->

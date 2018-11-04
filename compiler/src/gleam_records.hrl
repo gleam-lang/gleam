@@ -2,7 +2,7 @@
 
 -record(meta, {line = 1 :: non_neg_integer()}).
 -type meta() :: #meta{}.
--type scope() :: local | module.
+-type scope() :: local | module | {constant, ast_expression()}.
 -type export() :: {string(), non_neg_integer()}.
 -type type_annotation() :: type_not_annotated | {ok, type()}.
 
@@ -60,12 +60,17 @@
          public = false :: boolean(),
          name :: string()}).
 
+-record(ast_mod_import,
+        {meta = #meta{} :: meta(),
+         module :: string()}).
+
 -type mod_statement()
       :: #ast_mod_fn{}
       | #ast_mod_test{}
       | #ast_mod_enum{}
       | #ast_mod_external_fn{}
       | #ast_mod_external_type{}
+      | #ast_mod_import{}
       .
 
 -record(ast_tuple,
