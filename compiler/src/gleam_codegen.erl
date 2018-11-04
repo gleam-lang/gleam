@@ -162,6 +162,12 @@ fn_call(Fn, Args, Env0) ->
       C_apply = cerl:c_apply(C_var, C_args),
       {C_apply, Env1};
 
+    % A module:function call where the module is assigned to a variable
+    #ast_module_select{label = FnName, module = #ast_var{} = ModVar} ->
+      {C_module, Env1} = expression(ModVar, Env0),
+      C_FnName = cerl:c_atom(FnName),
+      {C_args, Env2} = map_expressions(Args, Env1),
+      {cerl:c_call(C_module, C_FnName, C_args), Env2};
 
     % A function value must be assigned to a variable because it can be called
     _ ->

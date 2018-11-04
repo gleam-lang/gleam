@@ -2,6 +2,12 @@
 -include_lib("eunit/include/eunit.hrl").
 -define(refute(Value), ?assert(not Value)).
 
+% Used in tests that pass a module to functions
+-export([inc/1, dec/1]).
+
+inc(X) -> X + 1.
+dec(X) -> X - 1.
+
 with_module(Name, Source, Fun) ->
   StrName = atom_to_list(Name),
   FileName = StrName ++ ".beam",
@@ -531,4 +537,15 @@ external_type_test() ->
   Mod = gleam_codegen_external_type,
   with_module(Mod, Source, fun() ->
     ?assertEqual(1, Mod:id(1))
+  end).
+
+module_term_call_test() ->
+  Source =
+    "pub fn call_inc(mod) { mod:inc(1) }\n"
+    "pub fn call_dec(mod) { mod:dec(1) }\n"
+  ,
+  Mod = gleam_module_term_call,
+  with_module(Mod, Source, fun() ->
+    ?assertEqual(2, Mod:call_inc(gleam_codegen_test)),
+    ?assertEqual(0, Mod:call_dec(gleam_codegen_test))
   end).

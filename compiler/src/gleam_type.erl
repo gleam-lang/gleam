@@ -944,6 +944,11 @@ generalize(Type, Env0) ->
       GeneralizedType = Type#type_record{row = GeneralizedRow},
       {GeneralizedType, Env1};
 
+    #type_module{row = Row} ->
+      {GeneralizedRow, Env1} = generalize(Row, Env0),
+      GeneralizedType = Type#type_module{row = GeneralizedRow},
+      {GeneralizedType, Env1};
+
     #type_var{type = Ref} ->
       Level = env_level(Env0),
       case env_lookup_type_ref(Ref, Env0) of
