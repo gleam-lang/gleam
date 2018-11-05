@@ -1377,27 +1377,21 @@ error_to_iolist(Error) ->
   case Error of
     {var_not_found, Name} ->
       io_lib:format(
-        "-- NAMING ERROR --------------------------------------------------------------\n"
-        "\n"
-        "I cannot find a `~s` variable.\n"
+        "error: No variable with name `~s` found in this scope.\n"
         "\n",
         [Name]
       );
 
     {type_not_found, Name, _Arity} ->
       io_lib:format(
-        "-- NAMING ERROR --------------------------------------------------------------\n"
-        "\n"
-        "I cannot find a `~s` type.\n"
+        "error: No type with name `~s` found in this scope.\n"
         "\n",
         [Name]
       );
 
     {not_a_function, NumArgs, Type} ->
       io_lib:format(
-        "-- TYPE MISMATCH -------------------------------------------------------------\n"
-        "\n"
-        "This value is not a function, but was called with ~B arguments.\n"
+        "error: A non-function value is being called with ~B arguments.\n"
         "\n"
         "The value is of type `~s`\n"
         "\n",
@@ -1406,9 +1400,8 @@ error_to_iolist(Error) ->
 
     {incorrect_number_of_arguments, Expected, Given} ->
       io_lib:format(
-        "-- INCORRECT ARITY -----------------------------------------------------------\n"
-        "\n"
-        "A function expected ~B arguments, but it got ~B instead.\n"
+        "error: A function expected ~B arguments, but it is being called\n"
+        "with ~B instead.\n"
         "\n",
         [Expected, Given]
       )

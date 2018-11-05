@@ -570,9 +570,7 @@ error_to_iodata_test() ->
       "  x + y\n"
       "}\n"
       ,
-      "-- NAMING ERROR --------------------------------------------------------------\n"
-      "\n"
-      "I cannot find a `y` variable.\n"
+      "error: No variable with name `y` found in this scope.\n"
       "\n"
     },
 
@@ -580,9 +578,7 @@ error_to_iodata_test() ->
       "fn x() { 1 }\n"
       "pub fn go() { x()(1, 2) }\n"
       ,
-      "-- TYPE MISMATCH -------------------------------------------------------------\n"
-      "\n"
-      "This value is not a function, but was called with 2 arguments.\n"
+      "error: A non-function value is being called with 2 arguments.\n"
       "\n"
       "The value is of type `Int`\n"
       "\n"
@@ -591,9 +587,7 @@ error_to_iodata_test() ->
     {
       "enum A = | B(C)"
       ,
-      "-- NAMING ERROR --------------------------------------------------------------\n"
-      "\n"
-      "I cannot find a `C` type.\n"
+      "error: No type with name `C` found in this scope.\n"
       "\n"
     },
 
@@ -601,9 +595,8 @@ error_to_iodata_test() ->
       "fn id(x) { x }\n"
       "pub fn go(x) { id(x, x) }\n"
       ,
-      "-- INCORRECT ARITY -----------------------------------------------------------\n"
-      "\n"
-      "A function expected 1 arguments, but it got 2 instead.\n"
+      "error: A function expected 1 arguments, but it is being called\n"
+      "with 2 instead.\n"
       "\n"
     }
   ],
