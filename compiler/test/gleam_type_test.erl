@@ -58,9 +58,9 @@ cannot_unify_test() ->
 
 infer_undefined_var_test() ->
   ?assertEqual(infer("one"),
-               {error, {var_not_found, #ast_var{name = "one"}}}),
+               {error, {var_not_found, "one"}}),
   ?assertEqual(infer("x = x x"),
-               {error, {var_not_found, #ast_var{name = "x"}}}).
+               {error, {var_not_found, "x"}}).
 
 infer_const_test() ->
   Cases = [
@@ -110,7 +110,7 @@ infer_pattern_assignment_test() ->
   test_infer(Cases).
 
 infer_unknown_var_test() ->
-  ?assertEqual({error, {var_not_found, #ast_var{name = "something"}}},
+  ?assertEqual({error, {var_not_found, "something"}},
                infer("something")).
 
 infer_fn_test() ->
@@ -169,14 +169,11 @@ infer_fn_call_test() ->
 %   , OK "forall[a b] ((a -> a) -> b) -> b" ) *)
 
 infer_not_a_function_test() ->
-  ?assertEqual({error, {not_a_function, #type_const{type = "Int"}}},
+  ?assertEqual({error, {not_a_function, 1, #type_const{type = "Int"}}},
                infer("x = 1 x(2)")).
 
 infer_wrong_function_arity_test() ->
-  Error = {incorrect_number_of_arguments,
-           #type_fn{args = [],
-                      return = #type_const{type = "Int"}}},
-  ?assertEqual({error, Error},
+  ?assertEqual({error, {incorrect_number_of_arguments, 0, 1}},
                infer("f = fn() { 1 } f(2)")).
 
 infer_recursive_type_error_test() ->
@@ -492,11 +489,11 @@ enum_test() ->
   test_infer(Cases).
 
 invalid_enum_test() ->
-  {error, {unknown_type, _, _, "a", 0}} = infer("enum X = | X(a)"),
-  {error, {unknown_type, _, _, "List", 0}} = infer("enum X = | X(List)"),
-  {error, {unknown_type, _, _, "x", 0}} = infer("enum X = | X(List(x))"),
-  {error, {unknown_type, _, _, "String", 1}} = infer("enum X = | X(String(x))"),
-  {error, {unknown_type, _, _, "A", 0}} = infer("enum X = | X(A)").
+  {error, {type_not_found, "a", 0}} = infer("enum X = | X(a)"),
+  {error, {type_not_found, "List", 0}} = infer("enum X = | X(List)"),
+  {error, {type_not_found, "x", 0}} = infer("enum X = | X(List(x))"),
+  {error, {type_not_found, "String", 1}} = infer("enum X = | X(String(x))"),
+  {error, {type_not_found, "A", 0}} = infer("enum X = | X(A)").
 
 external_fn_test() ->
   Cases = [
@@ -527,8 +524,10 @@ external_fn_test() ->
   test_infer(Cases).
 
 invalid_external_fn_test() ->
-  {error, {unknown_type, _, _, "List", 0}} = infer("external fn go(List) -> Int = '' ''"),
-  {error, {unknown_type, _, _, "List", 2}} = infer("external fn go(List(a, b)) -> Int = '' ''").
+  ?assertEqual({error, {type_not_found, "List", 0}},
+               infer("external fn go(List) -> Int = '' ''")),
+  ?assertEqual({error, {type_not_found, "List", 2}},
+               infer("external fn go(List(a, b)) -> Int = '' ''")).
 
 external_type_test() ->
   Cases = [
@@ -556,3 +555,63 @@ module_select_test() ->
     }
   ],
   test_infer(Cases).
+
+  % | {cannot_unify, {type(), type_var() | error, type(), type_var() | error}}
+  % | {recursive_row_type, type(), type()}
+  % | {not_a_row, type(), env()}
+  % | {row_does_not_contain_label, type(), env()}
+  % | {multiple_hole_fn, ast_expression()}
+  % | recursive_types.
+
+error_to_iodata_test() ->
+  Cases = [
+    {
+      "fn add(x) {\n"
+      "  x + y\n"
+      "}\n"
+      ,
+      "-- NAMING ERROR --------------------------------------------------------------\n"
+      "\n"
+      "I cannot find a `y` variable.\n"
+      "\n"
+    },
+
+    {
+      "fn x() { 1 }\n"
+      "pub fn go() { x()(1, 2) }\n"
+      ,
+      "-- TYPE MISMATCH -------------------------------------------------------------\n"
+      "\n"
+      "This value is not a function, but was called with 2 arguments.\n"
+      "\n"
+      "The value is of type `Int`\n"
+      "\n"
+    },
+
+    {
+      "enum A = | B(C)"
+      ,
+      "-- NAMING ERROR --------------------------------------------------------------\n"
+      "\n"
+      "I cannot find a `C` type.\n"
+      "\n"
+    },
+
+    {
+      "fn id(x) { x }\n"
+      "pub fn go(x) { id(x, x) }\n"
+      ,
+      "-- INCORRECT ARITY -----------------------------------------------------------\n"
+      "\n"
+      "A function expected 1 arguments, but it got 2 instead.\n"
+      "\n"
+    }
+  ],
+
+  TestCase =
+    fun({Src, FormattedError}) ->
+      {error, Error} = infer(Src),
+      ?assertEqual(FormattedError,
+                   lists:flatten(gleam_type:error_to_iolist(Error)))
+    end,
+  lists:foreach(TestCase, Cases).
