@@ -11,8 +11,15 @@ compile(Paths) ->
     fun(Path) ->
       io:put_chars("Compiling " ++ Path ++ "..."),
       ModName = filename:basename(Path, ".gleam"),
-      gleam_compiler:compile_file(Path, ModName),
-      io:put_chars(" ok\n")
+      case gleam_compiler:compile_file(Path, ModName) of
+        ok ->
+          io:put_chars(" ok\n");
+
+        {error, Error} ->
+          io:put_chars(standard_error, "\n\n"),
+          io:put_chars(standard_error, Error),
+          init:stop(1)
+      end
     end,
   lists:foreach(Fun, Paths).
 

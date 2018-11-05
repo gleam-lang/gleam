@@ -12,7 +12,7 @@ with_module(Name, Source, Fun) ->
   StrName = atom_to_list(Name),
   FileName = StrName ++ ".beam",
   "gleam_" ++ ModName = StrName,
-  BeamBinary = gleam_compiler:source_to_binary(Source, ModName, [{gen_tests, true}]),
+  {ok, BeamBinary} = gleam_compiler:source_to_binary(Source, ModName, [{gen_tests, true}]),
   {module, Name} = code:load_binary(Name, FileName, BeamBinary),
   ?assertEqual({file, FileName}, code:is_loaded(Name)),
   try Fun() of

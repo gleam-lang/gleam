@@ -1,6 +1,6 @@
 -module(gleam_type).
 
--export([infer/1, fetch/1, type_to_string/1]).
+-export([infer/1, fetch/1, type_to_string/1, error_to_iolist/1]).
 
 -include("gleam_records.hrl").
 
@@ -29,15 +29,15 @@
 -type env() :: #env{}.
 
 -type error()
-  :: {var_not_found, #ast_var{}}
+  :: {var_not_found, string()}
   | {cannot_unify, {type(), type_var() | error, type(), type_var() | error}}
-  | {incorrect_number_of_arguments, type()}
-  | {not_a_function, type()}
+  | {incorrect_number_of_arguments, non_neg_integer(), non_neg_integer()}
+  | {not_a_function, non_neg_integer(), type()}
   | {recursive_row_type, type(), type()}
   | {not_a_row, type(), env()}
   | {row_does_not_contain_label, type(), env()}
   | {multiple_hole_fn, ast_expression()}
-  | {unknown_type, meta(), env(), string()}
+  | {type_not_found, string(), non_neg_integer()}
   | recursive_types.
 
 
@@ -284,7 +284,7 @@ infer(Ast, Env0) ->
           {AnnotatedAst, NewEnv};
 
         error ->
-          fail({var_not_found, Ast})
+          fail({var_not_found, Name})
       end;
 
     #ast_assignment{pattern = Pattern, value = Value, then = Then} ->
@@ -389,25 +389,25 @@ infer(Ast, Env0) ->
 -spec ast_type_to_type(ast_type(), boolean(), env()) -> {type(), env()}.
 ast_type_to_type(AstType, Create, Env0) ->
   case AstType of
-    #ast_type_constructor{meta = Meta, name = Name, args = []} ->
-      check_type_exists(Name, 0, Meta, Env0),
+    #ast_type_constructor{name = Name, args = []} ->
+      check_type_exists(Name, 0, Env0),
       T = #type_const{type = Name},
       {T, Env0};
 
-    #ast_type_constructor{meta = Meta, name = Name, args = Args} ->
-      check_type_exists(Name, length(Args), Meta, Env0),
+    #ast_type_constructor{name = Name, args = Args} ->
+      check_type_exists(Name, length(Args), Env0),
       {ArgsTypes, Env1} = gleam:thread_map(fun(T, E) -> ast_type_to_type(T, Create, E) end,
                                            Args, Env0),
       T = #type_app{type = Name, args = ArgsTypes},
       {T, Env1};
 
-    #ast_type_var{meta = Meta, name = Name} ->
+    #ast_type_var{name = Name} ->
       case {Create, env_lookup_type(Name, Env0)} of
         {_, {ok, #type_data{type = Var}}} ->
           {Var, Env0};
 
         {false, error} ->
-          fail({unknown_type, Meta, Env0, Name, 0});
+          fail({type_not_found, Name, 0});
 
         {true, error} ->
           new_var(Env0)
@@ -415,14 +415,14 @@ ast_type_to_type(AstType, Create, Env0) ->
   end.
 
 
--spec check_type_exists(string(), arity(), meta(), env()) -> ok.
-check_type_exists(Name, Arity, Meta, Env) ->
+-spec check_type_exists(string(), arity(), env()) -> ok.
+check_type_exists(Name, Arity, Env) ->
   case env_lookup_type(Name, Env) of
     {ok, #type_data{arity = Arity}} ->
       ok;
 
      _ ->
-      fail({unknown_type, Meta, Env, Name, Arity})
+      fail({type_not_found, Name, Arity})
   end.
 
 
@@ -1226,7 +1226,6 @@ match_fun_type(Arity, #type_var{type = Ref}, Env) ->
       Env3 = env_put_type_ref(Ref, Link, Env2),
       Env4 = put_env_level(PrevLevel, Env3),
       {ArgsTypes, ReturnType, Env4};
-    % false -> fail({incorrect_number_of_arguments, Type})
 
     #type_var_link{type = LinkedType} ->
       match_fun_type(Arity, LinkedType, Env)
@@ -1235,13 +1234,14 @@ match_fun_type(Arity, #type_var{type = Ref}, Env) ->
 match_fun_type(Arity, Type, Env) ->
   case Type of
     #type_fn{args = Args, return = Return} ->
-      case Arity =:= length(Args) of
+      Expected = length(Args),
+      case Arity =:= Expected of
         true -> {Args, Return, Env};
-        false -> fail({incorrect_number_of_arguments, Type})
+        false -> fail({incorrect_number_of_arguments, Expected, Arity})
       end;
 
     _ ->
-      fail({not_a_function, Type})
+      fail({not_a_function, Arity, Type})
   end.
 
 % TODO: Don't use process dictionary
@@ -1356,14 +1356,60 @@ collect_row_fields(Row) ->
       lists:sort(Fields)
   end.
 
-collect_row_fields(#type_row_empty{}, Fields) ->
-  Fields;
-collect_row_fields(#type_row_extend{parent = Parent, label = Label, type = Type}, Fields) ->
-  NewFields = [{Label, Type} | Fields],
-  collect_row_fields(Parent, NewFields);
-collect_row_fields(Other, Fields) ->
-  {Other, Fields}.
+collect_row_fields(Row, Fields) ->
+  case Row of
+    #type_row_empty{} ->
+    Fields;
+
+    #type_row_extend{parent = Parent, label = Label, type = Type} ->
+      NewFields = [{Label, Type} | Fields],
+      collect_row_fields(Parent, NewFields);
+
+    Other ->
+      {Other, Fields}
+  end.
 
 -spec uid(env()) -> {integer(), env()}.
 uid(#env{uid = UID} = Env) ->
   {UID, Env#env{uid = UID + 1}}.
+
+error_to_iolist(Error) ->
+  case Error of
+    {var_not_found, Name} ->
+      io_lib:format(
+        "-- NAMING ERROR --------------------------------------------------------------\n"
+        "\n"
+        "I cannot find a `~s` variable.\n"
+        "\n",
+        [Name]
+      );
+
+    {type_not_found, Name, _Arity} ->
+      io_lib:format(
+        "-- NAMING ERROR --------------------------------------------------------------\n"
+        "\n"
+        "I cannot find a `~s` type.\n"
+        "\n",
+        [Name]
+      );
+
+    {not_a_function, NumArgs, Type} ->
+      io_lib:format(
+        "-- TYPE MISMATCH -------------------------------------------------------------\n"
+        "\n"
+        "This value is not a function, but was called with ~B arguments.\n"
+        "\n"
+        "The value is of type `~s`\n"
+        "\n",
+        [NumArgs, type_to_string(Type)]
+      );
+
+    {incorrect_number_of_arguments, Expected, Given} ->
+      io_lib:format(
+        "-- INCORRECT ARITY -----------------------------------------------------------\n"
+        "\n"
+        "A function expected ~B arguments, but it got ~B instead.\n"
+        "\n",
+        [Expected, Given]
+      )
+  end.
