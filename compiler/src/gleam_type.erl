@@ -32,8 +32,8 @@
 -type error()
   :: {var_not_found, line_number(), string()}
   | {cannot_unify, {type(), type_var() | error, type(), type_var() | error}}
-  | {incorrect_number_of_arguments, non_neg_integer(), non_neg_integer()}
-  | {not_a_function, non_neg_integer(), type()}
+  | {incorrect_number_of_arguments, line_number(), non_neg_integer(), non_neg_integer()}
+  | {not_a_function, line_number(), non_neg_integer(), type()}
   | {recursive_row_type, type(), type()}
   | {not_a_row, type(), env()}
   | {row_does_not_contain_label, type(), env()}
@@ -137,7 +137,7 @@ infer_enum_pattern(FunAst, Args, Env0) ->
   {AnnotatedFunAst, Env1} = infer(FunAst, Env0),
   FunType = fetch(AnnotatedFunAst),
   Arity = length(Args),
-  {ArgTypes, ReturnType, Env2} = match_fun_type(Arity, FunType, Env1),
+  {ArgTypes, ReturnType, Env2} = match_fun_type(Arity, FunType, line_number(FunAst), Env1),
   CheckArg =
     fun({ArgType, ArgExpr}, CheckEnv0) ->
       {AnnotatedArgExpr, CheckEnv1} = infer_pattern(ArgExpr, CheckEnv0),
@@ -537,7 +537,7 @@ infer_call(FunAst, Args, Env0) ->
   {AnnotatedFunAst, Env1} = infer(FunAst, Env0),
   FunType = fetch(AnnotatedFunAst),
   Arity = length(Args),
-  {ArgTypes, ReturnType, Env2} = match_fun_type(Arity, FunType, Env1),
+  {ArgTypes, ReturnType, Env2} = match_fun_type(Arity, FunType, line_number(FunAst), Env1),
   CheckArg =
     fun({ArgType, ArgExpr}, CheckEnv0) ->
       {AnnotatedArgExpr, CheckEnv1} = infer(ArgExpr, CheckEnv0),
@@ -1205,8 +1205,9 @@ tvar_value(_, _) ->
   error.
 
 
--spec match_fun_type(non_neg_integer(), type(), env()) -> {list(type()), type(), env()}.
-match_fun_type(Arity, #type_var{type = Ref}, Env) ->
+-spec match_fun_type(non_neg_integer(), type(), line_number(), env())
+      -> {list(type()), type(), env()}.
+match_fun_type(Arity, #type_var{type = Ref}, LineNumber, Env) ->
   case env_lookup_type_ref(Ref, Env) of
     #type_var_unbound{level = Level} ->
       PrevLevel = env_level(Env),
@@ -1229,20 +1230,20 @@ match_fun_type(Arity, #type_var{type = Ref}, Env) ->
       {ArgsTypes, ReturnType, Env4};
 
     #type_var_link{type = LinkedType} ->
-      match_fun_type(Arity, LinkedType, Env)
+      match_fun_type(Arity, LinkedType, LineNumber, Env)
   end;
 
-match_fun_type(Arity, Type, Env) ->
+match_fun_type(Arity, Type, LineNumber, Env) ->
   case Type of
     #type_fn{args = Args, return = Return} ->
       Expected = length(Args),
       case Arity =:= Expected of
         true -> {Args, Return, Env};
-        false -> fail({incorrect_number_of_arguments, Expected, Arity})
+        false -> fail({incorrect_number_of_arguments, LineNumber, Expected, Arity})
       end;
 
     _ ->
-      fail({not_a_function, Arity, Type})
+      fail({not_a_function, LineNumber, Arity, Type})
   end.
 
 % TODO: Don't use process dictionary
@@ -1394,21 +1395,25 @@ error_to_iolist(Error, Src) ->
         [Name]
       );
 
-    {not_a_function, NumArgs, Type} ->
+    {not_a_function, LineNumber, NumArgs, Type} ->
       io_lib:format(
         "error: A non-function value is being called with ~B arguments.\n"
         "\n"
+        "~s\n"
+        "\n"
         "The value is of type `~s`\n"
         "\n",
-        [NumArgs, type_to_string(Type)]
+        [NumArgs, show_code(LineNumber, Src), type_to_string(Type)]
       );
 
-    {incorrect_number_of_arguments, Expected, Given} ->
+    {incorrect_number_of_arguments, LineNumber, Expected, Given} ->
       io_lib:format(
         "error: A function expected ~B arguments, but it is being called\n"
         "with ~B instead.\n"
+        "\n"
+        "~s\n"
         "\n",
-        [Expected, Given]
+        [Expected, Given, show_code(LineNumber, Src)]
       )
   end.
 
@@ -1441,3 +1446,9 @@ take(N, List) when N >= 0 ->
     {_, []} -> [];
     {_, [X | Xs]} -> [X | take(N - 1, Xs)]
   end.
+
+
+-spec line_number(ast_expression()) -> line_number().
+line_number(Ast) ->
+  Meta = element(2, Ast),
+  Meta#meta.line.

@@ -169,11 +169,11 @@ infer_fn_call_test() ->
 %   , OK "forall[a b] ((a -> a) -> b) -> b" ) *)
 
 infer_not_a_function_test() ->
-  ?assertEqual({error, {not_a_function, 1, #type_const{type = "Int"}}},
+  ?assertEqual({error, {not_a_function, 1, 1, #type_const{type = "Int"}}},
                infer("x = 1 x(2)")).
 
 infer_wrong_function_arity_test() ->
-  ?assertEqual({error, {incorrect_number_of_arguments, 0, 1}},
+  ?assertEqual({error, {incorrect_number_of_arguments, 1, 0, 1}},
                infer("f = fn() { 1 } f(2)")).
 
 infer_recursive_type_error_test() ->
@@ -598,6 +598,10 @@ error_to_iodata_test() ->
       ,
       "error: A non-function value is being called with 2 arguments.\n"
       "\n"
+      "   | fn x() { 1 }\n"
+      " 2 | pub fn go() { x()(1, 2) }\n"
+      "   | \n"
+      "\n"
       "The value is of type `Int`\n"
       "\n"
     },
@@ -615,6 +619,10 @@ error_to_iodata_test() ->
       ,
       "error: A function expected 1 arguments, but it is being called\n"
       "with 2 instead.\n"
+      "\n"
+      "   | fn id(x) { x }\n"
+      " 2 | pub fn go(x) { id(x, x) }\n"
+      "   | \n"
       "\n"
     }
   ],
