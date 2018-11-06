@@ -58,9 +58,9 @@ cannot_unify_test() ->
 
 infer_undefined_var_test() ->
   ?assertEqual(infer("one"),
-               {error, {var_not_found, "one"}}),
+               {error, {var_not_found, 1, "one"}}),
   ?assertEqual(infer("x = x x"),
-               {error, {var_not_found, "x"}}).
+               {error, {var_not_found, 1, "x"}}).
 
 infer_const_test() ->
   Cases = [
@@ -110,7 +110,7 @@ infer_pattern_assignment_test() ->
   test_infer(Cases).
 
 infer_unknown_var_test() ->
-  ?assertEqual({error, {var_not_found, "something"}},
+  ?assertEqual({error, {var_not_found, 1, "something"}},
                infer("something")).
 
 infer_fn_test() ->
@@ -572,6 +572,24 @@ error_to_iodata_test() ->
       ,
       "error: No variable with name `y` found in this scope.\n"
       "\n"
+      "   | fn add(x) {\n"
+      " 2 |   x + y\n"
+      "   | }\n"
+      "\n"
+    },
+
+    {
+      "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+      "fn add(x) {\n"
+      "  x + y\n"
+      "}\n"
+      ,
+      "error: No variable with name `y` found in this scope.\n"
+      "\n"
+      "    | fn add(x) {\n"
+      " 35 |   x + y\n"
+      "    | }\n"
+      "\n"
     },
 
     {
@@ -604,7 +622,8 @@ error_to_iodata_test() ->
   TestCase =
     fun({Src, FormattedError}) ->
       {error, Error} = infer(Src),
+      io:put_chars(gleam_type:error_to_iolist(Error, Src)),
       ?assertEqual(FormattedError,
-                   lists:flatten(gleam_type:error_to_iolist(Error)))
+                   lists:flatten(gleam_type:error_to_iolist(Error, Src)))
     end,
   lists:foreach(TestCase, Cases).

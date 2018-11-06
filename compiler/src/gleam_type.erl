@@ -1,6 +1,6 @@
 -module(gleam_type).
 
--export([infer/1, fetch/1, type_to_string/1, error_to_iolist/1]).
+-export([infer/1, fetch/1, type_to_string/1, error_to_iolist/2]).
 
 -include("gleam_records.hrl").
 
@@ -27,9 +27,10 @@
          type_refs = #{} :: #{reference() => type_var()}}).
 
 -type env() :: #env{}.
+-type line_number() :: non_neg_integer().
 
 -type error()
-  :: {var_not_found, string()}
+  :: {var_not_found, line_number(), string()}
   | {cannot_unify, {type(), type_var() | error, type(), type_var() | error}}
   | {incorrect_number_of_arguments, non_neg_integer(), non_neg_integer()}
   | {not_a_function, non_neg_integer(), type()}
@@ -276,7 +277,7 @@ infer(Ast, Env0) ->
       FinalEnv = Env0#env{type_refs = ReturnEnv#env.type_refs},
       {AnnotatedAst, FinalEnv};
 
-    #ast_var{name = Name} ->
+    #ast_var{meta = Meta, name = Name} ->
       case env_lookup(Name, Env0) of
         {ok, #var_data{type = Type, scope = Scope}} ->
           {InstantiatedType, NewEnv} = instantiate(Type, Env0),
@@ -284,7 +285,7 @@ infer(Ast, Env0) ->
           {AnnotatedAst, NewEnv};
 
         error ->
-          fail({var_not_found, Name})
+          fail({var_not_found, Meta#meta.line, Name})
       end;
 
     #ast_assignment{pattern = Pattern, value = Value, then = Then} ->
@@ -1373,13 +1374,17 @@ collect_row_fields(Row, Fields) ->
 uid(#env{uid = UID} = Env) ->
   {UID, Env#env{uid = UID + 1}}.
 
-error_to_iolist(Error) ->
+
+-spec error_to_iolist(error(), string()) -> iodata().
+error_to_iolist(Error, Src) ->
   case Error of
-    {var_not_found, Name} ->
+    {var_not_found, LineNumber, Name} ->
       io_lib:format(
         "error: No variable with name `~s` found in this scope.\n"
+        "\n"
+        "~s\n"
         "\n",
-        [Name]
+        [Name, show_code(LineNumber, Src)]
       );
 
     {type_not_found, Name, _Arity} ->
@@ -1405,4 +1410,34 @@ error_to_iolist(Error) ->
         "\n",
         [Expected, Given]
       )
+  end.
+
+show_code(LineNumber, Src) ->
+  N = integer_to_list(LineNumber),
+  P = lists:map(fun(_) -> $\s end, N),
+  case take(3, drop(LineNumber - 2, string:split(Src, "\n", all))) of
+    [L1, L2, L3] ->
+      [" ", P, " | ", L1, "\n",
+       " ", N, " | ", L2, "\n",
+       " ", P, " | ", L3];
+
+    [L1, L2] ->
+      [" ", P, " | ", L1, "\n",
+       " ", N, " | ", L2, "\n",
+       " ", P, " |"]
+  end.
+
+
+drop(N, [_ | Xs] = List) ->
+  case N of
+    0 -> List;
+    _ -> drop(N - 1, Xs)
+  end.
+
+
+take(N, List) when N >= 0 ->
+  case {N, List} of
+    {0, _} -> [];
+    {_, []} -> [];
+    {_, [X | Xs]} -> [X | take(N - 1, Xs)]
   end.
