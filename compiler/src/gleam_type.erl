@@ -37,8 +37,8 @@
   | {recursive_row_type, type(), type()}
   | {not_a_row, type(), env()}
   | {row_does_not_contain_label, type(), env()}
-  | {multiple_hole_fn, ast_expression()}
-  | {type_not_found, string(), non_neg_integer()}
+  | {multiple_hole_fn, line_number(), non_neg_integer()}
+  | {type_not_found, line_number(), string(), non_neg_integer()}
   | recursive_types.
 
 
@@ -254,7 +254,7 @@ infer(Ast, Env0) ->
           infer(NewFn, Env1);
 
         _ ->
-          fail({multiple_hole_fn, Ast})
+          fail({multiple_hole_fn, line_number(Ast), NumHoles})
       end;
 
     #ast_enum{name = Name, elems = Args} ->
@@ -389,14 +389,24 @@ infer(Ast, Env0) ->
 
 -spec ast_type_to_type(ast_type(), boolean(), env()) -> {type(), env()}.
 ast_type_to_type(AstType, Create, Env0) ->
+  CheckTypeExists =
+    fun(Name, Arity, Env) ->
+      case env_lookup_type(Name, Env) of
+        {ok, #type_data{arity = Arity}} ->
+          ok;
+
+        _ ->
+          fail({type_not_found, line_number(AstType), Name, Arity})
+      end
+    end,
   case AstType of
     #ast_type_constructor{name = Name, args = []} ->
-      check_type_exists(Name, 0, Env0),
+      CheckTypeExists(Name, 0, Env0),
       T = #type_const{type = Name},
       {T, Env0};
 
     #ast_type_constructor{name = Name, args = Args} ->
-      check_type_exists(Name, length(Args), Env0),
+      CheckTypeExists(Name, length(Args), Env0),
       {ArgsTypes, Env1} = gleam:thread_map(fun(T, E) -> ast_type_to_type(T, Create, E) end,
                                            Args, Env0),
       T = #type_app{type = Name, args = ArgsTypes},
@@ -408,22 +418,11 @@ ast_type_to_type(AstType, Create, Env0) ->
           {Var, Env0};
 
         {false, error} ->
-          fail({type_not_found, Name, 0});
+          fail({type_not_found, line_number(AstType), Name, 0});
 
         {true, error} ->
           new_var(Env0)
       end
-  end.
-
-
--spec check_type_exists(string(), arity(), env()) -> ok.
-check_type_exists(Name, Arity, Env) ->
-  case env_lookup_type(Name, Env) of
-    {ok, #type_data{arity = Arity}} ->
-      ok;
-
-     _ ->
-      fail({type_not_found, Name, Arity})
   end.
 
 
@@ -1388,11 +1387,13 @@ error_to_iolist(Error, Src) ->
         [Name, show_code(LineNumber, Src)]
       );
 
-    {type_not_found, Name, _Arity} ->
+    {type_not_found, LineNumber, Name, _Arity} ->
       io_lib:format(
         "error: No type with name `~s` found in this scope.\n"
+        "\n"
+        "~s\n"
         "\n",
-        [Name]
+        [Name, show_code(LineNumber, Src)]
       );
 
     {not_a_function, LineNumber, NumArgs, Type} ->
@@ -1404,6 +1405,18 @@ error_to_iolist(Error, Src) ->
         "The value is of type `~s`\n"
         "\n",
         [NumArgs, show_code(LineNumber, Src), type_to_string(Type)]
+      );
+
+    {multiple_hole_fn, LineNumber, NumHoles} ->
+      io_lib:format(
+        "error: A function is being captured with ~B `_` placeholders, but \n"
+        "the function capture syntax only permits one `_` placeholder.\n"
+        "\n"
+        "~s\n"
+        "\n"
+        "Rewrite the capture as an anonymous function `fn(a, b) { ... }`\n"
+        "\n",
+        [NumHoles, show_code(LineNumber, Src)]
       );
 
     {incorrect_number_of_arguments, LineNumber, Expected, Given} ->
@@ -1429,20 +1442,25 @@ show_code(LineNumber, Src) ->
     [L1, L2] ->
       [" ", P, " | ", L1, "\n",
        " ", N, " | ", L2, "\n",
+       " ", P, " |"];
+
+    [L1] ->
+      [" ", P, " |\n",
+       " ", N, " | ", L1, "\n",
        " ", P, " |"]
   end.
 
 
 drop(N, [_ | Xs] = List) ->
-  case N of
-    0 -> List;
-    _ -> drop(N - 1, Xs)
+  case N =< 0 of
+    true -> List;
+    false -> drop(N - 1, Xs)
   end.
 
 
-take(N, List) when N >= 0 ->
+take(N, List) ->
   case {N, List} of
-    {0, _} -> [];
+    {_, _}  when N =< 0 -> [];
     {_, []} -> [];
     {_, [X | Xs]} -> [X | take(N - 1, Xs)]
   end.

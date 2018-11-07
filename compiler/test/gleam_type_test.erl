@@ -489,11 +489,11 @@ enum_test() ->
   test_infer(Cases).
 
 invalid_enum_test() ->
-  {error, {type_not_found, "a", 0}} = infer("enum X = | X(a)"),
-  {error, {type_not_found, "List", 0}} = infer("enum X = | X(List)"),
-  {error, {type_not_found, "x", 0}} = infer("enum X = | X(List(x))"),
-  {error, {type_not_found, "String", 1}} = infer("enum X = | X(String(x))"),
-  {error, {type_not_found, "A", 0}} = infer("enum X = | X(A)").
+  {error, {type_not_found, 1, "a", 0}} = infer("enum X = | X(a)"),
+  {error, {type_not_found, 1, "List", 0}} = infer("enum X = | X(List)"),
+  {error, {type_not_found, 1, "x", 0}} = infer("enum X = | X(List(x))"),
+  {error, {type_not_found, 1, "String", 1}} = infer("enum X = | X(String(x))"),
+  {error, {type_not_found, 1, "A", 0}} = infer("enum X = | X(A)").
 
 external_fn_test() ->
   Cases = [
@@ -524,9 +524,9 @@ external_fn_test() ->
   test_infer(Cases).
 
 invalid_external_fn_test() ->
-  ?assertEqual({error, {type_not_found, "List", 0}},
+  ?assertEqual({error, {type_not_found, 1, "List", 0}},
                infer("external fn go(List) -> Int = '' ''")),
-  ?assertEqual({error, {type_not_found, "List", 2}},
+  ?assertEqual({error, {type_not_found, 1, "List", 2}},
                infer("external fn go(List(a, b)) -> Int = '' ''")).
 
 external_type_test() ->
@@ -560,7 +560,6 @@ module_select_test() ->
   % | {recursive_row_type, type(), type()}
   % | {not_a_row, type(), env()}
   % | {row_does_not_contain_label, type(), env()}
-  % | {multiple_hole_fn, ast_expression()}
   % | recursive_types.
 
 error_to_iodata_test() ->
@@ -610,6 +609,24 @@ error_to_iodata_test() ->
       "enum A = | B(C)"
       ,
       "error: No type with name `C` found in this scope.\n"
+      "\n"
+      "   |\n"
+      " 1 | enum A = | B(C)\n"
+      "   |\n"
+      "\n"
+    },
+
+    {
+      "\n\nrun(1, _, _)\n\n"
+      ,
+      "error: A function is being captured with 2 `_` placeholders, but \n"
+      "the function capture syntax only permits one `_` placeholder.\n"
+      "\n"
+      "   | \n"
+      " 3 | run(1, _, _)\n"
+      "   | \n"
+      "\n"
+      "Rewrite the capture as an anonymous function `fn(a, b) { ... }`\n"
       "\n"
     },
 
