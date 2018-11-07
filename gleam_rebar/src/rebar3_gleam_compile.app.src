@@ -1,14 +1,14 @@
 {application, rebar3_gleam_compile, [
   {description, "gleam rebar3 plugin"},
-  {vsn, "0.2.0"},
+  {vsn, "0.1.0"},
   {registered, []},
   {applications,
-    [kernel,stdlib]}
+    [kernel, stdlib]},
   {env,[]},
   {modules, []},
   {env, [{providers, [gleam]}]},
 
-  {maintainers, ["Conrad Steenberg"]},
+  {maintainers, []},
   {licenses, ["Apache v2"]},
-  {links, [{"Github", "https://github.com/hengestone/rebar3_gleam"}]}
+  {links, [{"Github", "https://github.com/lpil/rebar3_gleam"}]}
  ]}.
