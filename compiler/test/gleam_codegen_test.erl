@@ -561,3 +561,15 @@ module_import_test() ->
   with_module(Mod, Source, fun() ->
     ?assertEqual(1, Mod:go())
   end).
+
+% This doesn't work because we're not writing the modules to the code path.
+module_docs_chunk_test() ->
+  Source =
+    "pub fn one() { 1 }\n"
+    "pub fn double(x) { x + x }\n"
+  ,
+  Mod = gleam_module_docs_chunk_test,
+  with_module(Mod, Source, fun() ->
+    ?assertEqual(1, Mod:one()),
+    ?assertEqual(1, gleam_compiler:fetch_docs(Mod))
+  end).
