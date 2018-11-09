@@ -1,7 +1,8 @@
 -module(gleam_compiler).
 -include("gleam_records.hrl").
 
--export([source_to_binary/2, source_to_binary/3, compile_file/2, fetch_docs/1]).
+-export([source_to_binary/2, source_to_binary/3, compile_file/2, fetch_docs/1,
+         fetch_docs_from_binary/1]).
 
 -spec source_to_binary(string(), string()) -> {error, string()} | {ok, binary()}.
 source_to_binary(Source, ModName) ->
@@ -60,15 +61,18 @@ docs_chunk(ModuleAst) ->
 fetch_docs(Module) when is_atom(Module) ->
   case code:get_object_code(Module) of
     {_Module, Beam, _BeamPath} ->
-      case beam_lib:chunks(Beam, ["Docs"]) of
-        {ok, {_module, [{"Docs", Chunk}]}} ->
-          binary_to_term(Chunk);
-
-        {error, beam_lib, {missing_chunk, _, "Docs"}} ->
-          {error, docs_chunk_not_found}
-      end;
+      fetch_docs_from_binary(Beam);
 
     error ->
       {error, module_not_found}
   end.
 
+
+fetch_docs_from_binary(Beam) ->
+  case beam_lib:chunks(Beam, ["Docs"]) of
+    {ok, {_module, [{"Docs", Chunk}]}} ->
+      {ok, binary_to_term(Chunk)};
+
+    {error, beam_lib, {missing_chunk, _, "Docs"}} ->
+      {error, docs_chunk_not_found}
+  end.
