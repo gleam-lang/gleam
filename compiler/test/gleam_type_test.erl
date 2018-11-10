@@ -719,3 +719,19 @@ error_to_iodata_test() ->
                    lists:flatten(gleam_type:error_to_iolist(Error, Src)))
     end,
   lists:foreach(TestCase, Cases).
+
+later_definition_test() ->
+  Cases = [
+    {
+      "pub fn two() { one() + zero() }\n"
+      "pub fn one() { 1 }\n"
+      "pub fn zero() { one() - 1 }\n"
+      ,
+      "module {"
+      " fn zero() -> Int"
+      " fn two() -> Int"
+      " fn one() -> Int"
+      "}"
+    }
+  ],
+  test_infer(Cases).

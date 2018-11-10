@@ -63,13 +63,43 @@ new_generic_var(Env) ->
 -spec infer(ast_expression()) -> {ok, ast_expression()} | {error, error()}.
 infer(Ast) ->
   try
-    {InferredAst, Env} = infer(Ast, new_env()),
-    ResolvedAst = resolve_type_vars(InferredAst, Env),
+    Env0 = register_statements(Ast, new_env()),
+    {InferredAst, Env1} = infer(Ast, Env0),
+    ResolvedAst = resolve_type_vars(InferredAst, Env1),
     {ok, ResolvedAst}
   catch
     throw:{gleam_type_error, Error} -> {error, Error}
   end.
 
+
+% Scan across the statements of a module, registering the top level defined
+% functions in the env with a minimal type definition. This allows statements
+% to make use of functions defined later in the file without throwing a
+% variable-not-found error when inferring.
+%
+-spec register_statements(ast_expression(), env()) -> env().
+register_statements(Ast, Env0) ->
+  case Ast of
+    #ast_module{statements = Statements} ->
+      lists:foldl(fun register_statement/2, Env0, Statements);
+
+    _ ->
+      Env0
+  end.
+
+-spec register_statement(ast_expression(), env()) -> env().
+register_statement(Statement, Env0) ->
+  case Statement of
+    #ast_mod_fn{name = Name, args = Args} ->
+      Env1 = increment_env_level(Env0),
+      {ArgTypes, Env2} = gleam:thread_map(fun(_, E) -> new_var(E) end, Args, Env1),
+      {ReturnType, Env3} = new_var(Env2),
+      Type = #type_fn{args = ArgTypes, return = ReturnType},
+      env_extend(Name, Type, module, Env3);
+
+    _ ->
+      Env0
+  end.
 
 -spec unify_clauses([#ast_clause{}], type(), env()) -> env().
 unify_clauses(Clauses, SubjectType, Env0) ->
@@ -480,16 +510,20 @@ module_statement(Statement, {Row, Env0}) ->
       Env4 = env_register_type(Name, Type, Env3),
       {Statement, {Row, Env4}};
 
-    #ast_mod_fn{public = Public, name = Name, args = Args, body = Body, meta = Meta} ->
+    #ast_mod_fn{public = Public, name = Name, args = Args, body = Body} ->
       Fn = #ast_fn{args = Args, body = Body},
-      Var = #ast_var{name = Name, scope = module, meta = Meta},
-      {FnType, AnnotatedFn, Env1} = infer_assignment(Var, Fn, Env0),
+      {AnnotatedFn, Env1} = infer(Fn, increment_env_level(Env0)),
+      Env2 = decrement_env_level(Env1),
+      {FnType, Env3} = generalize(fetch(AnnotatedFn), Env2),
+      {ok, #var_data{type = Type}} = env_lookup(Name, Env3),
+      Env4 = unify(Type, FnType, Env3),
+
       #ast_fn{args = NewArgs, body = NewBody} = AnnotatedFn,
       NewRow = case Public of
         true -> #type_row_extend{label = Name, type = FnType, parent = Row};
         false -> Row
       end,
-      NewState = {NewRow, Env1},
+      NewState = {NewRow, Env4},
       AnnotatedStatement = Statement#ast_mod_fn{type = {ok, FnType},
                                                 args = NewArgs,
                                                 body = NewBody},
