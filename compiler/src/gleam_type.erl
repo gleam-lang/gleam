@@ -421,7 +421,9 @@ ast_type_to_type(AstType, Create, Env0) ->
           fail({type_not_found, line_number(AstType), Name, 0});
 
         {true, error} ->
-          new_var(Env0)
+          {Var, Env1} = new_generic_var(Env0),
+          Env2 = env_register_type(Name, Var, Env1),
+          {Var, Env2}
       end
   end.
 

@@ -521,23 +521,21 @@ external_fn_test() ->
      "}"
     },
 
-    % FIXME
-    % {
-    %  "pub external fn go(List(a)) -> a = '' ''"
-    %  ,
-    %  "module {"
-    %  " fn go(List(a)) -> a"
-    %  "}"
-    % },
+    {
+     "pub external fn go(List(a)) -> a = '' ''"
+     ,
+     "module {"
+     " fn go(List(a)) -> a"
+     "}"
+    },
 
-    % FIXME
-    % {
-    %  "pub external fn go(Tuple(a, b)) -> b = '' ''"
-    %  ,
-    %  "module {"
-    %  " fn go(Tuple(a, b)) -> b"
-    %  "}"
-    % },
+    {
+     "pub external fn go(Tuple(a, b)) -> b = '' ''"
+     ,
+     "module {"
+     " fn go(Tuple(a, b)) -> b"
+     "}"
+    },
 
     {
      "external fn go(Bool) -> b = '' ''"
@@ -551,6 +549,17 @@ external_fn_test() ->
     },
 
     {
+     "external fn id(a) -> a = '' ''\n"
+     "pub fn a() { id(1) }\n"
+     "pub fn b() { id(1.0) }\n"
+     ,
+     "module {"
+     " fn b() -> Float"
+     " fn a() -> Int"
+     "}"
+    },
+
+    {
      "pub external fn len(List(a)) -> Int = '' ''"
      ,
      "module {"
@@ -559,6 +568,7 @@ external_fn_test() ->
     }
   ],
   test_infer(Cases).
+
 
 invalid_external_fn_test() ->
   ?assertEqual({error, {type_not_found, 1, "List", 0}},
