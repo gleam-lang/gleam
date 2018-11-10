@@ -258,6 +258,7 @@
       | #type_row_extend{}
       .
 
+
 %
 % Type variables
 %
