@@ -514,6 +514,17 @@ external_fn_test() ->
     },
 
     {
+     "external fn go(Bool) -> b = '' ''"
+     "pub fn x() {\n"
+     "  go(True)\n"
+     "}"
+     ,
+     "module {"
+     " fn x() -> a"
+     "}"
+    },
+
+    {
      "pub external fn len(List(a)) -> Int = '' ''"
      ,
      "module {"

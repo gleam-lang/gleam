@@ -502,7 +502,8 @@ module_statement(Statement, {Row, Env0}) ->
         true -> #type_row_extend{label = Name, type = Type, parent = Row};
         false -> Row
       end,
-      NewState = {NewRow, Env2},
+      Env3 = env_extend(Name, Type, module, Env2),
+      NewState = {NewRow, Env3},
       AnnotatedStatement = Statement#ast_mod_external_fn{type = {ok, Type}},
       {AnnotatedStatement, NewState};
 
