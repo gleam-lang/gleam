@@ -31,7 +31,7 @@
 
 -type error()
   :: {var_not_found, line_number(), string()}
-  | {cannot_unify, {type(), type_var() | error, type(), type_var() | error}}
+  | {cannot_unify, type(), type()}
   | {incorrect_number_of_arguments, line_number(), non_neg_integer(), non_neg_integer()}
   | {not_a_function, line_number(), non_neg_integer(), type()}
   | {recursive_row_type, type(), type()}
@@ -1162,7 +1162,9 @@ unify(Type1, Type2, Env) ->
       end;
 
     Other ->
-      fail({cannot_unify, Other})
+      T1 = type_resolve_type_vars(Type1, Env),
+      T2 = type_resolve_type_vars(Type2, Env),
+      fail({cannot_unify, T1, T2})
   end.
 
 
@@ -1245,6 +1247,7 @@ match_fun_type(Arity, Type, LineNumber, Env) ->
     _ ->
       fail({not_a_function, LineNumber, Arity, Type})
   end.
+
 
 % TODO: Don't use process dictionary
 type_to_string(Type) ->
@@ -1420,6 +1423,22 @@ error_to_iolist(Error, Src) ->
         [NumHoles, show_code(LineNumber, Src)]
       );
 
+    {cannot_unify, T1, T2} ->
+      io_lib:format(
+        "error: Type mismatch. The inferred type is\n"
+        "\n"
+        "    ~s\n"
+        "\n"
+        "But somewhere else wants\n"
+        "\n"
+        "    ~s\n"
+        "\n"
+        "Types are inferred top to bottom, left to right, so the problem \n"
+        "may be earlier in the file.\n"
+        "\n",
+        [type_to_string(T1), type_to_string(T2)]
+      );
+
     {incorrect_number_of_arguments, LineNumber, Expected, Given} ->
       io_lib:format(
         "error: A function expected ~B arguments, but it is being called\n"
@@ -1430,6 +1449,7 @@ error_to_iolist(Error, Src) ->
         [Expected, Given, show_code(LineNumber, Src)]
       )
   end.
+
 
 show_code(LineNumber, Src) ->
   N = integer_to_list(LineNumber),

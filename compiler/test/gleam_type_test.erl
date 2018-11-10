@@ -52,7 +52,7 @@ cannot_unify_test() ->
   Test =
     fun(Src) ->
       Result = infer(Src),
-      ?assertMatch({error, {cannot_unify, _}}, Result)
+      ?assertMatch({error, {cannot_unify, _, _}}, Result)
     end,
   lists:foreach(Test, Cases).
 
@@ -567,7 +567,6 @@ module_select_test() ->
   ],
   test_infer(Cases).
 
-  % | {cannot_unify, {type(), type_var() | error, type(), type_var() | error}}
   % | {recursive_row_type, type(), type()}
   % | {not_a_row, type(), env()}
   % | {row_does_not_contain_label, type(), env()}
@@ -624,6 +623,25 @@ error_to_iodata_test() ->
       "   |\n"
       " 1 | enum A = | B(C)\n"
       "   |\n"
+      "\n"
+    },
+
+    {
+      "fn add(x) {\n"
+      "  n = x + x\n"
+      "  n :: n\n"
+      "}\n"
+      ,
+      "error: Type mismatch. The inferred type is\n"
+      "\n"
+      "    Int\n"
+      "\n"
+      "But somewhere else wants\n"
+      "\n"
+      "    List(Int)\n"
+      "\n"
+      "Types are inferred top to bottom, left to right, so the problem \n"
+      "may be earlier in the file.\n"
       "\n"
     },
 
