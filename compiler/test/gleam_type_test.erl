@@ -663,18 +663,20 @@ error_to_iodata_test() ->
     },
 
     {
-      "fn add(x) {\n"
-      "  n = x + x\n"
-      "  n :: n\n"
+      "fn double(x) {\n"
+      "  x + x\n"
+      "}\n"
+      "fn run() {\n"
+      "  double(1.0)\n"
       "}\n"
       ,
       "error: Type mismatch. The inferred type is\n"
       "\n"
-      "    Int\n"
+      "    Float\n"
       "\n"
       "But somewhere else wants\n"
       "\n"
-      "    List(Int)\n"
+      "    Int\n"
       "\n"
       "Types are inferred top to bottom, left to right, so the problem \n"
       "may be earlier in the file.\n"

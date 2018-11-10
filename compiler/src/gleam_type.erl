@@ -1173,7 +1173,7 @@ unify(Type1, Type2, Env) ->
     _ ->
       T1 = type_resolve_type_vars(Type1, Env),
       T2 = type_resolve_type_vars(Type2, Env),
-      fail({cannot_unify, T1, T2})
+      fail({cannot_unify, T2, T1})
   end.
 
 
