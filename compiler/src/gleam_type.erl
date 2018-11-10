@@ -797,6 +797,7 @@ type_resolve_type_vars(Type, Env) ->
 new_env() ->
   E0 = #env{},
   Int = #type_const{type = "Int"},
+  Atom = #type_const{type = "Atom"},
   Bool = #type_const{type = "Bool"},
   Float = #type_const{type = "Float"},
   String = #type_const{type = "String"},
@@ -830,12 +831,18 @@ new_env() ->
   E9 = env_register_type("String", String, E8),
   E10 = env_register_type("Int", Int, E9),
   E11 = env_register_type("Bool", Bool, E10),
+  E12 = env_register_type("Atom", Atom, E11),
 
-  {V7, E12} = new_generic_var(E11),
+  {V7, E13} = new_generic_var(E12),
   List = #type_app{type = "List", args = [V7]},
-  E13 = env_register_type("List", List, E12),
+  E14 = env_register_type("List", List, E13),
 
-  LastE = E13,
+  {V8, E15} = new_generic_var(E14),
+  {V9, E16} = new_generic_var(E15),
+  Tuple = #type_app{type = "Tuple", args = [V8, V9]},
+  E17 = env_register_type("Tuple", Tuple, E16),
+
+  LastE = E17,
 
   Core = [
     {"+", EndoOp(Int)},
@@ -1161,7 +1168,7 @@ unify(Type1, Type2, Env) ->
           unify(Parent, OtherParent, Env1)
       end;
 
-    Other ->
+    _ ->
       T1 = type_resolve_type_vars(Type1, Env),
       T2 = type_resolve_type_vars(Type2, Env),
       fail({cannot_unify, T1, T2})

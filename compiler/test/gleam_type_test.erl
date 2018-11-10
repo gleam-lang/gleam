@@ -506,12 +506,38 @@ external_fn_test() ->
     },
 
     {
+     "pub external fn go(Atom) -> b = '' ''"
+     ,
+     "module {"
+     " fn go(Atom) -> a"
+     "}"
+    },
+
+    {
      "pub external fn go(Bool) -> b = '' ''"
      ,
      "module {"
      " fn go(Bool) -> a"
      "}"
     },
+
+    % FIXME
+    % {
+    %  "pub external fn go(List(a)) -> a = '' ''"
+    %  ,
+    %  "module {"
+    %  " fn go(List(a)) -> a"
+    %  "}"
+    % },
+
+    % FIXME
+    % {
+    %  "pub external fn go(Tuple(a, b)) -> b = '' ''"
+    %  ,
+    %  "module {"
+    %  " fn go(Tuple(a, b)) -> b"
+    %  "}"
+    % },
 
     {
      "external fn go(Bool) -> b = '' ''"
