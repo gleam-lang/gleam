@@ -1398,10 +1398,10 @@ type_to_string(Type) ->
 collect_row_fields(Row) ->
   case collect_row_fields(Row, []) of
     {Parent, Fields} ->
-      {Parent, lists:sort(Fields)};
+      {Parent, lists:sort(fun(X, Y) -> X < Y end, Fields)};
 
     Fields ->
-      lists:sort(Fields)
+      lists:sort(fun(X, Y) -> X < Y end, Fields)
   end.
 
 collect_row_fields(Row, Fields) ->
