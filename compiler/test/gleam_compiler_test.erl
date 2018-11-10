@@ -27,3 +27,16 @@ module_docs_chunk_test() ->
     []
   },
   ?assertEqual(Expected, Docs).
+
+module_dependencies_test() ->
+  Src =
+    "import foo\n"
+    "fn id(x) { y }\n"
+    "import bar\n"
+    "import baz\n"
+  ,
+  {ok, Tokens, _} = gleam_tokenizer:string(Src),
+  {ok, Ast} = gleam_parser:parse(Tokens),
+  ?assertEqual({ok, ["baz", "bar", "foo"]},
+               gleam_compiler:module_dependencies(Ast)).
+
