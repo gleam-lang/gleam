@@ -19,7 +19,7 @@
 -record(module_acc, {gen_tests = false, definitions = [], exports = []}).
 
 module(#ast_module{statements = Statements}, ModName, Options) ->
-  PrefixedName = prefix_module(ModName),
+  PrefixedName = "gleam_" ++ ModName,
   GenTests = proplists:get_value(gen_tests, Options, false),
   Acc0 = lists:foldl(fun module_statement/2,
                     #module_acc{gen_tests = GenTests},
@@ -254,7 +254,7 @@ expression(#ast_call{meta = Meta, fn = Fn, args = Args}, Env) ->
   end;
 
 expression(#ast_module_call{module = Mod, name = Name, args = Args}, Env) when is_list(Name) ->
-  C_module = cerl:c_atom(prefix_module(Mod)),
+  C_module = cerl:c_atom(Mod),
   C_name = cerl:c_atom(Name),
   {C_args, NewEnv} = map_expressions(Args, Env),
   {cerl:c_call(C_module, C_name, C_args), NewEnv};
@@ -431,16 +431,6 @@ binary_string_byte(Char) ->
                 cerl:c_int(1),
                 cerl:c_atom(integer),
                 c_list([cerl:c_atom(unsigned), cerl:c_atom(big)])).
-
-% TODO: FIXME: Whether the module is an Erlang one should be specified in the
-% AST, we should not have a special list here.
-prefix_module(Name) when is_list(Name) ->
-  case Name of
-    "erlang" -> "erlang";
-    "maps" -> "maps";
-    "binary" -> "binary";
-    _ -> "gleam_" ++ Name
-  end.
 
 uid(#env{uid = UID} = Env) ->
   {UID, Env#env{uid = UID + 1}}.

@@ -31,7 +31,12 @@ print_help() ->
     "    compile\tCompile .gleam files\n").
 
 load_gleam_modules() ->
-  BinDir = filename:dirname(escript:script_name()),
+  ScriptPath = escript:script_name(),
+  Path = case file:read_link(ScriptPath) of
+    {ok, P} -> P;
+    {error, _} -> ScriptPath
+  end,
+  BinDir = filename:dirname(Path),
   EBinDir = BinDir ++ "/../_build/default/lib/gleam/ebin",
   true = code:add_pathz(EBinDir).
 

@@ -24,7 +24,7 @@ source_to_binary(Source, ModName, Options) ->
       {ok, Bin};
 
     {error, Error} ->
-      {error, lists:flatten(gleam_type:error_to_iolist(Error))}
+      {error, lists:flatten(gleam_type:error_to_iolist(Error, Source))}
   end.
 
 
