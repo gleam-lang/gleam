@@ -148,10 +148,10 @@ var(Atom) ->
   cerl:c_var(list_to_atom(Atom)).
 
 map_clauses(Clauses, Env) ->
-  gleam:thread_map(fun clause/2, Clauses, Env).
+  lists:mapfoldl(fun clause/2, Env, Clauses).
 
 map_expressions(Expressions, Env) ->
-  gleam:thread_map(fun expression/2, Expressions, Env).
+  lists:mapfoldl(fun expression/2, Env, Expressions).
 
 
 fn_call(Fn, Args, Env0) ->
@@ -284,16 +284,16 @@ expression(#ast_record_empty{}, Env) ->
 expression(#ast_record_extend{} = Ast, Env) ->
   case flatten_record(Ast) of
     {flat, FlatFields} ->
-      {C_pairs, NewEnv} = gleam:thread_map(fun record_field/2,
-                                           maps:to_list(FlatFields),
-                                           Env),
+      {C_pairs, NewEnv} = lists:mapfoldl(fun record_field/2,
+                                         Env,
+                                         maps:to_list(FlatFields)),
       Core = cerl:c_map(C_pairs),
       {Core, NewEnv};
 
     {extending, Parent, FlatFields} ->
-      {C_pairs, Env1} = gleam:thread_map(fun record_field/2,
-                                         maps:to_list(FlatFields),
-                                         Env),
+      {C_pairs, Env1} = lists:mapfoldl(fun record_field/2,
+                                       Env,
+                                       maps:to_list(FlatFields)),
       C_extension = cerl:c_map(C_pairs),
       C_module = cerl:c_atom(maps),
       C_name = cerl:c_atom(merge),

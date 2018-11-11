@@ -95,7 +95,7 @@ register_statement(Statement, Env0) ->
   case Statement of
     #ast_mod_fn{name = Name, args = Args} ->
       Env1 = increment_env_level(Env0),
-      {ArgTypes, Env2} = gleam:thread_map(fun(_, E) -> new_var(E) end, Args, Env1),
+      {ArgTypes, Env2} = lists:mapfoldl(fun(_, E) -> new_var(E) end, Env1, Args),
       {ReturnType, Env3} = new_var(Env2),
       Type = #type_fn{args = ArgTypes, return = ReturnType},
       env_extend(Name, Type, module, Env3);
@@ -206,7 +206,7 @@ infer_pattern(Pattern, Env0) ->
       {AnnotatedPattern, Env1};
 
     #ast_tuple{elems = Elems} ->
-      {AnnotatedElems, NewEnv} = gleam:thread_map(fun infer_pattern/2, Elems, Env0),
+      {AnnotatedElems, NewEnv} = lists:mapfoldl(fun infer_pattern/2, Env0, Elems),
       AnnotatedPattern = Pattern#ast_tuple{elems = AnnotatedElems},
       {AnnotatedPattern, NewEnv};
 
@@ -238,16 +238,16 @@ infer_pattern(Pattern, Env0) ->
 infer(Ast, Env0) ->
   case Ast of
     #ast_module{statements = Statements} ->
-      {NewStatements, {Row, Env1}} = gleam:thread_map(fun module_statement/2,
-                                                      Statements,
-                                                      {#type_row_empty{}, Env0}),
+      {NewStatements, {Row, Env1}} = lists:mapfoldl(fun module_statement/2,
+                                                    {#type_row_empty{}, Env0},
+                                                    Statements),
       ModuleType = #type_module{row = Row},
       AnnotatedAst = Ast#ast_module{type = {ok, ModuleType}, statements = NewStatements},
       {AnnotatedAst, Env1};
 
     #ast_case{subject = Subject, clauses = Clauses} ->
       {AnnotatedSubject, Env1} = infer(Subject, Env0),
-      {AnnotatedClauses, Env2} = gleam:thread_map(fun infer_clause/2, Clauses, Env1),
+      {AnnotatedClauses, Env2} = lists:mapfoldl(fun infer_clause/2, Env1, Clauses),
       SubjectType = fetch(AnnotatedSubject),
       Env3 = unify_clauses(AnnotatedClauses, SubjectType, Env2),
       Type = fetch_clause_type(hd(AnnotatedClauses)),
@@ -297,7 +297,7 @@ infer(Ast, Env0) ->
       {AnnotatedAst, Env1};
 
     #ast_fn{args = Args, body = Body} ->
-      {ArgTypes, ArgsEnv} = gleam:thread_map(fun(_, E) -> new_var(E) end, Args, Env0),
+      {ArgTypes, ArgsEnv} = lists:mapfoldl(fun(_, E) -> new_var(E) end, Env0, Args),
       Insert =
         fun({Name, Type}, E) ->
           env_extend(Name, Type, local, E)
@@ -328,7 +328,7 @@ infer(Ast, Env0) ->
       {AnnotatedAst, Env2};
 
     #ast_tuple{elems = Elems} ->
-      {AnnotatedElems, NewEnv} = gleam:thread_map(fun infer/2, Elems, Env0),
+      {AnnotatedElems, NewEnv} = lists:mapfoldl(fun infer/2, Env0, Elems),
       AnnotatedAst = Ast#ast_tuple{elems = AnnotatedElems},
       {AnnotatedAst, NewEnv};
 
@@ -440,8 +440,9 @@ ast_type_to_type(AstType, Create, Env0) ->
 
     #ast_type_constructor{name = Name, args = Args} ->
       CheckTypeExists(Name, length(Args), Env0),
-      {ArgsTypes, Env1} = gleam:thread_map(fun(T, E) -> ast_type_to_type(T, Create, E) end,
-                                           Args, Env0),
+      {ArgsTypes, Env1} = lists:mapfoldl(fun(T, E) -> ast_type_to_type(T, Create, E) end,
+                                         Env0,
+                                         Args),
       T = #type_app{type = Name, args = ArgsTypes},
       {T, Env1};
 
@@ -488,7 +489,7 @@ module_statement(Statement, {Row, Env0}) ->
           E2 = env_register_type(TypeVarName, Var, E1),
           {Var, E2}
         end,
-      {ArgsTypes, Env1} = gleam:thread_map(NewVar, Args, Env0),
+      {ArgsTypes, Env1} = lists:mapfoldl(NewVar, Env0, Args),
       Type =
         case Args of
           [] -> #type_const{type = Name};
@@ -499,9 +500,9 @@ module_statement(Statement, {Row, Env0}) ->
       % Makes use of the type vars inserted in to the env previously.
       RegisterConstructor =
         fun(#ast_enum_def{name = CName, args = CArgs}, InnerEnv0) ->
-          {CArgsTypes, InnerEnv1} = gleam:thread_map(fun(A, E) -> ast_type_to_type(A, false, E) end,
-                                                     CArgs,
-                                                     InnerEnv0),
+          {CArgsTypes, InnerEnv1} = lists:mapfoldl(fun(A, E) -> ast_type_to_type(A, false, E) end,
+                                                   InnerEnv0,
+                                                   CArgs),
           T = #type_fn{args = CArgsTypes, return = Type},
           env_extend(CName, T, module, InnerEnv1)
         end,
@@ -533,8 +534,8 @@ module_statement(Statement, {Row, Env0}) ->
       {AnnotatedStatement, NewState};
 
     #ast_mod_external_fn{public = Public, name = Name, args = Args, return = Return} ->
-      {ArgsTypes, Env1} = gleam:thread_map(fun(A, E) -> ast_type_to_type(A, true, E) end,
-                                           Args, Env0),
+      {ArgsTypes, Env1} = lists:mapfoldl(fun(A, E) -> ast_type_to_type(A, true, E) end,
+                                         Env0, Args),
       {ReturnType, Env2} = ast_type_to_type(Return, true, Env1),
       Type = #type_fn{args = ArgsTypes, return = ReturnType},
       NewRow = case Public of
@@ -587,7 +588,7 @@ infer_call(FunAst, Args, Env0) ->
       CheckEnv2 = unify(ArgType, ArgExprType, CheckEnv1),
       {AnnotatedArgExpr, CheckEnv2}
     end,
-  {AnnotatedArgs, Env3} = gleam:thread_map(CheckArg, lists:zip(ArgTypes, Args), Env2),
+  {AnnotatedArgs, Env3} = lists:mapfoldl(CheckArg, Env2, lists:zip(ArgTypes, Args)),
   {ReturnType, AnnotatedFunAst, AnnotatedArgs, Env3}.
 
 
@@ -980,12 +981,12 @@ generalize(Type, Env0) ->
       {Type, Env0};
 
     #type_app{args = Args} ->
-      {GeneralizedArgs, Env1} = gleam:thread_map(fun generalize/2, Args, Env0),
+      {GeneralizedArgs, Env1} = lists:mapfoldl(fun generalize/2, Env0, Args),
       GeneralizedType = Type#type_app{args = GeneralizedArgs},
       {GeneralizedType, Env1};
 
     #type_fn{args = Args, return = Return} ->
-      {GeneralizedArgs, Env1} = gleam:thread_map(fun generalize/2, Args, Env0),
+      {GeneralizedArgs, Env1} = lists:mapfoldl(fun generalize/2, Env0, Args),
       {GeneralizedReturn, Env2} = generalize(Return, Env1),
       GeneralizedType = Type#type_fn{args = GeneralizedArgs, return = GeneralizedReturn},
       {GeneralizedType, Env2};
@@ -1060,13 +1061,13 @@ do_instantiate(Type, State0) ->
       {Type, State0};
 
     #type_app{args = Args} ->
-      {NewArgs, State1} = gleam:thread_map(fun do_instantiate/2, Args, State0),
+      {NewArgs, State1} = lists:mapfoldl(fun do_instantiate/2, State0, Args),
       NewType = Type#type_app{args = NewArgs},
       {NewType, State1};
 
     #type_fn{args = Args, return = Return} ->
       ?print(Args),
-      {NewArgs, State1} = gleam:thread_map(fun do_instantiate/2, Args, State0),
+      {NewArgs, State1} = lists:mapfoldl(fun do_instantiate/2, State0, Args),
       {NewReturn, State2} = do_instantiate(Return, State1),
       NewType = #type_fn{args = NewArgs, return = NewReturn},
       {NewType, State2};
