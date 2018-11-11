@@ -17,21 +17,62 @@ source_to_binary(Source, ModName) ->
 
 -spec compile(ModuleName::string(), Src::string(), importables(), list())
       -> {ok, compiled_module()} | {error, string()}.
-compile(ModName, Source, Importables, Options) ->
-  {ok, Tokens, _} = gleam_tokenizer:string(Source),
-  {ok, Ast} = gleam_parser:parse(Tokens),
-  case gleam_type:annotate(Ast, Importables) of
-    {ok, AnnotatedAst} ->
-      Chunks = docs_chunk(AnnotatedAst),
-      Opts = [report, verbose, from_core, {extra_chunks, Chunks}],
-      {ok, Forms} = gleam_codegen:module(AnnotatedAst, ModName, Options),
-      {ok, _, Bin} = compile:forms(Forms, Opts),
-      Compiled = #compiled_module{binary = Bin,
-                                  type = gleam_type:fetch(AnnotatedAst)},
-      {ok, Compiled};
+compile(ModName, Src, Importables, Options) ->
+  pipeline(Src,
+           [
+            fun tokenize/1,
+            fun parse/1,
+            infer_types(Importables, Src),
+            generate_core_erlang(ModName, Options),
+            fun generate_beam_binary/1
+           ]).
+
+tokenize(Src) ->
+  case gleam_tokenizer:string(Src) of
+    {ok, Tokens, _} ->
+      {ok, Tokens}
+  end.
+
+parse(Tokens) ->
+  case gleam_parser:parse(Tokens) of
+    {ok, Ast} ->
+      {ok, Ast}
+  end.
+
+infer_types(Importables, Src) ->
+  fun(Ast) ->
+    case gleam_type:annotate(Ast, Importables) of
+      {ok, AnnotatedAst} ->
+        {ok, AnnotatedAst};
 
     {error, Error} ->
-      {error, lists:flatten(gleam_type:error_to_iolist(Error, Source))}
+      {error, lists:flatten(gleam_type:error_to_iolist(Error, Src))}
+    end
+  end.
+
+generate_core_erlang(ModuleName, Options) ->
+  fun(Ast) ->
+    case gleam_codegen:module(Ast, ModuleName, Options) of
+      {ok, Core} ->
+        {ok, {Ast, Core}}
+    end
+  end.
+
+generate_beam_binary({Ast, Core}) ->
+  Chunks = docs_chunk(Ast),
+  Opts = [report, verbose, from_core, {extra_chunks, Chunks}],
+  {ok, _, Binary} = compile:forms(Core, Opts),
+  Compiled = #compiled_module{binary = Binary,
+                              type = gleam_type:fetch(Ast)},
+  {ok, Compiled}.
+
+pipeline(InitialValue, Funs) ->
+  lists:foldl(fun(Fn, Acc) -> flat_map(Fn, Acc) end, {ok, InitialValue}, Funs).
+
+flat_map(Fun, X) ->
+  case X of
+    {ok, Y} -> Fun(Y);
+    _ -> X
   end.
 
 % TODO
