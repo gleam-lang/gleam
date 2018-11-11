@@ -84,18 +84,14 @@ module_statement(Statement, Acc) ->
 
     #ast_mod_external_fn{meta = Meta, public = Public, name = Name, args =
                          Args, target_fn = TargetFn, target_mod = TargetMod} ->
-
       FnArgs = lists:map(fun(X) -> [$a | integer_to_list(X)] end, lists:seq(1, length(Args))),
-      ArgsVars = lists:map(fun(X) -> #ast_var{meta = Meta, name = X} end, FnArgs),
-      Fn = #ast_mod_fn{meta = Meta,
-                       public = Public,
-                       name = Name,
-                       args = FnArgs,
-                       body = #ast_module_call{meta = Meta,
-                                               module = TargetMod,
-                                               name = TargetFn,
-                                               args = ArgsVars}},
-      module_statement(Fn, Acc);
+      ArgsVars = lists:map(fun(X) -> #ast_var{meta = Meta, name = X, scope = local} end, FnArgs),
+      ModFn = #ast_mod_fn{meta = Meta,
+                          public = Public,
+                          name = Name,
+                          args = FnArgs,
+                          body = module_call(Meta, TargetMod, TargetFn, ArgsVars)},
+      module_statement(ModFn, Acc);
 
     #ast_mod_test{} ->
       case Acc#module_acc.gen_tests of
@@ -107,6 +103,13 @@ module_statement(Statement, Acc) ->
           Acc
       end
   end.
+
+-spec module_call(meta(), string(), string(), [ast_expression()]) -> ast_expression().
+module_call(Meta, ModName, FnName, Args) ->
+  Fn = #ast_module_select{meta = Meta,
+                          label = FnName,
+                          module = #ast_var{scope = {constant, #ast_atom{value = ModName}}}},
+  #ast_call{meta = Meta, fn = Fn, args = Args}.
 
 test(#ast_mod_test{name = Name, body = Body}) ->
   TestName = Name ++ "_test",
@@ -225,7 +228,7 @@ expression(#ast_operator{meta = Meta, name = "|>", args = [Lhs, Rhs]}, Env) ->
   Call = #ast_call{meta = Meta, fn = Rhs, args = [Lhs]},
   expression(Call, Env);
 
-expression(#ast_operator{name = Name, args = Args}, Env) ->
+expression(#ast_operator{meta = Meta, name = Name, args = Args}, Env) ->
   ErlangName = case Name of
     "/" -> "div";
     "+." -> "+";
@@ -237,7 +240,7 @@ expression(#ast_operator{name = Name, args = Args}, Env) ->
     "!=" -> "=/=";
     _ -> Name
   end,
-  expression(#ast_module_call{module = "erlang", name = ErlangName, args = Args}, Env);
+  expression(module_call(Meta, "erlang", ErlangName, Args), Env);
 
 expression(#ast_call{meta = Meta, fn = Fn, args = Args}, Env) ->
   NumHoles = length(lists:filter(fun(#ast_hole{}) -> true; (_) -> false end, Args)),
@@ -252,12 +255,6 @@ expression(#ast_call{meta = Meta, fn = Fn, args = Args}, Env) ->
     _ ->
       throw({error, multiple_hole_fn})
   end;
-
-expression(#ast_module_call{module = Mod, name = Name, args = Args}, Env) when is_list(Name) ->
-  C_module = cerl:c_atom(Mod),
-  C_name = cerl:c_atom(Name),
-  {C_args, NewEnv} = map_expressions(Args, Env),
-  {cerl:c_call(C_module, C_name, C_args), NewEnv};
 
 expression(#ast_assignment{pattern = #ast_var{name = Name}, value = Value, then = Then}, Env0) ->
   C_var = cerl:c_var(list_to_atom(Name)),
@@ -308,10 +305,7 @@ expression(#ast_record_extend{} = Ast, Env) ->
 
 expression(#ast_record_select{meta = Meta, record = Record, label = Label}, Env) ->
   Atom = #ast_atom{meta = Meta, value = Label},
-  Call = #ast_module_call{meta = Meta,
-                          module = "maps",
-                          name = "get",
-                          args = [Atom, Record]},
+  Call = module_call(Meta, "maps", "get", [Atom, Record]),
   expression(Call, Env);
 
 expression(#ast_case{subject = Subject, clauses = Clauses}, Env) ->
@@ -320,17 +314,11 @@ expression(#ast_case{subject = Subject, clauses = Clauses}, Env) ->
   {cerl:c_case(C_subject, C_clauses), Env2};
 
 expression(#ast_raise{meta = Meta, value = Value}, Env) ->
-  Call = #ast_module_call{meta = Meta,
-                          module = "erlang",
-                          name = "error",
-                          args = [Value]},
+  Call = module_call(Meta, "erlang", "error", [Value]),
   expression(Call, Env);
 
 expression(#ast_throw{meta = Meta, value = Value}, Env) ->
-  Call = #ast_module_call{meta = Meta,
-                          module = "erlang",
-                          name = "throw",
-                          args = [Value]},
+  Call = module_call(Meta, "erlang", "throw", [Value]),
   expression(Call, Env);
 
 expression(#ast_fn{args = Args, body = Body}, Env) ->

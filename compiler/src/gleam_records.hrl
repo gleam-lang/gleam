@@ -105,12 +105,6 @@
          args = [] :: [string()],
          body :: ast_expression()}).
 
--record(ast_module_call,
-        {meta = #meta{} :: meta(),
-         module :: string(),
-         name :: string(),
-         args = [] :: [ast_expression()]}).
-
 -record(ast_cons,
         {meta = #meta{} :: meta(),
          head :: ast_expression(),
@@ -211,7 +205,6 @@
       | #ast_fn{}
       | #ast_hole{}
       | #ast_int{}
-      | #ast_module_call{}
       | #ast_module_select{}
       | #ast_module{}
       | #ast_nil{}
@@ -227,7 +220,7 @@
       | #ast_var{}
       .
 
--type ast_pattern() :: ast_expression(). % TODO: Refine.
+-type ast_pattern() :: ast_expression().
 
 %
 % Types

@@ -521,12 +521,12 @@ eq_test() ->
 
 external_fn_test() ->
   Source =
-    "pub external fn first(String) -> Int = 'binary' 'first'\n"
+    "pub external fn get_first(String) -> Int = 'binary' 'first'\n"
   ,
   Mod = gleam_codegen_external_fn,
   with_module(Mod, Source, fun() ->
-    ?assertEqual(97, Mod:first(<<"abc">>)),
-    ?assertEqual(98, Mod:first(<<"bcd">>))
+    ?assertEqual(97, Mod:get_first(<<"abc">>)),
+    ?assertEqual(98, Mod:get_first(<<"bcd">>))
   end).
 
 external_type_test() ->
