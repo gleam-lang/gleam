@@ -1,7 +1,7 @@
 -module(gleam_compiler).
 -include("gleam_records.hrl").
 
--export([compile/4, fetch_docs_from_binary/1, module_dependencies/1]).
+-export([compile/4, compile_all/3, fetch_docs_from_binary/1, module_dependencies/1]).
 
 % TODO: Remove
 -export([source_to_binary/2, source_to_binary/3, compile_file/2, fetch_docs/1]).
@@ -15,6 +15,7 @@ source_to_binary(Source, ModName) ->
 
 -type importables() :: #{module_name() => compiled_module()}.
 
+
 -spec compile(ModuleName::string(), Src::string(), importables(), list())
       -> {ok, compiled_module()} | {error, string()}.
 compile(ModName, Src, Importables, Options) ->
@@ -27,17 +28,20 @@ compile(ModName, Src, Importables, Options) ->
             fun generate_beam_binary/1
            ]).
 
+
 tokenize(Src) ->
   case gleam_tokenizer:string(Src) of
     {ok, Tokens, _} ->
       {ok, Tokens}
   end.
 
+
 parse(Tokens) ->
   case gleam_parser:parse(Tokens) of
     {ok, Ast} ->
       {ok, Ast}
   end.
+
 
 infer_types(Importables, Src) ->
   fun(Ast) ->
@@ -50,6 +54,7 @@ infer_types(Importables, Src) ->
     end
   end.
 
+
 generate_core_erlang(ModuleName, Options) ->
   fun(Ast) ->
     case gleam_codegen:module(Ast, ModuleName, Options) of
@@ -57,6 +62,7 @@ generate_core_erlang(ModuleName, Options) ->
         {ok, {Ast, Core}}
     end
   end.
+
 
 generate_beam_binary({Ast, Core}) ->
   Chunks = docs_chunk(Ast),
@@ -66,8 +72,10 @@ generate_beam_binary({Ast, Core}) ->
                               type = gleam_type:fetch(Ast)},
   {ok, Compiled}.
 
+
 pipeline(InitialValue, Funs) ->
   lists:foldl(fun(Fn, Acc) -> flat_map(Fn, Acc) end, {ok, InitialValue}, Funs).
+
 
 flat_map(Fun, X) ->
   case X of
@@ -75,27 +83,36 @@ flat_map(Fun, X) ->
     _ -> X
   end.
 
-% TODO
-% -spec compile_all([{module_name(), string()}], importables(), list())
-%       -> {ok, importables()} | {error, {module_name(), string()}}.
-% compile_all(Inputs, Importables, Options) ->
-%   'TODO'.
-%   % Res = case Inputs of
-%   %   [] ->
-%   %     {ok, Importables};
 
-%   %   [{ModuleName, Src} | Rest] ->
-%   %     case compile(ModuleName, Src, Importables, Options) of
-%   %       {error, _} = Error ->
-%   %         Error;
+fold_while(Fun, Acc, List) ->
+  case List of
+    [] ->
+      Acc;
 
-%   %       {ok,
-%   %     end
-%   % end,
-%   % case Res of
-%   %   {error, _  ->
-%   %     body;
-%   % end.
+    [X | Rest] ->
+      case Fun(X) of
+        {ok, NextAcc} -> fold_while(Rest, NextAcc, Fun);
+        {error, Error} -> {error, Error}
+      end
+  end.
+
+% TODO: test me
+-spec compile_all([{module_name(), string()}], importables(), list())
+      -> {ok, importables()} | {error, {module_name(), string()}}.
+compile_all(Inputs, Importables, Options) ->
+  Compile =
+    fun({ModName, Src}, {Imps, Mods}) ->
+      case compile(ModName, Src, Imps, Options) of
+        {ok, CompiledMod} ->
+          NewImps = maps:put(ModName, CompiledMod#compiled_module.type, Imps),
+          NewMods = maps:put(ModName, CompiledMod, Mods),
+          {ok, {NewImps, NewMods}};
+
+        {error, Error} ->
+          {error, Error}
+      end
+    end,
+  fold_while(Compile, {Importables, #{}}, Inputs).
 
 
 source_to_binary(Source, ModName, Options) ->
