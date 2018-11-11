@@ -1,5 +1,10 @@
 -define(print(Var), io:format("DEBUG: ~p:~p - ~p~n ~p~n", [?MODULE, ?LINE, ??Var, Var])).
 
+-record(compiled_module,
+        {binary :: binary(),
+         type :: type()}).
+-type compiled_module() :: #compiled_module{}.
+
 -record(meta, {line = 1 :: non_neg_integer()}).
 -type meta() :: #meta{}.
 -type scope() :: local | module | {constant, ast_expression()}.
@@ -231,14 +236,14 @@
 -type level() :: integer().
 
 -record(type_const, {type :: string()}).
--record(type_fn, {args :: list(type()), return :: type()}).
+-record(type_fn, {args = [] :: list(type()), return :: type()}).
 % Should type be a type for type app? Possibly for aliases?
 -record(type_app, {type :: string(), args :: list(type())}).
 -record(type_var, {type :: type_var_reference()}).
 -record(type_record, {row :: type()}).
 -record(type_module, {row :: type()}).
 -record(type_row_empty, {}).
--record(type_row_extend, {label :: string(), type :: type(), parent :: type()}).
+-record(type_row_extend, {label :: string(), type :: type(), parent = #type_row_empty{} :: type()}).
 
 -type type()
       :: #type_app{}

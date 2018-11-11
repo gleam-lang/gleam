@@ -3,17 +3,26 @@
 
 -include("gleam_records.hrl").
 
-infer(Source) ->
+infer(Src) ->
+  infer(Src, #{}).
+
+infer(Source, Vars) ->
   {ok, Tokens, _} = gleam_tokenizer:string(Source),
   {ok, Ast} = gleam_parser:parse(Tokens),
-  gleam_type:infer(Ast).
+  gleam_type:annotate(Ast, Vars).
 
 test_infer(Cases) ->
   TestCase =
-    fun({Src, Type}) ->
-      {ok, Ast} = infer(Src),
-      ActualType = gleam_type:fetch(Ast),
-      ?assertEqual(Type, gleam_type:type_to_string(ActualType))
+    fun
+      ({Vars, Src, Type}) ->
+        {ok, Ast} = infer(Src, Vars),
+        ActualType = gleam_type:fetch(Ast),
+        ?assertEqual(Type, gleam_type:type_to_string(ActualType));
+
+      ({Src, Type}) ->
+        {ok, Ast} = infer(Src, #{}),
+        ActualType = gleam_type:fetch(Ast),
+        ?assertEqual(Type, gleam_type:type_to_string(ActualType))
     end,
   lists:foreach(TestCase, Cases).
 
@@ -767,5 +776,24 @@ recursion_test() ->
     %   " fn length(List(a)) -> Int"
     %   "}"
     % }
+  ],
+  test_infer(Cases).
+
+
+multiple_module_test() ->
+  Cases = [
+    {
+      #{"some_mod" =>
+          #type_module{row = #type_row_extend{label = "run",
+                                              type = #type_fn{return = #type_const{type = "Int"}},
+                                              parent = #type_row_empty{}}}}
+      ,
+      "import some_mod\n"
+      "pub fn go() { some_mod:run() }\n"
+      ,
+      "module {"
+      " fn go() -> Int"
+      "}"
+    }
   ],
   test_infer(Cases).

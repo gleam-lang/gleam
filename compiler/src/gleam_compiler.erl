@@ -1,30 +1,66 @@
 -module(gleam_compiler).
 -include("gleam_records.hrl").
 
--export([source_to_binary/2, source_to_binary/3, compile_file/2, fetch_docs/1,
-         fetch_docs_from_binary/1, module_dependencies/1]).
+-export([compile/4, fetch_docs_from_binary/1, module_dependencies/1]).
 
+% TODO: Remove
+-export([source_to_binary/2, source_to_binary/3, compile_file/2, fetch_docs/1]).
 
 -type docs_chunk_data() :: term().
+-type module_name() :: string().
 
 -spec source_to_binary(string(), string()) -> {error, string()} | {ok, binary()}.
 source_to_binary(Source, ModName) ->
   source_to_binary(Source, ModName, []).
 
+-type importables() :: #{module_name() => compiled_module()}.
 
-source_to_binary(Source, ModName, Options) ->
+-spec compile(ModuleName::string(), Src::string(), importables(), list())
+      -> {ok, compiled_module()} | {error, string()}.
+compile(ModName, Source, Importables, Options) ->
   {ok, Tokens, _} = gleam_tokenizer:string(Source),
   {ok, Ast} = gleam_parser:parse(Tokens),
-  case gleam_type:infer(Ast) of
+  case gleam_type:annotate(Ast, Importables) of
     {ok, AnnotatedAst} ->
       Chunks = docs_chunk(AnnotatedAst),
       Opts = [report, verbose, from_core, {extra_chunks, Chunks}],
       {ok, Forms} = gleam_codegen:module(AnnotatedAst, ModName, Options),
       {ok, _, Bin} = compile:forms(Forms, Opts),
-      {ok, Bin};
+      Compiled = #compiled_module{binary = Bin,
+                                  type = gleam_type:fetch(AnnotatedAst)},
+      {ok, Compiled};
 
     {error, Error} ->
       {error, lists:flatten(gleam_type:error_to_iolist(Error, Source))}
+  end.
+
+% TODO
+% -spec compile_all([{module_name(), string()}], importables(), list())
+%       -> {ok, importables()} | {error, {module_name(), string()}}.
+% compile_all(Inputs, Importables, Options) ->
+%   'TODO'.
+%   % Res = case Inputs of
+%   %   [] ->
+%   %     {ok, Importables};
+
+%   %   [{ModuleName, Src} | Rest] ->
+%   %     case compile(ModuleName, Src, Importables, Options) of
+%   %       {error, _} = Error ->
+%   %         Error;
+
+%   %       {ok,
+%   %     end
+%   % end,
+%   % case Res of
+%   %   {error, _  ->
+%   %     body;
+%   % end.
+
+
+source_to_binary(Source, ModName, Options) ->
+  case compile(ModName, Source, #{}, Options) of
+    {ok, Compiled} -> {ok, Compiled#compiled_module.binary};
+    Error -> Error
   end.
 
 

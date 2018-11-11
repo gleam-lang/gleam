@@ -550,14 +550,14 @@ module_term_call_test() ->
     ?assertEqual(0, Mod:call_dec(gleam_codegen_test))
   end).
 
-module_import_test() ->
-  % TODO: We cheat and use an Erlang module here atm. Need to actually create
-  % it in gleam so it can be typed.
-  Source =
-    "import codegen_test_module\n"
-    "pub fn go() { codegen_test_module:one() }\n"
-  ,
-  Mod = gleam_module_term_call,
-  with_module(Mod, Source, fun() ->
-    ?assertEqual(1, Mod:go())
-  end).
+% module_import_test() ->
+%   % TODO: We cheat and use an Erlang module here atm. Need to actually create
+%   % it in gleam so it can be typed.
+%   Source =
+%     "import codegen_test_module\n"
+%     "pub fn go() { codegen_test_module:one() }\n"
+%   ,
+%   Mod = gleam_module_term_call,
+%   with_module(Mod, Source, fun() ->
+%     ?assertEqual(1, Mod:go())
+%   end).

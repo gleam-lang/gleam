@@ -1,6 +1,6 @@
 -module(gleam_type).
 
--export([infer/1, fetch/1, type_to_string/1, error_to_iolist/2]).
+-export([annotate/2, fetch/1, type_to_string/1, error_to_iolist/2]).
 
 -include("gleam_records.hrl").
 
@@ -17,6 +17,7 @@
          arity :: non_neg_integer()}).
 
 -type var_name() :: string().
+-type mod_name() :: string().
 -type type_name() :: string().
 
 -record(env,
@@ -24,6 +25,7 @@
          level = 0 :: level(),
          vars = #{} :: #{var_name() => type()},
          types = #{} :: #{type_name() => type()},
+         importables = #{} :: #{mod_name() => type()},
          type_refs = #{} :: #{reference() => type_var()}}).
 
 -type env() :: #env{}.
@@ -60,10 +62,11 @@ new_generic_var(Env) ->
   {Type, NewEnv}.
 
 
--spec infer(ast_expression()) -> {ok, ast_expression()} | {error, error()}.
-infer(Ast) ->
+-spec annotate(ast_expression(), #{atom() => type()})
+      -> {ok, ast_expression()} | {error, error()}.
+annotate(Ast, ImportableVars) ->
   try
-    Env0 = register_statements(Ast, new_env()),
+    Env0 = register_statements(Ast, new_env(ImportableVars)),
     {InferredAst, Env1} = infer(Ast, Env0),
     ResolvedAst = resolve_type_vars(InferredAst, Env1),
     {ok, ResolvedAst}
@@ -552,12 +555,15 @@ module_statement(Statement, {Row, Env0}) ->
 
     % TODO: This should look up the actual module, instead it just assigns it
     % as an unknown value
-    #ast_mod_import{module = Module} ->
-      {Var, Env1} = new_var(Env0),
-      Type = #type_module{row = Var},
-      Value = #ast_atom{value = "gleam_" ++ Module},
-      Env2 = env_extend(Module, Type, {constant, Value}, Env1),
-      {Statement, {Row, Env2}};
+    #ast_mod_import{module = ModuleName} ->
+      case maps:find(ModuleName, Env0#env.importables) of
+        {ok, Type} ->
+          ModuleValue = #ast_atom{value = "gleam_" ++ ModuleName},
+          Env1 = env_extend(ModuleName, Type, {constant, ModuleValue}, Env0),
+          {Statement, {Row, Env1}}
+      end;
+      % {Var, Env1} = new_var(Env0),
+      % Type = #type_module{row = Var},
 
     #ast_mod_external_type{name = Name} ->
       Env1 = env_register_type(Name, #type_const{type = Name}, Env0),
@@ -829,9 +835,9 @@ type_resolve_type_vars(Type, Env) ->
   end.
 
 
--spec new_env() -> env().
-new_env() ->
-  E0 = #env{},
+-spec new_env(#{string() => type()}) -> env().
+new_env(ImportableVars) ->
+  E0 = #env{importables = ImportableVars},
   Int = #type_const{type = "Int"},
   Atom = #type_const{type = "Atom"},
   Bool = #type_const{type = "Bool"},
@@ -924,7 +930,7 @@ put_env_level(Level, Env) ->
 
 -ifdef(TEST).
 increment_env_level_test() ->
-  Env = new_env(),
+  Env = new_env(#{}),
   Env2 = Env#env{level = 42},
   Env3 = increment_env_level(Env2),
   ?assertEqual(43, Env3#env.level).
@@ -1059,6 +1065,7 @@ do_instantiate(Type, State0) ->
       {NewType, State1};
 
     #type_fn{args = Args, return = Return} ->
+      ?print(Args),
       {NewArgs, State1} = gleam:thread_map(fun do_instantiate/2, Args, State0),
       {NewReturn, State2} = do_instantiate(Return, State1),
       NewType = #type_fn{args = NewArgs, return = NewReturn},
