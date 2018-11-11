@@ -1353,12 +1353,12 @@ type_to_string(Type) ->
             "module {"
             ++ F(F, Parent)
             ++ " |"
-            ++ FieldsString(FieldsString, lists:reverse(Fields))
+            ++ FieldsString(FieldsString, Fields)
             ++ "}";
 
           Fields ->
             "module {"
-            ++ FieldsString(FieldsString, lists:reverse(Fields))
+            ++ FieldsString(FieldsString, Fields)
             ++ "}"
         end;
 
@@ -1373,8 +1373,7 @@ type_to_string(Type) ->
 
       (F, #type_fn{args = ParamTypeList, return = ReturnType}) ->
         "fn("
-        ++ lists:concat(lists:join(", ", lists:map(fun(X) -> F(F, X) end,
-                                                    ParamTypeList)))
+        ++ lists:concat(lists:join(", ", lists:map(fun(X) -> F(F, X) end, ParamTypeList)))
         ++ ") -> "
         ++ F(F, ReturnType);
 
@@ -1398,10 +1397,10 @@ type_to_string(Type) ->
 collect_row_fields(Row) ->
   case collect_row_fields(Row, []) of
     {Parent, Fields} ->
-      {Parent, lists:sort(fun(X, Y) -> X < Y end, Fields)};
+      {Parent, lists:sort(Fields)};
 
     Fields ->
-      lists:sort(fun(X, Y) -> X < Y end, Fields)
+      lists:sort(Fields)
   end.
 
 collect_row_fields(Row, Fields) ->

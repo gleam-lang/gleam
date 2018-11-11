@@ -424,8 +424,8 @@ module_test() ->
      "pub fn float() { id(1.0) }"
      ,
      "module {"
-     " fn int() -> Int"
      " fn float() -> Float"
+     " fn int() -> Int"
      "}"
     },
 
@@ -435,8 +435,8 @@ module_test() ->
      "pub fn no() { No }"
      ,
      "module {"
-     " fn yes() -> Is"
      " fn no() -> Is"
+     " fn yes() -> Is"
      "}"
     },
 
@@ -456,9 +456,9 @@ module_test() ->
      "test whatever { 'ok' }"
      ,
      "module {"
+     " fn get_age({a | age = b}) -> b"
+     " fn list_of(c) -> List(c)"
      " fn status() -> Atom"
-     " fn list_of(a) -> List(a)"
-     " fn get_age({b | age = c}) -> c"
      "}"
     }
   ],
@@ -472,8 +472,8 @@ enum_test() ->
      "pub fn float() { Box(1.0) }"
      ,
      "module {"
-     " fn int() -> Box(Int)"
      " fn float() -> Box(Float)"
+     " fn int() -> Box(Int)"
      "}"
     },
 
@@ -554,8 +554,8 @@ external_fn_test() ->
      "pub fn b() { id(1.0) }\n"
      ,
      "module {"
-     " fn b() -> Float"
      " fn a() -> Int"
+     " fn b() -> Float"
      "}"
     },
 
@@ -720,6 +720,7 @@ error_to_iodata_test() ->
     end,
   lists:foreach(TestCase, Cases).
 
+
 later_definition_test() ->
   Cases = [
     {
@@ -728,9 +729,9 @@ later_definition_test() ->
       "pub fn zero() { one() - 1 }\n"
       ,
       "module {"
-      " fn zero() -> Int"
-      " fn two() -> Int"
       " fn one() -> Int"
+      " fn two() -> Int"
+      " fn zero() -> Int"
       "}"
     }
   ],
