@@ -1204,7 +1204,7 @@ unify(Type1, Type2, Env) ->
           unify(Parent, OtherParent, Env1)
       end;
 
-    _ ->
+    _Other ->
       T1 = type_resolve_type_vars(Type1, Env),
       T2 = type_resolve_type_vars(Type2, Env),
       fail({cannot_unify, T2, T1})

@@ -735,3 +735,36 @@ later_definition_test() ->
     }
   ],
   test_infer(Cases).
+
+
+recursion_test() ->
+  Cases = [
+    {
+      "pub fn length(list) {\n"
+      "  case list {\n"
+      "  | [] -> 0\n"
+      "  | _ :: tail -> length(tail) + 1\n"
+      "  }\n"
+      "}"
+      ,
+      "module {"
+      " fn length(List(a)) -> Int"
+      "}"
+    }
+
+    % TODO: Work our how to support mutual recursion
+    % {
+    %   "pub fn length(list) {\n"
+    %   "  case list {\n"
+    %   "  | [] -> 0\n"
+    %   "  | _ :: tail -> helper_length(tail) + 1\n"
+    %   "  }\n"
+    %   "}"
+    %   "fn helper_length(list) { length(list) }"
+    %   ,
+    %   "module {"
+    %   " fn length(List(a)) -> Int"
+    %   "}"
+    % }
+  ],
+  test_infer(Cases).
