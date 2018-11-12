@@ -17,7 +17,6 @@
          arity :: non_neg_integer()}).
 
 -type var_name() :: string().
--type mod_name() :: string().
 -type type_name() :: string().
 
 -record(env,
@@ -25,7 +24,7 @@
          level = 0 :: level(),
          vars = #{} :: #{var_name() => type()},
          types = #{} :: #{type_name() => type()},
-         importables = #{} :: #{mod_name() => type()},
+         importables = #{} :: importables(),
          type_refs = #{} :: #{reference() => type_var()}}).
 
 -type env() :: #env{}.
@@ -558,7 +557,7 @@ module_statement(Statement, {Row, Env0}) ->
     % as an unknown value
     #ast_mod_import{module = ModuleName} ->
       case maps:find(ModuleName, Env0#env.importables) of
-        {ok, Type} ->
+        {ok, #compiled_module{type = Type}} ->
           ModuleValue = #ast_atom{value = "gleam_" ++ ModuleName},
           Env1 = env_extend(ModuleName, Type, {constant, ModuleValue}, Env0),
           {Statement, {Row, Env1}}
@@ -1066,7 +1065,6 @@ do_instantiate(Type, State0) ->
       {NewType, State1};
 
     #type_fn{args = Args, return = Return} ->
-      ?print(Args),
       {NewArgs, State1} = lists:mapfoldl(fun do_instantiate/2, State0, Args),
       {NewReturn, State2} = do_instantiate(Return, State1),
       NewType = #type_fn{args = NewArgs, return = NewReturn},

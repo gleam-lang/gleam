@@ -7,16 +7,13 @@
 -export([source_to_binary/2, source_to_binary/3, compile_file/2, fetch_docs/1]).
 
 -type docs_chunk_data() :: term().
--type module_name() :: string().
 
 -spec source_to_binary(string(), string()) -> {error, string()} | {ok, binary()}.
 source_to_binary(Source, ModName) ->
   source_to_binary(Source, ModName, []).
 
--type importables() :: #{module_name() => compiled_module()}.
 
-
--spec compile(ModuleName::string(), Src::string(), importables(), list())
+-spec compile(module_name(), Src::string(), importables(), list())
       -> {ok, compiled_module()} | {error, string()}.
 compile(ModName, Src, Importables, Options) ->
   pipeline(Src,
@@ -27,6 +24,22 @@ compile(ModName, Src, Importables, Options) ->
             generate_core_erlang(ModName, Options),
             fun generate_beam_binary/1
            ]).
+
+
+-spec compile_all([{module_name(), string()}], importables(), list())
+      -> {ok, importables()} | {error, {module_name(), string()}}.
+compile_all(Inputs, Importables, Options) ->
+  Compile =
+    fun({ModName, Src}, Imps) ->
+      case compile(ModName, Src, Imps, Options) of
+        {ok, CompiledModule} ->
+          {ok, maps:put(ModName, CompiledModule, Imps)};
+
+        {error, Error} ->
+          {error, {ModName, Error, Imps}}
+      end
+    end,
+  fold_while(Compile, Importables, Inputs).
 
 
 tokenize(Src) ->
@@ -87,32 +100,14 @@ flat_map(Fun, X) ->
 fold_while(Fun, Acc, List) ->
   case List of
     [] ->
-      Acc;
+      {ok, Acc};
 
     [X | Rest] ->
-      case Fun(X) of
-        {ok, NextAcc} -> fold_while(Rest, NextAcc, Fun);
+      case Fun(X, Acc) of
+        {ok, NextAcc} -> fold_while(Fun, NextAcc, Rest);
         {error, Error} -> {error, Error}
       end
   end.
-
-% TODO: test me
--spec compile_all([{module_name(), string()}], importables(), list())
-      -> {ok, importables()} | {error, {module_name(), string()}}.
-compile_all(Inputs, Importables, Options) ->
-  Compile =
-    fun({ModName, Src}, {Imps, Mods}) ->
-      case compile(ModName, Src, Imps, Options) of
-        {ok, CompiledMod} ->
-          NewImps = maps:put(ModName, CompiledMod#compiled_module.type, Imps),
-          NewMods = maps:put(ModName, CompiledMod, Mods),
-          {ok, {NewImps, NewMods}};
-
-        {error, Error} ->
-          {error, Error}
-      end
-    end,
-  fold_while(Compile, {Importables, #{}}, Inputs).
 
 
 source_to_binary(Source, ModName, Options) ->

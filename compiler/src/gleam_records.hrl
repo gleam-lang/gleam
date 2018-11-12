@@ -5,6 +5,9 @@
          type :: type()}).
 -type compiled_module() :: #compiled_module{}.
 
+-type module_name() :: string().
+-type importables() :: #{module_name() => compiled_module()}.
+
 -record(meta, {line = 1 :: non_neg_integer()}).
 -type meta() :: #meta{}.
 -type scope() :: local | module | {constant, ast_expression()}.
