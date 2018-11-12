@@ -40,3 +40,49 @@ module_dependencies_test() ->
   ?assertEqual({ok, ["baz", "bar", "foo"]},
                gleam_compiler:module_dependencies(Ast)).
 
+
+compile_all_test() ->
+  Mods = [
+    {
+      "top",
+      "pub fn go() { 1 }"
+    },
+    {
+      "middle_a",
+      "import top\n"
+      "pub fn go() { top:go() }"
+    },
+    {
+      "middle_b",
+      "import top\n"
+      "pub fn go() { top:go() }"
+    },
+    {
+      "bottom",
+      "import top\n"
+      "import middle_a\n"
+      "import middle_b\n"
+      "pub fn go() { top:go() + middle_a:go() + middle_b:go() }"
+    }
+  ],
+  {ok, #{"top" := #compiled_module{},
+         "middle_a" := #compiled_module{},
+         "middle_b" := #compiled_module{},
+         "bottom" := #compiled_module{}}} = gleam_compiler:compile_all(Mods, #{}, []).
+
+
+compile_all_fail_test() ->
+  Mods = [
+    {
+      "top",
+      "pub fn go() { 1 }"
+    },
+    {
+      "bottom",
+      "import top\n"
+      "pub fn go() { top:go() + 'two' }"
+    }
+  ],
+  {error, {"bottom",
+           "error: Type mismatch" ++ _,
+           #{"top" := #compiled_module{}}}} = gleam_compiler:compile_all(Mods, #{}, []).

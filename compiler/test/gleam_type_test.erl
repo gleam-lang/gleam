@@ -784,9 +784,12 @@ multiple_module_test() ->
   Cases = [
     {
       #{"some_mod" =>
-          #type_module{row = #type_row_extend{label = "run",
+          #compiled_module{
+             type = #type_module{
+                       row = #type_row_extend{label = "run",
                                               type = #type_fn{return = #type_const{type = "Int"}},
-                                              parent = #type_row_empty{}}}}
+                                              parent = #type_row_empty{}}},
+            binary = <<>>}}
       ,
       "import some_mod\n"
       "pub fn go() { some_mod:run() }\n"
