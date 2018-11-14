@@ -679,13 +679,13 @@ error_to_iodata_test() ->
     },
 
     {
-      "\n\nimport magic"
+      "import magic\nenum Foo = | Foo"
       ,
       "error: No module with name `magic` found.\n"
       "\n"
       "   | \n"
-      " 3 | import magic\n"
-      "   |\n"
+      " 1 | import magic\n"
+      "   | enum Foo = | Foo\n"
       "\n"
     },
 

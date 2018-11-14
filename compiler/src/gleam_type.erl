@@ -1511,7 +1511,12 @@ error_to_iolist(Error, Src) ->
 show_code(LineNumber, Src) ->
   N = integer_to_list(LineNumber),
   P = lists:map(fun(_) -> $\s end, N),
-  case take(3, drop(LineNumber - 2, string:split(Src, "\n", all))) of
+  PaddedSrc =
+    case LineNumber of
+      1 -> ["\n", Src];
+      _ -> Src
+    end,
+  case take(3, drop(LineNumber - 2, string:split(PaddedSrc, "\n", all))) of
     [L1, L2, L3] ->
       [" ", P, " | ", L1, "\n",
        " ", N, " | ", L2, "\n",
