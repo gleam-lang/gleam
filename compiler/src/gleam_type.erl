@@ -393,16 +393,6 @@ infer(Ast, Env0) ->
                                            module = AnnotatedModule},
       {AnnotatedAst, Env4};
 
-    #ast_raise{} ->
-      {Var, Env1} = new_var(Env0),
-      AnnotatedAst = Ast#ast_raise{type = {ok, Var}},
-      {AnnotatedAst, Env1};
-
-    #ast_throw{} ->
-      {Var, Env1} = new_var(Env0),
-      AnnotatedAst = Ast#ast_throw{type = {ok, Var}},
-      {AnnotatedAst, Env1};
-
     #ast_record_empty{} ->
       {Ast, Env0};
 
@@ -632,12 +622,6 @@ fetch(Ast) ->
     #ast_record_select{type = {ok, Type}} ->
       Type;
 
-    #ast_raise{type = {ok, Type}} ->
-      Type;
-
-    #ast_throw{type = {ok, Type}} ->
-      Type;
-
     #ast_seq{then = Then} ->
       fetch(Then);
 
@@ -736,12 +720,6 @@ resolve_type_vars(Ast, Env) ->
       NewType = type_resolve_type_vars(Type, Env),
       NewRecord = resolve_type_vars(Record, Env),
       Ast#ast_record_select{type = {ok, NewType}, record = NewRecord};
-
-    #ast_throw{} ->
-      Ast;
-
-    #ast_raise{} ->
-      Ast;
 
     #ast_record_empty{} ->
       Ast;

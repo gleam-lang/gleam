@@ -482,26 +482,6 @@ test_test() ->
     ?assertEqual(ok, Mod:thing_test())
   end).
 
-raise_test() ->
-  Source =
-    "pub fn go(x) { raise(x) }\n"
-  ,
-  Mod = gleam_codegen_raise,
-  with_module(Mod, Source, fun() ->
-    ?assertEqual(caught, try Mod:go(1) catch error:1 -> caught end),
-    ?assertEqual(caught, try Mod:go(2) catch error:2 -> caught end)
-  end).
-
-throw_test() ->
-  Source =
-    "pub fn go(x) { throw(x) }\n"
-  ,
-  Mod = gleam_codegen_throw,
-  with_module(Mod, Source, fun() ->
-    ?assertEqual(caught, try Mod:go(1) catch throw:1 -> caught end),
-    ?assertEqual(caught, try Mod:go(2) catch throw:2 -> caught end)
-  end).
-
 eq_test() ->
   Source =
     "pub fn eq(x, y) { x == y }\n"

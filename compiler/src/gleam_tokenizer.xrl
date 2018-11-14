@@ -12,8 +12,6 @@ Comment = \/\/[^\n]*
 Rules.
 
 external   : {token, {kw_external, m(TokenLine)}}.
-raise\(    : {token, {kw_raise, m(TokenLine)}}.
-throw\(    : {token, {kw_throw, m(TokenLine)}}.
 import     : {token, {kw_import, m(TokenLine)}}.
 case       : {token, {kw_case, m(TokenLine)}}.
 test       : {token, {kw_test, m(TokenLine)}}.

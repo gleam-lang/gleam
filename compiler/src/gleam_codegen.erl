@@ -313,14 +313,6 @@ expression(#ast_case{subject = Subject, clauses = Clauses}, Env) ->
   {C_clauses, Env2} = map_clauses(Clauses, Env1),
   {cerl:c_case(C_subject, C_clauses), Env2};
 
-expression(#ast_raise{meta = Meta, value = Value}, Env) ->
-  Call = module_call(Meta, "erlang", "error", [Value]),
-  expression(Call, Env);
-
-expression(#ast_throw{meta = Meta, value = Value}, Env) ->
-  Call = module_call(Meta, "erlang", "throw", [Value]),
-  expression(Call, Env);
-
 expression(#ast_fn{args = Args, body = Body}, Env) ->
   function(Args, Body, Env);
 

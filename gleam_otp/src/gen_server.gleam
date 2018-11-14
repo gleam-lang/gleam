@@ -53,5 +53,5 @@ pub enum Init =
   | Ignore
 
 fn start_link(mod: GenServer, arg: Argument) {
-  throw('not_implemented') // TODO
+  'ok' // TODO
 }

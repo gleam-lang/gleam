@@ -13,7 +13,7 @@ Terminals
 '/' '*' '+' '-' '/.' '*.' '+.' '-.'
 int float atom string
 hole name upname
-kw_fn kw_case kw_test kw_raise kw_throw kw_pub kw_enum kw_external kw_type
+kw_fn kw_case kw_test kw_pub kw_enum kw_external kw_type
 kw_import.
 
 Rootsymbol source.
@@ -117,8 +117,6 @@ expr -> expr '(' ')'               : call('$2', '$1', []).
 expr -> expr '(' call_args ')'     : call('$2', '$1', '$3').
 expr -> expr '.' '(' ')'           : call('$3', '$1', []).
 expr -> expr '.' '(' call_args ')' : call('$3', '$1', '$4').
-expr -> kw_raise expr ')'          : raise('$1', '$2').
-expr -> kw_throw expr ')'          : throw_('$1', '$2').
 expr -> expr '::' expr             : cons('$2', '$1', '$3').
 expr -> expr '|>' expr             : op('$2', ['$1', '$3']).
 expr -> expr '+' expr              : op('$2', ['$1', '$3']).
@@ -172,12 +170,6 @@ import({name, Meta, Module}, _members) ->
 
 seq(First, Then) ->
   #ast_seq{first = First, then = Then}.
-
-raise({kw_raise, Meta}, Value) ->
-  #ast_raise{meta = Meta, value = Value}.
-
-throw_({kw_throw, Meta}, Value) ->
-  #ast_throw{meta = Meta, value = Value}.
 
 test({name, Meta, Name}, Body) ->
   #ast_mod_test{meta = Meta, name = Name, body = Body}.

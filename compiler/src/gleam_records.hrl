@@ -126,16 +126,6 @@
         {meta = #meta{} :: meta(),
          type = type_not_annotated :: type_annotation()}).
 
--record(ast_raise,
-        {meta = #meta{} :: meta(),
-         type = type_not_annotated :: type_annotation(),
-         value :: ast_expression()}).
-
--record(ast_throw,
-        {meta = #meta{} :: meta(),
-         type = type_not_annotated :: type_annotation(),
-         value :: ast_expression()}).
-
 -record(ast_call,
         {meta = #meta{} :: meta(),
          type = type_not_annotated :: type_annotation(),
@@ -217,13 +207,11 @@
       | #ast_module{}
       | #ast_nil{}
       | #ast_operator{}
-      | #ast_raise{}
       | #ast_record_empty{}
       | #ast_record_extend{}
       | #ast_record_select{}
       | #ast_seq{}
       | #ast_string{}
-      | #ast_throw{}
       | #ast_tuple{}
       | #ast_var{}
       .
