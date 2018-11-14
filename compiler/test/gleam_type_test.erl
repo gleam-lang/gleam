@@ -255,8 +255,6 @@ record_test() ->
     {"{a = fn(x) { x }} == {a = fn(a) { a }}", "Bool"},
     % Different field order
     {"{b = 1, a = 1} == {a = 1, b = 1}", "Bool"}
-    % % Additional fields on the right hand side
-    % {"{b = 1, a = 1} == {a = 1, b = 1, c = 1}", "Bool"}
   ],
   test_infer(Cases).
 
@@ -425,6 +423,15 @@ module_test() ->
      "module {"
      " fn public() -> Int"
      "}"
+    },
+
+    {
+      "fn empty() { {} }\n"
+      "pub fn run() { { empty() | level = 1 } }\n"
+      ,
+      "module {"
+      " fn run() -> {level = Int}"
+      "}"
     },
 
     {
