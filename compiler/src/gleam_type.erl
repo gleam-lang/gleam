@@ -32,6 +32,8 @@
 
 -type error()
   :: {var_not_found, line_number(), string()}
+  | {type_not_found, line_number(), string(), non_neg_integer()}
+  | {module_not_found, line_number(), string()}
   | {cannot_unify, type(), type()}
   | {incorrect_number_of_arguments, line_number(), non_neg_integer(), non_neg_integer()}
   | {not_a_function, line_number(), non_neg_integer(), type()}
@@ -39,7 +41,6 @@
   | {not_a_row, type(), env()}
   | {row_does_not_contain_label, type(), env()}
   | {multiple_hole_fn, line_number(), non_neg_integer()}
-  | {type_not_found, line_number(), string(), non_neg_integer()}
   | recursive_types.
 
 
@@ -553,17 +554,16 @@ module_statement(Statement, {Row, Env0}) ->
       NewState = {Row, Env1},
       {AnnotatedAst, NewState};
 
-    % TODO: This should look up the actual module, instead it just assigns it
-    % as an unknown value
     #ast_mod_import{module = ModuleName} ->
       case maps:find(ModuleName, Env0#env.importables) of
         {ok, #compiled_module{type = Type}} ->
           ModuleValue = #ast_atom{value = "gleam_" ++ ModuleName},
           Env1 = env_extend(ModuleName, Type, {constant, ModuleValue}, Env0),
-          {Statement, {Row, Env1}}
+          {Statement, {Row, Env1}};
+
+        error ->
+          fail({module_not_found, line_number(Statement), ModuleName})
       end;
-      % {Var, Env1} = new_var(Env0),
-      % Type = #type_module{row = Var},
 
     #ast_mod_external_type{name = Name} ->
       Env1 = env_register_type(Name, #type_const{type = Name}, Env0),
@@ -1433,6 +1433,15 @@ error_to_iolist(Error, Src) ->
     {var_not_found, LineNumber, Name} ->
       io_lib:format(
         "error: No variable with name `~s` found in this scope.\n"
+        "\n"
+        "~s\n"
+        "\n",
+        [Name, show_code(LineNumber, Src)]
+      );
+
+    {module_not_found, LineNumber, Name} ->
+      io_lib:format(
+        "error: No module with name `~s` found.\n"
         "\n"
         "~s\n"
         "\n",

@@ -668,12 +668,23 @@ error_to_iodata_test() ->
     },
 
     {
-      "enum A = | B(C)"
+      "\n\n\n\n\nenum A = | B(C)"
       ,
       "error: No type with name `C` found in this scope.\n"
       "\n"
+      "   | \n"
+      " 6 | enum A = | B(C)\n"
       "   |\n"
-      " 1 | enum A = | B(C)\n"
+      "\n"
+    },
+
+    {
+      "\n\nimport magic"
+      ,
+      "error: No module with name `magic` found.\n"
+      "\n"
+      "   | \n"
+      " 3 | import magic\n"
       "   |\n"
       "\n"
     },
