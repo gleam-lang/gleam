@@ -2,7 +2,8 @@
 
 -record(compiled_module,
         {binary :: binary(),
-         type :: type()}).
+         type :: type(),
+         source_path :: file:name_all()}).
 -type compiled_module() :: #compiled_module{}.
 
 -type module_name() :: string().

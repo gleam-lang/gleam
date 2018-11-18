@@ -786,7 +786,8 @@ multiple_module_test() ->
                        row = #type_row_extend{label = "run",
                                               type = #type_fn{return = #type_const{type = "Int"}},
                                               parent = #type_row_empty{}}},
-            binary = <<>>}}
+            binary = <<>>,
+            source_path = "src/some_mod.gleam"}}
       ,
       "import some_mod\n"
       "pub fn go() { some_mod:run() }\n"

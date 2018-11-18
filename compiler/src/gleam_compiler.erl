@@ -13,25 +13,27 @@ source_to_binary(Source, ModName) ->
   source_to_binary(Source, ModName, []).
 
 
--spec compile(module_name(), Src::string(), importables(), list())
+-spec compile(file:name_all(), Src::string(), importables(), list())
       -> {ok, compiled_module()} | {error, string()}.
-compile(ModName, Src, Importables, Options) ->
+compile(ModPath, Src, Importables, Options) ->
+  ModName = filename:basename(ModPath, ".gleam"),
   pipeline(Src,
            [
             fun tokenize/1,
             fun parse/1,
             infer_types(Importables, Src),
             generate_core_erlang(ModName, Options),
-            fun generate_beam_binary/1
+            generate_beam_binary(ModPath)
            ]).
 
 
--spec compile_all([{module_name(), string()}], importables(), list())
+-spec compile_all([{file:name_all(), string()}], importables(), list())
       -> {ok, importables()} | {error, {module_name(), string()}}.
 compile_all(Inputs, Importables, Options) ->
   Compile =
-    fun({ModName, Src}, Imps) ->
-      case compile(ModName, Src, Imps, Options) of
+    fun({ModPath, Src}, Imps) ->
+      ModName = filename:basename(ModPath, ".gleam"),
+      case compile(ModPath, Src, Imps, Options) of
         {ok, CompiledModule} ->
           {ok, maps:put(ModName, CompiledModule, Imps)};
 
@@ -77,13 +79,16 @@ generate_core_erlang(ModuleName, Options) ->
   end.
 
 
-generate_beam_binary({Ast, Core}) ->
-  Chunks = docs_chunk(Ast),
-  Opts = [report, verbose, from_core, {extra_chunks, Chunks}],
-  {ok, _, Binary} = compile:forms(Core, Opts),
-  Compiled = #compiled_module{binary = Binary,
-                              type = gleam_type:fetch(Ast)},
-  {ok, Compiled}.
+generate_beam_binary(ModPath) ->
+  fun({Ast, Core}) ->
+    Chunks = docs_chunk(Ast),
+    Opts = [report, verbose, from_core, {extra_chunks, Chunks}],
+    {ok, _, Binary} = compile:forms(Core, Opts),
+    Compiled = #compiled_module{binary = Binary,
+                                type = gleam_type:fetch(Ast),
+                                source_path = ModPath},
+    {ok, Compiled}
+  end.
 
 
 pipeline(InitialValue, Funs) ->

@@ -44,41 +44,42 @@ module_dependencies_test() ->
 compile_all_test() ->
   Mods = [
     {
-      "top",
+      "src/top.gleam",
       "pub fn go() { 1 }"
     },
     {
-      "middle_a",
+      "src/middle_a.gleam",
       "import top\n"
       "pub fn go() { top:go() }"
     },
     {
-      "middle_b",
+      "src/middle_b.gleam",
       "import top\n"
       "pub fn go() { top:go() }"
     },
     {
-      "bottom",
+      "src/bottom.gleam",
       "import top\n"
       "import middle_a\n"
       "import middle_b\n"
       "pub fn go() { top:go() + middle_a:go() + middle_b:go() }"
     }
   ],
-  {ok, #{"top" := #compiled_module{},
+  {ok, #{"top" := #compiled_module{} = TopMod,
          "middle_a" := #compiled_module{},
          "middle_b" := #compiled_module{},
-         "bottom" := #compiled_module{}}} = gleam_compiler:compile_all(Mods, #{}, []).
+         "bottom" := #compiled_module{}}} = gleam_compiler:compile_all(Mods, #{}, []),
+  ?assertEqual("src/top.gleam", TopMod#compiled_module.source_path).
 
 
 compile_all_fail_test() ->
   Mods = [
     {
-      "top",
+      "src/top.gleam",
       "pub fn go() { 1 }"
     },
     {
-      "bottom",
+      "src/bottom.gleam",
       "import top\n"
       "pub fn go() { top:go() + 'two' }"
     }

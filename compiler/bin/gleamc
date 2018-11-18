@@ -7,21 +7,33 @@ compile([]) ->
   exit_message("Usage: gleamc compile [files]\n");
 compile(Paths) ->
   load_gleam_modules(),
-  Fun =
+  Read =
     fun(Path) ->
-      io:put_chars("Compiling " ++ Path ++ "..."),
-      ModName = filename:basename(Path, ".gleam"),
-      case gleam_compiler:compile_file(Path, ModName) of
-        ok ->
-          io:put_chars(" ok\n");
-
-        {error, Error} ->
-          io:put_chars(standard_error, "\n\n"),
-          io:put_chars(standard_error, Error),
-          init:stop(1)
-      end
+      {ok, Source} = file:read_file(Path),
+      {Path, binary_to_list(Source)}
     end,
-  lists:foreach(Fun, Paths).
+  case gleam_compiler:compile_all(lists:map(Read, Paths), #{}, []) of
+    {ok, CompiledMods} ->
+      write_modules(CompiledMods),
+      io:put_chars(" ok\n");
+
+    {error, {_Module, Error, CompiledMods}} ->
+      io:put_chars(standard_error, "\n"),
+      io:put_chars(standard_error, Error),
+      write_modules(CompiledMods),
+      init:stop(1)
+  end.
+
+
+write_modules(Modules) ->
+  Write =
+    fun(_, {compiled_module, Bin, _Type, SrcPath}, _) ->
+      BeamFileName = "gleam_" ++ filename:basename(filename:rootname(SrcPath)) ++ ".beam",
+      BeamPath = filename:join(filename:dirname(SrcPath), BeamFileName),
+      ok = file:write_file(BeamPath, Bin)
+    end,
+  maps:fold(Write, ok, Modules).
+
 
 print_help() ->
   exit_message(
@@ -29,6 +41,7 @@ print_help() ->
     "\n"
     "SUBCOMMANDS:\n"
     "    compile\tCompile .gleam files\n").
+
 
 load_gleam_modules() ->
   ScriptPath = escript:script_name(),
@@ -39,6 +52,7 @@ load_gleam_modules() ->
   BinDir = filename:dirname(Path),
   EBinDir = BinDir ++ "/../_build/default/lib/gleam/ebin",
   true = code:add_pathz(EBinDir).
+
 
 exit_message(String) ->
   io:put_chars(standard_error, String),
