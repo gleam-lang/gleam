@@ -32,8 +32,8 @@ pub type Response =
   (Int, List(Header), String)
 ;
 
-pub type Server(arg) =
-  module {
+pub type Server(arg, r) =
+  module { r |
     fn handle(Request, arg) -> Response;
 
     fn handle_event(Any, Any, Any) -> Atom;
@@ -88,19 +88,13 @@ pub fn query_string(req) {
   }
 }
 
-pub type StartArguments =
-  {
-    callback = Server(_),
-    port = Int,
-  };
-
 external fn erl_start_link(List(Tuple(Atom, Any))) -> gen_server:StartResult
   = 'elli' 'start_link';
 
 doc """
 Start the Elli web server process tree.
 """
-pub fn start_link(mod: Server(arg), arg: arg, port: Int) {
+pub fn start_link(mod: Server(arg, _), arg: arg, port: Int) {
   erl_start_link([
     {'callback', any:from(mod)},
     {'callback_args', any:from(arg)},

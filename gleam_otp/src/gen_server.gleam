@@ -36,8 +36,8 @@ pub enum Init(state) =
   | Stop(StopReason)
   | Ignore
 
-pub type GenServer(arg, state, call, cast, reply) =
-  module {
+pub type GenServer(arg, state, call, cast, reply, r) =
+  module { r |
     fn handle_call(call, Caller, state) -> Call(reply, state);
 
     fn handle_cast(cast, state) -> Cast(state);
@@ -49,17 +49,17 @@ pub type GenServer(arg, state, call, cast, reply) =
 
 external fn native_call(Pid, untyped_call) -> untyped_reply = 'gen_server' 'call'
 
-pub fn call(mod: GenServer(_, _, call, _, reply), server: Pid, call: call) -> reply {
+pub fn call(mod: GenServer(_, _, call, _, reply, _), server: Pid, call: call) -> reply {
   native_call(server, call)
 }
 
 external fn native_cast(Pid, untyped_cast) -> Unit = 'gen_server' 'cast'
 
-pub fn cast(mod: GenServer(_, _, _, cast, reply), server: Pid, cast: cast) {
+pub fn cast(mod: GenServer(_, _, _, cast, reply, _), server: Pid, cast: cast) {
   native_cast(server, call)
 }
 
-external fn native_start_link(GenServer(arg, _, _, _, _), arg, List(Tuple(Atom, Any)))
+external fn native_start_link(GenServer(arg, _, _, _, _, _), arg, List(Tuple(Atom, Any)))
   -> StartResult
   = 'gen_server' 'start_link'
 
