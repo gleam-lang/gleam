@@ -88,16 +88,32 @@ pub fn query_string(req) {
   }
 }
 
+pub type Options =
+  {
+    port = Int,
+    ip = Tuple(Int, Int, Int, Int),
+  }
+
+pub const default_options: Options =
+  {
+    port = 8080,
+    ip = {0, 0, 0, 0},
+  }
+
 external fn erl_start_link(List(Tuple(Atom, Any))) -> gen_server:StartResult
   = 'elli' 'start_link';
 
 doc """
 Start the Elli web server process tree.
 """
-pub fn start_link(mod: Server(arg, _), arg: arg, port: Int) {
-  erl_start_link([
-    {'callback', any:from(mod)},
-    {'callback_args', any:from(arg)},
-    {'port', any:from(port)},
-  ])
+pub fn start_link(mod: Server(arg, _), arg: arg, options: Options) {
+  { options |
+    callback = mod,
+    callback_args = arg,
+  }
+    |> map:from_record
+    |> map:to_list
+    |> erl_start_link
 }
+
+

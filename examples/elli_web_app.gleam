@@ -5,15 +5,12 @@
 
 import elli:[Get, Delete]
 
-pub type Argument =
-  {}
-
 doc """
 The handle/2 callback is used by Elli to response to requests
 
 It serves as the router for our application.
 """
-pub fn handle(req, _args) {
+pub fn handle(req, _arg) {
   method = elli:method(req)
   path = elli:path(req)
   case (method, path) {
@@ -55,8 +52,9 @@ The start_link/0 function can be used to create a new
 Elli web server process running this handler module.
 """
 pub fn start_link() {
-  elli:start_link({
-    callback = self,
-    port = 4000,
-  })
+  options = { elli:default_options |
+    port = 3000
+  }
+
+  elli:start_link(self, [], options)
 }
