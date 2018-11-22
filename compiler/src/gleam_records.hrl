@@ -1,4 +1,4 @@
--define(print(Var), io:format("DEBUG: ~p:~p - ~p~n ~p~n", [?MODULE, ?LINE, ??Var, Var])).
+-define(print(Var), io:format("DEBUG: ~p:~p - ~p~n ~p~n~n", [?MODULE, ?LINE, ??Var, Var]), Var).
 
 -record(compiled_module,
         {binary :: binary(),
@@ -227,10 +227,10 @@
 -type type_var_reference() :: reference().
 -type level() :: integer().
 
--record(type_const, {type :: string()}).
+-record(type_const, {public = true :: boolean(), type :: string()}).
 -record(type_fn, {args = [] :: list(type()), return :: type()}).
 % Should type be a type for type app? Possibly for aliases?
--record(type_app, {type :: string(), args :: list(type())}).
+-record(type_app, {public = true :: boolean(), type :: string(), args :: list(type())}).
 -record(type_var, {type :: type_var_reference()}).
 -record(type_record, {row :: type()}).
 -record(type_module, {row :: type()}).

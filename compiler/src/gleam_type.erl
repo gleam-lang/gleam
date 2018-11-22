@@ -12,6 +12,8 @@
         {type :: type(),
          scope :: scope()}).
 
+% TODO: Remove this. We don't need to store the arity any more. We can infer it
+% from type_app
 -record(type_data,
         {type :: type(),
          arity :: non_neg_integer()}).
@@ -412,28 +414,28 @@ infer(Ast, Env0) ->
 
 -spec ast_type_to_type(ast_type(), boolean(), env()) -> {type(), env()}.
 ast_type_to_type(AstType, Create, Env0) ->
-  CheckTypeExists =
-    fun(Name, Arity, Env) ->
-      case env_lookup_type(Name, Env) of
-        {ok, #type_data{arity = Arity}} ->
-          ok;
+  case AstType of
+    #ast_type_constructor{name = Name, args = []} ->
+      Type = case env_lookup_type(Name, Env0) of
+        {ok, #type_data{type = T, arity = 0}} -> T;
+        _ -> fail({type_not_found, line_number(AstType), Name, 0})
+      end,
+      {Type, Env0};
+
+    #ast_type_constructor{name = Name, args = Args} ->
+      Arity = length(Args),
+      Type = case env_lookup_type(Name, Env0) of
+        {ok, #type_data{type = AppType = #type_app{args = AppArgs}}}
+        when length(AppArgs) =:= Arity ->
+          AppType;
 
         _ ->
           fail({type_not_found, line_number(AstType), Name, Arity})
-      end
-    end,
-  case AstType of
-    #ast_type_constructor{name = Name, args = []} ->
-      CheckTypeExists(Name, 0, Env0),
-      T = #type_const{type = Name},
-      {T, Env0};
-
-    #ast_type_constructor{name = Name, args = Args} ->
-      CheckTypeExists(Name, length(Args), Env0),
+      end,
       {ArgsTypes, Env1} = lists:mapfoldl(fun(T, E) -> ast_type_to_type(T, Create, E) end,
                                          Env0,
                                          Args),
-      T = #type_app{type = Name, args = ArgsTypes},
+      T = Type#type_app{args = ArgsTypes},
       {T, Env1};
 
     #ast_type_var{name = Name} ->
@@ -448,6 +450,70 @@ ast_type_to_type(AstType, Create, Env0) ->
           {Var, Env1} = new_generic_var(Env0),
           Env2 = env_register_type(Name, Var, Env1),
           {Var, Env2}
+      end
+  end.
+
+
+-spec find_private_type(type(), env()) -> {ok, type()} | {error, not_found}.
+find_private_type(Type, Env) ->
+  case Type of
+    #type_var{type = Ref} ->
+      case env_lookup_type_ref(Ref, Env) of
+        #type_var_generic{} ->
+          {error, not_found};
+
+        #type_var_unbound{} ->
+          {error, not_found};
+
+        #type_var_link{type = InnerType} ->
+          find_private_type(InnerType, Env)
+      end;
+
+    #type_app{public = false} ->
+      {ok, Type};
+
+    #type_app{public = true, args = Args} ->
+      find_private_type_in_list(Args, Env);
+
+    #type_const{public = false} ->
+      {ok, Type};
+
+    #type_const{public = true} ->
+      {error, not_found};
+
+    #type_module{row = Row} ->
+      find_private_type(Row, Env);
+
+    #type_record{row = Row} ->
+      find_private_type(Row, Env);
+
+    #type_row_empty{} ->
+      {error, not_found};
+
+    #type_row_extend{parent = Parent, type = FieldType} ->
+      case find_private_type(FieldType, Env) of
+        {ok, T} -> {ok, T};
+        _ -> find_private_type(Parent, Env)
+      end;
+
+    #type_fn{args = Args, return = Return} ->
+      case find_private_type(Return, Env) of
+        {ok, T} -> {ok, T};
+        _ -> find_private_type_in_list(Args, Env)
+      end
+  end.
+
+
+-spec find_private_type_in_list([type()], env()) -> {ok, type()} | {error, not_found}.
+find_private_type_in_list(Types, Env) ->
+  case Types of
+    [] ->
+      {error, not_found};
+
+    [Type | Rest] ->
+      case find_private_type(Type, Env) of
+        {ok, X} -> {ok, X};
+        _ -> find_private_type_in_list(Rest, Env)
       end
   end.
 
@@ -467,7 +533,7 @@ infer_assignment(Pattern, Value, Env0) ->
       -> {mod_statement(), {type(), env()}}.
 module_statement(Statement, {Row, Env0}) ->
   case Statement of
-    #ast_mod_enum{public = _Public, name = Name, args = Args, constructors = Constructors} ->
+    #ast_mod_enum{public = Public, name = Name, args = Args, constructors = Constructors} ->
       % Store the original types so the type vars in the enum definition
       % (i.e. the a in Maybe(a)) do not leak outside the definition.
       OriginalTypes = Env0#env.types,
@@ -482,18 +548,25 @@ module_statement(Statement, {Row, Env0}) ->
       {ArgsTypes, Env1} = lists:mapfoldl(NewVar, Env0, Args),
       Type =
         case Args of
-          [] -> #type_const{type = Name};
-          _ -> #type_app{type = Name, args = ArgsTypes}
+          [] -> #type_const{public = Public, type = Name};
+          _ -> #type_app{public = Public, type = Name, args = ArgsTypes}
         end,
 
       % Create a function type for each constructor of the enum.
       % Makes use of the type vars inserted in to the env previously.
       RegisterConstructor =
-        fun(#ast_enum_def{name = CName, args = CArgs}, InnerEnv0) ->
+        fun(#ast_enum_def{name = CName, args = CArgs} = Def, InnerEnv0) ->
           {CArgsTypes, InnerEnv1} = lists:mapfoldl(fun(A, E) -> ast_type_to_type(A, false, E) end,
                                                    InnerEnv0,
                                                    CArgs),
           T = #type_fn{args = CArgsTypes, return = Type},
+
+          case Public andalso find_private_type(T, InnerEnv1) of
+            {ok, PrivateType} -> fail({type_not_public, line_number(Def), PrivateType});
+            {error, _} -> ok;
+            false -> ok
+          end,
+
           env_extend(CName, T, module, InnerEnv1)
         end,
       Env2 = lists:foldl(RegisterConstructor, Env1, Constructors),
@@ -509,8 +582,16 @@ module_statement(Statement, {Row, Env0}) ->
       {AnnotatedFn, Env1} = infer(Fn, increment_env_level(Env0)),
       Env2 = decrement_env_level(Env1),
       {FnType, Env3} = generalize(fetch(AnnotatedFn), Env2),
+
+      case Public andalso find_private_type(FnType, Env3) of
+        {ok, T} -> fail({type_not_public, line_number(Statement), T});
+        _ -> ok
+      end,
+
+      % Unify with previously registered type
       {ok, #var_data{type = Type}} = env_lookup(Name, Env3),
       Env4 = unify(Type, FnType, Env3),
+
 
       #ast_fn{args = NewArgs, body = NewBody} = AnnotatedFn,
       NewRow = case Public of
@@ -555,8 +636,8 @@ module_statement(Statement, {Row, Env0}) ->
           fail({module_not_found, line_number(Statement), ModuleName})
       end;
 
-    #ast_mod_external_type{name = Name} ->
-      Env1 = env_register_type(Name, #type_const{type = Name}, Env0),
+    #ast_mod_external_type{public = Public, name = Name} ->
+      Env1 = env_register_type(Name, #type_const{public = Public, type = Name}, Env0),
       {Statement, {Row, Env1}}
   end.
 
@@ -633,22 +714,22 @@ fetch(Ast) ->
 
     #ast_tuple{elems = Elems} ->
       ElemsTypes = lists:map(fun fetch/1, Elems),
-      #type_app{type = "Tuple", args = ElemsTypes};
+      #type_app{public = true, type = "Tuple", args = ElemsTypes};
 
     #ast_cons{head = Head} ->
-      #type_app{type = "List", args = [fetch(Head)]};
+      #type_app{public = true, type = "List", args = [fetch(Head)]};
 
     #ast_int{} ->
-      #type_const{type = "Int"};
+      #type_const{public = true, type = "Int"};
 
     #ast_atom{} ->
-      #type_const{type = "Atom"};
+      #type_const{public = true, type = "Atom"};
 
     #ast_float{} ->
-      #type_const{type = "Float"};
+      #type_const{public = true, type = "Float"};
 
     #ast_string{} ->
-      #type_const{type = "String"}
+      #type_const{public = true, type = "String"}
   end.
 
 
@@ -816,11 +897,11 @@ type_resolve_type_vars(Type, Env) ->
 -spec new_env(#{string() => type()}) -> env().
 new_env(ImportableVars) ->
   E0 = #env{importables = ImportableVars},
-  Int = #type_const{type = "Int"},
-  Atom = #type_const{type = "Atom"},
-  Bool = #type_const{type = "Bool"},
-  Float = #type_const{type = "Float"},
-  String = #type_const{type = "String"},
+  Int = #type_const{public = true, type = "Int"},
+  Atom = #type_const{public = true, type = "Atom"},
+  Bool = #type_const{public = true, type = "Bool"},
+  Float = #type_const{public = true, type = "Float"},
+  String = #type_const{public = true, type = "String"},
   BinOp = fun(A, B, C) -> #type_fn{args = [A, B], return = C} end,
   EndoOp = fun(T) -> BinOp(T, T, T) end,
   ZeroFn = fun(A) -> #type_fn{args = [], return = A} end,
@@ -854,12 +935,12 @@ new_env(ImportableVars) ->
   E12 = env_register_type("Atom", Atom, E11),
 
   {V7, E13} = new_generic_var(E12),
-  List = #type_app{type = "List", args = [V7]},
+  List = #type_app{public = true, type = "List", args = [V7]},
   E14 = env_register_type("List", List, E13),
 
   {V8, E15} = new_generic_var(E14),
   {V9, E16} = new_generic_var(E15),
-  Tuple = #type_app{type = "Tuple", args = [V8, V9]},
+  Tuple = #type_app{public = true, type = "Tuple", args = [V8, V9]},
   E17 = env_register_type("Tuple", Tuple, E16),
 
   LastE = E17,

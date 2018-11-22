@@ -425,7 +425,7 @@ module_test() ->
     },
 
     {
-     "enum Is = | Yes | No "
+     "pub enum Is = | Yes | No "
      "pub fn yes() { Yes }"
      "pub fn no() { No }"
      ,
@@ -436,7 +436,7 @@ module_test() ->
     },
 
     {
-     "enum Num = | I(Int) "
+     "pub enum Num = | I(Int) "
      "pub fn num(n) { I(n) }"
      ,
      "module {"
@@ -462,7 +462,7 @@ module_test() ->
 enum_test() ->
   Cases = [
     {
-     "enum Box(a) = | Box(a) "
+     "pub enum Box(a) = | Box(a) "
      "pub fn int() { Box(1) }"
      "pub fn float() { Box(1.0) }"
      ,
@@ -798,3 +798,30 @@ multiple_module_test() ->
     }
   ],
   test_infer(Cases).
+
+no_leak_private_types_test() ->
+  Cases = [
+    {
+      "enum A = | A "
+      "pub fn go() { A }"
+      ,
+      {type_not_public, 1, #type_const{public = false, type = "A"}}
+    },
+
+    % TODO: more tests.
+
+    {
+      "external type A "
+      "external fn a() -> A = '' ''"
+      "pub enum B = | BCon(A) "
+      ,
+      {type_not_public, 1, #type_const{public = false, type = "A"}}
+    }
+  ],
+  TestCase =
+    fun
+      ({Src, ExpectedError}) ->
+        {error, Error} = infer(Src, #{}),
+        ?assertEqual(ExpectedError, Error)
+    end,
+  lists:foreach(TestCase, Cases).
