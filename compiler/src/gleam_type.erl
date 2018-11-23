@@ -35,6 +35,7 @@
 -type error()
   :: {var_not_found, line_number(), string()}
   | {type_not_found, line_number(), string(), non_neg_integer()}
+  | {type_not_public, line_number(), type()}
   | {module_not_found, line_number(), string()}
   | {cannot_unify, type(), type()}
   | {incorrect_number_of_arguments, line_number(), non_neg_integer(), non_neg_integer()}
@@ -585,7 +586,8 @@ module_statement(Statement, {Row, Env0}) ->
 
       case Public andalso find_private_type(FnType, Env3) of
         {ok, T} -> fail({type_not_public, line_number(Statement), T});
-        _ -> ok
+        {error, _} -> ok;
+        false -> ok
       end,
 
       % Unify with previously registered type
@@ -609,6 +611,13 @@ module_statement(Statement, {Row, Env0}) ->
                                          Env0, Args),
       {ReturnType, Env2} = ast_type_to_type(Return, true, Env1),
       Type = #type_fn{args = ArgsTypes, return = ReturnType},
+
+      case Public andalso find_private_type(Type, Env2) of
+        {ok, PrivateType} -> fail({type_not_public, line_number(Statement), PrivateType});
+        {error, _} -> ok;
+        false -> ok
+      end,
+
       NewRow = case Public of
         true -> #type_row_extend{label = Name, type = Type, parent = Row};
         false -> Row

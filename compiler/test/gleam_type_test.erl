@@ -808,6 +808,34 @@ no_leak_private_types_test() ->
       {type_not_public, 1, #type_const{public = false, type = "A"}}
     },
 
+    {
+      "enum A = | A "
+      "pub fn go(a) { a == A }"
+      ,
+      {type_not_public, 1, #type_const{public = false, type = "A"}}
+    },
+
+    {
+      "enum A = | A "
+      "pub external fn go(A) -> Bool = '' ''"
+      ,
+      {type_not_public, 1, #type_const{public = false, type = "A"}}
+    },
+
+    {
+      "enum A = | A "
+      "pub external fn go() -> A = '' ''"
+      ,
+      {type_not_public, 1, #type_const{public = false, type = "A"}}
+    },
+
+    {
+      "enum A = | A "
+      "pub fn go(a) { a == A }"
+      ,
+      {type_not_public, 1, #type_const{public = false, type = "A"}}
+    },
+
     % TODO: more tests.
 
     {
