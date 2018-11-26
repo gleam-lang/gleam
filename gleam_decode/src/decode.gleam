@@ -1,10 +1,22 @@
 // Decoding of `Any` data into typed data
 
-import process:[Pid, Reference]
+import process:[Pid, Reference, Port]
 import any:Any
 import result:[Result, Ok, Error]
 import list
 import expect
+
+pub enum Tagged =
+  | Int(Int)
+  | Pid(Pid)
+  | Port(Port)
+  | Atom(Atom)
+  | Float(Float)
+  | String(String)
+  | List(List(Tagged))
+  | Tuple(List(Tagged))
+  | Reference(Reference)
+  | Map(List(Tuple(Tagged, Tagged)))
 
 pub external fn string(Any) -> Result(String, String)
   = 'gleam__decode_erl' 'string'
