@@ -2,6 +2,7 @@
 // http://erlang.org/doc/man/logger.html
 
 import order
+import any
 
 pub enum Level =
   | Emergency
@@ -11,12 +12,12 @@ pub enum Level =
   | Warning
   | Notice
   | Info
-  | Debug
+  | Debug;
 
 // Logging API functions
 
-type alias Report(r) =
-  { r }
+type Report(r) =
+  { r };
 
 pub external fn log(Level, Report(r)) -> Unit = 'logger' 'log';
 
@@ -38,8 +39,8 @@ pub external fn debug(Report(r)) -> Unit = 'logger' 'debug';
 
 // Metadata API functions
 
-type alias Metadata(r) =
-  { r }
+type Metadata(r) =
+  { r };
 
 pub external fn metadata(Metadata(r)) -> Unit = 'logger' 'update_process_metadata';
 
@@ -52,3 +53,32 @@ pub external fn get_metadata() -> Metadata(r) = 'logger' 'get_process_metadata';
 // Misc API functinos
 
 pub external fn compare(Level, Level) -> order:Order = 'logger' 'compare_levels';
+
+// Formatter callback module
+
+pub enum CheckResult(fail_reason) =
+  | Ok
+  | Error(fail_reason);
+
+// TODO: function for decoding this
+// msg :=
+//      {io:format(), [term()]} |
+//      {report, report()} |
+//      {string, unicode:chardata()},
+pub external type LogMsg;
+
+pub type LogEvent(m) =
+  {
+    level = Level,
+    msg = LogMsg,
+    metadata = Metadata(m),
+  };
+
+type Formatter(config, fail_reason, m) =
+  module { r |
+    fn check_config(FormatterConfig(config)) -> CheckResult(fail_reason)
+
+    fn format(LogEvent(m), FormatterConfig(config)) -> String
+  };
+
+// TODO: Handler callback module
