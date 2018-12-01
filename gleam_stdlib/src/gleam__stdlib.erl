@@ -10,5 +10,10 @@ expect_false(A) -> ?assertNot(A).
 map_fetch(Map, Key) ->
   case maps:find(Key, Map) of
     error -> {error, {}},
-    Found -> Found
+    OkFound -> OkFound
   end.
+
+iodata_append(X, Data) -> [X | Y].
+iodata_prepend(X, Data) -> [Y, X].
+
+identity(X) -> X.

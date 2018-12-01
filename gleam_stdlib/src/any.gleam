@@ -8,7 +8,7 @@ pub external type Any;
 // doc """
 // Convert any Gleam data into `Any` data.
 // """
-pub external fn from(a) -> Any = 'gleam_any' 'identity';
+pub external fn from(a) -> Any = 'gleam__stdlib' 'identity';
 
 // doc """
 // Unsafely cast any type into any other type.o
@@ -16,8 +16,4 @@ pub external fn from(a) -> Any = 'gleam_any' 'identity';
 // This is an escape hatch for the type system that may be useful when wrapping
 // native Erlang APIs. It is to be used as a last measure only.
 // """
-pub external fn unsafeCoerce(a) -> b = 'gleam_any' 'identity';
-
-pub fn identity(x) {
-  x
-}
+pub external fn unsafeCoerce(a) -> b = 'gleam__stdlib' 'identity';
