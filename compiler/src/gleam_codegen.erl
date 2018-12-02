@@ -82,10 +82,12 @@ module_statement(Statement, Acc) ->
     #ast_mod_external_type{} ->
       Acc;
 
-    #ast_mod_external_fn{meta = Meta, public = Public, name = Name, args =
-                         Args, target_fn = TargetFn, target_mod = TargetMod} ->
-      FnArgs = lists:map(fun(X) -> [$a | integer_to_list(X)] end, lists:seq(1, length(Args))),
-      ArgsVars = lists:map(fun(X) -> #ast_var{meta = Meta, name = X, scope = local} end, FnArgs),
+    #ast_mod_external_fn{meta = Meta, public = Public, name = Name, args = Args,
+                         target_fn = TargetFn, target_mod = TargetMod} ->
+      FnArgs = lists:map(fun(X) -> #ast_fn_arg{name = [$a | integer_to_list(X)]} end,
+                         lists:seq(1, length(Args))),
+      ArgsVars = lists:map(fun(#ast_fn_arg{name = X}) -> #ast_var{meta = Meta, name = X, scope = local} end,
+                           FnArgs),
       ModFn = #ast_mod_fn{meta = Meta,
                           public = Public,
                           name = Name,
@@ -139,7 +141,7 @@ named_function(#ast_mod_fn{name = Name, args = Args, body = Body}) ->
   {C_fname, C_fun}.
 
 function(Args, Body, Env) ->
-  C_args = lists:map(fun var/1, Args),
+  C_args = lists:map(fun(#ast_fn_arg{name = Name}) -> var(Name) end, Args),
   {C_body, NewEnv} = expression(Body, Env),
   C_fun = cerl:c_fun(C_args, C_body),
   {C_fun, NewEnv}.

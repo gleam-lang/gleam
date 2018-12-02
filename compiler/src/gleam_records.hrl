@@ -15,6 +15,10 @@
 -type export() :: {string(), non_neg_integer()}.
 -type type_annotation() :: type_not_annotated | {ok, type()}.
 
+-record(ast_fn_arg, {name :: string()}).
+
+-type ast_fn_arg() :: #ast_fn_arg{}.
+
 -record(ast_enum_def,
         {meta = #meta{} :: meta(),
          name :: string(),
@@ -39,7 +43,7 @@
          type = type_not_annotated :: type_annotation(),
          public = false :: boolean(),
          name :: string(),
-         args = [] :: [string()],
+         args = [] :: [ast_fn_arg()],
          body :: ast_expression()}).
 
 -record(ast_mod_test,

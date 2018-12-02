@@ -744,6 +744,19 @@ later_definition_test() ->
   test_infer(Cases).
 
 
+% type_annotation_test() ->
+%   Cases = [
+%     {
+%       "pub fn go(x: Int) { x }\n"
+%       ,
+%       "module {"
+%       " fn go(Int) -> Int"
+%       "}"
+%     }
+%   ],
+%   test_infer(Cases).
+
+
 recursion_test() ->
   Cases = [
     {

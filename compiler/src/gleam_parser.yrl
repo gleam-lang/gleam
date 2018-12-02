@@ -2,7 +2,7 @@ Nonterminals
 source module statements statement import
 function test enum enum_defs enum_def external_fn external_type
 exprs expr elems args call_args
-type type_args
+type type_args type_params
 case_clauses case_clause field fields.
 
 Terminals
@@ -54,10 +54,14 @@ statement -> function      : '$1'.
 statement -> external_fn   : '$1'.
 statement -> external_type : '$1'.
 
-enum -> kw_pub kw_enum upname              '=' enum_defs : enum(true, '$3', [], '$5').
-enum -> kw_pub kw_enum upname '(' args ')' '=' enum_defs : enum(true, '$3', '$5', '$8').
-enum ->        kw_enum upname              '=' enum_defs : enum(false, '$2', [], '$4').
-enum ->        kw_enum upname '(' args ')' '=' enum_defs : enum(false, '$2', '$4', '$7').
+enum -> kw_pub kw_enum upname                     '=' enum_defs : enum(true, '$3', [], '$5').
+enum -> kw_pub kw_enum upname '(' type_params ')' '=' enum_defs : enum(true, '$3', '$5', '$8').
+enum ->        kw_enum upname                     '=' enum_defs : enum(false, '$2', [], '$4').
+enum ->        kw_enum upname '(' type_params ')' '=' enum_defs : enum(false, '$2', '$4', '$7').
+
+type_params -> name                 : [type_param('$1')].
+type_params -> name ','             : [type_param('$1')].
+type_params -> name ',' type_params : [type_param('$1') | '$3'].
 
 enum_defs -> enum_def           : ['$1'].
 enum_defs -> enum_def enum_defs : ['$1' | '$2'].
@@ -229,6 +233,9 @@ assignment({'=', Meta}, Pattern, Value, Then) ->
   #ast_assignment{meta = Meta, pattern = Pattern, value = Value, then = Then}.
 
 arg({name, _Meta, Name}) ->
+  #ast_fn_arg{name = Name}.
+
+type_param({name, _Meta, Name}) ->
   Name.
 
 var({name, Meta, Name}) ->

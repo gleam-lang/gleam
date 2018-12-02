@@ -239,6 +239,7 @@ infer_pattern(Pattern, Env0) ->
 
 -spec infer(ast_expression(), env()) -> {ast_expression(), env()}.
 infer(Ast, Env0) ->
+  ?print(Ast),
   case Ast of
     #ast_module{statements = Statements} ->
       {NewStatements, {Row, Env1}} = lists:mapfoldl(fun module_statement/2,
@@ -286,7 +287,7 @@ infer(Ast, Env0) ->
           Var = #ast_var{name = VarName, scope = local},
           NewArgs = lists:map(fun(#ast_hole{}) -> Var; (X) -> X end, Args),
           Call = #ast_call{meta = Meta, fn = Fn, args = NewArgs},
-          NewFn = #ast_fn{meta = Meta, args = [VarName], body = Call},
+          NewFn = #ast_fn{meta = Meta, args = [#ast_fn_arg{name = VarName}], body = Call},
           infer(NewFn, Env1);
 
         _ ->
@@ -302,7 +303,7 @@ infer(Ast, Env0) ->
     #ast_fn{args = Args, body = Body} ->
       {ArgTypes, ArgsEnv} = lists:mapfoldl(fun(_, E) -> new_var(E) end, Env0, Args),
       Insert =
-        fun({Name, Type}, E) ->
+        fun({#ast_fn_arg{name = Name}, Type}, E) ->
           env_extend(Name, Type, local, E)
         end,
       FnEnv = lists:foldl(Insert, ArgsEnv, lists:zip(Args, ArgTypes)),
@@ -1006,7 +1007,7 @@ increment_env_level_test() ->
 
 
 -spec env_extend(var_name(), type(), scope(), env()) -> env().
-env_extend(Name, Type, Scope, Env = #env{vars = Vars}) ->
+env_extend(Name, Type, Scope, Env = #env{vars = Vars}) when is_list(Name) ->
   VarData = #var_data{type = Type, scope = Scope},
   NewVars = maps:put(Name, VarData, Vars),
   Env#env{vars = NewVars}.
