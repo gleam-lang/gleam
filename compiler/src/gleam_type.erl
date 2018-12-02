@@ -4,10 +4,6 @@
 
 -include("gleam_records.hrl").
 
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
--endif.
-
 -record(var_data,
         {type :: type(),
          scope :: scope()}).
@@ -996,15 +992,6 @@ env_level(#env{level = Level}) ->
 -spec put_env_level(level(), env()) -> env().
 put_env_level(Level, Env) ->
   Env#env{level = Level}.
-
--ifdef(TEST).
-increment_env_level_test() ->
-  Env = new_env(#{}),
-  Env2 = Env#env{level = 42},
-  Env3 = increment_env_level(Env2),
-  ?assertEqual(43, Env3#env.level).
--endif.
-
 
 -spec env_extend(var_name(), type(), scope(), env()) -> env().
 env_extend(Name, Type, Scope, Env = #env{vars = Vars}) when is_list(Name) ->
