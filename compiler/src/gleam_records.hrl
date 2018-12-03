@@ -15,7 +15,9 @@
 -type export() :: {string(), non_neg_integer()}.
 -type type_annotation() :: type_not_annotated | {ok, type()}.
 
--record(ast_fn_arg, {name :: string()}).
+-record(ast_fn_arg,
+        {name :: string(),
+         annotation :: ast_type()}).
 
 -type ast_fn_arg() :: #ast_fn_arg{}.
 

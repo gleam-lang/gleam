@@ -1,7 +1,7 @@
 Nonterminals
 source module statements statement import
 function test enum enum_defs enum_def external_fn external_type
-exprs expr elems args call_args
+exprs expr elems arg args call_args
 type type_args type_params
 case_clauses case_clause field fields.
 
@@ -150,9 +150,12 @@ call_args -> expr               : ['$1'].
 call_args -> expr ','           : ['$1'].
 call_args -> expr ',' call_args : ['$1' | '$3'].
 
-args -> name          : [arg('$1')].
-args -> name ','      : [arg('$1')].
-args -> name ',' args : [arg('$1') | '$3'].
+args -> arg          : ['$1'].
+args -> arg ','      : ['$1'].
+args -> arg ',' args : ['$1' | '$3'].
+
+arg -> name           : arg('$1', {error, no_annotation}).
+arg -> name  ':' type : arg('$1', {ok, '$2'}).
 
 elems -> expr           : ['$1'].
 elems -> expr ','       : ['$1'].
@@ -232,8 +235,8 @@ type_var({name, Meta, Name}) ->
 assignment({'=', Meta}, Pattern, Value, Then) ->
   #ast_assignment{meta = Meta, pattern = Pattern, value = Value, then = Then}.
 
-arg({name, _Meta, Name}) ->
-  #ast_fn_arg{name = Name}.
+arg({name, _Meta, Name}, Annotation) ->
+  #ast_fn_arg{name = Name, annotation = Annotation}.
 
 type_param({name, _Meta, Name}) ->
   Name.
