@@ -414,7 +414,7 @@ module_test() ->
     },
 
     {
-     "fn id(x) { x }"
+     "fn id(x: a) { x }" % FIXME: We shouldn't need to annotate this.
      "pub fn int() { id(1) }"
      "pub fn float() { id(1.0) }"
      ,
@@ -746,13 +746,29 @@ later_definition_test() ->
 
 type_annotation_test() ->
   Cases = [
-    % {
-    %   "pub fn go(x: Int) { x }\n"
-    %   ,
-    %   "module {"
-    %   " fn go(Int) -> Int"
-    %   "}"
-    % },
+    {
+      "pub fn go(x: Int) { x }\n"
+      ,
+      "module {"
+      " fn go(Int) -> Int"
+      "}"
+    },
+
+    {
+      "pub fn go(x: List(a)) { x }\n"
+      ,
+      "module {"
+      " fn go(List(a)) -> List(a)"
+      "}"
+    },
+
+    {
+      "pub fn go(x: List(String)) { x }\n"
+      ,
+      "module {"
+      " fn go(List(String)) -> List(String)"
+      "}"
+    },
 
     {
       "pub fn go(x: b, y: c) { x }\n"

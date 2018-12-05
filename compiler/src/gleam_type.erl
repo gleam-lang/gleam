@@ -94,7 +94,15 @@ register_statement(Statement, Env0) ->
   case Statement of
     #ast_mod_fn{name = Name, args = Args} ->
       Env1 = increment_env_level(Env0),
-      {ArgTypes, Env2} = lists:mapfoldl(fun(_, E) -> new_var(E) end, Env1, Args),
+      RegisterArg =
+        fun
+          (#ast_fn_arg{annotation = {ok, Type}}, E) ->
+            ast_type_to_type(Type, true, E);
+
+          (_, E) ->
+            new_var(E)
+        end,
+      {ArgTypes, Env2} = lists:mapfoldl(RegisterArg, Env1, Args),
       {ReturnType, Env3} = new_var(Env2),
       Type = #type_fn{args = ArgTypes, return = ReturnType},
       env_extend(Name, Type, module, Env3);
@@ -235,7 +243,6 @@ infer_pattern(Pattern, Env0) ->
 
 -spec infer(ast_expression(), env()) -> {ast_expression(), env()}.
 infer(Ast, Env0) ->
-  ?print(Ast),
   case Ast of
     #ast_module{statements = Statements} ->
       {NewStatements, {Row, Env1}} = lists:mapfoldl(fun module_statement/2,
@@ -579,23 +586,31 @@ module_statement(Statement, {Row, Env0}) ->
       Fn = #ast_fn{args = Args, body = Body},
       {AnnotatedFn, Env1} = infer(Fn, increment_env_level(Env0)),
       Env2 = decrement_env_level(Env1),
-      {FnType, Env3} = generalize(fetch(AnnotatedFn), Env2),
 
-      case Public andalso find_private_type(FnType, Env3) of
+      % Unify with previously registered type
+      % This was added to support recursion. It doesn't really work as
+      % functions are generalised incorrectly.
+      % TODO: Remove this once we know how to support recursion correctly.
+      FnType = fetch(AnnotatedFn),
+      {ok, #var_data{type = Type}} = env_lookup(Name, Env2),
+      Env3 = unify(Type, FnType, Env2),
+
+      % Generalise.
+      {GeneralFnType, Env4} = generalize(FnType, Env3),
+
+      case Public andalso find_private_type(GeneralFnType, Env3) of
         {ok, T} -> fail({type_not_public, line_number(Statement), T});
         {error, _} -> ok;
         false -> ok
       end,
 
-      % Unify with previously registered type
-      {ok, #var_data{type = Type}} = env_lookup(Name, Env3),
-      Env4 = unify(Type, FnType, Env3),
-
-
       #ast_fn{args = NewArgs, body = NewBody} = AnnotatedFn,
       NewRow = case Public of
-        true -> #type_row_extend{label = Name, type = FnType, parent = Row};
-        false -> Row
+        true ->
+          #type_row_extend{label = Name, type = GeneralFnType, parent = Row};
+
+        false ->
+          Row
       end,
       NewState = {NewRow, Env4},
       AnnotatedStatement = Statement#ast_mod_fn{type = {ok, FnType},

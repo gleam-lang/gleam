@@ -155,7 +155,7 @@ args -> arg ','      : ['$1'].
 args -> arg ',' args : ['$1' | '$3'].
 
 arg -> name           : arg('$1', {error, no_annotation}).
-arg -> name  ':' type : arg('$1', {ok, '$2'}).
+arg -> name  ':' type : arg('$1', {ok, '$3'}).
 
 elems -> expr           : ['$1'].
 elems -> expr ','       : ['$1'].
