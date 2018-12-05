@@ -659,7 +659,11 @@ module_statement(Statement, {Row, Env0}) ->
 
     #ast_mod_external_type{public = Public, name = Name} ->
       Env1 = env_register_type(Name, #type_const{public = Public, type = Name}, Env0),
-      {Statement, {Row, Env1}}
+      {Statement, {Row, Env1}};
+
+    % TODO: ast_mod_type_alias
+    #ast_mod_type_alias{} ->
+      {Statement, {Row, Env0}}
   end.
 
 
@@ -850,6 +854,10 @@ statement_resolve_type_vars(Statement, Env) ->
       Statement;
 
     #ast_mod_external_type{} ->
+      Statement;
+
+    % TODO: ast_mod_type_alias
+    #ast_mod_type_alias{} ->
       Statement;
 
     % TODO: resolve type vars in args and body?

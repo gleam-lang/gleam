@@ -2,7 +2,7 @@ Nonterminals
 source module statements statement import
 function test enum enum_defs enum_def external_fn external_type
 exprs expr elems arg args call_args
-type type_args type_params
+type type_args type_params type_alias
 case_clauses case_clause field fields.
 
 Terminals
@@ -51,6 +51,7 @@ statement -> test          : '$1'.
 statement -> enum          : '$1'.
 statement -> import        : '$1'.
 statement -> function      : '$1'.
+statement -> type_alias    : '$1'.
 statement -> external_fn   : '$1'.
 statement -> external_type : '$1'.
 
@@ -86,6 +87,8 @@ external_fn -> kw_external kw_fn name '(' type_args ')' '->' 'type' '=' atom ato
                : external_fn(false, '$1', '$3', '$5', '$8', '$10', '$11').
 external_fn -> kw_pub kw_external kw_fn name '(' type_args ')' '->' 'type' '=' atom atom
                : external_fn(true, '$2', '$4', '$6', '$9', '$11', '$12').
+
+type_alias -> kw_type upname '=' type : type_alias('$2', [], '$4').
 
 external_type ->        kw_external kw_type upname : external_type(false, '$3').
 external_type -> kw_pub kw_external kw_type upname : external_type(true, '$4').
@@ -265,6 +268,9 @@ record_select({'.', Meta}, Record, {name, _, Label}) ->
 
 module_select({':', Meta}, Module, {name, _, Label}) ->
   #ast_module_select{meta = Meta, module = Module, label = Label}.
+
+type_alias({upname, Meta, Name}, Args, Type) ->
+  #ast_mod_type_alias{meta = Meta, name = Name, args = Args, type = Type}.
 
 tuple({_, Meta}, Elems) ->
   #ast_tuple{meta = Meta, elems = Elems}.

@@ -40,6 +40,12 @@
       | #ast_type_var{}
       .
 
+-record(ast_mod_type_alias,
+        {meta = #meta{} :: meta(),
+         name :: string(),
+         args = [] :: [string()],
+         type :: ast_type()}).
+
 -record(ast_mod_fn,
         {meta = #meta{} :: meta(),
          type = type_not_annotated :: type_annotation(),
@@ -81,11 +87,12 @@
 
 -type mod_statement()
       :: #ast_mod_fn{}
-      | #ast_mod_test{}
       | #ast_mod_enum{}
       | #ast_mod_external_fn{}
       | #ast_mod_external_type{}
       | #ast_mod_import{}
+      | #ast_mod_test{}
+      | #ast_mod_type_alias{}
       .
 
 -record(ast_tuple,
@@ -235,7 +242,6 @@
 
 -record(type_const, {public = true :: boolean(), type :: string()}).
 -record(type_fn, {args = [] :: list(type()), return :: type()}).
-% Should type be a type for type app? Possibly for aliases?
 -record(type_app, {public = true :: boolean(), type :: string(), args :: list(type())}).
 -record(type_var, {type :: type_var_reference()}).
 -record(type_record, {row :: type()}).
@@ -253,7 +259,6 @@
       | #type_row_empty{}
       | #type_row_extend{}
       .
-
 
 %
 % Type variables

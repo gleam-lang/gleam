@@ -744,6 +744,20 @@ later_definition_test() ->
   test_infer(Cases).
 
 
+type_alias_test() ->
+  Cases = [
+    {
+      "type Html = String\n"
+      "pub fn go() { 1 }\n"
+      ,
+      "module {"
+      " fn go() -> Int"
+      "}"
+    }
+  ],
+  test_infer(Cases).
+
+
 type_annotation_test() ->
   Cases = [
     {
