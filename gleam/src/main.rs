@@ -10,6 +10,21 @@ mod ast;
 mod pattern;
 mod typ;
 
+#[macro_use]
+extern crate clap;
+use clap::{App, AppSettings, SubCommand};
+
 fn main() {
-    println!("Hello, world!");
+    match App::new("gleam")
+        .author("Louis Pilfold <louis@lpil.uk>")
+        .setting(AppSettings::SubcommandRequiredElseHelp)
+        .setting(AppSettings::ColoredHelp)
+        .version(crate_version!())
+        .subcommand(SubCommand::with_name("hello").about("Say hello!"))
+        .get_matches()
+        .subcommand_name()
+    {
+        Some("hello") => println!("Hello, sailor!"),
+        _ => unreachable!(),
+    }
 }

@@ -43,6 +43,12 @@ pub enum Pattern {
         head: Box<Pattern>,
         tail: Box<Pattern>,
     },
+
+    Enum {
+        meta: Meta,
+        name: String,
+        args: Vec<Pattern>,
+    },
 }
 
 impl Pattern {
@@ -56,6 +62,7 @@ impl Pattern {
             Pattern::Var { meta, .. } => meta,
             Pattern::Nil { meta, .. } => meta,
             Pattern::Cons { meta, .. } => meta,
+            Pattern::Enum { meta, .. } => meta,
         }
     }
 }
