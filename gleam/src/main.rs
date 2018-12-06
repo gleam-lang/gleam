@@ -15,6 +15,9 @@ mod typ;
 extern crate clap;
 use clap::{App, AppSettings, SubCommand};
 
+#[macro_use]
+extern crate im;
+
 fn main() {
     match App::new("gleam")
         .author("Louis Pilfold <louis@lpil.uk>")

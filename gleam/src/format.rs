@@ -1,9 +1,14 @@
+//!  This module implements the functionality described in
+//!  ["Strictly Pretty" (2000) by Christian Lindig][0], with a few
+//!  extensions.
+//!
+//!  [0]: http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.34.2200
+
 #![allow(dead_code)]
 
-// TODO: Use im vector rather than VecDeque?
+use im::vector::Vector;
 
-use std::collections::VecDeque;
-
+#[derive(Debug, Clone)]
 pub enum Document {
     /// Returns a document entity used to represent nothingness
     Nil,
@@ -18,66 +23,38 @@ pub enum Document {
     Break { broken: String, unbroken: String },
 
     /// Join 2 documents together
-    Cons {
-        left: Box<Document>,
-        right: Box<Document>,
-    },
+    Cons(Box<Document>, Box<Document>),
 
     /// Nests the given document by the given indent
-    Nest {
-        indent: isize,
-        contents: Box<Document>,
-    },
+    Nest(isize, Box<Document>),
 
     /// Nests the given document to the current cursor position
-    NestCurrent { contents: Box<Document> },
+    NestCurrent(Box<Document>),
 
     /// Nests the given document to the current cursor position
-    Group { contents: Box<Document> },
+    Group(Box<Document>),
+
+    /// A string to render
+    String(String),
 }
 
+#[derive(Debug, Clone)]
 enum Mode {
     Broken,
     Unbroken,
 }
 
-//   defp fits?(limit, [{indent, m, doc_cons(x, y)} | t]) do
-//     fits?(limit, [{indent, m, x} | [{indent, m, y} | t]])
-//   end
-
-//   # Indent is never used in `fits?/2`, why do we have clauses for it?
-//   defp fits?(limit, [{indent, m, doc_nest(x, :current)} | t]) do
-//     fits?(limit, [{indent, m, x} | t])
-//   end
-
-//   # Indent is never used in `fits?/2`, why do we have clauses for it?
-//   defp fits?(limit, [{indent, m, doc_nest(x, i)} | t]) do
-//     fits?(limit, [{indent + i, m, x} | t])
-//   end
-
-//   defp fits?(limit, [{_, _, s} | t]) when is_binary(s) do
-//     fits?((limit - byte_size(s)), t)
-//   end
-
-//   defp fits?(limit, [{_, :unbroken, doc_break(s, _)} | t]) do
-//     fits?((limit - byte_size(s)), t)
-//   end
-
-//   defp fits?(limit, [{indent, _, doc_group(x)} | t]) do
-//     fits?(limit, [{indent, :unbroken, x} | t])
-//   end
-
-fn fits(limit: isize, mut docs: VecDeque<(usize, Mode, Document)>) -> bool {
+fn fits(limit: isize, mut docs: Vector<(Mode, Document)>) -> bool {
     if limit < 0 {
         return false;
     };
 
-    let (indent, mode, doc) = match docs.pop_front() {
-        Some(triple) => triple,
+    let (mode, document) = match docs.pop_front() {
+        Some(pair) => pair,
         None => return true,
     };
 
-    match doc {
+    match document {
         Document::Line => true,
         Document::Nil => fits(limit, docs),
         Document::Line => unimplemented!(),
@@ -86,9 +63,151 @@ fn fits(limit: isize, mut docs: VecDeque<(usize, Mode, Document)>) -> bool {
             Mode::Broken => true,
             Mode::Unbroken => unimplemented!(),
         },
-        Document::Cons { left, right } => unimplemented!(),
-        Document::Nest { indent, contents } => unimplemented!(),
-        Document::NestCurrent { contents } => unimplemented!(),
-        Document::Group { contents } => unimplemented!(),
+        Document::Cons(left, right) => {
+            docs.push_front((mode.clone(), *left));
+            docs.push_front((mode, *right));
+            fits(limit, docs)
+        }
+        Document::Nest(_, contents) => {
+            docs.push_front((mode, *contents));
+            fits(limit, docs)
+        }
+        Document::NestCurrent(contents) => {
+            docs.push_front((mode, *contents));
+            fits(limit, docs)
+        }
+        Document::Group(contents) => {
+            docs.push_front((Mode::Unbroken, *contents));
+            fits(limit, docs)
+        }
+        Document::String(contents) => fits(limit - contents.len() as isize, docs),
     }
+}
+
+#[test]
+fn fits_test() {
+    use self::Document::*;
+    use self::Mode::*;
+
+    // Negative limits never fit
+    assert!(!fits(-1, vector![]));
+
+    // If no more documents it always fits
+    assert!(fits(0, vector![]));
+
+    // ForceBreak never fits
+    assert!(!fits(100, vector![(Unbroken, ForceBreak)]));
+    assert!(!fits(100, vector![(Broken, ForceBreak)]));
+
+    // Break in broken mode always fits
+    assert!(fits(
+        0,
+        vector![(
+            Broken,
+            Break {
+                broken: "".to_string(),
+                unbroken: "".to_string()
+            }
+        )]
+    ));
+
+    //     // Break in Unbroken mode fits if `unbroken` fits
+    //     assert!(!fits(
+    //         0,
+    //         vector![(
+    //             Broken,
+    //             Break {
+    //                 broken: "".to_string(),
+    //                 unbroken: "123".to_string()
+    //             }
+    //         )]
+    //     ));
+
+    // Line always fits
+    assert!(fits(0, vector![(Broken, Line)]));
+    assert!(fits(0, vector![(Unbroken, Line)]));
+
+    // String fits if smaller than limit
+    assert!(fits(5, vector![(Broken, String("Hello".to_string()))]));
+    assert!(fits(5, vector![(Unbroken, String("Hello".to_string()))]));
+    assert!(!fits(4, vector![(Broken, String("Hello".to_string()))]));
+    assert!(!fits(4, vector![(Unbroken, String("Hello".to_string()))]));
+
+    // Cons fits if combined smaller than limit
+    assert!(fits(
+        2,
+        vector![(
+            Broken,
+            Cons(
+                Box::new(String("1".to_string())),
+                Box::new(String("2".to_string()))
+            )
+        )]
+    ));
+    assert!(fits(
+        2,
+        vector![(
+            Unbroken,
+            Cons(
+                Box::new(String("1".to_string())),
+                Box::new(String("2".to_string()))
+            )
+        )]
+    ));
+    assert!(!fits(
+        1,
+        vector![(
+            Broken,
+            Cons(
+                Box::new(String("1".to_string())),
+                Box::new(String("2".to_string()))
+            )
+        )]
+    ));
+    assert!(!fits(
+        1,
+        vector![(
+            Unbroken,
+            Cons(
+                Box::new(String("1".to_string())),
+                Box::new(String("2".to_string()))
+            )
+        )]
+    ));
+
+    // Nest fits if combined smaller than limit
+    assert!(fits(
+        2,
+        vector![(Broken, Nest(1, Box::new(String("12".to_string())),))]
+    ));
+    assert!(fits(
+        2,
+        vector![(Unbroken, Nest(1, Box::new(String("12".to_string())),))]
+    ));
+    assert!(!fits(
+        1,
+        vector![(Broken, Nest(1, Box::new(String("12".to_string())),))]
+    ));
+    assert!(!fits(
+        1,
+        vector![(Unbroken, Nest(1, Box::new(String("12".to_string()))))]
+    ));
+
+    // Nest fits if combined smaller than limit
+    assert!(fits(
+        2,
+        vector![(Broken, NestCurrent(Box::new(String("12".to_string())),))]
+    ));
+    assert!(fits(
+        2,
+        vector![(Unbroken, NestCurrent(Box::new(String("12".to_string())),))]
+    ));
+    assert!(!fits(
+        1,
+        vector![(Broken, NestCurrent(Box::new(String("12".to_string())),))]
+    ));
+    assert!(!fits(
+        1,
+        vector![(Unbroken, NestCurrent(Box::new(String("12".to_string()))))]
+    ));
 }
