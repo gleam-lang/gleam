@@ -7,6 +7,7 @@
 // - https://github.com/lalrpop/lalrpop/issues/323#issuecomment-366681594
 
 mod ast;
+mod format;
 mod pattern;
 mod typ;
 
