@@ -57,11 +57,10 @@ fn fits(limit: isize, mut docs: Vector<(Mode, Document)>) -> bool {
     match document {
         Document::Line => true,
         Document::Nil => fits(limit, docs),
-        Document::Line => unimplemented!(),
         Document::ForceBreak => false,
-        Document::Break { .. } => match mode {
-            Mode::Broken => true,
-            Mode::Unbroken => unimplemented!(),
+        Document::Break { broken, unbroken } => match mode {
+            Mode::Broken => fits(limit - broken.len() as isize, docs),
+            Mode::Unbroken => fits(limit - unbroken.len() as isize, docs),
         },
         Document::Cons(left, right) => {
             docs.push_front((mode.clone(), *left));
@@ -99,29 +98,49 @@ fn fits_test() {
     assert!(!fits(100, vector![(Unbroken, ForceBreak)]));
     assert!(!fits(100, vector![(Broken, ForceBreak)]));
 
-    // Break in broken mode always fits
+    // Break in Broken fits if `broken` fits
     assert!(fits(
-        0,
+        2,
         vector![(
             Broken,
             Break {
-                broken: "".to_string(),
+                broken: "12".to_string(),
+                unbroken: "".to_string()
+            }
+        )]
+    ));
+    assert!(!fits(
+        1,
+        vector![(
+            Broken,
+            Break {
+                broken: "12".to_string(),
                 unbroken: "".to_string()
             }
         )]
     ));
 
-    //     // Break in Unbroken mode fits if `unbroken` fits
-    //     assert!(!fits(
-    //         0,
-    //         vector![(
-    //             Broken,
-    //             Break {
-    //                 broken: "".to_string(),
-    //                 unbroken: "123".to_string()
-    //             }
-    //         )]
-    //     ));
+    // Break in Unbroken mode fits if `unbroken` fits
+    assert!(fits(
+        3,
+        vector![(
+            Unbroken,
+            Break {
+                broken: "".to_string(),
+                unbroken: "123".to_string()
+            }
+        )]
+    ));
+    assert!(!fits(
+        2,
+        vector![(
+            Unbroken,
+            Break {
+                broken: "".to_string(),
+                unbroken: "123".to_string()
+            }
+        )]
+    ));
 
     // Line always fits
     assert!(fits(0, vector![(Broken, Line)]));
