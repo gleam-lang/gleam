@@ -7,12 +7,16 @@
 // - https://github.com/lalrpop/lalrpop/issues/323#issuecomment-366681594
 
 mod ast;
+mod format;
 mod pattern;
 mod typ;
 
 #[macro_use]
 extern crate clap;
 use clap::{App, AppSettings, SubCommand};
+
+#[macro_use]
+extern crate im;
 
 fn main() {
     match App::new("gleam")
