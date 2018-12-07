@@ -392,3 +392,7 @@ fn concat_test() {
     );
     assert_eq!(expected, concat(docs));
 }
+
+pub fn cons(a: Document, b: Document) -> Document {
+    Document::Cons(Box::new(a), Box::new(b))
+}

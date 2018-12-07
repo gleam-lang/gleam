@@ -56,6 +56,7 @@ pub enum Statement<T> {
         meta: Meta,
         public: bool,
         args: Vec<Type>,
+        name: String,
         retrn: Type,
         module: String,
         fun: String,

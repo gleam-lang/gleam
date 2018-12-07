@@ -6,3 +6,7 @@ authors = ["Louis Pilfold <louis@lpil.uk>"]
 [dependencies]
 clap = "2"
 im = "12"
+itertools = "0.7"
+
+[dev-dependencies]
+pretty_assertions = "0.5"
