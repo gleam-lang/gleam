@@ -8,7 +8,7 @@
 
 use im::vector::Vector;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Document {
     /// Returns a document entity used to represent nothingness
     Nil,
@@ -366,4 +366,29 @@ fn format_test() {
         }),
     );
     assert_eq!("broken".to_string(), format(100, doc));
+}
+
+pub fn concat(docs: Vec<Document>) -> Document {
+    docs.into_iter().rev().fold(Document::Nil, |acc, doc| {
+        Document::Cons(Box::new(doc), Box::new(acc))
+    })
+}
+
+#[test]
+fn concat_test() {
+    use self::Document::*;
+
+    let docs = vec![
+        Text("1".to_string()),
+        Text("2".to_string()),
+        Text("3".to_string()),
+    ];
+    let expected = Cons(
+        Box::new(Text("1".to_string())),
+        Box::new(Cons(
+            Box::new(Text("2".to_string())),
+            Box::new(Cons(Box::new(Text("3".to_string())), Box::new(Nil))),
+        )),
+    );
+    assert_eq!(expected, concat(docs));
 }

@@ -5,13 +5,13 @@ use super::typ;
 
 #[derive(Debug)]
 pub struct Module<T> {
-    name: String,
-    statements: Vec<Statement<T>>,
+    pub name: String,
+    pub statements: Vec<Statement<T>>,
 }
 
 #[derive(Debug)]
 pub struct Arg {
-    name: String,
+    pub name: String,
 }
 
 #[derive(Debug)]
