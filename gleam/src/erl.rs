@@ -1,6 +1,11 @@
-use ast::{Meta, Module, Statement, Type};
-use pretty;
-use pretty::Document::{self, *};
+#![allow(dead_code)]
+
+#[cfg(test)]
+use crate::ast::{Meta, Type};
+
+use crate::ast::{Module, Statement};
+use crate::pretty;
+use crate::pretty::Document::{self, *};
 
 const INDENT: isize = 2;
 
@@ -134,6 +139,7 @@ add_ints(A, B) ->
 -export([map/0]).
 map() ->
   maps:new().
-".to_string();
+"
+    .to_string();
     assert_eq!(expected, module(m));
 }

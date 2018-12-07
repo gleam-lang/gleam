@@ -13,16 +13,9 @@ mod pretty;
 mod typ;
 
 #[macro_use]
-extern crate clap;
-#[macro_use]
 extern crate im;
-extern crate itertools;
 
-#[cfg(test)]
-#[macro_use]
-extern crate pretty_assertions;
-
-use clap::{App, AppSettings, SubCommand};
+use clap::{crate_version, App, AppSettings, SubCommand};
 
 fn main() {
     match App::new("gleam")
