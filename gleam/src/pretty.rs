@@ -322,12 +322,18 @@ fn fmt(b: &mut String, limit: isize, width: isize, mut docs: Vector<(isize, Mode
         }
 
         Document::Break { broken, unbroken } => {
-            let x = match mode {
-                Mode::Unbroken => unbroken,
-                Mode::Broken => broken,
+            let new_width = match mode {
+                Mode::Unbroken => {
+                    b.push_str(unbroken.as_str());
+                    width + unbroken.len() as isize
+                }
+                Mode::Broken => {
+                    b.push_str(broken.as_str());
+                    b.push_str("\n");
+                    b.push_str(" ".repeat(indent as usize).as_str());
+                    width + broken.len() as isize
+                }
             };
-            let new_width = width + x.len() as isize;
-            b.push_str(x.as_str());
             fmt(b, limit, new_width, docs);
         }
 
@@ -392,7 +398,7 @@ fn format_test() {
         broken: "broken".to_string(),
         unbroken: "unbroken".to_string(),
     };
-    assert_eq!("broken".to_string(), format(5, doc));
+    assert_eq!("broken\n".to_string(), format(5, doc));
 
     let doc = Nest(
         2,
@@ -419,7 +425,7 @@ fn format_test() {
             unbroken: "unbroken".to_string(),
         }),
     );
-    assert_eq!("broken".to_string(), format(100, doc));
+    assert_eq!("broken\n".to_string(), format(100, doc));
 }
 
 pub fn nil() -> Document {
@@ -432,6 +438,13 @@ pub fn line() -> Document {
 
 pub fn force_break() -> Document {
     Document::ForceBreak
+}
+
+pub fn delim(d: &str) -> Document {
+    Document::Break {
+        broken: d.to_string(),
+        unbroken: format!("{} ", d),
+    }
 }
 
 impl Document {
@@ -453,5 +466,9 @@ impl Document {
 
     pub fn format(self, limit: isize) -> String {
         format(limit, self)
+    }
+
+    pub fn surround(self, open: impl Documentable, closed: impl Documentable) -> Document {
+        open.to_doc().append(self).append(closed)
     }
 }

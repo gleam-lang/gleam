@@ -197,6 +197,7 @@ pub enum Expr<T> {
 
     Enum {
         meta: Meta,
+        name: String,
         typ: T,
         args: Vec<Expr<T>>,
     },
