@@ -15,6 +15,10 @@ mod typ;
 #[macro_use]
 extern crate im;
 
+#[cfg(test)]
+#[macro_use]
+extern crate pretty_assertions;
+
 use clap::{crate_version, App, AppSettings, SubCommand};
 
 fn main() {

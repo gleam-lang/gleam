@@ -8,6 +8,60 @@
 
 use im::vector::Vector;
 
+pub trait Documentable {
+    fn to_doc(self) -> Document;
+}
+
+impl Documentable for &'static str {
+    fn to_doc(self) -> Document {
+        Document::Text(self.to_string())
+    }
+}
+
+impl Documentable for String {
+    fn to_doc(self) -> Document {
+        Document::Text(self)
+    }
+}
+
+impl Documentable for isize {
+    fn to_doc(self) -> Document {
+        Document::Text(format!("{}", self))
+    }
+}
+
+impl Documentable for i64 {
+    fn to_doc(self) -> Document {
+        Document::Text(format!("{}", self))
+    }
+}
+
+impl Documentable for usize {
+    fn to_doc(self) -> Document {
+        Document::Text(format!("{}", self))
+    }
+}
+
+impl Documentable for f64 {
+    fn to_doc(self) -> Document {
+        Document::Text(format!("{}", self))
+    }
+}
+
+impl Documentable for Document {
+    fn to_doc(self) -> Document {
+        self
+    }
+}
+
+impl Documentable for Vec<Document> {
+    fn to_doc(self) -> Document {
+        self.into_iter().rev().fold(Document::Nil, |acc, doc| {
+            Document::Cons(Box::new(doc), Box::new(acc))
+        })
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Document {
     /// Returns a document entity used to represent nothingness
@@ -368,31 +422,36 @@ fn format_test() {
     assert_eq!("broken".to_string(), format(100, doc));
 }
 
-pub fn concat(docs: Vec<Document>) -> Document {
-    docs.into_iter().rev().fold(Document::Nil, |acc, doc| {
-        Document::Cons(Box::new(doc), Box::new(acc))
-    })
+pub fn nil() -> Document {
+    Document::Nil
 }
 
-#[test]
-fn concat_test() {
-    use self::Document::*;
-
-    let docs = vec![
-        Text("1".to_string()),
-        Text("2".to_string()),
-        Text("3".to_string()),
-    ];
-    let expected = Cons(
-        Box::new(Text("1".to_string())),
-        Box::new(Cons(
-            Box::new(Text("2".to_string())),
-            Box::new(Cons(Box::new(Text("3".to_string())), Box::new(Nil))),
-        )),
-    );
-    assert_eq!(expected, concat(docs));
+pub fn line() -> Document {
+    Document::Line
 }
 
-pub fn cons(a: Document, b: Document) -> Document {
-    Document::Cons(Box::new(a), Box::new(b))
+pub fn force_break() -> Document {
+    Document::ForceBreak
+}
+
+impl Document {
+    pub fn group(self) -> Document {
+        Document::Group(Box::new(self))
+    }
+
+    pub fn nest(self, indent: isize) -> Document {
+        Document::Nest(indent, Box::new(self))
+    }
+
+    pub fn nest_current(self) -> Document {
+        Document::NestCurrent(Box::new(self))
+    }
+
+    pub fn append(self, x: impl Documentable) -> Document {
+        Document::Cons(Box::new(self), Box::new(x.to_doc()))
+    }
+
+    pub fn format(self, limit: isize) -> String {
+        format(limit, self)
+    }
 }

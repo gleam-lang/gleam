@@ -8,6 +8,7 @@ edition = "2018"
 clap = "2"
 im = "12"
 itertools = "0.7"
+heck = "0.3"
 
 [dev-dependencies]
 pretty_assertions = "0.5"
