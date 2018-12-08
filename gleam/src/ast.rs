@@ -191,8 +191,8 @@ pub enum Expr<T> {
         meta: Meta,
         typ: T,
         pattern: Pattern,
-        left: Box<Expr<T>>,
-        right: Box<Expr<T>>,
+        value: Box<Expr<T>>,
+        then: Box<Expr<T>>,
     },
 
     Enum {

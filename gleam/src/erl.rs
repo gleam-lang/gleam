@@ -4,6 +4,7 @@
 use crate::ast::{Meta, Type};
 
 use crate::ast::{Arg, BinOp, Expr, Module, Scope, Statement};
+use crate::pattern::Pattern;
 use crate::pretty::*;
 
 use heck::{CamelCase, SnakeCase};
@@ -110,7 +111,7 @@ fn string(value: String) -> Document {
     value.to_doc().surround("<<\"", "\">>")
 }
 
-// TODO: Wrap elem in `begin end` if it is a `Seq`
+// TODO: Wrap elem in `begin end` if it is a `Seq` or `Let`
 fn tuple<T>(elems: Vec<Expr<T>>, mut env: &ExprEnv) -> Document {
     elems
         .into_iter()
@@ -157,8 +158,53 @@ fn bin_op<T>(name: BinOp, left: Expr<T>, right: Expr<T>, mut env: &ExprEnv) -> D
         .append(expr(right, &mut env))
 }
 
-fn var(name: String) -> Document {
-    name.to_camel_case().to_doc()
+fn let_<T>(p: Pattern, value: Expr<T>, then: Expr<T>, mut env: &ExprEnv) -> Document {
+    pattern(p, &mut env)
+        .append(" =")
+        .append(break_("", " "))
+        .append(expr(value, &mut env).nest(INDENT))
+        .append(",")
+        .append(line())
+        .append(expr(then, &mut env))
+}
+
+fn pattern(p: Pattern, mut env: &ExprEnv) -> Document {
+    match p {
+        Pattern::Var { name, .. } => var(name, Scope::Local::<()>, &mut env),
+        Pattern::Int { .. } => unimplemented!(),
+        Pattern::Float { .. } => unimplemented!(),
+        Pattern::Atom { .. } => unimplemented!(),
+        Pattern::String { .. } => unimplemented!(),
+        Pattern::Tuple { .. } => unimplemented!(),
+        Pattern::Nil { .. } => unimplemented!(),
+        Pattern::Cons { .. } => unimplemented!(),
+        Pattern::Enum { .. } => unimplemented!(),
+    }
+}
+
+fn var<T>(name: String, scope: Scope<T>, mut env: &ExprEnv) -> Document {
+    match scope {
+        Scope::Local => name.to_camel_case().to_doc(),
+        Scope::Module => unimplemented!(),
+        Scope::Constant { value } => expr(*value, &mut env),
+    }
+}
+
+fn enum_<T>(name: String, args: Vec<Expr<T>>, mut env: &ExprEnv) -> Document {
+    if args.len() == 0 {
+        atom(name.to_snake_case())
+    } else {
+        atom(name.to_snake_case())
+            .append(delim(","))
+            .append(
+                args.into_iter()
+                    .map(|e| expr(e, &mut env))
+                    .intersperse(delim(","))
+                    .collect::<Vec<_>>(),
+            )
+            .nest_current()
+            .surround("{", "}")
+    }
 }
 
 fn expr<T>(expression: Expr<T>, mut env: &ExprEnv) -> Document {
@@ -169,36 +215,26 @@ fn expr<T>(expression: Expr<T>, mut env: &ExprEnv) -> Document {
         Expr::String { value, .. } => string(value),
         Expr::Tuple { elems, .. } => tuple(elems, &mut env),
         Expr::Seq { first, then, .. } => seq(*first, *then, &mut env),
-        Expr::Var { name, .. } => var(name),
+        Expr::Var { name, scope, .. } => var(name, scope, &mut env),
         Expr::Fun { .. } => unimplemented!(),
         Expr::Nil { .. } => "[]".to_doc(),
         Expr::Cons { .. } => unimplemented!(),
         Expr::Call { .. } => unimplemented!(),
-        Expr::BinOp {
-            name, left, right, ..
-        } => bin_op(name, *left, *right, &mut env),
-        Expr::Let { .. } => unimplemented!(),
-        Expr::Enum { name, args, .. } => {
-            if args.len() == 0 {
-                atom(name.to_snake_case())
-            } else {
-                atom(name.to_snake_case())
-                    .append(delim(","))
-                    .append(
-                        args.into_iter()
-                            .map(|e| expr(e, &mut env))
-                            .intersperse(delim(","))
-                            .collect::<Vec<_>>(),
-                    )
-                    .nest_current()
-                    .surround("{", "}")
-            }
-        }
+        Expr::Enum { name, args, .. } => enum_(name, args, &mut env),
         Expr::Case { .. } => unimplemented!(),
-        Expr::RecordNil { .. } => unimplemented!(),
+        Expr::RecordNil { .. } => "#{}".to_doc(),
         Expr::RecordCons { .. } => unimplemented!(),
         Expr::RecordSelect { .. } => unimplemented!(),
         Expr::ModuleSelect { .. } => unimplemented!(),
+        Expr::BinOp {
+            name, left, right, ..
+        } => bin_op(name, *left, *right, &mut env),
+        Expr::Let {
+            pattern,
+            value,
+            then,
+            ..
+        } => let_(pattern, *value, *then, &mut env),
     }
 }
 
@@ -346,6 +382,13 @@ fn expr_test() {
                 meta: Meta {},
                 public: false,
                 args: vec![],
+                name: "record_nil".to_string(),
+                body: Expr::RecordNil { meta: Meta {} },
+            },
+            Statement::Fun {
+                meta: Meta {},
+                public: false,
+                args: vec![],
                 name: "tup".to_string(),
                 body: Expr::Tuple {
                     meta: Meta {},
@@ -444,15 +487,25 @@ fn expr_test() {
             Statement::Fun {
                 meta: Meta {},
                 public: false,
-                args: vec![Arg {
-                    name: "some_arg".to_string(),
-                }],
-                name: "arg".to_string(),
-                body: Expr::Var {
+                args: vec![],
+                name: "let".to_string(),
+                body: Expr::Let {
                     meta: Meta {},
-                    name: "some_arg".to_string(),
+                    pattern: Pattern::Var {
+                        meta: Meta {},
+                        name: "OneTwo".to_string(),
+                    },
                     typ: (),
-                    scope: Scope::Local,
+                    value: Box::new(Expr::Int {
+                        meta: Meta {},
+                        value: 1,
+                    }),
+                    then: Box::new(Expr::Var {
+                        meta: Meta {},
+                        typ: (),
+                        scope: Scope::Local,
+                        name: "one_two".to_string(),
+                    }),
                 },
             },
         ],
@@ -470,6 +523,9 @@ float() ->
 
 nil() ->
     [].
+
+record_nil() ->
+    #{}.
 
 tup() ->
     {1, 2.0}.
@@ -490,8 +546,9 @@ enum1() ->
 enum2() ->
     {'ok', 1, 2.0}.
 
-arg(SomeArg) ->
-    SomeArg.
+let() ->
+    OneTwo = 1,
+    OneTwo.
 "
     .to_string();
     assert_eq!(expected, module(m));
@@ -572,6 +629,54 @@ fn test_test() {
 bang_test() ->
     'ok'.
 -endif.
+"
+    .to_string();
+    assert_eq!(expected, module(m));
+}
+
+#[test]
+fn var_test() {
+    let m: Module<()> = Module {
+        name: "vars".to_string(),
+        statements: vec![
+            Statement::Fun {
+                meta: Meta {},
+                public: false,
+                args: vec![],
+                name: "arg".to_string(),
+                body: Expr::Var {
+                    meta: Meta {},
+                    name: "some_arg".to_string(),
+                    typ: (),
+                    scope: Scope::Local,
+                },
+            },
+            Statement::Fun {
+                meta: Meta {},
+                public: false,
+                args: vec![],
+                name: "some_arg".to_string(),
+                body: Expr::Var {
+                    meta: Meta {},
+                    name: "some_arg".to_string(),
+                    typ: (),
+                    scope: Scope::Constant {
+                        value: Box::new(Expr::Atom {
+                            meta: Meta {},
+                            value: "hello".to_string(),
+                        }),
+                    },
+                },
+            },
+        ],
+    };
+    let expected = "-module(vars).
+
+arg() ->
+    SomeArg.
+
+some_arg() ->
+    'hello'.
 "
     .to_string();
     assert_eq!(expected, module(m));
