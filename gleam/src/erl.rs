@@ -31,7 +31,7 @@ pub fn module<T>(module: Module<T>) -> String {
 
 fn statement<T>(statement: Statement<T>) -> Document {
     match statement {
-        Statement::Test { .. } => unimplemented!(),
+        Statement::Test { name, body, .. } => test(name, body),
         Statement::Enum { .. } => nil(),
         Statement::Import { .. } => nil(),
         Statement::ExternalType { .. } => nil(),
@@ -54,22 +54,39 @@ fn statement<T>(statement: Statement<T>) -> Document {
 }
 
 fn mod_fun<T>(public: bool, name: String, args: Vec<Arg>, body: Expr<T>) -> Document {
-    let args_doc = arg_list(
-        args.iter()
-            .map(|a| a.name.to_camel_case().to_doc())
-            .collect(),
-    );
+    let args_doc = args
+        .iter()
+        .map(|a| a.name.to_camel_case().to_doc())
+        .intersperse(delim(","))
+        .collect::<Vec<_>>()
+        .to_doc()
+        .nest_current()
+        .surround("(", ")")
+        .group();
+
+    let body_doc = expr(body, &mut ExprEnv::default());
+
     export(public, &name, args.len())
         .append(line())
-        .append(name.to_doc())
+        .append(name)
         .append(args_doc)
-        .append(" ->".to_doc())
-        .append(
-            line()
-                .append(expr(body, &mut ExprEnv::default()))
-                .append(".")
-                .nest(INDENT),
-        )
+        .append(" ->")
+        .append(line().append(body_doc).nest(INDENT))
+        .append(".")
+        .append(line())
+}
+
+fn test<T>(name: String, body: Expr<T>) -> Document {
+    let body_doc = expr(body, &mut ExprEnv::default());
+    line()
+        .append("-ifdef(TEST).")
+        .append(line())
+        .append(name)
+        .append("_test() ->")
+        .append(line().append(body_doc).nest(INDENT))
+        .append(".")
+        .append(line())
+        .append("-endif.")
         .append(line())
 }
 
@@ -88,13 +105,25 @@ fn atom(value: String) -> Document {
     value.to_doc().surround("'", "'")
 }
 
+fn tuple<T>(elems: Vec<Expr<T>>, mut env: &ExprEnv) -> Document {
+    elems
+        .into_iter()
+        .map(|e| expr(e, &mut env))
+        .intersperse(delim(","))
+        .collect::<Vec<_>>()
+        .to_doc()
+        .nest_current()
+        .surround("{", "}")
+        .group()
+}
+
 fn expr<T>(expression: Expr<T>, mut env: &ExprEnv) -> Document {
     match expression {
         Expr::Int { value, .. } => value.to_doc(),
         Expr::Float { value, .. } => value.to_doc(),
         Expr::Atom { value, .. } => atom(value),
         Expr::String { .. } => unimplemented!(),
-        Expr::Tuple { .. } => unimplemented!(),
+        Expr::Tuple { elems, .. } => tuple(elems, &mut env),
         Expr::Seq { .. } => unimplemented!(),
         Expr::Var { .. } => unimplemented!(),
         Expr::Fun { .. } => unimplemented!(),
@@ -107,17 +136,16 @@ fn expr<T>(expression: Expr<T>, mut env: &ExprEnv) -> Document {
             if args.len() == 0 {
                 atom(name.to_snake_case())
             } else {
-                unimplemented!()
-
-                // name.to_doc().append(
-                //     args.into_iter()
-                //         .map(|e| expr(e, &mut env))
-                //         .intersperse(delim(";"))
-                //         .collect::<Vec<_>>()
-                //         .to_doc()
-                //         .nest_current()
-                //         .surround("(", ")"),
-                // )
+                atom(name.to_snake_case())
+                    .append(delim(","))
+                    .append(
+                        args.into_iter()
+                            .map(|e| expr(e, &mut env))
+                            .intersperse(delim(","))
+                            .collect::<Vec<_>>(),
+                    )
+                    .nest_current()
+                    .surround("{", "}")
             }
         }
         Expr::Case { .. } => unimplemented!(),
@@ -126,16 +154,6 @@ fn expr<T>(expression: Expr<T>, mut env: &ExprEnv) -> Document {
         Expr::RecordSelect { .. } => unimplemented!(),
         Expr::ModuleSelect { .. } => unimplemented!(),
     }
-}
-
-fn arg_list(args: Vec<Document>) -> Document {
-    args.into_iter()
-        .intersperse(delim(","))
-        .collect::<Vec<_>>()
-        .to_doc()
-        .nest_current()
-        .surround("(", ")")
-        .group()
 }
 
 fn external_fun(public: bool, name: String, module: String, fun: String, arity: usize) -> Document {
@@ -282,6 +300,26 @@ fn expr_test() {
                 meta: Meta {},
                 public: false,
                 args: vec![],
+                name: "tup".to_string(),
+                body: Expr::Tuple {
+                    meta: Meta {},
+                    typ: (),
+                    elems: vec![
+                        Expr::Int {
+                            meta: Meta {},
+                            value: 1,
+                        },
+                        Expr::Float {
+                            meta: Meta {},
+                            value: 2.0,
+                        },
+                    ],
+                },
+            },
+            Statement::Fun {
+                meta: Meta {},
+                public: false,
+                args: vec![],
                 name: "enum1".to_string(),
                 body: Expr::Enum {
                     meta: Meta {},
@@ -290,27 +328,27 @@ fn expr_test() {
                     args: vec![],
                 },
             },
-            // Statement::Fun {
-            //     meta: Meta {},
-            //     public: false,
-            //     args: vec![],
-            //     name: "enum2".to_string(),
-            //     body: Expr::Enum {
-            //         meta: Meta {},
-            //         name: "Ok".to_string(),
-            //         typ: (),
-            //         args: vec![
-            //             Expr::Int {
-            //                 meta: Meta {},
-            //                 value: 1,
-            //             },
-            //             Expr::Float {
-            //                 meta: Meta {},
-            //                 value: 2.0,
-            //             },
-            //         ],
-            //     },
-            // },
+            Statement::Fun {
+                meta: Meta {},
+                public: false,
+                args: vec![],
+                name: "enum2".to_string(),
+                body: Expr::Enum {
+                    meta: Meta {},
+                    name: "Ok".to_string(),
+                    typ: (),
+                    args: vec![
+                        Expr::Int {
+                            meta: Meta {},
+                            value: 1,
+                        },
+                        Expr::Float {
+                            meta: Meta {},
+                            value: 2.0,
+                        },
+                    ],
+                },
+            },
         ],
     };
     let expected = "-module(term).
@@ -327,12 +365,15 @@ float() ->
 nil() ->
     [].
 
+tup() ->
+    {1, 2.0}.
+
 enum1() ->
     'nil'.
+
+enum2() ->
+    {'ok', 1, 2.0}.
 "
-    //
-    // enum2() ->
-    //     {'ok', 1, 2.0}.
     .to_string();
     assert_eq!(expected, module(m));
 }
@@ -388,6 +429,30 @@ some_function(ArgOne,
               ArgSix,
               ArgThatIsLong) ->
     'ok'.
+"
+    .to_string();
+    assert_eq!(expected, module(m));
+}
+
+#[test]
+fn test_test() {
+    let m: Module<()> = Module {
+        name: "term".to_string(),
+        statements: vec![Statement::Test {
+            meta: Meta {},
+            name: "bang".to_string(),
+            body: Expr::Atom {
+                meta: Meta {},
+                value: "ok".to_string(),
+            },
+        }],
+    };
+    let expected = "-module(term).
+
+-ifdef(TEST).
+bang_test() ->
+    'ok'.
+-endif.
 "
     .to_string();
     assert_eq!(expected, module(m));

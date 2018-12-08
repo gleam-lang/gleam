@@ -44,7 +44,7 @@ impl Documentable for usize {
 
 impl Documentable for f64 {
     fn to_doc(self) -> Document {
-        Document::Text(format!("{}", self))
+        Document::Text(format!("{:?}", self))
     }
 }
 
