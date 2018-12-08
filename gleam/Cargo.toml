@@ -5,9 +5,13 @@ authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2018"
 
 [dependencies]
+# Command line interface
 clap = "2"
+# Immutable data structures
 im = "12"
+# Extra iter methods
 itertools = "0.7"
+# String case conversion
 heck = "0.3"
 
 [dev-dependencies]

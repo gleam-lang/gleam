@@ -440,6 +440,13 @@ pub fn force_break() -> Document {
     Document::ForceBreak
 }
 
+pub fn break_(broken: &str, unbroken: &str) -> Document {
+    Document::Break {
+        broken: broken.to_string(),
+        unbroken: unbroken.to_string(),
+    }
+}
+
 pub fn delim(d: &str) -> Document {
     Document::Break {
         broken: d.to_string(),

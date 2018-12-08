@@ -3,7 +3,7 @@
 #[cfg(test)]
 use crate::ast::{Meta, Type};
 
-use crate::ast::{Arg, Expr, Module, Statement};
+use crate::ast::{Arg, BinOp, Expr, Module, Scope, Statement};
 use crate::pretty::*;
 
 use heck::{CamelCase, SnakeCase};
@@ -105,6 +105,12 @@ fn atom(value: String) -> Document {
     value.to_doc().surround("'", "'")
 }
 
+// TODO: Escape
+fn string(value: String) -> Document {
+    value.to_doc().surround("<<\"", "\">>")
+}
+
+// TODO: Wrap elem in `begin end` if it is a `Seq`
 fn tuple<T>(elems: Vec<Expr<T>>, mut env: &ExprEnv) -> Document {
     elems
         .into_iter()
@@ -117,20 +123,60 @@ fn tuple<T>(elems: Vec<Expr<T>>, mut env: &ExprEnv) -> Document {
         .group()
 }
 
+fn seq<T>(first: Expr<T>, then: Expr<T>, mut env: &ExprEnv) -> Document {
+    expr(first, &mut env)
+        .append(",")
+        .append(line())
+        .append(expr(then, &mut env))
+}
+
+// TODO: Surround left or right in parens if required
+// TODO: Group nested bin_ops i.e. a |> b |> c
+fn bin_op<T>(name: BinOp, left: Expr<T>, right: Expr<T>, mut env: &ExprEnv) -> Document {
+    let op = match name {
+        BinOp::Pipe => "|>", // TODO: This is wrong.
+        BinOp::Lt => "<",
+        BinOp::LtEq => "=<",
+        BinOp::Eq => "=:=",
+        BinOp::GtEq => ">=",
+        BinOp::Gt => ">",
+        BinOp::AddInt => "+",
+        BinOp::AddFloat => "+",
+        BinOp::SubInt => "-",
+        BinOp::SubFloat => "-",
+        BinOp::MultInt => "*",
+        BinOp::MultFloat => "*",
+        BinOp::DivInt => "div",
+        BinOp::DivFloat => "/",
+    };
+
+    expr(left, &mut env)
+        .append(break_("", " "))
+        .append(op)
+        .append(" ")
+        .append(expr(right, &mut env))
+}
+
+fn var(name: String) -> Document {
+    name.to_camel_case().to_doc()
+}
+
 fn expr<T>(expression: Expr<T>, mut env: &ExprEnv) -> Document {
     match expression {
         Expr::Int { value, .. } => value.to_doc(),
         Expr::Float { value, .. } => value.to_doc(),
         Expr::Atom { value, .. } => atom(value),
-        Expr::String { .. } => unimplemented!(),
+        Expr::String { value, .. } => string(value),
         Expr::Tuple { elems, .. } => tuple(elems, &mut env),
-        Expr::Seq { .. } => unimplemented!(),
-        Expr::Var { .. } => unimplemented!(),
+        Expr::Seq { first, then, .. } => seq(*first, *then, &mut env),
+        Expr::Var { name, .. } => var(name),
         Expr::Fun { .. } => unimplemented!(),
         Expr::Nil { .. } => "[]".to_doc(),
         Expr::Cons { .. } => unimplemented!(),
         Expr::Call { .. } => unimplemented!(),
-        Expr::BinOp { .. } => unimplemented!(),
+        Expr::BinOp {
+            name, left, right, ..
+        } => bin_op(name, *left, *right, &mut env),
         Expr::Let { .. } => unimplemented!(),
         Expr::Enum { name, args, .. } => {
             if args.len() == 0 {
@@ -320,6 +366,52 @@ fn expr_test() {
                 meta: Meta {},
                 public: false,
                 args: vec![],
+                name: "string".to_string(),
+                body: Expr::String {
+                    meta: Meta {},
+                    value: "Hello there!".to_string(),
+                },
+            },
+            Statement::Fun {
+                meta: Meta {},
+                public: false,
+                args: vec![],
+                name: "seq".to_string(),
+                body: Expr::Seq {
+                    meta: Meta {},
+                    first: Box::new(Expr::Int {
+                        meta: Meta {},
+                        value: 1,
+                    }),
+                    then: Box::new(Expr::Int {
+                        meta: Meta {},
+                        value: 2,
+                    }),
+                },
+            },
+            Statement::Fun {
+                meta: Meta {},
+                public: false,
+                args: vec![],
+                name: "bin_op".to_string(),
+                body: Expr::BinOp {
+                    meta: Meta {},
+                    typ: (),
+                    name: BinOp::AddInt,
+                    left: Box::new(Expr::Int {
+                        meta: Meta {},
+                        value: 1,
+                    }),
+                    right: Box::new(Expr::Int {
+                        meta: Meta {},
+                        value: 2,
+                    }),
+                },
+            },
+            Statement::Fun {
+                meta: Meta {},
+                public: false,
+                args: vec![],
                 name: "enum1".to_string(),
                 body: Expr::Enum {
                     meta: Meta {},
@@ -349,6 +441,20 @@ fn expr_test() {
                     ],
                 },
             },
+            Statement::Fun {
+                meta: Meta {},
+                public: false,
+                args: vec![Arg {
+                    name: "some_arg".to_string(),
+                }],
+                name: "arg".to_string(),
+                body: Expr::Var {
+                    meta: Meta {},
+                    name: "some_arg".to_string(),
+                    typ: (),
+                    scope: Scope::Local,
+                },
+            },
         ],
     };
     let expected = "-module(term).
@@ -368,11 +474,24 @@ nil() ->
 tup() ->
     {1, 2.0}.
 
+string() ->
+    <<\"Hello there!\">>.
+
+seq() ->
+    1,
+    2.
+
+bin_op() ->
+    1 + 2.
+
 enum1() ->
     'nil'.
 
 enum2() ->
     {'ok', 1, 2.0}.
+
+arg(SomeArg) ->
+    SomeArg.
 "
     .to_string();
     assert_eq!(expected, module(m));
