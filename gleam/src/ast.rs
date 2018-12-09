@@ -290,10 +290,10 @@ impl Expr<typ::Type> {
 
 #[derive(Debug)]
 pub struct Clause<T> {
-    meta: Meta,
-    typ: T,
-    pattern: Box<Pattern>,
-    body: Box<Expr<T>>,
+    pub meta: Meta,
+    pub typ: T,
+    pub pattern: Box<Pattern>,
+    pub body: Box<Expr<T>>,
 }
 
 #[derive(Debug)]

@@ -3,7 +3,7 @@
 #[cfg(test)]
 use crate::ast::{Meta, Type};
 
-use crate::ast::{Arg, BinOp, Expr, Module, Scope, Statement};
+use crate::ast::{Arg, BinOp, Clause, Expr, Module, Scope, Statement};
 use crate::pattern::Pattern;
 use crate::pretty::*;
 
@@ -171,7 +171,7 @@ fn let_<T>(p: Pattern, value: Expr<T>, then: Expr<T>, mut env: &ExprEnv) -> Docu
 fn pattern(p: Pattern, mut env: &ExprEnv) -> Document {
     match p {
         Pattern::Var { name, .. } => var(name, Scope::Local::<()>, &mut env),
-        Pattern::Int { .. } => unimplemented!(),
+        Pattern::Int { value, .. } => value.to_doc(),
         Pattern::Float { .. } => unimplemented!(),
         Pattern::Atom { .. } => unimplemented!(),
         Pattern::String { .. } => unimplemented!(),
@@ -207,6 +207,31 @@ fn enum_<T>(name: String, args: Vec<Expr<T>>, mut env: &ExprEnv) -> Document {
     }
 }
 
+fn clause<T>(clause: Clause<T>, mut env: &ExprEnv) -> Document {
+    pattern(*clause.pattern, &mut env)
+        .append(" ->")
+        .append(break_("", " "))
+        .append(expr(*clause.body, &mut env).nest(INDENT).group())
+}
+
+fn clauses<T>(cs: Vec<Clause<T>>, mut env: &ExprEnv) -> Document {
+    cs.into_iter()
+        .map(|c| clause(c, &mut env))
+        .intersperse(line().append(break_("\n", "")))
+        .collect::<Vec<_>>()
+        .to_doc()
+}
+
+fn case<T>(subject: Expr<T>, cs: Vec<Clause<T>>, mut env: &ExprEnv) -> Document {
+    "case "
+        .to_doc()
+        .append(expr(subject, &mut env).group())
+        .append(" of")
+        .append(line().append(clauses(cs, &mut env)).nest(INDENT))
+        .append(line())
+        .append("end")
+}
+
 fn expr<T>(expression: Expr<T>, mut env: &ExprEnv) -> Document {
     match expression {
         Expr::Int { value, .. } => value.to_doc(),
@@ -221,11 +246,13 @@ fn expr<T>(expression: Expr<T>, mut env: &ExprEnv) -> Document {
         Expr::Cons { .. } => unimplemented!(),
         Expr::Call { .. } => unimplemented!(),
         Expr::Enum { name, args, .. } => enum_(name, args, &mut env),
-        Expr::Case { .. } => unimplemented!(),
         Expr::RecordNil { .. } => "#{}".to_doc(),
         Expr::RecordCons { .. } => unimplemented!(),
         Expr::RecordSelect { .. } => unimplemented!(),
         Expr::ModuleSelect { .. } => unimplemented!(),
+        Expr::Case {
+            subject, clauses, ..
+        } => case(*subject, clauses, &mut env),
         Expr::BinOp {
             name, left, right, ..
         } => bin_op(name, *left, *right, &mut env),
@@ -677,6 +704,48 @@ arg() ->
 
 some_arg() ->
     'hello'.
+"
+    .to_string();
+    assert_eq!(expected, module(m));
+}
+
+#[test]
+fn cast_test() {
+    let m: Module<()> = Module {
+        name: "my_mod".to_string(),
+        statements: vec![Statement::Fun {
+            meta: Meta {},
+            public: false,
+            args: vec![],
+            name: "go".to_string(),
+            body: Expr::Case {
+                meta: Meta {},
+                typ: (),
+                subject: Box::new(Expr::Int {
+                    meta: Meta {},
+                    value: 1,
+                }),
+                clauses: vec![Clause {
+                    meta: Meta {},
+                    typ: (),
+                    pattern: Box::new(Pattern::Int {
+                        meta: Meta {},
+                        value: 1,
+                    }),
+                    body: Box::new(Expr::Int {
+                        meta: Meta {},
+                        value: 1,
+                    }),
+                }],
+            },
+        }],
+    };
+    let expected = "-module(my_mod).
+
+go() ->
+    case 1 of
+        1 -> 1
+    end.
 "
     .to_string();
     assert_eq!(expected, module(m));
