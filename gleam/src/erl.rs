@@ -14,7 +14,7 @@ use std::char;
 const INDENT: isize = 4;
 
 #[derive(Debug, Clone, Default)]
-struct ExprEnv {}
+struct Env {}
 
 pub fn module<T>(module: Module<T>) -> String {
     format!("-module({}).", module.name)
@@ -65,7 +65,7 @@ fn mod_fun<T>(public: bool, name: String, args: Vec<Arg>, body: Expr<T>) -> Docu
         .surround("(", ")")
         .group();
 
-    let body_doc = expr(body, &mut ExprEnv::default());
+    let body_doc = expr(body, &mut Env::default());
 
     export(public, &name, args.len())
         .append(line())
@@ -78,7 +78,7 @@ fn mod_fun<T>(public: bool, name: String, args: Vec<Arg>, body: Expr<T>) -> Docu
 }
 
 fn test<T>(name: String, body: Expr<T>) -> Document {
-    let body_doc = expr(body, &mut ExprEnv::default());
+    let body_doc = expr(body, &mut Env::default());
     line()
         .append("-ifdef(TEST).")
         .append(line())
@@ -112,10 +112,13 @@ fn string(value: String) -> Document {
 }
 
 // TODO: Wrap elem in `begin end` if it is a `Seq` or `Let`
-fn tuple<T>(elems: Vec<Expr<T>>, mut env: &ExprEnv) -> Document {
+fn tuple<F, E>(f: F, elems: Vec<E>, mut env: &Env) -> Document
+where
+    F: Fn(E, &Env) -> Document,
+{
     elems
         .into_iter()
-        .map(|e| expr(e, &mut env))
+        .map(|e| f(e, &mut env))
         .intersperse(delim(","))
         .collect::<Vec<_>>()
         .to_doc()
@@ -124,7 +127,7 @@ fn tuple<T>(elems: Vec<Expr<T>>, mut env: &ExprEnv) -> Document {
         .group()
 }
 
-fn seq<T>(first: Expr<T>, then: Expr<T>, mut env: &ExprEnv) -> Document {
+fn seq<T>(first: Expr<T>, then: Expr<T>, mut env: &Env) -> Document {
     expr(first, &mut env)
         .append(",")
         .append(line())
@@ -133,7 +136,7 @@ fn seq<T>(first: Expr<T>, then: Expr<T>, mut env: &ExprEnv) -> Document {
 
 // TODO: Surround left or right in parens if required
 // TODO: Group nested bin_ops i.e. a |> b |> c
-fn bin_op<T>(name: BinOp, left: Expr<T>, right: Expr<T>, mut env: &ExprEnv) -> Document {
+fn bin_op<T>(name: BinOp, left: Expr<T>, right: Expr<T>, mut env: &Env) -> Document {
     let op = match name {
         BinOp::Pipe => "|>", // TODO: This is wrong.
         BinOp::Lt => "<",
@@ -158,7 +161,7 @@ fn bin_op<T>(name: BinOp, left: Expr<T>, right: Expr<T>, mut env: &ExprEnv) -> D
         .append(expr(right, &mut env))
 }
 
-fn let_<T>(p: Pattern, value: Expr<T>, then: Expr<T>, mut env: &ExprEnv) -> Document {
+fn let_<T>(p: Pattern, value: Expr<T>, then: Expr<T>, mut env: &Env) -> Document {
     pattern(p, &mut env)
         .append(" =")
         .append(break_("", " "))
@@ -168,21 +171,33 @@ fn let_<T>(p: Pattern, value: Expr<T>, then: Expr<T>, mut env: &ExprEnv) -> Docu
         .append(expr(then, &mut env))
 }
 
-fn pattern(p: Pattern, mut env: &ExprEnv) -> Document {
+fn pattern(p: Pattern, mut env: &Env) -> Document {
     match p {
         Pattern::Var { name, .. } => var(name, Scope::Local::<()>, &mut env),
         Pattern::Int { value, .. } => value.to_doc(),
-        Pattern::Float { .. } => unimplemented!(),
-        Pattern::Atom { .. } => unimplemented!(),
-        Pattern::String { .. } => unimplemented!(),
-        Pattern::Tuple { .. } => unimplemented!(),
-        Pattern::Nil { .. } => unimplemented!(),
-        Pattern::Cons { .. } => unimplemented!(),
-        Pattern::Enum { .. } => unimplemented!(),
+        Pattern::Float { value, .. } => value.to_doc(),
+        Pattern::Atom { value, .. } => atom(value),
+        Pattern::String { value, .. } => string(value),
+        Pattern::Tuple { elems, .. } => tuple(pattern, elems, &mut env),
+        Pattern::Nil { .. } => "[]".to_doc(),
+        Pattern::Cons { head, tail, .. } => cons(pattern, *head, *tail, &mut env),
+        Pattern::Enum { name, args, .. } => enum_(pattern_atom, pattern, name, args, &mut env),
     }
 }
 
-fn var<T>(name: String, scope: Scope<T>, mut env: &ExprEnv) -> Document {
+fn cons<F, E>(f: F, head: E, tail: E, mut env: &Env) -> Document
+where
+    F: Fn(E, &Env) -> Document,
+{
+    // TODO: Flatten nested cons into a list i.e. [1, 2, 3 | X] or [1, 2, 3, 4]
+    // TODO: Break, indent, etc
+    f(head, &mut env)
+        .append(" | ")
+        .append(f(tail, &mut env))
+        .surround("[", "]")
+}
+
+fn var<T>(name: String, scope: Scope<T>, mut env: &Env) -> Document {
     match scope {
         Scope::Local => name.to_camel_case().to_doc(),
         Scope::Module => unimplemented!(),
@@ -190,39 +205,35 @@ fn var<T>(name: String, scope: Scope<T>, mut env: &ExprEnv) -> Document {
     }
 }
 
-fn enum_<T>(name: String, args: Vec<Expr<T>>, mut env: &ExprEnv) -> Document {
+fn enum_<H, F, E>(h: H, to_doc: F, name: String, mut args: Vec<E>, mut env: &Env) -> Document
+where
+    H: Fn(String) -> E,
+    F: Fn(E, &Env) -> Document,
+{
     if args.len() == 0 {
-        atom(name.to_snake_case())
+        to_doc(h(name.to_snake_case()), &mut env)
     } else {
-        atom(name.to_snake_case())
-            .append(delim(","))
-            .append(
-                args.into_iter()
-                    .map(|e| expr(e, &mut env))
-                    .intersperse(delim(","))
-                    .collect::<Vec<_>>(),
-            )
-            .nest_current()
-            .surround("{", "}")
+        args.insert(0, h(name.to_snake_case()));
+        tuple(to_doc, args, &mut env)
     }
 }
 
-fn clause<T>(clause: Clause<T>, mut env: &ExprEnv) -> Document {
+fn clause<T>(clause: Clause<T>, mut env: &Env) -> Document {
     pattern(*clause.pattern, &mut env)
         .append(" ->")
         .append(break_("", " "))
         .append(expr(*clause.body, &mut env).nest(INDENT).group())
 }
 
-fn clauses<T>(cs: Vec<Clause<T>>, mut env: &ExprEnv) -> Document {
+fn clauses<T>(cs: Vec<Clause<T>>, mut env: &Env) -> Document {
     cs.into_iter()
         .map(|c| clause(c, &mut env))
-        .intersperse(line().append(break_("\n", "")))
+        .intersperse(";".to_doc().append(line()).append(break_("\n", "")))
         .collect::<Vec<_>>()
         .to_doc()
 }
 
-fn case<T>(subject: Expr<T>, cs: Vec<Clause<T>>, mut env: &ExprEnv) -> Document {
+fn case<T>(subject: Expr<T>, cs: Vec<Clause<T>>, mut env: &Env) -> Document {
     "case "
         .to_doc()
         .append(expr(subject, &mut env).group())
@@ -232,20 +243,34 @@ fn case<T>(subject: Expr<T>, cs: Vec<Clause<T>>, mut env: &ExprEnv) -> Document 
         .append("end")
 }
 
-fn expr<T>(expression: Expr<T>, mut env: &ExprEnv) -> Document {
+fn expr_atom<T>(s: String) -> Expr<T> {
+    Expr::Atom {
+        meta: Meta {},
+        value: s,
+    }
+}
+
+fn pattern_atom(s: String) -> Pattern {
+    Pattern::Atom {
+        meta: Meta {},
+        value: s,
+    }
+}
+
+fn expr<T>(expression: Expr<T>, mut env: &Env) -> Document {
     match expression {
         Expr::Int { value, .. } => value.to_doc(),
         Expr::Float { value, .. } => value.to_doc(),
         Expr::Atom { value, .. } => atom(value),
         Expr::String { value, .. } => string(value),
-        Expr::Tuple { elems, .. } => tuple(elems, &mut env),
+        Expr::Tuple { elems, .. } => tuple(expr, elems, &mut env),
         Expr::Seq { first, then, .. } => seq(*first, *then, &mut env),
         Expr::Var { name, scope, .. } => var(name, scope, &mut env),
         Expr::Fun { .. } => unimplemented!(),
         Expr::Nil { .. } => "[]".to_doc(),
         Expr::Cons { .. } => unimplemented!(),
         Expr::Call { .. } => unimplemented!(),
-        Expr::Enum { name, args, .. } => enum_(name, args, &mut env),
+        Expr::Enum { name, args, .. } => enum_(expr_atom, expr, name, args, &mut env),
         Expr::RecordNil { .. } => "#{}".to_doc(),
         Expr::RecordCons { .. } => unimplemented!(),
         Expr::RecordSelect { .. } => unimplemented!(),
@@ -725,18 +750,118 @@ fn cast_test() {
                     meta: Meta {},
                     value: 1,
                 }),
-                clauses: vec![Clause {
-                    meta: Meta {},
-                    typ: (),
-                    pattern: Box::new(Pattern::Int {
+                clauses: vec![
+                    Clause {
                         meta: Meta {},
-                        value: 1,
-                    }),
-                    body: Box::new(Expr::Int {
+                        typ: (),
+                        pattern: Box::new(Pattern::Int {
+                            meta: Meta {},
+                            value: 1,
+                        }),
+                        body: Box::new(Expr::Int {
+                            meta: Meta {},
+                            value: 1,
+                        }),
+                    },
+                    Clause {
                         meta: Meta {},
-                        value: 1,
-                    }),
-                }],
+                        typ: (),
+                        pattern: Box::new(Pattern::Float {
+                            meta: Meta {},
+                            value: 1.0,
+                        }),
+                        body: Box::new(Expr::Int {
+                            meta: Meta {},
+                            value: 1,
+                        }),
+                    },
+                    Clause {
+                        meta: Meta {},
+                        typ: (),
+                        pattern: Box::new(Pattern::Atom {
+                            meta: Meta {},
+                            value: "ok".to_string(),
+                        }),
+                        body: Box::new(Expr::Int {
+                            meta: Meta {},
+                            value: 1,
+                        }),
+                    },
+                    Clause {
+                        meta: Meta {},
+                        typ: (),
+                        pattern: Box::new(Pattern::String {
+                            meta: Meta {},
+                            value: "hello".to_string(),
+                        }),
+                        body: Box::new(Expr::Int {
+                            meta: Meta {},
+                            value: 1,
+                        }),
+                    },
+                    Clause {
+                        meta: Meta {},
+                        typ: (),
+                        pattern: Box::new(Pattern::Tuple {
+                            meta: Meta {},
+                            elems: vec![
+                                Pattern::Int {
+                                    meta: Meta {},
+                                    value: 1,
+                                },
+                                Pattern::Int {
+                                    meta: Meta {},
+                                    value: 2,
+                                },
+                            ],
+                        }),
+                        body: Box::new(Expr::Int {
+                            meta: Meta {},
+                            value: 1,
+                        }),
+                    },
+                    Clause {
+                        meta: Meta {},
+                        typ: (),
+                        pattern: Box::new(Pattern::Nil { meta: Meta {} }),
+                        body: Box::new(Expr::Int {
+                            meta: Meta {},
+                            value: 1,
+                        }),
+                    },
+                    Clause {
+                        meta: Meta {},
+                        typ: (),
+                        pattern: Box::new(Pattern::Enum {
+                            meta: Meta {},
+                            name: "Error".to_string(),
+                            args: vec![Pattern::Int {
+                                meta: Meta {},
+                                value: 2,
+                            }],
+                        }),
+                        body: Box::new(Expr::Int {
+                            meta: Meta {},
+                            value: 1,
+                        }),
+                    },
+                    Clause {
+                        meta: Meta {},
+                        typ: (),
+                        pattern: Box::new(Pattern::Cons {
+                            meta: Meta {},
+                            head: Box::new(Pattern::Int {
+                                meta: Meta {},
+                                value: 1,
+                            }),
+                            tail: Box::new(Pattern::Nil { meta: Meta {} }),
+                        }),
+                        body: Box::new(Expr::Int {
+                            meta: Meta {},
+                            value: 1,
+                        }),
+                    },
+                ],
             },
         }],
     };
@@ -744,7 +869,14 @@ fn cast_test() {
 
 go() ->
     case 1 of
-        1 -> 1
+        1 -> 1;
+        1.0 -> 1;
+        'ok' -> 1;
+        <<\"hello\">> -> 1;
+        {1, 2} -> 1;
+        [] -> 1;
+        {'error', 2} -> 1;
+        [1 | []] -> 1
     end.
 "
     .to_string();

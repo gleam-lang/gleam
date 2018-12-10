@@ -269,7 +269,7 @@ impl Expr<typ::Type> {
             Expr::Float { .. } => typ::float(),
             Expr::Atom { .. } => typ::atom(),
             Expr::String { .. } => typ::string(),
-            Expr::Seq { .. } => unimplemented!(),
+            Expr::Seq { then, .. } => then.typ(),
             Expr::Tuple { typ, .. } => (*typ).clone(),
             Expr::Var { typ, .. } => (*typ).clone(),
             Expr::Fun { typ, .. } => (*typ).clone(),
