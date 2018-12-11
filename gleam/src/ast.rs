@@ -296,5 +296,5 @@ pub struct Clause<T> {
     pub body: Box<Expr<T>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Meta {}

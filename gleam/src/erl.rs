@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 #[cfg(test)]
-use crate::ast::{Meta, Type};
+use crate::ast::Type;
 
 use crate::ast::{Arg, BinOp, Clause, Expr, Module, Scope, Statement};
 use crate::pattern::Pattern;
@@ -10,8 +10,17 @@ use crate::pretty::*;
 use heck::{CamelCase, SnakeCase};
 use itertools::Itertools;
 use std::char;
+use std::default::Default;
 
 const INDENT: isize = 4;
+
+#[cfg(test)]
+fn default<T>() -> T
+where
+    T: Default,
+{
+    Default::default()
+}
 
 #[derive(Debug, Clone, Default)]
 struct Env {}
@@ -245,14 +254,14 @@ fn case<T>(subject: Expr<T>, cs: Vec<Clause<T>>, mut env: &Env) -> Document {
 
 fn expr_atom<T>(s: String) -> Expr<T> {
     Expr::Atom {
-        meta: Meta {},
+        meta: default(),
         value: s,
     }
 }
 
 fn pattern_atom(s: String) -> Pattern {
     Pattern::Atom {
-        meta: Meta {},
+        meta: default(),
         value: s,
     }
 }
@@ -314,35 +323,35 @@ fn module_test() {
         name: "magic".to_string(),
         statements: vec![
             Statement::ExternalType {
-                meta: Meta {},
+                meta: default(),
                 public: true,
                 name: "Any".to_string(),
             },
             Statement::Enum {
-                meta: Meta {},
+                meta: default(),
                 public: true,
                 name: "Any".to_string(),
                 args: vec![],
                 constructors: vec![Type::Constructor {
-                    meta: Meta {},
+                    meta: default(),
                     args: vec![],
                     name: "Ok".to_string(),
                 }],
             },
             Statement::Import {
-                meta: Meta {},
+                meta: default(),
                 module: "result".to_string(),
             },
             Statement::ExternalFun {
-                meta: Meta {},
+                meta: default(),
                 args: vec![
                     Type::Constructor {
-                        meta: Meta {},
+                        meta: default(),
                         args: vec![],
                         name: "Int".to_string(),
                     },
                     Type::Constructor {
-                        meta: Meta {},
+                        meta: default(),
                         args: vec![],
                         name: "Int".to_string(),
                     },
@@ -352,20 +361,20 @@ fn module_test() {
                 module: "int".to_string(),
                 public: false,
                 retrn: Type::Constructor {
-                    meta: Meta {},
+                    meta: default(),
                     args: vec![],
                     name: "Int".to_string(),
                 },
             },
             Statement::ExternalFun {
-                meta: Meta {},
+                meta: default(),
                 args: vec![],
                 name: "map".to_string(),
                 fun: "new".to_string(),
                 module: "maps".to_string(),
                 public: true,
                 retrn: Type::Constructor {
-                    meta: Meta {},
+                    meta: default(),
                     args: vec![],
                     name: "Map".to_string(),
                 },
@@ -391,169 +400,169 @@ fn expr_test() {
         name: "term".to_string(),
         statements: vec![
             Statement::Fun {
-                meta: Meta {},
+                meta: default(),
                 public: false,
                 args: vec![],
                 name: "atom".to_string(),
                 body: Expr::Atom {
-                    meta: Meta {},
+                    meta: default(),
                     value: "ok".to_string(),
                 },
             },
             Statement::Fun {
-                meta: Meta {},
+                meta: default(),
                 public: false,
                 args: vec![],
                 name: "int".to_string(),
                 body: Expr::Int {
-                    meta: Meta {},
+                    meta: default(),
                     value: 176,
                 },
             },
             Statement::Fun {
-                meta: Meta {},
+                meta: default(),
                 public: false,
                 args: vec![],
                 name: "float".to_string(),
                 body: Expr::Float {
-                    meta: Meta {},
+                    meta: default(),
                     value: 11177.324401,
                 },
             },
             Statement::Fun {
-                meta: Meta {},
+                meta: default(),
                 public: false,
                 args: vec![],
                 name: "nil".to_string(),
                 body: Expr::Nil {
-                    meta: Meta {},
+                    meta: default(),
                     typ: (),
                 },
             },
             Statement::Fun {
-                meta: Meta {},
+                meta: default(),
                 public: false,
                 args: vec![],
                 name: "record_nil".to_string(),
-                body: Expr::RecordNil { meta: Meta {} },
+                body: Expr::RecordNil { meta: default() },
             },
             Statement::Fun {
-                meta: Meta {},
+                meta: default(),
                 public: false,
                 args: vec![],
                 name: "tup".to_string(),
                 body: Expr::Tuple {
-                    meta: Meta {},
+                    meta: default(),
                     typ: (),
                     elems: vec![
                         Expr::Int {
-                            meta: Meta {},
+                            meta: default(),
                             value: 1,
                         },
                         Expr::Float {
-                            meta: Meta {},
+                            meta: default(),
                             value: 2.0,
                         },
                     ],
                 },
             },
             Statement::Fun {
-                meta: Meta {},
+                meta: default(),
                 public: false,
                 args: vec![],
                 name: "string".to_string(),
                 body: Expr::String {
-                    meta: Meta {},
+                    meta: default(),
                     value: "Hello there!".to_string(),
                 },
             },
             Statement::Fun {
-                meta: Meta {},
+                meta: default(),
                 public: false,
                 args: vec![],
                 name: "seq".to_string(),
                 body: Expr::Seq {
-                    meta: Meta {},
+                    meta: default(),
                     first: Box::new(Expr::Int {
-                        meta: Meta {},
+                        meta: default(),
                         value: 1,
                     }),
                     then: Box::new(Expr::Int {
-                        meta: Meta {},
+                        meta: default(),
                         value: 2,
                     }),
                 },
             },
             Statement::Fun {
-                meta: Meta {},
+                meta: default(),
                 public: false,
                 args: vec![],
                 name: "bin_op".to_string(),
                 body: Expr::BinOp {
-                    meta: Meta {},
+                    meta: default(),
                     typ: (),
                     name: BinOp::AddInt,
                     left: Box::new(Expr::Int {
-                        meta: Meta {},
+                        meta: default(),
                         value: 1,
                     }),
                     right: Box::new(Expr::Int {
-                        meta: Meta {},
+                        meta: default(),
                         value: 2,
                     }),
                 },
             },
             Statement::Fun {
-                meta: Meta {},
+                meta: default(),
                 public: false,
                 args: vec![],
                 name: "enum1".to_string(),
                 body: Expr::Enum {
-                    meta: Meta {},
+                    meta: default(),
                     name: "Nil".to_string(),
                     typ: (),
                     args: vec![],
                 },
             },
             Statement::Fun {
-                meta: Meta {},
+                meta: default(),
                 public: false,
                 args: vec![],
                 name: "enum2".to_string(),
                 body: Expr::Enum {
-                    meta: Meta {},
+                    meta: default(),
                     name: "Ok".to_string(),
                     typ: (),
                     args: vec![
                         Expr::Int {
-                            meta: Meta {},
+                            meta: default(),
                             value: 1,
                         },
                         Expr::Float {
-                            meta: Meta {},
+                            meta: default(),
                             value: 2.0,
                         },
                     ],
                 },
             },
             Statement::Fun {
-                meta: Meta {},
+                meta: default(),
                 public: false,
                 args: vec![],
                 name: "let".to_string(),
                 body: Expr::Let {
-                    meta: Meta {},
+                    meta: default(),
                     pattern: Pattern::Var {
-                        meta: Meta {},
+                        meta: default(),
                         name: "OneTwo".to_string(),
                     },
                     typ: (),
                     value: Box::new(Expr::Int {
-                        meta: Meta {},
+                        meta: default(),
                         value: 1,
                     }),
                     then: Box::new(Expr::Var {
-                        meta: Meta {},
+                        meta: default(),
                         typ: (),
                         scope: Scope::Local,
                         name: "one_two".to_string(),
@@ -611,7 +620,7 @@ fn args_test() {
     let m: Module<()> = Module {
         name: "term".to_string(),
         statements: vec![Statement::Fun {
-            meta: Meta {},
+            meta: default(),
             public: false,
             name: "some_function".to_string(),
             args: vec![
@@ -641,7 +650,7 @@ fn args_test() {
                 },
             ],
             body: Expr::Atom {
-                meta: Meta {},
+                meta: default(),
                 value: "ok".to_string(),
             },
         }],
@@ -667,10 +676,10 @@ fn test_test() {
     let m: Module<()> = Module {
         name: "term".to_string(),
         statements: vec![Statement::Test {
-            meta: Meta {},
+            meta: default(),
             name: "bang".to_string(),
             body: Expr::Atom {
-                meta: Meta {},
+                meta: default(),
                 value: "ok".to_string(),
             },
         }],
@@ -692,29 +701,29 @@ fn var_test() {
         name: "vars".to_string(),
         statements: vec![
             Statement::Fun {
-                meta: Meta {},
+                meta: default(),
                 public: false,
                 args: vec![],
                 name: "arg".to_string(),
                 body: Expr::Var {
-                    meta: Meta {},
+                    meta: default(),
                     name: "some_arg".to_string(),
                     typ: (),
                     scope: Scope::Local,
                 },
             },
             Statement::Fun {
-                meta: Meta {},
+                meta: default(),
                 public: false,
                 args: vec![],
                 name: "some_arg".to_string(),
                 body: Expr::Var {
-                    meta: Meta {},
+                    meta: default(),
                     name: "some_arg".to_string(),
                     typ: (),
                     scope: Scope::Constant {
                         value: Box::new(Expr::Atom {
-                            meta: Meta {},
+                            meta: default(),
                             value: "hello".to_string(),
                         }),
                     },
@@ -739,125 +748,125 @@ fn cast_test() {
     let m: Module<()> = Module {
         name: "my_mod".to_string(),
         statements: vec![Statement::Fun {
-            meta: Meta {},
+            meta: default(),
             public: false,
             args: vec![],
             name: "go".to_string(),
             body: Expr::Case {
-                meta: Meta {},
+                meta: default(),
                 typ: (),
                 subject: Box::new(Expr::Int {
-                    meta: Meta {},
+                    meta: default(),
                     value: 1,
                 }),
                 clauses: vec![
                     Clause {
-                        meta: Meta {},
+                        meta: default(),
                         typ: (),
                         pattern: Box::new(Pattern::Int {
-                            meta: Meta {},
+                            meta: default(),
                             value: 1,
                         }),
                         body: Box::new(Expr::Int {
-                            meta: Meta {},
+                            meta: default(),
                             value: 1,
                         }),
                     },
                     Clause {
-                        meta: Meta {},
+                        meta: default(),
                         typ: (),
                         pattern: Box::new(Pattern::Float {
-                            meta: Meta {},
+                            meta: default(),
                             value: 1.0,
                         }),
                         body: Box::new(Expr::Int {
-                            meta: Meta {},
+                            meta: default(),
                             value: 1,
                         }),
                     },
                     Clause {
-                        meta: Meta {},
+                        meta: default(),
                         typ: (),
                         pattern: Box::new(Pattern::Atom {
-                            meta: Meta {},
+                            meta: default(),
                             value: "ok".to_string(),
                         }),
                         body: Box::new(Expr::Int {
-                            meta: Meta {},
+                            meta: default(),
                             value: 1,
                         }),
                     },
                     Clause {
-                        meta: Meta {},
+                        meta: default(),
                         typ: (),
                         pattern: Box::new(Pattern::String {
-                            meta: Meta {},
+                            meta: default(),
                             value: "hello".to_string(),
                         }),
                         body: Box::new(Expr::Int {
-                            meta: Meta {},
+                            meta: default(),
                             value: 1,
                         }),
                     },
                     Clause {
-                        meta: Meta {},
+                        meta: default(),
                         typ: (),
                         pattern: Box::new(Pattern::Tuple {
-                            meta: Meta {},
+                            meta: default(),
                             elems: vec![
                                 Pattern::Int {
-                                    meta: Meta {},
+                                    meta: default(),
                                     value: 1,
                                 },
                                 Pattern::Int {
-                                    meta: Meta {},
+                                    meta: default(),
                                     value: 2,
                                 },
                             ],
                         }),
                         body: Box::new(Expr::Int {
-                            meta: Meta {},
+                            meta: default(),
                             value: 1,
                         }),
                     },
                     Clause {
-                        meta: Meta {},
+                        meta: default(),
                         typ: (),
-                        pattern: Box::new(Pattern::Nil { meta: Meta {} }),
+                        pattern: Box::new(Pattern::Nil { meta: default() }),
                         body: Box::new(Expr::Int {
-                            meta: Meta {},
+                            meta: default(),
                             value: 1,
                         }),
                     },
                     Clause {
-                        meta: Meta {},
+                        meta: default(),
                         typ: (),
                         pattern: Box::new(Pattern::Enum {
-                            meta: Meta {},
+                            meta: default(),
                             name: "Error".to_string(),
                             args: vec![Pattern::Int {
-                                meta: Meta {},
+                                meta: default(),
                                 value: 2,
                             }],
                         }),
                         body: Box::new(Expr::Int {
-                            meta: Meta {},
+                            meta: default(),
                             value: 1,
                         }),
                     },
                     Clause {
-                        meta: Meta {},
+                        meta: default(),
                         typ: (),
                         pattern: Box::new(Pattern::Cons {
-                            meta: Meta {},
+                            meta: default(),
                             head: Box::new(Pattern::Int {
-                                meta: Meta {},
+                                meta: default(),
                                 value: 1,
                             }),
-                            tail: Box::new(Pattern::Nil { meta: Meta {} }),
+                            tail: Box::new(Pattern::Nil { meta: default() }),
                         }),
                         body: Box::new(Expr::Int {
-                            meta: Meta {},
+                            meta: default(),
                             value: 1,
                         }),
                     },
