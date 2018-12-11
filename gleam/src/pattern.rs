@@ -44,6 +44,17 @@ pub enum Pattern {
         tail: Box<Pattern>,
     },
 
+    RecordNil {
+        meta: Meta,
+    },
+
+    RecordCons {
+        meta: Meta,
+        label: String,
+        value: Box<Pattern>,
+        tail: Box<Pattern>,
+    },
+
     Enum {
         meta: Meta,
         name: String,
@@ -55,14 +66,16 @@ impl Pattern {
     pub fn meta(&self) -> &Meta {
         match self {
             Pattern::Int { meta, .. } => meta,
-            Pattern::Float { meta, .. } => meta,
-            Pattern::Atom { meta, .. } => meta,
-            Pattern::String { meta, .. } => meta,
-            Pattern::Tuple { meta, .. } => meta,
             Pattern::Var { meta, .. } => meta,
             Pattern::Nil { meta, .. } => meta,
             Pattern::Cons { meta, .. } => meta,
+            Pattern::Atom { meta, .. } => meta,
             Pattern::Enum { meta, .. } => meta,
+            Pattern::Float { meta, .. } => meta,
+            Pattern::Tuple { meta, .. } => meta,
+            Pattern::String { meta, .. } => meta,
+            Pattern::RecordNil { meta, .. } => meta,
+            Pattern::RecordCons { meta, .. } => meta,
         }
     }
 }

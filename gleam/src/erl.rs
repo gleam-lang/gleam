@@ -182,15 +182,17 @@ fn let_<T>(p: Pattern, value: Expr<T>, then: Expr<T>, mut env: &Env) -> Document
 
 fn pattern(p: Pattern, mut env: &Env) -> Document {
     match p {
-        Pattern::Var { name, .. } => var(name, Scope::Local::<()>, &mut env),
+        Pattern::Nil { .. } => "[]".to_doc(),
+        Pattern::RecordNil { .. } => "#{}".to_doc(),
         Pattern::Int { value, .. } => value.to_doc(),
         Pattern::Float { value, .. } => value.to_doc(),
+        Pattern::Var { name, .. } => var(name, Scope::Local::<()>, &mut env),
         Pattern::Atom { value, .. } => atom(value),
         Pattern::String { value, .. } => string(value),
         Pattern::Tuple { elems, .. } => tuple(pattern, elems, &mut env),
-        Pattern::Nil { .. } => "[]".to_doc(),
         Pattern::Cons { head, tail, .. } => cons(pattern, *head, *tail, &mut env),
         Pattern::Enum { name, args, .. } => enum_(pattern_atom, pattern, name, args, &mut env),
+        Pattern::RecordCons { .. } => unimplemented!(),
     }
 }
 
@@ -206,11 +208,31 @@ where
         .surround("[", "]")
 }
 
+fn expr_record_cons<T>(label: String, value: Expr<T>, tail: Expr<T>, mut env: &Env) -> Document {
+    record_cons(expr, "=>".to_string(), label, value, tail, &mut env)
+}
+
+fn record_cons<F, E>(f: F, sep: String, label: String, value: E, tail: E, mut env: &Env) -> Document
+where
+    F: Fn(E, &Env) -> Document,
+{
+    // TODO: Flatten nested cons into a map i.e. X#{a=>1, b=>2}
+    // TODO: Break, indent, etc
+    f(tail, &mut env)
+        .append("#{")
+        .append(atom(label))
+        .append(" ")
+        .append(sep)
+        .append(" ")
+        .append(f(value, &mut env))
+        .append("}")
+}
+
 fn var<T>(name: String, scope: Scope<T>, mut env: &Env) -> Document {
     match scope {
         Scope::Local => name.to_camel_case().to_doc(),
-        Scope::Module => unimplemented!(),
         Scope::Constant { value } => expr(*value, &mut env),
+        Scope::Module { arity, .. } => "fun ".to_doc().append(name).append("/").append(arity),
     }
 }
 
@@ -268,6 +290,8 @@ fn pattern_atom(s: String) -> Pattern {
 
 fn expr<T>(expression: Expr<T>, mut env: &Env) -> Document {
     match expression {
+        Expr::Nil { .. } => "[]".to_doc(),
+        Expr::RecordNil { .. } => "#{}".to_doc(),
         Expr::Int { value, .. } => value.to_doc(),
         Expr::Float { value, .. } => value.to_doc(),
         Expr::Atom { value, .. } => atom(value),
@@ -276,14 +300,14 @@ fn expr<T>(expression: Expr<T>, mut env: &Env) -> Document {
         Expr::Seq { first, then, .. } => seq(*first, *then, &mut env),
         Expr::Var { name, scope, .. } => var(name, scope, &mut env),
         Expr::Fun { .. } => unimplemented!(),
-        Expr::Nil { .. } => "[]".to_doc(),
-        Expr::Cons { .. } => unimplemented!(),
+        Expr::Cons { head, tail, .. } => cons(expr, *head, *tail, &mut env),
         Expr::Call { .. } => unimplemented!(),
         Expr::Enum { name, args, .. } => enum_(expr_atom, expr, name, args, &mut env),
-        Expr::RecordNil { .. } => "#{}".to_doc(),
-        Expr::RecordCons { .. } => unimplemented!(),
         Expr::RecordSelect { .. } => unimplemented!(),
         Expr::ModuleSelect { .. } => unimplemented!(),
+        Expr::RecordCons {
+            label, value, tail, ..
+        } => expr_record_cons(label, *value, *tail, &mut env),
         Expr::Case {
             subject, clauses, ..
         } => case(*subject, clauses, &mut env),
@@ -569,6 +593,40 @@ fn expr_test() {
                     }),
                 },
             },
+            Statement::Fun {
+                meta: default(),
+                public: false,
+                args: vec![],
+                name: "conny".to_string(),
+                body: Expr::Cons {
+                    meta: default(),
+                    typ: (),
+                    head: Box::new(Expr::Int {
+                        meta: default(),
+                        value: 1234,
+                    }),
+                    tail: Box::new(Expr::Nil {
+                        meta: default(),
+                        typ: (),
+                    }),
+                },
+            },
+            Statement::Fun {
+                meta: default(),
+                public: false,
+                args: vec![],
+                name: "retcon".to_string(),
+                body: Expr::RecordCons {
+                    meta: default(),
+                    typ: (),
+                    label: "size".to_string(),
+                    value: Box::new(Expr::Int {
+                        meta: default(),
+                        value: 1,
+                    }),
+                    tail: Box::new(Expr::RecordNil { meta: default() }),
+                },
+            },
         ],
     };
     let expected = "-module(term).
@@ -610,6 +668,12 @@ enum2() ->
 let() ->
     OneTwo = 1,
     OneTwo.
+
+conny() ->
+    [1234 | []].
+
+retcon() ->
+    #{}#{'size' => 1}.
 "
     .to_string();
     assert_eq!(expected, module(m));
@@ -729,6 +793,18 @@ fn var_test() {
                     },
                 },
             },
+            Statement::Fun {
+                meta: default(),
+                public: false,
+                args: vec![],
+                name: "another".to_string(),
+                body: Expr::Var {
+                    meta: default(),
+                    name: "run_task".to_string(),
+                    typ: (),
+                    scope: Scope::Module { arity: 6 },
+                },
+            },
         ],
     };
     let expected = "-module(vars).
@@ -738,6 +814,9 @@ arg() ->
 
 some_arg() ->
     'hello'.
+
+another() ->
+    fun run_task/6.
 "
     .to_string();
     assert_eq!(expected, module(m));
@@ -870,6 +949,15 @@ fn cast_test() {
                             value: 1,
                         }),
                     },
+                    Clause {
+                        meta: default(),
+                        typ: (),
+                        pattern: Box::new(Pattern::RecordNil { meta: default() }),
+                        body: Box::new(Expr::Int {
+                            meta: default(),
+                            value: 1,
+                        }),
+                    },
                 ],
             },
         }],
@@ -885,7 +973,8 @@ go() ->
         {1, 2} -> 1;
         [] -> 1;
         {'error', 2} -> 1;
-        [1 | []] -> 1
+        [1 | []] -> 1;
+        #{} -> 1
     end.
 "
     .to_string();

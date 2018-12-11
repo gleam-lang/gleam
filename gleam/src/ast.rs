@@ -108,7 +108,7 @@ pub enum BinOp {
 #[derive(Debug)]
 pub enum Scope<T> {
     Local,
-    Module,
+    Module { arity: usize },
     Constant { value: Box<Expr<T>> },
 }
 
