@@ -69,7 +69,7 @@ fn mod_fun<T>(public: bool, name: String, args: Vec<Arg>, body: Expr<T>) -> Docu
     export(public, &name, args.len())
         .append(line())
         .append(name)
-        .append(fun_args(args).group())
+        .append(fun_args(args))
         .append(" ->")
         .append(line().append(body_doc).nest(INDENT))
         .append(".")
@@ -84,6 +84,7 @@ fn fun_args(args: Vec<Arg>) -> Document {
         .to_doc()
         .nest_current()
         .surround("(", ")")
+        .group()
 }
 
 fn test<T>(name: String, body: Expr<T>) -> Document {
@@ -326,15 +327,10 @@ fn expr<T>(expression: Expr<T>, mut env: &Env) -> Document {
 fn fun<T>(args: Vec<Arg>, body: Expr<T>, mut env: &Env) -> Document {
     "fun"
         .to_doc()
-        .append(
-            fun_args(args).group().append(" ->").append(
-                break_("", " ")
-                    .append(expr(body, &mut env))
-                    .nest(INDENT)
-                    .append(break_("", " "))
-                    .append("end"),
-            ),
-        )
+        .append(fun_args(args).append(" ->"))
+        .append(break_("", " ").append(expr(body, &mut env)).nest(INDENT))
+        .append(break_("", " "))
+        .append("end")
         .group()
 }
 
