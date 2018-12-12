@@ -64,26 +64,26 @@ fn statement<T>(statement: Statement<T>) -> Document {
 }
 
 fn mod_fun<T>(public: bool, name: String, args: Vec<Arg>, body: Expr<T>) -> Document {
-    let args_doc = args
-        .iter()
+    let body_doc = expr(body, &mut Env::default());
+
+    export(public, &name, args.len())
+        .append(line())
+        .append(name)
+        .append(fun_args(args).group())
+        .append(" ->")
+        .append(line().append(body_doc).nest(INDENT))
+        .append(".")
+        .append(line())
+}
+
+fn fun_args(args: Vec<Arg>) -> Document {
+    args.iter()
         .map(|a| a.name.to_camel_case().to_doc())
         .intersperse(delim(","))
         .collect::<Vec<_>>()
         .to_doc()
         .nest_current()
         .surround("(", ")")
-        .group();
-
-    let body_doc = expr(body, &mut Env::default());
-
-    export(public, &name, args.len())
-        .append(line())
-        .append(name)
-        .append(args_doc)
-        .append(" ->")
-        .append(line().append(body_doc).nest(INDENT))
-        .append(".")
-        .append(line())
 }
 
 fn test<T>(name: String, body: Expr<T>) -> Document {
@@ -299,7 +299,7 @@ fn expr<T>(expression: Expr<T>, mut env: &Env) -> Document {
         Expr::Tuple { elems, .. } => tuple(expr, elems, &mut env),
         Expr::Seq { first, then, .. } => seq(*first, *then, &mut env),
         Expr::Var { name, scope, .. } => var(name, scope, &mut env),
-        Expr::Fun { .. } => unimplemented!(),
+        Expr::Fun { args, body, .. } => fun(args, *body, &mut env),
         Expr::Cons { head, tail, .. } => cons(expr, *head, *tail, &mut env),
         Expr::Call { .. } => unimplemented!(),
         Expr::Enum { name, args, .. } => enum_(expr_atom, expr, name, args, &mut env),
@@ -321,6 +321,21 @@ fn expr<T>(expression: Expr<T>, mut env: &Env) -> Document {
             ..
         } => let_(pattern, *value, *then, &mut env),
     }
+}
+
+fn fun<T>(args: Vec<Arg>, body: Expr<T>, mut env: &Env) -> Document {
+    "fun"
+        .to_doc()
+        .append(
+            fun_args(args).group().append(" ->").append(
+                break_("", " ")
+                    .append(expr(body, &mut env))
+                    .nest(INDENT)
+                    .append(break_("", " "))
+                    .append("end"),
+            ),
+        )
+        .group()
 }
 
 fn external_fun(public: bool, name: String, module: String, fun: String, arity: usize) -> Document {
@@ -627,6 +642,28 @@ fn expr_test() {
                     tail: Box::new(Expr::RecordNil { meta: default() }),
                 },
             },
+            Statement::Fun {
+                meta: default(),
+                public: false,
+                args: vec![],
+                name: "funny".to_string(),
+                body: Expr::Fun {
+                    meta: default(),
+                    typ: (),
+                    args: vec![
+                        Arg {
+                            name: "one_really_long_arg_to_cause_wrapping".to_string(),
+                        },
+                        Arg {
+                            name: "also_really_quite_long".to_string(),
+                        },
+                    ],
+                    body: Box::new(Expr::Int {
+                        meta: default(),
+                        value: 100000000000,
+                    }),
+                },
+            },
         ],
     };
     let expected = "-module(term).
@@ -674,6 +711,11 @@ conny() ->
 
 retcon() ->
     #{}#{'size' => 1}.
+
+funny() ->
+    fun(OneReallyLongArgToCauseWrapping, AlsoReallyQuiteLong) ->
+        100000000000
+    end.
 "
     .to_string();
     assert_eq!(expected, module(m));
