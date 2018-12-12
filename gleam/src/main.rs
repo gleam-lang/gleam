@@ -5,9 +5,12 @@
 //
 // https://crates.io/crates/lalrpop
 // - https://github.com/lalrpop/lalrpop/issues/323#issuecomment-366681594
+//
+// https://github.com/Marwes/combine
 
 mod ast;
 mod erl;
+mod parser;
 mod pattern;
 mod pretty;
 mod typ;
