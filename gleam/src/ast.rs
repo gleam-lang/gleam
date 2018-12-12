@@ -297,4 +297,7 @@ pub struct Clause<T> {
 }
 
 #[derive(Debug, Default)]
-pub struct Meta {}
+pub struct Meta {
+    pub start: combine::stream::state::SourcePosition,
+    pub end: combine::stream::state::SourcePosition,
+}
