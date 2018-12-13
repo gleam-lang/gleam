@@ -1,48 +1,71 @@
-use crate::ast::*;
+use crate::ast::{Expr, Meta};
+use crate::grammar::ExprParser;
 
-// https://github.com/Marwes/combine
-
-use combine::parser::char;
-use combine::*;
-
-fn raw_int<I>() -> impl Parser<Input = I, Output = isize>
-where
-    I: Stream<Item = char>,
-    I::Error: ParseError<I::Item, I::Range, I::Position>,
-{
-    (
-        optional(char::char('-')),
-        many1(char::digit()).map(|i: String| i.parse().unwrap_or(0)),
-    )
-        .map(|(sign, i)| match sign {
-            Some(_) => 0 - i,
-            None => i,
-        })
-}
-
-fn raw_float<I>() -> impl Parser<Input = I, Output = f64>
-where
-    I: Stream<Item = char>,
-    I::Error: ParseError<I::Item, I::Range, I::Position>,
-{
-    let parse_float =
-        |(a, _, b): (String, char, String)| [a, ".".to_string(), b].join("").parse().unwrap_or(0.0);
-
-    (
-        optional(char::char('-')),
-        (many1(char::digit()), char::char('.'), many1(char::digit())).map(parse_float),
-    )
-        .map(|(sign, i)| match sign {
-            Some(_) => 0.0 - i,
-            None => i,
-        })
+pub fn meta(start: usize, end: usize) -> Meta {
+    Meta { start, end }
 }
 
 #[test]
-fn raw_test() {
-    assert_eq!(Ok((1234, "")), raw_int().easy_parse("1234"));
-    assert_eq!(Ok((-567, "")), raw_int().easy_parse("-567"));
+fn expr_test() {
+    assert_eq!(
+        ExprParser::new().parse("123"),
+        Ok(Expr::Int {
+            meta: Meta { start: 0, end: 3 },
+            value: 123
+        })
+    );
 
-    assert_eq!(Ok((1234.5, "")), raw_float().easy_parse("1234.5"));
-    assert_eq!(Ok((-678.9, "")), raw_float().easy_parse("-678.9"));
+    assert_eq!(
+        ExprParser::new().parse("-45"),
+        Ok(Expr::Int {
+            meta: Meta { start: 0, end: 3 },
+            value: -45
+        })
+    );
+
+    assert_eq!(
+        ExprParser::new().parse("-1."),
+        Ok(Expr::Float {
+            meta: Meta { start: 0, end: 3 },
+            value: -1.0
+        })
+    );
+
+    assert_eq!(
+        ExprParser::new().parse("1.23"),
+        Ok(Expr::Float {
+            meta: Meta { start: 0, end: 4 },
+            value: 1.23
+        })
+    );
+
+    assert_eq!(
+        ExprParser::new().parse("-1.23"),
+        Ok(Expr::Float {
+            meta: Meta { start: 0, end: 5 },
+            value: -1.23
+        })
+    );
+
+    assert_eq!(
+        ExprParser::new().parse("{1, 2, 3}"),
+        Ok(Expr::Tuple {
+            meta: Meta { start: 0, end: 9 },
+            typ: (),
+            elems: vec![
+                Expr::Int {
+                    meta: Meta { start: 1, end: 2 },
+                    value: 1
+                },
+                Expr::Int {
+                    meta: Meta { start: 4, end: 5 },
+                    value: 2
+                },
+                Expr::Int {
+                    meta: Meta { start: 7, end: 8 },
+                    value: 3
+                },
+            ]
+        })
+    );
 }

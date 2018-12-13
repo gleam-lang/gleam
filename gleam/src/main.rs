@@ -1,12 +1,10 @@
-// https://crates.io/crates/nom
-//
-// https://crates.io/crates/pest
-// - https://docs.rs/pest/2.0.2/pest/struct.Position.html#method.line_col
-//
 // https://crates.io/crates/lalrpop
 // - https://github.com/lalrpop/lalrpop/issues/323#issuecomment-366681594
+// - https://github.com/dagit/rust-prolog/blob/master/src/lexer.rs
+// - https://github.com/dagit/rust-prolog/blob/master/src/parser.lalrpop
 //
-// https://github.com/Marwes/combine
+// Error displaying
+// - https://github.com/brendanzab/codespan
 
 mod ast;
 mod erl;
@@ -14,6 +12,7 @@ mod parser;
 mod pattern;
 mod pretty;
 mod typ;
+lalrpop_mod!(pub grammar);
 
 #[macro_use]
 extern crate im;
@@ -21,6 +20,9 @@ extern crate im;
 #[cfg(test)]
 #[macro_use]
 extern crate pretty_assertions;
+
+#[macro_use]
+extern crate lalrpop_util;
 
 use clap::{crate_version, App, AppSettings, SubCommand};
 

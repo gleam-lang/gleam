@@ -2,7 +2,7 @@
 
 use super::ast::Meta;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Pattern {
     Int {
         meta: Meta,

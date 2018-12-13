@@ -14,7 +14,6 @@ use std::default::Default;
 
 const INDENT: isize = 4;
 
-#[cfg(test)]
 fn default<T>() -> T
 where
     T: Default,

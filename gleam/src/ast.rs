@@ -3,18 +3,18 @@
 use super::pattern::Pattern;
 use super::typ;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Module<T> {
     pub name: String,
     pub statements: Vec<Statement<T>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Arg {
     pub name: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Type {
     Constructor {
         meta: Meta,
@@ -28,7 +28,7 @@ pub enum Type {
     },
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Statement<T> {
     Fun {
         meta: Meta,
@@ -87,7 +87,7 @@ impl<T> Statement<T> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum BinOp {
     Pipe,
     Lt,
@@ -105,14 +105,14 @@ pub enum BinOp {
     DivFloat,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Scope<T> {
     Local,
     Module { arity: usize },
     Constant { value: Box<Expr<T>> },
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Expr<T> {
     Int {
         meta: Meta,
@@ -288,7 +288,7 @@ impl Expr<typ::Type> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Clause<T> {
     pub meta: Meta,
     pub typ: T,
@@ -296,8 +296,8 @@ pub struct Clause<T> {
     pub body: Box<Expr<T>>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, PartialEq, Default)]
 pub struct Meta {
-    pub start: combine::stream::state::SourcePosition,
-    pub end: combine::stream::state::SourcePosition,
+    pub start: usize,
+    pub end: usize,
 }

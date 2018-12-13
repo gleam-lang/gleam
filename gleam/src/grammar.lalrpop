@@ -1,0 +1,47 @@
+// vi: ft=rust
+
+use std::str::FromStr;
+
+use crate::ast::Expr;
+use crate::parser::*;
+
+grammar;
+
+pub Expr: Expr<()> = {
+    Int => <>,
+    Float => <>,
+    Tuple => <>,
+};
+
+Tuple: Expr<()> = {
+    <s:@L> "{" <elems:Comma<Expr>> "}" <e:@L> => Expr::Tuple {
+        meta: meta(s, e),
+        typ: (),
+        elems: elems,
+    }
+}
+
+Int: Expr<()> = {
+    <s:@L> <i:r"-?[0-9]+"> <e:@L> => Expr::Int {
+        meta: meta(s, e),
+        value: i64::from_str(i).unwrap(),
+    }
+}
+
+Float: Expr<()> = {
+    <s:@L> <f:r"-?[0-9]+\.+[0-9]*"> <e:@L> => Expr::Float {
+        meta: meta(s, e),
+        value: f64::from_str(f).unwrap(),
+    }
+}
+
+Comma<T>: Vec<T> = {
+    <v:(<T> ",")*> <e:T?> => match e {
+        None => v,
+        Some(e) => {
+            let mut v = v;
+            v.push(e);
+            v
+        }
+    }
+};
