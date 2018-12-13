@@ -3,21 +3,79 @@
 use std::str::FromStr;
 
 use crate::ast::Expr;
+use crate::pattern::Pattern;
 use crate::parser::*;
 
 grammar;
 
+// TODO: Need to decide how to handle Seq
+// Seq => <>,
+
 pub Expr: Expr<()> = {
+    Nil => <>,
+    Let => <>,
     Int => <>,
+    Atom => <>,
     Float => <>,
     Tuple => <>,
-};
+    String => <>,
+    // Var => <>,
+    // Fun => <>,
+    // Cons => <>,
+    // Call => <>,
+    // BinOp => <>,
+    // Enum => <>,
+    // Case => <>,
+    RecordNil => <>,
+    // RecordCons => <>,
+    // RecordSelect => <>,
+    // ModuleSelect => <>,
+}
+
+Let: Expr<()> = {
+    <s:@L> <p:Pattern> "=" <v:Expr> <e:@L> <t:Expr> => Expr::Let {
+        meta: meta(s, e),
+        typ: (),
+        pattern: p,
+        value: Box::new(v),
+        then: Box::new(t),
+    }
+}
 
 Tuple: Expr<()> = {
     <s:@L> "{" <elems:Comma<Expr>> "}" <e:@L> => Expr::Tuple {
         meta: meta(s, e),
         typ: (),
         elems: elems,
+    }
+}
+
+Nil: Expr<()> = {
+    <s:@L> "[]" <e:@L> => Expr::Nil {
+        meta: meta(s, e),
+        typ: (),
+    }
+}
+
+RecordNil: Expr<()> = {
+    <s:@L> "{}" <e:@L> => Expr::RecordNil {
+        meta: meta(s, e),
+    }
+}
+
+// TODO: Unescape?
+Atom: Expr<()> = {
+    <s:@L> <x:r"'(([^\\']|\\.)*)'"> <e:@L> => Expr::Atom {
+        meta: meta(s, e),
+        value: x[1..(x.len() - 1)].to_string(),
+    }
+}
+
+// TODO: Unescape?
+String: Expr<()> = {
+    <s:@L> <x:r#""(([^\\"]|\\.)*)""#> <e:@L> => Expr::String {
+        meta: meta(s, e),
+        value: x[1..(x.len() - 1)].to_string(),
     }
 }
 
@@ -44,4 +102,29 @@ Comma<T>: Vec<T> = {
             v
         }
     }
-};
+}
+
+Pattern: Pattern = {
+    PatternVar => <>,
+    // PatternInt => <>,
+    // PatternNil => <>,
+    // PatternCons => <>,
+    // PatternAtom => <>,
+    // PatternEnum => <>,
+    // PatternFloat => <>,
+    // PatternTuple => <>,
+    // PatternString => <>,
+    // PatternRecordNil => <>,
+    // PatternRecordCons => <>,
+}
+
+PatternVar: Pattern = {
+    <s:@L> <v:VarName> <e:@L> => Pattern::Var {
+        meta: meta(s, e),
+        name: v,
+    }
+}
+
+VarName: String = {
+    <v:r"[a-z][a-z_]*"> => v.to_string()
+}
