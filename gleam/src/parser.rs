@@ -377,4 +377,26 @@ fn module_test() {
         }),
         ModuleParser::new().parse("pub fn go() { 1 }"),
     );
+
+    assert_eq!(
+        Ok(Module {
+            name: "".to_string(),
+            statements: vec![Statement::Test {
+                meta: Meta { start: 0, end: 16 },
+                name: "run".to_string(),
+                body: Expr::Seq {
+                    meta: Meta { start: 11, end: 14 },
+                    first: Box::new(Expr::Int {
+                        meta: Meta { start: 11, end: 12 },
+                        value: 1
+                    }),
+                    then: Box::new(Expr::Int {
+                        meta: Meta { start: 13, end: 14 },
+                        value: 2
+                    })
+                }
+            }]
+        }),
+        ModuleParser::new().parse("test run { 1 2 }"),
+    );
 }

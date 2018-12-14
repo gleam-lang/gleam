@@ -17,7 +17,7 @@ pub Module: Module<()> = {
 
 Statement: Statement<()> = {
     StatementFun => <>,
-    // StatementTest => <>,
+    StatementTest => <>,
     // StatementEnum => <>,
     // StatementExternalFun => <>,
     StatementExternalType => <>,
@@ -30,6 +30,14 @@ StatementFun: Statement<()> = {
         public: p.is_some(),
         name: n,
         args: a,
+        body: b,
+    }
+}
+
+StatementTest: Statement<()> = {
+    <s:@L> "test" <n:VarName> "{" <b:Expr> "}" <e:@L> => Statement::Test {
+        meta: meta(s, e),
+        name: n,
         body: b,
     }
 }
