@@ -16,12 +16,22 @@ pub Module: Module<()> = {
 }
 
 Statement: Statement<()> = {
-    // StatementFun => <>,
+    StatementFun => <>,
     // StatementTest => <>,
     // StatementEnum => <>,
     // StatementExternalFun => <>,
     StatementExternalType => <>,
     StatementImport => <>,
+}
+
+StatementFun: Statement<()> = {
+    <s:@L> <p:"pub"?> "fn" <n:VarName> "(" <a:Comma<FnArg>> ")" "{" <b:Expr> "}" <e:@L> => Statement::Fun {
+        meta: meta(s, e),
+        public: p.is_some(),
+        name: n,
+        args: a,
+        body: b,
+    }
 }
 
 StatementImport: Statement<()> = {

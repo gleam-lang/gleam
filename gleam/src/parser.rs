@@ -329,4 +329,52 @@ fn module_test() {
         }),
         ModuleParser::new().parse("external type Vector(a, b)"),
     );
+
+    assert_eq!(
+        Ok(Module {
+            name: "".to_string(),
+            statements: vec![Statement::Fun {
+                meta: Meta { start: 0, end: 24 },
+                public: false,
+                name: "run".to_string(),
+                args: vec![
+                    Arg {
+                        name: "one".to_string()
+                    },
+                    Arg {
+                        name: "two".to_string()
+                    }
+                ],
+                body: Expr::Seq {
+                    meta: Meta { start: 19, end: 22 },
+                    first: Box::new(Expr::Int {
+                        meta: Meta { start: 19, end: 20 },
+                        value: 1
+                    }),
+                    then: Box::new(Expr::Int {
+                        meta: Meta { start: 21, end: 22 },
+                        value: 2
+                    })
+                }
+            }]
+        }),
+        ModuleParser::new().parse("fn run(one, two) { 1 2 }"),
+    );
+
+    assert_eq!(
+        Ok(Module {
+            name: "".to_string(),
+            statements: vec![Statement::Fun {
+                meta: Meta { start: 0, end: 17 },
+                public: true,
+                name: "go".to_string(),
+                args: vec![],
+                body: Expr::Int {
+                    meta: Meta { start: 14, end: 15 },
+                    value: 1
+                },
+            }]
+        }),
+        ModuleParser::new().parse("pub fn go() { 1 }"),
+    );
 }
