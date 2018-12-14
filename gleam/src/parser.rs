@@ -1,4 +1,4 @@
-use crate::ast::{Clause, Expr, Meta, Scope};
+use crate::ast::{Arg, Clause, Expr, Meta, Scope};
 use crate::grammar::ExprParser;
 use crate::pattern::Pattern;
 
@@ -227,5 +227,45 @@ fn expr_test() {
             ]
         }),
         ExprParser::new().parse("{1, 2, 3}"),
+    );
+
+    assert_eq!(
+        Ok(Expr::Fun {
+            meta: Meta { start: 0, end: 10 },
+            typ: (),
+            args: vec![],
+            body: Box::new(Expr::Int {
+                meta: Meta { start: 7, end: 8 },
+                value: 1
+            })
+        }),
+        ExprParser::new().parse("fn() { 1 }"),
+    );
+
+    assert_eq!(
+        Ok(Expr::Fun {
+            meta: Meta { start: 0, end: 16 },
+            typ: (),
+            args: vec![
+                Arg {
+                    name: "a".to_string()
+                },
+                Arg {
+                    name: "b".to_string()
+                },
+            ],
+            body: Box::new(Expr::Seq {
+                meta: Meta { start: 11, end: 14 },
+                first: Box::new(Expr::Int {
+                    meta: Meta { start: 11, end: 12 },
+                    value: 1
+                }),
+                then: Box::new(Expr::Int {
+                    meta: Meta { start: 13, end: 14 },
+                    value: 2
+                })
+            })
+        }),
+        ExprParser::new().parse("fn(a, b) { 1 2 }"),
     );
 }

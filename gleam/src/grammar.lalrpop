@@ -2,7 +2,7 @@
 
 use std::str::FromStr;
 
-use crate::ast::{Expr, Clause, Scope};
+use crate::ast::{Expr, Clause, Scope, Arg};
 use crate::pattern::Pattern;
 use crate::parser::*;
 
@@ -18,13 +18,13 @@ SingleExpr: Expr<()> = {
     Nil => <>,
     Int => <>,
     Var => <>,
+    Fun => <>,
     Cons => <>,
     Call => <>,
     Atom => <>,
     Float => <>,
     Tuple => <>,
     String => <>,
-    // Fun => <>,
     // BinOp => <>,
     // Case => <>,
     RecordNil => <>,
@@ -54,6 +54,21 @@ Seq: Expr<()> = {
         first: Box::new(a),
         then: Box::new(b),
     }
+}
+
+Fun: Expr<()> = {
+    <s:@L> "fn(" <a:Comma<FnArg>> ")" "{" <b:Expr> "}" <e:@L> => Expr::Fun {
+        meta: meta(s, e),
+        typ: (),
+        args: a,
+        body: Box::new(b),
+    }
+}
+
+FnArg: Arg = {
+    VarName => Arg {
+        name: <>,
+    },
 }
 
 Constructor: Expr<()> = {
