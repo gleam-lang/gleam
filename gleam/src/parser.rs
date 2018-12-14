@@ -1,4 +1,4 @@
-use crate::ast::{Arg, Clause, Expr, Meta, Module, Scope, Statement};
+use crate::ast::{Arg, Clause, Expr, Meta, Module, Scope, Statement, Type};
 use crate::grammar::{ExprParser, ModuleParser};
 use crate::pattern::Pattern;
 
@@ -398,5 +398,36 @@ fn module_test() {
             }]
         }),
         ModuleParser::new().parse("test run { 1 2 }"),
+    );
+
+    assert_eq!(
+        Ok(Module {
+            name: "".to_string(),
+            statements: vec![Statement::ExternalFun {
+                meta: Meta { start: 0, end: 49 },
+                name: "run".to_string(),
+                module: "m".to_string(),
+                fun: "f".to_string(),
+                args: vec![
+                    Type::Constructor {
+                        meta: Meta { start: 20, end: 23 },
+                        name: "Int".to_string(),
+                        args: vec![]
+                    },
+                    Type::Constructor {
+                        meta: Meta { start: 25, end: 30 },
+                        name: "Float".to_string(),
+                        args: vec![]
+                    }
+                ],
+                public: true,
+                retrn: Type::Constructor {
+                    meta: Meta { start: 35, end: 39 },
+                    name: "Bool".to_string(),
+                    args: vec![]
+                }
+            }]
+        }),
+        ModuleParser::new().parse("pub external fn run(Int, Float) -> Bool = 'm' 'f'"),
     );
 }

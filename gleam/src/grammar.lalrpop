@@ -2,7 +2,7 @@
 
 use std::str::FromStr;
 
-use crate::ast::{Expr, Clause, Scope, Arg, Module, Statement};
+use crate::ast::{Expr, Clause, Scope, Arg, Module, Statement, Type};
 use crate::pattern::Pattern;
 use crate::parser::*;
 
@@ -19,9 +19,21 @@ Statement: Statement<()> = {
     StatementFun => <>,
     StatementTest => <>,
     // StatementEnum => <>,
-    // StatementExternalFun => <>,
+    StatementExternalFun => <>,
     StatementExternalType => <>,
     StatementImport => <>,
+}
+
+StatementExternalFun: Statement<()> = {
+    <s:@L> <p:"pub"?> "external" "fn" <n:VarName> "(" <a:Comma<Type>> ")" "->" <r:Type> "=" <m:RawAtom> <f:RawAtom> <e:@L> => Statement::ExternalFun {
+        meta: meta(s, e),
+        public: p.is_some(),
+        name: n,
+        args: a,
+        module: m,
+        fun: f,
+        retrn: r,
+    }
 }
 
 StatementFun: Statement<()> = {
@@ -179,9 +191,9 @@ RecordNil: Expr<()> = {
 
 // TODO: Unescape?
 Atom: Expr<()> = {
-    <s:@L> <x:r"'(([^\\']|\\.)*)'"> <e:@L> => Expr::Atom {
+    <s:@L> <x:RawAtom> <e:@L> => Expr::Atom {
         meta: meta(s, e),
-        value: x[1..(x.len() - 1)].to_string(),
+        value: x,
     }
 }
 
@@ -239,6 +251,31 @@ PatternVar: Pattern = {
     }
 }
 
+Type: Type = {
+    TypeConstructor => <>,
+    TypeVar => <>,
+}
+
+TypeConstructor: Type = {
+    <s:@L> <n:r"[A-Z][A-Za-z]*"> <e:@L> => Type::Constructor {
+        meta: meta(s, e),
+        args: vec![],
+        name: n.to_string(),
+    },
+    <s:@L> <n:r"[A-Z][A-Za-z]*"> "(" <a:Comma<Type>> ")" <e:@L> => Type::Constructor {
+        meta: meta(s, e),
+        args: a,
+        name: n.to_string(),
+    },
+}
+
+TypeVar: Type = {
+    <s:@L> <n:VarName> <e:@L> => Type::Var {
+        meta: meta(s, e),
+        name: n,
+    }
+}
+
 TypeName: (String, Vec<String>) = {
     <v:r"[A-Z][A-Za-z]*"> => (v.to_string(), vec![]),
     <v:r"[A-Z][A-Za-z]*"> "(" <a:Comma<VarName>> ")" => (v.to_string(), a),
@@ -250,4 +287,8 @@ VarName: String = {
 
 ConstructorName: String = {
     <v:r"[A-Z][A-Za-z]*"> => v.to_string()
+}
+
+RawAtom: String = {
+    <x:r"'(([^\\']|\\.)*)'"> => x[1..(x.len() - 1)].to_string(),
 }
