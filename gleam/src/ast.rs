@@ -190,16 +190,14 @@ pub enum Expr<T> {
     Let {
         meta: Meta,
         typ: T,
-        pattern: Pattern,
         value: Box<Expr<T>>,
-        then: Box<Expr<T>>,
+        clause: Clause<T>,
     },
 
-    Enum {
+    Constructor {
         meta: Meta,
         name: String,
         typ: T,
-        args: Vec<Expr<T>>,
     },
 
     Case {
@@ -240,22 +238,22 @@ impl<T> Expr<T> {
     pub fn meta(&self) -> &Meta {
         match self {
             Expr::Int { meta, .. } => meta,
-            Expr::Float { meta, .. } => meta,
-            Expr::Atom { meta, .. } => meta,
-            Expr::String { meta, .. } => meta,
-            Expr::Tuple { meta, .. } => meta,
             Expr::Seq { meta, .. } => meta,
             Expr::Var { meta, .. } => meta,
             Expr::Fun { meta, .. } => meta,
             Expr::Nil { meta, .. } => meta,
+            Expr::Let { meta, .. } => meta,
+            Expr::Atom { meta, .. } => meta,
+            Expr::Case { meta, .. } => meta,
             Expr::Cons { meta, .. } => meta,
             Expr::Call { meta, .. } => meta,
+            Expr::Tuple { meta, .. } => meta,
+            Expr::Float { meta, .. } => meta,
             Expr::BinOp { meta, .. } => meta,
-            Expr::Let { meta, .. } => meta,
-            Expr::Enum { meta, .. } => meta,
-            Expr::Case { meta, .. } => meta,
+            Expr::String { meta, .. } => meta,
             Expr::RecordNil { meta, .. } => meta,
             Expr::RecordCons { meta, .. } => meta,
+            Expr::Constructor { meta, .. } => meta,
             Expr::RecordSelect { meta, .. } => meta,
             Expr::ModuleSelect { meta, .. } => meta,
         }
@@ -278,10 +276,10 @@ impl Expr<typ::Type> {
             Expr::Call { typ, .. } => (*typ).clone(),
             Expr::BinOp { typ, .. } => (*typ).clone(),
             Expr::Let { typ, .. } => (*typ).clone(),
-            Expr::Enum { typ, .. } => (*typ).clone(),
             Expr::Case { typ, .. } => (*typ).clone(),
             Expr::RecordNil { .. } => typ::Type::Record { row: typ::Row::Nil },
             Expr::RecordCons { typ, .. } => (*typ).clone(),
+            Expr::Constructor { typ, .. } => (*typ).clone(),
             Expr::RecordSelect { typ, .. } => (*typ).clone(),
             Expr::ModuleSelect { typ, .. } => (*typ).clone(),
         }
@@ -292,8 +290,8 @@ impl Expr<typ::Type> {
 pub struct Clause<T> {
     pub meta: Meta,
     pub typ: T,
-    pub pattern: Box<Pattern>,
-    pub body: Box<Expr<T>>,
+    pub pattern: Pattern,
+    pub then: Box<Expr<T>>,
 }
 
 #[derive(Debug, PartialEq, Default)]

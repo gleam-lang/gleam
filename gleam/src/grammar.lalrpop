@@ -2,43 +2,74 @@
 
 use std::str::FromStr;
 
-use crate::ast::Expr;
+use crate::ast::{Expr, Clause, Scope};
 use crate::pattern::Pattern;
 use crate::parser::*;
 
 grammar;
 
-// TODO: Need to decide how to handle Seq
-// Seq => <>,
-
 pub Expr: Expr<()> = {
-    Nil => <>,
     Let => <>,
+    Seq => <>,
+    SingleExpr => <>,
+}
+
+SingleExpr: Expr<()> = {
+    Nil => <>,
     Int => <>,
+    Var => <>,
+    Cons => <>,
+    Call => <>,
     Atom => <>,
     Float => <>,
     Tuple => <>,
     String => <>,
-    // Var => <>,
     // Fun => <>,
-    // Cons => <>,
-    // Call => <>,
     // BinOp => <>,
-    // Enum => <>,
     // Case => <>,
     RecordNil => <>,
+    Constructor => <>,
     // RecordCons => <>,
     // RecordSelect => <>,
     // ModuleSelect => <>,
 }
 
 Let: Expr<()> = {
-    <s:@L> <p:Pattern> "=" <v:Expr> <e:@L> <t:Expr> => Expr::Let {
+    <s:@L> <p:Pattern> "=" <v:SingleExpr> <e:@L> <t:Expr> => Expr::Let {
         meta: meta(s, e),
         typ: (),
-        pattern: p,
         value: Box::new(v),
-        then: Box::new(t),
+        clause: Clause {
+            meta: meta(s, e),
+            typ: (),
+            pattern: p,
+            then: Box::new(t),
+        }
+    }
+}
+
+Seq: Expr<()> = {
+    <s:@L> <a:SingleExpr> <b:Expr> <e:@L> => Expr::Seq {
+        meta: meta(s, e),
+        first: Box::new(a),
+        then: Box::new(b),
+    }
+}
+
+Constructor: Expr<()> = {
+    <s:@L> <n:ConstructorName> <e:@L> => Expr::Constructor {
+        meta: meta(s, e),
+        typ: (),
+        name: n,
+    },
+}
+
+Call: Expr<()> = {
+    <s:@L> <fun:SingleExpr> "(" <args:Comma<Expr>> ")" <e:@L> => Expr::Call {
+        meta: meta(s, e),
+        typ: (),
+        fun: Box::new(fun),
+        args: args,
     }
 }
 
@@ -47,6 +78,24 @@ Tuple: Expr<()> = {
         meta: meta(s, e),
         typ: (),
         elems: elems,
+    }
+}
+
+Cons: Expr<()> = {
+    <s:@L> "[" <head:Expr> "|" <tail:Expr> "]" <e:@L> => Expr::Cons {
+        meta: meta(s, e),
+        typ: (),
+        head: Box::new(head),
+        tail: Box::new(tail),
+    }
+}
+
+Var: Expr<()> = {
+    <s:@L> <v:VarName> <e:@L> => Expr::Var {
+        meta: meta(s, e),
+        typ: (),
+        name: v,
+        scope: Scope::Local,
     }
 }
 
@@ -127,4 +176,8 @@ PatternVar: Pattern = {
 
 VarName: String = {
     <v:r"[a-z][a-z_]*"> => v.to_string()
+}
+
+ConstructorName: String = {
+    <v:r"[A-Z][A-Za-z_]*"> => v.to_string()
 }

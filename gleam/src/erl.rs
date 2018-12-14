@@ -120,7 +120,6 @@ fn string(value: String) -> Document {
     value.to_doc().surround("<<\"", "\">>")
 }
 
-// TODO: Wrap elem in `begin end` if it is a `Seq` or `Let`
 fn tuple<F, E>(f: F, elems: Vec<E>, mut env: &Env) -> Document
 where
     F: Fn(E, &Env) -> Document,
@@ -170,14 +169,14 @@ fn bin_op<T>(name: BinOp, left: Expr<T>, right: Expr<T>, mut env: &Env) -> Docum
         .append(expr(right, &mut env))
 }
 
-fn let_<T>(p: Pattern, value: Expr<T>, then: Expr<T>, mut env: &Env) -> Document {
-    pattern(p, &mut env)
+fn let_<T>(value: Expr<T>, clause: Clause<T>, mut env: &Env) -> Document {
+    pattern(clause.pattern, &mut env)
         .append(" =")
         .append(break_("", " "))
         .append(expr(value, &mut env).nest(INDENT))
         .append(",")
         .append(line())
-        .append(expr(then, &mut env))
+        .append(expr(*clause.then, &mut env))
 }
 
 fn pattern(p: Pattern, mut env: &Env) -> Document {
@@ -250,10 +249,10 @@ where
 }
 
 fn clause<T>(clause: Clause<T>, mut env: &Env) -> Document {
-    pattern(*clause.pattern, &mut env)
+    pattern(clause.pattern, &mut env)
         .append(" ->")
         .append(break_("", " "))
-        .append(expr(*clause.body, &mut env).nest(INDENT).group())
+        .append(expr(*clause.then, &mut env).nest(INDENT).group())
 }
 
 fn clauses<T>(cs: Vec<Clause<T>>, mut env: &Env) -> Document {
@@ -294,6 +293,7 @@ fn expr<T>(expression: Expr<T>, mut env: &Env) -> Document {
         Expr::RecordNil { .. } => "#{}".to_doc(),
         Expr::Int { value, .. } => value.to_doc(),
         Expr::Float { value, .. } => value.to_doc(),
+        Expr::Constructor { name, .. } => atom(name.to_snake_case()),
         Expr::Atom { value, .. } => atom(value),
         Expr::String { value, .. } => string(value),
         Expr::Tuple { elems, .. } => tuple(expr, elems, &mut env),
@@ -302,9 +302,9 @@ fn expr<T>(expression: Expr<T>, mut env: &Env) -> Document {
         Expr::Fun { args, body, .. } => fun(args, *body, &mut env),
         Expr::Cons { head, tail, .. } => cons(expr, *head, *tail, &mut env),
         Expr::Call { .. } => unimplemented!(),
-        Expr::Enum { name, args, .. } => enum_(expr_atom, expr, name, args, &mut env),
         Expr::RecordSelect { .. } => unimplemented!(),
         Expr::ModuleSelect { .. } => unimplemented!(),
+        Expr::Let { clause, value, .. } => let_(*value, clause, &mut env),
         Expr::RecordCons {
             label, value, tail, ..
         } => expr_record_cons(label, *value, *tail, &mut env),
@@ -314,12 +314,6 @@ fn expr<T>(expression: Expr<T>, mut env: &Env) -> Document {
         Expr::BinOp {
             name, left, right, ..
         } => bin_op(name, *left, *right, &mut env),
-        Expr::Let {
-            pattern,
-            value,
-            then,
-            ..
-        } => let_(pattern, *value, *then, &mut env),
     }
 }
 
@@ -551,32 +545,10 @@ fn expr_test() {
                 public: false,
                 args: vec![],
                 name: "enum1".to_string(),
-                body: Expr::Enum {
+                body: Expr::Constructor {
                     meta: default(),
                     name: "Nil".to_string(),
                     typ: (),
-                    args: vec![],
-                },
-            },
-            Statement::Fun {
-                meta: default(),
-                public: false,
-                args: vec![],
-                name: "enum2".to_string(),
-                body: Expr::Enum {
-                    meta: default(),
-                    name: "Ok".to_string(),
-                    typ: (),
-                    args: vec![
-                        Expr::Int {
-                            meta: default(),
-                            value: 1,
-                        },
-                        Expr::Float {
-                            meta: default(),
-                            value: 2.0,
-                        },
-                    ],
                 },
             },
             Statement::Fun {
@@ -586,21 +558,25 @@ fn expr_test() {
                 name: "let".to_string(),
                 body: Expr::Let {
                     meta: default(),
-                    pattern: Pattern::Var {
-                        meta: default(),
-                        name: "OneTwo".to_string(),
-                    },
                     typ: (),
                     value: Box::new(Expr::Int {
                         meta: default(),
                         value: 1,
                     }),
-                    then: Box::new(Expr::Var {
+                    clause: Clause {
                         meta: default(),
                         typ: (),
-                        scope: Scope::Local,
-                        name: "one_two".to_string(),
-                    }),
+                        pattern: Pattern::Var {
+                            meta: default(),
+                            name: "OneTwo".to_string(),
+                        },
+                        then: Box::new(Expr::Var {
+                            meta: default(),
+                            typ: (),
+                            scope: Scope::Local,
+                            name: "one_two".to_string(),
+                        }),
+                    },
                 },
             },
             Statement::Fun {
@@ -694,9 +670,6 @@ bin_op() ->
 enum1() ->
     'nil'.
 
-enum2() ->
-    {'ok', 1, 2.0}.
-
 let() ->
     OneTwo = 1,
     OneTwo.
@@ -715,6 +688,10 @@ funny() ->
     .to_string();
     assert_eq!(expected, module(m));
 }
+
+// TODO
+// enum2() ->
+//     {'ok', 1, 2.0}.
 
 #[test]
 fn args_test() {
@@ -879,11 +856,11 @@ fn cast_test() {
                     Clause {
                         meta: default(),
                         typ: (),
-                        pattern: Box::new(Pattern::Int {
+                        pattern: Pattern::Int {
                             meta: default(),
                             value: 1,
-                        }),
-                        body: Box::new(Expr::Int {
+                        },
+                        then: Box::new(Expr::Int {
                             meta: default(),
                             value: 1,
                         }),
@@ -891,11 +868,11 @@ fn cast_test() {
                     Clause {
                         meta: default(),
                         typ: (),
-                        pattern: Box::new(Pattern::Float {
+                        pattern: Pattern::Float {
                             meta: default(),
                             value: 1.0,
-                        }),
-                        body: Box::new(Expr::Int {
+                        },
+                        then: Box::new(Expr::Int {
                             meta: default(),
                             value: 1,
                         }),
@@ -903,11 +880,11 @@ fn cast_test() {
                     Clause {
                         meta: default(),
                         typ: (),
-                        pattern: Box::new(Pattern::Atom {
+                        pattern: Pattern::Atom {
                             meta: default(),
                             value: "ok".to_string(),
-                        }),
-                        body: Box::new(Expr::Int {
+                        },
+                        then: Box::new(Expr::Int {
                             meta: default(),
                             value: 1,
                         }),
@@ -915,11 +892,11 @@ fn cast_test() {
                     Clause {
                         meta: default(),
                         typ: (),
-                        pattern: Box::new(Pattern::String {
+                        pattern: Pattern::String {
                             meta: default(),
                             value: "hello".to_string(),
-                        }),
-                        body: Box::new(Expr::Int {
+                        },
+                        then: Box::new(Expr::Int {
                             meta: default(),
                             value: 1,
                         }),
@@ -927,7 +904,7 @@ fn cast_test() {
                     Clause {
                         meta: default(),
                         typ: (),
-                        pattern: Box::new(Pattern::Tuple {
+                        pattern: Pattern::Tuple {
                             meta: default(),
                             elems: vec![
                                 Pattern::Int {
@@ -939,8 +916,8 @@ fn cast_test() {
                                     value: 2,
                                 },
                             ],
-                        }),
-                        body: Box::new(Expr::Int {
+                        },
+                        then: Box::new(Expr::Int {
                             meta: default(),
                             value: 1,
                         }),
@@ -948,8 +925,8 @@ fn cast_test() {
                     Clause {
                         meta: default(),
                         typ: (),
-                        pattern: Box::new(Pattern::Nil { meta: default() }),
-                        body: Box::new(Expr::Int {
+                        pattern: Pattern::Nil { meta: default() },
+                        then: Box::new(Expr::Int {
                             meta: default(),
                             value: 1,
                         }),
@@ -957,15 +934,15 @@ fn cast_test() {
                     Clause {
                         meta: default(),
                         typ: (),
-                        pattern: Box::new(Pattern::Enum {
+                        pattern: Pattern::Enum {
                             meta: default(),
                             name: "Error".to_string(),
                             args: vec![Pattern::Int {
                                 meta: default(),
                                 value: 2,
                             }],
-                        }),
-                        body: Box::new(Expr::Int {
+                        },
+                        then: Box::new(Expr::Int {
                             meta: default(),
                             value: 1,
                         }),
@@ -973,15 +950,15 @@ fn cast_test() {
                     Clause {
                         meta: default(),
                         typ: (),
-                        pattern: Box::new(Pattern::Cons {
+                        pattern: Pattern::Cons {
                             meta: default(),
                             head: Box::new(Pattern::Int {
                                 meta: default(),
                                 value: 1,
                             }),
                             tail: Box::new(Pattern::Nil { meta: default() }),
-                        }),
-                        body: Box::new(Expr::Int {
+                        },
+                        then: Box::new(Expr::Int {
                             meta: default(),
                             value: 1,
                         }),
@@ -989,8 +966,8 @@ fn cast_test() {
                     Clause {
                         meta: default(),
                         typ: (),
-                        pattern: Box::new(Pattern::RecordNil { meta: default() }),
-                        body: Box::new(Expr::Int {
+                        pattern: Pattern::RecordNil { meta: default() },
+                        then: Box::new(Expr::Int {
                             meta: default(),
                             value: 1,
                         }),
