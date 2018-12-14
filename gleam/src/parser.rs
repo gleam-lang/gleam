@@ -1,5 +1,5 @@
-use crate::ast::{Arg, Clause, Expr, Meta, Scope};
-use crate::grammar::ExprParser;
+use crate::ast::{Arg, Clause, Expr, Meta, Module, Scope, Statement};
+use crate::grammar::{ExprParser, ModuleParser};
 use crate::pattern::Pattern;
 
 pub fn meta(start: usize, end: usize) -> Meta {
@@ -267,5 +267,66 @@ fn expr_test() {
             })
         }),
         ExprParser::new().parse("fn(a, b) { 1 2 }"),
+    );
+}
+
+#[test]
+fn module_test() {
+    assert_eq!(
+        Ok(Module {
+            name: "".to_string(),
+            statements: vec![]
+        }),
+        ModuleParser::new().parse(""),
+    );
+
+    assert_eq!(
+        Ok(Module {
+            name: "".to_string(),
+            statements: vec![Statement::Import {
+                meta: Meta { start: 0, end: 12 },
+                module: "magic".to_string()
+            }]
+        }),
+        ModuleParser::new().parse("import magic"),
+    );
+
+    assert_eq!(
+        Ok(Module {
+            name: "".to_string(),
+            statements: vec![Statement::ExternalType {
+                meta: Meta { start: 0, end: 18 },
+                public: false,
+                name: "Conn".to_string(),
+                args: vec![],
+            }]
+        }),
+        ModuleParser::new().parse("external type Conn"),
+    );
+
+    assert_eq!(
+        Ok(Module {
+            name: "".to_string(),
+            statements: vec![Statement::ExternalType {
+                meta: Meta { start: 0, end: 22 },
+                public: true,
+                name: "Conn".to_string(),
+                args: vec![],
+            }]
+        }),
+        ModuleParser::new().parse("pub external type Conn"),
+    );
+
+    assert_eq!(
+        Ok(Module {
+            name: "".to_string(),
+            statements: vec![Statement::ExternalType {
+                meta: Meta { start: 0, end: 26 },
+                public: false,
+                name: "Vector".to_string(),
+                args: vec!["a".to_string(), "b".to_string()],
+            }]
+        }),
+        ModuleParser::new().parse("external type Vector(a, b)"),
     );
 }

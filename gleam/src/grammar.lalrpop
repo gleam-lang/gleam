@@ -2,11 +2,43 @@
 
 use std::str::FromStr;
 
-use crate::ast::{Expr, Clause, Scope, Arg};
+use crate::ast::{Expr, Clause, Scope, Arg, Module, Statement};
 use crate::pattern::Pattern;
 use crate::parser::*;
 
 grammar;
+
+pub Module: Module<()> = {
+    Statement* => Module {
+        name: "".to_string(),
+        statements: <>,
+    }
+}
+
+Statement: Statement<()> = {
+    // StatementFun => <>,
+    // StatementTest => <>,
+    // StatementEnum => <>,
+    // StatementExternalFun => <>,
+    StatementExternalType => <>,
+    StatementImport => <>,
+}
+
+StatementImport: Statement<()> = {
+    <s:@L> "import" <n:VarName> <e:@L> => Statement::Import {
+        meta: meta(s, e),
+        module: n,
+    }
+}
+
+StatementExternalType: Statement<()> = {
+    <s:@L> <p:"pub"?> "external" "type" <n:TypeName> <e:@L> => Statement::ExternalType {
+        meta: meta(s, e),
+        public: p.is_some(),
+        name: n.0,
+        args: n.1,
+    }
+}
 
 pub Expr: Expr<()> = {
     Let => <>,
@@ -189,10 +221,15 @@ PatternVar: Pattern = {
     }
 }
 
+TypeName: (String, Vec<String>) = {
+    <v:r"[A-Z][A-Za-z]*"> => (v.to_string(), vec![]),
+    <v:r"[A-Z][A-Za-z]*"> "(" <a:Comma<VarName>> ")" => (v.to_string(), a),
+}
+
 VarName: String = {
     <v:r"[a-z][a-z_]*"> => v.to_string()
 }
 
 ConstructorName: String = {
-    <v:r"[A-Z][A-Za-z_]*"> => v.to_string()
+    <v:r"[A-Z][A-Za-z]*"> => v.to_string()
 }

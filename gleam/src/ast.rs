@@ -66,6 +66,7 @@ pub enum Statement<T> {
         meta: Meta,
         public: bool,
         name: String,
+        args: Vec<String>,
     },
 
     Import {

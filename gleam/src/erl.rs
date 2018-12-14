@@ -354,6 +354,7 @@ fn module_test() {
                 meta: default(),
                 public: true,
                 name: "Any".to_string(),
+                args: vec![],
             },
             Statement::Enum {
                 meta: default(),
