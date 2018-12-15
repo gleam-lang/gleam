@@ -1,10 +1,10 @@
+#![allow(dead_code)] // TODO
+
 //!  This module implements the functionality described in
 //!  ["Strictly Pretty" (2000) by Christian Lindig][0], with a few
 //!  extensions.
 //!
 //!  [0]: http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.34.2200
-
-#![allow(dead_code)]
 
 use im::vector::Vector;
 

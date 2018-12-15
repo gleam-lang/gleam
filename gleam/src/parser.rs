@@ -1,4 +1,4 @@
-use crate::ast::{Arg, Clause, Expr, Meta, Module, Pattern, Scope, Statement, Type};
+use crate::ast::{Arg, Expr, Meta, Module, Pattern, Scope, Statement, Type};
 use crate::grammar::{ExprParser, ModuleParser};
 
 pub fn meta(start: usize, end: usize) -> Meta {
@@ -82,7 +82,6 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Nil {
             meta: Meta { start: 0, end: 2 },
-            typ: (),
         }),
         ExprParser::new().parse("[]"),
     );
@@ -97,10 +96,8 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Call {
             meta: Meta { start: 0, end: 11 },
-            typ: (),
             fun: Box::new(Expr::Var {
                 meta: Meta { start: 0, end: 5 },
-                typ: (),
                 name: "hello".to_string(),
                 scope: Scope::Local,
             }),
@@ -121,7 +118,6 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Var {
             meta: Meta { start: 0, end: 5 },
-            typ: (),
             name: "hello".to_string(),
             scope: Scope::Local,
         }),
@@ -131,10 +127,8 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Call {
             meta: Meta { start: 0, end: 10 },
-            typ: (),
             fun: Box::new(Expr::Constructor {
                 meta: Meta { start: 0, end: 4 },
-                typ: (),
                 name: "Pair".to_string(),
             }),
             args: vec![
@@ -154,14 +148,12 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Cons {
             meta: Meta { start: 0, end: 8 },
-            typ: (),
             head: Box::new(Expr::Int {
                 meta: Meta { start: 1, end: 2 },
                 value: 1
             }),
             tail: Box::new(Expr::Nil {
                 meta: Meta { start: 5, end: 7 },
-                typ: (),
             })
         }),
         ExprParser::new().parse("[1 | []]"),
@@ -170,23 +162,18 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Let {
             meta: Meta { start: 0, end: 6 },
-            typ: (),
             value: Box::new(Expr::Int {
                 meta: Meta { start: 4, end: 5 },
                 value: 1
             }),
-            clause: Clause {
-                typ: (),
-                meta: Meta { start: 0, end: 6 },
-                pattern: Pattern::Var {
-                    meta: Meta { start: 0, end: 1 },
-                    name: "x".to_string(),
-                },
-                then: Box::new(Expr::Int {
-                    meta: Meta { start: 6, end: 7 },
-                    value: 2
-                })
-            }
+            pattern: Pattern::Var {
+                meta: Meta { start: 0, end: 1 },
+                name: "x".to_string(),
+            },
+            then: Box::new(Expr::Int {
+                meta: Meta { start: 6, end: 7 },
+                value: 2
+            })
         }),
         ExprParser::new().parse("x = 1 2"),
     );
@@ -209,11 +196,9 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::RecordSelect {
             meta: Meta { start: 0, end: 11 },
-            typ: (),
             label: "name".to_string(),
             record: Box::new(Expr::Var {
                 meta: Meta { start: 0, end: 6 },
-                typ: (),
                 name: "person".to_string(),
                 scope: Scope::Local,
             })
@@ -224,11 +209,9 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::ModuleSelect {
             meta: Meta { start: 0, end: 11 },
-            typ: (),
             label: "name".to_string(),
             module: Box::new(Expr::Var {
                 meta: Meta { start: 0, end: 6 },
-                typ: (),
                 name: "person".to_string(),
                 scope: Scope::Local,
             })
@@ -239,7 +222,6 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Tuple {
             meta: Meta { start: 0, end: 9 },
-            typ: (),
             elems: vec![
                 Expr::Int {
                     meta: Meta { start: 1, end: 2 },
@@ -261,7 +243,6 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Fun {
             meta: Meta { start: 0, end: 10 },
-            typ: (),
             args: vec![],
             body: Box::new(Expr::Int {
                 meta: Meta { start: 7, end: 8 },
@@ -274,7 +255,6 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Fun {
             meta: Meta { start: 0, end: 16 },
-            typ: (),
             args: vec![
                 Arg {
                     name: "a".to_string()
@@ -301,23 +281,18 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Let {
             meta: Meta { start: 0, end: 6 },
-            typ: (),
             value: Box::new(Expr::Int {
                 meta: Meta { start: 4, end: 5 },
                 value: 1
             }),
-            clause: Clause {
-                typ: (),
-                meta: Meta { start: 0, end: 6 },
-                pattern: Pattern::Int {
-                    meta: Meta { start: 0, end: 1 },
-                    value: 0,
-                },
-                then: Box::new(Expr::Int {
-                    meta: Meta { start: 6, end: 7 },
-                    value: 2
-                })
-            }
+            pattern: Pattern::Int {
+                meta: Meta { start: 0, end: 1 },
+                value: 0,
+            },
+            then: Box::new(Expr::Int {
+                meta: Meta { start: 6, end: 7 },
+                value: 2
+            })
         }),
         ExprParser::new().parse("0 = 1 2"),
     );
@@ -325,23 +300,18 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Let {
             meta: Meta { start: 0, end: 8 },
-            typ: (),
             value: Box::new(Expr::Int {
                 meta: Meta { start: 6, end: 7 },
                 value: 1,
             }),
-            clause: Clause {
-                typ: (),
-                meta: Meta { start: 0, end: 8 },
-                pattern: Pattern::Float {
-                    meta: Meta { start: 0, end: 3 },
-                    value: 1.0,
-                },
-                then: Box::new(Expr::Int {
-                    meta: Meta { start: 8, end: 9 },
-                    value: 2
-                })
-            }
+            pattern: Pattern::Float {
+                meta: Meta { start: 0, end: 3 },
+                value: 1.0,
+            },
+            then: Box::new(Expr::Int {
+                meta: Meta { start: 8, end: 9 },
+                value: 2
+            })
         }),
         ExprParser::new().parse("1.0 = 1 2"),
     );
@@ -349,23 +319,18 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Let {
             meta: Meta { start: 0, end: 8 },
-            typ: (),
             value: Box::new(Expr::Int {
                 meta: Meta { start: 6, end: 7 },
                 value: 1
             }),
-            clause: Clause {
-                typ: (),
-                meta: Meta { start: 0, end: 8 },
-                pattern: Pattern::Atom {
-                    meta: Meta { start: 0, end: 3 },
-                    value: "a".to_string(),
-                },
-                then: Box::new(Expr::Int {
-                    meta: Meta { start: 8, end: 9 },
-                    value: 2
-                })
-            }
+            pattern: Pattern::Atom {
+                meta: Meta { start: 0, end: 3 },
+                value: "a".to_string(),
+            },
+            then: Box::new(Expr::Int {
+                meta: Meta { start: 8, end: 9 },
+                value: 2
+            })
         }),
         ExprParser::new().parse("'a' = 1 2"),
     );
@@ -373,23 +338,18 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Let {
             meta: Meta { start: 0, end: 8 },
-            typ: (),
             value: Box::new(Expr::Int {
                 meta: Meta { start: 6, end: 7 },
                 value: 1
             }),
-            clause: Clause {
-                typ: (),
-                meta: Meta { start: 0, end: 8 },
-                pattern: Pattern::String {
-                    meta: Meta { start: 0, end: 3 },
-                    value: "a".to_string(),
-                },
-                then: Box::new(Expr::Int {
-                    meta: Meta { start: 8, end: 9 },
-                    value: 2
-                })
-            }
+            pattern: Pattern::String {
+                meta: Meta { start: 0, end: 3 },
+                value: "a".to_string(),
+            },
+            then: Box::new(Expr::Int {
+                meta: Meta { start: 8, end: 9 },
+                value: 2
+            })
         }),
         ExprParser::new().parse("\"a\" = 1 2"),
     );
@@ -397,7 +357,6 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::RecordCons {
             meta: Meta { start: 0, end: 19 },
-            typ: (),
             label: "size".to_string(),
             value: Box::new(Expr::Int {
                 meta: Meta { start: 16, end: 17 },
@@ -405,7 +364,6 @@ fn expr_test() {
             }),
             tail: Box::new(Expr::Var {
                 meta: Meta { start: 2, end: 6 },
-                typ: (),
                 name: "jane".to_string(),
                 scope: Scope::Local,
             }),

@@ -2,19 +2,19 @@
 
 use std::str::FromStr;
 
-use crate::ast::{Expr, Clause, Scope, Arg, Module, Statement, Type, Pattern};
+use crate::ast::{Expr, Scope, Arg, Module, Statement, Type, Pattern};
 use crate::parser::*;
 
 grammar;
 
-pub Module: Module<()> = {
+pub Module: Module = {
     Statement* => Module {
         name: "".to_string(),
         statements: <>,
     }
 }
 
-Statement: Statement<()> = {
+Statement: Statement = {
     StatementFun => <>,
     StatementTest => <>,
     // StatementEnum => <>,
@@ -23,7 +23,7 @@ Statement: Statement<()> = {
     StatementImport => <>,
 }
 
-StatementExternalFun: Statement<()> = {
+StatementExternalFun: Statement = {
     <s:@L> <p:"pub"?> "external" "fn" <n:VarName> "(" <a:Comma<Type>> ")" "->" <r:Type> "=" <m:RawAtom> <f:RawAtom> <e:@L> => Statement::ExternalFun {
         meta: meta(s, e),
         public: p.is_some(),
@@ -35,7 +35,7 @@ StatementExternalFun: Statement<()> = {
     }
 }
 
-StatementFun: Statement<()> = {
+StatementFun: Statement = {
     <s:@L> <p:"pub"?> "fn" <n:VarName> "(" <a:Comma<FnArg>> ")" "{" <b:Expr> "}" <e:@L> => Statement::Fun {
         meta: meta(s, e),
         public: p.is_some(),
@@ -45,7 +45,7 @@ StatementFun: Statement<()> = {
     }
 }
 
-StatementTest: Statement<()> = {
+StatementTest: Statement = {
     <s:@L> "test" <n:VarName> "{" <b:Expr> "}" <e:@L> => Statement::Test {
         meta: meta(s, e),
         name: n,
@@ -53,14 +53,14 @@ StatementTest: Statement<()> = {
     }
 }
 
-StatementImport: Statement<()> = {
+StatementImport: Statement = {
     <s:@L> "import" <n:VarName> <e:@L> => Statement::Import {
         meta: meta(s, e),
         module: n,
     }
 }
 
-StatementExternalType: Statement<()> = {
+StatementExternalType: Statement = {
     <s:@L> <p:"pub"?> "external" "type" <n:TypeName> <e:@L> => Statement::ExternalType {
         meta: meta(s, e),
         public: p.is_some(),
@@ -69,13 +69,13 @@ StatementExternalType: Statement<()> = {
     }
 }
 
-pub Expr: Expr<()> = {
+pub Expr: Expr = {
     Let => <>,
     Seq => <>,
     SingleExpr => <>,
 }
 
-SingleExpr: Expr<()> = {
+SingleExpr: Expr = {
     Nil => <>,
     Int => <>,
     Var => <>,
@@ -95,50 +95,42 @@ SingleExpr: Expr<()> = {
     ModuleSelect => <>,
 }
 
-Let: Expr<()> = {
+Let: Expr = {
     <s:@L> <p:Pattern> "=" <v:SingleExpr> <e:@L> <t:Expr> => Expr::Let {
         meta: meta(s, e),
-        typ: (),
         value: Box::new(v),
-        clause: Clause {
-            meta: meta(s, e),
-            typ: (),
-            pattern: p,
-            then: Box::new(t),
-        }
+        pattern: p,
+        then: Box::new(t),
     }
 }
 
-RecordSelect: Expr<()> = {
+RecordSelect: Expr = {
     <s:@L> <r:SingleExpr> "." <l:VarName> <e:@L> => Expr::RecordSelect {
         meta: meta(s, e),
-        typ: (),
         label: l,
         record: Box::new(r),
     },
 }
 
 // TODO: multiple fields
-RecordCons: Expr<()> = {
+RecordCons: Expr = {
     <s:@L> "{" <r:SingleExpr> "|" <l:VarName> "=" <v:SingleExpr> "}" <e:@L> => Expr::RecordCons {
         meta: meta(s, e),
-        typ: (),
         label: l,
         value: Box::new(v),
         tail: Box::new(r),
     },
 }
 
-ModuleSelect: Expr<()> = {
+ModuleSelect: Expr = {
     <s:@L> <m:SingleExpr> ":" <l:VarName> <e:@L> => Expr::ModuleSelect {
         meta: meta(s, e),
-        typ: (),
         label: l,
         module: Box::new(m),
     },
 }
 
-Seq: Expr<()> = {
+Seq: Expr = {
     <s:@L> <a:SingleExpr> <b:Expr> <e:@L> => Expr::Seq {
         meta: meta(s, e),
         first: Box::new(a),
@@ -146,10 +138,9 @@ Seq: Expr<()> = {
     }
 }
 
-Fun: Expr<()> = {
+Fun: Expr = {
     <s:@L> "fn(" <a:Comma<FnArg>> ")" "{" <b:Expr> "}" <e:@L> => Expr::Fun {
         meta: meta(s, e),
-        typ: (),
         args: a,
         body: Box::new(b),
     }
@@ -161,64 +152,58 @@ FnArg: Arg = {
     },
 }
 
-Constructor: Expr<()> = {
+Constructor: Expr = {
     <s:@L> <n:ConstructorName> <e:@L> => Expr::Constructor {
         meta: meta(s, e),
-        typ: (),
         name: n,
     },
 }
 
-Call: Expr<()> = {
+Call: Expr = {
     <s:@L> <fun:SingleExpr> "(" <args:Comma<Expr>> ")" <e:@L> => Expr::Call {
         meta: meta(s, e),
-        typ: (),
         fun: Box::new(fun),
         args: args,
     }
 }
 
-Tuple: Expr<()> = {
+Tuple: Expr = {
     <s:@L> "{" <elems:Comma<Expr>> "}" <e:@L> => Expr::Tuple {
         meta: meta(s, e),
-        typ: (),
         elems: elems,
     }
 }
 
-Cons: Expr<()> = {
+Cons: Expr = {
     <s:@L> "[" <head:Expr> "|" <tail:Expr> "]" <e:@L> => Expr::Cons {
         meta: meta(s, e),
-        typ: (),
         head: Box::new(head),
         tail: Box::new(tail),
     }
 }
 
-Var: Expr<()> = {
+Var: Expr = {
     <s:@L> <v:VarName> <e:@L> => Expr::Var {
         meta: meta(s, e),
-        typ: (),
         name: v,
         scope: Scope::Local,
     }
 }
 
-Nil: Expr<()> = {
+Nil: Expr = {
     <s:@L> "[]" <e:@L> => Expr::Nil {
         meta: meta(s, e),
-        typ: (),
     }
 }
 
-RecordNil: Expr<()> = {
+RecordNil: Expr = {
     <s:@L> "{}" <e:@L> => Expr::RecordNil {
         meta: meta(s, e),
     }
 }
 
 // TODO: Unescape?
-Atom: Expr<()> = {
+Atom: Expr = {
     <s:@L> <x:RawAtom> <e:@L> => Expr::Atom {
         meta: meta(s, e),
         value: x,
@@ -226,21 +211,21 @@ Atom: Expr<()> = {
 }
 
 // TODO: Unescape?
-String: Expr<()> = {
+String: Expr = {
     <s:@L> <x:RawString> <e:@L> => Expr::String {
         meta: meta(s, e),
         value: x,
     }
 }
 
-Int: Expr<()> = {
+Int: Expr = {
     <s:@L> <i:r"-?[0-9]+"> <e:@L> => Expr::Int {
         meta: meta(s, e),
         value: i64::from_str(i).unwrap(),
     }
 }
 
-Float: Expr<()> = {
+Float: Expr = {
     <s:@L> <f:r"-?[0-9]+\.+[0-9]*"> <e:@L> => Expr::Float {
         meta: meta(s, e),
         value: f64::from_str(f).unwrap(),

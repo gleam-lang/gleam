@@ -1,6 +1,9 @@
-use crate::ast::Expr;
+#![allow(dead_code)] // TODO
+
+use crate::ast::{Expr, Meta, Pattern};
 use crate::grammar;
 use crate::pretty::*;
+use im::hashmap::HashMap;
 use itertools::Itertools;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -217,6 +220,7 @@ pub enum Row {
 #[derive(Debug, Clone, Default)]
 pub struct Env {
     uid: usize,
+    variables: HashMap<String, Type>,
 }
 
 impl Env {
@@ -226,6 +230,9 @@ impl Env {
         i
     }
 
+    /// Create a new unbound type that is a specific type, we just don't
+    /// know which one yet.
+    ///
     pub fn new_var(&mut self, level: usize) -> Type {
         Type::Var {
             typ: Rc::new(RefCell::new(TypeVar::Unbound {
@@ -235,6 +242,8 @@ impl Env {
         }
     }
 
+    /// Create a new generic type that can stand in for any type.
+    ///
     pub fn new_generic_var(&mut self) -> Type {
         Type::Var {
             typ: Rc::new(RefCell::new(TypeVar::Generic {
@@ -242,29 +251,80 @@ impl Env {
             })),
         }
     }
+
+    /// Record the type of a variable in the environment.
+    ///
+    pub fn put_variable(&mut self, name: String, typ: Type) {
+        self.variables.insert(name, typ);
+    }
+
+    /// Record the type of a variable in the environment.
+    ///
+    pub fn get_variable(&mut self, name: &String) -> Option<&Type> {
+        self.variables.get(name)
+    }
 }
 
 #[derive(Debug)]
-pub enum Error {}
+pub enum Error {
+    UnknownVariable {
+        meta: Meta,
+        name: String,
+        variables: HashMap<String, Type>,
+    },
+}
 
+// If we later decide we want to annotate the AST with types we could add a Typed
+// variant to the Expr enum
+// https://github.com/purescript/purescript/blob/04d53f293b665715d61788213bd0d714c1d08778/src/Language/PureScript/AST/Declarations.hs#L770
+//
 /// Crawl the AST, annotating each node with the inferred type.
 ///
-pub fn infer(expr: Expr<()>, level: usize, env: &mut Env) -> Result<Expr<Type>, Error> {
+pub fn infer(expr: &Expr, level: usize, env: &mut Env) -> Result<Type, Error> {
     match expr {
-        Expr::Int { meta, value } => Ok(Expr::Int { meta, value }),
-        Expr::Seq { .. } => unimplemented!(),
-        Expr::Var { .. } => unimplemented!(),
+        Expr::Int { .. } => Ok(int()),
+
+        Expr::Seq { first, then, .. } => {
+            infer(first, level, env)?;
+            infer(then, level, env)
+        }
+
+        Expr::Var { meta, name, .. } => {
+            env.get_variable(name)
+                .map(|v| (*v).clone())
+                .ok_or_else(|| Error::UnknownVariable {
+                    meta: (*meta).clone(),
+                    name: name.to_string(),
+                    variables: env.variables.clone(),
+                })
+        }
+
         Expr::Fun { .. } => unimplemented!(),
         Expr::Nil { .. } => unimplemented!(),
+
+        Expr::Let {
+            pattern: Pattern::Var { name, .. },
+            value,
+            then,
+            ..
+        } => {
+            let value_type = infer(value, level + 1, env)?;
+            let value_type = generalise(value_type, level);
+            env.put_variable(name.to_string(), value_type);
+            infer(then, level, env)
+        }
+
+        // TODO: Support non var patterns by modifying the previous clause
         Expr::Let { .. } => unimplemented!(),
-        Expr::Atom { meta, value } => Ok(Expr::Atom { meta, value }),
+
+        Expr::Atom { .. } => Ok(atom()),
         Expr::Case { .. } => unimplemented!(),
         Expr::Cons { .. } => unimplemented!(),
         Expr::Call { .. } => unimplemented!(),
         Expr::Tuple { .. } => unimplemented!(),
-        Expr::Float { meta, value } => Ok(Expr::Float { meta, value }),
+        Expr::Float { .. } => Ok(float()),
         Expr::BinOp { .. } => unimplemented!(),
-        Expr::String { meta, value } => Ok(Expr::String { meta, value }),
+        Expr::String { .. } => Ok(string()),
         Expr::RecordNil { .. } => unimplemented!(),
         Expr::RecordCons { .. } => unimplemented!(),
         Expr::Constructor { .. } => unimplemented!(),
@@ -283,19 +343,46 @@ fn infer_test() {
         ("'hello'", "Atom"),
         ("\"ok\"", "String"),
         ("\"ok\"", "String"),
+        ("1 2.0", "Float"),
+        ("x = 1 2", "Int"),
+        ("x = 1 x", "Int"),
+        ("x = 'ok' x", "Atom"),
+        ("x = 'ok' y = x y", "Atom"),
     ];
 
     for (src, typ) in cases.into_iter() {
         let ast = grammar::ExprParser::new().parse(src).unwrap();
-        let typed = infer(ast, 1, &mut Env::default());
+        let typed = infer(&ast, 1, &mut Env::default());
         assert_eq!(
             typ.to_string(),
             typed
                 .expect("should successfully infer")
-                .typ()
                 .to_gleam_doc(&mut 0)
                 .format(80)
         );
+    }
+}
+
+// let rec generalize level = function
+// 	| TVar {contents = Unbound(id, other_level)} when other_level > level ->
+// 			TVar (ref (Generic id))
+// 	| TApp(ty, ty_arg_list) ->
+// 			TApp(generalize level ty, List.map (generalize level) ty_arg_list)
+// 	| TArrow(param_ty_list, return_ty) ->
+// 			TArrow(List.map (generalize level) param_ty_list, generalize level return_ty)
+// 	| TVar {contents = Link ty} -> generalize level ty
+// 	| TVar {contents = Generic _} | TVar {contents = Unbound _} | TConst _ as ty -> ty
+/// Takes a level and a type and turns all type variables within the type that have
+/// level higher than the input level into generalized (polymorphic) type variables.
+///
+fn generalise(typ: Type, level: usize) -> Type {
+    match typ {
+        Type::Var { .. } => unimplemented!(),
+        Type::App { .. } => unimplemented!(),
+        Type::Fun { .. } => unimplemented!(),
+        Type::Const { .. } => typ,
+        Type::Record { .. } => unimplemented!(),
+        Type::Module { .. } => unimplemented!(),
     }
 }
 

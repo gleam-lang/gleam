@@ -1,9 +1,7 @@
-use crate::typ;
-
 #[derive(Debug, PartialEq)]
-pub struct Module<T> {
+pub struct Module {
     pub name: String,
-    pub statements: Vec<Statement<T>>,
+    pub statements: Vec<Statement>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -26,19 +24,19 @@ pub enum Type {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum Statement<T> {
+pub enum Statement {
     Fun {
         meta: Meta,
         name: String,
         args: Vec<Arg>,
-        body: Expr<T>,
+        body: Expr,
         public: bool,
     },
 
     Test {
         meta: Meta,
         name: String,
-        body: Expr<T>,
+        body: Expr,
     },
 
     Enum {
@@ -72,7 +70,7 @@ pub enum Statement<T> {
     },
 }
 
-impl<T> Statement<T> {
+impl Statement {
     pub fn meta(&self) -> &Meta {
         match self {
             Statement::Fun { meta, .. } => meta,
@@ -104,14 +102,14 @@ pub enum BinOp {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum Scope<T> {
+pub enum Scope {
     Local,
     Module { arity: usize },
-    Constant { value: Box<Expr<T>> },
+    Constant { value: Box<Expr> },
 }
 
 #[derive(Debug, PartialEq)]
-pub enum Expr<T> {
+pub enum Expr {
     Int {
         meta: Meta,
         value: i64,
@@ -134,75 +132,66 @@ pub enum Expr<T> {
 
     Tuple {
         meta: Meta,
-        typ: T,
-        elems: Vec<Expr<T>>,
+        elems: Vec<Expr>,
     },
 
     Seq {
         meta: Meta,
-        first: Box<Expr<T>>,
-        then: Box<Expr<T>>,
+        first: Box<Expr>,
+        then: Box<Expr>,
     },
 
     Var {
         meta: Meta,
-        typ: T,
-        scope: Scope<T>,
+        scope: Scope,
         name: String,
     },
 
     Fun {
         meta: Meta,
-        typ: T,
         args: Vec<Arg>,
-        body: Box<Expr<T>>,
+        body: Box<Expr>,
     },
 
     Nil {
         meta: Meta,
-        typ: T,
     },
 
     Cons {
         meta: Meta,
-        typ: T,
-        head: Box<Expr<T>>,
-        tail: Box<Expr<T>>,
+        head: Box<Expr>,
+        tail: Box<Expr>,
     },
 
     Call {
         meta: Meta,
-        typ: T,
-        fun: Box<Expr<T>>,
-        args: Vec<Expr<T>>,
+        fun: Box<Expr>,
+        args: Vec<Expr>,
     },
 
     BinOp {
         meta: Meta,
-        typ: T,
         name: BinOp,
-        left: Box<Expr<T>>,
-        right: Box<Expr<T>>,
+        left: Box<Expr>,
+        right: Box<Expr>,
     },
 
     Let {
         meta: Meta,
-        typ: T,
-        value: Box<Expr<T>>,
-        clause: Clause<T>,
+        value: Box<Expr>,
+        pattern: Pattern,
+        then: Box<Expr>,
     },
 
     Constructor {
         meta: Meta,
         name: String,
-        typ: T,
     },
 
     Case {
         meta: Meta,
-        typ: T,
-        subject: Box<Expr<T>>,
-        clauses: Vec<Clause<T>>,
+        subject: Box<Expr>,
+        clauses: Vec<Clause>,
     },
 
     RecordNil {
@@ -211,28 +200,25 @@ pub enum Expr<T> {
 
     RecordCons {
         meta: Meta,
-        typ: T,
         label: String,
-        value: Box<Expr<T>>,
-        tail: Box<Expr<T>>,
+        value: Box<Expr>,
+        tail: Box<Expr>,
     },
 
     RecordSelect {
         meta: Meta,
-        typ: T,
         label: String,
-        record: Box<Expr<T>>,
+        record: Box<Expr>,
     },
 
     ModuleSelect {
         meta: Meta,
-        typ: T,
         label: String,
-        module: Box<Expr<T>>,
+        module: Box<Expr>,
     },
 }
 
-impl<T> Expr<T> {
+impl Expr {
     pub fn meta(&self) -> &Meta {
         match self {
             Expr::Int { meta, .. } => meta,
@@ -258,41 +244,14 @@ impl<T> Expr<T> {
     }
 }
 
-impl Expr<typ::Type> {
-    pub fn typ(&self) -> typ::Type {
-        match self {
-            Expr::Int { .. } => typ::int(),
-            Expr::Float { .. } => typ::float(),
-            Expr::Atom { .. } => typ::atom(),
-            Expr::String { .. } => typ::string(),
-            Expr::Seq { then, .. } => then.typ(),
-            Expr::Tuple { typ, .. } => (*typ).clone(),
-            Expr::Var { typ, .. } => (*typ).clone(),
-            Expr::Fun { typ, .. } => (*typ).clone(),
-            Expr::Nil { typ, .. } => (*typ).clone(),
-            Expr::Cons { typ, .. } => (*typ).clone(),
-            Expr::Call { typ, .. } => (*typ).clone(),
-            Expr::BinOp { typ, .. } => (*typ).clone(),
-            Expr::Let { typ, .. } => (*typ).clone(),
-            Expr::Case { typ, .. } => (*typ).clone(),
-            Expr::RecordNil { .. } => typ::Type::Record { row: typ::Row::Nil },
-            Expr::RecordCons { typ, .. } => (*typ).clone(),
-            Expr::Constructor { typ, .. } => (*typ).clone(),
-            Expr::RecordSelect { typ, .. } => (*typ).clone(),
-            Expr::ModuleSelect { typ, .. } => (*typ).clone(),
-        }
-    }
-}
-
 #[derive(Debug, PartialEq)]
-pub struct Clause<T> {
+pub struct Clause {
     pub meta: Meta,
-    pub typ: T,
     pub pattern: Pattern,
-    pub then: Box<Expr<T>>,
+    pub then: Box<Expr>,
 }
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub struct Meta {
     pub start: usize,
     pub end: usize,
