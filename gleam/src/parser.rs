@@ -301,6 +301,80 @@ fn expr_test() {
 }
 
 #[test]
+fn pattern_test() {
+    assert_eq!(
+        Ok(Expr::Let {
+            meta: Meta { start: 0, end: 6 },
+            typ: (),
+            value: Box::new(Expr::Int {
+                meta: Meta { start: 4, end: 5 },
+                value: 1
+            }),
+            clause: Clause {
+                typ: (),
+                meta: Meta { start: 0, end: 6 },
+                pattern: Pattern::Int {
+                    meta: Meta { start: 0, end: 1 },
+                    value: 0,
+                },
+                then: Box::new(Expr::Int {
+                    meta: Meta { start: 6, end: 7 },
+                    value: 2
+                })
+            }
+        }),
+        ExprParser::new().parse("0 = 1 2"),
+    );
+
+    assert_eq!(
+        Ok(Expr::Let {
+            meta: Meta { start: 0, end: 8 },
+            typ: (),
+            value: Box::new(Expr::Int {
+                meta: Meta { start: 6, end: 7 },
+                value: 1,
+            }),
+            clause: Clause {
+                typ: (),
+                meta: Meta { start: 0, end: 8 },
+                pattern: Pattern::Float {
+                    meta: Meta { start: 0, end: 3 },
+                    value: 1.0,
+                },
+                then: Box::new(Expr::Int {
+                    meta: Meta { start: 8, end: 9 },
+                    value: 2
+                })
+            }
+        }),
+        ExprParser::new().parse("1.0 = 1 2"),
+    );
+
+    assert_eq!(
+        Ok(Expr::Let {
+            meta: Meta { start: 0, end: 7 },
+            typ: (),
+            value: Box::new(Expr::Int {
+                meta: Meta { start: 5, end: 6 },
+                value: 1
+            }),
+            clause: Clause {
+                typ: (),
+                meta: Meta { start: 0, end: 7 },
+                pattern: Pattern::Nil {
+                    meta: Meta { start: 0, end: 2 },
+                },
+                then: Box::new(Expr::Int {
+                    meta: Meta { start: 7, end: 8 },
+                    value: 2
+                })
+            }
+        }),
+        ExprParser::new().parse("[] = 1 2"),
+    );
+}
+
+#[test]
 fn module_test() {
     assert_eq!(
         Ok(Module {
