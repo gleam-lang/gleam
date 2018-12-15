@@ -334,21 +334,16 @@ pub enum Pattern {
         meta: Meta,
     },
 
-    Cons {
+    List {
         meta: Meta,
-        head: Box<Pattern>,
-        tail: Box<Pattern>,
+        elems: Vec<Pattern>,
+        tail: Option<Box<Pattern>>,
     },
 
-    RecordNil {
-        meta: Meta,
-    },
-
-    RecordCons {
+    Record {
         meta: Meta,
         label: String,
-        value: Box<Pattern>,
-        tail: Box<Pattern>,
+        fields: Vec<(Pattern, Pattern)>,
     },
 
     Enum {
@@ -364,14 +359,13 @@ impl Pattern {
             Pattern::Int { meta, .. } => meta,
             Pattern::Var { meta, .. } => meta,
             Pattern::Nil { meta, .. } => meta,
-            Pattern::Cons { meta, .. } => meta,
+            Pattern::List { meta, .. } => meta,
             Pattern::Atom { meta, .. } => meta,
             Pattern::Enum { meta, .. } => meta,
             Pattern::Float { meta, .. } => meta,
             Pattern::Tuple { meta, .. } => meta,
             Pattern::String { meta, .. } => meta,
-            Pattern::RecordNil { meta, .. } => meta,
-            Pattern::RecordCons { meta, .. } => meta,
+            Pattern::Record { meta, .. } => meta,
         }
     }
 }

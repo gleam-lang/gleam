@@ -9,6 +9,7 @@
 use im::vector::Vector;
 
 pub trait Documentable {
+    // TODO: This should take a reference
     fn to_doc(self) -> Document;
 }
 

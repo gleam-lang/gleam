@@ -348,29 +348,6 @@ fn expr_test() {
 
     assert_eq!(
         Ok(Expr::Let {
-            meta: Meta { start: 0, end: 7 },
-            typ: (),
-            value: Box::new(Expr::Int {
-                meta: Meta { start: 5, end: 6 },
-                value: 1
-            }),
-            clause: Clause {
-                typ: (),
-                meta: Meta { start: 0, end: 7 },
-                pattern: Pattern::Nil {
-                    meta: Meta { start: 0, end: 2 },
-                },
-                then: Box::new(Expr::Int {
-                    meta: Meta { start: 7, end: 8 },
-                    value: 2
-                })
-            }
-        }),
-        ExprParser::new().parse("[] = 1 2"),
-    );
-
-    assert_eq!(
-        Ok(Expr::Let {
             meta: Meta { start: 0, end: 8 },
             typ: (),
             value: Box::new(Expr::Int {

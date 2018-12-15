@@ -176,28 +176,24 @@ fn let_<T>(value: Expr<T>, clause: Clause<T>, mut env: &Env) -> Document {
 fn pattern(p: Pattern, mut env: &Env) -> Document {
     match p {
         Pattern::Nil { .. } => "[]".to_doc(),
-        Pattern::RecordNil { .. } => "#{}".to_doc(),
-        Pattern::Int { value, .. } => value.to_doc(),
-        Pattern::Float { value, .. } => value.to_doc(),
+        Pattern::List { .. } => unimplemented!(),
+        Pattern::Record { .. } => unimplemented!(),
         Pattern::Var { name, .. } => var(name, Scope::Local::<()>, &mut env),
+        Pattern::Int { value, .. } => value.to_doc(),
         Pattern::Atom { value, .. } => atom(value),
-        Pattern::String { value, .. } => string(value),
+        Pattern::Float { value, .. } => value.to_doc(),
         Pattern::Tuple { elems, .. } => tuple(pattern, elems, &mut env),
-        Pattern::Cons { head, tail, .. } => cons(pattern, *head, *tail, &mut env),
+        Pattern::String { value, .. } => string(value),
         Pattern::Enum { name, args, .. } => enum_(pattern_atom, pattern, name, args, &mut env),
-        Pattern::RecordCons { .. } => unimplemented!(),
     }
 }
 
-fn cons<F, E>(f: F, head: E, tail: E, mut env: &Env) -> Document
-where
-    F: Fn(E, &Env) -> Document,
-{
+fn cons<T>(head: Expr<T>, tail: Expr<T>, mut env: &Env) -> Document {
     // TODO: Flatten nested cons into a list i.e. [1, 2, 3 | X] or [1, 2, 3, 4]
     // TODO: Break, indent, etc
-    f(head, &mut env)
+    expr(head, &mut env)
         .append(" | ")
-        .append(f(tail, &mut env))
+        .append(expr(tail, &mut env))
         .surround("[", "]")
 }
 
@@ -287,7 +283,7 @@ fn expr<T>(expression: Expr<T>, mut env: &Env) -> Document {
         Expr::Seq { first, then, .. } => seq(*first, *then, &mut env),
         Expr::Var { name, scope, .. } => var(name, scope, &mut env),
         Expr::Fun { args, body, .. } => fun(args, *body, &mut env),
-        Expr::Cons { head, tail, .. } => cons(expr, *head, *tail, &mut env),
+        Expr::Cons { head, tail, .. } => cons(*head, *tail, &mut env),
         Expr::Call { .. } => unimplemented!(),
         Expr::RecordSelect { .. } => unimplemented!(),
         Expr::ModuleSelect { .. } => unimplemented!(),
@@ -920,31 +916,6 @@ another() ->
                             value: 1,
                         }),
                     },
-                    Clause {
-                        meta: default(),
-                        typ: (),
-                        pattern: Pattern::Cons {
-                            meta: default(),
-                            head: Box::new(Pattern::Int {
-                                meta: default(),
-                                value: 1,
-                            }),
-                            tail: Box::new(Pattern::Nil { meta: default() }),
-                        },
-                        then: Box::new(Expr::Int {
-                            meta: default(),
-                            value: 1,
-                        }),
-                    },
-                    Clause {
-                        meta: default(),
-                        typ: (),
-                        pattern: Pattern::RecordNil { meta: default() },
-                        then: Box::new(Expr::Int {
-                            meta: default(),
-                            value: 1,
-                        }),
-                    },
                 ],
             },
         }],
@@ -959,9 +930,7 @@ go() ->
         <<\"hello\">> -> 1;
         {1, 2} -> 1;
         [] -> 1;
-        {'error', 2} -> 1;
-        [1 | []] -> 1;
-        #{} -> 1
+        {'error', 2} -> 1
     end.
 "
     .to_string();
