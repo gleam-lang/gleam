@@ -92,8 +92,8 @@ SingleExpr: Expr<()> = {
     RecordNil => <>,
     Constructor => <>,
     // RecordCons => <>,
-    // RecordSelect => <>,
-    // ModuleSelect => <>,
+    RecordSelect => <>,
+    ModuleSelect => <>,
 }
 
 Let: Expr<()> = {
@@ -108,6 +108,24 @@ Let: Expr<()> = {
             then: Box::new(t),
         }
     }
+}
+
+RecordSelect: Expr<()> = {
+    <s:@L> <r:SingleExpr> "." <l:VarName> <e:@L> => Expr::RecordSelect {
+        meta: meta(s, e),
+        typ: (),
+        label: l,
+        record: Box::new(r),
+    },
+}
+
+ModuleSelect: Expr<()> = {
+    <s:@L> <m:SingleExpr> ":" <l:VarName> <e:@L> => Expr::ModuleSelect {
+        meta: meta(s, e),
+        typ: (),
+        label: l,
+        module: Box::new(m),
+    },
 }
 
 Seq: Expr<()> = {
@@ -282,7 +300,7 @@ TypeName: (String, Vec<String>) = {
 }
 
 VarName: String = {
-    <v:r"[a-z][a-z_]*"> => v.to_string()
+    <v:r"[a-z][A-za-z_]*"> => v.to_string()
 }
 
 ConstructorName: String = {

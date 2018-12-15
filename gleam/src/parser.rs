@@ -208,6 +208,36 @@ fn expr_test() {
     );
 
     assert_eq!(
+        Ok(Expr::RecordSelect {
+            meta: Meta { start: 0, end: 11 },
+            typ: (),
+            label: "name".to_string(),
+            record: Box::new(Expr::Var {
+                meta: Meta { start: 0, end: 6 },
+                typ: (),
+                name: "person".to_string(),
+                scope: Scope::Local,
+            })
+        }),
+        ExprParser::new().parse("person.name"),
+    );
+
+    assert_eq!(
+        Ok(Expr::ModuleSelect {
+            meta: Meta { start: 0, end: 11 },
+            typ: (),
+            label: "name".to_string(),
+            module: Box::new(Expr::Var {
+                meta: Meta { start: 0, end: 6 },
+                typ: (),
+                name: "person".to_string(),
+                scope: Scope::Local,
+            })
+        }),
+        ExprParser::new().parse("person:name"),
+    );
+
+    assert_eq!(
         Ok(Expr::Tuple {
             meta: Meta { start: 0, end: 9 },
             typ: (),
