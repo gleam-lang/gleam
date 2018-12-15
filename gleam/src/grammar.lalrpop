@@ -227,9 +227,9 @@ Atom: Expr<()> = {
 
 // TODO: Unescape?
 String: Expr<()> = {
-    <s:@L> <x:r#""(([^\\"]|\\.)*)""#> <e:@L> => Expr::String {
+    <s:@L> <x:RawString> <e:@L> => Expr::String {
         meta: meta(s, e),
-        value: x[1..(x.len() - 1)].to_string(),
+        value: x,
     }
 }
 
@@ -263,11 +263,11 @@ Pattern: Pattern = {
     PatternInt => <>,
     PatternNil => <>,
     // PatternCons => <>,
-    // PatternAtom => <>,
+    PatternAtom => <>,
     // PatternEnum => <>,
     PatternFloat => <>,
     // PatternTuple => <>,
-    // PatternString => <>,
+    PatternString => <>,
     // PatternRecordNil => <>,
     // PatternRecordCons => <>,
 }
@@ -282,6 +282,20 @@ PatternFloat: Pattern = {
 PatternNil: Pattern = {
     <s:@L> "[]" <e:@L> => Pattern::Nil {
         meta: meta(s, e),
+    }
+}
+
+PatternAtom: Pattern = {
+    <s:@L> <a:RawAtom> <e:@L> => Pattern::Atom {
+        meta: meta(s, e),
+        value: a,
+    }
+}
+
+PatternString: Pattern = {
+    <s:@L> <a:RawString> <e:@L> => Pattern::String {
+        meta: meta(s, e),
+        value: a,
     }
 }
 
@@ -335,6 +349,10 @@ VarName: String = {
 
 ConstructorName: String = {
     <v:r"[A-Z][A-Za-z]*"> => v.to_string()
+}
+
+RawString: String = {
+    <x:r#""(([^\\"]|\\.)*)""#> => x[1..(x.len() - 1)].to_string(),
 }
 
 RawAtom: String = {

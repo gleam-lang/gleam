@@ -370,6 +370,54 @@ fn expr_test() {
     );
 
     assert_eq!(
+        Ok(Expr::Let {
+            meta: Meta { start: 0, end: 8 },
+            typ: (),
+            value: Box::new(Expr::Int {
+                meta: Meta { start: 6, end: 7 },
+                value: 1
+            }),
+            clause: Clause {
+                typ: (),
+                meta: Meta { start: 0, end: 8 },
+                pattern: Pattern::Atom {
+                    meta: Meta { start: 0, end: 3 },
+                    value: "a".to_string(),
+                },
+                then: Box::new(Expr::Int {
+                    meta: Meta { start: 8, end: 9 },
+                    value: 2
+                })
+            }
+        }),
+        ExprParser::new().parse("'a' = 1 2"),
+    );
+
+    assert_eq!(
+        Ok(Expr::Let {
+            meta: Meta { start: 0, end: 8 },
+            typ: (),
+            value: Box::new(Expr::Int {
+                meta: Meta { start: 6, end: 7 },
+                value: 1
+            }),
+            clause: Clause {
+                typ: (),
+                meta: Meta { start: 0, end: 8 },
+                pattern: Pattern::String {
+                    meta: Meta { start: 0, end: 3 },
+                    value: "a".to_string(),
+                },
+                then: Box::new(Expr::Int {
+                    meta: Meta { start: 8, end: 9 },
+                    value: 2
+                })
+            }
+        }),
+        ExprParser::new().parse("\"a\" = 1 2"),
+    );
+
+    assert_eq!(
         Ok(Expr::RecordCons {
             meta: Meta { start: 0, end: 19 },
             typ: (),
