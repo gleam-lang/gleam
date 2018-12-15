@@ -91,7 +91,7 @@ SingleExpr: Expr<()> = {
     // Case => <>,
     RecordNil => <>,
     Constructor => <>,
-    // RecordCons => <>,
+    RecordCons => <>,
     RecordSelect => <>,
     ModuleSelect => <>,
 }
@@ -116,6 +116,17 @@ RecordSelect: Expr<()> = {
         typ: (),
         label: l,
         record: Box::new(r),
+    },
+}
+
+// TODO: multiple fields
+RecordCons: Expr<()> = {
+    <s:@L> "{" <r:SingleExpr> "|" <l:VarName> "=" <v:SingleExpr> "}" <e:@L> => Expr::RecordCons {
+        meta: meta(s, e),
+        typ: (),
+        label: l,
+        value: Box::new(v),
+        tail: Box::new(r),
     },
 }
 

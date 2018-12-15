@@ -372,6 +372,25 @@ fn pattern_test() {
         }),
         ExprParser::new().parse("[] = 1 2"),
     );
+
+    assert_eq!(
+        Ok(Expr::RecordCons {
+            meta: Meta { start: 0, end: 19 },
+            typ: (),
+            label: "size".to_string(),
+            value: Box::new(Expr::Int {
+                meta: Meta { start: 16, end: 17 },
+                value: 2
+            }),
+            tail: Box::new(Expr::Var {
+                meta: Meta { start: 2, end: 6 },
+                typ: (),
+                name: "jane".to_string(),
+                scope: Scope::Local,
+            }),
+        }),
+        ExprParser::new().parse("{ jane | size = 2 }"),
+    );
 }
 
 #[test]
