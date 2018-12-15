@@ -25,6 +25,10 @@ pub enum Type {
         args: Vec<Type>,
     },
 
+    Tuple {
+        elems: Vec<Type>,
+    },
+
     Fun {
         args: Vec<Type>,
         retrn: Box<Type>,
@@ -44,7 +48,7 @@ pub enum Type {
 }
 
 impl Type {
-    pub fn to_gleam_doc(&self, uid: &mut usize) -> Document {
+    pub fn to_gleam_doc(&self, names: &mut HashMap<usize, String>, uid: &mut usize) -> Document {
         match self {
             Type::Const { name, .. } => name.clone().to_doc(),
 
@@ -52,23 +56,40 @@ impl Type {
                 .clone()
                 .to_doc()
                 .append("(")
-                .append(args_to_gleam_doc(args, uid))
+                .append(args_to_gleam_doc(args, names, uid))
                 .append(")"),
 
             Type::Fun { args, retrn } => "fn("
                 .to_doc()
-                .append(args_to_gleam_doc(args, uid))
+                .append(args_to_gleam_doc(args, names, uid))
                 .append(") -> ")
-                .append(retrn.to_gleam_doc(uid)),
+                .append(retrn.to_gleam_doc(names, uid)),
+
+            Type::Tuple { .. } => unimplemented!(),
 
             Type::Record { .. } => unimplemented!(),
 
             Type::Module { .. } => unimplemented!(),
 
-            Type::Var { typ, .. } => match *typ.borrow() {
-                TypeVar::Link { ref typ, .. } => typ.to_gleam_doc(uid),
-                TypeVar::Unbound { .. } => next_letter(uid).to_doc(),
-                TypeVar::Generic { .. } => next_letter(uid).to_doc(),
+            Type::Var { typ, .. } => typ.borrow().to_gleam_doc(names, uid),
+        }
+    }
+}
+
+impl TypeVar {
+    pub fn to_gleam_doc(&self, names: &mut HashMap<usize, String>, uid: &mut usize) -> Document {
+        match self {
+            TypeVar::Link { ref typ, .. } => typ.to_gleam_doc(names, uid),
+
+            TypeVar::Unbound { id, .. } => TypeVar::Generic { id: *id }.to_gleam_doc(names, uid),
+
+            TypeVar::Generic { id, .. } => match names.get(&id) {
+                Some(n) => n.clone().to_doc(),
+                None => {
+                    let n = next_letter(uid);
+                    names.insert(*id, n.clone());
+                    n.to_doc()
+                }
             },
         }
     }
@@ -89,9 +110,13 @@ fn letter_test() {
     assert_eq!("c", next_letter(&mut i));
 }
 
-fn args_to_gleam_doc(args: &Vec<Type>, uid: &mut usize) -> Document {
+fn args_to_gleam_doc(
+    args: &Vec<Type>,
+    names: &mut HashMap<usize, String>,
+    uid: &mut usize,
+) -> Document {
     args.iter()
-        .map(|t| t.to_gleam_doc(uid).group())
+        .map(|t| t.to_gleam_doc(names, uid).group())
         .intersperse(break_(",", ", "))
         .collect::<Vec<_>>()
         .to_doc()
@@ -195,7 +220,10 @@ fn to_gleam_doc_test() {
     ];
 
     for (typ, s) in cases.into_iter() {
-        assert_eq!(s.to_string(), typ.to_gleam_doc(&mut 0).format(80));
+        assert_eq!(
+            s.to_string(),
+            typ.to_gleam_doc(&mut hashmap! {}, &mut 0).format(80)
+        );
     }
 }
 
@@ -233,7 +261,7 @@ impl Env {
     /// Create a new unbound type that is a specific type, we just don't
     /// know which one yet.
     ///
-    pub fn new_var(&mut self, level: usize) -> Type {
+    pub fn new_unbound_var(&mut self, level: usize) -> Type {
         Type::Var {
             typ: Rc::new(RefCell::new(TypeVar::Unbound {
                 id: self.next_uid(),
@@ -299,8 +327,20 @@ pub fn infer(expr: &Expr, level: usize, env: &mut Env) -> Result<Type, Error> {
                 })
         }
 
-        Expr::Fun { .. } => unimplemented!(),
-        Expr::Nil { .. } => unimplemented!(),
+        Expr::Fun { args, body, .. } => {
+            let args_types: Vec<_> = args.iter().map(|_| env.new_unbound_var(level)).collect();
+            let ref mut fn_env = env.clone();
+            args.iter()
+                .zip(args_types.iter())
+                .for_each(|(arg, t)| fn_env.put_variable(arg.name.to_string(), (*t).clone()));
+            let ret = infer(body, level, fn_env)?;
+            Ok(Type::Fun {
+                args: args_types,
+                retrn: Box::new(ret),
+            })
+        }
+
+        Expr::Nil { .. } => Ok(list(env.new_unbound_var(level))),
 
         Expr::Let {
             pattern: Pattern::Var { name, .. },
@@ -318,17 +358,29 @@ pub fn infer(expr: &Expr, level: usize, env: &mut Env) -> Result<Type, Error> {
         Expr::Let { .. } => unimplemented!(),
 
         Expr::Atom { .. } => Ok(atom()),
+
         Expr::Case { .. } => unimplemented!(),
+
         Expr::Cons { .. } => unimplemented!(),
+
         Expr::Call { .. } => unimplemented!(),
+
         Expr::Tuple { .. } => unimplemented!(),
+
         Expr::Float { .. } => Ok(float()),
+
         Expr::BinOp { .. } => unimplemented!(),
+
         Expr::String { .. } => Ok(string()),
+
         Expr::RecordNil { .. } => unimplemented!(),
+
         Expr::RecordCons { .. } => unimplemented!(),
+
         Expr::Constructor { .. } => unimplemented!(),
+
         Expr::RecordSelect { .. } => unimplemented!(),
+
         Expr::ModuleSelect { .. } => unimplemented!(),
     }
 }
@@ -348,6 +400,12 @@ fn infer_test() {
         ("x = 1 x", "Int"),
         ("x = 'ok' x", "Atom"),
         ("x = 'ok' y = x y", "Atom"),
+        ("x = 'ok' y = x y", "Atom"),
+        ("[]", "List(a)"),
+        ("fn(x) { x }", "fn(a) -> a"),
+        ("fn(x) { x }", "fn(a) -> a"),
+        ("fn(x, y) { x }", "fn(a, b) -> a"),
+        ("fn(x, y) { [] }", "fn(a, b) -> List(c)"),
     ];
 
     for (src, typ) in cases.into_iter() {
@@ -357,7 +415,7 @@ fn infer_test() {
             typ.to_string(),
             typed
                 .expect("should successfully infer")
-                .to_gleam_doc(&mut 0)
+                .to_gleam_doc(&mut hashmap! {}, &mut 0)
                 .format(80)
         );
     }
@@ -380,6 +438,7 @@ fn generalise(typ: Type, level: usize) -> Type {
         Type::Var { .. } => unimplemented!(),
         Type::App { .. } => unimplemented!(),
         Type::Fun { .. } => unimplemented!(),
+        Type::Tuple { .. } => unimplemented!(),
         Type::Const { .. } => typ,
         Type::Record { .. } => unimplemented!(),
         Type::Module { .. } => unimplemented!(),
@@ -415,5 +474,14 @@ pub fn string() -> Type {
         public: true,
         name: "String".to_string(),
         module: "".to_string(),
+    }
+}
+
+pub fn list(t: Type) -> Type {
+    Type::App {
+        public: true,
+        name: "List".to_string(),
+        module: "".to_string(),
+        args: vec![t],
     }
 }
