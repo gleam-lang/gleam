@@ -1,18 +1,20 @@
 use crate::ast::Expr;
 use crate::grammar;
 use crate::pretty::*;
+use itertools::Itertools;
 use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub enum Type {
     Const {
         public: bool,
-        name: String,
         module: String,
+        name: String,
     },
 
     App {
         public: bool,
+        module: String,
         name: String,
         args: Vec<Type>,
     },
@@ -36,10 +38,22 @@ pub enum Type {
 }
 
 impl Type {
-    pub fn to_gleam_doc(&self, uid: usize) -> Document {
+    pub fn to_gleam_doc(&self, mut uid: &usize) -> Document {
         match self {
             Type::Const { name, .. } => name.clone().to_doc(),
-            Type::App { .. } => unimplemented!(),
+
+            Type::App { name, args, .. } => name
+                .clone()
+                .to_doc()
+                .append("(")
+                .append(
+                    args.iter()
+                        .map(|t| t.to_gleam_doc(&mut uid))
+                        .intersperse(break_(",", ", "))
+                        .collect::<Vec<_>>(),
+                )
+                .append(")"),
+
             Type::Fun { .. } => unimplemented!(),
             Type::Record { .. } => unimplemented!(),
             Type::Module { .. } => unimplemented!(),
@@ -60,17 +74,29 @@ fn to_gleam_doc_test() {
             "Int",
         ),
         (
-            Type::Const {
+            Type::App {
                 module: "".to_string(),
-                name: "Float".to_string(),
-                public: false,
+                name: "Pair".to_string(),
+                public: true,
+                args: vec![
+                    Type::Const {
+                        module: "whatever".to_string(),
+                        name: "Int".to_string(),
+                        public: true,
+                    },
+                    Type::Const {
+                        module: "whatever".to_string(),
+                        name: "Bool".to_string(),
+                        public: true,
+                    },
+                ],
             },
-            "Float",
+            "Pair(Int, Bool)",
         ),
     ];
 
     for (typ, s) in cases.into_iter() {
-        assert_eq!(s.to_string(), typ.to_gleam_doc(0).format(80));
+        assert_eq!(s.to_string(), typ.to_gleam_doc(&mut 0).format(80));
     }
 }
 
@@ -164,7 +190,7 @@ fn infer_test() {
     for (src, typ) in cases.into_iter() {
         let ast = grammar::ExprParser::new().parse(src).unwrap();
         let typed = infer(ast, &mut Env::default());
-        assert_eq!(typ.to_string(), typed.typ().to_gleam_doc(0).format(80));
+        assert_eq!(typ.to_string(), typed.typ().to_gleam_doc(&mut 0).format(80));
     }
 }
 
