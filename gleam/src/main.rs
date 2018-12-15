@@ -9,7 +9,6 @@
 mod ast;
 mod erl;
 mod parser;
-mod pattern;
 mod pretty;
 mod typ;
 lalrpop_mod!(pub grammar);

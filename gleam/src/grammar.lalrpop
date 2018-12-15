@@ -2,8 +2,7 @@
 
 use std::str::FromStr;
 
-use crate::ast::{Expr, Clause, Scope, Arg, Module, Statement, Type};
-use crate::pattern::Pattern;
+use crate::ast::{Expr, Clause, Scope, Arg, Module, Statement, Type, Pattern};
 use crate::parser::*;
 
 grammar;

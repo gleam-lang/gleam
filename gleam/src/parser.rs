@@ -1,6 +1,5 @@
-use crate::ast::{Arg, Clause, Expr, Meta, Module, Scope, Statement, Type};
+use crate::ast::{Arg, Clause, Expr, Meta, Module, Pattern, Scope, Statement, Type};
 use crate::grammar::{ExprParser, ModuleParser};
-use crate::pattern::Pattern;
 
 pub fn meta(start: usize, end: usize) -> Meta {
     Meta { start, end }
@@ -298,10 +297,7 @@ fn expr_test() {
         }),
         ExprParser::new().parse("fn(a, b) { 1 2 }"),
     );
-}
 
-#[test]
-fn pattern_test() {
     assert_eq!(
         Ok(Expr::Let {
             meta: Meta { start: 0, end: 6 },

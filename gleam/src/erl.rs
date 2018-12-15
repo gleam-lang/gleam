@@ -1,10 +1,4 @@
-#![allow(dead_code)]
-
-#[cfg(test)]
-use crate::ast::Type;
-
-use crate::ast::{Arg, BinOp, Clause, Expr, Module, Scope, Statement};
-use crate::pattern::Pattern;
+use crate::ast::{Arg, BinOp, Clause, Expr, Module, Pattern, Scope, Statement, Type};
 use crate::pretty::*;
 
 use heck::{CamelCase, SnakeCase};
@@ -273,13 +267,6 @@ fn case<T>(subject: Expr<T>, cs: Vec<Clause<T>>, mut env: &Env) -> Document {
         .append("end")
 }
 
-fn expr_atom<T>(s: String) -> Expr<T> {
-    Expr::Atom {
-        meta: default(),
-        value: s,
-    }
-}
-
 fn pattern_atom(s: String) -> Pattern {
     Pattern::Atom {
         meta: default(),
@@ -421,10 +408,7 @@ map() ->
 "
     .to_string();
     assert_eq!(expected, module(m));
-}
 
-#[test]
-fn expr_test() {
     let m: Module<()> = Module {
         name: "term".to_string(),
         statements: vec![
@@ -688,14 +672,11 @@ funny() ->
 "
     .to_string();
     assert_eq!(expected, module(m));
-}
 
-// TODO
-// enum2() ->
-//     {'ok', 1, 2.0}.
+    // TODO
+    // enum2() ->
+    //     {'ok', 1, 2.0}.
 
-#[test]
-fn args_test() {
     let m: Module<()> = Module {
         name: "term".to_string(),
         statements: vec![Statement::Fun {
@@ -748,10 +729,7 @@ some_function(ArgOne,
 "
     .to_string();
     assert_eq!(expected, module(m));
-}
 
-#[test]
-fn test_test() {
     let m: Module<()> = Module {
         name: "term".to_string(),
         statements: vec![Statement::Test {
@@ -772,10 +750,7 @@ bang_test() ->
 "
     .to_string();
     assert_eq!(expected, module(m));
-}
 
-#[test]
-fn var_test() {
     let m: Module<()> = Module {
         name: "vars".to_string(),
         statements: vec![
@@ -835,10 +810,7 @@ another() ->
 "
     .to_string();
     assert_eq!(expected, module(m));
-}
 
-#[test]
-fn cast_test() {
     let m: Module<()> = Module {
         name: "my_mod".to_string(),
         statements: vec![Statement::Fun {
