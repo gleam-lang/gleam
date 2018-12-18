@@ -98,6 +98,7 @@ SingleExpr: Expr = {
 Let: Expr = {
     <s:@L> <p:Pattern> "=" <v:SingleExpr> <e:@L> <t:Expr> => Expr::Let {
         meta: meta(s, e),
+        typ: None,
         value: Box::new(v),
         pattern: p,
         then: Box::new(t),
@@ -107,6 +108,7 @@ Let: Expr = {
 RecordSelect: Expr = {
     <s:@L> <r:SingleExpr> "." <l:VarName> <e:@L> => Expr::RecordSelect {
         meta: meta(s, e),
+        typ: None,
         label: l,
         record: Box::new(r),
     },
@@ -116,6 +118,7 @@ RecordSelect: Expr = {
 RecordCons: Expr = {
     <s:@L> "{" <r:SingleExpr> "|" <l:VarName> "=" <v:SingleExpr> "}" <e:@L> => Expr::RecordCons {
         meta: meta(s, e),
+        typ: None,
         label: l,
         value: Box::new(v),
         tail: Box::new(r),
@@ -125,6 +128,7 @@ RecordCons: Expr = {
 ModuleSelect: Expr = {
     <s:@L> <m:SingleExpr> ":" <l:VarName> <e:@L> => Expr::ModuleSelect {
         meta: meta(s, e),
+        typ: None,
         label: l,
         module: Box::new(m),
     },
@@ -133,6 +137,7 @@ ModuleSelect: Expr = {
 Seq: Expr = {
     <s:@L> <a:SingleExpr> <b:Expr> <e:@L> => Expr::Seq {
         meta: meta(s, e),
+        typ: None,
         first: Box::new(a),
         then: Box::new(b),
     }
@@ -141,6 +146,7 @@ Seq: Expr = {
 Fun: Expr = {
     <s:@L> "fn(" <a:Comma<FnArg>> ")" "{" <b:Expr> "}" <e:@L> => Expr::Fun {
         meta: meta(s, e),
+        typ: None,
         args: a,
         body: Box::new(b),
     }
@@ -155,6 +161,7 @@ FnArg: Arg = {
 Constructor: Expr = {
     <s:@L> <n:ConstructorName> <e:@L> => Expr::Constructor {
         meta: meta(s, e),
+        typ: None,
         name: n,
     },
 }
@@ -162,6 +169,7 @@ Constructor: Expr = {
 Call: Expr = {
     <s:@L> <fun:SingleExpr> "(" <args:Comma<Expr>> ")" <e:@L> => Expr::Call {
         meta: meta(s, e),
+        typ: None,
         fun: Box::new(fun),
         args: args,
     }
@@ -170,6 +178,7 @@ Call: Expr = {
 Tuple: Expr = {
     <s:@L> "{" <elems:Comma<Expr>> "}" <e:@L> => Expr::Tuple {
         meta: meta(s, e),
+        typ: None,
         elems: elems,
     }
 }
@@ -177,6 +186,7 @@ Tuple: Expr = {
 Cons: Expr = {
     <s:@L> "[" <head:Expr> "|" <tail:Expr> "]" <e:@L> => Expr::Cons {
         meta: meta(s, e),
+        typ: None,
         head: Box::new(head),
         tail: Box::new(tail),
     }
@@ -185,6 +195,7 @@ Cons: Expr = {
 Var: Expr = {
     <s:@L> <v:VarName> <e:@L> => Expr::Var {
         meta: meta(s, e),
+        typ: None,
         name: v,
         scope: Scope::Local,
     }
@@ -193,6 +204,7 @@ Var: Expr = {
 Nil: Expr = {
     <s:@L> "[]" <e:@L> => Expr::Nil {
         meta: meta(s, e),
+        typ: None,
     }
 }
 

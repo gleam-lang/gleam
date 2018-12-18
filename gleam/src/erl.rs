@@ -448,7 +448,10 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "nil".to_string(),
-                body: Expr::Nil { meta: default() },
+                body: Expr::Nil {
+                    meta: default(),
+                    typ: None,
+                },
             },
             Statement::Fun {
                 meta: default(),
@@ -464,6 +467,7 @@ map() ->
                 name: "tup".to_string(),
                 body: Expr::Tuple {
                     meta: default(),
+                    typ: None,
                     elems: vec![
                         Expr::Int {
                             meta: default(),
@@ -493,6 +497,7 @@ map() ->
                 name: "seq".to_string(),
                 body: Expr::Seq {
                     meta: default(),
+                    typ: None,
                     first: Box::new(Expr::Int {
                         meta: default(),
                         value: 1,
@@ -510,6 +515,7 @@ map() ->
                 name: "bin_op".to_string(),
                 body: Expr::BinOp {
                     meta: default(),
+                    typ: None,
                     name: BinOp::AddInt,
                     left: Box::new(Expr::Int {
                         meta: default(),
@@ -528,6 +534,7 @@ map() ->
                 name: "enum1".to_string(),
                 body: Expr::Constructor {
                     meta: default(),
+                    typ: None,
                     name: "Nil".to_string(),
                 },
             },
@@ -538,6 +545,7 @@ map() ->
                 name: "let".to_string(),
                 body: Expr::Let {
                     meta: default(),
+                    typ: None,
                     value: Box::new(Expr::Int {
                         meta: default(),
                         value: 1,
@@ -548,6 +556,7 @@ map() ->
                     },
                     then: Box::new(Expr::Var {
                         meta: default(),
+                        typ: None,
                         scope: Scope::Local,
                         name: "one_two".to_string(),
                     }),
@@ -560,11 +569,15 @@ map() ->
                 name: "conny".to_string(),
                 body: Expr::Cons {
                     meta: default(),
+                    typ: None,
                     head: Box::new(Expr::Int {
                         meta: default(),
                         value: 1234,
                     }),
-                    tail: Box::new(Expr::Nil { meta: default() }),
+                    tail: Box::new(Expr::Nil {
+                        meta: default(),
+                        typ: None,
+                    }),
                 },
             },
             Statement::Fun {
@@ -574,6 +587,8 @@ map() ->
                 name: "retcon".to_string(),
                 body: Expr::RecordCons {
                     meta: default(),
+
+                    typ: None,
                     label: "size".to_string(),
                     value: Box::new(Expr::Int {
                         meta: default(),
@@ -589,6 +604,7 @@ map() ->
                 name: "funny".to_string(),
                 body: Expr::Fun {
                     meta: default(),
+                    typ: None,
                     args: vec![
                         Arg {
                             name: "one_really_long_arg_to_cause_wrapping".to_string(),
@@ -743,6 +759,7 @@ bang_test() ->
                 args: vec![],
                 name: "arg".to_string(),
                 body: Expr::Var {
+                    typ: None,
                     meta: default(),
                     name: "some_arg".to_string(),
                     scope: Scope::Local,
@@ -754,6 +771,7 @@ bang_test() ->
                 args: vec![],
                 name: "some_arg".to_string(),
                 body: Expr::Var {
+                    typ: None,
                     meta: default(),
                     name: "some_arg".to_string(),
                     scope: Scope::Constant {
@@ -770,6 +788,7 @@ bang_test() ->
                 args: vec![],
                 name: "another".to_string(),
                 body: Expr::Var {
+                    typ: None,
                     meta: default(),
                     name: "run_task".to_string(),
                     scope: Scope::Module { arity: 6 },
@@ -800,6 +819,7 @@ another() ->
             name: "go".to_string(),
             body: Expr::Case {
                 meta: default(),
+                typ: None,
                 subject: Box::new(Expr::Int {
                     meta: default(),
                     value: 1,

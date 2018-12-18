@@ -10,7 +10,7 @@ use std::rc::Rc;
 
 const INDENT: isize = 2;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     Const {
         public: bool,
@@ -227,14 +227,14 @@ fn to_gleam_doc_test() {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TypeVar {
     Unbound { id: usize, level: usize },
     Link { typ: Box<Type> },
     Generic { id: usize },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Row {
     Nil,
 
@@ -302,54 +302,66 @@ pub enum Error {
     },
 }
 
-// If we later decide we want to annotate the AST with types we could add a Typed
-// variant to the Expr enum
-// https://github.com/purescript/purescript/blob/04d53f293b665715d61788213bd0d714c1d08778/src/Language/PureScript/AST/Declarations.hs#L770
-//
-/// Crawl the AST, annotating each node with the inferred type.
+/// Crawl the AST, annotating each node with the inferred type or
+/// returning an error.
 ///
-pub fn infer(expr: &Expr, level: usize, env: &mut Env) -> Result<Type, Error> {
+pub fn infer(expr: &mut Expr, level: usize, env: &mut Env) -> Result<(), Error> {
     match expr {
-        Expr::Int { .. } => Ok(int()),
+        Expr::Int { .. } => Ok(()),
 
-        Expr::Seq { first, then, .. } => {
+        Expr::Seq {
+            typ, first, then, ..
+        } => {
             infer(first, level, env)?;
-            infer(then, level, env)
+            infer(then, level, env).map(|_| {
+                *typ = then.typ();
+            })
         }
 
-        Expr::Var { meta, name, .. } => {
-            env.get_variable(name)
-                .map(|v| (*v).clone())
-                .ok_or_else(|| Error::UnknownVariable {
-                    meta: (*meta).clone(),
-                    name: name.to_string(),
-                    variables: env.variables.clone(),
-                })
-        }
+        Expr::Var {
+            meta, typ, name, ..
+        } => env
+            .get_variable(name)
+            .map(|t| {
+                *typ = Some(t.clone());
+            })
+            .ok_or_else(|| Error::UnknownVariable {
+                meta: (*meta).clone(),
+                name: name.to_string(),
+                variables: env.variables.clone(),
+            }),
 
-        Expr::Fun { args, body, .. } => {
+        Expr::Fun {
+            typ, args, body, ..
+        } => {
             let args_types: Vec<_> = args.iter().map(|_| env.new_unbound_var(level)).collect();
             let ref mut fn_env = env.clone();
             args.iter()
                 .zip(args_types.iter())
                 .for_each(|(arg, t)| fn_env.put_variable(arg.name.to_string(), (*t).clone()));
-            let ret = infer(body, level, fn_env)?;
-            Ok(Type::Fun {
-                args: args_types,
-                retrn: Box::new(ret),
+            infer(body, level, fn_env).map(|_| {
+                *typ = Some(Type::Fun {
+                    args: args_types,
+                    retrn: Box::new(body.typ().unwrap()),
+                })
             })
         }
 
-        Expr::Nil { .. } => Ok(list(env.new_unbound_var(level))),
+        Expr::Nil { typ, .. } => {
+            *typ = Some(list(env.new_unbound_var(level)));
+            Ok(())
+        }
 
         Expr::Let {
+            typ,
             pattern: Pattern::Var { name, .. },
             value,
             then,
             ..
         } => {
-            let value_type = infer(value, level + 1, env)?;
-            let value_type = generalise(value_type, level);
+            infer(value, level + 1, env)?;
+            let value_type = generalise(value.typ().unwrap(), level);
+            *typ = Some(value_type.clone());
             env.put_variable(name.to_string(), value_type);
             infer(then, level, env)
         }
@@ -357,7 +369,7 @@ pub fn infer(expr: &Expr, level: usize, env: &mut Env) -> Result<Type, Error> {
         // TODO: Support non var patterns by modifying the previous clause
         Expr::Let { .. } => unimplemented!(),
 
-        Expr::Atom { .. } => Ok(atom()),
+        Expr::Atom { .. } => Ok(()),
 
         Expr::Case { .. } => unimplemented!(),
 
@@ -367,11 +379,11 @@ pub fn infer(expr: &Expr, level: usize, env: &mut Env) -> Result<Type, Error> {
 
         Expr::Tuple { .. } => unimplemented!(),
 
-        Expr::Float { .. } => Ok(float()),
+        Expr::Float { .. } => Ok(()),
 
         Expr::BinOp { .. } => unimplemented!(),
 
-        Expr::String { .. } => Ok(string()),
+        Expr::String { .. } => Ok(()),
 
         Expr::RecordNil { .. } => unimplemented!(),
 
@@ -409,12 +421,12 @@ fn infer_test() {
     ];
 
     for (src, typ) in cases.into_iter() {
-        let ast = grammar::ExprParser::new().parse(src).unwrap();
-        let typed = infer(&ast, 1, &mut Env::default());
+        let mut ast = grammar::ExprParser::new().parse(src).unwrap();
+        let typed = infer(&mut ast, 1, &mut Env::default()).expect("should successfully infer");
         assert_eq!(
             typ.to_string(),
-            typed
-                .expect("should successfully infer")
+            ast.typ()
+                .expect("should be annotated")
                 .to_gleam_doc(&mut hashmap! {}, &mut 0)
                 .format(80)
         );
