@@ -1,9 +1,13 @@
 use crate::typ;
 
+pub type TypedModule = Module<typ::Type>;
+
+pub type UntypedModule = Module<()>;
+
 #[derive(Debug, PartialEq)]
-pub struct Module {
+pub struct Module<T> {
     pub name: String,
-    pub statements: Vec<Statement>,
+    pub statements: Vec<Statement<T>>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -25,20 +29,24 @@ pub enum Type {
     },
 }
 
+pub type TypedStatement = Statement<typ::Type>;
+
+pub type UntypedStatement = Statement<()>;
+
 #[derive(Debug, PartialEq)]
-pub enum Statement {
+pub enum Statement<T> {
     Fun {
         meta: Meta,
         name: String,
         args: Vec<Arg>,
-        body: Expr,
+        body: Expr<T>,
         public: bool,
     },
 
     Test {
         meta: Meta,
         name: String,
-        body: Expr,
+        body: Expr<T>,
     },
 
     Enum {
@@ -72,7 +80,7 @@ pub enum Statement {
     },
 }
 
-impl Statement {
+impl<T> Statement<T> {
     pub fn meta(&self) -> &Meta {
         match self {
             Statement::Fun { meta, .. } => meta,
@@ -103,12 +111,19 @@ pub enum BinOp {
     DivFloat,
 }
 
+pub type TypedScope = Scope<typ::Type>;
+
+// TODO: make only exist for TypedExpr
 #[derive(Debug, PartialEq)]
-pub enum Scope {
+pub enum Scope<T> {
     Local,
     Module { arity: usize },
-    Constant { value: Box<Expr> },
+    Constant { value: Box<Expr<T>> },
 }
+
+pub type TypedExpr = Expr<typ::Type>;
+
+pub type UntypedExpr = Expr<()>;
 
 // TODO: Ideally we would parameterise the typ instead of using Option<Type>
 // as then we can use the type system to ensure that the AST has the correct
@@ -117,7 +132,7 @@ pub enum Scope {
 // though, and reconstructing the term to copy across the values is cumbersome.
 //
 #[derive(Debug, PartialEq)]
-pub enum Expr {
+pub enum Expr<T> {
     Int {
         meta: Meta,
         value: i64,
@@ -140,77 +155,77 @@ pub enum Expr {
 
     Tuple {
         meta: Meta,
-        typ: Option<typ::Type>,
-        elems: Vec<Expr>,
+        typ: T,
+        elems: Vec<Expr<T>>,
     },
 
     Seq {
         meta: Meta,
-        typ: Option<typ::Type>,
-        first: Box<Expr>,
-        then: Box<Expr>,
+        typ: T,
+        first: Box<Expr<T>>,
+        then: Box<Expr<T>>,
     },
 
     Var {
         meta: Meta,
-        typ: Option<typ::Type>,
-        scope: Scope,
+        typ: T,
+        scope: Scope<T>,
         name: String,
     },
 
     Fun {
         meta: Meta,
-        typ: Option<typ::Type>,
+        typ: T,
         args: Vec<Arg>,
-        body: Box<Expr>,
+        body: Box<Expr<T>>,
     },
 
     Nil {
         meta: Meta,
-        typ: Option<typ::Type>,
+        typ: T,
     },
 
     Cons {
         meta: Meta,
-        typ: Option<typ::Type>,
-        head: Box<Expr>,
-        tail: Box<Expr>,
+        typ: T,
+        head: Box<Expr<T>>,
+        tail: Box<Expr<T>>,
     },
 
     Call {
         meta: Meta,
-        typ: Option<typ::Type>,
-        fun: Box<Expr>,
-        args: Vec<Expr>,
+        typ: T,
+        fun: Box<Expr<T>>,
+        args: Vec<Expr<T>>,
     },
 
     BinOp {
         meta: Meta,
-        typ: Option<typ::Type>,
+        typ: T,
         name: BinOp,
-        left: Box<Expr>,
-        right: Box<Expr>,
+        left: Box<Expr<T>>,
+        right: Box<Expr<T>>,
     },
 
     Let {
         meta: Meta,
-        typ: Option<typ::Type>,
-        value: Box<Expr>,
+        typ: T,
+        value: Box<Expr<T>>,
         pattern: Pattern,
-        then: Box<Expr>,
+        then: Box<Expr<T>>,
     },
 
     Constructor {
         meta: Meta,
-        typ: Option<typ::Type>,
+        typ: T,
         name: String,
     },
 
     Case {
         meta: Meta,
-        typ: Option<typ::Type>,
-        subject: Box<Expr>,
-        clauses: Vec<Clause>,
+        typ: T,
+        subject: Box<Expr<T>>,
+        clauses: Vec<Clause<T>>,
     },
 
     RecordNil {
@@ -219,28 +234,28 @@ pub enum Expr {
 
     RecordCons {
         meta: Meta,
-        typ: Option<typ::Type>,
+        typ: T,
         label: String,
-        value: Box<Expr>,
-        tail: Box<Expr>,
+        value: Box<Expr<T>>,
+        tail: Box<Expr<T>>,
     },
 
     RecordSelect {
         meta: Meta,
-        typ: Option<typ::Type>,
+        typ: T,
         label: String,
-        record: Box<Expr>,
+        record: Box<Expr<T>>,
     },
 
     ModuleSelect {
         meta: Meta,
-        typ: Option<typ::Type>,
+        typ: T,
         label: String,
-        module: Box<Expr>,
+        module: Box<Expr<T>>,
     },
 }
 
-impl Expr {
+impl<T> Expr<T> {
     pub fn meta(&self) -> &Meta {
         match self {
             Expr::Int { meta, .. } => meta,
@@ -264,15 +279,17 @@ impl Expr {
             Expr::ModuleSelect { meta, .. } => meta,
         }
     }
+}
 
+impl TypedExpr {
     // TODO: Reference here? Need to work out how lifetimes work for the
     // variants with no type value within.
-    pub fn typ(&self) -> Option<typ::Type> {
+    pub fn typ(&self) -> typ::Type {
         match self {
-            Expr::Int { .. } => Some(typ::int()),
-            Expr::Float { .. } => Some(typ::float()),
-            Expr::Atom { .. } => Some(typ::atom()),
-            Expr::String { .. } => Some(typ::string()),
+            Expr::Int { .. } => typ::int(),
+            Expr::Float { .. } => typ::float(),
+            Expr::Atom { .. } => typ::atom(),
+            Expr::String { .. } => typ::string(),
             Expr::Seq { then, .. } => then.typ(),
             Expr::Tuple { typ, .. } => (*typ).clone(),
             Expr::Var { typ, .. } => (*typ).clone(),
@@ -283,7 +300,7 @@ impl Expr {
             Expr::BinOp { typ, .. } => (*typ).clone(),
             Expr::Let { typ, .. } => (*typ).clone(),
             Expr::Case { typ, .. } => (*typ).clone(),
-            Expr::RecordNil { .. } => Some(typ::Type::Record { row: typ::Row::Nil }),
+            Expr::RecordNil { .. } => typ::Type::Record { row: typ::Row::Nil },
             Expr::RecordCons { typ, .. } => (*typ).clone(),
             Expr::Constructor { typ, .. } => (*typ).clone(),
             Expr::RecordSelect { typ, .. } => (*typ).clone(),
@@ -292,11 +309,13 @@ impl Expr {
     }
 }
 
+pub type TypedClause = Clause<typ::Type>;
+
 #[derive(Debug, PartialEq)]
-pub struct Clause {
+pub struct Clause<T> {
     pub meta: Meta,
     pub pattern: Pattern,
-    pub then: Box<Expr>,
+    pub then: Box<Expr<T>>,
 }
 
 #[derive(Debug, PartialEq, Default, Clone)]

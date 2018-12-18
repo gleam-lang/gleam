@@ -82,7 +82,7 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Nil {
             meta: Meta { start: 0, end: 2 },
-            typ: None,
+            typ: (),
         }),
         ExprParser::new().parse("[]"),
     );
@@ -97,10 +97,10 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Call {
             meta: Meta { start: 0, end: 11 },
-            typ: None,
+            typ: (),
             fun: Box::new(Expr::Var {
                 meta: Meta { start: 0, end: 5 },
-                typ: None,
+                typ: (),
                 name: "hello".to_string(),
                 scope: Scope::Local,
             }),
@@ -121,7 +121,7 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Var {
             meta: Meta { start: 0, end: 5 },
-            typ: None,
+            typ: (),
             name: "hello".to_string(),
             scope: Scope::Local,
         }),
@@ -131,10 +131,10 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Call {
             meta: Meta { start: 0, end: 10 },
-            typ: None,
+            typ: (),
             fun: Box::new(Expr::Constructor {
                 meta: Meta { start: 0, end: 4 },
-                typ: None,
+                typ: (),
                 name: "Pair".to_string(),
             }),
             args: vec![
@@ -154,14 +154,14 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Cons {
             meta: Meta { start: 0, end: 8 },
-            typ: None,
+            typ: (),
             head: Box::new(Expr::Int {
                 meta: Meta { start: 1, end: 2 },
                 value: 1
             }),
             tail: Box::new(Expr::Nil {
                 meta: Meta { start: 5, end: 7 },
-                typ: None,
+                typ: (),
             })
         }),
         ExprParser::new().parse("[1 | []]"),
@@ -170,7 +170,7 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Let {
             meta: Meta { start: 0, end: 6 },
-            typ: None,
+            typ: (),
             value: Box::new(Expr::Int {
                 meta: Meta { start: 4, end: 5 },
                 value: 1
@@ -190,7 +190,7 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Seq {
             meta: Meta { start: 0, end: 3 },
-            typ: None,
+            typ: (),
             first: Box::new(Expr::Int {
                 meta: Meta { start: 0, end: 1 },
                 value: 1
@@ -206,11 +206,11 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::RecordSelect {
             meta: Meta { start: 0, end: 11 },
-            typ: None,
+            typ: (),
             label: "name".to_string(),
             record: Box::new(Expr::Var {
                 meta: Meta { start: 0, end: 6 },
-                typ: None,
+                typ: (),
                 name: "person".to_string(),
                 scope: Scope::Local,
             })
@@ -221,11 +221,11 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::ModuleSelect {
             meta: Meta { start: 0, end: 11 },
-            typ: None,
+            typ: (),
             label: "name".to_string(),
             module: Box::new(Expr::Var {
                 meta: Meta { start: 0, end: 6 },
-                typ: None,
+                typ: (),
                 name: "person".to_string(),
                 scope: Scope::Local,
             })
@@ -236,7 +236,7 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Tuple {
             meta: Meta { start: 0, end: 9 },
-            typ: None,
+            typ: (),
             elems: vec![
                 Expr::Int {
                     meta: Meta { start: 1, end: 2 },
@@ -258,7 +258,7 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Fun {
             meta: Meta { start: 0, end: 10 },
-            typ: None,
+            typ: (),
             args: vec![],
             body: Box::new(Expr::Int {
                 meta: Meta { start: 7, end: 8 },
@@ -271,7 +271,7 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Fun {
             meta: Meta { start: 0, end: 16 },
-            typ: None,
+            typ: (),
             args: vec![
                 Arg {
                     name: "a".to_string()
@@ -282,7 +282,7 @@ fn expr_test() {
             ],
             body: Box::new(Expr::Seq {
                 meta: Meta { start: 11, end: 14 },
-                typ: None,
+                typ: (),
                 first: Box::new(Expr::Int {
                     meta: Meta { start: 11, end: 12 },
                     value: 1
@@ -299,7 +299,7 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Let {
             meta: Meta { start: 0, end: 6 },
-            typ: None,
+            typ: (),
             value: Box::new(Expr::Int {
                 meta: Meta { start: 4, end: 5 },
                 value: 1
@@ -319,7 +319,7 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Let {
             meta: Meta { start: 0, end: 8 },
-            typ: None,
+            typ: (),
             value: Box::new(Expr::Int {
                 meta: Meta { start: 6, end: 7 },
                 value: 1,
@@ -339,7 +339,7 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Let {
             meta: Meta { start: 0, end: 8 },
-            typ: None,
+            typ: (),
             value: Box::new(Expr::Int {
                 meta: Meta { start: 6, end: 7 },
                 value: 1
@@ -359,7 +359,7 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Let {
             meta: Meta { start: 0, end: 8 },
-            typ: None,
+            typ: (),
             value: Box::new(Expr::Int {
                 meta: Meta { start: 6, end: 7 },
                 value: 1
@@ -379,7 +379,7 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::RecordCons {
             meta: Meta { start: 0, end: 19 },
-            typ: None,
+            typ: (),
             label: "size".to_string(),
             value: Box::new(Expr::Int {
                 meta: Meta { start: 16, end: 17 },
@@ -387,7 +387,7 @@ fn expr_test() {
             }),
             tail: Box::new(Expr::Var {
                 meta: Meta { start: 2, end: 6 },
-                typ: None,
+                typ: (),
                 name: "jane".to_string(),
                 scope: Scope::Local,
             }),
@@ -473,7 +473,7 @@ fn module_test() {
                 ],
                 body: Expr::Seq {
                     meta: Meta { start: 19, end: 22 },
-                    typ: None,
+                    typ: (),
                     first: Box::new(Expr::Int {
                         meta: Meta { start: 19, end: 20 },
                         value: 1
@@ -513,7 +513,7 @@ fn module_test() {
                 name: "run".to_string(),
                 body: Expr::Seq {
                     meta: Meta { start: 11, end: 14 },
-                    typ: None,
+                    typ: (),
                     first: Box::new(Expr::Int {
                         meta: Meta { start: 11, end: 12 },
                         value: 1

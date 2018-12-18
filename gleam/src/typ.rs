@@ -1,6 +1,6 @@
 #![allow(dead_code)] // TODO
 
-use crate::ast::{Expr, Meta, Pattern};
+use crate::ast::{Expr, Meta, Pattern, Scope, TypedExpr, UntypedExpr};
 use crate::grammar;
 use crate::pretty::*;
 use im::hashmap::HashMap;
@@ -305,71 +305,109 @@ pub enum Error {
 /// Crawl the AST, annotating each node with the inferred type or
 /// returning an error.
 ///
-pub fn infer(expr: &mut Expr, level: usize, env: &mut Env) -> Result<(), Error> {
+pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr, Error> {
     match expr {
-        Expr::Int { .. } => Ok(()),
+        Expr::Int { meta, value } => Ok(Expr::Int { meta, value }),
 
         Expr::Seq {
-            typ, first, then, ..
+            meta,
+            typ: _,
+            first,
+            then,
         } => {
-            infer(first, level, env)?;
-            infer(then, level, env).map(|_| {
-                *typ = then.typ();
+            let first = infer(*first, level, env)?;
+            let then = infer(*then, level, env)?;
+            Ok(Expr::Seq {
+                meta,
+                typ: then.typ(),
+                first: Box::new(first),
+                then: Box::new(then),
             })
         }
 
         Expr::Var {
-            meta, typ, name, ..
-        } => env
-            .get_variable(name)
-            .map(|t| {
-                *typ = Some(t.clone());
+            meta,
+            scope: _,
+            typ: _,
+            name,
+        } => {
+            let typ = env.get_variable(&name).map(|t| t.clone()).ok_or_else(|| {
+                Error::UnknownVariable {
+                    meta: meta.clone(),
+                    name: name.to_string(),
+                    variables: env.variables.clone(),
+                }
+            })?;
+            // TODO: Get real scope
+            let scope = Scope::Local;
+            Ok(Expr::Var {
+                meta,
+                scope,
+                typ,
+                name,
             })
-            .ok_or_else(|| Error::UnknownVariable {
-                meta: (*meta).clone(),
-                name: name.to_string(),
-                variables: env.variables.clone(),
-            }),
+        }
 
         Expr::Fun {
-            typ, args, body, ..
+            meta,
+            typ: _,
+            args,
+            body,
         } => {
             let args_types: Vec<_> = args.iter().map(|_| env.new_unbound_var(level)).collect();
             let ref mut fn_env = env.clone();
             args.iter()
                 .zip(args_types.iter())
                 .for_each(|(arg, t)| fn_env.put_variable(arg.name.to_string(), (*t).clone()));
-            infer(body, level, fn_env).map(|_| {
-                *typ = Some(Type::Fun {
-                    args: args_types,
-                    retrn: Box::new(body.typ().unwrap()),
-                })
+            let body = infer(*body, level, fn_env)?;
+            let typ = Type::Fun {
+                args: args_types,
+                retrn: Box::new(body.typ()),
+            };
+            Ok(Expr::Fun {
+                meta,
+                typ,
+                args,
+                body: Box::new(body),
             })
         }
 
-        Expr::Nil { typ, .. } => {
-            *typ = Some(list(env.new_unbound_var(level)));
-            Ok(())
-        }
+        Expr::Nil { meta, typ: _ } => Ok(Expr::Nil {
+            meta,
+            typ: list(env.new_unbound_var(level)),
+        }),
 
         Expr::Let {
-            typ,
-            pattern: Pattern::Var { name, .. },
+            meta,
+            typ: _,
+            pattern:
+                Pattern::Var {
+                    name,
+                    meta: pattern_meta,
+                },
             value,
             then,
-            ..
         } => {
-            infer(value, level + 1, env)?;
-            let value_type = generalise(value.typ().unwrap(), level);
-            *typ = Some(value_type.clone());
-            env.put_variable(name.to_string(), value_type);
-            infer(then, level, env)
+            let value = infer(*value, level + 1, env)?;
+            let typ = generalise(value.typ(), level);
+            env.put_variable(name.to_string(), typ.clone());
+            let then = infer(*then, level, env)?;
+            Ok(Expr::Let {
+                meta,
+                typ,
+                pattern: Pattern::Var {
+                    name,
+                    meta: pattern_meta,
+                },
+                value: Box::new(value),
+                then: Box::new(then),
+            })
         }
 
         // TODO: Support non var patterns by modifying the previous clause
         Expr::Let { .. } => unimplemented!(),
 
-        Expr::Atom { .. } => Ok(()),
+        Expr::Atom { meta, value } => Ok(Expr::Atom { meta, value }),
 
         Expr::Case { .. } => unimplemented!(),
 
@@ -379,11 +417,11 @@ pub fn infer(expr: &mut Expr, level: usize, env: &mut Env) -> Result<(), Error> 
 
         Expr::Tuple { .. } => unimplemented!(),
 
-        Expr::Float { .. } => Ok(()),
+        Expr::Float { meta, value } => Ok(Expr::Float { meta, value }),
 
         Expr::BinOp { .. } => unimplemented!(),
 
-        Expr::String { .. } => Ok(()),
+        Expr::String { meta, value } => Ok(Expr::String { meta, value }),
 
         Expr::RecordNil { .. } => unimplemented!(),
 
@@ -421,12 +459,12 @@ fn infer_test() {
     ];
 
     for (src, typ) in cases.into_iter() {
-        let mut ast = grammar::ExprParser::new().parse(src).unwrap();
-        let typed = infer(&mut ast, 1, &mut Env::default()).expect("should successfully infer");
+        let ast = grammar::ExprParser::new().parse(src).expect("syntax error");
         assert_eq!(
             typ.to_string(),
-            ast.typ()
-                .expect("should be annotated")
+            infer(ast, 1, &mut Env::default())
+                .expect("should successfully infer")
+                .typ()
                 .to_gleam_doc(&mut hashmap! {}, &mut 0)
                 .format(80)
         );

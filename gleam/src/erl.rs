@@ -1,5 +1,9 @@
-use crate::ast::{Arg, BinOp, Clause, Expr, Module, Pattern, Scope, Statement, Type};
+use crate::ast::{
+    Arg, BinOp, Clause, Expr, Module, Pattern, Scope, Statement, Type, TypedClause, TypedExpr,
+    TypedModule, TypedScope, TypedStatement,
+};
 use crate::pretty::*;
+use crate::typ;
 
 use heck::{CamelCase, SnakeCase};
 use itertools::Itertools;
@@ -18,7 +22,7 @@ where
 #[derive(Debug, Clone, Default)]
 struct Env {}
 
-pub fn module(module: Module) -> String {
+pub fn module(module: TypedModule) -> String {
     format!("-module({}).", module.name)
         .to_doc()
         .append(line())
@@ -32,7 +36,7 @@ pub fn module(module: Module) -> String {
         .format(80)
 }
 
-fn statement(statement: Statement) -> Document {
+fn statement(statement: TypedStatement) -> Document {
     match statement {
         Statement::Test { name, body, .. } => test(name, body),
         Statement::Enum { .. } => nil(),
@@ -56,7 +60,7 @@ fn statement(statement: Statement) -> Document {
     }
 }
 
-fn mod_fun(public: bool, name: String, args: Vec<Arg>, body: Expr) -> Document {
+fn mod_fun(public: bool, name: String, args: Vec<Arg>, body: TypedExpr) -> Document {
     let body_doc = expr(body, &mut Env::default());
 
     export(public, &name, args.len())
@@ -80,7 +84,7 @@ fn fun_args(args: Vec<Arg>) -> Document {
         .group()
 }
 
-fn test(name: String, body: Expr) -> Document {
+fn test(name: String, body: TypedExpr) -> Document {
     let body_doc = expr(body, &mut Env::default());
     line()
         .append("-ifdef(TEST).")
@@ -129,7 +133,7 @@ where
         .group()
 }
 
-fn seq(first: Expr, then: Expr, mut env: &Env) -> Document {
+fn seq(first: TypedExpr, then: TypedExpr, mut env: &Env) -> Document {
     expr(first, &mut env)
         .append(",")
         .append(line())
@@ -138,7 +142,7 @@ fn seq(first: Expr, then: Expr, mut env: &Env) -> Document {
 
 // TODO: Surround left or right in parens if required
 // TODO: Group nested bin_ops i.e. a |> b |> c
-fn bin_op(name: BinOp, left: Expr, right: Expr, mut env: &Env) -> Document {
+fn bin_op(name: BinOp, left: TypedExpr, right: TypedExpr, mut env: &Env) -> Document {
     let op = match name {
         BinOp::Pipe => "|>", // TODO: This is wrong.
         BinOp::Lt => "<",
@@ -163,7 +167,7 @@ fn bin_op(name: BinOp, left: Expr, right: Expr, mut env: &Env) -> Document {
         .append(expr(right, &mut env))
 }
 
-fn let_(value: Expr, pat: Pattern, then: Expr, mut env: &Env) -> Document {
+fn let_(value: TypedExpr, pat: Pattern, then: TypedExpr, mut env: &Env) -> Document {
     pattern(pat, &mut env)
         .append(" =")
         .append(break_("", " "))
@@ -188,7 +192,7 @@ fn pattern(p: Pattern, mut env: &Env) -> Document {
     }
 }
 
-fn cons(head: Expr, tail: Expr, mut env: &Env) -> Document {
+fn cons(head: TypedExpr, tail: TypedExpr, mut env: &Env) -> Document {
     // TODO: Flatten nested cons into a list i.e. [1, 2, 3 | X] or [1, 2, 3, 4]
     // TODO: Break, indent, etc
     expr(head, &mut env)
@@ -197,7 +201,7 @@ fn cons(head: Expr, tail: Expr, mut env: &Env) -> Document {
         .surround("[", "]")
 }
 
-fn expr_record_cons(label: String, value: Expr, tail: Expr, mut env: &Env) -> Document {
+fn expr_record_cons(label: String, value: TypedExpr, tail: TypedExpr, mut env: &Env) -> Document {
     record_cons(expr, "=>".to_string(), label, value, tail, &mut env)
 }
 
@@ -217,7 +221,7 @@ where
         .append("}")
 }
 
-fn var(name: String, scope: Scope, mut env: &Env) -> Document {
+fn var(name: String, scope: TypedScope, mut env: &Env) -> Document {
     match scope {
         Scope::Local => name.to_camel_case().to_doc(),
         Scope::Constant { value } => expr(*value, &mut env),
@@ -238,14 +242,14 @@ where
     }
 }
 
-fn clause(clause: Clause, mut env: &Env) -> Document {
+fn clause(clause: TypedClause, mut env: &Env) -> Document {
     pattern(clause.pattern, &mut env)
         .append(" ->")
         .append(break_("", " "))
         .append(expr(*clause.then, &mut env).nest(INDENT).group())
 }
 
-fn clauses(cs: Vec<Clause>, mut env: &Env) -> Document {
+fn clauses(cs: Vec<TypedClause>, mut env: &Env) -> Document {
     cs.into_iter()
         .map(|c| clause(c, &mut env))
         .intersperse(";".to_doc().append(line()).append(break_("\n", "")))
@@ -253,7 +257,7 @@ fn clauses(cs: Vec<Clause>, mut env: &Env) -> Document {
         .to_doc()
 }
 
-fn case(subject: Expr, cs: Vec<Clause>, mut env: &Env) -> Document {
+fn case(subject: TypedExpr, cs: Vec<TypedClause>, mut env: &Env) -> Document {
     "case "
         .to_doc()
         .append(expr(subject, &mut env).group())
@@ -270,7 +274,7 @@ fn pattern_atom(s: String) -> Pattern {
     }
 }
 
-fn expr(expression: Expr, mut env: &Env) -> Document {
+fn expr(expression: TypedExpr, mut env: &Env) -> Document {
     match expression {
         Expr::Nil { .. } => "[]".to_doc(),
         Expr::RecordNil { .. } => "#{}".to_doc(),
@@ -305,7 +309,7 @@ fn expr(expression: Expr, mut env: &Env) -> Document {
     }
 }
 
-fn fun(args: Vec<Arg>, body: Expr, mut env: &Env) -> Document {
+fn fun(args: Vec<Arg>, body: TypedExpr, mut env: &Env) -> Document {
     "fun"
         .to_doc()
         .append(fun_args(args).append(" ->"))
@@ -335,7 +339,7 @@ fn external_fun(public: bool, name: String, module: String, fun: String, arity: 
 
 #[test]
 fn module_test() {
-    let m: Module = Module {
+    let m: TypedModule = Module {
         name: "magic".to_string(),
         statements: vec![
             Statement::ExternalType {
@@ -410,7 +414,7 @@ map() ->
     .to_string();
     assert_eq!(expected, module(m));
 
-    let m: Module = Module {
+    let m: TypedModule = Module {
         name: "term".to_string(),
         statements: vec![
             Statement::Fun {
@@ -450,7 +454,7 @@ map() ->
                 name: "nil".to_string(),
                 body: Expr::Nil {
                     meta: default(),
-                    typ: None,
+                    typ: typ::int(),
                 },
             },
             Statement::Fun {
@@ -467,7 +471,7 @@ map() ->
                 name: "tup".to_string(),
                 body: Expr::Tuple {
                     meta: default(),
-                    typ: None,
+                    typ: typ::int(),
                     elems: vec![
                         Expr::Int {
                             meta: default(),
@@ -497,7 +501,7 @@ map() ->
                 name: "seq".to_string(),
                 body: Expr::Seq {
                     meta: default(),
-                    typ: None,
+                    typ: typ::int(),
                     first: Box::new(Expr::Int {
                         meta: default(),
                         value: 1,
@@ -515,7 +519,7 @@ map() ->
                 name: "bin_op".to_string(),
                 body: Expr::BinOp {
                     meta: default(),
-                    typ: None,
+                    typ: typ::int(),
                     name: BinOp::AddInt,
                     left: Box::new(Expr::Int {
                         meta: default(),
@@ -534,7 +538,7 @@ map() ->
                 name: "enum1".to_string(),
                 body: Expr::Constructor {
                     meta: default(),
-                    typ: None,
+                    typ: typ::int(),
                     name: "Nil".to_string(),
                 },
             },
@@ -545,7 +549,7 @@ map() ->
                 name: "let".to_string(),
                 body: Expr::Let {
                     meta: default(),
-                    typ: None,
+                    typ: typ::int(),
                     value: Box::new(Expr::Int {
                         meta: default(),
                         value: 1,
@@ -556,7 +560,7 @@ map() ->
                     },
                     then: Box::new(Expr::Var {
                         meta: default(),
-                        typ: None,
+                        typ: typ::int(),
                         scope: Scope::Local,
                         name: "one_two".to_string(),
                     }),
@@ -569,14 +573,14 @@ map() ->
                 name: "conny".to_string(),
                 body: Expr::Cons {
                     meta: default(),
-                    typ: None,
+                    typ: typ::int(),
                     head: Box::new(Expr::Int {
                         meta: default(),
                         value: 1234,
                     }),
                     tail: Box::new(Expr::Nil {
                         meta: default(),
-                        typ: None,
+                        typ: typ::int(),
                     }),
                 },
             },
@@ -588,7 +592,7 @@ map() ->
                 body: Expr::RecordCons {
                     meta: default(),
 
-                    typ: None,
+                    typ: typ::int(),
                     label: "size".to_string(),
                     value: Box::new(Expr::Int {
                         meta: default(),
@@ -604,7 +608,7 @@ map() ->
                 name: "funny".to_string(),
                 body: Expr::Fun {
                     meta: default(),
-                    typ: None,
+                    typ: typ::int(),
                     args: vec![
                         Arg {
                             name: "one_really_long_arg_to_cause_wrapping".to_string(),
@@ -676,7 +680,7 @@ funny() ->
     // enum2() ->
     //     {'ok', 1, 2.0}.
 
-    let m: Module = Module {
+    let m: TypedModule = Module {
         name: "term".to_string(),
         statements: vec![Statement::Fun {
             meta: default(),
@@ -729,7 +733,7 @@ some_function(ArgOne,
     .to_string();
     assert_eq!(expected, module(m));
 
-    let m: Module = Module {
+    let m: TypedModule = Module {
         name: "term".to_string(),
         statements: vec![Statement::Test {
             meta: default(),
@@ -750,7 +754,7 @@ bang_test() ->
     .to_string();
     assert_eq!(expected, module(m));
 
-    let m: Module = Module {
+    let m: TypedModule = Module {
         name: "vars".to_string(),
         statements: vec![
             Statement::Fun {
@@ -759,7 +763,7 @@ bang_test() ->
                 args: vec![],
                 name: "arg".to_string(),
                 body: Expr::Var {
-                    typ: None,
+                    typ: typ::int(),
                     meta: default(),
                     name: "some_arg".to_string(),
                     scope: Scope::Local,
@@ -771,7 +775,7 @@ bang_test() ->
                 args: vec![],
                 name: "some_arg".to_string(),
                 body: Expr::Var {
-                    typ: None,
+                    typ: typ::int(),
                     meta: default(),
                     name: "some_arg".to_string(),
                     scope: Scope::Constant {
@@ -788,7 +792,7 @@ bang_test() ->
                 args: vec![],
                 name: "another".to_string(),
                 body: Expr::Var {
-                    typ: None,
+                    typ: typ::int(),
                     meta: default(),
                     name: "run_task".to_string(),
                     scope: Scope::Module { arity: 6 },
@@ -810,7 +814,7 @@ another() ->
     .to_string();
     assert_eq!(expected, module(m));
 
-    let m: Module = Module {
+    let m: TypedModule = Module {
         name: "my_mod".to_string(),
         statements: vec![Statement::Fun {
             meta: default(),
@@ -819,7 +823,7 @@ another() ->
             name: "go".to_string(),
             body: Expr::Case {
                 meta: default(),
-                typ: None,
+                typ: typ::int(),
                 subject: Box::new(Expr::Int {
                     meta: default(),
                     value: 1,
