@@ -65,7 +65,7 @@ impl Type {
                 .append(") -> ")
                 .append(retrn.to_gleam_doc(names, uid)),
 
-            Type::Tuple { .. } => unimplemented!(),
+            Type::Tuple { elems, .. } => args_to_gleam_doc(elems, names, uid).surround("{", "}"),
 
             Type::Record { .. } => unimplemented!(),
 
@@ -415,7 +415,20 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
 
         Expr::Call { .. } => unimplemented!(),
 
-        Expr::Tuple { .. } => unimplemented!(),
+        Expr::Tuple {
+            meta,
+            elems,
+            typ: _,
+        } => {
+            let elems = elems
+                .into_iter()
+                .map(|e| infer(e, level, env))
+                .collect::<Result<Vec<_>, _>>()?;
+            let typ = Type::Tuple {
+                elems: elems.iter().map(|e| e.typ()).collect(),
+            };
+            Ok(Expr::Tuple { meta, elems, typ })
+        }
 
         Expr::Float { meta, value } => Ok(Expr::Float { meta, value }),
 
@@ -456,6 +469,10 @@ fn infer_test() {
         ("fn(x) { x }", "fn(a) -> a"),
         ("fn(x, y) { x }", "fn(a, b) -> a"),
         ("fn(x, y) { [] }", "fn(a, b) -> List(c)"),
+        ("{1}", "{Int}"),
+        ("{1, 2.0}", "{Int, Float}"),
+        ("{1, 2.0, '3'}", "{Int, Float, Atom}"),
+        ("{1, 2.0, {'ok', 1}}", "{Int, Float, {Atom, Int}}"),
     ];
 
     for (src, typ) in cases.into_iter() {
