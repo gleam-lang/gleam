@@ -413,7 +413,30 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
 
         Expr::Cons { .. } => unimplemented!(),
 
-        Expr::Call { .. } => unimplemented!(),
+        Expr::Call {
+            meta,
+            typ: _,
+            fun,
+            args,
+        } => {
+            let fun = infer(*fun, level, env)?;
+            let (args_types, return_type) = match_fun_type(&fun.typ(), args.len())?;
+            let args = args_types
+                .iter()
+                .zip(args)
+                .map(|(typ, arg)| {
+                    let arg = infer(arg, level, env)?;
+                    unify(typ, &arg.typ())?;
+                    Ok(arg)
+                })
+                .collect::<Result<_, _>>()?;
+            Ok(Expr::Call {
+                meta,
+                typ: return_type,
+                fun: Box::new(fun),
+                args,
+            })
+        }
 
         Expr::Tuple {
             meta,
@@ -448,6 +471,72 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
     }
 }
 
+// let instantiate level ty =
+// 	let id_var_map = Hashtbl.create 10 in
+// 	let rec f ty = match ty with
+// 		| TConst _ -> ty
+// 		| TVar {contents = Link ty} -> f ty
+// 		| TVar {contents = Generic id} -> begin
+// 				try
+// 					Hashtbl.find id_var_map id
+// 				with Not_found ->
+// 					let var = new_var level in
+// 					Hashtbl.add id_var_map id var ;
+// 					var
+// 			end
+// 		| TVar {contents = Unbound _} -> ty
+// 		| TApp(ty, ty_arg_list) ->
+// 				TApp(f ty, List.map f ty_arg_list)
+// 		| TArrow(param_ty_list, return_ty) ->
+// 				TArrow(List.map f param_ty_list, f return_ty)
+// 	in
+// 	f ty
+
+// let rec unify ty1 ty2 =
+// 	if ty1 == ty2 then () else
+// 	match (ty1, ty2) with
+// 		| TConst name1, TConst name2 when name1 = name2 -> ()
+// 		| TApp(ty1, ty_arg_list1), TApp(ty2, ty_arg_list2) ->
+// 				unify ty1 ty2 ;
+// 				List.iter2 unify ty_arg_list1 ty_arg_list2
+// 		| TArrow(param_ty_list1, return_ty1), TArrow(param_ty_list2, return_ty2) ->
+// 				List.iter2 unify param_ty_list1 param_ty_list2 ;
+// 				unify return_ty1 return_ty2
+// 		| TVar {contents = Link ty1}, ty2 | ty1, TVar {contents = Link ty2} -> unify ty1 ty2
+// 		| TVar {contents = Unbound(id1, _)}, TVar {contents = Unbound(id2, _)} when id1 = id2 ->
+// 				assert false (* There is only a single instance of a particular type variable. *)
+// 		| TVar ({contents = Unbound(id, level)} as tvar), ty
+// 		| ty, TVar ({contents = Unbound(id, level)} as tvar) ->
+// 				occurs_check_adjust_levels id level ty ;
+// 				tvar := Link ty
+// 		| _, _ -> error ("cannot unify types " ^ string_of_ty ty1 ^ " and " ^ string_of_ty ty2)
+fn unify(t1: &Type, t2: &Type) -> Result<(), Error> {
+    unimplemented!()
+}
+
+// let rec match_fun_ty num_params = function
+// 	| TArrow(param_ty_list, return_ty) ->
+// 			if List.length param_ty_list <> num_params then
+// 				error "unexpected number of arguments"
+// 			else
+// 				param_ty_list, return_ty
+// 	| TVar {contents = Link ty} -> match_fun_ty num_params ty
+// 	| TVar ({contents = Unbound(id, level)} as tvar) ->
+// 			let param_ty_list =
+// 				let rec f = function
+// 					| 0 -> []
+// 					| n -> new_var level :: f (n - 1)
+// 				in
+// 				f num_params
+// 			in
+// 			let return_ty = new_var level in
+// 			tvar := Link (TArrow(param_ty_list, return_ty)) ;
+// 			param_ty_list, return_ty
+// 	| _ -> error "expected a function"
+fn match_fun_type(typ: &Type, arity: usize) -> Result<(Vec<Type>, Type), Error> {
+    unimplemented!()
+}
+
 #[test]
 fn infer_test() {
     let cases = [
@@ -473,6 +562,7 @@ fn infer_test() {
         ("{1, 2.0}", "{Int, Float}"),
         ("{1, 2.0, '3'}", "{Int, Float, Atom}"),
         ("{1, 2.0, {'ok', 1}}", "{Int, Float, {Atom, Int}}"),
+        ("id = fn(x) { x } id(1)", "Int"),
     ];
 
     for (src, typ) in cases.into_iter() {
@@ -500,14 +590,32 @@ fn infer_test() {
 /// Takes a level and a type and turns all type variables within the type that have
 /// level higher than the input level into generalized (polymorphic) type variables.
 ///
-fn generalise(typ: Type, level: usize) -> Type {
-    match typ {
+fn generalise(t: Type, level: usize) -> Type {
+    match t {
+        Type::Var { typ } => match (*typ).borrow() {
+            // TODO: How do I pattern match on a Ref?
+            TypeVar::Unbound { id, level: t_level } => t,
+        },
+
         Type::Var { .. } => unimplemented!(),
+
         Type::App { .. } => unimplemented!(),
-        Type::Fun { .. } => unimplemented!(),
+
+        Type::Fun { args, retrn } => {
+            let args = args.into_iter().map(|t| generalise(t, level)).collect();
+            let retrn = generalise(*retrn, level);
+            Type::Fun {
+                args,
+                retrn: Box::new(retrn),
+            }
+        }
+
         Type::Tuple { .. } => unimplemented!(),
-        Type::Const { .. } => typ,
+
+        Type::Const { .. } => t,
+
         Type::Record { .. } => unimplemented!(),
+
         Type::Module { .. } => unimplemented!(),
     }
 }
