@@ -300,6 +300,18 @@ pub enum Error {
         name: String,
         variables: HashMap<String, Type>,
     },
+
+    IncorrectArity {
+        meta: Meta,
+        expected: usize,
+        given: usize,
+    },
+
+    CouldNotUnify {
+        meta: Meta,
+        expected: Type,
+        given: Type,
+    },
 }
 
 /// Crawl the AST, annotating each node with the inferred type or
@@ -420,13 +432,14 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             args,
         } => {
             let fun = infer(*fun, level, env)?;
-            let (args_types, return_type) = match_fun_type(&fun.typ(), args.len())?;
+            let (args_types, return_type) = match_fun_type(fun.typ(), args.len())
+                .map_err(|e| convert_match_fun_type_error(e, &meta))?;
             let args = args_types
                 .iter()
                 .zip(args)
                 .map(|(typ, arg)| {
                     let arg = infer(arg, level, env)?;
-                    unify(typ, &arg.typ())?;
+                    unify(typ, &arg.typ()).map_err(|e| convert_unify_error(e, &meta))?;
                     Ok(arg)
                 })
                 .collect::<Result<_, _>>()?;
@@ -471,6 +484,14 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
     }
 }
 
+fn convert_unify_error(e: CouldNotUnifyError, meta: &Meta) -> Error {
+    Error::CouldNotUnify {
+        meta: meta.clone(),
+        expected: e.expected,
+        given: e.given,
+    }
+}
+
 // let instantiate level ty =
 // 	let id_var_map = Hashtbl.create 10 in
 // 	let rec f ty = match ty with
@@ -492,6 +513,11 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
 // 	in
 // 	f ty
 
+struct CouldNotUnifyError {
+    pub expected: Type,
+    pub given: Type,
+}
+
 // let rec unify ty1 ty2 =
 // 	if ty1 == ty2 then () else
 // 	match (ty1, ty2) with
@@ -510,8 +536,57 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
 // 				occurs_check_adjust_levels id level ty ;
 // 				tvar := Link ty
 // 		| _, _ -> error ("cannot unify types " ^ string_of_ty ty1 ^ " and " ^ string_of_ty ty2)
-fn unify(t1: &Type, t2: &Type) -> Result<(), Error> {
-    unimplemented!()
+fn unify(t1: &Type, t2: &Type) -> Result<(), CouldNotUnifyError> {
+    match (t1, t2) {
+        (
+            Type::Const {
+                module: m1,
+                name: n1,
+                ..
+            },
+            Type::Const {
+                module: m2,
+                name: n2,
+                ..
+            },
+        ) => {
+            if n1 == n2 && m1 == m2 {
+                Ok(())
+            } else {
+                unimplemented!()
+            }
+        }
+
+        (Type::App { .. }, Type::App { .. }) => unimplemented!(),
+
+        (Type::Tuple { .. }, Type::Tuple { .. }) => unimplemented!(),
+
+        (Type::Fun { .. }, Type::Fun { .. }) => unimplemented!(),
+
+        (Type::Record { .. }, Type::Record { .. }) => unimplemented!(),
+
+        (Type::Module { .. }, Type::Module { .. }) => unimplemented!(),
+
+        (Type::Var { typ }, other_typ) => match &*typ.borrow() {
+            TypeVar::Link { .. } => unimplemented!(),
+
+            TypeVar::Unbound { .. } => unimplemented!(),
+
+            TypeVar::Generic { .. } => unimplemented!(),
+        },
+
+        (_, Type::Var { .. }) => unify(t2, t1).map_err(|e| CouldNotUnifyError {
+            expected: e.given,
+            given: e.expected,
+        }),
+
+        (_, _) => unimplemented!(),
+    }
+}
+
+struct MatchFunTypeError {
+    pub expected: usize,
+    pub given: usize,
 }
 
 // let rec match_fun_ty num_params = function
@@ -533,8 +608,31 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), Error> {
 // 			tvar := Link (TArrow(param_ty_list, return_ty)) ;
 // 			param_ty_list, return_ty
 // 	| _ -> error "expected a function"
-fn match_fun_type(typ: &Type, arity: usize) -> Result<(Vec<Type>, Type), Error> {
-    unimplemented!()
+fn match_fun_type(typ: Type, arity: usize) -> Result<(Vec<Type>, Type), MatchFunTypeError> {
+    match typ {
+        Type::Fun { args, retrn } => {
+            if args.len() != arity {
+                Err(MatchFunTypeError {
+                    expected: args.len(),
+                    given: arity,
+                })
+            } else {
+                Ok((args, *retrn))
+            }
+        }
+
+        Type::Var { .. } => unimplemented!(),
+
+        _ => unimplemented!(),
+    }
+}
+
+fn convert_match_fun_type_error(e: MatchFunTypeError, meta: &Meta) -> Error {
+    Error::IncorrectArity {
+        meta: meta.clone(),
+        expected: e.expected,
+        given: e.given,
+    }
 }
 
 #[test]
@@ -590,20 +688,33 @@ fn infer_test() {
 /// Takes a level and a type and turns all type variables within the type that have
 /// level higher than the input level into generalized (polymorphic) type variables.
 ///
-fn generalise(t: Type, level: usize) -> Type {
+fn generalise(t: Type, ctx_level: usize) -> Type {
     match t {
-        Type::Var { typ } => match (*typ).borrow() {
-            // TODO: How do I pattern match on a Ref?
-            TypeVar::Unbound { id, level: t_level } => t,
-        },
+        Type::Var { typ } => match &*typ.borrow() {
+            TypeVar::Unbound { id, level } => {
+                let id = *id;
+                let var = if *level > ctx_level {
+                    TypeVar::Generic { id }
+                } else {
+                    let level = *level;
+                    TypeVar::Unbound { id, level }
+                };
 
-        Type::Var { .. } => unimplemented!(),
+                Type::Var {
+                    typ: Rc::new(RefCell::new(var)),
+                }
+            }
+
+            TypeVar::Link { .. } => unimplemented!(),
+
+            TypeVar::Generic { .. } => unimplemented!(),
+        },
 
         Type::App { .. } => unimplemented!(),
 
         Type::Fun { args, retrn } => {
-            let args = args.into_iter().map(|t| generalise(t, level)).collect();
-            let retrn = generalise(*retrn, level);
+            let args = args.into_iter().map(|t| generalise(t, ctx_level)).collect();
+            let retrn = generalise(*retrn, ctx_level);
             Type::Fun {
                 args,
                 retrn: Box::new(retrn),
