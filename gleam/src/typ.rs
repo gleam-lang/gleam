@@ -6,6 +6,7 @@ use crate::pretty::*;
 use im::hashmap::HashMap;
 use itertools::Itertools;
 use std::cell::RefCell;
+use std::mem;
 use std::rc::Rc;
 
 const INDENT: isize = 2;
@@ -312,6 +313,10 @@ pub enum Error {
         expected: Type,
         given: Type,
     },
+
+    RecursiveType {
+        meta: Meta,
+    },
 }
 
 /// Crawl the AST, annotating each node with the inferred type or
@@ -402,9 +407,10 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             then,
         } => {
             let value = infer(*value, level + 1, env)?;
-            let typ = generalise(value.typ(), level);
-            env.put_variable(name.to_string(), typ.clone());
+            let value_typ = generalise(value.typ(), level);
+            env.put_variable(name.to_string(), value_typ.clone());
             let then = infer(*then, level, env)?;
+            let typ = then.typ();
             Ok(Expr::Let {
                 meta,
                 typ,
@@ -433,14 +439,14 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             args,
         } => {
             let fun = infer(*fun, level, env)?;
-            let (args_types, return_type) = match_fun_type(fun.typ(), args.len())
-                .map_err(|e| convert_match_fun_type_error(e, &meta))?;
+            let (mut args_types, return_type) = match_fun_type(fun.typ(), args.len())
+                .map_err(|e| convert_not_fun_error(e, &meta))?;
             let args = args_types
-                .iter()
+                .iter_mut()
                 .zip(args)
-                .map(|(typ, arg)| {
+                .map(|(typ, arg): (&mut Type, _)| {
                     let arg = infer(arg, level, env)?;
-                    unify(typ, &arg.typ()).map_err(|e| convert_unify_error(e, &meta))?;
+                    unify(typ, &mut arg.typ()).map_err(|e| convert_unify_error(e, &meta))?;
                     Ok(arg)
                 })
                 .collect::<Result<_, _>>()?;
@@ -485,11 +491,15 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
     }
 }
 
-fn convert_unify_error(e: CouldNotUnifyError, meta: &Meta) -> Error {
-    Error::CouldNotUnify {
-        meta: meta.clone(),
-        expected: e.expected,
-        given: e.given,
+fn convert_unify_error(e: UnifyError, meta: &Meta) -> Error {
+    match e {
+        UnifyError::CouldNotUnify { expected, given } => Error::CouldNotUnify {
+            meta: meta.clone(),
+            expected,
+            given,
+        },
+
+        UnifyError::RecursiveType => Error::RecursiveType { meta: meta.clone() },
     }
 }
 
@@ -565,9 +575,10 @@ fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
     go(typ, ctx_level, &mut hashmap![], env)
 }
 
-struct CouldNotUnifyError {
-    pub expected: Type,
-    pub given: Type,
+enum UnifyError {
+    CouldNotUnify { expected: Type, given: Type },
+
+    RecursiveType,
 }
 
 // let rec unify ty1 ty2 =
@@ -588,7 +599,32 @@ struct CouldNotUnifyError {
 // 				occurs_check_adjust_levels id level ty ;
 // 				tvar := Link ty
 // 		| _, _ -> error ("cannot unify types " ^ string_of_ty ty1 ^ " and " ^ string_of_ty ty2)
-fn unify(t1: &Type, t2: &Type) -> Result<(), CouldNotUnifyError> {
+fn unify(t1: &mut Type, t2: &mut Type) -> Result<(), UnifyError> {
+    if let Type::Var { typ } = t1 {
+        let new_value = match &*typ.borrow() {
+            TypeVar::Link { .. } => unimplemented!(),
+
+            TypeVar::Unbound { id, level } => {
+                update_levels(t2, *level, *id);
+                Some(TypeVar::Link {
+                    typ: Box::new((*t2).clone()),
+                })
+            }
+
+            TypeVar::Generic { .. } => unimplemented!(),
+        };
+
+        if let Some(t) = new_value {
+            *typ.borrow_mut() = t;
+        }
+
+        return Ok(());
+    }
+
+    if let Type::Var { .. } = t2 {
+        return unify(t2, t1).map_err(|e| flip_unify_error(e));
+    }
+
     match (t1, t2) {
         (
             Type::Const {
@@ -619,7 +655,56 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), CouldNotUnifyError> {
 
         (Type::Module { .. }, Type::Module { .. }) => unimplemented!(),
 
-        (Type::Var { typ }, other_typ) => match &*typ.borrow() {
+        (_, _) => unimplemented!(),
+    }
+}
+
+fn flip_unify_error(e: UnifyError) -> UnifyError {
+    match e {
+        UnifyError::CouldNotUnify { expected, given } => UnifyError::CouldNotUnify {
+            expected: given,
+            given: expected,
+        },
+        other => other,
+    }
+}
+
+// let occurs_check_adjust_levels tvar_id tvar_level ty =
+// 	let rec f = function
+// 		| TVar {contents = Link ty} -> f ty
+// 		| TVar {contents = Generic _} -> assert false
+// 		| TVar ({contents = Unbound(other_id, other_level)} as other_tvar) ->
+// 				if other_id = tvar_id then
+// 					error "recursive types"
+// 				else
+// 					if other_level > tvar_level then
+// 						other_tvar := Unbound(other_id, tvar_level)
+// 					else
+// 						()
+// 		| TApp(ty, ty_arg_list) ->
+// 				f ty ;
+// 				List.iter f ty_arg_list
+// 		| TArrow(param_ty_list, return_ty) ->
+// 				List.iter f param_ty_list ;
+// 				f return_ty
+// 		| TConst _ -> ()
+// 	in
+// 	f ty
+/// This function makes sure that the type variable being unified
+/// doesn't occur within the type it is being unified with. This
+/// prevents the algorithm from inferring recursive types, which
+/// could cause naively-implemented type checking to diverge.
+/// While traversing the type tree, this function also takes care
+/// of updating the levels of the type variables appearing within
+/// the type, thus ensuring the type will be correctly generalized.
+///
+fn update_levels(typ: &mut Type, level: usize, id: usize) -> Result<(), UnifyError> {
+    match typ {
+        Type::Const { .. } => Ok(()),
+
+        Type::App { .. } => unimplemented!(),
+
+        Type::Var { typ } => match &*typ.borrow() {
             TypeVar::Link { .. } => unimplemented!(),
 
             TypeVar::Unbound { .. } => unimplemented!(),
@@ -627,16 +712,17 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), CouldNotUnifyError> {
             TypeVar::Generic { .. } => unimplemented!(),
         },
 
-        (_, Type::Var { .. }) => unify(t2, t1).map_err(|e| CouldNotUnifyError {
-            expected: e.given,
-            given: e.expected,
-        }),
+        Type::Tuple { .. } => unimplemented!(),
 
-        (_, _) => unimplemented!(),
+        Type::Fun { args, retrn, .. } => unimplemented!(),
+
+        Type::Record { .. } => unimplemented!(),
+
+        Type::Module { .. } => unimplemented!(),
     }
 }
 
-struct MatchFunTypeError {
+struct NotFunError {
     pub expected: usize,
     pub given: usize,
 }
@@ -660,11 +746,11 @@ struct MatchFunTypeError {
 // 			tvar := Link (TArrow(param_ty_list, return_ty)) ;
 // 			param_ty_list, return_ty
 // 	| _ -> error "expected a function"
-fn match_fun_type(typ: Type, arity: usize) -> Result<(Vec<Type>, Type), MatchFunTypeError> {
+fn match_fun_type(typ: Type, arity: usize) -> Result<(Vec<Type>, Type), NotFunError> {
     match typ {
         Type::Fun { args, retrn } => {
             if args.len() != arity {
-                Err(MatchFunTypeError {
+                Err(NotFunError {
                     expected: args.len(),
                     given: arity,
                 })
@@ -679,7 +765,7 @@ fn match_fun_type(typ: Type, arity: usize) -> Result<(Vec<Type>, Type), MatchFun
     }
 }
 
-fn convert_match_fun_type_error(e: MatchFunTypeError, meta: &Meta) -> Error {
+fn convert_not_fun_error(e: NotFunError, meta: &Meta) -> Error {
     Error::IncorrectArity {
         meta: meta.clone(),
         expected: e.expected,
@@ -712,10 +798,22 @@ fn infer_test() {
         ("{1, 2.0}", "{Int, Float}"),
         ("{1, 2.0, '3'}", "{Int, Float, Atom}"),
         ("{1, 2.0, {'ok', 1}}", "{Int, Float, {Atom, Int}}"),
+        ("x = 1.0 'nope'", "Atom"),
         ("id = fn(x) { x } id(1)", "Int"),
+        ("x = fn() { 1.0 } x()", "Float"),
+        // TODO: more tests for funs
     ];
 
     for (src, typ) in cases.into_iter() {
+        let ast = grammar::ExprParser::new().parse(src).expect("syntax error");
+
+        println!(
+            "{:?}",
+            infer(ast, 1, &mut Env::default())
+                .expect("should successfully infer")
+                .typ()
+        );
+
         let ast = grammar::ExprParser::new().parse(src).expect("syntax error");
         assert_eq!(
             typ.to_string(),
