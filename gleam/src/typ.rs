@@ -350,6 +350,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
                     variables: env.variables.clone(),
                 }
             })?;
+            let typ = instantiate(typ, level, env);
             // TODO: Get real scope
             let scope = Scope::Local;
             Ok(Expr::Var {
@@ -512,6 +513,57 @@ fn convert_unify_error(e: CouldNotUnifyError, meta: &Meta) -> Error {
 // 				TArrow(List.map f param_ty_list, f return_ty)
 // 	in
 // 	f ty
+/// Instanciate converts generic variables into unbound ones.
+///
+fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
+    fn go(t: Type, ctx_level: usize, ids: &mut HashMap<usize, Type>, env: &mut Env) -> Type {
+        match t {
+            Type::Const { .. } => t,
+
+            Type::App { .. } => unimplemented!(),
+
+            Type::Var { typ } => match &*typ.borrow() {
+                TypeVar::Link { .. } => unimplemented!(),
+
+                // TODO: Because of how we are borrowing here I have to reconstruct the
+                // whole term. There'll be a better way to do this I'm sure.
+                //
+                TypeVar::Unbound { id, level } => Type::Var {
+                    typ: Rc::new(RefCell::new(TypeVar::Unbound {
+                        id: *id,
+                        level: *level,
+                    })),
+                },
+
+                TypeVar::Generic { id } => match ids.get(id) {
+                    Some(t) => t.clone(),
+                    None => {
+                        let v = env.new_unbound_var(ctx_level);
+                        ids.insert(*id, v.clone());
+                        v
+                    }
+                },
+            },
+
+            Type::Tuple { .. } => unimplemented!(),
+
+            Type::Fun { args, retrn, .. } => {
+                let args = args
+                    .into_iter()
+                    .map(|t| go(t, ctx_level, ids, env))
+                    .collect();
+                let retrn = Box::new(go(*retrn, ctx_level, ids, env));
+                Type::Fun { args, retrn }
+            }
+
+            Type::Record { .. } => unimplemented!(),
+
+            Type::Module { .. } => unimplemented!(),
+        }
+    }
+
+    go(typ, ctx_level, &mut hashmap![], env)
+}
 
 struct CouldNotUnifyError {
     pub expected: Type,
@@ -670,7 +722,7 @@ fn infer_test() {
             infer(ast, 1, &mut Env::default())
                 .expect("should successfully infer")
                 .typ()
-                .to_gleam_doc(&mut hashmap! {}, &mut 0)
+                .to_gleam_doc(&mut hashmap![], &mut 0)
                 .format(80)
         );
     }
