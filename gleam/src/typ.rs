@@ -10,7 +10,7 @@ use std::rc::Rc;
 
 const INDENT: isize = 2;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     Const {
         public: bool,
@@ -248,7 +248,7 @@ pub enum Row {
 #[derive(Debug, Clone, Default)]
 pub struct Env {
     uid: usize,
-    variables: HashMap<String, Rc<Type>>,
+    variables: HashMap<String, Type>,
 }
 
 impl Env {
@@ -298,7 +298,7 @@ pub enum Error {
     UnknownVariable {
         meta: Meta,
         name: String,
-        variables: HashMap<String, Rc<Type>>,
+        variables: HashMap<String, Type>,
     },
 
     IncorrectArity {
@@ -376,11 +376,12 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             body,
         } => {
             let args_types: Vec<_> = args.iter().map(|_| env.new_unbound_var(level)).collect();
-            let ref mut fn_env = env.clone();
-            args.iter()
-                .zip(args_types.iter())
-                .for_each(|(arg, t)| fn_env.put_variable(arg.name.to_string(), (*t).clone()));
-            let body = infer(*body, level, fn_env)?;
+            let vars = env.variables.clone();
+            args.iter().zip(args_types.iter()).for_each(|(arg, t)| {
+                env.put_variable(arg.name.to_string(), (*t).clone());
+            });
+            let body = infer(*body, level, env)?;
+            env.variables = vars;
             let typ = Type::Fun {
                 args: args_types,
                 retrn: Box::new(body.typ().clone()),
@@ -447,20 +448,17 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             args,
         } => {
             let fun = infer(*fun, level, env)?;
-            println!("fun typ before match_fun_type {:?}", fun.typ());
             let (mut args_types, return_type) = match_fun_type(fun.typ(), args.len(), env)
                 .map_err(|e| convert_not_fun_error(e, &meta))?;
-            println!("fun typ after match_fun_type {:?}\n", fun.typ());
             let args = args_types
                 .iter_mut()
                 .zip(args)
                 .map(|(typ, arg): (&mut Type, _)| {
-                    let mut arg = infer(arg, level, env)?;
-                    unify(typ, arg.typ_mut()).map_err(|e| convert_unify_error(e, &meta))?;
+                    let arg = infer(arg, level, env)?;
+                    unify(typ, arg.typ()).map_err(|e| convert_unify_error(e, &meta))?;
                     Ok(arg)
                 })
                 .collect::<Result<_, _>>()?;
-            println!("return type of call {:?}", return_type);
             Ok(Expr::Call {
                 meta,
                 typ: return_type,
@@ -487,7 +485,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         Expr::Float { meta, value, .. } => Ok(Expr::Float {
             meta,
             value,
-            typ: int(),
+            typ: float(),
         }),
 
         Expr::BinOp { .. } => unimplemented!(),
@@ -545,7 +543,7 @@ fn convert_unify_error(e: UnifyError, meta: &Meta) -> Error {
 /// Instanciate converts generic variables into unbound ones.
 ///
 fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
-    fn go(t: Type, ctx_level: usize, ids: &mut HashMap<usize, Rc<Type>>, env: &mut Env) -> Type {
+    fn go(t: Type, ctx_level: usize, ids: &mut HashMap<usize, Type>, env: &mut Env) -> Type {
         match t {
             Type::Const { .. } => t,
 
@@ -554,15 +552,7 @@ fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
             Type::Var { typ } => match &*typ.borrow() {
                 TypeVar::Link { .. } => unimplemented!(),
 
-                // TODO: Because of how we are borrowing here I have to reconstruct the
-                // whole term. There'll be a better way to do this I'm sure.
-                //
-                TypeVar::Unbound { id, level } => Type::Var {
-                    typ: Rc::new(RefCell::new(TypeVar::Unbound {
-                        id: *id,
-                        level: *level,
-                    })),
-                },
+                TypeVar::Unbound { id, level } => Type::Var { typ: typ.clone() },
 
                 TypeVar::Generic { id } => match ids.get(id) {
                     Some(t) => t.clone(),
@@ -618,7 +608,7 @@ enum UnifyError {
 // 				occurs_check_adjust_levels id level ty ;
 // 				tvar := Link ty
 // 		| _, _ -> error ("cannot unify types " ^ string_of_ty ty1 ^ " and " ^ string_of_ty ty2)
-fn unify(t1: &mut Type, t2: &mut Type) -> Result<(), UnifyError> {
+fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
     if let Type::Var { typ } = t1 {
         let new_value = match &*typ.borrow() {
             TypeVar::Link { .. } => unimplemented!(),
@@ -721,7 +711,7 @@ fn flip_unify_error(e: UnifyError) -> UnifyError {
 /// of updating the levels of the type variables appearing within
 /// the type, thus ensuring the type will be correctly generalized.
 ///
-fn update_levels(typ: &mut Type, own_level: usize, own_id: usize) -> Result<(), UnifyError> {
+fn update_levels(typ: &Type, own_level: usize, own_id: usize) -> Result<(), UnifyError> {
     if let Type::Var { typ } = &typ {
         let new_value = match &*typ.borrow() {
             TypeVar::Link { .. } => unimplemented!(),
@@ -739,15 +729,10 @@ fn update_levels(typ: &mut Type, own_level: usize, own_id: usize) -> Result<(), 
             TypeVar::Generic { .. } => unimplemented!(),
         };
 
-        // if let Some() = new_value {
-        //     *typ.borrow_mut() = TypeVar::Link {
-        //         typ: Box::new(Type::Fun {
-        //             args: args.clone(),
-        //             retrn: Box::new(retrn.clone()),
-        //         }),
-        //     };
-        // }
-        // return Ok(());
+        if let Some(t) = new_value {
+            *typ.borrow_mut() = t;
+        }
+        return Ok(());
     }
 
     match typ {
@@ -849,166 +834,165 @@ fn infer_test() {
         typ: &'static str,
     }
     let cases = [
-        // Case {
-        //     src: "1",
-        //     typ: "Int",
-        // },
-        // Case {
-        //     src: "-2",
-        //     typ: "Int",
-        // },
-        // Case {
-        //     src: "1.0",
-        //     typ: "Float",
-        // },
-        // Case {
-        //     src: "-8.0",
-        //     typ: "Float",
-        // },
-        // Case {
-        //     src: "'hello'",
-        //     typ: "Atom",
-        // },
-        // Case {
-        //     src: "\"ok\"",
-        //     typ: "String",
-        // },
-        // Case {
-        //     src: "\"ok\"",
-        //     typ: "String",
-        // },
-        // Case {
-        //     src: "1 2.0",
-        //     typ: "Float",
-        // },
-        // Case {
-        //     src: "[]",
-        //     typ: "List(a)",
-        // },
-        // /* Assignments
+        Case {
+            src: "1",
+            typ: "Int",
+        },
+        Case {
+            src: "-2",
+            typ: "Int",
+        },
+        Case {
+            src: "1.0",
+            typ: "Float",
+        },
+        Case {
+            src: "-8.0",
+            typ: "Float",
+        },
+        Case {
+            src: "'hello'",
+            typ: "Atom",
+        },
+        Case {
+            src: "\"ok\"",
+            typ: "String",
+        },
+        Case {
+            src: "\"ok\"",
+            typ: "String",
+        },
+        Case {
+            src: "1 2.0",
+            typ: "Float",
+        },
+        Case {
+            src: "[]",
+            typ: "List(a)",
+        },
+        /* Assignments
 
-        // */
-        // Case {
-        //     src: "x = 1 2",
-        //     typ: "Int",
-        // },
-        // Case {
-        //     src: "x = 1 x",
-        //     typ: "Int",
-        // },
-        // Case {
-        //     src: "x = 'ok' x",
-        //     typ: "Atom",
-        // },
-        // Case {
-        //     src: "x = 'ok' y = x y",
-        //     typ: "Atom",
-        // },
-        // Case {
-        //     src: "x = 'ok' y = x y",
-        //     typ: "Atom",
-        // },
-        // /* Tuples
+        */
+        Case {
+            src: "x = 1 2",
+            typ: "Int",
+        },
+        Case {
+            src: "x = 1 x",
+            typ: "Int",
+        },
+        Case {
+            src: "x = 'ok' x",
+            typ: "Atom",
+        },
+        Case {
+            src: "x = 'ok' y = x y",
+            typ: "Atom",
+        },
+        Case {
+            src: "x = 'ok' y = x y",
+            typ: "Atom",
+        },
+        /* Tuples
 
-        // */
-        // Case {
-        //     src: "{1}",
-        //     typ: "{Int}",
-        // },
-        // Case {
-        //     src: "{1, 2.0}",
-        //     typ: "{Int, Float}",
-        // },
-        // Case {
-        //     src: "{1, 2.0, '3'}",
-        //     typ: "{Int, Float, Atom}",
-        // },
-        // Case {
-        //     src: "{1, 2.0, {'ok', 1}}",
-        //     typ: "{Int, Float, {Atom, Int}}",
-        // },
-        // /* Funs
+        */
+        Case {
+            src: "{1}",
+            typ: "{Int}",
+        },
+        Case {
+            src: "{1, 2.0}",
+            typ: "{Int, Float}",
+        },
+        Case {
+            src: "{1, 2.0, '3'}",
+            typ: "{Int, Float, Atom}",
+        },
+        Case {
+            src: "{1, 2.0, {'ok', 1}}",
+            typ: "{Int, Float, {Atom, Int}}",
+        },
+        /* Funs
 
-        // */
-        // Case {
-        //     src: "fn(x) { x }",
-        //     typ: "fn(a) -> a",
-        // },
-        // Case {
-        //     src: "fn(x) { x }",
-        //     typ: "fn(a) -> a",
-        // },
-        // Case {
-        //     src: "fn(x, y) { x }",
-        //     typ: "fn(a, b) -> a",
-        // },
-        // Case {
-        //     src: "fn(x, y) { [] }",
-        //     typ: "fn(a, b) -> List(c)",
-        // },
-        // Case {
-        //     src: "x = 1.0 'nope'",
-        //     typ: "Atom",
-        // },
-        // Case {
-        //     src: "id = fn(x) { x } id(1)",
-        //     typ: "Int",
-        // },
-        // Case {
-        //     src: "x = fn() { 1.0 } x()",
-        //     typ: "Float",
-        // },
-        // // TODO: FIXME
-        // // Case {src:"fn(x) { x }('ok')", typ: "Atom"},
-        // Case {
-        //     src: "fn() { 1 }",
-        //     typ: "fn() -> Int",
-        // },
-        // Case {
-        //     src: "fn() { 1.1 }",
-        //     typ: "fn() -> Float",
-        // },
-        // Case {
-        //     src: "fn(x) { 1.1 }",
-        //     typ: "fn(a) -> Float",
-        // },
-        // Case {
-        //     src: "fn(x) { x }",
-        //     typ: "fn(a) -> a",
-        // },
-        // Case {
-        //     src: "x = fn(x) { 1.1 } x",
-        //     typ: "fn(a) -> Float",
-        // },
-        // Case {
-        //     src: "fn(x, y, z) { 1 }",
-        //     typ: "fn(a, b, c) -> Int",
-        // },
-        // Case {
-        //     src: "fn(x) { y = x y }",
-        //     typ: "fn(a) -> a",
-        // },
-        // Case {
-        //     src: "fn(x) { {'ok', x} }",
-        //     typ: "fn(a) -> {Atom, a}",
-        // },
-        // Case {
-        //     src: "id = fn(x) { x } id(1)",
-        //     typ: "Int",
-        // },
-        // Case {
-        //     src: "const = fn(x) { fn(y) { x } } one = const(1) one('ok')",
-        //     typ: "Int",
-        // },
+        */
+        Case {
+            src: "fn(x) { x }",
+            typ: "fn(a) -> a",
+        },
+        Case {
+            src: "fn(x) { x }",
+            typ: "fn(a) -> a",
+        },
+        Case {
+            src: "fn(x, y) { x }",
+            typ: "fn(a, b) -> a",
+        },
+        Case {
+            src: "fn(x, y) { [] }",
+            typ: "fn(a, b) -> List(c)",
+        },
+        Case {
+            src: "x = 1.0 'nope'",
+            typ: "Atom",
+        },
+        Case {
+            src: "id = fn(x) { x } id(1)",
+            typ: "Int",
+        },
+        Case {
+            src: "x = fn() { 1.0 } x()",
+            typ: "Float",
+        },
+        // TODO: FIXME
+        // Case {src:"fn(x) { x }('ok')", typ: "Atom"},
+        Case {
+            src: "fn() { 1 }",
+            typ: "fn() -> Int",
+        },
+        Case {
+            src: "fn() { 1.1 }",
+            typ: "fn() -> Float",
+        },
+        Case {
+            src: "fn(x) { 1.1 }",
+            typ: "fn(a) -> Float",
+        },
+        Case {
+            src: "fn(x) { x }",
+            typ: "fn(a) -> a",
+        },
+        Case {
+            src: "x = fn(x) { 1.1 } x",
+            typ: "fn(a) -> Float",
+        },
+        Case {
+            src: "fn(x, y, z) { 1 }",
+            typ: "fn(a, b, c) -> Int",
+        },
+        Case {
+            src: "fn(x) { y = x y }",
+            typ: "fn(a) -> a",
+        },
+        Case {
+            src: "fn(x) { {'ok', x} }",
+            typ: "fn(a) -> {Atom, a}",
+        },
+        Case {
+            src: "id = fn(x) { x } id(1)",
+            typ: "Int",
+        },
+        Case {
+            src: "const = fn(x) { fn(y) { x } } one = const(1) one('ok')",
+            typ: "Int",
+        },
         Case {
             src: "fn(f) { f(1) }",
             typ: "fn(fn(Int) -> a) -> a",
         },
-        // Case {
-        //     src: "fn(f, x) { f(x) }",
-        //     typ: "fn(fn(a) -> b, a) -> b",
-        // },
-        /*
+        Case {
+            src: "fn(f, x) { f(x) }",
+            typ: "fn(fn(a) -> b, a) -> b",
+        },
         Case {
             src: "fn(f) { fn(x) { f(x) } }",
             typ: "fn(fn(a) -> b) -> fn(a) -> b",
@@ -1017,6 +1001,7 @@ fn infer_test() {
             src: "fn(f) { fn(x) { fn(y) { f(x, y) } } }",
             typ: "fn(fn(a, b) -> c) -> fn(a) -> fn(b) -> c",
         },
+        /*
         Case {
             src: "fn(f) { fn(x, y) { ff = f(x) ff(y) } }",
             typ: "fn(fn(a) -> fn(b) -> c) -> fn(a, b) -> c",
@@ -1302,13 +1287,15 @@ fn infer_test() {
     for Case { src, typ } in cases.into_iter() {
         let ast = grammar::ExprParser::new().parse(src).expect("syntax error");
         let result = infer(ast, 1, &mut Env::default()).expect("should successfully infer");
-        println!("{:?}", result.typ());
         assert_eq!(
-            typ.to_string(),
-            result
-                .typ()
-                .to_gleam_doc(&mut hashmap![], &mut 0)
-                .format(80)
+            (src, typ.to_string()),
+            (
+                src,
+                result
+                    .typ()
+                    .to_gleam_doc(&mut hashmap![], &mut 0)
+                    .format(80)
+            )
         );
     }
 }
