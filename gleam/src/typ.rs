@@ -775,45 +775,458 @@ fn convert_not_fun_error(e: NotFunError, meta: &Meta) -> Error {
 
 #[test]
 fn infer_test() {
+    struct Case {
+        src: &'static str,
+        typ: &'static str,
+    }
     let cases = [
-        ("1", "Int"),
-        ("-2", "Int"),
-        ("1.0", "Float"),
-        ("-8.0", "Float"),
-        ("'hello'", "Atom"),
-        ("\"ok\"", "String"),
-        ("\"ok\"", "String"),
-        ("1 2.0", "Float"),
-        ("x = 1 2", "Int"),
-        ("x = 1 x", "Int"),
-        ("x = 'ok' x", "Atom"),
-        ("x = 'ok' y = x y", "Atom"),
-        ("x = 'ok' y = x y", "Atom"),
-        ("[]", "List(a)"),
-        ("fn(x) { x }", "fn(a) -> a"),
-        ("fn(x) { x }", "fn(a) -> a"),
-        ("fn(x, y) { x }", "fn(a, b) -> a"),
-        ("fn(x, y) { [] }", "fn(a, b) -> List(c)"),
-        ("{1}", "{Int}"),
-        ("{1, 2.0}", "{Int, Float}"),
-        ("{1, 2.0, '3'}", "{Int, Float, Atom}"),
-        ("{1, 2.0, {'ok', 1}}", "{Int, Float, {Atom, Int}}"),
-        ("x = 1.0 'nope'", "Atom"),
-        ("id = fn(x) { x } id(1)", "Int"),
-        ("x = fn() { 1.0 } x()", "Float"),
-        // TODO: more tests for funs
+        Case {
+            src: "1",
+            typ: "Int",
+        },
+        Case {
+            src: "-2",
+            typ: "Int",
+        },
+        Case {
+            src: "1.0",
+            typ: "Float",
+        },
+        Case {
+            src: "-8.0",
+            typ: "Float",
+        },
+        Case {
+            src: "'hello'",
+            typ: "Atom",
+        },
+        Case {
+            src: "\"ok\"",
+            typ: "String",
+        },
+        Case {
+            src: "\"ok\"",
+            typ: "String",
+        },
+        Case {
+            src: "1 2.0",
+            typ: "Float",
+        },
+        Case {
+            src: "[]",
+            typ: "List(a)",
+        },
+        /* Assignments
+
+        */
+        Case {
+            src: "x = 1 2",
+            typ: "Int",
+        },
+        Case {
+            src: "x = 1 x",
+            typ: "Int",
+        },
+        Case {
+            src: "x = 'ok' x",
+            typ: "Atom",
+        },
+        Case {
+            src: "x = 'ok' y = x y",
+            typ: "Atom",
+        },
+        Case {
+            src: "x = 'ok' y = x y",
+            typ: "Atom",
+        },
+        /* Tuples
+
+        */
+        Case {
+            src: "{1}",
+            typ: "{Int}",
+        },
+        Case {
+            src: "{1, 2.0}",
+            typ: "{Int, Float}",
+        },
+        Case {
+            src: "{1, 2.0, '3'}",
+            typ: "{Int, Float, Atom}",
+        },
+        Case {
+            src: "{1, 2.0, {'ok', 1}}",
+            typ: "{Int, Float, {Atom, Int}}",
+        },
+        /* Funs
+
+        */
+        Case {
+            src: "fn(x) { x }",
+            typ: "fn(a) -> a",
+        },
+        Case {
+            src: "fn(x) { x }",
+            typ: "fn(a) -> a",
+        },
+        Case {
+            src: "fn(x, y) { x }",
+            typ: "fn(a, b) -> a",
+        },
+        Case {
+            src: "fn(x, y) { [] }",
+            typ: "fn(a, b) -> List(c)",
+        },
+        Case {
+            src: "x = 1.0 'nope'",
+            typ: "Atom",
+        },
+        Case {
+            src: "id = fn(x) { x } id(1)",
+            typ: "Int",
+        },
+        Case {
+            src: "x = fn() { 1.0 } x()",
+            typ: "Float",
+        },
+        // TODO: FIXME
+        // Case {src:"fn(x) { x }('ok')", typ: "Atom"},
+        Case {
+            src: "fn() { 1 }",
+            typ: "fn() -> Int",
+        },
+        Case {
+            src: "fn() { 1.1 }",
+            typ: "fn() -> Float",
+        },
+        Case {
+            src: "fn(x) { 1.1 }",
+            typ: "fn(a) -> Float",
+        },
+        Case {
+            src: "fn(x) { x }",
+            typ: "fn(a) -> a",
+        },
+        Case {
+            src: "x = fn(x) { 1.1 } x",
+            typ: "fn(a) -> Float",
+        },
+        Case {
+            src: "fn(x, y, z) { 1 }",
+            typ: "fn(a, b, c) -> Int",
+        },
+        Case {
+            src: "fn(x) { y = x y }",
+            typ: "fn(a) -> a",
+        },
+        /*
+        Case {
+            src: "fn(x) { {'ok', x} }",
+            typ: "fn(a) -> {Atom, a}",
+        },
+        Case {
+            src: "id = fn(x) { x } id(1)",
+            typ: "Int",
+        },
+        Case {
+            src: "two = fn(x) { fn(y) { x } } fun = two(1) fun('ok')",
+            typ: "Int",
+        },
+        Case {
+            src: "fn(f, x) { f(x) }",
+            typ: "fn(fn(a) -> b, a) -> b",
+        },
+        Case {
+            src: "fn(f) { fn(x) { f(x) } }",
+            typ: "fn(fn(a) -> b) -> fn(a) -> b",
+        },
+        Case {
+            src: "fnCase {src:f) { fn(x) { fn(y) { f(x, y) } } }",
+            typ: "fnCase {src:fn(a, b) -> c) -> fn(a) -> fn(b) -> c",
+        },
+        Case {
+            src: "fnCase {src:f) { fn(x, y) { ff = f(x) ff(y) } }",
+            typ: "fnCase {src:fn(a) -> fn(b) -> c) -> fn(a, b) -> c",
+        },
+        Case {
+            src: "fn(x) { fn(y) { x } }",
+            typ: "fn(a) -> fn(b) -> a",
+        },
+        Case {
+            src: "fn(f) { f() }",
+            typ: "fn(fn() -> a) -> a",
+        },
+        Case {
+            src: "fn(f, x) { f(f(x)) }",
+            typ: "fn(fn(a) -> a, a) -> a",
+        },
+        Case {
+            src: "fn(x) { y = fn(z) { z } y(y) }",
+            typ: "fn(a) -> fn(b) -> b",
+        },
+        Case {
+            src: "fn(x, y) { {x, y} }",
+            typ: "fn(a, b) -> Tuple(a, b)",
+        },
+        Case {
+            src: "fn(x) { {x, x} }",
+            typ: "fn(a) -> Tuple(a, a)",
+        },
+        Case {
+            src: "id = fnCase {src:a) { a } fn(x) { x(id) }",
+            typ: "fnCase {src:fn(fn(a) -> a) -> b) -> b",
+        },
+        /* Operators
+
+        */
+        Case {
+        src: "1 + 1",
+        typ: "Int",
+        },
+        Case {
+        src: "1 - 1",
+        typ: "Int",
+        },
+        Case {
+        src: "1 * 1",
+        typ: "Int",
+        },
+        Case {
+        src: "1 / 1",
+        typ: "Int",
+        },
+        Case {
+        src: "1.0 +. 1.0",
+        typ: "Float",
+        },
+        Case {
+        src: "1.0 -. 1.0",
+        typ: "Float",
+        },
+        Case {
+        src: "1.0 *. 1.0",
+        typ: "Float",
+        },
+        Case {
+        src: "1.0 /. 1.0",
+        typ: "Float",
+        },
+        Case {
+        src: "fn(a, b) { a + b }",
+        typ: "fn(Int, Int) -> Int",
+        },
+        Case {
+        src: "inc = fn(a) { a + 1 } 1 |> inc |> inc",
+        typ: "Int",
+        },
+        /* Equality
+
+        */
+        Case {
+        src: "1 == 1",
+        typ: "Bool",
+        },
+        Case {
+        src: "1.0 == 2.0",
+        typ: "Bool",
+        },
+        Case {
+        src: "'ok' == 'ko'",
+        typ: "Bool",
+        },
+        Case {
+        src: "{'ok', 1} == {'ko', 2}",
+        typ: "Bool",
+        },
+        Case {
+        src: "1 != 1",
+        typ: "Bool",
+        },
+        Case {
+        src: "1.0 != 2.0",
+        typ: "Bool",
+        },
+        Case {
+        src: "'ok' != 'ko'",
+        typ: "Bool",
+        },
+        Case {
+        src: "{'ok', 1} != {'ko', 2}",
+        typ: "Bool",
+        },
+        Case {
+        src: "x = 1 x == x",
+        typ: "Bool",
+        },
+        Case {
+        src: "id = fn(x) { x } id == id",
+        typ: "Bool",
+        },
+        Case {
+        src: "id1 = fn(x) { x } id2 = fn(x) { x } id1 == id2",
+        typ: "Bool",
+        },
+        Case {
+        src: "id = fn(x) { x } inc = fn(x) { x + 1 } id == inc",
+        typ: "Bool",
+        },
+        /* Lists
+
+        */
+        Case {
+        src: "[]",
+        typ: "List(a)",
+        },
+        Case {
+        src: "[1]",
+        typ: "List(Int)",
+        },
+        Case {
+        src: "[1, 2, 3]",
+        typ: "List(Int)",
+        },
+        Case {
+        src: "[[]]",
+        typ: "List(List(a))",
+        },
+        Case {
+        src: "[[1.0, 2.0]]",
+        typ: "List(List(Float))",
+        },
+        Case {
+        src: "[fn(x) { x }]",
+        typ: "List(fn(a) -> a)",
+        },
+        Case {
+        src: "[fn(x) { x + 1 }]",
+        typ: "List(fn(Int) -> Int)",
+        },
+        Case {
+        src: "[{[], []}]",
+        typ: "List(Tuple(List(a), List(b)))",
+        },
+        Case {
+        src: "[fn(x) { x }, fn(x) { x + 1 }]",
+        typ: "List(fn(Int) -> Int)",
+        },
+        Case {
+        src: "[fn(x) { x + 1 }, fn(x) { x }]",
+        typ: "List(fn(Int) -> Int)",
+        },
+        Case {
+        src: "[[], []]",
+        typ: "List(List(a))",
+        },
+        Case {
+        src: "[[], ['ok']]",
+        typ: "List(List(Atom))",
+        },
+        Case {
+        src: "1 :: 2 :: []",
+        typ: "List(Int)",
+        },
+        Case {
+        src: "fn(x) { x } :: []",
+        typ: "List(fn(a) -> a)",
+        },
+        Case {
+        src: "f = fn(x) { x } [f, f]",
+        typ: "List(fn(a) -> a)",
+        },
+        Case {
+        src: "x = 1 :: [] 2 :: x",
+        typ: "List(Int)",
+        },
+        /* Records
+
+        */
+        Case {
+        src: "{}",
+        typ: "{}",
+        },
+        Case {
+        src: "{a = 1}",
+        typ: "{a = Int}",
+        },
+        Case {
+        src: "{a = 1, b = 2}",
+        typ: "{a = Int, b = Int}",
+        },
+        Case {
+        src: "{a = 1, b = 2.0, c = -1}",
+        typ: "{a = Int, b = Float, c = Int}",
+        },
+        Case {
+        src: "{a = {a = 'ok'}}",
+        typ: "{a = {a = Atom}}",
+        },
+        Case {
+        src: "{} == {}",
+        typ: "Bool",
+        },
+        Case {
+        src: "{a = 1} == {a = 2}",
+        typ: "Bool",
+        },
+        Case {
+        src: "{a = 1, b = 1} == {a = 1, b = 1}",
+        typ: "Bool",
+        },
+        Case {
+        src: "{a = fn(x) { x }} == {a = fn(a) { a }}",
+        typ: "Bool",
+        },
+        Case {
+        src: "{b = 1, a = 1} == {a = 1, b = 1}",
+        typ: "Bool",
+        },
+        /* Record select
+
+        */
+        Case {
+        src: "{a = 1, b = 2.0}.b",
+        typ: "Float",
+        },
+        Case {
+        src: "r = {a = 1, b = 2} r.a",
+        typ: "Int",
+        },
+        Case {
+        src: "r = {a = 1, b = 2} r.a + r.b",
+        typ: "Int",
+        },
+        Case {
+        src: "fn(x) { x.t }",
+        typ: "fn({a | t = b}) -> b",
+        },
+        Case {
+        src: "f = fn(x) { x } r = {a = f} r.a",
+        typ: "fn(a) -> a",
+        },
+        Case {
+        src: "r = {a = fn(x) { x }} r.a",
+        typ: "fn(a) -> a",
+        },
+        Case {
+        src: "r = {a = fnCase {src:x) { x }, b = fn(x) { x }} [r.a, r.b]",
+        typ: "ListCase {src:fn(a) -> a)",
+        },
+        Case {
+        src: "f = fn(x) { x.t } f({ t = 1 })",
+        typ: "Int",
+        },
+        Case {
+        src: "f = fn(x) { x.t(1) } f({t = fn(x) { x + 1 }})",
+        typ: "Int",
+        },
+        Case {
+        src: "{a = 1, b = 2.0}.a",
+        typ: "Int",
+        },
+         */
     ];
 
-    for (src, typ) in cases.into_iter() {
-        let ast = grammar::ExprParser::new().parse(src).expect("syntax error");
-
-        println!(
-            "{:?}",
-            infer(ast, 1, &mut Env::default())
-                .expect("should successfully infer")
-                .typ()
-        );
-
+    for Case { src, typ } in cases.into_iter() {
         let ast = grammar::ExprParser::new().parse(src).expect("syntax error");
         assert_eq!(
             typ.to_string(),
