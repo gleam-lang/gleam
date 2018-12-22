@@ -211,6 +211,7 @@ Nil: UntypedExpr = {
 RecordNil: UntypedExpr = {
     <s:@L> "{}" <e:@L> => Expr::RecordNil {
         meta: meta(s, e),
+        typ: (),
     }
 }
 
@@ -218,6 +219,7 @@ RecordNil: UntypedExpr = {
 Atom: UntypedExpr = {
     <s:@L> <x:RawAtom> <e:@L> => Expr::Atom {
         meta: meta(s, e),
+        typ: (),
         value: x,
     }
 }
@@ -226,6 +228,7 @@ Atom: UntypedExpr = {
 String: UntypedExpr = {
     <s:@L> <x:RawString> <e:@L> => Expr::String {
         meta: meta(s, e),
+        typ: (),
         value: x,
     }
 }
@@ -233,6 +236,7 @@ String: UntypedExpr = {
 Int: UntypedExpr = {
     <s:@L> <i:r"-?[0-9]+"> <e:@L> => Expr::Int {
         meta: meta(s, e),
+        typ: (),
         value: i64::from_str(i).unwrap(),
     }
 }
@@ -240,6 +244,7 @@ Int: UntypedExpr = {
 Float: UntypedExpr = {
     <s:@L> <f:r"-?[0-9]+\.+[0-9]*"> <e:@L> => Expr::Float {
         meta: meta(s, e),
+        typ: (),
         value: f64::from_str(f).unwrap(),
     }
 }

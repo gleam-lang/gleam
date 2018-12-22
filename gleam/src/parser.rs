@@ -9,6 +9,7 @@ pub fn meta(start: usize, end: usize) -> Meta {
 fn expr_test() {
     assert_eq!(
         Ok(Expr::Int {
+            typ: (),
             meta: Meta { start: 0, end: 3 },
             value: 123
         }),
@@ -17,6 +18,7 @@ fn expr_test() {
 
     assert_eq!(
         Ok(Expr::Int {
+            typ: (),
             meta: Meta { start: 0, end: 3 },
             value: -45
         }),
@@ -25,6 +27,7 @@ fn expr_test() {
 
     assert_eq!(
         Ok(Expr::Float {
+            typ: (),
             meta: Meta { start: 0, end: 3 },
             value: -1.0
         }),
@@ -33,6 +36,7 @@ fn expr_test() {
 
     assert_eq!(
         Ok(Expr::Float {
+            typ: (),
             meta: Meta { start: 0, end: 4 },
             value: 1.23
         }),
@@ -41,6 +45,7 @@ fn expr_test() {
 
     assert_eq!(
         Ok(Expr::Float {
+            typ: (),
             meta: Meta { start: 0, end: 5 },
             value: -1.23
         }),
@@ -49,6 +54,7 @@ fn expr_test() {
 
     assert_eq!(
         Ok(Expr::String {
+            typ: (),
             meta: Meta { start: 0, end: 15 },
             value: "Hello, world!".to_string(),
         }),
@@ -57,6 +63,7 @@ fn expr_test() {
 
     assert_eq!(
         Ok(Expr::String {
+            typ: (),
             meta: Meta { start: 0, end: 13 },
             value: "quote -> \\\"".to_string(),
         }),
@@ -65,6 +72,7 @@ fn expr_test() {
 
     assert_eq!(
         Ok(Expr::Atom {
+            typ: (),
             meta: Meta { start: 0, end: 15 },
             value: "Hello, world!".to_string(),
         }),
@@ -73,6 +81,7 @@ fn expr_test() {
 
     assert_eq!(
         Ok(Expr::String {
+            typ: (),
             meta: Meta { start: 0, end: 13 },
             value: "quote -> \\'".to_string(),
         }),
@@ -90,6 +99,7 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::RecordNil {
             meta: Meta { start: 0, end: 2 },
+            typ: (),
         }),
         ExprParser::new().parse("{}"),
     );
@@ -106,10 +116,12 @@ fn expr_test() {
             }),
             args: vec![
                 Expr::Int {
+                    typ: (),
                     meta: Meta { start: 6, end: 7 },
                     value: 1
                 },
                 Expr::Int {
+                    typ: (),
                     meta: Meta { start: 9, end: 10 },
                     value: 2
                 },
@@ -139,10 +151,12 @@ fn expr_test() {
             }),
             args: vec![
                 Expr::Int {
+                    typ: (),
                     meta: Meta { start: 5, end: 6 },
                     value: 1
                 },
                 Expr::Int {
+                    typ: (),
                     meta: Meta { start: 8, end: 9 },
                     value: 3
                 }
@@ -156,6 +170,7 @@ fn expr_test() {
             meta: Meta { start: 0, end: 8 },
             typ: (),
             head: Box::new(Expr::Int {
+                typ: (),
                 meta: Meta { start: 1, end: 2 },
                 value: 1
             }),
@@ -172,6 +187,7 @@ fn expr_test() {
             meta: Meta { start: 0, end: 6 },
             typ: (),
             value: Box::new(Expr::Int {
+                typ: (),
                 meta: Meta { start: 4, end: 5 },
                 value: 1
             }),
@@ -180,6 +196,7 @@ fn expr_test() {
                 name: "x".to_string(),
             },
             then: Box::new(Expr::Int {
+                typ: (),
                 meta: Meta { start: 6, end: 7 },
                 value: 2
             })
@@ -192,10 +209,12 @@ fn expr_test() {
             meta: Meta { start: 0, end: 3 },
             typ: (),
             first: Box::new(Expr::Int {
+                typ: (),
                 meta: Meta { start: 0, end: 1 },
                 value: 1
             }),
             then: Box::new(Expr::Int {
+                typ: (),
                 meta: Meta { start: 2, end: 3 },
                 value: 2
             }),
@@ -239,14 +258,17 @@ fn expr_test() {
             typ: (),
             elems: vec![
                 Expr::Int {
+                    typ: (),
                     meta: Meta { start: 1, end: 2 },
                     value: 1
                 },
                 Expr::Int {
+                    typ: (),
                     meta: Meta { start: 4, end: 5 },
                     value: 2
                 },
                 Expr::Int {
+                    typ: (),
                     meta: Meta { start: 7, end: 8 },
                     value: 3
                 },
@@ -261,6 +283,7 @@ fn expr_test() {
             typ: (),
             args: vec![],
             body: Box::new(Expr::Int {
+                typ: (),
                 meta: Meta { start: 7, end: 8 },
                 value: 1
             })
@@ -284,10 +307,12 @@ fn expr_test() {
                 meta: Meta { start: 11, end: 14 },
                 typ: (),
                 first: Box::new(Expr::Int {
+                    typ: (),
                     meta: Meta { start: 11, end: 12 },
                     value: 1
                 }),
                 then: Box::new(Expr::Int {
+                    typ: (),
                     meta: Meta { start: 13, end: 14 },
                     value: 2
                 })
@@ -301,6 +326,7 @@ fn expr_test() {
             meta: Meta { start: 0, end: 6 },
             typ: (),
             value: Box::new(Expr::Int {
+                typ: (),
                 meta: Meta { start: 4, end: 5 },
                 value: 1
             }),
@@ -309,6 +335,7 @@ fn expr_test() {
                 value: 0,
             },
             then: Box::new(Expr::Int {
+                typ: (),
                 meta: Meta { start: 6, end: 7 },
                 value: 2
             })
@@ -321,6 +348,7 @@ fn expr_test() {
             meta: Meta { start: 0, end: 8 },
             typ: (),
             value: Box::new(Expr::Int {
+                typ: (),
                 meta: Meta { start: 6, end: 7 },
                 value: 1,
             }),
@@ -329,6 +357,7 @@ fn expr_test() {
                 value: 1.0,
             },
             then: Box::new(Expr::Int {
+                typ: (),
                 meta: Meta { start: 8, end: 9 },
                 value: 2
             })
@@ -341,6 +370,7 @@ fn expr_test() {
             meta: Meta { start: 0, end: 8 },
             typ: (),
             value: Box::new(Expr::Int {
+                typ: (),
                 meta: Meta { start: 6, end: 7 },
                 value: 1
             }),
@@ -349,6 +379,7 @@ fn expr_test() {
                 value: "a".to_string(),
             },
             then: Box::new(Expr::Int {
+                typ: (),
                 meta: Meta { start: 8, end: 9 },
                 value: 2
             })
@@ -361,6 +392,7 @@ fn expr_test() {
             meta: Meta { start: 0, end: 8 },
             typ: (),
             value: Box::new(Expr::Int {
+                typ: (),
                 meta: Meta { start: 6, end: 7 },
                 value: 1
             }),
@@ -369,6 +401,7 @@ fn expr_test() {
                 value: "a".to_string(),
             },
             then: Box::new(Expr::Int {
+                typ: (),
                 meta: Meta { start: 8, end: 9 },
                 value: 2
             })
@@ -382,6 +415,7 @@ fn expr_test() {
             typ: (),
             label: "size".to_string(),
             value: Box::new(Expr::Int {
+                typ: (),
                 meta: Meta { start: 16, end: 17 },
                 value: 2
             }),
@@ -475,10 +509,12 @@ fn module_test() {
                     meta: Meta { start: 19, end: 22 },
                     typ: (),
                     first: Box::new(Expr::Int {
+                        typ: (),
                         meta: Meta { start: 19, end: 20 },
                         value: 1
                     }),
                     then: Box::new(Expr::Int {
+                        typ: (),
                         meta: Meta { start: 21, end: 22 },
                         value: 2
                     })
@@ -497,6 +533,7 @@ fn module_test() {
                 name: "go".to_string(),
                 args: vec![],
                 body: Expr::Int {
+                    typ: (),
                     meta: Meta { start: 14, end: 15 },
                     value: 1
                 },
@@ -515,10 +552,12 @@ fn module_test() {
                     meta: Meta { start: 11, end: 14 },
                     typ: (),
                     first: Box::new(Expr::Int {
+                        typ: (),
                         meta: Meta { start: 11, end: 12 },
                         value: 1
                     }),
                     then: Box::new(Expr::Int {
+                        typ: (),
                         meta: Meta { start: 13, end: 14 },
                         value: 2
                     })
