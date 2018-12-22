@@ -423,6 +423,7 @@ map() ->
                 args: vec![],
                 name: "atom".to_string(),
                 body: Expr::Atom {
+                    typ: typ::atom(),
                     meta: default(),
                     value: "ok".to_string(),
                 },
@@ -433,6 +434,7 @@ map() ->
                 args: vec![],
                 name: "int".to_string(),
                 body: Expr::Int {
+                    typ: typ::int(),
                     meta: default(),
                     value: 176,
                 },
@@ -444,6 +446,7 @@ map() ->
                 name: "float".to_string(),
                 body: Expr::Float {
                     meta: default(),
+                    typ: typ::float(),
                     value: 11177.324401,
                 },
             },
@@ -462,7 +465,10 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "record_nil".to_string(),
-                body: Expr::RecordNil { meta: default() },
+                body: Expr::RecordNil {
+                    meta: default(),
+                    typ: typ::record_nil(),
+                },
             },
             Statement::Fun {
                 meta: default(),
@@ -474,11 +480,13 @@ map() ->
                     typ: typ::int(),
                     elems: vec![
                         Expr::Int {
+                            typ: typ::int(),
                             meta: default(),
                             value: 1,
                         },
                         Expr::Float {
                             meta: default(),
+                            typ: typ::float(),
                             value: 2.0,
                         },
                     ],
@@ -491,6 +499,7 @@ map() ->
                 name: "string".to_string(),
                 body: Expr::String {
                     meta: default(),
+                    typ: typ::string(),
                     value: "Hello there!".to_string(),
                 },
             },
@@ -503,10 +512,12 @@ map() ->
                     meta: default(),
                     typ: typ::int(),
                     first: Box::new(Expr::Int {
+                        typ: typ::int(),
                         meta: default(),
                         value: 1,
                     }),
                     then: Box::new(Expr::Int {
+                        typ: typ::int(),
                         meta: default(),
                         value: 2,
                     }),
@@ -522,10 +533,12 @@ map() ->
                     typ: typ::int(),
                     name: BinOp::AddInt,
                     left: Box::new(Expr::Int {
+                        typ: typ::int(),
                         meta: default(),
                         value: 1,
                     }),
                     right: Box::new(Expr::Int {
+                        typ: typ::int(),
                         meta: default(),
                         value: 2,
                     }),
@@ -551,6 +564,7 @@ map() ->
                     meta: default(),
                     typ: typ::int(),
                     value: Box::new(Expr::Int {
+                        typ: typ::int(),
                         meta: default(),
                         value: 1,
                     }),
@@ -575,6 +589,7 @@ map() ->
                     meta: default(),
                     typ: typ::int(),
                     head: Box::new(Expr::Int {
+                        typ: typ::int(),
                         meta: default(),
                         value: 1234,
                     }),
@@ -591,14 +606,17 @@ map() ->
                 name: "retcon".to_string(),
                 body: Expr::RecordCons {
                     meta: default(),
-
                     typ: typ::int(),
                     label: "size".to_string(),
                     value: Box::new(Expr::Int {
+                        typ: typ::int(),
                         meta: default(),
                         value: 1,
                     }),
-                    tail: Box::new(Expr::RecordNil { meta: default() }),
+                    tail: Box::new(Expr::RecordNil {
+                        meta: default(),
+                        typ: typ::record_nil(),
+                    }),
                 },
             },
             Statement::Fun {
@@ -618,6 +636,7 @@ map() ->
                         },
                     ],
                     body: Box::new(Expr::Int {
+                        typ: typ::int(),
                         meta: default(),
                         value: 100000000000,
                     }),
@@ -713,6 +732,7 @@ funny() ->
                 },
             ],
             body: Expr::Atom {
+                typ: typ::atom(),
                 meta: default(),
                 value: "ok".to_string(),
             },
@@ -739,6 +759,7 @@ some_function(ArgOne,
             meta: default(),
             name: "bang".to_string(),
             body: Expr::Atom {
+                typ: typ::atom(),
                 meta: default(),
                 value: "ok".to_string(),
             },
@@ -780,6 +801,7 @@ bang_test() ->
                     name: "some_arg".to_string(),
                     scope: Scope::Constant {
                         value: Box::new(Expr::Atom {
+                            typ: typ::atom(),
                             meta: default(),
                             value: "hello".to_string(),
                         }),
@@ -825,6 +847,7 @@ another() ->
                 meta: default(),
                 typ: typ::int(),
                 subject: Box::new(Expr::Int {
+                    typ: typ::int(),
                     meta: default(),
                     value: 1,
                 }),
@@ -836,6 +859,7 @@ another() ->
                             value: 1,
                         },
                         then: Box::new(Expr::Int {
+                            typ: typ::int(),
                             meta: default(),
                             value: 1,
                         }),
@@ -847,6 +871,7 @@ another() ->
                             value: 1.0,
                         },
                         then: Box::new(Expr::Int {
+                            typ: typ::int(),
                             meta: default(),
                             value: 1,
                         }),
@@ -858,6 +883,7 @@ another() ->
                             value: "ok".to_string(),
                         },
                         then: Box::new(Expr::Int {
+                            typ: typ::int(),
                             meta: default(),
                             value: 1,
                         }),
@@ -869,6 +895,7 @@ another() ->
                             value: "hello".to_string(),
                         },
                         then: Box::new(Expr::Int {
+                            typ: typ::int(),
                             meta: default(),
                             value: 1,
                         }),
@@ -889,6 +916,7 @@ another() ->
                             ],
                         },
                         then: Box::new(Expr::Int {
+                            typ: typ::int(),
                             meta: default(),
                             value: 1,
                         }),
@@ -897,6 +925,7 @@ another() ->
                         meta: default(),
                         pattern: Pattern::Nil { meta: default() },
                         then: Box::new(Expr::Int {
+                            typ: typ::int(),
                             meta: default(),
                             value: 1,
                         }),
@@ -912,6 +941,7 @@ another() ->
                             }],
                         },
                         then: Box::new(Expr::Int {
+                            typ: typ::int(),
                             meta: default(),
                             value: 1,
                         }),

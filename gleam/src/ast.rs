@@ -135,21 +135,25 @@ pub type UntypedExpr = Expr<()>;
 pub enum Expr<T> {
     Int {
         meta: Meta,
+        typ: T,
         value: i64,
     },
 
     Float {
         meta: Meta,
+        typ: T,
         value: f64,
     },
 
     Atom {
         meta: Meta,
+        typ: T,
         value: String,
     },
 
     String {
         meta: Meta,
+        typ: T,
         value: String,
     },
 
@@ -230,6 +234,7 @@ pub enum Expr<T> {
 
     RecordNil {
         meta: Meta,
+        typ: T,
     },
 
     RecordCons {
@@ -282,29 +287,51 @@ impl<T> Expr<T> {
 }
 
 impl TypedExpr {
-    // TODO: Reference here? Need to work out how lifetimes work for the
-    // variants with no type value within.
-    pub fn typ(&self) -> typ::Type {
+    pub fn typ<'a>(&'a self) -> &'a typ::Type {
         match self {
-            Expr::Int { .. } => typ::int(),
-            Expr::Float { .. } => typ::float(),
-            Expr::Atom { .. } => typ::atom(),
-            Expr::String { .. } => typ::string(),
+            Expr::Int { typ, .. } => typ,
+            Expr::Float { typ, .. } => typ,
+            Expr::Atom { typ, .. } => typ,
+            Expr::String { typ, .. } => typ,
             Expr::Seq { then, .. } => then.typ(),
-            Expr::Tuple { typ, .. } => (*typ).clone(),
-            Expr::Var { typ, .. } => (*typ).clone(),
-            Expr::Fun { typ, .. } => (*typ).clone(),
-            Expr::Nil { typ, .. } => (*typ).clone(),
-            Expr::Cons { typ, .. } => (*typ).clone(),
-            Expr::Call { typ, .. } => (*typ).clone(),
-            Expr::BinOp { typ, .. } => (*typ).clone(),
-            Expr::Let { typ, .. } => (*typ).clone(),
-            Expr::Case { typ, .. } => (*typ).clone(),
-            Expr::RecordNil { .. } => typ::Type::Record { row: typ::Row::Nil },
-            Expr::RecordCons { typ, .. } => (*typ).clone(),
-            Expr::Constructor { typ, .. } => (*typ).clone(),
-            Expr::RecordSelect { typ, .. } => (*typ).clone(),
-            Expr::ModuleSelect { typ, .. } => (*typ).clone(),
+            Expr::Tuple { typ, .. } => typ,
+            Expr::Var { typ, .. } => typ,
+            Expr::Fun { typ, .. } => typ,
+            Expr::Nil { typ, .. } => typ,
+            Expr::Cons { typ, .. } => typ,
+            Expr::Call { typ, .. } => typ,
+            Expr::BinOp { typ, .. } => typ,
+            Expr::Let { typ, .. } => typ,
+            Expr::Case { typ, .. } => typ,
+            Expr::RecordNil { typ, .. } => typ,
+            Expr::RecordCons { typ, .. } => typ,
+            Expr::Constructor { typ, .. } => typ,
+            Expr::RecordSelect { typ, .. } => typ,
+            Expr::ModuleSelect { typ, .. } => typ,
+        }
+    }
+
+    pub fn typ_mut<'a>(&'a mut self) -> &'a mut typ::Type {
+        match self {
+            Expr::Int { typ, .. } => typ,
+            Expr::Float { typ, .. } => typ,
+            Expr::Atom { typ, .. } => typ,
+            Expr::String { typ, .. } => typ,
+            Expr::Seq { then, .. } => then.typ_mut(),
+            Expr::Tuple { typ, .. } => typ,
+            Expr::Var { typ, .. } => typ,
+            Expr::Fun { typ, .. } => typ,
+            Expr::Nil { typ, .. } => typ,
+            Expr::Cons { typ, .. } => typ,
+            Expr::Call { typ, .. } => typ,
+            Expr::BinOp { typ, .. } => typ,
+            Expr::Let { typ, .. } => typ,
+            Expr::Case { typ, .. } => typ,
+            Expr::RecordNil { typ, .. } => typ,
+            Expr::RecordCons { typ, .. } => typ,
+            Expr::Constructor { typ, .. } => typ,
+            Expr::RecordSelect { typ, .. } => typ,
+            Expr::ModuleSelect { typ, .. } => typ,
         }
     }
 }
