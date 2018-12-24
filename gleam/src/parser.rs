@@ -1,4 +1,4 @@
-use crate::ast::{Arg, Expr, Meta, Module, Pattern, Scope, Statement, Type};
+use crate::ast::{Arg, BinOp, Expr, Meta, Module, Pattern, Scope, Statement, Type};
 use crate::grammar::{ExprParser, ModuleParser};
 
 pub fn meta(start: usize, end: usize) -> Meta {
@@ -197,6 +197,83 @@ fn expr_test() {
             })
         }),
         ExprParser::new().parse("[1]"),
+    );
+
+    assert_eq!(
+        Ok(Expr::BinOp {
+            meta: Meta { start: 0, end: 5 },
+            typ: (),
+            name: BinOp::AddInt,
+            left: Box::new(Expr::Int {
+                typ: (),
+                meta: Meta { start: 0, end: 1 },
+                value: 1
+            }),
+            right: Box::new(Expr::Int {
+                typ: (),
+                meta: Meta { start: 4, end: 5 },
+                value: 2
+            }),
+        }),
+        ExprParser::new().parse("1 + 2"),
+    );
+
+    assert_eq!(
+        Ok(Expr::BinOp {
+            meta: Meta { start: 0, end: 9 },
+            typ: (),
+            name: BinOp::AddInt,
+            left: Box::new(Expr::BinOp {
+                meta: Meta { start: 0, end: 5 },
+                typ: (),
+                name: BinOp::AddInt,
+                left: Box::new(Expr::Int {
+                    typ: (),
+                    meta: Meta { start: 0, end: 1 },
+                    value: 1
+                }),
+                right: Box::new(Expr::Int {
+                    typ: (),
+                    meta: Meta { start: 4, end: 5 },
+                    value: 2
+                }),
+            }),
+            right: Box::new(Expr::Int {
+                typ: (),
+                meta: Meta { start: 8, end: 9 },
+                value: 3
+            }),
+        }),
+        ExprParser::new().parse("1 + 2 + 3"),
+    );
+
+    assert_eq!(
+        Ok(Expr::BinOp {
+            meta: Meta { start: 0, end: 10 },
+            typ: (),
+            name: BinOp::AddFloat,
+            left: Box::new(Expr::BinOp {
+                meta: Meta { start: 0, end: 5 },
+                typ: (),
+                name: BinOp::AddInt,
+                left: Box::new(Expr::Int {
+                    typ: (),
+                    meta: Meta { start: 0, end: 1 },
+                    value: 1
+                }),
+                right: Box::new(Expr::Int {
+                    typ: (),
+                    meta: Meta { start: 4, end: 5 },
+                    value: 2
+                }),
+            }),
+            right: Box::new(Expr::Int {
+                typ: (),
+                meta: Meta { start: 9, end: 10 },
+                value: 3
+            }),
+        }),
+        ExprParser::new().parse("1 + 2 +. 3"),
     );
 
     assert_eq!(
