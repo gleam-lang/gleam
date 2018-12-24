@@ -1,6 +1,6 @@
 #![allow(dead_code)] // TODO
 
-use crate::ast::{Expr, Meta, Pattern, Scope, TypedExpr, UntypedExpr};
+use crate::ast::{BinOp, Expr, Meta, Pattern, Scope, TypedExpr, UntypedExpr};
 use crate::grammar;
 use crate::pretty::*;
 use im::hashmap::HashMap;
@@ -254,11 +254,107 @@ pub struct Env {
 
 impl Env {
     pub fn new() -> Self {
-        let env = Self {
+        let mut env = Self {
             uid: 0,
             variables: hashmap![],
         };
-        // Mutate env here to insert existing variables
+
+        env.insert_variable(
+            "+".to_string(),
+            Type::Fun {
+                args: vec![int(), int()],
+                retrn: Box::new(int()),
+            },
+        );
+
+        env.insert_variable(
+            "-".to_string(),
+            Type::Fun {
+                args: vec![int(), int()],
+                retrn: Box::new(int()),
+            },
+        );
+
+        env.insert_variable(
+            "*".to_string(),
+            Type::Fun {
+                args: vec![int(), int()],
+                retrn: Box::new(int()),
+            },
+        );
+
+        env.insert_variable(
+            "/".to_string(),
+            Type::Fun {
+                args: vec![int(), int()],
+                retrn: Box::new(int()),
+            },
+        );
+
+        env.insert_variable(
+            "+.".to_string(),
+            Type::Fun {
+                args: vec![float(), float()],
+                retrn: Box::new(float()),
+            },
+        );
+
+        env.insert_variable(
+            "-.".to_string(),
+            Type::Fun {
+                args: vec![float(), float()],
+                retrn: Box::new(float()),
+            },
+        );
+
+        env.insert_variable(
+            "*.".to_string(),
+            Type::Fun {
+                args: vec![float(), float()],
+                retrn: Box::new(float()),
+            },
+        );
+
+        env.insert_variable(
+            "/.".to_string(),
+            Type::Fun {
+                args: vec![float(), float()],
+                retrn: Box::new(float()),
+            },
+        );
+
+        let a = env.new_generic_var();
+        let b = env.new_generic_var();
+        let f = Type::Fun {
+            args: vec![a.clone()],
+            retrn: Box::new(b.clone()),
+        };
+        env.insert_variable(
+            "|>".to_string(),
+            Type::Fun {
+                args: vec![a, f],
+                retrn: Box::new(b),
+            },
+        );
+
+        let a = env.new_generic_var();
+        env.insert_variable(
+            "==".to_string(),
+            Type::Fun {
+                args: vec![a.clone(), a],
+                retrn: Box::new(bool()),
+            },
+        );
+
+        let a = env.new_generic_var();
+        env.insert_variable(
+            "!=".to_string(),
+            Type::Fun {
+                args: vec![a.clone(), a],
+                retrn: Box::new(bool()),
+            },
+        );
+
         env
     }
 
@@ -292,7 +388,7 @@ impl Env {
 
     /// Record the type of a variable in the environment.
     ///
-    pub fn put_variable(&mut self, name: String, typ: Type) {
+    pub fn insert_variable(&mut self, name: String, typ: Type) {
         self.variables.insert(name, typ);
     }
 
@@ -411,7 +507,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             let args_types: Vec<_> = args.iter().map(|_| env.new_unbound_var(level)).collect();
             let vars = env.variables.clone();
             args.iter().zip(args_types.iter()).for_each(|(arg, t)| {
-                env.put_variable(arg.name.to_string(), (*t).clone());
+                env.insert_variable(arg.name.to_string(), (*t).clone());
             });
             let body = infer(*body, level, env)?;
             env.variables = vars;
@@ -441,7 +537,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         } => {
             let value = infer(*value, level + 1, env)?;
             let value_typ = generalise(value.typ().clone(), level);
-            env.put_variable(name.to_string(), value_typ.clone());
+            env.insert_variable(name.to_string(), value_typ.clone());
             let then = infer(*then, level, env)?;
             let typ = then.typ().clone();
             Ok(Expr::Let {
@@ -517,7 +613,27 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             Ok(Expr::Tuple { meta, elems, typ })
         }
 
-        Expr::BinOp { .. } => unimplemented!(),
+        Expr::BinOp {
+            meta,
+            name,
+            left,
+            right,
+            ..
+        } => {
+            let var = Expr::Var {
+                meta: meta.clone(),
+                typ: (),
+                scope: Scope::Local,
+                name: bin_op_name(name),
+            };
+            let call = Expr::Call {
+                meta,
+                typ: (),
+                fun: Box::new(var),
+                args: vec![*left, *right],
+            };
+            infer(call, level, env)
+        }
 
         Expr::RecordNil { .. } => unimplemented!(),
 
@@ -531,6 +647,25 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
     }
 }
 
+fn bin_op_name(name: BinOp) -> String {
+    match name {
+        BinOp::Pipe => "|>".to_string(),
+        BinOp::Lt => "<".to_string(),
+        BinOp::LtEq => "<=".to_string(),
+        BinOp::Eq => "==".to_string(),
+        BinOp::NotEq => "!=".to_string(),
+        BinOp::GtEq => ">=".to_string(),
+        BinOp::Gt => ">".to_string(),
+        BinOp::AddInt => "+".to_string(),
+        BinOp::AddFloat => "+.".to_string(),
+        BinOp::SubInt => "-".to_string(),
+        BinOp::SubFloat => "-.".to_string(),
+        BinOp::MultInt => "*".to_string(),
+        BinOp::MultFloat => "*.".to_string(),
+        BinOp::DivInt => "/".to_string(),
+        BinOp::DivFloat => "/.".to_string(),
+    }
+}
 fn convert_unify_error(e: UnifyError, meta: &Meta) -> Error {
     match e {
         UnifyError::CouldNotUnify { expected, given } => Error::CouldNotUnify {
@@ -705,9 +840,38 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
             }
         }
 
-        (Type::Tuple { .. }, Type::Tuple { .. }) => unimplemented!(),
+        (Type::Tuple { elems: elems1, .. }, Type::Tuple { elems: elems2, .. }) => {
+            if elems1.len() == elems2.len() {
+                for (a, b) in elems1.iter().zip(elems2) {
+                    unify(a, b)?;
+                }
+                Ok(())
+            } else {
+                unimplemented!()
+            }
+        }
 
-        (Type::Fun { .. }, Type::Fun { .. }) => unimplemented!(),
+        (
+            Type::Fun {
+                args: args1,
+                retrn: retrn1,
+                ..
+            },
+            Type::Fun {
+                args: args2,
+                retrn: retrn2,
+                ..
+            },
+        ) => {
+            if args1.len() == args2.len() {
+                for (a, b) in args1.iter().zip(args2) {
+                    unify(a, b)?;
+                }
+                unify(retrn1, retrn2)
+            } else {
+                unimplemented!()
+            }
+        }
 
         (Type::Record { .. }, Type::Record { .. }) => unimplemented!(),
 
@@ -1103,102 +1267,102 @@ fn infer_test() {
             src: "id = fn(a) { a } fn(x) { x(id) }",
             typ: "fn(fn(fn(a) -> a) -> b) -> b",
         },
-        /*
         /* Operators
 
         */
         Case {
-        src: "1 + 1",
-        typ: "Int",
+            src: "1 + 1",
+            typ: "Int",
         },
         Case {
-        src: "1 - 1",
-        typ: "Int",
+            src: "1 - 1",
+            typ: "Int",
         },
         Case {
-        src: "1 * 1",
-        typ: "Int",
+            src: "1 * 1",
+            typ: "Int",
         },
         Case {
-        src: "1 / 1",
-        typ: "Int",
+            src: "1 / 1",
+            typ: "Int",
         },
         Case {
-        src: "1.0 +. 1.0",
-        typ: "Float",
+            src: "1.0 +. 1.0",
+            typ: "Float",
         },
         Case {
-        src: "1.0 -. 1.0",
-        typ: "Float",
+            src: "1.0 -. 1.0",
+            typ: "Float",
         },
         Case {
-        src: "1.0 *. 1.0",
-        typ: "Float",
+            src: "1.0 *. 1.0",
+            typ: "Float",
         },
         Case {
-        src: "1.0 /. 1.0",
-        typ: "Float",
+            src: "1.0 /. 1.0",
+            typ: "Float",
         },
         Case {
-        src: "fn(a, b) { a + b }",
-        typ: "fn(Int, Int) -> Int",
+            src: "fn(a, b) { a + b }",
+            typ: "fn(Int, Int) -> Int",
         },
         Case {
-        src: "inc = fn(a) { a + 1 } 1 |> inc |> inc",
-        typ: "Int",
+            src: "inc = fn(a) { a + 1 } 1 |> inc |> inc",
+            typ: "Int",
         },
         /* Equality
 
         */
         Case {
-        src: "1 == 1",
-        typ: "Bool",
+            src: "1 == 1",
+            typ: "Bool",
         },
         Case {
-        src: "1.0 == 2.0",
-        typ: "Bool",
+            src: "1.0 == 2.0",
+            typ: "Bool",
         },
         Case {
-        src: "'ok' == 'ko'",
-        typ: "Bool",
+            src: "'ok' == 'ko'",
+            typ: "Bool",
         },
         Case {
-        src: "{'ok', 1} == {'ko', 2}",
-        typ: "Bool",
+            src: "{'ok', 1} == {'ko', 2}",
+            typ: "Bool",
         },
         Case {
-        src: "1 != 1",
-        typ: "Bool",
+            src: "1 != 1",
+            typ: "Bool",
         },
         Case {
-        src: "1.0 != 2.0",
-        typ: "Bool",
+            src: "1.0 != 2.0",
+            typ: "Bool",
         },
         Case {
-        src: "'ok' != 'ko'",
-        typ: "Bool",
+            src: "'ok' != 'ko'",
+            typ: "Bool",
         },
         Case {
-        src: "{'ok', 1} != {'ko', 2}",
-        typ: "Bool",
+            src: "{'ok', 1} != {'ko', 2}",
+            typ: "Bool",
         },
         Case {
-        src: "x = 1 x == x",
-        typ: "Bool",
+            src: "x = 1 x == x",
+            typ: "Bool",
+        },
+        /*
+        Case {
+            src: "id = fn(x) { x } id == id",
+            typ: "Bool",
         },
         Case {
-        src: "id = fn(x) { x } id == id",
-        typ: "Bool",
+            src: "id1 = fn(x) { x } id2 = fn(x) { x } id1 == id2",
+            typ: "Bool",
         },
         Case {
-        src: "id1 = fn(x) { x } id2 = fn(x) { x } id1 == id2",
-        typ: "Bool",
+            src: "id = fn(x) { x } inc = fn(x) { x + 1 } id == inc",
+            typ: "Bool",
         },
-        Case {
-        src: "id = fn(x) { x } inc = fn(x) { x + 1 } id == inc",
-        typ: "Bool",
-        },
-         */
+        */
         /* Lists
 
         */
@@ -1458,6 +1622,14 @@ pub fn atom() -> Type {
     Type::Const {
         public: true,
         name: "Atom".to_string(),
+        module: "".to_string(),
+    }
+}
+
+pub fn bool() -> Type {
+    Type::Const {
+        public: true,
+        name: "Bool".to_string(),
         module: "".to_string(),
     }
 }
