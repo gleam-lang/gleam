@@ -72,12 +72,62 @@ StatementExternalType: UntypedStatement = {
 pub Expr: UntypedExpr = {
     Let => <>,
     Seq => <>,
-    OpOrExpr => <>,
+    Op1 => <>,
 }
 
-OpOrExpr: UntypedExpr = {
-    <o:Op<OpOrExpr, AddOp>> => <>,
+Op1: UntypedExpr = {
+    <o:Op<EqOp, Op1, Op2>> => <>,
+    Op2 => <>,
+}
+
+EqOp: BinOp = {
+    "==" => BinOp::Eq,
+    "!=" => BinOp::NotEq,
+}
+
+Op2: UntypedExpr = {
+    <o:Op<CompareOp, Op2, Op3>> => <>,
+    Op3 => <>,
+}
+
+CompareOp: BinOp = {
+    "<" => BinOp::Lt,
+    "<=" => BinOp::LtEq,
+    ">" => BinOp::Gt,
+    ">=" => BinOp::GtEq,
+}
+
+Op3: UntypedExpr = {
+    <o:Op<PipeOp, Op3, Op4>> => <>,
+    Op4 => <>,
+}
+
+PipeOp: BinOp = {
+    "|>" => BinOp::Pipe,
+}
+
+Op4: UntypedExpr = {
+    <o:Op<AddOp, Op4, Op5>> => <>,
+    Op5 => <>,
+}
+
+AddOp: BinOp = {
+    "+" => BinOp::AddInt,
+    "+." => BinOp::AddFloat,
+    "-" => BinOp::AddInt,
+    "-." => BinOp::AddFloat,
+}
+
+Op5: UntypedExpr = {
+    <o:Op<MultOp, Op5, SimpleExpr>> => <>,
     SimpleExpr => <>,
+}
+
+MultOp: BinOp = {
+    "*" => BinOp::MultInt,
+    "*." => BinOp::MultFloat,
+    "/" => BinOp::DivInt,
+    "/." => BinOp::DivFloat,
 }
 
 SimpleExpr: UntypedExpr = {
@@ -91,7 +141,6 @@ SimpleExpr: UntypedExpr = {
     Atom => <>,
     Float => <>,
     Tuple => <>,
-    // BinOp => <>,
     String => <>,
     // Case => <>,
     RecordNil => <>,
@@ -100,11 +149,6 @@ SimpleExpr: UntypedExpr = {
     RecordSelect => <>,
     ModuleSelect => <>,
     "begin" <e:Expr> "end" => e, // TODO: Replace begin end with ( )
-}
-
-AddOp: BinOp = {
-    "+" => BinOp::AddInt,
-    "+." => BinOp::AddFloat,
 }
 
 Let: UntypedExpr = {
@@ -289,8 +333,8 @@ Comma<T>: Vec<T> = {
     }
 }
 
-Op<E, T>: UntypedExpr = {
-    <s:@L> <l:(<E>)> <o:(<T>)> <r:SimpleExpr> <e:@L> => Expr::BinOp {
+Op<Operator, Current, Next>: UntypedExpr = {
+    <s:@L> <l:(<Current>)> <o:(<Operator>)> <r:Next> <e:@L> => Expr::BinOp {
         meta: meta(s, e),
         typ: (),
         name: o,

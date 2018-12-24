@@ -148,6 +148,7 @@ fn bin_op(name: BinOp, left: TypedExpr, right: TypedExpr, mut env: &Env) -> Docu
         BinOp::Lt => "<",
         BinOp::LtEq => "=<",
         BinOp::Eq => "=:=",
+        BinOp::NotEq => "/=",
         BinOp::GtEq => ">=",
         BinOp::Gt => ">",
         BinOp::AddInt => "+",

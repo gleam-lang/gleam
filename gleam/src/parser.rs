@@ -277,6 +277,64 @@ fn expr_test() {
     );
 
     assert_eq!(
+        Ok(Expr::BinOp {
+            meta: Meta { start: 0, end: 9 },
+            typ: (),
+            name: BinOp::AddInt,
+            left: Box::new(Expr::BinOp {
+                meta: Meta { start: 0, end: 5 },
+                typ: (),
+                name: BinOp::MultInt,
+                left: Box::new(Expr::Int {
+                    typ: (),
+                    meta: Meta { start: 0, end: 1 },
+                    value: 1
+                }),
+                right: Box::new(Expr::Int {
+                    typ: (),
+                    meta: Meta { start: 4, end: 5 },
+                    value: 2
+                }),
+            }),
+            right: Box::new(Expr::Int {
+                typ: (),
+                meta: Meta { start: 8, end: 9 },
+                value: 3
+            }),
+        }),
+        ExprParser::new().parse("1 * 2 + 3"),
+    );
+
+    assert_eq!(
+        Ok(Expr::BinOp {
+            meta: Meta { start: 0, end: 9 },
+            typ: (),
+            name: BinOp::AddInt,
+            left: Box::new(Expr::Int {
+                typ: (),
+                meta: Meta { start: 0, end: 1 },
+                value: 1
+            }),
+            right: Box::new(Expr::BinOp {
+                meta: Meta { start: 4, end: 9 },
+                typ: (),
+                name: BinOp::MultInt,
+                left: Box::new(Expr::Int {
+                    typ: (),
+                    meta: Meta { start: 4, end: 5 },
+                    value: 2
+                }),
+                right: Box::new(Expr::Int {
+                    typ: (),
+                    meta: Meta { start: 8, end: 9 },
+                    value: 3
+                }),
+            }),
+        }),
+        ExprParser::new().parse("1 + 2 * 3"),
+    );
+
+    assert_eq!(
         Ok(Expr::Cons {
             meta: Meta { start: 1, end: 2 },
             typ: (),
