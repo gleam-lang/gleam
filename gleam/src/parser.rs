@@ -183,6 +183,49 @@ fn expr_test() {
     );
 
     assert_eq!(
+        Ok(Expr::Cons {
+            meta: Meta { start: 1, end: 2 },
+            typ: (),
+            head: Box::new(Expr::Int {
+                typ: (),
+                meta: Meta { start: 1, end: 2 },
+                value: 1
+            }),
+            tail: Box::new(Expr::Nil {
+                meta: Meta { start: 2, end: 3 },
+                typ: (),
+            })
+        }),
+        ExprParser::new().parse("[1]"),
+    );
+
+    assert_eq!(
+        Ok(Expr::Cons {
+            meta: Meta { start: 1, end: 2 },
+            typ: (),
+            head: Box::new(Expr::Int {
+                typ: (),
+                meta: Meta { start: 1, end: 2 },
+                value: 1
+            }),
+            tail: Box::new(Expr::Cons {
+                meta: Meta { start: 4, end: 5 },
+                typ: (),
+                head: Box::new(Expr::Int {
+                    typ: (),
+                    meta: Meta { start: 4, end: 5 },
+                    value: 2
+                }),
+                tail: Box::new(Expr::Nil {
+                    meta: Meta { start: 5, end: 6 },
+                    typ: (),
+                })
+            })
+        }),
+        ExprParser::new().parse("[1, 2]"),
+    );
+
+    assert_eq!(
         Ok(Expr::Let {
             meta: Meta { start: 0, end: 6 },
             typ: (),

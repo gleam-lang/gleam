@@ -81,6 +81,7 @@ SingleExpr: UntypedExpr = {
     Var => <>,
     Fun => <>,
     Cons => <>,
+    List => <>,
     Call => <>,
     Atom => <>,
     Float => <>,
@@ -184,11 +185,28 @@ Tuple: UntypedExpr = {
 }
 
 Cons: UntypedExpr = {
-    <s:@L> "[" <head:Expr> "|" <tail:Expr> "]" <e:@L> => Expr::Cons {
+    <s:@L> "[" <head:SingleExpr> "|" <tail:SingleExpr> "]" <e:@L> => Expr::Cons {
         meta: meta(s, e),
         typ: (),
         head: Box::new(head),
         tail: Box::new(tail),
+    }
+}
+
+List: UntypedExpr = {
+    <s:@L> "[" <elems:Comma<SingleExpr>> "]" <e:@L> => {
+        elems.into_iter().rev().fold(
+            Expr::Nil {
+                meta: meta(e - 1, e),
+                typ: (),
+            },
+            |a, e| Expr::Cons {
+                meta: e.meta().clone(),
+                typ: (),
+                head: Box::new(e),
+                tail: Box::new(a),
+            }
+        )
     }
 }
 

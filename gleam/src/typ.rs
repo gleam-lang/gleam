@@ -245,13 +245,23 @@ pub enum Row {
     },
 }
 
-#[derive(Debug, Clone, Default)]
+// TODO: Make private to enforce construction with Env::new
+#[derive(Debug, Clone)]
 pub struct Env {
     uid: usize,
     variables: HashMap<String, Type>,
 }
 
 impl Env {
+    pub fn new() -> Self {
+        let env = Self {
+            uid: 0,
+            variables: hashmap![],
+        };
+        // Mutate env here to insert existing variables
+        env
+    }
+
     fn next_uid(&mut self) -> usize {
         let i = self.uid;
         self.uid += 1;
@@ -451,7 +461,20 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
 
         Expr::Case { .. } => unimplemented!(),
 
-        Expr::Cons { .. } => unimplemented!(),
+        Expr::Cons {
+            meta, head, tail, ..
+        } => {
+            let head = infer(*head, level, env)?;
+            let tail = infer(*tail, level, env)?;
+            unify(&list(head.typ().clone()), tail.typ())
+                .map_err(|e| convert_unify_error(e, &meta))?;
+            Ok(Expr::Cons {
+                meta,
+                typ: tail.typ().clone(),
+                head: Box::new(head),
+                tail: Box::new(tail),
+            })
+        }
 
         Expr::Call {
             meta,
@@ -658,7 +681,29 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
             }
         }
 
-        (Type::App { .. }, Type::App { .. }) => unimplemented!(),
+        (
+            Type::App {
+                module: m1,
+                name: n1,
+                args: args1,
+                ..
+            },
+            Type::App {
+                module: m2,
+                name: n2,
+                args: args2,
+                ..
+            },
+        ) => {
+            if m1 == m2 && n1 == n2 && args1.len() == args2.len() {
+                for (a, b) in args1.iter().zip(args2) {
+                    unify(a, b)?;
+                }
+                Ok(())
+            } else {
+                unimplemented!()
+            }
+        }
 
         (Type::Tuple { .. }, Type::Tuple { .. }) => unimplemented!(),
 
@@ -712,9 +757,10 @@ fn flip_unify_error(e: UnifyError) -> UnifyError {
 /// the type, thus ensuring the type will be correctly generalized.
 ///
 fn update_levels(typ: &Type, own_level: usize, own_id: usize) -> Result<(), UnifyError> {
+    // TODO: move this into the match block
     if let Type::Var { typ } = &typ {
         let _new_value = match &*typ.borrow() {
-            TypeVar::Link { .. } => unimplemented!(),
+            TypeVar::Link { typ, .. } => return update_levels(typ, own_level, own_id),
 
             TypeVar::Unbound { id, level } => {
                 if id == &own_id {
@@ -739,11 +785,26 @@ fn update_levels(typ: &Type, own_level: usize, own_id: usize) -> Result<(), Unif
     match typ {
         Type::Const { .. } => Ok(()),
 
-        Type::App { .. } => unimplemented!(),
+        Type::App { args, .. } => {
+            for arg in args.iter() {
+                update_levels(arg, own_level, own_id)?
+            }
+            Ok(())
+        }
 
-        Type::Tuple { .. } => unimplemented!(),
+        Type::Tuple { elems, .. } => {
+            for elem in elems.iter() {
+                update_levels(elem, own_level, own_id)?
+            }
+            Ok(())
+        }
 
-        Type::Fun { .. } => unimplemented!(),
+        Type::Fun { args, retrn } => {
+            for arg in args.iter() {
+                update_levels(arg, own_level, own_id)?;
+            }
+            update_levels(retrn, own_level, own_id)
+        }
 
         Type::Record { .. } => unimplemented!(),
 
@@ -1026,23 +1087,23 @@ fn infer_test() {
             src: "fn(f, x) { f(f(x)) }",
             typ: "fn(fn(a) -> a, a) -> a",
         },
-        /*
         Case {
             src: "fn(x) { y = fn(z) { z } y(y) }",
             typ: "fn(a) -> fn(b) -> b",
         },
         Case {
             src: "fn(x, y) { {x, y} }",
-            typ: "fn(a, b) -> Tuple(a, b)",
+            typ: "fn(a, b) -> {a, b}",
         },
         Case {
             src: "fn(x) { {x, x} }",
-            typ: "fn(a) -> Tuple(a, a)",
+            typ: "fn(a) -> {a, a}",
         },
         Case {
-            src: "id = fnCase {src:a) { a } fn(x) { x(id) }",
-            typ: "fnCase {src:fn(fn(a) -> a) -> b) -> b",
+            src: "id = fn(a) { a } fn(x) { x(id) }",
+            typ: "fn(fn(fn(a) -> a) -> b) -> b",
         },
+        /*
         /* Operators
 
         */
@@ -1137,41 +1198,45 @@ fn infer_test() {
         src: "id = fn(x) { x } inc = fn(x) { x + 1 } id == inc",
         typ: "Bool",
         },
+         */
         /* Lists
 
         */
         Case {
-        src: "[]",
-        typ: "List(a)",
+            src: "[]",
+            typ: "List(a)",
         },
         Case {
-        src: "[1]",
-        typ: "List(Int)",
+            src: "[1]",
+            typ: "List(Int)",
         },
         Case {
-        src: "[1, 2, 3]",
-        typ: "List(Int)",
+            src: "[1, 2, 3]",
+            typ: "List(Int)",
         },
         Case {
-        src: "[[]]",
-        typ: "List(List(a))",
+            src: "[[]]",
+            typ: "List(List(a))",
         },
         Case {
-        src: "[[1.0, 2.0]]",
-        typ: "List(List(Float))",
+            src: "[[1.0, 2.0]]",
+            typ: "List(List(Float))",
         },
         Case {
-        src: "[fn(x) { x }]",
-        typ: "List(fn(a) -> a)",
+            src: "[fn(x) { x }]",
+            typ: "List(fn(a) -> a)",
         },
+        /*
         Case {
-        src: "[fn(x) { x + 1 }]",
-        typ: "List(fn(Int) -> Int)",
+            src: "[fn(x) { x + 1 }]",
+            typ: "List(fn(Int) -> Int)",
         },
+        */
         Case {
-        src: "[{[], []}]",
-        typ: "List(Tuple(List(a), List(b)))",
+            src: "[{[], []}]",
+            typ: "List({List(a), List(b)})",
         },
+        /*
         Case {
         src: "[fn(x) { x }, fn(x) { x + 1 }]",
         typ: "List(fn(Int) -> Int)",
@@ -1295,7 +1360,7 @@ fn infer_test() {
 
     for Case { src, typ } in cases.into_iter() {
         let ast = grammar::ExprParser::new().parse(src).expect("syntax error");
-        let result = infer(ast, 1, &mut Env::default()).expect("should successfully infer");
+        let result = infer(ast, 1, &mut Env::new()).expect("should successfully infer");
         assert_eq!(
             (src, typ.to_string()),
             (
