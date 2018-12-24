@@ -72,11 +72,11 @@ StatementExternalType: UntypedStatement = {
 pub Expr: UntypedExpr = {
     Let => <>,
     Seq => <>,
-    Op1 => <>,
+    OpOrSimpleExpr => <>,
 }
 
-Op1: UntypedExpr = {
-    <o:Op<EqOp, Op1, Op2>> => <>,
+OpOrSimpleExpr: UntypedExpr = {
+    <o:Op<EqOp, OpOrSimpleExpr, Op2>> => <>,
     Op2 => <>,
 }
 
@@ -223,7 +223,7 @@ Constructor: UntypedExpr = {
 }
 
 Call: UntypedExpr = {
-    <s:@L> <fun:SimpleExpr> "(" <args:Comma<Expr>> ")" <e:@L> => Expr::Call {
+    <s:@L> <fun:SimpleExpr> "(" <args:Comma<OpOrSimpleExpr>> ")" <e:@L> => Expr::Call {
         meta: meta(s, e),
         typ: (),
         fun: Box::new(fun),
@@ -232,7 +232,7 @@ Call: UntypedExpr = {
 }
 
 Tuple: UntypedExpr = {
-    <s:@L> "{" <elems:Comma<Expr>> "}" <e:@L> => Expr::Tuple {
+    <s:@L> "{" <elems:Comma<OpOrSimpleExpr>> "}" <e:@L> => Expr::Tuple {
         meta: meta(s, e),
         typ: (),
         elems: elems,
@@ -240,7 +240,7 @@ Tuple: UntypedExpr = {
 }
 
 Cons: UntypedExpr = {
-    <s:@L> "[" <head:SimpleExpr> "|" <tail:SimpleExpr> "]" <e:@L> => Expr::Cons {
+    <s:@L> "[" <head:OpOrSimpleExpr> "|" <tail:OpOrSimpleExpr> "]" <e:@L> => Expr::Cons {
         meta: meta(s, e),
         typ: (),
         head: Box::new(head),
@@ -249,7 +249,7 @@ Cons: UntypedExpr = {
 }
 
 List: UntypedExpr = {
-    <s:@L> "[" <elems:Comma<SimpleExpr>> "]" <e:@L> => {
+    <s:@L> "[" <elems:Comma<OpOrSimpleExpr>> "]" <e:@L> => {
         elems.into_iter().rev().fold(
             Expr::Nil {
                 meta: meta(e - 1, e),
@@ -421,7 +421,7 @@ TypeName: (String, Vec<String>) = {
 }
 
 VarName: String = {
-    <v:r"[a-z][A-za-z_]*"> => v.to_string()
+    <v:r"[a-z][A-Za-z_]*"> => v.to_string()
 }
 
 ConstructorName: String = {

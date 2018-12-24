@@ -705,7 +705,20 @@ fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
         match t {
             Type::Const { .. } => t,
 
-            Type::App { .. } => unimplemented!(),
+            Type::App {
+                public,
+                name,
+                module,
+                args,
+            } => Type::App {
+                public,
+                name,
+                module,
+                args: args
+                    .into_iter()
+                    .map(|t| instantiate(t, ctx_level, env))
+                    .collect(),
+            },
 
             Type::Var { typ } => match &*typ.borrow() {
                 TypeVar::Link { typ } => instantiate(*typ.clone(), ctx_level, env),
@@ -1169,8 +1182,10 @@ fn infer_test() {
             src: "x = fn() { 1.0 } x()",
             typ: "Float",
         },
-        // TODO: FIXME
-        // Case {src:"fn(x) { x }('ok')", typ: "Atom"},
+        Case {
+            src: "fn(x) { x }('ok')",
+            typ: "Atom",
+        },
         Case {
             src: "fn() { 1 }",
             typ: "fn() -> Int",
@@ -1390,52 +1405,52 @@ fn infer_test() {
             src: "[fn(x) { x }]",
             typ: "List(fn(a) -> a)",
         },
-        /*
         Case {
             src: "[fn(x) { x + 1 }]",
             typ: "List(fn(Int) -> Int)",
         },
-        */
         Case {
             src: "[{[], []}]",
             typ: "List({List(a), List(b)})",
         },
+        Case {
+            src: "[fn(x) { x }, fn(x) { x + 1 }]",
+            typ: "List(fn(Int) -> Int)",
+        },
+        Case {
+            src: "[fn(x) { x + 1 }, fn(x) { x }]",
+            typ: "List(fn(Int) -> Int)",
+        },
+        Case {
+            src: "[[], []]",
+            typ: "List(List(a))",
+        },
+        Case {
+            src: "[[], ['ok']]",
+            typ: "List(List(Atom))",
+        },
+        Case {
+            src: "[1 | [2 | []]]",
+            typ: "List(Int)",
+        },
+        Case {
+            src: "[fn(x) { x } | []]",
+            typ: "List(fn(a) -> a)",
+        },
         /*
         Case {
-        src: "[fn(x) { x }, fn(x) { x + 1 }]",
-        typ: "List(fn(Int) -> Int)",
+            src: "f = fn(x) { x } [f, f]",
+            typ: "List(fn(a) -> a)",
         },
+        */
         Case {
-        src: "[fn(x) { x + 1 }, fn(x) { x }]",
-        typ: "List(fn(Int) -> Int)",
-        },
-        Case {
-        src: "[[], []]",
-        typ: "List(List(a))",
-        },
-        Case {
-        src: "[[], ['ok']]",
-        typ: "List(List(Atom))",
-        },
-        Case {
-        src: "1 :: 2 :: []",
-        typ: "List(Int)",
-        },
-        Case {
-        src: "fn(x) { x } :: []",
-        typ: "List(fn(a) -> a)",
-        },
-        Case {
-        src: "f = fn(x) { x } [f, f]",
-        typ: "List(fn(a) -> a)",
-        },
-        Case {
-        src: "x = 1 :: [] 2 :: x",
-        typ: "List(Int)",
+            src: "x = [1 | []] [2 | x]",
+            typ: "List(Int)",
         },
         /* Records
 
         */
+        /*
         Case {
         src: "{}",
         typ: "{}",
@@ -1581,7 +1596,20 @@ fn generalise(t: Type, ctx_level: usize) -> Type {
             Type::Var { typ }
         }
 
-        Type::App { .. } => unimplemented!(),
+        Type::App {
+            public,
+            module,
+            name,
+            args,
+        } => {
+            let args = args.into_iter().map(|t| generalise(t, ctx_level)).collect();
+            return Type::App {
+                public,
+                module,
+                name,
+                args,
+            };
+        }
 
         Type::Fun { args, retrn } => {
             let args = args.into_iter().map(|t| generalise(t, ctx_level)).collect();
