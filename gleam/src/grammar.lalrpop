@@ -114,8 +114,8 @@ Op4: UntypedExpr = {
 AddOp: BinOp = {
     "+" => BinOp::AddInt,
     "+." => BinOp::AddFloat,
-    "-" => BinOp::AddInt,
-    "-." => BinOp::AddFloat,
+    "-" => BinOp::SubInt,
+    "-." => BinOp::SubFloat,
 }
 
 Op5: UntypedExpr = {

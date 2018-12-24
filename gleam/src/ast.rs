@@ -80,19 +80,6 @@ pub enum Statement<T> {
     },
 }
 
-impl<T> Statement<T> {
-    pub fn meta(&self) -> &Meta {
-        match self {
-            Statement::Fun { meta, .. } => meta,
-            Statement::Test { meta, .. } => meta,
-            Statement::Enum { meta, .. } => meta,
-            Statement::ExternalFun { meta, .. } => meta,
-            Statement::ExternalType { meta, .. } => meta,
-            Statement::Import { meta, .. } => meta,
-        }
-    }
-}
-
 #[derive(Debug, PartialEq)]
 pub enum BinOp {
     Pipe,
@@ -311,30 +298,6 @@ impl TypedExpr {
             Expr::ModuleSelect { typ, .. } => typ,
         }
     }
-
-    pub fn typ_mut<'a>(&'a mut self) -> &'a mut typ::Type {
-        match self {
-            Expr::Int { typ, .. } => typ,
-            Expr::Float { typ, .. } => typ,
-            Expr::Atom { typ, .. } => typ,
-            Expr::String { typ, .. } => typ,
-            Expr::Seq { then, .. } => then.typ_mut(),
-            Expr::Tuple { typ, .. } => typ,
-            Expr::Var { typ, .. } => typ,
-            Expr::Fun { typ, .. } => typ,
-            Expr::Nil { typ, .. } => typ,
-            Expr::Cons { typ, .. } => typ,
-            Expr::Call { typ, .. } => typ,
-            Expr::BinOp { typ, .. } => typ,
-            Expr::Let { typ, .. } => typ,
-            Expr::Case { typ, .. } => typ,
-            Expr::RecordNil { typ, .. } => typ,
-            Expr::RecordCons { typ, .. } => typ,
-            Expr::Constructor { typ, .. } => typ,
-            Expr::RecordSelect { typ, .. } => typ,
-            Expr::ModuleSelect { typ, .. } => typ,
-        }
-    }
 }
 
 pub type TypedClause = Clause<typ::Type>;
@@ -405,21 +368,4 @@ pub enum Pattern {
         name: String,
         args: Vec<Pattern>,
     },
-}
-
-impl Pattern {
-    pub fn meta(&self) -> &Meta {
-        match self {
-            Pattern::Int { meta, .. } => meta,
-            Pattern::Var { meta, .. } => meta,
-            Pattern::Nil { meta, .. } => meta,
-            Pattern::List { meta, .. } => meta,
-            Pattern::Atom { meta, .. } => meta,
-            Pattern::Enum { meta, .. } => meta,
-            Pattern::Float { meta, .. } => meta,
-            Pattern::Tuple { meta, .. } => meta,
-            Pattern::String { meta, .. } => meta,
-            Pattern::Record { meta, .. } => meta,
-        }
-    }
 }

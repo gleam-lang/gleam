@@ -11,7 +11,10 @@ mod erl;
 mod parser;
 mod pretty;
 mod typ;
-lalrpop_mod!(pub grammar);
+lalrpop_mod!(
+    #[allow(deprecated)]
+    grammar
+);
 
 #[macro_use]
 extern crate im;
