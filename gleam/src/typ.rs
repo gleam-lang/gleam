@@ -3,7 +3,7 @@
 use crate::ast::{BinOp, Expr, Meta, Pattern, Scope, TypedExpr, UntypedExpr};
 use crate::grammar;
 use crate::pretty::*;
-use im::hashmap::HashMap;
+use im::{hashmap::HashMap, ordmap::OrdMap};
 use itertools::Itertools;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -35,15 +35,23 @@ pub enum Type {
     },
 
     Record {
-        row: Row,
+        row: Box<Type>,
     },
 
     Module {
-        row: Row,
+        row: Box<Type>,
     },
 
     Var {
         typ: Rc<RefCell<TypeVar>>,
+    },
+
+    RowNil,
+
+    RowCons {
+        label: String,
+        head: Box<Type>,
+        tail: Box<Type>,
     },
 }
 
@@ -67,11 +75,59 @@ impl Type {
 
             Type::Tuple { elems, .. } => args_to_gleam_doc(elems, names, uid).surround("{", "}"),
 
-            Type::Record { .. } => unimplemented!(),
+            Type::Record { row } => "{"
+                .to_doc()
+                .append(
+                    break_("", "")
+                        .append(row.to_gleam_doc(names, uid))
+                        .nest(INDENT)
+                        .append(break_("", ""))
+                        .group(),
+                )
+                .append("}"),
 
             Type::Module { .. } => unimplemented!(),
 
             Type::Var { typ, .. } => typ.borrow().to_gleam_doc(names, uid),
+
+            Type::RowCons { .. } => {
+                let mut fields = ordmap![];
+                let tail = self.gather_fields(&mut fields);
+                let fields_doc = fields
+                    .into_iter()
+                    .map(|(label, typ)| {
+                        label.to_doc().append(" =").append(
+                            break_("", " ")
+                                .append(typ.to_gleam_doc(names, uid))
+                                .nest(INDENT)
+                                .group(),
+                        )
+                    })
+                    .intersperse(break_(",", ", "))
+                    .collect::<Vec<_>>()
+                    .to_doc();
+                match tail {
+                    // TODO: concat on the tail
+                    Some(_tail) => fields_doc,
+                    None => fields_doc,
+                }
+            }
+
+            Type::RowNil { .. } => nil(),
+        }
+    }
+
+    fn gather_fields(&self, fields: &mut OrdMap<String, Type>) -> Option<Type> {
+        match self {
+            Type::RowNil => None,
+
+            Type::RowCons { label, head, tail } => {
+                // TODO: Don't overwrite fields with tail ones with the same label
+                fields.insert(label.clone(), *head.clone());
+                tail.gather_fields(fields)
+            }
+
+            other => Some(other.clone()),
         }
     }
 }
@@ -222,7 +278,7 @@ fn to_gleam_doc_test() {
     for (typ, s) in cases.into_iter() {
         assert_eq!(
             s.to_string(),
-            typ.to_gleam_doc(&mut hashmap! {}, &mut 0).format(80)
+            typ.to_gleam_doc(&mut hashmap![], &mut 0).format(80)
         );
     }
 }
@@ -232,17 +288,6 @@ pub enum TypeVar {
     Unbound { id: usize, level: usize },
     Link { typ: Box<Type> },
     Generic { id: usize },
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Row {
-    Nil,
-
-    Cons {
-        label: String,
-        head: Box<Type>,
-        tail: Box<Row>,
-    },
 }
 
 // TODO: Make private to enforce construction with Env::new
@@ -536,7 +581,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             then,
         } => {
             let value = infer(*value, level + 1, env)?;
-            let value_typ = generalise(value.typ().clone(), level);
+            let value_typ = generalise(value.typ().clone(), level + 1);
             env.insert_variable(name.to_string(), value_typ.clone());
             let then = infer(*then, level, env)?;
             let typ = then.typ().clone();
@@ -635,9 +680,60 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             infer(call, level, env)
         }
 
-        Expr::RecordNil { .. } => unimplemented!(),
+        Expr::RecordNil { meta, .. } => Ok(Expr::RecordNil {
+            meta,
+            typ: Type::Record {
+                row: Box::new(Type::RowNil),
+            },
+        }),
 
-        Expr::RecordCons { .. } => unimplemented!(),
+        // #ast_record_extend{parent = Parent, label = Label, value = Value} ->
+        //   {RestRowType, Env1} = new_var(Env0),
+        //   {FieldType, Env2} = new_var(Env1),
+        //   ParentType = #type_record{row = RestRowType},
+        //   {AnnotatedValue, Env3} = infer(Value, Env2),
+        //   {AnnotatedParent, Env4} = infer(Parent, Env3),
+        //   TypeOfValue = fetch(AnnotatedValue),
+        //   TypeOfParent = fetch(AnnotatedParent),
+        //   Env5 = unify(FieldType, TypeOfValue, Env4),
+        //   Env6 = unify(ParentType, TypeOfParent, Env5),
+        //   Type = #type_record{row = #type_row_extend{label = Label,
+        //                                              type = FieldType,
+        //                                              parent = RestRowType}},
+        //   AnnotatedAst = Ast#ast_record_extend{type = {ok, Type},
+        //                                        parent = AnnotatedParent,
+        //                                        value = AnnotatedValue},
+        //   {AnnotatedAst, Env6};
+        Expr::RecordCons {
+            meta,
+            tail,
+            label,
+            value,
+            ..
+        } => {
+            let tail_type = Type::Record {
+                row: Box::new(env.new_unbound_var(level)),
+            };
+            let field_type = env.new_unbound_var(level);
+            let value = infer(*value, level, env)?;
+            let tail = infer(*tail, level, env)?;
+            unify(value.typ(), &field_type).map_err(|e| convert_unify_error(e, &meta))?;
+            unify(tail.typ(), &tail_type).map_err(|e| convert_unify_error(e, &meta))?;
+            let typ = Type::Record {
+                row: Box::new(Type::RowCons {
+                    label: label.clone(),
+                    head: Box::new(field_type),
+                    tail: Box::new(tail_type),
+                }),
+            };
+            Ok(Expr::RecordCons {
+                meta,
+                typ,
+                label,
+                tail: Box::new(tail),
+                value: Box::new(value),
+            })
+        }
 
         Expr::Constructor { .. } => unimplemented!(),
 
@@ -749,6 +845,10 @@ fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
             Type::Record { .. } => unimplemented!(),
 
             Type::Module { .. } => unimplemented!(),
+
+            Type::RowCons { .. } => unimplemented!(),
+
+            Type::RowNil { .. } => unimplemented!(),
         }
     }
 
@@ -779,6 +879,10 @@ enum UnifyError {
 // 				tvar := Link ty
 // 		| _, _ -> error ("cannot unify types " ^ string_of_ty ty1 ^ " and " ^ string_of_ty ty2)
 fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
+    if t1 == t2 {
+        return Ok(());
+    }
+
     if let Type::Var { typ } = t1 {
         enum Action {
             Unify(Type),
@@ -886,7 +990,7 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
             }
         }
 
-        (Type::Record { .. }, Type::Record { .. }) => unimplemented!(),
+        (Type::Record { row: row1 }, Type::Record { row: row2 }) => unify(row1, row2),
 
         (Type::Module { .. }, Type::Module { .. }) => unimplemented!(),
 
@@ -936,27 +1040,31 @@ fn flip_unify_error(e: UnifyError) -> UnifyError {
 fn update_levels(typ: &Type, own_level: usize, own_id: usize) -> Result<(), UnifyError> {
     // TODO: move this into the match block
     if let Type::Var { typ } = &typ {
-        let _new_value = match &*typ.borrow() {
+        let new_value = match &*typ.borrow() {
             TypeVar::Link { typ, .. } => return update_levels(typ, own_level, own_id),
 
             TypeVar::Unbound { id, level } => {
                 if id == &own_id {
                     unimplemented!()
                 } else if level > &own_level {
-                    unimplemented!()
+                    Some(TypeVar::Unbound {
+                        id: *id,
+                        level: own_level,
+                    })
                 } else {
                     return Ok(());
                 }
             }
 
-            TypeVar::Generic { .. } => unimplemented!(),
+            TypeVar::Generic { .. } => {
+                panic!("Generic type var should not be passed to update_levels")
+            }
         };
 
-        // TODO
-        // if let Some(t) = new_value {
-        //     *typ.borrow_mut() = t;
-        // }
-        // return Ok(());
+        if let Some(t) = new_value {
+            *typ.borrow_mut() = t;
+        }
+        return Ok(());
     }
 
     match typ {
@@ -988,6 +1096,10 @@ fn update_levels(typ: &Type, own_level: usize, own_id: usize) -> Result<(), Unif
         Type::Module { .. } => unimplemented!(),
 
         Type::Var { .. } => unreachable!(),
+
+        Type::RowCons { .. } => unimplemented!(),
+
+        Type::RowNil { .. } => Ok(()),
     }
 }
 
@@ -1266,10 +1378,12 @@ fn infer_test() {
             src: "fn(f, x) { f(f(x)) }",
             typ: "fn(fn(a) -> a, a) -> a",
         },
-        Case {
-            src: "fn(x) { y = fn(z) { z } y(y) }",
-            typ: "fn(a) -> fn(b) -> b",
-        },
+        // TODO: This is allowed in the Erlang implementation due to how the pattern
+        // assignments work. Unclear what the implications of this would be.
+        // Case {
+        //     src: "fn(x) { y = fn(z) { z } y(y) }",
+        //     typ: "fn(a) -> fn(b) -> b",
+        // },
         Case {
             src: "fn(x, y) { {x, y} }",
             typ: "fn(a, b) -> {a, b}",
@@ -1282,182 +1396,21 @@ fn infer_test() {
             src: "id = fn(a) { a } fn(x) { x(id) }",
             typ: "fn(fn(fn(a) -> a) -> b) -> b",
         },
-        /* Operators
-
-        */
-        Case {
-            src: "1 + 1",
-            typ: "Int",
-        },
-        Case {
-            src: "1 - 1",
-            typ: "Int",
-        },
-        Case {
-            src: "1 * 1",
-            typ: "Int",
-        },
-        Case {
-            src: "1 / 1",
-            typ: "Int",
-        },
-        Case {
-            src: "1.0 +. 1.0",
-            typ: "Float",
-        },
-        Case {
-            src: "1.0 -. 1.0",
-            typ: "Float",
-        },
-        Case {
-            src: "1.0 *. 1.0",
-            typ: "Float",
-        },
-        Case {
-            src: "1.0 /. 1.0",
-            typ: "Float",
-        },
-        Case {
-            src: "fn(a, b) { a + b }",
-            typ: "fn(Int, Int) -> Int",
-        },
-        Case {
-            src: "inc = fn(a) { a + 1 } 1 |> inc |> inc",
-            typ: "Int",
-        },
-        /* Equality
-
-        */
-        Case {
-            src: "1 == 1",
-            typ: "Bool",
-        },
-        Case {
-            src: "1.0 == 2.0",
-            typ: "Bool",
-        },
-        Case {
-            src: "'ok' == 'ko'",
-            typ: "Bool",
-        },
-        Case {
-            src: "{'ok', 1} == {'ko', 2}",
-            typ: "Bool",
-        },
-        Case {
-            src: "1 != 1",
-            typ: "Bool",
-        },
-        Case {
-            src: "1.0 != 2.0",
-            typ: "Bool",
-        },
-        Case {
-            src: "'ok' != 'ko'",
-            typ: "Bool",
-        },
-        Case {
-            src: "{'ok', 1} != {'ko', 2}",
-            typ: "Bool",
-        },
-        Case {
-            src: "x = 1 x == x",
-            typ: "Bool",
-        },
-        /*
-        Case {
-            src: "id = fn(x) { x } id == id",
-            typ: "Bool",
-        },
-        Case {
-            src: "id1 = fn(x) { x } id2 = fn(x) { x } id1 == id2",
-            typ: "Bool",
-        },
-        Case {
-            src: "id = fn(x) { x } inc = fn(x) { x + 1 } id == inc",
-            typ: "Bool",
-        },
-        */
-        /* Lists
-
-        */
-        Case {
-            src: "[]",
-            typ: "List(a)",
-        },
-        Case {
-            src: "[1]",
-            typ: "List(Int)",
-        },
-        Case {
-            src: "[1, 2, 3]",
-            typ: "List(Int)",
-        },
-        Case {
-            src: "[[]]",
-            typ: "List(List(a))",
-        },
-        Case {
-            src: "[[1.0, 2.0]]",
-            typ: "List(List(Float))",
-        },
-        Case {
-            src: "[fn(x) { x }]",
-            typ: "List(fn(a) -> a)",
-        },
-        Case {
-            src: "[fn(x) { x + 1 }]",
-            typ: "List(fn(Int) -> Int)",
-        },
-        Case {
-            src: "[{[], []}]",
-            typ: "List({List(a), List(b)})",
-        },
-        Case {
-            src: "[fn(x) { x }, fn(x) { x + 1 }]",
-            typ: "List(fn(Int) -> Int)",
-        },
-        Case {
-            src: "[fn(x) { x + 1 }, fn(x) { x }]",
-            typ: "List(fn(Int) -> Int)",
-        },
-        Case {
-            src: "[[], []]",
-            typ: "List(List(a))",
-        },
-        Case {
-            src: "[[], ['ok']]",
-            typ: "List(List(Atom))",
-        },
-        Case {
-            src: "[1 | [2 | []]]",
-            typ: "List(Int)",
-        },
-        Case {
-            src: "[fn(x) { x } | []]",
-            typ: "List(fn(a) -> a)",
-        },
-        /*
-        Case {
-            src: "f = fn(x) { x } [f, f]",
-            typ: "List(fn(a) -> a)",
-        },
-        */
-        Case {
-            src: "x = [1 | []] [2 | x]",
-            typ: "List(Int)",
-        },
         /* Records
 
         */
-        /*
         Case {
-        src: "{}",
-        typ: "{}",
+            src: "{}",
+            typ: "{}",
         },
         Case {
-        src: "{a = 1}",
-        typ: "{a = Int}",
+            src: "{{} | a = 1}",
+            typ: "{a = Int}",
+        },
+        /*
+        Case {
+            src: "{a = 1}",
+            typ: "{a = Int}",
         },
         Case {
         src: "{a = 1, b = 2}",
@@ -1572,7 +1525,6 @@ enum GeneraliseVarAction {
 ///
 fn generalise(t: Type, ctx_level: usize) -> Type {
     match t {
-        // Type::Var { typ } => unreachable!(),
         Type::Var { typ } => {
             let new_var = match &*typ.borrow() {
                 TypeVar::Unbound { id, level } => {
@@ -1627,6 +1579,10 @@ fn generalise(t: Type, ctx_level: usize) -> Type {
         Type::Record { .. } => unimplemented!(),
 
         Type::Module { .. } => unimplemented!(),
+
+        Type::RowCons { .. } => unimplemented!(),
+
+        Type::RowNil { .. } => unimplemented!(),
     }
 }
 
@@ -1680,5 +1636,7 @@ pub fn list(t: Type) -> Type {
 }
 
 pub fn record_nil() -> Type {
-    Type::Record { row: Row::Nil }
+    Type::Record {
+        row: Box::new(Type::RowNil),
+    }
 }
