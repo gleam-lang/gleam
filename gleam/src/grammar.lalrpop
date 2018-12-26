@@ -142,10 +142,11 @@ SimpleExpr: UntypedExpr = {
     Float => <>,
     Tuple => <>,
     String => <>,
+    Record => <>,
     // Case => <>,
     RecordNil => <>,
-    Constructor => <>,
     RecordCons => <>,
+    Constructor => <>,
     RecordSelect => <>,
     ModuleSelect => <>,
     "begin" <e:Expr> "end" => e, // TODO: Replace begin end with ( )
@@ -170,15 +171,41 @@ RecordSelect: UntypedExpr = {
     },
 }
 
-// TODO: multiple fields
-RecordCons: UntypedExpr = {
-    <s:@L> "{" <r:SimpleExpr> "|" <l:VarName> "=" <v:SimpleExpr> "}" <e:@L> => Expr::RecordCons {
+RecordNil: UntypedExpr = {
+    <s:@L> "{}" <e:@L> => Expr::RecordNil {
         meta: meta(s, e),
         typ: (),
-        label: l,
-        value: Box::new(v),
-        tail: Box::new(r),
-    },
+    }
+}
+
+Record: UntypedExpr = {
+    <s:@L> "{" <fields:RecordFields> "}" <e:@L> => {
+        fields.into_iter().fold(
+            Expr::RecordNil {
+                meta: meta(e - 1, e),
+                typ: (),
+            },
+            |a, e| Expr::RecordCons {
+                meta: e.1.meta().clone(),
+                typ: (),
+                label: e.0,
+                value: Box::new(e.1),
+                tail: Box::new(a),
+            }
+        )
+    }
+}
+
+RecordCons: UntypedExpr = {
+    <s:@L> "{" <r:SimpleExpr> "|" <fields:RecordFields> "}" <e:@L> => {
+        fields.into_iter().fold(r, |a, f| Expr::RecordCons {
+            meta: meta(s, e),
+            typ: (),
+            label: f.0,
+            value: Box::new(f.1),
+            tail: Box::new(a),
+        })
+    }
 }
 
 ModuleSelect: UntypedExpr = {
@@ -281,13 +308,6 @@ Nil: UntypedExpr = {
     }
 }
 
-RecordNil: UntypedExpr = {
-    <s:@L> "{}" <e:@L> => Expr::RecordNil {
-        meta: meta(s, e),
-        typ: (),
-    }
-}
-
 // TODO: Unescape?
 Atom: UntypedExpr = {
     <s:@L> <x:RawAtom> <e:@L> => Expr::Atom {
@@ -321,6 +341,37 @@ Float: UntypedExpr = {
         value: f64::from_str(f).unwrap(),
     }
 }
+
+RecordField: (String, UntypedExpr) = {
+    <l:VarName> "=" <v:OpOrSimpleExpr> => {
+        (l, v)
+    }
+}
+
+RecordFields: Vec<(String, UntypedExpr)> = {
+    RecordField => vec![<>],
+
+    <x:RecordField> "," => vec![x],
+
+    <x:RecordField> "," <xs:RecordFields> => {
+        let mut xs = xs;
+        xs.push(x);
+        xs
+    }
+}
+
+// AtLeastOneComma<T>: Vec<T> = {
+//     <v:(<T> ","?)> => vec![v],
+
+//     // <v:(<T> ",")+> <e:T?> => match e {
+//     //     None => v,
+//     //     Some(e) => {
+//     //         let mut v = v;
+//     //         v.push(e);
+//     //         v
+//     //     }
+//     // }
+// }
 
 Comma<T>: Vec<T> = {
     <v:(<T> ",")*> <e:T?> => match e {

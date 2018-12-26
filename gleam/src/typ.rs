@@ -687,23 +687,6 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             },
         }),
 
-        // #ast_record_extend{parent = Parent, label = Label, value = Value} ->
-        //   {RestRowType, Env1} = new_var(Env0),
-        //   {FieldType, Env2} = new_var(Env1),
-        //   ParentType = #type_record{row = RestRowType},
-        //   {AnnotatedValue, Env3} = infer(Value, Env2),
-        //   {AnnotatedParent, Env4} = infer(Parent, Env3),
-        //   TypeOfValue = fetch(AnnotatedValue),
-        //   TypeOfParent = fetch(AnnotatedParent),
-        //   Env5 = unify(FieldType, TypeOfValue, Env4),
-        //   Env6 = unify(ParentType, TypeOfParent, Env5),
-        //   Type = #type_record{row = #type_row_extend{label = Label,
-        //                                              type = FieldType,
-        //                                              parent = RestRowType}},
-        //   AnnotatedAst = Ast#ast_record_extend{type = {ok, Type},
-        //                                        parent = AnnotatedParent,
-        //                                        value = AnnotatedValue},
-        //   {AnnotatedAst, Env6};
         Expr::RecordCons {
             meta,
             tail,
@@ -994,6 +977,23 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
 
         (Type::Module { .. }, Type::Module { .. }) => unimplemented!(),
 
+        //| TRowEmpty, TRowEmpty -> ()
+        (Type::RowNil, Type::RowNil) => unimplemented!(),
+
+        (Type::RowCons { .. }, Type::RowCons { .. }) => unimplemented!(),
+
+        //| TRowExtend(label1, field_ty1, rest_row1), (TRowExtend _ as row2) -> begin
+        //		let rest_row1_tvar_ref_option = match rest_row1 with
+        //			| TVar ({contents = Unbound _} as tvar_ref) -> Some tvar_ref
+        //			| _ -> None
+        //		in
+        //		let rest_row2 = rewrite_row row2 label1 field_ty1 in
+        //		begin match rest_row1_tvar_ref_option with
+        //			| Some {contents = Link _} -> error "recursive row types"
+        //			| _ -> ()
+        //		end ;
+        //		unify rest_row1 rest_row2
+        //	end
         (_, _) => unimplemented!(),
     }
 }
@@ -1407,14 +1407,14 @@ fn infer_test() {
             src: "{{} | a = 1}",
             typ: "{a = Int}",
         },
-        /*
         Case {
             src: "{a = 1}",
             typ: "{a = Int}",
         },
+        /*
         Case {
-        src: "{a = 1, b = 2}",
-        typ: "{a = Int, b = Int}",
+            src: "{a = 1, b = 2}",
+            typ: "{a = Int, b = Int}",
         },
         Case {
         src: "{a = 1, b = 2.0, c = -1}",
