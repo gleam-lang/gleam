@@ -55,11 +55,6 @@ pub enum Type {
     },
 }
 
-enum RowKind {
-    Module,
-    Record,
-}
-
 impl Type {
     pub fn to_gleam_doc(&self, names: &mut HashMap<usize, String>, uid: &mut usize) -> Document {
         match self {
@@ -87,7 +82,7 @@ impl Type {
                     uid: &mut usize,
                 ) -> Document {
                     let mut fields = ordmap![];
-                    let tail = row.gather_fields(RowKind::Record, &mut fields);
+                    let tail = row.gather_fields(&mut fields);
                     let fields_doc = fields
                         .into_iter()
                         .map(|(label, typ)| {
@@ -129,33 +124,19 @@ impl Type {
         }
     }
 
-    fn gather_fields(&self, kind: RowKind, fields: &mut OrdMap<String, Type>) -> Option<Type> {
-        println!("{:?}", self);
+    fn gather_fields(&self, fields: &mut OrdMap<String, Type>) -> Option<Type> {
         match self {
             Type::RowNil => None,
 
             Type::RowCons { label, head, tail } => {
                 // TODO: Don't overwrite fields with tail ones with the same label
                 fields.insert(label.clone(), *head.clone());
-                tail.gather_fields(kind, fields)
+                tail.gather_fields(fields)
             }
 
-            Type::Var { typ } => {
-                println!("{:?}", typ);
-                match &*typ.borrow() {
-                    TypeVar::Link { typ } => typ.gather_fields(kind, fields),
-                    _other => Some(self.clone()),
-                }
-            }
-
-            Type::Module { row } => match kind {
-                RowKind::Module => row.gather_fields(kind, fields),
-                _other => Some(*row.clone()),
-            },
-
-            Type::Record { row } => match kind {
-                RowKind::Record => row.gather_fields(kind, fields),
-                _other => Some(*row.clone()),
+            Type::Var { typ } => match &*typ.borrow() {
+                TypeVar::Link { typ } => typ.gather_fields(fields),
+                _other => Some(self.clone()),
             },
 
             other => Some(other.clone()),
@@ -718,6 +699,15 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             },
         }),
 
+        // | RecordExtend(label, expr, record_expr) ->
+        //     let rest_row_ty = new_var level in
+        //     let field_ty = new_var level in
+        //     let param1_ty = field_ty in
+        //     let param2_ty = TRecord rest_row_ty in
+        //     let return_ty = TRecord (TRowExtend(label, field_ty, rest_row_ty)) in
+        //     unify param1_ty (infer env level expr) ;
+        //     unify param2_ty (infer env level record_expr) ;
+        //     return_ty
         Expr::RecordCons {
             meta,
             tail,
@@ -725,19 +715,26 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             value,
             ..
         } => {
-            let tail_type = Type::Record {
-                row: Box::new(env.new_unbound_var(level)),
-            };
-            let field_type = env.new_unbound_var(level);
             let value = infer(*value, level, env)?;
             let tail = infer(*tail, level, env)?;
-            unify(value.typ(), &field_type).map_err(|e| convert_unify_error(e, &meta))?;
-            unify(tail.typ(), &tail_type).map_err(|e| convert_unify_error(e, &meta))?;
+
+            let value_type = env.new_unbound_var(level);
+            unify(&value_type, value.typ()).map_err(|e| convert_unify_error(e, &meta))?;
+
+            let tail_row_type = env.new_unbound_var(level);
+            unify(
+                &Type::Record {
+                    row: Box::new(tail_row_type.clone()),
+                },
+                tail.typ(),
+            )
+            .map_err(|e| convert_unify_error(e, &meta))?;
+
             let typ = Type::Record {
                 row: Box::new(Type::RowCons {
                     label: label.clone(),
-                    head: Box::new(field_type),
-                    tail: Box::new(tail_type),
+                    head: Box::new(value_type),
+                    tail: Box::new(tail_row_type),
                 }),
             };
             Ok(Expr::RecordCons {
@@ -1008,10 +1005,44 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
 
         (Type::Module { .. }, Type::Module { .. }) => unimplemented!(),
 
-        //| TRowEmpty, TRowEmpty -> ()
         (Type::RowNil, Type::RowNil) => unimplemented!(),
 
-        (Type::RowCons { .. }, Type::RowCons { .. }) => unimplemented!(),
+        (
+            Type::RowCons {
+                label: label1,
+                head: head1,
+                tail: tail1,
+            },
+            Type::RowCons {
+                label: label2,
+                head: head2,
+                tail: tail2,
+            },
+        ) => {
+            let unbound = match &**tail1 {
+                Type::Var { typ } => match &*typ.borrow() {
+                    TypeVar::Unbound { .. } => Some(typ.clone()),
+                    _ => None,
+                },
+                _ => None,
+            };
+
+            // TODO: If we use Rc for types then we clone the Rc not the type
+            let t2 = Type::RowCons {
+                label: (*label2).clone(),
+                head: (*head2).clone(),
+                tail: (*tail2).clone(),
+            };
+            let tail2 = rewrite_row(t2, label1.clone(), *head1.clone())?;
+
+            if let Some(typ) = unbound {
+                match &*typ.borrow() {
+                    TypeVar::Link { .. } => unimplemented!(),
+                    _ => (),
+                }
+            }
+            unify(tail1, &tail2)
+        }
 
         //| TRowExtend(label1, field_ty1, rest_row1), (TRowExtend _ as row2) -> begin
         //		let rest_row1_tvar_ref_option = match rest_row1 with
@@ -1026,6 +1057,50 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
         //		unify rest_row1 rest_row2
         //	end
         (_, _) => unimplemented!(),
+    }
+}
+
+// and rewrite_row row2 label1 field_ty1 = match row2 with
+// 	| TRowEmpty -> error ("row does not contain label " ^ label1)
+// 	| TRowExtend(label2, field_ty2, rest_row2) when label2 = label1 ->
+// 			unify field_ty1 field_ty2 ;
+// 			rest_row2
+// 	| TRowExtend(label2, field_ty2, rest_row2) ->
+// 			TRowExtend(label2, field_ty2, rewrite_row rest_row2 label1 field_ty1)
+// 	| TVar {contents = Link row2} -> rewrite_row row2 label1 field_ty1
+// 	| TVar ({contents = Unbound(id, level)} as tvar) ->
+// 			let rest_row2 = new_var level in
+// 			let ty2 = TRowExtend(label1, field_ty1, rest_row2) in
+// 			tvar := Link ty2 ;
+// 			rest_row2
+// 	| _ -> error "row type expected"
+fn rewrite_row(row: Type, label1: String, head1: Type) -> Result<Type, UnifyError> {
+    match row {
+        Type::RowNil => unimplemented!(),
+
+        Type::RowCons { label, head, tail } => {
+            if label == label1 {
+                unify(&head1, &head)?;
+                Ok(*tail)
+            } else {
+                let tail = rewrite_row(*tail, label1, head1)?;
+                Ok(Type::RowCons {
+                    label,
+                    head,
+                    tail: Box::new(tail),
+                })
+            }
+        }
+
+        Type::Var { typ } => match &*typ.borrow() {
+            TypeVar::Unbound { .. } => unimplemented!(),
+
+            TypeVar::Link { typ } => rewrite_row(*typ.clone(), label1, head1),
+
+            _ => unimplemented!(),
+        },
+
+        _ => unimplemented!(),
     }
 }
 
@@ -1453,34 +1528,34 @@ fn infer_test() {
             src: "{a = 1, b = 2.0, c = -1}",
             typ: "{a = Int, b = Float, c = Int}",
         },
-        /*
         Case {
-        src: "{a = {a = 'ok'}}",
-        typ: "{a = {a = Atom}}",
+            src: "{a = {a = 'ok'}}",
+            typ: "{a = {a = Atom}}",
         },
         Case {
-        src: "{} == {}",
-        typ: "Bool",
+            src: "{} == {}",
+            typ: "Bool",
         },
         Case {
-        src: "{a = 1} == {a = 2}",
-        typ: "Bool",
+            src: "{a = 1} == {a = 2}",
+            typ: "Bool",
         },
         Case {
-        src: "{a = 1, b = 1} == {a = 1, b = 1}",
-        typ: "Bool",
+            src: "{a = 1, b = 1} == {a = 1, b = 1}",
+            typ: "Bool",
         },
         Case {
-        src: "{a = fn(x) { x }} == {a = fn(a) { a }}",
-        typ: "Bool",
+            src: "{a = fn(x) { x }} == {a = fn(a) { a }}",
+            typ: "Bool",
         },
         Case {
-        src: "{b = 1, a = 1} == {a = 1, b = 1}",
-        typ: "Bool",
+            src: "{b = 1, a = 1} == {a = 1, b = 1}",
+            typ: "Bool",
         },
         /* Record select
 
         */
+        /*
         Case {
         src: "{a = 1, b = 2.0}.b",
         typ: "Float",
