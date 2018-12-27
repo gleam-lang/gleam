@@ -960,13 +960,15 @@ fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
                 Type::Fun { args, retrn }
             }
 
-            Type::Record { .. } => unimplemented!(),
+            Type::Record { row } => Type::Record {
+                row: Box::new(go(*row, ctx_level, ids, env)),
+            },
 
             Type::Module { .. } => unimplemented!(),
 
             Type::RowCons { .. } => unimplemented!(),
 
-            Type::RowNil { .. } => unimplemented!(),
+            Type::RowNil => t,
         }
     }
 
@@ -1462,15 +1464,21 @@ fn generalise(t: Type, ctx_level: usize) -> Type {
 
         Type::Tuple { .. } => unimplemented!(),
 
-        Type::Const { .. } => return t,
+        Type::Const { .. } => t,
 
-        Type::Record { .. } => unimplemented!(),
+        Type::Record { row } => Type::Record {
+            row: Box::new(generalise(*row, ctx_level)),
+        },
 
         Type::Module { .. } => unimplemented!(),
 
-        Type::RowCons { .. } => unimplemented!(),
+        Type::RowCons { label, head, tail } => Type::RowCons {
+            label,
+            head: Box::new(generalise(*head, ctx_level)),
+            tail: Box::new(generalise(*tail, ctx_level)),
+        },
 
-        Type::RowNil { .. } => unimplemented!(),
+        Type::RowNil => t,
     }
 }
 
@@ -1871,12 +1879,12 @@ fn private() { 1 }
 pub fn public() { 1 }",
             typ: "module { fn public() -> Int }",
         },
-        // Case {
-        //     src: "
-        // fn empty() { {} }
-        // pub fn run() { { empty() | level = 1 } }",
-        //     typ: "module { fn run() -> {level = Int} }",
-        // },
+        Case {
+            src: "
+fn empty() { {} }
+pub fn run() { { empty() | level = 1 } }",
+            typ: "module { fn run() -> {level = Int} }",
+        },
         // Case {
         //     src: "
         // pub enum Is = | Yes | No
