@@ -84,29 +84,12 @@ fn command_build(matches: &clap::ArgMatches) {
 
         let mut module = crate::grammar::ModuleParser::new()
             .parse(&src)
-            .expect(&format!("Unable to parse {:?}", dir_entry.path()));
+            .expect(&format!("Unable to parse {:?}", name));
 
-        module.name = name;
+        module.name = name.clone();
 
-        // TODO: infer types.
-
-        let module = {
-            use crate::{ast::*, typ::*};
-            Module {
-                name: module.name,
-                statements: vec![Statement::Fun {
-                    meta: Meta::default(),
-                    public: true,
-                    name: "hello".to_string(),
-                    args: vec![],
-                    body: Expr::String {
-                        meta: Meta::default(),
-                        typ: string(),
-                        value: "Hello, world!".to_string(),
-                    },
-                }],
-            }
-        };
+        let module = crate::typ::infer_module(module)
+            .expect(&format!("Unable to infer types of {:?}", name));
 
         let erl = crate::erl::module(module);
 

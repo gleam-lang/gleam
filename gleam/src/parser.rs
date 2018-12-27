@@ -612,6 +612,7 @@ fn expr_test() {
 fn module_test() {
     assert_eq!(
         Ok(Module {
+            typ: (),
             name: "".to_string(),
             statements: vec![]
         }),
@@ -620,6 +621,7 @@ fn module_test() {
 
     assert_eq!(
         Ok(Module {
+            typ: (),
             name: "".to_string(),
             statements: vec![Statement::Import {
                 meta: Meta { start: 0, end: 12 },
@@ -631,6 +633,7 @@ fn module_test() {
 
     assert_eq!(
         Ok(Module {
+            typ: (),
             name: "".to_string(),
             statements: vec![Statement::ExternalType {
                 meta: Meta { start: 0, end: 18 },
@@ -644,6 +647,7 @@ fn module_test() {
 
     assert_eq!(
         Ok(Module {
+            typ: (),
             name: "".to_string(),
             statements: vec![Statement::ExternalType {
                 meta: Meta { start: 0, end: 22 },
@@ -657,6 +661,7 @@ fn module_test() {
 
     assert_eq!(
         Ok(Module {
+            typ: (),
             name: "".to_string(),
             statements: vec![Statement::ExternalType {
                 meta: Meta { start: 0, end: 26 },
@@ -670,6 +675,7 @@ fn module_test() {
 
     assert_eq!(
         Ok(Module {
+            typ: (),
             name: "".to_string(),
             statements: vec![Statement::Fun {
                 meta: Meta { start: 0, end: 24 },
@@ -704,6 +710,7 @@ fn module_test() {
 
     assert_eq!(
         Ok(Module {
+            typ: (),
             name: "".to_string(),
             statements: vec![Statement::Fun {
                 meta: Meta { start: 0, end: 17 },
@@ -722,6 +729,7 @@ fn module_test() {
 
     assert_eq!(
         Ok(Module {
+            typ: (),
             name: "".to_string(),
             statements: vec![Statement::Test {
                 meta: Meta { start: 0, end: 16 },
@@ -747,6 +755,7 @@ fn module_test() {
 
     assert_eq!(
         Ok(Module {
+            typ: (),
             name: "".to_string(),
             statements: vec![Statement::ExternalFun {
                 meta: Meta { start: 0, end: 49 },

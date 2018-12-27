@@ -26,29 +26,32 @@ pub fn module(module: TypedModule) -> String {
     format!("-module({}).", module.name)
         .to_doc()
         .append(line())
+        .append(line())
         .append(
             module
                 .statements
                 .into_iter()
-                .map(statement)
+                .flat_map(statement)
+                .intersperse(line().append(line()))
                 .collect::<Vec<_>>(),
         )
+        .append(line())
         .format(80)
 }
 
-fn statement(statement: TypedStatement) -> Document {
+fn statement(statement: TypedStatement) -> Option<Document> {
     match statement {
-        Statement::Test { name, body, .. } => test(name, body),
-        Statement::Enum { .. } => nil(),
-        Statement::Import { .. } => nil(),
-        Statement::ExternalType { .. } => nil(),
+        Statement::Test { name, body, .. } => Some(test(name, body)),
+        Statement::Enum { .. } => None,
+        Statement::Import { .. } => None,
+        Statement::ExternalType { .. } => None,
         Statement::Fun {
             args,
             public,
             name,
             body,
             ..
-        } => mod_fun(public, name, args, body),
+        } => Some(mod_fun(public, name, args, body)),
         Statement::ExternalFun {
             fun,
             module,
@@ -56,7 +59,7 @@ fn statement(statement: TypedStatement) -> Document {
             public,
             name,
             ..
-        } => external_fun(public, name, module, fun, args.len()),
+        } => Some(external_fun(public, name, module, fun, args.len())),
     }
 }
 
@@ -64,13 +67,11 @@ fn mod_fun(public: bool, name: String, args: Vec<Arg>, body: TypedExpr) -> Docum
     let body_doc = expr(body, &mut Env::default());
 
     export(public, &name, args.len())
-        .append(line())
         .append(name)
         .append(fun_args(args))
         .append(" ->")
-        .append(line().append(body_doc).nest(INDENT))
+        .append(line().append(body_doc).nest(INDENT).group())
         .append(".")
-        .append(line())
 }
 
 fn fun_args(args: Vec<Arg>) -> Document {
@@ -86,8 +87,8 @@ fn fun_args(args: Vec<Arg>) -> Document {
 
 fn test(name: String, body: TypedExpr) -> Document {
     let body_doc = expr(body, &mut Env::default());
-    line()
-        .append("-ifdef(TEST).")
+    "-ifdef(TEST)."
+        .to_doc()
         .append(line())
         .append(name)
         .append("_test() ->")
@@ -95,7 +96,6 @@ fn test(name: String, body: TypedExpr) -> Document {
         .append(".")
         .append(line())
         .append("-endif.")
-        .append(line())
 }
 
 fn export(public: bool, name: &String, arity: usize) -> Document {
@@ -330,17 +330,15 @@ fn external_fun(public: bool, name: String, module: String, fun: String, arity: 
     let header = format!("{}({}) ->", name, chars).to_doc();
     let body = format!("{}:{}({}).", module, fun, chars).to_doc();
 
-    line()
-        .to_doc()
-        .append(export(public, &name, arity))
+    export(public, &name, arity)
         .append(header)
         .append(line().append(body).nest(INDENT))
-        .append(line())
 }
 
 #[test]
 fn module_test() {
     let m: TypedModule = Module {
+        typ: crate::typ::int(),
         name: "magic".to_string(),
         statements: vec![
             Statement::ExternalType {
@@ -416,6 +414,7 @@ map() ->
     assert_eq!(expected, module(m));
 
     let m: TypedModule = Module {
+        typ: crate::typ::int(),
         name: "term".to_string(),
         statements: vec![
             Statement::Fun {
@@ -701,6 +700,7 @@ funny() ->
     //     {'ok', 1, 2.0}.
 
     let m: TypedModule = Module {
+        typ: crate::typ::int(),
         name: "term".to_string(),
         statements: vec![Statement::Fun {
             meta: default(),
@@ -755,6 +755,7 @@ some_function(ArgOne,
     assert_eq!(expected, module(m));
 
     let m: TypedModule = Module {
+        typ: crate::typ::int(),
         name: "term".to_string(),
         statements: vec![Statement::Test {
             meta: default(),
@@ -777,6 +778,7 @@ bang_test() ->
     assert_eq!(expected, module(m));
 
     let m: TypedModule = Module {
+        typ: crate::typ::int(),
         name: "vars".to_string(),
         statements: vec![
             Statement::Fun {
@@ -838,6 +840,7 @@ another() ->
     assert_eq!(expected, module(m));
 
     let m: TypedModule = Module {
+        typ: crate::typ::int(),
         name: "my_mod".to_string(),
         statements: vec![Statement::Fun {
             meta: default(),

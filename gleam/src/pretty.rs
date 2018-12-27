@@ -118,8 +118,8 @@ fn fits(limit: isize, mut docs: Vector<(isize, Mode, Document)>) -> bool {
             Mode::Unbroken => fits(limit - unbroken.len() as isize, docs),
         },
         Document::Cons(left, right) => {
-            docs.push_front((indent, mode.clone(), *left));
-            docs.push_front((indent, mode, *right));
+            docs.push_front((indent, mode.clone(), *right));
+            docs.push_front((indent, mode, *left));
             fits(limit, docs)
         }
         Document::Nest(i, doc) => {
@@ -300,7 +300,7 @@ pub fn format(limit: isize, doc: Document) -> String {
         &mut buffer,
         limit,
         0,
-        vector![(0, Mode::Broken, Document::Group(Box::new(doc)))],
+        vector![(0, Mode::Unbroken, Document::Group(Box::new(doc)))],
     );
     buffer
 }

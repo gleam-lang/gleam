@@ -1,6 +1,9 @@
 #![allow(dead_code)] // TODO
 
-use crate::ast::{BinOp, Expr, Meta, Pattern, Scope, TypedExpr, UntypedExpr};
+use crate::ast::{
+    Arg, BinOp, Expr, Meta, Module, Pattern, Scope, Statement, TypedExpr, TypedModule,
+    TypedStatement, UntypedExpr, UntypedModule, UntypedStatement,
+};
 use crate::grammar;
 use crate::pretty::*;
 use im::{hashmap::HashMap, ordmap::OrdMap};
@@ -484,6 +487,56 @@ pub enum Error {
 /// Crawl the AST, annotating each node with the inferred type or
 /// returning an error.
 ///
+pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
+    let mut env = Env::new();
+    // let mut fn_types = vec![];
+
+    let statements = module
+        .statements
+        .into_iter()
+        .map(|s| {
+            // TODO: Push fn type on to fn_types
+            infer_statement(s, &mut env)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(Module {
+        name: module.name,
+        statements,
+        typ: Type::Module {
+            row: Box::new(int()), // TODO: construct module type from fn_types
+        },
+    })
+}
+
+pub fn infer_statement(
+    statement: UntypedStatement,
+    env: &mut Env,
+) -> Result<TypedStatement, Error> {
+    match statement {
+        Statement::Fun {
+            meta,
+            name,
+            public,
+            args,
+            body,
+        } => {
+            let (args_types, body) = infer_fun(&args, body, 1, env)?;
+            Ok(Statement::Fun {
+                meta,
+                name,
+                public,
+                args,
+                body,
+            })
+        }
+
+        _ => unimplemented!(),
+    }
+}
+
+/// Crawl the AST, annotating each node with the inferred type or
+/// returning an error.
+///
 pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr, Error> {
     match expr {
         Expr::Int { meta, value, .. } => Ok(Expr::Int {
@@ -561,13 +614,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             args,
             body,
         } => {
-            let args_types: Vec<_> = args.iter().map(|_| env.new_unbound_var(level)).collect();
-            let vars = env.variables.clone();
-            args.iter().zip(args_types.iter()).for_each(|(arg, t)| {
-                env.insert_variable(arg.name.to_string(), (*t).clone());
-            });
-            let body = infer(*body, level, env)?;
-            env.variables = vars;
+            let (args_types, body) = infer_fun(&args, *body, level, env)?;
             let typ = Type::Fun {
                 args: args_types,
                 retrn: Box::new(body.typ().clone()),
@@ -752,6 +799,22 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
 
         Expr::ModuleSelect { .. } => unimplemented!(),
     }
+}
+
+fn infer_fun(
+    args: &Vec<Arg>,
+    body: UntypedExpr,
+    level: usize,
+    env: &mut Env,
+) -> Result<(Vec<Type>, TypedExpr), Error> {
+    let args_types: Vec<_> = args.iter().map(|_| env.new_unbound_var(level)).collect();
+    let vars = env.variables.clone();
+    args.iter().zip(args_types.iter()).for_each(|(arg, t)| {
+        env.insert_variable(arg.name.to_string(), (*t).clone());
+    });
+    let body = infer(body, level, env)?;
+    env.variables = vars;
+    Ok((args_types, body))
 }
 
 fn bin_op_name(name: BinOp) -> String {

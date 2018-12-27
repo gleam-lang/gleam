@@ -7,6 +7,7 @@ pub type UntypedModule = Module<()>;
 #[derive(Debug, PartialEq)]
 pub struct Module<T> {
     pub name: String,
+    pub typ: T,
     pub statements: Vec<Statement<T>>,
 }
 
