@@ -55,6 +55,11 @@ pub enum Type {
     },
 }
 
+enum RowKind {
+    Module,
+    Record,
+}
+
 impl Type {
     pub fn to_gleam_doc(&self, names: &mut HashMap<usize, String>, uid: &mut usize) -> Document {
         match self {
@@ -75,57 +80,83 @@ impl Type {
 
             Type::Tuple { elems, .. } => args_to_gleam_doc(elems, names, uid).surround("{", "}"),
 
-            Type::Record { row } => "{"
-                .to_doc()
-                .append(
-                    break_("", "")
-                        .append(row.to_gleam_doc(names, uid))
-                        .nest(INDENT)
-                        .append(break_("", ""))
-                        .group(),
-                )
-                .append("}"),
+            Type::Record { row } => {
+                pub fn row_to_doc(
+                    row: &Type,
+                    names: &mut HashMap<usize, String>,
+                    uid: &mut usize,
+                ) -> Document {
+                    let mut fields = ordmap![];
+                    let tail = row.gather_fields(RowKind::Record, &mut fields);
+                    let fields_doc = fields
+                        .into_iter()
+                        .map(|(label, typ)| {
+                            label.to_doc().append(" =").append(
+                                break_("", " ")
+                                    .append(typ.to_gleam_doc(names, uid))
+                                    .nest(INDENT)
+                                    .group(),
+                            )
+                        })
+                        .intersperse(break_(",", ", "))
+                        .collect::<Vec<_>>()
+                        .to_doc();
+                    match tail {
+                        // TODO: concat on the tail
+                        Some(_tail) => fields_doc,
+                        None => fields_doc,
+                    }
+                }
+
+                "{".to_doc()
+                    .append(
+                        break_("", "")
+                            .append(row_to_doc(row, names, uid))
+                            .nest(INDENT)
+                            .append(break_("", ""))
+                            .group(),
+                    )
+                    .append("}")
+            }
 
             Type::Module { .. } => unimplemented!(),
 
             Type::Var { typ, .. } => typ.borrow().to_gleam_doc(names, uid),
 
-            Type::RowCons { .. } => {
-                let mut fields = ordmap![];
-                let tail = self.gather_fields(&mut fields);
-                let fields_doc = fields
-                    .into_iter()
-                    .map(|(label, typ)| {
-                        label.to_doc().append(" =").append(
-                            break_("", " ")
-                                .append(typ.to_gleam_doc(names, uid))
-                                .nest(INDENT)
-                                .group(),
-                        )
-                    })
-                    .intersperse(break_(",", ", "))
-                    .collect::<Vec<_>>()
-                    .to_doc();
-                match tail {
-                    // TODO: concat on the tail
-                    Some(_tail) => fields_doc,
-                    None => fields_doc,
-                }
-            }
+            Type::RowCons { .. } => unreachable!(),
 
             Type::RowNil { .. } => nil(),
         }
     }
 
-    fn gather_fields(&self, fields: &mut OrdMap<String, Type>) -> Option<Type> {
+    fn gather_fields(&self, kind: RowKind, fields: &mut OrdMap<String, Type>) -> Option<Type> {
+        println!("{:?}", self);
         match self {
             Type::RowNil => None,
 
             Type::RowCons { label, head, tail } => {
                 // TODO: Don't overwrite fields with tail ones with the same label
                 fields.insert(label.clone(), *head.clone());
-                tail.gather_fields(fields)
+                tail.gather_fields(kind, fields)
             }
+
+            Type::Var { typ } => {
+                println!("{:?}", typ);
+                match &*typ.borrow() {
+                    TypeVar::Link { typ } => typ.gather_fields(kind, fields),
+                    _other => Some(self.clone()),
+                }
+            }
+
+            Type::Module { row } => match kind {
+                RowKind::Module => row.gather_fields(kind, fields),
+                _other => Some(*row.clone()),
+            },
+
+            Type::Record { row } => match kind {
+                RowKind::Record => row.gather_fields(kind, fields),
+                _other => Some(*row.clone()),
+            },
 
             other => Some(other.clone()),
         }
@@ -1091,13 +1122,16 @@ fn update_levels(typ: &Type, own_level: usize, own_id: usize) -> Result<(), Unif
             update_levels(retrn, own_level, own_id)
         }
 
-        Type::Record { .. } => unimplemented!(),
+        Type::Record { row, .. } => update_levels(row, own_level, own_id),
 
-        Type::Module { .. } => unimplemented!(),
+        Type::Module { row, .. } => update_levels(row, own_level, own_id),
 
         Type::Var { .. } => unreachable!(),
 
-        Type::RowCons { .. } => unimplemented!(),
+        Type::RowCons { head, tail, .. } => {
+            update_levels(head, own_level, own_id)?;
+            update_levels(tail, own_level, own_id)
+        }
 
         Type::RowNil { .. } => Ok(()),
     }
@@ -1411,15 +1445,15 @@ fn infer_test() {
             src: "{a = 1}",
             typ: "{a = Int}",
         },
-        /*
         Case {
             src: "{a = 1, b = 2}",
             typ: "{a = Int, b = Int}",
         },
         Case {
-        src: "{a = 1, b = 2.0, c = -1}",
-        typ: "{a = Int, b = Float, c = Int}",
+            src: "{a = 1, b = 2.0, c = -1}",
+            typ: "{a = Int, b = Float, c = Int}",
         },
+        /*
         Case {
         src: "{a = {a = 'ok'}}",
         typ: "{a = {a = Atom}}",
@@ -1494,14 +1528,14 @@ fn infer_test() {
         let ast = grammar::ExprParser::new().parse(src).expect("syntax error");
         let result = infer(ast, 1, &mut Env::new()).expect("should successfully infer");
         assert_eq!(
-            (src, typ.to_string()),
             (
                 src,
                 result
                     .typ()
                     .to_gleam_doc(&mut hashmap![], &mut 0)
                     .format(80)
-            )
+            ),
+            (src, typ.to_string()),
         );
     }
 }
