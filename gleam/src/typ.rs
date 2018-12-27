@@ -1,8 +1,8 @@
 #![allow(dead_code)] // TODO
 
 use crate::ast::{
-    Arg, BinOp, Expr, Meta, Module, Pattern, Scope, Statement, TypedExpr, TypedModule,
-    TypedStatement, UntypedExpr, UntypedModule, UntypedStatement,
+    Arg, BinOp, Expr, Meta, Module, Pattern, Scope, Statement, TypedExpr, TypedModule, UntypedExpr,
+    UntypedModule,
 };
 use crate::grammar;
 use crate::pretty::*;
@@ -79,11 +79,7 @@ impl Type {
             Type::Tuple { elems, .. } => args_to_gleam_doc(elems, names, uid).surround("{", "}"),
 
             Type::Record { row } => {
-                pub fn row_to_doc(
-                    row: &Type,
-                    names: &mut HashMap<usize, String>,
-                    uid: &mut usize,
-                ) -> Document {
+                let mut row_to_doc = |row: &Type| {
                     let mut fields = ordmap![];
                     let tail = row.gather_fields(&mut fields);
                     let fields_doc = fields
@@ -104,12 +100,12 @@ impl Type {
                         Some(_tail) => fields_doc,
                         None => fields_doc,
                     }
-                }
+                };
 
                 "{".to_doc()
                     .append(
                         break_("", "")
-                            .append(row_to_doc(row, names, uid))
+                            .append(row_to_doc(row))
                             .nest(INDENT)
                             .append(break_("", ""))
                             .group(),
@@ -117,7 +113,46 @@ impl Type {
                     .append("}")
             }
 
-            Type::Module { .. } => unimplemented!(),
+            Type::Module { row } => {
+                let to_doc = |(label, t)| match t {
+                    Type::Fun { args, retrn } => "fn "
+                        .to_doc()
+                        .append(label)
+                        .append(args_to_gleam_doc(&args, names, uid))
+                        .append("() -> ")
+                        .append(retrn.to_gleam_doc(names, uid)),
+
+                    other => other.to_gleam_doc(names, uid),
+                };
+
+                let row_to_doc = |row: &Type| {
+                    let mut fields = ordmap![];
+                    let tail = row.gather_fields(&mut fields);
+                    let fields_doc = fields
+                        .into_iter()
+                        .map(to_doc)
+                        .intersperse(break_(",", ", "))
+                        .collect::<Vec<_>>()
+                        .to_doc()
+                        .append(break_("", " "));
+                    match tail {
+                        // TODO: concat on the tail
+                        Some(_tail) => fields_doc,
+                        None => fields_doc,
+                    }
+                };
+
+                "module {"
+                    .to_doc()
+                    .append(
+                        break_("", " ")
+                            .append(row_to_doc(row))
+                            .nest(INDENT)
+                            .append(break_("", ""))
+                            .group(),
+                    )
+                    .append("}")
+            }
 
             Type::Var { typ, .. } => typ.borrow().to_gleam_doc(names, uid),
 
@@ -489,49 +524,58 @@ pub enum Error {
 ///
 pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
     let mut env = Env::new();
-    // let mut fn_types = vec![];
+    let mut fields = vec![];
 
     let statements = module
         .statements
         .into_iter()
         .map(|s| {
-            // TODO: Push fn type on to fn_types
-            infer_statement(s, &mut env)
+            match s {
+                Statement::Fun {
+                    meta,
+                    name,
+                    public,
+                    args,
+                    body,
+                } => {
+                    let (args_types, body) = infer_fun(&args, body, 2, &mut env)?;
+                    let typ = Type::Fun {
+                        args: args_types,
+                        retrn: Box::new(body.typ().clone()),
+                    };
+                    let typ = generalise(typ, 2);
+                    // TODO: Module scope
+                    env.insert_variable(name.clone(), typ.clone());
+                    if public {
+                        fields.push((name.clone(), typ));
+                    }
+                    Ok(Statement::Fun {
+                        meta,
+                        name,
+                        public,
+                        args,
+                        body,
+                    })
+                }
+
+                _ => unimplemented!(),
+            }
         })
         .collect::<Result<Vec<_>, _>>()?;
+
+    let row = fields
+        .into_iter()
+        .fold(Type::RowNil, |tail, (label, head)| Type::RowCons {
+            label,
+            head: Box::new(head),
+            tail: Box::new(tail),
+        });
+
     Ok(Module {
         name: module.name,
         statements,
-        typ: Type::Module {
-            row: Box::new(int()), // TODO: construct module type from fn_types
-        },
+        typ: Type::Module { row: Box::new(row) },
     })
-}
-
-pub fn infer_statement(
-    statement: UntypedStatement,
-    env: &mut Env,
-) -> Result<TypedStatement, Error> {
-    match statement {
-        Statement::Fun {
-            meta,
-            name,
-            public,
-            args,
-            body,
-        } => {
-            let (args_types, body) = infer_fun(&args, body, 1, env)?;
-            Ok(Statement::Fun {
-                meta,
-                name,
-                public,
-                args,
-                body,
-            })
-        }
-
-        _ => unimplemented!(),
-    }
 }
 
 /// Crawl the AST, annotating each node with the inferred type or
@@ -1350,6 +1394,141 @@ fn convert_not_fun_error(e: NotFunError, meta: &Meta) -> Error {
     }
 }
 
+enum GeneraliseVarAction {
+    NewTypeVar(TypeVar),
+    NewType(Type),
+}
+
+// let rec generalize level = function
+// 	| TVar {contents = Unbound(id, other_level)} when other_level > level ->
+// 			TVar (ref (Generic id))
+// 	| TApp(ty, ty_arg_list) ->
+// 			TApp(generalize level ty, List.map (generalize level) ty_arg_list)
+// 	| TArrow(param_ty_list, return_ty) ->
+// 			TArrow(List.map (generalize level) param_ty_list, generalize level return_ty)
+// 	| TVar {contents = Link ty} -> generalize level ty
+// 	| TVar {contents = Generic _} | TVar {contents = Unbound _} | TConst _ as ty -> ty
+/// Takes a level and a type and turns all type variables within the type that have
+/// level higher than the input level into generalized (polymorphic) type variables.
+///
+fn generalise(t: Type, ctx_level: usize) -> Type {
+    match t {
+        Type::Var { typ } => {
+            let new_var = match &*typ.borrow() {
+                TypeVar::Unbound { id, level } => {
+                    let id = *id;
+                    if *level > ctx_level {
+                        Some(TypeVar::Generic { id })
+                    } else {
+                        let level = *level;
+                        Some(TypeVar::Unbound { id, level })
+                    }
+                }
+
+                TypeVar::Link { typ } => return generalise((**typ).clone(), ctx_level),
+
+                TypeVar::Generic { .. } => None,
+            };
+
+            if let Some(v) = new_var {
+                *typ.borrow_mut() = v;
+            }
+            Type::Var { typ }
+        }
+
+        Type::App {
+            public,
+            module,
+            name,
+            args,
+        } => {
+            let args = args.into_iter().map(|t| generalise(t, ctx_level)).collect();
+            return Type::App {
+                public,
+                module,
+                name,
+                args,
+            };
+        }
+
+        Type::Fun { args, retrn } => {
+            let args = args.into_iter().map(|t| generalise(t, ctx_level)).collect();
+            let retrn = generalise(*retrn, ctx_level);
+            return Type::Fun {
+                args,
+                retrn: Box::new(retrn),
+            };
+        }
+
+        Type::Tuple { .. } => unimplemented!(),
+
+        Type::Const { .. } => return t,
+
+        Type::Record { .. } => unimplemented!(),
+
+        Type::Module { .. } => unimplemented!(),
+
+        Type::RowCons { .. } => unimplemented!(),
+
+        Type::RowNil { .. } => unimplemented!(),
+    }
+}
+
+pub fn int() -> Type {
+    Type::Const {
+        public: true,
+        name: "Int".to_string(),
+        module: "".to_string(),
+    }
+}
+
+pub fn float() -> Type {
+    Type::Const {
+        public: true,
+        name: "Float".to_string(),
+        module: "".to_string(),
+    }
+}
+
+pub fn atom() -> Type {
+    Type::Const {
+        public: true,
+        name: "Atom".to_string(),
+        module: "".to_string(),
+    }
+}
+
+pub fn bool() -> Type {
+    Type::Const {
+        public: true,
+        name: "Bool".to_string(),
+        module: "".to_string(),
+    }
+}
+
+pub fn string() -> Type {
+    Type::Const {
+        public: true,
+        name: "String".to_string(),
+        module: "".to_string(),
+    }
+}
+
+pub fn list(t: Type) -> Type {
+    Type::App {
+        public: true,
+        name: "List".to_string(),
+        module: "".to_string(),
+        args: vec![t],
+    }
+}
+
+pub fn record_nil() -> Type {
+    Type::Record {
+        row: Box::new(Type::RowNil),
+    }
+}
+
 #[test]
 fn infer_test() {
     struct Case {
@@ -1678,137 +1857,191 @@ fn infer_test() {
     }
 }
 
-enum GeneraliseVarAction {
-    NewTypeVar(TypeVar),
-    NewType(Type),
-}
-
-// let rec generalize level = function
-// 	| TVar {contents = Unbound(id, other_level)} when other_level > level ->
-// 			TVar (ref (Generic id))
-// 	| TApp(ty, ty_arg_list) ->
-// 			TApp(generalize level ty, List.map (generalize level) ty_arg_list)
-// 	| TArrow(param_ty_list, return_ty) ->
-// 			TArrow(List.map (generalize level) param_ty_list, generalize level return_ty)
-// 	| TVar {contents = Link ty} -> generalize level ty
-// 	| TVar {contents = Generic _} | TVar {contents = Unbound _} | TConst _ as ty -> ty
-/// Takes a level and a type and turns all type variables within the type that have
-/// level higher than the input level into generalized (polymorphic) type variables.
-///
-fn generalise(t: Type, ctx_level: usize) -> Type {
-    match t {
-        Type::Var { typ } => {
-            let new_var = match &*typ.borrow() {
-                TypeVar::Unbound { id, level } => {
-                    let id = *id;
-                    if *level > ctx_level {
-                        Some(TypeVar::Generic { id })
-                    } else {
-                        let level = *level;
-                        Some(TypeVar::Unbound { id, level })
-                    }
-                }
-
-                TypeVar::Link { typ } => return generalise((**typ).clone(), ctx_level),
-
-                TypeVar::Generic { .. } => None,
-            };
-
-            if let Some(v) = new_var {
-                *typ.borrow_mut() = v;
-            }
-            Type::Var { typ }
-        }
-
-        Type::App {
-            public,
-            module,
-            name,
-            args,
-        } => {
-            let args = args.into_iter().map(|t| generalise(t, ctx_level)).collect();
-            return Type::App {
-                public,
-                module,
-                name,
-                args,
-            };
-        }
-
-        Type::Fun { args, retrn } => {
-            let args = args.into_iter().map(|t| generalise(t, ctx_level)).collect();
-            let retrn = generalise(*retrn, ctx_level);
-            return Type::Fun {
-                args,
-                retrn: Box::new(retrn),
-            };
-        }
-
-        Type::Tuple { .. } => unimplemented!(),
-
-        Type::Const { .. } => return t,
-
-        Type::Record { .. } => unimplemented!(),
-
-        Type::Module { .. } => unimplemented!(),
-
-        Type::RowCons { .. } => unimplemented!(),
-
-        Type::RowNil { .. } => unimplemented!(),
+#[test]
+fn infer_module_test() {
+    struct Case {
+        src: &'static str,
+        typ: &'static str,
     }
-}
 
-pub fn int() -> Type {
-    Type::Const {
-        public: true,
-        name: "Int".to_string(),
-        module: "".to_string(),
-    }
-}
+    let cases = [
+        Case {
+            src: "
+fn private() { 1 }
+pub fn public() { 1 }",
+            typ: "module { fn public() -> Int }",
+        },
+        // Case {
+        //     src: "
+        // fn empty() { {} }
+        // pub fn run() { { empty() | level = 1 } }",
+        //     typ: "module { fn run() -> {level = Int} }",
+        // },
+        // Case {
+        //     src: "
+        // pub enum Is = | Yes | No
+        // pub fn yes() { Yes }
+        // pub fn no() { No }",
+        //     typ: "module { fn no() -> Is fn yes() -> Is }",
+        // },
+        // Case {
+        //     src: "
+        // pub enum Num = | I(Int)
+        // pub fn num(n) { I(n) }",
+        //     typ: "module { fn num(Int) -> Num }",
+        // },
+        // Case {
+        //     src: "
+        // pub fn status() { 'ok' }
+        // pub fn list_of(x) { [x] }
+        // pub fn get_age(person) { person.age }
+        // test whatever { 'ok' }",
+        //     typ: "module {
+        // fn get_age({a | age = b}) -> b
+        // fn list_of(c) -> List(c)
+        // fn status() -> Atom
+        // }",
+        // },
+        // Case {
+        //     src: "
+        // pub enum Box(a) = | Box(a)
+        // pub fn int() { Box(1) }
+        // pub fn float() { Box(1.0) }",
+        //     typ: "module { fn float() -> Box(Float) fn int() -> Box(Int) }",
+        // },
+        // Case {
+        //     src: "
+        // pub enum I = | I(Int)
+        // pub fn open(x) { case x { | I(i) -> i  } }",
+        //     typ: "module { fn open(I) -> Int }",
+        // },
+        // Case {
+        //     src: "
+        // pub external fn go(String) -> String = '' ''",
+        //     typ: "module { fn go(String) -> String }",
+        // },
+        // Case {
+        //     src: "pub external fn go(Atom) -> b = '' ''",
+        //     typ: "module { fn go(Atom) -> a }",
+        // },
+        // Case {
+        //     src: "pub external fn go(Bool) -> b = '' ''",
+        //     typ: "module { fn go(Bool) -> a }",
+        // },
+        // Case {
+        //     src: "pub external fn go(List(a)) -> a = '' ''",
+        //     typ: "module { fn go(List(a)) -> a }",
+        // },
+        // Case {
+        //     src: "pub external fn go(Tuple(a, b)) -> b = '' ''",
+        //     typ: "module { fn go(Tuple(a, b)) -> b }",
+        // },
+        // Case {
+        //     src: "
+        // external fn go(Bool) -> b = '' ''
+        // pub fn x() {
+        // go(True)
+        // }",
+        //     typ: "module { fn x() -> a }",
+        // },
+        // Case {
+        //     src: "
+        // external fn id(a) -> a = '' ''
+        // pub fn a() { id(1) }
+        // pub fn b() { id(1.0) }",
+        //     typ: "module { fn a() -> Int fn b() -> Float }",
+        // },
+        // Case {
+        //     src: "pub external fn len(List(a)) -> Int = '' ''",
+        //     typ: "module { fn len(List(a)) -> Int }",
+        // },
+        // Case {
+        //     src: "
+        // pub external type Connection\n
+        // pub external fn is_open(Connection) -> Bool = '' ''",
+        //     typ: "module { fn is_open(Connection) -> Bool}",
+        // },
+        // Case {
+        //     src: "fn(x) { x:run() }",
+        //     typ: "fn(module {a | fn run() -> b}) -> b",
+        // },
+        // Case {
+        //     src: "fn(x) { x:go }",
+        //     typ: "fn(module {a | go = b}) -> b",
+        // },
+        // Case {
+        //     src: "
+        // pub fn two() { one() + zero() }
+        // pub fn one() { 1 }
+        // pub fn zero() { one() - 1 }",
+        //     typ: "module {
+        // fn one() -> Int
+        // fn two() -> Int
+        // fn zero() -> Int
+        // }",
+        // },
+        // Case {
+        //     src: "
+        // type Html = String
+        // pub fn go() { 1 }",
+        //     typ: "module { fn go() -> Int }",
+        // },
+        // Case {
+        //     src: "pub fn go(x: Int) { x }",
+        //     typ: "module { fn go(Int) -> Int }",
+        // },
+        // Case {
+        //     src: "pub fn go(x: List(a)) { x }",
+        //     typ: "module { fn go(List(a)) -> List(a) }",
+        // },
+        // Case {
+        //     src: "pub fn go(x: List(String)) { x }",
+        //     typ: "module { fn go(List(String)) -> List(String) }",
+        // },
+        // Case {
+        //     src: "pub fn go(x: b, y: c) { x }",
+        //     typ: "module { fn go(a, b) -> a }",
+        // },
+        // Case {
+        //     src: "pub fn go(x: Int) { x + 1 }",
+        //     typ: "module { fn go(Int) -> Int }",
+        // },
+        // Case {
+        //     src: "
+        // pub fn length(list) {
+        // case list {
+        // | [] -> 0
+        // | _ :: tail -> length(tail) + 1
+        // }
+        // }",
+        //     typ: "module { fn length(List(a)) -> Int }",
+        // }, // % TODO: Work our how to support mutual recursion
+        //    // % {
+        //    // %pub fn length(list) {\n
+        //    // %  case list {\n
+        //    // %  | [] -> 0\n
+        //    // %  | _ :: tail -> helper_length(tail) + 1\n
+        //    // %  }\n
+        //    // %}
+        //    // %fn helper_length(list) { length(list) }
+        //    // %   ,
+        //    // %module {
+        //    // % fn length(List(a)) -> Int
+        //    // %}
+        //    // % }
+    ];
 
-pub fn float() -> Type {
-    Type::Const {
-        public: true,
-        name: "Float".to_string(),
-        module: "".to_string(),
-    }
-}
-
-pub fn atom() -> Type {
-    Type::Const {
-        public: true,
-        name: "Atom".to_string(),
-        module: "".to_string(),
-    }
-}
-
-pub fn bool() -> Type {
-    Type::Const {
-        public: true,
-        name: "Bool".to_string(),
-        module: "".to_string(),
-    }
-}
-
-pub fn string() -> Type {
-    Type::Const {
-        public: true,
-        name: "String".to_string(),
-        module: "".to_string(),
-    }
-}
-
-pub fn list(t: Type) -> Type {
-    Type::App {
-        public: true,
-        name: "List".to_string(),
-        module: "".to_string(),
-        args: vec![t],
-    }
-}
-
-pub fn record_nil() -> Type {
-    Type::Record {
-        row: Box::new(Type::RowNil),
+    for Case { src, typ } in cases.into_iter() {
+        let ast = grammar::ModuleParser::new()
+            .parse(src)
+            .expect("syntax error");
+        let result = infer_module(ast).expect("should successfully infer");
+        assert_eq!(
+            (
+                src,
+                result.typ.to_gleam_doc(&mut hashmap![], &mut 0).format(80)
+            ),
+            (src, typ.to_string()),
+        );
     }
 }
