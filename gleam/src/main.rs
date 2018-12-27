@@ -39,7 +39,7 @@ fn main() {
                 .about("Compile Gleam modules in a given project")
                 .setting(AppSettings::ColoredHelp)
                 .arg(
-                    Arg::with_name("path")
+                    Arg::with_name("PATH")
                         .help("location of the project root")
                         .default_value("./")
                         .index(1),
@@ -56,7 +56,7 @@ fn main() {
 fn command_build(matches: &clap::ArgMatches) {
     use std::{fs, path::Path};
 
-    let root_dir = Path::new(matches.value_of("path").unwrap_or("."));
+    let root_dir = Path::new(matches.value_of("PATH").unwrap_or("."));
     let src_dir = root_dir.join("src");
     let srcs = fs::read_dir(src_dir)
         .expect("Could not locate src/")
