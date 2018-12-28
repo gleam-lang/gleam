@@ -167,8 +167,9 @@ impl Type {
             Type::RowNil => None,
 
             Type::RowCons { label, head, tail } => {
-                // TODO: Don't overwrite fields with tail ones with the same label
-                fields.insert(label.clone(), *head.clone());
+                if !fields.contains_key(label) {
+                    fields.insert(label.clone(), *head.clone());
+                }
                 tail.gather_fields(fields)
             }
 
@@ -1603,6 +1604,73 @@ fn infer_test() {
             src: "x = 'ok' y = x y",
             typ: "Atom",
         },
+        /* Lists
+
+        */
+        Case {
+            src: "[]",
+            typ: "List(a)",
+        },
+        Case {
+            src: "[1]",
+            typ: "List(Int)",
+        },
+        Case {
+            src: "[1, 2, 3]",
+            typ: "List(Int)",
+        },
+        Case {
+            src: "[[]]",
+            typ: "List(List(a))",
+        },
+        Case {
+            src: "[[1.0, 2.0]]",
+            typ: "List(List(Float))",
+        },
+        Case {
+            src: "[fn(x) { x }]",
+            typ: "List(fn(a) -> a)",
+        },
+        Case {
+            src: "[fn(x) { x + 1 }]",
+            typ: "List(fn(Int) -> Int)",
+        },
+        Case {
+            src: "[{[], []}]",
+            typ: "List({List(a), List(b)})",
+        },
+        Case {
+            src: "[fn(x) { x }, fn(x) { x + 1 }]",
+            typ: "List(fn(Int) -> Int)",
+        },
+        Case {
+            src: "[fn(x) { x + 1 }, fn(x) { x }]",
+            typ: "List(fn(Int) -> Int)",
+        },
+        Case {
+            src: "[[], []]",
+            typ: "List(List(a))",
+        },
+        Case {
+            src: "[[], ['ok']]",
+            typ: "List(List(Atom))",
+        },
+        Case {
+            src: "[1 | [2 | []]]",
+            typ: "List(Int)",
+        },
+        Case {
+            src: "[fn(x) { x } | []]",
+            typ: "List(fn(a) -> a)",
+        },
+        Case {
+            src: "f = fn(x) { x } [f, f]",
+            typ: "List(fn(a) -> a)",
+        },
+        Case {
+            src: "x = [1 | []] [2 | x]",
+            typ: "List(Int)",
+        },
         /* Tuples
 
         */
@@ -1802,6 +1870,22 @@ fn infer_test() {
             src: "{b = 1, a = 1} == {a = 1, b = 1}",
             typ: "Bool",
         },
+        Case {
+            src: "{{a = 1.0} | a = 1}",
+            typ: "{a = Int}",
+        },
+        Case {
+            src: "a = {} {a | b = 1}",
+            typ: "{b = Int}",
+        },
+        // Case {
+        //     src: "fn(r) { { r | x = 1 } }",
+        //     typ: "fn({ a }) -> {a | x = Int}",
+        // },
+        // Case {
+        //     src: "{ {} | a = 1}",
+        //     typ: "{a = Int}",
+        // },
         /* Record select
 
         */
@@ -1831,6 +1915,10 @@ fn infer_test() {
         typ: "fn(a) -> a",
         },
         Case {
+            src: "a = {b = 1} {a | b = 1.0}.b",
+            typ: "Float",
+        },
+        Case {
         src: "r = {a = fnCase {src:x) { x }, b = fn(x) { x }} [r.a, r.b]",
         typ: "ListCase {src:fn(a) -> a)",
         },
@@ -1845,6 +1933,14 @@ fn infer_test() {
         Case {
         src: "{a = 1, b = 2.0}.a",
         typ: "Int",
+        },
+        Case {
+            src: "fn(r) { r.x }",
+            typ: "fn({a | x = b}) -> b",
+        },
+        Case {
+            src: "fn(r) { r.x + 1 }",
+            typ: "fn({a | x = Int}) -> Int",
         },
          */
     ];
@@ -1924,8 +2020,7 @@ pub fn run() { { empty() | level = 1 } }",
         //     typ: "module { fn open(I) -> Int }",
         // },
         // Case {
-        //     src: "
-        // pub external fn go(String) -> String = '' ''",
+        //     src: "pub external fn go(String) -> String = '' ''",
         //     typ: "module { fn go(String) -> String }",
         // },
         // Case {
