@@ -113,8 +113,8 @@ fn fits(limit: isize, mut docs: Vector<(isize, Mode, Document)>) -> bool {
         Document::Line => true,
         Document::ForceBreak => false,
         Document::Nil => fits(limit, docs),
-        Document::Break { broken, unbroken } => match mode {
-            Mode::Broken => fits(limit - broken.len() as isize, docs),
+        Document::Break { unbroken, .. } => match mode {
+            Mode::Broken => true,
             Mode::Unbroken => fits(limit - unbroken.len() as isize, docs),
         },
         Document::Cons(left, right) => {
@@ -153,19 +153,8 @@ fn fits_test() {
     assert!(!fits(100, vector![(0, Unbroken, ForceBreak)]));
     assert!(!fits(100, vector![(0, Broken, ForceBreak)]));
 
-    // Break in Broken fits if `broken` fits
+    // Break in Broken fits always
     assert!(fits(
-        2,
-        vector![(
-            0,
-            Broken,
-            Break {
-                broken: "12".to_string(),
-                unbroken: "".to_string()
-            }
-        )]
-    ));
-    assert!(!fits(
         1,
         vector![(
             0,
@@ -332,7 +321,7 @@ fn fmt(b: &mut String, limit: isize, width: isize, mut docs: Vector<(isize, Mode
                     b.push_str(broken.as_str());
                     b.push_str("\n");
                     b.push_str(" ".repeat(indent as usize).as_str());
-                    width + broken.len() as isize
+                    indent as isize
                 }
             };
             fmt(b, limit, new_width, docs);

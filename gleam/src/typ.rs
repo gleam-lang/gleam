@@ -120,27 +120,36 @@ impl Type {
                 let mut row_to_doc = |row: &Type| {
                     let mut fields = ordmap![];
                     let tail = row.gather_fields(&mut fields);
-                    let fields_doc = fields
+                    let fields_docs = fields
                         .into_iter()
                         .map(|(label, t)| match t {
                             Type::Fun { args, retrn } => "fn "
                                 .to_doc()
                                 .append(label)
-                                .append(args_to_gleam_doc(&args, names, uid))
-                                .append("() -> ")
+                                .append(
+                                    "(".to_doc()
+                                        .append(break_("", ""))
+                                        .append(args_to_gleam_doc(&args, names, uid))
+                                        .append(break_("", ""))
+                                        .append(")")
+                                        .group(),
+                                )
+                                .append(" -> ")
                                 .append(retrn.to_gleam_doc(names, uid)),
 
                             other => other.to_gleam_doc(names, uid),
                         })
-                        .intersperse(break_(",", ", "))
-                        .collect::<Vec<_>>()
-                        .to_doc()
-                        .append(break_("", " "));
+                        .intersperse(break_("", " "))
+                        .collect::<Vec<_>>();
+                    let fields_doc = if fields_docs.len() > 1 {
+                        force_break().append(fields_docs)
+                    } else {
+                        fields_docs.to_doc()
+                    };
                     match tail {
                         None => fields_doc,
                         Some(tail) => tail
                             .to_gleam_doc(names, uid)
-                            .group()
                             .append(" | ")
                             .append(fields_doc),
                     }
@@ -152,7 +161,7 @@ impl Type {
                         break_("", " ")
                             .append(row_to_doc(row))
                             .nest(INDENT)
-                            .append(break_("", ""))
+                            .append(break_("", " "))
                             .group(),
                     )
                     .append("}")
@@ -233,6 +242,7 @@ fn args_to_gleam_doc(
         .to_doc()
         .nest(INDENT)
         .append(break_(",", ""))
+        .group()
 }
 
 #[test]
@@ -1455,7 +1465,14 @@ fn generalise(t: Type, ctx_level: usize) -> Type {
             };
         }
 
-        Type::Tuple { .. } => unimplemented!(),
+        Type::Tuple { elems } => {
+            return Type::Tuple {
+                elems: elems
+                    .into_iter()
+                    .map(|t| generalise(t, ctx_level))
+                    .collect(),
+            }
+        }
 
         Type::Const { .. } => t,
 
@@ -1934,6 +1951,17 @@ fn infer_test() {
             src: "fn(r) { r.x + 1 }",
             typ: "fn({a | x = Int}) -> Int",
         },
+        /* Module select
+
+         */
+        Case {
+        src: "fn(x) { x:run() }",
+        typ: "fn(module {a | fn run() -> b}) -> b",
+        },
+        Case {
+        src: "fn(x) { x:go }",
+        typ: "fn(module {a | go = b}) -> b",
+        },
          */
     ];
 
@@ -1972,6 +2000,10 @@ pub fn public() { 1 }",
 fn empty() { {} }
 pub fn run() { { empty() | level = 1 } }",
             typ: "module { fn run() -> {level = Int} }",
+        },
+        Case {
+            src: "pub fn ok(x) { {'ok', x} }",
+            typ: "module { fn ok(a) -> {Atom, a} }",
         },
         // Case {
         //     src: "
@@ -2056,14 +2088,17 @@ pub fn run() { { empty() | level = 1 } }",
         // pub external fn is_open(Connection) -> Bool = '' ''",
         //     typ: "module { fn is_open(Connection) -> Bool}",
         // },
-        // Case {
-        //     src: "fn(x) { x:run() }",
-        //     typ: "fn(module {a | fn run() -> b}) -> b",
-        // },
-        // Case {
-        //     src: "fn(x) { x:go }",
-        //     typ: "fn(module {a | go = b}) -> b",
-        // },
+        Case {
+            src: "
+pub fn one() { 1 }
+pub fn zero() { one() - 1 }
+pub fn two() { one() + zero() }",
+            typ: "module {
+  fn one() -> Int
+  fn two() -> Int
+  fn zero() -> Int
+}",
+        },
         // Case {
         //     src: "
         // pub fn two() { one() + zero() }
