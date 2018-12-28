@@ -1,7 +1,12 @@
-fn tup() {
-  {1, 2.0}
+fn greet(name) {
+  ["Hello, ", name, "!"]
 }
 
-fn funny() {
-  "111111111111111111111111111111111111111111111111111111111111111111111111111111111"
+fn add_name(record, name) {
+  record = { record | name = name }
+  record
+}
+
+fn its_tim(record) {
+  add_name(record, "Tim")
 }

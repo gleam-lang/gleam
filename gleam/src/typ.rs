@@ -981,7 +981,11 @@ fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
 
             Type::Module { .. } => unimplemented!(),
 
-            Type::RowCons { .. } => unimplemented!(),
+            Type::RowCons { label, head, tail } => Type::RowCons {
+                label,
+                head: Box::new(go(*head, ctx_level, ids, env)),
+                tail: Box::new(go(*tail, ctx_level, ids, env)),
+            },
 
             Type::RowNil => t,
         }
@@ -2004,6 +2008,20 @@ pub fn run() { { empty() | level = 1 } }",
         Case {
             src: "pub fn ok(x) { {'ok', x} }",
             typ: "module { fn ok(a) -> {Atom, a} }",
+        },
+        Case {
+            src: "pub fn empty() {
+  record = {}
+  record
+}",
+            typ: "module { fn empty() -> {} }",
+        },
+        Case {
+            src: "pub fn add_name(record, name) {
+  record = { record | name = name }
+  record
+}",
+            typ: "module { fn add_name({a | }, b) -> {a | name = b} }",
         },
         // Case {
         //     src: "
