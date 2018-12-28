@@ -96,9 +96,12 @@ impl Type {
                         .collect::<Vec<_>>()
                         .to_doc();
                     match tail {
-                        // TODO: concat on the tail
-                        Some(_tail) => fields_doc,
                         None => fields_doc,
+                        Some(tail) => tail
+                            .to_gleam_doc(names, uid)
+                            .group()
+                            .append(" | ")
+                            .append(fields_doc),
                     }
                 };
 
@@ -114,31 +117,32 @@ impl Type {
             }
 
             Type::Module { row } => {
-                let to_doc = |(label, t)| match t {
-                    Type::Fun { args, retrn } => "fn "
-                        .to_doc()
-                        .append(label)
-                        .append(args_to_gleam_doc(&args, names, uid))
-                        .append("() -> ")
-                        .append(retrn.to_gleam_doc(names, uid)),
-
-                    other => other.to_gleam_doc(names, uid),
-                };
-
-                let row_to_doc = |row: &Type| {
+                let mut row_to_doc = |row: &Type| {
                     let mut fields = ordmap![];
                     let tail = row.gather_fields(&mut fields);
                     let fields_doc = fields
                         .into_iter()
-                        .map(to_doc)
+                        .map(|(label, t)| match t {
+                            Type::Fun { args, retrn } => "fn "
+                                .to_doc()
+                                .append(label)
+                                .append(args_to_gleam_doc(&args, names, uid))
+                                .append("() -> ")
+                                .append(retrn.to_gleam_doc(names, uid)),
+
+                            other => other.to_gleam_doc(names, uid),
+                        })
                         .intersperse(break_(",", ", "))
                         .collect::<Vec<_>>()
                         .to_doc()
                         .append(break_("", " "));
                     match tail {
-                        // TODO: concat on the tail
-                        Some(_tail) => fields_doc,
                         None => fields_doc,
+                        Some(tail) => tail
+                            .to_gleam_doc(names, uid)
+                            .group()
+                            .append(" | ")
+                            .append(fields_doc),
                     }
                 };
 
@@ -1154,18 +1158,6 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
             unify(tail1, &tail2)
         }
 
-        //| TRowExtend(label1, field_ty1, rest_row1), (TRowExtend _ as row2) -> begin
-        //		let rest_row1_tvar_ref_option = match rest_row1 with
-        //			| TVar ({contents = Unbound _} as tvar_ref) -> Some tvar_ref
-        //			| _ -> None
-        //		in
-        //		let rest_row2 = rewrite_row row2 label1 field_ty1 in
-        //		begin match rest_row1_tvar_ref_option with
-        //			| Some {contents = Link _} -> error "recursive row types"
-        //			| _ -> ()
-        //		end ;
-        //		unify rest_row1 rest_row2
-        //	end
         (_, _) => unimplemented!(),
     }
 }
@@ -1878,14 +1870,14 @@ fn infer_test() {
             src: "a = {} {a | b = 1}",
             typ: "{b = Int}",
         },
-        // Case {
-        //     src: "fn(r) { { r | x = 1 } }",
-        //     typ: "fn({ a }) -> {a | x = Int}",
-        // },
-        // Case {
-        //     src: "{ {} | a = 1}",
-        //     typ: "{a = Int}",
-        // },
+        Case {
+            src: "fn(r) { { r | x = 1 } }",
+            typ: "fn({a | }) -> {a | x = Int}",
+        },
+        Case {
+            src: "{{} | a = 1}",
+            typ: "{a = Int}",
+        },
         /* Record select
 
         */
