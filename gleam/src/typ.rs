@@ -359,7 +359,7 @@ pub enum TypeVar {
 #[derive(Debug, Clone)]
 pub struct Env {
     uid: usize,
-    variables: HashMap<String, Type>,
+    variables: HashMap<String, (Scope<Type>, Type)>,
 }
 
 impl Env {
@@ -371,6 +371,7 @@ impl Env {
 
         env.insert_variable(
             "+".to_string(),
+            Scope::Local,
             Type::Fun {
                 args: vec![int(), int()],
                 retrn: Box::new(int()),
@@ -379,6 +380,7 @@ impl Env {
 
         env.insert_variable(
             "-".to_string(),
+            Scope::Local,
             Type::Fun {
                 args: vec![int(), int()],
                 retrn: Box::new(int()),
@@ -387,6 +389,7 @@ impl Env {
 
         env.insert_variable(
             "*".to_string(),
+            Scope::Local,
             Type::Fun {
                 args: vec![int(), int()],
                 retrn: Box::new(int()),
@@ -395,6 +398,7 @@ impl Env {
 
         env.insert_variable(
             "/".to_string(),
+            Scope::Local,
             Type::Fun {
                 args: vec![int(), int()],
                 retrn: Box::new(int()),
@@ -403,6 +407,7 @@ impl Env {
 
         env.insert_variable(
             "+.".to_string(),
+            Scope::Local,
             Type::Fun {
                 args: vec![float(), float()],
                 retrn: Box::new(float()),
@@ -411,6 +416,7 @@ impl Env {
 
         env.insert_variable(
             "-.".to_string(),
+            Scope::Local,
             Type::Fun {
                 args: vec![float(), float()],
                 retrn: Box::new(float()),
@@ -419,6 +425,7 @@ impl Env {
 
         env.insert_variable(
             "*.".to_string(),
+            Scope::Local,
             Type::Fun {
                 args: vec![float(), float()],
                 retrn: Box::new(float()),
@@ -427,6 +434,7 @@ impl Env {
 
         env.insert_variable(
             "/.".to_string(),
+            Scope::Local,
             Type::Fun {
                 args: vec![float(), float()],
                 retrn: Box::new(float()),
@@ -441,6 +449,7 @@ impl Env {
         };
         env.insert_variable(
             "|>".to_string(),
+            Scope::Local,
             Type::Fun {
                 args: vec![a, f],
                 retrn: Box::new(b),
@@ -450,6 +459,7 @@ impl Env {
         let a = env.new_generic_var();
         env.insert_variable(
             "==".to_string(),
+            Scope::Local,
             Type::Fun {
                 args: vec![a.clone(), a],
                 retrn: Box::new(bool()),
@@ -459,6 +469,7 @@ impl Env {
         let a = env.new_generic_var();
         env.insert_variable(
             "!=".to_string(),
+            Scope::Local,
             Type::Fun {
                 args: vec![a.clone(), a],
                 retrn: Box::new(bool()),
@@ -498,13 +509,13 @@ impl Env {
 
     /// Record the type of a variable in the environment.
     ///
-    pub fn insert_variable(&mut self, name: String, typ: Type) {
-        self.variables.insert(name, typ);
+    pub fn insert_variable(&mut self, name: String, scope: Scope<Type>, typ: Type) {
+        self.variables.insert(name, (scope, typ));
     }
 
     /// Record the type of a variable in the environment.
     ///
-    pub fn get_variable(&mut self, name: &String) -> Option<&Type> {
+    pub fn get_variable(&mut self, name: &String) -> Option<&(Scope<Type>, Type)> {
         self.variables.get(name)
     }
 }
@@ -514,7 +525,7 @@ pub enum Error {
     UnknownVariable {
         meta: Meta,
         name: String,
-        variables: HashMap<String, Type>,
+        variables: HashMap<String, (Scope<Type>, Type)>,
     },
 
     IncorrectArity {
@@ -544,37 +555,38 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
     let statements = module
         .statements
         .into_iter()
-        .map(|s| {
-            match s {
-                Statement::Fun {
+        .map(|s| match s {
+            Statement::Fun {
+                meta,
+                name,
+                public,
+                args,
+                body,
+            } => {
+                let (args_types, body) = infer_fun(&args, body, 2, &mut env)?;
+                let typ = Type::Fun {
+                    args: args_types,
+                    retrn: Box::new(body.typ().clone()),
+                };
+                let typ = generalise(typ, 2);
+                env.insert_variable(
+                    name.clone(),
+                    Scope::Module { arity: args.len() },
+                    typ.clone(),
+                );
+                if public {
+                    fields.push((name.clone(), typ));
+                }
+                Ok(Statement::Fun {
                     meta,
                     name,
                     public,
                     args,
                     body,
-                } => {
-                    let (args_types, body) = infer_fun(&args, body, 2, &mut env)?;
-                    let typ = Type::Fun {
-                        args: args_types,
-                        retrn: Box::new(body.typ().clone()),
-                    };
-                    let typ = generalise(typ, 2);
-                    // TODO: Module scope
-                    env.insert_variable(name.clone(), typ.clone());
-                    if public {
-                        fields.push((name.clone(), typ));
-                    }
-                    Ok(Statement::Fun {
-                        meta,
-                        name,
-                        public,
-                        args,
-                        body,
-                    })
-                }
-
-                _ => unimplemented!(),
+                })
             }
+
+            _ => unimplemented!(),
         })
         .collect::<Result<Vec<_>, _>>()?;
 
@@ -649,7 +661,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             typ: _,
             name,
         } => {
-            let typ = env.get_variable(&name).map(|t| t.clone()).ok_or_else(|| {
+            let (_scope, typ) = env.get_variable(&name).map(|t| t.clone()).ok_or_else(|| {
                 Error::UnknownVariable {
                     meta: meta.clone(),
                     name: name.to_string(),
@@ -700,7 +712,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         } => {
             let value = infer(*value, level + 1, env)?;
             let value_typ = generalise(value.typ().clone(), level + 1);
-            env.insert_variable(name.to_string(), value_typ.clone());
+            env.insert_variable(name.to_string(), Scope::Local, value_typ.clone());
             let then = infer(*then, level, env)?;
             let typ = then.typ().clone();
             Ok(Expr::Let {
@@ -868,9 +880,9 @@ fn infer_fun(
 ) -> Result<(Vec<Type>, TypedExpr), Error> {
     let args_types: Vec<_> = args.iter().map(|_| env.new_unbound_var(level)).collect();
     let vars = env.variables.clone();
-    args.iter().zip(args_types.iter()).for_each(|(arg, t)| {
-        env.insert_variable(arg.name.to_string(), (*t).clone());
-    });
+    args.iter()
+        .zip(args_types.iter())
+        .for_each(|(arg, t)| env.insert_variable(arg.name.to_string(), Scope::Local, (*t).clone()));
     let body = infer(body, level, env)?;
     env.variables = vars;
     Ok((args_types, body))

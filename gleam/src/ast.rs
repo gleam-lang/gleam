@@ -4,19 +4,19 @@ pub type TypedModule = Module<Scope<typ::Type>, typ::Type>;
 
 pub type UntypedModule = Module<(), ()>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Module<S, T> {
     pub name: String,
     pub typ: T,
     pub statements: Vec<Statement<S, T>>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Arg {
     pub name: String,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     Constructor {
         meta: Meta,
@@ -34,7 +34,7 @@ pub type TypedStatement = Statement<Scope<typ::Type>, typ::Type>;
 
 pub type UntypedStatement = Statement<(), ()>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Statement<S, T> {
     Fun {
         meta: Meta,
@@ -81,7 +81,7 @@ pub enum Statement<S, T> {
     },
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum BinOp {
     Pipe,
     Lt,
@@ -102,8 +102,7 @@ pub enum BinOp {
 
 pub type TypedScope = Scope<typ::Type>;
 
-// TODO: make only exist for TypedExpr
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Scope<T> {
     Local,
     Module { arity: usize },
@@ -120,7 +119,7 @@ pub type UntypedExpr = Expr<(), ()>;
 // I don't know how update a struct in place in a fashion that changes its type
 // though, and reconstructing the term to copy across the values is cumbersome.
 //
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expr<S, T> {
     Int {
         meta: Meta,
@@ -303,7 +302,7 @@ impl TypedExpr {
 
 pub type TypedClause = Clause<Scope<typ::Type>, typ::Type>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Clause<S, T> {
     pub meta: Meta,
     pub pattern: Pattern,
@@ -316,7 +315,7 @@ pub struct Meta {
     pub end: usize,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Pattern {
     Int {
         meta: Meta,
