@@ -118,13 +118,13 @@ fn string(value: String) -> Document {
     value.to_doc().surround("<<\"", "\">>")
 }
 
-fn tuple<F, E>(f: F, elems: Vec<E>, mut env: &Env) -> Document
+fn tuple<F, E>(f: F, elems: Vec<E>, env: &mut Env) -> Document
 where
-    F: Fn(E, &Env) -> Document,
+    F: Fn(E, &mut Env) -> Document,
 {
     elems
         .into_iter()
-        .map(|e| f(e, &mut env))
+        .map(|e| f(e, env))
         .intersperse(delim(","))
         .collect::<Vec<_>>()
         .to_doc()
@@ -133,16 +133,16 @@ where
         .group()
 }
 
-fn seq(first: TypedExpr, then: TypedExpr, mut env: &Env) -> Document {
-    expr(first, &mut env)
+fn seq(first: TypedExpr, then: TypedExpr, env: &mut Env) -> Document {
+    expr(first, env)
         .append(",")
         .append(line())
-        .append(expr(then, &mut env))
+        .append(expr(then, env))
 }
 
 // TODO: Surround left or right in parens if required
 // TODO: Group nested bin_ops i.e. a |> b |> c
-fn bin_op(name: BinOp, left: TypedExpr, right: TypedExpr, mut env: &Env) -> Document {
+fn bin_op(name: BinOp, left: TypedExpr, right: TypedExpr, env: &mut Env) -> Document {
     let op = match name {
         BinOp::Pipe => "|>", // TODO: This is wrong.
         BinOp::Lt => "<",
@@ -161,109 +161,109 @@ fn bin_op(name: BinOp, left: TypedExpr, right: TypedExpr, mut env: &Env) -> Docu
         BinOp::DivFloat => "/",
     };
 
-    expr(left, &mut env)
+    expr(left, env)
         .append(break_("", " "))
         .append(op)
         .append(" ")
-        .append(expr(right, &mut env))
+        .append(expr(right, env))
 }
 
-fn let_(value: TypedExpr, pat: Pattern, then: TypedExpr, mut env: &Env) -> Document {
-    pattern(pat, &mut env)
+fn let_(value: TypedExpr, pat: Pattern, then: TypedExpr, env: &mut Env) -> Document {
+    pattern(pat, env)
         .append(" =")
         .append(break_("", " "))
-        .append(expr(value, &mut env).nest(INDENT))
+        .append(expr(value, env).nest(INDENT))
         .append(",")
         .append(line())
-        .append(expr(then, &mut env))
+        .append(expr(then, env))
 }
 
-fn pattern(p: Pattern, mut env: &Env) -> Document {
+fn pattern(p: Pattern, env: &mut Env) -> Document {
     match p {
         Pattern::Nil { .. } => "[]".to_doc(),
         Pattern::List { .. } => unimplemented!(),
         Pattern::Record { .. } => unimplemented!(),
-        Pattern::Var { name, .. } => var(name, Scope::Local, &mut env),
+        Pattern::Var { name, .. } => var(name, Scope::Local, env),
         Pattern::Int { value, .. } => value.to_doc(),
         Pattern::Atom { value, .. } => atom(value),
         Pattern::Float { value, .. } => value.to_doc(),
-        Pattern::Tuple { elems, .. } => tuple(pattern, elems, &mut env),
+        Pattern::Tuple { elems, .. } => tuple(pattern, elems, env),
         Pattern::String { value, .. } => string(value),
-        Pattern::Enum { name, args, .. } => enum_(pattern_atom, pattern, name, args, &mut env),
+        Pattern::Enum { name, args, .. } => enum_(pattern_atom, pattern, name, args, env),
     }
 }
 
-fn cons(head: TypedExpr, tail: TypedExpr, mut env: &Env) -> Document {
+fn cons(head: TypedExpr, tail: TypedExpr, env: &mut Env) -> Document {
     // TODO: Flatten nested cons into a list i.e. [1, 2, 3 | X] or [1, 2, 3, 4]
     // TODO: Break, indent, etc
-    expr(head, &mut env)
+    expr(head, env)
         .append(" | ")
-        .append(expr(tail, &mut env))
+        .append(expr(tail, env))
         .surround("[", "]")
 }
 
-fn expr_record_cons(label: String, value: TypedExpr, tail: TypedExpr, mut env: &Env) -> Document {
-    record_cons(expr, "=>".to_string(), label, value, tail, &mut env)
+fn expr_record_cons(label: String, value: TypedExpr, tail: TypedExpr, env: &mut Env) -> Document {
+    record_cons(expr, "=>".to_string(), label, value, tail, env)
 }
 
-fn record_cons<F, E>(f: F, sep: String, label: String, value: E, tail: E, mut env: &Env) -> Document
+fn record_cons<F, E>(f: F, sep: String, label: String, value: E, tail: E, env: &mut Env) -> Document
 where
-    F: Fn(E, &Env) -> Document,
+    F: Fn(E, &mut Env) -> Document,
 {
     // TODO: Flatten nested cons into a map i.e. X#{a=>1, b=>2}
     // TODO: Break, indent, etc
-    f(tail, &mut env)
+    f(tail, env)
         .append("#{")
         .append(atom(label))
         .append(" ")
         .append(sep)
         .append(" ")
-        .append(f(value, &mut env))
+        .append(f(value, env))
         .append("}")
 }
 
-fn var(name: String, scope: TypedScope, mut env: &Env) -> Document {
+fn var(name: String, scope: TypedScope, env: &mut Env) -> Document {
     match scope {
         Scope::Local => name.to_camel_case().to_doc(),
-        Scope::Constant { value } => expr(*value, &mut env),
+        Scope::Constant { value } => expr(*value, env),
         Scope::Module { arity, .. } => "fun ".to_doc().append(name).append("/").append(arity),
     }
 }
 
-fn enum_<H, F, E>(h: H, to_doc: F, name: String, mut args: Vec<E>, mut env: &Env) -> Document
+fn enum_<H, F, E>(h: H, to_doc: F, name: String, mut args: Vec<E>, env: &mut Env) -> Document
 where
     H: Fn(String) -> E,
-    F: Fn(E, &Env) -> Document,
+    F: Fn(E, &mut Env) -> Document,
 {
     if args.len() == 0 {
-        to_doc(h(name.to_snake_case()), &mut env)
+        to_doc(h(name.to_snake_case()), env)
     } else {
         args.insert(0, h(name.to_snake_case()));
-        tuple(to_doc, args, &mut env)
+        tuple(to_doc, args, env)
     }
 }
 
-fn clause(clause: TypedClause, mut env: &Env) -> Document {
-    pattern(clause.pattern, &mut env)
+fn clause(clause: TypedClause, env: &mut Env) -> Document {
+    pattern(clause.pattern, env)
         .append(" ->")
         .append(break_("", " "))
-        .append(expr(*clause.then, &mut env).nest(INDENT).group())
+        .append(expr(*clause.then, env).nest(INDENT).group())
 }
 
-fn clauses(cs: Vec<TypedClause>, mut env: &Env) -> Document {
+fn clauses(cs: Vec<TypedClause>, env: &mut Env) -> Document {
     cs.into_iter()
-        .map(|c| clause(c, &mut env))
+        .map(|c| clause(c, env))
         .intersperse(";".to_doc().append(line()).append(break_("\n", "")))
         .collect::<Vec<_>>()
         .to_doc()
 }
 
-fn case(subject: TypedExpr, cs: Vec<TypedClause>, mut env: &Env) -> Document {
+fn case(subject: TypedExpr, cs: Vec<TypedClause>, env: &mut Env) -> Document {
     "case "
         .to_doc()
-        .append(expr(subject, &mut env).group())
+        .append(expr(subject, env).group())
         .append(" of")
-        .append(line().append(clauses(cs, &mut env)).nest(INDENT))
+        .append(line().append(clauses(cs, env)).nest(INDENT))
         .append(line())
         .append("end")
 }
@@ -275,7 +275,11 @@ fn pattern_atom(s: String) -> Pattern {
     }
 }
 
-fn expr(expression: TypedExpr, mut env: &Env) -> Document {
+fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
+    unimplemented!()
+}
+
+fn expr(expression: TypedExpr, env: &mut Env) -> Document {
     match expression {
         Expr::Nil { .. } => "[]".to_doc(),
         Expr::RecordNil { .. } => "#{}".to_doc(),
@@ -284,12 +288,12 @@ fn expr(expression: TypedExpr, mut env: &Env) -> Document {
         Expr::Constructor { name, .. } => atom(name.to_snake_case()),
         Expr::Atom { value, .. } => atom(value),
         Expr::String { value, .. } => string(value),
-        Expr::Tuple { elems, .. } => tuple(expr, elems, &mut env),
-        Expr::Seq { first, then, .. } => seq(*first, *then, &mut env),
-        Expr::Var { name, scope, .. } => var(name, scope, &mut env),
-        Expr::Fun { args, body, .. } => fun(args, *body, &mut env),
-        Expr::Cons { head, tail, .. } => cons(*head, *tail, &mut env),
-        Expr::Call { .. } => unimplemented!(),
+        Expr::Tuple { elems, .. } => tuple(expr, elems, env),
+        Expr::Seq { first, then, .. } => seq(*first, *then, env),
+        Expr::Var { name, scope, .. } => var(name, scope, env),
+        Expr::Fun { args, body, .. } => fun(args, *body, env),
+        Expr::Cons { head, tail, .. } => cons(*head, *tail, env),
+        Expr::Call { fun, args, .. } => call(*fun, args, env),
         Expr::RecordSelect { .. } => unimplemented!(),
         Expr::ModuleSelect { .. } => unimplemented!(),
         Expr::Let {
@@ -297,24 +301,24 @@ fn expr(expression: TypedExpr, mut env: &Env) -> Document {
             pattern,
             then,
             ..
-        } => let_(*value, pattern, *then, &mut env),
+        } => let_(*value, pattern, *then, env),
         Expr::RecordCons {
             label, value, tail, ..
-        } => expr_record_cons(label, *value, *tail, &mut env),
+        } => expr_record_cons(label, *value, *tail, env),
         Expr::Case {
             subject, clauses, ..
-        } => case(*subject, clauses, &mut env),
+        } => case(*subject, clauses, env),
         Expr::BinOp {
             name, left, right, ..
-        } => bin_op(name, *left, *right, &mut env),
+        } => bin_op(name, *left, *right, env),
     }
 }
 
-fn fun(args: Vec<Arg>, body: TypedExpr, mut env: &Env) -> Document {
+fn fun(args: Vec<Arg>, body: TypedExpr, env: &mut Env) -> Document {
     "fun"
         .to_doc()
         .append(fun_args(args).append(" ->"))
-        .append(break_("", " ").append(expr(body, &mut env)).nest(INDENT))
+        .append(break_("", " ").append(expr(body, env)).nest(INDENT))
         .append(break_("", " "))
         .append("end")
         .group()
