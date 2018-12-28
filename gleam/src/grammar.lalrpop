@@ -2,7 +2,7 @@
 
 use std::str::FromStr;
 
-use crate::ast::{UntypedExpr, Expr, Scope, Arg, UntypedModule, Module, UntypedStatement, Statement, Type, Pattern, BinOp};
+use crate::ast::{UntypedExpr, Expr, Arg, UntypedModule, Module, UntypedStatement, Statement, Type, Pattern, BinOp};
 use crate::parser::*;
 
 grammar;
@@ -297,8 +297,8 @@ Var: UntypedExpr = {
     <s:@L> <v:VarName> <e:@L> => Expr::Var {
         meta: meta(s, e),
         typ: (),
+        scope: (),
         name: v,
-        scope: Scope::Local,
     }
 }
 

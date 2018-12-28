@@ -1,14 +1,14 @@
 use crate::typ;
 
-pub type TypedModule = Module<typ::Type>;
+pub type TypedModule = Module<Scope<typ::Type>, typ::Type>;
 
-pub type UntypedModule = Module<()>;
+pub type UntypedModule = Module<(), ()>;
 
 #[derive(Debug, PartialEq)]
-pub struct Module<T> {
+pub struct Module<S, T> {
     pub name: String,
     pub typ: T,
-    pub statements: Vec<Statement<T>>,
+    pub statements: Vec<Statement<S, T>>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -30,24 +30,24 @@ pub enum Type {
     },
 }
 
-pub type TypedStatement = Statement<typ::Type>;
+pub type TypedStatement = Statement<Scope<typ::Type>, typ::Type>;
 
-pub type UntypedStatement = Statement<()>;
+pub type UntypedStatement = Statement<(), ()>;
 
 #[derive(Debug, PartialEq)]
-pub enum Statement<T> {
+pub enum Statement<S, T> {
     Fun {
         meta: Meta,
         name: String,
         args: Vec<Arg>,
-        body: Expr<T>,
+        body: Expr<S, T>,
         public: bool,
     },
 
     Test {
         meta: Meta,
         name: String,
-        body: Expr<T>,
+        body: Expr<S, T>,
     },
 
     Enum {
@@ -107,12 +107,12 @@ pub type TypedScope = Scope<typ::Type>;
 pub enum Scope<T> {
     Local,
     Module { arity: usize },
-    Constant { value: Box<Expr<T>> },
+    Constant { value: Box<Expr<Scope<T>, T>> },
 }
 
-pub type TypedExpr = Expr<typ::Type>;
+pub type TypedExpr = Expr<Scope<typ::Type>, typ::Type>;
 
-pub type UntypedExpr = Expr<()>;
+pub type UntypedExpr = Expr<(), ()>;
 
 // TODO: Ideally we would parameterise the typ instead of using Option<Type>
 // as then we can use the type system to ensure that the AST has the correct
@@ -121,7 +121,7 @@ pub type UntypedExpr = Expr<()>;
 // though, and reconstructing the term to copy across the values is cumbersome.
 //
 #[derive(Debug, PartialEq)]
-pub enum Expr<T> {
+pub enum Expr<S, T> {
     Int {
         meta: Meta,
         typ: T,
@@ -149,20 +149,20 @@ pub enum Expr<T> {
     Tuple {
         meta: Meta,
         typ: T,
-        elems: Vec<Expr<T>>,
+        elems: Vec<Expr<S, T>>,
     },
 
     Seq {
         meta: Meta,
         typ: T,
-        first: Box<Expr<T>>,
-        then: Box<Expr<T>>,
+        first: Box<Expr<S, T>>,
+        then: Box<Expr<S, T>>,
     },
 
     Var {
         meta: Meta,
         typ: T,
-        scope: Scope<T>,
+        scope: S,
         name: String,
     },
 
@@ -170,7 +170,7 @@ pub enum Expr<T> {
         meta: Meta,
         typ: T,
         args: Vec<Arg>,
-        body: Box<Expr<T>>,
+        body: Box<Expr<S, T>>,
     },
 
     Nil {
@@ -181,31 +181,31 @@ pub enum Expr<T> {
     Cons {
         meta: Meta,
         typ: T,
-        head: Box<Expr<T>>,
-        tail: Box<Expr<T>>,
+        head: Box<Expr<S, T>>,
+        tail: Box<Expr<S, T>>,
     },
 
     Call {
         meta: Meta,
         typ: T,
-        fun: Box<Expr<T>>,
-        args: Vec<Expr<T>>,
+        fun: Box<Expr<S, T>>,
+        args: Vec<Expr<S, T>>,
     },
 
     BinOp {
         meta: Meta,
         typ: T,
         name: BinOp,
-        left: Box<Expr<T>>,
-        right: Box<Expr<T>>,
+        left: Box<Expr<S, T>>,
+        right: Box<Expr<S, T>>,
     },
 
     Let {
         meta: Meta,
         typ: T,
-        value: Box<Expr<T>>,
+        value: Box<Expr<S, T>>,
         pattern: Pattern,
-        then: Box<Expr<T>>,
+        then: Box<Expr<S, T>>,
     },
 
     Constructor {
@@ -217,8 +217,8 @@ pub enum Expr<T> {
     Case {
         meta: Meta,
         typ: T,
-        subject: Box<Expr<T>>,
-        clauses: Vec<Clause<T>>,
+        subject: Box<Expr<S, T>>,
+        clauses: Vec<Clause<S, T>>,
     },
 
     RecordNil {
@@ -230,26 +230,26 @@ pub enum Expr<T> {
         meta: Meta,
         typ: T,
         label: String,
-        value: Box<Expr<T>>,
-        tail: Box<Expr<T>>,
+        value: Box<Expr<S, T>>,
+        tail: Box<Expr<S, T>>,
     },
 
     RecordSelect {
         meta: Meta,
         typ: T,
         label: String,
-        record: Box<Expr<T>>,
+        record: Box<Expr<S, T>>,
     },
 
     ModuleSelect {
         meta: Meta,
         typ: T,
         label: String,
-        module: Box<Expr<T>>,
+        module: Box<Expr<S, T>>,
     },
 }
 
-impl<T> Expr<T> {
+impl<S, T> Expr<S, T> {
     pub fn meta(&self) -> &Meta {
         match self {
             Expr::Int { meta, .. } => meta,
@@ -301,13 +301,13 @@ impl TypedExpr {
     }
 }
 
-pub type TypedClause = Clause<typ::Type>;
+pub type TypedClause = Clause<Scope<typ::Type>, typ::Type>;
 
 #[derive(Debug, PartialEq)]
-pub struct Clause<T> {
+pub struct Clause<S, T> {
     pub meta: Meta,
     pub pattern: Pattern,
-    pub then: Box<Expr<T>>,
+    pub then: Box<Expr<S, T>>,
 }
 
 #[derive(Debug, PartialEq, Default, Clone)]

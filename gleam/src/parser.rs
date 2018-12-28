@@ -1,4 +1,4 @@
-use crate::ast::{Arg, BinOp, Expr, Meta, Module, Pattern, Scope, Statement, Type};
+use crate::ast::{Arg, BinOp, Expr, Meta, Module, Pattern, Statement, Type};
 use crate::grammar::{ExprParser, ModuleParser};
 
 pub fn meta(start: usize, end: usize) -> Meta {
@@ -112,7 +112,7 @@ fn expr_test() {
                 meta: Meta { start: 0, end: 5 },
                 typ: (),
                 name: "hello".to_string(),
-                scope: Scope::Local,
+                scope: (),
             }),
             args: vec![
                 Expr::Int {
@@ -135,7 +135,7 @@ fn expr_test() {
             meta: Meta { start: 0, end: 5 },
             typ: (),
             name: "hello".to_string(),
-            scope: Scope::Local,
+            scope: (),
         }),
         ExprParser::new().parse("hello"),
     );
@@ -409,7 +409,7 @@ fn expr_test() {
                 meta: Meta { start: 0, end: 6 },
                 typ: (),
                 name: "person".to_string(),
-                scope: Scope::Local,
+                scope: (),
             })
         }),
         ExprParser::new().parse("person.name"),
@@ -424,7 +424,7 @@ fn expr_test() {
                 meta: Meta { start: 0, end: 6 },
                 typ: (),
                 name: "person".to_string(),
-                scope: Scope::Local,
+                scope: (),
             })
         }),
         ExprParser::new().parse("person:name"),
@@ -601,7 +601,7 @@ fn expr_test() {
                 meta: Meta { start: 2, end: 6 },
                 typ: (),
                 name: "jane".to_string(),
-                scope: Scope::Local,
+                scope: (),
             }),
         }),
         ExprParser::new().parse("{ jane | size = 2 }"),

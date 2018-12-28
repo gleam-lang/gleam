@@ -786,7 +786,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             let var = Expr::Var {
                 meta: meta.clone(),
                 typ: (),
-                scope: Scope::Local,
+                scope: (),
                 name: bin_op_name(name),
             };
             let call = Expr::Call {
