@@ -1,4 +1,4 @@
-use crate::ast::{Arg, BinOp, Expr, Meta, Module, Pattern, Statement, Type};
+use crate::ast::{Arg, BinOp, Clause, Expr, Meta, Module, Pattern, Statement, Type};
 use crate::grammar::{ExprParser, ModuleParser};
 
 pub fn meta(start: usize, end: usize) -> Meta {
@@ -605,6 +605,46 @@ fn expr_test() {
             }),
         }),
         ExprParser::new().parse("{ jane | size = 2 }"),
+    );
+
+    assert_eq!(
+        Ok(Expr::Case {
+            meta: Meta { start: 0, end: 30 },
+            typ: (),
+            subject: Box::new(Expr::Var {
+                typ: (),
+                scope: (),
+                meta: Meta { start: 5, end: 6 },
+                name: "x".to_string(),
+            }),
+            clauses: vec![
+                Clause {
+                    meta: Meta { start: 9, end: 18 },
+                    pattern: Pattern::Int {
+                        meta: Meta { start: 11, end: 12 },
+                        value: 1
+                    },
+                    then: Box::new(Expr::Int {
+                        meta: Meta { start: 16, end: 18 },
+                        typ: (),
+                        value: 10
+                    })
+                },
+                Clause {
+                    meta: Meta { start: 19, end: 28 },
+                    pattern: Pattern::Int {
+                        meta: Meta { start: 21, end: 22 },
+                        value: 2
+                    },
+                    then: Box::new(Expr::Int {
+                        meta: Meta { start: 26, end: 28 },
+                        typ: (),
+                        value: 20
+                    })
+                }
+            ]
+        }),
+        ExprParser::new().parse("case x { | 1 -> 10 | 2 -> 20 }"),
     );
 }
 

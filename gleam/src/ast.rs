@@ -302,10 +302,13 @@ impl TypedExpr {
 
 pub type TypedClause = Clause<Scope<typ::Type>, typ::Type>;
 
+pub type UntypedClause = Clause<(), ()>;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Clause<S, T> {
     pub meta: Meta,
     pub pattern: Pattern,
+    // TODO: Unbox this
     pub then: Box<Expr<S, T>>,
 }
 

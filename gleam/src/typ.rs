@@ -788,7 +788,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
                 scope: (),
                 name: bin_op_name(&name),
             };
-            let (fun, mut args, typ) = infer_call(fun, vec![*left, *right], level, &meta, env)?;
+            let (_fun, mut args, typ) = infer_call(fun, vec![*left, *right], level, &meta, env)?;
             Ok(Expr::BinOp {
                 meta,
                 name,

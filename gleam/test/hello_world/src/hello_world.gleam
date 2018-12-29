@@ -2,6 +2,14 @@ pub fn greet(name) {
   ["Hello, ", name, "!"]
 }
 
+pub fn ok(x) {
+  {'ok', x}
+}
+
+pub fn error(x) {
+  {'error', x}
+}
+
 pub fn curry(f) {
   fn(x) {
     fn(y) {

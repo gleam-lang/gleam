@@ -2,7 +2,10 @@
 
 use std::str::FromStr;
 
-use crate::ast::{UntypedExpr, Expr, Arg, UntypedModule, Module, UntypedStatement, Statement, Type, Pattern, BinOp};
+use crate::ast::{
+    UntypedExpr, Expr, Arg, UntypedModule, Module, UntypedStatement, Statement, Type, Pattern,
+    BinOp, Clause, UntypedClause
+};
 use crate::parser::*;
 
 grammar;
@@ -136,6 +139,7 @@ SimpleExpr: UntypedExpr = {
     Int => <>,
     Var => <>,
     Fun => <>,
+    Case => <>,
     Cons => <>,
     List => <>,
     Call => <>,
@@ -151,6 +155,23 @@ SimpleExpr: UntypedExpr = {
     RecordSelect => <>,
     ModuleSelect => <>,
     "begin" <e:Expr> "end" => e, // TODO: Replace begin end with ( )
+}
+
+Case: UntypedExpr = {
+    <s:@L> "case" <subject:OpOrSimpleExpr> "{" <clauses:Clause+> "}" <e:@L> => Expr::Case {
+        meta: meta(s, e),
+        typ: (),
+        subject: Box::new(subject),
+        clauses,
+    }
+}
+
+Clause: UntypedClause = {
+    <s:@L> "|" <pattern:Pattern> "->" <then:Expr> <e:@L> => Clause {
+        meta: meta(s, e),
+        pattern,
+        then: Box::new(then),
+    }
 }
 
 Let: UntypedExpr = {
@@ -360,19 +381,6 @@ RecordFields: Vec<(String, UntypedExpr)> = {
         xs
     }
 }
-
-// AtLeastOneComma<T>: Vec<T> = {
-//     <v:(<T> ","?)> => vec![v],
-
-//     // <v:(<T> ",")+> <e:T?> => match e {
-//     //     None => v,
-//     //     Some(e) => {
-//     //         let mut v = v;
-//     //         v.push(e);
-//     //         v
-//     //     }
-//     // }
-// }
 
 Comma<T>: Vec<T> = {
     <v:(<T> ",")*> <e:T?> => match e {
