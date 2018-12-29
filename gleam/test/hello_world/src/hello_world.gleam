@@ -1,12 +1,27 @@
-fn greet(name) {
+pub fn greet(name) {
   ["Hello, ", name, "!"]
 }
 
-fn add_name(record, name) {
-  record = { record | name = name }
-  record
+pub fn curry(f) {
+  fn(x) {
+    fn(y) {
+      f(x, y)
+    }
+  }
 }
 
-fn its_tim(record) {
-  add_name(record, "Tim")
+fn add(x, y) {
+  x + y
+}
+
+fn adder() {
+  curry(add)
+}
+
+fn incrementor() {
+  adder()(1)
+}
+
+fn increment(x) {
+  incrementor()(x)
 }

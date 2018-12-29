@@ -75,9 +75,18 @@ fn mod_fun(public: bool, name: String, args: Vec<Arg>, body: TypedExpr) -> Docum
 }
 
 fn fun_args(args: Vec<Arg>) -> Document {
-    args.iter()
-        .map(|a| a.name.to_camel_case().to_doc())
-        .intersperse(delim(","))
+    wrap_args(args.into_iter().map(|a| a.name.to_camel_case().to_doc()))
+}
+
+fn call_args(args: Vec<TypedExpr>, env: &mut Env) -> Document {
+    wrap_args(args.into_iter().map(|e| expr(e, env)))
+}
+
+fn wrap_args<I>(args: I) -> Document
+where
+    I: Iterator<Item = Document>,
+{
+    args.intersperse(delim(","))
         .collect::<Vec<_>>()
         .to_doc()
         .nest_current()
@@ -276,7 +285,20 @@ fn pattern_atom(s: String) -> Pattern {
 }
 
 fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
-    unimplemented!()
+    println!("\n\n{:?}", fun);
+
+    let fun = match fun {
+        Expr::Var {
+            scope: Scope::Module { .. },
+            name,
+            ..
+        } => name.to_doc(),
+
+        call @ Expr::Call { .. } => expr(call, env).surround("(", ")"),
+
+        other => expr(other, env),
+    };
+    fun.append(call_args(args, env))
 }
 
 fn expr(expression: TypedExpr, env: &mut Env) -> Document {
@@ -341,7 +363,7 @@ fn external_fun(public: bool, name: String, module: String, fun: String, arity: 
 
 #[test]
 fn module_test() {
-    let m: TypedModule = Module {
+    let m = Module {
         typ: crate::typ::int(),
         name: "magic".to_string(),
         statements: vec![
@@ -417,7 +439,7 @@ map() ->
     .to_string();
     assert_eq!(expected, module(m));
 
-    let m: TypedModule = Module {
+    let m = Module {
         typ: crate::typ::int(),
         name: "term".to_string(),
         statements: vec![
@@ -703,7 +725,7 @@ funny() ->
     // enum2() ->
     //     {'ok', 1, 2.0}.
 
-    let m: TypedModule = Module {
+    let m = Module {
         typ: crate::typ::int(),
         name: "term".to_string(),
         statements: vec![Statement::Fun {
@@ -758,7 +780,7 @@ some_function(ArgOne,
     .to_string();
     assert_eq!(expected, module(m));
 
-    let m: TypedModule = Module {
+    let m = Module {
         typ: crate::typ::int(),
         name: "term".to_string(),
         statements: vec![Statement::Test {
@@ -781,7 +803,7 @@ bang_test() ->
     .to_string();
     assert_eq!(expected, module(m));
 
-    let m: TypedModule = Module {
+    let m = Module {
         typ: crate::typ::int(),
         name: "vars".to_string(),
         statements: vec![
@@ -843,7 +865,7 @@ another() ->
     .to_string();
     assert_eq!(expected, module(m));
 
-    let m: TypedModule = Module {
+    let m = Module {
         typ: crate::typ::int(),
         name: "my_mod".to_string(),
         statements: vec![Statement::Fun {
@@ -970,6 +992,97 @@ go() ->
         [] -> 1;
         {'error', 2} -> 1
     end.
+"
+    .to_string();
+    assert_eq!(expected, module(m));
+    let m = Module {
+        typ: crate::typ::int(),
+        name: "funny".to_string(),
+        statements: vec![
+            Statement::Fun {
+                meta: default(),
+                args: vec![],
+                name: "one".to_string(),
+                public: false,
+                body: Expr::Call {
+                    meta: default(),
+                    typ: typ::int(),
+                    args: vec![Expr::Int {
+                        typ: typ::int(),
+                        meta: default(),
+                        value: 1,
+                    }],
+                    fun: Box::new(Expr::Var {
+                        meta: default(),
+                        scope: Scope::Module { arity: 1 },
+                        typ: typ::int(),
+                        name: "one_two".to_string(),
+                    }),
+                },
+            },
+            Statement::Fun {
+                meta: default(),
+                args: vec![],
+                name: "two".to_string(),
+                public: false,
+                body: Expr::Call {
+                    meta: default(),
+                    typ: typ::int(),
+                    args: vec![Expr::Int {
+                        typ: typ::int(),
+                        meta: default(),
+                        value: 1,
+                    }],
+                    fun: Box::new(Expr::Var {
+                        meta: default(),
+                        scope: Scope::Local,
+                        typ: typ::int(),
+                        name: "one_two".to_string(),
+                    }),
+                },
+            },
+            Statement::Fun {
+                meta: default(),
+                args: vec![],
+                name: "three".to_string(),
+                public: false,
+                body: Expr::Call {
+                    meta: default(),
+                    typ: typ::int(),
+                    args: vec![Expr::Int {
+                        typ: typ::int(),
+                        meta: default(),
+                        value: 2,
+                    }],
+                    fun: Box::new(Expr::Call {
+                        meta: default(),
+                        typ: typ::int(),
+                        args: vec![Expr::Int {
+                            typ: typ::int(),
+                            meta: default(),
+                            value: 1,
+                        }],
+                        fun: Box::new(Expr::Var {
+                            meta: default(),
+                            scope: Scope::Module { arity: 2 },
+                            typ: typ::int(),
+                            name: "one_two".to_string(),
+                        }),
+                    }),
+                },
+            },
+        ],
+    };
+    let expected = "-module(funny).
+
+one() ->
+    one_two(1).
+
+two() ->
+    OneTwo(1).
+
+three() ->
+    (one_two(1))(2).
 "
     .to_string();
     assert_eq!(expected, module(m));

@@ -661,7 +661,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             typ: _,
             name,
         } => {
-            let (_scope, typ) = env.get_variable(&name).map(|t| t.clone()).ok_or_else(|| {
+            let (scope, typ) = env.get_variable(&name).map(|t| t.clone()).ok_or_else(|| {
                 Error::UnknownVariable {
                     meta: meta.clone(),
                     name: name.to_string(),
@@ -669,8 +669,6 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
                 }
             })?;
             let typ = instantiate(typ, level, env);
-            // TODO: Get real scope
-            let scope = Scope::Local;
             Ok(Expr::Var {
                 meta,
                 scope,
