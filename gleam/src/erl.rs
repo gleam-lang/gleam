@@ -285,8 +285,6 @@ fn pattern_atom(s: String) -> Pattern {
 }
 
 fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
-    println!("\n\n{:?}", fun);
-
     let fun = match fun {
         Expr::Var {
             scope: Scope::Module { .. },

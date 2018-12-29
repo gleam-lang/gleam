@@ -751,23 +751,12 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             fun,
             args,
         } => {
-            let fun = infer(*fun, level, env)?;
-            let (mut args_types, return_type) = match_fun_type(fun.typ(), args.len(), env)
-                .map_err(|e| convert_not_fun_error(e, &meta))?;
-            let args = args_types
-                .iter_mut()
-                .zip(args)
-                .map(|(typ, arg): (&mut Type, _)| {
-                    let arg = infer(arg, level, env)?;
-                    unify(typ, arg.typ()).map_err(|e| convert_unify_error(e, &meta))?;
-                    Ok(arg)
-                })
-                .collect::<Result<_, _>>()?;
+            let (fun, args, typ) = infer_call(*fun, args, level, &meta, env)?;
             Ok(Expr::Call {
                 meta,
-                typ: return_type,
-                fun: Box::new(fun),
+                typ,
                 args,
+                fun: Box::new(fun),
             })
         }
 
@@ -793,19 +782,20 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             right,
             ..
         } => {
-            let var = Expr::Var {
+            let fun = Expr::Var {
                 meta: meta.clone(),
                 typ: (),
                 scope: (),
-                name: bin_op_name(name),
+                name: bin_op_name(&name),
             };
-            let call = Expr::Call {
+            let (fun, mut args, typ) = infer_call(fun, vec![*left, *right], level, &meta, env)?;
+            Ok(Expr::BinOp {
                 meta,
-                typ: (),
-                fun: Box::new(var),
-                args: vec![*left, *right],
-            };
-            infer(call, level, env)
+                name,
+                typ,
+                right: Box::new(args.pop().unwrap()),
+                left: Box::new(args.pop().unwrap()),
+            })
         }
 
         Expr::RecordNil { meta, .. } => Ok(Expr::RecordNil {
@@ -815,15 +805,6 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             },
         }),
 
-        // | RecordExtend(label, expr, record_expr) ->
-        //     let rest_row_ty = new_var level in
-        //     let field_ty = new_var level in
-        //     let param1_ty = field_ty in
-        //     let param2_ty = TRecord rest_row_ty in
-        //     let return_ty = TRecord (TRowExtend(label, field_ty, rest_row_ty)) in
-        //     unify param1_ty (infer env level expr) ;
-        //     unify param2_ty (infer env level record_expr) ;
-        //     return_ty
         Expr::RecordCons {
             meta,
             tail,
@@ -870,6 +851,28 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
     }
 }
 
+fn infer_call(
+    fun: UntypedExpr,
+    args: Vec<UntypedExpr>,
+    level: usize,
+    meta: &Meta,
+    env: &mut Env,
+) -> Result<(TypedExpr, Vec<TypedExpr>, Type), Error> {
+    let fun = infer(fun, level, env)?;
+    let (mut args_types, return_type) =
+        match_fun_type(fun.typ(), args.len(), env).map_err(|e| convert_not_fun_error(e, &meta))?;
+    let args = args_types
+        .iter_mut()
+        .zip(args)
+        .map(|(typ, arg): (&mut Type, _)| {
+            let arg = infer(arg, level, env)?;
+            unify(typ, arg.typ()).map_err(|e| convert_unify_error(e, &meta))?;
+            Ok(arg)
+        })
+        .collect::<Result<_, _>>()?;
+    Ok((fun, args, return_type))
+}
+
 fn infer_fun(
     args: &Vec<Arg>,
     body: UntypedExpr,
@@ -886,7 +889,7 @@ fn infer_fun(
     Ok((args_types, body))
 }
 
-fn bin_op_name(name: BinOp) -> String {
+fn bin_op_name(name: &BinOp) -> String {
     match name {
         BinOp::Pipe => "|>".to_string(),
         BinOp::Lt => "<".to_string(),
