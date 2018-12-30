@@ -1,8 +1,8 @@
 #![allow(dead_code)] // TODO
 
 use crate::ast::{
-    Arg, BinOp, Expr, Meta, Module, Pattern, Scope, Statement, TypedExpr, TypedModule, UntypedExpr,
-    UntypedModule,
+    Arg, BinOp, Clause, Expr, Meta, Module, Pattern, Scope, Statement, TypedExpr, TypedModule,
+    UntypedExpr, UntypedModule,
 };
 use crate::grammar;
 use crate::pretty::*;
@@ -520,7 +520,7 @@ impl Env {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Error {
     UnknownVariable {
         meta: Meta,
@@ -700,35 +700,58 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         Expr::Let {
             meta,
             typ: _,
-            pattern:
-                Pattern::Var {
-                    name,
-                    meta: pattern_meta,
-                },
+            pattern,
             value,
             then,
         } => {
             let value = infer(*value, level + 1, env)?;
             let value_typ = generalise(value.typ().clone(), level + 1);
-            env.insert_variable(name.to_string(), Scope::Local, value_typ.clone());
+            unify_pattern(&pattern, &value_typ, env).map_err(|e| convert_unify_error(e, &meta))?;
             let then = infer(*then, level, env)?;
             let typ = then.typ().clone();
             Ok(Expr::Let {
                 meta,
                 typ,
-                pattern: Pattern::Var {
-                    name,
-                    meta: pattern_meta,
-                },
+                pattern,
                 value: Box::new(value),
                 then: Box::new(then),
             })
         }
 
-        // TODO: Support non var patterns by modifying the previous clause
-        Expr::Let { .. } => unimplemented!(),
+        Expr::Case {
+            meta,
+            subject,
+            clauses,
+            ..
+        } => {
+            let return_type = env.new_unbound_var(level); // TODO: should this be level + 1 ?
+            let mut typed_clauses = Vec::with_capacity(clauses.len());
+            let subject = infer(*subject, level + 1, env)?;
+            let subject_type = generalise(subject.typ().clone(), level + 1);
 
-        Expr::Case { .. } => unimplemented!(),
+            for clause in clauses.into_iter() {
+                let vars = env.variables.clone();
+
+                unify_pattern(&clause.pattern, &subject_type, env)
+                    .map_err(|e| convert_unify_error(e, &meta))?;
+
+                let then = infer(*clause.then, level, env)?;
+                unify(&return_type, then.typ()).map_err(|e| convert_unify_error(e, &meta))?;
+                typed_clauses.push(Clause {
+                    meta: clause.meta,
+                    pattern: clause.pattern,
+                    then: Box::new(then),
+                });
+
+                env.variables = vars;
+            }
+            Ok(Expr::Case {
+                meta,
+                typ: return_type,
+                subject: Box::new(subject),
+                clauses: typed_clauses,
+            })
+        }
 
         Expr::Cons {
             meta, head, tail, ..
@@ -851,6 +874,21 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
     }
 }
 
+/// When we have an assignment or a case expression we unify the pattern with the
+/// inferred type of the subject in order to determine what variables to insert
+/// into the environment (or to detect a type error).
+///
+fn unify_pattern(pattern: &Pattern, typ: &Type, env: &mut Env) -> Result<(), UnifyError> {
+    match pattern {
+        Pattern::Var { meta, name } => {
+            env.insert_variable(name.to_string(), Scope::Local, typ.clone());
+            Ok(())
+        }
+
+        _ => unimplemented!(),
+    }
+}
+
 fn infer_call(
     fun: UntypedExpr,
     args: Vec<UntypedExpr>,
@@ -859,6 +897,7 @@ fn infer_call(
     env: &mut Env,
 ) -> Result<(TypedExpr, Vec<TypedExpr>, Type), Error> {
     let fun = infer(fun, level, env)?;
+    // TODO: Use the meta of the arg instead of the meta of the entire call
     let (mut args_types, return_type) =
         match_fun_type(fun.typ(), args.len(), env).map_err(|e| convert_not_fun_error(e, &meta))?;
     let args = args_types
@@ -1081,7 +1120,10 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
             if n1 == n2 && m1 == m2 {
                 Ok(())
             } else {
-                unimplemented!()
+                Err(UnifyError::CouldNotUnify {
+                    expected: (*t1).clone(),
+                    given: (*t2).clone(),
+                })
             }
         }
 
@@ -1911,6 +1953,21 @@ fn infer_test() {
         Case {
             src: "{{} | a = 1}",
             typ: "{a = Int}",
+        },
+        /* case
+
+        */
+        Case {
+            src: "case 1 { | a -> 1 }",
+            typ: "Int",
+        },
+        Case {
+            src: "case 1 { | a -> 1.0 | b -> 2.0 | c -> 3.0 }",
+            typ: "Float",
+        },
+        Case {
+            src: "case 1 { | a -> a }",
+            typ: "Int",
         },
         /* Record select
 
