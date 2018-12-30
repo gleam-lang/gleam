@@ -2056,6 +2056,85 @@ fn infer_test() {
 }
 
 #[test]
+fn infer_error_test() {
+    struct Case {
+        src: &'static str,
+        error: Error,
+    }
+
+    let cases = [
+        Case {
+            src: "1 + 1.0",
+            error: Error::CouldNotUnify {
+                meta: Meta { start: 0, end: 7 },
+                expected: int(),
+                given: float(),
+            },
+        },
+        Case {
+            src: "1 +. 1.0",
+            error: Error::CouldNotUnify {
+                meta: Meta { start: 0, end: 8 },
+                expected: float(),
+                given: int(),
+            },
+        },
+        Case {
+            src: "1 == 1.0",
+            error: Error::CouldNotUnify {
+                meta: Meta { start: 0, end: 8 },
+                expected: int(),
+                given: float(),
+            },
+        },
+        Case {
+            src: "x",
+            error: Error::UnknownVariable {
+                meta: Meta { start: 0, end: 1 },
+                name: "x".to_string(),
+                variables: Env::new().variables,
+            },
+        },
+        Case {
+            src: "x",
+            error: Error::UnknownVariable {
+                meta: Meta { start: 0, end: 1 },
+                name: "x".to_string(),
+                variables: Env::new().variables,
+            },
+        },
+        Case {
+            src: "id = fn(x) { x } id()",
+            error: Error::IncorrectArity {
+                meta: Meta { start: 17, end: 21 },
+                expected: 1,
+                given: 0,
+            },
+        },
+        Case {
+            src: "id = fn(x) { x } id(1, 2)",
+            error: Error::IncorrectArity {
+                meta: Meta { start: 17, end: 25 },
+                expected: 1,
+                given: 2,
+            },
+        },
+        // Case {
+        //     src: "id = fn(x) { x(x) } 1",
+        //     error: Error::RecursiveType {
+        //         meta: Meta { start: 0, end: 1 },
+        //     },
+        // },
+    ];
+
+    for Case { src, error } in cases.into_iter() {
+        let ast = grammar::ExprParser::new().parse(src).expect("syntax error");
+        let result = infer(ast, 1, &mut Env::new()).expect_err("should infer an error");
+        assert_eq!((src, &result), (src, error));
+    }
+}
+
+#[test]
 fn infer_module_test() {
     struct Case {
         src: &'static str,
