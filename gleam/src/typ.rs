@@ -706,7 +706,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         } => {
             let value = infer(*value, level + 1, env)?;
             let value_typ = generalise(value.typ().clone(), level + 1);
-            unify_pattern(&pattern, &value_typ, env).map_err(|e| convert_unify_error(e, &meta))?;
+            unify_pattern(&pattern, &value_typ, env)?;
             let then = infer(*then, level, env)?;
             let typ = then.typ().clone();
             Ok(Expr::Let {
@@ -732,11 +732,10 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             for clause in clauses.into_iter() {
                 let vars = env.variables.clone();
 
-                unify_pattern(&clause.pattern, &subject_type, env)
-                    .map_err(|e| convert_unify_error(e, &meta))?;
+                unify_pattern(&clause.pattern, &subject_type, env)?;
 
                 let then = infer(*clause.then, level, env)?;
-                unify(&return_type, then.typ()).map_err(|e| convert_unify_error(e, &meta))?;
+                unify(&return_type, then.typ()).map_err(|e| convert_unify_error(e, then.meta()))?;
                 typed_clauses.push(Clause {
                     meta: clause.meta,
                     pattern: clause.pattern,
@@ -878,11 +877,17 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
 /// inferred type of the subject in order to determine what variables to insert
 /// into the environment (or to detect a type error).
 ///
-fn unify_pattern(pattern: &Pattern, typ: &Type, env: &mut Env) -> Result<(), UnifyError> {
+fn unify_pattern(pattern: &Pattern, typ: &Type, env: &mut Env) -> Result<(), Error> {
     match pattern {
         Pattern::Var { meta, name } => {
             env.insert_variable(name.to_string(), Scope::Local, typ.clone());
             Ok(())
+        }
+
+        Pattern::Int { meta, .. } => unify(&int(), typ).map_err(|e| convert_unify_error(e, &meta)),
+
+        Pattern::Float { meta, .. } => {
+            unify(&float(), typ).map_err(|e| convert_unify_error(e, &meta))
         }
 
         _ => unimplemented!(),
@@ -1969,6 +1974,10 @@ fn infer_test() {
             src: "case 1 { | a -> a }",
             typ: "Int",
         },
+        Case {
+            src: "case 1 { | 1 -> 10 | 2 -> 20 | x -> x * 10 }",
+            typ: "Int",
+        },
         /* Record select
 
         */
@@ -2117,6 +2126,30 @@ fn infer_error_test() {
                 meta: Meta { start: 17, end: 25 },
                 expected: 1,
                 given: 2,
+            },
+        },
+        Case {
+            src: "case 1 { | a -> 1 | b -> 2.0 }",
+            error: Error::CouldNotUnify {
+                meta: Meta { start: 25, end: 28 },
+                expected: int(),
+                given: float(),
+            },
+        },
+        Case {
+            src: "case 1.0 { | 1 -> 1 }",
+            error: Error::CouldNotUnify {
+                meta: Meta { start: 13, end: 14 },
+                expected: int(),
+                given: float(),
+            },
+        },
+        Case {
+            src: "case 1 { | 1.0 -> 1 }",
+            error: Error::CouldNotUnify {
+                meta: Meta { start: 11, end: 14 },
+                expected: float(),
+                given: int(),
             },
         },
         // Case {
