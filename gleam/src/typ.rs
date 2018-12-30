@@ -886,8 +886,16 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, env: &mut Env) -> Result<(), Err
 
         Pattern::Int { meta, .. } => unify(&int(), typ).map_err(|e| convert_unify_error(e, &meta)),
 
+        Pattern::Atom { meta, .. } => {
+            unify(&atom(), typ).map_err(|e| convert_unify_error(e, &meta))
+        }
+
         Pattern::Float { meta, .. } => {
             unify(&float(), typ).map_err(|e| convert_unify_error(e, &meta))
+        }
+
+        Pattern::String { meta, .. } => {
+            unify(&string(), typ).map_err(|e| convert_unify_error(e, &meta))
         }
 
         _ => unimplemented!(),
@@ -1978,6 +1986,14 @@ fn infer_test() {
             src: "case 1 { | 1 -> 10 | 2 -> 20 | x -> x * 10 }",
             typ: "Int",
         },
+        Case {
+            src: "case 'ok' { | 'ko' -> 1 | x -> 0 }",
+            typ: "Int",
+        },
+        Case {
+            src: r#"case "ok" { | "ko" -> 1 | x -> 0 }"#,
+            typ: "Int",
+        },
         /* Record select
 
         */
@@ -2150,6 +2166,14 @@ fn infer_error_test() {
                 meta: Meta { start: 11, end: 14 },
                 expected: float(),
                 given: int(),
+            },
+        },
+        Case {
+            src: "case 1 { | x -> 1 | 1 -> x }",
+            error: Error::UnknownVariable {
+                meta: Meta { start: 25, end: 26 },
+                name: "x".to_string(),
+                variables: Env::new().variables,
             },
         },
         // Case {
