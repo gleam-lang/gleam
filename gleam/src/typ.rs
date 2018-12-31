@@ -724,7 +724,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             clauses,
             ..
         } => {
-            let return_type = env.new_unbound_var(level); // TODO: should this be level + 1 ?
+            let return_type = env.new_unbound_var(level); // TODO: st'hould this be level + 1 ?
             let mut typed_clauses = Vec::with_capacity(clauses.len());
             let subject = infer(*subject, level + 1, env)?;
             let subject_type = generalise(subject.typ().clone(), level + 1);
@@ -1994,6 +1994,10 @@ fn infer_test() {
             src: r#"case "ok" { | "ko" -> 1 | x -> 0 }"#,
             typ: "Int",
         },
+        // Case {
+        //     src: "case {'ok', 1} { | {'ko', x} -> x | x -> 5 }",
+        //     typ: "Int",
+        // },
         /* Record select
 
         */

@@ -1,35 +1,18 @@
 pub fn greet(name) {
-  ["Hello, ", name, "!"]
-}
-
-pub fn ok(x) {
-  {'ok', x}
-}
-
-pub fn error(x) {
-  {'error', x}
-}
-
-pub fn curry(f) {
-  fn(x) {
-    fn(y) {
-      f(x, y)
-    }
+  case name {
+  | "your mate Dave" -> ["Oi! Dave! What are you doing here? Go on. Clear off. Haven't you got better things to do?"]
+  | name -> ["Hello, ", name, "!"]
   }
 }
 
-fn add(x, y) {
-  x + y
+pub fn list() {
+  case 1 {
+  | name ->
+      123123123
+      "one two three. one two three. one two three. one two three. one two three."
+  }
 }
 
-fn adder() {
-  curry(add)
-}
-
-fn incrementor() {
-  adder()(1)
-}
-
-fn increment(x) {
-  incrementor()(x)
+pub fn x() {
+  {'ok', begin 1 2 end}
 }

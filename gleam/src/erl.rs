@@ -25,14 +25,13 @@ struct Env {}
 pub fn module(module: TypedModule) -> String {
     format!("-module({}).", module.name)
         .to_doc()
-        .append(line())
-        .append(line())
+        .append(lines(2))
         .append(
             module
                 .statements
                 .into_iter()
                 .flat_map(statement)
-                .intersperse(line().append(line()))
+                .intersperse(lines(2))
                 .collect::<Vec<_>>(),
         )
         .append(line())
@@ -255,14 +254,13 @@ where
 fn clause(clause: TypedClause, env: &mut Env) -> Document {
     pattern(clause.pattern, env)
         .append(" ->")
-        .append(break_("", " "))
-        .append(expr(*clause.then, env).nest(INDENT).group())
+        .append(line().append(expr(*clause.then, env)).nest(INDENT).group())
 }
 
 fn clauses(cs: Vec<TypedClause>, env: &mut Env) -> Document {
     cs.into_iter()
         .map(|c| clause(c, env))
-        .intersperse(";".to_doc().append(line()).append(break_("\n", "")))
+        .intersperse(";".to_doc().append(lines(2)))
         .collect::<Vec<_>>()
         .to_doc()
 }
@@ -275,6 +273,7 @@ fn case(subject: TypedExpr, cs: Vec<TypedClause>, env: &mut Env) -> Document {
         .append(line().append(clauses(cs, env)).nest(INDENT))
         .append(line())
         .append("end")
+        .group()
 }
 
 fn pattern_atom(s: String) -> Pattern {
@@ -982,13 +981,26 @@ another() ->
 
 go() ->
     case 1 of
-        1 -> 1;
-        1.0 -> 1;
-        'ok' -> 1;
-        <<\"hello\">> -> 1;
-        {1, 2} -> 1;
-        [] -> 1;
-        {'error', 2} -> 1
+        1 ->
+            1;
+
+        1.0 ->
+            1;
+
+        'ok' ->
+            1;
+
+        <<\"hello\">> ->
+            1;
+
+        {1, 2} ->
+            1;
+
+        [] ->
+            1;
+
+        {'error', 2} ->
+            1
     end.
 "
     .to_string();

@@ -69,7 +69,7 @@ pub enum Document {
     Nil,
 
     /// A mandatory linebreak
-    Line,
+    Line(usize),
 
     /// Forces contained groups to break
     ForceBreak,
@@ -110,7 +110,7 @@ fn fits(limit: isize, mut docs: Vector<(isize, Mode, Document)>) -> bool {
     };
 
     match document {
-        Document::Line => true,
+        Document::Line(_) => true,
         Document::ForceBreak => false,
         Document::Nil => fits(limit, docs),
         Document::Break { unbroken, .. } => match mode {
@@ -191,8 +191,8 @@ fn fits_test() {
     ));
 
     // Line always fits
-    assert!(fits(0, vector![(0, Broken, Line)]));
-    assert!(fits(0, vector![(0, Unbroken, Line)]));
+    assert!(fits(0, vector![(0, Broken, Line(100))]));
+    assert!(fits(0, vector![(0, Unbroken, Line(100))]));
 
     // String fits if smaller than limit
     assert!(fits(5, vector![(0, Broken, Text("Hello".to_string()))]));
@@ -294,6 +294,10 @@ pub fn format(limit: isize, doc: Document) -> String {
     buffer
 }
 
+// TODO: This is behaving strangely- groups not breaking when I
+// think they should. Either I'm forgetting how to use the algebra
+// or I've snuck a bug in here somewhere.
+//
 fn fmt(b: &mut String, limit: isize, width: isize, mut docs: Vector<(isize, Mode, Document)>) {
     let (indent, mode, document) = match docs.pop_front() {
         Some(x) => x,
@@ -305,8 +309,10 @@ fn fmt(b: &mut String, limit: isize, width: isize, mut docs: Vector<(isize, Mode
 
         Document::ForceBreak => fmt(b, limit, width, docs),
 
-        Document::Line => {
-            b.push_str("\n");
+        Document::Line(i) => {
+            for _ in 0..i {
+                b.push_str("\n");
+            }
             b.push_str(" ".repeat(indent as usize).as_str());
             fmt(b, limit, indent, docs);
         }
@@ -394,7 +400,7 @@ fn format_test() {
         2,
         Box::new(Cons(
             Box::new(Text("1".to_string())),
-            Box::new(Cons(Box::new(Line), Box::new(Text("2".to_string())))),
+            Box::new(Cons(Box::new(Line(1)), Box::new(Text("2".to_string())))),
         )),
     );
     assert_eq!("1\n  2".to_string(), format(1, doc));
@@ -402,7 +408,7 @@ fn format_test() {
     let doc = Cons(
         Box::new(Text("111".to_string())),
         Box::new(NestCurrent(Box::new(Cons(
-            Box::new(Line),
+            Box::new(Line(1)),
             Box::new(Text("2".to_string())),
         )))),
     );
@@ -423,7 +429,11 @@ pub fn nil() -> Document {
 }
 
 pub fn line() -> Document {
-    Document::Line
+    Document::Line(1)
+}
+
+pub fn lines(i: usize) -> Document {
+    Document::Line(i)
 }
 
 pub fn force_break() -> Document {
