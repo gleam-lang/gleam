@@ -1097,3 +1097,36 @@ three() ->
     .to_string();
     assert_eq!(expected, module(m));
 }
+
+#[test]
+fn integration_test() {
+    struct Case {
+        src: &'static str,
+        erl: &'static str,
+    }
+
+    let cases = [Case {
+        src: r#"fn go() {
+  x = {100000000000000000, {2000000000, 3000000000000, 40000000000}, 50000, 6000000000}
+  x
+}"#,
+        erl: r#"-module().
+
+go() ->
+    X = {100000000000000000,
+         {2000000000, 3000000000000, 40000000000},
+         50000,
+         6000000000},
+    X.
+"#,
+    }];
+
+    for Case { src, erl } in cases.into_iter() {
+        let ast = crate::grammar::ModuleParser::new()
+            .parse(src)
+            .expect("syntax error");
+        let ast = crate::typ::infer_module(ast).expect("should successfully infer");
+        let output = module(ast);
+        assert_eq!((src, output), (src, erl.to_string()),);
+    }
+}

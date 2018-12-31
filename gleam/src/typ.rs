@@ -1029,7 +1029,12 @@ fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
                 },
             },
 
-            Type::Tuple { .. } => unimplemented!(),
+            Type::Tuple { elems } => Type::Tuple {
+                elems: elems
+                    .into_iter()
+                    .map(|t| go(t, ctx_level, ids, env))
+                    .collect(),
+            },
 
             Type::Fun { args, retrn, .. } => {
                 let args = args
