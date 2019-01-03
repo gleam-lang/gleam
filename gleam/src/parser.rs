@@ -200,6 +200,39 @@ fn expr_test() {
     );
 
     assert_eq!(
+        Ok(Expr::Let {
+            meta: Meta { start: 0, end: 10 },
+            typ: (),
+            value: Box::new(Expr::BinOp {
+                meta: Meta { start: 4, end: 9 },
+                typ: (),
+                name: BinOp::AddInt,
+                left: Box::new(Expr::Int {
+                    typ: (),
+                    meta: Meta { start: 4, end: 5 },
+                    value: 1
+                }),
+                right: Box::new(Expr::Int {
+                    typ: (),
+                    meta: Meta { start: 8, end: 9 },
+                    value: 2
+                }),
+            }),
+            pattern: Pattern::Var {
+                meta: Meta { start: 0, end: 1 },
+                name: "x".to_string(),
+            },
+            then: Box::new(Expr::Var {
+                typ: (),
+                scope: (),
+                meta: Meta { start: 10, end: 11 },
+                name: "x".to_string(),
+            })
+        }),
+        ExprParser::new().parse("x = 1 + 2 x"),
+    );
+
+    assert_eq!(
         Ok(Expr::BinOp {
             meta: Meta { start: 0, end: 5 },
             typ: (),

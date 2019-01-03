@@ -14,5 +14,11 @@ pub fn list() {
 }
 
 pub fn x() {
-  {'ok', begin 1 2 end}
+  {'ok', 2}
+}
+
+pub fn run() {
+  x = 1
+  x = 2 + 3
+  x
 }

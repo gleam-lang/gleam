@@ -175,7 +175,7 @@ Clause: UntypedClause = {
 }
 
 Let: UntypedExpr = {
-    <s:@L> <p:Pattern> "=" <v:SimpleExpr> <e:@L> <t:Expr> => Expr::Let {
+    <s:@L> <p:Pattern> "=" <v:OpOrSimpleExpr> <e:@L> <t:Expr> => Expr::Let {
         meta: meta(s, e),
         typ: (),
         value: Box::new(v),
