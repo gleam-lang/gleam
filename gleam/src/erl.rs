@@ -6,6 +6,7 @@ use crate::pretty::*;
 use crate::typ;
 
 use heck::{CamelCase, SnakeCase};
+use im::hashmap::HashMap;
 use itertools::Itertools;
 use std::char;
 use std::default::Default;
@@ -20,7 +21,34 @@ where
 }
 
 #[derive(Debug, Clone, Default)]
-struct Env {}
+struct Env {
+    vars: HashMap<String, usize>,
+}
+
+impl Env {
+    pub fn local_var_name(&mut self, name: String) -> Document {
+        match self.vars.get(&name) {
+            None => {
+                self.vars.insert(name.clone(), 0);
+                name.to_camel_case().to_doc()
+            }
+            Some(0) => name.to_camel_case().to_doc(),
+            Some(n) => name.to_camel_case().to_doc().append(*n),
+        }
+    }
+
+    pub fn next_local_var_name(&mut self, name: String) -> Document {
+        match self.vars.get(&name) {
+            None => {
+                self.vars.insert(name.clone(), 0);
+            }
+            Some(n) => {
+                self.vars.insert(name.clone(), n + 1);
+            }
+        };
+        self.local_var_name(name)
+    }
+}
 
 pub fn module(module: TypedModule) -> String {
     format!("-module({}).", module.name)
@@ -191,7 +219,7 @@ fn pattern(p: Pattern, env: &mut Env) -> Document {
         Pattern::Nil { .. } => "[]".to_doc(),
         Pattern::List { .. } => unimplemented!(),
         Pattern::Record { .. } => unimplemented!(),
-        Pattern::Var { name, .. } => var(name, Scope::Local, env),
+        Pattern::Var { name, .. } => env.next_local_var_name(name),
         Pattern::Int { value, .. } => value.to_doc(),
         Pattern::Atom { value, .. } => atom(value),
         Pattern::Float { value, .. } => value.to_doc(),
@@ -232,7 +260,7 @@ where
 
 fn var(name: String, scope: TypedScope, env: &mut Env) -> Document {
     match scope {
-        Scope::Local => name.to_camel_case().to_doc(),
+        Scope::Local => env.local_var_name(name),
         Scope::Constant { value } => expr(*value, env),
         Scope::Module { arity, .. } => "fun ".to_doc().append(name).append("/").append(arity),
     }
@@ -1105,12 +1133,13 @@ fn integration_test() {
         erl: &'static str,
     }
 
-    let cases = [Case {
-        src: r#"fn go() {
+    let cases = [
+        Case {
+            src: r#"fn go() {
   x = {100000000000000000, {2000000000, 3000000000000, 40000000000}, 50000, 6000000000}
   x
 }"#,
-        erl: r#"-module().
+            erl: r#"-module().
 
 go() ->
     X = {100000000000000000,
@@ -1119,7 +1148,25 @@ go() ->
          6000000000},
     X.
 "#,
-    }];
+        },
+        Case {
+            src: r#"fn go() {
+  y = 1
+  y = 2
+  y
+}"#,
+            erl: r#"-module().
+
+go() ->
+    Y = 1,
+    Y1 = 2,
+    Y1.
+"#,
+        },
+        // TODO: Check that var num is incremented for args
+        // TODO: Check that var num is incremented for nested patterns
+        // TODO: Check that var num is reset after a closure that increments
+    ];
 
     for Case { src, erl } in cases.into_iter() {
         let ast = crate::grammar::ModuleParser::new()
