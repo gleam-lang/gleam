@@ -32,7 +32,7 @@ pub enum Type {
         elems: Vec<Type>,
     },
 
-    Fun {
+    Fn {
         args: Vec<Type>,
         retrn: Box<Type>,
     },
@@ -70,7 +70,7 @@ impl Type {
                 .append(args_to_gleam_doc(args, names, uid))
                 .append(")"),
 
-            Type::Fun { args, retrn } => "fn("
+            Type::Fn { args, retrn } => "fn("
                 .to_doc()
                 .append(args_to_gleam_doc(args, names, uid))
                 .append(") -> ")
@@ -123,7 +123,7 @@ impl Type {
                     let fields_docs = fields
                         .into_iter()
                         .map(|(label, t)| match t {
-                            Type::Fun { args, retrn } => "fn "
+                            Type::Fn { args, retrn } => "fn "
                                 .to_doc()
                                 .append(label)
                                 .append(
@@ -277,7 +277,7 @@ fn to_gleam_doc_test() {
             "Pair(Int, Bool)",
         ),
         (
-            Type::Fun {
+            Type::Fn {
                 args: vec![
                     Type::Const {
                         module: "whatever".to_string(),
@@ -317,7 +317,7 @@ fn to_gleam_doc_test() {
             "a",
         ),
         (
-            Type::Fun {
+            Type::Fn {
                 args: vec![Type::Var {
                     typ: Rc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 78 })),
                 }],
@@ -328,7 +328,7 @@ fn to_gleam_doc_test() {
             "fn(a) -> b",
         ),
         (
-            Type::Fun {
+            Type::Fn {
                 args: vec![Type::Var {
                     typ: Rc::new(RefCell::new(TypeVar::Generic { id: 78 })),
                 }],
@@ -434,7 +434,7 @@ impl Env {
         env.insert_variable(
             "+".to_string(),
             Scope::Local,
-            Type::Fun {
+            Type::Fn {
                 args: vec![int(), int()],
                 retrn: Box::new(int()),
             },
@@ -443,7 +443,7 @@ impl Env {
         env.insert_variable(
             "-".to_string(),
             Scope::Local,
-            Type::Fun {
+            Type::Fn {
                 args: vec![int(), int()],
                 retrn: Box::new(int()),
             },
@@ -452,7 +452,7 @@ impl Env {
         env.insert_variable(
             "*".to_string(),
             Scope::Local,
-            Type::Fun {
+            Type::Fn {
                 args: vec![int(), int()],
                 retrn: Box::new(int()),
             },
@@ -461,7 +461,7 @@ impl Env {
         env.insert_variable(
             "/".to_string(),
             Scope::Local,
-            Type::Fun {
+            Type::Fn {
                 args: vec![int(), int()],
                 retrn: Box::new(int()),
             },
@@ -470,7 +470,7 @@ impl Env {
         env.insert_variable(
             "+.".to_string(),
             Scope::Local,
-            Type::Fun {
+            Type::Fn {
                 args: vec![float(), float()],
                 retrn: Box::new(float()),
             },
@@ -479,7 +479,7 @@ impl Env {
         env.insert_variable(
             "-.".to_string(),
             Scope::Local,
-            Type::Fun {
+            Type::Fn {
                 args: vec![float(), float()],
                 retrn: Box::new(float()),
             },
@@ -488,7 +488,7 @@ impl Env {
         env.insert_variable(
             "*.".to_string(),
             Scope::Local,
-            Type::Fun {
+            Type::Fn {
                 args: vec![float(), float()],
                 retrn: Box::new(float()),
             },
@@ -497,7 +497,7 @@ impl Env {
         env.insert_variable(
             "/.".to_string(),
             Scope::Local,
-            Type::Fun {
+            Type::Fn {
                 args: vec![float(), float()],
                 retrn: Box::new(float()),
             },
@@ -505,14 +505,14 @@ impl Env {
 
         let a = env.new_generic_var();
         let b = env.new_generic_var();
-        let f = Type::Fun {
+        let f = Type::Fn {
             args: vec![a.clone()],
             retrn: Box::new(b.clone()),
         };
         env.insert_variable(
             "|>".to_string(),
             Scope::Local,
-            Type::Fun {
+            Type::Fn {
                 args: vec![a, f],
                 retrn: Box::new(b),
             },
@@ -522,7 +522,7 @@ impl Env {
         env.insert_variable(
             "==".to_string(),
             Scope::Local,
-            Type::Fun {
+            Type::Fn {
                 args: vec![a.clone(), a],
                 retrn: Box::new(bool()),
             },
@@ -532,7 +532,7 @@ impl Env {
         env.insert_variable(
             "!=".to_string(),
             Scope::Local,
-            Type::Fun {
+            Type::Fn {
                 args: vec![a.clone(), a],
                 retrn: Box::new(bool()),
             },
@@ -639,13 +639,13 @@ impl Env {
                 Ok(Type::Tuple { elems: elems })
             }
 
-            ast::Type::Fun { args, retrn, .. } => {
+            ast::Type::Fn { args, retrn, .. } => {
                 let args = args
                     .iter()
                     .map(|t| self.type_from_ast(t, vars))
                     .collect::<Result<_, _>>()?;
                 let retrn = self.type_from_ast(retrn, vars)?;
-                Ok(Type::Fun {
+                Ok(Type::Fn {
                     args,
                     retrn: Box::new(retrn),
                 })
@@ -703,7 +703,7 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
         .statements
         .into_iter()
         .map(|s| match s {
-            Statement::Fun {
+            Statement::Fn {
                 meta,
                 name,
                 public,
@@ -711,7 +711,7 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
                 body,
             } => {
                 let (args_types, body) = infer_fun(&args, body, 2, &mut env)?;
-                let typ = Type::Fun {
+                let typ = Type::Fn {
                     args: args_types,
                     retrn: Box::new(body.typ().clone()),
                 };
@@ -724,7 +724,7 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
                 if public {
                     fields.push((name.clone(), typ));
                 }
-                Ok(Statement::Fun {
+                Ok(Statement::Fn {
                     meta,
                     name,
                     public,
@@ -733,7 +733,7 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
                 })
             }
 
-            Statement::ExternalFun {
+            Statement::ExternalFn {
                 meta,
                 name,
                 public,
@@ -753,7 +753,7 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
                         .map_err(|e| convert_unknown_type_error(e, meta.clone()))?;
                     args_types.push(t)
                 }
-                let typ = Type::Fun {
+                let typ = Type::Fn {
                     args: args_types,
                     retrn: Box::new(retrn_type),
                 };
@@ -765,7 +765,7 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
                 if public {
                     fields.push((name.clone(), typ));
                 }
-                Ok(Statement::ExternalFun {
+                Ok(Statement::ExternalFn {
                     meta,
                     name,
                     public,
@@ -867,19 +867,19 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             })
         }
 
-        Expr::Fun {
+        Expr::Fn {
             meta,
             typ: _,
             args,
             body,
         } => {
             let (args_types, body) = infer_fun(&args, *body, level, env)?;
-            let typ = Type::Fun {
+            let typ = Type::Fn {
                 args: args_types,
                 retrn: Box::new(body.typ().clone()),
             };
 
-            Ok(Expr::Fun {
+            Ok(Expr::Fn {
                 meta,
                 typ,
                 args,
@@ -1235,13 +1235,13 @@ fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
                     .collect(),
             },
 
-            Type::Fun { args, retrn, .. } => {
+            Type::Fn { args, retrn, .. } => {
                 let args = args
                     .into_iter()
                     .map(|t| go(t, ctx_level, ids, env))
                     .collect();
                 let retrn = Box::new(go(*retrn, ctx_level, ids, env));
-                Type::Fun { args, retrn }
+                Type::Fn { args, retrn }
             }
 
             Type::Record { row } => Type::Record {
@@ -1380,12 +1380,12 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
         }
 
         (
-            Type::Fun {
+            Type::Fn {
                 args: args1,
                 retrn: retrn1,
                 ..
             },
-            Type::Fun {
+            Type::Fn {
                 args: args2,
                 retrn: retrn2,
                 ..
@@ -1578,7 +1578,7 @@ fn update_levels(typ: &Type, own_level: usize, own_id: usize) -> Result<(), Unif
             Ok(())
         }
 
-        Type::Fun { args, retrn } => {
+        Type::Fn { args, retrn } => {
             for arg in args.iter() {
                 update_levels(arg, own_level, own_id)?;
             }
@@ -1600,7 +1600,7 @@ fn update_levels(typ: &Type, own_level: usize, own_id: usize) -> Result<(), Unif
     }
 }
 
-struct NotFunError {
+struct NotFnError {
     pub expected: usize,
     pub given: usize,
 }
@@ -1628,7 +1628,7 @@ fn match_fun_type(
     typ: &Type,
     arity: usize,
     env: &mut Env,
-) -> Result<(Vec<Type>, Type), NotFunError> {
+) -> Result<(Vec<Type>, Type), NotFnError> {
     if let Type::Var { typ } = &typ {
         let new_value = match &*typ.borrow() {
             TypeVar::Link { .. } => unimplemented!(),
@@ -1644,7 +1644,7 @@ fn match_fun_type(
 
         if let Some((args, retrn)) = new_value {
             *typ.borrow_mut() = TypeVar::Link {
-                typ: Box::new(Type::Fun {
+                typ: Box::new(Type::Fn {
                     args: args.clone(),
                     retrn: Box::new(retrn.clone()),
                 }),
@@ -1653,9 +1653,9 @@ fn match_fun_type(
         }
     }
 
-    if let Type::Fun { args, retrn } = typ {
+    if let Type::Fn { args, retrn } = typ {
         return if args.len() != arity {
-            Err(NotFunError {
+            Err(NotFnError {
                 expected: args.len(),
                 given: arity,
             })
@@ -1667,7 +1667,7 @@ fn match_fun_type(
     unimplemented!()
 }
 
-fn convert_not_fun_error(e: NotFunError, meta: &Meta) -> Error {
+fn convert_not_fun_error(e: NotFnError, meta: &Meta) -> Error {
     Error::IncorrectArity {
         meta: meta.clone(),
         expected: e.expected,
@@ -1732,10 +1732,10 @@ fn generalise(t: Type, ctx_level: usize) -> Type {
             };
         }
 
-        Type::Fun { args, retrn } => {
+        Type::Fn { args, retrn } => {
             let args = args.into_iter().map(|t| generalise(t, ctx_level)).collect();
             let retrn = generalise(*retrn, ctx_level);
-            return Type::Fun {
+            return Type::Fn {
                 args,
                 retrn: Box::new(retrn),
             };
@@ -1975,7 +1975,7 @@ fn infer_test() {
             src: "{1, 2.0, {'ok', 1}}",
             typ: "{Int, Float, {Atom, Int}}",
         },
-        /* Funs
+        /* Fns
 
         */
         Case {

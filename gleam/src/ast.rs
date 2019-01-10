@@ -24,7 +24,7 @@ pub enum Type {
         args: Vec<Type>,
     },
 
-    Fun {
+    Fn {
         meta: Meta,
         args: Vec<Type>,
         retrn: Box<Type>,
@@ -47,7 +47,7 @@ pub type UntypedStatement = Statement<(), ()>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement<S, T> {
-    Fun {
+    Fn {
         meta: Meta,
         name: String,
         args: Vec<Arg>,
@@ -69,7 +69,7 @@ pub enum Statement<S, T> {
         constructors: Vec<Type>,
     },
 
-    ExternalFun {
+    ExternalFn {
         meta: Meta,
         public: bool,
         args: Vec<Type>,
@@ -176,7 +176,7 @@ pub enum Expr<S, T> {
         name: String,
     },
 
-    Fun {
+    Fn {
         meta: Meta,
         typ: T,
         args: Vec<Arg>,
@@ -265,7 +265,7 @@ impl<S, T> Expr<S, T> {
             Expr::Int { meta, .. } => meta,
             Expr::Seq { meta, .. } => meta,
             Expr::Var { meta, .. } => meta,
-            Expr::Fun { meta, .. } => meta,
+            Expr::Fn { meta, .. } => meta,
             Expr::Nil { meta, .. } => meta,
             Expr::Let { meta, .. } => meta,
             Expr::Atom { meta, .. } => meta,
@@ -295,7 +295,7 @@ impl TypedExpr {
             Expr::Seq { then, .. } => then.typ(),
             Expr::Tuple { typ, .. } => typ,
             Expr::Var { typ, .. } => typ,
-            Expr::Fun { typ, .. } => typ,
+            Expr::Fn { typ, .. } => typ,
             Expr::Nil { typ, .. } => typ,
             Expr::Cons { typ, .. } => typ,
             Expr::Call { typ, .. } => typ,

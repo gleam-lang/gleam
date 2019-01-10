@@ -19,16 +19,16 @@ pub Module: UntypedModule = {
 }
 
 Statement: UntypedStatement = {
-    StatementFun => <>,
+    StatementFn => <>,
     StatementTest => <>,
     // StatementEnum => <>,
-    StatementExternalFun => <>,
+    StatementExternalFn => <>,
     StatementExternalType => <>,
     StatementImport => <>,
 }
 
-StatementExternalFun: UntypedStatement = {
-    <s:@L> <p:"pub"?> "external" "fn" <n:VarName> "(" <a:Comma<Type>> ")" "->" <r:Type> "=" <m:RawAtom> <f:RawAtom> <e:@L> => Statement::ExternalFun {
+StatementExternalFn: UntypedStatement = {
+    <s:@L> <p:"pub"?> "external" "fn" <n:VarName> "(" <a:Comma<Type>> ")" "->" <r:Type> "=" <m:RawAtom> <f:RawAtom> <e:@L> => Statement::ExternalFn {
         meta: meta(s, e),
         public: p.is_some(),
         name: n,
@@ -39,8 +39,8 @@ StatementExternalFun: UntypedStatement = {
     }
 }
 
-StatementFun: UntypedStatement = {
-    <s:@L> <p:"pub"?> "fn" <n:VarName> "(" <a:Comma<FnArg>> ")" "{" <b:Expr> "}" <e:@L> => Statement::Fun {
+StatementFn: UntypedStatement = {
+    <s:@L> <p:"pub"?> "fn" <n:VarName> "(" <a:Comma<FnArg>> ")" "{" <b:Expr> "}" <e:@L> => Statement::Fn {
         meta: meta(s, e),
         public: p.is_some(),
         name: n,
@@ -138,7 +138,7 @@ SimpleExpr: UntypedExpr = {
     Nil => <>,
     Int => <>,
     Var => <>,
-    Fun => <>,
+    Fn => <>,
     Case => <>,
     Cons => <>,
     List => <>,
@@ -248,8 +248,8 @@ Seq: UntypedExpr = {
     }
 }
 
-Fun: UntypedExpr = {
-    <s:@L> "fn(" <a:Comma<FnArg>> ")" "{" <b:Expr> "}" <e:@L> => Expr::Fun {
+Fn: UntypedExpr = {
+    <s:@L> "fn(" <a:Comma<FnArg>> ")" "{" <b:Expr> "}" <e:@L> => Expr::Fn {
         meta: meta(s, e),
         typ: (),
         args: a,
@@ -486,7 +486,7 @@ TypeVar: Type = {
 }
 
 TypeFn: Type = {
-    <s:@L> "fn(" <args:Comma<Type>> ")" "->" <retrn:Type> <e:@L> => Type::Fun {
+    <s:@L> "fn(" <args:Comma<Type>> ")" "->" <retrn:Type> <e:@L> => Type::Fn {
         meta: meta(s, e),
         retrn: Box::new(retrn),
         args,

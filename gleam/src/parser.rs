@@ -489,7 +489,7 @@ fn expr_test() {
     );
 
     assert_eq!(
-        Ok(Expr::Fun {
+        Ok(Expr::Fn {
             meta: Meta { start: 0, end: 10 },
             typ: (),
             args: vec![],
@@ -503,7 +503,7 @@ fn expr_test() {
     );
 
     assert_eq!(
-        Ok(Expr::Fun {
+        Ok(Expr::Fn {
             meta: Meta { start: 0, end: 16 },
             typ: (),
             args: vec![
@@ -750,7 +750,7 @@ fn module_test() {
         Ok(Module {
             typ: (),
             name: "".to_string(),
-            statements: vec![Statement::Fun {
+            statements: vec![Statement::Fn {
                 meta: Meta { start: 0, end: 24 },
                 public: false,
                 name: "run".to_string(),
@@ -785,7 +785,7 @@ fn module_test() {
         Ok(Module {
             typ: (),
             name: "".to_string(),
-            statements: vec![Statement::Fun {
+            statements: vec![Statement::Fn {
                 meta: Meta { start: 0, end: 17 },
                 public: true,
                 name: "go".to_string(),
@@ -830,7 +830,7 @@ fn module_test() {
         Ok(Module {
             typ: (),
             name: "".to_string(),
-            statements: vec![Statement::ExternalFun {
+            statements: vec![Statement::ExternalFn {
                 meta: Meta { start: 0, end: 49 },
                 name: "run".to_string(),
                 module: "m".to_string(),

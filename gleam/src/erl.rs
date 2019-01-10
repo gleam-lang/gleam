@@ -72,14 +72,14 @@ fn statement(statement: TypedStatement) -> Option<Document> {
         Statement::Enum { .. } => None,
         Statement::Import { .. } => None,
         Statement::ExternalType { .. } => None,
-        Statement::Fun {
+        Statement::Fn {
             args,
             public,
             name,
             body,
             ..
         } => Some(mod_fun(public, name, args, body)),
-        Statement::ExternalFun {
+        Statement::ExternalFn {
             fun,
             module,
             args,
@@ -338,7 +338,7 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
         Expr::Tuple { elems, .. } => tuple(expr, elems, env),
         Expr::Seq { first, then, .. } => seq(*first, *then, env),
         Expr::Var { name, scope, .. } => var(name, scope, env),
-        Expr::Fun { args, body, .. } => fun(args, *body, env),
+        Expr::Fn { args, body, .. } => fun(args, *body, env),
         Expr::Cons { head, tail, .. } => cons(*head, *tail, env),
         Expr::Call { fun, args, .. } => call(*fun, args, env),
         Expr::RecordSelect { .. } => unimplemented!(),
@@ -413,7 +413,7 @@ fn module_test() {
                 meta: default(),
                 module: "result".to_string(),
             },
-            Statement::ExternalFun {
+            Statement::ExternalFn {
                 meta: default(),
                 args: vec![
                     Type::Constructor {
@@ -437,7 +437,7 @@ fn module_test() {
                     name: "Int".to_string(),
                 },
             },
-            Statement::ExternalFun {
+            Statement::ExternalFn {
                 meta: default(),
                 args: vec![],
                 name: "map".to_string(),
@@ -468,7 +468,7 @@ map() ->
         typ: crate::typ::int(),
         name: "term".to_string(),
         statements: vec![
-            Statement::Fun {
+            Statement::Fn {
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -479,7 +479,7 @@ map() ->
                     value: "ok".to_string(),
                 },
             },
-            Statement::Fun {
+            Statement::Fn {
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -490,7 +490,7 @@ map() ->
                     value: 176,
                 },
             },
-            Statement::Fun {
+            Statement::Fn {
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -501,7 +501,7 @@ map() ->
                     value: 11177.324401,
                 },
             },
-            Statement::Fun {
+            Statement::Fn {
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -511,7 +511,7 @@ map() ->
                     typ: typ::int(),
                 },
             },
-            Statement::Fun {
+            Statement::Fn {
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -521,7 +521,7 @@ map() ->
                     typ: typ::record_nil(),
                 },
             },
-            Statement::Fun {
+            Statement::Fn {
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -543,7 +543,7 @@ map() ->
                     ],
                 },
             },
-            Statement::Fun {
+            Statement::Fn {
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -554,7 +554,7 @@ map() ->
                     value: "Hello there!".to_string(),
                 },
             },
-            Statement::Fun {
+            Statement::Fn {
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -574,7 +574,7 @@ map() ->
                     }),
                 },
             },
-            Statement::Fun {
+            Statement::Fn {
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -595,7 +595,7 @@ map() ->
                     }),
                 },
             },
-            Statement::Fun {
+            Statement::Fn {
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -606,7 +606,7 @@ map() ->
                     name: "Nil".to_string(),
                 },
             },
-            Statement::Fun {
+            Statement::Fn {
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -631,7 +631,7 @@ map() ->
                     }),
                 },
             },
-            Statement::Fun {
+            Statement::Fn {
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -650,7 +650,7 @@ map() ->
                     }),
                 },
             },
-            Statement::Fun {
+            Statement::Fn {
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -670,12 +670,12 @@ map() ->
                     }),
                 },
             },
-            Statement::Fun {
+            Statement::Fn {
                 meta: default(),
                 public: false,
                 args: vec![],
                 name: "funny".to_string(),
-                body: Expr::Fun {
+                body: Expr::Fn {
                     meta: default(),
                     typ: typ::int(),
                     args: vec![
@@ -753,7 +753,7 @@ funny() ->
     let m = Module {
         typ: crate::typ::int(),
         name: "term".to_string(),
-        statements: vec![Statement::Fun {
+        statements: vec![Statement::Fn {
             meta: default(),
             public: false,
             name: "some_function".to_string(),
@@ -832,7 +832,7 @@ bang_test() ->
         typ: crate::typ::int(),
         name: "vars".to_string(),
         statements: vec![
-            Statement::Fun {
+            Statement::Fn {
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -844,7 +844,7 @@ bang_test() ->
                     scope: Scope::Local,
                 },
             },
-            Statement::Fun {
+            Statement::Fn {
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -862,7 +862,7 @@ bang_test() ->
                     },
                 },
             },
-            Statement::Fun {
+            Statement::Fn {
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -893,7 +893,7 @@ another() ->
     let m = Module {
         typ: crate::typ::int(),
         name: "my_mod".to_string(),
-        statements: vec![Statement::Fun {
+        statements: vec![Statement::Fn {
             meta: default(),
             public: false,
             args: vec![],
@@ -1037,7 +1037,7 @@ go() ->
         typ: crate::typ::int(),
         name: "funny".to_string(),
         statements: vec![
-            Statement::Fun {
+            Statement::Fn {
                 meta: default(),
                 args: vec![],
                 name: "one".to_string(),
@@ -1058,7 +1058,7 @@ go() ->
                     }),
                 },
             },
-            Statement::Fun {
+            Statement::Fn {
                 meta: default(),
                 args: vec![],
                 name: "two".to_string(),
@@ -1079,7 +1079,7 @@ go() ->
                     }),
                 },
             },
-            Statement::Fun {
+            Statement::Fn {
                 meta: default(),
                 args: vec![],
                 name: "three".to_string(),
