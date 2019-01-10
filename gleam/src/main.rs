@@ -72,6 +72,8 @@ fn command_build(matches: &clap::ArgMatches) {
         })
         .collect::<Vec<_>>();
 
+    // TODO: Build an acyclic graph to determine the order of module compilation
+    // https://crates.io/crates/petgraph
     for dir_entry in srcs {
         let src = fs::read_to_string(dir_entry.path())
             .expect(&format!("Unable to read {:?}", dir_entry.path()));

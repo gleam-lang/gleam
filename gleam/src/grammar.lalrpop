@@ -454,6 +454,7 @@ Type: Type = {
     TypeConstructor => <>,
     TypeTuple => <>,
     TypeVar => <>,
+    TypeFn => <>,
 }
 
 TypeConstructor: Type = {
@@ -481,6 +482,14 @@ TypeVar: Type = {
     <s:@L> <n:VarName> <e:@L> => Type::Var {
         meta: meta(s, e),
         name: n,
+    }
+}
+
+TypeFn: Type = {
+    <s:@L> "fn(" <args:Comma<Type>> ")" "->" <retrn:Type> <e:@L> => Type::Fun {
+        meta: meta(s, e),
+        retrn: Box::new(retrn),
+        args,
     }
 }
 

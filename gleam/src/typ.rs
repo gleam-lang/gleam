@@ -617,6 +617,7 @@ impl Env {
                 })?;
                 if args.len() != info.arity {
                     // Return an error, type constructor given wrong number of arguments
+                    // TODO: Write a test for this
                     unimplemented!()
                 }
                 match args.len() {
@@ -625,6 +626,7 @@ impl Env {
                         module: info.module.clone(),
                         public: info.public.clone(),
                     }),
+                    // TODO
                     n => unimplemented!(),
                 }
             }
@@ -635,6 +637,18 @@ impl Env {
                     .map(|t| self.type_from_ast(t, vars))
                     .collect::<Result<_, _>>()?;
                 Ok(Type::Tuple { elems: elems })
+            }
+
+            ast::Type::Fun { args, retrn, .. } => {
+                let args = args
+                    .iter()
+                    .map(|t| self.type_from_ast(t, vars))
+                    .collect::<Result<_, _>>()?;
+                let retrn = self.type_from_ast(retrn, vars)?;
+                Ok(Type::Fun {
+                    args,
+                    retrn: Box::new(retrn),
+                })
             }
 
             ast::Type::Var { name, .. } => unimplemented!(),
@@ -2480,6 +2494,10 @@ pub fn run() { { empty() | level = 1 } }",
         Case {
             src: "pub external fn ok(Int) -> {Atom, Int} = '' ''",
             typ: "module { fn ok(Int) -> {Atom, Int} }",
+        },
+        Case {
+            src: "pub external fn ok() -> fn(Int) -> Int = '' ''",
+            typ: "module { fn ok() -> fn(Int) -> Int }",
         },
         // Case {
         //     src: "pub external fn go(Atom) -> b = '' ''",

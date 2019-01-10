@@ -24,6 +24,12 @@ pub enum Type {
         args: Vec<Type>,
     },
 
+    Fun {
+        meta: Meta,
+        args: Vec<Type>,
+        retrn: Box<Type>,
+    },
+
     Var {
         meta: Meta,
         name: String,
