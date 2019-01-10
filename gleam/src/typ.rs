@@ -1,8 +1,8 @@
 #![allow(dead_code)] // TODO
 
 use crate::ast::{
-    Arg, BinOp, Clause, Expr, Meta, Module, Pattern, Scope, Statement, TypedExpr, TypedModule,
-    UntypedExpr, UntypedModule,
+    self, Arg, BinOp, Clause, Expr, Meta, Module, Pattern, Scope, Statement, TypedExpr,
+    TypedModule, UntypedExpr, UntypedModule,
 };
 use crate::grammar;
 use crate::pretty::*;
@@ -355,19 +355,81 @@ pub enum TypeVar {
     Generic { id: usize },
 }
 
-// TODO: Make private to enforce construction with Env::new
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypeConstructorInfo {
+    public: bool,
+    module: String,
+    arity: usize,
+}
+
 #[derive(Debug, Clone)]
 pub struct Env {
     uid: usize,
     variables: HashMap<String, (Scope<Type>, Type)>,
+    type_constructors: HashMap<String, TypeConstructorInfo>,
 }
 
 impl Env {
     pub fn new() -> Self {
         let mut env = Self {
             uid: 0,
+            type_constructors: hashmap![],
             variables: hashmap![],
         };
+
+        env.insert_type_constructor(
+            "Int".to_string(),
+            TypeConstructorInfo {
+                arity: 0,
+                module: "".to_string(),
+                public: true,
+            },
+        );
+
+        env.insert_type_constructor(
+            "Bool".to_string(),
+            TypeConstructorInfo {
+                arity: 0,
+                module: "".to_string(),
+                public: true,
+            },
+        );
+
+        env.insert_type_constructor(
+            "List".to_string(),
+            TypeConstructorInfo {
+                arity: 1,
+                module: "".to_string(),
+                public: true,
+            },
+        );
+
+        env.insert_type_constructor(
+            "Atom".to_string(),
+            TypeConstructorInfo {
+                arity: 0,
+                module: "".to_string(),
+                public: true,
+            },
+        );
+
+        env.insert_type_constructor(
+            "Float".to_string(),
+            TypeConstructorInfo {
+                arity: 0,
+                module: "".to_string(),
+                public: true,
+            },
+        );
+
+        env.insert_type_constructor(
+            "String".to_string(),
+            TypeConstructorInfo {
+                arity: 0,
+                module: "".to_string(),
+                public: true,
+            },
+        );
 
         env.insert_variable(
             "+".to_string(),
@@ -507,17 +569,74 @@ impl Env {
         }
     }
 
-    /// Record the type of a variable in the environment.
+    /// Record a variable in the current scope.
     ///
     pub fn insert_variable(&mut self, name: String, scope: Scope<Type>, typ: Type) {
         self.variables.insert(name, (scope, typ));
     }
 
-    /// Record the type of a variable in the environment.
+    /// Lookup a variable in the current scope.
     ///
     pub fn get_variable(&mut self, name: &String) -> Option<&(Scope<Type>, Type)> {
         self.variables.get(name)
     }
+
+    /// Record a type in the current scope.
+    ///
+    pub fn insert_type_constructor(&mut self, name: String, info: TypeConstructorInfo) {
+        self.type_constructors.insert(name, info);
+    }
+
+    /// Lookup a type in the current scope.
+    ///
+    pub fn get_type_constructor(&mut self, name: &String) -> Option<&TypeConstructorInfo> {
+        self.type_constructors.get(name)
+    }
+
+    /// Construct a Type from an AST Type annotation.
+    ///
+    /// Type variables are managed using a HashMap of names to types- this permits the
+    /// same type vars being shared between multiple annotations (such as in the arguments
+    /// of an external function declaration)
+    ///
+    pub fn type_from_ast(
+        &mut self,
+        ast: &ast::Type,
+        vars: &mut HashMap<String, Type>,
+    ) -> Result<Type, UnknownTypeError> {
+        match ast {
+            ast::Type::Constructor { name, args, .. } => {
+                let args: Vec<_> = args
+                    .iter()
+                    .map(|t| self.type_from_ast(t, vars))
+                    .collect::<Result<_, _>>()?;
+                let types = self.type_constructors.clone();
+                let info = self.get_type_constructor(name).ok_or(UnknownTypeError {
+                    name: name.to_string(),
+                    types,
+                })?;
+                if args.len() != info.arity {
+                    // Return an error, type constructor given wrong number of arguments
+                    unimplemented!()
+                }
+                match args.len() {
+                    0 => Ok(Type::Const {
+                        name: name.to_string(),
+                        module: info.module.clone(),
+                        public: info.public.clone(),
+                    }),
+                    n => unimplemented!(),
+                }
+            }
+
+            ast::Type::Var { name, .. } => unimplemented!(),
+        }
+    }
+}
+
+pub struct UnknownTypeError {
+    pub name: String,
+    pub types: HashMap<String, TypeConstructorInfo>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -526,6 +645,12 @@ pub enum Error {
         meta: Meta,
         name: String,
         variables: HashMap<String, (Scope<Type>, Type)>,
+    },
+
+    UnknownType {
+        meta: Meta,
+        name: String,
+        types: HashMap<String, TypeConstructorInfo>,
     },
 
     IncorrectArity {
@@ -583,6 +708,49 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
                     public,
                     args,
                     body,
+                })
+            }
+
+            Statement::ExternalFun {
+                meta,
+                name,
+                public,
+                args,
+                retrn,
+                module,
+                fun,
+            } => {
+                let mut type_vars = hashmap![];
+                let retrn_type = env
+                    .type_from_ast(&retrn, &mut type_vars)
+                    .map_err(|e| convert_unknown_type_error(e, meta.clone()))?;
+                let mut args_types = Vec::with_capacity(args.len());
+                for arg in args.iter() {
+                    let t = env
+                        .type_from_ast(arg, &mut type_vars)
+                        .map_err(|e| convert_unknown_type_error(e, meta.clone()))?;
+                    args_types.push(t)
+                }
+                let typ = Type::Fun {
+                    args: args_types,
+                    retrn: Box::new(retrn_type),
+                };
+                env.insert_variable(
+                    name.clone(),
+                    Scope::Module { arity: args.len() },
+                    typ.clone(),
+                );
+                if public {
+                    fields.push((name.clone(), typ));
+                }
+                Ok(Statement::ExternalFun {
+                    meta,
+                    name,
+                    public,
+                    args,
+                    retrn,
+                    module,
+                    fun,
                 })
             }
 
@@ -960,6 +1128,15 @@ fn bin_op_name(name: &BinOp) -> String {
         BinOp::DivFloat => "/.".to_string(),
     }
 }
+
+fn convert_unknown_type_error(e: UnknownTypeError, meta: Meta) -> Error {
+    Error::UnknownType {
+        meta,
+        name: e.name.clone(),
+        types: e.types.clone(),
+    }
+}
+
 fn convert_unify_error(e: UnifyError, meta: &Meta) -> Error {
     match e {
         UnifyError::CouldNotUnify { expected, given } => Error::CouldNotUnify {
@@ -2276,10 +2453,22 @@ pub fn run() { { empty() | level = 1 } }",
         // pub fn open(x) { case x { | I(i) -> i  } }",
         //     typ: "module { fn open(I) -> Int }",
         // },
-        // Case {
-        //     src: "pub external fn go(String) -> String = '' ''",
-        //     typ: "module { fn go(String) -> String }",
-        // },
+        Case {
+            src: "pub external fn go(String) -> String = '' ''",
+            typ: "module { fn go(String) -> String }",
+        },
+        Case {
+            src: "pub external fn go(Int) -> Float = '' ''",
+            typ: "module { fn go(Int) -> Float }",
+        },
+        Case {
+            src: "pub external fn go(Atom) -> Atom = '' ''",
+            typ: "module { fn go(Atom) -> Atom }",
+        },
+        Case {
+            src: "external fn go(Atom) -> Atom = '' ''",
+            typ: "module {  }",
+        },
         // Case {
         //     src: "pub external fn go(Atom) -> b = '' ''",
         //     typ: "module { fn go(Atom) -> a }",
