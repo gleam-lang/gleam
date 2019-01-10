@@ -452,6 +452,7 @@ PatternVar: Pattern = {
 
 Type: Type = {
     TypeConstructor => <>,
+    TypeTuple => <>,
     TypeVar => <>,
 }
 
@@ -467,6 +468,14 @@ TypeConstructor: Type = {
         name: n.to_string(),
     },
 }
+
+TypeTuple: Type = {
+    <s:@L> "{" <elems:Comma<Type>> "}" <e:@L> => Type::Tuple {
+        meta: meta(s, e),
+        elems: elems,
+    }
+}
+
 
 TypeVar: Type = {
     <s:@L> <n:VarName> <e:@L> => Type::Var {

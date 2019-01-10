@@ -606,10 +606,10 @@ impl Env {
     ) -> Result<Type, UnknownTypeError> {
         match ast {
             ast::Type::Constructor { name, args, .. } => {
-                let args: Vec<_> = args
+                let args = args
                     .iter()
                     .map(|t| self.type_from_ast(t, vars))
-                    .collect::<Result<_, _>>()?;
+                    .collect::<Result<Vec<_>, _>>()?;
                 let types = self.type_constructors.clone();
                 let info = self.get_type_constructor(name).ok_or(UnknownTypeError {
                     name: name.to_string(),
@@ -627,6 +627,14 @@ impl Env {
                     }),
                     n => unimplemented!(),
                 }
+            }
+
+            ast::Type::Tuple { elems, .. } => {
+                let elems = elems
+                    .iter()
+                    .map(|t| self.type_from_ast(t, vars))
+                    .collect::<Result<_, _>>()?;
+                Ok(Type::Tuple { elems: elems })
             }
 
             ast::Type::Var { name, .. } => unimplemented!(),
@@ -2468,6 +2476,10 @@ pub fn run() { { empty() | level = 1 } }",
         Case {
             src: "external fn go(Atom) -> Atom = '' ''",
             typ: "module {  }",
+        },
+        Case {
+            src: "pub external fn ok(Int) -> {Atom, Int} = '' ''",
+            typ: "module { fn ok(Int) -> {Atom, Int} }",
         },
         // Case {
         //     src: "pub external fn go(Atom) -> b = '' ''",

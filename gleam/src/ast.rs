@@ -28,6 +28,11 @@ pub enum Type {
         meta: Meta,
         name: String,
     },
+
+    Tuple {
+        meta: Meta,
+        elems: Vec<Type>,
+    },
 }
 
 pub type TypedStatement = Statement<Scope<typ::Type>, typ::Type>;
