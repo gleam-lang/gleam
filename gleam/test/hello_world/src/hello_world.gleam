@@ -1,4 +1,4 @@
-external fn rev(List(a)) -> List(a) = 'lists' 'reverse'
+pub external fn rev(String) -> String = 'lists' 'reverse'
 
 pub fn greet(name) {
   case name {

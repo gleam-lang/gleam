@@ -27,6 +27,8 @@ extern crate pretty_assertions;
 extern crate lalrpop_util;
 
 use clap::{crate_version, App, AppSettings, Arg, SubCommand};
+use std::fs::File;
+use std::io::Write;
 
 fn main() {
     let matches = App::new("gleam")
@@ -58,7 +60,7 @@ fn command_build(matches: &clap::ArgMatches) {
 
     let root_dir = Path::new(matches.value_of("PATH").unwrap_or("."));
     let src_dir = root_dir.join("src");
-    let srcs = fs::read_dir(src_dir)
+    let srcs = fs::read_dir(src_dir.clone())
         .expect("Could not locate src/")
         .filter_map(Result::ok)
         .filter(|d| {
@@ -94,5 +96,10 @@ fn command_build(matches: &clap::ArgMatches) {
         let erl = crate::erl::module(module);
 
         println!("{}", erl);
+
+        let erl_name = format!("gleam_{}.erl", name);
+        let mut f = File::create(src_dir.join(erl_name)).expect("Unable to create file");
+        f.write_all(erl.as_bytes())
+            .expect("Unable to write Erlang code to file");
     }
 }
