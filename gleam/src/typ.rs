@@ -789,7 +789,12 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
                 })
             }
 
-            Statement::Test { .. } => unimplemented!(),
+            Statement::Test { meta, name, body } => {
+                let vars = env.variables.clone();
+                let body = infer(body, 2, &mut env)?;
+                env.variables = vars;
+                Ok(Statement::Test { meta, name, body })
+            }
 
             Statement::Enum { .. } => unimplemented!(),
 
@@ -2624,6 +2629,10 @@ pub fn two() { one() + zero() }",
   fn zero() -> Int
 }",
         },
+        Case {
+            src: "test hello { 1 + 1 }",
+            typ: "module {  }",
+        },
         // Case {
         //     src: "
         // type Html = String
@@ -2687,5 +2696,30 @@ pub fn two() { one() + zero() }",
             ),
             (src, typ.to_string()),
         );
+    }
+}
+
+#[test]
+fn infer_module_error_test() {
+    struct Case {
+        src: &'static str,
+        error: Error,
+    }
+
+    let cases = [Case {
+        src: "test go { 1 + 'two' }",
+        error: Error::CouldNotUnify {
+            meta: Meta { start: 10, end: 19 }, // This should specify just the RHS
+            expected: int(),
+            given: atom(),
+        },
+    }];
+
+    for Case { src, error } in cases.into_iter() {
+        let ast = grammar::ModuleParser::new()
+            .parse(src)
+            .expect("syntax error");
+        let result = infer_module(ast).expect_err("should infer an error");
+        assert_eq!((src, &result), (src, error));
     }
 }
