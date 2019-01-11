@@ -710,6 +710,7 @@ pub enum Error {
 pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
     let mut env = Env::new();
     let mut fields = vec![];
+    let module_name = &module.name;
 
     let statements = module
         .statements
@@ -788,7 +789,45 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
                 })
             }
 
-            _ => unimplemented!(),
+            Statement::Test { .. } => unimplemented!(),
+
+            Statement::Enum { .. } => unimplemented!(),
+
+            Statement::ExternalType {
+                meta,
+                public,
+                name,
+                args,
+            } => {
+                let mut type_vars = hashmap![];
+                let mut args_types = Vec::with_capacity(args.len());
+                for arg in args.iter() {
+                    let var = ast::Type::Var {
+                        meta: meta.clone(),
+                        name: arg.to_string(),
+                    };
+                    let t = env
+                        .type_from_ast(&var, &mut type_vars)
+                        .map_err(|e| convert_unknown_type_error(e, meta.clone()))?;
+                    args_types.push(t)
+                }
+                env.insert_type_constructor(
+                    name.clone(),
+                    TypeConstructorInfo {
+                        module: module_name.clone(),
+                        public: public.clone(),
+                        arity: args_types.len(),
+                    },
+                );
+                Ok(Statement::ExternalType {
+                    meta,
+                    public,
+                    name,
+                    args,
+                })
+            }
+
+            Statement::Import { .. } => unimplemented!(),
         })
         .collect::<Result<Vec<_>, _>>()?;
 
@@ -2551,12 +2590,18 @@ pub fn run() { { empty() | level = 1 } }",
             src: "pub external fn len(List(a)) -> Int = '' ''",
             typ: "module { fn len(List(a)) -> Int }",
         },
-        // Case {
-        //     src: "
-        // pub external type Connection\n
-        // pub external fn is_open(Connection) -> Bool = '' ''",
-        //     typ: "module { fn is_open(Connection) -> Bool}",
-        // },
+        Case {
+            src: "
+        pub external type Connection\n
+        pub external fn is_open(Connection) -> Bool = '' ''",
+            typ: "module { fn is_open(Connection) -> Bool }",
+        },
+        Case {
+            src: "
+        pub external type Pair(thing, thing)\n
+        pub external fn pair(a) -> Pair(a, a) = '' ''",
+            typ: "module { fn pair(a) -> Pair(a, a) }",
+        },
         Case {
             src: "
 pub fn one() { 1 }
