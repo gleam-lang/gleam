@@ -626,8 +626,12 @@ impl Env {
                         module: info.module.clone(),
                         public: info.public.clone(),
                     }),
-                    // TODO
-                    n => unimplemented!(),
+                    n => Ok(Type::App {
+                        name: name.to_string(),
+                        module: info.module.clone(),
+                        public: info.public.clone(),
+                        args,
+                    }),
                 }
             }
 
@@ -651,7 +655,15 @@ impl Env {
                 })
             }
 
-            ast::Type::Var { name, .. } => unimplemented!(),
+            ast::Type::Var { name, .. } => match vars.get(name) {
+                Some(var) => Ok(var.clone()),
+
+                None => {
+                    let var = self.new_generic_var();
+                    vars.insert(name.to_string(), var.clone());
+                    Ok(var)
+                }
+            },
         }
     }
 }
@@ -2499,41 +2511,46 @@ pub fn run() { { empty() | level = 1 } }",
             src: "pub external fn ok() -> fn(Int) -> Int = '' ''",
             typ: "module { fn ok() -> fn(Int) -> Int }",
         },
-        // Case {
-        //     src: "pub external fn go(Atom) -> b = '' ''",
-        //     typ: "module { fn go(Atom) -> a }",
-        // },
-        // Case {
-        //     src: "pub external fn go(Bool) -> b = '' ''",
-        //     typ: "module { fn go(Bool) -> a }",
-        // },
-        // Case {
-        //     src: "pub external fn go(List(a)) -> a = '' ''",
-        //     typ: "module { fn go(List(a)) -> a }",
-        // },
-        // Case {
-        //     src: "pub external fn go(Tuple(a, b)) -> b = '' ''",
-        //     typ: "module { fn go(Tuple(a, b)) -> b }",
-        // },
-        // Case {
-        //     src: "
-        // external fn go(Bool) -> b = '' ''
-        // pub fn x() {
-        // go(True)
-        // }",
-        //     typ: "module { fn x() -> a }",
-        // },
-        // Case {
-        //     src: "
-        // external fn id(a) -> a = '' ''
-        // pub fn a() { id(1) }
-        // pub fn b() { id(1.0) }",
-        //     typ: "module { fn a() -> Int fn b() -> Float }",
-        // },
-        // Case {
-        //     src: "pub external fn len(List(a)) -> Int = '' ''",
-        //     typ: "module { fn len(List(a)) -> Int }",
-        // },
+        Case {
+            src: "pub external fn go(Atom) -> b = '' ''",
+            typ: "module { fn go(Atom) -> a }",
+        },
+        Case {
+            src: "pub external fn go(Bool) -> b = '' ''",
+            typ: "module { fn go(Bool) -> a }",
+        },
+        Case {
+            src: "pub external fn go(List(a)) -> a = '' ''",
+            typ: "module { fn go(List(a)) -> a }",
+        },
+        Case {
+            src: "pub external fn go({a, c}) -> c = '' ''",
+            typ: "module { fn go({a, b}) -> b }",
+        },
+        Case {
+            src: "
+        external fn go(Int) -> b = '' ''
+        pub fn x() {
+          go(1)
+        }",
+            typ: "module { fn x() -> a }",
+        },
+        Case {
+            src: "
+        external fn id(a) -> a = '' ''
+        pub fn i(x) { id(x) }
+        pub fn a() { id(1) }
+        pub fn b() { id(1.0) }",
+            typ: "module {
+  fn a() -> Int
+  fn b() -> Float
+  fn i(a) -> a
+}",
+        },
+        Case {
+            src: "pub external fn len(List(a)) -> Int = '' ''",
+            typ: "module { fn len(List(a)) -> Int }",
+        },
         // Case {
         //     src: "
         // pub external type Connection\n
@@ -2551,17 +2568,17 @@ pub fn two() { one() + zero() }",
   fn zero() -> Int
 }",
         },
-        // Case {
-        //     src: "
-        // pub fn two() { one() + zero() }
-        // pub fn one() { 1 }
-        // pub fn zero() { one() - 1 }",
-        //     typ: "module {
-        // fn one() -> Int
-        // fn two() -> Int
-        // fn zero() -> Int
-        // }",
-        // },
+        Case {
+            src: "
+        pub fn one() { 1 }
+        pub fn zero() { one() - 1 }
+        pub fn two() { one() + zero() }",
+            typ: "module {
+  fn one() -> Int
+  fn two() -> Int
+  fn zero() -> Int
+}",
+        },
         // Case {
         //     src: "
         // type Html = String
