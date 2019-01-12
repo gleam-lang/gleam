@@ -51,7 +51,7 @@ impl Env {
 }
 
 pub fn module(module: TypedModule) -> String {
-    format!("-module({}).", module.name)
+    format!("-module(gleam_{}).", module.name)
         .to_doc()
         .append(lines(2))
         .append(
@@ -452,7 +452,7 @@ fn module_test() {
             },
         ],
     };
-    let expected = "-module(magic).
+    let expected = "-module(gleam_magic).
 
 add_ints(A, B) ->
     int:add(A, B).
@@ -695,7 +695,7 @@ map() ->
             },
         ],
     };
-    let expected = "-module(term).
+    let expected = "-module(gleam_term).
 
 atom() ->
     'ok'.
@@ -790,7 +790,7 @@ funny() ->
             },
         }],
     };
-    let expected = "-module(term).
+    let expected = "-module(gleam_term).
 
 some_function(ArgOne,
               ArgTwo,
@@ -818,7 +818,7 @@ some_function(ArgOne,
             },
         }],
     };
-    let expected = "-module(term).
+    let expected = "-module(gleam_term).
 
 -ifdef(TEST).
 bang_test() ->
@@ -876,7 +876,7 @@ bang_test() ->
             },
         ],
     };
-    let expected = "-module(vars).
+    let expected = "-module(gleam_vars).
 
 arg() ->
     SomeArg.
@@ -1005,7 +1005,7 @@ another() ->
             },
         }],
     };
-    let expected = "-module(my_mod).
+    let expected = "-module(gleam_my_mod).
 
 go() ->
     case 1 of
@@ -1111,7 +1111,7 @@ go() ->
             },
         ],
     };
-    let expected = "-module(funny).
+    let expected = "-module(gleam_funny).
 
 one() ->
     one_two(1).
@@ -1139,7 +1139,7 @@ fn integration_test() {
   x = {100000000000000000, {2000000000, 3000000000000, 40000000000}, 50000, 6000000000}
   x
 }"#,
-            erl: r#"-module().
+            erl: r#"-module(gleam_).
 
 go() ->
     X = {100000000000000000,
@@ -1155,7 +1155,7 @@ go() ->
   y = 2
   y
 }"#,
-            erl: r#"-module().
+            erl: r#"-module(gleam_).
 
 go() ->
     Y = 1,

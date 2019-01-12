@@ -1,4 +1,4 @@
--module(hello_world).
+-module(gleam_hello_world).
 
 -export([rev/1]).
 rev(A) ->
