@@ -1,20 +1,22 @@
 -module(gleam_hello_world).
 
--export([rev/1]).
+-export([rev/1, greet/1, list/0, x/0, run/0]).
+
 rev(A) ->
     lists:reverse(A).
 
--export([greet/1]).
 greet(Name) ->
     case Name of
         <<"your mate Dave">> ->
             [<<"Oi! Dave! What are you doing here? Go on. Clear off. Haven't you got better things to do?">> | []];
 
         Name1 ->
-            [<<"Hello, ">> | [Name1 | [<<"!">> | []]]]
+            [<<"Hello, ">> | [begin
+                1,
+                Name1
+            end | [<<"!">> | []]]]
     end.
 
--export([list/0]).
 list() ->
     case 1 of
         2 ->
@@ -25,11 +27,13 @@ list() ->
             <<"one two three. one two three. one two three. one two three. one two three.">>
     end.
 
--export([x/0]).
 x() ->
-    {'ok', 2}.
+    {'ok',
+     begin
+         1,
+         2
+     end}.
 
--export([run/0]).
 run() ->
     X = 1,
     X1 = 2 + 3,

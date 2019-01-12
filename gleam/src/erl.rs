@@ -38,21 +38,45 @@ impl Env {
     }
 
     pub fn next_local_var_name(&mut self, name: String) -> Document {
-        match self.vars.get(&name) {
-            None => {
-                self.vars.insert(name.clone(), 0);
-            }
-            Some(n) => {
-                self.vars.insert(name.clone(), n + 1);
-            }
-        };
+        self.vars
+            .insert(name.clone(), self.vars.get(&name).map_or(0, |i| i + 1));
         self.local_var_name(name)
     }
 }
 
 pub fn module(module: TypedModule) -> String {
+    println!("{:?}", module.statements);
+
+    let exports: Vec<_> = module
+        .statements
+        .iter()
+        .flat_map(|s| match s {
+            Statement::Fn {
+                public: true,
+                name,
+                args,
+                ..
+            } => Some((name.clone(), args.len())),
+
+            Statement::ExternalFn {
+                public: true,
+                name,
+                args,
+                ..
+            } => Some((name.clone(), args.len())),
+
+            _ => None,
+        })
+        .map(|(n, a)| n.to_doc().append("/").append(a))
+        .intersperse(", ".to_doc())
+        .collect();
+
     format!("-module(gleam_{}).", module.name)
         .to_doc()
+        .append(lines(2))
+        .append("-export([")
+        .append(exports)
+        .append("]).")
         .append(lines(2))
         .append(
             module
@@ -93,8 +117,7 @@ fn statement(statement: TypedStatement) -> Option<Document> {
 fn mod_fun(public: bool, name: String, args: Vec<Arg>, body: TypedExpr) -> Document {
     let body_doc = expr(body, &mut Env::default());
 
-    export(public, &name, args.len())
-        .append(name)
+    name.to_doc()
         .append(fun_args(args))
         .append(" ->")
         .append(line().append(body_doc).nest(INDENT).group())
@@ -106,7 +129,7 @@ fn fun_args(args: Vec<Arg>) -> Document {
 }
 
 fn call_args(args: Vec<TypedExpr>, env: &mut Env) -> Document {
-    wrap_args(args.into_iter().map(|e| expr(e, env)))
+    wrap_args(args.into_iter().map(|e| wrap_expr(e, env)))
 }
 
 fn wrap_args<I>(args: I) -> Document
@@ -132,16 +155,6 @@ fn test(name: String, body: TypedExpr) -> Document {
         .append(".")
         .append(line())
         .append("-endif.")
-}
-
-fn export(public: bool, name: &String, arity: usize) -> Document {
-    if public {
-        format!("-export([{}/{}]).", name, arity)
-            .to_doc()
-            .append(line())
-    } else {
-        nil()
-    }
 }
 
 // TODO: Escape
@@ -170,7 +183,8 @@ where
 }
 
 fn seq(first: TypedExpr, then: TypedExpr, env: &mut Env) -> Document {
-    expr(first, env)
+    force_break()
+        .append(expr(first, env))
         .append(",")
         .append(line())
         .append(expr(then, env))
@@ -225,14 +239,14 @@ fn pattern(p: Pattern, env: &mut Env) -> Document {
         Pattern::Float { value, .. } => value.to_doc(),
         Pattern::Tuple { elems, .. } => tuple(pattern, elems, env),
         Pattern::String { value, .. } => string(value),
-        Pattern::Enum { name, args, .. } => enum_(pattern_atom, pattern, name, args, env),
+        Pattern::Enum { name, args, .. } => enum_pattern(name, args, env),
     }
 }
 
 fn cons(head: TypedExpr, tail: TypedExpr, env: &mut Env) -> Document {
     // TODO: Flatten nested cons into a list i.e. [1, 2, 3 | X] or [1, 2, 3, 4]
     // TODO: Break, indent, etc
-    expr(head, env)
+    wrap_expr(head, env)
         .append(" | ")
         .append(expr(tail, env))
         .surround("[", "]")
@@ -266,16 +280,12 @@ fn var(name: String, scope: TypedScope, env: &mut Env) -> Document {
     }
 }
 
-fn enum_<H, F, E>(h: H, to_doc: F, name: String, mut args: Vec<E>, env: &mut Env) -> Document
-where
-    H: Fn(String) -> E,
-    F: Fn(E, &mut Env) -> Document,
-{
+fn enum_pattern(name: String, mut args: Vec<Pattern>, env: &mut Env) -> Document {
     if args.len() == 0 {
-        to_doc(h(name.to_snake_case()), env)
+        pattern(pattern_atom(name.to_snake_case()), env)
     } else {
-        args.insert(0, h(name.to_snake_case()));
-        tuple(to_doc, args, env)
+        args.insert(0, pattern_atom(name.to_snake_case()));
+        tuple(pattern, args, env)
     }
 }
 
@@ -326,6 +336,26 @@ fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
     fun.append(call_args(args, env))
 }
 
+/// Wrap a document in begin end
+///
+fn begin_end(document: Document) -> Document {
+    force_break()
+        .append("begin")
+        .append(line().append(document).nest(INDENT))
+        .append(line())
+        .append("end")
+}
+
+/// Same as expr, expect it wraps seq, let, etc in begin end
+///
+fn wrap_expr(expression: TypedExpr, env: &mut Env) -> Document {
+    match &expression {
+        Expr::Seq { .. } => begin_end(expr(expression, env)),
+        Expr::Let { .. } => begin_end(expr(expression, env)),
+        _ => expr(expression, env),
+    }
+}
+
 fn expr(expression: TypedExpr, env: &mut Env) -> Document {
     match expression {
         Expr::Nil { .. } => "[]".to_doc(),
@@ -335,7 +365,7 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
         Expr::Constructor { name, .. } => atom(name.to_snake_case()),
         Expr::Atom { value, .. } => atom(value),
         Expr::String { value, .. } => string(value),
-        Expr::Tuple { elems, .. } => tuple(expr, elems, env),
+        Expr::Tuple { elems, .. } => tuple(wrap_expr, elems, env),
         Expr::Seq { first, then, .. } => seq(*first, *then, env),
         Expr::Var { name, scope, .. } => var(name, scope, env),
         Expr::Fn { args, body, .. } => fun(args, *body, env),
@@ -378,12 +408,11 @@ fn external_fun(public: bool, name: String, module: String, fun: String, arity: 
         .intersperse(", ".to_string())
         .collect();
 
-    let header = format!("{}({}) ->", name, chars).to_doc();
-    let body = format!("{}:{}({}).", module, fun, chars).to_doc();
-
-    export(public, &name, arity)
-        .append(header)
-        .append(line().append(body).nest(INDENT))
+    format!("{}({}) ->", name, chars)
+        .to_doc()
+        .append(line())
+        .append(format!("{}:{}({}).", module, fun, chars))
+        .nest(INDENT)
 }
 
 #[test]
@@ -454,10 +483,11 @@ fn module_test() {
     };
     let expected = "-module(gleam_magic).
 
+-export([map/0]).
+
 add_ints(A, B) ->
     int:add(A, B).
 
--export([map/0]).
 map() ->
     maps:new().
 "
@@ -697,6 +727,8 @@ map() ->
     };
     let expected = "-module(gleam_term).
 
+-export([]).
+
 atom() ->
     'ok'.
 
@@ -792,6 +824,8 @@ funny() ->
     };
     let expected = "-module(gleam_term).
 
+-export([]).
+
 some_function(ArgOne,
               ArgTwo,
               Arg3,
@@ -819,6 +853,8 @@ some_function(ArgOne,
         }],
     };
     let expected = "-module(gleam_term).
+
+-export([]).
 
 -ifdef(TEST).
 bang_test() ->
@@ -877,6 +913,8 @@ bang_test() ->
         ],
     };
     let expected = "-module(gleam_vars).
+
+-export([]).
 
 arg() ->
     SomeArg.
@@ -1007,6 +1045,8 @@ another() ->
     };
     let expected = "-module(gleam_my_mod).
 
+-export([]).
+
 go() ->
     case 1 of
         1 ->
@@ -1113,6 +1153,8 @@ go() ->
     };
     let expected = "-module(gleam_funny).
 
+-export([]).
+
 one() ->
     one_two(1).
 
@@ -1141,6 +1183,8 @@ fn integration_test() {
 }"#,
             erl: r#"-module(gleam_).
 
+-export([]).
+
 go() ->
     X = {100000000000000000,
          {2000000000, 3000000000000, 40000000000},
@@ -1156,6 +1200,8 @@ go() ->
   y
 }"#,
             erl: r#"-module(gleam_).
+
+-export([]).
 
 go() ->
     Y = 1,
