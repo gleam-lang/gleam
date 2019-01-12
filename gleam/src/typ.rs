@@ -603,22 +603,27 @@ impl Env {
         &mut self,
         ast: &ast::Type,
         vars: &mut HashMap<String, Type>,
-    ) -> Result<Type, UnknownTypeError> {
+    ) -> Result<Type, TypeFromAstError> {
         match ast {
-            ast::Type::Constructor { name, args, .. } => {
+            ast::Type::Constructor { meta, name, args } => {
                 let args = args
                     .iter()
                     .map(|t| self.type_from_ast(t, vars))
                     .collect::<Result<Vec<_>, _>>()?;
                 let types = self.type_constructors.clone();
-                let info = self.get_type_constructor(name).ok_or(UnknownTypeError {
-                    name: name.to_string(),
-                    types,
-                })?;
+                let info =
+                    self.get_type_constructor(name)
+                        .ok_or(TypeFromAstError::UnknownType {
+                            name: name.to_string(),
+                            types,
+                        })?;
                 if args.len() != info.arity {
-                    // Return an error, type constructor given wrong number of arguments
-                    // TODO: Write a test for this
-                    unimplemented!()
+                    return Err(TypeFromAstError::IncorrectTypeArity {
+                        meta: meta.clone(),
+                        name: name.to_string(),
+                        expected: info.arity,
+                        given: args.len(),
+                    });
                 }
                 match args.len() {
                     0 => Ok(Type::Const {
@@ -626,7 +631,7 @@ impl Env {
                         module: info.module.clone(),
                         public: info.public.clone(),
                     }),
-                    n => Ok(Type::App {
+                    _ => Ok(Type::App {
                         name: name.to_string(),
                         module: info.module.clone(),
                         public: info.public.clone(),
@@ -668,9 +673,18 @@ impl Env {
     }
 }
 
-pub struct UnknownTypeError {
-    pub name: String,
-    pub types: HashMap<String, TypeConstructorInfo>,
+pub enum TypeFromAstError {
+    UnknownType {
+        name: String,
+        types: HashMap<String, TypeConstructorInfo>,
+    },
+
+    IncorrectTypeArity {
+        meta: Meta,
+        name: String,
+        expected: usize,
+        given: usize,
+    },
 }
 
 #[derive(Debug, PartialEq)]
@@ -689,6 +703,13 @@ pub enum Error {
 
     IncorrectArity {
         meta: Meta,
+        expected: usize,
+        given: usize,
+    },
+
+    IncorrectTypeArity {
+        meta: Meta,
+        name: String,
         expected: usize,
         given: usize,
     },
@@ -758,12 +779,12 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
                 let mut type_vars = hashmap![];
                 let retrn_type = env
                     .type_from_ast(&retrn, &mut type_vars)
-                    .map_err(|e| convert_unknown_type_error(e, meta.clone()))?;
+                    .map_err(|e| convert_type_from_ast_error(e, meta.clone()))?;
                 let mut args_types = Vec::with_capacity(args.len());
                 for arg in args.iter() {
                     let t = env
                         .type_from_ast(arg, &mut type_vars)
-                        .map_err(|e| convert_unknown_type_error(e, meta.clone()))?;
+                        .map_err(|e| convert_type_from_ast_error(e, meta.clone()))?;
                     args_types.push(t)
                 }
                 let typ = Type::Fn {
@@ -813,7 +834,7 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
                     };
                     let t = env
                         .type_from_ast(&var, &mut type_vars)
-                        .map_err(|e| convert_unknown_type_error(e, meta.clone()))?;
+                        .map_err(|e| convert_type_from_ast_error(e, meta.clone()))?;
                     args_types.push(t)
                 }
                 env.insert_type_constructor(
@@ -1125,7 +1146,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
 ///
 fn unify_pattern(pattern: &Pattern, typ: &Type, env: &mut Env) -> Result<(), Error> {
     match pattern {
-        Pattern::Var { meta, name } => {
+        Pattern::Var { name, .. } => {
             env.insert_variable(name.to_string(), Scope::Local, typ.clone());
             Ok(())
         }
@@ -1207,11 +1228,25 @@ fn bin_op_name(name: &BinOp) -> String {
     }
 }
 
-fn convert_unknown_type_error(e: UnknownTypeError, meta: Meta) -> Error {
-    Error::UnknownType {
-        meta,
-        name: e.name.clone(),
-        types: e.types.clone(),
+fn convert_type_from_ast_error(e: TypeFromAstError, meta: Meta) -> Error {
+    match e {
+        TypeFromAstError::UnknownType { name, types } => Error::UnknownType {
+            meta,
+            name: name,
+            types: types,
+        },
+
+        TypeFromAstError::IncorrectTypeArity {
+            meta,
+            name,
+            expected,
+            given,
+        } => Error::IncorrectTypeArity {
+            meta,
+            name,
+            expected,
+            given,
+        },
     }
 }
 
@@ -2706,14 +2741,25 @@ fn infer_module_error_test() {
         error: Error,
     }
 
-    let cases = [Case {
-        src: "test go { 1 + 'two' }",
-        error: Error::CouldNotUnify {
-            meta: Meta { start: 10, end: 19 }, // This should specify just the RHS
-            expected: int(),
-            given: atom(),
+    let cases = [
+        Case {
+            src: "test go { 1 + 'two' }",
+            error: Error::CouldNotUnify {
+                meta: Meta { start: 10, end: 19 }, // TODO: FIXME: This should specify just the RHS
+                expected: int(),
+                given: atom(),
+            },
         },
-    }];
+        Case {
+            src: "external fn go(List(a, b)) -> a = '' ''",
+            error: Error::IncorrectTypeArity {
+                meta: Meta { start: 15, end: 25 },
+                name: "List".to_string(),
+                expected: 1,
+                given: 2,
+            },
+        },
+    ];
 
     for Case { src, error } in cases.into_iter() {
         let ast = grammar::ModuleParser::new()
