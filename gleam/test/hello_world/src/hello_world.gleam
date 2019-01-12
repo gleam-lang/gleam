@@ -8,7 +8,7 @@ pub fn greet(name) {
 }
 
 pub fn list() {
-  case 1 {
+  case begin 1 2 end {
   | 2 ->
       "ok"
 
@@ -26,4 +26,12 @@ pub fn run() {
   x = 1
   x = 2 + 3
   x
+}
+
+pub fn pair(a, b) {
+  {a, b}
+}
+
+pub fn go() {
+  pair(begin 1 2 end, 2)
 }

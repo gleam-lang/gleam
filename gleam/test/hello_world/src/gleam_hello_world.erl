@@ -1,6 +1,6 @@
 -module(gleam_hello_world).
 
--export([rev/1, greet/1, list/0, x/0, run/0]).
+-export([rev/1, greet/1, list/0, x/0, run/0, pair/2, go/0]).
 
 rev(A) ->
     lists:reverse(A).
@@ -18,7 +18,10 @@ greet(Name) ->
     end.
 
 list() ->
-    case 1 of
+    case begin
+        1,
+        2
+    end of
         2 ->
             <<"ok">>;
 
@@ -38,3 +41,13 @@ run() ->
     X = 1,
     X1 = 2 + 3,
     X1.
+
+pair(A, B) ->
+    {A, B}.
+
+go() ->
+    pair(begin
+             1,
+             2
+         end,
+         2).

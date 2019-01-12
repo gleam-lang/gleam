@@ -306,7 +306,7 @@ fn clauses(cs: Vec<TypedClause>, env: &mut Env) -> Document {
 fn case(subject: TypedExpr, cs: Vec<TypedClause>, env: &mut Env) -> Document {
     "case "
         .to_doc()
-        .append(expr(subject, env).group())
+        .append(wrap_expr(subject, env).group())
         .append(" of")
         .append(line().append(clauses(cs, env)).nest(INDENT))
         .append(line())
@@ -1207,6 +1207,37 @@ go() ->
     Y = 1,
     Y1 = 2,
     Y1.
+"#,
+        },
+        Case {
+            src: r#"fn go(x) {
+    case begin 1 x end {
+    | y ->
+        1
+    }
+}
+
+fn x() {
+    go(begin 1 2 end)
+}"#,
+            erl: r#"-module(gleam_).
+
+-export([]).
+
+go(X) ->
+    case begin
+        1,
+        X
+    end of
+        Y ->
+            1
+    end.
+
+x() ->
+    go(begin
+           1,
+           2
+       end).
 "#,
         },
         // TODO: Check that var num is incremented for args
