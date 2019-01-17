@@ -26,39 +26,33 @@ extern crate pretty_assertions;
 #[macro_use]
 extern crate lalrpop_util;
 
-use clap::{crate_version, App, AppSettings, Arg, SubCommand};
 use std::fs::File;
 use std::io::Write;
+use structopt::clap::AppSettings;
+use structopt::StructOpt;
+
+#[derive(StructOpt, Debug)]
+#[structopt(raw(
+    global_settings = "&[AppSettings::ColoredHelp, AppSettings::VersionlessSubcommands]"
+))]
+enum Command {
+    #[structopt(name = "build", about = "Compile Gleam modules in a given project")]
+    Build {
+        #[structopt(help = "location of the project root", default_value = ".")]
+        path: String,
+    },
+}
 
 fn main() {
-    let matches = App::new("gleam")
-        .setting(AppSettings::SubcommandRequiredElseHelp)
-        .setting(AppSettings::ColoredHelp)
-        .setting(AppSettings::VersionlessSubcommands)
-        .version(crate_version!())
-        .subcommand(
-            SubCommand::with_name("build")
-                .about("Compile Gleam modules in a given project")
-                .setting(AppSettings::ColoredHelp)
-                .arg(
-                    Arg::with_name("PATH")
-                        .help("location of the project root")
-                        .default_value("./")
-                        .index(1),
-                ),
-        )
-        .get_matches();
-
-    match matches.subcommand_name() {
-        Some("build") => command_build(matches.subcommand_matches("build").unwrap()),
-        _ => unreachable!(),
+    match Command::from_args() {
+        Command::Build { path } => command_build(path),
     }
 }
 
-fn command_build(matches: &clap::ArgMatches) {
+fn command_build(root: String) {
     use std::{fs, path::Path};
 
-    let root_dir = Path::new(matches.value_of("PATH").unwrap_or("."));
+    let root_dir = Path::new(&root);
     let src_dir = root_dir.join("src");
     let srcs = fs::read_dir(src_dir.clone())
         .expect("Could not locate src/")

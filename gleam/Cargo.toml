@@ -7,6 +7,7 @@ edition = "2018"
 [dependencies]
 # Command line interface
 clap = "2"
+structopt = "0.2"
 # Immutable data structures
 im = "12"
 # Extra iter methods
