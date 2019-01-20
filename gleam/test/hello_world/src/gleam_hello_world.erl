@@ -8,13 +8,15 @@ rev(A) ->
 greet(Name) ->
     case Name of
         <<"your mate Dave">> ->
-            [<<"Oi! Dave! What are you doing here? Go on. Clear off. Haven't you got better things to do?">> | []];
+            [<<"Oi! Dave! What are you doing here? Go on. Clear off. Haven't you got better things to do?">>];
 
         Name1 ->
-            [<<"Hello, ">> | [begin
-                1,
-                Name1
-            end | [<<"!">> | []]]]
+            [<<"Hello, ">>,
+             begin
+                 1,
+                 Name1
+             end,
+             <<"!">>]
     end.
 
 list() ->

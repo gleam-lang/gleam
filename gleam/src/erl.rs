@@ -45,8 +45,6 @@ impl Env {
 }
 
 pub fn module(module: TypedModule) -> String {
-    println!("{:?}", module.statements);
-
     let exports: Vec<_> = module
         .statements
         .iter()
@@ -244,12 +242,43 @@ fn pattern(p: Pattern, env: &mut Env) -> Document {
 }
 
 fn cons(head: TypedExpr, tail: TypedExpr, env: &mut Env) -> Document {
+    match collect_list(head, tail) {
+        (elems, Some(final_tail)) => unimplemented!(),
+
+        (elems, None) => elems
+            .into_iter()
+            .map(|e| wrap_expr(e, env))
+            .intersperse(delim(","))
+            .collect::<Vec<_>>()
+            .to_doc()
+            .nest_current()
+            .surround("[", "]")
+            .group(),
+    }
     // TODO: Flatten nested cons into a list i.e. [1, 2, 3 | X] or [1, 2, 3, 4]
     // TODO: Break, indent, etc
-    wrap_expr(head, env)
-        .append(" | ")
-        .append(expr(tail, env))
-        .surround("[", "]")
+    // wrap_expr(head, env)
+    //     .append(" | ")
+    //     .append(expr(tail, env))
+    //     .surround("[", "]")
+}
+
+fn collect_list(head: TypedExpr, tail: TypedExpr) -> (Vec<TypedExpr>, Option<TypedExpr>) {
+    fn go(expr: TypedExpr, elems: &mut Vec<TypedExpr>) -> Option<TypedExpr> {
+        match expr {
+            Expr::Nil { .. } => None,
+
+            Expr::Cons { head, tail, .. } => {
+                elems.push(*head);
+                go(*tail, elems)
+            }
+
+            other => Some(other),
+        }
+    }
+    let mut elems = vec![head];
+    let final_tail = go(tail, &mut elems);
+    (elems, final_tail)
 }
 
 fn expr_record_cons(label: String, value: TypedExpr, tail: TypedExpr, env: &mut Env) -> Document {
@@ -284,6 +313,7 @@ fn enum_pattern(name: String, mut args: Vec<Pattern>, env: &mut Env) -> Document
     if args.len() == 0 {
         pattern(pattern_atom(name.to_snake_case()), env)
     } else {
+        // FIXME: O(n), insert at start shuffles the elemes forward by one place
         args.insert(0, pattern_atom(name.to_snake_case()));
         tuple(pattern, args, env)
     }
@@ -672,11 +702,20 @@ map() ->
                     head: Box::new(Expr::Int {
                         typ: typ::int(),
                         meta: default(),
-                        value: 1234,
+                        value: 12,
                     }),
-                    tail: Box::new(Expr::Nil {
+                    tail: Box::new(Expr::Cons {
                         meta: default(),
                         typ: typ::int(),
+                        head: Box::new(Expr::Int {
+                            typ: typ::int(),
+                            meta: default(),
+                            value: 34,
+                        }),
+                        tail: Box::new(Expr::Nil {
+                            meta: default(),
+                            typ: typ::int(),
+                        }),
                     }),
                 },
             },
@@ -765,7 +804,7 @@ let() ->
     OneTwo.
 
 conny() ->
-    [1234 | []].
+    [12, 34].
 
 retcon() ->
     #{}#{'size' => 1}.
