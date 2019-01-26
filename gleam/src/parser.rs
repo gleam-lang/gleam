@@ -865,20 +865,20 @@ fn module_test() {
             typ: (),
             name: "".to_string(),
             statements: vec![Statement::Enum {
-                meta: Meta { start: 0, end: 26 },
+                meta: Meta { start: 0, end: 28 },
                 public: true,
                 args: vec!["a".to_string()],
                 constructors: vec![EnumConstructor {
-                    meta: Meta { start: 18, end: 26 },
+                    meta: Meta { start: 20, end: 28 },
                     name: "Boxed".to_string(),
                     args: vec![Type::Var {
-                        meta: Meta { start: 24, end: 25 },
+                        meta: Meta { start: 26, end: 27 },
                         name: "a".to_string()
                     }]
                 }],
                 name: "Box".to_string(),
             }]
         }),
-        ModuleParser::new().parse("pub enum Box(a) = Boxed(a)"),
+        ModuleParser::new().parse("pub enum Box(a) = | Boxed(a)"),
     );
 }

@@ -603,12 +603,13 @@ impl Env {
         &mut self,
         ast: &ast::Type,
         vars: &mut HashMap<String, Type>,
+        permit_new_vars: bool,
     ) -> Result<Type, TypeFromAstError> {
         match ast {
             ast::Type::Constructor { meta, name, args } => {
                 let args = args
                     .iter()
-                    .map(|t| self.type_from_ast(t, vars))
+                    .map(|t| self.type_from_ast(t, vars, permit_new_vars))
                     .collect::<Result<Vec<_>, _>>()?;
                 let types = self.type_constructors.clone();
                 let info =
@@ -643,7 +644,7 @@ impl Env {
             ast::Type::Tuple { elems, .. } => {
                 let elems = elems
                     .iter()
-                    .map(|t| self.type_from_ast(t, vars))
+                    .map(|t| self.type_from_ast(t, vars, permit_new_vars))
                     .collect::<Result<_, _>>()?;
                 Ok(Type::Tuple { elems: elems })
             }
@@ -651,9 +652,9 @@ impl Env {
             ast::Type::Fn { args, retrn, .. } => {
                 let args = args
                     .iter()
-                    .map(|t| self.type_from_ast(t, vars))
+                    .map(|t| self.type_from_ast(t, vars, permit_new_vars))
                     .collect::<Result<_, _>>()?;
-                let retrn = self.type_from_ast(retrn, vars)?;
+                let retrn = self.type_from_ast(retrn, vars, permit_new_vars)?;
                 Ok(Type::Fn {
                     args,
                     retrn: Box::new(retrn),
@@ -664,9 +665,15 @@ impl Env {
                 Some(var) => Ok(var.clone()),
 
                 None => {
-                    let var = self.new_generic_var();
-                    vars.insert(name.to_string(), var.clone());
-                    Ok(var)
+                    if permit_new_vars {
+                        let var = self.new_generic_var();
+                        vars.insert(name.to_string(), var.clone());
+                        Ok(var)
+                    } else {
+                        // TODO: test that enum constructors using unknown vars in their
+                        // definitions is not permitted.
+                        unimplemented!()
+                    }
                 }
             },
         }
@@ -776,14 +783,15 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
                 module,
                 fun,
             } => {
+                // TODO: DUPE: 63846
                 let mut type_vars = hashmap![];
                 let retrn_type = env
-                    .type_from_ast(&retrn, &mut type_vars)
+                    .type_from_ast(&retrn, &mut type_vars, true)
                     .map_err(|e| convert_type_from_ast_error(e, meta.clone()))?;
                 let mut args_types = Vec::with_capacity(args.len());
                 for arg in args.iter() {
                     let t = env
-                        .type_from_ast(arg, &mut type_vars)
+                        .type_from_ast(arg, &mut type_vars, true)
                         .map_err(|e| convert_type_from_ast_error(e, meta.clone()))?;
                     args_types.push(t)
                 }
@@ -791,14 +799,10 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
                     args: args_types,
                     retrn: Box::new(retrn_type),
                 };
-                env.insert_variable(
-                    name.clone(),
-                    Scope::Module { arity: args.len() },
-                    typ.clone(),
-                );
                 if public {
-                    fields.push((name.clone(), typ));
+                    fields.push((name.clone(), typ.clone()));
                 }
+                env.insert_variable(name.clone(), Scope::Module { arity: args.len() }, typ);
                 Ok(Statement::ExternalFn {
                     meta,
                     name,
@@ -817,7 +821,72 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
                 Ok(Statement::Test { meta, name, body })
             }
 
-            Statement::Enum { .. } => unimplemented!(),
+            Statement::Enum {
+                meta,
+                public,
+                name,
+                args,
+                constructors,
+            } => {
+                // Register type
+                env.insert_type_constructor(
+                    name.clone(),
+                    TypeConstructorInfo {
+                        module: module_name.clone(),
+                        public: public.clone(),
+                        arity: args.len(),
+                    },
+                );
+                // Build return type and collect type vars that can be used in constructors
+                let mut type_vars = hashmap![];
+                let ast = ast::Type::Constructor {
+                    meta: meta.clone(),
+                    name: name.clone(),
+                    args: args
+                        .iter()
+                        .map(|arg| ast::Type::Var {
+                            meta: meta.clone(),
+                            name: arg.to_string(),
+                        })
+                        .collect(),
+                };
+                let retrn = env
+                    .type_from_ast(&ast, &mut type_vars, true)
+                    .map_err(|e| convert_type_from_ast_error(e, meta.clone()))?;
+                // Check and register constructors
+                for constructor in constructors.iter() {
+                    let args_types = constructor
+                        .args
+                        .iter()
+                        .map(|arg| {
+                            env.type_from_ast(&arg, &mut type_vars, false)
+                                .map_err(|e| convert_type_from_ast_error(e, meta.clone()))
+                        })
+                        .collect::<Result<Vec<_>, _>>()?;
+                    // Insert constructor function into module scope
+                    let typ = Type::Fn {
+                        args: args_types,
+                        retrn: Box::new(retrn.clone()),
+                    };
+                    if public {
+                        fields.push((constructor.name.clone(), typ.clone()));
+                    }
+                    env.insert_variable(
+                        constructor.name.clone(),
+                        Scope::Module {
+                            arity: constructor.args.len(),
+                        },
+                        typ,
+                    );
+                }
+                Ok(Statement::Enum {
+                    meta,
+                    public,
+                    name,
+                    args,
+                    constructors,
+                })
+            }
 
             Statement::ExternalType {
                 meta,
@@ -825,26 +894,27 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
                 name,
                 args,
             } => {
+                // Register type
+                env.insert_type_constructor(
+                    name.clone(),
+                    TypeConstructorInfo {
+                        module: module_name.clone(),
+                        public: public.clone(),
+                        arity: args.len(),
+                    },
+                );
+                // Check contained types are valid
+                // TODO: DUPE: 63846
                 let mut type_vars = hashmap![];
-                let mut args_types = Vec::with_capacity(args.len());
                 for arg in args.iter() {
                     let var = ast::Type::Var {
                         meta: meta.clone(),
                         name: arg.to_string(),
                     };
                     let t = env
-                        .type_from_ast(&var, &mut type_vars)
+                        .type_from_ast(&var, &mut type_vars, true)
                         .map_err(|e| convert_type_from_ast_error(e, meta.clone()))?;
-                    args_types.push(t)
                 }
-                env.insert_type_constructor(
-                    name.clone(),
-                    TypeConstructorInfo {
-                        module: module_name.clone(),
-                        public: public.clone(),
-                        arity: args_types.len(),
-                    },
-                );
                 Ok(Statement::ExternalType {
                     meta,
                     public,
@@ -928,14 +998,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             typ: _,
             name,
         } => {
-            let (scope, typ) = env.get_variable(&name).map(|t| t.clone()).ok_or_else(|| {
-                Error::UnknownVariable {
-                    meta: meta.clone(),
-                    name: name.to_string(),
-                    variables: env.variables.clone(),
-                }
-            })?;
-            let typ = instantiate(typ, level, env);
+            let (scope, typ) = infer_var(&name, level, &meta, env)?;
             Ok(Expr::Var {
                 meta,
                 scope,
@@ -1132,7 +1195,10 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             })
         }
 
-        Expr::Constructor { .. } => unimplemented!(),
+        Expr::Constructor { meta, name, typ: _ } => {
+            let (scope, typ) = infer_var(&name, level, &meta, env)?;
+            Ok(Expr::Constructor { meta, typ, name })
+        }
 
         Expr::RecordSelect { .. } => unimplemented!(),
 
@@ -1167,6 +1233,24 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, env: &mut Env) -> Result<(), Err
 
         _ => unimplemented!(),
     }
+}
+
+fn infer_var(
+    name: &String,
+    level: usize,
+    meta: &Meta,
+    env: &mut Env,
+) -> Result<(Scope<Type>, Type), Error> {
+    let (scope, typ) =
+        env.get_variable(&name)
+            .map(|t| t.clone())
+            .ok_or_else(|| Error::UnknownVariable {
+                meta: meta.clone(),
+                name: name.to_string(),
+                variables: env.variables.clone(),
+            })?;
+    let typ = instantiate(typ, level, env);
+    Ok((scope, typ))
 }
 
 fn infer_call(
@@ -1838,7 +1922,7 @@ fn generalise(t: Type, ctx_level: usize) -> Type {
                     .into_iter()
                     .map(|t| generalise(t, ctx_level))
                     .collect(),
-            }
+            };
         }
 
         Type::Const { .. } => t,
@@ -2528,18 +2612,45 @@ pub fn run() { { empty() | level = 1 } }",
 }",
             typ: "module { fn add_name({a | }, b) -> {a | name = b} }",
         },
+        // TODO: Permit constructors to be used without parens
+        Case {
+            src: "
+        pub enum Is = | Yes | No
+        pub fn yes() { Yes() }
+        pub fn no() { No() }",
+            typ: "module {
+  fn No() -> Is
+  fn Yes() -> Is
+  fn no() -> Is
+  fn yes() -> Is
+}",
+        },
+        Case {
+            src: "
+        pub enum Num = | I(Int)
+        pub fn one() { I(1) }",
+            typ: "module {
+  fn I(Int) -> Num
+  fn one() -> Num
+}",
+        },
+        // TODO: FIXME: Unification of the vars isn't happening correctly
         // Case {
         //     src: "
-        // pub enum Is = | Yes | No
-        // pub fn yes() { Yes }
-        // pub fn no() { No }",
-        //     typ: "module { fn no() -> Is fn yes() -> Is }",
+        // pub enum Box(a) = | Box(a)
+        // pub fn int() { Box(1) }
+        // pub fn float() { Box(1.0) }",
+        //     typ: "module {
+        // fn Box(a) -> Box(a)
+        // fn float() -> Box(Float)
+        // fn int() -> Box(Int)
+        // }",
         // },
         // Case {
         //     src: "
-        // pub enum Num = | I(Int)
-        // pub fn num(n) { I(n) }",
-        //     typ: "module { fn num(Int) -> Num }",
+        // pub enum I = | I(Int)
+        // pub fn open(x) { case x { | I(i) -> i  } }",
+        //     typ: "module { fn open(I) -> Int }",
         // },
         // Case {
         //     src: "
@@ -2552,19 +2663,6 @@ pub fn run() { { empty() | level = 1 } }",
         // fn list_of(c) -> List(c)
         // fn status() -> Atom
         // }",
-        // },
-        // Case {
-        //     src: "
-        // pub enum Box(a) = | Box(a)
-        // pub fn int() { Box(1) }
-        // pub fn float() { Box(1.0) }",
-        //     typ: "module { fn float() -> Box(Float) fn int() -> Box(Int) }",
-        // },
-        // Case {
-        //     src: "
-        // pub enum I = | I(Int)
-        // pub fn open(x) { case x { | I(i) -> i  } }",
-        //     typ: "module { fn open(I) -> Int }",
         // },
         Case {
             src: "pub external fn go(String) -> String = '' ''",
