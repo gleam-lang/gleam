@@ -28,7 +28,7 @@ Statement: UntypedStatement = {
 }
 
 StatementEnum: UntypedStatement = {
-    <s:@L> <p:"pub"?> "enum" <t:TypeName> "=" <cs:EnumConstructors> <e:@L> => Statement::Enum {
+    <s:@L> <p:"pub"?> "enum" <t:TypeName> "=" <cs:EnumConstructor+> <e:@L> => Statement::Enum {
         meta: meta(s, e),
         public: p.is_some(),
         name: t.0,
@@ -37,18 +37,8 @@ StatementEnum: UntypedStatement = {
     }
 }
 
-EnumConstructors: Vec<EnumConstructor> = {
-    EnumConstructor => vec![<>],
-
-    <x:EnumConstructor> "," <xs:EnumConstructors> => {
-        let mut xs = xs;
-        xs.push(x);
-        xs
-    }
-}
-
 EnumConstructor: EnumConstructor = {
-    <s:@L> <t:UpName> <args:EnumConstructorArgs?> <e:@L> => EnumConstructor {
+    "|" <s:@L> <t:UpName> <args:EnumConstructorArgs?> <e:@L> => EnumConstructor {
         meta: meta(s, e),
         name: t,
         args: args.unwrap_or_else(|| vec![]),
