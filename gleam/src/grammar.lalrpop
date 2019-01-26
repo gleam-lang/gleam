@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use crate::ast::{
     UntypedExpr, Expr, Arg, UntypedModule, Module, UntypedStatement, Statement, Type, Pattern,
-    BinOp, Clause, UntypedClause
+    BinOp, Clause, UntypedClause, EnumConstructor
 };
 use crate::parser::*;
 
@@ -21,10 +21,42 @@ pub Module: UntypedModule = {
 Statement: UntypedStatement = {
     StatementFn => <>,
     StatementTest => <>,
-    // StatementEnum => <>,
+    StatementEnum => <>,
     StatementExternalFn => <>,
     StatementExternalType => <>,
     StatementImport => <>,
+}
+
+StatementEnum: UntypedStatement = {
+    <s:@L> <p:"pub"?> "enum" <t:TypeName> "=" <cs:EnumConstructors> <e:@L> => Statement::Enum {
+        meta: meta(s, e),
+        public: p.is_some(),
+        name: t.0,
+        args: t.1,
+        constructors: cs,
+    }
+}
+
+EnumConstructors: Vec<EnumConstructor> = {
+    EnumConstructor => vec![<>],
+
+    <x:EnumConstructor> "," <xs:EnumConstructors> => {
+        let mut xs = xs;
+        xs.push(x);
+        xs
+    }
+}
+
+EnumConstructor: EnumConstructor = {
+    <s:@L> <t:UpName> <args:EnumConstructorArgs?> <e:@L> => EnumConstructor {
+        meta: meta(s, e),
+        name: t,
+        args: args.unwrap_or_else(|| vec![]),
+    },
+}
+
+EnumConstructorArgs: Vec<Type> = {
+    "(" <ts:Comma<Type>> ")" => ts
 }
 
 StatementExternalFn: UntypedStatement = {
@@ -494,8 +526,12 @@ TypeFn: Type = {
 }
 
 TypeName: (String, Vec<String>) = {
-    <v:r"[A-Z][A-Za-z]*"> => (v.to_string(), vec![]),
-    <v:r"[A-Z][A-Za-z]*"> "(" <a:Comma<VarName>> ")" => (v.to_string(), a),
+    <v:UpName> => (v, vec![]),
+    <v:UpName> "(" <a:Comma<VarName>> ")" => (v, a),
+}
+
+UpName: String = {
+    <v:r"[A-Z][A-Za-z]*"> => v.to_string()
 }
 
 VarName: String = {

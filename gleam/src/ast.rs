@@ -17,6 +17,13 @@ pub struct Arg {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct EnumConstructor {
+    pub meta: Meta,
+    pub name: String,
+    pub args: Vec<Type>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     Constructor {
         meta: Meta,
@@ -66,7 +73,7 @@ pub enum Statement<S, T> {
         name: String,
         args: Vec<String>,
         public: bool,
-        constructors: Vec<Type>,
+        constructors: Vec<EnumConstructor>,
     },
 
     ExternalFn {

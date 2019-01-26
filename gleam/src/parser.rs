@@ -1,4 +1,6 @@
-use crate::ast::{Arg, BinOp, Clause, Expr, Meta, Module, Pattern, Statement, Type};
+use crate::ast::{
+    Arg, BinOp, Clause, EnumConstructor, Expr, Meta, Module, Pattern, Statement, Type,
+};
 use crate::grammar::{ExprParser, ModuleParser};
 
 pub fn meta(start: usize, end: usize) -> Meta {
@@ -856,5 +858,27 @@ fn module_test() {
             }]
         }),
         ModuleParser::new().parse("pub external fn run(Int, Float) -> Bool = 'm' 'f'"),
+    );
+
+    assert_eq!(
+        Ok(Module {
+            typ: (),
+            name: "".to_string(),
+            statements: vec![Statement::Enum {
+                meta: Meta { start: 0, end: 26 },
+                public: true,
+                args: vec!["a".to_string()],
+                constructors: vec![EnumConstructor {
+                    meta: Meta { start: 18, end: 26 },
+                    name: "Boxed".to_string(),
+                    args: vec![Type::Var {
+                        meta: Meta { start: 24, end: 25 },
+                        name: "a".to_string()
+                    }]
+                }],
+                name: "Box".to_string(),
+            }]
+        }),
+        ModuleParser::new().parse("pub enum Box(a) = Boxed(a)"),
     );
 }

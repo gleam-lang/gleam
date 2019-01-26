@@ -1,6 +1,6 @@
 use crate::ast::{
-    Arg, BinOp, Clause, Expr, Module, Pattern, Scope, Statement, Type, TypedClause, TypedExpr,
-    TypedModule, TypedScope, TypedStatement,
+    Arg, BinOp, Clause, EnumConstructor, Expr, Module, Pattern, Scope, Statement, Type,
+    TypedClause, TypedExpr, TypedModule, TypedScope, TypedStatement,
 };
 use crate::pretty::*;
 use crate::typ;
@@ -462,10 +462,10 @@ fn module_test() {
                 public: true,
                 name: "Any".to_string(),
                 args: vec![],
-                constructors: vec![Type::Constructor {
+                constructors: vec![EnumConstructor {
                     meta: default(),
-                    args: vec![],
                     name: "Ok".to_string(),
+                    args: vec![],
                 }],
             },
             Statement::Import {
