@@ -913,8 +913,7 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
                         meta: meta.clone(),
                         name: arg.to_string(),
                     };
-                    let t = env
-                        .type_from_ast(&var, &mut type_vars, true)
+                    env.type_from_ast(&var, &mut type_vars, true)
                         .map_err(|e| convert_type_from_ast_error(e, meta.clone()))?;
                 }
                 Ok(Statement::ExternalType {
@@ -1198,7 +1197,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         }
 
         Expr::Constructor { meta, name, typ: _ } => {
-            let (scope, typ) = infer_var(&name, level, &meta, env)?;
+            let (_scope, typ) = infer_var(&name, level, &meta, env)?;
             Ok(Expr::Constructor { meta, typ, name })
         }
 

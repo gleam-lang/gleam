@@ -95,24 +95,19 @@ fn statement(statement: TypedStatement) -> Option<Document> {
         Statement::Import { .. } => None,
         Statement::ExternalType { .. } => None,
         Statement::Fn {
-            args,
-            public,
-            name,
-            body,
-            ..
-        } => Some(mod_fun(public, name, args, body)),
+            args, name, body, ..
+        } => Some(mod_fun(name, args, body)),
         Statement::ExternalFn {
             fun,
             module,
             args,
-            public,
             name,
             ..
-        } => Some(external_fun(public, name, module, fun, args.len())),
+        } => Some(external_fun(name, module, fun, args.len())),
     }
 }
 
-fn mod_fun(public: bool, name: String, args: Vec<Arg>, body: TypedExpr) -> Document {
+fn mod_fun(name: String, args: Vec<Arg>, body: TypedExpr) -> Document {
     let body_doc = expr(body, &mut Env::default());
 
     name.to_doc()
@@ -243,7 +238,7 @@ fn pattern(p: Pattern, env: &mut Env) -> Document {
 
 fn cons(head: TypedExpr, tail: TypedExpr, env: &mut Env) -> Document {
     match collect_list(head, tail) {
-        (elems, Some(final_tail)) => unimplemented!(),
+        (_elems, Some(_final_tail)) => unimplemented!(),
 
         (elems, None) => elems
             .into_iter()
@@ -431,7 +426,7 @@ fn fun(args: Vec<Arg>, body: TypedExpr, env: &mut Env) -> Document {
         .group()
 }
 
-fn external_fun(public: bool, name: String, module: String, fun: String, arity: usize) -> Document {
+fn external_fun(name: String, module: String, fun: String, arity: usize) -> Document {
     let chars: String = (65..(65 + arity))
         .map(|x| x as u8 as char)
         .map(|c| c.to_string())
