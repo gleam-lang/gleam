@@ -751,12 +751,13 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
                 args,
                 body,
             } => {
-                let (args_types, body) = infer_fun(&args, body, 2, &mut env)?;
+                let level = 1;
+                let (args_types, body) = infer_fun(&args, body, level + 1, &mut env)?;
                 let typ = Type::Fn {
                     args: args_types,
                     retrn: Box::new(body.typ().clone()),
                 };
-                let typ = generalise(typ, 2);
+                let typ = generalise(typ, level);
                 env.insert_variable(
                     name.clone(),
                     Scope::Module { arity: args.len() },
@@ -868,6 +869,7 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
                         args: args_types,
                         retrn: Box::new(retrn.clone()),
                     };
+                    dbg!(&typ);
                     if public {
                         fields.push((constructor.name.clone(), typ.clone()));
                     }
@@ -1366,7 +1368,7 @@ fn convert_unify_error(e: UnifyError, meta: &Meta) -> Error {
 // 				TArrow(List.map f param_ty_list, f return_ty)
 // 	in
 // 	f ty
-/// Instanciate converts generic variables into unbound ones.
+/// Instantiate converts generic variables into unbound ones.
 ///
 fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
     fn go(t: Type, ctx_level: usize, ids: &mut HashMap<usize, Type>, env: &mut Env) -> Type {
@@ -1389,7 +1391,7 @@ fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
             },
 
             Type::Var { typ } => match &*typ.borrow() {
-                TypeVar::Link { typ } => instantiate(*typ.clone(), ctx_level, env),
+                TypeVar::Link { typ } => go(*typ.clone(), ctx_level, ids, env),
 
                 TypeVar::Unbound { .. } => Type::Var { typ: typ.clone() },
 
@@ -1874,10 +1876,11 @@ fn generalise(t: Type, ctx_level: usize) -> Type {
                 TypeVar::Unbound { id, level } => {
                     let id = *id;
                     if *level > ctx_level {
-                        Some(TypeVar::Generic { id })
+                        return Type::Var {
+                            typ: Rc::new(RefCell::new(TypeVar::Generic { id })),
+                        };
                     } else {
-                        let level = *level;
-                        Some(TypeVar::Unbound { id, level })
+                        Some(TypeVar::Unbound { id, level: *level })
                     }
                 }
 
@@ -2634,18 +2637,30 @@ pub fn run() { { empty() | level = 1 } }",
   fn one() -> Num
 }",
         },
-        // TODO: FIXME: Unification of the vars isn't happening correctly
-        // Case {
-        //     src: "
-        // pub enum Box(a) = | Box(a)
-        // pub fn int() { Box(1) }
-        // pub fn float() { Box(1.0) }",
-        //     typ: "module {
-        // fn Box(a) -> Box(a)
-        // fn float() -> Box(Float)
-        // fn int() -> Box(Int)
-        // }",
-        // },
+        Case {
+            src: "
+        pub fn id(x) { x }
+        pub fn float() { id(1.0) }
+        pub fn int() { id(1) }",
+            typ: "module {
+  fn float() -> Float
+  fn id(a) -> a
+  fn int() -> Int
+}",
+        },
+        /* TODO: FIXME: generic vars in constructors are not functioning correctly
+        Case {
+            src: "
+        pub enum Box(a) = | Box(a)
+        pub fn int() { Box(1) }
+        pub fn float() { Box(1.0) }",
+            typ: "module {
+  fn Box(a) -> Box(a)
+  fn float() -> Box(Float)
+  fn int() -> Box(Int)
+}",
+        },
+        */
         // Case {
         //     src: "
         // pub enum I = | I(Int)
