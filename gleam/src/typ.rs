@@ -869,7 +869,6 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
                         args: args_types,
                         retrn: Box::new(retrn.clone()),
                     };
-                    dbg!(&typ);
                     if public {
                         fields.push((constructor.name.clone(), typ.clone()));
                     }
@@ -990,21 +989,6 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
                 typ: then.typ().clone(),
                 first: Box::new(first),
                 then: Box::new(then),
-            })
-        }
-
-        Expr::Var {
-            meta,
-            scope: _,
-            typ: _,
-            name,
-        } => {
-            let (scope, typ) = infer_var(&name, level, &meta, env)?;
-            Ok(Expr::Var {
-                meta,
-                scope,
-                typ,
-                name,
             })
         }
 
@@ -1193,6 +1177,21 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
                 label,
                 tail: Box::new(tail),
                 value: Box::new(value),
+            })
+        }
+
+        Expr::Var {
+            meta,
+            scope: _,
+            typ: _,
+            name,
+        } => {
+            let (scope, typ) = infer_var(&name, level, &meta, env)?;
+            Ok(Expr::Var {
+                meta,
+                scope,
+                typ,
+                name,
             })
         }
 
@@ -1385,7 +1384,7 @@ fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
                 module,
                 args: args
                     .into_iter()
-                    .map(|t| instantiate(t, ctx_level, env))
+                    .map(|t| go(t, ctx_level, ids, env))
                     .collect(),
             },
 
@@ -2585,15 +2584,13 @@ fn infer_module_test() {
 
     let cases = [
         Case {
-            src: "
-fn private() { 1 }
-pub fn public() { 1 }",
+            src: "fn private() { 1 }
+                  pub fn public() { 1 }",
             typ: "module { fn public() -> Int }",
         },
         Case {
-            src: "
-fn empty() { {} }
-pub fn run() { { empty() | level = 1 } }",
+            src: "fn empty() { {} }
+                  pub fn run() { { empty() | level = 1 } }",
             typ: "module { fn run() -> {level = Int} }",
         },
         Case {
@@ -2602,24 +2599,24 @@ pub fn run() { { empty() | level = 1 } }",
         },
         Case {
             src: "pub fn empty() {
-  record = {}
-  record
-}",
+                    record = {}
+                    record
+                  }",
             typ: "module { fn empty() -> {} }",
         },
         Case {
             src: "pub fn add_name(record, name) {
-  record = { record | name = name }
-  record
-}",
+                    record = { record | name = name }
+                    record
+                  }",
             typ: "module { fn add_name({a | }, b) -> {a | name = b} }",
         },
         // TODO: Permit constructors to be used without parens
         Case {
             src: "
-        pub enum Is = | Yes | No
-        pub fn yes() { Yes() }
-        pub fn no() { No() }",
+                pub enum Is = | Yes | No
+                pub fn yes() { Yes() }
+                pub fn no() { No() }",
             typ: "module {
   fn No() -> Is
   fn Yes() -> Is
@@ -2629,8 +2626,8 @@ pub fn run() { { empty() | level = 1 } }",
         },
         Case {
             src: "
-        pub enum Num = | I(Int)
-        pub fn one() { I(1) }",
+                pub enum Num = | I(Int)
+                pub fn one() { I(1) }",
             typ: "module {
   fn I(Int) -> Num
   fn one() -> Num
@@ -2638,16 +2635,15 @@ pub fn run() { { empty() | level = 1 } }",
         },
         Case {
             src: "
-        pub fn id(x) { x }
-        pub fn float() { id(1.0) }
-        pub fn int() { id(1) }",
+                pub fn id(x) { x }
+                pub fn float() { id(1.0) }
+                pub fn int() { id(1) }",
             typ: "module {
   fn float() -> Float
   fn id(a) -> a
   fn int() -> Int
 }",
         },
-        /* TODO: FIXME: generic vars in constructors are not functioning correctly
         Case {
             src: "
         pub enum Box(a) = | Box(a)
@@ -2659,7 +2655,6 @@ pub fn run() { { empty() | level = 1 } }",
   fn int() -> Box(Int)
 }",
         },
-        */
         // Case {
         //     src: "
         // pub enum I = | I(Int)
