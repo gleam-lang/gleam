@@ -1,10 +1,5 @@
-use crate::ast::{
-    Arg, BinOp, Clause, EnumConstructor, Expr, Module, Pattern, Scope, Statement, Type,
-    TypedClause, TypedExpr, TypedModule, TypedScope, TypedStatement,
-};
+use crate::ast::*;
 use crate::pretty::*;
-use crate::typ;
-
 use heck::{CamelCase, SnakeCase};
 use im::hashmap::HashMap;
 use itertools::Itertools;
@@ -541,7 +536,7 @@ map() ->
                 args: vec![],
                 name: "atom".to_string(),
                 body: Expr::Atom {
-                    typ: typ::atom(),
+                    typ: crate::typ::atom(),
                     meta: default(),
                     value: "ok".to_string(),
                 },
@@ -552,7 +547,7 @@ map() ->
                 args: vec![],
                 name: "int".to_string(),
                 body: Expr::Int {
-                    typ: typ::int(),
+                    typ: crate::typ::int(),
                     meta: default(),
                     value: 176,
                 },
@@ -564,7 +559,7 @@ map() ->
                 name: "float".to_string(),
                 body: Expr::Float {
                     meta: default(),
-                    typ: typ::float(),
+                    typ: crate::typ::float(),
                     value: 11177.324401,
                 },
             },
@@ -575,7 +570,7 @@ map() ->
                 name: "nil".to_string(),
                 body: Expr::Nil {
                     meta: default(),
-                    typ: typ::int(),
+                    typ: crate::typ::int(),
                 },
             },
             Statement::Fn {
@@ -585,7 +580,7 @@ map() ->
                 name: "record_nil".to_string(),
                 body: Expr::RecordNil {
                     meta: default(),
-                    typ: typ::record_nil(),
+                    typ: crate::typ::record_nil(),
                 },
             },
             Statement::Fn {
@@ -595,16 +590,16 @@ map() ->
                 name: "tup".to_string(),
                 body: Expr::Tuple {
                     meta: default(),
-                    typ: typ::int(),
+                    typ: crate::typ::int(),
                     elems: vec![
                         Expr::Int {
-                            typ: typ::int(),
+                            typ: crate::typ::int(),
                             meta: default(),
                             value: 1,
                         },
                         Expr::Float {
                             meta: default(),
-                            typ: typ::float(),
+                            typ: crate::typ::float(),
                             value: 2.0,
                         },
                     ],
@@ -617,7 +612,7 @@ map() ->
                 name: "string".to_string(),
                 body: Expr::String {
                     meta: default(),
-                    typ: typ::string(),
+                    typ: crate::typ::string(),
                     value: "Hello there!".to_string(),
                 },
             },
@@ -628,14 +623,14 @@ map() ->
                 name: "seq".to_string(),
                 body: Expr::Seq {
                     meta: default(),
-                    typ: typ::int(),
+                    typ: crate::typ::int(),
                     first: Box::new(Expr::Int {
-                        typ: typ::int(),
+                        typ: crate::typ::int(),
                         meta: default(),
                         value: 1,
                     }),
                     then: Box::new(Expr::Int {
-                        typ: typ::int(),
+                        typ: crate::typ::int(),
                         meta: default(),
                         value: 2,
                     }),
@@ -648,15 +643,15 @@ map() ->
                 name: "bin_op".to_string(),
                 body: Expr::BinOp {
                     meta: default(),
-                    typ: typ::int(),
+                    typ: crate::typ::int(),
                     name: BinOp::AddInt,
                     left: Box::new(Expr::Int {
-                        typ: typ::int(),
+                        typ: crate::typ::int(),
                         meta: default(),
                         value: 1,
                     }),
                     right: Box::new(Expr::Int {
-                        typ: typ::int(),
+                        typ: crate::typ::int(),
                         meta: default(),
                         value: 2,
                     }),
@@ -669,7 +664,7 @@ map() ->
                 name: "enum1".to_string(),
                 body: Expr::Constructor {
                     meta: default(),
-                    typ: typ::int(),
+                    typ: crate::typ::int(),
                     name: "Nil".to_string(),
                 },
             },
@@ -680,9 +675,9 @@ map() ->
                 name: "let".to_string(),
                 body: Expr::Let {
                     meta: default(),
-                    typ: typ::int(),
+                    typ: crate::typ::int(),
                     value: Box::new(Expr::Int {
-                        typ: typ::int(),
+                        typ: crate::typ::int(),
                         meta: default(),
                         value: 1,
                     }),
@@ -692,7 +687,7 @@ map() ->
                     },
                     then: Box::new(Expr::Var {
                         meta: default(),
-                        typ: typ::int(),
+                        typ: crate::typ::int(),
                         scope: Scope::Local,
                         name: "one_two".to_string(),
                     }),
@@ -705,23 +700,23 @@ map() ->
                 name: "conny".to_string(),
                 body: Expr::Cons {
                     meta: default(),
-                    typ: typ::int(),
+                    typ: crate::typ::int(),
                     head: Box::new(Expr::Int {
-                        typ: typ::int(),
+                        typ: crate::typ::int(),
                         meta: default(),
                         value: 12,
                     }),
                     tail: Box::new(Expr::Cons {
                         meta: default(),
-                        typ: typ::int(),
+                        typ: crate::typ::int(),
                         head: Box::new(Expr::Int {
-                            typ: typ::int(),
+                            typ: crate::typ::int(),
                             meta: default(),
                             value: 34,
                         }),
                         tail: Box::new(Expr::Nil {
                             meta: default(),
-                            typ: typ::int(),
+                            typ: crate::typ::int(),
                         }),
                     }),
                 },
@@ -733,16 +728,16 @@ map() ->
                 name: "retcon".to_string(),
                 body: Expr::RecordCons {
                     meta: default(),
-                    typ: typ::int(),
+                    typ: crate::typ::int(),
                     label: "size".to_string(),
                     value: Box::new(Expr::Int {
-                        typ: typ::int(),
+                        typ: crate::typ::int(),
                         meta: default(),
                         value: 1,
                     }),
                     tail: Box::new(Expr::RecordNil {
                         meta: default(),
-                        typ: typ::record_nil(),
+                        typ: crate::typ::record_nil(),
                     }),
                 },
             },
@@ -753,7 +748,7 @@ map() ->
                 name: "funny".to_string(),
                 body: Expr::Fn {
                     meta: default(),
-                    typ: typ::int(),
+                    typ: crate::typ::int(),
                     args: vec![
                         Arg {
                             name: "one_really_long_arg_to_cause_wrapping".to_string(),
@@ -763,7 +758,7 @@ map() ->
                         },
                     ],
                     body: Box::new(Expr::Int {
-                        typ: typ::int(),
+                        typ: crate::typ::int(),
                         meta: default(),
                         value: 100000000000,
                     }),
@@ -862,7 +857,7 @@ funny() ->
                 },
             ],
             body: Expr::Atom {
-                typ: typ::atom(),
+                typ: crate::typ::atom(),
                 meta: default(),
                 value: "ok".to_string(),
             },
@@ -892,7 +887,7 @@ some_function(ArgOne,
             meta: default(),
             name: "bang".to_string(),
             body: Expr::Atom {
-                typ: typ::atom(),
+                typ: crate::typ::atom(),
                 meta: default(),
                 value: "ok".to_string(),
             },
@@ -920,7 +915,7 @@ bang_test() ->
                 args: vec![],
                 name: "arg".to_string(),
                 body: Expr::Var {
-                    typ: typ::int(),
+                    typ: crate::typ::int(),
                     meta: default(),
                     name: "some_arg".to_string(),
                     scope: Scope::Local,
@@ -932,12 +927,12 @@ bang_test() ->
                 args: vec![],
                 name: "some_arg".to_string(),
                 body: Expr::Var {
-                    typ: typ::int(),
+                    typ: crate::typ::int(),
                     meta: default(),
                     name: "some_arg".to_string(),
                     scope: Scope::Constant {
                         value: Box::new(Expr::Atom {
-                            typ: typ::atom(),
+                            typ: crate::typ::atom(),
                             meta: default(),
                             value: "hello".to_string(),
                         }),
@@ -950,7 +945,7 @@ bang_test() ->
                 args: vec![],
                 name: "another".to_string(),
                 body: Expr::Var {
-                    typ: typ::int(),
+                    typ: crate::typ::int(),
                     meta: default(),
                     name: "run_task".to_string(),
                     scope: Scope::Module { arity: 6 },
@@ -984,9 +979,9 @@ another() ->
             name: "go".to_string(),
             body: Expr::Case {
                 meta: default(),
-                typ: typ::int(),
+                typ: crate::typ::int(),
                 subject: Box::new(Expr::Int {
-                    typ: typ::int(),
+                    typ: crate::typ::int(),
                     meta: default(),
                     value: 1,
                 }),
@@ -998,7 +993,7 @@ another() ->
                             value: 1,
                         },
                         then: Box::new(Expr::Int {
-                            typ: typ::int(),
+                            typ: crate::typ::int(),
                             meta: default(),
                             value: 1,
                         }),
@@ -1010,7 +1005,7 @@ another() ->
                             value: 1.0,
                         },
                         then: Box::new(Expr::Int {
-                            typ: typ::int(),
+                            typ: crate::typ::int(),
                             meta: default(),
                             value: 1,
                         }),
@@ -1022,7 +1017,7 @@ another() ->
                             value: "ok".to_string(),
                         },
                         then: Box::new(Expr::Int {
-                            typ: typ::int(),
+                            typ: crate::typ::int(),
                             meta: default(),
                             value: 1,
                         }),
@@ -1034,7 +1029,7 @@ another() ->
                             value: "hello".to_string(),
                         },
                         then: Box::new(Expr::Int {
-                            typ: typ::int(),
+                            typ: crate::typ::int(),
                             meta: default(),
                             value: 1,
                         }),
@@ -1055,7 +1050,7 @@ another() ->
                             ],
                         },
                         then: Box::new(Expr::Int {
-                            typ: typ::int(),
+                            typ: crate::typ::int(),
                             meta: default(),
                             value: 1,
                         }),
@@ -1064,7 +1059,7 @@ another() ->
                         meta: default(),
                         pattern: Pattern::Nil { meta: default() },
                         then: Box::new(Expr::Int {
-                            typ: typ::int(),
+                            typ: crate::typ::int(),
                             meta: default(),
                             value: 1,
                         }),
@@ -1080,7 +1075,7 @@ another() ->
                             }],
                         },
                         then: Box::new(Expr::Int {
-                            typ: typ::int(),
+                            typ: crate::typ::int(),
                             meta: default(),
                             value: 1,
                         }),
@@ -1130,16 +1125,16 @@ go() ->
                 public: false,
                 body: Expr::Call {
                     meta: default(),
-                    typ: typ::int(),
+                    typ: crate::typ::int(),
                     args: vec![Expr::Int {
-                        typ: typ::int(),
+                        typ: crate::typ::int(),
                         meta: default(),
                         value: 1,
                     }],
                     fun: Box::new(Expr::Var {
                         meta: default(),
                         scope: Scope::Module { arity: 1 },
-                        typ: typ::int(),
+                        typ: crate::typ::int(),
                         name: "one_two".to_string(),
                     }),
                 },
@@ -1151,16 +1146,16 @@ go() ->
                 public: false,
                 body: Expr::Call {
                     meta: default(),
-                    typ: typ::int(),
+                    typ: crate::typ::int(),
                     args: vec![Expr::Int {
-                        typ: typ::int(),
+                        typ: crate::typ::int(),
                         meta: default(),
                         value: 1,
                     }],
                     fun: Box::new(Expr::Var {
                         meta: default(),
                         scope: Scope::Local,
-                        typ: typ::int(),
+                        typ: crate::typ::int(),
                         name: "one_two".to_string(),
                     }),
                 },
@@ -1172,24 +1167,24 @@ go() ->
                 public: false,
                 body: Expr::Call {
                     meta: default(),
-                    typ: typ::int(),
+                    typ: crate::typ::int(),
                     args: vec![Expr::Int {
-                        typ: typ::int(),
+                        typ: crate::typ::int(),
                         meta: default(),
                         value: 2,
                     }],
                     fun: Box::new(Expr::Call {
                         meta: default(),
-                        typ: typ::int(),
+                        typ: crate::typ::int(),
                         args: vec![Expr::Int {
-                            typ: typ::int(),
+                            typ: crate::typ::int(),
                             meta: default(),
                             value: 1,
                         }],
                         fun: Box::new(Expr::Var {
                             meta: default(),
                             scope: Scope::Module { arity: 2 },
-                            typ: typ::int(),
+                            typ: crate::typ::int(),
                             name: "one_two".to_string(),
                         }),
                     }),

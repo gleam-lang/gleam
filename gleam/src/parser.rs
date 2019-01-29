@@ -1,14 +1,12 @@
-use crate::ast::{
-    Arg, BinOp, Clause, EnumConstructor, Expr, Meta, Module, Pattern, Statement, Type,
-};
-use crate::grammar::{ExprParser, ModuleParser};
-
-pub fn meta(start: usize, end: usize) -> Meta {
-    Meta { start, end }
+pub fn meta(start: usize, end: usize) -> crate::ast::Meta {
+    crate::ast::Meta { start, end }
 }
 
 #[test]
 fn expr_test() {
+    use crate::ast::*;
+    use crate::grammar::{ExprParser, ModuleParser};
+
     assert_eq!(
         Ok(Expr::Int {
             typ: (),
@@ -685,6 +683,9 @@ fn expr_test() {
 
 #[test]
 fn module_test() {
+    use crate::ast::*;
+    use crate::grammar::{ExprParser, ModuleParser};
+
     assert_eq!(
         Ok(Module {
             typ: (),

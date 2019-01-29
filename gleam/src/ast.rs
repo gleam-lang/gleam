@@ -1,3 +1,5 @@
+#![allow(dead_code)] // TODO
+
 use crate::typ;
 
 pub type TypedModule = Module<Scope<typ::Type>, typ::Type>;

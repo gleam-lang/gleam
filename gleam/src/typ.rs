@@ -4,7 +4,6 @@ use crate::ast::{
     self, Arg, BinOp, Clause, Expr, Meta, Module, Pattern, Scope, Statement, TypedExpr,
     TypedModule, UntypedExpr, UntypedModule,
 };
-use crate::grammar;
 use crate::pretty::*;
 use im::{hashmap::HashMap, ordmap::OrdMap};
 use itertools::Itertools;
@@ -2449,7 +2448,9 @@ fn infer_test() {
     ];
 
     for Case { src, typ } in cases.into_iter() {
-        let ast = grammar::ExprParser::new().parse(src).expect("syntax error");
+        let ast = crate::grammar::ExprParser::new()
+            .parse(src)
+            .expect("syntax error");
         let result = infer(ast, 1, &mut Env::new()).expect("should successfully infer");
         assert_eq!(
             (
@@ -2569,7 +2570,9 @@ fn infer_error_test() {
     ];
 
     for Case { src, error } in cases.into_iter() {
-        let ast = grammar::ExprParser::new().parse(src).expect("syntax error");
+        let ast = crate::grammar::ExprParser::new()
+            .parse(src)
+            .expect("syntax error");
         let result = infer(ast, 1, &mut Env::new()).expect_err("should infer an error");
         assert_eq!((src, &result), (src, error));
     }
@@ -2827,7 +2830,7 @@ pub fn two() { one() + zero() }",
     ];
 
     for Case { src, typ } in cases.into_iter() {
-        let ast = grammar::ModuleParser::new()
+        let ast = crate::grammar::ModuleParser::new()
             .parse(src)
             .expect("syntax error");
         let result = infer_module(ast).expect("should successfully infer");
@@ -2869,7 +2872,7 @@ fn infer_module_error_test() {
     ];
 
     for Case { src, error } in cases.into_iter() {
-        let ast = grammar::ModuleParser::new()
+        let ast = crate::grammar::ModuleParser::new()
             .parse(src)
             .expect("syntax error");
         let result = infer_module(ast).expect_err("should infer an error");
