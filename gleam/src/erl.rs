@@ -346,19 +346,31 @@ fn pattern_atom(s: String) -> Pattern {
     }
 }
 
-fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
-    let fun = match fun {
+fn call(fun: TypedExpr, mut args: Vec<TypedExpr>, env: &mut Env) -> Document {
+    match fun {
         Expr::Var {
             scope: Scope::Module { .. },
             name,
             ..
-        } => name.to_doc(),
+        } => name.to_doc().append(call_args(args, env)),
 
-        call @ Expr::Call { .. } => expr(call, env).surround("(", ")"),
+        call @ Expr::Call { .. } => expr(call, env)
+            .surround("(", ")")
+            .append(call_args(args, env)),
 
-        other => expr(other, env),
-    };
-    fun.append(call_args(args, env))
+        Expr::Constructor { meta, typ, name } => {
+            // FIXME: O(n), insert at start shuffles the elemes forward by one place
+            let tag = Expr::Atom {
+                meta,
+                typ,
+                value: name.to_snake_case(),
+            };
+            args.insert(0, tag);
+            tuple(wrap_expr, args, env)
+        }
+
+        other => expr(other, env).append(call_args(args, env)),
+    }
 }
 
 /// Wrap a document in begin end
@@ -1272,6 +1284,19 @@ x() ->
            1,
            2
        end).
+"#,
+        },
+        Case {
+            src: r#"pub enum Money = | Pound(Int)
+                    fn pound(x) {
+                      Pound(x)
+                    }"#,
+            erl: r#"-module(gleam_).
+
+-export([]).
+
+pound(X) ->
+    {'pound', X}.
 "#,
         },
         // TODO: Check that var num is incremented for args

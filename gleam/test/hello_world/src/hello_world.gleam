@@ -1,37 +1,23 @@
-pub external fn rev(String) -> String = 'lists' 'reverse'
+pub enum Result(error, value) =
+  | Ok(value)
+  | Error(error)
 
-pub fn greet(name) {
-  case name {
-  | "your mate Dave" -> ["Oi! Dave! What are you doing here? Go on. Clear off. Haven't you got better things to do?"]
-  | name -> ["Hello, ", begin 1 name end, "!"]
-  }
+pub enum Size =
+  | Big
+  | Small
+
+pub fn ok(x) {
+  Ok(x)
 }
 
-pub fn list() {
-  case begin 1 2 end {
-  | 2 ->
-      "ok"
-
-  | name ->
-      123123123
-      "one two three. one two three. one two three. one two three. one two three."
-  }
+pub fn error(x) {
+  Error(x)
 }
 
-pub fn x() {
-  {'ok', begin 1 2 end}
+pub fn big() {
+  Big
 }
 
-pub fn run() {
-  x = 1
-  x = 2 + 3
-  x
-}
-
-pub fn pair(a, b) {
-  {a, b}
-}
-
-pub fn go() {
-  pair(begin 1 2 end, 2)
+pub fn small() {
+  Small
 }
