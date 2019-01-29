@@ -203,35 +203,35 @@ fn expr_test() {
 
     assert_eq!(
         Ok(Expr::Let {
-            meta: Meta { start: 0, end: 10 },
+            meta: Meta { start: 0, end: 14 },
             typ: (),
             value: Box::new(Expr::BinOp {
-                meta: Meta { start: 4, end: 9 },
+                meta: Meta { start: 8, end: 13 },
                 typ: (),
                 name: BinOp::AddInt,
                 left: Box::new(Expr::Int {
                     typ: (),
-                    meta: Meta { start: 4, end: 5 },
+                    meta: Meta { start: 8, end: 9 },
                     value: 1
                 }),
                 right: Box::new(Expr::Int {
                     typ: (),
-                    meta: Meta { start: 8, end: 9 },
+                    meta: Meta { start: 12, end: 13 },
                     value: 2
                 }),
             }),
             pattern: Pattern::Var {
-                meta: Meta { start: 0, end: 1 },
+                meta: Meta { start: 4, end: 5 },
                 name: "x".to_string(),
             },
             then: Box::new(Expr::Var {
                 typ: (),
                 scope: (),
-                meta: Meta { start: 10, end: 11 },
+                meta: Meta { start: 14, end: 15 },
                 name: "x".to_string(),
             })
         }),
-        ExprParser::new().parse("x = 1 + 2 x"),
+        ExprParser::new().parse("let x = 1 + 2 x"),
     );
 
     assert_eq!(
@@ -397,24 +397,24 @@ fn expr_test() {
 
     assert_eq!(
         Ok(Expr::Let {
-            meta: Meta { start: 0, end: 6 },
+            meta: Meta { start: 0, end: 10 },
             typ: (),
             value: Box::new(Expr::Int {
                 typ: (),
-                meta: Meta { start: 4, end: 5 },
+                meta: Meta { start: 8, end: 9 },
                 value: 1
             }),
             pattern: Pattern::Var {
-                meta: Meta { start: 0, end: 1 },
+                meta: Meta { start: 4, end: 5 },
                 name: "x".to_string(),
             },
             then: Box::new(Expr::Int {
                 typ: (),
-                meta: Meta { start: 6, end: 7 },
+                meta: Meta { start: 10, end: 11 },
                 value: 2
             })
         }),
-        ExprParser::new().parse("x = 1 2"),
+        ExprParser::new().parse("let x = 1 2"),
     );
 
     assert_eq!(
@@ -536,90 +536,90 @@ fn expr_test() {
 
     assert_eq!(
         Ok(Expr::Let {
-            meta: Meta { start: 0, end: 6 },
+            meta: Meta { start: 0, end: 10 },
             typ: (),
             value: Box::new(Expr::Int {
                 typ: (),
-                meta: Meta { start: 4, end: 5 },
+                meta: Meta { start: 8, end: 9 },
                 value: 1
             }),
             pattern: Pattern::Int {
-                meta: Meta { start: 0, end: 1 },
+                meta: Meta { start: 4, end: 5 },
                 value: 0,
             },
             then: Box::new(Expr::Int {
                 typ: (),
-                meta: Meta { start: 6, end: 7 },
+                meta: Meta { start: 10, end: 11 },
                 value: 2
             })
         }),
-        ExprParser::new().parse("0 = 1 2"),
+        ExprParser::new().parse("let 0 = 1 2"),
     );
 
     assert_eq!(
         Ok(Expr::Let {
-            meta: Meta { start: 0, end: 8 },
+            meta: Meta { start: 0, end: 12 },
             typ: (),
             value: Box::new(Expr::Int {
                 typ: (),
-                meta: Meta { start: 6, end: 7 },
+                meta: Meta { start: 10, end: 11 },
                 value: 1,
             }),
             pattern: Pattern::Float {
-                meta: Meta { start: 0, end: 3 },
+                meta: Meta { start: 4, end: 7 },
                 value: 1.0,
             },
             then: Box::new(Expr::Int {
                 typ: (),
-                meta: Meta { start: 8, end: 9 },
+                meta: Meta { start: 12, end: 13 },
                 value: 2
             })
         }),
-        ExprParser::new().parse("1.0 = 1 2"),
+        ExprParser::new().parse("let 1.0 = 1 2"),
     );
 
     assert_eq!(
         Ok(Expr::Let {
-            meta: Meta { start: 0, end: 8 },
+            meta: Meta { start: 0, end: 12 },
             typ: (),
             value: Box::new(Expr::Int {
                 typ: (),
-                meta: Meta { start: 6, end: 7 },
+                meta: Meta { start: 10, end: 11 },
                 value: 1
             }),
             pattern: Pattern::Atom {
-                meta: Meta { start: 0, end: 3 },
+                meta: Meta { start: 4, end: 7 },
                 value: "a".to_string(),
             },
             then: Box::new(Expr::Int {
                 typ: (),
-                meta: Meta { start: 8, end: 9 },
+                meta: Meta { start: 12, end: 13 },
                 value: 2
             })
         }),
-        ExprParser::new().parse("'a' = 1 2"),
+        ExprParser::new().parse("let 'a' = 1 2"),
     );
 
     assert_eq!(
         Ok(Expr::Let {
-            meta: Meta { start: 0, end: 8 },
+            meta: Meta { start: 0, end: 12 },
             typ: (),
             value: Box::new(Expr::Int {
                 typ: (),
-                meta: Meta { start: 6, end: 7 },
+                meta: Meta { start: 10, end: 11 },
                 value: 1
             }),
             pattern: Pattern::String {
-                meta: Meta { start: 0, end: 3 },
+                meta: Meta { start: 4, end: 7 },
                 value: "a".to_string(),
             },
             then: Box::new(Expr::Int {
                 typ: (),
-                meta: Meta { start: 8, end: 9 },
+                meta: Meta { start: 12, end: 13 },
                 value: 2
             })
         }),
-        ExprParser::new().parse("\"a\" = 1 2"),
+        ExprParser::new().parse("let \"a\" = 1 2"),
     );
 
     assert_eq!(
@@ -880,5 +880,77 @@ fn module_test() {
             }]
         }),
         ModuleParser::new().parse("pub enum Box(a) = | Boxed(a)"),
+    );
+
+    assert_eq!(
+        Ok(Module {
+            typ: (),
+            name: "".to_string(),
+            statements: vec![
+                Statement::Enum {
+                    meta: Meta { start: 0, end: 28 },
+                    public: true,
+                    args: vec!["x".to_string()],
+                    constructors: vec![EnumConstructor {
+                        meta: Meta { start: 20, end: 28 },
+                        name: "Boxxy".to_string(),
+                        args: vec![Type::Var {
+                            meta: Meta { start: 26, end: 27 },
+                            name: "x".to_string()
+                        }]
+                    }],
+                    name: "Box".to_string(),
+                },
+                Statement::Fn {
+                    meta: Meta {
+                        start: 43,
+                        end: 124
+                    },
+                    public: true,
+                    name: "value".to_string(),
+                    args: vec![Arg {
+                        name: "x".to_string()
+                    }],
+                    body: Expr::Let {
+                        meta: Meta {
+                            start: 76,
+                            end: 108
+                        },
+                        typ: (),
+                        value: Box::new(Expr::Var {
+                            typ: (),
+                            meta: Meta { start: 91, end: 92 },
+                            scope: (),
+                            name: "x".to_string()
+                        }),
+                        pattern: Pattern::Constructor {
+                            meta: Meta { start: 80, end: 88 },
+                            name: "Boxxy".to_string(),
+                            args: vec![Pattern::Var {
+                                meta: Meta { start: 86, end: 87 },
+                                name: "a".to_string()
+                            }]
+                        },
+                        then: Box::new(Expr::Var {
+                            meta: Meta {
+                                start: 108,
+                                end: 109
+                            },
+                            scope: (),
+                            typ: (),
+                            name: "a".to_string()
+                        }),
+                    }
+                }
+            ]
+        }),
+        ModuleParser::new().parse(
+            "pub enum Box(x) = | Boxxy(x)
+
+             pub fn value(x) {
+               let Boxxy(a) = x
+               a
+             }"
+        ),
     );
 }

@@ -232,7 +232,7 @@ fn pattern(p: Pattern, env: &mut Env) -> Document {
         Pattern::Float { value, .. } => value.to_doc(),
         Pattern::Tuple { elems, .. } => tuple(pattern, elems, env),
         Pattern::String { value, .. } => string(value),
-        Pattern::Enum { name, args, .. } => enum_pattern(name, args, env),
+        Pattern::Constructor { name, args, .. } => enum_pattern(name, args, env),
     }
 }
 
@@ -1071,7 +1071,7 @@ another() ->
                     },
                     Clause {
                         meta: default(),
-                        pattern: Pattern::Enum {
+                        pattern: Pattern::Constructor {
                             meta: default(),
                             name: "Error".to_string(),
                             args: vec![Pattern::Int {
@@ -1224,7 +1224,7 @@ fn integration_test() {
     let cases = [
         Case {
             src: r#"fn go() {
-  x = {100000000000000000, {2000000000, 3000000000000, 40000000000}, 50000, 6000000000}
+  let x = {100000000000000000, {2000000000, 3000000000000, 40000000000}, 50000, 6000000000}
   x
 }"#,
             erl: r#"-module(gleam_).
@@ -1241,8 +1241,8 @@ go() ->
         },
         Case {
             src: r#"fn go() {
-  y = 1
-  y = 2
+  let y = 1
+  let y = 2
   y
 }"#,
             erl: r#"-module(gleam_).

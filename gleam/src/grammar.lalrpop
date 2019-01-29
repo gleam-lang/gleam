@@ -157,10 +157,10 @@ MultOp: BinOp = {
 }
 
 SimpleExpr: UntypedExpr = {
+    Fn => <>,
     Nil => <>,
     Int => <>,
     Var => <>,
-    Fn => <>,
     Case => <>,
     Cons => <>,
     List => <>,
@@ -197,7 +197,7 @@ Clause: UntypedClause = {
 }
 
 Let: UntypedExpr = {
-    <s:@L> <p:Pattern> "=" <v:OpOrSimpleExpr> <e:@L> <t:Expr> => Expr::Let {
+    <s:@L> "let" <p:Pattern> "=" <v:OpOrSimpleExpr> <e:@L> <t:Expr> => Expr::Let {
         meta: meta(s, e),
         typ: (),
         value: Box::new(v),
@@ -430,11 +430,23 @@ Pattern: Pattern = {
     PatternInt => <>,
     // PatternList => <>,
     PatternAtom => <>,
-    // PatternEnum => <>,
     PatternFloat => <>,
     // PatternTuple => <>,
     PatternString => <>,
     // PatternRecord => <>,
+    PatternConstructor => <>,
+}
+
+PatternConstructor: Pattern = {
+    <s:@L> <name:UpName> <args:PatternConstructorArgs?> <e:@L> => Pattern::Constructor {
+        meta: meta(s, e),
+        name,
+        args: args.unwrap_or_else(|| vec![]),
+    },
+}
+
+PatternConstructorArgs: Vec<Pattern> = {
+    "(" <ts:Comma<Pattern>> ")" => ts
 }
 
 PatternFloat: Pattern = {

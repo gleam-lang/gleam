@@ -2046,23 +2046,23 @@ fn infer_test() {
 
         */
         Case {
-            src: "x = 1 2",
+            src: "let x = 1 2",
             typ: "Int",
         },
         Case {
-            src: "x = 1 x",
+            src: "let x = 1 x",
             typ: "Int",
         },
         Case {
-            src: "x = 'ok' x",
+            src: "let x = 'ok' x",
             typ: "Atom",
         },
         Case {
-            src: "x = 'ok' y = x y",
+            src: "let x = 'ok' let y = x y",
             typ: "Atom",
         },
         Case {
-            src: "x = 'ok' y = x y",
+            src: "let x = 'ok' let y = x y",
             typ: "Atom",
         },
         /* Lists
@@ -2125,11 +2125,11 @@ fn infer_test() {
             typ: "List(fn(a) -> a)",
         },
         Case {
-            src: "f = fn(x) { x } [f, f]",
+            src: "let f = fn(x) { x } [f, f]",
             typ: "List(fn(a) -> a)",
         },
         Case {
-            src: "x = [1 | []] [2 | x]",
+            src: "let x = [1 | []] [2 | x]",
             typ: "List(Int)",
         },
         /* Tuples
@@ -2171,15 +2171,15 @@ fn infer_test() {
             typ: "fn(a, b) -> List(c)",
         },
         Case {
-            src: "x = 1.0 'nope'",
+            src: "let x = 1.0 'nope'",
             typ: "Atom",
         },
         Case {
-            src: "id = fn(x) { x } id(1)",
+            src: "let id = fn(x) { x } id(1)",
             typ: "Int",
         },
         Case {
-            src: "x = fn() { 1.0 } x()",
+            src: "let x = fn() { 1.0 } x()",
             typ: "Float",
         },
         Case {
@@ -2203,7 +2203,7 @@ fn infer_test() {
             typ: "fn(a) -> a",
         },
         Case {
-            src: "x = fn(x) { 1.1 } x",
+            src: "let x = fn(x) { 1.1 } x",
             typ: "fn(a) -> Float",
         },
         Case {
@@ -2211,7 +2211,7 @@ fn infer_test() {
             typ: "fn(a, b, c) -> Int",
         },
         Case {
-            src: "fn(x) { y = x y }",
+            src: "fn(x) { let y = x y }",
             typ: "fn(a) -> a",
         },
         Case {
@@ -2219,11 +2219,11 @@ fn infer_test() {
             typ: "fn(a) -> {Atom, a}",
         },
         Case {
-            src: "id = fn(x) { x } id(1)",
+            src: "let id = fn(x) { x } id(1)",
             typ: "Int",
         },
         Case {
-            src: "const = fn(x) { fn(y) { x } } one = const(1) one('ok')",
+            src: "let const = fn(x) { fn(y) { x } } let one = const(1) one('ok')",
             typ: "Int",
         },
         Case {
@@ -2247,11 +2247,11 @@ fn infer_test() {
             typ: "fn(fn(a) -> fn(b) -> c) -> fn(a, b) -> c",
         },
         Case {
-            src: "fn(f) { fn(x) { ff = f ff(x) } }",
+            src: "fn(f) { fn(x) { let ff = f ff(x) } }",
             typ: "fn(fn(a) -> b) -> fn(a) -> b",
         },
         Case {
-            src: "fn(f) { fn(x, y) { ff = f(x) ff(y) } }",
+            src: "fn(f) { fn(x, y) { let ff = f(x) ff(y) } }",
             typ: "fn(fn(a) -> fn(b) -> c) -> fn(a, b) -> c",
         },
         Case {
@@ -2269,7 +2269,7 @@ fn infer_test() {
         // TODO: This is allowed in the Erlang implementation due to how the pattern
         // assignments work. Unclear what the implications of this would be.
         // Case {
-        //     src: "fn(x) { y = fn(z) { z } y(y) }",
+        //     src: "fn(x) { let y = fn(z) { z } y(y) }",
         //     typ: "fn(a) -> fn(b) -> b",
         // },
         Case {
@@ -2281,7 +2281,7 @@ fn infer_test() {
             typ: "fn(a) -> {a, a}",
         },
         Case {
-            src: "id = fn(a) { a } fn(x) { x(id) }",
+            src: "let id = fn(a) { a } fn(x) { x(id) }",
             typ: "fn(fn(fn(a) -> a) -> b) -> b",
         },
         /* Records
@@ -2336,7 +2336,7 @@ fn infer_test() {
             typ: "{a = Int}",
         },
         Case {
-            src: "a = {} {a | b = 1}",
+            src: "let a = {} {a | b = 1}",
             typ: "{b = Int}",
         },
         Case {
@@ -2513,17 +2513,17 @@ fn infer_error_test() {
             },
         },
         Case {
-            src: "id = fn(x) { x } id()",
+            src: "let id = fn(x) { x } id()",
             error: Error::IncorrectArity {
-                meta: Meta { start: 17, end: 21 },
+                meta: Meta { start: 21, end: 25 },
                 expected: 1,
                 given: 0,
             },
         },
         Case {
-            src: "id = fn(x) { x } id(1, 2)",
+            src: "let id = fn(x) { x } id(1, 2)",
             error: Error::IncorrectArity {
-                meta: Meta { start: 17, end: 25 },
+                meta: Meta { start: 21, end: 29 },
                 expected: 1,
                 given: 2,
             },
@@ -2599,14 +2599,14 @@ fn infer_module_test() {
         },
         Case {
             src: "pub fn empty() {
-                    record = {}
+                    let record = {}
                     record
                   }",
             typ: "module { fn empty() -> {} }",
         },
         Case {
             src: "pub fn add_name(record, name) {
-                    record = { record | name = name }
+                    let record = { record | name = name }
                     record
                   }",
             typ: "module { fn add_name({a | }, b) -> {a | name = b} }",

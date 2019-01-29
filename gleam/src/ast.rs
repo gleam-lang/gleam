@@ -131,12 +131,6 @@ pub type TypedExpr = Expr<Scope<typ::Type>, typ::Type>;
 
 pub type UntypedExpr = Expr<(), ()>;
 
-// TODO: Ideally we would parameterise the typ instead of using Option<Type>
-// as then we can use the type system to ensure that the AST has the correct
-// information before we pass it to the codegen function.
-// I don't know how update a struct in place in a fashion that changes its type
-// though, and reconstructing the term to copy across the values is cumbersome.
-//
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr<S, T> {
     Int {
@@ -384,7 +378,7 @@ pub enum Pattern {
         fields: Vec<(Pattern, Pattern)>,
     },
 
-    Enum {
+    Constructor {
         meta: Meta,
         name: String,
         args: Vec<Pattern>,
