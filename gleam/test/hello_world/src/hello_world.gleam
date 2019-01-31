@@ -21,3 +21,10 @@ pub fn big() {
 pub fn small() {
   Small
 }
+
+pub fn to_int(x) {
+  case x {
+  | Big -> 2
+  | Small -> 1
+  }
+}

@@ -5,7 +5,7 @@ pub fn meta(start: usize, end: usize) -> crate::ast::Meta {
 #[test]
 fn expr_test() {
     use crate::ast::*;
-    use crate::grammar::{ExprParser, ModuleParser};
+    use crate::grammar::ExprParser;
 
     assert_eq!(
         Ok(Expr::Int {
@@ -684,7 +684,7 @@ fn expr_test() {
 #[test]
 fn module_test() {
     use crate::ast::*;
-    use crate::grammar::{ExprParser, ModuleParser};
+    use crate::grammar::ModuleParser;
 
     assert_eq!(
         Ok(Module {

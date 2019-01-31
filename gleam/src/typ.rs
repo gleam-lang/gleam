@@ -864,13 +864,17 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
                         })
                         .collect::<Result<Vec<_>, _>>()?;
                     // Insert constructor function into module scope
-                    let typ = Type::Fn {
+                    let fun = Type::Fn {
                         args: args_types,
                         retrn: Box::new(retrn.clone()),
                     };
                     if public {
-                        fields.push((constructor.name.clone(), typ.clone()));
-                    }
+                        fields.push((constructor.name.clone(), fun.clone()));
+                    };
+                    let typ = match constructor.args.len() {
+                        0 => retrn.clone(),
+                        _ => fun,
+                    };
                     env.insert_variable(
                         constructor.name.clone(),
                         Scope::Module {
@@ -1229,6 +1233,8 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, env: &mut Env) -> Result<(), Err
         Pattern::String { meta, .. } => {
             unify(&string(), typ).map_err(|e| convert_unify_error(e, &meta))
         }
+
+        Pattern::Constructor { .. } => unimplemented!(),
 
         _ => unimplemented!(),
     }
@@ -2618,8 +2624,8 @@ fn infer_module_test() {
         Case {
             src: "
                 pub enum Is = | Yes | No
-                pub fn yes() { Yes() }
-                pub fn no() { No() }",
+                pub fn yes() { Yes }
+                pub fn no() { No }",
             typ: "module {
   fn No() -> Is
   fn Yes() -> Is
