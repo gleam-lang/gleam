@@ -136,7 +136,11 @@ impl Type {
                                 .append(" -> ")
                                 .append(retrn.to_gleam_doc(names, uid)),
 
-                            other => other.to_gleam_doc(names, uid),
+                            other => "const "
+                                .to_doc()
+                                .append(label)
+                                .append(": ")
+                                .append(other.to_gleam_doc(names, uid).nest(INDENT)),
                         })
                         .intersperse(break_("", " "))
                         .collect::<Vec<_>>();
@@ -864,16 +868,15 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
                         })
                         .collect::<Result<Vec<_>, _>>()?;
                     // Insert constructor function into module scope
-                    let fun = Type::Fn {
-                        args: args_types,
-                        retrn: Box::new(retrn.clone()),
-                    };
-                    if public {
-                        fields.push((constructor.name.clone(), fun.clone()));
-                    };
                     let typ = match constructor.args.len() {
                         0 => retrn.clone(),
-                        _ => fun,
+                        _ => Type::Fn {
+                            args: args_types,
+                            retrn: Box::new(retrn.clone()),
+                        },
+                    };
+                    if public {
+                        fields.push((constructor.name.clone(), typ.clone()));
                     };
                     env.insert_variable(
                         constructor.name.clone(),
@@ -2620,15 +2623,14 @@ fn infer_module_test() {
                   }",
             typ: "module { fn add_name({a | }, b) -> {a | name = b} }",
         },
-        // TODO: Permit constructors to be used without parens
         Case {
             src: "
                 pub enum Is = | Yes | No
                 pub fn yes() { Yes }
                 pub fn no() { No }",
             typ: "module {
-  fn No() -> Is
-  fn Yes() -> Is
+  const No: Is
+  const Yes: Is
   fn no() -> Is
   fn yes() -> Is
 }",
