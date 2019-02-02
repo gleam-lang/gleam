@@ -580,7 +580,7 @@ impl Env {
 
     /// Lookup a variable in the current scope.
     ///
-    pub fn get_variable(&mut self, name: &String) -> Option<&(Scope<Type>, Type)> {
+    pub fn get_variable(&self, name: &String) -> Option<&(Scope<Type>, Type)> {
         self.variables.get(name)
     }
 
@@ -592,7 +592,7 @@ impl Env {
 
     /// Lookup a type in the current scope.
     ///
-    pub fn get_type_constructor(&mut self, name: &String) -> Option<&TypeConstructorInfo> {
+    pub fn get_type_constructor(&self, name: &String) -> Option<&TypeConstructorInfo> {
         self.type_constructors.get(name)
     }
 
@@ -1027,7 +1027,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         } => {
             let value = infer(*value, level + 1, env)?;
             let value_typ = generalise(value.typ().clone(), level + 1);
-            unify_pattern(&pattern, &value_typ, env)?;
+            unify_pattern(&pattern, &value_typ, level, env)?;
             let then = infer(*then, level, env)?;
             let typ = then.typ().clone();
             Ok(Expr::Let {
@@ -1053,7 +1053,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             for clause in clauses.into_iter() {
                 let vars = env.variables.clone();
 
-                unify_pattern(&clause.pattern, &subject_type, env)?;
+                unify_pattern(&clause.pattern, &subject_type, level, env)?;
 
                 let then = infer(*clause.then, level, env)?;
                 unify(&return_type, then.typ()).map_err(|e| convert_unify_error(e, then.meta()))?;
@@ -1216,7 +1216,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
 /// inferred type of the subject in order to determine what variables to insert
 /// into the environment (or to detect a type error).
 ///
-fn unify_pattern(pattern: &Pattern, typ: &Type, env: &mut Env) -> Result<(), Error> {
+fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> Result<(), Error> {
     match pattern {
         Pattern::Var { name, .. } => {
             env.insert_variable(name.to_string(), Scope::Local, typ.clone());
@@ -1237,13 +1237,37 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, env: &mut Env) -> Result<(), Err
             unify(&string(), typ).map_err(|e| convert_unify_error(e, &meta))
         }
 
+        // if args1.len() == args2.len() {
+        //     for (a, b) in args1.iter().zip(args2) {
+        //         unify(a, b)?;
+        //     }
+        //     unify(retrn1, retrn2)
+        // } else {
+        //     unimplemented!()
+        // }
         Pattern::Constructor {
-            meta, name, args, ..
-        } => match env.get_variable(name) {
-            Some((_scope, Type::Fn { .. })) => unimplemented!(),
+            meta,
+            name,
+            args: pattern_args,
+            ..
+        } => match env
+            .clone()
+            .get_variable(name)
+            .map(|(s, t)| (s, instantiate(t.clone(), level, env)))
+        {
+            Some((_scope, Type::Fn { args, retrn })) => {
+                if args.len() == pattern_args.len() {
+                    for (pattern, typ) in pattern_args.iter().zip(&args) {
+                        unify_pattern(pattern, typ, level, env)?;
+                    }
+                    unify(&retrn, typ).map_err(|e| convert_unify_error(e, &meta))
+                } else {
+                    unimplemented!()
+                }
+            }
 
             Some((_scope, c @ Type::Const { .. })) => {
-                if args.len() == 0 {
+                if pattern_args.len() == 0 {
                     unify(&c, typ).map_err(|e| convert_unify_error(e, &meta))
                 } else {
                     unimplemented!()
@@ -1258,7 +1282,7 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, env: &mut Env) -> Result<(), Err
         Pattern::Tuple { elems, .. } => match typ {
             Type::Tuple { elems: type_elems } => {
                 for (pattern, typ) in elems.iter().zip(type_elems) {
-                    unify_pattern(pattern, typ, env)?;
+                    unify_pattern(pattern, typ, level, env)?;
                 }
                 Ok(())
             }
@@ -1385,26 +1409,6 @@ fn convert_unify_error(e: UnifyError, meta: &Meta) -> Error {
     }
 }
 
-// let instantiate level ty =
-// 	let id_var_map = Hashtbl.create 10 in
-// 	let rec f ty = match ty with
-// 		| TConst _ -> ty
-// 		| TVar {contents = Link ty} -> f ty
-// 		| TVar {contents = Generic id} -> begin
-// 				try
-// 					Hashtbl.find id_var_map id
-// 				with Not_found ->
-// 					let var = new_var level in
-// 					Hashtbl.add id_var_map id var ;
-// 					var
-// 			end
-// 		| TVar {contents = Unbound _} -> ty
-// 		| TApp(ty, ty_arg_list) ->
-// 				TApp(f ty, List.map f ty_arg_list)
-// 		| TArrow(param_ty_list, return_ty) ->
-// 				TArrow(List.map f param_ty_list, f return_ty)
-// 	in
-// 	f ty
 /// Instantiate converts generic variables into unbound ones.
 ///
 fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
@@ -2706,7 +2710,6 @@ fn infer_module_test() {
   fn go(Singleton) -> Int
 }",
         },
-        /*
         Case {
             src: "
         pub enum Box(a) = | Box(a)
@@ -2716,13 +2719,15 @@ fn infer_module_test() {
   fn unbox(Box(b)) -> b
 }",
         },
-        */
-        // Case {
-        //     src: "
-        // pub enum I = | I(Int)
-        // pub fn open(x) { case x { | I(i) -> i  } }",
-        //     typ: "module { fn open(I) -> Int }",
-        // },
+        Case {
+            src: "
+        pub enum I = | I(Int)
+        pub fn open(x) { case x { | I(i) -> i  } }",
+            typ: "module {
+  fn I(Int) -> I
+  fn open(I) -> Int
+}",
+        },
         // Case {
         //     src: "
         // pub fn status() { 'ok' }
