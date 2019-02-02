@@ -431,7 +431,7 @@ Pattern: Pattern = {
     // PatternList => <>,
     PatternAtom => <>,
     PatternFloat => <>,
-    // PatternTuple => <>,
+    PatternTuple => <>,
     PatternString => <>,
     // PatternRecord => <>,
     PatternConstructor => <>,
@@ -447,6 +447,13 @@ PatternConstructor: Pattern = {
 
 PatternConstructorArgs: Vec<Pattern> = {
     "(" <ts:Comma<Pattern>> ")" => ts
+}
+
+PatternTuple: Pattern = {
+    <s:@L> "{" <elems:Comma<Pattern>> "}" <e:@L> => Pattern::Tuple {
+        meta: meta(s, e),
+        elems,
+    }
 }
 
 PatternFloat: Pattern = {

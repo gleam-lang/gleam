@@ -1239,7 +1239,22 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, env: &mut Env) -> Result<(), Err
 
         Pattern::Constructor { .. } => unimplemented!(),
 
-        _ => unimplemented!(),
+        Pattern::Tuple { elems, .. } => match typ {
+            Type::Tuple { elems: type_elems } => {
+                for (pattern, typ) in elems.iter().zip(type_elems) {
+                    unify_pattern(pattern, typ, env)?;
+                }
+                Ok(())
+            }
+
+            _ => unimplemented!(),
+        },
+
+        Pattern::Nil { .. } => unimplemented!(),
+
+        Pattern::Record { .. } => unimplemented!(),
+
+        Pattern::List { .. } => unimplemented!(),
     }
 }
 
@@ -2382,10 +2397,10 @@ fn infer_test() {
             src: r#"case "ok" { | "ko" -> 1 | x -> 0 }"#,
             typ: "Int",
         },
-        // Case {
-        //     src: "case {'ok', 1} { | {'ko', x} -> x | x -> 5 }",
-        //     typ: "Int",
-        // },
+        Case {
+            src: "let {tag, x} = {'ok', 1} x",
+            typ: "Int",
+        },
         /* Record select
 
         */
