@@ -408,15 +408,6 @@ impl Env {
         );
 
         env.insert_type_constructor(
-            "Atom".to_string(),
-            TypeConstructorInfo {
-                arity: 0,
-                module: "".to_string(),
-                public: true,
-            },
-        );
-
-        env.insert_type_constructor(
             "Float".to_string(),
             TypeConstructorInfo {
                 arity: 0,
@@ -971,12 +962,6 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             typ: string(),
         }),
 
-        Expr::Atom { meta, value, .. } => Ok(Expr::Atom {
-            meta,
-            value,
-            typ: atom(),
-        }),
-
         Expr::Nil { meta, typ: _ } => Ok(Expr::Nil {
             meta,
             typ: list(env.new_unbound_var(level)),
@@ -1224,10 +1209,6 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
         }
 
         Pattern::Int { meta, .. } => unify(&int(), typ).map_err(|e| convert_unify_error(e, &meta)),
-
-        Pattern::Atom { meta, .. } => {
-            unify(&atom(), typ).map_err(|e| convert_unify_error(e, &meta))
-        }
 
         Pattern::Float { meta, .. } => {
             unify(&float(), typ).map_err(|e| convert_unify_error(e, &meta))
@@ -2003,14 +1984,6 @@ pub fn float() -> Type {
     }
 }
 
-pub fn atom() -> Type {
-    Type::Const {
-        public: true,
-        name: "Atom".to_string(),
-        module: "".to_string(),
-    }
-}
-
 pub fn bool() -> Type {
     Type::Const {
         public: true,
@@ -2066,10 +2039,6 @@ fn infer_test() {
             typ: "Float",
         },
         Case {
-            src: "'hello'",
-            typ: "Atom",
-        },
-        Case {
             src: "\"ok\"",
             typ: "String",
         },
@@ -2097,16 +2066,12 @@ fn infer_test() {
             typ: "Int",
         },
         Case {
-            src: "let x = 'ok' x",
-            typ: "Atom",
+            src: "let x = 2.0 x",
+            typ: "Float",
         },
         Case {
-            src: "let x = 'ok' let y = x y",
-            typ: "Atom",
-        },
-        Case {
-            src: "let x = 'ok' let y = x y",
-            typ: "Atom",
+            src: "let x = 2 let y = x y",
+            typ: "Int",
         },
         /* Lists
 
@@ -2156,8 +2121,8 @@ fn infer_test() {
             typ: "List(List(a))",
         },
         Case {
-            src: "[[], ['ok']]",
-            typ: "List(List(Atom))",
+            src: "[[], [1]]",
+            typ: "List(List(Int))",
         },
         Case {
             src: "[1 | [2 | []]]",
@@ -2187,12 +2152,12 @@ fn infer_test() {
             typ: "{Int, Float}",
         },
         Case {
-            src: "{1, 2.0, '3'}",
-            typ: "{Int, Float, Atom}",
+            src: "{1, 2.0, 3}",
+            typ: "{Int, Float, Int}",
         },
         Case {
-            src: "{1, 2.0, {'ok', 1}}",
-            typ: "{Int, Float, {Atom, Int}}",
+            src: "{1, 2.0, {1, 1}}",
+            typ: "{Int, Float, {Int, Int}}",
         },
         /* Fns
 
@@ -2214,8 +2179,8 @@ fn infer_test() {
             typ: "fn(a, b) -> List(c)",
         },
         Case {
-            src: "let x = 1.0 'nope'",
-            typ: "Atom",
+            src: "let x = 1.0 1",
+            typ: "Int",
         },
         Case {
             src: "let id = fn(x) { x } id(1)",
@@ -2226,8 +2191,8 @@ fn infer_test() {
             typ: "Float",
         },
         Case {
-            src: "fn(x) { x }('ok')",
-            typ: "Atom",
+            src: "fn(x) { x }(1)",
+            typ: "Int",
         },
         Case {
             src: "fn() { 1 }",
@@ -2258,15 +2223,15 @@ fn infer_test() {
             typ: "fn(a) -> a",
         },
         Case {
-            src: "fn(x) { {'ok', x} }",
-            typ: "fn(a) -> {Atom, a}",
+            src: "fn(x) { {1, x} }",
+            typ: "fn(a) -> {Int, a}",
         },
         Case {
             src: "let id = fn(x) { x } id(1)",
             typ: "Int",
         },
         Case {
-            src: "let const = fn(x) { fn(y) { x } } let one = const(1) one('ok')",
+            src: "let const = fn(x) { fn(y) { x } } let one = const(1) one(2.0)",
             typ: "Int",
         },
         Case {
@@ -2351,8 +2316,8 @@ fn infer_test() {
             typ: "{a = Int, b = Float, c = Int}",
         },
         Case {
-            src: "{a = {a = 'ok'}}",
-            typ: "{a = {a = Atom}}",
+            src: "{a = {a = 1}}",
+            typ: "{a = {a = Int}}",
         },
         Case {
             src: "{} == {}",
@@ -2410,7 +2375,7 @@ fn infer_test() {
             typ: "Int",
         },
         Case {
-            src: "case 'ok' { | 'ko' -> 1 | x -> 0 }",
+            src: "case 2.0 { | 2.0 -> 1 | x -> 0 }",
             typ: "Int",
         },
         Case {
@@ -2418,7 +2383,7 @@ fn infer_test() {
             typ: "Int",
         },
         Case {
-            src: "let {tag, x} = {'ok', 1} x",
+            src: "let {tag, x} = {1.0, 1} x",
             typ: "Int",
         },
         /* Record select
@@ -2641,8 +2606,8 @@ fn infer_module_test() {
             typ: "module { fn run() -> {level = Int} }",
         },
         Case {
-            src: "pub fn ok(x) { {'ok', x} }",
-            typ: "module { fn ok(a) -> {Atom, a} }",
+            src: "pub fn ok(x) { {1, x} }",
+            typ: "module { fn ok(a) -> {Int, a} }",
         },
         Case {
             src: "pub fn empty() {
@@ -2730,59 +2695,59 @@ fn infer_module_test() {
         },
         // Case {
         //     src: "
-        // pub fn status() { 'ok' }
+        // pub fn status() { 1 }
         // pub fn list_of(x) { [x] }
         // pub fn get_age(person) { person.age }
-        // test whatever { 'ok' }",
+        // test whatever { 1 }",
         //     typ: "module {
         // fn get_age({a | age = b}) -> b
         // fn list_of(c) -> List(c)
-        // fn status() -> Atom
+        // fn status() -> Int
         // }",
         // },
         Case {
-            src: "pub external fn go(String) -> String = '' ''",
+            src: "pub external fn go(String) -> String = \"\" \"\"",
             typ: "module { fn go(String) -> String }",
         },
         Case {
-            src: "pub external fn go(Int) -> Float = '' ''",
+            src: "pub external fn go(Int) -> Float = \"\" \"\"",
             typ: "module { fn go(Int) -> Float }",
         },
         Case {
-            src: "pub external fn go(Atom) -> Atom = '' ''",
-            typ: "module { fn go(Atom) -> Atom }",
+            src: "pub external fn go(Int) -> Int = \"\" \"\"",
+            typ: "module { fn go(Int) -> Int }",
         },
         Case {
-            src: "external fn go(Atom) -> Atom = '' ''",
+            src: "external fn go(Int) -> Int = \"\" \"\"",
             typ: "module {  }",
         },
         Case {
-            src: "pub external fn ok(Int) -> {Atom, Int} = '' ''",
-            typ: "module { fn ok(Int) -> {Atom, Int} }",
+            src: "pub external fn ok(Int) -> {Int, Int} = \"\" \"\"",
+            typ: "module { fn ok(Int) -> {Int, Int} }",
         },
         Case {
-            src: "pub external fn ok() -> fn(Int) -> Int = '' ''",
+            src: "pub external fn ok() -> fn(Int) -> Int = \"\" \"\"",
             typ: "module { fn ok() -> fn(Int) -> Int }",
         },
         Case {
-            src: "pub external fn go(Atom) -> b = '' ''",
-            typ: "module { fn go(Atom) -> a }",
+            src: "pub external fn go(Int) -> b = \"\" \"\"",
+            typ: "module { fn go(Int) -> a }",
         },
         Case {
-            src: "pub external fn go(Bool) -> b = '' ''",
+            src: "pub external fn go(Bool) -> b = \"\" \"\"",
             typ: "module { fn go(Bool) -> a }",
         },
         Case {
-            src: "pub external fn go(List(a)) -> a = '' ''",
+            src: "pub external fn go(List(a)) -> a = \"\" \"\"",
             typ: "module { fn go(List(a)) -> a }",
         },
         Case {
-            src: "pub external fn go({a, c}) -> c = '' ''",
+            src: "pub external fn go({a, c}) -> c = \"\" \"\"",
             typ: "module { fn go({a, b}) -> b }",
         },
         Case {
             src: "
-        external fn go(Int) -> b = '' ''
+        external fn go(Int) -> b = \"\" \"\"
         pub fn x() {
           go(1)
         }",
@@ -2790,7 +2755,7 @@ fn infer_module_test() {
         },
         Case {
             src: "
-        external fn id(a) -> a = '' ''
+        external fn id(a) -> a = \"\" \"\"
         pub fn i(x) { id(x) }
         pub fn a() { id(1) }
         pub fn b() { id(1.0) }",
@@ -2801,19 +2766,19 @@ fn infer_module_test() {
 }",
         },
         Case {
-            src: "pub external fn len(List(a)) -> Int = '' ''",
+            src: "pub external fn len(List(a)) -> Int = \"\" \"\"",
             typ: "module { fn len(List(a)) -> Int }",
         },
         Case {
             src: "
         pub external type Connection\n
-        pub external fn is_open(Connection) -> Bool = '' ''",
+        pub external fn is_open(Connection) -> Bool = \"\" \"\"",
             typ: "module { fn is_open(Connection) -> Bool }",
         },
         Case {
             src: "
         pub external type Pair(thing, thing)\n
-        pub external fn pair(a) -> Pair(a, a) = '' ''",
+        pub external fn pair(a) -> Pair(a, a) = \"\" \"\"",
             typ: "module { fn pair(a) -> Pair(a, a) }",
         },
         Case {
@@ -2917,15 +2882,15 @@ fn infer_module_error_test() {
 
     let cases = [
         Case {
-            src: "test go { 1 + 'two' }",
+            src: "test go { 1 + 2.0 }",
             error: Error::CouldNotUnify {
-                meta: Meta { start: 10, end: 19 }, // TODO: FIXME: This should specify just the RHS
+                meta: Meta { start: 10, end: 17 }, // TODO: FIXME: This should specify just the RHS
                 expected: int(),
-                given: atom(),
+                given: float(),
             },
         },
         Case {
-            src: "external fn go(List(a, b)) -> a = '' ''",
+            src: "external fn go(List(a, b)) -> a = \"\" \"\"",
             error: Error::IncorrectTypeArity {
                 meta: Meta { start: 15, end: 25 },
                 name: "List".to_string(),

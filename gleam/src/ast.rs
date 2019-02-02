@@ -147,12 +147,6 @@ pub enum Expr<S, T> {
         value: f64,
     },
 
-    Atom {
-        meta: Meta,
-        typ: T,
-        value: String,
-    },
-
     String {
         meta: Meta,
         typ: T,
@@ -271,7 +265,6 @@ impl<S, T> Expr<S, T> {
             Expr::Fn { meta, .. } => meta,
             Expr::Nil { meta, .. } => meta,
             Expr::Let { meta, .. } => meta,
-            Expr::Atom { meta, .. } => meta,
             Expr::Case { meta, .. } => meta,
             Expr::Cons { meta, .. } => meta,
             Expr::Call { meta, .. } => meta,
@@ -293,7 +286,6 @@ impl TypedExpr {
         match self {
             Expr::Int { typ, .. } => typ,
             Expr::Float { typ, .. } => typ,
-            Expr::Atom { typ, .. } => typ,
             Expr::String { typ, .. } => typ,
             Expr::Seq { then, .. } => then.typ(),
             Expr::Tuple { typ, .. } => typ,
@@ -342,11 +334,6 @@ pub enum Pattern {
     Float {
         meta: Meta,
         value: f64,
-    },
-
-    Atom {
-        meta: Meta,
-        value: String,
     },
 
     String {

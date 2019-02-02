@@ -71,15 +71,6 @@ fn expr_test() {
     );
 
     assert_eq!(
-        Ok(Expr::Atom {
-            typ: (),
-            meta: Meta { start: 0, end: 15 },
-            value: "Hello, world!".to_string(),
-        }),
-        ExprParser::new().parse(r#"'Hello, world!'"#),
-    );
-
-    assert_eq!(
         Ok(Expr::String {
             typ: (),
             meta: Meta { start: 0, end: 13 },
@@ -585,28 +576,6 @@ fn expr_test() {
                 meta: Meta { start: 10, end: 11 },
                 value: 1
             }),
-            pattern: Pattern::Atom {
-                meta: Meta { start: 4, end: 7 },
-                value: "a".to_string(),
-            },
-            then: Box::new(Expr::Int {
-                typ: (),
-                meta: Meta { start: 12, end: 13 },
-                value: 2
-            })
-        }),
-        ExprParser::new().parse("let 'a' = 1 2"),
-    );
-
-    assert_eq!(
-        Ok(Expr::Let {
-            meta: Meta { start: 0, end: 12 },
-            typ: (),
-            value: Box::new(Expr::Int {
-                typ: (),
-                meta: Meta { start: 10, end: 11 },
-                value: 1
-            }),
             pattern: Pattern::String {
                 meta: Meta { start: 4, end: 7 },
                 value: "a".to_string(),
@@ -858,7 +827,7 @@ fn module_test() {
                 }
             }]
         }),
-        ModuleParser::new().parse("pub external fn run(Int, Float) -> Bool = 'm' 'f'"),
+        ModuleParser::new().parse("pub external fn run(Int, Float) -> Bool = \"m\" \"f\""),
     );
 
     assert_eq!(

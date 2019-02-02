@@ -155,13 +155,9 @@ fn string(value: String) -> Document {
     value.to_doc().surround("<<\"", "\">>")
 }
 
-fn tuple<F, E>(f: F, elems: Vec<E>, env: &mut Env) -> Document
-where
-    F: Fn(E, &mut Env) -> Document,
-{
+fn tuple(elems: Vec<Document>) -> Document {
     elems
         .into_iter()
-        .map(|e| f(e, env))
         .intersperse(delim(","))
         .collect::<Vec<_>>()
         .to_doc()
@@ -223,9 +219,8 @@ fn pattern(p: Pattern, env: &mut Env) -> Document {
         Pattern::Record { .. } => unimplemented!(),
         Pattern::Var { name, .. } => env.next_local_var_name(name),
         Pattern::Int { value, .. } => value.to_doc(),
-        Pattern::Atom { value, .. } => atom(value),
         Pattern::Float { value, .. } => value.to_doc(),
-        Pattern::Tuple { elems, .. } => tuple(pattern, elems, env),
+        Pattern::Tuple { elems, .. } => tuple(elems.into_iter().map(|p| pattern(p, env)).collect()),
         Pattern::String { value, .. } => string(value),
         Pattern::Constructor { name, args, .. } => enum_pattern(name, args, env),
     }
@@ -299,13 +294,14 @@ fn var(name: String, scope: TypedScope, env: &mut Env) -> Document {
     }
 }
 
-fn enum_pattern(name: String, mut args: Vec<Pattern>, env: &mut Env) -> Document {
+fn enum_pattern(name: String, args: Vec<Pattern>, env: &mut Env) -> Document {
     if args.len() == 0 {
-        pattern(pattern_atom(name.to_snake_case()), env)
+        atom(name.to_snake_case())
     } else {
+        let mut args: Vec<_> = args.into_iter().map(|p| pattern(p, env)).collect();
         // FIXME: O(n), insert at start shuffles the elemes forward by one place
-        args.insert(0, pattern_atom(name.to_snake_case()));
-        tuple(pattern, args, env)
+        args.insert(0, atom(name.to_snake_case()));
+        tuple(args)
     }
 }
 
@@ -334,14 +330,7 @@ fn case(subject: TypedExpr, cs: Vec<TypedClause>, env: &mut Env) -> Document {
         .group()
 }
 
-fn pattern_atom(s: String) -> Pattern {
-    Pattern::Atom {
-        meta: default(),
-        value: s,
-    }
-}
-
-fn call(fun: TypedExpr, mut args: Vec<TypedExpr>, env: &mut Env) -> Document {
+fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
     match fun {
         Expr::Var {
             scope: Scope::Module { .. },
@@ -353,15 +342,11 @@ fn call(fun: TypedExpr, mut args: Vec<TypedExpr>, env: &mut Env) -> Document {
             .surround("(", ")")
             .append(call_args(args, env)),
 
-        Expr::Constructor { meta, typ, name } => {
+        Expr::Constructor { name, .. } => {
+            let mut args: Vec<_> = args.into_iter().map(|e| wrap_expr(e, env)).collect();
             // FIXME: O(n), insert at start shuffles the elemes forward by one place
-            let tag = Expr::Atom {
-                meta,
-                typ,
-                value: name.to_snake_case(),
-            };
-            args.insert(0, tag);
-            tuple(wrap_expr, args, env)
+            args.insert(0, atom(name.to_snake_case()));
+            tuple(args)
         }
 
         other => expr(other, env).append(call_args(args, env)),
@@ -395,9 +380,7 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
         Expr::Int { value, .. } => value.to_doc(),
         Expr::Float { value, .. } => value.to_doc(),
         Expr::Constructor { name, .. } => atom(name.to_snake_case()),
-        Expr::Atom { value, .. } => atom(value),
         Expr::String { value, .. } => string(value),
-        Expr::Tuple { elems, .. } => tuple(wrap_expr, elems, env),
         Expr::Seq { first, then, .. } => seq(*first, *then, env),
         Expr::Var { name, scope, .. } => var(name, scope, env),
         Expr::Fn { args, body, .. } => fun(args, *body, env),
@@ -405,6 +388,7 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
         Expr::Call { fun, args, .. } => call(*fun, args, env),
         Expr::RecordSelect { .. } => unimplemented!(),
         Expr::ModuleSelect { .. } => unimplemented!(),
+        Expr::Tuple { elems, .. } => tuple(elems.into_iter().map(|e| wrap_expr(e, env)).collect()),
         Expr::Let {
             value,
             pattern,
@@ -530,17 +514,6 @@ map() ->
         typ: crate::typ::int(),
         name: "term".to_string(),
         statements: vec![
-            Statement::Fn {
-                meta: default(),
-                public: false,
-                args: vec![],
-                name: "atom".to_string(),
-                body: Expr::Atom {
-                    typ: crate::typ::atom(),
-                    meta: default(),
-                    value: "ok".to_string(),
-                },
-            },
             Statement::Fn {
                 meta: default(),
                 public: false,
@@ -770,9 +743,6 @@ map() ->
 
 -export([]).
 
-atom() ->
-    'ok'.
-
 int() ->
     176.
 
@@ -819,10 +789,6 @@ funny() ->
     .to_string();
     assert_eq!(expected, module(m));
 
-    // TODO
-    // enum2() ->
-    //     {'ok', 1, 2.0}.
-
     let m = Module {
         typ: crate::typ::int(),
         name: "term".to_string(),
@@ -856,10 +822,10 @@ funny() ->
                     name: "arg_that_is_long".to_string(),
                 },
             ],
-            body: Expr::Atom {
-                typ: crate::typ::atom(),
+            body: Expr::Int {
+                typ: crate::typ::int(),
                 meta: default(),
-                value: "ok".to_string(),
+                value: 1,
             },
         }],
     };
@@ -875,7 +841,7 @@ some_function(ArgOne,
               ArgFive,
               ArgSix,
               ArgThatIsLong) ->
-    'ok'.
+    1.
 "
     .to_string();
     assert_eq!(expected, module(m));
@@ -886,10 +852,10 @@ some_function(ArgOne,
         statements: vec![Statement::Test {
             meta: default(),
             name: "bang".to_string(),
-            body: Expr::Atom {
-                typ: crate::typ::atom(),
+            body: Expr::Int {
+                typ: crate::typ::int(),
                 meta: default(),
-                value: "ok".to_string(),
+                value: 1,
             },
         }],
     };
@@ -899,7 +865,7 @@ some_function(ArgOne,
 
 -ifdef(TEST).
 bang_test() ->
-    'ok'.
+    1.
 -endif.
 "
     .to_string();
@@ -931,10 +897,10 @@ bang_test() ->
                     meta: default(),
                     name: "some_arg".to_string(),
                     scope: Scope::Constant {
-                        value: Box::new(Expr::Atom {
-                            typ: crate::typ::atom(),
+                        value: Box::new(Expr::Int {
+                            typ: crate::typ::int(),
                             meta: default(),
-                            value: "hello".to_string(),
+                            value: 1,
                         }),
                     },
                 },
@@ -961,7 +927,7 @@ arg() ->
     SomeArg.
 
 some_arg() ->
-    'hello'.
+    1.
 
 another() ->
     fun run_task/6.
@@ -1003,18 +969,6 @@ another() ->
                         pattern: Pattern::Float {
                             meta: default(),
                             value: 1.0,
-                        },
-                        then: Box::new(Expr::Int {
-                            typ: crate::typ::int(),
-                            meta: default(),
-                            value: 1,
-                        }),
-                    },
-                    Clause {
-                        meta: default(),
-                        pattern: Pattern::Atom {
-                            meta: default(),
-                            value: "ok".to_string(),
                         },
                         then: Box::new(Expr::Int {
                             typ: crate::typ::int(),
@@ -1094,9 +1048,6 @@ go() ->
             1;
 
         1.0 ->
-            1;
-
-        'ok' ->
             1;
 
         <<\"hello\">> ->
