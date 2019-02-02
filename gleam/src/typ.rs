@@ -1237,7 +1237,23 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, env: &mut Env) -> Result<(), Err
             unify(&string(), typ).map_err(|e| convert_unify_error(e, &meta))
         }
 
-        Pattern::Constructor { .. } => unimplemented!(),
+        Pattern::Constructor {
+            meta, name, args, ..
+        } => match env.get_variable(name) {
+            Some((_scope, Type::Fn { .. })) => unimplemented!(),
+
+            Some((_scope, c @ Type::Const { .. })) => {
+                if args.len() == 0 {
+                    unify(&c, typ).map_err(|e| convert_unify_error(e, &meta))
+                } else {
+                    unimplemented!()
+                }
+            }
+
+            Some((_scope, _)) => unimplemented!(), // ???
+
+            None => unimplemented!(), // Not found
+        },
 
         Pattern::Tuple { elems, .. } => match typ {
             Type::Tuple { elems: type_elems } => {
@@ -2681,6 +2697,26 @@ fn infer_module_test() {
   fn int() -> Box(Int)
 }",
         },
+        Case {
+            src: "
+        pub enum Singleton = | Singleton
+        pub fn go(x) { let Singleton = x 1 }",
+            typ: "module {
+  const Singleton: Singleton
+  fn go(Singleton) -> Int
+}",
+        },
+        /*
+        Case {
+            src: "
+        pub enum Box(a) = | Box(a)
+        pub fn unbox(x) { let Box(a) = x a }",
+            typ: "module {
+  fn Box(a) -> Box(a)
+  fn unbox(Box(b)) -> b
+}",
+        },
+        */
         // Case {
         //     src: "
         // pub enum I = | I(Int)
