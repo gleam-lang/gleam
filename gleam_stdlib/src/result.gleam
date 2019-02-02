@@ -77,15 +77,6 @@ pub fn flatten(result) {
   }
 }
 
-// TODO: This one doesn't type check. I think because we don't generalize for
-// case expressions
-// pub fn flatten(result) {
-//   case result {
-//   | Ok(x) -> x
-//   | Error(_) -> result
-//   }
-// }
-
 test flatten {
   flatten(Ok(Ok(1)))
     |> expect:equal(_, Ok(1))

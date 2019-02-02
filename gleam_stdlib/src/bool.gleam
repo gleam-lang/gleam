@@ -16,11 +16,11 @@ test not {
 }
 
 pub fn compare(a, b) {
-  case (a, b) {
-  | (True, True) -> Eq
-  | (True, False) -> Gt
-  | (False, False) -> Eq
-  | (False, True) -> Gt
+  case {a, b} {
+  | {True, True} -> Eq
+  | {True, False} -> Gt
+  | {False, False} -> Eq
+  | {False, True} -> Gt
   }
 }
 
