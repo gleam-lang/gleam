@@ -17,7 +17,7 @@ int(Data) -> err("an Int", Data).
 float(Data) when is_float(Data) -> {ok, Data};
 float(Data) -> err("a Float", Data).
 
-atom(Data) when is_atom(Data) -> {ok, Data};
+atom(Data) when is_atom(Data) -> {ok, atom_to_binary(Data, utf8)};
 atom(Data) -> err("an Atom", Data).
 
 bool(Data) when is_boolean(Data) -> {ok, Data};

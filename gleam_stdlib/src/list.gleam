@@ -6,7 +6,7 @@ pub enum Error =
 
 // Using the Erlang C BIF implementation.
 //
-pub external fn length(List(a)) -> Int = 'erlang' 'length'
+pub external fn length(List(a)) -> Int = "erlang" "length"
 
 test length {
   length([]) |> expect:equal(_, 0)
@@ -17,7 +17,7 @@ test length {
 
 // Using the Erlang C BIF implementation.
 //
-pub external fn reverse(List(a)) -> List(a) = 'erlang' 'reverse'
+pub external fn reverse(List(a)) -> List(a) = "erlang" "reverse"
 
 test reverse {
   length([]) |> expect:equal(_, [])

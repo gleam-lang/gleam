@@ -5,7 +5,7 @@ import expect
 pub external type Map(key, value);
 
 pub external fn new() -> Map(key, value))
-  = 'maps' 'new'
+  = "maps" "new"
 
 test new {
   new()
@@ -14,7 +14,7 @@ test new {
 }
 
 pub external fn size(Map(_, _)) -> Int
-  = 'maps' 'size'
+  = "maps" "size"
 
 test size {
   []
@@ -39,7 +39,7 @@ test size {
 }
 
 external fn is_key(key, Map(key, _)) -> Bool
-  = 'maps' 'is_key'
+  = "maps" "is_key"
 
 pub fn has_key(map, key) {
   is_key(key, map)
@@ -87,14 +87,14 @@ test from_record {
     |> expect:equal(_, 1)
 
   map
-    |> expect:equal(_, from_list([{'name', "Jane"}]))
+    |> expect:equal(_, from_list([{"name", "Jane"}]))
 }
 
 pub external fn to_list(Map(key, value)) -> List(Tuple(key, value))
-  = 'maps' 'to_list'
+  = "maps" "to_list"
 
 pub external fn from_list(List(Tuple(key, value))) -> Map(key, value)
-  = 'maps' 'from_list'
+  = "maps" "from_list"
 
 test from_list {
   proplist = [
@@ -113,7 +113,7 @@ test from_list {
 }
 
 pub external fn fetch(Map(key, value), key) -> Result(Unit, value)
-  = 'gleam__stdlib' 'map_fetch';
+  = "gleam__stdlib" "map_fetch";
 
 test fetch {
   proplist = [
@@ -136,7 +136,7 @@ test fetch {
 }
 
 external fn erl_put(key, value, Map(key, value)) -> Map(key, value)
-  = 'maps' 'put';
+  = "maps" "put";
 
 pub fn put(map, key, value) {
   erl_put(key, value, map)
@@ -144,14 +144,14 @@ pub fn put(map, key, value) {
 
 test put {
   new()
-    |> put(_, 'a', 0)
-    |> put(_, 'b', 1)
-    |> put(_, 'c', 2)
-    |> expect:equal(_, result:Ok(from_list([{'a', 0}, {'b', 1}, {'c', 2}])))
+    |> put(_, "a", 0)
+    |> put(_, "b", 1)
+    |> put(_, "c", 2)
+    |> expect:equal(_, result:Ok(from_list([{"a", 0}, {"b", 1}, {"c", 2}])))
 }
 
 external fn erl_map_values(fn(key, value) -> value, Map(key, value)) -> Map(key, value)
-  = 'maps' 'map';
+  = "maps" "map";
 
 pub fn map_values(map, fun) {
   erl_map_values(fun, map)
@@ -169,27 +169,27 @@ test map_values {
 }
 
 pub external fn keys(Map(keys, _)) -> List(keys)
-  = 'maps' 'keys'
+  = "maps" "keys"
 
 test keys {
   [
-    {'a', 0},
-    {'b', 1},
-    {'c', 2},
+    {"a", 0},
+    {"b", 1},
+    {"c", 2},
   ]
     |> from_list
     |> keys
-    |> expect:equal(_, ['a', 'b', 'c']))
+    |> expect:equal(_, ["a", "b", "c"]))
 }
 
 pub external fn values(Map(_, values)) -> List(values)
-  = 'maps' 'values'
+  = "maps" "values"
 
 test values {
   [
-    {'a', 0},
-    {'b', 1},
-    {'c', 2},
+    {"a", 0},
+    {"b", 1},
+    {"c", 2},
   ]
     |> from_list
     |> values
@@ -197,7 +197,7 @@ test values {
 }
 
 external fn erl_filter(fn(key, value) -> Bool, Map(key, value)) -> Map(key, value)
-  = 'maps' 'filter';
+  = "maps" "filter";
 
 pub fn filter(map, fun) {
   filter(fun, map)

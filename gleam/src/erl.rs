@@ -8,13 +8,6 @@ use std::default::Default;
 
 const INDENT: isize = 4;
 
-fn default<T>() -> T
-where
-    T: Default,
-{
-    Default::default()
-}
-
 #[derive(Debug, Clone, Default)]
 struct Env {
     vars: HashMap<String, usize>,
