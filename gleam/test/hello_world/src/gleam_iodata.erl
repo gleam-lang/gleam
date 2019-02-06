@@ -1,15 +1,12 @@
 -module(gleam_iodata).
 
--export([prepend/2, append/2, of/1, from/1, to_string/1, byte_size/1]).
+-export([prepend/2, append/2, from/1, to_string/1, byte_size/1]).
 
 prepend(A, B) ->
     gleam__stdlib:iodata_prepend(A, B).
 
 append(A, B) ->
     gleam__stdlib:iodata_append(A, B).
-
-of(A) ->
-    gleam__stdlib:identity(A).
 
 from(A) ->
     gleam__stdlib:identity(A).

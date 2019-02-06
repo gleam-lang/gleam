@@ -1,15 +1,6 @@
 -module(gleam_bool).
 
--export([not/1, compare/2, max/2, min/2, to_int/1]).
-
-not(Bool) ->
-    case Bool of
-        'true' ->
-            'false';
-
-        'false' ->
-            'true'
-    end.
+-export([compare/2, max/2, min/2, to_int/1]).
 
 compare(A, B) ->
     case {A, B} of

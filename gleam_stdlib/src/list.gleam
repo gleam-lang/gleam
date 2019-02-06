@@ -214,15 +214,6 @@ test take {
     |> expect:equal(_, [1, 2, 3, 4, 5])
 }
 
-pub fn of(x) {
-  [x]
-}
-
-test of() {
-  of([]) |> expect:equal(_, [[]])
-  of(1) |> expect:equal(_, [1])
-}
-
 pub fn new() {
   []
 }

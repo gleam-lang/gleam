@@ -9,10 +9,6 @@ pub fn is_empty(list) {
   list == []
 }
 
-pub fn of(x) {
-  [x]
-}
-
 pub fn new() {
   []
 }

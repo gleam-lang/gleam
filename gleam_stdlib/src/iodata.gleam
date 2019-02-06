@@ -10,9 +10,6 @@ pub external fn prepend(Iodata, String) -> Iodata =
 pub external fn append(Iodata, String) -> Iodata =
   "gleam__stdlib" "iodata_append";
 
-pub external fn of(String) -> Iodata =
-  "gleam__stdlib" "identity";
-
 pub external fn from(List(String)) -> Iodata =
   "gleam__stdlib" "identity";
 

@@ -7,13 +7,6 @@ pub enum Order =
   | Eq
   | Gt
 
-pub fn not(bool) {
-  case bool {
-  | True -> False
-  | False -> True
-  }
-}
-
 pub fn compare(a, b) {
   case {a, b} {
   | {True, True} -> Eq
