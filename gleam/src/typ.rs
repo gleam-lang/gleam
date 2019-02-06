@@ -746,20 +746,30 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
                 body,
             } => {
                 let level = 1;
+
+                // Register a var for the function so that it can call itself recursively
                 let rec = env.new_unbound_var(level + 1);
                 env.insert_variable(name.clone(), Scope::Local, rec.clone());
+
+                // Infer the type
                 let (args_types, body) = infer_fun(&args, body, level + 1, &mut env)?;
                 let typ = Type::Fn {
                     args: args_types,
                     retrn: Box::new(body.typ().clone()),
                 };
+
+                // Assert that the inferred type matches the type of any recursive call
                 unify(&rec, &typ).map_err(|e| convert_unify_error(e, &meta))?;
+
+                // Insert the function into the environment
                 let typ = generalise(typ, level);
                 env.insert_variable(
                     name.clone(),
                     Scope::Module { arity: args.len() },
                     typ.clone(),
                 );
+
+                // Insert the function into the module's type
                 if public {
                     fields.push((name.clone(), typ));
                 }
