@@ -173,6 +173,7 @@ fn bin_op(name: BinOp, left: TypedExpr, right: TypedExpr, env: &mut Env) -> Docu
     let op = match name {
         BinOp::Pipe => "|>", // TODO: This is wrong.
         BinOp::Lt => "<",
+        BinOp::And => "andalso",
         BinOp::LtEq => "=<",
         BinOp::Eq => "=:=",
         BinOp::NotEq => "/=",
@@ -1246,6 +1247,16 @@ pound(X) ->
 
 loop() ->
     loop().
+"#,
+        },
+        Case {
+            src: r#"fn and(x, y) { x && y }"#,
+            erl: r#"-module(gleam_).
+
+-export([]).
+
+and(X, Y) ->
+    X andalso Y.
 "#,
         },
         // TODO: Check that var num is incremented for args

@@ -104,6 +104,7 @@ pub enum Statement<S, T> {
 #[derive(Debug, Clone, PartialEq)]
 pub enum BinOp {
     Pipe,
+    And,
     Lt,
     LtEq,
     Eq,
