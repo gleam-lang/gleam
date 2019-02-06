@@ -1,3 +1,5 @@
+// Gosh! A COMMENT
+//
 pub fn hello() {
   "Hello, world!"
 }

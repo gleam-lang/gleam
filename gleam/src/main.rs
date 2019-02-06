@@ -81,7 +81,7 @@ fn command_build(root: String) {
             .to_string();
 
         let mut module = crate::grammar::ModuleParser::new()
-            .parse(&src)
+            .parse(&crate::parser::strip_extra(&src))
             .expect(&format!("Unable to parse {:?}", name));
 
         module.name = name.clone();
