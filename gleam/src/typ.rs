@@ -492,6 +492,15 @@ impl Env {
         );
 
         env.insert_variable(
+            "||".to_string(),
+            Scope::Local,
+            Type::Fn {
+                args: vec![bool(), bool()],
+                retrn: Box::new(bool()),
+            },
+        );
+
+        env.insert_variable(
             "&&".to_string(),
             Scope::Local,
             Type::Fn {
@@ -1369,6 +1378,7 @@ fn bin_op_name(name: &BinOp) -> String {
     match name {
         BinOp::Pipe => "|>".to_string(),
         BinOp::And => "&&".to_string(),
+        BinOp::Or => "||".to_string(),
         BinOp::Lt => "<".to_string(),
         BinOp::LtEq => "<=".to_string(),
         BinOp::Eq => "==".to_string(),

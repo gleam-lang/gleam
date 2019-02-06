@@ -102,16 +102,25 @@ pub Expr: UntypedExpr = {
 }
 
 OpOrSimpleExpr: UntypedExpr = {
-    <o:Op<AndOp, OpOrSimpleExpr, Op2>> => <>,
+    <o:Op<OrOp, OpOrSimpleExpr, Op2>> => <>,
     Op2 => <>,
+}
+
+OrOp: BinOp = {
+    "||" => BinOp::Or,
+}
+
+Op2: UntypedExpr = {
+    <o:Op<AndOp, Op2, Op3>> => <>,
+    Op3 => <>,
 }
 
 AndOp: BinOp = {
     "&&" => BinOp::And,
 }
 
-Op2: UntypedExpr = {
-    <o:Op<EqOp, Op2, Op3>> => <>,
+Op3: UntypedExpr = {
+    <o:Op<EqOp, Op3, Op4>> => <>,
     Op4 => <>,
 }
 
@@ -120,9 +129,9 @@ EqOp: BinOp = {
     "!=" => BinOp::NotEq,
 }
 
-Op3: UntypedExpr = {
-    <o:Op<CompareOp, Op3, Op4>> => <>,
-    Op4 => <>,
+Op4: UntypedExpr = {
+    <o:Op<CompareOp, Op4, Op5>> => <>,
+    Op5 => <>,
 }
 
 CompareOp: BinOp = {
@@ -132,18 +141,18 @@ CompareOp: BinOp = {
     ">=" => BinOp::GtEq,
 }
 
-Op4: UntypedExpr = {
-    <o:Op<PipeOp, Op4, Op5>> => <>,
-    Op5 => <>,
+Op5: UntypedExpr = {
+    <o:Op<PipeOp, Op5, Op6>> => <>,
+    Op6 => <>,
 }
 
 PipeOp: BinOp = {
     "|>" => BinOp::Pipe,
 }
 
-Op5: UntypedExpr = {
-    <o:Op<AddOp, Op5, Op6>> => <>,
-    Op6 => <>,
+Op6: UntypedExpr = {
+    <o:Op<AddOp, Op6, Op7>> => <>,
+    Op7 => <>,
 }
 
 AddOp: BinOp = {
@@ -153,8 +162,8 @@ AddOp: BinOp = {
     "-." => BinOp::SubFloat,
 }
 
-Op6: UntypedExpr = {
-    <o:Op<MultOp, Op6, SimpleExpr>> => <>,
+Op7: UntypedExpr = {
+    <o:Op<MultOp, Op7, SimpleExpr>> => <>,
     SimpleExpr => <>,
 }
 

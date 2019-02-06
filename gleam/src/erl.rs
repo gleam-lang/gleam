@@ -174,6 +174,7 @@ fn bin_op(name: BinOp, left: TypedExpr, right: TypedExpr, env: &mut Env) -> Docu
         BinOp::Pipe => "|>", // TODO: This is wrong.
         BinOp::Lt => "<",
         BinOp::And => "andalso",
+        BinOp::Or => "orelse",
         BinOp::LtEq => "=<",
         BinOp::Eq => "=:=",
         BinOp::NotEq => "/=",
@@ -1250,13 +1251,16 @@ loop() ->
 "#,
         },
         Case {
-            src: r#"fn and(x, y) { x && y }"#,
+            src: r#"fn and(x, y) { x && y } fn or(x, y) { x || y }"#,
             erl: r#"-module(gleam_).
 
 -export([]).
 
 and(X, Y) ->
     X andalso Y.
+
+or(X, Y) ->
+    X orelse Y.
 "#,
         },
         // TODO: Check that var num is incremented for args

@@ -105,6 +105,7 @@ pub enum Statement<S, T> {
 pub enum BinOp {
     Pipe,
     And,
+    Or,
     Lt,
     LtEq,
     Eq,
