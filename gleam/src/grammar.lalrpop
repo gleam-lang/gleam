@@ -168,6 +168,8 @@ Op7: UntypedExpr = {
 }
 
 MultOp: BinOp = {
+    "%" => BinOp::ModuloInt,
+    "%." => BinOp::ModuloFloat,
     "*" => BinOp::MultInt,
     "*." => BinOp::MultFloat,
     "/" => BinOp::DivInt,

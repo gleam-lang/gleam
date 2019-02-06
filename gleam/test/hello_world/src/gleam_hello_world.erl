@@ -1,6 +1,6 @@
 -module(gleam_hello_world).
 
--export([]).
+-export([any/2, has_even_leaf/1]).
 
 any(Tree, Predicate) ->
     case Tree of
@@ -8,11 +8,8 @@ any(Tree, Predicate) ->
             Predicate(I);
 
         {'node', Left, Right} ->
-            case any(Left, Predicate) of
-                'true' ->
-                    'true';
-
-                'false' ->
-                    any(Right, Predicate)
-            end
+            any(Left, Predicate) orelse any(Right, Predicate)
     end.
+
+has_even_leaf(Tree) ->
+    any(Tree, fun(I) -> I rem 2 =:= 0 end).

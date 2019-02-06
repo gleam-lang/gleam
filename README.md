@@ -3,25 +3,21 @@
 A statically typed language for the Erlang VM.
 
 ```rust
-import expect
+pub enum Tree =
+  | Leaf(Int)
+  | Node(Tree, Tree)
 
-pub enum Quadrilateral =
-  | Square(Int)
-  | Rectangle(Int, Int)
-
-pub fn from_dimensions(width, height) {
-  case width == height {
-  | True -> Square(width)
-  | False -> Rectangle(width, height)
+pub fn any(tree, predicate) {
+  case tree {
+  | Leaf(i) -> predicate(i)
+  | Node(left, right) -> any(left, predicate) || any(right, predicate)
   }
 }
 
-test from_dimensions {
-  from_dimensions(100, 100)
-    |> expect:equal(_, Square(100))
-
-  from_dimensions(100, 120)
-    |> expect:equal(_, Rectangle(100, 120))
+pub fn has_even_leaf(tree) {
+  any(tree, fn(i) {
+    i % 2 == 0
+  })
 }
 ```
 

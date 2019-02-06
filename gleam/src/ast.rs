@@ -120,6 +120,8 @@ pub enum BinOp {
     MultFloat,
     DivInt,
     DivFloat,
+    ModuloInt,
+    ModuloFloat,
 }
 
 pub type TypedScope = Scope<typ::Type>;

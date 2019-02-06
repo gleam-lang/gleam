@@ -188,6 +188,8 @@ fn bin_op(name: BinOp, left: TypedExpr, right: TypedExpr, env: &mut Env) -> Docu
         BinOp::MultFloat => "*",
         BinOp::DivInt => "div",
         BinOp::DivFloat => "/",
+        BinOp::ModuloInt => "rem",
+        BinOp::ModuloFloat => "rem",
     };
 
     expr(left, env)
@@ -1251,7 +1253,10 @@ loop() ->
 "#,
         },
         Case {
-            src: r#"fn and(x, y) { x && y } fn or(x, y) { x || y }"#,
+            src: r#"fn and(x, y) { x && y }
+                    fn or(x, y) { x || y }
+                    fn modulo(x, y) { x % y }
+            "#,
             erl: r#"-module(gleam_).
 
 -export([]).
@@ -1261,6 +1266,9 @@ and(X, Y) ->
 
 or(X, Y) ->
     X orelse Y.
+
+modulo(X, Y) ->
+    X rem Y.
 "#,
         },
         // TODO: Check that var num is incremented for args

@@ -510,6 +510,24 @@ impl Env {
         );
 
         env.insert_variable(
+            "%".to_string(),
+            Scope::Local,
+            Type::Fn {
+                args: vec![int(), int()],
+                retrn: Box::new(int()),
+            },
+        );
+
+        env.insert_variable(
+            "%.".to_string(),
+            Scope::Local,
+            Type::Fn {
+                args: vec![float(), float()],
+                retrn: Box::new(float()),
+            },
+        );
+
+        env.insert_variable(
             "/.".to_string(),
             Scope::Local,
             Type::Fn {
@@ -1393,6 +1411,8 @@ fn bin_op_name(name: &BinOp) -> String {
         BinOp::MultFloat => "*.".to_string(),
         BinOp::DivInt => "/".to_string(),
         BinOp::DivFloat => "/.".to_string(),
+        BinOp::ModuloInt => "*".to_string(),
+        BinOp::ModuloFloat => "*.".to_string(),
     }
 }
 
