@@ -1238,6 +1238,16 @@ pound(X) ->
     {'pound', X}.
 "#,
         },
+        Case {
+            src: r#"fn loop() { loop() }"#,
+            erl: r#"-module(gleam_).
+
+-export([]).
+
+loop() ->
+    loop().
+"#,
+        },
         // TODO: Check that var num is incremented for args
         // TODO: Check that var num is incremented for nested patterns
         // TODO: Check that var num is reset after a closure that increments

@@ -425,6 +425,9 @@ impl Env {
             },
         );
 
+        env.insert_variable("True".to_string(), Scope::Module { arity: 0 }, bool());
+        env.insert_variable("False".to_string(), Scope::Module { arity: 0 }, bool());
+
         env.insert_variable(
             "+".to_string(),
             Scope::Local,
@@ -749,7 +752,11 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
 
                 // Register a var for the function so that it can call itself recursively
                 let rec = env.new_unbound_var(level + 1);
-                env.insert_variable(name.clone(), Scope::Local, rec.clone());
+                env.insert_variable(
+                    name.clone(),
+                    Scope::Module { arity: args.len() },
+                    rec.clone(),
+                );
 
                 // Infer the type
                 let (args_types, body) = infer_fun(&args, body, level + 1, &mut env)?;
@@ -2042,6 +2049,14 @@ fn infer_test() {
         typ: &'static str,
     }
     let cases = [
+        Case {
+            src: "True",
+            typ: "Bool",
+        },
+        Case {
+            src: "False",
+            typ: "Bool",
+        },
         Case {
             src: "1",
             typ: "Int",

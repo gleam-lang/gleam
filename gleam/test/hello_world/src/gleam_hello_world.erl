@@ -1,16 +1,18 @@
 -module(gleam_hello_world).
 
--export([hello/0, times/2]).
+-export([]).
 
-hello() ->
-    <<"Hello, world!">>.
+any(Tree, Predicate) ->
+    case Tree of
+        {'leaf', I} ->
+            Predicate(I);
 
-times(I, F) ->
-    case I of
-        1 ->
-            F();
+        {'node', Left, Right} ->
+            case any(Left, Predicate) of
+                'true' ->
+                    'true';
 
-        I1 ->
-            F(),
-            Times(I1 - 1, F)
+                'false' ->
+                    any(Right, Predicate)
+            end
     end.
