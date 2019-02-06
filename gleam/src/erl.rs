@@ -1252,3 +1252,11 @@ pound(X) ->
         assert_eq!((src, output), (src, erl.to_string()),);
     }
 }
+
+#[cfg(test)]
+fn default<T>() -> T
+where
+    T: Default,
+{
+    Default::default()
+}

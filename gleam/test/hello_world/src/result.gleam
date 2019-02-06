@@ -42,17 +42,6 @@ pub fn flatten(result) {
 }
 
 pub fn flat_map(result, fun) {
-  case result {
-  | Ok(x) ->
-      case fun(x) {
-      | Ok(y) -> Ok(y)
-      | Error(y) -> Error(y)
-      }
-  | Error(a) -> result
-  }
-}
-
-pub fn flat_map(result, fun) {
   flatten(map(result, fun))
 }
 

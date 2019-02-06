@@ -1,6 +1,6 @@
 -module(gleam_result).
 
--export([is_ok/1, is_error/1, map/2, map_error/2, flatten/1, flat_map/2, flat_map/2, unwrap/2]).
+-export([is_ok/1, is_error/1, map/2, map_error/2, flatten/1, flat_map/2, unwrap/2]).
 
 is_ok(Result) ->
     case Result of
@@ -45,21 +45,6 @@ flatten(Result) ->
 
         {'error', Error} ->
             {'error', Error}
-    end.
-
-flat_map(Result, Fun) ->
-    case Result of
-        {'ok', X} ->
-            case Fun(X) of
-                {'ok', Y} ->
-                    {'ok', Y};
-
-                {'error', Y1} ->
-                    {'error', Y1}
-            end;
-
-        {'error', A} ->
-            Result
     end.
 
 flat_map(Result, Fun) ->

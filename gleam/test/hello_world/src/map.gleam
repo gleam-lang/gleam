@@ -26,7 +26,8 @@ pub fn put(map, key, value) {
   erl_put(key, value, map)
 }
 
-external fn erl_map_values(fn(key, value) -> value, Map(key, value)) -> Map(key, value)
+external fn erl_map_values(fn(key, value) -> value, Map(key, value))
+  -> Map(key, value)
   = "maps" "map"
 
 pub fn map_values(map, fun) {
@@ -39,7 +40,8 @@ pub external fn keys(Map(key, v)) -> List(key)
 pub external fn values(Map(k, value)) -> List(value)
   = "maps" "values"
 
-external fn erl_filter(fn(key, value) -> Bool, Map(key, value)) -> Map(key, value)
+external fn erl_filter(fn(key, value) -> Bool, Map(key, value))
+  -> Map(key, value)
   = "maps" "filter"
 
 pub fn filter(map, fun) {

@@ -746,11 +746,14 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
                 body,
             } => {
                 let level = 1;
+                let rec = env.new_unbound_var(level + 1);
+                env.insert_variable(name.clone(), Scope::Local, rec.clone());
                 let (args_types, body) = infer_fun(&args, body, level + 1, &mut env)?;
                 let typ = Type::Fn {
                     args: args_types,
                     retrn: Box::new(body.typ().clone()),
                 };
+                unify(&rec, &typ).map_err(|e| convert_unify_error(e, &meta))?;
                 let typ = generalise(typ, level);
                 env.insert_variable(
                     name.clone(),
@@ -1490,6 +1493,13 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
         return Ok(());
     }
 
+    // Collapse right hand side type links. Left hand side will be collapsed in the next block.
+    if let Type::Var { typ } = t2 {
+        if let TypeVar::Link { typ } = &*typ.borrow() {
+            return unify(t1, typ);
+        }
+    }
+
     if let Type::Var { typ } = t1 {
         enum Action {
             Unify(Type),
@@ -1738,7 +1748,7 @@ fn update_levels(typ: &Type, own_level: usize, own_id: usize) -> Result<(), Unif
 
             TypeVar::Unbound { id, level } => {
                 if id == &own_id {
-                    unimplemented!()
+                    return Err(UnifyError::RecursiveType);
                 } else if level > &own_level {
                     Some(TypeVar::Unbound {
                         id: *id,
@@ -2570,12 +2580,12 @@ fn infer_error_test() {
                 variables: Env::new().variables,
             },
         },
-        // Case {
-        //     src: "id = fn(x) { x(x) } 1",
-        //     error: Error::RecursiveType {
-        //         meta: Meta { start: 0, end: 1 },
-        //     },
-        // },
+        Case {
+            src: "let id = fn(x) { x(x) } 1",
+            error: Error::RecursiveType {
+                meta: Meta { start: 17, end: 21 },
+            },
+        },
     ];
 
     for Case { src, error } in cases.into_iter() {
@@ -2595,6 +2605,16 @@ fn infer_module_test() {
     }
 
     let cases = [
+        Case {
+            src: "
+        pub fn repeat(i, x) {
+          case i {
+          | 0 -> []
+          | i -> [x | repeat(i - 1, x)]
+          }
+        }",
+            typ: "module { fn repeat(Int, a) -> List(a) }",
+        },
         Case {
             src: "fn private() { 1 }
                   pub fn public() { 1 }",
