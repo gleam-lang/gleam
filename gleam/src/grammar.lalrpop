@@ -438,6 +438,7 @@ Op<Operator, Current, Next>: UntypedExpr = {
 Pattern: Pattern = {
     PatternVar => <>,
     PatternInt => <>,
+    PatternNil => <>,
     // PatternList => <>,
     PatternFloat => <>,
     PatternTuple => <>,
@@ -490,6 +491,12 @@ PatternVar: Pattern = {
     <s:@L> <v:VarName> <e:@L> => Pattern::Var {
         meta: meta(s, e),
         name: v,
+    }
+}
+
+PatternNil: Pattern = {
+    <s:@L> "[]" <e:@L> => Pattern::Nil {
+        meta: meta(s, e),
     }
 }
 

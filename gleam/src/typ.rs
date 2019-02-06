@@ -1331,7 +1331,7 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
 
         Pattern::Record { .. } => unimplemented!(),
 
-        Pattern::List { .. } => unimplemented!(),
+        Pattern::Cons { .. } => unimplemented!(),
     }
 }
 

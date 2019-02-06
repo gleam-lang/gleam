@@ -359,10 +359,10 @@ pub enum Pattern {
         meta: Meta,
     },
 
-    List {
+    Cons {
         meta: Meta,
-        elems: Vec<Pattern>,
-        tail: Option<Box<Pattern>>,
+        head: Box<Pattern>,
+        tail: Box<Pattern>,
     },
 
     Record {

@@ -212,7 +212,7 @@ fn let_(value: TypedExpr, pat: Pattern, then: TypedExpr, env: &mut Env) -> Docum
 fn pattern(p: Pattern, env: &mut Env) -> Document {
     match p {
         Pattern::Nil { .. } => "[]".to_doc(),
-        Pattern::List { .. } => unimplemented!(),
+        Pattern::Cons { .. } => unimplemented!(),
         Pattern::Record { .. } => unimplemented!(),
         Pattern::Var { name, .. } => env.next_local_var_name(name),
         Pattern::Int { value, .. } => value.to_doc(),
