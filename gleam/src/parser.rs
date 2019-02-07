@@ -1035,59 +1035,57 @@ fn module_test() {
              }"
         ),
     );
-    //     assert_eq!(
-    //         Ok(Module {
-    //             typ: (),
-    //             name: "".to_string(),
-    //             statements: vec![Statement::Fn {
-    //                 meta: Meta {
-    //                     start: 43,
-    //                     end: 124
-    //                 },
-    //                 public: true,
-    //                 name: "value".to_string(),
-    //                 args: vec![Arg {
-    //                     name: "x".to_string()
-    //                 }],
-    //                 body: Expr::Let {
-    //                     meta: Meta {
-    //                         start: 76,
-    //                         end: 108
-    //                     },
-    //                     typ: (),
-    //                     value: Box::new(Expr::Var {
-    //                         typ: (),
-    //                         meta: Meta { start: 91, end: 92 },
-    //                         scope: (),
-    //                         name: "x".to_string()
-    //                     }),
-    //                     pattern: Pattern::Cons {
-    //                         meta: Meta { start: 80, end: 88 },
-    //                         head: Box::new(Pattern::Var {
-    //                             meta: Meta { start: 86, end: 87 },
-    //                             name: "a".to_string()
-    //                         }),
-    //                         tail: Box::new(Pattern::Nil {
-    //                             meta: Meta { start: 80, end: 88 },
-    //                         })
-    //                     },
-    //                     then: Box::new(Expr::Var {
-    //                         meta: Meta {
-    //                             start: 108,
-    //                             end: 109
-    //                         },
-    //                         scope: (),
-    //                         typ: (),
-    //                         name: "a".to_string()
-    //                     }),
-    //                 }
-    //             }]
-    //         }),
-    //         ModuleParser::new().parse(
-    //             "pub fn value(x) {
-    //                let [a] = x
-    //                a
-    //              }"
-    //         ),
-    //     );
+    assert_eq!(
+        Ok(Module {
+            typ: (),
+            name: "".to_string(),
+            statements: vec![Statement::Fn {
+                meta: Meta { start: 0, end: 79 },
+                public: true,
+                name: "value".to_string(),
+                args: vec![Arg {
+                    name: "x".to_string()
+                }],
+                body: Expr::Let {
+                    meta: Meta { start: 33, end: 63 },
+                    typ: (),
+                    value: Box::new(Expr::Var {
+                        typ: (),
+                        meta: Meta { start: 46, end: 47 },
+                        scope: (),
+                        name: "x".to_string()
+                    }),
+                    pattern: Pattern::Cons {
+                        meta: Meta { start: 38, end: 39 },
+                        head: Box::new(Pattern::Var {
+                            meta: Meta { start: 38, end: 39 },
+                            name: "a".to_string()
+                        }),
+                        tail: Box::new(Pattern::Cons {
+                            meta: Meta { start: 41, end: 42 },
+                            head: Box::new(Pattern::Var {
+                                meta: Meta { start: 41, end: 42 },
+                                name: "b".to_string()
+                            }),
+                            tail: Box::new(Pattern::Nil {
+                                meta: Meta { start: 42, end: 43 },
+                            })
+                        })
+                    },
+                    then: Box::new(Expr::Var {
+                        meta: Meta { start: 63, end: 64 },
+                        scope: (),
+                        typ: (),
+                        name: "a".to_string()
+                    }),
+                }
+            }]
+        }),
+        ModuleParser::new().parse(
+            "pub fn value(x) {
+               let [a, b] = x
+               a
+             }"
+        ),
+    );
 }

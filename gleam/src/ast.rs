@@ -377,3 +377,19 @@ pub enum Pattern {
         args: Vec<Pattern>,
     },
 }
+
+impl Pattern {
+    pub fn meta(&self) -> &Meta {
+        match self {
+            Pattern::Int { meta, .. } => meta,
+            Pattern::Var { meta, .. } => meta,
+            Pattern::Nil { meta, .. } => meta,
+            Pattern::Cons { meta, .. } => meta,
+            Pattern::Tuple { meta, .. } => meta,
+            Pattern::Float { meta, .. } => meta,
+            Pattern::Record { meta, .. } => meta,
+            Pattern::String { meta, .. } => meta,
+            Pattern::Constructor { meta, .. } => meta,
+        }
+    }
+}

@@ -439,7 +439,7 @@ Pattern: Pattern = {
     PatternVar => <>,
     PatternInt => <>,
     PatternNil => <>,
-    // PatternList => <>,
+    PatternList => <>,
     PatternFloat => <>,
     PatternTuple => <>,
     PatternString => <>,
@@ -497,6 +497,21 @@ PatternVar: Pattern = {
 PatternNil: Pattern = {
     <s:@L> "[]" <e:@L> => Pattern::Nil {
         meta: meta(s, e),
+    }
+}
+
+PatternList: Pattern = {
+    <s:@L> "[" <elems:Comma<Pattern>> "]" <e:@L> => {
+        elems.into_iter().rev().fold(
+            Pattern::Nil {
+                meta: meta(e - 1, e),
+            },
+            |a, e| Pattern::Cons {
+                meta: e.meta().clone(),
+                head: Box::new(e),
+                tail: Box::new(a),
+            }
+        )
     }
 }
 
