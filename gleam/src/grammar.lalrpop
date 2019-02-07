@@ -439,6 +439,7 @@ Pattern: Pattern = {
     PatternVar => <>,
     PatternInt => <>,
     PatternNil => <>,
+    PatternCons => <>,
     PatternList => <>,
     PatternFloat => <>,
     PatternTuple => <>,
@@ -512,6 +513,14 @@ PatternList: Pattern = {
                 tail: Box::new(a),
             }
         )
+    }
+}
+
+PatternCons: Pattern = {
+    <s:@L> "[" <head:Pattern> "|" <tail:Pattern> "]" <e:@L> => Pattern::Cons {
+        meta: meta(s, e),
+        head: Box::new(head),
+        tail: Box::new(tail),
     }
 }
 

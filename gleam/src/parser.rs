@@ -1035,6 +1035,7 @@ fn module_test() {
              }"
         ),
     );
+
     assert_eq!(
         Ok(Module {
             typ: (),
@@ -1084,6 +1085,60 @@ fn module_test() {
         ModuleParser::new().parse(
             "pub fn value(x) {
                let [a, b] = x
+               a
+             }"
+        ),
+    );
+
+    assert_eq!(
+        Ok(Module {
+            typ: (),
+            name: "".to_string(),
+            statements: vec![Statement::Fn {
+                meta: Meta { start: 0, end: 87 },
+                public: true,
+                name: "value".to_string(),
+                args: vec![Arg {
+                    name: "x".to_string()
+                }],
+                body: Expr::Let {
+                    meta: Meta { start: 33, end: 71 },
+                    typ: (),
+                    value: Box::new(Expr::Var {
+                        typ: (),
+                        meta: Meta { start: 54, end: 55 },
+                        scope: (),
+                        name: "x".to_string()
+                    }),
+                    pattern: Pattern::Cons {
+                        meta: Meta { start: 37, end: 51 },
+                        head: Box::new(Pattern::Var {
+                            meta: Meta { start: 38, end: 39 },
+                            name: "a".to_string()
+                        }),
+                        tail: Box::new(Pattern::Cons {
+                            meta: Meta { start: 42, end: 50 },
+                            head: Box::new(Pattern::Var {
+                                meta: Meta { start: 43, end: 44 },
+                                name: "b".to_string()
+                            }),
+                            tail: Box::new(Pattern::Nil {
+                                meta: Meta { start: 47, end: 49 },
+                            })
+                        })
+                    },
+                    then: Box::new(Expr::Var {
+                        meta: Meta { start: 71, end: 72 },
+                        scope: (),
+                        typ: (),
+                        name: "a".to_string()
+                    }),
+                }
+            }]
+        }),
+        ModuleParser::new().parse(
+            "pub fn value(x) {
+               let [a | [b | []]] = x
                a
              }"
         ),
