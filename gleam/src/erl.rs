@@ -223,80 +223,87 @@ fn pattern(p: Pattern, env: &mut Env) -> Document {
     }
 }
 
-// DUPE: 19942342
 fn pattern_cons(head: Pattern, tail: Pattern, env: &mut Env) -> Document {
-    match collect_pattern_list(head, tail) {
-        (_elems, Some(_final_tail)) => unimplemented!(),
+    cons(head, tail, env, pattern, |expr| match expr {
+        Pattern::Nil { .. } => ListType::Nil,
 
-        (elems, None) => elems
-            .into_iter()
-            .map(|e| pattern(e, env))
-            .intersperse(delim(","))
-            .collect::<Vec<_>>()
-            .to_doc()
-            .nest_current()
-            .surround("[", "]")
-            .group(),
-    }
+        Pattern::Cons { head, tail, .. } => ListType::Cons {
+            head: *head,
+            tail: *tail,
+        },
+
+        other => ListType::NotList(other),
+    })
 }
 
-// DUPE: 19942342
-fn cons(head: TypedExpr, tail: TypedExpr, env: &mut Env) -> Document {
-    match collect_list(head, tail) {
-        (_elems, Some(_final_tail)) => unimplemented!(),
+fn expr_cons(head: TypedExpr, tail: TypedExpr, env: &mut Env) -> Document {
+    cons(head, tail, env, wrap_expr, |expr| match expr {
+        Expr::Nil { .. } => ListType::Nil,
 
-        (elems, None) => elems
-            .into_iter()
-            .map(|e| wrap_expr(e, env))
-            .intersperse(delim(","))
-            .collect::<Vec<_>>()
-            .to_doc()
-            .nest_current()
-            .surround("[", "]")
-            .group(),
-    }
+        Expr::Cons { head, tail, .. } => ListType::Cons {
+            head: *head,
+            tail: *tail,
+        },
+
+        other => ListType::NotList(other),
+    })
+}
+
+fn cons<ToDoc, Categorise, Elem>(
+    head: Elem,
+    tail: Elem,
+    env: &mut Env,
+    to_doc: ToDoc,
+    categorise_element: Categorise,
+) -> Document
+where
+    ToDoc: Fn(Elem, &mut Env) -> Document,
+    Categorise: Fn(Elem) -> ListType<Elem>,
+{
+    let mut elems = vec![head];
+    let final_tail = collect_list(tail, &mut elems, categorise_element);
+
     // TODO: Flatten nested cons into a list i.e. [1, 2, 3 | X] or [1, 2, 3, 4]
     // TODO: Break, indent, etc
     // wrap_expr(head, env)
     //     .append(" | ")
     //     .append(expr(tail, env))
     //     .surround("[", "]")
+    match final_tail {
+        Some(_final_tail) => unimplemented!(),
+
+        None => elems
+            .into_iter()
+            .map(|e| to_doc(e, env))
+            .intersperse(delim(","))
+            .collect::<Vec<_>>()
+            .to_doc()
+            .nest_current()
+            .surround("[", "]")
+            .group(),
+    }
 }
 
-fn collect_pattern_list(head: Pattern, tail: Pattern) -> (Vec<Pattern>, Option<Pattern>) {
-    fn go(expr: Pattern, elems: &mut Vec<Pattern>) -> Option<Pattern> {
-        match expr {
-            Pattern::Nil { .. } => None,
+fn collect_list<F, E>(e: E, elems: &mut Vec<E>, f: F) -> Option<E>
+where
+    F: Fn(E) -> ListType<E>,
+{
+    match f(e) {
+        ListType::Nil => None,
 
-            Pattern::Cons { head, tail, .. } => {
-                elems.push(*head);
-                go(*tail, elems)
-            }
-
-            other => Some(other),
+        ListType::Cons { head, tail } => {
+            elems.push(head);
+            collect_list(tail, elems, f)
         }
+
+        ListType::NotList(other) => Some(other),
     }
-    let mut elems = vec![head];
-    let final_tail = go(tail, &mut elems);
-    (elems, final_tail)
 }
 
-fn collect_list(head: TypedExpr, tail: TypedExpr) -> (Vec<TypedExpr>, Option<TypedExpr>) {
-    fn go(expr: TypedExpr, elems: &mut Vec<TypedExpr>) -> Option<TypedExpr> {
-        match expr {
-            Expr::Nil { .. } => None,
-
-            Expr::Cons { head, tail, .. } => {
-                elems.push(*head);
-                go(*tail, elems)
-            }
-
-            other => Some(other),
-        }
-    }
-    let mut elems = vec![head];
-    let final_tail = go(tail, &mut elems);
-    (elems, final_tail)
+enum ListType<E> {
+    Nil,
+    Cons { head: E, tail: E },
+    NotList(E),
 }
 
 fn expr_record_cons(label: String, value: TypedExpr, tail: TypedExpr, env: &mut Env) -> Document {
@@ -417,7 +424,7 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
         Expr::Seq { first, then, .. } => seq(*first, *then, env),
         Expr::Var { name, scope, .. } => var(name, scope, env),
         Expr::Fn { args, body, .. } => fun(args, *body, env),
-        Expr::Cons { head, tail, .. } => cons(*head, *tail, env),
+        Expr::Cons { head, tail, .. } => expr_cons(*head, *tail, env),
         Expr::Call { fun, args, .. } => call(*fun, args, env),
         Expr::RecordSelect { .. } => unimplemented!(),
         Expr::ModuleSelect { .. } => unimplemented!(),
