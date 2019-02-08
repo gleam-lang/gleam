@@ -36,8 +36,7 @@ test is_empty {
 pub fn member(list, elem) {
   case list {
   | [] -> False
-  | elem :: _ -> True
-  | _ :: rest -> member(rest, elem)
+  | [head | rest] -> head == elem || member(rest, elem)
   }
 }
 
@@ -50,7 +49,7 @@ test is_member {
 pub fn head(list) {
   case list {
   | [] -> Error(Empty)
-  | elem :: _ -> Ok(elem)
+  | [x | xs] -> Ok(x)
   }
 }
 
@@ -65,7 +64,7 @@ test head {
 pub fn tail(list) {
   case list {
   | [] -> Error(Empty)
-  | _ :: rest -> Ok(rest)
+  | [x | xs] -> Ok(xs)
   }
 }
 
@@ -80,8 +79,21 @@ test tail {
     |> expect:equal(_, Error(Empty))
 }
 
+fn do_filter(list, fun, acc) {
+  case list {
+  | [] -> reverse(acc)
+  | [x | xs] ->
+      let new_acc =
+        case fun(x) {
+        | True -> [x | acc]
+        | False -> acc
+        }
+      do_filter(xs, fun, new_acc)
+  }
+}
+
 pub fn filter(list, fun) {
-  filter(list, fun, [])
+  do_filter(list, fun, [])
 }
 
 test filter {
@@ -102,28 +114,15 @@ test filter {
     |> expect:equal(_, [0, 3])
 }
 
-fn do_filter(list, fun, acc) {
+fn do_map(list, fun, acc) {
   case list {
   | [] -> reverse(acc)
-  | x :: xs ->
-      new_acc =
-        case fun(x) {
-        | True -> x :: acc
-        | False -> acc
-        }
-      do_filter(xs, fun, new_acc)
+  | [x | xs] -> do_map(xs, fun, [fun(x) | acc])
   }
 }
 
 pub fn map(list, fun) {
   do_map(list, fun, [])
-}
-
-fn do_map(list, fun, acc) {
-  case list {
-  | [] -> reverse(acc)
-  | x :: xs -> do_map(xs, fun, fun(x) :: acc)
-  }
 }
 
 test map {
@@ -136,19 +135,19 @@ test map {
     |> expect:equal(_, [0, 8, 10, 14, 6])
 }
 
-pub fn traverse(list, fun) {
-  do_traverse(list, fun, [])
-}
-
 pub fn do_traverse(list, fun, acc) {
   case list {
   | [] -> Ok(reverse(acc))
-  | x :: xs ->
+  | [x | xs] ->
       case fun(x) {
-        Ok(y) -> do_traverse(xs, fun, y :: acc)
-        error -> error
+      | Ok(y) -> do_traverse(xs, fun, [y | acc])
+      | Error(error) -> Error(error)
       }
   }
+}
+
+pub fn traverse(list, fun) {
+  do_traverse(list, fun, [])
 }
 
 test traverse {
@@ -168,14 +167,13 @@ test traverse {
     |> expect:equal(_, Error(7)))
 }
 
-
 pub fn drop(list, n) {
   case n <= 0 {
   | True -> list
   | False ->
       case list {
       | [] -> []
-      | _ :: xs -> drop(xs, n - 1)
+      | [x | xs] -> drop(xs, n - 1)
       }
   }
 }
@@ -190,19 +188,19 @@ test drop/2 {
     |> expect:equal(_, [6, 7, 8])
 }
 
-pub fn take(list, n) {
-  do_take(list, n, [])
-}
-
 fn do_take(list, n, acc) {
   case n <= 0 {
   | True -> reverse(acc)
   | False ->
       case list {
       | [] -> reverse(acc)
-      | x :: xs -> take(xs, n - 1, x :: acc)
+      | [x | xs] -> take(xs, n - 1, [x | acc])
       }
   }
+}
+
+pub fn take(list, n) {
+  do_take(list, n, [])
 }
 
 test take {
@@ -220,6 +218,13 @@ pub fn new() {
 
 test new {
   new() |> expect:equal(_, [])
+}
+
+fn do_flatten(lists, acc) {
+  case lists {
+  | [] -> acc
+  | [l | rest] -> flatten(rest, acc ++ l)
+  }
 }
 
 pub fn flatten(lists) {
@@ -240,17 +245,10 @@ test flatten {
     |> expect:equal(_, [1, 2, 3, 4])
 }
 
-fn do_flatten(lists, acc) {
-  case lists {
-  | [] -> acc
-  | l :: rest -> flatten(rest, acc ++ l)
-  }
-}
-
 pub fn foldl(list, acc, fun) {
   case list {
   | [] -> acc
-  | x :: rest -> foldl(rest, fun(x, acc), fun)
+  | [x | rest] -> foldl(rest, fun(x, acc), fun)
   }
 }
 
@@ -263,7 +261,7 @@ test foldl {
 pub fn foldr(list, acc, fun) {
   case list {
   | [] -> acc
-  | x :: rest -> fun(x, foldr(rest, acc, fun))
+  | [x | rest] -> fun(x, foldr(rest, acc, fun))
   }
 }
 

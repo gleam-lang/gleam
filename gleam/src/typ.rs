@@ -201,17 +201,63 @@ impl Type {
     /// Get the args for the type if the type is a specific Type::App.
     /// Returns None if the type is not a Type::App or is an incorrect Type:App
     ///
-    pub fn get_app_args(&self, desired_module: &str, desired_name: &str) -> Option<Vec<Type>> {
+    /// TODO: This is currently wrong in that if an unbound var is found it assumes that the App
+    /// takes a single arg. Really the number of args should be passed in.
+    ///
+    pub fn get_app_args(
+        &self,
+        public: bool,
+        module: &str,
+        name: &str,
+        arity: usize,
+        env: &mut Env,
+    ) -> Option<Vec<Type>> {
         match self {
             Type::App {
-                module, name, args, ..
+                module: m,
+                name: n,
+                args,
+                ..
             } => {
-                if module == desired_module && name == desired_name {
+                if module == m && name == n {
                     Some(args.clone())
                 } else {
                     None
                 }
             }
+
+            Type::Var { typ } => {
+                enum Action {
+                    Link(Vec<Type>),
+                }
+
+                let action = match &*typ.borrow() {
+                    TypeVar::Link { typ } => {
+                        return typ.get_app_args(public, module, name, arity, env);
+                    }
+
+                    TypeVar::Unbound { level, .. } => {
+                        Action::Link((0..arity).map(|_| env.new_unbound_var(*level)).collect())
+                    }
+
+                    TypeVar::Generic { .. } => unimplemented!(),
+                };
+
+                return match action {
+                    Action::Link(args) => {
+                        *typ.borrow_mut() = TypeVar::Link {
+                            typ: Box::new(Type::App {
+                                name: name.to_string(),
+                                module: module.to_string(),
+                                public: public,
+                                args: args.clone(),
+                            }),
+                        };
+                        Some(args)
+                    }
+                };
+            }
+
             _ => None,
         }
     }
@@ -1304,7 +1350,7 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
 
         Pattern::Cons {
             meta, head, tail, ..
-        } => match typ.get_app_args("", "List") {
+        } => match typ.get_app_args(true, "", "List", 1, env) {
             Some(args) => {
                 unify_pattern(head, &args[0], level, env)?;
                 unify_pattern(tail, typ, level, env)
@@ -2511,6 +2557,14 @@ fn infer_test() {
         Case {
             src: "let [a | [b | []]] = [1] a",
             typ: "Int",
+        },
+        Case {
+            src: "fn(x) { let [a] = x a }",
+            typ: "fn(List(a)) -> a",
+        },
+        Case {
+            src: "fn(x) { let [a] = x a + 1 }",
+            typ: "fn(List(Int)) -> Int",
         },
         /* Record select
 
