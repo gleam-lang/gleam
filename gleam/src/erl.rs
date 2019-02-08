@@ -263,25 +263,22 @@ where
     let mut elems = vec![head];
     let final_tail = collect_list(tail, &mut elems, categorise_element);
 
-    // TODO: Flatten nested cons into a list i.e. [1, 2, 3 | X] or [1, 2, 3, 4]
-    // TODO: Break, indent, etc
-    // wrap_expr(head, env)
-    //     .append(" | ")
-    //     .append(expr(tail, env))
-    //     .surround("[", "]")
-    match final_tail {
-        Some(_final_tail) => unimplemented!(),
+    let mut elems = elems
+        .into_iter()
+        .map(|e| to_doc(e, env))
+        .intersperse(delim(","))
+        .collect::<Vec<_>>();
 
-        None => elems
-            .into_iter()
-            .map(|e| to_doc(e, env))
-            .intersperse(delim(","))
-            .collect::<Vec<_>>()
-            .to_doc()
-            .nest_current()
-            .surround("[", "]")
-            .group(),
-    }
+    match final_tail {
+        Some(final_tail) => {
+            elems.push(delim(" |"));
+            elems.push(to_doc(final_tail, env))
+        }
+
+        None => (),
+    };
+
+    elems.to_doc().nest_current().surround("[", "]").group()
 }
 
 fn collect_list<F, E>(e: E, elems: &mut Vec<E>, f: F) -> Option<E>
@@ -1316,6 +1313,7 @@ modulo(X, Y) ->
         },
         Case {
             src: r#"fn second(list) { case list { | [x, y] -> y | z -> 1 } }
+                    fn tail(list) { case list { | [x | xs] -> xs | z -> list } }
             "#,
             erl: r#"-module(gleam_).
 
@@ -1328,6 +1326,15 @@ second(List) ->
 
         Z ->
             1
+    end.
+
+tail(List) ->
+    case List of
+        [X | Xs] ->
+            Xs;
+
+        Z ->
+            List
     end.
 "#,
         },
