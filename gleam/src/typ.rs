@@ -197,6 +197,24 @@ impl Type {
             other => Some(other.clone()),
         }
     }
+
+    /// Get the args for the type if the type is a specific Type::App.
+    /// Returns None if the type is not a Type::App or is an incorrect Type:App
+    ///
+    pub fn get_app_args(&self, desired_module: &str, desired_name: &str) -> Option<Vec<Type>> {
+        match self {
+            Type::App {
+                module, name, args, ..
+            } => {
+                if module == desired_module && name == desired_name {
+                    Some(args.clone())
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    }
 }
 
 impl TypeVar {
@@ -1258,6 +1276,12 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
 /// into the environment (or to detect a type error).
 ///
 fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> Result<(), Error> {
+    //
+    // TODO: I think we might be unifying backwards here.
+    // The typ should be the `expected` and the `pattern` is the actual?
+    // Or perhaps because it's a pattern there should be a different Error variant
+    // so we can display a more specific error message.
+    //
     match pattern {
         Pattern::Var { name, .. } => {
             env.insert_variable(name.to_string(), Scope::Local, typ.clone());
@@ -1277,6 +1301,21 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
         Pattern::Nil { meta, .. } => {
             unify(&list(env.new_unbound_var(level)), typ).map_err(|e| convert_unify_error(e, &meta))
         }
+
+        Pattern::Cons {
+            meta, head, tail, ..
+        } => match typ.get_app_args("", "List") {
+            Some(args) => {
+                unify_pattern(head, &args[0], level, env)?;
+                unify_pattern(tail, typ, level, env)
+            }
+
+            None => Err(Error::CouldNotUnify {
+                given: list(env.new_unbound_var(level)),
+                expected: typ.clone(),
+                meta: meta.clone(),
+            }),
+        },
 
         Pattern::Constructor {
             meta,
@@ -1325,8 +1364,6 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
         },
 
         Pattern::Record { .. } => unimplemented!(),
-
-        Pattern::Cons { .. } => unimplemented!(),
     }
 }
 
@@ -2461,6 +2498,18 @@ fn infer_test() {
         },
         Case {
             src: "let [] = [] 1",
+            typ: "Int",
+        },
+        Case {
+            src: "let [a] = [1] a",
+            typ: "Int",
+        },
+        Case {
+            src: "let [a, 2] = [1] a",
+            typ: "Int",
+        },
+        Case {
+            src: "let [a | [b | []]] = [1] a",
             typ: "Int",
         },
         /* Record select
