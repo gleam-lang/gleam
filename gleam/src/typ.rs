@@ -1274,14 +1274,10 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
             unify(&string(), typ).map_err(|e| convert_unify_error(e, &meta))
         }
 
-        // if args1.len() == args2.len() {
-        //     for (a, b) in args1.iter().zip(args2) {
-        //         unify(a, b)?;
-        //     }
-        //     unify(retrn1, retrn2)
-        // } else {
-        //     unimplemented!()
-        // }
+        Pattern::Nil { meta, .. } => {
+            unify(&list(env.new_unbound_var(level)), typ).map_err(|e| convert_unify_error(e, &meta))
+        }
+
         Pattern::Constructor {
             meta,
             name,
@@ -1307,11 +1303,12 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
                 if pattern_args.len() == 0 {
                     unify(&c, typ).map_err(|e| convert_unify_error(e, &meta))
                 } else {
+                    // Error: singleton given args
                     unimplemented!()
                 }
             }
 
-            Some((_scope, _)) => unimplemented!(), // ???
+            Some((_scope, _)) => unreachable!(),
 
             None => unimplemented!(), // Not found
         },
@@ -1326,8 +1323,6 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
 
             _ => unimplemented!(),
         },
-
-        Pattern::Nil { .. } => unimplemented!(),
 
         Pattern::Record { .. } => unimplemented!(),
 
@@ -2457,8 +2452,15 @@ fn infer_test() {
             src: r#"case "ok" { | "ko" -> 1 | x -> 0 }"#,
             typ: "Int",
         },
+        /* let
+
+        */
         Case {
             src: "let {tag, x} = {1.0, 1} x",
+            typ: "Int",
+        },
+        Case {
+            src: "let [] = [] 1",
             typ: "Int",
         },
         /* Record select
