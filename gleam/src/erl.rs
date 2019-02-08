@@ -212,7 +212,7 @@ fn let_(value: TypedExpr, pat: Pattern, then: TypedExpr, env: &mut Env) -> Docum
 fn pattern(p: Pattern, env: &mut Env) -> Document {
     match p {
         Pattern::Nil { .. } => "[]".to_doc(),
-        Pattern::Cons { .. } => unimplemented!(),
+        Pattern::Cons { head, tail, .. } => pattern_cons(*head, *tail, env),
         Pattern::Record { .. } => unimplemented!(),
         Pattern::Var { name, .. } => env.next_local_var_name(name),
         Pattern::Int { value, .. } => value.to_doc(),
@@ -223,6 +223,24 @@ fn pattern(p: Pattern, env: &mut Env) -> Document {
     }
 }
 
+// DUPE: 19942342
+fn pattern_cons(head: Pattern, tail: Pattern, env: &mut Env) -> Document {
+    match collect_pattern_list(head, tail) {
+        (_elems, Some(_final_tail)) => unimplemented!(),
+
+        (elems, None) => elems
+            .into_iter()
+            .map(|e| pattern(e, env))
+            .intersperse(delim(","))
+            .collect::<Vec<_>>()
+            .to_doc()
+            .nest_current()
+            .surround("[", "]")
+            .group(),
+    }
+}
+
+// DUPE: 19942342
 fn cons(head: TypedExpr, tail: TypedExpr, env: &mut Env) -> Document {
     match collect_list(head, tail) {
         (_elems, Some(_final_tail)) => unimplemented!(),
@@ -243,6 +261,24 @@ fn cons(head: TypedExpr, tail: TypedExpr, env: &mut Env) -> Document {
     //     .append(" | ")
     //     .append(expr(tail, env))
     //     .surround("[", "]")
+}
+
+fn collect_pattern_list(head: Pattern, tail: Pattern) -> (Vec<Pattern>, Option<Pattern>) {
+    fn go(expr: Pattern, elems: &mut Vec<Pattern>) -> Option<Pattern> {
+        match expr {
+            Pattern::Nil { .. } => None,
+
+            Pattern::Cons { head, tail, .. } => {
+                elems.push(*head);
+                go(*tail, elems)
+            }
+
+            other => Some(other),
+        }
+    }
+    let mut elems = vec![head];
+    let final_tail = go(tail, &mut elems);
+    (elems, final_tail)
 }
 
 fn collect_list(head: TypedExpr, tail: TypedExpr) -> (Vec<TypedExpr>, Option<TypedExpr>) {
@@ -1269,6 +1305,23 @@ or(X, Y) ->
 
 modulo(X, Y) ->
     X rem Y.
+"#,
+        },
+        Case {
+            src: r#"fn second(list) { case list { | [x, y] -> y | z -> 1 } }
+            "#,
+            erl: r#"-module(gleam_).
+
+-export([]).
+
+second(List) ->
+    case List of
+        [X, Y] ->
+            Y;
+
+        Z ->
+            1
+    end.
 "#,
         },
         // TODO: Check that var num is incremented for args
