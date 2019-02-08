@@ -201,9 +201,8 @@ fn bin_op(name: BinOp, left: TypedExpr, right: TypedExpr, env: &mut Env) -> Docu
 
 fn let_(value: TypedExpr, pat: Pattern, then: TypedExpr, env: &mut Env) -> Document {
     pattern(pat, env)
-        .append(" =")
-        .append(break_("", " "))
-        .append(expr(value, env).nest(INDENT))
+        .append(" = ")
+        .append(expr(value, env))
         .append(",")
         .append(line())
         .append(expr(then, env))

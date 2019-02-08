@@ -48,12 +48,12 @@ do_filter(List, Fun, Acc) ->
 
         [X | Xs] ->
             NewAcc = case Fun(X) of
-                    'true' ->
-                        [X | Acc];
+                'true' ->
+                    [X | Acc];
 
-                    'false' ->
-                        Acc
-                end,
+                'false' ->
+                    Acc
+            end,
             do_filter(Xs, Fun, NewAcc)
     end.
 
