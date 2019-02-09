@@ -58,31 +58,6 @@ Gleam's Floats are the same as Elixir and Erlang's floats.
 ```
 
 
-## Bools
-
-Gleam's Bools are the same as Elixir and Erlang's booleans.
-
-While written in the code using a capital letter, they are represented at
-runtime with the atoms `true` and `false`, making them compatible with Elixir
-and Erlang's booleans.
-
-```
-// Gleam
-True
-False
-```
-```
-# Elixir
-true
-false
-```
-```
-% Erlang
-true.
-false.
-```
-
-
 ## Atoms
 
 Gleam does not currently have first class support for Erlang atoms, though

@@ -74,15 +74,15 @@ dog  // { name = "Rex", size = 70, playful = True }
 ```
 # Elixir
 pup = %{ name: "Rex", size: 40 }
-dog = %{ pup | size: 70, playful: true }
+dog = %{ pup | size: 70 } |> Map.put(:playful, true)
 
 pup  # { name: "Rex", size: 40 }
 dog  # { name: "Rex", size: 70, playful: true }
 ```
 ```
 % Erlang
-Pup = #{name => <<"Rex">>, size => 40},
-Dog = Pup#{size => 70, playful => True}.
+Pup = #{name => <<"Rex">>, size => 40}.
+Dog = Pup#{size => 70, playful => true}.
 
 Pup.  % #{name => <<"Rex">>, size => 40}
 Dog.  % #{name => <<"Rex">>, size => 70, playful => true}
