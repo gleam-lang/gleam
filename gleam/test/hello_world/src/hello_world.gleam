@@ -15,3 +15,19 @@ pub fn has_even_leaf(tree) {
     i % 2 == 0
   })
 }
+
+pub fn person(name) {
+  { name = name }
+}
+
+pub fn put_age(record, age) {
+  { record | age = age }
+}
+
+pub fn person_with_age(name, age) {
+  put_age(person(name), age)
+}
+
+pub fn get_age(record) {
+  record.age
+}

@@ -1311,7 +1311,34 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             Ok(Expr::Constructor { meta, typ, name })
         }
 
-        Expr::RecordSelect { .. } => unimplemented!(),
+        Expr::RecordSelect {
+            meta,
+            label,
+            record,
+            ..
+        } => {
+            let record = infer(*record, level, env)?;
+
+            // We unify the record with a dummy record in order to determine the type of the
+            // selected field.
+            let other_fields_typ = env.new_unbound_var(level);
+            let selected_field_typ = env.new_unbound_var(level);
+            let dummy_record = Type::Record {
+                row: Box::new(Type::RowCons {
+                    label: label.clone(),
+                    head: Box::new(selected_field_typ.clone()),
+                    tail: Box::new(other_fields_typ),
+                }),
+            };
+            unify(&dummy_record, record.typ()).map_err(|e| convert_unify_error(e, &meta))?;
+
+            Ok(Expr::RecordSelect {
+                meta,
+                label,
+                record: Box::new(record),
+                typ: selected_field_typ,
+            })
+        }
 
         Expr::ModuleSelect { .. } => unimplemented!(),
     }
@@ -1323,7 +1350,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
 ///
 fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> Result<(), Error> {
     //
-    // TODO: I think we might be unifying backwards here.
+    // TODO: I think we might be unifying backwards for some of these.
     // The typ should be the `expected` and the `pattern` is the actual?
     // Or perhaps because it's a pattern there should be a different Error variant
     // so we can display a more specific error message.
@@ -2569,59 +2596,59 @@ fn infer_test() {
         /* Record select
 
         */
-        /*
         Case {
-        src: "{a = 1, b = 2.0}.b",
-        typ: "Float",
-        },
-        Case {
-        src: "r = {a = 1, b = 2} r.a",
-        typ: "Int",
-        },
-        Case {
-        src: "r = {a = 1, b = 2} r.a + r.b",
-        typ: "Int",
-        },
-        Case {
-        src: "fn(x) { x.t }",
-        typ: "fn({a | t = b}) -> b",
-        },
-        Case {
-        src: "f = fn(x) { x } r = {a = f} r.a",
-        typ: "fn(a) -> a",
-        },
-        Case {
-        src: "r = {a = fn(x) { x }} r.a",
-        typ: "fn(a) -> a",
-        },
-        Case {
-            src: "a = {b = 1} {a | b = 1.0}.b",
+            src: "{a = 1, b = 2.0}.b",
             typ: "Float",
         },
         Case {
-        src: "r = {a = fnCase {src:x) { x }, b = fn(x) { x }} [r.a, r.b]",
-        typ: "ListCase {src:fn(a) -> a)",
+            src: "let r = {a = 1, b = 2} r.a",
+            typ: "Int",
         },
         Case {
-        src: "f = fn(x) { x.t } f({ t = 1 })",
-        typ: "Int",
+            src: "let r = {a = 1, b = 2} r.a + r.b",
+            typ: "Int",
         },
         Case {
-        src: "f = fn(x) { x.t(1) } f({t = fn(x) { x + 1 }})",
-        typ: "Int",
+            src: "fn(x) { x.t }",
+            typ: "fn({b | t = a}) -> a",
         },
         Case {
-        src: "{a = 1, b = 2.0}.a",
-        typ: "Int",
+            src: "let f = fn(x) { x } let r = {a = f} r.a",
+            typ: "fn(a) -> a",
+        },
+        Case {
+            src: "let r = {a = fn(x) { x }} r.a",
+            typ: "fn(a) -> a",
+        },
+        Case {
+            src: "let a = {b = 1} {a | b = 1.0}.b",
+            typ: "Float",
+        },
+        Case {
+            src: "let r = {a = fn(x) { x }, b = fn(x) { x }} [r.a, r.b]",
+            typ: "List(fn(a) -> a)",
+        },
+        Case {
+            src: "let f = fn(x) { x.t } f({ t = 1 })",
+            typ: "Int",
+        },
+        Case {
+            src: "let f = fn(x) { x.t(1) } f({t = fn(x) { x + 1 }})",
+            typ: "Int",
+        },
+        Case {
+            src: "{a = 1, b = 2.0}.a",
+            typ: "Int",
         },
         Case {
             src: "fn(r) { r.x }",
-            typ: "fn({a | x = b}) -> b",
+            typ: "fn({b | x = a}) -> a",
         },
         Case {
             src: "fn(r) { r.x + 1 }",
             typ: "fn({a | x = Int}) -> Int",
         },
+        /*
         /* Module select
 
          */

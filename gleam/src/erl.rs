@@ -1337,6 +1337,16 @@ tail(List) ->
     end.
 "#,
         },
+        // Case {
+        //     src: r#"fn age(x) { x.age }"#,
+        //     erl: r#"-module(gleam_).
+
+        // -export([]).
+
+        // age(X) ->
+        // maps:get('age', X).
+        // "#,
+        // },
         // TODO: Check that var num is incremented for args
         // TODO: Check that var num is incremented for nested patterns
         // TODO: Check that var num is reset after a closure that increments
