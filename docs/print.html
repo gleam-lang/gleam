@@ -1,0 +1,443 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>The Gleam Book</title>
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
+        <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+    </head>
+    <body class="light">
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">var path_to_root = "";</script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { } 
+            if (theme === null || theme === undefined) { theme = 'light'; }
+            document.body.className = theme;
+            document.querySelector('html').className = theme + ' js';
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <ol class="chapter"><li><a href="comparison-to-erlang-and-elixir/index.html"><strong aria-hidden="true">1.</strong> Comparison to Erlang and Elixir</a></li><li><ol class="section"><li><a href="comparison-to-erlang-and-elixir/simple-types.html"><strong aria-hidden="true">1.1.</strong> Simple types</a></li><li><a href="comparison-to-erlang-and-elixir/bool.html"><strong aria-hidden="true">1.2.</strong> Bool</a></li><li><a href="comparison-to-erlang-and-elixir/variables.html"><strong aria-hidden="true">1.3.</strong> Variables</a></li><li><a href="comparison-to-erlang-and-elixir/records.html"><strong aria-hidden="true">1.4.</strong> Records</a></li><li><a href="comparison-to-erlang-and-elixir/enums.html"><strong aria-hidden="true">1.5.</strong> Enums</a></li></ol></li></ol>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar" class="menu-bar">
+                    <div id="menu-bar-sticky-container">
+                        <div class="left-buttons">
+                            <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                                <i class="fa fa-bars"></i>
+                            </button>
+                            <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                                <i class="fa fa-paint-brush"></i>
+                            </button>
+                            <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                                <li role="none"><button role="menuitem" class="theme" id="light">Light <span class="default">(default)</span></button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                            </ul>
+                            
+                            <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                                <i class="fa fa-search"></i>
+                            </button>
+                            
+                        </div>
+
+                        <h1 class="menu-title">The Gleam Book</h1> 
+
+                        <div class="right-buttons">
+                            <a href="print.html" title="Print this book" aria-label="Print this book">
+                                <i id="print-button" class="fa fa-print"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <a class="header" href="#comparison-to-erlang-and-elixir" id="comparison-to-erlang-and-elixir"><h1>Comparison to Erlang and Elixir</h1></a>
+<p>Being another functional language on the BEAM (the Erlang virual machine)
+Gleam is very similar to both Erlang and Elixir, albeit with a static type
+system.</p>
+<p>This chapter aims to give Erlang and Elixir users enough knowledge to start
+writing reading and writing Gleam code.</p>
+<a class="header" href="#simple-types" id="simple-types"><h1>Simple types</h1></a>
+<p>Gleam has many of the same data types as Erlang and Elixir, with a few
+differences.</p>
+<a class="header" href="#strings" id="strings"><h2>Strings</h2></a>
+<p>Gleam's Strings are binary strings, the same as Elixir's strings.</p>
+<pre><code>// Gleam
+&quot;Hello, Gleam!&quot;
+</code></pre>
+<pre><code># Elixir
+&quot;Hello, Elixir!&quot;
+</code></pre>
+<pre><code>% Erlang
+&lt;&lt;&quot;Hello, Erlang!&quot;&gt;&gt;.
+</code></pre>
+<a class="header" href="#ints" id="ints"><h2>Ints</h2></a>
+<p>Gleam's Ints are the same as Elixir and Erlang's integers.</p>
+<pre><code>// Gleam
+123
+</code></pre>
+<pre><code># Elixir
+123
+</code></pre>
+<pre><code>% Erlang
+123.
+</code></pre>
+<a class="header" href="#floats" id="floats"><h2>Floats</h2></a>
+<p>Gleam's Floats are the same as Elixir and Erlang's floats.</p>
+<pre><code>// Gleam
+1.5
+</code></pre>
+<pre><code># Elixir
+1.5
+</code></pre>
+<pre><code>% Erlang
+1.5.
+</code></pre>
+<a class="header" href="#atoms" id="atoms"><h2>Atoms</h2></a>
+<p>Gleam does not currently have first class support for Erlang atoms, though
+likely will in future.</p>
+<a class="header" href="#tuples" id="tuples"><h2>Tuples</h2></a>
+<p>Tuples are the same in Gleam as in Elixir and Erlang.</p>
+<pre><code>// Gleam
+{1, 2.0, &quot;three&quot;}
+</code></pre>
+<pre><code># Elixir
+true
+{1, 2.0, &quot;three&quot;}
+</code></pre>
+<pre><code>% Erlang
+{1, 2.0, &lt;&lt;&quot;three&quot;&gt;&gt;}.
+</code></pre>
+<a class="header" href="#lists" id="lists"><h2>Lists</h2></a>
+<p>Unlike in Elixir and Erlang, Gleam's Lists are <em>homogeneous</em>, meaning all the
+elements of a List must be of the same type.</p>
+<p>Attempting to construct a list of multiple types of element will result in the
+compiler presenting a type error.</p>
+<pre><code>// Gleam
+[1, 2, 3, 4]  // List(Int)
+[1.22, 2.30]  // List(Float)
+[1.22, 3, 4]  // Type error!
+</code></pre>
+<pre><code># Elixir
+[1, 2, 3, 4]
+[1.22, 2.30]
+[1.22, 3, 4]
+</code></pre>
+<pre><code>% Erlang
+[1, 2, 3, 4].
+[1.22, 2.30].
+[1.22, 3, 4].
+</code></pre>
+<p>The syntax for prepending to a List is the same as in Elixir or Erlang.</p>
+<pre><code>// Gleam
+[1 | [2, 3]]  // =&gt; [1, 2, 3]
+</code></pre>
+<pre><code># Elixir
+[1 | [2, 3]]
+</code></pre>
+<pre><code>% Erlang
+[1 | [2, 3]].
+</code></pre>
+<a class="header" href="#bool" id="bool"><h1>Bool</h1></a>
+<p>Gleam's Bools are the same as Elixir and Erlang's booleans.</p>
+<p>While written in the code using a capital letter, they are represented at
+runtime with the atoms <code>true</code> and <code>false</code>, making them compatible with Elixir
+and Erlang's booleans.</p>
+<pre><code>// Gleam
+True
+False
+</code></pre>
+<pre><code># Elixir
+true
+false
+</code></pre>
+<pre><code>% Erlang
+true.
+false.
+</code></pre>
+<p>Gleam defines a handful of operators that operate on or return Bools.</p>
+<ul>
+<li><code>==</code>, <code>!=</code>: Equality</li>
+<li><code>&lt;</code>, <code>&lt;=</code>, <code>&gt;=</code>, <code>&gt;</code>: Order comparison</li>
+<li><code>&amp;&amp;</code>: Short circuiting logical and</li>
+<li><code>||</code>: Short circuiting logical or</li>
+</ul>
+<a class="header" href="#variables" id="variables"><h1>Variables</h1></a>
+<p>Gleam's variables are immutable and rebindable, like Elixir's.</p>
+<pre><code>// Gleam
+let x = 1
+let x = 2
+</code></pre>
+<pre><code># Elixir
+x = 1
+x = 2
+</code></pre>
+<pre><code>% Erlang
+X = 1.
+X = 2.  % Runtime error!
+</code></pre>
+<p>Pattern matching can be used to extract contained values from data structures
+when defining variables with <code>let</code>.</p>
+<pre><code>// Gleam
+let {x, y} = {1, 2.0}
+</code></pre>
+<pre><code># Elixir
+{x, y} = {1, 2.0}
+</code></pre>
+<pre><code>% Erlang
+{X, Y} = {1, 2.0}.
+</code></pre>
+<a class="header" href="#records" id="records"><h1>Records</h1></a>
+<p>Gleam's records are a collection of names and values where each value can be
+of any type.</p>
+<p>At runtime they are maps with atom keys. They are not the same as Erlang
+records, which are tuples. They are similar to Elixir's structs, but do not
+need to be declared prior to being used.</p>
+<pre><code>// Gleam
+{
+  name = &quot;Rex&quot;,
+  size = 40,
+}
+</code></pre>
+<pre><code># Elixir
+%{
+  name: &quot;Rex&quot;,
+  size: 40
+}
+</code></pre>
+<pre><code>% Erlang
+#{
+  name =&gt; &lt;&lt;&quot;Rex&quot;&gt;&gt;,
+  size =&gt; 40
+}.
+</code></pre>
+<p>Record values can be accessed using the <code>.</code> syntax, as in Elixir.</p>
+<p>The Gleam compiler keeps tracks of what fields and values each record has and
+will present a compile time error if you try to use a record field that does
+not exist or has the incorrect type.</p>
+<pre><code>// Gleam
+let pup = { name = &quot;Rex&quot;, size = 40 }
+let name = pup.name
+
+pup.huh  // Compile time error
+</code></pre>
+<pre><code># Elixir
+pup = %{ name: &quot;Rex&quot;, size: 40 }
+name = pup.name
+
+pup.huh  # Runtime error
+</code></pre>
+<pre><code>% Erlang
+Pup = #{name =&gt; &lt;&lt;&quot;Rex&quot;&gt;&gt;, size =&gt; 40}.
+#{name =&gt; Name} = Pup.
+
+#{huh =&gt; Huh} = Pup.  % Runtime error
+</code></pre>
+<p>A new record with updated or additional fields can be created using the update
+syntax.</p>
+<p>The new/updated record fields do not have to have the same types as the
+original fields.</p>
+<pre><code>// Gleam
+let pup = { name = &quot;Rex&quot;, size = 40 }
+let dog = { pup | size = 70, playful = True }
+
+pup  // { name = &quot;Rex&quot;, size = 40 }
+dog  // { name = &quot;Rex&quot;, size = 70, playful = True }
+</code></pre>
+<pre><code># Elixir
+pup = %{ name: &quot;Rex&quot;, size: 40 }
+dog = %{ pup | size: 70 } |&gt; Map.put(:playful, true)
+
+pup  # { name: &quot;Rex&quot;, size: 40 }
+dog  # { name: &quot;Rex&quot;, size: 70, playful: true }
+</code></pre>
+<pre><code>% Erlang
+Pup = #{name =&gt; &lt;&lt;&quot;Rex&quot;&gt;&gt;, size =&gt; 40}.
+Dog = Pup#{size =&gt; 70, playful =&gt; true}.
+
+Pup.  % #{name =&gt; &lt;&lt;&quot;Rex&quot;&gt;&gt;, size =&gt; 40}
+Dog.  % #{name =&gt; &lt;&lt;&quot;Rex&quot;&gt;&gt;, size =&gt; 70, playful =&gt; true}
+</code></pre>
+<a class="header" href="#enums" id="enums"><h1>Enums</h1></a>
+<p>Enums in Gleam are a way of modeling data that can be one of a few different
+variants.</p>
+<p>We've seen an enum already in this chapter- <code>Bool</code>. In Gleam Bool is defined
+like this:</p>
+<pre><code>// A Bool is a value that is either `True` or `False`
+enum Bool =
+  | True
+  | False
+</code></pre>
+<p>Enum variants can also contain other values.</p>
+<pre><code>enum User =
+  | LoggedIn(String)  // A logged in user with a name
+  | Guest             // A guest user with no details
+</code></pre>
+<pre><code>let sara = LoggedIn(&quot;Sara&quot;)
+let rick = LoggedIn(&quot;Rick&quot;)
+let visitor = Guest
+</code></pre>
+<p>When given an enum we need to pattern match on it to determine the variant and
+use any contained values.</p>
+<pre><code>fn get_name(user) {
+  case user {
+  | LoggedIn(name) -&gt; name
+  | Guest -&gt; &quot;Guest user&quot;
+  }
+}
+</code></pre>
+<a class="header" href="#runtime-representation" id="runtime-representation"><h2>Runtime representation</h2></a>
+<p>At runtime enum variants with no contained values become atoms. The atoms are
+written in <code>snake_case</code> rather than <code>CamelCase</code> so <code>LoggedIn</code> becomes
+<code>logged_in</code>.</p>
+<p>Enum variants with contained values become tuples with a tag atom.</p>
+<pre><code>// Gleam
+Guest
+LoggedIn(&quot;Kim&quot;)
+</code></pre>
+<pre><code># Elixir
+:guest
+{:logged_in, &quot;Kim&quot;}
+</code></pre>
+<pre><code>% Erlang
+guest.
+{logged_in, &lt;&lt;&quot;Kim&quot;&gt;&gt;}.
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+
+        
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+        
+        <script type="text/javascript">
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+        
+        
+
+    </body>
+</html>
