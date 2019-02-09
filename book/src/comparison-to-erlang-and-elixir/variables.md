@@ -2,7 +2,7 @@
 
 Gleam's variables are immutable and rebindable, like Elixir's.
 
-```
+```rust,noplaypen
 // Gleam
 let x = 1
 let x = 2
@@ -21,7 +21,7 @@ X = 2.  % Runtime error!
 Pattern matching can be used to extract contained values from data structures
 when defining variables with `let`.
 
-```
+```rust,noplaypen
 // Gleam
 let {x, y} = {1, 2.0}
 ```

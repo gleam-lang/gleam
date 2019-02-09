@@ -72,7 +72,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="comparison-to-erlang-and-elixir/index.html"><strong aria-hidden="true">1.</strong> Comparison to Erlang and Elixir</a></li><li><ol class="section"><li><a href="comparison-to-erlang-and-elixir/simple-types.html"><strong aria-hidden="true">1.1.</strong> Simple types</a></li><li><a href="comparison-to-erlang-and-elixir/bool.html"><strong aria-hidden="true">1.2.</strong> Bool</a></li><li><a href="comparison-to-erlang-and-elixir/variables.html"><strong aria-hidden="true">1.3.</strong> Variables</a></li><li><a href="comparison-to-erlang-and-elixir/records.html"><strong aria-hidden="true">1.4.</strong> Records</a></li><li><a href="comparison-to-erlang-and-elixir/enums.html"><strong aria-hidden="true">1.5.</strong> Enums</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="comparison-to-erlang-and-elixir/index.html"><strong aria-hidden="true">2.</strong> Comparison to Erlang and Elixir</a></li><li><ol class="section"><li><a href="comparison-to-erlang-and-elixir/simple-types.html"><strong aria-hidden="true">2.1.</strong> Simple types</a></li><li><a href="comparison-to-erlang-and-elixir/bool.html"><strong aria-hidden="true">2.2.</strong> Bool</a></li><li><a href="comparison-to-erlang-and-elixir/variables.html"><strong aria-hidden="true">2.3.</strong> Variables</a></li><li><a href="comparison-to-erlang-and-elixir/records.html"><strong aria-hidden="true">2.4.</strong> Records</a></li><li><a href="comparison-to-erlang-and-elixir/enums.html"><strong aria-hidden="true">2.5.</strong> Enums</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -136,7 +136,55 @@
 
                 <div id="content" class="content">
                     <main>
-                        <a class="header" href="#comparison-to-erlang-and-elixir" id="comparison-to-erlang-and-elixir"><h1>Comparison to Erlang and Elixir</h1></a>
+                        <a class="header" href="#gleam" id="gleam"><h1>Gleam</h1></a>
+<p>A statically typed language for the Erlang VM.</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+pub enum Tree =
+  | Leaf(Int)
+  | Node(Tree, Tree)
+
+pub fn any(tree, predicate) {
+  case tree {
+  | Leaf(i) -&gt; predicate(i)
+  | Node(left, right) -&gt; any(left, predicate) || any(right, predicate)
+  }
+}
+
+pub fn has_even_leaf(tree) {
+  any(tree, fn(i) {
+    i % 2 == 0
+  })
+}
+#}</code></pre></pre>
+<a class="header" href="#principals" id="principals"><h2>Principals</h2></a>
+<a class="header" href="#be-safe" id="be-safe"><h3>Be safe</h3></a>
+<p>An expressive type system inspired by the ML family of languages helps us find
+and prevent bugs at compile time, long before it reaches your users.</p>
+<p>For the problems the type system can't solve (such as your server being hit by
+a bolt of lightning) the Erlang/OTP runtime provides well tested mechanisms
+for gracefully handling failure.</p>
+<a class="header" href="#be-friendly" id="be-friendly"><h3>Be friendly</h3></a>
+<p>Hunting down bugs can be stressful so feedback from the compiler should be
+as clear and helpful as possible. We want to spend more time working on our
+application and less time looking for typos or deciphering cryptic error
+messages.</p>
+<p>As a community we want to be friendly too. People of all backgrounds, genders,
+and experience levels are welcome and must receive equal respect.</p>
+<a class="header" href="#be-performant" id="be-performant"><h3>Be performant</h3></a>
+<p>The Erlang/OTP runtime is known for its speed and ability to scale, enabling
+organisations such as WhatsApp and Ericsson to reliably handle massive amounts
+of traffic at low latency. Gleam should take full advantage of this runtime
+and be as fast as other BEAM languages such as Erlang and Elixir.</p>
+<a class="header" href="#be-a-good-citizen" id="be-a-good-citizen"><h3>Be a good citizen</h3></a>
+<p>Gleam makes it easy to use code written in other BEAM languages such as
+Erlang, Elixir and LFE, so there's a rich ecosystem of tools and library for
+Gleam users to make use of.</p>
+<p>Users of other BEAM languages should in return be able to take advantage of
+Gleam, either by transparently making use of libraries written in Gleam, or by
+adding Gleam modules to their existing project with minimal fuss.</p>
+<a class="header" href="#comparison-to-erlang-and-elixir" id="comparison-to-erlang-and-elixir"><h1>Comparison to Erlang and Elixir</h1></a>
 <p>Being another functional language on the BEAM (the Erlang virual machine)
 Gleam is very similar to both Erlang and Elixir, albeit with a static type
 system.</p>

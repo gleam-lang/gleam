@@ -1,5 +1,6 @@
 # Summary
 
+- [Hello, Gleam!](./README.md)
 - [Comparison to Erlang and Elixir](./comparison-to-erlang-and-elixir/README.md)
   - [Simple types](./comparison-to-erlang-and-elixir/simple-types.md)
   - [Bool](./comparison-to-erlang-and-elixir/bool.md)

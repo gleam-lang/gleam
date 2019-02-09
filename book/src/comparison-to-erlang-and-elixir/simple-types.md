@@ -8,7 +8,7 @@ differences.
 
 Gleam's Strings are binary strings, the same as Elixir's strings.
 
-```
+```rust,noplaypen
 // Gleam
 "Hello, Gleam!"
 ```
@@ -26,7 +26,7 @@ Gleam's Strings are binary strings, the same as Elixir's strings.
 
 Gleam's Ints are the same as Elixir and Erlang's integers.
 
-```
+```rust,noplaypen
 // Gleam
 123
 ```
@@ -44,7 +44,7 @@ Gleam's Ints are the same as Elixir and Erlang's integers.
 
 Gleam's Floats are the same as Elixir and Erlang's floats.
 
-```
+```rust,noplaypen
 // Gleam
 1.5
 ```
@@ -68,7 +68,7 @@ likely will in future.
 
 Tuples are the same in Gleam as in Elixir and Erlang.
 
-```
+```rust,noplaypen
 // Gleam
 {1, 2.0, "three"}
 ```
@@ -91,7 +91,7 @@ elements of a List must be of the same type.
 Attempting to construct a list of multiple types of element will result in the
 compiler presenting a type error.
 
-```
+```rust,noplaypen
 // Gleam
 [1, 2, 3, 4]  // List(Int)
 [1.22, 2.30]  // List(Float)
@@ -112,7 +112,7 @@ compiler presenting a type error.
 
 The syntax for prepending to a List is the same as in Elixir or Erlang.
 
-```
+```rust,noplaypen
 // Gleam
 [1 | [2, 3]]  // => [1, 2, 3]
 ```

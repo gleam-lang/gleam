@@ -3,6 +3,3 @@ authors = ["Louis Pilfold"]
 multilingual = false
 src = "src"
 title = "The Gleam Book"
-
-[build]
-build-dir = "../docs"

@@ -6,7 +6,7 @@ While written in the code using a capital letter, they are represented at
 runtime with the atoms `true` and `false`, making them compatible with Elixir
 and Erlang's booleans.
 
-```
+```rust,noplaypen
 // Gleam
 True
 False

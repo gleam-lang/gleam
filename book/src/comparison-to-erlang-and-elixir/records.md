@@ -7,7 +7,7 @@ At runtime they are maps with atom keys. They are not the same as Erlang
 records, which are tuples. They are similar to Elixir's structs, but do not
 need to be declared prior to being used.
 
-```
+```rust,noplaypen
 // Gleam
 {
   name = "Rex",
@@ -35,7 +35,7 @@ The Gleam compiler keeps tracks of what fields and values each record has and
 will present a compile time error if you try to use a record field that does
 not exist or has the incorrect type.
 
-```
+```rust,noplaypen
 // Gleam
 let pup = { name = "Rex", size = 40 }
 let name = pup.name
@@ -63,7 +63,7 @@ syntax.
 The new/updated record fields do not have to have the same types as the
 original fields.
 
-```
+```rust,noplaypen
 // Gleam
 let pup = { name = "Rex", size = 40 }
 let dog = { pup | size = 70, playful = True }
