@@ -422,7 +422,7 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
         Expr::Fn { args, body, .. } => fun(args, *body, env),
         Expr::Cons { head, tail, .. } => expr_cons(*head, *tail, env),
         Expr::Call { fun, args, .. } => call(*fun, args, env),
-        Expr::RecordSelect { .. } => unimplemented!(),
+        Expr::RecordSelect { label, record, .. } => record_select(*record, label, env),
         Expr::ModuleSelect { .. } => unimplemented!(),
         Expr::Tuple { elems, .. } => tuple(elems.into_iter().map(|e| wrap_expr(e, env)).collect()),
         Expr::Let {
@@ -441,6 +441,15 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
             name, left, right, ..
         } => bin_op(name, *left, *right, env),
     }
+}
+
+fn record_select(record: TypedExpr, label: String, env: &mut Env) -> Document {
+    "maps:get("
+        .to_doc()
+        .append(atom(label))
+        .append(", ")
+        .append(wrap_expr(record, env))
+        .append(")")
 }
 
 fn fun(args: Vec<Arg>, body: TypedExpr, env: &mut Env) -> Document {
@@ -1337,16 +1346,16 @@ tail(List) ->
     end.
 "#,
         },
-        // Case {
-        //     src: r#"fn age(x) { x.age }"#,
-        //     erl: r#"-module(gleam_).
+        Case {
+            src: r#"fn age(x) { x.age }"#,
+            erl: r#"-module(gleam_).
 
-        // -export([]).
+-export([]).
 
-        // age(X) ->
-        // maps:get('age', X).
-        // "#,
-        // },
+age(X) ->
+    maps:get('age', X).
+"#,
+        },
         // TODO: Check that var num is incremented for args
         // TODO: Check that var num is incremented for nested patterns
         // TODO: Check that var num is reset after a closure that increments
