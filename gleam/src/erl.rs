@@ -443,6 +443,7 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
     }
 }
 
+// TODO: Nest, break, etc
 fn record_select(record: TypedExpr, label: String, env: &mut Env) -> Document {
     "maps:get("
         .to_doc()
