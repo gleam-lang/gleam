@@ -827,6 +827,11 @@ pub enum Error {
     RecursiveType {
         meta: Meta,
     },
+
+    DuplicateFunction {
+        meta: Meta,
+        name: String,
+    },
 }
 
 /// Crawl the AST, annotating each node with the inferred type or
@@ -849,6 +854,11 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
                 body,
             } => {
                 let level = 1;
+
+                // Ensure function has not already been defined in this module
+                if let Some((Scope::Module { .. }, _)) = env.get_variable(&name) {
+                    return Err(Error::DuplicateFunction { meta, name });
+                };
 
                 // Register a var for the function so that it can call itself recursively
                 let rec = env.new_unbound_var(level + 1);
@@ -3113,6 +3123,22 @@ fn infer_module_error_test() {
                 name: "List".to_string(),
                 expected: 1,
                 given: 2,
+            },
+        },
+        Case {
+            src: "fn dupe() { 1 }
+                  fn dupe() { 2 }",
+            error: Error::DuplicateFunction {
+                meta: Meta { start: 34, end: 49 },
+                name: "dupe".to_string(),
+            },
+        },
+        Case {
+            src: "fn dupe() { 1 }
+                  fn dupe(x) { x }",
+            error: Error::DuplicateFunction {
+                meta: Meta { start: 34, end: 50 },
+                name: "dupe".to_string(),
             },
         },
     ];
