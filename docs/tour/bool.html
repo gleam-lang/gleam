@@ -72,7 +72,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../comparison-to-erlang-and-elixir/index.html"><strong aria-hidden="true">2.</strong> Comparison to Erlang and Elixir</a></li><li><ol class="section"><li><a href="../comparison-to-erlang-and-elixir/simple-types.html"><strong aria-hidden="true">2.1.</strong> Simple types</a></li><li><a href="../comparison-to-erlang-and-elixir/bool.html" class="active"><strong aria-hidden="true">2.2.</strong> Bool</a></li><li><a href="../comparison-to-erlang-and-elixir/variables.html"><strong aria-hidden="true">2.3.</strong> Variables</a></li><li><a href="../comparison-to-erlang-and-elixir/records.html"><strong aria-hidden="true">2.4.</strong> Records</a></li><li><a href="../comparison-to-erlang-and-elixir/enums.html"><strong aria-hidden="true">2.5.</strong> Enums</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../tour/index.html"><strong aria-hidden="true">2.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/string-and-atom.html"><strong aria-hidden="true">2.1.</strong> String &amp; Atom</a></li><li><a href="../tour/bool.html" class="active"><strong aria-hidden="true">2.2.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">2.3.</strong> Int &amp; Float</a></li><li><a href="../tour/tuple.html"><strong aria-hidden="true">2.4.</strong> Tuple</a></li><li><a href="../tour/list.html"><strong aria-hidden="true">2.5.</strong> List</a></li><li><a href="../tour/let.html"><strong aria-hidden="true">2.6.</strong> Let</a></li><li><a href="../tour/record.html"><strong aria-hidden="true">2.7.</strong> Record</a></li><li><a href="../tour/enum.html"><strong aria-hidden="true">2.8.</strong> Enum</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -137,42 +137,49 @@
                 <div id="content" class="content">
                     <main>
                         <a class="header" href="#bool" id="bool"><h1>Bool</h1></a>
-<p>Gleam's Bools are the same as Elixir and Erlang's booleans.</p>
+<p>A Bool can be either <code>True</code> or <code>False</code>.</p>
+<p>Gleam defines a handful of operators that work with Bools.</p>
+<pre><code class="language-rust noplaypen">False &amp;&amp; False // =&gt; False
+False &amp;&amp; True  // =&gt; False
+True &amp;&amp; False  // =&gt; False
+True &amp;&amp; True   // =&gt; True
+
+False || False // =&gt; False
+False || True  // =&gt; True
+True || False  // =&gt; True
+True || True   // =&gt; True
+</code></pre>
+<p><code>&amp;&amp;</code> and <code>||</code> are <em>short circuiting</em>, meaning they don't evaluate the right
+hand side if they don't have to.</p>
+<p><code>&amp;&amp;</code> evaluates the right hand side if the left hand side is <code>True</code>.</p>
+<p><code>||</code> evaluates the right hand side if the left hand side is <code>False</code>.</p>
+<a class="header" href="#runtime-representation" id="runtime-representation"><h2>Runtime representation</h2></a>
 <p>While written in the code using a capital letter, they are represented at
 runtime with the atoms <code>true</code> and <code>false</code>, making them compatible with Elixir
 and Erlang's booleans.</p>
-<pre><code>// Gleam
+<p>This is important if you want to use Gleam and Elixir or Erlang together in
+one project.</p>
+<pre><code class="language-rust noplaypen">// Gleam
 True
 False
 </code></pre>
-<pre><code># Elixir
-true
-false
-</code></pre>
-<pre><code>% Erlang
+<pre><code class="language-erlang">% Erlang
 true.
 false.
 </code></pre>
-<p>Gleam defines a handful of operators that operate on or return Bools.</p>
-<ul>
-<li><code>==</code>, <code>!=</code>: Equality</li>
-<li><code>&lt;</code>, <code>&lt;=</code>, <code>&gt;=</code>, <code>&gt;</code>: Order comparison</li>
-<li><code>&amp;&amp;</code>: Short circuiting logical and</li>
-<li><code>||</code>: Short circuiting logical or</li>
-</ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="../comparison-to-erlang-and-elixir/simple-types.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../tour/string-and-atom.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
                         
-                            <a rel="next" href="../comparison-to-erlang-and-elixir/variables.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../tour/int-and-float.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -184,13 +191,13 @@ false.
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a href="../comparison-to-erlang-and-elixir/simple-types.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a href="../tour/string-and-atom.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
-                    <a href="../comparison-to-erlang-and-elixir/variables.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a href="../tour/int-and-float.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 

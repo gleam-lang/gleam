@@ -26,6 +26,5 @@ print-%: ; @echo $*=$($*)
 gleam/target/release/gleam: $(shell find gleam/src -type f)
 	cd gleam && cargo build --release
 
-# docs/index.html: $(shell find book/src -type f)
-docs/index.html:
+docs/index.html: $(shell find book/src -type f)
 	cd book && mdbook build --dest-dir ../docs/

@@ -72,7 +72,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="comparison-to-erlang-and-elixir/index.html"><strong aria-hidden="true">2.</strong> Comparison to Erlang and Elixir</a></li><li><ol class="section"><li><a href="comparison-to-erlang-and-elixir/simple-types.html"><strong aria-hidden="true">2.1.</strong> Simple types</a></li><li><a href="comparison-to-erlang-and-elixir/bool.html"><strong aria-hidden="true">2.2.</strong> Bool</a></li><li><a href="comparison-to-erlang-and-elixir/variables.html"><strong aria-hidden="true">2.3.</strong> Variables</a></li><li><a href="comparison-to-erlang-and-elixir/records.html"><strong aria-hidden="true">2.4.</strong> Records</a></li><li><a href="comparison-to-erlang-and-elixir/enums.html"><strong aria-hidden="true">2.5.</strong> Enums</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="tour/index.html"><strong aria-hidden="true">2.</strong> Language tour</a></li><li><ol class="section"><li><a href="tour/string-and-atom.html"><strong aria-hidden="true">2.1.</strong> String &amp; Atom</a></li><li><a href="tour/bool.html"><strong aria-hidden="true">2.2.</strong> Bool</a></li><li><a href="tour/int-and-float.html"><strong aria-hidden="true">2.3.</strong> Int &amp; Float</a></li><li><a href="tour/tuple.html"><strong aria-hidden="true">2.4.</strong> Tuple</a></li><li><a href="tour/list.html"><strong aria-hidden="true">2.5.</strong> List</a></li><li><a href="tour/let.html"><strong aria-hidden="true">2.6.</strong> Let</a></li><li><a href="tour/record.html"><strong aria-hidden="true">2.7.</strong> Record</a></li><li><a href="tour/enum.html"><strong aria-hidden="true">2.8.</strong> Enum</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -138,10 +138,7 @@
                     <main>
                         <a class="header" href="#gleam" id="gleam"><h1>Gleam</h1></a>
 <p>A statically typed language for the Erlang VM.</p>
-<pre><pre class="playpen"><code class="language-rust">
-# #![allow(unused_variables)]
-#fn main() {
-pub enum Tree =
+<pre><code class="language-rust noplaypen">pub enum Tree =
   | Leaf(Int)
   | Node(Tree, Tree)
 
@@ -157,7 +154,7 @@ pub fn has_even_leaf(tree) {
     i % 2 == 0
   })
 }
-#}</code></pre></pre>
+</code></pre>
 <a class="header" href="#principals" id="principals"><h2>Principals</h2></a>
 <a class="header" href="#be-safe" id="be-safe"><h3>Be safe</h3></a>
 <p>An expressive type system inspired by the ML family of languages helps us find
@@ -190,12 +187,10 @@ Gleam is very similar to both Erlang and Elixir, albeit with a static type
 system.</p>
 <p>This chapter aims to give Erlang and Elixir users enough knowledge to start
 writing reading and writing Gleam code.</p>
-<a class="header" href="#simple-types" id="simple-types"><h1>Simple types</h1></a>
-<p>Gleam has many of the same data types as Erlang and Elixir, with a few
-differences.</p>
+<a class="header" href="#string--atom" id="string--atom"><h1>String &amp; Atom</h1></a>
 <a class="header" href="#strings" id="strings"><h2>Strings</h2></a>
 <p>Gleam's Strings are binary strings, the same as Elixir's strings.</p>
-<pre><code>// Gleam
+<pre><code class="language-rust noplaypen">// Gleam
 &quot;Hello, Gleam!&quot;
 </code></pre>
 <pre><code># Elixir
@@ -204,34 +199,74 @@ differences.</p>
 <pre><code>% Erlang
 &lt;&lt;&quot;Hello, Erlang!&quot;&gt;&gt;.
 </code></pre>
-<a class="header" href="#ints" id="ints"><h2>Ints</h2></a>
-<p>Gleam's Ints are the same as Elixir and Erlang's integers.</p>
-<pre><code>// Gleam
-123
-</code></pre>
-<pre><code># Elixir
-123
-</code></pre>
-<pre><code>% Erlang
-123.
-</code></pre>
-<a class="header" href="#floats" id="floats"><h2>Floats</h2></a>
-<p>Gleam's Floats are the same as Elixir and Erlang's floats.</p>
-<pre><code>// Gleam
-1.5
-</code></pre>
-<pre><code># Elixir
-1.5
-</code></pre>
-<pre><code>% Erlang
-1.5.
-</code></pre>
 <a class="header" href="#atoms" id="atoms"><h2>Atoms</h2></a>
 <p>Gleam does not currently have first class support for Erlang atoms, though
 likely will in future.</p>
-<a class="header" href="#tuples" id="tuples"><h2>Tuples</h2></a>
-<p>Tuples are the same in Gleam as in Elixir and Erlang.</p>
-<pre><code>// Gleam
+<a class="header" href="#bool" id="bool"><h1>Bool</h1></a>
+<p>A Bool can be either <code>True</code> or <code>False</code>.</p>
+<p>Gleam defines a handful of operators that work with Bools.</p>
+<pre><code class="language-rust noplaypen">False &amp;&amp; False // =&gt; False
+False &amp;&amp; True  // =&gt; False
+True &amp;&amp; False  // =&gt; False
+True &amp;&amp; True   // =&gt; True
+
+False || False // =&gt; False
+False || True  // =&gt; True
+True || False  // =&gt; True
+True || True   // =&gt; True
+</code></pre>
+<p><code>&amp;&amp;</code> and <code>||</code> are <em>short circuiting</em>, meaning they don't evaluate the right
+hand side if they don't have to.</p>
+<p><code>&amp;&amp;</code> evaluates the right hand side if the left hand side is <code>True</code>.</p>
+<p><code>||</code> evaluates the right hand side if the left hand side is <code>False</code>.</p>
+<a class="header" href="#runtime-representation" id="runtime-representation"><h2>Runtime representation</h2></a>
+<p>While written in the code using a capital letter, they are represented at
+runtime with the atoms <code>true</code> and <code>false</code>, making them compatible with Elixir
+and Erlang's booleans.</p>
+<p>This is important if you want to use Gleam and Elixir or Erlang together in
+one project.</p>
+<pre><code class="language-rust noplaypen">// Gleam
+True
+False
+</code></pre>
+<pre><code class="language-erlang">% Erlang
+true.
+false.
+</code></pre>
+<a class="header" href="#int-and-float" id="int-and-float"><h1>Int and Float</h1></a>
+<p>Gleam's main number types are Int and Float.</p>
+<a class="header" href="#ints" id="ints"><h2>Ints</h2></a>
+<p>Ints are &quot;whole&quot; numbers.</p>
+<pre><code class="language-rust noplaypen">1
+2
+-3
+4001
+</code></pre>
+<p>Gleam has several operators that work with Ints, all of which return Ints.</p>
+<pre><code class="language-rust noplaypen">1 + 1 // =&gt; 2
+5 - 1 // =&gt; 4
+5 / 2 // =&gt; 2
+3 * 3 // =&gt; 9
+5 % 2 // =&gt; 1
+</code></pre>
+<a class="header" href="#floats" id="floats"><h2>Floats</h2></a>
+<p>Floats are &quot;<a href="https://en.wikipedia.org/wiki/Real_number">real</a>&quot; numbers,
+meaning they have a decimal point.</p>
+<pre><code class="language-rust noplaypen">1.5
+2.0
+-0.1
+</code></pre>
+<p>Floats also have their own set of operators.</p>
+<pre><code class="language-rust noplaypen">1.0 +. 1.4 // =&gt; 2.4
+5.0 -. 1.5 // =&gt; 3.5
+5.0 /. 2.0 // =&gt; 2.5
+3.0 *. 3.1 // =&gt; 9.3
+</code></pre>
+<a class="header" href="#tuples" id="tuples"><h1>Tuples</h1></a>
+<p>Tuples are an ordered collection of elements of a fixed size. Each element can
+be of a different type.</p>
+<p>The syntax for tuples in Gleam is the same as in Elixir and Erlang.</p>
+<pre><code class="language-rust noplaypen">// Gleam
 {1, 2.0, &quot;three&quot;}
 </code></pre>
 <pre><code># Elixir
@@ -241,63 +276,26 @@ true
 <pre><code>% Erlang
 {1, 2.0, &lt;&lt;&quot;three&quot;&gt;&gt;}.
 </code></pre>
-<a class="header" href="#lists" id="lists"><h2>Lists</h2></a>
-<p>Unlike in Elixir and Erlang, Gleam's Lists are <em>homogeneous</em>, meaning all the
-elements of a List must be of the same type.</p>
-<p>Attempting to construct a list of multiple types of element will result in the
-compiler presenting a type error.</p>
-<pre><code>// Gleam
+<a class="header" href="#list" id="list"><h1>List</h1></a>
+<p>Lists are ordered collections of values. They're one of the most common data
+structures in Gleam.</p>
+<p>Lists are <em>homogeneous</em>, meaning all the elements of a List must be of the
+same type. Attempting to construct a list of multiple types of element will
+result in the compiler presenting a type error.</p>
+<pre><code class="language-rust noplaypen">// Gleam
 [1, 2, 3, 4]  // List(Int)
 [1.22, 2.30]  // List(Float)
 [1.22, 3, 4]  // Type error!
 </code></pre>
-<pre><code># Elixir
-[1, 2, 3, 4]
-[1.22, 2.30]
-[1.22, 3, 4]
-</code></pre>
-<pre><code>% Erlang
-[1, 2, 3, 4].
-[1.22, 2.30].
-[1.22, 3, 4].
-</code></pre>
-<p>The syntax for prepending to a List is the same as in Elixir or Erlang.</p>
-<pre><code>// Gleam
+<p>Prepending to a list is very fast, and is the preferred way to add new values.</p>
+<pre><code class="language-rust noplaypen">// Gleam
 [1 | [2, 3]]  // =&gt; [1, 2, 3]
 </code></pre>
-<pre><code># Elixir
-[1 | [2, 3]]
-</code></pre>
-<pre><code>% Erlang
-[1 | [2, 3]].
-</code></pre>
-<a class="header" href="#bool" id="bool"><h1>Bool</h1></a>
-<p>Gleam's Bools are the same as Elixir and Erlang's booleans.</p>
-<p>While written in the code using a capital letter, they are represented at
-runtime with the atoms <code>true</code> and <code>false</code>, making them compatible with Elixir
-and Erlang's booleans.</p>
-<pre><code>// Gleam
-True
-False
-</code></pre>
-<pre><code># Elixir
-true
-false
-</code></pre>
-<pre><code>% Erlang
-true.
-false.
-</code></pre>
-<p>Gleam defines a handful of operators that operate on or return Bools.</p>
-<ul>
-<li><code>==</code>, <code>!=</code>: Equality</li>
-<li><code>&lt;</code>, <code>&lt;=</code>, <code>&gt;=</code>, <code>&gt;</code>: Order comparison</li>
-<li><code>&amp;&amp;</code>: Short circuiting logical and</li>
-<li><code>||</code>: Short circuiting logical or</li>
-</ul>
 <a class="header" href="#variables" id="variables"><h1>Variables</h1></a>
-<p>Gleam's variables are immutable and rebindable, like Elixir's.</p>
-<pre><code>// Gleam
+<p>A value can be given a name using <code>let</code>. Names can be reused by later let
+bindings, but the values contained are <em>immutable</em>, meaning the values
+themselves cannot be changed.</p>
+<pre><code class="language-rust noplaypen">// Gleam
 let x = 1
 let x = 2
 </code></pre>
@@ -307,11 +305,11 @@ x = 2
 </code></pre>
 <pre><code>% Erlang
 X = 1.
-X = 2.  % Runtime error!
+X = 2.  % Runtime error! Erlang doesn't allow rebinding
 </code></pre>
 <p>Pattern matching can be used to extract contained values from data structures
 when defining variables with <code>let</code>.</p>
-<pre><code>// Gleam
+<pre><code class="language-rust noplaypen">// Gleam
 let {x, y} = {1, 2.0}
 </code></pre>
 <pre><code># Elixir
@@ -326,7 +324,7 @@ of any type.</p>
 <p>At runtime they are maps with atom keys. They are not the same as Erlang
 records, which are tuples. They are similar to Elixir's structs, but do not
 need to be declared prior to being used.</p>
-<pre><code>// Gleam
+<pre><code class="language-rust noplaypen">// Gleam
 {
   name = &quot;Rex&quot;,
   size = 40,
@@ -348,7 +346,7 @@ need to be declared prior to being used.</p>
 <p>The Gleam compiler keeps tracks of what fields and values each record has and
 will present a compile time error if you try to use a record field that does
 not exist or has the incorrect type.</p>
-<pre><code>// Gleam
+<pre><code class="language-rust noplaypen">// Gleam
 let pup = { name = &quot;Rex&quot;, size = 40 }
 let name = pup.name
 
@@ -370,7 +368,7 @@ Pup = #{name =&gt; &lt;&lt;&quot;Rex&quot;&gt;&gt;, size =&gt; 40}.
 syntax.</p>
 <p>The new/updated record fields do not have to have the same types as the
 original fields.</p>
-<pre><code>// Gleam
+<pre><code class="language-rust noplaypen">// Gleam
 let pup = { name = &quot;Rex&quot;, size = 40 }
 let dog = { pup | size = 70, playful = True }
 
@@ -396,35 +394,44 @@ Dog.  % #{name =&gt; &lt;&lt;&quot;Rex&quot;&gt;&gt;, size =&gt; 70, playful =&g
 variants.</p>
 <p>We've seen an enum already in this chapter- <code>Bool</code>. In Gleam Bool is defined
 like this:</p>
-<pre><code>// A Bool is a value that is either `True` or `False`
+<pre><code class="language-rust noplaypen">// A Bool is a value that is either `True` or `False`
 enum Bool =
   | True
   | False
 </code></pre>
 <p>Enum variants can also contain other values.</p>
-<pre><code>enum User =
+<pre><code class="language-rust noplaypen">enum User =
   | LoggedIn(String)  // A logged in user with a name
   | Guest             // A guest user with no details
 </code></pre>
-<pre><code>let sara = LoggedIn(&quot;Sara&quot;)
+<pre><code class="language-rust noplaypen">let sara = LoggedIn(&quot;Sara&quot;)
 let rick = LoggedIn(&quot;Rick&quot;)
 let visitor = Guest
 </code></pre>
 <p>When given an enum we need to pattern match on it to determine the variant and
 use any contained values.</p>
-<pre><code>fn get_name(user) {
+<pre><code class="language-rust noplaypen">fn get_name(user) {
   case user {
   | LoggedIn(name) -&gt; name
   | Guest -&gt; &quot;Guest user&quot;
   }
 }
 </code></pre>
-<a class="header" href="#runtime-representation" id="runtime-representation"><h2>Runtime representation</h2></a>
+<p>Enums can also be destructured with a <code>let</code> binding.</p>
+<pre><code class="language-rust noplaypen">enum Score =
+  | Points(Int)
+</code></pre>
+<pre><code class="language-rust noplaypen">let score = Points(50)
+let Points(p) = score
+
+p // =&gt; 50
+</code></pre>
+<a class="header" href="#runtime-representation-1" id="runtime-representation-1"><h2>Runtime representation</h2></a>
 <p>At runtime enum variants with no contained values become atoms. The atoms are
 written in <code>snake_case</code> rather than <code>CamelCase</code> so <code>LoggedIn</code> becomes
 <code>logged_in</code>.</p>
 <p>Enum variants with contained values become tuples with a tag atom.</p>
-<pre><code>// Gleam
+<pre><code class="language-rust noplaypen">// Gleam
 Guest
 LoggedIn(&quot;Kim&quot;)
 </code></pre>

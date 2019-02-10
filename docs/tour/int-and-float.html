@@ -3,27 +3,27 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Hello, Gleam! - The Gleam Book</title>
+        <title>Int &amp; Float - The Gleam Book</title>
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
 
-        <link rel="shortcut icon" href="favicon.png">
-        <link rel="stylesheet" href="css/variables.css">
-        <link rel="stylesheet" href="css/general.css">
-        <link rel="stylesheet" href="css/chrome.css">
-        <link rel="stylesheet" href="css/print.css" media="print">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
 
         <!-- Fonts -->
-        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
         <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
         <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" href="highlight.css">
-        <link rel="stylesheet" href="tomorrow-night.css">
-        <link rel="stylesheet" href="ayu-highlight.css">
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
         
@@ -32,7 +32,7 @@
     </head>
     <body class="light">
         <!-- Provide site root to javascript -->
-        <script type="text/javascript">var path_to_root = "";</script>
+        <script type="text/javascript">var path_to_root = "../";</script>
 
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script type="text/javascript">
@@ -72,7 +72,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="tour/index.html"><strong aria-hidden="true">2.</strong> Language tour</a></li><li><ol class="section"><li><a href="tour/string-and-atom.html"><strong aria-hidden="true">2.1.</strong> String &amp; Atom</a></li><li><a href="tour/bool.html"><strong aria-hidden="true">2.2.</strong> Bool</a></li><li><a href="tour/int-and-float.html"><strong aria-hidden="true">2.3.</strong> Int &amp; Float</a></li><li><a href="tour/tuple.html"><strong aria-hidden="true">2.4.</strong> Tuple</a></li><li><a href="tour/list.html"><strong aria-hidden="true">2.5.</strong> List</a></li><li><a href="tour/let.html"><strong aria-hidden="true">2.6.</strong> Let</a></li><li><a href="tour/record.html"><strong aria-hidden="true">2.7.</strong> Record</a></li><li><a href="tour/enum.html"><strong aria-hidden="true">2.8.</strong> Enum</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../tour/index.html"><strong aria-hidden="true">2.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/string-and-atom.html"><strong aria-hidden="true">2.1.</strong> String &amp; Atom</a></li><li><a href="../tour/bool.html"><strong aria-hidden="true">2.2.</strong> Bool</a></li><li><a href="../tour/int-and-float.html" class="active"><strong aria-hidden="true">2.3.</strong> Int &amp; Float</a></li><li><a href="../tour/tuple.html"><strong aria-hidden="true">2.4.</strong> Tuple</a></li><li><a href="../tour/list.html"><strong aria-hidden="true">2.5.</strong> List</a></li><li><a href="../tour/let.html"><strong aria-hidden="true">2.6.</strong> Let</a></li><li><a href="../tour/record.html"><strong aria-hidden="true">2.7.</strong> Record</a></li><li><a href="../tour/enum.html"><strong aria-hidden="true">2.8.</strong> Enum</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -105,7 +105,7 @@
                         <h1 class="menu-title">The Gleam Book</h1> 
 
                         <div class="right-buttons">
-                            <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <a href="../print.html" title="Print this book" aria-label="Print this book">
                                 <i id="print-button" class="fa fa-print"></i>
                             </a>
                         </div>
@@ -136,58 +136,50 @@
 
                 <div id="content" class="content">
                     <main>
-                        <a class="header" href="#gleam" id="gleam"><h1>Gleam</h1></a>
-<p>A statically typed language for the Erlang VM.</p>
-<pre><code class="language-rust noplaypen">pub enum Tree =
-  | Leaf(Int)
-  | Node(Tree, Tree)
-
-pub fn any(tree, predicate) {
-  case tree {
-  | Leaf(i) -&gt; predicate(i)
-  | Node(left, right) -&gt; any(left, predicate) || any(right, predicate)
-  }
-}
-
-pub fn has_even_leaf(tree) {
-  any(tree, fn(i) {
-    i % 2 == 0
-  })
-}
+                        <a class="header" href="#int-and-float" id="int-and-float"><h1>Int and Float</h1></a>
+<p>Gleam's main number types are Int and Float.</p>
+<a class="header" href="#ints" id="ints"><h2>Ints</h2></a>
+<p>Ints are &quot;whole&quot; numbers.</p>
+<pre><code class="language-rust noplaypen">1
+2
+-3
+4001
 </code></pre>
-<a class="header" href="#principals" id="principals"><h2>Principals</h2></a>
-<a class="header" href="#be-safe" id="be-safe"><h3>Be safe</h3></a>
-<p>An expressive type system inspired by the ML family of languages helps us find
-and prevent bugs at compile time, long before it reaches your users.</p>
-<p>For the problems the type system can't solve (such as your server being hit by
-a bolt of lightning) the Erlang/OTP runtime provides well tested mechanisms
-for gracefully handling failure.</p>
-<a class="header" href="#be-friendly" id="be-friendly"><h3>Be friendly</h3></a>
-<p>Hunting down bugs can be stressful so feedback from the compiler should be
-as clear and helpful as possible. We want to spend more time working on our
-application and less time looking for typos or deciphering cryptic error
-messages.</p>
-<p>As a community we want to be friendly too. People of all backgrounds, genders,
-and experience levels are welcome and must receive equal respect.</p>
-<a class="header" href="#be-performant" id="be-performant"><h3>Be performant</h3></a>
-<p>The Erlang/OTP runtime is known for its speed and ability to scale, enabling
-organisations such as WhatsApp and Ericsson to reliably handle massive amounts
-of traffic at low latency. Gleam should take full advantage of this runtime
-and be as fast as other BEAM languages such as Erlang and Elixir.</p>
-<a class="header" href="#be-a-good-citizen" id="be-a-good-citizen"><h3>Be a good citizen</h3></a>
-<p>Gleam makes it easy to use code written in other BEAM languages such as
-Erlang, Elixir and LFE, so there's a rich ecosystem of tools and library for
-Gleam users to make use of.</p>
-<p>Users of other BEAM languages should in return be able to take advantage of
-Gleam, either by transparently making use of libraries written in Gleam, or by
-adding Gleam modules to their existing project with minimal fuss.</p>
+<p>Gleam has several operators that work with Ints, all of which return Ints.</p>
+<pre><code class="language-rust noplaypen">1 + 1 // =&gt; 2
+5 - 1 // =&gt; 4
+5 / 2 // =&gt; 2
+3 * 3 // =&gt; 9
+5 % 2 // =&gt; 1
+</code></pre>
+<a class="header" href="#floats" id="floats"><h2>Floats</h2></a>
+<p>Floats are &quot;<a href="https://en.wikipedia.org/wiki/Real_number">real</a>&quot; numbers,
+meaning they have a decimal point.</p>
+<pre><code class="language-rust noplaypen">1.5
+2.0
+-0.1
+</code></pre>
+<p>Floats also have their own set of operators.</p>
+<pre><code class="language-rust noplaypen">1.0 +. 1.4 // =&gt; 2.4
+5.0 -. 1.5 // =&gt; 3.5
+5.0 /. 2.0 // =&gt; 2.5
+3.0 *. 3.1 // =&gt; 9.3
+</code></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
+                            <a rel="prev" href="../tour/bool.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        
 
+                        
+                            <a rel="next" href="../tour/tuple.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
                         
 
                         <div style="clear: both"></div>
@@ -197,7 +189,15 @@ adding Gleam modules to their existing project with minimal fuss.</p>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
+                    <a href="../tour/bool.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
 
+                
+                    <a href="../tour/tuple.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
                 
             </nav>
 
@@ -210,14 +210,14 @@ adding Gleam modules to their existing project with minimal fuss.</p>
         
 
         
-        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
         
 
-        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
-        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
 
         <!-- Custom JS scripts -->
         

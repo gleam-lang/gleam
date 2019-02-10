@@ -1,9 +1,12 @@
 # Summary
 
 - [Hello, Gleam!](./README.md)
-- [Comparison to Erlang and Elixir](./comparison-to-erlang-and-elixir/README.md)
-  - [Simple types](./comparison-to-erlang-and-elixir/simple-types.md)
-  - [Bool](./comparison-to-erlang-and-elixir/bool.md)
-  - [Variables](./comparison-to-erlang-and-elixir/variables.md)
-  - [Records](./comparison-to-erlang-and-elixir/records.md)
-  - [Enums](./comparison-to-erlang-and-elixir/enums.md)
+- [Language tour](./tour/README.md)
+  - [String & Atom](./tour/string-and-atom.md)
+  - [Bool](./tour/bool.md)
+  - [Int & Float](./tour/int-and-float.md)
+  - [Tuple](./tour/tuple.md)
+  - [List](./tour/list.md)
+  - [Let](./tour/let.md)
+  - [Record](./tour/record.md)
+  - [Enum](./tour/enum.md)

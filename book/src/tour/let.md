@@ -1,6 +1,8 @@
 # Variables
 
-Gleam's variables are immutable and rebindable, like Elixir's.
+A value can be given a name using `let`. Names can be reused by later let
+bindings, but the values contained are _immutable_, meaning the values
+themselves cannot be changed.
 
 ```rust,noplaypen
 // Gleam
@@ -15,7 +17,7 @@ x = 2
 ```
 % Erlang
 X = 1.
-X = 2.  % Runtime error!
+X = 2.  % Runtime error! Erlang doesn't allow rebinding
 ```
 
 Pattern matching can be used to extract contained values from data structures

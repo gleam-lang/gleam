@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Enums - The Gleam Book</title>
+        <title>Record - The Gleam Book</title>
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -72,7 +72,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../comparison-to-erlang-and-elixir/index.html"><strong aria-hidden="true">2.</strong> Comparison to Erlang and Elixir</a></li><li><ol class="section"><li><a href="../comparison-to-erlang-and-elixir/simple-types.html"><strong aria-hidden="true">2.1.</strong> Simple types</a></li><li><a href="../comparison-to-erlang-and-elixir/bool.html"><strong aria-hidden="true">2.2.</strong> Bool</a></li><li><a href="../comparison-to-erlang-and-elixir/variables.html"><strong aria-hidden="true">2.3.</strong> Variables</a></li><li><a href="../comparison-to-erlang-and-elixir/records.html"><strong aria-hidden="true">2.4.</strong> Records</a></li><li><a href="../comparison-to-erlang-and-elixir/enums.html" class="active"><strong aria-hidden="true">2.5.</strong> Enums</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../tour/index.html"><strong aria-hidden="true">2.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/string-and-atom.html"><strong aria-hidden="true">2.1.</strong> String &amp; Atom</a></li><li><a href="../tour/bool.html"><strong aria-hidden="true">2.2.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">2.3.</strong> Int &amp; Float</a></li><li><a href="../tour/tuple.html"><strong aria-hidden="true">2.4.</strong> Tuple</a></li><li><a href="../tour/list.html"><strong aria-hidden="true">2.5.</strong> List</a></li><li><a href="../tour/let.html"><strong aria-hidden="true">2.6.</strong> Let</a></li><li><a href="../tour/record.html" class="active"><strong aria-hidden="true">2.7.</strong> Record</a></li><li><a href="../tour/enum.html"><strong aria-hidden="true">2.8.</strong> Enum</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -136,50 +136,76 @@
 
                 <div id="content" class="content">
                     <main>
-                        <a class="header" href="#enums" id="enums"><h1>Enums</h1></a>
-<p>Enums in Gleam are a way of modeling data that can be one of a few different
-variants.</p>
-<p>We've seen an enum already in this chapter- <code>Bool</code>. In Gleam Bool is defined
-like this:</p>
-<pre><code>// A Bool is a value that is either `True` or `False`
-enum Bool =
-  | True
-  | False
-</code></pre>
-<p>Enum variants can also contain other values.</p>
-<pre><code>enum User =
-  | LoggedIn(String)  // A logged in user with a name
-  | Guest             // A guest user with no details
-</code></pre>
-<pre><code>let sara = LoggedIn(&quot;Sara&quot;)
-let rick = LoggedIn(&quot;Rick&quot;)
-let visitor = Guest
-</code></pre>
-<p>When given an enum we need to pattern match on it to determine the variant and
-use any contained values.</p>
-<pre><code>fn get_name(user) {
-  case user {
-  | LoggedIn(name) -&gt; name
-  | Guest -&gt; &quot;Guest user&quot;
-  }
+                        <a class="header" href="#records" id="records"><h1>Records</h1></a>
+<p>Gleam's records are a collection of names and values where each value can be
+of any type.</p>
+<p>At runtime they are maps with atom keys. They are not the same as Erlang
+records, which are tuples. They are similar to Elixir's structs, but do not
+need to be declared prior to being used.</p>
+<pre><code class="language-rust noplaypen">// Gleam
+{
+  name = &quot;Rex&quot;,
+  size = 40,
 }
 </code></pre>
-<a class="header" href="#runtime-representation" id="runtime-representation"><h2>Runtime representation</h2></a>
-<p>At runtime enum variants with no contained values become atoms. The atoms are
-written in <code>snake_case</code> rather than <code>CamelCase</code> so <code>LoggedIn</code> becomes
-<code>logged_in</code>.</p>
-<p>Enum variants with contained values become tuples with a tag atom.</p>
-<pre><code>// Gleam
-Guest
-LoggedIn(&quot;Kim&quot;)
-</code></pre>
 <pre><code># Elixir
-:guest
-{:logged_in, &quot;Kim&quot;}
+%{
+  name: &quot;Rex&quot;,
+  size: 40
+}
 </code></pre>
 <pre><code>% Erlang
-guest.
-{logged_in, &lt;&lt;&quot;Kim&quot;&gt;&gt;}.
+#{
+  name =&gt; &lt;&lt;&quot;Rex&quot;&gt;&gt;,
+  size =&gt; 40
+}.
+</code></pre>
+<p>Record values can be accessed using the <code>.</code> syntax, as in Elixir.</p>
+<p>The Gleam compiler keeps tracks of what fields and values each record has and
+will present a compile time error if you try to use a record field that does
+not exist or has the incorrect type.</p>
+<pre><code class="language-rust noplaypen">// Gleam
+let pup = { name = &quot;Rex&quot;, size = 40 }
+let name = pup.name
+
+pup.huh  // Compile time error
+</code></pre>
+<pre><code># Elixir
+pup = %{ name: &quot;Rex&quot;, size: 40 }
+name = pup.name
+
+pup.huh  # Runtime error
+</code></pre>
+<pre><code>% Erlang
+Pup = #{name =&gt; &lt;&lt;&quot;Rex&quot;&gt;&gt;, size =&gt; 40}.
+#{name =&gt; Name} = Pup.
+
+#{huh =&gt; Huh} = Pup.  % Runtime error
+</code></pre>
+<p>A new record with updated or additional fields can be created using the update
+syntax.</p>
+<p>The new/updated record fields do not have to have the same types as the
+original fields.</p>
+<pre><code class="language-rust noplaypen">// Gleam
+let pup = { name = &quot;Rex&quot;, size = 40 }
+let dog = { pup | size = 70, playful = True }
+
+pup  // { name = &quot;Rex&quot;, size = 40 }
+dog  // { name = &quot;Rex&quot;, size = 70, playful = True }
+</code></pre>
+<pre><code># Elixir
+pup = %{ name: &quot;Rex&quot;, size: 40 }
+dog = %{ pup | size: 70 } |&gt; Map.put(:playful, true)
+
+pup  # { name: &quot;Rex&quot;, size: 40 }
+dog  # { name: &quot;Rex&quot;, size: 70, playful: true }
+</code></pre>
+<pre><code>% Erlang
+Pup = #{name =&gt; &lt;&lt;&quot;Rex&quot;&gt;&gt;, size =&gt; 40}.
+Dog = Pup#{size =&gt; 70, playful =&gt; true}.
+
+Pup.  % #{name =&gt; &lt;&lt;&quot;Rex&quot;&gt;&gt;, size =&gt; 40}
+Dog.  % #{name =&gt; &lt;&lt;&quot;Rex&quot;&gt;&gt;, size =&gt; 70, playful =&gt; true}
 </code></pre>
 
                     </main>
@@ -187,11 +213,15 @@ guest.
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="../comparison-to-erlang-and-elixir/records.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../tour/let.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
+                        
+                            <a rel="next" href="../tour/enum.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
                         
 
                         <div style="clear: both"></div>
@@ -201,11 +231,15 @@ guest.
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a href="../comparison-to-erlang-and-elixir/records.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a href="../tour/let.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
+                
+                    <a href="../tour/enum.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
                 
             </nav>
 

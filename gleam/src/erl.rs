@@ -189,7 +189,7 @@ fn bin_op(name: BinOp, left: TypedExpr, right: TypedExpr, env: &mut Env) -> Docu
         BinOp::DivInt => "div",
         BinOp::DivFloat => "/",
         BinOp::ModuloInt => "rem",
-        BinOp::ModuloFloat => "rem",
+        BinOp::ModuloFloat => "rem", // TODO: remove
     };
 
     expr(left, env)

@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Variables - The Gleam Book</title>
+        <title>String &amp; Atom - The Gleam Book</title>
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -72,7 +72,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../comparison-to-erlang-and-elixir/index.html"><strong aria-hidden="true">2.</strong> Comparison to Erlang and Elixir</a></li><li><ol class="section"><li><a href="../comparison-to-erlang-and-elixir/simple-types.html"><strong aria-hidden="true">2.1.</strong> Simple types</a></li><li><a href="../comparison-to-erlang-and-elixir/bool.html"><strong aria-hidden="true">2.2.</strong> Bool</a></li><li><a href="../comparison-to-erlang-and-elixir/variables.html" class="active"><strong aria-hidden="true">2.3.</strong> Variables</a></li><li><a href="../comparison-to-erlang-and-elixir/records.html"><strong aria-hidden="true">2.4.</strong> Records</a></li><li><a href="../comparison-to-erlang-and-elixir/enums.html"><strong aria-hidden="true">2.5.</strong> Enums</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../tour/index.html"><strong aria-hidden="true">2.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/string-and-atom.html" class="active"><strong aria-hidden="true">2.1.</strong> String &amp; Atom</a></li><li><a href="../tour/bool.html"><strong aria-hidden="true">2.2.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">2.3.</strong> Int &amp; Float</a></li><li><a href="../tour/tuple.html"><strong aria-hidden="true">2.4.</strong> Tuple</a></li><li><a href="../tour/list.html"><strong aria-hidden="true">2.5.</strong> List</a></li><li><a href="../tour/let.html"><strong aria-hidden="true">2.6.</strong> Let</a></li><li><a href="../tour/record.html"><strong aria-hidden="true">2.7.</strong> Record</a></li><li><a href="../tour/enum.html"><strong aria-hidden="true">2.8.</strong> Enum</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -136,44 +136,34 @@
 
                 <div id="content" class="content">
                     <main>
-                        <a class="header" href="#variables" id="variables"><h1>Variables</h1></a>
-<p>Gleam's variables are immutable and rebindable, like Elixir's.</p>
-<pre><code>// Gleam
-let x = 1
-let x = 2
+                        <a class="header" href="#string--atom" id="string--atom"><h1>String &amp; Atom</h1></a>
+<a class="header" href="#strings" id="strings"><h2>Strings</h2></a>
+<p>Gleam's Strings are binary strings, the same as Elixir's strings.</p>
+<pre><code class="language-rust noplaypen">// Gleam
+&quot;Hello, Gleam!&quot;
 </code></pre>
 <pre><code># Elixir
-x = 1
-x = 2
+&quot;Hello, Elixir!&quot;
 </code></pre>
 <pre><code>% Erlang
-X = 1.
-X = 2.  % Runtime error!
+&lt;&lt;&quot;Hello, Erlang!&quot;&gt;&gt;.
 </code></pre>
-<p>Pattern matching can be used to extract contained values from data structures
-when defining variables with <code>let</code>.</p>
-<pre><code>// Gleam
-let {x, y} = {1, 2.0}
-</code></pre>
-<pre><code># Elixir
-{x, y} = {1, 2.0}
-</code></pre>
-<pre><code>% Erlang
-{X, Y} = {1, 2.0}.
-</code></pre>
+<a class="header" href="#atoms" id="atoms"><h2>Atoms</h2></a>
+<p>Gleam does not currently have first class support for Erlang atoms, though
+likely will in future.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="../comparison-to-erlang-and-elixir/bool.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../tour/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
                         
-                            <a rel="next" href="../comparison-to-erlang-and-elixir/records.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../tour/bool.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -185,13 +175,13 @@ let {x, y} = {1, 2.0}
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a href="../comparison-to-erlang-and-elixir/bool.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a href="../tour/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
-                    <a href="../comparison-to-erlang-and-elixir/records.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a href="../tour/bool.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 

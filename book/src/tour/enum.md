@@ -20,7 +20,6 @@ enum User =
   | LoggedIn(String)  // A logged in user with a name
   | Guest             // A guest user with no details
 ```
-
 ```rust,noplaypen
 let sara = LoggedIn("Sara")
 let rick = LoggedIn("Rick")
@@ -38,6 +37,20 @@ fn get_name(user) {
   }
 }
 ```
+
+Enums can also be destructured with a `let` binding.
+
+```rust,noplaypen
+enum Score =
+  | Points(Int)
+```
+```rust,noplaypen
+let score = Points(50)
+let Points(p) = score
+
+p // => 50
+```
+
 
 ## Runtime representation
 
