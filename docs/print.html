@@ -72,7 +72,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="tour/index.html"><strong aria-hidden="true">2.</strong> Language tour</a></li><li><ol class="section"><li><a href="tour/string.html"><strong aria-hidden="true">2.1.</strong> String</a></li><li><a href="tour/bool.html"><strong aria-hidden="true">2.2.</strong> Bool</a></li><li><a href="tour/int-and-float.html"><strong aria-hidden="true">2.3.</strong> Int &amp; Float</a></li><li><a href="tour/let.html"><strong aria-hidden="true">2.4.</strong> Let bindings</a></li><li><a href="tour/case.html"><strong aria-hidden="true">2.5.</strong> Case</a></li><li><a href="tour/tuple.html"><strong aria-hidden="true">2.6.</strong> Tuple</a></li><li><a href="tour/list.html"><strong aria-hidden="true">2.7.</strong> List</a></li><li><a href="tour/function.html"><strong aria-hidden="true">2.8.</strong> Function</a></li><li><a href="tour/record.html"><strong aria-hidden="true">2.9.</strong> Record</a></li><li><a href="tour/enum.html"><strong aria-hidden="true">2.10.</strong> Enum</a></li><li><a href="tour/external-function.html"><strong aria-hidden="true">2.11.</strong> External function</a></li><li><a href="tour/external-type.html"><strong aria-hidden="true">2.12.</strong> External type</a></li><li><a href="tour/module.html"><strong aria-hidden="true">2.13.</strong> Module</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="tour/index.html"><strong aria-hidden="true">2.</strong> Language tour</a></li><li><ol class="section"><li><a href="tour/string.html"><strong aria-hidden="true">2.1.</strong> String</a></li><li><a href="tour/bool.html"><strong aria-hidden="true">2.2.</strong> Bool</a></li><li><a href="tour/int-and-float.html"><strong aria-hidden="true">2.3.</strong> Int &amp; Float</a></li><li><a href="tour/let.html"><strong aria-hidden="true">2.4.</strong> Let bindings</a></li><li><a href="tour/tuple.html"><strong aria-hidden="true">2.5.</strong> Tuple</a></li><li><a href="tour/list.html"><strong aria-hidden="true">2.6.</strong> List</a></li><li><a href="tour/case.html"><strong aria-hidden="true">2.7.</strong> Case</a></li><li><a href="tour/function.html"><strong aria-hidden="true">2.8.</strong> Function</a></li><li><a href="tour/record.html"><strong aria-hidden="true">2.9.</strong> Record</a></li><li><a href="tour/enum.html"><strong aria-hidden="true">2.10.</strong> Enum</a></li><li><a href="tour/external-function.html"><strong aria-hidden="true">2.11.</strong> External function</a></li><li><a href="tour/external-type.html"><strong aria-hidden="true">2.12.</strong> External type</a></li><li><a href="tour/module.html"><strong aria-hidden="true">2.13.</strong> Module</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -267,12 +267,11 @@ bindings, but the values contained are <em>immutable</em>, meaning the values
 themselves cannot be changed.</p>
 <pre><code class="language-rust noplaypen">let x = 1
 let y = x
-let y = 2
+let x = 2
 
-x  // =&gt; 1
-y  // =&gt; 2
+x  // =&gt; 2
+y  // =&gt; 1
 </code></pre>
-<a class="header" href="#case" id="case"><h1>Case</h1></a>
 <a class="header" href="#tuples" id="tuples"><h1>Tuples</h1></a>
 <p>Tuples are an ordered collection of elements of a fixed size. Each element can
 be of a different type.</p>
@@ -308,6 +307,64 @@ let y = [1 | y]
 
 x  // =&gt; [2, 3]
 y  // =&gt; [1, 2, 3]
+</code></pre>
+<a class="header" href="#case" id="case"><h1>Case</h1></a>
+<p>The <code>case</code> expression is the most common kind of flow control in Gleam code. It
+allows us to say &quot;if the data has this shape then do that&quot;, which we call
+<em>pattern matching</em>.</p>
+<p>Here we match on an <code>Int</code> and return a specific string for the values 0, 1,
+and 2. The final pattern <code>n</code> matches any other value that did not match any of
+the previous patterns.</p>
+<pre><code class="language-rust noplaypen">case some_number {
+| 0 -&gt; &quot;Zero&quot;
+| 1 -&gt; &quot;One&quot;
+| 2 -&gt; &quot;Two&quot;
+| n -&gt; &quot;Some other number&quot; // This matches anything
+}
+</code></pre>
+<p>Pattern matching on a <code>Bool</code> value is the Gleam alternative to the <code>if else</code>
+statement found in other languages.</p>
+<pre><code class="language-rust noplaypen">case some_bool {
+| True -&gt; &quot;It's true!&quot;
+| False -&gt; &quot;It's not true.&quot;
+}
+</code></pre>
+<p>Gleam's <code>case</code> is an expression, meaning it returns a value and can be used
+anywhere we would use a value. For example, we can name the value of a case
+expression with a <code>let</code> binding.</p>
+<pre><code class="language-rust noplaypen">let description =
+  case True {
+  | True -&gt; &quot;It's true!&quot;
+  | False -&gt; &quot;It's not true.&quot;
+  }
+
+description  // =&gt; &quot;It's true!&quot;
+</code></pre>
+<a class="header" href="#destructuring" id="destructuring"><h2>Destructuring</h2></a>
+<p>Like <code>let</code> bindings a <code>case</code> expression can be used to destructure values that
+contain other values, such as tuples and lists.</p>
+<pre><code class="language-rust noplaypen">case xs {
+| [] -&gt; &quot;This list is empty&quot;
+| [a] -&gt; &quot;This list has 1 element&quot;
+| [a, b] -&gt; &quot;This list has 2 element&quot;
+| other -&gt; &quot;This list has more than 2 elements&quot;
+}
+</code></pre>
+<p>It's not just the top level data structure that can be pattern matches,
+contained values can also be matched. This gives <code>case</code> the ability to
+concisely express flow control that might be verbose without pattern matching.</p>
+<pre><code class="language-rust noplaypen">case xs {
+| [[]] -&gt; &quot;The only element is an empty list&quot;
+| [[] | _] -&gt; &quot;The 1st element is an empty list&quot;
+| [[4] | _] -&gt; &quot;The 1st element is a list of the number 4&quot;
+| other -&gt; &quot;Something else&quot;
+}
+</code></pre>
+<pre><code class="language-rust noplaypen">case xs {
+| {1, _} -&gt; &quot;The 1st element is 1&quot;
+| {_, 1} -&gt; &quot;The 2nd element is 1&quot;
+| other -&gt; &quot;Something else&quot;
+}
 </code></pre>
 <a class="header" href="#function" id="function"><h1>Function</h1></a>
 <a class="header" href="#records" id="records"><h1>Records</h1></a>
@@ -395,7 +452,7 @@ using a let binding.</p>
 let rick = LoggedIn(&quot;Rick&quot;)
 let visitor = Guest
 </code></pre>
-<a class="header" href="#destructuring" id="destructuring"><h2>Destructuring</h2></a>
+<a class="header" href="#destructuring-1" id="destructuring-1"><h2>Destructuring</h2></a>
 <p>When given an enum we can pattern match on it to determine which variant it is
 and to assign names to any contained values.</p>
 <pre><code class="language-rust noplaypen">fn get_name(user) {

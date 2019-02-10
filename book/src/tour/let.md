@@ -7,8 +7,8 @@ themselves cannot be changed.
 ```rust,noplaypen
 let x = 1
 let y = x
-let y = 2
+let x = 2
 
-x  // => 1
-y  // => 2
+x  // => 2
+y  // => 1
 ```
