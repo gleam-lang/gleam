@@ -1,10 +1,12 @@
 # Enums
 
 Enums in Gleam are a way of modeling data that can be one of a few different
-variants.
+variants. They must be declared before use, and the names of variants must be
+unique for the given module.
 
-We've seen an enum already in this chapter- `Bool`. In Gleam Bool is defined
-like this:
+We've seen an enum already in this chapter- `Bool`.
+
+Bool is defined like this:
 
 ```rust,noplaypen
 // A Bool is a value that is either `True` or `False`
@@ -13,7 +15,9 @@ enum Bool =
   | False
 ```
 
-Enum variants can also contain other values.
+
+Enum variants can also contain other values, and these values can be extracted
+using a let binding.
 
 ```rust,noplaypen
 enum User =
@@ -26,8 +30,11 @@ let rick = LoggedIn("Rick")
 let visitor = Guest
 ```
 
-When given an enum we need to pattern match on it to determine the variant and
-use any contained values.
+
+## Destructuring
+
+When given an enum we can pattern match on it to determine which variant it is
+and to assign names to any contained values.
 
 ```rust,noplaypen
 fn get_name(user) {
@@ -52,7 +59,7 @@ p // => 50
 ```
 
 
-## Runtime representation
+## Erlang interop
 
 At runtime enum variants with no contained values become atoms. The atoms are
 written in `snake_case` rather than `CamelCase` so `LoggedIn` becomes

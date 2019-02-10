@@ -3,18 +3,17 @@
 Tuples are an ordered collection of elements of a fixed size. Each element can
 be of a different type.
 
-The syntax for tuples in Gleam is the same as in Elixir and Erlang.
+```rust,noplaypen
+{"Cat", True}  // Type {String, Bool}
+{1, 2.0, "3"}  // Type {Int, Float, String}
+```
+
+Contained values can be extracted from tuples using a let binding.
 
 ```rust,noplaypen
-// Gleam
-{1, 2.0, "three"}
-```
-```
-# Elixir
-true
-{1, 2.0, "three"}
-```
-```
-% Erlang
-{1, 2.0, <<"three">>}.
+let values = {1, 2.0}
+let {x, y} = values
+
+x  // => 1
+y  // => 1.0
 ```

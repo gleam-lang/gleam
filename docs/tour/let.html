@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Let - The Gleam Book</title>
+        <title>Let bindings - The Gleam Book</title>
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -72,7 +72,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../tour/index.html"><strong aria-hidden="true">2.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/string-and-atom.html"><strong aria-hidden="true">2.1.</strong> String &amp; Atom</a></li><li><a href="../tour/bool.html"><strong aria-hidden="true">2.2.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">2.3.</strong> Int &amp; Float</a></li><li><a href="../tour/tuple.html"><strong aria-hidden="true">2.4.</strong> Tuple</a></li><li><a href="../tour/list.html"><strong aria-hidden="true">2.5.</strong> List</a></li><li><a href="../tour/let.html" class="active"><strong aria-hidden="true">2.6.</strong> Let</a></li><li><a href="../tour/record.html"><strong aria-hidden="true">2.7.</strong> Record</a></li><li><a href="../tour/enum.html"><strong aria-hidden="true">2.8.</strong> Enum</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../tour/index.html"><strong aria-hidden="true">2.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/string.html"><strong aria-hidden="true">2.1.</strong> String</a></li><li><a href="../tour/bool.html"><strong aria-hidden="true">2.2.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">2.3.</strong> Int &amp; Float</a></li><li><a href="../tour/let.html" class="active"><strong aria-hidden="true">2.4.</strong> Let bindings</a></li><li><a href="../tour/case.html"><strong aria-hidden="true">2.5.</strong> Case</a></li><li><a href="../tour/tuple.html"><strong aria-hidden="true">2.6.</strong> Tuple</a></li><li><a href="../tour/list.html"><strong aria-hidden="true">2.7.</strong> List</a></li><li><a href="../tour/function.html"><strong aria-hidden="true">2.8.</strong> Function</a></li><li><a href="../tour/record.html"><strong aria-hidden="true">2.9.</strong> Record</a></li><li><a href="../tour/enum.html"><strong aria-hidden="true">2.10.</strong> Enum</a></li><li><a href="../tour/external-function.html"><strong aria-hidden="true">2.11.</strong> External function</a></li><li><a href="../tour/external-type.html"><strong aria-hidden="true">2.12.</strong> External type</a></li><li><a href="../tour/module.html"><strong aria-hidden="true">2.13.</strong> Module</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -136,32 +136,16 @@
 
                 <div id="content" class="content">
                     <main>
-                        <a class="header" href="#variables" id="variables"><h1>Variables</h1></a>
+                        <a class="header" href="#let-bindings" id="let-bindings"><h1>Let bindings</h1></a>
 <p>A value can be given a name using <code>let</code>. Names can be reused by later let
 bindings, but the values contained are <em>immutable</em>, meaning the values
 themselves cannot be changed.</p>
-<pre><code class="language-rust noplaypen">// Gleam
-let x = 1
-let x = 2
-</code></pre>
-<pre><code># Elixir
-x = 1
-x = 2
-</code></pre>
-<pre><code>% Erlang
-X = 1.
-X = 2.  % Runtime error! Erlang doesn't allow rebinding
-</code></pre>
-<p>Pattern matching can be used to extract contained values from data structures
-when defining variables with <code>let</code>.</p>
-<pre><code class="language-rust noplaypen">// Gleam
-let {x, y} = {1, 2.0}
-</code></pre>
-<pre><code># Elixir
-{x, y} = {1, 2.0}
-</code></pre>
-<pre><code>% Erlang
-{X, Y} = {1, 2.0}.
+<pre><code class="language-rust noplaypen">let x = 1
+let y = x
+let y = 2
+
+x  // =&gt; 1
+y  // =&gt; 2
 </code></pre>
 
                     </main>
@@ -169,13 +153,13 @@ let {x, y} = {1, 2.0}
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="../tour/list.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../tour/int-and-float.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
                         
-                            <a rel="next" href="../tour/record.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../tour/case.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -187,13 +171,13 @@ let {x, y} = {1, 2.0}
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a href="../tour/list.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a href="../tour/int-and-float.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
-                    <a href="../tour/record.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a href="../tour/case.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 

@@ -31,3 +31,9 @@ pub fn person_with_age(name, age) {
 pub fn get_age(record) {
   record.age
 }
+
+pub fn multiline() {
+  "hello
+  \"
+world"
+}

@@ -27,4 +27,5 @@ gleam/target/release/gleam: $(shell find gleam/src -type f)
 	cd gleam && cargo build --release
 
 docs/index.html: $(shell find book/src -type f)
+	rm -r docs
 	cd book && mdbook build --dest-dir ../docs/

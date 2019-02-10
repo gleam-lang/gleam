@@ -24,7 +24,7 @@ hand side if they don't have to.
 `||` evaluates the right hand side if the left hand side is `False`.
 
 
-## Runtime representation
+## Erlang interop
 
 While written in the code using a capital letter, they are represented at
 runtime with the atoms `true` and `false`, making them compatible with Elixir

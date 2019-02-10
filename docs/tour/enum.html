@@ -72,7 +72,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../tour/index.html"><strong aria-hidden="true">2.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/string-and-atom.html"><strong aria-hidden="true">2.1.</strong> String &amp; Atom</a></li><li><a href="../tour/bool.html"><strong aria-hidden="true">2.2.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">2.3.</strong> Int &amp; Float</a></li><li><a href="../tour/tuple.html"><strong aria-hidden="true">2.4.</strong> Tuple</a></li><li><a href="../tour/list.html"><strong aria-hidden="true">2.5.</strong> List</a></li><li><a href="../tour/let.html"><strong aria-hidden="true">2.6.</strong> Let</a></li><li><a href="../tour/record.html"><strong aria-hidden="true">2.7.</strong> Record</a></li><li><a href="../tour/enum.html" class="active"><strong aria-hidden="true">2.8.</strong> Enum</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../tour/index.html"><strong aria-hidden="true">2.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/string.html"><strong aria-hidden="true">2.1.</strong> String</a></li><li><a href="../tour/bool.html"><strong aria-hidden="true">2.2.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">2.3.</strong> Int &amp; Float</a></li><li><a href="../tour/let.html"><strong aria-hidden="true">2.4.</strong> Let bindings</a></li><li><a href="../tour/case.html"><strong aria-hidden="true">2.5.</strong> Case</a></li><li><a href="../tour/tuple.html"><strong aria-hidden="true">2.6.</strong> Tuple</a></li><li><a href="../tour/list.html"><strong aria-hidden="true">2.7.</strong> List</a></li><li><a href="../tour/function.html"><strong aria-hidden="true">2.8.</strong> Function</a></li><li><a href="../tour/record.html"><strong aria-hidden="true">2.9.</strong> Record</a></li><li><a href="../tour/enum.html" class="active"><strong aria-hidden="true">2.10.</strong> Enum</a></li><li><a href="../tour/external-function.html"><strong aria-hidden="true">2.11.</strong> External function</a></li><li><a href="../tour/external-type.html"><strong aria-hidden="true">2.12.</strong> External type</a></li><li><a href="../tour/module.html"><strong aria-hidden="true">2.13.</strong> Module</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -138,15 +138,17 @@
                     <main>
                         <a class="header" href="#enums" id="enums"><h1>Enums</h1></a>
 <p>Enums in Gleam are a way of modeling data that can be one of a few different
-variants.</p>
-<p>We've seen an enum already in this chapter- <code>Bool</code>. In Gleam Bool is defined
-like this:</p>
+variants. They must be declared before use, and the names of variants must be
+unique for the given module.</p>
+<p>We've seen an enum already in this chapter- <code>Bool</code>.</p>
+<p>Bool is defined like this:</p>
 <pre><code class="language-rust noplaypen">// A Bool is a value that is either `True` or `False`
 enum Bool =
   | True
   | False
 </code></pre>
-<p>Enum variants can also contain other values.</p>
+<p>Enum variants can also contain other values, and these values can be extracted
+using a let binding.</p>
 <pre><code class="language-rust noplaypen">enum User =
   | LoggedIn(String)  // A logged in user with a name
   | Guest             // A guest user with no details
@@ -155,8 +157,9 @@ enum Bool =
 let rick = LoggedIn(&quot;Rick&quot;)
 let visitor = Guest
 </code></pre>
-<p>When given an enum we need to pattern match on it to determine the variant and
-use any contained values.</p>
+<a class="header" href="#destructuring" id="destructuring"><h2>Destructuring</h2></a>
+<p>When given an enum we can pattern match on it to determine which variant it is
+and to assign names to any contained values.</p>
 <pre><code class="language-rust noplaypen">fn get_name(user) {
   case user {
   | LoggedIn(name) -&gt; name
@@ -173,7 +176,7 @@ let Points(p) = score
 
 p // =&gt; 50
 </code></pre>
-<a class="header" href="#runtime-representation" id="runtime-representation"><h2>Runtime representation</h2></a>
+<a class="header" href="#erlang-interop" id="erlang-interop"><h2>Erlang interop</h2></a>
 <p>At runtime enum variants with no contained values become atoms. The atoms are
 written in <code>snake_case</code> rather than <code>CamelCase</code> so <code>LoggedIn</code> becomes
 <code>logged_in</code>.</p>
@@ -202,6 +205,10 @@ guest.
                         
 
                         
+                            <a rel="next" href="../tour/external-function.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        
 
                         <div style="clear: both"></div>
                     </nav>
@@ -215,6 +222,10 @@ guest.
                     </a>
                 
 
+                
+                    <a href="../tour/external-function.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
                 
             </nav>
 

@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Tuple - The Gleam Book</title>
+        <title>External function - The Gleam Book</title>
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -72,7 +72,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../tour/index.html"><strong aria-hidden="true">2.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/string.html"><strong aria-hidden="true">2.1.</strong> String</a></li><li><a href="../tour/bool.html"><strong aria-hidden="true">2.2.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">2.3.</strong> Int &amp; Float</a></li><li><a href="../tour/let.html"><strong aria-hidden="true">2.4.</strong> Let bindings</a></li><li><a href="../tour/case.html"><strong aria-hidden="true">2.5.</strong> Case</a></li><li><a href="../tour/tuple.html" class="active"><strong aria-hidden="true">2.6.</strong> Tuple</a></li><li><a href="../tour/list.html"><strong aria-hidden="true">2.7.</strong> List</a></li><li><a href="../tour/function.html"><strong aria-hidden="true">2.8.</strong> Function</a></li><li><a href="../tour/record.html"><strong aria-hidden="true">2.9.</strong> Record</a></li><li><a href="../tour/enum.html"><strong aria-hidden="true">2.10.</strong> Enum</a></li><li><a href="../tour/external-function.html"><strong aria-hidden="true">2.11.</strong> External function</a></li><li><a href="../tour/external-type.html"><strong aria-hidden="true">2.12.</strong> External type</a></li><li><a href="../tour/module.html"><strong aria-hidden="true">2.13.</strong> Module</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../tour/index.html"><strong aria-hidden="true">2.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/string.html"><strong aria-hidden="true">2.1.</strong> String</a></li><li><a href="../tour/bool.html"><strong aria-hidden="true">2.2.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">2.3.</strong> Int &amp; Float</a></li><li><a href="../tour/let.html"><strong aria-hidden="true">2.4.</strong> Let bindings</a></li><li><a href="../tour/case.html"><strong aria-hidden="true">2.5.</strong> Case</a></li><li><a href="../tour/tuple.html"><strong aria-hidden="true">2.6.</strong> Tuple</a></li><li><a href="../tour/list.html"><strong aria-hidden="true">2.7.</strong> List</a></li><li><a href="../tour/function.html"><strong aria-hidden="true">2.8.</strong> Function</a></li><li><a href="../tour/record.html"><strong aria-hidden="true">2.9.</strong> Record</a></li><li><a href="../tour/enum.html"><strong aria-hidden="true">2.10.</strong> Enum</a></li><li><a href="../tour/external-function.html" class="active"><strong aria-hidden="true">2.11.</strong> External function</a></li><li><a href="../tour/external-type.html"><strong aria-hidden="true">2.12.</strong> External type</a></li><li><a href="../tour/module.html"><strong aria-hidden="true">2.13.</strong> Module</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -136,32 +136,20 @@
 
                 <div id="content" class="content">
                     <main>
-                        <a class="header" href="#tuples" id="tuples"><h1>Tuples</h1></a>
-<p>Tuples are an ordered collection of elements of a fixed size. Each element can
-be of a different type.</p>
-<pre><code class="language-rust noplaypen">{&quot;Cat&quot;, True}  // Type {String, Bool}
-{1, 2.0, &quot;3&quot;}  // Type {Int, Float, String}
-</code></pre>
-<p>Contained values can be extracted from tuples using a let binding.</p>
-<pre><code class="language-rust noplaypen">let values = {1, 2.0}
-let {x, y} = values
-
-x  // =&gt; 1
-y  // =&gt; 1.0
-</code></pre>
+                        <a class="header" href="#external-function" id="external-function"><h1>External function</h1></a>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="../tour/case.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../tour/enum.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
                         
-                            <a rel="next" href="../tour/list.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../tour/external-type.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -173,13 +161,13 @@ y  // =&gt; 1.0
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a href="../tour/case.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a href="../tour/enum.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
-                    <a href="../tour/list.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a href="../tour/external-type.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 

@@ -72,7 +72,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../tour/index.html"><strong aria-hidden="true">2.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/string-and-atom.html"><strong aria-hidden="true">2.1.</strong> String &amp; Atom</a></li><li><a href="../tour/bool.html"><strong aria-hidden="true">2.2.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">2.3.</strong> Int &amp; Float</a></li><li><a href="../tour/tuple.html"><strong aria-hidden="true">2.4.</strong> Tuple</a></li><li><a href="../tour/list.html" class="active"><strong aria-hidden="true">2.5.</strong> List</a></li><li><a href="../tour/let.html"><strong aria-hidden="true">2.6.</strong> Let</a></li><li><a href="../tour/record.html"><strong aria-hidden="true">2.7.</strong> Record</a></li><li><a href="../tour/enum.html"><strong aria-hidden="true">2.8.</strong> Enum</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../tour/index.html"><strong aria-hidden="true">2.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/string.html"><strong aria-hidden="true">2.1.</strong> String</a></li><li><a href="../tour/bool.html"><strong aria-hidden="true">2.2.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">2.3.</strong> Int &amp; Float</a></li><li><a href="../tour/let.html"><strong aria-hidden="true">2.4.</strong> Let bindings</a></li><li><a href="../tour/case.html"><strong aria-hidden="true">2.5.</strong> Case</a></li><li><a href="../tour/tuple.html"><strong aria-hidden="true">2.6.</strong> Tuple</a></li><li><a href="../tour/list.html" class="active"><strong aria-hidden="true">2.7.</strong> List</a></li><li><a href="../tour/function.html"><strong aria-hidden="true">2.8.</strong> Function</a></li><li><a href="../tour/record.html"><strong aria-hidden="true">2.9.</strong> Record</a></li><li><a href="../tour/enum.html"><strong aria-hidden="true">2.10.</strong> Enum</a></li><li><a href="../tour/external-function.html"><strong aria-hidden="true">2.11.</strong> External function</a></li><li><a href="../tour/external-type.html"><strong aria-hidden="true">2.12.</strong> External type</a></li><li><a href="../tour/module.html"><strong aria-hidden="true">2.13.</strong> Module</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -142,14 +142,22 @@ structures in Gleam.</p>
 <p>Lists are <em>homogeneous</em>, meaning all the elements of a List must be of the
 same type. Attempting to construct a list of multiple types of element will
 result in the compiler presenting a type error.</p>
-<pre><code class="language-rust noplaypen">// Gleam
-[1, 2, 3, 4]  // List(Int)
+<pre><code class="language-rust noplaypen">[1, 2, 3, 4]  // List(Int)
 [1.22, 2.30]  // List(Float)
 [1.22, 3, 4]  // Type error!
 </code></pre>
 <p>Prepending to a list is very fast, and is the preferred way to add new values.</p>
-<pre><code class="language-rust noplaypen">// Gleam
-[1 | [2, 3]]  // =&gt; [1, 2, 3]
+<pre><code class="language-rust noplaypen">[1 | [2, 3]]  // =&gt; [1, 2, 3]
+</code></pre>
+<p>Note that as all data structures in Gleam are immutable so prepanding to a
+list does not change the original list, instead it efficiently creates a new
+list with the new additional element.</p>
+<pre><code class="language-rust noplaypen">let x = [2, 3]
+let y = [1 | y]
+
+
+x  // =&gt; [2, 3]
+y  // =&gt; [1, 2, 3]
 </code></pre>
 
                     </main>
@@ -163,7 +171,7 @@ result in the compiler presenting a type error.</p>
                         
 
                         
-                            <a rel="next" href="../tour/let.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../tour/function.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -181,7 +189,7 @@ result in the compiler presenting a type error.</p>
                 
 
                 
-                    <a href="../tour/let.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a href="../tour/function.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 

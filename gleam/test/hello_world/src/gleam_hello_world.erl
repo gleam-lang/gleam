@@ -1,6 +1,6 @@
 -module(gleam_hello_world).
 
--export([any/2, has_even_leaf/1, person/1, add_age/2, person_with_age/2]).
+-export([any/2, has_even_leaf/1, person/1, put_age/2, person_with_age/2, get_age/1, multiline/0]).
 
 any(Tree, Predicate) ->
     case Tree of
@@ -17,8 +17,16 @@ has_even_leaf(Tree) ->
 person(Name) ->
     #{}#{'name' => Name}.
 
-add_age(Record, Age) ->
+put_age(Record, Age) ->
     Record#{'age' => Age}.
 
 person_with_age(Name, Age) ->
-    add_age(person(Name), Age).
+    put_age(person(Name), Age).
+
+get_age(Record) ->
+    maps:get('age', Record).
+
+multiline() ->
+    <<"hello
+  \"
+world">>.
