@@ -189,13 +189,12 @@ SimpleExpr: UntypedExpr = {
     Tuple => <>,
     String => <>,
     Record => <>,
-    // Case => <>,
     RecordNil => <>,
     RecordCons => <>,
     Constructor => <>,
     RecordSelect => <>,
     ModuleSelect => <>,
-    "begin" <e:Expr> "end" => e, // TODO: Replace begin end with ( )
+    "begin" <e:Expr> "end" => e,
 }
 
 Case: UntypedExpr = {

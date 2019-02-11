@@ -26,6 +26,8 @@ extern crate pretty_assertions;
 #[macro_use]
 extern crate lalrpop_util;
 
+use petgraph::Graph;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 use structopt::clap::AppSettings;
@@ -66,8 +68,11 @@ fn command_build(root: String) {
         })
         .collect::<Vec<_>>();
 
-    // TODO: Build an acyclic graph to determine the order of module compilation
-    // https://crates.io/crates/petgraph
+    let mut deps_graph = Graph::new();
+    let mut deps_vec = Vec::with_capacity(srcs.len());
+    let mut indexes = HashMap::new();
+    let mut modules = HashMap::new();
+
     for dir_entry in srcs {
         let src = fs::read_to_string(dir_entry.path())
             .expect(&format!("Unable to read {:?}", dir_entry.path()));
@@ -86,16 +91,37 @@ fn command_build(root: String) {
 
         module.name = name.clone();
 
-        let module = crate::typ::infer_module(module)
-            .expect(&format!("Unable to infer types of {:?}", name));
-
-        let erl = crate::erl::module(module);
-
-        println!("{}", erl);
-
-        let erl_name = format!("gleam_{}.erl", name);
-        let mut f = File::create(src_dir.join(erl_name)).expect("Unable to create file");
-        f.write_all(erl.as_bytes())
-            .expect("Unable to write Erlang code to file");
+        let index = deps_graph.add_node(name.clone());
+        deps_vec.push((name.clone(), module.dependancies()));
+        indexes.insert(name.clone(), index.clone());
+        modules.insert(index, module);
     }
+
+    // Register each module's deps so that we can determine a correct order to compile the modules.
+    for (module, deps) in deps_vec {
+        let module_index = indexes.get(&module).expect("Unable to find module index");
+        for dep in deps {
+            let dep_index = indexes.get(&dep).expect("Unable to find module index");
+            deps_graph.add_edge(module_index.clone(), dep_index.clone(), ());
+        }
+    }
+
+    let modules = petgraph::algo::toposort(&deps_graph, None)
+        .expect("Could not determine module compile order")
+        .into_iter()
+        .map(|i| modules.remove(&i).expect("Unknown graph index"))
+        .for_each(|module| {
+            let name = module.name.clone();
+            let module = crate::typ::infer_module(module)
+                .expect(&format!("Unable to infer types of {:?}", name));
+
+            let erl = crate::erl::module(module);
+
+            println!("{}", erl);
+
+            let erl_name = format!("gleam_{}.erl", name);
+            let mut f = File::create(src_dir.join(erl_name)).expect("Unable to create file");
+            f.write_all(erl.as_bytes())
+                .expect("Unable to write Erlang code to file");
+        });
 }
