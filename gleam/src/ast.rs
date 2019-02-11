@@ -13,6 +13,29 @@ pub struct Module<S, T> {
     pub statements: Vec<Statement<S, T>>,
 }
 
+impl<S, T> Module<S, T> {
+    pub fn dependancies(&self) -> Vec<String> {
+        self.statements
+            .iter()
+            .flat_map(|s| match s {
+                Statement::Import { module, .. } => Some(module.clone()),
+                _ => None,
+            })
+            .collect()
+    }
+}
+
+#[test]
+fn module_dependencies_test() {
+    assert_eq!(
+        vec!["foo".to_string(), "bar".to_string(), "foo_bar".to_string()],
+        crate::grammar::ModuleParser::new()
+            .parse("import foo import bar import foo_bar")
+            .expect("syntax error")
+            .dependancies()
+    );
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Arg {
     pub name: String,

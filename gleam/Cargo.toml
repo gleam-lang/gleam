@@ -15,8 +15,10 @@ itertools = "0.7"
 # String case conversion
 heck = "0.3"
 # Parsing
-lalrpop-util = "0.16.2"
+lalrpop-util = "0.16"
 regex = "0.2.1"
+# Graph data structures
+petgraph = "0.4"
 
 [build-dependencies]
 lalrpop = "0.16"
