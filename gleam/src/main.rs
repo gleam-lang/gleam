@@ -106,7 +106,7 @@ fn command_build(root: String) {
         }
     }
 
-    let modules = petgraph::algo::toposort(&deps_graph, None)
+    petgraph::algo::toposort(&deps_graph, None)
         .expect("Could not determine module compile order")
         .into_iter()
         .map(|i| modules.remove(&i).expect("Unknown graph index"))
