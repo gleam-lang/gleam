@@ -16,6 +16,13 @@ pub fn compare(a, b) {
   }
 }
 
+pub fn not(a) {
+  case a {
+  | True -> False
+  | False -> True
+  }
+}
+
 pub fn max(a, b) {
   case a {
   | True -> True

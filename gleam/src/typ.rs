@@ -837,7 +837,10 @@ pub enum Error {
 /// Crawl the AST, annotating each node with the inferred type or
 /// returning an error.
 ///
-pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
+pub fn infer_module(
+    module: UntypedModule,
+    modules: &std::collections::HashMap<String, Type>,
+) -> Result<TypedModule, Error> {
     let mut env = Env::new();
     let mut fields = vec![];
     let module_name = &module.name;
@@ -1050,7 +1053,17 @@ pub fn infer_module(module: UntypedModule) -> Result<TypedModule, Error> {
                 })
             }
 
-            Statement::Import { .. } => unimplemented!(),
+            Statement::Import { meta, module } => {
+                let typ = modules.get(&module).unwrap(); // TODO: handle unknown
+                env.insert_variable(
+                    module.clone(),
+                    Scope::Import {
+                        module: module.clone(),
+                    },
+                    typ.clone(),
+                );
+                Ok(Statement::Import { meta, module })
+            }
         })
         .collect::<Result<Vec<_>, _>>()?;
 
@@ -1350,7 +1363,34 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             })
         }
 
-        Expr::ModuleSelect { .. } => unimplemented!(),
+        Expr::ModuleSelect {
+            meta,
+            module,
+            label,
+            ..
+        } => {
+            let module = infer(*module, level, env)?;
+
+            // We unify the module with a dummy module in order to determine the type of the
+            // selected field.
+            let other_fields_typ = env.new_unbound_var(level);
+            let selected_field_typ = env.new_unbound_var(level);
+            let dummy_module = Type::Module {
+                row: Box::new(Type::RowCons {
+                    label: label.clone(),
+                    head: Box::new(selected_field_typ.clone()),
+                    tail: Box::new(other_fields_typ),
+                }),
+            };
+            unify(&dummy_module, module.typ()).map_err(|e| convert_unify_error(e, &meta))?;
+
+            Ok(Expr::ModuleSelect {
+                meta,
+                label,
+                module: Box::new(module),
+                typ: selected_field_typ,
+            })
+        }
     }
 }
 
@@ -1622,7 +1662,9 @@ fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
                 row: Box::new(go(*row, ctx_level, ids, env)),
             },
 
-            Type::Module { .. } => unimplemented!(),
+            Type::Module { row } => Type::Module {
+                row: Box::new(go(*row, ctx_level, ids, env)),
+            },
 
             Type::RowCons { label, head, tail } => Type::RowCons {
                 label,
@@ -1784,7 +1826,7 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
 
         (Type::Record { row: row1 }, Type::Record { row: row2 }) => unify(row1, row2),
 
-        (Type::Module { .. }, Type::Module { .. }) => unimplemented!(),
+        (Type::Module { row: row1 }, Type::Module { row: row2 }) => unify(row1, row2),
 
         (Type::RowNil, Type::RowNil) => unimplemented!(),
 
@@ -2012,7 +2054,7 @@ fn match_fun_type(
 ) -> Result<(Vec<Type>, Type), NotFnError> {
     if let Type::Var { typ } = &typ {
         let new_value = match &*typ.borrow() {
-            TypeVar::Link { .. } => unimplemented!(),
+            TypeVar::Link { typ, .. } => return match_fun_type(typ, arity, env),
 
             TypeVar::Unbound { level, .. } => {
                 let args: Vec<_> = (0..arity).map(|_| env.new_unbound_var(*level)).collect();
@@ -3089,7 +3131,8 @@ pub fn two() { one() + zero() }",
         let ast = crate::grammar::ModuleParser::new()
             .parse(src)
             .expect("syntax error");
-        let result = infer_module(ast).expect("should successfully infer");
+        let result = infer_module(ast, &std::collections::HashMap::new())
+            .expect("should successfully infer");
         assert_eq!(
             (
                 src,
@@ -3147,7 +3190,8 @@ fn infer_module_error_test() {
         let ast = crate::grammar::ModuleParser::new()
             .parse(src)
             .expect("syntax error");
-        let result = infer_module(ast).expect_err("should infer an error");
+        let result = infer_module(ast, &std::collections::HashMap::new())
+            .expect_err("should infer an error");
         assert_eq!((src, &result), (src, error));
     }
 }

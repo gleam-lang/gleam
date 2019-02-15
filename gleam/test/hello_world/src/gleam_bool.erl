@@ -1,6 +1,6 @@
 -module(gleam_bool).
 
--export([compare/2, max/2, min/2, to_int/1]).
+-export([compare/2, not/1, max/2, min/2, to_int/1]).
 
 compare(A, B) ->
     case {A, B} of
@@ -15,6 +15,15 @@ compare(A, B) ->
 
         {'false', 'true'} ->
             'gt'
+    end.
+
+not(A) ->
+    case A of
+        'true' ->
+            'false';
+
+        'false' ->
+            'true'
     end.
 
 max(A, B) ->

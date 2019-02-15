@@ -153,6 +153,7 @@ pub type TypedScope = Scope<typ::Type>;
 pub enum Scope<T> {
     Local,
     Module { arity: usize },
+    Import { module: String },
     Constant { value: Box<Expr<Scope<T>, T>> },
 }
 

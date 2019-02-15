@@ -325,8 +325,9 @@ where
 fn var(name: String, scope: TypedScope, env: &mut Env) -> Document {
     match scope {
         Scope::Local => env.local_var_name(name),
-        Scope::Constant { value } => expr(*value, env),
+        Scope::Import { module } => module.to_doc(),
         Scope::Module { arity, .. } => "fun ".to_doc().append(name).append("/").append(arity),
+        Scope::Constant { value } => expr(*value, env),
     }
 }
 
@@ -373,6 +374,12 @@ fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
             name,
             ..
         } => name.to_doc().append(call_args(args, env)),
+
+        // TODO: test
+        Expr::ModuleSelect { module, label, .. } => expr(*module, env)
+            .append(":")
+            .append(label)
+            .append(call_args(args, env)),
 
         call @ Expr::Call { .. } => expr(call, env)
             .surround("(", ")")
@@ -1366,7 +1373,8 @@ age(X) ->
         let ast = crate::grammar::ModuleParser::new()
             .parse(src)
             .expect("syntax error");
-        let ast = crate::typ::infer_module(ast).expect("should successfully infer");
+        let ast = crate::typ::infer_module(ast, &std::collections::HashMap::new())
+            .expect("should successfully infer");
         let output = module(ast);
         assert_eq!((src, output), (src, erl.to_string()),);
     }

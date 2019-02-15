@@ -37,3 +37,9 @@ pub fn multiline() {
   \"
 world"
 }
+
+import bool
+
+pub fn not(b) {
+  bool:not(b)
+}

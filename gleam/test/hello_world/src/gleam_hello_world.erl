@@ -1,6 +1,6 @@
 -module(gleam_hello_world).
 
--export([any/2, has_even_leaf/1, person/1, put_age/2, person_with_age/2, get_age/1, multiline/0]).
+-export([any/2, has_even_leaf/1, person/1, put_age/2, person_with_age/2, get_age/1, multiline/0, not/1]).
 
 any(Tree, Predicate) ->
     case Tree of
@@ -30,3 +30,6 @@ multiline() ->
     <<"hello
   \"
 world">>.
+
+not(B) ->
+    bool:not(B).

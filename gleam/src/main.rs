@@ -68,6 +68,8 @@ fn command_build(root: String) {
         })
         .collect::<Vec<_>>();
 
+    // TODO: Extract the code below.
+
     let mut deps_graph = Graph::new();
     let mut deps_vec = Vec::with_capacity(srcs.len());
     let mut indexes = HashMap::new();
@@ -102,9 +104,11 @@ fn command_build(root: String) {
         let module_index = indexes.get(&module).expect("Unable to find module index");
         for dep in deps {
             let dep_index = indexes.get(&dep).expect("Unable to find module index");
-            deps_graph.add_edge(module_index.clone(), dep_index.clone(), ());
+            deps_graph.add_edge(dep_index.clone(), module_index.clone(), ());
         }
     }
+
+    let mut module_types = HashMap::new();
 
     petgraph::algo::toposort(&deps_graph, None)
         .expect("Could not determine module compile order")
@@ -112,12 +116,15 @@ fn command_build(root: String) {
         .map(|i| modules.remove(&i).expect("Unknown graph index"))
         .for_each(|module| {
             let name = module.name.clone();
-            let module = crate::typ::infer_module(module)
+
+            println!("Compiling {}", name);
+
+            let module = crate::typ::infer_module(module, &module_types)
                 .expect(&format!("Unable to infer types of {:?}", name));
 
-            let erl = crate::erl::module(module);
+            module_types.insert(name.clone(), module.typ.clone());
 
-            println!("{}", erl);
+            let erl = crate::erl::module(module);
 
             let erl_name = format!("gleam_{}.erl", name);
             let mut f = File::create(src_dir.join(erl_name)).expect("Unable to create file");
