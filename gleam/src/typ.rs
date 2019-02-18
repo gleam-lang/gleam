@@ -78,6 +78,9 @@ impl Type {
             Type::Tuple { elems, .. } => args_to_gleam_doc(elems, names, uid).surround("{", "}"),
 
             Type::Record { row } => {
+                if let Type::RowNil { .. } = **row {
+                    return "{}".to_doc();
+                }
                 let mut row_to_doc = |row: &Type| {
                     let mut fields = ordmap![];
                     let tail = row.gather_fields(&mut fields);
@@ -103,13 +106,12 @@ impl Type {
                             .append(fields_doc),
                     }
                 };
-
                 "{".to_doc()
                     .append(
-                        break_("", "")
+                        break_("", " ")
                             .append(row_to_doc(row))
                             .nest(INDENT)
-                            .append(break_("", ""))
+                            .append(break_("", " "))
                             .group(),
                     )
                     .append("}")
@@ -2515,12 +2517,6 @@ fn infer_test() {
             src: "fn(f, x) { f(f(x)) }",
             typ: "fn(fn(a) -> a, a) -> a",
         },
-        // TODO: This is allowed in the Erlang implementation due to how the pattern
-        // assignments work. Unclear what the implications of this would be.
-        Case {
-            src: "fn(x) { let y = fn(z) { z } y(y) }",
-            typ: "fn(a) -> fn(b) -> b",
-        },
         Case {
             src: "fn(x, y) { {x, y} }",
             typ: "fn(a, b) -> {a, b}",
@@ -2542,23 +2538,23 @@ fn infer_test() {
         },
         Case {
             src: "{{} | a = 1}",
-            typ: "{a = Int}",
+            typ: "{ a = Int }",
         },
         Case {
             src: "{a = 1}",
-            typ: "{a = Int}",
+            typ: "{ a = Int }",
         },
         Case {
             src: "{a = 1, b = 2}",
-            typ: "{a = Int, b = Int}",
+            typ: "{ a = Int, b = Int }",
         },
         Case {
             src: "{a = 1, b = 2.0, c = -1}",
-            typ: "{a = Int, b = Float, c = Int}",
+            typ: "{ a = Int, b = Float, c = Int }",
         },
         Case {
             src: "{a = {a = 1}}",
-            typ: "{a = {a = Int}}",
+            typ: "{ a = { a = Int } }",
         },
         Case {
             src: "{} == {}",
@@ -2582,19 +2578,19 @@ fn infer_test() {
         },
         Case {
             src: "{{a = 1.0} | a = 1}",
-            typ: "{a = Int}",
+            typ: "{ a = Int }",
         },
         Case {
             src: "let a = {} {a | b = 1}",
-            typ: "{b = Int}",
+            typ: "{ b = Int }",
         },
         Case {
             src: "fn(r) { { r | x = 1 } }",
-            typ: "fn({a | }) -> {a | x = Int}",
+            typ: "fn({ a |  }) -> { a | x = Int }",
         },
         Case {
             src: "{{} | a = 1}",
-            typ: "{a = Int}",
+            typ: "{ a = Int }",
         },
         /* case
 
@@ -2671,7 +2667,7 @@ fn infer_test() {
         },
         Case {
             src: "fn(x) { x.t }",
-            typ: "fn({b | t = a}) -> a",
+            typ: "fn({ b | t = a }) -> a",
         },
         Case {
             src: "let f = fn(x) { x } let r = {a = f} r.a",
@@ -2703,11 +2699,11 @@ fn infer_test() {
         },
         Case {
             src: "fn(r) { r.x }",
-            typ: "fn({b | x = a}) -> a",
+            typ: "fn({ b | x = a }) -> a",
         },
         Case {
             src: "fn(r) { r.x + 1 }",
-            typ: "fn({a | x = Int}) -> Int",
+            typ: "fn({ a | x = Int }) -> Int",
         },
         /* Module select
 
@@ -2879,7 +2875,7 @@ fn infer_module_test() {
         Case {
             src: "fn empty() { {} }
                   pub fn run() { { empty() | level = 1 } }",
-            typ: "module { fn run() -> {level = Int} }",
+            typ: "module { fn run() -> { level = Int } }",
         },
         Case {
             src: "pub fn ok(x) { {1, x} }",
@@ -2897,7 +2893,7 @@ fn infer_module_test() {
                     let record = { record | name = name }
                     record
                   }",
-            typ: "module { fn add_name({a | }, b) -> {a | name = b} }",
+            typ: "module { fn add_name({ a |  }, b) -> { a | name = b } }",
         },
         Case {
             src: "
@@ -2969,18 +2965,17 @@ fn infer_module_test() {
   fn open(I) -> Int
 }",
         },
-        // Case {
-        //     src: "
-        // pub fn status() { 1 }
-        // pub fn list_of(x) { [x] }
-        // pub fn get_age(person) { person.age }
-        // test whatever { 1 }",
-        //     typ: "module {
-        // fn get_age({a | age = b}) -> b
-        // fn list_of(c) -> List(c)
-        // fn status() -> Int
-        // }",
-        // },
+        Case {
+            src: "pub fn status() { 1 }
+                  pub fn list_of(x) { [x] }
+                  pub fn get_age(person) { person.age }
+                  test whatever { 1 }",
+            typ: "module {
+  fn get_age({ b | age = a }) -> a
+  fn list_of(c) -> List(c)
+  fn status() -> Int
+}",
+        },
         Case {
             src: "pub external fn go(String) -> String = \"\" \"\"",
             typ: "module { fn go(String) -> String }",
