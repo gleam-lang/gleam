@@ -121,7 +121,7 @@ impl Type {
                     let tail = row.gather_fields(&mut fields);
                     let fields_docs = fields
                         .into_iter()
-                        .map(|(label, t)| match t {
+                        .map(|(label, t)| match t.collapse_links() {
                             Type::Fn { args, retrn } => "fn "
                                 .to_doc()
                                 .append(label)
@@ -196,6 +196,15 @@ impl Type {
 
             other => Some(other.clone()),
         }
+    }
+
+    pub fn collapse_links(self) -> Type {
+        if let Type::Var { typ } = &self {
+            if let TypeVar::Link { typ } = &*typ.borrow() {
+                return *typ.clone();
+            }
+        }
+        self
     }
 
     /// Get the args for the type if the type is a specific Type::App.
@@ -2508,10 +2517,10 @@ fn infer_test() {
         },
         // TODO: This is allowed in the Erlang implementation due to how the pattern
         // assignments work. Unclear what the implications of this would be.
-        // Case {
-        //     src: "fn(x) { let y = fn(z) { z } y(y) }",
-        //     typ: "fn(a) -> fn(b) -> b",
-        // },
+        Case {
+            src: "fn(x) { let y = fn(z) { z } y(y) }",
+            typ: "fn(a) -> fn(b) -> b",
+        },
         Case {
             src: "fn(x, y) { {x, y} }",
             typ: "fn(a, b) -> {a, b}",
@@ -2700,19 +2709,17 @@ fn infer_test() {
             src: "fn(r) { r.x + 1 }",
             typ: "fn({a | x = Int}) -> Int",
         },
-        /*
         /* Module select
 
-         */
+        */
         Case {
-        src: "fn(x) { x:run() }",
-        typ: "fn(module {a | fn run() -> b}) -> b",
+            src: "fn(x) { x:run() }",
+            typ: "fn(module { b | fn run() -> a }) -> a",
         },
         Case {
-        src: "fn(x) { x:go }",
-        typ: "fn(module {a | go = b}) -> b",
+            src: "fn(x) { x:go }",
+            typ: "fn(module { b | const go: a }) -> a",
         },
-         */
     ];
 
     for Case { src, typ } in cases.into_iter() {
