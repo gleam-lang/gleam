@@ -375,7 +375,6 @@ fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
             ..
         } => name.to_doc().append(call_args(args, env)),
 
-        // TODO: test
         Expr::ModuleSelect { module, label, .. } => expr(*module, env)
             .append(":")
             .append(label)
@@ -430,7 +429,9 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
         Expr::Cons { head, tail, .. } => expr_cons(*head, *tail, env),
         Expr::Call { fun, args, .. } => call(*fun, args, env),
         Expr::RecordSelect { label, record, .. } => record_select(*record, label, env),
-        Expr::ModuleSelect { .. } => unimplemented!(),
+        Expr::ModuleSelect {
+            typ, label, module, ..
+        } => module_select(typ, *module, label, env),
         Expr::Tuple { elems, .. } => tuple(elems.into_iter().map(|e| wrap_expr(e, env)).collect()),
         Expr::Let {
             value,
@@ -447,6 +448,25 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
         Expr::BinOp {
             name, left, right, ..
         } => bin_op(name, *left, *right, env),
+    }
+}
+
+fn module_select(
+    typ: crate::typ::Type,
+    module: TypedExpr,
+    label: String,
+    env: &mut Env,
+) -> Document {
+    match typ.collapse_links() {
+        crate::typ::Type::Fn { args, .. } => "fun "
+            .to_doc()
+            .append(expr(module, env))
+            .append(":")
+            .append(label)
+            .append("/")
+            .append(args.len()),
+
+        _ => expr(module, env).append(":").append(label).append("()"),
     }
 }
 
@@ -970,6 +990,97 @@ bang_test() ->
                     scope: Scope::Module { arity: 6 },
                 },
             },
+            Statement::Fn {
+                meta: default(),
+                public: false,
+                args: vec![],
+                name: "moddy".to_string(),
+                body: Expr::ModuleSelect {
+                    typ: crate::typ::Type::Fn {
+                        args: vec![],
+                        retrn: Box::new(crate::typ::int()),
+                    },
+                    meta: default(),
+                    module: Box::new(Expr::Var {
+                        meta: default(),
+                        name: "zero".to_string(),
+                        scope: Scope::Import {
+                            module: "one".to_string(),
+                        },
+                        typ: crate::typ::int(),
+                    }),
+                    label: "two".to_string(),
+                },
+            },
+            Statement::Fn {
+                meta: default(),
+                public: false,
+                args: vec![],
+                name: "moddy2".to_string(),
+                body: Expr::ModuleSelect {
+                    typ: crate::typ::Type::Fn {
+                        args: vec![crate::typ::int(), crate::typ::int()],
+                        retrn: Box::new(crate::typ::int()),
+                    },
+                    meta: default(),
+                    module: Box::new(Expr::Var {
+                        meta: default(),
+                        name: "zero".to_string(),
+                        scope: Scope::Import {
+                            module: "one".to_string(),
+                        },
+                        typ: crate::typ::int(),
+                    }),
+                    label: "two".to_string(),
+                },
+            },
+            Statement::Fn {
+                meta: default(),
+                public: false,
+                args: vec![],
+                name: "moddy3".to_string(),
+                body: Expr::ModuleSelect {
+                    typ: crate::typ::int(),
+                    meta: default(),
+                    module: Box::new(Expr::Var {
+                        meta: default(),
+                        name: "zero".to_string(),
+                        scope: Scope::Import {
+                            module: "one".to_string(),
+                        },
+                        typ: crate::typ::int(),
+                    }),
+                    label: "two".to_string(),
+                },
+            },
+            Statement::Fn {
+                meta: default(),
+                public: false,
+                args: vec![],
+                name: "moddy4".to_string(),
+                body: Expr::Call {
+                    meta: default(),
+                    typ: crate::typ::int(),
+                    args: vec![Expr::Int {
+                        meta: default(),
+                        typ: crate::typ::int(),
+                        value: 1,
+                    }],
+                    fun: Box::new(Expr::ModuleSelect {
+                        typ: crate::typ::int(),
+                        meta: default(),
+                        module: Box::new(Expr::Var {
+                            meta: default(),
+                            name: "zero".to_string(),
+                            scope: Scope::Import {
+                                module: "one".to_string(),
+                            },
+                            typ: crate::typ::int(),
+                        }),
+                        label: "two".to_string(),
+                    }),
+                },
+            },
         ],
     };
     let expected = "-module(gleam_vars).
@@ -984,6 +1095,18 @@ some_arg() ->
 
 another() ->
     fun run_task/6.
+
+moddy() ->
+    fun one:two/0.
+
+moddy2() ->
+    fun one:two/2.
+
+moddy3() ->
+    one:two().
+
+moddy4() ->
+    one:two(1).
 "
     .to_string();
     assert_eq!(expected, module(m));

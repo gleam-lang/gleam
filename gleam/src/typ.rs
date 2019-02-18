@@ -3078,6 +3078,7 @@ pub fn two() { one() + zero() }",
             src: "test hello { 1 + 1 }",
             typ: "module {  }",
         },
+        // // Type annotations
         // Case {
         //     src: "
         // type Html = String
@@ -3104,16 +3105,16 @@ pub fn two() { one() + zero() }",
         //     src: "pub fn go(x: Int) { x + 1 }",
         //     typ: "module { fn go(Int) -> Int }",
         // },
-        // Case {
-        //     src: "
-        // pub fn length(list) {
-        // case list {
-        // | [] -> 0
-        // | _ :: tail -> length(tail) + 1
-        // }
-        // }",
-        //     typ: "module { fn length(List(a)) -> Int }",
-        // }, // % TODO: Work our how to support mutual recursion
+        Case {
+            src: "pub fn length(list) {
+                    case list {
+                    | [] -> 0
+                    | [x | xs] -> length(xs) + 1
+                    }
+                  }",
+            typ: "module { fn length(List(a)) -> Int }",
+        },
+        // % TODO: mutual recursion
         //    // % {
         //    // %pub fn length(list) {\n
         //    // %  case list {\n
