@@ -1,5 +1,3 @@
-#![allow(dead_code)] // TODO
-
 use crate::typ;
 
 pub type TypedModule = Module<Scope<typ::Type>, typ::Type>;
@@ -389,12 +387,11 @@ pub enum Pattern {
         tail: Box<Pattern>,
     },
 
-    Record {
-        meta: Meta,
-        label: String,
-        fields: Vec<(Pattern, Pattern)>,
-    },
-
+    //     Record {
+    //         meta: Meta,
+    //         label: String,
+    //         fields: Vec<(Pattern, Pattern)>,
+    //     },
     Constructor {
         meta: Meta,
         name: String,
@@ -411,7 +408,7 @@ impl Pattern {
             Pattern::Cons { meta, .. } => meta,
             Pattern::Tuple { meta, .. } => meta,
             Pattern::Float { meta, .. } => meta,
-            Pattern::Record { meta, .. } => meta,
+            // Pattern::Record { meta, .. } => meta,
             Pattern::String { meta, .. } => meta,
             Pattern::Constructor { meta, .. } => meta,
         }

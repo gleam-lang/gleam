@@ -1,5 +1,3 @@
-#![allow(dead_code)] // TODO
-
 //!  This module implements the functionality described in
 //!  ["Strictly Pretty" (2000) by Christian Lindig][0], with a few
 //!  extensions.

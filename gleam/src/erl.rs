@@ -212,7 +212,7 @@ fn pattern(p: Pattern, env: &mut Env) -> Document {
     match p {
         Pattern::Nil { .. } => "[]".to_doc(),
         Pattern::Cons { head, tail, .. } => pattern_cons(*head, *tail, env),
-        Pattern::Record { .. } => unimplemented!(),
+        // Pattern::Record { .. } => unimplemented!(),
         Pattern::Var { name, .. } => env.next_local_var_name(name),
         Pattern::Int { value, .. } => value.to_doc(),
         Pattern::Float { value, .. } => value.to_doc(),

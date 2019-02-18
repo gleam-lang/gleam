@@ -1,5 +1,3 @@
-#![allow(dead_code)] // TODO
-
 use crate::ast::{
     self, Arg, BinOp, Clause, Expr, Meta, Module, Pattern, Scope, Statement, TypedExpr,
     TypedModule, UntypedExpr, UntypedModule,
@@ -1496,8 +1494,7 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
 
             _ => unimplemented!(),
         },
-
-        Pattern::Record { .. } => unimplemented!(),
+        // Pattern::Record { .. } => unimplemented!(),
     }
 }
 
@@ -2107,11 +2104,6 @@ fn convert_not_fun_error(e: NotFnError, meta: &Meta) -> Error {
         expected: e.expected,
         given: e.given,
     }
-}
-
-enum GeneraliseVarAction {
-    NewTypeVar(TypeVar),
-    NewType(Type),
 }
 
 // let rec generalize level = function
