@@ -10,6 +10,7 @@ mod ast;
 mod erl;
 mod parser;
 mod pretty;
+mod project;
 mod typ;
 lalrpop_mod!(
     #[allow(deprecated)]
@@ -26,8 +27,6 @@ extern crate pretty_assertions;
 #[macro_use]
 extern crate lalrpop_util;
 
-use petgraph::Graph;
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 use structopt::clap::AppSettings;
@@ -66,69 +65,27 @@ fn command_build(root: String) {
                 false
             }
         })
+        .map(|dir_entry| {
+            let src = fs::read_to_string(dir_entry.path())
+                .expect(&format!("Unable to read {:?}", dir_entry.path()));
+
+            let name = dir_entry
+                .path()
+                .file_stem()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_string();
+            (name, src)
+        })
         .collect::<Vec<_>>();
 
-    // TODO: Extract the code below.
+    let compiled = crate::project::compile(srcs).unwrap();
 
-    let mut deps_graph = Graph::new();
-    let mut deps_vec = Vec::with_capacity(srcs.len());
-    let mut indexes = HashMap::new();
-    let mut modules = HashMap::new();
-
-    for dir_entry in srcs {
-        let src = fs::read_to_string(dir_entry.path())
-            .expect(&format!("Unable to read {:?}", dir_entry.path()));
-
-        let name = dir_entry
-            .path()
-            .file_stem()
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .to_string();
-
-        let mut module = crate::grammar::ModuleParser::new()
-            .parse(&crate::parser::strip_extra(&src))
-            .expect(&format!("Unable to parse {:?}", name));
-
-        module.name = name.clone();
-
-        let index = deps_graph.add_node(name.clone());
-        deps_vec.push((name.clone(), module.dependancies()));
-        indexes.insert(name.clone(), index.clone());
-        modules.insert(index, module);
+    for crate::project::Compiled { name, out, .. } in compiled {
+        let erl_name = format!("gleam_{}.erl", name);
+        let mut f = File::create(src_dir.join(erl_name)).expect("Unable to create file");
+        f.write_all(out.as_bytes())
+            .expect("Unable to write Erlang code to file");
     }
-
-    // Register each module's deps so that we can determine a correct order to compile the modules.
-    for (module, deps) in deps_vec {
-        let module_index = indexes.get(&module).expect("Unable to find module index");
-        for dep in deps {
-            let dep_index = indexes.get(&dep).expect("Unable to find module index");
-            deps_graph.add_edge(dep_index.clone(), module_index.clone(), ());
-        }
-    }
-
-    let mut module_types = HashMap::new();
-
-    petgraph::algo::toposort(&deps_graph, None)
-        .expect("Could not determine module compile order")
-        .into_iter()
-        .map(|i| modules.remove(&i).expect("Unknown graph index"))
-        .for_each(|module| {
-            let name = module.name.clone();
-
-            println!("Compiling {}", name);
-
-            let module = crate::typ::infer_module(module, &module_types)
-                .expect(&format!("Unable to infer types of {:?}", name));
-
-            module_types.insert(name.clone(), module.typ.clone());
-
-            let erl = crate::erl::module(module);
-
-            let erl_name = format!("gleam_{}.erl", name);
-            let mut f = File::create(src_dir.join(erl_name)).expect("Unable to create file");
-            f.write_all(erl.as_bytes())
-                .expect("Unable to write Erlang code to file");
-        });
 }
