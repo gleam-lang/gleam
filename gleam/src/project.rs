@@ -1,5 +1,6 @@
 use petgraph::Graph;
 use std::collections::HashMap;
+use termcolor::Buffer;
 
 pub type Name = String;
 pub type Src = String;
@@ -25,6 +26,77 @@ pub enum Error {
     },
 
     DependencyCycle,
+}
+
+impl Error {
+    pub fn pretty(&self, mut buffer: &mut Buffer) {
+        use crate::typ;
+        use codespan::{CodeMap, Span};
+        use codespan_reporting::{Diagnostic, Label, Severity};
+
+        match self {
+            Error::Type {
+                src,
+                name: filename,
+                error: typ::Error::DuplicateFunction { meta, name },
+            } => {
+                let mut code_map = CodeMap::new();
+                let file_map = code_map.add_filemap(filename.clone().into(), src.to_string());
+                let diagnostic =
+                    Diagnostic::new(Severity::Error, "Unexpected type in `+` application")
+                        .with_label(
+                            Label::new_primary(Span::from_offset(
+                                (meta.start as u32).into(),
+                                ((meta.end - meta.start) as i64).into(),
+                            ))
+                            .with_message("Expected integer but got string"),
+                        )
+                        .with_code("E0001");
+                codespan_reporting::emit(&mut buffer, &code_map, &diagnostic).unwrap();
+            }
+
+            _ => unimplemented!(),
+        }
+    }
+}
+
+#[test]
+fn error_pretty_test() {
+    use crate::ast::Meta;
+    use crate::typ;
+
+    struct Case {
+        error: Error,
+        expected: &'static str,
+    }
+
+    let cases = vec![
+        Case {
+            error: Error::Type {
+                name: "whatever.gleam".to_string(),
+                src: "fn one() { 1 }\nfn one() { 1 }".to_string(),
+                error: typ::Error::DuplicateFunction {
+                    meta: Meta { start: 16, end: 30 },
+                    name: "one".to_string(),
+                },
+            },
+            expected: "",
+        },
+        // Case {
+        //     error: vec![],
+        //     expected: Ok(vec![]),
+        // },
+    ];
+
+    let mut buffer_writer = termcolor::BufferWriter::stderr(termcolor::ColorChoice::Always);
+
+    for Case { error, expected } in cases.into_iter() {
+        let mut buffer = buffer_writer.buffer();
+        error.pretty(&mut buffer);
+        buffer_writer.print(&buffer).unwrap();
+        let out = std::str::from_utf8(buffer.as_slice()).unwrap();
+        assert_eq!(expected, out)
+    }
 }
 
 pub fn compile(srcs: Vec<(Name, Src)>) -> Result<Vec<Compiled>, Error> {
