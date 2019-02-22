@@ -416,10 +416,10 @@ to functions. Take this function for example.</p>
 <p>The <code>a |</code> in <code>{ a | year = Int}</code> means &quot;any other fields&quot;, so this function
 can be called with any record so long as the record has a <code>year</code> field that
 has an <code>Int</code> value.</p>
-<pre><code class="language-rust noplaypen">let date = { day: 5, month: 1, year: 2019 }
-let book = { title: &quot;Sabriel&quot;, year: 1995 }
-let soup = { kind: &quot;Tomato&quot;, spicy: False }
-let wine = { kind: &quot;Fancy!&quot;, year: &quot;Good&quot; }
+<pre><code class="language-rust noplaypen">let date = { day = 5, month: 1, year = 2019 }
+let book = { title = &quot;Sabriel&quot;, year = 1995 }
+let soup = { kind = &quot;Tomato&quot;, spicy = False }
+let wine = { kind = &quot;Fancy!&quot;, year = &quot;Good&quot; }
 
 get_following_year(date)  // =&gt; 2020
 get_following_year(book)  // =&gt; 1996
