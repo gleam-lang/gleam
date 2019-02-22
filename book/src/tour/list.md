@@ -19,7 +19,7 @@ Prepending to a list is very fast, and is the preferred way to add new values.
 [1 | [2, 3]]  // => [1, 2, 3]
 ```
 
-Note that as all data structures in Gleam are immutable so prepanding to a
+Note that as all data structures in Gleam are immutable so prepending to a
 list does not change the original list, instead it efficiently creates a new
 list with the new additional element.
 
