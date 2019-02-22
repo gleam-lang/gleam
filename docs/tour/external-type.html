@@ -137,6 +137,20 @@
                 <div id="content" class="content">
                     <main>
                         <a class="header" href="#external-type" id="external-type"><h1>External type</h1></a>
+<p>In addition to importing external functions we can also import external types.
+Gleam knows nothing about the runtime representation of these types and so
+they cannot be pattern matched on, but they can be used with external
+functions that know how to work with them.</p>
+<p>Here is an example of importing a <code>Queue</code> data type and some functions from
+Erlang's <code>queue</code> module to work with the new <code>Queue</code> type.</p>
+<pre><code class="language-rust noplaypen">pub external type Queue(a)
+
+pub external fn new() -&gt; Queue(a) = &quot;queue&quot; &quot;new&quot;
+
+pub external fn length(Queue(a)) -&gt; Int = &quot;queue&quot; &quot;len&quot;
+
+pub external fn push(Queue(a), a) -&gt; Queue(a) = &quot;queue&quot; &quot;in&quot;
+</code></pre>
 
                     </main>
 

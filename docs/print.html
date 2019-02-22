@@ -488,7 +488,42 @@ guest.
 {logged_in, &lt;&lt;&quot;Kim&quot;&gt;&gt;}.
 </code></pre>
 <a class="header" href="#external-function" id="external-function"><h1>External function</h1></a>
+<p>Gleam is just one of many languages on the Erlang virtual machine and at times
+we may want to use functions from these other languages in our Gleam programs.
+To enable this Gleam allows the importing of <em>external functions</em>, which may
+be written in any BEAM language.</p>
+<p>External functions are typically written in a different language with a
+different type system, so the compiler is unable to determine the type of the
+function and instead the programmer must inform the compiler the type.</p>
+<p>Gleam trusts that the type given is correct so an inaccurate type annotation
+can result in unexpected behaviour and crashes at runtime. Be careful!</p>
+<a class="header" href="#example" id="example"><h2>Example</h2></a>
+<p>The Erlang <code>rand</code> module has a function named <code>uniform</code> that takes no
+arguments and returns a <code>Float</code>.</p>
+<p>The Elixir module <code>IO</code> has a function named <code>inspect</code> that takes any value,
+prints it, and returns the same value.</p>
+<p>If we want to import these functions and use them in our program we would do
+so like this:</p>
+<pre><code class="language-rust noplaypen">pub external fn random_float() -&gt; Float = &quot;rand&quot; &quot;uniform&quot;
+
+// Elixir modules start with `Elixir.`
+pub external fn inspect(a) -&gt; a = &quot;Elixir.IO&quot; &quot;inspect&quot;
+</code></pre>
 <a class="header" href="#external-type" id="external-type"><h1>External type</h1></a>
+<p>In addition to importing external functions we can also import external types.
+Gleam knows nothing about the runtime representation of these types and so
+they cannot be pattern matched on, but they can be used with external
+functions that know how to work with them.</p>
+<p>Here is an example of importing a <code>Queue</code> data type and some functions from
+Erlang's <code>queue</code> module to work with the new <code>Queue</code> type.</p>
+<pre><code class="language-rust noplaypen">pub external type Queue(a)
+
+pub external fn new() -&gt; Queue(a) = &quot;queue&quot; &quot;new&quot;
+
+pub external fn length(Queue(a)) -&gt; Int = &quot;queue&quot; &quot;len&quot;
+
+pub external fn push(Queue(a), a) -&gt; Queue(a) = &quot;queue&quot; &quot;in&quot;
+</code></pre>
 <a class="header" href="#module" id="module"><h1>Module</h1></a>
 
                     </main>
