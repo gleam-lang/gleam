@@ -149,7 +149,7 @@ result in the compiler presenting a type error.</p>
 <p>Prepending to a list is very fast, and is the preferred way to add new values.</p>
 <pre><code class="language-rust noplaypen">[1 | [2, 3]]  // =&gt; [1, 2, 3]
 </code></pre>
-<p>Note that as all data structures in Gleam are immutable so prepanding to a
+<p>Note that as all data structures in Gleam are immutable so prepending to a
 list does not change the original list, instead it efficiently creates a new
 list with the new additional element.</p>
 <pre><code class="language-rust noplaypen">let x = [2, 3]
