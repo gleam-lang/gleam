@@ -79,10 +79,10 @@ can be called with any record so long as the record has a `year` field that
 has an `Int` value.
 
 ```rust,noplaypen
-let date = { day: 5, month: 1, year: 2019 }
-let book = { title: "Sabriel", year: 1995 }
-let soup = { kind: "Tomato", spicy: False }
-let wine = { kind: "Fancy!", year: "Good" }
+let date = { day = 5, month: 1, year = 2019 }
+let book = { title = "Sabriel", year = 1995 }
+let soup = { kind = "Tomato", spicy = False }
+let wine = { kind = "Fancy!", year = "Good" }
 
 get_following_year(date)  // => 2020
 get_following_year(book)  // => 1996
