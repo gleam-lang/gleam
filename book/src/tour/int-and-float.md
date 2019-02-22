@@ -26,8 +26,7 @@ Gleam has several operators that work with Ints, all of which return Ints.
 
 ## Floats
 
-Floats are "[real](https://en.wikipedia.org/wiki/Real_number)" numbers,
-meaning they have a decimal point.
+Floats are numbers with have a decimal point.
 
 ```rust,noplaypen
 1.5
