@@ -15,5 +15,5 @@ let values = {1, 2.0}
 let {x, y} = values
 
 x  // => 1
-y  // => 1.0
+y  // => 2.0
 ```
