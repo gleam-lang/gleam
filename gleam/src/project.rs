@@ -1,5 +1,6 @@
 use petgraph::Graph;
 use std::collections::HashMap;
+use termcolor::Buffer;
 
 pub type Name = String;
 pub type Src = String;
@@ -26,6 +27,220 @@ pub enum Error {
 
     DependencyCycle,
 }
+
+impl Error {
+    // TODO: Tests.
+    pub fn pretty(&self, buffer: &mut Buffer) {
+        use crate::typ::Error::*;
+        use std::io::Write;
+
+        buffer
+            .write(b"\n")
+            .expect("pretty buffer write space before");
+
+        match self {
+            Error::Type { src, name, error } => match error {
+                DuplicateFunction { meta, name: fun } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Duplicate function".to_string(),
+                        label: format!("`{}` redefined here", fun),
+                        file: name.clone(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                }
+
+                RecursiveType { meta } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Recursive type".to_string(),
+                        label: "".to_string(),
+                        file: name.clone(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                }
+
+                CouldNotUnify {
+                    meta,
+                    expected,
+                    given,
+                } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Type mismatch".to_string(),
+                        label: "".to_string(),
+                        file: name.clone(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+
+                    write!(
+                        buffer,
+                        "
+Expected type:
+
+    {}
+
+Found type:
+
+    {}
+",
+                        expected.pretty_print(),
+                        given.pretty_print()
+                    )
+                    .unwrap();
+                }
+
+                IncorrectTypeArity {
+                    meta,
+                    expected,
+                    given,
+                    name: _,
+                } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Incorrect arity".to_string(),
+                        label: format!("Expected {} arguments, got {}", expected, given),
+                        file: name.clone(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                }
+
+                IncorrectArity {
+                    meta,
+                    expected,
+                    given,
+                } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Incorrect arity".to_string(),
+                        label: format!("Expected {} arguments, got {}", expected, given),
+                        file: name.clone(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                }
+
+                UnknownType {
+                    meta,
+                    name: _,
+                    types: _,
+                } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Unknown type".to_string(),
+                        label: "".to_string(),
+                        file: name.clone(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                }
+
+                UnknownVariable {
+                    meta,
+                    name: _,
+                    variables: _,
+                } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Unknown variable".to_string(),
+                        label: "".to_string(),
+                        file: name.clone(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                }
+            },
+
+            Error::Parse { .. } => {
+                println!("{:?}", self);
+                unimplemented!();
+            }
+
+            Error::DependencyCycle => {
+                println!("{:?}", self);
+                unimplemented!();
+            }
+        }
+
+        buffer
+            .write(b"\n")
+            .expect("pretty buffer write space after");
+    }
+
+    pub fn pretty_print(&self) {
+        let buffer_writer = termcolor::BufferWriter::stderr(termcolor::ColorChoice::Always);
+        let mut buffer = buffer_writer.buffer();
+        self.pretty(&mut buffer);
+        buffer_writer.print(&buffer).unwrap();
+    }
+}
+
+struct ErrorDiagnostic {
+    file: String,
+    meta: crate::ast::Meta,
+    src: String,
+    title: String,
+    label: String,
+}
+
+fn write(mut buffer: &mut Buffer, d: ErrorDiagnostic) {
+    use codespan::{CodeMap, Span};
+    use codespan_reporting::{Diagnostic, Label};
+
+    let mut code_map = CodeMap::new();
+    code_map.add_filemap(d.file.into(), d.src);
+    let diagnostic = Diagnostic::new_error(d.title).with_label(
+        Label::new_primary(Span::from_offset(
+            ((d.meta.start + 1) as u32).into(),
+            ((d.meta.end - d.meta.start) as i64).into(),
+        ))
+        .with_message(d.label),
+    );
+    codespan_reporting::emit(&mut buffer, &code_map, &diagnostic).unwrap();
+}
+
+// #[test]
+// fn error_pretty_test() {
+//     use crate::ast::Meta;
+//     use crate::typ;
+
+//     struct Case {
+//         error: Error,
+//         expected: &'static str,
+//     }
+
+//     let cases = vec![
+//         Case {
+//             error: Error::Type {
+//                 name: "whatever.gleam".to_string(),
+//                 src: "fn one() { 1 }\nfn one() { 1 }".to_string(),
+//                 error: typ::Error::DuplicateFunction {
+//                     meta: Meta { start: 16, end: 30 },
+//                     name: "one".to_string(),
+//                 },
+//             },
+//             expected: "",
+//         },
+//         // Case {
+//         //     error: vec![],
+//         //     expected: Ok(vec![]),
+//         // },
+//     ];
+
+//     let buffer_writer = termcolor::BufferWriter::stderr(termcolor::ColorChoice::Always);
+
+//     for Case { error, expected } in cases.into_iter() {
+//         let mut buffer = buffer_writer.buffer();
+//         error.pretty(&mut buffer);
+//         buffer_writer.print(&buffer).unwrap();
+//         let out = std::str::from_utf8(buffer.as_slice()).unwrap();
+//         assert_eq!(expected, out)
+//     }
+// }
 
 pub fn compile(srcs: Vec<(Name, Src)>) -> Result<Vec<Compiled>, Error> {
     let mut deps_graph = Graph::new();

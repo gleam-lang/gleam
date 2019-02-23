@@ -1,7 +1,3 @@
-pub enum Bool =
-  | True
-  | False
-
 pub enum Order =
   | Lt
   | Eq
