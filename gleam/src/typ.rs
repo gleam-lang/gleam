@@ -56,6 +56,10 @@ pub enum Type {
 }
 
 impl Type {
+    pub fn pretty_print(&self) -> String {
+        self.to_gleam_doc(&mut hashmap![], &mut 0).format(80)
+    }
+
     pub fn to_gleam_doc(&self, names: &mut HashMap<usize, String>, uid: &mut usize) -> Document {
         match self {
             Type::Const { name, .. } => name.clone().to_doc(),
@@ -1215,7 +1219,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         } => {
             let head = infer(*head, level, env)?;
             let tail = infer(*tail, level, env)?;
-            unify(&list(head.typ().clone()), tail.typ())
+            unify(tail.typ(), &list(head.typ().clone()))
                 .map_err(|e| convert_unify_error(e, &meta))?;
             Ok(Expr::Cons {
                 meta,
@@ -1875,7 +1879,10 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
             unify(tail1, &tail2)
         }
 
-        (_, _) => unimplemented!(),
+        (_, _) => Err(UnifyError::CouldNotUnify {
+            expected: (*t1).clone(),
+            given: (*t2).clone(),
+        }),
     }
 }
 

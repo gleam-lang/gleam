@@ -29,6 +29,7 @@ pub enum Error {
 }
 
 impl Error {
+    // TODO: Tests.
     pub fn pretty(&self, buffer: &mut Buffer) {
         use crate::typ::Error::*;
         use std::io::Write;
@@ -63,8 +64,8 @@ impl Error {
 
                 CouldNotUnify {
                     meta,
-                    expected: _,
-                    given: _,
+                    expected,
+                    given,
                 } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Type mismatch".to_string(),
@@ -74,6 +75,22 @@ impl Error {
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
+
+                    write!(
+                        buffer,
+                        "
+Expected type:
+
+    {}
+
+Found type:
+
+    {}
+",
+                        expected.pretty_print(),
+                        given.pretty_print()
+                    )
+                    .unwrap();
                 }
 
                 IncorrectTypeArity {
@@ -178,7 +195,7 @@ fn write(mut buffer: &mut Buffer, d: ErrorDiagnostic) {
     code_map.add_filemap(d.file.into(), d.src);
     let diagnostic = Diagnostic::new_error(d.title).with_label(
         Label::new_primary(Span::from_offset(
-            (d.meta.start as u32).into(),
+            ((d.meta.start + 1) as u32).into(),
             ((d.meta.end - d.meta.start) as i64).into(),
         ))
         .with_message(d.label),

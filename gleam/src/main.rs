@@ -94,4 +94,6 @@ fn command_build(root: String) {
         f.write_all(out.as_bytes())
             .expect("Unable to write Erlang code to file");
     }
+
+    println!("Done!");
 }
