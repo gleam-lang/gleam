@@ -29,35 +29,161 @@ pub enum Error {
 }
 
 impl Error {
-    pub fn pretty(&self, mut buffer: &mut Buffer) {
-        use crate::typ;
-        use codespan::{CodeMap, Span};
-        use codespan_reporting::{Diagnostic, Label, Severity};
+    pub fn pretty(&self, buffer: &mut Buffer) {
+        use crate::typ::Error::*;
+        use std::io::Write;
+
+        buffer
+            .write(b"\n")
+            .expect("pretty buffer write space before");
 
         match self {
-            Error::Type {
-                src,
-                name: filename,
-                error: typ::Error::DuplicateFunction { meta, name },
-            } => {
-                let mut code_map = CodeMap::new();
-                let file_map = code_map.add_filemap(filename.clone().into(), src.to_string());
-                let diagnostic =
-                    Diagnostic::new(Severity::Error, "Unexpected type in `+` application")
-                        .with_label(
-                            Label::new_primary(Span::from_offset(
-                                (meta.start as u32).into(),
-                                ((meta.end - meta.start) as i64).into(),
-                            ))
-                            .with_message("Expected integer but got string"),
-                        )
-                        .with_code("E0001");
-                codespan_reporting::emit(&mut buffer, &code_map, &diagnostic).unwrap();
+            Error::Type { src, name, error } => match error {
+                DuplicateFunction { meta, name: fun } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Duplicate function".to_string(),
+                        label: format!("`{}` redefined here", fun),
+                        file: name.clone(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                }
+
+                RecursiveType { meta } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Recursive type".to_string(),
+                        label: "".to_string(),
+                        file: name.clone(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                }
+
+                CouldNotUnify {
+                    meta,
+                    expected: _,
+                    given: _,
+                } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Type mismatch".to_string(),
+                        label: "".to_string(),
+                        file: name.clone(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                }
+
+                IncorrectTypeArity {
+                    meta,
+                    expected,
+                    given,
+                    name: _,
+                } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Incorrect arity".to_string(),
+                        label: format!("Expected {} arguments, got {}", expected, given),
+                        file: name.clone(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                }
+
+                IncorrectArity {
+                    meta,
+                    expected,
+                    given,
+                } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Incorrect arity".to_string(),
+                        label: format!("Expected {} arguments, got {}", expected, given),
+                        file: name.clone(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                }
+
+                UnknownType {
+                    meta,
+                    name: _,
+                    types: _,
+                } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Unknown type".to_string(),
+                        label: "".to_string(),
+                        file: name.clone(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                }
+
+                UnknownVariable {
+                    meta,
+                    name: _,
+                    variables: _,
+                } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Unknown variable".to_string(),
+                        label: "".to_string(),
+                        file: name.clone(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                }
+            },
+
+            Error::Parse { .. } => {
+                println!("{:?}", self);
+                unimplemented!();
             }
 
-            _ => unimplemented!(),
+            Error::DependencyCycle => {
+                println!("{:?}", self);
+                unimplemented!();
+            }
         }
+
+        buffer
+            .write(b"\n")
+            .expect("pretty buffer write space after");
     }
+
+    pub fn pretty_print(&self) {
+        let buffer_writer = termcolor::BufferWriter::stderr(termcolor::ColorChoice::Always);
+        let mut buffer = buffer_writer.buffer();
+        self.pretty(&mut buffer);
+        buffer_writer.print(&buffer).unwrap();
+    }
+}
+
+struct ErrorDiagnostic {
+    file: String,
+    meta: crate::ast::Meta,
+    src: String,
+    title: String,
+    label: String,
+}
+
+fn write(mut buffer: &mut Buffer, d: ErrorDiagnostic) {
+    use codespan::{CodeMap, Span};
+    use codespan_reporting::{Diagnostic, Label};
+
+    let mut code_map = CodeMap::new();
+    code_map.add_filemap(d.file.into(), d.src);
+    let diagnostic = Diagnostic::new_error(d.title).with_label(
+        Label::new_primary(Span::from_offset(
+            (d.meta.start as u32).into(),
+            ((d.meta.end - d.meta.start) as i64).into(),
+        ))
+        .with_message(d.label),
+    );
+    codespan_reporting::emit(&mut buffer, &code_map, &diagnostic).unwrap();
 }
 
 #[test]
@@ -88,7 +214,7 @@ fn error_pretty_test() {
         // },
     ];
 
-    let mut buffer_writer = termcolor::BufferWriter::stderr(termcolor::ColorChoice::Always);
+    let buffer_writer = termcolor::BufferWriter::stderr(termcolor::ColorChoice::Always);
 
     for Case { error, expected } in cases.into_iter() {
         let mut buffer = buffer_writer.buffer();

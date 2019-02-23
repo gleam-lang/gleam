@@ -80,7 +80,13 @@ fn command_build(root: String) {
         })
         .collect::<Vec<_>>();
 
-    let compiled = crate::project::compile(srcs).unwrap();
+    let compiled = match crate::project::compile(srcs) {
+        Ok(c) => c,
+        Err(e) => {
+            e.pretty_print();
+            std::process::exit(1);
+        }
+    };
 
     for crate::project::Compiled { name, out, .. } in compiled {
         let erl_name = format!("gleam_{}.erl", name);
