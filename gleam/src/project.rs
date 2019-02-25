@@ -81,14 +81,14 @@ impl Error {
                         "
 Expected type:
 
-    {}
+{}
 
 Found type:
 
-    {}
+{}
 ",
-                        expected.pretty_print(),
-                        given.pretty_print()
+                        expected.pretty_print(4),
+                        given.pretty_print(4)
                     )
                     .unwrap();
                 }
@@ -202,45 +202,6 @@ fn write(mut buffer: &mut Buffer, d: ErrorDiagnostic) {
     );
     codespan_reporting::emit(&mut buffer, &code_map, &diagnostic).unwrap();
 }
-
-// #[test]
-// fn error_pretty_test() {
-//     use crate::ast::Meta;
-//     use crate::typ;
-
-//     struct Case {
-//         error: Error,
-//         expected: &'static str,
-//     }
-
-//     let cases = vec![
-//         Case {
-//             error: Error::Type {
-//                 name: "whatever.gleam".to_string(),
-//                 src: "fn one() { 1 }\nfn one() { 1 }".to_string(),
-//                 error: typ::Error::DuplicateFunction {
-//                     meta: Meta { start: 16, end: 30 },
-//                     name: "one".to_string(),
-//                 },
-//             },
-//             expected: "",
-//         },
-//         // Case {
-//         //     error: vec![],
-//         //     expected: Ok(vec![]),
-//         // },
-//     ];
-
-//     let buffer_writer = termcolor::BufferWriter::stderr(termcolor::ColorChoice::Always);
-
-//     for Case { error, expected } in cases.into_iter() {
-//         let mut buffer = buffer_writer.buffer();
-//         error.pretty(&mut buffer);
-//         buffer_writer.print(&buffer).unwrap();
-//         let out = std::str::from_utf8(buffer.as_slice()).unwrap();
-//         assert_eq!(expected, out)
-//     }
-// }
 
 pub fn compile(srcs: Vec<(Name, Src)>) -> Result<Vec<Compiled>, Error> {
     let mut deps_graph = Graph::new();

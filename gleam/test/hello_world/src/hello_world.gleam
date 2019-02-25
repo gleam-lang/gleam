@@ -41,7 +41,5 @@ world"
 import bool
 
 pub fn not(b) {
-  bool:not(b)
-  // [1, 2, 3, 4.0, 5]
-  // 1 + 2.0
+  bool + 1
 }

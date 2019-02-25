@@ -56,8 +56,17 @@ pub enum Type {
 }
 
 impl Type {
-    pub fn pretty_print(&self) -> String {
-        self.to_gleam_doc(&mut hashmap![], &mut 0).format(80)
+    pub fn pretty_print(&self, initial_indent: usize) -> String {
+        let mut b = String::with_capacity(initial_indent);
+        for _ in 0..initial_indent {
+            b.push(' ');
+        }
+        b.to_doc()
+            .append(
+                self.to_gleam_doc(&mut hashmap![], &mut initial_indent.clone())
+                    .nest(initial_indent as isize),
+            )
+            .format(80)
     }
 
     pub fn to_gleam_doc(&self, names: &mut HashMap<usize, String>, uid: &mut usize) -> Document {
