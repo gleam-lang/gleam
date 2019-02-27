@@ -138,12 +138,10 @@ fn test(name: String, body: TypedExpr) -> Document {
         .append("-endif.")
 }
 
-// TODO: Escape
 fn atom(value: String) -> Document {
     value.to_doc().surround("'", "'")
 }
 
-// TODO: Escape
 fn string(value: String) -> Document {
     value.to_doc().surround("<<\"", "\">>")
 }

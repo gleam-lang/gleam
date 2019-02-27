@@ -36,7 +36,7 @@ impl Error {
 
         buffer
             .write(b"\n")
-            .expect("pretty buffer write space before");
+            .expect("error pretty buffer write space before");
 
         match self {
             Error::Type { src, name, error } => match error {
@@ -155,9 +155,64 @@ Found type:
                 }
             },
 
-            Error::Parse { .. } => {
-                println!("{:?}", self);
-                unimplemented!();
+            Error::Parse { name, src, error } => {
+                use lalrpop_util::ParseError::*;
+
+                match error {
+                    UnrecognizedToken {
+                        token: Some((start, _, end)),
+                        expected,
+                    } => {
+                        let diagnostic = ErrorDiagnostic {
+                            title: "Syntax error".to_string(),
+                            label: "Unexpected token".to_string(),
+                            file: name.clone(),
+                            src: src.to_string(),
+                            meta: crate::ast::Meta {
+                                start: *start,
+                                end: *end,
+                            },
+                        };
+                        write(buffer, diagnostic);
+                        write!(buffer, "\nExpected one of {}", expected.join(", "))
+                            .expect("error pretty buffer write");
+                    }
+
+                    UnrecognizedToken {
+                        token: None,
+                        expected: _,
+                    } => {
+                        let diagnostic = ErrorDiagnostic {
+                            title: "Syntax error".to_string(),
+                            label: "Unexpected end of file".to_string(),
+                            file: name.clone(),
+                            src: src.to_string(),
+                            meta: crate::ast::Meta {
+                                start: src.len() - 2,
+                                end: src.len() - 1,
+                            },
+                        };
+                        write(buffer, diagnostic);
+                    }
+
+                    InvalidToken { location } => {
+                        let diagnostic = ErrorDiagnostic {
+                            title: "Syntax error".to_string(),
+                            label: "Unknown token".to_string(),
+                            file: name.clone(),
+                            src: src.to_string(),
+                            meta: crate::ast::Meta {
+                                start: *location - 1,
+                                end: *location,
+                            },
+                        };
+                        write(buffer, diagnostic);
+                    }
+
+                    ExtraToken { .. } => unimplemented!(),
+
+                    User { .. } => unimplemented!(),
+                }
             }
 
             Error::DependencyCycle => {
@@ -168,7 +223,7 @@ Found type:
 
         buffer
             .write(b"\n")
-            .expect("pretty buffer write space after");
+            .expect("error pretty buffer write space after");
     }
 
     pub fn pretty_print(&self) {
