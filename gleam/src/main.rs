@@ -89,7 +89,7 @@ fn command_build(root: String) {
     };
 
     for crate::project::Compiled { name, out, .. } in compiled {
-        let erl_name = format!("gleam_{}.erl", name);
+        let erl_name = format!("{}.erl", name);
         let mut f = File::create(src_dir.join(erl_name)).expect("Unable to create file");
         f.write_all(out.as_bytes())
             .expect("Unable to write Erlang code to file");

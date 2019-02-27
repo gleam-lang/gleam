@@ -57,7 +57,7 @@ pub fn module(module: TypedModule) -> String {
         .intersperse(", ".to_doc())
         .collect();
 
-    format!("-module(gleam_{}).", module.name)
+    format!("-module({}).", module.name)
         .to_doc()
         .append(lines(2))
         .append("-export([")
@@ -576,7 +576,7 @@ fn module_test() {
             },
         ],
     };
-    let expected = "-module(gleam_magic).
+    let expected = "-module(magic).
 
 -export([map/0]).
 
@@ -818,7 +818,7 @@ map() ->
             },
         ],
     };
-    let expected = "-module(gleam_term).
+    let expected = "-module(term).
 
 -export([]).
 
@@ -908,7 +908,7 @@ funny() ->
             },
         }],
     };
-    let expected = "-module(gleam_term).
+    let expected = "-module(term).
 
 -export([]).
 
@@ -938,7 +938,7 @@ some_function(ArgOne,
             },
         }],
     };
-    let expected = "-module(gleam_term).
+    let expected = "-module(term).
 
 -export([]).
 
@@ -1089,7 +1089,7 @@ bang_test() ->
             },
         ],
     };
-    let expected = "-module(gleam_vars).
+    let expected = "-module(vars).
 
 -export([]).
 
@@ -1220,7 +1220,7 @@ moddy4() ->
             },
         }],
     };
-    let expected = "-module(gleam_my_mod).
+    let expected = "-module(my_mod).
 
 -export([]).
 
@@ -1325,7 +1325,7 @@ go() ->
             },
         ],
     };
-    let expected = "-module(gleam_funny).
+    let expected = "-module(funny).
 
 -export([]).
 
@@ -1355,7 +1355,7 @@ fn integration_test() {
   let x = {100000000000000000, {2000000000, 3000000000000, 40000000000}, 50000, 6000000000}
   x
 }"#,
-            erl: r#"-module(gleam_).
+            erl: r#"-module().
 
 -export([]).
 
@@ -1373,7 +1373,7 @@ go() ->
   let y = 2
   y
 }"#,
-            erl: r#"-module(gleam_).
+            erl: r#"-module().
 
 -export([]).
 
@@ -1394,7 +1394,7 @@ go() ->
 fn x() {
     go(begin 1 2 end)
 }"#,
-            erl: r#"-module(gleam_).
+            erl: r#"-module().
 
 -export([]).
 
@@ -1419,7 +1419,7 @@ x() ->
                     fn pound(x) {
                       Pound(x)
                     }"#,
-            erl: r#"-module(gleam_).
+            erl: r#"-module().
 
 -export([]).
 
@@ -1429,7 +1429,7 @@ pound(X) ->
         },
         Case {
             src: r#"fn loop() { loop() }"#,
-            erl: r#"-module(gleam_).
+            erl: r#"-module().
 
 -export([]).
 
@@ -1439,7 +1439,7 @@ loop() ->
         },
         Case {
             src: r#"external fn run() -> Int = "Elixir.MyApp" "run""#,
-            erl: r#"-module(gleam_).
+            erl: r#"-module().
 
 -export([]).
 
@@ -1452,7 +1452,7 @@ run() ->
                     fn or(x, y) { x || y }
                     fn modulo(x, y) { x % y }
             "#,
-            erl: r#"-module(gleam_).
+            erl: r#"-module().
 
 -export([]).
 
@@ -1470,7 +1470,7 @@ modulo(X, Y) ->
             src: r#"fn second(list) { case list { | [x, y] -> y | z -> 1 } }
                     fn tail(list) { case list { | [x | xs] -> xs | z -> list } }
             "#,
-            erl: r#"-module(gleam_).
+            erl: r#"-module().
 
 -export([]).
 
@@ -1495,7 +1495,7 @@ tail(List) ->
         },
         Case {
             src: r#"fn age(x) { x.age }"#,
-            erl: r#"-module(gleam_).
+            erl: r#"-module().
 
 -export([]).
 

@@ -339,11 +339,11 @@ fn compile_test() {
             expected: Ok(vec![
                 Compiled {
                     name: "two".to_string(),
-                    out: "-module(gleam_two).\n\n-export([]).\n\n\n".to_string(),
+                    out: "-module(two).\n\n-export([]).\n\n\n".to_string(),
                 },
                 Compiled {
                     name: "one".to_string(),
-                    out: "-module(gleam_one).\n\n-export([]).\n\n\n".to_string(),
+                    out: "-module(one).\n\n-export([]).\n\n\n".to_string(),
                 },
             ]),
         },
@@ -355,11 +355,11 @@ fn compile_test() {
             expected: Ok(vec![
                 Compiled {
                     name: "two".to_string(),
-                    out: "-module(gleam_two).\n\n-export([]).\n\n\n".to_string(),
+                    out: "-module(two).\n\n-export([]).\n\n\n".to_string(),
                 },
                 Compiled {
                     name: "one".to_string(),
-                    out: "-module(gleam_one).\n\n-export([]).\n\n\n".to_string(),
+                    out: "-module(one).\n\n-export([]).\n\n\n".to_string(),
                 },
             ]),
         },
@@ -371,11 +371,11 @@ fn compile_test() {
             expected: Ok(vec![
                 Compiled {
                     name: "one".to_string(),
-                    out: "-module(gleam_one).\n\n-export([]).\n\n\n".to_string(),
+                    out: "-module(one).\n\n-export([]).\n\n\n".to_string(),
                 },
                 Compiled {
                     name: "two".to_string(),
-                    out: "-module(gleam_two).\n\n-export([]).\n\n\n".to_string(),
+                    out: "-module(two).\n\n-export([]).\n\n\n".to_string(),
                 },
             ]),
         },
