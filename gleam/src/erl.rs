@@ -139,7 +139,14 @@ fn test(name: String, body: TypedExpr) -> Document {
 }
 
 fn atom(value: String) -> Document {
-    value.to_doc().surround("'", "'")
+    use regex::Regex;
+    // TODO: Lazy static to avoid regex recompilation
+    let re = Regex::new(r"^[a-z_\$]+$").unwrap();
+    if re.is_match(&value) {
+        value.to_doc()
+    } else {
+        value.to_doc().surround("'", "'")
+    }
 }
 
 fn string(value: String) -> Document {
@@ -498,7 +505,8 @@ fn external_fun(name: String, module: String, fun: String, arity: usize) -> Docu
     format!("{}({}) ->", name, chars)
         .to_doc()
         .append(line())
-        .append(format!("{}:{}({}).", module, fun, chars))
+        .append(atom(module))
+        .append(format!(":{}({}).", fun, chars))
         .nest(INDENT)
 }
 
@@ -840,7 +848,7 @@ bin_op() ->
     1 + 2.
 
 enum1() ->
-    'nil'.
+    nil.
 
 let() ->
     OneTwo = 1,
@@ -850,7 +858,7 @@ conny() ->
     [12, 34].
 
 retcon() ->
-    #{}#{'size' => 1}.
+    #{}#{size => 1}.
 
 funny() ->
     fun(OneReallyLongArgToCauseWrapping, AlsoReallyQuiteLong) ->
@@ -1233,7 +1241,7 @@ go() ->
         [] ->
             1;
 
-        {'error', 2} ->
+        {error, 2} ->
             1
     end.
 "
@@ -1416,7 +1424,7 @@ x() ->
 -export([]).
 
 pound(X) ->
-    {'pound', X}.
+    {pound, X}.
 "#,
         },
         Case {
@@ -1427,6 +1435,16 @@ pound(X) ->
 
 loop() ->
     loop().
+"#,
+        },
+        Case {
+            src: r#"external fn run() -> Int = "Elixir.MyApp" "run""#,
+            erl: r#"-module(gleam_).
+
+-export([]).
+
+run() ->
+    'Elixir.MyApp':run().
 "#,
         },
         Case {
@@ -1482,7 +1500,7 @@ tail(List) ->
 -export([]).
 
 age(X) ->
-    maps:get('age', X).
+    maps:get(age, X).
 "#,
         },
         // TODO: Check that var num is incremented for args

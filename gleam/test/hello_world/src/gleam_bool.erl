@@ -4,51 +4,51 @@
 
 compare(A, B) ->
     case {A, B} of
-        {'true', 'true'} ->
-            'eq';
+        {true, true} ->
+            eq;
 
-        {'true', 'false'} ->
-            'gt';
+        {true, false} ->
+            gt;
 
-        {'false', 'false'} ->
-            'eq';
+        {false, false} ->
+            eq;
 
-        {'false', 'true'} ->
-            'gt'
+        {false, true} ->
+            gt
     end.
 
 not(A) ->
     case A of
-        'true' ->
-            'false';
+        true ->
+            false;
 
-        'false' ->
-            'true'
+        false ->
+            true
     end.
 
 max(A, B) ->
     case A of
-        'true' ->
-            'true';
+        true ->
+            true;
 
-        'false' ->
+        false ->
             B
     end.
 
 min(A, B) ->
     case A of
-        'false' ->
-            'false';
+        false ->
+            false;
 
-        'true' ->
+        true ->
             B
     end.
 
 to_int(Bool) ->
     case Bool of
-        'false' ->
+        false ->
             0;
 
-        'true' ->
+        true ->
             1
     end.

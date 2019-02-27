@@ -17,7 +17,7 @@ new() ->
 member(List, Elem) ->
     case List of
         [] ->
-            'false';
+            false;
 
         [Head | Rest] ->
             Head =:= Elem orelse member(Rest, Elem)
@@ -26,19 +26,19 @@ member(List, Elem) ->
 head(List) ->
     case List of
         [] ->
-            {'error', 'empty'};
+            {error, empty};
 
         [X | Xs] ->
-            {'ok', X}
+            {ok, X}
     end.
 
 tail(List) ->
     case List of
         [] ->
-            {'error', 'empty'};
+            {error, empty};
 
         [X | Xs] ->
-            {'ok', Xs}
+            {ok, Xs}
     end.
 
 do_filter(List, Fun, Acc) ->
@@ -48,10 +48,10 @@ do_filter(List, Fun, Acc) ->
 
         [X | Xs] ->
             NewAcc = case Fun(X) of
-                'true' ->
+                true ->
                     [X | Acc];
 
-                'false' ->
+                false ->
                     Acc
             end,
             do_filter(Xs, Fun, NewAcc)
@@ -75,15 +75,15 @@ map(List, Fun) ->
 do_traverse(List, Fun, Acc) ->
     case List of
         [] ->
-            {'ok', reverse(Acc)};
+            {ok, reverse(Acc)};
 
         [X | Xs] ->
             case Fun(X) of
-                {'ok', Y} ->
+                {ok, Y} ->
                     do_traverse(Xs, Fun, [Y | Acc]);
 
-                {'error', Error} ->
-                    {'error', Error}
+                {error, Error} ->
+                    {error, Error}
             end
     end.
 
@@ -92,10 +92,10 @@ traverse(List, Fun) ->
 
 drop(List, N) ->
     case N =:= 0 of
-        'true' ->
+        true ->
             List;
 
-        'false' ->
+        false ->
             case List of
                 [] ->
                     [];
@@ -107,10 +107,10 @@ drop(List, N) ->
 
 do_take(List, N, Acc) ->
     case N =:= 0 of
-        'true' ->
+        true ->
             reverse(Acc);
 
-        'false' ->
+        false ->
             case List of
                 [] ->
                     reverse(Acc);

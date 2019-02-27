@@ -4,47 +4,47 @@
 
 is_ok(Result) ->
     case Result of
-        {'error', A} ->
-            'false';
+        {error, A} ->
+            false;
 
-        {'ok', A1} ->
-            'true'
+        {ok, A1} ->
+            true
     end.
 
 is_error(Result) ->
     case Result of
-        {'ok', A} ->
-            'false';
+        {ok, A} ->
+            false;
 
-        {'error', A1} ->
-            'true'
+        {error, A1} ->
+            true
     end.
 
 map(Result, Fun) ->
     case Result of
-        {'ok', X} ->
-            {'ok', Fun(X)};
+        {ok, X} ->
+            {ok, Fun(X)};
 
-        {'error', X1} ->
+        {error, X1} ->
             Result
     end.
 
 map_error(Result, Fun) ->
     case Result of
-        {'ok', A} ->
+        {ok, A} ->
             Result;
 
-        {'error', Error} ->
-            {'error', Fun(Error)}
+        {error, Error} ->
+            {error, Fun(Error)}
     end.
 
 flatten(Result) ->
     case Result of
-        {'ok', X} ->
+        {ok, X} ->
             X;
 
-        {'error', Error} ->
-            {'error', Error}
+        {error, Error} ->
+            {error, Error}
     end.
 
 flat_map(Result, Fun) ->
@@ -52,9 +52,9 @@ flat_map(Result, Fun) ->
 
 unwrap(Result, Default) ->
     case Result of
-        {'ok', V} ->
+        {ok, V} ->
             V;
 
-        {'error', A} ->
+        {error, A} ->
             Default
     end.
