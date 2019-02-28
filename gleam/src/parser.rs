@@ -662,6 +662,33 @@ fn expr_test() {
     );
 
     assert_eq!(
+        Ok(Expr::Let {
+            meta: Meta { start: 0, end: 23 },
+            typ: (),
+            pattern: Pattern::Constructor {
+                meta: Meta { start: 4, end: 18 },
+                module: Some("option".to_string()),
+                name: "Some".to_string(),
+                args: vec![Pattern::Var {
+                    meta: Meta { start: 16, end: 17 },
+                    name: "a".to_string()
+                }]
+            },
+            value: Box::new(Expr::Int {
+                typ: (),
+                meta: Meta { start: 21, end: 22 },
+                value: 1
+            }),
+            then: Box::new(Expr::Int {
+                typ: (),
+                meta: Meta { start: 23, end: 24 },
+                value: 2
+            })
+        }),
+        ExprParser::new().parse("let option:Some(a) = 1 2"),
+    );
+
+    assert_eq!(
         Ok(Expr::RecordCons {
             meta: Meta { start: 0, end: 19 },
             typ: (),
@@ -967,6 +994,7 @@ fn module_test() {
                         }),
                         pattern: Pattern::Constructor {
                             meta: Meta { start: 80, end: 88 },
+                            module: None,
                             name: "Boxxy".to_string(),
                             args: vec![Pattern::Var {
                                 meta: Meta { start: 86, end: 87 },

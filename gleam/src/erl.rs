@@ -1204,6 +1204,7 @@ moddy4() ->
                         meta: default(),
                         pattern: Pattern::Constructor {
                             meta: default(),
+                            module: None,
                             name: "Error".to_string(),
                             args: vec![Pattern::Int {
                                 meta: default(),

@@ -450,8 +450,16 @@ Pattern: Pattern = {
 PatternConstructor: Pattern = {
     <s:@L> <name:UpName> <args:PatternConstructorArgs?> <e:@L> => Pattern::Constructor {
         meta: meta(s, e),
-        name,
+        module: None,
         args: args.unwrap_or_else(|| vec![]),
+        name,
+    },
+
+    <s:@L> <module:VarName> ":" <name:UpName> <args:PatternConstructorArgs?> <e:@L> => Pattern::Constructor {
+        meta: meta(s, e),
+        module: Some(module),
+        args: args.unwrap_or_else(|| vec![]),
+        name,
     },
 }
 

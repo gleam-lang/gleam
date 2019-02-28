@@ -396,6 +396,7 @@ pub enum Pattern {
         meta: Meta,
         name: String,
         args: Vec<Pattern>,
+        module: Option<String>,
     },
 }
 
