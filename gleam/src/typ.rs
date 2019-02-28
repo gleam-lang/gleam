@@ -283,6 +283,42 @@ impl Type {
             _ => None,
         }
     }
+
+    pub fn find_private_type(&self) -> Option<Type> {
+        match self {
+            Type::RowNil { .. } => None,
+
+            Type::Const { public: true, .. } => None,
+
+            Type::Const { .. } => Some(self.clone()),
+
+            Type::Module { row, .. } => row.find_private_type(),
+
+            Type::Record { row, .. } => row.find_private_type(),
+
+            Type::Tuple { elems, .. } => elems.iter().find_map(|t| t.find_private_type()),
+
+            Type::App { public: false, .. } => Some(self.clone()),
+
+            Type::App { args, .. } => args.iter().find_map(|t| t.find_private_type()),
+
+            Type::RowCons { head, tail, .. } => head
+                .find_private_type()
+                .or_else(|| tail.find_private_type()),
+
+            Type::Fn { retrn, args, .. } => retrn
+                .find_private_type()
+                .or_else(|| args.iter().find_map(|t| t.find_private_type())),
+
+            Type::Var { typ, .. } => match &*typ.borrow() {
+                TypeVar::Unbound { .. } => None,
+
+                TypeVar::Generic { .. } => None,
+
+                TypeVar::Link { typ, .. } => typ.find_private_type(),
+            },
+        }
+    }
 }
 
 impl TypeVar {
@@ -850,9 +886,14 @@ pub enum Error {
         meta: Meta,
     },
 
-    DuplicateFunction {
+    DuplicateName {
         meta: Meta,
         name: String,
+    },
+
+    PrivateTypeLeak {
+        meta: Meta,
+        leaked: Type,
     },
 }
 
@@ -882,7 +923,7 @@ pub fn infer_module(
 
                 // Ensure function has not already been defined in this module
                 if let Some((Scope::Module { .. }, _)) = env.get_variable(&name) {
-                    return Err(Error::DuplicateFunction { meta, name });
+                    return Err(Error::DuplicateName { meta, name });
                 };
 
                 // Register a var for the function so that it can call itself recursively
@@ -913,6 +954,13 @@ pub fn infer_module(
 
                 // Insert the function into the module's type
                 if public {
+                    if let Some(leaked) = typ.find_private_type() {
+                        return Err(Error::PrivateTypeLeak {
+                            meta: meta.clone(),
+                            leaked,
+                        });
+                    }
+
                     fields.push((name.clone(), typ));
                 }
                 Ok(Statement::Fn {
@@ -951,6 +999,13 @@ pub fn infer_module(
                 };
                 if public {
                     fields.push((name.clone(), typ.clone()));
+
+                    if let Some(leaked) = typ.find_private_type() {
+                        return Err(Error::PrivateTypeLeak {
+                            meta: meta.clone(),
+                            leaked,
+                        });
+                    }
                 }
                 env.insert_variable(name.clone(), Scope::Module { arity: args.len() }, typ);
                 Ok(Statement::ExternalFn {
@@ -3182,7 +3237,7 @@ fn infer_module_error_test() {
         Case {
             src: "fn dupe() { 1 }
                   fn dupe() { 2 }",
-            error: Error::DuplicateFunction {
+            error: Error::DuplicateName {
                 meta: Meta { start: 34, end: 49 },
                 name: "dupe".to_string(),
             },
@@ -3190,9 +3245,65 @@ fn infer_module_error_test() {
         Case {
             src: "fn dupe() { 1 }
                   fn dupe(x) { x }",
-            error: Error::DuplicateFunction {
+            error: Error::DuplicateName {
                 meta: Meta { start: 34, end: 50 },
                 name: "dupe".to_string(),
+            },
+        },
+        Case {
+            src: r#"external type PrivateType
+                    pub external fn leak_type() -> PrivateType = "" """#,
+            error: Error::PrivateTypeLeak {
+                meta: Meta { start: 46, end: 96 },
+                leaked: Type::Const {
+                    public: false,
+                    module: "".to_string(),
+                    name: "PrivateType".to_string(),
+                },
+            },
+        },
+        Case {
+            src: r#"external type PrivateType
+                    external fn go() -> PrivateType = "" ""
+                    pub fn leak_type() { go() }"#,
+            error: Error::PrivateTypeLeak {
+                meta: Meta {
+                    start: 106,
+                    end: 133,
+                },
+                leaked: Type::Const {
+                    public: false,
+                    module: "".to_string(),
+                    name: "PrivateType".to_string(),
+                },
+            },
+        },
+        Case {
+            src: r#"external type PrivateType
+                    external fn go() -> PrivateType = "" ""
+                    pub fn leak_type() { [go()] }"#,
+            error: Error::PrivateTypeLeak {
+                meta: Meta {
+                    start: 106,
+                    end: 135,
+                },
+                leaked: Type::Const {
+                    public: false,
+                    module: "".to_string(),
+                    name: "PrivateType".to_string(),
+                },
+            },
+        },
+        Case {
+            src: r#"external type PrivateType
+                    pub external fn go(PrivateType) -> Int = "" """#,
+            error: Error::PrivateTypeLeak {
+                meta: Meta { start: 46, end: 92 },
+                leaked: Type::Const {
+                    public: false,
+                    module: "".to_string(),
+                    name: "PrivateType".to_string(),
+                },
             },
         },
     ];
@@ -3203,6 +3314,6 @@ fn infer_module_error_test() {
             .expect("syntax error");
         let result = infer_module(ast, &std::collections::HashMap::new())
             .expect_err("should infer an error");
-        assert_eq!((src, &result), (src, error));
+        assert_eq!((src, error), (src, &result));
     }
 }

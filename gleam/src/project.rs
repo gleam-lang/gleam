@@ -40,9 +40,9 @@ impl Error {
 
         match self {
             Error::Type { src, name, error } => match error {
-                DuplicateFunction { meta, name: fun } => {
+                DuplicateName { meta, name: fun } => {
                     let diagnostic = ErrorDiagnostic {
-                        title: "Duplicate function".to_string(),
+                        title: "Duplicate name".to_string(),
                         label: format!("`{}` redefined here", fun),
                         file: name.clone(),
                         src: src.to_string(),
@@ -152,6 +152,19 @@ Found type:
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
+                }
+
+                PrivateTypeLeak { meta: _, leaked: _ } => {
+                    // let diagnostic = ErrorDiagnostic {
+                    //     title: "Unknown variable".to_string(),
+                    //     label: "".to_string(),
+                    //     file: name.clone(),
+                    //     src: src.to_string(),
+                    //     meta: meta.clone(),
+                    // };
+                    // write(buffer, diagnostic);
+                    // TODO
+                    unimplemented!()
                 }
             },
 
