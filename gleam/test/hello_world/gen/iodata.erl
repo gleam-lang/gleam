@@ -1,4 +1,4 @@
--module(gleam_iodata).
+-module(iodata).
 
 -export([prepend/2, append/2, from/1, to_string/1, byte_size/1]).
 

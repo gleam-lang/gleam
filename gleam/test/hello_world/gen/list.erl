@@ -1,4 +1,4 @@
--module(gleam_list).
+-module(list).
 
 -export([length/1, reverse/1, is_empty/1, new/0, member/2, head/1, tail/1, filter/2, map/2, do_traverse/3, traverse/2, drop/2, take/2, foldl/3, foldr/3]).
 

@@ -55,6 +55,10 @@ fn command_build(root: String) {
 
     let root_dir = Path::new(&root);
     let src_dir = root_dir.join("src");
+    let gen_dir = root_dir.join("gen");
+
+    fs::create_dir_all(&gen_dir).expect("creating gen dir");
+
     let srcs = fs::read_dir(src_dir.clone())
         .expect("Could not locate src/")
         .filter_map(Result::ok)
@@ -90,7 +94,7 @@ fn command_build(root: String) {
 
     for crate::project::Compiled { name, out, .. } in compiled {
         let erl_name = format!("{}.erl", name);
-        let mut f = File::create(src_dir.join(erl_name)).expect("Unable to create file");
+        let mut f = File::create(gen_dir.join(erl_name)).expect("Unable to create file");
         f.write_all(out.as_bytes())
             .expect("Unable to write Erlang code to file");
     }

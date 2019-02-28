@@ -1,4 +1,4 @@
--module(gleam_map).
+-module(map).
 
 -export([new/0, size/1, has_key/2, to_list/1, from_list/1, put/3, map_values/2, keys/1, values/1, filter/2]).
 

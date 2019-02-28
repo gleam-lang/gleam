@@ -1,4 +1,4 @@
--module(gleam_plug).
+-module(plug).
 
 -export([path_info/1, send_resp/3]).
 

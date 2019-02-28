@@ -1,4 +1,4 @@
--module(gleam_hello_world).
+-module(hello_world).
 
 -export([init/1, call/2]).
 

@@ -1,4 +1,4 @@
--module(gleam_string).
+-module(string).
 
 -export([concat/1]).
 

@@ -1,4 +1,4 @@
--module(gleam_bool).
+-module(bool).
 
 -export([compare/2, not/1, max/2, min/2, to_int/1]).
 
