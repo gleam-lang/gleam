@@ -33,6 +33,16 @@ impl Env {
 }
 
 pub fn module(module: TypedModule) -> String {
+    let has_tests = module.statements.iter().any(|x| match x {
+        Statement::Test { .. } => true,
+        _ => false,
+    });
+    let test_header = if has_tests {
+        line().append("-include_lib(\"eunit/include/eunit.hrl\").")
+    } else {
+        nil()
+    };
+
     let exports: Vec<_> = module
         .statements
         .iter()
@@ -59,6 +69,7 @@ pub fn module(module: TypedModule) -> String {
 
     format!("-module({}).", module.name)
         .to_doc()
+        .append(test_header)
         .append(lines(2))
         .append("-export([")
         .append(exports)
@@ -942,7 +953,8 @@ some_function(ArgOne,
             },
         }],
     };
-    let expected = "-module(term).
+    let expected = r#"-module(term).
+-include_lib("eunit/include/eunit.hrl").
 
 -export([]).
 
@@ -950,7 +962,7 @@ some_function(ArgOne,
 bang_test() ->
     1.
 -endif.
-"
+"#
     .to_string();
     assert_eq!(expected, module(m));
 
