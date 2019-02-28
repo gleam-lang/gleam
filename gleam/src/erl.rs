@@ -176,7 +176,7 @@ fn seq(first: TypedExpr, then: TypedExpr, env: &mut Env) -> Document {
 // TODO: Group nested bin_ops i.e. a |> b |> c
 fn bin_op(name: BinOp, left: TypedExpr, right: TypedExpr, env: &mut Env) -> Document {
     let op = match name {
-        BinOp::Pipe => "|>", // TODO: This is wrong.
+        BinOp::Pipe => return pipe(left, right, env),
         BinOp::Lt => "<",
         BinOp::And => "andalso",
         BinOp::Or => "orelse",
@@ -202,6 +202,10 @@ fn bin_op(name: BinOp, left: TypedExpr, right: TypedExpr, env: &mut Env) -> Docu
         .append(op)
         .append(" ")
         .append(expr(right, env))
+}
+
+fn pipe(value: TypedExpr, fun: TypedExpr, env: &mut Env) -> Document {
+    call(fun, vec![value], env)
 }
 
 fn let_(value: TypedExpr, pat: Pattern, then: TypedExpr, env: &mut Env) -> Document {
@@ -1446,6 +1450,19 @@ loop() ->
 
 run() ->
     'Elixir.MyApp':run().
+"#,
+        },
+        Case {
+            src: r#"fn inc(x) { x + 1 } pub fn go() { 1 |> inc |> inc |> inc }"#,
+            erl: r#"-module().
+
+-export([go/0]).
+
+inc(X) ->
+    X + 1.
+
+go() ->
+    inc(inc(inc(1))).
 "#,
         },
         Case {
