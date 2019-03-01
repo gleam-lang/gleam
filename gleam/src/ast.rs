@@ -372,6 +372,10 @@ pub enum Pattern {
         name: String,
     },
 
+    Discard {
+        meta: Meta,
+    },
+
     Tuple {
         meta: Meta,
         elems: Vec<Pattern>,
@@ -409,6 +413,7 @@ impl Pattern {
             Pattern::Cons { meta, .. } => meta,
             Pattern::Tuple { meta, .. } => meta,
             Pattern::Float { meta, .. } => meta,
+            Pattern::Discard { meta, .. } => meta,
             // Pattern::Record { meta, .. } => meta,
             Pattern::String { meta, .. } => meta,
             Pattern::Constructor { meta, .. } => meta,

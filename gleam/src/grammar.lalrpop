@@ -443,6 +443,7 @@ Pattern: Pattern = {
     PatternFloat => <>,
     PatternTuple => <>,
     PatternString => <>,
+    PatternDiscard => <>,
     // PatternRecord => <>,
     PatternConstructor => <>,
 }
@@ -499,6 +500,12 @@ PatternVar: Pattern = {
     <s:@L> <v:VarName> <e:@L> => Pattern::Var {
         meta: meta(s, e),
         name: v,
+    }
+}
+
+PatternDiscard: Pattern = {
+    <s:@L> <_d:DiscardName> <e:@L> => Pattern::Discard {
+        meta: meta(s, e),
     }
 }
 
@@ -581,6 +588,10 @@ TypeName: (String, Vec<String>) = {
 
 UpName: String = {
     <v:r"[A-Z][A-Za-z]*"> => v.to_string()
+}
+
+DiscardName: () = {
+    <v:r"_[A-Za-z_]*"> => ()
 }
 
 VarName: String = {

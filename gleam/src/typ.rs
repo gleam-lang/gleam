@@ -1483,6 +1483,8 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
     // so we can display a more specific error message.
     //
     match pattern {
+        Pattern::Discard { .. } => Ok(()),
+
         Pattern::Var { name, .. } => {
             env.insert_variable(name.to_string(), Scope::Local, typ.clone());
             Ok(())
@@ -2712,6 +2714,14 @@ fn infer_test() {
         Case {
             src: "fn(x) { let [a] = x a + 1 }",
             typ: "fn(List(Int)) -> Int",
+        },
+        Case {
+            src: "let _x = 1 2.0",
+            typ: "Float",
+        },
+        Case {
+            src: "let _ = 1 2.0",
+            typ: "Float",
         },
         /* Record select
 
