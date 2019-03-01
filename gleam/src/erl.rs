@@ -117,7 +117,10 @@ fn mod_fun(name: String, args: Vec<Arg>, body: TypedExpr) -> Document {
 }
 
 fn fun_args(args: Vec<Arg>) -> Document {
-    wrap_args(args.into_iter().map(|a| a.name.to_camel_case().to_doc()))
+    wrap_args(args.into_iter().map(|a| match a.name {
+        None => "_".to_doc(),
+        Some(name) => name.to_camel_case().to_doc(),
+    }))
 }
 
 fn call_args(args: Vec<TypedExpr>, env: &mut Env) -> Document {
@@ -819,10 +822,10 @@ map() ->
                     typ: crate::typ::int(),
                     args: vec![
                         Arg {
-                            name: "one_really_long_arg_to_cause_wrapping".to_string(),
+                            name: Some("one_really_long_arg_to_cause_wrapping".to_string()),
                         },
                         Arg {
-                            name: "also_really_quite_long".to_string(),
+                            name: Some("also_really_quite_long".to_string()),
                         },
                     ],
                     body: Box::new(Expr::Int {
@@ -893,28 +896,28 @@ funny() ->
             name: "some_function".to_string(),
             args: vec![
                 Arg {
-                    name: "arg_one".to_string(),
+                    name: Some("arg_one".to_string()),
                 },
                 Arg {
-                    name: "arg_two".to_string(),
+                    name: Some("arg_two".to_string()),
                 },
                 Arg {
-                    name: "arg_3".to_string(),
+                    name: Some("arg_3".to_string()),
                 },
                 Arg {
-                    name: "arg4".to_string(),
+                    name: Some("arg4".to_string()),
                 },
                 Arg {
-                    name: "arg_four".to_string(),
+                    name: Some("arg_four".to_string()),
                 },
                 Arg {
-                    name: "arg__five".to_string(),
+                    name: Some("arg__five".to_string()),
                 },
                 Arg {
-                    name: "arg_six".to_string(),
+                    name: Some("arg_six".to_string()),
                 },
                 Arg {
-                    name: "arg_that_is_long".to_string(),
+                    name: Some("arg_that_is_long".to_string()),
                 },
             ],
             body: Expr::Int {

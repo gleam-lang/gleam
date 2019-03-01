@@ -299,7 +299,11 @@ Fn: UntypedExpr = {
 
 FnArg: Arg = {
     VarName => Arg {
-        name: <>,
+        name: Some(<>),
+    },
+
+    DiscardName => Arg {
+        name: None,
     },
 }
 

@@ -2,8 +2,8 @@
 
 -export([init/1, call/2]).
 
-init(Opts) ->
-    Opts.
+init(_) ->
+    [].
 
 call(Conn, Opts) ->
     case plug:path_info(Conn) of

@@ -1619,7 +1619,10 @@ fn infer_fun(
     let vars = env.variables.clone();
     args.iter()
         .zip(args_types.iter())
-        .for_each(|(arg, t)| env.insert_variable(arg.name.to_string(), Scope::Local, (*t).clone()));
+        .for_each(|(arg, t)| match &arg.name {
+            Some(name) => env.insert_variable(name.to_string(), Scope::Local, (*t).clone()),
+            None => (),
+        });
     let body = infer(body, level, env)?;
     env.variables = vars;
     Ok((args_types, body))

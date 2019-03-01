@@ -1,8 +1,8 @@
 import plug
 import string
 
-pub fn init(opts) {
-  opts
+pub fn init(_dont_care) {
+  []
 }
 
 pub fn call(conn, opts) {

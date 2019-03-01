@@ -36,7 +36,7 @@ fn module_dependencies_test() {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Arg {
-    pub name: String,
+    pub name: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

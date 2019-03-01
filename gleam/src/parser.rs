@@ -571,10 +571,10 @@ fn expr_test() {
             typ: (),
             args: vec![
                 Arg {
-                    name: "a".to_string()
+                    name: Some("a".to_string())
                 },
                 Arg {
-                    name: "b".to_string()
+                    name: Some("b".to_string())
                 },
             ],
             body: Box::new(Expr::Seq {
@@ -827,10 +827,10 @@ fn module_test() {
                 name: "run".to_string(),
                 args: vec![
                     Arg {
-                        name: "one".to_string()
+                        name: Some("one".to_string())
                     },
                     Arg {
-                        name: "two".to_string()
+                        name: Some("two".to_string())
                     }
                 ],
                 body: Expr::Seq {
@@ -978,7 +978,7 @@ fn module_test() {
                     public: true,
                     name: "value".to_string(),
                     args: vec![Arg {
-                        name: "x".to_string()
+                        name: Some("x".to_string())
                     }],
                     body: Expr::Let {
                         meta: Meta {
@@ -1033,7 +1033,7 @@ fn module_test() {
                 public: true,
                 name: "value".to_string(),
                 args: vec![Arg {
-                    name: "x".to_string()
+                    name: Some("x".to_string())
                 }],
                 body: Expr::Let {
                     meta: Meta { start: 33, end: 59 },
@@ -1073,7 +1073,7 @@ fn module_test() {
                 public: true,
                 name: "value".to_string(),
                 args: vec![Arg {
-                    name: "x".to_string()
+                    name: Some("x".to_string())
                 }],
                 body: Expr::Let {
                     meta: Meta { start: 33, end: 63 },
@@ -1127,7 +1127,7 @@ fn module_test() {
                 public: true,
                 name: "value".to_string(),
                 args: vec![Arg {
-                    name: "x".to_string()
+                    name: Some("x".to_string())
                 }],
                 body: Expr::Let {
                     meta: Meta { start: 33, end: 71 },
