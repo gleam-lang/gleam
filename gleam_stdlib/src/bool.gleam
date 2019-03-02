@@ -1,42 +1,43 @@
-import order:[Gt, Eq, Lt]
+import expect
+// import order:[Gt, Eq, Lt]
 
-pub fn not(bool) {
-  case bool {
-  | True -> False
-  | False -> True
-  }
-}
+// pub fn not(bool) {
+//   case bool {
+//   | True -> False
+//   | False -> True
+//   }
+// }
 
-test not {
-  not(True)
-    |> expect:false
+// test not {
+//   not(True)
+//     |> expect:false
 
-  not(False)
-    |> expect:true
-}
+//   not(False)
+//     |> expect:true
+// }
 
-pub fn compare(a, b) {
-  case {a, b} {
-  | {True, True} -> Eq
-  | {True, False} -> Gt
-  | {False, False} -> Eq
-  | {False, True} -> Gt
-  }
-}
+// pub fn compare(a, b) {
+//   case {a, b} {
+//   | {True, True} -> Eq
+//   | {True, False} -> Gt
+//   | {False, False} -> Eq
+//   | {False, True} -> Gt
+//   }
+// }
 
-test compare {
-  compare(True, True)
-    |> expect:equal(_, Eq)
+// test compare {
+//   compare(True, True)
+//     |> expect:equal(_, Eq)
 
-  compare(True, False)
-    |> expect:equal(_, Gt)
+//   compare(True, False)
+//     |> expect:equal(_, Gt)
 
-  compare(False, False)
-    |> expect:equal(_, Lt)
+//   compare(False, False)
+//     |> expect:equal(_, Lt)
 
-  compare(False, True)
-    |> expect:equal(_, Gt)
-}
+//   compare(False, True)
+//     |> expect:equal(_, Gt)
+// }
 
 pub fn max(a, b) {
   case a {
@@ -46,13 +47,13 @@ pub fn max(a, b) {
 }
 
 test max {
-  max(True, True)
+  let _ = max(True, True)
     |> expect:equal(_, True)
 
-  max(True, False)
+  let _ = max(True, False)
     |> expect:equal(_, True)
 
-  max(False, False)
+  let _ = max(False, False)
     |> expect:equal(_, False)
 
   max(False, True)
@@ -67,13 +68,13 @@ pub fn min(a, b) {
 }
 
 test min {
-  min(True, True)
+  let _ = min(True, True)
     |> expect:equal(_, True)
 
-  min(True, False)
+  let _ = min(True, False)
     |> expect:equal(_, False)
 
-  min(False, False)
+  let _ = min(False, False)
     |> expect:equal(_, False)
 
   min(False, True)
@@ -88,7 +89,7 @@ pub fn to_int(bool) {
 }
 
 test to_int {
-  to_int(True)
+  let _ = to_int(True)
     |> expect:equal(_, 1)
 
   to_int(False)
