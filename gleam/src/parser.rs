@@ -554,6 +554,7 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Fn {
             meta: Meta { start: 0, end: 10 },
+            is_capture: false,
             typ: (),
             args: vec![],
             body: Box::new(Expr::Int {
@@ -568,6 +569,7 @@ fn expr_test() {
     assert_eq!(
         Ok(Expr::Fn {
             meta: Meta { start: 0, end: 16 },
+            is_capture: false,
             typ: (),
             args: vec![
                 Arg {

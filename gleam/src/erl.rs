@@ -819,6 +819,7 @@ map() ->
                 name: "funny".to_string(),
                 body: Expr::Fn {
                     meta: default(),
+                    is_capture: false,
                     typ: crate::typ::int(),
                     args: vec![
                         Arg {

@@ -291,6 +291,7 @@ Seq: UntypedExpr = {
 Fn: UntypedExpr = {
     <s:@L> "fn(" <a:Comma<FnArg>> ")" "{" <b:Expr> "}" <e:@L> => Expr::Fn {
         meta: meta(s, e),
+        is_capture: false,
         typ: (),
         args: a,
         body: Box::new(b),
