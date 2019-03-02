@@ -1,9 +1,8 @@
 import expect
 
-// doc """
 // Result represents the result of something that may succeed or fail.
 // `Ok` means it was successful, `Error` means it failed.
-// """
+//
 pub enum Result(error, value) =
   | Ok(value)
   | Error(error)
@@ -17,7 +16,7 @@ pub fn is_ok(result) {
 }
 
 test is_ok {
-  is_ok(Ok(1)) |> expect:true
+  let _ = is_ok(Ok(1)) |> expect:true
   is_ok(Error(1)) |> expect:false
 }
 
@@ -29,7 +28,7 @@ pub fn is_error(result) {
 }
 
 test is_error {
-  is_error(Ok(1))
+  let _ = is_error(Ok(1))
     |> expect:false
 
   is_error(Error(1))
@@ -44,13 +43,13 @@ pub fn map(result, fun) {
 }
 
 test map {
-  Ok(1)
+  let _ = Ok(1)
     |> map(_, fn(x) { x + 1 })
     |> expect:equal(_, Ok(2))
 
   Error(1)
     |> map(_, fn(x) { x + 1 })
-    |> expect:equal(Error(1))
+    |> expect:equal(_, Error(1))
 }
 
 pub fn map_error(result, fun) {
@@ -61,7 +60,7 @@ pub fn map_error(result, fun) {
 }
 
 test map_error {
-  Ok(1)
+  let _ = Ok(1)
     |> map_error(_, fn(x) { x + 1 })
     |> expect:equal(_, Ok(1))
 
@@ -78,13 +77,13 @@ pub fn flatten(result) {
 }
 
 test flatten {
-  flatten(Ok(Ok(1)))
+  let _ = flatten(Ok(Ok(1)))
     |> expect:equal(_, Ok(1))
 
-  flatten(Ok(Error(1)))
+  let _ = flatten(Ok(Error(1)))
     |> expect:equal(_, Error(1))
 
-  flatten(Error(1))
+  let _ = flatten(Error(1))
     |> expect:equal(_, Error(1))
 
   flatten(Error(Error(1)))
@@ -109,11 +108,11 @@ pub fn flat_map(result, fun) {
 }
 
 test flat_map {
-  Error(1)
+  let _ = Error(1)
     |> flat_map(_, fn(x) { Ok(x + 1) })
     |> expect:equal(_, Error(1))
 
-  Ok(1)
+  let _ = Ok(1)
     |> flat_map(_, fn(x) { Ok(x + 1) })
     |> expect:equal(_, Ok(2))
 
@@ -130,7 +129,7 @@ pub fn unwrap(result, default) {
 }
 
 test unwrap {
-  unwrap(Ok(1), 50)
+  let _ = unwrap(Ok(1), 50)
     |> expect:equal(_, 1)
 
   unwrap(Error("nope"), 50)

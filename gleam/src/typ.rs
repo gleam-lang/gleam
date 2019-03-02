@@ -547,6 +547,15 @@ impl Env {
             },
         );
 
+        env.insert_type_constructor(
+            "Result".to_string(),
+            TypeConstructorInfo {
+                arity: 2,
+                module: "".to_string(),
+                public: true,
+            },
+        );
+
         env.insert_variable("True".to_string(), Scope::Module { arity: 0 }, bool());
         env.insert_variable("False".to_string(), Scope::Module { arity: 0 }, bool());
 
@@ -690,6 +699,35 @@ impl Env {
             Type::Fn {
                 args: vec![a.clone(), a],
                 retrn: Box::new(bool()),
+            },
+        );
+
+        let result = |ok, error| Type::App {
+            name: "Result".to_string(),
+            module: "".to_string(),
+            public: true,
+            args: vec![ok, error],
+        };
+
+        let ok = env.new_generic_var();
+        let error = env.new_generic_var();
+        env.insert_variable(
+            "Ok".to_string(),
+            Scope::Local,
+            Type::Fn {
+                args: vec![ok.clone()],
+                retrn: Box::new(result(ok, error)),
+            },
+        );
+
+        let ok = env.new_generic_var();
+        let error = env.new_generic_var();
+        env.insert_variable(
+            "Error".to_string(),
+            Scope::Local,
+            Type::Fn {
+                args: vec![error.clone()],
+                retrn: Box::new(result(ok, error)),
             },
         );
 
