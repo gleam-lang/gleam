@@ -202,6 +202,7 @@ pub enum Expr<S, T> {
     Fn {
         meta: Meta,
         typ: T,
+        is_capture: bool,
         args: Vec<Arg>,
         body: Box<Expr<S, T>>,
     },

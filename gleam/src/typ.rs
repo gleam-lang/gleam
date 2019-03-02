@@ -1206,6 +1206,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         Expr::Fn {
             meta,
             typ: _,
+            is_capture,
             args,
             body,
         } => {
@@ -1218,6 +1219,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             Ok(Expr::Fn {
                 meta,
                 typ,
+                is_capture,
                 args,
                 body: Box::new(body),
             })
