@@ -2599,6 +2599,10 @@ fn infer_test() {
             src: "let id = fn(a) { a } fn(x) { x(id) }",
             typ: "fn(fn(fn(a) -> a) -> b) -> b",
         },
+        Case {
+            src: "let add = fn(x, y) { x + y } add(_, 2)",
+            typ: "fn(Int) -> Int",
+        },
         /* Records
 
         */

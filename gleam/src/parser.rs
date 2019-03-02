@@ -568,6 +568,46 @@ fn expr_test() {
 
     assert_eq!(
         Ok(Expr::Fn {
+            meta: Meta { start: 0, end: 10 },
+            typ: (),
+            is_capture: true,
+            args: vec![Arg {
+                name: Some("capture@1".to_string())
+            }],
+            body: Box::new(Expr::Call {
+                meta: Meta { start: 0, end: 10 },
+                typ: (),
+                fun: Box::new(Expr::Var {
+                    meta: Meta { start: 0, end: 1 },
+                    typ: (),
+                    scope: (),
+                    name: "f".to_string(),
+                }),
+                args: vec![
+                    Expr::Int {
+                        meta: Meta { start: 2, end: 3 },
+                        typ: (),
+                        value: 1
+                    },
+                    Expr::Var {
+                        meta: Meta { start: 5, end: 6 },
+                        typ: (),
+                        scope: (),
+                        name: "capture@1".to_string(),
+                    },
+                    Expr::Int {
+                        meta: Meta { start: 8, end: 9 },
+                        typ: (),
+                        value: 3
+                    }
+                ]
+            })
+        }),
+        ExprParser::new().parse("f(1, _, 3)"),
+    );
+
+    assert_eq!(
+        Ok(Expr::Fn {
             meta: Meta { start: 0, end: 16 },
             is_capture: false,
             typ: (),
