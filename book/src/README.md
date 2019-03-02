@@ -21,7 +21,7 @@ pub fn has_even_leaf(tree) {
 }
 ```
 
-## Principals
+## Principles
 
 ### Be safe
 
