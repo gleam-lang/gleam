@@ -1,6 +1,7 @@
 # Summary
 
 - [Hello, Gleam!](./README.md)
+- [Installation](./getting-started/installation.md)
 - [Language tour](./tour/README.md)
   - [String](./tour/string.md)
   - [Bool](./tour/bool.md)

@@ -72,7 +72,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="tour/index.html"><strong aria-hidden="true">2.</strong> Language tour</a></li><li><ol class="section"><li><a href="tour/string.html"><strong aria-hidden="true">2.1.</strong> String</a></li><li><a href="tour/bool.html"><strong aria-hidden="true">2.2.</strong> Bool</a></li><li><a href="tour/int-and-float.html"><strong aria-hidden="true">2.3.</strong> Int &amp; Float</a></li><li><a href="tour/let.html"><strong aria-hidden="true">2.4.</strong> Let bindings</a></li><li><a href="tour/tuple.html"><strong aria-hidden="true">2.5.</strong> Tuple</a></li><li><a href="tour/list.html"><strong aria-hidden="true">2.6.</strong> List</a></li><li><a href="tour/case.html"><strong aria-hidden="true">2.7.</strong> Case</a></li><li><a href="tour/function.html"><strong aria-hidden="true">2.8.</strong> Function</a></li><li><a href="tour/record.html"><strong aria-hidden="true">2.9.</strong> Record</a></li><li><a href="tour/enum.html"><strong aria-hidden="true">2.10.</strong> Enum</a></li><li><a href="tour/external-function.html"><strong aria-hidden="true">2.11.</strong> External function</a></li><li><a href="tour/external-type.html"><strong aria-hidden="true">2.12.</strong> External type</a></li><li><a href="tour/module.html"><strong aria-hidden="true">2.13.</strong> Module</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="getting-started/installation.html"><strong aria-hidden="true">2.</strong> Installation</a></li><li><a href="tour/index.html"><strong aria-hidden="true">3.</strong> Language tour</a></li><li><ol class="section"><li><a href="tour/string.html"><strong aria-hidden="true">3.1.</strong> String</a></li><li><a href="tour/bool.html"><strong aria-hidden="true">3.2.</strong> Bool</a></li><li><a href="tour/int-and-float.html"><strong aria-hidden="true">3.3.</strong> Int &amp; Float</a></li><li><a href="tour/let.html"><strong aria-hidden="true">3.4.</strong> Let bindings</a></li><li><a href="tour/tuple.html"><strong aria-hidden="true">3.5.</strong> Tuple</a></li><li><a href="tour/list.html"><strong aria-hidden="true">3.6.</strong> List</a></li><li><a href="tour/case.html"><strong aria-hidden="true">3.7.</strong> Case</a></li><li><a href="tour/function.html"><strong aria-hidden="true">3.8.</strong> Function</a></li><li><a href="tour/record.html"><strong aria-hidden="true">3.9.</strong> Record</a></li><li><a href="tour/enum.html"><strong aria-hidden="true">3.10.</strong> Enum</a></li><li><a href="tour/external-function.html"><strong aria-hidden="true">3.11.</strong> External function</a></li><li><a href="tour/external-type.html"><strong aria-hidden="true">3.12.</strong> External type</a></li><li><a href="tour/module.html"><strong aria-hidden="true">3.13.</strong> Module</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -181,6 +181,33 @@ Gleam users to make use of.</p>
 <p>Users of other BEAM languages should in return be able to take advantage of
 Gleam, either by transparently making use of libraries written in Gleam, or by
 adding Gleam modules to their existing project with minimal fuss.</p>
+<a class="header" href="#installation" id="installation"><h1>Installation</h1></a>
+<p>A Gleam installation is made up of two parts: The Gleam compiler, and the
+Erlang runtime.</p>
+<a class="header" href="#installing-the-compiler" id="installing-the-compiler"><h2>Installing the compiler</h2></a>
+<p>The compiler is written in the Rust programming language and must be build
+from source. <a href="https://www.rust-lang.org/tools/install">Install the Rust compiler</a>
+before proceeding.</p>
+<pre><code class="language-sh"># Download the Gleam source code git reponsitory
+cd /tmp
+git clone https://github.com/lpil/gleam.git
+
+# Build the Gleam compiler. This will take some time!
+cd gleam/gleam
+cargo install --path . --force
+
+# Verify the compiler is installed
+# Prints &quot;gleam 0.1.0&quot;
+gleam --version
+</code></pre>
+<a class="header" href="#installing-the-erlang-runtime" id="installing-the-erlang-runtime"><h2>Installing the Erlang runtime</h2></a>
+<p>Gleam compiles to Erlang code, so Erlang needs to be installed to run Gleam
+code.</p>
+<p>TODO: details on installing Erlang.</p>
+<a class="header" href="#linux" id="linux"><h3>Linux</h3></a>
+<a class="header" href="#mac-os-x" id="mac-os-x"><h3>Mac OS X</h3></a>
+<a class="header" href="#windows" id="windows"><h3>Windows</h3></a>
+<a class="header" href="#using-version-managers" id="using-version-managers"><h3>Using version managers</h3></a>
 <a class="header" href="#language-tour" id="language-tour"><h1>Language Tour</h1></a>
 <p>In this chapter we explore the fundamentals of the Gleam language, namely its
 syntax, core data structures, flow control features, and static type system.</p>

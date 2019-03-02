@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>External function - The Gleam Book</title>
+        <title>Installation - The Gleam Book</title>
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -72,7 +72,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../getting-started/installation.html"><strong aria-hidden="true">2.</strong> Installation</a></li><li><a href="../tour/index.html"><strong aria-hidden="true">3.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/string.html"><strong aria-hidden="true">3.1.</strong> String</a></li><li><a href="../tour/bool.html"><strong aria-hidden="true">3.2.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">3.3.</strong> Int &amp; Float</a></li><li><a href="../tour/let.html"><strong aria-hidden="true">3.4.</strong> Let bindings</a></li><li><a href="../tour/tuple.html"><strong aria-hidden="true">3.5.</strong> Tuple</a></li><li><a href="../tour/list.html"><strong aria-hidden="true">3.6.</strong> List</a></li><li><a href="../tour/case.html"><strong aria-hidden="true">3.7.</strong> Case</a></li><li><a href="../tour/function.html"><strong aria-hidden="true">3.8.</strong> Function</a></li><li><a href="../tour/record.html"><strong aria-hidden="true">3.9.</strong> Record</a></li><li><a href="../tour/enum.html"><strong aria-hidden="true">3.10.</strong> Enum</a></li><li><a href="../tour/external-function.html" class="active"><strong aria-hidden="true">3.11.</strong> External function</a></li><li><a href="../tour/external-type.html"><strong aria-hidden="true">3.12.</strong> External type</a></li><li><a href="../tour/module.html"><strong aria-hidden="true">3.13.</strong> Module</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../getting-started/installation.html" class="active"><strong aria-hidden="true">2.</strong> Installation</a></li><li><a href="../tour/index.html"><strong aria-hidden="true">3.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/string.html"><strong aria-hidden="true">3.1.</strong> String</a></li><li><a href="../tour/bool.html"><strong aria-hidden="true">3.2.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">3.3.</strong> Int &amp; Float</a></li><li><a href="../tour/let.html"><strong aria-hidden="true">3.4.</strong> Let bindings</a></li><li><a href="../tour/tuple.html"><strong aria-hidden="true">3.5.</strong> Tuple</a></li><li><a href="../tour/list.html"><strong aria-hidden="true">3.6.</strong> List</a></li><li><a href="../tour/case.html"><strong aria-hidden="true">3.7.</strong> Case</a></li><li><a href="../tour/function.html"><strong aria-hidden="true">3.8.</strong> Function</a></li><li><a href="../tour/record.html"><strong aria-hidden="true">3.9.</strong> Record</a></li><li><a href="../tour/enum.html"><strong aria-hidden="true">3.10.</strong> Enum</a></li><li><a href="../tour/external-function.html"><strong aria-hidden="true">3.11.</strong> External function</a></li><li><a href="../tour/external-type.html"><strong aria-hidden="true">3.12.</strong> External type</a></li><li><a href="../tour/module.html"><strong aria-hidden="true">3.13.</strong> Module</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -136,41 +136,46 @@
 
                 <div id="content" class="content">
                     <main>
-                        <a class="header" href="#external-function" id="external-function"><h1>External function</h1></a>
-<p>Gleam is just one of many languages on the Erlang virtual machine and at times
-we may want to use functions from these other languages in our Gleam programs.
-To enable this Gleam allows the importing of <em>external functions</em>, which may
-be written in any BEAM language.</p>
-<p>External functions are typically written in a different language with a
-different type system, so the compiler is unable to determine the type of the
-function and instead the programmer must inform the compiler the type.</p>
-<p>Gleam trusts that the type given is correct so an inaccurate type annotation
-can result in unexpected behaviour and crashes at runtime. Be careful!</p>
-<a class="header" href="#example" id="example"><h2>Example</h2></a>
-<p>The Erlang <code>rand</code> module has a function named <code>uniform</code> that takes no
-arguments and returns a <code>Float</code>.</p>
-<p>The Elixir module <code>IO</code> has a function named <code>inspect</code> that takes any value,
-prints it, and returns the same value.</p>
-<p>If we want to import these functions and use them in our program we would do
-so like this:</p>
-<pre><code class="language-rust noplaypen">pub external fn random_float() -&gt; Float = &quot;rand&quot; &quot;uniform&quot;
+                        <a class="header" href="#installation" id="installation"><h1>Installation</h1></a>
+<p>A Gleam installation is made up of two parts: The Gleam compiler, and the
+Erlang runtime.</p>
+<a class="header" href="#installing-the-compiler" id="installing-the-compiler"><h2>Installing the compiler</h2></a>
+<p>The compiler is written in the Rust programming language and must be build
+from source. <a href="https://www.rust-lang.org/tools/install">Install the Rust compiler</a>
+before proceeding.</p>
+<pre><code class="language-sh"># Download the Gleam source code git reponsitory
+cd /tmp
+git clone https://github.com/lpil/gleam.git
 
-// Elixir modules start with `Elixir.`
-pub external fn inspect(a) -&gt; a = &quot;Elixir.IO&quot; &quot;inspect&quot;
+# Build the Gleam compiler. This will take some time!
+cd gleam/gleam
+cargo install --path . --force
+
+# Verify the compiler is installed
+# Prints &quot;gleam 0.1.0&quot;
+gleam --version
 </code></pre>
+<a class="header" href="#installing-the-erlang-runtime" id="installing-the-erlang-runtime"><h2>Installing the Erlang runtime</h2></a>
+<p>Gleam compiles to Erlang code, so Erlang needs to be installed to run Gleam
+code.</p>
+<p>TODO: details on installing Erlang.</p>
+<a class="header" href="#linux" id="linux"><h3>Linux</h3></a>
+<a class="header" href="#mac-os-x" id="mac-os-x"><h3>Mac OS X</h3></a>
+<a class="header" href="#windows" id="windows"><h3>Windows</h3></a>
+<a class="header" href="#using-version-managers" id="using-version-managers"><h3>Using version managers</h3></a>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="../tour/enum.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
                         
-                            <a rel="next" href="../tour/external-type.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../tour/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -182,13 +187,13 @@ pub external fn inspect(a) -&gt; a = &quot;Elixir.IO&quot; &quot;inspect&quot;
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a href="../tour/enum.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a href="../index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
-                    <a href="../tour/external-type.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a href="../tour/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 
