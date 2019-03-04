@@ -392,6 +392,27 @@ fn compile_test() {
                 },
             ]),
         },
+        Case {
+            input: vec![
+                ("one".to_string(), "pub enum Box = | Box(Int)".to_string()),
+                (
+                    "two".to_string(),
+                    "import one pub
+                     fn unbox(x) { let one:Box(i) = x i }"
+                        .to_string(),
+                ),
+            ],
+            expected: Ok(vec![
+                Compiled {
+                    name: "one".to_string(),
+                    out: "-module(one).\n\n-export([]).\n\n\n".to_string(),
+                },
+                Compiled {
+                    name: "two".to_string(),
+                    out: "-module(two).\n\n-export([unbox/1]).\n\nunbox(X) ->\n    {box, I} = X,\n    I.\n".to_string(),
+                },
+            ]),
+        },
     ];
 
     for Case { input, expected } in cases.into_iter() {

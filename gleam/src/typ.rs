@@ -1487,28 +1487,39 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             ..
         } => {
             let module = infer(*module, level, env)?;
-
-            // We unify the module with a dummy module in order to determine the type of the
-            // selected field.
-            let other_fields_typ = env.new_unbound_var(level);
-            let selected_field_typ = env.new_unbound_var(level);
-            let dummy_module = Type::Module {
-                row: Box::new(Type::RowCons {
-                    label: label.clone(),
-                    head: Box::new(selected_field_typ.clone()),
-                    tail: Box::new(other_fields_typ),
-                }),
-            };
-            unify(&dummy_module, module.typ()).map_err(|e| convert_unify_error(e, &meta))?;
+            let typ = infer_module_select(module.typ(), &label, level, &meta, env)?;
 
             Ok(Expr::ModuleSelect {
                 meta,
                 label,
                 module: Box::new(module),
-                typ: selected_field_typ,
+                typ,
             })
         }
     }
+}
+
+fn infer_module_select(
+    module_type: &Type,
+    label: &String,
+    level: usize,
+    meta: &Meta,
+    env: &mut Env,
+) -> Result<Type, Error> {
+    // We unify the module with a dummy module in order to determine the type of the
+    // selected field.
+    let other_fields_typ = env.new_unbound_var(level);
+    let selected_field_typ = env.new_unbound_var(level);
+    let dummy_module = Type::Module {
+        row: Box::new(Type::RowCons {
+            label: label.clone(),
+            head: Box::new(selected_field_typ.clone()),
+            tail: Box::new(other_fields_typ),
+        }),
+    };
+    unify(&dummy_module, module_type).map_err(|e| convert_unify_error(e, meta))?;
+
+    Ok(selected_field_typ)
 }
 
 /// When we have an assignment or a case expression we unify the pattern with the
@@ -1561,38 +1572,40 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
 
         Pattern::Constructor {
             meta,
+            module,
             name,
             args: pattern_args,
-            ..
-        } => match env
-            .clone()
-            .get_variable(name)
-            .map(|(s, t)| (s, instantiate(t.clone(), level, env)))
-        {
-            Some((_scope, Type::Fn { args, retrn })) => {
-                if args.len() == pattern_args.len() {
-                    for (pattern, typ) in pattern_args.iter().zip(&args) {
-                        unify_pattern(pattern, typ, level, env)?;
+        } => {
+            match infer_possibly_namespaced_var(module, name, level, meta, env)?
+                .1
+                .collapse_links()
+            {
+                Type::Fn { args, retrn } => {
+                    if args.len() == pattern_args.len() {
+                        for (pattern, typ) in pattern_args.iter().zip(&args) {
+                            unify_pattern(pattern, typ, level, env)?;
+                        }
+                        unify(&retrn, typ).map_err(|e| convert_unify_error(e, &meta))
+                    } else {
+                        unimplemented!()
                     }
-                    unify(&retrn, typ).map_err(|e| convert_unify_error(e, &meta))
-                } else {
-                    unimplemented!()
+                }
+
+                c @ Type::Const { .. } => {
+                    if pattern_args.len() == 0 {
+                        unify(&c, typ).map_err(|e| convert_unify_error(e, &meta))
+                    } else {
+                        // Error: singleton given args
+                        unimplemented!()
+                    }
+                }
+
+                typ => {
+                    dbg!(typ);
+                    unreachable!()
                 }
             }
-
-            Some((_scope, c @ Type::Const { .. })) => {
-                if pattern_args.len() == 0 {
-                    unify(&c, typ).map_err(|e| convert_unify_error(e, &meta))
-                } else {
-                    // Error: singleton given args
-                    unimplemented!()
-                }
-            }
-
-            Some((_scope, _)) => unreachable!(),
-
-            None => unimplemented!(), // Not found
-        },
+        }
 
         Pattern::Tuple { elems, .. } => match typ {
             Type::Tuple { elems: type_elems } => {
@@ -1605,6 +1618,24 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
             _ => unimplemented!(),
         },
         // Pattern::Record { .. } => unimplemented!(),
+    }
+}
+
+fn infer_possibly_namespaced_var(
+    module: &Option<String>,
+    name: &String,
+    level: usize,
+    meta: &Meta,
+    env: &mut Env,
+) -> Result<(Scope<Type>, Type), Error> {
+    match module {
+        None => infer_var(name, level, meta, env),
+
+        Some(module) => {
+            let (_, typ) = infer_var(module, level, meta, env)?;
+            let typ = infer_module_select(&typ, name, level, meta, env)?;
+            Ok((Scope::Module { arity: 0 }, typ))
+        }
     }
 }
 
