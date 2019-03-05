@@ -2,8 +2,8 @@ import plug
 
 external fn concat(List(String)) -> String = "erlang" "list_to_binary"
 
-pub fn init(options) {
-  options
+pub fn init(_options) {
+  {}
 }
 
 pub fn call(conn, _options) {

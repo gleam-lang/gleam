@@ -1,7 +1,7 @@
 -module(list).
 -include_lib("eunit/include/eunit.hrl").
 
--export([length/1, reverse/1, is_empty/1, has_member/2, head/1, tail/1, map/2, new/0, foldl/3, foldr/3]).
+-export([length/1, reverse/1, is_empty/1, has_member/2, head/1, tail/1, map/2, do_traverse/3, traverse/2, new/0, foldl/3, foldr/3]).
 
 length(A) ->
     erlang:length(A).
@@ -105,6 +105,41 @@ map_test() ->
     end(fun(Capture1) ->
             map(Capture1, fun(X) -> X * 2 end)
         end([0, 4, 5, 7, 3])).
+-endif.
+
+do_traverse(List, Fun, Acc) ->
+    case List of
+        [] ->
+            {ok, reverse(Acc)};
+
+        [X | Xs] ->
+            case Fun(X) of
+                {ok, Y} ->
+                    do_traverse(Xs, Fun, [Y | Acc]);
+
+                {error, Error} ->
+                    {error, Error}
+            end
+    end.
+
+traverse(List, Fun) ->
+    do_traverse(List, Fun, []).
+
+-ifdef(TEST).
+traverse_test() ->
+    Fun = fun(X) -> case X =:= 6 orelse X =:= 5 of
+            true ->
+                {ok, X * 2};
+
+            false ->
+                {error, X}
+        end end,
+    _ = fun(Capture1) ->
+        expect:equal(Capture1, {ok, [10, 12, 10, 12]})
+    end(fun(Capture1) -> traverse(Capture1, Fun) end([5, 6, 5, 6])),
+    fun(Capture1) ->
+        expect:equal(Capture1, {error, 7})
+    end(fun(Capture1) -> traverse(Capture1, Fun) end([6, 5, 7, 3])).
 -endif.
 
 new() ->

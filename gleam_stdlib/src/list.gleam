@@ -134,37 +134,38 @@ test map {
     |> expect:equal(_, [0, 8, 10, 14, 6])
 }
 
-// pub fn do_traverse(list, fun, acc) {
-//   case list {
-//   | [] -> Ok(reverse(acc))
-//   | [x | xs] ->
-//       case fun(x) {
-//       | Ok(y) -> do_traverse(xs, fun, [y | acc])
-//       | Error(error) -> Error(error)
-//       }
-//   }
-// }
+pub fn do_traverse(list, fun, acc) {
+  case list {
+  | [] -> Ok(reverse(acc))
+  | [x | xs] ->
+      case fun(x) {
+      | Ok(y) -> do_traverse(xs, fun, [y | acc])
+      | Error(error) -> Error(error)
+      }
+  }
+}
 
-// pub fn traverse(list, fun) {
-//   do_traverse(list, fun, [])
-// }
+pub fn traverse(list, fun) {
+  do_traverse(list, fun, [])
+}
 
-// test traverse {
-//   let fun = fn(x) {
-//     case x < 6 {
-//     | True -> Ok(x * 2)
-//     | False -> Error(x)
-//     }
-//   }
+test traverse {
+  let fun = fn(x) {
+    case x == 6 || x == 5 || x == 4 {
+    | True -> Ok(x * 2)
+    | False -> Error(x)
+    }
+  }
 
-//   let _ = [0, 4, 5, 6, 3]
-//     |> traverse(_, fun)
-//     |> expect:equal(_, Ok([0, 8, 10, 12, 6]))
+  let _ = [5, 6, 5, 6]
+    |> traverse(_, fun)
+    |> expect:equal(_, Ok([10, 12, 10, 12]))
 
-//   [0, 4, 5, 7, 3]
-//     |> traverse(_, fun)
-//     |> expect:equal(_, Error(7))
-// }
+  [4, 6, 5, 7, 3]
+    |> traverse(_, fun)
+    |> expect:equal(_, Error(7))
+}
+
 
 // pub fn drop(list, n) {
 //   case n <= 0 {
