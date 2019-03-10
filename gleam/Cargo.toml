@@ -21,7 +21,7 @@ regex = "0.2.1"
 petgraph = "0.4"
 # Pretty error messages
 codespan = "0.2"
-codespan-reporting = "0.2"
+codespan-reporting = "0.2.1"
 termcolor = "1.0.4"
 
 
