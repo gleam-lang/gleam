@@ -136,23 +136,32 @@
 
                 <div id="content" class="content">
                     <main>
-                        <a class="header" href="#installation" id="installation"><h1>Installation</h1></a>
+                        <a class="header" href="#warning-pre-release-software" id="warning-pre-release-software"><h1>Warning! Pre-release software</h1></a>
+<p>The Gleam compiler is incomplete alpha software and is not yet intended for
+general use. Many language features are not yet supported by the compiler and
+compiler bugs are numerous, so running Gleam code will not be as pleasant an
+experience as desired.</p>
+<p>If you wish to continue anyway please follow the instructions below and record
+any bugs or feedback on the <a href="https://github.com/lpil/gleam/issues">Gleam issue tracker</a>.</p>
+<p>Good luck, have fun!</p>
+<p><br></p>
+<a class="header" href="#installation" id="installation"><h1>Installation</h1></a>
 <p>A Gleam installation is made up of two parts: The Gleam compiler, and the
 Erlang runtime.</p>
 <a class="header" href="#installing-the-compiler" id="installing-the-compiler"><h2>Installing the compiler</h2></a>
 <p>The compiler is written in the Rust programming language and must be build
 from source. <a href="https://www.rust-lang.org/tools/install">Install the Rust compiler</a>
 before proceeding.</p>
-<pre><code class="language-sh"># Download the Gleam source code git reponsitory
+<pre><code class="language-sh"># Download the Gleam source code git repository
 cd /tmp
 git clone https://github.com/lpil/gleam.git
+cd gleam
 
 # Build the Gleam compiler. This will take some time!
-cd gleam/gleam
-cargo install --path . --force
+make install
 
 # Verify the compiler is installed
-# Prints &quot;gleam 0.1.0&quot;
+# Prints &quot;gleam $VERSION&quot;
 gleam --version
 </code></pre>
 <a class="header" href="#installing-the-erlang-runtime" id="installing-the-erlang-runtime"><h2>Installing the Erlang runtime</h2></a>

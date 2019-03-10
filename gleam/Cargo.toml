@@ -1,6 +1,6 @@
 [package]
 name = "gleam"
-version = "0.1.0"
+version = "0.0.0-alpha"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2018"
 

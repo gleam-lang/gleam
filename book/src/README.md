@@ -1,6 +1,13 @@
 # Gleam
 
-A statically typed language for the Erlang VM.
+Gleam is a statically typed functional programming language for building
+scalable concurrent systems.
+
+It compiles to [Erlang](http://www.erlang.org/) and has straightforward
+interop with other BEAM languages such as Erlang, Elixir and LFE.
+
+It looks like this:
+
 
 ```rust,noplaypen
 pub enum Tree =
