@@ -44,12 +44,12 @@ map(Result, Fun) ->
 
 -ifdef(TEST).
 map_test() ->
-    _ = fun(Capture1) ->
+    _ = (fun(Capture1) ->
         expect:equal(Capture1, {ok, 2})
-    end(fun(Capture1) -> map(Capture1, fun(X) -> X + 1 end) end({ok, 1})),
-    fun(Capture1) ->
+    end)((fun(Capture1) -> map(Capture1, fun(X) -> X + 1 end) end)({ok, 1})),
+    (fun(Capture1) ->
         expect:equal(Capture1, {error, 1})
-    end(fun(Capture1) -> map(Capture1, fun(X) -> X + 1 end) end({error, 1})).
+    end)((fun(Capture1) -> map(Capture1, fun(X) -> X + 1 end) end)({error, 1})).
 -endif.
 
 map_error(Result, Fun) ->
@@ -63,14 +63,16 @@ map_error(Result, Fun) ->
 
 -ifdef(TEST).
 map_error_test() ->
-    _ = fun(Capture1) ->
+    _ = (fun(Capture1) ->
         expect:equal(Capture1, {ok, 1})
-    end(fun(Capture1) -> map_error(Capture1, fun(X) -> X + 1 end) end({ok, 1})),
-    fun(Capture1) ->
+    end)((fun(Capture1) ->
+             map_error(Capture1, fun(X) -> X + 1 end)
+         end)({ok, 1})),
+    (fun(Capture1) ->
         expect:equal(Capture1, {error, 2})
-    end(fun(Capture1) ->
-            map_error(Capture1, fun(X) -> X + 1 end)
-        end({error, 1})).
+    end)((fun(Capture1) ->
+             map_error(Capture1, fun(X) -> X + 1 end)
+         end)({error, 1})).
 -endif.
 
 flatten(Result) ->
@@ -84,18 +86,18 @@ flatten(Result) ->
 
 -ifdef(TEST).
 flatten_test() ->
-    _ = fun(Capture1) ->
+    _ = (fun(Capture1) ->
         expect:equal(Capture1, {ok, 1})
-    end(flatten({ok, {ok, 1}})),
-    _ = fun(Capture1) ->
+    end)(flatten({ok, {ok, 1}})),
+    _ = (fun(Capture1) ->
         expect:equal(Capture1, {error, 1})
-    end(flatten({ok, {error, 1}})),
-    _ = fun(Capture1) ->
+    end)(flatten({ok, {error, 1}})),
+    _ = (fun(Capture1) ->
         expect:equal(Capture1, {error, 1})
-    end(flatten({error, 1})),
-    fun(Capture1) ->
+    end)(flatten({error, 1})),
+    (fun(Capture1) ->
         expect:equal(Capture1, {error, {error, 1}})
-    end(flatten({error, {error, 1}})).
+    end)(flatten({error, {error, 1}})).
 -endif.
 
 flat_map(Result, Fun) ->
@@ -115,21 +117,21 @@ flat_map(Result, Fun) ->
 
 -ifdef(TEST).
 flat_map_test() ->
-    _ = fun(Capture1) ->
+    _ = (fun(Capture1) ->
         expect:equal(Capture1, {error, 1})
-    end(fun(Capture1) ->
-            flat_map(Capture1, fun(X) -> {ok, X + 1} end)
-        end({error, 1})),
-    _ = fun(Capture1) ->
+    end)((fun(Capture1) ->
+             flat_map(Capture1, fun(X) -> {ok, X + 1} end)
+         end)({error, 1})),
+    _ = (fun(Capture1) ->
         expect:equal(Capture1, {ok, 2})
-    end(fun(Capture1) ->
-            flat_map(Capture1, fun(X) -> {ok, X + 1} end)
-        end({ok, 1})),
-    fun(Capture1) ->
+    end)((fun(Capture1) ->
+             flat_map(Capture1, fun(X) -> {ok, X + 1} end)
+         end)({ok, 1})),
+    (fun(Capture1) ->
         expect:equal(Capture1, {error, 1})
-    end(fun(Capture1) ->
-            flat_map(Capture1, fun(Unused) -> {error, 1} end)
-        end({ok, 1})).
+    end)((fun(Capture1) ->
+             flat_map(Capture1, fun(Unused) -> {error, 1} end)
+         end)({ok, 1})).
 -endif.
 
 unwrap(Result, Default) ->
@@ -143,8 +145,8 @@ unwrap(Result, Default) ->
 
 -ifdef(TEST).
 unwrap_test() ->
-    _ = fun(Capture1) -> expect:equal(Capture1, 1) end(unwrap({ok, 1}, 50)),
-    fun(Capture1) ->
+    _ = (fun(Capture1) -> expect:equal(Capture1, 1) end)(unwrap({ok, 1}, 50)),
+    (fun(Capture1) ->
         expect:equal(Capture1, 50)
-    end(unwrap({error, <<"nope">>}, 50)).
+    end)(unwrap({error, <<"nope">>}, 50)).
 -endif.

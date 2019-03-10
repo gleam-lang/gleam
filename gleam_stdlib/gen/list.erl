@@ -8,10 +8,10 @@ length(A) ->
 
 -ifdef(TEST).
 length_test() ->
-    _ = fun(Capture1) -> expect:equal(Capture1, 0) end(length([])),
-    _ = fun(Capture1) -> expect:equal(Capture1, 1) end(length([1])),
-    _ = fun(Capture1) -> expect:equal(Capture1, 2) end(length([1, 1])),
-    fun(Capture1) -> expect:equal(Capture1, 3) end(length([1, 1, 1])).
+    _ = (fun(Capture1) -> expect:equal(Capture1, 0) end)(length([])),
+    _ = (fun(Capture1) -> expect:equal(Capture1, 1) end)(length([1])),
+    _ = (fun(Capture1) -> expect:equal(Capture1, 2) end)(length([1, 1])),
+    (fun(Capture1) -> expect:equal(Capture1, 3) end)(length([1, 1, 1])).
 -endif.
 
 reverse(A) ->
@@ -19,8 +19,8 @@ reverse(A) ->
 
 -ifdef(TEST).
 reverse_test() ->
-    _ = fun(Capture1) -> expect:equal(Capture1, 0) end(length([])),
-    fun(Capture1) -> expect:equal(Capture1, 5) end(length([1, 2, 3, 4, 5])).
+    _ = (fun(Capture1) -> expect:equal(Capture1, 0) end)(length([])),
+    (fun(Capture1) -> expect:equal(Capture1, 5) end)(length([1, 2, 3, 4, 5])).
 -endif.
 
 is_empty(List) ->
@@ -59,10 +59,10 @@ head(List) ->
 
 -ifdef(TEST).
 head_test() ->
-    _ = fun(Capture1) ->
+    _ = (fun(Capture1) ->
         expect:equal(Capture1, {ok, 0})
-    end(head([0, 4, 5, 7])),
-    fun(Capture1) -> expect:equal(Capture1, {error, empty}) end(head([])).
+    end)(head([0, 4, 5, 7])),
+    (fun(Capture1) -> expect:equal(Capture1, {error, empty}) end)(head([])).
 -endif.
 
 tail(List) ->
@@ -76,11 +76,11 @@ tail(List) ->
 
 -ifdef(TEST).
 tail_test() ->
-    _ = fun(Capture1) ->
+    _ = (fun(Capture1) ->
         expect:equal(Capture1, {ok, [4, 5, 7]})
-    end(tail([0, 4, 5, 7])),
-    _ = fun(Capture1) -> expect:equal(Capture1, {ok, []}) end(tail([0])),
-    fun(Capture1) -> expect:equal(Capture1, {error, empty}) end(tail([])).
+    end)(tail([0, 4, 5, 7])),
+    _ = (fun(Capture1) -> expect:equal(Capture1, {ok, []}) end)(tail([0])),
+    (fun(Capture1) -> expect:equal(Capture1, {error, empty}) end)(tail([])).
 -endif.
 
 do_map(List, Fun, Acc) ->
@@ -97,14 +97,14 @@ map(List, Fun) ->
 
 -ifdef(TEST).
 map_test() ->
-    _ = fun(Capture1) ->
+    _ = (fun(Capture1) ->
         expect:equal(Capture1, [])
-    end(fun(Capture1) -> map(Capture1, fun(X) -> X * 2 end) end([])),
-    fun(Capture1) ->
+    end)((fun(Capture1) -> map(Capture1, fun(X) -> X * 2 end) end)([])),
+    (fun(Capture1) ->
         expect:equal(Capture1, [0, 8, 10, 14, 6])
-    end(fun(Capture1) ->
-            map(Capture1, fun(X) -> X * 2 end)
-        end([0, 4, 5, 7, 3])).
+    end)((fun(Capture1) ->
+             map(Capture1, fun(X) -> X * 2 end)
+         end)([0, 4, 5, 7, 3])).
 -endif.
 
 do_traverse(List, Fun, Acc) ->
@@ -127,19 +127,19 @@ traverse(List, Fun) ->
 
 -ifdef(TEST).
 traverse_test() ->
-    Fun = fun(X) -> case X =:= 6 orelse X =:= 5 of
+    Fun = fun(X) -> case X =:= 6 orelse X =:= 5 orelse X =:= 4 of
             true ->
                 {ok, X * 2};
 
             false ->
                 {error, X}
         end end,
-    _ = fun(Capture1) ->
+    _ = (fun(Capture1) ->
         expect:equal(Capture1, {ok, [10, 12, 10, 12]})
-    end(fun(Capture1) -> traverse(Capture1, Fun) end([5, 6, 5, 6])),
-    fun(Capture1) ->
+    end)((fun(Capture1) -> traverse(Capture1, Fun) end)([5, 6, 5, 6])),
+    (fun(Capture1) ->
         expect:equal(Capture1, {error, 7})
-    end(fun(Capture1) -> traverse(Capture1, Fun) end([6, 5, 7, 3])).
+    end)((fun(Capture1) -> traverse(Capture1, Fun) end)([4, 6, 5, 7, 3])).
 -endif.
 
 new() ->
@@ -147,7 +147,7 @@ new() ->
 
 -ifdef(TEST).
 new_test() ->
-    fun(Capture1) -> expect:equal(Capture1, []) end(new()).
+    (fun(Capture1) -> expect:equal(Capture1, []) end)(new()).
 -endif.
 
 foldl(List, Acc, Fun) ->
@@ -161,11 +161,11 @@ foldl(List, Acc, Fun) ->
 
 -ifdef(TEST).
 foldl_test() ->
-    fun(Capture1) ->
+    (fun(Capture1) ->
         expect:equal(Capture1, [3, 2, 1])
-    end(fun(Capture1) ->
-            foldl(Capture1, [], fun(X, Acc) -> [X | Acc] end)
-        end([1, 2, 3])).
+    end)((fun(Capture1) ->
+             foldl(Capture1, [], fun(X, Acc) -> [X | Acc] end)
+         end)([1, 2, 3])).
 -endif.
 
 foldr(List, Acc, Fun) ->
@@ -179,9 +179,9 @@ foldr(List, Acc, Fun) ->
 
 -ifdef(TEST).
 foldr_test() ->
-    fun(Capture1) ->
+    (fun(Capture1) ->
         expect:equal(Capture1, [1, 2, 3])
-    end(fun(Capture1) ->
-            foldr(Capture1, [], fun(X, Acc) -> [X | Acc] end)
-        end([1, 2, 3])).
+    end)((fun(Capture1) ->
+             foldr(Capture1, [], fun(X, Acc) -> [X | Acc] end)
+         end)([1, 2, 3])).
 -endif.

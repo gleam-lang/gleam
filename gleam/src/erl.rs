@@ -404,16 +404,20 @@ fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
             .append(label)
             .append(call_args(args, env)),
 
-        call @ Expr::Call { .. } => expr(call, env)
-            .surround("(", ")")
-            .append(call_args(args, env)),
-
         Expr::Constructor { name, .. } => {
             let mut args: Vec<_> = args.into_iter().map(|e| wrap_expr(e, env)).collect();
             // FIXME: O(n), insert at start shuffles the elemes forward by one place
             args.insert(0, atom(name.to_snake_case()));
             tuple(args)
         }
+
+        call @ Expr::Call { .. } => expr(call, env)
+            .surround("(", ")")
+            .append(call_args(args, env)),
+
+        fun @ Expr::Fn { .. } => expr(fun, env)
+            .surround("(", ")")
+            .append(call_args(args, env)),
 
         other => expr(other, env).append(call_args(args, env)),
     }
@@ -1470,7 +1474,8 @@ run() ->
 "#,
         },
         Case {
-            src: r#"fn inc(x) { x + 1 } pub fn go() { 1 |> inc |> inc |> inc }"#,
+            src: r#"fn inc(x) { x + 1 }
+                    pub fn go() { 1 |> inc |> inc |> inc }"#,
             erl: r#"-module().
 
 -export([go/0]).
@@ -1480,6 +1485,24 @@ inc(X) ->
 
 go() ->
     inc(inc(inc(1))).
+"#,
+        },
+        Case {
+            src: r#"fn add(x, y) { x + y }
+                    pub fn go() { 1 |> add(_, 1) |> add(2, _) |> add(_, 3) }"#,
+            erl: r#"-module().
+
+-export([go/0]).
+
+add(X, Y) ->
+    X + Y.
+
+go() ->
+    (fun(Capture1) ->
+        add(Capture1, 3)
+    end)((fun(Capture1) ->
+             add(2, Capture1)
+         end)((fun(Capture1) -> add(Capture1, 1) end)(1))).
 "#,
         },
         Case {
@@ -1550,7 +1573,7 @@ age(X) ->
         let ast = crate::typ::infer_module(ast, &std::collections::HashMap::new())
             .expect("should successfully infer");
         let output = module(ast);
-        assert_eq!((src, output), (src, erl.to_string()),);
+        assert_eq!((src, output), (src, erl.to_string()));
     }
 }
 

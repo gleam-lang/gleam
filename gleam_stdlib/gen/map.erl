@@ -19,8 +19,8 @@ from_list(A) ->
 from_list_test() ->
     Proplist = [{4, 0}, {1, 0}],
     Map = from_list(Proplist),
-    _ = fun(Capture1) -> expect:equal(Capture1, 2) end(size(Map)),
-    fun(Capture1) -> expect:equal(Capture1, Proplist) end(to_list(Map)).
+    _ = (fun(Capture1) -> expect:equal(Capture1, 2) end)(size(Map)),
+    (fun(Capture1) -> expect:equal(Capture1, Proplist) end)(to_list(Map)).
 -endif.
 
 fetch(A, B) ->
@@ -30,12 +30,12 @@ fetch(A, B) ->
 fetch_test() ->
     Proplist = [{4, 0}, {1, 1}],
     Map = from_list(Proplist),
-    _ = fun(Capture1) ->
+    _ = (fun(Capture1) ->
         expect:equal(Capture1, {ok, 0})
-    end(fun(Capture1) -> fetch(Capture1, 4) end(Map)),
-    fun(Capture1) ->
+    end)((fun(Capture1) -> fetch(Capture1, 4) end)(Map)),
+    (fun(Capture1) ->
         expect:equal(Capture1, {ok, 1})
-    end(fun(Capture1) -> fetch(Capture1, 1) end(Map)).
+    end)((fun(Capture1) -> fetch(Capture1, 1) end)(Map)).
 -endif.
 
 erl_map_values(A, B) ->
@@ -46,11 +46,11 @@ map_values(Map, Fun) ->
 
 -ifdef(TEST).
 map_values_test() ->
-    fun(Capture1) ->
+    (fun(Capture1) ->
         expect:equal(Capture1, from_list([{1, 0}, {2, 3}, {3, 5}]))
-    end(fun(Capture1) ->
-            map_values(Capture1, fun(K, V) -> K + V end)
-        end(from_list([{1, 0}, {2, 1}, {3, 2}]))).
+    end)((fun(Capture1) ->
+             map_values(Capture1, fun(K, V) -> K + V end)
+         end)(from_list([{1, 0}, {2, 1}, {3, 2}]))).
 -endif.
 
 keys(A) ->
@@ -58,9 +58,9 @@ keys(A) ->
 
 -ifdef(TEST).
 keys_test() ->
-    fun(Capture1) ->
+    (fun(Capture1) ->
         expect:equal(Capture1, [<<"a">>, <<"b">>, <<"c">>])
-    end(keys(from_list([{<<"a">>, 0}, {<<"b">>, 1}, {<<"c">>, 2}]))).
+    end)(keys(from_list([{<<"a">>, 0}, {<<"b">>, 1}, {<<"c">>, 2}]))).
 -endif.
 
 values(A) ->
@@ -68,9 +68,9 @@ values(A) ->
 
 -ifdef(TEST).
 values_test() ->
-    fun(Capture1) ->
+    (fun(Capture1) ->
         expect:equal(Capture1, [0, 1, 2])
-    end(values(from_list([{<<"a">>, 0}, {<<"b">>, 1}, {<<"c">>, 2}]))).
+    end)(values(from_list([{<<"a">>, 0}, {<<"b">>, 1}, {<<"c">>, 2}]))).
 -endif.
 
 erl_filter(A, B) ->

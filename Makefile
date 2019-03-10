@@ -1,5 +1,11 @@
+COMPILER=$(realpath gleam/target/release/gleam)
+
+#
+# Goals to be specified by user
+#
+
 .PHONY: build
-build: book gleam ## Build all targets
+build: book gleam gleam_stdlib/gen ## Build all targets
 
 .PHONY: help
 help:
@@ -18,12 +24,15 @@ book-serve: ## Run the book dev server
 # Debug print vars with `make print-VAR_NAME`
 print-%: ; @echo $*=$($*)
 
-
 #
 # Files
 #
 
-gleam/target/release/gleam: $(shell find gleam/src -type f)
+gleam_stdlib/gen: $(COMPILER) $(shell find gleam_stdlib -type f)
+	rm -fr gleam_stdlib/gen
+	$(COMPILER) build gleam_stdlib
+
+$(COMPILER): $(shell find gleam/src -type f)
 	cd gleam && cargo build --release
 
 docs/index.html: $(shell find book/src -type f)
