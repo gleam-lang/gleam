@@ -137,7 +137,11 @@
                 <div id="content" class="content">
                     <main>
                         <a class="header" href="#gleam" id="gleam"><h1>Gleam</h1></a>
-<p>A statically typed language for the Erlang VM.</p>
+<p>Gleam is a statically typed functional programming language for building
+scalable concurrent systems.</p>
+<p>It compiles to <a href="http://www.erlang.org/">Erlang</a> and has straightforward
+interop with other BEAM languages such as Erlang, Elixir and LFE.</p>
+<p>It looks like this:</p>
 <pre><code class="language-rust noplaypen">pub enum Tree =
   | Leaf(Int)
   | Node(Tree, Tree)
@@ -402,6 +406,70 @@ concisely express flow control that might be verbose without pattern matching.</
 }
 </code></pre>
 <a class="header" href="#function" id="function"><h1>Function</h1></a>
+<a class="header" href="#named-functions" id="named-functions"><h2>Named functions</h2></a>
+<p>Named functions in Gleam are defined using the <code>fn</code> keyword and are made
+public with the <code>pub</code> keyword.</p>
+<pre><code class="language-rust noplaypen">// This function is private and can only be called from the same module
+fn add(x, y) {
+  x + y
+}
+
+// This function is public and can be called from other modules
+pub fn multiply(x, y) {
+  x * y
+}
+</code></pre>
+<p>Functions in Gleam are first class values and so can be assigned to variables,
+passed to functions, or anything else you might do with any other data type.</p>
+<pre><code class="language-rust noplaypen">// This function takes a function as an argument
+fn twice(f, x) {
+  f(f(x))
+}
+
+fn add_one(x) {
+  x + 1
+}
+
+fn add_two(x) {
+  twice(add_one, x)
+}
+</code></pre>
+<a class="header" href="#anonymous-functions" id="anonymous-functions"><h2>Anonymous functions</h2></a>
+<p>Anonymous functions can be defined with a similar syntax.</p>
+<pre><code class="language-rust noplaypen">pub fn run() {
+  let add = fn(x, y) { x + y }
+
+  add(1, 2)
+}
+</code></pre>
+<a class="header" href="#function-capturing" id="function-capturing"><h2>Function capturing</h2></a>
+<p>There is a shorthand syntax for creating anonymous functions that take one
+argument and call another function. The <code>_</code> is used to indicate where the
+argument should be passed.</p>
+<pre><code class="language-rust noplaypen">fn add(x, y) {
+  x + y
+}
+
+pub fn run() {
+  let add_one = add(1, _)
+
+  add_one(2)
+}
+</code></pre>
+<p>The function capture syntax is often used with the pipe operator to create
+a series of transformations on some data.</p>
+<pre><code class="language-rust noplaypen">fn add(x, y) {
+  x + y
+}
+
+pub fn run() {
+  // This is the same as add(add(add(1, 3), 6), 9)
+  1
+  |&gt; add(_, 3)
+  |&gt; add(_, 6)
+  |&gt; add(_, 9)
+}
+</code></pre>
 <a class="header" href="#records" id="records"><h1>Records</h1></a>
 <p>Gleam's records are a collection of names and values where each value can be
 of any type.</p>

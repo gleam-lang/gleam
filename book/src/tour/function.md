@@ -1,1 +1,83 @@
 # Function
+
+## Named functions
+
+Named functions in Gleam are defined using the `fn` keyword and are made
+public with the `pub` keyword.
+
+```rust,noplaypen
+// This function is private and can only be called from the same module
+fn add(x, y) {
+  x + y
+}
+
+// This function is public and can be called from other modules
+pub fn multiply(x, y) {
+  x * y
+}
+```
+
+Functions in Gleam are first class values and so can be assigned to variables,
+passed to functions, or anything else you might do with any other data type.
+
+```rust,noplaypen
+// This function takes a function as an argument
+fn twice(f, x) {
+  f(f(x))
+}
+
+fn add_one(x) {
+  x + 1
+}
+
+fn add_two(x) {
+  twice(add_one, x)
+}
+```
+
+## Anonymous functions
+
+Anonymous functions can be defined with a similar syntax.
+
+```rust,noplaypen
+pub fn run() {
+  let add = fn(x, y) { x + y }
+
+  add(1, 2)
+}
+```
+
+## Function capturing
+
+There is a shorthand syntax for creating anonymous functions that take one
+argument and call another function. The `_` is used to indicate where the
+argument should be passed.
+
+```rust,noplaypen
+fn add(x, y) {
+  x + y
+}
+
+pub fn run() {
+  let add_one = add(1, _)
+
+  add_one(2)
+}
+```
+
+The function capture syntax is often used with the pipe operator to create
+a series of transformations on some data.
+
+```rust,noplaypen
+fn add(x, y) {
+  x + y
+}
+
+pub fn run() {
+  // This is the same as add(add(add(1, 3), 6), 9)
+  1
+  |> add(_, 3)
+  |> add(_, 6)
+  |> add(_, 9)
+}
+```
