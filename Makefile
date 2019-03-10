@@ -7,6 +7,10 @@ COMPILER=$(realpath gleam/target/release/gleam)
 .PHONY: build
 build: book gleam gleam_stdlib/gen gleam_decode/gen ## Build all targets
 
+.PHONY: install
+install: gleam ## Build the Gleam compiler and place it on PATH
+	cd gleam && cargo install --path . --force
+
 .PHONY: help
 help:
 	@cat $(MAKEFILE_LIST) | grep -E '^[a-zA-Z_-]+:.*?## .*$$' | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
