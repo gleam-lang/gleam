@@ -1,6 +1,6 @@
 workflow "Build and test" {
   on = "push"
-  resolves = ["Test compiler"]
+  resolves = ["Test2", "Test"]
 }
 
 action "Build compiler deps" {
