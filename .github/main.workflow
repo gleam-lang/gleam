@@ -6,6 +6,7 @@ workflow "Build and test" {
 action "Build compiler deps" {
   uses = "./.github/actions/rust"
   #args = "action-bin/compile-deps.sh"
+  runs = ["/bin/sh", "-c"]
   args = "ls"
 }
 
