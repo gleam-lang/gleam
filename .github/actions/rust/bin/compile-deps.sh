@@ -6,9 +6,15 @@ echo Compiling Rust deps
 echo
 
 cd gleam
-cp -v src/main.rs src/main.rs.bak
+
+# Create an empty main to avoid compiling the entire application
+mv -v src/main.rs src/main.rs.bak
+echo "fn main() {}" > src/main.rs
+
 cargo build
-cp -v src/main.rs.bak src/main.rs
+
+# Put back the application main
+mv -v src/main.rs.bak src/main.rs
 cd ..
 
 echo
