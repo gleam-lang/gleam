@@ -1,6 +1,6 @@
 workflow "Build and test" {
   on = "push"
-  resolves = ["Test"]
+  resolves = ["Test2"]
 }
 
 action "Build compiler deps" {
@@ -15,6 +15,12 @@ action "Test compiler" {
 }
 
 action "Test" {
+  uses = "./.github/actions/rust"
+  needs = ["Test compiler"]
+  args = "ls gleam && ls gleam/target"
+}
+
+action "Test2" {
   uses = "./.github/actions/rust"
   needs = ["Test compiler"]
   args = "ls gleam && ls gleam/target"
