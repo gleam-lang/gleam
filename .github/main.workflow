@@ -13,3 +13,9 @@ action "Test compiler" {
   needs = ["Build compiler deps"]
   args = "cd gleam && cargo test && echo done"
 }
+
+action "Test" {
+  uses = "./.github/actions/rust"
+  needs = ["Test compiler"]
+  args = "ls gleam && ls gleam/target"
+}
