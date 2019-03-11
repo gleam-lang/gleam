@@ -5,11 +5,11 @@ workflow "Build and test" {
 
 action "Build compiler deps" {
   uses = "./.github/actions/rust"
-  args = "cd gleam && cp src/main.rs{,.bak} && echo '' > src/main.rs && cargo build && cp src/main.rs{.bak,}"
+  args = "cd gleam && cp src/main.rs{,.bak} && echo '' > src/main.rs && cargo build && cp src/main.rs{.bak,} && echo done"
 }
 
 action "Test compiler" {
   uses = "./.github/actions/rust"
   needs = ["Build compiler deps"]
-  args = "cd gleam && cargo test"
+  args = "cd gleam && cargo test && echo done"
 }
