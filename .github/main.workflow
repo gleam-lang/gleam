@@ -5,5 +5,5 @@ workflow "Build and test" {
 
 action "Test Gleam compiler" {
   uses = "./.github/actions/rust"
-  args = "echo 1"
+  args = "cargo test"
 }
