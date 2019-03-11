@@ -22,6 +22,6 @@ action "Test" {
 
 action "Test2" {
   uses = "./.github/actions/rust"
-  needs = ["Test compiler"]
+  needs = ["Test"]
   args = "ls gleam && ls gleam/target"
 }
