@@ -356,7 +356,7 @@ fn var(name: String, scope: TypedScope, env: &mut Env) -> Document {
 }
 
 fn enum_pattern(name: String, args: Vec<Pattern>, env: &mut Env) -> Document {
-    if args.len() == 0 {
+    if args.is_empty() {
         atom(name.to_snake_case())
     } else {
         let mut args: Vec<_> = args.into_iter().map(|p| pattern(p, env)).collect();

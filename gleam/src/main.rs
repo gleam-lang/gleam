@@ -14,6 +14,7 @@ mod project;
 mod typ;
 lalrpop_mod!(
     #[allow(deprecated)]
+    #[allow(clippy::all)]
     grammar
 );
 

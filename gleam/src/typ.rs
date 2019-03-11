@@ -56,14 +56,14 @@ pub enum Type {
 }
 
 impl Type {
-    pub fn pretty_print(&self, initial_indent: usize) -> String {
+    pub fn pretty_print(&self, mut initial_indent: usize) -> String {
         let mut b = String::with_capacity(initial_indent);
         for _ in 0..initial_indent {
             b.push(' ');
         }
         b.to_doc()
             .append(
-                self.to_gleam_doc(&mut hashmap![], &mut initial_indent.clone())
+                self.to_gleam_doc(&mut hashmap![], &mut initial_indent)
                     .nest(initial_indent as isize),
             )
             .format(80)
@@ -265,19 +265,19 @@ impl Type {
                     TypeVar::Generic { .. } => unimplemented!(),
                 };
 
-                return match action {
+                match action {
                     Action::Link(args) => {
                         *typ.borrow_mut() = TypeVar::Link {
                             typ: Box::new(Type::App {
                                 name: name.to_string(),
                                 module: module.to_string(),
-                                public: public,
                                 args: args.clone(),
+                                public,
                             }),
                         };
                         Some(args)
                     }
-                };
+                }
             }
 
             _ => None,
@@ -747,7 +747,7 @@ impl Env {
         Type::Var {
             typ: Rc::new(RefCell::new(TypeVar::Unbound {
                 id: self.next_uid(),
-                level: level,
+                level,
             })),
         }
     }
@@ -770,7 +770,7 @@ impl Env {
 
     /// Lookup a variable in the current scope.
     ///
-    pub fn get_variable(&self, name: &String) -> Option<&(Scope<Type>, Type)> {
+    pub fn get_variable(&self, name: &str) -> Option<&(Scope<Type>, Type)> {
         self.variables.get(name)
     }
 
@@ -823,12 +823,12 @@ impl Env {
                     0 => Ok(Type::Const {
                         name: name.to_string(),
                         module: info.module.clone(),
-                        public: info.public.clone(),
+                        public: info.public,
                     }),
                     _ => Ok(Type::App {
                         name: name.to_string(),
                         module: info.module.clone(),
-                        public: info.public.clone(),
+                        public: info.public,
                         args,
                     }),
                 }
@@ -839,7 +839,7 @@ impl Env {
                     .iter()
                     .map(|t| self.type_from_ast(t, vars, permit_new_vars))
                     .collect::<Result<_, _>>()?;
-                Ok(Type::Tuple { elems: elems })
+                Ok(Type::Tuple { elems })
             }
 
             ast::Type::Fn { args, retrn, .. } => {
@@ -1076,7 +1076,7 @@ pub fn infer_module(
                     name.clone(),
                     TypeConstructorInfo {
                         module: module_name.clone(),
-                        public: public.clone(),
+                        public,
                         arity: args.len(),
                     },
                 );
@@ -1145,7 +1145,7 @@ pub fn infer_module(
                     name.clone(),
                     TypeConstructorInfo {
                         module: module_name.clone(),
-                        public: public.clone(),
+                        public,
                         arity: args.len(),
                     },
                 );
@@ -1220,16 +1220,13 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             typ: string(),
         }),
 
-        Expr::Nil { meta, typ: _ } => Ok(Expr::Nil {
+        Expr::Nil { meta, .. } => Ok(Expr::Nil {
             meta,
             typ: list(env.new_unbound_var(level)),
         }),
 
         Expr::Seq {
-            meta,
-            typ: _,
-            first,
-            then,
+            meta, first, then, ..
         } => {
             let first = infer(*first, level, env)?;
             let then = infer(*then, level, env)?;
@@ -1243,10 +1240,10 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
 
         Expr::Fn {
             meta,
-            typ: _,
             is_capture,
             args,
             body,
+            ..
         } => {
             let (args_types, body) = infer_fun(&args, *body, level, env)?;
             let typ = Type::Fn {
@@ -1265,10 +1262,10 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
 
         Expr::Let {
             meta,
-            typ: _,
             pattern,
             value,
             then,
+            ..
         } => {
             let value = infer(*value, level + 1, env)?;
             let value_typ = generalise(value.typ().clone(), level + 1);
@@ -1334,10 +1331,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         }
 
         Expr::Call {
-            meta,
-            typ: _,
-            fun,
-            args,
+            meta, fun, args, ..
         } => {
             let (fun, args, typ) = infer_call(*fun, args, level, &meta, env)?;
             Ok(Expr::Call {
@@ -1348,11 +1342,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             })
         }
 
-        Expr::Tuple {
-            meta,
-            elems,
-            typ: _,
-        } => {
+        Expr::Tuple { meta, elems, .. } => {
             let elems = elems
                 .into_iter()
                 .map(|e| infer(e, level, env))
@@ -1431,12 +1421,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             })
         }
 
-        Expr::Var {
-            meta,
-            scope: _,
-            typ: _,
-            name,
-        } => {
+        Expr::Var { meta, name, .. } => {
             let (scope, typ) = infer_var(&name, level, &meta, env)?;
             Ok(Expr::Var {
                 meta,
@@ -1446,7 +1431,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             })
         }
 
-        Expr::Constructor { meta, name, typ: _ } => {
+        Expr::Constructor { meta, name, .. } => {
             let (_scope, typ) = infer_var(&name, level, &meta, env)?;
             Ok(Expr::Constructor { meta, typ, name })
         }
@@ -1592,7 +1577,7 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
                 }
 
                 c @ Type::Const { .. } => {
-                    if pattern_args.len() == 0 {
+                    if pattern_args.is_empty() {
                         unify(&c, typ).map_err(|e| convert_unify_error(e, &meta))
                     } else {
                         // Error: singleton given args
@@ -1645,14 +1630,14 @@ fn infer_var(
     meta: &Meta,
     env: &mut Env,
 ) -> Result<(Scope<Type>, Type), Error> {
-    let (scope, typ) =
-        env.get_variable(&name)
-            .map(|t| t.clone())
-            .ok_or_else(|| Error::UnknownVariable {
-                meta: meta.clone(),
-                name: name.to_string(),
-                variables: env.variables.clone(),
-            })?;
+    let (scope, typ) = env
+        .get_variable(&name)
+        .cloned()
+        .ok_or_else(|| Error::UnknownVariable {
+            meta: meta.clone(),
+            name: name.to_string(),
+            variables: env.variables.clone(),
+        })?;
     let typ = instantiate(typ, level, env);
     Ok((scope, typ))
 }
@@ -1725,11 +1710,7 @@ fn bin_op_name(name: &BinOp) -> String {
 
 fn convert_type_from_ast_error(e: TypeFromAstError, meta: Meta) -> Error {
     match e {
-        TypeFromAstError::UnknownType { name, types } => Error::UnknownType {
-            meta,
-            name: name,
-            types: types,
-        },
+        TypeFromAstError::UnknownType { name, types } => Error::UnknownType { meta, name, types },
 
         TypeFromAstError::IncorrectTypeArity {
             meta,
@@ -2011,9 +1992,8 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
             let tail2 = rewrite_row(t2, label1.clone(), *head1.clone())?;
 
             if let Some(typ) = unbound {
-                match &*typ.borrow() {
-                    TypeVar::Link { .. } => unimplemented!(),
-                    _ => (),
+                if let TypeVar::Link { .. } = &*typ.borrow() {
+                    unimplemented!()
                 }
             }
             unify(tail1, &tail2)
@@ -2118,7 +2098,7 @@ fn update_levels(typ: &Type, own_level: usize, own_id: usize) -> Result<(), Unif
             TypeVar::Unbound { id, level } => {
                 if id == &own_id {
                     return Err(UnifyError::RecursiveType);
-                } else if level > &own_level {
+                } else if *level > own_level {
                     Some(TypeVar::Unbound {
                         id: *id,
                         level: own_level,
@@ -2298,31 +2278,29 @@ fn generalise(t: Type, ctx_level: usize) -> Type {
             args,
         } => {
             let args = args.into_iter().map(|t| generalise(t, ctx_level)).collect();
-            return Type::App {
+            Type::App {
                 public,
                 module,
                 name,
                 args,
-            };
+            }
         }
 
         Type::Fn { args, retrn } => {
             let args = args.into_iter().map(|t| generalise(t, ctx_level)).collect();
             let retrn = generalise(*retrn, ctx_level);
-            return Type::Fn {
+            Type::Fn {
                 args,
                 retrn: Box::new(retrn),
-            };
+            }
         }
 
-        Type::Tuple { elems } => {
-            return Type::Tuple {
-                elems: elems
-                    .into_iter()
-                    .map(|t| generalise(t, ctx_level))
-                    .collect(),
-            };
-        }
+        Type::Tuple { elems } => Type::Tuple {
+            elems: elems
+                .into_iter()
+                .map(|t| generalise(t, ctx_level))
+                .collect(),
+        },
 
         Type::Const { .. } => t,
 

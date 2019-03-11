@@ -97,7 +97,7 @@ Found type:
                     meta,
                     expected,
                     given,
-                    name: _,
+                    ..
                 } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Incorrect arity".to_string(),
@@ -124,11 +124,7 @@ Found type:
                     write(buffer, diagnostic);
                 }
 
-                UnknownType {
-                    meta,
-                    name: _,
-                    types: _,
-                } => {
+                UnknownType { meta, .. } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Unknown type".to_string(),
                         label: "".to_string(),
@@ -139,11 +135,7 @@ Found type:
                     write(buffer, diagnostic);
                 }
 
-                UnknownVariable {
-                    meta,
-                    name: _,
-                    variables: _,
-                } => {
+                UnknownVariable { meta, .. } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Unknown variable".to_string(),
                         label: "".to_string(),
@@ -154,7 +146,7 @@ Found type:
                     write(buffer, diagnostic);
                 }
 
-                PrivateTypeLeak { meta: _, leaked: _ } => {
+                PrivateTypeLeak { .. } => {
                     // let diagnostic = ErrorDiagnostic {
                     //     title: "Unknown variable".to_string(),
                     //     label: "".to_string(),
@@ -191,10 +183,7 @@ Found type:
                             .expect("error pretty buffer write");
                     }
 
-                    UnrecognizedToken {
-                        token: None,
-                        expected: _,
-                    } => {
+                    UnrecognizedToken { token: None, .. } => {
                         let diagnostic = ErrorDiagnostic {
                             title: "Syntax error".to_string(),
                             label: "Unexpected end of file".to_string(),
@@ -292,7 +281,7 @@ pub fn compile(srcs: Vec<(Name, Src)>) -> Result<Vec<Compiled>, Error> {
 
         let index = deps_graph.add_node(name.clone());
         deps_vec.push((name.clone(), module.dependancies()));
-        indexes.insert(name.clone(), index.clone());
+        indexes.insert(name.clone(), index);
         modules.insert(index, (src, module));
     }
 
