@@ -8,6 +8,6 @@ LABEL "com.github.actions.color"="orange"
 LABEL "repository"="http://github.com/lpil/gleam"
 LABEL "maintainer"="Louis Pilfold <louis@lpil.uk>"
 
-ADD bin/* action-bin/
+ADD bin/* /bin/
 
 ENTRYPOINT ["/bin/sh"]
