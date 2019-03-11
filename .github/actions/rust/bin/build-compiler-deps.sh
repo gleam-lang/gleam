@@ -1,8 +1,9 @@
 #!/bin/sh
+
 set -eu
 
 echo
-echo Compiling Rust deps
+echo Building compiler deps
 echo
 
 cd gleam
