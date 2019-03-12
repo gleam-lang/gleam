@@ -62,20 +62,20 @@ StatementExternalFn: UntypedStatement = {
 }
 
 StatementFn: UntypedStatement = {
-    <s:@L> <p:"pub"?> "fn" <n:VarName> "(" <a:Comma<FnArg>> ")" "{" <b:Expr> "}" <e:@L> => Statement::Fn {
+    <s:@L> <p:"pub"?> "fn" <n:VarName> "(" <a:Comma<FnArg>> ")" "{" <b:Expr+> "}" <e:@L> => Statement::Fn {
         meta: meta(s, e),
         public: p.is_some(),
         name: n,
         args: a,
-        body: b,
+        body: seq(b),
     }
 }
 
 StatementTest: UntypedStatement = {
-    <s:@L> "test" <n:VarName> "{" <b:Expr> "}" <e:@L> => Statement::Test {
+    <s:@L> "test" <n:VarName> "{" <b:Expr+> "}" <e:@L> => Statement::Test {
         meta: meta(s, e),
         name: n,
-        body: b,
+        body: seq(b),
     }
 }
 
@@ -97,7 +97,6 @@ StatementExternalType: UntypedStatement = {
 
 pub Expr: UntypedExpr = {
     Let => <>,
-    Seq => <>,
     OpOrSimpleExpr => <>,
 }
 
@@ -279,22 +278,13 @@ ModuleSelect: UntypedExpr = {
     },
 }
 
-Seq: UntypedExpr = {
-    <s:@L> <a:SimpleExpr> <b:Expr> <e:@L> => Expr::Seq {
-        meta: meta(s, e),
-        typ: (),
-        first: Box::new(a),
-        then: Box::new(b),
-    }
-}
-
 Fn: UntypedExpr = {
-    <s:@L> "fn(" <a:Comma<FnArg>> ")" "{" <b:Expr> "}" <e:@L> => Expr::Fn {
+    <s:@L> "fn(" <a:Comma<FnArg>> ")" "{" <b:Expr+> "}" <e:@L> => Expr::Fn {
         meta: meta(s, e),
         is_capture: false,
         typ: (),
         args: a,
-        body: Box::new(b),
+        body: Box::new(seq(b)),
     }
 }
 
@@ -413,7 +403,6 @@ Nil: UntypedExpr = {
     }
 }
 
-// TODO: Unescape?
 String: UntypedExpr = {
     <s:@L> <x:RawString> <e:@L> => Expr::String {
         meta: meta(s, e),

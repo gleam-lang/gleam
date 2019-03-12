@@ -26,7 +26,7 @@ book-serve: ## Run the book dev server
 	cd book && mdbook serve --open
 
 .PHONY: test ## Run all tests
-test: test-compiler test-stdlib
+test: test-gleam test-stdlib
 
 .PHONY: test-gleam
 test-gleam: ## Test the compiler
