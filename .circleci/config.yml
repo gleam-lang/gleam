@@ -11,7 +11,6 @@ jobs:
           key: gleam-compiler-cargo-{{ checksum "gleam/Cargo.toml" }}
 
       - run: cd gleam && cargo test
-
       - run: cd gleam && cargo build --release
       - run: gleam/target/release/gleam --version
 
