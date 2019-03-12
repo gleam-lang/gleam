@@ -1,5 +1,5 @@
 import expect
-// import order:[Gt, Eq, Lt]
+import order
 
 // pub fn not(bool) {
 //   case bool {
@@ -9,7 +9,7 @@ import expect
 // }
 
 // test not {
-//   not(True)
+//   let _ = not(True)
 //     |> expect:false
 
 //   not(False)
@@ -18,10 +18,10 @@ import expect
 
 // pub fn compare(a, b) {
 //   case {a, b} {
-//   | {True, True} -> Eq
-//   | {True, False} -> Gt
-//   | {False, False} -> Eq
-//   | {False, True} -> Gt
+//   | {True, True} -> order:Eq
+//   | {True, False} -> order:Gt
+//   | {False, False} -> order:Eq
+//   | {False, True} -> order:Gt
 //   }
 // }
 

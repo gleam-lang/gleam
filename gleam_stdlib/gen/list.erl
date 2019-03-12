@@ -2,7 +2,7 @@
 -compile(no_auto_import).
 -include_lib("eunit/include/eunit.hrl").
 
--export([length/1, reverse/1, is_empty/1, has_member/2, head/1, tail/1, map/2, do_traverse/3, traverse/2, new/0, foldl/3, foldr/3]).
+-export([length/1, reverse/1, is_empty/1, has_member/2, head/1, tail/1, map/2, do_traverse/3, traverse/2, new/0, append/2, flatten/1, foldl/3, foldr/3]).
 
 length(A) ->
     erlang:length(A).
@@ -54,7 +54,7 @@ head(List) ->
         [] ->
             {error, empty};
 
-        [X | Xs] ->
+        [X | _] ->
             {ok, X}
     end.
 
@@ -71,7 +71,7 @@ tail(List) ->
         [] ->
             {error, empty};
 
-        [X | Xs] ->
+        [_ | Xs] ->
             {ok, Xs}
     end.
 
@@ -149,6 +149,38 @@ new() ->
 -ifdef(TEST).
 new_test() ->
     (fun(Capture1) -> expect:equal(Capture1, []) end)(new()).
+-endif.
+
+append(A, B) ->
+    lists:append(A, B).
+
+-ifdef(TEST).
+append_test() ->
+    expect:equal(append([1], [2, 3]), [1, 2, 3]).
+-endif.
+
+do_flatten(Lists, Acc) ->
+    case Lists of
+        [] ->
+            Acc;
+
+        [L | Rest] ->
+            do_flatten(Rest, append(Acc, L))
+    end.
+
+flatten(Lists) ->
+    do_flatten(Lists, []).
+
+-ifdef(TEST).
+flatten_test() ->
+    _ = (fun(Capture1) -> expect:equal(Capture1, []) end)(flatten([])),
+    _ = (fun(Capture1) -> expect:equal(Capture1, []) end)(flatten([[]])),
+    _ = (fun(Capture1) ->
+        expect:equal(Capture1, [])
+    end)(flatten([[], [], []])),
+    (fun(Capture1) ->
+        expect:equal(Capture1, [1, 2, 3, 4])
+    end)(flatten([[1, 2], [], [3, 4]])).
 -endif.
 
 foldl(List, Acc, Fun) ->

@@ -48,7 +48,7 @@ test has_member {
 pub fn head(list) {
   case list {
   | [] -> Error(Empty)
-  | [x | xs] -> Ok(x)
+  | [x | _] -> Ok(x)
   }
 }
 
@@ -63,7 +63,7 @@ test head {
 pub fn tail(list) {
   case list {
   | [] -> Error(Empty)
-  | [x | xs] -> Ok(xs)
+  | [_ | xs] -> Ok(xs)
   }
 }
 
@@ -220,30 +220,39 @@ test new {
   new() |> expect:equal(_, [])
 }
 
-// fn do_flatten(lists, acc) {
-//   case lists {
-//   | [] -> acc
-//   | [l | rest] -> flatten(rest, acc ++ l)
-//   }
-// }
+pub external fn append(List(a), List(a)) -> List(a) = "lists" "append";
 
-// pub fn flatten(lists) {
-//   do_flatten(lists, [])
-// }
+test append {
+  expect:equal(
+    append([1], [2, 3]),
+    [1, 2, 3],
+  )
+}
 
-// test flatten {
-//   let _ = flatten([])
-//     |> expect:equal(_, [])
+fn do_flatten(lists, acc) {
+  case lists {
+  | [] -> acc
+  | [l | rest] -> do_flatten(rest, append(acc, l))
+  }
+}
 
-//   let _ = flatten([[]])
-//     |> expect:equal(_, [])
+pub fn flatten(lists) {
+  do_flatten(lists, [])
+}
 
-//   let _ = flatten([[], [], []])
-//     |> expect:equal(_, [])
+test flatten {
+  let _ = flatten([])
+    |> expect:equal(_, [])
 
-//   flatten([[1, 2], [], [3, 4]])
-//     |> expect:equal(_, [1, 2, 3, 4])
-// }
+  let _ = flatten([[]])
+    |> expect:equal(_, [])
+
+  let _ = flatten([[], [], []])
+    |> expect:equal(_, [])
+
+  flatten([[1, 2], [], [3, 4]])
+    |> expect:equal(_, [1, 2, 3, 4])
+}
 
 pub fn foldl(list, acc, fun) {
   case list {
