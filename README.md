@@ -1,5 +1,7 @@
 # Gleam ✨
 
+[![build](https://circleci.com/gh/lpil/gleam.svg?style=shield)](https://circleci.com/gh/lpil/gleam)
+
 Gleam is a statically typed functional programming language for building
 scalable concurrent systems.
 
