@@ -1,4 +1,5 @@
 -module(order).
+-compile(no_auto_import).
 -include_lib("eunit/include/eunit.hrl").
 
 -export([reverse/1, to_int/1, compare/2, max/2, min/2]).

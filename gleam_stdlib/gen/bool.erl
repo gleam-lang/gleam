@@ -1,4 +1,5 @@
 -module(bool).
+-compile(no_auto_import).
 -include_lib("eunit/include/eunit.hrl").
 
 -export([max/2, min/2, to_int/1]).

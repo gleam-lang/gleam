@@ -1,6 +1,9 @@
 -module(gleam__stdlib).
--compile(export_all).
 -include_lib("eunit/include/eunit.hrl").
+
+-export([expect_equal/2, expect_not_equal/2, expect_true/1, expect_false/1, map_fetch/2,
+         iodata_append/2, iodata_prepend/2, identity/1]).
+
 
 expect_equal(A, Expected) -> ?assertEqual(Expected, A).
 expect_not_equal(A, Expected) -> ?assertNotEqual(Expected, A).
@@ -9,11 +12,11 @@ expect_false(A) -> ?assertNot(A).
 
 map_fetch(Map, Key) ->
   case maps:find(Key, Map) of
-    error -> {error, {}},
+    error -> {error, {}};
     OkFound -> OkFound
   end.
 
-iodata_append(X, Data) -> [X | Y].
-iodata_prepend(X, Data) -> [Y, X].
+iodata_append(Iodata, String) -> [Iodata, String].
+iodata_prepend(Iodata, String) -> [String, Iodata].
 
 identity(X) -> X.

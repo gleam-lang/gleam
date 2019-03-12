@@ -1,4 +1,5 @@
 -module(list).
+-compile(no_auto_import).
 -include_lib("eunit/include/eunit.hrl").
 
 -export([length/1, reverse/1, is_empty/1, has_member/2, head/1, tail/1, map/2, do_traverse/3, traverse/2, new/0, foldl/3, foldr/3]).
@@ -15,7 +16,7 @@ length_test() ->
 -endif.
 
 reverse(A) ->
-    erlang:reverse(A).
+    lists:reverse(A).
 
 -ifdef(TEST).
 reverse_test() ->

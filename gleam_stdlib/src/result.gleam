@@ -90,12 +90,6 @@ test flatten {
     |> expect:equal(_, Error(Error(1)))
 }
 
-// pub fn flat_map(result, fun) {
-//   result
-//     |> map(_, fun)
-//     |> flatten
-// }
-
 pub fn flat_map(result, fun) {
   case result {
   | Ok(x) ->

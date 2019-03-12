@@ -5,7 +5,7 @@ import any
 pub external type Iodata;
 
 pub external fn prepend(Iodata, String) -> Iodata =
-  "gleam__stdlib" "iodata_prepend";
+  "gleam__stdlib" "iodata_concat";
 
 pub external fn append(Iodata, String) -> Iodata =
   "gleam__stdlib" "iodata_append";

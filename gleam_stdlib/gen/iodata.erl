@@ -1,9 +1,10 @@
 -module(iodata).
+-compile(no_auto_import).
 
 -export([prepend/2, append/2, from/1, to_string/1, byte_size/1]).
 
 prepend(A, B) ->
-    gleam__stdlib:iodata_prepend(A, B).
+    gleam__stdlib:iodata_concat(A, B).
 
 append(A, B) ->
     gleam__stdlib:iodata_append(A, B).

@@ -16,7 +16,7 @@ test length {
 
 // Using the Erlang C BIF implementation.
 //
-pub external fn reverse(List(a)) -> List(a) = "erlang" "reverse"
+pub external fn reverse(List(a)) -> List(a) = "lists" "reverse"
 
 test reverse {
   let _ = length([]) |> expect:equal(_, 0)

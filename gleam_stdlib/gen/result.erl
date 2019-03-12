@@ -1,4 +1,5 @@
 -module(result).
+-compile(no_auto_import).
 -include_lib("eunit/include/eunit.hrl").
 
 -export([is_ok/1, is_error/1, map/2, map_error/2, flatten/1, flat_map/2, unwrap/2]).

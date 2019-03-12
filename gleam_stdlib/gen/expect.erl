@@ -1,4 +1,5 @@
 -module(expect).
+-compile(no_auto_import).
 
 -export([equal/2, not_equal/2, true/1, false/1, fail/0]).
 

@@ -25,6 +25,17 @@ book: docs/index.html ## Build the documentation
 book-serve: ## Run the book dev server
 	cd book && mdbook serve --open
 
+.PHONY: test ## Run all tests
+test: test-compiler test-stdlib
+
+.PHONY: test-compiler
+test-compiler: ## Test the compiler
+	cd gleam && cargo test
+
+.PHONY: test-compiler
+test-stdlib: $(COMPILER) gleam_stdlib/gen ## Test gleam_stdlib
+	cd gleam_stdlib && rebar3 eunit
+
 # Debug print vars with `make print-VAR_NAME`
 print-%: ; @echo $*=$($*)
 

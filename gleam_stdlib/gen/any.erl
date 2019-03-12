@@ -1,4 +1,5 @@
 -module(any).
+-compile(no_auto_import).
 
 -export([from/1, unsafeCoerce/1]).
 

@@ -1,4 +1,5 @@
 -module(decode).
+-compile(no_auto_import).
 
 -export([string/1, int/1, float/1, atom/1, bool/1, thunk/1]).
 
