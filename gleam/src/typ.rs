@@ -356,7 +356,7 @@ fn letter_test() {
 }
 
 fn args_to_gleam_doc(
-    args: &Vec<Type>,
+    args: &[Type],
     names: &mut HashMap<usize, String>,
     uid: &mut usize,
 ) -> Document {
@@ -782,7 +782,7 @@ impl Env {
 
     /// Lookup a type in the current scope.
     ///
-    pub fn get_type_constructor(&self, name: &String) -> Option<&TypeConstructorInfo> {
+    pub fn get_type_constructor(&self, name: &str) -> Option<&TypeConstructorInfo> {
         self.type_constructors.get(name)
     }
 
@@ -1486,7 +1486,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
 
 fn infer_module_select(
     module_type: &Type,
-    label: &String,
+    label: &str,
     level: usize,
     meta: &Meta,
     env: &mut Env,
@@ -1497,7 +1497,7 @@ fn infer_module_select(
     let selected_field_typ = env.new_unbound_var(level);
     let dummy_module = Type::Module {
         row: Box::new(Type::RowCons {
-            label: label.clone(),
+            label: label.to_string(),
             head: Box::new(selected_field_typ.clone()),
             tail: Box::new(other_fields_typ),
         }),
@@ -1608,7 +1608,7 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
 
 fn infer_possibly_namespaced_var(
     module: &Option<String>,
-    name: &String,
+    name: &str,
     level: usize,
     meta: &Meta,
     env: &mut Env,
@@ -1625,13 +1625,13 @@ fn infer_possibly_namespaced_var(
 }
 
 fn infer_var(
-    name: &String,
+    name: &str,
     level: usize,
     meta: &Meta,
     env: &mut Env,
 ) -> Result<(Scope<Type>, Type), Error> {
     let (scope, typ) = env
-        .get_variable(&name)
+        .get_variable(name)
         .cloned()
         .ok_or_else(|| Error::UnknownVariable {
             meta: meta.clone(),
@@ -1666,7 +1666,7 @@ fn infer_call(
 }
 
 fn infer_fun(
-    args: &Vec<Arg>,
+    args: &[Arg],
     body: UntypedExpr,
     level: usize,
     env: &mut Env,
@@ -1874,7 +1874,7 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
     }
 
     if let Type::Var { .. } = t2 {
-        return unify(t2, t1).map_err(|e| flip_unify_error(e));
+        return unify(t2, t1).map_err(flip_unify_error);
     }
 
     match (t1, t2) {

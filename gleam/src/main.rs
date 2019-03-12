@@ -72,7 +72,7 @@ fn command_build(root: String) {
         })
         .map(|dir_entry| {
             let src = fs::read_to_string(dir_entry.path())
-                .expect(&format!("Unable to read {:?}", dir_entry.path()));
+                .unwrap_or_else(|_| panic!("Unable to read {:?}", dir_entry.path()));
 
             let name = dir_entry
                 .path()

@@ -292,13 +292,9 @@ where
         .intersperse(delim(","))
         .collect::<Vec<_>>();
 
-    match final_tail {
-        Some(final_tail) => {
-            elems.push(delim(" |"));
-            elems.push(to_doc(final_tail, env))
-        }
-
-        None => (),
+    if let Some(final_tail) = final_tail {
+        elems.push(delim(" |"));
+        elems.push(to_doc(final_tail, env))
     };
 
     elems.to_doc().nest_current().surround("[", "]").group()

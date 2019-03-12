@@ -35,7 +35,7 @@ impl Error {
         use std::io::Write;
 
         buffer
-            .write(b"\n")
+            .write_all(b"\n")
             .expect("error pretty buffer write space before");
 
         match self {
@@ -224,7 +224,7 @@ Found type:
         }
 
         buffer
-            .write(b"\n")
+            .write_all(b"\n")
             .expect("error pretty buffer write space after");
     }
 

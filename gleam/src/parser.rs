@@ -39,7 +39,9 @@ pub fn strip_extra(src: &str) -> String {
             Mode::String => match c {
                 '\\' => {
                     buffer.push(c);
-                    chars.next().map(|c| buffer.push(c));
+                    if let Some(c) = chars.next() {
+                        buffer.push(c)
+                    }
                 }
 
                 '"' => {

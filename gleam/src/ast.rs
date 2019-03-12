@@ -309,7 +309,7 @@ impl<S, T> Expr<S, T> {
 }
 
 impl TypedExpr {
-    pub fn typ<'a>(&'a self) -> &'a typ::Type {
+    pub fn typ(&self) -> &typ::Type {
         match self {
             Expr::Int { typ, .. } => typ,
             Expr::Float { typ, .. } => typ,
