@@ -1,7 +1,7 @@
 version: 2
 jobs:
   build_compiler:
-    working_directory: ~/gleam
+    working_directory: ~/tmp
     docker:
       - image: rust:1.33
     steps:
@@ -19,8 +19,8 @@ jobs:
           key: gleam-compiler-cargo-{{ checksum "gleam/Cargo.toml" }}
           paths:
             - /usr/local/cargo/registry
+            - gleam/target
             - ~/.cargo/
-            - target
 
 
 # https://circleci.com/docs/2.0/workflows/
