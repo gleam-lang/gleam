@@ -2410,10 +2410,6 @@ fn infer_test() {
             typ: "String",
         },
         Case {
-            src: "1 2.0",
-            typ: "Float",
-        },
-        Case {
             src: "[]",
             typ: "List(a)",
         },

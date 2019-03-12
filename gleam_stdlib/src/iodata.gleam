@@ -24,6 +24,11 @@ test iodata {
     |> append(_, " world!")
     |> prepend(_, "H")
 
-  expect:equal(to_string(iodata), "Hello, world!")
-  expect:equal(byte_size(iodata), 13)
+  iodata
+  |> to_string
+  |> expect:equal(_, "Hello, world!")
+
+  iodata
+  |> byte_size
+  |> expect:equal(_, 13)
 }

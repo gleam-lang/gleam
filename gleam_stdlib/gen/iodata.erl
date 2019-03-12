@@ -28,6 +28,8 @@ iodata_test() ->
          end)((fun(Capture1) ->
                   append(Capture1, <<",">>)
               end)(from([<<"ello">>])))),
-    expect:equal(to_string(Iodata), <<"Hello, world!">>),
-    expect:equal(byte_size(Iodata), 13).
+    (fun(Capture1) ->
+        expect:equal(Capture1, <<"Hello, world!">>)
+    end)(to_string(Iodata)),
+    (fun(Capture1) -> expect:equal(Capture1, 13) end)(byte_size(Iodata)).
 -endif.

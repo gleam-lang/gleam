@@ -72,6 +72,18 @@ fn strip_extra_test() {
     assert_eq!(strip_extra(&r#""\"//" hi"#), r#""\"//" hi"#.to_string());
 }
 
+pub fn seq(mut exprs: Vec<crate::ast::UntypedExpr>) -> crate::ast::UntypedExpr {
+    use crate::ast::*;
+
+    let head = exprs.pop().unwrap();
+    exprs.into_iter().rev().fold(head, |acc, expr| Expr::Seq {
+        meta: expr.meta().clone(),
+        typ: (),
+        first: Box::new(expr),
+        then: Box::new(acc),
+    })
+}
+
 pub fn meta(start: usize, end: usize) -> crate::ast::Meta {
     crate::ast::Meta { start, end }
 }
@@ -481,24 +493,6 @@ fn expr_test() {
     );
 
     assert_eq!(
-        Ok(Expr::Seq {
-            meta: Meta { start: 0, end: 3 },
-            typ: (),
-            first: Box::new(Expr::Int {
-                typ: (),
-                meta: Meta { start: 0, end: 1 },
-                value: 1
-            }),
-            then: Box::new(Expr::Int {
-                typ: (),
-                meta: Meta { start: 2, end: 3 },
-                value: 2
-            }),
-        }),
-        ExprParser::new().parse("1 2"),
-    );
-
-    assert_eq!(
         Ok(Expr::RecordSelect {
             meta: Meta { start: 0, end: 11 },
             typ: (),
@@ -622,7 +616,7 @@ fn expr_test() {
                 },
             ],
             body: Box::new(Expr::Seq {
-                meta: Meta { start: 11, end: 14 },
+                meta: Meta { start: 11, end: 12 },
                 typ: (),
                 first: Box::new(Expr::Int {
                     typ: (),
@@ -878,7 +872,7 @@ fn module_test() {
                     }
                 ],
                 body: Expr::Seq {
-                    meta: Meta { start: 19, end: 22 },
+                    meta: Meta { start: 19, end: 20 },
                     typ: (),
                     first: Box::new(Expr::Int {
                         typ: (),
@@ -894,6 +888,52 @@ fn module_test() {
             }]
         }),
         ModuleParser::new().parse("fn run(one, two) { 1 2 }"),
+    );
+
+    assert_eq!(
+        Ok(Module {
+            typ: (),
+            name: "".to_string(),
+            statements: vec![Statement::Fn {
+                meta: Meta { start: 0, end: 20 },
+                public: false,
+                name: "run".to_string(),
+                args: vec![],
+                body: Expr::Seq {
+                    meta: Meta { start: 11, end: 12 },
+                    typ: (),
+                    first: Box::new(Expr::Int {
+                        typ: (),
+                        meta: Meta { start: 11, end: 12 },
+                        value: 1
+                    }),
+                    then: Box::new(Expr::Seq {
+                        meta: Meta { start: 13, end: 14 },
+                        typ: (),
+                        first: Box::new(Expr::Int {
+                            typ: (),
+                            meta: Meta { start: 13, end: 14 },
+                            value: 2
+                        }),
+                        then: Box::new(Expr::Seq {
+                            meta: Meta { start: 15, end: 16 },
+                            typ: (),
+                            first: Box::new(Expr::Int {
+                                typ: (),
+                                meta: Meta { start: 15, end: 16 },
+                                value: 3
+                            }),
+                            then: Box::new(Expr::Int {
+                                typ: (),
+                                meta: Meta { start: 17, end: 18 },
+                                value: 4
+                            })
+                        })
+                    })
+                }
+            }]
+        }),
+        ModuleParser::new().parse("fn run() { 1 2 3 4 }"),
     );
 
     assert_eq!(
@@ -923,7 +963,7 @@ fn module_test() {
                 meta: Meta { start: 0, end: 16 },
                 name: "run".to_string(),
                 body: Expr::Seq {
-                    meta: Meta { start: 11, end: 14 },
+                    meta: Meta { start: 11, end: 12 },
                     typ: (),
                     first: Box::new(Expr::Int {
                         typ: (),

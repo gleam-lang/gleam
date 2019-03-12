@@ -1417,38 +1417,6 @@ go() ->
 "#,
         },
         Case {
-            src: r#"fn go(x) {
-    case begin 1 x end {
-    | y ->
-        1
-    }
-}
-
-fn x() {
-    go(begin 1 2 end)
-}"#,
-            erl: r#"-module().
--compile(no_auto_import).
-
--export([]).
-
-go(X) ->
-    case begin
-        1,
-        X
-    end of
-        Y ->
-            1
-    end.
-
-x() ->
-    go(begin
-           1,
-           2
-       end).
-"#,
-        },
-        Case {
             src: r#"pub enum Money = | Pound(Int)
                     fn pound(x) {
                       Pound(x)
