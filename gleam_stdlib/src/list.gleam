@@ -8,9 +8,9 @@ pub enum Error =
 pub external fn length(List(a)) -> Int = "erlang" "length"
 
 test length {
-  let _ = length([]) |> expect:equal(_, 0)
-  let _ = length([1]) |> expect:equal(_, 1)
-  let _ = length([1, 1]) |> expect:equal(_, 2)
+  length([]) |> expect:equal(_, 0)
+  length([1]) |> expect:equal(_, 1)
+  length([1, 1]) |> expect:equal(_, 2)
   length([1, 1, 1]) |> expect:equal(_, 3)
 }
 
@@ -19,7 +19,7 @@ test length {
 pub external fn reverse(List(a)) -> List(a) = "lists" "reverse"
 
 test reverse {
-  let _ = length([]) |> expect:equal(_, 0)
+  length([]) |> expect:equal(_, 0)
   length([1, 2, 3, 4, 5]) |> expect:equal(_, 5)
 }
 
@@ -28,7 +28,7 @@ pub fn is_empty(list) {
 }
 
 test is_empty {
-  let _ = is_empty([]) |> expect:true
+  is_empty([]) |> expect:true
   is_empty([1]) |> expect:false
 }
 
@@ -40,8 +40,8 @@ pub fn has_member(list, elem) {
 }
 
 test has_member {
-  let _ = has_member([0, 4, 5, 1], 1) |> expect:true
-  let _ = has_member([0, 4, 5, 7], 1) |> expect:false
+  has_member([0, 4, 5, 1], 1) |> expect:true
+  has_member([0, 4, 5, 7], 1) |> expect:false
   has_member([], 1) |> expect:false
 }
 
@@ -53,7 +53,7 @@ pub fn head(list) {
 }
 
 test head {
-  let _ = head([0, 4, 5, 7])
+  head([0, 4, 5, 7])
     |> expect:equal(_, Ok(0))
 
   head([])
@@ -68,10 +68,10 @@ pub fn tail(list) {
 }
 
 test tail {
-  let _ = tail([0, 4, 5, 7])
+  tail([0, 4, 5, 7])
     |> expect:equal(_, Ok([4, 5, 7]))
 
-  let _ = tail([0])
+  tail([0])
     |> expect:equal(_, Ok([]))
 
   tail([])
@@ -96,15 +96,15 @@ test tail {
 // }
 
 // test filter {
-//   let _ = []
+//   []
 //     |> filter(_, fn(x) { True })
 //     |> expect:equal(_, [])
 
-//   let _ = [0, 4, 5, 7, 3]
+//   [0, 4, 5, 7, 3]
 //     |> filter(_, fn(x) { True })
 //     |> expect:equal(_, [0, 4, 5, 7, 3])
 
-//   let _ = [0, 4, 5, 7, 3]
+//   [0, 4, 5, 7, 3]
 //     |> filter(_, fn(x) { x > 4 })
 //     |> expect:equal(_, [5, 7])
 
@@ -125,7 +125,7 @@ pub fn map(list, fun) {
 }
 
 test map {
-  let _ = []
+  []
     |> map(_, fn(x) { x * 2 })
     |> expect:equal(_, [])
 
@@ -157,7 +157,7 @@ test traverse {
     }
   }
 
-  let _ = [5, 6, 5, 6]
+  [5, 6, 5, 6]
     |> traverse(_, fun)
     |> expect:equal(_, Ok([10, 12, 10, 12]))
 
@@ -179,7 +179,7 @@ test traverse {
 // }
 
 // test drop {
-//   let _ = []
+//   []
 //     |> drop(_, 5)
 //     |> expect:equal(_, [])
 
@@ -204,7 +204,7 @@ test traverse {
 // }
 
 // test take {
-//   let _ = []
+//   []
 //     |> take(_, 5)
 //     |> expect:equal(_, [])
 //   [1, 2, 3, 4, 5, 6, 7, 8]
@@ -241,13 +241,13 @@ pub fn flatten(lists) {
 }
 
 test flatten {
-  let _ = flatten([])
+  flatten([])
     |> expect:equal(_, [])
 
-  let _ = flatten([[]])
+  flatten([[]])
     |> expect:equal(_, [])
 
-  let _ = flatten([[], [], []])
+  flatten([[], [], []])
     |> expect:equal(_, [])
 
   flatten([[1, 2], [], [3, 4]])

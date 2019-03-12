@@ -15,7 +15,7 @@ is_ok(Result) ->
 
 -ifdef(TEST).
 is_ok_test() ->
-    _ = expect:true(is_ok({ok, 1})),
+    expect:true(is_ok({ok, 1})),
     expect:false(is_ok({error, 1})).
 -endif.
 
@@ -30,7 +30,7 @@ is_error(Result) ->
 
 -ifdef(TEST).
 is_error_test() ->
-    _ = expect:false(is_error({ok, 1})),
+    expect:false(is_error({ok, 1})),
     expect:true(is_error({error, 1})).
 -endif.
 
@@ -45,7 +45,7 @@ map(Result, Fun) ->
 
 -ifdef(TEST).
 map_test() ->
-    _ = (fun(Capture1) ->
+    (fun(Capture1) ->
         expect:equal(Capture1, {ok, 2})
     end)((fun(Capture1) -> map(Capture1, fun(X) -> X + 1 end) end)({ok, 1})),
     (fun(Capture1) ->
@@ -64,7 +64,7 @@ map_error(Result, Fun) ->
 
 -ifdef(TEST).
 map_error_test() ->
-    _ = (fun(Capture1) ->
+    (fun(Capture1) ->
         expect:equal(Capture1, {ok, 1})
     end)((fun(Capture1) ->
              map_error(Capture1, fun(X) -> X + 1 end)
@@ -87,13 +87,13 @@ flatten(Result) ->
 
 -ifdef(TEST).
 flatten_test() ->
-    _ = (fun(Capture1) ->
+    (fun(Capture1) ->
         expect:equal(Capture1, {ok, 1})
     end)(flatten({ok, {ok, 1}})),
-    _ = (fun(Capture1) ->
+    (fun(Capture1) ->
         expect:equal(Capture1, {error, 1})
     end)(flatten({ok, {error, 1}})),
-    _ = (fun(Capture1) ->
+    (fun(Capture1) ->
         expect:equal(Capture1, {error, 1})
     end)(flatten({error, 1})),
     (fun(Capture1) ->
@@ -118,12 +118,12 @@ flat_map(Result, Fun) ->
 
 -ifdef(TEST).
 flat_map_test() ->
-    _ = (fun(Capture1) ->
+    (fun(Capture1) ->
         expect:equal(Capture1, {error, 1})
     end)((fun(Capture1) ->
              flat_map(Capture1, fun(X) -> {ok, X + 1} end)
          end)({error, 1})),
-    _ = (fun(Capture1) ->
+    (fun(Capture1) ->
         expect:equal(Capture1, {ok, 2})
     end)((fun(Capture1) ->
              flat_map(Capture1, fun(X) -> {ok, X + 1} end)
@@ -146,7 +146,7 @@ unwrap(Result, Default) ->
 
 -ifdef(TEST).
 unwrap_test() ->
-    _ = (fun(Capture1) -> expect:equal(Capture1, 1) end)(unwrap({ok, 1}, 50)),
+    (fun(Capture1) -> expect:equal(Capture1, 1) end)(unwrap({ok, 1}, 50)),
     (fun(Capture1) ->
         expect:equal(Capture1, 50)
     end)(unwrap({error, <<"nope">>}, 50)).

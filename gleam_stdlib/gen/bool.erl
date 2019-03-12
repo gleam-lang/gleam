@@ -15,9 +15,9 @@ max(A, B) ->
 
 -ifdef(TEST).
 max_test() ->
-    _ = (fun(Capture1) -> expect:equal(Capture1, true) end)(max(true, true)),
-    _ = (fun(Capture1) -> expect:equal(Capture1, true) end)(max(true, false)),
-    _ = (fun(Capture1) -> expect:equal(Capture1, false) end)(max(false, false)),
+    (fun(Capture1) -> expect:equal(Capture1, true) end)(max(true, true)),
+    (fun(Capture1) -> expect:equal(Capture1, true) end)(max(true, false)),
+    (fun(Capture1) -> expect:equal(Capture1, false) end)(max(false, false)),
     (fun(Capture1) -> expect:equal(Capture1, true) end)(max(false, true)).
 -endif.
 
@@ -32,9 +32,9 @@ min(A, B) ->
 
 -ifdef(TEST).
 min_test() ->
-    _ = (fun(Capture1) -> expect:equal(Capture1, true) end)(min(true, true)),
-    _ = (fun(Capture1) -> expect:equal(Capture1, false) end)(min(true, false)),
-    _ = (fun(Capture1) -> expect:equal(Capture1, false) end)(min(false, false)),
+    (fun(Capture1) -> expect:equal(Capture1, true) end)(min(true, true)),
+    (fun(Capture1) -> expect:equal(Capture1, false) end)(min(true, false)),
+    (fun(Capture1) -> expect:equal(Capture1, false) end)(min(false, false)),
     (fun(Capture1) -> expect:equal(Capture1, false) end)(min(false, true)).
 -endif.
 
@@ -49,6 +49,6 @@ to_int(Bool) ->
 
 -ifdef(TEST).
 to_int_test() ->
-    _ = (fun(Capture1) -> expect:equal(Capture1, 1) end)(to_int(true)),
+    (fun(Capture1) -> expect:equal(Capture1, 1) end)(to_int(true)),
     (fun(Capture1) -> expect:equal(Capture1, 0) end)(to_int(false)).
 -endif.

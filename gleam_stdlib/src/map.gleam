@@ -34,19 +34,19 @@ pub fn has_key(map, key) {
 }
 
 test has_key {
-  let _ = []
+  []
     |> from_list
     |> has_key(_, 1)
     |> expect:false
 
-  let _ = [
+  [
       {1, 0},
     ]
     |> from_list
     |> has_key(_, 1)
     |> expect:true
 
-  let _ = [
+  [
       {4, 0},
       {1, 0},
     ]
@@ -67,7 +67,7 @@ pub external fn new() -> Map(key, value)
   = "maps" "new"
 
 test new {
-  let _ = new()
+  new()
     |> size
     |> expect:equal(_, 0)
 
@@ -83,7 +83,7 @@ test new {
 // test from_record {
 //   let map = from_record({ name = "Jane" })
 
-//   let _ = map
+//   map
 //     |> size
 //     |> expect:equal(_, 1)
 
@@ -101,7 +101,7 @@ test fetch {
   ]
   let map = from_list(proplist)
 
-  let _ = map
+  map
     |> fetch(_, 4)
     |> expect:equal(_, Ok(0))
 
