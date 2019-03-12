@@ -1,0 +1,23 @@
+version: 2
+jobs:
+  build_compiler:
+    working_directory: ~/gleam
+    docker:
+      - image: rust:1.33
+    steps:
+      - checkout
+
+      - restore_cache:
+          key: gleam-compiler-cargo-{{ checksum "gleam/Cargo.toml" }}
+
+      - run: cargo test
+
+      - run: cargo build --release
+      - run: gleam/target/release/gleam --version
+
+      - save_cache:
+          key: gleam-compiler-cargo-{{ checksum "gleam/Cargo.toml" }}
+          paths:
+            - /usr/local/cargo/registry
+            - ~/.cargo/
+            - target
