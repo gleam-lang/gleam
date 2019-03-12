@@ -23,11 +23,9 @@ jobs:
             - target
 
 
+# https://circleci.com/docs/2.0/workflows/
 workflows:
   version: 2
   ci:
     jobs:
       - build_compiler
-      # - deploy:
-      #     requires:
-      #       - build
