@@ -9,9 +9,9 @@ length(A) ->
 
 -ifdef(TEST).
 length_test() ->
-    _ = (fun(Capture1) -> expect:equal(Capture1, 0) end)(length([])),
-    _ = (fun(Capture1) -> expect:equal(Capture1, 1) end)(length([1])),
-    _ = (fun(Capture1) -> expect:equal(Capture1, 2) end)(length([1, 1])),
+    (fun(Capture1) -> expect:equal(Capture1, 0) end)(length([])),
+    (fun(Capture1) -> expect:equal(Capture1, 1) end)(length([1])),
+    (fun(Capture1) -> expect:equal(Capture1, 2) end)(length([1, 1])),
     (fun(Capture1) -> expect:equal(Capture1, 3) end)(length([1, 1, 1])).
 -endif.
 
@@ -20,7 +20,7 @@ reverse(A) ->
 
 -ifdef(TEST).
 reverse_test() ->
-    _ = (fun(Capture1) -> expect:equal(Capture1, 0) end)(length([])),
+    (fun(Capture1) -> expect:equal(Capture1, 0) end)(length([])),
     (fun(Capture1) -> expect:equal(Capture1, 5) end)(length([1, 2, 3, 4, 5])).
 -endif.
 
@@ -29,7 +29,7 @@ is_empty(List) ->
 
 -ifdef(TEST).
 is_empty_test() ->
-    _ = expect:true(is_empty([])),
+    expect:true(is_empty([])),
     expect:false(is_empty([1])).
 -endif.
 
@@ -44,8 +44,8 @@ has_member(List, Elem) ->
 
 -ifdef(TEST).
 has_member_test() ->
-    _ = expect:true(has_member([0, 4, 5, 1], 1)),
-    _ = expect:false(has_member([0, 4, 5, 7], 1)),
+    expect:true(has_member([0, 4, 5, 1], 1)),
+    expect:false(has_member([0, 4, 5, 7], 1)),
     expect:false(has_member([], 1)).
 -endif.
 
@@ -60,9 +60,7 @@ head(List) ->
 
 -ifdef(TEST).
 head_test() ->
-    _ = (fun(Capture1) ->
-        expect:equal(Capture1, {ok, 0})
-    end)(head([0, 4, 5, 7])),
+    (fun(Capture1) -> expect:equal(Capture1, {ok, 0}) end)(head([0, 4, 5, 7])),
     (fun(Capture1) -> expect:equal(Capture1, {error, empty}) end)(head([])).
 -endif.
 
@@ -77,10 +75,10 @@ tail(List) ->
 
 -ifdef(TEST).
 tail_test() ->
-    _ = (fun(Capture1) ->
+    (fun(Capture1) ->
         expect:equal(Capture1, {ok, [4, 5, 7]})
     end)(tail([0, 4, 5, 7])),
-    _ = (fun(Capture1) -> expect:equal(Capture1, {ok, []}) end)(tail([0])),
+    (fun(Capture1) -> expect:equal(Capture1, {ok, []}) end)(tail([0])),
     (fun(Capture1) -> expect:equal(Capture1, {error, empty}) end)(tail([])).
 -endif.
 
@@ -98,7 +96,7 @@ map(List, Fun) ->
 
 -ifdef(TEST).
 map_test() ->
-    _ = (fun(Capture1) ->
+    (fun(Capture1) ->
         expect:equal(Capture1, [])
     end)((fun(Capture1) -> map(Capture1, fun(X) -> X * 2 end) end)([])),
     (fun(Capture1) ->
@@ -135,7 +133,7 @@ traverse_test() ->
             false ->
                 {error, X}
         end end,
-    _ = (fun(Capture1) ->
+    (fun(Capture1) ->
         expect:equal(Capture1, {ok, [10, 12, 10, 12]})
     end)((fun(Capture1) -> traverse(Capture1, Fun) end)([5, 6, 5, 6])),
     (fun(Capture1) ->
@@ -173,11 +171,9 @@ flatten(Lists) ->
 
 -ifdef(TEST).
 flatten_test() ->
-    _ = (fun(Capture1) -> expect:equal(Capture1, []) end)(flatten([])),
-    _ = (fun(Capture1) -> expect:equal(Capture1, []) end)(flatten([[]])),
-    _ = (fun(Capture1) ->
-        expect:equal(Capture1, [])
-    end)(flatten([[], [], []])),
+    (fun(Capture1) -> expect:equal(Capture1, []) end)(flatten([])),
+    (fun(Capture1) -> expect:equal(Capture1, []) end)(flatten([[]])),
+    (fun(Capture1) -> expect:equal(Capture1, []) end)(flatten([[], [], []])),
     (fun(Capture1) ->
         expect:equal(Capture1, [1, 2, 3, 4])
     end)(flatten([[1, 2], [], [3, 4]])).

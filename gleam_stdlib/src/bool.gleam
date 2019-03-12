@@ -9,7 +9,7 @@ import order
 // }
 
 // test not {
-//   let _ = not(True)
+//   not(True)
 //     |> expect:false
 
 //   not(False)
@@ -47,13 +47,13 @@ pub fn max(a, b) {
 }
 
 test max {
-  let _ = max(True, True)
+  max(True, True)
     |> expect:equal(_, True)
 
-  let _ = max(True, False)
+  max(True, False)
     |> expect:equal(_, True)
 
-  let _ = max(False, False)
+  max(False, False)
     |> expect:equal(_, False)
 
   max(False, True)
@@ -68,13 +68,13 @@ pub fn min(a, b) {
 }
 
 test min {
-  let _ = min(True, True)
+  min(True, True)
     |> expect:equal(_, True)
 
-  let _ = min(True, False)
+  min(True, False)
     |> expect:equal(_, False)
 
-  let _ = min(False, False)
+  min(False, False)
     |> expect:equal(_, False)
 
   min(False, True)
@@ -89,7 +89,7 @@ pub fn to_int(bool) {
 }
 
 test to_int {
-  let _ = to_int(True)
+  to_int(True)
     |> expect:equal(_, 1)
 
   to_int(False)

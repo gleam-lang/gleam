@@ -28,15 +28,13 @@ has_key(Map, Key) ->
 
 -ifdef(TEST).
 has_key_test() ->
-    _ = expect:false((fun(Capture1) ->
-                         has_key(Capture1, 1)
-                     end)(from_list([]))),
-    _ = expect:true((fun(Capture1) ->
-                        has_key(Capture1, 1)
-                    end)(from_list([{1, 0}]))),
-    _ = expect:true((fun(Capture1) ->
-                        has_key(Capture1, 1)
-                    end)(from_list([{4, 0}, {1, 0}]))),
+    expect:false((fun(Capture1) -> has_key(Capture1, 1) end)(from_list([]))),
+    expect:true((fun(Capture1) ->
+                    has_key(Capture1, 1)
+                end)(from_list([{1, 0}]))),
+    expect:true((fun(Capture1) ->
+                    has_key(Capture1, 1)
+                end)(from_list([{4, 0}, {1, 0}]))),
     expect:false((fun(Capture1) ->
                      has_key(Capture1, 0)
                  end)(from_list([{4, 0}, {1, 0}]))).
@@ -47,7 +45,7 @@ new() ->
 
 -ifdef(TEST).
 new_test() ->
-    _ = (fun(Capture1) -> expect:equal(Capture1, 0) end)(size(new())),
+    (fun(Capture1) -> expect:equal(Capture1, 0) end)(size(new())),
     (fun(Capture1) -> expect:equal(Capture1, []) end)(to_list(new())).
 -endif.
 
@@ -58,7 +56,7 @@ fetch(A, B) ->
 fetch_test() ->
     Proplist = [{4, 0}, {1, 1}],
     Map = from_list(Proplist),
-    _ = (fun(Capture1) ->
+    (fun(Capture1) ->
         expect:equal(Capture1, {ok, 0})
     end)((fun(Capture1) -> fetch(Capture1, 4) end)(Map)),
     (fun(Capture1) ->
