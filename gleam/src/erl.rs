@@ -69,6 +69,8 @@ pub fn module(module: TypedModule) -> String {
 
     format!("-module({}).", module.name)
         .to_doc()
+        .append(line())
+        .append("-compile(no_auto_import).")
         .append(test_header)
         .append(lines(2))
         .append("-export([")
@@ -596,6 +598,7 @@ fn module_test() {
         ],
     };
     let expected = "-module(magic).
+-compile(no_auto_import).
 
 -export([map/0]).
 
@@ -839,6 +842,7 @@ map() ->
         ],
     };
     let expected = "-module(term).
+-compile(no_auto_import).
 
 -export([]).
 
@@ -929,6 +933,7 @@ funny() ->
         }],
     };
     let expected = "-module(term).
+-compile(no_auto_import).
 
 -export([]).
 
@@ -959,6 +964,7 @@ some_function(ArgOne,
         }],
     };
     let expected = r#"-module(term).
+-compile(no_auto_import).
 -include_lib("eunit/include/eunit.hrl").
 
 -export([]).
@@ -1111,6 +1117,7 @@ bang_test() ->
         ],
     };
     let expected = "-module(vars).
+-compile(no_auto_import).
 
 -export([]).
 
@@ -1243,6 +1250,7 @@ moddy4() ->
         }],
     };
     let expected = "-module(my_mod).
+-compile(no_auto_import).
 
 -export([]).
 
@@ -1348,6 +1356,7 @@ go() ->
         ],
     };
     let expected = "-module(funny).
+-compile(no_auto_import).
 
 -export([]).
 
@@ -1378,6 +1387,7 @@ fn integration_test() {
   x
 }"#,
             erl: r#"-module().
+-compile(no_auto_import).
 
 -export([]).
 
@@ -1396,6 +1406,7 @@ go() ->
   y
 }"#,
             erl: r#"-module().
+-compile(no_auto_import).
 
 -export([]).
 
@@ -1417,6 +1428,7 @@ fn x() {
     go(begin 1 2 end)
 }"#,
             erl: r#"-module().
+-compile(no_auto_import).
 
 -export([]).
 
@@ -1442,6 +1454,7 @@ x() ->
                       Pound(x)
                     }"#,
             erl: r#"-module().
+-compile(no_auto_import).
 
 -export([]).
 
@@ -1452,6 +1465,7 @@ pound(X) ->
         Case {
             src: r#"fn loop() { loop() }"#,
             erl: r#"-module().
+-compile(no_auto_import).
 
 -export([]).
 
@@ -1462,6 +1476,7 @@ loop() ->
         Case {
             src: r#"external fn run() -> Int = "Elixir.MyApp" "run""#,
             erl: r#"-module().
+-compile(no_auto_import).
 
 -export([]).
 
@@ -1473,6 +1488,7 @@ run() ->
             src: r#"fn inc(x) { x + 1 }
                     pub fn go() { 1 |> inc |> inc |> inc }"#,
             erl: r#"-module().
+-compile(no_auto_import).
 
 -export([go/0]).
 
@@ -1487,6 +1503,7 @@ go() ->
             src: r#"fn add(x, y) { x + y }
                     pub fn go() { 1 |> add(_, 1) |> add(2, _) |> add(_, 3) }"#,
             erl: r#"-module().
+-compile(no_auto_import).
 
 -export([go/0]).
 
@@ -1507,6 +1524,7 @@ go() ->
                     fn modulo(x, y) { x % y }
             "#,
             erl: r#"-module().
+-compile(no_auto_import).
 
 -export([]).
 
@@ -1525,6 +1543,7 @@ modulo(X, Y) ->
                     fn tail(list) { case list { | [x | xs] -> xs | z -> list } }
             "#,
             erl: r#"-module().
+-compile(no_auto_import).
 
 -export([]).
 
@@ -1550,6 +1569,7 @@ tail(List) ->
         Case {
             src: r#"fn age(x) { x.age }"#,
             erl: r#"-module().
+-compile(no_auto_import).
 
 -export([]).
 

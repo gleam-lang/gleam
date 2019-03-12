@@ -341,11 +341,11 @@ fn compile_test() {
             expected: Ok(vec![
                 Compiled {
                     name: "two".to_string(),
-                    out: "-module(two).\n\n-export([]).\n\n\n".to_string(),
+                    out: "-module(two).\n-compile(no_auto_import).\n\n-export([]).\n\n\n".to_string(),
                 },
                 Compiled {
                     name: "one".to_string(),
-                    out: "-module(one).\n\n-export([]).\n\n\n".to_string(),
+                    out: "-module(one).\n-compile(no_auto_import).\n\n-export([]).\n\n\n".to_string(),
                 },
             ]),
         },
@@ -357,11 +357,11 @@ fn compile_test() {
             expected: Ok(vec![
                 Compiled {
                     name: "two".to_string(),
-                    out: "-module(two).\n\n-export([]).\n\n\n".to_string(),
+                    out: "-module(two).\n-compile(no_auto_import).\n\n-export([]).\n\n\n".to_string(),
                 },
                 Compiled {
                     name: "one".to_string(),
-                    out: "-module(one).\n\n-export([]).\n\n\n".to_string(),
+                    out: "-module(one).\n-compile(no_auto_import).\n\n-export([]).\n\n\n".to_string(),
                 },
             ]),
         },
@@ -373,11 +373,11 @@ fn compile_test() {
             expected: Ok(vec![
                 Compiled {
                     name: "one".to_string(),
-                    out: "-module(one).\n\n-export([]).\n\n\n".to_string(),
+                    out: "-module(one).\n-compile(no_auto_import).\n\n-export([]).\n\n\n".to_string(),
                 },
                 Compiled {
                     name: "two".to_string(),
-                    out: "-module(two).\n\n-export([]).\n\n\n".to_string(),
+                    out: "-module(two).\n-compile(no_auto_import).\n\n-export([]).\n\n\n".to_string(),
                 },
             ]),
         },
@@ -394,11 +394,11 @@ fn compile_test() {
             expected: Ok(vec![
                 Compiled {
                     name: "one".to_string(),
-                    out: "-module(one).\n\n-export([]).\n\n\n".to_string(),
+                    out: "-module(one).\n-compile(no_auto_import).\n\n-export([]).\n\n\n".to_string(),
                 },
                 Compiled {
                     name: "two".to_string(),
-                    out: "-module(two).\n\n-export([unbox/1]).\n\nunbox(X) ->\n    {box, I} = X,\n    I.\n".to_string(),
+                    out: "-module(two).\n-compile(no_auto_import).\n\n-export([unbox/1]).\n\nunbox(X) ->\n    {box, I} = X,\n    I.\n".to_string(),
                 },
             ]),
         },

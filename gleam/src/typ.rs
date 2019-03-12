@@ -1920,7 +1920,10 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
                 }
                 Ok(())
             } else {
-                unimplemented!()
+                Err(UnifyError::CouldNotUnify {
+                    expected: (*t1).clone(),
+                    given: (*t2).clone(),
+                })
             }
         }
 
