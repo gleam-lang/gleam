@@ -21,3 +21,11 @@ jobs:
             - /usr/local/cargo/registry
             - ~/.cargo/
             - target
+
+
+
+workflows:
+  version: 2
+  ci:
+    jobs:
+      - build_compiler
