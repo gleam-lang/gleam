@@ -37,3 +37,19 @@ Code changes to Gleam are welcomed via the process below.
    work on. Depending on the change there may be multiple rounds of feedback.
 4. Once the changes have been approved the code will be rebased into the
    master branch.
+
+
+## The Gleam codebase
+
+This code repository contains multiple projects including:
+
+- `./gleam` - The Gleam compiler, written in Rust.
+- `./gleam_stdlib` - The Gleam standard library, written in Gleam.
+- `./book` - The Gleam book/website.
+
+You can run all the tests in the root directory by running `make test`. You
+can also run the tests for a specific project with `make test-$NAME`, for
+example `make test-stdlib`.
+
+The book development server can be run with `make book-serve`, and any changes
+can be compiled into HTML in the `./docs` directory with `make book`.

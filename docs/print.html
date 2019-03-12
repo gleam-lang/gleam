@@ -216,11 +216,45 @@ gleam --version
 <a class="header" href="#installing-the-erlang-runtime" id="installing-the-erlang-runtime"><h2>Installing the Erlang runtime</h2></a>
 <p>Gleam compiles to Erlang code, so Erlang needs to be installed to run Gleam
 code.</p>
-<p>TODO: details on installing Erlang.</p>
+<p>Precompiled builds for many popular operating systems can be downloaded from
+the <a href="https://www.erlang-solutions.com/resources/download.html">Erlang solutions website</a>,</p>
+<p>Guides for installing Erlang on specific operating systems can be found below,
+as well as information on installing multiple versions of Erlang at once using
+version manager tools.</p>
+<p>Once Erlang has been installed you can check it is working by typing <code>erl -version</code> in your computer's terminal. You will see version information like
+this if all is well:</p>
+<pre><code>$ erl -version
+Erlang (SMP,ASYNC_THREADS,HIPE) (BEAM) emulator version 10.1
+</code></pre>
 <a class="header" href="#linux" id="linux"><h3>Linux</h3></a>
+<a class="header" href="#debian-linux" id="debian-linux"><h4>Debian Linux</h4></a>
+<pre><code class="language-sh">sudo apt-get update
+sudo apt-get install erlang
+</code></pre>
+<a class="header" href="#ubuntu-linux" id="ubuntu-linux"><h4>Ubuntu Linux</h4></a>
+<pre><code class="language-sh">sudo apt-get update
+sudo apt-get install erlang
+</code></pre>
 <a class="header" href="#mac-os-x" id="mac-os-x"><h3>Mac OS X</h3></a>
+<a class="header" href="#using-homebrew" id="using-homebrew"><h4>Using Homebrew</h4></a>
+<p>With <a href="https://brew.sh">Homebrew</a> installed run the following:</p>
+<pre><code class="language-sh">brew update
+brew install erlang
+</code></pre>
 <a class="header" href="#windows" id="windows"><h3>Windows</h3></a>
+<a class="header" href="#using-chocolatey" id="using-chocolatey"><h4>Using Chocolatey</h4></a>
+<p>With <a href="https://chocolatey.org/">Chocolatey</a> installed on your computer run the
+following:</p>
+<pre><code>choco install erlang
+</code></pre>
 <a class="header" href="#using-version-managers" id="using-version-managers"><h3>Using version managers</h3></a>
+<a class="header" href="#asdf" id="asdf"><h4>asdf</h4></a>
+<p>The asdf version manager has a plugin for installing Erlang. Installation and
+usage instructions can be found here:</p>
+<ul>
+<li><a href="https://github.com/asdf-vm/asdf">https://github.com/asdf-vm/asdf</a></li>
+<li><a href="https://github.com/asdf-vm/asdf-erlang">https://github.com/asdf-vm/asdf-erlang</a></li>
+</ul>
 <a class="header" href="#language-tour" id="language-tour"><h1>Language Tour</h1></a>
 <p>In this chapter we explore the fundamentals of the Gleam language, namely its
 syntax, core data structures, flow control features, and static type system.</p>

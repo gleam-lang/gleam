@@ -28,11 +28,11 @@ book-serve: ## Run the book dev server
 .PHONY: test ## Run all tests
 test: test-compiler test-stdlib
 
-.PHONY: test-compiler
-test-compiler: ## Test the compiler
+.PHONY: test-gleam
+test-gleam: ## Test the compiler
 	cd gleam && cargo test
 
-.PHONY: test-compiler
+.PHONY: test-stdlib
 test-stdlib: $(COMPILER) gleam_stdlib/gen ## Test gleam_stdlib
 	cd gleam_stdlib && rebar3 eunit
 
