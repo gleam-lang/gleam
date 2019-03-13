@@ -1703,8 +1703,7 @@ fn bin_op_name(name: &BinOp) -> String {
         BinOp::MultFloat => "*.".to_string(),
         BinOp::DivInt => "/".to_string(),
         BinOp::DivFloat => "/.".to_string(),
-        BinOp::ModuloInt => "*".to_string(),
-        BinOp::ModuloFloat => "*.".to_string(),
+        BinOp::ModuloInt => "%".to_string(),
     }
 }
 
@@ -2412,6 +2411,10 @@ fn infer_test() {
         Case {
             src: "[]",
             typ: "List(a)",
+        },
+        Case {
+            src: "4 % 1",
+            typ: "Int",
         },
         /* Assignments
 
