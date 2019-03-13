@@ -156,9 +156,11 @@ fn test(name: String, body: TypedExpr) -> Document {
 
 fn atom(value: String) -> Document {
     use regex::Regex;
-    // TODO: Lazy static to avoid regex recompilation
-    let re = Regex::new(r"^[a-z_\$]+$").unwrap();
-    if re.is_match(&value) {
+
+    lazy_static! {
+        static ref RE: Regex = Regex::new(r"^[a-z_\$]+$").unwrap();
+    }
+    if RE.is_match(&value) {
         value.to_doc()
     } else {
         value.to_doc().surround("'", "'")

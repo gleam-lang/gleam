@@ -23,6 +23,8 @@ petgraph = "0.4"
 codespan = "0.2"
 codespan-reporting = "0.2.1"
 termcolor = "1.0.4"
+# Initialize complex static values at runtime
+lazy_static = "1.3"
 
 
 [build-dependencies]

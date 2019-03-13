@@ -28,6 +28,9 @@ extern crate pretty_assertions;
 #[macro_use]
 extern crate lalrpop_util;
 
+#[macro_use]
+extern crate lazy_static;
+
 use std::fs::File;
 use std::io::Write;
 use structopt::clap::AppSettings;
