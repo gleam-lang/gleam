@@ -1019,7 +1019,6 @@ pub fn infer_module(
                 module,
                 fun,
             } => {
-                // TODO: DUPE: 63846
                 let mut type_vars = hashmap![];
                 let retrn_type = env
                     .type_from_ast(&retrn, &mut type_vars, true)
@@ -1150,7 +1149,6 @@ pub fn infer_module(
                     },
                 );
                 // Check contained types are valid
-                // TODO: DUPE: 63846
                 let mut type_vars = hashmap![];
                 for arg in args.iter() {
                     let var = ast::Type::Var {
@@ -1297,12 +1295,12 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
 
                 unify_pattern(&clause.pattern, &subject_type, level, env)?;
 
-                let then = infer(*clause.then, level, env)?;
+                let then = infer(clause.then, level, env)?;
                 unify(&return_type, then.typ()).map_err(|e| convert_unify_error(e, then.meta()))?;
                 typed_clauses.push(Clause {
                     meta: clause.meta,
                     pattern: clause.pattern,
-                    then: Box::new(then),
+                    then,
                 });
 
                 env.variables = vars;

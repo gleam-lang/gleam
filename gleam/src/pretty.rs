@@ -292,10 +292,6 @@ pub fn format(limit: isize, doc: Document) -> String {
     buffer
 }
 
-// TODO: This is behaving strangely- groups not breaking when I
-// think they should. Either I'm forgetting how to use the algebra
-// or I've snuck a bug in here somewhere.
-//
 fn fmt(b: &mut String, limit: isize, width: isize, mut docs: Vector<(isize, Mode, Document)>) {
     let (indent, mode, document) = match docs.pop_front() {
         Some(x) => x,

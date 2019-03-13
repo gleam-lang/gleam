@@ -368,7 +368,7 @@ fn enum_pattern(name: String, args: Vec<Pattern>, env: &mut Env) -> Document {
 fn clause(clause: TypedClause, env: &mut Env) -> Document {
     pattern(clause.pattern, env)
         .append(" ->")
-        .append(line().append(expr(*clause.then, env)).nest(INDENT).group())
+        .append(line().append(expr(clause.then, env)).nest(INDENT).group())
 }
 
 fn clauses(cs: Vec<TypedClause>, env: &mut Env) -> Document {
@@ -1169,11 +1169,11 @@ moddy4() ->
                             meta: default(),
                             value: 1,
                         },
-                        then: Box::new(Expr::Int {
+                        then: Expr::Int {
                             typ: crate::typ::int(),
                             meta: default(),
                             value: 1,
-                        }),
+                        },
                     },
                     Clause {
                         meta: default(),
@@ -1181,11 +1181,11 @@ moddy4() ->
                             meta: default(),
                             value: 1.0,
                         },
-                        then: Box::new(Expr::Int {
+                        then: Expr::Int {
                             typ: crate::typ::int(),
                             meta: default(),
                             value: 1,
-                        }),
+                        },
                     },
                     Clause {
                         meta: default(),
@@ -1193,11 +1193,11 @@ moddy4() ->
                             meta: default(),
                             value: "hello".to_string(),
                         },
-                        then: Box::new(Expr::Int {
+                        then: Expr::Int {
                             typ: crate::typ::int(),
                             meta: default(),
                             value: 1,
-                        }),
+                        },
                     },
                     Clause {
                         meta: default(),
@@ -1214,20 +1214,20 @@ moddy4() ->
                                 },
                             ],
                         },
-                        then: Box::new(Expr::Int {
+                        then: Expr::Int {
                             typ: crate::typ::int(),
                             meta: default(),
                             value: 1,
-                        }),
+                        },
                     },
                     Clause {
                         meta: default(),
                         pattern: Pattern::Nil { meta: default() },
-                        then: Box::new(Expr::Int {
+                        then: Expr::Int {
                             typ: crate::typ::int(),
                             meta: default(),
                             value: 1,
-                        }),
+                        },
                     },
                     Clause {
                         meta: default(),
@@ -1240,11 +1240,11 @@ moddy4() ->
                                 value: 2,
                             }],
                         },
-                        then: Box::new(Expr::Int {
+                        then: Expr::Int {
                             typ: crate::typ::int(),
                             meta: default(),
                             value: 1,
-                        }),
+                        },
                     },
                 ],
             },

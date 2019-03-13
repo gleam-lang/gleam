@@ -763,11 +763,11 @@ fn expr_test() {
                         meta: Meta { start: 11, end: 12 },
                         value: 1
                     },
-                    then: Box::new(Expr::Int {
+                    then: Expr::Int {
                         meta: Meta { start: 16, end: 18 },
                         typ: (),
                         value: 10
-                    })
+                    }
                 },
                 Clause {
                     meta: Meta { start: 19, end: 28 },
@@ -775,11 +775,11 @@ fn expr_test() {
                         meta: Meta { start: 21, end: 22 },
                         value: 2
                     },
-                    then: Box::new(Expr::Int {
+                    then: Expr::Int {
                         meta: Meta { start: 26, end: 28 },
                         typ: (),
                         value: 20
-                    })
+                    }
                 }
             ]
         }),

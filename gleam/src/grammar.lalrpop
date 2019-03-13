@@ -208,7 +208,7 @@ Clause: UntypedClause = {
     <s:@L> "|" <pattern:Pattern> "->" <then:Expr> <e:@L> => Clause {
         meta: meta(s, e),
         pattern,
-        then: Box::new(then),
+        then: then,
     }
 }
 

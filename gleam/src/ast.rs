@@ -340,8 +340,7 @@ pub type UntypedClause = Clause<(), ()>;
 pub struct Clause<S, T> {
     pub meta: Meta,
     pub pattern: Pattern,
-    // TODO: Unbox this
-    pub then: Box<Expr<S, T>>,
+    pub then: Expr<S, T>,
 }
 
 #[derive(Debug, PartialEq, Default, Clone)]
