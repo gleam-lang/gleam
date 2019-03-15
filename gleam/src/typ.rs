@@ -694,6 +694,46 @@ impl Env {
 
         let a = env.new_generic_var();
         env.insert_variable(
+            ">".to_string(),
+            Scope::Local,
+            Type::Fn {
+                args: vec![a.clone(), a],
+                retrn: Box::new(bool()),
+            },
+        );
+
+        let a = env.new_generic_var();
+        env.insert_variable(
+            ">=".to_string(),
+            Scope::Local,
+            Type::Fn {
+                args: vec![a.clone(), a],
+                retrn: Box::new(bool()),
+            },
+        );
+
+        let a = env.new_generic_var();
+        env.insert_variable(
+            "<".to_string(),
+            Scope::Local,
+            Type::Fn {
+                args: vec![a.clone(), a],
+                retrn: Box::new(bool()),
+            },
+        );
+
+        let a = env.new_generic_var();
+        env.insert_variable(
+            "<=".to_string(),
+            Scope::Local,
+            Type::Fn {
+                args: vec![a.clone(), a],
+                retrn: Box::new(bool()),
+            },
+        );
+
+        let a = env.new_generic_var();
+        env.insert_variable(
             "!=".to_string(),
             Scope::Local,
             Type::Fn {
@@ -2413,6 +2453,22 @@ fn infer_test() {
         Case {
             src: "4 % 1",
             typ: "Int",
+        },
+        Case {
+            src: "4 > 1",
+            typ: "Bool",
+        },
+        Case {
+            src: "4 >= 1",
+            typ: "Bool",
+        },
+        Case {
+            src: "4 <= 1",
+            typ: "Bool",
+        },
+        Case {
+            src: "4 < 1",
+            typ: "Bool",
         },
         /* Assignments
 

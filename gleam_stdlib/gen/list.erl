@@ -2,7 +2,7 @@
 -compile(no_auto_import).
 -include_lib("eunit/include/eunit.hrl").
 
--export([length/1, reverse/1, is_empty/1, has_member/2, head/1, tail/1, map/2, do_traverse/3, traverse/2, new/0, append/2, flatten/1, foldl/3, foldr/3]).
+-export([length/1, reverse/1, is_empty/1, has_member/2, head/1, tail/1, filter/2, map/2, do_traverse/3, traverse/2, drop/2, take/2, new/0, append/2, flatten/1, foldl/3, foldr/3]).
 
 length(A) ->
     erlang:length(A).
@@ -80,6 +80,33 @@ tail_test() ->
     expect:equal(tail([]), {error, empty}).
 -endif.
 
+do_filter(List, Fun, Acc) ->
+    case List of
+        [] ->
+            reverse(Acc);
+
+        [X | Xs] ->
+            NewAcc = case Fun(X) of
+                true ->
+                    [X | Acc];
+
+                false ->
+                    Acc
+            end,
+            do_filter(Xs, Fun, NewAcc)
+    end.
+
+filter(List, Fun) ->
+    do_filter(List, Fun, []).
+
+-ifdef(TEST).
+filter_test() ->
+    expect:equal(filter([], fun(X) -> true end), []),
+    expect:equal(filter([0, 4, 5, 7, 3], fun(X) -> true end), [0, 4, 5, 7, 3]),
+    expect:equal(filter([0, 4, 5, 7, 3], fun(X) -> X > 4 end), [5, 7]),
+    expect:equal(filter([0, 4, 5, 7, 3], fun(X) -> X < 4 end), [0, 3]).
+-endif.
+
 do_map(List, Fun, Acc) ->
     case List of
         [] ->
@@ -127,6 +154,51 @@ traverse_test() ->
         end end,
     expect:equal(traverse([5, 6, 5, 6], Fun), {ok, [10, 12, 10, 12]}),
     expect:equal(traverse([4, 6, 5, 7, 3], Fun), {error, 7}).
+-endif.
+
+drop(List, N) ->
+    case N =< 0 of
+        true ->
+            List;
+
+        false ->
+            case List of
+                [] ->
+                    [];
+
+                [X | Xs] ->
+                    drop(Xs, N - 1)
+            end
+    end.
+
+-ifdef(TEST).
+drop_test() ->
+    expect:equal(drop([], 5), []),
+    expect:equal(drop([1, 2, 3, 4, 5, 6, 7, 8], 5), [6, 7, 8]).
+-endif.
+
+do_take(List, N, Acc) ->
+    case N =< 0 of
+        true ->
+            reverse(Acc);
+
+        false ->
+            case List of
+                [] ->
+                    reverse(Acc);
+
+                [X | Xs] ->
+                    do_take(Xs, N - 1, [X | Acc])
+            end
+    end.
+
+take(List, N) ->
+    do_take(List, N, []).
+
+-ifdef(TEST).
+take_test() ->
+    expect:equal(take([], 5), []),
+    expect:equal(take([1, 2, 3, 4, 5, 6, 7, 8], 5), [1, 2, 3, 4, 5]).
 -endif.
 
 new() ->

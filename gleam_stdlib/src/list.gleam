@@ -78,40 +78,40 @@ test tail {
     |> expect:equal(_, Error(Empty))
 }
 
-// fn do_filter(list, fun, acc) {
-//   case list {
-//   | [] -> reverse(acc)
-//   | [x | xs] ->
-//       let new_acc =
-//         case fun(x) {
-//         | True -> [x | acc]
-//         | False -> acc
-//         }
-//       do_filter(xs, fun, new_acc)
-//   }
-// }
+fn do_filter(list, fun, acc) {
+  case list {
+  | [] -> reverse(acc)
+  | [x | xs] ->
+      let new_acc =
+        case fun(x) {
+        | True -> [x | acc]
+        | False -> acc
+        }
+      do_filter(xs, fun, new_acc)
+  }
+}
 
-// pub fn filter(list, fun) {
-//   do_filter(list, fun, [])
-// }
+pub fn filter(list, fun) {
+  do_filter(list, fun, [])
+}
 
-// test filter {
-//   []
-//     |> filter(_, fn(x) { True })
-//     |> expect:equal(_, [])
+test filter {
+  []
+    |> filter(_, fn(x) { True })
+    |> expect:equal(_, [])
 
-//   [0, 4, 5, 7, 3]
-//     |> filter(_, fn(x) { True })
-//     |> expect:equal(_, [0, 4, 5, 7, 3])
+  [0, 4, 5, 7, 3]
+    |> filter(_, fn(x) { True })
+    |> expect:equal(_, [0, 4, 5, 7, 3])
 
-//   [0, 4, 5, 7, 3]
-//     |> filter(_, fn(x) { x > 4 })
-//     |> expect:equal(_, [5, 7])
+  [0, 4, 5, 7, 3]
+    |> filter(_, fn(x) { x > 4 })
+    |> expect:equal(_, [5, 7])
 
-//   [0, 4, 5, 7, 3]
-//     |> filter(_, fn(x) { x < 4 })
-//     |> expect:equal(_, [0, 3])
-// }
+  [0, 4, 5, 7, 3]
+    |> filter(_, fn(x) { x < 4 })
+    |> expect:equal(_, [0, 3])
+}
 
 fn do_map(list, fun, acc) {
   case list {
@@ -167,50 +167,50 @@ test traverse {
 }
 
 
-// pub fn drop(list, n) {
-//   case n <= 0 {
-//   | True -> list
-//   | False ->
-//       case list {
-//       | [] -> []
-//       | [x | xs] -> drop(xs, n - 1)
-//       }
-//   }
-// }
+pub fn drop(list, n) {
+  case n <= 0 {
+  | True -> list
+  | False ->
+      case list {
+      | [] -> []
+      | [x | xs] -> drop(xs, n - 1)
+      }
+  }
+}
 
-// test drop {
-//   []
-//     |> drop(_, 5)
-//     |> expect:equal(_, [])
+test drop {
+  []
+    |> drop(_, 5)
+    |> expect:equal(_, [])
 
-//   [1, 2, 3, 4, 5, 6, 7, 8]
-//     |> drop(_, 5)
-//     |> expect:equal(_, [6, 7, 8])
-// }
+  [1, 2, 3, 4, 5, 6, 7, 8]
+    |> drop(_, 5)
+    |> expect:equal(_, [6, 7, 8])
+}
 
-// fn do_take(list, n, acc) {
-//   case n <= 0 {
-//   | True -> reverse(acc)
-//   | False ->
-//       case list {
-//       | [] -> reverse(acc)
-//       | [x | xs] -> take(xs, n - 1, [x | acc])
-//       }
-//   }
-// }
+fn do_take(list, n, acc) {
+  case n <= 0 {
+  | True -> reverse(acc)
+  | False ->
+      case list {
+      | [] -> reverse(acc)
+      | [x | xs] -> do_take(xs, n - 1, [x | acc])
+      }
+  }
+}
 
-// pub fn take(list, n) {
-//   do_take(list, n, [])
-// }
+pub fn take(list, n) {
+  do_take(list, n, [])
+}
 
-// test take {
-//   []
-//     |> take(_, 5)
-//     |> expect:equal(_, [])
-//   [1, 2, 3, 4, 5, 6, 7, 8]
-//     |> take(_, 5)
-//     |> expect:equal(_, [1, 2, 3, 4, 5])
-// }
+test take {
+  []
+    |> take(_, 5)
+    |> expect:equal(_, [])
+  [1, 2, 3, 4, 5, 6, 7, 8]
+    |> take(_, 5)
+    |> expect:equal(_, [1, 2, 3, 4, 5])
+}
 
 pub fn new() {
   []
