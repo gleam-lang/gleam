@@ -111,7 +111,7 @@ test flat_map {
     |> expect:equal(_, Ok(2))
 
   Ok(1)
-    |> flat_map(_, fn(unused) { Error(1) })
+    |> flat_map(_, fn(_) { Error(1) })
     |> expect:equal(_, Error(1))
 }
 

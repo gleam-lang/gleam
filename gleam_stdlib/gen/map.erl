@@ -17,7 +17,7 @@ from_list(A) ->
 from_list_test() ->
     Proplist = [{4, 0}, {1, 0}],
     Map = from_list(Proplist),
-    (fun(Capture1) -> expect:equal(Capture1, 2) end)(size(Map)).
+    expect:equal(size(Map), 2).
 -endif.
 
 is_key(A, B) ->
@@ -28,16 +28,10 @@ has_key(Map, Key) ->
 
 -ifdef(TEST).
 has_key_test() ->
-    expect:false((fun(Capture1) -> has_key(Capture1, 1) end)(from_list([]))),
-    expect:true((fun(Capture1) ->
-                    has_key(Capture1, 1)
-                end)(from_list([{1, 0}]))),
-    expect:true((fun(Capture1) ->
-                    has_key(Capture1, 1)
-                end)(from_list([{4, 0}, {1, 0}]))),
-    expect:false((fun(Capture1) ->
-                     has_key(Capture1, 0)
-                 end)(from_list([{4, 0}, {1, 0}]))).
+    expect:false(has_key(from_list([]), 1)),
+    expect:true(has_key(from_list([{1, 0}]), 1)),
+    expect:true(has_key(from_list([{4, 0}, {1, 0}]), 1)),
+    expect:false(has_key(from_list([{4, 0}, {1, 0}]), 0)).
 -endif.
 
 new() ->
@@ -45,8 +39,8 @@ new() ->
 
 -ifdef(TEST).
 new_test() ->
-    (fun(Capture1) -> expect:equal(Capture1, 0) end)(size(new())),
-    (fun(Capture1) -> expect:equal(Capture1, []) end)(to_list(new())).
+    expect:equal(size(new()), 0),
+    expect:equal(to_list(new()), []).
 -endif.
 
 fetch(A, B) ->
@@ -56,12 +50,8 @@ fetch(A, B) ->
 fetch_test() ->
     Proplist = [{4, 0}, {1, 1}],
     Map = from_list(Proplist),
-    (fun(Capture1) ->
-        expect:equal(Capture1, {ok, 0})
-    end)((fun(Capture1) -> fetch(Capture1, 4) end)(Map)),
-    (fun(Capture1) ->
-        expect:equal(Capture1, {ok, 1})
-    end)((fun(Capture1) -> fetch(Capture1, 1) end)(Map)).
+    expect:equal(fetch(Map, 4), {ok, 0}),
+    expect:equal(fetch(Map, 1), {ok, 1}).
 -endif.
 
 erl_put(A, B, C) ->
@@ -72,14 +62,8 @@ put(Map, Key, Value) ->
 
 -ifdef(TEST).
 put_test() ->
-    (fun(Capture1) ->
-        expect:equal(Capture1,
-                     from_list([{<<"a">>, 0}, {<<"b">>, 1}, {<<"c">>, 2}]))
-    end)((fun(Capture1) ->
-             put(Capture1, <<"c">>, 2)
-         end)((fun(Capture1) ->
-                  put(Capture1, <<"b">>, 1)
-              end)((fun(Capture1) -> put(Capture1, <<"a">>, 0) end)(new())))).
+    expect:equal(put(put(put(new(), <<"a">>, 0), <<"b">>, 1), <<"c">>, 2),
+                 from_list([{<<"a">>, 0}, {<<"b">>, 1}, {<<"c">>, 2}])).
 -endif.
 
 erl_map_values(A, B) ->
@@ -90,11 +74,9 @@ map_values(Map, Fun) ->
 
 -ifdef(TEST).
 map_values_test() ->
-    (fun(Capture1) ->
-        expect:equal(Capture1, from_list([{1, 1}, {2, 3}, {3, 5}]))
-    end)((fun(Capture1) ->
-             map_values(Capture1, fun(K, V) -> K + V end)
-         end)(from_list([{1, 0}, {2, 1}, {3, 2}]))).
+    expect:equal(map_values(from_list([{1, 0}, {2, 1}, {3, 2}]),
+                            fun(K, V) -> K + V end),
+                 from_list([{1, 1}, {2, 3}, {3, 5}])).
 -endif.
 
 keys(A) ->
@@ -102,9 +84,8 @@ keys(A) ->
 
 -ifdef(TEST).
 keys_test() ->
-    (fun(Capture1) ->
-        expect:equal(Capture1, [<<"a">>, <<"b">>, <<"c">>])
-    end)(keys(from_list([{<<"a">>, 0}, {<<"b">>, 1}, {<<"c">>, 2}]))).
+    expect:equal(keys(from_list([{<<"a">>, 0}, {<<"b">>, 1}, {<<"c">>, 2}])),
+                 [<<"a">>, <<"b">>, <<"c">>]).
 -endif.
 
 values(A) ->
@@ -112,9 +93,8 @@ values(A) ->
 
 -ifdef(TEST).
 values_test() ->
-    (fun(Capture1) ->
-        expect:equal(Capture1, [0, 1, 2])
-    end)(values(from_list([{<<"a">>, 0}, {<<"b">>, 1}, {<<"c">>, 2}]))).
+    expect:equal(values(from_list([{<<"a">>, 0}, {<<"b">>, 1}, {<<"c">>, 2}])),
+                 [0, 1, 2]).
 -endif.
 
 erl_filter(A, B) ->

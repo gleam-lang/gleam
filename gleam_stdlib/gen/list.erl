@@ -9,10 +9,10 @@ length(A) ->
 
 -ifdef(TEST).
 length_test() ->
-    (fun(Capture1) -> expect:equal(Capture1, 0) end)(length([])),
-    (fun(Capture1) -> expect:equal(Capture1, 1) end)(length([1])),
-    (fun(Capture1) -> expect:equal(Capture1, 2) end)(length([1, 1])),
-    (fun(Capture1) -> expect:equal(Capture1, 3) end)(length([1, 1, 1])).
+    expect:equal(length([]), 0),
+    expect:equal(length([1]), 1),
+    expect:equal(length([1, 1]), 2),
+    expect:equal(length([1, 1, 1]), 3).
 -endif.
 
 reverse(A) ->
@@ -20,8 +20,8 @@ reverse(A) ->
 
 -ifdef(TEST).
 reverse_test() ->
-    (fun(Capture1) -> expect:equal(Capture1, 0) end)(length([])),
-    (fun(Capture1) -> expect:equal(Capture1, 5) end)(length([1, 2, 3, 4, 5])).
+    expect:equal(length([]), 0),
+    expect:equal(length([1, 2, 3, 4, 5]), 5).
 -endif.
 
 is_empty(List) ->
@@ -60,8 +60,8 @@ head(List) ->
 
 -ifdef(TEST).
 head_test() ->
-    (fun(Capture1) -> expect:equal(Capture1, {ok, 0}) end)(head([0, 4, 5, 7])),
-    (fun(Capture1) -> expect:equal(Capture1, {error, empty}) end)(head([])).
+    expect:equal(head([0, 4, 5, 7]), {ok, 0}),
+    expect:equal(head([]), {error, empty}).
 -endif.
 
 tail(List) ->
@@ -75,11 +75,9 @@ tail(List) ->
 
 -ifdef(TEST).
 tail_test() ->
-    (fun(Capture1) ->
-        expect:equal(Capture1, {ok, [4, 5, 7]})
-    end)(tail([0, 4, 5, 7])),
-    (fun(Capture1) -> expect:equal(Capture1, {ok, []}) end)(tail([0])),
-    (fun(Capture1) -> expect:equal(Capture1, {error, empty}) end)(tail([])).
+    expect:equal(tail([0, 4, 5, 7]), {ok, [4, 5, 7]}),
+    expect:equal(tail([0]), {ok, []}),
+    expect:equal(tail([]), {error, empty}).
 -endif.
 
 do_map(List, Fun, Acc) ->
@@ -96,14 +94,8 @@ map(List, Fun) ->
 
 -ifdef(TEST).
 map_test() ->
-    (fun(Capture1) ->
-        expect:equal(Capture1, [])
-    end)((fun(Capture1) -> map(Capture1, fun(X) -> X * 2 end) end)([])),
-    (fun(Capture1) ->
-        expect:equal(Capture1, [0, 8, 10, 14, 6])
-    end)((fun(Capture1) ->
-             map(Capture1, fun(X) -> X * 2 end)
-         end)([0, 4, 5, 7, 3])).
+    expect:equal(map([], fun(X) -> X * 2 end), []),
+    expect:equal(map([0, 4, 5, 7, 3], fun(X) -> X * 2 end), [0, 8, 10, 14, 6]).
 -endif.
 
 do_traverse(List, Fun, Acc) ->
@@ -133,12 +125,8 @@ traverse_test() ->
             false ->
                 {error, X}
         end end,
-    (fun(Capture1) ->
-        expect:equal(Capture1, {ok, [10, 12, 10, 12]})
-    end)((fun(Capture1) -> traverse(Capture1, Fun) end)([5, 6, 5, 6])),
-    (fun(Capture1) ->
-        expect:equal(Capture1, {error, 7})
-    end)((fun(Capture1) -> traverse(Capture1, Fun) end)([4, 6, 5, 7, 3])).
+    expect:equal(traverse([5, 6, 5, 6], Fun), {ok, [10, 12, 10, 12]}),
+    expect:equal(traverse([4, 6, 5, 7, 3], Fun), {error, 7}).
 -endif.
 
 new() ->
@@ -146,7 +134,7 @@ new() ->
 
 -ifdef(TEST).
 new_test() ->
-    (fun(Capture1) -> expect:equal(Capture1, []) end)(new()).
+    expect:equal(new(), []).
 -endif.
 
 append(A, B) ->
@@ -171,12 +159,10 @@ flatten(Lists) ->
 
 -ifdef(TEST).
 flatten_test() ->
-    (fun(Capture1) -> expect:equal(Capture1, []) end)(flatten([])),
-    (fun(Capture1) -> expect:equal(Capture1, []) end)(flatten([[]])),
-    (fun(Capture1) -> expect:equal(Capture1, []) end)(flatten([[], [], []])),
-    (fun(Capture1) ->
-        expect:equal(Capture1, [1, 2, 3, 4])
-    end)(flatten([[1, 2], [], [3, 4]])).
+    expect:equal(flatten([]), []),
+    expect:equal(flatten([[]]), []),
+    expect:equal(flatten([[], [], []]), []),
+    expect:equal(flatten([[1, 2], [], [3, 4]]), [1, 2, 3, 4]).
 -endif.
 
 foldl(List, Acc, Fun) ->
@@ -190,11 +176,7 @@ foldl(List, Acc, Fun) ->
 
 -ifdef(TEST).
 foldl_test() ->
-    (fun(Capture1) ->
-        expect:equal(Capture1, [3, 2, 1])
-    end)((fun(Capture1) ->
-             foldl(Capture1, [], fun(X, Acc) -> [X | Acc] end)
-         end)([1, 2, 3])).
+    expect:equal(foldl([1, 2, 3], [], fun(X, Acc) -> [X | Acc] end), [3, 2, 1]).
 -endif.
 
 foldr(List, Acc, Fun) ->
@@ -208,9 +190,5 @@ foldr(List, Acc, Fun) ->
 
 -ifdef(TEST).
 foldr_test() ->
-    (fun(Capture1) ->
-        expect:equal(Capture1, [1, 2, 3])
-    end)((fun(Capture1) ->
-             foldr(Capture1, [], fun(X, Acc) -> [X | Acc] end)
-         end)([1, 2, 3])).
+    expect:equal(foldr([1, 2, 3], [], fun(X, Acc) -> [X | Acc] end), [1, 2, 3]).
 -endif.

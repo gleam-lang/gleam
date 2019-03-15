@@ -414,6 +414,35 @@ fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
             .surround("(", ")")
             .append(call_args(args, env)),
 
+        Expr::Fn {
+            is_capture: true,
+            body,
+            ..
+        } => {
+            if let Expr::Call {
+                fun,
+                args: inner_args,
+                ..
+            } = *body
+            {
+                let mut args = args;
+                let merged_args = inner_args
+                    .into_iter()
+                    .map(|a| {
+                        if let Expr::Var { name, .. } = a.clone() {
+                            if name == "capture@1" {
+                                return args.pop().unwrap();
+                            }
+                        }
+                        a
+                    })
+                    .collect();
+                call(*fun, merged_args, env)
+            } else {
+                unreachable!()
+            }
+        }
+
         fun @ Expr::Fn { .. } => expr(fun, env)
             .surround("(", ")")
             .append(call_args(args, env)),
@@ -1480,11 +1509,7 @@ add(X, Y) ->
     X + Y.
 
 go() ->
-    (fun(Capture1) ->
-        add(Capture1, 3)
-    end)((fun(Capture1) ->
-             add(2, Capture1)
-         end)((fun(Capture1) -> add(Capture1, 1) end)(1))).
+    add(add(2, add(1, 1)), 3).
 "#,
         },
         Case {

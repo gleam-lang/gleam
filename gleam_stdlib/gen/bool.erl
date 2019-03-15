@@ -2,7 +2,22 @@
 -compile(no_auto_import).
 -include_lib("eunit/include/eunit.hrl").
 
--export([max/2, min/2, to_int/1]).
+-export([negate/1, max/2, min/2, to_int/1]).
+
+negate(Bool) ->
+    case Bool of
+        true ->
+            false;
+
+        false ->
+            true
+    end.
+
+-ifdef(TEST).
+negate_test() ->
+    expect:false(negate(true)),
+    expect:true(negate(false)).
+-endif.
 
 max(A, B) ->
     case A of
@@ -15,10 +30,10 @@ max(A, B) ->
 
 -ifdef(TEST).
 max_test() ->
-    (fun(Capture1) -> expect:equal(Capture1, true) end)(max(true, true)),
-    (fun(Capture1) -> expect:equal(Capture1, true) end)(max(true, false)),
-    (fun(Capture1) -> expect:equal(Capture1, false) end)(max(false, false)),
-    (fun(Capture1) -> expect:equal(Capture1, true) end)(max(false, true)).
+    expect:equal(max(true, true), true),
+    expect:equal(max(true, false), true),
+    expect:equal(max(false, false), false),
+    expect:equal(max(false, true), true).
 -endif.
 
 min(A, B) ->
@@ -32,10 +47,10 @@ min(A, B) ->
 
 -ifdef(TEST).
 min_test() ->
-    (fun(Capture1) -> expect:equal(Capture1, true) end)(min(true, true)),
-    (fun(Capture1) -> expect:equal(Capture1, false) end)(min(true, false)),
-    (fun(Capture1) -> expect:equal(Capture1, false) end)(min(false, false)),
-    (fun(Capture1) -> expect:equal(Capture1, false) end)(min(false, true)).
+    expect:equal(min(true, true), true),
+    expect:equal(min(true, false), false),
+    expect:equal(min(false, false), false),
+    expect:equal(min(false, true), false).
 -endif.
 
 to_int(Bool) ->
@@ -49,6 +64,6 @@ to_int(Bool) ->
 
 -ifdef(TEST).
 to_int_test() ->
-    (fun(Capture1) -> expect:equal(Capture1, 1) end)(to_int(true)),
-    (fun(Capture1) -> expect:equal(Capture1, 0) end)(to_int(false)).
+    expect:equal(to_int(true), 1),
+    expect:equal(to_int(false), 0).
 -endif.

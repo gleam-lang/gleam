@@ -21,15 +21,8 @@ byte_size(A) ->
 
 -ifdef(TEST).
 iodata_test() ->
-    Iodata = (fun(Capture1) ->
-        prepend(Capture1, <<"H">>)
-    end)((fun(Capture1) ->
-             append(Capture1, <<" world!">>)
-         end)((fun(Capture1) ->
-                  append(Capture1, <<",">>)
-              end)(from([<<"ello">>])))),
-    (fun(Capture1) ->
-        expect:equal(Capture1, <<"Hello, world!">>)
-    end)(to_string(Iodata)),
-    (fun(Capture1) -> expect:equal(Capture1, 13) end)(byte_size(Iodata)).
+    Iodata = prepend(append(append(from([<<"ello">>]), <<",">>), <<" world!">>),
+                     <<"H">>),
+    expect:equal(to_string(Iodata), <<"Hello, world!">>),
+    expect:equal(byte_size(Iodata), 13).
 -endif.

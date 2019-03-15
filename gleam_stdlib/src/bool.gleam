@@ -1,20 +1,20 @@
 import expect
 import order
 
-// pub fn not(bool) {
-//   case bool {
-//   | True -> False
-//   | False -> True
-//   }
-// }
+pub fn negate(bool) {
+  case bool {
+  | True -> False
+  | False -> True
+  }
+}
 
-// test not {
-//   not(True)
-//     |> expect:false
+test negate {
+  negate(True)
+    |> expect:false
 
-//   not(False)
-//     |> expect:true
-// }
+  negate(False)
+    |> expect:true
+}
 
 // pub fn compare(a, b) {
 //   case {a, b} {
