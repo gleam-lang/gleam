@@ -134,7 +134,7 @@ test map {
     |> expect:equal(_, [0, 8, 10, 14, 6])
 }
 
-pub fn do_traverse(list, fun, acc) {
+fn do_traverse(list, fun, acc) {
   case list {
   | [] -> Ok(reverse(acc))
   | [x | xs] ->

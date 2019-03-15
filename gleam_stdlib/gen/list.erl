@@ -2,7 +2,7 @@
 -compile(no_auto_import).
 -include_lib("eunit/include/eunit.hrl").
 
--export([length/1, reverse/1, is_empty/1, has_member/2, head/1, tail/1, filter/2, map/2, do_traverse/3, traverse/2, drop/2, take/2, new/0, append/2, flatten/1, foldl/3, foldr/3]).
+-export([length/1, reverse/1, is_empty/1, has_member/2, head/1, tail/1, filter/2, map/2, traverse/2, drop/2, take/2, new/0, append/2, flatten/1, foldl/3, foldr/3]).
 
 length(A) ->
     erlang:length(A).
