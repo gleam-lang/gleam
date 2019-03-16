@@ -25,6 +25,11 @@ pub enum Error {
         error: crate::typ::Error,
     },
 
+    UnknownImport {
+        module: Name,
+        import: Name,
+    },
+
     DependencyCycle,
 }
 
@@ -221,6 +226,19 @@ Found type:
                 println!("{:?}", self);
                 unimplemented!();
             }
+
+            Error::UnknownImport { module, import } => {
+                // TODO: source code preview
+                write!(
+                    buffer,
+                    "error: Unknown import
+
+The module `{}` is trying to import the module `{}`, but it cannot be found.
+",
+                    module, import
+                )
+                .expect("error pretty buffer write");
+            }
         }
 
         buffer
@@ -289,7 +307,10 @@ pub fn compile(srcs: Vec<(Name, Src)>) -> Result<Vec<Compiled>, Error> {
     for (module, deps) in deps_vec {
         let module_index = indexes.get(&module).expect("Unable to find module index");
         for dep in deps {
-            let dep_index = indexes.get(&dep).expect("Unable to find module index");
+            let dep_index = indexes.get(&dep).ok_or_else(|| Error::UnknownImport {
+                module: module.clone(),
+                import: dep,
+            })?;
             deps_graph.add_edge(dep_index.clone(), module_index.clone(), ());
         }
     }

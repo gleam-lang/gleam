@@ -1207,7 +1207,7 @@ pub fn infer_module(
             }
 
             Statement::Import { meta, module } => {
-                let typ = modules.get(&module).unwrap(); // TODO: handle unknown
+                let typ = modules.get(&module).unwrap();
                 env.insert_variable(
                     module.clone(),
                     Scope::Import {
