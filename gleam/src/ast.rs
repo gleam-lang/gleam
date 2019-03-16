@@ -148,9 +148,19 @@ pub type TypedScope = Scope<typ::Type>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Scope<T> {
+    /// A locally defined variable or function parameter
     Local,
+
+    /// An enum constructor or singleton
+    Enum { arity: usize },
+
+    /// A function in the current module
     Module { arity: usize },
+
+    /// An imported module
     Import { module: String },
+
+    /// A constant value to be inlined
     Constant { value: Box<Expr<Scope<T>, T>> },
 }
 
@@ -241,12 +251,6 @@ pub enum Expr<S, T> {
         then: Box<Expr<S, T>>,
     },
 
-    Constructor {
-        meta: Meta,
-        typ: T,
-        name: String,
-    },
-
     Case {
         meta: Meta,
         typ: T,
@@ -300,7 +304,6 @@ impl<S, T> Expr<S, T> {
             Expr::String { meta, .. } => meta,
             Expr::RecordNil { meta, .. } => meta,
             Expr::RecordCons { meta, .. } => meta,
-            Expr::Constructor { meta, .. } => meta,
             Expr::RecordSelect { meta, .. } => meta,
             Expr::ModuleSelect { meta, .. } => meta,
         }
@@ -325,7 +328,6 @@ impl TypedExpr {
             Expr::Case { typ, .. } => typ,
             Expr::RecordNil { typ, .. } => typ,
             Expr::RecordCons { typ, .. } => typ,
-            Expr::Constructor { typ, .. } => typ,
             Expr::RecordSelect { typ, .. } => typ,
             Expr::ModuleSelect { typ, .. } => typ,
         }

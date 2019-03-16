@@ -556,8 +556,8 @@ impl Env {
             },
         );
 
-        env.insert_variable("True".to_string(), Scope::Module { arity: 0 }, bool());
-        env.insert_variable("False".to_string(), Scope::Module { arity: 0 }, bool());
+        env.insert_variable("True".to_string(), Scope::Enum { arity: 0 }, bool());
+        env.insert_variable("False".to_string(), Scope::Enum { arity: 0 }, bool());
 
         env.insert_variable(
             "+".to_string(),
@@ -753,7 +753,7 @@ impl Env {
         let error = env.new_generic_var();
         env.insert_variable(
             "Ok".to_string(),
-            Scope::Local,
+            Scope::Enum { arity: 1 },
             Type::Fn {
                 args: vec![ok.clone()],
                 retrn: Box::new(result(ok, error)),
@@ -764,7 +764,7 @@ impl Env {
         let error = env.new_generic_var();
         env.insert_variable(
             "Error".to_string(),
-            Scope::Local,
+            Scope::Enum { arity: 1 },
             Type::Fn {
                 args: vec![error.clone()],
                 retrn: Box::new(result(ok, error)),
@@ -1158,7 +1158,7 @@ pub fn infer_module(
                     };
                     env.insert_variable(
                         constructor.name.clone(),
-                        Scope::Module {
+                        Scope::Enum {
                             arity: constructor.args.len(),
                         },
                         typ,
@@ -1467,11 +1467,6 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
                 typ,
                 name,
             })
-        }
-
-        Expr::Constructor { meta, name, .. } => {
-            let (_scope, typ) = infer_var(&name, level, &meta, env)?;
-            Ok(Expr::Constructor { meta, typ, name })
         }
 
         Expr::RecordSelect {
@@ -2401,6 +2396,7 @@ pub fn list(t: Type) -> Type {
     }
 }
 
+#[cfg(test)]
 pub fn record_nil() -> Type {
     Type::Record {
         row: Box::new(Type::RowNil),

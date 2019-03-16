@@ -347,6 +347,7 @@ where
 
 fn var(name: String, scope: TypedScope, env: &mut Env) -> Document {
     match scope {
+        Scope::Enum { .. } => atom(name.to_snake_case()),
         Scope::Local => env.local_var_name(name),
         Scope::Import { module } => module.to_doc(),
         Scope::Module { arity, .. } => "fun ".to_doc().append(name).append("/").append(arity),
@@ -393,6 +394,17 @@ fn case(subject: TypedExpr, cs: Vec<TypedClause>, env: &mut Env) -> Document {
 fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
     match fun {
         Expr::Var {
+            scope: Scope::Enum { .. },
+            name,
+            ..
+        } => {
+            let mut args: Vec<_> = args.into_iter().map(|e| expr(e, env)).collect();
+            // FIXME: O(n), insert at start shuffles the elemes forward by one place
+            args.insert(0, atom(name.to_snake_case()));
+            tuple(args)
+        }
+
+        Expr::Var {
             scope: Scope::Module { .. },
             name,
             ..
@@ -402,13 +414,6 @@ fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
             .append(":")
             .append(label)
             .append(call_args(args, env)),
-
-        Expr::Constructor { name, .. } => {
-            let mut args: Vec<_> = args.into_iter().map(|e| wrap_expr(e, env)).collect();
-            // FIXME: O(n), insert at start shuffles the elemes forward by one place
-            args.insert(0, atom(name.to_snake_case()));
-            tuple(args)
-        }
 
         call @ Expr::Call { .. } => expr(call, env)
             .surround("(", ")")
@@ -477,7 +482,6 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
         Expr::RecordNil { .. } => "#{}".to_doc(),
         Expr::Int { value, .. } => value.to_doc(),
         Expr::Float { value, .. } => value.to_doc(),
-        Expr::Constructor { name, .. } => atom(name.to_snake_case()),
         Expr::String { value, .. } => string(value),
         Expr::Seq { first, then, .. } => seq(*first, *then, env),
         Expr::Var { name, scope, .. } => var(name, scope, env),
@@ -766,9 +770,10 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "enum1".to_string(),
-                body: Expr::Constructor {
+                body: Expr::Var {
                     meta: default(),
                     typ: crate::typ::int(),
+                    scope: Scope::Enum { arity: 0 },
                     name: "Nil".to_string(),
                 },
             },
@@ -1444,6 +1449,17 @@ go() ->
     Y = 1,
     Y1 = 2,
     Y1.
+"#,
+        },
+        Case {
+            src: r#"pub fn t() { True }"#,
+            erl: r#"-module().
+-compile(no_auto_import).
+
+-export([t/0]).
+
+t() ->
+    true.
 "#,
         },
         Case {

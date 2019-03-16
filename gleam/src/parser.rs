@@ -221,9 +221,10 @@ fn expr_test() {
         Ok(Expr::Call {
             meta: Meta { start: 0, end: 10 },
             typ: (),
-            fun: Box::new(Expr::Constructor {
+            fun: Box::new(Expr::Var {
                 meta: Meta { start: 0, end: 4 },
                 typ: (),
+                scope: (),
                 name: "Pair".to_string(),
             }),
             args: vec![

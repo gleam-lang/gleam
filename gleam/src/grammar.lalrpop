@@ -189,7 +189,7 @@ SimpleExpr: UntypedExpr = {
     Record => <>,
     RecordNil => <>,
     RecordCons => <>,
-    Constructor => <>,
+    // Constructor => <>,
     RecordSelect => <>,
     ModuleSelect => <>,
     "begin" <e:Expr> "end" => e,
@@ -297,14 +297,6 @@ FnArg: Arg = {
     },
 }
 
-Constructor: UntypedExpr = {
-    <s:@L> <n:ConstructorName> <e:@L> => Expr::Constructor {
-        meta: meta(s, e),
-        typ: (),
-        name: n,
-    },
-}
-
 Call: UntypedExpr = {
     <s:@L> <fun:SimpleExpr> "(" <args:Comma<CallArg>> ")" <e:@L> =>? {
         let hole_arg_name = "capture@1";
@@ -388,6 +380,13 @@ List: UntypedExpr = {
 
 Var: UntypedExpr = {
     <s:@L> <v:VarName> <e:@L> => Expr::Var {
+        meta: meta(s, e),
+        typ: (),
+        scope: (),
+        name: v,
+    },
+
+    <s:@L> <v:UpName> <e:@L> => Expr::Var {
         meta: meta(s, e),
         typ: (),
         scope: (),
