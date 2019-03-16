@@ -27,16 +27,16 @@ test negate {
 
 // test compare {
 //   compare(True, True)
-//     |> expect:equal(_, Eq)
+//     |> expect:equal(_, order:Eq)
 
 //   compare(True, False)
-//     |> expect:equal(_, Gt)
+//     |> expect:equal(_, order:Gt)
 
 //   compare(False, False)
-//     |> expect:equal(_, Lt)
+//     |> expect:equal(_, order:Lt)
 
 //   compare(False, True)
-//     |> expect:equal(_, Gt)
+//     |> expect:equal(_, order:Gt)
 // }
 
 pub fn max(a, b) {

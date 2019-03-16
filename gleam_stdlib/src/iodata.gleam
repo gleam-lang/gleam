@@ -1,4 +1,3 @@
-import any
 import expect
 
 pub external type Iodata;

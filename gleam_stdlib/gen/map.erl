@@ -51,7 +51,8 @@ fetch_test() ->
     Proplist = [{4, 0}, {1, 1}],
     Map = from_list(Proplist),
     expect:equal(fetch(Map, 4), {ok, 0}),
-    expect:equal(fetch(Map, 1), {ok, 1}).
+    expect:equal(fetch(Map, 1), {ok, 1}),
+    expect:equal(fetch(Map, 2), {error, not_found}).
 -endif.
 
 erl_put(A, B, C) ->

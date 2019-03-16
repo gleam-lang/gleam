@@ -4,6 +4,9 @@ import expect
 
 pub external type Map(key, value);
 
+pub enum NotFound =
+  | NotFound
+
 pub external fn size(Map(k, v)) -> Int
   = "maps" "size"
 
@@ -41,7 +44,7 @@ test has_key {
 
   [
       {1, 0},
-    ]
+  ]
     |> from_list
     |> has_key(_, 1)
     |> expect:true
@@ -49,7 +52,7 @@ test has_key {
   [
       {4, 0},
       {1, 0},
-    ]
+  ]
     |> from_list
     |> has_key(_, 1)
     |> expect:true
@@ -91,7 +94,7 @@ test new {
 //     |> expect:equal(_, from_list([{"name", "Jane"}]))
 // }
 
-pub external fn fetch(Map(key, value), key) -> Result(a, value)
+pub external fn fetch(Map(key, value), key) -> Result(value, NotFound)
   = "gleam__stdlib" "map_fetch";
 
 test fetch {
@@ -109,9 +112,9 @@ test fetch {
     |> fetch(_, 1)
     |> expect:equal(_, Ok(1))
 
-  // map
-  //   |> fetch(_, 2)
-  //   |> expect:equal(_, Error(())
+  map
+    |> fetch(_, 2)
+    |> expect:equal(_, Error(NotFound))
 }
 
 external fn erl_put(key, value, Map(key, value)) -> Map(key, value)

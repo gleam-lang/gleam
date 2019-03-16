@@ -1,6 +1,6 @@
 import expect
 
-pub enum Error =
+pub enum Empty =
   | Empty
 
 // Using the Erlang C BIF implementation.
