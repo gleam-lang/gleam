@@ -2,7 +2,7 @@
 -compile(no_auto_import).
 -include_lib("eunit/include/eunit.hrl").
 
--export([from/1, unsafeCoerce/1, string/1, int/1, float/1, bool/1, thunk/1, tuple/1, field/2]).
+-export([from/1, unsafeCoerce/1, string/1, int/1, float/1, bool/1, thunk/1, list/2, tuple/1, field/2]).
 
 from(A) ->
     gleam__stdlib:identity(A).
@@ -56,6 +56,16 @@ bool_test() ->
 
 thunk(A) ->
     gleam__stdlib:thunk(A).
+
+list_any(A) ->
+    gleam__stdlib:decode_list(A).
+
+list_module() ->
+    list.
+
+list(Any, Decode) ->
+    result:then(list_any(Any),
+                fun(X) -> (list_module()):traverse(X, Decode) end).
 
 tuple(A) ->
     gleam__stdlib:decode_tuple(A).

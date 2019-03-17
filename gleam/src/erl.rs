@@ -410,10 +410,18 @@ fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
             ..
         } => name.to_doc().append(call_args(args, env)),
 
-        Expr::ModuleSelect { module, label, .. } => expr(*module, env)
-            .append(":")
-            .append(label)
-            .append(call_args(args, env)),
+        Expr::ModuleSelect { module, label, .. } => match *module {
+            Expr::Var { .. } => expr(*module, env)
+                .append(":")
+                .append(label)
+                .append(call_args(args, env)),
+
+            _ => expr(*module, env)
+                .surround("(", ")")
+                .append(":")
+                .append(label)
+                .append(call_args(args, env)),
+        },
 
         call @ Expr::Call { .. } => expr(call, env)
             .surround("(", ")")
@@ -1312,6 +1320,7 @@ go() ->
 "
     .to_string();
     assert_eq!(expected, module(m));
+
     let m = Module {
         typ: crate::typ::int(),
         name: "funny".to_string(),

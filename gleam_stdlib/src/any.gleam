@@ -172,17 +172,17 @@ pub external fn thunk(Any) -> Result(fn() -> Any, String)
 ////     |> expect:is_error
 //// }
 
-// external fn list_any(Any) -> Result(List(Any), String) = "gleam__stdlib" "decode_list"
+external fn list_any(Any) -> Result(List(Any), String) = "gleam__stdlib" "decode_list"
 
-// fn list_module() {
-//   list
-// }
+fn list_module() {
+  list
+}
 
-// pub fn list(any, decode) {
-//   any
-//     |> list_any
-//     |> result:then(_, fn(x) { list_module():traverse(x, decode) })
-// }
+pub fn list(any, decode) {
+  any
+    |> list_any
+    |> result:then(_, fn(x) { list_module():traverse(x, decode) })
+}
 
 //// test list {
 ////   let _ = []
