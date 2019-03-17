@@ -91,12 +91,8 @@ test flatten {
 
 pub fn then(result, fun) {
   case result {
-  | Ok(x) ->
-      case fun(x) {
-      | Ok(y) -> Ok(y)
-      | Error(y) -> Error(y)
-      }
-  | Error(_) -> result
+  | Ok(x) -> fun(x)
+  | Error(e) -> Error(e)
   }
 }
 
@@ -108,6 +104,10 @@ test then {
   Ok(1)
     |> then(_, fn(x) { Ok(x + 1) })
     |> expect:equal(_, Ok(2))
+
+  Ok(1)
+    |> then(_, fn(_) { Ok("type change") })
+    |> expect:equal(_, Ok("type change"))
 
   Ok(1)
     |> then(_, fn(_) { Error(1) })

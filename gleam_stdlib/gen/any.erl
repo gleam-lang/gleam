@@ -2,7 +2,7 @@
 -compile(no_auto_import).
 -include_lib("eunit/include/eunit.hrl").
 
--export([from/1, unsafeCoerce/1, string/1, int/1, float/1, bool/1, thunk/1, tuple/1]).
+-export([from/1, unsafeCoerce/1, string/1, int/1, float/1, bool/1, thunk/1, tuple/1, field/2]).
 
 from(A) ->
     gleam__stdlib:identity(A).
@@ -66,5 +66,29 @@ tuple_test() ->
     expect:equal(tuple(from({<<"ok">>, <<"ok">>})),
                  {ok, {from(<<"ok">>), from(<<"ok">>)}}),
     expect:is_error(tuple(from({1}))),
-    expect:is_error(tuple(from({1, 2, 3}))).
+    expect:is_error(tuple(from({1, 2, 3}))),
+    expect:equal(result:then(result:then(tuple(from({1, 2.0})),
+                                         fun(X) -> {A, B} = X,
+                                             result:map(int(A),
+                                                        fun(I) ->
+                                                            {I, B}
+                                                        end) end),
+                             fun(X) -> {A1, B1} = X,
+                                 result:map(float(B1),
+                                            fun(F) -> {A1, F} end) end),
+                 {ok, {1, 2.0}}).
+-endif.
+
+field(A, B) ->
+    gleam__stdlib:decode_field(A, B).
+
+-ifdef(TEST).
+field_test() ->
+    {ok, OkAtom} = atom:from_string(<<"ok">>),
+    expect:equal(field(from(#{}#{ok => 1}), OkAtom), {ok, from(1)}),
+    expect:equal(field(from(#{}#{ok => 3}#{earlier => 2}), OkAtom),
+                 {ok, from(3)}),
+    expect:is_error(field(from(#{}), OkAtom)),
+    expect:is_error(field(from(1), OkAtom)),
+    expect:is_error(field(from([]), [])).
 -endif.

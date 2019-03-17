@@ -85,22 +85,18 @@ flatten_test() ->
 then(Result, Fun) ->
     case Result of
         {ok, X} ->
-            case Fun(X) of
-                {ok, Y} ->
-                    {ok, Y};
+            Fun(X);
 
-                {error, Y1} ->
-                    {error, Y1}
-            end;
-
-        {error, _} ->
-            Result
+        {error, E} ->
+            {error, E}
     end.
 
 -ifdef(TEST).
 then_test() ->
     expect:equal(then({error, 1}, fun(X) -> {ok, X + 1} end), {error, 1}),
     expect:equal(then({ok, 1}, fun(X) -> {ok, X + 1} end), {ok, 2}),
+    expect:equal(then({ok, 1}, fun(_) -> {ok, <<"type change">>} end),
+                 {ok, <<"type change">>}),
     expect:equal(then({ok, 1}, fun(_) -> {error, 1} end), {error, 1}).
 -endif.
 

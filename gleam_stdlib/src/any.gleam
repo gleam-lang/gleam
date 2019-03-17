@@ -1,4 +1,5 @@
 import list
+import atom
 import result
 import expect
 
@@ -230,74 +231,67 @@ pub external fn tuple(Any) -> Result({Any, Any}, String)
 
 test tuple {
   {1, []}
-    |> from
-    |> tuple
-    |> expect:equal(_, Ok({from(1), from([])}))
+  |> from
+  |> tuple
+  |> expect:equal(_, Ok({from(1), from([])}))
 
   {"ok", "ok"}
-    |> from
-    |> tuple
-    |> expect:equal(_, Ok({from("ok"), from("ok")}))
+  |> from
+  |> tuple
+  |> expect:equal(_, Ok({from("ok"), from("ok")}))
 
   {1}
-    |> from
-    |> tuple
-    |> expect:is_error
+  |> from
+  |> tuple
+  |> expect:is_error
 
   {1, 2, 3}
-    |> from
-    |> tuple
-    |> expect:is_error
+  |> from
+  |> tuple
+  |> expect:is_error
 
-//   {1, 2.0}
-//     |> from
-//     |> tuple
-//     |> result:map(_, fn(x) {
-//       let {a, b} = x
-//       a |> int |> result:map(_, fn(x) { {x, b} })
-//     })
-//     // |> result:then(_, fn(x) {
-//     //   let {a, b} = x
-//     //   b |> float |> result:map(_, fn(x) { {a, x} })
-//     // })
-//     // |> expect:equal(_, Ok({1, 2.0}))
+  {1, 2.0}
+  |> from
+  |> tuple
+  |> result:then(_, fn(x) {
+    let {a, b} = x
+    a |> int |> result:map(_, fn(i) { {i, b} })
+  })
+  |> result:then(_, fn(x) {
+    let {a, b} = x
+    b |> float |> result:map(_, fn(f) { {a, f} })
+  })
+  |> expect:equal(_, Ok({1, 2.0}))
 }
 
-////// TODO: FIXME: This doesn't work anymore because atoms are no longer a thing.
-////// "Decode a field from a map, extracting a specified field.
-//////
-////// Multiple fields can be extracted and stored in a new record like so:
-//////
-//////     Ok(name) <- decode:field(raw_data, \"name\") |> result:then(_, decode:string)
-//////     Ok(size) <- decode:field(raw_data, \"size\") |> result:then(_, decode:int)
-//////     Ok({ name = name, size = size })
-//////
-////pub external fn field(Any, a) -> Result(String, Any)
-////  = "gleam__stdlib" "field"
+pub external fn field(Any, a) -> Result(Any, String)
+  = "gleam__stdlib" "decode_field"
 
-////test field {
-////  let _ = {ok = 1}
-////    |> from
-////    |> field("ok")
-////    |> expect:equal(from(1))
+test field {
+  let Ok(ok_atom) = atom:from_string("ok")
 
-////  let _ = {earlier = 2, ok = 3}
-////    |> from
-////    |> field("ok")
-////    |> expect:equal(from(3))
+  {ok = 1}
+  |> from
+  |> field(_, ok_atom)
+  |> expect:equal(_, Ok(from(1)))
 
-////  let _ = {}
-////    |> from
-////    |> field("ok")
-////    |> expect:is_error
+  {earlier = 2, ok = 3}
+  |> from
+  |> field(_, ok_atom)
+  |> expect:equal(_, Ok(from(3)))
 
-////  let _ = 1
-////    |> from
-////    |> field("ok")
-////    |> expect:is_error
+  {}
+  |> from
+  |> field(_, ok_atom)
+  |> expect:is_error
 
-////  []
-////    |> from
-////    |> field("ok")
-////    |> expect:is_error
-////}
+  1
+  |> from
+  |> field(_, ok_atom)
+  |> expect:is_error
+
+  []
+  |> from
+  |> field(_, [])
+  |> expect:is_error
+}

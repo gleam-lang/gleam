@@ -1625,12 +1625,20 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
             }
         }
 
-        Pattern::Tuple { elems, .. } => match typ {
+        Pattern::Tuple { elems, meta, .. } => match typ.clone().collapse_links() {
             Type::Tuple { elems: type_elems } => {
                 for (pattern, typ) in elems.iter().zip(type_elems) {
-                    unify_pattern(pattern, typ, level, env)?;
+                    unify_pattern(pattern, &typ, level, env)?;
                 }
                 Ok(())
+            }
+
+            typ @ Type::Var { .. } => {
+                let elems = (0..(elems.len()))
+                    .map(|_| env.new_unbound_var(level))
+                    .collect();
+                unify(&Type::Tuple { elems }, &typ).map_err(|e| convert_unify_error(e, &meta))?;
+                unify_pattern(pattern, &typ, level, env)
             }
 
             other => {
@@ -2827,6 +2835,10 @@ fn infer_test() {
         Case {
             src: "fn(x) { let [a] = x a + 1 }",
             typ: "fn(List(Int)) -> Int",
+        },
+        Case {
+            src: "fn(x) { let {a, b} = x a }",
+            typ: "fn({a, b}) -> a",
         },
         Case {
             src: "let _x = 1 2.0",
