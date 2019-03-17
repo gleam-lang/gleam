@@ -97,11 +97,11 @@ pub fn filter(list, fun) {
 
 test filter {
   []
-    |> filter(_, fn(x) { True })
+    |> filter(_, fn(_) { True })
     |> expect:equal(_, [])
 
   [0, 4, 5, 7, 3]
-    |> filter(_, fn(x) { True })
+    |> filter(_, fn(_) { True })
     |> expect:equal(_, [0, 4, 5, 7, 3])
 
   [0, 4, 5, 7, 3]
@@ -173,7 +173,7 @@ pub fn drop(list, n) {
   | False ->
       case list {
       | [] -> []
-      | [x | xs] -> drop(xs, n - 1)
+      | [_ | xs] -> drop(xs, n - 1)
       }
   }
 }

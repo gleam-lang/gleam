@@ -101,8 +101,8 @@ filter(List, Fun) ->
 
 -ifdef(TEST).
 filter_test() ->
-    expect:equal(filter([], fun(X) -> true end), []),
-    expect:equal(filter([0, 4, 5, 7, 3], fun(X) -> true end), [0, 4, 5, 7, 3]),
+    expect:equal(filter([], fun(_) -> true end), []),
+    expect:equal(filter([0, 4, 5, 7, 3], fun(_) -> true end), [0, 4, 5, 7, 3]),
     expect:equal(filter([0, 4, 5, 7, 3], fun(X) -> X > 4 end), [5, 7]),
     expect:equal(filter([0, 4, 5, 7, 3], fun(X) -> X < 4 end), [0, 3]).
 -endif.
@@ -166,7 +166,7 @@ drop(List, N) ->
                 [] ->
                     [];
 
-                [X | Xs] ->
+                [_ | Xs] ->
                     drop(Xs, N - 1)
             end
     end.
