@@ -2,11 +2,6 @@ import expect
 
 // Result represents the result of something that may succeed or fail.
 // `Ok` means it was successful, `Error` means it failed.
-//
-pub enum Result(error, value) =
-  | Ok(value)
-  | Error(error)
-;
 
 pub fn is_ok(result) {
   case result {
@@ -38,7 +33,7 @@ test is_error {
 pub fn map(result, fun) {
   case result {
   | Ok(x) -> Ok(fun(x))
-  | Error(_) -> result
+  | Error(e) -> Error(e)
   }
 }
 
@@ -46,6 +41,10 @@ test map {
   Ok(1)
     |> map(_, fn(x) { x + 1 })
     |> expect:equal(_, Ok(2))
+
+  Ok(1)
+    |> map(_, fn(_) { "2" })
+    |> expect:equal(_, Ok("2"))
 
   Error(1)
     |> map(_, fn(x) { x + 1 })
@@ -90,7 +89,7 @@ test flatten {
     |> expect:equal(_, Error(Error(1)))
 }
 
-pub fn flat_map(result, fun) {
+pub fn then(result, fun) {
   case result {
   | Ok(x) ->
       case fun(x) {
@@ -101,17 +100,17 @@ pub fn flat_map(result, fun) {
   }
 }
 
-test flat_map {
+test then {
   Error(1)
-    |> flat_map(_, fn(x) { Ok(x + 1) })
+    |> then(_, fn(x) { Ok(x + 1) })
     |> expect:equal(_, Error(1))
 
   Ok(1)
-    |> flat_map(_, fn(x) { Ok(x + 1) })
+    |> then(_, fn(x) { Ok(x + 1) })
     |> expect:equal(_, Ok(2))
 
   Ok(1)
-    |> flat_map(_, fn(_) { Error(1) })
+    |> then(_, fn(_) { Error(1) })
     |> expect:equal(_, Error(1))
 }
 

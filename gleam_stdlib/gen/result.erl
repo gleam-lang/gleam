@@ -2,7 +2,7 @@
 -compile(no_auto_import).
 -include_lib("eunit/include/eunit.hrl").
 
--export([is_ok/1, is_error/1, map/2, map_error/2, flatten/1, flat_map/2, unwrap/2]).
+-export([is_ok/1, is_error/1, map/2, map_error/2, flatten/1, then/2, unwrap/2]).
 
 is_ok(Result) ->
     case Result of
@@ -39,13 +39,14 @@ map(Result, Fun) ->
         {ok, X} ->
             {ok, Fun(X)};
 
-        {error, _} ->
-            Result
+        {error, E} ->
+            {error, E}
     end.
 
 -ifdef(TEST).
 map_test() ->
     expect:equal(map({ok, 1}, fun(X) -> X + 1 end), {ok, 2}),
+    expect:equal(map({ok, 1}, fun(_) -> <<"2">> end), {ok, <<"2">>}),
     expect:equal(map({error, 1}, fun(X) -> X + 1 end), {error, 1}).
 -endif.
 
@@ -81,7 +82,7 @@ flatten_test() ->
     expect:equal(flatten({error, {error, 1}}), {error, {error, 1}}).
 -endif.
 
-flat_map(Result, Fun) ->
+then(Result, Fun) ->
     case Result of
         {ok, X} ->
             case Fun(X) of
@@ -97,10 +98,10 @@ flat_map(Result, Fun) ->
     end.
 
 -ifdef(TEST).
-flat_map_test() ->
-    expect:equal(flat_map({error, 1}, fun(X) -> {ok, X + 1} end), {error, 1}),
-    expect:equal(flat_map({ok, 1}, fun(X) -> {ok, X + 1} end), {ok, 2}),
-    expect:equal(flat_map({ok, 1}, fun(_) -> {error, 1} end), {error, 1}).
+then_test() ->
+    expect:equal(then({error, 1}, fun(X) -> {ok, X + 1} end), {error, 1}),
+    expect:equal(then({ok, 1}, fun(X) -> {ok, X + 1} end), {ok, 2}),
+    expect:equal(then({ok, 1}, fun(_) -> {error, 1} end), {error, 1}).
 -endif.
 
 unwrap(Result, Default) ->

@@ -1,9 +1,12 @@
 -module(gleam__stdlib).
 -include_lib("eunit/include/eunit.hrl").
 
--export([expect_equal/2, expect_not_equal/2, expect_true/1, expect_false/1, expect_is_ok/1,
-         expect_is_error/1, atom_from_string/1, atom_create_from_string/1, atom_to_string/1,
-         map_fetch/2, iodata_append/2, iodata_prepend/2, identity/1]).
+-export([expect_equal/2, expect_not_equal/2, expect_true/1, expect_false/1,
+         expect_is_ok/1, expect_is_error/1, atom_from_string/1,
+         atom_create_from_string/1, atom_to_string/1, map_fetch/2,
+         iodata_append/2, iodata_prepend/2, identity/1, decode_int/1,
+         decode_string/1, decode_bool/1, decode_float/1, decode_thunk/1,
+         decode_tuple/1, decode_field/2]).
 
 expect_equal(A, Expected) -> ?assertEqual(Expected, A).
 expect_not_equal(A, Expected) -> ?assertNotEqual(Expected, A).
@@ -33,3 +36,33 @@ iodata_append(Iodata, String) -> [Iodata, String].
 iodata_prepend(Iodata, String) -> [String, Iodata].
 
 identity(X) -> X.
+
+decode_error_msg(Type, Data) ->
+  {error, iolist_to_binary(io_lib:format("Expected ~s, got `~p`", [Type, Data]))}.
+
+decode_string(Data) when is_binary(Data) -> {ok, Data};
+decode_string(Data) -> decode_error_msg("a String", Data).
+
+decode_int(Data) when is_integer(Data) -> {ok, Data};
+decode_int(Data) -> decode_error_msg("an Int", Data).
+
+decode_float(Data) when is_float(Data) -> {ok, Data};
+decode_float(Data) -> decode_error_msg("a Float", Data).
+
+decode_bool(Data) when is_boolean(Data) -> {ok, Data};
+decode_bool(Data) -> decode_error_msg("a Bool", Data).
+
+decode_thunk(Data) when is_function(Data, 0) -> {ok, Data};
+decode_thunk(Data) -> decode_error_msg("a zero arity function", Data).
+
+decode_tuple(Data = {_, _}) -> {ok, Data};
+decode_tuple(Data) -> decode_error_msg("a 2 element tuple", Data).
+
+decode_field(Data, Key) ->
+  case Data of
+    #{Key := Value} ->
+      {ok, Value};
+
+    _ ->
+      decode_error_msg(io_lib:format("a map with key `~p`", [Key]), Data)
+  end.

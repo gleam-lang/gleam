@@ -1633,7 +1633,10 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
                 Ok(())
             }
 
-            _ => unimplemented!(),
+            other => {
+                dbg!(&other);
+                unimplemented!()
+            }
         },
         // Pattern::Record { .. } => unimplemented!(),
     }
@@ -2343,7 +2346,9 @@ fn generalise(t: Type, ctx_level: usize) -> Type {
             row: Box::new(generalise(*row, ctx_level)),
         },
 
-        Type::Module { .. } => unimplemented!(),
+        Type::Module { row } => Type::Module {
+            row: Box::new(generalise(*row, ctx_level)),
+        },
 
         Type::RowCons { label, head, tail } => Type::RowCons {
             label,
