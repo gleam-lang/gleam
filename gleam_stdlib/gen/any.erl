@@ -4,6 +4,12 @@
 
 -export([from/1, unsafeCoerce/1, string/1, int/1, float/1, bool/1, thunk/1, list/2, tuple/1, field/2]).
 
+list_module() ->
+    list.
+
+tuple_module() ->
+    tuple.
+
 from(A) ->
     gleam__stdlib:identity(A).
 
@@ -55,17 +61,40 @@ bool_test() ->
 -endif.
 
 thunk(A) ->
-    gleam__stdlib:thunk(A).
+    gleam__stdlib:decode_thunk(A).
+
+-ifdef(TEST).
+thunk_test() ->
+    expect:is_ok(thunk(from(fun() -> 1 end))),
+    expect:equal(result:map(thunk(from(fun() -> 1 end)), fun(F) -> F() end),
+                 {ok, from(1)}),
+    expect:is_error(thunk(from(fun(X) -> X end))),
+    expect:is_error(thunk(from(1))),
+    expect:is_error(thunk(from([]))).
+-endif.
 
 list_any(A) ->
     gleam__stdlib:decode_list(A).
 
-list_module() ->
-    list.
-
 list(Any, Decode) ->
     result:then(list_any(Any),
-                fun(X) -> (list_module()):traverse(X, Decode) end).
+                fun(Capture1) ->
+                    (list_module()):traverse(Capture1, Decode)
+                end).
+
+-ifdef(TEST).
+list_test() ->
+    expect:equal(list(from([]), fun string/1), {ok, []}),
+    expect:equal(list(from([]), fun int/1), {ok, []}),
+    expect:equal(list(from([1, 2, 3]), fun int/1), {ok, [1, 2, 3]}),
+    expect:equal(list(from([[1], [2], [3]]),
+                      fun(Capture1) -> list(Capture1, fun int/1) end),
+                 {ok, [[1], [2], [3]]}),
+    expect:is_error(list(from(1), fun string/1)),
+    expect:is_error(list(from(1.0), fun int/1)),
+    expect:is_error(list(from([<<"">>]), fun int/1)),
+    expect:is_error(list(from([from(1), from(<<"not an int">>)]), fun int/1)).
+-endif.
 
 tuple(A) ->
     gleam__stdlib:decode_tuple(A).
@@ -78,14 +107,19 @@ tuple_test() ->
     expect:is_error(tuple(from({1}))),
     expect:is_error(tuple(from({1, 2, 3}))),
     expect:equal(result:then(result:then(tuple(from({1, 2.0})),
-                                         fun(X) -> {A, B} = X,
-                                             result:map(int(A),
-                                                        fun(I) ->
-                                                            {I, B}
-                                                        end) end),
-                             fun(X) -> {A1, B1} = X,
-                                 result:map(float(B1),
-                                            fun(F) -> {A1, F} end) end),
+                                         fun(X) ->
+                                             result:map(int((tuple_module()):first(X)),
+                                                        fun(F) ->
+                                                            {F,
+                                                             (tuple_module()):second(X)}
+                                                        end)
+                                         end),
+                             fun(X) ->
+                                 result:map(float((tuple_module()):second(X)),
+                                            fun(F) ->
+                                                {(tuple_module()):first(X), F}
+                                            end)
+                             end),
                  {ok, {1, 2.0}}).
 -endif.
 

@@ -1,7 +1,16 @@
 import list
 import atom
+import tuple
 import result
 import expect
+
+fn list_module() {
+  list
+}
+
+fn tuple_module() {
+  tuple
+}
 
 // `Any` data is data that we don"t know the type of yet.
 // We likely get data like this from interop with Erlang, or from
@@ -95,32 +104,31 @@ test float {
   |> expect:equal(_, Error("Expected a Float, got `[]`"))
 }
 
+// TODO
 // pub external fn atom(Any) -> Result(Atom, String)
 //   = "gleam__stdlib" "decode_atom"
 
-//// test atom {
-////   // TODO
-////   // make an atom here
-////   //   |> from
-////   //   |> atom
-////   //   |> expect:equal(_, Ok(""))
+// test atom {
+//   make an atom here
+//     |> from
+//     |> atom
+//     |> expect:equal(_, Ok(""))
 
-////   // TODO
-////   // make an atom here
-////   //   |> from
-////   //   |> atom
-////   //   |> expect:equal(_, Ok("ok"))
+//   make an atom here
+//     |> from
+//     |> atom
+//     |> expect:equal(_, Ok("ok"))
 
-////   let _ = 1
-////     |> from
-////     |> atom
-////     |> expect:is_error
+//   1
+//     |> from
+//     |> atom
+//     |> expect:is_error
 
-////   []
-////     |> from
-////     |> atom
-////     |> expect:is_error
-//// }
+//   []
+//     |> from
+//     |> atom
+//     |> expect:is_error
+// }
 
 pub external fn bool(Any) -> Result(Bool, String)
   = "gleam__stdlib" "decode_bool"
@@ -148,83 +156,86 @@ test bool {
 }
 
 pub external fn thunk(Any) -> Result(fn() -> Any, String)
-  = "gleam__stdlib" "thunk"
+  = "gleam__stdlib" "decode_thunk"
 
-//// test thunk {
-////   let _ = fn() { 1 }
-////     |> from
-////     |> thunk
-////     |> expect:is_ok
+test thunk {
+  fn() { 1 }
+  |> from
+  |> thunk
+  |> expect:is_ok
 
-////   let _ = fn(x) { x }
-////     |> from
-////     |> thunk
-////     |> expect:is_error
+  fn() { 1 }
+  |> from
+  |> thunk
+  |> result:map(_, fn(f) { f() })
+  |> expect:equal(_, Ok(from(1)))
 
-////   let _ = 1
-////     |> from
-////     |> thunk
-////     |> expect:is_error
+  fn(x) { x }
+  |> from
+  |> thunk
+  |> expect:is_error
 
-////   []
-////     |> from
-////     |> thunk
-////     |> expect:is_error
-//// }
+  1
+  |> from
+  |> thunk
+  |> expect:is_error
 
-external fn list_any(Any) -> Result(List(Any), String) = "gleam__stdlib" "decode_list"
-
-fn list_module() {
-  list
+  []
+  |> from
+  |> thunk
+  |> expect:is_error
 }
+
+external fn list_any(Any) -> Result(List(Any), String) =
+  "gleam__stdlib" "decode_list"
 
 pub fn list(any, decode) {
   any
-    |> list_any
-    |> result:then(_, fn(x) { list_module():traverse(x, decode) })
+  |> list_any
+  |> result:then(_, list_module():traverse(_, decode))
 }
 
-//// test list {
-////   let _ = []
-////     |> from
-////     |> list(string)
-////     |> expect:equal(_, Ok([]))
+test list {
+  []
+  |> from
+  |> list(_, string)
+  |> expect:equal(_, Ok([]))
 
-////   let _ = []
-////     |> from
-////     |> list(atom)
-////     |> expect:equal(_, Ok([]))
+  []
+  |> from
+  |> list(_, int)
+  |> expect:equal(_, Ok([]))
 
-////   let _ = [1, 2, 3]
-////     |> from
-////     |> list(int)
-////     |> expect:equal(_, Ok([1, 2, 3]))
+  [1, 2, 3]
+  |> from
+  |> list(_, int)
+  |> expect:equal(_, Ok([1, 2, 3]))
 
-////   let _ = [[1], [2], [3]]
-////     |> from
-////     |> list(list(int))
-////     |> expect:equal(_, Ok([1, 2, 3]))
+  [[1], [2], [3]]
+  |> from
+  |> list(_, list(_, int))
+  |> expect:equal(_, Ok([[1], [2], [3]]))
 
-////   let _ = 1
-////     |> from
-////     |> list(string)
-////     |> expect:is_error
+  1
+  |> from
+  |> list(_, string)
+  |> expect:is_error
 
-////   let _ = 1.0
-////     |> from()
-////     |> list(int)
-////     |> expect:is_error
+  1.0
+  |> from
+  |> list(_, int)
+  |> expect:is_error
 
-////   let _ = [""]
-////     |> from()
-////     |> list(int)
-////     |> expect:is_error
+  [""]
+  |> from
+  |> list(_, int)
+  |> expect:is_error
 
-////   [from(1), any:from("not an int")]
-////     |> from
-////     |> list(int)
-////     |> expect:is_error
-//// }
+  [from(1), from("not an int")]
+  |> from
+  |> list(_, int)
+  |> expect:is_error
+}
 
 pub external fn tuple(Any) -> Result({Any, Any}, String)
   = "gleam__stdlib" "decode_tuple"
@@ -254,12 +265,16 @@ test tuple {
   |> from
   |> tuple
   |> result:then(_, fn(x) {
-    let {a, b} = x
-    a |> int |> result:map(_, fn(i) { {i, b} })
+    x
+    |> tuple_module():first
+    |> int
+    |> result:map(_, fn(f) { {f, tuple_module():second(x)} })
   })
   |> result:then(_, fn(x) {
-    let {a, b} = x
-    b |> float |> result:map(_, fn(f) { {a, f} })
+    x
+    |> tuple_module():second
+    |> float
+    |> result:map(_, fn(f) { {tuple_module():first(x), f} })
   })
   |> expect:equal(_, Ok({1, 2.0}))
 }

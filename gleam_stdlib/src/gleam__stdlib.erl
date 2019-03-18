@@ -6,7 +6,7 @@
          atom_create_from_string/1, atom_to_string/1, map_fetch/2,
          iodata_append/2, iodata_prepend/2, identity/1, decode_int/1,
          decode_string/1, decode_bool/1, decode_float/1, decode_thunk/1,
-         decode_tuple/1, decode_field/2]).
+         decode_tuple/1, decode_list/1, decode_field/2]).
 
 expect_equal(A, Expected) -> ?assertEqual(Expected, A).
 expect_not_equal(A, Expected) -> ?assertNotEqual(Expected, A).
@@ -57,6 +57,9 @@ decode_thunk(Data) -> decode_error_msg("a zero arity function", Data).
 
 decode_tuple(Data = {_, _}) -> {ok, Data};
 decode_tuple(Data) -> decode_error_msg("a 2 element tuple", Data).
+
+decode_list(Data) when is_list(Data) -> {ok, Data};
+decode_list(Data) -> decode_error_msg("a List", Data).
 
 decode_field(Data, Key) ->
   case Data of
