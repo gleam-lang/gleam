@@ -8,8 +8,8 @@
          decode_string/1, decode_bool/1, decode_float/1, decode_thunk/1,
          decode_tuple/1, decode_list/1, decode_field/2]).
 
-expect_equal(A, Expected) -> ?assertEqual(Expected, A).
-expect_not_equal(A, Expected) -> ?assertNotEqual(Expected, A).
+expect_equal(Actual, Expected) -> ?assertEqual(Expected, Actual).
+expect_not_equal(Actual, Expected) -> ?assertNotEqual(Expected, Actual).
 expect_true(A) -> ?assert(A).
 expect_false(A) -> ?assertNot(A).
 expect_is_ok(A) -> ?assertMatch({ok, _}, A).
