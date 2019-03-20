@@ -63,7 +63,9 @@ fn command_build(root: String) {
 
     fs::create_dir_all(&gen_dir).expect("creating gen dir");
 
-    let srcs = fs::read_dir(src_dir.clone())
+    let mut srcs = vec![];
+
+    fs::read_dir(src_dir.clone())
         .expect("Could not locate src/")
         .filter_map(Result::ok)
         .filter(|d| {
@@ -73,20 +75,15 @@ fn command_build(root: String) {
                 false
             }
         })
-        .map(|dir_entry| {
+        .for_each(|dir_entry| {
             let src = fs::read_to_string(dir_entry.path())
                 .unwrap_or_else(|_| panic!("Unable to read {:?}", dir_entry.path()));
 
-            let name = dir_entry
-                .path()
-                .file_stem()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .to_string();
-            (name, src)
-        })
-        .collect::<Vec<_>>();
+            srcs.push(project::Input {
+                path: dir_entry.path().canonicalize().unwrap(),
+                src,
+            })
+        });
 
     let compiled = match crate::project::compile(srcs) {
         Ok(c) => c,

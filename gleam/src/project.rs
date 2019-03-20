@@ -1,9 +1,16 @@
 use petgraph::Graph;
 use std::collections::HashMap;
+use std::path::PathBuf;
 use termcolor::Buffer;
 
 pub type Name = String;
 pub type Src = String;
+
+#[derive(Debug, PartialEq)]
+pub struct Input {
+    pub path: PathBuf,
+    pub src: String,
+}
 
 #[derive(Debug, PartialEq)]
 pub struct Compiled {
@@ -278,13 +285,14 @@ fn write(mut buffer: &mut Buffer, d: ErrorDiagnostic) {
     codespan_reporting::emit(&mut buffer, &code_map, &diagnostic).unwrap();
 }
 
-pub fn compile(srcs: Vec<(Name, Src)>) -> Result<Vec<Compiled>, Error> {
+pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
     let mut deps_graph = Graph::new();
     let mut deps_vec = Vec::with_capacity(srcs.len());
     let mut indexes = HashMap::new();
     let mut modules = HashMap::new();
 
-    for (name, src) in srcs {
+    for Input { path, src } in srcs {
+        let name = path.file_stem().unwrap().to_str().unwrap().to_string();
         let mut module = crate::grammar::ModuleParser::new()
             .parse(&crate::parser::strip_extra(&src))
             .map_err(|e| Error::Parse {
@@ -345,7 +353,7 @@ pub fn compile(srcs: Vec<(Name, Src)>) -> Result<Vec<Compiled>, Error> {
 #[test]
 fn compile_test() {
     struct Case {
-        input: Vec<(Name, Src)>,
+        input: Vec<Input>,
         expected: Result<Vec<Compiled>, Error>,
     }
 
@@ -356,70 +364,98 @@ fn compile_test() {
         },
         Case {
             input: vec![
-                ("one".to_string(), "".to_string()),
-                ("two".to_string(), "".to_string()),
+                Input {
+                    path: PathBuf::from("/src/one"),
+                    src: "".to_string(),
+                },
+                Input {
+                    path: PathBuf::from("/src/two"),
+                    src: "".to_string(),
+                },
             ],
             expected: Ok(vec![
                 Compiled {
                     name: "two".to_string(),
-                    out: "-module(two).\n-compile(no_auto_import).\n\n-export([]).\n\n\n".to_string(),
-                },
-                Compiled {
-                    name: "one".to_string(),
-                    out: "-module(one).\n-compile(no_auto_import).\n\n-export([]).\n\n\n".to_string(),
-                },
-            ]),
-        },
-        Case {
-            input: vec![
-                ("one".to_string(), "import two".to_string()),
-                ("two".to_string(), "".to_string()),
-            ],
-            expected: Ok(vec![
-                Compiled {
-                    name: "two".to_string(),
-                    out: "-module(two).\n-compile(no_auto_import).\n\n-export([]).\n\n\n".to_string(),
-                },
-                Compiled {
-                    name: "one".to_string(),
-                    out: "-module(one).\n-compile(no_auto_import).\n\n-export([]).\n\n\n".to_string(),
-                },
-            ]),
-        },
-        Case {
-            input: vec![
-                ("one".to_string(), "".to_string()),
-                ("two".to_string(), "import one".to_string()),
-            ],
-            expected: Ok(vec![
-                Compiled {
-                    name: "one".to_string(),
-                    out: "-module(one).\n-compile(no_auto_import).\n\n-export([]).\n\n\n".to_string(),
-                },
-                Compiled {
-                    name: "two".to_string(),
-                    out: "-module(two).\n-compile(no_auto_import).\n\n-export([]).\n\n\n".to_string(),
-                },
-            ]),
-        },
-        Case {
-            input: vec![
-                ("one".to_string(), "pub enum Box = | Box(Int)".to_string()),
-                (
-                    "two".to_string(),
-                    "import one pub
-                     fn unbox(x) { let one:Box(i) = x i }"
+                    out: "-module(two).\n-compile(no_auto_import).\n\n-export([]).\n\n\n"
                         .to_string(),
-                ),
+                },
+                Compiled {
+                    name: "one".to_string(),
+                    out: "-module(one).\n-compile(no_auto_import).\n\n-export([]).\n\n\n"
+                        .to_string(),
+                },
+            ]),
+        },
+        Case {
+            input: vec![
+                Input {
+                    path: PathBuf::from("/src/one"),
+                    src: "import two".to_string(),
+                },
+                Input {
+                    path: PathBuf::from("/src/two"),
+                    src: "".to_string(),
+                },
+            ],
+            expected: Ok(vec![
+                Compiled {
+                    name: "two".to_string(),
+                    out: "-module(two).\n-compile(no_auto_import).\n\n-export([]).\n\n\n"
+                        .to_string(),
+                },
+                Compiled {
+                    name: "one".to_string(),
+                    out: "-module(one).\n-compile(no_auto_import).\n\n-export([]).\n\n\n"
+                        .to_string(),
+                },
+            ]),
+        },
+        Case {
+            input: vec![
+                Input {
+                    path: PathBuf::from("/src/one"),
+                    src: "".to_string(),
+                },
+                Input {
+                    path: PathBuf::from("/src/two"),
+                    src: "import one".to_string(),
+                },
             ],
             expected: Ok(vec![
                 Compiled {
                     name: "one".to_string(),
-                    out: "-module(one).\n-compile(no_auto_import).\n\n-export([]).\n\n\n".to_string(),
+                    out: "-module(one).\n-compile(no_auto_import).\n\n-export([]).\n\n\n"
+                        .to_string(),
                 },
                 Compiled {
                     name: "two".to_string(),
-                    out: "-module(two).\n-compile(no_auto_import).\n\n-export([unbox/1]).\n\nunbox(X) ->\n    {box, I} = X,\n    I.\n".to_string(),
+                    out: "-module(two).\n-compile(no_auto_import).\n\n-export([]).\n\n\n"
+                        .to_string(),
+                },
+            ]),
+        },
+        Case {
+            input: vec![
+                Input {
+                    path: PathBuf::from("/src/one"),
+                    src: "pub enum Box = | Box(Int)".to_string(),
+                },
+                Input {
+                    path: PathBuf::from("/src/two"),
+                    src: "import one pub fn unbox(x) { let one:Box(i) = x i }".to_string(),
+                },
+            ],
+            expected: Ok(vec![
+                Compiled {
+                    name: "one".to_string(),
+                    out: "-module(one).\n-compile(no_auto_import).\n\n-export([]).\n\n\n"
+                        .to_string(),
+                },
+                Compiled {
+                    name: "two".to_string(),
+                    out: "-module(two).\n-compile(no_auto_import).\n\n-export([unbox/1]).\n
+unbox(X) ->\n    {box, I} = X,\n    I.\n"
+                        .to_string(),
                 },
             ]),
         },
