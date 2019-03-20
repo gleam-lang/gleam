@@ -28,6 +28,9 @@ pub fn has_even_leaf(tree) {
 }
 ```
 
+The source code can be found at
+[https://github.com/lpil/gleam](https://github.com/lpil/gleam).
+
 ## Principles
 
 ### Be safe
