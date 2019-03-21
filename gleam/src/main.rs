@@ -33,6 +33,7 @@ extern crate lazy_static;
 
 use std::fs::File;
 use std::io::Write;
+use std::path::PathBuf;
 use structopt::clap::AppSettings;
 use structopt::StructOpt;
 
@@ -55,17 +56,43 @@ fn main() {
 }
 
 fn command_build(root: String) {
-    use std::{fs, path::Path};
-
-    let root_dir = Path::new(&root);
-    let src_dir = root_dir.join("src");
-    let gen_dir = root_dir.join("gen");
-
-    fs::create_dir_all(&gen_dir).expect("creating gen dir");
-
     let mut srcs = vec![];
+    let root_path = PathBuf::from(&root);
+    let lib_dir = root_path.join("_build/default/lib");
 
-    fs::read_dir(src_dir.clone())
+    std::fs::read_dir(lib_dir)
+        .expect("Could not locate _build/default/lib")
+        .filter_map(Result::ok)
+        .map(|d| d.path())
+        .filter(|p| p.file_name() != root_path.file_name())
+        .for_each(|p| collect_app(p, &mut srcs));
+
+    collect_app(root_path, &mut srcs);
+
+    let compiled = match crate::project::compile(srcs) {
+        Ok(c) => c,
+        Err(e) => {
+            e.pretty_print();
+            std::process::exit(1);
+        }
+    };
+
+    for crate::project::Compiled { code, path, .. } in compiled {
+        let gen_path = path.parent().unwrap();
+        std::fs::create_dir_all(gen_path).expect("creating gen dir");
+
+        let mut f = File::create(path).expect("Unable to create file");
+        f.write_all(code.as_bytes())
+            .expect("Unable to write Erlang code to file");
+    }
+
+    println!("Done!");
+}
+
+fn collect_app(app_path: PathBuf, srcs: &mut Vec<crate::project::Input>) {
+    let src_dir = app_path.join("src");
+
+    std::fs::read_dir(src_dir.clone())
         .expect("Could not locate src/")
         .filter_map(Result::ok)
         .filter(|d| {
@@ -76,7 +103,7 @@ fn command_build(root: String) {
             }
         })
         .for_each(|dir_entry| {
-            let src = fs::read_to_string(dir_entry.path())
+            let src = std::fs::read_to_string(dir_entry.path())
                 .unwrap_or_else(|_| panic!("Unable to read {:?}", dir_entry.path()));
 
             srcs.push(project::Input {
@@ -84,21 +111,4 @@ fn command_build(root: String) {
                 src,
             })
         });
-
-    let compiled = match crate::project::compile(srcs) {
-        Ok(c) => c,
-        Err(e) => {
-            e.pretty_print();
-            std::process::exit(1);
-        }
-    };
-
-    for crate::project::Compiled { name, out, .. } in compiled {
-        let erl_name = format!("{}.erl", name);
-        let mut f = File::create(gen_dir.join(erl_name)).expect("Unable to create file");
-        f.write_all(out.as_bytes())
-            .expect("Unable to write Erlang code to file");
-    }
-
-    println!("Done!");
 }
