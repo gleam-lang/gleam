@@ -136,6 +136,75 @@ fn fits(limit: isize, mut docs: Vector<(isize, Mode, Document)>) -> bool {
     }
 }
 
+pub fn format(limit: isize, doc: Document) -> String {
+    let mut buffer = String::new();
+    fmt(
+        &mut buffer,
+        limit,
+        0,
+        vector![(0, Mode::Unbroken, Document::Group(Box::new(doc)))],
+    );
+    buffer
+}
+
+fn fmt(b: &mut String, limit: isize, mut width: isize, mut docs: Vector<(isize, Mode, Document)>) {
+    while let Some((indent, mode, document)) = docs.pop_front() {
+        match document {
+            Document::Nil | Document::ForceBreak => (),
+
+            Document::Line(i) => {
+                for _ in 0..i {
+                    b.push_str("\n");
+                }
+                b.push_str(" ".repeat(indent as usize).as_str());
+            }
+
+            Document::Break { broken, unbroken } => {
+                match mode {
+                    Mode::Unbroken => {
+                        b.push_str(unbroken.as_str());
+                        width = width + unbroken.len() as isize
+                    }
+                    Mode::Broken => {
+                        b.push_str(broken.as_str());
+                        b.push_str("\n");
+                        b.push_str(" ".repeat(indent as usize).as_str());
+                        width = indent as isize
+                    }
+                };
+            }
+
+            Document::Text(s) => {
+                b.push_str(s.as_str());
+                width = width + s.len() as isize;
+            }
+
+            Document::Cons(left, right) => {
+                docs.push_front((indent, mode.clone(), *right));
+                docs.push_front((indent, mode, *left));
+            }
+
+            Document::Nest(i, doc) => {
+                docs.push_front((indent + i, mode, *doc));
+            }
+
+            Document::NestCurrent(doc) => {
+                docs.push_front((width, mode, *doc));
+            }
+
+            Document::Group(doc) => {
+                let mut flat_docs = docs.clone();
+                flat_docs.push_front((indent, Mode::Unbroken, (*doc).clone()));
+                if fits(limit - width, flat_docs.clone()) {
+                    docs = flat_docs;
+                } else {
+                    docs.push_front((indent, Mode::Broken, (*doc).clone()));
+                }
+            }
+        }
+    }
+}
+
 #[test]
 fn fits_test() {
     use self::Document::*;
@@ -279,87 +348,6 @@ fn fits_test() {
         1,
         vector![(0, Unbroken, NestCurrent(Box::new(Text("12".to_string()))))]
     ));
-}
-
-pub fn format(limit: isize, doc: Document) -> String {
-    let mut buffer = String::new();
-    fmt(
-        &mut buffer,
-        limit,
-        0,
-        vector![(0, Mode::Unbroken, Document::Group(Box::new(doc)))],
-    );
-    buffer
-}
-
-fn fmt(b: &mut String, limit: isize, width: isize, mut docs: Vector<(isize, Mode, Document)>) {
-    let (indent, mode, document) = match docs.pop_front() {
-        Some(x) => x,
-        None => return,
-    };
-
-    match document {
-        Document::Nil => fmt(b, limit, width, docs),
-
-        Document::ForceBreak => fmt(b, limit, width, docs),
-
-        Document::Line(i) => {
-            for _ in 0..i {
-                b.push_str("\n");
-            }
-            b.push_str(" ".repeat(indent as usize).as_str());
-            fmt(b, limit, indent, docs);
-        }
-
-        Document::Break { broken, unbroken } => {
-            let new_width = match mode {
-                Mode::Unbroken => {
-                    b.push_str(unbroken.as_str());
-                    width + unbroken.len() as isize
-                }
-                Mode::Broken => {
-                    b.push_str(broken.as_str());
-                    b.push_str("\n");
-                    b.push_str(" ".repeat(indent as usize).as_str());
-                    indent as isize
-                }
-            };
-            fmt(b, limit, new_width, docs);
-        }
-
-        Document::Text(s) => {
-            let new_width = width + s.len() as isize;
-            b.push_str(s.as_str());
-            fmt(b, limit, new_width, docs);
-        }
-
-        Document::Cons(left, right) => {
-            docs.push_front((indent, mode.clone(), *right));
-            docs.push_front((indent, mode, *left));
-            fmt(b, limit, width, docs);
-        }
-
-        Document::Nest(i, doc) => {
-            docs.push_front((indent + i, mode, *doc));
-            fmt(b, limit, width, docs);
-        }
-
-        Document::NestCurrent(doc) => {
-            docs.push_front((width, mode, *doc));
-            fmt(b, limit, width, docs);
-        }
-
-        Document::Group(doc) => {
-            let mut flat_docs = docs.clone();
-            flat_docs.push_front((indent, Mode::Unbroken, (*doc).clone()));
-            if fits(limit - width, flat_docs.clone()) {
-                fmt(b, limit, width, flat_docs);
-            } else {
-                docs.push_front((indent, Mode::Broken, (*doc).clone()));
-                fmt(b, limit, width, docs);
-            }
-        }
-    }
 }
 
 #[test]
