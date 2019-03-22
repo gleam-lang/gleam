@@ -1,6 +1,6 @@
-{application, gleam_stdlib,
+{application, gleam_experimental_stdlib,
  [{description, "An OTP library"},
-  {vsn, "0.1.0"},
+  {vsn, "0.0.0"},
   {registered, []},
   {applications,
    [kernel,
@@ -11,5 +11,6 @@
 
   {maintainers, []},
   {licenses, ["Apache 2.0"]},
-  {links, []}
+  {links, []},
+  {include_files, ["gen"]}
  ]}.

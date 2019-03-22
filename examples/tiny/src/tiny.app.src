@@ -1,8 +1,8 @@
-{application, elli_web_app,
- [{description, "An OTP application"},
+{application, tiny,
+ [{description, "An example URL shortener web app, written in Gleam"},
   {vsn, "0.1.0"},
   {registered, []},
-  {mod, { elli_web_app_sup, []}},
+  {mod, { tiny_sup, []}},
   {applications,
    [kernel,
     stdlib

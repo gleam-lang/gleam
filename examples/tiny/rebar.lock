@@ -1,0 +1,10 @@
+{"1.1.0",
+[{<<"elli">>,{pkg,<<"elli">>,<<"3.1.0">>},0},
+ {<<"gleam_experimental_stdlib">>,
+  {pkg,<<"gleam_experimental_stdlib">>,<<"0.0.0">>},
+  0}]}.
+[
+{pkg_hash,[
+ {<<"elli">>, <<"3B0C46B549BAC00DB06FF79A87B69A7FE06F3B24E7E06858FF6CCD9654276785">>},
+ {<<"gleam_experimental_stdlib">>, <<"43C4B61AB76D474CF0658E21262619DD37CC66778B0415C7A03335D0BCEEFC32">>}]}
+].

@@ -1,4 +1,4 @@
--module(elli_web_app_sup).
+-module(tiny_sup).
 
 -behaviour(application).
 -behaviour(supervisor).
@@ -22,15 +22,20 @@ init([]) ->
     Config = #{strategy => one_for_all,
                intensity => 0,
                period => 1},
-    Children = [web_handler_child_spec([])],
+    Children = [db_child_spec([]),
+                web_child_spec([])],
     {ok, {Config, Children}}.
 
-web_handler_child_spec(_) ->
-    ElliOpts = [{callback, elli_web_app_handler},
-                {port, 3000}],
-    #{id => elli_web_app_handler,
-      start => {elli, start_link, [ElliOpts]},
+web_child_spec(_) ->
+    #{id => tiny_web,
+      start => {elli, start_link, [[{callback, tiny_web}, {port, 3000}]]},
       restart => permanent,
       shutdown => 5000,
-      type => worker,
-      modules => [elli]}.
+      type => worker}.
+
+db_child_spec(_) ->
+    #{id => tiny_db,
+      start => {gen_server, start_link, [{local, tiny_db}, tiny_db, [], []]},
+      restart => permanent,
+      shutdown => 5000,
+      type => worker}.
