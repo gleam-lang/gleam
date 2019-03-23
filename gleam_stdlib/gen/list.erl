@@ -2,7 +2,7 @@
 -compile(no_auto_import).
 -include_lib("eunit/include/eunit.hrl").
 
--export([length/1, reverse/1, is_empty/1, has_member/2, head/1, tail/1, filter/2, map/2, traverse/2, drop/2, take/2, new/0, append/2, flatten/1, foldl/3, foldr/3]).
+-export([length/1, reverse/1, is_empty/1, has_member/2, head/1, tail/1, filter/2, map/2, traverse/2, drop/2, take/2, new/0, append/2, flatten/1, foldl/3, foldr/3, find/2]).
 
 length(A) ->
     erlang:length(A).
@@ -263,4 +263,33 @@ foldr(List, Acc, Fun) ->
 -ifdef(TEST).
 foldr_test() ->
     expect:equal(foldr([1, 2, 3], [], fun(X, Acc) -> [X | Acc] end), [1, 2, 3]).
+-endif.
+
+find(Haystack, F) ->
+    case Haystack of
+        [] ->
+            {error, not_found};
+
+        [X | Rest] ->
+            case F(X) of
+                {ok, X1} ->
+                    {ok, X1};
+
+                _ ->
+                    find(Rest, F)
+            end
+    end.
+
+-ifdef(TEST).
+find_test() ->
+    F = fun(X) -> case X of
+            2 ->
+                {ok, 4};
+
+            _ ->
+                {error, not_found}
+        end end,
+    expect:equal(find([1, 2, 3], F), {ok, 4}),
+    expect:equal(find([1, 3, 2], F), {ok, 4}),
+    expect:equal(find([1, 3], F), {error, not_found}).
 -endif.

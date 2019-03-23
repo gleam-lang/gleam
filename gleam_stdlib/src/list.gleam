@@ -3,6 +3,9 @@ import expect
 pub enum Empty =
   | Empty
 
+pub enum NotFound =
+  | NotFound
+
 // Using the Erlang C BIF implementation.
 //
 pub external fn length(List(a)) -> Int = "erlang" "length"
@@ -278,4 +281,36 @@ test foldr {
   [1, 2, 3]
     |> foldr(_, [], fn(x, acc) { [x | acc] })
     |> expect:equal(_, [1, 2, 3])
+}
+
+pub fn find(haystack, f) {
+  case haystack {
+  | [] -> Error(NotFound)
+  | [x | rest] ->
+      case f(x) {
+      | Ok(x) -> Ok(x)
+      | _ -> find(rest, f)
+      }
+  }
+}
+
+test find {
+  let f = fn(x) {
+    case x {
+    | 2 -> Ok(4)
+    | _ -> Error(NotFound)
+    }
+  }
+
+  [1, 2, 3]
+  |> find(_, f)
+  |> expect:equal(_, Ok(4))
+
+  [1, 3, 2]
+  |> find(_, f)
+  |> expect:equal(_, Ok(4))
+
+  [1, 3]
+  |> find(_, f)
+  |> expect:equal(_, Error(NotFound))
 }
