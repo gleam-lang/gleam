@@ -1,5 +1,8 @@
 import expect
 
+// concat should work on List(Iodata)
+// need a name for the string version
+
 pub external type Iodata;
 
 pub external fn prepend(Iodata, String) -> Iodata =
