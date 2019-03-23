@@ -2,6 +2,10 @@ import any
 import result
 import expect
 
+// TODO: drop
+// TODO: take
+// TODO: update :: fn(Map(k, v), k, fn(Result(v, NotFound)) -> v) -> Map(k, v)
+
 pub external type Map(key, value);
 
 pub enum NotFound =

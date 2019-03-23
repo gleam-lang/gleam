@@ -1,5 +1,16 @@
 import expect
 
+// TODO: all
+// TODO: any
+// TODO: at
+// TODO: concat
+// TODO: index_map
+// TODO: index_map
+// TODO: intersperse
+// TODO: sort
+// TODO: unique
+// TODO: zip
+
 pub enum Empty =
   | Empty
 
