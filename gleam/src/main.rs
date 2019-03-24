@@ -60,12 +60,12 @@ fn command_build(root: String) {
     let root_path = PathBuf::from(&root);
     let lib_dir = root_path.join("_build/default/lib");
 
-    std::fs::read_dir(lib_dir)
-        .expect("Could not locate _build/default/lib")
-        .filter_map(Result::ok)
-        .map(|d| d.path())
-        .filter(|p| p.file_name() != root_path.file_name())
-        .for_each(|p| collect_app(p, &mut srcs));
+    if let Ok(dir) = std::fs::read_dir(lib_dir) {
+        dir.filter_map(Result::ok)
+            .map(|d| d.path())
+            .filter(|p| p.file_name() != root_path.file_name())
+            .for_each(|p| collect_app(p, &mut srcs));
+    }
 
     collect_app(root_path, &mut srcs);
 
