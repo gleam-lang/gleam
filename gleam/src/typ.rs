@@ -223,9 +223,6 @@ impl Type {
     /// Get the args for the type if the type is a specific Type::App.
     /// Returns None if the type is not a Type::App or is an incorrect Type:App
     ///
-    /// TODO: This is currently wrong in that if an unbound var is found it assumes that the App
-    /// takes a single arg. Really the number of args should be passed in.
-    ///
     pub fn get_app_args(
         &self,
         public: bool,
@@ -241,7 +238,7 @@ impl Type {
                 args,
                 ..
             } => {
-                if module == m && name == n {
+                if module == m && name == n && args.len() == arity {
                     Some(args.clone())
                 } else {
                     None
@@ -262,7 +259,7 @@ impl Type {
                         Action::Link((0..arity).map(|_| env.new_unbound_var(*level)).collect())
                     }
 
-                    TypeVar::Generic { .. } => unimplemented!(),
+                    TypeVar::Generic { .. } => return None,
                 };
 
                 match action {
@@ -1607,6 +1604,7 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
                         }
                         unify(&retrn, typ).map_err(|e| convert_unify_error(e, &meta))
                     } else {
+                        // TODO: Incorrect number of args given to constructor
                         unimplemented!()
                     }
                 }
@@ -1622,7 +1620,7 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
 
                 typ => {
                     dbg!(typ);
-                    unreachable!()
+                    unimplemented!();
                 }
             }
         }
@@ -1645,7 +1643,7 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
 
             other => {
                 dbg!(&other);
-                unimplemented!()
+                unimplemented!();
             }
         },
         // Pattern::Record { .. } => unimplemented!(),
@@ -1896,6 +1894,7 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
         enum Action {
             Unify(Type),
             Link(Type),
+            Error,
         }
 
         let action = match &*typ.borrow() {
@@ -1906,7 +1905,7 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
                 Action::Link((*t2).clone())
             }
 
-            TypeVar::Generic { .. } => unimplemented!(),
+            TypeVar::Generic { .. } => Action::Error,
         };
 
         return match action {
@@ -1914,7 +1913,13 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
                 *typ.borrow_mut() = TypeVar::Link { typ: Box::new(t) };
                 Ok(())
             }
+
             Action::Unify(t) => unify(&t, t2),
+
+            Action::Error => Err(UnifyError::CouldNotUnify {
+                expected: (*t1).clone(),
+                given: (*t2).clone(),
+            }),
         };
     }
 
@@ -1979,7 +1984,10 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
                 }
                 Ok(())
             } else {
-                unimplemented!()
+                Err(UnifyError::CouldNotUnify {
+                    expected: (*t1).clone(),
+                    given: (*t2).clone(),
+                })
             }
         }
 
@@ -2001,7 +2009,10 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
                 }
                 unify(retrn1, retrn2)
             } else {
-                unimplemented!()
+                Err(UnifyError::CouldNotUnify {
+                    expected: (*t1).clone(),
+                    given: (*t2).clone(),
+                })
             }
         }
 
@@ -2009,7 +2020,7 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
 
         (Type::Module { row: row1 }, Type::Module { row: row2 }) => unify(row1, row2),
 
-        (Type::RowNil, Type::RowNil) => unimplemented!(),
+        (Type::RowNil, Type::RowNil) => Ok(()),
 
         (
             Type::RowCons {
@@ -2041,6 +2052,7 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
 
             if let Some(typ) = unbound {
                 if let TypeVar::Link { .. } = &*typ.borrow() {
+                    // TODO: I don't remember what is supposed to happen here.
                     unimplemented!()
                 }
             }
@@ -2070,7 +2082,7 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
 // 	| _ -> error "row type expected"
 fn rewrite_row(row: Type, label1: String, head1: Type) -> Result<Type, UnifyError> {
     match row {
-        Type::RowNil => unimplemented!(),
+        Type::RowNil => unimplemented!(), // TODO: Row does not contain label
 
         Type::RowCons { label, head, tail } => {
             if label == label1 {
@@ -2091,10 +2103,10 @@ fn rewrite_row(row: Type, label1: String, head1: Type) -> Result<Type, UnifyErro
 
             TypeVar::Link { typ } => rewrite_row(*typ.clone(), label1, head1),
 
-            _ => unimplemented!(),
+            _ => unimplemented!(), // Expected a row
         },
 
-        _ => unimplemented!(),
+        _ => unimplemented!(), // Expected a row
     }
 }
 
@@ -2270,7 +2282,7 @@ fn match_fun_type(
         };
     }
 
-    unimplemented!()
+    unimplemented!() // Expected a function
 }
 
 fn convert_not_fun_error(e: NotFnError, meta: &Meta) -> Error {
@@ -3022,6 +3034,36 @@ fn infer_error_test() {
                 meta: Meta { start: 11, end: 14 },
                 expected: float(),
                 given: int(),
+            },
+        },
+        Case {
+            src: "{1, 2} == {1, 2, 3}",
+            error: Error::CouldNotUnify {
+                meta: Meta { start: 0, end: 19 },
+                expected: Type::Tuple {
+                    elems: vec![int(), int()],
+                },
+                given: Type::Tuple {
+                    elems: vec![int(), int(), int()],
+                },
+            },
+        },
+        Case {
+            src: "fn() { 1 } == fn(x) { x + 1 }",
+            error: Error::CouldNotUnify {
+                meta: Meta { start: 0, end: 29 },
+                expected: Type::Fn {
+                    args: vec![],
+                    retrn: Box::new(int()),
+                },
+                given: Type::Fn {
+                    args: vec![Type::Var {
+                        typ: Rc::new(RefCell::new(TypeVar::Link {
+                            typ: Box::new(int()),
+                        })),
+                    }],
+                    retrn: Box::new(int()),
+                },
             },
         },
         Case {
