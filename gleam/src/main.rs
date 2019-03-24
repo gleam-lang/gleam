@@ -31,6 +31,9 @@ extern crate lalrpop_util;
 #[macro_use]
 extern crate lazy_static;
 
+#[macro_use]
+extern crate serde_derive;
+
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
@@ -49,6 +52,11 @@ enum Command {
     },
 }
 
+#[derive(Deserialize)]
+struct ProjectConfig {
+    name: String,
+}
+
 fn main() {
     match Command::from_args() {
         Command::Build { path } => command_build(path),
@@ -57,13 +65,19 @@ fn main() {
 
 fn command_build(root: String) {
     let mut srcs = vec![];
+
+    // Read gleam.toml
+    let project_config = read_project_config(&root).expect("Could not read gleam.toml");
+
     let root_path = PathBuf::from(&root);
     let lib_dir = root_path.join("_build/default/lib");
 
     if let Ok(dir) = std::fs::read_dir(lib_dir) {
         dir.filter_map(Result::ok)
             .map(|d| d.path())
-            .filter(|p| p.file_name() != root_path.file_name())
+            .filter(|p| {
+                p.file_name().and_then(|os_string| os_string.to_str()) != Some(&project_config.name)
+            })
             .for_each(|p| collect_app(p, &mut srcs));
     }
 
@@ -87,6 +101,16 @@ fn command_build(root: String) {
     }
 
     println!("Done!");
+}
+
+fn read_project_config(root: &str) -> Result<ProjectConfig, ()> {
+    use std::io::Read;
+    let mut toml = String::new();
+    let config_path = PathBuf::from(root).join("gleam.toml");
+    let mut file = File::open(config_path).expect("Unable to open gleam.toml");
+    file.read_to_string(&mut toml)
+        .expect("Unable to read gleam.toml");
+    Ok(toml::from_str(&toml).expect("Unable to parse gleam.toml"))
 }
 
 fn collect_app(app_path: PathBuf, srcs: &mut Vec<crate::project::Input>) {

@@ -1209,7 +1209,7 @@ pub fn infer_module(
             Statement::Import { meta, module } => {
                 let typ = modules
                     .get(&module)
-                    .expect("COMPILER BUG: import module missing");
+                    .expect("COMPILER BUG: Typer could not find a module being imported. This should not be possible. Please report this crash");
                 env.insert_variable(
                     module.clone(),
                     Scope::Import {
