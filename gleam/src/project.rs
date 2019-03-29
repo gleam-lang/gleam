@@ -159,17 +159,33 @@ Found type:
                     write(buffer, diagnostic);
                 }
 
-                PrivateTypeLeak { .. } => {
-                    // let diagnostic = ErrorDiagnostic {
-                    //     title: "Unknown variable".to_string(),
-                    //     label: "".to_string(),
-                    //     file: name.clone(),
-                    //     src: src.to_string(),
-                    //     meta: meta.clone(),
-                    // };
-                    // write(buffer, diagnostic);
-                    // TODO
-                    unimplemented!()
+                PrivateTypeLeak { meta, leaked } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Private type used in public interface".to_string(),
+                        label: "".to_string(),
+                        file: name.clone(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+
+                    // TODO: be more precise.
+                    // - is being returned by this public function
+                    // - is taken as an argument by this public function
+                    // - is taken as an argument by this public enum constructor
+                    // etc
+                    write!(
+                        buffer,
+                        "
+The following type is private, but is being used by this public export.
+
+{}
+
+Private types can only be used within the module that defines them.
+",
+                        leaked.pretty_print(4),
+                    )
+                    .unwrap();
                 }
             },
 
