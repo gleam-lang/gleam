@@ -834,7 +834,7 @@ impl Env {
         ast: &ast::Type,
         vars: &mut HashMap<String, Type>,
         permit_new_vars: bool,
-    ) -> Result<Type, TypeFromAstError> {
+    ) -> Result<Type, Error> {
         match ast {
             ast::Type::Constructor { meta, name, args } => {
                 let args = args
@@ -842,14 +842,13 @@ impl Env {
                     .map(|t| self.type_from_ast(t, vars, permit_new_vars))
                     .collect::<Result<Vec<_>, _>>()?;
                 let types = self.type_constructors.clone();
-                let info =
-                    self.get_type_constructor(name)
-                        .ok_or(TypeFromAstError::UnknownType {
-                            name: name.to_string(),
-                            types,
-                        })?;
+                let info = self.get_type_constructor(name).ok_or(Error::UnknownType {
+                    name: name.to_string(),
+                    meta: meta.clone(),
+                    types,
+                })?;
                 if args.len() != info.arity {
-                    return Err(TypeFromAstError::IncorrectTypeArity {
+                    return Err(Error::IncorrectTypeArity {
                         meta: meta.clone(),
                         name: name.to_string(),
                         expected: info.arity,
@@ -908,20 +907,6 @@ impl Env {
             },
         }
     }
-}
-
-pub enum TypeFromAstError {
-    UnknownType {
-        name: String,
-        types: HashMap<String, TypeConstructorInfo>,
-    },
-
-    IncorrectTypeArity {
-        meta: Meta,
-        name: String,
-        expected: usize,
-        given: usize,
-    },
 }
 
 #[derive(Debug, PartialEq)]
@@ -1058,13 +1043,11 @@ pub fn infer_module(
             } => {
                 let mut type_vars = hashmap![];
                 let retrn_type = env
-                    .type_from_ast(&retrn, &mut type_vars, true)
-                    .map_err(|e| convert_type_from_ast_error(e, meta.clone()))?;
+                    .type_from_ast(&retrn, &mut type_vars, true)?;
                 let mut args_types = Vec::with_capacity(args.len());
                 for arg in args.iter() {
                     let t = env
-                        .type_from_ast(arg, &mut type_vars, true)
-                        .map_err(|e| convert_type_from_ast_error(e, meta.clone()))?;
+                        .type_from_ast(arg, &mut type_vars, true)?;
                     args_types.push(t)
                 }
                 let typ = Type::Fn {
@@ -1130,17 +1113,13 @@ pub fn infer_module(
                         .collect(),
                 };
                 let retrn = env
-                    .type_from_ast(&ast, &mut type_vars, true)
-                    .map_err(|e| convert_type_from_ast_error(e, meta.clone()))?;
+                    .type_from_ast(&ast, &mut type_vars, true)?;
                 // Check and register constructors
                 for constructor in constructors.iter() {
                     let args_types = constructor
                         .args
                         .iter()
-                        .map(|arg| {
-                            env.type_from_ast(&arg, &mut type_vars, false)
-                                .map_err(|e| convert_type_from_ast_error(e, meta.clone()))
-                        })
+                        .map(|arg| env.type_from_ast(&arg, &mut type_vars, false))
                         .collect::<Result<Vec<_>, _>>()?;
                     // Insert constructor function into module scope
                     let typ = match constructor.args.len() {
@@ -1192,8 +1171,7 @@ pub fn infer_module(
                         meta: meta.clone(),
                         name: arg.to_string(),
                     };
-                    env.type_from_ast(&var, &mut type_vars, true)
-                        .map_err(|e| convert_type_from_ast_error(e, meta.clone()))?;
+                    env.type_from_ast(&var, &mut type_vars, true)?;
                 }
                 Ok(Statement::ExternalType {
                     meta,
@@ -1748,24 +1726,6 @@ fn bin_op_name(name: &BinOp) -> String {
         BinOp::DivInt => "/".to_string(),
         BinOp::DivFloat => "/.".to_string(),
         BinOp::ModuloInt => "%".to_string(),
-    }
-}
-
-fn convert_type_from_ast_error(e: TypeFromAstError, meta: Meta) -> Error {
-    match e {
-        TypeFromAstError::UnknownType { name, types } => Error::UnknownType { meta, name, types },
-
-        TypeFromAstError::IncorrectTypeArity {
-            meta,
-            name,
-            expected,
-            given,
-        } => Error::IncorrectTypeArity {
-            meta,
-            name,
-            expected,
-            given,
-        },
     }
 }
 
