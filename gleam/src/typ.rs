@@ -56,6 +56,8 @@ pub enum Type {
 }
 
 impl Type {
+    /// Render a Type as a well formatted string.
+    ///
     pub fn pretty_print(&self, mut initial_indent: usize) -> String {
         let mut b = String::with_capacity(initial_indent);
         for _ in 0..initial_indent {
