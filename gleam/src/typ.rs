@@ -2900,7 +2900,8 @@ fn infer_test() {
         let ast = crate::grammar::ExprParser::new()
             .parse(src)
             .expect("syntax error");
-        let result = infer(ast, 1, &mut Env::new()).expect("should successfully infer");
+        let result = infer(ast, 1, &mut Env::new(&std::collections::HashMap::new()))
+            .expect("should successfully infer");
         assert_eq!(
             (
                 src,
@@ -2951,7 +2952,7 @@ fn infer_error_test() {
             error: Error::UnknownVariable {
                 meta: Meta { start: 0, end: 1 },
                 name: "x".to_string(),
-                variables: Env::new().variables,
+                variables: Env::new(&std::collections::HashMap::new()).variables,
             },
         },
         Case {
@@ -2959,7 +2960,7 @@ fn infer_error_test() {
             error: Error::UnknownVariable {
                 meta: Meta { start: 0, end: 1 },
                 name: "x".to_string(),
-                variables: Env::new().variables,
+                variables: Env::new(&std::collections::HashMap::new()).variables,
             },
         },
         Case {
@@ -3037,7 +3038,7 @@ fn infer_error_test() {
             error: Error::UnknownVariable {
                 meta: Meta { start: 25, end: 26 },
                 name: "x".to_string(),
-                variables: Env::new().variables,
+                variables: Env::new(&std::collections::HashMap::new()).variables,
             },
         },
         Case {
@@ -3052,7 +3053,8 @@ fn infer_error_test() {
         let ast = crate::grammar::ExprParser::new()
             .parse(src)
             .expect("syntax error");
-        let result = infer(ast, 1, &mut Env::new()).expect_err("should infer an error");
+        let result = infer(ast, 1, &mut Env::new(&std::collections::HashMap::new()))
+            .expect_err("should infer an error");
         assert_eq!((src, &result), (src, error));
     }
 }

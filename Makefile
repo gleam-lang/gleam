@@ -5,7 +5,7 @@ COMPILER=$(realpath gleam/target/release/gleam)
 #
 
 .PHONY: build
-build: book gleam gleam_stdlib/gen gleam_decode/gen ## Build all targets
+build: book gleam gleam_stdlib/gen ## Build all targets
 
 .PHONY: install
 install: gleam ## Build the Gleam compiler and place it on PATH
@@ -46,10 +46,6 @@ print-%: ; @echo $*=$($*)
 gleam_stdlib/gen: $(COMPILER) $(shell find gleam_stdlib -type f)
 	rm -fr gleam_stdlib/gen
 	$(COMPILER) build gleam_stdlib
-
-gleam_decode/gen: $(COMPILER) $(shell find gleam_decode -type f)
-	rm -fr gleam_decode/gen
-	$(COMPILER) build gleam_decode
 
 $(COMPILER): gleam/Cargo.toml gleam/Cargo.lock gleam/build.rs $(shell find gleam/src -type f)
 	cd gleam && cargo build --release
