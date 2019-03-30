@@ -994,11 +994,13 @@ fn module_test() {
                 args: vec![
                     Type::Constructor {
                         meta: Meta { start: 20, end: 23 },
+                        module: None,
                         name: "Int".to_string(),
                         args: vec![]
                     },
                     Type::Constructor {
                         meta: Meta { start: 25, end: 30 },
+                        module: None,
                         name: "Float".to_string(),
                         args: vec![]
                     }
@@ -1006,6 +1008,7 @@ fn module_test() {
                 public: true,
                 retrn: Type::Constructor {
                     meta: Meta { start: 35, end: 39 },
+                    module: None,
                     name: "Bool".to_string(),
                     args: vec![]
                 }

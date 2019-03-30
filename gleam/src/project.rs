@@ -351,14 +351,14 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
 
             println!("Compiling {}", name);
 
-            let module =
+            let (module, types) =
                 crate::typ::infer_module(module, &module_types).map_err(|error| Error::Type {
                     name: name.clone(),
                     src,
                     error,
                 })?;
 
-            module_types.insert(name.clone(), module.typ.clone());
+            module_types.insert(name.clone(), (module.typ.clone(), types));
 
             let path = path
                 .parent()

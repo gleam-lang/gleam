@@ -56,6 +56,8 @@ pub enum Type {
 }
 
 impl Type {
+    /// Render a Type as a well formatted string.
+    ///
     pub fn pretty_print(&self, mut initial_indent: usize) -> String {
         let mut b = String::with_capacity(initial_indent);
         for _ in 0..initial_indent {
@@ -484,19 +486,23 @@ pub struct TypeConstructorInfo {
     arity: usize,
 }
 
+pub type TypeConstructors = HashMap<String, TypeConstructorInfo>;
+
 #[derive(Debug, Clone)]
-pub struct Env {
+pub struct Env<'a> {
     uid: usize,
     variables: HashMap<String, (Scope<Type>, Type)>,
-    type_constructors: HashMap<String, TypeConstructorInfo>,
+    modules: &'a std::collections::HashMap<String, (Type, TypeConstructors)>,
+    type_constructors: TypeConstructors,
 }
 
-impl Env {
-    pub fn new() -> Self {
+impl<'a> Env<'a> {
+    pub fn new(modules: &'a std::collections::HashMap<String, (Type, TypeConstructors)>) -> Self {
         let mut env = Self {
             uid: 0,
             type_constructors: hashmap![],
             variables: hashmap![],
+            modules,
         };
 
         env.insert_type_constructor(
@@ -819,8 +825,19 @@ impl Env {
 
     /// Lookup a type in the current scope.
     ///
-    pub fn get_type_constructor(&self, name: &str) -> Option<&TypeConstructorInfo> {
-        self.type_constructors.get(name)
+    pub fn get_type_constructor(
+        &self,
+        module: &Option<String>,
+        name: &str,
+    ) -> Option<&TypeConstructorInfo> {
+        match module {
+            None => self.type_constructors.get(name),
+
+            Some(m) => self
+                .modules
+                .get(m)
+                .and_then(|(_, constructors)| constructors.get(name)),
+        }
     }
 
     /// Construct a Type from an AST Type annotation.
@@ -836,17 +853,24 @@ impl Env {
         permit_new_vars: bool,
     ) -> Result<Type, Error> {
         match ast {
-            ast::Type::Constructor { meta, name, args } => {
+            ast::Type::Constructor {
+                meta,
+                module,
+                name,
+                args,
+            } => {
                 let args = args
                     .iter()
                     .map(|t| self.type_from_ast(t, vars, permit_new_vars))
                     .collect::<Result<Vec<_>, _>>()?;
                 let types = self.type_constructors.clone();
-                let info = self.get_type_constructor(name).ok_or(Error::UnknownType {
-                    name: name.to_string(),
-                    meta: meta.clone(),
-                    types,
-                })?;
+                let info = self
+                    .get_type_constructor(module, name)
+                    .ok_or(Error::UnknownType {
+                        name: name.to_string(),
+                        meta: meta.clone(),
+                        types,
+                    })?;
                 if args.len() != info.arity {
                     return Err(Error::IncorrectTypeArity {
                         meta: meta.clone(),
@@ -962,9 +986,9 @@ pub enum Error {
 ///
 pub fn infer_module(
     module: UntypedModule,
-    modules: &std::collections::HashMap<String, Type>,
-) -> Result<TypedModule, Error> {
-    let mut env = Env::new();
+    modules: &std::collections::HashMap<String, (Type, TypeConstructors)>,
+) -> Result<(TypedModule, TypeConstructors), Error> {
+    let mut env = Env::new(modules);
     let mut fields = vec![];
     let module_name = &module.name;
 
@@ -1101,21 +1125,32 @@ pub fn infer_module(
                 );
                 // Build return type and collect type vars that can be used in constructors
                 let mut type_vars = hashmap![];
-                let ast = ast::Type::Constructor {
-                    meta: meta.clone(),
-                    name: name.clone(),
-                    args: args
-                        .iter()
-                        .map(|arg| ast::Type::Var {
-                            meta: meta.clone(),
-                            name: arg.to_string(),
-                        })
-                        .collect(),
+                let args_types: Vec<_> = args
+                            .iter()
+                            .map(|arg| ast::Type::Var {
+                                meta: meta.clone(),
+                                name: arg.to_string(),
+                            })
+                            .map(|ast| env.type_from_ast(&ast, &mut type_vars,true))
+                            .collect::<Result<_, _>>()?;
+
+                let retrn = match args.len() {
+                    0 => Type::Const {
+                        public: public.clone(),
+                        module: module_name.clone(),
+                        name: name.clone(),
+                    },
+
+                    _ => Type::App {
+                        public: public.clone(),
+                        module: module_name.clone(),
+                        name: name.clone(),
+                        args: args_types,
+                    },
                 };
-                let retrn = env
-                    .type_from_ast(&ast, &mut type_vars, true)?;
                 // Check and register constructors
                 for constructor in constructors.iter() {
+
                     let args_types = constructor
                         .args
                         .iter()
@@ -1182,7 +1217,7 @@ pub fn infer_module(
             }
 
             Statement::Import { meta, module } => {
-                let typ = modules
+                let (typ, _module_types) = env.modules
                     .get(&module)
                     .expect("COMPILER BUG: Typer could not find a module being imported. This should not be possible. Please report this crash");
                 env.insert_variable(
@@ -1205,11 +1240,14 @@ pub fn infer_module(
             tail: Box::new(tail),
         });
 
-    Ok(Module {
-        name: module.name,
-        statements,
-        typ: Type::Module { row: Box::new(row) },
-    })
+    Ok((
+        Module {
+            name: module.name,
+            statements,
+            typ: Type::Module { row: Box::new(row) },
+        },
+        env.type_constructors,
+    ))
 }
 
 /// Crawl the AST, annotating each node with the inferred type or
@@ -1820,24 +1858,6 @@ enum UnifyError {
     RecursiveType,
 }
 
-// let rec unify ty1 ty2 =
-// 	if ty1 == ty2 then () else
-// 	match (ty1, ty2) with
-// 		| TConst name1, TConst name2 when name1 = name2 -> ()
-// 		| TApp(ty1, ty_arg_list1), TApp(ty2, ty_arg_list2) ->
-// 				unify ty1 ty2 ;
-// 				List.iter2 unify ty_arg_list1 ty_arg_list2
-// 		| TArrow(param_ty_list1, return_ty1), TArrow(param_ty_list2, return_ty2) ->
-// 				List.iter2 unify param_ty_list1 param_ty_list2 ;
-// 				unify return_ty1 return_ty2
-// 		| TVar {contents = Link ty1}, ty2 | ty1, TVar {contents = Link ty2} -> unify ty1 ty2
-// 		| TVar {contents = Unbound(id1, _)}, TVar {contents = Unbound(id2, _)} when id1 = id2 ->
-// 				assert false (* There is only a single instance of a particular type variable. *)
-// 		| TVar ({contents = Unbound(id, level)} as tvar), ty
-// 		| ty, TVar ({contents = Unbound(id, level)} as tvar) ->
-// 				occurs_check_adjust_levels id level ty ;
-// 				tvar := Link ty
-// 		| _, _ -> error ("cannot unify types " ^ string_of_ty ty1 ^ " and " ^ string_of_ty ty2)
 fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
     if t1 == t2 {
         return Ok(());
@@ -2880,7 +2900,8 @@ fn infer_test() {
         let ast = crate::grammar::ExprParser::new()
             .parse(src)
             .expect("syntax error");
-        let result = infer(ast, 1, &mut Env::new()).expect("should successfully infer");
+        let result = infer(ast, 1, &mut Env::new(&std::collections::HashMap::new()))
+            .expect("should successfully infer");
         assert_eq!(
             (
                 src,
@@ -2931,7 +2952,7 @@ fn infer_error_test() {
             error: Error::UnknownVariable {
                 meta: Meta { start: 0, end: 1 },
                 name: "x".to_string(),
-                variables: Env::new().variables,
+                variables: Env::new(&std::collections::HashMap::new()).variables,
             },
         },
         Case {
@@ -2939,7 +2960,7 @@ fn infer_error_test() {
             error: Error::UnknownVariable {
                 meta: Meta { start: 0, end: 1 },
                 name: "x".to_string(),
-                variables: Env::new().variables,
+                variables: Env::new(&std::collections::HashMap::new()).variables,
             },
         },
         Case {
@@ -3017,7 +3038,7 @@ fn infer_error_test() {
             error: Error::UnknownVariable {
                 meta: Meta { start: 25, end: 26 },
                 name: "x".to_string(),
-                variables: Env::new().variables,
+                variables: Env::new(&std::collections::HashMap::new()).variables,
             },
         },
         Case {
@@ -3032,7 +3053,8 @@ fn infer_error_test() {
         let ast = crate::grammar::ExprParser::new()
             .parse(src)
             .expect("syntax error");
-        let result = infer(ast, 1, &mut Env::new()).expect_err("should infer an error");
+        let result = infer(ast, 1, &mut Env::new(&std::collections::HashMap::new()))
+            .expect_err("should infer an error");
         assert_eq!((src, &result), (src, error));
     }
 }
@@ -3322,7 +3344,7 @@ pub fn two() { one() + zero() }",
         let ast = crate::grammar::ModuleParser::new()
             .parse(src)
             .expect("syntax error");
-        let result = infer_module(ast, &std::collections::HashMap::new())
+        let (result, _) = infer_module(ast, &std::collections::HashMap::new())
             .expect("should successfully infer");
         assert_eq!(
             (

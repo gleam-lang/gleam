@@ -605,11 +605,13 @@ fn module_test() {
                 args: vec![
                     Type::Constructor {
                         meta: default(),
+                        module: None,
                         args: vec![],
                         name: "Int".to_string(),
                     },
                     Type::Constructor {
                         meta: default(),
+                        module: None,
                         args: vec![],
                         name: "Int".to_string(),
                     },
@@ -620,6 +622,7 @@ fn module_test() {
                 public: false,
                 retrn: Type::Constructor {
                     meta: default(),
+                    module: None,
                     args: vec![],
                     name: "Int".to_string(),
                 },
@@ -633,6 +636,7 @@ fn module_test() {
                 public: true,
                 retrn: Type::Constructor {
                     meta: default(),
+                    module: None,
                     args: vec![],
                     name: "Map".to_string(),
                 },
@@ -1605,7 +1609,7 @@ age(X) ->
         let ast = crate::grammar::ModuleParser::new()
             .parse(src)
             .expect("syntax error");
-        let ast = crate::typ::infer_module(ast, &std::collections::HashMap::new())
+        let (ast, _) = crate::typ::infer_module(ast, &std::collections::HashMap::new())
             .expect("should successfully infer");
         let output = module(ast);
         assert_eq!((src, output), (src, erl.to_string()));
