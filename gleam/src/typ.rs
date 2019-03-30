@@ -838,7 +838,12 @@ impl Env {
         permit_new_vars: bool,
     ) -> Result<Type, Error> {
         match ast {
-            ast::Type::Constructor { meta, name, args } => {
+            ast::Type::Constructor {
+                meta,
+                module,
+                name,
+                args,
+            } => {
                 let args = args
                     .iter()
                     .map(|t| self.type_from_ast(t, vars, permit_new_vars))
@@ -1105,6 +1110,7 @@ pub fn infer_module(
                 let mut type_vars = hashmap![];
                 let ast = ast::Type::Constructor {
                     meta: meta.clone(),
+                    module: Some(module_name.clone()),
                     name: name.clone(),
                     args: args
                         .iter()

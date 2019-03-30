@@ -50,6 +50,7 @@ pub struct EnumConstructor {
 pub enum Type {
     Constructor {
         meta: Meta,
+        module: Option<String>,
         name: String,
         args: Vec<Type>,
     },

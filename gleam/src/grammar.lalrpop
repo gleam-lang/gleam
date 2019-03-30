@@ -578,11 +578,14 @@ Type: Type = {
 TypeConstructor: Type = {
     <s:@L> <n:r"[A-Z][A-Za-z]*"> <e:@L> => Type::Constructor {
         meta: meta(s, e),
+        module: None,
         args: vec![],
         name: n.to_string(),
     },
+
     <s:@L> <n:r"[A-Z][A-Za-z]*"> "(" <a:Comma<Type>> ")" <e:@L> => Type::Constructor {
         meta: meta(s, e),
+        module: None,
         args: a,
         name: n.to_string(),
     },
