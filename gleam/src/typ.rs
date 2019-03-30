@@ -2026,20 +2026,6 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
     }
 }
 
-// and rewrite_row row2 label1 field_ty1 = match row2 with
-// 	| TRowEmpty -> error ("row does not contain label " ^ label1)
-// 	| TRowExtend(label2, field_ty2, rest_row2) when label2 = label1 ->
-// 			unify field_ty1 field_ty2 ;
-// 			rest_row2
-// 	| TRowExtend(label2, field_ty2, rest_row2) ->
-// 			TRowExtend(label2, field_ty2, rewrite_row rest_row2 label1 field_ty1)
-// 	| TVar {contents = Link row2} -> rewrite_row row2 label1 field_ty1
-// 	| TVar ({contents = Unbound(id, level)} as tvar) ->
-// 			let rest_row2 = new_var level in
-// 			let ty2 = TRowExtend(label1, field_ty1, rest_row2) in
-// 			tvar := Link ty2 ;
-// 			rest_row2
-// 	| _ -> error "row type expected"
 fn rewrite_row(row: Type, label1: String, head1: Type) -> Result<Type, UnifyError> {
     match row {
         Type::RowNil => unimplemented!(), // TODO: Row does not contain label
