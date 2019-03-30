@@ -849,6 +849,7 @@ impl Env {
                     .map(|t| self.type_from_ast(t, vars, permit_new_vars))
                     .collect::<Result<Vec<_>, _>>()?;
                 let types = self.type_constructors.clone();
+                // TODO: Look up type from a module if there is a module field
                 let info = self.get_type_constructor(name).ok_or(Error::UnknownType {
                     name: name.to_string(),
                     meta: meta.clone(),
