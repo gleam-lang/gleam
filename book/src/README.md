@@ -31,6 +31,8 @@ pub fn has_even_leaf(tree) {
 The source code can be found at
 [https://github.com/lpil/gleam](https://github.com/lpil/gleam).
 
+For Gleam chat we have the IRC channel `#gleam-lang` on Freenode.
+
 ## Principles
 
 ### Be safe
