@@ -489,18 +489,20 @@ pub struct TypeConstructorInfo {
 pub type TypeConstructors = HashMap<String, TypeConstructorInfo>;
 
 #[derive(Debug, Clone)]
-pub struct Env {
+pub struct Env<'a> {
     uid: usize,
     variables: HashMap<String, (Scope<Type>, Type)>,
+    modules: &'a std::collections::HashMap<String, (Type, TypeConstructors)>,
     type_constructors: TypeConstructors,
 }
 
-impl Env {
-    pub fn new() -> Self {
+impl<'a> Env<'a> {
+    pub fn new(modules: &'a std::collections::HashMap<String, (Type, TypeConstructors)>) -> Self {
         let mut env = Self {
             uid: 0,
             type_constructors: hashmap![],
             variables: hashmap![],
+            modules,
         };
 
         env.insert_type_constructor(
@@ -823,8 +825,19 @@ impl Env {
 
     /// Lookup a type in the current scope.
     ///
-    pub fn get_type_constructor(&self, name: &str) -> Option<&TypeConstructorInfo> {
-        self.type_constructors.get(name)
+    pub fn get_type_constructor(
+        &self,
+        module: &Option<String>,
+        name: &str,
+    ) -> Option<&TypeConstructorInfo> {
+        match module {
+            None => self.type_constructors.get(name),
+
+            Some(m) => self
+                .modules
+                .get(m)
+                .and_then(|(_, constructors)| constructors.get(name)),
+        }
     }
 
     /// Construct a Type from an AST Type annotation.
@@ -851,12 +864,13 @@ impl Env {
                     .map(|t| self.type_from_ast(t, vars, permit_new_vars))
                     .collect::<Result<Vec<_>, _>>()?;
                 let types = self.type_constructors.clone();
-                // TODO: Look up type from a module if there is a module field
-                let info = self.get_type_constructor(name).ok_or(Error::UnknownType {
-                    name: name.to_string(),
-                    meta: meta.clone(),
-                    types,
-                })?;
+                let info = self
+                    .get_type_constructor(module, name)
+                    .ok_or(Error::UnknownType {
+                        name: name.to_string(),
+                        meta: meta.clone(),
+                        types,
+                    })?;
                 if args.len() != info.arity {
                     return Err(Error::IncorrectTypeArity {
                         meta: meta.clone(),
@@ -974,7 +988,7 @@ pub fn infer_module(
     module: UntypedModule,
     modules: &std::collections::HashMap<String, (Type, TypeConstructors)>,
 ) -> Result<(TypedModule, TypeConstructors), Error> {
-    let mut env = Env::new();
+    let mut env = Env::new(modules);
     let mut fields = vec![];
     let module_name = &module.name;
 
@@ -1111,22 +1125,32 @@ pub fn infer_module(
                 );
                 // Build return type and collect type vars that can be used in constructors
                 let mut type_vars = hashmap![];
-                let ast = ast::Type::Constructor {
-                    meta: meta.clone(),
-                    module: Some(module_name.clone()),
-                    name: name.clone(),
-                    args: args
-                        .iter()
-                        .map(|arg| ast::Type::Var {
-                            meta: meta.clone(),
-                            name: arg.to_string(),
-                        })
-                        .collect(),
+                let args_types: Vec<_> = args
+                            .iter()
+                            .map(|arg| ast::Type::Var {
+                                meta: meta.clone(),
+                                name: arg.to_string(),
+                            })
+                            .map(|ast| env.type_from_ast(&ast, &mut type_vars,true))
+                            .collect::<Result<_, _>>()?;
+
+                let retrn = match args.len() {
+                    0 => Type::Const {
+                        public: public.clone(),
+                        module: module_name.clone(),
+                        name: name.clone(),
+                    },
+
+                    _ => Type::App {
+                        public: public.clone(),
+                        module: module_name.clone(),
+                        name: name.clone(),
+                        args: args_types,
+                    },
                 };
-                let retrn = env
-                    .type_from_ast(&ast, &mut type_vars, true)?;
                 // Check and register constructors
                 for constructor in constructors.iter() {
+
                     let args_types = constructor
                         .args
                         .iter()
@@ -1193,7 +1217,7 @@ pub fn infer_module(
             }
 
             Statement::Import { meta, module } => {
-                let (typ, _module_types) = modules
+                let (typ, _module_types) = env.modules
                     .get(&module)
                     .expect("COMPILER BUG: Typer could not find a module being imported. This should not be possible. Please report this crash");
                 env.insert_variable(
