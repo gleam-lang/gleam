@@ -1605,7 +1605,7 @@ age(X) ->
         let ast = crate::grammar::ModuleParser::new()
             .parse(src)
             .expect("syntax error");
-        let ast = crate::typ::infer_module(ast, &std::collections::HashMap::new())
+        let (ast, _) = crate::typ::infer_module(ast, &std::collections::HashMap::new())
             .expect("should successfully infer");
         let output = module(ast);
         assert_eq!((src, output), (src, erl.to_string()));

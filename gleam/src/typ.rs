@@ -484,11 +484,13 @@ pub struct TypeConstructorInfo {
     arity: usize,
 }
 
+pub type TypeConstructors = HashMap<String, TypeConstructorInfo>;
+
 #[derive(Debug, Clone)]
 pub struct Env {
     uid: usize,
     variables: HashMap<String, (Scope<Type>, Type)>,
-    type_constructors: HashMap<String, TypeConstructorInfo>,
+    type_constructors: TypeConstructors,
 }
 
 impl Env {
@@ -962,8 +964,8 @@ pub enum Error {
 ///
 pub fn infer_module(
     module: UntypedModule,
-    modules: &std::collections::HashMap<String, Type>,
-) -> Result<TypedModule, Error> {
+    modules: &std::collections::HashMap<String, (Type, TypeConstructors)>,
+) -> Result<(TypedModule, TypeConstructors), Error> {
     let mut env = Env::new();
     let mut fields = vec![];
     let module_name = &module.name;
@@ -1182,7 +1184,7 @@ pub fn infer_module(
             }
 
             Statement::Import { meta, module } => {
-                let typ = modules
+                let (typ, _module_types) = modules
                     .get(&module)
                     .expect("COMPILER BUG: Typer could not find a module being imported. This should not be possible. Please report this crash");
                 env.insert_variable(
@@ -1205,11 +1207,14 @@ pub fn infer_module(
             tail: Box::new(tail),
         });
 
-    Ok(Module {
-        name: module.name,
-        statements,
-        typ: Type::Module { row: Box::new(row) },
-    })
+    Ok((
+        Module {
+            name: module.name,
+            statements,
+            typ: Type::Module { row: Box::new(row) },
+        },
+        env.type_constructors,
+    ))
 }
 
 /// Crawl the AST, annotating each node with the inferred type or
@@ -1820,24 +1825,6 @@ enum UnifyError {
     RecursiveType,
 }
 
-// let rec unify ty1 ty2 =
-// 	if ty1 == ty2 then () else
-// 	match (ty1, ty2) with
-// 		| TConst name1, TConst name2 when name1 = name2 -> ()
-// 		| TApp(ty1, ty_arg_list1), TApp(ty2, ty_arg_list2) ->
-// 				unify ty1 ty2 ;
-// 				List.iter2 unify ty_arg_list1 ty_arg_list2
-// 		| TArrow(param_ty_list1, return_ty1), TArrow(param_ty_list2, return_ty2) ->
-// 				List.iter2 unify param_ty_list1 param_ty_list2 ;
-// 				unify return_ty1 return_ty2
-// 		| TVar {contents = Link ty1}, ty2 | ty1, TVar {contents = Link ty2} -> unify ty1 ty2
-// 		| TVar {contents = Unbound(id1, _)}, TVar {contents = Unbound(id2, _)} when id1 = id2 ->
-// 				assert false (* There is only a single instance of a particular type variable. *)
-// 		| TVar ({contents = Unbound(id, level)} as tvar), ty
-// 		| ty, TVar ({contents = Unbound(id, level)} as tvar) ->
-// 				occurs_check_adjust_levels id level ty ;
-// 				tvar := Link ty
-// 		| _, _ -> error ("cannot unify types " ^ string_of_ty ty1 ^ " and " ^ string_of_ty ty2)
 fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
     if t1 == t2 {
         return Ok(());
@@ -3322,7 +3309,7 @@ pub fn two() { one() + zero() }",
         let ast = crate::grammar::ModuleParser::new()
             .parse(src)
             .expect("syntax error");
-        let result = infer_module(ast, &std::collections::HashMap::new())
+        let (result, _) = infer_module(ast, &std::collections::HashMap::new())
             .expect("should successfully infer");
         assert_eq!(
             (
