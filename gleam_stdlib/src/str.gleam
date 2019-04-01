@@ -16,10 +16,6 @@ test length {
 
   length("")
   |> expect:equal(_, 0)
-
-  // TODO: This crashes.
-  // length("é")
-  // |> expect:equal(_, 1)
 }
 
 pub external fn lowercase(String) -> String = "string" "lowercase"
@@ -76,4 +72,48 @@ test replace {
   "Gleam,Erlang,Elixir"
   |> replace(_, ",", "++")
   |> expect:equal(_, "Gleam++Erlang++Elixir")
+}
+
+pub external fn from_int(Int) -> String = "erlang" "integer_to_binary"
+
+test from_int {
+  123
+  |> from_int
+  |> expect:equal(_, "123")
+
+  -123
+  |> from_int
+  |> expect:equal(_, "-123")
+
+  0123
+  |> from_int
+  |> expect:equal(_, "123")
+}
+
+pub external fn base_from_int(Int, Int) -> String = "erlang" "integer_to_binary"
+
+test base_from_int {
+  100
+  |> base_from_int(_, 16)
+  |> expect:equal(_, "64")
+
+  -100
+  |> base_from_int(_, 16)
+  |> expect:equal(_, "-64")
+}
+
+pub fn from_float(f) {
+  f
+  |> iodata:from_float
+  |> iodata:to_string
+}
+
+test from_float {
+  123.0
+  |> from_float
+  |> expect:equal(_, "123.0")
+
+  -8.1
+  |> from_float
+  |> expect:equal(_, "-8.1")
 }

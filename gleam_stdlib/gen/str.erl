@@ -2,7 +2,7 @@
 -compile(no_auto_import).
 -include_lib("eunit/include/eunit.hrl").
 
--export([length/1, lowercase/1, uppercase/1, reverse/1, split/2, replace/3]).
+-export([length/1, lowercase/1, uppercase/1, reverse/1, split/2, replace/3, from_int/1, base_from_int/2, from_float/1]).
 
 length(A) ->
     string:length(A).
@@ -56,4 +56,32 @@ replace(String, Pattern, With) ->
 replace_test() ->
     expect:equal(replace(<<"Gleam,Erlang,Elixir">>, <<",">>, <<"++">>),
                  <<"Gleam++Erlang++Elixir">>).
+-endif.
+
+from_int(A) ->
+    erlang:integer_to_binary(A).
+
+-ifdef(TEST).
+from_int_test() ->
+    expect:equal(from_int(123), <<"123">>),
+    expect:equal(from_int(-123), <<"-123">>),
+    expect:equal(from_int(123), <<"123">>).
+-endif.
+
+base_from_int(A, B) ->
+    erlang:integer_to_binary(A, B).
+
+-ifdef(TEST).
+base_from_int_test() ->
+    expect:equal(base_from_int(100, 16), <<"64">>),
+    expect:equal(base_from_int(-100, 16), <<"-64">>).
+-endif.
+
+from_float(F) ->
+    iodata:to_string(iodata:from_float(F)).
+
+-ifdef(TEST).
+from_float_test() ->
+    expect:equal(from_float(123.0), <<"123.0">>),
+    expect:equal(from_float(-8.1), <<"-8.1">>).
 -endif.
