@@ -38,6 +38,12 @@ pub enum Error {
         import: Name,
     },
 
+    DuplicateModule {
+        module: Name,
+        first: PathBuf,
+        second: PathBuf,
+    },
+
     DependencyCycle,
 }
 
@@ -52,6 +58,28 @@ impl Error {
             .expect("error pretty buffer write space before");
 
         match self {
+            Error::DuplicateModule {
+                module,
+                first,
+                second,
+            } => {
+                // TODO: Colours
+                write!(
+                    buffer,
+                    "error: Duplicate module
+
+The module {} is defined multiple times.
+
+First: {}
+Then:  {}
+",
+                    module,
+                    first.to_str().expect("pretty error print PathBuf to_str"),
+                    second.to_str().expect("pretty error print PathBuf to_str"),
+                )
+                .unwrap();
+            }
+
             Error::Type { src, name, error } => match error {
                 DuplicateName { meta, name: fun } => {
                     let diagnostic = ErrorDiagnostic {
@@ -306,7 +334,7 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
     let mut deps_graph = Graph::new();
     let mut deps_vec = Vec::with_capacity(srcs.len());
     let mut indexes = HashMap::new();
-    let mut modules = HashMap::new();
+    let mut modules: HashMap<_, (_, PathBuf, _)> = HashMap::new();
 
     for Input { path, src } in srcs {
         let name = path.file_stem().unwrap().to_str().unwrap().to_string();
@@ -319,6 +347,14 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
                     .map_error(|s| s.to_string())
                     .map_token(|crate::grammar::Token(a, b)| (a, b.to_string())),
             })?;
+
+        if let Some((_, first_path, _)) = indexes.get(&name).and_then(|i| modules.get(i)) {
+            return Err(Error::DuplicateModule {
+                module: name,
+                first: first_path.clone(),
+                second: path,
+            });
+        }
 
         module.name = name.clone();
 
@@ -490,6 +526,23 @@ unbox(X) ->\n    {box, I} = X,\n    I.\n"
                         .to_string(),
                 },
             ]),
+        },
+        Case {
+            input: vec![
+                Input {
+                    path: PathBuf::from("/src/one.gleam"),
+                    src: "".to_string(),
+                },
+                Input {
+                    path: PathBuf::from("/other/src/one.gleam"),
+                    src: "".to_string(),
+                },
+            ],
+            expected: Err(Error::DuplicateModule {
+                module: "one".to_string(),
+                first: PathBuf::from("/src/one.gleam"),
+                second: PathBuf::from("/other/src/one.gleam"),
+            }),
         },
     ];
 

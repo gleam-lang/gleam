@@ -50,7 +50,7 @@ test swap {
 pub fn fetch(haystack, needle) {
   list:find(haystack, fn(tuple) {
     case first(tuple) == needle {
-    | True -> Ok(second(tuple))
+    | True -> tuple |> second |> Ok
     | False -> Error([])
     }
   })
