@@ -153,7 +153,7 @@ result in the compiler presenting a type error.</p>
 list does not change the original list, instead it efficiently creates a new
 list with the new additional element.</p>
 <pre><code class="language-rust noplaypen">let x = [2, 3]
-let y = [1 | y]
+let y = [1 | x]
 
 
 x  // =&gt; [2, 3]
