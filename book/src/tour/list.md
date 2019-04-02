@@ -25,7 +25,7 @@ list with the new additional element.
 
 ```rust,noplaypen
 let x = [2, 3]
-let y = [1 | y]
+let y = [1 | x]
 
 
 x  // => [2, 3]
