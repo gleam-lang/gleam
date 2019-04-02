@@ -894,6 +894,10 @@ impl<'a> Env<'a> {
                 }
             }
 
+            ast::Type::Record { .. } => unimplemented!(),
+
+            ast::Type::Module { .. } => unimplemented!(),
+
             ast::Type::Tuple { elems, .. } => {
                 let elems = elems
                     .iter()
@@ -2636,7 +2640,7 @@ fn infer_test() {
             typ: "Int",
         },
         Case {
-            src: "let const = fn(x) { fn(y) { x } } let one = const(1) one(2.0)",
+            src: "let constant = fn(x) { fn(y) { x } } let one = constant(1) one(2.0)",
             typ: "Int",
         },
         Case {
@@ -3226,6 +3230,39 @@ fn infer_module_test() {
             src: "pub external fn go({a, c}) -> c = \"\" \"\"",
             typ: "module { fn go({a, b}) -> b }",
         },
+        // TODO
+        // Case {
+        //     src: "pub external fn go() -> module {} = \"\" \"\"",
+        //     typ: "module { fn go() -> module {} }",
+        // },
+        // Case {
+        //     src: "pub external fn go() -> module { a | } = \"\" \"\"",
+        //     typ: "module { fn go() -> module {a | } }",
+        // },
+        // Case {
+        //     src: "pub external fn go() -> module { a | const x = Int fn y() -> Int} = \"\" \"\"",
+        //     typ: "module { fn go() -> module {a | const x = Int fn y() -> Int }",
+        // },
+        // Case {
+        //     src: "pub external fn go() -> module { const x = Int fn y() -> Int} = \"\" \"\"",
+        //     typ: "module { fn go() -> module { const x = Int fn y() -> Int }",
+        // },
+        // Case {
+        //     src: "pub external fn go() -> {} = \"\" \"\"",
+        //     typ: "module { fn go() -> {} }",
+        // },
+        // Case {
+        //     src: "pub external fn go() -> {a = Int, b = Int} = \"\" \"\"",
+        //     typ: "module { fn go() -> {a = Int, b = Int} }",
+        // },
+        // Case {
+        //     src: "pub external fn go() -> {a | a = Int} = \"\" \"\"",
+        //     typ: "module { fn go() -> {a | a = Int} }",
+        // },
+        // Case {
+        //     src: "pub external fn go() -> {a | } = \"\" \"\"",
+        //     typ: "module { fn go() -> {a | } }",
+        // },
         Case {
             src: "
         external fn go(Int) -> b = \"\" \"\"

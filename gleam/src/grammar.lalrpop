@@ -454,6 +454,17 @@ Comma<T>: Vec<T> = {
     }
 }
 
+AtLeastOneComma<T>: Vec<T> = {
+    <v:(<T> ",")+> <e:T?> => match e {
+        None => v,
+        Some(e) => {
+            let mut v = v;
+            v.push(e);
+            v
+        }
+    }
+}
+
 Op<Operator, Current, Next>: UntypedExpr = {
     <s:@L> <l:(<Current>)> <o:(<Operator>)> <r:Next> <e:@L> => Expr::BinOp {
         meta: meta(s, e),
@@ -570,9 +581,60 @@ PatternCons: Pattern = {
 
 Type: Type = {
     TypeConstructor => <>,
+    TypeRecord => <>,
+    TypeModule => <>,
     TypeTuple => <>,
     TypeVar => <>,
     TypeFn => <>,
+}
+
+TypeModule: Type = {
+    <s:@L> "module" "{}" <e:@L> => Type::Module {
+        meta: meta(s, e),
+        fields: vec![],
+        tail: None,
+    },
+
+    <s:@L> "module" "{" <tail:TypeRecordTail?> <fields:Comma<TypeModuleField>> "}" <e:@L> => Type::Record {
+        meta: meta(s, e),
+        fields,
+        tail,
+    },
+}
+
+TypeModuleField: (String, Type) = {
+    "const" <l:VarName> "=" <t:Type> => (l, t),
+
+    <s:@L> "fn" <l:VarName> "(" <args:Comma<Type>> ")" "->" <retrn:Type> <e:@L> => {
+        let f = Type::Fn {
+            meta: meta(s, e),
+            retrn: Box::new(retrn),
+            args,
+        };
+        (l, f)
+    }
+}
+
+TypeRecord: Type = {
+    <s:@L> "{}" <e:@L> => Type::Record {
+        meta: meta(s, e),
+        fields: vec![],
+        tail: None,
+    },
+
+    <s:@L> "{" <tail:TypeRecordTail?> <fields:Comma<TypeRecordField>> "}" <e:@L> => Type::Record {
+        meta: meta(s, e),
+        fields,
+        tail,
+    },
+}
+
+TypeRecordTail: String = {
+    <name:VarName> "|" => name
+}
+
+TypeRecordField: (String, Type) = {
+    <l:VarName> "=" <t:Type> => (l, t)
 }
 
 TypeConstructor: Type = {
@@ -606,7 +668,7 @@ TypeConstructor: Type = {
 }
 
 TypeTuple: Type = {
-    <s:@L> "{" <elems:Comma<Type>> "}" <e:@L> => Type::Tuple {
+    <s:@L> "{" <elems:AtLeastOneComma<Type>> "}" <e:@L> => Type::Tuple {
         meta: meta(s, e),
         elems: elems,
     }

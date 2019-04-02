@@ -55,6 +55,18 @@ pub enum Type {
         args: Vec<Type>,
     },
 
+    Record {
+        meta: Meta,
+        fields: Vec<(String, Type)>,
+        tail: Option<String>,
+    },
+
+    Module {
+        meta: Meta,
+        fields: Vec<(String, Type)>,
+        tail: Option<String>,
+    },
+
     Fn {
         meta: Meta,
         args: Vec<Type>,
