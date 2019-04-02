@@ -3,12 +3,12 @@
 [![build](https://circleci.com/gh/lpil/gleam.svg?style=shield)](https://circleci.com/gh/lpil/gleam)
 
 Gleam is a statically typed functional programming language for building
-scalable concurrent systems.
+scalable concurrent systems. It compiles to [Erlang](http://www.erlang.org/)
+and has straightforward interop with other BEAM languages such as Erlang,
+Elixir and LFE.
 
-It compiles to [Erlang](http://www.erlang.org/) and has straightforward
-interop with other BEAM languages such as Erlang, Elixir and LFE.
-
-It looks like this:
+⚠️ Gleam is pre-alpha software. You are welcome to try it, but it may do
+anything up to and including eating your laundry and then crashing.
 
 ```rust
 pub enum Tree =
