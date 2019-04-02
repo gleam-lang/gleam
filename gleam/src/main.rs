@@ -49,6 +49,9 @@ enum Command {
     Build {
         #[structopt(help = "location of the project root", default_value = ".")]
         path: String,
+
+        #[structopt(long = "env", default_value = "default")]
+        env: String,
     },
 }
 
@@ -59,18 +62,18 @@ struct ProjectConfig {
 
 fn main() {
     match Command::from_args() {
-        Command::Build { path } => command_build(path),
+        Command::Build { path, env } => command_build(path, env),
     }
 }
 
-fn command_build(root: String) {
+fn command_build(root: String, env: String) {
     let mut srcs = vec![];
 
     // Read gleam.toml
     let project_config = read_project_config(&root).expect("Could not read gleam.toml");
 
     let root_path = PathBuf::from(&root);
-    let lib_dir = root_path.join("_build/default/lib");
+    let lib_dir = root_path.join("_build").join(env).join("lib");
 
     if let Ok(dir) = std::fs::read_dir(lib_dir) {
         dir.filter_map(Result::ok)
