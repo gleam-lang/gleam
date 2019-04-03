@@ -58,13 +58,13 @@ pub enum Type {
     Record {
         meta: Meta,
         fields: Vec<(String, Type)>,
-        tail: Option<String>,
+        tail: Option<Box<Type>>,
     },
 
     Module {
         meta: Meta,
         fields: Vec<(String, Type)>,
-        tail: Option<String>,
+        tail: Option<Box<Type>>,
     },
 
     Fn {
