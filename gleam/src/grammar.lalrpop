@@ -595,7 +595,7 @@ TypeModule: Type = {
         tail: None,
     },
 
-    <s:@L> "module" "{" <tail:TypeRecordTail?> <fields:Comma<TypeModuleField>> "}" <e:@L> => Type::Record {
+    <s:@L> "module" "{" <tail:TypeRecordTail?> <fields:TypeModuleField*> "}" <e:@L> => Type::Module {
         meta: meta(s, e),
         fields,
         tail,
@@ -603,7 +603,7 @@ TypeModule: Type = {
 }
 
 TypeModuleField: (String, Type) = {
-    "const" <l:VarName> "=" <t:Type> => (l, t),
+    "const" <l:VarName> ":" <t:Type> => (l, t),
 
     <s:@L> "fn" <l:VarName> "(" <args:Comma<Type>> ")" "->" <retrn:Type> <e:@L> => {
         let f = Type::Fn {
@@ -629,8 +629,11 @@ TypeRecord: Type = {
     },
 }
 
-TypeRecordTail: String = {
-    <name:VarName> "|" => name
+TypeRecordTail: Box<Type> = {
+    <s:@L> <n:VarName> <e:@L> "|" => Box::new(Type::Var {
+        meta: meta(s, e),
+        name: n,
+    })
 }
 
 TypeRecordField: (String, Type) = {

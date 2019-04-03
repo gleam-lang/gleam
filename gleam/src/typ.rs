@@ -140,14 +140,9 @@ impl Type {
                             Type::Fn { args, retrn } => "fn "
                                 .to_doc()
                                 .append(label)
-                                .append(
-                                    "(".to_doc()
-                                        .append(break_("", ""))
-                                        .append(args_to_gleam_doc(&args, names, uid))
-                                        .append(break_("", ""))
-                                        .append(")")
-                                        .group(),
-                                )
+                                .append("(")
+                                .append(args_to_gleam_doc(&args, names, uid))
+                                .append(")")
                                 .append(" -> ")
                                 .append(retrn.to_gleam_doc(names, uid)),
 
@@ -165,23 +160,19 @@ impl Type {
                         fields_docs.to_doc()
                     };
                     match tail {
-                        None => fields_doc,
-                        Some(tail) => tail
-                            .to_gleam_doc(names, uid)
-                            .append(" | ")
+                        None => break_("", " ").append(fields_doc),
+                        Some(tail) => " "
+                            .to_doc()
+                            .append(tail.to_gleam_doc(names, uid))
+                            .append(" |")
+                            .append(break_("", " "))
                             .append(fields_doc),
                     }
                 };
 
                 "module {"
                     .to_doc()
-                    .append(
-                        break_("", " ")
-                            .append(row_to_doc(row))
-                            .nest(INDENT)
-                            .append(break_("", " "))
-                            .group(),
-                    )
+                    .append(row_to_doc(row).nest(INDENT).append(break_("", " ")).group())
                     .append("}")
             }
 
@@ -359,14 +350,18 @@ fn args_to_gleam_doc(
     names: &mut HashMap<usize, String>,
     uid: &mut usize,
 ) -> Document {
-    args.iter()
-        .map(|t| t.to_gleam_doc(names, uid).group())
-        .intersperse(break_(",", ", "))
-        .collect::<Vec<_>>()
-        .to_doc()
-        .nest(INDENT)
-        .append(break_(",", ""))
-        .group()
+    match args.len() {
+        0 => nil(),
+        _ => args
+            .iter()
+            .map(|t| t.to_gleam_doc(names, uid).group())
+            .intersperse(break_(",", ", "))
+            .collect::<Vec<_>>()
+            .to_doc()
+            .nest(INDENT)
+            .append(break_(",", ""))
+            .group(),
+    }
 }
 
 #[test]
@@ -894,9 +889,13 @@ impl<'a> Env<'a> {
                 }
             }
 
-            ast::Type::Record { .. } => unimplemented!(),
+            ast::Type::Record { fields, tail, .. } => Ok(Type::Record {
+                row: Box::new(self.row_from_ast(fields, tail, vars, permit_new_vars)?),
+            }),
 
-            ast::Type::Module { .. } => unimplemented!(),
+            ast::Type::Module { fields, tail, .. } => Ok(Type::Module {
+                row: Box::new(self.row_from_ast(fields, tail, vars, permit_new_vars)?),
+            }),
 
             ast::Type::Tuple { elems, .. } => {
                 let elems = elems
@@ -934,6 +933,27 @@ impl<'a> Env<'a> {
                 }
             },
         }
+    }
+
+    fn row_from_ast(
+        &mut self,
+        fields: &Vec<(String, ast::Type)>,
+        tail: &Option<Box<ast::Type>>,
+        vars: &mut HashMap<String, Type>,
+        permit_new_vars: bool,
+    ) -> Result<Type, Error> {
+        let tail = match tail {
+            None => Type::RowNil,
+            Some(t) => self.type_from_ast(t, vars, permit_new_vars)?,
+        };
+        fields
+            .iter()
+            .map(|(label, t)| Ok((label, self.type_from_ast(t, vars, permit_new_vars)?)))
+            .fold_results(tail, |acc, (label, t)| Type::RowCons {
+                label: label.to_string(),
+                head: Box::new(t),
+                tail: Box::new(acc),
+            })
     }
 }
 
@@ -3230,39 +3250,48 @@ fn infer_module_test() {
             src: "pub external fn go({a, c}) -> c = \"\" \"\"",
             typ: "module { fn go({a, b}) -> b }",
         },
-        // TODO
-        // Case {
-        //     src: "pub external fn go() -> module {} = \"\" \"\"",
-        //     typ: "module { fn go() -> module {} }",
-        // },
-        // Case {
-        //     src: "pub external fn go() -> module { a | } = \"\" \"\"",
-        //     typ: "module { fn go() -> module {a | } }",
-        // },
-        // Case {
-        //     src: "pub external fn go() -> module { a | const x = Int fn y() -> Int} = \"\" \"\"",
-        //     typ: "module { fn go() -> module {a | const x = Int fn y() -> Int }",
-        // },
-        // Case {
-        //     src: "pub external fn go() -> module { const x = Int fn y() -> Int} = \"\" \"\"",
-        //     typ: "module { fn go() -> module { const x = Int fn y() -> Int }",
-        // },
-        // Case {
-        //     src: "pub external fn go() -> {} = \"\" \"\"",
-        //     typ: "module { fn go() -> {} }",
-        // },
-        // Case {
-        //     src: "pub external fn go() -> {a = Int, b = Int} = \"\" \"\"",
-        //     typ: "module { fn go() -> {a = Int, b = Int} }",
-        // },
-        // Case {
-        //     src: "pub external fn go() -> {a | a = Int} = \"\" \"\"",
-        //     typ: "module { fn go() -> {a | a = Int} }",
-        // },
-        // Case {
-        //     src: "pub external fn go() -> {a | } = \"\" \"\"",
-        //     typ: "module { fn go() -> {a | } }",
-        // },
+        Case {
+            src: "pub external fn go() -> module {} = \"\" \"\"",
+            typ: "module { fn go() -> module {  } }",
+        },
+        Case {
+            src: "pub external fn go() -> module { a | } = \"\" \"\"",
+            typ: "module { fn go() -> module { a |  } }",
+        },
+        Case {
+            src: "pub external fn go() -> module { a | const x: Int fn y() -> Int} = \"\" \"\"",
+            typ: "module {
+  fn go() -> module { a |
+    const x: Int
+    fn y() -> Int
+  }
+}",
+        },
+        Case {
+            src: "pub external fn go() -> module { const x: Int fn y() -> Int} = \"\" \"\"",
+            typ: "module {
+  fn go() -> module {
+    const x: Int
+    fn y() -> Int
+  }
+}",
+        },
+        Case {
+            src: "pub external fn ok() -> {} = \"\" \"\"",
+            typ: "module { fn ok() -> {} }",
+        },
+        Case {
+            src: "pub external fn ok() -> {a = Int, b = Int} = \"\" \"\"",
+            typ: "module { fn ok() -> { a = Int, b = Int } }",
+        },
+        Case {
+            src: "pub external fn ok() -> {a | a = Int} = \"\" \"\"",
+            typ: "module { fn ok() -> { a | a = Int } }",
+        },
+        Case {
+            src: "pub external fn ok() -> {a | } = \"\" \"\"",
+            typ: "module { fn ok() -> { a |  } }",
+        },
         Case {
             src: "
         external fn go(Int) -> b = \"\" \"\"
