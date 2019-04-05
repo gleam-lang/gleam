@@ -2,7 +2,7 @@
 -compile(no_auto_import).
 -include_lib("eunit/include/eunit.hrl").
 
--export([length/1, lowercase/1, uppercase/1, reverse/1, split/2, replace/3, from_int/1, base_from_int/2, from_float/1]).
+-export([length/1, lowercase/1, uppercase/1, reverse/1, split/2, replace/3, from_int/1, parse_int/1, base_from_int/2, from_float/1]).
 
 length(A) ->
     string:length(A).
@@ -66,6 +66,16 @@ from_int_test() ->
     expect:equal(from_int(123), <<"123">>),
     expect:equal(from_int(-123), <<"-123">>),
     expect:equal(from_int(123), <<"123">>).
+-endif.
+
+parse_int(A) ->
+    gleam__stdlib:parse_int(A).
+
+-ifdef(TEST).
+parse_int_test() ->
+    expect:equal(parse_int(<<"123">>), {ok, 123}),
+    expect:equal(parse_int(<<"-123">>), {ok, -123}),
+    expect:equal(parse_int(<<"0123">>), {ok, 123}).
 -endif.
 
 base_from_int(A, B) ->

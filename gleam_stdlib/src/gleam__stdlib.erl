@@ -6,7 +6,7 @@
          atom_create_from_string/1, atom_to_string/1, map_fetch/2,
          iodata_append/2, iodata_prepend/2, identity/1, decode_int/1,
          decode_string/1, decode_bool/1, decode_float/1, decode_thunk/1,
-         decode_tuple/1, decode_list/1, decode_field/2]).
+         decode_tuple/1, decode_list/1, decode_field/2, parse_int/1]).
 
 expect_equal(Actual, Expected) -> ?assertEqual(Expected, Actual).
 expect_not_equal(Actual, Expected) -> ?assertNotEqual(Expected, Actual).
@@ -68,4 +68,13 @@ decode_field(Data, Key) ->
 
     _ ->
       decode_error_msg(io_lib:format("a map with key `~p`", [Key]), Data)
+  end.
+
+parse_int(String) ->
+  case string:to_integer(String) of
+    {Integer, []} ->
+      {ok, Integer};
+
+    _ ->
+      {error, parse_error}
   end.
