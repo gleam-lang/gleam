@@ -7,6 +7,9 @@ import list
 
 pub external fn length(String) -> Int = "string" "length"
 
+pub enum ParseError =
+  | ParseError
+
 test length {
   length("ß↑e̊")
   |> expect:equal(_, 3)
@@ -88,6 +91,34 @@ test from_int {
   0123
   |> from_int
   |> expect:equal(_, "123")
+}
+
+pub external fn parse_int(String) -> Result(Int, ParseError) = "gleam__stdlib" "parse_int";
+
+test parse_int {
+  "123"
+  |> parse_int
+  |> expect:equal(_, Ok(123))
+
+  "-123"
+  |> parse_int
+  |> expect:equal(_, Ok(-123))
+
+  "0123"
+  |> parse_int
+  |> expect:equal(_, Ok(123))
+
+  ""
+  |> parse_int
+  |> expect:equal(_, Error(ParseError))
+
+  "what"
+  |> parse_int
+  |> expect:equal(_, Error(ParseError))
+
+  "1.23"
+  |> parse_int
+  |> expect:equal(_, Error(ParseError))
 }
 
 pub external fn base_from_int(Int, Int) -> String = "erlang" "integer_to_binary"
