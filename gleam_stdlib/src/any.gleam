@@ -22,7 +22,7 @@ pub external type Any;
 //
 pub external fn from(a) -> Any = "gleam__stdlib" "identity";
 
-// Unsafely cast any type into any other type.o
+// Unsafely cast any type into any other type.
 //
 // This is an escape hatch for the type system that may be useful when wrapping
 // native Erlang APIs. It is to be used as a last measure only.
