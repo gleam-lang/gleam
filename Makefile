@@ -8,7 +8,7 @@ COMPILER=$(realpath gleam/target/release/gleam)
 build: book gleam gleam_stdlib/gen ## Build all targets
 
 .PHONY: install
-install: gleam ## Build the Gleam compiler and place it on PATH
+install: ## Build the Gleam compiler and place it on PATH
 	cd gleam && cargo install --path . --force
 
 .PHONY: help
