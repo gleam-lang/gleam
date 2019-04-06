@@ -71,7 +71,7 @@ decode_field(Data, Key) ->
   end.
 
 parse_int(String) ->
-  case string:to_integer(String) of
+  case string:to_integer(binary:bin_to_list(String)) of
     {Integer, []} ->
       {ok, Integer};
 

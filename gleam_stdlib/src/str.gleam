@@ -107,6 +107,10 @@ test parse_int {
   "0123"
   |> parse_int
   |> expect:equal(_, Ok(123))
+
+  "what"
+  |> parse_int
+  |> expect:equal(_, Error(ParseError))
 }
 
 pub external fn base_from_int(Int, Int) -> String = "erlang" "integer_to_binary"
