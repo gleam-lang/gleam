@@ -76,7 +76,9 @@ parse_int_test() ->
     expect:equal(parse_int(<<"123">>), {ok, 123}),
     expect:equal(parse_int(<<"-123">>), {ok, -123}),
     expect:equal(parse_int(<<"0123">>), {ok, 123}),
-    expect:equal(parse_int(<<"what">>), {error, parse_error}).
+    expect:equal(parse_int(<<"">>), {error, parse_error}),
+    expect:equal(parse_int(<<"what">>), {error, parse_error}),
+    expect:equal(parse_int(<<"1.23">>), {error, parse_error}).
 -endif.
 
 base_from_int(A, B) ->

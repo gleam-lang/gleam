@@ -108,7 +108,15 @@ test parse_int {
   |> parse_int
   |> expect:equal(_, Ok(123))
 
+  ""
+  |> parse_int
+  |> expect:equal(_, Error(ParseError))
+
   "what"
+  |> parse_int
+  |> expect:equal(_, Error(ParseError))
+
+  "1.23"
   |> parse_int
   |> expect:equal(_, Error(ParseError))
 }
