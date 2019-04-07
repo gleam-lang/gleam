@@ -121,6 +121,34 @@ test parse_int {
   |> expect:equal(_, Error(ParseError))
 }
 
+pub external fn parse_float(String) -> Result(Float, ParseError) = "gleam__stdlib" "parse_float";
+
+test parse_float {
+  "1.23"
+  |> parse_float
+  |> expect:equal(_, Ok(1.23))
+
+  "5.0"
+  |> parse_float
+  |> expect:equal(_, Ok(5.0))
+
+  "0.123456789"
+  |> parse_float
+  |> expect:equal(_, Ok(0.123456789))
+
+  ""
+  |> parse_float
+  |> expect:equal(_, Error(ParseError))
+
+  "what"
+  |> parse_float
+  |> expect:equal(_, Error(ParseError))
+
+  "1"
+  |> parse_float
+  |> expect:equal(_, Error(ParseError))
+}
+
 pub external fn base_from_int(Int, Int) -> String = "erlang" "integer_to_binary"
 
 test base_from_int {

@@ -2,7 +2,7 @@
 -compile(no_auto_import).
 -include_lib("eunit/include/eunit.hrl").
 
--export([length/1, lowercase/1, uppercase/1, reverse/1, split/2, replace/3, from_int/1, parse_int/1, base_from_int/2, from_float/1]).
+-export([length/1, lowercase/1, uppercase/1, reverse/1, split/2, replace/3, from_int/1, parse_int/1, parse_float/1, base_from_int/2, from_float/1]).
 
 length(A) ->
     string:length(A).
@@ -79,6 +79,19 @@ parse_int_test() ->
     expect:equal(parse_int(<<"">>), {error, parse_error}),
     expect:equal(parse_int(<<"what">>), {error, parse_error}),
     expect:equal(parse_int(<<"1.23">>), {error, parse_error}).
+-endif.
+
+parse_float(A) ->
+    gleam__stdlib:parse_float(A).
+
+-ifdef(TEST).
+parse_float_test() ->
+    expect:equal(parse_float(<<"1.23">>), {ok, 1.23}),
+    expect:equal(parse_float(<<"5.0">>), {ok, 5.0}),
+    expect:equal(parse_float(<<"0.123456789">>), {ok, 0.123456789}),
+    expect:equal(parse_float(<<"">>), {error, parse_error}),
+    expect:equal(parse_float(<<"what">>), {error, parse_error}),
+    expect:equal(parse_float(<<"1">>), {error, parse_error}).
 -endif.
 
 base_from_int(A, B) ->
