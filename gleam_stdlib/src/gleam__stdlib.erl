@@ -80,10 +80,10 @@ parse_int(String) ->
   end.
 
 parse_float(String) ->
-    case string:to_float(binary:bin_to_list(String)) of
-        {Float, []} ->
-            {ok, Float};
+  case string:to_float(binary:bin_to_list(String)) of
+    {Float, []} ->
+      {ok, Float};
 
-        _ ->
-            {error, parse_error}
-    end.
+    _ ->
+      {error, parse_error}
+  end.
