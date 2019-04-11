@@ -971,6 +971,11 @@ pub enum Error {
         types: HashMap<String, TypeConstructorInfo>,
     },
 
+    NotFn {
+        meta: Meta,
+        typ: Type,
+    },
+
     IncorrectArity {
         meta: Meta,
         expected: usize,
@@ -1735,8 +1740,8 @@ fn infer_call(
 ) -> Result<(TypedExpr, Vec<TypedExpr>, Type), Error> {
     let fun = infer(fun, level, env)?;
     // TODO: Use the meta of the arg instead of the meta of the entire call
-    let (mut args_types, return_type) =
-        match_fun_type(fun.typ(), args.len(), env).map_err(|e| convert_not_fun_error(e, &meta))?;
+    let (mut args_types, return_type) = match_fun_type(fun.typ(), args.len(), env)
+        .map_err(|e| convert_not_fun_error(e, fun.meta(), &meta))?;
     let args = args_types
         .iter_mut()
         .zip(args)
@@ -2208,11 +2213,6 @@ fn update_levels(typ: &Type, own_level: usize, own_id: usize) -> Result<(), Unif
     }
 }
 
-struct NotFnError {
-    pub expected: usize,
-    pub given: usize,
-}
-
 // let rec match_fun_ty num_params = function
 // 	| TArrow(param_ty_list, return_ty) ->
 // 			if List.length param_ty_list <> num_params then
@@ -2236,7 +2236,7 @@ fn match_fun_type(
     typ: &Type,
     arity: usize,
     env: &mut Env,
-) -> Result<(Vec<Type>, Type), NotFnError> {
+) -> Result<(Vec<Type>, Type), MatchFunTypeError> {
     if let Type::Var { typ } = &typ {
         let new_value = match &*typ.borrow() {
             TypeVar::Link { typ, .. } => return match_fun_type(typ, arity, env),
@@ -2263,7 +2263,7 @@ fn match_fun_type(
 
     if let Type::Fn { args, retrn } = typ {
         return if args.len() != arity {
-            Err(NotFnError {
+            Err(MatchFunTypeError::IncorrectArity {
                 expected: args.len(),
                 given: arity,
             })
@@ -2272,14 +2272,26 @@ fn match_fun_type(
         };
     }
 
-    unimplemented!() // Expected a function
+    Err(MatchFunTypeError::NotFn { typ: typ.clone() })
 }
 
-fn convert_not_fun_error(e: NotFnError, meta: &Meta) -> Error {
-    Error::IncorrectArity {
-        meta: meta.clone(),
-        expected: e.expected,
-        given: e.given,
+enum MatchFunTypeError {
+    IncorrectArity { expected: usize, given: usize },
+    NotFn { typ: Type },
+}
+
+fn convert_not_fun_error(e: MatchFunTypeError, fn_meta: &Meta, call_meta: &Meta) -> Error {
+    match e {
+        MatchFunTypeError::IncorrectArity { expected, given } => Error::IncorrectArity {
+            meta: call_meta.clone(),
+            expected,
+            given,
+        },
+
+        MatchFunTypeError::NotFn { typ } => Error::NotFn {
+            meta: fn_meta.clone(),
+            typ,
+        },
     }
 }
 

@@ -103,6 +103,28 @@ Then:  {}
                     write(buffer, diagnostic);
                 }
 
+                NotFn { meta, typ } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Type mismatch".to_string(),
+                        label: "".to_string(),
+                        file: name.clone(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+
+                    write!(
+                        buffer,
+                        "
+This value is being called as a function but its type is:
+
+{}
+",
+                        typ.pretty_print(4)
+                    )
+                    .unwrap();
+                }
+
                 CouldNotUnify {
                     meta,
                     expected,
