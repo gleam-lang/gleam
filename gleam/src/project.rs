@@ -125,6 +125,31 @@ This value is being called as a function but its type is:
                     .unwrap();
                 }
 
+                FieldNotFound {
+                    meta,
+                    label,
+                    container_typ,
+                } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Field not found".to_string(),
+                        label: "".to_string(),
+                        file: name.clone(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+
+                    write!(
+                        buffer,
+                        "
+This {} does not contain a field named `{}`.
+",
+                        container_typ.to_string(),
+                        label,
+                    )
+                    .unwrap();
+                }
+
                 CouldNotUnify {
                     meta,
                     expected,

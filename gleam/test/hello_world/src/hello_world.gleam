@@ -1,6 +1,10 @@
+import other
+
 pub enum What =
   | What
 
 fn x() {
-  1()
+  let i = {name = "faefef"}
+  i.efkjwhf
+  other:thing
 }

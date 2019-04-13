@@ -1008,6 +1008,27 @@ pub enum Error {
         meta: Meta,
         leaked: Type,
     },
+
+    FieldNotFound {
+        meta: Meta,
+        label: String,
+        container_typ: RowContainerType,
+    },
+}
+
+#[derive(Debug, PartialEq)]
+pub enum RowContainerType {
+    Module,
+    Record,
+}
+
+impl RowContainerType {
+    pub fn to_string(&self) -> String {
+        match self {
+            RowContainerType::Module => "module".to_string(),
+            RowContainerType::Record => "record".to_string(),
+        }
+    }
 }
 
 /// Crawl the AST, annotating each node with the inferred type or
@@ -1804,6 +1825,12 @@ fn convert_unify_error(e: UnifyError, meta: &Meta) -> Error {
             given,
         },
 
+        UnifyError::FieldNotFound { label } => Error::FieldNotFound {
+            meta: meta.clone(),
+            container_typ: RowContainerType::Module,
+            label,
+        },
+
         UnifyError::RecursiveType => Error::RecursiveType { meta: meta.clone() },
     }
 }
@@ -1885,6 +1912,7 @@ fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
 enum UnifyError {
     CouldNotUnify { expected: Type, given: Type },
     RecursiveType,
+    FieldNotFound { label: String },
 }
 
 fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
@@ -2077,7 +2105,7 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
 
 fn rewrite_row(row: Type, label1: String, head1: Type) -> Result<Type, UnifyError> {
     match row {
-        Type::RowNil => unimplemented!(), // TODO: Row does not contain label
+        Type::RowNil => Err(UnifyError::FieldNotFound { label: label1 }),
 
         Type::RowCons { label, head, tail } => {
             if label == label1 {
