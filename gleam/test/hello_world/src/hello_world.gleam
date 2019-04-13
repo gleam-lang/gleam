@@ -4,7 +4,13 @@ pub enum What =
   | What
 
 fn x() {
-  let i = {name = "faefef"}
-  i.efkjwhf
-  other:thing
+  1
+}
+
+test x {
+  2
+}
+
+test x {
+  2
 }

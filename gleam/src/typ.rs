@@ -6,6 +6,7 @@ use crate::pretty::*;
 use im::{hashmap::HashMap, ordmap::OrdMap};
 use itertools::Itertools;
 use std::cell::RefCell;
+use std::collections::HashSet;
 use std::rc::Rc;
 
 const INDENT: isize = 2;
@@ -1002,6 +1003,7 @@ pub enum Error {
     DuplicateName {
         meta: Meta,
         name: String,
+        kind: DuplicateNameKind,
     },
 
     PrivateTypeLeak {
@@ -1014,6 +1016,22 @@ pub enum Error {
         label: String,
         container_typ: RowContainerType,
     },
+}
+
+#[derive(Debug, PartialEq)]
+pub enum DuplicateNameKind {
+    Function,
+    Test,
+}
+
+impl DuplicateNameKind {
+    pub fn to_string(&self) -> String {
+        match self {
+            DuplicateNameKind::Function => "function",
+            DuplicateNameKind::Test => "test",
+        }
+        .to_string()
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -1040,6 +1058,7 @@ pub fn infer_module(
 ) -> Result<(TypedModule, TypeConstructors), Error> {
     let mut env = Env::new(modules);
     let mut fields = vec![];
+    let mut tests: HashSet<String> = HashSet::new();
     let module_name = &module.name;
 
     let statements = module
@@ -1057,7 +1076,11 @@ pub fn infer_module(
 
                 // Ensure function has not already been defined in this module
                 if let Some((Scope::Module { .. }, _)) = env.get_variable(&name) {
-                    return Err(Error::DuplicateName { meta, name });
+                    return Err(Error::DuplicateName {
+                        meta,
+                        name,
+                        kind: DuplicateNameKind::Function,
+                    });
                 };
 
                 // Register a var for the function so that it can call itself recursively
@@ -1116,12 +1139,10 @@ pub fn infer_module(
                 fun,
             } => {
                 let mut type_vars = hashmap![];
-                let retrn_type = env
-                    .type_from_ast(&retrn, &mut type_vars, true)?;
+                let retrn_type = env.type_from_ast(&retrn, &mut type_vars, true)?;
                 let mut args_types = Vec::with_capacity(args.len());
                 for arg in args.iter() {
-                    let t = env
-                        .type_from_ast(arg, &mut type_vars, true)?;
+                    let t = env.type_from_ast(arg, &mut type_vars, true)?;
                     args_types.push(t)
                 }
                 let typ = Type::Fn {
@@ -1151,10 +1172,18 @@ pub fn infer_module(
             }
 
             Statement::Test { meta, name, body } => {
-                let vars = env.variables.clone();
-                let body = infer(body, 2, &mut env)?;
-                env.variables = vars;
-                Ok(Statement::Test { meta, name, body })
+                if tests.insert(name.clone()) {
+                    let vars = env.variables.clone();
+                    let body = infer(body, 2, &mut env)?;
+                    env.variables = vars;
+                    Ok(Statement::Test { meta, name, body })
+                } else {
+                    Err(Error::DuplicateName {
+                        meta,
+                        name,
+                        kind: DuplicateNameKind::Test,
+                    })
+                }
             }
 
             Statement::Enum {
@@ -1176,13 +1205,13 @@ pub fn infer_module(
                 // Build return type and collect type vars that can be used in constructors
                 let mut type_vars = hashmap![];
                 let args_types: Vec<_> = args
-                            .iter()
-                            .map(|arg| ast::Type::Var {
-                                meta: meta.clone(),
-                                name: arg.to_string(),
-                            })
-                            .map(|ast| env.type_from_ast(&ast, &mut type_vars,true))
-                            .collect::<Result<_, _>>()?;
+                    .iter()
+                    .map(|arg| ast::Type::Var {
+                        meta: meta.clone(),
+                        name: arg.to_string(),
+                    })
+                    .map(|ast| env.type_from_ast(&ast, &mut type_vars, true))
+                    .collect::<Result<_, _>>()?;
 
                 let retrn = match args.len() {
                     0 => Type::Const {
@@ -1200,7 +1229,6 @@ pub fn infer_module(
                 };
                 // Check and register constructors
                 for constructor in constructors.iter() {
-
                     let args_types = constructor
                         .args
                         .iter()
@@ -1267,9 +1295,10 @@ pub fn infer_module(
             }
 
             Statement::Import { meta, module } => {
-                let (typ, _module_types) = env.modules
-                    .get(&module)
-                    .expect("COMPILER BUG: Typer could not find a module being imported. This should not be possible. Please report this crash");
+                let (typ, _module_types) = env.modules.get(&module).expect(
+                    "COMPILER BUG: Typer could not find a module being imported.
+This should not be possible. Please report this crash",
+                );
                 env.insert_variable(
                     module.clone(),
                     Scope::Import {
@@ -1553,7 +1582,16 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
                     tail: Box::new(other_fields_typ),
                 }),
             };
-            unify(&dummy_record, record.typ()).map_err(|e| convert_unify_error(e, &meta))?;
+            unify(&dummy_record, record.typ()).map_err(|e| {
+                match convert_unify_error(e, &meta) {
+                    Error::FieldNotFound { meta, label, .. } => Error::FieldNotFound {
+                        meta,
+                        label,
+                        container_typ: RowContainerType::Record,
+                    },
+                    other => other,
+                }
+            })?;
 
             Ok(Expr::RecordSelect {
                 meta,
@@ -3493,6 +3531,7 @@ fn infer_module_error_test() {
             error: Error::DuplicateName {
                 meta: Meta { start: 34, end: 49 },
                 name: "dupe".to_string(),
+                kind: DuplicateNameKind::Function,
             },
         },
         Case {
@@ -3501,6 +3540,16 @@ fn infer_module_error_test() {
             error: Error::DuplicateName {
                 meta: Meta { start: 34, end: 50 },
                 name: "dupe".to_string(),
+                kind: DuplicateNameKind::Function,
+            },
+        },
+        Case {
+            src: "test dupe { 1 }
+                  test dupe { 1 }",
+            error: Error::DuplicateName {
+                meta: Meta { start: 34, end: 49 },
+                name: "dupe".to_string(),
+                kind: DuplicateNameKind::Test,
             },
         },
         Case {

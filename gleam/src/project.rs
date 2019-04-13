@@ -81,15 +81,28 @@ Then:  {}
             }
 
             Error::Type { src, name, error } => match error {
-                DuplicateName { meta, name: fun } => {
+                DuplicateName {
+                    meta,
+                    kind,
+                    name: fun,
+                } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Duplicate name".to_string(),
-                        label: format!("`{}` redefined here", fun),
+                        label: "Redefined here".to_string(),
                         file: name.clone(),
                         src: src.to_string(),
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
+                    write!(
+                        buffer,
+                        "
+A {} has already been defined with the name `{}` in this module.
+",
+                        kind.to_string(),
+                        fun
+                    )
+                    .unwrap();
                 }
 
                 RecursiveType { meta } => {

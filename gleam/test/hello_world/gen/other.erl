@@ -1,6 +1,7 @@
 -module(other).
 -compile(no_auto_import).
 
--export([]).
+-export([run/0]).
 
-
+run() ->
+    <<"ok!">>.
