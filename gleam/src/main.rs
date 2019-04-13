@@ -34,6 +34,7 @@ extern crate lazy_static;
 #[macro_use]
 extern crate serde_derive;
 
+use crate::project::ModuleOrigin;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
@@ -49,9 +50,6 @@ enum Command {
     Build {
         #[structopt(help = "location of the project root", default_value = ".")]
         path: String,
-
-        #[structopt(long = "env", default_value = "default")]
-        env: String,
     },
 }
 
@@ -62,18 +60,18 @@ struct ProjectConfig {
 
 fn main() {
     match Command::from_args() {
-        Command::Build { path, env } => command_build(path, env),
+        Command::Build { path } => command_build(path),
     }
 }
 
-fn command_build(root: String, env: String) {
+fn command_build(root: String) {
     let mut srcs = vec![];
 
     // Read gleam.toml
     let project_config = read_project_config(&root).expect("Could not read gleam.toml");
 
     let root_path = PathBuf::from(&root);
-    let lib_dir = root_path.join("_build").join(env).join("lib");
+    let lib_dir = root_path.join("_build").join("default").join("lib");
 
     if let Ok(dir) = std::fs::read_dir(lib_dir) {
         dir.filter_map(Result::ok)
@@ -81,10 +79,11 @@ fn command_build(root: String, env: String) {
             .filter(|p| {
                 p.file_name().and_then(|os_string| os_string.to_str()) != Some(&project_config.name)
             })
-            .for_each(|p| collect_app(p, &mut srcs));
+            .for_each(|p| collect_source(p.join("src"), ModuleOrigin::Src, &mut srcs));
     }
 
-    collect_app(root_path, &mut srcs);
+    collect_source(root_path.join("src"), ModuleOrigin::Src, &mut srcs);
+    collect_source(root_path.join("test"), ModuleOrigin::Test, &mut srcs);
 
     let compiled = match crate::project::compile(srcs) {
         Ok(c) => c,
@@ -116,11 +115,15 @@ fn read_project_config(root: &str) -> Result<ProjectConfig, ()> {
     Ok(toml::from_str(&toml).expect("Unable to parse gleam.toml"))
 }
 
-fn collect_app(app_path: PathBuf, srcs: &mut Vec<crate::project::Input>) {
-    let src_dir = app_path.join("src");
+fn collect_source(src_dir: PathBuf, origin: ModuleOrigin, srcs: &mut Vec<crate::project::Input>) {
+    dbg!(&src_dir);
 
-    std::fs::read_dir(src_dir.clone())
-        .expect("Could not locate src/")
+    let entries = match std::fs::read_dir(src_dir.clone()) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+
+    entries
         .filter_map(Result::ok)
         .filter(|d| {
             if let Some(e) = d.path().extension() {
@@ -135,6 +138,7 @@ fn collect_app(app_path: PathBuf, srcs: &mut Vec<crate::project::Input>) {
 
             srcs.push(project::Input {
                 path: dir_entry.path().canonicalize().unwrap(),
+                origin: origin.clone(),
                 src,
             })
         });

@@ -10,6 +10,7 @@ pub type Src = String;
 pub struct Input {
     pub path: PathBuf,
     pub src: String,
+    pub origin: ModuleOrigin,
 }
 
 #[derive(Debug, PartialEq)]
@@ -17,6 +18,21 @@ pub struct Compiled {
     pub name: String,
     pub code: String,
     pub path: PathBuf,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum ModuleOrigin {
+    Src,
+    Test,
+}
+
+impl ModuleOrigin {
+    pub fn dir_name(&self) -> &'static str {
+        match self {
+            ModuleOrigin::Src => "src",
+            ModuleOrigin::Test => "test",
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -44,6 +60,11 @@ pub enum Error {
         second: PathBuf,
     },
 
+    SrcImportingTest {
+        src_module: Name,
+        test_module: Name,
+    },
+
     DependencyCycle,
 }
 
@@ -58,6 +79,24 @@ impl Error {
             .expect("error pretty buffer write space before");
 
         match self {
+            Error::SrcImportingTest {
+                src_module,
+                test_module,
+            } => {
+                // TODO: Colours
+                write!(
+                    buffer,
+                    "error: App importing test module
+
+The application module `{}` is importing the test module `{}`.
+
+Test modules are not included in production builds so test modules
+cannot import them. Perhaps move the `{}` module to the src directory.
+",
+                    src_module, test_module, test_module,
+                )
+                .unwrap();
+            }
             Error::DuplicateModule {
                 module,
                 first,
@@ -391,12 +430,19 @@ fn write(mut buffer: &mut Buffer, d: ErrorDiagnostic) {
 }
 
 pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
+    struct Module {
+        src: String,
+        path: PathBuf,
+        origin: ModuleOrigin,
+        module: crate::ast::UntypedModule,
+    }
+
     let mut deps_graph = Graph::new();
     let mut deps_vec = Vec::with_capacity(srcs.len());
     let mut indexes = HashMap::new();
-    let mut modules: HashMap<_, (_, PathBuf, _)> = HashMap::new();
+    let mut modules: HashMap<_, Module> = HashMap::new();
 
-    for Input { path, src } in srcs {
+    for Input { path, src, origin } in srcs {
         let name = path.file_stem().unwrap().to_str().unwrap().to_string();
         let mut module = crate::grammar::ModuleParser::new()
             .parse(&crate::parser::strip_extra(&src))
@@ -408,7 +454,10 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
                     .map_token(|crate::grammar::Token(a, b)| (a, b.to_string())),
             })?;
 
-        if let Some((_, first_path, _)) = indexes.get(&name).and_then(|i| modules.get(i)) {
+        if let Some(Module {
+            path: first_path, ..
+        }) = indexes.get(&name).and_then(|i| modules.get(i))
+        {
             return Err(Error::DuplicateModule {
                 module: name,
                 first: first_path.clone(),
@@ -421,17 +470,45 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
         let index = deps_graph.add_node(name.clone());
         deps_vec.push((name.clone(), module.dependancies()));
         indexes.insert(name.clone(), index);
-        modules.insert(index, (src, path, module));
+        modules.insert(
+            index,
+            Module {
+                src,
+                path,
+                module,
+                origin,
+            },
+        );
     }
 
     // Register each module's deps so that we can determine a correct order to compile the modules.
-    for (module, deps) in deps_vec {
-        let module_index = indexes.get(&module).expect("Unable to find module index");
+    for (module_name, deps) in deps_vec {
+        let module_index = indexes
+            .get(&module_name)
+            .expect("Unable to find module index");
+        let module = modules
+            .get(&module_index)
+            .expect("Unable to find module for index");
+
         for dep in deps {
             let dep_index = indexes.get(&dep).ok_or_else(|| Error::UnknownImport {
-                module: module.clone(),
-                import: dep,
+                module: module_name.clone(),
+                import: dep.clone(),
             })?;
+
+            if module.origin == ModuleOrigin::Src
+                && modules
+                    .get(&dep_index)
+                    .expect("Unable to find module for dep index")
+                    .origin
+                    == ModuleOrigin::Test
+            {
+                return Err(Error::SrcImportingTest {
+                    src_module: module_name,
+                    test_module: dep,
+                });
+            }
+
             deps_graph.add_edge(dep_index.clone(), module_index.clone(), ());
         }
     }
@@ -442,7 +519,12 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
         .map_err(|_| Error::DependencyCycle)?
         .into_iter()
         .map(|i| {
-            let (src, path, module) = modules.remove(&i).expect("Unknown graph index");
+            let Module {
+                src,
+                path,
+                module,
+                origin,
+            } = modules.remove(&i).expect("Unknown graph index");
             let name = module.name.clone();
 
             println!("Compiling {}", name);
@@ -462,6 +544,7 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
                 .parent()
                 .unwrap()
                 .join("gen")
+                .join(origin.dir_name())
                 .join(format!("{}.erl", module.name));
             let code = crate::erl::module(module);
 
@@ -485,10 +568,12 @@ fn compile_test() {
         Case {
             input: vec![
                 Input {
+                    origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/one.gleam"),
                     src: "".to_string(),
                 },
                 Input {
+                    origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/two.gleam"),
                     src: "".to_string(),
                 },
@@ -496,25 +581,57 @@ fn compile_test() {
             expected: Ok(vec![
                 Compiled {
                     name: "two".to_string(),
-                    path: PathBuf::from("/gen/two.erl"),
+                    path: PathBuf::from("/gen/src/two.erl"),
                     code: "-module(two).\n-compile(no_auto_import).\n\n-export([]).\n\n\n"
                         .to_string(),
                 },
                 Compiled {
                     name: "one".to_string(),
-                    path: PathBuf::from("/gen/one.erl"),
+                    path: PathBuf::from("/gen/src/one.erl"),
                     code: "-module(one).\n-compile(no_auto_import).\n\n-export([]).\n\n\n"
                         .to_string(),
                 },
             ]),
         },
         Case {
+            input: vec![Input {
+                origin: ModuleOrigin::Test,
+                path: PathBuf::from("/test/one.gleam"),
+                src: "".to_string(),
+            }],
+            expected: Ok(vec![Compiled {
+                name: "one".to_string(),
+                path: PathBuf::from("/gen/test/one.erl"),
+                code: "-module(one).\n-compile(no_auto_import).\n\n-export([]).\n\n\n".to_string(),
+            }]),
+        },
+        Case {
             input: vec![
                 Input {
+                    origin: ModuleOrigin::Test,
+                    path: PathBuf::from("/test/two.gleam"),
+                    src: "".to_string(),
+                },
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/one.gleam"),
+                    src: "import two".to_string(),
+                },
+            ],
+            expected: Err(Error::SrcImportingTest {
+                src_module: "one".to_string(),
+                test_module: "two".to_string(),
+            }),
+        },
+        Case {
+            input: vec![
+                Input {
+                    origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/one.gleam"),
                     src: "import two".to_string(),
                 },
                 Input {
+                    origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/two.gleam"),
                     src: "".to_string(),
                 },
@@ -522,13 +639,13 @@ fn compile_test() {
             expected: Ok(vec![
                 Compiled {
                     name: "two".to_string(),
-                    path: PathBuf::from("/gen/two.erl"),
+                    path: PathBuf::from("/gen/src/two.erl"),
                     code: "-module(two).\n-compile(no_auto_import).\n\n-export([]).\n\n\n"
                         .to_string(),
                 },
                 Compiled {
                     name: "one".to_string(),
-                    path: PathBuf::from("/gen/one.erl"),
+                    path: PathBuf::from("/gen/src/one.erl"),
                     code: "-module(one).\n-compile(no_auto_import).\n\n-export([]).\n\n\n"
                         .to_string(),
                 },
@@ -537,10 +654,12 @@ fn compile_test() {
         Case {
             input: vec![
                 Input {
+                    origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/one.gleam"),
                     src: "".to_string(),
                 },
                 Input {
+                    origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/two.gleam"),
                     src: "import one".to_string(),
                 },
@@ -548,13 +667,13 @@ fn compile_test() {
             expected: Ok(vec![
                 Compiled {
                     name: "one".to_string(),
-                    path: PathBuf::from("/gen/one.erl"),
+                    path: PathBuf::from("/gen/src/one.erl"),
                     code: "-module(one).\n-compile(no_auto_import).\n\n-export([]).\n\n\n"
                         .to_string(),
                 },
                 Compiled {
                     name: "two".to_string(),
-                    path: PathBuf::from("/gen/two.erl"),
+                    path: PathBuf::from("/gen/src/two.erl"),
                     code: "-module(two).\n-compile(no_auto_import).\n\n-export([]).\n\n\n"
                         .to_string(),
                 },
@@ -563,10 +682,12 @@ fn compile_test() {
         Case {
             input: vec![
                 Input {
+                    origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/one.gleam"),
                     src: "pub enum Box = | Box(Int)".to_string(),
                 },
                 Input {
+                    origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/two.gleam"),
                     src: "import one pub fn unbox(x) { let one:Box(i) = x i }".to_string(),
                 },
@@ -574,13 +695,13 @@ fn compile_test() {
             expected: Ok(vec![
                 Compiled {
                     name: "one".to_string(),
-                    path: PathBuf::from("/gen/one.erl"),
+                    path: PathBuf::from("/gen/src/one.erl"),
                     code: "-module(one).\n-compile(no_auto_import).\n\n-export([]).\n\n\n"
                         .to_string(),
                 },
                 Compiled {
                     name: "two".to_string(),
-                    path: PathBuf::from("/gen/two.erl"),
+                    path: PathBuf::from("/gen/src/two.erl"),
                     code: "-module(two).\n-compile(no_auto_import).\n\n-export([unbox/1]).\n
 unbox(X) ->\n    {box, I} = X,\n    I.\n"
                         .to_string(),
@@ -590,10 +711,12 @@ unbox(X) ->\n    {box, I} = X,\n    I.\n"
         Case {
             input: vec![
                 Input {
+                    origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/one.gleam"),
                     src: "".to_string(),
                 },
                 Input {
+                    origin: ModuleOrigin::Src,
                     path: PathBuf::from("/other/src/one.gleam"),
                     src: "".to_string(),
                 },
