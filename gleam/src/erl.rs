@@ -226,9 +226,10 @@ fn pipe(value: TypedExpr, fun: TypedExpr, env: &mut Env) -> Document {
 }
 
 fn let_(value: TypedExpr, pat: Pattern, then: TypedExpr, env: &mut Env) -> Document {
+    let body = expr(value, env);
     pattern(pat, env)
         .append(" = ")
-        .append(expr(value, env))
+        .append(body)
         .append(",")
         .append(line())
         .append(expr(then, env))
@@ -1598,6 +1599,19 @@ tail(List) ->
 
 age(X) ->
     maps:get(age, X).
+"#,
+        },
+        Case {
+            src: r#"fn x() { let x = 1 let x = x + 1 x }"#,
+            erl: r#"-module().
+-compile(no_auto_import).
+
+-export([]).
+
+x() ->
+    X = 1,
+    X1 = X + 1,
+    X1.
 "#,
         },
         // TODO: Check that var num is incremented for args
