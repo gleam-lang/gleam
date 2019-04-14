@@ -98,12 +98,6 @@ pub enum Statement<S, T> {
         public: bool,
     },
 
-    Test {
-        meta: Meta,
-        name: String,
-        body: Expr<S, T>,
-    },
-
     Enum {
         meta: Meta,
         name: String,

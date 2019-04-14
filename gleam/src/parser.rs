@@ -960,32 +960,6 @@ fn module_test() {
         Ok(Module {
             typ: (),
             name: "".to_string(),
-            statements: vec![Statement::Test {
-                meta: Meta { start: 0, end: 16 },
-                name: "run".to_string(),
-                body: Expr::Seq {
-                    meta: Meta { start: 11, end: 12 },
-                    typ: (),
-                    first: Box::new(Expr::Int {
-                        typ: (),
-                        meta: Meta { start: 11, end: 12 },
-                        value: 1
-                    }),
-                    then: Box::new(Expr::Int {
-                        typ: (),
-                        meta: Meta { start: 13, end: 14 },
-                        value: 2
-                    })
-                }
-            }]
-        }),
-        ModuleParser::new().parse("test run { 1 2 }"),
-    );
-
-    assert_eq!(
-        Ok(Module {
-            typ: (),
-            name: "".to_string(),
             statements: vec![Statement::ExternalFn {
                 meta: Meta { start: 0, end: 49 },
                 name: "run".to_string(),

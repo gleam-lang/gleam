@@ -6,7 +6,6 @@ use crate::pretty::*;
 use im::{hashmap::HashMap, ordmap::OrdMap};
 use itertools::Itertools;
 use std::cell::RefCell;
-use std::collections::HashSet;
 use std::rc::Rc;
 
 const INDENT: isize = 2;
@@ -1003,7 +1002,6 @@ pub enum Error {
     DuplicateName {
         meta: Meta,
         name: String,
-        kind: DuplicateNameKind,
     },
 
     PrivateTypeLeak {
@@ -1016,22 +1014,6 @@ pub enum Error {
         label: String,
         container_typ: RowContainerType,
     },
-}
-
-#[derive(Debug, PartialEq)]
-pub enum DuplicateNameKind {
-    Function,
-    Test,
-}
-
-impl DuplicateNameKind {
-    pub fn to_string(&self) -> String {
-        match self {
-            DuplicateNameKind::Function => "function",
-            DuplicateNameKind::Test => "test",
-        }
-        .to_string()
-    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -1058,7 +1040,6 @@ pub fn infer_module(
 ) -> Result<(TypedModule, TypeConstructors), Error> {
     let mut env = Env::new(modules);
     let mut fields = vec![];
-    let mut tests: HashSet<String> = HashSet::new();
     let module_name = &module.name;
 
     let statements = module
@@ -1076,11 +1057,7 @@ pub fn infer_module(
 
                 // Ensure function has not already been defined in this module
                 if let Some((Scope::Module { .. }, _)) = env.get_variable(&name) {
-                    return Err(Error::DuplicateName {
-                        meta,
-                        name,
-                        kind: DuplicateNameKind::Function,
-                    });
+                    return Err(Error::DuplicateName { meta, name });
                 };
 
                 // Register a var for the function so that it can call itself recursively
@@ -1169,21 +1146,6 @@ pub fn infer_module(
                     module,
                     fun,
                 })
-            }
-
-            Statement::Test { meta, name, body } => {
-                if tests.insert(name.clone()) {
-                    let vars = env.variables.clone();
-                    let body = infer(body, 2, &mut env)?;
-                    env.variables = vars;
-                    Ok(Statement::Test { meta, name, body })
-                } else {
-                    Err(Error::DuplicateName {
-                        meta,
-                        name,
-                        kind: DuplicateNameKind::Test,
-                    })
-                }
             }
 
             Statement::Enum {
@@ -3275,8 +3237,7 @@ fn infer_module_test() {
         Case {
             src: "pub fn status() { 1 }
                   pub fn list_of(x) { [x] }
-                  pub fn get_age(person) { person.age }
-                  test whatever { 1 }",
+                  pub fn get_age(person) { person.age }",
             typ: "module {
   fn get_age({ b | age = a }) -> a
   fn list_of(c) -> List(c)
@@ -3423,10 +3384,6 @@ pub fn two() { one() + zero() }",
   fn zero() -> Int
 }",
         },
-        Case {
-            src: "test hello { 1 + 1 }",
-            typ: "module {  }",
-        },
         // // Type annotations
         // Case {
         //     src: "
@@ -3504,7 +3461,7 @@ fn infer_module_error_test() {
 
     let cases = [
         Case {
-            src: "test go { 1 + 2.0 }",
+            src: "fn go() { 1 + 2.0 }",
             error: Error::CouldNotUnify {
                 meta: Meta { start: 10, end: 17 }, // TODO: FIXME: This should specify just the RHS
                 expected: int(),
@@ -3526,7 +3483,6 @@ fn infer_module_error_test() {
             error: Error::DuplicateName {
                 meta: Meta { start: 34, end: 49 },
                 name: "dupe".to_string(),
-                kind: DuplicateNameKind::Function,
             },
         },
         Case {
@@ -3535,16 +3491,6 @@ fn infer_module_error_test() {
             error: Error::DuplicateName {
                 meta: Meta { start: 34, end: 50 },
                 name: "dupe".to_string(),
-                kind: DuplicateNameKind::Function,
-            },
-        },
-        Case {
-            src: "test dupe { 1 }
-                  test dupe { 1 }",
-            error: Error::DuplicateName {
-                meta: Meta { start: 34, end: 49 },
-                name: "dupe".to_string(),
-                kind: DuplicateNameKind::Test,
             },
         },
         Case {

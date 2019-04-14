@@ -1,4 +1,5 @@
 import other
+import thing
 
 pub fn when() {
   "never"

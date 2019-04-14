@@ -33,16 +33,6 @@ impl Env {
 }
 
 pub fn module(module: TypedModule) -> String {
-    let has_tests = module.statements.iter().any(|x| match x {
-        Statement::Test { .. } => true,
-        _ => false,
-    });
-    let test_header = if has_tests {
-        line().append("-include_lib(\"eunit/include/eunit.hrl\").")
-    } else {
-        nil()
-    };
-
     let exports: Vec<_> = module
         .statements
         .iter()
@@ -71,7 +61,6 @@ pub fn module(module: TypedModule) -> String {
         .to_doc()
         .append(line())
         .append("-compile(no_auto_import).")
-        .append(test_header)
         .append(lines(2))
         .append("-export([")
         .append(exports)
@@ -91,7 +80,6 @@ pub fn module(module: TypedModule) -> String {
 
 fn statement(statement: TypedStatement) -> Option<Document> {
     match statement {
-        Statement::Test { name, body, .. } => Some(test(name, body)),
         Statement::Enum { .. } => None,
         Statement::Import { .. } => None,
         Statement::ExternalType { .. } => None,
@@ -139,19 +127,6 @@ where
         .nest_current()
         .surround("(", ")")
         .group()
-}
-
-fn test(name: String, body: TypedExpr) -> Document {
-    let body_doc = expr(body, &mut Env::default());
-    "-ifdef(TEST)."
-        .to_doc()
-        .append(line())
-        .append(name)
-        .append("_test() ->")
-        .append(line().append(body_doc).nest(INDENT))
-        .append(".")
-        .append(line())
-        .append("-endif.")
 }
 
 fn atom(value: String) -> Document {
@@ -995,33 +970,6 @@ some_function(ArgOne,
               ArgThatIsLong) ->
     1.
 "
-    .to_string();
-    assert_eq!(expected, module(m));
-
-    let m = Module {
-        typ: crate::typ::int(),
-        name: "term".to_string(),
-        statements: vec![Statement::Test {
-            meta: default(),
-            name: "bang".to_string(),
-            body: Expr::Int {
-                typ: crate::typ::int(),
-                meta: default(),
-                value: 1,
-            },
-        }],
-    };
-    let expected = r#"-module(term).
--compile(no_auto_import).
--include_lib("eunit/include/eunit.hrl").
-
--export([]).
-
--ifdef(TEST).
-bang_test() ->
-    1.
--endif.
-"#
     .to_string();
     assert_eq!(expected, module(m));
 

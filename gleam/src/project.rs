@@ -120,11 +120,7 @@ Then:  {}
             }
 
             Error::Type { src, name, error } => match error {
-                DuplicateName {
-                    meta,
-                    kind,
-                    name: fun,
-                } => {
+                DuplicateName { meta, name: fun } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Duplicate name".to_string(),
                         label: "Redefined here".to_string(),
@@ -136,9 +132,9 @@ Then:  {}
                     write!(
                         buffer,
                         "
-A {} has already been defined with the name `{}` in this module.
+A function has already been defined with the name
+`{}` in this module.
 ",
-                        kind.to_string(),
                         fun
                     )
                     .unwrap();
