@@ -93,6 +93,5 @@ get_following_year(wine)  // Compile time error! Wrong field type
 
 ## Erlang interop
 
-At runtime Gleam maps are Erlang maps with atom keys. They are not the same as
-Erlang maps, which are tuples. They are similar to Elixir's structs, but do
-not need to be declared prior to being used.
+At runtime Gleam maps are Erlang maps with atom keys. They are similar to
+Elixir's structs, but do not need to be declared prior to being used.

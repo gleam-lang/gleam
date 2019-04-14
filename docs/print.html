@@ -530,12 +530,12 @@ pub fn launch() {
 }
 </code></pre>
 <p>Here we can see a module named <code>rocket_ship</code>, the name determined by the
-filename of <code>src/rocket_ship.gleam</code>.</p>
+filename <code>src/rocket_ship.gleam</code>.</p>
 <p>For the functions <code>count_down</code> and <code>blast_off</code> we have omitted the <code>pub</code>
 keyword, so these functions are <em>private</em> module functions. They can only be
 called by other functions within the same module.</p>
 <a class="header" href="#import" id="import"><h2>Import</h2></a>
-<p>To use functions or types from another module we need to import using the
+<p>To use functions or types from another module we need to import them using the
 <code>import</code> keyword.</p>
 <pre><code class="language-rust noplaypen">// inside src/moon_base.gleam
 
@@ -572,7 +572,6 @@ pub fn run() {
 called it with various different modules.</p>
 <p>The <code>perform_launch</code> function doesn't care what module it takes, so long as it
 has a public function called <code>launch</code> that takes no arguments.</p>
-<p>The type of <code>perform_launch</code> is <code>fn(module { a | fn perform_launch() -&gt; b }) -&gt; b</code></p>
 <a class="header" href="#map" id="map"><h1>Map</h1></a>
 <p>Gleam's maps are a collection of names and values where each value can be
 of any type.</p>
@@ -634,9 +633,8 @@ get_following_year(soup)  // Compile time error! No year field
 get_following_year(wine)  // Compile time error! Wrong field type
 </code></pre>
 <a class="header" href="#erlang-interop-1" id="erlang-interop-1"><h2>Erlang interop</h2></a>
-<p>At runtime Gleam maps are Erlang maps with atom keys. They are not the same as
-Erlang maps, which are tuples. They are similar to Elixir's structs, but do
-not need to be declared prior to being used.</p>
+<p>At runtime Gleam maps are Erlang maps with atom keys. They are similar to
+Elixir's structs, but do not need to be declared prior to being used.</p>
 <a class="header" href="#enums" id="enums"><h1>Enums</h1></a>
 <p>Enums in Gleam are a way of modeling data that can be one of a few different
 variants. They must be declared before use, and the names of variants must be

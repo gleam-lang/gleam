@@ -158,12 +158,12 @@ pub fn launch() {
 }
 </code></pre>
 <p>Here we can see a module named <code>rocket_ship</code>, the name determined by the
-filename of <code>src/rocket_ship.gleam</code>.</p>
+filename <code>src/rocket_ship.gleam</code>.</p>
 <p>For the functions <code>count_down</code> and <code>blast_off</code> we have omitted the <code>pub</code>
 keyword, so these functions are <em>private</em> module functions. They can only be
 called by other functions within the same module.</p>
 <a class="header" href="#import" id="import"><h2>Import</h2></a>
-<p>To use functions or types from another module we need to import using the
+<p>To use functions or types from another module we need to import them using the
 <code>import</code> keyword.</p>
 <pre><code class="language-rust noplaypen">// inside src/moon_base.gleam
 
@@ -200,7 +200,6 @@ pub fn run() {
 called it with various different modules.</p>
 <p>The <code>perform_launch</code> function doesn't care what module it takes, so long as it
 has a public function called <code>launch</code> that takes no arguments.</p>
-<p>The type of <code>perform_launch</code> is <code>fn(module { a | fn perform_launch() -&gt; b }) -&gt; b</code></p>
 
                     </main>
 
