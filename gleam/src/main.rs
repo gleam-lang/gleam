@@ -116,8 +116,6 @@ fn read_project_config(root: &str) -> Result<ProjectConfig, ()> {
 }
 
 fn collect_source(src_dir: PathBuf, origin: ModuleOrigin, srcs: &mut Vec<crate::project::Input>) {
-    dbg!(&src_dir);
-
     let entries = match std::fs::read_dir(src_dir.clone()) {
         Ok(e) => e,
         Err(_) => return,

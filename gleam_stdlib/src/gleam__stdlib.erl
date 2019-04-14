@@ -5,7 +5,7 @@
          expect_is_ok/1, expect_is_error/1, atom_from_string/1,
          atom_create_from_string/1, atom_to_string/1, map_fetch/2,
          iodata_append/2, iodata_prepend/2, identity/1, decode_int/1,
-         decode_string/1, decode_bool/1, decode_float/1, decode_thunk/1,
+         decode_string/1, decode_bool/1, decode_float/1, decode_thunk/1, decode_atom/1,
          decode_tuple/1, decode_list/1, decode_field/2, parse_int/1, parse_float/1]).
 
 expect_equal(Actual, Expected) -> ?assertEqual(Expected, Actual).
@@ -39,6 +39,9 @@ identity(X) -> X.
 
 decode_error_msg(Type, Data) ->
   {error, iolist_to_binary(io_lib:format("Expected ~s, got `~p`", [Type, Data]))}.
+
+decode_atom(Data) when is_atom(Data) -> {ok, Data};
+decode_atom(Data) -> decode_error_msg("an Atom", Data).
 
 decode_string(Data) when is_binary(Data) -> {ok, Data};
 decode_string(Data) -> decode_error_msg("a String", Data).
