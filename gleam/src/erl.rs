@@ -240,7 +240,7 @@ fn pattern(p: Pattern, env: &mut Env) -> Document {
         Pattern::Nil { .. } => "[]".to_doc(),
         Pattern::Cons { head, tail, .. } => pattern_cons(*head, *tail, env),
         Pattern::Discard { .. } => "_".to_doc(),
-        // Pattern::Record { .. } => unimplemented!(),
+        // Pattern::Map { .. } => unimplemented!(),
         Pattern::Var { name, .. } => env.next_local_var_name(name),
         Pattern::Int { value, .. } => value.to_doc(),
         Pattern::Float { value, .. } => value.to_doc(),
@@ -326,11 +326,11 @@ enum ListType<E> {
     NotList(E),
 }
 
-fn expr_record_cons(label: String, value: TypedExpr, tail: TypedExpr, env: &mut Env) -> Document {
-    record_cons(expr, "=>".to_string(), label, value, tail, env)
+fn expr_map_cons(label: String, value: TypedExpr, tail: TypedExpr, env: &mut Env) -> Document {
+    map_cons(expr, "=>".to_string(), label, value, tail, env)
 }
 
-fn record_cons<F, E>(f: F, sep: String, label: String, value: E, tail: E, env: &mut Env) -> Document
+fn map_cons<F, E>(f: F, sep: String, label: String, value: E, tail: E, env: &mut Env) -> Document
 where
     F: Fn(E, &mut Env) -> Document,
 {
@@ -488,7 +488,7 @@ fn wrap_expr(expression: TypedExpr, env: &mut Env) -> Document {
 fn expr(expression: TypedExpr, env: &mut Env) -> Document {
     match expression {
         Expr::Nil { .. } => "[]".to_doc(),
-        Expr::RecordNil { .. } => "#{}".to_doc(),
+        Expr::MapNil { .. } => "#{}".to_doc(),
         Expr::Int { value, .. } => value.to_doc(),
         Expr::Float { value, .. } => value.to_doc(),
         Expr::String { value, .. } => string(value),
@@ -497,7 +497,7 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
         Expr::Fn { args, body, .. } => fun(args, *body, env),
         Expr::Cons { head, tail, .. } => expr_cons(*head, *tail, env),
         Expr::Call { fun, args, .. } => call(*fun, args, env),
-        Expr::RecordSelect { label, record, .. } => record_select(*record, label, env),
+        Expr::MapSelect { label, map, .. } => map_select(*map, label, env),
         Expr::ModuleSelect {
             typ, label, module, ..
         } => module_select(typ, *module, label, env),
@@ -508,9 +508,9 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
             then,
             ..
         } => let_(*value, pattern, *then, env),
-        Expr::RecordCons {
+        Expr::MapCons {
             label, value, tail, ..
-        } => expr_record_cons(label, *value, *tail, env),
+        } => expr_map_cons(label, *value, *tail, env),
         Expr::Case {
             subject, clauses, ..
         } => case(*subject, clauses, env),
@@ -540,12 +540,12 @@ fn module_select(
 }
 
 // TODO: Nest, break, etc
-fn record_select(record: TypedExpr, label: String, env: &mut Env) -> Document {
+fn map_select(map: TypedExpr, label: String, env: &mut Env) -> Document {
     "maps:get("
         .to_doc()
         .append(atom(label))
         .append(", ")
-        .append(wrap_expr(record, env))
+        .append(wrap_expr(map, env))
         .append(")")
 }
 
@@ -698,10 +698,10 @@ map() ->
                 meta: default(),
                 public: false,
                 args: vec![],
-                name: "record_nil".to_string(),
-                body: Expr::RecordNil {
+                name: "map_nil".to_string(),
+                body: Expr::MapNil {
                     meta: default(),
-                    typ: crate::typ::record_nil(),
+                    typ: crate::typ::map_nil(),
                 },
             },
             Statement::Fn {
@@ -848,7 +848,7 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "retcon".to_string(),
-                body: Expr::RecordCons {
+                body: Expr::MapCons {
                     meta: default(),
                     typ: crate::typ::int(),
                     label: "size".to_string(),
@@ -857,9 +857,9 @@ map() ->
                         meta: default(),
                         value: 1,
                     }),
-                    tail: Box::new(Expr::RecordNil {
+                    tail: Box::new(Expr::MapNil {
                         meta: default(),
-                        typ: crate::typ::record_nil(),
+                        typ: crate::typ::map_nil(),
                     }),
                 },
             },
@@ -903,7 +903,7 @@ float() ->
 nil() ->
     [].
 
-record_nil() ->
+map_nil() ->
     #{}.
 
 tup() ->

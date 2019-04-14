@@ -72,7 +72,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="getting-started/installation.html"><strong aria-hidden="true">2.</strong> Installation</a></li><li><a href="getting-started/editor-support.html"><strong aria-hidden="true">3.</strong> Editor support</a></li><li><a href="tour/index.html"><strong aria-hidden="true">4.</strong> Language tour</a></li><li><ol class="section"><li><a href="tour/string.html"><strong aria-hidden="true">4.1.</strong> String</a></li><li><a href="tour/bool.html"><strong aria-hidden="true">4.2.</strong> Bool</a></li><li><a href="tour/int-and-float.html"><strong aria-hidden="true">4.3.</strong> Int &amp; Float</a></li><li><a href="tour/let.html"><strong aria-hidden="true">4.4.</strong> Let bindings</a></li><li><a href="tour/tuple.html"><strong aria-hidden="true">4.5.</strong> Tuple</a></li><li><a href="tour/list.html"><strong aria-hidden="true">4.6.</strong> List</a></li><li><a href="tour/case.html"><strong aria-hidden="true">4.7.</strong> Case</a></li><li><a href="tour/function.html"><strong aria-hidden="true">4.8.</strong> Function</a></li><li><a href="tour/record.html"><strong aria-hidden="true">4.9.</strong> Record</a></li><li><a href="tour/enum.html"><strong aria-hidden="true">4.10.</strong> Enum</a></li><li><a href="tour/external-function.html"><strong aria-hidden="true">4.11.</strong> External function</a></li><li><a href="tour/external-type.html"><strong aria-hidden="true">4.12.</strong> External type</a></li><li><a href="tour/module.html"><strong aria-hidden="true">4.13.</strong> Module</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="getting-started/installation.html"><strong aria-hidden="true">2.</strong> Installation</a></li><li><a href="getting-started/editor-support.html"><strong aria-hidden="true">3.</strong> Editor support</a></li><li><a href="tour/index.html"><strong aria-hidden="true">4.</strong> Language tour</a></li><li><ol class="section"><li><a href="tour/string.html"><strong aria-hidden="true">4.1.</strong> String</a></li><li><a href="tour/bool.html"><strong aria-hidden="true">4.2.</strong> Bool</a></li><li><a href="tour/int-and-float.html"><strong aria-hidden="true">4.3.</strong> Int &amp; Float</a></li><li><a href="tour/let.html"><strong aria-hidden="true">4.4.</strong> Let bindings</a></li><li><a href="tour/tuple.html"><strong aria-hidden="true">4.5.</strong> Tuple</a></li><li><a href="tour/list.html"><strong aria-hidden="true">4.6.</strong> List</a></li><li><a href="tour/case.html"><strong aria-hidden="true">4.7.</strong> Case</a></li><li><a href="tour/function.html"><strong aria-hidden="true">4.8.</strong> Function</a></li><li><a href="tour/map.html"><strong aria-hidden="true">4.9.</strong> Map</a></li><li><a href="tour/enum.html"><strong aria-hidden="true">4.10.</strong> Enum</a></li><li><a href="tour/external-function.html"><strong aria-hidden="true">4.11.</strong> External function</a></li><li><a href="tour/external-type.html"><strong aria-hidden="true">4.12.</strong> External type</a></li><li><a href="tour/module.html"><strong aria-hidden="true">4.13.</strong> Module</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -512,8 +512,8 @@ pub fn run() {
   |&gt; add(_, 9)
 }
 </code></pre>
-<a class="header" href="#records" id="records"><h1>Records</h1></a>
-<p>Gleam's records are a collection of names and values where each value can be
+<a class="header" href="#maps" id="maps"><h1>Maps</h1></a>
+<p>Gleam's maps are a collection of names and values where each value can be
 of any type.</p>
 <pre><code class="language-rust noplaypen">{
   name = &quot;Rex&quot;,
@@ -521,16 +521,16 @@ of any type.</p>
 }
 </code></pre>
 <a class="header" href="#accessing-field-values" id="accessing-field-values"><h2>Accessing field values</h2></a>
-<p>Record values can be accessed using the <code>record.field_name</code> syntax.</p>
+<p>Map values can be accessed using the <code>map.field_name</code> syntax.</p>
 <pre><code class="language-rust noplaypen">let pup = { name = &quot;Rex&quot;, size = 40 }
 let name = pup.name
 
 name  // =&gt; &quot;Rex&quot;
 </code></pre>
 <a class="header" href="#inserting-field-values" id="inserting-field-values"><h2>Inserting field values</h2></a>
-<p>A new record with updated or additional fields can be created using the
-<code>{ record | field_name = value }</code> update syntax.</p>
-<p>The updated record fields do not have to have the same types as the original
+<p>A new map with updated or additional fields can be created using the
+<code>{ map | field_name = value }</code> update syntax.</p>
+<p>The updated map fields do not have to have the same types as the original
 fields.</p>
 <pre><code class="language-rust noplaypen">let pup = { name = &quot;Rex&quot;, size = 40 }
 let dog = { pup | size = 70, playful = True }
@@ -539,28 +539,28 @@ pup  // { name = &quot;Rex&quot;, size = 40 }
 dog  // { name = &quot;Rex&quot;, size = 70, playful = True }
 </code></pre>
 <a class="header" href="#types" id="types"><h2>Types</h2></a>
-<p>The type of a record depends upon the names and types of its fields.</p>
+<p>The type of a map depends upon the names and types of its fields.</p>
 <pre><code class="language-rust noplaypen">{ name = &quot;Rex&quot; }             // Type { name = String }
 { name = &quot;Rex&quot;, size = 40 }  // Type { name = String, size = Int }
 </code></pre>
-<p>The Gleam compiler keeps tracks of what fields and values each record has and
-will present a compile time error if you try to use a record field that does
+<p>The Gleam compiler keeps tracks of what fields and values each map has and
+will present a compile time error if you try to use a map field that does
 not exist or has the incorrect type.</p>
 <pre><code class="language-rust noplaypen">let pup = { name = &quot;Rex&quot;, size = 40 }
 
 pup.address   // Compile time error! Unknown field
 pup.name + 1  // Compile time error! Wrong type
 </code></pre>
-<a class="header" href="#parameterised-record-fields" id="parameterised-record-fields"><h3>Parameterised record fields</h3></a>
-<p>Gleam's type system aims to be as permissive when it comes to records passed
+<a class="header" href="#parameterised-map-fields" id="parameterised-map-fields"><h3>Parameterised map fields</h3></a>
+<p>Gleam's type system aims to be as permissive when it comes to maps passed
 to functions. Take this function for example.</p>
-<pre><code class="language-rust noplaypen">fn get_following_year(record) {
-  record.year + 1
+<pre><code class="language-rust noplaypen">fn get_following_year(map) {
+  map.year + 1
 }
 </code></pre>
 <p>The type of this function is <code>fn({ a | year = Int }) -&gt; Int</code>.</p>
 <p>The <code>a |</code> in <code>{ a | year = Int}</code> means &quot;any other fields&quot;, so this function
-can be called with any record so long as the record has a <code>year</code> field that
+can be called with any map so long as the map has a <code>year</code> field that
 has an <code>Int</code> value.</p>
 <pre><code class="language-rust noplaypen">let date = { day = 5, month: 1, year = 2019 }
 let book = { title = &quot;Sabriel&quot;, year = 1995 }
@@ -573,9 +573,9 @@ get_following_year(soup)  // Compile time error! No year field
 get_following_year(wine)  // Compile time error! Wrong field type
 </code></pre>
 <a class="header" href="#erlang-interop-1" id="erlang-interop-1"><h2>Erlang interop</h2></a>
-<p>At runtime records are maps with atom keys. They are not the same as Erlang
-records, which are tuples. They are similar to Elixir's structs, but do not
-need to be declared prior to being used.</p>
+<p>At runtime Gleam maps are Erlang maps with atom keys. They are not the same as
+Erlang maps, which are tuples. They are similar to Elixir's structs, but do
+not need to be declared prior to being used.</p>
 <a class="header" href="#enums" id="enums"><h1>Enums</h1></a>
 <p>Enums in Gleam are a way of modeling data that can be one of a few different
 variants. They must be declared before use, and the names of variants must be

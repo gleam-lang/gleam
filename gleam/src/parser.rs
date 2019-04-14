@@ -174,7 +174,7 @@ fn expr_test() {
     );
 
     assert_eq!(
-        Ok(Expr::RecordNil {
+        Ok(Expr::MapNil {
             meta: Meta { start: 0, end: 2 },
             typ: (),
         }),
@@ -494,11 +494,11 @@ fn expr_test() {
     );
 
     assert_eq!(
-        Ok(Expr::RecordSelect {
+        Ok(Expr::MapSelect {
             meta: Meta { start: 0, end: 11 },
             typ: (),
             label: "name".to_string(),
-            record: Box::new(Expr::Var {
+            map: Box::new(Expr::Var {
                 meta: Meta { start: 0, end: 6 },
                 typ: (),
                 name: "person".to_string(),
@@ -728,7 +728,7 @@ fn expr_test() {
     );
 
     assert_eq!(
-        Ok(Expr::RecordCons {
+        Ok(Expr::MapCons {
             meta: Meta { start: 0, end: 19 },
             typ: (),
             label: "size".to_string(),

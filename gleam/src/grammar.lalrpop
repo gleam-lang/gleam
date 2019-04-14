@@ -186,11 +186,11 @@ SimpleExpr: UntypedExpr = {
     Float => <>,
     Tuple => <>,
     String => <>,
-    Record => <>,
-    RecordNil => <>,
-    RecordCons => <>,
+    Map => <>,
+    MapNil => <>,
+    MapCons => <>,
     // Constructor => <>,
-    RecordSelect => <>,
+    MapSelect => <>,
     ModuleSelect => <>,
     "begin" <e:Expr> "end" => e,
 }
@@ -222,30 +222,30 @@ Let: UntypedExpr = {
     }
 }
 
-RecordSelect: UntypedExpr = {
-    <s:@L> <r:SimpleExpr> "." <l:VarName> <e:@L> => Expr::RecordSelect {
+MapSelect: UntypedExpr = {
+    <s:@L> <r:SimpleExpr> "." <l:VarName> <e:@L> => Expr::MapSelect {
         meta: meta(s, e),
         typ: (),
         label: l,
-        record: Box::new(r),
+        map: Box::new(r),
     },
 }
 
-RecordNil: UntypedExpr = {
-    <s:@L> "{}" <e:@L> => Expr::RecordNil {
+MapNil: UntypedExpr = {
+    <s:@L> "{}" <e:@L> => Expr::MapNil {
         meta: meta(s, e),
         typ: (),
     }
 }
 
-Record: UntypedExpr = {
-    <s:@L> "{" <fields:RecordFields> "}" <e:@L> => {
+Map: UntypedExpr = {
+    <s:@L> "{" <fields:MapFields> "}" <e:@L> => {
         fields.into_iter().fold(
-            Expr::RecordNil {
+            Expr::MapNil {
                 meta: meta(e - 1, e),
                 typ: (),
             },
-            |a, e| Expr::RecordCons {
+            |a, e| Expr::MapCons {
                 meta: e.1.meta().clone(),
                 typ: (),
                 label: e.0,
@@ -256,9 +256,9 @@ Record: UntypedExpr = {
     }
 }
 
-RecordCons: UntypedExpr = {
-    <s:@L> "{" <r:SimpleExpr> "|" <fields:RecordFields> "}" <e:@L> => {
-        fields.into_iter().fold(r, |a, f| Expr::RecordCons {
+MapCons: UntypedExpr = {
+    <s:@L> "{" <r:SimpleExpr> "|" <fields:MapFields> "}" <e:@L> => {
+        fields.into_iter().fold(r, |a, f| Expr::MapCons {
             meta: meta(s, e),
             typ: (),
             label: f.0,
@@ -425,18 +425,18 @@ Float: UntypedExpr = {
     }
 }
 
-RecordField: (String, UntypedExpr) = {
+MapField: (String, UntypedExpr) = {
     <l:VarName> "=" <v:OpOrSimpleExpr> => {
         (l, v)
     }
 }
 
-RecordFields: Vec<(String, UntypedExpr)> = {
-    RecordField => vec![<>],
+MapFields: Vec<(String, UntypedExpr)> = {
+    MapField => vec![<>],
 
-    <x:RecordField> "," => vec![x],
+    <x:MapField> "," => vec![x],
 
-    <x:RecordField> "," <xs:RecordFields> => {
+    <x:MapField> "," <xs:MapFields> => {
         let mut xs = xs;
         xs.push(x);
         xs
@@ -485,7 +485,7 @@ Pattern: Pattern = {
     PatternTuple => <>,
     PatternString => <>,
     PatternDiscard => <>,
-    // PatternRecord => <>,
+    // PatternMap => <>,
     PatternConstructor => <>,
 }
 
@@ -581,7 +581,7 @@ PatternCons: Pattern = {
 
 Type: Type = {
     TypeConstructor => <>,
-    TypeRecord => <>,
+    TypeMap => <>,
     TypeModule => <>,
     TypeTuple => <>,
     TypeVar => <>,
@@ -595,7 +595,7 @@ TypeModule: Type = {
         tail: None,
     },
 
-    <s:@L> "module" "{" <tail:TypeRecordTail?> <fields:TypeModuleField*> "}" <e:@L> => Type::Module {
+    <s:@L> "module" "{" <tail:TypeMapTail?> <fields:TypeModuleField*> "}" <e:@L> => Type::Module {
         meta: meta(s, e),
         fields,
         tail,
@@ -615,28 +615,28 @@ TypeModuleField: (String, Type) = {
     }
 }
 
-TypeRecord: Type = {
-    <s:@L> "{}" <e:@L> => Type::Record {
+TypeMap: Type = {
+    <s:@L> "{}" <e:@L> => Type::Map {
         meta: meta(s, e),
         fields: vec![],
         tail: None,
     },
 
-    <s:@L> "{" <tail:TypeRecordTail?> <fields:Comma<TypeRecordField>> "}" <e:@L> => Type::Record {
+    <s:@L> "{" <tail:TypeMapTail?> <fields:Comma<TypeMapField>> "}" <e:@L> => Type::Map {
         meta: meta(s, e),
         fields,
         tail,
     },
 }
 
-TypeRecordTail: Box<Type> = {
+TypeMapTail: Box<Type> = {
     <s:@L> <n:VarName> <e:@L> "|" => Box::new(Type::Var {
         meta: meta(s, e),
         name: n,
     })
 }
 
-TypeRecordField: (String, Type) = {
+TypeMapField: (String, Type) = {
     <l:VarName> "=" <t:Type> => (l, t)
 }
 

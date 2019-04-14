@@ -35,7 +35,7 @@ pub enum Type {
         retrn: Box<Type>,
     },
 
-    Record {
+    Map {
         row: Box<Type>,
     },
 
@@ -91,7 +91,7 @@ impl Type {
 
             Type::Tuple { elems, .. } => args_to_gleam_doc(elems, names, uid).surround("{", "}"),
 
-            Type::Record { row } => {
+            Type::Map { row } => {
                 if let Type::RowNil { .. } = **row {
                     return "{}".to_doc();
                 }
@@ -285,7 +285,7 @@ impl Type {
 
             Type::Module { row, .. } => row.find_private_type(),
 
-            Type::Record { row, .. } => row.find_private_type(),
+            Type::Map { row, .. } => row.find_private_type(),
 
             Type::Tuple { elems, .. } => elems.iter().find_map(|t| t.find_private_type()),
 
@@ -801,7 +801,7 @@ impl<'a> Env<'a> {
         }
     }
 
-    /// Record a variable in the current scope.
+    /// Map a variable in the current scope.
     ///
     pub fn insert_variable(&mut self, name: String, scope: Scope<Type>, typ: Type) {
         self.variables.insert(name, (scope, typ));
@@ -813,7 +813,7 @@ impl<'a> Env<'a> {
         self.variables.get(name)
     }
 
-    /// Record a type in the current scope.
+    /// Map a type in the current scope.
     ///
     pub fn insert_type_constructor(&mut self, name: String, info: TypeConstructorInfo) {
         self.type_constructors.insert(name, info);
@@ -890,7 +890,7 @@ impl<'a> Env<'a> {
                 }
             }
 
-            ast::Type::Record { fields, tail, .. } => Ok(Type::Record {
+            ast::Type::Map { fields, tail, .. } => Ok(Type::Map {
                 row: Box::new(self.row_from_ast(fields, tail, vars, permit_new_vars)?),
             }),
 
@@ -1037,14 +1037,14 @@ impl DuplicateNameKind {
 #[derive(Debug, PartialEq)]
 pub enum RowContainerType {
     Module,
-    Record,
+    Map,
 }
 
 impl RowContainerType {
     pub fn to_string(&self) -> String {
         match self {
             RowContainerType::Module => "module".to_string(),
-            RowContainerType::Record => "record".to_string(),
+            RowContainerType::Map => "map".to_string(),
         }
     }
 }
@@ -1508,14 +1508,14 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             })
         }
 
-        Expr::RecordNil { meta, .. } => Ok(Expr::RecordNil {
+        Expr::MapNil { meta, .. } => Ok(Expr::MapNil {
             meta,
-            typ: Type::Record {
+            typ: Type::Map {
                 row: Box::new(Type::RowNil),
             },
         }),
 
-        Expr::RecordCons {
+        Expr::MapCons {
             meta,
             tail,
             label,
@@ -1530,21 +1530,21 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
 
             let tail_row_type = env.new_unbound_var(level);
             unify(
-                &Type::Record {
+                &Type::Map {
                     row: Box::new(tail_row_type.clone()),
                 },
                 tail.typ(),
             )
             .map_err(|e| convert_unify_error(e, &meta))?;
 
-            let typ = Type::Record {
+            let typ = Type::Map {
                 row: Box::new(Type::RowCons {
                     label: label.clone(),
                     head: Box::new(value_type),
                     tail: Box::new(tail_row_type),
                 }),
             };
-            Ok(Expr::RecordCons {
+            Ok(Expr::MapCons {
                 meta,
                 typ,
                 label,
@@ -1563,40 +1563,35 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             })
         }
 
-        Expr::RecordSelect {
-            meta,
-            label,
-            record,
-            ..
+        Expr::MapSelect {
+            meta, label, map, ..
         } => {
-            let record = infer(*record, level, env)?;
+            let map = infer(*map, level, env)?;
 
-            // We unify the record with a dummy record in order to determine the type of the
+            // We unify the map with a dummy map in order to determine the type of the
             // selected field.
             let other_fields_typ = env.new_unbound_var(level);
             let selected_field_typ = env.new_unbound_var(level);
-            let dummy_record = Type::Record {
+            let dummy_map = Type::Map {
                 row: Box::new(Type::RowCons {
                     label: label.clone(),
                     head: Box::new(selected_field_typ.clone()),
                     tail: Box::new(other_fields_typ),
                 }),
             };
-            unify(&dummy_record, record.typ()).map_err(|e| {
-                match convert_unify_error(e, &meta) {
-                    Error::FieldNotFound { meta, label, .. } => Error::FieldNotFound {
-                        meta,
-                        label,
-                        container_typ: RowContainerType::Record,
-                    },
-                    other => other,
-                }
+            unify(&dummy_map, map.typ()).map_err(|e| match convert_unify_error(e, &meta) {
+                Error::FieldNotFound { meta, label, .. } => Error::FieldNotFound {
+                    meta,
+                    label,
+                    container_typ: RowContainerType::Map,
+                },
+                other => other,
             })?;
 
-            Ok(Expr::RecordSelect {
+            Ok(Expr::MapSelect {
                 meta,
                 label,
-                record: Box::new(record),
+                map: Box::new(map),
                 typ: selected_field_typ,
             })
         }
@@ -1750,7 +1745,7 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
                 unimplemented!();
             }
         },
-        // Pattern::Record { .. } => unimplemented!(),
+        // Pattern::Map { .. } => unimplemented!(),
     }
 }
 
@@ -1926,7 +1921,7 @@ fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
                 Type::Fn { args, retrn }
             }
 
-            Type::Record { row } => Type::Record {
+            Type::Map { row } => Type::Map {
                 row: Box::new(go(*row, ctx_level, ids, env)),
             },
 
@@ -2091,7 +2086,7 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
             }
         }
 
-        (Type::Record { row: row1 }, Type::Record { row: row2 }) => unify(row1, row2),
+        (Type::Map { row: row1 }, Type::Map { row: row2 }) => unify(row1, row2),
 
         (Type::Module { row: row1 }, Type::Module { row: row2 }) => unify(row1, row2),
 
@@ -2264,7 +2259,7 @@ fn update_levels(typ: &Type, own_level: usize, own_id: usize) -> Result<(), Unif
             update_levels(retrn, own_level, own_id)
         }
 
-        Type::Record { row, .. } => update_levels(row, own_level, own_id),
+        Type::Map { row, .. } => update_levels(row, own_level, own_id),
 
         Type::Module { row, .. } => update_levels(row, own_level, own_id),
 
@@ -2432,7 +2427,7 @@ fn generalise(t: Type, ctx_level: usize) -> Type {
 
         Type::Const { .. } => t,
 
-        Type::Record { row } => Type::Record {
+        Type::Map { row } => Type::Map {
             row: Box::new(generalise(*row, ctx_level)),
         },
 
@@ -2492,8 +2487,8 @@ pub fn list(t: Type) -> Type {
 }
 
 #[cfg(test)]
-pub fn record_nil() -> Type {
-    Type::Record {
+pub fn map_nil() -> Type {
+    Type::Map {
         row: Box::new(Type::RowNil),
     }
 }
@@ -2797,7 +2792,7 @@ fn infer_test() {
             src: "let add = fn(x, y) { x + y } add(_, 2)",
             typ: "fn(Int) -> Int",
         },
-        /* Records
+        /* Maps
 
         */
         Case {
@@ -2930,7 +2925,7 @@ fn infer_test() {
             src: "let _ = 1 2.0",
             typ: "Float",
         },
-        /* Record select
+        /* Map select
 
         */
         Case {
@@ -3195,15 +3190,15 @@ fn infer_module_test() {
         },
         Case {
             src: "pub fn empty() {
-                    let record = {}
-                    record
+                    let map = {}
+                    map
                   }",
             typ: "module { fn empty() -> {} }",
         },
         Case {
-            src: "pub fn add_name(record, name) {
-                    let record = { record | name = name }
-                    record
+            src: "pub fn add_name(map, name) {
+                    let map = { map | name = name }
+                    map
                   }",
             typ: "module { fn add_name({ a |  }, b) -> { a | name = b } }",
         },

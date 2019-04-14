@@ -12,7 +12,7 @@
   - [List](./tour/list.md)
   - [Case](./tour/case.md)
   - [Function](./tour/function.md)
-  - [Record](./tour/record.md)
+  - [Map](./tour/map.md)
   - [Enum](./tour/enum.md)
   - [External function](./tour/external-function.md)
   - [External type](./tour/external-type.md)

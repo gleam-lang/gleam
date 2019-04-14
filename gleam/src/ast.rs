@@ -55,7 +55,7 @@ pub enum Type {
         args: Vec<Type>,
     },
 
-    Record {
+    Map {
         meta: Meta,
         fields: Vec<(String, Type)>,
         tail: Option<Box<Type>>,
@@ -271,12 +271,12 @@ pub enum Expr<S, T> {
         clauses: Vec<Clause<S, T>>,
     },
 
-    RecordNil {
+    MapNil {
         meta: Meta,
         typ: T,
     },
 
-    RecordCons {
+    MapCons {
         meta: Meta,
         typ: T,
         label: String,
@@ -284,11 +284,11 @@ pub enum Expr<S, T> {
         tail: Box<Expr<S, T>>,
     },
 
-    RecordSelect {
+    MapSelect {
         meta: Meta,
         typ: T,
         label: String,
-        record: Box<Expr<S, T>>,
+        map: Box<Expr<S, T>>,
     },
 
     ModuleSelect {
@@ -315,9 +315,9 @@ impl<S, T> Expr<S, T> {
             Expr::Float { meta, .. } => meta,
             Expr::BinOp { meta, .. } => meta,
             Expr::String { meta, .. } => meta,
-            Expr::RecordNil { meta, .. } => meta,
-            Expr::RecordCons { meta, .. } => meta,
-            Expr::RecordSelect { meta, .. } => meta,
+            Expr::MapNil { meta, .. } => meta,
+            Expr::MapCons { meta, .. } => meta,
+            Expr::MapSelect { meta, .. } => meta,
             Expr::ModuleSelect { meta, .. } => meta,
         }
     }
@@ -339,9 +339,9 @@ impl TypedExpr {
             Expr::BinOp { typ, .. } => typ,
             Expr::Let { typ, .. } => typ,
             Expr::Case { typ, .. } => typ,
-            Expr::RecordNil { typ, .. } => typ,
-            Expr::RecordCons { typ, .. } => typ,
-            Expr::RecordSelect { typ, .. } => typ,
+            Expr::MapNil { typ, .. } => typ,
+            Expr::MapCons { typ, .. } => typ,
+            Expr::MapSelect { typ, .. } => typ,
             Expr::ModuleSelect { typ, .. } => typ,
         }
     }
@@ -405,7 +405,7 @@ pub enum Pattern {
         tail: Box<Pattern>,
     },
 
-    //     Record {
+    //     Map {
     //         meta: Meta,
     //         label: String,
     //         fields: Vec<(Pattern, Pattern)>,
@@ -428,7 +428,7 @@ impl Pattern {
             Pattern::Tuple { meta, .. } => meta,
             Pattern::Float { meta, .. } => meta,
             Pattern::Discard { meta, .. } => meta,
-            // Pattern::Record { meta, .. } => meta,
+            // Pattern::Map { meta, .. } => meta,
             Pattern::String { meta, .. } => meta,
             Pattern::Constructor { meta, .. } => meta,
         }
