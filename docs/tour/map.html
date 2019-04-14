@@ -183,7 +183,7 @@ to functions. Take this function for example.</p>
 }
 </code></pre>
 <p>The type of this function is <code>fn({ a | year = Int }) -&gt; Int</code>.</p>
-<p>The <code>a |</code> in <code>{ a | year = Int}</code> means &quot;any other fields&quot;, so this function
+<p>The <code>a |</code> in <code>{ a | year = Int }</code> means &quot;any other fields&quot;, so this function
 can be called with any map so long as the map has a <code>year</code> field that
 has an <code>Int</code> value.</p>
 <pre><code class="language-rust noplaypen">let date = { day = 5, month: 1, year = 2019 }

@@ -74,7 +74,7 @@ fn get_following_year(map) {
 
 The type of this function is `fn({ a | year = Int }) -> Int`.
 
-The `a |` in `{ a | year = Int}` means "any other fields", so this function
+The `a |` in `{ a | year = Int }` means "any other fields", so this function
 can be called with any map so long as the map has a `year` field that
 has an `Int` value.
 
