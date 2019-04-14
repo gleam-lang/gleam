@@ -367,18 +367,20 @@ fn case(subject: TypedExpr, cs: Vec<TypedClause>, env: &mut Env) -> Document {
         .group()
 }
 
+fn enum_(name: String, args: Vec<TypedExpr>, env: &mut Env) -> Document {
+    let mut args: Vec<_> = args.into_iter().map(|e| expr(e, env)).collect();
+    // FIXME: O(n), insert at start shuffles the elemes forward by one place
+    args.insert(0, atom(name.to_snake_case()));
+    tuple(args)
+}
+
 fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
     match fun {
         Expr::Var {
             scope: Scope::Enum { .. },
             name,
             ..
-        } => {
-            let mut args: Vec<_> = args.into_iter().map(|e| expr(e, env)).collect();
-            // FIXME: O(n), insert at start shuffles the elemes forward by one place
-            args.insert(0, atom(name.to_snake_case()));
-            tuple(args)
-        }
+        } => enum_(name, args, env),
 
         Expr::Var {
             scope: Scope::Module { .. },
@@ -386,18 +388,33 @@ fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
             ..
         } => name.to_doc().append(call_args(args, env)),
 
-        Expr::ModuleSelect { module, label, .. } => match *module {
-            Expr::Var { .. } => expr(*module, env)
-                .append(":")
-                .append(label)
-                .append(call_args(args, env)),
+        Expr::ModuleSelect { module, label, .. } => {
+            // TODO: So here we don't have a good way to tell if it is an enum constructor or not,
+            // we have to rely on the case of the variable. A bit lackluster. Perhaps enum
+            // constructors should be recorded differently on the module type somehow.
+            let is_constructor = label
+                .chars()
+                .next()
+                .map(|c| c.is_uppercase())
+                .unwrap_or(false);
 
-            _ => expr(*module, env)
-                .surround("(", ")")
-                .append(":")
-                .append(label)
-                .append(call_args(args, env)),
-        },
+            if is_constructor {
+                enum_(label, args, env)
+            } else {
+                match *module {
+                    Expr::Var { .. } => expr(*module, env)
+                        .append(":")
+                        .append(label)
+                        .append(call_args(args, env)),
+
+                    _ => expr(*module, env)
+                        .surround("(", ")")
+                        .append(":")
+                        .append(label)
+                        .append(call_args(args, env)),
+                }
+            }
+        }
 
         call @ Expr::Call { .. } => expr(call, env)
             .surround("(", ")")

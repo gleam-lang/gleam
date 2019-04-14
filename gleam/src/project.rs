@@ -741,6 +741,35 @@ unbox(X) ->\n    {box, I} = X,\n    I.\n"
                 Input {
                     origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/one.gleam"),
+                    src: "pub enum Box = | Box(Int)".to_string(),
+                },
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/two.gleam"),
+                    src: "import one pub fn box(x) { one:Box(x) }".to_string(),
+                },
+            ],
+            expected: Ok(vec![
+                Compiled {
+                    name: "one".to_string(),
+                    path: PathBuf::from("/gen/src/one.erl"),
+                    code: "-module(one).\n-compile(no_auto_import).\n\n-export([]).\n\n\n"
+                        .to_string(),
+                },
+                Compiled {
+                    name: "two".to_string(),
+                    path: PathBuf::from("/gen/src/two.erl"),
+                    code: "-module(two).\n-compile(no_auto_import).\n\n-export([box/1]).\n
+box(X) ->\n    {box, X}.\n"
+                        .to_string(),
+                },
+            ]),
+        },
+        Case {
+            input: vec![
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/one.gleam"),
                     src: "".to_string(),
                 },
                 Input {

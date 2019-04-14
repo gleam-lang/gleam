@@ -1,7 +1,10 @@
 -module(hello_world).
 -compile(no_auto_import).
 
--export([x/0]).
+-export([when/0, x/0]).
+
+when() ->
+    <<"never">>.
 
 x() ->
-    1.
+    other:Person().

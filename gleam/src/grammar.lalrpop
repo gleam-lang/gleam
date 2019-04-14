@@ -266,6 +266,13 @@ ModuleSelect: UntypedExpr = {
         label: l,
         module: Box::new(m),
     },
+
+    <s:@L> <m:SimpleExpr> ":" <l:UpName> <e:@L> => Expr::ModuleSelect {
+        meta: meta(s, e),
+        typ: (),
+        label: l,
+        module: Box::new(m),
+    },
 }
 
 Fn: UntypedExpr = {
