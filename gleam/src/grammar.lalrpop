@@ -698,7 +698,7 @@ DiscardName: () = {
 }
 
 VarName: String = {
-    <v:r"[a-z][A-Za-z_]*"> => v.to_string()
+    <v:r"[a-z][0-9a-z_]*"> => v.to_string()
 }
 
 ConstructorName: String = {

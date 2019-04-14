@@ -1185,40 +1185,40 @@ fn module_test() {
             typ: (),
             name: "".to_string(),
             statements: vec![Statement::Fn {
-                meta: Meta { start: 0, end: 87 },
+                meta: Meta { start: 0, end: 88 },
                 public: true,
-                name: "value".to_string(),
+                name: "value1".to_string(),
                 args: vec![Arg {
                     name: Some("x".to_string())
                 }],
                 body: Expr::Let {
-                    meta: Meta { start: 33, end: 71 },
+                    meta: Meta { start: 34, end: 72 },
                     typ: (),
                     value: Box::new(Expr::Var {
                         typ: (),
-                        meta: Meta { start: 54, end: 55 },
+                        meta: Meta { start: 55, end: 56 },
                         scope: (),
                         name: "x".to_string()
                     }),
                     pattern: Pattern::Cons {
-                        meta: Meta { start: 37, end: 51 },
+                        meta: Meta { start: 38, end: 52 },
                         head: Box::new(Pattern::Var {
-                            meta: Meta { start: 38, end: 39 },
+                            meta: Meta { start: 39, end: 40 },
                             name: "a".to_string()
                         }),
                         tail: Box::new(Pattern::Cons {
-                            meta: Meta { start: 42, end: 50 },
+                            meta: Meta { start: 43, end: 51 },
                             head: Box::new(Pattern::Var {
-                                meta: Meta { start: 43, end: 44 },
+                                meta: Meta { start: 44, end: 45 },
                                 name: "b".to_string()
                             }),
                             tail: Box::new(Pattern::Nil {
-                                meta: Meta { start: 47, end: 49 },
+                                meta: Meta { start: 48, end: 50 },
                             })
                         })
                     },
                     then: Box::new(Expr::Var {
-                        meta: Meta { start: 71, end: 72 },
+                        meta: Meta { start: 72, end: 73 },
                         scope: (),
                         typ: (),
                         name: "a".to_string()
@@ -1227,7 +1227,7 @@ fn module_test() {
             }]
         }),
         ModuleParser::new().parse(
-            "pub fn value(x) {
+            "pub fn value1(x) {
                let [a | [b | []]] = x
                a
              }"
