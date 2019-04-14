@@ -1,8 +1,12 @@
 import other
 
-pub enum What =
-  | What
+pub fn when() {
+  "never"
+}
 
 pub fn x() {
-  1
+  what
 }
+
+pub enum What =
+  | What(Boop)

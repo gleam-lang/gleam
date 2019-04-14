@@ -264,26 +264,58 @@ Found type:
                     write(buffer, diagnostic);
                 }
 
-                UnknownType { meta, .. } => {
+                UnknownType { meta, name, types } => {
+                    let mut options: Vec<_> = types.keys().collect();
+                    options.sort_by(|a, b| {
+                        strsim::levenshtein(a, name)
+                            .partial_cmp(&strsim::levenshtein(b, name))
+                            .unwrap()
+                    });
                     let diagnostic = ErrorDiagnostic {
                         title: "Unknown type".to_string(),
-                        label: "".to_string(),
+                        label: format!("Did you mean `{}`?", options[0]),
                         file: name.clone(),
                         src: src.to_string(),
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
+                    write!(
+                        buffer,
+                        "
+The type `{}` is not defined or imported in this module.
+",
+                        name
+                    )
+                    .unwrap();
                 }
 
-                UnknownVariable { meta, .. } => {
+                UnknownVariable {
+                    meta,
+                    variables,
+                    name,
+                } => {
+                    let mut options: Vec<_> = variables.keys().collect();
+                    options.sort_by(|a, b| {
+                        strsim::levenshtein(a, name)
+                            .partial_cmp(&strsim::levenshtein(b, name))
+                            .unwrap()
+                    });
                     let diagnostic = ErrorDiagnostic {
                         title: "Unknown variable".to_string(),
-                        label: "".to_string(),
+                        label: format!("Did you mean `{}`?", options[0]),
                         file: name.clone(),
                         src: src.to_string(),
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
+                    write!(
+                        buffer,
+                        "
+The name `{}` is not in scope here.
+",
+                        name
+                    )
+                    .unwrap();
                 }
 
                 PrivateTypeLeak { meta, leaked } => {
