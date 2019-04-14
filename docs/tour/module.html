@@ -72,7 +72,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../getting-started/installation.html"><strong aria-hidden="true">2.</strong> Installation</a></li><li><a href="../getting-started/editor-support.html"><strong aria-hidden="true">3.</strong> Editor support</a></li><li><a href="../tour/index.html"><strong aria-hidden="true">4.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/string.html"><strong aria-hidden="true">4.1.</strong> String</a></li><li><a href="../tour/bool.html"><strong aria-hidden="true">4.2.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">4.3.</strong> Int &amp; Float</a></li><li><a href="../tour/let.html"><strong aria-hidden="true">4.4.</strong> Let bindings</a></li><li><a href="../tour/tuple.html"><strong aria-hidden="true">4.5.</strong> Tuple</a></li><li><a href="../tour/list.html"><strong aria-hidden="true">4.6.</strong> List</a></li><li><a href="../tour/case.html"><strong aria-hidden="true">4.7.</strong> Case</a></li><li><a href="../tour/function.html"><strong aria-hidden="true">4.8.</strong> Function</a></li><li><a href="../tour/map.html"><strong aria-hidden="true">4.9.</strong> Map</a></li><li><a href="../tour/enum.html"><strong aria-hidden="true">4.10.</strong> Enum</a></li><li><a href="../tour/external-function.html"><strong aria-hidden="true">4.11.</strong> External function</a></li><li><a href="../tour/external-type.html"><strong aria-hidden="true">4.12.</strong> External type</a></li><li><a href="../tour/module.html" class="active"><strong aria-hidden="true">4.13.</strong> Module</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../getting-started/index.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li><ol class="section"><li><a href="../getting-started/installation.html"><strong aria-hidden="true">2.1.</strong> Installation</a></li><li><a href="../getting-started/editor-support.html"><strong aria-hidden="true">2.2.</strong> Editor support</a></li><li><a href="../getting-started/creating-a-project.html"><strong aria-hidden="true">2.3.</strong> Creating a project</a></li></ol></li><li><a href="../tour/index.html"><strong aria-hidden="true">3.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/string.html"><strong aria-hidden="true">3.1.</strong> String</a></li><li><a href="../tour/bool.html"><strong aria-hidden="true">3.2.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">3.3.</strong> Int &amp; Float</a></li><li><a href="../tour/let.html"><strong aria-hidden="true">3.4.</strong> Let bindings</a></li><li><a href="../tour/tuple.html"><strong aria-hidden="true">3.5.</strong> Tuple</a></li><li><a href="../tour/list.html"><strong aria-hidden="true">3.6.</strong> List</a></li><li><a href="../tour/case.html"><strong aria-hidden="true">3.7.</strong> Case</a></li><li><a href="../tour/function.html"><strong aria-hidden="true">3.8.</strong> Function</a></li><li><a href="../tour/module.html" class="active"><strong aria-hidden="true">3.9.</strong> Module</a></li><li><a href="../tour/map.html"><strong aria-hidden="true">3.10.</strong> Map</a></li><li><a href="../tour/enum.html"><strong aria-hidden="true">3.11.</strong> Enum</a></li><li><a href="../tour/external-function.html"><strong aria-hidden="true">3.12.</strong> External function</a></li><li><a href="../tour/external-type.html"><strong aria-hidden="true">3.13.</strong> External type</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -137,17 +137,85 @@
                 <div id="content" class="content">
                     <main>
                         <a class="header" href="#module" id="module"><h1>Module</h1></a>
+<p>Gleam programs are made up of bundles of functions and types called modules.
+Each module has its own namespace and can export types and values to be used
+by other modules in the program.</p>
+<pre><code class="language-rust noplaypen">// inside src/rocket_ship.gleam
+
+fn count_down() {
+  &quot;3... 2... 1...&quot;
+}
+
+fn blast_off() {
+  &quot;BOOM!&quot;
+}
+
+pub fn launch() {
+  [
+    count_down(),
+    blast_off(),
+  ]
+}
+</code></pre>
+<p>Here we can see a module named <code>rocket_ship</code>, the name determined by the
+filename of <code>src/rocket_ship.gleam</code>.</p>
+<p>For the functions <code>count_down</code> and <code>blast_off</code> we have omitted the <code>pub</code>
+keyword, so these functions are <em>private</em> module functions. They can only be
+called by other functions within the same module.</p>
+<a class="header" href="#import" id="import"><h2>Import</h2></a>
+<p>To use functions or types from another module we need to import using the
+<code>import</code> keyword.</p>
+<pre><code class="language-rust noplaypen">// inside src/moon_base.gleam
+
+import rocket_ship
+
+pub fn explore_space() {
+  rocket_ship:launch()
+}
+</code></pre>
+<p>The statement <code>import rocket_ship</code> creates a new variable with the name
+<code>rocket_ship</code> and the value of the <code>rocket_ship</code> module.</p>
+<p>In the <code>explore_space</code> function we call the imported module's public <code>launch</code>
+function using the <code>:</code> operator.
+If we had attempted to call <code>count_down</code> it would result in a compile time
+error as this function is private in the <code>rocket_ship</code> module.</p>
+<a class="header" href="#first-class-modules" id="first-class-modules"><h2>First class modules</h2></a>
+<p>Modules in Gleam are first class values and can be assigned to variables,
+passed to functions, or anything else that we can do with regular values.</p>
+<pre><code class="language-rust noplaypen">import rocket_ship
+import new_website
+import navy_boat
+
+pub fn perform_launch(some_module) {
+  some_module:launch()
+}
+
+pub fn run() {
+  perform_launch(rocket_ship)
+  perform_launch(new_website)
+  perform_launch(navy_boat)
+}
+</code></pre>
+<p>Here we have define a function that takes a module as an argument and then
+called it with various different modules.</p>
+<p>The <code>perform_launch</code> function doesn't care what module it takes, so long as it
+has a public function called <code>launch</code> that takes no arguments.</p>
+<p>The type of <code>perform_launch</code> is <code>fn(module { a | fn perform_launch() -&gt; b }) -&gt; b</code></p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="../tour/external-type.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../tour/function.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
+                        
+                            <a rel="next" href="../tour/map.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
                         
 
                         <div style="clear: both"></div>
@@ -157,11 +225,15 @@
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a href="../tour/external-type.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a href="../tour/function.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
+                
+                    <a href="../tour/map.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
                 
             </nav>
 

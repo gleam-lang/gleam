@@ -1,8 +1,10 @@
 # Summary
 
 - [Hello, Gleam!](./README.md)
-- [Installation](./getting-started/installation.md)
-- [Editor support](./getting-started/editor-support.md)
+- [Getting started](./getting-started/README.md)
+  - [Installation](./getting-started/installation.md)
+  - [Editor support](./getting-started/editor-support.md)
+  - [Creating a project](./getting-started/creating-a-project.md)
 - [Language tour](./tour/README.md)
   - [String](./tour/string.md)
   - [Bool](./tour/bool.md)
@@ -12,8 +14,8 @@
   - [List](./tour/list.md)
   - [Case](./tour/case.md)
   - [Function](./tour/function.md)
+  - [Module](./tour/module.md)
   - [Map](./tour/map.md)
   - [Enum](./tour/enum.md)
   - [External function](./tour/external-function.md)
   - [External type](./tour/external-type.md)
-  - [Module](./tour/module.md)

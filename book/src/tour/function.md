@@ -2,16 +2,13 @@
 
 ## Named functions
 
-Named functions in Gleam are defined using the `fn` keyword and are made
-public with the `pub` keyword.
+Named functions in Gleam are defined using the `pub fn` keywords.
 
 ```rust,noplaypen
-// This function is private and can only be called from the same module
-fn add(x, y) {
+pub fn add(x, y) {
   x + y
 }
 
-// This function is public and can be called from other modules
 pub fn multiply(x, y) {
   x * y
 }
@@ -22,15 +19,15 @@ passed to functions, or anything else you might do with any other data type.
 
 ```rust,noplaypen
 // This function takes a function as an argument
-fn twice(f, x) {
+pub fn twice(f, x) {
   f(f(x))
 }
 
-fn add_one(x) {
+pub fn add_one(x) {
   x + 1
 }
 
-fn add_two(x) {
+pub fn add_two(x) {
   twice(add_one, x)
 }
 ```
@@ -54,7 +51,7 @@ argument and call another function. The `_` is used to indicate where the
 argument should be passed.
 
 ```rust,noplaypen
-fn add(x, y) {
+pub fn add(x, y) {
   x + y
 }
 
@@ -69,7 +66,7 @@ The function capture syntax is often used with the pipe operator to create
 a series of transformations on some data.
 
 ```rust,noplaypen
-fn add(x, y) {
+pub fn add(x, y) {
   x + y
 }
 

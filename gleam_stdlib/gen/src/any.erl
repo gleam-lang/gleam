@@ -1,7 +1,7 @@
 -module(any).
 -compile(no_auto_import).
 
--export([from/1, unsafeCoerce/1, string/1, int/1, float/1, atom/1, bool/1, thunk/1, list/2, tuple/1, field/2]).
+-export([from/1, unsafe_coerce/1, string/1, int/1, float/1, atom/1, bool/1, thunk/1, list/2, tuple/1, field/2]).
 
 list_module() ->
     list.
@@ -9,7 +9,7 @@ list_module() ->
 from(A) ->
     gleam__stdlib:identity(A).
 
-unsafeCoerce(A) ->
+unsafe_coerce(A) ->
     gleam__stdlib:identity(A).
 
 string(A) ->

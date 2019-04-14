@@ -1,4 +1,4 @@
-# Maps
+# Map
 
 Gleam's maps are a collection of names and values where each value can be
 of any type.

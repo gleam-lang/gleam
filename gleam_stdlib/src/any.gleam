@@ -21,7 +21,7 @@ pub external fn from(a) -> Any = "gleam__stdlib" "identity";
 // This is an escape hatch for the type system that may be useful when wrapping
 // native Erlang APIs. It is to be used as a last measure only.
 //
-pub external fn unsafeCoerce(a) -> b = "gleam__stdlib" "identity";
+pub external fn unsafe_coerce(a) -> b = "gleam__stdlib" "identity";
 
 pub external fn string(Any) -> Result(String, String)
   = "gleam__stdlib" "decode_string"

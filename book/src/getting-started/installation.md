@@ -1,17 +1,3 @@
-# Warning! Pre-release software
-
-The Gleam compiler is incomplete alpha software and is not yet intended for
-general use. Many language features are not yet supported by the compiler and
-compiler bugs are numerous, so running Gleam code will not be as pleasant an
-experience as desired.
-
-If you wish to continue anyway please follow the instructions below and record
-any bugs or feedback on the [Gleam issue tracker](https://github.com/lpil/gleam/issues).
-
-Good luck, have fun!
-
-<br>
-
 # Installation
 
 A Gleam installation is made up of two parts: The Gleam compiler, and the
