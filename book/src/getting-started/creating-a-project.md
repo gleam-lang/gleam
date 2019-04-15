@@ -63,3 +63,6 @@ rebar3 shell
 # Run any eunit compatible tests
 rebar3 eunit
 ```
+
+For a standard library consider adding `gleam_experimental_stdlib` to your
+rebar3 deps.
