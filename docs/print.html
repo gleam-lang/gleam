@@ -262,6 +262,48 @@ niceties.</p>
 <li><strong>Emacs</strong> - <a href="https://github.com/MainShayne233/gleam-mode">https://github.com/MainShayne233/gleam-mode</a></li>
 </ul>
 <a class="header" href="#creating-a-project" id="creating-a-project"><h1>Creating a project</h1></a>
+<p><strong>Note</strong>: Gleam's tooling is very young and in a state of flux. Expect rough
+edges and breaking changes to come.</p>
+<p>The Gleam compiler can build Gleam projects that are managed with the standard
+Erlang build tool, rebar3. If you don't have rebar3 installed please <a href="https://www.rebar3.org/">install
+it now</a>.</p>
+<p>In future we will be able to generate a pre-configured rebar3 project capable
+of compiling Gleam, but for now it is a multi-step process.</p>
+<p>Create the rebar3 project:</p>
+<pre><code class="language-sh">cd path/to/my/projects
+
+# Run either...
+rebar3 new app my_amazing_project_name # for an application
+rebar3 new lib my_amazing_project_name # for a library
+
+cd my_amazing_project_name
+</code></pre>
+<p>The Gleam compiler needs to know the name of the project to correctly compile
+it, so let it know via a config file.</p>
+<pre><code class="language-sh">echo 'name = &quot;my_amazing_project_name&quot;' &gt; gleam.toml
+</code></pre>
+<p>Gleam source code is compiled into Erlang source code, so we need to tell
+rebar3 where to find this generated code.</p>
+<pre><code class="language-sh">printf '\n{src_dirs, [&quot;src&quot;, &quot;gen/src&quot;]}.\n' &gt;&gt; rebar.config
+printf '\n{profiles, [\n    {test, [{src_dirs, [&quot;test&quot;, &quot;gen/test&quot;]}]}\n]}.\n' &gt;&gt; rebar.config
+</code></pre>
+<p>Rebar3 needs to know to run the Gleam compiler before it compiles any Erlang
+code.</p>
+<pre><code class="language-sh">printf '\n{pre_hooks, [{compile, &quot;gleam build .&quot;}]}.\n' &gt;&gt; rebar.config
+</code></pre>
+<p>Lastly, create a directory to keep your Gleam tests.</p>
+<pre><code class="language-sh">mkdir test
+</code></pre>
+<p>And now your project is ready! Appliation code goes in <code>src/some_name.gleam</code>
+and test code goes in <code>test/another_name.gleam</code>.</p>
+<p>If you're not familiar with rebar3 here are some commonly used commands. More
+information can be found on the <a href="https://www.rebar3.org/docs">rebar3 documentation website</a>.</p>
+<pre><code class="language-sh"># Run an interactive shell with your code loaded (Erlang syntax)
+rebar3 shell
+
+# Run any eunit compatible tests
+rebar3 eunit
+</code></pre>
 <a class="header" href="#language-tour" id="language-tour"><h1>Language Tour</h1></a>
 <p>In this chapter we explore the fundamentals of the Gleam language, namely its
 syntax, core data structures, flow control features, and static type system.</p>
