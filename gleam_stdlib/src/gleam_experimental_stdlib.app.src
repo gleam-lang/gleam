@@ -1,6 +1,6 @@
 {application,gleam_experimental_stdlib,
-             [{description,"An OTP library"},
-              {vsn,"0.0.1"},
+             [{description,"A standard library for the Gleam programming language"},
+              {vsn,"0.1.0"},
               {registered,[]},
               {applications,[kernel,stdlib]},
               {env,[]},
