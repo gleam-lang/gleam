@@ -158,3 +158,13 @@ pub fn find(haystack, f) {
   }
 }
 
+pub fn all(list, f) {
+  case list {
+    | [] -> True
+    | [x | rest] ->
+      case f(x) {
+        | True -> all(rest, f)
+        | _ -> False
+      }
+  }
+}

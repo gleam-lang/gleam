@@ -162,3 +162,14 @@ pub fn find_test() {
   |> list:find(_, f)
   |> expect:is_error
 }
+
+pub fn all_test() {
+  list:all([1,2,3,4,5], fn(x) { x > 0 })
+  |> expect:equal(_, True)
+
+  list:all([1,2,3,4,5], fn(x) { x < 0 })
+  |> expect:equal(_, False)
+
+  list:all([], fn(_) { False })
+  |> expect:equal(_, True)
+}
