@@ -1,7 +1,7 @@
 -module(list_test).
 -compile(no_auto_import).
 
--export([length_test/0, reverse_test/0, is_empty_test/0, contains_test/0, head_test/0, tail_test/0, filter_test/0, map_test/0, traverse_test/0, drop_test/0, take_test/0, new_test/0, append_test/0, flatten_test/0, fold_test/0, fold_right_test/0, find_test/0]).
+-export([length_test/0, reverse_test/0, is_empty_test/0, contains_test/0, head_test/0, tail_test/0, filter_test/0, map_test/0, traverse_test/0, drop_test/0, take_test/0, new_test/0, append_test/0, flatten_test/0, fold_test/0, fold_right_test/0, find_test/0, all_test/0]).
 
 length_test() ->
     expect:equal(list:length([]), 0),
@@ -93,3 +93,8 @@ find_test() ->
     expect:equal(list:find([1, 2, 3], F), {ok, 4}),
     expect:equal(list:find([1, 3, 2], F), {ok, 4}),
     expect:is_error(list:find([1, 3], F)).
+
+all_test() ->
+    expect:equal(list:all([1, 2, 3, 4, 5], fun(X) -> X > 0 end), true),
+    expect:equal(list:all([1, 2, 3, 4, 5], fun(X) -> X < 0 end), false),
+    expect:equal(list:all([], fun(_) -> false end), true).
