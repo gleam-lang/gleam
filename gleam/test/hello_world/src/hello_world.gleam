@@ -1,7 +1,7 @@
 import other
 
 pub fn when() {
-  "never"
+  "never" + 1
 }
 
 pub fn x() {

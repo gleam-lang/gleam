@@ -38,13 +38,13 @@ impl ModuleOrigin {
 #[derive(Debug, PartialEq)]
 pub enum Error {
     Parse {
-        name: Name,
+        path: PathBuf,
         src: Src,
         error: lalrpop_util::ParseError<usize, (usize, String), String>,
     },
 
     Type {
-        name: Name,
+        path: PathBuf,
         src: Src,
         error: crate::typ::Error,
     },
@@ -119,12 +119,12 @@ Then:  {}
                 .unwrap();
             }
 
-            Error::Type { src, name, error } => match error {
+            Error::Type { path, src, error } => match error {
                 DuplicateName { meta, name: fun } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Duplicate name".to_string(),
                         label: "Redefined here".to_string(),
-                        file: name.clone(),
+                        file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
                     };
@@ -144,7 +144,7 @@ A function has already been defined with the name
                     let diagnostic = ErrorDiagnostic {
                         title: "Recursive type".to_string(),
                         label: "".to_string(),
-                        file: name.clone(),
+                        file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
                     };
@@ -155,7 +155,7 @@ A function has already been defined with the name
                     let diagnostic = ErrorDiagnostic {
                         title: "Type mismatch".to_string(),
                         label: "".to_string(),
-                        file: name.clone(),
+                        file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
                     };
@@ -181,7 +181,7 @@ This value is being called as a function but its type is:
                     let diagnostic = ErrorDiagnostic {
                         title: "Field not found".to_string(),
                         label: "".to_string(),
-                        file: name.clone(),
+                        file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
                     };
@@ -206,7 +206,7 @@ This {} does not contain a field named `{}`.
                     let diagnostic = ErrorDiagnostic {
                         title: "Type mismatch".to_string(),
                         label: "".to_string(),
-                        file: name.clone(),
+                        file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
                     };
@@ -238,7 +238,7 @@ Found type:
                     let diagnostic = ErrorDiagnostic {
                         title: "Incorrect arity".to_string(),
                         label: format!("Expected {} arguments, got {}", expected, given),
-                        file: name.clone(),
+                        file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
                     };
@@ -253,7 +253,7 @@ Found type:
                     let diagnostic = ErrorDiagnostic {
                         title: "Incorrect arity".to_string(),
                         label: format!("Expected {} arguments, got {}", expected, given),
-                        file: name.clone(),
+                        file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
                     };
@@ -270,7 +270,7 @@ Found type:
                     let diagnostic = ErrorDiagnostic {
                         title: "Unknown type".to_string(),
                         label: format!("Did you mean `{}`?", options[0]),
-                        file: name.clone(),
+                        file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
                     };
@@ -299,7 +299,7 @@ The type `{}` is not defined or imported in this module.
                     let diagnostic = ErrorDiagnostic {
                         title: "Unknown variable".to_string(),
                         label: format!("Did you mean `{}`?", options[0]),
-                        file: name.clone(),
+                        file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
                     };
@@ -318,7 +318,7 @@ The name `{}` is not in scope here.
                     let diagnostic = ErrorDiagnostic {
                         title: "Private type used in public interface".to_string(),
                         label: "".to_string(),
-                        file: name.clone(),
+                        file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
                     };
@@ -344,7 +344,7 @@ Private types can only be used within the module that defines them.
                 }
             },
 
-            Error::Parse { name, src, error } => {
+            Error::Parse { path, src, error } => {
                 use lalrpop_util::ParseError::*;
 
                 match error {
@@ -355,7 +355,7 @@ Private types can only be used within the module that defines them.
                         let diagnostic = ErrorDiagnostic {
                             title: "Syntax error".to_string(),
                             label: "Unexpected token".to_string(),
-                            file: name.clone(),
+                            file: path.to_str().unwrap().to_string(),
                             src: src.to_string(),
                             meta: crate::ast::Meta {
                                 start: *start,
@@ -371,7 +371,7 @@ Private types can only be used within the module that defines them.
                         let diagnostic = ErrorDiagnostic {
                             title: "Syntax error".to_string(),
                             label: "Unexpected end of file".to_string(),
-                            file: name.clone(),
+                            file: path.to_str().unwrap().to_string(),
                             src: src.to_string(),
                             meta: crate::ast::Meta {
                                 start: src.len() - 2,
@@ -385,7 +385,7 @@ Private types can only be used within the module that defines them.
                         let diagnostic = ErrorDiagnostic {
                             title: "Syntax error".to_string(),
                             label: "Unknown token".to_string(),
-                            file: name.clone(),
+                            file: path.to_str().unwrap().to_string(),
                             src: src.to_string(),
                             meta: crate::ast::Meta {
                                 start: *location - 1,
@@ -475,7 +475,7 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
         let mut module = crate::grammar::ModuleParser::new()
             .parse(&crate::parser::strip_extra(&src))
             .map_err(|e| Error::Parse {
-                name: name.clone(),
+                path: path.clone(),
                 src: src.clone(),
                 error: e
                     .map_error(|s| s.to_string())
@@ -559,7 +559,7 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
 
             let (module, types) =
                 crate::typ::infer_module(module, &module_types).map_err(|error| Error::Type {
-                    name: name.clone(),
+                    path: path.clone(),
                     src,
                     error,
                 })?;
