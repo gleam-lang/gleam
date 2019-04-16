@@ -168,3 +168,14 @@ pub fn all(list, f) {
       }
   }
 }
+
+pub fn any(list, f) {
+  case list {
+    | [] -> False
+    | [ x | rest] ->
+      case f(x) {
+        | False -> any(rest, f)
+        | _ -> True
+      }
+  }
+}
