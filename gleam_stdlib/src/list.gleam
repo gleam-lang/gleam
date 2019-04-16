@@ -1,5 +1,3 @@
-// TODO: all
-// TODO: any
 // TODO: at
 // TODO: concat
 // TODO: index_map
