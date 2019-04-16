@@ -173,3 +173,14 @@ pub fn all_test() {
   list:all([], fn(_) { False })
   |> expect:equal(_, True)
 }
+
+pub fn any_test() {
+  list:any([1,2,3,4,5], fn(x) { x == 2 })
+  |> expect:equal(_, True)
+
+  list:any([1,2,3,4,5], fn(x) { x < 0 })
+  |> expect:equal(_, False)
+
+  list:any([], fn(_) { False })
+  |> expect:equal(_, False)
+}
