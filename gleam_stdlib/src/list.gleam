@@ -184,3 +184,57 @@ pub fn zip(l1, l2) {
     | {[x1 | rest1], [x2 | rest2] } -> [ {x1, x2} | zip(rest1, rest2) ]
   }
 }
+
+pub fn intersperse(list, elem) {
+  case list {
+    | [] -> []
+    | [x | []] -> [x]
+    | [x | rest] -> [x | [elem | intersperse(rest, elem)]]
+  }
+}
+
+pub fn at(list, i) {
+  case i < 0 {
+    | True -> Error(NotFound)
+    | False ->
+      case list {
+        | [] -> Error(NotFound)
+        | [x | rest] ->
+          case i == 0 {
+            | True -> Ok(x)
+            | False -> at(rest, i - 1)
+          }
+      }
+  }
+}
+
+pub fn unique(list) {
+  case list {
+    | [] -> []
+    | [x | rest] -> [x | unique(filter(rest, fn(y) { y != x }))]
+  }
+}
+
+fn merge_sort(a, b) {
+  case {a, b} {
+    | {[], _} -> b
+    | {_, []} -> a
+    | {[ax | ar], [bx | br]} ->
+      case ax < bx {
+        | True -> [ax | merge_sort(ar, b)]
+        | False -> [bx | merge_sort(a, br)]
+      }
+  }
+}
+
+pub fn sort(list) {
+  let list_length = length(list)
+  case list_length < 2 {
+    | True -> list
+    | False ->
+      let split_length = list_length / 2
+      let a_list = take(list, split_length)
+      let b_list = drop(list, split_length)
+      merge_sort(sort(a_list), sort(b_list))
+  }
+}
