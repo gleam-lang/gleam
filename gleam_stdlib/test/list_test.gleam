@@ -184,3 +184,20 @@ pub fn any_test() {
   list:any([], fn(_) { False })
   |> expect:equal(_, False)
 }
+
+pub fn zip_test() {
+  list:zip([], [1,2,3])
+  |> expect:equal(_, [])
+
+  list:zip([1,2], [])
+  |> expect:equal(_, [])
+
+  list:zip([1,2,3], [4,5,6])
+  |> expect:equal(_, [{1,4}, {2,5}, {3,6}])
+
+  list:zip([5,6], [1,2,3])
+  |> expect:equal(_, [{5,1}, {6,2}])
+
+  list:zip([5,6,7], [1,2])
+  |> expect:equal(_, [{5,1}, {6,2}])
+}

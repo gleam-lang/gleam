@@ -4,7 +4,6 @@
 // TODO: intersperse
 // TODO: sort
 // TODO: unique
-// TODO: zip
 
 pub enum Empty =
   | Empty
@@ -175,5 +174,13 @@ pub fn any(list, f) {
         | False -> any(rest, f)
         | _ -> True
       }
+  }
+}
+
+pub fn zip(l1, l2) {
+  case {l1, l2} {
+    | {[], _} -> []
+    | {_, []} -> []
+    | {[x1 | rest1], [x2 | rest2] } -> [ {x1, x2} | zip(rest1, rest2) ]
   }
 }
