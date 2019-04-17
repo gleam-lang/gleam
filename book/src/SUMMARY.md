@@ -5,6 +5,7 @@
   - [Installation](./getting-started/installation.md)
   - [Editor support](./getting-started/editor-support.md)
   - [Creating a project](./getting-started/creating-a-project.md)
+  - [Example projects](./getting-started/example-projects.md)
 - [Language tour](./tour/README.md)
   - [String](./tour/string.md)
   - [Bool](./tour/bool.md)
