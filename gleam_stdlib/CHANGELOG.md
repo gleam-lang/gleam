@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- `list` module gains `all`, `any`, and `zip` functions.
+- `list` module gains `at`, `all`, `any`, `intersperse`, `unique`, `sort`, and
+  `zip` functions.
 
 ## v0.1.1 - 2019-04-17
 
