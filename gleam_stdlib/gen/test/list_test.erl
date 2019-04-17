@@ -1,7 +1,7 @@
 -module(list_test).
 -compile(no_auto_import).
 
--export([length_test/0, reverse_test/0, is_empty_test/0, contains_test/0, head_test/0, tail_test/0, filter_test/0, map_test/0, traverse_test/0, drop_test/0, take_test/0, new_test/0, append_test/0, flatten_test/0, fold_test/0, fold_right_test/0, find_test/0, all_test/0, any_test/0]).
+-export([length_test/0, reverse_test/0, is_empty_test/0, contains_test/0, head_test/0, tail_test/0, filter_test/0, map_test/0, traverse_test/0, drop_test/0, take_test/0, new_test/0, append_test/0, flatten_test/0, fold_test/0, fold_right_test/0, find_test/0, all_test/0, any_test/0, zip_test/0]).
 
 length_test() ->
     expect:equal(list:length([]), 0),
@@ -103,3 +103,10 @@ any_test() ->
     expect:equal(list:any([1, 2, 3, 4, 5], fun(X) -> X =:= 2 end), true),
     expect:equal(list:any([1, 2, 3, 4, 5], fun(X) -> X < 0 end), false),
     expect:equal(list:any([], fun(_) -> false end), false).
+
+zip_test() ->
+    expect:equal(list:zip([], [1, 2, 3]), []),
+    expect:equal(list:zip([1, 2], []), []),
+    expect:equal(list:zip([1, 2, 3], [4, 5, 6]), [{1, 4}, {2, 5}, {3, 6}]),
+    expect:equal(list:zip([5, 6], [1, 2, 3]), [{5, 1}, {6, 2}]),
+    expect:equal(list:zip([5, 6, 7], [1, 2]), [{5, 1}, {6, 2}]).
