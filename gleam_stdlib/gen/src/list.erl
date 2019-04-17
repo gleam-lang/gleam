@@ -1,7 +1,7 @@
 -module(list).
 -compile(no_auto_import).
 
--export([length/1, reverse/1, is_empty/1, contains/2, head/1, tail/1, filter/2, map/2, traverse/2, drop/2, take/2, new/0, append/2, flatten/1, fold/3, fold_right/3, find/2, all/2, any/2, zip/2]).
+-export([length/1, reverse/1, is_empty/1, contains/2, head/1, tail/1, filter/2, map/2, traverse/2, drop/2, take/2, new/0, append/2, flatten/1, fold/3, fold_right/3, find/2, all/2, any/2, zip/2, intersperse/2, at/2, unique/1, sort/1]).
 
 length(A) ->
     erlang:length(A).
@@ -212,4 +212,77 @@ zip(L1, L2) ->
 
         {[X1 | Rest1], [X2 | Rest2]} ->
             [{X1, X2} | zip(Rest1, Rest2)]
+    end.
+
+intersperse(List, Elem) ->
+    case List of
+        [] ->
+            [];
+
+        [X] ->
+            [X];
+
+        [X1 | Rest] ->
+            [X1, Elem | intersperse(Rest, Elem)]
+    end.
+
+at(List, I) ->
+    case I < 0 of
+        true ->
+            {error, not_found};
+
+        false ->
+            case List of
+                [] ->
+                    {error, not_found};
+
+                [X | Rest] ->
+                    case I =:= 0 of
+                        true ->
+                            {ok, X};
+
+                        false ->
+                            at(Rest, I - 1)
+                    end
+            end
+    end.
+
+unique(List) ->
+    case List of
+        [] ->
+            [];
+
+        [X | Rest] ->
+            [X | unique(filter(Rest, fun(Y) -> Y /= X end))]
+    end.
+
+merge_sort(A, B) ->
+    case {A, B} of
+        {[], _} ->
+            B;
+
+        {_, []} ->
+            A;
+
+        {[Ax | Ar], [Bx | Br]} ->
+            case Ax < Bx of
+                true ->
+                    [Ax | merge_sort(Ar, B)];
+
+                false ->
+                    [Bx | merge_sort(A, Br)]
+            end
+    end.
+
+sort(List) ->
+    ListLength = length(List),
+    case ListLength < 2 of
+        true ->
+            List;
+
+        false ->
+            SplitLength = ListLength div 2,
+            AList = take(List, SplitLength),
+            BList = drop(List, SplitLength),
+            merge_sort(sort(AList), sort(BList))
     end.

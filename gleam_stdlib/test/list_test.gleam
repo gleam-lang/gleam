@@ -201,3 +201,50 @@ pub fn zip_test() {
   list:zip([5,6,7], [1,2])
   |> expect:equal(_, [{5,1}, {6,2}])
 }
+
+pub fn intersperse_test() {
+  list:intersperse([1,2,3], 4)
+  |> expect:equal(_, [1,4,2,4,3])
+
+  list:intersperse([], 2)
+  |> expect:equal(_, [])
+}
+
+pub fn at_test() {
+  list:at([1,2,3], 2)
+  |> expect:equal(_, Ok(3))
+
+  list:at([1,2,3], 5)
+  |> expect:is_error
+
+  list:at([], 0)
+  |> expect:is_error
+
+  list:at([1,2,3,4,5,6], -1)
+  |> expect:is_error
+}
+
+pub fn unique_test() {
+  list:unique([1,1,2,3,4,4,4,5,6])
+  |> expect:equal(_, [1,2,3,4,5,6])
+
+  list:unique([7,1,45,6,2,47,2,7,5])
+  |> expect:equal(_, [7,1,45,6,2,47,5])
+
+  list:unique([3,4,5])
+  |> expect:equal(_, [3,4,5])
+
+  list:unique([])
+  |> expect:equal(_, [])
+}
+
+pub fn sort_test() {
+  list:sort([4,3,6,5,4])
+  |> expect:equal(_, [3,4,4,5,6])
+
+  list:sort([])
+  |> expect:equal(_, [])
+
+  list:sort([{1,2}, {4,5}, {3,2}])
+  |> expect:equal(_, [{1,2}, {3,2}, {4,5}])
+}
