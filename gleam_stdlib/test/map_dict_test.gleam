@@ -111,3 +111,14 @@ pub fn values_test() {
     |> map_dict:values
     |> expect:equal(_, [0, 1, 2])
 }
+
+pub fn take_test() {
+  [
+    {"a", 0},
+    {"b", 1},
+    {"c", 2},
+  ]
+    |> map_dict:from_list
+    |> map_dict:take(_, ["a", "b", "d"])
+    |> expect:equal(_, map_dict:from_list([{"a", 0}, {"b", 1}]))
+}

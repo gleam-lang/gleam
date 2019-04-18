@@ -4,6 +4,8 @@
 
 - `list` module gains `at`, `all`, `any`, `index_map`, `intersperse`, `sort`,
   `unique`, and `zip` functions.
+- `map_dict:Map` renamed to `map_dict:MapDict`.
+- `map_dict` module gains `take`.
 - `str` module gains `append`.
 
 ## v0.1.1 - 2019-04-17
