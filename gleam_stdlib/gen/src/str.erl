@@ -1,7 +1,7 @@
 -module(str).
 -compile(no_auto_import).
 
--export([length/1, lowercase/1, uppercase/1, reverse/1, split/2, replace/3, from_int/1, parse_int/1, parse_float/1, base_from_int/2, from_float/1]).
+-export([length/1, lowercase/1, uppercase/1, reverse/1, split/2, replace/3, append/2, from_int/1, parse_int/1, parse_float/1, base_from_int/2, from_float/1]).
 
 length(A) ->
     string:length(A).
@@ -20,6 +20,9 @@ split(String, On) ->
 
 replace(String, Pattern, With) ->
     iodata:to_string(iodata:replace(iodata:new(String), Pattern, With)).
+
+append(S1, S2) ->
+    iodata:to_string(iodata:append(iodata:new(S1), S2)).
 
 from_int(A) ->
     erlang:integer_to_binary(A).

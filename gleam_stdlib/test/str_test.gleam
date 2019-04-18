@@ -43,6 +43,11 @@ pub fn replace_test() {
   |> expect:equal(_, "Gleam++Erlang++Elixir")
 }
 
+pub fn append_test() {
+  str:append("Test", " Me")
+  |> expect:equal(_, "Test Me")
+}
+
 pub fn from_int_test() {
   123
   |> str:from_int
