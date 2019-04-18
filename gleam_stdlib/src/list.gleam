@@ -65,6 +65,17 @@ pub fn map(list, fun) {
   do_map(list, fun, [])
 }
 
+fn do_index_map(list, fun, index, acc) {
+  case list {
+  | [] -> reverse(acc)
+  | [x | xs] -> do_index_map(xs, fun, index + 1, [fun(index, x) | acc])
+  }
+}
+
+pub fn index_map(list, fun) {
+  do_index_map(list, fun, 0, [])
+}
+
 fn do_traverse(list, fun, acc) {
   case list {
   | [] -> Ok(reverse(acc))

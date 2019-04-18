@@ -1,7 +1,7 @@
 -module(list_test).
 -compile(no_auto_import).
 
--export([length_test/0, reverse_test/0, is_empty_test/0, contains_test/0, head_test/0, tail_test/0, filter_test/0, map_test/0, traverse_test/0, drop_test/0, take_test/0, new_test/0, append_test/0, flatten_test/0, fold_test/0, fold_right_test/0, find_test/0, all_test/0, any_test/0, zip_test/0, intersperse_test/0, at_test/0, unique_test/0, sort_test/0]).
+-export([length_test/0, reverse_test/0, is_empty_test/0, contains_test/0, head_test/0, tail_test/0, filter_test/0, map_test/0, traverse_test/0, drop_test/0, take_test/0, new_test/0, append_test/0, flatten_test/0, fold_test/0, fold_right_test/0, find_test/0, all_test/0, any_test/0, zip_test/0, intersperse_test/0, at_test/0, unique_test/0, sort_test/0, index_map_test/0]).
 
 length_test() ->
     expect:equal(list:length([]), 0),
@@ -132,3 +132,10 @@ sort_test() ->
     expect:equal(list:sort([4, 3, 6, 5, 4]), [3, 4, 4, 5, 6]),
     expect:equal(list:sort([]), []),
     expect:equal(list:sort([{1, 2}, {4, 5}, {3, 2}]), [{1, 2}, {3, 2}, {4, 5}]).
+
+index_map_test() ->
+    expect:equal(list:index_map([3, 4, 5], fun(I, X) -> {I, X} end),
+                 [{0, 3}, {1, 4}, {2, 5}]),
+    F = fun(I, X) -> str:append(X, str:from_int(I)) end,
+    expect:equal(list:index_map([<<"a">>, <<"b">>, <<"c">>], F),
+                 [<<"a0">>, <<"b1">>, <<"c2">>]).
