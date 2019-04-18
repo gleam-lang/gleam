@@ -1,7 +1,6 @@
 import any
 import result
 
-// TODO: drop
 // TODO: update :: fn(MapDict(k, v), k, fn(Result(v, NotFound)) -> v) -> MapDict(k, v)
 
 pub external type MapDict(key, value);
@@ -64,4 +63,10 @@ external fn erl_take(List(k), MapDict(k, v)) -> MapDict(k, v) = "maps" "with"
 
 pub fn take(map, keys) {
   erl_take(keys, map)
+}
+
+external fn erl_drop(List(k), MapDict(k, v)) -> MapDict(k, v) = "maps" "without"
+
+pub fn drop(map, keys) {
+  erl_drop(keys, map)
 }
