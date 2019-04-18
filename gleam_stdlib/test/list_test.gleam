@@ -256,7 +256,7 @@ pub fn index_map_test() {
   |> expect:equal(_, [{0,3},{1,4},{2,5}])
 
   let f = fn(i, x) {
-    iodata:new(x) |> iodata:append(_, str:from_int(i)) |> iodata:to_string(_)
+    str:concat(x, str:from_int(i))
   }
   list:index_map(["a","b","c"], f)
   |> expect:equal(_, ["a0", "b1", "c2"])

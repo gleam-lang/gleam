@@ -1,7 +1,7 @@
 -module(str_test).
 -compile(no_auto_import).
 
--export([length_test/0, lowercase_test/0, uppercase_test/0, reverse_test/0, split_test/0, replace_test/0, from_int_test/0, parse_int_test/0, parse_float_test/0, base_from_int_test/0, from_float_test/0]).
+-export([length_test/0, lowercase_test/0, uppercase_test/0, reverse_test/0, split_test/0, replace_test/0, concat_test/0, from_int_test/0, parse_int_test/0, parse_float_test/0, base_from_int_test/0, from_float_test/0]).
 
 length_test() ->
     expect:equal(str:length(<<"ß↑e̊">>), 3),
@@ -26,6 +26,9 @@ split_test() ->
 replace_test() ->
     expect:equal(str:replace(<<"Gleam,Erlang,Elixir">>, <<",">>, <<"++">>),
                  <<"Gleam++Erlang++Elixir">>).
+
+concat_test() ->
+    expect:equal(str:concat(<<"Test">>, <<" Me">>), <<"Test Me">>).
 
 from_int_test() ->
     expect:equal(str:from_int(123), <<"123">>),
