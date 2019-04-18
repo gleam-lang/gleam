@@ -54,15 +54,19 @@ pub fn filter(list, fun) {
   do_filter(list, fun, [])
 }
 
-fn do_map(list, fun, acc) {
+fn do_map_with(list, f, acc, map_f) {
   case list {
   | [] -> reverse(acc)
-  | [x | xs] -> do_map(xs, fun, [fun(x) | acc])
+  | [x | xs] -> do_map_with(xs, f, [map_f(f, acc, x) | acc], map_f)
   }
 }
 
-pub fn map(list, fun) {
-  do_map(list, fun, [])
+pub fn map(list, f) {
+  do_map_with(list, f, [], fn(fun, _, x) { fun(x) })
+}
+
+pub fn index_map(list, f) {
+  do_map_with(list, f, [], fn(fun, a, x) { fun(length(a), x) })
 }
 
 fn do_traverse(list, fun, acc) {

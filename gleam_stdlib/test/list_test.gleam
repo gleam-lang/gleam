@@ -1,5 +1,7 @@
 import expect
 import list
+import str
+import iodata
 
 pub fn length_test() {
   list:length([]) |> expect:equal(_, 0)
@@ -247,4 +249,15 @@ pub fn sort_test() {
 
   list:sort([{1,2}, {4,5}, {3,2}])
   |> expect:equal(_, [{1,2}, {3,2}, {4,5}])
+}
+
+pub fn index_map_test() {
+  list:index_map([3,4,5], fn(i, x) { {i, x} })
+  |> expect:equal(_, [{0,3},{1,4},{2,5}])
+
+  let f = fn(i, x) {
+    iodata:new(x) |> iodata:append(_, str:from_int(i)) |> iodata:to_string(_)
+  }
+  list:index_map(["a","b","c"], f)
+  |> expect:equal(_, ["a0", "b1", "c2"])
 }
