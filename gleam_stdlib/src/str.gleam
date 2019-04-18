@@ -34,6 +34,10 @@ pub fn replace(string, pattern, with) {
   |> iodata:to_string
 }
 
+pub fn append(s1, s2) {
+  iodata:new(s1) |> iodata:append(_, s2) |> iodata:to_string(_)
+}
+
 pub external fn from_int(Int) -> String = "erlang" "integer_to_binary"
 
 pub external fn parse_int(String) -> Result(Int, ParseError) = "gleam__stdlib" "parse_int";
