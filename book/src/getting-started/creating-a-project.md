@@ -11,6 +11,8 @@ it now](https://www.rebar3.org/) and the [rebar_gleam][rebar_gleam] plugin.
 
 [rebar_gleam]: https://github.com/gleam-lang/rebar_gleam#installation
 
+## Generating a project
+
 Now a project can be generated using rebar3 like so:
 
 ```sh
