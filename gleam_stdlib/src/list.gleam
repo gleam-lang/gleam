@@ -164,8 +164,8 @@ pub fn all(list, f) {
     | [] -> True
     | [x | rest] ->
       case f(x) {
-        | True -> all(rest, f)
-        | _ -> False
+      | True -> all(rest, f)
+      | _ -> False
       }
   }
 }
@@ -175,8 +175,8 @@ pub fn any(list, f) {
     | [] -> False
     | [ x | rest] ->
       case f(x) {
-        | False -> any(rest, f)
-        | _ -> True
+      | False -> any(rest, f)
+      | _ -> True
       }
   }
 }
@@ -205,8 +205,8 @@ pub fn at(list, i) {
         | [] -> Error(NotFound)
         | [x | rest] ->
           case i == 0 {
-            | True -> Ok(x)
-            | False -> at(rest, i - 1)
+          | True -> Ok(x)
+          | False -> at(rest, i - 1)
           }
       }
   }
@@ -214,8 +214,8 @@ pub fn at(list, i) {
 
 pub fn unique(list) {
   case list {
-    | [] -> []
-    | [x | rest] -> [x | unique(filter(rest, fn(y) { y != x }))]
+  | [] -> []
+  | [x | rest] -> [x | unique(filter(rest, fn(y) { y != x }))]
   }
 }
 
@@ -225,8 +225,8 @@ fn merge_sort(a, b) {
     | {_, []} -> a
     | {[ax | ar], [bx | br]} ->
       case ax < bx {
-        | True -> [ax | merge_sort(ar, b)]
-        | False -> [bx | merge_sort(a, br)]
+      | True -> [ax | merge_sort(ar, b)]
+      | False -> [bx | merge_sort(a, br)]
       }
   }
 }
@@ -234,11 +234,11 @@ fn merge_sort(a, b) {
 pub fn sort(list) {
   let list_length = length(list)
   case list_length < 2 {
-    | True -> list
-    | False ->
-      let split_length = list_length / 2
-      let a_list = take(list, split_length)
-      let b_list = drop(list, split_length)
-      merge_sort(sort(a_list), sort(b_list))
+  | True -> list
+  | False ->
+    let split_length = list_length / 2
+    let a_list = take(list, split_length)
+    let b_list = drop(list, split_length)
+    merge_sort(sort(a_list), sort(b_list))
   }
 }

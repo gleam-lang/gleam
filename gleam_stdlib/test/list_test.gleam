@@ -165,10 +165,10 @@ pub fn find_test() {
 }
 
 pub fn all_test() {
-  list:all([1,2,3,4,5], fn(x) { x > 0 })
+  list:all([1, 2, 3, 4, 5], fn(x) { x > 0 })
   |> expect:equal(_, True)
 
-  list:all([1,2,3,4,5], fn(x) { x < 0 })
+  list:all([1, 2, 3, 4, 5], fn(x) { x < 0 })
   |> expect:equal(_, False)
 
   list:all([], fn(_) { False })
@@ -176,10 +176,10 @@ pub fn all_test() {
 }
 
 pub fn any_test() {
-  list:any([1,2,3,4,5], fn(x) { x == 2 })
+  list:any([1, 2, 3, 4, 5], fn(x) { x == 2 })
   |> expect:equal(_, True)
 
-  list:any([1,2,3,4,5], fn(x) { x < 0 })
+  list:any([1, 2, 3, 4, 5], fn(x) { x < 0 })
   |> expect:equal(_, False)
 
   list:any([], fn(_) { False })
@@ -187,76 +187,76 @@ pub fn any_test() {
 }
 
 pub fn zip_test() {
-  list:zip([], [1,2,3])
+  list:zip([], [1, 2, 3])
   |> expect:equal(_, [])
 
-  list:zip([1,2], [])
+  list:zip([1, 2], [])
   |> expect:equal(_, [])
 
-  list:zip([1,2,3], [4,5,6])
-  |> expect:equal(_, [{1,4}, {2,5}, {3,6}])
+  list:zip([1, 2, 3], [4, 5, 6])
+  |> expect:equal(_, [{1, 4}, {2, 5}, {3, 6}])
 
-  list:zip([5,6], [1,2,3])
-  |> expect:equal(_, [{5,1}, {6,2}])
+  list:zip([5, 6], [1, 2, 3])
+  |> expect:equal(_, [{5, 1}, {6, 2}])
 
-  list:zip([5,6,7], [1,2])
-  |> expect:equal(_, [{5,1}, {6,2}])
+  list:zip([5, 6, 7], [1, 2])
+  |> expect:equal(_, [{5, 1}, {6, 2}])
 }
 
 pub fn intersperse_test() {
-  list:intersperse([1,2,3], 4)
-  |> expect:equal(_, [1,4,2,4,3])
+  list:intersperse([1, 2, 3], 4)
+  |> expect:equal(_, [1, 4, 2, 4, 3])
 
   list:intersperse([], 2)
   |> expect:equal(_, [])
 }
 
 pub fn at_test() {
-  list:at([1,2,3], 2)
+  list:at([1, 2, 3], 2)
   |> expect:equal(_, Ok(3))
 
-  list:at([1,2,3], 5)
+  list:at([1, 2, 3], 5)
   |> expect:is_error
 
   list:at([], 0)
   |> expect:is_error
 
-  list:at([1,2,3,4,5,6], -1)
+  list:at([1, 2, 3, 4, 5, 6], -1)
   |> expect:is_error
 }
 
 pub fn unique_test() {
-  list:unique([1,1,2,3,4,4,4,5,6])
-  |> expect:equal(_, [1,2,3,4,5,6])
+  list:unique([1, 1, 2, 3, 4, 4, 4, 5, 6])
+  |> expect:equal(_, [1, 2, 3, 4, 5, 6])
 
-  list:unique([7,1,45,6,2,47,2,7,5])
-  |> expect:equal(_, [7,1,45,6,2,47,5])
+  list:unique([7, 1, 45, 6, 2, 47, 2, 7, 5])
+  |> expect:equal(_, [7, 1, 45, 6, 2, 47, 5])
 
-  list:unique([3,4,5])
-  |> expect:equal(_, [3,4,5])
+  list:unique([3, 4, 5])
+  |> expect:equal(_, [3, 4, 5])
 
   list:unique([])
   |> expect:equal(_, [])
 }
 
 pub fn sort_test() {
-  list:sort([4,3,6,5,4])
-  |> expect:equal(_, [3,4,4,5,6])
+  list:sort([4, 3, 6, 5, 4])
+  |> expect:equal(_, [3, 4, 4, 5, 6])
 
   list:sort([])
   |> expect:equal(_, [])
 
-  list:sort([{1,2}, {4,5}, {3,2}])
-  |> expect:equal(_, [{1,2}, {3,2}, {4,5}])
+  list:sort([{1, 2}, {4, 5}, {3, 2}])
+  |> expect:equal(_, [{1, 2}, {3, 2}, {4, 5}])
 }
 
 pub fn index_map_test() {
-  list:index_map([3,4,5], fn(i, x) { {i, x} })
-  |> expect:equal(_, [{0,3},{1,4},{2,5}])
+  list:index_map([3, 4, 5], fn(i, x) { {i, x} })
+  |> expect:equal(_, [{0, 3}, {1, 4}, {2, 5}])
 
   let f = fn(i, x) {
     str:append(x, str:from_int(i))
   }
-  list:index_map(["a","b","c"], f)
+  list:index_map(["a", "b", "c"], f)
   |> expect:equal(_, ["a0", "b1", "c2"])
 }
