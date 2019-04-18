@@ -263,50 +263,39 @@ niceties.</p>
 <li><strong>Visual Studio Code</strong> - <a href="https://github.com/rawburt/vscode-gleam-syntax">https://github.com/rawburt/vscode-gleam-syntax</a></li>
 </ul>
 <a class="header" href="#creating-a-project" id="creating-a-project"><h1>Creating a project</h1></a>
+<a class="header" href="#installing-the-rebar3-build-tool" id="installing-the-rebar3-build-tool"><h2>Installing the rebar3 build tool</h2></a>
 <p><strong>Note</strong>: Gleam's tooling is very young and in a state of flux. Expect rough
 edges and breaking changes to come.</p>
 <p>The Gleam compiler can build Gleam projects that are managed with the standard
 Erlang build tool, rebar3. If you don't have rebar3 installed please <a href="https://www.rebar3.org/">install
-it now</a>.</p>
-<p>In future we will be able to generate a pre-configured rebar3 project capable
-of compiling Gleam, but for now it is a multi-step process.</p>
-<p>Create the rebar3 project:</p>
-<pre><code class="language-sh">cd path/to/my/projects
+it now</a> and the <a href="https://github.com/gleam-lang/rebar_gleam#installation">rebar_gleam</a> plugin.</p>
+<p>Now a project can be generated using rebar3 like so:</p>
+<pre><code class="language-sh">rebar3 new gleam_lib my_fantastic_project
+cd my_fantastic_project
+</code></pre>
+<p>You'll now have a project with this structure:</p>
+<pre><code>.
+├── gleam.toml
+├── LICENSE
+├── README.md
+├── rebar.config
+├── src
+│   ├── my_fantastic_project.app.src
+│   └── my_fantastic_project.gleam
+└── test
+    └── my_fantastic_project_test.gleam
 
-# Run either...
-rebar3 new app my_amazing_project_name # for an application
-rebar3 new lib my_amazing_project_name # for a library
-
-cd my_amazing_project_name
+2 directories, 7 files
 </code></pre>
-<p>The Gleam compiler needs to know the name of the project to correctly compile
-it, so let it know via a config file.</p>
-<pre><code class="language-sh">echo 'name = &quot;my_amazing_project_name&quot;' &gt; gleam.toml
-</code></pre>
-<p>Gleam source code is compiled into Erlang source code, so we need to tell
-rebar3 where to find this generated code.</p>
-<pre><code class="language-sh">printf '\n{src_dirs, [&quot;src&quot;, &quot;gen/src&quot;]}.\n' &gt;&gt; rebar.config
-printf '\n{profiles, [\n    {test, [{src_dirs, [&quot;test&quot;, &quot;gen/test&quot;]}]}\n]}.\n' &gt;&gt; rebar.config
-</code></pre>
-<p>Rebar3 needs to know to run the Gleam compiler before it compiles any Erlang
-code.</p>
-<pre><code class="language-sh">printf '\n{pre_hooks, [{compile, &quot;gleam build .&quot;}]}.\n' &gt;&gt; rebar.config
-</code></pre>
-<p>Lastly, create a directory to keep your Gleam tests.</p>
-<pre><code class="language-sh">mkdir test
-</code></pre>
-<p>And now your project is ready! Appliation code goes in <code>src/some_name.gleam</code>
-and test code goes in <code>test/another_name.gleam</code>.</p>
-<p>If you're not familiar with rebar3 here are some commonly used commands. More
-information can be found on the <a href="https://www.rebar3.org/docs">rebar3 documentation website</a>.</p>
+<p>Here are some commonly used commands rebar3 commands that you can use with
+your new project:</p>
 <pre><code class="language-sh"># Run an interactive shell with your code loaded (Erlang syntax)
 rebar3 shell
 
-# Run any eunit compatible tests
+# Run the eunit tests
 rebar3 eunit
 </code></pre>
-<p>For a standard library consider adding <code>gleam_experimental_stdlib</code> to your
-rebar3 deps.</p>
+<p>More information can be found on the <a href="https://www.rebar3.org/docs">rebar3 documentation website</a>.</p>
 <a class="header" href="#example-projects" id="example-projects"><h1>Example projects</h1></a>
 <p>When learning a new language it can often be used to have example code to
 refer to and learn from, so here's some examples:</p>
