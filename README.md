@@ -7,9 +7,6 @@ scalable concurrent systems. It compiles to [Erlang](http://www.erlang.org/)
 and has straightforward interop with other BEAM languages such as Erlang,
 Elixir and LFE.
 
-⚠️ Gleam is pre-alpha software. You are welcome to try it, but it may do
-anything up to and including eating your laundry and then crashing.
-
 ```rust
 pub enum Tree =
   | Leaf(Int)
