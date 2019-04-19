@@ -388,11 +388,16 @@ Private types can only be used within the module that defines them.
                             file: path.to_str().unwrap().to_string(),
                             src: src.to_string(),
                             meta: crate::ast::Meta {
-                                start: *location - 1,
-                                end: *location,
+                                start: *location,
+                                end: *location + 1,
                             },
                         };
                         write(buffer, diagnostic);
+                        write!(
+                            buffer,
+                            "\nI don't know what this character means. Is it a typo?\n"
+                        )
+                        .expect("error pretty buffer write");
                     }
 
                     ExtraToken { .. } => unimplemented!(),

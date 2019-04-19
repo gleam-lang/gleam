@@ -1,6 +1,6 @@
 import other
 
-pub fn when() {
+pub fn when?() {
   "never" + 1
 }
 
