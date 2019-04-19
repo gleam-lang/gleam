@@ -141,6 +141,7 @@
 <li><a href="#why-is-the-compiler-written-in-rust">Why is the compiler written in Rust?</a></li>
 <li><a href="#will-gleam-have-type-classes">Will Gleam have type classes?</a></li>
 <li><a href="#how-is-message-passing-typed">How is message passing typed?</a></li>
+<li><a href="#how-does-gleam-compare-to-alpaca">How does Gleam compare to Alpaca?</a></li>
 <li><a href="#should-i-put-gleam-in-production">Should I put Gleam in production?</a></li>
 <li><a href="#is-it-good">Is it good?</a></li>
 </ul>
@@ -166,6 +167,21 @@ should be used via the Erlang FFI, making them dynamically typed.</p>
 <p>Many OTP patterns such as <code>gen_server</code> are functional in nature and don't
 require direct use of these primitives so these behaviours can be implemented
 in Gleam today.</p>
+<a class="header" href="#how-does-gleam-compare-to-alpaca" id="how-does-gleam-compare-to-alpaca"><h2>How does Gleam compare to Alpaca?</h2></a>
+<p><a href="https://github.com/alpaca-lang/alpaca">Alpaca</a> is similar to Gleam in that it is a statically typed language
+for the Erlang VM that is inspired by the ML family of languages. It's a
+wonderful project and we hope they are wildly successful!</p>
+<p>Here's a non-exhaustive list of differences:</p>
+<ul>
+<li>Alpaca functions are auto-curried, Gleam's are not.</li>
+<li>Alpaca's unions can be untagged, with Gleam all variants in an enum need a
+name.</li>
+<li>Alpaca's compiler is written in Erlang, Gleam's is written in Rust.</li>
+<li>Alpaca's syntax is closer to ML family languages, Gleam's is closer to C
+family languages.</li>
+<li>Alpaca compiles to Core Erlang, Gleam compiles to regular Erlang.</li>
+</ul>
+<p>Alpaca is great, check it out! :)</p>
 <a class="header" href="#should-i-put-gleam-in-production" id="should-i-put-gleam-in-production"><h2>Should I put Gleam in production?</h2></a>
 <p>Probably not. Gleam is a very young language and there may be all kinds of
 problems and breaking changes down the line.</p>

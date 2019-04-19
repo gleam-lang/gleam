@@ -3,6 +3,7 @@
 - [Why is the compiler written in Rust?](#why-is-the-compiler-written-in-rust)
 - [Will Gleam have type classes?](#will-gleam-have-type-classes)
 - [How is message passing typed?](#how-is-message-passing-typed)
+- [How does Gleam compare to Alpaca?](#how-does-gleam-compare-to-alpaca)
 - [Should I put Gleam in production?](#should-i-put-gleam-in-production)
 - [Is it good?](#is-it-good)
 
@@ -38,6 +39,27 @@ should be used via the Erlang FFI, making them dynamically typed.
 Many OTP patterns such as `gen_server` are functional in nature and don't
 require direct use of these primitives so these behaviours can be implemented
 in Gleam today.
+
+
+## How does Gleam compare to Alpaca?
+
+[alpaca]: https://github.com/alpaca-lang/alpaca
+
+[Alpaca][alpaca] is similar to Gleam in that it is a statically typed language
+for the Erlang VM that is inspired by the ML family of languages. It's a
+wonderful project and we hope they are wildly successful!
+
+Here's a non-exhaustive list of differences:
+
+- Alpaca functions are auto-curried, Gleam's are not.
+- Alpaca's unions can be untagged, with Gleam all variants in an enum need a
+  name.
+- Alpaca's compiler is written in Erlang, Gleam's is written in Rust.
+- Alpaca's syntax is closer to ML family languages, Gleam's is closer to C
+  family languages.
+- Alpaca compiles to Core Erlang, Gleam compiles to regular Erlang.
+
+Alpaca is great, check it out! :)
 
 
 ## Should I put Gleam in production?
