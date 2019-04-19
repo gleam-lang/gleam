@@ -72,7 +72,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="getting-started/index.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li><ol class="section"><li><a href="getting-started/installation.html"><strong aria-hidden="true">2.1.</strong> Installation</a></li><li><a href="getting-started/editor-support.html"><strong aria-hidden="true">2.2.</strong> Editor support</a></li><li><a href="getting-started/creating-a-project.html"><strong aria-hidden="true">2.3.</strong> Creating a project</a></li><li><a href="getting-started/example-projects.html"><strong aria-hidden="true">2.4.</strong> Example projects</a></li></ol></li><li><a href="tour/index.html"><strong aria-hidden="true">3.</strong> Language tour</a></li><li><ol class="section"><li><a href="tour/string.html"><strong aria-hidden="true">3.1.</strong> String</a></li><li><a href="tour/bool.html"><strong aria-hidden="true">3.2.</strong> Bool</a></li><li><a href="tour/int-and-float.html"><strong aria-hidden="true">3.3.</strong> Int &amp; Float</a></li><li><a href="tour/let.html"><strong aria-hidden="true">3.4.</strong> Let bindings</a></li><li><a href="tour/tuple.html"><strong aria-hidden="true">3.5.</strong> Tuple</a></li><li><a href="tour/list.html"><strong aria-hidden="true">3.6.</strong> List</a></li><li><a href="tour/case.html"><strong aria-hidden="true">3.7.</strong> Case</a></li><li><a href="tour/function.html"><strong aria-hidden="true">3.8.</strong> Function</a></li><li><a href="tour/module.html"><strong aria-hidden="true">3.9.</strong> Module</a></li><li><a href="tour/map.html"><strong aria-hidden="true">3.10.</strong> Map</a></li><li><a href="tour/enum.html"><strong aria-hidden="true">3.11.</strong> Enum</a></li><li><a href="tour/external-function.html"><strong aria-hidden="true">3.12.</strong> External function</a></li><li><a href="tour/external-type.html"><strong aria-hidden="true">3.13.</strong> External type</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="getting-started/index.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li><ol class="section"><li><a href="getting-started/installation.html"><strong aria-hidden="true">2.1.</strong> Installation</a></li><li><a href="getting-started/editor-support.html"><strong aria-hidden="true">2.2.</strong> Editor support</a></li><li><a href="getting-started/creating-a-project.html"><strong aria-hidden="true">2.3.</strong> Creating a project</a></li><li><a href="getting-started/example-projects.html"><strong aria-hidden="true">2.4.</strong> Example projects</a></li></ol></li><li><a href="tour/index.html"><strong aria-hidden="true">3.</strong> Language tour</a></li><li><ol class="section"><li><a href="tour/string.html"><strong aria-hidden="true">3.1.</strong> String</a></li><li><a href="tour/bool.html"><strong aria-hidden="true">3.2.</strong> Bool</a></li><li><a href="tour/int-and-float.html"><strong aria-hidden="true">3.3.</strong> Int &amp; Float</a></li><li><a href="tour/let.html"><strong aria-hidden="true">3.4.</strong> Let bindings</a></li><li><a href="tour/tuple.html"><strong aria-hidden="true">3.5.</strong> Tuple</a></li><li><a href="tour/list.html"><strong aria-hidden="true">3.6.</strong> List</a></li><li><a href="tour/case.html"><strong aria-hidden="true">3.7.</strong> Case</a></li><li><a href="tour/function.html"><strong aria-hidden="true">3.8.</strong> Function</a></li><li><a href="tour/module.html"><strong aria-hidden="true">3.9.</strong> Module</a></li><li><a href="tour/map.html"><strong aria-hidden="true">3.10.</strong> Map</a></li><li><a href="tour/enum.html"><strong aria-hidden="true">3.11.</strong> Enum</a></li><li><a href="tour/external-function.html"><strong aria-hidden="true">3.12.</strong> External function</a></li><li><a href="tour/external-type.html"><strong aria-hidden="true">3.13.</strong> External type</a></li></ol></li><li><a href="faqs.html"><strong aria-hidden="true">4.</strong> FAQs</a></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -774,6 +774,44 @@ pub external fn length(Queue(a)) -&gt; Int = &quot;queue&quot; &quot;len&quot;
 
 pub external fn push(Queue(a), a) -&gt; Queue(a) = &quot;queue&quot; &quot;in&quot;
 </code></pre>
+<a class="header" href="#faqs" id="faqs"><h1>FAQs</h1></a>
+<ul>
+<li><a href="#why-is-the-compiler-written-in-rust">Why is the compiler written in Rust?</a></li>
+<li><a href="#will-gleam-have-type-classes">Will Gleam have type classes?</a></li>
+<li><a href="#how-is-message-passing-typed">How is message passing typed?</a></li>
+<li><a href="#should-i-put-gleam-in-production">Should I put Gleam in production?</a></li>
+<li><a href="#is-it-good">Is it good?</a></li>
+</ul>
+<a class="header" href="#why-is-the-compiler-written-in-rust" id="why-is-the-compiler-written-in-rust"><h2>Why is the compiler written in Rust?</h2></a>
+<p>Prototype versions of the Gleam compiler was written in Erlang, but a switch was
+made to Rust as the lack of static types was making refactoring a slow and
+error prone process. A full Rust rewrite of the prototype resulted in the
+removal of a lot of tech debt and bugs, and the performance boost is nice too!</p>
+<p>One day Gleam may have a compiler written in Gleam, but for now we are focused
+on developing other areas of the language such as libraries, tooling, and
+documentation.</p>
+<a class="header" href="#will-gleam-have-type-classes" id="will-gleam-have-type-classes"><h2>Will Gleam have type classes?</h2></a>
+<p>Some form of ad-hoc polymorphism could be a good addition to the ergonomics of
+the language, though what shape that may take is unclear. Type classes are one
+option, OCaml style implicit modules are another, or perhaps it'll be
+something else entirely.</p>
+<a class="header" href="#how-is-message-passing-typed" id="how-is-message-passing-typed"><h2>How is message passing typed?</h2></a>
+<p>Gleam currently doesn't currently have first class support for the BEAM's
+concurrency primitives such as <code>receive</code>, <code>send</code>, and <code>spawn</code>. This is because
+research is still ongoing as to the best way to apply a strong type system to
+them while still enabling established OTP patterns. For now these primitives
+should be used via the Erlang FFI, making them dynamically typed.</p>
+<p>Many OTP patterns such as <code>gen_server</code> are functional in nature and don't
+require direct use of these primitives so these behaviours can be implemented
+in Gleam today.</p>
+<a class="header" href="#should-i-put-gleam-in-production" id="should-i-put-gleam-in-production"><h2>Should I put Gleam in production?</h2></a>
+<p>Probably not. Gleam is a very young language and there may be all kinds of
+problems and breaking changes down the line.</p>
+<p>Having said that, the Erlang VM is extremely mature and well tested, and if
+you decide to move away from Gleam the language you can compile your code to
+Erlang and maintain that in future.</p>
+<a class="header" href="#is-it-good" id="is-it-good"><h2>Is it good?</h2></a>
+<p>Yes.</p>
 
                     </main>
 

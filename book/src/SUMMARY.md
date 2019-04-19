@@ -20,3 +20,4 @@
   - [Enum](./tour/enum.md)
   - [External function](./tour/external-function.md)
   - [External type](./tour/external-type.md)
+- [FAQs](./faqs.md)
