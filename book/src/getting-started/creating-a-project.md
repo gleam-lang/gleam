@@ -49,3 +49,15 @@ rebar3 eunit
 ```
 
 More information can be found on the [rebar3 documentation website](https://www.rebar3.org/docs).
+
+
+## What next?
+
+Want to see some Gleam code? See the [example projects](./example-projects.html).
+
+Looking learn the language? Check out the [language tour](../tour).
+
+Need ideas for a project? We have a [list of libraries][libraries] that need
+writing.
+
+[libraries]: https://github.com/gleam-lang/suggestions/issues?q=is%3Aopen+is%3Aissue+label%3Aarea%3Alibraries
