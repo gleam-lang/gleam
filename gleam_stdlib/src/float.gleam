@@ -17,3 +17,5 @@ pub external fn ceiling(Float) -> Float = "math" "ceil";
 pub external fn floor(Float) -> Float = "math" "floor";
 
 pub external fn round(Float) -> Int = "erlang" "round";
+
+pub external fn truncate(Float) -> Int = "erlang" "trunc";

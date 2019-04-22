@@ -90,3 +90,29 @@ pub fn round_test() {
   |> float:round
   |> expect:equal(_, -8)
 }
+
+pub fn truncate_test() {
+  8.1
+  |> float:truncate
+  |> expect:equal(_, 8)
+
+  8.4
+  |> float:truncate
+  |> expect:equal(_, 8)
+
+  8.499
+  |> float:truncate
+  |> expect:equal(_, 8)
+
+  8.5
+  |> float:truncate
+  |> expect:equal(_, 8)
+
+  -8.1
+  |> float:truncate
+  |> expect:equal(_, -8)
+
+  -7.5
+  |> float:truncate
+  |> expect:equal(_, -7)
+}
