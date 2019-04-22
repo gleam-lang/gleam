@@ -1,5 +1,6 @@
 import expect
 import list
+import int
 import str
 
 pub fn length_test() {
@@ -255,7 +256,7 @@ pub fn index_map_test() {
   |> expect:equal(_, [{0, 3}, {1, 4}, {2, 5}])
 
   let f = fn(i, x) {
-    str:append(x, str:from_int(i))
+    str:append(x, int:to_string(i))
   }
   list:index_map(["a", "b", "c"], f)
   |> expect:equal(_, ["a0", "b1", "c2"])

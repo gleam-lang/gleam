@@ -136,6 +136,6 @@ sort_test() ->
 index_map_test() ->
     expect:equal(list:index_map([3, 4, 5], fun(I, X) -> {I, X} end),
                  [{0, 3}, {1, 4}, {2, 5}]),
-    F = fun(I, X) -> str:append(X, str:from_int(I)) end,
+    F = fun(I, X) -> str:append(X, int:to_string(I)) end,
     expect:equal(list:index_map([<<"a">>, <<"b">>, <<"c">>], F),
                  [<<"a0">>, <<"b1">>, <<"c2">>]).

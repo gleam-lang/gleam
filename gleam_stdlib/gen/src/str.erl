@@ -1,7 +1,7 @@
 -module(str).
 -compile(no_auto_import).
 
--export([length/1, lowercase/1, uppercase/1, reverse/1, split/2, replace/3, append/2, from_int/1, parse_int/1, parse_float/1, base_from_int/2, from_float/1]).
+-export([length/1, lowercase/1, uppercase/1, reverse/1, split/2, replace/3, append/2]).
 
 length(A) ->
     string:length(A).
@@ -23,18 +23,3 @@ replace(String, Pattern, With) ->
 
 append(S1, S2) ->
     iodata:to_string(iodata:append(iodata:new(S1), S2)).
-
-from_int(A) ->
-    erlang:integer_to_binary(A).
-
-parse_int(A) ->
-    gleam__stdlib:parse_int(A).
-
-parse_float(A) ->
-    gleam__stdlib:parse_float(A).
-
-base_from_int(A, B) ->
-    erlang:integer_to_binary(A, B).
-
-from_float(F) ->
-    iodata:to_string(iodata:from_float(F)).

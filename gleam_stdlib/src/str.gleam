@@ -37,17 +37,3 @@ pub fn replace(string, pattern, with) {
 pub fn append(s1, s2) {
   iodata:new(s1) |> iodata:append(_, s2) |> iodata:to_string(_)
 }
-
-pub external fn from_int(Int) -> String = "erlang" "integer_to_binary"
-
-pub external fn parse_int(String) -> Result(Int, ParseError) = "gleam__stdlib" "parse_int";
-
-pub external fn parse_float(String) -> Result(Float, ParseError) = "gleam__stdlib" "parse_float";
-
-pub external fn base_from_int(Int, Int) -> String = "erlang" "integer_to_binary"
-
-pub fn from_float(f) {
-  f
-  |> iodata:from_float
-  |> iodata:to_string
-}
