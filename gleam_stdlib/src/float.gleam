@@ -15,3 +15,5 @@ pub fn to_string(f) {
 pub external fn ceiling(Float) -> Float = "math" "ceil";
 
 pub external fn floor(Float) -> Float = "math" "floor";
+
+pub external fn round(Float) -> Int = "erlang" "round";

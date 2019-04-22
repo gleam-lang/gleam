@@ -1,7 +1,7 @@
 -module(float_test).
 -compile(no_auto_import).
 
--export([parse_test/0, to_string_test/0, ceiling_test/0, floor_test/0]).
+-export([parse_test/0, to_string_test/0, ceiling_test/0, floor_test/0, round_test/0]).
 
 parse_test() ->
     expect:equal(float:parse(<<"1.23">>), {ok, 1.23}),
@@ -24,3 +24,11 @@ floor_test() ->
     expect:equal(float:floor(8.1), 8.0),
     expect:equal(float:floor(-8.1), -9.0),
     expect:equal(float:floor(-8.0), -8.0).
+
+round_test() ->
+    expect:equal(float:round(8.1), 8),
+    expect:equal(float:round(8.4), 8),
+    expect:equal(float:round(8.499), 8),
+    expect:equal(float:round(8.5), 9),
+    expect:equal(float:round(-8.1), -8),
+    expect:equal(float:round(-7.5), -8).

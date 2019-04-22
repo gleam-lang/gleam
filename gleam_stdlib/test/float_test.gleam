@@ -64,3 +64,29 @@ pub fn floor_test() {
   |> float:floor
   |> expect:equal(_, -8.0)
 }
+
+pub fn round_test() {
+  8.1
+  |> float:round
+  |> expect:equal(_, 8)
+
+  8.4
+  |> float:round
+  |> expect:equal(_, 8)
+
+  8.499
+  |> float:round
+  |> expect:equal(_, 8)
+
+  8.5
+  |> float:round
+  |> expect:equal(_, 9)
+
+  -8.1
+  |> float:round
+  |> expect:equal(_, -8)
+
+  -7.5
+  |> float:round
+  |> expect:equal(_, -8)
+}

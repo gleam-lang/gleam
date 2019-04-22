@@ -9,7 +9,8 @@
 - `str` module gains `append` function and loses `from_int`, `parse_int`,
   `from_float`, `parse_float`, and `base_from_int`.
 - `int` module created with `parse`, `to_string`, and `to_base_string`.
-- `float` module created with `ceiling`, `floor`, `parse`, and `to_string`.
+- `float` module created with `ceiling`, `floor`, `round`, `parse`, and
+  `to_string`.
 
 ## v0.1.1 - 2019-04-17
 
