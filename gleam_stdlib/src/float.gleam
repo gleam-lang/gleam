@@ -11,3 +11,7 @@ pub fn to_string(f) {
   |> iodata:from_float
   |> iodata:to_string
 }
+
+pub external fn ceiling(Float) -> Float = "math" "ceil";
+
+pub external fn floor(Float) -> Float = "math" "floor";

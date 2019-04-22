@@ -36,3 +36,31 @@ pub fn to_string_test() {
   |> float:to_string
   |> expect:equal(_, "-8.1")
 }
+
+pub fn ceiling_test() {
+  8.1
+  |> float:ceiling
+  |> expect:equal(_, 9.0)
+
+  -8.1
+  |> float:ceiling
+  |> expect:equal(_, -8.0)
+
+  -8.0
+  |> float:ceiling
+  |> expect:equal(_, -8.0)
+}
+
+pub fn floor_test() {
+  8.1
+  |> float:floor
+  |> expect:equal(_, 8.0)
+
+  -8.1
+  |> float:floor
+  |> expect:equal(_, -9.0)
+
+  -8.0
+  |> float:floor
+  |> expect:equal(_, -8.0)
+}
