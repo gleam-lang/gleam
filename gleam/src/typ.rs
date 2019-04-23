@@ -12,12 +12,6 @@ const INDENT: isize = 2;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
-    Const {
-        public: bool,
-        module: String,
-        name: String,
-    },
-
     App {
         public: bool,
         module: String,
@@ -73,15 +67,17 @@ impl Type {
 
     pub fn to_gleam_doc(&self, names: &mut HashMap<usize, String>, uid: &mut usize) -> Document {
         match self {
-            Type::Const { name, .. } => name.clone().to_doc(),
-
-            Type::App { name, args, .. } => name
-                .clone()
-                .to_doc()
-                .append("(")
-                .append(args_to_gleam_doc(args, names, uid))
-                .append(")"),
-
+            Type::App { name, args, .. } => {
+                if args.len() == 0 {
+                    name.clone().to_doc()
+                } else {
+                    name.clone()
+                        .to_doc()
+                        .append("(")
+                        .append(args_to_gleam_doc(args, names, uid))
+                        .append(")")
+                }
+            }
             Type::Fn { args, retrn } => "fn("
                 .to_doc()
                 .append(args_to_gleam_doc(args, names, uid))
@@ -278,10 +274,6 @@ impl Type {
         match self {
             Type::RowNil { .. } => None,
 
-            Type::Const { public: true, .. } => None,
-
-            Type::Const { .. } => Some(self.clone()),
-
             Type::Module { row, .. } => row.find_private_type(),
 
             Type::Map { row, .. } => row.find_private_type(),
@@ -368,10 +360,11 @@ fn args_to_gleam_doc(
 fn to_gleam_doc_test() {
     let cases = [
         (
-            Type::Const {
+            Type::App {
                 module: "whatever".to_string(),
                 name: "Int".to_string(),
                 public: true,
+                args: vec![],
             },
             "Int",
         ),
@@ -381,15 +374,17 @@ fn to_gleam_doc_test() {
                 name: "Pair".to_string(),
                 public: true,
                 args: vec![
-                    Type::Const {
+                    Type::App {
                         module: "whatever".to_string(),
                         name: "Int".to_string(),
                         public: true,
+                        args: vec![],
                     },
-                    Type::Const {
+                    Type::App {
                         module: "whatever".to_string(),
                         name: "Bool".to_string(),
                         public: true,
+                        args: vec![],
                     },
                 ],
             },
@@ -398,18 +393,21 @@ fn to_gleam_doc_test() {
         (
             Type::Fn {
                 args: vec![
-                    Type::Const {
+                    Type::App {
+                        args: vec![],
                         module: "whatever".to_string(),
                         name: "Int".to_string(),
                         public: true,
                     },
-                    Type::Const {
+                    Type::App {
+                        args: vec![],
                         module: "whatever".to_string(),
                         name: "Bool".to_string(),
                         public: true,
                     },
                 ],
-                retrn: Box::new(Type::Const {
+                retrn: Box::new(Type::App {
+                    args: vec![],
                     module: "whatever".to_string(),
                     name: "Bool".to_string(),
                     public: true,
@@ -420,7 +418,8 @@ fn to_gleam_doc_test() {
         (
             Type::Var {
                 typ: Rc::new(RefCell::new(TypeVar::Link {
-                    typ: Box::new(Type::Const {
+                    typ: Box::new(Type::App {
+                        args: vec![],
                         module: "whatever".to_string(),
                         name: "Int".to_string(),
                         public: true,
@@ -874,19 +873,12 @@ impl<'a> Env<'a> {
                         given: args.len(),
                     });
                 }
-                match args.len() {
-                    0 => Ok(Type::Const {
-                        name: name.to_string(),
-                        module: info.module.clone(),
-                        public: info.public,
-                    }),
-                    _ => Ok(Type::App {
-                        name: name.to_string(),
-                        module: info.module.clone(),
-                        public: info.public,
-                        args,
-                    }),
-                }
+                Ok(Type::App {
+                    name: name.to_string(),
+                    module: info.module.clone(),
+                    public: info.public,
+                    args,
+                })
             }
 
             ast::Type::Map { fields, tail, .. } => Ok(Type::Map {
@@ -1175,19 +1167,11 @@ pub fn infer_module(
                     .map(|ast| env.type_from_ast(&ast, &mut type_vars, true))
                     .collect::<Result<_, _>>()?;
 
-                let retrn = match args.len() {
-                    0 => Type::Const {
-                        public: public.clone(),
-                        module: module_name.clone(),
-                        name: name.clone(),
-                    },
-
-                    _ => Type::App {
-                        public: public.clone(),
-                        module: module_name.clone(),
-                        name: name.clone(),
-                        args: args_types,
-                    },
+                let retrn = Type::App {
+                    public: public.clone(),
+                    module: module_name.clone(),
+                    name: name.clone(),
+                    args: args_types,
                 };
                 // Check and register constructors
                 for constructor in constructors.iter() {
@@ -1670,7 +1654,7 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
                     }
                 }
 
-                c @ Type::Const { .. } => {
+                c @ Type::App { .. } => {
                     if pattern_args.is_empty() {
                         unify(&c, typ).map_err(|e| convert_unify_error(e, &meta))
                     } else {
@@ -1835,8 +1819,6 @@ fn convert_unify_error(e: UnifyError, meta: &Meta) -> Error {
 fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
     fn go(t: Type, ctx_level: usize, ids: &mut HashMap<usize, Type>, env: &mut Env) -> Type {
         match t {
-            Type::Const { .. } => t,
-
             Type::App {
                 public,
                 name,
@@ -1960,28 +1942,6 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
     }
 
     match (t1, t2) {
-        (
-            Type::Const {
-                module: m1,
-                name: n1,
-                ..
-            },
-            Type::Const {
-                module: m2,
-                name: n2,
-                ..
-            },
-        ) => {
-            if n1 == n2 && m1 == m2 {
-                Ok(())
-            } else {
-                Err(UnifyError::CouldNotUnify {
-                    expected: (*t1).clone(),
-                    given: (*t2).clone(),
-                })
-            }
-        }
-
         (
             Type::App {
                 module: m1,
@@ -2198,8 +2158,6 @@ fn update_levels(typ: &Type, own_level: usize, own_id: usize) -> Result<(), Unif
     }
 
     match typ {
-        Type::Const { .. } => Ok(()),
-
         Type::App { args, .. } => {
             for arg in args.iter() {
                 update_levels(arg, own_level, own_id)?
@@ -2387,8 +2345,6 @@ fn generalise(t: Type, ctx_level: usize) -> Type {
                 .collect(),
         },
 
-        Type::Const { .. } => t,
-
         Type::Map { row } => Type::Map {
             row: Box::new(generalise(*row, ctx_level)),
         },
@@ -2408,15 +2364,17 @@ fn generalise(t: Type, ctx_level: usize) -> Type {
 }
 
 pub fn int() -> Type {
-    Type::Const {
+    Type::App {
         public: true,
         name: "Int".to_string(),
         module: "".to_string(),
+        args: vec![],
     }
 }
 
 pub fn float() -> Type {
-    Type::Const {
+    Type::App {
+        args: vec![],
         public: true,
         name: "Float".to_string(),
         module: "".to_string(),
@@ -2424,7 +2382,8 @@ pub fn float() -> Type {
 }
 
 pub fn bool() -> Type {
-    Type::Const {
+    Type::App {
+        args: vec![],
         public: true,
         name: "Bool".to_string(),
         module: "".to_string(),
@@ -2432,7 +2391,8 @@ pub fn bool() -> Type {
 }
 
 pub fn string() -> Type {
-    Type::Const {
+    Type::App {
+        args: vec![],
         public: true,
         name: "String".to_string(),
         module: "".to_string(),
@@ -3498,7 +3458,8 @@ fn infer_module_error_test() {
                     pub external fn leak_type() -> PrivateType = "" """#,
             error: Error::PrivateTypeLeak {
                 meta: Meta { start: 46, end: 96 },
-                leaked: Type::Const {
+                leaked: Type::App {
+                    args: vec![],
                     public: false,
                     module: "".to_string(),
                     name: "PrivateType".to_string(),
@@ -3514,7 +3475,8 @@ fn infer_module_error_test() {
                     start: 106,
                     end: 133,
                 },
-                leaked: Type::Const {
+                leaked: Type::App {
+                    args: vec![],
                     public: false,
                     module: "".to_string(),
                     name: "PrivateType".to_string(),
@@ -3530,7 +3492,8 @@ fn infer_module_error_test() {
                     start: 106,
                     end: 135,
                 },
-                leaked: Type::Const {
+                leaked: Type::App {
+                    args: vec![],
                     public: false,
                     module: "".to_string(),
                     name: "PrivateType".to_string(),
@@ -3542,7 +3505,8 @@ fn infer_module_error_test() {
                     pub external fn go(PrivateType) -> Int = "" """#,
             error: Error::PrivateTypeLeak {
                 meta: Meta { start: 46, end: 92 },
-                leaked: Type::Const {
+                leaked: Type::App {
+                    args: vec![],
                     public: false,
                     module: "".to_string(),
                     name: "PrivateType".to_string(),
