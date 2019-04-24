@@ -23,7 +23,7 @@ book: docs/index.html ## Build the documentation
 
 .PHONY: book-serve
 book-serve: ## Run the book dev server
-	cd book && mdbook serve --open
+	cd book && mdbook serve --open --websocket-port 4200
 
 .PHONY: test ## Run all tests
 test: test-gleam test-stdlib

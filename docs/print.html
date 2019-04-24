@@ -195,7 +195,12 @@ how to create an navigate a Gleam project.</p>
 <a class="header" href="#installation" id="installation"><h1>Installation</h1></a>
 <p>A Gleam installation is made up of two parts: The Gleam compiler, and the
 Erlang runtime.</p>
+<ul>
+<li><a href="#installing-the-compiler">Installing the compiler</a></li>
+<li><a href="#installing-the-erlang-runtime">Installing the Erlang runtime</a></li>
+</ul>
 <a class="header" href="#installing-the-compiler" id="installing-the-compiler"><h2>Installing the compiler</h2></a>
+<a class="header" href="#build-from-source" id="build-from-source"><h3>Build from source</h3></a>
 <p>The compiler is written in the Rust programming language and must be build
 from source. <a href="https://www.rust-lang.org/tools/install">Install the Rust compiler</a>
 before proceeding.</p>
@@ -211,6 +216,11 @@ make install
 # Prints &quot;gleam $VERSION&quot;
 gleam --version
 </code></pre>
+<a class="header" href="#linux" id="linux"><h3>Linux</h3></a>
+<a class="header" href="#arch-linux" id="arch-linux"><h4>Arch Linux</h4></a>
+<p>Gleam is available through the <a href="https://wiki.archlinux.org/index.php/Arch_User_Repository">Arch User Repository</a>
+as package <code>gleam</code>. You can use your prefered <a href="https://wiki.archlinux.org/index.php/AUR_helpers">helper</a>
+to install it or clone it for manual build from <a href="https://aur.archlinux.org/gleam.git">https://aur.archlinux.org/gleam.git</a>.</p>
 <a class="header" href="#installing-the-erlang-runtime" id="installing-the-erlang-runtime"><h2>Installing the Erlang runtime</h2></a>
 <p>Gleam compiles to Erlang code, so Erlang needs to be installed to run Gleam
 code.</p>
@@ -224,7 +234,7 @@ this if all is well:</p>
 <pre><code>$ erl -version
 Erlang (SMP,ASYNC_THREADS,HIPE) (BEAM) emulator version 10.1
 </code></pre>
-<a class="header" href="#linux" id="linux"><h3>Linux</h3></a>
+<a class="header" href="#linux-1" id="linux-1"><h3>Linux</h3></a>
 <a class="header" href="#debian-linux" id="debian-linux"><h4>Debian Linux</h4></a>
 <pre><code class="language-sh">sudo apt-get update
 sudo apt-get install erlang
