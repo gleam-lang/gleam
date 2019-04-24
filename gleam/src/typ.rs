@@ -174,7 +174,10 @@ impl Type {
 
             Type::Var { typ, .. } => typ.borrow().to_gleam_doc(names, uid),
 
-            Type::RowCons { .. } => unreachable!(),
+            Type::RowCons { .. } => {
+                // TODO
+                format!("{:?}", self).to_doc()
+            }
 
             Type::RowNil { .. } => nil(),
         }
@@ -1074,7 +1077,7 @@ pub fn infer_module(
                 };
 
                 // Assert that the inferred type matches the type of any recursive call
-                unify(&rec, &typ).map_err(|e| convert_unify_error(e, &meta))?;
+                unify(&rec, &typ, &mut env).map_err(|e| convert_unify_error(e, &meta))?;
 
                 // Insert the function into the environment
                 let typ = generalise(typ, level);
@@ -1382,7 +1385,8 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
                 unify_pattern(&clause.pattern, &subject_type, level, env)?;
 
                 let then = infer(clause.then, level, env)?;
-                unify(&return_type, then.typ()).map_err(|e| convert_unify_error(e, then.meta()))?;
+                unify(&return_type, then.typ(), env)
+                    .map_err(|e| convert_unify_error(e, then.meta()))?;
                 typed_clauses.push(Clause {
                     meta: clause.meta,
                     pattern: clause.pattern,
@@ -1404,7 +1408,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         } => {
             let head = infer(*head, level, env)?;
             let tail = infer(*tail, level, env)?;
-            unify(tail.typ(), &list(head.typ().clone()))
+            unify(tail.typ(), &list(head.typ().clone()), env)
                 .map_err(|e| convert_unify_error(e, &meta))?;
             Ok(Expr::Cons {
                 meta,
@@ -1478,7 +1482,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             let tail = infer(*tail, level, env)?;
 
             let value_type = env.new_unbound_var(level);
-            unify(&value_type, value.typ()).map_err(|e| convert_unify_error(e, &meta))?;
+            unify(&value_type, value.typ(), env).map_err(|e| convert_unify_error(e, &meta))?;
 
             let tail_row_type = env.new_unbound_var(level);
             unify(
@@ -1486,6 +1490,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
                     row: Box::new(tail_row_type.clone()),
                 },
                 tail.typ(),
+                env,
             )
             .map_err(|e| convert_unify_error(e, &meta))?;
 
@@ -1531,7 +1536,8 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
                     tail: Box::new(other_fields_typ),
                 }),
             };
-            unify(&dummy_map, map.typ())
+
+            unify(&dummy_map, map.typ(), env)
                 .map_err(|e| convert_unify_error(set_map_row_type(e), &meta))?;
 
             Ok(Expr::MapSelect {
@@ -1579,7 +1585,7 @@ fn infer_module_select(
             tail: Box::new(other_fields_typ),
         }),
     };
-    unify(&dummy_module, module_type).map_err(|e| convert_unify_error(e, meta))?;
+    unify(&dummy_module, module_type, env).map_err(|e| convert_unify_error(e, meta))?;
 
     Ok(selected_field_typ)
 }
@@ -1603,19 +1609,20 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
             Ok(())
         }
 
-        Pattern::Int { meta, .. } => unify(&int(), typ).map_err(|e| convert_unify_error(e, &meta)),
+        Pattern::Int { meta, .. } => {
+            unify(&int(), typ, env).map_err(|e| convert_unify_error(e, &meta))
+        }
 
         Pattern::Float { meta, .. } => {
-            unify(&float(), typ).map_err(|e| convert_unify_error(e, &meta))
+            unify(&float(), typ, env).map_err(|e| convert_unify_error(e, &meta))
         }
 
         Pattern::String { meta, .. } => {
-            unify(&string(), typ).map_err(|e| convert_unify_error(e, &meta))
+            unify(&string(), typ, env).map_err(|e| convert_unify_error(e, &meta))
         }
 
-        Pattern::Nil { meta, .. } => {
-            unify(&list(env.new_unbound_var(level)), typ).map_err(|e| convert_unify_error(e, &meta))
-        }
+        Pattern::Nil { meta, .. } => unify(&list(env.new_unbound_var(level)), typ, env)
+            .map_err(|e| convert_unify_error(e, &meta)),
 
         Pattern::Cons {
             meta, head, tail, ..
@@ -1647,7 +1654,7 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
                         for (pattern, typ) in pattern_args.iter().zip(&args) {
                             unify_pattern(pattern, typ, level, env)?;
                         }
-                        unify(&retrn, typ).map_err(|e| convert_unify_error(e, &meta))
+                        unify(&retrn, typ, env).map_err(|e| convert_unify_error(e, &meta))
                     } else {
                         // TODO: Incorrect number of args given to constructor
                         unimplemented!()
@@ -1656,7 +1663,7 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
 
                 c @ Type::App { .. } => {
                     if pattern_args.is_empty() {
-                        unify(&c, typ).map_err(|e| convert_unify_error(e, &meta))
+                        unify(&c, typ, env).map_err(|e| convert_unify_error(e, &meta))
                     } else {
                         // Error: singleton given args
                         unimplemented!()
@@ -1682,7 +1689,8 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
                 let elems = (0..(elems.len()))
                     .map(|_| env.new_unbound_var(level))
                     .collect();
-                unify(&Type::Tuple { elems }, &typ).map_err(|e| convert_unify_error(e, &meta))?;
+                unify(&Type::Tuple { elems }, &typ, env)
+                    .map_err(|e| convert_unify_error(e, &meta))?;
                 unify_pattern(pattern, &typ, level, env)
             }
 
@@ -1747,7 +1755,7 @@ fn infer_call(
         .zip(args)
         .map(|(typ, arg): (&mut Type, _)| {
             let arg = infer(arg, level, env)?;
-            unify(typ, arg.typ()).map_err(|e| convert_unify_error(e, &meta))?;
+            unify(typ, arg.typ(), env).map_err(|e| convert_unify_error(e, &meta))?;
             Ok(arg)
         })
         .collect::<Result<_, _>>()?;
@@ -1918,7 +1926,7 @@ enum UnifyError {
     },
 }
 
-fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
+fn unify(t1: &Type, t2: &Type, env: &mut Env) -> Result<(), UnifyError> {
     if t1 == t2 {
         return Ok(());
     }
@@ -1926,7 +1934,7 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
     // Collapse right hand side type links. Left hand side will be collapsed in the next block.
     if let Type::Var { typ } = t2 {
         if let TypeVar::Link { typ } = &*typ.borrow() {
-            return unify(t1, typ);
+            return unify(t1, typ, env);
         }
     }
 
@@ -1954,7 +1962,7 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
                 Ok(())
             }
 
-            Action::Unify(t) => unify(&t, t2),
+            Action::Unify(t) => unify(&t, t2, env),
 
             Action::Error => Err(UnifyError::CouldNotUnify {
                 expected: (*t1).clone(),
@@ -1964,7 +1972,7 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
     }
 
     if let Type::Var { .. } = t2 {
-        return unify(t2, t1).map_err(flip_unify_error);
+        return unify(t2, t1, env).map_err(flip_unify_error);
     }
 
     match (t1, t2) {
@@ -1984,7 +1992,7 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
         ) => {
             if m1 == m2 && n1 == n2 && args1.len() == args2.len() {
                 for (a, b) in args1.iter().zip(args2) {
-                    unify(a, b)?;
+                    unify(a, b, env)?;
                 }
                 Ok(())
             } else {
@@ -1998,7 +2006,7 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
         (Type::Tuple { elems: elems1, .. }, Type::Tuple { elems: elems2, .. }) => {
             if elems1.len() == elems2.len() {
                 for (a, b) in elems1.iter().zip(elems2) {
-                    unify(a, b)?;
+                    unify(a, b, env)?;
                 }
                 Ok(())
             } else {
@@ -2023,9 +2031,9 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
         ) => {
             if args1.len() == args2.len() {
                 for (a, b) in args1.iter().zip(args2) {
-                    unify(a, b)?;
+                    unify(a, b, env)?;
                 }
-                unify(retrn1, retrn2)
+                unify(retrn1, retrn2, env)
             } else {
                 Err(UnifyError::CouldNotUnify {
                     expected: (*t1).clone(),
@@ -2035,10 +2043,10 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
         }
 
         (Type::Map { row: row1 }, Type::Map { row: row2 }) => {
-            unify(row1, row2).map_err(set_map_row_type)
+            unify(row1, row2, env).map_err(set_map_row_type)
         }
 
-        (Type::Module { row: row1 }, Type::Module { row: row2 }) => unify(row1, row2),
+        (Type::Module { row: row1 }, Type::Module { row: row2 }) => unify(row1, row2, env),
 
         (Type::RowNil, Type::RowNil) => Ok(()),
 
@@ -2073,15 +2081,15 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
                 head: (*head2).clone(),
                 tail: (*tail2).clone(),
             };
-            let tail2 = rewrite_row(t2, label1.clone(), *head1.clone())?;
+            let tail2 = rewrite_row(t2, label1.clone(), *head1.clone(), env)?;
 
             if let Some(typ) = unbound {
                 if let TypeVar::Link { .. } = &*typ.borrow() {
-                    // TODO: I don't remember what is supposed to happen here.
+                    // TODO: Recursive row type
                     unimplemented!()
                 }
             }
-            unify(tail1, &tail2)
+            unify(dbg!(tail1), dbg!(&tail2), env)
         }
 
         (_, _) => Err(UnifyError::CouldNotUnify {
@@ -2107,7 +2115,13 @@ fn set_map_row_type(e: UnifyError) -> UnifyError {
     }
 }
 
-fn rewrite_row(row: Type, label1: String, head1: Type) -> Result<Type, UnifyError> {
+// It seems that we are rewriting rows incorrectly.
+// It is supposed to return the row minus the label+head we are looking for, however it seems to be
+// doing something else. Or possibly not. I'm tired and can't tell right now.
+// Perhaps we should write some very simple unit tests for this function to get a better understand
+// of what is happening here.
+
+fn rewrite_row(row: Type, label1: String, head1: Type, env: &mut Env) -> Result<Type, UnifyError> {
     match row {
         Type::RowNil => Err(UnifyError::FieldNotFound {
             label: label1,
@@ -2116,10 +2130,10 @@ fn rewrite_row(row: Type, label1: String, head1: Type) -> Result<Type, UnifyErro
 
         Type::RowCons { label, head, tail } => {
             if label == label1 {
-                unify(&head1, &head)?;
+                unify(&head1, &head, env)?;
                 Ok(*tail)
             } else {
-                let tail = rewrite_row(*tail, label1, head1)?;
+                let tail = rewrite_row(*tail, label1, head1, env)?;
                 Ok(Type::RowCons {
                     label,
                     head,
@@ -2128,13 +2142,25 @@ fn rewrite_row(row: Type, label1: String, head1: Type) -> Result<Type, UnifyErro
             }
         }
 
-        Type::Var { typ } => match &*typ.borrow() {
-            TypeVar::Unbound { .. } => unimplemented!(),
+        Type::Var { typ } => {
+            let new_typ = match &*typ.borrow() {
+                // TODO: test.
+                TypeVar::Unbound { level, .. } => Type::RowCons {
+                    label: label1,
+                    head: Box::new(head1),
+                    tail: Box::new(env.new_unbound_var(*level)),
+                },
 
-            TypeVar::Link { typ } => rewrite_row(*typ.clone(), label1, head1),
+                TypeVar::Link { typ } => return rewrite_row(*typ.clone(), label1, head1, env),
 
-            _ => unimplemented!(), // Expected a row
-        },
+                _ => unimplemented!(), // Expected a row
+            };
+            *typ.borrow_mut() = TypeVar::Link {
+                typ: Box::new(new_typ),
+            };
+
+            Ok(Type::Var { typ })
+        }
 
         _ => unimplemented!(), // Expected a row
     }
@@ -2159,7 +2185,6 @@ fn flip_unify_error(e: UnifyError) -> UnifyError {
 /// the type, thus ensuring the type will be correctly generalized.
 ///
 fn update_levels(typ: &Type, own_level: usize, own_id: usize) -> Result<(), UnifyError> {
-    // TODO: move this into the match block
     if let Type::Var { typ } = &typ {
         let new_value = match &*typ.borrow() {
             TypeVar::Link { typ, .. } => return update_levels(typ, own_level, own_id),
@@ -3390,6 +3415,15 @@ pub fn two() { one() + zero() }",
                     }
                   }",
             typ: "module { fn length(List(a)) -> Int }",
+        },
+        // TODO
+        Case {
+            src: "external fn the_map({a = Int, b = Int}) -> Int = \"\" \"\"
+            pub fn go(map) {
+                    let a = map.a
+                    the_map(map)
+                  }",
+            typ: "module { fn go({ a = Int, b = Int }) -> Int }",
         },
         // % TODO: mutual recursion
         //    // % {
