@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.1.2 - 2019-04-25
 
 - `list` module gains `at`, `all`, `any`, `index_map`, `intersperse`, `sort`,
   `unique`, and `zip` functions.

@@ -1,6 +1,6 @@
 {application,gleam_experimental_stdlib,
              [{description,"A standard library for the Gleam programming language"},
-              {vsn,"0.1.1"},
+              {vsn,"0.1.2"},
               {registered,[]},
               {applications,[kernel,stdlib]},
               {env,[]},
