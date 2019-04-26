@@ -1001,6 +1001,12 @@ pub enum Error {
         leaked: Type,
     },
 
+    ExtraField {
+        meta: Meta,
+        label: String,
+        container_typ: RowContainerType,
+    },
+
     FieldNotFound {
         meta: Meta,
         label: String,
@@ -1525,14 +1531,8 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
                     tail: Box::new(other_fields_typ),
                 }),
             };
-            unify(&dummy_map, map.typ()).map_err(|e| match convert_unify_error(e, &meta) {
-                Error::FieldNotFound { meta, label, .. } => Error::FieldNotFound {
-                    meta,
-                    label,
-                    container_typ: RowContainerType::Map,
-                },
-                other => other,
-            })?;
+            unify(&dummy_map, map.typ())
+                .map_err(|e| convert_unify_error(set_map_row_type(e), &meta))?;
 
             Ok(Expr::MapSelect {
                 meta,
@@ -1804,9 +1804,21 @@ fn convert_unify_error(e: UnifyError, meta: &Meta) -> Error {
             given,
         },
 
-        UnifyError::FieldNotFound { label } => Error::FieldNotFound {
+        UnifyError::FieldNotFound {
+            label,
+            container_typ,
+        } => Error::FieldNotFound {
             meta: meta.clone(),
-            container_typ: RowContainerType::Module,
+            container_typ,
+            label,
+        },
+
+        UnifyError::ExtraField {
+            label,
+            container_typ,
+        } => Error::ExtraField {
+            meta: meta.clone(),
+            container_typ,
             label,
         },
 
@@ -1886,10 +1898,24 @@ fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
     go(typ, ctx_level, &mut hashmap![], env)
 }
 
+#[derive(Debug)]
 enum UnifyError {
-    CouldNotUnify { expected: Type, given: Type },
+    CouldNotUnify {
+        expected: Type,
+        given: Type,
+    },
+
     RecursiveType,
-    FieldNotFound { label: String },
+
+    FieldNotFound {
+        container_typ: RowContainerType,
+        label: String,
+    },
+
+    ExtraField {
+        container_typ: RowContainerType,
+        label: String,
+    },
 }
 
 fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
@@ -2008,11 +2034,18 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
             }
         }
 
-        (Type::Map { row: row1 }, Type::Map { row: row2 }) => unify(row1, row2),
+        (Type::Map { row: row1 }, Type::Map { row: row2 }) => {
+            unify(row1, row2).map_err(set_map_row_type)
+        }
 
         (Type::Module { row: row1 }, Type::Module { row: row2 }) => unify(row1, row2),
 
         (Type::RowNil, Type::RowNil) => Ok(()),
+
+        (Type::RowNil, Type::RowCons { label, .. }) => Err(UnifyError::ExtraField {
+            label: label.to_string(),
+            container_typ: RowContainerType::Module,
+        }),
 
         (
             Type::RowCons {
@@ -2058,9 +2091,28 @@ fn unify(t1: &Type, t2: &Type) -> Result<(), UnifyError> {
     }
 }
 
+fn set_map_row_type(e: UnifyError) -> UnifyError {
+    match e {
+        UnifyError::FieldNotFound { label, .. } => UnifyError::FieldNotFound {
+            label,
+            container_typ: RowContainerType::Map,
+        },
+
+        UnifyError::ExtraField { label, .. } => UnifyError::ExtraField {
+            label,
+            container_typ: RowContainerType::Map,
+        },
+
+        other => other,
+    }
+}
+
 fn rewrite_row(row: Type, label1: String, head1: Type) -> Result<Type, UnifyError> {
     match row {
-        Type::RowNil => Err(UnifyError::FieldNotFound { label: label1 }),
+        Type::RowNil => Err(UnifyError::FieldNotFound {
+            label: label1,
+            container_typ: RowContainerType::Module,
+        }),
 
         Type::RowCons { label, head, tail } => {
             if label == label1 {
@@ -2098,27 +2150,6 @@ fn flip_unify_error(e: UnifyError) -> UnifyError {
     }
 }
 
-// let occurs_check_adjust_levels tvar_id tvar_level ty =
-// 	let rec f = function
-// 		| TVar {contents = Link ty} -> f ty
-// 		| TVar {contents = Generic _} -> assert false
-// 		| TVar ({contents = Unbound(other_id, other_level)} as other_tvar) ->
-// 				if other_id = tvar_id then
-// 					error "recursive types"
-// 				else
-// 					if other_level > tvar_level then
-// 						other_tvar := Unbound(other_id, tvar_level)
-// 					else
-// 						()
-// 		| TApp(ty, ty_arg_list) ->
-// 				f ty ;
-// 				List.iter f ty_arg_list
-// 		| TArrow(param_ty_list, return_ty) ->
-// 				List.iter f param_ty_list ;
-// 				f return_ty
-// 		| TConst _ -> ()
-// 	in
-// 	f ty
 /// This function makes sure that the type variable being unified
 /// doesn't occur within the type it is being unified with. This
 /// prevents the algorithm from inferring recursive types, which
@@ -2194,25 +2225,6 @@ fn update_levels(typ: &Type, own_level: usize, own_id: usize) -> Result<(), Unif
     }
 }
 
-// let rec match_fun_ty num_params = function
-// 	| TArrow(param_ty_list, return_ty) ->
-// 			if List.length param_ty_list <> num_params then
-// 				error "unexpected number of arguments"
-// 			else
-// 				param_ty_list, return_ty
-// 	| TVar {contents = Link ty} -> match_fun_ty num_params ty
-// 	| TVar ({contents = Unbound(id, level)} as tvar) ->
-// 			let param_ty_list =
-// 				let rec f = function
-// 					| 0 -> []
-// 					| n -> new_var level :: f (n - 1)
-// 				in
-// 				f num_params
-// 			in
-// 			let return_ty = new_var level in
-// 			tvar := Link (TArrow(param_ty_list, return_ty)) ;
-// 			param_ty_list, return_ty
-// 	| _ -> error "expected a function"
 fn match_fun_type(
     typ: &Type,
     arity: usize,
@@ -2276,15 +2288,6 @@ fn convert_not_fun_error(e: MatchFunTypeError, fn_meta: &Meta, call_meta: &Meta)
     }
 }
 
-// let rec generalize level = function
-// 	| TVar {contents = Unbound(id, other_level)} when other_level > level ->
-// 			TVar (ref (Generic id))
-// 	| TApp(ty, ty_arg_list) ->
-// 			TApp(generalize level ty, List.map (generalize level) ty_arg_list)
-// 	| TArrow(param_ty_list, return_ty) ->
-// 			TArrow(List.map (generalize level) param_ty_list, generalize level return_ty)
-// 	| TVar {contents = Link ty} -> generalize level ty
-// 	| TVar {contents = Generic _} | TVar {contents = Unbound _} | TConst _ as ty -> ty
 /// Takes a level and a type and turns all type variables within the type that have
 /// level higher than the input level into generalized (polymorphic) type variables.
 ///
@@ -3032,6 +3035,14 @@ fn infer_error_test() {
                 given: Type::Tuple {
                     elems: vec![int(), int(), int()],
                 },
+            },
+        },
+        Case {
+            src: "{} == {a = 2}",
+            error: Error::ExtraField {
+                meta: Meta { start: 0, end: 13 },
+                label: "a".to_string(),
+                container_typ: RowContainerType::Map,
             },
         },
         Case {

@@ -173,6 +173,31 @@ This value is being called as a function but its type is:
                     .unwrap();
                 }
 
+                ExtraField {
+                    meta,
+                    label,
+                    container_typ,
+                } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Erroneous field".to_string(),
+                        label: "".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+
+                    write!(
+                        buffer,
+                        "
+This {} has an extra field named `{}` that should not be present.
+",
+                        container_typ.to_string(),
+                        label,
+                    )
+                    .unwrap();
+                }
+
                 FieldNotFound {
                     meta,
                     label,
