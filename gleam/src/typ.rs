@@ -2081,7 +2081,7 @@ fn unify(t1: &Type, t2: &Type, env: &mut Env) -> Result<(), UnifyError> {
                 head: (*head2).clone(),
                 tail: (*tail2).clone(),
             };
-            let tail2 = rewrite_row(t2, label1.clone(), *head1.clone(), env)?;
+            let tail2 = unify_row_field(t2, label1.clone(), *head1.clone(), env)?;
 
             if let Some(typ) = unbound {
                 if let TypeVar::Link { .. } = &*typ.borrow() {
@@ -2125,7 +2125,12 @@ fn set_map_row_type(e: UnifyError) -> UnifyError {
 /// fields in the row without having to pass over the field that has already
 /// been checked.
 ///
-fn rewrite_row(row: Type, label1: String, head1: Type, env: &mut Env) -> Result<Type, UnifyError> {
+fn unify_row_field(
+    row: Type,
+    label1: String,
+    head1: Type,
+    env: &mut Env,
+) -> Result<Type, UnifyError> {
     match row {
         Type::RowNil => Err(UnifyError::FieldNotFound {
             label: label1,
@@ -2137,7 +2142,7 @@ fn rewrite_row(row: Type, label1: String, head1: Type, env: &mut Env) -> Result<
                 unify(&head1, &head, env)?;
                 Ok(*tail)
             } else {
-                let tail = rewrite_row(*tail, label1, head1, env)?;
+                let tail = unify_row_field(*tail, label1, head1, env)?;
                 Ok(Type::RowCons {
                     label,
                     head,
@@ -2158,7 +2163,7 @@ fn rewrite_row(row: Type, label1: String, head1: Type, env: &mut Env) -> Result<
                     (t, tail)
                 }
 
-                TypeVar::Link { typ } => return rewrite_row(*typ.clone(), label1, head1, env),
+                TypeVar::Link { typ } => return unify_row_field(*typ.clone(), label1, head1, env),
 
                 _ => unimplemented!(), // Expected a row
             };
@@ -2185,7 +2190,7 @@ fn rewrite_row_test() {
     };
     assert_eq!(
         Ok(Type::RowNil {}),
-        rewrite_row(row, "a".to_string(), int(), &mut env)
+        unify_row_field(row, "a".to_string(), int(), &mut env)
     );
 
     let row = Type::RowCons {
@@ -2203,7 +2208,7 @@ fn rewrite_row_test() {
             head: Box::new(int()),
             tail: Box::new(Type::RowNil {}),
         }),
-        rewrite_row(row, "a".to_string(), int(), &mut env)
+        unify_row_field(row, "a".to_string(), int(), &mut env)
     );
 
     let row = Type::RowCons {
@@ -2219,7 +2224,7 @@ fn rewrite_row_test() {
                 typ: Rc::new(RefCell::new(TypeVar::Unbound { id: 13, level: 1 }))
             }),
         }),
-        rewrite_row(row, "a".to_string(), int(), &mut env)
+        unify_row_field(row, "a".to_string(), int(), &mut env)
     );
 }
 
