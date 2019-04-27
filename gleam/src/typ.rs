@@ -1906,7 +1906,7 @@ fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
     go(typ, ctx_level, &mut hashmap![], env)
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum UnifyError {
     CouldNotUnify {
         expected: Type,
@@ -2143,13 +2143,16 @@ fn rewrite_row(row: Type, label1: String, head1: Type, env: &mut Env) -> Result<
         }
 
         Type::Var { typ } => {
-            let new_typ = match &*typ.borrow() {
-                // TODO: test.
-                TypeVar::Unbound { level, .. } => Type::RowCons {
-                    label: label1,
-                    head: Box::new(head1),
-                    tail: Box::new(env.new_unbound_var(*level)),
-                },
+            let (new_typ, tail) = match &*typ.borrow() {
+                TypeVar::Unbound { level, .. } => {
+                    let tail = env.new_unbound_var(*level);
+                    let t = Type::RowCons {
+                        label: label1,
+                        head: Box::new(head1),
+                        tail: Box::new(tail.clone()), // return this var as it is the tail
+                    };
+                    (t, tail)
+                }
 
                 TypeVar::Link { typ } => return rewrite_row(*typ.clone(), label1, head1, env),
 
@@ -2159,11 +2162,61 @@ fn rewrite_row(row: Type, label1: String, head1: Type, env: &mut Env) -> Result<
                 typ: Box::new(new_typ),
             };
 
-            Ok(Type::Var { typ })
+            Ok(tail)
         }
 
-        _ => unimplemented!(), // Expected a row
+        _ => unimplemented!(), // TODO: Expected a row
     }
+}
+
+#[test]
+fn rewrite_row_test() {
+    let mods = std::collections::HashMap::new();
+    let mut env = Env::new(&mods);
+
+    let row = Type::RowCons {
+        label: "a".to_string(),
+        head: Box::new(int()),
+        tail: Box::new(Type::RowNil {}),
+    };
+    assert_eq!(
+        Ok(Type::RowNil {}),
+        rewrite_row(row, "a".to_string(), int(), &mut env)
+    );
+
+    let row = Type::RowCons {
+        label: "b".to_string(),
+        head: Box::new(int()),
+        tail: Box::new(Type::RowCons {
+            label: "a".to_string(),
+            head: Box::new(int()),
+            tail: Box::new(Type::RowNil {}),
+        }),
+    };
+    assert_eq!(
+        Ok(Type::RowCons {
+            label: "b".to_string(),
+            head: Box::new(int()),
+            tail: Box::new(Type::RowNil {}),
+        }),
+        rewrite_row(row, "a".to_string(), int(), &mut env)
+    );
+
+    let row = Type::RowCons {
+        label: "b".to_string(),
+        head: Box::new(int()),
+        tail: Box::new(env.new_unbound_var(1)),
+    };
+    assert_eq!(
+        Ok(Type::RowCons {
+            label: "b".to_string(),
+            head: Box::new(int()),
+            tail: Box::new(Type::Var {
+                typ: Rc::new(RefCell::new(TypeVar::Unbound { id: 13, level: 1 }))
+            }),
+        }),
+        rewrite_row(row, "a".to_string(), int(), &mut env)
+    );
 }
 
 fn flip_unify_error(e: UnifyError) -> UnifyError {
