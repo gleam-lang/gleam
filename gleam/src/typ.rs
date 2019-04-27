@@ -174,10 +174,7 @@ impl Type {
 
             Type::Var { typ, .. } => typ.borrow().to_gleam_doc(names, uid),
 
-            Type::RowCons { .. } => {
-                // TODO
-                format!("{:?}", self).to_doc()
-            }
+            Type::RowCons { .. } => unreachable!(),
 
             Type::RowNil { .. } => nil(),
         }
@@ -3478,7 +3475,6 @@ pub fn two() { one() + zero() }",
                   }",
             typ: "module { fn length(List(a)) -> Int }",
         },
-        // TODO
         Case {
             src: "external fn the_map({a = Int, b = Int}) -> Int = \"\" \"\"
             pub fn go(map) {
