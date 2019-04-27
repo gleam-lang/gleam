@@ -2115,12 +2115,16 @@ fn set_map_row_type(e: UnifyError) -> UnifyError {
     }
 }
 
-// It seems that we are rewriting rows incorrectly.
-// It is supposed to return the row minus the label+head we are looking for, however it seems to be
-// doing something else. Or possibly not. I'm tired and can't tell right now.
-// Perhaps we should write some very simple unit tests for this function to get a better understand
-// of what is happening here.
-
+/// Takes a type (expected to be a Row) and searches within it for a field
+/// with a particular label.
+/// If found the type of the label is unified with the expected type,
+/// possibly returning a unification error.
+///
+/// If the unification is successful the row is returned minus the field
+/// that has been unified, so that the caller may continue to check other
+/// fields in the row without having to pass over the field that has already
+/// been checked.
+///
 fn rewrite_row(row: Type, label1: String, head1: Type, env: &mut Env) -> Result<Type, UnifyError> {
     match row {
         Type::RowNil => Err(UnifyError::FieldNotFound {
