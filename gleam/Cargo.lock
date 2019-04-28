@@ -244,7 +244,7 @@ dependencies = [
 
 [[package]]
 name = "gleam"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "clap 2.32.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "codespan 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
