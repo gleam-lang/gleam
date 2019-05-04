@@ -2,6 +2,8 @@ import any
 import result
 
 // TODO: update :: fn(MapDict(k, v), k, fn(Result(v, NotFound)) -> v) -> MapDict(k, v)
+// TODO: merge :: fn(MapDict(k, v), MapDict(k, v)) -> MapDict(k, v)
+// TODO: delete :: fn(MapDict(k, v), k) -> MapDict(k, v)
 
 pub external type MapDict(key, value);
 
