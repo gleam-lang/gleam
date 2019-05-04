@@ -174,3 +174,30 @@ pub fn delete_test() {
   |> map_dict:delete(_, "d")
   |> expect:equal(_, map_dict:from_list([{"b", 1}, {"c", 2}]))
 }
+
+pub fn update_test() {
+  let dict = map_dict:from_list([
+    {"a", 0},
+    {"b", 1},
+    {"c", 2},
+  ])
+
+  let inc_or_zero = fn(x) {
+    case x {
+    | Ok(i) -> i + 1
+    | Error(_) -> 0
+    }
+  }
+
+  dict
+  |> map_dict:update(_, "a", inc_or_zero)
+  |> expect:equal(_, map_dict:from_list([{"a", 1}, {"b", 1}, {"c", 2}]))
+
+  dict
+  |> map_dict:update(_, "b", inc_or_zero)
+  |> expect:equal(_, map_dict:from_list([{"a", 0}, {"b", 2}, {"c", 2}]))
+
+  dict
+  |> map_dict:update(_, "z", inc_or_zero)
+  |> expect:equal(_, map_dict:from_list([{"a", 0}, {"b", 1}, {"c", 2}, {"z", 0}]))
+}

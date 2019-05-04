@@ -1,8 +1,6 @@
 import any
 import result
-
-// TODO: update :: fn(MapDict(k, v), k, fn(Result(v, NotFound)) -> v) -> MapDict(k, v)
-// TODO: delete :: fn(MapDict(k, v), k) -> MapDict(k, v)
+import list
 
 pub external type MapDict(key, value);
 
@@ -66,16 +64,25 @@ pub fn take(map, keys) {
   erl_take(keys, map)
 }
 
-external fn erl_drop(List(k), MapDict(k, v)) -> MapDict(k, v) = "maps" "without"
-
-pub fn drop(map, keys) {
-  erl_drop(keys, map)
-}
-
 pub external fn merge(MapDict(k, v), MapDict(k, v)) -> MapDict(k, v) = "maps" "merge"
 
 external fn erl_delete(k, MapDict(k, v)) -> MapDict(k, v) = "maps" "remove"
 
 pub fn delete(map, key) {
   erl_delete(key, map)
+}
+
+pub fn drop(map, keys) {
+  list:fold(keys, map, fn(key, acc) {
+    delete(acc, key)
+  })
+}
+
+pub external type NotFound;
+
+pub fn update(dict, key, f) {
+  case fetch(dict, key) {
+  | Ok(value) -> put(dict, key, f(Ok(value)))
+  | Error(_) -> put(dict, key, f(Error(NotFound)))
+  }
 }

@@ -1,7 +1,7 @@
 -module(map_dict).
 -compile(no_auto_import).
 
--export([size/1, to_list/1, from_list/1, has_key/2, new/0, fetch/2, put/3, map_values/2, keys/1, values/1, filter/2, take/2, drop/2, merge/2, delete/2]).
+-export([size/1, to_list/1, from_list/1, has_key/2, new/0, fetch/2, put/3, map_values/2, keys/1, values/1, filter/2, take/2, merge/2, delete/2, drop/2, update/3]).
 
 size(A) ->
     maps:size(A).
@@ -54,12 +54,6 @@ erl_take(A, B) ->
 take(Map, Keys) ->
     erl_take(Keys, Map).
 
-erl_drop(A, B) ->
-    maps:without(A, B).
-
-drop(Map, Keys) ->
-    erl_drop(Keys, Map).
-
 merge(A, B) ->
     maps:merge(A, B).
 
@@ -68,3 +62,15 @@ erl_delete(A, B) ->
 
 delete(Map, Key) ->
     erl_delete(Key, Map).
+
+drop(Map, Keys) ->
+    list:fold(Keys, Map, fun(Key, Acc) -> delete(Acc, Key) end).
+
+update(Dict, Key, F) ->
+    case fetch(Dict, Key) of
+        {ok, Value} ->
+            put(Dict, Key, F({ok, Value}));
+
+        {error, _} ->
+            put(Dict, Key, F({error, not_found}))
+    end.

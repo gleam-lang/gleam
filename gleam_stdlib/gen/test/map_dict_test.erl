@@ -1,7 +1,7 @@
 -module(map_dict_test).
 -compile(no_auto_import).
 
--export([from_list_test/0, has_key_test/0, new_test/0, fetch_test/0, put_test/0, map_values_test/0, keys_test/0, values_test/0, take_test/0, drop_test/0, merge_test/0, delete_test/0]).
+-export([from_list_test/0, has_key_test/0, new_test/0, fetch_test/0, put_test/0, map_values_test/0, keys_test/0, values_test/0, take_test/0, drop_test/0, merge_test/0, delete_test/0, update_test/0]).
 
 from_list_test() ->
     expect:equal(map_dict:size(map_dict:from_list([{4, 0}, {1, 0}])), 2).
@@ -92,3 +92,26 @@ delete_test() ->
                                                  <<"a">>),
                                  <<"d">>),
                  map_dict:from_list([{<<"b">>, 1}, {<<"c">>, 2}])).
+
+update_test() ->
+    Dict = map_dict:from_list([{<<"a">>, 0}, {<<"b">>, 1}, {<<"c">>, 2}]),
+    IncOrZero = fun(X) -> case X of
+            {ok, I} ->
+                I + 1;
+
+            {error, _} ->
+                0
+        end end,
+    expect:equal(map_dict:update(Dict, <<"a">>, IncOrZero),
+                 map_dict:from_list([{<<"a">>, 1},
+                                     {<<"b">>, 1},
+                                     {<<"c">>, 2}])),
+    expect:equal(map_dict:update(Dict, <<"b">>, IncOrZero),
+                 map_dict:from_list([{<<"a">>, 0},
+                                     {<<"b">>, 2},
+                                     {<<"c">>, 2}])),
+    expect:equal(map_dict:update(Dict, <<"z">>, IncOrZero),
+                 map_dict:from_list([{<<"a">>, 0},
+                                     {<<"b">>, 1},
+                                     {<<"c">>, 2},
+                                     {<<"z">>, 0}])).
