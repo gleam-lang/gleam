@@ -1,7 +1,7 @@
 -module(map_dict_test).
 -compile(no_auto_import).
 
--export([from_list_test/0, has_key_test/0, new_test/0, fetch_test/0, put_test/0, map_values_test/0, keys_test/0, values_test/0, take_test/0, drop_test/0]).
+-export([from_list_test/0, has_key_test/0, new_test/0, fetch_test/0, put_test/0, map_values_test/0, keys_test/0, values_test/0, take_test/0, drop_test/0, merge_test/0]).
 
 from_list_test() ->
     expect:equal(map_dict:size(map_dict:from_list([{4, 0}, {1, 0}])), 2).
@@ -67,3 +67,17 @@ drop_test() ->
                                                    {<<"c">>, 2}]),
                                [<<"a">>, <<"b">>, <<"d">>]),
                  map_dict:from_list([{<<"c">>, 2}])).
+
+merge_test() ->
+    A = map_dict:from_list([{<<"a">>, 2}, {<<"c">>, 4}, {<<"d">>, 3}]),
+    B = map_dict:from_list([{<<"a">>, 0}, {<<"b">>, 1}, {<<"c">>, 2}]),
+    expect:equal(map_dict:merge(A, B),
+                 map_dict:from_list([{<<"a">>, 0},
+                                     {<<"b">>, 1},
+                                     {<<"c">>, 2},
+                                     {<<"d">>, 3}])),
+    expect:equal(map_dict:merge(B, A),
+                 map_dict:from_list([{<<"a">>, 2},
+                                     {<<"b">>, 1},
+                                     {<<"c">>, 4},
+                                     {<<"d">>, 3}])).

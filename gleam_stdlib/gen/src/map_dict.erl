@@ -1,7 +1,7 @@
 -module(map_dict).
 -compile(no_auto_import).
 
--export([size/1, to_list/1, from_list/1, has_key/2, new/0, fetch/2, put/3, map_values/2, keys/1, values/1, filter/2, take/2, drop/2]).
+-export([size/1, to_list/1, from_list/1, has_key/2, new/0, fetch/2, put/3, map_values/2, keys/1, values/1, filter/2, take/2, drop/2, merge/2]).
 
 size(A) ->
     maps:size(A).
@@ -59,3 +59,6 @@ erl_drop(A, B) ->
 
 drop(Map, Keys) ->
     erl_drop(Keys, Map).
+
+merge(A, B) ->
+    maps:merge(A, B).

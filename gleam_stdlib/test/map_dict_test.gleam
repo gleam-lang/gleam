@@ -133,3 +133,32 @@ pub fn drop_test() {
   |> map_dict:drop(_, ["a", "b", "d"])
   |> expect:equal(_, map_dict:from_list([{"c", 2}]))
 }
+
+pub fn merge_test() {
+  let a = map_dict:from_list([
+    {"a", 2},
+    {"c", 4},
+    {"d", 3},
+  ])
+  let b = map_dict:from_list([
+    {"a", 0},
+    {"b", 1},
+    {"c", 2},
+  ])
+
+  map_dict:merge(a, b)
+  |> expect:equal(_, map_dict:from_list([
+      {"a", 0},
+      {"b", 1},
+      {"c", 2},
+      {"d", 3},
+    ]))
+
+  map_dict:merge(b, a)
+  |> expect:equal(_, map_dict:from_list([
+      {"a", 2},
+      {"b", 1},
+      {"c", 4},
+      {"d", 3},
+    ]))
+}

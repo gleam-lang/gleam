@@ -2,8 +2,11 @@ import any
 import result
 
 // TODO: update :: fn(MapDict(k, v), k, fn(Result(v, NotFound)) -> v) -> MapDict(k, v)
-// TODO: merge :: fn(MapDict(k, v), MapDict(k, v)) -> MapDict(k, v)
 // TODO: delete :: fn(MapDict(k, v), k) -> MapDict(k, v)
+// TODO: is_disjoint
+// TODO: is_subset
+// TODO: difference
+// TODO: intersection
 
 pub external type MapDict(key, value);
 
@@ -72,3 +75,5 @@ external fn erl_drop(List(k), MapDict(k, v)) -> MapDict(k, v) = "maps" "without"
 pub fn drop(map, keys) {
   erl_drop(keys, map)
 }
+
+pub external fn merge(MapDict(k, v), MapDict(k, v)) -> MapDict(k, v) = "maps" "merge"
