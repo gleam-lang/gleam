@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- `map_dict` module gains `merge` function.
+- `map_dict` module gains `merge` and `delete` functions.
 
 ## v0.1.2 - 2019-04-25
 

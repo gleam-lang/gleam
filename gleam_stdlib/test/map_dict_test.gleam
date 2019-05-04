@@ -162,3 +162,15 @@ pub fn merge_test() {
       {"d", 3},
     ]))
 }
+
+pub fn delete_test() {
+  [
+    {"a", 0},
+    {"b", 1},
+    {"c", 2},
+  ]
+  |> map_dict:from_list
+  |> map_dict:delete(_, "a")
+  |> map_dict:delete(_, "d")
+  |> expect:equal(_, map_dict:from_list([{"b", 1}, {"c", 2}]))
+}
