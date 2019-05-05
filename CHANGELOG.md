@@ -6,6 +6,8 @@
   type is used to represent the absence of a value and is commonly used with
   `Result` to model a value that is either present (`Ok(value)`) or absent
   (`Error(Nil)`).
+- Zero arity enum constructors now generate the correct Erlang when used in
+  modules other than the one they are defined in.
 
 ## v0.1.1 - 2019-04-28
 

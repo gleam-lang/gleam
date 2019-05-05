@@ -374,6 +374,17 @@ fn enum_(name: String, args: Vec<TypedExpr>, env: &mut Env) -> Document {
     tuple(args)
 }
 
+// TODO: So here we don't have a good way to tell if it is an enum constructor or not,
+// we have to rely on the case of the variable. A bit lackluster. Perhaps enum
+// constructors should be recorded differently on the module type somehow.
+fn is_constructor_label(label: &String) -> bool {
+    label
+        .chars()
+        .next()
+        .map(|c| c.is_uppercase())
+        .unwrap_or(false)
+}
+
 fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
     match fun {
         Expr::Var {
@@ -389,16 +400,7 @@ fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
         } => name.to_doc().append(call_args(args, env)),
 
         Expr::ModuleSelect { module, label, .. } => {
-            // TODO: So here we don't have a good way to tell if it is an enum constructor or not,
-            // we have to rely on the case of the variable. A bit lackluster. Perhaps enum
-            // constructors should be recorded differently on the module type somehow.
-            let is_constructor = label
-                .chars()
-                .next()
-                .map(|c| c.is_uppercase())
-                .unwrap_or(false);
-
-            if is_constructor {
+            if is_constructor_label(&label) {
                 enum_(label, args, env)
             } else {
                 match *module {
@@ -518,16 +520,20 @@ fn module_select(
     label: String,
     env: &mut Env,
 ) -> Document {
-    match typ.collapse_links() {
-        crate::typ::Type::Fn { args, .. } => "fun "
-            .to_doc()
-            .append(expr(module, env))
-            .append(":")
-            .append(label)
-            .append("/")
-            .append(args.len()),
+    if is_constructor_label(&label) {
+        atom(label.to_snake_case())
+    } else {
+        match typ.collapse_links() {
+            crate::typ::Type::Fn { args, .. } => "fun "
+                .to_doc()
+                .append(expr(module, env))
+                .append(":")
+                .append(label)
+                .append("/")
+                .append(args.len()),
 
-        _ => expr(module, env).append(":").append(label).append("()"),
+            _ => expr(module, env).append(":").append(label).append("()"),
+        }
     }
 }
 
