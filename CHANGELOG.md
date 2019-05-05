@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- There is a new type `Nil` which is occupied by a single value (`Nil`). This
+  type is used to represent the absence of a value and is commonly used with
+  `Result` to model a value that is either present (`Ok(value)`) or absent
+  (`Error(Nil)`).
+
 ## v0.1.1 - 2019-04-28
 
 - Error messages now display the path of the file containing the problem.

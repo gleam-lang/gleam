@@ -1,7 +1,7 @@
 import other
 
 pub fn when() {
-  {} == {a=1}
+  Nil
 }
 
 pub fn x() {

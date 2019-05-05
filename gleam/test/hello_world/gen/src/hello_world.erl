@@ -4,7 +4,7 @@
 -export([when/0, x/0]).
 
 when() ->
-    <<"never">>.
+    nil.
 
 x() ->
     other:Person().

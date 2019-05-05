@@ -508,6 +508,8 @@ impl<'a> Env<'a> {
             },
         );
 
+        env.insert_variable("True".to_string(), Scope::Enum { arity: 0 }, bool());
+        env.insert_variable("False".to_string(), Scope::Enum { arity: 0 }, bool());
         env.insert_type_constructor(
             "Bool".to_string(),
             TypeConstructorInfo {
@@ -553,8 +555,15 @@ impl<'a> Env<'a> {
             },
         );
 
-        env.insert_variable("True".to_string(), Scope::Enum { arity: 0 }, bool());
-        env.insert_variable("False".to_string(), Scope::Enum { arity: 0 }, bool());
+        env.insert_variable("Nil".to_string(), Scope::Enum { arity: 0 }, bool());
+        env.insert_type_constructor(
+            "Nil".to_string(),
+            TypeConstructorInfo {
+                arity: 0,
+                module: "".to_string(),
+                public: true,
+            },
+        );
 
         env.insert_variable(
             "+".to_string(),

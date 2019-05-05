@@ -179,7 +179,7 @@ This value is being called as a function but its type is:
                     container_typ,
                 } => {
                     let diagnostic = ErrorDiagnostic {
-                        title: "Erroneous field".to_string(),
+                        title: "Extra field".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
