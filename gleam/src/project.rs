@@ -215,7 +215,7 @@ This {} has an extra field named `{}` that should not be present.
                     write!(
                         buffer,
                         "
-This {} does not contain a field named `{}`.
+This {} does not have a field named `{}`.
 ",
                         container_typ.to_string(),
                         label,
