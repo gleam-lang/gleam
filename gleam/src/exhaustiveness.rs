@@ -13,8 +13,9 @@ pub fn check(typ: &Type, clauses: &Vec<TypedClause>) -> Result<(), Left> {
 
 #[derive(Debug, PartialEq)]
 pub enum Left {
-    None,
     Int,
+    None,
+    Other,
     Float,
     String,
 }
@@ -30,19 +31,14 @@ impl Left {
 
 fn cases_left(typ: &Type) -> Left {
     match typ {
-        Type::Fn { .. } => Left::None, // TODO
-
-        Type::Var { .. } => Left::None, // TODO
-
-        Type::Map { .. } => Left::None, // TODO
+        Type::RowNil { .. }
+        | Type::RowCons { .. }
+        | Type::Fn { .. }
+        | Type::Var { .. }
+        | Type::Map { .. }
+        | Type::Module { .. } => Left::Other,
 
         Type::Tuple { .. } => Left::None, // TODO
-
-        Type::Module { .. } => Left::None, // TODO
-
-        Type::RowNil { .. } => Left::None, // TODO
-
-        Type::RowCons { .. } => Left::None, // TODO
 
         Type::App { module, name, .. } if module == "" => match &**name {
             "Int" => Left::Int,
@@ -82,10 +78,16 @@ fn apply_test() {
     // Discard pattern
     assert_eq!(Left::None, apply(Left::None, &discard()));
     assert_eq!(Left::None, apply(Left::Int, &discard()));
+    assert_eq!(Left::None, apply(Left::Float, &discard()));
+    assert_eq!(Left::None, apply(Left::String, &discard()));
+    assert_eq!(Left::None, apply(Left::Other, &discard()));
 
     // Var pattern
     assert_eq!(Left::None, apply(Left::None, &var()));
     assert_eq!(Left::None, apply(Left::Int, &var()));
+    assert_eq!(Left::None, apply(Left::Float, &var()));
+    assert_eq!(Left::None, apply(Left::String, &var()));
+    assert_eq!(Left::None, apply(Left::Other, &var()));
 
     // Int pattern
     assert_eq!(Left::Int, apply(Left::Int, &int(0)));
