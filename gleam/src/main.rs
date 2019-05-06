@@ -8,6 +8,7 @@
 
 mod ast;
 mod erl;
+mod exhaustiveness;
 mod parser;
 mod pretty;
 mod project;

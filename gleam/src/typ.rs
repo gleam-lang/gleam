@@ -1401,6 +1401,11 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
 
                 env.variables = vars;
             }
+
+            if let Err(cases) = crate::exhaustiveness::check(&subject_type, &typed_clauses) {
+                dbg!(cases);
+            }
+
             Ok(Expr::Case {
                 meta,
                 typ: return_type,
