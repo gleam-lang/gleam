@@ -7,6 +7,9 @@ pub enum Empty =
 pub enum NotFound =
   | NotFound
 
+pub enum LengthMismatch =
+  | LengthMismatch
+
 // Using the Erlang C BIF implementation.
 //
 pub external fn length(List(a)) -> Int = "erlang" "length"
@@ -189,6 +192,13 @@ pub fn zip(l1, l2) {
     | {[], _} -> []
     | {_, []} -> []
     | {[x1 | rest1], [x2 | rest2] } -> [ {x1, x2} | zip(rest1, rest2) ]
+  }
+}
+
+pub fn strict_zip(l1, l2) {
+  case length(l1) == length(l2) {
+  | True -> Ok(zip(l1, l2))
+  | False -> Error(LengthMismatch)
   }
 }
 

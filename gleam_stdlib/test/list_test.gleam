@@ -204,6 +204,23 @@ pub fn zip_test() {
   |> expect:equal(_, [{5, 1}, {6, 2}])
 }
 
+pub fn srict_zip_test() {
+  list:strict_zip([], [1, 2, 3])
+  |> expect:is_error
+
+  list:strict_zip([1, 2], [])
+  |> expect:is_error
+
+  list:zip([1, 2, 3], [4, 5, 6])
+  |> expect:equal(_, [{1, 4}, {2, 5}, {3, 6}])
+
+  list:strict_zip([5, 6], [1, 2, 3])
+  |> expect:is_error
+
+  list:strict_zip([5, 6, 7], [1, 2])
+  |> expect:is_error
+}
+
 pub fn intersperse_test() {
   list:intersperse([1, 2, 3], 4)
   |> expect:equal(_, [1, 4, 2, 4, 3])
