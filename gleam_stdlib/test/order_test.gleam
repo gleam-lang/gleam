@@ -1,52 +1,111 @@
 import expect
 import order
 
-// TODO: https://github.com/lpil/gleam/issues/141
+pub fn reverse_test() {
+  order:reverse(order:Lt)
+  |> expect:equal(_, order:Gt)
 
-// pub fn reverse_test() {
-//   order:reverse(Lt) |> expect:equal(_, Gt)
-//   order:reverse(Eq) |> expect:equal(_, Eq)
-//   order:reverse(Gt) |> expect:equal(_, Lt)
-// }
+  order:reverse(order:Eq)
+  |> expect:equal(_, order:Eq)
 
-// pub fn to_int_test() {
-//   order:to_int(Lt) |> expect:equal(_, -1)
-//   order:to_int(Eq) |> expect:equal(_, 0)
-//   order:to_int(Gt) |> expect:equal(_, 1)
-// }
+  order:reverse(order:Gt)
+  |> expect:equal(_, order:Lt)
+}
 
-// pub fn compare_test() {
-//   order:compare(Lt, Lt) |> expect:equal(_, Eq)
-//   order:compare(Lt, Eq) |> expect:equal(_, Lt)
-//   order:compare(Lt, Gt) |> expect:equal(_, Lt)
-//   order:compare(Eq, Lt) |> expect:equal(_, Gt)
-//   order:compare(Eq, Eq) |> expect:equal(_, Eq)
-//   order:compare(Eq, Gt) |> expect:equal(_, Lt)
-//   order:compare(Gt, Lt) |> expect:equal(_, Gt)
-//   order:compare(Gt, Eq) |> expect:equal(_, Gt)
-//   order:compare(Gt, Gt) |> expect:equal(_, Eq)
-// }
+pub fn to_int_test() {
+  order:to_int(order:Lt)
+  |> expect:equal(_, -1)
 
-// pub fn max_test() {
-//   order:max(Lt, Lt) |> expect:equal(_, Lt)
-//   order:max(Lt, Eq) |> expect:equal(_, Eq)
-//   order:max(Lt, Gt) |> expect:equal(_, Gt)
-//   order:max(Eq, Lt) |> expect:equal(_, Eq)
-//   order:max(Eq, Eq) |> expect:equal(_, Eq)
-//   order:max(Eq, Gt) |> expect:equal(_, Gt)
-//   order:max(Gt, Lt) |> expect:equal(_, Gt)
-//   order:max(Gt, Eq) |> expect:equal(_, Gt)
-//   order:max(Gt, Gt) |> expect:equal(_, Gt)
-// }
+  order:to_int(order:Eq)
+  |> expect:equal(_, 0)
 
-// pub fn min_test() {
-//   order:min(Lt, Lt) |> expect:equal(_, Lt)
-//   order:min(Lt, Eq) |> expect:equal(_, Lt)
-//   order:min(Lt, Gt) |> expect:equal(_, Lt)
-//   order:min(Eq, Lt) |> expect:equal(_, Lt)
-//   order:min(Eq, Eq) |> expect:equal(_, Eq)
-//   order:min(Eq, Gt) |> expect:equal(_, Eq)
-//   order:min(Gt, Lt) |> expect:equal(_, Lt)
-//   order:min(Gt, Eq) |> expect:equal(_, Eq)
-//   order:min(Gt, Gt) |> expect:equal(_, Gt)
-// }
+  order:to_int(order:Gt)
+  |> expect:equal(_, 1)
+}
+
+pub fn compare_test() {
+  order:compare(order:Lt, order:Lt)
+  |> expect:equal(_, order:Eq)
+
+  order:compare(order:Lt, order:Eq)
+  |> expect:equal(_, order:Lt)
+
+  order:compare(order:Lt, order:Gt)
+  |> expect:equal(_, order:Lt)
+
+  order:compare(order:Eq, order:Lt)
+  |> expect:equal(_, order:Gt)
+
+  order:compare(order:Eq, order:Eq)
+  |> expect:equal(_, order:Eq)
+
+  order:compare(order:Eq, order:Gt)
+  |> expect:equal(_, order:Lt)
+
+  order:compare(order:Gt, order:Lt)
+  |> expect:equal(_, order:Gt)
+
+  order:compare(order:Gt, order:Eq)
+  |> expect:equal(_, order:Gt)
+
+  order:compare(order:Gt, order:Gt)
+  |> expect:equal(_, order:Eq)
+}
+
+pub fn max_test() {
+  order:max(order:Lt, order:Lt)
+  |> expect:equal(_, order:Lt)
+
+  order:max(order:Lt, order:Eq)
+  |> expect:equal(_, order:Eq)
+
+  order:max(order:Lt, order:Gt)
+  |> expect:equal(_, order:Gt)
+
+  order:max(order:Eq, order:Lt)
+  |> expect:equal(_, order:Eq)
+
+  order:max(order:Eq, order:Eq)
+  |> expect:equal(_, order:Eq)
+
+  order:max(order:Eq, order:Gt)
+  |> expect:equal(_, order:Gt)
+
+  order:max(order:Gt, order:Lt)
+  |> expect:equal(_, order:Gt)
+
+  order:max(order:Gt, order:Eq)
+  |> expect:equal(_, order:Gt)
+
+  order:max(order:Gt, order:Gt)
+  |> expect:equal(_, order:Gt)
+}
+
+pub fn min_test() {
+  order:min(order:Lt, order:Lt)
+  |> expect:equal(_, order:Lt)
+
+  order:min(order:Lt, order:Eq)
+  |> expect:equal(_, order:Lt)
+
+  order:min(order:Lt, order:Gt)
+  |> expect:equal(_, order:Lt)
+
+  order:min(order:Eq, order:Lt)
+  |> expect:equal(_, order:Lt)
+
+  order:min(order:Eq, order:Eq)
+  |> expect:equal(_, order:Eq)
+
+  order:min(order:Eq, order:Gt)
+  |> expect:equal(_, order:Eq)
+
+  order:min(order:Gt, order:Lt)
+  |> expect:equal(_, order:Lt)
+
+  order:min(order:Gt, order:Eq)
+  |> expect:equal(_, order:Eq)
+
+  order:min(order:Gt, order:Gt)
+  |> expect:equal(_, order:Gt)
+}
