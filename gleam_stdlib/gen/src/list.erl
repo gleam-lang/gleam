@@ -1,7 +1,7 @@
 -module(list).
 -compile(no_auto_import).
 
--export([length/1, reverse/1, is_empty/1, contains/2, head/1, tail/1, filter/2, map/2, index_map/2, traverse/2, drop/2, take/2, new/0, append/2, flatten/1, fold/3, fold_right/3, find/2, all/2, any/2, zip/2, intersperse/2, at/2, unique/1, sort/1]).
+-export([length/1, reverse/1, is_empty/1, contains/2, head/1, tail/1, filter/2, map/2, index_map/2, traverse/2, drop/2, take/2, new/0, append/2, flatten/1, fold/3, fold_right/3, find/2, all/2, any/2, zip/2, strict_zip/2, intersperse/2, at/2, unique/1, sort/1]).
 
 length(A) ->
     erlang:length(A).
@@ -224,6 +224,15 @@ zip(L1, L2) ->
 
         {[X1 | Rest1], [X2 | Rest2]} ->
             [{X1, X2} | zip(Rest1, Rest2)]
+    end.
+
+strict_zip(L1, L2) ->
+    case length(L1) =:= length(L2) of
+        true ->
+            {ok, zip(L1, L2)};
+
+        false ->
+            {error, length_mismatch}
     end.
 
 intersperse(List, Elem) ->
