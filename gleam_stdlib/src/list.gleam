@@ -1,3 +1,6 @@
+import int
+import order
+
 pub enum Empty =
   | Empty
 
@@ -240,5 +243,13 @@ pub fn sort(list) {
     let a_list = take(list, split_length)
     let b_list = drop(list, split_length)
     merge_sort(sort(a_list), sort(b_list))
+  }
+}
+
+pub fn range(start, stop) {
+  case int:compare(start, stop) {
+  | order:Eq -> []
+  | order:Gt -> [start | range(start - 1, stop)]
+  | order:Lt -> [start | range(start + 1, stop)]
   }
 }

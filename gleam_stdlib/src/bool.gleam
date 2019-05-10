@@ -12,7 +12,7 @@ pub fn negate(bool) {
 //   | {True, True} -> order:Eq
 //   | {True, False} -> order:Gt
 //   | {False, False} -> order:Eq
-//   | {False, True} -> order:Gt
+//   | {False, True} -> order:Lt
 //   }
 // }
 

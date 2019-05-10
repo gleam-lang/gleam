@@ -261,3 +261,23 @@ pub fn index_map_test() {
   list:index_map(["a", "b", "c"], f)
   |> expect:equal(_, ["a0", "b1", "c2"])
 }
+
+pub fn range_test() {
+  list:range(0, 0)
+  |> expect:equal(_, [])
+
+  list:range(1, 1)
+  |> expect:equal(_, [])
+
+  list:range(-1, -1)
+  |> expect:equal(_, [])
+
+  list:range(0, 1)
+  |> expect:equal(_, [0])
+
+  list:range(0, 5)
+  |> expect:equal(_, [0, 1, 2, 3, 4])
+
+  list:range(1, -5)
+  |> expect:equal(_, [1, 0, -1, -2, -3, -4])
+}
