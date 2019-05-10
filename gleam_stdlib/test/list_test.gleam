@@ -204,7 +204,7 @@ pub fn zip_test() {
   |> expect:equal(_, [{5, 1}, {6, 2}])
 }
 
-pub fn srict_zip_test() {
+pub fn strict_zip_test() {
   list:strict_zip([], [1, 2, 3])
   |> expect:is_error
 
