@@ -1,5 +1,6 @@
 import expect
 import int
+import order
 
 pub fn to_string() {
   123
@@ -49,4 +50,24 @@ pub fn to_base_string() {
   -100
   |> int:to_base_string(_, 16)
   |> expect:equal(_, "-64")
+}
+
+pub fn compare_test() {
+  int:compare(0, 0)
+  |> expect:equal(_, order:Eq)
+
+  int:compare(1, 1)
+  |> expect:equal(_, order:Eq)
+
+  int:compare(0, 1)
+  |> expect:equal(_, order:Lt)
+
+  int:compare(-2, -1)
+  |> expect:equal(_, order:Lt)
+
+  int:compare(2, 1)
+  |> expect:equal(_, order:Gt)
+
+  int:compare(-1, -2)
+  |> expect:equal(_, order:Gt)
 }
