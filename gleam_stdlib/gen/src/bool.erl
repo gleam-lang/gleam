@@ -1,7 +1,7 @@
 -module(bool).
 -compile(no_auto_import).
 
--export([negate/1, max/2, min/2, to_int/1]).
+-export([negate/1, compare/2, max/2, min/2, to_int/1]).
 
 negate(Bool) ->
     case Bool of
@@ -10,6 +10,21 @@ negate(Bool) ->
 
         false ->
             true
+    end.
+
+compare(A, B) ->
+    case {A, B} of
+        {true, true} ->
+            eq;
+
+        {true, false} ->
+            gt;
+
+        {false, false} ->
+            eq;
+
+        {false, true} ->
+            lt
     end.
 
 max(A, B) ->

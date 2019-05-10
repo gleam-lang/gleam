@@ -1,11 +1,17 @@
 -module(bool_test).
 -compile(no_auto_import).
 
--export([negate_test/0, max_test/0, min_test/0, to_int_test/0]).
+-export([negate_test/0, compare_test/0, max_test/0, min_test/0, to_int_test/0]).
 
 negate_test() ->
     expect:false(bool:negate(true)),
     expect:true(bool:negate(false)).
+
+compare_test() ->
+    expect:equal(bool:compare(true, true), eq),
+    expect:equal(bool:compare(true, false), gt),
+    expect:equal(bool:compare(false, false), eq),
+    expect:equal(bool:compare(false, true), lt).
 
 max_test() ->
     expect:equal(bool:max(true, true), true),

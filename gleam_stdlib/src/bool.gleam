@@ -1,4 +1,4 @@
-// import order
+import order
 
 pub fn negate(bool) {
   case bool {
@@ -7,14 +7,14 @@ pub fn negate(bool) {
   }
 }
 
-// pub fn compare(a, b) {
-//   case {a, b} {
-//   | {True, True} -> order:Eq
-//   | {True, False} -> order:Gt
-//   | {False, False} -> order:Eq
-//   | {False, True} -> order:Lt
-//   }
-// }
+pub fn compare(a, b) {
+  case {a, b} {
+  | {True, True} -> order:Eq
+  | {True, False} -> order:Gt
+  | {False, False} -> order:Eq
+  | {False, True} -> order:Lt
+  }
+}
 
 pub fn max(a, b) {
   case a {
