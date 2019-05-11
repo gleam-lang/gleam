@@ -263,3 +263,14 @@ pub fn range(start, stop) {
   | order:Lt -> [start | range(start + 1, stop)]
   }
 }
+
+fn do_repeat(a, times, acc) {
+  case times <= 0 {
+    | True -> acc
+    | False -> do_repeat(a, times - 1, [a | acc])
+  }
+}
+
+pub fn repeat(a, times) {
+  do_repeat(a, times, [])
+}
