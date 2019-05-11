@@ -1,11 +1,10 @@
-{application,gleam_experimental_stdlib,
+{application,gleam_stdlib,
              [{description,"A standard library for the Gleam programming language"},
-              {vsn,"0.1.2"},
+              {vsn,"0.2.0"},
               {registered,[]},
               {applications,[kernel,stdlib]},
               {env,[]},
               {modules,[]},
-              {maintainers,[]},
               {licenses,["Apache 2.0"]},
               {links,[]},
               {include_files,["gleam.toml", "gen"]}]}.
