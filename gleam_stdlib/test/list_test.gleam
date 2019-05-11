@@ -312,3 +312,23 @@ pub fn repeat_test() {
   list:repeat("x", 5)
   |> expect:equal(_, ["x", "x", "x", "x", "x"])
 }
+
+pub fn split_test() {
+  list:split([], 0)
+  |> expect:equal(_, {[], []})
+
+  list:split([0, 1, 2, 3, 4], 0)
+  |> expect:equal(_, {[], [0, 1, 2, 3, 4]})
+
+  list:split([0, 1, 2, 3, 4], -2)
+  |> expect:equal(_, {[], [0, 1, 2, 3, 4]})
+
+  list:split([0, 1, 2, 3, 4], 1)
+  |> expect:equal(_, {[0], [1, 2, 3, 4]})
+
+  list:split([0, 1, 2, 3, 4], 3)
+  |> expect:equal(_, {[0, 1, 2], [3, 4]})
+
+  list:split([0, 1, 2, 3, 4], 9)
+  |> expect:equal(_, {[0, 1, 2, 3, 4], []})
+}

@@ -1,7 +1,7 @@
 -module(list).
 -compile(no_auto_import).
 
--export([length/1, reverse/1, is_empty/1, contains/2, head/1, tail/1, filter/2, map/2, index_map/2, traverse/2, drop/2, take/2, new/0, append/2, flatten/1, fold/3, fold_right/3, find/2, all/2, any/2, zip/2, strict_zip/2, intersperse/2, at/2, unique/1, sort/1, range/2, repeat/2]).
+-export([length/1, reverse/1, is_empty/1, contains/2, head/1, tail/1, filter/2, map/2, index_map/2, traverse/2, drop/2, take/2, new/0, append/2, flatten/1, fold/3, fold_right/3, find/2, all/2, any/2, zip/2, strict_zip/2, intersperse/2, at/2, unique/1, sort/1, range/2, repeat/2, split/2]).
 
 length(A) ->
     erlang:length(A).
@@ -331,3 +331,21 @@ do_repeat(A, Times, Acc) ->
 
 repeat(A, Times) ->
     do_repeat(A, Times, []).
+
+do_split(List, N, Taken) ->
+    case N =< 0 of
+        true ->
+            {reverse(Taken), List};
+
+        false ->
+            case List of
+                [] ->
+                    {reverse(Taken), []};
+
+                [X | Xs] ->
+                    do_split(Xs, N - 1, [X | Taken])
+            end
+    end.
+
+split(List, N) ->
+    do_split(List, N, []).
