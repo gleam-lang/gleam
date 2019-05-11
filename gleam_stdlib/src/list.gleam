@@ -289,3 +289,18 @@ fn do_split(list, n, taken) {
 pub fn split(list, n) {
   do_split(list, n, [])
 }
+
+fn do_split_while(list, f, acc) {
+  case list {
+    | [] -> {reverse(acc), []}
+    | [x | xs] -> 
+      case f(x) {
+      | False -> {reverse(acc), list}
+      | _ -> do_split_while(xs, f, [x | acc])
+      }
+  }
+}
+
+pub fn split_while(list, f) {
+  do_split_while(list, f, [])
+}
