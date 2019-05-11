@@ -332,3 +332,20 @@ pub fn split_test() {
   list:split([0, 1, 2, 3, 4], 9)
   |> expect:equal(_, {[0, 1, 2, 3, 4], []})
 }
+
+pub fn split_while_test() {
+  list:split_while([], fn(x) { x <= 5 })
+  |> expect:equal(_, {[], []})
+
+  list:split_while([1, 2, 3, 4, 5], fn(x) { x <= 5 })
+  |> expect:equal(_, {[1, 2, 3, 4, 5], []})
+
+  list:split_while([1, 2, 3, 4, 5], fn(x) { x == 2 })
+  |> expect:equal(_, {[], [1, 2, 3, 4, 5]})
+
+  list:split_while([1, 2, 3, 4, 5], fn(x) { x <= 3 })
+  |> expect:equal(_, {[1, 2, 3], [4, 5]})
+
+  list:split_while([1, 2, 3, 4, 5], fn(x) { x <= -3 })
+  |> expect:equal(_, {[], [1, 2, 3, 4, 5]})
+}

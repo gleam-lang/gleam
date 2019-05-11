@@ -5,7 +5,7 @@
 - The `map_dict` module gains `update`, `merge` and `delete` functions.
 - The `bool` module gains a `compare` function.
 - The `int` module gains a `compare` function.
-- The `list` module gains `range`, `repeat`, `split`, and `strict_zip` functions.
+- The `list` module gains `range`, `repeat`, `split`, `split_while` and `strict_zip` functions.
 
 ## v0.1.2 - 2019-04-25
 
