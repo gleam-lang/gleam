@@ -274,3 +274,18 @@ fn do_repeat(a, times, acc) {
 pub fn repeat(a, times) {
   do_repeat(a, times, [])
 }
+
+fn do_split(list, n, taken) {
+  case n <= 0 {
+  | True -> {reverse(taken), list}
+  | False ->
+      case list {
+      | [] -> {reverse(taken), []}
+      | [x | xs] -> do_split(xs, n - 1, [x | taken])
+      }
+  }
+}
+
+pub fn split(list, n) {
+  do_split(list, n, [])
+}
