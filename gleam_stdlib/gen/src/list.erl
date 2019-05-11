@@ -1,7 +1,7 @@
 -module(list).
 -compile(no_auto_import).
 
--export([length/1, reverse/1, is_empty/1, contains/2, head/1, tail/1, filter/2, map/2, index_map/2, traverse/2, drop/2, take/2, new/0, append/2, flatten/1, fold/3, fold_right/3, find/2, all/2, any/2, zip/2, strict_zip/2, intersperse/2, at/2, unique/1, sort/1, range/2]).
+-export([length/1, reverse/1, is_empty/1, contains/2, head/1, tail/1, filter/2, map/2, index_map/2, traverse/2, drop/2, take/2, new/0, append/2, flatten/1, fold/3, fold_right/3, find/2, all/2, any/2, zip/2, strict_zip/2, intersperse/2, at/2, unique/1, sort/1, range/2, repeat/2]).
 
 length(A) ->
     erlang:length(A).
@@ -319,3 +319,15 @@ range(Start, Stop) ->
         lt ->
             [Start | range(Start + 1, Stop)]
     end.
+
+do_repeat(A, Times, Acc) ->
+    case Times =< 0 of
+        true ->
+            Acc;
+
+        false ->
+            do_repeat(A, Times - 1, [A | Acc])
+    end.
+
+repeat(A, Times) ->
+    do_repeat(A, Times, []).

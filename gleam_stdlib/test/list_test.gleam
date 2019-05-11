@@ -298,3 +298,17 @@ pub fn range_test() {
   list:range(1, -5)
   |> expect:equal(_, [1, 0, -1, -2, -3, -4])
 }
+
+pub fn repeat_test() {
+  list:repeat(1, -10)
+  |> expect:equal(_, [])
+
+  list:repeat(1, 0)
+  |> expect:equal(_, [])
+
+  list:repeat(2, 3)
+  |> expect:equal(_, [2, 2, 2])
+
+  list:repeat("x", 5)
+  |> expect:equal(_, ["x", "x", "x", "x", "x"])
+}
