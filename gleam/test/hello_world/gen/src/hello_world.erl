@@ -7,4 +7,4 @@ when() ->
     nil.
 
 x() ->
-    other:Person().
+    person.

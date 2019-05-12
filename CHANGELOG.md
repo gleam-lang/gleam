@@ -4,6 +4,8 @@
 
 - Types containing more than 26 type variables will no longer render with
   invalid type variable names.
+- Types in error messages no longer have extra indentation that increases as
+  the type gets larger.
 - There is a new type `Nil` which is occupied by a single value (`Nil`). This
   type is used to represent the absence of a value and is commonly used with
   `Result` to model a value that is either present (`Ok(value)`) or absent

@@ -52,16 +52,14 @@ pub enum Type {
 impl Type {
     /// Render a Type as a well formatted string.
     ///
-    pub fn pretty_print(&self, mut initial_indent: usize) -> String {
+    pub fn pretty_print(&self, initial_indent: usize) -> String {
         let mut b = String::with_capacity(initial_indent);
         for _ in 0..initial_indent {
             b.push(' ');
         }
         b.to_doc()
-            .append(
-                self.to_gleam_doc(&mut hashmap![], &mut initial_indent)
-                    .nest(initial_indent as isize),
-            )
+            .append(self.to_gleam_doc(&mut hashmap![], &mut initial_indent.clone()))
+            .nest(initial_indent as isize)
             .format(80)
     }
 
@@ -553,6 +551,149 @@ fn to_gleam_doc_test() {
                 }),
             },
             "fn(a) -> b",
+        ),
+        (
+            Type::Module {
+                row: Box::new(Type::RowNil),
+            },
+            "module {  }",
+        ),
+        (
+            Type::Module {
+                row: Box::new(Type::RowCons {
+                    label: "one".to_string(),
+                    head: Box::new(Type::Fn {
+                        args: vec![],
+                        retrn: Box::new(Type::App {
+                            args: vec![],
+                            module: "whatever".to_string(),
+                            name: "Bool".to_string(),
+                            public: true,
+                        }),
+                    }),
+                    tail: Box::new(Type::RowCons {
+                        label: "two".to_string(),
+                        head: Box::new(Type::Fn {
+                            args: vec![],
+                            retrn: Box::new(Type::App {
+                                args: vec![],
+                                module: "whatever".to_string(),
+                                name: "Bool".to_string(),
+                                public: true,
+                            }),
+                        }),
+                        tail: Box::new(Type::RowCons {
+                            label: "three".to_string(),
+                            head: Box::new(Type::Fn {
+                                args: vec![],
+                                retrn: Box::new(Type::App {
+                                    args: vec![],
+                                    module: "whatever".to_string(),
+                                    name: "Bool".to_string(),
+                                    public: true,
+                                }),
+                            }),
+                            tail: Box::new(Type::RowCons {
+                                label: "four".to_string(),
+                                head: Box::new(Type::Fn {
+                                    args: vec![],
+                                    retrn: Box::new(Type::App {
+                                        args: vec![],
+                                        module: "whatever".to_string(),
+                                        name: "Bool".to_string(),
+                                        public: true,
+                                    }),
+                                }),
+                                tail: Box::new(Type::RowCons {
+                                    label: "five".to_string(),
+                                    head: Box::new(Type::Fn {
+                                        args: vec![],
+                                        retrn: Box::new(Type::App {
+                                            args: vec![],
+                                            module: "whatever".to_string(),
+                                            name: "Bool".to_string(),
+                                            public: true,
+                                        }),
+                                    }),
+                                    tail: Box::new(Type::RowCons {
+                                        label: "six".to_string(),
+                                        head: Box::new(Type::Fn {
+                                            args: vec![],
+                                            retrn: Box::new(Type::App {
+                                                args: vec![],
+                                                module: "whatever".to_string(),
+                                                name: "Bool".to_string(),
+                                                public: true,
+                                            }),
+                                        }),
+                                        tail: Box::new(Type::RowCons {
+                                            label: "seven".to_string(),
+                                            head: Box::new(Type::Fn {
+                                                args: vec![],
+                                                retrn: Box::new(Type::App {
+                                                    args: vec![],
+                                                    module: "whatever".to_string(),
+                                                    name: "Bool".to_string(),
+                                                    public: true,
+                                                }),
+                                            }),
+                                            tail: Box::new(Type::RowCons {
+                                                label: "eight".to_string(),
+                                                head: Box::new(Type::Fn {
+                                                    args: vec![],
+                                                    retrn: Box::new(Type::App {
+                                                        args: vec![],
+                                                        module: "whatever".to_string(),
+                                                        name: "Bool".to_string(),
+                                                        public: true,
+                                                    }),
+                                                }),
+                                                tail: Box::new(Type::RowCons {
+                                                    label: "nine".to_string(),
+                                                    head: Box::new(Type::Fn {
+                                                        args: vec![],
+                                                        retrn: Box::new(Type::App {
+                                                            args: vec![],
+                                                            module: "whatever".to_string(),
+                                                            name: "Bool".to_string(),
+                                                            public: true,
+                                                        }),
+                                                    }),
+                                                    tail: Box::new(Type::RowCons {
+                                                        label: "ten".to_string(),
+                                                        head: Box::new(Type::Fn {
+                                                            args: vec![],
+                                                            retrn: Box::new(Type::App {
+                                                                args: vec![],
+                                                                module: "whatever".to_string(),
+                                                                name: "Bool".to_string(),
+                                                                public: true,
+                                                            }),
+                                                        }),
+                                                        tail: Box::new(Type::RowNil),
+                                                    }),
+                                                }),
+                                            }),
+                                        }),
+                                    }),
+                                }),
+                            }),
+                        }),
+                    }),
+                }),
+            },
+            "module {
+  fn eight() -> Bool
+  fn five() -> Bool
+  fn four() -> Bool
+  fn nine() -> Bool
+  fn one() -> Bool
+  fn seven() -> Bool
+  fn six() -> Bool
+  fn ten() -> Bool
+  fn three() -> Bool
+  fn two() -> Bool
+}",
         ),
     ];
 
