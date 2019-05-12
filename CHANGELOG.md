@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.1.2 - 2019-05-12
 
 - Types containing more than 26 type variables will no longer render with
   invalid type variable names.
