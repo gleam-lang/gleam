@@ -86,3 +86,11 @@ pub fn update(dict, key, f) {
   | Error(_) -> put(dict, key, f(Error(NotFound)))
   }
 }
+
+pub fn fold(dict, acc, f) {
+  let kvs = to_list(dict)
+  case kvs {
+    | [] -> acc
+    | [{k, v} | _] -> fold(delete(dict, k), f(k, v, acc), f)
+  }
+}

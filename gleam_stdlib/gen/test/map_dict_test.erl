@@ -1,7 +1,7 @@
 -module(map_dict_test).
 -compile(no_auto_import).
 
--export([from_list_test/0, has_key_test/0, new_test/0, fetch_test/0, put_test/0, map_values_test/0, keys_test/0, values_test/0, take_test/0, drop_test/0, merge_test/0, delete_test/0, update_test/0]).
+-export([from_list_test/0, has_key_test/0, new_test/0, fetch_test/0, put_test/0, map_values_test/0, keys_test/0, values_test/0, take_test/0, drop_test/0, merge_test/0, delete_test/0, update_test/0, fold_test/0]).
 
 from_list_test() ->
     expect:equal(map_dict:size(map_dict:from_list([{4, 0}, {1, 0}])), 2).
@@ -115,3 +115,14 @@ update_test() ->
                                      {<<"b">>, 1},
                                      {<<"c">>, 2},
                                      {<<"z">>, 0}])).
+
+fold_test() ->
+    Dict = map_dict:from_list([{<<"a">>, 0},
+                               {<<"b">>, 1},
+                               {<<"c">>, 2},
+                               {<<"d">>, 3}]),
+    Add = fun(_, V, Acc) -> V + Acc end,
+    expect:equal(map_dict:fold(Dict, 0, Add), 6),
+    Concat = fun(K, _, Acc) -> str:append(Acc, K) end,
+    expect:equal(map_dict:fold(Dict, <<"">>, Concat), <<"abcd">>),
+    expect:equal(map_dict:fold(map_dict:from_list([]), 0, Add), 0).

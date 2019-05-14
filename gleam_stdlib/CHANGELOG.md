@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The `map_dict` module gains a `fold` function.
+
 ## v0.2.0 - 2019-05-11
 
 - Library renamed to `gleam_stdlib`.
