@@ -1,5 +1,6 @@
 import expect
 import map_dict
+import str
 
 pub fn from_list_test() {
   [
@@ -200,4 +201,33 @@ pub fn update_test() {
   dict
   |> map_dict:update(_, "z", inc_or_zero)
   |> expect:equal(_, map_dict:from_list([{"a", 0}, {"b", 1}, {"c", 2}, {"z", 0}]))
+}
+
+pub fn fold_test() {
+  let dict = map_dict:from_list([
+    {"a", 0},
+    {"b", 1},
+    {"c", 2},
+    {"d", 3},
+  ])
+
+  let add = fn(_, v, acc) {
+    v + acc
+  }
+
+  dict
+  |> map_dict:fold(_, 0, add)
+  |> expect:equal(_, 6)
+
+  let concat = fn(k, _, acc) {
+    str:append(acc, k)
+  }
+
+  dict
+  |> map_dict:fold(_, "", concat)
+  |> expect:equal(_, "abcd")
+
+  map_dict:from_list([])
+  |> map_dict:fold(_, 0, add)
+  |> expect:equal(_, 0)
 }
