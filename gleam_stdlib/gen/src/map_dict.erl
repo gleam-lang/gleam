@@ -75,12 +75,15 @@ update(Dict, Key, F) ->
             put(Dict, Key, F({error, not_found}))
     end.
 
-fold(Dict, Acc, F) ->
-    Kvs = to_list(Dict),
-    case Kvs of
+do_fold(List, Acc, F) ->
+    case List of
         [] ->
             Acc;
 
-        [{K, V} | _] ->
-            fold(delete(Dict, K), F(K, V, Acc), F)
+        [{K, V} | Tail] ->
+            do_fold(Tail, F(K, V, Acc), F)
     end.
+
+fold(Dict, Acc, F) ->
+    Kvs = to_list(Dict),
+    do_fold(Kvs, Acc, F).
