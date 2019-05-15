@@ -87,10 +87,14 @@ pub fn update(dict, key, f) {
   }
 }
 
+fn do_fold(list, acc, f) {
+  case list {
+    | [] -> acc
+    | [{k, v} | tail] -> do_fold(tail, f(k, v, acc), f)
+  }
+}
+
 pub fn fold(dict, acc, f) {
   let kvs = to_list(dict)
-  case kvs {
-    | [] -> acc
-    | [{k, v} | _] -> fold(delete(dict, k), f(k, v, acc), f)
-  }
+  do_fold(kvs, acc, f)
 }
