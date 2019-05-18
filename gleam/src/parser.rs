@@ -796,7 +796,7 @@ fn module_test() {
     assert_eq!(
         Ok(Module {
             typ: (),
-            name: "".to_string(),
+            name: vec![],
             statements: vec![]
         }),
         ModuleParser::new().parse(""),
@@ -805,7 +805,7 @@ fn module_test() {
     assert_eq!(
         Ok(Module {
             typ: (),
-            name: "".to_string(),
+            name: vec![],
             statements: vec![Statement::Import {
                 meta: Meta { start: 0, end: 12 },
                 module: "magic".to_string()
@@ -817,7 +817,7 @@ fn module_test() {
     assert_eq!(
         Ok(Module {
             typ: (),
-            name: "".to_string(),
+            name: vec![],
             statements: vec![Statement::ExternalType {
                 meta: Meta { start: 0, end: 18 },
                 public: false,
@@ -831,7 +831,7 @@ fn module_test() {
     assert_eq!(
         Ok(Module {
             typ: (),
-            name: "".to_string(),
+            name: vec![],
             statements: vec![Statement::ExternalType {
                 meta: Meta { start: 0, end: 22 },
                 public: true,
@@ -845,7 +845,7 @@ fn module_test() {
     assert_eq!(
         Ok(Module {
             typ: (),
-            name: "".to_string(),
+            name: vec![],
             statements: vec![Statement::ExternalType {
                 meta: Meta { start: 0, end: 26 },
                 public: false,
@@ -859,7 +859,7 @@ fn module_test() {
     assert_eq!(
         Ok(Module {
             typ: (),
-            name: "".to_string(),
+            name: vec![],
             statements: vec![Statement::Fn {
                 meta: Meta { start: 0, end: 24 },
                 public: false,
@@ -894,7 +894,7 @@ fn module_test() {
     assert_eq!(
         Ok(Module {
             typ: (),
-            name: "".to_string(),
+            name: vec![],
             statements: vec![Statement::Fn {
                 meta: Meta { start: 0, end: 20 },
                 public: false,
@@ -940,7 +940,7 @@ fn module_test() {
     assert_eq!(
         Ok(Module {
             typ: (),
-            name: "".to_string(),
+            name: vec![],
             statements: vec![Statement::Fn {
                 meta: Meta { start: 0, end: 17 },
                 public: true,
@@ -959,7 +959,7 @@ fn module_test() {
     assert_eq!(
         Ok(Module {
             typ: (),
-            name: "".to_string(),
+            name: vec![],
             statements: vec![Statement::ExternalFn {
                 meta: Meta { start: 0, end: 49 },
                 name: "run".to_string(),
@@ -994,7 +994,7 @@ fn module_test() {
     assert_eq!(
         Ok(Module {
             typ: (),
-            name: "".to_string(),
+            name: vec![],
             statements: vec![Statement::Enum {
                 meta: Meta { start: 0, end: 28 },
                 public: true,
@@ -1016,7 +1016,7 @@ fn module_test() {
     assert_eq!(
         Ok(Module {
             typ: (),
-            name: "".to_string(),
+            name: vec![],
             statements: vec![
                 Statement::Enum {
                     meta: Meta { start: 0, end: 28 },
@@ -1089,7 +1089,7 @@ fn module_test() {
     assert_eq!(
         Ok(Module {
             typ: (),
-            name: "".to_string(),
+            name: vec![],
             statements: vec![Statement::Fn {
                 meta: Meta { start: 0, end: 75 },
                 public: true,
@@ -1129,7 +1129,7 @@ fn module_test() {
     assert_eq!(
         Ok(Module {
             typ: (),
-            name: "".to_string(),
+            name: vec![],
             statements: vec![Statement::Fn {
                 meta: Meta { start: 0, end: 79 },
                 public: true,
@@ -1183,7 +1183,7 @@ fn module_test() {
     assert_eq!(
         Ok(Module {
             typ: (),
-            name: "".to_string(),
+            name: vec![],
             statements: vec![Statement::Fn {
                 meta: Meta { start: 0, end: 88 },
                 public: true,

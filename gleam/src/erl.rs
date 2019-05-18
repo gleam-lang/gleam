@@ -57,7 +57,7 @@ pub fn module(module: TypedModule) -> String {
         .intersperse(", ".to_doc())
         .collect();
 
-    format!("-module({}).", module.name)
+    format!("-module({}).", module.name.join("$"))
         .to_doc()
         .append(line())
         .append("-compile(no_auto_import).")
@@ -576,7 +576,7 @@ fn external_fun(name: String, module: String, fun: String, arity: usize) -> Docu
 fn module_test() {
     let m = Module {
         typ: crate::typ::int(),
-        name: "magic".to_string(),
+        name: vec!["magic".to_string()],
         statements: vec![
             Statement::ExternalType {
                 meta: default(),
@@ -658,7 +658,7 @@ map() ->
 
     let m = Module {
         typ: crate::typ::int(),
-        name: "term".to_string(),
+        name: vec!["term".to_string()],
         statements: vec![
             Statement::Fn {
                 meta: default(),
@@ -940,7 +940,7 @@ funny() ->
 
     let m = Module {
         typ: crate::typ::int(),
-        name: "term".to_string(),
+        name: vec!["term".to_string()],
         statements: vec![Statement::Fn {
             meta: default(),
             public: false,
@@ -998,7 +998,7 @@ some_function(ArgOne,
 
     let m = Module {
         typ: crate::typ::int(),
-        name: "vars".to_string(),
+        name: vec!["vars".to_string()],
         statements: vec![
             Statement::Fn {
                 meta: default(),
@@ -1166,7 +1166,7 @@ moddy4() ->
 
     let m = Module {
         typ: crate::typ::int(),
-        name: "my_mod".to_string(),
+        name: vec!["my_mod".to_string()],
         statements: vec![Statement::Fn {
             meta: default(),
             public: false,
@@ -1299,7 +1299,7 @@ go() ->
 
     let m = Module {
         typ: crate::typ::int(),
-        name: "funny".to_string(),
+        name: vec!["funny".to_string()],
         statements: vec![
             Statement::Fn {
                 meta: default(),

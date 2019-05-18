@@ -13,7 +13,7 @@ grammar;
 pub Module: UntypedModule = {
     Statement* => Module {
         typ: (),
-        name: "".to_string(),
+        name: vec![],
         statements: <>,
     }
 }
