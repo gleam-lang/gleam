@@ -14,7 +14,7 @@ const INDENT: isize = 2;
 pub enum Type {
     App {
         public: bool,
-        module: String,
+        module: Vec<String>,
         name: String,
         args: Vec<Type>,
     },
@@ -213,7 +213,7 @@ impl Type {
     pub fn get_app_args(
         &self,
         public: bool,
-        module: &str,
+        module: &Vec<String>,
         name: &str,
         arity: usize,
         env: &mut Env,
@@ -254,7 +254,7 @@ impl Type {
                         *typ.borrow_mut() = TypeVar::Link {
                             typ: Box::new(Type::App {
                                 name: name.to_string(),
-                                module: module.to_string(),
+                                module: module.clone(),
                                 args: args.clone(),
                                 public,
                             }),
@@ -457,7 +457,7 @@ fn to_gleam_doc_test() {
     let cases = [
         (
             Type::App {
-                module: "whatever".to_string(),
+                module: vec!["whatever".to_string()],
                 name: "Int".to_string(),
                 public: true,
                 args: vec![],
@@ -466,18 +466,18 @@ fn to_gleam_doc_test() {
         ),
         (
             Type::App {
-                module: "".to_string(),
+                module: vec![],
                 name: "Pair".to_string(),
                 public: true,
                 args: vec![
                     Type::App {
-                        module: "whatever".to_string(),
+                        module: vec!["whatever".to_string()],
                         name: "Int".to_string(),
                         public: true,
                         args: vec![],
                     },
                     Type::App {
-                        module: "whatever".to_string(),
+                        module: vec!["whatever".to_string()],
                         name: "Bool".to_string(),
                         public: true,
                         args: vec![],
@@ -491,20 +491,20 @@ fn to_gleam_doc_test() {
                 args: vec![
                     Type::App {
                         args: vec![],
-                        module: "whatever".to_string(),
+                        module: vec!["whatever".to_string()],
                         name: "Int".to_string(),
                         public: true,
                     },
                     Type::App {
                         args: vec![],
-                        module: "whatever".to_string(),
+                        module: vec!["whatever".to_string()],
                         name: "Bool".to_string(),
                         public: true,
                     },
                 ],
                 retrn: Box::new(Type::App {
                     args: vec![],
-                    module: "whatever".to_string(),
+                    module: vec!["whatever".to_string()],
                     name: "Bool".to_string(),
                     public: true,
                 }),
@@ -516,7 +516,7 @@ fn to_gleam_doc_test() {
                 typ: Rc::new(RefCell::new(TypeVar::Link {
                     typ: Box::new(Type::App {
                         args: vec![],
-                        module: "whatever".to_string(),
+                        module: vec!["whatever".to_string()],
                         name: "Int".to_string(),
                         public: true,
                     }),
@@ -566,7 +566,7 @@ fn to_gleam_doc_test() {
                         args: vec![],
                         retrn: Box::new(Type::App {
                             args: vec![],
-                            module: "whatever".to_string(),
+                            module: vec!["whatever".to_string()],
                             name: "Bool".to_string(),
                             public: true,
                         }),
@@ -577,7 +577,7 @@ fn to_gleam_doc_test() {
                             args: vec![],
                             retrn: Box::new(Type::App {
                                 args: vec![],
-                                module: "whatever".to_string(),
+                                module: vec!["whatever".to_string()],
                                 name: "Bool".to_string(),
                                 public: true,
                             }),
@@ -588,7 +588,7 @@ fn to_gleam_doc_test() {
                                 args: vec![],
                                 retrn: Box::new(Type::App {
                                     args: vec![],
-                                    module: "whatever".to_string(),
+                                    module: vec!["whatever".to_string()],
                                     name: "Bool".to_string(),
                                     public: true,
                                 }),
@@ -599,7 +599,7 @@ fn to_gleam_doc_test() {
                                     args: vec![],
                                     retrn: Box::new(Type::App {
                                         args: vec![],
-                                        module: "whatever".to_string(),
+                                        module: vec!["whatever".to_string()],
                                         name: "Bool".to_string(),
                                         public: true,
                                     }),
@@ -610,7 +610,7 @@ fn to_gleam_doc_test() {
                                         args: vec![],
                                         retrn: Box::new(Type::App {
                                             args: vec![],
-                                            module: "whatever".to_string(),
+                                            module: vec!["whatever".to_string()],
                                             name: "Bool".to_string(),
                                             public: true,
                                         }),
@@ -621,7 +621,7 @@ fn to_gleam_doc_test() {
                                             args: vec![],
                                             retrn: Box::new(Type::App {
                                                 args: vec![],
-                                                module: "whatever".to_string(),
+                                                module: vec!["whatever".to_string()],
                                                 name: "Bool".to_string(),
                                                 public: true,
                                             }),
@@ -632,7 +632,7 @@ fn to_gleam_doc_test() {
                                                 args: vec![],
                                                 retrn: Box::new(Type::App {
                                                     args: vec![],
-                                                    module: "whatever".to_string(),
+                                                    module: vec!["whatever".to_string()],
                                                     name: "Bool".to_string(),
                                                     public: true,
                                                 }),
@@ -643,7 +643,7 @@ fn to_gleam_doc_test() {
                                                     args: vec![],
                                                     retrn: Box::new(Type::App {
                                                         args: vec![],
-                                                        module: "whatever".to_string(),
+                                                        module: vec!["whatever".to_string()],
                                                         name: "Bool".to_string(),
                                                         public: true,
                                                     }),
@@ -654,7 +654,7 @@ fn to_gleam_doc_test() {
                                                         args: vec![],
                                                         retrn: Box::new(Type::App {
                                                             args: vec![],
-                                                            module: "whatever".to_string(),
+                                                            module: vec!["whatever".to_string()],
                                                             name: "Bool".to_string(),
                                                             public: true,
                                                         }),
@@ -665,7 +665,7 @@ fn to_gleam_doc_test() {
                                                             args: vec![],
                                                             retrn: Box::new(Type::App {
                                                                 args: vec![],
-                                                                module: "whatever".to_string(),
+                                                                module: vec!["whatever".to_string()],
                                                                 name: "Bool".to_string(),
                                                                 public: true,
                                                             }),
@@ -715,7 +715,7 @@ pub enum TypeVar {
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeConstructorInfo {
     public: bool,
-    module: String,
+    module: Vec<String>,
     arity: usize,
 }
 
@@ -742,7 +742,7 @@ impl<'a> Env<'a> {
             "Int".to_string(),
             TypeConstructorInfo {
                 arity: 0,
-                module: "".to_string(),
+                module: vec![],
                 public: true,
             },
         );
@@ -753,7 +753,7 @@ impl<'a> Env<'a> {
             "Bool".to_string(),
             TypeConstructorInfo {
                 arity: 0,
-                module: "".to_string(),
+                module: vec![],
                 public: true,
             },
         );
@@ -762,7 +762,7 @@ impl<'a> Env<'a> {
             "List".to_string(),
             TypeConstructorInfo {
                 arity: 1,
-                module: "".to_string(),
+                module: vec![],
                 public: true,
             },
         );
@@ -771,7 +771,7 @@ impl<'a> Env<'a> {
             "Float".to_string(),
             TypeConstructorInfo {
                 arity: 0,
-                module: "".to_string(),
+                module: vec![],
                 public: true,
             },
         );
@@ -780,7 +780,7 @@ impl<'a> Env<'a> {
             "String".to_string(),
             TypeConstructorInfo {
                 arity: 0,
-                module: "".to_string(),
+                module: vec![],
                 public: true,
             },
         );
@@ -789,7 +789,7 @@ impl<'a> Env<'a> {
             "Result".to_string(),
             TypeConstructorInfo {
                 arity: 2,
-                module: "".to_string(),
+                module: vec![],
                 public: true,
             },
         );
@@ -799,7 +799,7 @@ impl<'a> Env<'a> {
             "Nil".to_string(),
             TypeConstructorInfo {
                 arity: 0,
-                module: "".to_string(),
+                module: vec![],
                 public: true,
             },
         );
@@ -989,7 +989,7 @@ impl<'a> Env<'a> {
 
         let result = |ok, error| Type::App {
             name: "Result".to_string(),
-            module: "".to_string(),
+            module: vec![],
             public: true,
             args: vec![ok, error],
         };
@@ -1871,7 +1871,7 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
 
         Pattern::Cons {
             meta, head, tail, ..
-        } => match typ.get_app_args(true, "", "List", 1, env) {
+        } => match typ.get_app_args(true, &vec![], "List", 1, env) {
             Some(args) => {
                 unify_pattern(head, &args[0], level, env)?;
                 unify_pattern(tail, typ, level, env)
@@ -2702,7 +2702,7 @@ pub fn int() -> Type {
     Type::App {
         public: true,
         name: "Int".to_string(),
-        module: "".to_string(),
+        module: vec![],
         args: vec![],
     }
 }
@@ -2712,7 +2712,7 @@ pub fn float() -> Type {
         args: vec![],
         public: true,
         name: "Float".to_string(),
-        module: "".to_string(),
+        module: vec![],
     }
 }
 
@@ -2721,7 +2721,7 @@ pub fn bool() -> Type {
         args: vec![],
         public: true,
         name: "Bool".to_string(),
-        module: "".to_string(),
+        module: vec![],
     }
 }
 
@@ -2730,7 +2730,7 @@ pub fn string() -> Type {
         args: vec![],
         public: true,
         name: "String".to_string(),
-        module: "".to_string(),
+        module: vec![],
     }
 }
 
@@ -2738,7 +2738,7 @@ pub fn list(t: Type) -> Type {
     Type::App {
         public: true,
         name: "List".to_string(),
-        module: "".to_string(),
+        module: vec![],
         args: vec![t],
     }
 }
@@ -3812,7 +3812,7 @@ fn infer_module_error_test() {
                 leaked: Type::App {
                     args: vec![],
                     public: false,
-                    module: "".to_string(),
+                    module: vec![],
                     name: "PrivateType".to_string(),
                 },
             },
@@ -3829,7 +3829,7 @@ fn infer_module_error_test() {
                 leaked: Type::App {
                     args: vec![],
                     public: false,
-                    module: "".to_string(),
+                    module: vec![],
                     name: "PrivateType".to_string(),
                 },
             },
@@ -3846,7 +3846,7 @@ fn infer_module_error_test() {
                 leaked: Type::App {
                     args: vec![],
                     public: false,
-                    module: "".to_string(),
+                    module: vec![],
                     name: "PrivateType".to_string(),
                 },
             },
@@ -3859,7 +3859,7 @@ fn infer_module_error_test() {
                 leaked: Type::App {
                     args: vec![],
                     public: false,
-                    module: "".to_string(),
+                    module: vec![],
                     name: "PrivateType".to_string(),
                 },
             },
