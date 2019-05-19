@@ -1495,14 +1495,15 @@ pub fn infer_module(
             }
 
             Statement::Import { meta, module } => {
-                let (typ, _module_types) = env.modules.get(&module).expect(
+                let module_path = module.join("/");
+                let (typ, _module_types) = env.modules.get(&module_path).expect(
                     "COMPILER BUG: Typer could not find a module being imported.
 This should not be possible. Please report this crash",
                 );
                 env.insert_variable(
-                    module.clone(),
+                    module_path.clone(),
                     Scope::Import {
-                        module: module.clone(),
+                        module: module_path,
                     },
                     typ.clone(),
                 );

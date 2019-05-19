@@ -808,7 +808,7 @@ fn module_test() {
             name: vec![],
             statements: vec![Statement::Import {
                 meta: Meta { start: 0, end: 12 },
-                module: "magic".to_string()
+                module: vec!["magic".to_string()]
             }]
         }),
         ModuleParser::new().parse("import magic"),
