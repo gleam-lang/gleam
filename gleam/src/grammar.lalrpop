@@ -73,7 +73,7 @@ StatementFn: UntypedStatement = {
 StatementImport: UntypedStatement = {
     <s:@L> "import" <n:VarName> <e:@L> => Statement::Import {
         meta: meta(s, e),
-        module: n,
+        module: vec![n],
     }
 }
 

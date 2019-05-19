@@ -16,7 +16,7 @@ impl<S, T> Module<S, T> {
         self.statements
             .iter()
             .flat_map(|s| match s {
-                Statement::Import { module, .. } => Some(module.clone()),
+                Statement::Import { module, .. } => Some(module.join("/")),
                 _ => None,
             })
             .collect()
@@ -125,7 +125,7 @@ pub enum Statement<S, T> {
 
     Import {
         meta: Meta,
-        module: String,
+        module: Vec<String>,
     },
 }
 
