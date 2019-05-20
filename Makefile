@@ -1,4 +1,4 @@
-COMPILER=$(realpath gleam/target/release/gleam)
+COMPILER=gleam/target/release/gleam
 
 #
 # Goals to be specified by user

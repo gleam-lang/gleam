@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>List - The Gleam Book</title>
+        <title>Comments - The Gleam Book</title>
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -75,7 +75,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../getting-started/index.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li><ol class="section"><li><a href="../getting-started/installation.html"><strong aria-hidden="true">2.1.</strong> Installation</a></li><li><a href="../getting-started/editor-support.html"><strong aria-hidden="true">2.2.</strong> Editor support</a></li><li><a href="../getting-started/creating-a-project.html"><strong aria-hidden="true">2.3.</strong> Creating a project</a></li><li><a href="../getting-started/example-projects.html"><strong aria-hidden="true">2.4.</strong> Example projects</a></li></ol></li><li><a href="../tour/index.html"><strong aria-hidden="true">3.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/comments.html"><strong aria-hidden="true">3.1.</strong> Comments</a></li><li><a href="../tour/string.html"><strong aria-hidden="true">3.2.</strong> String</a></li><li><a href="../tour/bool.html"><strong aria-hidden="true">3.3.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">3.4.</strong> Int &amp; Float</a></li><li><a href="../tour/let.html"><strong aria-hidden="true">3.5.</strong> Let bindings</a></li><li><a href="../tour/tuple.html"><strong aria-hidden="true">3.6.</strong> Tuple</a></li><li><a href="../tour/list.html" class="active"><strong aria-hidden="true">3.7.</strong> List</a></li><li><a href="../tour/case.html"><strong aria-hidden="true">3.8.</strong> Case</a></li><li><a href="../tour/function.html"><strong aria-hidden="true">3.9.</strong> Function</a></li><li><a href="../tour/module.html"><strong aria-hidden="true">3.10.</strong> Module</a></li><li><a href="../tour/map.html"><strong aria-hidden="true">3.11.</strong> Map</a></li><li><a href="../tour/enum.html"><strong aria-hidden="true">3.12.</strong> Enum</a></li><li><a href="../tour/external-function.html"><strong aria-hidden="true">3.13.</strong> External function</a></li><li><a href="../tour/external-type.html"><strong aria-hidden="true">3.14.</strong> External type</a></li></ol></li><li><a href="../faqs.html"><strong aria-hidden="true">4.</strong> FAQs</a></li></ol>
+            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../getting-started/index.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li><ol class="section"><li><a href="../getting-started/installation.html"><strong aria-hidden="true">2.1.</strong> Installation</a></li><li><a href="../getting-started/editor-support.html"><strong aria-hidden="true">2.2.</strong> Editor support</a></li><li><a href="../getting-started/creating-a-project.html"><strong aria-hidden="true">2.3.</strong> Creating a project</a></li><li><a href="../getting-started/example-projects.html"><strong aria-hidden="true">2.4.</strong> Example projects</a></li></ol></li><li><a href="../tour/index.html"><strong aria-hidden="true">3.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/comments.html" class="active"><strong aria-hidden="true">3.1.</strong> Comments</a></li><li><a href="../tour/string.html"><strong aria-hidden="true">3.2.</strong> String</a></li><li><a href="../tour/bool.html"><strong aria-hidden="true">3.3.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">3.4.</strong> Int &amp; Float</a></li><li><a href="../tour/let.html"><strong aria-hidden="true">3.5.</strong> Let bindings</a></li><li><a href="../tour/tuple.html"><strong aria-hidden="true">3.6.</strong> Tuple</a></li><li><a href="../tour/list.html"><strong aria-hidden="true">3.7.</strong> List</a></li><li><a href="../tour/case.html"><strong aria-hidden="true">3.8.</strong> Case</a></li><li><a href="../tour/function.html"><strong aria-hidden="true">3.9.</strong> Function</a></li><li><a href="../tour/module.html"><strong aria-hidden="true">3.10.</strong> Module</a></li><li><a href="../tour/map.html"><strong aria-hidden="true">3.11.</strong> Map</a></li><li><a href="../tour/enum.html"><strong aria-hidden="true">3.12.</strong> Enum</a></li><li><a href="../tour/external-function.html"><strong aria-hidden="true">3.13.</strong> External function</a></li><li><a href="../tour/external-type.html"><strong aria-hidden="true">3.14.</strong> External type</a></li></ol></li><li><a href="../faqs.html"><strong aria-hidden="true">4.</strong> FAQs</a></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -140,28 +140,29 @@
 
                 <div id="content" class="content">
                     <main>
-                        <a class="header" href="#list" id="list"><h1>List</h1></a>
-<p>Lists are ordered collections of values. They're one of the most common data
-structures in Gleam.</p>
-<p>Lists are <em>homogeneous</em>, meaning all the elements of a List must be of the
-same type. Attempting to construct a list of multiple types of element will
-result in the compiler presenting a type error.</p>
-<pre><code class="language-rust noplaypen">[1, 2, 3, 4]  // List(Int)
-[1.22, 2.30]  // List(Float)
-[1.22, 3, 4]  // Type error!
+                        <a class="header" href="#comments" id="comments"><h1>Comments</h1></a>
+<p>Gleam allows you to write comments in your code.</p>
+<p>Here’s a simple comment:</p>
+<pre><code class="language-rust noplaypen">// Hello, world!
 </code></pre>
-<p>Prepending to a list is very fast, and is the preferred way to add new values.</p>
-<pre><code class="language-rust noplaypen">[1 | [2, 3]]  // =&gt; [1, 2, 3]
+<p>In Gleam, comments must start with two slashes and continue until the end of the
+line. For comments that extend beyond a single line, you’ll need to include
+<code>//</code> on each line, like this:</p>
+<pre><code class="language-rust noplaypen">// Hello, world! I have a lot to say, so much that it will take multiple
+// lines of text. Therefore, I will start each line with // to denote it
+// as part of a multi-line comment.
 </code></pre>
-<p>Note that as all data structures in Gleam are immutable so prepending to a
-list does not change the original list, instead it efficiently creates a new
-list with the new additional element.</p>
-<pre><code class="language-rust noplaypen">let x = [2, 3]
-let y = [1 | x]
-
-
-x  // =&gt; [2, 3]
-y  // =&gt; [1, 2, 3]
+<p>Comments can also be placed at the end of lines containing code:</p>
+<pre><code class="language-rust noplaypen">pub fn add(x, y) {
+  x + y // here we are adding two values together
+}
+</code></pre>
+<p>Comments may also be indented:</p>
+<pre><code class="language-rust noplaypen">
+pub fn multiply(x, y) {
+  // here were are multiplying x by y
+  x * y 
+}
 </code></pre>
 
                     </main>
@@ -169,13 +170,13 @@ y  // =&gt; [1, 2, 3]
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="../tour/tuple.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../tour/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
                         
-                            <a rel="next" href="../tour/case.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../tour/string.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -187,13 +188,13 @@ y  // =&gt; [1, 2, 3]
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a href="../tour/tuple.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a href="../tour/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
-                    <a href="../tour/case.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a href="../tour/string.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 
