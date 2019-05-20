@@ -7,6 +7,7 @@
   - [Creating a project](./getting-started/creating-a-project.md)
   - [Example projects](./getting-started/example-projects.md)
 - [Language tour](./tour/README.md)
+  - [Comments](./tour/comments.md)
   - [String](./tour/string.md)
   - [Bool](./tour/bool.md)
   - [Int & Float](./tour/int-and-float.md)
