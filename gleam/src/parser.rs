@@ -1233,4 +1233,16 @@ fn module_test() {
              }"
         ),
     );
+
+    assert_eq!(
+        Ok(Module {
+            typ: (),
+            name: vec![],
+            statements: vec![Statement::Import {
+                meta: Meta { start: 0, end: 20 },
+                module: vec!["one".to_string(), "two".to_string(), "three".to_string(),]
+            }]
+        }),
+        ModuleParser::new().parse("import one/two/three"),
+    );
 }

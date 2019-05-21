@@ -4,7 +4,7 @@
 -export([when/0, x/0]).
 
 when() ->
-    nil.
+    1.
 
 x() ->
-    person.
+    1.
