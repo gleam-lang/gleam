@@ -116,26 +116,34 @@ fn read_project_config(root: &str) -> Result<ProjectConfig, ()> {
 }
 
 fn collect_source(src_dir: PathBuf, origin: ModuleOrigin, srcs: &mut Vec<crate::project::Input>) {
-    let entries = match std::fs::read_dir(src_dir.clone()) {
-        Ok(e) => e,
-        Err(_) => return,
+    let src_dir = src_dir.canonicalize().unwrap();
+    let is_gleam_path = |e: &walkdir::DirEntry| {
+        use regex::Regex;
+        lazy_static! {
+            static ref RE: Regex = Regex::new("^([a-z_]+/)*[a-z_]+\\.gleam$").unwrap();
+        }
+
+        RE.is_match(
+            e.path()
+                .strip_prefix(&*src_dir)
+                .expect("collect_source strip_prefix")
+                .to_str()
+                .unwrap_or(""),
+        )
     };
 
-    entries
+    walkdir::WalkDir::new(src_dir.clone())
+        .into_iter()
         .filter_map(Result::ok)
-        .filter(|d| {
-            if let Some(e) = d.path().extension() {
-                e == "gleam"
-            } else {
-                false
-            }
-        })
+        .filter(|e| e.file_type().is_file())
+        .filter(is_gleam_path)
         .for_each(|dir_entry| {
             let src = std::fs::read_to_string(dir_entry.path())
                 .unwrap_or_else(|_| panic!("Unable to read {:?}", dir_entry.path()));
 
             srcs.push(project::Input {
                 path: dir_entry.path().canonicalize().unwrap(),
+                base_path: src_dir.clone(),
                 origin: origin.clone(),
                 src,
             })

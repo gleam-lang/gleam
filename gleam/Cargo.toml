@@ -31,6 +31,8 @@ serde_derive = "1.0"
 toml = "0.5"
 # Levenshtein string distance for typo suggestions
 strsim = "0.9"
+# Recursively traversing directories
+walkdir = "2"
 
 
 [build-dependencies]

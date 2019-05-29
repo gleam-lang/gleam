@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Modules can now live within namespaces such as `my_app/user/profile`.
+
+
 ## v0.1.2 - 2019-05-12
 
 - Types containing more than 26 type variables will no longer render with

@@ -719,12 +719,18 @@ pub struct TypeConstructorInfo {
     arity: usize,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct VariableInfo {
+    scope: Scope<Type>,
+    typ: Type,
+}
+
 pub type TypeConstructors = HashMap<String, TypeConstructorInfo>;
 
 #[derive(Debug, Clone)]
 pub struct Env<'a> {
     uid: usize,
-    variables: HashMap<String, (Scope<Type>, Type)>,
+    variables: HashMap<String, VariableInfo>,
     modules: &'a std::collections::HashMap<String, (Type, TypeConstructors)>,
     type_constructors: TypeConstructors,
 }
@@ -1050,12 +1056,12 @@ impl<'a> Env<'a> {
     /// Map a variable in the current scope.
     ///
     pub fn insert_variable(&mut self, name: String, scope: Scope<Type>, typ: Type) {
-        self.variables.insert(name, (scope, typ));
+        self.variables.insert(name, VariableInfo { scope, typ });
     }
 
     /// Lookup a variable in the current scope.
     ///
-    pub fn get_variable(&self, name: &str) -> Option<&(Scope<Type>, Type)> {
+    pub fn get_variable(&self, name: &str) -> Option<&VariableInfo> {
         self.variables.get(name)
     }
 
@@ -1076,9 +1082,15 @@ impl<'a> Env<'a> {
             None => self.type_constructors.get(name),
 
             Some(m) => self
-                .modules
+                .variables
                 .get(m)
-                .and_then(|(_, constructors)| constructors.get(name)),
+                .and_then(|variable_info| match &variable_info.scope {
+                    Scope::Import {
+                        type_constructors, ..
+                    } => type_constructors.get(name),
+
+                    _ => unimplemented!(),
+                }),
         }
     }
 
@@ -1106,6 +1118,7 @@ impl<'a> Env<'a> {
                     .map(|t| self.type_from_ast(t, vars, permit_new_vars))
                     .collect::<Result<Vec<_>, _>>()?;
                 let types = self.type_constructors.clone();
+
                 let info = self
                     .get_type_constructor(module, name)
                     .ok_or(Error::UnknownType {
@@ -1202,7 +1215,7 @@ pub enum Error {
     UnknownVariable {
         meta: Meta,
         name: String,
-        variables: HashMap<String, (Scope<Type>, Type)>,
+        variables: HashMap<String, VariableInfo>,
     },
 
     UnknownType {
@@ -1302,7 +1315,11 @@ pub fn infer_module(
                 let level = 1;
 
                 // Ensure function has not already been defined in this module
-                if let Some((Scope::Module { .. }, _)) = env.get_variable(&name) {
+                if let Some(VariableInfo {
+                    scope: Scope::Module { .. },
+                    ..
+                }) = env.get_variable(&name)
+                {
                     return Err(Error::DuplicateName { meta, name });
                 };
 
@@ -1495,15 +1512,16 @@ pub fn infer_module(
             }
 
             Statement::Import { meta, module } => {
-                let module_path = module.join("/");
-                let (typ, _module_types) = env.modules.get(&module_path).expect(
+                let (typ, module_types) = env.modules.get(&module.join("/")).expect(
                     "COMPILER BUG: Typer could not find a module being imported.
 This should not be possible. Please report this crash",
                 );
+                let var = module[module.len() - 1].clone();
                 env.insert_variable(
-                    module_path.clone(),
+                    var,
                     Scope::Import {
-                        module: module_path,
+                        module: module.clone(),
+                        type_constructors: module_types.clone(),
                     },
                     typ.clone(),
                 );
@@ -1757,7 +1775,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         }
 
         Expr::Var { meta, name, .. } => {
-            let (scope, typ) = infer_var(&name, level, &meta, env)?;
+            let VariableInfo { scope, typ } = infer_var(&name, level, &meta, env)?;
             Ok(Expr::Var {
                 meta,
                 scope,
@@ -1892,7 +1910,7 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
             args: pattern_args,
         } => {
             match infer_possibly_namespaced_var(module, name, level, meta, env)?
-                .1
+                .typ
                 .collapse_links()
             {
                 Type::Fn { args, retrn } => {
@@ -1955,34 +1973,32 @@ fn infer_possibly_namespaced_var(
     level: usize,
     meta: &Meta,
     env: &mut Env,
-) -> Result<(Scope<Type>, Type), Error> {
+) -> Result<VariableInfo, Error> {
     match module {
         None => infer_var(name, level, meta, env),
 
         Some(module) => {
-            let (_, typ) = infer_var(module, level, meta, env)?;
+            let VariableInfo { typ, .. } = infer_var(module, level, meta, env)?;
             let typ = infer_module_select(&typ, name, level, meta, env)?;
-            Ok((Scope::Module { arity: 0 }, typ))
+            Ok(VariableInfo {
+                scope: Scope::Module { arity: 0 },
+                typ,
+            })
         }
     }
 }
 
-fn infer_var(
-    name: &str,
-    level: usize,
-    meta: &Meta,
-    env: &mut Env,
-) -> Result<(Scope<Type>, Type), Error> {
-    let (scope, typ) = env
-        .get_variable(name)
-        .cloned()
-        .ok_or_else(|| Error::UnknownVariable {
-            meta: meta.clone(),
-            name: name.to_string(),
-            variables: env.variables.clone(),
-        })?;
+fn infer_var(name: &str, level: usize, meta: &Meta, env: &mut Env) -> Result<VariableInfo, Error> {
+    let VariableInfo { scope, typ } =
+        env.get_variable(name)
+            .cloned()
+            .ok_or_else(|| Error::UnknownVariable {
+                meta: meta.clone(),
+                name: name.to_string(),
+                variables: env.variables.clone(),
+            })?;
     let typ = instantiate(typ, level, env);
-    Ok((scope, typ))
+    Ok(VariableInfo { scope, typ })
 }
 
 fn infer_call(
