@@ -3,6 +3,7 @@
 ## Unreleased
 
 - The `map_dict` module gains a `fold` function.
+- All modules moved under the `std` namespace.
 
 ## v0.2.0 - 2019-05-11
 

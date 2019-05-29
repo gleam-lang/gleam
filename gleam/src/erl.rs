@@ -57,7 +57,7 @@ pub fn module(module: TypedModule) -> String {
         .intersperse(", ".to_doc())
         .collect();
 
-    format!("-module({}).", module.name.join("$"))
+    format!("-module({}).", module.name.join("@"))
         .to_doc()
         .append(line())
         .append("-compile(no_auto_import).")
@@ -133,7 +133,7 @@ fn atom(value: String) -> Document {
     use regex::Regex;
 
     lazy_static! {
-        static ref RE: Regex = Regex::new(r"^[a-z_\$]+$").unwrap();
+        static ref RE: Regex = Regex::new(r"^[a-z_@]+$").unwrap();
     }
     if RE.is_match(&value) {
         value.to_doc()
@@ -325,7 +325,7 @@ fn var(name: String, scope: TypedScope, env: &mut Env) -> Document {
     match scope {
         Scope::Enum { .. } => atom(name.to_snake_case()),
         Scope::Local => env.local_var_name(name),
-        Scope::Import { module } => module.to_doc(),
+        Scope::Import { module, .. } => module.join("@").to_doc(),
         Scope::Module { arity, .. } => "fun ".to_doc().append(name).append("/").append(arity),
         Scope::Constant { value } => expr(*value, env),
     }
@@ -1057,7 +1057,8 @@ some_function(ArgOne,
                         meta: default(),
                         name: "zero".to_string(),
                         scope: Scope::Import {
-                            module: "one".to_string(),
+                            module: vec!["one".to_string()],
+                            type_constructors: im::HashMap::new(),
                         },
                         typ: crate::typ::int(),
                     }),
@@ -1079,7 +1080,8 @@ some_function(ArgOne,
                         meta: default(),
                         name: "zero".to_string(),
                         scope: Scope::Import {
-                            module: "one".to_string(),
+                            module: vec!["one".to_string()],
+                            type_constructors: im::HashMap::new(),
                         },
                         typ: crate::typ::int(),
                     }),
@@ -1098,7 +1100,8 @@ some_function(ArgOne,
                         meta: default(),
                         name: "zero".to_string(),
                         scope: Scope::Import {
-                            module: "one".to_string(),
+                            module: vec!["one".to_string()],
+                            type_constructors: im::HashMap::new(),
                         },
                         typ: crate::typ::int(),
                     }),
@@ -1125,7 +1128,8 @@ some_function(ArgOne,
                             meta: default(),
                             name: "zero".to_string(),
                             scope: Scope::Import {
-                                module: "one".to_string(),
+                                type_constructors: im::HashMap::new(),
+                                module: vec!["one".to_string()],
                             },
                             typ: crate::typ::int(),
                         }),

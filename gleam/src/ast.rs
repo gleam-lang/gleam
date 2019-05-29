@@ -165,7 +165,10 @@ pub enum Scope<T> {
     Module { arity: usize },
 
     /// An imported module
-    Import { module: String },
+    Import {
+        module: Vec<String>,
+        type_constructors: im::HashMap<String, crate::typ::TypeConstructorInfo>,
+    },
 
     /// A constant value to be inlined
     Constant { value: Box<Expr<Scope<T>, T>> },
