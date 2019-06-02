@@ -598,6 +598,7 @@ fn module_test() {
             Statement::Import {
                 meta: default(),
                 module: vec!["result".to_string()],
+                as_name: None,
             },
             Statement::ExternalFn {
                 meta: default(),

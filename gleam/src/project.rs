@@ -869,6 +869,40 @@ box() ->\n    box.\n"
             input: vec![
                 Input {
                     origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/one.gleam"),
+                    base_path: PathBuf::from("/src"),
+                    src: "pub fn go() { 1 }".to_string(),
+                },
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/two.gleam"),
+                    base_path: PathBuf::from("/src"),
+                    src: "import one as thingy pub fn call() { thingy:go() }".to_string(),
+                },
+            ],
+            expected: Ok(vec![
+                Compiled {
+                    name: vec!["one".to_string()],
+                    path: PathBuf::from("/gen/src/one.erl"),
+                    code: "-module(one).\n-compile(no_auto_import).\n\n-export([go/0]).\n
+go() ->
+    1.\n"
+                        .to_string(),
+                },
+                Compiled {
+                    name: vec!["two".to_string()],
+                    path: PathBuf::from("/gen/src/two.erl"),
+                    code: "-module(two).\n-compile(no_auto_import).\n\n-export([call/0]).\n
+call() ->
+    one:go().\n"
+                        .to_string(),
+                },
+            ]),
+        },
+        Case {
+            input: vec![
+                Input {
+                    origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/nested/one.gleam"),
                     base_path: PathBuf::from("/src"),
                     src: "pub external type Thing pub fn go() { 1 }".to_string(),

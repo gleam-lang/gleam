@@ -1,10 +1,6 @@
-import std/list
+import std/list as list_mod
 import std/atom
 import std/result
-
-fn list_module() {
-  list
-}
 
 // `Any` data is data that we don"t know the type of yet.
 // We likely get data like this from interop with Erlang, or from
@@ -47,7 +43,7 @@ external fn list_any(Any) -> Result(List(Any), String) =
 pub fn list(any, decode) {
   any
   |> list_any
-  |> result:then(_, list_module():traverse(_, decode))
+  |> result:then(_, list_mod:traverse(_, decode))
 }
 
 pub external fn tuple(Any) -> Result({Any, Any}, String)

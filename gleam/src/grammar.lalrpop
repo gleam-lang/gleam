@@ -71,12 +71,13 @@ StatementFn: UntypedStatement = {
 }
 
 StatementImport: UntypedStatement = {
-    <s:@L> "import" <ns:(<VarName> "/")*> <n:VarName> <e:@L> => {
+    <s:@L> "import" <ns:(<VarName> "/")*> <n:VarName> <e:@L> <as_name:("as" <VarName>)?> => {
         let mut module = ns;
         module.push(n);
         Statement::Import {
             meta: meta(s, e),
             module,
+            as_name,
         }
     }
 }

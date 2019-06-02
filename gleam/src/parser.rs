@@ -808,7 +808,8 @@ fn module_test() {
             name: vec![],
             statements: vec![Statement::Import {
                 meta: Meta { start: 0, end: 12 },
-                module: vec!["magic".to_string()]
+                module: vec!["magic".to_string()],
+                as_name: None,
             }]
         }),
         ModuleParser::new().parse("import magic"),
@@ -1240,9 +1241,23 @@ fn module_test() {
             name: vec![],
             statements: vec![Statement::Import {
                 meta: Meta { start: 0, end: 20 },
-                module: vec!["one".to_string(), "two".to_string(), "three".to_string(),]
+                module: vec!["one".to_string(), "two".to_string(), "three".to_string(),],
+                as_name: None,
             }]
         }),
         ModuleParser::new().parse("import one/two/three"),
+    );
+
+    assert_eq!(
+        Ok(Module {
+            typ: (),
+            name: vec![],
+            statements: vec![Statement::Import {
+                meta: Meta { start: 0, end: 21 },
+                module: vec!["one".to_string(), "two".to_string(), "three".to_string(),],
+                as_name: Some("something".to_string()),
+            }]
+        }),
+        ModuleParser::new().parse("import one/two/three as something"),
     );
 }
