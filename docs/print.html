@@ -32,10 +32,7 @@
     </head>
     <body class="light">
         <!-- Provide site root to javascript -->
-        <script type="text/javascript">
-            var path_to_root = "";
-            var default_theme = "light";
-        </script>
+        <script type="text/javascript">var path_to_root = "";</script>
 
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script type="text/javascript">
@@ -57,7 +54,7 @@
         <script type="text/javascript">
             var theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { } 
-            if (theme === null || theme === undefined) { theme = default_theme; }
+            if (theme === null || theme === undefined) { theme = 'light'; }
             document.body.className = theme;
             document.querySelector('html').className = theme + ' js';
         </script>
@@ -92,7 +89,7 @@
                                 <i class="fa fa-paint-brush"></i>
                             </button>
                             <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                                <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="light">Light <span class="default">(default)</span></button></li>
                                 <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                                 <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
                                 <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
@@ -111,7 +108,6 @@
                             <a href="print.html" title="Print this book" aria-label="Print this book">
                                 <i id="print-button" class="fa fa-print"></i>
                             </a>
-                            
                         </div>
                     </div>
                 </div>
@@ -600,7 +596,7 @@ pub fn run() {
 <p>Gleam programs are made up of bundles of functions and types called modules.
 Each module has its own namespace and can export types and values to be used
 by other modules in the program.</p>
-<pre><code class="language-rust noplaypen">// inside src/rocket_ship.gleam
+<pre><code class="language-rust noplaypen">// inside src/nasa/rocket_ship.gleam
 
 fn count_down() {
   &quot;3... 2... 1...&quot;
@@ -617,34 +613,44 @@ pub fn launch() {
   ]
 }
 </code></pre>
-<p>Here we can see a module named <code>rocket_ship</code>, the name determined by the
-filename <code>src/rocket_ship.gleam</code>.</p>
+<p>Here we can see a module named <code>nasa/rocket_ship</code>, the name determined by the
+filename <code>src/nasa/rocket_ship.gleam</code>. Typically all the modules for one
+project would live within a directory with the name of the project, such as
+<code>nasa</code> in this example.</p>
 <p>For the functions <code>count_down</code> and <code>blast_off</code> we have omitted the <code>pub</code>
 keyword, so these functions are <em>private</em> module functions. They can only be
 called by other functions within the same module.</p>
 <a class="header" href="#import" id="import"><h2>Import</h2></a>
 <p>To use functions or types from another module we need to import them using the
 <code>import</code> keyword.</p>
-<pre><code class="language-rust noplaypen">// inside src/moon_base.gleam
+<pre><code class="language-rust noplaypen">// inside src/nasa/moon_base.gleam
 
-import rocket_ship
+import nasa/rocket_ship
 
 pub fn explore_space() {
   rocket_ship:launch()
 }
 </code></pre>
-<p>The statement <code>import rocket_ship</code> creates a new variable with the name
+<p>The statement <code>import nasa/rocket_ship</code> creates a new variable with the name
 <code>rocket_ship</code> and the value of the <code>rocket_ship</code> module.</p>
 <p>In the <code>explore_space</code> function we call the imported module's public <code>launch</code>
 function using the <code>:</code> operator.
 If we had attempted to call <code>count_down</code> it would result in a compile time
 error as this function is private in the <code>rocket_ship</code> module.</p>
+<a class="header" href="#named-import" id="named-import"><h2>Named import</h2></a>
+<p>It is also possible to give a module a custom name when importing it using the
+<code>as</code> keyword.</p>
+<pre><code class="language-rust noplaypen">import unix/cat
+import animal/cat as kitty
+</code></pre>
+<p>This may be useful to differentiate between multiple modules that would have
+the same default name when imported.</p>
 <a class="header" href="#first-class-modules" id="first-class-modules"><h2>First class modules</h2></a>
 <p>Modules in Gleam are first class values and can be assigned to variables,
 passed to functions, or anything else that we can do with regular values.</p>
-<pre><code class="language-rust noplaypen">import rocket_ship
-import new_website
-import navy_boat
+<pre><code class="language-rust noplaypen">import nasa/rocket_ship
+import nasa/new_website
+import nasa/navy_boat
 
 pub fn perform_launch(some_module) {
   some_module:launch()
