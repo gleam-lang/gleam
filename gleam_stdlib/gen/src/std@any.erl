@@ -3,9 +3,6 @@
 
 -export([from/1, unsafe_coerce/1, string/1, int/1, float/1, atom/1, bool/1, thunk/1, list/2, tuple/1, field/2]).
 
-list_module() ->
-    std@list.
-
 from(A) ->
     gleam__stdlib:identity(A).
 
@@ -35,9 +32,7 @@ list_any(A) ->
 
 list(Any, Decode) ->
     std@result:then(list_any(Any),
-                    fun(Capture1) ->
-                        (list_module()):traverse(Capture1, Decode)
-                    end).
+                    fun(Capture1) -> std@list:traverse(Capture1, Decode) end).
 
 tuple(A) ->
     gleam__stdlib:decode_tuple(A).

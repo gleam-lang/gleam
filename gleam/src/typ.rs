@@ -1511,12 +1511,19 @@ pub fn infer_module(
                 })
             }
 
-            Statement::Import { meta, module } => {
+            Statement::Import {
+                meta,
+                module,
+                as_name,
+            } => {
                 let (typ, module_types) = env.modules.get(&module.join("/")).expect(
                     "COMPILER BUG: Typer could not find a module being imported.
 This should not be possible. Please report this crash",
                 );
-                let var = module[module.len() - 1].clone();
+                let var = match &as_name {
+                    None => module[module.len() - 1].clone(),
+                    Some(name) => name.clone(),
+                };
                 env.insert_variable(
                     var,
                     Scope::Import {
@@ -1525,7 +1532,11 @@ This should not be possible. Please report this crash",
                     },
                     typ.clone(),
                 );
-                Ok(Statement::Import { meta, module })
+                Ok(Statement::Import {
+                    meta,
+                    module,
+                    as_name,
+                })
             }
         })
         .collect::<Result<Vec<_>, _>>()?;

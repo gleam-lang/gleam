@@ -126,6 +126,7 @@ pub enum Statement<S, T> {
     Import {
         meta: Meta,
         module: Vec<String>,
+        as_name: Option<String>,
     },
 }
 
