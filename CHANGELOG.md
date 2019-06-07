@@ -5,6 +5,8 @@
 - Modules can now live within namespaces such as `my_app/user/profile`.
 - The name of the variable created can be specified when importing a module
   using the `import my_mod as name` syntax.
+- Functions names are now escaped in the generated code if they collide with
+  Erlang keywords such as `catch` or `or`.
 
 ## v0.1.2 - 2019-05-12
 

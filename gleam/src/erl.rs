@@ -99,11 +99,17 @@ fn statement(statement: TypedStatement) -> Option<Document> {
 fn mod_fun(name: String, args: Vec<Arg>, body: TypedExpr) -> Document {
     let body_doc = expr(body, &mut Env::default());
 
-    name.to_doc()
-        .append(fun_args(args))
-        .append(" ->")
-        .append(line().append(body_doc).nest(INDENT).group())
-        .append(".")
+    match &*name {
+        "!" | "receive" | "bnot" | "div" | "rem" | "band" | "bor" | "bxor" | "bsl" | "bsr"
+        | "not" | "and" | "or" | "xor" | "orelse" | "andalso" | "when" | "end" | "fun" | "try"
+        | "catch" | "after" => format!("'{}'", name),
+        _ => name,
+    }
+    .to_doc()
+    .append(fun_args(args))
+    .append(" ->")
+    .append(line().append(body_doc).nest(INDENT).group())
+    .append(".")
 }
 
 fn fun_args(args: Vec<Arg>) -> Document {
@@ -1528,10 +1534,10 @@ go() ->
 
 -export([]).
 
-and(X, Y) ->
+'and'(X, Y) ->
     X andalso Y.
 
-or(X, Y) ->
+'or'(X, Y) ->
     X orelse Y.
 
 modulo(X, Y) ->
@@ -1590,9 +1596,17 @@ x() ->
     X1.
 "#,
         },
-        // TODO: Check that var num is incremented for args
-        // TODO: Check that var num is incremented for nested patterns
-        // TODO: Check that var num is reset after a closure that increments
+        Case {
+            src: r#"fn catch() { 1 }"#,
+            erl: r#"-module().
+-compile(no_auto_import).
+
+-export([]).
+
+'catch'() ->
+    1.
+"#,
+        },
     ];
 
     for Case { src, erl } in cases.into_iter() {
