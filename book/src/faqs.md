@@ -30,7 +30,7 @@ something else entirely.
 
 ## How is message passing typed?
 
-Gleam currently doesn't currently have first class support for the BEAM's
+Gleam doesn't currently have first class support for the BEAM's
 concurrency primitives such as `receive`, `send`, and `spawn`. This is because
 research is still ongoing as to the best way to apply a strong type system to
 them while still enabling established OTP patterns. For now these primitives
