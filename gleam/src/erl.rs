@@ -53,7 +53,7 @@ pub fn module(module: TypedModule) -> String {
 
             _ => None,
         })
-        .map(|(n, a)| n.to_doc().append("/").append(a))
+        .map(|(n, a)| atom(n).append("/").append(a))
         .intersperse(", ".to_doc())
         .collect();
 
@@ -99,17 +99,11 @@ fn statement(statement: TypedStatement) -> Option<Document> {
 fn mod_fun(name: String, args: Vec<Arg>, body: TypedExpr) -> Document {
     let body_doc = expr(body, &mut Env::default());
 
-    match &*name {
-        "!" | "receive" | "bnot" | "div" | "rem" | "band" | "bor" | "bxor" | "bsl" | "bsr"
-        | "not" | "and" | "or" | "xor" | "orelse" | "andalso" | "when" | "end" | "fun" | "try"
-        | "catch" | "after" => format!("'{}'", name),
-        _ => name,
-    }
-    .to_doc()
-    .append(fun_args(args))
-    .append(" ->")
-    .append(line().append(body_doc).nest(INDENT).group())
-    .append(".")
+    atom(name)
+        .append(fun_args(args))
+        .append(" ->")
+        .append(line().append(body_doc).nest(INDENT).group())
+        .append(".")
 }
 
 fn fun_args(args: Vec<Arg>) -> Document {
@@ -137,14 +131,21 @@ where
 
 fn atom(value: String) -> Document {
     use regex::Regex;
-
     lazy_static! {
-        static ref RE: Regex = Regex::new(r"^[a-z_@]+$").unwrap();
+        static ref RE: Regex = Regex::new(r"^[a-z][a-z0-9_@]*$").unwrap();
     }
-    if RE.is_match(&value) {
-        value.to_doc()
-    } else {
-        value.to_doc().surround("'", "'")
+
+    match &*value {
+        // Escape because of keyword collision
+        "!" | "receive" | "bnot" | "div" | "rem" | "band" | "bor" | "bxor" | "bsl" | "bsr"
+        | "not" | "and" | "or" | "xor" | "orelse" | "andalso" | "when" | "end" | "fun" | "try"
+        | "catch" | "after" => format!("'{}'", value).to_doc(),
+
+        // No need to escape
+        _ if RE.is_match(&value) => value.to_doc(),
+
+        // Escape because of characters contained
+        _ => value.to_doc().surround("'", "'"),
     }
 }
 
@@ -1597,11 +1598,11 @@ x() ->
 "#,
         },
         Case {
-            src: r#"fn catch(x) { [1, 2, 3 | x] }"#,
+            src: r#"pub fn catch(x) { [1, 2, 3 | x] }"#,
             erl: r#"-module().
 -compile(no_auto_import).
 
--export([]).
+-export(['catch'/1]).
 
 'catch'(X) ->
     [1, 2, 3 | X].
