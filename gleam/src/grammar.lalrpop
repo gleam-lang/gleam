@@ -176,7 +176,6 @@ SimpleExpr: UntypedExpr = {
     Int => <>,
     Var => <>,
     Case => <>,
-    Cons => <>,
     List => <>,
     Call => <>,
     Float => <>,
@@ -355,27 +354,19 @@ Tuple: UntypedExpr = {
     }
 }
 
-Cons: UntypedExpr = {
-    <s:@L> "[" <head:OpOrSimpleExpr> "|" <tail:OpOrSimpleExpr> "]" <e:@L> => Expr::Cons {
-        meta: meta(s, e),
-        typ: (),
-        head: Box::new(head),
-        tail: Box::new(tail),
-    }
-}
-
 List: UntypedExpr = {
-    <s:@L> "[" <elems:Comma<OpOrSimpleExpr>> "]" <e:@L> => {
+    "[" <elems:Comma<OpOrSimpleExpr>> <tail:("|" <OpOrSimpleExpr>)?>"]" <e:@L> => {
+        let tail = tail.unwrap_or_else(|| Expr::Nil {
+            meta: meta(e - 1, e),
+            typ: (),
+        });
         elems.into_iter().rev().fold(
-            Expr::Nil {
-                meta: meta(e - 1, e),
+            tail,
+            |t, h| Expr::Cons {
+                meta: t.meta().clone(),
                 typ: (),
-            },
-            |a, e| Expr::Cons {
-                meta: e.meta().clone(),
-                typ: (),
-                head: Box::new(e),
-                tail: Box::new(a),
+                head: Box::new(h),
+                tail: Box::new(t),
             }
         )
     }

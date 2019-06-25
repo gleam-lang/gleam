@@ -1597,14 +1597,14 @@ x() ->
 "#,
         },
         Case {
-            src: r#"fn catch() { 1 }"#,
+            src: r#"fn catch(x) { [1, 2, 3 | x] }"#,
             erl: r#"-module().
 -compile(no_auto_import).
 
 -export([]).
 
-'catch'() ->
-    1.
+'catch'(X) ->
+    [1, 2, 3 | X].
 "#,
         },
     ];

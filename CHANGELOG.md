@@ -7,6 +7,8 @@
   using the `import my_mod as name` syntax.
 - Functions names are now escaped in the generated code if they collide with
   Erlang keywords such as `catch` or `or`.
+- There is a shorthand syntax for prepending multiple elements to a list.
+  `[1, 2, 3 | my_list]`
 
 ## v0.1.2 - 2019-05-12
 
