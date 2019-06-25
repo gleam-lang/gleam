@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.2.0 - 2019-06-25
 
 - Modules can now live within namespaces such as `my_app/user/profile`.
 - The name of the variable created can be specified when importing a module
