@@ -17,7 +17,7 @@ before proceeding.
 ```sh
 # Download the Gleam source code git repository
 cd /tmp
-git clone https://github.com/lpil/gleam.git
+git clone https://github.com/lpil/gleam.git --branch v0.2.0
 cd gleam
 
 # Build the Gleam compiler. This will take some time!
