@@ -94,7 +94,7 @@ fn command_build(root: String) {
     };
 
     for crate::project::Compiled { code, path, .. } in compiled {
-        let gen_path = path.parent().unwrap();
+        let gen_path = path.parent().expect("gen_path");
         std::fs::create_dir_all(gen_path).expect("creating gen dir");
 
         let mut f = File::create(path).expect("Unable to create file");
@@ -116,11 +116,12 @@ fn read_project_config(root: &str) -> Result<ProjectConfig, ()> {
 }
 
 fn collect_source(src_dir: PathBuf, origin: ModuleOrigin, srcs: &mut Vec<crate::project::Input>) {
-    let src_dir = src_dir.canonicalize().unwrap();
+    let src_dir = src_dir.canonicalize().expect("collect_source src_dir");
     let is_gleam_path = |e: &walkdir::DirEntry| {
         use regex::Regex;
         lazy_static! {
-            static ref RE: Regex = Regex::new("^([a-z_]+/)*[a-z_]+\\.gleam$").unwrap();
+            static ref RE: Regex =
+                Regex::new("^([a-z_]+/)*[a-z_]+\\.gleam$").expect("collect_source RE regex");
         }
 
         RE.is_match(
@@ -142,7 +143,10 @@ fn collect_source(src_dir: PathBuf, origin: ModuleOrigin, srcs: &mut Vec<crate::
                 .unwrap_or_else(|_| panic!("Unable to read {:?}", dir_entry.path()));
 
             srcs.push(project::Input {
-                path: dir_entry.path().canonicalize().unwrap(),
+                path: dir_entry
+                    .path()
+                    .canonicalize()
+                    .expect("collect_source path canonicalize"),
                 base_path: src_dir.clone(),
                 origin: origin.clone(),
                 src,
