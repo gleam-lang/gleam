@@ -4,6 +4,8 @@
 
 - External function names and their target functions are now escaped in the
   generated code if they collide with Erlang keywords such as `catch` or `or`.
+- Type error arising from the arguments of function calls have more accurate
+  error diagnostics.
 
 ## v0.2.0 - 2019-06-25
 
