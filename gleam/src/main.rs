@@ -116,7 +116,10 @@ fn read_project_config(root: &str) -> Result<ProjectConfig, ()> {
 }
 
 fn collect_source(src_dir: PathBuf, origin: ModuleOrigin, srcs: &mut Vec<crate::project::Input>) {
-    let src_dir = src_dir.canonicalize().expect("collect_source src_dir");
+    let src_dir = match src_dir.canonicalize() {
+        Ok(d) => d,
+        Err(_) => return,
+    };
     let is_gleam_path = |e: &walkdir::DirEntry| {
         use regex::Regex;
         lazy_static! {
