@@ -2020,7 +2020,6 @@ fn infer_call(
     env: &mut Env,
 ) -> Result<(TypedExpr, Vec<TypedExpr>, Type), Error> {
     let fun = infer(fun, level, env)?;
-    // TODO: Use the meta of the arg instead of the meta of the entire call
     let (mut args_types, return_type) = match_fun_type(fun.typ(), args.len(), env)
         .map_err(|e| convert_not_fun_error(e, fun.meta(), &meta))?;
     let args = args_types
@@ -2028,7 +2027,7 @@ fn infer_call(
         .zip(args)
         .map(|(typ, arg): (&mut Type, _)| {
             let arg = infer(arg, level, env)?;
-            unify(typ, arg.typ(), env).map_err(|e| convert_unify_error(e, &meta))?;
+            unify(typ, arg.typ(), env).map_err(|e| convert_unify_error(e, arg.meta()))?;
             Ok(arg)
         })
         .collect::<Result<_, _>>()?;
@@ -3308,7 +3307,7 @@ fn infer_error_test() {
         Case {
             src: "1 + 1.0",
             error: Error::CouldNotUnify {
-                meta: Meta { start: 0, end: 7 },
+                meta: Meta { start: 4, end: 7 },
                 expected: int(),
                 given: float(),
             },
@@ -3316,7 +3315,7 @@ fn infer_error_test() {
         Case {
             src: "1 +. 1.0",
             error: Error::CouldNotUnify {
-                meta: Meta { start: 0, end: 8 },
+                meta: Meta { start: 0, end: 1 },
                 expected: float(),
                 given: int(),
             },
@@ -3324,7 +3323,7 @@ fn infer_error_test() {
         Case {
             src: "1 == 1.0",
             error: Error::CouldNotUnify {
-                meta: Meta { start: 0, end: 8 },
+                meta: Meta { start: 5, end: 8 },
                 expected: int(),
                 given: float(),
             },
@@ -3388,7 +3387,7 @@ fn infer_error_test() {
         Case {
             src: "{1, 2} == {1, 2, 3}",
             error: Error::CouldNotUnify {
-                meta: Meta { start: 0, end: 19 },
+                meta: Meta { start: 10, end: 19 },
                 expected: Type::Tuple {
                     elems: vec![int(), int()],
                 },
@@ -3400,7 +3399,7 @@ fn infer_error_test() {
         Case {
             src: "{} == {a = 2}",
             error: Error::ExtraField {
-                meta: Meta { start: 0, end: 13 },
+                meta: Meta { start: 11, end: 12 },
                 label: "a".to_string(),
                 container_typ: RowContainerType::Map,
             },
@@ -3408,7 +3407,7 @@ fn infer_error_test() {
         Case {
             src: "fn() { 1 } == fn(x) { x + 1 }",
             error: Error::CouldNotUnify {
-                meta: Meta { start: 0, end: 29 },
+                meta: Meta { start: 14, end: 29 },
                 expected: Type::Fn {
                     args: vec![],
                     retrn: Box::new(int()),
@@ -3434,7 +3433,7 @@ fn infer_error_test() {
         Case {
             src: "let id = fn(x) { x(x) } 1",
             error: Error::RecursiveType {
-                meta: Meta { start: 17, end: 21 },
+                meta: Meta { start: 19, end: 20 },
             },
         },
     ];
@@ -3445,7 +3444,7 @@ fn infer_error_test() {
             .expect("syntax error");
         let result = infer(ast, 1, &mut Env::new(&std::collections::HashMap::new()))
             .expect_err("should infer an error");
-        assert_eq!((src, &result), (src, error));
+        assert_eq!((src, error), (src, &result));
     }
 }
 
@@ -3802,7 +3801,7 @@ fn infer_module_error_test() {
         Case {
             src: "fn go() { 1 + 2.0 }",
             error: Error::CouldNotUnify {
-                meta: Meta { start: 10, end: 17 }, // TODO: FIXME: This should specify just the RHS
+                meta: Meta { start: 14, end: 17 },
                 expected: int(),
                 given: float(),
             },
