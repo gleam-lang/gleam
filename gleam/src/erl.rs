@@ -571,11 +571,13 @@ fn external_fun(name: String, module: String, fun: String, arity: usize) -> Docu
         .intersperse(", ".to_string())
         .collect();
 
-    format!("{}({}) ->", name, chars)
-        .to_doc()
+    atom(name)
+        .append(format!("({}) ->", chars))
         .append(line())
         .append(atom(module))
-        .append(format!(":{}({}).", fun, chars))
+        .append(":")
+        .append(atom(fun))
+        .append(format!("({}).", chars))
         .nest(INDENT)
 }
 
@@ -1598,14 +1600,17 @@ x() ->
 "#,
         },
         Case {
-            src: r#"pub fn catch(x) { [1, 2, 3 | x] }"#,
+            src: r#"pub fn catch(x) { [1, 2, 3 | x] } pub external fn receive() -> Int = "try" "and""#,
             erl: r#"-module().
 -compile(no_auto_import).
 
--export(['catch'/1]).
+-export(['catch'/1, 'receive'/0]).
 
 'catch'(X) ->
     [1, 2, 3 | X].
+
+'receive'() ->
+    'try':'and'().
 "#,
         },
     ];

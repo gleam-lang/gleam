@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- External function names and their target functions are now escaped in the
+  generated code if they collide with Erlang keywords such as `catch` or `or`.
+
 ## v0.2.0 - 2019-06-25
 
 - Modules can now live within namespaces such as `my_app/user/profile`.
