@@ -46,7 +46,7 @@ use structopt::StructOpt;
     global_settings = "&[AppSettings::ColoredHelp, AppSettings::VersionlessSubcommands]"
 ))]
 enum Command {
-    #[structopt(name = "build", about = "Compile Gleam modules in a given project")]
+    #[structopt(name = "build", about = "Compile Gleam in a rebar3 project")]
     Build {
         #[structopt(help = "location of the project root", default_value = ".")]
         path: String,
