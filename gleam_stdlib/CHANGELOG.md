@@ -4,6 +4,7 @@
 
 - The `map_dict` module gains a `fold` function.
 - All modules moved under the `std` namespace.
+- The `http` module has been split out into the `gleam_http` package.
 
 ## v0.2.0 - 2019-05-11
 
