@@ -32,7 +32,10 @@
     </head>
     <body class="light">
         <!-- Provide site root to javascript -->
-        <script type="text/javascript">var path_to_root = "";</script>
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = "light";
+        </script>
 
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script type="text/javascript">
@@ -54,7 +57,7 @@
         <script type="text/javascript">
             var theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { } 
-            if (theme === null || theme === undefined) { theme = 'light'; }
+            if (theme === null || theme === undefined) { theme = default_theme; }
             document.body.className = theme;
             document.querySelector('html').className = theme + ' js';
         </script>
@@ -72,7 +75,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="getting-started/index.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li><ol class="section"><li><a href="getting-started/installation.html"><strong aria-hidden="true">2.1.</strong> Installation</a></li><li><a href="getting-started/editor-support.html"><strong aria-hidden="true">2.2.</strong> Editor support</a></li><li><a href="getting-started/creating-a-project.html"><strong aria-hidden="true">2.3.</strong> Creating a project</a></li><li><a href="getting-started/example-projects.html"><strong aria-hidden="true">2.4.</strong> Example projects</a></li></ol></li><li><a href="tour/index.html"><strong aria-hidden="true">3.</strong> Language tour</a></li><li><ol class="section"><li><a href="tour/comments.html"><strong aria-hidden="true">3.1.</strong> Comments</a></li><li><a href="tour/string.html"><strong aria-hidden="true">3.2.</strong> String</a></li><li><a href="tour/bool.html"><strong aria-hidden="true">3.3.</strong> Bool</a></li><li><a href="tour/int-and-float.html"><strong aria-hidden="true">3.4.</strong> Int &amp; Float</a></li><li><a href="tour/let.html"><strong aria-hidden="true">3.5.</strong> Let bindings</a></li><li><a href="tour/tuple.html"><strong aria-hidden="true">3.6.</strong> Tuple</a></li><li><a href="tour/list.html"><strong aria-hidden="true">3.7.</strong> List</a></li><li><a href="tour/case.html"><strong aria-hidden="true">3.8.</strong> Case</a></li><li><a href="tour/function.html"><strong aria-hidden="true">3.9.</strong> Function</a></li><li><a href="tour/module.html"><strong aria-hidden="true">3.10.</strong> Module</a></li><li><a href="tour/map.html"><strong aria-hidden="true">3.11.</strong> Map</a></li><li><a href="tour/enum.html"><strong aria-hidden="true">3.12.</strong> Enum</a></li><li><a href="tour/external-function.html"><strong aria-hidden="true">3.13.</strong> External function</a></li><li><a href="tour/external-type.html"><strong aria-hidden="true">3.14.</strong> External type</a></li></ol></li><li><a href="faqs.html"><strong aria-hidden="true">4.</strong> FAQs</a></li></ol>
+            <ol class="chapter"><li><a href="index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="getting-started/index.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li><ol class="section"><li><a href="getting-started/installing-gleam.html"><strong aria-hidden="true">2.1.</strong> Installing Gleam</a></li><li><a href="getting-started/installing-erlang.html"><strong aria-hidden="true">2.2.</strong> Installing Erlang</a></li><li><a href="getting-started/editor-support.html"><strong aria-hidden="true">2.3.</strong> Editor support</a></li><li><a href="getting-started/creating-a-project.html"><strong aria-hidden="true">2.4.</strong> Creating a project</a></li><li><a href="getting-started/example-projects.html"><strong aria-hidden="true">2.5.</strong> Example projects</a></li></ol></li><li><a href="tour/index.html"><strong aria-hidden="true">3.</strong> Language tour</a></li><li><ol class="section"><li><a href="tour/comments.html"><strong aria-hidden="true">3.1.</strong> Comments</a></li><li><a href="tour/string.html"><strong aria-hidden="true">3.2.</strong> String</a></li><li><a href="tour/bool.html"><strong aria-hidden="true">3.3.</strong> Bool</a></li><li><a href="tour/int-and-float.html"><strong aria-hidden="true">3.4.</strong> Int &amp; Float</a></li><li><a href="tour/let.html"><strong aria-hidden="true">3.5.</strong> Let bindings</a></li><li><a href="tour/tuple.html"><strong aria-hidden="true">3.6.</strong> Tuple</a></li><li><a href="tour/list.html"><strong aria-hidden="true">3.7.</strong> List</a></li><li><a href="tour/case.html"><strong aria-hidden="true">3.8.</strong> Case</a></li><li><a href="tour/function.html"><strong aria-hidden="true">3.9.</strong> Function</a></li><li><a href="tour/module.html"><strong aria-hidden="true">3.10.</strong> Module</a></li><li><a href="tour/map.html"><strong aria-hidden="true">3.11.</strong> Map</a></li><li><a href="tour/enum.html"><strong aria-hidden="true">3.12.</strong> Enum</a></li><li><a href="tour/external-function.html"><strong aria-hidden="true">3.13.</strong> External function</a></li><li><a href="tour/external-type.html"><strong aria-hidden="true">3.14.</strong> External type</a></li></ol></li><li><a href="faqs.html"><strong aria-hidden="true">4.</strong> FAQs</a></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -89,7 +92,7 @@
                                 <i class="fa fa-paint-brush"></i>
                             </button>
                             <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                                <li role="none"><button role="menuitem" class="theme" id="light">Light <span class="default">(default)</span></button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
                                 <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                                 <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
                                 <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
@@ -108,6 +111,7 @@
                             <a href="print.html" title="Print this book" aria-label="Print this book">
                                 <i id="print-button" class="fa fa-print"></i>
                             </a>
+                            
                         </div>
                     </div>
                 </div>
@@ -192,18 +196,19 @@ adding Gleam modules to their existing project with minimal fuss.</p>
 <p>In this chapter we get the Gleam language set up on your computer and learn
 how to create an navigate a Gleam project.</p>
 <p>Good luck, have fun!</p>
-<a class="header" href="#installation" id="installation"><h1>Installation</h1></a>
-<p>A Gleam installation is made up of two parts: The Gleam compiler, and the
-Erlang runtime.</p>
-<ul>
-<li><a href="#installing-the-compiler">Installing the compiler</a></li>
-<li><a href="#installing-the-erlang-runtime">Installing the Erlang runtime</a></li>
-</ul>
-<a class="header" href="#installing-the-compiler" id="installing-the-compiler"><h2>Installing the compiler</h2></a>
-<a class="header" href="#build-from-source" id="build-from-source"><h3>Build from source</h3></a>
-<p>The compiler is written in the Rust programming language and must be build
-from source. <a href="https://www.rust-lang.org/tools/install">Install the Rust compiler</a>
-before proceeding.</p>
+<a class="header" href="#installing-gleam" id="installing-gleam"><h1>Installing Gleam</h1></a>
+<a class="header" href="#precompiled-for-linux-or-macos" id="precompiled-for-linux-or-macos"><h2>Precompiled for Linux or macOS</h2></a>
+<p>The easiest way to install Gleam on Linux and Apple macOS is to download a
+prebuilt version of the compiler from the <a href="https://github.com/lpil/gleam/releases">GitHub release
+page</a>.</p>
+<a class="header" href="#arch-linux" id="arch-linux"><h2>Arch Linux</h2></a>
+<p>Gleam is available through the <a href="https://wiki.archlinux.org/index.php/Arch_User_Repository">Arch User Repository</a>
+as package <code>gleam</code>. You can use your prefered <a href="https://wiki.archlinux.org/index.php/AUR_helpers">helper</a>
+to install it or clone it for manual build from <a href="https://aur.archlinux.org/gleam.git">https://aur.archlinux.org/gleam.git</a>.</p>
+<a class="header" href="#build-from-source" id="build-from-source"><h2>Build from source</h2></a>
+<p>The compiler is written in the Rust programming language and so if you wish to
+build Gleam from source you will need to <a href="https://www.rust-lang.org/tools/install">install the Rust
+compiler</a>.</p>
 <pre><code class="language-sh"># Download the Gleam source code git repository
 cd /tmp
 git clone https://github.com/lpil/gleam.git --branch v0.2.0
@@ -216,12 +221,7 @@ make install
 # Prints &quot;gleam $VERSION&quot;
 gleam --version
 </code></pre>
-<a class="header" href="#linux" id="linux"><h3>Linux</h3></a>
-<a class="header" href="#arch-linux" id="arch-linux"><h4>Arch Linux</h4></a>
-<p>Gleam is available through the <a href="https://wiki.archlinux.org/index.php/Arch_User_Repository">Arch User Repository</a>
-as package <code>gleam</code>. You can use your prefered <a href="https://wiki.archlinux.org/index.php/AUR_helpers">helper</a>
-to install it or clone it for manual build from <a href="https://aur.archlinux.org/gleam.git">https://aur.archlinux.org/gleam.git</a>.</p>
-<a class="header" href="#installing-the-erlang-runtime" id="installing-the-erlang-runtime"><h2>Installing the Erlang runtime</h2></a>
+<a class="header" href="#installing-erlang" id="installing-erlang"><h1>Installing Erlang</h1></a>
 <p>Gleam compiles to Erlang code, so Erlang needs to be installed to run Gleam
 code.</p>
 <p>Precompiled builds for many popular operating systems can be downloaded from
@@ -234,7 +234,7 @@ this if all is well:</p>
 <pre><code>$ erl -version
 Erlang (SMP,ASYNC_THREADS,HIPE) (BEAM) emulator version 10.1
 </code></pre>
-<a class="header" href="#linux-1" id="linux-1"><h3>Linux</h3></a>
+<a class="header" href="#linux" id="linux"><h3>Linux</h3></a>
 <a class="header" href="#debian-linux" id="debian-linux"><h4>Debian Linux</h4></a>
 <pre><code class="language-sh">sudo apt-get update
 sudo apt-get install erlang

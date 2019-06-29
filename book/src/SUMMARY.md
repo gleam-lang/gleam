@@ -2,7 +2,8 @@
 
 - [Hello, Gleam!](./README.md)
 - [Getting started](./getting-started/README.md)
-  - [Installation](./getting-started/installation.md)
+  - [Installing Gleam](./getting-started/installing-gleam.md)
+  - [Installing Erlang](./getting-started/installing-erlang.md)
   - [Editor support](./getting-started/editor-support.md)
   - [Creating a project](./getting-started/creating-a-project.md)
   - [Example projects](./getting-started/example-projects.md)

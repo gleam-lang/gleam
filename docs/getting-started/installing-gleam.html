@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Getting started - The Gleam Book</title>
+        <title>Installing Gleam - The Gleam Book</title>
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -75,7 +75,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../getting-started/index.html" class="active"><strong aria-hidden="true">2.</strong> Getting started</a></li><li><ol class="section"><li><a href="../getting-started/installing-gleam.html"><strong aria-hidden="true">2.1.</strong> Installing Gleam</a></li><li><a href="../getting-started/installing-erlang.html"><strong aria-hidden="true">2.2.</strong> Installing Erlang</a></li><li><a href="../getting-started/editor-support.html"><strong aria-hidden="true">2.3.</strong> Editor support</a></li><li><a href="../getting-started/creating-a-project.html"><strong aria-hidden="true">2.4.</strong> Creating a project</a></li><li><a href="../getting-started/example-projects.html"><strong aria-hidden="true">2.5.</strong> Example projects</a></li></ol></li><li><a href="../tour/index.html"><strong aria-hidden="true">3.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/comments.html"><strong aria-hidden="true">3.1.</strong> Comments</a></li><li><a href="../tour/string.html"><strong aria-hidden="true">3.2.</strong> String</a></li><li><a href="../tour/bool.html"><strong aria-hidden="true">3.3.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">3.4.</strong> Int &amp; Float</a></li><li><a href="../tour/let.html"><strong aria-hidden="true">3.5.</strong> Let bindings</a></li><li><a href="../tour/tuple.html"><strong aria-hidden="true">3.6.</strong> Tuple</a></li><li><a href="../tour/list.html"><strong aria-hidden="true">3.7.</strong> List</a></li><li><a href="../tour/case.html"><strong aria-hidden="true">3.8.</strong> Case</a></li><li><a href="../tour/function.html"><strong aria-hidden="true">3.9.</strong> Function</a></li><li><a href="../tour/module.html"><strong aria-hidden="true">3.10.</strong> Module</a></li><li><a href="../tour/map.html"><strong aria-hidden="true">3.11.</strong> Map</a></li><li><a href="../tour/enum.html"><strong aria-hidden="true">3.12.</strong> Enum</a></li><li><a href="../tour/external-function.html"><strong aria-hidden="true">3.13.</strong> External function</a></li><li><a href="../tour/external-type.html"><strong aria-hidden="true">3.14.</strong> External type</a></li></ol></li><li><a href="../faqs.html"><strong aria-hidden="true">4.</strong> FAQs</a></li></ol>
+            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../getting-started/index.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li><ol class="section"><li><a href="../getting-started/installing-gleam.html" class="active"><strong aria-hidden="true">2.1.</strong> Installing Gleam</a></li><li><a href="../getting-started/installing-erlang.html"><strong aria-hidden="true">2.2.</strong> Installing Erlang</a></li><li><a href="../getting-started/editor-support.html"><strong aria-hidden="true">2.3.</strong> Editor support</a></li><li><a href="../getting-started/creating-a-project.html"><strong aria-hidden="true">2.4.</strong> Creating a project</a></li><li><a href="../getting-started/example-projects.html"><strong aria-hidden="true">2.5.</strong> Example projects</a></li></ol></li><li><a href="../tour/index.html"><strong aria-hidden="true">3.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/comments.html"><strong aria-hidden="true">3.1.</strong> Comments</a></li><li><a href="../tour/string.html"><strong aria-hidden="true">3.2.</strong> String</a></li><li><a href="../tour/bool.html"><strong aria-hidden="true">3.3.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">3.4.</strong> Int &amp; Float</a></li><li><a href="../tour/let.html"><strong aria-hidden="true">3.5.</strong> Let bindings</a></li><li><a href="../tour/tuple.html"><strong aria-hidden="true">3.6.</strong> Tuple</a></li><li><a href="../tour/list.html"><strong aria-hidden="true">3.7.</strong> List</a></li><li><a href="../tour/case.html"><strong aria-hidden="true">3.8.</strong> Case</a></li><li><a href="../tour/function.html"><strong aria-hidden="true">3.9.</strong> Function</a></li><li><a href="../tour/module.html"><strong aria-hidden="true">3.10.</strong> Module</a></li><li><a href="../tour/map.html"><strong aria-hidden="true">3.11.</strong> Map</a></li><li><a href="../tour/enum.html"><strong aria-hidden="true">3.12.</strong> Enum</a></li><li><a href="../tour/external-function.html"><strong aria-hidden="true">3.13.</strong> External function</a></li><li><a href="../tour/external-type.html"><strong aria-hidden="true">3.14.</strong> External type</a></li></ol></li><li><a href="../faqs.html"><strong aria-hidden="true">4.</strong> FAQs</a></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -140,23 +140,44 @@
 
                 <div id="content" class="content">
                     <main>
-                        <a class="header" href="#getting-started" id="getting-started"><h1>Getting started</h1></a>
-<p>In this chapter we get the Gleam language set up on your computer and learn
-how to create an navigate a Gleam project.</p>
-<p>Good luck, have fun!</p>
+                        <a class="header" href="#installing-gleam" id="installing-gleam"><h1>Installing Gleam</h1></a>
+<a class="header" href="#precompiled-for-linux-or-macos" id="precompiled-for-linux-or-macos"><h2>Precompiled for Linux or macOS</h2></a>
+<p>The easiest way to install Gleam on Linux and Apple macOS is to download a
+prebuilt version of the compiler from the <a href="https://github.com/lpil/gleam/releases">GitHub release
+page</a>.</p>
+<a class="header" href="#arch-linux" id="arch-linux"><h2>Arch Linux</h2></a>
+<p>Gleam is available through the <a href="https://wiki.archlinux.org/index.php/Arch_User_Repository">Arch User Repository</a>
+as package <code>gleam</code>. You can use your prefered <a href="https://wiki.archlinux.org/index.php/AUR_helpers">helper</a>
+to install it or clone it for manual build from <a href="https://aur.archlinux.org/gleam.git">https://aur.archlinux.org/gleam.git</a>.</p>
+<a class="header" href="#build-from-source" id="build-from-source"><h2>Build from source</h2></a>
+<p>The compiler is written in the Rust programming language and so if you wish to
+build Gleam from source you will need to <a href="https://www.rust-lang.org/tools/install">install the Rust
+compiler</a>.</p>
+<pre><code class="language-sh"># Download the Gleam source code git repository
+cd /tmp
+git clone https://github.com/lpil/gleam.git --branch v0.2.0
+cd gleam
+
+# Build the Gleam compiler. This will take some time!
+make install
+
+# Verify the compiler is installed
+# Prints &quot;gleam $VERSION&quot;
+gleam --version
+</code></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="../index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../getting-started/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
                         
-                            <a rel="next" href="../getting-started/installing-gleam.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../getting-started/installing-erlang.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -168,13 +189,13 @@ how to create an navigate a Gleam project.</p>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a href="../index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a href="../getting-started/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
-                    <a href="../getting-started/installing-gleam.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a href="../getting-started/installing-erlang.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 

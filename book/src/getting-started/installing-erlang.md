@@ -1,43 +1,4 @@
-# Installation
-
-A Gleam installation is made up of two parts: The Gleam compiler, and the
-Erlang runtime.
-
-- [Installing the compiler](#installing-the-compiler)
-- [Installing the Erlang runtime](#installing-the-erlang-runtime)
-
-## Installing the compiler
-
-### Build from source
-
-The compiler is written in the Rust programming language and must be build
-from source. [Install the Rust compiler](https://www.rust-lang.org/tools/install)
-before proceeding.
-
-```sh
-# Download the Gleam source code git repository
-cd /tmp
-git clone https://github.com/lpil/gleam.git --branch v0.2.0
-cd gleam
-
-# Build the Gleam compiler. This will take some time!
-make install
-
-# Verify the compiler is installed
-# Prints "gleam $VERSION"
-gleam --version
-```
-
-### Linux
-
-#### Arch Linux
-
-Gleam is available through the [Arch User Repository](https://wiki.archlinux.org/index.php/Arch_User_Repository)
-as package `gleam`. You can use your prefered [helper](https://wiki.archlinux.org/index.php/AUR_helpers)
-to install it or clone it for manual build from [https://aur.archlinux.org/gleam.git](https://aur.archlinux.org/gleam.git).
-
-
-## Installing the Erlang runtime
+# Installing Erlang
 
 Gleam compiles to Erlang code, so Erlang needs to be installed to run Gleam
 code.

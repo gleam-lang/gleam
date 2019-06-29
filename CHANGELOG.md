@@ -6,6 +6,9 @@
   generated code if they collide with Erlang keywords such as `catch` or `or`.
 - Type error arising from the arguments of function calls have more accurate
   error diagnostics.
+- Precompiled Gleam binaries are now available on the GitHub release page.
+- Precompiled Docker images containing the Gleam binary are now available on
+  DockerHub.
 
 ## v0.2.0 - 2019-06-25
 
