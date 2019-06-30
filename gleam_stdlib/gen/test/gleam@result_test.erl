@@ -21,8 +21,9 @@ map_test() ->
 map_error_test() ->
     gleam@expect:equal(gleam@result:map_error({ok, 1}, fun(X) -> X + 1 end),
                        {ok, 1}),
-    gleam@expect:equal(gleam@result:map_error({error, 1}, fun(X) -> X + 1 end),
-                       {error, 2}).
+    gleam@expect:equal(gleam@result:map_error({error, 1},
+                                              fun(X) -> {<<"ok">>, X + 1} end),
+                       {error, {<<"ok">>, 2}}).
 
 flatten_test() ->
     gleam@expect:equal(gleam@result:flatten({ok, {ok, 1}}), {ok, 1}),

@@ -32,8 +32,8 @@ map(Result, Fun) ->
 
 map_error(Result, Fun) ->
     case Result of
-        {ok, _} ->
-            Result;
+        {ok, X} ->
+            {ok, X};
 
         {error, Error} ->
             {error, Fun(Error)}

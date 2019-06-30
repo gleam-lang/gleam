@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- `result:map_error` has been relaxed to allow mapping to a different error
+  type.
+
+## v0.3.0 - 2019-06-25
+
 - The `map_dict` module gains a `fold` function.
 - All modules moved under the `std` namespace.
 - The `http` module has been split out into the `gleam_http` package.

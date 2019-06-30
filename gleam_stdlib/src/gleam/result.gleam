@@ -24,7 +24,7 @@ pub fn map(result, fun) {
 
 pub fn map_error(result, fun) {
   case result {
-  | Ok(_) -> result
+  | Ok(x) -> Ok(x)
   | Error(error) -> Error(fun(error))
   }
 }
