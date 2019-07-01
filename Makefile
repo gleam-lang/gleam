@@ -11,6 +11,14 @@ build: book gleam gleam_stdlib/gen ## Build all targets
 install: ## Build the Gleam compiler and place it on PATH
 	cd gleam && cargo install --path . --force
 
+.PHONY: upgrade
+upgrade: ## Fetch by version tag using arg version=v0.x.x and install
+	git fetch &&\
+	git fetch --tags &&\
+	git checkout v$(version) &&\
+	make install &&\
+	rebar3 as global plugins upgrade rebar_gleam
+
 .PHONY: help
 help:
 	@cat $(MAKEFILE_LIST) | grep -E '^[a-zA-Z_-]+:.*?## .*$$' | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
