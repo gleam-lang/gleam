@@ -334,8 +334,11 @@ Call: UntypedExpr = {
                 body: Box::new(call),
             }),
 
-            _ => Err(lalrpop_util::ParseError::User {
-                error: "too many holes in capture" // TODO: Real error
+            count => Err(lalrpop_util::ParseError::User {
+                error: Error::TooManyHolesInCapture {
+                    meta: call.meta().clone(),
+                    count
+                },
             })
         }
     }
