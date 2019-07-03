@@ -152,11 +152,11 @@ tuple_test() ->
 field_test() ->
     {ok, OkAtom} = gleam@atom:from_string(<<"ok">>),
     gleam@expect:equal(
-        gleam@any:field(gleam@any:from(#{}#{ok => 1}), OkAtom),
+        gleam@any:field(gleam@any:from(#{ok => 1}), OkAtom),
         {ok, gleam@any:from(1)}
     ),
     gleam@expect:equal(
-        gleam@any:field(gleam@any:from(#{}#{ok => 3}#{earlier => 2}), OkAtom),
+        gleam@any:field(gleam@any:from(#{earlier => 2, ok => 3}), OkAtom),
         {ok, gleam@any:from(3)}
     ),
     gleam@expect:is_error(gleam@any:field(gleam@any:from(#{}), OkAtom)),

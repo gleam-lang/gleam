@@ -173,7 +173,6 @@ fn seq(first: TypedExpr, then: TypedExpr, env: &mut Env) -> Document {
 }
 
 // TODO: Surround left or right in parens if required
-// TODO: Group nested bin_ops i.e. a |> b |> c
 fn bin_op(name: BinOp, left: TypedExpr, right: TypedExpr, env: &mut Env) -> Document {
     let op = match name {
         BinOp::Pipe => return pipe(left, right, env),
@@ -220,7 +219,7 @@ fn let_(value: TypedExpr, pat: Pattern, then: TypedExpr, env: &mut Env) -> Docum
 fn pattern(p: Pattern, env: &mut Env) -> Document {
     match p {
         Pattern::Nil { .. } => "[]".to_doc(),
-        Pattern::Cons { head, tail, .. } => pattern_cons(*head, *tail, env),
+        Pattern::Cons { head, tail, .. } => pattern_list_cons(*head, *tail, env),
         Pattern::Discard { .. } => "_".to_doc(),
         // Pattern::Map { .. } => unimplemented!(),
         Pattern::Var { name, .. } => env.next_local_var_name(name),
@@ -232,8 +231,8 @@ fn pattern(p: Pattern, env: &mut Env) -> Document {
     }
 }
 
-fn pattern_cons(head: Pattern, tail: Pattern, env: &mut Env) -> Document {
-    cons(head, tail, env, pattern, |expr| match expr {
+fn pattern_list_cons(head: Pattern, tail: Pattern, env: &mut Env) -> Document {
+    list_cons(head, tail, env, pattern, |expr| match expr {
         Pattern::Nil { .. } => ListType::Nil,
 
         Pattern::Cons { head, tail, .. } => ListType::Cons {
@@ -245,8 +244,8 @@ fn pattern_cons(head: Pattern, tail: Pattern, env: &mut Env) -> Document {
     })
 }
 
-fn expr_cons(head: TypedExpr, tail: TypedExpr, env: &mut Env) -> Document {
-    cons(head, tail, env, wrap_expr, |expr| match expr {
+fn expr_list_cons(head: TypedExpr, tail: TypedExpr, env: &mut Env) -> Document {
+    list_cons(head, tail, env, wrap_expr, |expr| match expr {
         Expr::Nil { .. } => ListType::Nil,
 
         Expr::Cons { head, tail, .. } => ListType::Cons {
@@ -258,7 +257,7 @@ fn expr_cons(head: TypedExpr, tail: TypedExpr, env: &mut Env) -> Document {
     })
 }
 
-fn cons<ToDoc, Categorise, Elem>(
+fn list_cons<ToDoc, Categorise, Elem>(
     head: Elem,
     tail: Elem,
     env: &mut Env,
@@ -267,10 +266,10 @@ fn cons<ToDoc, Categorise, Elem>(
 ) -> Document
 where
     ToDoc: Fn(Elem, &mut Env) -> Document,
-    Categorise: Fn(Elem) -> ListType<Elem>,
+    Categorise: Fn(Elem) -> ListType<Elem, Elem>,
 {
     let mut elems = vec![head];
-    let final_tail = collect_list(tail, &mut elems, categorise_element);
+    let final_tail = collect_cons(tail, &mut elems, categorise_element);
 
     let mut elems = elems
         .into_iter()
@@ -286,46 +285,61 @@ where
     elems.to_doc().nest_current().surround("[", "]").group()
 }
 
-fn collect_list<F, E>(e: E, elems: &mut Vec<E>, f: F) -> Option<E>
+fn map_cons(label: String, head: TypedExpr, tail: TypedExpr, env: &mut Env) -> Document {
+    fn categorise_element(head: TypedExpr) -> ListType<(String, TypedExpr), TypedExpr> {
+        match head {
+            Expr::MapNil { .. } => ListType::Nil,
+
+            Expr::MapCons {
+                label, value, tail, ..
+            } => ListType::Cons {
+                head: (label, *value),
+                tail: *tail,
+            },
+
+            other => ListType::NotList(other),
+        }
+    }
+
+    let mut elems = vec![(label, head)];
+    let final_tail = collect_cons(tail, &mut elems, categorise_element).map(|e| expr(e, env));
+
+    let map = elems
+        .into_iter()
+        .map(|(l, e)| l.to_doc().append(" => ").append(expr(e, env)))
+        .intersperse(delim(","))
+        .collect::<Vec<_>>()
+        .to_doc()
+        .nest(INDENT)
+        .surround("#{", "}")
+        .group();
+
+    match final_tail {
+        None => map,
+        Some(tail) => tail.append(map),
+    }
+}
+
+fn collect_cons<F, E, T>(e: T, elems: &mut Vec<E>, f: F) -> Option<T>
 where
-    F: Fn(E) -> ListType<E>,
+    F: Fn(T) -> ListType<E, T>,
 {
     match f(e) {
         ListType::Nil => None,
 
         ListType::Cons { head, tail } => {
             elems.push(head);
-            collect_list(tail, elems, f)
+            collect_cons(tail, elems, f)
         }
 
         ListType::NotList(other) => Some(other),
     }
 }
 
-enum ListType<E> {
+enum ListType<E, T> {
     Nil,
-    Cons { head: E, tail: E },
-    NotList(E),
-}
-
-fn expr_map_cons(label: String, value: TypedExpr, tail: TypedExpr, env: &mut Env) -> Document {
-    map_cons(expr, "=>".to_string(), label, value, tail, env)
-}
-
-fn map_cons<F, E>(f: F, sep: String, label: String, value: E, tail: E, env: &mut Env) -> Document
-where
-    F: Fn(E, &mut Env) -> Document,
-{
-    // TODO: Flatten nested cons into a map i.e. X#{a=>1, b=>2}
-    // TODO: Break, indent, etc
-    f(tail, env)
-        .append("#{")
-        .append(atom(label))
-        .append(" ")
-        .append(sep)
-        .append(" ")
-        .append(f(value, env))
-        .append("}")
+    Cons { head: E, tail: T },
+    NotList(T),
 }
 
 fn var(name: String, scope: TypedScope, env: &mut Env) -> Document {
@@ -496,7 +510,7 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
         Expr::Seq { first, then, .. } => seq(*first, *then, env),
         Expr::Var { name, scope, .. } => var(name, scope, env),
         Expr::Fn { args, body, .. } => fun(args, *body, env),
-        Expr::Cons { head, tail, .. } => expr_cons(*head, *tail, env),
+        Expr::Cons { head, tail, .. } => expr_list_cons(*head, *tail, env),
         Expr::Call { fun, args, .. } => call(*fun, args, env),
         Expr::MapSelect { label, map, .. } => map_select(*map, label, env),
         Expr::ModuleSelect {
@@ -511,7 +525,7 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
         } => let_(*value, pattern, *then, env),
         Expr::MapCons {
             label, value, tail, ..
-        } => expr_map_cons(label, *value, *tail, env),
+        } => map_cons(label, *value, *tail, env),
         Expr::Case {
             subject, clauses, ..
         } => case(*subject, clauses, env),
@@ -938,7 +952,7 @@ conny() ->
     [12, 34].
 
 retcon() ->
-    #{}#{size => 1}.
+    #{size => 1}.
 
 funny() ->
     fun(OneReallyLongArgToCauseWrapping, AlsoReallyQuiteLong) ->
