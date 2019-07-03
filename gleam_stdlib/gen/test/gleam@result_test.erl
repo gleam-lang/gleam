@@ -13,35 +13,51 @@ is_error_test() ->
 
 map_test() ->
     gleam@expect:equal(gleam@result:map({ok, 1}, fun(X) -> X + 1 end), {ok, 2}),
-    gleam@expect:equal(gleam@result:map({ok, 1}, fun(_) -> <<"2">> end),
-                       {ok, <<"2">>}),
-    gleam@expect:equal(gleam@result:map({error, 1}, fun(X) -> X + 1 end),
-                       {error, 1}).
+    gleam@expect:equal(
+        gleam@result:map({ok, 1}, fun(_) -> <<"2">> end),
+        {ok, <<"2">>}
+    ),
+    gleam@expect:equal(
+        gleam@result:map({error, 1}, fun(X) -> X + 1 end),
+        {error, 1}
+    ).
 
 map_error_test() ->
-    gleam@expect:equal(gleam@result:map_error({ok, 1}, fun(X) -> X + 1 end),
-                       {ok, 1}),
-    gleam@expect:equal(gleam@result:map_error({error, 1},
-                                              fun(X) -> {<<"ok">>, X + 1} end),
-                       {error, {<<"ok">>, 2}}).
+    gleam@expect:equal(
+        gleam@result:map_error({ok, 1}, fun(X) -> X + 1 end),
+        {ok, 1}
+    ),
+    gleam@expect:equal(
+        gleam@result:map_error({error, 1}, fun(X) -> {<<"ok">>, X + 1} end),
+        {error, {<<"ok">>, 2}}
+    ).
 
 flatten_test() ->
     gleam@expect:equal(gleam@result:flatten({ok, {ok, 1}}), {ok, 1}),
     gleam@expect:equal(gleam@result:flatten({ok, {error, 1}}), {error, 1}),
     gleam@expect:equal(gleam@result:flatten({error, 1}), {error, 1}),
-    gleam@expect:equal(gleam@result:flatten({error, {error, 1}}),
-                       {error, {error, 1}}).
+    gleam@expect:equal(
+        gleam@result:flatten({error, {error, 1}}),
+        {error, {error, 1}}
+    ).
 
 then_test() ->
-    gleam@expect:equal(gleam@result:then({error, 1}, fun(X) -> {ok, X + 1} end),
-                       {error, 1}),
-    gleam@expect:equal(gleam@result:then({ok, 1}, fun(X) -> {ok, X + 1} end),
-                       {ok, 2}),
-    gleam@expect:equal(gleam@result:then({ok, 1},
-                                         fun(_) -> {ok, <<"type change">>} end),
-                       {ok, <<"type change">>}),
-    gleam@expect:equal(gleam@result:then({ok, 1}, fun(_) -> {error, 1} end),
-                       {error, 1}).
+    gleam@expect:equal(
+        gleam@result:then({error, 1}, fun(X) -> {ok, X + 1} end),
+        {error, 1}
+    ),
+    gleam@expect:equal(
+        gleam@result:then({ok, 1}, fun(X) -> {ok, X + 1} end),
+        {ok, 2}
+    ),
+    gleam@expect:equal(
+        gleam@result:then({ok, 1}, fun(_) -> {ok, <<"type change">>} end),
+        {ok, <<"type change">>}
+    ),
+    gleam@expect:equal(
+        gleam@result:then({ok, 1}, fun(_) -> {error, 1} end),
+        {error, 1}
+    ).
 
 unwrap_test() ->
     gleam@expect:equal(gleam@result:unwrap({ok, 1}, 50), 1),

@@ -31,10 +31,10 @@ list_any(A) ->
     gleam__stdlib:decode_list(A).
 
 list(Any, Decode) ->
-    gleam@result:then(list_any(Any),
-                      fun(Capture1) ->
-                          gleam@list:traverse(Capture1, Decode)
-                      end).
+    gleam@result:then(
+        list_any(Any),
+        fun(Capture1) -> gleam@list:traverse(Capture1, Decode) end
+    ).
 
 tuple(A) ->
     gleam__stdlib:decode_tuple(A).

@@ -9,6 +9,8 @@
 - Precompiled Gleam binaries are now available on the GitHub release page.
 - Precompiled Docker images containing the Gleam binary are now available on
   DockerHub.
+- The formatting of the Erlang code rendered by the compiler has been altered
+  to improve legibility.
 
 ## v0.2.0 - 2019-06-25
 

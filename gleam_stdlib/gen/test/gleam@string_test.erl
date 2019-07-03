@@ -18,17 +18,23 @@ reverse_test() ->
     gleam@expect:equal(gleam@string:reverse(<<"Gleam">>), <<"maelG">>).
 
 split_test() ->
-    gleam@expect:equal(gleam@string:split(<<"Gleam,Erlang,Elixir">>, <<",">>),
-                       [<<"Gleam">>, <<"Erlang">>, <<"Elixir">>]),
-    gleam@expect:equal(gleam@string:split(<<"Gleam, Erlang,Elixir">>, <<", ">>),
-                       [<<"Gleam">>, <<"Erlang,Elixir">>]).
+    gleam@expect:equal(
+        gleam@string:split(<<"Gleam,Erlang,Elixir">>, <<",">>),
+        [<<"Gleam">>, <<"Erlang">>, <<"Elixir">>]
+    ),
+    gleam@expect:equal(
+        gleam@string:split(<<"Gleam, Erlang,Elixir">>, <<", ">>),
+        [<<"Gleam">>, <<"Erlang,Elixir">>]
+    ).
 
 replace_test() ->
-    gleam@expect:equal(gleam@string:replace(<<"Gleam,Erlang,Elixir">>,
-                                            <<",">>,
-                                            <<"++">>),
-                       <<"Gleam++Erlang++Elixir">>).
+    gleam@expect:equal(
+        gleam@string:replace(<<"Gleam,Erlang,Elixir">>, <<",">>, <<"++">>),
+        <<"Gleam++Erlang++Elixir">>
+    ).
 
 append_test() ->
-    gleam@expect:equal(gleam@string:append(<<"Test">>, <<" Me">>),
-                       <<"Test Me">>).
+    gleam@expect:equal(
+        gleam@string:append(<<"Test">>, <<" Me">>),
+        <<"Test Me">>
+    ).

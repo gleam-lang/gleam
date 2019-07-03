@@ -20,9 +20,9 @@ swap(Tup) ->
 
 fetch(Haystack, Needle) ->
     gleam@list:find(Haystack, fun(Tuple) -> case first(Tuple) =:= Needle of
-                            true ->
-                                {ok, second(Tuple)};
+                true ->
+                    {ok, second(Tuple)};
 
-                            false ->
-                                {error, []}
-                        end end).
+                false ->
+                    {error, []}
+            end end).

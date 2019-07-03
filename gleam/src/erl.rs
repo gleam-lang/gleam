@@ -121,10 +121,10 @@ fn wrap_args<I>(args: I) -> Document
 where
     I: Iterator<Item = Document>,
 {
-    args.intersperse(delim(","))
-        .collect::<Vec<_>>()
-        .to_doc()
-        .nest_current()
+    break_("", "")
+        .append(args.intersperse(delim(",")).collect::<Vec<_>>())
+        .nest(INDENT)
+        .append(break_("", ""))
         .surround("(", ")")
         .group()
 }
@@ -993,14 +993,16 @@ funny() ->
 
 -export([]).
 
-some_function(ArgOne,
-              ArgTwo,
-              Arg3,
-              Arg4,
-              ArgFour,
-              ArgFive,
-              ArgSix,
-              ArgThatIsLong) ->
+some_function(
+    ArgOne,
+    ArgTwo,
+    Arg3,
+    Arg4,
+    ArgFour,
+    ArgFive,
+    ArgSix,
+    ArgThatIsLong
+) ->
     1.
 "
     .to_string();

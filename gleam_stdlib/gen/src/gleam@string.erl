@@ -16,13 +16,15 @@ reverse(String) ->
     gleam@iodata:to_string(gleam@iodata:reverse(gleam@iodata:new(String))).
 
 split(String, On) ->
-    gleam@list:map(gleam@iodata:split(gleam@iodata:new(String), On),
-                   fun gleam@iodata:to_string/1).
+    gleam@list:map(
+        gleam@iodata:split(gleam@iodata:new(String), On),
+        fun gleam@iodata:to_string/1
+    ).
 
 replace(String, Pattern, With) ->
-    gleam@iodata:to_string(gleam@iodata:replace(gleam@iodata:new(String),
-                                                Pattern,
-                                                With)).
+    gleam@iodata:to_string(
+        gleam@iodata:replace(gleam@iodata:new(String), Pattern, With)
+    ).
 
 append(S1, S2) ->
     gleam@iodata:to_string(gleam@iodata:append(gleam@iodata:new(S1), S2)).
