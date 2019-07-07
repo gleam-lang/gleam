@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Error {
     TooManyHolesInCapture {
         meta: crate::ast::Meta,

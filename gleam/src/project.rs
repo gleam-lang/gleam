@@ -41,7 +41,7 @@ pub enum Error {
     Parse {
         path: PathBuf,
         src: Src,
-        error: lalrpop_util::ParseError<usize, (usize, String), String>,
+        error: lalrpop_util::ParseError<usize, (usize, String), crate::parser::Error>,
     },
 
     Type {
@@ -523,9 +523,7 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
             .map_err(|e| Error::Parse {
                 path: path.clone(),
                 src: src.clone(),
-                error: e
-                    .map_error(|s| s.to_string())
-                    .map_token(|crate::grammar::Token(a, b)| (a, b.to_string())),
+                error: e.map_token(|crate::grammar::Token(a, b)| (a, b.to_string())),
             })?;
 
         if let Some(Module {

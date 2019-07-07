@@ -10,6 +10,10 @@ use crate::parser::*;
 
 grammar;
 
+extern {
+    type Error = crate::parser::Error;
+}
+
 pub Module: UntypedModule = {
     Statement* => Module {
         typ: (),
