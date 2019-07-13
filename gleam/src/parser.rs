@@ -1,3 +1,11 @@
+#[derive(Debug, PartialEq)]
+pub enum Error {
+    TooManyHolesInCapture {
+        meta: crate::ast::Meta,
+        count: usize,
+    },
+}
+
 /// Blanks out comments, semicolons, etc
 ///
 pub fn strip_extra(src: &str) -> String {

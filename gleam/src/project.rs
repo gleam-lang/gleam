@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use petgraph::Graph;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -41,7 +42,7 @@ pub enum Error {
     Parse {
         path: PathBuf,
         src: Src,
-        error: lalrpop_util::ParseError<usize, (usize, String), String>,
+        error: lalrpop_util::ParseError<usize, (usize, String), crate::parser::Error>,
     },
 
     Type {
@@ -428,7 +429,34 @@ Private types can only be used within the module that defines them.
 
                     ExtraToken { .. } => unimplemented!(),
 
-                    User { .. } => unimplemented!(),
+                    User { error } => {
+                        use crate::parser::Error;
+                        match error {
+                            Error::TooManyHolesInCapture { meta, count } => {
+                                let diagnostic = ErrorDiagnostic {
+                                    title: "Invalid capture".to_string(),
+                                    label: "".to_string(),
+                                    file: path.to_str().unwrap().to_string(),
+                                    src: src.to_string(),
+                                    meta: meta.clone(),
+                                };
+                                write(buffer, diagnostic);
+                                let chars: String = (97..(97 + count))
+                                    .map(|x| x as u8 as char)
+                                    .map(|c| c.to_string())
+                                    .intersperse(", ".to_string())
+                                    .collect();
+                                write!(
+                                    buffer,
+                                    "
+The function capture syntax can only be used with a single _ argument,
+but this one uses {}. Rewrite this using the fn({}) {{ ... }} syntax.",
+                                    count, chars
+                                )
+                                .expect("error pretty buffer write");
+                            }
+                        }
+                    }
                 }
             }
 
@@ -523,9 +551,7 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
             .map_err(|e| Error::Parse {
                 path: path.clone(),
                 src: src.clone(),
-                error: e
-                    .map_error(|s| s.to_string())
-                    .map_token(|crate::grammar::Token(a, b)| (a, b.to_string())),
+                error: e.map_token(|crate::grammar::Token(a, b)| (a, b.to_string())),
             })?;
 
         if let Some(Module {
