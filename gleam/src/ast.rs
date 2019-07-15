@@ -12,11 +12,15 @@ pub struct Module<S, T> {
 }
 
 impl<S, T> Module<S, T> {
-    pub fn dependancies(&self) -> Vec<String> {
+    pub fn name_string(&self) -> String {
+        self.name.join("/")
+    }
+
+    pub fn dependancies(&self) -> Vec<(String, Meta)> {
         self.statements
             .iter()
             .flat_map(|s| match s {
-                Statement::Import { module, .. } => Some(module.join("/")),
+                Statement::Import { module, meta, .. } => Some((module.join("/"), meta.clone())),
                 _ => None,
             })
             .collect()
@@ -26,7 +30,11 @@ impl<S, T> Module<S, T> {
 #[test]
 fn module_dependencies_test() {
     assert_eq!(
-        vec!["foo".to_string(), "bar".to_string(), "foo_bar".to_string()],
+        vec![
+            ("foo".to_string(), Meta { start: 0, end: 10 }),
+            ("bar".to_string(), Meta { start: 11, end: 21 }),
+            ("foo_bar".to_string(), Meta { start: 22, end: 36 }),
+        ],
         crate::grammar::ModuleParser::new()
             .parse("import foo import bar import foo_bar")
             .expect("syntax error")

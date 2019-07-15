@@ -54,6 +54,9 @@ pub enum Error {
     UnknownImport {
         module: Name,
         import: Name,
+        meta: crate::ast::Meta,
+        path: PathBuf,
+        src: String,
     },
 
     DuplicateModule {
@@ -465,13 +468,26 @@ but this one uses {}. Rewrite this using the fn({}) {{ ... }} syntax.",
                 unimplemented!();
             }
 
-            Error::UnknownImport { module, import } => {
-                // TODO: source code preview
+            Error::UnknownImport {
+                module,
+                import,
+                meta,
+                path,
+                src,
+            } => {
+                let diagnostic = ErrorDiagnostic {
+                    title: "Unknown import".to_string(),
+                    label: "".to_string(),
+                    file: path.to_str().unwrap().to_string(),
+                    src: src.to_string(),
+                    meta: meta.clone(),
+                };
+                write(buffer, diagnostic);
                 write!(
                     buffer,
-                    "error: Unknown import
-
-The module `{}` is trying to import the module `{}`, but it cannot be found.
+                    "
+The module `{}` is trying to import the module `{}`,
+but it cannot be found.
 ",
                     module, import
                 )
@@ -526,7 +542,6 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
     }
 
     let mut deps_graph = Graph::new();
-    let mut deps_vec = Vec::with_capacity(srcs.len());
     let mut indexes = HashMap::new();
     let mut modules: HashMap<_, Module> = HashMap::new();
 
@@ -568,7 +583,6 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
         module.name = name.split("/").map(|s| s.to_string()).collect();
 
         let index = deps_graph.add_node(name.clone());
-        deps_vec.push((name.clone(), module.dependancies()));
         indexes.insert(name.clone(), index);
         modules.insert(
             index,
@@ -583,7 +597,12 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
     }
 
     // Register each module's deps so that we can determine a correct order to compile the modules.
-    for (module_name, deps) in deps_vec {
+    for module in modules.values() {
+        let module_name = module.module.name_string();
+        let src = module.src.clone();
+        let path = module.path.clone();
+        let deps = module.module.dependancies();
+        // (module_name, src, path, deps)
         let module_index = indexes
             .get(&module_name)
             .expect("Unable to find module index");
@@ -591,10 +610,13 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
             .get(&module_index)
             .expect("Unable to find module for index");
 
-        for dep in deps {
+        for (dep, meta) in deps {
             let dep_index = indexes.get(&dep).ok_or_else(|| Error::UnknownImport {
                 module: module_name.clone(),
                 import: dep.clone(),
+                src: src.clone(),
+                path: path.clone(),
+                meta,
             })?;
 
             if module.origin == ModuleOrigin::Src
@@ -628,13 +650,14 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
                 base_path,
             } = modules.remove(&i).expect("Unknown graph index");
             let name = module.name.clone();
+            let name_string = module.name_string();
 
-            println!("Compiling {}", name.join("/"));
+            println!("Compiling {}", name_string);
 
             let (module, types) = crate::typ::infer_module(module, &module_types)
                 .map_err(|error| Error::Type { path, src, error })?;
 
-            module_types.insert(name.join("/"), (module.typ.clone(), types));
+            module_types.insert(name_string, (module.typ.clone(), types));
 
             let path = base_path
                 .parent()

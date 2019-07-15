@@ -13,6 +13,8 @@
   to improve legibility.
 - A helpful error message is now rendered if the shorthand anonymous function
   syntax is used with too many underscores.
+- A helpful error message is now rendered when attempting to import an unknown
+  module.
 
 ## v0.2.0 - 2019-06-25
 
