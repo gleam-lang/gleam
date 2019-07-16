@@ -31,5 +31,4 @@ pub fn head(list) {
   | [] -> Error(Empty)
   | [x | _] -> Ok(x)
   }
-  contains(_, _)
 }

@@ -57,6 +57,7 @@ pub enum Error {
         meta: crate::ast::Meta,
         path: PathBuf,
         src: String,
+        modules: Vec<String>,
     },
 
     DuplicateModule {
@@ -291,15 +292,12 @@ Found type:
                 }
 
                 UnknownType { meta, name, types } => {
-                    let mut options: Vec<_> = types.keys().collect();
-                    options.sort_by(|a, b| {
-                        strsim::levenshtein(a, name)
-                            .partial_cmp(&strsim::levenshtein(b, name))
-                            .unwrap()
-                    });
                     let diagnostic = ErrorDiagnostic {
                         title: "Unknown type".to_string(),
-                        label: format!("Did you mean `{}`?", options[0]),
+                        label: suggestion_label(
+                            name,
+                            &types.keys().map(|s| s.clone()).collect::<Vec<_>>(),
+                        ),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
@@ -474,10 +472,11 @@ but this one uses {}. Rewrite this using the fn({}) {{ ... }} syntax.",
                 meta,
                 path,
                 src,
+                modules,
             } => {
                 let diagnostic = ErrorDiagnostic {
                     title: "Unknown import".to_string(),
-                    label: "".to_string(),
+                    label: suggestion_label(import, modules),
                     file: path.to_str().unwrap().to_string(),
                     src: src.to_string(),
                     meta: meta.clone(),
@@ -506,6 +505,18 @@ but it cannot be found.
         self.pretty(&mut buffer);
         buffer_writer.print(&buffer).unwrap();
     }
+}
+
+fn suggestion_label(chosen: &str, options: &Vec<String>) -> String {
+    options
+        .iter()
+        .min_by(|a, b| {
+            strsim::levenshtein(a, chosen)
+                .partial_cmp(&strsim::levenshtein(b, chosen))
+                .unwrap()
+        })
+        .map(|s| format!("Did you mean `{}`?", s))
+        .unwrap_or_else(|| "".to_string())
 }
 
 struct ErrorDiagnostic {
@@ -616,6 +627,7 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
                 import: dep.clone(),
                 src: src.clone(),
                 path: path.clone(),
+                modules: modules.values().map(|m| m.module.name_string()).collect(),
                 meta,
             })?;
 
