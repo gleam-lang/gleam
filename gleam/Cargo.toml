@@ -16,12 +16,12 @@ itertools = "0.7"
 heck = "0.3"
 # Parsing
 lalrpop-util = "0.16"
-regex = "0.2.1"
+regex = "1.1"
 # Graph data structures
 petgraph = "0.4"
 # Pretty error messages
-codespan = "0.2"
-codespan-reporting = "0.2.1"
+codespan = "0.3"
+codespan-reporting = "0.3"
 termcolor = "1.0.4"
 # Initialize complex static values at runtime
 lazy_static = "1.3"
@@ -36,7 +36,7 @@ walkdir = "2"
 
 
 [build-dependencies]
-lalrpop = "0.16"
+lalrpop = "0.17"
 
 [dev-dependencies]
-pretty_assertions = "0.5"
+pretty_assertions = "0.6"
