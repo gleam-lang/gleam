@@ -1,6 +1,6 @@
 
-fn sum(x, y, z) {
-  u + y + z
+fn sum(x :: Int, y, z) {
+  z + y + z
 }
 
 pub fn x() {

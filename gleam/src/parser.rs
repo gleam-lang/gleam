@@ -577,6 +577,7 @@ fn expr_test() {
             typ: (),
             is_capture: true,
             args: vec![Arg {
+                annotation: None,
                 name: Some("capture@1".to_string())
             }],
             body: Box::new(Expr::Call {
@@ -618,9 +619,11 @@ fn expr_test() {
             typ: (),
             args: vec![
                 Arg {
+                    annotation: None,
                     name: Some("a".to_string())
                 },
                 Arg {
+                    annotation: None,
                     name: Some("b".to_string())
                 },
             ],
@@ -870,14 +873,17 @@ fn module_test() {
             typ: (),
             name: vec![],
             statements: vec![Statement::Fn {
+                return_annotation: None,
                 meta: Meta { start: 0, end: 24 },
                 public: false,
                 name: "run".to_string(),
                 args: vec![
                     Arg {
+                        annotation: None,
                         name: Some("one".to_string())
                     },
                     Arg {
+                        annotation: None,
                         name: Some("two".to_string())
                     }
                 ],
@@ -905,6 +911,7 @@ fn module_test() {
             typ: (),
             name: vec![],
             statements: vec![Statement::Fn {
+                return_annotation: None,
                 meta: Meta { start: 0, end: 20 },
                 public: false,
                 name: "run".to_string(),
@@ -951,6 +958,7 @@ fn module_test() {
             typ: (),
             name: vec![],
             statements: vec![Statement::Fn {
+                return_annotation: None,
                 meta: Meta { start: 0, end: 17 },
                 public: true,
                 name: "go".to_string(),
@@ -1042,6 +1050,7 @@ fn module_test() {
                     name: "Box".to_string(),
                 },
                 Statement::Fn {
+                    return_annotation: None,
                     meta: Meta {
                         start: 43,
                         end: 124
@@ -1049,6 +1058,7 @@ fn module_test() {
                     public: true,
                     name: "value".to_string(),
                     args: vec![Arg {
+                        annotation: None,
                         name: Some("x".to_string())
                     }],
                     body: Expr::Let {
@@ -1100,10 +1110,12 @@ fn module_test() {
             typ: (),
             name: vec![],
             statements: vec![Statement::Fn {
+                return_annotation: None,
                 meta: Meta { start: 0, end: 75 },
                 public: true,
                 name: "value".to_string(),
                 args: vec![Arg {
+                    annotation: None,
                     name: Some("x".to_string())
                 }],
                 body: Expr::Let {
@@ -1140,10 +1152,12 @@ fn module_test() {
             typ: (),
             name: vec![],
             statements: vec![Statement::Fn {
+                return_annotation: None,
                 meta: Meta { start: 0, end: 79 },
                 public: true,
                 name: "value".to_string(),
                 args: vec![Arg {
+                    annotation: None,
                     name: Some("x".to_string())
                 }],
                 body: Expr::Let {
@@ -1194,10 +1208,12 @@ fn module_test() {
             typ: (),
             name: vec![],
             statements: vec![Statement::Fn {
+                return_annotation: None,
                 meta: Meta { start: 0, end: 88 },
                 public: true,
                 name: "value1".to_string(),
                 args: vec![Arg {
+                    annotation: None,
                     name: Some("x".to_string())
                 }],
                 body: Expr::Let {
@@ -1254,6 +1270,39 @@ fn module_test() {
             }]
         }),
         ModuleParser::new().parse("import one/two/three"),
+    );
+
+    assert_eq!(
+        Ok(Module {
+            typ: (),
+            name: vec![],
+            statements: vec![Statement::Fn {
+                return_annotation: Some(Type::Constructor {
+                    args: vec![],
+                    meta: Meta { start: 20, end: 25 },
+                    module: None,
+                    name: "Float".to_string()
+                }),
+                meta: Meta { start: 0, end: 33 },
+                public: false,
+                name: "run".to_string(),
+                body: Expr::Float {
+                    typ: (),
+                    meta: Meta { start: 28, end: 31 },
+                    value: 1.0
+                },
+                args: vec![Arg {
+                    name: Some("x".to_string()),
+                    annotation: Some(Type::Constructor {
+                        args: vec![],
+                        meta: Meta { start: 12, end: 15 },
+                        module: None,
+                        name: "Int".to_string()
+                    })
+                }]
+            }]
+        }),
+        ModuleParser::new().parse("fn run(x :: Int) -> Float { 1.0 }"),
     );
 
     assert_eq!(

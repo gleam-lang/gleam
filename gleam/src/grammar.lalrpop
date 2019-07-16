@@ -65,12 +65,13 @@ StatementExternalFn: UntypedStatement = {
 }
 
 StatementFn: UntypedStatement = {
-    <s:@L> <p:"pub"?> "fn" <n:VarName> "(" <a:Comma<FnArg>> ")" "{" <b:Expr+> "}" <e:@L> => Statement::Fn {
+    <s:@L> <p:"pub"?> "fn" <n:VarName> "(" <a:Comma<FnArg>> ")" <return_annotation:("->" <Type>)?> "{" <b:Expr+> "}" <e:@L> => Statement::Fn {
         meta: meta(s, e),
         public: p.is_some(),
         name: n,
         args: a,
         body: seq(b),
+        return_annotation,
     }
 }
 
@@ -290,16 +291,18 @@ Fn: UntypedExpr = {
         typ: (),
         args: a,
         body: Box::new(seq(b)),
-    }
+    },
 }
 
 FnArg: Arg = {
-    VarName => Arg {
-        name: Some(<>),
+    <n:VarName> <annotation:("::" <Type>)?> => Arg {
+        name: Some(n),
+        annotation,
     },
 
     DiscardName => Arg {
         name: None,
+        annotation: None,
     },
 }
 
@@ -334,7 +337,10 @@ Call: UntypedExpr = {
                 meta: call.meta().clone(),
                 typ: (),
                 is_capture: true,
-                args: vec![Arg { name: Some(hole_arg_name.to_string()) }],
+                args: vec![Arg {
+                    annotation: None,
+                    name: Some(hole_arg_name.to_string())
+                }],
                 body: Box::new(call),
             }),
 

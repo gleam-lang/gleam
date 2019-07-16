@@ -685,6 +685,7 @@ map() ->
         name: vec!["term".to_string()],
         statements: vec![
             Statement::Fn {
+                return_annotation: None,
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -696,6 +697,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                return_annotation: None,
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -707,6 +709,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                return_annotation: None,
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -717,6 +720,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                return_annotation: None,
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -727,6 +731,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                return_annotation: None,
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -749,6 +754,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                return_annotation: None,
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -760,6 +766,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                return_annotation: None,
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -780,6 +787,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                return_annotation: None,
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -801,6 +809,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                return_annotation: None,
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -813,6 +822,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                return_annotation: None,
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -838,6 +848,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                return_annotation: None,
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -866,6 +877,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                return_annotation: None,
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -886,6 +898,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                return_annotation: None,
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -896,9 +909,11 @@ map() ->
                     typ: crate::typ::int(),
                     args: vec![
                         Arg {
+                            annotation: None,
                             name: Some("one_really_long_arg_to_cause_wrapping".to_string()),
                         },
                         Arg {
+                            annotation: None,
                             name: Some("also_really_quite_long".to_string()),
                         },
                     ],
@@ -966,32 +981,41 @@ funny() ->
         typ: crate::typ::int(),
         name: vec!["term".to_string()],
         statements: vec![Statement::Fn {
+            return_annotation: None,
             meta: default(),
             public: false,
             name: "some_function".to_string(),
             args: vec![
                 Arg {
+                    annotation: None,
                     name: Some("arg_one".to_string()),
                 },
                 Arg {
+                    annotation: None,
                     name: Some("arg_two".to_string()),
                 },
                 Arg {
+                    annotation: None,
                     name: Some("arg_3".to_string()),
                 },
                 Arg {
+                    annotation: None,
                     name: Some("arg4".to_string()),
                 },
                 Arg {
+                    annotation: None,
                     name: Some("arg_four".to_string()),
                 },
                 Arg {
+                    annotation: None,
                     name: Some("arg__five".to_string()),
                 },
                 Arg {
+                    annotation: None,
                     name: Some("arg_six".to_string()),
                 },
                 Arg {
+                    annotation: None,
                     name: Some("arg_that_is_long".to_string()),
                 },
             ],
@@ -1027,6 +1051,7 @@ some_function(
         name: vec!["vars".to_string()],
         statements: vec![
             Statement::Fn {
+                return_annotation: None,
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -1039,6 +1064,7 @@ some_function(
                 },
             },
             Statement::Fn {
+                return_annotation: None,
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -1057,6 +1083,7 @@ some_function(
                 },
             },
             Statement::Fn {
+                return_annotation: None,
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -1069,6 +1096,7 @@ some_function(
                 },
             },
             Statement::Fn {
+                return_annotation: None,
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -1092,6 +1120,7 @@ some_function(
                 },
             },
             Statement::Fn {
+                return_annotation: None,
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -1115,6 +1144,7 @@ some_function(
                 },
             },
             Statement::Fn {
+                return_annotation: None,
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -1135,6 +1165,7 @@ some_function(
                 },
             },
             Statement::Fn {
+                return_annotation: None,
                 meta: default(),
                 public: false,
                 args: vec![],
@@ -1198,6 +1229,7 @@ moddy4() ->
         typ: crate::typ::int(),
         name: vec!["my_mod".to_string()],
         statements: vec![Statement::Fn {
+            return_annotation: None,
             meta: default(),
             public: false,
             args: vec![],
@@ -1332,6 +1364,7 @@ go() ->
         name: vec!["funny".to_string()],
         statements: vec![
             Statement::Fn {
+                return_annotation: None,
                 meta: default(),
                 args: vec![],
                 name: "one".to_string(),
@@ -1353,6 +1386,7 @@ go() ->
                 },
             },
             Statement::Fn {
+                return_annotation: None,
                 meta: default(),
                 args: vec![],
                 name: "two".to_string(),
@@ -1374,6 +1408,7 @@ go() ->
                 },
             },
             Statement::Fn {
+                return_annotation: None,
                 meta: default(),
                 args: vec![],
                 name: "three".to_string(),

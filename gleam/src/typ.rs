@@ -1311,6 +1311,7 @@ pub fn infer_module(
                 public,
                 args,
                 body,
+                return_annotation,
             } => {
                 let level = 1;
 
@@ -1366,6 +1367,7 @@ pub fn infer_module(
                     public,
                     args,
                     body,
+                    return_annotation,
                 })
             }
 

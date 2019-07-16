@@ -45,6 +45,7 @@ fn module_dependencies_test() {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Arg {
     pub name: Option<String>,
+    pub annotation: Option<Type>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -104,6 +105,7 @@ pub enum Statement<S, T> {
         args: Vec<Arg>,
         body: Expr<S, T>,
         public: bool,
+        return_annotation: Option<Type>,
     },
 
     Enum {
