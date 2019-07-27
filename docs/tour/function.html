@@ -162,6 +162,18 @@ pub fn add_two(x) {
   twice(add_one, x)
 }
 </code></pre>
+<a class="header" href="#type-annotations" id="type-annotations"><h2>Type annotations</h2></a>
+<p>Function arguments can be optionally be annotated with their type. The
+compiler will check these annotations and ensure they are correct.</p>
+<pre><code class="language-rust noplaypen">fn identity(x :: Int) {
+  x
+}
+</code></pre>
+<p>Without an annotation this identity function would have have the inferred type
+<code>fn(a) -&gt; a</code>, but the type annotation on the argument results in the type
+of the function being <code>fn(Int) -&gt; Int</code>. This shows how type annotations can be
+used to create functions with types less general than the compiler may have
+inferred otherwise.</p>
 <a class="header" href="#anonymous-functions" id="anonymous-functions"><h2>Anonymous functions</h2></a>
 <p>Anonymous functions can be defined with a similar syntax.</p>
 <pre><code class="language-rust noplaypen">pub fn run() {

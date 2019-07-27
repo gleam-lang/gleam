@@ -735,6 +735,13 @@ pub struct Env<'a> {
     type_constructors: TypeConstructors,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum NewTypeAction {
+    Disallow,
+    MakeGeneric,
+    MakeUnbound(usize),
+}
+
 impl<'a> Env<'a> {
     pub fn new(modules: &'a std::collections::HashMap<String, (Type, TypeConstructors)>) -> Self {
         let mut env = Self {
@@ -1104,7 +1111,7 @@ impl<'a> Env<'a> {
         &mut self,
         ast: &ast::Type,
         vars: &mut HashMap<String, Type>,
-        permit_new_vars: bool,
+        new: NewTypeAction,
     ) -> Result<Type, Error> {
         match ast {
             ast::Type::Constructor {
@@ -1115,7 +1122,7 @@ impl<'a> Env<'a> {
             } => {
                 let args = args
                     .iter()
-                    .map(|t| self.type_from_ast(t, vars, permit_new_vars))
+                    .map(|t| self.type_from_ast(t, vars, new))
                     .collect::<Result<Vec<_>, _>>()?;
                 let types = self.type_constructors.clone();
 
@@ -1143,17 +1150,17 @@ impl<'a> Env<'a> {
             }
 
             ast::Type::Map { fields, tail, .. } => Ok(Type::Map {
-                row: Box::new(self.row_from_ast(fields, tail, vars, permit_new_vars)?),
+                row: Box::new(self.row_from_ast(fields, tail, vars, new)?),
             }),
 
             ast::Type::Module { fields, tail, .. } => Ok(Type::Module {
-                row: Box::new(self.row_from_ast(fields, tail, vars, permit_new_vars)?),
+                row: Box::new(self.row_from_ast(fields, tail, vars, new)?),
             }),
 
             ast::Type::Tuple { elems, .. } => {
                 let elems = elems
                     .iter()
-                    .map(|t| self.type_from_ast(t, vars, permit_new_vars))
+                    .map(|t| self.type_from_ast(t, vars, new))
                     .collect::<Result<_, _>>()?;
                 Ok(Type::Tuple { elems })
             }
@@ -1161,9 +1168,9 @@ impl<'a> Env<'a> {
             ast::Type::Fn { args, retrn, .. } => {
                 let args = args
                     .iter()
-                    .map(|t| self.type_from_ast(t, vars, permit_new_vars))
+                    .map(|t| self.type_from_ast(t, vars, new))
                     .collect::<Result<_, _>>()?;
-                let retrn = self.type_from_ast(retrn, vars, permit_new_vars)?;
+                let retrn = self.type_from_ast(retrn, vars, new)?;
                 Ok(Type::Fn {
                     args,
                     retrn: Box::new(retrn),
@@ -1174,14 +1181,22 @@ impl<'a> Env<'a> {
                 Some(var) => Ok(var.clone()),
 
                 None => {
-                    if permit_new_vars {
-                        let var = self.new_generic_var();
-                        vars.insert(name.to_string(), var.clone());
-                        Ok(var)
-                    } else {
-                        // TODO: test that enum constructors using unknown vars in their
-                        // definitions is not permitted.
-                        unimplemented!()
+                    match new {
+                        NewTypeAction::MakeGeneric => {
+                            let var = self.new_generic_var();
+                            vars.insert(name.to_string(), var.clone());
+                            Ok(var)
+                        }
+                        NewTypeAction::MakeUnbound(level) => {
+                            let var = self.new_unbound_var(level);
+                            vars.insert(name.to_string(), var.clone());
+                            Ok(var)
+                        }
+                        NewTypeAction::Disallow => {
+                            // TODO: test that enum constructors using unknown vars in their
+                            // definitions is not permitted.
+                            unimplemented!()
+                        }
                     }
                 }
             },
@@ -1193,15 +1208,15 @@ impl<'a> Env<'a> {
         fields: &Vec<(String, ast::Type)>,
         tail: &Option<Box<ast::Type>>,
         vars: &mut HashMap<String, Type>,
-        permit_new_vars: bool,
+        new: NewTypeAction,
     ) -> Result<Type, Error> {
         let tail = match tail {
             None => Type::RowNil,
-            Some(t) => self.type_from_ast(t, vars, permit_new_vars)?,
+            Some(t) => self.type_from_ast(t, vars, new)?,
         };
         fields
             .iter()
-            .map(|(label, t)| Ok((label, self.type_from_ast(t, vars, permit_new_vars)?)))
+            .map(|(label, t)| Ok((label, self.type_from_ast(t, vars, new)?)))
             .fold_results(tail, |acc, (label, t)| Type::RowCons {
                 label: label.to_string(),
                 head: Box::new(t),
@@ -1381,10 +1396,11 @@ pub fn infer_module(
                 fun,
             } => {
                 let mut type_vars = hashmap![];
-                let retrn_type = env.type_from_ast(&retrn, &mut type_vars, true)?;
+                let retrn_type =
+                    env.type_from_ast(&retrn, &mut type_vars, NewTypeAction::MakeGeneric)?;
                 let mut args_types = Vec::with_capacity(args.len());
                 for arg in args.iter() {
-                    let t = env.type_from_ast(arg, &mut type_vars, true)?;
+                    let t = env.type_from_ast(arg, &mut type_vars, NewTypeAction::MakeGeneric)?;
                     args_types.push(t)
                 }
                 let typ = Type::Fn {
@@ -1437,7 +1453,7 @@ pub fn infer_module(
                         meta: meta.clone(),
                         name: arg.to_string(),
                     })
-                    .map(|ast| env.type_from_ast(&ast, &mut type_vars, true))
+                    .map(|ast| env.type_from_ast(&ast, &mut type_vars, NewTypeAction::MakeGeneric))
                     .collect::<Result<_, _>>()?;
 
                 let retrn = Type::App {
@@ -1451,7 +1467,7 @@ pub fn infer_module(
                     let args_types = constructor
                         .args
                         .iter()
-                        .map(|arg| env.type_from_ast(&arg, &mut type_vars, false))
+                        .map(|arg| env.type_from_ast(&arg, &mut type_vars, NewTypeAction::Disallow))
                         .collect::<Result<Vec<_>, _>>()?;
                     // Insert constructor function into module scope
                     let typ = match constructor.args.len() {
@@ -1503,7 +1519,7 @@ pub fn infer_module(
                         meta: meta.clone(),
                         name: arg.to_string(),
                     };
-                    env.type_from_ast(&var, &mut type_vars, true)?;
+                    env.type_from_ast(&var, &mut type_vars, NewTypeAction::MakeGeneric)?;
                 }
                 Ok(Statement::ExternalType {
                     meta,
@@ -2042,17 +2058,32 @@ fn infer_fun(
     level: usize,
     env: &mut Env,
 ) -> Result<(Vec<Type>, TypedExpr), Error> {
-    let args_types: Vec<_> = args.iter().map(|_| env.new_unbound_var(level)).collect();
+    let mut type_vars = hashmap![];
+    let args_types: Vec<_> = args
+        .iter()
+        .map(|arg| {
+            arg.annotation
+                .clone()
+                .map(|t| env.type_from_ast(&t, &mut type_vars, NewTypeAction::MakeUnbound(level)))
+                .unwrap_or_else(|| Ok(env.new_unbound_var(level)))
+        })
+        .collect::<Result<_, _>>()?;
     let vars = env.variables.clone();
-    args.iter()
-        .zip(args_types.iter())
-        .for_each(|(arg, t)| match &arg.name {
+
+    // Insert arguments into function body scope
+    for (arg, t) in args.iter().zip(args_types.iter()) {
+        match &arg.name {
             Some(name) => env.insert_variable(name.to_string(), Scope::Local, (*t).clone()),
             None => (),
-        });
+        };
+    }
+
     let body = infer(body, level, env)?;
+
     env.variables = vars;
     Ok((args_types, body))
+    // TODO: unify the body type with the return annotation if given.
+    // Will need to have the return annotation passed in to this function as an argument.
 }
 
 fn bin_op_name(name: &BinOp) -> String {
@@ -3425,6 +3456,24 @@ fn infer_error_test() {
             },
         },
         Case {
+            src: "let f = fn(x :: Int) { x } f(1.0)",
+            error: Error::CouldNotUnify {
+                meta: Meta { start: 29, end: 32 },
+                expected: Type::App {
+                    public: true,
+                    module: vec![],
+                    name: "Int".to_string(),
+                    args: vec![],
+                },
+                given: Type::App {
+                    public: true,
+                    module: vec![],
+                    name: "Float".to_string(),
+                    args: vec![],
+                },
+            },
+        },
+        Case {
             src: "case 1 { | x -> 1 | 1 -> x }",
             error: Error::UnknownVariable {
                 meta: Meta { start: 25, end: 26 },
@@ -3804,6 +3853,22 @@ fn infer_module_error_test() {
             src: "fn go() { 1 + 2.0 }",
             error: Error::CouldNotUnify {
                 meta: Meta { start: 14, end: 17 },
+                expected: int(),
+                given: float(),
+            },
+        },
+        Case {
+            src: "
+fn id(x :: a, y :: a) {
+  x
+}
+
+pub fn x() {
+  id(1, 1.0)
+}
+                ",
+            error: Error::CouldNotUnify {
+                meta: Meta { start: 53, end: 56 },
                 expected: int(),
                 given: float(),
             },

@@ -32,6 +32,25 @@ pub fn add_two(x) {
 }
 ```
 
+
+## Type annotations
+
+Function arguments can be optionally be annotated with their type. The
+compiler will check these annotations and ensure they are correct.
+
+```rust,noplaypen
+fn identity(x :: Int) {
+  x
+}
+```
+
+Without an annotation this identity function would have have the inferred type
+`fn(a) -> a`, but the type annotation on the argument results in the type
+of the function being `fn(Int) -> Int`. This shows how type annotations can be
+used to create functions with types less general than the compiler may have
+inferred otherwise.
+
+
 ## Anonymous functions
 
 Anonymous functions can be defined with a similar syntax.

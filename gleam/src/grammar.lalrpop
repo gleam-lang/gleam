@@ -295,12 +295,14 @@ Fn: UntypedExpr = {
 }
 
 FnArg: Arg = {
-    <n:VarName> <annotation:("::" <Type>)?> => Arg {
+    <s:@L> <n:VarName> <annotation:("::" <Type>)?> <e:@L> => Arg {
+        meta: meta(s, e),
         name: Some(n),
         annotation,
     },
 
-    DiscardName => Arg {
+    <s:@L> DiscardName <e:@L> => Arg {
+        meta: meta(s, e),
         name: None,
         annotation: None,
     },
@@ -338,6 +340,7 @@ Call: UntypedExpr = {
                 typ: (),
                 is_capture: true,
                 args: vec![Arg {
+                    meta: meta(0, 0),
                     annotation: None,
                     name: Some(hole_arg_name.to_string())
                 }],

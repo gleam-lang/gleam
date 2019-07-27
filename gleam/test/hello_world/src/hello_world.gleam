@@ -1,8 +1,7 @@
-
-fn sum(x :: Int, y, z) {
-  z + y + z
+fn id(x :: a, y :: a) {
+  x
 }
 
 pub fn x() {
-  sum(1, 2)
+  id(1.0, 1)
 }

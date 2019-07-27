@@ -577,6 +577,7 @@ fn expr_test() {
             typ: (),
             is_capture: true,
             args: vec![Arg {
+                meta: Meta { start: 0, end: 0 },
                 annotation: None,
                 name: Some("capture@1".to_string())
             }],
@@ -619,10 +620,12 @@ fn expr_test() {
             typ: (),
             args: vec![
                 Arg {
+                    meta: Meta { start: 3, end: 4 },
                     annotation: None,
                     name: Some("a".to_string())
                 },
                 Arg {
+                    meta: Meta { start: 6, end: 7 },
                     annotation: None,
                     name: Some("b".to_string())
                 },
@@ -879,10 +882,12 @@ fn module_test() {
                 name: "run".to_string(),
                 args: vec![
                     Arg {
+                        meta: Meta { start: 7, end: 10 },
                         annotation: None,
                         name: Some("one".to_string())
                     },
                     Arg {
+                        meta: Meta { start: 12, end: 15 },
                         annotation: None,
                         name: Some("two".to_string())
                     }
@@ -1058,6 +1063,7 @@ fn module_test() {
                     public: true,
                     name: "value".to_string(),
                     args: vec![Arg {
+                        meta: Meta { start: 56, end: 57 },
                         annotation: None,
                         name: Some("x".to_string())
                     }],
@@ -1115,6 +1121,7 @@ fn module_test() {
                 public: true,
                 name: "value".to_string(),
                 args: vec![Arg {
+                    meta: Meta { start: 13, end: 14 },
                     annotation: None,
                     name: Some("x".to_string())
                 }],
@@ -1157,6 +1164,7 @@ fn module_test() {
                 public: true,
                 name: "value".to_string(),
                 args: vec![Arg {
+                    meta: Meta { start: 13, end: 14 },
                     annotation: None,
                     name: Some("x".to_string())
                 }],
@@ -1213,6 +1221,7 @@ fn module_test() {
                 public: true,
                 name: "value1".to_string(),
                 args: vec![Arg {
+                    meta: Meta { start: 14, end: 15 },
                     annotation: None,
                     name: Some("x".to_string())
                 }],
@@ -1292,6 +1301,7 @@ fn module_test() {
                     value: 1.0
                 },
                 args: vec![Arg {
+                    meta: Meta { start: 7, end: 15 },
                     name: Some("x".to_string()),
                     annotation: Some(Type::Constructor {
                         args: vec![],
