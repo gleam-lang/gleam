@@ -45,6 +45,7 @@ fn module_dependencies_test() {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Arg {
     pub name: Option<String>,
+    pub meta: Meta,
     pub annotation: Option<Type>,
 }
 

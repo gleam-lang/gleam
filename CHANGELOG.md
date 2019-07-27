@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Function arguments can be annotated with their type. This may be used to
+  restrict the function to a less general type than inferred by the compiler,
+  or purely for documentation purposes.
 - External function names and their target functions are now escaped in the
   generated code if they collide with Erlang keywords such as `catch` or `or`.
 - Type error arising from the arguments of function calls have more accurate

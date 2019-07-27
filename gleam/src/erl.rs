@@ -909,10 +909,12 @@ map() ->
                     typ: crate::typ::int(),
                     args: vec![
                         Arg {
+                            meta: Meta { start: 0, end: 0 },
                             annotation: None,
                             name: Some("one_really_long_arg_to_cause_wrapping".to_string()),
                         },
                         Arg {
+                            meta: Meta { start: 0, end: 0 },
                             annotation: None,
                             name: Some("also_really_quite_long".to_string()),
                         },
@@ -987,34 +989,42 @@ funny() ->
             name: "some_function".to_string(),
             args: vec![
                 Arg {
+                    meta: Meta { start: 0, end: 0 },
                     annotation: None,
                     name: Some("arg_one".to_string()),
                 },
                 Arg {
+                    meta: Meta { start: 0, end: 0 },
                     annotation: None,
                     name: Some("arg_two".to_string()),
                 },
                 Arg {
+                    meta: Meta { start: 0, end: 0 },
                     annotation: None,
                     name: Some("arg_3".to_string()),
                 },
                 Arg {
+                    meta: Meta { start: 0, end: 0 },
                     annotation: None,
                     name: Some("arg4".to_string()),
                 },
                 Arg {
+                    meta: Meta { start: 0, end: 0 },
                     annotation: None,
                     name: Some("arg_four".to_string()),
                 },
                 Arg {
+                    meta: Meta { start: 0, end: 0 },
                     annotation: None,
                     name: Some("arg__five".to_string()),
                 },
                 Arg {
+                    meta: Meta { start: 0, end: 0 },
                     annotation: None,
                     name: Some("arg_six".to_string()),
                 },
                 Arg {
+                    meta: Meta { start: 0, end: 0 },
                     annotation: None,
                     name: Some("arg_that_is_long".to_string()),
                 },
