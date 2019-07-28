@@ -3456,9 +3456,9 @@ fn infer_error_test() {
             },
         },
         Case {
-            src: "let f = fn(x :: Int) { x } f(1.0)",
+            src: "let f = fn(x: Int) { x } f(1.0)",
             error: Error::CouldNotUnify {
-                meta: Meta { start: 29, end: 32 },
+                meta: Meta { start: 27, end: 30 },
                 expected: Type::App {
                     public: true,
                     module: vec![],
@@ -3859,7 +3859,7 @@ fn infer_module_error_test() {
         },
         Case {
             src: "
-fn id(x :: a, y :: a) {
+fn id(x: a, y: a) {
   x
 }
 
@@ -3868,7 +3868,7 @@ pub fn x() {
 }
                 ",
             error: Error::CouldNotUnify {
-                meta: Meta { start: 53, end: 56 },
+                meta: Meta { start: 49, end: 52 },
                 expected: int(),
                 given: float(),
             },

@@ -295,7 +295,7 @@ Fn: UntypedExpr = {
 }
 
 FnArg: Arg = {
-    <s:@L> <n:VarName> <annotation:("::" <Type>)?> <e:@L> => Arg {
+    <s:@L> <n:VarName> <annotation:(":" <Type>)?> <e:@L> => Arg {
         meta: meta(s, e),
         name: Some(n),
         annotation,

@@ -39,7 +39,7 @@ Function arguments can be optionally be annotated with their type. The
 compiler will check these annotations and ensure they are correct.
 
 ```rust,noplaypen
-fn identity(x :: Int) {
+fn identity(x: Int) {
   x
 }
 ```

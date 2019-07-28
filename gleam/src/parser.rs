@@ -1288,31 +1288,31 @@ fn module_test() {
             statements: vec![Statement::Fn {
                 return_annotation: Some(Type::Constructor {
                     args: vec![],
-                    meta: Meta { start: 20, end: 25 },
+                    meta: Meta { start: 18, end: 23 },
                     module: None,
                     name: "Float".to_string()
                 }),
-                meta: Meta { start: 0, end: 33 },
+                meta: Meta { start: 0, end: 31 },
                 public: false,
                 name: "run".to_string(),
                 body: Expr::Float {
                     typ: (),
-                    meta: Meta { start: 28, end: 31 },
+                    meta: Meta { start: 26, end: 29 },
                     value: 1.0
                 },
                 args: vec![Arg {
-                    meta: Meta { start: 7, end: 15 },
+                    meta: Meta { start: 7, end: 13 },
                     name: Some("x".to_string()),
                     annotation: Some(Type::Constructor {
                         args: vec![],
-                        meta: Meta { start: 12, end: 15 },
+                        meta: Meta { start: 10, end: 13 },
                         module: None,
                         name: "Int".to_string()
                     })
                 }]
             }]
         }),
-        ModuleParser::new().parse("fn run(x :: Int) -> Float { 1.0 }"),
+        ModuleParser::new().parse("fn run(x: Int) -> Float { 1.0 }"),
     );
 
     assert_eq!(
