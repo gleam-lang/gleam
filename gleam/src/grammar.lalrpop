@@ -184,13 +184,13 @@ SimpleExpr: UntypedExpr = {
     List => <>,
     Call => <>,
     Float => <>,
-    Tuple => <>,
     String => <>,
     Map => <>,
     MapNil => <>,
     MapCons => <>,
     // Constructor => <>,
     MapSelect => <>,
+    AnonStruct => <>,
     ModuleSelect => <>,
     "begin" <e:Expr> "end" => e,
 }
@@ -362,8 +362,8 @@ CallArg: Result<UntypedExpr, crate::ast::Meta> = {
     <s:@L> DiscardName <e:@L> => Err(meta(s, e)),
 }
 
-Tuple: UntypedExpr = {
-    <s:@L> "{" <elems:Comma<OpOrSimpleExpr>> "}" <e:@L> => Expr::Tuple {
+AnonStruct: UntypedExpr = {
+    <s:@L> "struct" "(" <elems:Comma<OpOrSimpleExpr>> ")" <e:@L> => Expr::AnonStruct {
         meta: meta(s, e),
         typ: (),
         elems: elems,
@@ -492,10 +492,10 @@ Pattern: Pattern = {
     PatternCons => <>,
     PatternList => <>,
     PatternFloat => <>,
-    PatternTuple => <>,
     PatternString => <>,
     PatternDiscard => <>,
     // PatternMap => <>,
+    PatternAnonStruct => <>,
     PatternConstructor => <>,
 }
 
@@ -519,8 +519,8 @@ PatternConstructorArgs: Vec<Pattern> = {
     "(" <ts:Comma<Pattern>> ")" => ts
 }
 
-PatternTuple: Pattern = {
-    <s:@L> "{" <elems:Comma<Pattern>> "}" <e:@L> => Pattern::Tuple {
+PatternAnonStruct: Pattern = {
+    <s:@L> "struct" "(" <elems:Comma<Pattern>> ")" <e:@L> => Pattern::AnonStruct {
         meta: meta(s, e),
         elems,
     }
@@ -593,7 +593,7 @@ Type: Type = {
     TypeConstructor => <>,
     TypeMap => <>,
     TypeModule => <>,
-    TypeTuple => <>,
+    TypeAnonStruct => <>,
     TypeVar => <>,
     TypeFn => <>,
 }
@@ -680,8 +680,8 @@ TypeConstructor: Type = {
     },
 }
 
-TypeTuple: Type = {
-    <s:@L> "{" <elems:AtLeastOneComma<Type>> "}" <e:@L> => Type::Tuple {
+TypeAnonStruct: Type = {
+    <s:@L> "struct" "(" <elems:AtLeastOneComma<Type>> ")" <e:@L> => Type::AnonStruct {
         meta: meta(s, e),
         elems: elems,
     }

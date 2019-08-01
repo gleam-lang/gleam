@@ -225,7 +225,9 @@ fn pattern(p: Pattern, env: &mut Env) -> Document {
         Pattern::Var { name, .. } => env.next_local_var_name(name),
         Pattern::Int { value, .. } => value.to_doc(),
         Pattern::Float { value, .. } => value.to_doc(),
-        Pattern::Tuple { elems, .. } => tuple(elems.into_iter().map(|p| pattern(p, env)).collect()),
+        Pattern::AnonStruct { elems, .. } => {
+            tuple(elems.into_iter().map(|p| pattern(p, env)).collect())
+        }
         Pattern::String { value, .. } => string(value),
         Pattern::Constructor { name, args, .. } => enum_pattern(name, args, env),
     }
@@ -516,7 +518,9 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
         Expr::ModuleSelect {
             typ, label, module, ..
         } => module_select(typ, *module, label, env),
-        Expr::Tuple { elems, .. } => tuple(elems.into_iter().map(|e| wrap_expr(e, env)).collect()),
+        Expr::AnonStruct { elems, .. } => {
+            tuple(elems.into_iter().map(|e| wrap_expr(e, env)).collect())
+        }
         Expr::Let {
             value,
             pattern,
@@ -736,7 +740,7 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "tup".to_string(),
-                body: Expr::Tuple {
+                body: Expr::AnonStruct {
                     meta: default(),
                     typ: crate::typ::int(),
                     elems: vec![
@@ -1291,7 +1295,7 @@ moddy4() ->
                     },
                     Clause {
                         meta: default(),
-                        pattern: Pattern::Tuple {
+                        pattern: Pattern::AnonStruct {
                             meta: default(),
                             elems: vec![
                                 Pattern::Int {

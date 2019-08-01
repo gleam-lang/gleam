@@ -19,7 +19,7 @@ pub enum Type {
         args: Vec<Type>,
     },
 
-    Tuple {
+    AnonStruct {
         elems: Vec<Type>,
     },
 
@@ -82,7 +82,9 @@ impl Type {
                 .append(") -> ")
                 .append(retrn.to_gleam_doc(names, uid)),
 
-            Type::Tuple { elems, .. } => args_to_gleam_doc(elems, names, uid).surround("{", "}"),
+            Type::AnonStruct { elems, .. } => {
+                args_to_gleam_doc(elems, names, uid).surround("{", "}")
+            }
 
             Type::Map { row } => {
                 if let Type::RowNil { .. } = **row {
@@ -276,7 +278,7 @@ impl Type {
 
             Type::Map { row, .. } => row.find_private_type(),
 
-            Type::Tuple { elems, .. } => elems.iter().find_map(|t| t.find_private_type()),
+            Type::AnonStruct { elems, .. } => elems.iter().find_map(|t| t.find_private_type()),
 
             Type::App { public: false, .. } => Some(self.clone()),
 
@@ -1157,12 +1159,12 @@ impl<'a> Env<'a> {
                 row: Box::new(self.row_from_ast(fields, tail, vars, new)?),
             }),
 
-            ast::Type::Tuple { elems, .. } => {
+            ast::Type::AnonStruct { elems, .. } => {
                 let elems = elems
                     .iter()
                     .map(|t| self.type_from_ast(t, vars, new))
                     .collect::<Result<_, _>>()?;
-                Ok(Type::Tuple { elems })
+                Ok(Type::AnonStruct { elems })
             }
 
             ast::Type::Fn { args, retrn, .. } => {
@@ -1723,15 +1725,15 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             })
         }
 
-        Expr::Tuple { meta, elems, .. } => {
+        Expr::AnonStruct { meta, elems, .. } => {
             let elems = elems
                 .into_iter()
                 .map(|e| infer(e, level, env))
                 .collect::<Result<Vec<_>, _>>()?;
-            let typ = Type::Tuple {
+            let typ = Type::AnonStruct {
                 elems: elems.iter().map(|e| e.typ().clone()).collect(),
             };
-            Ok(Expr::Tuple { meta, elems, typ })
+            Ok(Expr::AnonStruct { meta, elems, typ })
         }
 
         Expr::BinOp {
@@ -1970,8 +1972,8 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
             }
         }
 
-        Pattern::Tuple { elems, meta, .. } => match typ.clone().collapse_links() {
-            Type::Tuple { elems: type_elems } => {
+        Pattern::AnonStruct { elems, meta, .. } => match typ.clone().collapse_links() {
+            Type::AnonStruct { elems: type_elems } => {
                 for (pattern, typ) in elems.iter().zip(type_elems) {
                     unify_pattern(pattern, &typ, level, env)?;
                 }
@@ -1982,7 +1984,7 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
                 let elems = (0..(elems.len()))
                     .map(|_| env.new_unbound_var(level))
                     .collect();
-                unify(&Type::Tuple { elems }, &typ, env)
+                unify(&Type::AnonStruct { elems }, &typ, env)
                     .map_err(|e| convert_unify_error(e, &meta))?;
                 unify_pattern(pattern, &typ, level, env)
             }
@@ -2174,7 +2176,7 @@ fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
                 },
             },
 
-            Type::Tuple { elems } => Type::Tuple {
+            Type::AnonStruct { elems } => Type::AnonStruct {
                 elems: elems
                     .into_iter()
                     .map(|t| go(t, ctx_level, ids, env))
@@ -2308,7 +2310,7 @@ fn unify(t1: &Type, t2: &Type, env: &mut Env) -> Result<(), UnifyError> {
             }
         }
 
-        (Type::Tuple { elems: elems1, .. }, Type::Tuple { elems: elems2, .. }) => {
+        (Type::AnonStruct { elems: elems1, .. }, Type::AnonStruct { elems: elems2, .. }) => {
             if elems1.len() == elems2.len() {
                 for (a, b) in elems1.iter().zip(elems2) {
                     unify(a, b, env)?;
@@ -2588,7 +2590,7 @@ fn update_levels(typ: &Type, own_level: usize, own_id: usize) -> Result<(), Unif
             Ok(())
         }
 
-        Type::Tuple { elems, .. } => {
+        Type::AnonStruct { elems, .. } => {
             for elem in elems.iter() {
                 update_levels(elem, own_level, own_id)?
             }
@@ -2733,7 +2735,7 @@ fn generalise(t: Type, ctx_level: usize) -> Type {
             }
         }
 
-        Type::Tuple { elems } => Type::Tuple {
+        Type::AnonStruct { elems } => Type::AnonStruct {
             elems: elems
                 .into_iter()
                 .map(|t| generalise(t, ctx_level))
@@ -2959,24 +2961,24 @@ fn infer_test() {
             src: "let x = [1 | []] [2 | x]",
             typ: "List(Int)",
         },
-        /* Tuples
+        /* AnonStructs
 
         */
         Case {
-            src: "{1}",
-            typ: "{Int}",
+            src: "struct(1)",
+            typ: "struct(Int)",
         },
         Case {
-            src: "{1, 2.0}",
-            typ: "{Int, Float}",
+            src: "(1, 2.0)",
+            typ: "(Int, Float)",
         },
         Case {
-            src: "{1, 2.0, 3}",
-            typ: "{Int, Float, Int}",
+            src: "(1, 2.0, 3)",
+            typ: "(Int, Float, Int)",
         },
         Case {
-            src: "{1, 2.0, {1, 1}}",
-            typ: "{Int, Float, {Int, Int}}",
+            src: "struct(1, 2.0, struct(1, 1))",
+            typ: "struct(Int, Float, struct(Int, Int))",
         },
         /* Fns
 
@@ -3094,12 +3096,12 @@ fn infer_test() {
             typ: "fn(fn(a) -> a, a) -> a",
         },
         Case {
-            src: "fn(x, y) { {x, y} }",
-            typ: "fn(a, b) -> {a, b}",
+            src: "fn(x, y) { struct(x, y) }",
+            typ: "fn(a, b) -> struct(a, b)",
         },
         Case {
-            src: "fn(x) { {x, x} }",
-            typ: "fn(a) -> {a, a}",
+            src: "fn(x) { struct(x, x) }",
+            typ: "fn(a) -> struct(a, a)",
         },
         Case {
             src: "let id = fn(a) { a } fn(x) { x(id) }",
@@ -3141,7 +3143,7 @@ fn infer_test() {
             typ: "Bool",
         },
         Case {
-            src: "{a = 1} == {a = 2}",
+            src: "struct(a = 1) == struct(a = 2)",
             typ: "Bool",
         },
         Case {
@@ -3203,7 +3205,7 @@ fn infer_test() {
 
         */
         Case {
-            src: "let {tag, x} = {1.0, 1} x",
+            src: "let struct(tag, x) = struct(1.0, 1) x",
             typ: "Int",
         },
         Case {
@@ -3231,8 +3233,8 @@ fn infer_test() {
             typ: "fn(List(Int)) -> Int",
         },
         Case {
-            src: "fn(x) { let {a, b} = x a }",
-            typ: "fn({a, b}) -> a",
+            src: "fn(x) { let struct(a, b) = x a }",
+            typ: "fn(struct(a, b)) -> a",
         },
         Case {
             src: "let _x = 1 2.0",
@@ -3421,10 +3423,10 @@ fn infer_error_test() {
             src: "{1, 2} == {1, 2, 3}",
             error: Error::CouldNotUnify {
                 meta: Meta { start: 10, end: 19 },
-                expected: Type::Tuple {
+                expected: Type::AnonStruct {
                     elems: vec![int(), int()],
                 },
-                given: Type::Tuple {
+                given: Type::AnonStruct {
                     elems: vec![int(), int(), int()],
                 },
             },

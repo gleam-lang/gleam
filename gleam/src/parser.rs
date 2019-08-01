@@ -532,7 +532,7 @@ fn expr_test() {
     );
 
     assert_eq!(
-        Ok(Expr::Tuple {
+        Ok(Expr::AnonStruct {
             meta: Meta { start: 0, end: 9 },
             typ: (),
             elems: vec![
