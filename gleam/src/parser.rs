@@ -570,28 +570,28 @@ fn expr_test() {
     );
 
     assert_eq!(
-        Ok(Expr::Tuple {
-            meta: Meta { start: 0, end: 9 },
+        Ok(Expr::AnonStruct {
+            meta: Meta { start: 0, end: 15 },
             typ: (),
             elems: vec![
                 Expr::Int {
                     typ: (),
-                    meta: Meta { start: 1, end: 2 },
+                    meta: Meta { start: 7, end: 8 },
                     value: 1
                 },
                 Expr::Int {
                     typ: (),
-                    meta: Meta { start: 4, end: 5 },
+                    meta: Meta { start: 10, end: 11 },
                     value: 2
                 },
                 Expr::Int {
                     typ: (),
-                    meta: Meta { start: 7, end: 8 },
+                    meta: Meta { start: 13, end: 14 },
                     value: 3
                 },
             ]
         }),
-        ExprParser::new().parse("{1, 2, 3}"),
+        ExprParser::new().parse("struct(1, 2, 3)"),
     );
 
     assert_eq!(
