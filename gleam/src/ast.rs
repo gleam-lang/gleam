@@ -88,7 +88,7 @@ pub enum Type {
         name: String,
     },
 
-    Tuple {
+    AnonStruct {
         meta: Meta,
         elems: Vec<Type>,
     },
@@ -214,7 +214,7 @@ pub enum Expr<S, T> {
         value: String,
     },
 
-    Tuple {
+    AnonStruct {
         meta: Meta,
         typ: T,
         elems: Vec<Expr<S, T>>,
@@ -324,7 +324,7 @@ impl<S, T> Expr<S, T> {
             Expr::Case { meta, .. } => meta,
             Expr::Cons { meta, .. } => meta,
             Expr::Call { meta, .. } => meta,
-            Expr::Tuple { meta, .. } => meta,
+            Expr::AnonStruct { meta, .. } => meta,
             Expr::Float { meta, .. } => meta,
             Expr::BinOp { meta, .. } => meta,
             Expr::String { meta, .. } => meta,
@@ -343,7 +343,7 @@ impl TypedExpr {
             Expr::Float { typ, .. } => typ,
             Expr::String { typ, .. } => typ,
             Expr::Seq { then, .. } => then.typ(),
-            Expr::Tuple { typ, .. } => typ,
+            Expr::AnonStruct { typ, .. } => typ,
             Expr::Var { typ, .. } => typ,
             Expr::Fn { typ, .. } => typ,
             Expr::Nil { typ, .. } => typ,
@@ -403,7 +403,7 @@ pub enum Pattern {
         meta: Meta,
     },
 
-    Tuple {
+    AnonStruct {
         meta: Meta,
         elems: Vec<Pattern>,
     },
@@ -438,7 +438,7 @@ impl Pattern {
             Pattern::Var { meta, .. } => meta,
             Pattern::Nil { meta, .. } => meta,
             Pattern::Cons { meta, .. } => meta,
-            Pattern::Tuple { meta, .. } => meta,
+            Pattern::AnonStruct { meta, .. } => meta,
             Pattern::Float { meta, .. } => meta,
             Pattern::Discard { meta, .. } => meta,
             // Pattern::Map { meta, .. } => meta,

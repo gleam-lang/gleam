@@ -28,6 +28,10 @@ book-serve: ## Run the book dev server
 .PHONY: test ## Run all tests
 test: test-gleam test-stdlib
 
+.PHONY: test-watch-gleam
+test-watch-gleam: ## Run compiler tests when files change
+	cd gleam && watchexec -e rs,lalrpop "echo; echo; echo; cargo test"
+
 .PHONY: test-gleam
 test-gleam: ## Test the compiler
 	cd gleam && cargo test
