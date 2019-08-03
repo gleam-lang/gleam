@@ -3,7 +3,7 @@ use crate::ast::{
     TypedModule, UntypedExpr, UntypedModule,
 };
 use crate::pretty::*;
-use im::{hashmap::HashMap, ordmap::OrdMap};
+use im::{hashmap::HashMap, hashset::HashSet, ordmap::OrdMap};
 use itertools::Itertools;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -316,6 +316,13 @@ impl TypeVar {
                     n.to_doc()
                 }
             },
+        }
+    }
+
+    pub fn is_unbound(&self) -> bool {
+        match self {
+            TypeVar::Unbound { .. } => true,
+            _ => false,
         }
     }
 }
@@ -730,6 +737,7 @@ pub type TypeConstructors = HashMap<String, TypeConstructorInfo>;
 #[derive(Debug, Clone)]
 pub struct Env<'a> {
     uid: usize,
+    annotated_generic_types: HashSet<usize>,
     variables: HashMap<String, VariableInfo>,
     modules: &'a std::collections::HashMap<String, (Type, TypeConstructors)>,
     type_constructors: TypeConstructors,
@@ -739,13 +747,13 @@ pub struct Env<'a> {
 pub enum NewTypeAction {
     Disallow,
     MakeGeneric,
-    MakeUnbound(usize),
 }
 
 impl<'a> Env<'a> {
     pub fn new(modules: &'a std::collections::HashMap<String, (Type, TypeConstructors)>) -> Self {
         let mut env = Self {
             uid: 0,
+            annotated_generic_types: HashSet::new(),
             type_constructors: hashmap![],
             variables: hashmap![],
             modules,
@@ -1038,6 +1046,10 @@ impl<'a> Env<'a> {
         i
     }
 
+    fn previous_uid(&self) -> usize {
+        self.uid - 1
+    }
+
     /// Create a new unbound type that is a specific type, we just don't
     /// know which one yet.
     ///
@@ -1110,7 +1122,7 @@ impl<'a> Env<'a> {
     pub fn type_from_ast(
         &mut self,
         ast: &ast::Type,
-        vars: &mut HashMap<String, Type>,
+        vars: &mut HashMap<String, (usize, Type)>,
         new: NewTypeAction,
     ) -> Result<Type, Error> {
         match ast {
@@ -1178,18 +1190,13 @@ impl<'a> Env<'a> {
             }
 
             ast::Type::Var { name, .. } => match vars.get(name) {
-                Some(var) => Ok(var.clone()),
+                Some((_, var)) => Ok(var.clone()),
 
                 None => {
                     match new {
                         NewTypeAction::MakeGeneric => {
                             let var = self.new_generic_var();
-                            vars.insert(name.to_string(), var.clone());
-                            Ok(var)
-                        }
-                        NewTypeAction::MakeUnbound(level) => {
-                            let var = self.new_unbound_var(level);
-                            vars.insert(name.to_string(), var.clone());
+                            vars.insert(name.to_string(), (self.previous_uid(), var.clone()));
                             Ok(var)
                         }
                         NewTypeAction::Disallow => {
@@ -1207,7 +1214,7 @@ impl<'a> Env<'a> {
         &mut self,
         fields: &Vec<(String, ast::Type)>,
         tail: &Option<Box<ast::Type>>,
-        vars: &mut HashMap<String, Type>,
+        vars: &mut HashMap<String, (usize, Type)>,
         new: NewTypeAction,
     ) -> Result<Type, Error> {
         let tail = match tail {
@@ -1348,7 +1355,8 @@ pub fn infer_module(
                 );
 
                 // Infer the type
-                let (args_types, body) = infer_fun(&args, body, level + 1, &mut env)?;
+                let (args_types, body) =
+                    infer_fun(&args, body, &return_annotation, level + 1, &mut env)?;
                 let typ = Type::Fn {
                     args: args_types,
                     retrn: Box::new(body.typ().clone()),
@@ -1582,31 +1590,46 @@ This should not be possible. Please report this crash",
 ///
 pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr, Error> {
     match expr {
-        Expr::Int { meta, value, .. } => Ok(Expr::Int {
+        Expr::Int {
+            meta,
+            value,
+            typ: _,
+        } => Ok(Expr::Int {
             meta,
             value,
             typ: int(),
         }),
 
-        Expr::Float { meta, value, .. } => Ok(Expr::Float {
+        Expr::Float {
+            meta,
+            value,
+            typ: _,
+        } => Ok(Expr::Float {
             meta,
             value,
             typ: float(),
         }),
 
-        Expr::String { meta, value, .. } => Ok(Expr::String {
+        Expr::String {
+            meta,
+            value,
+            typ: _,
+        } => Ok(Expr::String {
             meta,
             value,
             typ: string(),
         }),
 
-        Expr::Nil { meta, .. } => Ok(Expr::Nil {
+        Expr::Nil { meta, typ: _ } => Ok(Expr::Nil {
             meta,
             typ: list(env.new_unbound_var(level)),
         }),
 
         Expr::Seq {
-            meta, first, then, ..
+            meta,
+            first,
+            then,
+            typ: _,
         } => {
             let first = infer(*first, level, env)?;
             let then = infer(*then, level, env)?;
@@ -1623,9 +1646,9 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             is_capture,
             args,
             body,
-            ..
+            typ: _,
         } => {
-            let (args_types, body) = infer_fun(&args, *body, level, env)?;
+            let (args_types, body) = infer_fun(&args, *body, &None, level, env)?;
             let typ = Type::Fn {
                 args: args_types,
                 retrn: Box::new(body.typ().clone()),
@@ -1645,7 +1668,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             pattern,
             value,
             then,
-            ..
+            typ: _,
         } => {
             let value = infer(*value, level + 1, env)?;
             let value_typ = generalise(value.typ().clone(), level + 1);
@@ -1665,7 +1688,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             meta,
             subject,
             clauses,
-            ..
+            typ: _,
         } => {
             let return_type = env.new_unbound_var(level); // TODO: st'hould this be level + 1 ?
             let mut typed_clauses = Vec::with_capacity(clauses.len());
@@ -1697,7 +1720,10 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         }
 
         Expr::Cons {
-            meta, head, tail, ..
+            meta,
+            head,
+            tail,
+            typ: _,
         } => {
             let head = infer(*head, level, env)?;
             let tail = infer(*tail, level, env)?;
@@ -1712,7 +1738,10 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         }
 
         Expr::Call {
-            meta, fun, args, ..
+            meta,
+            fun,
+            args,
+            typ: _,
         } => {
             let (fun, args, typ) = infer_call(*fun, args, level, &meta, env)?;
             Ok(Expr::Call {
@@ -1723,7 +1752,11 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             })
         }
 
-        Expr::Tuple { meta, elems, .. } => {
+        Expr::Tuple {
+            meta,
+            elems,
+            typ: _,
+        } => {
             let elems = elems
                 .into_iter()
                 .map(|e| infer(e, level, env))
@@ -1739,7 +1772,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             name,
             left,
             right,
-            ..
+            typ: _,
         } => {
             let fun = Expr::Var {
                 meta: meta.clone(),
@@ -1757,7 +1790,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             })
         }
 
-        Expr::MapNil { meta, .. } => Ok(Expr::MapNil {
+        Expr::MapNil { meta, typ: _ } => Ok(Expr::MapNil {
             meta,
             typ: Type::Map {
                 row: Box::new(Type::RowNil),
@@ -1769,7 +1802,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             tail,
             label,
             value,
-            ..
+            typ: _,
         } => {
             let value = infer(*value, level, env)?;
             let tail = infer(*tail, level, env)?;
@@ -1803,7 +1836,12 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             })
         }
 
-        Expr::Var { meta, name, .. } => {
+        Expr::Var {
+            meta,
+            name,
+            scope: _,
+            typ: _,
+        } => {
             let VariableInfo { scope, typ } = infer_var(&name, level, &meta, env)?;
             Ok(Expr::Var {
                 meta,
@@ -1814,7 +1852,10 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         }
 
         Expr::MapSelect {
-            meta, label, map, ..
+            meta,
+            label,
+            map,
+            typ: _,
         } => {
             let map = infer(*map, level, env)?;
 
@@ -1845,7 +1886,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             meta,
             module,
             label,
-            ..
+            typ: _,
         } => {
             let module = infer(*module, level, env)?;
             let typ = infer_module_select(module.typ(), &label, level, &meta, env)?;
@@ -2055,22 +2096,32 @@ fn infer_call(
 fn infer_fun(
     args: &[Arg],
     body: UntypedExpr,
+    return_annotation: &Option<ast::Type>,
     level: usize,
     env: &mut Env,
 ) -> Result<(Vec<Type>, TypedExpr), Error> {
+    // Construct an initial type for each argument of the function- either an unbound type variable
+    // or a type provided by an annotation.
     let mut type_vars = hashmap![];
     let args_types: Vec<_> = args
         .iter()
         .map(|arg| {
             arg.annotation
                 .clone()
-                .map(|t| env.type_from_ast(&t, &mut type_vars, NewTypeAction::MakeUnbound(level)))
+                .map(|t| env.type_from_ast(&t, &mut type_vars, NewTypeAction::MakeGeneric))
                 .unwrap_or_else(|| Ok(env.new_unbound_var(level)))
         })
         .collect::<Result<_, _>>()?;
-    let vars = env.variables.clone();
 
-    // Insert arguments into function body scope
+    // Record generic type variables that comes from type annotations.
+    // They cannot be instantiated so we need to keep track of them.
+    let previous_annotated_generic_types = env.annotated_generic_types.clone();
+    for (id, _type) in type_vars.values() {
+        env.annotated_generic_types.insert(*id);
+    }
+
+    // Insert arguments into function body scope.
+    let previous_vars = env.variables.clone();
     for (arg, t) in args.iter().zip(args_types.iter()) {
         match &arg.name {
             Some(name) => env.insert_variable(name.to_string(), Scope::Local, (*t).clone()),
@@ -2080,10 +2131,16 @@ fn infer_fun(
 
     let body = infer(body, level, env)?;
 
-    env.variables = vars;
+    // Check that any return type annotation is accurate.
+    if let Some(ann) = return_annotation {
+        let ret_typ = env.type_from_ast(ann, &mut type_vars, NewTypeAction::MakeGeneric)?;
+        unify(&ret_typ, body.typ(), env).map_err(|e| convert_unify_error(e, body.meta()))?;
+    }
+
+    // Reset the env now that the scope of the function has ended.
+    env.variables = previous_vars;
+    env.annotated_generic_types = previous_annotated_generic_types;
     Ok((args_types, body))
-    // TODO: unify the body type with the return annotation if given.
-    // Will need to have the return annotation passed in to this function as an argument.
 }
 
 fn bin_op_name(name: &BinOp) -> String {
@@ -2159,20 +2216,25 @@ fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
                     .collect(),
             },
 
-            Type::Var { typ } => match &*typ.borrow() {
-                TypeVar::Link { typ } => go(*typ.clone(), ctx_level, ids, env),
+            Type::Var { typ } => {
+                match &*typ.borrow() {
+                    TypeVar::Link { typ } => return go(*typ.clone(), ctx_level, ids, env),
 
-                TypeVar::Unbound { .. } => Type::Var { typ: typ.clone() },
+                    TypeVar::Unbound { .. } => return Type::Var { typ: typ.clone() },
 
-                TypeVar::Generic { id } => match ids.get(id) {
-                    Some(t) => t.clone(),
-                    None => {
-                        let v = env.new_unbound_var(ctx_level);
-                        ids.insert(*id, v.clone());
-                        v
-                    }
-                },
-            },
+                    TypeVar::Generic { id } => match ids.get(id) {
+                        Some(t) => return t.clone(),
+                        None => {
+                            if !env.annotated_generic_types.contains(id) {
+                                let v = env.new_unbound_var(ctx_level);
+                                ids.insert(*id, v.clone());
+                                return v;
+                            }
+                        }
+                    },
+                }
+                Type::Var { typ }
+            }
 
             Type::Tuple { elems } => Type::Tuple {
                 elems: elems
@@ -2246,8 +2308,8 @@ fn unify(t1: &Type, t2: &Type, env: &mut Env) -> Result<(), UnifyError> {
     if let Type::Var { typ } = t1 {
         enum Action {
             Unify(Type),
-            Link(Type),
-            Error,
+            CouldNotUnify,
+            Link,
         }
 
         let action = match &*typ.borrow() {
@@ -2255,21 +2317,31 @@ fn unify(t1: &Type, t2: &Type, env: &mut Env) -> Result<(), UnifyError> {
 
             TypeVar::Unbound { id, level } => {
                 update_levels(t2, *level, *id)?;
-                Action::Link((*t2).clone())
+                Action::Link
             }
 
-            TypeVar::Generic { .. } => Action::Error,
+            TypeVar::Generic { id } => {
+                if let Type::Var { typ } = t2 {
+                    if typ.borrow().is_unbound() {
+                        *typ.borrow_mut() = TypeVar::Generic { id: *id };
+                        return Ok(());
+                    }
+                }
+                Action::CouldNotUnify
+            }
         };
 
         return match action {
-            Action::Link(t) => {
-                *typ.borrow_mut() = TypeVar::Link { typ: Box::new(t) };
+            Action::Link => {
+                *typ.borrow_mut() = TypeVar::Link {
+                    typ: Box::new((*t2).clone()),
+                };
                 Ok(())
             }
 
             Action::Unify(t) => unify(&t, t2, env),
 
-            Action::Error => Err(UnifyError::CouldNotUnify {
+            Action::CouldNotUnify => Err(UnifyError::CouldNotUnify {
                 expected: (*t1).clone(),
                 given: (*t2).clone(),
             }),
@@ -2569,9 +2641,7 @@ fn update_levels(typ: &Type, own_level: usize, own_id: usize) -> Result<(), Unif
                 }
             }
 
-            TypeVar::Generic { .. } => {
-                panic!("Generic type var should not be passed to update_levels")
-            }
+            TypeVar::Generic { .. } => return Ok(()),
         };
 
         if let Some(t) = new_value {
@@ -3765,32 +3835,49 @@ pub fn two() { one() + zero() }",
   fn zero() -> Int
 }",
         },
-        // // Type annotations
+        // Type annotations
+        Case {
+            src: "pub fn go(x: Int) { x }",
+            typ: "module { fn go(Int) -> Int }",
+        },
+        Case {
+            src: "pub fn go(x: b) -> b { x }",
+            typ: "module { fn go(a) -> a }",
+        },
+        Case {
+            src: "pub fn go(x) -> b { x }",
+            typ: "module { fn go(a) -> a }",
+        },
+        Case {
+            src: "pub fn go(x: b) { x }",
+            typ: "module { fn go(a) -> a }",
+        },
+        Case {
+            src: "pub fn go(x: List(b)) -> List(b) { x }",
+            typ: "module { fn go(List(a)) -> List(a) }",
+        },
+        Case {
+            src: "pub fn go(x: List(b)) { x }",
+            typ: "module { fn go(List(a)) -> List(a) }",
+        },
+        Case {
+            src: "pub fn go(x: List(String)) { x }",
+            typ: "module { fn go(List(String)) -> List(String) }",
+        },
+        Case {
+            src: "pub fn go(x: b, y: c) { x }",
+            typ: "module { fn go(a, b) -> a }",
+        },
+        Case {
+            src: "pub fn go(x) -> Int { x }",
+            typ: "module { fn go(Int) -> Int }",
+        },
+        // // Type aliases
         // Case {
         //     src: "
         // type Html = String
         // pub fn go() { 1 }",
         //     typ: "module { fn go() -> Int }",
-        // },
-        // Case {
-        //     src: "pub fn go(x: Int) { x }",
-        //     typ: "module { fn go(Int) -> Int }",
-        // },
-        // Case {
-        //     src: "pub fn go(x: List(a)) { x }",
-        //     typ: "module { fn go(List(a)) -> List(a) }",
-        // },
-        // Case {
-        //     src: "pub fn go(x: List(String)) { x }",
-        //     typ: "module { fn go(List(String)) -> List(String) }",
-        // },
-        // Case {
-        //     src: "pub fn go(x: b, y: c) { x }",
-        //     typ: "module { fn go(a, b) -> a }",
-        // },
-        // Case {
-        //     src: "pub fn go(x: Int) { x + 1 }",
-        //     typ: "module { fn go(Int) -> Int }",
         // },
         Case {
             src: "pub fn length(list) {
@@ -3859,16 +3946,11 @@ fn infer_module_error_test() {
         },
         Case {
             src: "
-fn id(x: a, y: a) {
-  x
-}
-
-pub fn x() {
-  id(1, 1.0)
-}
+fn id(x: a, y: a) { x }
+pub fn x() { id(1, 1.0) }
                 ",
             error: Error::CouldNotUnify {
-                meta: Meta { start: 49, end: 52 },
+                meta: Meta { start: 44, end: 47 },
                 expected: int(),
                 given: float(),
             },
@@ -3967,5 +4049,15 @@ pub fn x() {
         let result = infer_module(ast, &std::collections::HashMap::new())
             .expect_err("should infer an error");
         assert_eq!((src, error), (src, &result));
+    }
+
+    // Cases were we can't so easily check for equality- i.e. because the contents of the error are
+    // non-deterministic.
+    let cases = ["fn inc(x: a) { x + 1 }"];
+    for src in cases.into_iter() {
+        let ast = crate::grammar::ModuleParser::new()
+            .parse(src)
+            .expect("syntax error");
+        infer_module(ast, &std::collections::HashMap::new()).expect_err("should infer an error");
     }
 }
