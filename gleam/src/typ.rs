@@ -3,7 +3,7 @@ use crate::ast::{
     TypedModule, UntypedExpr, UntypedModule,
 };
 use crate::pretty::*;
-use im::{hashmap::HashMap, ordmap::OrdMap};
+use im::{hashmap::HashMap, hashset::HashSet, ordmap::OrdMap};
 use itertools::Itertools;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -737,6 +737,7 @@ pub type TypeConstructors = HashMap<String, TypeConstructorInfo>;
 #[derive(Debug, Clone)]
 pub struct Env<'a> {
     uid: usize,
+    annotated_generic_types: HashSet<usize>,
     variables: HashMap<String, VariableInfo>,
     modules: &'a std::collections::HashMap<String, (Type, TypeConstructors)>,
     type_constructors: TypeConstructors,
@@ -752,6 +753,7 @@ impl<'a> Env<'a> {
     pub fn new(modules: &'a std::collections::HashMap<String, (Type, TypeConstructors)>) -> Self {
         let mut env = Self {
             uid: 0,
+            annotated_generic_types: HashSet::new(),
             type_constructors: hashmap![],
             variables: hashmap![],
             modules,
@@ -1044,6 +1046,10 @@ impl<'a> Env<'a> {
         i
     }
 
+    fn previous_uid(&self) -> usize {
+        self.uid - 1
+    }
+
     /// Create a new unbound type that is a specific type, we just don't
     /// know which one yet.
     ///
@@ -1116,7 +1122,7 @@ impl<'a> Env<'a> {
     pub fn type_from_ast(
         &mut self,
         ast: &ast::Type,
-        vars: &mut HashMap<String, Type>,
+        vars: &mut HashMap<String, (usize, Type)>,
         new: NewTypeAction,
     ) -> Result<Type, Error> {
         match ast {
@@ -1184,13 +1190,13 @@ impl<'a> Env<'a> {
             }
 
             ast::Type::Var { name, .. } => match vars.get(name) {
-                Some(var) => Ok(var.clone()),
+                Some((_, var)) => Ok(var.clone()),
 
                 None => {
                     match new {
                         NewTypeAction::MakeGeneric => {
                             let var = self.new_generic_var();
-                            vars.insert(name.to_string(), var.clone());
+                            vars.insert(name.to_string(), (self.previous_uid(), var.clone()));
                             Ok(var)
                         }
                         NewTypeAction::Disallow => {
@@ -1208,7 +1214,7 @@ impl<'a> Env<'a> {
         &mut self,
         fields: &Vec<(String, ast::Type)>,
         tail: &Option<Box<ast::Type>>,
-        vars: &mut HashMap<String, Type>,
+        vars: &mut HashMap<String, (usize, Type)>,
         new: NewTypeAction,
     ) -> Result<Type, Error> {
         let tail = match tail {
@@ -2094,7 +2100,8 @@ fn infer_fun(
     level: usize,
     env: &mut Env,
 ) -> Result<(Vec<Type>, TypedExpr), Error> {
-    println!("\n\n\n\n\n\n\n\n");
+    // Construct an initial type for each argument of the function- either an unbound type variable
+    // or a type provided by an annotation.
     let mut type_vars = hashmap![];
     let args_types: Vec<_> = args
         .iter()
@@ -2106,9 +2113,15 @@ fn infer_fun(
         })
         .collect::<Result<_, _>>()?;
 
-    let vars = env.variables.clone();
+    // Record generic type variables that comes from type annotations.
+    // They cannot be instantiated so we need to keep track of them.
+    let previous_annotated_generic_types = env.annotated_generic_types.clone();
+    for (id, _type) in type_vars.values() {
+        env.annotated_generic_types.insert(*id);
+    }
 
-    // Insert arguments into function body scope
+    // Insert arguments into function body scope.
+    let previous_vars = env.variables.clone();
     for (arg, t) in args.iter().zip(args_types.iter()) {
         match &arg.name {
             Some(name) => env.insert_variable(name.to_string(), Scope::Local, (*t).clone()),
@@ -2118,13 +2131,15 @@ fn infer_fun(
 
     let body = infer(body, level, env)?;
 
-    // Check that any return type annotation is accurate
+    // Check that any return type annotation is accurate.
     if let Some(ann) = return_annotation {
         let ret_typ = env.type_from_ast(ann, &mut type_vars, NewTypeAction::MakeGeneric)?;
         unify(&ret_typ, body.typ(), env).map_err(|e| convert_unify_error(e, body.meta()))?;
     }
 
-    env.variables = vars;
+    // Reset the env now that the scope of the function has ended.
+    env.variables = previous_vars;
+    env.annotated_generic_types = previous_annotated_generic_types;
     Ok((args_types, body))
 }
 
@@ -2201,20 +2216,25 @@ fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
                     .collect(),
             },
 
-            Type::Var { typ } => match &*typ.borrow() {
-                TypeVar::Link { typ } => go(*typ.clone(), ctx_level, ids, env),
+            Type::Var { typ } => {
+                match &*typ.borrow() {
+                    TypeVar::Link { typ } => return go(*typ.clone(), ctx_level, ids, env),
 
-                TypeVar::Unbound { .. } => Type::Var { typ: typ.clone() },
+                    TypeVar::Unbound { .. } => return Type::Var { typ: typ.clone() },
 
-                TypeVar::Generic { id } => match ids.get(id) {
-                    Some(t) => t.clone(),
-                    None => {
-                        let v = env.new_unbound_var(ctx_level);
-                        ids.insert(*id, v.clone());
-                        v
-                    }
-                },
-            },
+                    TypeVar::Generic { id } => match ids.get(id) {
+                        Some(t) => return t.clone(),
+                        None => {
+                            if !env.annotated_generic_types.contains(id) {
+                                let v = env.new_unbound_var(ctx_level);
+                                ids.insert(*id, v.clone());
+                                return v;
+                            }
+                        }
+                    },
+                }
+                Type::Var { typ }
+            }
 
             Type::Tuple { elems } => Type::Tuple {
                 elems: elems
@@ -2274,9 +2294,6 @@ enum UnifyError {
 }
 
 fn unify(t1: &Type, t2: &Type, env: &mut Env) -> Result<(), UnifyError> {
-    dbg!(&t1);
-    dbg!(&t2);
-
     if t1 == t2 {
         return Ok(());
     }
@@ -3836,7 +3853,7 @@ pub fn two() { one() + zero() }",
             typ: "module { fn go(a) -> a }",
         },
         Case {
-            src: "pub fn go(x: List(b)) -> List(a) { x }",
+            src: "pub fn go(x: List(b)) -> List(b) { x }",
             typ: "module { fn go(List(a)) -> List(a) }",
         },
         Case {
