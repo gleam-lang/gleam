@@ -8,6 +8,7 @@
 
 mod ast;
 mod erl;
+mod new;
 mod parser;
 mod pretty;
 mod project;
@@ -46,10 +47,17 @@ use structopt::StructOpt;
     global_settings = "&[AppSettings::ColoredHelp, AppSettings::VersionlessSubcommands]"
 ))]
 enum Command {
-    #[structopt(name = "build", about = "Compile Gleam in a rebar3 project")]
+    #[structopt(name = "build", about = "Compile a Gleam project")]
     Build {
         #[structopt(help = "location of the project root", default_value = ".")]
         path: String,
+    },
+    #[structopt(name = "new", about = "Create a new Gleam project")]
+    New {
+        #[structopt(help = "name of the project")]
+        name: String,
+        #[structopt(help = "location of the project root")]
+        path: Option<String>,
     },
 }
 
@@ -61,6 +69,7 @@ struct ProjectConfig {
 fn main() {
     match Command::from_args() {
         Command::Build { path } => command_build(path),
+        Command::New { name, path } => crate::new::create(name, path),
     }
 }
 
