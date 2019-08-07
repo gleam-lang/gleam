@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- New project structure can be generated with the `gleam new` command.
 - Functions can be annotated with their argument and return types. This may be
   used to restrict the function to a less general type than inferred by the
   compiler, or purely for documentation purposes.
