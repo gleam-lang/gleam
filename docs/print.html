@@ -4,6 +4,10 @@
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
         <title>The Gleam Book</title>
+        
+        <meta name="robots" content="noindex" />
+        
+
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -32,7 +36,10 @@
     </head>
     <body class="light">
         <!-- Provide site root to javascript -->
-        <script type="text/javascript">var path_to_root = "";</script>
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = "light";
+        </script>
 
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script type="text/javascript">
@@ -53,8 +60,8 @@
         <!-- Set the theme before any content is loaded, prevents flash -->
         <script type="text/javascript">
             var theme;
-            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { } 
-            if (theme === null || theme === undefined) { theme = 'light'; }
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
             document.body.className = theme;
             document.querySelector('html').className = theme + ' js';
         </script>
@@ -72,7 +79,10 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="getting-started/index.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li><ol class="section"><li><a href="getting-started/installing-gleam.html"><strong aria-hidden="true">2.1.</strong> Installing Gleam</a></li><li><a href="getting-started/installing-erlang.html"><strong aria-hidden="true">2.2.</strong> Installing Erlang</a></li><li><a href="getting-started/editor-support.html"><strong aria-hidden="true">2.3.</strong> Editor support</a></li><li><a href="getting-started/creating-a-project.html"><strong aria-hidden="true">2.4.</strong> Creating a project</a></li><li><a href="getting-started/example-projects.html"><strong aria-hidden="true">2.5.</strong> Example projects</a></li></ol></li><li><a href="tour/index.html"><strong aria-hidden="true">3.</strong> Language tour</a></li><li><ol class="section"><li><a href="tour/comments.html"><strong aria-hidden="true">3.1.</strong> Comments</a></li><li><a href="tour/string.html"><strong aria-hidden="true">3.2.</strong> String</a></li><li><a href="tour/bool.html"><strong aria-hidden="true">3.3.</strong> Bool</a></li><li><a href="tour/int-and-float.html"><strong aria-hidden="true">3.4.</strong> Int &amp; Float</a></li><li><a href="tour/let.html"><strong aria-hidden="true">3.5.</strong> Let bindings</a></li><li><a href="tour/tuple.html"><strong aria-hidden="true">3.6.</strong> Tuple</a></li><li><a href="tour/list.html"><strong aria-hidden="true">3.7.</strong> List</a></li><li><a href="tour/case.html"><strong aria-hidden="true">3.8.</strong> Case</a></li><li><a href="tour/function.html"><strong aria-hidden="true">3.9.</strong> Function</a></li><li><a href="tour/module.html"><strong aria-hidden="true">3.10.</strong> Module</a></li><li><a href="tour/map.html"><strong aria-hidden="true">3.11.</strong> Map</a></li><li><a href="tour/enum.html"><strong aria-hidden="true">3.12.</strong> Enum</a></li><li><a href="tour/external-function.html"><strong aria-hidden="true">3.13.</strong> External function</a></li><li><a href="tour/external-type.html"><strong aria-hidden="true">3.14.</strong> External type</a></li></ol></li><li><a href="faqs.html"><strong aria-hidden="true">4.</strong> FAQs</a></li></ol>
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li><a href="index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="getting-started/index.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li><ol class="section"><li><a href="getting-started/installing-gleam.html"><strong aria-hidden="true">2.1.</strong> Installing Gleam</a></li><li><a href="getting-started/installing-erlang.html"><strong aria-hidden="true">2.2.</strong> Installing Erlang</a></li><li><a href="getting-started/editor-support.html"><strong aria-hidden="true">2.3.</strong> Editor support</a></li><li><a href="getting-started/creating-a-project.html"><strong aria-hidden="true">2.4.</strong> Creating a project</a></li><li><a href="getting-started/example-projects.html"><strong aria-hidden="true">2.5.</strong> Example projects</a></li></ol></li><li><a href="tour/index.html"><strong aria-hidden="true">3.</strong> Language tour</a></li><li><ol class="section"><li><a href="tour/comments.html"><strong aria-hidden="true">3.1.</strong> Comments</a></li><li><a href="tour/string.html"><strong aria-hidden="true">3.2.</strong> String</a></li><li><a href="tour/bool.html"><strong aria-hidden="true">3.3.</strong> Bool</a></li><li><a href="tour/int-and-float.html"><strong aria-hidden="true">3.4.</strong> Int &amp; Float</a></li><li><a href="tour/let.html"><strong aria-hidden="true">3.5.</strong> Let bindings</a></li><li><a href="tour/tuple.html"><strong aria-hidden="true">3.6.</strong> Tuple</a></li><li><a href="tour/list.html"><strong aria-hidden="true">3.7.</strong> List</a></li><li><a href="tour/case.html"><strong aria-hidden="true">3.8.</strong> Case</a></li><li><a href="tour/function.html"><strong aria-hidden="true">3.9.</strong> Function</a></li><li><a href="tour/module.html"><strong aria-hidden="true">3.10.</strong> Module</a></li><li><a href="tour/map.html"><strong aria-hidden="true">3.11.</strong> Map</a></li><li><a href="tour/enum.html"><strong aria-hidden="true">3.12.</strong> Enum</a></li><li><a href="tour/external-function.html"><strong aria-hidden="true">3.13.</strong> External function</a></li><li><a href="tour/external-type.html"><strong aria-hidden="true">3.14.</strong> External type</a></li></ol></li><li><a href="faqs.html"><strong aria-hidden="true">4.</strong> FAQs</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -89,7 +99,7 @@
                                 <i class="fa fa-paint-brush"></i>
                             </button>
                             <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                                <li role="none"><button role="menuitem" class="theme" id="light">Light <span class="default">(default)</span></button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
                                 <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                                 <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
                                 <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
@@ -102,12 +112,13 @@
                             
                         </div>
 
-                        <h1 class="menu-title">The Gleam Book</h1> 
+                        <h1 class="menu-title">The Gleam Book</h1>
 
                         <div class="right-buttons">
                             <a href="print.html" title="Print this book" aria-label="Print this book">
                                 <i id="print-button" class="fa fa-print"></i>
                             </a>
+                            
                         </div>
                     </div>
                 </div>
@@ -136,7 +147,7 @@
 
                 <div id="content" class="content">
                     <main>
-                        <a class="header" href="#gleam" id="gleam"><h1>Gleam</h1></a>
+                        <h1><a class="header" href="#gleam" id="gleam">Gleam</a></h1>
 <p>Gleam is a statically typed functional programming language for building
 scalable concurrent systems.</p>
 <p>It compiles to <a href="http://www.erlang.org/">Erlang</a> and has straightforward
@@ -162,51 +173,51 @@ pub fn has_even_leaf(tree) {
 <p>The source code can be found at
 <a href="https://github.com/lpil/gleam">https://github.com/lpil/gleam</a>.</p>
 <p>For Gleam chat we have the IRC channel <code>#gleam-lang</code> on Freenode.</p>
-<a class="header" href="#principles" id="principles"><h2>Principles</h2></a>
-<a class="header" href="#be-safe" id="be-safe"><h3>Be safe</h3></a>
+<h2><a class="header" href="#principles" id="principles">Principles</a></h2>
+<h3><a class="header" href="#be-safe" id="be-safe">Be safe</a></h3>
 <p>An expressive type system inspired by the ML family of languages helps us find
 and prevent bugs at compile time, long before it reaches your users.</p>
 <p>For the problems the type system can't solve (such as your server being hit by
 a bolt of lightning) the Erlang/OTP runtime provides well tested mechanisms
 for gracefully handling failure.</p>
-<a class="header" href="#be-friendly" id="be-friendly"><h3>Be friendly</h3></a>
+<h3><a class="header" href="#be-friendly" id="be-friendly">Be friendly</a></h3>
 <p>Hunting down bugs can be stressful so feedback from the compiler should be
 as clear and helpful as possible. We want to spend more time working on our
 application and less time looking for typos or deciphering cryptic error
 messages.</p>
 <p>As a community we want to be friendly too. People of all backgrounds, genders,
 and experience levels are welcome and must receive equal respect.</p>
-<a class="header" href="#be-performant" id="be-performant"><h3>Be performant</h3></a>
+<h3><a class="header" href="#be-performant" id="be-performant">Be performant</a></h3>
 <p>The Erlang/OTP runtime is known for its speed and ability to scale, enabling
 organisations such as WhatsApp and Ericsson to reliably handle massive amounts
 of traffic at low latency. Gleam should take full advantage of this runtime
 and be as fast as other BEAM languages such as Erlang and Elixir.</p>
-<a class="header" href="#be-a-good-citizen" id="be-a-good-citizen"><h3>Be a good citizen</h3></a>
+<h3><a class="header" href="#be-a-good-citizen" id="be-a-good-citizen">Be a good citizen</a></h3>
 <p>Gleam makes it easy to use code written in other BEAM languages such as
 Erlang, Elixir and LFE, so there's a rich ecosystem of tools and library for
 Gleam users to make use of.</p>
 <p>Users of other BEAM languages should in return be able to take advantage of
 Gleam, either by transparently making use of libraries written in Gleam, or by
 adding Gleam modules to their existing project with minimal fuss.</p>
-<a class="header" href="#getting-started" id="getting-started"><h1>Getting started</h1></a>
+<h1><a class="header" href="#getting-started" id="getting-started">Getting started</a></h1>
 <p>In this chapter we get the Gleam language set up on your computer and learn
 how to create an navigate a Gleam project.</p>
 <p>Good luck, have fun!</p>
-<a class="header" href="#installing-gleam" id="installing-gleam"><h1>Installing Gleam</h1></a>
-<a class="header" href="#precompiled-for-linux-or-macos" id="precompiled-for-linux-or-macos"><h2>Precompiled for Linux or macOS</h2></a>
+<h1><a class="header" href="#installing-gleam" id="installing-gleam">Installing Gleam</a></h1>
+<h2><a class="header" href="#precompiled-for-linux-or-macos" id="precompiled-for-linux-or-macos">Precompiled for Linux or macOS</a></h2>
 <p>The easiest way to install Gleam on Linux and Apple macOS is to download a
 prebuilt version of the compiler from the <a href="https://github.com/lpil/gleam/releases">GitHub release
 page</a>.</p>
-<a class="header" href="#asdf-version-manager" id="asdf-version-manager"><h2>asdf version manager</h2></a>
+<h2><a class="header" href="#asdf-version-manager" id="asdf-version-manager">asdf version manager</a></h2>
 <p><a href="https://github.com/asdf-vm/asdf">asdf</a> is a tool for installing and managing
 multiple version of programming languages at the same time. Install the
 <a href="https://github.com/vic/asdf-gleam">asdf-gleam plugin</a> to manage Gleam with
 asdf.</p>
-<a class="header" href="#arch-linux" id="arch-linux"><h2>Arch Linux</h2></a>
+<h2><a class="header" href="#arch-linux" id="arch-linux">Arch Linux</a></h2>
 <p>Gleam is available through the <a href="https://wiki.archlinux.org/index.php/Arch_User_Repository">Arch User Repository</a>
 as package <code>gleam</code>. You can use your prefered <a href="https://wiki.archlinux.org/index.php/AUR_helpers">helper</a>
 to install it or clone it for manual build from <a href="https://aur.archlinux.org/gleam.git">https://aur.archlinux.org/gleam.git</a>.</p>
-<a class="header" href="#build-from-source" id="build-from-source"><h2>Build from source</h2></a>
+<h2><a class="header" href="#build-from-source" id="build-from-source">Build from source</a></h2>
 <p>The compiler is written in the Rust programming language and so if you wish to
 build Gleam from source you will need to <a href="https://www.rust-lang.org/tools/install">install the Rust
 compiler</a>.</p>
@@ -222,7 +233,7 @@ make install
 # Prints &quot;gleam $VERSION&quot;
 gleam --version
 </code></pre>
-<a class="header" href="#installing-erlang" id="installing-erlang"><h1>Installing Erlang</h1></a>
+<h1><a class="header" href="#installing-erlang" id="installing-erlang">Installing Erlang</a></h1>
 <p>Gleam compiles to Erlang code, so Erlang needs to be installed to run Gleam
 code.</p>
 <p>Precompiled builds for many popular operating systems can be downloaded from
@@ -235,36 +246,36 @@ this if all is well:</p>
 <pre><code>$ erl -version
 Erlang (SMP,ASYNC_THREADS,HIPE) (BEAM) emulator version 10.1
 </code></pre>
-<a class="header" href="#linux" id="linux"><h3>Linux</h3></a>
-<a class="header" href="#debian-linux" id="debian-linux"><h4>Debian Linux</h4></a>
+<h3><a class="header" href="#linux" id="linux">Linux</a></h3>
+<h4><a class="header" href="#debian-linux" id="debian-linux">Debian Linux</a></h4>
 <pre><code class="language-sh">sudo apt-get update
 sudo apt-get install erlang
 </code></pre>
-<a class="header" href="#ubuntu-linux" id="ubuntu-linux"><h4>Ubuntu Linux</h4></a>
+<h4><a class="header" href="#ubuntu-linux" id="ubuntu-linux">Ubuntu Linux</a></h4>
 <pre><code class="language-sh">sudo apt-get update
 sudo apt-get install erlang
 </code></pre>
-<a class="header" href="#mac-os-x" id="mac-os-x"><h3>Mac OS X</h3></a>
-<a class="header" href="#using-homebrew" id="using-homebrew"><h4>Using Homebrew</h4></a>
+<h3><a class="header" href="#mac-os-x" id="mac-os-x">Mac OS X</a></h3>
+<h4><a class="header" href="#using-homebrew" id="using-homebrew">Using Homebrew</a></h4>
 <p>With <a href="https://brew.sh">Homebrew</a> installed run the following:</p>
 <pre><code class="language-sh">brew update
 brew install erlang
 </code></pre>
-<a class="header" href="#windows" id="windows"><h3>Windows</h3></a>
-<a class="header" href="#using-chocolatey" id="using-chocolatey"><h4>Using Chocolatey</h4></a>
+<h3><a class="header" href="#windows" id="windows">Windows</a></h3>
+<h4><a class="header" href="#using-chocolatey" id="using-chocolatey">Using Chocolatey</a></h4>
 <p>With <a href="https://chocolatey.org/">Chocolatey</a> installed on your computer run the
 following:</p>
 <pre><code>choco install erlang
 </code></pre>
-<a class="header" href="#using-version-managers" id="using-version-managers"><h3>Using version managers</h3></a>
-<a class="header" href="#asdf" id="asdf"><h4>asdf</h4></a>
+<h3><a class="header" href="#using-version-managers" id="using-version-managers">Using version managers</a></h3>
+<h4><a class="header" href="#asdf" id="asdf">asdf</a></h4>
 <p>The asdf version manager has a plugin for installing Erlang. Installation and
 usage instructions can be found here:</p>
 <ul>
 <li><a href="https://github.com/asdf-vm/asdf">https://github.com/asdf-vm/asdf</a></li>
 <li><a href="https://github.com/asdf-vm/asdf-erlang">https://github.com/asdf-vm/asdf-erlang</a></li>
 </ul>
-<a class="header" href="#editor-support" id="editor-support"><h1>Editor support</h1></a>
+<h1><a class="header" href="#editor-support" id="editor-support">Editor support</a></h1>
 <p>Gleam plugins are available for several popular editors. If one exists for
 your editor of choice consider installing it for syntax highlighting and other
 niceties.</p>
@@ -273,16 +284,16 @@ niceties.</p>
 <li><strong>Emacs</strong> - <a href="https://github.com/MainShayne233/gleam-mode">https://github.com/MainShayne233/gleam-mode</a></li>
 <li><strong>Visual Studio Code</strong> - <a href="https://github.com/rawburt/vscode-gleam-syntax">https://github.com/rawburt/vscode-gleam-syntax</a></li>
 </ul>
-<a class="header" href="#creating-a-project" id="creating-a-project"><h1>Creating a project</h1></a>
-<a class="header" href="#installing-the-rebar3-build-tool" id="installing-the-rebar3-build-tool"><h2>Installing the rebar3 build tool</h2></a>
+<h1><a class="header" href="#creating-a-project" id="creating-a-project">Creating a project</a></h1>
+<h2><a class="header" href="#installing-the-rebar3-build-tool" id="installing-the-rebar3-build-tool">Installing the rebar3 build tool</a></h2>
 <p><strong>Note</strong>: Gleam's tooling is very young and in a state of flux. Expect rough
 edges and breaking changes to come.</p>
 <p>The Gleam compiler can build Gleam projects that are managed with the standard
 Erlang build tool, rebar3. If you don't have rebar3 installed please <a href="https://www.rebar3.org/">install
-it now</a> and the <a href="https://github.com/gleam-lang/rebar_gleam#installation">rebar_gleam</a> plugin.</p>
-<a class="header" href="#generating-a-project" id="generating-a-project"><h2>Generating a project</h2></a>
-<p>Now a project can be generated using rebar3 like so:</p>
-<pre><code class="language-sh">rebar3 new gleam_lib my_fantastic_project
+it now</a>.</p>
+<h2><a class="header" href="#generating-a-project" id="generating-a-project">Generating a project</a></h2>
+<p>Now a project can be generated like so:</p>
+<pre><code class="language-sh">gleam new my_fantastic_project
 cd my_fantastic_project
 </code></pre>
 <p>You'll now have a project with this structure:</p>
@@ -299,7 +310,8 @@ cd my_fantastic_project
 
 2 directories, 7 files
 </code></pre>
-<p>Here are some commonly used commands rebar3 commands that you can use with
+<p>The project is managed and built using rebar3, the standard Erlang build tool.
+Here are some commonly used commands rebar3 commands that you can use with
 your new project:</p>
 <pre><code class="language-sh"># Run an interactive shell with your code loaded (Erlang syntax)
 rebar3 shell
@@ -308,22 +320,22 @@ rebar3 shell
 rebar3 eunit
 </code></pre>
 <p>More information can be found on the <a href="https://www.rebar3.org/docs">rebar3 documentation website</a>.</p>
-<a class="header" href="#what-next" id="what-next"><h2>What next?</h2></a>
-<p>Want to see some Gleam code? See the <a href="./example-projects.html">example projects</a>.</p>
-<p>Looking learn the language? Check out the <a href="../tour">language tour</a>.</p>
+<h2><a class="header" href="#what-next" id="what-next">What next?</a></h2>
+<p>Want to see some Gleam code? See the <a href="getting-started/./example-projects.html">example projects</a>.</p>
+<p>Looking learn the language? Check out the <a href="getting-started/../tour">language tour</a>.</p>
 <p>Need ideas for a project? We have a <a href="https://github.com/gleam-lang/suggestions/issues?q=is%3Aopen+is%3Aissue+label%3Aarea%3Alibraries">list of libraries</a> that need
 writing.</p>
-<a class="header" href="#example-projects" id="example-projects"><h1>Example projects</h1></a>
+<h1><a class="header" href="#example-projects" id="example-projects">Example projects</a></h1>
 <p>When learning a new language it can often be used to have example code to
 refer to and learn from, so here's some examples:</p>
-<a class="header" href="#a-hrefhttpsgithubcomgleam-langexample-url-shortenertiny-url-shortenera" id="a-hrefhttpsgithubcomgleam-langexample-url-shortenertiny-url-shortenera"><h2><a href="https://github.com/gleam-lang/example-url-shortener">Tiny: URL shortener</a></h2></a>
+<h2><a class="header" href="#a-hrefhttpsgithubcomgleam-langexample-url-shortenertiny-url-shortenera" id="a-hrefhttpsgithubcomgleam-langexample-url-shortenertiny-url-shortenera"><a href="https://github.com/gleam-lang/example-url-shortener">Tiny: URL shortener</a></a></h2>
 <p>A simple HTML serving web application that takes URLs and gives the user a
 shorter URL to use in its place.</p>
 <p>Uses the Elli web server and the Postgresql database via the epgsql client.</p>
-<a class="header" href="#a-hrefhttpsgithubcomlpilgleamtreemastergleam_stdlibthe-gleam-standard-librarya" id="a-hrefhttpsgithubcomlpilgleamtreemastergleam_stdlibthe-gleam-standard-librarya"><h2><a href="https://github.com/lpil/gleam/tree/master/gleam_stdlib">The Gleam standard library</a></h2></a>
+<h2><a class="header" href="#a-hrefhttpsgithubcomlpilgleamtreemastergleam_stdlibthe-gleam-standard-librarya" id="a-hrefhttpsgithubcomlpilgleamtreemastergleam_stdlibthe-gleam-standard-librarya"><a href="https://github.com/lpil/gleam/tree/master/gleam_stdlib">The Gleam standard library</a></a></h2>
 <p>A collection of modules for working with the common data structures of Gleam.
 Makes heavy use of Erlang FFI.</p>
-<a class="header" href="#language-tour" id="language-tour"><h1>Language Tour</h1></a>
+<h1><a class="header" href="#language-tour" id="language-tour">Language Tour</a></h1>
 <p>In this chapter we explore the fundamentals of the Gleam language, namely its
 syntax, core data structures, flow control features, and static type system.</p>
 <p>After completion the reader should know enough to start reading and writing
@@ -332,7 +344,7 @@ Gleam code, assuming they have some prior programming experience.</p>
 This is useful for programmers with Erlang or Elixir experience who wish to
 use Gleam alongside these languages. If you are using Gleam alone this
 information can be safely ignored.</p>
-<a class="header" href="#comments" id="comments"><h1>Comments</h1></a>
+<h1><a class="header" href="#comments" id="comments">Comments</a></h1>
 <p>Gleam allows you to write comments in your code.</p>
 <p>Here’s a simple comment:</p>
 <pre><code class="language-rust noplaypen">// Hello, world!
@@ -356,7 +368,7 @@ pub fn multiply(x, y) {
   x * y 
 }
 </code></pre>
-<a class="header" href="#string" id="string"><h1>String</h1></a>
+<h1><a class="header" href="#string" id="string">String</a></h1>
 <p>Gleam's has UTF-8 binary strings, written as text surrounded by double quotes.</p>
 <pre><code class="language-rust noplaypen">&quot;Hello, Gleam!&quot;
 </code></pre>
@@ -367,7 +379,7 @@ Gleam!&quot;
 <p>Special characters such as <code>&quot;</code> need to be escaped with a <code>\</code> character.</p>
 <pre><code class="language-rust noplaypen">&quot;Here is a double quote -&gt; \&quot; &lt;-&quot;
 </code></pre>
-<a class="header" href="#bool" id="bool"><h1>Bool</h1></a>
+<h1><a class="header" href="#bool" id="bool">Bool</a></h1>
 <p>A Bool can be either <code>True</code> or <code>False</code>.</p>
 <p>Gleam defines a handful of operators that work with Bools.</p>
 <pre><code class="language-rust noplaypen">False &amp;&amp; False // =&gt; False
@@ -384,7 +396,7 @@ True || True   // =&gt; True
 hand side if they don't have to.</p>
 <p><code>&amp;&amp;</code> evaluates the right hand side if the left hand side is <code>True</code>.</p>
 <p><code>||</code> evaluates the right hand side if the left hand side is <code>False</code>.</p>
-<a class="header" href="#erlang-interop" id="erlang-interop"><h2>Erlang interop</h2></a>
+<h2><a class="header" href="#erlang-interop" id="erlang-interop">Erlang interop</a></h2>
 <p>While written in the code using a capital letter, they are represented at
 runtime with the atoms <code>true</code> and <code>false</code>, making them compatible with Elixir
 and Erlang's booleans.</p>
@@ -398,9 +410,9 @@ False
 true.
 false.
 </code></pre>
-<a class="header" href="#int-and-float" id="int-and-float"><h1>Int and Float</h1></a>
+<h1><a class="header" href="#int-and-float" id="int-and-float">Int and Float</a></h1>
 <p>Gleam's main number types are Int and Float.</p>
-<a class="header" href="#ints" id="ints"><h2>Ints</h2></a>
+<h2><a class="header" href="#ints" id="ints">Ints</a></h2>
 <p>Ints are &quot;whole&quot; numbers.</p>
 <pre><code class="language-rust noplaypen">1
 2
@@ -414,7 +426,7 @@ false.
 3 * 3 // =&gt; 9
 5 % 2 // =&gt; 1
 </code></pre>
-<a class="header" href="#floats" id="floats"><h2>Floats</h2></a>
+<h2><a class="header" href="#floats" id="floats">Floats</a></h2>
 <p>Floats are numbers that have a decimal point.</p>
 <pre><code class="language-rust noplaypen">1.5
 2.0
@@ -426,7 +438,7 @@ false.
 5.0 /. 2.0 // =&gt; 2.5
 3.0 *. 3.1 // =&gt; 9.3
 </code></pre>
-<a class="header" href="#let-bindings" id="let-bindings"><h1>Let bindings</h1></a>
+<h1><a class="header" href="#let-bindings" id="let-bindings">Let bindings</a></h1>
 <p>A value can be given a name using <code>let</code>. Names can be reused by later let
 bindings, but the values contained are <em>immutable</em>, meaning the values
 themselves cannot be changed.</p>
@@ -437,7 +449,7 @@ let x = 2
 x  // =&gt; 2
 y  // =&gt; 1
 </code></pre>
-<a class="header" href="#tuples" id="tuples"><h1>Tuples</h1></a>
+<h1><a class="header" href="#tuples" id="tuples">Tuples</a></h1>
 <p>Tuples are an ordered collection of elements of a fixed size. Each element can
 be of a different type.</p>
 <pre><code class="language-rust noplaypen">{&quot;Cat&quot;, True}  // Type {String, Bool}
@@ -450,7 +462,7 @@ let {x, y} = values
 x  // =&gt; 1
 y  // =&gt; 2.0
 </code></pre>
-<a class="header" href="#list" id="list"><h1>List</h1></a>
+<h1><a class="header" href="#list" id="list">List</a></h1>
 <p>Lists are ordered collections of values. They're one of the most common data
 structures in Gleam.</p>
 <p>Lists are <em>homogeneous</em>, meaning all the elements of a List must be of the
@@ -473,7 +485,7 @@ let y = [1 | x]
 x  // =&gt; [2, 3]
 y  // =&gt; [1, 2, 3]
 </code></pre>
-<a class="header" href="#case" id="case"><h1>Case</h1></a>
+<h1><a class="header" href="#case" id="case">Case</a></h1>
 <p>The <code>case</code> expression is the most common kind of flow control in Gleam code. It
 allows us to say &quot;if the data has this shape then do that&quot;, which we call
 <em>pattern matching</em>.</p>
@@ -505,7 +517,7 @@ expression with a <code>let</code> binding.</p>
 
 description  // =&gt; &quot;It's true!&quot;
 </code></pre>
-<a class="header" href="#destructuring" id="destructuring"><h2>Destructuring</h2></a>
+<h2><a class="header" href="#destructuring" id="destructuring">Destructuring</a></h2>
 <p>Like <code>let</code> bindings a <code>case</code> expression can be used to destructure values that
 contain other values, such as tuples and lists.</p>
 <pre><code class="language-rust noplaypen">case xs {
@@ -531,8 +543,8 @@ concisely express flow control that might be verbose without pattern matching.</
 | other -&gt; &quot;Something else&quot;
 }
 </code></pre>
-<a class="header" href="#function" id="function"><h1>Function</h1></a>
-<a class="header" href="#named-functions" id="named-functions"><h2>Named functions</h2></a>
+<h1><a class="header" href="#function" id="function">Function</a></h1>
+<h2><a class="header" href="#named-functions" id="named-functions">Named functions</a></h2>
 <p>Named functions in Gleam are defined using the <code>pub fn</code> keywords.</p>
 <pre><code class="language-rust noplaypen">pub fn add(x, y) {
   x + y
@@ -557,7 +569,7 @@ pub fn add_two(x) {
   twice(add_one, x)
 }
 </code></pre>
-<a class="header" href="#type-annotations" id="type-annotations"><h2>Type annotations</h2></a>
+<h2><a class="header" href="#type-annotations" id="type-annotations">Type annotations</a></h2>
 <p>Function arguments can be optionally be annotated with their type. The
 compiler will check these annotations and ensure they are correct.</p>
 <pre><code class="language-rust noplaypen">fn identity(x: Int) -&gt; Int {
@@ -569,7 +581,7 @@ compiler will check these annotations and ensure they are correct.</p>
 of the function being <code>fn(Int) -&gt; Int</code>. This shows how type annotations can be
 used to create functions with types less general than the compiler may have
 inferred otherwise.</p>
-<a class="header" href="#anonymous-functions" id="anonymous-functions"><h2>Anonymous functions</h2></a>
+<h2><a class="header" href="#anonymous-functions" id="anonymous-functions">Anonymous functions</a></h2>
 <p>Anonymous functions can be defined with a similar syntax.</p>
 <pre><code class="language-rust noplaypen">pub fn run() {
   let add = fn(x, y) { x + y }
@@ -577,7 +589,7 @@ inferred otherwise.</p>
   add(1, 2)
 }
 </code></pre>
-<a class="header" href="#function-capturing" id="function-capturing"><h2>Function capturing</h2></a>
+<h2><a class="header" href="#function-capturing" id="function-capturing">Function capturing</a></h2>
 <p>There is a shorthand syntax for creating anonymous functions that take one
 argument and call another function. The <code>_</code> is used to indicate where the
 argument should be passed.</p>
@@ -605,7 +617,7 @@ pub fn run() {
   |&gt; add(_, 9)
 }
 </code></pre>
-<a class="header" href="#module" id="module"><h1>Module</h1></a>
+<h1><a class="header" href="#module" id="module">Module</a></h1>
 <p>Gleam programs are made up of bundles of functions and types called modules.
 Each module has its own namespace and can export types and values to be used
 by other modules in the program.</p>
@@ -633,7 +645,7 @@ project would live within a directory with the name of the project, such as
 <p>For the functions <code>count_down</code> and <code>blast_off</code> we have omitted the <code>pub</code>
 keyword, so these functions are <em>private</em> module functions. They can only be
 called by other functions within the same module.</p>
-<a class="header" href="#import" id="import"><h2>Import</h2></a>
+<h2><a class="header" href="#import" id="import">Import</a></h2>
 <p>To use functions or types from another module we need to import them using the
 <code>import</code> keyword.</p>
 <pre><code class="language-rust noplaypen">// inside src/nasa/moon_base.gleam
@@ -650,7 +662,7 @@ pub fn explore_space() {
 function using the <code>:</code> operator.
 If we had attempted to call <code>count_down</code> it would result in a compile time
 error as this function is private in the <code>rocket_ship</code> module.</p>
-<a class="header" href="#named-import" id="named-import"><h2>Named import</h2></a>
+<h2><a class="header" href="#named-import" id="named-import">Named import</a></h2>
 <p>It is also possible to give a module a custom name when importing it using the
 <code>as</code> keyword.</p>
 <pre><code class="language-rust noplaypen">import unix/cat
@@ -658,7 +670,7 @@ import animal/cat as kitty
 </code></pre>
 <p>This may be useful to differentiate between multiple modules that would have
 the same default name when imported.</p>
-<a class="header" href="#first-class-modules" id="first-class-modules"><h2>First class modules</h2></a>
+<h2><a class="header" href="#first-class-modules" id="first-class-modules">First class modules</a></h2>
 <p>Modules in Gleam are first class values and can be assigned to variables,
 passed to functions, or anything else that we can do with regular values.</p>
 <pre><code class="language-rust noplaypen">import nasa/rocket_ship
@@ -679,7 +691,7 @@ pub fn run() {
 called it with various different modules.</p>
 <p>The <code>perform_launch</code> function doesn't care what module it takes, so long as it
 has a public function called <code>launch</code> that takes no arguments.</p>
-<a class="header" href="#map" id="map"><h1>Map</h1></a>
+<h1><a class="header" href="#map" id="map">Map</a></h1>
 <p>Gleam's maps are a collection of names and values where each value can be
 of any type.</p>
 <pre><code class="language-rust noplaypen">{
@@ -687,14 +699,14 @@ of any type.</p>
   size = 40,
 }
 </code></pre>
-<a class="header" href="#accessing-field-values" id="accessing-field-values"><h2>Accessing field values</h2></a>
+<h2><a class="header" href="#accessing-field-values" id="accessing-field-values">Accessing field values</a></h2>
 <p>Map values can be accessed using the <code>map.field_name</code> syntax.</p>
 <pre><code class="language-rust noplaypen">let pup = { name = &quot;Rex&quot;, size = 40 }
 let name = pup.name
 
 name  // =&gt; &quot;Rex&quot;
 </code></pre>
-<a class="header" href="#inserting-field-values" id="inserting-field-values"><h2>Inserting field values</h2></a>
+<h2><a class="header" href="#inserting-field-values" id="inserting-field-values">Inserting field values</a></h2>
 <p>A new map with updated or additional fields can be created using the
 <code>{ map | field_name = value }</code> update syntax.</p>
 <p>The updated map fields do not have to have the same types as the original
@@ -705,7 +717,7 @@ let dog = { pup | size = 70, playful = True }
 pup  // { name = &quot;Rex&quot;, size = 40 }
 dog  // { name = &quot;Rex&quot;, size = 70, playful = True }
 </code></pre>
-<a class="header" href="#types" id="types"><h2>Types</h2></a>
+<h2><a class="header" href="#types" id="types">Types</a></h2>
 <p>The type of a map depends upon the names and types of its fields.</p>
 <pre><code class="language-rust noplaypen">{ name = &quot;Rex&quot; }             // Type { name = String }
 { name = &quot;Rex&quot;, size = 40 }  // Type { name = String, size = Int }
@@ -718,7 +730,7 @@ not exist or has the incorrect type.</p>
 pup.address   // Compile time error! Unknown field
 pup.name + 1  // Compile time error! Wrong type
 </code></pre>
-<a class="header" href="#parameterised-map-fields" id="parameterised-map-fields"><h3>Parameterised map fields</h3></a>
+<h3><a class="header" href="#parameterised-map-fields" id="parameterised-map-fields">Parameterised map fields</a></h3>
 <p>Gleam's type system aims to be as permissive when it comes to maps passed
 to functions. Take this function for example.</p>
 <pre><code class="language-rust noplaypen">fn get_following_year(map) {
@@ -739,10 +751,10 @@ get_following_year(book)  // =&gt; 1996
 get_following_year(soup)  // Compile time error! No year field
 get_following_year(wine)  // Compile time error! Wrong field type
 </code></pre>
-<a class="header" href="#erlang-interop-1" id="erlang-interop-1"><h2>Erlang interop</h2></a>
+<h2><a class="header" href="#erlang-interop-1" id="erlang-interop-1">Erlang interop</a></h2>
 <p>At runtime Gleam maps are Erlang maps with atom keys. They are similar to
 Elixir's structs, but do not need to be declared prior to being used.</p>
-<a class="header" href="#enums" id="enums"><h1>Enums</h1></a>
+<h1><a class="header" href="#enums" id="enums">Enums</a></h1>
 <p>Enums in Gleam are a way of modeling data that can be one of a few different
 variants. They must be declared before use, and the names of variants must be
 unique for the given module.</p>
@@ -763,7 +775,7 @@ using a let binding.</p>
 let rick = LoggedIn(&quot;Rick&quot;)
 let visitor = Guest
 </code></pre>
-<a class="header" href="#destructuring-1" id="destructuring-1"><h2>Destructuring</h2></a>
+<h2><a class="header" href="#destructuring-1" id="destructuring-1">Destructuring</a></h2>
 <p>When given an enum we can pattern match on it to determine which variant it is
 and to assign names to any contained values.</p>
 <pre><code class="language-rust noplaypen">fn get_name(user) {
@@ -782,7 +794,7 @@ let Points(p) = score
 
 p // =&gt; 50
 </code></pre>
-<a class="header" href="#erlang-interop-2" id="erlang-interop-2"><h2>Erlang interop</h2></a>
+<h2><a class="header" href="#erlang-interop-2" id="erlang-interop-2">Erlang interop</a></h2>
 <p>At runtime enum variants with no contained values become atoms. The atoms are
 written in <code>snake_case</code> rather than <code>CamelCase</code> so <code>LoggedIn</code> becomes
 <code>logged_in</code>.</p>
@@ -799,7 +811,7 @@ LoggedIn(&quot;Kim&quot;)
 guest.
 {logged_in, &lt;&lt;&quot;Kim&quot;&gt;&gt;}.
 </code></pre>
-<a class="header" href="#external-function" id="external-function"><h1>External function</h1></a>
+<h1><a class="header" href="#external-function" id="external-function">External function</a></h1>
 <p>Gleam is just one of many languages on the Erlang virtual machine and at times
 we may want to use functions from these other languages in our Gleam programs.
 To enable this Gleam allows the importing of <em>external functions</em>, which may
@@ -809,7 +821,7 @@ different type system, so the compiler is unable to determine the type of the
 function and instead the programmer must inform the compiler the type.</p>
 <p>Gleam trusts that the type given is correct so an inaccurate type annotation
 can result in unexpected behaviour and crashes at runtime. Be careful!</p>
-<a class="header" href="#example" id="example"><h2>Example</h2></a>
+<h2><a class="header" href="#example" id="example">Example</a></h2>
 <p>The Erlang <code>rand</code> module has a function named <code>uniform</code> that takes no
 arguments and returns a <code>Float</code>.</p>
 <p>The Elixir module <code>IO</code> has a function named <code>inspect</code> that takes any value,
@@ -821,7 +833,7 @@ so like this:</p>
 // Elixir modules start with `Elixir.`
 pub external fn inspect(a) -&gt; a = &quot;Elixir.IO&quot; &quot;inspect&quot;
 </code></pre>
-<a class="header" href="#external-type" id="external-type"><h1>External type</h1></a>
+<h1><a class="header" href="#external-type" id="external-type">External type</a></h1>
 <p>In addition to importing external functions we can also import external types.
 Gleam knows nothing about the runtime representation of these types and so
 they cannot be pattern matched on, but they can be used with external
@@ -836,16 +848,16 @@ pub external fn length(Queue(a)) -&gt; Int = &quot;queue&quot; &quot;len&quot;
 
 pub external fn push(Queue(a), a) -&gt; Queue(a) = &quot;queue&quot; &quot;in&quot;
 </code></pre>
-<a class="header" href="#faqs" id="faqs"><h1>FAQs</h1></a>
+<h1><a class="header" href="#faqs" id="faqs">FAQs</a></h1>
 <ul>
-<li><a href="#why-is-the-compiler-written-in-rust">Why is the compiler written in Rust?</a></li>
-<li><a href="#will-gleam-have-type-classes">Will Gleam have type classes?</a></li>
-<li><a href="#how-is-message-passing-typed">How is message passing typed?</a></li>
-<li><a href="#how-does-gleam-compare-to-alpaca">How does Gleam compare to Alpaca?</a></li>
-<li><a href="#should-i-put-gleam-in-production">Should I put Gleam in production?</a></li>
-<li><a href="#is-it-good">Is it good?</a></li>
+<li><a href="faqs.html#why-is-the-compiler-written-in-rust">Why is the compiler written in Rust?</a></li>
+<li><a href="faqs.html#will-gleam-have-type-classes">Will Gleam have type classes?</a></li>
+<li><a href="faqs.html#how-is-message-passing-typed">How is message passing typed?</a></li>
+<li><a href="faqs.html#how-does-gleam-compare-to-alpaca">How does Gleam compare to Alpaca?</a></li>
+<li><a href="faqs.html#should-i-put-gleam-in-production">Should I put Gleam in production?</a></li>
+<li><a href="faqs.html#is-it-good">Is it good?</a></li>
 </ul>
-<a class="header" href="#why-is-the-compiler-written-in-rust" id="why-is-the-compiler-written-in-rust"><h2>Why is the compiler written in Rust?</h2></a>
+<h2><a class="header" href="#why-is-the-compiler-written-in-rust" id="why-is-the-compiler-written-in-rust">Why is the compiler written in Rust?</a></h2>
 <p>Prototype versions of the Gleam compiler was written in Erlang, but a switch was
 made to Rust as the lack of static types was making refactoring a slow and
 error prone process. A full Rust rewrite of the prototype resulted in the
@@ -853,12 +865,12 @@ removal of a lot of tech debt and bugs, and the performance boost is nice too!</
 <p>One day Gleam may have a compiler written in Gleam, but for now we are focused
 on developing other areas of the language such as libraries, tooling, and
 documentation.</p>
-<a class="header" href="#will-gleam-have-type-classes" id="will-gleam-have-type-classes"><h2>Will Gleam have type classes?</h2></a>
+<h2><a class="header" href="#will-gleam-have-type-classes" id="will-gleam-have-type-classes">Will Gleam have type classes?</a></h2>
 <p>Some form of ad-hoc polymorphism could be a good addition to the ergonomics of
 the language, though what shape that may take is unclear. Type classes are one
 option, OCaml style implicit modules are another, or perhaps it'll be
 something else entirely.</p>
-<a class="header" href="#how-is-message-passing-typed" id="how-is-message-passing-typed"><h2>How is message passing typed?</h2></a>
+<h2><a class="header" href="#how-is-message-passing-typed" id="how-is-message-passing-typed">How is message passing typed?</a></h2>
 <p>Gleam doesn't currently have first class support for the BEAM's
 concurrency primitives such as <code>receive</code>, <code>send</code>, and <code>spawn</code>. This is because
 research is still ongoing as to the best way to apply a strong type system to
@@ -867,7 +879,7 @@ should be used via the Erlang FFI, making them dynamically typed.</p>
 <p>Many OTP patterns such as <code>gen_server</code> are functional in nature and don't
 require direct use of these primitives so these behaviours can be implemented
 in Gleam today.</p>
-<a class="header" href="#how-does-gleam-compare-to-alpaca" id="how-does-gleam-compare-to-alpaca"><h2>How does Gleam compare to Alpaca?</h2></a>
+<h2><a class="header" href="#how-does-gleam-compare-to-alpaca" id="how-does-gleam-compare-to-alpaca">How does Gleam compare to Alpaca?</a></h2>
 <p><a href="https://github.com/alpaca-lang/alpaca">Alpaca</a> is similar to Gleam in that it is a statically typed language
 for the Erlang VM that is inspired by the ML family of languages. It's a
 wonderful project and we hope they are wildly successful!</p>
@@ -882,14 +894,14 @@ family languages.</li>
 <li>Alpaca compiles to Core Erlang, Gleam compiles to regular Erlang.</li>
 </ul>
 <p>Alpaca is great, check it out! :)</p>
-<a class="header" href="#should-i-put-gleam-in-production" id="should-i-put-gleam-in-production"><h2>Should I put Gleam in production?</h2></a>
+<h2><a class="header" href="#should-i-put-gleam-in-production" id="should-i-put-gleam-in-production">Should I put Gleam in production?</a></h2>
 <p>Probably not. Gleam is a very young language and there may be all kinds of
 problems and breaking changes down the line.</p>
 <p>Having said that, the Erlang VM is extremely mature and well tested, and if
 you decide to move away from Gleam the language you can compile your code to
 Erlang and maintain that in future.</p>
-<a class="header" href="#is-it-good" id="is-it-good"><h2>Is it good?</h2></a>
-<p>Yes.</p>
+<h2><a class="header" href="#is-it-good" id="is-it-good">Is it good?</a></h2>
+<p>Yes, I think so. :)</p>
 
                     </main>
 

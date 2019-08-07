@@ -7,16 +7,16 @@ edges and breaking changes to come.
 
 The Gleam compiler can build Gleam projects that are managed with the standard
 Erlang build tool, rebar3. If you don't have rebar3 installed please [install
-it now](https://www.rebar3.org/) and the [rebar_gleam][rebar_gleam] plugin.
+it now](https://www.rebar3.org/).
 
 [rebar_gleam]: https://github.com/gleam-lang/rebar_gleam#installation
 
 ## Generating a project
 
-Now a project can be generated using rebar3 like so:
+Now a project can be generated like so:
 
 ```sh
-rebar3 new gleam_lib my_fantastic_project
+gleam new my_fantastic_project
 cd my_fantastic_project
 ```
 
@@ -37,6 +37,7 @@ You'll now have a project with this structure:
 2 directories, 7 files
 ```
 
+The project is managed and built using rebar3, the standard Erlang build tool.
 Here are some commonly used commands rebar3 commands that you can use with
 your new project:
 

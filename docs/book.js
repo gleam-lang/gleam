@@ -101,11 +101,15 @@ function playpen_text(playpen) {
         }
 
         let text = playpen_text(code_block);
+        let classes = code_block.querySelector('code').classList;
+        let has_2018 = classes.contains("edition2018");
+        let edition = has_2018 ? "2018" : "2015";
 
         var params = {
             version: "stable",
             optimize: "0",
-            code: text
+            code: text,
+            edition: edition
         };
 
         if (text.indexOf("#![feature") !== -1) {
@@ -330,13 +334,11 @@ function playpen_text(playpen) {
             stylesheets.ayuHighlight.disabled = false;
             stylesheets.tomorrowNight.disabled = true;
             stylesheets.highlight.disabled = true;
-
             ace_theme = "ace/theme/tomorrow_night";
         } else {
             stylesheets.ayuHighlight.disabled = true;
             stylesheets.tomorrowNight.disabled = true;
             stylesheets.highlight.disabled = false;
-
             ace_theme = "ace/theme/dawn";
         }
 
@@ -352,7 +354,7 @@ function playpen_text(playpen) {
 
         var previousTheme;
         try { previousTheme = localStorage.getItem('mdbook-theme'); } catch (e) { }
-        if (previousTheme === null || previousTheme === undefined) { previousTheme = 'light'; }
+        if (previousTheme === null || previousTheme === undefined) { previousTheme = default_theme; }
 
         try { localStorage.setItem('mdbook-theme', theme); } catch (e) { }
 
@@ -364,7 +366,7 @@ function playpen_text(playpen) {
     // Set theme
     var theme;
     try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
-    if (theme === null || theme === undefined) { theme = 'light'; }
+    if (theme === null || theme === undefined) { theme = default_theme; }
 
     set_theme(theme);
 
@@ -435,6 +437,7 @@ function playpen_text(playpen) {
     var sidebar = document.getElementById("sidebar");
     var sidebarLinks = document.querySelectorAll('#sidebar a');
     var sidebarToggleButton = document.getElementById("sidebar-toggle");
+    var sidebarResizeHandle = document.getElementById("sidebar-resize-handle");
     var firstContact = null;
 
     function showSidebar() {
@@ -473,6 +476,23 @@ function playpen_text(playpen) {
             }
         }
     });
+
+    sidebarResizeHandle.addEventListener('mousedown', initResize, false);
+
+    function initResize(e) {
+        window.addEventListener('mousemove', resize, false);
+        window.addEventListener('mouseup', stopResize, false);
+        html.classList.add('sidebar-resizing');
+    }
+    function resize(e) {
+        document.documentElement.style.setProperty('--sidebar-width', (e.clientX - sidebar.offsetLeft) + 'px');
+    }
+    //on mouseup remove windows functions mousemove & mouseup
+    function stopResize(e) {
+        html.classList.remove('sidebar-resizing');
+        window.removeEventListener('mousemove', resize, false);
+        window.removeEventListener('mouseup', stopResize, false);
+    }
 
     document.addEventListener('touchstart', function (e) {
         firstContact = {
@@ -543,7 +563,7 @@ function playpen_text(playpen) {
         elem.className = 'fa fa-copy tooltipped';
     }
 
-    var clipboardSnippets = new Clipboard('.clip-button', {
+    var clipboardSnippets = new ClipboardJS('.clip-button', {
         text: function (trigger) {
             hideTooltip(trigger);
             let playpen = trigger.closest("pre");

@@ -4,6 +4,8 @@
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
         <title>FAQs - The Gleam Book</title>
+        
+
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -32,7 +34,10 @@
     </head>
     <body class="light">
         <!-- Provide site root to javascript -->
-        <script type="text/javascript">var path_to_root = "";</script>
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = "light";
+        </script>
 
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script type="text/javascript">
@@ -53,8 +58,8 @@
         <!-- Set the theme before any content is loaded, prevents flash -->
         <script type="text/javascript">
             var theme;
-            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { } 
-            if (theme === null || theme === undefined) { theme = 'light'; }
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
             document.body.className = theme;
             document.querySelector('html').className = theme + ' js';
         </script>
@@ -72,7 +77,10 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="getting-started/index.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li><ol class="section"><li><a href="getting-started/installing-gleam.html"><strong aria-hidden="true">2.1.</strong> Installing Gleam</a></li><li><a href="getting-started/installing-erlang.html"><strong aria-hidden="true">2.2.</strong> Installing Erlang</a></li><li><a href="getting-started/editor-support.html"><strong aria-hidden="true">2.3.</strong> Editor support</a></li><li><a href="getting-started/creating-a-project.html"><strong aria-hidden="true">2.4.</strong> Creating a project</a></li><li><a href="getting-started/example-projects.html"><strong aria-hidden="true">2.5.</strong> Example projects</a></li></ol></li><li><a href="tour/index.html"><strong aria-hidden="true">3.</strong> Language tour</a></li><li><ol class="section"><li><a href="tour/comments.html"><strong aria-hidden="true">3.1.</strong> Comments</a></li><li><a href="tour/string.html"><strong aria-hidden="true">3.2.</strong> String</a></li><li><a href="tour/bool.html"><strong aria-hidden="true">3.3.</strong> Bool</a></li><li><a href="tour/int-and-float.html"><strong aria-hidden="true">3.4.</strong> Int &amp; Float</a></li><li><a href="tour/let.html"><strong aria-hidden="true">3.5.</strong> Let bindings</a></li><li><a href="tour/tuple.html"><strong aria-hidden="true">3.6.</strong> Tuple</a></li><li><a href="tour/list.html"><strong aria-hidden="true">3.7.</strong> List</a></li><li><a href="tour/case.html"><strong aria-hidden="true">3.8.</strong> Case</a></li><li><a href="tour/function.html"><strong aria-hidden="true">3.9.</strong> Function</a></li><li><a href="tour/module.html"><strong aria-hidden="true">3.10.</strong> Module</a></li><li><a href="tour/map.html"><strong aria-hidden="true">3.11.</strong> Map</a></li><li><a href="tour/enum.html"><strong aria-hidden="true">3.12.</strong> Enum</a></li><li><a href="tour/external-function.html"><strong aria-hidden="true">3.13.</strong> External function</a></li><li><a href="tour/external-type.html"><strong aria-hidden="true">3.14.</strong> External type</a></li></ol></li><li><a href="faqs.html" class="active"><strong aria-hidden="true">4.</strong> FAQs</a></li></ol>
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li><a href="index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="getting-started/index.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li><ol class="section"><li><a href="getting-started/installing-gleam.html"><strong aria-hidden="true">2.1.</strong> Installing Gleam</a></li><li><a href="getting-started/installing-erlang.html"><strong aria-hidden="true">2.2.</strong> Installing Erlang</a></li><li><a href="getting-started/editor-support.html"><strong aria-hidden="true">2.3.</strong> Editor support</a></li><li><a href="getting-started/creating-a-project.html"><strong aria-hidden="true">2.4.</strong> Creating a project</a></li><li><a href="getting-started/example-projects.html"><strong aria-hidden="true">2.5.</strong> Example projects</a></li></ol></li><li><a href="tour/index.html"><strong aria-hidden="true">3.</strong> Language tour</a></li><li><ol class="section"><li><a href="tour/comments.html"><strong aria-hidden="true">3.1.</strong> Comments</a></li><li><a href="tour/string.html"><strong aria-hidden="true">3.2.</strong> String</a></li><li><a href="tour/bool.html"><strong aria-hidden="true">3.3.</strong> Bool</a></li><li><a href="tour/int-and-float.html"><strong aria-hidden="true">3.4.</strong> Int &amp; Float</a></li><li><a href="tour/let.html"><strong aria-hidden="true">3.5.</strong> Let bindings</a></li><li><a href="tour/tuple.html"><strong aria-hidden="true">3.6.</strong> Tuple</a></li><li><a href="tour/list.html"><strong aria-hidden="true">3.7.</strong> List</a></li><li><a href="tour/case.html"><strong aria-hidden="true">3.8.</strong> Case</a></li><li><a href="tour/function.html"><strong aria-hidden="true">3.9.</strong> Function</a></li><li><a href="tour/module.html"><strong aria-hidden="true">3.10.</strong> Module</a></li><li><a href="tour/map.html"><strong aria-hidden="true">3.11.</strong> Map</a></li><li><a href="tour/enum.html"><strong aria-hidden="true">3.12.</strong> Enum</a></li><li><a href="tour/external-function.html"><strong aria-hidden="true">3.13.</strong> External function</a></li><li><a href="tour/external-type.html"><strong aria-hidden="true">3.14.</strong> External type</a></li></ol></li><li><a href="faqs.html" class="active"><strong aria-hidden="true">4.</strong> FAQs</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -89,7 +97,7 @@
                                 <i class="fa fa-paint-brush"></i>
                             </button>
                             <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                                <li role="none"><button role="menuitem" class="theme" id="light">Light <span class="default">(default)</span></button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
                                 <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                                 <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
                                 <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
@@ -102,12 +110,13 @@
                             
                         </div>
 
-                        <h1 class="menu-title">The Gleam Book</h1> 
+                        <h1 class="menu-title">The Gleam Book</h1>
 
                         <div class="right-buttons">
                             <a href="print.html" title="Print this book" aria-label="Print this book">
                                 <i id="print-button" class="fa fa-print"></i>
                             </a>
+                            
                         </div>
                     </div>
                 </div>
@@ -136,7 +145,7 @@
 
                 <div id="content" class="content">
                     <main>
-                        <a class="header" href="#faqs" id="faqs"><h1>FAQs</h1></a>
+                        <h1><a class="header" href="#faqs" id="faqs">FAQs</a></h1>
 <ul>
 <li><a href="#why-is-the-compiler-written-in-rust">Why is the compiler written in Rust?</a></li>
 <li><a href="#will-gleam-have-type-classes">Will Gleam have type classes?</a></li>
@@ -145,7 +154,7 @@
 <li><a href="#should-i-put-gleam-in-production">Should I put Gleam in production?</a></li>
 <li><a href="#is-it-good">Is it good?</a></li>
 </ul>
-<a class="header" href="#why-is-the-compiler-written-in-rust" id="why-is-the-compiler-written-in-rust"><h2>Why is the compiler written in Rust?</h2></a>
+<h2><a class="header" href="#why-is-the-compiler-written-in-rust" id="why-is-the-compiler-written-in-rust">Why is the compiler written in Rust?</a></h2>
 <p>Prototype versions of the Gleam compiler was written in Erlang, but a switch was
 made to Rust as the lack of static types was making refactoring a slow and
 error prone process. A full Rust rewrite of the prototype resulted in the
@@ -153,12 +162,12 @@ removal of a lot of tech debt and bugs, and the performance boost is nice too!</
 <p>One day Gleam may have a compiler written in Gleam, but for now we are focused
 on developing other areas of the language such as libraries, tooling, and
 documentation.</p>
-<a class="header" href="#will-gleam-have-type-classes" id="will-gleam-have-type-classes"><h2>Will Gleam have type classes?</h2></a>
+<h2><a class="header" href="#will-gleam-have-type-classes" id="will-gleam-have-type-classes">Will Gleam have type classes?</a></h2>
 <p>Some form of ad-hoc polymorphism could be a good addition to the ergonomics of
 the language, though what shape that may take is unclear. Type classes are one
 option, OCaml style implicit modules are another, or perhaps it'll be
 something else entirely.</p>
-<a class="header" href="#how-is-message-passing-typed" id="how-is-message-passing-typed"><h2>How is message passing typed?</h2></a>
+<h2><a class="header" href="#how-is-message-passing-typed" id="how-is-message-passing-typed">How is message passing typed?</a></h2>
 <p>Gleam doesn't currently have first class support for the BEAM's
 concurrency primitives such as <code>receive</code>, <code>send</code>, and <code>spawn</code>. This is because
 research is still ongoing as to the best way to apply a strong type system to
@@ -167,7 +176,7 @@ should be used via the Erlang FFI, making them dynamically typed.</p>
 <p>Many OTP patterns such as <code>gen_server</code> are functional in nature and don't
 require direct use of these primitives so these behaviours can be implemented
 in Gleam today.</p>
-<a class="header" href="#how-does-gleam-compare-to-alpaca" id="how-does-gleam-compare-to-alpaca"><h2>How does Gleam compare to Alpaca?</h2></a>
+<h2><a class="header" href="#how-does-gleam-compare-to-alpaca" id="how-does-gleam-compare-to-alpaca">How does Gleam compare to Alpaca?</a></h2>
 <p><a href="https://github.com/alpaca-lang/alpaca">Alpaca</a> is similar to Gleam in that it is a statically typed language
 for the Erlang VM that is inspired by the ML family of languages. It's a
 wonderful project and we hope they are wildly successful!</p>
@@ -182,14 +191,14 @@ family languages.</li>
 <li>Alpaca compiles to Core Erlang, Gleam compiles to regular Erlang.</li>
 </ul>
 <p>Alpaca is great, check it out! :)</p>
-<a class="header" href="#should-i-put-gleam-in-production" id="should-i-put-gleam-in-production"><h2>Should I put Gleam in production?</h2></a>
+<h2><a class="header" href="#should-i-put-gleam-in-production" id="should-i-put-gleam-in-production">Should I put Gleam in production?</a></h2>
 <p>Probably not. Gleam is a very young language and there may be all kinds of
 problems and breaking changes down the line.</p>
 <p>Having said that, the Erlang VM is extremely mature and well tested, and if
 you decide to move away from Gleam the language you can compile your code to
 Erlang and maintain that in future.</p>
-<a class="header" href="#is-it-good" id="is-it-good"><h2>Is it good?</h2></a>
-<p>Yes.</p>
+<h2><a class="header" href="#is-it-good" id="is-it-good">Is it good?</a></h2>
+<p>Yes, I think so. :)</p>
 
                     </main>
 

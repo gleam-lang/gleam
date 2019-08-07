@@ -74,4 +74,4 @@ Erlang and maintain that in future.
 
 ## Is it good?
 
-Yes.
+Yes, I think so. :)
