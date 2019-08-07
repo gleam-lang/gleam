@@ -4,6 +4,8 @@
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
         <title>Map - The Gleam Book</title>
+        
+
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -32,7 +34,10 @@
     </head>
     <body class="light">
         <!-- Provide site root to javascript -->
-        <script type="text/javascript">var path_to_root = "../";</script>
+        <script type="text/javascript">
+            var path_to_root = "../";
+            var default_theme = "light";
+        </script>
 
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script type="text/javascript">
@@ -53,8 +58,8 @@
         <!-- Set the theme before any content is loaded, prevents flash -->
         <script type="text/javascript">
             var theme;
-            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { } 
-            if (theme === null || theme === undefined) { theme = 'light'; }
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
             document.body.className = theme;
             document.querySelector('html').className = theme + ' js';
         </script>
@@ -72,7 +77,10 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../getting-started/index.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li><ol class="section"><li><a href="../getting-started/installing-gleam.html"><strong aria-hidden="true">2.1.</strong> Installing Gleam</a></li><li><a href="../getting-started/installing-erlang.html"><strong aria-hidden="true">2.2.</strong> Installing Erlang</a></li><li><a href="../getting-started/editor-support.html"><strong aria-hidden="true">2.3.</strong> Editor support</a></li><li><a href="../getting-started/creating-a-project.html"><strong aria-hidden="true">2.4.</strong> Creating a project</a></li><li><a href="../getting-started/example-projects.html"><strong aria-hidden="true">2.5.</strong> Example projects</a></li></ol></li><li><a href="../tour/index.html"><strong aria-hidden="true">3.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/comments.html"><strong aria-hidden="true">3.1.</strong> Comments</a></li><li><a href="../tour/string.html"><strong aria-hidden="true">3.2.</strong> String</a></li><li><a href="../tour/bool.html"><strong aria-hidden="true">3.3.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">3.4.</strong> Int &amp; Float</a></li><li><a href="../tour/let.html"><strong aria-hidden="true">3.5.</strong> Let bindings</a></li><li><a href="../tour/tuple.html"><strong aria-hidden="true">3.6.</strong> Tuple</a></li><li><a href="../tour/list.html"><strong aria-hidden="true">3.7.</strong> List</a></li><li><a href="../tour/case.html"><strong aria-hidden="true">3.8.</strong> Case</a></li><li><a href="../tour/function.html"><strong aria-hidden="true">3.9.</strong> Function</a></li><li><a href="../tour/module.html"><strong aria-hidden="true">3.10.</strong> Module</a></li><li><a href="../tour/map.html" class="active"><strong aria-hidden="true">3.11.</strong> Map</a></li><li><a href="../tour/enum.html"><strong aria-hidden="true">3.12.</strong> Enum</a></li><li><a href="../tour/external-function.html"><strong aria-hidden="true">3.13.</strong> External function</a></li><li><a href="../tour/external-type.html"><strong aria-hidden="true">3.14.</strong> External type</a></li></ol></li><li><a href="../faqs.html"><strong aria-hidden="true">4.</strong> FAQs</a></li></ol>
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../getting-started/index.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li><ol class="section"><li><a href="../getting-started/installing-gleam.html"><strong aria-hidden="true">2.1.</strong> Installing Gleam</a></li><li><a href="../getting-started/installing-erlang.html"><strong aria-hidden="true">2.2.</strong> Installing Erlang</a></li><li><a href="../getting-started/editor-support.html"><strong aria-hidden="true">2.3.</strong> Editor support</a></li><li><a href="../getting-started/creating-a-project.html"><strong aria-hidden="true">2.4.</strong> Creating a project</a></li><li><a href="../getting-started/example-projects.html"><strong aria-hidden="true">2.5.</strong> Example projects</a></li></ol></li><li><a href="../tour/index.html"><strong aria-hidden="true">3.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/comments.html"><strong aria-hidden="true">3.1.</strong> Comments</a></li><li><a href="../tour/string.html"><strong aria-hidden="true">3.2.</strong> String</a></li><li><a href="../tour/bool.html"><strong aria-hidden="true">3.3.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">3.4.</strong> Int &amp; Float</a></li><li><a href="../tour/let.html"><strong aria-hidden="true">3.5.</strong> Let bindings</a></li><li><a href="../tour/tuple.html"><strong aria-hidden="true">3.6.</strong> Tuple</a></li><li><a href="../tour/list.html"><strong aria-hidden="true">3.7.</strong> List</a></li><li><a href="../tour/case.html"><strong aria-hidden="true">3.8.</strong> Case</a></li><li><a href="../tour/function.html"><strong aria-hidden="true">3.9.</strong> Function</a></li><li><a href="../tour/module.html"><strong aria-hidden="true">3.10.</strong> Module</a></li><li><a href="../tour/map.html" class="active"><strong aria-hidden="true">3.11.</strong> Map</a></li><li><a href="../tour/enum.html"><strong aria-hidden="true">3.12.</strong> Enum</a></li><li><a href="../tour/external-function.html"><strong aria-hidden="true">3.13.</strong> External function</a></li><li><a href="../tour/external-type.html"><strong aria-hidden="true">3.14.</strong> External type</a></li></ol></li><li><a href="../faqs.html"><strong aria-hidden="true">4.</strong> FAQs</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -89,7 +97,7 @@
                                 <i class="fa fa-paint-brush"></i>
                             </button>
                             <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                                <li role="none"><button role="menuitem" class="theme" id="light">Light <span class="default">(default)</span></button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
                                 <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                                 <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
                                 <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
@@ -102,12 +110,13 @@
                             
                         </div>
 
-                        <h1 class="menu-title">The Gleam Book</h1> 
+                        <h1 class="menu-title">The Gleam Book</h1>
 
                         <div class="right-buttons">
                             <a href="../print.html" title="Print this book" aria-label="Print this book">
                                 <i id="print-button" class="fa fa-print"></i>
                             </a>
+                            
                         </div>
                     </div>
                 </div>
@@ -136,7 +145,7 @@
 
                 <div id="content" class="content">
                     <main>
-                        <a class="header" href="#map" id="map"><h1>Map</h1></a>
+                        <h1><a class="header" href="#map" id="map">Map</a></h1>
 <p>Gleam's maps are a collection of names and values where each value can be
 of any type.</p>
 <pre><code class="language-rust noplaypen">{
@@ -144,14 +153,14 @@ of any type.</p>
   size = 40,
 }
 </code></pre>
-<a class="header" href="#accessing-field-values" id="accessing-field-values"><h2>Accessing field values</h2></a>
+<h2><a class="header" href="#accessing-field-values" id="accessing-field-values">Accessing field values</a></h2>
 <p>Map values can be accessed using the <code>map.field_name</code> syntax.</p>
 <pre><code class="language-rust noplaypen">let pup = { name = &quot;Rex&quot;, size = 40 }
 let name = pup.name
 
 name  // =&gt; &quot;Rex&quot;
 </code></pre>
-<a class="header" href="#inserting-field-values" id="inserting-field-values"><h2>Inserting field values</h2></a>
+<h2><a class="header" href="#inserting-field-values" id="inserting-field-values">Inserting field values</a></h2>
 <p>A new map with updated or additional fields can be created using the
 <code>{ map | field_name = value }</code> update syntax.</p>
 <p>The updated map fields do not have to have the same types as the original
@@ -162,7 +171,7 @@ let dog = { pup | size = 70, playful = True }
 pup  // { name = &quot;Rex&quot;, size = 40 }
 dog  // { name = &quot;Rex&quot;, size = 70, playful = True }
 </code></pre>
-<a class="header" href="#types" id="types"><h2>Types</h2></a>
+<h2><a class="header" href="#types" id="types">Types</a></h2>
 <p>The type of a map depends upon the names and types of its fields.</p>
 <pre><code class="language-rust noplaypen">{ name = &quot;Rex&quot; }             // Type { name = String }
 { name = &quot;Rex&quot;, size = 40 }  // Type { name = String, size = Int }
@@ -175,7 +184,7 @@ not exist or has the incorrect type.</p>
 pup.address   // Compile time error! Unknown field
 pup.name + 1  // Compile time error! Wrong type
 </code></pre>
-<a class="header" href="#parameterised-map-fields" id="parameterised-map-fields"><h3>Parameterised map fields</h3></a>
+<h3><a class="header" href="#parameterised-map-fields" id="parameterised-map-fields">Parameterised map fields</a></h3>
 <p>Gleam's type system aims to be as permissive when it comes to maps passed
 to functions. Take this function for example.</p>
 <pre><code class="language-rust noplaypen">fn get_following_year(map) {
@@ -196,7 +205,7 @@ get_following_year(book)  // =&gt; 1996
 get_following_year(soup)  // Compile time error! No year field
 get_following_year(wine)  // Compile time error! Wrong field type
 </code></pre>
-<a class="header" href="#erlang-interop" id="erlang-interop"><h2>Erlang interop</h2></a>
+<h2><a class="header" href="#erlang-interop" id="erlang-interop">Erlang interop</a></h2>
 <p>At runtime Gleam maps are Erlang maps with atom keys. They are similar to
 Elixir's structs, but do not need to be declared prior to being used.</p>
 

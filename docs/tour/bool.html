@@ -4,6 +4,8 @@
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
         <title>Bool - The Gleam Book</title>
+        
+
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -32,7 +34,10 @@
     </head>
     <body class="light">
         <!-- Provide site root to javascript -->
-        <script type="text/javascript">var path_to_root = "../";</script>
+        <script type="text/javascript">
+            var path_to_root = "../";
+            var default_theme = "light";
+        </script>
 
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script type="text/javascript">
@@ -53,8 +58,8 @@
         <!-- Set the theme before any content is loaded, prevents flash -->
         <script type="text/javascript">
             var theme;
-            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { } 
-            if (theme === null || theme === undefined) { theme = 'light'; }
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
             document.body.className = theme;
             document.querySelector('html').className = theme + ' js';
         </script>
@@ -72,7 +77,10 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../getting-started/index.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li><ol class="section"><li><a href="../getting-started/installing-gleam.html"><strong aria-hidden="true">2.1.</strong> Installing Gleam</a></li><li><a href="../getting-started/installing-erlang.html"><strong aria-hidden="true">2.2.</strong> Installing Erlang</a></li><li><a href="../getting-started/editor-support.html"><strong aria-hidden="true">2.3.</strong> Editor support</a></li><li><a href="../getting-started/creating-a-project.html"><strong aria-hidden="true">2.4.</strong> Creating a project</a></li><li><a href="../getting-started/example-projects.html"><strong aria-hidden="true">2.5.</strong> Example projects</a></li></ol></li><li><a href="../tour/index.html"><strong aria-hidden="true">3.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/comments.html"><strong aria-hidden="true">3.1.</strong> Comments</a></li><li><a href="../tour/string.html"><strong aria-hidden="true">3.2.</strong> String</a></li><li><a href="../tour/bool.html" class="active"><strong aria-hidden="true">3.3.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">3.4.</strong> Int &amp; Float</a></li><li><a href="../tour/let.html"><strong aria-hidden="true">3.5.</strong> Let bindings</a></li><li><a href="../tour/tuple.html"><strong aria-hidden="true">3.6.</strong> Tuple</a></li><li><a href="../tour/list.html"><strong aria-hidden="true">3.7.</strong> List</a></li><li><a href="../tour/case.html"><strong aria-hidden="true">3.8.</strong> Case</a></li><li><a href="../tour/function.html"><strong aria-hidden="true">3.9.</strong> Function</a></li><li><a href="../tour/module.html"><strong aria-hidden="true">3.10.</strong> Module</a></li><li><a href="../tour/map.html"><strong aria-hidden="true">3.11.</strong> Map</a></li><li><a href="../tour/enum.html"><strong aria-hidden="true">3.12.</strong> Enum</a></li><li><a href="../tour/external-function.html"><strong aria-hidden="true">3.13.</strong> External function</a></li><li><a href="../tour/external-type.html"><strong aria-hidden="true">3.14.</strong> External type</a></li></ol></li><li><a href="../faqs.html"><strong aria-hidden="true">4.</strong> FAQs</a></li></ol>
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../getting-started/index.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li><ol class="section"><li><a href="../getting-started/installing-gleam.html"><strong aria-hidden="true">2.1.</strong> Installing Gleam</a></li><li><a href="../getting-started/installing-erlang.html"><strong aria-hidden="true">2.2.</strong> Installing Erlang</a></li><li><a href="../getting-started/editor-support.html"><strong aria-hidden="true">2.3.</strong> Editor support</a></li><li><a href="../getting-started/creating-a-project.html"><strong aria-hidden="true">2.4.</strong> Creating a project</a></li><li><a href="../getting-started/example-projects.html"><strong aria-hidden="true">2.5.</strong> Example projects</a></li></ol></li><li><a href="../tour/index.html"><strong aria-hidden="true">3.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/comments.html"><strong aria-hidden="true">3.1.</strong> Comments</a></li><li><a href="../tour/string.html"><strong aria-hidden="true">3.2.</strong> String</a></li><li><a href="../tour/bool.html" class="active"><strong aria-hidden="true">3.3.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">3.4.</strong> Int &amp; Float</a></li><li><a href="../tour/let.html"><strong aria-hidden="true">3.5.</strong> Let bindings</a></li><li><a href="../tour/tuple.html"><strong aria-hidden="true">3.6.</strong> Tuple</a></li><li><a href="../tour/list.html"><strong aria-hidden="true">3.7.</strong> List</a></li><li><a href="../tour/case.html"><strong aria-hidden="true">3.8.</strong> Case</a></li><li><a href="../tour/function.html"><strong aria-hidden="true">3.9.</strong> Function</a></li><li><a href="../tour/module.html"><strong aria-hidden="true">3.10.</strong> Module</a></li><li><a href="../tour/map.html"><strong aria-hidden="true">3.11.</strong> Map</a></li><li><a href="../tour/enum.html"><strong aria-hidden="true">3.12.</strong> Enum</a></li><li><a href="../tour/external-function.html"><strong aria-hidden="true">3.13.</strong> External function</a></li><li><a href="../tour/external-type.html"><strong aria-hidden="true">3.14.</strong> External type</a></li></ol></li><li><a href="../faqs.html"><strong aria-hidden="true">4.</strong> FAQs</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -89,7 +97,7 @@
                                 <i class="fa fa-paint-brush"></i>
                             </button>
                             <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                                <li role="none"><button role="menuitem" class="theme" id="light">Light <span class="default">(default)</span></button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
                                 <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                                 <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
                                 <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
@@ -102,12 +110,13 @@
                             
                         </div>
 
-                        <h1 class="menu-title">The Gleam Book</h1> 
+                        <h1 class="menu-title">The Gleam Book</h1>
 
                         <div class="right-buttons">
                             <a href="../print.html" title="Print this book" aria-label="Print this book">
                                 <i id="print-button" class="fa fa-print"></i>
                             </a>
+                            
                         </div>
                     </div>
                 </div>
@@ -136,7 +145,7 @@
 
                 <div id="content" class="content">
                     <main>
-                        <a class="header" href="#bool" id="bool"><h1>Bool</h1></a>
+                        <h1><a class="header" href="#bool" id="bool">Bool</a></h1>
 <p>A Bool can be either <code>True</code> or <code>False</code>.</p>
 <p>Gleam defines a handful of operators that work with Bools.</p>
 <pre><code class="language-rust noplaypen">False &amp;&amp; False // =&gt; False
@@ -153,7 +162,7 @@ True || True   // =&gt; True
 hand side if they don't have to.</p>
 <p><code>&amp;&amp;</code> evaluates the right hand side if the left hand side is <code>True</code>.</p>
 <p><code>||</code> evaluates the right hand side if the left hand side is <code>False</code>.</p>
-<a class="header" href="#erlang-interop" id="erlang-interop"><h2>Erlang interop</h2></a>
+<h2><a class="header" href="#erlang-interop" id="erlang-interop">Erlang interop</a></h2>
 <p>While written in the code using a capital letter, they are represented at
 runtime with the atoms <code>true</code> and <code>false</code>, making them compatible with Elixir
 and Erlang's booleans.</p>
