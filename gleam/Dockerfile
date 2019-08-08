@@ -2,7 +2,7 @@ FROM ekidd/rust-musl-builder:1.34.2 as build
 
 # Build
 COPY . .
-RUN cargo build --release
+RUN sudo chown -R rust:rust /home/rust && cargo build --release
 
 # Create user
 FROM alpine:latest as alpine

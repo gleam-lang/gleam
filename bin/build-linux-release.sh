@@ -4,9 +4,11 @@ set -eu
 
 GLEAM_ROOT=$(pwd)
 TAG=$(git tag --points-at HEAD)
-DOCKER_TAG=lpil/gleam:${TAG:1}
+DOCKER_TAG=lpil/gleam:$(echo $TAG | tail -c +2)
 ARCHIVE=gleam-$TAG-linux-amd64.tar.gz
 CONTAINER_NAME=gleam-linux-builder
+
+echo Building $DOCKER_TAG
 
 cd gleam
 docker build . -t $DOCKER_TAG

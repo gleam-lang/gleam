@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.3.0 - 2019-08-08
 
 - New project structure can be generated with the `gleam new` command.
 - Functions can be annotated with their argument and return types. This may be

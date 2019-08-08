@@ -63,7 +63,7 @@ fn write(path: PathBuf, contents: &str) {
 }
 
 fn gleam_toml(name: &str) -> String {
-    format!("name = {}\n", name)
+    format!("name = \"{}\"\n", name)
 }
 
 fn readme(name: &str) -> String {
