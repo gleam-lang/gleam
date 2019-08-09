@@ -31,7 +31,7 @@ Comments may also be indented:
 ```rust,noplaypen
 
 pub fn multiply(x, y) {
-  // here were are multiplying x by y
+  // here we are multiplying x by y
   x * y 
 }
 ```
