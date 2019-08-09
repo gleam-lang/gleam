@@ -56,7 +56,7 @@ More information can be found on the [rebar3 documentation website](https://www.
 
 Want to see some Gleam code? See the [example projects](./example-projects.html).
 
-Looking learn the language? Check out the [language tour](../tour).
+Looking to learn the language? Check out the [language tour](../tour).
 
 Need ideas for a project? We have a [list of libraries][libraries] that need
 writing.
