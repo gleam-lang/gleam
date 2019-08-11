@@ -13,7 +13,7 @@
   - [Bool](./tour/bool.md)
   - [Int & Float](./tour/int-and-float.md)
   - [Let bindings](./tour/let.md)
-  - [Tuple](./tour/tuple.md)
+  - [Struct](./tour/struct.md)
   - [List](./tour/list.md)
   - [Case](./tour/case.md)
   - [Function](./tour/function.md)
