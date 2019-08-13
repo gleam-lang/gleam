@@ -133,6 +133,14 @@ pub enum Statement<S, T> {
         module: Vec<String>,
         as_name: Option<String>,
     },
+
+    Struct {
+        meta: Meta,
+        name: String,
+        args: Vec<String>,
+        public: bool,
+        fields: Vec<(String, Type)>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
