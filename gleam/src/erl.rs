@@ -81,6 +81,7 @@ pub fn module(module: TypedModule) -> String {
 fn statement(statement: TypedStatement) -> Option<Document> {
     match statement {
         Statement::Enum { .. } => None,
+        Statement::Struct { .. } => None,
         Statement::Import { .. } => None,
         Statement::ExternalType { .. } => None,
         Statement::Fn {

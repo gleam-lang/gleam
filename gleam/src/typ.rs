@@ -1437,6 +1437,14 @@ pub fn infer_module(
                 })
             }
 
+            Statement::Struct {
+                meta,
+                public,
+                name,
+                args,
+                fields,
+            } => unimplemented!(),
+
             Statement::Enum {
                 meta,
                 public,

@@ -25,6 +25,7 @@ pub Module: UntypedModule = {
 Statement: UntypedStatement = {
     StatementFn => <>,
     StatementEnum => <>,
+    StatementStruct => <>,
     StatementExternalFn => <>,
     StatementExternalType => <>,
     StatementImport => <>,
@@ -38,6 +39,20 @@ StatementEnum: UntypedStatement = {
         args: t.1,
         constructors: cs,
     }
+}
+
+StatementStruct: UntypedStatement = {
+    <s:@L> <p:"pub"?> "struct" <t:TypeName> "{" <fields:StructFieldDefinition*> "}" <e:@L> => Statement::Struct {
+        meta: meta(s, e),
+        public: p.is_some(),
+        name: t.0,
+        args: t.1,
+        fields,
+    }
+}
+
+StructFieldDefinition: (String, Type) = {
+    <name:VarName> ":" <typ:Type> => (name, typ)
 }
 
 EnumConstructor: EnumConstructor = {
