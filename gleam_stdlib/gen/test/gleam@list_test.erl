@@ -179,12 +179,11 @@ unique_test() ->
     gleam@expect:equal(gleam@list:unique([]), []).
 
 sort_test() ->
-    gleam@expect:equal(gleam@list:sort([4, 3, 6, 5, 4]), [3, 4, 4, 5, 6]),
-    gleam@expect:equal(gleam@list:sort([]), []),
     gleam@expect:equal(
-        gleam@list:sort([{1, 2}, {4, 5}, {3, 2}]),
-        [{1, 2}, {3, 2}, {4, 5}]
-    ).
+        gleam@list:sort([4, 3, 6, 5, 4], fun gleam@int:compare/2),
+        [3, 4, 4, 5, 6]
+    ),
+    gleam@expect:equal(gleam@list:sort([], fun gleam@int:compare/2), []).
 
 index_map_test() ->
     gleam@expect:equal(

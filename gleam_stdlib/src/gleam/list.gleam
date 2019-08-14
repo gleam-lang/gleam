@@ -232,19 +232,19 @@ pub fn unique(list) {
   }
 }
 
-fn merge_sort(a, b) {
+fn merge_sort(a, b, compare) {
   case {a, b} {
     | {[], _} -> b
     | {_, []} -> a
     | {[ax | ar], [bx | br]} ->
-      case ax < bx {
-      | True -> [ax | merge_sort(ar, b)]
-      | False -> [bx | merge_sort(a, br)]
+      case compare(ax, bx) {
+      | order:Lt -> [ax | merge_sort(ar, b, compare)]
+      | _ -> [bx | merge_sort(a, br, compare)]
       }
   }
 }
 
-pub fn sort(list) {
+pub fn sort(list, compare) {
   let list_length = length(list)
   case list_length < 2 {
   | True -> list
@@ -252,7 +252,7 @@ pub fn sort(list) {
     let split_length = list_length / 2
     let a_list = take(list, split_length)
     let b_list = drop(list, split_length)
-    merge_sort(sort(a_list), sort(b_list))
+    merge_sort(sort(a_list, compare), sort(b_list, compare), compare)
   }
 }
 

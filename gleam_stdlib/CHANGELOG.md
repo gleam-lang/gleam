@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- `list:sort` now requires a compare function as comparison operators now only
+  work on Ints.
+
 ## v0.3.1 - 2019-08-08
 
 - `result:map_error` has been relaxed to allow mapping to a different error

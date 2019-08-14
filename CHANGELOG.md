@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Comparison operators have been specialised to operate only on Ints.
+
 ## v0.3.0 - 2019-08-08
 
 - New project structure can be generated with the `gleam new` command.

@@ -1,6 +1,7 @@
 import gleam/expect
 import gleam/list
 import gleam/int
+import gleam/float
 import gleam/string
 
 pub fn length_test() {
@@ -258,14 +259,18 @@ pub fn unique_test() {
 }
 
 pub fn sort_test() {
-  list:sort([4, 3, 6, 5, 4])
+  [4, 3, 6, 5, 4]
+  |> list:sort(_, int:compare)
   |> expect:equal(_, [3, 4, 4, 5, 6])
 
-  list:sort([])
-  |> expect:equal(_, [])
+  // TODO: Requires float:compare
+  // [4.1, 3.1, 6.1, 5.1, 4.1]
+  // |> list:sort(_, float:compare)
+  // |> expect:equal(_, [3.1, 4.1, 4.1, 5.1, 6.1])
 
-  list:sort([{1, 2}, {4, 5}, {3, 2}])
-  |> expect:equal(_, [{1, 2}, {3, 2}, {4, 5}])
+  []
+  |> list:sort(_, int:compare)
+  |> expect:equal(_, [])
 }
 
 pub fn index_map_test() {
