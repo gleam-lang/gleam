@@ -30,7 +30,7 @@ test: test-gleam test-stdlib
 
 .PHONY: test-watch-gleam
 test-watch-gleam: ## Run compiler tests when files change
-	cd gleam && watchexec -e rs,lalrpop "echo; echo; echo; cargo test"
+	cd gleam && watchexec -e rs,lalrpop "echo; cargo test; echo; echo"
 
 .PHONY: test-gleam
 test-gleam: ## Test the compiler
