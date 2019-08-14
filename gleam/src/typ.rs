@@ -1483,6 +1483,13 @@ pub fn infer_module(
                     };
                     if public {
                         fields.push((constructor.name.clone(), typ.clone()));
+
+                        if let Some(leaked) = typ.find_private_type() {
+                            return Err(Error::PrivateTypeLeak {
+                                meta: constructor.meta.clone(),
+                                leaked,
+                            });
+                        }
                     };
                     env.insert_variable(
                         constructor.name.clone(),
@@ -4036,6 +4043,20 @@ pub fn x() { id(1, 1.0) }
                     pub external fn go(PrivateType) -> Int = "" """#,
             error: Error::PrivateTypeLeak {
                 meta: Meta { start: 46, end: 92 },
+                leaked: Type::App {
+                    args: vec![],
+                    public: false,
+                    module: vec![],
+                    name: "PrivateType".to_string(),
+                },
+            },
+        },
+        Case {
+            src: r#"external type PrivateType
+                    pub enum LeakType =
+                      | Variant(PrivateType)"#,
+            error: Error::PrivateTypeLeak {
+                meta: Meta { start: 90, end: 110 },
                 leaked: Type::App {
                     args: vec![],
                     public: false,
