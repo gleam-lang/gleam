@@ -1,7 +1,7 @@
 use crate::ast::*;
 use crate::pretty::*;
+use crate::typ::{ValueConstructor, ValueConstructorVariant};
 use heck::{CamelCase, SnakeCase};
-use im::hashmap::HashMap;
 use itertools::Itertools;
 use std::char;
 use std::default::Default;
@@ -10,7 +10,7 @@ const INDENT: isize = 4;
 
 #[derive(Debug, Clone, Default)]
 struct Env {
-    vars: HashMap<String, usize>,
+    vars: im::HashMap<String, usize>,
 }
 
 impl Env {
@@ -62,16 +62,15 @@ pub fn module(module: TypedModule) -> String {
         .append(line())
         .append("-compile(no_auto_import).")
         .append(lines(2))
-        .append(
-            if exports.is_empty() {
-                nil()
-            } else {
-                "-export([".to_doc()
-                    .append(exports)
-                    .append("]).")
-                    .append(lines(2))
-            }
-        )
+        .append(if exports.is_empty() {
+            nil()
+        } else {
+            "-export(["
+                .to_doc()
+                .append(exports)
+                .append("]).")
+                .append(lines(2))
+        })
         .append(
             module
                 .statements
@@ -350,13 +349,15 @@ enum ListType<E, T> {
     NotList(T),
 }
 
-fn var(name: String, scope: TypedScope, env: &mut Env) -> Document {
-    match scope {
-        Scope::Enum { .. } => atom(name.to_snake_case()),
-        Scope::Local => env.local_var_name(name),
-        Scope::Import { module, .. } => module.join("@").to_doc(),
-        Scope::Module { arity, .. } => "fun ".to_doc().append(name).append("/").append(arity),
-        Scope::Constant { value } => expr(*value, env),
+fn var(name: String, constructor: ValueConstructor, env: &mut Env) -> Document {
+    match constructor.variant {
+        ValueConstructorVariant::Enum { .. } => atom(name.to_snake_case()),
+        ValueConstructorVariant::LocalVariable => env.local_var_name(name),
+        ValueConstructorVariant::ModuleFn { arity, module, .. } => "fun "
+            .to_doc()
+            .append(module.join("@"))
+            .append("/")
+            .append(arity),
     }
 }
 
@@ -417,33 +418,37 @@ fn is_constructor_label(label: &String) -> bool {
 fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
     match fun {
         Expr::Var {
-            scope: Scope::Enum { .. },
+            constructor:
+                ValueConstructor {
+                    variant: ValueConstructorVariant::Enum { .. },
+                    ..
+                },
             name,
             ..
         } => enum_(name, args, env),
 
         Expr::Var {
-            scope: Scope::Module { .. },
+            constructor:
+                ValueConstructor {
+                    variant: ValueConstructorVariant::ModuleFn { .. },
+                    ..
+                },
             name,
             ..
         } => name.to_doc().append(call_args(args, env)),
 
-        Expr::ModuleSelect { module, label, .. } => {
+        Expr::ModuleSelect {
+            module_name, label, ..
+        } => {
             if is_constructor_label(&label) {
                 enum_(label, args, env)
             } else {
-                match *module {
-                    Expr::Var { .. } => expr(*module, env)
-                        .append(":")
-                        .append(label)
-                        .append(call_args(args, env)),
-
-                    _ => expr(*module, env)
-                        .surround("(", ")")
-                        .append(":")
-                        .append(label)
-                        .append(call_args(args, env)),
-                }
+                module_name
+                    .join("@")
+                    .to_doc()
+                    .append(":")
+                    .append(label)
+                    .append(call_args(args, env))
             }
         }
 
@@ -516,14 +521,19 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
         Expr::Float { value, .. } => value.to_doc(),
         Expr::String { value, .. } => string(value),
         Expr::Seq { first, then, .. } => seq(*first, *then, env),
-        Expr::Var { name, scope, .. } => var(name, scope, env),
+        Expr::Var {
+            name, constructor, ..
+        } => var(name, constructor, env),
         Expr::Fn { args, body, .. } => fun(args, *body, env),
         Expr::Cons { head, tail, .. } => expr_list_cons(*head, *tail, env),
         Expr::Call { fun, args, .. } => call(*fun, args, env),
-        Expr::MapSelect { label, map, .. } => map_select(*map, label, env),
+        Expr::FieldSelect { label, map, .. } => map_select(*map, label, env),
         Expr::ModuleSelect {
-            typ, label, module, ..
-        } => module_select(typ, *module, label, env),
+            typ,
+            label,
+            module_name,
+            ..
+        } => module_select(typ, module_name, label),
         Expr::AnonStruct { elems, .. } => {
             tuple(elems.into_iter().map(|e| wrap_expr(e, env)).collect())
         }
@@ -545,25 +555,25 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
     }
 }
 
-fn module_select(
-    typ: crate::typ::Type,
-    module: TypedExpr,
-    label: String,
-    env: &mut Env,
-) -> Document {
+fn module_select(typ: crate::typ::Type, module_name: Vec<String>, label: String) -> Document {
     if is_constructor_label(&label) {
         atom(label.to_snake_case())
     } else {
         match typ.collapse_links() {
             crate::typ::Type::Fn { args, .. } => "fun "
                 .to_doc()
-                .append(expr(module, env))
+                .append(module_name.join("@"))
                 .append(":")
                 .append(label)
                 .append("/")
                 .append(args.len()),
 
-            _ => expr(module, env).append(":").append(label).append("()"),
+            _ => module_name
+                .join("@")
+                .to_doc()
+                .append(":")
+                .append(label)
+                .append("()"),
         }
     }
 }
@@ -607,8 +617,13 @@ fn external_fun(name: String, module: String, fun: String, arity: usize) -> Docu
 
 #[test]
 fn module_test() {
+    use std::collections::HashMap;
     let m = Module {
-        typ: crate::typ::int(),
+        type_info: crate::typ::ModuleTypeInfo {
+            name: vec!["magic".to_string()],
+            type_constructors: HashMap::new(),
+            value_constructors: HashMap::new(),
+        },
         name: vec!["magic".to_string()],
         statements: vec![
             Statement::ExternalType {
@@ -691,7 +706,11 @@ map() ->
     assert_eq!(expected, module(m));
 
     let m = Module {
-        typ: crate::typ::int(),
+        type_info: crate::typ::ModuleTypeInfo {
+            name: vec!["term".to_string()],
+            type_constructors: HashMap::new(),
+            value_constructors: HashMap::new(),
+        },
         name: vec!["term".to_string()],
         statements: vec![
             Statement::Fn {
@@ -826,8 +845,10 @@ map() ->
                 name: "enum1".to_string(),
                 body: Expr::Var {
                     meta: default(),
-                    typ: crate::typ::int(),
-                    scope: Scope::Enum { arity: 0 },
+                    constructor: ValueConstructor {
+                        typ: crate::typ::int(),
+                        variant: ValueConstructorVariant::Enum { arity: 0 },
+                    },
                     name: "Nil".to_string(),
                 },
             },
@@ -851,8 +872,10 @@ map() ->
                     },
                     then: Box::new(Expr::Var {
                         meta: default(),
-                        typ: crate::typ::int(),
-                        scope: Scope::Local,
+                        constructor: ValueConstructor {
+                            typ: crate::typ::int(),
+                            variant: ValueConstructorVariant::LocalVariable,
+                        },
                         name: "one_two".to_string(),
                     }),
                 },
@@ -988,7 +1011,11 @@ funny() ->
     assert_eq!(expected, module(m));
 
     let m = Module {
-        typ: crate::typ::int(),
+        type_info: crate::typ::ModuleTypeInfo {
+            name: vec!["term".to_string()],
+            type_constructors: HashMap::new(),
+            value_constructors: HashMap::new(),
+        },
         name: vec!["term".to_string()],
         statements: vec![Statement::Fn {
             return_annotation: None,
@@ -1063,7 +1090,11 @@ some_function(
     assert_eq!(expected, module(m));
 
     let m = Module {
-        typ: crate::typ::int(),
+        type_info: crate::typ::ModuleTypeInfo {
+            name: vec!["ok".to_string()],
+            type_constructors: HashMap::new(),
+            value_constructors: HashMap::new(),
+        },
         name: vec!["vars".to_string()],
         statements: vec![
             Statement::Fn {
@@ -1073,42 +1104,12 @@ some_function(
                 args: vec![],
                 name: "arg".to_string(),
                 body: Expr::Var {
-                    typ: crate::typ::int(),
                     meta: default(),
                     name: "some_arg".to_string(),
-                    scope: Scope::Local,
-                },
-            },
-            Statement::Fn {
-                return_annotation: None,
-                meta: default(),
-                public: false,
-                args: vec![],
-                name: "some_arg".to_string(),
-                body: Expr::Var {
-                    typ: crate::typ::int(),
-                    meta: default(),
-                    name: "some_arg".to_string(),
-                    scope: Scope::Constant {
-                        value: Box::new(Expr::Int {
-                            typ: crate::typ::int(),
-                            meta: default(),
-                            value: 1,
-                        }),
+                    constructor: ValueConstructor {
+                        typ: crate::typ::int(),
+                        variant: ValueConstructorVariant::LocalVariable,
                     },
-                },
-            },
-            Statement::Fn {
-                return_annotation: None,
-                meta: default(),
-                public: false,
-                args: vec![],
-                name: "another".to_string(),
-                body: Expr::Var {
-                    typ: crate::typ::int(),
-                    meta: default(),
-                    name: "run_task".to_string(),
-                    scope: Scope::Module { arity: 6 },
                 },
             },
             Statement::Fn {
@@ -1123,15 +1124,8 @@ some_function(
                         retrn: Box::new(crate::typ::int()),
                     },
                     meta: default(),
-                    module: Box::new(Expr::Var {
-                        meta: default(),
-                        name: "zero".to_string(),
-                        scope: Scope::Import {
-                            module: vec!["one".to_string()],
-                            type_constructors: im::HashMap::new(),
-                        },
-                        typ: crate::typ::int(),
-                    }),
+                    module_alias: "zero".to_string(),
+                    module_name: vec!["one".to_string()],
                     label: "two".to_string(),
                 },
             },
@@ -1147,36 +1141,8 @@ some_function(
                         retrn: Box::new(crate::typ::int()),
                     },
                     meta: default(),
-                    module: Box::new(Expr::Var {
-                        meta: default(),
-                        name: "zero".to_string(),
-                        scope: Scope::Import {
-                            module: vec!["one".to_string()],
-                            type_constructors: im::HashMap::new(),
-                        },
-                        typ: crate::typ::int(),
-                    }),
-                    label: "two".to_string(),
-                },
-            },
-            Statement::Fn {
-                return_annotation: None,
-                meta: default(),
-                public: false,
-                args: vec![],
-                name: "moddy3".to_string(),
-                body: Expr::ModuleSelect {
-                    typ: crate::typ::int(),
-                    meta: default(),
-                    module: Box::new(Expr::Var {
-                        meta: default(),
-                        name: "zero".to_string(),
-                        scope: Scope::Import {
-                            module: vec!["one".to_string()],
-                            type_constructors: im::HashMap::new(),
-                        },
-                        typ: crate::typ::int(),
-                    }),
+                    module_alias: "zero".to_string(),
+                    module_name: vec!["one".to_string(), "zero".to_string()],
                     label: "two".to_string(),
                 },
             },
@@ -1197,15 +1163,8 @@ some_function(
                     fun: Box::new(Expr::ModuleSelect {
                         typ: crate::typ::int(),
                         meta: default(),
-                        module: Box::new(Expr::Var {
-                            meta: default(),
-                            name: "zero".to_string(),
-                            scope: Scope::Import {
-                                type_constructors: im::HashMap::new(),
-                                module: vec!["one".to_string()],
-                            },
-                            typ: crate::typ::int(),
-                        }),
+                        module_alias: "zero".to_string(),
+                        module_name: vec!["one".to_string(), "zero".to_string()],
                         label: "two".to_string(),
                     }),
                 },
@@ -1218,29 +1177,24 @@ some_function(
 arg() ->
     SomeArg.
 
-some_arg() ->
-    1.
-
-another() ->
-    fun run_task/6.
-
 moddy() ->
     fun one:two/0.
 
 moddy2() ->
-    fun one:two/2.
-
-moddy3() ->
-    one:two().
+    fun one@zero:two/2.
 
 moddy4() ->
-    one:two(1).
+    one@zero:two(1).
 "
     .to_string();
     assert_eq!(expected, module(m));
 
     let m = Module {
-        typ: crate::typ::int(),
+        type_info: crate::typ::ModuleTypeInfo {
+            name: vec!["my_mod".to_string()],
+            type_constructors: HashMap::new(),
+            value_constructors: HashMap::new(),
+        },
         name: vec!["my_mod".to_string()],
         statements: vec![Statement::Fn {
             return_annotation: None,
@@ -1372,7 +1326,11 @@ go() ->
     assert_eq!(expected, module(m));
 
     let m = Module {
-        typ: crate::typ::int(),
+        type_info: crate::typ::ModuleTypeInfo {
+            name: vec!["funny".to_string()],
+            type_constructors: HashMap::new(),
+            value_constructors: HashMap::new(),
+        },
         name: vec!["funny".to_string()],
         statements: vec![
             Statement::Fn {
@@ -1391,8 +1349,13 @@ go() ->
                     }],
                     fun: Box::new(Expr::Var {
                         meta: default(),
-                        scope: Scope::Module { arity: 1 },
-                        typ: crate::typ::int(),
+                        constructor: ValueConstructor {
+                            variant: ValueConstructorVariant::ModuleFn {
+                                module: vec!["funny".to_string()],
+                                arity: 1,
+                            },
+                            typ: crate::typ::int(),
+                        },
                         name: "one_two".to_string(),
                     }),
                 },
@@ -1413,8 +1376,10 @@ go() ->
                     }],
                     fun: Box::new(Expr::Var {
                         meta: default(),
-                        scope: Scope::Local,
-                        typ: crate::typ::int(),
+                        constructor: ValueConstructor {
+                            variant: ValueConstructorVariant::LocalVariable,
+                            typ: crate::typ::int(),
+                        },
                         name: "one_two".to_string(),
                     }),
                 },
@@ -1443,8 +1408,13 @@ go() ->
                         }],
                         fun: Box::new(Expr::Var {
                             meta: default(),
-                            scope: Scope::Module { arity: 2 },
-                            typ: crate::typ::int(),
+                            constructor: ValueConstructor {
+                                typ: crate::typ::int(),
+                                variant: ValueConstructorVariant::ModuleFn {
+                                    module: vec!["funny".to_string()],
+                                    arity: 2,
+                                },
+                            },
                             name: "one_two".to_string(),
                         }),
                     }),
@@ -1672,7 +1642,7 @@ x() ->
         let ast = crate::grammar::ModuleParser::new()
             .parse(src)
             .expect("syntax error");
-        let (ast, _) = crate::typ::infer_module(ast, &std::collections::HashMap::new())
+        let ast = crate::typ::infer_module(ast, &std::collections::HashMap::new())
             .expect("should successfully infer");
         let output = module(ast);
         assert_eq!((src, output), (src, erl.to_string()));

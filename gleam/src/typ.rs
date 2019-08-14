@@ -1,11 +1,11 @@
 use crate::ast::{
-    self, Arg, BinOp, Clause, Expr, Meta, Module, Pattern, Scope, Statement, TypedExpr,
-    TypedModule, UntypedExpr, UntypedModule,
+    self, Arg, BinOp, Clause, Expr, Meta, Module, Pattern, Statement, TypedExpr, TypedModule,
+    UntypedExpr, UntypedModule,
 };
 use crate::pretty::*;
-use im::{hashmap::HashMap, hashset::HashSet, ordmap::OrdMap};
 use itertools::Itertools;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 const INDENT: isize = 2;
@@ -32,10 +32,6 @@ pub enum Type {
         row: Box<Type>,
     },
 
-    Module {
-        row: Box<Type>,
-    },
-
     Var {
         typ: Rc<RefCell<TypeVar>>,
     },
@@ -58,12 +54,16 @@ impl Type {
             b.push(' ');
         }
         b.to_doc()
-            .append(self.to_gleam_doc(&mut hashmap![], &mut initial_indent.clone()))
+            .append(self.to_gleam_doc(&mut im::hashmap![], &mut initial_indent.clone()))
             .nest(initial_indent as isize)
             .format(80)
     }
 
-    pub fn to_gleam_doc(&self, names: &mut HashMap<usize, String>, uid: &mut usize) -> Document {
+    pub fn to_gleam_doc(
+        &self,
+        names: &mut im::HashMap<usize, String>,
+        uid: &mut usize,
+    ) -> Document {
         match self {
             Type::App { name, args, .. } => {
                 if args.len() == 0 {
@@ -126,52 +126,6 @@ impl Type {
                     .append("}")
             }
 
-            Type::Module { row } => {
-                let mut row_to_doc = |row: &Type| {
-                    let mut fields = ordmap![];
-                    let tail = row.gather_fields(&mut fields);
-                    let fields_docs = fields
-                        .into_iter()
-                        .map(|(label, t)| match t.collapse_links() {
-                            Type::Fn { args, retrn } => "fn "
-                                .to_doc()
-                                .append(label)
-                                .append("(")
-                                .append(args_to_gleam_doc(&args, names, uid))
-                                .append(")")
-                                .append(" -> ")
-                                .append(retrn.to_gleam_doc(names, uid)),
-
-                            other => "const "
-                                .to_doc()
-                                .append(label)
-                                .append(": ")
-                                .append(other.to_gleam_doc(names, uid).nest(INDENT)),
-                        })
-                        .intersperse(break_("", " "))
-                        .collect::<Vec<_>>();
-                    let fields_doc = if fields_docs.len() > 1 {
-                        force_break().append(fields_docs)
-                    } else {
-                        fields_docs.to_doc()
-                    };
-                    match tail {
-                        None => break_("", " ").append(fields_doc),
-                        Some(tail) => " "
-                            .to_doc()
-                            .append(tail.to_gleam_doc(names, uid))
-                            .append(" |")
-                            .append(break_("", " "))
-                            .append(fields_doc),
-                    }
-                };
-
-                "module {"
-                    .to_doc()
-                    .append(row_to_doc(row).nest(INDENT).append(break_("", " ")).group())
-                    .append("}")
-            }
-
             Type::Var { typ, .. } => typ.borrow().to_gleam_doc(names, uid),
 
             Type::RowCons { .. } => unreachable!(),
@@ -180,7 +134,7 @@ impl Type {
         }
     }
 
-    fn gather_fields(&self, fields: &mut OrdMap<String, Type>) -> Option<Type> {
+    fn gather_fields(&self, fields: &mut im::OrdMap<String, Type>) -> Option<Type> {
         match self {
             Type::RowNil => None,
 
@@ -274,8 +228,6 @@ impl Type {
         match self {
             Type::RowNil { .. } => None,
 
-            Type::Module { row, .. } => row.find_private_type(),
-
             Type::Map { row, .. } => row.find_private_type(),
 
             Type::AnonStruct { elems, .. } => elems.iter().find_map(|t| t.find_private_type()),
@@ -304,7 +256,11 @@ impl Type {
 }
 
 impl TypeVar {
-    pub fn to_gleam_doc(&self, names: &mut HashMap<usize, String>, uid: &mut usize) -> Document {
+    pub fn to_gleam_doc(
+        &self,
+        names: &mut im::HashMap<usize, String>,
+        uid: &mut usize,
+    ) -> Document {
         match self {
             TypeVar::Link { ref typ, .. } => typ.to_gleam_doc(names, uid),
 
@@ -444,7 +400,7 @@ fn letter_test() {
 
 fn args_to_gleam_doc(
     args: &[Type],
-    names: &mut HashMap<usize, String>,
+    names: &mut im::HashMap<usize, String>,
     uid: &mut usize,
 ) -> Document {
     match args.len() {
@@ -561,149 +517,6 @@ fn to_gleam_doc_test() {
             },
             "fn(a) -> b",
         ),
-        (
-            Type::Module {
-                row: Box::new(Type::RowNil),
-            },
-            "module {  }",
-        ),
-        (
-            Type::Module {
-                row: Box::new(Type::RowCons {
-                    label: "one".to_string(),
-                    head: Box::new(Type::Fn {
-                        args: vec![],
-                        retrn: Box::new(Type::App {
-                            args: vec![],
-                            module: vec!["whatever".to_string()],
-                            name: "Bool".to_string(),
-                            public: true,
-                        }),
-                    }),
-                    tail: Box::new(Type::RowCons {
-                        label: "two".to_string(),
-                        head: Box::new(Type::Fn {
-                            args: vec![],
-                            retrn: Box::new(Type::App {
-                                args: vec![],
-                                module: vec!["whatever".to_string()],
-                                name: "Bool".to_string(),
-                                public: true,
-                            }),
-                        }),
-                        tail: Box::new(Type::RowCons {
-                            label: "three".to_string(),
-                            head: Box::new(Type::Fn {
-                                args: vec![],
-                                retrn: Box::new(Type::App {
-                                    args: vec![],
-                                    module: vec!["whatever".to_string()],
-                                    name: "Bool".to_string(),
-                                    public: true,
-                                }),
-                            }),
-                            tail: Box::new(Type::RowCons {
-                                label: "four".to_string(),
-                                head: Box::new(Type::Fn {
-                                    args: vec![],
-                                    retrn: Box::new(Type::App {
-                                        args: vec![],
-                                        module: vec!["whatever".to_string()],
-                                        name: "Bool".to_string(),
-                                        public: true,
-                                    }),
-                                }),
-                                tail: Box::new(Type::RowCons {
-                                    label: "five".to_string(),
-                                    head: Box::new(Type::Fn {
-                                        args: vec![],
-                                        retrn: Box::new(Type::App {
-                                            args: vec![],
-                                            module: vec!["whatever".to_string()],
-                                            name: "Bool".to_string(),
-                                            public: true,
-                                        }),
-                                    }),
-                                    tail: Box::new(Type::RowCons {
-                                        label: "six".to_string(),
-                                        head: Box::new(Type::Fn {
-                                            args: vec![],
-                                            retrn: Box::new(Type::App {
-                                                args: vec![],
-                                                module: vec!["whatever".to_string()],
-                                                name: "Bool".to_string(),
-                                                public: true,
-                                            }),
-                                        }),
-                                        tail: Box::new(Type::RowCons {
-                                            label: "seven".to_string(),
-                                            head: Box::new(Type::Fn {
-                                                args: vec![],
-                                                retrn: Box::new(Type::App {
-                                                    args: vec![],
-                                                    module: vec!["whatever".to_string()],
-                                                    name: "Bool".to_string(),
-                                                    public: true,
-                                                }),
-                                            }),
-                                            tail: Box::new(Type::RowCons {
-                                                label: "eight".to_string(),
-                                                head: Box::new(Type::Fn {
-                                                    args: vec![],
-                                                    retrn: Box::new(Type::App {
-                                                        args: vec![],
-                                                        module: vec!["whatever".to_string()],
-                                                        name: "Bool".to_string(),
-                                                        public: true,
-                                                    }),
-                                                }),
-                                                tail: Box::new(Type::RowCons {
-                                                    label: "nine".to_string(),
-                                                    head: Box::new(Type::Fn {
-                                                        args: vec![],
-                                                        retrn: Box::new(Type::App {
-                                                            args: vec![],
-                                                            module: vec!["whatever".to_string()],
-                                                            name: "Bool".to_string(),
-                                                            public: true,
-                                                        }),
-                                                    }),
-                                                    tail: Box::new(Type::RowCons {
-                                                        label: "ten".to_string(),
-                                                        head: Box::new(Type::Fn {
-                                                            args: vec![],
-                                                            retrn: Box::new(Type::App {
-                                                                args: vec![],
-                                                                module: vec!["whatever".to_string()],
-                                                                name: "Bool".to_string(),
-                                                                public: true,
-                                                            }),
-                                                        }),
-                                                        tail: Box::new(Type::RowNil),
-                                                    }),
-                                                }),
-                                            }),
-                                        }),
-                                    }),
-                                }),
-                            }),
-                        }),
-                    }),
-                }),
-            },
-            "module {
-  fn eight() -> Bool
-  fn five() -> Bool
-  fn four() -> Bool
-  fn nine() -> Bool
-  fn one() -> Bool
-  fn seven() -> Bool
-  fn six() -> Bool
-  fn ten() -> Bool
-  fn three() -> Bool
-  fn two() -> Bool
-}",
-        ),
     ];
 
     for (typ, s) in cases.into_iter() {
@@ -723,26 +536,45 @@ pub enum TypeVar {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeConstructorInfo {
-    public: bool,
-    module: Vec<String>,
-    arity: usize,
+    pub public: bool,
+    pub module: Vec<String>,
+    pub arity: usize,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct VariableInfo {
-    scope: Scope<Type>,
-    typ: Type,
+pub struct ValueConstructor {
+    pub variant: ValueConstructorVariant,
+    pub typ: Type,
 }
 
-pub type TypeConstructors = HashMap<String, TypeConstructorInfo>;
+#[derive(Debug, Clone, PartialEq)]
+pub enum ValueConstructorVariant {
+    /// A locally defined variable or function parameter
+    LocalVariable,
+
+    /// An enum constructor or singleton
+    Enum { arity: usize },
+
+    /// A function belonging to the module
+    ModuleFn { module: Vec<String>, arity: usize },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ModuleTypeInfo {
+    pub name: Vec<String>,
+    pub type_constructors: HashMap<String, TypeConstructorInfo>,
+    pub value_constructors: HashMap<String, ValueConstructor>,
+}
 
 #[derive(Debug, Clone)]
 pub struct Env<'a> {
     uid: usize,
-    annotated_generic_types: HashSet<usize>,
-    variables: HashMap<String, VariableInfo>,
-    modules: &'a std::collections::HashMap<String, (Type, TypeConstructors)>,
-    type_constructors: TypeConstructors,
+    annotated_generic_types: im::HashSet<usize>,
+    variables: im::HashMap<String, ValueConstructor>,
+    importable_modules: &'a HashMap<String, ModuleTypeInfo>,
+    imported_modules: HashMap<String, ModuleTypeInfo>,
+    type_constructors: HashMap<String, TypeConstructorInfo>,
+    public_module_value_constructors: HashMap<String, ValueConstructor>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -752,13 +584,15 @@ pub enum NewTypeAction {
 }
 
 impl<'a> Env<'a> {
-    pub fn new(modules: &'a std::collections::HashMap<String, (Type, TypeConstructors)>) -> Self {
+    pub fn new(importable_modules: &'a HashMap<String, ModuleTypeInfo>) -> Self {
         let mut env = Self {
             uid: 0,
-            annotated_generic_types: HashSet::new(),
-            type_constructors: hashmap![],
+            annotated_generic_types: im::HashSet::new(),
+            type_constructors: HashMap::new(),
+            public_module_value_constructors: HashMap::new(),
+            imported_modules: HashMap::new(),
             variables: hashmap![],
-            modules,
+            importable_modules,
         };
 
         env.insert_type_constructor(
@@ -770,8 +604,16 @@ impl<'a> Env<'a> {
             },
         );
 
-        env.insert_variable("True".to_string(), Scope::Enum { arity: 0 }, bool());
-        env.insert_variable("False".to_string(), Scope::Enum { arity: 0 }, bool());
+        env.insert_variable(
+            "True".to_string(),
+            ValueConstructorVariant::Enum { arity: 0 },
+            bool(),
+        );
+        env.insert_variable(
+            "False".to_string(),
+            ValueConstructorVariant::Enum { arity: 0 },
+            bool(),
+        );
         env.insert_type_constructor(
             "Bool".to_string(),
             TypeConstructorInfo {
@@ -817,7 +659,11 @@ impl<'a> Env<'a> {
             },
         );
 
-        env.insert_variable("Nil".to_string(), Scope::Enum { arity: 0 }, bool());
+        env.insert_variable(
+            "Nil".to_string(),
+            ValueConstructorVariant::Enum { arity: 0 },
+            bool(),
+        );
         env.insert_type_constructor(
             "Nil".to_string(),
             TypeConstructorInfo {
@@ -829,7 +675,7 @@ impl<'a> Env<'a> {
 
         env.insert_variable(
             "+".to_string(),
-            Scope::Local,
+            ValueConstructorVariant::LocalVariable,
             Type::Fn {
                 args: vec![int(), int()],
                 retrn: Box::new(int()),
@@ -838,7 +684,7 @@ impl<'a> Env<'a> {
 
         env.insert_variable(
             "-".to_string(),
-            Scope::Local,
+            ValueConstructorVariant::LocalVariable,
             Type::Fn {
                 args: vec![int(), int()],
                 retrn: Box::new(int()),
@@ -847,7 +693,7 @@ impl<'a> Env<'a> {
 
         env.insert_variable(
             "*".to_string(),
-            Scope::Local,
+            ValueConstructorVariant::LocalVariable,
             Type::Fn {
                 args: vec![int(), int()],
                 retrn: Box::new(int()),
@@ -856,7 +702,7 @@ impl<'a> Env<'a> {
 
         env.insert_variable(
             "/".to_string(),
-            Scope::Local,
+            ValueConstructorVariant::LocalVariable,
             Type::Fn {
                 args: vec![int(), int()],
                 retrn: Box::new(int()),
@@ -865,7 +711,7 @@ impl<'a> Env<'a> {
 
         env.insert_variable(
             "+.".to_string(),
-            Scope::Local,
+            ValueConstructorVariant::LocalVariable,
             Type::Fn {
                 args: vec![float(), float()],
                 retrn: Box::new(float()),
@@ -874,7 +720,7 @@ impl<'a> Env<'a> {
 
         env.insert_variable(
             "-.".to_string(),
-            Scope::Local,
+            ValueConstructorVariant::LocalVariable,
             Type::Fn {
                 args: vec![float(), float()],
                 retrn: Box::new(float()),
@@ -883,7 +729,7 @@ impl<'a> Env<'a> {
 
         env.insert_variable(
             "*.".to_string(),
-            Scope::Local,
+            ValueConstructorVariant::LocalVariable,
             Type::Fn {
                 args: vec![float(), float()],
                 retrn: Box::new(float()),
@@ -892,7 +738,7 @@ impl<'a> Env<'a> {
 
         env.insert_variable(
             "||".to_string(),
-            Scope::Local,
+            ValueConstructorVariant::LocalVariable,
             Type::Fn {
                 args: vec![bool(), bool()],
                 retrn: Box::new(bool()),
@@ -901,7 +747,7 @@ impl<'a> Env<'a> {
 
         env.insert_variable(
             "&&".to_string(),
-            Scope::Local,
+            ValueConstructorVariant::LocalVariable,
             Type::Fn {
                 args: vec![bool(), bool()],
                 retrn: Box::new(bool()),
@@ -910,7 +756,7 @@ impl<'a> Env<'a> {
 
         env.insert_variable(
             "%".to_string(),
-            Scope::Local,
+            ValueConstructorVariant::LocalVariable,
             Type::Fn {
                 args: vec![int(), int()],
                 retrn: Box::new(int()),
@@ -919,7 +765,7 @@ impl<'a> Env<'a> {
 
         env.insert_variable(
             "%.".to_string(),
-            Scope::Local,
+            ValueConstructorVariant::LocalVariable,
             Type::Fn {
                 args: vec![float(), float()],
                 retrn: Box::new(float()),
@@ -928,7 +774,7 @@ impl<'a> Env<'a> {
 
         env.insert_variable(
             "/.".to_string(),
-            Scope::Local,
+            ValueConstructorVariant::LocalVariable,
             Type::Fn {
                 args: vec![float(), float()],
                 retrn: Box::new(float()),
@@ -943,7 +789,7 @@ impl<'a> Env<'a> {
         };
         env.insert_variable(
             "|>".to_string(),
-            Scope::Local,
+            ValueConstructorVariant::LocalVariable,
             Type::Fn {
                 args: vec![a, f],
                 retrn: Box::new(b),
@@ -953,7 +799,7 @@ impl<'a> Env<'a> {
         let a = env.new_generic_var();
         env.insert_variable(
             "==".to_string(),
-            Scope::Local,
+            ValueConstructorVariant::LocalVariable,
             Type::Fn {
                 args: vec![a.clone(), a],
                 retrn: Box::new(bool()),
@@ -962,7 +808,7 @@ impl<'a> Env<'a> {
 
         env.insert_variable(
             ">".to_string(),
-            Scope::Local,
+            ValueConstructorVariant::LocalVariable,
             Type::Fn {
                 args: vec![int(), int()],
                 retrn: Box::new(bool()),
@@ -971,7 +817,7 @@ impl<'a> Env<'a> {
 
         env.insert_variable(
             ">=".to_string(),
-            Scope::Local,
+            ValueConstructorVariant::LocalVariable,
             Type::Fn {
                 args: vec![int(), int()],
                 retrn: Box::new(bool()),
@@ -980,7 +826,7 @@ impl<'a> Env<'a> {
 
         env.insert_variable(
             "<".to_string(),
-            Scope::Local,
+            ValueConstructorVariant::LocalVariable,
             Type::Fn {
                 args: vec![int(), int()],
                 retrn: Box::new(bool()),
@@ -989,7 +835,7 @@ impl<'a> Env<'a> {
 
         env.insert_variable(
             "<=".to_string(),
-            Scope::Local,
+            ValueConstructorVariant::LocalVariable,
             Type::Fn {
                 args: vec![int(), int()],
                 retrn: Box::new(bool()),
@@ -998,7 +844,7 @@ impl<'a> Env<'a> {
 
         env.insert_variable(
             ">.".to_string(),
-            Scope::Local,
+            ValueConstructorVariant::LocalVariable,
             Type::Fn {
                 args: vec![float(), float()],
                 retrn: Box::new(bool()),
@@ -1007,7 +853,7 @@ impl<'a> Env<'a> {
 
         env.insert_variable(
             ">=.".to_string(),
-            Scope::Local,
+            ValueConstructorVariant::LocalVariable,
             Type::Fn {
                 args: vec![float(), float()],
                 retrn: Box::new(bool()),
@@ -1016,7 +862,7 @@ impl<'a> Env<'a> {
 
         env.insert_variable(
             "<.".to_string(),
-            Scope::Local,
+            ValueConstructorVariant::LocalVariable,
             Type::Fn {
                 args: vec![float(), float()],
                 retrn: Box::new(bool()),
@@ -1025,7 +871,7 @@ impl<'a> Env<'a> {
 
         env.insert_variable(
             "<=.".to_string(),
-            Scope::Local,
+            ValueConstructorVariant::LocalVariable,
             Type::Fn {
                 args: vec![float(), float()],
                 retrn: Box::new(bool()),
@@ -1035,7 +881,7 @@ impl<'a> Env<'a> {
         let a = env.new_generic_var();
         env.insert_variable(
             "!=".to_string(),
-            Scope::Local,
+            ValueConstructorVariant::LocalVariable,
             Type::Fn {
                 args: vec![a.clone(), a],
                 retrn: Box::new(bool()),
@@ -1053,7 +899,7 @@ impl<'a> Env<'a> {
         let error = env.new_generic_var();
         env.insert_variable(
             "Ok".to_string(),
-            Scope::Enum { arity: 1 },
+            ValueConstructorVariant::Enum { arity: 1 },
             Type::Fn {
                 args: vec![ok.clone()],
                 retrn: Box::new(result(ok, error)),
@@ -1064,7 +910,7 @@ impl<'a> Env<'a> {
         let error = env.new_generic_var();
         env.insert_variable(
             "Error".to_string(),
-            Scope::Enum { arity: 1 },
+            ValueConstructorVariant::Enum { arity: 1 },
             Type::Fn {
                 args: vec![error.clone()],
                 retrn: Box::new(result(ok, error)),
@@ -1108,13 +954,14 @@ impl<'a> Env<'a> {
 
     /// Map a variable in the current scope.
     ///
-    pub fn insert_variable(&mut self, name: String, scope: Scope<Type>, typ: Type) {
-        self.variables.insert(name, VariableInfo { scope, typ });
+    pub fn insert_variable(&mut self, name: String, variant: ValueConstructorVariant, typ: Type) {
+        self.variables
+            .insert(name, ValueConstructor { variant, typ });
     }
 
     /// Lookup a variable in the current scope.
     ///
-    pub fn get_variable(&self, name: &str) -> Option<&VariableInfo> {
+    pub fn get_variable(&self, name: &str) -> Option<&ValueConstructor> {
         self.variables.get(name)
     }
 
@@ -1128,22 +975,65 @@ impl<'a> Env<'a> {
     ///
     pub fn get_type_constructor(
         &self,
-        module: &Option<String>,
+        module_alias: &Option<String>,
         name: &str,
-    ) -> Option<&TypeConstructorInfo> {
+    ) -> Result<&TypeConstructorInfo, GetTypeConstructorError> {
+        match module_alias {
+            None => self.type_constructors.get(name).ok_or_else(|| {
+                GetTypeConstructorError::UnknownType {
+                    name: name.to_string(),
+                    type_constructors: self.type_constructors.clone(),
+                }
+            }),
+
+            Some(m) => {
+                let module = &self.imported_modules.get(m).ok_or_else(|| {
+                    GetTypeConstructorError::UnknownModule {
+                        name: name.to_string(),
+                        imported_modules: self.importable_modules.clone(),
+                    }
+                })?;
+                module.type_constructors.get(name).ok_or_else(|| {
+                    GetTypeConstructorError::UnknownModuleType {
+                        name: name.to_string(),
+                        module_name: module.name.clone(),
+                        type_constructors: module.type_constructors.clone(),
+                    }
+                })
+            }
+        }
+    }
+
+    /// Lookup a value constructor in the current scope.
+    ///
+    fn get_value_constructor(
+        &self,
+        module: &Option<String>,
+        name: &String,
+    ) -> Result<&ValueConstructor, GetValueConstructorError> {
         match module {
-            None => self.type_constructors.get(name),
+            None => self.variables.get(&*name).ok_or_else(|| {
+                GetValueConstructorError::UnknownVariable {
+                    name: name.to_string(),
+                    variables: self.variables.clone(),
+                }
+            }),
 
-            Some(m) => self
-                .variables
-                .get(m)
-                .and_then(|variable_info| match &variable_info.scope {
-                    Scope::Import {
-                        type_constructors, ..
-                    } => type_constructors.get(name),
-
-                    _ => unimplemented!(),
-                }),
+            Some(module) => {
+                let module = self.imported_modules.get(&*module).ok_or_else(|| {
+                    GetValueConstructorError::UnknownModule {
+                        name: name.to_string(),
+                        imported_modules: self.importable_modules.clone(),
+                    }
+                })?;
+                module.value_constructors.get(&*name).ok_or_else(|| {
+                    GetValueConstructorError::UnknownModuleValue {
+                        name: name.to_string(),
+                        module_name: module.name.clone(),
+                        value_constructors: module.value_constructors.clone(),
+                    }
+                })
+            }
         }
     }
 
@@ -1156,7 +1046,7 @@ impl<'a> Env<'a> {
     pub fn type_from_ast(
         &mut self,
         ast: &ast::Type,
-        vars: &mut HashMap<String, (usize, Type)>,
+        vars: &mut im::HashMap<String, (usize, Type)>,
         new: NewTypeAction,
     ) -> Result<Type, Error> {
         match ast {
@@ -1170,15 +1060,9 @@ impl<'a> Env<'a> {
                     .iter()
                     .map(|t| self.type_from_ast(t, vars, new))
                     .collect::<Result<Vec<_>, _>>()?;
-                let types = self.type_constructors.clone();
-
                 let info = self
                     .get_type_constructor(module, name)
-                    .ok_or(Error::UnknownType {
-                        name: name.to_string(),
-                        meta: meta.clone(),
-                        types,
-                    })?;
+                    .map_err(|e| convert_get_type_constructor_error(e, &meta))?;
                 if args.len() != info.arity {
                     return Err(Error::IncorrectTypeArity {
                         meta: meta.clone(),
@@ -1196,10 +1080,6 @@ impl<'a> Env<'a> {
             }
 
             ast::Type::Map { fields, tail, .. } => Ok(Type::Map {
-                row: Box::new(self.row_from_ast(fields, tail, vars, new)?),
-            }),
-
-            ast::Type::Module { fields, tail, .. } => Ok(Type::Module {
                 row: Box::new(self.row_from_ast(fields, tail, vars, new)?),
             }),
 
@@ -1248,7 +1128,7 @@ impl<'a> Env<'a> {
         &mut self,
         fields: &Vec<(String, ast::Type)>,
         tail: &Option<Box<ast::Type>>,
-        vars: &mut HashMap<String, (usize, Type)>,
+        vars: &mut im::HashMap<String, (usize, Type)>,
         new: NewTypeAction,
     ) -> Result<Type, Error> {
         let tail = match tail {
@@ -1271,13 +1151,33 @@ pub enum Error {
     UnknownVariable {
         meta: Meta,
         name: String,
-        variables: HashMap<String, VariableInfo>,
+        variables: im::HashMap<String, ValueConstructor>,
     },
 
     UnknownType {
         meta: Meta,
         name: String,
         types: HashMap<String, TypeConstructorInfo>,
+    },
+
+    UnknownModule {
+        meta: Meta,
+        name: String,
+        imported_modules: HashMap<String, ModuleTypeInfo>,
+    },
+
+    UnknownModuleType {
+        meta: Meta,
+        name: String,
+        module_name: Vec<String>,
+        type_constructors: HashMap<String, TypeConstructorInfo>,
+    },
+
+    UnknownModuleValue {
+        meta: Meta,
+        name: String,
+        module_name: Vec<String>,
+        value_constructors: HashMap<String, ValueConstructor>,
     },
 
     NotFn {
@@ -1332,6 +1232,107 @@ pub enum Error {
 }
 
 #[derive(Debug, PartialEq)]
+pub enum GetValueConstructorError {
+    UnknownVariable {
+        name: String,
+        variables: im::HashMap<String, ValueConstructor>,
+    },
+
+    UnknownModule {
+        name: String,
+        imported_modules: HashMap<String, ModuleTypeInfo>,
+    },
+
+    UnknownModuleValue {
+        name: String,
+        module_name: Vec<String>,
+        value_constructors: HashMap<String, ValueConstructor>,
+    },
+}
+
+fn convert_get_value_constructor_error(e: GetValueConstructorError, meta: &Meta) -> Error {
+    match e {
+        GetValueConstructorError::UnknownVariable { name, variables } => Error::UnknownVariable {
+            meta: meta.clone(),
+            name,
+            variables,
+        },
+
+        GetValueConstructorError::UnknownModule {
+            name,
+            imported_modules,
+        } => Error::UnknownModule {
+            meta: meta.clone(),
+            name,
+            imported_modules,
+        },
+
+        GetValueConstructorError::UnknownModuleValue {
+            name,
+            module_name,
+            value_constructors,
+        } => Error::UnknownModuleValue {
+            meta: meta.clone(),
+            name,
+            module_name,
+            value_constructors,
+        },
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum GetTypeConstructorError {
+    UnknownType {
+        name: String,
+        type_constructors: HashMap<String, TypeConstructorInfo>,
+    },
+
+    UnknownModule {
+        name: String,
+        imported_modules: HashMap<String, ModuleTypeInfo>,
+    },
+
+    UnknownModuleType {
+        name: String,
+        module_name: Vec<String>,
+        type_constructors: HashMap<String, TypeConstructorInfo>,
+    },
+}
+
+fn convert_get_type_constructor_error(e: GetTypeConstructorError, meta: &Meta) -> Error {
+    match e {
+        GetTypeConstructorError::UnknownType {
+            name,
+            type_constructors,
+        } => Error::UnknownType {
+            meta: meta.clone(),
+            name,
+            types: type_constructors,
+        },
+
+        GetTypeConstructorError::UnknownModule {
+            name,
+            imported_modules,
+        } => Error::UnknownModule {
+            meta: meta.clone(),
+            name,
+            imported_modules,
+        },
+
+        GetTypeConstructorError::UnknownModuleType {
+            name,
+            module_name,
+            type_constructors,
+        } => Error::UnknownModuleType {
+            meta: meta.clone(),
+            name,
+            module_name,
+            type_constructors,
+        },
+    }
+}
+
+#[derive(Debug, PartialEq)]
 pub enum RowContainerType {
     Module,
     Map,
@@ -1351,13 +1352,12 @@ impl RowContainerType {
 ///
 pub fn infer_module(
     module: UntypedModule,
-    modules: &std::collections::HashMap<String, (Type, TypeConstructors)>,
-) -> Result<(TypedModule, TypeConstructors), Error> {
+    modules: &HashMap<String, ModuleTypeInfo>,
+) -> Result<TypedModule, Error> {
     let mut env = Env::new(modules);
-    let mut fields = vec![];
     let module_name = &module.name;
 
-    let statements = module
+    let statements: Vec<Statement<_, Type>> = module
         .statements
         .into_iter()
         .map(|s| match s {
@@ -1372,8 +1372,8 @@ pub fn infer_module(
                 let level = 1;
 
                 // Ensure function has not already been defined in this module
-                if let Some(VariableInfo {
-                    scope: Scope::Module { .. },
+                if let Some(ValueConstructor {
+                    variant: ValueConstructorVariant::ModuleFn { .. },
                     ..
                 }) = env.get_variable(&name)
                 {
@@ -1384,7 +1384,10 @@ pub fn infer_module(
                 let rec = env.new_unbound_var(level + 1);
                 env.insert_variable(
                     name.clone(),
-                    Scope::Module { arity: args.len() },
+                    ValueConstructorVariant::ModuleFn {
+                        module: module_name.clone(),
+                        arity: args.len(),
+                    },
                     rec.clone(),
                 );
 
@@ -1403,11 +1406,14 @@ pub fn infer_module(
                 let typ = generalise(typ, level);
                 env.insert_variable(
                     name.clone(),
-                    Scope::Module { arity: args.len() },
+                    ValueConstructorVariant::ModuleFn {
+                        module: module_name.clone(),
+                        arity: args.len(),
+                    },
                     typ.clone(),
                 );
 
-                // Insert the function into the module's type
+                // Insert the function into the module's interface
                 if public {
                     if let Some(leaked) = typ.find_private_type() {
                         return Err(Error::PrivateTypeLeak {
@@ -1415,8 +1421,16 @@ pub fn infer_module(
                             leaked,
                         });
                     }
-
-                    fields.push((name.clone(), typ));
+                    env.public_module_value_constructors.insert(
+                        name.clone(),
+                        ValueConstructor {
+                            typ,
+                            variant: ValueConstructorVariant::ModuleFn {
+                                module: module_name.clone(),
+                                arity: args.len(),
+                            },
+                        },
+                    );
                 }
                 Ok(Statement::Fn {
                     meta,
@@ -1437,6 +1451,7 @@ pub fn infer_module(
                 module,
                 fun,
             } => {
+                // Construct type of function from AST
                 let mut type_vars = hashmap![];
                 let retrn_type =
                     env.type_from_ast(&retrn, &mut type_vars, NewTypeAction::MakeGeneric)?;
@@ -1449,17 +1464,36 @@ pub fn infer_module(
                     args: args_types,
                     retrn: Box::new(retrn_type),
                 };
-                if public {
-                    fields.push((name.clone(), typ.clone()));
 
+                // Insert function into module's public interface
+                if public {
                     if let Some(leaked) = typ.find_private_type() {
                         return Err(Error::PrivateTypeLeak {
                             meta: meta.clone(),
                             leaked,
                         });
                     }
+                    env.public_module_value_constructors.insert(
+                        name.clone(),
+                        ValueConstructor {
+                            typ: typ.clone(),
+                            variant: ValueConstructorVariant::ModuleFn {
+                                module: vec![module.clone()],
+                                arity: args.len(),
+                            },
+                        },
+                    );
                 }
-                env.insert_variable(name.clone(), Scope::Module { arity: args.len() }, typ);
+
+                // Insert function into module's internal scope
+                env.insert_variable(
+                    name.clone(),
+                    ValueConstructorVariant::ModuleFn {
+                        module: vec![module.clone()],
+                        arity: args.len(),
+                    },
+                    typ,
+                );
                 Ok(Statement::ExternalFn {
                     meta,
                     name,
@@ -1520,18 +1554,23 @@ pub fn infer_module(
                         },
                     };
                     if public {
-                        fields.push((constructor.name.clone(), typ.clone()));
-
                         if let Some(leaked) = typ.find_private_type() {
                             return Err(Error::PrivateTypeLeak {
                                 meta: constructor.meta.clone(),
                                 leaked,
                             });
                         }
+                        env.public_module_value_constructors.insert(
+                            constructor.name.clone(),
+                            ValueConstructor {
+                                typ: typ.clone(),
+                                variant: ValueConstructorVariant::Enum { arity: args.len() },
+                            },
+                        );
                     };
                     env.insert_variable(
                         constructor.name.clone(),
-                        Scope::Enum {
+                        ValueConstructorVariant::Enum {
                             arity: constructor.args.len(),
                         },
                         typ,
@@ -1583,22 +1622,15 @@ pub fn infer_module(
                 module,
                 as_name,
             } => {
-                let (typ, module_types) = env.modules.get(&module.join("/")).expect(
+                let module_info = env.importable_modules.get(&module.join("/")).expect(
                     "COMPILER BUG: Typer could not find a module being imported.
 This should not be possible. Please report this crash",
                 );
-                let var = match &as_name {
+                let name = match &as_name {
                     None => module[module.len() - 1].clone(),
                     Some(name) => name.clone(),
                 };
-                env.insert_variable(
-                    var,
-                    Scope::Import {
-                        module: module.clone(),
-                        type_constructors: module_types.clone(),
-                    },
-                    typ.clone(),
-                );
+                env.imported_modules.insert(name, module_info.clone());
                 Ok(Statement::Import {
                     meta,
                     module,
@@ -1608,22 +1640,18 @@ This should not be possible. Please report this crash",
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    let row = fields
-        .into_iter()
-        .fold(Type::RowNil, |tail, (label, head)| Type::RowCons {
-            label,
-            head: Box::new(head),
-            tail: Box::new(tail),
-        });
+    // Remove private type constructors to create the public interface
+    env.type_constructors.retain(|_, info| info.public);
 
-    Ok((
-        Module {
+    Ok(Module {
+        name: module.name.clone(),
+        statements,
+        type_info: ModuleTypeInfo {
             name: module.name,
-            statements,
-            typ: Type::Module { row: Box::new(row) },
+            type_constructors: env.type_constructors,
+            value_constructors: env.public_module_value_constructors,
         },
-        env.type_constructors,
-    ))
+    })
 }
 
 /// Crawl the AST, annotating each node with the inferred type or
@@ -1731,7 +1759,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             clauses,
             typ: _,
         } => {
-            let return_type = env.new_unbound_var(level); // TODO: st'hould this be level + 1 ?
+            let return_type = env.new_unbound_var(level); // TODO: should this be level + 1 ?
             let mut typed_clauses = Vec::with_capacity(clauses.len());
             let subject = infer(*subject, level + 1, env)?;
             let subject_type = generalise(subject.typ().clone(), level + 1);
@@ -1817,8 +1845,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         } => {
             let fun = Expr::Var {
                 meta: meta.clone(),
-                typ: (),
-                scope: (),
+                constructor: (),
                 name: bin_op_name(&name),
             };
             let (_fun, mut args, typ) = infer_call(fun, vec![*left, *right], level, &meta, env)?;
@@ -1880,89 +1907,109 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         Expr::Var {
             meta,
             name,
-            scope: _,
-            typ: _,
+            constructor: _,
         } => {
-            let VariableInfo { scope, typ } = infer_var(&name, level, &meta, env)?;
+            let constructor = infer_var(&name, level, &meta, env)?;
             Ok(Expr::Var {
+                constructor,
                 meta,
-                scope,
-                typ,
                 name,
             })
         }
 
-        Expr::MapSelect {
-            meta,
+        Expr::FieldSelect {
+            meta: select_meta,
             label,
-            map,
+            map: container,
             typ: _,
-        } => {
-            let map = infer(*map, level, env)?;
+        } => match &*container {
+            Expr::Var { name, meta, .. } if !env.variables.contains_key(name) => {
+                infer_module_select(name, label, level, meta, select_meta, env)
+            }
 
-            // We unify the map with a dummy map in order to determine the type of the
-            // selected field.
-            let other_fields_typ = env.new_unbound_var(level);
-            let selected_field_typ = env.new_unbound_var(level);
-            let dummy_map = Type::Map {
-                row: Box::new(Type::RowCons {
-                    label: label.clone(),
-                    head: Box::new(selected_field_typ.clone()),
-                    tail: Box::new(other_fields_typ),
-                }),
-            };
+            _ => infer_value_field_select(*container, label, level, select_meta, env),
+        },
 
-            unify(&dummy_map, map.typ(), env)
-                .map_err(|e| convert_unify_error(set_map_row_type(e), &meta))?;
-
-            Ok(Expr::MapSelect {
-                meta,
-                label,
-                map: Box::new(map),
-                typ: selected_field_typ,
-            })
-        }
-
-        Expr::ModuleSelect {
-            meta,
-            module,
-            label,
-            typ: _,
-        } => {
-            let module = infer(*module, level, env)?;
-            let typ = infer_module_select(module.typ(), &label, level, &meta, env)?;
-
-            Ok(Expr::ModuleSelect {
-                meta,
-                label,
-                module: Box::new(module),
-                typ,
-            })
-        }
+        // This node is not created by the parser, it is constructed by the typer from
+        // the more general FieldSelect. Because of this it should never be present in AST
+        // being inferred.
+        Expr::ModuleSelect { .. } => panic!(
+            "Expr::ModuleSelect erroneously passed to typer.
+The is a bug in the Gleam compiler, please report it here:
+https://github.com/lpil/gleam/issues
+"
+        ),
     }
 }
 
 fn infer_module_select(
-    module_type: &Type,
-    label: &str,
+    module_alias: &String,
+    label: String,
     level: usize,
-    meta: &Meta,
+    module_meta: &Meta,
+    select_meta: Meta,
     env: &mut Env,
-) -> Result<Type, Error> {
-    // We unify the module with a dummy module in order to determine the type of the
+) -> Result<TypedExpr, Error> {
+    let (module_name, constructor) = {
+        let module_info =
+            env.imported_modules
+                .get(&*module_alias)
+                .ok_or_else(|| Error::UnknownModule {
+                    name: module_alias.to_string(),
+                    meta: module_meta.clone(),
+                    imported_modules: env.imported_modules.clone(),
+                })?;
+
+        let constructor = module_info.value_constructors.get(&label).ok_or_else(|| {
+            Error::UnknownModuleValue {
+                name: label.clone(),
+                meta: select_meta.clone(),
+                module_name: module_info.name.clone(),
+                value_constructors: module_info.value_constructors.clone(),
+            }
+        })?;
+
+        (module_info.name.clone(), constructor.clone())
+    };
+
+    Ok(Expr::ModuleSelect {
+        label,
+        typ: instantiate(constructor.typ.clone(), level, env),
+        meta: select_meta,
+        module_name,
+        module_alias: module_alias.clone(),
+    })
+}
+
+fn infer_value_field_select(
+    container: UntypedExpr,
+    label: String,
+    level: usize,
+    meta: Meta,
+    env: &mut Env,
+) -> Result<TypedExpr, Error> {
+    let map = infer(container, level, env)?;
+    // We unify the map with a dummy map in order to determine the type of the
     // selected field.
     let other_fields_typ = env.new_unbound_var(level);
     let selected_field_typ = env.new_unbound_var(level);
-    let dummy_module = Type::Module {
+    let dummy_map = Type::Map {
         row: Box::new(Type::RowCons {
-            label: label.to_string(),
+            label: label.clone(),
             head: Box::new(selected_field_typ.clone()),
             tail: Box::new(other_fields_typ),
         }),
     };
-    unify(&dummy_module, module_type, env).map_err(|e| convert_unify_error(e, meta))?;
 
-    Ok(selected_field_typ)
+    unify(&dummy_map, map.typ(), env)
+        .map_err(|e| convert_unify_error(set_map_row_type(e), &meta))?;
+
+    Ok(Expr::FieldSelect {
+        meta,
+        label,
+        map: Box::new(map),
+        typ: selected_field_typ,
+    })
 }
 
 /// When we have an assignment or a case expression we unify the pattern with the
@@ -1980,7 +2027,11 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
         Pattern::Discard { .. } => Ok(()),
 
         Pattern::Var { name, .. } => {
-            env.insert_variable(name.to_string(), Scope::Local, typ.clone());
+            env.insert_variable(
+                name.to_string(),
+                ValueConstructorVariant::LocalVariable,
+                typ.clone(),
+            );
             Ok(())
         }
 
@@ -2020,16 +2071,19 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
             name,
             args: pattern_args,
         } => {
-            match infer_possibly_namespaced_var(module, name, level, meta, env)?
+            let constructor_typ = env
+                .get_value_constructor(module, name)
+                .map_err(|e| convert_get_value_constructor_error(e, &meta))?
                 .typ
-                .collapse_links()
-            {
+                .clone();
+
+            match instantiate(constructor_typ, level, env) {
                 Type::Fn { args, retrn } => {
                     if args.len() == pattern_args.len() {
-                        for (pattern, typ) in pattern_args.iter().zip(&args) {
-                            unify_pattern(pattern, typ, level, env)?;
+                        for (pattern, typ) in pattern_args.iter().zip(args) {
+                            unify_pattern(pattern, &typ, level, env)?;
                         }
-                        unify(&retrn, typ, env).map_err(|e| convert_unify_error(e, &meta))
+                        unify(&retrn, &typ, env).map_err(|e| convert_unify_error(e, &meta))
                     } else {
                         // TODO: Incorrect number of args given to constructor
                         unimplemented!()
@@ -2038,7 +2092,7 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
 
                 c @ Type::App { .. } => {
                     if pattern_args.is_empty() {
-                        unify(&c, typ, env).map_err(|e| convert_unify_error(e, &meta))
+                        unify(&c, &typ, env).map_err(|e| convert_unify_error(e, &meta))
                     } else {
                         // Error: singleton given args
                         unimplemented!()
@@ -2074,33 +2128,16 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
                 unimplemented!();
             }
         },
-        // Pattern::Map { .. } => unimplemented!(),
     }
 }
 
-fn infer_possibly_namespaced_var(
-    module: &Option<String>,
+fn infer_var(
     name: &str,
     level: usize,
     meta: &Meta,
     env: &mut Env,
-) -> Result<VariableInfo, Error> {
-    match module {
-        None => infer_var(name, level, meta, env),
-
-        Some(module) => {
-            let VariableInfo { typ, .. } = infer_var(module, level, meta, env)?;
-            let typ = infer_module_select(&typ, name, level, meta, env)?;
-            Ok(VariableInfo {
-                scope: Scope::Module { arity: 0 },
-                typ,
-            })
-        }
-    }
-}
-
-fn infer_var(name: &str, level: usize, meta: &Meta, env: &mut Env) -> Result<VariableInfo, Error> {
-    let VariableInfo { scope, typ } =
+) -> Result<ValueConstructor, Error> {
+    let ValueConstructor { variant, typ } =
         env.get_variable(name)
             .cloned()
             .ok_or_else(|| Error::UnknownVariable {
@@ -2109,7 +2146,7 @@ fn infer_var(name: &str, level: usize, meta: &Meta, env: &mut Env) -> Result<Var
                 variables: env.variables.clone(),
             })?;
     let typ = instantiate(typ, level, env);
-    Ok(VariableInfo { scope, typ })
+    Ok(ValueConstructor { variant, typ })
 }
 
 fn infer_call(
@@ -2165,7 +2202,11 @@ fn infer_fun(
     let previous_vars = env.variables.clone();
     for (arg, t) in args.iter().zip(args_types.iter()) {
         match &arg.name {
-            Some(name) => env.insert_variable(name.to_string(), Scope::Local, (*t).clone()),
+            Some(name) => env.insert_variable(
+                name.to_string(),
+                ValueConstructorVariant::LocalVariable,
+                (*t).clone(),
+            ),
             None => (),
         };
     }
@@ -2244,7 +2285,7 @@ fn convert_unify_error(e: UnifyError, meta: &Meta) -> Error {
 /// Instantiate converts generic variables into unbound ones.
 ///
 fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
-    fn go(t: Type, ctx_level: usize, ids: &mut HashMap<usize, Type>, env: &mut Env) -> Type {
+    fn go(t: Type, ctx_level: usize, ids: &mut im::HashMap<usize, Type>, env: &mut Env) -> Type {
         match t {
             Type::App {
                 public,
@@ -2298,10 +2339,6 @@ fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
             }
 
             Type::Map { row } => Type::Map {
-                row: Box::new(go(*row, ctx_level, ids, env)),
-            },
-
-            Type::Module { row } => Type::Module {
                 row: Box::new(go(*row, ctx_level, ids, env)),
             },
 
@@ -2468,8 +2505,6 @@ fn unify(t1: &Type, t2: &Type, env: &mut Env) -> Result<(), UnifyError> {
             unify(row1, row2, env).map_err(set_map_row_type)
         }
 
-        (Type::Module { row: row1 }, Type::Module { row: row2 }) => unify(row1, row2, env),
-
         (Type::RowNil, Type::RowNil) => Ok(()),
 
         (Type::RowNil, Type::RowCons { label, .. }) => Err(UnifyError::ExtraField {
@@ -2602,7 +2637,7 @@ fn unify_row_field(
 
 #[test]
 fn rewrite_row_test() {
-    let mods = std::collections::HashMap::new();
+    let mods = HashMap::new();
     let mut env = Env::new(&mods);
 
     let row = Type::RowCons {
@@ -2718,8 +2753,6 @@ fn update_levels(typ: &Type, own_level: usize, own_id: usize) -> Result<(), Unif
         }
 
         Type::Map { row, .. } => update_levels(row, own_level, own_id),
-
-        Type::Module { row, .. } => update_levels(row, own_level, own_id),
 
         Type::Var { .. } => unreachable!(),
 
@@ -2856,10 +2889,6 @@ fn generalise(t: Type, ctx_level: usize) -> Type {
         },
 
         Type::Map { row } => Type::Map {
-            row: Box::new(generalise(*row, ctx_level)),
-        },
-
-        Type::Module { row } => Type::Module {
             row: Box::new(generalise(*row, ctx_level)),
         },
 
@@ -3412,25 +3441,14 @@ fn infer_test() {
             src: "fn(r) { r.x + 1 }",
             typ: "fn({ a | x = Int }) -> Int",
         },
-        /* Module select
-
-        */
-        Case {
-            src: "fn(x) { x:run() }",
-            typ: "fn(module { b | fn run() -> a }) -> a",
-        },
-        Case {
-            src: "fn(x) { x:go }",
-            typ: "fn(module { b | const go: a }) -> a",
-        },
     ];
 
     for Case { src, typ } in cases.into_iter() {
         let ast = crate::grammar::ExprParser::new()
             .parse(src)
             .expect("syntax error");
-        let result = infer(ast, 1, &mut Env::new(&std::collections::HashMap::new()))
-            .expect("should successfully infer");
+        let result =
+            infer(ast, 1, &mut Env::new(&HashMap::new())).expect("should successfully infer");
         assert_eq!(
             (
                 src,
@@ -3497,7 +3515,7 @@ fn infer_error_test() {
             error: Error::UnknownVariable {
                 meta: Meta { start: 0, end: 1 },
                 name: "x".to_string(),
-                variables: Env::new(&std::collections::HashMap::new()).variables,
+                variables: Env::new(&HashMap::new()).variables,
             },
         },
         Case {
@@ -3505,7 +3523,7 @@ fn infer_error_test() {
             error: Error::UnknownVariable {
                 meta: Meta { start: 0, end: 1 },
                 name: "x".to_string(),
-                variables: Env::new(&std::collections::HashMap::new()).variables,
+                variables: Env::new(&HashMap::new()).variables,
             },
         },
         Case {
@@ -3609,7 +3627,7 @@ fn infer_error_test() {
             error: Error::UnknownVariable {
                 meta: Meta { start: 25, end: 26 },
                 name: "x".to_string(),
-                variables: Env::new(&std::collections::HashMap::new()).variables,
+                variables: Env::new(&HashMap::new()).variables,
             },
         },
         Case {
@@ -3624,8 +3642,8 @@ fn infer_error_test() {
         let ast = crate::grammar::ExprParser::new()
             .parse(src)
             .expect("syntax error");
-        let result = infer(ast, 1, &mut Env::new(&std::collections::HashMap::new()))
-            .expect_err("should infer an error");
+        let result =
+            infer(ast, 1, &mut Env::new(&HashMap::new())).expect_err("should infer an error");
         assert_eq!((src, error), (src, &result));
     }
 }
@@ -3634,7 +3652,7 @@ fn infer_error_test() {
 fn infer_module_test() {
     struct Case {
         src: &'static str,
-        typ: &'static str,
+        module: Vec<(&'static str, &'static str)>,
     }
 
     let cases = [
@@ -3646,197 +3664,159 @@ fn infer_module_test() {
           | i -> [x | repeat(i - 1, x)]
           }
         }",
-            typ: "module { fn repeat(Int, a) -> List(a) }",
+            module: vec![("repeat", "fn(Int, a) -> List(a)")],
         },
         Case {
             src: "fn private() { 1 }
                   pub fn public() { 1 }",
-            typ: "module { fn public() -> Int }",
+            module: vec![("public", "fn() -> Int")],
         },
         Case {
             src: "fn empty() { {} }
                   pub fn run() { { empty() | level = 1 } }",
-            typ: "module { fn run() -> { level = Int } }",
+            module: vec![("run", "fn() -> { level = Int }")],
         },
         Case {
             src: "pub fn ok(x) { struct(1, x) }",
-            typ: "module { fn ok(a) -> struct(Int, a) }",
+            module: vec![("ok", "fn(a) -> struct(Int, a)")],
         },
         Case {
             src: "pub fn empty() {
                     let map = {}
                     map
                   }",
-            typ: "module { fn empty() -> {} }",
+            module: vec![("empty", "fn() -> {}")],
         },
         Case {
             src: "pub fn add_name(map, name) {
                     let map = { map | name = name }
                     map
                   }",
-            typ: "module { fn add_name({ a |  }, b) -> { a | name = b } }",
+            module: vec![("add_name", "fn({ a |  }, b) -> { a | name = b }")],
         },
         Case {
             src: "
                 pub enum Is = | Yes | No
                 pub fn yes() { Yes }
                 pub fn no() { No }",
-            typ: "module {
-  const No: Is
-  const Yes: Is
-  fn no() -> Is
-  fn yes() -> Is
-}",
+            module: vec![
+                ("No", "Is"),
+                ("Yes", "Is"),
+                ("no", "fn() -> Is"),
+                ("yes", "fn() -> Is"),
+            ],
         },
         Case {
             src: "
                 pub enum Num = | I(Int)
                 pub fn one() { I(1) }",
-            typ: "module {
-  fn I(Int) -> Num
-  fn one() -> Num
-}",
+            module: vec![("I", "fn(Int) -> Num"), ("one", "fn() -> Num")],
         },
         Case {
             src: "
                 pub fn id(x) { x }
                 pub fn float() { id(1.0) }
                 pub fn int() { id(1) }",
-            typ: "module {
-  fn float() -> Float
-  fn id(a) -> a
-  fn int() -> Int
-}",
+            module: vec![
+                ("float", "fn() -> Float"),
+                ("id", "fn(a) -> a"),
+                ("int", "fn() -> Int"),
+            ],
         },
         Case {
             src: "
         pub enum Box(a) = | Box(a)
         pub fn int() { Box(1) }
         pub fn float() { Box(1.0) }",
-            typ: "module {
-  fn Box(a) -> Box(a)
-  fn float() -> Box(Float)
-  fn int() -> Box(Int)
-}",
+            module: vec![
+                ("Box", "fn(a) -> Box(a)"),
+                ("float", "fn() -> Box(Float)"),
+                ("int", "fn() -> Box(Int)"),
+            ],
         },
         Case {
             src: "
         pub enum Singleton = | Singleton
         pub fn go(x) { let Singleton = x 1 }",
-            typ: "module {
-  const Singleton: Singleton
-  fn go(Singleton) -> Int
-}",
+            module: vec![("Singleton", "Singleton"), ("go", "fn(Singleton) -> Int")],
         },
         Case {
             src: "
         pub enum Box(a) = | Box(a)
         pub fn unbox(x) { let Box(a) = x a }",
-            typ: "module {
-  fn Box(a) -> Box(a)
-  fn unbox(Box(b)) -> b
-}",
+            module: vec![("Box", "fn(a) -> Box(a)"), ("unbox", "fn(Box(a)) -> a")],
         },
         Case {
             src: "
         pub enum I = | I(Int)
         pub fn open(x) { case x { | I(i) -> i  } }",
-            typ: "module {
-  fn I(Int) -> I
-  fn open(I) -> Int
-}",
+            module: vec![("I", "fn(Int) -> I"), ("open", "fn(I) -> Int")],
         },
         Case {
             src: "pub fn status() { 1 }
                   pub fn list_of(x) { [x] }
                   pub fn get_age(person) { person.age }",
-            typ: "module {
-  fn get_age({ b | age = a }) -> a
-  fn list_of(c) -> List(c)
-  fn status() -> Int
-}",
+            module: vec![
+                ("get_age", "fn({ b | age = a }) -> a"),
+                ("list_of", "fn(a) -> List(a)"),
+                ("status", "fn() -> Int"),
+            ],
         },
         Case {
             src: "pub external fn go(String) -> String = \"\" \"\"",
-            typ: "module { fn go(String) -> String }",
+            module: vec![("go", "fn(String) -> String")],
         },
         Case {
             src: "pub external fn go(Int) -> Float = \"\" \"\"",
-            typ: "module { fn go(Int) -> Float }",
+            module: vec![("go", "fn(Int) -> Float")],
         },
         Case {
             src: "pub external fn go(Int) -> Int = \"\" \"\"",
-            typ: "module { fn go(Int) -> Int }",
+            module: vec![("go", "fn(Int) -> Int")],
         },
         Case {
             src: "external fn go(Int) -> Int = \"\" \"\"",
-            typ: "module {  }",
+            module: vec![],
         },
         Case {
             src: "pub external fn ok(Int) -> struct(Int, Int) = \"\" \"\"",
-            typ: "module { fn ok(Int) -> struct(Int, Int) }",
+            module: vec![("ok", "fn(Int) -> struct(Int, Int)")],
         },
         Case {
             src: "pub external fn ok() -> fn(Int) -> Int = \"\" \"\"",
-            typ: "module { fn ok() -> fn(Int) -> Int }",
+            module: vec![("ok", "fn() -> fn(Int) -> Int")],
         },
         Case {
             src: "pub external fn go(Int) -> b = \"\" \"\"",
-            typ: "module { fn go(Int) -> a }",
+            module: vec![("go", "fn(Int) -> a")],
         },
         Case {
             src: "pub external fn go(Bool) -> b = \"\" \"\"",
-            typ: "module { fn go(Bool) -> a }",
+            module: vec![("go", "fn(Bool) -> a")],
         },
         Case {
             src: "pub external fn go(List(a)) -> a = \"\" \"\"",
-            typ: "module { fn go(List(a)) -> a }",
+            module: vec![("go", "fn(List(a)) -> a")],
         },
         Case {
             src: "pub external fn go(struct(a, c)) -> c = \"\" \"\"",
-            typ: "module { fn go(struct(a, b)) -> b }",
-        },
-        Case {
-            src: "pub external fn go() -> module {} = \"\" \"\"",
-            typ: "module { fn go() -> module {  } }",
-        },
-        Case {
-            src: "pub external fn go() -> module { a | } = \"\" \"\"",
-            typ: "module { fn go() -> module { a |  } }",
-        },
-        Case {
-            src: "pub external fn go() -> module { a | const x: Int fn y() -> Int} = \"\" \"\"",
-            typ: "module {
-  fn go() -> module { a |
-    const x: Int
-    fn y() -> Int
-  }
-}",
-        },
-        Case {
-            src: "pub external fn go() -> module { const x: Int fn y() -> Int} = \"\" \"\"",
-            typ: "module {
-  fn go() -> module {
-    const x: Int
-    fn y() -> Int
-  }
-}",
+            module: vec![("go", "fn(struct(a, b)) -> b")],
         },
         Case {
             src: "pub external fn ok() -> {} = \"\" \"\"",
-            typ: "module { fn ok() -> {} }",
+            module: vec![("ok", "fn() -> {}")],
         },
         Case {
             src: "pub external fn ok() -> {a = Int, b = Int} = \"\" \"\"",
-            typ: "module { fn ok() -> { a = Int, b = Int } }",
+            module: vec![("ok", "fn() -> { a = Int, b = Int }")],
         },
         Case {
             src: "pub external fn ok() -> {a | a = Int} = \"\" \"\"",
-            typ: "module { fn ok() -> { a | a = Int } }",
+            module: vec![("ok", "fn() -> { a | a = Int }")],
         },
         Case {
             src: "pub external fn ok() -> {a | } = \"\" \"\"",
-            typ: "module { fn ok() -> { a |  } }",
+            module: vec![("ok", "fn() -> { a |  }")],
         },
         Case {
             src: "
@@ -3844,7 +3824,7 @@ fn infer_module_test() {
         pub fn x() {
           go(1)
         }",
-            typ: "module { fn x() -> a }",
+            module: vec![("x", "fn() -> a")],
         },
         Case {
             src: "
@@ -3852,93 +3832,93 @@ fn infer_module_test() {
         pub fn i(x) { id(x) }
         pub fn a() { id(1) }
         pub fn b() { id(1.0) }",
-            typ: "module {
-  fn a() -> Int
-  fn b() -> Float
-  fn i(a) -> a
-}",
+            module: vec![
+                ("a", "fn() -> Int"),
+                ("b", "fn() -> Float"),
+                ("i", "fn(a) -> a"),
+            ],
         },
         Case {
             src: "pub external fn len(List(a)) -> Int = \"\" \"\"",
-            typ: "module { fn len(List(a)) -> Int }",
+            module: vec![("len", "fn(List(a)) -> Int")],
         },
         Case {
             src: "
         pub external type Connection\n
         pub external fn is_open(Connection) -> Bool = \"\" \"\"",
-            typ: "module { fn is_open(Connection) -> Bool }",
+            module: vec![("is_open", "fn(Connection) -> Bool")],
         },
         Case {
             src: "
         pub external type Pair(thing, thing)\n
         pub external fn pair(a) -> Pair(a, a) = \"\" \"\"",
-            typ: "module { fn pair(a) -> Pair(a, a) }",
+            module: vec![("pair", "fn(a) -> Pair(a, a)")],
         },
         Case {
             src: "
 pub fn one() { 1 }
 pub fn zero() { one() - 1 }
 pub fn two() { one() + zero() }",
-            typ: "module {
-  fn one() -> Int
-  fn two() -> Int
-  fn zero() -> Int
-}",
+            module: vec![
+                ("one", "fn() -> Int"),
+                ("two", "fn() -> Int"),
+                ("zero", "fn() -> Int"),
+            ],
         },
         Case {
             src: "
         pub fn one() { 1 }
         pub fn zero() { one() - 1 }
         pub fn two() { one() + zero() }",
-            typ: "module {
-  fn one() -> Int
-  fn two() -> Int
-  fn zero() -> Int
-}",
+            module: vec![
+                ("one", "fn() -> Int"),
+                ("two", "fn() -> Int"),
+                ("zero", "fn() -> Int"),
+            ],
         },
         // Type annotations
         Case {
             src: "pub fn go(x: Int) { x }",
-            typ: "module { fn go(Int) -> Int }",
+            module: vec![("go", "fn(Int) -> Int")],
         },
         Case {
             src: "pub fn go(x: b) -> b { x }",
-            typ: "module { fn go(a) -> a }",
+            module: vec![("go", "fn(a) -> a")],
         },
         Case {
             src: "pub fn go(x) -> b { x }",
-            typ: "module { fn go(a) -> a }",
+            module: vec![("go", "fn(a) -> a")],
         },
         Case {
             src: "pub fn go(x: b) { x }",
-            typ: "module { fn go(a) -> a }",
+            module: vec![("go", "fn(a) -> a")],
         },
         Case {
             src: "pub fn go(x: List(b)) -> List(b) { x }",
-            typ: "module { fn go(List(a)) -> List(a) }",
+            module: vec![("go", "fn(List(a)) -> List(a)")],
         },
         Case {
             src: "pub fn go(x: List(b)) { x }",
-            typ: "module { fn go(List(a)) -> List(a) }",
+            module: vec![("go", "fn(List(a)) -> List(a)")],
         },
         Case {
             src: "pub fn go(x: List(String)) { x }",
-            typ: "module { fn go(List(String)) -> List(String) }",
+            module: vec![("go", "fn(List(String)) -> List(String)")],
         },
         Case {
             src: "pub fn go(x: b, y: c) { x }",
-            typ: "module { fn go(a, b) -> a }",
+            module: vec![("go", "fn(a, b) -> a")],
         },
         Case {
             src: "pub fn go(x) -> Int { x }",
-            typ: "module { fn go(Int) -> Int }",
+            module: vec![("go", "fn(Int) -> Int")],
         },
         // // Type aliases
         // Case {
         //     src: "
         // type Html = String
         // pub fn go() { 1 }",
-        //     typ: "module { fn go() -> Int }",
+        //     module: vec![("go", "fn() -> Int")],
         // },
         Case {
             src: "pub fn length(list) {
@@ -3947,7 +3927,7 @@ pub fn two() { one() + zero() }",
                     | [x | xs] -> length(xs) + 1
                     }
                   }",
-            typ: "module { fn length(List(a)) -> Int }",
+            module: vec![("length", "fn(List(a)) -> Int")],
         },
         Case {
             src: "external fn the_map({a = Int, b = Int}) -> Int = \"\" \"\"
@@ -3955,7 +3935,7 @@ pub fn two() { one() + zero() }",
                     let a = map.a
                     the_map(map)
                   }",
-            typ: "module { fn go({ a = Int, b = Int }) -> Int }",
+            module: vec![("go", "fn({ a = Int, b = Int }) -> Int")],
         },
         // % TODO: mutual recursion
         //    // % {
@@ -3973,20 +3953,23 @@ pub fn two() { one() + zero() }",
         //    // % }
     ];
 
-    for Case { src, typ } in cases.into_iter() {
-        println!("{}", src);
+    for Case { src, module } in cases.into_iter() {
         let ast = crate::grammar::ModuleParser::new()
             .parse(src)
             .expect("syntax error");
-        let (result, _) = infer_module(ast, &std::collections::HashMap::new())
-            .expect("should successfully infer");
-        assert_eq!(
-            (
-                src,
-                result.typ.to_gleam_doc(&mut hashmap![], &mut 0).format(80)
-            ),
-            (src, typ.to_string()),
-        );
+        let result = infer_module(ast, &HashMap::new()).expect("should successfully infer");
+        let mut constructors: Vec<(_, _)> = result
+            .type_info
+            .value_constructors
+            .iter()
+            .map(|(k, v)| (k.clone(), v.typ.pretty_print(0)))
+            .collect();
+        constructors.sort();
+        let expected: Vec<_> = module
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect();
+        assert_eq!((src, constructors), (src, expected));
     }
 }
 
@@ -4107,7 +4090,10 @@ pub fn x() { id(1, 1.0) }
                     pub enum LeakType =
                       | Variant(PrivateType)"#,
             error: Error::PrivateTypeLeak {
-                meta: Meta { start: 90, end: 110 },
+                meta: Meta {
+                    start: 90,
+                    end: 110,
+                },
                 leaked: Type::App {
                     args: vec![],
                     public: false,
@@ -4122,8 +4108,7 @@ pub fn x() { id(1, 1.0) }
         let ast = crate::grammar::ModuleParser::new()
             .parse(src)
             .expect("syntax error");
-        let result = infer_module(ast, &std::collections::HashMap::new())
-            .expect_err("should infer an error");
+        let result = infer_module(ast, &HashMap::new()).expect_err("should infer an error");
         assert_eq!((src, error), (src, &result));
     }
 
@@ -4134,6 +4119,6 @@ pub fn x() { id(1, 1.0) }
         let ast = crate::grammar::ModuleParser::new()
             .parse(src)
             .expect("syntax error");
-        infer_module(ast, &std::collections::HashMap::new()).expect_err("should infer an error");
+        infer_module(ast, &HashMap::new()).expect_err("should infer an error");
     }
 }

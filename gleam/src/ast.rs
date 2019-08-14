@@ -1,17 +1,17 @@
-use crate::typ;
+use crate::typ::{self, ValueConstructor};
 
-pub type TypedModule = Module<Scope<typ::Type>, typ::Type>;
+pub type TypedModule = Module<ValueConstructor, typ::Type, typ::ModuleTypeInfo>;
 
-pub type UntypedModule = Module<(), ()>;
+pub type UntypedModule = Module<(), (), ()>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Module<S, T> {
+pub struct Module<S, T, I> {
     pub name: Vec<String>,
-    pub typ: T,
+    pub type_info: I,
     pub statements: Vec<Statement<S, T>>,
 }
 
-impl<S, T> Module<S, T> {
+impl<S, T, I> Module<S, T, I> {
     pub fn name_string(&self) -> String {
         self.name.join("/")
     }
@@ -71,12 +71,6 @@ pub enum Type {
         tail: Option<Box<Type>>,
     },
 
-    Module {
-        meta: Meta,
-        fields: Vec<(String, Type)>,
-        tail: Option<Box<Type>>,
-    },
-
     Fn {
         meta: Meta,
         args: Vec<Type>,
@@ -94,7 +88,7 @@ pub enum Type {
     },
 }
 
-pub type TypedStatement = Statement<Scope<typ::Type>, typ::Type>;
+pub type TypedStatement = Statement<ValueConstructor, typ::Type>;
 
 pub type UntypedStatement = Statement<(), ()>;
 
@@ -167,30 +161,7 @@ pub enum BinOp {
     ModuloInt,
 }
 
-pub type TypedScope = Scope<typ::Type>;
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Scope<T> {
-    /// A locally defined variable or function parameter
-    Local,
-
-    /// An enum constructor or singleton
-    Enum { arity: usize },
-
-    /// A function in the current module
-    Module { arity: usize },
-
-    /// An imported module
-    Import {
-        module: Vec<String>,
-        type_constructors: im::HashMap<String, crate::typ::TypeConstructorInfo>,
-    },
-
-    /// A constant value to be inlined
-    Constant { value: Box<Expr<Scope<T>, T>> },
-}
-
-pub type TypedExpr = Expr<Scope<typ::Type>, typ::Type>;
+pub type TypedExpr = Expr<ValueConstructor, typ::Type>;
 
 pub type UntypedExpr = Expr<(), ()>;
 
@@ -229,8 +200,7 @@ pub enum Expr<S, T> {
 
     Var {
         meta: Meta,
-        typ: T,
-        scope: S,
+        constructor: S,
         name: String,
     },
 
@@ -297,7 +267,7 @@ pub enum Expr<S, T> {
         tail: Box<Expr<S, T>>,
     },
 
-    MapSelect {
+    FieldSelect {
         meta: Meta,
         typ: T,
         label: String,
@@ -308,7 +278,8 @@ pub enum Expr<S, T> {
         meta: Meta,
         typ: T,
         label: String,
-        module: Box<Expr<S, T>>,
+        module_name: Vec<String>,
+        module_alias: String,
     },
 }
 
@@ -330,7 +301,7 @@ impl<S, T> Expr<S, T> {
             Expr::String { meta, .. } => meta,
             Expr::MapNil { meta, .. } => meta,
             Expr::MapCons { meta, .. } => meta,
-            Expr::MapSelect { meta, .. } => meta,
+            Expr::FieldSelect { meta, .. } => meta,
             Expr::ModuleSelect { meta, .. } => meta,
         }
     }
@@ -344,7 +315,7 @@ impl TypedExpr {
             Expr::String { typ, .. } => typ,
             Expr::Seq { then, .. } => then.typ(),
             Expr::AnonStruct { typ, .. } => typ,
-            Expr::Var { typ, .. } => typ,
+            Expr::Var { constructor, .. } => &constructor.typ,
             Expr::Fn { typ, .. } => typ,
             Expr::Nil { typ, .. } => typ,
             Expr::Cons { typ, .. } => typ,
@@ -354,13 +325,13 @@ impl TypedExpr {
             Expr::Case { typ, .. } => typ,
             Expr::MapNil { typ, .. } => typ,
             Expr::MapCons { typ, .. } => typ,
-            Expr::MapSelect { typ, .. } => typ,
+            Expr::FieldSelect { typ, .. } => typ,
             Expr::ModuleSelect { typ, .. } => typ,
         }
     }
 }
 
-pub type TypedClause = Clause<Scope<typ::Type>, typ::Type>;
+pub type TypedClause = Clause<ValueConstructor, typ::Type>;
 
 pub type UntypedClause = Clause<(), ()>;
 
@@ -418,11 +389,6 @@ pub enum Pattern {
         tail: Box<Pattern>,
     },
 
-    //     Map {
-    //         meta: Meta,
-    //         label: String,
-    //         fields: Vec<(Pattern, Pattern)>,
-    //     },
     Constructor {
         meta: Meta,
         name: String,

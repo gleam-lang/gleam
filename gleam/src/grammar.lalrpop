@@ -16,7 +16,7 @@ extern {
 
 pub Module: UntypedModule = {
     Statement* => Module {
-        typ: (),
+        type_info: (),
         name: vec![],
         statements: <>,
     }
@@ -192,10 +192,8 @@ SimpleExpr: UntypedExpr = {
     Map => <>,
     MapNil => <>,
     MapCons => <>,
-    // Constructor => <>,
-    MapSelect => <>,
     AnonStruct => <>,
-    ModuleSelect => <>,
+    FieldSelect => <>,
     "begin" <e:Expr> "end" => e,
 }
 
@@ -226,8 +224,8 @@ Let: UntypedExpr = {
     }
 }
 
-MapSelect: UntypedExpr = {
-    <s:@L> <r:SimpleExpr> "." <l:VarName> <e:@L> => Expr::MapSelect {
+FieldSelect: UntypedExpr = {
+    <s:@L> <r:SimpleExpr> "." <l:AnyName> <e:@L> => Expr::FieldSelect {
         meta: meta(s, e),
         typ: (),
         label: l,
@@ -272,22 +270,6 @@ MapCons: UntypedExpr = {
     }
 }
 
-ModuleSelect: UntypedExpr = {
-    <s:@L> <m:SimpleExpr> ":" <l:VarName> <e:@L> => Expr::ModuleSelect {
-        meta: meta(s, e),
-        typ: (),
-        label: l,
-        module: Box::new(m),
-    },
-
-    <s:@L> <m:SimpleExpr> ":" <l:UpName> <e:@L> => Expr::ModuleSelect {
-        meta: meta(s, e),
-        typ: (),
-        label: l,
-        module: Box::new(m),
-    },
-}
-
 Fn: UntypedExpr = {
     <s:@L> "fn(" <a:Comma<FnArg>> ")" "{" <b:Expr+> "}" <e:@L> => Expr::Fn {
         meta: meta(s, e),
@@ -322,8 +304,7 @@ Call: UntypedExpr = {
                 num_holes += 1;
                 Expr::Var {
                     meta,
-                    typ: (),
-                    scope: (),
+                    constructor: (),
                     name: hole_arg_name.to_string(),
                 }
             }
@@ -395,15 +376,13 @@ List: UntypedExpr = {
 Var: UntypedExpr = {
     <s:@L> <v:VarName> <e:@L> => Expr::Var {
         meta: meta(s, e),
-        typ: (),
-        scope: (),
+        constructor: (),
         name: v,
     },
 
     <s:@L> <v:UpName> <e:@L> => Expr::Var {
         meta: meta(s, e),
-        typ: (),
-        scope: (),
+        constructor: (),
         name: v,
     }
 }
@@ -504,17 +483,10 @@ Pattern: Pattern = {
 }
 
 PatternConstructor: Pattern = {
-    <s:@L> <name:UpName> <args:PatternConstructorArgs?> <e:@L> => Pattern::Constructor {
+    <s:@L> <module:(<VarName> ".")?> <name:UpName> <args:PatternConstructorArgs?> <e:@L> => Pattern::Constructor {
         meta: meta(s, e),
-        module: None,
         args: args.unwrap_or_else(|| vec![]),
-        name,
-    },
-
-    <s:@L> <module:VarName> ":" <name:UpName> <args:PatternConstructorArgs?> <e:@L> => Pattern::Constructor {
-        meta: meta(s, e),
-        module: Some(module),
-        args: args.unwrap_or_else(|| vec![]),
+        module,
         name,
     },
 }
@@ -595,38 +567,10 @@ PatternCons: Pattern = {
 
 Type: Type = {
     TypeConstructor => <>,
-    TypeMap => <>,
-    TypeModule => <>,
     TypeAnonStruct => <>,
+    TypeMap => <>,
     TypeVar => <>,
     TypeFn => <>,
-}
-
-TypeModule: Type = {
-    <s:@L> "module" "{}" <e:@L> => Type::Module {
-        meta: meta(s, e),
-        fields: vec![],
-        tail: None,
-    },
-
-    <s:@L> "module" "{" <tail:TypeMapTail?> <fields:TypeModuleField*> "}" <e:@L> => Type::Module {
-        meta: meta(s, e),
-        fields,
-        tail,
-    },
-}
-
-TypeModuleField: (String, Type) = {
-    "const" <l:VarName> ":" <t:Type> => (l, t),
-
-    <s:@L> "fn" <l:VarName> "(" <args:Comma<Type>> ")" "->" <retrn:Type> <e:@L> => {
-        let f = Type::Fn {
-            meta: meta(s, e),
-            retrn: Box::new(retrn),
-            args,
-        };
-        (l, f)
-    }
 }
 
 TypeMap: Type = {
@@ -655,14 +599,14 @@ TypeMapField: (String, Type) = {
 }
 
 TypeConstructor: Type = {
-    <s:@L> <m:VarName> ":" <n:r"[A-Z][A-Za-z]*"> <e:@L> => Type::Constructor {
+    <s:@L> <m:VarName> "." <n:r"[A-Z][A-Za-z]*"> <e:@L> => Type::Constructor {
         meta: meta(s, e),
         module: Some(m),
         args: vec![],
         name: n.to_string(),
     },
 
-    <s:@L> <m:VarName> ":" <n:r"[A-Z][A-Za-z]*"> "(" <a:Comma<Type>> ")" <e:@L> => Type::Constructor {
+    <s:@L> <m:VarName> "." <n:r"[A-Z][A-Za-z]*"> "(" <a:Comma<Type>> ")" <e:@L> => Type::Constructor {
         meta: meta(s, e),
         module: Some(m),
         args: a,
@@ -718,6 +662,11 @@ UpName: String = {
 
 DiscardName: () = {
     <v:r"_[A-Za-z_]*"> => ()
+}
+
+AnyName: String = {
+    VarName => <>,
+    UpName => <>
 }
 
 VarName: String = {
