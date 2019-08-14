@@ -244,16 +244,23 @@ fn merge_sort(a, b, compare) {
   }
 }
 
-pub fn sort(list, compare) {
-  let list_length = length(list)
+fn do_sort(list, compare, list_length) {
   case list_length < 2 {
   | True -> list
   | False ->
     let split_length = list_length / 2
     let a_list = take(list, split_length)
     let b_list = drop(list, split_length)
-    merge_sort(sort(a_list, compare), sort(b_list, compare), compare)
+    merge_sort(
+      do_sort(a_list, compare, split_length),
+      do_sort(b_list, compare, list_length - split_length),
+      compare,
+    )
   }
+}
+
+pub fn sort(list, compare) {
+  do_sort(list, compare, length(list))
 }
 
 pub fn range(start, stop) {

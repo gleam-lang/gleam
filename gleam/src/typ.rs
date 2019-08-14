@@ -2594,7 +2594,7 @@ fn rewrite_row_test() {
             label: "b".to_string(),
             head: Box::new(int()),
             tail: Box::new(Type::Var {
-                typ: Rc::new(RefCell::new(TypeVar::Unbound { id: 13, level: 1 }))
+                typ: Rc::new(RefCell::new(TypeVar::Unbound { id: 9, level: 1 }))
             }),
         }),
         unify_row_field(row, "a".to_string(), int(), &mut env)

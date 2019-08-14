@@ -295,8 +295,7 @@ merge_sort(A, B, Compare) ->
             end
     end.
 
-sort(List, Compare) ->
-    ListLength = length(List),
+do_sort(List, Compare, ListLength) ->
     case ListLength < 2 of
         true ->
             List;
@@ -305,8 +304,15 @@ sort(List, Compare) ->
             SplitLength = ListLength div 2,
             AList = take(List, SplitLength),
             BList = drop(List, SplitLength),
-            merge_sort(sort(AList, Compare), sort(BList, Compare), Compare)
+            merge_sort(
+                do_sort(AList, Compare, SplitLength),
+                do_sort(BList, Compare, ListLength - SplitLength),
+                Compare
+            )
     end.
+
+sort(List, Compare) ->
+    do_sort(List, Compare, length(List)).
 
 range(Start, Stop) ->
     case gleam@int:compare(Start, Stop) of
