@@ -958,42 +958,38 @@ impl<'a> Env<'a> {
             },
         );
 
-        let a = env.new_generic_var();
         env.insert_variable(
             ">".to_string(),
             Scope::Local,
             Type::Fn {
-                args: vec![a.clone(), a],
+                args: vec![int(), int()],
                 retrn: Box::new(bool()),
             },
         );
 
-        let a = env.new_generic_var();
         env.insert_variable(
             ">=".to_string(),
             Scope::Local,
             Type::Fn {
-                args: vec![a.clone(), a],
+                args: vec![int(), int()],
                 retrn: Box::new(bool()),
             },
         );
 
-        let a = env.new_generic_var();
         env.insert_variable(
             "<".to_string(),
             Scope::Local,
             Type::Fn {
-                args: vec![a.clone(), a],
+                args: vec![int(), int()],
                 retrn: Box::new(bool()),
             },
         );
 
-        let a = env.new_generic_var();
         env.insert_variable(
             "<=".to_string(),
             Scope::Local,
             Type::Fn {
-                args: vec![a.clone(), a],
+                args: vec![int(), int()],
                 retrn: Box::new(bool()),
             },
         );
@@ -3427,6 +3423,14 @@ fn infer_error_test() {
             src: "1 == 1.0",
             error: Error::CouldNotUnify {
                 meta: Meta { start: 5, end: 8 },
+                expected: int(),
+                given: float(),
+            },
+        },
+        Case {
+            src: "1 > 1.0",
+            error: Error::CouldNotUnify {
+                meta: Meta { start: 4, end: 7 },
                 expected: int(),
                 given: float(),
             },
