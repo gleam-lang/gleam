@@ -1656,6 +1656,16 @@ x() ->
     'try':'and'().
 "#,
         },
+        // Translation of Float-specific BinOp into variable-type Erlang term comparison.
+        Case {
+            src: r#"fn x() { 1. <. 2.3 }"#,
+            erl: r#"-module().
+-compile(no_auto_import).
+
+x() ->
+    1.0 < 2.3.
+"#
+        }
     ];
 
     for Case { src, erl } in cases.into_iter() {
