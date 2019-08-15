@@ -61,17 +61,17 @@ pub fn module(module: TypedModule) -> String {
         .to_doc()
         .append(line())
         .append("-compile(no_auto_import).")
+        .append(lines(2))
         .append(
             if exports.is_empty() {
                 nil()
             } else {
-                lines(2)
-                    .append("-export([")
+                "-export([".to_doc()
                     .append(exports)
                     .append("]).")
+                    .append(lines(2))
             }
         )
-        .append(lines(2))
         .append(
             module
                 .statements
