@@ -454,6 +454,44 @@ fn expr_test() {
     );
 
     assert_eq!(
+        Ok(Expr::BinOp {
+            meta: Meta { start: 0, end: 5 },
+            typ: (),
+            name: BinOp::GtInt,
+            left: Box::new(Expr::Int {
+                typ: (),
+                meta: Meta { start: 0, end: 1 },
+                value: 1
+            }),
+            right: Box::new(Expr::Int {
+                typ: (),
+                meta: Meta { start: 4, end: 5 },
+                value: 2
+            }),
+        }),
+        ExprParser::new().parse("1 > 2"),
+    );
+
+    assert_eq!(
+        Ok(Expr::BinOp {
+            meta: Meta { start: 0, end: 9 },
+            typ: (),
+            name: BinOp::GtFloat,
+            left: Box::new(Expr::Float {
+                typ: (),
+                meta: Meta { start: 0, end: 2 },
+                value: 1.0
+            }),
+            right: Box::new(Expr::Float {
+                typ: (),
+                meta: Meta { start: 6, end: 9 },
+                value: 2.3
+            }),
+        }),
+        ExprParser::new().parse("1. >. 2.3"),
+    );
+
+    assert_eq!(
         Ok(Expr::Cons {
             meta: Meta { start: 5, end: 6 },
             typ: (),

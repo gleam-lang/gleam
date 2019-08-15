@@ -135,10 +135,14 @@ Op4: UntypedExpr = {
 }
 
 CompareOp: BinOp = {
-    "<" => BinOp::Lt,
-    "<=" => BinOp::LtEq,
-    ">" => BinOp::Gt,
-    ">=" => BinOp::GtEq,
+    "<" => BinOp::LtInt,
+    "<=" => BinOp::LtEqInt,
+    ">" => BinOp::GtInt,
+    ">=" => BinOp::GtEqInt,
+    "<." => BinOp::LtFloat,
+    "<=." => BinOp::LtEqFloat,
+    ">." => BinOp::GtFloat,
+    ">=." => BinOp::GtEqFloat,
 }
 
 Op5: UntypedExpr = {
