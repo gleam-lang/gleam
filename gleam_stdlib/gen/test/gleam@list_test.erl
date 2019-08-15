@@ -187,6 +187,10 @@ sort_test() ->
         gleam@list:sort([4, 3, 6, 5, 4, 1], fun gleam@int:compare/2),
         [1, 3, 4, 4, 5, 6]
     ),
+    gleam@expect:equal(
+        gleam@list:sort([4.1, 3.1, 6.1, 5.1, 4.1], fun gleam@float:compare/2),
+        [3.1, 4.1, 4.1, 5.1, 6.1]
+    ),
     gleam@expect:equal(gleam@list:sort([], fun gleam@int:compare/2), []).
 
 index_map_test() ->
