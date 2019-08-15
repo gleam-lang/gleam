@@ -61,10 +61,16 @@ pub fn module(module: TypedModule) -> String {
         .to_doc()
         .append(line())
         .append("-compile(no_auto_import).")
-        .append(lines(2))
-        .append("-export([")
-        .append(exports)
-        .append("]).")
+        .append(
+            if exports.is_empty() {
+                nil()
+            } else {
+                lines(2)
+                    .append("-export([")
+                    .append(exports)
+                    .append("]).")
+            }
+        )
         .append(lines(2))
         .append(
             module
@@ -931,8 +937,6 @@ map() ->
     let expected = "-module(term).
 -compile(no_auto_import).
 
--export([]).
-
 int() ->
     176.
 
@@ -1038,8 +1042,6 @@ funny() ->
     };
     let expected = "-module(term).
 -compile(no_auto_import).
-
--export([]).
 
 some_function(
     ArgOne,
@@ -1209,8 +1211,6 @@ some_function(
     let expected = "-module(vars).
 -compile(no_auto_import).
 
--export([]).
-
 arg() ->
     SomeArg.
 
@@ -1343,8 +1343,6 @@ moddy4() ->
     let expected = "-module(my_mod).
 -compile(no_auto_import).
 
--export([]).
-
 go() ->
     case 1 of
         1 ->
@@ -1453,8 +1451,6 @@ go() ->
     let expected = "-module(funny).
 -compile(no_auto_import).
 
--export([]).
-
 one() ->
     one_two(1).
 
@@ -1484,8 +1480,6 @@ fn integration_test() {
             erl: r#"-module().
 -compile(no_auto_import).
 
--export([]).
-
 go() ->
     X = {100000000000000000,
          {2000000000, 3000000000000, 40000000000},
@@ -1502,8 +1496,6 @@ go() ->
 }"#,
             erl: r#"-module().
 -compile(no_auto_import).
-
--export([]).
 
 go() ->
     Y = 1,
@@ -1530,8 +1522,6 @@ t() ->
             erl: r#"-module().
 -compile(no_auto_import).
 
--export([]).
-
 pound(X) ->
     {pound, X}.
 "#,
@@ -1541,8 +1531,6 @@ pound(X) ->
             erl: r#"-module().
 -compile(no_auto_import).
 
--export([]).
-
 loop() ->
     loop().
 "#,
@@ -1551,8 +1539,6 @@ loop() ->
             src: r#"external fn run() -> Int = "Elixir.MyApp" "run""#,
             erl: r#"-module().
 -compile(no_auto_import).
-
--export([]).
 
 run() ->
     'Elixir.MyApp':run().
@@ -1596,8 +1582,6 @@ go() ->
             erl: r#"-module().
 -compile(no_auto_import).
 
--export([]).
-
 'and'(X, Y) ->
     X andalso Y.
 
@@ -1614,8 +1598,6 @@ modulo(X, Y) ->
             "#,
             erl: r#"-module().
 -compile(no_auto_import).
-
--export([]).
 
 second(List) ->
     case List of
@@ -1641,8 +1623,6 @@ tail(List) ->
             erl: r#"-module().
 -compile(no_auto_import).
 
--export([]).
-
 age(X) ->
     maps:get(age, X).
 "#,
@@ -1651,8 +1631,6 @@ age(X) ->
             src: r#"fn x() { let x = 1 let x = x + 1 x }"#,
             erl: r#"-module().
 -compile(no_auto_import).
-
--export([]).
 
 x() ->
     X = 1,
