@@ -267,10 +267,9 @@ pub fn sort_test() {
   |> list:sort(_, int:compare)
   |> expect:equal(_, [1, 3, 4, 4, 5, 6])
 
-  // TODO: Requires float:compare
-  // [4.1, 3.1, 6.1, 5.1, 4.1]
-  // |> list:sort(_, float:compare)
-  // |> expect:equal(_, [3.1, 4.1, 4.1, 5.1, 6.1])
+  [4.1, 3.1, 6.1, 5.1, 4.1]
+  |> list:sort(_, float:compare)
+  |> expect:equal(_, [3.1, 4.1, 4.1, 5.1, 6.1])
 
   []
   |> list:sort(_, int:compare)
