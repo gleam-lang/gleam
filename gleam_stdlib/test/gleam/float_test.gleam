@@ -1,5 +1,6 @@
 import gleam/expect
 import gleam/float
+import gleam/order
 
 pub fn parse_test() {
   "1.23"
@@ -35,6 +36,26 @@ pub fn to_string_test() {
   -8.1
   |> float:to_string
   |> expect:equal(_, "-8.1")
+}
+
+pub fn compare_test() {
+  float:compare(0., 0.)
+  |> expect:equal(_, order:Eq)
+
+  float:compare(0.1, 0.1)
+  |> expect:equal(_, order:Eq)
+
+  float:compare(0., 0.1)
+  |> expect:equal(_, order:Lt)
+
+  float:compare(-2., -1.9)
+  |> expect:equal(_, order:Lt)
+
+  float:compare(2., 1.9)
+  |> expect:equal(_, order:Gt)
+
+  float:compare(-1.9, -2.)
+  |> expect:equal(_, order:Gt)
 }
 
 pub fn ceiling_test() {

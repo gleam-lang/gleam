@@ -1,7 +1,7 @@
 -module(gleam@float_test).
 -compile(no_auto_import).
 
--export([parse_test/0, to_string_test/0, ceiling_test/0, floor_test/0, round_test/0, truncate_test/0]).
+-export([parse_test/0, to_string_test/0, compare_test/0, ceiling_test/0, floor_test/0, round_test/0, truncate_test/0]).
 
 parse_test() ->
     gleam@expect:equal(gleam@float:parse(<<"1.23">>), {ok, 1.23}),
@@ -14,6 +14,14 @@ parse_test() ->
 to_string_test() ->
     gleam@expect:equal(gleam@float:to_string(123.0), <<"123.0">>),
     gleam@expect:equal(gleam@float:to_string(-8.1), <<"-8.1">>).
+
+compare_test() ->
+    gleam@expect:equal(gleam@float:compare(0.0, 0.0), eq),
+    gleam@expect:equal(gleam@float:compare(0.1, 0.1), eq),
+    gleam@expect:equal(gleam@float:compare(0.0, 0.1), lt),
+    gleam@expect:equal(gleam@float:compare(-2.0, -1.9), lt),
+    gleam@expect:equal(gleam@float:compare(2.0, 1.9), gt),
+    gleam@expect:equal(gleam@float:compare(-1.9, -2.0), gt).
 
 ceiling_test() ->
     gleam@expect:equal(gleam@float:ceiling(8.1), 9.0),

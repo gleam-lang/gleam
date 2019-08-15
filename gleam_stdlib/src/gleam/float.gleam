@@ -1,4 +1,5 @@
 import gleam/iodata
+import gleam/order
 
 pub enum NotAFloat =
   | NotAFloat
@@ -10,6 +11,17 @@ pub fn to_string(f) {
   f
   |> iodata:from_float
   |> iodata:to_string
+}
+
+pub fn compare(a, b) {
+  case a == b {
+  | True -> order:Eq
+  | False ->
+    case a <. b {
+    | True -> order:Lt
+    | False -> order:Gt
+    }
+  }
 }
 
 pub external fn ceiling(Float) -> Float = "math" "ceil";
