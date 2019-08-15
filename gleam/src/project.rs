@@ -715,13 +715,13 @@ fn compile_test() {
                 Compiled {
                     name: vec!["two".to_string()],
                     path: PathBuf::from("/gen/src/two.erl"),
-                    code: "-module(two).\n-compile(no_auto_import).\n\n-export([]).\n\n\n"
+                    code: "-module(two).\n-compile(no_auto_import).\n\n\n"
                         .to_string(),
                 },
                 Compiled {
                     name: vec!["one".to_string()],
                     path: PathBuf::from("/gen/src/one.erl"),
-                    code: "-module(one).\n-compile(no_auto_import).\n\n-export([]).\n\n\n"
+                    code: "-module(one).\n-compile(no_auto_import).\n\n\n"
                         .to_string(),
                 },
             ]),
@@ -736,7 +736,7 @@ fn compile_test() {
             expected: Ok(vec![Compiled {
                 name: vec!["one".to_string()],
                 path: PathBuf::from("/gen/test/one.erl"),
-                code: "-module(one).\n-compile(no_auto_import).\n\n-export([]).\n\n\n".to_string(),
+                code: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
             }]),
         },
         Case {
@@ -778,13 +778,13 @@ fn compile_test() {
                 Compiled {
                     name: vec!["two".to_string()],
                     path: PathBuf::from("/gen/src/two.erl"),
-                    code: "-module(two).\n-compile(no_auto_import).\n\n-export([]).\n\n\n"
+                    code: "-module(two).\n-compile(no_auto_import).\n\n\n"
                         .to_string(),
                 },
                 Compiled {
                     name: vec!["one".to_string()],
                     path: PathBuf::from("/gen/src/one.erl"),
-                    code: "-module(one).\n-compile(no_auto_import).\n\n-export([]).\n\n\n"
+                    code: "-module(one).\n-compile(no_auto_import).\n\n\n"
                         .to_string(),
                 },
             ]),
@@ -808,13 +808,13 @@ fn compile_test() {
                 Compiled {
                     name: vec!["one".to_string()],
                     path: PathBuf::from("/gen/src/one.erl"),
-                    code: "-module(one).\n-compile(no_auto_import).\n\n-export([]).\n\n\n"
+                    code: "-module(one).\n-compile(no_auto_import).\n\n\n"
                         .to_string(),
                 },
                 Compiled {
                     name: vec!["two".to_string()],
                     path: PathBuf::from("/gen/src/two.erl"),
-                    code: "-module(two).\n-compile(no_auto_import).\n\n-export([]).\n\n\n"
+                    code: "-module(two).\n-compile(no_auto_import).\n\n\n"
                         .to_string(),
                 },
             ]),
@@ -838,7 +838,7 @@ fn compile_test() {
                 Compiled {
                     name: vec!["one".to_string()],
                     path: PathBuf::from("/gen/src/one.erl"),
-                    code: "-module(one).\n-compile(no_auto_import).\n\n-export([]).\n\n\n"
+                    code: "-module(one).\n-compile(no_auto_import).\n\n\n"
                         .to_string(),
                 },
                 Compiled {
@@ -869,7 +869,7 @@ unbox(X) ->\n    {box, I} = X,\n    I.\n"
                 Compiled {
                     name: vec!["one".to_string()],
                     path: PathBuf::from("/gen/src/one.erl"),
-                    code: "-module(one).\n-compile(no_auto_import).\n\n-export([]).\n\n\n"
+                    code: "-module(one).\n-compile(no_auto_import).\n\n\n"
                         .to_string(),
                 },
                 Compiled {
@@ -891,7 +891,7 @@ box(X) ->\n    {box, X}.\n"
             expected: Ok(vec![Compiled {
                 name: vec!["one".to_string(), "two".to_string()],
                 path: PathBuf::from("/gen/src/one@two.erl"),
-                code: "-module(one@two).\n-compile(no_auto_import).\n\n-export([]).\n\n\n"
+                code: "-module(one@two).\n-compile(no_auto_import).\n\n\n"
                     .to_string(),
             }]),
         },
@@ -914,7 +914,7 @@ box(X) ->\n    {box, X}.\n"
                 Compiled {
                     name: vec!["one".to_string()],
                     path: PathBuf::from("/gen/src/one.erl"),
-                    code: "-module(one).\n-compile(no_auto_import).\n\n-export([]).\n\n\n"
+                    code: "-module(one).\n-compile(no_auto_import).\n\n\n"
                         .to_string(),
                 },
                 Compiled {
