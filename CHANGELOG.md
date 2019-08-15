@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Comparison operators have been specialised to operate only on Ints.
+- It is now an error to export an enum which has a constructor that takes a
+  private type as an argument.
 
 ## v0.3.0 - 2019-08-08
 
