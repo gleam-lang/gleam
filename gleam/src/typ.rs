@@ -994,6 +994,42 @@ impl<'a> Env<'a> {
             },
         );
 
+        env.insert_variable(
+            ">.".to_string(),
+            Scope::Local,
+            Type::Fn {
+                args: vec![float(), float()],
+                retrn: Box::new(bool()),
+            },
+        );
+
+        env.insert_variable(
+            ">=.".to_string(),
+            Scope::Local,
+            Type::Fn {
+                args: vec![float(), float()],
+                retrn: Box::new(bool()),
+            },
+        );
+
+        env.insert_variable(
+            "<.".to_string(),
+            Scope::Local,
+            Type::Fn {
+                args: vec![float(), float()],
+                retrn: Box::new(bool()),
+            },
+        );
+
+        env.insert_variable(
+            "<=.".to_string(),
+            Scope::Local,
+            Type::Fn {
+                args: vec![float(), float()],
+                retrn: Box::new(bool()),
+            },
+        );
+
         let a = env.new_generic_var();
         env.insert_variable(
             "!=".to_string(),
@@ -3444,6 +3480,14 @@ fn infer_error_test() {
                 meta: Meta { start: 4, end: 7 },
                 expected: int(),
                 given: float(),
+            },
+        },
+        Case {
+            src: "1.0 >. 1",
+            error: Error::CouldNotUnify {
+                meta: Meta { start: 7, end: 8 },
+                expected: float(),
+                given: int(),
             },
         },
         Case {
