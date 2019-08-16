@@ -8,18 +8,18 @@ and has straightforward interop with other BEAM languages such as Erlang,
 Elixir and LFE.
 
 ```rust
-pub enum Tree =
-  | Leaf(Int)
+pub enum Tree(value) =
+  | Leaf(value)
   | Node(Tree, Tree)
 
-pub fn any(tree, predicate) {
+pub fn any(tree: Tree(a), predicate: fn(a) -> Bool) -> Bool {
   case tree {
   | Leaf(i) -> predicate(i)
   | Node(left, right) -> any(left, predicate) || any(right, predicate)
   }
 }
 
-pub fn has_even_leaf(tree) {
+pub fn has_even_leaf(tree: Tree(Int)) -> Bool {
   any(tree, fn(i) {
     i % 2 == 0
   })

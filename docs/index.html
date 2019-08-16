@@ -151,18 +151,18 @@ scalable concurrent systems.</p>
 <p>It compiles to <a href="http://www.erlang.org/">Erlang</a> and has straightforward
 interop with other BEAM languages such as Erlang, Elixir and LFE.</p>
 <p>It looks like this:</p>
-<pre><code class="language-rust noplaypen">pub enum Tree =
-  | Leaf(Int)
+<pre><code class="language-rust noplaypen">pub enum Tree(value) =
+  | Leaf(value)
   | Node(Tree, Tree)
 
-pub fn any(tree, predicate) {
+pub fn any(tree: Tree(a), predicate: fn(a) -&gt; Bool) -&gt; Bool {
   case tree {
   | Leaf(i) -&gt; predicate(i)
   | Node(left, right) -&gt; any(left, predicate) || any(right, predicate)
   }
 }
 
-pub fn has_even_leaf(tree) {
+pub fn has_even_leaf(tree: Tree(Int)) -&gt; Bool {
   any(tree, fn(i) {
     i % 2 == 0
   })
