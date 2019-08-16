@@ -5,6 +5,8 @@
 - The generated code no longer contains export statements if no functions are
   exported from a module.
 - Comparison operators have been specialised to operate only on Ints.
+- The `>.` `>=.` `<.` and `<=.` comparison operators have been added for
+  comparing Floats.
 - It is now an error to export an enum which has a constructor that takes a
   private type as an argument.
 
