@@ -16,7 +16,7 @@ impl<S, T> Module<S, T> {
         self.name.join("/")
     }
 
-    pub fn dependancies(&self) -> Vec<(String, Meta)> {
+    pub fn dependencies(&self) -> Vec<(String, Meta)> {
         self.statements
             .iter()
             .flat_map(|s| match s {
@@ -38,7 +38,7 @@ fn module_dependencies_test() {
         crate::grammar::ModuleParser::new()
             .parse("import foo import bar import foo_bar")
             .expect("syntax error")
-            .dependancies()
+            .dependencies()
     );
 }
 
