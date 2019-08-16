@@ -10,7 +10,7 @@ Elixir and LFE.
 ```rust
 pub enum Tree(value) =
   | Leaf(value)
-  | Node(Tree, Tree)
+  | Node(Tree(value), Tree(value))
 
 pub fn any(tree: Tree(a), predicate: fn(a) -> Bool) -> Bool {
   case tree {
