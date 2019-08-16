@@ -612,8 +612,7 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
         let module_name = module.module.name_string();
         let src = module.src.clone();
         let path = module.path.clone();
-        let deps = module.module.dependancies();
-        // (module_name, src, path, deps)
+        let deps = module.module.dependencies();
         let module_index = indexes
             .get(&module_name)
             .expect("Unable to find module index");
