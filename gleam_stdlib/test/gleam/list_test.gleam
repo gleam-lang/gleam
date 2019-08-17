@@ -196,13 +196,13 @@ pub fn zip_test() {
   |> expect:equal(_, [])
 
   list:zip([1, 2, 3], [4, 5, 6])
-  |> expect:equal(_, [{1, 4}, {2, 5}, {3, 6}])
+  |> expect:equal(_, [struct(1, 4), struct(2, 5), struct(3, 6)])
 
   list:zip([5, 6], [1, 2, 3])
-  |> expect:equal(_, [{5, 1}, {6, 2}])
+  |> expect:equal(_, [struct(5, 1), struct(6, 2)])
 
   list:zip([5, 6, 7], [1, 2])
-  |> expect:equal(_, [{5, 1}, {6, 2}])
+  |> expect:equal(_, [struct(5, 1), struct(6, 2)])
 }
 
 pub fn strict_zip_test() {
@@ -213,7 +213,7 @@ pub fn strict_zip_test() {
   |> expect:is_error
 
   list:strict_zip([1, 2, 3], [4, 5, 6])
-  |> expect:equal(_, Ok([{1, 4}, {2, 5}, {3, 6}]))
+  |> expect:equal(_, Ok([struct(1, 4), struct(2, 5), struct(3, 6)]))
 
   list:strict_zip([5, 6], [1, 2, 3])
   |> expect:is_error
@@ -277,8 +277,8 @@ pub fn sort_test() {
 }
 
 pub fn index_map_test() {
-  list:index_map([3, 4, 5], fn(i, x) { {i, x} })
-  |> expect:equal(_, [{0, 3}, {1, 4}, {2, 5}])
+  list:index_map([3, 4, 5], fn(i, x) { struct(i, x) })
+  |> expect:equal(_, [struct(0, 3), struct(1, 4), struct(2, 5)])
 
   let f = fn(i, x) {
     string:append(x, int:to_string(i))
@@ -323,37 +323,37 @@ pub fn repeat_test() {
 
 pub fn split_test() {
   list:split([], 0)
-  |> expect:equal(_, {[], []})
+  |> expect:equal(_, struct([], []))
 
   list:split([0, 1, 2, 3, 4], 0)
-  |> expect:equal(_, {[], [0, 1, 2, 3, 4]})
+  |> expect:equal(_, struct([], [0, 1, 2, 3, 4]))
 
   list:split([0, 1, 2, 3, 4], -2)
-  |> expect:equal(_, {[], [0, 1, 2, 3, 4]})
+  |> expect:equal(_, struct([], [0, 1, 2, 3, 4]))
 
   list:split([0, 1, 2, 3, 4], 1)
-  |> expect:equal(_, {[0], [1, 2, 3, 4]})
+  |> expect:equal(_, struct([0], [1, 2, 3, 4]))
 
   list:split([0, 1, 2, 3, 4], 3)
-  |> expect:equal(_, {[0, 1, 2], [3, 4]})
+  |> expect:equal(_, struct([0, 1, 2], [3, 4]))
 
   list:split([0, 1, 2, 3, 4], 9)
-  |> expect:equal(_, {[0, 1, 2, 3, 4], []})
+  |> expect:equal(_, struct([0, 1, 2, 3, 4], []))
 }
 
 pub fn split_while_test() {
   list:split_while([], fn(x) { x <= 5 })
-  |> expect:equal(_, {[], []})
+  |> expect:equal(_, struct([], []))
 
   list:split_while([1, 2, 3, 4, 5], fn(x) { x <= 5 })
-  |> expect:equal(_, {[1, 2, 3, 4, 5], []})
+  |> expect:equal(_, struct([1, 2, 3, 4, 5], []))
 
   list:split_while([1, 2, 3, 4, 5], fn(x) { x == 2 })
-  |> expect:equal(_, {[], [1, 2, 3, 4, 5]})
+  |> expect:equal(_, struct([], [1, 2, 3, 4, 5]))
 
   list:split_while([1, 2, 3, 4, 5], fn(x) { x <= 3 })
-  |> expect:equal(_, {[1, 2, 3], [4, 5]})
+  |> expect:equal(_, struct([1, 2, 3], [4, 5]))
 
   list:split_while([1, 2, 3, 4, 5], fn(x) { x <= -3 })
-  |> expect:equal(_, {[], [1, 2, 3, 4, 5]})
+  |> expect:equal(_, struct([], [1, 2, 3, 4, 5]))
 }

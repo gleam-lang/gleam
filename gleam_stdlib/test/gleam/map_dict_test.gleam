@@ -4,8 +4,8 @@ import gleam/map_dict
 
 pub fn from_list_test() {
   [
-    {4, 0},
-    {1, 0},
+    struct(4, 0),
+    struct(1, 0),
   ]
   |> map_dict:from_list
   |> map_dict:size
@@ -19,23 +19,23 @@ pub fn has_key_test() {
   |> expect:false
 
   [
-      {1, 0},
+      struct(1, 0),
   ]
   |> map_dict:from_list
   |> map_dict:has_key(_, 1)
   |> expect:true
 
   [
-      {4, 0},
-      {1, 0},
+      struct(4, 0),
+      struct(1, 0),
   ]
   |> map_dict:from_list
   |> map_dict:has_key(_, 1)
   |> expect:true
 
   [
-    {4, 0},
-    {1, 0},
+    struct(4, 0),
+    struct(1, 0),
   ]
   |> map_dict:from_list
   |> map_dict:has_key(_, 0)
@@ -54,8 +54,8 @@ pub fn new_test() {
 
 pub fn fetch_test() {
   let proplist = [
-    {4, 0},
-    {1, 1},
+    struct(4, 0),
+    struct(1, 1),
   ]
   let m = map_dict:from_list(proplist)
 
@@ -77,25 +77,33 @@ pub fn put_test() {
   |> map_dict:put(_, "a", 0)
   |> map_dict:put(_, "b", 1)
   |> map_dict:put(_, "c", 2)
-  |> expect:equal(_, map_dict:from_list([{"a", 0}, {"b", 1}, {"c", 2}]))
+  |> expect:equal(_, map_dict:from_list([
+    struct("a", 0),
+    struct("b", 1),
+    struct("c", 2),
+  ]))
 }
 
 pub fn map_values_test() {
   [
-    {1, 0},
-    {2, 1},
-    {3, 2},
+    struct(1, 0),
+    struct(2, 1),
+    struct(3, 2),
   ]
   |> map_dict:from_list
   |> map_dict:map_values(_, fn(k, v) { k + v })
-  |> expect:equal(_, map_dict:from_list([{1, 1}, {2, 3}, {3, 5}]))
+  |> expect:equal(_, map_dict:from_list([
+    struct(1, 1),
+    struct(2, 3),
+    struct(3, 5),
+  ]))
 }
 
 pub fn keys_test() {
   [
-    {"a", 0},
-    {"b", 1},
-    {"c", 2},
+    struct("a", 0),
+    struct("b", 1),
+    struct("c", 2),
   ]
   |> map_dict:from_list
   |> map_dict:keys
@@ -104,9 +112,9 @@ pub fn keys_test() {
 
 pub fn values_test() {
   [
-    {"a", 0},
-    {"b", 1},
-    {"c", 2},
+    struct("a", 0),
+    struct("b", 1),
+    struct("c", 2),
   ]
   |> map_dict:from_list
   |> map_dict:values
@@ -115,72 +123,72 @@ pub fn values_test() {
 
 pub fn take_test() {
   [
-    {"a", 0},
-    {"b", 1},
-    {"c", 2},
+    struct("a", 0),
+    struct("b", 1),
+    struct("c", 2),
   ]
   |> map_dict:from_list
   |> map_dict:take(_, ["a", "b", "d"])
-  |> expect:equal(_, map_dict:from_list([{"a", 0}, {"b", 1}]))
+  |> expect:equal(_, map_dict:from_list([struct("a", 0), struct("b", 1)]))
 }
 
 pub fn drop_test() {
   [
-    {"a", 0},
-    {"b", 1},
-    {"c", 2},
+    struct("a", 0),
+    struct("b", 1),
+    struct("c", 2),
   ]
   |> map_dict:from_list
   |> map_dict:drop(_, ["a", "b", "d"])
-  |> expect:equal(_, map_dict:from_list([{"c", 2}]))
+  |> expect:equal(_, map_dict:from_list([struct("c", 2)]))
 }
 
 pub fn merge_test() {
   let a = map_dict:from_list([
-    {"a", 2},
-    {"c", 4},
-    {"d", 3},
+    struct("a", 2),
+    struct("c", 4),
+    struct("d", 3),
   ])
   let b = map_dict:from_list([
-    {"a", 0},
-    {"b", 1},
-    {"c", 2},
+    struct("a", 0),
+    struct("b", 1),
+    struct("c", 2),
   ])
 
   map_dict:merge(a, b)
   |> expect:equal(_, map_dict:from_list([
-      {"a", 0},
-      {"b", 1},
-      {"c", 2},
-      {"d", 3},
+      struct("a", 0),
+      struct("b", 1),
+      struct("c", 2),
+      struct("d", 3),
     ]))
 
   map_dict:merge(b, a)
   |> expect:equal(_, map_dict:from_list([
-      {"a", 2},
-      {"b", 1},
-      {"c", 4},
-      {"d", 3},
+      struct("a", 2),
+      struct("b", 1),
+      struct("c", 4),
+      struct("d", 3),
     ]))
 }
 
 pub fn delete_test() {
   [
-    {"a", 0},
-    {"b", 1},
-    {"c", 2},
+    struct("a", 0),
+    struct("b", 1),
+    struct("c", 2),
   ]
   |> map_dict:from_list
   |> map_dict:delete(_, "a")
   |> map_dict:delete(_, "d")
-  |> expect:equal(_, map_dict:from_list([{"b", 1}, {"c", 2}]))
+  |> expect:equal(_, map_dict:from_list([struct("b", 1), struct("c", 2)]))
 }
 
 pub fn update_test() {
   let dict = map_dict:from_list([
-    {"a", 0},
-    {"b", 1},
-    {"c", 2},
+    struct("a", 0),
+    struct("b", 1),
+    struct("c", 2),
   ])
 
   let inc_or_zero = fn(x) {
@@ -192,23 +200,36 @@ pub fn update_test() {
 
   dict
   |> map_dict:update(_, "a", inc_or_zero)
-  |> expect:equal(_, map_dict:from_list([{"a", 1}, {"b", 1}, {"c", 2}]))
+  |> expect:equal(_, map_dict:from_list([
+    struct("a", 1),
+    struct("b", 1),
+    struct("c", 2),
+  ]))
 
   dict
   |> map_dict:update(_, "b", inc_or_zero)
-  |> expect:equal(_, map_dict:from_list([{"a", 0}, {"b", 2}, {"c", 2}]))
+  |> expect:equal(_, map_dict:from_list([
+    struct("a", 0),
+    struct("b", 2),
+    struct("c", 2),
+  ]))
 
   dict
   |> map_dict:update(_, "z", inc_or_zero)
-  |> expect:equal(_, map_dict:from_list([{"a", 0}, {"b", 1}, {"c", 2}, {"z", 0}]))
+  |> expect:equal(_, map_dict:from_list([
+    struct("a", 0),
+    struct("b", 1),
+    struct("c", 2),
+    struct("z", 0),
+  ]))
 }
 
 pub fn fold_test() {
   let dict = map_dict:from_list([
-    {"a", 0},
-    {"b", 1},
-    {"c", 2},
-    {"d", 3},
+    struct("a", 0),
+    struct("b", 1),
+    struct("c", 2),
+    struct("d", 3),
   ])
 
   let add = fn(_, v, acc) {

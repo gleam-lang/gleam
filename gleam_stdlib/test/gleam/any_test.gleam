@@ -209,43 +209,43 @@ pub fn list_test() {
   |> expect:is_error
 }
 
-pub fn tuple_test() {
-  {1, []}
+pub fn struct2_test() {
+  struct(1, [])
   |> any:from
-  |> any:tuple
-  |> expect:equal(_, Ok({any:from(1), any:from([])}))
+  |> any:struct2
+  |> expect:equal(_, Ok(struct(any:from(1), any:from([]))))
 
-  {"ok", "ok"}
+  struct("ok", "ok")
   |> any:from
-  |> any:tuple
-  |> expect:equal(_, Ok({any:from("ok"), any:from("ok")}))
+  |> any:struct2
+  |> expect:equal(_, Ok(struct(any:from("ok"), any:from("ok"))))
 
-  {1}
+  struct(1)
   |> any:from
-  |> any:tuple
+  |> any:struct2
   |> expect:is_error
 
-  {1, 2, 3}
+  struct(1, 2, 3)
   |> any:from
-  |> any:tuple
+  |> any:struct2
   |> expect:is_error
 
-  {1, 2.0}
+  struct(1, 2.0)
   |> any:from
-  |> any:tuple
+  |> any:struct2
   |> result:then(_, fn(x) {
     x
     |> tuple:first
     |> any:int
-    |> result:map(_, fn(f) { {f, tuple:second(x)} })
+    |> result:map(_, fn(f) { struct(f, tuple:second(x)) })
   })
   |> result:then(_, fn(x) {
     x
     |> tuple:second
     |> any:float
-    |> result:map(_, fn(f) { {tuple:first(x), f} })
+    |> result:map(_, fn(f) { struct(tuple:first(x), f) })
   })
-  |> expect:equal(_, Ok({1, 2.0}))
+  |> expect:equal(_, Ok(struct(1, 2.0)))
 }
 
 pub fn field_test() {

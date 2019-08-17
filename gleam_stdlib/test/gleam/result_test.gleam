@@ -37,8 +37,8 @@ pub fn map_error_test() {
   |> expect:equal(_, Ok(1))
 
   Error(1)
-  |> result:map_error(_, fn(x) { {"ok", x + 1} })
-  |> expect:equal(_, Error({"ok", 2}))
+  |> result:map_error(_, fn(x) { struct("ok", x + 1) })
+  |> expect:equal(_, Error(struct("ok", 2)))
 }
 
 pub fn flatten_test() {
