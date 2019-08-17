@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The tuple data structure has been renamed to struct and has a new syntax.
 - The generated code no longer contains export statements if no functions are
   exported from a module.
 - Comparison operators have been specialised to operate only on Ints.
