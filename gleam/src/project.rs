@@ -67,6 +67,9 @@ pub enum Error {
     },
 
     SrcImportingTest {
+        path: PathBuf,
+        src: Src,
+        meta: crate::ast::Meta,
         src_module: Name,
         test_module: Name,
     },
@@ -86,20 +89,30 @@ impl Error {
 
         match self {
             Error::SrcImportingTest {
+                path,
+                src,
+                meta,
                 src_module,
                 test_module,
             } => {
-                // TODO: Colours
+                let diagnostic = ErrorDiagnostic {
+                    title: "App importing test module".to_string(),
+                    label: "Imported here".to_string(),
+                    file: path.to_str().unwrap().to_string(),
+                    src: src.to_string(),
+                    meta: meta.clone(),
+                };
+                write(buffer, diagnostic);
                 write!(
                     buffer,
-                    "error: App importing test module
-
+                    "
 The application module `{}` is importing the test module `{}`.
 
 Test modules are not included in production builds so test modules
-cannot import them. Perhaps move the `{}` module to the src directory.
-",
-                    src_module, test_module, test_module,
+cannot import them. Perhaps move the `{}` module to the src directory.",
+                    src_module,
+                    test_module,
+                    test_module,
                 )
                 .unwrap();
             }
@@ -645,7 +658,7 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
                 src: src.clone(),
                 path: path.clone(),
                 modules: modules.values().map(|m| m.module.name_string()).collect(),
-                meta,
+                meta: meta.clone(),
             })?;
 
             if module.origin == ModuleOrigin::Src
@@ -656,6 +669,9 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
                     == ModuleOrigin::Test
             {
                 return Err(Error::SrcImportingTest {
+                    path: path.clone(),
+                    src: src.clone(),
+                    meta,
                     src_module: module_name,
                     test_module: dep,
                 });
@@ -772,6 +788,9 @@ fn compile_test() {
                 },
             ],
             expected: Err(Error::SrcImportingTest {
+                path: PathBuf::from("/src/one.gleam"),
+                src: "import two".to_string(),
+                meta: crate::ast::Meta { start: 0, end: 10 },
                 src_module: "one".to_string(),
                 test_module: "two".to_string(),
             }),
