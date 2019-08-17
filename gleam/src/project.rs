@@ -108,21 +108,19 @@ cannot import them. Perhaps move the `{}` module to the src directory.
                 first,
                 second,
             } => {
-                // TODO: Colours
-                write!(
-                    buffer,
-                    "error: Duplicate module
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Duplicate module".to_string(),
+                    label: format!(
+                        "The module `{}` is defined multiple times.
 
-The module {} is defined multiple times.
-
-First: {}
-Then:  {}
-",
-                    module,
-                    first.to_str().expect("pretty error print PathBuf to_str"),
-                    second.to_str().expect("pretty error print PathBuf to_str"),
-                )
-                .unwrap();
+First:  {}
+Second: {}",
+                        module,
+                        first.to_str().expect("pretty error print PathBuf to_str"),
+                        second.to_str().expect("pretty error print PathBuf to_str"),
+                    ),
+                };
+                write_project(buffer, diagnostic);
             }
 
             Error::Type { path, src, error } => match error {
