@@ -21,28 +21,28 @@ pub fn to_int(order) {
 }
 
 pub fn compare(a, b) {
-  case {a, b} {
-  | {Lt, Lt} -> Eq
-  | {Lt, _} -> Lt
-  | {Eq, Eq} -> Eq
-  | {Gt, Gt} -> Eq
-  | {Eq, Gt} -> Lt
+  case struct(a, b) {
+  | struct(Lt, Lt) -> Eq
+  | struct(Lt, _) -> Lt
+  | struct(Eq, Eq) -> Eq
+  | struct(Gt, Gt) -> Eq
+  | struct(Eq, Gt) -> Lt
   | _ -> Gt
   }
 }
 
 pub fn max(a, b) {
-  case {a, b} {
-  | {Gt, _} -> Gt
-  | {Eq, Lt} -> Eq
+  case struct(a, b) {
+  | struct(Gt, _) -> Gt
+  | struct(Eq, Lt) -> Eq
   | _ -> b
   }
 }
 
 pub fn min(a, b) {
-  case {a, b} {
-  | {Lt, _} -> Lt
-  | {Eq, Gt} -> Eq
+  case struct(a, b) {
+  | struct(Lt, _) -> Lt
+  | struct(Eq, Gt) -> Eq
   | _ -> b
   }
 }

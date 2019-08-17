@@ -179,7 +179,7 @@ pub fn all(list, f) {
 pub fn any(list, f) {
   case list {
     | [] -> False
-    | [ x | rest] ->
+    | [x | rest] ->
       case f(x) {
       | False -> any(rest, f)
       | _ -> True
@@ -188,10 +188,10 @@ pub fn any(list, f) {
 }
 
 pub fn zip(l1, l2) {
-  case {l1, l2} {
-    | {[], _} -> []
-    | {_, []} -> []
-    | {[x1 | rest1], [x2 | rest2] } -> [ {x1, x2} | zip(rest1, rest2) ]
+  case struct(l1, l2) {
+    | struct([], _) -> []
+    | struct(_, []) -> []
+    | struct([x1 | rest1], [x2 | rest2]) -> [ struct(x1, x2) | zip(rest1, rest2) ]
   }
 }
 
@@ -233,10 +233,10 @@ pub fn unique(list) {
 }
 
 fn merge_sort(a, b, compare) {
-  case {a, b} {
-    | {[], _} -> b
-    | {_, []} -> a
-    | {[ax | ar], [bx | br]} ->
+  case struct(a, b) {
+    | struct([], _) -> b
+    | struct(_, []) -> a
+    | struct([ax | ar], [bx | br]) ->
       case compare(ax, bx) {
       | order:Lt -> [ax | merge_sort(ar, b, compare)]
       | _ -> [bx | merge_sort(a, br, compare)]
@@ -284,10 +284,10 @@ pub fn repeat(a, times) {
 
 fn do_split(list, n, taken) {
   case n <= 0 {
-  | True -> {reverse(taken), list}
+  | True -> struct(reverse(taken), list)
   | False ->
       case list {
-      | [] -> {reverse(taken), []}
+      | [] -> struct(reverse(taken), [])
       | [x | xs] -> do_split(xs, n - 1, [x | taken])
       }
   }
@@ -299,10 +299,10 @@ pub fn split(list, n) {
 
 fn do_split_while(list, f, acc) {
   case list {
-    | [] -> {reverse(acc), []}
+    | [] -> struct(reverse(acc), [])
     | [x | xs] ->
       case f(x) {
-      | False -> {reverse(acc), list}
+      | False -> struct(reverse(acc), list)
       | _ -> do_split_while(xs, f, [x | acc])
       }
   }

@@ -8,11 +8,11 @@ pub fn negate(bool) {
 }
 
 pub fn compare(a, b) {
-  case {a, b} {
-  | {True, True} -> order:Eq
-  | {True, False} -> order:Gt
-  | {False, False} -> order:Eq
-  | {False, True} -> order:Lt
+  case struct(a, b) {
+  | struct(True, True) -> order:Eq
+  | struct(True, False) -> order:Gt
+  | struct(False, False) -> order:Eq
+  | struct(False, True) -> order:Lt
   }
 }
 

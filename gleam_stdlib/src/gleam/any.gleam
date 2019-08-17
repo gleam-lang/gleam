@@ -46,8 +46,8 @@ pub fn list(any, decode) {
   |> result:then(_, list_mod:traverse(_, decode))
 }
 
-pub external fn tuple(Any) -> Result({Any, Any}, String)
-  = "gleam__stdlib" "decode_tuple"
+pub external fn struct2(Any) -> Result(struct(Any, Any), String)
+  = "gleam__stdlib" "decode_struct2"
 
 pub external fn field(Any, a) -> Result(Any, String)
   = "gleam__stdlib" "decode_field"

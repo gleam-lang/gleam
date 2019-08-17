@@ -2,10 +2,12 @@
 
 ## Unreleased
 
+- Syntax has been updated for Gleam v0.4.
 - `list:sort` now requires a compare function as comparison operators now only
   work on Ints.
 - `list:sort`'s performance has been slightly optimised.
 - The `float` module gains a `compare` function.
+- `any:tuple` has been renamed `any:struct2`.
 
 ## v0.3.1 - 2019-08-08
 

@@ -1,7 +1,7 @@
 -module(gleam@any_test).
 -compile(no_auto_import).
 
--export([string_test/0, int_test/0, float_test/0, thunk_test/0, bool_test/0, atom_test/0, list_test/0, tuple_test/0, field_test/0]).
+-export([string_test/0, int_test/0, float_test/0, thunk_test/0, bool_test/0, atom_test/0, list_test/0, struct2_test/0, field_test/0]).
 
 string_test() ->
     gleam@expect:equal(gleam@any:string(gleam@any:from(<<"">>)), {ok, <<"">>}),
@@ -117,21 +117,21 @@ list_test() ->
         )
     ).
 
-tuple_test() ->
+struct2_test() ->
     gleam@expect:equal(
-        gleam@any:tuple(gleam@any:from({1, []})),
+        gleam@any:struct2(gleam@any:from({1, []})),
         {ok, {gleam@any:from(1), gleam@any:from([])}}
     ),
     gleam@expect:equal(
-        gleam@any:tuple(gleam@any:from({<<"ok">>, <<"ok">>})),
+        gleam@any:struct2(gleam@any:from({<<"ok">>, <<"ok">>})),
         {ok, {gleam@any:from(<<"ok">>), gleam@any:from(<<"ok">>)}}
     ),
-    gleam@expect:is_error(gleam@any:tuple(gleam@any:from({1}))),
-    gleam@expect:is_error(gleam@any:tuple(gleam@any:from({1, 2, 3}))),
+    gleam@expect:is_error(gleam@any:struct2(gleam@any:from({1}))),
+    gleam@expect:is_error(gleam@any:struct2(gleam@any:from({1, 2, 3}))),
     gleam@expect:equal(
         gleam@result:then(
             gleam@result:then(
-                gleam@any:tuple(gleam@any:from({1, 2.0})),
+                gleam@any:struct2(gleam@any:from({1, 2.0})),
                 fun(X) ->
                     gleam@result:map(
                         gleam@any:int(gleam@tuple:first(X)),

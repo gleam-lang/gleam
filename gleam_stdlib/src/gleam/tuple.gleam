@@ -1,22 +1,22 @@
 import gleam/list
 
 pub fn new(a, b) {
-  {a, b}
+  struct(a, b)
 }
 
 pub fn first(tup) {
-  let {a, _} = tup
+  let struct(a, _) = tup
   a
 }
 
 pub fn second(tup) {
-  let {_, a} = tup
+  let struct(_, a) = tup
   a
 }
 
 pub fn swap(tup) {
-  let {a, b} = tup
-  {b, a}
+  let struct(a, b) = tup
+  struct(b, a)
 }
 
 pub fn fetch(haystack, needle) {
