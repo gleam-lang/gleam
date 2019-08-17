@@ -9,6 +9,8 @@
   comparing Floats.
 - It is now an error to export an enum which has a constructor that takes a
   private type as an argument.
+- The error messages for defining multiple modules with the same name and for
+  importing test modules into application code have been improved.
 
 ## v0.3.0 - 2019-08-08
 
