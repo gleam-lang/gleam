@@ -543,6 +543,26 @@ fn write(mut buffer: &mut Buffer, d: ErrorDiagnostic) {
     codespan_reporting::emit(&mut buffer, &code_map, &diagnostic).unwrap();
 }
 
+/// Describes an error encountered while compiling the project (eg. a name collision
+/// between files).
+///
+struct ProjectErrorDiagnostic {
+    title: String,
+    label: String,
+}
+
+fn write_project(mut buffer: &mut Buffer, d: ProjectErrorDiagnostic) {
+    use codespan::{CodeMap, Span};
+    use codespan_reporting::{Diagnostic, Label};
+
+    let code_map: CodeMap<String> = CodeMap::new();
+    let diagnostic = Diagnostic::new_error(d.title).with_label(
+        Label::new_primary(Span::new(0.into(), 0.into()))
+            .with_message(d.label),
+    );
+    codespan_reporting::emit(&mut buffer, &code_map, &diagnostic).unwrap();
+}
+
 pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
     struct Module {
         src: String,
