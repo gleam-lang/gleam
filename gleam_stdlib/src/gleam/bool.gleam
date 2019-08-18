@@ -9,10 +9,10 @@ pub fn negate(bool) {
 
 pub fn compare(a, b) {
   case struct(a, b) {
-  | struct(True, True) -> order:Eq
-  | struct(True, False) -> order:Gt
-  | struct(False, False) -> order:Eq
-  | struct(False, True) -> order:Lt
+  | struct(True, True) -> order.Eq
+  | struct(True, False) -> order.Gt
+  | struct(False, False) -> order.Eq
+  | struct(False, True) -> order.Lt
   }
 }
 
