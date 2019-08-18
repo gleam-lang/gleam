@@ -238,7 +238,7 @@ fn merge_sort(a, b, compare) {
     | struct(_, []) -> a
     | struct([ax | ar], [bx | br]) ->
       case compare(ax, bx) {
-      | order:Lt -> [ax | merge_sort(ar, b, compare)]
+      | order.Lt -> [ax | merge_sort(ar, b, compare)]
       | _ -> [bx | merge_sort(a, br, compare)]
       }
   }
@@ -264,10 +264,10 @@ pub fn sort(list, compare) {
 }
 
 pub fn range(start, stop) {
-  case int:compare(start, stop) {
-  | order:Eq -> []
-  | order:Gt -> [start | range(start - 1, stop)]
-  | order:Lt -> [start | range(start + 1, stop)]
+  case int.compare(start, stop) {
+  | order.Eq -> []
+  | order.Gt -> [start | range(start - 1, stop)]
+  | order.Lt -> [start | range(start + 1, stop)]
   }
 }
 

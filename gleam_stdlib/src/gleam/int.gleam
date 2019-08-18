@@ -11,11 +11,11 @@ pub external fn to_base_string(Int, Int) -> String = "erlang" "integer_to_binary
 
 pub fn compare(a, b) {
   case a == b {
-  | True -> order:Eq
+  | True -> order.Eq
   | False ->
     case a < b {
-    | True -> order:Lt
-    | False -> order:Gt
+    | True -> order.Lt
+    | False -> order.Gt
     }
   }
 }

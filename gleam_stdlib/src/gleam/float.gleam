@@ -9,17 +9,17 @@ pub external fn parse(String) -> Result(Float, NotAFloat) =
 
 pub fn to_string(f) {
   f
-  |> iodata:from_float
-  |> iodata:to_string
+  |> iodata.from_float
+  |> iodata.to_string
 }
 
 pub fn compare(a, b) {
   case a == b {
-  | True -> order:Eq
+  | True -> order.Eq
   | False ->
     case a <. b {
-    | True -> order:Lt
-    | False -> order:Gt
+    | True -> order.Lt
+    | False -> order.Gt
     }
   }
 }

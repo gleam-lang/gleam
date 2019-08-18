@@ -20,7 +20,7 @@ pub fn swap(tup) {
 }
 
 pub fn fetch(haystack, needle) {
-  list:find(haystack, fn(tuple) {
+  list.find(haystack, fn(tuple) {
     case first(tuple) == needle {
     | True -> tuple |> second |> Ok
     | False -> Error([])

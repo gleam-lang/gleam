@@ -28,7 +28,7 @@ pub external fn int(Any) -> Result(Int, String)
 pub external fn float(Any) -> Result(Float, String)
   = "gleam__stdlib" "decode_float"
 
-pub external fn atom(Any) -> Result(atom:Atom, String)
+pub external fn atom(Any) -> Result(atom.Atom, String)
   = "gleam__stdlib" "decode_atom"
 
 pub external fn bool(Any) -> Result(Bool, String)
@@ -43,7 +43,7 @@ external fn list_any(Any) -> Result(List(Any), String) =
 pub fn list(any, decode) {
   any
   |> list_any
-  |> result:then(_, list_mod:traverse(_, decode))
+  |> result.then(_, list_mod.traverse(_, decode))
 }
 
 pub external fn struct2(Any) -> Result(struct(Any, Any), String)

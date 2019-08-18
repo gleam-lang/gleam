@@ -73,7 +73,7 @@ pub fn delete(map, key) {
 }
 
 pub fn drop(map, keys) {
-  list:fold(keys, map, fn(key, acc) {
+  list.fold(keys, map, fn(key, acc) {
     delete(acc, key)
   })
 }
