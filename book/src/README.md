@@ -1,7 +1,5 @@
 # Gleam
 
-[![IRC: #gleam-lang on chat.freenode.net](https://img.shields.io/badge/freenode%20bchat-%23gleam--lang-blue)](https://webchat.freenode.net/#gleam-lang)
-
 Gleam is a statically typed functional programming language for building
 scalable concurrent systems.
 
