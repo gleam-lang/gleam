@@ -1,6 +1,7 @@
 # Gleam ✨
 
 [![build](https://circleci.com/gh/lpil/gleam.svg?style=shield)](https://circleci.com/gh/lpil/gleam)
+[![GitHub release](https://img.shields.io/github/release/lpil/gleam)](https://github.com/lpil/gleam/releases)
 [![IRC: #gleam-lang on chat.freenode.net](https://img.shields.io/badge/freenode%20chat-%23gleam--lang-blue)](https://webchat.freenode.net/#gleam-lang)
 
 
