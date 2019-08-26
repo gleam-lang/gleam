@@ -1,8 +1,5 @@
 # Language Tour
 
-> **Warning:** This documentation is for the master branch. It may not be
-> completely accurate for previous releases.
-
 In this chapter we explore the fundamentals of the Gleam language, namely its
 syntax, core data structures, flow control features, and static type system.
 
