@@ -46,7 +46,7 @@ StatementStruct: UntypedStatement = {
         meta: meta(s, e),
         public: p.is_some(),
         name: t.0,
-        args: t.1,
+        type_args: t.1,
         fields,
     }
 }

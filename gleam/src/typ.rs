@@ -1509,9 +1509,77 @@ pub fn infer_module(
                 meta,
                 public,
                 name,
-                args,
+                type_args,
                 fields,
-            } => unimplemented!(),
+            } => {
+                // Register type
+                env.insert_type_constructor(
+                    name.clone(),
+                    TypeConstructorInfo {
+                        module: module_name.clone(),
+                        public,
+                        arity: fields.len(),
+                    },
+                );
+                // Build return type and collect type vars that can be used by the constructor
+                let mut type_vars = hashmap![];
+                let type_args_types: Vec<_> = type_args
+                    .iter()
+                    .map(|arg| ast::Type::Var {
+                        meta: meta.clone(),
+                        name: arg.to_string(),
+                    })
+                    .map(|ast| env.type_from_ast(&ast, &mut type_vars, NewTypeAction::MakeGeneric))
+                    .collect::<Result<_, _>>()?;
+
+                let retrn = Type::App {
+                    public: public.clone(),
+                    module: module_name.clone(),
+                    name: name.clone(),
+                    args: type_args_types,
+                };
+                // Register constructor
+                let args_types = fields
+                    .iter()
+                    .map(|(_, arg)| {
+                        env.type_from_ast(&arg, &mut type_vars, NewTypeAction::Disallow)
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                // Insert constructor function into module scope
+                let typ = match fields.len() {
+                    0 => retrn.clone(),
+                    _ => Type::Fn {
+                        args: args_types,
+                        retrn: Box::new(retrn.clone()),
+                    },
+                };
+                let constructor_variant = ValueConstructorVariant::Enum {
+                    arity: fields.len(), // TODO
+                };
+                if public {
+                    if let Some(leaked) = typ.find_private_type() {
+                        return Err(Error::PrivateTypeLeak {
+                            meta: meta.clone(),
+                            leaked,
+                        });
+                    }
+                    env.public_module_value_constructors.insert(
+                        name.clone(),
+                        ValueConstructor {
+                            typ: typ.clone(),
+                            variant: constructor_variant.clone(),
+                        },
+                    );
+                };
+                env.insert_variable(name.clone(), constructor_variant, typ);
+                Ok(Statement::Struct {
+                    meta,
+                    public,
+                    name,
+                    type_args,
+                    fields,
+                })
+            }
 
             Statement::Enum {
                 meta,
@@ -3959,6 +4027,13 @@ pub fn two() { one() + zero() }",
         //    // % fn length(List(a)) -> Int
         //    // %}
         //    // % }
+        /* Structs
+
+        */
+        Case {
+            src: "pub struct Box { boxed: Int }",
+            module: vec![("Box", "fn(Int) -> Box")],
+        },
     ];
 
     for Case { src, module } in cases.into_iter() {

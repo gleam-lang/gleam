@@ -137,7 +137,7 @@ pub enum Statement<S, T> {
     Struct {
         meta: Meta,
         name: String,
-        args: Vec<String>,
+        type_args: Vec<String>,
         public: bool,
         fields: Vec<(String, Type)>,
     },
@@ -303,12 +303,12 @@ impl<S, T> Expr<S, T> {
             Expr::Case { meta, .. } => meta,
             Expr::Cons { meta, .. } => meta,
             Expr::Call { meta, .. } => meta,
-            Expr::AnonStruct { meta, .. } => meta,
             Expr::Float { meta, .. } => meta,
             Expr::BinOp { meta, .. } => meta,
             Expr::String { meta, .. } => meta,
             Expr::MapNil { meta, .. } => meta,
             Expr::MapCons { meta, .. } => meta,
+            Expr::AnonStruct { meta, .. } => meta,
             Expr::FieldSelect { meta, .. } => meta,
             Expr::ModuleSelect { meta, .. } => meta,
         }
