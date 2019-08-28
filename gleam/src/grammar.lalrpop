@@ -3,7 +3,7 @@
 use std::str::FromStr;
 
 use crate::ast::{
-    UntypedExpr, Expr, Arg, UntypedModule, Module, UntypedStatement, Statement, Type, Pattern,
+    UntypedExpr, Expr, Arg, UntypedModule, Module, UntypedStatement, Statement, TypeAst, Pattern,
     BinOp, Clause, UntypedClause, EnumConstructor
 };
 use crate::parser::*;
@@ -59,7 +59,7 @@ StatementStruct: UntypedStatement = {
     },
 }
 
-StructFieldDefinition: (String, Type) = {
+StructFieldDefinition: (String, TypeAst) = {
     <name:VarName> ":" <typ:Type> => (name, typ)
 }
 
@@ -71,7 +71,7 @@ EnumConstructor: EnumConstructor = {
     },
 }
 
-EnumConstructorArgs: Vec<Type> = {
+EnumConstructorArgs: Vec<TypeAst> = {
     "(" <ts:Comma<Type>> ")" => ts
 }
 
@@ -588,7 +588,7 @@ PatternCons: Pattern = {
     }
 }
 
-Type: Type = {
+Type: TypeAst = {
     TypeConstructor => <>,
     TypeAnonStruct => <>,
     TypeMap => <>,
@@ -596,54 +596,54 @@ Type: Type = {
     TypeFn => <>,
 }
 
-TypeMap: Type = {
-    <s:@L> "{}" <e:@L> => Type::Map {
+TypeMap: TypeAst = {
+    <s:@L> "{}" <e:@L> => TypeAst::Map {
         meta: meta(s, e),
         fields: vec![],
         tail: None,
     },
 
-    <s:@L> "{" <tail:TypeMapTail?> <fields:Comma<TypeMapField>> "}" <e:@L> => Type::Map {
+    <s:@L> "{" <tail:TypeMapTail?> <fields:Comma<TypeMapField>> "}" <e:@L> => TypeAst::Map {
         meta: meta(s, e),
         fields,
         tail,
     },
 }
 
-TypeMapTail: Box<Type> = {
-    <s:@L> <n:VarName> <e:@L> "|" => Box::new(Type::Var {
+TypeMapTail: Box<TypeAst> = {
+    <s:@L> <n:VarName> <e:@L> "|" => Box::new(TypeAst::Var {
         meta: meta(s, e),
         name: n,
     })
 }
 
-TypeMapField: (String, Type) = {
+TypeMapField: (String, TypeAst) = {
     <l:VarName> "=" <t:Type> => (l, t)
 }
 
-TypeConstructor: Type = {
-    <s:@L> <m:VarName> "." <n:r"[A-Z][A-Za-z]*"> <e:@L> => Type::Constructor {
+TypeConstructor: TypeAst = {
+    <s:@L> <m:VarName> "." <n:r"[A-Z][A-Za-z]*"> <e:@L> => TypeAst::Constructor {
         meta: meta(s, e),
         module: Some(m),
         args: vec![],
         name: n.to_string(),
     },
 
-    <s:@L> <m:VarName> "." <n:r"[A-Z][A-Za-z]*"> "(" <a:Comma<Type>> ")" <e:@L> => Type::Constructor {
+    <s:@L> <m:VarName> "." <n:r"[A-Z][A-Za-z]*"> "(" <a:Comma<Type>> ")" <e:@L> => TypeAst::Constructor {
         meta: meta(s, e),
         module: Some(m),
         args: a,
         name: n.to_string(),
     },
 
-    <s:@L> <n:r"[A-Z][A-Za-z]*"> <e:@L> => Type::Constructor {
+    <s:@L> <n:r"[A-Z][A-Za-z]*"> <e:@L> => TypeAst::Constructor {
         meta: meta(s, e),
         module: None,
         args: vec![],
         name: n.to_string(),
     },
 
-    <s:@L> <n:r"[A-Z][A-Za-z]*"> "(" <a:Comma<Type>> ")" <e:@L> => Type::Constructor {
+    <s:@L> <n:r"[A-Z][A-Za-z]*"> "(" <a:Comma<Type>> ")" <e:@L> => TypeAst::Constructor {
         meta: meta(s, e),
         module: None,
         args: a,
@@ -651,23 +651,23 @@ TypeConstructor: Type = {
     },
 }
 
-TypeAnonStruct: Type = {
-    <s:@L> "struct" "(" <elems:AtLeastOneComma<Type>> ")" <e:@L> => Type::AnonStruct {
+TypeAnonStruct: TypeAst = {
+    <s:@L> "struct" "(" <elems:AtLeastOneComma<Type>> ")" <e:@L> => TypeAst::AnonStruct {
         meta: meta(s, e),
         elems: elems,
     }
 }
 
 
-TypeVar: Type = {
-    <s:@L> <n:VarName> <e:@L> => Type::Var {
+TypeVar: TypeAst = {
+    <s:@L> <n:VarName> <e:@L> => TypeAst::Var {
         meta: meta(s, e),
         name: n,
     }
 }
 
-TypeFn: Type = {
-    <s:@L> "fn(" <args:Comma<Type>> ")" "->" <retrn:Type> <e:@L> => Type::Fn {
+TypeFn: TypeAst = {
+    <s:@L> "fn(" <args:Comma<Type>> ")" "->" <retrn:Type> <e:@L> => TypeAst::Fn {
         meta: meta(s, e),
         retrn: Box::new(retrn),
         args,

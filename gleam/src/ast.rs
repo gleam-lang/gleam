@@ -54,7 +54,7 @@ pub struct Arg {
 pub struct EnumConstructor {
     pub meta: Meta,
     pub name: String,
-    pub args: Vec<Type>,
+    pub args: Vec<TypeAst>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -89,17 +89,17 @@ pub enum TypeAst {
     },
 }
 
-pub type TypedStatement = Statement<ValueConstructor, typ::Type, ModuleValueConstructor>;
+pub type TypedStatement = Statement<ValueConstructor, ModuleValueConstructor, typ::Type>;
 
 pub type UntypedStatement = Statement<(), (), ()>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Statement<ValueConstructor, Type, ModuleValueConstructor> {
+pub enum Statement<ValueConstructor, ModuleValueConstructor, Type> {
     Fn {
         meta: Meta,
         name: String,
         args: Vec<Arg>,
-        body: Expr<ValueConstructor, Type, ModuleValueConstructor>,
+        body: Expr<ValueConstructor, ModuleValueConstructor, Type>,
         public: bool,
         return_annotation: Option<TypeAst>,
     },
