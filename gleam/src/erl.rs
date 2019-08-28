@@ -1,6 +1,6 @@
 use crate::ast::*;
 use crate::pretty::*;
-use crate::typ::{ValueConstructor, ValueConstructorVariant};
+use crate::typ::{ModuleValueConstructor, ValueConstructor, ValueConstructorVariant};
 use heck::{CamelCase, SnakeCase};
 use itertools::Itertools;
 use std::char;
@@ -227,15 +227,17 @@ fn pattern(p: Pattern, env: &mut Env) -> Document {
         Pattern::Nil { .. } => "[]".to_doc(),
         Pattern::Cons { head, tail, .. } => pattern_list_cons(*head, *tail, env),
         Pattern::Discard { .. } => "_".to_doc(),
-        // Pattern::Map { .. } => unimplemented!(),
         Pattern::Var { name, .. } => env.next_local_var_name(name),
         Pattern::Int { value, .. } => value.to_doc(),
         Pattern::Float { value, .. } => value.to_doc(),
+        Pattern::String { value, .. } => string(value),
         Pattern::AnonStruct { elems, .. } => {
             tuple(elems.into_iter().map(|p| pattern(p, env)).collect())
         }
-        Pattern::String { value, .. } => string(value),
-        Pattern::Constructor { name, args, .. } => enum_pattern(name, args, env),
+        Pattern::Constructor { name, args, .. } => {
+            // TODO: check to see what kind of constructor this is. i.e. enum, struct
+            enum_pattern(name, args, env)
+        }
     }
 }
 
@@ -662,13 +664,13 @@ fn module_test() {
             Statement::ExternalFn {
                 meta: default(),
                 args: vec![
-                    Type::Constructor {
+                    TypeAst::Constructor {
                         meta: default(),
                         module: None,
                         args: vec![],
                         name: "Int".to_string(),
                     },
-                    Type::Constructor {
+                    TypeAst::Constructor {
                         meta: default(),
                         module: None,
                         args: vec![],
@@ -679,7 +681,7 @@ fn module_test() {
                 fun: "add".to_string(),
                 module: "int".to_string(),
                 public: false,
-                retrn: Type::Constructor {
+                retrn: TypeAst::Constructor {
                     meta: default(),
                     module: None,
                     args: vec![],
@@ -693,7 +695,7 @@ fn module_test() {
                 fun: "new".to_string(),
                 module: "maps".to_string(),
                 public: true,
-                retrn: Type::Constructor {
+                retrn: TypeAst::Constructor {
                     meta: default(),
                     module: None,
                     args: vec![],
@@ -1138,6 +1140,7 @@ some_function(
                     module_alias: "zero".to_string(),
                     module_name: vec!["one".to_string()],
                     label: "two".to_string(),
+                    constructor: ModuleValueConstructor::Fn,
                 },
             },
             Statement::Fn {
@@ -1155,6 +1158,7 @@ some_function(
                     module_alias: "zero".to_string(),
                     module_name: vec!["one".to_string(), "zero".to_string()],
                     label: "two".to_string(),
+                    constructor: ModuleValueConstructor::Fn,
                 },
             },
             Statement::Fn {
@@ -1177,6 +1181,7 @@ some_function(
                         module_alias: "zero".to_string(),
                         module_name: vec!["one".to_string(), "zero".to_string()],
                         label: "two".to_string(),
+                        constructor: ModuleValueConstructor::Fn,
                     }),
                 },
             },

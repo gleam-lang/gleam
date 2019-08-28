@@ -1,5 +1,5 @@
 use crate::ast::{
-    self, Arg, BinOp, Clause, Expr, Meta, Module, Pattern, Statement, TypedExpr, TypedModule,
+    Arg, BinOp, Clause, Expr, Meta, Module, Pattern, Statement, TypeAst, TypedExpr, TypedModule,
     UntypedExpr, UntypedModule,
 };
 use crate::pretty::*;
@@ -563,6 +563,12 @@ pub enum ValueConstructorVariant {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum ModuleValueConstructor {
+    Enum,
+    Fn,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct ModuleTypeInfo {
     pub name: Vec<String>,
     pub type_constructors: HashMap<String, TypeConstructorInfo>,
@@ -1048,12 +1054,12 @@ impl<'a> Env<'a> {
     ///
     pub fn type_from_ast(
         &mut self,
-        ast: &ast::Type,
+        ast: &TypeAst,
         vars: &mut im::HashMap<String, (usize, Type)>,
         new: NewTypeAction,
     ) -> Result<Type, Error> {
         match ast {
-            ast::Type::Constructor {
+            TypeAst::Constructor {
                 meta,
                 module,
                 name,
@@ -1082,11 +1088,11 @@ impl<'a> Env<'a> {
                 })
             }
 
-            ast::Type::Map { fields, tail, .. } => Ok(Type::Map {
+            TypeAst::Map { fields, tail, .. } => Ok(Type::Map {
                 row: Box::new(self.row_from_ast(fields, tail, vars, new)?),
             }),
 
-            ast::Type::AnonStruct { elems, .. } => {
+            TypeAst::AnonStruct { elems, .. } => {
                 let elems = elems
                     .iter()
                     .map(|t| self.type_from_ast(t, vars, new))
@@ -1094,7 +1100,7 @@ impl<'a> Env<'a> {
                 Ok(Type::AnonStruct { elems })
             }
 
-            ast::Type::Fn { args, retrn, .. } => {
+            TypeAst::Fn { args, retrn, .. } => {
                 let args = args
                     .iter()
                     .map(|t| self.type_from_ast(t, vars, new))
@@ -1106,7 +1112,7 @@ impl<'a> Env<'a> {
                 })
             }
 
-            ast::Type::Var { name, .. } => match vars.get(name) {
+            TypeAst::Var { name, .. } => match vars.get(name) {
                 Some((_, var)) => Ok(var.clone()),
 
                 None => {
@@ -1129,8 +1135,8 @@ impl<'a> Env<'a> {
 
     fn row_from_ast(
         &mut self,
-        fields: &Vec<(String, ast::Type)>,
-        tail: &Option<Box<ast::Type>>,
+        fields: &Vec<(String, TypeAst)>,
+        tail: &Option<Box<TypeAst>>,
         vars: &mut im::HashMap<String, (usize, Type)>,
         new: NewTypeAction,
     ) -> Result<Type, Error> {
@@ -1360,7 +1366,7 @@ pub fn infer_module(
     let mut env = Env::new(modules);
     let module_name = &module.name;
 
-    let statements: Vec<Statement<_, Type>> = module
+    let statements: Vec<Statement<_, _, Type>> = module
         .statements
         .into_iter()
         .map(|s| match s {
@@ -1528,7 +1534,7 @@ pub fn infer_module(
                 let mut type_vars = hashmap![];
                 let type_args_types: Vec<_> = type_args
                     .iter()
-                    .map(|arg| ast::Type::Var {
+                    .map(|arg| TypeAst::Var {
                         meta: meta.clone(),
                         name: arg.to_string(),
                     })
@@ -1602,7 +1608,7 @@ pub fn infer_module(
                 let mut type_vars = hashmap![];
                 let args_types: Vec<_> = args
                     .iter()
-                    .map(|arg| ast::Type::Var {
+                    .map(|arg| TypeAst::Var {
                         meta: meta.clone(),
                         name: arg.to_string(),
                     })
@@ -1680,7 +1686,7 @@ pub fn infer_module(
                 // Check contained types are valid
                 let mut type_vars = hashmap![];
                 for arg in args.iter() {
-                    let var = ast::Type::Var {
+                    let var = TypeAst::Var {
                         meta: meta.clone(),
                         name: arg.to_string(),
                     };
@@ -2055,6 +2061,7 @@ fn infer_module_select(
         meta: select_meta,
         module_name,
         module_alias: module_alias.clone(),
+        constructor: unimplemented!(), // TODO
     })
 }
 
@@ -2251,7 +2258,7 @@ fn infer_call(
 fn infer_fun(
     args: &[Arg],
     body: UntypedExpr,
-    return_annotation: &Option<ast::Type>,
+    return_annotation: &Option<TypeAst>,
     level: usize,
     env: &mut Env,
 ) -> Result<(Vec<Type>, TypedExpr), Error> {

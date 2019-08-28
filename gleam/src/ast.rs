@@ -1,17 +1,18 @@
-use crate::typ::{self, ValueConstructor};
+use crate::typ::{self, ModuleValueConstructor, ValueConstructor};
 
-pub type TypedModule = Module<ValueConstructor, typ::Type, typ::ModuleTypeInfo>;
+pub type TypedModule =
+    Module<ValueConstructor, ModuleValueConstructor, typ::Type, typ::ModuleTypeInfo>;
 
-pub type UntypedModule = Module<(), (), ()>;
+pub type UntypedModule = Module<(), (), (), ()>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Module<S, T, I> {
+pub struct Module<ValueConstructor, ModuleValueConstructor, Type, Info> {
     pub name: Vec<String>,
-    pub type_info: I,
-    pub statements: Vec<Statement<S, T>>,
+    pub type_info: Info,
+    pub statements: Vec<Statement<ValueConstructor, ModuleValueConstructor, Type>>,
 }
 
-impl<S, T, I> Module<S, T, I> {
+impl<A, B, C, D> Module<A, B, C, D> {
     pub fn name_string(&self) -> String {
         self.name.join("/")
     }
@@ -46,7 +47,7 @@ fn module_dependencies_test() {
 pub struct Arg {
     pub name: Option<String>,
     pub meta: Meta,
-    pub annotation: Option<Type>,
+    pub annotation: Option<TypeAst>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -57,24 +58,24 @@ pub struct EnumConstructor {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Type {
+pub enum TypeAst {
     Constructor {
         meta: Meta,
         module: Option<String>,
         name: String,
-        args: Vec<Type>,
+        args: Vec<Self>,
     },
 
     Map {
         meta: Meta,
-        fields: Vec<(String, Type)>,
-        tail: Option<Box<Type>>,
+        fields: Vec<(String, Self)>,
+        tail: Option<Box<Self>>,
     },
 
     Fn {
         meta: Meta,
-        args: Vec<Type>,
-        retrn: Box<Type>,
+        args: Vec<Self>,
+        retrn: Box<Self>,
     },
 
     Var {
@@ -84,23 +85,23 @@ pub enum Type {
 
     AnonStruct {
         meta: Meta,
-        elems: Vec<Type>,
+        elems: Vec<Self>,
     },
 }
 
-pub type TypedStatement = Statement<ValueConstructor, typ::Type>;
+pub type TypedStatement = Statement<ValueConstructor, typ::Type, ModuleValueConstructor>;
 
-pub type UntypedStatement = Statement<(), ()>;
+pub type UntypedStatement = Statement<(), (), ()>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Statement<S, T> {
+pub enum Statement<ValueConstructor, Type, ModuleValueConstructor> {
     Fn {
         meta: Meta,
         name: String,
         args: Vec<Arg>,
-        body: Expr<S, T>,
+        body: Expr<ValueConstructor, Type, ModuleValueConstructor>,
         public: bool,
-        return_annotation: Option<Type>,
+        return_annotation: Option<TypeAst>,
     },
 
     Enum {
@@ -114,9 +115,9 @@ pub enum Statement<S, T> {
     ExternalFn {
         meta: Meta,
         public: bool,
-        args: Vec<Type>,
+        args: Vec<TypeAst>,
         name: String,
-        retrn: Type,
+        retrn: TypeAst,
         module: String,
         fun: String,
     },
@@ -139,7 +140,7 @@ pub enum Statement<S, T> {
         name: String,
         type_args: Vec<String>,
         public: bool,
-        fields: Vec<(String, Type)>,
+        fields: Vec<(String, TypeAst)>,
     },
 }
 
@@ -169,129 +170,130 @@ pub enum BinOp {
     ModuloInt,
 }
 
-pub type TypedExpr = Expr<ValueConstructor, typ::Type>;
+pub type TypedExpr = Expr<ValueConstructor, ModuleValueConstructor, typ::Type>;
 
-pub type UntypedExpr = Expr<(), ()>;
+pub type UntypedExpr = Expr<(), (), ()>;
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum Expr<S, T> {
+pub enum Expr<ValueConstructor, ModuleValueConstructor, Type> {
     Int {
         meta: Meta,
-        typ: T,
+        typ: Type,
         value: i64,
     },
 
     Float {
         meta: Meta,
-        typ: T,
+        typ: Type,
         value: f64,
     },
 
     String {
         meta: Meta,
-        typ: T,
+        typ: Type,
         value: String,
     },
 
     AnonStruct {
         meta: Meta,
-        typ: T,
-        elems: Vec<Expr<S, T>>,
+        typ: Type,
+        elems: Vec<Self>,
     },
 
     Seq {
         meta: Meta,
-        typ: T,
-        first: Box<Expr<S, T>>,
-        then: Box<Expr<S, T>>,
+        typ: Type,
+        first: Box<Self>,
+        then: Box<Self>,
     },
 
     Var {
         meta: Meta,
-        constructor: S,
+        constructor: ValueConstructor,
         name: String,
     },
 
     Fn {
         meta: Meta,
-        typ: T,
+        typ: Type,
         is_capture: bool,
         args: Vec<Arg>,
-        body: Box<Expr<S, T>>,
+        body: Box<Self>,
     },
 
     Nil {
         meta: Meta,
-        typ: T,
+        typ: Type,
     },
 
     Cons {
         meta: Meta,
-        typ: T,
-        head: Box<Expr<S, T>>,
-        tail: Box<Expr<S, T>>,
+        typ: Type,
+        head: Box<Self>,
+        tail: Box<Self>,
     },
 
     Call {
         meta: Meta,
-        typ: T,
-        fun: Box<Expr<S, T>>,
-        args: Vec<Expr<S, T>>,
+        typ: Type,
+        fun: Box<Self>,
+        args: Vec<Self>,
     },
 
     BinOp {
         meta: Meta,
-        typ: T,
+        typ: Type,
         name: BinOp,
-        left: Box<Expr<S, T>>,
-        right: Box<Expr<S, T>>,
+        left: Box<Self>,
+        right: Box<Self>,
     },
 
     Let {
         meta: Meta,
-        typ: T,
-        value: Box<Expr<S, T>>,
+        typ: Type,
+        value: Box<Self>,
         pattern: Pattern,
-        then: Box<Expr<S, T>>,
+        then: Box<Self>,
     },
 
     Case {
         meta: Meta,
-        typ: T,
-        subject: Box<Expr<S, T>>,
-        clauses: Vec<Clause<S, T>>,
+        typ: Type,
+        subject: Box<Self>,
+        clauses: Vec<Clause<ValueConstructor, ModuleValueConstructor, Type>>,
     },
 
     MapNil {
         meta: Meta,
-        typ: T,
+        typ: Type,
     },
 
     MapCons {
         meta: Meta,
-        typ: T,
+        typ: Type,
         label: String,
-        value: Box<Expr<S, T>>,
-        tail: Box<Expr<S, T>>,
+        value: Box<Self>,
+        tail: Box<Self>,
     },
 
     FieldSelect {
         meta: Meta,
-        typ: T,
+        typ: Type,
         label: String,
-        map: Box<Expr<S, T>>,
+        map: Box<Self>,
     },
 
     ModuleSelect {
         meta: Meta,
-        typ: T,
+        typ: Type,
         label: String,
         module_name: Vec<String>,
         module_alias: String,
+        constructor: ModuleValueConstructor,
     },
 }
 
-impl<S, T> Expr<S, T> {
+impl<A, B, C> Expr<A, B, C> {
     pub fn meta(&self) -> &Meta {
         match self {
             Expr::Int { meta, .. } => meta,
@@ -322,7 +324,6 @@ impl TypedExpr {
             Expr::Float { typ, .. } => typ,
             Expr::String { typ, .. } => typ,
             Expr::Seq { then, .. } => then.typ(),
-            Expr::AnonStruct { typ, .. } => typ,
             Expr::Var { constructor, .. } => &constructor.typ,
             Expr::Fn { typ, .. } => typ,
             Expr::Nil { typ, .. } => typ,
@@ -333,21 +334,22 @@ impl TypedExpr {
             Expr::Case { typ, .. } => typ,
             Expr::MapNil { typ, .. } => typ,
             Expr::MapCons { typ, .. } => typ,
+            Expr::AnonStruct { typ, .. } => typ,
             Expr::FieldSelect { typ, .. } => typ,
             Expr::ModuleSelect { typ, .. } => typ,
         }
     }
 }
 
-pub type TypedClause = Clause<ValueConstructor, typ::Type>;
+pub type TypedClause = Clause<ValueConstructor, ModuleValueConstructor, typ::Type>;
 
-pub type UntypedClause = Clause<(), ()>;
+pub type UntypedClause = Clause<(), (), ()>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Clause<S, T> {
+pub struct Clause<ValueConstructor, ModuleValueConstructor, Type> {
     pub meta: Meta,
     pub pattern: Pattern,
-    pub then: Expr<S, T>,
+    pub then: Expr<ValueConstructor, ModuleValueConstructor, Type>,
 }
 
 #[derive(Debug, PartialEq, Default, Clone)]
