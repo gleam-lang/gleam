@@ -48,7 +48,15 @@ StatementStruct: UntypedStatement = {
         name: t.0,
         type_args: t.1,
         fields,
-    }
+    },
+
+    <s:@L> <p:"pub"?> "struct" <t:TypeName> "{}" <e:@L> => Statement::Struct {
+        meta: meta(s, e),
+        public: p.is_some(),
+        name: t.0,
+        type_args: t.1,
+        fields: vec![],
+    },
 }
 
 StructFieldDefinition: (String, Type) = {

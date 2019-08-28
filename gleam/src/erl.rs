@@ -353,6 +353,7 @@ enum ListType<E, T> {
 fn var(name: String, constructor: ValueConstructor, env: &mut Env) -> Document {
     match constructor.variant {
         ValueConstructorVariant::Enum { .. } => atom(name.to_snake_case()),
+        ValueConstructorVariant::NamedStruct { .. } => "{}".to_doc(),
         ValueConstructorVariant::LocalVariable => env.local_var_name(name),
         ValueConstructorVariant::ModuleFn { arity, module, .. } => "fun "
             .to_doc()
@@ -427,6 +428,15 @@ fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
             name,
             ..
         } => enum_(name, args, env),
+
+        Expr::Var {
+            constructor:
+                ValueConstructor {
+                    variant: ValueConstructorVariant::NamedStruct { .. },
+                    ..
+                },
+            ..
+        } => tuple(args.into_iter().map(|e| expr(e, env)).collect::<Vec<_>>()),
 
         Expr::Var {
             constructor:
@@ -1635,6 +1645,35 @@ x() ->
 
 x() ->
     1.0 < 2.3.
+"#
+        },
+        // Named struct creation
+        Case {
+            src: r#"struct Pair(x, y) { x: x y: y } fn x() { Pair(1, 2) Pair(3., 4.) }"#,
+            erl: r#"-module().
+-compile(no_auto_import).
+
+x() ->
+    {1, 2},
+    {3.0, 4.0}.
+"#
+        },
+        Case {
+            src: r#"struct Null { } fn x() { Null }"#,
+            erl: r#"-module().
+-compile(no_auto_import).
+
+x() ->
+    {}.
+"#
+        },
+        Case {
+            src: r#"struct Null {} fn x() { Null }"#,
+            erl: r#"-module().
+-compile(no_auto_import).
+
+x() ->
+    {}.
 "#
         }
     ];

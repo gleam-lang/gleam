@@ -557,6 +557,9 @@ pub enum ValueConstructorVariant {
 
     /// A function belonging to the module
     ModuleFn { module: Vec<String>, arity: usize },
+
+    /// A named struct
+    NamedStruct {},
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1553,9 +1556,7 @@ pub fn infer_module(
                         retrn: Box::new(retrn.clone()),
                     },
                 };
-                let constructor_variant = ValueConstructorVariant::Enum {
-                    arity: fields.len(), // TODO
-                };
+                let constructor_variant = ValueConstructorVariant::NamedStruct {};
                 if public {
                     if let Some(leaked) = typ.find_private_type() {
                         return Err(Error::PrivateTypeLeak {
