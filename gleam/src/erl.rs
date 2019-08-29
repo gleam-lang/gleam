@@ -408,17 +408,6 @@ fn enum_(name: String, args: Vec<TypedExpr>, env: &mut Env) -> Document {
     tuple(args)
 }
 
-// TODO: So here we don't have a good way to tell if it is an enum constructor or not,
-// we have to rely on the case of the variable. A bit lackluster. Perhaps enum
-// constructors should be recorded differently on the module type somehow.
-fn is_constructor_label(label: &String) -> bool {
-    label
-        .chars()
-        .next()
-        .map(|c| c.is_uppercase())
-        .unwrap_or(false)
-}
-
 fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
     match fun {
         Expr::Var {
@@ -451,19 +440,22 @@ fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
         } => name.to_doc().append(call_args(args, env)),
 
         Expr::ModuleSelect {
-            module_name, label, ..
-        } => {
-            if is_constructor_label(&label) {
-                enum_(label, args, env)
-            } else {
-                module_name
-                    .join("@")
-                    .to_doc()
-                    .append(":")
-                    .append(label)
-                    .append(call_args(args, env))
-            }
-        }
+            label,
+            constructor: ModuleValueConstructor::Enum,
+            ..
+        } => enum_(label, args, env),
+
+        Expr::ModuleSelect {
+            module_name,
+            label,
+            constructor: ModuleValueConstructor::Fn,
+            ..
+        } => module_name
+            .join("@")
+            .to_doc()
+            .append(":")
+            .append(label)
+            .append(call_args(args, env)),
 
         call @ Expr::Call { .. } => expr(call, env)
             .surround("(", ")")
@@ -534,60 +526,73 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
         Expr::Float { value, .. } => value.to_doc(),
         Expr::String { value, .. } => string(value),
         Expr::Seq { first, then, .. } => seq(*first, *then, env),
+
         Expr::Var {
             name, constructor, ..
         } => var(name, constructor, env),
+
         Expr::Fn { args, body, .. } => fun(args, *body, env),
+
         Expr::Cons { head, tail, .. } => expr_list_cons(*head, *tail, env),
+
         Expr::Call { fun, args, .. } => call(*fun, args, env),
+
         Expr::FieldSelect { label, map, .. } => map_select(*map, label, env),
+
+        Expr::ModuleSelect {
+            label,
+            constructor: ModuleValueConstructor::Enum,
+            ..
+        } => atom(label.to_snake_case()),
+
         Expr::ModuleSelect {
             typ,
             label,
             module_name,
             ..
-        } => module_select(typ, module_name, label),
+        } => module_select_fn(typ, module_name, label),
+
         Expr::AnonStruct { elems, .. } => {
             tuple(elems.into_iter().map(|e| wrap_expr(e, env)).collect())
         }
+
         Expr::Let {
             value,
             pattern,
             then,
             ..
         } => let_(*value, pattern, *then, env),
+
         Expr::MapCons {
             label, value, tail, ..
         } => map_cons(label, *value, *tail, env),
+
         Expr::Case {
             subject, clauses, ..
         } => case(*subject, clauses, env),
+
         Expr::BinOp {
             name, left, right, ..
         } => bin_op(name, *left, *right, env),
     }
 }
 
-fn module_select(typ: crate::typ::Type, module_name: Vec<String>, label: String) -> Document {
-    if is_constructor_label(&label) {
-        atom(label.to_snake_case())
-    } else {
-        match typ.collapse_links() {
-            crate::typ::Type::Fn { args, .. } => "fun "
-                .to_doc()
-                .append(module_name.join("@"))
-                .append(":")
-                .append(label)
-                .append("/")
-                .append(args.len()),
+fn module_select_fn(typ: crate::typ::Type, module_name: Vec<String>, label: String) -> Document {
+    match typ.collapse_links() {
+        crate::typ::Type::Fn { args, .. } => "fun "
+            .to_doc()
+            .append(module_name.join("@"))
+            .append(":")
+            .append(label)
+            .append("/")
+            .append(args.len()),
 
-            _ => module_name
-                .join("@")
-                .to_doc()
-                .append(":")
-                .append(label)
-                .append("()"),
-        }
+        _ => module_name
+            .join("@")
+            .to_doc()
+            .append(":")
+            .append(label)
+            .append("()"),
     }
 }
 

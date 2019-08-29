@@ -562,6 +562,17 @@ pub enum ValueConstructorVariant {
     NamedStruct {},
 }
 
+impl ValueConstructorVariant {
+    fn to_module_value_constructor(&self) -> ModuleValueConstructor {
+        match self {
+            ValueConstructorVariant::Enum { .. } => ModuleValueConstructor::Enum,
+            ValueConstructorVariant::LocalVariable { .. } => ModuleValueConstructor::Fn,
+            ValueConstructorVariant::ModuleFn { .. } => ModuleValueConstructor::Fn,
+            ValueConstructorVariant::NamedStruct { .. } => unimplemented!(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum ModuleValueConstructor {
     Enum,
@@ -2057,11 +2068,11 @@ fn infer_module_select(
 
     Ok(Expr::ModuleSelect {
         label,
-        typ: instantiate(constructor.typ.clone(), level, env),
+        typ: instantiate(constructor.typ, level, env),
         meta: select_meta,
         module_name,
         module_alias: module_alias.clone(),
-        constructor: unimplemented!(), // TODO
+        constructor: constructor.variant.to_module_value_constructor(),
     })
 }
 
