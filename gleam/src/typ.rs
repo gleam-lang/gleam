@@ -586,6 +586,12 @@ pub struct ModuleTypeInfo {
     pub value_constructors: HashMap<String, ValueConstructor>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum PatternConstructor {
+    Enum,
+    Struct,
+}
+
 #[derive(Debug, Clone)]
 pub struct Env<'a> {
     uid: usize,
@@ -1352,6 +1358,7 @@ fn convert_get_type_constructor_error(e: GetTypeConstructorError, meta: &Meta) -
     }
 }
 
+// TODO: Remove. Unused.
 #[derive(Debug, PartialEq)]
 pub enum RowContainerType {
     Module,
@@ -2111,7 +2118,12 @@ fn infer_value_field_select(
 /// inferred type of the subject in order to determine what variables to insert
 /// into the environment (or to detect a type error).
 ///
-fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> Result<(), Error> {
+fn unify_pattern(
+    pattern: &TypedPattern,
+    typ: &Type,
+    level: usize,
+    env: &mut Env,
+) -> Result<(), Error> {
     //
     // TODO: I think we might be unifying backwards for some of these.
     // The typ should be the `expected` and the `pattern` is the actual?
@@ -2165,6 +2177,7 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
             module,
             name,
             args: pattern_args,
+            constructor: _,
         } => {
             let constructor_typ = env
                 .get_value_constructor(module, name)

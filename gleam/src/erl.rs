@@ -212,7 +212,7 @@ fn pipe(value: TypedExpr, fun: TypedExpr, env: &mut Env) -> Document {
     call(fun, vec![value], env)
 }
 
-fn let_(value: TypedExpr, pat: Pattern, then: TypedExpr, env: &mut Env) -> Document {
+fn let_(value: TypedExpr, pat: TypedPattern, then: TypedExpr, env: &mut Env) -> Document {
     let body = expr(value, env);
     pattern(pat, env)
         .append(" = ")
@@ -222,7 +222,7 @@ fn let_(value: TypedExpr, pat: Pattern, then: TypedExpr, env: &mut Env) -> Docum
         .append(expr(then, env))
 }
 
-fn pattern(p: Pattern, env: &mut Env) -> Document {
+fn pattern(p: TypedPattern, env: &mut Env) -> Document {
     match p {
         Pattern::Nil { .. } => "[]".to_doc(),
         Pattern::Cons { head, tail, .. } => pattern_list_cons(*head, *tail, env),
@@ -241,7 +241,7 @@ fn pattern(p: Pattern, env: &mut Env) -> Document {
     }
 }
 
-fn pattern_list_cons(head: Pattern, tail: Pattern, env: &mut Env) -> Document {
+fn pattern_list_cons(head: TypedPattern, tail: TypedPattern, env: &mut Env) -> Document {
     list_cons(head, tail, env, pattern, |expr| match expr {
         Pattern::Nil { .. } => ListType::Nil,
 
@@ -365,7 +365,7 @@ fn var(name: String, constructor: ValueConstructor, env: &mut Env) -> Document {
     }
 }
 
-fn enum_pattern(name: String, args: Vec<Pattern>, env: &mut Env) -> Document {
+fn enum_pattern(name: String, args: Vec<TypedPattern>, env: &mut Env) -> Document {
     if args.is_empty() {
         atom(name.to_snake_case())
     } else {

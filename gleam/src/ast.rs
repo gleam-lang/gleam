@@ -1,18 +1,24 @@
-use crate::typ::{self, ModuleValueConstructor, ValueConstructor};
+use crate::typ::{self, ModuleValueConstructor, PatternConstructor, ValueConstructor};
 
-pub type TypedModule =
-    Module<ValueConstructor, ModuleValueConstructor, typ::Type, typ::ModuleTypeInfo>;
+pub type TypedModule = Module<
+    ValueConstructor,
+    ModuleValueConstructor,
+    PatternConstructor,
+    typ::Type,
+    typ::ModuleTypeInfo,
+>;
 
-pub type UntypedModule = Module<(), (), (), ()>;
+pub type UntypedModule = Module<(), (), (), (), ()>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Module<ValueConstructor, ModuleValueConstructor, Type, Info> {
+pub struct Module<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type, Info> {
     pub name: Vec<String>,
     pub type_info: Info,
-    pub statements: Vec<Statement<ValueConstructor, ModuleValueConstructor, Type>>,
+    pub statements:
+        Vec<Statement<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type>>,
 }
 
-impl<A, B, C, D> Module<A, B, C, D> {
+impl<A, B, C, D, E> Module<A, B, C, D, E> {
     pub fn name_string(&self) -> String {
         self.name.join("/")
     }
@@ -89,17 +95,18 @@ pub enum TypeAst {
     },
 }
 
-pub type TypedStatement = Statement<ValueConstructor, ModuleValueConstructor, typ::Type>;
+pub type TypedStatement =
+    Statement<ValueConstructor, ModuleValueConstructor, PatternConstructor, typ::Type>;
 
-pub type UntypedStatement = Statement<(), (), ()>;
+pub type UntypedStatement = Statement<(), (), (), ()>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Statement<ValueConstructor, ModuleValueConstructor, Type> {
+pub enum Statement<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type> {
     Fn {
         meta: Meta,
         name: String,
         args: Vec<Arg>,
-        body: Expr<ValueConstructor, ModuleValueConstructor, Type>,
+        body: Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type>,
         public: bool,
         return_annotation: Option<TypeAst>,
     },
@@ -170,12 +177,12 @@ pub enum BinOp {
     ModuloInt,
 }
 
-pub type TypedExpr = Expr<ValueConstructor, ModuleValueConstructor, typ::Type>;
+pub type TypedExpr = Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, typ::Type>;
 
-pub type UntypedExpr = Expr<(), (), ()>;
+pub type UntypedExpr = Expr<(), (), (), ()>;
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum Expr<ValueConstructor, ModuleValueConstructor, Type> {
+pub enum Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type> {
     Int {
         meta: Meta,
         typ: Type,
@@ -252,7 +259,7 @@ pub enum Expr<ValueConstructor, ModuleValueConstructor, Type> {
         meta: Meta,
         typ: Type,
         value: Box<Self>,
-        pattern: Pattern,
+        pattern: Pattern<PatternConstructor>,
         then: Box<Self>,
     },
 
@@ -260,7 +267,7 @@ pub enum Expr<ValueConstructor, ModuleValueConstructor, Type> {
         meta: Meta,
         typ: Type,
         subject: Box<Self>,
-        clauses: Vec<Clause<ValueConstructor, ModuleValueConstructor, Type>>,
+        clauses: Vec<Clause<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type>>,
     },
 
     MapNil {
@@ -293,7 +300,7 @@ pub enum Expr<ValueConstructor, ModuleValueConstructor, Type> {
     },
 }
 
-impl<A, B, C> Expr<A, B, C> {
+impl<A, B, C, D> Expr<A, B, C, D> {
     pub fn meta(&self) -> &Meta {
         match self {
             Expr::Int { meta, .. } => meta,
@@ -341,15 +348,16 @@ impl TypedExpr {
     }
 }
 
-pub type TypedClause = Clause<ValueConstructor, ModuleValueConstructor, typ::Type>;
+pub type TypedClause =
+    Clause<ValueConstructor, ModuleValueConstructor, PatternConstructor, typ::Type>;
 
-pub type UntypedClause = Clause<(), (), ()>;
+pub type UntypedClause = Clause<(), (), (), ()>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Clause<ValueConstructor, ModuleValueConstructor, Type> {
+pub struct Clause<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type> {
     pub meta: Meta,
-    pub pattern: Pattern,
-    pub then: Expr<ValueConstructor, ModuleValueConstructor, Type>,
+    pub pattern: Pattern<PatternConstructor>,
+    pub then: Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type>,
 }
 
 #[derive(Debug, PartialEq, Default, Clone)]
@@ -358,8 +366,11 @@ pub struct Meta {
     pub end: usize,
 }
 
+pub type UntypedPattern = Pattern<()>;
+pub type TypedPattern = Pattern<PatternConstructor>;
+
 #[derive(Debug, Clone, PartialEq)]
-pub enum Pattern {
+pub enum Pattern<Constructor> {
     Int {
         meta: Meta,
         value: i64,
@@ -386,7 +397,7 @@ pub enum Pattern {
 
     AnonStruct {
         meta: Meta,
-        elems: Vec<Pattern>,
+        elems: Vec<Self>,
     },
 
     Nil {
@@ -395,19 +406,20 @@ pub enum Pattern {
 
     Cons {
         meta: Meta,
-        head: Box<Pattern>,
-        tail: Box<Pattern>,
+        head: Box<Self>,
+        tail: Box<Self>,
     },
 
     Constructor {
         meta: Meta,
         name: String,
-        args: Vec<Pattern>,
+        args: Vec<Self>,
         module: Option<String>,
+        constructor: Constructor,
     },
 }
 
-impl Pattern {
+impl<A> Pattern<A> {
     pub fn meta(&self) -> &Meta {
         match self {
             Pattern::Int { meta, .. } => meta,

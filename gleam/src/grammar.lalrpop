@@ -3,7 +3,7 @@
 use std::str::FromStr;
 
 use crate::ast::{
-    UntypedExpr, Expr, Arg, UntypedModule, Module, UntypedStatement, Statement, TypeAst, Pattern,
+    UntypedExpr, Expr, Arg, UntypedModule, Module, UntypedStatement, Statement, TypeAst, UntypedPattern,
     BinOp, Clause, UntypedClause, EnumConstructor
 };
 use crate::parser::*;
@@ -491,7 +491,7 @@ Op<Operator, Current, Next>: UntypedExpr = {
     },
 }
 
-Pattern: Pattern = {
+Pattern: UntypedPattern = {
     PatternVar => <>,
     PatternInt => <>,
     PatternNil => <>,
@@ -505,7 +505,7 @@ Pattern: Pattern = {
     PatternConstructor => <>,
 }
 
-PatternConstructor: Pattern = {
+PatternConstructor: UntypedPattern = {
     <s:@L> <module:(<VarName> ".")?> <name:UpName> <args:PatternConstructorArgs?> <e:@L> => Pattern::Constructor {
         meta: meta(s, e),
         args: args.unwrap_or_else(|| vec![]),
@@ -518,54 +518,54 @@ PatternConstructorArgs: Vec<Pattern> = {
     "(" <ts:Comma<Pattern>> ")" => ts
 }
 
-PatternAnonStruct: Pattern = {
+PatternAnonStruct: UntypedPattern = {
     <s:@L> "struct" "(" <elems:Comma<Pattern>> ")" <e:@L> => Pattern::AnonStruct {
         meta: meta(s, e),
         elems,
     }
 }
 
-PatternFloat: Pattern = {
+PatternFloat: UntypedPattern = {
     <s:@L> <f:r"-?[0-9]+\.+[0-9]*"> <e:@L> => Pattern::Float {
         meta: meta(s, e),
         value: f64::from_str(f).unwrap(),
     }
 }
 
-PatternString: Pattern = {
+PatternString: UntypedPattern = {
     <s:@L> <a:RawString> <e:@L> => Pattern::String {
         meta: meta(s, e),
         value: a,
     }
 }
 
-PatternInt: Pattern = {
+PatternInt: UntypedPattern = {
     <s:@L> <i:r"-?[0-9]+"> <e:@L> => Pattern::Int {
         meta: meta(s, e),
         value: i64::from_str(i).unwrap(),
     }
 }
 
-PatternVar: Pattern = {
+PatternVar: UntypedPattern = {
     <s:@L> <v:VarName> <e:@L> => Pattern::Var {
         meta: meta(s, e),
         name: v,
     }
 }
 
-PatternDiscard: Pattern = {
+PatternDiscard: UntypedPattern = {
     <s:@L> <_d:DiscardName> <e:@L> => Pattern::Discard {
         meta: meta(s, e),
     }
 }
 
-PatternNil: Pattern = {
+PatternNil: UntypedPattern = {
     <s:@L> "[]" <e:@L> => Pattern::Nil {
         meta: meta(s, e),
     }
 }
 
-PatternList: Pattern = {
+PatternList: UntypedPattern = {
     <s:@L> "[" <elems:Comma<Pattern>> "]" <e:@L> => {
         elems.into_iter().rev().fold(
             Pattern::Nil {
@@ -580,7 +580,7 @@ PatternList: Pattern = {
     }
 }
 
-PatternCons: Pattern = {
+PatternCons: UntypedPattern = {
     <s:@L> "[" <head:Pattern> "|" <tail:Pattern> "]" <e:@L> => Pattern::Cons {
         meta: meta(s, e),
         head: Box::new(head),
