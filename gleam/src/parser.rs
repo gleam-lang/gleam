@@ -741,7 +741,8 @@ fn expr_test() {
                 args: vec![Pattern::Var {
                     meta: Meta { start: 16, end: 17 },
                     name: "a".to_string()
-                }]
+                }],
+                constructor: (),
             },
             value: Box::new(Expr::Int {
                 typ: (),
@@ -1094,6 +1095,7 @@ fn module_test() {
                         }),
                         pattern: Pattern::Constructor {
                             meta: Meta { start: 80, end: 88 },
+                            constructor: (),
                             module: None,
                             name: "Boxxy".to_string(),
                             args: vec![Pattern::Var {

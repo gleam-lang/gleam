@@ -1,6 +1,8 @@
 use crate::ast::*;
 use crate::pretty::*;
-use crate::typ::{ModuleValueConstructor, ValueConstructor, ValueConstructorVariant};
+use crate::typ::{
+    ModuleValueConstructor, PatternConstructor, ValueConstructor, ValueConstructorVariant,
+};
 use heck::{CamelCase, SnakeCase};
 use itertools::Itertools;
 use std::char;
@@ -1308,6 +1310,7 @@ moddy4() ->
                                 meta: default(),
                                 value: 2,
                             }],
+                            constructor: PatternConstructor::Enum,
                         },
                         then: Expr::Int {
                             typ: crate::typ::int(),

@@ -1,6 +1,6 @@
 use crate::ast::{
     Arg, BinOp, Clause, Expr, Meta, Module, Pattern, Statement, TypeAst, TypedExpr, TypedModule,
-    UntypedExpr, UntypedModule,
+    TypedPattern, UntypedExpr, UntypedModule,
 };
 use crate::pretty::*;
 use itertools::Itertools;
@@ -1384,7 +1384,7 @@ pub fn infer_module(
     let mut env = Env::new(modules);
     let module_name = &module.name;
 
-    let statements: Vec<Statement<_, _, Type>> = module
+    let statements: Vec<Statement<_, _, _, Type>> = module
         .statements
         .into_iter()
         .map(|s| match s {
