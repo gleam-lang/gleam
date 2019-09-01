@@ -238,6 +238,7 @@ fn pattern(p: TypedPattern, env: &mut Env) -> Document {
         }
         Pattern::Constructor { name, args, .. } => {
             // TODO: check to see what kind of constructor this is. i.e. enum, struct
+            unimplemented!();
             enum_pattern(name, args, env)
         }
     }

@@ -1,6 +1,6 @@
 use crate::ast::{
     Arg, BinOp, Clause, Expr, Meta, Module, Pattern, Statement, TypeAst, TypedExpr, TypedModule,
-    TypedPattern, UntypedExpr, UntypedModule,
+    TypedPattern, UntypedExpr, UntypedModule, UntypedPattern,
 };
 use crate::pretty::*;
 use itertools::Itertools;
@@ -1842,7 +1842,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         } => {
             let value = infer(*value, level + 1, env)?;
             let value_typ = generalise(value.typ().clone(), level + 1);
-            unify_pattern(&pattern, &value_typ, level, env)?;
+            let pattern = unify_pattern(pattern, &value_typ, level, env)?;
             let then = infer(*then, level, env)?;
             let typ = then.typ().clone();
             Ok(Expr::Let {
@@ -1868,14 +1868,14 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             for clause in clauses.into_iter() {
                 let vars = env.variables.clone();
 
-                unify_pattern(&clause.pattern, &subject_type, level, env)?;
+                let pattern = unify_pattern(clause.pattern, &subject_type, level, env)?;
 
                 let then = infer(clause.then, level, env)?;
                 unify(&return_type, then.typ(), env)
                     .map_err(|e| convert_unify_error(e, then.meta()))?;
                 typed_clauses.push(Clause {
                     meta: clause.meta,
-                    pattern: clause.pattern,
+                    pattern,
                     then,
                 });
 
@@ -2119,11 +2119,11 @@ fn infer_value_field_select(
 /// into the environment (or to detect a type error).
 ///
 fn unify_pattern(
-    pattern: &TypedPattern,
+    pattern: UntypedPattern,
     typ: &Type,
     level: usize,
     env: &mut Env,
-) -> Result<(), Error> {
+) -> Result<TypedPattern, Error> {
     //
     // TODO: I think we might be unifying backwards for some of these.
     // The typ should be the `expected` and the `pattern` is the actual?
@@ -2131,38 +2131,44 @@ fn unify_pattern(
     // so we can display a more specific error message.
     //
     match pattern {
-        Pattern::Discard { .. } => Ok(()),
+        Pattern::Discard { meta } => Ok(Pattern::Discard { meta }),
 
-        Pattern::Var { name, .. } => {
+        Pattern::Var { name, meta } => {
             env.insert_variable(
                 name.to_string(),
                 ValueConstructorVariant::LocalVariable,
                 typ.clone(),
             );
-            Ok(())
+            Ok(Pattern::Var { name, meta })
         }
 
-        Pattern::Int { meta, .. } => {
-            unify(&int(), typ, env).map_err(|e| convert_unify_error(e, &meta))
+        Pattern::Int { meta, value } => {
+            unify(&int(), typ, env).map_err(|e| convert_unify_error(e, &meta))?;
+            Ok(Pattern::Int { meta, value })
         }
 
-        Pattern::Float { meta, .. } => {
-            unify(&float(), typ, env).map_err(|e| convert_unify_error(e, &meta))
+        Pattern::Float { meta, value } => {
+            unify(&float(), typ, env).map_err(|e| convert_unify_error(e, &meta))?;
+            Ok(Pattern::Float { meta, value })
         }
 
-        Pattern::String { meta, .. } => {
-            unify(&string(), typ, env).map_err(|e| convert_unify_error(e, &meta))
+        Pattern::String { meta, value } => {
+            unify(&string(), typ, env).map_err(|e| convert_unify_error(e, &meta))?;
+            Ok(Pattern::String { meta, value })
         }
 
-        Pattern::Nil { meta, .. } => unify(&list(env.new_unbound_var(level)), typ, env)
-            .map_err(|e| convert_unify_error(e, &meta)),
+        Pattern::Nil { meta } => {
+            unify(&list(env.new_unbound_var(level)), typ, env)
+                .map_err(|e| convert_unify_error(e, &meta))?;
+            Ok(Pattern::Nil { meta })
+        }
 
-        Pattern::Cons {
-            meta, head, tail, ..
-        } => match typ.get_app_args(true, &vec![], "List", 1, env) {
+        Pattern::Cons { meta, head, tail } => match typ.get_app_args(true, &vec![], "List", 1, env)
+        {
             Some(args) => {
-                unify_pattern(head, &args[0], level, env)?;
-                unify_pattern(tail, typ, level, env)
+                let head = Box::new(unify_pattern(*head, &args[0], level, env)?);
+                let tail = Box::new(unify_pattern(*tail, typ, level, env)?);
+                Ok(Pattern::Cons { meta, head, tail })
             }
 
             None => Err(Error::CouldNotUnify {
@@ -2179,19 +2185,29 @@ fn unify_pattern(
             args: pattern_args,
             constructor: _,
         } => {
-            let constructor_typ = env
-                .get_value_constructor(module, name)
-                .map_err(|e| convert_get_value_constructor_error(e, &meta))?
-                .typ
-                .clone();
+            let cons = env
+                .get_value_constructor(&module, &name)
+                .map_err(|e| convert_get_value_constructor_error(e, &meta))?;
+            let constructor_typ = cons.typ.clone();
+            // TODO: get this from the constructor
+            let constructor = PatternConstructor::Enum;
 
             match instantiate(constructor_typ, level, env) {
                 Type::Fn { args, retrn } => {
                     if args.len() == pattern_args.len() {
-                        for (pattern, typ) in pattern_args.iter().zip(args) {
-                            unify_pattern(pattern, &typ, level, env)?;
-                        }
-                        unify(&retrn, &typ, env).map_err(|e| convert_unify_error(e, &meta))
+                        let pattern_args = pattern_args
+                            .into_iter()
+                            .zip(args)
+                            .map(|(pattern, typ)| unify_pattern(pattern, &typ, level, env))
+                            .collect::<Result<Vec<_>, _>>()?;
+                        unify(&retrn, &typ, env).map_err(|e| convert_unify_error(e, &meta))?;
+                        Ok(Pattern::Constructor {
+                            meta,
+                            module,
+                            name,
+                            args: pattern_args,
+                            constructor,
+                        })
                     } else {
                         // TODO: Incorrect number of args given to constructor
                         unimplemented!()
@@ -2200,7 +2216,14 @@ fn unify_pattern(
 
                 c @ Type::App { .. } => {
                     if pattern_args.is_empty() {
-                        unify(&c, &typ, env).map_err(|e| convert_unify_error(e, &meta))
+                        unify(&c, &typ, env).map_err(|e| convert_unify_error(e, &meta))?;
+                        Ok(Pattern::Constructor {
+                            meta,
+                            module,
+                            name,
+                            args: vec![],
+                            constructor,
+                        })
                     } else {
                         // Error: singleton given args
                         unimplemented!()
@@ -2214,21 +2237,23 @@ fn unify_pattern(
             }
         }
 
-        Pattern::AnonStruct { elems, meta, .. } => match typ.clone().collapse_links() {
+        Pattern::AnonStruct { elems, meta } => match typ.clone().collapse_links() {
             Type::AnonStruct { elems: type_elems } => {
-                for (pattern, typ) in elems.iter().zip(type_elems) {
-                    unify_pattern(pattern, &typ, level, env)?;
-                }
-                Ok(())
+                let elems = elems
+                    .into_iter()
+                    .zip(type_elems)
+                    .map(|(pattern, typ)| unify_pattern(pattern, &typ, level, env))
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(Pattern::AnonStruct { elems, meta })
             }
 
             typ @ Type::Var { .. } => {
-                let elems = (0..(elems.len()))
+                let elems_types = (0..(elems.len()))
                     .map(|_| env.new_unbound_var(level))
                     .collect();
-                unify(&Type::AnonStruct { elems }, &typ, env)
+                unify(&Type::AnonStruct { elems: elems_types }, &typ, env)
                     .map_err(|e| convert_unify_error(e, &meta))?;
-                unify_pattern(pattern, &typ, level, env)
+                unify_pattern(Pattern::AnonStruct { elems, meta }, &typ, level, env)
             }
 
             other => {
