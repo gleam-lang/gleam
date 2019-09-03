@@ -2189,8 +2189,16 @@ fn unify_pattern(
                 .get_value_constructor(&module, &name)
                 .map_err(|e| convert_get_value_constructor_error(e, &meta))?;
             let constructor_typ = cons.typ.clone();
-            // TODO: get this from the constructor
-            let constructor = PatternConstructor::Enum;
+            let constructor = match cons.variant {
+                ValueConstructorVariant::Enum { .. } => PatternConstructor::Enum,
+                ValueConstructorVariant::NamedStruct { .. } => PatternConstructor::Struct,
+                ValueConstructorVariant::LocalVariable
+                | ValueConstructorVariant::ModuleFn { .. } => panic!(
+                    "Unexpected value constructor type for a constructor pattern.
+This is a bug in the Gleam compiler.
+Please report this to https://github.com/lpil/gleam/issues"
+                ),
+            };
 
             match instantiate(constructor_typ, level, env) {
                 Type::Fn { args, retrn } => {

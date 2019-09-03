@@ -227,20 +227,35 @@ fn let_(value: TypedExpr, pat: TypedPattern, then: TypedExpr, env: &mut Env) -> 
 fn pattern(p: TypedPattern, env: &mut Env) -> Document {
     match p {
         Pattern::Nil { .. } => "[]".to_doc(),
+
         Pattern::Cons { head, tail, .. } => pattern_list_cons(*head, *tail, env),
+
         Pattern::Discard { .. } => "_".to_doc(),
+
         Pattern::Var { name, .. } => env.next_local_var_name(name),
+
         Pattern::Int { value, .. } => value.to_doc(),
+
         Pattern::Float { value, .. } => value.to_doc(),
+
         Pattern::String { value, .. } => string(value),
+
         Pattern::AnonStruct { elems, .. } => {
             tuple(elems.into_iter().map(|p| pattern(p, env)).collect())
         }
-        Pattern::Constructor { name, args, .. } => {
-            // TODO: check to see what kind of constructor this is. i.e. enum, struct
-            unimplemented!();
-            enum_pattern(name, args, env)
-        }
+
+        Pattern::Constructor {
+            name,
+            args,
+            constructor: PatternConstructor::Enum,
+            ..
+        } => enum_pattern(name, args, env),
+
+        Pattern::Constructor {
+            args,
+            constructor: PatternConstructor::Struct,
+            ..
+        } => tuple(args.into_iter().map(|p| pattern(p, env)).collect()),
     }
 }
 
@@ -1688,6 +1703,25 @@ x() ->
 
 x() ->
     {}.
+"#
+        },
+        Case {
+            src: r#"struct Point {x: Int x: Int} fn x() { Point(4, 6) }"#,
+            erl: r#"-module().
+-compile(no_auto_import).
+
+x() ->
+    {4, 6}.
+"#
+        },
+        Case {
+            src: r#"struct Point {x: Int x: Int} fn x(y) { let Point(a, b) = y a }"#,
+            erl: r#"-module().
+-compile(no_auto_import).
+
+x(Y) ->
+    {A, B} = Y,
+    A.
 "#
         }
     ];
