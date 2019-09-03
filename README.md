@@ -15,10 +15,10 @@ pub enum Tree(value) =
   | Leaf(value)
   | Node(Tree(value), Tree(value))
 
-pub fn any(tree: Tree(a), predicate: fn(a) -> Bool) -> Bool {
+pub fn any(tree: Tree(a), check: fn(a) -> Bool) -> Bool {
   case tree {
-  | Leaf(i) -> predicate(i)
-  | Node(left, right) -> any(left, predicate) || any(right, predicate)
+  | Leaf(i) -> check(i)
+  | Node(left, right) -> any(left, check) || any(right, check)
   }
 }
 

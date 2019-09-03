@@ -157,10 +157,10 @@ interop with other BEAM languages such as Erlang, Elixir and LFE.</p>
   | Leaf(value)
   | Node(Tree(value), Tree(value))
 
-pub fn any(tree: Tree(a), predicate: fn(a) -&gt; Bool) -&gt; Bool {
+pub fn any(tree: Tree(a), check: fn(a) -&gt; Bool) -&gt; Bool {
   case tree {
-  | Leaf(i) -&gt; predicate(i)
-  | Node(left, right) -&gt; any(left, predicate) || any(right, predicate)
+  | Leaf(i) -&gt; check(i)
+  | Node(left, right) -&gt; any(left, check) || any(right, check)
   }
 }
 
