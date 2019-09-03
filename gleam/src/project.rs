@@ -188,11 +188,7 @@ This value is being called as a function but its type is:
                     .unwrap();
                 }
 
-                ExtraField {
-                    meta,
-                    label,
-                    container_typ,
-                } => {
+                ExtraField { meta, label } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Extra field".to_string(),
                         label: "".to_string(),
@@ -205,19 +201,14 @@ This value is being called as a function but its type is:
                     write!(
                         buffer,
                         "
-This {} has an extra field named `{}` that should not be present.
+This map has an extra field named `{}` that should not be present.
 ",
-                        container_typ.to_string(),
                         label,
                     )
                     .unwrap();
                 }
 
-                FieldNotFound {
-                    meta,
-                    label,
-                    container_typ,
-                } => {
+                FieldNotFound { meta, label } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Field not found".to_string(),
                         label: "".to_string(),
@@ -230,9 +221,8 @@ This {} has an extra field named `{}` that should not be present.
                     write!(
                         buffer,
                         "
-This {} does not have a field named `{}`.
+This map does not have a field named `{}`.
 ",
-                        container_typ.to_string(),
                         label,
                     )
                     .unwrap();

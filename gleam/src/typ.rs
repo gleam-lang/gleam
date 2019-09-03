@@ -1247,13 +1247,11 @@ pub enum Error {
     ExtraField {
         meta: Meta,
         label: String,
-        container_typ: RowContainerType,
     },
 
     FieldNotFound {
         meta: Meta,
         label: String,
-        container_typ: RowContainerType,
     },
 }
 
@@ -1355,22 +1353,6 @@ fn convert_get_type_constructor_error(e: GetTypeConstructorError, meta: &Meta) -
             module_name,
             type_constructors,
         },
-    }
-}
-
-// TODO: Remove. Unused.
-#[derive(Debug, PartialEq)]
-pub enum RowContainerType {
-    Module,
-    Map,
-}
-
-impl RowContainerType {
-    pub fn to_string(&self) -> String {
-        match self {
-            RowContainerType::Module => "module".to_string(),
-            RowContainerType::Map => "map".to_string(),
-        }
     }
 }
 
@@ -2103,8 +2085,7 @@ fn infer_value_field_select(
         }),
     };
 
-    unify(&dummy_map, map.typ(), env)
-        .map_err(|e| convert_unify_error(set_map_row_type(e), &meta))?;
+    unify(&dummy_map, map.typ(), env).map_err(|e| convert_unify_error(e, &meta))?;
 
     Ok(Expr::FieldSelect {
         meta,
@@ -2401,21 +2382,13 @@ fn convert_unify_error(e: UnifyError, meta: &Meta) -> Error {
             given,
         },
 
-        UnifyError::FieldNotFound {
-            label,
-            container_typ,
-        } => Error::FieldNotFound {
+        UnifyError::FieldNotFound { label } => Error::FieldNotFound {
             meta: meta.clone(),
-            container_typ,
             label,
         },
 
-        UnifyError::ExtraField {
-            label,
-            container_typ,
-        } => Error::ExtraField {
+        UnifyError::ExtraField { label } => Error::ExtraField {
             meta: meta.clone(),
-            container_typ,
             label,
         },
 
@@ -2498,22 +2471,13 @@ fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
 
 #[derive(Debug, PartialEq)]
 enum UnifyError {
-    CouldNotUnify {
-        expected: Type,
-        given: Type,
-    },
+    CouldNotUnify { expected: Type, given: Type },
 
     RecursiveType,
 
-    FieldNotFound {
-        container_typ: RowContainerType,
-        label: String,
-    },
+    FieldNotFound { label: String },
 
-    ExtraField {
-        container_typ: RowContainerType,
-        label: String,
-    },
+    ExtraField { label: String },
 }
 
 fn unify(t1: &Type, t2: &Type, env: &mut Env) -> Result<(), UnifyError> {
@@ -2642,15 +2606,12 @@ fn unify(t1: &Type, t2: &Type, env: &mut Env) -> Result<(), UnifyError> {
             }
         }
 
-        (Type::Map { row: row1 }, Type::Map { row: row2 }) => {
-            unify(row1, row2, env).map_err(set_map_row_type)
-        }
+        (Type::Map { row: row1 }, Type::Map { row: row2 }) => unify(row1, row2, env),
 
         (Type::RowNil, Type::RowNil) => Ok(()),
 
         (Type::RowNil, Type::RowCons { label, .. }) => Err(UnifyError::ExtraField {
             label: label.to_string(),
-            container_typ: RowContainerType::Module,
         }),
 
         (
@@ -2697,22 +2658,6 @@ fn unify(t1: &Type, t2: &Type, env: &mut Env) -> Result<(), UnifyError> {
     }
 }
 
-fn set_map_row_type(e: UnifyError) -> UnifyError {
-    match e {
-        UnifyError::FieldNotFound { label, .. } => UnifyError::FieldNotFound {
-            label,
-            container_typ: RowContainerType::Map,
-        },
-
-        UnifyError::ExtraField { label, .. } => UnifyError::ExtraField {
-            label,
-            container_typ: RowContainerType::Map,
-        },
-
-        other => other,
-    }
-}
-
 /// Takes a type (expected to be a Row) and searches within it for a field
 /// with a particular label.
 /// If found the type of the label is unified with the expected type,
@@ -2730,10 +2675,7 @@ fn unify_row_field(
     env: &mut Env,
 ) -> Result<Type, UnifyError> {
     match row {
-        Type::RowNil => Err(UnifyError::FieldNotFound {
-            label: label1,
-            container_typ: RowContainerType::Module,
-        }),
+        Type::RowNil => Err(UnifyError::FieldNotFound { label: label1 }),
 
         Type::RowCons { label, head, tail } => {
             if label == label1 {
@@ -3724,7 +3666,6 @@ fn infer_error_test() {
             error: Error::ExtraField {
                 meta: Meta { start: 11, end: 12 },
                 label: "a".to_string(),
-                container_typ: RowContainerType::Map,
             },
         },
         Case {
