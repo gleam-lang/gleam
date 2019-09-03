@@ -1100,6 +1100,38 @@ thing() ->\n    thing:new().\n"
                 second: PathBuf::from("/other/src/one.gleam"),
             }),
         },
+        Case {
+            input: vec![
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/one.gleam"),
+                    base_path: PathBuf::from("/src"),
+                    src: "pub struct Point { x: Int y: Int }".to_string(),
+                },
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/two.gleam"),
+                    base_path: PathBuf::from("/src"),
+                    src: "import one
+                        fn make() { one.Point(1, 4) }
+                        fn x(p) { let one.Point(x, _) = p x }".to_string(),
+                },
+            ],
+            expected: Ok(vec![
+                Compiled {
+                    name: vec!["one".to_string()],
+                    path: PathBuf::from("/gen/src/one.erl"),
+                    code: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                },
+                Compiled {
+                    name: vec!["two".to_string()],
+                    path: PathBuf::from("/gen/src/two.erl"),
+                    code: "-module(two).\n-compile(no_auto_import).\n
+make() ->\n    {1, 4}.\n
+x(P) ->\n    {X, _} = P,\n    X.\n".to_string(),
+                },
+            ]),
+        },
     ];
 
     for Case { input, expected } in cases.into_iter() {

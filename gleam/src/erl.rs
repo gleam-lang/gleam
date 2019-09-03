@@ -464,6 +464,11 @@ fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
         } => enum_(label, args, env),
 
         Expr::ModuleSelect {
+            constructor: ModuleValueConstructor::Struct,
+            ..
+        } => tuple(args.into_iter().map(|e| wrap_expr(e, env)).collect()),
+
+        Expr::ModuleSelect {
             module_name,
             label,
             constructor: ModuleValueConstructor::Fn,

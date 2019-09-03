@@ -566,15 +566,18 @@ impl ValueConstructorVariant {
     fn to_module_value_constructor(&self) -> ModuleValueConstructor {
         match self {
             ValueConstructorVariant::Enum { .. } => ModuleValueConstructor::Enum,
-            ValueConstructorVariant::LocalVariable { .. } => ModuleValueConstructor::Fn,
-            ValueConstructorVariant::ModuleFn { .. } => ModuleValueConstructor::Fn,
-            ValueConstructorVariant::NamedStruct { .. } => unimplemented!(),
+
+            ValueConstructorVariant::NamedStruct { .. } => ModuleValueConstructor::Struct,
+
+            ValueConstructorVariant::LocalVariable { .. }
+            | ValueConstructorVariant::ModuleFn { .. } => ModuleValueConstructor::Fn,
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ModuleValueConstructor {
+    Struct,
     Enum,
     Fn,
 }
