@@ -741,7 +741,8 @@ fn expr_test() {
                 args: vec![Pattern::Var {
                     meta: Meta { start: 16, end: 17 },
                     name: "a".to_string()
-                }]
+                }],
+                constructor: (),
             },
             value: Box::new(Expr::Int {
                 typ: (),
@@ -1002,13 +1003,13 @@ fn module_test() {
                 module: "m".to_string(),
                 fun: "f".to_string(),
                 args: vec![
-                    Type::Constructor {
+                    TypeAst::Constructor {
                         meta: Meta { start: 20, end: 23 },
                         module: None,
                         name: "Int".to_string(),
                         args: vec![]
                     },
-                    Type::Constructor {
+                    TypeAst::Constructor {
                         meta: Meta { start: 25, end: 30 },
                         module: None,
                         name: "Float".to_string(),
@@ -1016,7 +1017,7 @@ fn module_test() {
                     }
                 ],
                 public: true,
-                retrn: Type::Constructor {
+                retrn: TypeAst::Constructor {
                     meta: Meta { start: 35, end: 39 },
                     module: None,
                     name: "Bool".to_string(),
@@ -1038,7 +1039,7 @@ fn module_test() {
                 constructors: vec![EnumConstructor {
                     meta: Meta { start: 20, end: 28 },
                     name: "Boxed".to_string(),
-                    args: vec![Type::Var {
+                    args: vec![TypeAst::Var {
                         meta: Meta { start: 26, end: 27 },
                         name: "a".to_string()
                     }]
@@ -1061,7 +1062,7 @@ fn module_test() {
                     constructors: vec![EnumConstructor {
                         meta: Meta { start: 20, end: 28 },
                         name: "Boxxy".to_string(),
-                        args: vec![Type::Var {
+                        args: vec![TypeAst::Var {
                             meta: Meta { start: 26, end: 27 },
                             name: "x".to_string()
                         }]
@@ -1094,6 +1095,7 @@ fn module_test() {
                         }),
                         pattern: Pattern::Constructor {
                             meta: Meta { start: 80, end: 88 },
+                            constructor: (),
                             module: None,
                             name: "Boxxy".to_string(),
                             args: vec![Pattern::Var {
@@ -1292,7 +1294,7 @@ fn module_test() {
             type_info: (),
             name: vec![],
             statements: vec![Statement::Fn {
-                return_annotation: Some(Type::Constructor {
+                return_annotation: Some(TypeAst::Constructor {
                     args: vec![],
                     meta: Meta { start: 18, end: 23 },
                     module: None,
@@ -1309,7 +1311,7 @@ fn module_test() {
                 args: vec![Arg {
                     meta: Meta { start: 7, end: 13 },
                     name: Some("x".to_string()),
-                    annotation: Some(Type::Constructor {
+                    annotation: Some(TypeAst::Constructor {
                         args: vec![],
                         meta: Meta { start: 10, end: 13 },
                         module: None,

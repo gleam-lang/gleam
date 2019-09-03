@@ -188,11 +188,7 @@ This value is being called as a function but its type is:
                     .unwrap();
                 }
 
-                ExtraField {
-                    meta,
-                    label,
-                    container_typ,
-                } => {
+                ExtraField { meta, label } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Extra field".to_string(),
                         label: "".to_string(),
@@ -205,19 +201,14 @@ This value is being called as a function but its type is:
                     write!(
                         buffer,
                         "
-This {} has an extra field named `{}` that should not be present.
+This map has an extra field named `{}` that should not be present.
 ",
-                        container_typ.to_string(),
                         label,
                     )
                     .unwrap();
                 }
 
-                FieldNotFound {
-                    meta,
-                    label,
-                    container_typ,
-                } => {
+                FieldNotFound { meta, label } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Field not found".to_string(),
                         label: "".to_string(),
@@ -230,9 +221,8 @@ This {} has an extra field named `{}` that should not be present.
                     write!(
                         buffer,
                         "
-This {} does not have a field named `{}`.
+This map does not have a field named `{}`.
 ",
-                        container_typ.to_string(),
                         label,
                     )
                     .unwrap();
@@ -1109,6 +1099,38 @@ thing() ->\n    thing:new().\n"
                 first: PathBuf::from("/src/one.gleam"),
                 second: PathBuf::from("/other/src/one.gleam"),
             }),
+        },
+        Case {
+            input: vec![
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/one.gleam"),
+                    base_path: PathBuf::from("/src"),
+                    src: "pub struct Point { x: Int y: Int }".to_string(),
+                },
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/two.gleam"),
+                    base_path: PathBuf::from("/src"),
+                    src: "import one
+                        fn make() { one.Point(1, 4) }
+                        fn x(p) { let one.Point(x, _) = p x }".to_string(),
+                },
+            ],
+            expected: Ok(vec![
+                Compiled {
+                    name: vec!["one".to_string()],
+                    path: PathBuf::from("/gen/src/one.erl"),
+                    code: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                },
+                Compiled {
+                    name: vec!["two".to_string()],
+                    path: PathBuf::from("/gen/src/two.erl"),
+                    code: "-module(two).\n-compile(no_auto_import).\n
+make() ->\n    {1, 4}.\n
+x(P) ->\n    {X, _} = P,\n    X.\n".to_string(),
+                },
+            ]),
         },
     ];
 

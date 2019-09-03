@@ -3,8 +3,8 @@
 use std::str::FromStr;
 
 use crate::ast::{
-    UntypedExpr, Expr, Arg, UntypedModule, Module, UntypedStatement, Statement, Type, Pattern,
-    BinOp, Clause, UntypedClause, EnumConstructor
+    UntypedExpr, Expr, Arg, UntypedModule, Module, UntypedStatement, Statement, TypeAst, UntypedPattern,
+    BinOp, Clause, UntypedClause, EnumConstructor, Pattern
 };
 use crate::parser::*;
 
@@ -25,6 +25,7 @@ pub Module: UntypedModule = {
 Statement: UntypedStatement = {
     StatementFn => <>,
     StatementEnum => <>,
+    StatementStruct => <>,
     StatementExternalFn => <>,
     StatementExternalType => <>,
     StatementImport => <>,
@@ -40,6 +41,28 @@ StatementEnum: UntypedStatement = {
     }
 }
 
+StatementStruct: UntypedStatement = {
+    <s:@L> <p:"pub"?> "struct" <t:TypeName> "{" <fields:StructFieldDefinition*> "}" <e:@L> => Statement::Struct {
+        meta: meta(s, e),
+        public: p.is_some(),
+        name: t.0,
+        type_args: t.1,
+        fields,
+    },
+
+    <s:@L> <p:"pub"?> "struct" <t:TypeName> "{}" <e:@L> => Statement::Struct {
+        meta: meta(s, e),
+        public: p.is_some(),
+        name: t.0,
+        type_args: t.1,
+        fields: vec![],
+    },
+}
+
+StructFieldDefinition: (String, TypeAst) = {
+    <name:VarName> ":" <typ:Type> => (name, typ)
+}
+
 EnumConstructor: EnumConstructor = {
     "|" <s:@L> <t:UpName> <args:EnumConstructorArgs?> <e:@L> => EnumConstructor {
         meta: meta(s, e),
@@ -48,7 +71,7 @@ EnumConstructor: EnumConstructor = {
     },
 }
 
-EnumConstructorArgs: Vec<Type> = {
+EnumConstructorArgs: Vec<TypeAst> = {
     "(" <ts:Comma<Type>> ")" => ts
 }
 
@@ -468,7 +491,7 @@ Op<Operator, Current, Next>: UntypedExpr = {
     },
 }
 
-Pattern: Pattern = {
+Pattern: UntypedPattern = {
     PatternVar => <>,
     PatternInt => <>,
     PatternNil => <>,
@@ -477,72 +500,72 @@ Pattern: Pattern = {
     PatternFloat => <>,
     PatternString => <>,
     PatternDiscard => <>,
-    // PatternMap => <>,
     PatternAnonStruct => <>,
     PatternConstructor => <>,
 }
 
-PatternConstructor: Pattern = {
+PatternConstructor: UntypedPattern = {
     <s:@L> <module:(<VarName> ".")?> <name:UpName> <args:PatternConstructorArgs?> <e:@L> => Pattern::Constructor {
         meta: meta(s, e),
         args: args.unwrap_or_else(|| vec![]),
+        constructor: (),
         module,
         name,
     },
 }
 
-PatternConstructorArgs: Vec<Pattern> = {
+PatternConstructorArgs: Vec<UntypedPattern> = {
     "(" <ts:Comma<Pattern>> ")" => ts
 }
 
-PatternAnonStruct: Pattern = {
+PatternAnonStruct: UntypedPattern = {
     <s:@L> "struct" "(" <elems:Comma<Pattern>> ")" <e:@L> => Pattern::AnonStruct {
         meta: meta(s, e),
         elems,
     }
 }
 
-PatternFloat: Pattern = {
+PatternFloat: UntypedPattern = {
     <s:@L> <f:r"-?[0-9]+\.+[0-9]*"> <e:@L> => Pattern::Float {
         meta: meta(s, e),
         value: f64::from_str(f).unwrap(),
     }
 }
 
-PatternString: Pattern = {
+PatternString: UntypedPattern = {
     <s:@L> <a:RawString> <e:@L> => Pattern::String {
         meta: meta(s, e),
         value: a,
     }
 }
 
-PatternInt: Pattern = {
+PatternInt: UntypedPattern = {
     <s:@L> <i:r"-?[0-9]+"> <e:@L> => Pattern::Int {
         meta: meta(s, e),
         value: i64::from_str(i).unwrap(),
     }
 }
 
-PatternVar: Pattern = {
+PatternVar: UntypedPattern = {
     <s:@L> <v:VarName> <e:@L> => Pattern::Var {
         meta: meta(s, e),
         name: v,
     }
 }
 
-PatternDiscard: Pattern = {
+PatternDiscard: UntypedPattern = {
     <s:@L> <_d:DiscardName> <e:@L> => Pattern::Discard {
         meta: meta(s, e),
     }
 }
 
-PatternNil: Pattern = {
+PatternNil: UntypedPattern = {
     <s:@L> "[]" <e:@L> => Pattern::Nil {
         meta: meta(s, e),
     }
 }
 
-PatternList: Pattern = {
+PatternList: UntypedPattern = {
     <s:@L> "[" <elems:Comma<Pattern>> "]" <e:@L> => {
         elems.into_iter().rev().fold(
             Pattern::Nil {
@@ -557,7 +580,7 @@ PatternList: Pattern = {
     }
 }
 
-PatternCons: Pattern = {
+PatternCons: UntypedPattern = {
     <s:@L> "[" <head:Pattern> "|" <tail:Pattern> "]" <e:@L> => Pattern::Cons {
         meta: meta(s, e),
         head: Box::new(head),
@@ -565,7 +588,7 @@ PatternCons: Pattern = {
     }
 }
 
-Type: Type = {
+Type: TypeAst = {
     TypeConstructor => <>,
     TypeAnonStruct => <>,
     TypeMap => <>,
@@ -573,54 +596,54 @@ Type: Type = {
     TypeFn => <>,
 }
 
-TypeMap: Type = {
-    <s:@L> "{}" <e:@L> => Type::Map {
+TypeMap: TypeAst = {
+    <s:@L> "{}" <e:@L> => TypeAst::Map {
         meta: meta(s, e),
         fields: vec![],
         tail: None,
     },
 
-    <s:@L> "{" <tail:TypeMapTail?> <fields:Comma<TypeMapField>> "}" <e:@L> => Type::Map {
+    <s:@L> "{" <tail:TypeMapTail?> <fields:Comma<TypeMapField>> "}" <e:@L> => TypeAst::Map {
         meta: meta(s, e),
         fields,
         tail,
     },
 }
 
-TypeMapTail: Box<Type> = {
-    <s:@L> <n:VarName> <e:@L> "|" => Box::new(Type::Var {
+TypeMapTail: Box<TypeAst> = {
+    <s:@L> <n:VarName> <e:@L> "|" => Box::new(TypeAst::Var {
         meta: meta(s, e),
         name: n,
     })
 }
 
-TypeMapField: (String, Type) = {
+TypeMapField: (String, TypeAst) = {
     <l:VarName> "=" <t:Type> => (l, t)
 }
 
-TypeConstructor: Type = {
-    <s:@L> <m:VarName> "." <n:r"[A-Z][A-Za-z]*"> <e:@L> => Type::Constructor {
+TypeConstructor: TypeAst = {
+    <s:@L> <m:VarName> "." <n:r"[A-Z][A-Za-z]*"> <e:@L> => TypeAst::Constructor {
         meta: meta(s, e),
         module: Some(m),
         args: vec![],
         name: n.to_string(),
     },
 
-    <s:@L> <m:VarName> "." <n:r"[A-Z][A-Za-z]*"> "(" <a:Comma<Type>> ")" <e:@L> => Type::Constructor {
+    <s:@L> <m:VarName> "." <n:r"[A-Z][A-Za-z]*"> "(" <a:Comma<Type>> ")" <e:@L> => TypeAst::Constructor {
         meta: meta(s, e),
         module: Some(m),
         args: a,
         name: n.to_string(),
     },
 
-    <s:@L> <n:r"[A-Z][A-Za-z]*"> <e:@L> => Type::Constructor {
+    <s:@L> <n:r"[A-Z][A-Za-z]*"> <e:@L> => TypeAst::Constructor {
         meta: meta(s, e),
         module: None,
         args: vec![],
         name: n.to_string(),
     },
 
-    <s:@L> <n:r"[A-Z][A-Za-z]*"> "(" <a:Comma<Type>> ")" <e:@L> => Type::Constructor {
+    <s:@L> <n:r"[A-Z][A-Za-z]*"> "(" <a:Comma<Type>> ")" <e:@L> => TypeAst::Constructor {
         meta: meta(s, e),
         module: None,
         args: a,
@@ -628,23 +651,23 @@ TypeConstructor: Type = {
     },
 }
 
-TypeAnonStruct: Type = {
-    <s:@L> "struct" "(" <elems:AtLeastOneComma<Type>> ")" <e:@L> => Type::AnonStruct {
+TypeAnonStruct: TypeAst = {
+    <s:@L> "struct" "(" <elems:AtLeastOneComma<Type>> ")" <e:@L> => TypeAst::AnonStruct {
         meta: meta(s, e),
         elems: elems,
     }
 }
 
 
-TypeVar: Type = {
-    <s:@L> <n:VarName> <e:@L> => Type::Var {
+TypeVar: TypeAst = {
+    <s:@L> <n:VarName> <e:@L> => TypeAst::Var {
         meta: meta(s, e),
         name: n,
     }
 }
 
-TypeFn: Type = {
-    <s:@L> "fn(" <args:Comma<Type>> ")" "->" <retrn:Type> <e:@L> => Type::Fn {
+TypeFn: TypeAst = {
+    <s:@L> "fn(" <args:Comma<Type>> ")" "->" <retrn:Type> <e:@L> => TypeAst::Fn {
         meta: meta(s, e),
         retrn: Box::new(retrn),
         args,

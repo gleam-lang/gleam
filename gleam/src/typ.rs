@@ -1,6 +1,6 @@
 use crate::ast::{
-    self, Arg, BinOp, Clause, Expr, Meta, Module, Pattern, Statement, TypedExpr, TypedModule,
-    UntypedExpr, UntypedModule,
+    Arg, BinOp, Clause, Expr, Meta, Module, Pattern, Statement, TypeAst, TypedExpr, TypedModule,
+    TypedPattern, UntypedExpr, UntypedModule, UntypedPattern,
 };
 use crate::pretty::*;
 use itertools::Itertools;
@@ -557,6 +557,29 @@ pub enum ValueConstructorVariant {
 
     /// A function belonging to the module
     ModuleFn { module: Vec<String>, arity: usize },
+
+    /// A named struct
+    NamedStruct {},
+}
+
+impl ValueConstructorVariant {
+    fn to_module_value_constructor(&self) -> ModuleValueConstructor {
+        match self {
+            ValueConstructorVariant::Enum { .. } => ModuleValueConstructor::Enum,
+
+            ValueConstructorVariant::NamedStruct { .. } => ModuleValueConstructor::Struct,
+
+            ValueConstructorVariant::LocalVariable { .. }
+            | ValueConstructorVariant::ModuleFn { .. } => ModuleValueConstructor::Fn,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ModuleValueConstructor {
+    Struct,
+    Enum,
+    Fn,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -564,6 +587,12 @@ pub struct ModuleTypeInfo {
     pub name: Vec<String>,
     pub type_constructors: HashMap<String, TypeConstructorInfo>,
     pub value_constructors: HashMap<String, ValueConstructor>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum PatternConstructor {
+    Enum,
+    Struct,
 }
 
 #[derive(Debug, Clone)]
@@ -1045,12 +1074,12 @@ impl<'a> Env<'a> {
     ///
     pub fn type_from_ast(
         &mut self,
-        ast: &ast::Type,
+        ast: &TypeAst,
         vars: &mut im::HashMap<String, (usize, Type)>,
         new: NewTypeAction,
     ) -> Result<Type, Error> {
         match ast {
-            ast::Type::Constructor {
+            TypeAst::Constructor {
                 meta,
                 module,
                 name,
@@ -1079,11 +1108,11 @@ impl<'a> Env<'a> {
                 })
             }
 
-            ast::Type::Map { fields, tail, .. } => Ok(Type::Map {
+            TypeAst::Map { fields, tail, .. } => Ok(Type::Map {
                 row: Box::new(self.row_from_ast(fields, tail, vars, new)?),
             }),
 
-            ast::Type::AnonStruct { elems, .. } => {
+            TypeAst::AnonStruct { elems, .. } => {
                 let elems = elems
                     .iter()
                     .map(|t| self.type_from_ast(t, vars, new))
@@ -1091,7 +1120,7 @@ impl<'a> Env<'a> {
                 Ok(Type::AnonStruct { elems })
             }
 
-            ast::Type::Fn { args, retrn, .. } => {
+            TypeAst::Fn { args, retrn, .. } => {
                 let args = args
                     .iter()
                     .map(|t| self.type_from_ast(t, vars, new))
@@ -1103,7 +1132,7 @@ impl<'a> Env<'a> {
                 })
             }
 
-            ast::Type::Var { name, .. } => match vars.get(name) {
+            TypeAst::Var { name, .. } => match vars.get(name) {
                 Some((_, var)) => Ok(var.clone()),
 
                 None => {
@@ -1126,8 +1155,8 @@ impl<'a> Env<'a> {
 
     fn row_from_ast(
         &mut self,
-        fields: &Vec<(String, ast::Type)>,
-        tail: &Option<Box<ast::Type>>,
+        fields: &Vec<(String, TypeAst)>,
+        tail: &Option<Box<TypeAst>>,
         vars: &mut im::HashMap<String, (usize, Type)>,
         new: NewTypeAction,
     ) -> Result<Type, Error> {
@@ -1221,13 +1250,11 @@ pub enum Error {
     ExtraField {
         meta: Meta,
         label: String,
-        container_typ: RowContainerType,
     },
 
     FieldNotFound {
         meta: Meta,
         label: String,
-        container_typ: RowContainerType,
     },
 }
 
@@ -1332,21 +1359,6 @@ fn convert_get_type_constructor_error(e: GetTypeConstructorError, meta: &Meta) -
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub enum RowContainerType {
-    Module,
-    Map,
-}
-
-impl RowContainerType {
-    pub fn to_string(&self) -> String {
-        match self {
-            RowContainerType::Module => "module".to_string(),
-            RowContainerType::Map => "map".to_string(),
-        }
-    }
-}
-
 /// Crawl the AST, annotating each node with the inferred type or
 /// returning an error.
 ///
@@ -1357,7 +1369,7 @@ pub fn infer_module(
     let mut env = Env::new(modules);
     let module_name = &module.name;
 
-    let statements: Vec<Statement<_, Type>> = module
+    let statements: Vec<Statement<_, _, _, Type>> = module
         .statements
         .into_iter()
         .map(|s| match s {
@@ -1505,6 +1517,80 @@ pub fn infer_module(
                 })
             }
 
+            Statement::Struct {
+                meta,
+                public,
+                name,
+                type_args,
+                fields,
+            } => {
+                // Register type
+                env.insert_type_constructor(
+                    name.clone(),
+                    TypeConstructorInfo {
+                        module: module_name.clone(),
+                        public,
+                        arity: fields.len(),
+                    },
+                );
+                // Build return type and collect type vars that can be used by the constructor
+                let mut type_vars = hashmap![];
+                let type_args_types: Vec<_> = type_args
+                    .iter()
+                    .map(|arg| TypeAst::Var {
+                        meta: meta.clone(),
+                        name: arg.to_string(),
+                    })
+                    .map(|ast| env.type_from_ast(&ast, &mut type_vars, NewTypeAction::MakeGeneric))
+                    .collect::<Result<_, _>>()?;
+
+                let retrn = Type::App {
+                    public: public.clone(),
+                    module: module_name.clone(),
+                    name: name.clone(),
+                    args: type_args_types,
+                };
+                // Register constructor
+                let args_types = fields
+                    .iter()
+                    .map(|(_, arg)| {
+                        env.type_from_ast(&arg, &mut type_vars, NewTypeAction::Disallow)
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                // Insert constructor function into module scope
+                let typ = match fields.len() {
+                    0 => retrn.clone(),
+                    _ => Type::Fn {
+                        args: args_types,
+                        retrn: Box::new(retrn.clone()),
+                    },
+                };
+                let constructor_variant = ValueConstructorVariant::NamedStruct {};
+                if public {
+                    if let Some(leaked) = typ.find_private_type() {
+                        return Err(Error::PrivateTypeLeak {
+                            meta: meta.clone(),
+                            leaked,
+                        });
+                    }
+                    env.public_module_value_constructors.insert(
+                        name.clone(),
+                        ValueConstructor {
+                            typ: typ.clone(),
+                            variant: constructor_variant.clone(),
+                        },
+                    );
+                };
+                env.insert_variable(name.clone(), constructor_variant, typ);
+                Ok(Statement::Struct {
+                    meta,
+                    public,
+                    name,
+                    type_args,
+                    fields,
+                })
+            }
+
             Statement::Enum {
                 meta,
                 public,
@@ -1525,7 +1611,7 @@ pub fn infer_module(
                 let mut type_vars = hashmap![];
                 let args_types: Vec<_> = args
                     .iter()
-                    .map(|arg| ast::Type::Var {
+                    .map(|arg| TypeAst::Var {
                         meta: meta.clone(),
                         name: arg.to_string(),
                     })
@@ -1603,7 +1689,7 @@ pub fn infer_module(
                 // Check contained types are valid
                 let mut type_vars = hashmap![];
                 for arg in args.iter() {
-                    let var = ast::Type::Var {
+                    let var = TypeAst::Var {
                         meta: meta.clone(),
                         name: arg.to_string(),
                     };
@@ -1741,7 +1827,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         } => {
             let value = infer(*value, level + 1, env)?;
             let value_typ = generalise(value.typ().clone(), level + 1);
-            unify_pattern(&pattern, &value_typ, level, env)?;
+            let pattern = unify_pattern(pattern, &value_typ, level, env)?;
             let then = infer(*then, level, env)?;
             let typ = then.typ().clone();
             Ok(Expr::Let {
@@ -1767,14 +1853,14 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             for clause in clauses.into_iter() {
                 let vars = env.variables.clone();
 
-                unify_pattern(&clause.pattern, &subject_type, level, env)?;
+                let pattern = unify_pattern(clause.pattern, &subject_type, level, env)?;
 
                 let then = infer(clause.then, level, env)?;
                 unify(&return_type, then.typ(), env)
                     .map_err(|e| convert_unify_error(e, then.meta()))?;
                 typed_clauses.push(Clause {
                     meta: clause.meta,
-                    pattern: clause.pattern,
+                    pattern,
                     then,
                 });
 
@@ -1974,10 +2060,11 @@ fn infer_module_select(
 
     Ok(Expr::ModuleSelect {
         label,
-        typ: instantiate(constructor.typ.clone(), level, env),
+        typ: instantiate(constructor.typ, level, env),
         meta: select_meta,
         module_name,
         module_alias: module_alias.clone(),
+        constructor: constructor.variant.to_module_value_constructor(),
     })
 }
 
@@ -2001,8 +2088,7 @@ fn infer_value_field_select(
         }),
     };
 
-    unify(&dummy_map, map.typ(), env)
-        .map_err(|e| convert_unify_error(set_map_row_type(e), &meta))?;
+    unify(&dummy_map, map.typ(), env).map_err(|e| convert_unify_error(e, &meta))?;
 
     Ok(Expr::FieldSelect {
         meta,
@@ -2016,7 +2102,12 @@ fn infer_value_field_select(
 /// inferred type of the subject in order to determine what variables to insert
 /// into the environment (or to detect a type error).
 ///
-fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> Result<(), Error> {
+fn unify_pattern(
+    pattern: UntypedPattern,
+    typ: &Type,
+    level: usize,
+    env: &mut Env,
+) -> Result<TypedPattern, Error> {
     //
     // TODO: I think we might be unifying backwards for some of these.
     // The typ should be the `expected` and the `pattern` is the actual?
@@ -2024,38 +2115,44 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
     // so we can display a more specific error message.
     //
     match pattern {
-        Pattern::Discard { .. } => Ok(()),
+        Pattern::Discard { meta } => Ok(Pattern::Discard { meta }),
 
-        Pattern::Var { name, .. } => {
+        Pattern::Var { name, meta } => {
             env.insert_variable(
                 name.to_string(),
                 ValueConstructorVariant::LocalVariable,
                 typ.clone(),
             );
-            Ok(())
+            Ok(Pattern::Var { name, meta })
         }
 
-        Pattern::Int { meta, .. } => {
-            unify(&int(), typ, env).map_err(|e| convert_unify_error(e, &meta))
+        Pattern::Int { meta, value } => {
+            unify(&int(), typ, env).map_err(|e| convert_unify_error(e, &meta))?;
+            Ok(Pattern::Int { meta, value })
         }
 
-        Pattern::Float { meta, .. } => {
-            unify(&float(), typ, env).map_err(|e| convert_unify_error(e, &meta))
+        Pattern::Float { meta, value } => {
+            unify(&float(), typ, env).map_err(|e| convert_unify_error(e, &meta))?;
+            Ok(Pattern::Float { meta, value })
         }
 
-        Pattern::String { meta, .. } => {
-            unify(&string(), typ, env).map_err(|e| convert_unify_error(e, &meta))
+        Pattern::String { meta, value } => {
+            unify(&string(), typ, env).map_err(|e| convert_unify_error(e, &meta))?;
+            Ok(Pattern::String { meta, value })
         }
 
-        Pattern::Nil { meta, .. } => unify(&list(env.new_unbound_var(level)), typ, env)
-            .map_err(|e| convert_unify_error(e, &meta)),
+        Pattern::Nil { meta } => {
+            unify(&list(env.new_unbound_var(level)), typ, env)
+                .map_err(|e| convert_unify_error(e, &meta))?;
+            Ok(Pattern::Nil { meta })
+        }
 
-        Pattern::Cons {
-            meta, head, tail, ..
-        } => match typ.get_app_args(true, &vec![], "List", 1, env) {
+        Pattern::Cons { meta, head, tail } => match typ.get_app_args(true, &vec![], "List", 1, env)
+        {
             Some(args) => {
-                unify_pattern(head, &args[0], level, env)?;
-                unify_pattern(tail, typ, level, env)
+                let head = Box::new(unify_pattern(*head, &args[0], level, env)?);
+                let tail = Box::new(unify_pattern(*tail, typ, level, env)?);
+                Ok(Pattern::Cons { meta, head, tail })
             }
 
             None => Err(Error::CouldNotUnify {
@@ -2070,20 +2167,39 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
             module,
             name,
             args: pattern_args,
+            constructor: _,
         } => {
-            let constructor_typ = env
-                .get_value_constructor(module, name)
-                .map_err(|e| convert_get_value_constructor_error(e, &meta))?
-                .typ
-                .clone();
+            let cons = env
+                .get_value_constructor(&module, &name)
+                .map_err(|e| convert_get_value_constructor_error(e, &meta))?;
+            let constructor_typ = cons.typ.clone();
+            let constructor = match cons.variant {
+                ValueConstructorVariant::Enum { .. } => PatternConstructor::Enum,
+                ValueConstructorVariant::NamedStruct { .. } => PatternConstructor::Struct,
+                ValueConstructorVariant::LocalVariable
+                | ValueConstructorVariant::ModuleFn { .. } => panic!(
+                    "Unexpected value constructor type for a constructor pattern.
+This is a bug in the Gleam compiler.
+Please report this to https://github.com/lpil/gleam/issues"
+                ),
+            };
 
             match instantiate(constructor_typ, level, env) {
                 Type::Fn { args, retrn } => {
                     if args.len() == pattern_args.len() {
-                        for (pattern, typ) in pattern_args.iter().zip(args) {
-                            unify_pattern(pattern, &typ, level, env)?;
-                        }
-                        unify(&retrn, &typ, env).map_err(|e| convert_unify_error(e, &meta))
+                        let pattern_args = pattern_args
+                            .into_iter()
+                            .zip(args)
+                            .map(|(pattern, typ)| unify_pattern(pattern, &typ, level, env))
+                            .collect::<Result<Vec<_>, _>>()?;
+                        unify(&retrn, &typ, env).map_err(|e| convert_unify_error(e, &meta))?;
+                        Ok(Pattern::Constructor {
+                            meta,
+                            module,
+                            name,
+                            args: pattern_args,
+                            constructor,
+                        })
                     } else {
                         // TODO: Incorrect number of args given to constructor
                         unimplemented!()
@@ -2092,7 +2208,14 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
 
                 c @ Type::App { .. } => {
                     if pattern_args.is_empty() {
-                        unify(&c, &typ, env).map_err(|e| convert_unify_error(e, &meta))
+                        unify(&c, &typ, env).map_err(|e| convert_unify_error(e, &meta))?;
+                        Ok(Pattern::Constructor {
+                            meta,
+                            module,
+                            name,
+                            args: vec![],
+                            constructor,
+                        })
                     } else {
                         // Error: singleton given args
                         unimplemented!()
@@ -2106,21 +2229,23 @@ fn unify_pattern(pattern: &Pattern, typ: &Type, level: usize, env: &mut Env) -> 
             }
         }
 
-        Pattern::AnonStruct { elems, meta, .. } => match typ.clone().collapse_links() {
+        Pattern::AnonStruct { elems, meta } => match typ.clone().collapse_links() {
             Type::AnonStruct { elems: type_elems } => {
-                for (pattern, typ) in elems.iter().zip(type_elems) {
-                    unify_pattern(pattern, &typ, level, env)?;
-                }
-                Ok(())
+                let elems = elems
+                    .into_iter()
+                    .zip(type_elems)
+                    .map(|(pattern, typ)| unify_pattern(pattern, &typ, level, env))
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(Pattern::AnonStruct { elems, meta })
             }
 
             typ @ Type::Var { .. } => {
-                let elems = (0..(elems.len()))
+                let elems_types = (0..(elems.len()))
                     .map(|_| env.new_unbound_var(level))
                     .collect();
-                unify(&Type::AnonStruct { elems }, &typ, env)
+                unify(&Type::AnonStruct { elems: elems_types }, &typ, env)
                     .map_err(|e| convert_unify_error(e, &meta))?;
-                unify_pattern(pattern, &typ, level, env)
+                unify_pattern(Pattern::AnonStruct { elems, meta }, &typ, level, env)
             }
 
             other => {
@@ -2174,7 +2299,7 @@ fn infer_call(
 fn infer_fun(
     args: &[Arg],
     body: UntypedExpr,
-    return_annotation: &Option<ast::Type>,
+    return_annotation: &Option<TypeAst>,
     level: usize,
     env: &mut Env,
 ) -> Result<(Vec<Type>, TypedExpr), Error> {
@@ -2260,21 +2385,13 @@ fn convert_unify_error(e: UnifyError, meta: &Meta) -> Error {
             given,
         },
 
-        UnifyError::FieldNotFound {
-            label,
-            container_typ,
-        } => Error::FieldNotFound {
+        UnifyError::FieldNotFound { label } => Error::FieldNotFound {
             meta: meta.clone(),
-            container_typ,
             label,
         },
 
-        UnifyError::ExtraField {
-            label,
-            container_typ,
-        } => Error::ExtraField {
+        UnifyError::ExtraField { label } => Error::ExtraField {
             meta: meta.clone(),
-            container_typ,
             label,
         },
 
@@ -2357,22 +2474,13 @@ fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
 
 #[derive(Debug, PartialEq)]
 enum UnifyError {
-    CouldNotUnify {
-        expected: Type,
-        given: Type,
-    },
+    CouldNotUnify { expected: Type, given: Type },
 
     RecursiveType,
 
-    FieldNotFound {
-        container_typ: RowContainerType,
-        label: String,
-    },
+    FieldNotFound { label: String },
 
-    ExtraField {
-        container_typ: RowContainerType,
-        label: String,
-    },
+    ExtraField { label: String },
 }
 
 fn unify(t1: &Type, t2: &Type, env: &mut Env) -> Result<(), UnifyError> {
@@ -2501,15 +2609,12 @@ fn unify(t1: &Type, t2: &Type, env: &mut Env) -> Result<(), UnifyError> {
             }
         }
 
-        (Type::Map { row: row1 }, Type::Map { row: row2 }) => {
-            unify(row1, row2, env).map_err(set_map_row_type)
-        }
+        (Type::Map { row: row1 }, Type::Map { row: row2 }) => unify(row1, row2, env),
 
         (Type::RowNil, Type::RowNil) => Ok(()),
 
         (Type::RowNil, Type::RowCons { label, .. }) => Err(UnifyError::ExtraField {
             label: label.to_string(),
-            container_typ: RowContainerType::Module,
         }),
 
         (
@@ -2556,22 +2661,6 @@ fn unify(t1: &Type, t2: &Type, env: &mut Env) -> Result<(), UnifyError> {
     }
 }
 
-fn set_map_row_type(e: UnifyError) -> UnifyError {
-    match e {
-        UnifyError::FieldNotFound { label, .. } => UnifyError::FieldNotFound {
-            label,
-            container_typ: RowContainerType::Map,
-        },
-
-        UnifyError::ExtraField { label, .. } => UnifyError::ExtraField {
-            label,
-            container_typ: RowContainerType::Map,
-        },
-
-        other => other,
-    }
-}
-
 /// Takes a type (expected to be a Row) and searches within it for a field
 /// with a particular label.
 /// If found the type of the label is unified with the expected type,
@@ -2589,10 +2678,7 @@ fn unify_row_field(
     env: &mut Env,
 ) -> Result<Type, UnifyError> {
     match row {
-        Type::RowNil => Err(UnifyError::FieldNotFound {
-            label: label1,
-            container_typ: RowContainerType::Module,
-        }),
+        Type::RowNil => Err(UnifyError::FieldNotFound { label: label1 }),
 
         Type::RowCons { label, head, tail } => {
             if label == label1 {
@@ -3583,7 +3669,6 @@ fn infer_error_test() {
             error: Error::ExtraField {
                 meta: Meta { start: 11, end: 12 },
                 label: "a".to_string(),
-                container_typ: RowContainerType::Map,
             },
         },
         Case {
@@ -3951,6 +4036,13 @@ pub fn two() { one() + zero() }",
         //    // % fn length(List(a)) -> Int
         //    // %}
         //    // % }
+        /* Structs
+
+        */
+        Case {
+            src: "pub struct Box { boxed: Int }",
+            module: vec![("Box", "fn(Int) -> Box")],
+        },
     ];
 
     for Case { src, module } in cases.into_iter() {

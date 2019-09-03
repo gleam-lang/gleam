@@ -1,6 +1,8 @@
 use crate::ast::*;
 use crate::pretty::*;
-use crate::typ::{ValueConstructor, ValueConstructorVariant};
+use crate::typ::{
+    ModuleValueConstructor, PatternConstructor, ValueConstructor, ValueConstructorVariant,
+};
 use heck::{CamelCase, SnakeCase};
 use itertools::Itertools;
 use std::char;
@@ -86,6 +88,7 @@ pub fn module(module: TypedModule) -> String {
 fn statement(statement: TypedStatement) -> Option<Document> {
     match statement {
         Statement::Enum { .. } => None,
+        Statement::Struct { .. } => None,
         Statement::Import { .. } => None,
         Statement::ExternalType { .. } => None,
         Statement::Fn {
@@ -211,7 +214,7 @@ fn pipe(value: TypedExpr, fun: TypedExpr, env: &mut Env) -> Document {
     call(fun, vec![value], env)
 }
 
-fn let_(value: TypedExpr, pat: Pattern, then: TypedExpr, env: &mut Env) -> Document {
+fn let_(value: TypedExpr, pat: TypedPattern, then: TypedExpr, env: &mut Env) -> Document {
     let body = expr(value, env);
     pattern(pat, env)
         .append(" = ")
@@ -221,24 +224,42 @@ fn let_(value: TypedExpr, pat: Pattern, then: TypedExpr, env: &mut Env) -> Docum
         .append(expr(then, env))
 }
 
-fn pattern(p: Pattern, env: &mut Env) -> Document {
+fn pattern(p: TypedPattern, env: &mut Env) -> Document {
     match p {
         Pattern::Nil { .. } => "[]".to_doc(),
+
         Pattern::Cons { head, tail, .. } => pattern_list_cons(*head, *tail, env),
+
         Pattern::Discard { .. } => "_".to_doc(),
-        // Pattern::Map { .. } => unimplemented!(),
+
         Pattern::Var { name, .. } => env.next_local_var_name(name),
+
         Pattern::Int { value, .. } => value.to_doc(),
+
         Pattern::Float { value, .. } => value.to_doc(),
+
+        Pattern::String { value, .. } => string(value),
+
         Pattern::AnonStruct { elems, .. } => {
             tuple(elems.into_iter().map(|p| pattern(p, env)).collect())
         }
-        Pattern::String { value, .. } => string(value),
-        Pattern::Constructor { name, args, .. } => enum_pattern(name, args, env),
+
+        Pattern::Constructor {
+            name,
+            args,
+            constructor: PatternConstructor::Enum,
+            ..
+        } => enum_pattern(name, args, env),
+
+        Pattern::Constructor {
+            args,
+            constructor: PatternConstructor::Struct,
+            ..
+        } => tuple(args.into_iter().map(|p| pattern(p, env)).collect()),
     }
 }
 
-fn pattern_list_cons(head: Pattern, tail: Pattern, env: &mut Env) -> Document {
+fn pattern_list_cons(head: TypedPattern, tail: TypedPattern, env: &mut Env) -> Document {
     list_cons(head, tail, env, pattern, |expr| match expr {
         Pattern::Nil { .. } => ListType::Nil,
 
@@ -352,6 +373,7 @@ enum ListType<E, T> {
 fn var(name: String, constructor: ValueConstructor, env: &mut Env) -> Document {
     match constructor.variant {
         ValueConstructorVariant::Enum { .. } => atom(name.to_snake_case()),
+        ValueConstructorVariant::NamedStruct { .. } => "{}".to_doc(),
         ValueConstructorVariant::LocalVariable => env.local_var_name(name),
         ValueConstructorVariant::ModuleFn { arity, module, .. } => "fun "
             .to_doc()
@@ -361,7 +383,7 @@ fn var(name: String, constructor: ValueConstructor, env: &mut Env) -> Document {
     }
 }
 
-fn enum_pattern(name: String, args: Vec<Pattern>, env: &mut Env) -> Document {
+fn enum_pattern(name: String, args: Vec<TypedPattern>, env: &mut Env) -> Document {
     if args.is_empty() {
         atom(name.to_snake_case())
     } else {
@@ -404,17 +426,6 @@ fn enum_(name: String, args: Vec<TypedExpr>, env: &mut Env) -> Document {
     tuple(args)
 }
 
-// TODO: So here we don't have a good way to tell if it is an enum constructor or not,
-// we have to rely on the case of the variable. A bit lackluster. Perhaps enum
-// constructors should be recorded differently on the module type somehow.
-fn is_constructor_label(label: &String) -> bool {
-    label
-        .chars()
-        .next()
-        .map(|c| c.is_uppercase())
-        .unwrap_or(false)
-}
-
 fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
     match fun {
         Expr::Var {
@@ -430,6 +441,15 @@ fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
         Expr::Var {
             constructor:
                 ValueConstructor {
+                    variant: ValueConstructorVariant::NamedStruct { .. },
+                    ..
+                },
+            ..
+        } => tuple(args.into_iter().map(|e| expr(e, env)).collect::<Vec<_>>()),
+
+        Expr::Var {
+            constructor:
+                ValueConstructor {
                     variant: ValueConstructorVariant::ModuleFn { .. },
                     ..
                 },
@@ -438,19 +458,27 @@ fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
         } => name.to_doc().append(call_args(args, env)),
 
         Expr::ModuleSelect {
-            module_name, label, ..
-        } => {
-            if is_constructor_label(&label) {
-                enum_(label, args, env)
-            } else {
-                module_name
-                    .join("@")
-                    .to_doc()
-                    .append(":")
-                    .append(label)
-                    .append(call_args(args, env))
-            }
-        }
+            label,
+            constructor: ModuleValueConstructor::Enum,
+            ..
+        } => enum_(label, args, env),
+
+        Expr::ModuleSelect {
+            constructor: ModuleValueConstructor::Struct,
+            ..
+        } => tuple(args.into_iter().map(|e| wrap_expr(e, env)).collect()),
+
+        Expr::ModuleSelect {
+            module_name,
+            label,
+            constructor: ModuleValueConstructor::Fn,
+            ..
+        } => module_name
+            .join("@")
+            .to_doc()
+            .append(":")
+            .append(label)
+            .append(call_args(args, env)),
 
         call @ Expr::Call { .. } => expr(call, env)
             .surround("(", ")")
@@ -521,60 +549,73 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
         Expr::Float { value, .. } => value.to_doc(),
         Expr::String { value, .. } => string(value),
         Expr::Seq { first, then, .. } => seq(*first, *then, env),
+
         Expr::Var {
             name, constructor, ..
         } => var(name, constructor, env),
+
         Expr::Fn { args, body, .. } => fun(args, *body, env),
+
         Expr::Cons { head, tail, .. } => expr_list_cons(*head, *tail, env),
+
         Expr::Call { fun, args, .. } => call(*fun, args, env),
+
         Expr::FieldSelect { label, map, .. } => map_select(*map, label, env),
+
+        Expr::ModuleSelect {
+            label,
+            constructor: ModuleValueConstructor::Enum,
+            ..
+        } => atom(label.to_snake_case()),
+
         Expr::ModuleSelect {
             typ,
             label,
             module_name,
             ..
-        } => module_select(typ, module_name, label),
+        } => module_select_fn(typ, module_name, label),
+
         Expr::AnonStruct { elems, .. } => {
             tuple(elems.into_iter().map(|e| wrap_expr(e, env)).collect())
         }
+
         Expr::Let {
             value,
             pattern,
             then,
             ..
         } => let_(*value, pattern, *then, env),
+
         Expr::MapCons {
             label, value, tail, ..
         } => map_cons(label, *value, *tail, env),
+
         Expr::Case {
             subject, clauses, ..
         } => case(*subject, clauses, env),
+
         Expr::BinOp {
             name, left, right, ..
         } => bin_op(name, *left, *right, env),
     }
 }
 
-fn module_select(typ: crate::typ::Type, module_name: Vec<String>, label: String) -> Document {
-    if is_constructor_label(&label) {
-        atom(label.to_snake_case())
-    } else {
-        match typ.collapse_links() {
-            crate::typ::Type::Fn { args, .. } => "fun "
-                .to_doc()
-                .append(module_name.join("@"))
-                .append(":")
-                .append(label)
-                .append("/")
-                .append(args.len()),
+fn module_select_fn(typ: crate::typ::Type, module_name: Vec<String>, label: String) -> Document {
+    match typ.collapse_links() {
+        crate::typ::Type::Fn { args, .. } => "fun "
+            .to_doc()
+            .append(module_name.join("@"))
+            .append(":")
+            .append(label)
+            .append("/")
+            .append(args.len()),
 
-            _ => module_name
-                .join("@")
-                .to_doc()
-                .append(":")
-                .append(label)
-                .append("()"),
-        }
+        _ => module_name
+            .join("@")
+            .to_doc()
+            .append(":")
+            .append(label)
+            .append("()"),
     }
 }
 
@@ -651,13 +692,13 @@ fn module_test() {
             Statement::ExternalFn {
                 meta: default(),
                 args: vec![
-                    Type::Constructor {
+                    TypeAst::Constructor {
                         meta: default(),
                         module: None,
                         args: vec![],
                         name: "Int".to_string(),
                     },
-                    Type::Constructor {
+                    TypeAst::Constructor {
                         meta: default(),
                         module: None,
                         args: vec![],
@@ -668,7 +709,7 @@ fn module_test() {
                 fun: "add".to_string(),
                 module: "int".to_string(),
                 public: false,
-                retrn: Type::Constructor {
+                retrn: TypeAst::Constructor {
                     meta: default(),
                     module: None,
                     args: vec![],
@@ -682,7 +723,7 @@ fn module_test() {
                 fun: "new".to_string(),
                 module: "maps".to_string(),
                 public: true,
-                retrn: Type::Constructor {
+                retrn: TypeAst::Constructor {
                     meta: default(),
                     module: None,
                     args: vec![],
@@ -1127,6 +1168,7 @@ some_function(
                     module_alias: "zero".to_string(),
                     module_name: vec!["one".to_string()],
                     label: "two".to_string(),
+                    constructor: ModuleValueConstructor::Fn,
                 },
             },
             Statement::Fn {
@@ -1144,6 +1186,7 @@ some_function(
                     module_alias: "zero".to_string(),
                     module_name: vec!["one".to_string(), "zero".to_string()],
                     label: "two".to_string(),
+                    constructor: ModuleValueConstructor::Fn,
                 },
             },
             Statement::Fn {
@@ -1166,6 +1209,7 @@ some_function(
                         module_alias: "zero".to_string(),
                         module_name: vec!["one".to_string(), "zero".to_string()],
                         label: "two".to_string(),
+                        constructor: ModuleValueConstructor::Fn,
                     }),
                 },
             },
@@ -1287,6 +1331,7 @@ moddy4() ->
                                 meta: default(),
                                 value: 2,
                             }],
+                            constructor: PatternConstructor::Enum,
                         },
                         then: Expr::Int {
                             typ: crate::typ::int(),
@@ -1634,6 +1679,54 @@ x() ->
 
 x() ->
     1.0 < 2.3.
+"#
+        },
+        // Named struct creation
+        Case {
+            src: r#"struct Pair(x, y) { x: x y: y } fn x() { Pair(1, 2) Pair(3., 4.) }"#,
+            erl: r#"-module().
+-compile(no_auto_import).
+
+x() ->
+    {1, 2},
+    {3.0, 4.0}.
+"#
+        },
+        Case {
+            src: r#"struct Null { } fn x() { Null }"#,
+            erl: r#"-module().
+-compile(no_auto_import).
+
+x() ->
+    {}.
+"#
+        },
+        Case {
+            src: r#"struct Null {} fn x() { Null }"#,
+            erl: r#"-module().
+-compile(no_auto_import).
+
+x() ->
+    {}.
+"#
+        },
+        Case {
+            src: r#"struct Point {x: Int x: Int} fn x() { Point(4, 6) }"#,
+            erl: r#"-module().
+-compile(no_auto_import).
+
+x() ->
+    {4, 6}.
+"#
+        },
+        Case {
+            src: r#"struct Point {x: Int x: Int} fn x(y) { let Point(a, b) = y a }"#,
+            erl: r#"-module().
+-compile(no_auto_import).
+
+x(Y) ->
+    {A, B} = Y,
+    A.
 "#
         }
     ];
