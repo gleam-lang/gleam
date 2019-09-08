@@ -199,15 +199,21 @@ fn expr_test() {
                 constructor: (),
             }),
             args: vec![
-                Expr::Int {
-                    typ: (),
-                    meta: Meta { start: 6, end: 7 },
-                    value: 1
+                CallArg {
+                    label: None,
+                    value: Expr::Int {
+                        typ: (),
+                        meta: Meta { start: 6, end: 7 },
+                        value: 1
+                    }
                 },
-                Expr::Int {
-                    typ: (),
-                    meta: Meta { start: 9, end: 10 },
-                    value: 2
+                CallArg {
+                    label: None,
+                    value: Expr::Int {
+                        typ: (),
+                        meta: Meta { start: 9, end: 10 },
+                        value: 2
+                    }
                 },
             ]
         }),
@@ -233,15 +239,21 @@ fn expr_test() {
                 name: "Pair".to_string(),
             }),
             args: vec![
-                Expr::Int {
-                    typ: (),
-                    meta: Meta { start: 5, end: 6 },
-                    value: 1
+                CallArg {
+                    label: None,
+                    value: Expr::Int {
+                        typ: (),
+                        meta: Meta { start: 5, end: 6 },
+                        value: 1
+                    }
                 },
-                Expr::Int {
-                    typ: (),
-                    meta: Meta { start: 8, end: 9 },
-                    value: 3
+                CallArg {
+                    label: None,
+                    value: Expr::Int {
+                        typ: (),
+                        meta: Meta { start: 8, end: 9 },
+                        value: 3
+                    }
                 }
             ]
         }),
@@ -608,20 +620,29 @@ fn expr_test() {
                     name: "f".to_string(),
                 }),
                 args: vec![
-                    Expr::Int {
-                        meta: Meta { start: 2, end: 3 },
-                        typ: (),
-                        value: 1
+                    CallArg {
+                        label: None,
+                        value: Expr::Int {
+                            meta: Meta { start: 2, end: 3 },
+                            typ: (),
+                            value: 1
+                        }
                     },
-                    Expr::Var {
-                        meta: Meta { start: 5, end: 6 },
-                        constructor: (),
-                        name: "capture@1".to_string(),
+                    CallArg {
+                        label: None,
+                        value: Expr::Var {
+                            meta: Meta { start: 5, end: 6 },
+                            constructor: (),
+                            name: "capture@1".to_string(),
+                        },
                     },
-                    Expr::Int {
-                        meta: Meta { start: 8, end: 9 },
-                        typ: (),
-                        value: 3
+                    CallArg {
+                        label: None,
+                        value: Expr::Int {
+                            meta: Meta { start: 8, end: 9 },
+                            typ: (),
+                            value: 3
+                        }
                     }
                 ]
             })
@@ -1089,17 +1110,26 @@ fn module_test() {
                         },
                         typ: (),
                         value: Box::new(Expr::Var {
-                            meta: Meta { start: 124, end: 125 },
+                            meta: Meta {
+                                start: 124,
+                                end: 125
+                            },
                             constructor: (),
                             name: "x".to_string()
                         }),
                         pattern: Pattern::Constructor {
-                            meta: Meta { start: 102, end: 121 },
+                            meta: Meta {
+                                start: 102,
+                                end: 121
+                            },
                             constructor: (),
                             module: None,
                             name: "Boxxy0123456789x".to_string(),
                             args: vec![Pattern::Var {
-                                meta: Meta { start: 119, end: 120 },
+                                meta: Meta {
+                                    start: 119,
+                                    end: 120
+                                },
                                 name: "a".to_string()
                             }]
                         },

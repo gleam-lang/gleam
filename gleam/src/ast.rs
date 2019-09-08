@@ -177,6 +177,12 @@ pub enum BinOp {
     ModuloInt,
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub struct CallArg<A> {
+    pub label: Option<String>,
+    pub value: A,
+}
+
 pub type TypedExpr = Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, typ::Type>;
 
 pub type UntypedExpr = Expr<(), (), (), ()>;
@@ -244,7 +250,7 @@ pub enum Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type
         meta: Meta,
         typ: Type,
         fun: Box<Self>,
-        args: Vec<Self>,
+        args: Vec<CallArg<Self>>,
     },
 
     BinOp {

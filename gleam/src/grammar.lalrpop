@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use crate::ast::{
     UntypedExpr, Expr, Arg, UntypedModule, Module, UntypedStatement, Statement, TypeAst, UntypedPattern,
-    BinOp, Clause, UntypedClause, EnumConstructor, Pattern
+    BinOp, Clause, UntypedClause, EnumConstructor, Pattern, CallArg
 };
 use crate::parser::*;
 
@@ -321,17 +321,21 @@ Call: UntypedExpr = {
     <s:@L> <fun:SimpleExpr> "(" <args:Comma<CallArg>> ")" <e:@L> =>? {
         let hole_arg_name = "capture@1";
         let mut num_holes = 0;
-        let args = args.into_iter().map(|a| match a {
-            Ok(arg) => arg,
-            Err(meta) => {
-                num_holes += 1;
-                Expr::Var {
-                    meta,
-                    constructor: (),
-                    name: hole_arg_name.to_string(),
+        let args = args
+            .into_iter()
+            .map(|a| match a {
+                Ok(arg) => arg,
+                Err(meta) => {
+                    num_holes += 1;
+                    Expr::Var {
+                        meta,
+                        constructor: (),
+                        name: hole_arg_name.to_string(),
+                    }
                 }
-            }
-        }).collect();
+            })
+            .map(|value| CallArg { label: None, value })
+            .collect();
         let call = Expr::Call {
             meta: meta(s, e),
             typ: (),

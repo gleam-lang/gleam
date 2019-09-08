@@ -1,6 +1,6 @@
 use crate::ast::{
-    Arg, BinOp, Clause, Expr, Meta, Module, Pattern, Statement, TypeAst, TypedExpr, TypedModule,
-    TypedPattern, UntypedExpr, UntypedModule, UntypedPattern,
+    Arg, BinOp, CallArg, Clause, Expr, Meta, Module, Pattern, Statement, TypeAst, TypedExpr,
+    TypedModule, TypedPattern, UntypedExpr, UntypedModule, UntypedPattern,
 };
 use crate::pretty::*;
 use itertools::Itertools;
@@ -1934,13 +1934,23 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
                 constructor: (),
                 name: bin_op_name(&name),
             };
-            let (_fun, mut args, typ) = infer_call(fun, vec![*left, *right], level, &meta, env)?;
+            let args = vec![
+                CallArg {
+                    label: None,
+                    value: *left,
+                },
+                CallArg {
+                    label: None,
+                    value: *right,
+                },
+            ];
+            let (_fun, mut args, typ) = infer_call(fun, args, level, &meta, env)?;
             Ok(Expr::BinOp {
                 meta,
                 name,
                 typ,
-                right: Box::new(args.pop().unwrap()),
-                left: Box::new(args.pop().unwrap()),
+                right: Box::new(args.pop().unwrap().value),
+                left: Box::new(args.pop().unwrap().value),
             })
         }
 
@@ -2276,21 +2286,21 @@ fn infer_var(
 
 fn infer_call(
     fun: UntypedExpr,
-    args: Vec<UntypedExpr>,
+    args: Vec<CallArg<UntypedExpr>>,
     level: usize,
     meta: &Meta,
     env: &mut Env,
-) -> Result<(TypedExpr, Vec<TypedExpr>, Type), Error> {
+) -> Result<(TypedExpr, Vec<CallArg<TypedExpr>>, Type), Error> {
     let fun = infer(fun, level, env)?;
     let (mut args_types, return_type) = match_fun_type(fun.typ(), args.len(), env)
         .map_err(|e| convert_not_fun_error(e, fun.meta(), &meta))?;
     let args = args_types
         .iter_mut()
         .zip(args)
-        .map(|(typ, arg): (&mut Type, _)| {
-            let arg = infer(arg, level, env)?;
-            unify(typ, arg.typ(), env).map_err(|e| convert_unify_error(e, arg.meta()))?;
-            Ok(arg)
+        .map(|(typ, CallArg { label, value }): (&mut Type, _)| {
+            let value = infer(value, level, env)?;
+            unify(typ, value.typ(), env).map_err(|e| convert_unify_error(e, value.meta()))?;
+            Ok(CallArg { label, value })
         })
         .collect::<Result<_, _>>()?;
     Ok((fun, args, return_type))
