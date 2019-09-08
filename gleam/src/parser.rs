@@ -1056,6 +1056,81 @@ fn module_test() {
             name: vec![],
             statements: vec![
                 Statement::Enum {
+                    meta: Meta { start: 0, end: 50 },
+                    public: true,
+                    args: vec!["x".to_string()],
+                    constructors: vec![EnumConstructor {
+                        meta: Meta { start: 31, end: 50 },
+                        name: "Boxxy0123456789x".to_string(),
+                        args: vec![TypeAst::Var {
+                            meta: Meta { start: 48, end: 49 },
+                            name: "x".to_string()
+                        }]
+                    }],
+                    name: "Box0123456789x".to_string(),
+                },
+                Statement::Fn {
+                    return_annotation: None,
+                    meta: Meta {
+                        start: 65,
+                        end: 157
+                    },
+                    public: true,
+                    name: "value".to_string(),
+                    args: vec![Arg {
+                        meta: Meta { start: 78, end: 79 },
+                        annotation: None,
+                        name: Some("x".to_string())
+                    }],
+                    body: Expr::Let {
+                        meta: Meta {
+                            start: 98,
+                            end: 141
+                        },
+                        typ: (),
+                        value: Box::new(Expr::Var {
+                            meta: Meta { start: 124, end: 125 },
+                            constructor: (),
+                            name: "x".to_string()
+                        }),
+                        pattern: Pattern::Constructor {
+                            meta: Meta { start: 102, end: 121 },
+                            constructor: (),
+                            module: None,
+                            name: "Boxxy0123456789x".to_string(),
+                            args: vec![Pattern::Var {
+                                meta: Meta { start: 119, end: 120 },
+                                name: "a".to_string()
+                            }]
+                        },
+                        then: Box::new(Expr::Var {
+                            meta: Meta {
+                                start: 141,
+                                end: 142
+                            },
+                            constructor: (),
+                            name: "a".to_string()
+                        }),
+                    }
+                }
+            ]
+        }),
+        ModuleParser::new().parse(
+            "pub enum Box0123456789x(x) = | Boxxy0123456789x(x)
+
+             pub fn value(x) {
+               let Boxxy0123456789x(a) = x
+               a
+             }"
+        ),
+    );
+
+    assert_eq!(
+        Ok(Module {
+            type_info: (),
+            name: vec![],
+            statements: vec![
+                Statement::Enum {
                     meta: Meta { start: 0, end: 28 },
                     public: true,
                     args: vec!["x".to_string()],

@@ -622,28 +622,28 @@ TypeMapField: (String, TypeAst) = {
 }
 
 TypeConstructor: TypeAst = {
-    <s:@L> <m:VarName> "." <n:r"[A-Z][A-Za-z]*"> <e:@L> => TypeAst::Constructor {
+    <s:@L> <m:VarName> "." <n:UpName> <e:@L> => TypeAst::Constructor {
         meta: meta(s, e),
         module: Some(m),
         args: vec![],
         name: n.to_string(),
     },
 
-    <s:@L> <m:VarName> "." <n:r"[A-Z][A-Za-z]*"> "(" <a:Comma<Type>> ")" <e:@L> => TypeAst::Constructor {
+    <s:@L> <m:VarName> "." <n:UpName> "(" <a:Comma<Type>> ")" <e:@L> => TypeAst::Constructor {
         meta: meta(s, e),
         module: Some(m),
         args: a,
         name: n.to_string(),
     },
 
-    <s:@L> <n:r"[A-Z][A-Za-z]*"> <e:@L> => TypeAst::Constructor {
+    <s:@L> <n:UpName> <e:@L> => TypeAst::Constructor {
         meta: meta(s, e),
         module: None,
         args: vec![],
         name: n.to_string(),
     },
 
-    <s:@L> <n:r"[A-Z][A-Za-z]*"> "(" <a:Comma<Type>> ")" <e:@L> => TypeAst::Constructor {
+    <s:@L> <n:UpName> "(" <a:Comma<Type>> ")" <e:@L> => TypeAst::Constructor {
         meta: meta(s, e),
         module: None,
         args: a,
@@ -680,7 +680,7 @@ TypeName: (String, Vec<String>) = {
 }
 
 UpName: String = {
-    <v:r"[A-Z][A-Za-z]*"> => v.to_string()
+    <v:r"[A-Z][0-9A-Za-z]*"> => v.to_string()
 }
 
 DiscardName: () = {
@@ -697,7 +697,7 @@ VarName: String = {
 }
 
 ConstructorName: String = {
-    <v:r"[A-Z][A-Za-z]*"> => v.to_string()
+    <v:r"[A-Z][0-9A-Za-z]*"> => v.to_string()
 }
 
 RawString: String = {
