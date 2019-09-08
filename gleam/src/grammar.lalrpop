@@ -327,20 +327,22 @@ Call: UntypedExpr = {
                 Ok(arg) => arg,
                 Err(meta) => {
                     num_holes += 1;
-                    Expr::Var {
-                        meta,
-                        constructor: (),
-                        name: hole_arg_name.to_string(),
+                    CallArg {
+                        label: None,
+                        value: Expr::Var {
+                            meta,
+                            constructor: (),
+                            name: hole_arg_name.to_string(),
+                        }
                     }
                 }
             })
-            .map(|value| CallArg { label: None, value })
             .collect();
         let call = Expr::Call {
             meta: meta(s, e),
             typ: (),
             fun: Box::new(fun),
-            args: args,
+            args,
         };
         match num_holes {
             // A normal call
@@ -369,8 +371,8 @@ Call: UntypedExpr = {
     }
 }
 
-CallArg: Result<UntypedExpr, crate::ast::Meta> = {
-    <arg:OpOrSimpleExpr> => Ok(arg),
+CallArg: Result<CallArg<UntypedExpr>, crate::ast::Meta> = {
+    <label:(<VarName> ":")?> <value:OpOrSimpleExpr> => Ok(CallArg { label, value }),
     <s:@L> DiscardName <e:@L> => Err(meta(s, e)),
 }
 

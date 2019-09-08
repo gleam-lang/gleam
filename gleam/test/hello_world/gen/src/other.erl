@@ -26,3 +26,8 @@ head(List) ->
         [X | _] ->
             {ok, X}
     end.
+
+run() ->
+    Origin = {4, 8},
+    Cursor = {7, 6},
+    <<"ok!">>.

@@ -1,4 +1,4 @@
-fn id(x :: a, y :: a) {
+fn id(x: a, y: b) {
   x
 }
 

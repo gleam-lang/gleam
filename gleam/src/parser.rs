@@ -261,6 +261,68 @@ fn expr_test() {
     );
 
     assert_eq!(
+        Ok(Expr::Call {
+            meta: Meta { start: 0, end: 17 },
+            typ: (),
+            fun: Box::new(Expr::Var {
+                meta: Meta { start: 0, end: 5 },
+                constructor: (),
+                name: "Point".to_string(),
+            }),
+            args: vec![
+                CallArg {
+                    label: Some("x".to_string()),
+                    value: Expr::Int {
+                        typ: (),
+                        meta: Meta { start: 9, end: 10 },
+                        value: 1
+                    }
+                },
+                CallArg {
+                    label: Some("y".to_string()),
+                    value: Expr::Int {
+                        typ: (),
+                        meta: Meta { start: 15, end: 16 },
+                        value: 3
+                    }
+                }
+            ]
+        }),
+        ExprParser::new().parse("Point(x: 1, y: 3)"),
+    );
+
+    assert_eq!(
+        Ok(Expr::Call {
+            meta: Meta { start: 0, end: 14 },
+            typ: (),
+            fun: Box::new(Expr::Var {
+                meta: Meta { start: 0, end: 5 },
+                constructor: (),
+                name: "Point".to_string(),
+            }),
+            args: vec![
+                CallArg {
+                    label: None,
+                    value: Expr::Int {
+                        typ: (),
+                        meta: Meta { start: 6, end: 7 },
+                        value: 1
+                    }
+                },
+                CallArg {
+                    label: Some("y".to_string()),
+                    value: Expr::Int {
+                        typ: (),
+                        meta: Meta { start: 12, end: 13 },
+                        value: 3
+                    }
+                }
+            ]
+        }),
+        ExprParser::new().parse("Point(1, y: 3)"),
+    );
+
+    assert_eq!(
         Ok(Expr::Cons {
             meta: Meta { start: 5, end: 7 },
             typ: (),
