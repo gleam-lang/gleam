@@ -121,8 +121,8 @@ fn fun_args(args: Vec<Arg>) -> Document {
     }))
 }
 
-fn call_args(args: Vec<TypedExpr>, env: &mut Env) -> Document {
-    wrap_args(args.into_iter().map(|e| wrap_expr(e, env)))
+fn call_args(args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Document {
+    wrap_args(args.into_iter().map(|arg| wrap_expr(arg.value, env)))
 }
 
 fn wrap_args<I>(args: I) -> Document
@@ -211,7 +211,7 @@ fn bin_op(name: BinOp, left: TypedExpr, right: TypedExpr, env: &mut Env) -> Docu
 }
 
 fn pipe(value: TypedExpr, fun: TypedExpr, env: &mut Env) -> Document {
-    call(fun, vec![value], env)
+    call(fun, vec![CallArg { label: None, value }], env)
 }
 
 fn let_(value: TypedExpr, pat: TypedPattern, then: TypedExpr, env: &mut Env) -> Document {
@@ -419,14 +419,14 @@ fn case(subject: TypedExpr, cs: Vec<TypedClause>, env: &mut Env) -> Document {
         .group()
 }
 
-fn enum_(name: String, args: Vec<TypedExpr>, env: &mut Env) -> Document {
-    let mut args: Vec<_> = args.into_iter().map(|e| expr(e, env)).collect();
+fn enum_(name: String, args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Document {
+    let mut args: Vec<_> = args.into_iter().map(|arg| expr(arg.value, env)).collect();
     // FIXME: O(n), insert at start shuffles the elemes forward by one place
     args.insert(0, atom(name.to_snake_case()));
     tuple(args)
 }
 
-fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
+fn call(fun: TypedExpr, args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Document {
     match fun {
         Expr::Var {
             constructor:
@@ -445,7 +445,11 @@ fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
                     ..
                 },
             ..
-        } => tuple(args.into_iter().map(|e| expr(e, env)).collect::<Vec<_>>()),
+        } => tuple(
+            args.into_iter()
+                .map(|a| expr(a.value, env))
+                .collect::<Vec<_>>(),
+        ),
 
         Expr::Var {
             constructor:
@@ -466,7 +470,7 @@ fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
         Expr::ModuleSelect {
             constructor: ModuleValueConstructor::Struct,
             ..
-        } => tuple(args.into_iter().map(|e| wrap_expr(e, env)).collect()),
+        } => tuple(args.into_iter().map(|a| wrap_expr(a.value, env)).collect()),
 
         Expr::ModuleSelect {
             module_name,
@@ -498,13 +502,9 @@ fn call(fun: TypedExpr, args: Vec<TypedExpr>, env: &mut Env) -> Document {
                 let mut args = args;
                 let merged_args = inner_args
                     .into_iter()
-                    .map(|a| {
-                        if let Expr::Var { name, .. } = a.clone() {
-                            if name == "capture@1" {
-                                return args.pop().unwrap();
-                            }
-                        }
-                        a
+                    .map(|a| match &a.value {
+                        Expr::Var { name, .. } if name == "capture@1" => args.pop().unwrap(),
+                        _ => a,
                     })
                     .collect();
                 call(*fun, merged_args, env)
@@ -1198,10 +1198,13 @@ some_function(
                 body: Expr::Call {
                     meta: default(),
                     typ: crate::typ::int(),
-                    args: vec![Expr::Int {
-                        meta: default(),
-                        typ: crate::typ::int(),
-                        value: 1,
+                    args: vec![CallArg {
+                        label: None,
+                        value: Expr::Int {
+                            meta: default(),
+                            typ: crate::typ::int(),
+                            value: 1,
+                        },
                     }],
                     fun: Box::new(Expr::ModuleSelect {
                         typ: crate::typ::int(),
@@ -1387,10 +1390,13 @@ go() ->
                 body: Expr::Call {
                     meta: default(),
                     typ: crate::typ::int(),
-                    args: vec![Expr::Int {
-                        typ: crate::typ::int(),
-                        meta: default(),
-                        value: 1,
+                    args: vec![CallArg {
+                        label: None,
+                        value: Expr::Int {
+                            typ: crate::typ::int(),
+                            meta: default(),
+                            value: 1,
+                        },
                     }],
                     fun: Box::new(Expr::Var {
                         meta: default(),
@@ -1414,10 +1420,13 @@ go() ->
                 body: Expr::Call {
                     meta: default(),
                     typ: crate::typ::int(),
-                    args: vec![Expr::Int {
-                        typ: crate::typ::int(),
-                        meta: default(),
-                        value: 1,
+                    args: vec![CallArg {
+                        label: None,
+                        value: Expr::Int {
+                            typ: crate::typ::int(),
+                            meta: default(),
+                            value: 1,
+                        },
                     }],
                     fun: Box::new(Expr::Var {
                         meta: default(),
@@ -1438,18 +1447,24 @@ go() ->
                 body: Expr::Call {
                     meta: default(),
                     typ: crate::typ::int(),
-                    args: vec![Expr::Int {
-                        typ: crate::typ::int(),
-                        meta: default(),
-                        value: 2,
+                    args: vec![CallArg {
+                        label: None,
+                        value: Expr::Int {
+                            typ: crate::typ::int(),
+                            meta: default(),
+                            value: 2,
+                        },
                     }],
                     fun: Box::new(Expr::Call {
                         meta: default(),
                         typ: crate::typ::int(),
-                        args: vec![Expr::Int {
-                            typ: crate::typ::int(),
-                            meta: default(),
-                            value: 1,
+                        args: vec![CallArg {
+                            label: None,
+                            value: Expr::Int {
+                                typ: crate::typ::int(),
+                                meta: default(),
+                                value: 1,
+                            },
                         }],
                         fun: Box::new(Expr::Var {
                             meta: default(),

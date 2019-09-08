@@ -5,16 +5,6 @@ pub enum Empty =
 //
 pub external fn reverse(List(a)) -> List(a) = "lists" "reverse"
 
-// pub external fn reverse2(List(a)) -> List(a) = "lists" "reverse"
-// pub external fn reverse3(List(a)) -> List(a) = "lists" "reverse"
-// pub external fn reverse4(List(a)) -> List(a) = "lists" "reverse"
-// pub external fn reverse5(List(a)) -> List(a) = "lists" "reverse"
-// pub external fn reverse6(List(a)) -> List(a) = "lists" "reverse"
-// pub external fn reverse7(List(a)) -> List(a) = "lists" "reverse"
-// pub external fn reverse8(List(a)) -> List(a) = "lists" "reverse"
-// pub external fn reverse9(List(a)) -> List(a) = "lists" "reverse"
-// pub external fn reverse10(List(a)) -> List(a) = "lists" "reverse"
-
 pub fn is_empty(list) {
   list == []
 }
@@ -31,4 +21,15 @@ pub fn head(list) {
   | [] -> Error(Empty)
   | [x | _] -> Ok(x)
   }
+}
+
+pub struct Point {
+  x: Int
+  y: Int
+}
+
+fn run() {
+  let origin = Point(x: 4, y: 8)
+  let cursor = Point(x: 7, y: 6)
+  "ok!"
 }
