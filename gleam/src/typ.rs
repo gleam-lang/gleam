@@ -548,6 +548,173 @@ pub struct ValueConstructor {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct FieldMap {
+    fields: HashMap<String, usize>,
+}
+
+impl FieldMap {
+    /// Reorder an argument list so that labelled fields supplied out-of-order are in the correct
+    /// order.
+    ///
+    fn reorder<A, B, C, D>(&self, args: &mut Vec<CallArg<Expr<A, B, C, D>>>) -> Result<(), Error> {
+        for i in 0..args.len() {
+            let label = match &args[i].label {
+                // A labelled argument, we may need to reposition it in the array vector
+                Some(l) => l,
+
+                // Not a labelled argument, assume it is in the correct place
+                None => continue,
+            };
+
+            let position = match self.fields.get(label) {
+                None => panic!("label not found"), // TODO: Error: Label not found
+                Some(p) => p,
+            };
+
+            if *position < i {
+                panic!("arg already given"); // TODO: Error: Argument has already been specified
+            }
+
+            args.swap(*position, i)
+        }
+        Ok(())
+    }
+}
+
+#[test]
+fn field_map_reorder_test() {
+    let int = |value| Expr::Int {
+        value,
+        typ: (),
+        meta: Meta { start: 0, end: 0 },
+    };
+
+    struct Case {
+        fields: HashMap<String, usize>,
+        args: Vec<CallArg<UntypedExpr>>,
+        expected_result: Result<(), Error>,
+        expected_args: Vec<CallArg<UntypedExpr>>,
+    }
+    let cases = vec![
+        Case {
+            fields: HashMap::new(),
+            args: vec![],
+            expected_result: Ok(()),
+            expected_args: vec![],
+        },
+        Case {
+            fields: HashMap::new(),
+            args: vec![
+                CallArg {
+                    label: None,
+                    value: int(1),
+                },
+                CallArg {
+                    label: None,
+                    value: int(2),
+                },
+                CallArg {
+                    label: None,
+                    value: int(3),
+                },
+            ],
+            expected_result: Ok(()),
+            expected_args: vec![
+                CallArg {
+                    label: None,
+                    value: int(1),
+                },
+                CallArg {
+                    label: None,
+                    value: int(2),
+                },
+                CallArg {
+                    label: None,
+                    value: int(3),
+                },
+            ],
+        },
+        Case {
+            fields: [("last".to_string(), 2)].iter().cloned().collect(),
+            args: vec![
+                CallArg {
+                    label: None,
+                    value: int(1),
+                },
+                CallArg {
+                    label: Some("last".to_string()),
+                    value: int(2),
+                },
+                CallArg {
+                    label: None,
+                    value: int(3),
+                },
+            ],
+            expected_result: Ok(()),
+            expected_args: vec![
+                CallArg {
+                    label: None,
+                    value: int(1),
+                },
+                CallArg {
+                    label: None,
+                    value: int(3),
+                },
+                CallArg {
+                    label: Some("last".to_string()),
+                    value: int(2),
+                },
+            ],
+        },
+        Case {
+            fields: [("last".to_string(), 2)].iter().cloned().collect(),
+            args: vec![
+                CallArg {
+                    label: None,
+                    value: int(1),
+                },
+                CallArg {
+                    label: None,
+                    value: int(2),
+                },
+                CallArg {
+                    label: Some("last".to_string()),
+                    value: int(3),
+                },
+            ],
+            expected_result: Ok(()),
+            expected_args: vec![
+                CallArg {
+                    label: None,
+                    value: int(1),
+                },
+                CallArg {
+                    label: None,
+                    value: int(2),
+                },
+                CallArg {
+                    label: Some("last".to_string()),
+                    value: int(3),
+                },
+            ],
+        },
+    ];
+
+    for case in cases.into_iter() {
+        let Case {
+            fields,
+            args,
+            expected_result,
+            expected_args,
+        } = case;
+        let mut args = args;
+        let fm = FieldMap { fields };
+        assert_eq!(expected_result, fm.reorder(&mut args));
+        assert_eq!(expected_args, args);
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum ValueConstructorVariant {
     /// A locally defined variable or function parameter
     LocalVariable,
@@ -559,7 +726,7 @@ pub enum ValueConstructorVariant {
     ModuleFn { module: Vec<String>, arity: usize },
 
     /// A named struct
-    NamedStruct {},
+    Struct { field_map: FieldMap, arity: usize },
 }
 
 impl ValueConstructorVariant {
@@ -567,7 +734,7 @@ impl ValueConstructorVariant {
         match self {
             ValueConstructorVariant::Enum { .. } => ModuleValueConstructor::Enum,
 
-            ValueConstructorVariant::NamedStruct { .. } => ModuleValueConstructor::Struct,
+            ValueConstructorVariant::Struct { .. } => ModuleValueConstructor::Struct,
 
             ValueConstructorVariant::LocalVariable { .. }
             | ValueConstructorVariant::ModuleFn { .. } => ModuleValueConstructor::Fn,
@@ -1037,7 +1204,7 @@ impl<'a> Env<'a> {
     ///
     fn get_value_constructor(
         &self,
-        module: &Option<String>,
+        module: Option<&String>,
         name: &String,
     ) -> Result<&ValueConstructor, GetValueConstructorError> {
         match module {
@@ -1550,6 +1717,18 @@ pub fn infer_module(
                     name: name.clone(),
                     args: type_args_types,
                 };
+                // Create FieldMap which later can be used to rewrite labelled arguments
+                let mut field_map = HashMap::new();
+                for (i, (label, _)) in fields.iter().enumerate() {
+                    if let Some(_) = field_map.insert(label.clone(), i) {
+                        panic!("duplicate label"); // TODO
+                    }
+                }
+                let field_map = FieldMap { fields: field_map };
+                let constructor_variant = ValueConstructorVariant::Struct {
+                    arity: fields.len(),
+                    field_map,
+                };
                 // Register constructor
                 let args_types = fields
                     .iter()
@@ -1565,7 +1744,7 @@ pub fn infer_module(
                         retrn: Box::new(retrn.clone()),
                     },
                 };
-                let constructor_variant = ValueConstructorVariant::NamedStruct {};
+                // If the struct is public then record it so that it can be used in other modules
                 if public {
                     if let Some(leaked) = typ.find_private_type() {
                         return Err(Error::PrivateTypeLeak {
@@ -2180,12 +2359,12 @@ fn unify_pattern(
             constructor: _,
         } => {
             let cons = env
-                .get_value_constructor(&module, &name)
+                .get_value_constructor(module.as_ref(), &name)
                 .map_err(|e| convert_get_value_constructor_error(e, &meta))?;
             let constructor_typ = cons.typ.clone();
             let constructor = match cons.variant {
                 ValueConstructorVariant::Enum { .. } => PatternConstructor::Enum,
-                ValueConstructorVariant::NamedStruct { .. } => PatternConstructor::Struct,
+                ValueConstructorVariant::Struct { .. } => PatternConstructor::Struct,
                 ValueConstructorVariant::LocalVariable
                 | ValueConstructorVariant::ModuleFn { .. } => panic!(
                     "Unexpected value constructor type for a constructor pattern.
@@ -2286,12 +2465,21 @@ fn infer_var(
 
 fn infer_call(
     fun: UntypedExpr,
-    args: Vec<CallArg<UntypedExpr>>,
+    mut args: Vec<CallArg<UntypedExpr>>,
     level: usize,
     meta: &Meta,
     env: &mut Env,
 ) -> Result<(TypedExpr, Vec<CallArg<TypedExpr>>, Type), Error> {
     let fun = infer(fun, level, env)?;
+
+    match get_field_map(&fun, env).map_err(|e| convert_get_value_constructor_error(e, meta))? {
+        // The fun has a field map so labelled arguments may be present and need to be reordered.
+        Some(field_map) => field_map.reorder(&mut args)?,
+
+        // The fun has no field map and so we error if arguments have been labelled
+        None => (), // TODO: error if it's not a struct and there are labelled arguments
+    }
+
     let (mut args_types, return_type) = match_fun_type(fun.typ(), args.len(), env)
         .map_err(|e| convert_not_fun_error(e, fun.meta(), &meta))?;
     let args = args_types
@@ -2304,6 +2492,28 @@ fn infer_call(
         })
         .collect::<Result<_, _>>()?;
     Ok((fun, args, return_type))
+}
+
+fn get_field_map<'a>(
+    constructor: &TypedExpr,
+    env: &'a Env,
+) -> Result<Option<&'a FieldMap>, GetValueConstructorError> {
+    let (module, name) = match constructor {
+        Expr::ModuleSelect {
+            module_alias,
+            label,
+            ..
+        } => (Some(module_alias), label),
+
+        Expr::Var { name, .. } => (None, name),
+
+        _ => return Ok(None),
+    };
+
+    match env.get_value_constructor(module, name)?.variant {
+        ValueConstructorVariant::Struct { ref field_map, .. } => Ok(Some(field_map)),
+        _ => Ok(None),
+    }
 }
 
 fn infer_fun(
