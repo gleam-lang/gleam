@@ -373,8 +373,21 @@ enum ListType<E, T> {
 fn var(name: String, constructor: ValueConstructor, env: &mut Env) -> Document {
     match constructor.variant {
         ValueConstructorVariant::Enum { .. } => atom(name.to_snake_case()),
-        ValueConstructorVariant::NamedStruct { .. } => "{}".to_doc(),
+
+        ValueConstructorVariant::Struct { arity: 0, .. } => "{}".to_doc(),
+
+        ValueConstructorVariant::Struct { arity, .. } => {
+            let chars = incrementing_args_list(arity);
+            "fun("
+                .to_doc()
+                .append(chars.clone())
+                .append(") -> {")
+                .append(chars)
+                .append("} end")
+        }
+
         ValueConstructorVariant::LocalVariable => env.local_var_name(name),
+
         ValueConstructorVariant::ModuleFn { arity, module, .. } => "fun "
             .to_doc()
             .append(module.join("@"))
@@ -441,7 +454,7 @@ fn call(fun: TypedExpr, args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Documen
         Expr::Var {
             constructor:
                 ValueConstructor {
-                    variant: ValueConstructorVariant::NamedStruct { .. },
+                    variant: ValueConstructorVariant::Struct { .. },
                     ..
                 },
             ..
@@ -639,12 +652,16 @@ fn fun(args: Vec<Arg>, body: TypedExpr, env: &mut Env) -> Document {
         .group()
 }
 
-fn external_fun(name: String, module: String, fun: String, arity: usize) -> Document {
-    let chars: String = (65..(65 + arity))
+fn incrementing_args_list(arity: usize) -> String {
+    (65..(65 + arity))
         .map(|x| x as u8 as char)
         .map(|c| c.to_string())
         .intersperse(", ".to_string())
-        .collect();
+        .collect()
+}
+
+fn external_fun(name: String, module: String, fun: String, arity: usize) -> Document {
+    let chars: String = incrementing_args_list(arity);
 
     atom(name)
         .append(format!("({}) ->", chars))
@@ -1726,16 +1743,38 @@ x() ->
 "#
         },
         Case {
-            src: r#"struct Point {x: Int x: Int} fn x() { Point(4, 6) }"#,
+            src: r#"struct Point {x: Int y: Int}
+                fn y() { fn() { Point }()(4, 6) }"#,
+            erl: r#"-module().
+-compile(no_auto_import).
+
+y() ->
+    ((fun() -> fun(A, B) -> {A, B} end end)())(4, 6).
+"#
+        },
+        Case {
+            src: r#"struct Point {x: Int y: Int}
+                fn x() { Point(x: 4, y: 6) Point(y: 1, x: 9) }"#,
             erl: r#"-module().
 -compile(no_auto_import).
 
 x() ->
-    {4, 6}.
+    {4, 6},
+    {9, 1}.
 "#
         },
         Case {
-            src: r#"struct Point {x: Int x: Int} fn x(y) { let Point(a, b) = y a }"#,
+            src: r#"struct Point {x: Int y: Int}
+                fn y() { fn() { Point }()(x: 4, y: 6) }"#, // TODO: This should error because labels have been erased after Point has been turned into an anonymous function
+            erl: r#"-module().
+-compile(no_auto_import).
+
+y() ->
+    ((fun() -> fun(A, B) -> {A, B} end end)())(4, 6).
+"#
+        },
+        Case {
+            src: r#"struct Point {x: Int y: Int} fn x(y) { let Point(a, b) = y a }"#,
             erl: r#"-module().
 -compile(no_auto_import).
 
