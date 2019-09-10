@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use crate::ast::{
     UntypedExpr, Expr, Arg, UntypedModule, Module, UntypedStatement, Statement, TypeAst, UntypedPattern,
-    BinOp, Clause, UntypedClause, EnumConstructor, Pattern, CallArg
+    BinOp, Clause, UntypedClause, EnumConstructor, Pattern, CallArg, StructField
 };
 use crate::parser::*;
 
@@ -59,8 +59,12 @@ StatementStruct: UntypedStatement = {
     },
 }
 
-StructFieldDefinition: (String, TypeAst) = {
-    <name:VarName> ":" <typ:Type> => (name, typ)
+StructFieldDefinition: StructField = {
+    <s:@L> <label:VarName> ":" <typ:Type> <e:@L> => StructField {
+        meta: meta(s, e),
+        label,
+        typ,
+    }
 }
 
 EnumConstructor: EnumConstructor = {

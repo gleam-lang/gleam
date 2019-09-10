@@ -1,6 +1,6 @@
 use crate::ast::{
-    Arg, BinOp, CallArg, Clause, Expr, Meta, Module, Pattern, Statement, TypeAst, TypedExpr,
-    TypedModule, TypedPattern, UntypedExpr, UntypedModule, UntypedPattern,
+    Arg, BinOp, CallArg, Clause, Expr, Meta, Module, Pattern, Statement, StructField, TypeAst,
+    TypedExpr, TypedModule, TypedPattern, UntypedExpr, UntypedModule, UntypedPattern,
 };
 use crate::pretty::*;
 use itertools::Itertools;
@@ -1447,6 +1447,11 @@ pub enum Error {
         label: String,
     },
 
+    DuplicateField {
+        meta: Meta,
+        label: String,
+    },
+
     PrivateTypeLeak {
         meta: Meta,
         leaked: Type,
@@ -1762,9 +1767,12 @@ pub fn infer_module(
                 };
                 // Create FieldMap which later can be used to rewrite labelled arguments
                 let mut field_map = HashMap::new();
-                for (i, (label, _)) in fields.iter().enumerate() {
+                for (i, StructField { label, meta, .. }) in fields.iter().enumerate() {
                     if let Some(_) = field_map.insert(label.clone(), i) {
-                        panic!("duplicate label"); // TODO
+                        return Err(Error::DuplicateField {
+                            label: label.to_string(),
+                            meta: meta.clone(),
+                        });
                     }
                 }
                 let field_map = FieldMap { fields: field_map };
@@ -1775,7 +1783,7 @@ pub fn infer_module(
                 // Register constructor
                 let args_types = fields
                     .iter()
-                    .map(|(_, arg)| {
+                    .map(|StructField { typ: arg, .. }| {
                         env.type_from_ast(&arg, &mut type_vars, NewTypeAction::Disallow)
                     })
                     .collect::<Result<Vec<_>, _>>()?;

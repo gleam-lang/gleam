@@ -206,6 +206,25 @@ A function has already been defined with the name
                     .unwrap();
                 }
 
+                DuplicateField { meta, label } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Duplicate field".to_string(),
+                        label: "".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                    write!(
+                        buffer,
+                        "
+The field `{}` has already been defined. Rename this field.
+",
+                        label
+                    )
+                    .unwrap();
+                }
+
                 DuplicateArgument { meta, label } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Duplicate argument".to_string(),
