@@ -28,6 +28,12 @@ pub struct Point {
   y: Int
 }
 
+
+pub struct P {
+  x: Int
+  x: Int
+}
+
 fn run() {
   let origin = Point(x: 4, y: 8)
   let cursor = Point(7, x: 6, y: 10)

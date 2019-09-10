@@ -147,8 +147,15 @@ pub enum Statement<ValueConstructor, ModuleValueConstructor, PatternConstructor,
         name: String,
         type_args: Vec<String>,
         public: bool,
-        fields: Vec<(String, TypeAst)>,
+        fields: Vec<StructField>,
     },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StructField {
+    pub label: String,
+    pub meta: Meta,
+    pub typ: TypeAst,
 }
 
 #[derive(Debug, Clone, PartialEq)]
