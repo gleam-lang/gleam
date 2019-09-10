@@ -211,7 +211,15 @@ fn bin_op(name: BinOp, left: TypedExpr, right: TypedExpr, env: &mut Env) -> Docu
 }
 
 fn pipe(value: TypedExpr, fun: TypedExpr, env: &mut Env) -> Document {
-    call(fun, vec![CallArg { label: None, value }], env)
+    call(
+        fun,
+        vec![CallArg {
+            label: None,
+            meta: Default::default(),
+            value,
+        }],
+        env,
+    )
 }
 
 fn let_(value: TypedExpr, pat: TypedPattern, then: TypedExpr, env: &mut Env) -> Document {
@@ -1217,6 +1225,7 @@ some_function(
                     typ: crate::typ::int(),
                     args: vec![CallArg {
                         label: None,
+                        meta: default(),
                         value: Expr::Int {
                             meta: default(),
                             typ: crate::typ::int(),
@@ -1409,6 +1418,7 @@ go() ->
                     typ: crate::typ::int(),
                     args: vec![CallArg {
                         label: None,
+                        meta: default(),
                         value: Expr::Int {
                             typ: crate::typ::int(),
                             meta: default(),
@@ -1439,6 +1449,7 @@ go() ->
                     typ: crate::typ::int(),
                     args: vec![CallArg {
                         label: None,
+                        meta: default(),
                         value: Expr::Int {
                             typ: crate::typ::int(),
                             meta: default(),
@@ -1466,6 +1477,7 @@ go() ->
                     typ: crate::typ::int(),
                     args: vec![CallArg {
                         label: None,
+                        meta: default(),
                         value: Expr::Int {
                             typ: crate::typ::int(),
                             meta: default(),
@@ -1477,6 +1489,7 @@ go() ->
                         typ: crate::typ::int(),
                         args: vec![CallArg {
                             label: None,
+                            meta: default(),
                             value: Expr::Int {
                                 typ: crate::typ::int(),
                                 meta: default(),
@@ -1761,16 +1774,6 @@ y() ->
 x() ->
     {4, 6},
     {9, 1}.
-"#
-        },
-        Case {
-            src: r#"struct Point {x: Int y: Int}
-                fn y() { fn() { Point }()(x: 4, y: 6) }"#, // TODO: This should error because labels have been erased after Point has been turned into an anonymous function
-            erl: r#"-module().
--compile(no_auto_import).
-
-y() ->
-    ((fun() -> fun(A, B) -> {A, B} end end)())(4, 6).
 "#
         },
         Case {

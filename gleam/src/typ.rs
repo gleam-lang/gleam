@@ -606,14 +606,17 @@ fn field_map_reorder_test() {
             fields: HashMap::new(),
             args: vec![
                 CallArg {
+                    meta: Default::default(),
                     label: None,
                     value: int(1),
                 },
                 CallArg {
+                    meta: Default::default(),
                     label: None,
                     value: int(2),
                 },
                 CallArg {
+                    meta: Default::default(),
                     label: None,
                     value: int(3),
                 },
@@ -621,14 +624,17 @@ fn field_map_reorder_test() {
             expected_result: Ok(()),
             expected_args: vec![
                 CallArg {
+                    meta: Default::default(),
                     label: None,
                     value: int(1),
                 },
                 CallArg {
+                    meta: Default::default(),
                     label: None,
                     value: int(2),
                 },
                 CallArg {
+                    meta: Default::default(),
                     label: None,
                     value: int(3),
                 },
@@ -638,14 +644,17 @@ fn field_map_reorder_test() {
             fields: [("last".to_string(), 2)].iter().cloned().collect(),
             args: vec![
                 CallArg {
+                    meta: Default::default(),
                     label: None,
                     value: int(1),
                 },
                 CallArg {
+                    meta: Default::default(),
                     label: Some("last".to_string()),
                     value: int(2),
                 },
                 CallArg {
+                    meta: Default::default(),
                     label: None,
                     value: int(3),
                 },
@@ -653,14 +662,17 @@ fn field_map_reorder_test() {
             expected_result: Ok(()),
             expected_args: vec![
                 CallArg {
+                    meta: Default::default(),
                     label: None,
                     value: int(1),
                 },
                 CallArg {
+                    meta: Default::default(),
                     label: None,
                     value: int(3),
                 },
                 CallArg {
+                    meta: Default::default(),
                     label: Some("last".to_string()),
                     value: int(2),
                 },
@@ -670,14 +682,17 @@ fn field_map_reorder_test() {
             fields: [("last".to_string(), 2)].iter().cloned().collect(),
             args: vec![
                 CallArg {
+                    meta: Default::default(),
                     label: None,
                     value: int(1),
                 },
                 CallArg {
+                    meta: Default::default(),
                     label: None,
                     value: int(2),
                 },
                 CallArg {
+                    meta: Default::default(),
                     label: Some("last".to_string()),
                     value: int(3),
                 },
@@ -685,14 +700,17 @@ fn field_map_reorder_test() {
             expected_result: Ok(()),
             expected_args: vec![
                 CallArg {
+                    meta: Default::default(),
                     label: None,
                     value: int(1),
                 },
                 CallArg {
+                    meta: Default::default(),
                     label: None,
                     value: int(2),
                 },
                 CallArg {
+                    meta: Default::default(),
                     label: Some("last".to_string()),
                     value: int(3),
                 },
@@ -1423,6 +1441,11 @@ pub enum Error {
         meta: Meta,
         label: String,
     },
+
+    UnexpectedLabelledArg {
+        meta: Meta,
+        label: String,
+    },
 }
 
 #[derive(Debug, PartialEq)]
@@ -2115,10 +2138,12 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             };
             let args = vec![
                 CallArg {
+                    meta: Default::default(),
                     label: None,
                     value: *left,
                 },
                 CallArg {
+                    meta: Default::default(),
                     label: None,
                     value: *right,
                 },
@@ -2477,7 +2502,7 @@ fn infer_call(
         Some(field_map) => field_map.reorder(&mut args)?,
 
         // The fun has no field map and so we error if arguments have been labelled
-        None => (), // TODO: error if it's not a struct and there are labelled arguments
+        None => assert_no_labelled_arguments(&args)?,
     }
 
     let (mut args_types, return_type) = match_fun_type(fun.typ(), args.len(), env)
@@ -2485,13 +2510,25 @@ fn infer_call(
     let args = args_types
         .iter_mut()
         .zip(args)
-        .map(|(typ, CallArg { label, value }): (&mut Type, _)| {
+        .map(|(typ, CallArg { label, value, meta }): (&mut Type, _)| {
             let value = infer(value, level, env)?;
             unify(typ, value.typ(), env).map_err(|e| convert_unify_error(e, value.meta()))?;
-            Ok(CallArg { label, value })
+            Ok(CallArg { label, value, meta })
         })
         .collect::<Result<_, _>>()?;
     Ok((fun, args, return_type))
+}
+
+fn assert_no_labelled_arguments(args: &Vec<CallArg<UntypedExpr>>) -> Result<(), Error> {
+    for arg in args {
+        if let Some(label) = &arg.label {
+            return Err(Error::UnexpectedLabelledArg {
+                meta: arg.meta.clone(),
+                label: label.to_string(),
+            });
+        }
+    }
+    Ok(())
 }
 
 fn get_field_map<'a>(
@@ -4412,6 +4449,13 @@ pub fn x() { id(1, 1.0) }
                     module: vec![],
                     name: "PrivateType".to_string(),
                 },
+            },
+        },
+        Case {
+            src: r#"fn id(x) { x } fn y() { id(x: 4) }"#,
+            error: Error::UnexpectedLabelledArg {
+                label: "x".to_string(),
+                meta: Meta { start: 27, end: 31 },
             },
         },
     ];

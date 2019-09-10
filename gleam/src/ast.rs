@@ -180,6 +180,7 @@ pub enum BinOp {
 #[derive(Debug, PartialEq, Clone)]
 pub struct CallArg<A> {
     pub label: Option<String>,
+    pub meta: Meta,
     pub value: A,
 }
 
