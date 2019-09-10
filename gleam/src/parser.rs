@@ -200,6 +200,7 @@ fn expr_test() {
             }),
             args: vec![
                 CallArg {
+                    meta: Meta { start: 6, end: 7 },
                     label: None,
                     value: Expr::Int {
                         typ: (),
@@ -209,6 +210,7 @@ fn expr_test() {
                 },
                 CallArg {
                     label: None,
+                    meta: Meta { start: 9, end: 10 },
                     value: Expr::Int {
                         typ: (),
                         meta: Meta { start: 9, end: 10 },
@@ -241,6 +243,7 @@ fn expr_test() {
             args: vec![
                 CallArg {
                     label: None,
+                    meta: Meta { start: 5, end: 6 },
                     value: Expr::Int {
                         typ: (),
                         meta: Meta { start: 5, end: 6 },
@@ -249,6 +252,7 @@ fn expr_test() {
                 },
                 CallArg {
                     label: None,
+                    meta: Meta { start: 8, end: 9 },
                     value: Expr::Int {
                         typ: (),
                         meta: Meta { start: 8, end: 9 },
@@ -272,6 +276,7 @@ fn expr_test() {
             args: vec![
                 CallArg {
                     label: Some("x".to_string()),
+                    meta: Meta { start: 6, end: 10 },
                     value: Expr::Int {
                         typ: (),
                         meta: Meta { start: 9, end: 10 },
@@ -280,6 +285,7 @@ fn expr_test() {
                 },
                 CallArg {
                     label: Some("y".to_string()),
+                    meta: Meta { start: 12, end: 16 },
                     value: Expr::Int {
                         typ: (),
                         meta: Meta { start: 15, end: 16 },
@@ -303,6 +309,7 @@ fn expr_test() {
             args: vec![
                 CallArg {
                     label: None,
+                    meta: Meta { start: 6, end: 7 },
                     value: Expr::Int {
                         typ: (),
                         meta: Meta { start: 6, end: 7 },
@@ -311,6 +318,7 @@ fn expr_test() {
                 },
                 CallArg {
                     label: Some("y".to_string()),
+                    meta: Meta { start: 9, end: 13 },
                     value: Expr::Int {
                         typ: (),
                         meta: Meta { start: 12, end: 13 },
@@ -684,6 +692,7 @@ fn expr_test() {
                 args: vec![
                     CallArg {
                         label: None,
+                        meta: Meta { start: 2, end: 3 },
                         value: Expr::Int {
                             meta: Meta { start: 2, end: 3 },
                             typ: (),
@@ -692,6 +701,7 @@ fn expr_test() {
                     },
                     CallArg {
                         label: None,
+                        meta: Meta { start: 0, end: 0 },
                         value: Expr::Var {
                             meta: Meta { start: 5, end: 6 },
                             constructor: (),
@@ -700,6 +710,7 @@ fn expr_test() {
                     },
                     CallArg {
                         label: None,
+                        meta: Meta { start: 8, end: 9 },
                         value: Expr::Int {
                             meta: Meta { start: 8, end: 9 },
                             typ: (),

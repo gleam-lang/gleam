@@ -329,6 +329,7 @@ Call: UntypedExpr = {
                     num_holes += 1;
                     CallArg {
                         label: None,
+                        meta: Default::default(),
                         value: Expr::Var {
                             meta,
                             constructor: (),
@@ -372,7 +373,7 @@ Call: UntypedExpr = {
 }
 
 CallArg: Result<CallArg<UntypedExpr>, crate::ast::Meta> = {
-    <label:(<VarName> ":")?> <value:OpOrSimpleExpr> => Ok(CallArg { label, value }),
+    <s:@L> <label:(<VarName> ":")?> <value:OpOrSimpleExpr> <e:@L> => Ok(CallArg { label, value, meta: meta(s, e) }),
     <s:@L> DiscardName <e:@L> => Err(meta(s, e)),
 }
 

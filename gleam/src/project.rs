@@ -135,6 +135,26 @@ Second: {}",
             }
 
             Error::Type { path, src, error } => match error {
+                UnexpectedLabelledArg { meta, label } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Unexpected labelled argument".to_string(),
+                        label: "".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                    write!(
+                        buffer,
+                        "
+This argument has been given a label but the constructor does not expect any.
+Please remove the label `{}`.
+",
+                        label
+                    )
+                    .unwrap();
+                }
+
                 DuplicateName { meta, name: fun } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Duplicate name".to_string(),
