@@ -832,9 +832,13 @@ fn expr_test() {
                 meta: Meta { start: 4, end: 18 },
                 module: Some("option".to_string()),
                 name: "Some".to_string(),
-                args: vec![Pattern::Var {
+                args: vec![PatternConstructorArg {
+                    label: None,
                     meta: Meta { start: 16, end: 17 },
-                    name: "a".to_string()
+                    pattern: Pattern::Var {
+                        meta: Meta { start: 16, end: 17 },
+                        name: "a".to_string()
+                    }
                 }],
                 constructor: (),
             },
@@ -1198,12 +1202,19 @@ fn module_test() {
                             constructor: (),
                             module: None,
                             name: "Boxxy0123456789x".to_string(),
-                            args: vec![Pattern::Var {
+                            args: vec![PatternConstructorArg {
                                 meta: Meta {
                                     start: 119,
                                     end: 120
                                 },
-                                name: "a".to_string()
+                                label: None,
+                                pattern: Pattern::Var {
+                                    meta: Meta {
+                                        start: 119,
+                                        end: 120
+                                    },
+                                    name: "a".to_string()
+                                }
                             }]
                         },
                         then: Box::new(Expr::Var {
@@ -1276,9 +1287,13 @@ fn module_test() {
                             constructor: (),
                             module: None,
                             name: "Boxxy".to_string(),
-                            args: vec![Pattern::Var {
+                            args: vec![PatternConstructorArg {
+                                label: None,
                                 meta: Meta { start: 86, end: 87 },
-                                name: "a".to_string()
+                                pattern: Pattern::Var {
+                                    meta: Meta { start: 86, end: 87 },
+                                    name: "a".to_string()
+                                }
                             }]
                         },
                         then: Box::new(Expr::Var {
