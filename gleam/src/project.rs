@@ -135,6 +135,37 @@ Second: {}",
             }
 
             Error::Type { path, src, error } => match error {
+                UnknownLabel {
+                    label,
+                    meta,
+                    labels,
+                } => {
+                    let mut options: Vec<_> = labels.keys().collect();
+                    options.sort_by(|a, b| {
+                        strsim::levenshtein(a, label)
+                            .partial_cmp(&strsim::levenshtein(b, label))
+                            .unwrap()
+                    });
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Unknown label".to_string(),
+                        label: format!("Did you mean `{}`?", options[0]),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                    write!(
+                        buffer,
+                        "
+This constructor does not accept the label `{}`.
+Expected one of {}.
+",
+                        label,
+                        options.iter().join(", ")
+                    )
+                    .unwrap();
+                }
+
                 UnexpectedLabelledArg { meta, label } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Unexpected labelled argument".to_string(),
