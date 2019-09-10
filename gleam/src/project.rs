@@ -158,10 +158,10 @@ Second: {}",
                         buffer,
                         "
 This constructor does not accept the label `{}`.
-Expected one of {}.
+Expected one of `{}`.
 ",
                         label,
-                        options.iter().join(", ")
+                        options.iter().join("`, `")
                     )
                     .unwrap();
                 }
@@ -202,6 +202,25 @@ A function has already been defined with the name
 `{}` in this module.
 ",
                         fun
+                    )
+                    .unwrap();
+                }
+
+                DuplicateArgument { meta, label } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Duplicate argument".to_string(),
+                        label: "".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                    write!(
+                        buffer,
+                        "
+The labelled argument `{}` has already been supplied.
+",
+                        label
                     )
                     .unwrap();
                 }
