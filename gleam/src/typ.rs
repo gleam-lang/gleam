@@ -578,7 +578,10 @@ impl FieldMap {
             };
 
             if *position < i {
-                panic!("arg already given"); // TODO: Error: Argument has already been specified
+                return Err(Error::DuplicateArgument {
+                    meta: meta.clone(),
+                    label: label.to_string(),
+                });
             }
 
             args.swap(*position, i)
@@ -1437,6 +1440,11 @@ pub enum Error {
     DuplicateName {
         meta: Meta,
         name: String,
+    },
+
+    DuplicateArgument {
+        meta: Meta,
+        label: String,
     },
 
     PrivateTypeLeak {

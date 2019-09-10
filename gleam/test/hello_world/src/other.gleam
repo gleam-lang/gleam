@@ -30,6 +30,6 @@ pub struct Point {
 
 fn run() {
   let origin = Point(x: 4, y: 8)
-  let cursor = Point(x: 7, y: 6, z: 10)
+  let cursor = Point(7, x: 6, y: 10)
   "ok!"
 }
