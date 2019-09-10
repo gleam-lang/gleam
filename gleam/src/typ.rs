@@ -558,16 +558,22 @@ impl FieldMap {
     ///
     fn reorder<A, B, C, D>(&self, args: &mut Vec<CallArg<Expr<A, B, C, D>>>) -> Result<(), Error> {
         for i in 0..args.len() {
-            let label = match &args[i].label {
+            let (label, meta) = match &args[i].label {
                 // A labelled argument, we may need to reposition it in the array vector
-                Some(l) => l,
+                Some(l) => (l, &args[i].meta),
 
                 // Not a labelled argument, assume it is in the correct place
                 None => continue,
             };
 
             let position = match self.fields.get(label) {
-                None => panic!("label not found"), // TODO: Error: Label not found
+                None => {
+                    return Err(Error::UnknownLabel {
+                        meta: meta.clone(),
+                        labels: self.fields.clone(),
+                        label: label.to_string(),
+                    })
+                }
                 Some(p) => p,
             };
 
@@ -1362,6 +1368,12 @@ impl<'a> Env<'a> {
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
+    UnknownLabel {
+        meta: Meta,
+        label: String,
+        labels: HashMap<String, usize>,
+    },
+
     UnknownVariable {
         meta: Meta,
         name: String,
