@@ -1,6 +1,7 @@
 use crate::ast::{
-    Arg, BinOp, CallArg, Clause, Expr, Meta, Module, Pattern, Statement, StructField, TypeAst,
-    TypedExpr, TypedModule, TypedPattern, UntypedExpr, UntypedModule, UntypedPattern,
+    Arg, BinOp, CallArg, Clause, Expr, Meta, Module, Pattern, PatternConstructorArg, Statement,
+    StructField, TypeAst, TypedExpr, TypedModule, TypedPattern, UntypedExpr, UntypedModule,
+    UntypedPattern,
 };
 use crate::pretty::*;
 use itertools::Itertools;
@@ -2432,7 +2433,19 @@ Please report this to https://github.com/lpil/gleam/issues"
                         let pattern_args = pattern_args
                             .into_iter()
                             .zip(args)
-                            .map(|(pattern, typ)| unify_pattern(pattern, &typ, level, env))
+                            .map(|(arg, typ)| {
+                                let PatternConstructorArg {
+                                    pattern,
+                                    meta,
+                                    label,
+                                } = arg;
+                                let pattern = unify_pattern(pattern, &typ, level, env)?;
+                                Ok(PatternConstructorArg {
+                                    pattern,
+                                    meta,
+                                    label,
+                                })
+                            })
                             .collect::<Result<Vec<_>, _>>()?;
                         unify(&retrn, &typ, env).map_err(|e| convert_unify_error(e, &meta))?;
                         Ok(Pattern::Constructor {

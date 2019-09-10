@@ -427,10 +427,17 @@ pub enum Pattern<Constructor> {
     Constructor {
         meta: Meta,
         name: String,
-        args: Vec<Self>,
+        args: Vec<PatternConstructorArg<Self>>,
         module: Option<String>,
         constructor: Constructor,
     },
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct PatternConstructorArg<A> {
+    pub label: Option<String>,
+    pub meta: Meta,
+    pub pattern: A,
 }
 
 impl<A> Pattern<A> {
