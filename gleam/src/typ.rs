@@ -1,7 +1,6 @@
 use crate::ast::{
-    Arg, BinOp, CallArg, Clause, Expr, Meta, Module, Pattern, PatternConstructorArg, Statement,
-    StructField, TypeAst, TypedExpr, TypedModule, TypedPattern, UntypedExpr, UntypedModule,
-    UntypedPattern,
+    Arg, BinOp, CallArg, Clause, Expr, Meta, Module, Pattern, Statement, StructField, TypeAst,
+    TypedExpr, TypedModule, TypedPattern, UntypedExpr, UntypedModule, UntypedPattern,
 };
 use crate::pretty::*;
 use itertools::Itertools;
@@ -548,6 +547,15 @@ pub struct ValueConstructor {
     pub typ: Type,
 }
 
+impl ValueConstructor {
+    fn field_map(&self) -> Option<&FieldMap> {
+        match self.variant {
+            ValueConstructorVariant::Struct { ref field_map, .. } => Some(field_map),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct FieldMap {
     fields: HashMap<String, usize>,
@@ -557,7 +565,7 @@ impl FieldMap {
     /// Reorder an argument list so that labelled fields supplied out-of-order are in the correct
     /// order.
     ///
-    fn reorder<A, B, C, D>(&self, args: &mut Vec<CallArg<Expr<A, B, C, D>>>) -> Result<(), Error> {
+    fn reorder<A>(&self, args: &mut Vec<CallArg<A>>) -> Result<(), Error> {
         for i in 0..args.len() {
             let (label, meta) = match &args[i].label {
                 // A labelled argument, we may need to reposition it in the array vector
@@ -2409,12 +2417,21 @@ fn unify_pattern(
             meta,
             module,
             name,
-            args: pattern_args,
+            args: mut pattern_args,
             constructor: _,
         } => {
             let cons = env
                 .get_value_constructor(module.as_ref(), &name)
                 .map_err(|e| convert_get_value_constructor_error(e, &meta))?;
+
+            match cons.field_map() {
+                // The fun has a field map so labelled arguments may be present and need to be reordered.
+                Some(field_map) => field_map.reorder(&mut pattern_args)?,
+
+                // The fun has no field map and so we error if arguments have been labelled
+                None => assert_no_labelled_arguments(&pattern_args)?,
+            }
+
             let constructor_typ = cons.typ.clone();
             let constructor = match cons.variant {
                 ValueConstructorVariant::Enum { .. } => PatternConstructor::Enum,
@@ -2434,17 +2451,9 @@ Please report this to https://github.com/lpil/gleam/issues"
                             .into_iter()
                             .zip(args)
                             .map(|(arg, typ)| {
-                                let PatternConstructorArg {
-                                    pattern,
-                                    meta,
-                                    label,
-                                } = arg;
-                                let pattern = unify_pattern(pattern, &typ, level, env)?;
-                                Ok(PatternConstructorArg {
-                                    pattern,
-                                    meta,
-                                    label,
-                                })
+                                let CallArg { value, meta, label } = arg;
+                                let value = unify_pattern(value, &typ, level, env)?;
+                                Ok(CallArg { value, meta, label })
                             })
                             .collect::<Result<Vec<_>, _>>()?;
                         unify(&retrn, &typ, env).map_err(|e| convert_unify_error(e, &meta))?;
@@ -2560,7 +2569,7 @@ fn infer_call(
     Ok((fun, args, return_type))
 }
 
-fn assert_no_labelled_arguments(args: &Vec<CallArg<UntypedExpr>>) -> Result<(), Error> {
+fn assert_no_labelled_arguments<A>(args: &Vec<CallArg<A>>) -> Result<(), Error> {
     for arg in args {
         if let Some(label) = &arg.label {
             return Err(Error::UnexpectedLabelledArg {
@@ -2588,10 +2597,7 @@ fn get_field_map<'a>(
         _ => return Ok(None),
     };
 
-    match env.get_value_constructor(module, name)?.variant {
-        ValueConstructorVariant::Struct { ref field_map, .. } => Ok(Some(field_map)),
-        _ => Ok(None),
-    }
+    Ok(env.get_value_constructor(module, name)?.field_map())
 }
 
 fn infer_fun(
@@ -4340,6 +4346,18 @@ pub fn two() { one() + zero() }",
         Case {
             src: "pub struct Box { boxed: Int }",
             module: vec![("Box", "fn(Int) -> Box")],
+        },
+        Case {
+            src: "pub struct Tup(a, b) { first: a second: b }",
+            module: vec![("Tup", "fn(a, b) -> Tup(a, b)")],
+        },
+        Case {
+            src: "pub struct Tup(a, b, c) { first: a second: b third: c }
+                  pub fn third(t) { let Tup(_, third: a, _) = t a }",
+            module: vec![
+                ("Tup", "fn(a, b, c) -> Tup(a, b, c)"),
+                ("third", "fn(Tup(a, b, c)) -> c"),
+            ],
         },
     ];
 

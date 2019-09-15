@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use crate::ast::{
     UntypedExpr, Expr, Arg, UntypedModule, Module, UntypedStatement, Statement, TypeAst, UntypedPattern,
-    BinOp, Clause, UntypedClause, EnumConstructor, Pattern, CallArg, StructField, PatternConstructorArg
+    BinOp, Clause, UntypedClause, EnumConstructor, Pattern, CallArg, StructField,
 };
 use crate::parser::*;
 
@@ -525,16 +525,16 @@ PatternConstructor: UntypedPattern = {
     },
 }
 
-PatternConstructorArgs: Vec<PatternConstructorArg<UntypedPattern>> = {
+PatternConstructorArgs: Vec<CallArg<UntypedPattern>> = {
     "(" <args:Comma<PatternConstructorArg>> ")" => args
 
 }
 
-PatternConstructorArg: PatternConstructorArg<UntypedPattern> = {
-    <s:@L> <label:(<VarName> ":")?> <pattern:Pattern> <e:@L> => PatternConstructorArg {
+PatternConstructorArg: CallArg<UntypedPattern> = {
+    <s:@L> <label:(<VarName> ":")?> <value:Pattern> <e:@L> => CallArg {
         meta: meta(s, e),
         label,
-        pattern,
+        value,
     },
 }
 

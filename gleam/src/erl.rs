@@ -263,7 +263,7 @@ fn pattern(p: TypedPattern, env: &mut Env) -> Document {
             args,
             constructor: PatternConstructor::Struct,
             ..
-        } => tuple(args.into_iter().map(|p| pattern(p.pattern, env)).collect()),
+        } => tuple(args.into_iter().map(|p| pattern(p.value, env)).collect()),
     }
 }
 
@@ -404,15 +404,11 @@ fn var(name: String, constructor: ValueConstructor, env: &mut Env) -> Document {
     }
 }
 
-fn enum_pattern(
-    name: String,
-    args: Vec<PatternConstructorArg<TypedPattern>>,
-    env: &mut Env,
-) -> Document {
+fn enum_pattern(name: String, args: Vec<CallArg<TypedPattern>>, env: &mut Env) -> Document {
     if args.is_empty() {
         atom(name.to_snake_case())
     } else {
-        let mut args: Vec<_> = args.into_iter().map(|p| pattern(p.pattern, env)).collect();
+        let mut args: Vec<_> = args.into_iter().map(|p| pattern(p.value, env)).collect();
         // FIXME: O(n), insert at start shuffles the elemes forward by one place
         args.insert(0, atom(name.to_snake_case()));
         tuple(args)
@@ -1360,10 +1356,10 @@ moddy4() ->
                             meta: default(),
                             module: None,
                             name: "Error".to_string(),
-                            args: vec![PatternConstructorArg {
+                            args: vec![CallArg {
                                 label: None,
                                 meta: default(),
-                                pattern: Pattern::Int {
+                                value: Pattern::Int {
                                     meta: default(),
                                     value: 2,
                                 },
