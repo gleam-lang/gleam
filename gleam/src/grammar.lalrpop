@@ -531,9 +531,9 @@ PatternConstructorArgs: Vec<PatternConstructorArg<UntypedPattern>> = {
 }
 
 PatternConstructorArg: PatternConstructorArg<UntypedPattern> = {
-    <s:@L> <pattern:Pattern> <e:@L> => PatternConstructorArg {
+    <s:@L> <label:(<VarName> ":")?> <pattern:Pattern> <e:@L> => PatternConstructorArg {
         meta: meta(s, e),
-        label: None,
+        label,
         pattern,
     },
 }
