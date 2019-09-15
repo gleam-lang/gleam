@@ -2,10 +2,10 @@
 
 ## Unreleased
 
-- The tuple data structure has been renamed to struct and has a new syntax.
 - Named structs have be introduced. Named structs are specific pre-declared
   types with specific fields.
-- The map data type has been removed, succeeded by the struct data type.
+- The map and tuple data types has been removed, replaced by the struct data
+  type.
 - The generated code no longer contains export statements if no functions are
   exported from a module.
 - Comparison operators have been specialised to operate only on Ints.

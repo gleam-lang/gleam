@@ -208,7 +208,6 @@ SimpleExpr: UntypedExpr = {
     Call => <>,
     Float => <>,
     String => <>,
-    AnonStruct => <>,
     FieldSelect => <>,
     "begin" <e:Expr> "end" => e,
 }
@@ -333,14 +332,6 @@ CallArg: Result<CallArg<UntypedExpr>, crate::ast::Meta> = {
     <s:@L> DiscardName <e:@L> => Err(meta(s, e)),
 }
 
-AnonStruct: UntypedExpr = {
-    <s:@L> "struct" "(" <elems:Comma<OpOrSimpleExpr>> ")" <e:@L> => Expr::AnonStruct {
-        meta: meta(s, e),
-        typ: (),
-        elems: elems,
-    }
-}
-
 List: UntypedExpr = {
     "[" <elems:Comma<OpOrSimpleExpr>> <tail:("|" <OpOrSimpleExpr>)?>"]" <e:@L> => {
         let tail = tail.unwrap_or_else(|| Expr::Nil {
@@ -445,7 +436,6 @@ Pattern: UntypedPattern = {
     PatternFloat => <>,
     PatternString => <>,
     PatternDiscard => <>,
-    PatternAnonStruct => <>,
     PatternConstructor => <>,
 }
 
@@ -470,13 +460,6 @@ PatternConstructorArg: CallArg<UntypedPattern> = {
         label,
         value,
     },
-}
-
-PatternAnonStruct: UntypedPattern = {
-    <s:@L> "struct" "(" <elems:Comma<Pattern>> ")" <e:@L> => Pattern::AnonStruct {
-        meta: meta(s, e),
-        elems,
-    }
 }
 
 PatternFloat: UntypedPattern = {
@@ -544,7 +527,6 @@ PatternCons: UntypedPattern = {
 
 Type: TypeAst = {
     TypeConstructor => <>,
-    TypeAnonStruct => <>,
     TypeVar => <>,
     TypeFn => <>,
 }
@@ -578,14 +560,6 @@ TypeConstructor: TypeAst = {
         name: n.to_string(),
     },
 }
-
-TypeAnonStruct: TypeAst = {
-    <s:@L> "struct" "(" <elems:AtLeastOneComma<Type>> ")" <e:@L> => TypeAst::AnonStruct {
-        meta: meta(s, e),
-        elems: elems,
-    }
-}
-
 
 TypeVar: TypeAst = {
     <s:@L> <n:VarName> <e:@L> => TypeAst::Var {

@@ -248,10 +248,6 @@ fn pattern(p: TypedPattern, env: &mut Env) -> Document {
 
         Pattern::String { value, .. } => string(value),
 
-        Pattern::AnonStruct { elems, .. } => {
-            tuple(elems.into_iter().map(|p| pattern(p, env)).collect())
-        }
-
         Pattern::Constructor {
             name,
             args,
@@ -562,10 +558,6 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
             ..
         } => module_select_fn(typ, module_name, label),
 
-        Expr::AnonStruct { elems, .. } => {
-            tuple(elems.into_iter().map(|e| wrap_expr(e, env)).collect())
-        }
-
         Expr::Let {
             value,
             pattern,
@@ -781,29 +773,6 @@ map() ->
                 meta: default(),
                 public: false,
                 args: vec![],
-                name: "tup".to_string(),
-                body: Expr::AnonStruct {
-                    meta: default(),
-                    typ: crate::typ::int(),
-                    elems: vec![
-                        Expr::Int {
-                            typ: crate::typ::int(),
-                            meta: default(),
-                            value: 1,
-                        },
-                        Expr::Float {
-                            meta: default(),
-                            typ: crate::typ::float(),
-                            value: 2.0,
-                        },
-                    ],
-                },
-            },
-            Statement::Fn {
-                return_annotation: None,
-                meta: default(),
-                public: false,
-                args: vec![],
                 name: "string".to_string(),
                 body: Expr::String {
                     meta: default(),
@@ -968,9 +937,6 @@ float() ->
 
 nil() ->
     [].
-
-tup() ->
-    {1, 2.0}.
 
 string() ->
     <<\"Hello there!\">>.
@@ -1246,27 +1212,6 @@ moddy4() ->
                     },
                     Clause {
                         meta: default(),
-                        pattern: Pattern::AnonStruct {
-                            meta: default(),
-                            elems: vec![
-                                Pattern::Int {
-                                    meta: default(),
-                                    value: 1,
-                                },
-                                Pattern::Int {
-                                    meta: default(),
-                                    value: 2,
-                                },
-                            ],
-                        },
-                        then: Expr::Int {
-                            typ: crate::typ::int(),
-                            meta: default(),
-                            value: 1,
-                        },
-                    },
-                    Clause {
-                        meta: default(),
                         pattern: Pattern::Nil { meta: default() },
                         then: Expr::Int {
                             typ: crate::typ::int(),
@@ -1312,9 +1257,6 @@ go() ->
             1;
 
         <<\"hello\">> ->
-            1;
-
-        {1, 2} ->
             1;
 
         [] ->
@@ -1464,22 +1406,6 @@ fn integration_test() {
     }
 
     let cases = [
-        Case {
-            src: r#"fn go() {
-  let x = struct(100000000000000000, struct(2000000000, 3000000000000, 40000000000), 50000, 6000000000)
-  x
-}"#,
-            erl: r#"-module().
--compile(no_auto_import).
-
-go() ->
-    X = {100000000000000000,
-         {2000000000, 3000000000000, 40000000000},
-         50000,
-         6000000000},
-    X.
-"#,
-        },
         Case {
             src: r#"fn go() {
   let y = 1
