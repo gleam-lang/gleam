@@ -195,6 +195,7 @@ pub fn zip_test() {
   list.zip([1, 2], [])
   |> expect.equal(_, [])
 
+  // TODO: replace struct with Pair
   list.zip([1, 2, 3], [4, 5, 6])
   |> expect.equal(_, [struct(1, 4), struct(2, 5), struct(3, 6)])
 

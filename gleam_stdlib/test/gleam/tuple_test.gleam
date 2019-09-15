@@ -1,6 +1,8 @@
 import gleam/expect
 import gleam/tuple
 
+// TODO: replace struct with Pair
+
 pub fn new_test() {
   tuple.new(1, 2)
   |> expect.equal(_, struct(1, 2))

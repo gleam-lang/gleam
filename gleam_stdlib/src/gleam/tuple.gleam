@@ -1,5 +1,7 @@
 import gleam/list
 
+// TODO: replace struct with Pair
+
 pub fn new(a, b) {
   struct(a, b)
 }

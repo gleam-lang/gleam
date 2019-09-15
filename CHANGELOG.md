@@ -2,8 +2,8 @@
 
 ## Unreleased
 
-- Named structs have be introduced. Named structs are specific pre-declared
-  types with specific fields.
+- The struct data type has be introduced. Structs are pre-declared user
+  defined data types with named fields and constant access time.
 - The map and tuple data types has been removed, replaced by the struct data
   type.
 - The generated code no longer contains export statements if no functions are

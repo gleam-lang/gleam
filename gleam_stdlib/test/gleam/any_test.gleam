@@ -210,6 +210,7 @@ pub fn list_test() {
   |> expect.is_error
 }
 
+// TODO: replace struct with Pair
 pub fn struct2_test() {
   struct(1, [])
   |> any.from
