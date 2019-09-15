@@ -72,12 +72,6 @@ pub enum TypeAst {
         args: Vec<Self>,
     },
 
-    Map {
-        meta: Meta,
-        fields: Vec<(String, Self)>,
-        tail: Option<Box<Self>>,
-    },
-
     Fn {
         meta: Meta,
         args: Vec<Self>,
@@ -284,19 +278,6 @@ pub enum Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type
         clauses: Vec<Clause<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type>>,
     },
 
-    MapNil {
-        meta: Meta,
-        typ: Type,
-    },
-
-    MapCons {
-        meta: Meta,
-        typ: Type,
-        label: String,
-        value: Box<Self>,
-        tail: Box<Self>,
-    },
-
     FieldSelect {
         meta: Meta,
         typ: Type,
@@ -329,8 +310,6 @@ impl<A, B, C, D> Expr<A, B, C, D> {
             Expr::Float { meta, .. } => meta,
             Expr::BinOp { meta, .. } => meta,
             Expr::String { meta, .. } => meta,
-            Expr::MapNil { meta, .. } => meta,
-            Expr::MapCons { meta, .. } => meta,
             Expr::AnonStruct { meta, .. } => meta,
             Expr::FieldSelect { meta, .. } => meta,
             Expr::ModuleSelect { meta, .. } => meta,
@@ -353,8 +332,6 @@ impl TypedExpr {
             Expr::BinOp { typ, .. } => typ,
             Expr::Let { typ, .. } => typ,
             Expr::Case { typ, .. } => typ,
-            Expr::MapNil { typ, .. } => typ,
-            Expr::MapCons { typ, .. } => typ,
             Expr::AnonStruct { typ, .. } => typ,
             Expr::FieldSelect { typ, .. } => typ,
             Expr::ModuleSelect { typ, .. } => typ,
@@ -443,7 +420,6 @@ impl<A> Pattern<A> {
             Pattern::AnonStruct { meta, .. } => meta,
             Pattern::Float { meta, .. } => meta,
             Pattern::Discard { meta, .. } => meta,
-            // Pattern::Map { meta, .. } => meta,
             Pattern::String { meta, .. } => meta,
             Pattern::Constructor { meta, .. } => meta,
         }

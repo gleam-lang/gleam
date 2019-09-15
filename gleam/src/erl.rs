@@ -321,41 +321,6 @@ where
     elems.to_doc().nest_current().surround("[", "]").group()
 }
 
-fn map_cons(label: String, head: TypedExpr, tail: TypedExpr, env: &mut Env) -> Document {
-    fn categorise_element(head: TypedExpr) -> ListType<(String, TypedExpr), TypedExpr> {
-        match head {
-            Expr::MapNil { .. } => ListType::Nil,
-
-            Expr::MapCons {
-                label, value, tail, ..
-            } => ListType::Cons {
-                head: (label, *value),
-                tail: *tail,
-            },
-
-            other => ListType::NotList(other),
-        }
-    }
-
-    let mut elems = vec![(label, head)];
-    let final_tail = collect_cons(tail, &mut elems, categorise_element).map(|e| expr(e, env));
-
-    let map = elems
-        .into_iter()
-        .map(|(l, e)| l.to_doc().append(" => ").append(expr(e, env)))
-        .intersperse(delim(","))
-        .collect::<Vec<_>>()
-        .to_doc()
-        .nest(INDENT)
-        .surround("#{", "}")
-        .group();
-
-    match final_tail {
-        None => map,
-        Some(tail) => tail.append(map),
-    }
-}
-
 fn collect_cons<F, E, T>(e: T, elems: &mut Vec<E>, f: F) -> Option<T>
 where
     F: Fn(T) -> ListType<E, T>,
@@ -565,7 +530,6 @@ fn wrap_expr(expression: TypedExpr, env: &mut Env) -> Document {
 fn expr(expression: TypedExpr, env: &mut Env) -> Document {
     match expression {
         Expr::Nil { .. } => "[]".to_doc(),
-        Expr::MapNil { .. } => "#{}".to_doc(),
         Expr::Int { value, .. } => value.to_doc(),
         Expr::Float { value, .. } => value.to_doc(),
         Expr::String { value, .. } => string(value),
@@ -606,10 +570,6 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
             then,
             ..
         } => let_(*value, pattern, *then, env),
-
-        Expr::MapCons {
-            label, value, tail, ..
-        } => map_cons(label, *value, *tail, env),
 
         Expr::Case {
             subject, clauses, ..
@@ -819,17 +779,6 @@ map() ->
                 meta: default(),
                 public: false,
                 args: vec![],
-                name: "map_nil".to_string(),
-                body: Expr::MapNil {
-                    meta: default(),
-                    typ: crate::typ::map_nil(),
-                },
-            },
-            Statement::Fn {
-                return_annotation: None,
-                meta: default(),
-                public: false,
-                args: vec![],
                 name: "tup".to_string(),
                 body: Expr::AnonStruct {
                     meta: default(),
@@ -980,27 +929,6 @@ map() ->
                 meta: default(),
                 public: false,
                 args: vec![],
-                name: "retcon".to_string(),
-                body: Expr::MapCons {
-                    meta: default(),
-                    typ: crate::typ::int(),
-                    label: "size".to_string(),
-                    value: Box::new(Expr::Int {
-                        typ: crate::typ::int(),
-                        meta: default(),
-                        value: 1,
-                    }),
-                    tail: Box::new(Expr::MapNil {
-                        meta: default(),
-                        typ: crate::typ::map_nil(),
-                    }),
-                },
-            },
-            Statement::Fn {
-                return_annotation: None,
-                meta: default(),
-                public: false,
-                args: vec![],
                 name: "funny".to_string(),
                 body: Expr::Fn {
                     meta: default(),
@@ -1039,9 +967,6 @@ float() ->
 nil() ->
     [].
 
-map_nil() ->
-    #{}.
-
 tup() ->
     {1, 2.0}.
 
@@ -1064,9 +989,6 @@ let() ->
 
 conny() ->
     [12, 34].
-
-retcon() ->
-    #{size => 1}.
 
 funny() ->
     fun(OneReallyLongArgToCauseWrapping, AlsoReallyQuiteLong) ->
@@ -1684,15 +1606,6 @@ tail(List) ->
         Z ->
             List
     end.
-"#,
-        },
-        Case {
-            src: r#"fn age(x) { x.age }"#,
-            erl: r#"-module().
--compile(no_auto_import).
-
-age(X) ->
-    maps:get(age, X).
 "#,
         },
         Case {

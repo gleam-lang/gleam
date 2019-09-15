@@ -277,46 +277,6 @@ This value is being called as a function but its type is:
                     .unwrap();
                 }
 
-                ExtraField { meta, label } => {
-                    let diagnostic = ErrorDiagnostic {
-                        title: "Extra field".to_string(),
-                        label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        meta: meta.clone(),
-                    };
-                    write(buffer, diagnostic);
-
-                    write!(
-                        buffer,
-                        "
-This map has an extra field named `{}` that should not be present.
-",
-                        label,
-                    )
-                    .unwrap();
-                }
-
-                FieldNotFound { meta, label } => {
-                    let diagnostic = ErrorDiagnostic {
-                        title: "Field not found".to_string(),
-                        label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        meta: meta.clone(),
-                    };
-                    write(buffer, diagnostic);
-
-                    write!(
-                        buffer,
-                        "
-This map does not have a field named `{}`.
-",
-                        label,
-                    )
-                    .unwrap();
-                }
-
                 CouldNotUnify {
                     meta,
                     expected,

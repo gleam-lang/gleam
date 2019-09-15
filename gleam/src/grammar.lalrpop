@@ -49,14 +49,6 @@ StatementStruct: UntypedStatement = {
         type_args: t.1,
         fields,
     },
-
-    <s:@L> <p:"pub"?> "struct" <t:TypeName> "{}" <e:@L> => Statement::Struct {
-        meta: meta(s, e),
-        public: p.is_some(),
-        name: t.0,
-        type_args: t.1,
-        fields: vec![],
-    },
 }
 
 StructFieldDefinition: StructField = {
@@ -216,9 +208,6 @@ SimpleExpr: UntypedExpr = {
     Call => <>,
     Float => <>,
     String => <>,
-    Map => <>,
-    MapNil => <>,
-    MapCons => <>,
     AnonStruct => <>,
     FieldSelect => <>,
     "begin" <e:Expr> "end" => e,
@@ -258,43 +247,6 @@ FieldSelect: UntypedExpr = {
         label: l,
         map: Box::new(r),
     },
-}
-
-MapNil: UntypedExpr = {
-    <s:@L> "{}" <e:@L> => Expr::MapNil {
-        meta: meta(s, e),
-        typ: (),
-    }
-}
-
-Map: UntypedExpr = {
-    <s:@L> "{" <fields:MapFields> "}" <e:@L> => {
-        fields.into_iter().fold(
-            Expr::MapNil {
-                meta: meta(e - 1, e),
-                typ: (),
-            },
-            |a, e| Expr::MapCons {
-                meta: e.1.meta().clone(),
-                typ: (),
-                label: e.0,
-                value: Box::new(e.1),
-                tail: Box::new(a),
-            }
-        )
-    }
-}
-
-MapCons: UntypedExpr = {
-    <s:@L> "{" <r:SimpleExpr> "|" <fields:MapFields> "}" <e:@L> => {
-        fields.into_iter().fold(r, |a, f| Expr::MapCons {
-            meta: meta(s, e),
-            typ: (),
-            label: f.0,
-            value: Box::new(f.1),
-            tail: Box::new(a),
-        })
-    }
 }
 
 Fn: UntypedExpr = {
@@ -452,24 +404,6 @@ Float: UntypedExpr = {
     }
 }
 
-MapField: (String, UntypedExpr) = {
-    <l:VarName> "=" <v:OpOrSimpleExpr> => {
-        (l, v)
-    }
-}
-
-MapFields: Vec<(String, UntypedExpr)> = {
-    MapField => vec![<>],
-
-    <x:MapField> "," => vec![x],
-
-    <x:MapField> "," <xs:MapFields> => {
-        let mut xs = xs;
-        xs.push(x);
-        xs
-    }
-}
-
 Comma<T>: Vec<T> = {
     <v:(<T> ",")*> <e:T?> => match e {
         None => v,
@@ -611,34 +545,8 @@ PatternCons: UntypedPattern = {
 Type: TypeAst = {
     TypeConstructor => <>,
     TypeAnonStruct => <>,
-    TypeMap => <>,
     TypeVar => <>,
     TypeFn => <>,
-}
-
-TypeMap: TypeAst = {
-    <s:@L> "{}" <e:@L> => TypeAst::Map {
-        meta: meta(s, e),
-        fields: vec![],
-        tail: None,
-    },
-
-    <s:@L> "{" <tail:TypeMapTail?> <fields:Comma<TypeMapField>> "}" <e:@L> => TypeAst::Map {
-        meta: meta(s, e),
-        fields,
-        tail,
-    },
-}
-
-TypeMapTail: Box<TypeAst> = {
-    <s:@L> <n:VarName> <e:@L> "|" => Box::new(TypeAst::Var {
-        meta: meta(s, e),
-        name: n,
-    })
-}
-
-TypeMapField: (String, TypeAst) = {
-    <l:VarName> "=" <t:Type> => (l, t)
 }
 
 TypeConstructor: TypeAst = {

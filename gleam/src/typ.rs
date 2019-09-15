@@ -28,20 +28,8 @@ pub enum Type {
         retrn: Box<Type>,
     },
 
-    Map {
-        row: Box<Type>,
-    },
-
     Var {
         typ: Rc<RefCell<TypeVar>>,
-    },
-
-    RowNil,
-
-    RowCons {
-        label: String,
-        head: Box<Type>,
-        tail: Box<Type>,
     },
 }
 
@@ -86,71 +74,7 @@ impl Type {
                 args_to_gleam_doc(elems, names, uid).surround("struct(", ")")
             }
 
-            Type::Map { row } => {
-                if let Type::RowNil { .. } = **row {
-                    return "{}".to_doc();
-                }
-                let mut row_to_doc = |row: &Type| {
-                    let mut fields = ordmap![];
-                    let tail = row.gather_fields(&mut fields);
-                    let fields_doc = fields
-                        .into_iter()
-                        .map(|(label, typ)| {
-                            label.to_doc().append(" =").append(
-                                break_("", " ")
-                                    .append(typ.to_gleam_doc(names, uid))
-                                    .nest(INDENT)
-                                    .group(),
-                            )
-                        })
-                        .intersperse(break_(",", ", "))
-                        .collect::<Vec<_>>()
-                        .to_doc();
-                    match tail {
-                        None => fields_doc,
-                        Some(tail) => tail
-                            .to_gleam_doc(names, uid)
-                            .group()
-                            .append(" | ")
-                            .append(fields_doc),
-                    }
-                };
-                "{".to_doc()
-                    .append(
-                        break_("", " ")
-                            .append(row_to_doc(row))
-                            .nest(INDENT)
-                            .append(break_("", " "))
-                            .group(),
-                    )
-                    .append("}")
-            }
-
             Type::Var { typ, .. } => typ.borrow().to_gleam_doc(names, uid),
-
-            Type::RowCons { .. } => unreachable!(),
-
-            Type::RowNil { .. } => nil(),
-        }
-    }
-
-    fn gather_fields(&self, fields: &mut im::OrdMap<String, Type>) -> Option<Type> {
-        match self {
-            Type::RowNil => None,
-
-            Type::RowCons { label, head, tail } => {
-                if !fields.contains_key(label) {
-                    fields.insert(label.clone(), *head.clone());
-                }
-                tail.gather_fields(fields)
-            }
-
-            Type::Var { typ } => match &*typ.borrow() {
-                TypeVar::Link { typ } => typ.gather_fields(fields),
-                _other => Some(self.clone()),
-            },
-
-            other => Some(other.clone()),
         }
     }
 
@@ -226,19 +150,11 @@ impl Type {
 
     pub fn find_private_type(&self) -> Option<Type> {
         match self {
-            Type::RowNil { .. } => None,
-
-            Type::Map { row, .. } => row.find_private_type(),
-
             Type::AnonStruct { elems, .. } => elems.iter().find_map(|t| t.find_private_type()),
 
             Type::App { public: false, .. } => Some(self.clone()),
 
             Type::App { args, .. } => args.iter().find_map(|t| t.find_private_type()),
-
-            Type::RowCons { head, tail, .. } => head
-                .find_private_type()
-                .or_else(|| tail.find_private_type()),
 
             Type::Fn { retrn, args, .. } => retrn
                 .find_private_type()
@@ -1311,10 +1227,6 @@ impl<'a> Env<'a> {
                 })
             }
 
-            TypeAst::Map { fields, tail, .. } => Ok(Type::Map {
-                row: Box::new(self.row_from_ast(fields, tail, vars, new)?),
-            }),
-
             TypeAst::AnonStruct { elems, .. } => {
                 let elems = elems
                     .iter()
@@ -1354,27 +1266,6 @@ impl<'a> Env<'a> {
                 }
             },
         }
-    }
-
-    fn row_from_ast(
-        &mut self,
-        fields: &Vec<(String, TypeAst)>,
-        tail: &Option<Box<TypeAst>>,
-        vars: &mut im::HashMap<String, (usize, Type)>,
-        new: NewTypeAction,
-    ) -> Result<Type, Error> {
-        let tail = match tail {
-            None => Type::RowNil,
-            Some(t) => self.type_from_ast(t, vars, new)?,
-        };
-        fields
-            .iter()
-            .map(|(label, t)| Ok((label, self.type_from_ast(t, vars, new)?)))
-            .fold_results(tail, |acc, (label, t)| Type::RowCons {
-                label: label.to_string(),
-                head: Box::new(t),
-                tail: Box::new(acc),
-            })
     }
 }
 
@@ -1464,16 +1355,6 @@ pub enum Error {
     PrivateTypeLeak {
         meta: Meta,
         leaked: Type,
-    },
-
-    ExtraField {
-        meta: Meta,
-        label: String,
-    },
-
-    FieldNotFound {
-        meta: Meta,
-        label: String,
     },
 
     UnexpectedLabelledArg {
@@ -2195,52 +2076,6 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             })
         }
 
-        Expr::MapNil { meta, typ: _ } => Ok(Expr::MapNil {
-            meta,
-            typ: Type::Map {
-                row: Box::new(Type::RowNil),
-            },
-        }),
-
-        Expr::MapCons {
-            meta,
-            tail,
-            label,
-            value,
-            typ: _,
-        } => {
-            let value = infer(*value, level, env)?;
-            let tail = infer(*tail, level, env)?;
-
-            let value_type = env.new_unbound_var(level);
-            unify(&value_type, value.typ(), env).map_err(|e| convert_unify_error(e, &meta))?;
-
-            let tail_row_type = env.new_unbound_var(level);
-            unify(
-                &Type::Map {
-                    row: Box::new(tail_row_type.clone()),
-                },
-                tail.typ(),
-                env,
-            )
-            .map_err(|e| convert_unify_error(e, &meta))?;
-
-            let typ = Type::Map {
-                row: Box::new(Type::RowCons {
-                    label: label.clone(),
-                    head: Box::new(value_type),
-                    tail: Box::new(tail_row_type),
-                }),
-            };
-            Ok(Expr::MapCons {
-                meta,
-                typ,
-                label,
-                tail: Box::new(tail),
-                value: Box::new(value),
-            })
-        }
-
         Expr::Var {
             meta,
             name,
@@ -2320,33 +2155,14 @@ fn infer_module_select(
 }
 
 fn infer_value_field_select(
-    container: UntypedExpr,
-    label: String,
-    level: usize,
-    meta: Meta,
-    env: &mut Env,
+    _container: UntypedExpr,
+    _label: String,
+    _level: usize,
+    _meta: Meta,
+    _env: &mut Env,
 ) -> Result<TypedExpr, Error> {
-    let map = infer(container, level, env)?;
-    // We unify the map with a dummy map in order to determine the type of the
-    // selected field.
-    let other_fields_typ = env.new_unbound_var(level);
-    let selected_field_typ = env.new_unbound_var(level);
-    let dummy_map = Type::Map {
-        row: Box::new(Type::RowCons {
-            label: label.clone(),
-            head: Box::new(selected_field_typ.clone()),
-            tail: Box::new(other_fields_typ),
-        }),
-    };
-
-    unify(&dummy_map, map.typ(), env).map_err(|e| convert_unify_error(e, &meta))?;
-
-    Ok(Expr::FieldSelect {
-        meta,
-        label,
-        map: Box::new(map),
-        typ: selected_field_typ,
-    })
+    // TODO: struct field access
+    panic!("struct field access not implemented yet")
 }
 
 /// When we have an assignment or a case expression we unify the pattern with the
@@ -2689,16 +2505,6 @@ fn convert_unify_error(e: UnifyError, meta: &Meta) -> Error {
             given,
         },
 
-        UnifyError::FieldNotFound { label } => Error::FieldNotFound {
-            meta: meta.clone(),
-            label,
-        },
-
-        UnifyError::ExtraField { label } => Error::ExtraField {
-            meta: meta.clone(),
-            label,
-        },
-
         UnifyError::RecursiveType => Error::RecursiveType { meta: meta.clone() },
     }
 }
@@ -2758,18 +2564,6 @@ fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
                 let retrn = Box::new(go(*retrn, ctx_level, ids, env));
                 Type::Fn { args, retrn }
             }
-
-            Type::Map { row } => Type::Map {
-                row: Box::new(go(*row, ctx_level, ids, env)),
-            },
-
-            Type::RowCons { label, head, tail } => Type::RowCons {
-                label,
-                head: Box::new(go(*head, ctx_level, ids, env)),
-                tail: Box::new(go(*tail, ctx_level, ids, env)),
-            },
-
-            Type::RowNil => t,
         }
     }
 
@@ -2781,10 +2575,6 @@ enum UnifyError {
     CouldNotUnify { expected: Type, given: Type },
 
     RecursiveType,
-
-    FieldNotFound { label: String },
-
-    ExtraField { label: String },
 }
 
 fn unify(t1: &Type, t2: &Type, env: &mut Env) -> Result<(), UnifyError> {
@@ -2913,166 +2703,11 @@ fn unify(t1: &Type, t2: &Type, env: &mut Env) -> Result<(), UnifyError> {
             }
         }
 
-        (Type::Map { row: row1 }, Type::Map { row: row2 }) => unify(row1, row2, env),
-
-        (Type::RowNil, Type::RowNil) => Ok(()),
-
-        (Type::RowNil, Type::RowCons { label, .. }) => Err(UnifyError::ExtraField {
-            label: label.to_string(),
-        }),
-
-        (
-            Type::RowCons {
-                label: label1,
-                head: head1,
-                tail: tail1,
-            },
-            Type::RowCons {
-                label: label2,
-                head: head2,
-                tail: tail2,
-            },
-        ) => {
-            let unbound = match &**tail1 {
-                Type::Var { typ } => match &*typ.borrow() {
-                    TypeVar::Unbound { .. } => Some(typ.clone()),
-                    _ => None,
-                },
-                _ => None,
-            };
-
-            // TODO: If we use Rc for types then we clone the Rc not the type
-            let t2 = Type::RowCons {
-                label: (*label2).clone(),
-                head: (*head2).clone(),
-                tail: (*tail2).clone(),
-            };
-            let tail2 = unify_row_field(t2, label1.clone(), *head1.clone(), env)?;
-
-            if let Some(typ) = unbound {
-                if let TypeVar::Link { .. } = &*typ.borrow() {
-                    // TODO: Recursive row type
-                    unimplemented!()
-                }
-            }
-            unify(tail1, &tail2, env)
-        }
-
         (_, _) => Err(UnifyError::CouldNotUnify {
             expected: (*t1).clone(),
             given: (*t2).clone(),
         }),
     }
-}
-
-/// Takes a type (expected to be a Row) and searches within it for a field
-/// with a particular label.
-/// If found the type of the label is unified with the expected type,
-/// possibly returning a unification error.
-///
-/// If the unification is successful the row is returned minus the field
-/// that has been unified, so that the caller may continue to check other
-/// fields in the row without having to pass over the field that has already
-/// been checked.
-///
-fn unify_row_field(
-    row: Type,
-    label1: String,
-    head1: Type,
-    env: &mut Env,
-) -> Result<Type, UnifyError> {
-    match row {
-        Type::RowNil => Err(UnifyError::FieldNotFound { label: label1 }),
-
-        Type::RowCons { label, head, tail } => {
-            if label == label1 {
-                unify(&head1, &head, env)?;
-                Ok(*tail)
-            } else {
-                let tail = unify_row_field(*tail, label1, head1, env)?;
-                Ok(Type::RowCons {
-                    label,
-                    head,
-                    tail: Box::new(tail),
-                })
-            }
-        }
-
-        Type::Var { typ } => {
-            let (new_typ, tail) = match &*typ.borrow() {
-                TypeVar::Unbound { level, .. } => {
-                    let tail = env.new_unbound_var(*level);
-                    let t = Type::RowCons {
-                        label: label1,
-                        head: Box::new(head1),
-                        tail: Box::new(tail.clone()), // return this var as it is the tail
-                    };
-                    (t, tail)
-                }
-
-                TypeVar::Link { typ } => return unify_row_field(*typ.clone(), label1, head1, env),
-
-                _ => unimplemented!(), // Expected a row
-            };
-            *typ.borrow_mut() = TypeVar::Link {
-                typ: Box::new(new_typ),
-            };
-
-            Ok(tail)
-        }
-
-        _ => unimplemented!(), // TODO: Expected a row
-    }
-}
-
-#[test]
-fn rewrite_row_test() {
-    let mods = HashMap::new();
-    let mut env = Env::new(&mods);
-
-    let row = Type::RowCons {
-        label: "a".to_string(),
-        head: Box::new(int()),
-        tail: Box::new(Type::RowNil {}),
-    };
-    assert_eq!(
-        Ok(Type::RowNil {}),
-        unify_row_field(row, "a".to_string(), int(), &mut env)
-    );
-
-    let row = Type::RowCons {
-        label: "b".to_string(),
-        head: Box::new(int()),
-        tail: Box::new(Type::RowCons {
-            label: "a".to_string(),
-            head: Box::new(int()),
-            tail: Box::new(Type::RowNil {}),
-        }),
-    };
-    assert_eq!(
-        Ok(Type::RowCons {
-            label: "b".to_string(),
-            head: Box::new(int()),
-            tail: Box::new(Type::RowNil {}),
-        }),
-        unify_row_field(row, "a".to_string(), int(), &mut env)
-    );
-
-    let row = Type::RowCons {
-        label: "b".to_string(),
-        head: Box::new(int()),
-        tail: Box::new(env.new_unbound_var(1)),
-    };
-    assert_eq!(
-        Ok(Type::RowCons {
-            label: "b".to_string(),
-            head: Box::new(int()),
-            tail: Box::new(Type::Var {
-                typ: Rc::new(RefCell::new(TypeVar::Unbound { id: 9, level: 1 }))
-            }),
-        }),
-        unify_row_field(row, "a".to_string(), int(), &mut env)
-    );
 }
 
 fn flip_unify_error(e: UnifyError) -> UnifyError {
@@ -3142,16 +2777,7 @@ fn update_levels(typ: &Type, own_level: usize, own_id: usize) -> Result<(), Unif
             update_levels(retrn, own_level, own_id)
         }
 
-        Type::Map { row, .. } => update_levels(row, own_level, own_id),
-
         Type::Var { .. } => unreachable!(),
-
-        Type::RowCons { head, tail, .. } => {
-            update_levels(head, own_level, own_id)?;
-            update_levels(tail, own_level, own_id)
-        }
-
-        Type::RowNil { .. } => Ok(()),
     }
 }
 
@@ -3277,18 +2903,6 @@ fn generalise(t: Type, ctx_level: usize) -> Type {
                 .map(|t| generalise(t, ctx_level))
                 .collect(),
         },
-
-        Type::Map { row } => Type::Map {
-            row: Box::new(generalise(*row, ctx_level)),
-        },
-
-        Type::RowCons { label, head, tail } => Type::RowCons {
-            label,
-            head: Box::new(generalise(*head, ctx_level)),
-            tail: Box::new(generalise(*tail, ctx_level)),
-        },
-
-        Type::RowNil => t,
     }
 }
 
@@ -3334,13 +2948,6 @@ pub fn list(t: Type) -> Type {
         name: "List".to_string(),
         module: vec![],
         args: vec![t],
-    }
-}
-
-#[cfg(test)]
-pub fn map_nil() -> Type {
-    Type::Map {
-        row: Box::new(Type::RowNil),
     }
 }
 
@@ -3643,69 +3250,6 @@ fn infer_test() {
             src: "let add = fn(x, y) { x + y } add(_, 2)",
             typ: "fn(Int) -> Int",
         },
-        /* Maps
-
-        */
-        Case {
-            src: "{}",
-            typ: "{}",
-        },
-        Case {
-            src: "{{} | a = 1}",
-            typ: "{ a = Int }",
-        },
-        Case {
-            src: "{a = 1}",
-            typ: "{ a = Int }",
-        },
-        Case {
-            src: "{a = 1, b = 2}",
-            typ: "{ a = Int, b = Int }",
-        },
-        Case {
-            src: "{a = 1, b = 2.0, c = -1}",
-            typ: "{ a = Int, b = Float, c = Int }",
-        },
-        Case {
-            src: "{a = {a = 1}}",
-            typ: "{ a = { a = Int } }",
-        },
-        Case {
-            src: "{} == {}",
-            typ: "Bool",
-        },
-        Case {
-            src: "{ a = 1 } == { a = 2 }",
-            typ: "Bool",
-        },
-        Case {
-            src: "{a = 1, b = 1} == {a = 1, b = 1}",
-            typ: "Bool",
-        },
-        Case {
-            src: "{a = fn(x) { x }} == {a = fn(a) { a }}",
-            typ: "Bool",
-        },
-        Case {
-            src: "{b = 1, a = 1} == {a = 1, b = 1}",
-            typ: "Bool",
-        },
-        Case {
-            src: "{{a = 1.0} | a = 1}",
-            typ: "{ a = Int }",
-        },
-        Case {
-            src: "let a = {} {a | b = 1}",
-            typ: "{ b = Int }",
-        },
-        Case {
-            src: "fn(r) { { r | x = 1 } }",
-            typ: "fn({ a |  }) -> { a | x = Int }",
-        },
-        Case {
-            src: "{{} | a = 1}",
-            typ: "{ a = Int }",
-        },
         /* case
 
         */
@@ -3776,64 +3320,10 @@ fn infer_test() {
             src: "let _ = 1 2.0",
             typ: "Float",
         },
-        /* Map select
-
-        */
-        Case {
-            src: "{a = 1, b = 2.0}.b",
-            typ: "Float",
-        },
-        Case {
-            src: "let r = {a = 1, b = 2} r.a",
-            typ: "Int",
-        },
-        Case {
-            src: "let r = {a = 1, b = 2} r.a + r.b",
-            typ: "Int",
-        },
-        Case {
-            src: "fn(x) { x.t }",
-            typ: "fn({ b | t = a }) -> a",
-        },
-        Case {
-            src: "let f = fn(x) { x } let r = {a = f} r.a",
-            typ: "fn(a) -> a",
-        },
-        Case {
-            src: "let r = {a = fn(x) { x }} r.a",
-            typ: "fn(a) -> a",
-        },
-        Case {
-            src: "let a = {b = 1} {a | b = 1.0}.b",
-            typ: "Float",
-        },
-        Case {
-            src: "let r = {a = fn(x) { x }, b = fn(x) { x }} [r.a, r.b]",
-            typ: "List(fn(a) -> a)",
-        },
-        Case {
-            src: "let f = fn(x) { x.t } f({ t = 1 })",
-            typ: "Int",
-        },
-        Case {
-            src: "let f = fn(x) { x.t(1) } f({t = fn(x) { x + 1 }})",
-            typ: "Int",
-        },
-        Case {
-            src: "{a = 1, b = 2.0}.a",
-            typ: "Int",
-        },
-        Case {
-            src: "fn(r) { r.x }",
-            typ: "fn({ b | x = a }) -> a",
-        },
-        Case {
-            src: "fn(r) { r.x + 1 }",
-            typ: "fn({ a | x = Int }) -> Int",
-        },
     ];
 
     for Case { src, typ } in cases.into_iter() {
+        println!("{}", src);
         let ast = crate::grammar::ExprParser::new()
             .parse(src)
             .expect("syntax error");
@@ -3969,13 +3459,6 @@ fn infer_error_test() {
             },
         },
         Case {
-            src: "{} == {a = 2}",
-            error: Error::ExtraField {
-                meta: Meta { start: 11, end: 12 },
-                label: "a".to_string(),
-            },
-        },
-        Case {
             src: "fn() { 1 } == fn(x) { x + 1 }",
             error: Error::CouldNotUnify {
                 meta: Meta { start: 14, end: 29 },
@@ -4061,27 +3544,8 @@ fn infer_module_test() {
             module: vec![("public", "fn() -> Int")],
         },
         Case {
-            src: "fn empty() { {} }
-                  pub fn run() { { empty() | level = 1 } }",
-            module: vec![("run", "fn() -> { level = Int }")],
-        },
-        Case {
             src: "pub fn ok(x) { struct(1, x) }",
             module: vec![("ok", "fn(a) -> struct(Int, a)")],
-        },
-        Case {
-            src: "pub fn empty() {
-                    let map = {}
-                    map
-                  }",
-            module: vec![("empty", "fn() -> {}")],
-        },
-        Case {
-            src: "pub fn add_name(map, name) {
-                    let map = { map | name = name }
-                    map
-                  }",
-            module: vec![("add_name", "fn({ a |  }, b) -> { a | name = b }")],
         },
         Case {
             src: "
@@ -4143,13 +3607,8 @@ fn infer_module_test() {
         },
         Case {
             src: "pub fn status() { 1 }
-                  pub fn list_of(x) { [x] }
-                  pub fn get_age(person) { person.age }",
-            module: vec![
-                ("get_age", "fn({ b | age = a }) -> a"),
-                ("list_of", "fn(a) -> List(a)"),
-                ("status", "fn() -> Int"),
-            ],
+                  pub fn list_of(x) { [x] }",
+            module: vec![("list_of", "fn(a) -> List(a)"), ("status", "fn() -> Int")],
         },
         Case {
             src: "pub external fn go(String) -> String = \"\" \"\"",
@@ -4192,27 +3651,9 @@ fn infer_module_test() {
             module: vec![("go", "fn(struct(a, b)) -> b")],
         },
         Case {
-            src: "pub external fn ok() -> {} = \"\" \"\"",
-            module: vec![("ok", "fn() -> {}")],
-        },
-        Case {
-            src: "pub external fn ok() -> {a = Int, b = Int} = \"\" \"\"",
-            module: vec![("ok", "fn() -> { a = Int, b = Int }")],
-        },
-        Case {
-            src: "pub external fn ok() -> {a | a = Int} = \"\" \"\"",
-            module: vec![("ok", "fn() -> { a | a = Int }")],
-        },
-        Case {
-            src: "pub external fn ok() -> {a | } = \"\" \"\"",
-            module: vec![("ok", "fn() -> { a |  }")],
-        },
-        Case {
             src: "
         external fn go(Int) -> b = \"\" \"\"
-        pub fn x() {
-          go(1)
-        }",
+        pub fn x() { go(1) }",
             module: vec![("x", "fn() -> a")],
         },
         Case {
@@ -4318,14 +3759,6 @@ pub fn two() { one() + zero() }",
                   }",
             module: vec![("length", "fn(List(a)) -> Int")],
         },
-        Case {
-            src: "external fn the_map({a = Int, b = Int}) -> Int = \"\" \"\"
-            pub fn go(map) {
-                    let a = map.a
-                    the_map(map)
-                  }",
-            module: vec![("go", "fn({ a = Int, b = Int }) -> Int")],
-        },
         // % TODO: mutual recursion
         //    // % {
         //    // %pub fn length(list) {\n
@@ -4362,6 +3795,7 @@ pub fn two() { one() + zero() }",
     ];
 
     for Case { src, module } in cases.into_iter() {
+        println!("{}", src);
         let ast = crate::grammar::ModuleParser::new()
             .parse(src)
             .expect("syntax error");
