@@ -182,14 +182,6 @@ fn expr_test() {
     );
 
     assert_eq!(
-        Ok(Expr::MapNil {
-            meta: Meta { start: 0, end: 2 },
-            typ: (),
-        }),
-        ExprParser::new().parse("{}"),
-    );
-
-    assert_eq!(
         Ok(Expr::Call {
             meta: Meta { start: 0, end: 11 },
             typ: (),
@@ -886,25 +878,6 @@ fn expr_test() {
             })
         }),
         ExprParser::new().parse("let option.Some(a) = 1 2"),
-    );
-
-    assert_eq!(
-        Ok(Expr::MapCons {
-            meta: Meta { start: 0, end: 19 },
-            typ: (),
-            label: "size".to_string(),
-            value: Box::new(Expr::Int {
-                typ: (),
-                meta: Meta { start: 16, end: 17 },
-                value: 2
-            }),
-            tail: Box::new(Expr::Var {
-                meta: Meta { start: 2, end: 6 },
-                name: "jane".to_string(),
-                constructor: (),
-            }),
-        }),
-        ExprParser::new().parse("{ jane | size = 2 }"),
     );
 
     assert_eq!(
