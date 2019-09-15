@@ -830,6 +830,38 @@ fn expr_test() {
             typ: (),
             pattern: Pattern::Constructor {
                 meta: Meta { start: 4, end: 18 },
+                module: None,
+                name: "Some".to_string(),
+                args: vec![PatternConstructorArg {
+                    label: Some("body".to_string()),
+                    meta: Meta { start: 9, end: 17 },
+                    pattern: Pattern::Var {
+                        meta: Meta { start: 16, end: 17 },
+                        name: "a".to_string()
+                    }
+                }],
+                constructor: (),
+            },
+            value: Box::new(Expr::Int {
+                typ: (),
+                meta: Meta { start: 21, end: 22 },
+                value: 1
+            }),
+            then: Box::new(Expr::Int {
+                typ: (),
+                meta: Meta { start: 23, end: 24 },
+                value: 2
+            })
+        }),
+        ExprParser::new().parse("let Some(body:  a) = 1 2"),
+    );
+
+    assert_eq!(
+        Ok(Expr::Let {
+            meta: Meta { start: 0, end: 23 },
+            typ: (),
+            pattern: Pattern::Constructor {
+                meta: Meta { start: 4, end: 18 },
                 module: Some("option".to_string()),
                 name: "Some".to_string(),
                 args: vec![PatternConstructorArg {
