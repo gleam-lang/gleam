@@ -151,14 +151,29 @@ struct2_test() ->
 
 field_test() ->
     {ok, OkAtom} = gleam@atom:from_string(<<"ok">>),
+    {ok, EarlierAtom} = gleam@atom:from_string(<<"earlier">>),
     gleam@expect:equal(
-        gleam@any:field(gleam@any:from(#{ok => 1}), OkAtom),
+        gleam@any:field(
+            gleam@any:from(gleam@map:put(gleam@map:new(), OkAtom, 1)),
+            OkAtom
+        ),
         {ok, gleam@any:from(1)}
     ),
     gleam@expect:equal(
-        gleam@any:field(gleam@any:from(#{earlier => 2, ok => 3}), OkAtom),
+        gleam@any:field(
+            gleam@any:from(
+                gleam@map:put(
+                    gleam@map:put(gleam@map:new(), OkAtom, 3),
+                    EarlierAtom,
+                    1
+                )
+            ),
+            OkAtom
+        ),
         {ok, gleam@any:from(3)}
     ),
-    gleam@expect:is_error(gleam@any:field(gleam@any:from(#{}), OkAtom)),
+    gleam@expect:is_error(
+        gleam@any:field(gleam@any:from(gleam@map:new()), OkAtom)
+    ),
     gleam@expect:is_error(gleam@any:field(gleam@any:from(1), OkAtom)),
     gleam@expect:is_error(gleam@any:field(gleam@any:from([]), [])).

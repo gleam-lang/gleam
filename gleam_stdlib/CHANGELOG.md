@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Syntax has been updated for Gleam v0.4.
+- The `map_dict` module has been renamed to `map`.
 - `list:sort` now requires a compare function as comparison operators now only
   work on Ints.
 - `list:sort`'s performance has been slightly optimised.
