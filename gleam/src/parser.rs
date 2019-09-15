@@ -832,10 +832,10 @@ fn expr_test() {
                 meta: Meta { start: 4, end: 18 },
                 module: None,
                 name: "Some".to_string(),
-                args: vec![PatternConstructorArg {
+                args: vec![CallArg {
                     label: Some("body".to_string()),
                     meta: Meta { start: 9, end: 17 },
-                    pattern: Pattern::Var {
+                    value: Pattern::Var {
                         meta: Meta { start: 16, end: 17 },
                         name: "a".to_string()
                     }
@@ -864,10 +864,10 @@ fn expr_test() {
                 meta: Meta { start: 4, end: 18 },
                 module: Some("option".to_string()),
                 name: "Some".to_string(),
-                args: vec![PatternConstructorArg {
+                args: vec![CallArg {
                     label: None,
                     meta: Meta { start: 16, end: 17 },
-                    pattern: Pattern::Var {
+                    value: Pattern::Var {
                         meta: Meta { start: 16, end: 17 },
                         name: "a".to_string()
                     }
@@ -1234,13 +1234,13 @@ fn module_test() {
                             constructor: (),
                             module: None,
                             name: "Boxxy0123456789x".to_string(),
-                            args: vec![PatternConstructorArg {
+                            args: vec![CallArg {
                                 meta: Meta {
                                     start: 119,
                                     end: 120
                                 },
                                 label: None,
-                                pattern: Pattern::Var {
+                                value: Pattern::Var {
                                     meta: Meta {
                                         start: 119,
                                         end: 120
@@ -1319,10 +1319,10 @@ fn module_test() {
                             constructor: (),
                             module: None,
                             name: "Boxxy".to_string(),
-                            args: vec![PatternConstructorArg {
+                            args: vec![CallArg {
                                 label: None,
                                 meta: Meta { start: 86, end: 87 },
-                                pattern: Pattern::Var {
+                                value: Pattern::Var {
                                     meta: Meta { start: 86, end: 87 },
                                     name: "a".to_string()
                                 }
