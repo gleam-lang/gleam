@@ -7,6 +7,7 @@ pub fn negate(bool) {
   }
 }
 
+// TODO: replace struct with Pair
 pub fn compare(a, b) {
   case struct(a, b) {
   | struct(True, True) -> order.Eq

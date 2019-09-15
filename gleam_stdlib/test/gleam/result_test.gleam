@@ -36,6 +36,7 @@ pub fn map_error_test() {
   |> result.map_error(_, fn(x) { x + 1 })
   |> expect.equal(_, Ok(1))
 
+  // TODO: replace struct with Pair
   Error(1)
   |> result.map_error(_, fn(x) { struct("ok", x + 1) })
   |> expect.equal(_, Error(struct("ok", 2)))

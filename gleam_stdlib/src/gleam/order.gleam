@@ -20,6 +20,7 @@ pub fn to_int(order) {
   }
 }
 
+// TODO: replace struct with Pair
 pub fn compare(a, b) {
   case struct(a, b) {
   | struct(Lt, Lt) -> Eq

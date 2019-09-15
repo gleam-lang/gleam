@@ -88,6 +88,7 @@ pub fn update(dict, key, f) {
 }
 
 fn do_fold(list, acc, f) {
+  // TODO: replace struct with Pair
   case list {
     | [] -> acc
     | [struct(k, v) | tail] -> do_fold(tail, f(k, v, acc), f)

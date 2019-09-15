@@ -2,6 +2,7 @@ import gleam/string
 import gleam/expect
 import gleam/map
 
+// TODO: replace struct with Pair
 pub fn from_list_test() {
   [
     struct(4, 0),

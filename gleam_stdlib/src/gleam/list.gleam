@@ -187,6 +187,7 @@ pub fn any(list, f) {
   }
 }
 
+// TODO: replace struct with Pair
 pub fn zip(l1, l2) {
   case struct(l1, l2) {
     | struct([], _) -> []
