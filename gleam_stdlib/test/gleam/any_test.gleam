@@ -4,6 +4,7 @@ import gleam/list
 import gleam/tuple
 import gleam/expect
 import gleam/result
+import gleam/map
 
 pub fn string_test() {
   ""
@@ -250,18 +251,22 @@ pub fn struct2_test() {
 
 pub fn field_test() {
   let Ok(ok_atom) = atom.from_string("ok")
+  let Ok(earlier_atom) = atom.from_string("earlier")
 
-  {ok = 1}
+  map.new()
+  |> map.put(_, ok_atom, 1)
   |> any.from
   |> any.field(_, ok_atom)
   |> expect.equal(_, Ok(any.from(1)))
 
-  {earlier = 2, ok = 3}
+  map.new()
+  |> map.put(_, ok_atom, 3)
+  |> map.put(_, earlier_atom, 1)
   |> any.from
   |> any.field(_, ok_atom)
   |> expect.equal(_, Ok(any.from(3)))
 
-  {}
+  map.new()
   |> any.from
   |> any.field(_, ok_atom)
   |> expect.is_error

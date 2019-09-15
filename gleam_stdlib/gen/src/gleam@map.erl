@@ -1,4 +1,4 @@
--module(gleam@map_dict).
+-module(gleam@map).
 -compile(no_auto_import).
 
 -export([size/1, to_list/1, from_list/1, has_key/2, new/0, fetch/2, put/3, map_values/2, keys/1, values/1, filter/2, take/2, merge/2, delete/2, drop/2, update/3, fold/3]).
