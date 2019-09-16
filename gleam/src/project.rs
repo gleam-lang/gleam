@@ -77,6 +77,19 @@ pub enum Error {
     DependencyCycle,
 }
 
+fn did_you_mean(name: &str, options: &mut Vec<&String>, alt: &'static str) -> String {
+    options.sort_by(|a, b| {
+        strsim::levenshtein(a, name)
+            .partial_cmp(&strsim::levenshtein(b, name))
+            .unwrap()
+    });
+
+    match options.get(0) {
+        Some(option) => format!("Did you mean `{}`?", option),
+        None => alt.to_string(),
+    }
+}
+
 impl Error {
     // TODO: Tests.
     pub fn pretty(&self, buffer: &mut Buffer) {
@@ -141,29 +154,34 @@ Second: {}",
                     labels,
                 } => {
                     let mut options: Vec<_> = labels.keys().collect();
-                    options.sort_by(|a, b| {
-                        strsim::levenshtein(a, label)
-                            .partial_cmp(&strsim::levenshtein(b, label))
-                            .unwrap()
-                    });
                     let diagnostic = ErrorDiagnostic {
                         title: "Unknown label".to_string(),
-                        label: format!("Did you mean `{}`?", options[0]),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
+                        label: did_you_mean(label, &mut options, "Unexpected label"),
                     };
                     write(buffer, diagnostic);
-                    write!(
-                        buffer,
-                        "
+                    if options.len() > 0 {
+                        write!(
+                            buffer,
+                            "
 This constructor does not accept the label `{}`.
 Expected one of `{}`.
 ",
-                        label,
-                        options.iter().join("`, `")
-                    )
-                    .unwrap();
+                            label,
+                            options.iter().join("`, `")
+                        )
+                        .unwrap();
+                    } else {
+                        write!(
+                            buffer,
+                            "\n This constructor does not accept any labelled arguments.\n "
+                        )
+                        .unwrap();
+                    }
+
+                    if options.len() > 0 {}
                 }
 
                 UnexpectedLabelledArg { meta, label } => {
@@ -384,10 +402,7 @@ Found type:
                 UnknownType { meta, name, types } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Unknown type".to_string(),
-                        label: suggestion_label(
-                            name,
-                            &types.keys().map(|s| s.clone()).collect::<Vec<_>>(),
-                        ),
+                        label: did_you_mean(name, &mut types.keys().collect::<Vec<_>>(), ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
@@ -409,14 +424,9 @@ The type `{}` is not defined or imported in this module.
                     name,
                 } => {
                     let mut options: Vec<_> = variables.keys().collect();
-                    options.sort_by(|a, b| {
-                        strsim::levenshtein(a, name)
-                            .partial_cmp(&strsim::levenshtein(b, name))
-                            .unwrap()
-                    });
                     let diagnostic = ErrorDiagnostic {
                         title: "Unknown variable".to_string(),
-                        label: format!("Did you mean `{}`?", options[0]),
+                        label: did_you_mean(name, &mut options, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
@@ -462,13 +472,13 @@ Private types can only be used within the module that defines them.
                 }
 
                 // TODO
-                UnknownModule { .. } => panic!("UnknownModule"),
+                UnknownModule { .. } => panic!("unimplemented UnknownModule"),
 
                 // TODO
-                UnknownModuleType { .. } => panic!("UnknownModuleType"),
+                UnknownModuleType { .. } => panic!("unimplemented UnknownModuleType"),
 
                 // TODO
-                UnknownModuleValue { .. } => panic!("UnknownModuleValue"),
+                UnknownModuleField { .. } => panic!("unimplemented UnknownModuleField"),
             },
 
             Error::Parse { path, src, error } => {
@@ -573,9 +583,10 @@ but this one uses {}. Rewrite this using the fn({}) {{ ... }} syntax.",
                 src,
                 modules,
             } => {
+                let mut modules: Vec<&String> = modules.iter().collect();
                 let diagnostic = ErrorDiagnostic {
                     title: "Unknown import".to_string(),
-                    label: suggestion_label(import, modules),
+                    label: did_you_mean(import, &mut modules, ""),
                     file: path.to_str().unwrap().to_string(),
                     src: src.to_string(),
                     meta: meta.clone(),
@@ -604,18 +615,6 @@ but it cannot be found.
         self.pretty(&mut buffer);
         buffer_writer.print(&buffer).unwrap();
     }
-}
-
-fn suggestion_label(chosen: &str, options: &Vec<String>) -> String {
-    options
-        .iter()
-        .min_by(|a, b| {
-            strsim::levenshtein(a, chosen)
-                .partial_cmp(&strsim::levenshtein(b, chosen))
-                .unwrap()
-        })
-        .map(|s| format!("Did you mean `{}`?", s))
-        .unwrap_or_else(|| "".to_string())
 }
 
 struct ErrorDiagnostic {
