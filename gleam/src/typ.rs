@@ -1187,7 +1187,7 @@ impl<'a> Env<'a> {
                     }
                 })?;
                 module.value_constructors.get(&*name).ok_or_else(|| {
-                    GetValueConstructorError::UnknownModuleValue {
+                    GetValueConstructorError::UnknownModuleField {
                         name: name.to_string(),
                         module_name: module.name.clone(),
                         value_constructors: module.value_constructors.clone(),
@@ -1314,7 +1314,7 @@ pub enum Error {
         type_constructors: HashMap<String, TypeConstructorInfo>,
     },
 
-    UnknownModuleValue {
+    UnknownModuleField {
         meta: Meta,
         name: String,
         module_name: Vec<String>,
@@ -1396,7 +1396,7 @@ pub enum GetValueConstructorError {
         imported_modules: HashMap<String, ModuleTypeInfo>,
     },
 
-    UnknownModuleValue {
+    UnknownModuleField {
         name: String,
         module_name: Vec<String>,
         value_constructors: HashMap<String, ValueConstructor>,
@@ -1420,11 +1420,11 @@ fn convert_get_value_constructor_error(e: GetValueConstructorError, meta: &Meta)
             imported_modules,
         },
 
-        GetValueConstructorError::UnknownModuleValue {
+        GetValueConstructorError::UnknownModuleField {
             name,
             module_name,
             value_constructors,
-        } => Error::UnknownModuleValue {
+        } => Error::UnknownModuleField {
             meta: meta.clone(),
             name,
             module_name,
@@ -2154,7 +2154,7 @@ fn infer_module_select(
                 })?;
 
         let constructor = module_info.value_constructors.get(&label).ok_or_else(|| {
-            Error::UnknownModuleValue {
+            Error::UnknownModuleField {
                 name: label.clone(),
                 meta: select_meta.clone(),
                 module_name: module_info.name.clone(),
