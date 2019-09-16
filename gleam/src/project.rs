@@ -186,6 +186,26 @@ Please remove the label `{}`.
                     .unwrap();
                 }
 
+                PositionalArgumentAfterLabelled { meta } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Unexpected positional argument".to_string(),
+                        label: "".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                    write!(
+                        buffer,
+                        "
+This unlablled argument has been supplied after a labelled argument.
+Once a labelled argument has been supplied all following arguments must
+also be labelled.
+",
+                    )
+                    .unwrap();
+                }
+
                 DuplicateName { meta, name: fun } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Duplicate name".to_string(),

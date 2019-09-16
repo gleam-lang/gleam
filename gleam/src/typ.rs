@@ -482,13 +482,25 @@ impl FieldMap {
     /// order.
     ///
     fn reorder<A>(&self, args: &mut Vec<CallArg<A>>) -> Result<(), Error> {
+        let mut labelled = false;
+
         for i in 0..args.len() {
             let (label, meta) = match &args[i].label {
                 // A labelled argument, we may need to reposition it in the array vector
-                Some(l) => (l, &args[i].meta),
+                Some(l) => {
+                    labelled = true;
+                    (l, &args[i].meta)
+                }
 
                 // Not a labelled argument, assume it is in the correct place
-                None => continue,
+                None => {
+                    if labelled {
+                        return Err(Error::PositionalArgumentAfterLabelled {
+                            meta: args[i].meta.clone(),
+                        });
+                    }
+                    continue;
+                }
             };
 
             let position = match self.fields.get(label) {
@@ -1360,6 +1372,10 @@ pub enum Error {
     UnexpectedLabelledArg {
         meta: Meta,
         label: String,
+    },
+
+    PositionalArgumentAfterLabelled {
+        meta: Meta,
     },
 }
 
@@ -3949,6 +3965,13 @@ pub fn x() { id(1, 1.0) }
             error: Error::UnexpectedLabelledArg {
                 label: "x".to_string(),
                 meta: Meta { start: 27, end: 31 },
+            },
+        },
+        Case {
+            src: r#"struct X { a: Int b: Int c: Int }
+                    fn x() { X(b: 1, a: 1, 1) }"#,
+            error: Error::PositionalArgumentAfterLabelled {
+                meta: Meta { start: 77, end: 78 },
             },
         },
     ];
