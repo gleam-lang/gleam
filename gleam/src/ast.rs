@@ -282,7 +282,7 @@ pub enum Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type
         meta: Meta,
         typ: Type,
         label: String,
-        map: Box<Self>,
+        container: Box<Self>,
     },
 
     ModuleSelect {

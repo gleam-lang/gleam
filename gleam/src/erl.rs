@@ -545,7 +545,9 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
 
         Expr::Call { fun, args, .. } => call(*fun, args, env),
 
-        Expr::FieldSelect { label, map, .. } => map_select(*map, label, env),
+        Expr::FieldSelect {
+            label, container, ..
+        } => map_select(*container, label, env),
 
         Expr::ModuleSelect {
             label,

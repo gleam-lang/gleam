@@ -245,7 +245,7 @@ FieldSelect: UntypedExpr = {
         meta: meta(s, e),
         typ: (),
         label: l,
-        map: Box::new(r),
+        container: Box::new(r),
     },
 }
 

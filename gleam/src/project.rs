@@ -297,6 +297,28 @@ This value is being called as a function but its type is:
                     .unwrap();
                 }
 
+                NotModule { meta, typ } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Not a module".to_string(),
+                        label: "".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+
+                    write!(
+                        buffer,
+                        "
+Fields can only be accessed on modules, but this is a value with the type:
+
+`{}`.
+",
+                        typ.pretty_print(4)
+                    )
+                    .unwrap();
+                }
+
                 CouldNotUnify {
                     meta,
                     expected,

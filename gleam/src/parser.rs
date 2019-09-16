@@ -614,7 +614,7 @@ fn expr_test() {
             meta: Meta { start: 0, end: 11 },
             typ: (),
             label: "name".to_string(),
-            map: Box::new(Expr::Var {
+            container: Box::new(Expr::Var {
                 meta: Meta { start: 0, end: 6 },
                 name: "person".to_string(),
                 constructor: (),

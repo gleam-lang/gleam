@@ -1326,6 +1326,11 @@ pub enum Error {
         typ: Type,
     },
 
+    NotModule {
+        meta: Meta,
+        typ: Type,
+    },
+
     IncorrectArity {
         meta: Meta,
         expected: usize,
@@ -2108,7 +2113,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         Expr::FieldSelect {
             meta: select_meta,
             label,
-            map: container,
+            container,
             typ: _,
         } => match &*container {
             Expr::Var { name, meta, .. } if !env.variables.contains_key(name) => {
@@ -2162,7 +2167,7 @@ fn infer_module_select(
 
     Ok(Expr::ModuleSelect {
         label,
-        typ: instantiate(constructor.typ, level, env),
+        typ: instantiate(constructor.typ, level, &mut hashmap![], env),
         meta: select_meta,
         module_name,
         module_alias: module_alias.clone(),
@@ -2171,14 +2176,17 @@ fn infer_module_select(
 }
 
 fn infer_value_field_select(
-    _container: UntypedExpr,
+    container: UntypedExpr,
     _label: String,
-    _level: usize,
+    level: usize,
     _meta: Meta,
-    _env: &mut Env,
+    env: &mut Env,
 ) -> Result<TypedExpr, Error> {
     // TODO: struct field access
-    panic!("struct field access not implemented yet")
+    Err(Error::NotModule {
+        meta: container.meta().clone(),
+        typ: infer(container, level, env)?.typ().clone(),
+    })
 }
 
 /// When we have an assignment or a case expression we unify the pattern with the
@@ -2276,7 +2284,7 @@ Please report this to https://github.com/lpil/gleam/issues"
                 ),
             };
 
-            match instantiate(constructor_typ, level, env) {
+            match instantiate(constructor_typ, level, &mut hashmap![], env) {
                 Type::Fn { args, retrn } => {
                     if args.len() == pattern_args.len() {
                         let pattern_args = pattern_args
@@ -2366,7 +2374,7 @@ fn infer_var(
                 name: name.to_string(),
                 variables: env.variables.clone(),
             })?;
-    let typ = instantiate(typ, level, env);
+    let typ = instantiate(typ, level, &mut hashmap![], env);
     Ok(ValueConstructor { variant, typ })
 }
 
@@ -2527,63 +2535,67 @@ fn convert_unify_error(e: UnifyError, meta: &Meta) -> Error {
 
 /// Instantiate converts generic variables into unbound ones.
 ///
-fn instantiate(typ: Type, ctx_level: usize, env: &mut Env) -> Type {
-    fn go(t: Type, ctx_level: usize, ids: &mut im::HashMap<usize, Type>, env: &mut Env) -> Type {
-        match t {
+fn instantiate(
+    t: Type,
+    ctx_level: usize,
+    ids: &mut im::HashMap<usize, Type>,
+    env: &mut Env,
+) -> Type {
+    match t {
+        Type::App {
+            public,
+            name,
+            module,
+            args,
+        } => {
+            let args = args
+                .into_iter()
+                .map(|t| instantiate(t, ctx_level, ids, env))
+                .collect();
             Type::App {
                 public,
                 name,
                 module,
                 args,
-            } => Type::App {
-                public,
-                name,
-                module,
-                args: args
-                    .into_iter()
-                    .map(|t| go(t, ctx_level, ids, env))
-                    .collect(),
-            },
-
-            Type::Var { typ } => {
-                match &*typ.borrow() {
-                    TypeVar::Link { typ } => return go(*typ.clone(), ctx_level, ids, env),
-
-                    TypeVar::Unbound { .. } => return Type::Var { typ: typ.clone() },
-
-                    TypeVar::Generic { id } => match ids.get(id) {
-                        Some(t) => return t.clone(),
-                        None => {
-                            if !env.annotated_generic_types.contains(id) {
-                                let v = env.new_unbound_var(ctx_level);
-                                ids.insert(*id, v.clone());
-                                return v;
-                            }
-                        }
-                    },
-                }
-                Type::Var { typ }
-            }
-
-            Type::AnonStruct { elems } => Type::AnonStruct {
-                elems: elems
-                    .into_iter()
-                    .map(|t| go(t, ctx_level, ids, env))
-                    .collect(),
-            },
-
-            Type::Fn { args, retrn, .. } => {
-                let args = args
-                    .into_iter()
-                    .map(|t| go(t, ctx_level, ids, env))
-                    .collect();
-                let retrn = Box::new(go(*retrn, ctx_level, ids, env));
-                Type::Fn { args, retrn }
             }
         }
-    }
 
-    go(typ, ctx_level, &mut hashmap![], env)
+        Type::Var { typ } => {
+            match &*typ.borrow() {
+                TypeVar::Link { typ } => return instantiate(*typ.clone(), ctx_level, ids, env),
+
+                TypeVar::Unbound { .. } => return Type::Var { typ: typ.clone() },
+
+                TypeVar::Generic { id } => match ids.get(id) {
+                    Some(t) => return t.clone(),
+                    None => {
+                        if !env.annotated_generic_types.contains(id) {
+                            let v = env.new_unbound_var(ctx_level);
+                            ids.insert(*id, v.clone());
+                            return v;
+                        }
+                    }
+                },
+            }
+            Type::Var { typ }
+        }
+
+        Type::AnonStruct { elems } => Type::AnonStruct {
+            elems: elems
+                .into_iter()
+                .map(|t| instantiate(t, ctx_level, ids, env))
+                .collect(),
+        },
+
+        Type::Fn { args, retrn, .. } => {
+            let args = args
+                .into_iter()
+                .map(|t| instantiate(t, ctx_level, ids, env))
+                .collect();
+            let retrn = Box::new(instantiate(*retrn, ctx_level, ids, env));
+            Type::Fn { args, retrn }
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -2666,32 +2678,20 @@ fn unify(t1: &Type, t2: &Type, env: &mut Env) -> Result<(), UnifyError> {
                 args: args2,
                 ..
             },
-        ) => {
-            if m1 == m2 && n1 == n2 && args1.len() == args2.len() {
-                for (a, b) in args1.iter().zip(args2) {
-                    unify(a, b, env)?;
-                }
-                Ok(())
-            } else {
-                Err(UnifyError::CouldNotUnify {
-                    expected: (*t1).clone(),
-                    given: (*t2).clone(),
-                })
+        ) if m1 == m2 && n1 == n2 && args1.len() == args2.len() => {
+            for (a, b) in args1.iter().zip(args2) {
+                unify(a, b, env)?;
             }
+            Ok(())
         }
 
-        (Type::AnonStruct { elems: elems1, .. }, Type::AnonStruct { elems: elems2, .. }) => {
-            if elems1.len() == elems2.len() {
-                for (a, b) in elems1.iter().zip(elems2) {
-                    unify(a, b, env)?;
-                }
-                Ok(())
-            } else {
-                Err(UnifyError::CouldNotUnify {
-                    expected: (*t1).clone(),
-                    given: (*t2).clone(),
-                })
+        (Type::AnonStruct { elems: elems1, .. }, Type::AnonStruct { elems: elems2, .. })
+            if elems1.len() == elems2.len() =>
+        {
+            for (a, b) in elems1.iter().zip(elems2) {
+                unify(a, b, env)?;
             }
+            Ok(())
         }
 
         (
@@ -2705,18 +2705,11 @@ fn unify(t1: &Type, t2: &Type, env: &mut Env) -> Result<(), UnifyError> {
                 retrn: retrn2,
                 ..
             },
-        ) => {
-            if args1.len() == args2.len() {
-                for (a, b) in args1.iter().zip(args2) {
-                    unify(a, b, env)?;
-                }
-                unify(retrn1, retrn2, env)
-            } else {
-                Err(UnifyError::CouldNotUnify {
-                    expected: (*t1).clone(),
-                    given: (*t2).clone(),
-                })
+        ) if args1.len() == args2.len() => {
+            for (a, b) in args1.iter().zip(args2) {
+                unify(a, b, env)?;
             }
+            unify(retrn1, retrn2, env)
         }
 
         (_, _) => Err(UnifyError::CouldNotUnify {
@@ -3524,6 +3517,14 @@ fn infer_error_test() {
                 meta: Meta { start: 19, end: 20 },
             },
         },
+        // TODO: remove when struct field access is supported
+        Case {
+            src: "let x = 1 x.whatever",
+            error: Error::NotModule {
+                meta: Meta { start: 10, end: 11 },
+                typ: int(),
+            },
+        },
     ];
 
     for Case { src, error } in cases.into_iter() {
@@ -3808,6 +3809,27 @@ pub fn two() { one() + zero() }",
                 ("third", "fn(Tup(a, b, c)) -> c"),
             ],
         },
+        // TODO: struct access
+        // Case {
+        //     src: "pub struct Box(a) { boxed: a }
+        //           pub fn unbox_int(b: Box(Int)) { b.boxed }",
+        //     module: vec![
+        //         ("Box", "fn(a) -> Box(a)"),
+        //         ("unbox_int", "fn(Box(Int)) -> Int"),
+        //     ],
+        // },
+        // Case {
+        //     src: "pub struct Box(a) { boxed: a }
+        //           pub fn unbox_pattern(b: Box(a)) { let Box(x) = b x }
+        //           pub fn unbox(b: Box(a)) { b.boxed }
+        //           pub fn unbox_int(b: Box(Int)) { b.boxed }",
+        //     module: vec![
+        //         ("Box", "fn(a) -> Box(a)"),
+        //         ("unbox", "fn(Box(a)) -> a"),
+        //         ("unbox_int", "fn(Box(Int)) -> Int"),
+        //         ("unbox_pattern", "fn(Box(a)) -> a"),
+        //     ],
+        // },
     ];
 
     for Case { src, module } in cases.into_iter() {
