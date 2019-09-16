@@ -41,7 +41,8 @@ pub fn create(name: String, path: Option<String>) {
 
     // Print success message
     println!(
-        "Your Gleam project \"{}\" has been successfully created.
+        "
+Your Gleam project \"{}\" has been successfully created.
 The rebar3 program can be used to compile and test it.
 
     cd {}
@@ -128,8 +129,8 @@ fn test(name: &str) -> String {
 import gleam/expect
 
 pub fn hello_world_test() {{
-  {}:hello_world()
-  |> expect:equal(_, "Hello, from {}!")
+  {}.hello_world()
+  |> expect.equal(_, "Hello, from {}!")
 }}
 "#,
         name, name, name
