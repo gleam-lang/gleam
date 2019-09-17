@@ -1,25 +1,25 @@
 pub external type Iodata;
 
 pub external fn prepend(Iodata, String) -> Iodata =
-  "gleam__stdlib" "iodata_prepend";
+  "gleam_stdlib" "iodata_prepend";
 
 pub external fn append(Iodata, String) -> Iodata =
-  "gleam__stdlib" "iodata_append";
+  "gleam_stdlib" "iodata_append";
 
 pub external fn prepend_iodata(Iodata, Iodata) -> Iodata =
-  "gleam__stdlib" "iodata_prepend";
+  "gleam_stdlib" "iodata_prepend";
 
 pub external fn append_iodata(Iodata, Iodata) -> Iodata =
-  "gleam__stdlib" "iodata_append";
+  "gleam_stdlib" "iodata_append";
 
 pub external fn from_strings(List(String)) -> Iodata =
-  "gleam__stdlib" "identity";
+  "gleam_stdlib" "identity";
 
 pub external fn concat(List(Iodata)) -> Iodata =
-  "gleam__stdlib" "identity";
+  "gleam_stdlib" "identity";
 
 pub external fn new(String) -> Iodata =
-  "gleam__stdlib" "identity";
+  "gleam_stdlib" "identity";
 
 pub external fn to_string(Iodata) -> String =
   "erlang" "iolist_to_binary";

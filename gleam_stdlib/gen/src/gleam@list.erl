@@ -24,7 +24,7 @@ contains(List, Elem) ->
 head(List) ->
     case List of
         [] ->
-            {error, {}};
+            {error, nil};
 
         [X | _] ->
             {ok, X}
@@ -33,7 +33,7 @@ head(List) ->
 tail(List) ->
     case List of
         [] ->
-            {error, {}};
+            {error, nil};
 
         [_ | Xs] ->
             {ok, Xs}
@@ -172,7 +172,7 @@ fold_right(List, Acc, Fun) ->
 find(Haystack, F) ->
     case Haystack of
         [] ->
-            {error, {}};
+            {error, nil};
 
         [X | Rest] ->
             case F(X) of
@@ -250,12 +250,12 @@ intersperse(List, Elem) ->
 at(List, I) ->
     case I < 0 of
         true ->
-            {error, {}};
+            {error, nil};
 
         false ->
             case List of
                 [] ->
-                    {error, {}};
+                    {error, nil};
 
                 [X | Rest] ->
                     case I =:= 0 of

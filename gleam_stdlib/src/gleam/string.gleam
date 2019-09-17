@@ -3,9 +3,6 @@ import gleam/list
 
 pub external fn length(String) -> Int = "string" "length"
 
-pub enum ParseError =
-  | ParseError
-
 pub external fn lowercase(String) -> String = "string" "lowercase"
 
 pub external fn uppercase(String) -> String = "string" "uppercase"
