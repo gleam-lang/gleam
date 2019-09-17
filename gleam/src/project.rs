@@ -1286,6 +1286,35 @@ x(P) ->\n    {X, _} = P,\n    X.\n".to_string(),
                 },
             ]),
         },
+        Case {
+            input: vec![
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/one.gleam"),
+                    base_path: PathBuf::from("/src"),
+                    src: "pub struct Empty {}".to_string(),
+                },
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/two.gleam"),
+                    base_path: PathBuf::from("/src"),
+                    src: "import one
+                        fn make() { one.Empty }".to_string(),
+                },
+            ],
+            expected: Ok(vec![
+                Compiled {
+                    name: vec!["one".to_string()],
+                    path: PathBuf::from("/gen/src/one.erl"),
+                    code: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                },
+                Compiled {
+                    name: vec!["two".to_string()],
+                    path: PathBuf::from("/gen/src/two.erl"),
+                    code: "-module(two).\n-compile(no_auto_import).\n\nmake() ->\n    {}.\n".to_string(),
+                },
+            ]),
+        },
     ];
 
     for Case { input, expected } in cases.into_iter() {
