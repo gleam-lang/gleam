@@ -328,9 +328,10 @@ This value is being called as a function but its type is:
                     write!(
                         buffer,
                         "
-Fields can only be accessed on modules, but this is a value with the type:
+Fields can only be accessed on modules. This is not a module, it is
+a value with this type:
 
-`{}`.
+{}
 ",
                         typ.pretty_print(4)
                     )
