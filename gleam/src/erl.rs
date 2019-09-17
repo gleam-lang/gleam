@@ -552,9 +552,15 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
         } => atom(label.to_snake_case()),
 
         Expr::ModuleSelect {
+            constructor: ModuleValueConstructor::Struct,
+            ..
+        } => "{}".to_doc(),
+
+        Expr::ModuleSelect {
             typ,
             label,
             module_name,
+            constructor: ModuleValueConstructor::Fn,
             ..
         } => module_select_fn(typ, module_name, label),
 
@@ -1630,7 +1636,7 @@ x(Y) ->
     {A, B} = Y,
     A.
 "#
-        }
+        },
     ];
 
     for Case { src, erl } in cases.into_iter() {
