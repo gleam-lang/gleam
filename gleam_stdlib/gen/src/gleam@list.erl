@@ -232,7 +232,7 @@ strict_zip(L1, L2) ->
             {ok, zip(L1, L2)};
 
         false ->
-            {error, {}}
+            {error, length_mismatch}
     end.
 
 intersperse(List, Elem) ->

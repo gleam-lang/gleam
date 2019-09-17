@@ -28,8 +28,8 @@ book-serve: ## Run the book dev server
 .PHONY: test ## Run all tests
 test: test-gleam test-stdlib
 
-.PHONY: test-watch-gleam
-test-watch-gleam: ## Run compiler tests when files change
+.PHONY: test-gleam-watch
+test-gleam-watch: ## Run compiler tests when files change
 	cd gleam && watchexec -e rs,lalrpop "echo; cargo test; echo; echo"
 
 .PHONY: test-gleam
@@ -39,6 +39,10 @@ test-gleam: ## Test the compiler
 .PHONY: test-stdlib
 test-stdlib: $(COMPILER) gleam_stdlib/gen ## Test gleam_stdlib
 	cd gleam_stdlib && rebar3 eunit
+
+.PHONY: test-stdlib-watch
+test-stdlib-watch: ## Run stdlib tests when files change
+	cd gleam_stdlib && watchexec -e gleam "echo; rebar3 eunit; echo"
 
 # Debug print vars with `make print-VAR_NAME`
 print-%: ; @echo $*=$($*)

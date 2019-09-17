@@ -12,9 +12,7 @@ pub fn from_string_test() {
 
   "this is not an atom we have seen before"
   |> atom.from_string
-  // TODO
-  // |> expect.equal(_, Error(AtomNotLoaded))
-  |> expect.is_error
+  |> expect.equal(_, Error(atom.AtomNotLoaded))
 }
 
 pub fn create_from_string_test() {

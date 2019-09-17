@@ -1,10 +1,7 @@
 import gleam/iodata
 import gleam/order
 
-pub enum NotAFloat =
-  | NotAFloat
-
-pub external fn parse(String) -> Result(Float, NotAFloat) =
+pub external fn parse(String) -> Result(Float, Nil) =
   "gleam_stdlib" "parse_float";
 
 pub fn to_string(f) {

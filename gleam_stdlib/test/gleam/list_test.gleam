@@ -33,7 +33,7 @@ pub fn head_test() {
     |> expect.equal(_, Ok(0))
 
   list.head([])
-    |> expect.is_error
+    |> expect.equal(_, Error(Nil))
 }
 
 pub fn tail_test() {
@@ -44,7 +44,7 @@ pub fn tail_test() {
     |> expect.equal(_, Ok([]))
 
   list.tail([])
-    |> expect.is_error
+    |> expect.equal(_, Error(Nil))
 }
 
 pub fn filter_test() {
@@ -164,7 +164,7 @@ pub fn find_test() {
 
   [1, 3]
   |> list.find(_, f)
-  |> expect.is_error
+  |> expect.equal(_, Error(Nil))
 }
 
 pub fn all_test() {
@@ -208,19 +208,23 @@ pub fn zip_test() {
 
 pub fn strict_zip_test() {
   list.strict_zip([], [1, 2, 3])
-  |> expect.is_error
+  |> expect.equal(_, Error(list.LengthMismatch))
 
   list.strict_zip([1, 2], [])
-  |> expect.is_error
+  |> expect.equal(_, Error(list.LengthMismatch))
 
   list.strict_zip([1, 2, 3], [4, 5, 6])
-  |> expect.equal(_, Ok([pair.Pair(1, 4), pair.Pair(2, 5), pair.Pair(3, 6)]))
+  |> expect.equal(_, Ok([
+    pair.Pair(1, 4),
+    pair.Pair(2, 5),
+    pair.Pair(3, 6),
+  ]))
 
   list.strict_zip([5, 6], [1, 2, 3])
-  |> expect.is_error
+  |> expect.equal(_, Error(list.LengthMismatch))
 
   list.strict_zip([5, 6, 7], [1, 2])
-  |> expect.is_error
+  |> expect.equal(_, Error(list.LengthMismatch))
 }
 
 pub fn intersperse_test() {
@@ -236,13 +240,13 @@ pub fn at_test() {
   |> expect.equal(_, Ok(3))
 
   list.at([1, 2, 3], 5)
-  |> expect.is_error
+  |> expect.equal(_, Error(Nil))
 
   list.at([], 0)
-  |> expect.is_error
+  |> expect.equal(_, Error(Nil))
 
   list.at([1, 2, 3, 4, 5, 6], -1)
-  |> expect.is_error
+  |> expect.equal(_, Error(Nil))
 }
 
 pub fn unique_test() {
@@ -373,5 +377,5 @@ pub fn key_find_test() {
 
   proplist
   |> list.key_find(_, 2)
-  |> expect.is_error
+  |> expect.equal(_, Error(Nil))
 }

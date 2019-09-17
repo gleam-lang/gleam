@@ -7,9 +7,9 @@ parse_test() ->
     gleam@expect:equal(gleam@float:parse(<<"1.23">>), {ok, 1.23}),
     gleam@expect:equal(gleam@float:parse(<<"5.0">>), {ok, 5.0}),
     gleam@expect:equal(gleam@float:parse(<<"0.123456789">>), {ok, 0.123456789}),
-    gleam@expect:is_error(gleam@float:parse(<<"">>)),
-    gleam@expect:is_error(gleam@float:parse(<<"what">>)),
-    gleam@expect:is_error(gleam@float:parse(<<"1">>)).
+    gleam@expect:equal(gleam@float:parse(<<"">>), {error, nil}),
+    gleam@expect:equal(gleam@float:parse(<<"what">>), {error, nil}),
+    gleam@expect:equal(gleam@float:parse(<<"1">>), {error, nil}).
 
 to_string_test() ->
     gleam@expect:equal(gleam@float:to_string(123.0), <<"123.0">>),

@@ -17,15 +17,15 @@ pub fn parse_test() {
 
   ""
   |> float.parse
-  |> expect.is_error
+  |> expect.equal(_, Error(Nil))
 
   "what"
   |> float.parse
-  |> expect.is_error
+  |> expect.equal(_, Error(Nil))
 
   "1"
   |> float.parse
-  |> expect.is_error
+  |> expect.equal(_, Error(Nil))
 }
 
 pub fn to_string_test() {

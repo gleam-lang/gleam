@@ -24,12 +24,12 @@ contains_test() ->
 
 head_test() ->
     gleam@expect:equal(gleam@list:head([0, 4, 5, 7]), {ok, 0}),
-    gleam@expect:is_error(gleam@list:head([])).
+    gleam@expect:equal(gleam@list:head([]), {error, nil}).
 
 tail_test() ->
     gleam@expect:equal(gleam@list:tail([0, 4, 5, 7]), {ok, [4, 5, 7]}),
     gleam@expect:equal(gleam@list:tail([0]), {ok, []}),
-    gleam@expect:is_error(gleam@list:tail([])).
+    gleam@expect:equal(gleam@list:tail([]), {error, nil}).
 
 filter_test() ->
     gleam@expect:equal(gleam@list:filter([], fun(_) -> true end), []),
@@ -112,7 +112,7 @@ find_test() ->
         end end,
     gleam@expect:equal(gleam@list:find([1, 2, 3], F), {ok, 4}),
     gleam@expect:equal(gleam@list:find([1, 3, 2], F), {ok, 4}),
-    gleam@expect:is_error(gleam@list:find([1, 3], F)).
+    gleam@expect:equal(gleam@list:find([1, 3], F), {error, nil}).
 
 all_test() ->
     gleam@expect:equal(
@@ -147,14 +147,26 @@ zip_test() ->
     gleam@expect:equal(gleam@list:zip([5, 6, 7], [1, 2]), [{5, 1}, {6, 2}]).
 
 strict_zip_test() ->
-    gleam@expect:is_error(gleam@list:strict_zip([], [1, 2, 3])),
-    gleam@expect:is_error(gleam@list:strict_zip([1, 2], [])),
+    gleam@expect:equal(
+        gleam@list:strict_zip([], [1, 2, 3]),
+        {error, length_mismatch}
+    ),
+    gleam@expect:equal(
+        gleam@list:strict_zip([1, 2], []),
+        {error, length_mismatch}
+    ),
     gleam@expect:equal(
         gleam@list:strict_zip([1, 2, 3], [4, 5, 6]),
         {ok, [{1, 4}, {2, 5}, {3, 6}]}
     ),
-    gleam@expect:is_error(gleam@list:strict_zip([5, 6], [1, 2, 3])),
-    gleam@expect:is_error(gleam@list:strict_zip([5, 6, 7], [1, 2])).
+    gleam@expect:equal(
+        gleam@list:strict_zip([5, 6], [1, 2, 3]),
+        {error, length_mismatch}
+    ),
+    gleam@expect:equal(
+        gleam@list:strict_zip([5, 6, 7], [1, 2]),
+        {error, length_mismatch}
+    ).
 
 intersperse_test() ->
     gleam@expect:equal(gleam@list:intersperse([1, 2, 3], 4), [1, 4, 2, 4, 3]),
@@ -162,9 +174,9 @@ intersperse_test() ->
 
 at_test() ->
     gleam@expect:equal(gleam@list:at([1, 2, 3], 2), {ok, 3}),
-    gleam@expect:is_error(gleam@list:at([1, 2, 3], 5)),
-    gleam@expect:is_error(gleam@list:at([], 0)),
-    gleam@expect:is_error(gleam@list:at([1, 2, 3, 4, 5, 6], -1)).
+    gleam@expect:equal(gleam@list:at([1, 2, 3], 5), {error, nil}),
+    gleam@expect:equal(gleam@list:at([], 0), {error, nil}),
+    gleam@expect:equal(gleam@list:at([1, 2, 3, 4, 5, 6], -1), {error, nil}).
 
 unique_test() ->
     gleam@expect:equal(
@@ -270,4 +282,4 @@ key_find_test() ->
     Proplist = [{0, <<"1">>}, {1, <<"2">>}],
     gleam@expect:equal(gleam@list:key_find(Proplist, 0), {ok, <<"1">>}),
     gleam@expect:equal(gleam@list:key_find(Proplist, 1), {ok, <<"2">>}),
-    gleam@expect:is_error(gleam@list:key_find(Proplist, 2)).
+    gleam@expect:equal(gleam@list:key_find(Proplist, 2), {error, nil}).

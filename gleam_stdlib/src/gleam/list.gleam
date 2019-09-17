@@ -2,7 +2,7 @@ import gleam/int
 import gleam/order
 import gleam/pair
 
-pub struct LengthMismatch {}
+pub enum LengthMismatch = | LengthMismatch
 
 // Using the Erlang C BIF implementation.
 //
@@ -183,9 +183,9 @@ pub fn any(list, f) {
 
 pub fn zip(l1, l2) {
   case pair.Pair(l1, l2) {
-    | pair.Pair([], _) -> []
-    | pair.Pair(_, []) -> []
-    | pair.Pair([x1 | rest1], [x2 | rest2]) -> [ pair.Pair(x1, x2) | zip(rest1, rest2) ]
+  | pair.Pair([], _) -> []
+  | pair.Pair(_, []) -> []
+  | pair.Pair([x1 | rest1], [x2 | rest2]) -> [ pair.Pair(x1, x2) | zip(rest1, rest2) ]
   }
 }
 
