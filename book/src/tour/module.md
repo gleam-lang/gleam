@@ -44,7 +44,7 @@ To use functions or types from another module we need to import them using the
 import nasa/rocket_ship
 
 pub fn explore_space() {
-  rocket_ship:launch()
+  rocket_ship.launch()
 }
 ```
 
@@ -52,7 +52,7 @@ The statement `import nasa/rocket_ship` creates a new variable with the name
 `rocket_ship` and the value of the `rocket_ship` module.
 
 In the `explore_space` function we call the imported module's public `launch`
-function using the `:` operator.
+function using the `.` operator.
 If we had attempted to call `count_down` it would result in a compile time
 error as this function is private in the `rocket_ship` module.
 
@@ -69,31 +69,3 @@ import animal/cat as kitty
 
 This may be useful to differentiate between multiple modules that would have
 the same default name when imported.
-
-
-## First class modules
-
-Modules in Gleam are first class values and can be assigned to variables,
-passed to functions, or anything else that we can do with regular values.
-
-```rust,noplaypen
-import nasa/rocket_ship
-import nasa/new_website
-import nasa/navy_boat
-
-pub fn perform_launch(some_module) {
-  some_module:launch()
-}
-
-pub fn run() {
-  perform_launch(rocket_ship)
-  perform_launch(new_website)
-  perform_launch(navy_boat)
-}
-```
-
-Here we have define a function that takes a module as an argument and then
-called it with various different modules.
-
-The `perform_launch` function doesn't care what module it takes, so long as it
-has a public function called `launch` that takes no arguments.

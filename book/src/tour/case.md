@@ -44,7 +44,7 @@ description  // => "It's true!"
 
 ## Destructuring
 
-Like `let` bindings a `case` expression can be used to destructure values that
+A `case` expression can be used to destructure values that
 contain other values, such as tuples and lists.
 
 ```rust,noplaypen
@@ -69,10 +69,10 @@ case xs {
 }
 ```
 
+Pattern matching also works in `let` bindings, though patterns that do not
+match all instances of that type may result in a runtime error.
+
 ```rust,noplaypen
-case xs {
-| {1, _} -> "The 1st element is 1"
-| {_, 1} -> "The 2nd element is 1"
-| other -> "Something else"
-}
+let [a] = [1]    // a is 1
+let [b] = [1, 2] // Runtime error! The pattern has 1 element but the value has 2
 ```

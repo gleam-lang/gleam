@@ -78,7 +78,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../getting-started/index.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li><ol class="section"><li><a href="../getting-started/installing-gleam.html"><strong aria-hidden="true">2.1.</strong> Installing Gleam</a></li><li><a href="../getting-started/installing-erlang.html"><strong aria-hidden="true">2.2.</strong> Installing Erlang</a></li><li><a href="../getting-started/editor-support.html"><strong aria-hidden="true">2.3.</strong> Editor support</a></li><li><a href="../getting-started/creating-a-project.html"><strong aria-hidden="true">2.4.</strong> Creating a project</a></li><li><a href="../getting-started/example-projects.html"><strong aria-hidden="true">2.5.</strong> Example projects</a></li></ol></li><li><a href="../tour/index.html"><strong aria-hidden="true">3.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/comments.html"><strong aria-hidden="true">3.1.</strong> Comments</a></li><li><a href="../tour/string.html"><strong aria-hidden="true">3.2.</strong> String</a></li><li><a href="../tour/bool.html"><strong aria-hidden="true">3.3.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">3.4.</strong> Int &amp; Float</a></li><li><a href="../tour/let.html"><strong aria-hidden="true">3.5.</strong> Let bindings</a></li><li><a href="../tour/tuple.html"><strong aria-hidden="true">3.6.</strong> Tuple</a></li><li><a href="../tour/list.html"><strong aria-hidden="true">3.7.</strong> List</a></li><li><a href="../tour/case.html"><strong aria-hidden="true">3.8.</strong> Case</a></li><li><a href="../tour/function.html"><strong aria-hidden="true">3.9.</strong> Function</a></li><li><a href="../tour/module.html" class="active"><strong aria-hidden="true">3.10.</strong> Module</a></li><li><a href="../tour/map.html"><strong aria-hidden="true">3.11.</strong> Map</a></li><li><a href="../tour/enum.html"><strong aria-hidden="true">3.12.</strong> Enum</a></li><li><a href="../tour/external-function.html"><strong aria-hidden="true">3.13.</strong> External function</a></li><li><a href="../tour/external-type.html"><strong aria-hidden="true">3.14.</strong> External type</a></li></ol></li><li><a href="../faqs.html"><strong aria-hidden="true">4.</strong> FAQs</a></li></ol>
+                <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../getting-started/index.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li><ol class="section"><li><a href="../getting-started/installing-gleam.html"><strong aria-hidden="true">2.1.</strong> Installing Gleam</a></li><li><a href="../getting-started/installing-erlang.html"><strong aria-hidden="true">2.2.</strong> Installing Erlang</a></li><li><a href="../getting-started/editor-support.html"><strong aria-hidden="true">2.3.</strong> Editor support</a></li><li><a href="../getting-started/creating-a-project.html"><strong aria-hidden="true">2.4.</strong> Creating a project</a></li><li><a href="../getting-started/example-projects.html"><strong aria-hidden="true">2.5.</strong> Example projects</a></li></ol></li><li><a href="../tour/index.html"><strong aria-hidden="true">3.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/comments.html"><strong aria-hidden="true">3.1.</strong> Comments</a></li><li><a href="../tour/string.html"><strong aria-hidden="true">3.2.</strong> String</a></li><li><a href="../tour/bool.html"><strong aria-hidden="true">3.3.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">3.4.</strong> Int &amp; Float</a></li><li><a href="../tour/let.html"><strong aria-hidden="true">3.5.</strong> Let bindings</a></li><li><a href="../tour/list.html"><strong aria-hidden="true">3.6.</strong> List</a></li><li><a href="../tour/case.html"><strong aria-hidden="true">3.7.</strong> Case</a></li><li><a href="../tour/function.html"><strong aria-hidden="true">3.8.</strong> Function</a></li><li><a href="../tour/module.html" class="active"><strong aria-hidden="true">3.9.</strong> Module</a></li><li><a href="../tour/struct.html"><strong aria-hidden="true">3.10.</strong> Struct</a></li><li><a href="../tour/enum.html"><strong aria-hidden="true">3.11.</strong> Enum</a></li><li><a href="../tour/external-function.html"><strong aria-hidden="true">3.12.</strong> External function</a></li><li><a href="../tour/external-type.html"><strong aria-hidden="true">3.13.</strong> External type</a></li></ol></li><li><a href="../faqs.html"><strong aria-hidden="true">4.</strong> FAQs</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -181,13 +181,13 @@ called by other functions within the same module.</p>
 import nasa/rocket_ship
 
 pub fn explore_space() {
-  rocket_ship:launch()
+  rocket_ship.launch()
 }
 </code></pre>
 <p>The statement <code>import nasa/rocket_ship</code> creates a new variable with the name
 <code>rocket_ship</code> and the value of the <code>rocket_ship</code> module.</p>
 <p>In the <code>explore_space</code> function we call the imported module's public <code>launch</code>
-function using the <code>:</code> operator.
+function using the <code>.</code> operator.
 If we had attempted to call <code>count_down</code> it would result in a compile time
 error as this function is private in the <code>rocket_ship</code> module.</p>
 <h2><a class="header" href="#named-import" id="named-import">Named import</a></h2>
@@ -198,27 +198,6 @@ import animal/cat as kitty
 </code></pre>
 <p>This may be useful to differentiate between multiple modules that would have
 the same default name when imported.</p>
-<h2><a class="header" href="#first-class-modules" id="first-class-modules">First class modules</a></h2>
-<p>Modules in Gleam are first class values and can be assigned to variables,
-passed to functions, or anything else that we can do with regular values.</p>
-<pre><code class="language-rust noplaypen">import nasa/rocket_ship
-import nasa/new_website
-import nasa/navy_boat
-
-pub fn perform_launch(some_module) {
-  some_module:launch()
-}
-
-pub fn run() {
-  perform_launch(rocket_ship)
-  perform_launch(new_website)
-  perform_launch(navy_boat)
-}
-</code></pre>
-<p>Here we have define a function that takes a module as an argument and then
-called it with various different modules.</p>
-<p>The <code>perform_launch</code> function doesn't care what module it takes, so long as it
-has a public function called <code>launch</code> that takes no arguments.</p>
 
                     </main>
 
@@ -231,7 +210,7 @@ has a public function called <code>launch</code> that takes no arguments.</p>
                         
 
                         
-                            <a rel="next" href="../tour/map.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../tour/struct.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -249,7 +228,7 @@ has a public function called <code>launch</code> that takes no arguments.</p>
                 
 
                 
-                    <a href="../tour/map.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a href="../tour/struct.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 
