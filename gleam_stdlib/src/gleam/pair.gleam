@@ -1,5 +1,3 @@
-// import gleam/list
-
 pub struct Pair(a, b) {
   first: a
   second: b

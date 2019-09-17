@@ -11,6 +11,7 @@
 - `any:tuple` has been renamed `any:pair`.
 - The `tuple` module has been renamed to `pair` and has a `Pair` type.
 - `pair.fetch` has been replaced with `list.key_find`.
+- `triple` module has been created with type `Triple`.
 
 ## v0.3.1 - 2019-08-08
 
