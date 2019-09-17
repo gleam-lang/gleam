@@ -1,4 +1,5 @@
 import gleam/order
+import gleam/pair
 
 pub fn negate(bool) {
   case bool {
@@ -7,13 +8,12 @@ pub fn negate(bool) {
   }
 }
 
-// TODO: replace struct with Pair
 pub fn compare(a, b) {
-  case struct(a, b) {
-  | struct(True, True) -> order.Eq
-  | struct(True, False) -> order.Gt
-  | struct(False, False) -> order.Eq
-  | struct(False, True) -> order.Lt
+  case pair.Pair(a, b) {
+  | pair.Pair(True, True) -> order.Eq
+  | pair.Pair(True, False) -> order.Gt
+  | pair.Pair(False, False) -> order.Eq
+  | pair.Pair(False, True) -> order.Lt
   }
 }
 

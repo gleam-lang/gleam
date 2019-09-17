@@ -1,5 +1,6 @@
 import gleam/int
 import gleam/order
+import gleam/pair
 
 pub enum Empty =
   | Empty
@@ -187,12 +188,11 @@ pub fn any(list, f) {
   }
 }
 
-// TODO: replace struct with Pair
 pub fn zip(l1, l2) {
-  case struct(l1, l2) {
-    | struct([], _) -> []
-    | struct(_, []) -> []
-    | struct([x1 | rest1], [x2 | rest2]) -> [ struct(x1, x2) | zip(rest1, rest2) ]
+  case pair.Pair(l1, l2) {
+    | pair.Pair([], _) -> []
+    | pair.Pair(_, []) -> []
+    | pair.Pair([x1 | rest1], [x2 | rest2]) -> [ pair.Pair(x1, x2) | zip(rest1, rest2) ]
   }
 }
 
@@ -234,10 +234,10 @@ pub fn unique(list) {
 }
 
 fn merge_sort(a, b, compare) {
-  case struct(a, b) {
-    | struct([], _) -> b
-    | struct(_, []) -> a
-    | struct([ax | ar], [bx | br]) ->
+  case pair.Pair(a, b) {
+    | pair.Pair([], _) -> b
+    | pair.Pair(_, []) -> a
+    | pair.Pair([ax | ar], [bx | br]) ->
       case compare(ax, bx) {
       | order.Lt -> [ax | merge_sort(ar, b, compare)]
       | _ -> [bx | merge_sort(a, br, compare)]
@@ -285,10 +285,10 @@ pub fn repeat(a, times) {
 
 fn do_split(list, n, taken) {
   case n <= 0 {
-  | True -> struct(reverse(taken), list)
+  | True -> pair.Pair(reverse(taken), list)
   | False ->
       case list {
-      | [] -> struct(reverse(taken), [])
+      | [] -> pair.Pair(reverse(taken), [])
       | [x | xs] -> do_split(xs, n - 1, [x | taken])
       }
   }
@@ -300,10 +300,10 @@ pub fn split(list, n) {
 
 fn do_split_while(list, f, acc) {
   case list {
-    | [] -> struct(reverse(acc), [])
+    | [] -> pair.Pair(reverse(acc), [])
     | [x | xs] ->
       case f(x) {
-      | False -> struct(reverse(acc), list)
+      | False -> pair.Pair(reverse(acc), list)
       | _ -> do_split_while(xs, f, [x | acc])
       }
   }

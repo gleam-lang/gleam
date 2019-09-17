@@ -1,3 +1,5 @@
+import gleam/pair
+
 pub enum Order =
   | Lt
   | Eq
@@ -20,30 +22,29 @@ pub fn to_int(order) {
   }
 }
 
-// TODO: replace struct with Pair
 pub fn compare(a, b) {
-  case struct(a, b) {
-  | struct(Lt, Lt) -> Eq
-  | struct(Lt, _) -> Lt
-  | struct(Eq, Eq) -> Eq
-  | struct(Gt, Gt) -> Eq
-  | struct(Eq, Gt) -> Lt
+  case pair.Pair(a, b) {
+  | pair.Pair(Lt, Lt) -> Eq
+  | pair.Pair(Lt, _) -> Lt
+  | pair.Pair(Eq, Eq) -> Eq
+  | pair.Pair(Gt, Gt) -> Eq
+  | pair.Pair(Eq, Gt) -> Lt
   | _ -> Gt
   }
 }
 
 pub fn max(a, b) {
-  case struct(a, b) {
-  | struct(Gt, _) -> Gt
-  | struct(Eq, Lt) -> Eq
+  case pair.Pair(a, b) {
+  | pair.Pair(Gt, _) -> Gt
+  | pair.Pair(Eq, Lt) -> Eq
   | _ -> b
   }
 }
 
 pub fn min(a, b) {
-  case struct(a, b) {
-  | struct(Lt, _) -> Lt
-  | struct(Eq, Gt) -> Eq
+  case pair.Pair(a, b) {
+  | pair.Pair(Lt, _) -> Lt
+  | pair.Pair(Eq, Gt) -> Eq
   | _ -> b
   }
 }
