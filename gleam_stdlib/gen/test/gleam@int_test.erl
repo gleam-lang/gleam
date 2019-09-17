@@ -12,9 +12,9 @@ parse() ->
     gleam@expect:equal(gleam@int:parse(<<"123">>), {ok, 123}),
     gleam@expect:equal(gleam@int:parse(<<"-123">>), {ok, -123}),
     gleam@expect:equal(gleam@int:parse(<<"0123">>), {ok, 123}),
-    gleam@expect:is_error(gleam@int:parse(<<"">>)),
-    gleam@expect:is_error(gleam@int:parse(<<"what">>)),
-    gleam@expect:is_error(gleam@int:parse(<<"1.23">>)).
+    gleam@expect:equal(gleam@int:parse(<<"">>), {error, nil}),
+    gleam@expect:equal(gleam@int:parse(<<"what">>), {error, nil}),
+    gleam@expect:equal(gleam@int:parse(<<"1.23">>), {error, nil}).
 
 to_base_string() ->
     gleam@expect:equal(gleam@int:to_base_string(100, 16), <<"64">>),

@@ -88,5 +88,5 @@ parse_float(String) ->
       {ok, Float};
 
     _ ->
-      {error, parse_error}
+      {error, nil}
   end.

@@ -31,15 +31,15 @@ pub fn parse() {
 
   ""
   |> int.parse
-  |> expect.is_error
+  |> expect.equal(_, Error(Nil))
 
   "what"
   |> int.parse
-  |> expect.is_error
+  |> expect.equal(_, Error(Nil))
 
   "1.23"
   |> int.parse
-  |> expect.is_error
+  |> expect.equal(_, Error(Nil))
 }
 
 pub fn to_base_string() {

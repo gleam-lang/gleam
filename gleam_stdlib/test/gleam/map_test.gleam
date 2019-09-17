@@ -70,7 +70,7 @@ pub fn fetch_test() {
 
   m
   |> map.fetch(_, 2)
-  |> expect.is_error
+  |> expect.equal(_, Error(Nil))
 }
 
 pub fn put_test() {

@@ -28,7 +28,7 @@ fetch_test() ->
     M = gleam@map:from_list(Proplist),
     gleam@expect:equal(gleam@map:fetch(M, 4), {ok, 0}),
     gleam@expect:equal(gleam@map:fetch(M, 1), {ok, 1}),
-    gleam@expect:is_error(gleam@map:fetch(M, 2)).
+    gleam@expect:equal(gleam@map:fetch(M, 2), {error, nil}).
 
 put_test() ->
     gleam@expect:equal(

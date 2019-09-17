@@ -6,8 +6,9 @@
 from_string_test() ->
     gleam@expect:is_ok(gleam@atom:from_string(<<"ok">>)),
     gleam@expect:is_ok(gleam@atom:from_string(<<"expect">>)),
-    gleam@expect:is_error(
-        gleam@atom:from_string(<<"this is not an atom we have seen before">>)
+    gleam@expect:equal(
+        gleam@atom:from_string(<<"this is not an atom we have seen before">>),
+        {error, atom_not_loaded}
     ).
 
 create_from_string_test() ->
