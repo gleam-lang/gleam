@@ -16,6 +16,7 @@
 - The error messages for defining multiple modules with the same name and for
   importing test modules into application code have been improved.
 - Numbers are now permitted in type names and constructors.
+- The `Nil` constructor will no longer erroneously be of type `Int`.
 
 ## v0.3.0 - 2019-08-08
 

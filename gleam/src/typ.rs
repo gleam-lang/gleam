@@ -812,7 +812,12 @@ impl<'a> Env<'a> {
         env.insert_variable(
             "Nil".to_string(),
             ValueConstructorVariant::Enum { arity: 0 },
-            bool(),
+            Type::App {
+                args: vec![],
+                public: true,
+                name: "Bool".to_string(),
+                module: vec![],
+            },
         );
         env.insert_type_constructor(
             "Nil".to_string(),
