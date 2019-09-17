@@ -72,7 +72,7 @@ update(Dict, Key, F) ->
             put(Dict, Key, F({ok, Value}));
 
         {error, _} ->
-            put(Dict, Key, F({error, not_found}))
+            put(Dict, Key, F({error, nil}))
     end.
 
 do_fold(List, Acc, F) ->

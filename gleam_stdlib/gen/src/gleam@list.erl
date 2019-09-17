@@ -24,7 +24,7 @@ contains(List, Elem) ->
 head(List) ->
     case List of
         [] ->
-            {error, empty};
+            {error, {}};
 
         [X | _] ->
             {ok, X}
@@ -33,7 +33,7 @@ head(List) ->
 tail(List) ->
     case List of
         [] ->
-            {error, empty};
+            {error, {}};
 
         [_ | Xs] ->
             {ok, Xs}
@@ -172,7 +172,7 @@ fold_right(List, Acc, Fun) ->
 find(Haystack, F) ->
     case Haystack of
         [] ->
-            {error, not_found};
+            {error, {}};
 
         [X | Rest] ->
             case F(X) of
@@ -232,7 +232,7 @@ strict_zip(L1, L2) ->
             {ok, zip(L1, L2)};
 
         false ->
-            {error, length_mismatch}
+            {error, {}}
     end.
 
 intersperse(List, Elem) ->
@@ -250,12 +250,12 @@ intersperse(List, Elem) ->
 at(List, I) ->
     case I < 0 of
         true ->
-            {error, not_found};
+            {error, {}};
 
         false ->
             case List of
                 [] ->
-                    {error, not_found};
+                    {error, {}};
 
                 [X | Rest] ->
                     case I =:= 0 of
