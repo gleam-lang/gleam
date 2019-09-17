@@ -1,6 +1,7 @@
 import gleam/any
 import gleam/result
 import gleam/list
+import gleam/pair
 
 pub external type MapDict(key, value);
 
@@ -10,10 +11,10 @@ pub enum NotFound =
 pub external fn size(MapDict(k, v)) -> Int
   = "maps" "size"
 
-pub external fn to_list(MapDict(key, value)) -> List(struct(key, value))
+pub external fn to_list(MapDict(key, value)) -> List(pair.Pair(key, value))
   = "maps" "to_list"
 
-pub external fn from_list(List(struct(key, value))) -> MapDict(key, value)
+pub external fn from_list(List(pair.Pair(key, value))) -> MapDict(key, value)
   = "maps" "from_list"
 
 external fn is_key(key, MapDict(key, v)) -> Bool
@@ -88,10 +89,9 @@ pub fn update(dict, key, f) {
 }
 
 fn do_fold(list, acc, f) {
-  // TODO: replace struct with Pair
   case list {
     | [] -> acc
-    | [struct(k, v) | tail] -> do_fold(tail, f(k, v, acc), f)
+    | [pair.Pair(k, v) | tail] -> do_fold(tail, f(k, v, acc), f)
   }
 }
 

@@ -1,7 +1,7 @@
 import gleam/any
 import gleam/atom
 import gleam/list
-import gleam/tuple
+import gleam/pair
 import gleam/expect
 import gleam/result
 import gleam/map
@@ -210,49 +210,38 @@ pub fn list_test() {
   |> expect.is_error
 }
 
-// TODO: replace struct with Pair
-pub fn struct2_test() {
-  struct(1, [])
+pub fn pair_test() {
+  pair.Pair(1, [])
   |> any.from
-  |> any.struct2
-  |> expect.equal(_, Ok(struct(any.from(1), any.from([]))))
+  |> any.pair
+  |> expect.equal(_, Ok(pair.Pair(any.from(1), any.from([]))))
 
-  struct("ok", "ok")
+  pair.Pair("ok", "ok")
   |> any.from
-  |> any.struct2
-  |> expect.equal(_, Ok(struct(any.from("ok"), any.from("ok"))))
+  |> any.pair
+  |> expect.equal(_, Ok(pair.Pair(any.from("ok"), any.from("ok"))))
 
-  struct(1)
+  pair.Pair(1, 2.0)
   |> any.from
-  |> any.struct2
-  |> expect.is_error
-
-  struct(1, 2, 3)
-  |> any.from
-  |> any.struct2
-  |> expect.is_error
-
-  struct(1, 2.0)
-  |> any.from
-  |> any.struct2
+  |> any.pair
   |> result.then(_, fn(x) {
     x
-    |> tuple.first
+    |> pair.first
     |> any.int
-    |> result.map(_, fn(f) { struct(f, tuple.second(x)) })
+    |> result.map(_, fn(f) { pair.Pair(f, pair.second(x)) })
   })
   |> result.then(_, fn(x) {
     x
-    |> tuple.second
+    |> pair.second
     |> any.float
-    |> result.map(_, fn(f) { struct(tuple.first(x), f) })
+    |> result.map(_, fn(f) { pair.Pair(pair.first(x), f) })
   })
-  |> expect.equal(_, Ok(struct(1, 2.0)))
+  |> expect.equal(_, Ok(pair.Pair(1, 2.0)))
 }
 
 pub fn field_test() {
   let Ok(ok_atom) = atom.from_string("ok")
-  let Ok(earlier_atom) = atom.from_string("earlier")
+  let Ok(error_atom) = atom.from_string("error")
 
   map.new()
   |> map.put(_, ok_atom, 1)
@@ -262,7 +251,7 @@ pub fn field_test() {
 
   map.new()
   |> map.put(_, ok_atom, 3)
-  |> map.put(_, earlier_atom, 1)
+  |> map.put(_, error_atom, 1)
   |> any.from
   |> any.field(_, ok_atom)
   |> expect.equal(_, Ok(any.from(3)))

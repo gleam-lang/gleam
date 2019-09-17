@@ -1,6 +1,7 @@
 import gleam/list as list_mod
 import gleam/atom
 import gleam/result
+import gleam/pair
 
 // `Any` data is data that we don"t know the type of yet.
 // We likely get data like this from interop with Erlang, or from
@@ -46,9 +47,8 @@ pub fn list(any, decode) {
   |> result.then(_, list_mod.traverse(_, decode))
 }
 
-// TODO: replace struct with Pair
-pub external fn struct2(Any) -> Result(struct(Any, Any), String)
-  = "gleam__stdlib" "decode_struct2"
+pub external fn pair(Any) -> Result(pair.Pair(Any, Any), String)
+  = "gleam__stdlib" "decode_pair"
 
 pub external fn field(Any, a) -> Result(Any, String)
   = "gleam__stdlib" "decode_field"
