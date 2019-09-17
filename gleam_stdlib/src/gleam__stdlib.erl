@@ -17,7 +17,7 @@ expect_is_error(A) -> ?assertMatch({error, _}, A).
 
 map_fetch(Map, Key) ->
   case maps:find(Key, Map) of
-    error -> {error, not_found};
+    error -> {error, nil};
     OkFound -> OkFound
   end.
 
@@ -79,7 +79,7 @@ parse_int(String) ->
       {ok, Integer};
 
     _ ->
-      {error, parse_error}
+      {error, nil}
   end.
 
 parse_float(String) ->

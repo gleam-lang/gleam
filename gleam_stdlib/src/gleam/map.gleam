@@ -5,9 +5,6 @@ import gleam/pair
 
 pub external type MapDict(key, value);
 
-pub enum NotFound =
-  | NotFound
-
 pub external fn size(MapDict(k, v)) -> Int
   = "maps" "size"
 
@@ -27,7 +24,7 @@ pub fn has_key(map, key) {
 pub external fn new() -> MapDict(key, value)
   = "maps" "new"
 
-pub external fn fetch(MapDict(key, value), key) -> Result(value, NotFound)
+pub external fn fetch(MapDict(key, value), key) -> Result(value, Nil)
   = "gleam__stdlib" "map_fetch";
 
 external fn erl_put(key, value, MapDict(key, value)) -> MapDict(key, value)
@@ -79,12 +76,10 @@ pub fn drop(map, keys) {
   })
 }
 
-pub external type NotFound;
-
 pub fn update(dict, key, f) {
   case fetch(dict, key) {
   | Ok(value) -> put(dict, key, f(Ok(value)))
-  | Error(_) -> put(dict, key, f(Error(NotFound)))
+  | Error(_) -> put(dict, key, f(Error(Nil)))
   }
 }
 

@@ -1,9 +1,6 @@
 import gleam/order
 
-pub enum NotAnInt =
-  | NotAnInt
-
-pub external fn parse(String) -> Result(Int, NotAnInt) = "gleam__stdlib" "parse_int";
+pub external fn parse(String) -> Result(Int, Nil) = "gleam__stdlib" "parse_int";
 
 pub external fn to_string(Int) -> String = "erlang" "integer_to_binary"
 

@@ -2,14 +2,7 @@ import gleam/int
 import gleam/order
 import gleam/pair
 
-pub enum Empty =
-  | Empty
-
-pub enum NotFound =
-  | NotFound
-
-pub enum LengthMismatch =
-  | LengthMismatch
+pub struct LengthMismatch {}
 
 // Using the Erlang C BIF implementation.
 //
@@ -32,14 +25,14 @@ pub fn contains(list, elem) {
 
 pub fn head(list) {
   case list {
-  | [] -> Error(Empty)
+  | [] -> Error(Nil)
   | [x | _] -> Ok(x)
   }
 }
 
 pub fn tail(list) {
   case list {
-  | [] -> Error(Empty)
+  | [] -> Error(Nil)
   | [_ | xs] -> Ok(xs)
   }
 }
@@ -157,7 +150,7 @@ pub fn fold_right(list, acc, fun) {
 
 pub fn find(haystack, f) {
   case haystack {
-  | [] -> Error(NotFound)
+  | [] -> Error(Nil)
   | [x | rest] ->
       case f(x) {
       | Ok(x) -> Ok(x)
@@ -213,10 +206,10 @@ pub fn intersperse(list, elem) {
 
 pub fn at(list, i) {
   case i < 0 {
-    | True -> Error(NotFound)
+    | True -> Error(Nil)
     | False ->
       case list {
-        | [] -> Error(NotFound)
+        | [] -> Error(Nil)
         | [x | rest] ->
           case i == 0 {
           | True -> Ok(x)
