@@ -19,12 +19,3 @@ pub fn swap(tup) {
   let Pair(a, b) = tup
   Pair(b, a)
 }
-
-// pub fn fetch(haystack, needle) {
-//   list.find(haystack, fn(tuple) {
-//     case first(tuple) == needle {
-//     | True -> tuple |> second |> Ok
-//     | False -> Error([])
-//     }
-//   })
-// }

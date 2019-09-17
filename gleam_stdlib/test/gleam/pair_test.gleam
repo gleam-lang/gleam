@@ -18,19 +18,3 @@ pub fn swap_test() {
   |> pair.swap
   |> expect.equal(_, pair.Pair("2", 1))
 }
-
-// pub fn fetch_test() {
-//   let proplist = [pair.Pair(0, "1"), pair.Pair(1, "2")]
-
-//   proplist
-//   |> pair.fetch(_, 0)
-//   |> expect.equal(_, Ok("1"))
-
-//   proplist
-//   |> pair.fetch(_, 1)
-//   |> expect.equal(_, Ok("2"))
-
-//   proplist
-//   |> pair.fetch(_, 2)
-//   |> expect.is_error
-// }

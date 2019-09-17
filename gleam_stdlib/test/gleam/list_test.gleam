@@ -358,3 +358,20 @@ pub fn split_while_test() {
   list.split_while([1, 2, 3, 4, 5], fn(x) { x <= -3 })
   |> expect.equal(_, pair.Pair([], [1, 2, 3, 4, 5]))
 }
+
+
+pub fn key_find_test() {
+  let proplist = [pair.Pair(0, "1"), pair.Pair(1, "2")]
+
+  proplist
+  |> list.key_find(_, 0)
+  |> expect.equal(_, Ok("1"))
+
+  proplist
+  |> list.key_find(_, 1)
+  |> expect.equal(_, Ok("2"))
+
+  proplist
+  |> list.key_find(_, 2)
+  |> expect.is_error
+}
