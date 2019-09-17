@@ -1849,8 +1849,9 @@ This should not be possible. Please report this crash",
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    // Remove private type constructors to create the public interface
-    env.type_constructors.retain(|_, info| info.public);
+    // Remove private and imported type constructors to create the public interface
+    env.type_constructors
+        .retain(|_, info| info.public && &info.module == module_name);
 
     Ok(Module {
         name: module.name.clone(),
@@ -1861,6 +1862,26 @@ This should not be possible. Please report this crash",
             value_constructors: env.public_module_value_constructors,
         },
     })
+}
+
+#[test]
+fn infer_module_type_retention_test() {
+    let module: UntypedModule = crate::ast::Module {
+        name: vec!["ok".to_string()],
+        statements: vec![],
+        type_info: (),
+    };
+
+    let module = infer_module(module, &HashMap::new()).expect("Should infer OK");
+
+    assert_eq!(
+        module.type_info,
+        ModuleTypeInfo {
+            name: vec!["ok".to_string()],
+            type_constructors: HashMap::new(), // Core type constructors like String and Int are not included
+            value_constructors: HashMap::new(),
+        }
+    );
 }
 
 /// Crawl the AST, annotating each node with the inferred type or

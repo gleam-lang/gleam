@@ -495,8 +495,29 @@ No module has been imported with the name `{}`.
                     .unwrap();
                 }
 
-                // TODO
-                UnknownModuleType { .. } => panic!("unimplemented UnknownModuleType"),
+                UnknownModuleType {
+                    meta,
+                    name,
+                    module_name,
+                    type_constructors,
+                } => {
+                    let mut options: Vec<_> = type_constructors.keys().collect();
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Unknown module".to_string(),
+                        label: did_you_mean(name, &mut options, ""),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                    write!(
+                        buffer,
+                        "\nThe module `{}` does not contain a `{}` type.\n",
+                        module_name.join("/"),
+                        name
+                    )
+                    .unwrap();
+                }
 
                 // TODO
                 UnknownModuleField { .. } => panic!("unimplemented UnknownModuleField"),
