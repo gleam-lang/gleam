@@ -1,3 +1,3 @@
-pub fn ok() {
+pub fn ffok() {
   Ok(1)
 }
