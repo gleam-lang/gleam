@@ -4,11 +4,13 @@
 
 - Syntax has been updated for Gleam v0.4.
 - The `map_dict` module has been renamed to `map`.
-- `list:sort` now requires a compare function as comparison operators now only
-  work on Ints.
+- `list:sort` now requires a compare function as comparison operators
+  now only work on Ints.
 - `list:sort`'s performance has been slightly optimised.
 - The `float` module gains a `compare` function.
-- `any:tuple` has been renamed `any:struct2`.
+- `any:tuple` has been renamed `any:pair`.
+- The `tuple` module has been renamed to `pair` and has a `Pair` type.
+- `pair.fetch` has been replaced with `list.key_find`.
 
 ## v0.3.1 - 2019-08-08
 
