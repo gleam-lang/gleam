@@ -503,7 +503,7 @@ No module has been imported with the name `{}`.
                 } => {
                     let mut options: Vec<_> = type_constructors.keys().collect();
                     let diagnostic = ErrorDiagnostic {
-                        title: "Unknown module".to_string(),
+                        title: "Unknown module type".to_string(),
                         label: did_you_mean(name, &mut options, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
@@ -512,15 +512,36 @@ No module has been imported with the name `{}`.
                     write(buffer, diagnostic);
                     write!(
                         buffer,
-                        "\nThe module `{}` does not contain a `{}` type.\n",
+                        "\nThe module `{}` does not have a `{}` type.\n",
                         module_name.join("/"),
                         name
                     )
                     .unwrap();
                 }
 
-                // TODO
-                UnknownModuleField { .. } => panic!("unimplemented UnknownModuleField"),
+                UnknownModuleField {
+                    meta,
+                    name,
+                    module_name,
+                    value_constructors,
+                } => {
+                    let mut options: Vec<_> = value_constructors.keys().collect();
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Unknown module field".to_string(),
+                        label: did_you_mean(name, &mut options, ""),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                    write!(
+                        buffer,
+                        "\nThe module `{}` does not have a `{}` field.\n",
+                        module_name.join("/"),
+                        name
+                    )
+                    .unwrap();
+                }
             },
 
             Error::Parse { path, src, error } => {
