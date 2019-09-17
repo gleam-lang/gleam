@@ -312,3 +312,12 @@ fn do_split_while(list, f, acc) {
 pub fn split_while(list, f) {
   do_split_while(list, f, [])
 }
+
+pub fn key_find(haystack, needle) {
+  find(haystack, fn(p) {
+    case pair.first(p) == needle {
+    | True -> p |> pair.second |> Ok
+    | False -> Error(Nil)
+    }
+  })
+}
