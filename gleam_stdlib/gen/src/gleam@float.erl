@@ -4,7 +4,7 @@
 -export([parse/1, to_string/1, compare/2, ceiling/1, floor/1, round/1, truncate/1]).
 
 parse(A) ->
-    gleam__stdlib:parse_float(A).
+    gleam_stdlib:parse_float(A).
 
 to_string(F) ->
     gleam@iodata:to_string(gleam@iodata:from_float(F)).

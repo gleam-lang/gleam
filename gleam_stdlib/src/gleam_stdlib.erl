@@ -1,4 +1,4 @@
--module(gleam__stdlib).
+-module(gleam_stdlib).
 -include_lib("eunit/include/eunit.hrl").
 
 -export([expect_equal/2, expect_not_equal/2, expect_true/1, expect_false/1,

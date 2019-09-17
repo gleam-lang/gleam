@@ -25,7 +25,7 @@ pub external fn new() -> MapDict(key, value)
   = "maps" "new"
 
 pub external fn fetch(MapDict(key, value), key) -> Result(value, Nil)
-  = "gleam__stdlib" "map_fetch";
+  = "gleam_stdlib" "map_fetch";
 
 external fn erl_put(key, value, MapDict(key, value)) -> MapDict(key, value)
   = "maps" "put";

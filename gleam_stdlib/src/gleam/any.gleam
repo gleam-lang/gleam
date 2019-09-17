@@ -11,35 +11,35 @@ pub external type Any;
 
 // Convert any Gleam data into `Any` data.
 //
-pub external fn from(a) -> Any = "gleam__stdlib" "identity";
+pub external fn from(a) -> Any = "gleam_stdlib" "identity";
 
 // Unsafely cast any type into any other type.
 //
 // This is an escape hatch for the type system that may be useful when wrapping
 // native Erlang APIs. It is to be used as a last measure only.
 //
-pub external fn unsafe_coerce(a) -> b = "gleam__stdlib" "identity";
+pub external fn unsafe_coerce(a) -> b = "gleam_stdlib" "identity";
 
 pub external fn string(Any) -> Result(String, String)
-  = "gleam__stdlib" "decode_string"
+  = "gleam_stdlib" "decode_string"
 
 pub external fn int(Any) -> Result(Int, String)
-  = "gleam__stdlib" "decode_int"
+  = "gleam_stdlib" "decode_int"
 
 pub external fn float(Any) -> Result(Float, String)
-  = "gleam__stdlib" "decode_float"
+  = "gleam_stdlib" "decode_float"
 
 pub external fn atom(Any) -> Result(atom.Atom, String)
-  = "gleam__stdlib" "decode_atom"
+  = "gleam_stdlib" "decode_atom"
 
 pub external fn bool(Any) -> Result(Bool, String)
-  = "gleam__stdlib" "decode_bool"
+  = "gleam_stdlib" "decode_bool"
 
 pub external fn thunk(Any) -> Result(fn() -> Any, String)
-  = "gleam__stdlib" "decode_thunk"
+  = "gleam_stdlib" "decode_thunk"
 
-external fn list_any(Any) -> Result(List(Any), String) =
-  "gleam__stdlib" "decode_list"
+external fn list_any(Any) -> Result(List(Any), String)
+  = "gleam_stdlib" "decode_list"
 
 pub fn list(any, decode) {
   any
@@ -48,7 +48,7 @@ pub fn list(any, decode) {
 }
 
 pub external fn pair(Any) -> Result(pair.Pair(Any, Any), String)
-  = "gleam__stdlib" "decode_pair"
+  = "gleam_stdlib" "decode_pair"
 
 pub external fn field(Any, a) -> Result(Any, String)
-  = "gleam__stdlib" "decode_field"
+  = "gleam_stdlib" "decode_field"

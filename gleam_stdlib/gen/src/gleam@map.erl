@@ -22,7 +22,7 @@ new() ->
     maps:new().
 
 fetch(A, B) ->
-    gleam__stdlib:map_fetch(A, B).
+    gleam_stdlib:map_fetch(A, B).
 
 erl_put(A, B, C) ->
     maps:put(A, B, C).
