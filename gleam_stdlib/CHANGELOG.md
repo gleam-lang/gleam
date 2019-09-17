@@ -8,10 +8,12 @@
   now only work on Ints.
 - `list:sort`'s performance has been slightly optimised.
 - The `float` module gains a `compare` function.
-- `any:tuple` has been renamed `any:pair`.
+- `any.tuple` has been renamed `any.pair`.
 - The `tuple` module has been renamed to `pair` and has a `Pair` type.
 - `pair.fetch` has been replaced with `list.key_find`.
 - `triple` module has been created with type `Triple`.
+- The error type for `float.parse`, `int.parse`, `list.head`, `list.tail`,
+  `list.find`, `list.at`, `map.fetch`, and `map.update` is now `Nil`.
 
 ## v0.3.1 - 2019-08-08
 

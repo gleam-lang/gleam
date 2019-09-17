@@ -72,29 +72,6 @@ pub fn float_test() {
   |> expect.equal(_, Error("Expected a Float, got `[]`"))
 }
 
-// TODO
-// pub fn atom_test() {
-//   make an atom here
-//     |> any.from
-//     |> atom
-//     |> expect.equal(_, Ok(""))
-
-//   make an atom here
-//     |> any.from
-//     |> atom
-//     |> expect.equal(_, Ok("ok"))
-
-//   1
-//     |> any.from
-//     |> atom
-//     |> expect.is_error
-
-//   []
-//     |> any.from
-//     |> atom
-//     |> expect.is_error
-// }
-
 pub fn thunk_test() {
   fn() { 1 }
   |> any.from
