@@ -471,8 +471,29 @@ Private types can only be used within the module that defines them.
                     .unwrap();
                 }
 
-                // TODO
-                UnknownModule { .. } => panic!("unimplemented UnknownModule"),
+                UnknownModule {
+                    meta,
+                    name,
+                    imported_modules,
+                } => {
+                    let mut options: Vec<_> = imported_modules.keys().collect();
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Unknown module".to_string(),
+                        label: did_you_mean(name, &mut options, ""),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                    write!(
+                        buffer,
+                        "
+No module has been imported with the name `{}`.
+",
+                        name
+                    )
+                    .unwrap();
+                }
 
                 // TODO
                 UnknownModuleType { .. } => panic!("unimplemented UnknownModuleType"),

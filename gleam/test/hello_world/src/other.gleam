@@ -1,3 +1,5 @@
+import nest/bird
+
 pub enum Empty =
   | Empty
 
@@ -5,7 +7,7 @@ pub enum Empty =
 //
 pub external fn reverse(List(a)) -> List(a) = "lists" "reverse"
 
-pub fn is_empty(list) {
+pub fn is_empty(list: bird.Thingy) {
   list == []
 }
 
