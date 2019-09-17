@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Tuple - The Gleam Book</title>
+        <title>Struct - The Gleam Book</title>
         
 
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
@@ -78,7 +78,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../getting-started/index.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li><ol class="section"><li><a href="../getting-started/installing-gleam.html"><strong aria-hidden="true">2.1.</strong> Installing Gleam</a></li><li><a href="../getting-started/installing-erlang.html"><strong aria-hidden="true">2.2.</strong> Installing Erlang</a></li><li><a href="../getting-started/editor-support.html"><strong aria-hidden="true">2.3.</strong> Editor support</a></li><li><a href="../getting-started/creating-a-project.html"><strong aria-hidden="true">2.4.</strong> Creating a project</a></li><li><a href="../getting-started/example-projects.html"><strong aria-hidden="true">2.5.</strong> Example projects</a></li></ol></li><li><a href="../tour/index.html"><strong aria-hidden="true">3.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/comments.html"><strong aria-hidden="true">3.1.</strong> Comments</a></li><li><a href="../tour/string.html"><strong aria-hidden="true">3.2.</strong> String</a></li><li><a href="../tour/bool.html"><strong aria-hidden="true">3.3.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">3.4.</strong> Int &amp; Float</a></li><li><a href="../tour/let.html"><strong aria-hidden="true">3.5.</strong> Let bindings</a></li><li><a href="../tour/tuple.html" class="active"><strong aria-hidden="true">3.6.</strong> Tuple</a></li><li><a href="../tour/list.html"><strong aria-hidden="true">3.7.</strong> List</a></li><li><a href="../tour/case.html"><strong aria-hidden="true">3.8.</strong> Case</a></li><li><a href="../tour/function.html"><strong aria-hidden="true">3.9.</strong> Function</a></li><li><a href="../tour/module.html"><strong aria-hidden="true">3.10.</strong> Module</a></li><li><a href="../tour/map.html"><strong aria-hidden="true">3.11.</strong> Map</a></li><li><a href="../tour/enum.html"><strong aria-hidden="true">3.12.</strong> Enum</a></li><li><a href="../tour/external-function.html"><strong aria-hidden="true">3.13.</strong> External function</a></li><li><a href="../tour/external-type.html"><strong aria-hidden="true">3.14.</strong> External type</a></li></ol></li><li><a href="../faqs.html"><strong aria-hidden="true">4.</strong> FAQs</a></li></ol>
+                <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="../getting-started/index.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li><ol class="section"><li><a href="../getting-started/installing-gleam.html"><strong aria-hidden="true">2.1.</strong> Installing Gleam</a></li><li><a href="../getting-started/installing-erlang.html"><strong aria-hidden="true">2.2.</strong> Installing Erlang</a></li><li><a href="../getting-started/editor-support.html"><strong aria-hidden="true">2.3.</strong> Editor support</a></li><li><a href="../getting-started/creating-a-project.html"><strong aria-hidden="true">2.4.</strong> Creating a project</a></li><li><a href="../getting-started/example-projects.html"><strong aria-hidden="true">2.5.</strong> Example projects</a></li></ol></li><li><a href="../tour/index.html"><strong aria-hidden="true">3.</strong> Language tour</a></li><li><ol class="section"><li><a href="../tour/comments.html"><strong aria-hidden="true">3.1.</strong> Comments</a></li><li><a href="../tour/string.html"><strong aria-hidden="true">3.2.</strong> String</a></li><li><a href="../tour/bool.html"><strong aria-hidden="true">3.3.</strong> Bool</a></li><li><a href="../tour/int-and-float.html"><strong aria-hidden="true">3.4.</strong> Int &amp; Float</a></li><li><a href="../tour/let.html"><strong aria-hidden="true">3.5.</strong> Let bindings</a></li><li><a href="../tour/list.html"><strong aria-hidden="true">3.6.</strong> List</a></li><li><a href="../tour/case.html"><strong aria-hidden="true">3.7.</strong> Case</a></li><li><a href="../tour/function.html"><strong aria-hidden="true">3.8.</strong> Function</a></li><li><a href="../tour/module.html"><strong aria-hidden="true">3.9.</strong> Module</a></li><li><a href="../tour/struct.html" class="active"><strong aria-hidden="true">3.10.</strong> Struct</a></li><li><a href="../tour/enum.html"><strong aria-hidden="true">3.11.</strong> Enum</a></li><li><a href="../tour/external-function.html"><strong aria-hidden="true">3.12.</strong> External function</a></li><li><a href="../tour/external-type.html"><strong aria-hidden="true">3.13.</strong> External type</a></li></ol></li><li><a href="../faqs.html"><strong aria-hidden="true">4.</strong> FAQs</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -145,32 +145,87 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#tuples" id="tuples">Tuples</a></h1>
-<p>Tuples are an ordered collection of elements of a fixed size. Each element can
-be of a different type.</p>
-<pre><code class="language-rust noplaypen">{&quot;Cat&quot;, True}  // Type {String, Bool}
-{1, 2.0, &quot;3&quot;}  // Type {Int, Float, String}
+                        <h1><a class="header" href="#struct" id="struct">Struct</a></h1>
+<p>Gleam's struct types are named collections of keys and values. They are
+similar to objects in object oriented languages, though they don't have
+methods.</p>
+<p>Structs are defined with the <code>struct</code> keyword.</p>
+<pre><code class="language-rust noplaypen">pub struct Cat {
+  name: String
+  cuteness: Int
+}
 </code></pre>
-<p>Contained values can be extracted from structs using a let binding.</p>
-<pre><code class="language-rust noplaypen">let values = {1, 2.0}
-let {x, y} = values
+<p>Here we have defined a struct called <code>Cat</code> which has two fields: A <code>name</code>
+field which is an <code>Int</code>, and a <code>cuteness</code> field which is an <code>Int</code>.</p>
+<p>The <code>pub</code> keyword has been used to make this struct usable from other modules.</p>
+<p>Once defined the struct type can be used in functions:</p>
+<pre><code class="language-rust noplaypen">fn cats() {
+  // Struct fields can be given in any order
+  let cat1 = Cat(name: &quot;Nubi&quot;, cuteness: 2001)
+  let cat2 = Cat(cuteness: 1805, name: &quot;Biffy&quot;)
 
-x  // =&gt; 1
-y  // =&gt; 2.0
+  // Alternatively fields can be given without labels
+  let cat3 = Cat(&quot;Ginny&quot;, 1950)
+
+  [cat1, cat2, cat3]
+}
 </code></pre>
+<h2><a class="header" href="#destructuring-structs" id="destructuring-structs">Destructuring structs</a></h2>
+<p>To extract values from structs we can pattern match on them with <code>let</code> or
+<code>case</code>.</p>
+<pre><code class="language-rust noplaypen">let Cat(name: name1, cuteness: cuteness1) = cat1
+
+name1     // =&gt; &quot;Nubi&quot;
+cuteness1 // =&gt; 2001
+</code></pre>
+<p>We can also pattern match using positional arguments:</p>
+<pre><code class="language-rust noplaypen">let Cat(name2, cuteness2) = cat2
+
+name2     // =&gt; &quot;Biffy&quot;
+cuteness2 // =&gt; 1805
+</code></pre>
+<h2><a class="header" href="#generic-structs" id="generic-structs">Generic structs</a></h2>
+<p>Structs types can be parameterised so the same struct can be constructed with
+different contained types.</p>
+<pre><code class="language-rust noplaypen">pub struct Box(a) {
+  tag: String,
+  contents: a, // The type of this field is injected when constructed
+}
+
+fn run() {
+  Box(tag: &quot;one&quot;, contents: 1.0) // the type is Box(Float)
+  Box(tag: &quot;two&quot;, contents: &quot;2&quot;) // the type is Box(String)
+}
+</code></pre>
+<h2><a class="header" href="#commonly-used-structs" id="commonly-used-structs">Commonly used structs</a></h2>
+<h3><a class="header" href="#paira-b" id="paira-b"><code>Pair(a, b)</code></a></h3>
+<p>There may be times when you want to move two values together, or return them
+both from a function. To save you from having to define a new struct for this
+the Gleam standard library implements a <code>Pair</code> type in the <code>gleam/pair</code>
+module which can contain any two values.</p>
+<pre><code class="language-rust noplaypen">import gleam/pair
+
+fn run() {
+  pair.Pair(&quot;ok&quot;, 100) // type is Pair(String, Int)
+  pair.Pair(1.01, [1]) // type is Pair(Float, List(Int))
+}
+</code></pre>
+<h2><a class="header" href="#erlang-interop" id="erlang-interop">Erlang interop</a></h2>
+<p>At runtime Gleam structs are Erlang tuples. All information about the names of
+the keys is erased at runtime.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="../tour/let.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../tour/module.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
                         
-                            <a rel="next" href="../tour/list.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../tour/enum.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -182,13 +237,13 @@ y  // =&gt; 2.0
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a href="../tour/let.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a href="../tour/module.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
-                    <a href="../tour/list.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a href="../tour/enum.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 

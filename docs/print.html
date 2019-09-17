@@ -80,7 +80,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li><a href="index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="getting-started/index.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li><ol class="section"><li><a href="getting-started/installing-gleam.html"><strong aria-hidden="true">2.1.</strong> Installing Gleam</a></li><li><a href="getting-started/installing-erlang.html"><strong aria-hidden="true">2.2.</strong> Installing Erlang</a></li><li><a href="getting-started/editor-support.html"><strong aria-hidden="true">2.3.</strong> Editor support</a></li><li><a href="getting-started/creating-a-project.html"><strong aria-hidden="true">2.4.</strong> Creating a project</a></li><li><a href="getting-started/example-projects.html"><strong aria-hidden="true">2.5.</strong> Example projects</a></li></ol></li><li><a href="tour/index.html"><strong aria-hidden="true">3.</strong> Language tour</a></li><li><ol class="section"><li><a href="tour/comments.html"><strong aria-hidden="true">3.1.</strong> Comments</a></li><li><a href="tour/string.html"><strong aria-hidden="true">3.2.</strong> String</a></li><li><a href="tour/bool.html"><strong aria-hidden="true">3.3.</strong> Bool</a></li><li><a href="tour/int-and-float.html"><strong aria-hidden="true">3.4.</strong> Int &amp; Float</a></li><li><a href="tour/let.html"><strong aria-hidden="true">3.5.</strong> Let bindings</a></li><li><a href="tour/tuple.html"><strong aria-hidden="true">3.6.</strong> Tuple</a></li><li><a href="tour/list.html"><strong aria-hidden="true">3.7.</strong> List</a></li><li><a href="tour/case.html"><strong aria-hidden="true">3.8.</strong> Case</a></li><li><a href="tour/function.html"><strong aria-hidden="true">3.9.</strong> Function</a></li><li><a href="tour/module.html"><strong aria-hidden="true">3.10.</strong> Module</a></li><li><a href="tour/map.html"><strong aria-hidden="true">3.11.</strong> Map</a></li><li><a href="tour/enum.html"><strong aria-hidden="true">3.12.</strong> Enum</a></li><li><a href="tour/external-function.html"><strong aria-hidden="true">3.13.</strong> External function</a></li><li><a href="tour/external-type.html"><strong aria-hidden="true">3.14.</strong> External type</a></li></ol></li><li><a href="faqs.html"><strong aria-hidden="true">4.</strong> FAQs</a></li></ol>
+                <ol class="chapter"><li><a href="index.html"><strong aria-hidden="true">1.</strong> Hello, Gleam!</a></li><li><a href="getting-started/index.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li><ol class="section"><li><a href="getting-started/installing-gleam.html"><strong aria-hidden="true">2.1.</strong> Installing Gleam</a></li><li><a href="getting-started/installing-erlang.html"><strong aria-hidden="true">2.2.</strong> Installing Erlang</a></li><li><a href="getting-started/editor-support.html"><strong aria-hidden="true">2.3.</strong> Editor support</a></li><li><a href="getting-started/creating-a-project.html"><strong aria-hidden="true">2.4.</strong> Creating a project</a></li><li><a href="getting-started/example-projects.html"><strong aria-hidden="true">2.5.</strong> Example projects</a></li></ol></li><li><a href="tour/index.html"><strong aria-hidden="true">3.</strong> Language tour</a></li><li><ol class="section"><li><a href="tour/comments.html"><strong aria-hidden="true">3.1.</strong> Comments</a></li><li><a href="tour/string.html"><strong aria-hidden="true">3.2.</strong> String</a></li><li><a href="tour/bool.html"><strong aria-hidden="true">3.3.</strong> Bool</a></li><li><a href="tour/int-and-float.html"><strong aria-hidden="true">3.4.</strong> Int &amp; Float</a></li><li><a href="tour/let.html"><strong aria-hidden="true">3.5.</strong> Let bindings</a></li><li><a href="tour/list.html"><strong aria-hidden="true">3.6.</strong> List</a></li><li><a href="tour/case.html"><strong aria-hidden="true">3.7.</strong> Case</a></li><li><a href="tour/function.html"><strong aria-hidden="true">3.8.</strong> Function</a></li><li><a href="tour/module.html"><strong aria-hidden="true">3.9.</strong> Module</a></li><li><a href="tour/struct.html"><strong aria-hidden="true">3.10.</strong> Struct</a></li><li><a href="tour/enum.html"><strong aria-hidden="true">3.11.</strong> Enum</a></li><li><a href="tour/external-function.html"><strong aria-hidden="true">3.12.</strong> External function</a></li><li><a href="tour/external-type.html"><strong aria-hidden="true">3.13.</strong> External type</a></li></ol></li><li><a href="faqs.html"><strong aria-hidden="true">4.</strong> FAQs</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -449,19 +449,6 @@ let x = 2
 x  // =&gt; 2
 y  // =&gt; 1
 </code></pre>
-<h1><a class="header" href="#tuples" id="tuples">Tuples</a></h1>
-<p>Tuples are an ordered collection of elements of a fixed size. Each element can
-be of a different type.</p>
-<pre><code class="language-rust noplaypen">{&quot;Cat&quot;, True}  // Type {String, Bool}
-{1, 2.0, &quot;3&quot;}  // Type {Int, Float, String}
-</code></pre>
-<p>Contained values can be extracted from structs using a let binding.</p>
-<pre><code class="language-rust noplaypen">let values = {1, 2.0}
-let {x, y} = values
-
-x  // =&gt; 1
-y  // =&gt; 2.0
-</code></pre>
 <h1><a class="header" href="#list" id="list">List</a></h1>
 <p>Lists are ordered collections of values. They're one of the most common data
 structures in Gleam.</p>
@@ -518,7 +505,7 @@ expression with a <code>let</code> binding.</p>
 description  // =&gt; &quot;It's true!&quot;
 </code></pre>
 <h2><a class="header" href="#destructuring" id="destructuring">Destructuring</a></h2>
-<p>Like <code>let</code> bindings a <code>case</code> expression can be used to destructure values that
+<p>A <code>case</code> expression can be used to destructure values that
 contain other values, such as tuples and lists.</p>
 <pre><code class="language-rust noplaypen">case xs {
 | [] -&gt; &quot;This list is empty&quot;
@@ -537,11 +524,10 @@ concisely express flow control that might be verbose without pattern matching.</
 | other -&gt; &quot;Something else&quot;
 }
 </code></pre>
-<pre><code class="language-rust noplaypen">case xs {
-| {1, _} -&gt; &quot;The 1st element is 1&quot;
-| {_, 1} -&gt; &quot;The 2nd element is 1&quot;
-| other -&gt; &quot;Something else&quot;
-}
+<p>Pattern matching also works in <code>let</code> bindings, though patterns that do not
+match all instances of that type may result in a runtime error.</p>
+<pre><code class="language-rust noplaypen">let [a] = [1]    // a is 1
+let [b] = [1, 2] // Runtime error! The pattern has 1 element but the value has 2
 </code></pre>
 <h1><a class="header" href="#function" id="function">Function</a></h1>
 <h2><a class="header" href="#named-functions" id="named-functions">Named functions</a></h2>
@@ -653,13 +639,13 @@ called by other functions within the same module.</p>
 import nasa/rocket_ship
 
 pub fn explore_space() {
-  rocket_ship:launch()
+  rocket_ship.launch()
 }
 </code></pre>
 <p>The statement <code>import nasa/rocket_ship</code> creates a new variable with the name
 <code>rocket_ship</code> and the value of the <code>rocket_ship</code> module.</p>
 <p>In the <code>explore_space</code> function we call the imported module's public <code>launch</code>
-function using the <code>:</code> operator.
+function using the <code>.</code> operator.
 If we had attempted to call <code>count_down</code> it would result in a compile time
 error as this function is private in the <code>rocket_ship</code> module.</p>
 <h2><a class="header" href="#named-import" id="named-import">Named import</a></h2>
@@ -670,90 +656,74 @@ import animal/cat as kitty
 </code></pre>
 <p>This may be useful to differentiate between multiple modules that would have
 the same default name when imported.</p>
-<h2><a class="header" href="#first-class-modules" id="first-class-modules">First class modules</a></h2>
-<p>Modules in Gleam are first class values and can be assigned to variables,
-passed to functions, or anything else that we can do with regular values.</p>
-<pre><code class="language-rust noplaypen">import nasa/rocket_ship
-import nasa/new_website
-import nasa/navy_boat
-
-pub fn perform_launch(some_module) {
-  some_module:launch()
-}
-
-pub fn run() {
-  perform_launch(rocket_ship)
-  perform_launch(new_website)
-  perform_launch(navy_boat)
+<h1><a class="header" href="#struct" id="struct">Struct</a></h1>
+<p>Gleam's struct types are named collections of keys and values. They are
+similar to objects in object oriented languages, though they don't have
+methods.</p>
+<p>Structs are defined with the <code>struct</code> keyword.</p>
+<pre><code class="language-rust noplaypen">pub struct Cat {
+  name: String
+  cuteness: Int
 }
 </code></pre>
-<p>Here we have define a function that takes a module as an argument and then
-called it with various different modules.</p>
-<p>The <code>perform_launch</code> function doesn't care what module it takes, so long as it
-has a public function called <code>launch</code> that takes no arguments.</p>
-<h1><a class="header" href="#map" id="map">Map</a></h1>
-<p>Gleam's maps are a collection of names and values where each value can be
-of any type.</p>
-<pre><code class="language-rust noplaypen">{
-  name = &quot;Rex&quot;,
-  size = 40,
+<p>Here we have defined a struct called <code>Cat</code> which has two fields: A <code>name</code>
+field which is an <code>Int</code>, and a <code>cuteness</code> field which is an <code>Int</code>.</p>
+<p>The <code>pub</code> keyword has been used to make this struct usable from other modules.</p>
+<p>Once defined the struct type can be used in functions:</p>
+<pre><code class="language-rust noplaypen">fn cats() {
+  // Struct fields can be given in any order
+  let cat1 = Cat(name: &quot;Nubi&quot;, cuteness: 2001)
+  let cat2 = Cat(cuteness: 1805, name: &quot;Biffy&quot;)
+
+  // Alternatively fields can be given without labels
+  let cat3 = Cat(&quot;Ginny&quot;, 1950)
+
+  [cat1, cat2, cat3]
 }
 </code></pre>
-<h2><a class="header" href="#accessing-field-values" id="accessing-field-values">Accessing field values</a></h2>
-<p>Map values can be accessed using the <code>map.field_name</code> syntax.</p>
-<pre><code class="language-rust noplaypen">let pup = { name = &quot;Rex&quot;, size = 40 }
-let name = pup.name
+<h2><a class="header" href="#destructuring-structs" id="destructuring-structs">Destructuring structs</a></h2>
+<p>To extract values from structs we can pattern match on them with <code>let</code> or
+<code>case</code>.</p>
+<pre><code class="language-rust noplaypen">let Cat(name: name1, cuteness: cuteness1) = cat1
 
-name  // =&gt; &quot;Rex&quot;
+name1     // =&gt; &quot;Nubi&quot;
+cuteness1 // =&gt; 2001
 </code></pre>
-<h2><a class="header" href="#inserting-field-values" id="inserting-field-values">Inserting field values</a></h2>
-<p>A new map with updated or additional fields can be created using the
-<code>{ map | field_name = value }</code> update syntax.</p>
-<p>The updated map fields do not have to have the same types as the original
-fields.</p>
-<pre><code class="language-rust noplaypen">let pup = { name = &quot;Rex&quot;, size = 40 }
-let dog = { pup | size = 70, playful = True }
+<p>We can also pattern match using positional arguments:</p>
+<pre><code class="language-rust noplaypen">let Cat(name2, cuteness2) = cat2
 
-pup  // { name = &quot;Rex&quot;, size = 40 }
-dog  // { name = &quot;Rex&quot;, size = 70, playful = True }
+name2     // =&gt; &quot;Biffy&quot;
+cuteness2 // =&gt; 1805
 </code></pre>
-<h2><a class="header" href="#types" id="types">Types</a></h2>
-<p>The type of a map depends upon the names and types of its fields.</p>
-<pre><code class="language-rust noplaypen">{ name = &quot;Rex&quot; }             // Type { name = String }
-{ name = &quot;Rex&quot;, size = 40 }  // Type { name = String, size = Int }
-</code></pre>
-<p>The Gleam compiler keeps tracks of what fields and values each map has and
-will present a compile time error if you try to use a map field that does
-not exist or has the incorrect type.</p>
-<pre><code class="language-rust noplaypen">let pup = { name = &quot;Rex&quot;, size = 40 }
+<h2><a class="header" href="#generic-structs" id="generic-structs">Generic structs</a></h2>
+<p>Structs types can be parameterised so the same struct can be constructed with
+different contained types.</p>
+<pre><code class="language-rust noplaypen">pub struct Box(a) {
+  tag: String,
+  contents: a, // The type of this field is injected when constructed
+}
 
-pup.address   // Compile time error! Unknown field
-pup.name + 1  // Compile time error! Wrong type
-</code></pre>
-<h3><a class="header" href="#parameterised-map-fields" id="parameterised-map-fields">Parameterised map fields</a></h3>
-<p>Gleam's type system aims to be as permissive when it comes to maps passed
-to functions. Take this function for example.</p>
-<pre><code class="language-rust noplaypen">fn get_following_year(map) {
-  map.year + 1
+fn run() {
+  Box(tag: &quot;one&quot;, contents: 1.0) // the type is Box(Float)
+  Box(tag: &quot;two&quot;, contents: &quot;2&quot;) // the type is Box(String)
 }
 </code></pre>
-<p>The type of this function is <code>fn({ a | year = Int }) -&gt; Int</code>.</p>
-<p>The <code>a |</code> in <code>{ a | year = Int }</code> means &quot;any other fields&quot;, so this function
-can be called with any map so long as the map has a <code>year</code> field that
-has an <code>Int</code> value.</p>
-<pre><code class="language-rust noplaypen">let date = { day = 5, month: 1, year = 2019 }
-let book = { title = &quot;Sabriel&quot;, year = 1995 }
-let soup = { kind = &quot;Tomato&quot;, spicy = False }
-let wine = { kind = &quot;Fancy!&quot;, year = &quot;Good&quot; }
+<h2><a class="header" href="#commonly-used-structs" id="commonly-used-structs">Commonly used structs</a></h2>
+<h3><a class="header" href="#paira-b" id="paira-b"><code>Pair(a, b)</code></a></h3>
+<p>There may be times when you want to move two values together, or return them
+both from a function. To save you from having to define a new struct for this
+the Gleam standard library implements a <code>Pair</code> type in the <code>gleam/pair</code>
+module which can contain any two values.</p>
+<pre><code class="language-rust noplaypen">import gleam/pair
 
-get_following_year(date)  // =&gt; 2020
-get_following_year(book)  // =&gt; 1996
-get_following_year(soup)  // Compile time error! No year field
-get_following_year(wine)  // Compile time error! Wrong field type
+fn run() {
+  pair.Pair(&quot;ok&quot;, 100) // type is Pair(String, Int)
+  pair.Pair(1.01, [1]) // type is Pair(Float, List(Int))
+}
 </code></pre>
 <h2><a class="header" href="#erlang-interop-1" id="erlang-interop-1">Erlang interop</a></h2>
-<p>At runtime Gleam maps are Erlang maps with atom keys. They are similar to
-Elixir's structs, but do not need to be declared prior to being used.</p>
+<p>At runtime Gleam structs are Erlang tuples. All information about the names of
+the keys is erased at runtime.</p>
 <h1><a class="header" href="#enums" id="enums">Enums</a></h1>
 <p>Enums in Gleam are a way of modeling data that can be one of a few different
 variants. They must be declared before use, and the names of variants must be
