@@ -419,12 +419,17 @@ false.
 -3
 4001
 </code></pre>
-<p>Gleam has several operators that work with Ints, all of which return Ints.</p>
+<p>Gleam has several operators that work with Ints.</p>
 <pre><code class="language-rust noplaypen">1 + 1 // =&gt; 2
 5 - 1 // =&gt; 4
 5 / 2 // =&gt; 2
 3 * 3 // =&gt; 9
 5 % 2 // =&gt; 1
+
+2 &gt; 1  // =&gt; True
+2 &lt; 1  // =&gt; False
+2 &gt;= 1 // =&gt; True
+2 &lt;= 1 // =&gt; False
 </code></pre>
 <h2><a class="header" href="#floats" id="floats">Floats</a></h2>
 <p>Floats are numbers that have a decimal point.</p>
@@ -437,6 +442,11 @@ false.
 5.0 -. 1.5 // =&gt; 3.5
 5.0 /. 2.0 // =&gt; 2.5
 3.0 *. 3.1 // =&gt; 9.3
+
+2.0 &gt;. 1.0  // =&gt; True
+2.0 &lt;. 1.0  // =&gt; False
+2.0 &gt;=. 1.0 // =&gt; True
+2.0 &lt;=. 1.0 // =&gt; False
 </code></pre>
 <h1><a class="header" href="#let-bindings" id="let-bindings">Let bindings</a></h1>
 <p>A value can be given a name using <code>let</code>. Names can be reused by later let
@@ -764,6 +774,52 @@ let Points(p) = score
 
 p // =&gt; 50
 </code></pre>
+<h2><a class="header" href="#commonly-used-enums" id="commonly-used-enums">Commonly used enums</a></h2>
+<h3><a class="header" href="#bool-1" id="bool-1"><code>Bool</code></a></h3>
+<pre><code class="language-rust noplaypen">pub enum Bool =
+  | True
+  | False
+</code></pre>
+<p>As seen above Gleam's <code>Bool</code> type is an enum! Use it to answer yes/no
+questions and to indicate whether something is <code>True</code> or <code>False</code>.</p>
+<h3><a class="header" href="#resultvalue-error" id="resultvalue-error"><code>Result(value, error)</code></a></h3>
+<pre><code class="language-rust noplaypen">pub enum Result(value, reason) =
+  | Ok(value)
+  | Error(reason)
+</code></pre>
+<p>Gleam doesn't have exceptions of <code>null</code> to represent errors in our programs,
+instead we have the <code>Result</code> type. If a function call fail wrap the returned
+value in a <code>Result</code>, either <code>Ok</code> if the function was successful, or <code>Error</code>
+if it failed.</p>
+<pre><code class="language-rust noplaypen">pub fn lookup(name, phone_book) {
+  // ... we found a phone number in the phone book for the given name here
+  Ok(phone_number)
+}
+</code></pre>
+<p>The <code>Error</code> type needs to be given a reason for the failure in order to
+return, like so:</p>
+<pre><code class="language-rust noplaypen">pub enum MyDatabaseError =
+  | InvalidQuery
+  | NetworkTimeout
+
+pub fn insert(db_row) {
+  // ... something went wrong connecting to a database here
+  Error(NetworkTimeout)
+}
+</code></pre>
+<p>In cases where we don't care about the specific error enough to want to create
+a custom error type, or when the cause of the error is obvious without further
+detail, the <code>Nil</code> type can be used as the <code>Error</code> reason.</p>
+<pre><code class="language-rust noplaypen">pub fn lookup(name, phone_book) {
+  // ... That name wasn't found in the phone book
+  Error(Nil)
+}
+</code></pre>
+<p>When we have a <code>Result</code> type returned to us from a function we can pattern
+match on it using <code>case</code> to determine whether we have an <code>Ok</code> result or
+an <code>Error</code> result.</p>
+<p>The standard library <code>gleam/result</code> module contains helpful functions for
+working with the <code>Result</code> type, make good use of them!</p>
 <h2><a class="header" href="#erlang-interop-2" id="erlang-interop-2">Erlang interop</a></h2>
 <p>At runtime enum variants with no contained values become atoms. The atoms are
 written in <code>snake_case</code> rather than <code>CamelCase</code> so <code>LoggedIn</code> becomes
@@ -778,7 +834,7 @@ LoggedIn(&quot;Kim&quot;)
 {:logged_in, &quot;Kim&quot;}
 </code></pre>
 <pre><code>% Erlang
-guest.
+guest,
 {logged_in, &lt;&lt;&quot;Kim&quot;&gt;&gt;}.
 </code></pre>
 <h1><a class="header" href="#external-function" id="external-function">External function</a></h1>
