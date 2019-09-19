@@ -3,7 +3,7 @@
 set -eu
 
 GLEAM_ROOT=$(pwd)
-TAG=$(git tag --points-at HEAD)
+TAG=$(git tag --points-at HEAD | grep '^v')
 ARCHIVE=gleam-$TAG-macos.tar.gz
 
 cd gleam
