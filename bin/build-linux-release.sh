@@ -3,7 +3,7 @@
 set -eu
 
 GLEAM_ROOT=$(pwd)
-TAG=$(git tag --points-at HEAD)
+TAG=$(git tag --points-at HEAD | grep '^v')
 DOCKER_TAG=lpil/gleam:$(echo $TAG | tail -c +2)
 ARCHIVE=gleam-$TAG-linux-amd64.tar.gz
 CONTAINER_NAME=gleam-linux-builder
