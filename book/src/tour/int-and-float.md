@@ -14,7 +14,7 @@ Ints are "whole" numbers.
 4001
 ```
 
-Gleam has several operators that work with Ints, all of which return Ints.
+Gleam has several operators that work with Ints.
 
 ```rust,noplaypen
 1 + 1 // => 2
@@ -22,6 +22,11 @@ Gleam has several operators that work with Ints, all of which return Ints.
 5 / 2 // => 2
 3 * 3 // => 9
 5 % 2 // => 1
+
+2 > 1  // => True
+2 < 1  // => False
+2 >= 1 // => True
+2 <= 1 // => False
 ```
 
 ## Floats
@@ -41,4 +46,9 @@ Floats also have their own set of operators.
 5.0 -. 1.5 // => 3.5
 5.0 /. 2.0 // => 2.5
 3.0 *. 3.1 // => 9.3
+
+2.0 >. 1.0  // => True
+2.0 <. 1.0  // => False
+2.0 >=. 1.0 // => True
+2.0 <=. 1.0 // => False
 ```
