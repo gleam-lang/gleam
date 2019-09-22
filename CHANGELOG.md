@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.4.0 - 2019-09-19
 
 - The struct data type has be introduced. Structs are pre-declared user
   defined data types with named fields and constant access time.

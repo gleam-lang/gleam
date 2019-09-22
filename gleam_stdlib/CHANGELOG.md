@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.4.0 - 2019-09-19
 
 - Syntax has been updated for Gleam v0.4.
 - The `map_dict` module has been renamed to `map`.
