@@ -2314,8 +2314,11 @@ Please report this to https://github.com/lpil/gleam/issues"
                             constructor,
                         })
                     } else {
-                        // Error: singleton given args
-                        unimplemented!()
+                        Err(Error::IncorrectArity {
+                            meta,
+                            expected: 0,
+                            given: pattern_args.len(),
+                        })
                     }
                 }
 
@@ -3398,6 +3401,14 @@ fn infer_error_test() {
             src: "let id = fn(x) { x(x) } 1",
             error: Error::RecursiveType {
                 meta: Meta { start: 19, end: 20 },
+            },
+        },
+        Case {
+            src: "let True(x) = 1 x",
+            error: Error::IncorrectArity {
+                meta: Meta { start: 4, end: 11 },
+                expected: 0,
+                given: 1,
             },
         },
         // TODO: remove when struct field access is supported
