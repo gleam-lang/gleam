@@ -2175,7 +2175,6 @@ fn infer_value_field_select(
     _meta: Meta,
     env: &mut Env,
 ) -> Result<TypedExpr, Error> {
-    // TODO: struct field access
     Err(Error::NotModule {
         meta: container.meta().clone(),
         typ: infer(container, level, env)?.typ().clone(),
@@ -2193,7 +2192,7 @@ fn unify_pattern(
     env: &mut Env,
 ) -> Result<TypedPattern, Error> {
     //
-    // TODO: I think we might be unifying backwards for some of these.
+    // I think we might be unifying backwards for some of these.
     // The typ should be the `expected` and the `pattern` is the actual?
     // Or perhaps because it's a pattern there should be a different Error variant
     // so we can display a more specific error message.
@@ -2298,8 +2297,11 @@ Please report this to https://github.com/lpil/gleam/issues"
                             constructor,
                         })
                     } else {
-                        // TODO: Incorrect number of args given to constructor
-                        unimplemented!()
+                        Err(Error::IncorrectArity {
+                            meta,
+                            expected: args.len(),
+                            given: pattern_args.len(),
+                        })
                     }
                 }
 
@@ -3411,7 +3413,14 @@ fn infer_error_test() {
                 given: 1,
             },
         },
-        // TODO: remove when struct field access is supported
+        Case {
+            src: "let Ok(1, x) = 1 x",
+            error: Error::IncorrectArity {
+                meta: Meta { start: 4, end: 12 },
+                expected: 1,
+                given: 2,
+            },
+        },
         Case {
             src: "let x = 1 x.whatever",
             error: Error::NotModule {
@@ -3658,7 +3667,6 @@ pub fn two() { one() + zero() }",
                   }",
             module: vec![("length", "fn(List(a)) -> Int")],
         },
-        // % TODO: mutual recursion
         //    // % {
         //    // %pub fn length(list) {\n
         //    // %  case list {\n
@@ -3691,7 +3699,6 @@ pub fn two() { one() + zero() }",
                 ("third", "fn(Tup(a, b, c)) -> c"),
             ],
         },
-        // TODO: struct access
         // Case {
         //     src: "pub struct Box(a) { boxed: a }
         //           pub fn unbox_int(b: Box(Int)) { b.boxed }",
