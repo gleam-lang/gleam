@@ -4,6 +4,8 @@
 
 - The source code preview for functions that return a type incompatible with
   the functions annotations has been improved to be more precise.
+- A helpful error message is rendered if an enum field contains a generic type
+  that has not been declared.
 
 ## v0.4.1 - 2019-09-29
 
