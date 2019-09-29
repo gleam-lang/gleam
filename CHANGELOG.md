@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.4.1 - 2019-09-29
+
+- Struct types with parameterised fields are now registered with the correct
+  number of type parameters.
+
 ## v0.4.0 - 2019-09-19
 
 - The struct data type has be introduced. Structs are pre-declared user

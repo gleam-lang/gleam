@@ -1643,7 +1643,7 @@ pub fn infer_module(
                     TypeConstructorInfo {
                         module: module_name.clone(),
                         public,
-                        arity: fields.len(),
+                        arity: type_args.len(),
                     },
                 );
                 // Build return type and collect type vars that can be used by the constructor
@@ -3697,6 +3697,14 @@ pub fn two() { one() + zero() }",
             module: vec![
                 ("Tup", "fn(a, b, c) -> Tup(a, b, c)"),
                 ("third", "fn(Tup(a, b, c)) -> c"),
+            ],
+        },
+        Case {
+            src: "pub struct Box(x) { label: String contents: x }
+                  pub fn id(x: Box(y)) { x }",
+            module: vec![
+                ("Box", "fn(String, a) -> Box(a)"),
+                ("id", "fn(Box(a)) -> Box(a)"),
             ],
         },
         // Case {
