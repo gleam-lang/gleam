@@ -1,11 +1,15 @@
 import gleam/iodata
 import gleam/list
+import gleam/order
 
 pub external fn length(String) -> Int = "string" "length"
 
 pub external fn lowercase(String) -> String = "string" "lowercase"
 
 pub external fn uppercase(String) -> String = "string" "uppercase"
+
+pub external fn compare(String, String) -> order.Order =
+  "gleam_stdlib" "compare_strings"
 
 pub fn reverse(string) {
   string

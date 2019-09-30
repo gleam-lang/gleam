@@ -1,5 +1,6 @@
 import gleam/string
 import gleam/expect
+import gleam/order
 
 pub fn length_test() {
   string.length("ß↑e̊")
@@ -47,4 +48,21 @@ pub fn append_test() {
   "Test"
   |> string.append(_, " Me")
   |> expect.equal(_, "Test Me")
+}
+
+pub fn compare_test() {
+  string.compare("", "")
+  |> expect.equal(_, order.Eq)
+
+  string.compare("a", "")
+  |> expect.equal(_, order.Gt)
+
+  string.compare("a", "A")
+  |> expect.equal(_, order.Gt)
+
+  string.compare("A", "B")
+  |> expect.equal(_, order.Lt)
+
+  string.compare("t", "ABC")
+  |> expect.equal(_, order.Gt)
 }

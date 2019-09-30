@@ -1,7 +1,7 @@
 -module(gleam@string_test).
 -compile(no_auto_import).
 
--export([length_test/0, lowercase_test/0, uppercase_test/0, reverse_test/0, split_test/0, replace_test/0, append_test/0]).
+-export([length_test/0, lowercase_test/0, uppercase_test/0, reverse_test/0, split_test/0, replace_test/0, append_test/0, compare_test/0]).
 
 length_test() ->
     gleam@expect:equal(gleam@string:length(<<"ß↑e̊">>), 3),
@@ -38,3 +38,10 @@ append_test() ->
         gleam@string:append(<<"Test">>, <<" Me">>),
         <<"Test Me">>
     ).
+
+compare_test() ->
+    gleam@expect:equal(gleam@string:compare(<<"">>, <<"">>), eq),
+    gleam@expect:equal(gleam@string:compare(<<"a">>, <<"">>), gt),
+    gleam@expect:equal(gleam@string:compare(<<"a">>, <<"A">>), gt),
+    gleam@expect:equal(gleam@string:compare(<<"A">>, <<"B">>), lt),
+    gleam@expect:equal(gleam@string:compare(<<"t">>, <<"ABC">>), gt).

@@ -1,7 +1,7 @@
 -module(gleam@string).
 -compile(no_auto_import).
 
--export([length/1, lowercase/1, uppercase/1, reverse/1, split/2, replace/3, append/2]).
+-export([length/1, lowercase/1, uppercase/1, compare/2, reverse/1, split/2, replace/3, append/2]).
 
 length(A) ->
     string:length(A).
@@ -11,6 +11,9 @@ lowercase(A) ->
 
 uppercase(A) ->
     string:uppercase(A).
+
+compare(A, B) ->
+    gleam_stdlib:compare_strings(A, B).
 
 reverse(String) ->
     gleam@iodata:to_string(gleam@iodata:reverse(gleam@iodata:new(String))).
