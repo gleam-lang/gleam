@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- The source code preview for functions that return a type incompatible with
+  the functions annotations has been improved to be more precise.
+
 ## v0.4.1 - 2019-09-29
 
 - Struct types with parameterised fields are now registered with the correct

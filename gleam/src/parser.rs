@@ -85,7 +85,6 @@ pub fn seq(mut exprs: Vec<crate::ast::UntypedExpr>) -> crate::ast::UntypedExpr {
 
     let head = exprs.pop().unwrap();
     exprs.into_iter().rev().fold(head, |acc, expr| Expr::Seq {
-        meta: expr.meta().clone(),
         typ: (),
         first: Box::new(expr),
         then: Box::new(acc),
@@ -708,7 +707,6 @@ fn expr_test() {
                 },
             ],
             body: Box::new(Expr::Seq {
-                meta: Meta { start: 11, end: 12 },
                 typ: (),
                 first: Box::new(Expr::Int {
                     typ: (),
@@ -986,7 +984,6 @@ fn module_test() {
                     }
                 ],
                 body: Expr::Seq {
-                    meta: Meta { start: 19, end: 20 },
                     typ: (),
                     first: Box::new(Expr::Int {
                         typ: (),
@@ -1015,7 +1012,6 @@ fn module_test() {
                 name: "run".to_string(),
                 args: vec![],
                 body: Expr::Seq {
-                    meta: Meta { start: 11, end: 12 },
                     typ: (),
                     first: Box::new(Expr::Int {
                         typ: (),
@@ -1023,7 +1019,6 @@ fn module_test() {
                         value: 1
                     }),
                     then: Box::new(Expr::Seq {
-                        meta: Meta { start: 13, end: 14 },
                         typ: (),
                         first: Box::new(Expr::Int {
                             typ: (),
@@ -1031,7 +1026,6 @@ fn module_test() {
                             value: 2
                         }),
                         then: Box::new(Expr::Seq {
-                            meta: Meta { start: 15, end: 16 },
                             typ: (),
                             first: Box::new(Expr::Int {
                                 typ: (),

@@ -1930,7 +1930,6 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         }),
 
         Expr::Seq {
-            meta,
             first,
             then,
             typ: _,
@@ -1938,7 +1937,6 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             let first = infer(*first, level, env)?;
             let then = infer(*then, level, env)?;
             Ok(Expr::Seq {
-                meta,
                 typ: then.typ().clone(),
                 first: Box::new(first),
                 then: Box::new(then),
