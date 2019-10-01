@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The `string` module gains the `compare` function.
+
 ## v0.4.0 - 2019-09-19
 
 - Syntax has been updated for Gleam v0.4.
