@@ -7,9 +7,11 @@ pub enum Empty =
 //
 pub external fn reverse(List(a)) -> List(a) = "lists" "reverse"
 
-pub fn is_empty(list) {
-  list.thing
-  list == []
+pub fn is_empty(list) -> Int {
+  1
+  let x = 2
+  list ==
+  []
 }
 
 pub fn contains(list, elem) {

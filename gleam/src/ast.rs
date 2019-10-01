@@ -205,7 +205,6 @@ pub enum Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type
     },
 
     Seq {
-        meta: Meta,
         typ: Type,
         first: Box<Self>,
         then: Box<Self>,
@@ -287,12 +286,12 @@ pub enum Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type
 impl<A, B, C, D> Expr<A, B, C, D> {
     pub fn meta(&self) -> &Meta {
         match self {
-            Expr::Int { meta, .. } => meta,
-            Expr::Seq { meta, .. } => meta,
-            Expr::Var { meta, .. } => meta,
             Expr::Fn { meta, .. } => meta,
+            Expr::Int { meta, .. } => meta,
+            Expr::Seq { then, .. } => then.meta(),
+            Expr::Var { meta, .. } => meta,
             Expr::Nil { meta, .. } => meta,
-            Expr::Let { meta, .. } => meta,
+            Expr::Let { then, .. } => then.meta(),
             Expr::Case { meta, .. } => meta,
             Expr::Cons { meta, .. } => meta,
             Expr::Call { meta, .. } => meta,

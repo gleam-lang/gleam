@@ -793,7 +793,6 @@ map() ->
                 args: vec![],
                 name: "seq".to_string(),
                 body: Expr::Seq {
-                    meta: default(),
                     typ: crate::typ::int(),
                     first: Box::new(Expr::Int {
                         typ: crate::typ::int(),
