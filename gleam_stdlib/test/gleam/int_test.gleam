@@ -71,3 +71,23 @@ pub fn compare_test() {
   int.compare(-1, -2)
   |> expect.equal(_, order.Gt)
 }
+
+pub fn max_test() {
+  int.max(0, 0)
+  |> expect.equal(_, 0)
+
+  int.max(0, 1)
+  |> expect.equal(_, 1)
+
+  int.max(1, 0)
+  |> expect.equal(_, 1)
+
+  int.max(-1, 2)
+  |> expect.equal(_, 2)
+
+  int.max(2, -2)
+  |> expect.equal(_, 2)
+
+  int.max(-1, -1)
+  |> expect.equal(_, -1)
+}

@@ -16,3 +16,10 @@ pub fn compare(a, b) {
     }
   }
 }
+
+pub fn max(a, b) {
+  case a > b {
+  | True -> a
+  | False -> b
+  }
+}
