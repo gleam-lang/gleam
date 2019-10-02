@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The `pair` module gains the `map_first`, and `map_second` functions.
 - The `string` module gains the `compare` function.
 
 ## v0.4.0 - 2019-09-19
