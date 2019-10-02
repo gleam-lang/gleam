@@ -1,7 +1,7 @@
 -module(gleam@float).
 -compile(no_auto_import).
 
--export([parse/1, to_string/1, compare/2, ceiling/1, floor/1, round/1, truncate/1]).
+-export([parse/1, to_string/1, compare/2, min/2, ceiling/1, floor/1, round/1, truncate/1]).
 
 parse(A) ->
     gleam_stdlib:parse_float(A).
@@ -22,6 +22,15 @@ compare(A, B) ->
                 false ->
                     gt
             end
+    end.
+
+min(A, B) ->
+    case A < B of
+        true ->
+            A;
+
+        false ->
+            B
     end.
 
 ceiling(A) ->

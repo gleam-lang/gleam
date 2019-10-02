@@ -3,6 +3,8 @@
 ## Unreleased
 
 - The `string` module gains the `compare` function.
+- The `float` module gains the `min` function.
+- The `int` module gains the `min` function.
 
 ## v0.4.0 - 2019-09-19
 

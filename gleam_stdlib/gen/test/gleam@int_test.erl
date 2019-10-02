@@ -1,7 +1,7 @@
 -module(gleam@int_test).
 -compile(no_auto_import).
 
--export([to_string/0, parse/0, to_base_string/0, compare_test/0]).
+-export([to_string/0, parse/0, to_base_string/0, compare_test/0, min_test/0]).
 
 to_string() ->
     gleam@expect:equal(gleam@int:to_string(123), <<"123">>),
@@ -27,3 +27,11 @@ compare_test() ->
     gleam@expect:equal(gleam@int:compare(-2, -1), lt),
     gleam@expect:equal(gleam@int:compare(2, 1), gt),
     gleam@expect:equal(gleam@int:compare(-1, -2), gt).
+
+min_test() ->
+    gleam@expect:equal(gleam@int:min(0, 0), 0),
+    gleam@expect:equal(gleam@int:min(0, 1), 0),
+    gleam@expect:equal(gleam@int:min(1, 0), 0),
+    gleam@expect:equal(gleam@int:min(-1, 2), -1),
+    gleam@expect:equal(gleam@int:min(2, -2), -2),
+    gleam@expect:equal(gleam@int:min(-1, -1), -1).

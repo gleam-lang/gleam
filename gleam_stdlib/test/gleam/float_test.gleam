@@ -137,3 +137,26 @@ pub fn truncate_test() {
   |> float.truncate
   |> expect.equal(_, -7)
 }
+
+pub fn min_test() {
+  float.min(0., 0.)
+  |> expect.equal(_, 0.)
+
+  float.min(0.3, 1.5)
+  |> expect.equal(_, 0.3)
+
+  float.min(1., 0.)
+  |> expect.equal(_, 0.)
+
+  float.min(-1.7, 2.5)
+  |> expect.equal(_, -1.7)
+
+  float.min(-2.2, -2.2)
+  |> expect.equal(_, -2.2)
+
+  float.min(-1., -1.)
+  |> expect.equal(_, -1.)
+
+  float.min(-1.1, -1.)
+  |> expect.equal(_, -1.1)
+}
