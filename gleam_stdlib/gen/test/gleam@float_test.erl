@@ -1,7 +1,7 @@
 -module(gleam@float_test).
 -compile(no_auto_import).
 
--export([parse_test/0, to_string_test/0, compare_test/0, ceiling_test/0, floor_test/0, round_test/0, truncate_test/0, min_test/0]).
+-export([parse_test/0, to_string_test/0, compare_test/0, ceiling_test/0, floor_test/0, round_test/0, truncate_test/0, min_test/0, max_test/0]).
 
 parse_test() ->
     gleam@expect:equal(gleam@float:parse(<<"1.23">>), {ok, 1.23}),
@@ -57,3 +57,12 @@ min_test() ->
     gleam@expect:equal(gleam@float:min(-2.2, -2.2), -2.2),
     gleam@expect:equal(gleam@float:min(-1.0, -1.0), -1.0),
     gleam@expect:equal(gleam@float:min(-1.1, -1.0), -1.1).
+
+max_test() ->
+    gleam@expect:equal(gleam@float:max(0.0, 0.0), 0.0),
+    gleam@expect:equal(gleam@float:max(0.3, 1.5), 1.5),
+    gleam@expect:equal(gleam@float:max(1.0, 0.0), 1.0),
+    gleam@expect:equal(gleam@float:max(-1.7, 2.5), 2.5),
+    gleam@expect:equal(gleam@float:max(-2.2, -2.2), -2.2),
+    gleam@expect:equal(gleam@float:max(-1.0, -1.0), -1.0),
+    gleam@expect:equal(gleam@float:max(-1.1, -1.0), -1.0).
