@@ -160,3 +160,26 @@ pub fn min_test() {
   float.min(-1.1, -1.)
   |> expect.equal(_, -1.1)
 }
+
+pub fn max_test() {
+  float.max(0., 0.)
+  |> expect.equal(_, 0.)
+
+  float.max(0.3, 1.5)
+  |> expect.equal(_, 1.5)
+
+  float.max(1., 0.)
+  |> expect.equal(_, 1.)
+
+  float.max(-1.7, 2.5)
+  |> expect.equal(_, 2.5)
+
+  float.max(-2.2, -2.2)
+  |> expect.equal(_, -2.2)
+
+  float.max(-1., -1.)
+  |> expect.equal(_, -1.)
+
+  float.max(-1.1, -1.)
+  |> expect.equal(_, -1.)
+}

@@ -4,8 +4,8 @@
 
 - The `pair` module gains the `map_first`, and `map_second` functions.
 - The `string` module gains the `compare` function.
-- The `float` module gains the `min` function.
-- The `int` module gains the `min` function.
+- The `float` module gains the `max`,  and `min` functions.
+- The `int` module gains the `max`, and `min` functions.
 
 ## v0.4.0 - 2019-09-19
 

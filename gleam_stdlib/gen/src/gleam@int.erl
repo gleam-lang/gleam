@@ -1,7 +1,7 @@
 -module(gleam@int).
 -compile(no_auto_import).
 
--export([parse/1, to_string/1, to_base_string/2, compare/2, min/2]).
+-export([parse/1, to_string/1, to_base_string/2, compare/2, min/2, max/2]).
 
 parse(A) ->
     gleam_stdlib:parse_int(A).
@@ -29,6 +29,15 @@ compare(A, B) ->
 
 min(A, B) ->
     case A < B of
+        true ->
+            A;
+
+        false ->
+            B
+    end.
+
+max(A, B) ->
+    case A > B of
         true ->
             A;
 

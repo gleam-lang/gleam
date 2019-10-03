@@ -28,6 +28,13 @@ pub fn min(a, b) {
   }
 }
 
+pub fn max(a, b) {
+  case a >. b {
+  | True -> a
+  | False -> b
+  }
+}
+
 pub external fn ceiling(Float) -> Float = "math" "ceil";
 
 pub external fn floor(Float) -> Float = "math" "floor";
