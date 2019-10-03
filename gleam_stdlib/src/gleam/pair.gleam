@@ -17,3 +17,13 @@ pub fn swap(tup) {
   let Pair(a, b) = tup
   Pair(b, a)
 }
+
+pub fn map_first(tup, f) {
+    let Pair(a, b) = tup
+    Pair(f(a), b)
+}
+
+pub fn map_second(tup, f) {
+    let Pair(a, b) = tup
+    Pair(a, f(b))
+}
