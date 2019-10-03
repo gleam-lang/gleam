@@ -16,3 +16,11 @@ pub fn compare(a, b) {
     }
   }
 }
+
+pub fn min(a, b) {
+  case a < b {
+  | True -> a
+  | False -> b
+  }
+}
+
