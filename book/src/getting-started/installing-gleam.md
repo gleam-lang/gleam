@@ -6,6 +6,17 @@ The easiest way to install Gleam on Linux and Apple macOS is to download a
 prebuilt version of the compiler from the [GitHub release
 page](https://github.com/lpil/gleam/releases).
 
+## Mac OS X
+
+### Using Homebrew
+
+With [Homebrew](https://brew.sh) installed run the following:
+
+```sh
+brew update
+brew install gleam
+```
+
 ## asdf version manager
 
 [asdf](https://github.com/asdf-vm/asdf) is a tool for installing and managing
