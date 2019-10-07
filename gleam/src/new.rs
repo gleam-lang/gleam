@@ -42,18 +42,26 @@ pub fn create(template: Template, name: String, path: Option<String>) {
         path.join("src").join(format!("{}.gleam", name)),
         &src(&name),
     );
-    write(
-        path.join("src").join(format!("{}.app.src", name)),
-        &app_src(&name),
-    );
 
     match template {
         Template::Lib => {
             write(path.join("rebar.config"), &rebar_config(""));
+            write(
+                path.join("src").join(format!("{}.app.src", name)),
+                &app_src(&name, false),
+            );
         }
 
         Template::App => {
             write(path.join("rebar.config"), &app_rebar_config(&name));
+            write(
+                path.join("src").join(format!("{}_app.erl", name)),
+                &src_app(&name),
+            );
+            write(
+                path.join("src").join(format!("{}.app.src", name)),
+                &app_src(&name, true),
+            );
         }
     }
 
@@ -110,12 +118,17 @@ rebar3 shell
     )
 }
 
-fn app_src(name: &str) -> String {
+fn app_src(name: &str, is_application: bool) -> String {
+    let module = if is_application {
+        format!("\n  {{mod, {{{}_app, []}}}},", name)
+    } else {
+        "".to_string()
+    };
     format!(
         r#"{{application, {},
  [{{description, "A Gleam program"}},
   {{vsn, "0.1.0"}},
-  {{registered, []}},
+  {{registered, []}},{}
   {{applications,
    [kernel,
     stdlib
@@ -126,6 +139,40 @@ fn app_src(name: &str) -> String {
   {{licenses, ["Apache 2.0"]}},
   {{links, []}}
 ]}}.
+"#,
+        name, module,
+    )
+}
+
+fn src_app(name: &str) -> String {
+    format!(
+        r#"-module({}_app).
+
+-behaviour(application).
+-behaviour(supervisor).
+
+-export([start/2, stop/1, init/1]).
+
+-define(SERVER, ?MODULE).
+
+start(_StartType, _StartArgs) ->
+    supervisor:start_link({{local, ?SERVER}}, ?MODULE, []).
+
+stop(_State) ->
+    ok.
+
+%% child_spec() = #{{id => child_id(),       % mandatory
+%%                  start => mfargs(),      % mandatory
+%%                  restart => restart(),   % optional
+%%                  shutdown => shutdown(), % optional
+%%                  type => worker(),       % optional
+%%                  modules => modules()}}   % optional
+init([]) ->
+    SupFlags = #{{strategy => one_for_all,
+                 intensity => 0,
+                 period => 1}},
+    ChildSpecs = [],
+    {{ok, {{SupFlags, ChildSpecs}}}}.
 "#,
         name
     )
