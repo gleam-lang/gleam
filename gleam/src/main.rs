@@ -32,11 +32,8 @@ extern crate lalrpop_util;
 #[macro_use]
 extern crate lazy_static;
 
-#[macro_use]
-extern crate serde_derive;
-
 use crate::project::ModuleOrigin;
-use clap::arg_enum;
+use serde::Deserialize;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
@@ -60,14 +57,14 @@ enum Command {
         #[structopt(help = "location of the project root")]
         path: Option<String>,
 
-        #[structopt(name = "template", possible_values = &NewTemplate::variants(), case_insensitive = true)]
-        template: NewTemplate,
+        #[structopt(
+            long = "template",
+            possible_values = &new::Template::variants(),
+            case_insensitive = true,
+            default_value = "lib"
+        )]
+        template: new::Template,
     },
-}
-
-#[derive(Debug)]
-enum NewTemplate {
-    ErlLib,
 }
 
 #[derive(Deserialize)]

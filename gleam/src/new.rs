@@ -1,7 +1,16 @@
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
+use strum_macros::{Display, EnumString, EnumVariantNames};
+
+#[derive(Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames)]
+#[strum(serialize_all = "kebab_case")]
+pub enum Template {
+    Lib,
+    App,
+}
 
 pub fn create(name: String, path: Option<String>) {
     if !regex::Regex::new("^[a-z_]+$")
@@ -23,7 +32,7 @@ pub fn create(name: String, path: Option<String>) {
     // write files
     write(path.join("LICENSE"), APACHE_2);
     write(path.join(".gitignore"), GITIGNORE);
-    write(path.join("rebar.config"), REBAR_CONFIG);
+    write(path.join("rebar.config"), LIB_REBAR_CONFIG);
     write(path.join("README.md"), &readme(&name));
     write(path.join("gleam.toml"), &gleam_toml(&name));
     write(
@@ -352,7 +361,7 @@ logs
 rebar3.crashdump
 ";
 
-const REBAR_CONFIG: &'static str = r#"{erl_opts, [debug_info]}.
+const LIB_REBAR_CONFIG: &'static str = r#"{erl_opts, [debug_info]}.
 {src_dirs, ["src", "gen/src"]}.
 
 {profiles, [
