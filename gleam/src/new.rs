@@ -12,7 +12,7 @@ pub enum Template {
     App,
 }
 
-pub fn create(name: String, path: Option<String>) {
+pub fn create(template: Template, name: String, path: Option<String>) {
     if !regex::Regex::new("^[a-z_]+$")
         .expect("new name regex could not be compiled")
         .is_match(&name)
@@ -32,7 +32,6 @@ pub fn create(name: String, path: Option<String>) {
     // write files
     write(path.join("LICENSE"), APACHE_2);
     write(path.join(".gitignore"), GITIGNORE);
-    write(path.join("rebar.config"), LIB_REBAR_CONFIG);
     write(path.join("README.md"), &readme(&name));
     write(path.join("gleam.toml"), &gleam_toml(&name));
     write(
@@ -47,6 +46,16 @@ pub fn create(name: String, path: Option<String>) {
         path.join("src").join(format!("{}.app.src", name)),
         &app_src(&name),
     );
+
+    match template {
+        Template::Lib => {
+            write(path.join("rebar.config"), &rebar_config(""));
+        }
+
+        Template::App => {
+            write(path.join("rebar.config"), &app_rebar_config(&name));
+        }
+    }
 
     // Print success message
     println!(
@@ -361,21 +370,39 @@ logs
 rebar3.crashdump
 ";
 
-const LIB_REBAR_CONFIG: &'static str = r#"{erl_opts, [debug_info]}.
-{src_dirs, ["src", "gen/src"]}.
+fn rebar_config(insert: &str) -> String {
+    format!(
+        r#"{{erl_opts, [debug_info]}}.
+{{src_dirs, ["src", "gen/src"]}}.
 
-{profiles, [
-    {test, [
-        {pre_hooks, [{compile, "gleam build ."}]},
-        {src_dirs, ["src", "test", "gen/src", "gen/test"]}
-    ]},
+{{profiles, [
+    {{test, [
+        {{pre_hooks, [{{compile, "gleam build ."}}]}},
+        {{src_dirs, ["src", "test", "gen/src", "gen/test"]}}
+    ]}},
 
-    {dev, [
-        {pre_hooks, [{compile, "gleam build ."}]}
-    ]}
-]}.
-
-{deps, [
+    {{dev, [
+        {{pre_hooks, [{{compile, "gleam build ."}}]}}
+    ]}}
+]}}.
+{}
+{{deps, [
     gleam_stdlib
-]}.
-"#;
+]}}.
+"#,
+        insert
+    )
+}
+
+fn app_rebar_config(name: &str) -> String {
+    rebar_config(&format!(
+        r#"
+{{shell, [
+    % {{config, "config/sys.config"}},
+    {{apps, [{}]}}
+]}}.
+
+"#,
+        name
+    ))
+}

@@ -80,7 +80,7 @@ fn main() {
             name,
             path,
             template,
-        } => crate::new::create(name, path),
+        } => crate::new::create(template, name, path),
     }
 }
 
