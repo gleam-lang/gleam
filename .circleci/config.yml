@@ -3,7 +3,7 @@ jobs:
   build_compiler:
     working_directory: ~/tmp
     docker:
-      - image: rust:1.33
+      - image: rust:1.37
     steps:
       - checkout
 

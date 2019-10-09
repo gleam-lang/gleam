@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `gleam new` now accepts a `--template` flag to generate different styles of
+  project. An OTP application template has been added alongside the existing
+  OTP library template.
 - The source code preview for functions that return a type incompatible with
   the functions annotations has been improved to be more precise.
 - A helpful error message is rendered if an enum field contains a generic type

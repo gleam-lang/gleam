@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 # Command line interface
 clap = "2"
-structopt = "0.2"
+structopt = "0.3"
 # Immutable data structures
 im = "12"
 # Extra iter methods
@@ -26,13 +26,15 @@ termcolor = "1.0.4"
 # Initialize complex static values at runtime
 lazy_static = "1.3"
 # toml parsing
-serde = "1.0"
-serde_derive = "1.0"
+serde = { version = "1.0", features = ["derive"] }
 toml = "0.5"
 # Levenshtein string distance for typo suggestions
 strsim = "0.9"
 # Recursively traversing directories
 walkdir = "2"
+# Enum trait impl macros
+strum = "0.16"
+strum_macros = "0.16"
 
 
 [build-dependencies]

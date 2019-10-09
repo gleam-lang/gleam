@@ -32,10 +32,8 @@ extern crate lalrpop_util;
 #[macro_use]
 extern crate lazy_static;
 
-#[macro_use]
-extern crate serde_derive;
-
 use crate::project::ModuleOrigin;
+use serde::Deserialize;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
@@ -43,21 +41,29 @@ use structopt::clap::AppSettings;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
-#[structopt(raw(
-    global_settings = "&[AppSettings::ColoredHelp, AppSettings::VersionlessSubcommands]"
-))]
+#[structopt(global_settings = &[AppSettings::ColoredHelp, AppSettings::VersionlessSubcommands])]
 enum Command {
     #[structopt(name = "build", about = "Compile a Gleam project")]
     Build {
         #[structopt(help = "location of the project root", default_value = ".")]
         path: String,
     },
+
     #[structopt(name = "new", about = "Create a new Gleam project")]
     New {
         #[structopt(help = "name of the project")]
         name: String,
+
         #[structopt(help = "location of the project root")]
         path: Option<String>,
+
+        #[structopt(
+            long = "template",
+            possible_values = &new::Template::variants(),
+            case_insensitive = true,
+            default_value = "lib"
+        )]
+        template: new::Template,
     },
 }
 
@@ -69,7 +75,12 @@ struct ProjectConfig {
 fn main() {
     match Command::from_args() {
         Command::Build { path } => command_build(path),
-        Command::New { name, path } => crate::new::create(name, path),
+
+        Command::New {
+            name,
+            path,
+            template,
+        } => crate::new::create(template, name, path),
     }
 }
 

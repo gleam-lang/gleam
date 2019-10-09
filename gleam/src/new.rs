@@ -1,9 +1,18 @@
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
+use strum_macros::{Display, EnumString, EnumVariantNames};
 
-pub fn create(name: String, path: Option<String>) {
+#[derive(Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames)]
+#[strum(serialize_all = "kebab_case")]
+pub enum Template {
+    Lib,
+    App,
+}
+
+pub fn create(template: Template, name: String, path: Option<String>) {
     if !regex::Regex::new("^[a-z_]+$")
         .expect("new name regex could not be compiled")
         .is_match(&name)
@@ -23,7 +32,6 @@ pub fn create(name: String, path: Option<String>) {
     // write files
     write(path.join("LICENSE"), APACHE_2);
     write(path.join(".gitignore"), GITIGNORE);
-    write(path.join("rebar.config"), REBAR_CONFIG);
     write(path.join("README.md"), &readme(&name));
     write(path.join("gleam.toml"), &gleam_toml(&name));
     write(
@@ -34,10 +42,28 @@ pub fn create(name: String, path: Option<String>) {
         path.join("src").join(format!("{}.gleam", name)),
         &src(&name),
     );
-    write(
-        path.join("src").join(format!("{}.app.src", name)),
-        &app_src(&name),
-    );
+
+    match template {
+        Template::Lib => {
+            write(path.join("rebar.config"), &rebar_config(""));
+            write(
+                path.join("src").join(format!("{}.app.src", name)),
+                &app_src(&name, false),
+            );
+        }
+
+        Template::App => {
+            write(path.join("rebar.config"), &app_rebar_config(&name));
+            write(
+                path.join("src").join(format!("{}_app.erl", name)),
+                &src_app(&name),
+            );
+            write(
+                path.join("src").join(format!("{}.app.src", name)),
+                &app_src(&name, true),
+            );
+        }
+    }
 
     // Print success message
     println!(
@@ -92,12 +118,17 @@ rebar3 shell
     )
 }
 
-fn app_src(name: &str) -> String {
+fn app_src(name: &str, is_application: bool) -> String {
+    let module = if is_application {
+        format!("\n  {{mod, {{{}_app, []}}}},", name)
+    } else {
+        "".to_string()
+    };
     format!(
         r#"{{application, {},
  [{{description, "A Gleam program"}},
   {{vsn, "0.1.0"}},
-  {{registered, []}},
+  {{registered, []}},{}
   {{applications,
    [kernel,
     stdlib
@@ -108,6 +139,38 @@ fn app_src(name: &str) -> String {
   {{licenses, ["Apache 2.0"]}},
   {{links, []}}
 ]}}.
+"#,
+        name, module,
+    )
+}
+
+fn src_app(name: &str) -> String {
+    format!(
+        r#"-module({}_app).
+
+-behaviour(application).
+-behaviour(supervisor).
+
+-export([start/2, stop/1, init/1]).
+
+start(_StartType, _StartArgs) ->
+    supervisor:start_link({{local, ?MODULE}}, ?MODULE, []).
+
+stop(_State) ->
+    ok.
+
+%% child_spec() = #{{id => child_id(),       % mandatory
+%%                  start => mfargs(),       % mandatory
+%%                  restart => restart(),    % optional
+%%                  shutdown => shutdown(),  % optional
+%%                  type => worker(),        % optional
+%%                  modules => modules()}}   % optional
+init([]) ->
+    SupFlags = #{{strategy => one_for_all,
+                 intensity => 0,
+                 period => 1}},
+    ChildSpecs = [],
+    {{ok, {{SupFlags, ChildSpecs}}}}.
 "#,
         name
     )
@@ -352,21 +415,39 @@ logs
 rebar3.crashdump
 ";
 
-const REBAR_CONFIG: &'static str = r#"{erl_opts, [debug_info]}.
-{src_dirs, ["src", "gen/src"]}.
+fn rebar_config(insert: &str) -> String {
+    format!(
+        r#"{{erl_opts, [debug_info]}}.
+{{src_dirs, ["src", "gen/src"]}}.
 
-{profiles, [
-    {test, [
-        {pre_hooks, [{compile, "gleam build ."}]},
-        {src_dirs, ["src", "test", "gen/src", "gen/test"]}
-    ]},
+{{profiles, [
+    {{test, [
+        {{pre_hooks, [{{compile, "gleam build ."}}]}},
+        {{src_dirs, ["src", "test", "gen/src", "gen/test"]}}
+    ]}},
 
-    {dev, [
-        {pre_hooks, [{compile, "gleam build ."}]}
-    ]}
-]}.
-
-{deps, [
+    {{dev, [
+        {{pre_hooks, [{{compile, "gleam build ."}}]}}
+    ]}}
+]}}.
+{}
+{{deps, [
     gleam_stdlib
-]}.
-"#;
+]}}.
+"#,
+        insert
+    )
+}
+
+fn app_rebar_config(name: &str) -> String {
+    rebar_config(&format!(
+        r#"
+{{shell, [
+    % {{config, "config/sys.config"}},
+    {{apps, [{}]}}
+]}}.
+
+"#,
+        name
+    ))
+}
