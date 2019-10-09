@@ -153,19 +153,17 @@ fn src_app(name: &str) -> String {
 
 -export([start/2, stop/1, init/1]).
 
--define(SERVER, ?MODULE).
-
 start(_StartType, _StartArgs) ->
-    supervisor:start_link({{local, ?SERVER}}, ?MODULE, []).
+    supervisor:start_link({{local, ?MODULE}}, ?MODULE, []).
 
 stop(_State) ->
     ok.
 
 %% child_spec() = #{{id => child_id(),       % mandatory
-%%                  start => mfargs(),      % mandatory
-%%                  restart => restart(),   % optional
-%%                  shutdown => shutdown(), % optional
-%%                  type => worker(),       % optional
+%%                  start => mfargs(),       % mandatory
+%%                  restart => restart(),    % optional
+%%                  shutdown => shutdown(),  % optional
+%%                  type => worker(),        % optional
 %%                  modules => modules()}}   % optional
 init([]) ->
     SupFlags = #{{strategy => one_for_all,
