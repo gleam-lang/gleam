@@ -1,5 +1,9 @@
+<p align="center">
+  <img src="img/gleam-logo-readme.png" alt="Gleam logo">
+</p>
+
 <h1 align="center">
-  ✨ Gleam ✨
+  Fast, friendly, functional!
 </h1>
 
 <p align="center">
@@ -8,9 +12,6 @@
   <a href="https://webchat.freenode.net/#gleam-lang"><img src="https://img.shields.io/badge/freenode%20chat-%23gleam--lang-blue" alt="IRC: #gleam-lang on chat.freenode.net"></a>
 </p>
 
-<p align="center">
-  <b>Fast, friendly, functional!</b>
-</p>
 
 <!-- A spacer -->
 <div>&nbsp;</div>
