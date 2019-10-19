@@ -14,7 +14,7 @@ pub struct Cat {
 ```
 
 Here we have defined a struct called `Cat` which has two fields: A `name`
-field which is an `Int`, and a `cuteness` field which is an `Int`.
+field which is a `String`, and a `cuteness` field which is an `Int`.
 
 The `pub` keyword has been used to make this struct usable from other modules.
 
