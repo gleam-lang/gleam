@@ -3,8 +3,9 @@
 use std::str::FromStr;
 
 use crate::ast::{
-    UntypedExpr, Expr, Arg, UntypedModule, Module, UntypedStatement, Statement, TypeAst, UntypedPattern,
-    BinOp, Clause, UntypedClause, EnumConstructor, Pattern, CallArg, StructField,
+    UntypedExpr, Expr, Arg, UntypedModule, Module, UntypedStatement, Statement, TypeAst,
+    UntypedPattern, BinOp, Clause, UntypedClause, EnumConstructor, Pattern, CallArg, StructField,
+    ExternalFnArg,
 };
 use crate::parser::*;
 
@@ -72,7 +73,7 @@ EnumConstructorArgs: Vec<TypeAst> = {
 }
 
 StatementExternalFn: UntypedStatement = {
-    <s:@L> <p:"pub"?> "external" "fn" <n:VarName> "(" <a:Comma<Type>> ")" "->" <r:Type> "=" <m:RawString> <f:RawString> <e:@L> => Statement::ExternalFn {
+    <s:@L> <p:"pub"?> "external" "fn" <n:VarName> "(" <a:Comma<ExternalFnArg>> ")" "->" <r:Type> "=" <m:RawString> <f:RawString> <e:@L> => Statement::ExternalFn {
         meta: meta(s, e),
         public: p.is_some(),
         name: n,
@@ -81,6 +82,13 @@ StatementExternalFn: UntypedStatement = {
         fun: f,
         retrn: r,
     }
+}
+
+ExternalFnArg: ExternalFnArg = {
+    <label:(<VarName> ":")?> <typ:Type> => ExternalFnArg {
+        label,
+        typ,
+    },
 }
 
 StatementFn: UntypedStatement = {

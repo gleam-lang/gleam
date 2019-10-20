@@ -677,17 +677,23 @@ fn module_test() {
             Statement::ExternalFn {
                 meta: default(),
                 args: vec![
-                    TypeAst::Constructor {
-                        meta: default(),
-                        module: None,
-                        args: vec![],
-                        name: "Int".to_string(),
+                    ExternalFnArg {
+                        label: None,
+                        typ: TypeAst::Constructor {
+                            meta: default(),
+                            module: None,
+                            args: vec![],
+                            name: "Int".to_string(),
+                        },
                     },
-                    TypeAst::Constructor {
-                        meta: default(),
-                        module: None,
-                        args: vec![],
-                        name: "Int".to_string(),
+                    ExternalFnArg {
+                        label: None,
+                        typ: TypeAst::Constructor {
+                            meta: default(),
+                            module: None,
+                            args: vec![],
+                            name: "Int".to_string(),
+                        },
                     },
                 ],
                 name: "add_ints".to_string(),
