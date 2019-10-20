@@ -1,6 +1,6 @@
 use crate::ast::{
-    Arg, BinOp, CallArg, Clause, Expr, Meta, Module, Pattern, Statement, StructField, TypeAst,
-    TypedExpr, TypedModule, TypedPattern, UntypedExpr, UntypedModule, UntypedPattern,
+    Arg, ArgNames, BinOp, CallArg, Clause, Expr, Meta, Module, Pattern, Statement, StructField,
+    TypeAst, TypedExpr, TypedModule, TypedPattern, UntypedExpr, UntypedModule, UntypedPattern,
 };
 use crate::pretty::*;
 use itertools::Itertools;
@@ -2482,13 +2482,13 @@ fn infer_fun(
     // Insert arguments into function body scope.
     let previous_vars = env.variables.clone();
     for (arg, t) in args.iter().zip(args_types.iter()) {
-        match &arg.name {
-            Some(name) => env.insert_variable(
+        match &arg.names {
+            ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => env.insert_variable(
                 name.to_string(),
                 ValueConstructorVariant::LocalVariable,
                 (*t).clone(),
             ),
-            None => (),
+            ArgNames::Discard => (),
         };
     }
 

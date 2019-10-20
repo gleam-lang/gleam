@@ -645,7 +645,9 @@ fn expr_test() {
             args: vec![Arg {
                 meta: Meta { start: 0, end: 0 },
                 annotation: None,
-                name: Some("capture@1".to_string())
+                names: ArgNames::Named {
+                    name: "capture@1".to_string()
+                }
             }],
             body: Box::new(Expr::Call {
                 meta: Meta { start: 0, end: 10 },
@@ -698,12 +700,16 @@ fn expr_test() {
                 Arg {
                     meta: Meta { start: 3, end: 4 },
                     annotation: None,
-                    name: Some("a".to_string())
+                    names: ArgNames::Named {
+                        name: "a".to_string()
+                    }
                 },
                 Arg {
                     meta: Meta { start: 6, end: 7 },
                     annotation: None,
-                    name: Some("b".to_string())
+                    names: ArgNames::Named {
+                        name: "b".to_string()
+                    }
                 },
             ],
             body: Box::new(Expr::Seq {
@@ -975,12 +981,16 @@ fn module_test() {
                     Arg {
                         meta: Meta { start: 7, end: 10 },
                         annotation: None,
-                        name: Some("one".to_string())
+                        names: ArgNames::Named {
+                            name: "one".to_string()
+                        }
                     },
                     Arg {
                         meta: Meta { start: 12, end: 15 },
                         annotation: None,
-                        name: Some("two".to_string())
+                        names: ArgNames::Named {
+                            name: "two".to_string()
+                        }
                     }
                 ],
                 body: Expr::Seq {
@@ -1158,7 +1168,9 @@ fn module_test() {
                     args: vec![Arg {
                         meta: Meta { start: 78, end: 79 },
                         annotation: None,
-                        name: Some("x".to_string())
+                        names: ArgNames::Named {
+                            name: "x".to_string()
+                        }
                     }],
                     body: Expr::Let {
                         meta: Meta {
@@ -1249,7 +1261,9 @@ fn module_test() {
                     args: vec![Arg {
                         meta: Meta { start: 56, end: 57 },
                         annotation: None,
-                        name: Some("x".to_string())
+                        names: ArgNames::Named {
+                            name: "x".to_string()
+                        }
                     }],
                     body: Expr::Let {
                         meta: Meta {
@@ -1310,7 +1324,9 @@ fn module_test() {
                 args: vec![Arg {
                     meta: Meta { start: 13, end: 14 },
                     annotation: None,
-                    name: Some("x".to_string())
+                    names: ArgNames::Named {
+                        name: "x".to_string()
+                    }
                 }],
                 body: Expr::Let {
                     meta: Meta { start: 33, end: 59 },
@@ -1351,7 +1367,9 @@ fn module_test() {
                 args: vec![Arg {
                     meta: Meta { start: 13, end: 14 },
                     annotation: None,
-                    name: Some("x".to_string())
+                    names: ArgNames::Named {
+                        name: "x".to_string()
+                    }
                 }],
                 body: Expr::Let {
                     meta: Meta { start: 33, end: 63 },
@@ -1406,7 +1424,9 @@ fn module_test() {
                 args: vec![Arg {
                     meta: Meta { start: 14, end: 15 },
                     annotation: None,
-                    name: Some("x".to_string())
+                    names: ArgNames::Named {
+                        name: "x".to_string()
+                    }
                 }],
                 body: Expr::Let {
                     meta: Meta { start: 34, end: 72 },
@@ -1483,7 +1503,9 @@ fn module_test() {
                 },
                 args: vec![Arg {
                     meta: Meta { start: 7, end: 13 },
-                    name: Some("x".to_string()),
+                    names: ArgNames::Named {
+                        name: "x".to_string()
+                    },
                     annotation: Some(TypeAst::Constructor {
                         args: vec![],
                         meta: Meta { start: 10, end: 13 },
