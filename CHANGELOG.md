@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- External function arguments can be labelled, allowing arguments to be given
+  by name at the call site.
 - `gleam new` now accepts a `--template` flag to generate different styles of
   project. An OTP application template has been added alongside the existing
   OTP library template.
