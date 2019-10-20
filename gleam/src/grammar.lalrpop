@@ -5,7 +5,7 @@ use std::str::FromStr;
 use crate::ast::{
     UntypedExpr, Expr, Arg, UntypedModule, Module, UntypedStatement, Statement, TypeAst,
     UntypedPattern, BinOp, Clause, UntypedClause, EnumConstructor, Pattern, CallArg, StructField,
-    ExternalFnArg,
+    ExternalFnArg, ArgNames
 };
 use crate::parser::*;
 
@@ -267,17 +267,19 @@ Fn: UntypedExpr = {
 }
 
 FnArg: Arg = {
-    <s:@L> <n:VarName> <annotation:(":" <Type>)?> <e:@L> => Arg {
+    <s:@L> <names:ArgNames> <annotation:(":" <Type>)?> <e:@L> => Arg {
         meta: meta(s, e),
-        name: Some(n),
+        names,
         annotation,
     },
+}
 
-    <s:@L> DiscardName <e:@L> => Arg {
-        meta: meta(s, e),
-        name: None,
-        annotation: None,
-    },
+ArgNames: ArgNames = {
+    DiscardName => ArgNames::Discard,
+
+    <name:VarName> => ArgNames::Named { name },
+
+    <label:VarName> "as" <name:VarName> => ArgNames::NamedLabelled { name, label },
 }
 
 Call: UntypedExpr = {
@@ -320,7 +322,7 @@ Call: UntypedExpr = {
                 args: vec![Arg {
                     meta: meta(0, 0),
                     annotation: None,
-                    name: Some(hole_arg_name.to_string())
+                    names: ArgNames::Named{ name: hole_arg_name.to_string() },
                 }],
                 body: Box::new(call),
             }),

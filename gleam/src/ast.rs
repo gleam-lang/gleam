@@ -51,9 +51,16 @@ fn module_dependencies_test() {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Arg {
-    pub name: Option<String>,
+    pub names: ArgNames,
     pub meta: Meta,
     pub annotation: Option<TypeAst>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ArgNames {
+    Discard,
+    Named { name: String },
+    NamedLabelled { name: String, label: String },
 }
 
 #[derive(Debug, Clone, PartialEq)]
