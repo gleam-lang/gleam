@@ -1680,6 +1680,20 @@ x() ->
     go(4, 3).
 "#
         },
+        Case {
+            src: r#"fn go(x as xx, y as yy) { xx }
+                    fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"#,
+            erl: r#"-module().
+-compile(no_auto_import).
+
+go(Xx, Yy) ->
+    Xx.
+
+x() ->
+    go(1, 2),
+    go(4, 3).
+"#
+        },
     ];
 
     for Case { src, erl } in cases.into_iter() {
