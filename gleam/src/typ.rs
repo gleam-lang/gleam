@@ -1580,7 +1580,8 @@ pub fn infer_module(
                     env.type_from_ast(&retrn, &mut type_vars, NewTypeAction::MakeGeneric)?;
                 let mut args_types = Vec::with_capacity(args.len());
                 for arg in args.iter() {
-                    let t = env.type_from_ast(arg, &mut type_vars, NewTypeAction::MakeGeneric)?;
+                    let t =
+                        env.type_from_ast(&arg.typ, &mut type_vars, NewTypeAction::MakeGeneric)?;
                     args_types.push(t)
                 }
                 let typ = Type::Fn {

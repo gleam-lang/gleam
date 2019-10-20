@@ -1070,34 +1070,40 @@ fn module_test() {
             type_info: (),
             name: vec![],
             statements: vec![Statement::ExternalFn {
-                meta: Meta { start: 0, end: 49 },
+                meta: Meta { start: 0, end: 52 },
                 name: "run".to_string(),
                 module: "m".to_string(),
                 fun: "f".to_string(),
                 args: vec![
-                    TypeAst::Constructor {
-                        meta: Meta { start: 20, end: 23 },
-                        module: None,
-                        name: "Int".to_string(),
-                        args: vec![]
+                    ExternalFnArg {
+                        label: None,
+                        typ: TypeAst::Constructor {
+                            meta: Meta { start: 20, end: 23 },
+                            module: None,
+                            name: "Int".to_string(),
+                            args: vec![]
+                        },
                     },
-                    TypeAst::Constructor {
-                        meta: Meta { start: 25, end: 30 },
-                        module: None,
-                        name: "Float".to_string(),
-                        args: vec![]
-                    }
+                    ExternalFnArg {
+                        label: Some("b".to_string()),
+                        typ: TypeAst::Constructor {
+                            meta: Meta { start: 28, end: 33 },
+                            module: None,
+                            name: "Float".to_string(),
+                            args: vec![]
+                        }
+                    },
                 ],
                 public: true,
                 retrn: TypeAst::Constructor {
-                    meta: Meta { start: 35, end: 39 },
+                    meta: Meta { start: 38, end: 42 },
                     module: None,
                     name: "Bool".to_string(),
                     args: vec![]
                 }
             }]
         }),
-        ModuleParser::new().parse("pub external fn run(Int, Float) -> Bool = \"m\" \"f\""),
+        ModuleParser::new().parse("pub external fn run(Int, b: Float) -> Bool = \"m\" \"f\""),
     );
 
     assert_eq!(

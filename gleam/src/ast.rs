@@ -111,7 +111,7 @@ pub enum Statement<ValueConstructor, ModuleValueConstructor, PatternConstructor,
     ExternalFn {
         meta: Meta,
         public: bool,
-        args: Vec<TypeAst>,
+        args: Vec<ExternalFnArg>,
         name: String,
         retrn: TypeAst,
         module: String,
@@ -138,6 +138,12 @@ pub enum Statement<ValueConstructor, ModuleValueConstructor, PatternConstructor,
         public: bool,
         fields: Vec<StructField>,
     },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExternalFnArg {
+    pub label: Option<String>,
+    pub typ: TypeAst,
 }
 
 #[derive(Debug, Clone, PartialEq)]
