@@ -1531,12 +1531,25 @@ pub fn infer_module(
                     return Err(Error::DuplicateName { meta, name });
                 };
 
+                let mut field_map = FieldMap::new();
+                for (i, arg) in args.iter().enumerate() {
+                    if let ArgNames::NamedLabelled { label, .. } = &arg.names {
+                        field_map
+                            .insert(label.clone(), i)
+                            .map_err(|_| Error::DuplicateField {
+                                label: label.to_string(),
+                                meta: meta.clone(),
+                            })?;
+                    }
+                }
+                let field_map = field_map.to_option();
+
                 // Register a var for the function so that it can call itself recursively
                 let rec = env.new_unbound_var(level + 1);
                 env.insert_variable(
                     name.clone(),
                     ValueConstructorVariant::ModuleFn {
-                        field_map: None,
+                        field_map: field_map.clone(),
                         module: module_name.clone(),
                         arity: args.len(),
                     },
@@ -1553,18 +1566,7 @@ pub fn infer_module(
 
                 // Assert that the inferred type matches the type of any recursive call
                 unify(&rec, &typ, &mut env).map_err(|e| convert_unify_error(e, &meta))?;
-
-                // Insert the function into the environment
                 let typ = generalise(typ, level);
-                env.insert_variable(
-                    name.clone(),
-                    ValueConstructorVariant::ModuleFn {
-                        field_map: None,
-                        module: module_name.clone(),
-                        arity: args.len(),
-                    },
-                    typ.clone(),
-                );
 
                 // Insert the function into the module's interface
                 if public {
@@ -1577,15 +1579,27 @@ pub fn infer_module(
                     env.public_module_value_constructors.insert(
                         name.clone(),
                         ValueConstructor {
-                            typ,
+                            typ: typ.clone(),
                             variant: ValueConstructorVariant::ModuleFn {
-                                field_map: None,
+                                field_map: field_map.clone(),
                                 module: module_name.clone(),
                                 arity: args.len(),
                             },
                         },
                     );
                 }
+
+                // Insert the function into the environment
+                env.insert_variable(
+                    name.clone(),
+                    ValueConstructorVariant::ModuleFn {
+                        field_map,
+                        module: module_name.clone(),
+                        arity: args.len(),
+                    },
+                    typ,
+                );
+
                 Ok(Statement::Fn {
                     meta,
                     name,
