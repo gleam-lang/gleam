@@ -3748,183 +3748,200 @@ pub fn two() { one() + zero() }",
 
 #[test]
 fn infer_module_error_test() {
-    struct Case {
-        src: &'static str,
-        error: Error,
+    macro_rules! assert_error {
+        ($src:expr, $error:expr) => {
+            let ast = crate::grammar::ModuleParser::new()
+                .parse($src)
+                .expect("syntax error");
+            let result = infer_module(ast, &HashMap::new()).expect_err("should infer an error");
+            assert_eq!(($src, $error), ($src, result));
+        };
+
+        ($src:expr) => {
+            let ast = crate::grammar::ModuleParser::new()
+                .parse($src)
+                .expect("syntax error");
+            infer_module(ast, &HashMap::new()).expect_err("should infer an error");
+        };
     }
 
-    let cases = [
-        Case {
-            src: "fn go() { 1 + 2.0 }",
-            error: Error::CouldNotUnify {
-                meta: Meta { start: 14, end: 17 },
-                expected: int(),
-                given: float(),
-            },
-        },
-        Case {
-            src: "
+    assert_error!(
+        "fn go() { 1 + 2.0 }",
+        Error::CouldNotUnify {
+            meta: Meta { start: 14, end: 17 },
+            expected: int(),
+            given: float(),
+        }
+    );
+
+    assert_error!(
+        "fn go() { 1 + 2.0 }",
+        Error::CouldNotUnify {
+            meta: Meta { start: 14, end: 17 },
+            expected: int(),
+            given: float(),
+        }
+    );
+
+    assert_error!(
+        "
 fn id(x: a, y: a) { x }
 pub fn x() { id(1, 1.0) }
                 ",
-            error: Error::CouldNotUnify {
-                meta: Meta { start: 44, end: 47 },
-                expected: int(),
-                given: float(),
-            },
-        },
-        Case {
-            src: "external fn go(List(a, b)) -> a = \"\" \"\"",
-            error: Error::IncorrectTypeArity {
-                meta: Meta { start: 15, end: 25 },
-                name: "List".to_string(),
-                expected: 1,
-                given: 2,
-            },
-        },
-        Case {
-            src: "fn dupe() { 1 }
+        Error::CouldNotUnify {
+            meta: Meta { start: 44, end: 47 },
+            expected: int(),
+            given: float(),
+        }
+    );
+
+    assert_error!(
+        "external fn go(List(a, b)) -> a = \"\" \"\"",
+        Error::IncorrectTypeArity {
+            meta: Meta { start: 15, end: 25 },
+            name: "List".to_string(),
+            expected: 1,
+            given: 2,
+        }
+    );
+
+    assert_error!(
+        "fn dupe() { 1 }
                   fn dupe() { 2 }",
-            error: Error::DuplicateName {
-                meta: Meta { start: 34, end: 49 },
-                name: "dupe".to_string(),
-            },
-        },
-        Case {
-            src: "fn dupe() { 1 }
+        Error::DuplicateName {
+            meta: Meta { start: 34, end: 49 },
+            name: "dupe".to_string(),
+        }
+    );
+
+    assert_error!(
+        "fn dupe() { 1 }
                   fn dupe(x) { x }",
-            error: Error::DuplicateName {
-                meta: Meta { start: 34, end: 50 },
-                name: "dupe".to_string(),
-            },
-        },
-        Case {
-            src: r#"external type PrivateType
+        Error::DuplicateName {
+            meta: Meta { start: 34, end: 50 },
+            name: "dupe".to_string(),
+        }
+    );
+
+    assert_error!(
+        r#"external type PrivateType
                     pub external fn leak_type() -> PrivateType = "" """#,
-            error: Error::PrivateTypeLeak {
-                meta: Meta { start: 46, end: 96 },
-                leaked: Type::App {
-                    args: vec![],
-                    public: false,
-                    module: vec![],
-                    name: "PrivateType".to_string(),
-                },
+        Error::PrivateTypeLeak {
+            meta: Meta { start: 46, end: 96 },
+            leaked: Type::App {
+                args: vec![],
+                public: false,
+                module: vec![],
+                name: "PrivateType".to_string(),
             },
-        },
-        Case {
-            src: r#"external type PrivateType
+        }
+    );
+
+    assert_error!(
+        r#"external type PrivateType
                     external fn go() -> PrivateType = "" ""
                     pub fn leak_type() { go() }"#,
-            error: Error::PrivateTypeLeak {
-                meta: Meta {
-                    start: 106,
-                    end: 133,
-                },
-                leaked: Type::App {
-                    args: vec![],
-                    public: false,
-                    module: vec![],
-                    name: "PrivateType".to_string(),
-                },
+        Error::PrivateTypeLeak {
+            meta: Meta {
+                start: 106,
+                end: 133,
             },
-        },
-        Case {
-            src: r#"external type PrivateType
+            leaked: Type::App {
+                args: vec![],
+                public: false,
+                module: vec![],
+                name: "PrivateType".to_string(),
+            },
+        }
+    );
+
+    assert_error!(
+        r#"external type PrivateType
                     external fn go() -> PrivateType = "" ""
                     pub fn leak_type() { [go()] }"#,
-            error: Error::PrivateTypeLeak {
-                meta: Meta {
-                    start: 106,
-                    end: 135,
-                },
-                leaked: Type::App {
-                    args: vec![],
-                    public: false,
-                    module: vec![],
-                    name: "PrivateType".to_string(),
-                },
+        Error::PrivateTypeLeak {
+            meta: Meta {
+                start: 106,
+                end: 135,
             },
-        },
-        Case {
-            src: r#"external type PrivateType
+            leaked: Type::App {
+                args: vec![],
+                public: false,
+                module: vec![],
+                name: "PrivateType".to_string(),
+            },
+        }
+    );
+
+    assert_error!(
+        r#"external type PrivateType
                     pub external fn go(PrivateType) -> Int = "" """#,
-            error: Error::PrivateTypeLeak {
-                meta: Meta { start: 46, end: 92 },
-                leaked: Type::App {
-                    args: vec![],
-                    public: false,
-                    module: vec![],
-                    name: "PrivateType".to_string(),
-                },
+        Error::PrivateTypeLeak {
+            meta: Meta { start: 46, end: 92 },
+            leaked: Type::App {
+                args: vec![],
+                public: false,
+                module: vec![],
+                name: "PrivateType".to_string(),
             },
-        },
-        Case {
-            src: r#"external type PrivateType
+        }
+    );
+
+    assert_error!(
+        r#"external type PrivateType
                     pub enum LeakType =
                       | Variant(PrivateType)"#,
-            error: Error::PrivateTypeLeak {
-                meta: Meta {
-                    start: 90,
-                    end: 110,
-                },
-                leaked: Type::App {
-                    args: vec![],
-                    public: false,
-                    module: vec![],
-                    name: "PrivateType".to_string(),
-                },
+        Error::PrivateTypeLeak {
+            meta: Meta {
+                start: 90,
+                end: 110,
             },
-        },
-        Case {
-            src: r#"fn id(x) { x } fn y() { id(x: 4) }"#,
-            error: Error::UnexpectedLabelledArg {
-                label: "x".to_string(),
-                meta: Meta { start: 27, end: 31 },
+            leaked: Type::App {
+                args: vec![],
+                public: false,
+                module: vec![],
+                name: "PrivateType".to_string(),
             },
-        },
-        Case {
-            src: r#"struct X { a: Int b: Int c: Int }
+        }
+    );
+
+    assert_error!(
+        r#"fn id(x) { x } fn y() { id(x: 4) }"#,
+        Error::UnexpectedLabelledArg {
+            label: "x".to_string(),
+            meta: Meta { start: 27, end: 31 },
+        }
+    );
+
+    assert_error!(
+        r#"struct X { a: Int b: Int c: Int }
                     fn x() { X(b: 1, a: 1, 1) }"#,
-            error: Error::PositionalArgumentAfterLabelled {
-                meta: Meta { start: 77, end: 78 },
-            },
-        },
-        Case {
-            src: r#"struct Thing { unknown: x }"#,
-            error: Error::UnknownType {
-                meta: Meta { start: 24, end: 25 },
-                name: "x".to_string(),
-                types: {
-                    let mut types = Env::new(&mut HashMap::new()).type_constructors;
-                    types.insert(
-                        "Thing".to_string(),
-                        TypeConstructorInfo {
-                            public: false,
-                            module: vec![],
-                            arity: 0,
-                        },
-                    );
-                    types
-                },
-            },
-        },
-    ];
+        Error::PositionalArgumentAfterLabelled {
+            meta: Meta { start: 77, end: 78 },
+        }
+    );
 
-    for Case { src, error } in cases.into_iter() {
-        let ast = crate::grammar::ModuleParser::new()
-            .parse(src)
-            .expect("syntax error");
-        let result = infer_module(ast, &HashMap::new()).expect_err("should infer an error");
-        assert_eq!((src, error), (src, &result));
-    }
+    assert_error!(
+        r#"struct Thing { unknown: x }"#,
+        Error::UnknownType {
+            meta: Meta { start: 24, end: 25 },
+            name: "x".to_string(),
+            types: {
+                let mut types = Env::new(&mut HashMap::new()).type_constructors;
+                types.insert(
+                    "Thing".to_string(),
+                    TypeConstructorInfo {
+                        public: false,
+                        module: vec![],
+                        arity: 0,
+                    },
+                );
+                types
+            },
+        }
+    );
 
-    // Cases were we can't so easily check for equality- i.e. because the contents of the error are
-    // non-deterministic.
-    let cases = ["fn inc(x: a) { x + 1 }"];
-    for src in cases.into_iter() {
-        let ast = crate::grammar::ModuleParser::new()
-            .parse(src)
-            .expect("syntax error");
-        infer_module(ast, &HashMap::new()).expect_err("should infer an error");
-    }
+    // Cases were we can't so easily check for equality-
+    // i.e. because the contents of the error are non-deterministic.
+    assert_error!("fn inc(x: a) { x + 1 }");
 }
