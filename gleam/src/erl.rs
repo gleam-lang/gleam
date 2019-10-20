@@ -1311,6 +1311,7 @@ go() ->
                         constructor: ValueConstructor {
                             variant: ValueConstructorVariant::ModuleFn {
                                 module: vec!["funny".to_string()],
+                                field_map: None,
                                 arity: 1,
                             },
                             typ: crate::typ::int(),
@@ -1383,6 +1384,7 @@ go() ->
                                 typ: crate::typ::int(),
                                 variant: ValueConstructorVariant::ModuleFn {
                                     module: vec!["funny".to_string()],
+                                    field_map: None,
                                     arity: 2,
                                 },
                             },
@@ -1640,6 +1642,20 @@ x() ->
 x(Y) ->
     {A, B} = Y,
     A.
+"#
+        },
+        Case {
+            src: r#"external fn go(x: Int, y: Int) -> Int = "m" "f"
+                    fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"#,
+            erl: r#"-module().
+-compile(no_auto_import).
+
+go(A, B) ->
+    m:f(A, B).
+
+x() ->
+    go(1, 2),
+    go(4, 3).
 "#
         },
     ];
