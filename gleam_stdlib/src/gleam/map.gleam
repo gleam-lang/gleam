@@ -24,14 +24,14 @@ pub fn has_key(map, key) {
 pub external fn new() -> Map(key, value)
   = "maps" "new"
 
-pub external fn fetch(Map(key, value), key) -> Result(value, Nil)
-  = "gleam_stdlib" "map_fetch";
+pub external fn get(Map(key, value), key) -> Result(value, Nil)
+  = "gleam_stdlib" "map_get";
 
-external fn erl_put(key, value, Map(key, value)) -> Map(key, value)
+external fn erl_insert(key, value, Map(key, value)) -> Map(key, value)
   = "maps" "put";
 
-pub fn put(map, key, value) {
-  erl_put(key, value, map)
+pub fn insert(map, key, value) {
+  erl_insert(key, value, map)
 }
 
 external fn erl_map_values(fn(key, value) -> value, Map(key, value))
@@ -76,10 +76,10 @@ pub fn drop(map, keys) {
   })
 }
 
-pub fn update(dict, key, f) {
-  case fetch(dict, key) {
-  | Ok(value) -> put(dict, key, f(Ok(value)))
-  | Error(_) -> put(dict, key, f(Error(Nil)))
+pub fn update(map, key, f) {
+  case get(map, key) {
+  | Ok(value) -> insert(map, key, f(Ok(value)))
+  | Error(_) -> insert(map, key, f(Error(Nil)))
   }
 }
 
@@ -90,7 +90,7 @@ fn do_fold(list, acc, f) {
   }
 }
 
-pub fn fold(dict, acc, f) {
-  let kvs = to_list(dict)
+pub fn fold(map, acc, f) {
+  let kvs = to_list(map)
   do_fold(kvs, acc, f)
 }

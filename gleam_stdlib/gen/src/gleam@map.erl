@@ -1,7 +1,7 @@
 -module(gleam@map).
 -compile(no_auto_import).
 
--export([size/1, to_list/1, from_list/1, has_key/2, new/0, fetch/2, put/3, map_values/2, keys/1, values/1, filter/2, take/2, merge/2, delete/2, drop/2, update/3, fold/3]).
+-export([size/1, to_list/1, from_list/1, has_key/2, new/0, get/2, insert/3, map_values/2, keys/1, values/1, filter/2, take/2, merge/2, delete/2, drop/2, update/3, fold/3]).
 
 size(A) ->
     maps:size(A).
@@ -21,14 +21,14 @@ has_key(Map, Key) ->
 new() ->
     maps:new().
 
-fetch(A, B) ->
-    gleam_stdlib:map_fetch(A, B).
+get(A, B) ->
+    gleam_stdlib:map_get(A, B).
 
-erl_put(A, B, C) ->
+erl_insert(A, B, C) ->
     maps:put(A, B, C).
 
-put(Map, Key, Value) ->
-    erl_put(Key, Value, Map).
+insert(Map, Key, Value) ->
+    erl_insert(Key, Value, Map).
 
 erl_map_values(A, B) ->
     maps:map(A, B).
@@ -66,13 +66,13 @@ delete(Map, Key) ->
 drop(Map, Keys) ->
     gleam@list:fold(Keys, Map, fun(Key, Acc) -> delete(Acc, Key) end).
 
-update(Dict, Key, F) ->
-    case fetch(Dict, Key) of
+update(Map, Key, F) ->
+    case get(Map, Key) of
         {ok, Value} ->
-            put(Dict, Key, F({ok, Value}));
+            insert(Map, Key, F({ok, Value}));
 
         {error, _} ->
-            put(Dict, Key, F({error, nil}))
+            insert(Map, Key, F({error, nil}))
     end.
 
 do_fold(List, Acc, F) ->
@@ -84,6 +84,6 @@ do_fold(List, Acc, F) ->
             do_fold(Tail, F(K, V, Acc), F)
     end.
 
-fold(Dict, Acc, F) ->
-    Kvs = to_list(Dict),
+fold(Map, Acc, F) ->
+    Kvs = to_list(Map),
     do_fold(Kvs, Acc, F).

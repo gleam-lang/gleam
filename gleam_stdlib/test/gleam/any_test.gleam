@@ -222,14 +222,14 @@ pub fn field_test() {
   let Ok(error_atom) = atom.from_string("error")
 
   map.new()
-  |> map.put(_, ok_atom, 1)
+  |> map.insert(_, ok_atom, 1)
   |> any.from
   |> any.field(_, ok_atom)
   |> expect.equal(_, Ok(any.from(1)))
 
   map.new()
-  |> map.put(_, ok_atom, 3)
-  |> map.put(_, error_atom, 1)
+  |> map.insert(_, ok_atom, 3)
+  |> map.insert(_, error_atom, 1)
   |> any.from
   |> any.field(_, ok_atom)
   |> expect.equal(_, Ok(any.from(3)))

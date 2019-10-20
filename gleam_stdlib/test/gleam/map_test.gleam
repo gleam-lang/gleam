@@ -53,7 +53,7 @@ pub fn new_test() {
   |> expect.equal(_, [])
 }
 
-pub fn fetch_test() {
+pub fn get_test() {
   let proplist = [
     pair.Pair(4, 0),
     pair.Pair(1, 1),
@@ -61,23 +61,23 @@ pub fn fetch_test() {
   let m = map.from_list(proplist)
 
   m
-  |> map.fetch(_, 4)
+  |> map.get(_, 4)
   |> expect.equal(_, Ok(0))
 
   m
-  |> map.fetch(_, 1)
+  |> map.get(_, 1)
   |> expect.equal(_, Ok(1))
 
   m
-  |> map.fetch(_, 2)
+  |> map.get(_, 2)
   |> expect.equal(_, Error(Nil))
 }
 
-pub fn put_test() {
+pub fn insert_test() {
   map.new()
-  |> map.put(_, "a", 0)
-  |> map.put(_, "b", 1)
-  |> map.put(_, "c", 2)
+  |> map.insert(_, "a", 0)
+  |> map.insert(_, "b", 1)
+  |> map.insert(_, "c", 2)
   |> expect.equal(_, map.from_list([
     pair.Pair("a", 0),
     pair.Pair("b", 1),

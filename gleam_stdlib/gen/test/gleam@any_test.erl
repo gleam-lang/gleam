@@ -152,7 +152,7 @@ field_test() ->
     {ok, ErrorAtom} = gleam@atom:from_string(<<"error">>),
     gleam@expect:equal(
         gleam@any:field(
-            gleam@any:from(gleam@map:put(gleam@map:new(), OkAtom, 1)),
+            gleam@any:from(gleam@map:insert(gleam@map:new(), OkAtom, 1)),
             OkAtom
         ),
         {ok, gleam@any:from(1)}
@@ -160,8 +160,8 @@ field_test() ->
     gleam@expect:equal(
         gleam@any:field(
             gleam@any:from(
-                gleam@map:put(
-                    gleam@map:put(gleam@map:new(), OkAtom, 3),
+                gleam@map:insert(
+                    gleam@map:insert(gleam@map:new(), OkAtom, 3),
                     ErrorAtom,
                     1
                 )

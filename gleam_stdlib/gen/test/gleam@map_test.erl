@@ -1,7 +1,7 @@
 -module(gleam@map_test).
 -compile(no_auto_import).
 
--export([from_list_test/0, has_key_test/0, new_test/0, fetch_test/0, put_test/0, map_values_test/0, keys_test/0, values_test/0, take_test/0, drop_test/0, merge_test/0, delete_test/0, update_test/0, fold_test/0]).
+-export([from_list_test/0, has_key_test/0, new_test/0, get_test/0, insert_test/0, map_values_test/0, keys_test/0, values_test/0, take_test/0, drop_test/0, merge_test/0, delete_test/0, update_test/0, fold_test/0]).
 
 from_list_test() ->
     gleam@expect:equal(
@@ -23,18 +23,18 @@ new_test() ->
     gleam@expect:equal(gleam@map:size(gleam@map:new()), 0),
     gleam@expect:equal(gleam@map:to_list(gleam@map:new()), []).
 
-fetch_test() ->
+get_test() ->
     Proplist = [{4, 0}, {1, 1}],
     M = gleam@map:from_list(Proplist),
-    gleam@expect:equal(gleam@map:fetch(M, 4), {ok, 0}),
-    gleam@expect:equal(gleam@map:fetch(M, 1), {ok, 1}),
-    gleam@expect:equal(gleam@map:fetch(M, 2), {error, nil}).
+    gleam@expect:equal(gleam@map:get(M, 4), {ok, 0}),
+    gleam@expect:equal(gleam@map:get(M, 1), {ok, 1}),
+    gleam@expect:equal(gleam@map:get(M, 2), {error, nil}).
 
-put_test() ->
+insert_test() ->
     gleam@expect:equal(
-        gleam@map:put(
-            gleam@map:put(
-                gleam@map:put(gleam@map:new(), <<"a">>, 0),
+        gleam@map:insert(
+            gleam@map:insert(
+                gleam@map:insert(gleam@map:new(), <<"a">>, 0),
                 <<"b">>,
                 1
             ),
