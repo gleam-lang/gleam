@@ -457,6 +457,7 @@ impl ValueConstructor {
     fn field_map(&self) -> Option<&FieldMap> {
         match self.variant {
             ValueConstructorVariant::Struct { ref field_map, .. } => Some(field_map),
+            ValueConstructorVariant::ModuleFn { ref field_map, .. } => field_map.as_ref(),
             _ => None,
         }
     }
@@ -467,7 +468,30 @@ pub struct FieldMap {
     fields: HashMap<String, usize>,
 }
 
+pub struct DuplicateField {}
+
 impl FieldMap {
+    pub fn new() -> Self {
+        Self {
+            fields: HashMap::new(),
+        }
+    }
+
+    pub fn insert(&mut self, label: String, index: usize) -> Result<(), DuplicateField> {
+        match self.fields.insert(label, index) {
+            Some(_) => Err(DuplicateField {}),
+            None => Ok(()),
+        }
+    }
+
+    pub fn to_option(self) -> Option<Self> {
+        if self.fields.len() == 0 {
+            None
+        } else {
+            Some(self)
+        }
+    }
+
     /// Reorder an argument list so that labelled fields supplied out-of-order are in the correct
     /// order.
     ///
@@ -677,7 +701,11 @@ pub enum ValueConstructorVariant {
     Enum { arity: usize },
 
     /// A function belonging to the module
-    ModuleFn { module: Vec<String>, arity: usize },
+    ModuleFn {
+        field_map: Option<FieldMap>,
+        module: Vec<String>,
+        arity: usize,
+    },
 
     /// A named struct
     Struct { field_map: FieldMap, arity: usize },
@@ -1508,6 +1536,7 @@ pub fn infer_module(
                 env.insert_variable(
                     name.clone(),
                     ValueConstructorVariant::ModuleFn {
+                        field_map: None,
                         module: module_name.clone(),
                         arity: args.len(),
                     },
@@ -1530,6 +1559,7 @@ pub fn infer_module(
                 env.insert_variable(
                     name.clone(),
                     ValueConstructorVariant::ModuleFn {
+                        field_map: None,
                         module: module_name.clone(),
                         arity: args.len(),
                     },
@@ -1549,6 +1579,7 @@ pub fn infer_module(
                         ValueConstructor {
                             typ,
                             variant: ValueConstructorVariant::ModuleFn {
+                                field_map: None,
                                 module: module_name.clone(),
                                 arity: args.len(),
                             },
@@ -1579,11 +1610,21 @@ pub fn infer_module(
                 let retrn_type =
                     env.type_from_ast(&retrn, &mut type_vars, NewTypeAction::MakeGeneric)?;
                 let mut args_types = Vec::with_capacity(args.len());
-                for arg in args.iter() {
+                let mut field_map = FieldMap::new();
+                for (i, arg) in args.iter().enumerate() {
                     let t =
                         env.type_from_ast(&arg.typ, &mut type_vars, NewTypeAction::MakeGeneric)?;
-                    args_types.push(t)
+                    args_types.push(t);
+                    if let Some(label) = &arg.label {
+                        field_map
+                            .insert(label.clone(), i)
+                            .map_err(|_| Error::DuplicateField {
+                                label: label.to_string(),
+                                meta: meta.clone(),
+                            })?;
+                    }
                 }
+                let field_map = field_map.to_option();
                 let typ = Type::Fn {
                     args: args_types,
                     retrn: Box::new(retrn_type),
@@ -1602,6 +1643,7 @@ pub fn infer_module(
                         ValueConstructor {
                             typ: typ.clone(),
                             variant: ValueConstructorVariant::ModuleFn {
+                                field_map: field_map.clone(),
                                 module: vec![module.clone()],
                                 arity: args.len(),
                             },
@@ -1615,6 +1657,7 @@ pub fn infer_module(
                     ValueConstructorVariant::ModuleFn {
                         module: vec![module.clone()],
                         arity: args.len(),
+                        field_map,
                     },
                     typ,
                 );
@@ -1663,19 +1706,18 @@ pub fn infer_module(
                     args: type_args_types,
                 };
                 // Create FieldMap which later can be used to rewrite labelled arguments
-                let mut field_map = HashMap::new();
+                let mut field_map = FieldMap::new();
                 for (i, StructField { label, meta, .. }) in fields.iter().enumerate() {
-                    if let Some(_) = field_map.insert(label.clone(), i) {
-                        return Err(Error::DuplicateField {
+                    field_map
+                        .insert(label.clone(), i)
+                        .map_err(|_| Error::DuplicateField {
                             label: label.to_string(),
                             meta: meta.clone(),
-                        });
-                    }
+                        })?;
                 }
-                let field_map = FieldMap { fields: field_map };
                 let constructor_variant = ValueConstructorVariant::Struct {
                     arity: fields.len(),
-                    field_map,
+                    field_map: field_map,
                 };
                 // Register constructor
                 let args_types = fields
