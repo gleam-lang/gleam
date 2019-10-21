@@ -30,10 +30,10 @@ thunk(A) ->
 list_any(A) ->
     gleam_stdlib:decode_list(A).
 
-list(Any, Decode) ->
+list(Any, DecoderType) ->
     gleam@result:then(
         list_any(Any),
-        fun(Capture1) -> gleam@list:traverse(Capture1, Decode) end
+        fun(Capture1) -> gleam@list:traverse(Capture1, DecoderType) end
     ).
 
 pair(A) ->

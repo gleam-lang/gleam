@@ -15,14 +15,14 @@ pub fn is_error(result) {
   }
 }
 
-pub fn map(result, fun) {
+pub fn map(result, with fun) {
   case result {
   | Ok(x) -> Ok(fun(x))
   | Error(e) -> Error(e)
   }
 }
 
-pub fn map_error(result, fun) {
+pub fn map_error(result, with fun) {
   case result {
   | Ok(x) -> Ok(x)
   | Error(error) -> Error(fun(error))
@@ -36,14 +36,14 @@ pub fn flatten(result) {
   }
 }
 
-pub fn then(result, fun) {
+pub fn then(result, apply fun) {
   case result {
   | Ok(x) -> fun(x)
   | Error(e) -> Error(e)
   }
 }
 
-pub fn unwrap(result, default) {
+pub fn unwrap(result, or default) {
   case result {
   | Ok(v) -> v
   | Error(_) -> default

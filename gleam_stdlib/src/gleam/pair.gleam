@@ -18,12 +18,12 @@ pub fn swap(tup) {
   Pair(b, a)
 }
 
-pub fn map_first(tup, f) {
+pub fn map_first(of tup, with fun) {
     let Pair(a, b) = tup
-    Pair(f(a), b)
+    Pair(fun(a), b)
 }
 
-pub fn map_second(tup, f) {
+pub fn map_second(of tup, with fun) {
     let Pair(a, b) = tup
-    Pair(a, f(b))
+    Pair(a, fun(b))
 }
