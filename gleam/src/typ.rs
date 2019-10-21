@@ -325,112 +325,112 @@ fn args_to_gleam_doc(
 
 #[test]
 fn to_gleam_doc_test() {
-    let cases = [
-        (
-            Type::App {
-                module: vec!["whatever".to_string()],
-                name: "Int".to_string(),
-                public: true,
-                args: vec![],
-            },
-            "Int",
-        ),
-        (
-            Type::App {
-                module: vec![],
-                name: "Pair".to_string(),
-                public: true,
-                args: vec![
-                    Type::App {
-                        module: vec!["whatever".to_string()],
-                        name: "Int".to_string(),
-                        public: true,
-                        args: vec![],
-                    },
-                    Type::App {
-                        module: vec!["whatever".to_string()],
-                        name: "Bool".to_string(),
-                        public: true,
-                        args: vec![],
-                    },
-                ],
-            },
-            "Pair(Int, Bool)",
-        ),
-        (
-            Type::Fn {
-                args: vec![
-                    Type::App {
-                        args: vec![],
-                        module: vec!["whatever".to_string()],
-                        name: "Int".to_string(),
-                        public: true,
-                    },
-                    Type::App {
-                        args: vec![],
-                        module: vec!["whatever".to_string()],
-                        name: "Bool".to_string(),
-                        public: true,
-                    },
-                ],
-                retrn: Box::new(Type::App {
+    macro_rules! assert_string {
+        ($src:expr, $typ:expr $(,)?) => {
+            assert_eq!(
+                $typ.to_string(),
+                $src.to_gleam_doc(&mut hashmap![], &mut 0).format(80)
+            );
+        };
+    }
+
+    assert_string!(
+        Type::App {
+            module: vec!["whatever".to_string()],
+            name: "Int".to_string(),
+            public: true,
+            args: vec![],
+        },
+        "Int",
+    );
+    assert_string!(
+        Type::App {
+            module: vec![],
+            name: "Pair".to_string(),
+            public: true,
+            args: vec![
+                Type::App {
+                    module: vec!["whatever".to_string()],
+                    name: "Int".to_string(),
+                    public: true,
+                    args: vec![],
+                },
+                Type::App {
+                    module: vec!["whatever".to_string()],
+                    name: "Bool".to_string(),
+                    public: true,
+                    args: vec![],
+                },
+            ],
+        },
+        "Pair(Int, Bool)",
+    );
+    assert_string!(
+        Type::Fn {
+            args: vec![
+                Type::App {
+                    args: vec![],
+                    module: vec!["whatever".to_string()],
+                    name: "Int".to_string(),
+                    public: true,
+                },
+                Type::App {
                     args: vec![],
                     module: vec!["whatever".to_string()],
                     name: "Bool".to_string(),
                     public: true,
+                },
+            ],
+            retrn: Box::new(Type::App {
+                args: vec![],
+                module: vec!["whatever".to_string()],
+                name: "Bool".to_string(),
+                public: true,
+            }),
+        },
+        "fn(Int, Bool) -> Bool",
+    );
+    assert_string!(
+        Type::Var {
+            typ: Rc::new(RefCell::new(TypeVar::Link {
+                typ: Box::new(Type::App {
+                    args: vec![],
+                    module: vec!["whatever".to_string()],
+                    name: "Int".to_string(),
+                    public: true,
                 }),
-            },
-            "fn(Int, Bool) -> Bool",
-        ),
-        (
-            Type::Var {
-                typ: Rc::new(RefCell::new(TypeVar::Link {
-                    typ: Box::new(Type::App {
-                        args: vec![],
-                        module: vec!["whatever".to_string()],
-                        name: "Int".to_string(),
-                        public: true,
-                    }),
-                })),
-            },
-            "Int",
-        ),
-        (
-            Type::Var {
-                typ: Rc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 2231 })),
-            },
-            "a",
-        ),
-        (
-            Type::Fn {
-                args: vec![Type::Var {
-                    typ: Rc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 78 })),
-                }],
-                retrn: Box::new(Type::Var {
-                    typ: Rc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 2 })),
-                }),
-            },
-            "fn(a) -> b",
-        ),
-        (
-            Type::Fn {
-                args: vec![Type::Var {
-                    typ: Rc::new(RefCell::new(TypeVar::Generic { id: 78 })),
-                }],
-                retrn: Box::new(Type::Var {
-                    typ: Rc::new(RefCell::new(TypeVar::Generic { id: 2 })),
-                }),
-            },
-            "fn(a) -> b",
-        ),
-    ];
-
-    for (typ, s) in cases.into_iter() {
-        assert_eq!(
-            s.to_string(),
-            typ.to_gleam_doc(&mut hashmap![], &mut 0).format(80)
-        );
-    }
+            })),
+        },
+        "Int",
+    );
+    assert_string!(
+        Type::Var {
+            typ: Rc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 2231 })),
+        },
+        "a",
+    );
+    assert_string!(
+        Type::Fn {
+            args: vec![Type::Var {
+                typ: Rc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 78 })),
+            }],
+            retrn: Box::new(Type::Var {
+                typ: Rc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 2 })),
+            }),
+        },
+        "fn(a) -> b",
+    );
+    assert_string!(
+        Type::Fn {
+            args: vec![Type::Var {
+                typ: Rc::new(RefCell::new(TypeVar::Generic { id: 78 })),
+            }],
+            retrn: Box::new(Type::Var {
+                typ: Rc::new(RefCell::new(TypeVar::Generic { id: 2 })),
+            }),
+        },
+        "fn(a) -> b",
+    );
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -555,141 +555,145 @@ fn field_map_reorder_test() {
         expected_result: Result<(), Error>,
         expected_args: Vec<CallArg<UntypedExpr>>,
     }
-    let cases = vec![
-        Case {
-            fields: HashMap::new(),
-            args: vec![],
-            expected_result: Ok(()),
-            expected_args: vec![],
-        },
-        Case {
-            fields: HashMap::new(),
-            args: vec![
-                CallArg {
-                    meta: Default::default(),
-                    label: None,
-                    value: int(1),
-                },
-                CallArg {
-                    meta: Default::default(),
-                    label: None,
-                    value: int(2),
-                },
-                CallArg {
-                    meta: Default::default(),
-                    label: None,
-                    value: int(3),
-                },
-            ],
-            expected_result: Ok(()),
-            expected_args: vec![
-                CallArg {
-                    meta: Default::default(),
-                    label: None,
-                    value: int(1),
-                },
-                CallArg {
-                    meta: Default::default(),
-                    label: None,
-                    value: int(2),
-                },
-                CallArg {
-                    meta: Default::default(),
-                    label: None,
-                    value: int(3),
-                },
-            ],
-        },
-        Case {
-            fields: [("last".to_string(), 2)].iter().cloned().collect(),
-            args: vec![
-                CallArg {
-                    meta: Default::default(),
-                    label: None,
-                    value: int(1),
-                },
-                CallArg {
-                    meta: Default::default(),
-                    label: Some("last".to_string()),
-                    value: int(2),
-                },
-                CallArg {
-                    meta: Default::default(),
-                    label: None,
-                    value: int(3),
-                },
-            ],
-            expected_result: Ok(()),
-            expected_args: vec![
-                CallArg {
-                    meta: Default::default(),
-                    label: None,
-                    value: int(1),
-                },
-                CallArg {
-                    meta: Default::default(),
-                    label: None,
-                    value: int(3),
-                },
-                CallArg {
-                    meta: Default::default(),
-                    label: Some("last".to_string()),
-                    value: int(2),
-                },
-            ],
-        },
-        Case {
-            fields: [("last".to_string(), 2)].iter().cloned().collect(),
-            args: vec![
-                CallArg {
-                    meta: Default::default(),
-                    label: None,
-                    value: int(1),
-                },
-                CallArg {
-                    meta: Default::default(),
-                    label: None,
-                    value: int(2),
-                },
-                CallArg {
-                    meta: Default::default(),
-                    label: Some("last".to_string()),
-                    value: int(3),
-                },
-            ],
-            expected_result: Ok(()),
-            expected_args: vec![
-                CallArg {
-                    meta: Default::default(),
-                    label: None,
-                    value: int(1),
-                },
-                CallArg {
-                    meta: Default::default(),
-                    label: None,
-                    value: int(2),
-                },
-                CallArg {
-                    meta: Default::default(),
-                    label: Some("last".to_string()),
-                    value: int(3),
-                },
-            ],
-        },
-    ];
 
-    for case in cases.into_iter() {
-        let Case {
-            fields,
-            args,
-            expected_result,
-            expected_args,
-        } = case;
-        let mut args = args;
-        let fm = FieldMap { fields };
-        assert_eq!(expected_result, fm.reorder(&mut args));
-        assert_eq!(expected_args, args);
+    impl Case {
+        fn test(self) {
+            let mut args = self.args;
+            let fm = FieldMap {
+                fields: self.fields,
+            };
+            assert_eq!(self.expected_result, fm.reorder(&mut args));
+            assert_eq!(self.expected_args, args);
+        }
     }
+
+    Case {
+        fields: HashMap::new(),
+        args: vec![],
+        expected_result: Ok(()),
+        expected_args: vec![],
+    }
+    .test();
+
+    Case {
+        fields: HashMap::new(),
+        args: vec![
+            CallArg {
+                meta: Default::default(),
+                label: None,
+                value: int(1),
+            },
+            CallArg {
+                meta: Default::default(),
+                label: None,
+                value: int(2),
+            },
+            CallArg {
+                meta: Default::default(),
+                label: None,
+                value: int(3),
+            },
+        ],
+        expected_result: Ok(()),
+        expected_args: vec![
+            CallArg {
+                meta: Default::default(),
+                label: None,
+                value: int(1),
+            },
+            CallArg {
+                meta: Default::default(),
+                label: None,
+                value: int(2),
+            },
+            CallArg {
+                meta: Default::default(),
+                label: None,
+                value: int(3),
+            },
+        ],
+    }
+    .test();
+
+    Case {
+        fields: [("last".to_string(), 2)].iter().cloned().collect(),
+        args: vec![
+            CallArg {
+                meta: Default::default(),
+                label: None,
+                value: int(1),
+            },
+            CallArg {
+                meta: Default::default(),
+                label: Some("last".to_string()),
+                value: int(2),
+            },
+            CallArg {
+                meta: Default::default(),
+                label: None,
+                value: int(3),
+            },
+        ],
+        expected_result: Ok(()),
+        expected_args: vec![
+            CallArg {
+                meta: Default::default(),
+                label: None,
+                value: int(1),
+            },
+            CallArg {
+                meta: Default::default(),
+                label: None,
+                value: int(3),
+            },
+            CallArg {
+                meta: Default::default(),
+                label: Some("last".to_string()),
+                value: int(2),
+            },
+        ],
+    }
+    .test();
+
+    Case {
+        fields: [("last".to_string(), 2)].iter().cloned().collect(),
+        args: vec![
+            CallArg {
+                meta: Default::default(),
+                label: None,
+                value: int(1),
+            },
+            CallArg {
+                meta: Default::default(),
+                label: None,
+                value: int(2),
+            },
+            CallArg {
+                meta: Default::default(),
+                label: Some("last".to_string()),
+                value: int(3),
+            },
+        ],
+        expected_result: Ok(()),
+        expected_args: vec![
+            CallArg {
+                meta: Default::default(),
+                label: None,
+                value: int(1),
+            },
+            CallArg {
+                meta: Default::default(),
+                label: None,
+                value: int(2),
+            },
+            CallArg {
+                meta: Default::default(),
+                label: Some("last".to_string()),
+                value: int(3),
+            },
+        ],
+    }
+    .test();
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -2958,855 +2962,586 @@ pub fn list(t: Type) -> Type {
 
 #[test]
 fn infer_test() {
-    struct Case {
-        src: &'static str,
-        typ: &'static str,
+    macro_rules! assert_infer {
+        ($src:expr, $typ:expr $(,)?) => {
+            let ast = crate::grammar::ExprParser::new()
+                .parse($src)
+                .expect("syntax error");
+            let result =
+                infer(ast, 1, &mut Env::new(&HashMap::new())).expect("should successfully infer");
+            assert_eq!(
+                (
+                    $src,
+                    result
+                        .typ()
+                        .to_gleam_doc(&mut hashmap![], &mut 0)
+                        .format(80)
+                ),
+                ($src, $typ.to_string()),
+            );
+        };
     }
-    let cases = [
-        Case {
-            src: "True",
-            typ: "Bool",
-        },
-        Case {
-            src: "False",
-            typ: "Bool",
-        },
-        Case {
-            src: "1",
-            typ: "Int",
-        },
-        Case {
-            src: "-2",
-            typ: "Int",
-        },
-        Case {
-            src: "1.0",
-            typ: "Float",
-        },
-        Case {
-            src: "-8.0",
-            typ: "Float",
-        },
-        Case {
-            src: "\"ok\"",
-            typ: "String",
-        },
-        Case {
-            src: "\"ok\"",
-            typ: "String",
-        },
-        Case {
-            src: "[]",
-            typ: "List(a)",
-        },
-        Case {
-            src: "4 % 1",
-            typ: "Int",
-        },
-        Case {
-            src: "4 > 1",
-            typ: "Bool",
-        },
-        Case {
-            src: "4 >= 1",
-            typ: "Bool",
-        },
-        Case {
-            src: "4 <= 1",
-            typ: "Bool",
-        },
-        Case {
-            src: "4 < 1",
-            typ: "Bool",
-        },
-        /* Assignments
 
-        */
-        Case {
-            src: "let x = 1 2",
-            typ: "Int",
-        },
-        Case {
-            src: "let x = 1 x",
-            typ: "Int",
-        },
-        Case {
-            src: "let x = 2.0 x",
-            typ: "Float",
-        },
-        Case {
-            src: "let x = 2 let y = x y",
-            typ: "Int",
-        },
-        /* Lists
+    assert_infer!("True", "Bool");
+    assert_infer!("False", "Bool");
+    assert_infer!("1", "Int");
+    assert_infer!("-2", "Int");
+    assert_infer!("1.0", "Float");
+    assert_infer!("-8.0", "Float");
+    assert_infer!("\"ok\"", "String");
+    assert_infer!("\"ok\"", "String");
+    assert_infer!("[]", "List(a)");
+    assert_infer!("4 % 1", "Int");
+    assert_infer!("4 > 1", "Bool");
+    assert_infer!("4 >= 1", "Bool");
+    assert_infer!("4 <= 1", "Bool");
+    assert_infer!("4 < 1", "Bool");
 
-        */
-        Case {
-            src: "[]",
-            typ: "List(a)",
-        },
-        Case {
-            src: "[1]",
-            typ: "List(Int)",
-        },
-        Case {
-            src: "[1, 2, 3]",
-            typ: "List(Int)",
-        },
-        Case {
-            src: "[[]]",
-            typ: "List(List(a))",
-        },
-        Case {
-            src: "[[1.0, 2.0]]",
-            typ: "List(List(Float))",
-        },
-        Case {
-            src: "[fn(x) { x }]",
-            typ: "List(fn(a) -> a)",
-        },
-        Case {
-            src: "[fn(x) { x + 1 }]",
-            typ: "List(fn(Int) -> Int)",
-        },
-        Case {
-            src: "[fn(x) { x }, fn(x) { x + 1 }]",
-            typ: "List(fn(Int) -> Int)",
-        },
-        Case {
-            src: "[fn(x) { x + 1 }, fn(x) { x }]",
-            typ: "List(fn(Int) -> Int)",
-        },
-        Case {
-            src: "[[], []]",
-            typ: "List(List(a))",
-        },
-        Case {
-            src: "[[], [1]]",
-            typ: "List(List(Int))",
-        },
-        Case {
-            src: "[1 | [2 | []]]",
-            typ: "List(Int)",
-        },
-        Case {
-            src: "[fn(x) { x } | []]",
-            typ: "List(fn(a) -> a)",
-        },
-        Case {
-            src: "let f = fn(x) { x } [f, f]",
-            typ: "List(fn(a) -> a)",
-        },
-        Case {
-            src: "let x = [1 | []] [2 | x]",
-            typ: "List(Int)",
-        },
-        /* Fns
+    // let
+    assert_infer!("let x = 1 2", "Int");
+    assert_infer!("let x = 1 x", "Int");
+    assert_infer!("let x = 2.0 x", "Float");
+    assert_infer!("let x = 2 let y = x y", "Int");
 
-        */
-        Case {
-            src: "fn(x) { x }",
-            typ: "fn(a) -> a",
-        },
-        Case {
-            src: "fn(x) { x }",
-            typ: "fn(a) -> a",
-        },
-        Case {
-            src: "fn(x, y) { x }",
-            typ: "fn(a, b) -> a",
-        },
-        Case {
-            src: "fn(x, y) { [] }",
-            typ: "fn(a, b) -> List(c)",
-        },
-        Case {
-            src: "let x = 1.0 1",
-            typ: "Int",
-        },
-        Case {
-            src: "let id = fn(x) { x } id(1)",
-            typ: "Int",
-        },
-        Case {
-            src: "let x = fn() { 1.0 } x()",
-            typ: "Float",
-        },
-        Case {
-            src: "fn(x) { x }(1)",
-            typ: "Int",
-        },
-        Case {
-            src: "fn() { 1 }",
-            typ: "fn() -> Int",
-        },
-        Case {
-            src: "fn() { 1.1 }",
-            typ: "fn() -> Float",
-        },
-        Case {
-            src: "fn(x) { 1.1 }",
-            typ: "fn(a) -> Float",
-        },
-        Case {
-            src: "fn(x) { x }",
-            typ: "fn(a) -> a",
-        },
-        Case {
-            src: "let x = fn(x) { 1.1 } x",
-            typ: "fn(a) -> Float",
-        },
-        Case {
-            src: "fn(x, y, z) { 1 }",
-            typ: "fn(a, b, c) -> Int",
-        },
-        Case {
-            src: "fn(x) { let y = x y }",
-            typ: "fn(a) -> a",
-        },
-        Case {
-            src: "let id = fn(x) { x } id(1)",
-            typ: "Int",
-        },
-        Case {
-            src: "let constant = fn(x) { fn(y) { x } } let one = constant(1) one(2.0)",
-            typ: "Int",
-        },
-        Case {
-            src: "fn(f) { f(1) }",
-            typ: "fn(fn(Int) -> a) -> a",
-        },
-        Case {
-            src: "fn(f, x) { f(x) }",
-            typ: "fn(fn(a) -> b, a) -> b",
-        },
-        Case {
-            src: "fn(f) { fn(x) { f(x) } }",
-            typ: "fn(fn(a) -> b) -> fn(a) -> b",
-        },
-        Case {
-            src: "fn(f) { fn(x) { fn(y) { f(x, y) } } }",
-            typ: "fn(fn(a, b) -> c) -> fn(a) -> fn(b) -> c",
-        },
-        Case {
-            src: "fn(f) { fn(x, y) { f(x)(y) } }",
-            typ: "fn(fn(a) -> fn(b) -> c) -> fn(a, b) -> c",
-        },
-        Case {
-            src: "fn(f) { fn(x) { let ff = f ff(x) } }",
-            typ: "fn(fn(a) -> b) -> fn(a) -> b",
-        },
-        Case {
-            src: "fn(f) { fn(x, y) { let ff = f(x) ff(y) } }",
-            typ: "fn(fn(a) -> fn(b) -> c) -> fn(a, b) -> c",
-        },
-        Case {
-            src: "fn(x) { fn(y) { x } }",
-            typ: "fn(a) -> fn(b) -> a",
-        },
-        Case {
-            src: "fn(f) { f() }",
-            typ: "fn(fn() -> a) -> a",
-        },
-        Case {
-            src: "fn(f, x) { f(f(x)) }",
-            typ: "fn(fn(a) -> a, a) -> a",
-        },
-        Case {
-            src: "let id = fn(a) { a } fn(x) { x(id) }",
-            typ: "fn(fn(fn(a) -> a) -> b) -> b",
-        },
-        Case {
-            src: "let add = fn(x, y) { x + y } add(_, 2)",
-            typ: "fn(Int) -> Int",
-        },
-        /* case
+    // list
+    assert_infer!("[]", "List(a)");
+    assert_infer!("[1]", "List(Int)");
+    assert_infer!("[1, 2, 3]", "List(Int)");
+    assert_infer!("[[]]", "List(List(a))");
+    assert_infer!("[[1.0, 2.0]]", "List(List(Float))");
+    assert_infer!("[fn(x) { x }]", "List(fn(a) -> a)");
+    assert_infer!("[fn(x) { x + 1 }]", "List(fn(Int) -> Int)");
+    assert_infer!("[fn(x) { x }, fn(x) { x + 1 }]", "List(fn(Int) -> Int)");
+    assert_infer!("[fn(x) { x + 1 }, fn(x) { x }]", "List(fn(Int) -> Int)");
+    assert_infer!("[[], []]", "List(List(a))");
+    assert_infer!("[[], [1]]", "List(List(Int))");
+    assert_infer!("[1 | [2 | []]]", "List(Int)");
+    assert_infer!("[fn(x) { x } | []]", "List(fn(a) -> a)");
+    assert_infer!("let f = fn(x) { x } [f, f]", "List(fn(a) -> a)");
+    assert_infer!("let x = [1 | []] [2 | x]", "List(Int)");
 
-        */
-        Case {
-            src: "case 1 { | a -> 1 }",
-            typ: "Int",
-        },
-        Case {
-            src: "case 1 { | a -> 1.0 | b -> 2.0 | c -> 3.0 }",
-            typ: "Float",
-        },
-        Case {
-            src: "case 1 { | a -> a }",
-            typ: "Int",
-        },
-        Case {
-            src: "case 1 { | 1 -> 10 | 2 -> 20 | x -> x * 10 }",
-            typ: "Int",
-        },
-        Case {
-            src: "case 2.0 { | 2.0 -> 1 | x -> 0 }",
-            typ: "Int",
-        },
-        Case {
-            src: r#"case "ok" { | "ko" -> 1 | x -> 0 }"#,
-            typ: "Int",
-        },
-        /* let
+    // fn
+    assert_infer!("fn(x) { x }", "fn(a) -> a");
+    assert_infer!("fn(x) { x }", "fn(a) -> a");
+    assert_infer!("fn(x, y) { x }", "fn(a, b) -> a");
+    assert_infer!("fn(x, y) { [] }", "fn(a, b) -> List(c)");
+    assert_infer!("let x = 1.0 1", "Int");
+    assert_infer!("let id = fn(x) { x } id(1)", "Int");
+    assert_infer!("let x = fn() { 1.0 } x()", "Float");
+    assert_infer!("fn(x) { x }(1)", "Int");
+    assert_infer!("fn() { 1 }", "fn() -> Int");
+    assert_infer!("fn() { 1.1 }", "fn() -> Float");
+    assert_infer!("fn(x) { 1.1 }", "fn(a) -> Float");
+    assert_infer!("fn(x) { x }", "fn(a) -> a");
+    assert_infer!("let x = fn(x) { 1.1 } x", "fn(a) -> Float");
+    assert_infer!("fn(x, y, z) { 1 }", "fn(a, b, c) -> Int");
+    assert_infer!("fn(x) { let y = x y }", "fn(a) -> a");
+    assert_infer!("let id = fn(x) { x } id(1)", "Int");
+    assert_infer!(
+        "let constant = fn(x) { fn(y) { x } } let one = constant(1) one(2.0)",
+        "Int",
+    );
+    assert_infer!("fn(f) { f(1) }", "fn(fn(Int) -> a) -> a");
+    assert_infer!("fn(f, x) { f(x) }", "fn(fn(a) -> b, a) -> b");
+    assert_infer!("fn(f) { fn(x) { f(x) } }", "fn(fn(a) -> b) -> fn(a) -> b");
+    assert_infer!(
+        "fn(f) { fn(x) { fn(y) { f(x, y) } } }",
+        "fn(fn(a, b) -> c) -> fn(a) -> fn(b) -> c",
+    );
+    assert_infer!(
+        "fn(f) { fn(x, y) { f(x)(y) } }",
+        "fn(fn(a) -> fn(b) -> c) -> fn(a, b) -> c",
+    );
+    assert_infer!(
+        "fn(f) { fn(x) { let ff = f ff(x) } }",
+        "fn(fn(a) -> b) -> fn(a) -> b",
+    );
+    assert_infer!(
+        "fn(f) { fn(x, y) { let ff = f(x) ff(y) } }",
+        "fn(fn(a) -> fn(b) -> c) -> fn(a, b) -> c",
+    );
+    assert_infer!("fn(x) { fn(y) { x } }", "fn(a) -> fn(b) -> a");
+    assert_infer!("fn(f) { f() }", "fn(fn() -> a) -> a");
+    assert_infer!("fn(f, x) { f(f(x)) }", "fn(fn(a) -> a, a) -> a");
+    assert_infer!(
+        "let id = fn(a) { a } fn(x) { x(id) }",
+        "fn(fn(fn(a) -> a) -> b) -> b",
+    );
+    assert_infer!("let add = fn(x, y) { x + y } add(_, 2)", "fn(Int) -> Int");
 
-        */
-        Case {
-            src: "let [] = [] 1",
-            typ: "Int",
-        },
-        Case {
-            src: "let [a] = [1] a",
-            typ: "Int",
-        },
-        Case {
-            src: "let [a, 2] = [1] a",
-            typ: "Int",
-        },
-        Case {
-            src: "let [a | [b | []]] = [1] a",
-            typ: "Int",
-        },
-        Case {
-            src: "fn(x) { let [a] = x a }",
-            typ: "fn(List(a)) -> a",
-        },
-        Case {
-            src: "fn(x) { let [a] = x a + 1 }",
-            typ: "fn(List(Int)) -> Int",
-        },
-        Case {
-            src: "let _x = 1 2.0",
-            typ: "Float",
-        },
-        Case {
-            src: "let _ = 1 2.0",
-            typ: "Float",
-        },
-    ];
+    // case
+    assert_infer!("case 1 { | a -> 1 }", "Int");
+    assert_infer!("case 1 { | a -> 1.0 | b -> 2.0 | c -> 3.0 }", "Float");
+    assert_infer!("case 1 { | a -> a }", "Int");
+    assert_infer!("case 1 { | 1 -> 10 | 2 -> 20 | x -> x * 10 }", "Int");
+    assert_infer!("case 2.0 { | 2.0 -> 1 | x -> 0 }", "Int");
+    assert_infer!(r#"case "ok" { | "ko" -> 1 | x -> 0 }"#, "Int");
 
-    for Case { src, typ } in cases.into_iter() {
-        println!("{}", src);
-        let ast = crate::grammar::ExprParser::new()
-            .parse(src)
-            .expect("syntax error");
-        let result =
-            infer(ast, 1, &mut Env::new(&HashMap::new())).expect("should successfully infer");
-        assert_eq!(
-            (
-                src,
-                result
-                    .typ()
-                    .to_gleam_doc(&mut hashmap![], &mut 0)
-                    .format(80)
-            ),
-            (src, typ.to_string()),
-        );
-    }
+    // let
+    assert_infer!("let [] = [] 1", "Int");
+    assert_infer!("let [a] = [1] a", "Int");
+    assert_infer!("let [a, 2] = [1] a", "Int");
+    assert_infer!("let [a | [b | []]] = [1] a", "Int");
+    assert_infer!("fn(x) { let [a] = x a }", "fn(List(a)) -> a");
+    assert_infer!("fn(x) { let [a] = x a + 1 }", "fn(List(Int)) -> Int");
+    assert_infer!("let _x = 1 2.0", "Float");
+    assert_infer!("let _ = 1 2.0", "Float");
 }
 
 #[test]
 fn infer_error_test() {
-    struct Case {
-        src: &'static str,
-        error: Error,
+    macro_rules! assert_error {
+        ($src:expr, $error:expr $(,)?) => {
+            let ast = crate::grammar::ExprParser::new()
+                .parse($src)
+                .expect("syntax error");
+            let result =
+                infer(ast, 1, &mut Env::new(&HashMap::new())).expect_err("should infer an error");
+            assert_eq!(($src, $error), ($src, result));
+        };
     }
 
-    let cases = [
-        Case {
-            src: "1 + 1.0",
-            error: Error::CouldNotUnify {
-                meta: Meta { start: 4, end: 7 },
-                expected: int(),
-                given: float(),
+    assert_error!(
+        "1 + 1.0",
+        Error::CouldNotUnify {
+            meta: Meta { start: 4, end: 7 },
+            expected: int(),
+            given: float(),
+        },
+    );
+    assert_error!(
+        "1 +. 1.0",
+        Error::CouldNotUnify {
+            meta: Meta { start: 0, end: 1 },
+            expected: float(),
+            given: int(),
+        },
+    );
+    assert_error!(
+        "1 == 1.0",
+        Error::CouldNotUnify {
+            meta: Meta { start: 5, end: 8 },
+            expected: int(),
+            given: float(),
+        },
+    );
+    assert_error!(
+        "1 > 1.0",
+        Error::CouldNotUnify {
+            meta: Meta { start: 4, end: 7 },
+            expected: int(),
+            given: float(),
+        },
+    );
+    assert_error!(
+        "1.0 >. 1",
+        Error::CouldNotUnify {
+            meta: Meta { start: 7, end: 8 },
+            expected: float(),
+            given: int(),
+        },
+    );
+    assert_error!(
+        "x",
+        Error::UnknownVariable {
+            meta: Meta { start: 0, end: 1 },
+            name: "x".to_string(),
+            variables: Env::new(&HashMap::new()).variables,
+        },
+    );
+    assert_error!(
+        "x",
+        Error::UnknownVariable {
+            meta: Meta { start: 0, end: 1 },
+            name: "x".to_string(),
+            variables: Env::new(&HashMap::new()).variables,
+        },
+    );
+    assert_error!(
+        "let id = fn(x) { x } id()",
+        Error::IncorrectArity {
+            meta: Meta { start: 21, end: 25 },
+            expected: 1,
+            given: 0,
+        },
+    );
+    assert_error!(
+        "let id = fn(x) { x } id(1, 2)",
+        Error::IncorrectArity {
+            meta: Meta { start: 21, end: 29 },
+            expected: 1,
+            given: 2,
+        },
+    );
+    assert_error!(
+        "case 1 { | a -> 1 | b -> 2.0 }",
+        Error::CouldNotUnify {
+            meta: Meta { start: 25, end: 28 },
+            expected: int(),
+            given: float(),
+        },
+    );
+    assert_error!(
+        "case 1.0 { | 1 -> 1 }",
+        Error::CouldNotUnify {
+            meta: Meta { start: 13, end: 14 },
+            expected: int(),
+            given: float(),
+        },
+    );
+    assert_error!(
+        "case 1 { | 1.0 -> 1 }",
+        Error::CouldNotUnify {
+            meta: Meta { start: 11, end: 14 },
+            expected: float(),
+            given: int(),
+        },
+    );
+    assert_error!(
+        "fn() { 1 } == fn(x) { x + 1 }",
+        Error::CouldNotUnify {
+            meta: Meta { start: 14, end: 29 },
+            expected: Type::Fn {
+                args: vec![],
+                retrn: Box::new(int()),
+            },
+            given: Type::Fn {
+                args: vec![Type::Var {
+                    typ: Rc::new(RefCell::new(TypeVar::Link {
+                        typ: Box::new(int()),
+                    })),
+                }],
+                retrn: Box::new(int()),
             },
         },
-        Case {
-            src: "1 +. 1.0",
-            error: Error::CouldNotUnify {
-                meta: Meta { start: 0, end: 1 },
-                expected: float(),
-                given: int(),
+    );
+    assert_error!(
+        "let f = fn(x: Int) { x } f(1.0)",
+        Error::CouldNotUnify {
+            meta: Meta { start: 27, end: 30 },
+            expected: Type::App {
+                public: true,
+                module: vec![],
+                name: "Int".to_string(),
+                args: vec![],
+            },
+            given: Type::App {
+                public: true,
+                module: vec![],
+                name: "Float".to_string(),
+                args: vec![],
             },
         },
-        Case {
-            src: "1 == 1.0",
-            error: Error::CouldNotUnify {
-                meta: Meta { start: 5, end: 8 },
-                expected: int(),
-                given: float(),
-            },
+    );
+    assert_error!(
+        "case 1 { | x -> 1 | 1 -> x }",
+        Error::UnknownVariable {
+            meta: Meta { start: 25, end: 26 },
+            name: "x".to_string(),
+            variables: Env::new(&HashMap::new()).variables,
         },
-        Case {
-            src: "1 > 1.0",
-            error: Error::CouldNotUnify {
-                meta: Meta { start: 4, end: 7 },
-                expected: int(),
-                given: float(),
-            },
+    );
+    assert_error!(
+        "let id = fn(x) { x(x) } 1",
+        Error::RecursiveType {
+            meta: Meta { start: 19, end: 20 },
         },
-        Case {
-            src: "1.0 >. 1",
-            error: Error::CouldNotUnify {
-                meta: Meta { start: 7, end: 8 },
-                expected: float(),
-                given: int(),
-            },
+    );
+    assert_error!(
+        "let True(x) = 1 x",
+        Error::IncorrectArity {
+            meta: Meta { start: 4, end: 11 },
+            expected: 0,
+            given: 1,
         },
-        Case {
-            src: "x",
-            error: Error::UnknownVariable {
-                meta: Meta { start: 0, end: 1 },
-                name: "x".to_string(),
-                variables: Env::new(&HashMap::new()).variables,
-            },
+    );
+    assert_error!(
+        "let Ok(1, x) = 1 x",
+        Error::IncorrectArity {
+            meta: Meta { start: 4, end: 12 },
+            expected: 1,
+            given: 2,
         },
-        Case {
-            src: "x",
-            error: Error::UnknownVariable {
-                meta: Meta { start: 0, end: 1 },
-                name: "x".to_string(),
-                variables: Env::new(&HashMap::new()).variables,
-            },
+    );
+    assert_error!(
+        "let x = 1 x.whatever",
+        Error::NotModule {
+            meta: Meta { start: 10, end: 11 },
+            typ: int(),
         },
-        Case {
-            src: "let id = fn(x) { x } id()",
-            error: Error::IncorrectArity {
-                meta: Meta { start: 21, end: 25 },
-                expected: 1,
-                given: 0,
-            },
-        },
-        Case {
-            src: "let id = fn(x) { x } id(1, 2)",
-            error: Error::IncorrectArity {
-                meta: Meta { start: 21, end: 29 },
-                expected: 1,
-                given: 2,
-            },
-        },
-        Case {
-            src: "case 1 { | a -> 1 | b -> 2.0 }",
-            error: Error::CouldNotUnify {
-                meta: Meta { start: 25, end: 28 },
-                expected: int(),
-                given: float(),
-            },
-        },
-        Case {
-            src: "case 1.0 { | 1 -> 1 }",
-            error: Error::CouldNotUnify {
-                meta: Meta { start: 13, end: 14 },
-                expected: int(),
-                given: float(),
-            },
-        },
-        Case {
-            src: "case 1 { | 1.0 -> 1 }",
-            error: Error::CouldNotUnify {
-                meta: Meta { start: 11, end: 14 },
-                expected: float(),
-                given: int(),
-            },
-        },
-        Case {
-            src: "fn() { 1 } == fn(x) { x + 1 }",
-            error: Error::CouldNotUnify {
-                meta: Meta { start: 14, end: 29 },
-                expected: Type::Fn {
-                    args: vec![],
-                    retrn: Box::new(int()),
-                },
-                given: Type::Fn {
-                    args: vec![Type::Var {
-                        typ: Rc::new(RefCell::new(TypeVar::Link {
-                            typ: Box::new(int()),
-                        })),
-                    }],
-                    retrn: Box::new(int()),
-                },
-            },
-        },
-        Case {
-            src: "let f = fn(x: Int) { x } f(1.0)",
-            error: Error::CouldNotUnify {
-                meta: Meta { start: 27, end: 30 },
-                expected: Type::App {
-                    public: true,
-                    module: vec![],
-                    name: "Int".to_string(),
-                    args: vec![],
-                },
-                given: Type::App {
-                    public: true,
-                    module: vec![],
-                    name: "Float".to_string(),
-                    args: vec![],
-                },
-            },
-        },
-        Case {
-            src: "case 1 { | x -> 1 | 1 -> x }",
-            error: Error::UnknownVariable {
-                meta: Meta { start: 25, end: 26 },
-                name: "x".to_string(),
-                variables: Env::new(&HashMap::new()).variables,
-            },
-        },
-        Case {
-            src: "let id = fn(x) { x(x) } 1",
-            error: Error::RecursiveType {
-                meta: Meta { start: 19, end: 20 },
-            },
-        },
-        Case {
-            src: "let True(x) = 1 x",
-            error: Error::IncorrectArity {
-                meta: Meta { start: 4, end: 11 },
-                expected: 0,
-                given: 1,
-            },
-        },
-        Case {
-            src: "let Ok(1, x) = 1 x",
-            error: Error::IncorrectArity {
-                meta: Meta { start: 4, end: 12 },
-                expected: 1,
-                given: 2,
-            },
-        },
-        Case {
-            src: "let x = 1 x.whatever",
-            error: Error::NotModule {
-                meta: Meta { start: 10, end: 11 },
-                typ: int(),
-            },
-        },
-    ];
-
-    for Case { src, error } in cases.into_iter() {
-        let ast = crate::grammar::ExprParser::new()
-            .parse(src)
-            .expect("syntax error");
-        let result =
-            infer(ast, 1, &mut Env::new(&HashMap::new())).expect_err("should infer an error");
-        assert_eq!((src, error), (src, &result));
-    }
+    );
 }
 
 #[test]
 fn infer_module_test() {
-    struct Case {
-        src: &'static str,
-        module: Vec<(&'static str, &'static str)>,
+    macro_rules! assert_infer {
+        ($src:expr, $module:expr $(,)?) => {
+            let ast = crate::grammar::ModuleParser::new()
+                .parse($src)
+                .expect("syntax error");
+            let result = infer_module(ast, &HashMap::new()).expect("should successfully infer");
+            let mut constructors: Vec<(_, _)> = result
+                .type_info
+                .value_constructors
+                .iter()
+                .map(|(k, v)| (k.clone(), v.typ.pretty_print(0)))
+                .collect();
+            constructors.sort();
+            let expected: Vec<_> = $module
+                .into_iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect();
+            assert_eq!(($src, constructors), ($src, expected));
+        };
     }
 
-    let cases = [
-        Case {
-            src: "
-        pub fn repeat(i, x) {
-          case i {
-          | 0 -> []
-          | i -> [x | repeat(i - 1, x)]
-          }
-        }",
-            module: vec![("repeat", "fn(Int, a) -> List(a)")],
-        },
-        Case {
-            src: "fn private() { 1 }
-                  pub fn public() { 1 }",
-            module: vec![("public", "fn() -> Int")],
-        },
-        Case {
-            src: "
-                pub enum Is = | Yes | No
-                pub fn yes() { Yes }
-                pub fn no() { No }",
-            module: vec![
-                ("No", "Is"),
-                ("Yes", "Is"),
-                ("no", "fn() -> Is"),
-                ("yes", "fn() -> Is"),
-            ],
-        },
-        Case {
-            src: "
-                pub enum Num = | I(Int)
-                pub fn one() { I(1) }",
-            module: vec![("I", "fn(Int) -> Num"), ("one", "fn() -> Num")],
-        },
-        Case {
-            src: "
-                pub fn id(x) { x }
-                pub fn float() { id(1.0) }
-                pub fn int() { id(1) }",
-            module: vec![
-                ("float", "fn() -> Float"),
-                ("id", "fn(a) -> a"),
-                ("int", "fn() -> Int"),
-            ],
-        },
-        Case {
-            src: "
-        pub enum Box(a) = | Box(a)
+    assert_infer!(
+        "pub fn repeat(i, x) {
+           case i {
+           | 0 -> []
+           | i -> [x | repeat(i - 1, x)]
+           }
+         }",
+        vec![("repeat", "fn(Int, a) -> List(a)")],
+    );
+    assert_infer!(
+        "fn private() { 1 }
+         pub fn public() { 1 }",
+        vec![("public", "fn() -> Int")],
+    );
+    assert_infer!(
+        "pub enum Is = | Yes | No
+         pub fn yes() { Yes }
+         pub fn no() { No }",
+        vec![
+            ("No", "Is"),
+            ("Yes", "Is"),
+            ("no", "fn() -> Is"),
+            ("yes", "fn() -> Is"),
+        ],
+    );
+    assert_infer!(
+        "pub enum Num = | I(Int)
+         pub fn one() { I(1) }",
+        vec![("I", "fn(Int) -> Num"), ("one", "fn() -> Num")],
+    );
+    assert_infer!(
+        "pub fn id(x) { x }
+         pub fn float() { id(1.0) }
+         pub fn int() { id(1) }",
+        vec![
+            ("float", "fn() -> Float"),
+            ("id", "fn(a) -> a"),
+            ("int", "fn() -> Int"),
+        ],
+    );
+    assert_infer!(
+        "pub enum Box(a) = | Box(a)
         pub fn int() { Box(1) }
         pub fn float() { Box(1.0) }",
-            module: vec![
-                ("Box", "fn(a) -> Box(a)"),
-                ("float", "fn() -> Box(Float)"),
-                ("int", "fn() -> Box(Int)"),
-            ],
-        },
-        Case {
-            src: "
-        pub enum Singleton = | Singleton
+        vec![
+            ("Box", "fn(a) -> Box(a)"),
+            ("float", "fn() -> Box(Float)"),
+            ("int", "fn() -> Box(Int)"),
+        ],
+    );
+    assert_infer!(
+        "pub enum Singleton = | Singleton
         pub fn go(x) { let Singleton = x 1 }",
-            module: vec![("Singleton", "Singleton"), ("go", "fn(Singleton) -> Int")],
-        },
-        Case {
-            src: "
-        pub enum Box(a) = | Box(a)
+        vec![("Singleton", "Singleton"), ("go", "fn(Singleton) -> Int")],
+    );
+    assert_infer!(
+        "pub enum Box(a) = | Box(a)
         pub fn unbox(x) { let Box(a) = x a }",
-            module: vec![("Box", "fn(a) -> Box(a)"), ("unbox", "fn(Box(a)) -> a")],
-        },
-        Case {
-            src: "
-        pub enum I = | I(Int)
+        vec![("Box", "fn(a) -> Box(a)"), ("unbox", "fn(Box(a)) -> a")],
+    );
+    assert_infer!(
+        "pub enum I = | I(Int)
         pub fn open(x) { case x { | I(i) -> i  } }",
-            module: vec![("I", "fn(Int) -> I"), ("open", "fn(I) -> Int")],
-        },
-        Case {
-            src: "pub fn status() { 1 }
+        vec![("I", "fn(Int) -> I"), ("open", "fn(I) -> Int")],
+    );
+    assert_infer!(
+        "pub fn status() { 1 }
                   pub fn list_of(x) { [x] }",
-            module: vec![("list_of", "fn(a) -> List(a)"), ("status", "fn() -> Int")],
-        },
-        Case {
-            src: "pub external fn go(String) -> String = \"\" \"\"",
-            module: vec![("go", "fn(String) -> String")],
-        },
-        Case {
-            src: "pub external fn go(Int) -> Float = \"\" \"\"",
-            module: vec![("go", "fn(Int) -> Float")],
-        },
-        Case {
-            src: "pub external fn go(Int) -> Int = \"\" \"\"",
-            module: vec![("go", "fn(Int) -> Int")],
-        },
-        Case {
-            src: "external fn go(Int) -> Int = \"\" \"\"",
-            module: vec![],
-        },
-        Case {
-            src: "pub external fn ok() -> fn(Int) -> Int = \"\" \"\"",
-            module: vec![("ok", "fn() -> fn(Int) -> Int")],
-        },
-        Case {
-            src: "pub external fn go(Int) -> b = \"\" \"\"",
-            module: vec![("go", "fn(Int) -> a")],
-        },
-        Case {
-            src: "pub external fn go(Bool) -> b = \"\" \"\"",
-            module: vec![("go", "fn(Bool) -> a")],
-        },
-        Case {
-            src: "pub external fn go(List(a)) -> a = \"\" \"\"",
-            module: vec![("go", "fn(List(a)) -> a")],
-        },
-        Case {
-            src: "
-        external fn go(Int) -> b = \"\" \"\"
+        vec![("list_of", "fn(a) -> List(a)"), ("status", "fn() -> Int")],
+    );
+    assert_infer!(
+        "pub external fn go(String) -> String = \"\" \"\"",
+        vec![("go", "fn(String) -> String")],
+    );
+    assert_infer!(
+        "pub external fn go(Int) -> Float = \"\" \"\"",
+        vec![("go", "fn(Int) -> Float")],
+    );
+    assert_infer!(
+        "pub external fn go(Int) -> Int = \"\" \"\"",
+        vec![("go", "fn(Int) -> Int")],
+    );
+    assert_infer!(
+        "pub external fn ok() -> fn(Int) -> Int = \"\" \"\"",
+        vec![("ok", "fn() -> fn(Int) -> Int")],
+    );
+    assert_infer!(
+        "pub external fn go(Int) -> b = \"\" \"\"",
+        vec![("go", "fn(Int) -> a")],
+    );
+    assert_infer!(
+        "pub external fn go(Bool) -> b = \"\" \"\"",
+        vec![("go", "fn(Bool) -> a")],
+    );
+    assert_infer!(
+        "pub external fn go(List(a)) -> a = \"\" \"\"",
+        vec![("go", "fn(List(a)) -> a")],
+    );
+    assert_infer!(
+        "external fn go(Int) -> b = \"\" \"\"
         pub fn x() { go(1) }",
-            module: vec![("x", "fn() -> a")],
-        },
-        Case {
-            src: "
-        external fn id(a) -> a = \"\" \"\"
+        vec![("x", "fn() -> a")],
+    );
+    assert_infer!(
+        "external fn id(a) -> a = \"\" \"\"
         pub fn i(x) { id(x) }
         pub fn a() { id(1) }
         pub fn b() { id(1.0) }",
-            module: vec![
-                ("a", "fn() -> Int"),
-                ("b", "fn() -> Float"),
-                ("i", "fn(a) -> a"),
-            ],
-        },
-        Case {
-            src: "pub external fn len(List(a)) -> Int = \"\" \"\"",
-            module: vec![("len", "fn(List(a)) -> Int")],
-        },
-        Case {
-            src: "
-        pub external type Connection\n
-        pub external fn is_open(Connection) -> Bool = \"\" \"\"",
-            module: vec![("is_open", "fn(Connection) -> Bool")],
-        },
-        Case {
-            src: "
-        pub external type Pair(thing, thing)\n
-        pub external fn pair(a) -> Pair(a, a) = \"\" \"\"",
-            module: vec![("pair", "fn(a) -> Pair(a, a)")],
-        },
-        Case {
-            src: "
-pub fn one() { 1 }
-pub fn zero() { one() - 1 }
-pub fn two() { one() + zero() }",
-            module: vec![
-                ("one", "fn() -> Int"),
-                ("two", "fn() -> Int"),
-                ("zero", "fn() -> Int"),
-            ],
-        },
-        Case {
-            src: "
-        pub fn one() { 1 }
-        pub fn zero() { one() - 1 }
-        pub fn two() { one() + zero() }",
-            module: vec![
-                ("one", "fn() -> Int"),
-                ("two", "fn() -> Int"),
-                ("zero", "fn() -> Int"),
-            ],
-        },
-        // Type annotations
-        Case {
-            src: "pub fn go(x: Int) { x }",
-            module: vec![("go", "fn(Int) -> Int")],
-        },
-        Case {
-            src: "pub fn go(x: b) -> b { x }",
-            module: vec![("go", "fn(a) -> a")],
-        },
-        Case {
-            src: "pub fn go(x) -> b { x }",
-            module: vec![("go", "fn(a) -> a")],
-        },
-        Case {
-            src: "pub fn go(x: b) { x }",
-            module: vec![("go", "fn(a) -> a")],
-        },
-        Case {
-            src: "pub fn go(x: List(b)) -> List(b) { x }",
-            module: vec![("go", "fn(List(a)) -> List(a)")],
-        },
-        Case {
-            src: "pub fn go(x: List(b)) { x }",
-            module: vec![("go", "fn(List(a)) -> List(a)")],
-        },
-        Case {
-            src: "pub fn go(x: List(String)) { x }",
-            module: vec![("go", "fn(List(String)) -> List(String)")],
-        },
-        Case {
-            src: "pub fn go(x: b, y: c) { x }",
-            module: vec![("go", "fn(a, b) -> a")],
-        },
-        Case {
-            src: "pub fn go(x) -> Int { x }",
-            module: vec![("go", "fn(Int) -> Int")],
-        },
-        // // Type aliases
-        // Case {
-        //     src: "
-        // type Html = String
-        // pub fn go() { 1 }",
-        //     module: vec![("go", "fn() -> Int")],
-        // },
-        Case {
-            src: "pub fn length(list) {
-                    case list {
-                    | [] -> 0
-                    | [x | xs] -> length(xs) + 1
-                    }
-                  }",
-            module: vec![("length", "fn(List(a)) -> Int")],
-        },
-        //    // % {
-        //    // %pub fn length(list) {\n
-        //    // %  case list {\n
-        //    // %  | [] -> 0\n
-        //    // %  | _ :: tail -> helper_length(tail) + 1\n
-        //    // %  }\n
-        //    // %}
-        //    // %fn helper_length(list) { length(list) }
-        //    // %   ,
-        //    // %module {
-        //    // % fn length(List(a)) -> Int
-        //    // %}
-        //    // % }
-        /* Structs
+        vec![
+            ("a", "fn() -> Int"),
+            ("b", "fn() -> Float"),
+            ("i", "fn(a) -> a"),
+        ],
+    );
+    assert_infer!(
+        "pub external fn len(List(a)) -> Int = \"\" \"\"",
+        vec![("len", "fn(List(a)) -> Int")],
+    );
+    assert_infer!(
+        "pub external type Connection\n
+         pub external fn is_open(Connection) -> Bool = \"\" \"\"",
+        vec![("is_open", "fn(Connection) -> Bool")],
+    );
+    assert_infer!(
+        "pub external type Pair(thing, thing)\n
+         pub external fn pair(a) -> Pair(a, a) = \"\" \"\"",
+        vec![("pair", "fn(a) -> Pair(a, a)")],
+    );
+    assert_infer!(
+        "pub fn one() { 1 }
+         pub fn zero() { one() - 1 }
+         pub fn two() { one() + zero() }",
+        vec![
+            ("one", "fn() -> Int"),
+            ("two", "fn() -> Int"),
+            ("zero", "fn() -> Int"),
+        ],
+    );
+    assert_infer!(
+        "pub fn one() { 1 }
+         pub fn zero() { one() - 1 }
+         pub fn two() { one() + zero() }",
+        vec![
+            ("one", "fn() -> Int"),
+            ("two", "fn() -> Int"),
+            ("zero", "fn() -> Int"),
+        ],
+    );
 
-        */
-        Case {
-            src: "pub struct Box { boxed: Int }",
-            module: vec![("Box", "fn(Int) -> Box")],
-        },
-        Case {
-            src: "pub struct Tup(a, b) { first: a second: b }",
-            module: vec![("Tup", "fn(a, b) -> Tup(a, b)")],
-        },
-        Case {
-            src: "pub struct Tup(a, b, c) { first: a second: b third: c }
-                  pub fn third(t) { let Tup(_, third: a, _) = t a }",
-            module: vec![
-                ("Tup", "fn(a, b, c) -> Tup(a, b, c)"),
-                ("third", "fn(Tup(a, b, c)) -> c"),
-            ],
-        },
-        Case {
-            src: "pub struct Box(x) { label: String contents: x }
-                  pub fn id(x: Box(y)) { x }",
-            module: vec![
-                ("Box", "fn(String, a) -> Box(a)"),
-                ("id", "fn(Box(a)) -> Box(a)"),
-            ],
-        },
-        // Case {
-        //     src: "pub struct Box(a) { boxed: a }
-        //           pub fn unbox_int(b: Box(Int)) { b.boxed }",
-        //     module: vec![
-        //         ("Box", "fn(a) -> Box(a)"),
-        //         ("unbox_int", "fn(Box(Int)) -> Int"),
-        //     ],
-        // },
-        // Case {
-        //     src: "pub struct Box(a) { boxed: a }
-        //           pub fn unbox_pattern(b: Box(a)) { let Box(x) = b x }
-        //           pub fn unbox(b: Box(a)) { b.boxed }
-        //           pub fn unbox_int(b: Box(Int)) { b.boxed }",
-        //     module: vec![
-        //         ("Box", "fn(a) -> Box(a)"),
-        //         ("unbox", "fn(Box(a)) -> a"),
-        //         ("unbox_int", "fn(Box(Int)) -> Int"),
-        //         ("unbox_pattern", "fn(Box(a)) -> a"),
-        //     ],
-        // },
-    ];
+    // Type annotations
+    assert_infer!("pub fn go(x: Int) { x }", vec![("go", "fn(Int) -> Int")],);
+    assert_infer!("pub fn go(x: b) -> b { x }", vec![("go", "fn(a) -> a")],);
+    assert_infer!("pub fn go(x) -> b { x }", vec![("go", "fn(a) -> a")],);
+    assert_infer!("pub fn go(x: b) { x }", vec![("go", "fn(a) -> a")],);
+    assert_infer!(
+        "pub fn go(x: List(b)) -> List(b) { x }",
+        vec![("go", "fn(List(a)) -> List(a)")],
+    );
+    assert_infer!(
+        "pub fn go(x: List(b)) { x }",
+        vec![("go", "fn(List(a)) -> List(a)")],
+    );
+    assert_infer!(
+        "pub fn go(x: List(String)) { x }",
+        vec![("go", "fn(List(String)) -> List(String)")],
+    );
+    assert_infer!("pub fn go(x: b, y: c) { x }", vec![("go", "fn(a, b) -> a")],);
+    assert_infer!("pub fn go(x) -> Int { x }", vec![("go", "fn(Int) -> Int")],);
 
-    for Case { src, module } in cases.into_iter() {
-        println!("{}", src);
-        let ast = crate::grammar::ModuleParser::new()
-            .parse(src)
-            .expect("syntax error");
-        let result = infer_module(ast, &HashMap::new()).expect("should successfully infer");
-        let mut constructors: Vec<(_, _)> = result
-            .type_info
-            .value_constructors
-            .iter()
-            .map(|(k, v)| (k.clone(), v.typ.pretty_print(0)))
-            .collect();
-        constructors.sort();
-        let expected: Vec<_> = module
-            .iter()
-            .map(|(k, v)| (k.to_string(), v.to_string()))
-            .collect();
-        assert_eq!((src, constructors), (src, expected));
-    }
+    // // Type aliases
+    // assert_infer!(     src: "
+    // type Html = String
+    // pub fn go() { 1 }",
+    //     vec![("go", "fn() -> Int")],
+    // );
+    assert_infer!(
+        "pub fn length(list) {
+           case list {
+           | [] -> 0
+           | [x | xs] -> length(xs) + 1
+           }
+        }",
+        vec![("length", "fn(List(a)) -> Int")],
+    );
+    //    // % {
+    //    // %pub fn length(list) {\n
+    //    // %  case list {\n
+    //    // %  | [] -> 0\n
+    //    // %  | _ :: tail -> helper_length(tail) + 1\n
+    //    // %  }\n
+    //    // %}
+    //    // %fn helper_length(list) { length(list) }
+    //    // %   ,
+    //    // %module {
+    //    // % fn length(List(a)) -> Int
+    //    // %}
+    //    // % }
+
+    // Structs
+    assert_infer!(
+        "pub struct Box { boxed: Int }",
+        vec![("Box", "fn(Int) -> Box")]
+    );
+    assert_infer!(
+        "pub struct Tup(a, b) { first: a second: b }",
+        vec![("Tup", "fn(a, b) -> Tup(a, b)")]
+    );
+    assert_infer!(
+        "pub struct Tup(a, b, c) { first: a second: b third: c }
+         pub fn third(t) { let Tup(_, third: a, _) = t a }",
+        vec![
+            ("Tup", "fn(a, b, c) -> Tup(a, b, c)"),
+            ("third", "fn(Tup(a, b, c)) -> c"),
+        ],
+    );
+    assert_infer!(
+        "pub struct Box(x) { label: String contents: x }
+         pub fn id(x: Box(y)) { x }",
+        vec![
+            ("Box", "fn(String, a) -> Box(a)"),
+            ("id", "fn(Box(a)) -> Box(a)"),
+        ],
+    );
+    // assert_infer!(     src: "pub struct Box(a) { boxed: a }
+    //           pub fn unbox_int(b: Box(Int)) { b.boxed }",
+    //     vec![
+    //         ("Box", "fn(a) -> Box(a)"),
+    //         ("unbox_int", "fn(Box(Int)) -> Int"),
+    //     ],
+    // );
+    // assert_infer!(     src: "pub struct Box(a) { boxed: a }
+    //           pub fn unbox_pattern(b: Box(a)) { let Box(x) = b x }
+    //           pub fn unbox(b: Box(a)) { b.boxed }
+    //           pub fn unbox_int(b: Box(Int)) { b.boxed }",
+    //     vec![
+    //         ("Box", "fn(a) -> Box(a)"),
+    //         ("unbox", "fn(Box(a)) -> a"),
+    //         ("unbox_int", "fn(Box(Int)) -> Int"),
+    //         ("unbox_pattern", "fn(Box(a)) -> a"),
+    //     ],
+    // );
 }
 
 #[test]
 fn infer_module_error_test() {
     macro_rules! assert_error {
-        ($src:expr, $error:expr) => {
+        ($src:expr, $error:expr $(,)?) => {
             let ast = crate::grammar::ModuleParser::new()
                 .parse($src)
                 .expect("syntax error");
@@ -3864,27 +3599,27 @@ pub fn x() { id(1, 1.0) }
 
     assert_error!(
         "fn dupe() { 1 }
-                  fn dupe() { 2 }",
+         fn dupe() { 2 }",
         Error::DuplicateName {
-            meta: Meta { start: 34, end: 49 },
+            meta: Meta { start: 25, end: 40 },
             name: "dupe".to_string(),
         }
     );
 
     assert_error!(
         "fn dupe() { 1 }
-                  fn dupe(x) { x }",
+         fn dupe(x) { x }",
         Error::DuplicateName {
-            meta: Meta { start: 34, end: 50 },
+            meta: Meta { start: 25, end: 41 },
             name: "dupe".to_string(),
         }
     );
 
     assert_error!(
         r#"external type PrivateType
-                    pub external fn leak_type() -> PrivateType = "" """#,
+           pub external fn leak_type() -> PrivateType = "" """#,
         Error::PrivateTypeLeak {
-            meta: Meta { start: 46, end: 96 },
+            meta: Meta { start: 37, end: 87 },
             leaked: Type::App {
                 args: vec![],
                 public: false,
@@ -3896,12 +3631,12 @@ pub fn x() { id(1, 1.0) }
 
     assert_error!(
         r#"external type PrivateType
-                    external fn go() -> PrivateType = "" ""
-                    pub fn leak_type() { go() }"#,
+           external fn go() -> PrivateType = "" ""
+           pub fn leak_type() { go() }"#,
         Error::PrivateTypeLeak {
             meta: Meta {
-                start: 106,
-                end: 133,
+                start: 88,
+                end: 115,
             },
             leaked: Type::App {
                 args: vec![],
@@ -3914,12 +3649,12 @@ pub fn x() { id(1, 1.0) }
 
     assert_error!(
         r#"external type PrivateType
-                    external fn go() -> PrivateType = "" ""
-                    pub fn leak_type() { [go()] }"#,
+           external fn go() -> PrivateType = "" ""
+           pub fn leak_type() { [go()] }"#,
         Error::PrivateTypeLeak {
             meta: Meta {
-                start: 106,
-                end: 135,
+                start: 88,
+                end: 117,
             },
             leaked: Type::App {
                 args: vec![],
