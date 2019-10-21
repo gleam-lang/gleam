@@ -18,16 +18,18 @@ compare(A, B) ->
 reverse(String) ->
     gleam@iodata:to_string(gleam@iodata:reverse(gleam@iodata:new(String))).
 
-split(String, On) ->
+split(X, Pattern) ->
     gleam@list:map(
-        gleam@iodata:split(gleam@iodata:new(String), On),
+        gleam@iodata:split(gleam@iodata:new(X), Pattern),
         fun gleam@iodata:to_string/1
     ).
 
-replace(String, Pattern, With) ->
+replace(String, Pattern, Substitute) ->
     gleam@iodata:to_string(
-        gleam@iodata:replace(gleam@iodata:new(String), Pattern, With)
+        gleam@iodata:replace(gleam@iodata:new(String), Pattern, Substitute)
     ).
 
-append(S1, S2) ->
-    gleam@iodata:to_string(gleam@iodata:append(gleam@iodata:new(S1), S2)).
+append(First, Second) ->
+    gleam@iodata:to_string(
+        gleam@iodata:append(gleam@iodata:new(First), Second)
+    ).

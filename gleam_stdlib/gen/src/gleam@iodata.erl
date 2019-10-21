@@ -45,14 +45,14 @@ reverse(A) ->
 erl_split(A, B, C) ->
     string:split(A, B, C).
 
-split(Iodata, On) ->
-    erl_split(Iodata, On, all).
+split(Iodata, Pattern) ->
+    erl_split(Iodata, Pattern, all).
 
 erl_replace(A, B, C, D) ->
     string:replace(A, B, C, D).
 
-replace(Iodata, Pattern, Replacement) ->
-    erl_replace(Iodata, Pattern, Replacement, all).
+replace(Iodata, Pattern, Substitute) ->
+    erl_replace(Iodata, Pattern, Substitute, all).
 
 is_equal(A, B) ->
     string:equal(A, B).

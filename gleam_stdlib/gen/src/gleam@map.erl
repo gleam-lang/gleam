@@ -45,14 +45,14 @@ values(A) ->
 erl_filter(A, B) ->
     maps:filter(A, B).
 
-filter(Map, Fun) ->
-    erl_filter(Fun, Map).
+filter(Map, Predicate) ->
+    erl_filter(Predicate, Map).
 
 erl_take(A, B) ->
     maps:with(A, B).
 
-take(Map, Keys) ->
-    erl_take(Keys, Map).
+take(Map, DesiredKeys) ->
+    erl_take(DesiredKeys, Map).
 
 merge(A, B) ->
     maps:merge(A, B).
@@ -63,27 +63,27 @@ erl_delete(A, B) ->
 delete(Map, Key) ->
     erl_delete(Key, Map).
 
-drop(Map, Keys) ->
-    gleam@list:fold(Keys, Map, fun(Key, Acc) -> delete(Acc, Key) end).
+drop(Map, DisallowedKeys) ->
+    gleam@list:fold(DisallowedKeys, Map, fun(Key, Acc) -> delete(Acc, Key) end).
 
-update(Map, Key, F) ->
+update(Map, Key, Fun) ->
     case get(Map, Key) of
         {ok, Value} ->
-            insert(Map, Key, F({ok, Value}));
+            insert(Map, Key, Fun({ok, Value}));
 
         {error, _} ->
-            insert(Map, Key, F({error, nil}))
+            insert(Map, Key, Fun({error, nil}))
     end.
 
-do_fold(List, Acc, F) ->
+do_fold(List, Initial, Fun) ->
     case List of
         [] ->
-            Acc;
+            Initial;
 
         [{K, V} | Tail] ->
-            do_fold(Tail, F(K, V, Acc), F)
+            do_fold(Tail, Fun(K, V, Initial), Fun)
     end.
 
-fold(Map, Acc, F) ->
+fold(Map, Initial, Fun) ->
     Kvs = to_list(Map),
-    do_fold(Kvs, Acc, F).
+    do_fold(Kvs, Initial, Fun).

@@ -18,20 +18,23 @@ pub fn reverse(string) {
   |> iodata.to_string
 }
 
-pub fn split(string, on) {
-  string
+pub fn split(string x, on pattern) {
+  x
   |> iodata.new
-  |> iodata.split(_, on)
-  |> list.map(_, iodata.to_string)
+  |> iodata.split(_, on: pattern)
+  |> list.map(_, with: iodata.to_string)
 }
 
-pub fn replace(string, pattern, with) {
+pub fn replace(in string, all pattern, with substitute) {
   string
   |> iodata.new
-  |> iodata.replace(_, pattern, with)
+  |> iodata.replace(_, all: pattern, with: substitute)
   |> iodata.to_string
 }
 
-pub fn append(s1, s2) {
-  iodata.new(s1) |> iodata.append(_, s2) |> iodata.to_string(_)
+pub fn append(to first, suffix second) {
+  first
+  |> iodata.new
+  |> iodata.append(_, second)
+  |> iodata.to_string
 }

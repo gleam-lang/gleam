@@ -16,7 +16,7 @@ pub fn is_empty(list) {
   list == []
 }
 
-pub fn contains(list, elem) {
+pub fn contains(list, has elem) {
   case list {
   | [] -> False
   | [head | rest] -> head == elem || contains(rest, elem)
@@ -50,8 +50,8 @@ fn do_filter(list, fun, acc) {
   }
 }
 
-pub fn filter(list, fun) {
-  do_filter(list, fun, [])
+pub fn filter(list, for predicate) {
+  do_filter(list, predicate, [])
 }
 
 fn do_map(list, fun, acc) {
@@ -61,7 +61,7 @@ fn do_map(list, fun, acc) {
   }
 }
 
-pub fn map(list, fun) {
+pub fn map(list, with fun) {
   do_map(list, fun, [])
 }
 
@@ -72,7 +72,7 @@ fn do_index_map(list, fun, index, acc) {
   }
 }
 
-pub fn index_map(list, fun) {
+pub fn index_map(list, with fun) {
   do_index_map(list, fun, 0, [])
 }
 
@@ -87,11 +87,11 @@ fn do_traverse(list, fun, acc) {
   }
 }
 
-pub fn traverse(list, fun) {
+pub fn traverse(list, with fun) {
   do_traverse(list, fun, [])
 }
 
-pub fn drop(list, n) {
+pub fn drop(from list, up_to n) {
   case n <= 0 {
   | True -> list
   | False ->
@@ -113,7 +113,7 @@ fn do_take(list, n, acc) {
   }
 }
 
-pub fn take(list, n) {
+pub fn take(from list, up_to n) {
   do_take(list, n, [])
 }
 
@@ -134,50 +134,50 @@ pub fn flatten(lists) {
   do_flatten(lists, [])
 }
 
-pub fn fold(list, acc, fun) {
+pub fn fold(list, from initial, with fun) {
   case list {
-  | [] -> acc
-  | [x | rest] -> fold(rest, fun(x, acc), fun)
+  | [] -> initial
+  | [x | rest] -> fold(rest, fun(x, initial), fun)
   }
 }
 
-pub fn fold_right(list, acc, fun) {
+pub fn fold_right(list, from initial, with fun) {
   case list {
-  | [] -> acc
-  | [x | rest] -> fun(x, fold_right(rest, acc, fun))
+  | [] -> initial
+  | [x | rest] -> fun(x, fold_right(rest, initial, fun))
   }
 }
 
-pub fn find(haystack, f) {
+pub fn find(in haystack, one_that is_desired) {
   case haystack {
   | [] -> Error(Nil)
   | [x | rest] ->
-      case f(x) {
+      case is_desired(x) {
       | Ok(x) -> Ok(x)
-      | _ -> find(rest, f)
+      | _ -> find(in: rest, one_that: is_desired)
       }
   }
 }
 
-pub fn all(list, f) {
+pub fn all(in list, satisfying predicate) {
   case list {
     | [] -> True
     | [x | rest] ->
-      case f(x) {
-      | True -> all(rest, f)
+      case predicate(x) {
+      | True -> all(rest, predicate)
       | _ -> False
       }
   }
 }
 
-pub fn any(list, f) {
+pub fn any(in list, satisfying predicate) {
   case list {
-    | [] -> False
-    | [x | rest] ->
-      case f(x) {
-      | False -> any(rest, f)
-      | _ -> True
-      }
+  | [] -> False
+  | [x | rest] ->
+    case predicate(x) {
+    | False -> any(rest, predicate)
+    | _ -> True
+    }
   }
 }
 
@@ -196,7 +196,7 @@ pub fn strict_zip(l1, l2) {
   }
 }
 
-pub fn intersperse(list, elem) {
+pub fn intersperse(list, with elem) {
   case list {
     | [] -> []
     | [x | []] -> [x]
@@ -204,18 +204,18 @@ pub fn intersperse(list, elem) {
   }
 }
 
-pub fn at(list, i) {
-  case i < 0 {
-    | True -> Error(Nil)
-    | False ->
-      case list {
-        | [] -> Error(Nil)
-        | [x | rest] ->
-          case i == 0 {
-          | True -> Ok(x)
-          | False -> at(rest, i - 1)
-          }
+pub fn at(in list, get index) {
+  case index < 0 {
+  | True -> Error(Nil)
+  | False ->
+    case list {
+    | [] -> Error(Nil)
+    | [x | rest] ->
+      case index == 0 {
+      | True -> Ok(x)
+      | False -> at(rest, index - 1)
       }
+    }
   }
 }
 
@@ -228,13 +228,13 @@ pub fn unique(list) {
 
 fn merge_sort(a, b, compare) {
   case a, b {
-    | [], _ -> b
-    | _, [] -> a
-    | [ax | ar], [bx | br] ->
-      case compare(ax, bx) {
-      | order.Lt -> [ax | merge_sort(ar, b, compare)]
-      | _ -> [bx | merge_sort(a, br, compare)]
-      }
+  | [], _ -> b
+  | _, [] -> a
+  | [ax | ar], [bx | br] ->
+    case compare(ax, bx) {
+    | order.Lt -> [ax | merge_sort(ar, b, compare)]
+    | _ -> [bx | merge_sort(a, br, compare)]
+    }
   }
 }
 
@@ -253,11 +253,11 @@ fn do_sort(list, compare, list_length) {
   }
 }
 
-pub fn sort(list, compare) {
+pub fn sort(list, sort_by compare) {
   do_sort(list, compare, length(list))
 }
 
-pub fn range(start, stop) {
+pub fn range(from start, to stop) {
   case int.compare(start, stop) {
   | order.Eq -> []
   | order.Gt -> [start | range(start - 1, stop)]
@@ -272,7 +272,7 @@ fn do_repeat(a, times, acc) {
   }
 }
 
-pub fn repeat(a, times) {
+pub fn repeat(item a, times times) {
   do_repeat(a, times, [])
 }
 
@@ -287,8 +287,8 @@ fn do_split(list, n, taken) {
   }
 }
 
-pub fn split(list, n) {
-  do_split(list, n, [])
+pub fn split(list list, on target) {
+  do_split(list, target, [])
 }
 
 fn do_split_while(list, f, acc) {
@@ -302,11 +302,11 @@ fn do_split_while(list, f, acc) {
   }
 }
 
-pub fn split_while(list, f) {
-  do_split_while(list, f, [])
+pub fn split_while(list list, while predicate) {
+  do_split_while(list, predicate, [])
 }
 
-pub fn key_find(haystack, needle) {
+pub fn key_find(in haystack, find needle) {
   find(haystack, fn(p) {
     case pair.first(p) == needle {
     | True -> p |> pair.second |> Ok

@@ -24,13 +24,13 @@ pub fn has_key(map, key) {
 pub external fn new() -> Map(key, value)
   = "maps" "new"
 
-pub external fn get(Map(key, value), key) -> Result(value, Nil)
+pub external fn get(from: Map(key, value), get: key) -> Result(value, Nil)
   = "gleam_stdlib" "map_get";
 
 external fn erl_insert(key, value, Map(key, value)) -> Map(key, value)
   = "maps" "put";
 
-pub fn insert(map, key, value) {
+pub fn insert(into map, for key, insert value) {
   erl_insert(key, value, map)
 }
 
@@ -38,7 +38,7 @@ external fn erl_map_values(fn(key, value) -> value, Map(key, value))
   -> Map(key, value)
   = "maps" "map";
 
-pub fn map_values(map, fun) {
+pub fn map_values(in map, with fun) {
   erl_map_values(fun, map)
 }
 
@@ -52,45 +52,45 @@ external fn erl_filter(fn(key, value) -> Bool, Map(key, value))
   -> Map(key, value)
   = "maps" "filter";
 
-pub fn filter(map, fun) {
-  erl_filter(fun, map)
+pub fn filter(in map, for predicate) {
+  erl_filter(predicate, map)
 }
 
 external fn erl_take(List(k), Map(k, v)) -> Map(k, v) = "maps" "with"
 
-pub fn take(map, keys) {
-  erl_take(keys, map)
+pub fn take(from map, drop desired_keys) {
+  erl_take(desired_keys, map)
 }
 
-pub external fn merge(Map(k, v), Map(k, v)) -> Map(k, v) = "maps" "merge"
+pub external fn merge(into: Map(k, v), merge: Map(k, v)) -> Map(k, v) = "maps" "merge"
 
 external fn erl_delete(k, Map(k, v)) -> Map(k, v) = "maps" "remove"
 
-pub fn delete(map, key) {
+pub fn delete(from map, delete key) {
   erl_delete(key, map)
 }
 
-pub fn drop(map, keys) {
-  list.fold(keys, map, fn(key, acc) {
+pub fn drop(from map, drop disallowed_keys) {
+  list.fold(disallowed_keys, map, fn(key, acc) {
     delete(acc, key)
   })
 }
 
-pub fn update(map, key, f) {
+pub fn update(in map, update key, with fun) {
   case get(map, key) {
-  | Ok(value) -> insert(map, key, f(Ok(value)))
-  | Error(_) -> insert(map, key, f(Error(Nil)))
+  | Ok(value) -> insert(map, key, fun(Ok(value)))
+  | Error(_) -> insert(map, key, fun(Error(Nil)))
   }
 }
 
-fn do_fold(list, acc, f) {
+fn do_fold(list, initial, fun) {
   case list {
-    | [] -> acc
-    | [pair.Pair(k, v) | tail] -> do_fold(tail, f(k, v, acc), f)
+    | [] -> initial
+    | [pair.Pair(k, v) | tail] -> do_fold(tail, fun(k, v, initial), fun)
   }
 }
 
-pub fn fold(map, acc, f) {
+pub fn fold(map, from initial, with fun) {
   let kvs = to_list(map)
-  do_fold(kvs, acc, f)
+  do_fold(kvs, initial, fun)
 }

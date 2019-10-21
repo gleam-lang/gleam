@@ -55,8 +55,8 @@ do_filter(List, Fun, Acc) ->
             do_filter(Xs, Fun, NewAcc)
     end.
 
-filter(List, Fun) ->
-    do_filter(List, Fun, []).
+filter(List, Predicate) ->
+    do_filter(List, Predicate, []).
 
 do_map(List, Fun, Acc) ->
     case List of
@@ -151,63 +151,63 @@ do_flatten(Lists, Acc) ->
 flatten(Lists) ->
     do_flatten(Lists, []).
 
-fold(List, Acc, Fun) ->
+fold(List, Initial, Fun) ->
     case List of
         [] ->
-            Acc;
+            Initial;
 
         [X | Rest] ->
-            fold(Rest, Fun(X, Acc), Fun)
+            fold(Rest, Fun(X, Initial), Fun)
     end.
 
-fold_right(List, Acc, Fun) ->
+fold_right(List, Initial, Fun) ->
     case List of
         [] ->
-            Acc;
+            Initial;
 
         [X | Rest] ->
-            Fun(X, fold_right(Rest, Acc, Fun))
+            Fun(X, fold_right(Rest, Initial, Fun))
     end.
 
-find(Haystack, F) ->
+find(Haystack, Predicate) ->
     case Haystack of
         [] ->
             {error, nil};
 
         [X | Rest] ->
-            case F(X) of
+            case Predicate(X) of
                 {ok, X1} ->
                     {ok, X1};
 
                 _ ->
-                    find(Rest, F)
+                    find(Rest, Predicate)
             end
     end.
 
-all(List, F) ->
+all(List, Predicate) ->
     case List of
         [] ->
             true;
 
         [X | Rest] ->
-            case F(X) of
+            case Predicate(X) of
                 true ->
-                    all(Rest, F);
+                    all(Rest, Predicate);
 
                 _ ->
                     false
             end
     end.
 
-any(List, F) ->
+any(List, Predicate) ->
     case List of
         [] ->
             false;
 
         [X | Rest] ->
-            case F(X) of
+            case Predicate(X) of
                 false ->
-                    any(Rest, F);
+                    any(Rest, Predicate);
 
                 _ ->
                     true
@@ -247,8 +247,8 @@ intersperse(List, Elem) ->
             [X1, Elem | intersperse(Rest, Elem)]
     end.
 
-at(List, I) ->
-    case I < 0 of
+at(List, Index) ->
+    case Index < 0 of
         true ->
             {error, nil};
 
@@ -258,12 +258,12 @@ at(List, I) ->
                     {error, nil};
 
                 [X | Rest] ->
-                    case I =:= 0 of
+                    case Index =:= 0 of
                         true ->
                             {ok, X};
 
                         false ->
-                            at(Rest, I - 1)
+                            at(Rest, Index - 1)
                     end
             end
     end.
@@ -353,8 +353,8 @@ do_split(List, N, Taken) ->
             end
     end.
 
-split(List, N) ->
-    do_split(List, N, []).
+split(List, Target) ->
+    do_split(List, Target, []).
 
 do_split_while(List, F, Acc) ->
     case List of
@@ -371,8 +371,8 @@ do_split_while(List, F, Acc) ->
             end
     end.
 
-split_while(List, F) ->
-    do_split_while(List, F, []).
+split_while(List, Predicate) ->
+    do_split_while(List, Predicate, []).
 
 key_find(Haystack, Needle) ->
     find(Haystack, fun(P) -> case gleam@pair:first(P) =:= Needle of

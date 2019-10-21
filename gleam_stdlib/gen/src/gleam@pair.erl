@@ -15,10 +15,10 @@ swap(Tup) ->
     {A, B} = Tup,
     {B, A}.
 
-map_first(Tup, F) ->
+map_first(Tup, Fun) ->
     {A, B} = Tup,
-    {F(A), B}.
+    {Fun(A), B}.
 
-map_second(Tup, F) ->
+map_second(Tup, Fun) ->
     {A, B} = Tup,
-    {A, F(B)}.
+    {A, Fun(B)}.
