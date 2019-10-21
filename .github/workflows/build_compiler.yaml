@@ -1,0 +1,14 @@
+name: CI
+
+on: [push]
+
+jobs:
+  build_compiler:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v1
+      - run: cd gleam && cargo test
+      - run: cd gleam && cargo build --release
+      - run: gleam/target/release/gleam --version
+      - run: gleam/target/release/gleam build gleam_stdlib
