@@ -1,11 +1,3 @@
-// https://crates.io/crates/lalrpop
-// - https://github.com/lalrpop/lalrpop/issues/323#issuecomment-366681594
-// - https://github.com/dagit/rust-prolog/blob/master/src/lexer.rs
-// - https://github.com/dagit/rust-prolog/blob/master/src/parser.lalrpop
-//
-// Error displaying
-// - https://github.com/brendanzab/codespan
-
 mod ast;
 mod erl;
 mod new;
@@ -127,16 +119,18 @@ fn command_build(root: String) {
 
 fn read_project_config(root: &str) -> Result<ProjectConfig, ()> {
     fn die(message: String) -> ! {
-        use termcolor::{StandardStream, Color, ColorSpec, ColorChoice, WriteColor};
+        use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
         let mut stderr = StandardStream::stderr(ColorChoice::Always);
 
         // Write "error: " in red
-        stderr.set_color(
-            ColorSpec::new()
-                .set_fg(Some(Color::Red))
-                .set_intense(true)
-                .set_bold(true)
-        ).unwrap();
+        stderr
+            .set_color(
+                ColorSpec::new()
+                    .set_fg(Some(Color::Red))
+                    .set_intense(true)
+                    .set_bold(true),
+            )
+            .unwrap();
         write!(&mut stderr, "error: ").unwrap();
 
         // Write error message in white
@@ -148,18 +142,15 @@ fn read_project_config(root: &str) -> Result<ProjectConfig, ()> {
 
     use std::io::Read;
     let config_path = PathBuf::from(root).join("gleam.toml");
-    let mut file = File::open(config_path).unwrap_or_else(
-        |e| die(format!("could not open gleam.toml: {}", e.to_string()))
-    );
+    let mut file = File::open(config_path)
+        .unwrap_or_else(|e| die(format!("could not open gleam.toml: {}", e.to_string())));
 
     let mut toml = String::new();
-    file.read_to_string(&mut toml).unwrap_or_else(
-        |e| die(format!("could not read gleam.toml: {}", e.to_string()))
-    );
+    file.read_to_string(&mut toml)
+        .unwrap_or_else(|e| die(format!("could not read gleam.toml: {}", e.to_string())));
 
-    let project_config = toml::from_str(&toml).unwrap_or_else(
-        |e| die(format!("could not parse gleam.toml: {}", e.to_string()))
-    );
+    let project_config = toml::from_str(&toml)
+        .unwrap_or_else(|e| die(format!("could not parse gleam.toml: {}", e.to_string())));
 
     Ok(project_config)
 }

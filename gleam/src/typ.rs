@@ -465,14 +465,16 @@ impl ValueConstructor {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FieldMap {
+    arity: usize,
     fields: HashMap<String, usize>,
 }
 
 pub struct DuplicateField {}
 
 impl FieldMap {
-    pub fn new() -> Self {
+    pub fn new(arity: usize) -> Self {
         Self {
+            arity,
             fields: HashMap::new(),
         }
     }
@@ -495,8 +497,16 @@ impl FieldMap {
     /// Reorder an argument list so that labelled fields supplied out-of-order are in the correct
     /// order.
     ///
-    fn reorder<A>(&self, args: &mut Vec<CallArg<A>>) -> Result<(), Error> {
+    fn reorder<A>(&self, args: &mut Vec<CallArg<A>>, meta: &Meta) -> Result<(), Error> {
         let mut labelled = false;
+
+        if self.arity != args.len() {
+            return Err(Error::IncorrectArity {
+                meta: meta.clone(),
+                expected: self.arity,
+                given: args.len(),
+            });
+        }
 
         for i in 0..args.len() {
             let (label, meta) = match &args[i].label {
@@ -550,6 +560,7 @@ fn field_map_reorder_test() {
     };
 
     struct Case {
+        arity: usize,
         fields: HashMap<String, usize>,
         args: Vec<CallArg<UntypedExpr>>,
         expected_result: Result<(), Error>,
@@ -560,14 +571,17 @@ fn field_map_reorder_test() {
         fn test(self) {
             let mut args = self.args;
             let fm = FieldMap {
+                arity: self.arity,
                 fields: self.fields,
             };
-            assert_eq!(self.expected_result, fm.reorder(&mut args));
+            let meta = &Meta { start: 0, end: 0 };
+            assert_eq!(self.expected_result, fm.reorder(&mut args, meta));
             assert_eq!(self.expected_args, args);
         }
     }
 
     Case {
+        arity: 0,
         fields: HashMap::new(),
         args: vec![],
         expected_result: Ok(()),
@@ -576,6 +590,7 @@ fn field_map_reorder_test() {
     .test();
 
     Case {
+        arity: 3,
         fields: HashMap::new(),
         args: vec![
             CallArg {
@@ -616,6 +631,7 @@ fn field_map_reorder_test() {
     .test();
 
     Case {
+        arity: 3,
         fields: [("last".to_string(), 2)].iter().cloned().collect(),
         args: vec![
             CallArg {
@@ -656,6 +672,7 @@ fn field_map_reorder_test() {
     .test();
 
     Case {
+        arity: 3,
         fields: [("last".to_string(), 2)].iter().cloned().collect(),
         args: vec![
             CallArg {
@@ -1535,7 +1552,7 @@ pub fn infer_module(
                     return Err(Error::DuplicateName { meta, name });
                 };
 
-                let mut field_map = FieldMap::new();
+                let mut field_map = FieldMap::new(args.len());
                 for (i, arg) in args.iter().enumerate() {
                     if let ArgNames::NamedLabelled { label, .. } = &arg.names {
                         field_map
@@ -1628,7 +1645,7 @@ pub fn infer_module(
                 let retrn_type =
                     env.type_from_ast(&retrn, &mut type_vars, NewTypeAction::MakeGeneric)?;
                 let mut args_types = Vec::with_capacity(args.len());
-                let mut field_map = FieldMap::new();
+                let mut field_map = FieldMap::new(args.len());
                 for (i, arg) in args.iter().enumerate() {
                     let t =
                         env.type_from_ast(&arg.typ, &mut type_vars, NewTypeAction::MakeGeneric)?;
@@ -1724,7 +1741,7 @@ pub fn infer_module(
                     args: type_args_types,
                 };
                 // Create FieldMap which later can be used to rewrite labelled arguments
-                let mut field_map = FieldMap::new();
+                let mut field_map = FieldMap::new(fields.len());
                 for (i, StructField { label, meta, .. }) in fields.iter().enumerate() {
                     field_map
                         .insert(label.clone(), i)
@@ -2315,7 +2332,7 @@ fn unify_pattern(
 
             match cons.field_map() {
                 // The fun has a field map so labelled arguments may be present and need to be reordered.
-                Some(field_map) => field_map.reorder(&mut pattern_args)?,
+                Some(field_map) => field_map.reorder(&mut pattern_args, &meta)?,
 
                 // The fun has no field map and so we error if arguments have been labelled
                 None => assert_no_labelled_arguments(&pattern_args)?,
@@ -2419,7 +2436,7 @@ fn infer_call(
 
     match get_field_map(&fun, env).map_err(|e| convert_get_value_constructor_error(e, meta))? {
         // The fun has a field map so labelled arguments may be present and need to be reordered.
-        Some(field_map) => field_map.reorder(&mut args)?,
+        Some(field_map) => field_map.reorder(&mut args, meta)?,
 
         // The fun has no field map and so we error if arguments have been labelled
         None => assert_no_labelled_arguments(&args)?,
@@ -3711,6 +3728,15 @@ pub fn x() { id(1, 1.0) }
         Error::PositionalArgumentAfterLabelled {
             meta: Meta { start: 77, end: 78 },
         }
+    );
+
+    assert_error!(
+        "struct X {} fn x() { X(one: 1) }",
+        Error::IncorrectArity {
+            meta: Meta { start: 21, end: 30 },
+            expected: 0,
+            given: 1,
+        },
     );
 
     assert_error!(
