@@ -1694,6 +1694,19 @@ x() ->
     go(4, 3).
 "#
         },
+        // https://github.com/lpil/gleam/issues/289
+        Case {
+            src: r#"
+struct User { id: Int name: String age: Int }
+fn create_user(user_id) { User(age: 22, id: user_id, name: "") }
+                    "#,
+            erl: r#"-module().
+-compile(no_auto_import).
+
+create_user(UserId) ->
+    {UserId, <<"">>, 22}.
+"#
+        },
     ];
 
     for Case { src, erl } in cases.into_iter() {

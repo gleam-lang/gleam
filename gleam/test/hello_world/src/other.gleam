@@ -5,5 +5,5 @@ pub struct User {
 }
 
 pub fn create_user(user_id) {
-  User(age: 22, id: user_id)
+  User(age: 22, id: user_id, name: "")
 }
