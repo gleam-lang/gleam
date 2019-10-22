@@ -12,6 +12,12 @@
 - A helpful error message is rendered if an enum field contains a generic type
   that has not been declared.
 
+## v0.4.2 - 2019-10-22
+
+- Fixed a crash when an incorrect number of labelled struct arguments are
+  given.
+- Fixed a struct labelled argument being incorrect reported as already given.
+
 ## v0.4.1 - 2019-09-29
 
 - Struct types with parameterised fields are now registered with the correct
