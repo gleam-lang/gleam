@@ -1,7 +1,7 @@
 -module(nest@bird).
 -compile(no_auto_import).
 
--export([ok/0]).
+-export([ffok/0]).
 
-ok() ->
+ffok() ->
     {ok, 1}.

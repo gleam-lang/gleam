@@ -498,7 +498,8 @@ impl FieldMap {
     /// order.
     ///
     fn reorder<A>(&self, args: &mut Vec<CallArg<A>>, meta: &Meta) -> Result<(), Error> {
-        let mut labelled = false;
+        let mut labelled_arguments_given = false;
+        let mut seen = std::collections::HashSet::new();
 
         if self.arity != args.len() {
             return Err(Error::IncorrectArity {
@@ -512,13 +513,13 @@ impl FieldMap {
             let (label, meta) = match &args[i].label {
                 // A labelled argument, we may need to reposition it in the array vector
                 Some(l) => {
-                    labelled = true;
+                    labelled_arguments_given = true;
                     (l, &args[i].meta)
                 }
 
-                // Not a labelled argument, assume it is in the correct place
+                // Not a labelled argument
                 None => {
-                    if labelled {
+                    if labelled_arguments_given {
                         return Err(Error::PositionalArgumentAfterLabelled {
                             meta: args[i].meta.clone(),
                         });
@@ -538,14 +539,19 @@ impl FieldMap {
                 Some(p) => p,
             };
 
-            if *position < i {
+            if *position == i {
+                continue;
+            }
+
+            if seen.contains(position) {
                 return Err(Error::DuplicateArgument {
                     meta: meta.clone(),
                     label: label.to_string(),
                 });
             }
 
-            args.swap(*position, i)
+            seen.insert(*position);
+            args.swap(*position, i);
         }
         Ok(())
     }
