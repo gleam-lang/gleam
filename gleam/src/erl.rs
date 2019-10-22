@@ -1681,13 +1681,13 @@ x() ->
 "#
         },
         Case {
-            src: r#"fn go(x as xx, y as yy) { xx }
-                    fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"#,
+            src: r#"fn go(x as xx, y as yy) { x }
+                    fn x() { go(xx: 1, yy: 2) go(yy: 3, xx: 4) }"#,
             erl: r#"-module().
 -compile(no_auto_import).
 
-go(Xx, Yy) ->
-    Xx.
+go(X, Y) ->
+    X.
 
 x() ->
     go(1, 2),
