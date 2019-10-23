@@ -2070,26 +2070,43 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
 
         Expr::Case {
             meta,
-            subject,
+            subjects,
             clauses,
             typ: _,
         } => {
-            let return_type = env.new_unbound_var(level); // TODO: should this be level + 1 ?
+            let subjects_count = subjects.len();
+            let mut typed_subjects = Vec::with_capacity(subjects_count);
+            let mut subject_types = Vec::with_capacity(subjects_count);
             let mut typed_clauses = Vec::with_capacity(clauses.len());
-            let subject = infer(*subject, level + 1, env)?;
-            let subject_type = generalise(subject.typ().clone(), level + 1);
+
+            let return_type = env.new_unbound_var(level); // TODO: should this be level + 1 ?
+
+            for subject in subjects.into_iter() {
+                let subject = infer(subject, level + 1, env)?;
+                let subject_type = generalise(subject.typ().clone(), level + 1);
+                typed_subjects.push(subject);
+                subject_types.push(subject_type);
+            }
 
             for clause in clauses.into_iter() {
                 let vars = env.variables.clone();
+                if subjects_count != clause.patterns.len() {
+                    panic!("incorrect number of patterns")
+                }
 
-                let pattern = unify_pattern(clause.pattern, &subject_type, level, env)?;
+                let mut typed_patterns = Vec::new();
+                for (pattern, subject_type) in clause.patterns.into_iter().zip(subject_types.iter())
+                {
+                    let pattern = unify_pattern(pattern, &subject_type, level, env)?;
+                    typed_patterns.push(pattern);
+                }
 
                 let then = infer(clause.then, level, env)?;
                 unify(&return_type, then.typ(), env)
                     .map_err(|e| convert_unify_error(e, then.meta()))?;
                 typed_clauses.push(Clause {
                     meta: clause.meta,
-                    pattern,
+                    patterns: typed_patterns,
                     then,
                 });
 
@@ -2098,7 +2115,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             Ok(Expr::Case {
                 meta,
                 typ: return_type,
-                subject: Box::new(subject),
+                subjects: typed_subjects,
                 clauses: typed_clauses,
             })
         }
@@ -2271,12 +2288,6 @@ fn unify_pattern(
     level: usize,
     env: &mut Env,
 ) -> Result<TypedPattern, Error> {
-    //
-    // I think we might be unifying backwards for some of these.
-    // The typ should be the `expected` and the `pattern` is the actual?
-    // Or perhaps because it's a pattern there should be a different Error variant
-    // so we can display a more specific error message.
-    //
     match pattern {
         Pattern::Discard { meta } => Ok(Pattern::Discard { meta }),
 
@@ -2290,22 +2301,22 @@ fn unify_pattern(
         }
 
         Pattern::Int { meta, value } => {
-            unify(&int(), typ, env).map_err(|e| convert_unify_error(e, &meta))?;
+            unify(typ, &int(), env).map_err(|e| convert_unify_error(e, &meta))?;
             Ok(Pattern::Int { meta, value })
         }
 
         Pattern::Float { meta, value } => {
-            unify(&float(), typ, env).map_err(|e| convert_unify_error(e, &meta))?;
+            unify(typ, &float(), env).map_err(|e| convert_unify_error(e, &meta))?;
             Ok(Pattern::Float { meta, value })
         }
 
         Pattern::String { meta, value } => {
-            unify(&string(), typ, env).map_err(|e| convert_unify_error(e, &meta))?;
+            unify(typ, &string(), env).map_err(|e| convert_unify_error(e, &meta))?;
             Ok(Pattern::String { meta, value })
         }
 
         Pattern::Nil { meta } => {
-            unify(&list(env.new_unbound_var(level)), typ, env)
+            unify(typ, &list(env.new_unbound_var(level)), env)
                 .map_err(|e| convert_unify_error(e, &meta))?;
             Ok(Pattern::Nil { meta })
         }
@@ -2368,7 +2379,7 @@ Please report this to https://github.com/lpil/gleam/issues"
                                 Ok(CallArg { value, meta, label })
                             })
                             .collect::<Result<Vec<_>, _>>()?;
-                        unify(&retrn, &typ, env).map_err(|e| convert_unify_error(e, &meta))?;
+                        unify(&typ, &retrn, env).map_err(|e| convert_unify_error(e, &meta))?;
                         Ok(Pattern::Constructor {
                             meta,
                             module,
@@ -2387,7 +2398,7 @@ Please report this to https://github.com/lpil/gleam/issues"
 
                 c @ Type::App { .. } => {
                     if pattern_args.is_empty() {
-                        unify(&c, &typ, env).map_err(|e| convert_unify_error(e, &meta))?;
+                        unify(&typ, &c, env).map_err(|e| convert_unify_error(e, &meta))?;
                         Ok(Pattern::Constructor {
                             meta,
                             module,
@@ -3100,6 +3111,11 @@ fn infer_test() {
     assert_infer!("case 2.0 { | 2.0 -> 1 | x -> 0 }", "Int");
     assert_infer!(r#"case "ok" { | "ko" -> 1 | x -> 0 }"#, "Int");
 
+    // Multiple subject case
+    assert_infer!("case 1, 2.0 { | a, b -> a }", "Int");
+    assert_infer!("case 1, 2.0 { | a, b -> b }", "Float");
+    assert_infer!("case 1, 2.0, 3 { | a, b, c -> a + c }", "Int");
+
     // let
     assert_infer!("let [] = [] 1", "Int");
     assert_infer!("let [a] = [1] a", "Int");
@@ -3132,6 +3148,7 @@ fn infer_error_test() {
             given: float(),
         },
     );
+
     assert_error!(
         "1 +. 1.0",
         Error::CouldNotUnify {
@@ -3140,6 +3157,7 @@ fn infer_error_test() {
             given: int(),
         },
     );
+
     assert_error!(
         "1 == 1.0",
         Error::CouldNotUnify {
@@ -3148,6 +3166,7 @@ fn infer_error_test() {
             given: float(),
         },
     );
+
     assert_error!(
         "1 > 1.0",
         Error::CouldNotUnify {
@@ -3156,6 +3175,7 @@ fn infer_error_test() {
             given: float(),
         },
     );
+
     assert_error!(
         "1.0 >. 1",
         Error::CouldNotUnify {
@@ -3164,6 +3184,7 @@ fn infer_error_test() {
             given: int(),
         },
     );
+
     assert_error!(
         "x",
         Error::UnknownVariable {
@@ -3172,6 +3193,7 @@ fn infer_error_test() {
             variables: Env::new(&HashMap::new()).variables,
         },
     );
+
     assert_error!(
         "x",
         Error::UnknownVariable {
@@ -3180,6 +3202,7 @@ fn infer_error_test() {
             variables: Env::new(&HashMap::new()).variables,
         },
     );
+
     assert_error!(
         "let id = fn(x) { x } id()",
         Error::IncorrectArity {
@@ -3188,6 +3211,7 @@ fn infer_error_test() {
             given: 0,
         },
     );
+
     assert_error!(
         "let id = fn(x) { x } id(1, 2)",
         Error::IncorrectArity {
@@ -3196,6 +3220,7 @@ fn infer_error_test() {
             given: 2,
         },
     );
+
     assert_error!(
         "case 1 { | a -> 1 | b -> 2.0 }",
         Error::CouldNotUnify {
@@ -3204,22 +3229,43 @@ fn infer_error_test() {
             given: float(),
         },
     );
+
     assert_error!(
         "case 1.0 { | 1 -> 1 }",
         Error::CouldNotUnify {
             meta: Meta { start: 13, end: 14 },
-            expected: int(),
-            given: float(),
-        },
-    );
-    assert_error!(
-        "case 1 { | 1.0 -> 1 }",
-        Error::CouldNotUnify {
-            meta: Meta { start: 11, end: 14 },
             expected: float(),
             given: int(),
         },
     );
+
+    assert_error!(
+        "case 1 { | 1.0 -> 1 }",
+        Error::CouldNotUnify {
+            meta: Meta { start: 11, end: 14 },
+            expected: int(),
+            given: float(),
+        },
+    );
+
+    assert_error!(
+        "case 1, 2.0 { | a, b -> a + b }",
+        Error::CouldNotUnify {
+            meta: Meta { start: 28, end: 29 },
+            expected: int(),
+            given: float(),
+        },
+    );
+
+    assert_error!(
+        "case 1, 2.0 { | a, b -> a | 1, 2 -> 0 }",
+        Error::CouldNotUnify {
+            meta: Meta { start: 31, end: 32 },
+            expected: float(),
+            given: int(),
+        },
+    );
+
     assert_error!(
         "fn() { 1 } == fn(x) { x + 1 }",
         Error::CouldNotUnify {
@@ -3238,6 +3284,7 @@ fn infer_error_test() {
             },
         },
     );
+
     assert_error!(
         "let f = fn(x: Int) { x } f(1.0)",
         Error::CouldNotUnify {
@@ -3256,6 +3303,7 @@ fn infer_error_test() {
             },
         },
     );
+
     assert_error!(
         "case 1 { | x -> 1 | 1 -> x }",
         Error::UnknownVariable {
@@ -3264,12 +3312,14 @@ fn infer_error_test() {
             variables: Env::new(&HashMap::new()).variables,
         },
     );
+
     assert_error!(
         "let id = fn(x) { x(x) } 1",
         Error::RecursiveType {
             meta: Meta { start: 19, end: 20 },
         },
     );
+
     assert_error!(
         "let True(x) = 1 x",
         Error::IncorrectArity {
@@ -3278,6 +3328,7 @@ fn infer_error_test() {
             given: 1,
         },
     );
+
     assert_error!(
         "let Ok(1, x) = 1 x",
         Error::IncorrectArity {
@@ -3286,6 +3337,7 @@ fn infer_error_test() {
             given: 2,
         },
     );
+
     assert_error!(
         "let x = 1 x.whatever",
         Error::NotModule {
@@ -3327,11 +3379,13 @@ fn infer_module_test() {
          }",
         vec![("repeat", "fn(Int, a) -> List(a)")],
     );
+
     assert_infer!(
         "fn private() { 1 }
          pub fn public() { 1 }",
         vec![("public", "fn() -> Int")],
     );
+
     assert_infer!(
         "pub enum Is = | Yes | No
          pub fn yes() { Yes }
@@ -3343,11 +3397,13 @@ fn infer_module_test() {
             ("yes", "fn() -> Is"),
         ],
     );
+
     assert_infer!(
         "pub enum Num = | I(Int)
          pub fn one() { I(1) }",
         vec![("I", "fn(Int) -> Num"), ("one", "fn() -> Num")],
     );
+
     assert_infer!(
         "pub fn id(x) { x }
          pub fn float() { id(1.0) }
@@ -3358,6 +3414,7 @@ fn infer_module_test() {
             ("int", "fn() -> Int"),
         ],
     );
+
     assert_infer!(
         "pub enum Box(a) = | Box(a)
         pub fn int() { Box(1) }
@@ -3368,59 +3425,71 @@ fn infer_module_test() {
             ("int", "fn() -> Box(Int)"),
         ],
     );
+
     assert_infer!(
         "pub enum Singleton = | Singleton
         pub fn go(x) { let Singleton = x 1 }",
         vec![("Singleton", "Singleton"), ("go", "fn(Singleton) -> Int")],
     );
+
     assert_infer!(
         "pub enum Box(a) = | Box(a)
         pub fn unbox(x) { let Box(a) = x a }",
         vec![("Box", "fn(a) -> Box(a)"), ("unbox", "fn(Box(a)) -> a")],
     );
+
     assert_infer!(
         "pub enum I = | I(Int)
         pub fn open(x) { case x { | I(i) -> i  } }",
         vec![("I", "fn(Int) -> I"), ("open", "fn(I) -> Int")],
     );
+
     assert_infer!(
-        "pub fn status() { 1 }
-                  pub fn list_of(x) { [x] }",
+        "pub fn status() { 1 } pub fn list_of(x) { [x] }",
         vec![("list_of", "fn(a) -> List(a)"), ("status", "fn() -> Int")],
     );
+
     assert_infer!(
         "pub external fn go(String) -> String = \"\" \"\"",
         vec![("go", "fn(String) -> String")],
     );
+
     assert_infer!(
         "pub external fn go(Int) -> Float = \"\" \"\"",
         vec![("go", "fn(Int) -> Float")],
     );
+
     assert_infer!(
         "pub external fn go(Int) -> Int = \"\" \"\"",
         vec![("go", "fn(Int) -> Int")],
     );
+
     assert_infer!(
         "pub external fn ok() -> fn(Int) -> Int = \"\" \"\"",
         vec![("ok", "fn() -> fn(Int) -> Int")],
     );
+
     assert_infer!(
         "pub external fn go(Int) -> b = \"\" \"\"",
         vec![("go", "fn(Int) -> a")],
     );
+
     assert_infer!(
         "pub external fn go(Bool) -> b = \"\" \"\"",
         vec![("go", "fn(Bool) -> a")],
     );
+
     assert_infer!(
         "pub external fn go(List(a)) -> a = \"\" \"\"",
         vec![("go", "fn(List(a)) -> a")],
     );
+
     assert_infer!(
         "external fn go(Int) -> b = \"\" \"\"
         pub fn x() { go(1) }",
         vec![("x", "fn() -> a")],
     );
+
     assert_infer!(
         "external fn id(a) -> a = \"\" \"\"
         pub fn i(x) { id(x) }
@@ -3432,20 +3501,24 @@ fn infer_module_test() {
             ("i", "fn(a) -> a"),
         ],
     );
+
     assert_infer!(
         "pub external fn len(List(a)) -> Int = \"\" \"\"",
         vec![("len", "fn(List(a)) -> Int")],
     );
+
     assert_infer!(
         "pub external type Connection\n
          pub external fn is_open(Connection) -> Bool = \"\" \"\"",
         vec![("is_open", "fn(Connection) -> Bool")],
     );
+
     assert_infer!(
         "pub external type Pair(thing, thing)\n
          pub external fn pair(a) -> Pair(a, a) = \"\" \"\"",
         vec![("pair", "fn(a) -> Pair(a, a)")],
     );
+
     assert_infer!(
         "pub fn one() { 1 }
          pub fn zero() { one() - 1 }
@@ -3456,6 +3529,7 @@ fn infer_module_test() {
             ("zero", "fn() -> Int"),
         ],
     );
+
     assert_infer!(
         "pub fn one() { 1 }
          pub fn zero() { one() - 1 }

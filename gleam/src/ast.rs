@@ -275,7 +275,7 @@ pub enum Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type
     Case {
         meta: Meta,
         typ: Type,
-        subject: Box<Self>,
+        subjects: Vec<Self>,
         clauses: Vec<Clause<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type>>,
     },
 
@@ -346,7 +346,7 @@ pub type UntypedClause = Clause<(), (), (), ()>;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Clause<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type> {
     pub meta: Meta,
-    pub pattern: Pattern<PatternConstructor>,
+    pub patterns: Vec<Pattern<PatternConstructor>>,
     pub then: Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type>,
 }
 
