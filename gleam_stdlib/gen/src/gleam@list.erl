@@ -214,16 +214,16 @@ any(List, F) ->
             end
     end.
 
-zip(L1, L2) ->
-    case {L1, L2} of
+zip(Xs, Ys) ->
+    case {Xs, Ys} of
         {[], _} ->
             [];
 
         {_, []} ->
             [];
 
-        {[X1 | Rest1], [X2 | Rest2]} ->
-            [{X1, X2} | zip(Rest1, Rest2)]
+        {[X | Xs1], [Y | Ys1]} ->
+            [{X, Y} | zip(Xs1, Ys1)]
     end.
 
 strict_zip(L1, L2) ->

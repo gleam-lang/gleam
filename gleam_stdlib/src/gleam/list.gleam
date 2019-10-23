@@ -181,11 +181,11 @@ pub fn any(list, f) {
   }
 }
 
-pub fn zip(l1, l2) {
-  case pair.Pair(l1, l2) {
-  | pair.Pair([], _) -> []
-  | pair.Pair(_, []) -> []
-  | pair.Pair([x1 | rest1], [x2 | rest2]) -> [ pair.Pair(x1, x2) | zip(rest1, rest2) ]
+pub fn zip(xs, ys) {
+  case xs, ys {
+  | [], _ -> []
+  | _, [] -> []
+  | [x | xs], [y | ys] -> [ pair.Pair(x, y) | zip(xs, ys) ]
   }
 }
 
@@ -227,10 +227,10 @@ pub fn unique(list) {
 }
 
 fn merge_sort(a, b, compare) {
-  case pair.Pair(a, b) {
-    | pair.Pair([], _) -> b
-    | pair.Pair(_, []) -> a
-    | pair.Pair([ax | ar], [bx | br]) ->
+  case a, b {
+    | [], _ -> b
+    | _, [] -> a
+    | [ax | ar], [bx | br] ->
       case compare(ax, bx) {
       | order.Lt -> [ax | merge_sort(ar, b, compare)]
       | _ -> [bx | merge_sort(a, br, compare)]

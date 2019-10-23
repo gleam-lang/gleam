@@ -44,7 +44,7 @@ compare(A, B) ->
         {eq, gt} ->
             lt;
 
-        _ ->
+        {_, _} ->
             gt
     end.
 
@@ -56,7 +56,7 @@ max(A, B) ->
         {eq, lt} ->
             eq;
 
-        _ ->
+        {_, _} ->
             B
     end.
 
@@ -68,6 +68,6 @@ min(A, B) ->
         {eq, gt} ->
             eq;
 
-        _ ->
+        {_, _} ->
             B
     end.
