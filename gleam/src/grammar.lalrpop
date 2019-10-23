@@ -221,18 +221,18 @@ SimpleExpr: UntypedExpr = {
 }
 
 Case: UntypedExpr = {
-    <s:@L> "case" <subject:OpOrSimpleExpr> "{" <clauses:Clause+> "}" <e:@L> => Expr::Case {
+    <s:@L> "case" <subjects:Comma<OpOrSimpleExpr>> "{" <clauses:Clause+> "}" <e:@L> => Expr::Case {
         meta: meta(s, e),
         typ: (),
-        subject: Box::new(subject),
+        subjects,
         clauses,
     }
 }
 
 Clause: UntypedClause = {
-    <s:@L> "|" <pattern:Pattern> "->" <then:Expr+> <e:@L> => Clause {
+    <s:@L> "|" <patterns:Comma<Pattern>> "->" <then:Expr+> <e:@L> => Clause {
         meta: meta(s, e),
-        pattern,
+        patterns,
         then: seq(then),
     }
 }
@@ -407,17 +407,6 @@ Float: UntypedExpr = {
 
 Comma<T>: Vec<T> = {
     <v:(<T> ",")*> <e:T?> => match e {
-        None => v,
-        Some(e) => {
-            let mut v = v;
-            v.push(e);
-            v
-        }
-    }
-}
-
-AtLeastOneComma<T>: Vec<T> = {
-    <v:(<T> ",")+> <e:T?> => match e {
         None => v,
         Some(e) => {
             let mut v = v;

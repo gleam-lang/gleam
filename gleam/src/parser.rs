@@ -863,18 +863,18 @@ fn expr_test() {
         Ok(Expr::Case {
             meta: Meta { start: 0, end: 30 },
             typ: (),
-            subject: Box::new(Expr::Var {
+            subjects: vec![Expr::Var {
                 constructor: (),
                 meta: Meta { start: 5, end: 6 },
                 name: "x".to_string(),
-            }),
+            }],
             clauses: vec![
                 Clause {
                     meta: Meta { start: 9, end: 18 },
-                    pattern: Pattern::Int {
+                    patterns: vec![Pattern::Int {
                         meta: Meta { start: 11, end: 12 },
                         value: 1
-                    },
+                    }],
                     then: Expr::Int {
                         meta: Meta { start: 16, end: 18 },
                         typ: (),
@@ -883,10 +883,10 @@ fn expr_test() {
                 },
                 Clause {
                     meta: Meta { start: 19, end: 28 },
-                    pattern: Pattern::Int {
+                    patterns: vec![Pattern::Int {
                         meta: Meta { start: 21, end: 22 },
                         value: 2
-                    },
+                    }],
                     then: Expr::Int {
                         meta: Meta { start: 26, end: 28 },
                         typ: (),
