@@ -279,7 +279,7 @@ ArgNames: ArgNames = {
 
     <name:VarName> => ArgNames::Named { name },
 
-    <name:VarName> "as" <label:VarName> => ArgNames::NamedLabelled { name, label },
+    <label:VarName> <name:VarName> => ArgNames::NamedLabelled { name, label },
 }
 
 Call: UntypedExpr = {
