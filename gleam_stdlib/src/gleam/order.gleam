@@ -23,28 +23,28 @@ pub fn to_int(order) {
 }
 
 pub fn compare(a, b) {
-  case pair.Pair(a, b) {
-  | pair.Pair(Lt, Lt) -> Eq
-  | pair.Pair(Lt, _) -> Lt
-  | pair.Pair(Eq, Eq) -> Eq
-  | pair.Pair(Gt, Gt) -> Eq
-  | pair.Pair(Eq, Gt) -> Lt
-  | _ -> Gt
+  case a, b {
+  | Lt, Lt -> Eq
+  | Lt, _ -> Lt
+  | Eq, Eq -> Eq
+  | Gt, Gt -> Eq
+  | Eq, Gt -> Lt
+  | _, _ -> Gt
   }
 }
 
 pub fn max(a, b) {
-  case pair.Pair(a, b) {
-  | pair.Pair(Gt, _) -> Gt
-  | pair.Pair(Eq, Lt) -> Eq
-  | _ -> b
+  case a, b {
+  | Gt, _ -> Gt
+  | Eq, Lt -> Eq
+  | _, _ -> b
   }
 }
 
 pub fn min(a, b) {
-  case pair.Pair(a, b) {
-  | pair.Pair(Lt, _) -> Lt
-  | pair.Pair(Eq, Gt) -> Eq
-  | _ -> b
+  case a, b {
+  | Lt, _ -> Lt
+  | Eq, Gt -> Eq
+  | _, _ -> b
   }
 }

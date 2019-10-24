@@ -4,6 +4,8 @@
 
 - Function arguments can be labelled, allowing arguments to be given by name
   at the call site.
+- `case` expressions now accept multiple subjects, enabling pattern matching
+  on multiple values simultaneously.
 - `gleam new` now accepts a `--template` flag to generate different styles of
   project. An OTP application template has been added alongside the existing
   OTP library template.
@@ -11,6 +13,8 @@
   the functions annotations has been improved to be more precise.
 - A helpful error message is rendered if an enum field contains a generic type
   that has not been declared.
+- A bug has been fixed in which type mismatch errors originating from pattern
+  matching would sometimes display the incorrect expected type.
 
 ## v0.4.2 - 2019-10-22
 

@@ -378,8 +378,18 @@ fn enum_pattern(name: String, args: Vec<CallArg<TypedPattern>>, env: &mut Env) -
     }
 }
 
-fn clause(clause: TypedClause, env: &mut Env) -> Document {
-    pattern(clause.pattern, env)
+fn clause(mut clause: TypedClause, env: &mut Env) -> Document {
+    let patterns_doc = if clause.patterns.len() == 1 {
+        pattern(clause.patterns.remove(0), env)
+    } else {
+        let docs = clause
+            .patterns
+            .into_iter()
+            .map(|p| pattern(p, env))
+            .collect();
+        tuple(docs)
+    };
+    patterns_doc
         .append(" ->")
         .append(line().append(expr(clause.then, env)).nest(INDENT).group())
 }
@@ -392,10 +402,15 @@ fn clauses(cs: Vec<TypedClause>, env: &mut Env) -> Document {
         .to_doc()
 }
 
-fn case(subject: TypedExpr, cs: Vec<TypedClause>, env: &mut Env) -> Document {
+fn case(mut subjects: Vec<TypedExpr>, cs: Vec<TypedClause>, env: &mut Env) -> Document {
+    let subjects_doc = if subjects.len() == 1 {
+        wrap_expr(subjects.remove(0), env).group()
+    } else {
+        tuple(subjects.into_iter().map(|e| wrap_expr(e, env)).collect())
+    };
     "case "
         .to_doc()
-        .append(wrap_expr(subject, env).group())
+        .append(subjects_doc)
         .append(" of")
         .append(line().append(clauses(cs, env)).nest(INDENT))
         .append(line())
@@ -574,8 +589,8 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
         } => let_(*value, pattern, *then, env),
 
         Expr::Case {
-            subject, clauses, ..
-        } => case(*subject, clauses, env),
+            subjects, clauses, ..
+        } => case(subjects, clauses, env),
 
         Expr::BinOp {
             name, left, right, ..
@@ -1201,18 +1216,18 @@ moddy4() ->
             body: Expr::Case {
                 meta: default(),
                 typ: crate::typ::int(),
-                subject: Box::new(Expr::Int {
+                subjects: vec![Expr::Int {
                     typ: crate::typ::int(),
                     meta: default(),
                     value: 1,
-                }),
+                }],
                 clauses: vec![
                     Clause {
                         meta: default(),
-                        pattern: Pattern::Int {
+                        patterns: vec![Pattern::Int {
                             meta: default(),
                             value: 1,
-                        },
+                        }],
                         then: Expr::Int {
                             typ: crate::typ::int(),
                             meta: default(),
@@ -1221,10 +1236,10 @@ moddy4() ->
                     },
                     Clause {
                         meta: default(),
-                        pattern: Pattern::Float {
+                        patterns: vec![Pattern::Float {
                             meta: default(),
                             value: 1.0,
-                        },
+                        }],
                         then: Expr::Int {
                             typ: crate::typ::int(),
                             meta: default(),
@@ -1233,10 +1248,10 @@ moddy4() ->
                     },
                     Clause {
                         meta: default(),
-                        pattern: Pattern::String {
+                        patterns: vec![Pattern::String {
                             meta: default(),
                             value: "hello".to_string(),
-                        },
+                        }],
                         then: Expr::Int {
                             typ: crate::typ::int(),
                             meta: default(),
@@ -1245,7 +1260,7 @@ moddy4() ->
                     },
                     Clause {
                         meta: default(),
-                        pattern: Pattern::Nil { meta: default() },
+                        patterns: vec![Pattern::Nil { meta: default() }],
                         then: Expr::Int {
                             typ: crate::typ::int(),
                             meta: default(),
@@ -1254,7 +1269,7 @@ moddy4() ->
                     },
                     Clause {
                         meta: default(),
-                        pattern: Pattern::Constructor {
+                        patterns: vec![Pattern::Constructor {
                             meta: default(),
                             module: None,
                             name: "Error".to_string(),
@@ -1267,7 +1282,7 @@ moddy4() ->
                                 },
                             }],
                             constructor: PatternConstructor::Enum,
-                        },
+                        }],
                         then: Expr::Int {
                             typ: crate::typ::int(),
                             meta: default(),
@@ -1705,6 +1720,18 @@ fn create_user(user_id) { User(age: 22, id: user_id, name: "") }
 
 create_user(UserId) ->
     {UserId, <<"">>, 22}.
+"#
+        },
+        Case {
+            src: r#"fn run() { case 1, 2 { | a, b -> a } }"#,
+            erl: r#"-module().
+-compile(no_auto_import).
+
+run() ->
+    case {1, 2} of
+        {A, B} ->
+            A
+    end.
 "#
         },
     ];
