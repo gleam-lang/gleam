@@ -8,6 +8,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v1
+      - run: rustup component add rustfmt
+      - run: cd gleam && cargo fmt -- --check
       - run: cd gleam && cargo test
       - run: cd gleam && cargo build --release
       - run: gleam/target/release/gleam --version
