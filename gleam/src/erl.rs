@@ -10,12 +10,20 @@ use std::default::Default;
 
 const INDENT: isize = 4;
 
-#[derive(Debug, Clone, Default)]
-struct Env {
+#[derive(Debug, Clone)]
+struct Env<'a> {
+    module: &'a Vec<String>,
     vars: im::HashMap<String, usize>,
 }
 
-impl Env {
+impl<'a> Env<'a> {
+    pub fn new(module: &'a Vec<String>) -> Self {
+        Self {
+            vars: Default::default(),
+            module,
+        }
+    }
+
     pub fn local_var_name(&mut self, name: String) -> Document {
         match self.vars.get(&name) {
             None => {
@@ -35,6 +43,7 @@ impl Env {
 }
 
 pub fn module(module: TypedModule) -> String {
+    let module_name = module.name;
     let exports: Vec<_> = module
         .statements
         .iter()
@@ -59,7 +68,7 @@ pub fn module(module: TypedModule) -> String {
         .intersperse(", ".to_doc())
         .collect();
 
-    format!("-module({}).", module.name.join("@"))
+    format!("-module({}).", module_name.join("@"))
         .to_doc()
         .append(line())
         .append("-compile(no_auto_import).")
@@ -77,7 +86,7 @@ pub fn module(module: TypedModule) -> String {
             module
                 .statements
                 .into_iter()
-                .flat_map(statement)
+                .flat_map(|s| statement(s, &module_name))
                 .intersperse(lines(2))
                 .collect::<Vec<_>>(),
         )
@@ -85,7 +94,7 @@ pub fn module(module: TypedModule) -> String {
         .format(80)
 }
 
-fn statement(statement: TypedStatement) -> Option<Document> {
+fn statement(statement: TypedStatement, module: &Vec<String>) -> Option<Document> {
     match statement {
         Statement::Enum { .. } => None,
         Statement::Struct { .. } => None,
@@ -93,7 +102,7 @@ fn statement(statement: TypedStatement) -> Option<Document> {
         Statement::ExternalType { .. } => None,
         Statement::Fn {
             args, name, body, ..
-        } => Some(mod_fun(name, args, body)),
+        } => Some(mod_fun(name, args, body, module)),
         Statement::ExternalFn {
             fun,
             module,
@@ -104,8 +113,8 @@ fn statement(statement: TypedStatement) -> Option<Document> {
     }
 }
 
-fn mod_fun(name: String, args: Vec<Arg>, body: TypedExpr) -> Document {
-    let body_doc = expr(body, &mut Env::default());
+fn mod_fun(name: String, args: Vec<Arg>, body: TypedExpr, module: &Vec<String>) -> Document {
+    let body_doc = expr(body, &mut Env::new(module));
 
     atom(name)
         .append(fun_args(args))
@@ -453,12 +462,23 @@ fn call(fun: TypedExpr, args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Documen
         Expr::Var {
             constructor:
                 ValueConstructor {
-                    variant: ValueConstructorVariant::ModuleFn { .. },
+                    variant: ValueConstructorVariant::ModuleFn { module, .. },
                     ..
                 },
             name,
             ..
-        } => name.to_doc().append(call_args(args, env)),
+        } => {
+            if &module == env.module {
+                name.to_doc().append(call_args(args, env))
+            } else {
+                module
+                    .join("@")
+                    .to_doc()
+                    .append(":")
+                    .append(name)
+                    .append(call_args(args, env))
+            }
+        }
 
         Expr::ModuleSelect {
             label,
@@ -690,6 +710,7 @@ fn module_test() {
                 meta: default(),
                 module: vec!["result".to_string()],
                 as_name: None,
+                unqualified: vec![],
             },
             Statement::ExternalFn {
                 meta: default(),
@@ -1462,7 +1483,7 @@ fn integration_test() {
   let y = 2
   y
 }"#,
-            erl: r#"-module().
+            erl: r#"-module(the_app).
 -compile(no_auto_import).
 
 go() ->
@@ -1473,7 +1494,7 @@ go() ->
         },
         Case {
             src: r#"pub fn t() { True }"#,
-            erl: r#"-module().
+            erl: r#"-module(the_app).
 -compile(no_auto_import).
 
 -export([t/0]).
@@ -1487,7 +1508,7 @@ t() ->
                     fn pound(x) {
                       Pound(x)
                     }"#,
-            erl: r#"-module().
+            erl: r#"-module(the_app).
 -compile(no_auto_import).
 
 pound(X) ->
@@ -1496,7 +1517,7 @@ pound(X) ->
         },
         Case {
             src: r#"fn loop() { loop() }"#,
-            erl: r#"-module().
+            erl: r#"-module(the_app).
 -compile(no_auto_import).
 
 loop() ->
@@ -1505,7 +1526,7 @@ loop() ->
         },
         Case {
             src: r#"external fn run() -> Int = "Elixir.MyApp" "run""#,
-            erl: r#"-module().
+            erl: r#"-module(the_app).
 -compile(no_auto_import).
 
 run() ->
@@ -1515,7 +1536,7 @@ run() ->
         Case {
             src: r#"fn inc(x) { x + 1 }
                     pub fn go() { 1 |> inc |> inc |> inc }"#,
-            erl: r#"-module().
+            erl: r#"-module(the_app).
 -compile(no_auto_import).
 
 -export([go/0]).
@@ -1530,7 +1551,7 @@ go() ->
         Case {
             src: r#"fn add(x, y) { x + y }
                     pub fn go() { 1 |> add(_, 1) |> add(2, _) |> add(_, 3) }"#,
-            erl: r#"-module().
+            erl: r#"-module(the_app).
 -compile(no_auto_import).
 
 -export([go/0]).
@@ -1547,7 +1568,7 @@ go() ->
                     fn or(x, y) { x || y }
                     fn modulo(x, y) { x % y }
             "#,
-            erl: r#"-module().
+            erl: r#"-module(the_app).
 -compile(no_auto_import).
 
 'and'(X, Y) ->
@@ -1564,7 +1585,7 @@ modulo(X, Y) ->
             src: r#"fn second(list) { case list { | [x, y] -> y | z -> 1 } }
                     fn tail(list) { case list { | [x | xs] -> xs | z -> list } }
             "#,
-            erl: r#"-module().
+            erl: r#"-module(the_app).
 -compile(no_auto_import).
 
 second(List) ->
@@ -1588,7 +1609,7 @@ tail(List) ->
         },
         Case {
             src: r#"fn x() { let x = 1 let x = x + 1 x }"#,
-            erl: r#"-module().
+            erl: r#"-module(the_app).
 -compile(no_auto_import).
 
 x() ->
@@ -1599,7 +1620,7 @@ x() ->
         },
         Case {
             src: r#"pub fn catch(x) { [1, 2, 3 | x] } pub external fn receive() -> Int = "try" "and""#,
-            erl: r#"-module().
+            erl: r#"-module(the_app).
 -compile(no_auto_import).
 
 -export(['catch'/1, 'receive'/0]).
@@ -1614,7 +1635,7 @@ x() ->
         // Translation of Float-specific BinOp into variable-type Erlang term comparison.
         Case {
             src: r#"fn x() { 1. <. 2.3 }"#,
-            erl: r#"-module().
+            erl: r#"-module(the_app).
 -compile(no_auto_import).
 
 x() ->
@@ -1624,7 +1645,7 @@ x() ->
         // Named struct creation
         Case {
             src: r#"struct Pair(x, y) { x: x y: y } fn x() { Pair(1, 2) Pair(3., 4.) }"#,
-            erl: r#"-module().
+            erl: r#"-module(the_app).
 -compile(no_auto_import).
 
 x() ->
@@ -1634,7 +1655,7 @@ x() ->
         },
         Case {
             src: r#"struct Null { } fn x() { Null }"#,
-            erl: r#"-module().
+            erl: r#"-module(the_app).
 -compile(no_auto_import).
 
 x() ->
@@ -1643,7 +1664,7 @@ x() ->
         },
         Case {
             src: r#"struct Null {} fn x() { Null }"#,
-            erl: r#"-module().
+            erl: r#"-module(the_app).
 -compile(no_auto_import).
 
 x() ->
@@ -1653,7 +1674,7 @@ x() ->
         Case {
             src: r#"struct Point {x: Int y: Int}
                 fn y() { fn() { Point }()(4, 6) }"#,
-            erl: r#"-module().
+            erl: r#"-module(the_app).
 -compile(no_auto_import).
 
 y() ->
@@ -1663,7 +1684,7 @@ y() ->
         Case {
             src: r#"struct Point {x: Int y: Int}
                 fn x() { Point(x: 4, y: 6) Point(y: 1, x: 9) }"#,
-            erl: r#"-module().
+            erl: r#"-module(the_app).
 -compile(no_auto_import).
 
 x() ->
@@ -1673,7 +1694,7 @@ x() ->
         },
         Case {
             src: r#"struct Point {x: Int y: Int} fn x(y) { let Point(a, b) = y a }"#,
-            erl: r#"-module().
+            erl: r#"-module(the_app).
 -compile(no_auto_import).
 
 x(Y) ->
@@ -1684,7 +1705,7 @@ x(Y) ->
         Case {
             src: r#"external fn go(x: Int, y: Int) -> Int = "m" "f"
                     fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"#,
-            erl: r#"-module().
+            erl: r#"-module(the_app).
 -compile(no_auto_import).
 
 go(A, B) ->
@@ -1698,7 +1719,7 @@ x() ->
         Case {
             src: r#"fn go(x xx, y yy) { xx }
                     fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"#,
-            erl: r#"-module().
+            erl: r#"-module(the_app).
 -compile(no_auto_import).
 
 go(Xx, Yy) ->
@@ -1715,7 +1736,7 @@ x() ->
 struct User { id: Int name: String age: Int }
 fn create_user(user_id) { User(age: 22, id: user_id, name: "") }
                     "#,
-            erl: r#"-module().
+            erl: r#"-module(the_app).
 -compile(no_auto_import).
 
 create_user(UserId) ->
@@ -1724,7 +1745,7 @@ create_user(UserId) ->
         },
         Case {
             src: r#"fn run() { case 1, 2 { | a, b -> a } }"#,
-            erl: r#"-module().
+            erl: r#"-module(the_app).
 -compile(no_auto_import).
 
 run() ->
@@ -1737,9 +1758,10 @@ run() ->
     ];
 
     for Case { src, erl } in cases.into_iter() {
-        let ast = crate::grammar::ModuleParser::new()
+        let mut ast = crate::grammar::ModuleParser::new()
             .parse(src)
             .expect("syntax error");
+        ast.name = vec!["the_app".to_string()];
         let ast = crate::typ::infer_module(ast, &std::collections::HashMap::new())
             .expect("should successfully infer");
         let output = module(ast);

@@ -103,11 +103,12 @@ StatementFn: UntypedStatement = {
 }
 
 StatementImport: UntypedStatement = {
-    <s:@L> "import" <ns:(<VarName> "/")*> <n:VarName> <e:@L> <as_name:("as" <VarName>)?> => {
+    <s:@L> "import" <ns:(<VarName> "/")*> <n:VarName> <e:@L> <unqualified:("." "{" <Comma<AnyName>>"}")?> <as_name:("as" <VarName>)?> => {
         let mut module = ns;
         module.push(n);
         Statement::Import {
             meta: meta(s, e),
+            unqualified: unqualified.unwrap_or_else(|| vec![]),
             module,
             as_name,
         }

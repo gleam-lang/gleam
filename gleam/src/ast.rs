@@ -136,6 +136,7 @@ pub enum Statement<ValueConstructor, ModuleValueConstructor, PatternConstructor,
         meta: Meta,
         module: Vec<String>,
         as_name: Option<String>,
+        unqualified: Vec<String>,
     },
 
     Struct {

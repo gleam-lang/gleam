@@ -1685,7 +1685,7 @@ pub fn infer_module(
                             typ: typ.clone(),
                             variant: ValueConstructorVariant::ModuleFn {
                                 field_map: field_map.clone(),
-                                module: vec![module.clone()],
+                                module: module_name.clone(),
                                 arity: args.len(),
                             },
                         },
@@ -1696,7 +1696,7 @@ pub fn infer_module(
                 env.insert_variable(
                     name.clone(),
                     ValueConstructorVariant::ModuleFn {
-                        module: vec![module.clone()],
+                        module: module_name.clone(),
                         arity: args.len(),
                         field_map,
                     },
@@ -1917,20 +1917,45 @@ pub fn infer_module(
                 meta,
                 module,
                 as_name,
+                unqualified,
             } => {
+                // Find imported module
                 let module_info = env.importable_modules.get(&module.join("/")).expect(
                     "COMPILER BUG: Typer could not find a module being imported.
 This should not be possible. Please report this crash",
                 );
+
+                // Insert imported module into scope
                 let name = match &as_name {
                     None => module[module.len() - 1].clone(),
                     Some(name) => name.clone(),
                 };
                 env.imported_modules.insert(name, module_info.clone());
+
+                // Insert unqualified imports into scope
+                for name in &unqualified {
+                    let mut imported = false;
+
+                    if let Some(value) = module_info.value_constructors.get(name) {
+                        env.insert_variable(name.clone(), value.variant.clone(), value.typ.clone());
+                        imported = true;
+                    }
+
+                    if let Some(typ) = module_info.type_constructors.get(name) {
+                        env.insert_type_constructor(name.clone(), typ.clone());
+                        imported = true;
+                    }
+
+                    if !imported {
+                        panic!("module does not have this field") // TODO
+                    }
+                }
+
                 Ok(Statement::Import {
                     meta,
                     module,
                     as_name,
+                    unqualified,
                 })
             }
         })

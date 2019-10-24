@@ -1,5 +1,2 @@
-fn run() {
-  case 1, 2.0 {
-  | 1, 2 -> 1
-  }
-}
+import gleam/list.{map, fold}
+import gleam/list.{map, fold} as listy
