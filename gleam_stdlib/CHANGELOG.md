@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Labels have been added to functions throughout the stdlib.
 - `map.fetch` has been renamed to `map.get` and `map.put` to `map.insert`.
 - The `pair` module gains the `map_first`, and `map_second` functions.
 - The `string` module gains the `compare` function.
