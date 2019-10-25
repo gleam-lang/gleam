@@ -142,11 +142,11 @@ pub fn fold_test() {
 
 pub fn fold_right_test() {
   [1, 2, 3]
-    |> list.fold_right(_, [], fn(x, acc) { [x | acc] })
-    |> expect.equal(_, [1, 2, 3])
+  |> list.fold_right(_, from: [], with: fn(x, acc) { [x | acc] })
+  |> expect.equal(_, [1, 2, 3])
 }
 
-pub fn find_test() {
+pub fn find_map_test() {
   let f = fn(x) {
     case x {
     | 2 -> Ok(4)
@@ -155,15 +155,33 @@ pub fn find_test() {
   }
 
   [1, 2, 3]
-  |> list.find(_, f)
+  |> list.find_map(_, with: f)
   |> expect.equal(_, Ok(4))
 
   [1, 3, 2]
-  |> list.find(_, f)
+  |> list.find_map(_, with: f)
   |> expect.equal(_, Ok(4))
 
   [1, 3]
-  |> list.find(_, f)
+  |> list.find_map(_, with: f)
+  |> expect.equal(_, Error(Nil))
+}
+
+pub fn find_test() {
+  let is_two = fn(x) {
+    x == 2
+  }
+
+  [1, 2, 3]
+  |> list.find(_, one_that: is_two)
+  |> expect.equal(_, Ok(2))
+
+  [1, 3, 2]
+  |> list.find(_, one_that: is_two)
+  |> expect.equal(_, Ok(2))
+
+  [1, 3]
+  |> list.find(_, one_that: is_two)
   |> expect.equal(_, Error(Nil))
 }
 

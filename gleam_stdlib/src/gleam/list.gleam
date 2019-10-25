@@ -153,8 +153,19 @@ pub fn find(in haystack, one_that is_desired) {
   | [] -> Error(Nil)
   | [x | rest] ->
       case is_desired(x) {
-      | Ok(x) -> Ok(x)
+      | True -> Ok(x)
       | _ -> find(in: rest, one_that: is_desired)
+      }
+  }
+}
+
+pub fn find_map(in haystack, with fun) {
+  case haystack {
+  | [] -> Error(Nil)
+  | [x | rest] ->
+      case fun(x) {
+      | Ok(x) -> Ok(x)
+      | _ -> find_map(in: rest, with: fun)
       }
   }
 }
@@ -307,7 +318,7 @@ pub fn split_while(list list, while predicate) {
 }
 
 pub fn key_find(in haystack, find needle) {
-  find(haystack, fn(p) {
+  find_map(haystack, fn(p) {
     case pair.first(p) == needle {
     | True -> p |> pair.second |> Ok
     | False -> Error(Nil)

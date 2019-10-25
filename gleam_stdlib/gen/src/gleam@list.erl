@@ -1,7 +1,7 @@
 -module(gleam@list).
 -compile(no_auto_import).
 
--export([length/1, reverse/1, is_empty/1, contains/2, head/1, tail/1, filter/2, map/2, index_map/2, traverse/2, drop/2, take/2, new/0, append/2, flatten/1, fold/3, fold_right/3, find/2, all/2, any/2, zip/2, strict_zip/2, intersperse/2, at/2, unique/1, sort/2, range/2, repeat/2, split/2, split_while/2, key_find/2]).
+-export([length/1, reverse/1, is_empty/1, contains/2, head/1, tail/1, filter/2, map/2, index_map/2, traverse/2, drop/2, take/2, new/0, append/2, flatten/1, fold/3, fold_right/3, find/2, find_map/2, all/2, any/2, zip/2, strict_zip/2, intersperse/2, at/2, unique/1, sort/2, range/2, repeat/2, split/2, split_while/2, key_find/2]).
 
 length(A) ->
     erlang:length(A).
@@ -169,18 +169,33 @@ fold_right(List, Initial, Fun) ->
             Fun(X, fold_right(Rest, Initial, Fun))
     end.
 
-find(Haystack, Predicate) ->
+find(Haystack, IsDesired) ->
     case Haystack of
         [] ->
             {error, nil};
 
         [X | Rest] ->
-            case Predicate(X) of
+            case IsDesired(X) of
+                true ->
+                    {ok, X};
+
+                _ ->
+                    find(Rest, IsDesired)
+            end
+    end.
+
+find_map(Haystack, Fun) ->
+    case Haystack of
+        [] ->
+            {error, nil};
+
+        [X | Rest] ->
+            case Fun(X) of
                 {ok, X1} ->
                     {ok, X1};
 
                 _ ->
-                    find(Rest, Predicate)
+                    find_map(Rest, Fun)
             end
     end.
 
@@ -375,7 +390,7 @@ split_while(List, Predicate) ->
     do_split_while(List, Predicate, []).
 
 key_find(Haystack, Needle) ->
-    find(Haystack, fun(P) -> case gleam@pair:first(P) =:= Needle of
+    find_map(Haystack, fun(P) -> case gleam@pair:first(P) =:= Needle of
                 true ->
                     {ok, gleam@pair:second(P)};
 

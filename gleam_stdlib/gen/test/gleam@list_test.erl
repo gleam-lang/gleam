@@ -1,7 +1,7 @@
 -module(gleam@list_test).
 -compile(no_auto_import).
 
--export([length_test/0, reverse_test/0, is_empty_test/0, contains_test/0, head_test/0, tail_test/0, filter_test/0, map_test/0, traverse_test/0, drop_test/0, take_test/0, new_test/0, append_test/0, flatten_test/0, fold_test/0, fold_right_test/0, find_test/0, all_test/0, any_test/0, zip_test/0, strict_zip_test/0, intersperse_test/0, at_test/0, unique_test/0, sort_test/0, index_map_test/0, range_test/0, repeat_test/0, split_test/0, split_while_test/0, key_find_test/0]).
+-export([length_test/0, reverse_test/0, is_empty_test/0, contains_test/0, head_test/0, tail_test/0, filter_test/0, map_test/0, traverse_test/0, drop_test/0, take_test/0, new_test/0, append_test/0, flatten_test/0, fold_test/0, fold_right_test/0, find_map_test/0, find_test/0, all_test/0, any_test/0, zip_test/0, strict_zip_test/0, intersperse_test/0, at_test/0, unique_test/0, sort_test/0, index_map_test/0, range_test/0, repeat_test/0, split_test/0, split_while_test/0, key_find_test/0]).
 
 length_test() ->
     gleam@expect:equal(gleam@list:length([]), 0),
@@ -102,7 +102,7 @@ fold_right_test() ->
         [1, 2, 3]
     ).
 
-find_test() ->
+find_map_test() ->
     F = fun(X) -> case X of
             2 ->
                 {ok, 4};
@@ -110,9 +110,15 @@ find_test() ->
             _ ->
                 {error, 0}
         end end,
-    gleam@expect:equal(gleam@list:find([1, 2, 3], F), {ok, 4}),
-    gleam@expect:equal(gleam@list:find([1, 3, 2], F), {ok, 4}),
-    gleam@expect:equal(gleam@list:find([1, 3], F), {error, nil}).
+    gleam@expect:equal(gleam@list:find_map([1, 2, 3], F), {ok, 4}),
+    gleam@expect:equal(gleam@list:find_map([1, 3, 2], F), {ok, 4}),
+    gleam@expect:equal(gleam@list:find_map([1, 3], F), {error, nil}).
+
+find_test() ->
+    IsTwo = fun(X) -> X =:= 2 end,
+    gleam@expect:equal(gleam@list:find([1, 2, 3], IsTwo), {ok, 2}),
+    gleam@expect:equal(gleam@list:find([1, 3, 2], IsTwo), {ok, 2}),
+    gleam@expect:equal(gleam@list:find([1, 3], IsTwo), {error, nil}).
 
 all_test() ->
     gleam@expect:equal(
