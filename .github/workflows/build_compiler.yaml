@@ -36,8 +36,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v1
-      - run: cargo test
-        working-directory: ./gleam
+#       - run: cargo test
+#         working-directory: ./gleam
       - run: cargo build --release
         working-directory: ./gleam
       - run: gleam/target/release/gleam --version
