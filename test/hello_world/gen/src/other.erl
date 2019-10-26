@@ -1,7 +1,8 @@
 -module(other).
 -compile(no_auto_import).
 
--export([create_user/1]).
-
-create_user(UserId) ->
-    {UserId, <<"">>, 22}.
+run() ->
+    case {1, 2.0} of
+        {_, _} ->
+            1
+    end.
