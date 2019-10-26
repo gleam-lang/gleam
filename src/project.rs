@@ -1,11 +1,7 @@
-use itertools::Itertools;
+use crate::error::Error;
 use petgraph::Graph;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use termcolor::Buffer;
-
-pub type Name = String;
-pub type Src = String;
 
 #[derive(Debug, PartialEq)]
 pub struct Input {
@@ -20,711 +16,23 @@ pub struct Compiled {
     pub name: Vec<String>,
     pub code: String,
     pub path: PathBuf,
+    pub origin: ModuleOrigin,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum ModuleOrigin {
     Src,
     Test,
+    Dependency,
 }
 
 impl ModuleOrigin {
     pub fn dir_name(&self) -> &'static str {
         match self {
-            ModuleOrigin::Src => "src",
+            ModuleOrigin::Src | ModuleOrigin::Dependency => "src",
             ModuleOrigin::Test => "test",
         }
     }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Error {
-    Parse {
-        path: PathBuf,
-        src: Src,
-        error: lalrpop_util::ParseError<usize, (usize, String), crate::parser::Error>,
-    },
-
-    Type {
-        path: PathBuf,
-        src: Src,
-        error: crate::typ::Error,
-    },
-
-    UnknownImport {
-        module: Name,
-        import: Name,
-        meta: crate::ast::Meta,
-        path: PathBuf,
-        src: String,
-        modules: Vec<String>,
-    },
-
-    DuplicateModule {
-        module: Name,
-        first: PathBuf,
-        second: PathBuf,
-    },
-
-    SrcImportingTest {
-        path: PathBuf,
-        src: Src,
-        meta: crate::ast::Meta,
-        src_module: Name,
-        test_module: Name,
-    },
-
-    DependencyCycle,
-}
-
-fn did_you_mean(name: &str, options: &mut Vec<&String>, alt: &'static str) -> String {
-    options.sort_by(|a, b| {
-        strsim::levenshtein(a, name)
-            .partial_cmp(&strsim::levenshtein(b, name))
-            .unwrap()
-    });
-
-    match options.get(0) {
-        Some(option) => format!("Did you mean `{}`?", option),
-        None => alt.to_string(),
-    }
-}
-
-impl Error {
-    // TODO: Tests.
-    pub fn pretty(&self, buffer: &mut Buffer) {
-        use crate::typ::Error::*;
-        use std::io::Write;
-
-        buffer
-            .write_all(b"\n")
-            .expect("error pretty buffer write space before");
-
-        match self {
-            Error::SrcImportingTest {
-                path,
-                src,
-                meta,
-                src_module,
-                test_module,
-            } => {
-                let diagnostic = ErrorDiagnostic {
-                    title: "App importing test module".to_string(),
-                    label: "Imported here".to_string(),
-                    file: path.to_str().unwrap().to_string(),
-                    src: src.to_string(),
-                    meta: meta.clone(),
-                };
-                write(buffer, diagnostic);
-                write!(
-                    buffer,
-                    "
-The application module `{}` is importing the test module `{}`.
-
-Test modules are not included in production builds so test modules
-cannot import them. Perhaps move the `{}` module to the src directory.",
-                    src_module, test_module, test_module,
-                )
-                .unwrap();
-            }
-            Error::DuplicateModule {
-                module,
-                first,
-                second,
-            } => {
-                let diagnostic = ProjectErrorDiagnostic {
-                    title: "Duplicate module".to_string(),
-                    label: format!(
-                        "The module `{}` is defined multiple times.
-
-First:  {}
-Second: {}",
-                        module,
-                        first.to_str().expect("pretty error print PathBuf to_str"),
-                        second.to_str().expect("pretty error print PathBuf to_str"),
-                    ),
-                };
-                write_project(buffer, diagnostic);
-            }
-
-            Error::Type { path, src, error } => match error {
-                UnknownLabel {
-                    label,
-                    meta,
-                    labels,
-                } => {
-                    let mut options: Vec<_> = labels.keys().collect();
-                    let diagnostic = ErrorDiagnostic {
-                        title: "Unknown label".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        meta: meta.clone(),
-                        label: did_you_mean(label, &mut options, "Unexpected label"),
-                    };
-                    write(buffer, diagnostic);
-                    if options.is_empty() {
-                        write!(
-                            buffer,
-                            "\n This constructor does not accept any labelled arguments.\n "
-                        )
-                        .unwrap();
-                    } else {
-                        writeln!(
-                            buffer,
-                            "
-This constructor does not accept the label `{}`.
-Expected one of `{}`.",
-                            label,
-                            options.iter().join("`, `")
-                        )
-                        .unwrap();
-                    }
-                }
-
-                UnexpectedLabelledArg { meta, label } => {
-                    let diagnostic = ErrorDiagnostic {
-                        title: "Unexpected labelled argument".to_string(),
-                        label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        meta: meta.clone(),
-                    };
-                    write(buffer, diagnostic);
-                    writeln!(
-                        buffer,
-                        "
-This argument has been given a label but the constructor does not expect any.
-Please remove the label `{}`.",
-                        label
-                    )
-                    .unwrap();
-                }
-
-                PositionalArgumentAfterLabelled { meta } => {
-                    let diagnostic = ErrorDiagnostic {
-                        title: "Unexpected positional argument".to_string(),
-                        label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        meta: meta.clone(),
-                    };
-                    write(buffer, diagnostic);
-                    writeln!(
-                        buffer,
-                        "
-This unlablled argument has been supplied after a labelled argument.
-Once a labelled argument has been supplied all following arguments must
-also be labelled.",
-                    )
-                    .unwrap();
-                }
-
-                DuplicateName { meta, name: fun } => {
-                    let diagnostic = ErrorDiagnostic {
-                        title: "Duplicate name".to_string(),
-                        label: "Redefined here".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        meta: meta.clone(),
-                    };
-                    write(buffer, diagnostic);
-                    writeln!(
-                        buffer,
-                        "
-A function has already been defined with the name
-`{}` in this module.",
-                        fun
-                    )
-                    .unwrap();
-                }
-
-                DuplicateField { meta, label } => {
-                    let diagnostic = ErrorDiagnostic {
-                        title: "Duplicate field".to_string(),
-                        label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        meta: meta.clone(),
-                    };
-                    write(buffer, diagnostic);
-                    writeln!(
-                        buffer,
-                        "
-The field `{}` has already been defined. Rename this field.",
-                        label
-                    )
-                    .unwrap();
-                }
-
-                DuplicateArgument { meta, label } => {
-                    let diagnostic = ErrorDiagnostic {
-                        title: "Duplicate argument".to_string(),
-                        label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        meta: meta.clone(),
-                    };
-                    write(buffer, diagnostic);
-                    writeln!(
-                        buffer,
-                        "\nThe labelled argument `{}` has already been supplied.",
-                        label
-                    )
-                    .unwrap();
-                }
-
-                RecursiveType { meta } => {
-                    let diagnostic = ErrorDiagnostic {
-                        title: "Recursive type".to_string(),
-                        label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        meta: meta.clone(),
-                    };
-                    write(buffer, diagnostic);
-                }
-
-                NotFn { meta, typ } => {
-                    let diagnostic = ErrorDiagnostic {
-                        title: "Type mismatch".to_string(),
-                        label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        meta: meta.clone(),
-                    };
-                    write(buffer, diagnostic);
-
-                    writeln!(
-                        buffer,
-                        "
-This value is being called as a function but its type is:
-
-{}",
-                        typ.pretty_print(4)
-                    )
-                    .unwrap();
-                }
-
-                NotModule { meta, typ } => {
-                    let diagnostic = ErrorDiagnostic {
-                        title: "Not a module".to_string(),
-                        label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        meta: meta.clone(),
-                    };
-                    write(buffer, diagnostic);
-
-                    writeln!(
-                        buffer,
-                        "
-Fields can only be accessed on modules. This is not a module, it is
-a value with this type:
-
-{}",
-                        typ.pretty_print(4)
-                    )
-                    .unwrap();
-                }
-
-                CouldNotUnify {
-                    meta,
-                    expected,
-                    given,
-                } => {
-                    let diagnostic = ErrorDiagnostic {
-                        title: "Type mismatch".to_string(),
-                        label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        meta: meta.clone(),
-                    };
-                    write(buffer, diagnostic);
-
-                    writeln!(
-                        buffer,
-                        "
-Expected type:
-
-{}
-
-Found type:
-
-{}",
-                        expected.pretty_print(4),
-                        given.pretty_print(4)
-                    )
-                    .unwrap();
-                }
-
-                IncorrectTypeArity {
-                    meta,
-                    expected,
-                    given,
-                    ..
-                } => {
-                    let diagnostic = ErrorDiagnostic {
-                        title: "Incorrect arity".to_string(),
-                        label: format!("Expected {} arguments, got {}", expected, given),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        meta: meta.clone(),
-                    };
-                    write(buffer, diagnostic);
-                }
-
-                IncorrectArity {
-                    meta,
-                    expected,
-                    given,
-                } => {
-                    let diagnostic = ErrorDiagnostic {
-                        title: "Incorrect arity".to_string(),
-                        label: format!("Expected {} arguments, got {}", expected, given),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        meta: meta.clone(),
-                    };
-                    write(buffer, diagnostic);
-                }
-
-                UnknownType { meta, name, types } => {
-                    let diagnostic = ErrorDiagnostic {
-                        title: "Unknown type".to_string(),
-                        label: did_you_mean(name, &mut types.keys().collect::<Vec<_>>(), ""),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        meta: meta.clone(),
-                    };
-                    write(buffer, diagnostic);
-                    writeln!(
-                        buffer,
-                        "
-The type `{}` is not defined or imported in this module.",
-                        name
-                    )
-                    .unwrap();
-                }
-
-                UnknownVariable {
-                    meta,
-                    variables,
-                    name,
-                } => {
-                    let mut options: Vec<_> = variables.keys().collect();
-                    let diagnostic = ErrorDiagnostic {
-                        title: "Unknown variable".to_string(),
-                        label: did_you_mean(name, &mut options, ""),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        meta: meta.clone(),
-                    };
-                    write(buffer, diagnostic);
-                    writeln!(buffer, "\nThe name `{}` is not in scope here.", name).unwrap();
-                }
-
-                PrivateTypeLeak { meta, leaked } => {
-                    let diagnostic = ErrorDiagnostic {
-                        title: "Private type used in public interface".to_string(),
-                        label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        meta: meta.clone(),
-                    };
-                    write(buffer, diagnostic);
-
-                    // TODO: be more precise.
-                    // - is being returned by this public function
-                    // - is taken as an argument by this public function
-                    // - is taken as an argument by this public enum constructor
-                    // etc
-                    writeln!(
-                        buffer,
-                        "
-The following type is private, but is being used by this public export.
-
-{}
-
-Private types can only be used within the module that defines them.",
-                        leaked.pretty_print(4),
-                    )
-                    .unwrap();
-                }
-
-                UnknownModule {
-                    meta,
-                    name,
-                    imported_modules,
-                } => {
-                    let mut options: Vec<_> = imported_modules.keys().collect();
-                    let diagnostic = ErrorDiagnostic {
-                        title: "Unknown module".to_string(),
-                        label: did_you_mean(name, &mut options, ""),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        meta: meta.clone(),
-                    };
-                    write(buffer, diagnostic);
-                    writeln!(
-                        buffer,
-                        "\nNo module has been imported with the name `{}`.",
-                        name
-                    )
-                    .unwrap();
-                }
-
-                UnknownModuleType {
-                    meta,
-                    name,
-                    module_name,
-                    type_constructors,
-                } => {
-                    let mut options: Vec<_> = type_constructors.keys().collect();
-                    let diagnostic = ErrorDiagnostic {
-                        title: "Unknown module type".to_string(),
-                        label: did_you_mean(name, &mut options, ""),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        meta: meta.clone(),
-                    };
-                    write(buffer, diagnostic);
-                    writeln!(
-                        buffer,
-                        "\nThe module `{}` does not have a `{}` type.\n",
-                        module_name.join("/"),
-                        name
-                    )
-                    .unwrap();
-                }
-
-                UnknownModuleValue {
-                    meta,
-                    name,
-                    module_name,
-                    value_constructors,
-                } => {
-                    let mut options: Vec<_> = value_constructors.keys().collect();
-                    let diagnostic = ErrorDiagnostic {
-                        title: "Unknown module value".to_string(),
-                        label: did_you_mean(name, &mut options, ""),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        meta: meta.clone(),
-                    };
-                    write(buffer, diagnostic);
-                    writeln!(
-                        buffer,
-                        "\nThe module `{}` does not have a `{}` value.\n",
-                        module_name.join("/"),
-                        name
-                    )
-                    .unwrap();
-                }
-
-                UnknownModuleField {
-                    meta,
-                    name,
-                    module_name,
-                    type_constructors,
-                    value_constructors,
-                } => {
-                    let mut options: Vec<_> = type_constructors
-                        .keys()
-                        .chain(value_constructors.keys())
-                        .collect();
-                    let diagnostic = ErrorDiagnostic {
-                        title: "Unknown module field".to_string(),
-                        label: did_you_mean(name, &mut options, ""),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        meta: meta.clone(),
-                    };
-                    write(buffer, diagnostic);
-                    writeln!(
-                        buffer,
-                        "\nThe module `{}` does not have a `{}` field.\n",
-                        module_name.join("/"),
-                        name
-                    )
-                    .unwrap();
-                }
-            },
-
-            Error::Parse { path, src, error } => {
-                use lalrpop_util::ParseError::*;
-
-                match error {
-                    UnrecognizedToken {
-                        token: Some((start, _, end)),
-                        expected,
-                    } => {
-                        let diagnostic = ErrorDiagnostic {
-                            title: "Syntax error".to_string(),
-                            label: "Unexpected token".to_string(),
-                            file: path.to_str().unwrap().to_string(),
-                            src: src.to_string(),
-                            meta: crate::ast::Meta {
-                                start: *start,
-                                end: *end,
-                            },
-                        };
-                        write(buffer, diagnostic);
-                        write!(buffer, "\nExpected one of {}", expected.join(", "))
-                            .expect("error pretty buffer write");
-                    }
-
-                    UnrecognizedToken { token: None, .. } => {
-                        let diagnostic = ErrorDiagnostic {
-                            title: "Syntax error".to_string(),
-                            label: "Unexpected end of file".to_string(),
-                            file: path.to_str().unwrap().to_string(),
-                            src: src.to_string(),
-                            meta: crate::ast::Meta {
-                                start: src.len() - 2,
-                                end: src.len() - 1,
-                            },
-                        };
-                        write(buffer, diagnostic);
-                    }
-
-                    InvalidToken { location } => {
-                        let diagnostic = ErrorDiagnostic {
-                            title: "Syntax error".to_string(),
-                            label: "Unknown token".to_string(),
-                            file: path.to_str().unwrap().to_string(),
-                            src: src.to_string(),
-                            meta: crate::ast::Meta {
-                                start: *location,
-                                end: *location + 1,
-                            },
-                        };
-                        write(buffer, diagnostic);
-                        writeln!(
-                            buffer,
-                            "\nI don't know what this character means. Is it a typo?\n"
-                        )
-                        .expect("error pretty buffer write");
-                    }
-
-                    ExtraToken { .. } => unimplemented!(),
-
-                    User { error } => {
-                        use crate::parser::Error;
-                        match error {
-                            Error::TooManyHolesInCapture { meta, count } => {
-                                let diagnostic = ErrorDiagnostic {
-                                    title: "Invalid capture".to_string(),
-                                    label: "".to_string(),
-                                    file: path.to_str().unwrap().to_string(),
-                                    src: src.to_string(),
-                                    meta: meta.clone(),
-                                };
-                                write(buffer, diagnostic);
-                                let chars: String = (97..(97 + count))
-                                    .map(|x| x as u8 as char)
-                                    .map(|c| c.to_string())
-                                    .intersperse(", ".to_string())
-                                    .collect();
-                                write!(
-                                    buffer,
-                                    "
-The function capture syntax can only be used with a single _ argument,
-but this one uses {}. Rewrite this using the fn({}) {{ ... }} syntax.",
-                                    count, chars
-                                )
-                                .expect("error pretty buffer write");
-                            }
-                        }
-                    }
-                }
-            }
-
-            Error::DependencyCycle => {
-                println!("{:?}", self);
-                unimplemented!();
-            }
-
-            Error::UnknownImport {
-                module,
-                import,
-                meta,
-                path,
-                src,
-                modules,
-            } => {
-                let mut modules: Vec<&String> = modules.iter().collect();
-                let diagnostic = ErrorDiagnostic {
-                    title: "Unknown import".to_string(),
-                    label: did_you_mean(import, &mut modules, ""),
-                    file: path.to_str().unwrap().to_string(),
-                    src: src.to_string(),
-                    meta: meta.clone(),
-                };
-                write(buffer, diagnostic);
-                writeln!(
-                    buffer,
-                    "
-The module `{}` is trying to import the module `{}`,
-but it cannot be found.",
-                    module, import
-                )
-                .expect("error pretty buffer write");
-            }
-        }
-
-        buffer
-            .write_all(b"\n")
-            .expect("error pretty buffer write space after");
-    }
-
-    pub fn pretty_print(&self) {
-        let buffer_writer = termcolor::BufferWriter::stderr(termcolor::ColorChoice::Always);
-        let mut buffer = buffer_writer.buffer();
-        self.pretty(&mut buffer);
-        buffer_writer.print(&buffer).unwrap();
-    }
-}
-
-struct ErrorDiagnostic {
-    file: String,
-    meta: crate::ast::Meta,
-    src: String,
-    title: String,
-    label: String,
-}
-
-fn write(mut buffer: &mut Buffer, d: ErrorDiagnostic) {
-    use codespan::{CodeMap, Span};
-    use codespan_reporting::{Diagnostic, Label};
-
-    let mut code_map = CodeMap::new();
-    code_map.add_filemap(d.file.into(), d.src);
-    let diagnostic = Diagnostic::new_error(d.title).with_label(
-        Label::new_primary(Span::from_offset(
-            ((d.meta.start + 1) as u32).into(),
-            ((d.meta.end - d.meta.start) as i64).into(),
-        ))
-        .with_message(d.label),
-    );
-    codespan_reporting::emit(&mut buffer, &code_map, &diagnostic).unwrap();
-}
-
-/// Describes an error encountered while compiling the project (eg. a name collision
-/// between files).
-///
-struct ProjectErrorDiagnostic {
-    title: String,
-    label: String,
-}
-
-fn write_project(mut buffer: &mut Buffer, d: ProjectErrorDiagnostic) {
-    use codespan::{CodeMap, Span};
-    use codespan_reporting::{Diagnostic, Label};
-
-    let code_map: CodeMap<String> = CodeMap::new();
-    let diagnostic = Diagnostic::new_error(d.title)
-        .with_label(Label::new_primary(Span::new(0.into(), 0.into())).with_message(d.label));
-    codespan_reporting::emit(&mut buffer, &code_map, &diagnostic).unwrap();
 }
 
 pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
@@ -865,9 +173,61 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
                 .join(format!("{}.erl", module.name.join("@")));
             let code = crate::erl::module(module);
 
-            Ok(Compiled { name, code, path })
+            Ok(Compiled {
+                name,
+                code,
+                path,
+                origin,
+                // TODO: We want to include the type information here but we don't want to have to
+                // close the data as it need to continue to reside within modules_type_infos
+                // We could have them both have a pointer to the same data, or we could do one pass
+                // as it is now and then another pass once all the inference is done where we merge
+                // the modules_type_infos into this array and discard the modules_type_infos hash.
+            })
         })
         .collect()
+}
+
+pub fn collect_source(src_dir: PathBuf, origin: ModuleOrigin, srcs: &mut Vec<Input>) {
+    let src_dir = match src_dir.canonicalize() {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+    let is_gleam_path = |e: &walkdir::DirEntry| {
+        use regex::Regex;
+        lazy_static! {
+            static ref RE: Regex =
+                Regex::new("^([a-z_]+/)*[a-z_]+\\.gleam$").expect("collect_source RE regex");
+        }
+
+        RE.is_match(
+            e.path()
+                .strip_prefix(&*src_dir)
+                .expect("collect_source strip_prefix")
+                .to_str()
+                .unwrap_or(""),
+        )
+    };
+
+    walkdir::WalkDir::new(src_dir.clone())
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|e| e.file_type().is_file())
+        .filter(is_gleam_path)
+        .for_each(|dir_entry| {
+            let src = std::fs::read_to_string(dir_entry.path())
+                .unwrap_or_else(|_| panic!("Unable to read {:?}", dir_entry.path()));
+
+            srcs.push(Input {
+                path: dir_entry
+                    .path()
+                    .canonicalize()
+                    .expect("collect_source path canonicalize"),
+                base_path: src_dir.clone(),
+                origin: origin.clone(),
+                src,
+            })
+        });
 }
 
 #[test]
@@ -899,11 +259,13 @@ fn compile_test() {
             ],
             expected: Ok(vec![
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["two".to_string()],
                     path: PathBuf::from("/gen/src/two.erl"),
                     code: "-module(two).\n-compile(no_auto_import).\n\n\n".to_string(),
                 },
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["one".to_string()],
                     path: PathBuf::from("/gen/src/one.erl"),
                     code: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
@@ -918,6 +280,7 @@ fn compile_test() {
                 src: "".to_string(),
             }],
             expected: Ok(vec![Compiled {
+                    origin: ModuleOrigin::Test,
                 name: vec!["one".to_string()],
                 path: PathBuf::from("/gen/test/one.erl"),
                 code: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
@@ -963,11 +326,13 @@ fn compile_test() {
             ],
             expected: Ok(vec![
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["two".to_string()],
                     path: PathBuf::from("/gen/src/two.erl"),
                     code: "-module(two).\n-compile(no_auto_import).\n\n\n".to_string(),
                 },
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["one".to_string()],
                     path: PathBuf::from("/gen/src/one.erl"),
                     code: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
@@ -991,11 +356,13 @@ fn compile_test() {
             ],
             expected: Ok(vec![
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["one".to_string()],
                     path: PathBuf::from("/gen/src/one.erl"),
                     code: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
                 },
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["two".to_string()],
                     path: PathBuf::from("/gen/src/two.erl"),
                     code: "-module(two).\n-compile(no_auto_import).\n\n\n".to_string(),
@@ -1019,11 +386,13 @@ fn compile_test() {
             ],
             expected: Ok(vec![
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["one".to_string()],
                     path: PathBuf::from("/gen/src/one.erl"),
                     code: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
                 },
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["two".to_string()],
                     path: PathBuf::from("/gen/src/two.erl"),
                     code: "-module(two).\n-compile(no_auto_import).\n\n-export([unbox/1]).\n
@@ -1035,13 +404,13 @@ unbox(X) ->\n    {box, I} = X,\n    I.\n"
         Case {
             input: vec![
                 Input {
-                    origin: ModuleOrigin::Src,
+                    origin: ModuleOrigin::Dependency,
                     path: PathBuf::from("/src/one.gleam"),
                     base_path: PathBuf::from("/src"),
                     src: "pub enum Box { Box(Int) }".to_string(),
                 },
                 Input {
-                    origin: ModuleOrigin::Src,
+                    origin: ModuleOrigin::Dependency,
                     path: PathBuf::from("/src/two.gleam"),
                     base_path: PathBuf::from("/src"),
                     src: "import one pub fn box(x) { one.Box(x) }".to_string(),
@@ -1049,11 +418,13 @@ unbox(X) ->\n    {box, I} = X,\n    I.\n"
             ],
             expected: Ok(vec![
                 Compiled {
+                    origin: ModuleOrigin::Dependency,
                     name: vec!["one".to_string()],
                     path: PathBuf::from("/gen/src/one.erl"),
                     code: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
                 },
                 Compiled {
+                    origin: ModuleOrigin::Dependency,
                     name: vec!["two".to_string()],
                     path: PathBuf::from("/gen/src/two.erl"),
                     code: "-module(two).\n-compile(no_auto_import).\n\n-export([box/1]).\n
@@ -1070,6 +441,7 @@ box(X) ->\n    {box, X}.\n"
                 src: "pub enum Box { Box }".to_string(),
             }],
             expected: Ok(vec![Compiled {
+                    origin: ModuleOrigin::Src,
                 name: vec!["one".to_string(), "two".to_string()],
                 path: PathBuf::from("/gen/src/one@two.erl"),
                 code: "-module(one@two).\n-compile(no_auto_import).\n\n\n".to_string(),
@@ -1092,11 +464,13 @@ box(X) ->\n    {box, X}.\n"
             ],
             expected: Ok(vec![
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["one".to_string()],
                     path: PathBuf::from("/gen/src/one.erl"),
                     code: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
                 },
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["two".to_string()],
                     path: PathBuf::from("/gen/src/two.erl"),
                     code: "-module(two).\n-compile(no_auto_import).\n\n-export([box/0]).\n
@@ -1122,6 +496,7 @@ box() ->\n    box.\n"
             ],
             expected: Ok(vec![
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["one".to_string()],
                     path: PathBuf::from("/gen/src/one.erl"),
                     code: "-module(one).\n-compile(no_auto_import).\n\n-export([go/0]).\n
@@ -1130,6 +505,7 @@ go() ->
                         .to_string(),
                 },
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["two".to_string()],
                     path: PathBuf::from("/gen/src/two.erl"),
                     code: "-module(two).\n-compile(no_auto_import).\n\n-export([call/0]).\n
@@ -1157,12 +533,14 @@ call() ->
             ],
             expected: Ok(vec![
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["nested".to_string(), "one".to_string()],
                     path: PathBuf::from("/gen/src/nested@one.erl"),
                     code: "-module(nested@one).\n-compile(no_auto_import).\n\n\n"
                         .to_string(),
                 },
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["two".to_string()],
                     path: PathBuf::from("/gen/src/two.erl"),
                     code: "-module(two).\n-compile(no_auto_import).\n\n-export([go/1]).\n\ngo(X) ->\n    {box, Y} = X,\n    Y.\n"
@@ -1188,12 +566,14 @@ call() ->
             ],
             expected: Ok(vec![
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["nested".to_string(), "one".to_string()],
                     path: PathBuf::from("/gen/src/nested@one.erl"),
                     code: "-module(nested@one).\n-compile(no_auto_import).\n\n\n"
                         .to_string(),
                 },
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["two".to_string()],
                     path: PathBuf::from("/gen/src/two.erl"),
                     code: "-module(two).\n-compile(no_auto_import).\n\n-export([go/1]).\n\ngo(X) ->\n    {box, Y} = X,\n    Y.\n"
@@ -1221,6 +601,7 @@ call() ->
             ],
             expected: Ok(vec![
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["nested".to_string(), "one".to_string()],
                     path: PathBuf::from("/gen/src/nested@one.erl"),
                     code: "-module(nested@one).\n-compile(no_auto_import).\n\n-export([go/0]).\n
@@ -1228,6 +609,7 @@ go() ->\n    1.\n"
                         .to_string(),
                 },
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["two".to_string()],
                     path: PathBuf::from("/gen/src/two.erl"),
                     code: "-module(two).\n-compile(no_auto_import).\n\n-export([go/0, thing/0]).\n
@@ -1277,11 +659,13 @@ thing() ->\n    thing:new().\n"
             ],
             expected: Ok(vec![
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["one".to_string()],
                     path: PathBuf::from("/gen/src/one.erl"),
                     code: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
                 },
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["two".to_string()],
                     path: PathBuf::from("/gen/src/two.erl"),
                     code: "-module(two).\n-compile(no_auto_import).\n
@@ -1308,11 +692,13 @@ x(P) ->\n    {point, X, _} = P,\n    X.\n".to_string(),
             ],
             expected: Ok(vec![
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["one".to_string()],
                     path: PathBuf::from("/gen/src/one.erl"),
                     code: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
                 },
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["two".to_string()],
                     path: PathBuf::from("/gen/src/two.erl"),
                     code: "-module(two).\n-compile(no_auto_import).\n\nmake() ->\n    empty.\n".to_string(),
@@ -1336,11 +722,13 @@ x(P) ->\n    {point, X, _} = P,\n    X.\n".to_string(),
             ],
             expected: Ok(vec![
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["one".to_string()],
                     path: PathBuf::from("/gen/src/one.erl"),
                     code: "-module(one).\n-compile(no_auto_import).\n\n-export([id/1]).\n\nid(X) ->\n    X.\n".to_string(),
                 },
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["two".to_string()],
                     path: PathBuf::from("/gen/src/two.erl"),
                     code: "-module(two).\n-compile(no_auto_import).\n\nmake() ->\n    one:id(empty).\n".to_string(),
@@ -1364,11 +752,13 @@ x(P) ->\n    {point, X, _} = P,\n    X.\n".to_string(),
             ],
             expected: Ok(vec![
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["one".to_string()],
                     path: PathBuf::from("/gen/src/one.erl"),
                     code: "-module(one).\n-compile(no_auto_import).\n\n-export(['receive'/0]).\n\n'receive'() ->\n    1.\n".to_string(),
                 },
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["two".to_string()],
                     path: PathBuf::from("/gen/src/two.erl"),
                     code: "-module(two).\n-compile(no_auto_import).\n\nfunky() ->\n    fun one:'receive'/0.\n".to_string(),
@@ -1392,11 +782,13 @@ x(P) ->\n    {point, X, _} = P,\n    X.\n".to_string(),
             ],
             expected: Ok(vec![
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["one".to_string()],
                     path: PathBuf::from("/gen/src/one.erl"),
                     code: "-module(one).\n-compile(no_auto_import).\n\n-export(['receive'/0]).\n\n'receive'() ->\n    1.\n".to_string(),
                 },
                 Compiled {
+                    origin: ModuleOrigin::Src,
                     name: vec!["two".to_string()],
                     path: PathBuf::from("/gen/src/two.erl"),
                     code: "-module(two).\n-compile(no_auto_import).\n\nfunky() ->\n    fun one:'receive'/0.\n".to_string(),
