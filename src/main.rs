@@ -1,5 +1,6 @@
 mod ast;
 mod erl;
+mod error;
 mod new;
 mod parser;
 mod pretty;
@@ -96,10 +97,13 @@ fn command_build(root: String) {
         .filter(|p| {
             p.file_name().and_then(|os_string| os_string.to_str()) != Some(&project_config.name)
         })
-        .for_each(|p| collect_source(p.join("src"), ModuleOrigin::Src, &mut srcs));
+        .for_each(|p| {
+            crate::project::collect_source(p.join("src"), ModuleOrigin::Dependency, &mut srcs)
+        });
 
-    collect_source(root_path.join("src"), ModuleOrigin::Src, &mut srcs);
-    collect_source(root_path.join("test"), ModuleOrigin::Test, &mut srcs);
+    // Collect source code from top level project
+    crate::project::collect_source(root_path.join("src"), ModuleOrigin::Src, &mut srcs);
+    crate::project::collect_source(root_path.join("test"), ModuleOrigin::Test, &mut srcs);
 
     let compiled = match crate::project::compile(srcs) {
         Ok(c) => c,
@@ -117,6 +121,8 @@ fn command_build(root: String) {
         f.write_all(code.as_bytes())
             .expect("Unable to write Erlang code to file");
     }
+
+    std::fs::create_dir_all(root_path.join("gen").join("docs")).expect("creating gen/docs");
 
     println!("Done!");
 }
@@ -157,46 +163,4 @@ fn read_project_config(root: &str) -> Result<ProjectConfig, ()> {
         .unwrap_or_else(|e| die(format!("could not parse gleam.toml: {}", e.to_string())));
 
     Ok(project_config)
-}
-
-fn collect_source(src_dir: PathBuf, origin: ModuleOrigin, srcs: &mut Vec<crate::project::Input>) {
-    let src_dir = match src_dir.canonicalize() {
-        Ok(d) => d,
-        Err(_) => return,
-    };
-    let is_gleam_path = |e: &walkdir::DirEntry| {
-        use regex::Regex;
-        lazy_static! {
-            static ref RE: Regex =
-                Regex::new("^([a-z_]+/)*[a-z_]+\\.gleam$").expect("collect_source RE regex");
-        }
-
-        RE.is_match(
-            e.path()
-                .strip_prefix(&*src_dir)
-                .expect("collect_source strip_prefix")
-                .to_str()
-                .unwrap_or(""),
-        )
-    };
-
-    walkdir::WalkDir::new(src_dir.clone())
-        .into_iter()
-        .filter_map(Result::ok)
-        .filter(|e| e.file_type().is_file())
-        .filter(is_gleam_path)
-        .for_each(|dir_entry| {
-            let src = std::fs::read_to_string(dir_entry.path())
-                .unwrap_or_else(|_| panic!("Unable to read {:?}", dir_entry.path()));
-
-            srcs.push(project::Input {
-                path: dir_entry
-                    .path()
-                    .canonicalize()
-                    .expect("collect_source path canonicalize"),
-                base_path: src_dir.clone(),
-                origin: origin.clone(),
-                src,
-            })
-        });
 }
