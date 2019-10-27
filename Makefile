@@ -1,22 +1,18 @@
-COMPILER=gleam/target/release/gleam
-
 #
 # Goals to be specified by user
 #
-
-.PHONY: build
-build: book gleam gleam_stdlib/gen ## Build all targets
-
-.PHONY: install
-install: ## Build the Gleam compiler and place it on PATH
-	cd gleam && cargo install --path . --force
 
 .PHONY: help
 help:
 	@cat $(MAKEFILE_LIST) | grep -E '^[a-zA-Z_-]+:.*?## .*$$' | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-.PHONY: gleam
-gleam: gleam/target/release/gleam ## Build the Gleam compiler
+.PHONY: build
+build: book ## Build the compiler and the book
+	cargo build --release
+
+.PHONY: install
+install: ## Build the Gleam compiler and place it on PATH
+	cargo install --path . --force
 
 .PHONY: book
 book: docs/index.html ## Build the documentation
@@ -26,23 +22,12 @@ book-serve: ## Run the book dev server
 	cd book && mdbook serve --open --websocket-port 4200
 
 .PHONY: test ## Run all tests
-test: test-gleam test-stdlib
+test:
+	cargo test
 
 .PHONY: test-gleam-watch
-test-gleam-watch: ## Run compiler tests when files change
-	cd gleam && watchexec -e rs,lalrpop "echo; cargo test; echo; echo"
-
-.PHONY: test-gleam
-test-gleam: ## Test the compiler
-	cd gleam && cargo test
-
-.PHONY: test-stdlib
-test-stdlib: $(COMPILER) gleam_stdlib/gen ## Test gleam_stdlib
-	cd gleam_stdlib && rebar3 eunit
-
-.PHONY: test-stdlib-watch
-test-stdlib-watch: ## Run stdlib tests when files change
-	cd gleam_stdlib && watchexec -e gleam "echo; rebar3 eunit; echo"
+test-watch: ## Run compiler tests when files change
+	watchexec -e rs,lalrpop "echo; cargo test; echo; echo"
 
 # Debug print vars with `make print-VAR_NAME`
 print-%: ; @echo $*=$($*)
@@ -50,13 +35,6 @@ print-%: ; @echo $*=$($*)
 #
 # Files
 #
-
-gleam_stdlib/gen: $(COMPILER) $(shell find gleam_stdlib -type f)
-	rm -fr gleam_stdlib/gen
-	$(COMPILER) build gleam_stdlib
-
-$(COMPILER): gleam/Cargo.toml gleam/Cargo.lock gleam/build.rs $(shell find gleam/src -type f)
-	cd gleam && cargo build --release
 
 docs/index.html: $(shell find book/src -type f)
 	rm -fr docs

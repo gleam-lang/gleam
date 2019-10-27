@@ -13,7 +13,6 @@ jobs:
       - run: cd gleam && cargo test
       - run: cd gleam && cargo build --release
       - run: gleam/target/release/gleam --version
-      - run: gleam/target/release/gleam build gleam_stdlib
 
       - save_cache:
           key: gleam-compiler-cargo-{{ checksum "gleam/Cargo.toml" }}
