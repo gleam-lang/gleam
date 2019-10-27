@@ -7,8 +7,7 @@
 </h1>
 
 <p align="center">
-  <a href="https://circleci.com/gh/lpil/gleam"><img src="https://circleci.com/gh/lpil/gleam.svg?style=shield" alt="build"></a>
-  <a href="https://github.com/lpil/gleam/releases"><img src="https://img.shields.io/github/release/lpil/gleam" alt="GitHub release"></a>
+  <a href="https://github.com/gleam-lang/gleam/releases"><img src="https://img.shields.io/github/release/gleam-lang/gleam" alt="GitHub release"></a>
   <a href="https://webchat.freenode.net/#gleam-lang"><img src="https://img.shields.io/badge/freenode%20chat-%23gleam--lang-blue" alt="IRC: #gleam-lang on chat.freenode.net"></a>
 </p>
 
