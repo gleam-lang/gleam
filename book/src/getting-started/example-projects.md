@@ -13,7 +13,7 @@ shorter URL to use in its place.
 Uses the Elli web server and the Postgresql database via the epgsql client.
 
 
-## [The Gleam standard library](https://github.com/lpil/gleam/tree/master/gleam_stdlib)
+## [The Gleam standard library](https://github.com/gleam-lang/stdlib)
 
 A collection of modules for working with the common data structures of Gleam.
 Makes heavy use of Erlang FFI.

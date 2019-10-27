@@ -8,17 +8,16 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - run: rustup component add rustfmt
-      - run: cd gleam && cargo fmt -- --check
+      - run: cargo fmt -- --check
 
   build_compiler_linux:
     needs: rustfmt
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - run: cd gleam && cargo test
-      - run: cd gleam && cargo build --release
-      - run: gleam/target/release/gleam --version
-      - run: gleam/target/release/gleam build gleam_stdlib
+      - run: cargo test
+      - run: cargo build --release
+      - run: target/release/gleam --version
 
   build_compiler_macos:
     needs: rustfmt
@@ -26,19 +25,15 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - run: curl https://sh.rustup.rs -sSf | sh -s -- -y
-      - run: cd gleam && $HOME/.cargo/bin/cargo test
-      - run: cd gleam && $HOME/.cargo/bin/cargo build --release
-      - run: gleam/target/release/gleam --version
-      - run: gleam/target/release/gleam build gleam_stdlib
+      - run: $HOME/.cargo/bin/cargo test
+      - run: $HOME/.cargo/bin/cargo build --release
+      - run: target/release/gleam --version
 
   build_compiler_win:
     needs: rustfmt
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v1
-#       - run: cargo test
-#         working-directory: ./gleam
+      # - run: cargo test
       - run: cargo build --release
-        working-directory: ./gleam
-      - run: gleam/target/release/gleam --version
-      - run: gleam/target/release/gleam build gleam_stdlib
+      - run: target/release/gleam --version
