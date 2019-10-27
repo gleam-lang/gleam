@@ -5,7 +5,7 @@ use std::str::FromStr;
 use crate::ast::{
     UntypedExpr, Expr, Arg, UntypedModule, Module, UntypedStatement, Statement, TypeAst,
     UntypedPattern, BinOp, Clause, UntypedClause, EnumConstructor, Pattern, CallArg, StructField,
-    ExternalFnArg, ArgNames
+    ExternalFnArg, ArgNames, UnqualifiedImport
 };
 use crate::parser::*;
 
@@ -103,7 +103,7 @@ StatementFn: UntypedStatement = {
 }
 
 StatementImport: UntypedStatement = {
-    <s:@L> "import" <ns:(<VarName> "/")*> <n:VarName> <e:@L> <unqualified:("." "{" <Comma<AnyName>>"}")?> <as_name:("as" <VarName>)?> => {
+    "import" <s:@L> <ns:(<VarName> "/")*> <n:VarName> <e:@L> <unqualified:("." "{" <Comma<UnqualifiedImport>>"}")?> <as_name:("as" <VarName>)?> => {
         let mut module = ns;
         module.push(n);
         Statement::Import {
@@ -112,6 +112,13 @@ StatementImport: UntypedStatement = {
             module,
             as_name,
         }
+    }
+}
+
+UnqualifiedImport: UnqualifiedImport = {
+    <s:@L> <name:AnyName> <e:@L> => UnqualifiedImport {
+        meta: meta(s, e),
+        name,
     }
 }
 

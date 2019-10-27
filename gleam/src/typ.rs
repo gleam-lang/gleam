@@ -1,6 +1,7 @@
 use crate::ast::{
     Arg, ArgNames, BinOp, CallArg, Clause, Expr, Meta, Module, Pattern, Statement, StructField,
-    TypeAst, TypedExpr, TypedModule, TypedPattern, UntypedExpr, UntypedModule, UntypedPattern,
+    TypeAst, TypedExpr, TypedModule, TypedPattern, UnqualifiedImport, UntypedExpr, UntypedModule,
+    UntypedPattern,
 };
 use crate::pretty::*;
 use itertools::Itertools;
@@ -1237,7 +1238,7 @@ impl<'a> Env<'a> {
                     }
                 })?;
                 module.value_constructors.get(&*name).ok_or_else(|| {
-                    GetValueConstructorError::UnknownModuleField {
+                    GetValueConstructorError::UnknownModuleValue {
                         name: name.to_string(),
                         module_name: module.name.clone(),
                         value_constructors: module.value_constructors.clone(),
@@ -1354,11 +1355,19 @@ pub enum Error {
         type_constructors: HashMap<String, TypeConstructorInfo>,
     },
 
+    UnknownModuleValue {
+        meta: Meta,
+        name: String,
+        module_name: Vec<String>,
+        value_constructors: HashMap<String, ValueConstructor>,
+    },
+
     UnknownModuleField {
         meta: Meta,
         name: String,
         module_name: Vec<String>,
         value_constructors: HashMap<String, ValueConstructor>,
+        type_constructors: HashMap<String, TypeConstructorInfo>,
     },
 
     NotFn {
@@ -1436,7 +1445,7 @@ pub enum GetValueConstructorError {
         imported_modules: HashMap<String, ModuleTypeInfo>,
     },
 
-    UnknownModuleField {
+    UnknownModuleValue {
         name: String,
         module_name: Vec<String>,
         value_constructors: HashMap<String, ValueConstructor>,
@@ -1460,11 +1469,11 @@ fn convert_get_value_constructor_error(e: GetValueConstructorError, meta: &Meta)
             imported_modules,
         },
 
-        GetValueConstructorError::UnknownModuleField {
+        GetValueConstructorError::UnknownModuleValue {
             name,
             module_name,
             value_constructors,
-        } => Error::UnknownModuleField {
+        } => Error::UnknownModuleValue {
             meta: meta.clone(),
             name,
             module_name,
@@ -1925,15 +1934,14 @@ pub fn infer_module(
 This should not be possible. Please report this crash",
                 );
 
-                // Insert imported module into scope
-                let name = match &as_name {
+                // Determine local alias of imported module
+                let module_name = match &as_name {
                     None => module[module.len() - 1].clone(),
                     Some(name) => name.clone(),
                 };
-                env.imported_modules.insert(name, module_info.clone());
 
                 // Insert unqualified imports into scope
-                for name in &unqualified {
+                for UnqualifiedImport { name, meta } in &unqualified {
                     let mut imported = false;
 
                     if let Some(value) = module_info.value_constructors.get(name) {
@@ -1947,9 +1955,19 @@ This should not be possible. Please report this crash",
                     }
 
                     if !imported {
-                        panic!("module does not have this field") // TODO
+                        return Err(Error::UnknownModuleField {
+                            meta: meta.clone(),
+                            name: name.clone(),
+                            module_name: module.clone(),
+                            value_constructors: module_info.value_constructors.clone(),
+                            type_constructors: module_info.type_constructors.clone(),
+                        });
                     }
                 }
+
+                // Insert imported module into scope
+                env.imported_modules
+                    .insert(module_name, module_info.clone());
 
                 Ok(Statement::Import {
                     meta,
@@ -2269,7 +2287,7 @@ fn infer_module_select(
                 })?;
 
         let constructor = module_info.value_constructors.get(&label).ok_or_else(|| {
-            Error::UnknownModuleField {
+            Error::UnknownModuleValue {
                 name: label.clone(),
                 meta: select_meta.clone(),
                 module_name: module_info.name.clone(),

@@ -520,13 +520,41 @@ No module has been imported with the name `{}`.
                     .unwrap();
                 }
 
-                UnknownModuleField {
+                UnknownModuleValue {
                     meta,
                     name,
                     module_name,
                     value_constructors,
                 } => {
                     let mut options: Vec<_> = value_constructors.keys().collect();
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Unknown module value".to_string(),
+                        label: did_you_mean(name, &mut options, ""),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                    write!(
+                        buffer,
+                        "\nThe module `{}` does not have a `{}` value.\n",
+                        module_name.join("/"),
+                        name
+                    )
+                    .unwrap();
+                }
+
+                UnknownModuleField {
+                    meta,
+                    name,
+                    module_name,
+                    type_constructors,
+                    value_constructors,
+                } => {
+                    let mut options: Vec<_> = type_constructors
+                        .keys()
+                        .chain(value_constructors.keys())
+                        .collect();
                     let diagnostic = ErrorDiagnostic {
                         title: "Unknown module field".to_string(),
                         label: did_you_mean(name, &mut options, ""),
@@ -937,7 +965,7 @@ fn compile_test() {
             expected: Err(Error::SrcImportingTest {
                 path: PathBuf::from("/src/one.gleam"),
                 src: "import two".to_string(),
-                meta: crate::ast::Meta { start: 0, end: 10 },
+                meta: crate::ast::Meta { start: 7, end: 10 },
                 src_module: "one".to_string(),
                 test_module: "two".to_string(),
             }),

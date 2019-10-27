@@ -1,2 +1,2 @@
-import gleam/list.{map, fold}
-import gleam/list.{map, fold} as listy
+import nest/bird.{map, fold}
+import nest/bird.{map, fold} as listy

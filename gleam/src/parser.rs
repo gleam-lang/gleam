@@ -918,7 +918,7 @@ fn module_test() {
             type_info: (),
             name: vec![],
             statements: vec![Statement::Import {
-                meta: Meta { start: 0, end: 12 },
+                meta: Meta { start: 7, end: 12 },
                 module: vec!["magic".to_string()],
                 unqualified: vec![],
                 as_name: None,
@@ -1475,7 +1475,7 @@ fn module_test() {
             type_info: (),
             name: vec![],
             statements: vec![Statement::Import {
-                meta: Meta { start: 0, end: 20 },
+                meta: Meta { start: 7, end: 20 },
                 module: vec!["one".to_string(), "two".to_string(), "three".to_string(),],
                 unqualified: vec![],
                 as_name: None,
@@ -1525,7 +1525,7 @@ fn module_test() {
             type_info: (),
             name: vec![],
             statements: vec![Statement::Import {
-                meta: Meta { start: 0, end: 21 },
+                meta: Meta { start: 7, end: 21 },
                 unqualified: vec![],
                 module: vec!["one".to_string(), "two".to_string(), "three".to_string(),],
                 as_name: Some("something".to_string()),

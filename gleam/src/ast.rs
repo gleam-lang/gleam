@@ -38,9 +38,9 @@ impl<A, B, C, D, E> Module<A, B, C, D, E> {
 fn module_dependencies_test() {
     assert_eq!(
         vec![
-            ("foo".to_string(), Meta { start: 0, end: 10 }),
-            ("bar".to_string(), Meta { start: 11, end: 21 }),
-            ("foo_bar".to_string(), Meta { start: 22, end: 36 }),
+            ("foo".to_string(), Meta { start: 7, end: 10 }),
+            ("bar".to_string(), Meta { start: 18, end: 21 }),
+            ("foo_bar".to_string(), Meta { start: 29, end: 36 }),
         ],
         crate::grammar::ModuleParser::new()
             .parse("import foo import bar import foo_bar")
@@ -136,7 +136,7 @@ pub enum Statement<ValueConstructor, ModuleValueConstructor, PatternConstructor,
         meta: Meta,
         module: Vec<String>,
         as_name: Option<String>,
-        unqualified: Vec<String>,
+        unqualified: Vec<UnqualifiedImport>,
     },
 
     Struct {
@@ -146,6 +146,12 @@ pub enum Statement<ValueConstructor, ModuleValueConstructor, PatternConstructor,
         public: bool,
         fields: Vec<StructField>,
     },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct UnqualifiedImport {
+    pub meta: Meta,
+    pub name: String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
