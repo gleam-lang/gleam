@@ -1,5 +1,3 @@
-import gleam/pair
-
 pub enum Order =
   | Lt
   | Eq

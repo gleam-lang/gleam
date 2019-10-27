@@ -1,12 +1,12 @@
 import gleam/string
 import gleam/expect
 import gleam/map
-import gleam/pair
+import gleam/pair.{Pair}
 
 pub fn from_list_test() {
   [
-    pair.Pair(4, 0),
-    pair.Pair(1, 0),
+    Pair(4, 0),
+    Pair(1, 0),
   ]
   |> map.from_list
   |> map.size
@@ -20,23 +20,23 @@ pub fn has_key_test() {
   |> expect.false
 
   [
-      pair.Pair(1, 0),
+      Pair(1, 0),
   ]
   |> map.from_list
   |> map.has_key(_, 1)
   |> expect.true
 
   [
-      pair.Pair(4, 0),
-      pair.Pair(1, 0),
+      Pair(4, 0),
+      Pair(1, 0),
   ]
   |> map.from_list
   |> map.has_key(_, 1)
   |> expect.true
 
   [
-    pair.Pair(4, 0),
-    pair.Pair(1, 0),
+    Pair(4, 0),
+    Pair(1, 0),
   ]
   |> map.from_list
   |> map.has_key(_, 0)
@@ -55,8 +55,8 @@ pub fn new_test() {
 
 pub fn get_test() {
   let proplist = [
-    pair.Pair(4, 0),
-    pair.Pair(1, 1),
+    Pair(4, 0),
+    Pair(1, 1),
   ]
   let m = map.from_list(proplist)
 
@@ -79,32 +79,32 @@ pub fn insert_test() {
   |> map.insert(_, "b", 1)
   |> map.insert(_, "c", 2)
   |> expect.equal(_, map.from_list([
-    pair.Pair("a", 0),
-    pair.Pair("b", 1),
-    pair.Pair("c", 2),
+    Pair("a", 0),
+    Pair("b", 1),
+    Pair("c", 2),
   ]))
 }
 
 pub fn map_values_test() {
   [
-    pair.Pair(1, 0),
-    pair.Pair(2, 1),
-    pair.Pair(3, 2),
+    Pair(1, 0),
+    Pair(2, 1),
+    Pair(3, 2),
   ]
   |> map.from_list
   |> map.map_values(_, fn(k, v) { k + v })
   |> expect.equal(_, map.from_list([
-    pair.Pair(1, 1),
-    pair.Pair(2, 3),
-    pair.Pair(3, 5),
+    Pair(1, 1),
+    Pair(2, 3),
+    Pair(3, 5),
   ]))
 }
 
 pub fn keys_test() {
   [
-    pair.Pair("a", 0),
-    pair.Pair("b", 1),
-    pair.Pair("c", 2),
+    Pair("a", 0),
+    Pair("b", 1),
+    Pair("c", 2),
   ]
   |> map.from_list
   |> map.keys
@@ -113,9 +113,9 @@ pub fn keys_test() {
 
 pub fn values_test() {
   [
-    pair.Pair("a", 0),
-    pair.Pair("b", 1),
-    pair.Pair("c", 2),
+    Pair("a", 0),
+    Pair("b", 1),
+    Pair("c", 2),
   ]
   |> map.from_list
   |> map.values
@@ -124,72 +124,72 @@ pub fn values_test() {
 
 pub fn take_test() {
   [
-    pair.Pair("a", 0),
-    pair.Pair("b", 1),
-    pair.Pair("c", 2),
+    Pair("a", 0),
+    Pair("b", 1),
+    Pair("c", 2),
   ]
   |> map.from_list
   |> map.take(_, ["a", "b", "d"])
-  |> expect.equal(_, map.from_list([pair.Pair("a", 0), pair.Pair("b", 1)]))
+  |> expect.equal(_, map.from_list([Pair("a", 0), Pair("b", 1)]))
 }
 
 pub fn drop_test() {
   [
-    pair.Pair("a", 0),
-    pair.Pair("b", 1),
-    pair.Pair("c", 2),
+    Pair("a", 0),
+    Pair("b", 1),
+    Pair("c", 2),
   ]
   |> map.from_list
   |> map.drop(_, ["a", "b", "d"])
-  |> expect.equal(_, map.from_list([pair.Pair("c", 2)]))
+  |> expect.equal(_, map.from_list([Pair("c", 2)]))
 }
 
 pub fn merge_test() {
   let a = map.from_list([
-    pair.Pair("a", 2),
-    pair.Pair("c", 4),
-    pair.Pair("d", 3),
+    Pair("a", 2),
+    Pair("c", 4),
+    Pair("d", 3),
   ])
   let b = map.from_list([
-    pair.Pair("a", 0),
-    pair.Pair("b", 1),
-    pair.Pair("c", 2),
+    Pair("a", 0),
+    Pair("b", 1),
+    Pair("c", 2),
   ])
 
   map.merge(a, b)
   |> expect.equal(_, map.from_list([
-      pair.Pair("a", 0),
-      pair.Pair("b", 1),
-      pair.Pair("c", 2),
-      pair.Pair("d", 3),
+      Pair("a", 0),
+      Pair("b", 1),
+      Pair("c", 2),
+      Pair("d", 3),
     ]))
 
   map.merge(b, a)
   |> expect.equal(_, map.from_list([
-      pair.Pair("a", 2),
-      pair.Pair("b", 1),
-      pair.Pair("c", 4),
-      pair.Pair("d", 3),
+      Pair("a", 2),
+      Pair("b", 1),
+      Pair("c", 4),
+      Pair("d", 3),
     ]))
 }
 
 pub fn delete_test() {
   [
-    pair.Pair("a", 0),
-    pair.Pair("b", 1),
-    pair.Pair("c", 2),
+    Pair("a", 0),
+    Pair("b", 1),
+    Pair("c", 2),
   ]
   |> map.from_list
   |> map.delete(_, "a")
   |> map.delete(_, "d")
-  |> expect.equal(_, map.from_list([pair.Pair("b", 1), pair.Pair("c", 2)]))
+  |> expect.equal(_, map.from_list([Pair("b", 1), Pair("c", 2)]))
 }
 
 pub fn update_test() {
   let dict = map.from_list([
-    pair.Pair("a", 0),
-    pair.Pair("b", 1),
-    pair.Pair("c", 2),
+    Pair("a", 0),
+    Pair("b", 1),
+    Pair("c", 2),
   ])
 
   let inc_or_zero = fn(x) {
@@ -202,35 +202,35 @@ pub fn update_test() {
   dict
   |> map.update(_, "a", inc_or_zero)
   |> expect.equal(_, map.from_list([
-    pair.Pair("a", 1),
-    pair.Pair("b", 1),
-    pair.Pair("c", 2),
+    Pair("a", 1),
+    Pair("b", 1),
+    Pair("c", 2),
   ]))
 
   dict
   |> map.update(_, "b", inc_or_zero)
   |> expect.equal(_, map.from_list([
-    pair.Pair("a", 0),
-    pair.Pair("b", 2),
-    pair.Pair("c", 2),
+    Pair("a", 0),
+    Pair("b", 2),
+    Pair("c", 2),
   ]))
 
   dict
   |> map.update(_, "z", inc_or_zero)
   |> expect.equal(_, map.from_list([
-    pair.Pair("a", 0),
-    pair.Pair("b", 1),
-    pair.Pair("c", 2),
-    pair.Pair("z", 0),
+    Pair("a", 0),
+    Pair("b", 1),
+    Pair("c", 2),
+    Pair("z", 0),
   ]))
 }
 
 pub fn fold_test() {
   let dict = map.from_list([
-    pair.Pair("a", 0),
-    pair.Pair("b", 1),
-    pair.Pair("c", 2),
-    pair.Pair("d", 3),
+    Pair("a", 0),
+    Pair("b", 1),
+    Pair("c", 2),
+    Pair("d", 3),
   ])
 
   let add = fn(_, v, acc) {

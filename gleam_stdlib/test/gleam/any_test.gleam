@@ -1,10 +1,10 @@
 import gleam/any
 import gleam/atom
 import gleam/list
-import gleam/pair
 import gleam/expect
 import gleam/result
 import gleam/map
+import gleam/pair.{Pair}
 
 pub fn string_test() {
   ""
@@ -189,32 +189,32 @@ pub fn list_test() {
 }
 
 pub fn pair_test() {
-  pair.Pair(1, [])
+  Pair(1, [])
   |> any.from
   |> any.pair
-  |> expect.equal(_, Ok(pair.Pair(any.from(1), any.from([]))))
+  |> expect.equal(_, Ok(Pair(any.from(1), any.from([]))))
 
-  pair.Pair("ok", "ok")
+  Pair("ok", "ok")
   |> any.from
   |> any.pair
-  |> expect.equal(_, Ok(pair.Pair(any.from("ok"), any.from("ok"))))
+  |> expect.equal(_, Ok(Pair(any.from("ok"), any.from("ok"))))
 
-  pair.Pair(1, 2.0)
+  Pair(1, 2.0)
   |> any.from
   |> any.pair
   |> result.then(_, fn(x) {
     x
     |> pair.first
     |> any.int
-    |> result.map(_, fn(f) { pair.Pair(f, pair.second(x)) })
+    |> result.map(_, fn(f) { Pair(f, pair.second(x)) })
   })
   |> result.then(_, fn(x) {
     x
     |> pair.second
     |> any.float
-    |> result.map(_, fn(f) { pair.Pair(pair.first(x), f) })
+    |> result.map(_, fn(f) { Pair(pair.first(x), f) })
   })
-  |> expect.equal(_, Ok(pair.Pair(1, 2.0)))
+  |> expect.equal(_, Ok(Pair(1, 2.0)))
 }
 
 pub fn field_test() {
