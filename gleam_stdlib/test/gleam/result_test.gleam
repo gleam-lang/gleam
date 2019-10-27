@@ -1,6 +1,6 @@
 import gleam/expect
 import gleam/result
-import gleam/pair
+import gleam/pair.{Pair}
 
 pub fn is_ok_test() {
   result.is_ok(Ok(1))
@@ -38,8 +38,8 @@ pub fn map_error_test() {
   |> expect.equal(_, Ok(1))
 
   Error(1)
-  |> result.map_error(_, fn(x) { pair.Pair("ok", x + 1) })
-  |> expect.equal(_, Error(pair.Pair("ok", 2)))
+  |> result.map_error(_, fn(x) { Pair("ok", x + 1) })
+  |> expect.equal(_, Error(Pair("ok", 2)))
 }
 
 pub fn flatten_test() {

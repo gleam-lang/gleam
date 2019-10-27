@@ -1,5 +1,4 @@
 import gleam/order
-import gleam/pair
 
 pub fn negate(bool) {
   case bool {
