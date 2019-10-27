@@ -6,6 +6,8 @@
   at the call site.
 - `case` expressions now accept multiple subjects, enabling pattern matching
   on multiple values simultaneously.
+- Values and types can be imported from modules and references in an
+  unqualified fashion.
 - `gleam new` now accepts a `--template` flag to generate different styles of
   project. An OTP application template has been added alongside the existing
   OTP library template.
