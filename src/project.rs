@@ -1032,7 +1032,7 @@ fn compile_test() {
                     origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/one.gleam"),
                     base_path: PathBuf::from("/src"),
-                    src: "pub enum Box = | Box(Int)".to_string(),
+                    src: "pub enum Box { Box(Int) }".to_string(),
                 },
                 Input {
                     origin: ModuleOrigin::Src,
@@ -1062,7 +1062,7 @@ unbox(X) ->\n    {box, I} = X,\n    I.\n"
                     origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/one.gleam"),
                     base_path: PathBuf::from("/src"),
-                    src: "pub enum Box = | Box(Int)".to_string(),
+                    src: "pub enum Box { Box(Int) }".to_string(),
                 },
                 Input {
                     origin: ModuleOrigin::Src,
@@ -1091,7 +1091,7 @@ box(X) ->\n    {box, X}.\n"
                 origin: ModuleOrigin::Src,
                 path: PathBuf::from("/src/one/two.gleam"),
                 base_path: PathBuf::from("/src"),
-                src: "pub enum Box = | Box".to_string(),
+                src: "pub enum Box { Box }".to_string(),
             }],
             expected: Ok(vec![Compiled {
                 name: vec!["one".to_string(), "two".to_string()],
@@ -1105,7 +1105,7 @@ box(X) ->\n    {box, X}.\n"
                     origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/one.gleam"),
                     base_path: PathBuf::from("/src"),
-                    src: "pub enum Box = | Box".to_string(),
+                    src: "pub enum Box { Box }".to_string(),
                 },
                 Input {
                     origin: ModuleOrigin::Src,
@@ -1169,7 +1169,7 @@ call() ->
                     origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/nested/one.gleam"),
                     base_path: PathBuf::from("/src"),
-                    src: "pub enum Box = | Box(Int)".to_string(),
+                    src: "pub enum Box { Box(Int) }".to_string(),
                 },
                 Input {
                     origin: ModuleOrigin::Src,
@@ -1200,7 +1200,7 @@ call() ->
                     origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/nested/one.gleam"),
                     base_path: PathBuf::from("/src"),
-                    src: "pub enum Box = | Box(Int)".to_string(),
+                    src: "pub enum Box { Box(Int) }".to_string(),
                 },
                 Input {
                     origin: ModuleOrigin::Src,

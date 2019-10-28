@@ -1122,21 +1122,21 @@ fn module_test() {
             type_info: (),
             name: vec![],
             statements: vec![Statement::Enum {
-                meta: Meta { start: 0, end: 28 },
+                meta: Meta { start: 0, end: 16 },
                 public: true,
                 args: vec!["a".to_string()],
                 constructors: vec![EnumConstructor {
-                    meta: Meta { start: 20, end: 28 },
+                    meta: Meta { start: 18, end: 26 },
                     name: "Boxed".to_string(),
                     args: vec![TypeAst::Var {
-                        meta: Meta { start: 26, end: 27 },
+                        meta: Meta { start: 24, end: 25 },
                         name: "a".to_string()
                     }]
                 }],
                 name: "Box".to_string(),
             }]
         }),
-        ModuleParser::new().parse("pub enum Box(a) = | Boxed(a)"),
+        ModuleParser::new().parse("pub enum Box(a) { Boxed(a) }"),
     );
 
     assert_eq!(
@@ -1145,14 +1145,14 @@ fn module_test() {
             name: vec![],
             statements: vec![
                 Statement::Enum {
-                    meta: Meta { start: 0, end: 50 },
+                    meta: Meta { start: 0, end: 27 },
                     public: true,
                     args: vec!["x".to_string()],
                     constructors: vec![EnumConstructor {
-                        meta: Meta { start: 31, end: 50 },
+                        meta: Meta { start: 29, end: 48 },
                         name: "Boxxy0123456789x".to_string(),
                         args: vec![TypeAst::Var {
-                            meta: Meta { start: 48, end: 49 },
+                            meta: Meta { start: 46, end: 47 },
                             name: "x".to_string()
                         }]
                     }],
@@ -1223,7 +1223,7 @@ fn module_test() {
             ]
         }),
         ModuleParser::new().parse(
-            "pub enum Box0123456789x(x) = | Boxxy0123456789x(x)
+            "pub enum Box0123456789x(x) { Boxxy0123456789x(x) }
 
              pub fn value(x) {
                let Boxxy0123456789x(a) = x
@@ -1238,14 +1238,14 @@ fn module_test() {
             name: vec![],
             statements: vec![
                 Statement::Enum {
-                    meta: Meta { start: 0, end: 28 },
+                    meta: Meta { start: 0, end: 16 },
                     public: true,
                     args: vec!["x".to_string()],
                     constructors: vec![EnumConstructor {
-                        meta: Meta { start: 20, end: 28 },
+                        meta: Meta { start: 18, end: 26 },
                         name: "Boxxy".to_string(),
                         args: vec![TypeAst::Var {
-                            meta: Meta { start: 26, end: 27 },
+                            meta: Meta { start: 24, end: 25 },
                             name: "x".to_string()
                         }]
                     }],
@@ -1304,7 +1304,7 @@ fn module_test() {
             ]
         }),
         ModuleParser::new().parse(
-            "pub enum Box(x) = | Boxxy(x)
+            "pub enum Box(x) { Boxxy(x) }
 
              pub fn value(x) {
                let Boxxy(a) = x

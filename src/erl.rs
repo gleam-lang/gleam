@@ -1504,10 +1504,8 @@ t() ->
 "#,
         },
         Case {
-            src: r#"pub enum Money = | Pound(Int)
-                    fn pound(x) {
-                      Pound(x)
-                    }"#,
+            src: r#"pub enum Money { Pound(Int) }
+                    fn pound(x) { Pound(x) }"#,
             erl: r#"-module(the_app).
 -compile(no_auto_import).
 

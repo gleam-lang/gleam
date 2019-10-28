@@ -3430,7 +3430,7 @@ fn infer_module_test() {
     );
 
     assert_infer!(
-        "pub enum Is = | Yes | No
+        "pub enum Is { Yes No }
          pub fn yes() { Yes }
          pub fn no() { No }",
         vec![
@@ -3442,7 +3442,7 @@ fn infer_module_test() {
     );
 
     assert_infer!(
-        "pub enum Num = | I(Int)
+        "pub enum Num { I(Int) }
          pub fn one() { I(1) }",
         vec![("I", "fn(Int) -> Num"), ("one", "fn() -> Num")],
     );
@@ -3459,7 +3459,7 @@ fn infer_module_test() {
     );
 
     assert_infer!(
-        "pub enum Box(a) = | Box(a)
+        "pub enum Box(a) { Box(a) }
         pub fn int() { Box(1) }
         pub fn float() { Box(1.0) }",
         vec![
@@ -3470,19 +3470,19 @@ fn infer_module_test() {
     );
 
     assert_infer!(
-        "pub enum Singleton = | Singleton
+        "pub enum Singleton { Singleton }
         pub fn go(x) { let Singleton = x 1 }",
         vec![("Singleton", "Singleton"), ("go", "fn(Singleton) -> Int")],
     );
 
     assert_infer!(
-        "pub enum Box(a) = | Box(a)
+        "pub enum Box(a) { Box(a) }
         pub fn unbox(x) { let Box(a) = x a }",
         vec![("Box", "fn(a) -> Box(a)"), ("unbox", "fn(Box(a)) -> a")],
     );
 
     assert_infer!(
-        "pub enum I = | I(Int)
+        "pub enum I { I(Int) }
         pub fn open(x) { case x { I(i) -> i  } }",
         vec![("I", "fn(Int) -> I"), ("open", "fn(I) -> Int")],
     );
@@ -3821,13 +3821,9 @@ pub fn x() { id(1, 1.0) }
 
     assert_error!(
         r#"external type PrivateType
-                    pub enum LeakType =
-                      | Variant(PrivateType)"#,
+           pub enum LeakType { Variant(PrivateType) }"#,
         Error::PrivateTypeLeak {
-            meta: Meta {
-                start: 90,
-                end: 110,
-            },
+            meta: Meta { start: 57, end: 77 },
             leaked: Type::App {
                 args: vec![],
                 public: false,
