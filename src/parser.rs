@@ -861,7 +861,7 @@ fn expr_test() {
 
     assert_eq!(
         Ok(Expr::Case {
-            meta: Meta { start: 0, end: 30 },
+            meta: Meta { start: 0, end: 26 },
             typ: (),
             subjects: vec![Expr::Var {
                 constructor: (),
@@ -870,32 +870,32 @@ fn expr_test() {
             }],
             clauses: vec![
                 Clause {
-                    meta: Meta { start: 9, end: 18 },
+                    meta: Meta { start: 9, end: 16 },
                     patterns: vec![Pattern::Int {
-                        meta: Meta { start: 11, end: 12 },
+                        meta: Meta { start: 9, end: 10 },
                         value: 1
                     }],
                     then: Expr::Int {
-                        meta: Meta { start: 16, end: 18 },
+                        meta: Meta { start: 14, end: 16 },
                         typ: (),
                         value: 10
                     }
                 },
                 Clause {
-                    meta: Meta { start: 19, end: 28 },
+                    meta: Meta { start: 17, end: 24 },
                     patterns: vec![Pattern::Int {
-                        meta: Meta { start: 21, end: 22 },
+                        meta: Meta { start: 17, end: 18 },
                         value: 2
                     }],
                     then: Expr::Int {
-                        meta: Meta { start: 26, end: 28 },
+                        meta: Meta { start: 22, end: 24 },
                         typ: (),
                         value: 20
                     }
                 }
             ]
         }),
-        ExprParser::new().parse("case x { | 1 -> 10 | 2 -> 20 }"),
+        ExprParser::new().parse("case x { 1 -> 10 2 -> 20 }"),
     );
 }
 
