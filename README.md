@@ -23,14 +23,15 @@ Elixir and LFE.
 It looks like this:
 
 ```rust
-pub enum Tree(value) =
-  | Leaf(value)
-  | Node(Tree(value), Tree(value))
+pub enum Tree(value) {
+  Leaf(value)
+  Node(Tree(value), Tree(value))
+}
 
 pub fn any(tree: Tree(a), check: fn(a) -> Bool) -> Bool {
   case tree {
-  | Leaf(i) -> check(i)
-  | Node(left, right) -> any(left, check) || any(right, check)
+    Leaf(i) -> check(i)
+    Node(left, right) -> any(left, check) || any(right, check)
   }
 }
 
