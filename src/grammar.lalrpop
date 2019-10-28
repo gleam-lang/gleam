@@ -33,7 +33,7 @@ Statement: UntypedStatement = {
 }
 
 StatementEnum: UntypedStatement = {
-    <s:@L> <p:"pub"?> "enum" <t:TypeName> "=" <cs:EnumConstructor+> <e:@L> => Statement::Enum {
+    <s:@L> <p:"pub"?> "enum" <t:TypeName> <e:@L> "{" <cs:EnumConstructor+> "}" => Statement::Enum {
         meta: meta(s, e),
         public: p.is_some(),
         name: t.0,
@@ -61,7 +61,7 @@ StructFieldDefinition: StructField = {
 }
 
 EnumConstructor: EnumConstructor = {
-    "|" <s:@L> <t:UpName> <args:EnumConstructorArgs?> <e:@L> => EnumConstructor {
+    <s:@L> <t:UpName> <args:EnumConstructorArgs?> <e:@L> => EnumConstructor {
         meta: meta(s, e),
         name: t,
         args: args.unwrap_or_else(|| vec![]),
