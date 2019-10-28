@@ -11,6 +11,8 @@
 - `gleam new` now accepts a `--template` flag to generate different styles of
   project. An OTP application template has been added alongside the existing
   OTP library template.
+- The syntax for defining enums, case expressions, and blocks has been changed
+  to a syntax closer to that found in the C family of languages.
 - The source code preview for functions that return a type incompatible with
   the functions annotations has been improved to be more precise.
 - A helpful error message is rendered if an enum field contains a generic type
