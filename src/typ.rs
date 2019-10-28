@@ -3147,17 +3147,17 @@ fn infer_test() {
     assert_infer!("let add = fn(x, y) { x + y } add(_, 2)", "fn(Int) -> Int");
 
     // case
-    assert_infer!("case 1 { | a -> 1 }", "Int");
-    assert_infer!("case 1 { | a -> 1.0 | b -> 2.0 | c -> 3.0 }", "Float");
-    assert_infer!("case 1 { | a -> a }", "Int");
-    assert_infer!("case 1 { | 1 -> 10 | 2 -> 20 | x -> x * 10 }", "Int");
-    assert_infer!("case 2.0 { | 2.0 -> 1 | x -> 0 }", "Int");
-    assert_infer!(r#"case "ok" { | "ko" -> 1 | x -> 0 }"#, "Int");
+    assert_infer!("case 1 { a -> 1 }", "Int");
+    assert_infer!("case 1 { a -> 1.0 b -> 2.0 c -> 3.0 }", "Float");
+    assert_infer!("case 1 { a -> a }", "Int");
+    assert_infer!("case 1 { 1 -> 10 2 -> 20 x -> x * 10 }", "Int");
+    assert_infer!("case 2.0 { 2.0 -> 1 x -> 0 }", "Int");
+    assert_infer!(r#"case "ok" { "ko" -> 1 x -> 0 }"#, "Int");
 
     // Multiple subject case
-    assert_infer!("case 1, 2.0 { | a, b -> a }", "Int");
-    assert_infer!("case 1, 2.0 { | a, b -> b }", "Float");
-    assert_infer!("case 1, 2.0, 3 { | a, b, c -> a + c }", "Int");
+    assert_infer!("case 1, 2.0 { a, b -> a }", "Int");
+    assert_infer!("case 1, 2.0 { a, b -> b }", "Float");
+    assert_infer!("case 1, 2.0, 3 { a, b, c -> a + c }", "Int");
 
     // let
     assert_infer!("let [] = [] 1", "Int");
@@ -3265,45 +3265,45 @@ fn infer_error_test() {
     );
 
     assert_error!(
-        "case 1 { | a -> 1 | b -> 2.0 }",
+        "case 1 { a -> 1 b -> 2.0 }",
         Error::CouldNotUnify {
-            meta: Meta { start: 25, end: 28 },
+            meta: Meta { start: 21, end: 24 },
             expected: int(),
             given: float(),
         },
     );
 
     assert_error!(
-        "case 1.0 { | 1 -> 1 }",
+        "case 1.0 { 1 -> 1 }",
         Error::CouldNotUnify {
-            meta: Meta { start: 13, end: 14 },
+            meta: Meta { start: 11, end: 12 },
             expected: float(),
             given: int(),
         },
     );
 
     assert_error!(
-        "case 1 { | 1.0 -> 1 }",
+        "case 1 { 1.0 -> 1 }",
         Error::CouldNotUnify {
-            meta: Meta { start: 11, end: 14 },
+            meta: Meta { start: 9, end: 12 },
             expected: int(),
             given: float(),
         },
     );
 
     assert_error!(
-        "case 1, 2.0 { | a, b -> a + b }",
+        "case 1, 2.0 { a, b -> a + b }",
         Error::CouldNotUnify {
-            meta: Meta { start: 28, end: 29 },
+            meta: Meta { start: 26, end: 27 },
             expected: int(),
             given: float(),
         },
     );
 
     assert_error!(
-        "case 1, 2.0 { | a, b -> a | 1, 2 -> 0 }",
+        "case 1, 2.0 { a, b -> a 1, 2 -> 0 }",
         Error::CouldNotUnify {
-            meta: Meta { start: 31, end: 32 },
+            meta: Meta { start: 27, end: 28 },
             expected: float(),
             given: int(),
         },
@@ -3348,9 +3348,9 @@ fn infer_error_test() {
     );
 
     assert_error!(
-        "case 1 { | x -> 1 | 1 -> x }",
+        "case 1 { x -> 1 1 -> x }",
         Error::UnknownVariable {
-            meta: Meta { start: 25, end: 26 },
+            meta: Meta { start: 21, end: 22 },
             name: "x".to_string(),
             variables: Env::new(&HashMap::new()).variables,
         },
@@ -3416,8 +3416,8 @@ fn infer_module_test() {
     assert_infer!(
         "pub fn repeat(i, x) {
            case i {
-           | 0 -> []
-           | i -> [x | repeat(i - 1, x)]
+             0 -> []
+             i -> [x | repeat(i - 1, x)]
            }
          }",
         vec![("repeat", "fn(Int, a) -> List(a)")],
@@ -3483,7 +3483,7 @@ fn infer_module_test() {
 
     assert_infer!(
         "pub enum I = | I(Int)
-        pub fn open(x) { case x { | I(i) -> i  } }",
+        pub fn open(x) { case x { I(i) -> i  } }",
         vec![("I", "fn(Int) -> I"), ("open", "fn(I) -> Int")],
     );
 
@@ -3613,8 +3613,8 @@ fn infer_module_test() {
     assert_infer!(
         "pub fn length(list) {
            case list {
-           | [] -> 0
-           | [x | xs] -> length(xs) + 1
+           [] -> 0
+           [x | xs] -> length(xs) + 1
            }
         }",
         vec![("length", "fn(List(a)) -> Int")],

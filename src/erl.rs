@@ -1582,8 +1582,8 @@ modulo(X, Y) ->
 "#,
         },
         Case {
-            src: r#"fn second(list) { case list { | [x, y] -> y | z -> 1 } }
-                    fn tail(list) { case list { | [x | xs] -> xs | z -> list } }
+            src: r#"fn second(list) { case list { [x, y] -> y z -> 1 } }
+                    fn tail(list) { case list { [x | xs] -> xs z -> list } }
             "#,
             erl: r#"-module(the_app).
 -compile(no_auto_import).
@@ -1744,7 +1744,7 @@ create_user(UserId) ->
 "#
         },
         Case {
-            src: r#"fn run() { case 1, 2 { | a, b -> a } }"#,
+            src: r#"fn run() { case 1, 2 { a, b -> a } }"#,
             erl: r#"-module(the_app).
 -compile(no_auto_import).
 

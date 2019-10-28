@@ -225,23 +225,23 @@ SimpleExpr: UntypedExpr = {
     Float => <>,
     String => <>,
     FieldSelect => <>,
-    "begin" <e:Expr> "end" => e,
+    "{" <e:Expr+> "}" => seq(e),
 }
 
 Case: UntypedExpr = {
-    <s:@L> "case" <subjects:Comma<OpOrSimpleExpr>> "{" <clauses:Clause+> "}" <e:@L> => Expr::Case {
+    <s:@L> "case" <subjects:CommaNoTrailing<OpOrSimpleExpr>> "{" <clauses:Clause+> "}" <e:@L> => Expr::Case {
         meta: meta(s, e),
         typ: (),
         subjects,
         clauses,
-    }
+    },
 }
 
 Clause: UntypedClause = {
-    <s:@L> "|" <patterns:Comma<Pattern>> "->" <then:Expr+> <e:@L> => Clause {
+    <s:@L> <patterns:Comma<Pattern>> "->" <then:OpOrSimpleExpr> <e:@L> => Clause {
         meta: meta(s, e),
         patterns,
-        then: seq(then),
+        then,
     }
 }
 
@@ -410,6 +410,14 @@ Float: UntypedExpr = {
         meta: meta(s, e),
         typ: (),
         value: f64::from_str(f).unwrap(),
+    }
+}
+
+CommaNoTrailing<T>: Vec<T> = {
+    <v:(<T> ",")*> <e:T> => {
+        let mut v = v;
+        v.push(e);
+        v
     }
 }
 
