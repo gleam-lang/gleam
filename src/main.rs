@@ -42,6 +42,14 @@ enum Command {
     Build {
         #[structopt(help = "location of the project root", default_value = ".")]
         path: String,
+
+        #[structopt(
+            long = "docs",
+            possible_values = &project::RenderDocs::variants(),
+            case_insensitive = true,
+            default_value = "false"
+        )]
+        render_docs: project::RenderDocs,
     },
 
     #[structopt(name = "new", about = "Create a new Gleam project")]
@@ -69,7 +77,7 @@ struct ProjectConfig {
 
 fn main() {
     match Command::from_args() {
-        Command::Build { path } => command_build(path),
+        Command::Build { path, render_docs } => command_build(path, render_docs),
 
         Command::New {
             name,
@@ -79,7 +87,7 @@ fn main() {
     }
 }
 
-fn command_build(root: String) {
+fn command_build(root: String, render_docs: project::RenderDocs) {
     let mut srcs = vec![];
 
     // Read gleam.toml
@@ -105,7 +113,7 @@ fn command_build(root: String) {
     crate::project::collect_source(root_path.join("src"), ModuleOrigin::Src, &mut srcs);
     crate::project::collect_source(root_path.join("test"), ModuleOrigin::Test, &mut srcs);
 
-    let compiled = match crate::project::compile(srcs) {
+    let compiled = match crate::project::compile(srcs, render_docs) {
         Ok(c) => c,
         Err(e) => {
             e.pretty_print();
@@ -114,7 +122,7 @@ fn command_build(root: String) {
     };
 
     for crate::project::Compiled { files, .. } in compiled {
-        for crate::project::OutputFile { text, path } in files {
+        for crate::project::OutputFile { contents, path } in files {
             let dir_path = path
                 .parent()
                 .unwrap_or_else(|| panic!("getting output file directory {:?}", path));
@@ -128,7 +136,7 @@ fn command_build(root: String) {
 
             let mut f = File::create(&path)
                 .unwrap_or_else(|e| panic!("creating output file {:?}: {:?}", path, e.to_string()));
-            f.write_all(text.as_bytes()).unwrap_or_else(|e| {
+            f.write_all(contents.as_bytes()).unwrap_or_else(|e| {
                 panic!("writing to output file {:?}: {:?}", path, e.to_string())
             });
         }
