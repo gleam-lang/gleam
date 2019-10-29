@@ -113,16 +113,26 @@ fn command_build(root: String) {
         }
     };
 
-    for crate::project::Compiled { code, path, .. } in compiled {
-        let gen_path = path.parent().expect("gen_path");
-        std::fs::create_dir_all(gen_path).expect("creating gen dir");
+    for crate::project::Compiled { files, .. } in compiled {
+        for crate::project::OutputFile { text, path } in files {
+            let dir_path = path
+                .parent()
+                .unwrap_or_else(|| panic!("getting output file directory {:?}", path));
+            std::fs::create_dir_all(dir_path).unwrap_or_else(|e| {
+                panic!(
+                    "creating output file directory {:?}: {:?}",
+                    dir_path,
+                    e.to_string()
+                )
+            });
 
-        let mut f = File::create(path).expect("Unable to create file");
-        f.write_all(code.as_bytes())
-            .expect("Unable to write Erlang code to file");
+            let mut f = File::create(&path)
+                .unwrap_or_else(|e| panic!("creating output file {:?}: {:?}", path, e.to_string()));
+            f.write_all(text.as_bytes()).unwrap_or_else(|e| {
+                panic!("writing to output file {:?}: {:?}", path, e.to_string())
+            });
+        }
     }
-
-    std::fs::create_dir_all(root_path.join("gen").join("docs")).expect("creating gen/docs");
 
     println!("Done!");
 }
