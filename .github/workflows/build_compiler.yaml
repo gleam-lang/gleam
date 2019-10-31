@@ -19,6 +19,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
+      - name: Cache Rust dependencies
+        uses: actions/cache@preview
+        with:
+          path: target
+          key: ${{ runner.os }}-rust-target
       - run: cargo test
       - run: cargo build --release
       - run: target/release/gleam --version
@@ -29,6 +34,11 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - run: curl https://sh.rustup.rs -sSf | sh -s -- -y
+      - name: Cache Rust dependencies
+        uses: actions/cache@preview
+        with:
+          path: target
+          key: ${{ runner.os }}-rust-target
       - run: $HOME/.cargo/bin/cargo test
       - run: $HOME/.cargo/bin/cargo build --release
       - run: target/release/gleam --version
@@ -38,6 +48,12 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v1
+      - name: Cache Rust dependencies
+        uses: actions/cache@preview
+        with:
+          path: target
+          key: ${{ runner.os }}-rust-target
+
       # - run: cargo test
       - run: cargo build --release
       - run: target/release/gleam --version
