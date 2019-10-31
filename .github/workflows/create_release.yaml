@@ -27,3 +27,32 @@ jobs:
           asset_path: ${{ steps.create_archive.outputs.ASSET }}
           asset_name: ${{ steps.create_archive.outputs.ASSET }}
           asset_content_type: application/gzip
+
+  build_release_linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - id: create_archive
+        run: |
+          CONTAINER_NAME=gleam-linux-builder
+          ARCHIVE=gleam-$TAG_NAME-linux-amd64.tar.gz
+          DOCKER_TAG=lpil/gleam:$(echo $TAG_NAME | tail -c +2)
+          docker build . -t $DOCKER_TAG
+          docker run --name $CONTAINER_NAME $DOCKER_TAG --version
+          TMP=$(mktemp -d)
+          cd $TMP
+          docker cp $CONTAINER_NAME:/gleam gleam
+          docker rm $CONTAINER_NAME
+          tar -czvf $ARCHIVE gleam 
+          echo ::set-output name=ASSET_NAME::"$ARCHIVE"
+          echo ::set-output name=ASSET_PATH::"$TMP/$ARCHIVE"
+        env:
+          TAG_NAME: ${{ github.event.release.tag_name }}
+      - uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ${{ steps.create_archive.outputs.ASSET_PATH }}
+          asset_name: ${{ steps.create_archive.outputs.ASSET_NAME }}
+          asset_content_type: application/gzip
