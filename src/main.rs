@@ -84,15 +84,17 @@ fn command_build(root: String) {
 
     let root_path = PathBuf::from(&root);
     let lib_dir = root_path.join("_build").join("default").join("lib");
+    let checkouts_dir = root_path.join("_checkouts");
 
-    if let Ok(dir) = std::fs::read_dir(lib_dir) {
-        dir.filter_map(Result::ok)
-            .map(|d| d.path())
-            .filter(|p| {
-                p.file_name().and_then(|os_string| os_string.to_str()) != Some(&project_config.name)
-            })
-            .for_each(|p| collect_source(p.join("src"), ModuleOrigin::Src, &mut srcs));
-    }
+    [lib_dir, checkouts_dir]
+        .iter()
+        .filter_map(|d| std::fs::read_dir(d).ok())
+        .flat_map(|d| d.filter_map(Result::ok))
+        .map(|d| d.path())
+        .filter(|p| {
+            p.file_name().and_then(|os_string| os_string.to_str()) != Some(&project_config.name)
+        })
+        .for_each(|p| collect_source(p.join("src"), ModuleOrigin::Src, &mut srcs));
 
     collect_source(root_path.join("src"), ModuleOrigin::Src, &mut srcs);
     collect_source(root_path.join("test"), ModuleOrigin::Test, &mut srcs);
