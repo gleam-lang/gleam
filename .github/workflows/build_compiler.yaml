@@ -19,6 +19,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
+      - name: Cache Rust dependencies
+        uses: actions/cache@v1.0.1
+        with:
+          path: target
+          key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.OS }}-build-
       - run: cargo test
       - run: cargo build --release
       - run: target/release/gleam --version
@@ -29,6 +36,13 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - run: curl https://sh.rustup.rs -sSf | sh -s -- -y
+      - name: Cache Rust dependencies
+        uses: actions/cache@v1.0.1
+        with:
+          path: target
+          key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.OS }}-build-
       - run: $HOME/.cargo/bin/cargo test
       - run: $HOME/.cargo/bin/cargo build --release
       - run: target/release/gleam --version
@@ -38,6 +52,16 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v1
+      - name: Cache Rust dependencies
+        uses: actions/cache@v1.0.1
+        with:
+          path: target
+          key: ${{ runner.OS }}-build-${{ hashFiles('**\Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.OS }}-build-
+
+      # commented out until tests on Windows are fixed
+      # see: https://github.com/gleam-lang/gleam/issues/299
       # - run: cargo test
       - run: cargo build --release
       - run: target/release/gleam --version
