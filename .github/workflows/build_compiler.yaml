@@ -23,7 +23,7 @@ jobs:
         uses: actions/cache@v1.0.1
         with:
           path: target
-          key: ${{ runner.os }}-rust-target
+          key: ${{ runner.OS }}-build-${{ hashFiles('Cargo.lock')
       - run: cargo test
       - run: cargo build --release
       - run: target/release/gleam --version
@@ -38,7 +38,7 @@ jobs:
         uses: actions/cache@v1.0.1
         with:
           path: target
-          key: ${{ runner.os }}-rust-target
+          key: ${{ runner.OS }}-build-${{ hashFiles('Cargo.lock')
       - run: $HOME/.cargo/bin/cargo test
       - run: $HOME/.cargo/bin/cargo build --release
       - run: target/release/gleam --version
@@ -52,7 +52,7 @@ jobs:
         uses: actions/cache@v1.0.1
         with:
           path: target
-          key: ${{ runner.os }}-rust-target
+          key: ${{ runner.OS }}-build-${{ hashFiles('Cargo.lock')
 
       # commented out until tests on Windows are fixed
       # see: https://github.com/gleam-lang/gleam/issues/299
