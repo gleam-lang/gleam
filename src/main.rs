@@ -25,6 +25,7 @@ extern crate lalrpop_util;
 #[macro_use]
 extern crate lazy_static;
 
+use crate::error::Error;
 use crate::project::ModuleOrigin;
 use serde::Deserialize;
 use std::fs::File;
@@ -69,7 +70,12 @@ struct ProjectConfig {
 
 fn main() {
     match Command::from_args() {
-        Command::Build { path } => command_build(path),
+        Command::Build { path } => {
+            if let Err(e) = command_build(path) {
+                e.pretty_print();
+                std::process::exit(1);
+            }
+        }
 
         Command::New {
             name,
@@ -79,7 +85,7 @@ fn main() {
     }
 }
 
-fn command_build(root: String) {
+fn command_build(root: String) -> Result<(), Error> {
     let mut srcs = vec![];
 
     // Read gleam.toml
@@ -105,13 +111,7 @@ fn command_build(root: String) {
     crate::project::collect_source(root_path.join("src"), ModuleOrigin::Src, &mut srcs);
     crate::project::collect_source(root_path.join("test"), ModuleOrigin::Test, &mut srcs);
 
-    let compiled = match crate::project::compile(srcs) {
-        Ok(c) => c,
-        Err(e) => {
-            e.pretty_print();
-            std::process::exit(1);
-        }
-    };
+    let compiled = crate::project::compile(srcs)?;
 
     for crate::project::Compiled { files, .. } in compiled {
         for crate::project::OutputFile { text, path } in files {
@@ -135,6 +135,7 @@ fn command_build(root: String) {
     }
 
     println!("Done!");
+    Ok(())
 }
 
 fn read_project_config(root: &str) -> Result<ProjectConfig, ()> {
