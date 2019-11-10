@@ -1309,8 +1309,8 @@ thing() ->\n    thing:new().\n"
                     name: vec!["two".to_string()],
                     path: PathBuf::from("/gen/src/two.erl"),
                     code: "-module(two).\n-compile(no_auto_import).\n
-make() ->\n    {1, 4}.\n
-x(P) ->\n    {X, _} = P,\n    X.\n".to_string(),
+make() ->\n    {point, 1, 4}.\n
+x(P) ->\n    {point, X, _} = P,\n    X.\n".to_string(),
                 },
             ]),
         },
@@ -1339,7 +1339,7 @@ x(P) ->\n    {X, _} = P,\n    X.\n".to_string(),
                 Compiled {
                     name: vec!["two".to_string()],
                     path: PathBuf::from("/gen/src/two.erl"),
-                    code: "-module(two).\n-compile(no_auto_import).\n\nmake() ->\n    {}.\n".to_string(),
+                    code: "-module(two).\n-compile(no_auto_import).\n\nmake() ->\n    empty.\n".to_string(),
                 },
             ]),
         },
@@ -1367,7 +1367,7 @@ x(P) ->\n    {X, _} = P,\n    X.\n".to_string(),
                 Compiled {
                     name: vec!["two".to_string()],
                     path: PathBuf::from("/gen/src/two.erl"),
-                    code: "-module(two).\n-compile(no_auto_import).\n\nmake() ->\n    one:id({}).\n".to_string(),
+                    code: "-module(two).\n-compile(no_auto_import).\n\nmake() ->\n    one:id(empty).\n".to_string(),
                 },
             ]),
         },
