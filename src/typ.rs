@@ -736,7 +736,11 @@ pub enum ValueConstructorVariant {
     },
 
     /// A named struct
-    Struct { field_map: FieldMap, arity: usize },
+    Struct {
+        name: String,
+        field_map: FieldMap,
+        arity: usize,
+    },
 }
 
 impl ValueConstructorVariant {
@@ -744,7 +748,9 @@ impl ValueConstructorVariant {
         match self {
             ValueConstructorVariant::Enum { .. } => ModuleValueConstructor::Enum,
 
-            ValueConstructorVariant::Struct { .. } => ModuleValueConstructor::Struct,
+            ValueConstructorVariant::Struct { name, .. } => {
+                ModuleValueConstructor::Struct { name: name.clone() }
+            }
 
             ValueConstructorVariant::LocalVariable { .. }
             | ValueConstructorVariant::ModuleFn { .. } => ModuleValueConstructor::Fn,
@@ -754,7 +760,7 @@ impl ValueConstructorVariant {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ModuleValueConstructor {
-    Struct,
+    Struct { name: String },
     Enum,
     Fn,
 }
@@ -769,7 +775,7 @@ pub struct ModuleTypeInfo {
 #[derive(Debug, Clone, PartialEq)]
 pub enum PatternConstructor {
     Enum,
-    Struct,
+    Struct { name: String },
 }
 
 #[derive(Debug, Clone)]
@@ -1766,6 +1772,7 @@ pub fn infer_module(
                         })?;
                 }
                 let constructor_variant = ValueConstructorVariant::Struct {
+                    name: name.clone(),
                     arity: fields.len(),
                     field_map: field_map,
                 };
@@ -2401,7 +2408,9 @@ fn unify_pattern(
             let constructor_typ = cons.typ.clone();
             let constructor = match cons.variant {
                 ValueConstructorVariant::Enum { .. } => PatternConstructor::Enum,
-                ValueConstructorVariant::Struct { .. } => PatternConstructor::Struct,
+                ValueConstructorVariant::Struct { ref name, .. } => {
+                    PatternConstructor::Struct { name: name.clone() }
+                }
                 ValueConstructorVariant::LocalVariable
                 | ValueConstructorVariant::ModuleFn { .. } => panic!(
                     "Unexpected value constructor type for a constructor pattern.

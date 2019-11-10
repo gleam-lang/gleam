@@ -264,13 +264,13 @@ fn pattern(p: TypedPattern, env: &mut Env) -> Document {
             args,
             constructor: PatternConstructor::Enum,
             ..
-        } => enum_pattern(name, args, env),
+        } => tag_tuple_pattern(name, args, env),
 
         Pattern::Constructor {
             args,
-            constructor: PatternConstructor::Struct,
+            constructor: PatternConstructor::Struct { name },
             ..
-        } => tuple(args.into_iter().map(|p| pattern(p.value, env)).collect()),
+        } => tag_tuple_pattern(name, args, env),
     }
 }
 
@@ -354,7 +354,7 @@ fn var(name: String, constructor: ValueConstructor, env: &mut Env) -> Document {
     match constructor.variant {
         ValueConstructorVariant::Enum { .. } => atom(name.to_snake_case()),
 
-        ValueConstructorVariant::Struct { arity: 0, .. } => "{}".to_doc(),
+        ValueConstructorVariant::Struct { name, arity: 0, .. } => name.to_snake_case().to_doc(),
 
         ValueConstructorVariant::Struct { arity, .. } => {
             let chars = incrementing_args_list(arity);
@@ -362,6 +362,8 @@ fn var(name: String, constructor: ValueConstructor, env: &mut Env) -> Document {
                 .to_doc()
                 .append(chars.clone())
                 .append(") -> {")
+                .append(name.to_snake_case())
+                .append(", ")
                 .append(chars)
                 .append("} end")
         }
@@ -376,7 +378,7 @@ fn var(name: String, constructor: ValueConstructor, env: &mut Env) -> Document {
     }
 }
 
-fn enum_pattern(name: String, args: Vec<CallArg<TypedPattern>>, env: &mut Env) -> Document {
+fn tag_tuple_pattern(name: String, args: Vec<CallArg<TypedPattern>>, env: &mut Env) -> Document {
     if args.is_empty() {
         atom(name.to_snake_case())
     } else {
@@ -427,7 +429,7 @@ fn case(mut subjects: Vec<TypedExpr>, cs: Vec<TypedClause>, env: &mut Env) -> Do
         .group()
 }
 
-fn enum_(name: String, args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Document {
+fn tag_tuple(name: String, args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Document {
     let mut args: Vec<_> = args.into_iter().map(|arg| expr(arg.value, env)).collect();
     // FIXME: O(n), insert at start shuffles the elemes forward by one place
     args.insert(0, atom(name.to_snake_case()));
@@ -444,20 +446,20 @@ fn call(fun: TypedExpr, args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Documen
                 },
             name,
             ..
-        } => enum_(name, args, env),
+        } => tag_tuple(name, args, env),
 
-        Expr::Var {
+        Expr::ModuleSelect {
+            constructor: ModuleValueConstructor::Struct { name },
+            ..
+        }
+        | Expr::Var {
             constructor:
                 ValueConstructor {
-                    variant: ValueConstructorVariant::Struct { .. },
+                    variant: ValueConstructorVariant::Struct { name, .. },
                     ..
                 },
             ..
-        } => tuple(
-            args.into_iter()
-                .map(|a| expr(a.value, env))
-                .collect::<Vec<_>>(),
-        ),
+        } => tag_tuple(name.to_snake_case(), args, env),
 
         Expr::Var {
             constructor:
@@ -484,12 +486,7 @@ fn call(fun: TypedExpr, args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Documen
             label,
             constructor: ModuleValueConstructor::Enum,
             ..
-        } => enum_(label, args, env),
-
-        Expr::ModuleSelect {
-            constructor: ModuleValueConstructor::Struct,
-            ..
-        } => tuple(args.into_iter().map(|a| wrap_expr(a.value, env)).collect()),
+        } => tag_tuple(label, args, env),
 
         Expr::ModuleSelect {
             module_name,
@@ -589,9 +586,9 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
         } => atom(label.to_snake_case()),
 
         Expr::ModuleSelect {
-            constructor: ModuleValueConstructor::Struct,
+            constructor: ModuleValueConstructor::Struct { name },
             ..
-        } => "{}".to_doc(),
+        } => name.to_snake_case().to_doc(),
 
         Expr::ModuleSelect {
             typ,
@@ -1647,8 +1644,8 @@ x() ->
 -compile(no_auto_import).
 
 x() ->
-    {1, 2},
-    {3.0, 4.0}.
+    {pair, 1, 2},
+    {pair, 3.0, 4.0}.
 "#
         },
         Case {
@@ -1657,16 +1654,7 @@ x() ->
 -compile(no_auto_import).
 
 x() ->
-    {}.
-"#
-        },
-        Case {
-            src: r#"struct Null {} fn x() { Null }"#,
-            erl: r#"-module(the_app).
--compile(no_auto_import).
-
-x() ->
-    {}.
+    null.
 "#
         },
         Case {
@@ -1676,7 +1664,7 @@ x() ->
 -compile(no_auto_import).
 
 y() ->
-    ((fun() -> fun(A, B) -> {A, B} end end)())(4, 6).
+    ((fun() -> fun(A, B) -> {point, A, B} end end)())(4, 6).
 "#
         },
         Case {
@@ -1686,8 +1674,8 @@ y() ->
 -compile(no_auto_import).
 
 x() ->
-    {4, 6},
-    {9, 1}.
+    {point, 4, 6},
+    {point, 9, 1}.
 "#
         },
         Case {
@@ -1696,7 +1684,7 @@ x() ->
 -compile(no_auto_import).
 
 x(Y) ->
-    {A, B} = Y,
+    {point, A, B} = Y,
     A.
 "#
         },
@@ -1738,7 +1726,7 @@ fn create_user(user_id) { User(age: 22, id: user_id, name: "") }
 -compile(no_auto_import).
 
 create_user(UserId) ->
-    {UserId, <<"">>, 22}.
+    {user, UserId, <<"">>, 22}.
 "#
         },
         Case {
