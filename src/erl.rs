@@ -271,6 +271,10 @@ fn pattern(p: TypedPattern, env: &mut Env) -> Document {
             constructor: PatternConstructor::Struct { name },
             ..
         } => tag_tuple_pattern(name, args, env),
+
+        Pattern::AnonStruct { elems, .. } => {
+            tuple(elems.into_iter().map(|p| pattern(p, env)).collect())
+        }
     }
 }
 
@@ -612,6 +616,10 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
         Expr::BinOp {
             name, left, right, ..
         } => bin_op(name, *left, *right, env),
+
+        Expr::AnonStruct { elems, .. } => {
+            tuple(elems.into_iter().map(|e| wrap_expr(e, env)).collect())
+        }
     }
 }
 
@@ -974,6 +982,29 @@ map() ->
                     }),
                 },
             },
+            Statement::Fn {
+                return_annotation: None,
+                meta: default(),
+                public: false,
+                args: vec![],
+                name: "tup".to_string(),
+                body: Expr::AnonStruct {
+                    meta: default(),
+                    typ: crate::typ::int(),
+                    elems: vec![
+                        Expr::Int {
+                            typ: crate::typ::int(),
+                            meta: default(),
+                            value: 1,
+                        },
+                        Expr::Float {
+                            meta: default(),
+                            typ: crate::typ::float(),
+                            value: 2.0,
+                        },
+                    ],
+                },
+            },
         ],
     };
     let expected = "-module(term).
@@ -1012,6 +1043,9 @@ funny() ->
     fun(OneReallyLongArgToCauseWrapping, AlsoReallyQuiteLong) ->
         100000000000
     end.
+
+tup() ->
+    {1, 2.0}.
 "
     .to_string();
     assert_eq!(expected, module(m));
@@ -1307,6 +1341,27 @@ moddy4() ->
                             value: 1,
                         },
                     },
+                    Clause {
+                        meta: default(),
+                        patterns: vec![Pattern::AnonStruct {
+                            meta: default(),
+                            elems: vec![
+                                Pattern::Int {
+                                    meta: default(),
+                                    value: 1,
+                                },
+                                Pattern::Int {
+                                    meta: default(),
+                                    value: 2,
+                                },
+                            ],
+                        }],
+                        then: Expr::Int {
+                            typ: crate::typ::int(),
+                            meta: default(),
+                            value: 1,
+                        },
+                    },
                 ],
             },
         }],
@@ -1329,6 +1384,9 @@ go() ->
             1;
 
         {error, 2} ->
+            1;
+
+        {1, 2} ->
             1
     end.
 "
@@ -1474,6 +1532,22 @@ fn integration_test() {
     }
 
     let cases = [
+        Case {
+            src: r#"fn go() {
+let x = struct(100000000000000000, struct(2000000000, 3000000000000, 40000000000), 50000, 6000000000)
+  x
+}"#,
+            erl: r#"-module(the_app).
+-compile(no_auto_import).
+
+go() ->
+    X = {100000000000000000,
+         {2000000000, 3000000000000, 40000000000},
+         50000,
+         6000000000},
+    X.
+"#,
+        },
         Case {
             src: r#"fn go() {
   let y = 1
