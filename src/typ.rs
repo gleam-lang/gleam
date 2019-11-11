@@ -28,6 +28,10 @@ pub enum Type {
     Var {
         typ: Rc<RefCell<TypeVar>>,
     },
+
+    AnonStruct {
+        elems: Vec<Type>,
+    },
 }
 
 impl Type {
@@ -68,6 +72,10 @@ impl Type {
                 .append(retrn.to_gleam_doc(names, uid)),
 
             Type::Var { typ, .. } => typ.borrow().to_gleam_doc(names, uid),
+
+            Type::AnonStruct { elems, .. } => {
+                args_to_gleam_doc(elems, names, uid).surround("struct(", ")")
+            }
         }
     }
 
@@ -146,6 +154,8 @@ impl Type {
             Type::App { public: false, .. } => Some(self.clone()),
 
             Type::App { args, .. } => args.iter().find_map(|t| t.find_private_type()),
+
+            Type::AnonStruct { elems, .. } => elems.iter().find_map(|t| t.find_private_type()),
 
             Type::Fn { retrn, args, .. } => retrn
                 .find_private_type()
@@ -1296,6 +1306,14 @@ impl<'a> Env<'a> {
                 })
             }
 
+            TypeAst::AnonStruct { elems, .. } => {
+                let elems = elems
+                    .iter()
+                    .map(|t| self.type_from_ast(t, vars, new))
+                    .collect::<Result<_, _>>()?;
+                Ok(Type::AnonStruct { elems })
+            }
+
             TypeAst::Fn { args, retrn, .. } => {
                 let args = args
                     .iter()
@@ -2203,6 +2221,21 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             })
         }
 
+        Expr::AnonStruct {
+            meta,
+            elems,
+            typ: _,
+        } => {
+            let elems = elems
+                .into_iter()
+                .map(|e| infer(e, level, env))
+                .collect::<Result<Vec<_>, _>>()?;
+            let typ = Type::AnonStruct {
+                elems: elems.iter().map(|e| e.typ().clone()).collect(),
+            };
+            Ok(Expr::AnonStruct { meta, elems, typ })
+        }
+
         Expr::BinOp {
             meta,
             name,
@@ -2384,6 +2417,31 @@ fn unify_pattern(
                 expected: typ.clone(),
                 meta: meta.clone(),
             }),
+        },
+
+        Pattern::AnonStruct { elems, meta } => match typ.clone().collapse_links() {
+            Type::AnonStruct { elems: type_elems } => {
+                let elems = elems
+                    .into_iter()
+                    .zip(type_elems)
+                    .map(|(pattern, typ)| unify_pattern(pattern, &typ, level, env))
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(Pattern::AnonStruct { elems, meta })
+            }
+
+            typ @ Type::Var { .. } => {
+                let elems_types = (0..(elems.len()))
+                    .map(|_| env.new_unbound_var(level))
+                    .collect();
+                unify(&Type::AnonStruct { elems: elems_types }, &typ, env)
+                    .map_err(|e| convert_unify_error(e, &meta))?;
+                unify_pattern(Pattern::AnonStruct { elems, meta }, &typ, level, env)
+            }
+
+            other => {
+                dbg!(&other);
+                unimplemented!();
+            }
         },
 
         Pattern::Constructor {
@@ -2704,6 +2762,13 @@ fn instantiate(
             let retrn = Box::new(instantiate(*retrn, ctx_level, ids, env));
             Type::Fn { args, retrn }
         }
+
+        Type::AnonStruct { elems } => Type::AnonStruct {
+            elems: elems
+                .into_iter()
+                .map(|t| instantiate(t, ctx_level, ids, env))
+                .collect(),
+        },
     }
 }
 
@@ -2794,6 +2859,15 @@ fn unify(t1: &Type, t2: &Type, env: &mut Env) -> Result<(), UnifyError> {
             Ok(())
         }
 
+        (Type::AnonStruct { elems: elems1, .. }, Type::AnonStruct { elems: elems2, .. })
+            if elems1.len() == elems2.len() =>
+        {
+            for (a, b) in elems1.iter().zip(elems2) {
+                unify(a, b, env)?;
+            }
+            Ok(())
+        }
+
         (
             Type::Fn {
                 args: args1,
@@ -2877,6 +2951,13 @@ fn update_levels(typ: &Type, own_level: usize, own_id: usize) -> Result<(), Unif
                 update_levels(arg, own_level, own_id)?;
             }
             update_levels(retrn, own_level, own_id)
+        }
+
+        Type::AnonStruct { elems, .. } => {
+            for elem in elems.iter() {
+                update_levels(elem, own_level, own_id)?
+            }
+            Ok(())
         }
 
         Type::Var { .. } => unreachable!(),
@@ -2998,6 +3079,13 @@ fn generalise(t: Type, ctx_level: usize) -> Type {
                 retrn: Box::new(retrn),
             }
         }
+
+        Type::AnonStruct { elems } => Type::AnonStruct {
+            elems: elems
+                .into_iter()
+                .map(|t| generalise(t, ctx_level))
+                .collect(),
+        },
     }
 }
 
@@ -3105,6 +3193,16 @@ fn infer_test() {
     assert_infer!("[fn(x) { x } | []]", "List(fn(a) -> a)");
     assert_infer!("let f = fn(x) { x } [f, f]", "List(fn(a) -> a)");
     assert_infer!("let x = [1 | []] [2 | x]", "List(Int)");
+    assert_infer!("[struct([], [])]", "List(struct(List(a), List(b)))");
+
+    // anon structs
+    assert_infer!("struct(1)", "struct(Int)");
+    assert_infer!("struct(1, 2.0)", "struct(Int, Float)");
+    assert_infer!("struct(1, 2.0, 3)", "struct(Int, Float, Int)");
+    assert_infer!(
+        "struct(1, 2.0, struct(1, 1))",
+        "struct(Int, Float, struct(Int, Int))",
+    );
 
     // fn
     assert_infer!("fn(x) { x }", "fn(a) -> a");
@@ -3154,6 +3252,9 @@ fn infer_test() {
         "fn(fn(fn(a) -> a) -> b) -> b",
     );
     assert_infer!("let add = fn(x, y) { x + y } add(_, 2)", "fn(Int) -> Int");
+    assert_infer!("fn(x) { struct(1, x) }", "fn(a) -> struct(Int, a)");
+    assert_infer!("fn(x, y) { struct(x, y) }", "fn(a, b) -> struct(a, b)");
+    assert_infer!("fn(x) { struct(x, x) }", "fn(a) -> struct(a, a)");
 
     // case
     assert_infer!("case 1 { a -> 1 }", "Int");
@@ -3177,6 +3278,8 @@ fn infer_test() {
     assert_infer!("fn(x) { let [a] = x a + 1 }", "fn(List(Int)) -> Int");
     assert_infer!("let _x = 1 2.0", "Float");
     assert_infer!("let _ = 1 2.0", "Float");
+    assert_infer!("let struct(tag, x) = struct(1.0, 1) x", "Int");
+    assert_infer!("fn(x) { let struct(a, b) = x a }", "fn(struct(a, b)) -> a");
 }
 
 #[test]
@@ -3395,6 +3498,19 @@ fn infer_error_test() {
         Error::NotModule {
             meta: Meta { start: 10, end: 11 },
             typ: int(),
+        },
+    );
+
+    assert_error!(
+        "struct(1, 2) == struct(1, 2, 3)",
+        Error::CouldNotUnify {
+            meta: Meta { start: 16, end: 31 },
+            expected: Type::AnonStruct {
+                elems: vec![int(), int()],
+            },
+            given: Type::AnonStruct {
+                elems: vec![int(), int(), int()],
+            },
         },
     );
 }
@@ -3685,6 +3801,22 @@ fn infer_module_test() {
     //         ("unbox_pattern", "fn(Box(a)) -> a"),
     //     ],
     // );
+
+    // Anon structs
+    assert_infer!(
+        "pub fn ok(x) { struct(1, x) }",
+        vec![("ok", "fn(a) -> struct(Int, a)")],
+    );
+
+    assert_infer!(
+        "pub external fn ok(Int) -> struct(Int, Int) = \"\" \"\"",
+        vec![("ok", "fn(Int) -> struct(Int, Int)")],
+    );
+
+    assert_infer!(
+        "pub external fn go(struct(a, c)) -> c = \"\" \"\"",
+        vec![("go", "fn(struct(a, b)) -> b")],
+    );
 }
 
 #[test]
