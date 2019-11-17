@@ -11,12 +11,14 @@
 - Named structs now have their name as the first element in the generated
   Erlang code. This enabled easier use from Erlang by defining records for
   them, as well as slightly clearer printf debugging.
-- Anonymous tuples have been introduced, serving as a quick and generic
+- Anonymous structs have been introduced, serving as a quick and generic
   alternative to declared structs and as a format for interop with Erlang
   tuples.
 - `gleam new` now accepts a `--template` flag to generate different styles of
   project. An OTP application template has been added alongside the existing
   OTP library template.
+- `gleam new` now creates configuration for GitHub Actions, making Gleam
+  projects ready for continuous integration out of the box.
 - The syntax for defining enums, case expressions, and blocks has been changed
   to a syntax closer to that found in the C family of languages.
 - The source code preview for functions that return a type incompatible with

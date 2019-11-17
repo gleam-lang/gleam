@@ -12,7 +12,7 @@ pub enum Template {
     App,
 }
 
-pub fn create(template: Template, name: String, path: Option<String>) {
+pub fn create(template: Template, name: String, path: Option<String>, version: &'static str) {
     if !regex::Regex::new("^[a-z_]+$")
         .expect("new name regex could not be compiled")
         .is_match(&name)
@@ -22,44 +22,42 @@ pub fn create(template: Template, name: String, path: Option<String>) {
     }
 
     let path = path.unwrap_or_else(|| name.clone());
-    let path = Path::new(&path);
+    let root_dir = Path::new(&path);
+    let src_dir = root_dir.join("src");
+    let test_dir = root_dir.join("test");
+    let github_dir = root_dir.join(".github");
+    let workflows_dir = github_dir.join("workflows");
 
     // Create directories
-    std::fs::create_dir(&path).expect("new create_dir path");
-    std::fs::create_dir(path.join("src")).expect("new create_dir src");
-    std::fs::create_dir(path.join("test")).expect("new create_dir test");
+    std::fs::create_dir(&root_dir).expect("new create_dir path");
+    std::fs::create_dir(&src_dir).expect("new create_dir src");
+    std::fs::create_dir(&test_dir).expect("new create_dir test");
+    std::fs::create_dir(&github_dir).expect("new create_dir .github");
+    std::fs::create_dir(&workflows_dir).expect("new create_dir .github/workflows");
 
     // write files
-    write(path.join("LICENSE"), APACHE_2);
-    write(path.join(".gitignore"), GITIGNORE);
-    write(path.join("README.md"), &readme(&name));
-    write(path.join("gleam.toml"), &gleam_toml(&name));
-    write(
-        path.join("test").join(format!("{}_test.gleam", name)),
-        &test(&name),
-    );
-    write(
-        path.join("src").join(format!("{}.gleam", name)),
-        &src(&name),
-    );
+    write(root_dir.join("LICENSE"), APACHE_2);
+    write(root_dir.join(".gitignore"), GITIGNORE);
+    write(root_dir.join("README.md"), &readme(&name));
+    write(root_dir.join("gleam.toml"), &gleam_toml(&name));
+    write(test_dir.join(format!("{}_test.gleam", name)), &test(&name));
+    write(src_dir.join(format!("{}.gleam", name)), &src(&name));
+    write(workflows_dir.join("test.yml"), &github_ci(version));
 
     match template {
         Template::Lib => {
-            write(path.join("rebar.config"), &rebar_config(""));
+            write(root_dir.join("rebar.config"), &rebar_config(""));
             write(
-                path.join("src").join(format!("{}.app.src", name)),
+                src_dir.join(format!("{}.app.src", name)),
                 &app_src(&name, false),
             );
         }
 
         Template::App => {
-            write(path.join("rebar.config"), &app_rebar_config(&name));
+            write(root_dir.join("rebar.config"), &app_rebar_config(&name));
+            write(src_dir.join(format!("{}_app.erl", name)), &src_app(&name));
             write(
-                path.join("src").join(format!("{}_app.erl", name)),
-                &src_app(&name),
-            );
-            write(
-                path.join("src").join(format!("{}.app.src", name)),
+                src_dir.join(format!("{}.app.src", name)),
                 &app_src(&name, true),
             );
         }
@@ -75,7 +73,7 @@ The rebar3 program can be used to compile and test it.
     rebar3 eunit
 ",
         name,
-        path.to_str().expect("Unable to display path")
+        root_dir.to_str().expect("Unable to display path")
     );
 }
 
@@ -115,6 +113,34 @@ rebar3 shell
 ```
 "#,
         name
+    )
+}
+
+fn github_ci(version: &str) -> String {
+    format!(
+        r#"name: test
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1.0.0
+      - uses: gleam-lang/setup-erlang@v1.0.0
+        with:
+          otp-version: 22.1
+      - uses: gleam-lang/setup-gleam@v1.0.0
+        with:
+          gleam-version: {}
+      - run: rebar3 install_deps
+      - run: rebar3 eunit
+"#,
+        version
     )
 }
 
