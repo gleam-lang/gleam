@@ -134,7 +134,7 @@ jobs:
       - uses: gleam-lang/setup-erlang@v1.0.0
         with:
           otp-version: 22.1
-      - uses: gleam-lang/setup-gleam@v1.0.0
+      - uses: gleam-lang/setup-gleam@v1.0.1
         with:
           gleam-version: {}
       - run: rebar3 install_deps
