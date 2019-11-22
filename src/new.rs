@@ -226,7 +226,7 @@ pub fn hello_world_test() {{
     )
 }
 
-const APACHE_2: &'static str = r#"                                 Apache License
+const APACHE_2: &str = r#"                                 Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/
 
@@ -419,7 +419,7 @@ const APACHE_2: &'static str = r#"                                 Apache Licens
 
 "#;
 
-const GITIGNORE: &'static str = "*.beam
+const GITIGNORE: &str = "*.beam
 *.iml
 *.o
 *.plt

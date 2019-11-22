@@ -42,8 +42,9 @@ impl Type {
         for _ in 0..initial_indent {
             b.push(' ');
         }
+        let mut initial_indent = initial_indent;
         b.to_doc()
-            .append(self.to_gleam_doc(&mut im::hashmap![], &mut initial_indent.clone()))
+            .append(self.to_gleam_doc(&mut im::hashmap![], &mut initial_indent))
             .nest(initial_indent as isize)
             .format(80)
     }
@@ -55,7 +56,7 @@ impl Type {
     ) -> Document {
         match self {
             Type::App { name, args, .. } => {
-                if args.len() == 0 {
+                if args.is_empty() {
                     name.clone().to_doc()
                 } else {
                     name.clone()
@@ -94,7 +95,7 @@ impl Type {
     pub fn get_app_args(
         &self,
         public: bool,
-        module: &Vec<String>,
+        module: &[String],
         name: &str,
         arity: usize,
         env: &mut Env,
@@ -106,7 +107,7 @@ impl Type {
                 args,
                 ..
             } => {
-                if module == m && name == n && args.len() == arity {
+                if *module == m[..] && name == n && args.len() == arity {
                     Some(args.clone())
                 } else {
                     None
@@ -135,7 +136,7 @@ impl Type {
                         *typ.borrow_mut() = TypeVar::Link {
                             typ: Box::new(Type::App {
                                 name: name.to_string(),
-                                module: module.clone(),
+                                module: module.to_owned(),
                                 args: args.clone(),
                                 public,
                             }),
@@ -211,10 +212,10 @@ fn next_letter(i: &mut usize) -> String {
 
     loop {
         n = rest % alphabet_length;
-        rest = rest / alphabet_length;
+        rest /= alphabet_length;
         chars.push((n as u8 + char_offset) as char);
 
-        if rest <= 0 {
+        if rest == 0 {
             break;
         }
         rest -= 1
@@ -497,8 +498,8 @@ impl FieldMap {
         }
     }
 
-    pub fn to_option(self) -> Option<Self> {
-        if self.fields.len() == 0 {
+    pub fn into_option(self) -> Option<Self> {
+        if self.fields.is_empty() {
             None
         } else {
             Some(self)
@@ -1236,15 +1237,17 @@ impl<'a> Env<'a> {
     fn get_value_constructor(
         &self,
         module: Option<&String>,
-        name: &String,
+        name: &str,
     ) -> Result<&ValueConstructor, GetValueConstructorError> {
         match module {
-            None => self.variables.get(&*name).ok_or_else(|| {
-                GetValueConstructorError::UnknownVariable {
-                    name: name.to_string(),
-                    variables: self.variables.clone(),
-                }
-            }),
+            None => {
+                self.variables
+                    .get(name)
+                    .ok_or_else(|| GetValueConstructorError::UnknownVariable {
+                        name: name.to_string(),
+                        variables: self.variables.clone(),
+                    })
+            }
 
             Some(module) => {
                 let module = self.imported_modules.get(&*module).ok_or_else(|| {
@@ -1602,7 +1605,7 @@ pub fn infer_module(
                             })?;
                     }
                 }
-                let field_map = field_map.to_option();
+                let field_map = field_map.into_option();
 
                 // Register a var for the function so that it can call itself recursively
                 let rec = env.new_unbound_var(level + 1);
@@ -1698,7 +1701,7 @@ pub fn infer_module(
                             })?;
                     }
                 }
-                let field_map = field_map.to_option();
+                let field_map = field_map.into_option();
                 let typ = Type::Fn {
                     args: args_types,
                     retrn: Box::new(retrn_type),
@@ -1774,7 +1777,7 @@ pub fn infer_module(
                     .collect::<Result<_, _>>()?;
 
                 let retrn = Type::App {
-                    public: public.clone(),
+                    public,
                     module: module_name.clone(),
                     name: name.clone(),
                     args: type_args_types,
@@ -1792,7 +1795,7 @@ pub fn infer_module(
                 let constructor_variant = ValueConstructorVariant::Struct {
                     name: name.clone(),
                     arity: fields.len(),
-                    field_map: field_map,
+                    field_map,
                 };
                 // Register constructor
                 let args_types = fields
@@ -1863,7 +1866,7 @@ pub fn infer_module(
                     .collect::<Result<_, _>>()?;
 
                 let retrn = Type::App {
-                    public: public.clone(),
+                    public,
                     module: module_name.clone(),
                     name: name.clone(),
                     args: args_types,
@@ -2044,46 +2047,30 @@ fn infer_module_type_retention_test() {
 ///
 pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr, Error> {
     match expr {
-        Expr::Int {
-            meta,
-            value,
-            typ: _,
-        } => Ok(Expr::Int {
+        Expr::Int { meta, value, .. } => Ok(Expr::Int {
             meta,
             value,
             typ: int(),
         }),
 
-        Expr::Float {
-            meta,
-            value,
-            typ: _,
-        } => Ok(Expr::Float {
+        Expr::Float { meta, value, .. } => Ok(Expr::Float {
             meta,
             value,
             typ: float(),
         }),
 
-        Expr::String {
-            meta,
-            value,
-            typ: _,
-        } => Ok(Expr::String {
+        Expr::String { meta, value, .. } => Ok(Expr::String {
             meta,
             value,
             typ: string(),
         }),
 
-        Expr::Nil { meta, typ: _ } => Ok(Expr::Nil {
+        Expr::Nil { meta, .. } => Ok(Expr::Nil {
             meta,
             typ: list(env.new_unbound_var(level)),
         }),
 
-        Expr::Seq {
-            first,
-            then,
-            typ: _,
-        } => {
+        Expr::Seq { first, then, .. } => {
             let first = infer(*first, level, env)?;
             let then = infer(*then, level, env)?;
             Ok(Expr::Seq {
@@ -2098,7 +2085,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             is_capture,
             args,
             body,
-            typ: _,
+            ..
         } => {
             let (args_types, body) = infer_fun(&args, *body, &None, level, env)?;
             let typ = Type::Fn {
@@ -2120,7 +2107,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             pattern,
             value,
             then,
-            typ: _,
+            ..
         } => {
             let value = infer(*value, level + 1, env)?;
             let value_typ = generalise(value.typ().clone(), level + 1);
@@ -2140,7 +2127,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             meta,
             subjects,
             clauses,
-            typ: _,
+            ..
         } => {
             let subjects_count = subjects.len();
             let mut typed_subjects = Vec::with_capacity(subjects_count);
@@ -2189,10 +2176,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         }
 
         Expr::Cons {
-            meta,
-            head,
-            tail,
-            typ: _,
+            meta, head, tail, ..
         } => {
             let head = infer(*head, level, env)?;
             let tail = infer(*tail, level, env)?;
@@ -2207,10 +2191,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         }
 
         Expr::Call {
-            meta,
-            fun,
-            args,
-            typ: _,
+            meta, fun, args, ..
         } => {
             let (fun, args, typ) = infer_call(*fun, args, level, &meta, env)?;
             Ok(Expr::Call {
@@ -2221,11 +2202,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             })
         }
 
-        Expr::AnonStruct {
-            meta,
-            elems,
-            typ: _,
-        } => {
+        Expr::AnonStruct { meta, elems, .. } => {
             let elems = elems
                 .into_iter()
                 .map(|e| infer(e, level, env))
@@ -2241,7 +2218,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             name,
             left,
             right,
-            typ: _,
+            ..
         } => {
             let fun = Expr::Var {
                 meta: meta.clone(),
@@ -2270,11 +2247,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             })
         }
 
-        Expr::Var {
-            meta,
-            name,
-            constructor: _,
-        } => {
+        Expr::Var { meta, name, .. } => {
             let constructor = infer_var(&name, level, &meta, env)?;
             Ok(Expr::Var {
                 constructor,
@@ -2287,7 +2260,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             meta: select_meta,
             label,
             container,
-            typ: _,
+            ..
         } => match &*container {
             Expr::Var { name, meta, .. } if !env.variables.contains_key(name) => {
                 infer_module_select(name, label, level, meta, select_meta, env)
@@ -2309,7 +2282,7 @@ https://github.com/lpil/gleam/issues
 }
 
 fn infer_module_select(
-    module_alias: &String,
+    module_alias: &str,
     label: String,
     level: usize,
     module_meta: &Meta,
@@ -2343,7 +2316,7 @@ fn infer_module_select(
         typ: instantiate(constructor.typ, level, &mut hashmap![], env),
         meta: select_meta,
         module_name,
-        module_alias: module_alias.clone(),
+        module_alias: module_alias.to_string(),
         constructor: constructor.variant.to_module_value_constructor(),
     })
 }
@@ -2404,8 +2377,7 @@ fn unify_pattern(
             Ok(Pattern::Nil { meta })
         }
 
-        Pattern::Cons { meta, head, tail } => match typ.get_app_args(true, &vec![], "List", 1, env)
-        {
+        Pattern::Cons { meta, head, tail } => match typ.get_app_args(true, &[], "List", 1, env) {
             Some(args) => {
                 let head = Box::new(unify_pattern(*head, &args[0], level, env)?);
                 let tail = Box::new(unify_pattern(*tail, typ, level, env)?);
@@ -2449,7 +2421,7 @@ fn unify_pattern(
             module,
             name,
             args: mut pattern_args,
-            constructor: _,
+            ..
         } => {
             let cons = env
                 .get_value_constructor(module.as_ref(), &name)
@@ -2583,7 +2555,7 @@ fn infer_call(
     Ok((fun, args, return_type))
 }
 
-fn assert_no_labelled_arguments<A>(args: &Vec<CallArg<A>>) -> Result<(), Error> {
+fn assert_no_labelled_arguments<A>(args: &[CallArg<A>]) -> Result<(), Error> {
     for arg in args {
         if let Some(label) = &arg.label {
             return Err(Error::UnexpectedLabelledArg {
