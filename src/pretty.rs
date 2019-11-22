@@ -120,11 +120,11 @@ fn fits(mut limit: isize, mut docs: Vector<(isize, Mode, Document)>) -> bool {
 
             Document::Group(doc) => docs.push_front((indent, Mode::Unbroken, *doc)),
 
-            Document::Text(s) => limit = limit - s.len() as isize,
+            Document::Text(s) => limit -= s.len() as isize,
 
             Document::Break { unbroken, .. } => match mode {
                 Mode::Broken => return true,
-                Mode::Unbroken => limit = limit - unbroken.len() as isize,
+                Mode::Unbroken => limit -= unbroken.len() as isize,
             },
 
             Document::Cons(left, right) => {
@@ -175,7 +175,7 @@ fn fmt(b: &mut String, limit: isize, mut width: isize, mut docs: Vector<(isize, 
             }
 
             Document::Text(s) => {
-                width = width + s.len() as isize;
+                width += s.len() as isize;
                 b.push_str(s.as_str());
             }
 

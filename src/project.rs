@@ -162,26 +162,23 @@ Second: {}",
                         label: did_you_mean(label, &mut options, "Unexpected label"),
                     };
                     write(buffer, diagnostic);
-                    if options.len() > 0 {
-                        write!(
-                            buffer,
-                            "
-This constructor does not accept the label `{}`.
-Expected one of `{}`.
-",
-                            label,
-                            options.iter().join("`, `")
-                        )
-                        .unwrap();
-                    } else {
+                    if options.is_empty() {
                         write!(
                             buffer,
                             "\n This constructor does not accept any labelled arguments.\n "
                         )
                         .unwrap();
+                    } else {
+                        writeln!(
+                            buffer,
+                            "
+This constructor does not accept the label `{}`.
+Expected one of `{}`.",
+                            label,
+                            options.iter().join("`, `")
+                        )
+                        .unwrap();
                     }
-
-                    if options.len() > 0 {}
                 }
 
                 UnexpectedLabelledArg { meta, label } => {
@@ -193,12 +190,11 @@ Expected one of `{}`.
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
-                    write!(
+                    writeln!(
                         buffer,
                         "
 This argument has been given a label but the constructor does not expect any.
-Please remove the label `{}`.
-",
+Please remove the label `{}`.",
                         label
                     )
                     .unwrap();
@@ -213,13 +209,12 @@ Please remove the label `{}`.
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
-                    write!(
+                    writeln!(
                         buffer,
                         "
 This unlablled argument has been supplied after a labelled argument.
 Once a labelled argument has been supplied all following arguments must
-also be labelled.
-",
+also be labelled.",
                     )
                     .unwrap();
                 }
@@ -233,12 +228,11 @@ also be labelled.
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
-                    write!(
+                    writeln!(
                         buffer,
                         "
 A function has already been defined with the name
-`{}` in this module.
-",
+`{}` in this module.",
                         fun
                     )
                     .unwrap();
@@ -253,11 +247,10 @@ A function has already been defined with the name
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
-                    write!(
+                    writeln!(
                         buffer,
                         "
-The field `{}` has already been defined. Rename this field.
-",
+The field `{}` has already been defined. Rename this field.",
                         label
                     )
                     .unwrap();
@@ -272,11 +265,9 @@ The field `{}` has already been defined. Rename this field.
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
-                    write!(
+                    writeln!(
                         buffer,
-                        "
-The labelled argument `{}` has already been supplied.
-",
+                        "\nThe labelled argument `{}` has already been supplied.",
                         label
                     )
                     .unwrap();
@@ -303,13 +294,12 @@ The labelled argument `{}` has already been supplied.
                     };
                     write(buffer, diagnostic);
 
-                    write!(
+                    writeln!(
                         buffer,
                         "
 This value is being called as a function but its type is:
 
-{}
-",
+{}",
                         typ.pretty_print(4)
                     )
                     .unwrap();
@@ -325,14 +315,13 @@ This value is being called as a function but its type is:
                     };
                     write(buffer, diagnostic);
 
-                    write!(
+                    writeln!(
                         buffer,
                         "
 Fields can only be accessed on modules. This is not a module, it is
 a value with this type:
 
-{}
-",
+{}",
                         typ.pretty_print(4)
                     )
                     .unwrap();
@@ -352,7 +341,7 @@ a value with this type:
                     };
                     write(buffer, diagnostic);
 
-                    write!(
+                    writeln!(
                         buffer,
                         "
 Expected type:
@@ -361,8 +350,7 @@ Expected type:
 
 Found type:
 
-{}
-",
+{}",
                         expected.pretty_print(4),
                         given.pretty_print(4)
                     )
@@ -409,11 +397,10 @@ Found type:
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
-                    write!(
+                    writeln!(
                         buffer,
                         "
-The type `{}` is not defined or imported in this module.
-",
+The type `{}` is not defined or imported in this module.",
                         name
                     )
                     .unwrap();
@@ -433,14 +420,7 @@ The type `{}` is not defined or imported in this module.
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
-                    write!(
-                        buffer,
-                        "
-The name `{}` is not in scope here.
-",
-                        name
-                    )
-                    .unwrap();
+                    writeln!(buffer, "\nThe name `{}` is not in scope here.", name).unwrap();
                 }
 
                 PrivateTypeLeak { meta, leaked } => {
@@ -458,15 +438,14 @@ The name `{}` is not in scope here.
                     // - is taken as an argument by this public function
                     // - is taken as an argument by this public enum constructor
                     // etc
-                    write!(
+                    writeln!(
                         buffer,
                         "
 The following type is private, but is being used by this public export.
 
 {}
 
-Private types can only be used within the module that defines them.
-",
+Private types can only be used within the module that defines them.",
                         leaked.pretty_print(4),
                     )
                     .unwrap();
@@ -486,11 +465,9 @@ Private types can only be used within the module that defines them.
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
-                    write!(
+                    writeln!(
                         buffer,
-                        "
-No module has been imported with the name `{}`.
-",
+                        "\nNo module has been imported with the name `{}`.",
                         name
                     )
                     .unwrap();
@@ -511,7 +488,7 @@ No module has been imported with the name `{}`.
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
-                    write!(
+                    writeln!(
                         buffer,
                         "\nThe module `{}` does not have a `{}` type.\n",
                         module_name.join("/"),
@@ -535,7 +512,7 @@ No module has been imported with the name `{}`.
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
-                    write!(
+                    writeln!(
                         buffer,
                         "\nThe module `{}` does not have a `{}` value.\n",
                         module_name.join("/"),
@@ -563,7 +540,7 @@ No module has been imported with the name `{}`.
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
-                    write!(
+                    writeln!(
                         buffer,
                         "\nThe module `{}` does not have a `{}` field.\n",
                         module_name.join("/"),
@@ -622,7 +599,7 @@ No module has been imported with the name `{}`.
                             },
                         };
                         write(buffer, diagnostic);
-                        write!(
+                        writeln!(
                             buffer,
                             "\nI don't know what this character means. Is it a typo?\n"
                         )
@@ -684,12 +661,11 @@ but this one uses {}. Rewrite this using the fn({}) {{ ... }} syntax.",
                     meta: meta.clone(),
                 };
                 write(buffer, diagnostic);
-                write!(
+                writeln!(
                     buffer,
                     "
 The module `{}` is trying to import the module `{}`,
-but it cannot be found.
-",
+but it cannot be found.",
                     module, import
                 )
                 .expect("error pretty buffer write");
@@ -799,7 +775,7 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
             });
         }
 
-        module.name = name.split("/").map(|s| s.to_string()).collect();
+        module.name = name.split('/').map(|s| s.to_string()).collect();
 
         let index = deps_graph.add_node(name.clone());
         indexes.insert(name.clone(), index);

@@ -32,7 +32,7 @@ use std::path::PathBuf;
 use structopt::clap::AppSettings;
 use structopt::StructOpt;
 
-const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(StructOpt, Debug)]
 #[structopt(global_settings = &[AppSettings::ColoredHelp, AppSettings::VersionlessSubcommands])]
