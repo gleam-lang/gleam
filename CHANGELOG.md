@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.5.0-rc1 - 2019-11-26
 
 - Function arguments can be labelled, allowing arguments to be given by name
   at the call site.
