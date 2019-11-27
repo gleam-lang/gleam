@@ -153,7 +153,7 @@ fn app_src(name: &str, is_application: bool) -> String {
     format!(
         r#"{{application, {},
  [{{description, "A Gleam program"}},
-  {{vsn, "0.1.0"}},
+  {{vsn, "1.0.0"}},
   {{registered, []}},{}
   {{applications,
    [kernel,
