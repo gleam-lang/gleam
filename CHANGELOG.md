@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased - 2019-11-27
+
+- `gleam new` creates a project at v1.0.0.
+
 ## v0.5.0-rc1 - 2019-11-26
 
 - Function arguments can be labelled, allowing arguments to be given by name
