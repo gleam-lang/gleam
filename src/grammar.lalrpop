@@ -68,8 +68,12 @@ EnumConstructor: EnumConstructor = {
     },
 }
 
-EnumConstructorArgs: Vec<TypeAst> = {
-    "(" <ts:Comma<Type>> ")" => ts
+EnumConstructorArgs: Vec<(Option<String>, TypeAst)> = {
+    "(" <ts:Comma<EnumConstructorArg>> ")" => ts
+}
+
+EnumConstructorArg: (Option<String>, TypeAst) = {
+    <label:(<VarName> ":")?> <typ:Type> => (label, typ),
 }
 
 StatementExternalFn: UntypedStatement = {

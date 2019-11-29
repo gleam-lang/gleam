@@ -468,8 +468,9 @@ pub struct ValueConstructor {
 impl ValueConstructor {
     fn field_map(&self) -> Option<&FieldMap> {
         match self.variant {
-            ValueConstructorVariant::Struct { ref field_map, .. } => Some(field_map),
+            ValueConstructorVariant::Enum { ref field_map, .. } => field_map.as_ref(),
             ValueConstructorVariant::ModuleFn { ref field_map, .. } => field_map.as_ref(),
+            ValueConstructorVariant::Struct { ref field_map, .. } => Some(field_map),
             _ => None,
         }
     }
@@ -737,7 +738,10 @@ pub enum ValueConstructorVariant {
     LocalVariable,
 
     /// An enum constructor or singleton
-    Enum { arity: usize },
+    Enum {
+        field_map: Option<FieldMap>,
+        arity: usize,
+    },
 
     /// A function belonging to the module
     ModuleFn {
@@ -829,12 +833,18 @@ impl<'a> Env<'a> {
 
         env.insert_variable(
             "True".to_string(),
-            ValueConstructorVariant::Enum { arity: 0 },
+            ValueConstructorVariant::Enum {
+                field_map: None,
+                arity: 0,
+            },
             bool(),
         );
         env.insert_variable(
             "False".to_string(),
-            ValueConstructorVariant::Enum { arity: 0 },
+            ValueConstructorVariant::Enum {
+                field_map: None,
+                arity: 0,
+            },
             bool(),
         );
         env.insert_type_constructor(
@@ -884,7 +894,10 @@ impl<'a> Env<'a> {
 
         env.insert_variable(
             "Nil".to_string(),
-            ValueConstructorVariant::Enum { arity: 0 },
+            ValueConstructorVariant::Enum {
+                field_map: None,
+                arity: 0,
+            },
             Type::App {
                 args: vec![],
                 public: true,
@@ -1127,7 +1140,10 @@ impl<'a> Env<'a> {
         let error = env.new_generic_var();
         env.insert_variable(
             "Ok".to_string(),
-            ValueConstructorVariant::Enum { arity: 1 },
+            ValueConstructorVariant::Enum {
+                field_map: None,
+                arity: 1,
+            },
             Type::Fn {
                 args: vec![ok.clone()],
                 retrn: Box::new(result(ok, error)),
@@ -1138,7 +1154,10 @@ impl<'a> Env<'a> {
         let error = env.new_generic_var();
         env.insert_variable(
             "Error".to_string(),
-            ValueConstructorVariant::Enum { arity: 1 },
+            ValueConstructorVariant::Enum {
+                field_map: None,
+                arity: 1,
+            },
             Type::Fn {
                 args: vec![error.clone()],
                 retrn: Box::new(result(ok, error)),
@@ -1873,11 +1892,21 @@ pub fn infer_module(
                 };
                 // Check and register constructors
                 for constructor in constructors.iter() {
-                    let args_types = constructor
-                        .args
-                        .iter()
-                        .map(|arg| env.type_from_ast(&arg, &mut type_vars, NewTypeAction::Disallow))
-                        .collect::<Result<Vec<_>, _>>()?;
+                    let mut field_map = FieldMap::new(constructor.args.len());
+                    let mut args_types = Vec::with_capacity(constructor.args.len());
+                    for (i, (label, arg)) in constructor.args.iter().enumerate() {
+                        let t = env.type_from_ast(&arg, &mut type_vars, NewTypeAction::Disallow)?;
+                        args_types.push(t);
+                        if let Some(label) = label {
+                            field_map.insert(label.clone(), i).map_err(|_| {
+                                Error::DuplicateField {
+                                    label: label.to_string(),
+                                    meta: meta.clone(),
+                                }
+                            })?;
+                        }
+                    }
+                    let field_map = field_map.into_option();
                     // Insert constructor function into module scope
                     let typ = match constructor.args.len() {
                         0 => retrn.clone(),
@@ -1897,7 +1926,10 @@ pub fn infer_module(
                             constructor.name.clone(),
                             ValueConstructor {
                                 typ: typ.clone(),
-                                variant: ValueConstructorVariant::Enum { arity: args.len() },
+                                variant: ValueConstructorVariant::Enum {
+                                    arity: args.len(),
+                                    field_map: field_map.clone(),
+                                },
                             },
                         );
                     };
@@ -1905,6 +1937,7 @@ pub fn infer_module(
                         constructor.name.clone(),
                         ValueConstructorVariant::Enum {
                             arity: constructor.args.len(),
+                            field_map,
                         },
                         typ,
                     );

@@ -1153,10 +1153,13 @@ fn module_test() {
                 constructors: vec![EnumConstructor {
                     meta: Meta { start: 18, end: 26 },
                     name: "Boxed".to_string(),
-                    args: vec![TypeAst::Var {
-                        meta: Meta { start: 24, end: 25 },
-                        name: "a".to_string()
-                    }]
+                    args: vec![(
+                        None,
+                        TypeAst::Var {
+                            meta: Meta { start: 24, end: 25 },
+                            name: "a".to_string()
+                        }
+                    )]
                 }],
                 name: "Box".to_string(),
             }]
@@ -1176,10 +1179,13 @@ fn module_test() {
                     constructors: vec![EnumConstructor {
                         meta: Meta { start: 29, end: 48 },
                         name: "Boxxy0123456789x".to_string(),
-                        args: vec![TypeAst::Var {
-                            meta: Meta { start: 46, end: 47 },
-                            name: "x".to_string()
-                        }]
+                        args: vec![(
+                            None,
+                            TypeAst::Var {
+                                meta: Meta { start: 46, end: 47 },
+                                name: "x".to_string()
+                            }
+                        )]
                     }],
                     name: "Box0123456789x".to_string(),
                 },
@@ -1269,10 +1275,13 @@ fn module_test() {
                     constructors: vec![EnumConstructor {
                         meta: Meta { start: 18, end: 26 },
                         name: "Boxxy".to_string(),
-                        args: vec![TypeAst::Var {
-                            meta: Meta { start: 24, end: 25 },
-                            name: "x".to_string()
-                        }]
+                        args: vec![(
+                            None,
+                            TypeAst::Var {
+                                meta: Meta { start: 24, end: 25 },
+                                name: "x".to_string()
+                            }
+                        )]
                     }],
                     name: "Box".to_string(),
                 },

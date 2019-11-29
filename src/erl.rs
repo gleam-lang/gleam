@@ -887,7 +887,10 @@ map() ->
                     meta: default(),
                     constructor: ValueConstructor {
                         typ: crate::typ::int(),
-                        variant: ValueConstructorVariant::Enum { arity: 0 },
+                        variant: ValueConstructorVariant::Enum {
+                            field_map: None,
+                            arity: 0,
+                        },
                     },
                     name: "Nil".to_string(),
                 },
@@ -1813,6 +1816,17 @@ run() ->
         {A, B} ->
             A
     end.
+"#
+        },
+        Case {
+            src: r#"enum X { X(x: Int, y: Float) }
+                    fn x() { X(x: 1, y: 2.) X(y: 3., x: 4) }"#,
+            erl: r#"-module(the_app).
+-compile(no_auto_import).
+
+x() ->
+    {x, 1, 2.0},
+    {x, 4, 3.0}.
 "#
         },
     ];
