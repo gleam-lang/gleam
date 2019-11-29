@@ -4,9 +4,11 @@
 
 - Enum constructor arguments can now be labelled, allowing arguments to be
   given by name at the call site.
+- `gleam new` creates a project at v1.0.0.
 - Function calls are now properly escaped when the function name conflicts
   with an Erlang keyword.
-- `gleam new` creates a project at v1.0.0.
+- References to unqualified imported functions now generate correct Erlang
+  code.
 
 ## v0.5.0-rc1 - 2019-11-26
 
