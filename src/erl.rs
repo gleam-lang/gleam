@@ -475,13 +475,13 @@ fn call(fun: TypedExpr, args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Documen
             ..
         } => {
             if &module == env.module {
-                name.to_doc().append(call_args(args, env))
+                atom(name).append(call_args(args, env))
             } else {
                 module
                     .join("@")
                     .to_doc()
                     .append(":")
-                    .append(name)
+                    .append(atom(name))
                     .append(call_args(args, env))
             }
         }
@@ -1691,17 +1691,18 @@ x() ->
 "#,
         },
         Case {
-            src: r#"pub fn catch(x) { [1, 2, 3 | x] } pub external fn receive() -> Int = "try" "and""#,
+            src: r#"pub external fn receive() -> Int = "try" "and"
+                    pub fn catch(x) { receive() }"#,
             erl: r#"-module(the_app).
 -compile(no_auto_import).
 
--export(['catch'/1, 'receive'/0]).
-
-'catch'(X) ->
-    [1, 2, 3 | X].
+-export(['receive'/0, 'catch'/1]).
 
 'receive'() ->
     'try':'and'().
+
+'catch'(X) ->
+    'receive'().
 "#,
         },
         // Translation of Float-specific BinOp into variable-type Erlang term comparison.
