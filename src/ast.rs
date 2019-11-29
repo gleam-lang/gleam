@@ -67,7 +67,7 @@ pub enum ArgNames {
 pub struct EnumConstructor {
     pub meta: Meta,
     pub name: String,
-    pub args: Vec<TypeAst>,
+    pub args: Vec<(Option<String>, TypeAst)>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
