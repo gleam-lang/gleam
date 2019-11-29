@@ -629,7 +629,7 @@ fn module_select_fn(typ: crate::typ::Type, module_name: Vec<String>, label: Stri
             .to_doc()
             .append(module_name.join("@"))
             .append(":")
-            .append(label)
+            .append(atom(label))
             .append("/")
             .append(args.len()),
 
