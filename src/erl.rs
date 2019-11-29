@@ -377,6 +377,8 @@ fn var(name: String, constructor: ValueConstructor, env: &mut Env) -> Document {
         ValueConstructorVariant::ModuleFn { arity, module, .. } => "fun "
             .to_doc()
             .append(module.join("@"))
+            .append(":")
+            .append(atom(name))
             .append("/")
             .append(arity),
     }
