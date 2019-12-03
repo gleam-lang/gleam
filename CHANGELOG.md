@@ -9,6 +9,8 @@
   with an Erlang keyword.
 - References to unqualified imported functions now generate correct Erlang
   code.
+- Fixed a bug where variable renaming would be incorrectly rewritten in some
+  case expressions.
 
 ## v0.5.0-rc1 - 2019-11-26
 
