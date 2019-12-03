@@ -1,7 +1,12 @@
 -module(other).
 -compile(no_auto_import).
 
--export([create_user/1]).
+solve_b(Noun) ->
+    case Noun of
+        99 ->
+            Noun1 = Noun,
+            1;
 
-create_user(UserId) ->
-    {UserId, <<"">>, 22}.
+        Code ->
+            Noun1
+    end.
