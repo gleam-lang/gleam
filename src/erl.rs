@@ -413,7 +413,12 @@ fn clause(mut clause: TypedClause, env: &mut Env) -> Document {
 
 fn clauses(cs: Vec<TypedClause>, env: &mut Env) -> Document {
     cs.into_iter()
-        .map(|c| clause(c, env))
+        .map(|c| {
+            let vars = env.vars.clone();
+            let erl = clause(c, env);
+            env.vars = vars; // Reset the known variables now the clauses' scope has ended
+            erl
+        })
         .intersperse(";".to_doc().append(lines(2)))
         .collect::<Vec<_>>()
         .to_doc()
@@ -1830,6 +1835,34 @@ run() ->
 x() ->
     {x, 1, 2.0},
     {x, 4, 3.0}.
+"#
+        },
+        // https://github.com/gleam-lang/gleam/issues/333
+        Case {
+            src: r#"
+fn go(a) {
+  case a {
+    99 -> {
+      let a = a
+      1
+    }
+    _ -> a
+  }
+}
+
+                    "#,
+            erl: r#"-module(the_app).
+-compile(no_auto_import).
+
+go(A) ->
+    case A of
+        99 ->
+            A1 = A,
+            1;
+
+        _ ->
+            A
+    end.
 "#
         },
     ];
