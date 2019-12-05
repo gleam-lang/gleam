@@ -1,0 +1,1 @@
+-record(three, {a, b, c}).

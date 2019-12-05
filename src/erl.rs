@@ -42,6 +42,61 @@ impl<'a> Env<'a> {
     }
 }
 
+pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
+    let mut records = vec![];
+    for statement in &module.statements {
+        match statement {
+            Statement::Struct {
+                public: true,
+                fields,
+                name,
+                ..
+            } if !fields.is_empty() => records.push((name.as_ref(), struct_record(name, fields))),
+
+            _ => (),
+        }
+    }
+    records
+}
+
+pub fn struct_record(name: &str, fields: &[StructField]) -> String {
+    use std::fmt::Write;
+    let mut buffer = format!("-record({}, {{", name.to_snake_case());
+    for field in fields.iter().map(|f| f.label.as_ref()).intersperse(", ") {
+        write!(buffer, "{}", field).unwrap();
+    }
+    write!(buffer, "}}).\n").unwrap();
+    buffer
+}
+
+#[test]
+fn struct_record_test() {
+    assert_eq!(
+        struct_record(
+            "PetCat",
+            &[
+                StructField {
+                    meta: Default::default(),
+                    label: "name".to_string(),
+                    typ: TypeAst::Var {
+                        meta: Default::default(),
+                        name: "x".to_string(),
+                    },
+                },
+                StructField {
+                    meta: Default::default(),
+                    label: "is_cute".to_string(),
+                    typ: TypeAst::Var {
+                        meta: Default::default(),
+                        name: "x".to_string(),
+                    },
+                },
+            ]
+        ),
+        "-record(pet_cat, {name, is_cute}).\n".to_string()
+    );
+}
+
 pub fn module(module: TypedModule) -> String {
     let module_name = module.name;
     let exports: Vec<_> = module
