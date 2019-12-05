@@ -4,6 +4,8 @@
 
 - Enum constructor arguments can now be labelled, allowing arguments to be
   given by name at the call site.
+- An Erlang header file with a record definition is generated for each Gleam
+  struct defined.
 - `gleam new` creates a project at v1.0.0.
 - Function calls are now properly escaped when the function name conflicts
   with an Erlang keyword.
