@@ -8,4 +8,5 @@ solve_b(Noun) ->
             1;
 
         Code ->
-            Noun1
+            Noun
+    end.

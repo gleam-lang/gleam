@@ -1,0 +1,1 @@
+-record(one, {a}).

@@ -180,19 +180,31 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
 
         modules_type_infos.insert(name_string.clone(), module.type_info.clone());
 
-        let path = source_base_path
+        let gen_dir = source_base_path
             .parent()
             .unwrap()
             .join("gen")
-            .join(origin.dir_name())
-            .join(format!("{}.erl", module.name.join("@")));
-        let text = crate::erl::module(module);
+            .join(origin.dir_name());
+        let erl_module_name = module.name.join("@");
+
+        let mut files: Vec<_> = crate::erl::records(&module)
+            .into_iter()
+            .map(|(name, text)| OutputFile {
+                path: gen_dir.join(format!("{}_{}.erl", erl_module_name, name)),
+                text,
+            })
+            .collect();
+
+        files.push(OutputFile {
+            path: gen_dir.join(format!("{}.erl", erl_module_name)),
+            text: crate::erl::module(module),
+        });
 
         compiled_modules.push(Out {
             name,
             name_string,
             origin,
-            files: vec![OutputFile { path, text }],
+            files,
         });
     }
 
@@ -741,10 +753,16 @@ thing() ->\n    thing:new().\n"
                 Output {
                     origin: ModuleOrigin::Src,
                     name: vec!["one".to_string()],
-                    files: vec![OutputFile {
-                        path: PathBuf::from("/gen/src/one.erl"),
-                        text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
-                    }],
+                    files: vec![
+                        OutputFile {
+                            path: PathBuf::from("/gen/src/one_Point.erl"),
+                            text: "-record(point, {x, y}).\n".to_string(),
+                        },
+                        OutputFile {
+                            path: PathBuf::from("/gen/src/one.erl"),
+                            text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                        },
+                    ],
                 },
                 Output {
                     origin: ModuleOrigin::Src,
