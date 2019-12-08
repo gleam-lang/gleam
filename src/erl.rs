@@ -169,20 +169,20 @@ fn statement(statement: TypedStatement, module: &Vec<String>) -> Option<Document
 }
 
 fn mod_fun(name: String, args: Vec<Arg>, body: TypedExpr, module: &Vec<String>) -> Document {
-    let body_doc = expr(body, &mut Env::new(module));
+    let mut env = Env::new(module);
 
     atom(name)
-        .append(fun_args(args))
+        .append(fun_args(args, &mut env))
         .append(" ->")
-        .append(line().append(body_doc).nest(INDENT).group())
+        .append(line().append(expr(body, &mut env)).nest(INDENT).group())
         .append(".")
 }
 
-fn fun_args(args: Vec<Arg>) -> Document {
+fn fun_args(args: Vec<Arg>, env: &mut Env) -> Document {
     wrap_args(args.into_iter().map(|a| match a.names {
         ArgNames::Discard => "_".to_doc(),
         ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
-            name.to_camel_case().to_doc()
+            env.next_local_var_name(name)
         }
     }))
 }
@@ -717,7 +717,7 @@ fn map_select(map: TypedExpr, label: String, env: &mut Env) -> Document {
 fn fun(args: Vec<Arg>, body: TypedExpr, env: &mut Env) -> Document {
     "fun"
         .to_doc()
-        .append(fun_args(args).append(" ->"))
+        .append(fun_args(args, env).append(" ->"))
         .append(break_("", " ").append(expr(body, env)).nest(INDENT))
         .append(break_("", " "))
         .append("end")
@@ -1918,6 +1918,38 @@ go(A) ->
         _ ->
             A
     end.
+"#
+        },
+        Case {
+            src: r#"
+fn go(a) {
+  let a = a + 1
+  a
+}
+
+                    "#,
+            erl: r#"-module(the_app).
+-compile(no_auto_import).
+
+go(A) ->
+    A1 = A + 1,
+    A1.
+"#
+        },
+        Case {
+            src: r#"
+fn go(a) {
+  let a = 1
+  a
+}
+
+                    "#,
+            erl: r#"-module(the_app).
+-compile(no_auto_import).
+
+go(A) ->
+    A1 = 1,
+    A1.
 "#
         },
     ];
