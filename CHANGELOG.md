@@ -11,8 +11,10 @@
   with an Erlang keyword.
 - References to unqualified imported functions now generate correct Erlang
   code.
-- Fixed a bug where variable renaming would be incorrectly rewritten in some
+- Fixed a bug where variable rebinding would generate incorrect code in some
   case expressions.
+- Fixed a bug where variable rebinding of function arguments would generate
+  incorrect code.
 
 ## v0.5.0-rc1 - 2019-11-26
 
