@@ -447,16 +447,11 @@ fn rebar_config(insert: &str) -> String {
 {{src_dirs, ["src", "gen/src"]}}.
 
 {{profiles, [
-    {{test, [
-        {{pre_hooks, [{{compile, "gleam build ."}}]}},
-        {{src_dirs, ["src", "test", "gen/src", "gen/test"]}}
-    ]}},
-
-    {{dev, [
-        {{pre_hooks, [{{compile, "gleam build ."}}]}}
-    ]}}
+    {{test, [{{src_dirs, ["src", "test", "gen/src", "gen/test"]}}]}}
 ]}}.
 {}
+{{project_plugins, [rebar_gleam]}}.
+
 {{deps, [
     gleam_stdlib
 ]}}.
