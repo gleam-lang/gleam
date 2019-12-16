@@ -563,7 +563,7 @@ fn call(fun: TypedExpr, args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Documen
             .join("@")
             .to_doc()
             .append(":")
-            .append(label)
+            .append(atom(label))
             .append(call_args(args, env)),
 
         call @ Expr::Call { .. } => expr(call, env)

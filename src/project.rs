@@ -932,6 +932,46 @@ funky() ->
                 },
             ]),
         },
+        // https://github.com/gleam-lang/gleam/issues/340
+        Case {
+            input: vec![
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/one.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "pub fn receive(x) { x }".to_string(),
+                },
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/two.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "import one fn funky() { one.receive(1) }".to_string(),
+                },
+            ],
+            expected: Ok(vec![
+                Output {
+                    origin: ModuleOrigin::Src,
+                    name: vec!["one".to_string()],
+                    files: vec![OutputFile {
+                        path: PathBuf::from("/gen/src/one.erl"),
+                        text: "-module(one).\n-compile(no_auto_import).\n
+-export(['receive'/1]).\n
+'receive'(X) ->\n    X.\n"
+                            .to_string(),
+                    }],
+                },
+                Output {
+                    origin: ModuleOrigin::Src,
+                    name: vec!["two".to_string()],
+                    files: vec![OutputFile {
+                        path: PathBuf::from("/gen/src/two.erl"),
+                        text: "-module(two).\n-compile(no_auto_import).\n\nfunky() ->
+    one:'receive'(1).\n"
+                            .to_string(),
+                    }],
+                },
+            ]),
+        },
     ];
 
     for Case { input, expected } in cases.into_iter() {
