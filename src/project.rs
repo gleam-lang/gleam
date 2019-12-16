@@ -190,7 +190,7 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
         let mut files: Vec<_> = crate::erl::records(&module)
             .into_iter()
             .map(|(name, text)| OutputFile {
-                path: gen_dir.join(format!("{}_{}.erl", erl_module_name, name)),
+                path: gen_dir.join(format!("{}_{}.hrl", erl_module_name, name)),
                 text,
             })
             .collect();
@@ -755,7 +755,7 @@ thing() ->\n    thing:new().\n"
                     name: vec!["one".to_string()],
                     files: vec![
                         OutputFile {
-                            path: PathBuf::from("/gen/src/one_Point.erl"),
+                            path: PathBuf::from("/gen/src/one_Point.hrl"),
                             text: "-record(point, {x, y}).\n".to_string(),
                         },
                         OutputFile {
