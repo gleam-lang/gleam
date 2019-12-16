@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased - 2019-11-27
+## v0.5.0 - 2019-12-16
 
 - Enum constructor arguments can now be labelled, allowing arguments to be
   given by name at the call site.
