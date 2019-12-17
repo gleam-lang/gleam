@@ -95,7 +95,6 @@ fn readme(name: &str) -> String {
     format!(
         r#"# {}
 
-
 A Gleam program
 
 
