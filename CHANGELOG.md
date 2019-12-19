@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Fixed a bug where invalid Erlang would be generated when using a local
+  private function as a value.
+
 ## v0.5.0 - 2019-12-16
 
 - Enum constructor arguments can now be labelled, allowing arguments to be
