@@ -1,4 +1,7 @@
-fn walk_b(x) {
-  let x = 1
+fn id(x) {
   x
+}
+
+fn main() {
+  id(id)
 }
