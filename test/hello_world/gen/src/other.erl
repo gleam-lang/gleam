@@ -1,6 +1,8 @@
 -module(other).
 -compile(no_auto_import).
 
-walk_b(X) ->
-    X = 1,
+id(X) ->
     X.
+
+main() ->
+    id(fun other:id/1).

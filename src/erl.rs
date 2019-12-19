@@ -429,6 +429,10 @@ fn var(name: String, constructor: ValueConstructor, env: &mut Env) -> Document {
 
         ValueConstructorVariant::LocalVariable => env.local_var_name(name),
 
+        ValueConstructorVariant::ModuleFn {
+            arity, ref module, ..
+        } if module == env.module => "fun ".to_doc().append(atom(name)).append("/").append(arity),
+
         ValueConstructorVariant::ModuleFn { arity, module, .. } => "fun "
             .to_doc()
             .append(module.join("@"))
@@ -1950,6 +1954,26 @@ fn go(a) {
 go(A) ->
     A1 = 1,
     A1.
+"#
+        },
+        Case {
+            src: r#"
+fn id(x) {
+  x
+}
+
+fn main() {
+  id(id)
+}
+"#,
+            erl: r#"-module(the_app).
+-compile(no_auto_import).
+
+id(X) ->
+    X.
+
+main() ->
+    id(fun id/1).
 "#
         },
     ];
