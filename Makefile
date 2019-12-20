@@ -18,7 +18,7 @@ install: ## Build the Gleam compiler and place it on PATH
 test:
 	cargo test
 
-.PHONY: test-gleam-watch
+.PHONY: test-watch
 test-watch: ## Run compiler tests when files change
 	watchexec -e rs,lalrpop "echo; cargo test; echo; echo"
 
