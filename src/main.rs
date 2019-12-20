@@ -34,6 +34,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use structopt::clap::AppSettings;
 use structopt::StructOpt;
+use strum::VariantNames;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -56,7 +57,7 @@ enum Command {
 
         #[structopt(
             long = "template",
-            possible_values = &new::Template::variants(),
+            possible_values = &new::Template::VARIANTS,
             case_insensitive = true,
             default_value = "lib"
         )]

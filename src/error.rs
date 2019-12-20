@@ -556,7 +556,7 @@ No module has been imported with the name `{}`.
 
                 match error {
                     UnrecognizedToken {
-                        token: Some((start, _, end)),
+                        token: (start, _, end),
                         expected,
                     } => {
                         let diagnostic = ErrorDiagnostic {
@@ -574,7 +574,7 @@ No module has been imported with the name `{}`.
                             .expect("error pretty buffer write");
                     }
 
-                    UnrecognizedToken { token: None, .. } => {
+                    UnrecognizedEOF { .. } => {
                         let diagnostic = ErrorDiagnostic {
                             title: "Syntax error".to_string(),
                             label: "Unexpected end of file".to_string(),

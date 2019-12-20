@@ -9,13 +9,13 @@ edition = "2018"
 clap = "2"
 structopt = "0.3"
 # Immutable data structures
-im = "12"
+im = "14"
 # Extra iter methods
-itertools = "0.7"
+itertools = "0.8"
 # String case conversion
 heck = "0.3"
 # Parsing
-lalrpop-util = "0.16"
+lalrpop-util = "0.17"
 regex = "1.1"
 # Graph data structures
 petgraph = "0.4"
@@ -33,8 +33,8 @@ strsim = "0.9"
 # Recursively traversing directories
 walkdir = "2"
 # Enum trait impl macros
-strum = "0.16"
-strum_macros = "0.16"
+strum = "0.17"
+strum_macros = "0.17"
 
 
 [build-dependencies]
