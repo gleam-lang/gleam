@@ -9,9 +9,9 @@ edition = "2018"
 clap = "2"
 structopt = "0.3"
 # Immutable data structures
-im = "12"
+im = "14"
 # Extra iter methods
-itertools = "0.7"
+itertools = "0.8"
 # String case conversion
 heck = "0.3"
 # Parsing
