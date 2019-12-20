@@ -43,6 +43,51 @@ pub enum Error {
     },
 
     DependencyCycle,
+
+    FileIO {
+        kind: FileKind,
+        action: FileIOAction,
+        path: PathBuf,
+        err: Option<String>,
+    },
+}
+
+#[derive(Debug, PartialEq)]
+pub enum FileIOAction {
+    Open,
+    Read,
+    Parse,
+    Create,
+    WriteTo,
+    FindParent,
+}
+
+impl FileIOAction {
+    fn text(&self) -> &'static str {
+        match self {
+            FileIOAction::Open => "open",
+            FileIOAction::Read => "read",
+            FileIOAction::Parse => "parse",
+            FileIOAction::Create => "create",
+            FileIOAction::WriteTo => "write to",
+            FileIOAction::FindParent => "find the parent of",
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum FileKind {
+    File,
+    Directory,
+}
+
+impl FileKind {
+    fn text(&self) -> &'static str {
+        match self {
+            FileKind::File => "file",
+            FileKind::Directory => "directory",
+        }
+    }
 }
 
 fn write_project(mut buffer: &mut Buffer, d: ProjectErrorDiagnostic) {
@@ -105,6 +150,7 @@ cannot import them. Perhaps move the `{}` module to the src directory.",
                 )
                 .unwrap();
             }
+
             Error::DuplicateModule {
                 module,
                 first,
@@ -120,6 +166,31 @@ Second: {}",
                         module,
                         first.to_str().expect("pretty error print PathBuf to_str"),
                         second.to_str().expect("pretty error print PathBuf to_str"),
+                    ),
+                };
+                write_project(buffer, diagnostic);
+            }
+
+            Error::FileIO {
+                kind,
+                action,
+                path,
+                err,
+            } => {
+                let err = match err {
+                    Some(e) => format!("\n\nThe error message was:\n    {}\n", e),
+                    None => "".to_string(),
+                };
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "File IO failure".to_string(),
+                    label: format!(
+                        "An error occurred while trying to {} the {}
+{}.{}
+",
+                        action.text(),
+                        kind.text(),
+                        path.to_string_lossy(),
+                        err,
                     ),
                 };
                 write_project(buffer, diagnostic);
