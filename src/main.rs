@@ -117,22 +117,33 @@ fn command_build(root: String) -> Result<(), Error> {
 
     for crate::project::Compiled { files, .. } in compiled {
         for crate::project::OutputFile { text, path } in files {
-            let dir_path = path
-                .parent()
-                .unwrap_or_else(|| panic!("getting output file directory {:?}", path));
-            std::fs::create_dir_all(dir_path).unwrap_or_else(|e| {
-                panic!(
-                    "creating output file directory {:?}: {:?}",
-                    dir_path,
-                    e.to_string()
-                )
-            });
+            let dir_path = path.parent().ok_or_else(|| Error::FileIO {
+                action: error::FileIOAction::FindParent,
+                kind: error::FileKind::Directory,
+                path: path.clone(),
+                err: None,
+            })?;
 
-            let mut f = File::create(&path)
-                .unwrap_or_else(|e| panic!("creating output file {:?}: {:?}", path, e.to_string()));
-            f.write_all(text.as_bytes()).unwrap_or_else(|e| {
-                panic!("writing to output file {:?}: {:?}", path, e.to_string())
-            });
+            std::fs::create_dir_all(dir_path).map_err(|e| Error::FileIO {
+                action: error::FileIOAction::Create,
+                kind: error::FileKind::Directory,
+                path: dir_path.to_path_buf(),
+                err: Some(e.to_string()),
+            })?;
+
+            let mut f = File::create(&path).map_err(|e| Error::FileIO {
+                action: error::FileIOAction::Create,
+                kind: error::FileKind::File,
+                path: path.clone(),
+                err: Some(e.to_string()),
+            })?;
+
+            f.write_all(text.as_bytes()).map_err(|e| Error::FileIO {
+                action: error::FileIOAction::WriteTo,
+                kind: error::FileKind::File,
+                path: path.clone(),
+                err: Some(e.to_string()),
+            })?;
         }
     }
 
@@ -140,40 +151,31 @@ fn command_build(root: String) -> Result<(), Error> {
     Ok(())
 }
 
-fn read_project_config(root: &str) -> Result<ProjectConfig, ()> {
-    fn die(message: String) -> ! {
-        use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
-        let mut stderr = StandardStream::stderr(ColorChoice::Always);
-
-        // Write "error: " in red
-        stderr
-            .set_color(
-                ColorSpec::new()
-                    .set_fg(Some(Color::Red))
-                    .set_intense(true)
-                    .set_bold(true),
-            )
-            .unwrap();
-        write!(&mut stderr, "error: ").unwrap();
-
-        // Write error message in white
-        stderr.reset().unwrap();
-        writeln!(&mut stderr, "{}", message).unwrap();
-
-        std::process::exit(1);
-    }
-
+fn read_project_config(root: &str) -> Result<ProjectConfig, Error> {
     use std::io::Read;
     let config_path = PathBuf::from(root).join("gleam.toml");
-    let mut file = File::open(config_path)
-        .unwrap_or_else(|e| die(format!("could not open gleam.toml: {}", e.to_string())));
+
+    let mut file = File::open(&config_path).map_err(|e| Error::FileIO {
+        action: error::FileIOAction::Open,
+        kind: error::FileKind::File,
+        path: config_path.clone(),
+        err: Some(e.to_string()),
+    })?;
 
     let mut toml = String::new();
-    file.read_to_string(&mut toml)
-        .unwrap_or_else(|e| die(format!("could not read gleam.toml: {}", e.to_string())));
+    file.read_to_string(&mut toml).map_err(|e| Error::FileIO {
+        action: error::FileIOAction::Read,
+        kind: error::FileKind::File,
+        path: config_path.clone(),
+        err: Some(e.to_string()),
+    })?;
 
-    let project_config = toml::from_str(&toml)
-        .unwrap_or_else(|e| die(format!("could not parse gleam.toml: {}", e.to_string())));
+    let project_config = toml::from_str(&toml).map_err(|e| Error::FileIO {
+        action: error::FileIOAction::Parse,
+        kind: error::FileKind::File,
+        path: config_path.clone(),
+        err: Some(e.to_string()),
+    })?;
 
     Ok(project_config)
 }
