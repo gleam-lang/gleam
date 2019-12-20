@@ -9,6 +9,7 @@ mod typ;
 lalrpop_mod!(
     #[allow(deprecated)]
     #[allow(clippy::all)]
+    #[allow(dead_code)]
     grammar
 );
 
