@@ -1,12 +1,7 @@
 use crate::typ::{self, ModuleValueConstructor, PatternConstructor, ValueConstructor};
 
-pub type TypedModule = Module<
-    ValueConstructor,
-    ModuleValueConstructor,
-    PatternConstructor,
-    typ::Type,
-    typ::ModuleTypeInfo,
->;
+pub type TypedModule =
+    Module<ValueConstructor, ModuleValueConstructor, PatternConstructor, typ::Type, typ::Module>;
 
 pub type UntypedModule = Module<(), (), (), (), ()>;
 

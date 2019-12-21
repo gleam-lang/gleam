@@ -1,5 +1,5 @@
 use crate::ast::{
-    Arg, ArgNames, BinOp, CallArg, Clause, Expr, Meta, Module, Pattern, Statement, StructField,
+    self, Arg, ArgNames, BinOp, CallArg, Clause, Expr, Meta, Pattern, Statement, StructField,
     TypeAst, TypedExpr, TypedModule, TypedPattern, UnqualifiedImport, UntypedExpr, UntypedModule,
     UntypedPattern,
 };
@@ -446,37 +446,6 @@ fn to_gleam_doc_test() {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum TypeVar {
-    Unbound { id: usize, level: usize },
-    Link { typ: Box<Type> },
-    Generic { id: usize },
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct TypeConstructorInfo {
-    pub public: bool,
-    pub module: Vec<String>,
-    pub arity: usize,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct ValueConstructor {
-    pub variant: ValueConstructorVariant,
-    pub typ: Type,
-}
-
-impl ValueConstructor {
-    fn field_map(&self) -> Option<&FieldMap> {
-        match self.variant {
-            ValueConstructorVariant::Enum { ref field_map, .. } => field_map.as_ref(),
-            ValueConstructorVariant::ModuleFn { ref field_map, .. } => field_map.as_ref(),
-            ValueConstructorVariant::Struct { ref field_map, .. } => Some(field_map),
-            _ => None,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub struct FieldMap {
     arity: usize,
     fields: HashMap<String, usize>,
@@ -781,10 +750,10 @@ pub enum ModuleValueConstructor {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ModuleTypeInfo {
+pub struct Module {
     pub name: Vec<String>,
-    pub type_constructors: HashMap<String, TypeConstructorInfo>,
-    pub value_constructors: HashMap<String, ValueConstructor>,
+    pub types: HashMap<String, TypeConstructor>,
+    pub values: HashMap<String, ValueConstructor>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -797,11 +766,48 @@ pub enum PatternConstructor {
 pub struct Env<'a> {
     uid: usize,
     annotated_generic_types: im::HashSet<usize>,
-    variables: im::HashMap<String, ValueConstructor>,
-    importable_modules: &'a HashMap<String, ModuleTypeInfo>,
-    imported_modules: HashMap<String, ModuleTypeInfo>,
-    type_constructors: HashMap<String, TypeConstructorInfo>,
-    public_module_value_constructors: HashMap<String, ValueConstructor>,
+    importable_modules: &'a HashMap<String, Module>,
+    imported_modules: HashMap<String, Module>,
+
+    // Values defined in the current function (or the prelude)
+    local_values: im::HashMap<String, ValueConstructor>,
+
+    // Types defined in the current module (or the prelude)
+    module_types: HashMap<String, TypeConstructor>,
+
+    // Values defined in the current module
+    public_module_values: HashMap<String, ValueConstructor>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum TypeVar {
+    Unbound { id: usize, level: usize },
+    Link { typ: Box<Type> },
+    Generic { id: usize },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypeConstructor {
+    pub public: bool,
+    pub module: Vec<String>,
+    pub arity: usize,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ValueConstructor {
+    pub variant: ValueConstructorVariant,
+    pub typ: Type,
+}
+
+impl ValueConstructor {
+    fn field_map(&self) -> Option<&FieldMap> {
+        match self.variant {
+            ValueConstructorVariant::Enum { ref field_map, .. } => field_map.as_ref(),
+            ValueConstructorVariant::ModuleFn { ref field_map, .. } => field_map.as_ref(),
+            ValueConstructorVariant::Struct { ref field_map, .. } => Some(field_map),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -811,20 +817,20 @@ pub enum NewTypeAction {
 }
 
 impl<'a> Env<'a> {
-    pub fn new(importable_modules: &'a HashMap<String, ModuleTypeInfo>) -> Self {
+    pub fn new(importable_modules: &'a HashMap<String, Module>) -> Self {
         let mut env = Self {
             uid: 0,
             annotated_generic_types: im::HashSet::new(),
-            type_constructors: HashMap::new(),
-            public_module_value_constructors: HashMap::new(),
+            module_types: HashMap::new(),
+            public_module_values: HashMap::new(),
             imported_modules: HashMap::new(),
-            variables: hashmap![],
+            local_values: hashmap![],
             importable_modules,
         };
 
         env.insert_type_constructor(
             "Int".to_string(),
-            TypeConstructorInfo {
+            TypeConstructor {
                 arity: 0,
                 module: vec![],
                 public: true,
@@ -849,7 +855,7 @@ impl<'a> Env<'a> {
         );
         env.insert_type_constructor(
             "Bool".to_string(),
-            TypeConstructorInfo {
+            TypeConstructor {
                 arity: 0,
                 module: vec![],
                 public: true,
@@ -858,7 +864,7 @@ impl<'a> Env<'a> {
 
         env.insert_type_constructor(
             "List".to_string(),
-            TypeConstructorInfo {
+            TypeConstructor {
                 arity: 1,
                 module: vec![],
                 public: true,
@@ -867,7 +873,7 @@ impl<'a> Env<'a> {
 
         env.insert_type_constructor(
             "Float".to_string(),
-            TypeConstructorInfo {
+            TypeConstructor {
                 arity: 0,
                 module: vec![],
                 public: true,
@@ -876,7 +882,7 @@ impl<'a> Env<'a> {
 
         env.insert_type_constructor(
             "String".to_string(),
-            TypeConstructorInfo {
+            TypeConstructor {
                 arity: 0,
                 module: vec![],
                 public: true,
@@ -885,7 +891,7 @@ impl<'a> Env<'a> {
 
         env.insert_type_constructor(
             "Result".to_string(),
-            TypeConstructorInfo {
+            TypeConstructor {
                 arity: 2,
                 module: vec![],
                 public: true,
@@ -907,7 +913,7 @@ impl<'a> Env<'a> {
         );
         env.insert_type_constructor(
             "Nil".to_string(),
-            TypeConstructorInfo {
+            TypeConstructor {
                 arity: 0,
                 module: vec![],
                 public: true,
@@ -1202,20 +1208,20 @@ impl<'a> Env<'a> {
     /// Map a variable in the current scope.
     ///
     pub fn insert_variable(&mut self, name: String, variant: ValueConstructorVariant, typ: Type) {
-        self.variables
+        self.local_values
             .insert(name, ValueConstructor { variant, typ });
     }
 
     /// Lookup a variable in the current scope.
     ///
     pub fn get_variable(&self, name: &str) -> Option<&ValueConstructor> {
-        self.variables.get(name)
+        self.local_values.get(name)
     }
 
     /// Map a type in the current scope.
     ///
-    pub fn insert_type_constructor(&mut self, name: String, info: TypeConstructorInfo) {
-        self.type_constructors.insert(name, info);
+    pub fn insert_type_constructor(&mut self, name: String, info: TypeConstructor) {
+        self.module_types.insert(name, info);
     }
 
     /// Lookup a type in the current scope.
@@ -1224,14 +1230,16 @@ impl<'a> Env<'a> {
         &self,
         module_alias: &Option<String>,
         name: &str,
-    ) -> Result<&TypeConstructorInfo, GetTypeConstructorError> {
+    ) -> Result<&TypeConstructor, GetTypeConstructorError> {
         match module_alias {
-            None => self.type_constructors.get(name).ok_or_else(|| {
-                GetTypeConstructorError::UnknownType {
-                    name: name.to_string(),
-                    type_constructors: self.type_constructors.clone(),
-                }
-            }),
+            None => {
+                self.module_types
+                    .get(name)
+                    .ok_or_else(|| GetTypeConstructorError::UnknownType {
+                        name: name.to_string(),
+                        type_constructors: self.module_types.clone(),
+                    })
+            }
 
             Some(m) => {
                 let module = &self.imported_modules.get(m).ok_or_else(|| {
@@ -1240,13 +1248,14 @@ impl<'a> Env<'a> {
                         imported_modules: self.importable_modules.clone(),
                     }
                 })?;
-                module.type_constructors.get(name).ok_or_else(|| {
-                    GetTypeConstructorError::UnknownModuleType {
+                module
+                    .types
+                    .get(name)
+                    .ok_or_else(|| GetTypeConstructorError::UnknownModuleType {
                         name: name.to_string(),
                         module_name: module.name.clone(),
-                        type_constructors: module.type_constructors.clone(),
-                    }
-                })
+                        type_constructors: module.types.clone(),
+                    })
             }
         }
     }
@@ -1260,12 +1269,12 @@ impl<'a> Env<'a> {
     ) -> Result<&ValueConstructor, GetValueConstructorError> {
         match module {
             None => {
-                self.variables
-                    .get(name)
-                    .ok_or_else(|| GetValueConstructorError::UnknownVariable {
+                self.local_values.get(name).ok_or_else(|| {
+                    GetValueConstructorError::UnknownVariable {
                         name: name.to_string(),
-                        variables: self.variables.clone(),
-                    })
+                        variables: self.local_values.clone(), // TODO: include module values too
+                    }
+                })
             }
 
             Some(module) => {
@@ -1275,11 +1284,11 @@ impl<'a> Env<'a> {
                         imported_modules: self.importable_modules.clone(),
                     }
                 })?;
-                module.value_constructors.get(&*name).ok_or_else(|| {
+                module.values.get(&*name).ok_or_else(|| {
                     GetValueConstructorError::UnknownModuleValue {
                         name: name.to_string(),
                         module_name: module.name.clone(),
-                        value_constructors: module.value_constructors.clone(),
+                        value_constructors: module.values.clone(),
                     }
                 })
             }
@@ -1360,7 +1369,7 @@ impl<'a> Env<'a> {
                     NewTypeAction::Disallow => Err(Error::UnknownType {
                         name: name.to_string(),
                         meta: meta.clone(),
-                        types: self.type_constructors.clone(),
+                        types: self.module_types.clone(),
                     }),
                 },
             },
@@ -1385,20 +1394,20 @@ pub enum Error {
     UnknownType {
         meta: Meta,
         name: String,
-        types: HashMap<String, TypeConstructorInfo>,
+        types: HashMap<String, TypeConstructor>,
     },
 
     UnknownModule {
         meta: Meta,
         name: String,
-        imported_modules: HashMap<String, ModuleTypeInfo>,
+        imported_modules: HashMap<String, Module>,
     },
 
     UnknownModuleType {
         meta: Meta,
         name: String,
         module_name: Vec<String>,
-        type_constructors: HashMap<String, TypeConstructorInfo>,
+        type_constructors: HashMap<String, TypeConstructor>,
     },
 
     UnknownModuleValue {
@@ -1413,7 +1422,7 @@ pub enum Error {
         name: String,
         module_name: Vec<String>,
         value_constructors: HashMap<String, ValueConstructor>,
-        type_constructors: HashMap<String, TypeConstructorInfo>,
+        type_constructors: HashMap<String, TypeConstructor>,
     },
 
     NotFn {
@@ -1488,7 +1497,7 @@ pub enum GetValueConstructorError {
 
     UnknownModule {
         name: String,
-        imported_modules: HashMap<String, ModuleTypeInfo>,
+        imported_modules: HashMap<String, Module>,
     },
 
     UnknownModuleValue {
@@ -1532,18 +1541,18 @@ fn convert_get_value_constructor_error(e: GetValueConstructorError, meta: &Meta)
 pub enum GetTypeConstructorError {
     UnknownType {
         name: String,
-        type_constructors: HashMap<String, TypeConstructorInfo>,
+        type_constructors: HashMap<String, TypeConstructor>,
     },
 
     UnknownModule {
         name: String,
-        imported_modules: HashMap<String, ModuleTypeInfo>,
+        imported_modules: HashMap<String, Module>,
     },
 
     UnknownModuleType {
         name: String,
         module_name: Vec<String>,
-        type_constructors: HashMap<String, TypeConstructorInfo>,
+        type_constructors: HashMap<String, TypeConstructor>,
     },
 }
 
@@ -1585,7 +1594,7 @@ fn convert_get_type_constructor_error(e: GetTypeConstructorError, meta: &Meta) -
 ///
 pub fn infer_module(
     module: UntypedModule,
-    modules: &HashMap<String, ModuleTypeInfo>,
+    modules: &HashMap<String, Module>,
 ) -> Result<TypedModule, Error> {
     let mut env = Env::new(modules);
     let module_name = &module.name;
@@ -1658,7 +1667,7 @@ pub fn infer_module(
                             leaked,
                         });
                     }
-                    env.public_module_value_constructors.insert(
+                    env.public_module_values.insert(
                         name.clone(),
                         ValueConstructor {
                             typ: typ.clone(),
@@ -1734,7 +1743,7 @@ pub fn infer_module(
                             leaked,
                         });
                     }
-                    env.public_module_value_constructors.insert(
+                    env.public_module_values.insert(
                         name.clone(),
                         ValueConstructor {
                             typ: typ.clone(),
@@ -1778,7 +1787,7 @@ pub fn infer_module(
                 // Register type
                 env.insert_type_constructor(
                     name.clone(),
-                    TypeConstructorInfo {
+                    TypeConstructor {
                         module: module_name.clone(),
                         public,
                         arity: type_args.len(),
@@ -1839,7 +1848,7 @@ pub fn infer_module(
                             leaked,
                         });
                     }
-                    env.public_module_value_constructors.insert(
+                    env.public_module_values.insert(
                         name.clone(),
                         ValueConstructor {
                             typ: typ.clone(),
@@ -1867,7 +1876,7 @@ pub fn infer_module(
                 // Register type
                 env.insert_type_constructor(
                     name.clone(),
-                    TypeConstructorInfo {
+                    TypeConstructor {
                         module: module_name.clone(),
                         public,
                         arity: args.len(),
@@ -1922,7 +1931,7 @@ pub fn infer_module(
                                 leaked,
                             });
                         }
-                        env.public_module_value_constructors.insert(
+                        env.public_module_values.insert(
                             constructor.name.clone(),
                             ValueConstructor {
                                 typ: typ.clone(),
@@ -1960,7 +1969,7 @@ pub fn infer_module(
                 // Register type
                 env.insert_type_constructor(
                     name.clone(),
-                    TypeConstructorInfo {
+                    TypeConstructor {
                         module: module_name.clone(),
                         public,
                         arity: args.len(),
@@ -2010,32 +2019,28 @@ This should not be possible. Please report this crash",
                 {
                     let mut imported = false;
 
-                    let unqualified_alias = match &as_name {
+                    let name = match &as_name {
                         None => name,
                         Some(alias) => alias,
                     };
 
-                    if let Some(value) = module_info.value_constructors.get(name) {
-                        env.insert_variable(
-                            unqualified_alias.clone(),
-                            value.variant.clone(),
-                            value.typ.clone(),
-                        );
+                    if let Some(value) = module_info.values.get(name) {
+                        env.insert_variable(name.clone(), value.variant.clone(), value.typ.clone());
                         imported = true;
                     }
 
-                    if let Some(typ) = module_info.type_constructors.get(name) {
-                        env.insert_type_constructor(unqualified_alias.clone(), typ.clone());
+                    if let Some(typ) = module_info.types.get(name) {
+                        env.insert_type_constructor(name.clone(), typ.clone());
                         imported = true;
                     }
 
                     if !imported {
                         return Err(Error::UnknownModuleField {
                             meta: meta.clone(),
-                            name: unqualified_alias.clone(),
+                            name: name.clone(),
                             module_name: module.clone(),
-                            value_constructors: module_info.value_constructors.clone(),
-                            type_constructors: module_info.type_constructors.clone(),
+                            value_constructors: module_info.values.clone(),
+                            type_constructors: module_info.types.clone(),
                         });
                     }
                 }
@@ -2055,16 +2060,16 @@ This should not be possible. Please report this crash",
         .collect::<Result<Vec<_>, _>>()?;
 
     // Remove private and imported type constructors to create the public interface
-    env.type_constructors
+    env.module_types
         .retain(|_, info| info.public && &info.module == module_name);
 
-    Ok(Module {
+    Ok(ast::Module {
         name: module.name.clone(),
         statements,
-        type_info: ModuleTypeInfo {
+        type_info: Module {
             name: module.name,
-            type_constructors: env.type_constructors,
-            value_constructors: env.public_module_value_constructors,
+            types: env.module_types,
+            values: env.public_module_values,
         },
     })
 }
@@ -2081,10 +2086,10 @@ fn infer_module_type_retention_test() {
 
     assert_eq!(
         module.type_info,
-        ModuleTypeInfo {
+        Module {
             name: vec!["ok".to_string()],
-            type_constructors: HashMap::new(), // Core type constructors like String and Int are not included
-            value_constructors: HashMap::new(),
+            types: HashMap::new(), // Core type constructors like String and Int are not included
+            values: HashMap::new(),
         }
     );
 }
@@ -2191,7 +2196,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             }
 
             for clause in clauses.into_iter() {
-                let vars = env.variables.clone();
+                let vars = env.local_values.clone();
                 if subjects_count != clause.patterns.len() {
                     panic!("incorrect number of patterns")
                 }
@@ -2212,7 +2217,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
                     then,
                 });
 
-                env.variables = vars;
+                env.local_values = vars;
             }
             Ok(Expr::Case {
                 meta,
@@ -2309,7 +2314,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             container,
             ..
         } => match &*container {
-            Expr::Var { name, meta, .. } if !env.variables.contains_key(name) => {
+            Expr::Var { name, meta, .. } if !env.local_values.contains_key(name) => {
                 infer_module_select(name, label, level, meta, select_meta, env)
             }
 
@@ -2346,14 +2351,16 @@ fn infer_module_select(
                     imported_modules: env.imported_modules.clone(),
                 })?;
 
-        let constructor = module_info.value_constructors.get(&label).ok_or_else(|| {
-            Error::UnknownModuleValue {
-                name: label.clone(),
-                meta: select_meta.clone(),
-                module_name: module_info.name.clone(),
-                value_constructors: module_info.value_constructors.clone(),
-            }
-        })?;
+        let constructor =
+            module_info
+                .values
+                .get(&label)
+                .ok_or_else(|| Error::UnknownModuleValue {
+                    name: label.clone(),
+                    meta: select_meta.clone(),
+                    module_name: module_info.name.clone(),
+                    value_constructors: module_info.values.clone(),
+                })?;
 
         (module_info.name.clone(), constructor.clone())
     };
@@ -2565,7 +2572,7 @@ fn infer_var(
             .ok_or_else(|| Error::UnknownVariable {
                 meta: meta.clone(),
                 name: name.to_string(),
-                variables: env.variables.clone(),
+                variables: env.local_values.clone(), // TODO: include module values too
             })?;
     let typ = instantiate(typ, level, &mut hashmap![], env);
     Ok(ValueConstructor { variant, typ })
@@ -2661,7 +2668,7 @@ fn infer_fun(
     }
 
     // Insert arguments into function body scope.
-    let previous_vars = env.variables.clone();
+    let previous_vars = env.local_values.clone();
     for (arg, t) in args.iter().zip(args_types.iter()) {
         match &arg.names {
             ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => env.insert_variable(
@@ -2682,7 +2689,7 @@ fn infer_fun(
     }
 
     // Reset the env now that the scope of the function has ended.
-    env.variables = previous_vars;
+    env.local_values = previous_vars;
     env.annotated_generic_types = previous_annotated_generic_types;
     Ok((args_types, body))
 }
@@ -3364,7 +3371,7 @@ fn infer_error_test() {
         Error::UnknownVariable {
             meta: Meta { start: 0, end: 1 },
             name: "x".to_string(),
-            variables: Env::new(&HashMap::new()).variables,
+            variables: Env::new(&HashMap::new()).local_values,
         },
     );
 
@@ -3373,7 +3380,7 @@ fn infer_error_test() {
         Error::UnknownVariable {
             meta: Meta { start: 0, end: 1 },
             name: "x".to_string(),
-            variables: Env::new(&HashMap::new()).variables,
+            variables: Env::new(&HashMap::new()).local_values,
         },
     );
 
@@ -3483,7 +3490,7 @@ fn infer_error_test() {
         Error::UnknownVariable {
             meta: Meta { start: 21, end: 22 },
             name: "x".to_string(),
-            variables: Env::new(&HashMap::new()).variables,
+            variables: Env::new(&HashMap::new()).local_values,
         },
     );
 
@@ -3544,7 +3551,7 @@ fn infer_module_test() {
             let result = infer_module(ast, &HashMap::new()).expect("should successfully infer");
             let mut constructors: Vec<(_, _)> = result
                 .type_info
-                .value_constructors
+                .values
                 .iter()
                 .map(|(k, v)| (k.clone(), v.typ.pretty_print(0)))
                 .collect();
@@ -4024,10 +4031,10 @@ pub fn x() { id(1, 1.0) }
             meta: Meta { start: 24, end: 25 },
             name: "x".to_string(),
             types: {
-                let mut types = Env::new(&mut HashMap::new()).type_constructors;
+                let mut types = Env::new(&mut HashMap::new()).module_types;
                 types.insert(
                     "Thing".to_string(),
-                    TypeConstructorInfo {
+                    TypeConstructor {
                         public: false,
                         module: vec![],
                         arity: 0,
