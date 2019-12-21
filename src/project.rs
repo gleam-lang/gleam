@@ -1,5 +1,5 @@
 use crate::error::Error;
-use crate::typ::ModuleTypeInfo;
+use crate::typ;
 use petgraph::Graph;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -17,7 +17,7 @@ pub struct Compiled {
     pub name: Vec<String>,
     pub origin: ModuleOrigin,
     pub files: Vec<OutputFile>,
-    pub type_info: ModuleTypeInfo,
+    pub type_info: typ::Module,
 }
 
 #[derive(Debug, PartialEq)]

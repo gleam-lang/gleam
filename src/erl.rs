@@ -753,10 +753,10 @@ fn external_fun(name: String, module: String, fun: String, arity: usize) -> Docu
 fn module_test() {
     use std::collections::HashMap;
     let m = Module {
-        type_info: crate::typ::ModuleTypeInfo {
+        type_info: crate::typ::Module {
             name: vec!["magic".to_string()],
-            type_constructors: HashMap::new(),
-            value_constructors: HashMap::new(),
+            types: HashMap::new(),
+            values: HashMap::new(),
         },
         name: vec!["magic".to_string()],
         statements: vec![
@@ -847,10 +847,10 @@ map() ->
     assert_eq!(expected, module(m));
 
     let m = Module {
-        type_info: crate::typ::ModuleTypeInfo {
+        type_info: crate::typ::Module {
             name: vec!["term".to_string()],
-            type_constructors: HashMap::new(),
-            value_constructors: HashMap::new(),
+            types: HashMap::new(),
+            values: HashMap::new(),
         },
         name: vec!["term".to_string()],
         statements: vec![
@@ -1120,10 +1120,10 @@ tup() ->
     assert_eq!(expected, module(m));
 
     let m = Module {
-        type_info: crate::typ::ModuleTypeInfo {
+        type_info: crate::typ::Module {
             name: vec!["term".to_string()],
-            type_constructors: HashMap::new(),
-            value_constructors: HashMap::new(),
+            types: HashMap::new(),
+            values: HashMap::new(),
         },
         name: vec!["term".to_string()],
         statements: vec![Statement::Fn {
@@ -1215,10 +1215,10 @@ some_function(
     assert_eq!(expected, module(m));
 
     let m = Module {
-        type_info: crate::typ::ModuleTypeInfo {
+        type_info: crate::typ::Module {
             name: vec!["ok".to_string()],
-            type_constructors: HashMap::new(),
-            value_constructors: HashMap::new(),
+            types: HashMap::new(),
+            values: HashMap::new(),
         },
         name: vec!["vars".to_string()],
         statements: vec![
@@ -1322,10 +1322,10 @@ moddy4() ->
     assert_eq!(expected, module(m));
 
     let m = Module {
-        type_info: crate::typ::ModuleTypeInfo {
+        type_info: crate::typ::Module {
             name: vec!["my_mod".to_string()],
-            type_constructors: HashMap::new(),
-            value_constructors: HashMap::new(),
+            types: HashMap::new(),
+            values: HashMap::new(),
         },
         name: vec!["my_mod".to_string()],
         statements: vec![Statement::Fn {
@@ -1463,10 +1463,10 @@ go() ->
     assert_eq!(expected, module(m));
 
     let m = Module {
-        type_info: crate::typ::ModuleTypeInfo {
+        type_info: crate::typ::Module {
             name: vec!["funny".to_string()],
-            type_constructors: HashMap::new(),
-            value_constructors: HashMap::new(),
+            types: HashMap::new(),
+            values: HashMap::new(),
         },
         name: vec!["funny".to_string()],
         statements: vec![
