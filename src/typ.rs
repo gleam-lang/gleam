@@ -770,13 +770,18 @@ pub struct Env<'a> {
     imported_modules: HashMap<String, Module>,
 
     // Values defined in the current function (or the prelude)
+    // TODO: Once we look up names in env.module_values we don't need to store the constructor type
+    // in here, it will always be a local variable.
     local_values: im::HashMap<String, ValueConstructor>,
 
     // Types defined in the current module (or the prelude)
     module_types: HashMap<String, TypeConstructor>,
 
     // Values defined in the current module
-    public_module_values: HashMap<String, ValueConstructor>,
+    module_values: HashMap<String, ValueConstructor>,
+    // TODO:
+    // Once we have tracked _all_ module values we can look up from here and the local scope,
+    // meaning we don't need to insert into both. Is that better? I'm not sure yet.
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -795,6 +800,7 @@ pub struct TypeConstructor {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ValueConstructor {
+    pub public: bool,
     pub variant: ValueConstructorVariant,
     pub typ: Type,
 }
@@ -822,7 +828,7 @@ impl<'a> Env<'a> {
             uid: 0,
             annotated_generic_types: im::HashSet::new(),
             module_types: HashMap::new(),
-            public_module_values: HashMap::new(),
+            module_values: HashMap::new(),
             imported_modules: HashMap::new(),
             local_values: hashmap![],
             importable_modules,
@@ -1208,8 +1214,14 @@ impl<'a> Env<'a> {
     /// Map a variable in the current scope.
     ///
     pub fn insert_variable(&mut self, name: String, variant: ValueConstructorVariant, typ: Type) {
-        self.local_values
-            .insert(name, ValueConstructor { variant, typ });
+        self.local_values.insert(
+            name,
+            ValueConstructor {
+                public: false,
+                variant,
+                typ,
+            },
+        );
     }
 
     /// Lookup a variable in the current scope.
@@ -1659,7 +1671,7 @@ pub fn infer_module(
                 unify(&rec, &typ, &mut env).map_err(|e| convert_unify_error(e, &meta))?;
                 let typ = generalise(typ, level);
 
-                // Insert the function into the module's interface
+                // TODO
                 if public {
                     if let Some(leaked) = typ.find_private_type() {
                         return Err(Error::PrivateTypeLeak {
@@ -1667,18 +1679,21 @@ pub fn infer_module(
                             leaked,
                         });
                     }
-                    env.public_module_values.insert(
-                        name.clone(),
-                        ValueConstructor {
-                            typ: typ.clone(),
-                            variant: ValueConstructorVariant::ModuleFn {
-                                field_map: field_map.clone(),
-                                module: module_name.clone(),
-                                arity: args.len(),
-                            },
-                        },
-                    );
                 }
+                // Insert the function into the module's interface
+                // TODO
+                env.module_values.insert(
+                    name.clone(),
+                    ValueConstructor {
+                        public: public,
+                        typ: typ.clone(),
+                        variant: ValueConstructorVariant::ModuleFn {
+                            field_map: field_map.clone(),
+                            module: module_name.clone(),
+                            arity: args.len(),
+                        },
+                    },
+                );
 
                 // Insert the function into the environment
                 env.insert_variable(
@@ -1736,6 +1751,7 @@ pub fn infer_module(
                 };
 
                 // Insert function into module's public interface
+                // TODO
                 if public {
                     if let Some(leaked) = typ.find_private_type() {
                         return Err(Error::PrivateTypeLeak {
@@ -1743,18 +1759,20 @@ pub fn infer_module(
                             leaked,
                         });
                     }
-                    env.public_module_values.insert(
-                        name.clone(),
-                        ValueConstructor {
-                            typ: typ.clone(),
-                            variant: ValueConstructorVariant::ModuleFn {
-                                field_map: field_map.clone(),
-                                module: module_name.clone(),
-                                arity: args.len(),
-                            },
-                        },
-                    );
                 }
+                // TODO
+                env.module_values.insert(
+                    name.clone(),
+                    ValueConstructor {
+                        public: public,
+                        typ: typ.clone(),
+                        variant: ValueConstructorVariant::ModuleFn {
+                            field_map: field_map.clone(),
+                            module: module_name.clone(),
+                            arity: args.len(),
+                        },
+                    },
+                );
 
                 // Insert function into module's internal scope
                 env.insert_variable(
@@ -1841,6 +1859,7 @@ pub fn infer_module(
                     },
                 };
                 // If the struct is public then record it so that it can be used in other modules
+                // TODO
                 if public {
                     if let Some(leaked) = typ.find_private_type() {
                         return Err(Error::PrivateTypeLeak {
@@ -1848,14 +1867,16 @@ pub fn infer_module(
                             leaked,
                         });
                     }
-                    env.public_module_values.insert(
-                        name.clone(),
-                        ValueConstructor {
-                            typ: typ.clone(),
-                            variant: constructor_variant.clone(),
-                        },
-                    );
                 };
+                // TODO
+                env.module_values.insert(
+                    name.clone(),
+                    ValueConstructor {
+                        public: public,
+                        typ: typ.clone(),
+                        variant: constructor_variant.clone(),
+                    },
+                );
                 env.insert_variable(name.clone(), constructor_variant, typ);
                 Ok(Statement::Struct {
                     meta,
@@ -1924,6 +1945,7 @@ pub fn infer_module(
                             retrn: Box::new(retrn.clone()),
                         },
                     };
+                    // TODO
                     if public {
                         if let Some(leaked) = typ.find_private_type() {
                             return Err(Error::PrivateTypeLeak {
@@ -1931,17 +1953,19 @@ pub fn infer_module(
                                 leaked,
                             });
                         }
-                        env.public_module_values.insert(
-                            constructor.name.clone(),
-                            ValueConstructor {
-                                typ: typ.clone(),
-                                variant: ValueConstructorVariant::Enum {
-                                    arity: args.len(),
-                                    field_map: field_map.clone(),
-                                },
-                            },
-                        );
                     };
+                    // TODO
+                    env.module_values.insert(
+                        constructor.name.clone(),
+                        ValueConstructor {
+                            public: public,
+                            typ: typ.clone(),
+                            variant: ValueConstructorVariant::Enum {
+                                arity: args.len(),
+                                field_map: field_map.clone(),
+                            },
+                        },
+                    );
                     env.insert_variable(
                         constructor.name.clone(),
                         ValueConstructorVariant::Enum {
@@ -2059,9 +2083,12 @@ This should not be possible. Please report this crash",
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    // Remove private and imported type constructors to create the public interface
+    // Remove private and imported types and values to create the public interface
     env.module_types
         .retain(|_, info| info.public && &info.module == module_name);
+    env.module_values.retain(|_, info| info.public);
+
+    // TODO: check for private type leaks here
 
     Ok(ast::Module {
         name: module.name.clone(),
@@ -2069,7 +2096,7 @@ This should not be possible. Please report this crash",
         type_info: Module {
             name: module.name,
             types: env.module_types,
-            values: env.public_module_values,
+            values: env.module_values,
         },
     })
 }
@@ -2566,16 +2593,25 @@ fn infer_var(
     meta: &Meta,
     env: &mut Env,
 ) -> Result<ValueConstructor, Error> {
-    let ValueConstructor { variant, typ } =
-        env.get_variable(name)
-            .cloned()
-            .ok_or_else(|| Error::UnknownVariable {
-                meta: meta.clone(),
-                name: name.to_string(),
-                variables: env.local_values.clone(), // TODO: include module values too
-            })?;
+    // TODO: check the local scope then the module scope.
+    let ValueConstructor {
+        public,
+        variant,
+        typ,
+    } = env
+        .get_variable(name)
+        .cloned()
+        .ok_or_else(|| Error::UnknownVariable {
+            meta: meta.clone(),
+            name: name.to_string(),
+            variables: env.local_values.clone(), // TODO: include module values too
+        })?;
     let typ = instantiate(typ, level, &mut hashmap![], env);
-    Ok(ValueConstructor { variant, typ })
+    Ok(ValueConstructor {
+        public,
+        variant,
+        typ,
+    })
 }
 
 fn infer_call(
