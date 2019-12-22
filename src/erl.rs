@@ -952,6 +952,7 @@ map() ->
                 body: Expr::Var {
                     meta: default(),
                     constructor: ValueConstructor {
+                        public: true,
                         typ: crate::typ::int(),
                         variant: ValueConstructorVariant::Enum {
                             field_map: None,
@@ -982,6 +983,7 @@ map() ->
                     then: Box::new(Expr::Var {
                         meta: default(),
                         constructor: ValueConstructor {
+                            public: true,
                             typ: crate::typ::int(),
                             variant: ValueConstructorVariant::LocalVariable,
                         },
@@ -1232,6 +1234,7 @@ some_function(
                     meta: default(),
                     name: "some_arg".to_string(),
                     constructor: ValueConstructor {
+                        public: true,
                         typ: crate::typ::int(),
                         variant: ValueConstructorVariant::LocalVariable,
                     },
@@ -1491,6 +1494,7 @@ go() ->
                     fun: Box::new(Expr::Var {
                         meta: default(),
                         constructor: ValueConstructor {
+                            public: true,
                             variant: ValueConstructorVariant::ModuleFn {
                                 module: vec!["funny".to_string()],
                                 field_map: None,
@@ -1523,6 +1527,7 @@ go() ->
                     fun: Box::new(Expr::Var {
                         meta: default(),
                         constructor: ValueConstructor {
+                            public: true,
                             variant: ValueConstructorVariant::LocalVariable,
                             typ: crate::typ::int(),
                         },
@@ -1563,6 +1568,7 @@ go() ->
                         fun: Box::new(Expr::Var {
                             meta: default(),
                             constructor: ValueConstructor {
+                                public: true,
                                 typ: crate::typ::int(),
                                 variant: ValueConstructorVariant::ModuleFn {
                                     module: vec!["funny".to_string()],
