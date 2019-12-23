@@ -1949,6 +1949,33 @@ main() ->
     id(fun id/1).
 "#,
         },
+        // https://github.com/gleam-lang/gleam/issues/358
+        Case {
+            src: r#"
+pub fn factory(f, i) {
+  f(i)
+}
+
+pub enum Box {
+  Box(i: Int)
+}
+
+pub fn main() {
+  factory(Box, 0)
+}
+"#,
+            erl: r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([factory/2, main/0]).
+
+factory(F, I) ->
+    F(I).
+
+main() ->
+    factory(fun(A) -> {box, A} end, 0).
+"#,
+        },
     ];
 
     for Case { src, erl } in cases.into_iter() {
