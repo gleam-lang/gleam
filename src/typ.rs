@@ -706,12 +706,6 @@ pub enum ValueConstructorVariant {
     /// A locally defined variable or function parameter
     LocalVariable,
 
-    /// An enum constructor or singleton
-    Enum {
-        field_map: Option<FieldMap>,
-        arity: usize,
-    },
-
     /// A function belonging to the module
     ModuleFn {
         field_map: Option<FieldMap>,
@@ -719,10 +713,10 @@ pub enum ValueConstructorVariant {
         arity: usize,
     },
 
-    /// A named struct
-    Struct {
+    /// A constructor for a custom type
+    CustomType {
         name: String,
-        field_map: FieldMap,
+        field_map: Option<FieldMap>,
         arity: usize,
     },
 }
@@ -730,10 +724,8 @@ pub enum ValueConstructorVariant {
 impl ValueConstructorVariant {
     fn to_module_value_constructor(&self) -> ModuleValueConstructor {
         match self {
-            ValueConstructorVariant::Enum { .. } => ModuleValueConstructor::Enum,
-
-            ValueConstructorVariant::Struct { name, .. } => {
-                ModuleValueConstructor::Struct { name: name.clone() }
+            ValueConstructorVariant::CustomType { name, .. } => {
+                ModuleValueConstructor::CustomType { name: name.clone() }
             }
 
             ValueConstructorVariant::LocalVariable { .. }
@@ -744,8 +736,7 @@ impl ValueConstructorVariant {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ModuleValueConstructor {
-    Struct { name: String },
-    Enum,
+    CustomType { name: String },
     Fn,
 }
 
@@ -758,8 +749,7 @@ pub struct Module {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PatternConstructor {
-    Enum,
-    Struct { name: String },
+    CustomType { name: String },
 }
 
 #[derive(Debug, Clone)]
@@ -809,9 +799,8 @@ pub struct ValueConstructor {
 impl ValueConstructor {
     fn field_map(&self) -> Option<&FieldMap> {
         match self.variant {
-            ValueConstructorVariant::Enum { ref field_map, .. } => field_map.as_ref(),
-            ValueConstructorVariant::ModuleFn { ref field_map, .. } => field_map.as_ref(),
-            ValueConstructorVariant::Struct { ref field_map, .. } => Some(field_map),
+            ValueConstructorVariant::ModuleFn { ref field_map, .. }
+            | ValueConstructorVariant::CustomType { ref field_map, .. } => field_map.as_ref(),
             _ => None,
         }
     }
@@ -846,7 +835,8 @@ impl<'a> Env<'a> {
 
         env.insert_variable(
             "True".to_string(),
-            ValueConstructorVariant::Enum {
+            ValueConstructorVariant::CustomType {
+                name: "True".to_string(),
                 field_map: None,
                 arity: 0,
             },
@@ -854,7 +844,8 @@ impl<'a> Env<'a> {
         );
         env.insert_variable(
             "False".to_string(),
-            ValueConstructorVariant::Enum {
+            ValueConstructorVariant::CustomType {
+                name: "False".to_string(),
                 field_map: None,
                 arity: 0,
             },
@@ -907,7 +898,8 @@ impl<'a> Env<'a> {
 
         env.insert_variable(
             "Nil".to_string(),
-            ValueConstructorVariant::Enum {
+            ValueConstructorVariant::CustomType {
+                name: "Nil".to_string(),
                 field_map: None,
                 arity: 0,
             },
@@ -1153,7 +1145,8 @@ impl<'a> Env<'a> {
         let error = env.new_generic_var();
         env.insert_variable(
             "Ok".to_string(),
-            ValueConstructorVariant::Enum {
+            ValueConstructorVariant::CustomType {
+                name: "Ok".to_string(),
                 field_map: None,
                 arity: 1,
             },
@@ -1167,7 +1160,8 @@ impl<'a> Env<'a> {
         let error = env.new_generic_var();
         env.insert_variable(
             "Error".to_string(),
-            ValueConstructorVariant::Enum {
+            ValueConstructorVariant::CustomType {
+                name: "Error".to_string(),
                 field_map: None,
                 arity: 1,
             },
@@ -1824,10 +1818,10 @@ pub fn infer_module(
                             meta: meta.clone(),
                         })?;
                 }
-                let constructor_variant = ValueConstructorVariant::Struct {
+                let constructor_variant = ValueConstructorVariant::CustomType {
                     name: name.clone(),
                     arity: fields.len(),
-                    field_map,
+                    field_map: field_map.into_option(),
                 };
                 // Register constructor
                 let args_types = fields
@@ -1930,7 +1924,8 @@ pub fn infer_module(
                             public: public,
                             typ: typ.clone(),
                             origin: constructor.meta.clone(),
-                            variant: ValueConstructorVariant::Enum {
+                            variant: ValueConstructorVariant::CustomType {
+                                name: constructor.name.clone(),
                                 arity: args.len(),
                                 field_map: field_map.clone(),
                             },
@@ -1938,7 +1933,8 @@ pub fn infer_module(
                     );
                     env.insert_variable(
                         constructor.name.clone(),
-                        ValueConstructorVariant::Enum {
+                        ValueConstructorVariant::CustomType {
+                            name: constructor.name.clone(),
                             arity: constructor.args.len(),
                             field_map,
                         },
@@ -2058,6 +2054,7 @@ This should not be possible. Please report this crash",
         .retain(|_, info| info.public && &info.module == module_name);
     env.module_values.retain(|_, info| info.public);
 
+    // Ensure no exported values have private types in their type signature
     for (_, value) in env.module_values.iter() {
         if let Some(leaked) = value.typ.find_private_type() {
             return Err(Error::PrivateTypeLeak {
@@ -2495,9 +2492,8 @@ fn unify_pattern(
 
             let constructor_typ = cons.typ.clone();
             let constructor = match cons.variant {
-                ValueConstructorVariant::Enum { .. } => PatternConstructor::Enum,
-                ValueConstructorVariant::Struct { ref name, .. } => {
-                    PatternConstructor::Struct { name: name.clone() }
+                ValueConstructorVariant::CustomType { ref name, .. } => {
+                    PatternConstructor::CustomType { name: name.clone() }
                 }
                 ValueConstructorVariant::LocalVariable
                 | ValueConstructorVariant::ModuleFn { .. } => panic!(
@@ -4029,15 +4025,6 @@ pub fn x() { id(1, 1.0) }
         Error::PositionalArgumentAfterLabelled {
             meta: Meta { start: 77, end: 78 },
         }
-    );
-
-    assert_error!(
-        "struct X {} fn x() { X(one: 1) }",
-        Error::IncorrectArity {
-            meta: Meta { start: 21, end: 30 },
-            expected: 0,
-            given: 1,
-        },
     );
 
     assert_error!(

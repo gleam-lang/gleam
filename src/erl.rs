@@ -315,15 +315,8 @@ fn pattern(p: TypedPattern, env: &mut Env) -> Document {
         Pattern::String { value, .. } => string(value),
 
         Pattern::Constructor {
-            name,
             args,
-            constructor: PatternConstructor::Enum,
-            ..
-        } => tag_tuple_pattern(name, args, env),
-
-        Pattern::Constructor {
-            args,
-            constructor: PatternConstructor::Struct { name },
+            constructor: PatternConstructor::CustomType { name },
             ..
         } => tag_tuple_pattern(name, args, env),
 
@@ -411,11 +404,9 @@ enum ListType<E, T> {
 
 fn var(name: String, constructor: ValueConstructor, env: &mut Env) -> Document {
     match constructor.variant {
-        ValueConstructorVariant::Enum { .. } => atom(name.to_snake_case()),
+        ValueConstructorVariant::CustomType { name, arity: 0, .. } => atom(name.to_snake_case()),
 
-        ValueConstructorVariant::Struct { name, arity: 0, .. } => name.to_snake_case().to_doc(),
-
-        ValueConstructorVariant::Struct { arity, .. } => {
+        ValueConstructorVariant::CustomType { arity, .. } => {
             let chars = incrementing_args_list(arity);
             "fun("
                 .to_doc()
@@ -508,28 +499,18 @@ fn tag_tuple(name: String, args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Docu
 
 fn call(fun: TypedExpr, args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Document {
     match fun {
-        Expr::Var {
-            constructor:
-                ValueConstructor {
-                    variant: ValueConstructorVariant::Enum { .. },
-                    ..
-                },
-            name,
-            ..
-        } => tag_tuple(name, args, env),
-
         Expr::ModuleSelect {
-            constructor: ModuleValueConstructor::Struct { name },
+            constructor: ModuleValueConstructor::CustomType { name },
             ..
         }
         | Expr::Var {
             constructor:
                 ValueConstructor {
-                    variant: ValueConstructorVariant::Struct { name, .. },
+                    variant: ValueConstructorVariant::CustomType { name, .. },
                     ..
                 },
             ..
-        } => tag_tuple(name.to_snake_case(), args, env),
+        } => tag_tuple(name, args, env),
 
         Expr::Var {
             constructor:
@@ -551,12 +532,6 @@ fn call(fun: TypedExpr, args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Documen
                     .append(call_args(args, env))
             }
         }
-
-        Expr::ModuleSelect {
-            label,
-            constructor: ModuleValueConstructor::Enum,
-            ..
-        } => tag_tuple(label, args, env),
 
         Expr::ModuleSelect {
             module_name,
@@ -650,15 +625,9 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
         } => map_select(*container, label, env),
 
         Expr::ModuleSelect {
-            label,
-            constructor: ModuleValueConstructor::Enum,
+            constructor: ModuleValueConstructor::CustomType { name },
             ..
-        } => atom(label.to_snake_case()),
-
-        Expr::ModuleSelect {
-            constructor: ModuleValueConstructor::Struct { name },
-            ..
-        } => name.to_snake_case().to_doc(),
+        } => atom(name.to_snake_case()),
 
         Expr::ModuleSelect {
             typ,
@@ -955,7 +924,8 @@ map() ->
                         public: true,
                         origin: Default::default(),
                         typ: crate::typ::int(),
-                        variant: ValueConstructorVariant::Enum {
+                        variant: ValueConstructorVariant::CustomType {
+                            name: "Nil".to_string(),
                             field_map: None,
                             arity: 0,
                         },
@@ -1408,7 +1378,9 @@ moddy4() ->
                                     value: 2,
                                 },
                             }],
-                            constructor: PatternConstructor::Enum,
+                            constructor: PatternConstructor::CustomType {
+                                name: "Error".to_string(),
+                            },
                         }],
                         then: Expr::Int {
                             typ: crate::typ::int(),
