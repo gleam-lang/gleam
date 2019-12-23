@@ -2011,8 +2011,8 @@ This should not be possible. Please report this crash",
                     let mut imported = false;
 
                     let unqualified_alias = match &as_name {
-                        None => name.clone(),
-                        Some(alias) => alias.clone(),
+                        None => name,
+                        Some(alias) => alias,
                     };
 
                     if let Some(value) = module_info.value_constructors.get(name) {
