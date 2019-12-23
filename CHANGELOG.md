@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.6.0-rc1 - 2019-12-23
 
 - Syntax for defining structs and enums have been unified into a singular
   custom type definition statement. Instances of these custom types are called
