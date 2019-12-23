@@ -309,9 +309,7 @@ fn pattern(p: TypedPattern, env: &mut Env) -> Document {
             ..
         } => tag_tuple_pattern(name, args, env),
 
-        Pattern::Tuple { elems, .. } => {
-            tuple(elems.into_iter().map(|p| pattern(p, env)).collect())
-        }
+        Pattern::Tuple { elems, .. } => tuple(elems.into_iter().map(|p| pattern(p, env)).collect()),
     }
 }
 
@@ -504,10 +502,9 @@ fn call(fun: TypedExpr, args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Documen
         Expr::Var {
             constructor:
                 ValueConstructor {
-                    variant: ValueConstructorVariant::ModuleFn { module, .. },
+                    variant: ValueConstructorVariant::ModuleFn { module, name, .. },
                     ..
                 },
-            name,
             ..
         } => {
             if &module == env.module {
@@ -641,9 +638,7 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
             name, left, right, ..
         } => bin_op(name, *left, *right, env),
 
-        Expr::Tuple { elems, .. } => {
-            tuple(elems.into_iter().map(|e| wrap_expr(e, env)).collect())
-        }
+        Expr::Tuple { elems, .. } => tuple(elems.into_iter().map(|e| wrap_expr(e, env)).collect()),
     }
 }
 
@@ -1461,6 +1456,7 @@ go() ->
                             public: true,
                             origin: Default::default(),
                             variant: ValueConstructorVariant::ModuleFn {
+                                name: "one_two".to_string(),
                                 module: vec!["funny".to_string()],
                                 field_map: None,
                                 arity: 1,
@@ -1538,12 +1534,13 @@ go() ->
                                 origin: Default::default(),
                                 typ: crate::typ::int(),
                                 variant: ValueConstructorVariant::ModuleFn {
+                                    name: "one_two_actual".to_string(),
                                     module: vec!["funny".to_string()],
                                     field_map: None,
                                     arity: 2,
                                 },
                             },
-                            name: "one_two".to_string(),
+                            name: "one_two_alias".to_string(),
                         }),
                     }),
                 },
@@ -1560,7 +1557,7 @@ two() ->
     OneTwo(1).
 
 three() ->
-    (one_two(1))(2).
+    (one_two_actual(1))(2).
 "
     .to_string();
     assert_eq!(expected, module(m));
