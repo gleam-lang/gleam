@@ -47,7 +47,7 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
         .statements
         .iter()
         .flat_map(|s| match s {
-            Statement::Enum {
+            Statement::CustomType {
                 public: true,
                 constructors,
                 ..
@@ -141,7 +141,7 @@ pub fn module(module: TypedModule) -> String {
 
 fn statement(statement: TypedStatement, module: &Vec<String>) -> Option<Document> {
     match statement {
-        Statement::Enum { .. } => None,
+        Statement::CustomType { .. } => None,
         Statement::Import { .. } => None,
         Statement::ExternalType { .. } => None,
         Statement::Fn {
@@ -724,12 +724,12 @@ fn module_test() {
                 name: "Any".to_string(),
                 args: vec![],
             },
-            Statement::Enum {
+            Statement::CustomType {
                 meta: default(),
                 public: true,
                 name: "Any".to_string(),
                 args: vec![],
-                constructors: vec![EnumConstructor {
+                constructors: vec![RecordConstructor {
                     meta: default(),
                     name: "Ok".to_string(),
                     args: vec![],
@@ -1617,7 +1617,7 @@ t() ->
 "#,
         },
         Case {
-            src: r#"pub enum Money { Pound(Int) }
+            src: r#"pub type Money { Pound(Int) }
                     fn pound(x) { Pound(x) }"#,
             erl: r#"-module(the_app).
 -compile(no_auto_import).
@@ -1754,9 +1754,9 @@ x() ->
     1.0 < 2.3.
 "#,
         },
-        // Named struct creation
+        // Custom type creation
         Case {
-            src: r#"struct Pair(x, y) { x: x y: y } fn x() { Pair(1, 2) Pair(3., 4.) }"#,
+            src: r#"type Pair(x, y) { Pair(x: x, y: y) } fn x() { Pair(1, 2) Pair(3., 4.) }"#,
             erl: r#"-module(the_app).
 -compile(no_auto_import).
 
@@ -1766,7 +1766,7 @@ x() ->
 "#,
         },
         Case {
-            src: r#"struct Null { } fn x() { Null }"#,
+            src: r#"type Null { Null } fn x() { Null }"#,
             erl: r#"-module(the_app).
 -compile(no_auto_import).
 
@@ -1775,7 +1775,7 @@ x() ->
 "#,
         },
         Case {
-            src: r#"struct Point {x: Int y: Int}
+            src: r#"type Point { Point(x: Int, y: Int) }
                 fn y() { fn() { Point }()(4, 6) }"#,
             erl: r#"-module(the_app).
 -compile(no_auto_import).
@@ -1785,7 +1785,7 @@ y() ->
 "#,
         },
         Case {
-            src: r#"struct Point {x: Int y: Int}
+            src: r#"type Point { Point(x: Int, y: Int) }
                 fn x() { Point(x: 4, y: 6) Point(y: 1, x: 9) }"#,
             erl: r#"-module(the_app).
 -compile(no_auto_import).
@@ -1796,7 +1796,7 @@ x() ->
 "#,
         },
         Case {
-            src: r#"struct Point {x: Int y: Int} fn x(y) { let Point(a, b) = y a }"#,
+            src: r#"type Point { Point(x: Int, y: Int) } fn x(y) { let Point(a, b) = y a }"#,
             erl: r#"-module(the_app).
 -compile(no_auto_import).
 
@@ -1836,7 +1836,7 @@ x() ->
         // https://github.com/lpil/gleam/issues/289
         Case {
             src: r#"
-struct User { id: Int name: String age: Int }
+type User { User(id: Int, name: String, age: Int) }
 fn create_user(user_id) { User(age: 22, id: user_id, name: "") }
                     "#,
             erl: r#"-module(the_app).
@@ -1859,7 +1859,7 @@ run() ->
 "#,
         },
         Case {
-            src: r#"enum X { X(x: Int, y: Float) }
+            src: r#"type X { X(x: Int, y: Float) }
                     fn x() { X(x: 1, y: 2.) X(y: 3., x: 4) }"#,
             erl: r#"-module(the_app).
 -compile(no_auto_import).
@@ -1956,7 +1956,7 @@ pub fn factory(f, i) {
   f(i)
 }
 
-pub enum Box {
+pub type Box {
   Box(i: Int)
 }
 

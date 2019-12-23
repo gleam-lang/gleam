@@ -59,7 +59,7 @@ pub enum ArgNames {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct EnumConstructor {
+pub struct RecordConstructor {
     pub meta: Meta,
     pub name: String,
     pub args: Vec<(Option<String>, TypeAst)>,
@@ -107,12 +107,12 @@ pub enum Statement<ValueConstructor, ModuleValueConstructor, PatternConstructor,
         return_annotation: Option<TypeAst>,
     },
 
-    Enum {
+    CustomType {
         meta: Meta,
         name: String,
         args: Vec<String>,
         public: bool,
-        constructors: Vec<EnumConstructor>,
+        constructors: Vec<RecordConstructor>,
     },
 
     ExternalFn {
@@ -150,13 +150,6 @@ pub struct UnqualifiedImport {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExternalFnArg {
     pub label: Option<String>,
-    pub typ: TypeAst,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct StructField {
-    pub label: String,
-    pub meta: Meta,
     pub typ: TypeAst,
 }
 
