@@ -708,8 +708,7 @@ pub enum ValueConstructorVariant {
 
     /// A function belonging to the module
     ModuleFn {
-        // TODO
-        // name: String,
+        name: String,
         field_map: Option<FieldMap>,
         module: Vec<String>,
         arity: usize,
@@ -1654,6 +1653,7 @@ pub fn infer_module(
                 env.insert_variable(
                     name.clone(),
                     ValueConstructorVariant::ModuleFn {
+                        name: name.clone(),
                         field_map: field_map.clone(),
                         module: module_name.clone(),
                         arity: args.len(),
@@ -1681,6 +1681,7 @@ pub fn infer_module(
                         origin: meta.clone(),
                         typ: typ.clone(),
                         variant: ValueConstructorVariant::ModuleFn {
+                            name: name.clone(),
                             field_map: field_map.clone(),
                             module: module_name.clone(),
                             arity: args.len(),
@@ -1692,6 +1693,7 @@ pub fn infer_module(
                 env.insert_variable(
                     name.clone(),
                     ValueConstructorVariant::ModuleFn {
+                        name: name.clone(),
                         field_map,
                         module: module_name.clone(),
                         arity: args.len(),
@@ -1751,6 +1753,7 @@ pub fn infer_module(
                         typ: typ.clone(),
                         origin: meta.clone(),
                         variant: ValueConstructorVariant::ModuleFn {
+                            name: name.clone(),
                             field_map: field_map.clone(),
                             module: module_name.clone(),
                             arity: args.len(),
@@ -1762,6 +1765,7 @@ pub fn infer_module(
                 env.insert_variable(
                     name.clone(),
                     ValueConstructorVariant::ModuleFn {
+                        name: name.clone(),
                         module: module_name.clone(),
                         arity: args.len(),
                         field_map,
@@ -1928,18 +1932,22 @@ This should not be possible. Please report this crash",
                 {
                     let mut imported = false;
 
-                    let name = match &as_name {
+                    let imported_name = match &as_name {
                         None => name,
                         Some(alias) => alias,
                     };
 
                     if let Some(value) = module_info.values.get(name) {
-                        env.insert_variable(name.clone(), value.variant.clone(), value.typ.clone());
+                        env.insert_variable(
+                            imported_name.clone(),
+                            value.variant.clone(),
+                            value.typ.clone(),
+                        );
                         imported = true;
                     }
 
                     if let Some(typ) = module_info.types.get(name) {
-                        env.insert_type_constructor(name.clone(), typ.clone());
+                        env.insert_type_constructor(imported_name.clone(), typ.clone());
                         imported = true;
                     }
 
