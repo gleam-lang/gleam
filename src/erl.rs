@@ -309,7 +309,7 @@ fn pattern(p: TypedPattern, env: &mut Env) -> Document {
             ..
         } => tag_tuple_pattern(name, args, env),
 
-        Pattern::AnonStruct { elems, .. } => {
+        Pattern::Tuple { elems, .. } => {
             tuple(elems.into_iter().map(|p| pattern(p, env)).collect())
         }
     }
@@ -641,7 +641,7 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
             name, left, right, ..
         } => bin_op(name, *left, *right, env),
 
-        Expr::AnonStruct { elems, .. } => {
+        Expr::Tuple { elems, .. } => {
             tuple(elems.into_iter().map(|e| wrap_expr(e, env)).collect())
         }
     }
@@ -1020,7 +1020,7 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "tup".to_string(),
-                body: Expr::AnonStruct {
+                body: Expr::Tuple {
                     meta: default(),
                     typ: crate::typ::int(),
                     elems: vec![
@@ -1379,7 +1379,7 @@ moddy4() ->
                     },
                     Clause {
                         meta: default(),
-                        patterns: vec![Pattern::AnonStruct {
+                        patterns: vec![Pattern::Tuple {
                             meta: default(),
                             elems: vec![
                                 Pattern::Int {
@@ -1576,7 +1576,7 @@ fn integration_test() {
     let cases = [
         Case {
             src: r#"fn go() {
-let x = struct(100000000000000000, struct(2000000000, 3000000000000, 40000000000), 50000, 6000000000)
+let x = tuple(100000000000000000, tuple(2000000000, 3000000000000, 40000000000), 50000, 6000000000)
   x
 }"#,
             erl: r#"-module(the_app).
