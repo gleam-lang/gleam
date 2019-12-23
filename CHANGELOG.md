@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Syntax for defining structs and enums have been unified into a singular
+  custom type definition statement. Instances of these custom types are called
+  records.
+
 ## v0.5.1 - 2019-12-23
 
 - Fixed a bug where invalid Erlang would be generated when using a local
