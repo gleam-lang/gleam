@@ -2002,23 +2002,28 @@ This should not be possible. Please report this crash",
                 };
 
                 // Insert unqualified imports into scope
-                for UnqualifiedImport { name, meta } in &unqualified {
+                for UnqualifiedImport { name, meta, as_name } in &unqualified {
                     let mut imported = false;
 
+                    let unqualified_alias = match &as_name {
+                        None => name.clone(),
+                        Some(alias) => alias.clone(),
+                    };
+
                     if let Some(value) = module_info.value_constructors.get(name) {
-                        env.insert_variable(name.clone(), value.variant.clone(), value.typ.clone());
+                        env.insert_variable(unqualified_alias.clone(), value.variant.clone(), value.typ.clone());
                         imported = true;
                     }
 
                     if let Some(typ) = module_info.type_constructors.get(name) {
-                        env.insert_type_constructor(name.clone(), typ.clone());
+                        env.insert_type_constructor(unqualified_alias.clone(), typ.clone());
                         imported = true;
                     }
 
                     if !imported {
                         return Err(Error::UnknownModuleField {
                             meta: meta.clone(),
-                            name: name.clone(),
+                            name: unqualified_alias.clone(),
                             module_name: module.clone(),
                             value_constructors: module_info.value_constructors.clone(),
                             type_constructors: module_info.type_constructors.clone(),
