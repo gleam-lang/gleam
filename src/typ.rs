@@ -1,6 +1,6 @@
 use crate::ast::{
-    self, Arg, ArgNames, BinOp, CallArg, Clause, Expr, Meta, Pattern, Statement, StructField,
-    TypeAst, TypedExpr, TypedModule, TypedPattern, UnqualifiedImport, UntypedExpr, UntypedModule,
+    self, Arg, ArgNames, BinOp, CallArg, Clause, Expr, Meta, Pattern, Statement, TypeAst,
+    TypedExpr, TypedModule, TypedPattern, UnqualifiedImport, UntypedExpr, UntypedModule,
     UntypedPattern,
 };
 use crate::pretty::*;
@@ -1783,89 +1783,6 @@ pub fn infer_module(
                     retrn,
                     module,
                     fun,
-                })
-            }
-
-            Statement::Struct {
-                meta,
-                public,
-                name,
-                type_args,
-                fields,
-            } => {
-                // Register type
-                env.insert_type_constructor(
-                    name.clone(),
-                    TypeConstructor {
-                        module: module_name.clone(),
-                        public,
-                        arity: type_args.len(),
-                    },
-                );
-                // Build return type and collect type vars that can be used by the constructor
-                let mut type_vars = hashmap![];
-                let type_args_types: Vec<_> = type_args
-                    .iter()
-                    .map(|arg| TypeAst::Var {
-                        meta: meta.clone(),
-                        name: arg.to_string(),
-                    })
-                    .map(|ast| env.type_from_ast(&ast, &mut type_vars, NewTypeAction::MakeGeneric))
-                    .collect::<Result<_, _>>()?;
-
-                let retrn = Type::App {
-                    public,
-                    module: module_name.clone(),
-                    name: name.clone(),
-                    args: type_args_types,
-                };
-                // Create FieldMap which later can be used to rewrite labelled arguments
-                let mut field_map = FieldMap::new(fields.len());
-                for (i, StructField { label, meta, .. }) in fields.iter().enumerate() {
-                    field_map
-                        .insert(label.clone(), i)
-                        .map_err(|_| Error::DuplicateField {
-                            label: label.to_string(),
-                            meta: meta.clone(),
-                        })?;
-                }
-                let constructor_variant = ValueConstructorVariant::Record {
-                    name: name.clone(),
-                    arity: fields.len(),
-                    field_map: field_map.into_option(),
-                };
-                // Register constructor
-                let args_types = fields
-                    .iter()
-                    .map(|StructField { typ: arg, .. }| {
-                        env.type_from_ast(&arg, &mut type_vars, NewTypeAction::Disallow)
-                    })
-                    .collect::<Result<Vec<_>, _>>()?;
-                // Insert constructor function into module scope
-                let typ = match fields.len() {
-                    0 => retrn.clone(),
-                    _ => Type::Fn {
-                        args: args_types,
-                        retrn: Box::new(retrn.clone()),
-                    },
-                };
-                // Insert function into module
-                env.insert_module_value(
-                    &name,
-                    ValueConstructor {
-                        public: public,
-                        origin: meta.clone(),
-                        typ: typ.clone(),
-                        variant: constructor_variant.clone(),
-                    },
-                )?;
-                env.insert_variable(name.clone(), constructor_variant, typ);
-                Ok(Statement::Struct {
-                    meta,
-                    public,
-                    name,
-                    type_args,
-                    fields,
                 })
             }
 

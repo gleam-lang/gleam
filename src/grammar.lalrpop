@@ -43,12 +43,18 @@ StatementEnum: UntypedStatement = {
 }
 
 StatementStruct: UntypedStatement = {
-    <s:@L> <p:"pub"?> "struct" <t:TypeName> "{" <fields:StructFieldDefinition*> "}" <e:@L> => Statement::Struct {
+    <s:@L> <p:"pub"?> "struct" <t:TypeName> "{" <fields:StructFieldDefinition*> "}" <e:@L> => Statement::Enum {
         meta: meta(s, e),
         public: p.is_some(),
-        name: t.0,
-        type_args: t.1,
-        fields,
+        name: t.0.clone(),
+        args: t.1,
+        constructors: vec![
+            EnumConstructor {
+                meta: meta(s, e),
+                name: t.0,
+                args: fields.into_iter().map(|f| (Some(f.label), f.typ)).collect(),
+            },
+        ]
     },
 }
 

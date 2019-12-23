@@ -138,14 +138,6 @@ pub enum Statement<ValueConstructor, ModuleValueConstructor, PatternConstructor,
         as_name: Option<String>,
         unqualified: Vec<UnqualifiedImport>,
     },
-
-    Struct {
-        meta: Meta,
-        name: String,
-        type_args: Vec<String>,
-        public: bool,
-        fields: Vec<StructField>,
-    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
