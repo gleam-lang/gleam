@@ -708,6 +708,8 @@ pub enum ValueConstructorVariant {
 
     /// A function belonging to the module
     ModuleFn {
+        // TODO
+        // name: String,
         field_map: Option<FieldMap>,
         module: Vec<String>,
         arity: usize,
@@ -1206,18 +1208,37 @@ impl<'a> Env<'a> {
         }
     }
 
-    /// Map a variable in the current scope.
+    /// Insert a variable in the current scope.
     ///
     pub fn insert_variable(&mut self, name: String, variant: ValueConstructorVariant, typ: Type) {
         self.local_values.insert(
             name,
             ValueConstructor {
                 public: false,
-                origin: Default::default(), // TODO: remove
+                origin: Default::default(), // TODO: use the real one
                 variant,
                 typ,
             },
         );
+    }
+
+    /// Insert a value into the current module.
+    /// Errors if the module already has a value with that name.
+    ///
+    pub fn insert_module_value(
+        &mut self,
+        name: &str,
+        value: ValueConstructor,
+    ) -> Result<(), Error> {
+        let location = value.origin.clone();
+        match self.module_values.insert(name.to_string(), value) {
+            None => Ok(()),
+            Some(previous) => Err(Error::DuplicateName {
+                location,
+                previous_location: previous.origin,
+                name: name.to_string(),
+            }),
+        }
     }
 
     /// Lookup a variable in the current scope.
@@ -1467,7 +1488,8 @@ pub enum Error {
     },
 
     DuplicateName {
-        meta: Meta,
+        location: Meta,
+        previous_location: Meta,
         name: String,
     },
 
@@ -1621,15 +1643,6 @@ pub fn infer_module(
             } => {
                 let level = 1;
 
-                // Ensure function has not already been defined in this module
-                if let Some(ValueConstructor {
-                    variant: ValueConstructorVariant::ModuleFn { .. },
-                    ..
-                }) = env.get_variable(&name)
-                {
-                    return Err(Error::DuplicateName { meta, name });
-                };
-
                 let mut field_map = FieldMap::new(args.len());
                 for (i, arg) in args.iter().enumerate() {
                     if let ArgNames::NamedLabelled { label, .. } = &arg.names {
@@ -1668,9 +1681,8 @@ pub fn infer_module(
                 let typ = generalise(typ, level);
 
                 // Insert the function into the module's interface
-                // TODO
-                env.module_values.insert(
-                    name.clone(),
+                env.insert_module_value(
+                    &name,
                     ValueConstructor {
                         public: public,
                         origin: meta.clone(),
@@ -1681,7 +1693,7 @@ pub fn infer_module(
                             arity: args.len(),
                         },
                     },
-                );
+                )?;
 
                 // Insert the function into the environment
                 env.insert_variable(
@@ -1738,10 +1750,9 @@ pub fn infer_module(
                     retrn: Box::new(retrn_type),
                 };
 
-                // Insert function into module's public interface
-                // TODO
-                env.module_values.insert(
-                    name.clone(),
+                // Insert function into module
+                env.insert_module_value(
+                    &name,
                     ValueConstructor {
                         public: public,
                         typ: typ.clone(),
@@ -1752,7 +1763,7 @@ pub fn infer_module(
                             arity: args.len(),
                         },
                     },
-                );
+                )?;
 
                 // Insert function into module's internal scope
                 env.insert_variable(
@@ -1838,17 +1849,16 @@ pub fn infer_module(
                         retrn: Box::new(retrn.clone()),
                     },
                 };
-                // If the struct is public then record it so that it can be used in other modules
-                // TODO
-                env.module_values.insert(
-                    name.clone(),
+                // Insert function into module
+                env.insert_module_value(
+                    &name,
                     ValueConstructor {
                         public: public,
                         origin: meta.clone(),
                         typ: typ.clone(),
                         variant: constructor_variant.clone(),
                     },
-                );
+                )?;
                 env.insert_variable(name.clone(), constructor_variant, typ);
                 Ok(Statement::Struct {
                     meta,
@@ -1917,9 +1927,8 @@ pub fn infer_module(
                             retrn: Box::new(retrn.clone()),
                         },
                     };
-                    // TODO
-                    env.module_values.insert(
-                        constructor.name.clone(),
+                    env.insert_module_value(
+                        &constructor.name,
                         ValueConstructor {
                             public: public,
                             typ: typ.clone(),
@@ -1930,7 +1939,7 @@ pub fn infer_module(
                                 field_map: field_map.clone(),
                             },
                         },
-                    );
+                    )?;
                     env.insert_variable(
                         constructor.name.clone(),
                         ValueConstructorVariant::CustomType {
@@ -3919,7 +3928,8 @@ pub fn x() { id(1, 1.0) }
         "fn dupe() { 1 }
          fn dupe() { 2 }",
         Error::DuplicateName {
-            meta: Meta { start: 25, end: 40 },
+            location: Meta { start: 25, end: 40 },
+            previous_location: Meta { start: 0, end: 15 },
             name: "dupe".to_string(),
         }
     );
@@ -3928,8 +3938,58 @@ pub fn x() { id(1, 1.0) }
         "fn dupe() { 1 }
          fn dupe(x) { x }",
         Error::DuplicateName {
-            meta: Meta { start: 25, end: 41 },
+            location: Meta { start: 25, end: 41 },
+            previous_location: Meta { start: 0, end: 15 },
             name: "dupe".to_string(),
+        }
+    );
+
+    assert_error!(
+        "fn dupe() { 1 }
+         external fn dupe(x) -> x = \"\" \"\"",
+        Error::DuplicateName {
+            location: Meta { start: 25, end: 57 },
+            previous_location: Meta { start: 0, end: 15 },
+            name: "dupe".to_string(),
+        }
+    );
+
+    assert_error!(
+        "external fn dupe(x) -> x = \"\" \"\"
+         fn dupe() { 1 }",
+        Error::DuplicateName {
+            location: Meta { start: 42, end: 57 },
+            previous_location: Meta { start: 0, end: 32 },
+            name: "dupe".to_string(),
+        }
+    );
+
+    assert_error!(
+        "struct Box { x: Int }
+         enum Boxy { Box(Int) }",
+        Error::DuplicateName {
+            location: Meta { start: 43, end: 51 },
+            previous_location: Meta { start: 0, end: 21 },
+            name: "Box".to_string(),
+        }
+    );
+
+    assert_error!(
+        "enum Boxy { Box(Int) }
+         struct Box { x: Int }",
+        Error::DuplicateName {
+            location: Meta { start: 32, end: 53 },
+            previous_location: Meta { start: 12, end: 20 },
+            name: "Box".to_string(),
+        }
+    );
+
+    assert_error!(
+        "enum Boxy { Box(Int) Box(Float) }",
+        Error::DuplicateName {
+            location: Meta { start: 21, end: 31 },
+            previous_location: Meta { start: 12, end: 20 },
+            name: "Box".to_string(),
         }
     );
 
