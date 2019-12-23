@@ -1779,7 +1779,7 @@ x() ->
 
 x() ->
     1.0 < 2.3.
-"#
+"#,
         },
         // Named struct creation
         Case {
@@ -1790,7 +1790,7 @@ x() ->
 x() ->
     {pair, 1, 2},
     {pair, 3.0, 4.0}.
-"#
+"#,
         },
         Case {
             src: r#"struct Null { } fn x() { Null }"#,
@@ -1799,7 +1799,7 @@ x() ->
 
 x() ->
     null.
-"#
+"#,
         },
         Case {
             src: r#"struct Point {x: Int y: Int}
@@ -1809,7 +1809,7 @@ x() ->
 
 y() ->
     ((fun() -> fun(A, B) -> {point, A, B} end end)())(4, 6).
-"#
+"#,
         },
         Case {
             src: r#"struct Point {x: Int y: Int}
@@ -1820,7 +1820,7 @@ y() ->
 x() ->
     {point, 4, 6},
     {point, 9, 1}.
-"#
+"#,
         },
         Case {
             src: r#"struct Point {x: Int y: Int} fn x(y) { let Point(a, b) = y a }"#,
@@ -1830,7 +1830,7 @@ x() ->
 x(Y) ->
     {point, A, B} = Y,
     A.
-"#
+"#,
         },
         Case {
             src: r#"external fn go(x: Int, y: Int) -> Int = "m" "f"
@@ -1844,7 +1844,7 @@ go(A, B) ->
 x() ->
     go(1, 2),
     go(4, 3).
-"#
+"#,
         },
         Case {
             src: r#"fn go(x xx, y yy) { xx }
@@ -1858,7 +1858,7 @@ go(Xx, Yy) ->
 x() ->
     go(1, 2),
     go(4, 3).
-"#
+"#,
         },
         // https://github.com/lpil/gleam/issues/289
         Case {
@@ -1871,7 +1871,7 @@ fn create_user(user_id) { User(age: 22, id: user_id, name: "") }
 
 create_user(UserId) ->
     {user, UserId, <<"">>, 22}.
-"#
+"#,
         },
         Case {
             src: r#"fn run() { case 1, 2 { a, b -> a } }"#,
@@ -1883,7 +1883,7 @@ run() ->
         {A, B} ->
             A
     end.
-"#
+"#,
         },
         Case {
             src: r#"enum X { X(x: Int, y: Float) }
@@ -1894,7 +1894,7 @@ run() ->
 x() ->
     {x, 1, 2.0},
     {x, 4, 3.0}.
-"#
+"#,
         },
         // https://github.com/gleam-lang/gleam/issues/333
         Case {
@@ -1922,7 +1922,7 @@ go(A) ->
         _ ->
             A
     end.
-"#
+"#,
         },
         Case {
             src: r#"
@@ -1938,7 +1938,7 @@ fn go(a) {
 go(A) ->
     A1 = A + 1,
     A1.
-"#
+"#,
         },
         Case {
             src: r#"
@@ -1954,7 +1954,7 @@ fn go(a) {
 go(A) ->
     A1 = 1,
     A1.
-"#
+"#,
         },
         Case {
             src: r#"
@@ -1974,7 +1974,7 @@ id(X) ->
 
 main() ->
     id(fun id/1).
-"#
+"#,
         },
     ];
 

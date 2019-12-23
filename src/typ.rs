@@ -2002,7 +2002,12 @@ This should not be possible. Please report this crash",
                 };
 
                 // Insert unqualified imports into scope
-                for UnqualifiedImport { name, meta, as_name } in &unqualified {
+                for UnqualifiedImport {
+                    name,
+                    meta,
+                    as_name,
+                } in &unqualified
+                {
                     let mut imported = false;
 
                     let unqualified_alias = match &as_name {
@@ -2011,7 +2016,11 @@ This should not be possible. Please report this crash",
                     };
 
                     if let Some(value) = module_info.value_constructors.get(name) {
-                        env.insert_variable(unqualified_alias.clone(), value.variant.clone(), value.typ.clone());
+                        env.insert_variable(
+                            unqualified_alias.clone(),
+                            value.variant.clone(),
+                            value.typ.clone(),
+                        );
                         imported = true;
                     }
 
