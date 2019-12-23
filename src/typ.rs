@@ -716,7 +716,7 @@ pub enum ValueConstructorVariant {
     },
 
     /// A constructor for a custom type
-    CustomType {
+    Record {
         name: String,
         field_map: Option<FieldMap>,
         arity: usize,
@@ -726,8 +726,8 @@ pub enum ValueConstructorVariant {
 impl ValueConstructorVariant {
     fn to_module_value_constructor(&self) -> ModuleValueConstructor {
         match self {
-            ValueConstructorVariant::CustomType { name, .. } => {
-                ModuleValueConstructor::CustomType { name: name.clone() }
+            ValueConstructorVariant::Record { name, .. } => {
+                ModuleValueConstructor::Record { name: name.clone() }
             }
 
             ValueConstructorVariant::LocalVariable { .. }
@@ -738,7 +738,7 @@ impl ValueConstructorVariant {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ModuleValueConstructor {
-    CustomType { name: String },
+    Record { name: String },
     Fn,
 }
 
@@ -751,7 +751,7 @@ pub struct Module {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PatternConstructor {
-    CustomType { name: String },
+    Record { name: String },
 }
 
 #[derive(Debug, Clone)]
@@ -802,7 +802,7 @@ impl ValueConstructor {
     fn field_map(&self) -> Option<&FieldMap> {
         match self.variant {
             ValueConstructorVariant::ModuleFn { ref field_map, .. }
-            | ValueConstructorVariant::CustomType { ref field_map, .. } => field_map.as_ref(),
+            | ValueConstructorVariant::Record { ref field_map, .. } => field_map.as_ref(),
             _ => None,
         }
     }
@@ -837,7 +837,7 @@ impl<'a> Env<'a> {
 
         env.insert_variable(
             "True".to_string(),
-            ValueConstructorVariant::CustomType {
+            ValueConstructorVariant::Record {
                 name: "True".to_string(),
                 field_map: None,
                 arity: 0,
@@ -846,7 +846,7 @@ impl<'a> Env<'a> {
         );
         env.insert_variable(
             "False".to_string(),
-            ValueConstructorVariant::CustomType {
+            ValueConstructorVariant::Record {
                 name: "False".to_string(),
                 field_map: None,
                 arity: 0,
@@ -900,7 +900,7 @@ impl<'a> Env<'a> {
 
         env.insert_variable(
             "Nil".to_string(),
-            ValueConstructorVariant::CustomType {
+            ValueConstructorVariant::Record {
                 name: "Nil".to_string(),
                 field_map: None,
                 arity: 0,
@@ -1147,7 +1147,7 @@ impl<'a> Env<'a> {
         let error = env.new_generic_var();
         env.insert_variable(
             "Ok".to_string(),
-            ValueConstructorVariant::CustomType {
+            ValueConstructorVariant::Record {
                 name: "Ok".to_string(),
                 field_map: None,
                 arity: 1,
@@ -1162,7 +1162,7 @@ impl<'a> Env<'a> {
         let error = env.new_generic_var();
         env.insert_variable(
             "Error".to_string(),
-            ValueConstructorVariant::CustomType {
+            ValueConstructorVariant::Record {
                 name: "Error".to_string(),
                 field_map: None,
                 arity: 1,
@@ -1829,7 +1829,7 @@ pub fn infer_module(
                             meta: meta.clone(),
                         })?;
                 }
-                let constructor_variant = ValueConstructorVariant::CustomType {
+                let constructor_variant = ValueConstructorVariant::Record {
                     name: name.clone(),
                     arity: fields.len(),
                     field_map: field_map.into_option(),
@@ -1933,7 +1933,7 @@ pub fn infer_module(
                             public: public,
                             typ: typ.clone(),
                             origin: constructor.meta.clone(),
-                            variant: ValueConstructorVariant::CustomType {
+                            variant: ValueConstructorVariant::Record {
                                 name: constructor.name.clone(),
                                 arity: args.len(),
                                 field_map: field_map.clone(),
@@ -1942,7 +1942,7 @@ pub fn infer_module(
                     )?;
                     env.insert_variable(
                         constructor.name.clone(),
-                        ValueConstructorVariant::CustomType {
+                        ValueConstructorVariant::Record {
                             name: constructor.name.clone(),
                             arity: constructor.args.len(),
                             field_map,
@@ -2501,8 +2501,8 @@ fn unify_pattern(
 
             let constructor_typ = cons.typ.clone();
             let constructor = match cons.variant {
-                ValueConstructorVariant::CustomType { ref name, .. } => {
-                    PatternConstructor::CustomType { name: name.clone() }
+                ValueConstructorVariant::Record { ref name, .. } => {
+                    PatternConstructor::Record { name: name.clone() }
                 }
                 ValueConstructorVariant::LocalVariable
                 | ValueConstructorVariant::ModuleFn { .. } => panic!(
