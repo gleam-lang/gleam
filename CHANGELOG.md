@@ -6,6 +6,8 @@
   custom type definition statement. Instances of these custom types are called
   records.
 - Anonymous structs have been renamed tuples.
+- Values and types can be given a new name when imported in the unqualified
+  fashion using the `import mod.{value as name}` syntax.
 
 ## v0.5.1 - 2019-12-23
 
