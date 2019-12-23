@@ -43,26 +43,36 @@ impl<'a> Env<'a> {
 }
 
 pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
-    let mut records = vec![];
-    for statement in &module.statements {
-        match statement {
-            Statement::Struct {
+    module
+        .statements
+        .iter()
+        .flat_map(|s| match s {
+            Statement::Enum {
                 public: true,
-                fields,
-                name,
+                constructors,
                 ..
-            } if !fields.is_empty() => records.push((name.as_ref(), struct_record(name, fields))),
-
-            _ => (),
-        }
-    }
-    records
+            } => &constructors[..],
+            _ => &[],
+        })
+        .filter(|constructor| !constructor.args.is_empty())
+        .flat_map(|constructor| {
+            let mut fields = Vec::with_capacity(constructor.args.len());
+            for (label, _) in constructor.args.iter() {
+                match label {
+                    Some(s) => fields.push(&**s),
+                    None => return None,
+                }
+            }
+            Some((&constructor.name, fields))
+        })
+        .map(|(name, fields)| (name.as_ref(), record_definition(&name, &fields[..])))
+        .collect()
 }
 
-pub fn struct_record(name: &str, fields: &[StructField]) -> String {
+pub fn record_definition(name: &str, fields: &[&str]) -> String {
     use std::fmt::Write;
     let mut buffer = format!("-record({}, {{", name.to_snake_case());
-    for field in fields.iter().map(|f| f.label.as_ref()).intersperse(", ") {
+    for field in fields.iter().intersperse(&", ") {
         write!(buffer, "{}", field).unwrap();
     }
     write!(buffer, "}}).\n").unwrap();
@@ -70,29 +80,9 @@ pub fn struct_record(name: &str, fields: &[StructField]) -> String {
 }
 
 #[test]
-fn struct_record_test() {
+fn record_definition_test() {
     assert_eq!(
-        struct_record(
-            "PetCat",
-            &[
-                StructField {
-                    meta: Default::default(),
-                    label: "name".to_string(),
-                    typ: TypeAst::Var {
-                        meta: Default::default(),
-                        name: "x".to_string(),
-                    },
-                },
-                StructField {
-                    meta: Default::default(),
-                    label: "is_cute".to_string(),
-                    typ: TypeAst::Var {
-                        meta: Default::default(),
-                        name: "x".to_string(),
-                    },
-                },
-            ]
-        ),
+        record_definition("PetCat", &[&"name", &"is_cute",]),
         "-record(pet_cat, {name, is_cute}).\n".to_string()
     );
 }
@@ -152,7 +142,6 @@ pub fn module(module: TypedModule) -> String {
 fn statement(statement: TypedStatement, module: &Vec<String>) -> Option<Document> {
     match statement {
         Statement::Enum { .. } => None,
-        Statement::Struct { .. } => None,
         Statement::Import { .. } => None,
         Statement::ExternalType { .. } => None,
         Statement::Fn {
