@@ -8,6 +8,8 @@
 - Anonymous structs have been renamed tuples.
 - Values and types can be given a new name when imported in the unqualified
   fashion using the `import mod.{value as name}` syntax.
+- An error will be emitted if multiple values constructors are defined with
+  the same name in a module.
 
 ## v0.5.1 - 2019-12-23
 
