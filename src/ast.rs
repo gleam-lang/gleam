@@ -157,6 +157,7 @@ pub enum Statement<ValueConstructor, ModuleValueConstructor, PatternConstructor,
 pub struct UnqualifiedImport {
     pub meta: Meta,
     pub name: String,
+    pub as_name: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

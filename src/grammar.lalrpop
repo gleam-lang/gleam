@@ -120,9 +120,10 @@ StatementImport: UntypedStatement = {
 }
 
 UnqualifiedImport: UnqualifiedImport = {
-    <s:@L> <name:AnyName> <e:@L> => UnqualifiedImport {
+    <s:@L> <name:AnyName> <as_name:("as" <VarName>)?> <e:@L> => UnqualifiedImport {
         meta: meta(s, e),
         name,
+        as_name
     }
 }
 
