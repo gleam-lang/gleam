@@ -801,6 +801,7 @@ pub struct TypeConstructor {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ValueConstructor {
     pub public: bool,
+    pub origin: Meta,
     pub variant: ValueConstructorVariant,
     pub typ: Type,
 }
@@ -1218,6 +1219,7 @@ impl<'a> Env<'a> {
             name,
             ValueConstructor {
                 public: false,
+                origin: Default::default(), // TODO: remove
                 variant,
                 typ,
             },
@@ -1671,21 +1673,13 @@ pub fn infer_module(
                 unify(&rec, &typ, &mut env).map_err(|e| convert_unify_error(e, &meta))?;
                 let typ = generalise(typ, level);
 
-                // TODO
-                if public {
-                    if let Some(leaked) = typ.find_private_type() {
-                        return Err(Error::PrivateTypeLeak {
-                            meta: meta.clone(),
-                            leaked,
-                        });
-                    }
-                }
                 // Insert the function into the module's interface
                 // TODO
                 env.module_values.insert(
                     name.clone(),
                     ValueConstructor {
                         public: public,
+                        origin: meta.clone(),
                         typ: typ.clone(),
                         variant: ValueConstructorVariant::ModuleFn {
                             field_map: field_map.clone(),
@@ -1752,20 +1746,12 @@ pub fn infer_module(
 
                 // Insert function into module's public interface
                 // TODO
-                if public {
-                    if let Some(leaked) = typ.find_private_type() {
-                        return Err(Error::PrivateTypeLeak {
-                            meta: meta.clone(),
-                            leaked,
-                        });
-                    }
-                }
-                // TODO
                 env.module_values.insert(
                     name.clone(),
                     ValueConstructor {
                         public: public,
                         typ: typ.clone(),
+                        origin: meta.clone(),
                         variant: ValueConstructorVariant::ModuleFn {
                             field_map: field_map.clone(),
                             module: module_name.clone(),
@@ -1860,19 +1846,11 @@ pub fn infer_module(
                 };
                 // If the struct is public then record it so that it can be used in other modules
                 // TODO
-                if public {
-                    if let Some(leaked) = typ.find_private_type() {
-                        return Err(Error::PrivateTypeLeak {
-                            meta: meta.clone(),
-                            leaked,
-                        });
-                    }
-                };
-                // TODO
                 env.module_values.insert(
                     name.clone(),
                     ValueConstructor {
                         public: public,
+                        origin: meta.clone(),
                         typ: typ.clone(),
                         variant: constructor_variant.clone(),
                     },
@@ -1946,20 +1924,12 @@ pub fn infer_module(
                         },
                     };
                     // TODO
-                    if public {
-                        if let Some(leaked) = typ.find_private_type() {
-                            return Err(Error::PrivateTypeLeak {
-                                meta: constructor.meta.clone(),
-                                leaked,
-                            });
-                        }
-                    };
-                    // TODO
                     env.module_values.insert(
                         constructor.name.clone(),
                         ValueConstructor {
                             public: public,
                             typ: typ.clone(),
+                            origin: constructor.meta.clone(),
                             variant: ValueConstructorVariant::Enum {
                                 arity: args.len(),
                                 field_map: field_map.clone(),
@@ -2088,7 +2058,14 @@ This should not be possible. Please report this crash",
         .retain(|_, info| info.public && &info.module == module_name);
     env.module_values.retain(|_, info| info.public);
 
-    // TODO: check for private type leaks here
+    for (_, value) in env.module_values.iter() {
+        if let Some(leaked) = value.typ.find_private_type() {
+            return Err(Error::PrivateTypeLeak {
+                meta: value.origin.clone(),
+                leaked,
+            });
+        }
+    }
 
     Ok(ast::Module {
         name: module.name.clone(),
@@ -2597,6 +2574,7 @@ fn infer_var(
     let ValueConstructor {
         public,
         variant,
+        origin,
         typ,
     } = env
         .get_variable(name)
@@ -2610,6 +2588,7 @@ fn infer_var(
     Ok(ValueConstructor {
         public,
         variant,
+        origin,
         typ,
     })
 }
