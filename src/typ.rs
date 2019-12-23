@@ -29,7 +29,7 @@ pub enum Type {
         typ: Rc<RefCell<TypeVar>>,
     },
 
-    AnonStruct {
+    Tuple {
         elems: Vec<Type>,
     },
 }
@@ -74,8 +74,8 @@ impl Type {
 
             Type::Var { typ, .. } => typ.borrow().to_gleam_doc(names, uid),
 
-            Type::AnonStruct { elems, .. } => {
-                args_to_gleam_doc(elems, names, uid).surround("struct(", ")")
+            Type::Tuple { elems, .. } => {
+                args_to_gleam_doc(elems, names, uid).surround("tuple(", ")")
             }
         }
     }
@@ -156,7 +156,7 @@ impl Type {
 
             Type::App { args, .. } => args.iter().find_map(|t| t.find_private_type()),
 
-            Type::AnonStruct { elems, .. } => elems.iter().find_map(|t| t.find_private_type()),
+            Type::Tuple { elems, .. } => elems.iter().find_map(|t| t.find_private_type()),
 
             Type::Fn { retrn, args, .. } => retrn
                 .find_private_type()
@@ -1366,12 +1366,12 @@ impl<'a> Env<'a> {
                 })
             }
 
-            TypeAst::AnonStruct { elems, .. } => {
+            TypeAst::Tuple { elems, .. } => {
                 let elems = elems
                     .iter()
                     .map(|t| self.type_from_ast(t, vars, new))
                     .collect::<Result<_, _>>()?;
-                Ok(Type::AnonStruct { elems })
+                Ok(Type::Tuple { elems })
             }
 
             TypeAst::Fn { args, retrn, .. } => {
@@ -2181,15 +2181,15 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             })
         }
 
-        Expr::AnonStruct { meta, elems, .. } => {
+        Expr::Tuple { meta, elems, .. } => {
             let elems = elems
                 .into_iter()
                 .map(|e| infer(e, level, env))
                 .collect::<Result<Vec<_>, _>>()?;
-            let typ = Type::AnonStruct {
+            let typ = Type::Tuple {
                 elems: elems.iter().map(|e| e.typ().clone()).collect(),
             };
-            Ok(Expr::AnonStruct { meta, elems, typ })
+            Ok(Expr::Tuple { meta, elems, typ })
         }
 
         Expr::BinOp {
@@ -2372,23 +2372,23 @@ fn unify_pattern(
             }),
         },
 
-        Pattern::AnonStruct { elems, meta } => match typ.clone().collapse_links() {
-            Type::AnonStruct { elems: type_elems } => {
+        Pattern::Tuple { elems, meta } => match typ.clone().collapse_links() {
+            Type::Tuple { elems: type_elems } => {
                 let elems = elems
                     .into_iter()
                     .zip(type_elems)
                     .map(|(pattern, typ)| unify_pattern(pattern, &typ, level, env))
                     .collect::<Result<Vec<_>, _>>()?;
-                Ok(Pattern::AnonStruct { elems, meta })
+                Ok(Pattern::Tuple { elems, meta })
             }
 
             typ @ Type::Var { .. } => {
                 let elems_types = (0..(elems.len()))
                     .map(|_| env.new_unbound_var(level))
                     .collect();
-                unify(&Type::AnonStruct { elems: elems_types }, &typ, env)
+                unify(&Type::Tuple { elems: elems_types }, &typ, env)
                     .map_err(|e| convert_unify_error(e, &meta))?;
-                unify_pattern(Pattern::AnonStruct { elems, meta }, &typ, level, env)
+                unify_pattern(Pattern::Tuple { elems, meta }, &typ, level, env)
             }
 
             other => {
@@ -2726,7 +2726,7 @@ fn instantiate(
             Type::Fn { args, retrn }
         }
 
-        Type::AnonStruct { elems } => Type::AnonStruct {
+        Type::Tuple { elems } => Type::Tuple {
             elems: elems
                 .into_iter()
                 .map(|t| instantiate(t, ctx_level, ids, env))
@@ -2822,7 +2822,7 @@ fn unify(t1: &Type, t2: &Type, env: &mut Env) -> Result<(), UnifyError> {
             Ok(())
         }
 
-        (Type::AnonStruct { elems: elems1, .. }, Type::AnonStruct { elems: elems2, .. })
+        (Type::Tuple { elems: elems1, .. }, Type::Tuple { elems: elems2, .. })
             if elems1.len() == elems2.len() =>
         {
             for (a, b) in elems1.iter().zip(elems2) {
@@ -2916,7 +2916,7 @@ fn update_levels(typ: &Type, own_level: usize, own_id: usize) -> Result<(), Unif
             update_levels(retrn, own_level, own_id)
         }
 
-        Type::AnonStruct { elems, .. } => {
+        Type::Tuple { elems, .. } => {
             for elem in elems.iter() {
                 update_levels(elem, own_level, own_id)?
             }
@@ -3043,7 +3043,7 @@ fn generalise(t: Type, ctx_level: usize) -> Type {
             }
         }
 
-        Type::AnonStruct { elems } => Type::AnonStruct {
+        Type::Tuple { elems } => Type::Tuple {
             elems: elems
                 .into_iter()
                 .map(|t| generalise(t, ctx_level))
@@ -3156,15 +3156,15 @@ fn infer_test() {
     assert_infer!("[fn(x) { x } | []]", "List(fn(a) -> a)");
     assert_infer!("let f = fn(x) { x } [f, f]", "List(fn(a) -> a)");
     assert_infer!("let x = [1 | []] [2 | x]", "List(Int)");
-    assert_infer!("[struct([], [])]", "List(struct(List(a), List(b)))");
+    assert_infer!("[tuple([], [])]", "List(tuple(List(a), List(b)))");
 
     // anon structs
-    assert_infer!("struct(1)", "struct(Int)");
-    assert_infer!("struct(1, 2.0)", "struct(Int, Float)");
-    assert_infer!("struct(1, 2.0, 3)", "struct(Int, Float, Int)");
+    assert_infer!("tuple(1)", "tuple(Int)");
+    assert_infer!("tuple(1, 2.0)", "tuple(Int, Float)");
+    assert_infer!("tuple(1, 2.0, 3)", "tuple(Int, Float, Int)");
     assert_infer!(
-        "struct(1, 2.0, struct(1, 1))",
-        "struct(Int, Float, struct(Int, Int))",
+        "tuple(1, 2.0, tuple(1, 1))",
+        "tuple(Int, Float, tuple(Int, Int))",
     );
 
     // fn
@@ -3215,9 +3215,9 @@ fn infer_test() {
         "fn(fn(fn(a) -> a) -> b) -> b",
     );
     assert_infer!("let add = fn(x, y) { x + y } add(_, 2)", "fn(Int) -> Int");
-    assert_infer!("fn(x) { struct(1, x) }", "fn(a) -> struct(Int, a)");
-    assert_infer!("fn(x, y) { struct(x, y) }", "fn(a, b) -> struct(a, b)");
-    assert_infer!("fn(x) { struct(x, x) }", "fn(a) -> struct(a, a)");
+    assert_infer!("fn(x) { tuple(1, x) }", "fn(a) -> tuple(Int, a)");
+    assert_infer!("fn(x, y) { tuple(x, y) }", "fn(a, b) -> tuple(a, b)");
+    assert_infer!("fn(x) { tuple(x, x) }", "fn(a) -> tuple(a, a)");
 
     // case
     assert_infer!("case 1 { a -> 1 }", "Int");
@@ -3241,8 +3241,8 @@ fn infer_test() {
     assert_infer!("fn(x) { let [a] = x a + 1 }", "fn(List(Int)) -> Int");
     assert_infer!("let _x = 1 2.0", "Float");
     assert_infer!("let _ = 1 2.0", "Float");
-    assert_infer!("let struct(tag, x) = struct(1.0, 1) x", "Int");
-    assert_infer!("fn(x) { let struct(a, b) = x a }", "fn(struct(a, b)) -> a");
+    assert_infer!("let tuple(tag, x) = tuple(1.0, 1) x", "Int");
+    assert_infer!("fn(x) { let tuple(a, b) = x a }", "fn(tuple(a, b)) -> a");
 }
 
 #[test]
@@ -3465,13 +3465,13 @@ fn infer_error_test() {
     );
 
     assert_error!(
-        "struct(1, 2) == struct(1, 2, 3)",
+        "tuple(1, 2) == tuple(1, 2, 3)",
         Error::CouldNotUnify {
-            meta: Meta { start: 16, end: 31 },
-            expected: Type::AnonStruct {
+            meta: Meta { start: 15, end: 29 },
+            expected: Type::Tuple {
                 elems: vec![int(), int()],
             },
-            given: Type::AnonStruct {
+            given: Type::Tuple {
                 elems: vec![int(), int(), int()],
             },
         },
@@ -3749,18 +3749,18 @@ fn infer_module_test() {
 
     // Anon structs
     assert_infer!(
-        "pub fn ok(x) { struct(1, x) }",
-        vec![("ok", "fn(a) -> struct(Int, a)")],
+        "pub fn ok(x) { tuple(1, x) }",
+        vec![("ok", "fn(a) -> tuple(Int, a)")],
     );
 
     assert_infer!(
-        "pub external fn ok(Int) -> struct(Int, Int) = \"\" \"\"",
-        vec![("ok", "fn(Int) -> struct(Int, Int)")],
+        "pub external fn ok(Int) -> tuple(Int, Int) = \"\" \"\"",
+        vec![("ok", "fn(Int) -> tuple(Int, Int)")],
     );
 
     assert_infer!(
-        "pub external fn go(struct(a, c)) -> c = \"\" \"\"",
-        vec![("go", "fn(struct(a, b)) -> b")],
+        "pub external fn go(tuple(a, c)) -> c = \"\" \"\"",
+        vec![("go", "fn(tuple(a, b)) -> b")],
     );
 }
 

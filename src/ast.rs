@@ -85,7 +85,7 @@ pub enum TypeAst {
         name: String,
     },
 
-    AnonStruct {
+    Tuple {
         meta: Meta,
         elems: Vec<Self>,
     },
@@ -288,7 +288,7 @@ pub enum Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type
         constructor: ModuleValueConstructor,
     },
 
-    AnonStruct {
+    Tuple {
         meta: Meta,
         typ: Type,
         elems: Vec<Self>,
@@ -310,7 +310,7 @@ impl<A, B, C, D> Expr<A, B, C, D> {
             Expr::Float { meta, .. } => meta,
             Expr::BinOp { meta, .. } => meta,
             Expr::String { meta, .. } => meta,
-            Expr::AnonStruct { meta, .. } => meta,
+            Expr::Tuple { meta, .. } => meta,
             Expr::FieldSelect { meta, .. } => meta,
             Expr::ModuleSelect { meta, .. } => meta,
         }
@@ -332,7 +332,7 @@ impl TypedExpr {
             Expr::BinOp { typ, .. } => typ,
             Expr::Let { typ, .. } => typ,
             Expr::Case { typ, .. } => typ,
-            Expr::AnonStruct { typ, .. } => typ,
+            Expr::Tuple { typ, .. } => typ,
             Expr::FieldSelect { typ, .. } => typ,
             Expr::ModuleSelect { typ, .. } => typ,
         }
@@ -404,7 +404,7 @@ pub enum Pattern<Constructor> {
         constructor: Constructor,
     },
 
-    AnonStruct {
+    Tuple {
         meta: Meta,
         elems: Vec<Self>,
     },
@@ -420,7 +420,7 @@ impl<A> Pattern<A> {
             Pattern::Float { meta, .. } => meta,
             Pattern::Discard { meta, .. } => meta,
             Pattern::String { meta, .. } => meta,
-            Pattern::AnonStruct { meta, .. } => meta,
+            Pattern::Tuple { meta, .. } => meta,
             Pattern::Constructor { meta, .. } => meta,
         }
     }

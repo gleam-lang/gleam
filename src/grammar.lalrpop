@@ -209,8 +209,8 @@ SimpleExpr: UntypedExpr = {
     List => <>,
     Call => <>,
     Float => <>,
+    Tuple => <>,
     String => <>,
-    AnonStruct => <>,
     FieldSelect => <>,
     "{" <e:Expr+> "}" => seq(e),
 }
@@ -337,8 +337,8 @@ CallArg: Result<CallArg<UntypedExpr>, crate::ast::Meta> = {
     <s:@L> DiscardName <e:@L> => Err(meta(s, e)),
 }
 
-AnonStruct: UntypedExpr = {
-    <s:@L> "struct" "(" <elems:Comma<OpOrSimpleExpr>> ")" <e:@L> => Expr::AnonStruct {
+Tuple: UntypedExpr = {
+    <s:@L> "tuple" "(" <elems:Comma<OpOrSimpleExpr>> ")" <e:@L> => Expr::Tuple {
         meta: meta(s, e),
         typ: (),
         elems: elems,
@@ -446,7 +446,7 @@ Pattern: UntypedPattern = {
     PatternFloat => <>,
     PatternString => <>,
     PatternDiscard => <>,
-    PatternAnonStruct => <>,
+    PatternTuple => <>,
     PatternConstructor => <>,
 }
 
@@ -473,8 +473,8 @@ PatternConstructorArg: CallArg<UntypedPattern> = {
     },
 }
 
-PatternAnonStruct: UntypedPattern = {
-    <s:@L> "struct" "(" <elems:Comma<Pattern>> ")" <e:@L> => Pattern::AnonStruct {
+PatternTuple: UntypedPattern = {
+    <s:@L> "tuple" "(" <elems:Comma<Pattern>> ")" <e:@L> => Pattern::Tuple {
         meta: meta(s, e),
         elems,
     }
@@ -545,13 +545,13 @@ PatternCons: UntypedPattern = {
 
 Type: TypeAst = {
     TypeConstructor => <>,
-    TypeAnonStruct => <>,
+    TypeTuple => <>,
     TypeVar => <>,
     TypeFn => <>,
 }
 
-TypeAnonStruct: TypeAst = {
-    <s:@L> "struct" "(" <elems:Comma<Type>> ")" <e:@L> => TypeAst::AnonStruct {
+TypeTuple: TypeAst = {
+    <s:@L> "tuple" "(" <elems:Comma<Type>> ")" <e:@L> => TypeAst::Tuple {
         meta: meta(s, e),
         elems: elems,
     }
