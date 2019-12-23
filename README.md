@@ -23,7 +23,7 @@ Elixir and LFE.
 It looks like this:
 
 ```rust
-pub enum Tree(value) {
+pub type Tree(value) {
   Leaf(value)
   Node(Tree(value), Tree(value))
 }
