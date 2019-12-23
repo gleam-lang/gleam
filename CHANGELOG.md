@@ -5,6 +5,7 @@
 - Syntax for defining structs and enums have been unified into a singular
   custom type definition statement. Instances of these custom types are called
   records.
+- Anonymous structs have been renamed tuples.
 
 ## v0.5.1 - 2019-12-23
 
