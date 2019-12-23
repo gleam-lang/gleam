@@ -1146,11 +1146,11 @@ fn module_test() {
         Ok(Module {
             type_info: (),
             name: vec![],
-            statements: vec![Statement::Enum {
+            statements: vec![Statement::CustomType {
                 meta: Meta { start: 0, end: 16 },
                 public: true,
                 args: vec!["a".to_string()],
-                constructors: vec![EnumConstructor {
+                constructors: vec![RecordConstructor {
                     meta: Meta { start: 18, end: 26 },
                     name: "Boxed".to_string(),
                     args: vec![(
@@ -1164,7 +1164,7 @@ fn module_test() {
                 name: "Box".to_string(),
             }]
         }),
-        ModuleParser::new().parse("pub enum Box(a) { Boxed(a) }"),
+        ModuleParser::new().parse("pub type Box(a) { Boxed(a) }"),
     );
 
     assert_eq!(
@@ -1172,11 +1172,11 @@ fn module_test() {
             type_info: (),
             name: vec![],
             statements: vec![
-                Statement::Enum {
+                Statement::CustomType {
                     meta: Meta { start: 0, end: 27 },
                     public: true,
                     args: vec!["x".to_string()],
-                    constructors: vec![EnumConstructor {
+                    constructors: vec![RecordConstructor {
                         meta: Meta { start: 29, end: 48 },
                         name: "Boxxy0123456789x".to_string(),
                         args: vec![(
@@ -1254,7 +1254,7 @@ fn module_test() {
             ]
         }),
         ModuleParser::new().parse(
-            "pub enum Box0123456789x(x) { Boxxy0123456789x(x) }
+            "pub type Box0123456789x(x) { Boxxy0123456789x(x) }
 
              pub fn value(x) {
                let Boxxy0123456789x(a) = x
@@ -1268,11 +1268,11 @@ fn module_test() {
             type_info: (),
             name: vec![],
             statements: vec![
-                Statement::Enum {
+                Statement::CustomType {
                     meta: Meta { start: 0, end: 16 },
                     public: true,
                     args: vec!["x".to_string()],
-                    constructors: vec![EnumConstructor {
+                    constructors: vec![RecordConstructor {
                         meta: Meta { start: 18, end: 26 },
                         name: "Boxxy".to_string(),
                         args: vec![(
@@ -1338,7 +1338,7 @@ fn module_test() {
             ]
         }),
         ModuleParser::new().parse(
-            "pub enum Box(x) { Boxxy(x) }
+            "pub type Box(x) { Boxxy(x) }
 
              pub fn value(x) {
                let Boxxy(a) = x

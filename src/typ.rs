@@ -1786,7 +1786,7 @@ pub fn infer_module(
                 })
             }
 
-            Statement::Enum {
+            Statement::CustomType {
                 meta,
                 public,
                 name,
@@ -1867,7 +1867,7 @@ pub fn infer_module(
                         typ,
                     );
                 }
-                Ok(Statement::Enum {
+                Ok(Statement::CustomType {
                     meta,
                     public,
                     name,
@@ -3518,7 +3518,7 @@ fn infer_module_test() {
     );
 
     assert_infer!(
-        "pub enum Is { Yes No }
+        "pub type Is { Yes No }
          pub fn yes() { Yes }
          pub fn no() { No }",
         vec![
@@ -3530,7 +3530,7 @@ fn infer_module_test() {
     );
 
     assert_infer!(
-        "pub enum Num { I(Int) }
+        "pub type Num { I(Int) }
          pub fn one() { I(1) }",
         vec![("I", "fn(Int) -> Num"), ("one", "fn() -> Num")],
     );
@@ -3547,7 +3547,7 @@ fn infer_module_test() {
     );
 
     assert_infer!(
-        "pub enum Box(a) { Box(a) }
+        "pub type Box(a) { Box(a) }
         pub fn int() { Box(1) }
         pub fn float() { Box(1.0) }",
         vec![
@@ -3558,19 +3558,19 @@ fn infer_module_test() {
     );
 
     assert_infer!(
-        "pub enum Singleton { Singleton }
+        "pub type Singleton { Singleton }
         pub fn go(x) { let Singleton = x 1 }",
         vec![("Singleton", "Singleton"), ("go", "fn(Singleton) -> Int")],
     );
 
     assert_infer!(
-        "pub enum Box(a) { Box(a) }
+        "pub type Box(a) { Box(a) }
         pub fn unbox(x) { let Box(a) = x a }",
         vec![("Box", "fn(a) -> Box(a)"), ("unbox", "fn(Box(a)) -> a")],
     );
 
     assert_infer!(
-        "pub enum I { I(Int) }
+        "pub type I { I(Int) }
         pub fn open(x) { case x { I(i) -> i  } }",
         vec![("I", "fn(Int) -> I"), ("open", "fn(I) -> Int")],
     );
@@ -3723,15 +3723,15 @@ fn infer_module_test() {
 
     // Structs
     assert_infer!(
-        "pub struct Box { boxed: Int }",
+        "pub type Box { Box(boxed: Int) }",
         vec![("Box", "fn(Int) -> Box")]
     );
     assert_infer!(
-        "pub struct Tup(a, b) { first: a second: b }",
+        "pub type Tup(a, b) { Tup(first: a, second: b) }",
         vec![("Tup", "fn(a, b) -> Tup(a, b)")]
     );
     assert_infer!(
-        "pub struct Tup(a, b, c) { first: a second: b third: c }
+        "pub type Tup(a, b, c) { Tup(first: a, second: b, third: c) }
          pub fn third(t) { let Tup(_, third: a, _) = t a }",
         vec![
             ("Tup", "fn(a, b, c) -> Tup(a, b, c)"),
@@ -3739,31 +3739,13 @@ fn infer_module_test() {
         ],
     );
     assert_infer!(
-        "pub struct Box(x) { label: String contents: x }
+        "pub type Box(x) { Box(label: String, contents: x) }
          pub fn id(x: Box(y)) { x }",
         vec![
             ("Box", "fn(String, a) -> Box(a)"),
             ("id", "fn(Box(a)) -> Box(a)"),
         ],
     );
-    // assert_infer!(     src: "pub struct Box(a) { boxed: a }
-    //           pub fn unbox_int(b: Box(Int)) { b.boxed }",
-    //     vec![
-    //         ("Box", "fn(a) -> Box(a)"),
-    //         ("unbox_int", "fn(Box(Int)) -> Int"),
-    //     ],
-    // );
-    // assert_infer!(     src: "pub struct Box(a) { boxed: a }
-    //           pub fn unbox_pattern(b: Box(a)) { let Box(x) = b x }
-    //           pub fn unbox(b: Box(a)) { b.boxed }
-    //           pub fn unbox_int(b: Box(Int)) { b.boxed }",
-    //     vec![
-    //         ("Box", "fn(a) -> Box(a)"),
-    //         ("unbox", "fn(Box(a)) -> a"),
-    //         ("unbox_int", "fn(Box(Int)) -> Int"),
-    //         ("unbox_pattern", "fn(Box(a)) -> a"),
-    //     ],
-    // );
 
     // Anon structs
     assert_infer!(
@@ -3882,27 +3864,27 @@ pub fn x() { id(1, 1.0) }
     );
 
     assert_error!(
-        "struct Box { x: Int }
-         enum Boxy { Box(Int) }",
+        "type Box { Box(x: Int) }
+         type Boxy { Box(Int) }",
         Error::DuplicateName {
-            location: Meta { start: 43, end: 51 },
-            previous_location: Meta { start: 0, end: 21 },
+            location: Meta { start: 46, end: 54 },
+            previous_location: Meta { start: 11, end: 22 },
             name: "Box".to_string(),
         }
     );
 
     assert_error!(
-        "enum Boxy { Box(Int) }
-         struct Box { x: Int }",
+        "type Boxy { Box(Int) }
+         type Box { Box(x: Int) }",
         Error::DuplicateName {
-            location: Meta { start: 32, end: 53 },
+            location: Meta { start: 43, end: 54 },
             previous_location: Meta { start: 12, end: 20 },
             name: "Box".to_string(),
         }
     );
 
     assert_error!(
-        "enum Boxy { Box(Int) Box(Float) }",
+        "type Boxy { Box(Int) Box(Float) }",
         Error::DuplicateName {
             location: Meta { start: 21, end: 31 },
             previous_location: Meta { start: 12, end: 20 },
@@ -3976,7 +3958,7 @@ pub fn x() { id(1, 1.0) }
 
     assert_error!(
         r#"external type PrivateType
-           pub enum LeakType { Variant(PrivateType) }"#,
+           pub type LeakType { Variant(PrivateType) }"#,
         Error::PrivateTypeLeak {
             meta: Meta { start: 57, end: 77 },
             leaked: Type::App {
@@ -3997,17 +3979,17 @@ pub fn x() { id(1, 1.0) }
     );
 
     assert_error!(
-        r#"struct X { a: Int b: Int c: Int }
+        r#"type X { X(a: Int, b: Int, c: Int) }
                     fn x() { X(b: 1, a: 1, 1) }"#,
         Error::PositionalArgumentAfterLabelled {
-            meta: Meta { start: 77, end: 78 },
+            meta: Meta { start: 80, end: 81 },
         }
     );
 
     assert_error!(
-        r#"struct Thing { unknown: x }"#,
+        r#"type Thing { Thing(unknown: x) }"#,
         Error::UnknownType {
-            meta: Meta { start: 24, end: 25 },
+            meta: Meta { start: 28, end: 29 },
             name: "x".to_string(),
             types: {
                 let mut types = Env::new(&mut HashMap::new()).module_types;

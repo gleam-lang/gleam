@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use crate::ast::{
     UntypedExpr, Expr, Arg, UntypedModule, Module, UntypedStatement, Statement, TypeAst,
-    UntypedPattern, BinOp, Clause, UntypedClause, EnumConstructor, Pattern, CallArg, StructField,
+    UntypedPattern, BinOp, Clause, UntypedClause, RecordConstructor, Pattern, CallArg,
     ExternalFnArg, ArgNames, UnqualifiedImport
 };
 use crate::parser::*;
@@ -25,15 +25,14 @@ pub Module: UntypedModule = {
 
 Statement: UntypedStatement = {
     StatementFn => <>,
-    StatementEnum => <>,
-    StatementStruct => <>,
+    StatementCustomType => <>,
     StatementExternalFn => <>,
     StatementExternalType => <>,
     StatementImport => <>,
 }
 
-StatementEnum: UntypedStatement = {
-    <s:@L> <p:"pub"?> "enum" <t:TypeName> <e:@L> "{" <cs:EnumConstructor+> "}" => Statement::Enum {
+StatementCustomType: UntypedStatement = {
+    <s:@L> <p:"pub"?> "type" <t:TypeName> <e:@L> "{" <cs:RecordConstructor+> "}" => Statement::CustomType {
         meta: meta(s, e),
         public: p.is_some(),
         name: t.0,
@@ -42,43 +41,19 @@ StatementEnum: UntypedStatement = {
     }
 }
 
-StatementStruct: UntypedStatement = {
-    <s:@L> <p:"pub"?> "struct" <t:TypeName> "{" <fields:StructFieldDefinition*> "}" <e:@L> => Statement::Enum {
-        meta: meta(s, e),
-        public: p.is_some(),
-        name: t.0.clone(),
-        args: t.1,
-        constructors: vec![
-            EnumConstructor {
-                meta: meta(s, e),
-                name: t.0,
-                args: fields.into_iter().map(|f| (Some(f.label), f.typ)).collect(),
-            },
-        ]
-    },
-}
-
-StructFieldDefinition: StructField = {
-    <s:@L> <label:VarName> ":" <typ:Type> <e:@L> => StructField {
-        meta: meta(s, e),
-        label,
-        typ,
-    }
-}
-
-EnumConstructor: EnumConstructor = {
-    <s:@L> <t:UpName> <args:EnumConstructorArgs?> <e:@L> => EnumConstructor {
+RecordConstructor: RecordConstructor = {
+    <s:@L> <t:UpName> <args:RecordConstructorArgs?> <e:@L> => RecordConstructor {
         meta: meta(s, e),
         name: t,
         args: args.unwrap_or_else(|| vec![]),
     },
 }
 
-EnumConstructorArgs: Vec<(Option<String>, TypeAst)> = {
-    "(" <ts:Comma<EnumConstructorArg>> ")" => ts
+RecordConstructorArgs: Vec<(Option<String>, TypeAst)> = {
+    "(" <ts:Comma<RecordConstructorArg>> ")" => ts
 }
 
-EnumConstructorArg: (Option<String>, TypeAst) = {
+RecordConstructorArg: (Option<String>, TypeAst) = {
     <label:(<VarName> ":")?> <typ:Type> => (label, typ),
 }
 

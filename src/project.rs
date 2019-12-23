@@ -435,7 +435,7 @@ fn compile_test() {
                     origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/one.gleam"),
                     source_base_path: PathBuf::from("/src"),
-                    src: "pub enum Box { Box(Int) }".to_string(),
+                    src: "pub type Box { Box(Int) }".to_string(),
                 },
                 Input {
                     origin: ModuleOrigin::Src,
@@ -471,7 +471,7 @@ unbox(X) ->\n    {box, I} = X,\n    I.\n"
                     origin: ModuleOrigin::Dependency,
                     path: PathBuf::from("/src/one.gleam"),
                     source_base_path: PathBuf::from("/src"),
-                    src: "pub enum Box { Box(Int) }".to_string(),
+                    src: "pub type Box { Box(Int) }".to_string(),
                 },
                 Input {
                     origin: ModuleOrigin::Dependency,
@@ -506,7 +506,7 @@ box(X) ->\n    {box, X}.\n"
                 origin: ModuleOrigin::Src,
                 path: PathBuf::from("/src/one/two.gleam"),
                 source_base_path: PathBuf::from("/src"),
-                src: "pub enum Box { Box }".to_string(),
+                src: "pub type Box { Box }".to_string(),
             }],
             expected: Ok(vec![Output {
                 origin: ModuleOrigin::Src,
@@ -523,7 +523,7 @@ box(X) ->\n    {box, X}.\n"
                     origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/one.gleam"),
                     source_base_path: PathBuf::from("/src"),
-                    src: "pub enum Box { Box }".to_string(),
+                    src: "pub type Box { Box }".to_string(),
                 },
                 Input {
                     origin: ModuleOrigin::Src,
@@ -599,7 +599,7 @@ call() ->
                     origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/nested/one.gleam"),
                     source_base_path: PathBuf::from("/src"),
-                    src: "pub enum Box { Box(Int) }".to_string(),
+                    src: "pub type Box { Box(Int) }".to_string(),
                 },
                 Input {
                     origin: ModuleOrigin::Src,
@@ -635,7 +635,7 @@ call() ->
                     origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/nested/one.gleam"),
                     source_base_path: PathBuf::from("/src"),
-                    src: "pub enum Box { Box(Int) }".to_string(),
+                    src: "pub type Box { Box(Int) }".to_string(),
                 },
                 Input {
                     origin: ModuleOrigin::Src,
@@ -737,7 +737,7 @@ thing() ->\n    thing:new().\n"
                     origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/one.gleam"),
                     source_base_path: PathBuf::from("/src"),
-                    src: "pub struct Point { x: Int y: Int }".to_string(),
+                    src: "pub type Point { Point(x: Int, y: Int) }".to_string(),
                 },
                 Input {
                     origin: ModuleOrigin::Src,
@@ -783,7 +783,7 @@ x(P) ->\n    {point, X, _} = P,\n    X.\n"
                     origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/one.gleam"),
                     source_base_path: PathBuf::from("/src"),
-                    src: "pub struct Empty {}".to_string(),
+                    src: "pub type Empty { Empty }".to_string(),
                 },
                 Input {
                     origin: ModuleOrigin::Src,
@@ -820,7 +820,7 @@ x(P) ->\n    {point, X, _} = P,\n    X.\n"
                     origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/one.gleam"),
                     source_base_path: PathBuf::from("/src"),
-                    src: "pub fn id(x) { x } pub struct Empty {}".to_string(),
+                    src: "pub fn id(x) { x } pub type Empty { Empty }".to_string(),
                 },
                 Input {
                     origin: ModuleOrigin::Src,
