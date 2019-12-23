@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.5.1 - 2019-12-23
 
 - Fixed a bug where invalid Erlang would be generated when using a local
   private function as a value.
