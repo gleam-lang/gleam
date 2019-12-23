@@ -762,8 +762,6 @@ pub struct Env<'a> {
     imported_modules: HashMap<String, Module>,
 
     // Values defined in the current function (or the prelude)
-    // TODO: Once we look up names in env.module_values we don't need to store the constructor type
-    // in here, it will always be a local variable.
     local_values: im::HashMap<String, ValueConstructor>,
 
     // Types defined in the current module (or the prelude)
@@ -771,9 +769,6 @@ pub struct Env<'a> {
 
     // Values defined in the current module
     module_values: HashMap<String, ValueConstructor>,
-    // TODO:
-    // Once we have tracked _all_ module values we can look up from here and the local scope,
-    // meaning we don't need to insert into both. Is that better? I'm not sure yet.
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1297,14 +1292,12 @@ impl<'a> Env<'a> {
         name: &str,
     ) -> Result<&ValueConstructor, GetValueConstructorError> {
         match module {
-            None => {
-                self.local_values.get(name).ok_or_else(|| {
-                    GetValueConstructorError::UnknownVariable {
-                        name: name.to_string(),
-                        variables: self.local_values.clone(), // TODO: include module values too
-                    }
-                })
-            }
+            None => self.local_values.get(name).ok_or_else(|| {
+                GetValueConstructorError::UnknownVariable {
+                    name: name.to_string(),
+                    variables: self.local_values.clone(),
+                }
+            }),
 
             Some(module) => {
                 let module = self.imported_modules.get(&*module).ok_or_else(|| {
@@ -2492,7 +2485,6 @@ fn infer_var(
     meta: &Meta,
     env: &mut Env,
 ) -> Result<ValueConstructor, Error> {
-    // TODO: check the local scope then the module scope.
     let ValueConstructor {
         public,
         variant,
@@ -2504,7 +2496,7 @@ fn infer_var(
         .ok_or_else(|| Error::UnknownVariable {
             meta: meta.clone(),
             name: name.to_string(),
-            variables: env.local_values.clone(), // TODO: include module values too
+            variables: env.local_values.clone(),
         })?;
     let typ = instantiate(typ, level, &mut hashmap![], env);
     Ok(ValueConstructor {
