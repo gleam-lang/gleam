@@ -316,7 +316,7 @@ fn pattern(p: TypedPattern, env: &mut Env) -> Document {
 
         Pattern::Constructor {
             args,
-            constructor: PatternConstructor::CustomType { name },
+            constructor: PatternConstructor::Record { name },
             ..
         } => tag_tuple_pattern(name, args, env),
 
@@ -404,9 +404,9 @@ enum ListType<E, T> {
 
 fn var(name: String, constructor: ValueConstructor, env: &mut Env) -> Document {
     match constructor.variant {
-        ValueConstructorVariant::CustomType { name, arity: 0, .. } => atom(name.to_snake_case()),
+        ValueConstructorVariant::Record { name, arity: 0, .. } => atom(name.to_snake_case()),
 
-        ValueConstructorVariant::CustomType { arity, .. } => {
+        ValueConstructorVariant::Record { arity, .. } => {
             let chars = incrementing_args_list(arity);
             "fun("
                 .to_doc()
@@ -500,13 +500,13 @@ fn tag_tuple(name: String, args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Docu
 fn call(fun: TypedExpr, args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Document {
     match fun {
         Expr::ModuleSelect {
-            constructor: ModuleValueConstructor::CustomType { name },
+            constructor: ModuleValueConstructor::Record { name },
             ..
         }
         | Expr::Var {
             constructor:
                 ValueConstructor {
-                    variant: ValueConstructorVariant::CustomType { name, .. },
+                    variant: ValueConstructorVariant::Record { name, .. },
                     ..
                 },
             ..
@@ -625,7 +625,7 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
         } => map_select(*container, label, env),
 
         Expr::ModuleSelect {
-            constructor: ModuleValueConstructor::CustomType { name },
+            constructor: ModuleValueConstructor::Record { name },
             ..
         } => atom(name.to_snake_case()),
 
@@ -924,7 +924,7 @@ map() ->
                         public: true,
                         origin: Default::default(),
                         typ: crate::typ::int(),
-                        variant: ValueConstructorVariant::CustomType {
+                        variant: ValueConstructorVariant::Record {
                             name: "Nil".to_string(),
                             field_map: None,
                             arity: 0,
@@ -1378,7 +1378,7 @@ moddy4() ->
                                     value: 2,
                                 },
                             }],
-                            constructor: PatternConstructor::CustomType {
+                            constructor: PatternConstructor::Record {
                                 name: "Error".to_string(),
                             },
                         }],
