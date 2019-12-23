@@ -273,13 +273,18 @@ also be labelled.
                     .unwrap();
                 }
 
-                DuplicateName { meta, name: fun } => {
+                // TODO: show previous location
+                DuplicateName {
+                    location,
+                    previous_location: _,
+                    name: fun,
+                } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Duplicate name".to_string(),
                         label: "Redefined here".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        meta: location.clone(),
                     };
                     write(buffer, diagnostic);
                     write!(
