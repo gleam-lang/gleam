@@ -783,6 +783,45 @@ x(P) ->\n    {point, X, _} = P,\n    X.\n"
                     origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/one.gleam"),
                     source_base_path: PathBuf::from("/src"),
+                    src: "pub fn div(top x, bottom y) { x/y }".to_string(),
+                },
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/two.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "import one.{div} 
+                    fn run() { 2 |> div(top: _, bottom: 4) |> div(2, bottom: _) }"
+                        .to_string(),
+                },
+            ],
+            expected: Ok(vec![
+                Output {
+                    origin: ModuleOrigin::Src,
+                    name: vec!["one".to_string()],
+                    files: vec![OutputFile {
+                        path: PathBuf::from("/gen/src/one.erl"),
+                        text:
+                            "-module(one).\n-compile(no_auto_import).\n\n-export([\'div\'/2]).\n\n'div'(X, Y) ->\n    X div Y.\n"
+                                .to_string(),
+                    }],
+                },
+                Output {
+                    origin: ModuleOrigin::Src,
+                    name: vec!["two".to_string()],
+                    files: vec![OutputFile {
+                        path: PathBuf::from("/gen/src/two.erl"),
+                        text: "-module(two).\n-compile(no_auto_import).\n\nrun() ->\n    one:'div'(2, one:'div'(2, 4)).\n"
+                            .to_string(),
+                    }],
+                },
+            ]),
+        },
+        Case {
+            input: vec![
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/one.gleam"),
+                    source_base_path: PathBuf::from("/src"),
                     src: "pub type Empty { Empty }".to_string(),
                 },
                 Input {
