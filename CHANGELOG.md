@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.6.0-rc1 - 2019-12-23
+## v0.6.0-rc1 - 2019-12-24
 
 - Syntax for defining structs and enums have been unified into a singular
   custom type definition statement. Instances of these custom types are called
@@ -10,6 +10,7 @@
   fashion using the `import mod.{value as name}` syntax.
 - An error will be emitted if multiple values constructors are defined with
   the same name in a module.
+- Function capture syntax now support labelled arguments.
 
 ## v0.5.1 - 2019-12-23
 
