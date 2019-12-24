@@ -285,10 +285,10 @@ Call: UntypedExpr = {
             .into_iter()
             .map(|a| match a {
                 Ok(arg) => arg,
-                Err(meta) => {
+                Err((meta, label)) => {
                     num_holes += 1;
                     CallArg {
-                        label: None,
+                        label,
                         meta: Default::default(),
                         value: Expr::Var {
                             meta,
@@ -332,9 +332,9 @@ Call: UntypedExpr = {
     }
 }
 
-CallArg: Result<CallArg<UntypedExpr>, crate::ast::Meta> = {
+CallArg: Result<CallArg<UntypedExpr>, (crate::ast::Meta, Option<String>)> = {
     <s:@L> <label:(<VarName> ":")?> <value:OpOrSimpleExpr> <e:@L> => Ok(CallArg { label, value, meta: meta(s, e) }),
-    <s:@L> DiscardName <e:@L> => Err(meta(s, e)),
+    <s:@L> <label:(<VarName> ":")?> DiscardName <e:@L> => Err((meta(s, e), label)),
 }
 
 Tuple: UntypedExpr = {
