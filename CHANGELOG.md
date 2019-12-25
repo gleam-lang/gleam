@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.6.0 - 2019-12-25 🎄
 
 - Function capture syntax now supports labelled arguments.
 
