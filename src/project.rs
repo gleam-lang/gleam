@@ -70,7 +70,8 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
             .join(path.file_stem().unwrap())
             .to_str()
             .unwrap()
-            .to_string();
+            .to_string()
+            .replace("\\", "/");
         let mut module = crate::grammar::ModuleParser::new()
             .parse(&crate::parser::strip_extra(&src))
             .map_err(|e| Error::Parse {
