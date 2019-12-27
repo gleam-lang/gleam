@@ -238,7 +238,7 @@ pub fn collect_source(src_dir: PathBuf, origin: ModuleOrigin, srcs: &mut Vec<Inp
         use regex::Regex;
         lazy_static! {
             static ref RE: Regex =
-                Regex::new("^([a-z_]+/)*[a-z_]+\\.gleam$").expect("collect_source RE regex");
+                Regex::new("^([a-z_]+(/|\\\\))*[a-z_]+\\.gleam$").expect("collect_source RE regex");
         }
 
         RE.is_match(
