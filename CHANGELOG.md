@@ -3,7 +3,7 @@
 ## Unreleased
 
 - Fixed a bug where import paths would not be correctly resolved on Windows.
-- Added job to create precompiled binary for Windows when releasing.
+- Added job to create precompiled binary for 64-bit Windows when releasing.
 
 ## v0.6.0 - 2019-12-25 🎄
 
