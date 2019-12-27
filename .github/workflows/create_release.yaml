@@ -71,7 +71,7 @@ jobs:
           target\\release\\gleam --version
       - id: create_archive
         run: |
-          $ARCHIVE="gleam-$env:TAG_NAME-windows.zip"
+          $ARCHIVE="gleam-$env:TAG_NAME-windows-64bit.zip"
           Compress-Archive target\\release\\gleam.exe -DestinationPath $ARCHIVE
           echo "::set-output name=ASSET::$ARCHIVE"
         env:
