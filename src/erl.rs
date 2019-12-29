@@ -279,12 +279,20 @@ fn pipe(value: TypedExpr, fun: TypedExpr, env: &mut Env) -> Document {
 
 fn let_(value: TypedExpr, pat: TypedPattern, then: TypedExpr, env: &mut Env) -> Document {
     let body = expr(value, env);
-    pattern(pat, env)
+    let_pattern(pat, env)
         .append(" = ")
         .append(body)
         .append(",")
         .append(line())
         .append(expr(then, env))
+}
+
+fn let_pattern(p: TypedPattern, env: &mut Env) -> Document {
+    match p {
+        Pattern::Var { name, .. } => env.next_local_var_name(name),
+
+        other => pattern(other, env),
+    }
 }
 
 fn pattern(p: TypedPattern, env: &mut Env) -> Document {
@@ -295,7 +303,7 @@ fn pattern(p: TypedPattern, env: &mut Env) -> Document {
 
         Pattern::Discard { .. } => "_".to_doc(),
 
-        Pattern::Var { name, .. } => env.next_local_var_name(name),
+        Pattern::Var { name, .. } => env.local_var_name(name),
 
         Pattern::Int { value, .. } => value.to_doc(),
 
@@ -1600,6 +1608,19 @@ go() ->
     Y = 1,
     Y1 = 2,
     Y1.
+"#,
+        },
+        Case {
+            src: r#"fn go() {
+  let [x, x] = [1, 1]
+  x
+}"#,
+            erl: r#"-module(the_app).
+-compile(no_auto_import).
+
+go() ->
+    [X, X] = [1, 1],
+    X.
 "#,
         },
         Case {
