@@ -129,7 +129,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1.0.0
+      - uses: actions/checkout@v2.0.0
       - uses: gleam-lang/setup-erlang@v1.0.0
         with:
           otp-version: 22.1
