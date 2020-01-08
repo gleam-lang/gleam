@@ -11,7 +11,7 @@ jobs:
   rustfmt:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2.0.0
       - run: rustup component add rustfmt
       - run: cargo fmt -- --check
 
@@ -19,9 +19,9 @@ jobs:
     needs: rustfmt
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2.0.0
       - name: Cache Rust dependencies
-        uses: actions/cache@v1.0.1
+        uses: actions/cache@v1.1.0
         with:
           path: target
           key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
@@ -35,10 +35,10 @@ jobs:
     needs: rustfmt
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2.0.0
       - run: curl https://sh.rustup.rs -sSf | sh -s -- -y
       - name: Cache Rust dependencies
-        uses: actions/cache@v1.0.1
+        uses: actions/cache@v1.1.0
         with:
           path: target
           key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
@@ -52,9 +52,9 @@ jobs:
     needs: rustfmt
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2.0.0
       - name: Cache Rust dependencies
-        uses: actions/cache@v1.0.1
+        uses: actions/cache@v1.1.0
         with:
           path: target
           key: ${{ runner.OS }}-build-${{ hashFiles('**\Cargo.lock') }}
