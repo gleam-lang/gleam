@@ -8,6 +8,8 @@
   GitHub actions workflow.
 - Labelled argument in functions may now be discarded by prefixing the name
   with an underscore, like unlabelled arguments.
+- Sub-patterns can have names assigned to them within a pattern using the `as`
+  keyword.
 
 ## v0.6.0 - 2019-12-25 🎄
 
