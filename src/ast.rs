@@ -383,6 +383,11 @@ pub enum Pattern<Constructor> {
         name: String,
     },
 
+    Let {
+        name: String,
+        pattern: Box<Self>,
+    },
+
     Discard {
         meta: Meta,
     },
@@ -414,6 +419,7 @@ pub enum Pattern<Constructor> {
 impl<A> Pattern<A> {
     pub fn meta(&self) -> &Meta {
         match self {
+            Pattern::Let { pattern, .. } => pattern.meta(),
             Pattern::Int { meta, .. } => meta,
             Pattern::Var { meta, .. } => meta,
             Pattern::Nil { meta, .. } => meta,

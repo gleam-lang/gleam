@@ -2338,6 +2338,15 @@ fn unify_pattern(
             Ok(Pattern::Var { name, meta })
         }
 
+        Pattern::Let { name, pattern, .. } => {
+            env.insert_variable(
+                name.to_string(),
+                ValueConstructorVariant::LocalVariable,
+                typ.clone(),
+            );
+            unify_pattern(*pattern, typ, level, env)
+        }
+
         Pattern::Int { meta, value } => {
             unify(typ, &int(), env).map_err(|e| convert_unify_error(e, &meta))?;
             Ok(Pattern::Int { meta, value })
@@ -3139,6 +3148,10 @@ fn infer_test() {
     assert_infer!("let x = 1 x", "Int");
     assert_infer!("let x = 2.0 x", "Float");
     assert_infer!("let x = 2 let y = x y", "Int");
+    assert_infer!(
+        "let tuple(tuple(_, _) as x, _) = tuple(tuple(0, 1.0), []) x",
+        "tuple(Int, Float)"
+    );
 
     // list
     assert_infer!("[]", "List(a)");
