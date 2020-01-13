@@ -275,11 +275,13 @@ ArgNames: ArgNames = {
     <name:VarName> => ArgNames::Named { name },
 
     <label:VarName> <name:VarName> => ArgNames::NamedLabelled { name, label },
+
+    <label:VarName> DiscardName => ArgNames::LabelledDiscard { label },
 }
 
 Call: UntypedExpr = {
     <s:@L> <fun:SimpleExpr> "(" <args:Comma<CallArg>> ")" <e:@L> =>? {
-        let hole_arg_name = "capture@1";
+        let hole_arg_name = "capture@1"; // TODO: model placeholder arguments in a less hacky way. This value can leak to the user in error messages.
         let mut num_holes = 0;
         let args = args
             .into_iter()

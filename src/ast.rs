@@ -54,6 +54,7 @@ pub struct Arg {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ArgNames {
     Discard,
+    LabelledDiscard { label: String },
     Named { name: String },
     NamedLabelled { name: String, label: String },
 }

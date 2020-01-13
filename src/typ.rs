@@ -2613,7 +2613,7 @@ fn infer_fun(
                 ValueConstructorVariant::LocalVariable,
                 (*t).clone(),
             ),
-            ArgNames::Discard => (),
+            ArgNames::Discard | ArgNames::LabelledDiscard { .. } => (),
         };
     }
 
@@ -3761,6 +3761,11 @@ fn infer_module_test() {
     assert_infer!(
         "pub external fn go(tuple(a, c)) -> c = \"\" \"\"",
         vec![("go", "fn(tuple(a, b)) -> b")],
+    );
+
+    assert_infer!(
+        "pub fn always(ignore _a, return b) { b }",
+        vec![("always", "fn(a, b) -> b")],
     );
 }
 

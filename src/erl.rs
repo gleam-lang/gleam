@@ -169,7 +169,7 @@ fn mod_fun(name: String, args: Vec<Arg>, body: TypedExpr, module: &Vec<String>) 
 
 fn fun_args(args: Vec<Arg>, env: &mut Env) -> Document {
     wrap_args(args.into_iter().map(|a| match a.names {
-        ArgNames::Discard => "_".to_doc(),
+        ArgNames::Discard | ArgNames::LabelledDiscard { .. } => "_".to_doc(),
         ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
             env.next_local_var_name(name)
         }
