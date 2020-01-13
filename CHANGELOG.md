@@ -6,6 +6,8 @@
 - Added job to create precompiled binary for 64-bit Windows when releasing.
 - `gleam new` now creates a project that uses `actions/checkout@v2.0.0` in its
   GitHub actions workflow.
+- Labelled argument in functions may now be discarded by prefixing the name
+  with an underscore, like unlabelled arguments.
 
 ## v0.6.0 - 2019-12-25 🎄
 
