@@ -441,6 +441,7 @@ Op<Operator, Current, Next>: UntypedExpr = {
 
 Pattern: UntypedPattern = {
     PatternVar => <>,
+    PatternLet => <>,
     PatternInt => <>,
     PatternNil => <>,
     PatternCons => <>,
@@ -500,6 +501,13 @@ PatternInt: UntypedPattern = {
     <s:@L> <i:r"-?[0-9]+"> <e:@L> => Pattern::Int {
         meta: meta(s, e),
         value: i64::from_str(i).unwrap(),
+    }
+}
+
+PatternLet: UntypedPattern = {
+    <p:Pattern> "as" <name:VarName> => Pattern::Let {
+        name,
+        pattern: Box::new(p),
     }
 }
 

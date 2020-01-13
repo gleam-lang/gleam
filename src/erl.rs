@@ -291,6 +291,10 @@ fn pattern(p: TypedPattern, env: &mut Env) -> Document {
     match p {
         Pattern::Nil { .. } => "[]".to_doc(),
 
+        Pattern::Let { name, pattern: p } => pattern(*p, env)
+            .append(" = ")
+            .append(env.next_local_var_name(name)),
+
         Pattern::Cons { head, tail, .. } => pattern_list_cons(*head, *tail, env),
 
         Pattern::Discard { .. } => "_".to_doc(),
