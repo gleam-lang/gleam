@@ -10,6 +10,8 @@
   with an underscore, like unlabelled arguments.
 - Sub-patterns can have names assigned to them within a pattern using the `as`
   keyword.
+- The format of compiler error messages printed to the console has been
+  improved by upgrading to a newer version of the codespan-reporting library.
 
 ## v0.6.0 - 2019-12-25 🎄
 
