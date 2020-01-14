@@ -1,7 +1,8 @@
-fn id(x) {
-  x
-}
 
-fn main() {
-  id(id)
-}
+
+
+
+
+
+
+fn main() { "" + 1 }

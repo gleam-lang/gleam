@@ -23,6 +23,7 @@ petgraph = "0.4"
 codespan = "0.3"
 codespan-reporting = "0.3"
 termcolor = "1.0.4"
+annotate-snippets = { features = ["ansi_term"], git = "https://github.com/rust-lang/annotate-snippets-rs" }
 # Initialize complex static values at runtime
 lazy_static = "1.3"
 # toml parsing

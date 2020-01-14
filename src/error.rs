@@ -1,4 +1,8 @@
+use annotate_snippets::display_list::DisplayList;
+use annotate_snippets::formatter::DisplayListFormatter;
+use annotate_snippets::snippet::{Annotation, AnnotationType, Slice, Snippet, SourceAnnotation};
 use itertools::Itertools;
+use std::io::Write;
 use std::path::PathBuf;
 use termcolor::Buffer;
 
@@ -117,7 +121,6 @@ impl Error {
     // TODO: Tests.
     pub fn pretty(&self, buffer: &mut Buffer) {
         use crate::typ::Error::*;
-        use std::io::Write;
 
         buffer
             .write_all(b"\n")
@@ -771,20 +774,51 @@ struct ErrorDiagnostic {
     label: String,
 }
 
-fn write(mut buffer: &mut Buffer, d: ErrorDiagnostic) {
-    use codespan::{CodeMap, Span};
-    use codespan_reporting::{Diagnostic, Label};
+fn write(buffer: &mut Buffer, d: ErrorDiagnostic) {
+    // use codespan::{CodeMap, Span};
+    // use codespan_reporting::{Diagnostic, Label};
 
-    let mut code_map = CodeMap::new();
-    code_map.add_filemap(d.file.into(), d.src);
-    let diagnostic = Diagnostic::new_error(d.title).with_label(
-        Label::new_primary(Span::from_offset(
-            ((d.meta.start + 1) as u32).into(),
-            ((d.meta.end - d.meta.start) as i64).into(),
-        ))
-        .with_message(d.label),
-    );
-    codespan_reporting::emit(&mut buffer, &code_map, &diagnostic).unwrap();
+    // let mut code_map = CodeMap::new();
+    // code_map.add_filemap(d.file.into(), d.src);
+    // let diagnostic = Diagnostic::new_error(d.title).with_label(
+    //     Label::new_primary(Span::from_offset(
+    //         ((d.meta.start + 1) as u32).into(),
+    //         ((d.meta.end - d.meta.start) as i64).into(),
+    //     ))
+    //     .with_message(d.label),
+    // );
+    // codespan_reporting::emit(&mut buffer, &code_map, &diagnostic).unwrap();
+    let snippet = Snippet {
+        title: Some(Annotation {
+            label: Some(d.title),
+            id: None,
+            annotation_type: AnnotationType::Error,
+        }),
+        footer: vec![],
+        // footer: vec![Annotation {
+        //     label: Some(
+        //         "expected type: `snippet::Annotation`\n   found type: `__&__snippet::Annotation`"
+        //             .to_string(),
+        //     ),
+        //     id: None,
+        //     annotation_type: AnnotationType::Note,
+        // }],
+        slices: vec![Slice {
+            source: d.src,
+            line_start: 1,
+            origin: Some(d.file),
+            fold: true,
+            annotations: vec![SourceAnnotation {
+                label: d.label,
+                range: (d.meta.start, d.meta.end),
+                annotation_type: AnnotationType::Error,
+            }],
+        }],
+    };
+
+    let dl = DisplayList::from(snippet);
+    let dlf = DisplayListFormatter::new(true, false);
+    write!(buffer, "{}", dlf.format(&dl)).expect("write error to console");
 }
 
 /// Describes an error encountered while compiling the project (eg. a name collision
