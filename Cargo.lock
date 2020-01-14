@@ -175,20 +175,20 @@ dependencies = [
 
 [[package]]
 name = "codespan"
-version = "0.3.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "failure 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "itertools 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "unicode-segmentation 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "codespan-reporting"
-version = "0.3.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "codespan 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "codespan 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "termcolor 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "unicode-width 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -314,8 +314,8 @@ name = "gleam"
 version = "0.6.0"
 dependencies = [
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "codespan 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "codespan-reporting 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "codespan 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "codespan-reporting 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "heck 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "im 14.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -968,8 +968,8 @@ dependencies = [
 "checksum cfg-if 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)" = "4785bdd1c96b2a846b2bd7cc02e86b6b3dbf14e7e53446c4f54c92a361040822"
 "checksum clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)" = "5067f5bb2d80ef5d68b4c87db81601f0b75bca627bc2ef76b141d7b846a3c6d9"
 "checksum cloudabi 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)" = "ddfc5b9aa5d4507acaf872de71051dfd0e309860e88966e1051e462a077aac4f"
-"checksum codespan 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "03ed0fdf823b4a01c3b6a3e086b4d0a2def8d3cb75b110ec5c988fe2790860a9"
-"checksum codespan-reporting 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2ae73f6c4b3803dc2a0fe08ed1ce40e8f3f94ecc8394a82e0696bbc86d4e4fc3"
+"checksum codespan 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "21094c000d5db8035900662bbfddec754e79f795324254ac0817f36e5ccfc3f5"
+"checksum codespan-reporting 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "657b2c99e1f17bc3e5153808d9f704c8ba6171c3fe45e69fde26e2876156938b"
 "checksum constant_time_eq 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "995a44c877f9212528ccc74b21a232f66ad69001e40ede5bcee2ac9ef2657120"
 "checksum crossbeam-utils 0.6.6 (registry+https://github.com/rust-lang/crates.io-index)" = "04973fa96e96579258a5091af6003abde64af786b860f18622b82e026cca60e6"
 "checksum ctor 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)" = "cd8ce37ad4184ab2ce004c33bf6379185d3b1c95801cab51026bd271bf68eedc"

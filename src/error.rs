@@ -90,16 +90,6 @@ impl FileKind {
     }
 }
 
-fn write_project(mut buffer: &mut Buffer, d: ProjectErrorDiagnostic) {
-    use codespan::{CodeMap, Span};
-    use codespan_reporting::{Diagnostic, Label};
-
-    let code_map: CodeMap<String> = CodeMap::new();
-    let diagnostic = Diagnostic::new_error(d.title)
-        .with_label(Label::new_primary(Span::new(0.into(), 0.into())).with_message(d.label));
-    codespan_reporting::emit(&mut buffer, &code_map, &diagnostic).unwrap();
-}
-
 fn did_you_mean(name: &str, options: &mut Vec<&String>, alt: &'static str) -> String {
     options.sort_by(|a, b| {
         strsim::levenshtein(a, name)
@@ -114,7 +104,6 @@ fn did_you_mean(name: &str, options: &mut Vec<&String>, alt: &'static str) -> St
 }
 
 impl Error {
-    // TODO: Tests.
     pub fn pretty(&self, buffer: &mut Buffer) {
         use crate::typ::Error::*;
         use std::io::Write;
@@ -178,15 +167,19 @@ Second: {}",
                 err,
             } => {
                 let err = match err {
-                    Some(e) => format!("\n\nThe error message was:\n    {}\n", e),
+                    Some(e) => format!(
+                        "\nThe error message from the file IO library was:\n\n    {}\n",
+                        e
+                    ),
                     None => "".to_string(),
                 };
                 let diagnostic = ProjectErrorDiagnostic {
                     title: "File IO failure".to_string(),
                     label: format!(
-                        "An error occurred while trying to {} the {}
-{}.{}
-",
+                        "An error occurred while trying to {} this {}:
+
+    {}
+{}",
                         action.text(),
                         kind.text(),
                         path.to_string_lossy(),
@@ -772,19 +765,20 @@ struct ErrorDiagnostic {
 }
 
 fn write(mut buffer: &mut Buffer, d: ErrorDiagnostic) {
-    use codespan::{CodeMap, Span};
-    use codespan_reporting::{Diagnostic, Label};
+    use codespan::Files;
+    use codespan_reporting::diagnostic::{Diagnostic, Label};
+    use codespan_reporting::term::emit;
 
-    let mut code_map = CodeMap::new();
-    code_map.add_filemap(d.file.into(), d.src);
-    let diagnostic = Diagnostic::new_error(d.title).with_label(
-        Label::new_primary(Span::from_offset(
-            ((d.meta.start + 1) as u32).into(),
-            ((d.meta.end - d.meta.start) as i64).into(),
-        ))
-        .with_message(d.label),
+    let mut files = Files::new();
+    let file_id = files.add(d.file, d.src);
+
+    let diagnostic = Diagnostic::new_error(
+        d.title,
+        Label::new(file_id, (d.meta.start as u32)..(d.meta.end as u32), d.label),
     );
-    codespan_reporting::emit(&mut buffer, &code_map, &diagnostic).unwrap();
+
+    let config = codespan_reporting::term::Config::default();
+    emit(&mut buffer, &config, &files, &diagnostic).unwrap();
 }
 
 /// Describes an error encountered while compiling the project (eg. a name collision
@@ -793,4 +787,17 @@ fn write(mut buffer: &mut Buffer, d: ErrorDiagnostic) {
 struct ProjectErrorDiagnostic {
     title: String,
     label: String,
+}
+
+fn write_project(buffer: &mut Buffer, d: ProjectErrorDiagnostic) {
+    use std::io::Write;
+    use termcolor::{Color, ColorSpec, WriteColor};
+    buffer
+        .set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Red)))
+        .unwrap();
+    write!(buffer, "error").unwrap();
+    buffer.set_color(ColorSpec::new().set_bold(true)).unwrap();
+    write!(buffer, ": {}\n\n", d.title).unwrap();
+    buffer.set_color(&ColorSpec::new()).unwrap();
+    write!(buffer, "{}", d.label).unwrap();
 }
