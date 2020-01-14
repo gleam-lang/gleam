@@ -130,11 +130,11 @@ impl Error {
                 write(buffer, diagnostic);
                 write!(
                     buffer,
-                    "
-The application module `{}` is importing the test module `{}`.
+                    "The application module `{}` is importing the test module `{}`.
 
 Test modules are not included in production builds so test modules
-cannot import them. Perhaps move the `{}` module to the src directory.",
+cannot import them. Perhaps move the `{}` module to the src directory.
+",
                     src_module, test_module, test_module,
                 )
                 .unwrap();
@@ -151,7 +151,8 @@ cannot import them. Perhaps move the `{}` module to the src directory.",
                         "The module `{}` is defined multiple times.
 
 First:  {}
-Second: {}",
+Second: {}
+",
                         module,
                         first.to_str().expect("pretty error print PathBuf to_str"),
                         second.to_str().expect("pretty error print PathBuf to_str"),
@@ -179,7 +180,8 @@ Second: {}",
                         "An error occurred while trying to {} this {}:
 
     {}
-{}",
+{}
+",
                         action.text(),
                         kind.text(),
                         path.to_string_lossy(),
@@ -207,8 +209,7 @@ Second: {}",
                     if options.len() > 0 {
                         write!(
                             buffer,
-                            "
-This constructor does not accept the label `{}`.
+                            "This constructor does not accept the label `{}`.
 Expected one of `{}`.
 ",
                             label,
@@ -218,7 +219,7 @@ Expected one of `{}`.
                     } else {
                         write!(
                             buffer,
-                            "\n This constructor does not accept any labelled arguments.\n "
+                            "This constructor does not accept any labelled arguments.\n"
                         )
                         .unwrap();
                     }
@@ -257,8 +258,7 @@ Please remove the label `{}`.
                     write(buffer, diagnostic);
                     write!(
                         buffer,
-                        "
-This unlablled argument has been supplied after a labelled argument.
+                        "This unlablled argument has been supplied after a labelled argument.
 Once a labelled argument has been supplied all following arguments must
 also be labelled.
 ",
@@ -282,8 +282,7 @@ also be labelled.
                     write(buffer, diagnostic);
                     write!(
                         buffer,
-                        "
-A function has already been defined with the name
+                        "A function has already been defined with the name
 `{}` in this module.
 ",
                         fun
@@ -302,9 +301,7 @@ A function has already been defined with the name
                     write(buffer, diagnostic);
                     write!(
                         buffer,
-                        "
-The field `{}` has already been defined. Rename this field.
-",
+                        "The field `{}` has already been defined. Rename this field.\n",
                         label
                     )
                     .unwrap();
@@ -321,9 +318,7 @@ The field `{}` has already been defined. Rename this field.
                     write(buffer, diagnostic);
                     write!(
                         buffer,
-                        "
-The labelled argument `{}` has already been supplied.
-",
+                        "The labelled argument `{}` has already been supplied.\n",
                         label
                     )
                     .unwrap();
@@ -352,11 +347,7 @@ The labelled argument `{}` has already been supplied.
 
                     write!(
                         buffer,
-                        "
-This value is being called as a function but its type is:
-
-{}
-",
+                        "This value is being called as a function but its type is:\n\n{}\n",
                         typ.pretty_print(4)
                     )
                     .unwrap();
@@ -374,8 +365,7 @@ This value is being called as a function but its type is:
 
                     write!(
                         buffer,
-                        "
-Fields can only be accessed on modules. This is not a module, it is
+                        "Fields can only be accessed on modules. This is not a module, it is
 a value with this type:
 
 {}
@@ -401,8 +391,7 @@ a value with this type:
 
                     write!(
                         buffer,
-                        "
-Expected type:
+                        "Expected type:
 
 {}
 
@@ -458,9 +447,7 @@ Found type:
                     write(buffer, diagnostic);
                     write!(
                         buffer,
-                        "
-The type `{}` is not defined or imported in this module.
-",
+                        "The type `{}` is not defined or imported in this module.\n",
                         name
                     )
                     .unwrap();
@@ -480,14 +467,7 @@ The type `{}` is not defined or imported in this module.
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
-                    write!(
-                        buffer,
-                        "
-The name `{}` is not in scope here.
-",
-                        name
-                    )
-                    .unwrap();
+                    write!(buffer, "The name `{}` is not in scope here.\n", name).unwrap();
                 }
 
                 PrivateTypeLeak { meta, leaked } => {
@@ -507,8 +487,7 @@ The name `{}` is not in scope here.
                     // etc
                     write!(
                         buffer,
-                        "
-The following type is private, but is being used by this public export.
+                        "The following type is private, but is being used by this public export.
 
 {}
 
@@ -535,9 +514,7 @@ Private types can only be used within the module that defines them.
                     write(buffer, diagnostic);
                     write!(
                         buffer,
-                        "
-No module has been imported with the name `{}`.
-",
+                        "No module has been imported with the name `{}`.\n",
                         name
                     )
                     .unwrap();
@@ -560,7 +537,7 @@ No module has been imported with the name `{}`.
                     write(buffer, diagnostic);
                     write!(
                         buffer,
-                        "\nThe module `{}` does not have a `{}` type.\n",
+                        "The module `{}` does not have a `{}` type.\n",
                         module_name.join("/"),
                         name
                     )
@@ -584,7 +561,7 @@ No module has been imported with the name `{}`.
                     write(buffer, diagnostic);
                     write!(
                         buffer,
-                        "\nThe module `{}` does not have a `{}` field.\n",
+                        "The module `{}` does not have a `{}` field.\n",
                         module_name.join("/"),
                         name
                     )
@@ -612,7 +589,7 @@ No module has been imported with the name `{}`.
                     write(buffer, diagnostic);
                     write!(
                         buffer,
-                        "\nThe module `{}` does not have a `{}` field.\n",
+                        "The module `{}` does not have a `{}` field.\n",
                         module_name.join("/"),
                         name
                     )
@@ -639,7 +616,7 @@ No module has been imported with the name `{}`.
                             },
                         };
                         write(buffer, diagnostic);
-                        write!(buffer, "\nExpected one of {}", expected.join(", "))
+                        write!(buffer, "Expected one of {}\n", expected.join(", "))
                             .expect("error pretty buffer write");
                     }
 
@@ -671,7 +648,7 @@ No module has been imported with the name `{}`.
                         write(buffer, diagnostic);
                         write!(
                             buffer,
-                            "\nI don't know what this character means. Is it a typo?\n"
+                            "I don't know what this character means. Is it a typo?\n"
                         )
                         .expect("error pretty buffer write");
                     }
@@ -697,9 +674,8 @@ No module has been imported with the name `{}`.
                                     .collect();
                                 write!(
                                     buffer,
-                                    "
-The function capture syntax can only be used with a single _ argument,
-but this one uses {}. Rewrite this using the fn({}) {{ ... }} syntax.",
+                                    "The function capture syntax can only be used with a single _ argument,
+but this one uses {}. Rewrite this using the fn({}) {{ ... }} syntax.\n",
                                     count, chars
                                 )
                                 .expect("error pretty buffer write");
@@ -733,8 +709,7 @@ but this one uses {}. Rewrite this using the fn({}) {{ ... }} syntax.",
                 write(buffer, diagnostic);
                 write!(
                     buffer,
-                    "
-The module `{}` is trying to import the module `{}`,
+                    "The module `{}` is trying to import the module `{}`,
 but it cannot be found.
 ",
                     module, import

@@ -348,9 +348,9 @@ Tuple: UntypedExpr = {
 }
 
 List: UntypedExpr = {
-    "[" <elems:Comma<OpOrSimpleExpr>> <tail:("|" <OpOrSimpleExpr>)?>"]" <e:@L> => {
+    <s:@L> "[" <elems:Comma<OpOrSimpleExpr>> <tail:("|" <OpOrSimpleExpr>)?>"]" <e:@L> => {
         let tail = tail.unwrap_or_else(|| Expr::Nil {
-            meta: meta(e - 1, e),
+            meta: meta(s, e),
             typ: (),
         });
         elems.into_iter().rev().fold(

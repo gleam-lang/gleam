@@ -340,7 +340,7 @@ fn expr_test() {
 
     assert_eq!(
         Ok(Expr::Cons {
-            meta: Meta { start: 2, end: 3 },
+            meta: Meta { start: 0, end: 3 },
             typ: (),
             head: Box::new(Expr::Int {
                 typ: (),
@@ -348,7 +348,7 @@ fn expr_test() {
                 value: 1
             }),
             tail: Box::new(Expr::Nil {
-                meta: Meta { start: 2, end: 3 },
+                meta: Meta { start: 0, end: 3 },
                 typ: (),
             })
         }),
@@ -562,7 +562,7 @@ fn expr_test() {
 
     assert_eq!(
         Ok(Expr::Cons {
-            meta: Meta { start: 5, end: 6 },
+            meta: Meta { start: 0, end: 6 },
             typ: (),
             head: Box::new(Expr::Int {
                 typ: (),
@@ -570,7 +570,7 @@ fn expr_test() {
                 value: 1
             }),
             tail: Box::new(Expr::Cons {
-                meta: Meta { start: 5, end: 6 },
+                meta: Meta { start: 0, end: 6 },
                 typ: (),
                 head: Box::new(Expr::Int {
                     typ: (),
@@ -578,7 +578,7 @@ fn expr_test() {
                     value: 2
                 }),
                 tail: Box::new(Expr::Nil {
-                    meta: Meta { start: 5, end: 6 },
+                    meta: Meta { start: 0, end: 6 },
                     typ: (),
                 })
             })
