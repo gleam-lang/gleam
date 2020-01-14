@@ -91,7 +91,7 @@ fn command_build(root: String) -> Result<(), Error> {
     let mut srcs = vec![];
 
     // Read gleam.toml
-    let project_config = read_project_config(&root).expect("Could not read gleam.toml");
+    let project_config = read_project_config(&root)?;
 
     let root_path = PathBuf::from(&root);
     let lib_dir = root_path.join("_build").join("default").join("lib");

@@ -5,4 +5,4 @@ id(X) ->
     X.
 
 main() ->
-    id(fun other:id/1).
+    id(fun id/1).
