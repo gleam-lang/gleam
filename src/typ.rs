@@ -42,9 +42,8 @@ impl Type {
         for _ in 0..initial_indent {
             b.push(' ');
         }
-        let mut initial_indent = initial_indent;
         b.to_doc()
-            .append(self.to_gleam_doc(&mut im::hashmap![], &mut initial_indent))
+            .append(self.to_gleam_doc(&mut im::hashmap![], &mut 0))
             .nest(initial_indent as isize)
             .format(80)
     }
