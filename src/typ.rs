@@ -1,15 +1,13 @@
+pub mod pretty;
+
 use crate::ast::{
     self, Arg, ArgNames, BinOp, CallArg, Clause, Expr, Meta, Pattern, Statement, TypeAst,
     TypedExpr, TypedModule, TypedPattern, UnqualifiedImport, UntypedExpr, UntypedModule,
     UntypedPattern,
 };
-use crate::pretty::*;
-use itertools::Itertools;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-
-const INDENT: isize = 2;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
@@ -35,50 +33,6 @@ pub enum Type {
 }
 
 impl Type {
-    /// Render a Type as a well formatted string.
-    ///
-    pub fn pretty_print(&self, initial_indent: usize) -> String {
-        let mut b = String::with_capacity(initial_indent);
-        for _ in 0..initial_indent {
-            b.push(' ');
-        }
-        b.to_doc()
-            .append(self.to_gleam_doc(&mut im::hashmap![], &mut 0))
-            .nest(initial_indent as isize)
-            .format(80)
-    }
-
-    pub fn to_gleam_doc(
-        &self,
-        names: &mut im::HashMap<usize, String>,
-        uid: &mut usize,
-    ) -> Document {
-        match self {
-            Type::App { name, args, .. } => {
-                if args.is_empty() {
-                    name.clone().to_doc()
-                } else {
-                    name.clone()
-                        .to_doc()
-                        .append("(")
-                        .append(args_to_gleam_doc(args, names, uid))
-                        .append(")")
-                }
-            }
-            Type::Fn { args, retrn } => "fn("
-                .to_doc()
-                .append(args_to_gleam_doc(args, names, uid))
-                .append(") -> ")
-                .append(retrn.to_gleam_doc(names, uid)),
-
-            Type::Var { typ, .. } => typ.borrow().to_gleam_doc(names, uid),
-
-            Type::Tuple { elems, .. } => {
-                args_to_gleam_doc(elems, names, uid).surround("tuple(", ")")
-            }
-        }
-    }
-
     pub fn collapse_links(self) -> Type {
         if let Type::Var { typ } = &self {
             if let TypeVar::Link { typ } = &*typ.borrow() {
@@ -173,275 +127,12 @@ impl Type {
 }
 
 impl TypeVar {
-    pub fn to_gleam_doc(
-        &self,
-        names: &mut im::HashMap<usize, String>,
-        uid: &mut usize,
-    ) -> Document {
-        match self {
-            TypeVar::Link { ref typ, .. } => typ.to_gleam_doc(names, uid),
-
-            TypeVar::Unbound { id, .. } => TypeVar::Generic { id: *id }.to_gleam_doc(names, uid),
-
-            TypeVar::Generic { id, .. } => match names.get(&id) {
-                Some(n) => n.clone().to_doc(),
-                None => {
-                    let n = next_letter(uid);
-                    names.insert(*id, n.clone());
-                    n.to_doc()
-                }
-            },
-        }
-    }
-
     pub fn is_unbound(&self) -> bool {
         match self {
             TypeVar::Unbound { .. } => true,
             _ => false,
         }
     }
-}
-
-fn next_letter(i: &mut usize) -> String {
-    let alphabet_length = 26;
-    let char_offset = 97;
-    let mut chars = vec![];
-    let mut n;
-    let mut rest = *i;
-
-    loop {
-        n = rest % alphabet_length;
-        rest /= alphabet_length;
-        chars.push((n as u8 + char_offset) as char);
-
-        if rest == 0 {
-            break;
-        }
-        rest -= 1
-    }
-
-    *i += 1;
-    chars.into_iter().rev().collect()
-}
-
-#[test]
-fn next_letter_test() {
-    let mut x = 0;
-    assert_eq!(next_letter(&mut x), "a".to_string());
-    assert_eq!(next_letter(&mut x), "b".to_string());
-    assert_eq!(next_letter(&mut x), "c".to_string());
-    assert_eq!(next_letter(&mut x), "d".to_string());
-    assert_eq!(next_letter(&mut x), "e".to_string());
-    assert_eq!(next_letter(&mut x), "f".to_string());
-    assert_eq!(next_letter(&mut x), "g".to_string());
-    assert_eq!(next_letter(&mut x), "h".to_string());
-    assert_eq!(next_letter(&mut x), "i".to_string());
-    assert_eq!(next_letter(&mut x), "j".to_string());
-    assert_eq!(next_letter(&mut x), "k".to_string());
-    assert_eq!(next_letter(&mut x), "l".to_string());
-    assert_eq!(next_letter(&mut x), "m".to_string());
-    assert_eq!(next_letter(&mut x), "n".to_string());
-    assert_eq!(next_letter(&mut x), "o".to_string());
-    assert_eq!(next_letter(&mut x), "p".to_string());
-    assert_eq!(next_letter(&mut x), "q".to_string());
-    assert_eq!(next_letter(&mut x), "r".to_string());
-    assert_eq!(next_letter(&mut x), "s".to_string());
-    assert_eq!(next_letter(&mut x), "t".to_string());
-    assert_eq!(next_letter(&mut x), "u".to_string());
-    assert_eq!(next_letter(&mut x), "v".to_string());
-    assert_eq!(next_letter(&mut x), "w".to_string());
-    assert_eq!(next_letter(&mut x), "x".to_string());
-    assert_eq!(next_letter(&mut x), "y".to_string());
-    assert_eq!(next_letter(&mut x), "z".to_string());
-    assert_eq!(next_letter(&mut x), "aa".to_string());
-    assert_eq!(next_letter(&mut x), "ab".to_string());
-    assert_eq!(next_letter(&mut x), "ac".to_string());
-    assert_eq!(next_letter(&mut x), "ad".to_string());
-    assert_eq!(next_letter(&mut x), "ae".to_string());
-    assert_eq!(next_letter(&mut x), "af".to_string());
-    assert_eq!(next_letter(&mut x), "ag".to_string());
-    assert_eq!(next_letter(&mut x), "ah".to_string());
-    assert_eq!(next_letter(&mut x), "ai".to_string());
-    assert_eq!(next_letter(&mut x), "aj".to_string());
-    assert_eq!(next_letter(&mut x), "ak".to_string());
-    assert_eq!(next_letter(&mut x), "al".to_string());
-    assert_eq!(next_letter(&mut x), "am".to_string());
-    assert_eq!(next_letter(&mut x), "an".to_string());
-    assert_eq!(next_letter(&mut x), "ao".to_string());
-    assert_eq!(next_letter(&mut x), "ap".to_string());
-    assert_eq!(next_letter(&mut x), "aq".to_string());
-    assert_eq!(next_letter(&mut x), "ar".to_string());
-    assert_eq!(next_letter(&mut x), "as".to_string());
-    assert_eq!(next_letter(&mut x), "at".to_string());
-    assert_eq!(next_letter(&mut x), "au".to_string());
-    assert_eq!(next_letter(&mut x), "av".to_string());
-    assert_eq!(next_letter(&mut x), "aw".to_string());
-    assert_eq!(next_letter(&mut x), "ax".to_string());
-    assert_eq!(next_letter(&mut x), "ay".to_string());
-    assert_eq!(next_letter(&mut x), "az".to_string());
-    assert_eq!(next_letter(&mut x), "ba".to_string());
-    assert_eq!(next_letter(&mut x), "bb".to_string());
-    assert_eq!(next_letter(&mut x), "bc".to_string());
-    assert_eq!(next_letter(&mut x), "bd".to_string());
-    assert_eq!(next_letter(&mut x), "be".to_string());
-    assert_eq!(next_letter(&mut x), "bf".to_string());
-    assert_eq!(next_letter(&mut x), "bg".to_string());
-    assert_eq!(next_letter(&mut x), "bh".to_string());
-    assert_eq!(next_letter(&mut x), "bi".to_string());
-    assert_eq!(next_letter(&mut x), "bj".to_string());
-    assert_eq!(next_letter(&mut x), "bk".to_string());
-    assert_eq!(next_letter(&mut x), "bl".to_string());
-    assert_eq!(next_letter(&mut x), "bm".to_string());
-    assert_eq!(next_letter(&mut x), "bn".to_string());
-    assert_eq!(next_letter(&mut x), "bo".to_string());
-    assert_eq!(next_letter(&mut x), "bp".to_string());
-    assert_eq!(next_letter(&mut x), "bq".to_string());
-    assert_eq!(next_letter(&mut x), "br".to_string());
-    assert_eq!(next_letter(&mut x), "bs".to_string());
-    assert_eq!(next_letter(&mut x), "bt".to_string());
-    assert_eq!(next_letter(&mut x), "bu".to_string());
-    assert_eq!(next_letter(&mut x), "bv".to_string());
-    assert_eq!(next_letter(&mut x), "bw".to_string());
-    assert_eq!(next_letter(&mut x), "bx".to_string());
-    assert_eq!(next_letter(&mut x), "by".to_string());
-    assert_eq!(next_letter(&mut x), "bz".to_string());
-}
-
-#[test]
-fn letter_test() {
-    let mut i = 0;
-    assert_eq!("a", next_letter(&mut i));
-    assert_eq!("b", next_letter(&mut i));
-    assert_eq!("c", next_letter(&mut i));
-}
-
-fn args_to_gleam_doc(
-    args: &[Type],
-    names: &mut im::HashMap<usize, String>,
-    uid: &mut usize,
-) -> Document {
-    match args.len() {
-        0 => nil(),
-        _ => args
-            .iter()
-            .map(|t| t.to_gleam_doc(names, uid).group())
-            .intersperse(break_(",", ", "))
-            .collect::<Vec<_>>()
-            .to_doc()
-            .nest(INDENT)
-            .append(break_(",", ""))
-            .group(),
-    }
-}
-
-#[test]
-fn to_gleam_doc_test() {
-    macro_rules! assert_string {
-        ($src:expr, $typ:expr $(,)?) => {
-            assert_eq!(
-                $typ.to_string(),
-                $src.to_gleam_doc(&mut hashmap![], &mut 0).format(80)
-            );
-        };
-    }
-
-    assert_string!(
-        Type::App {
-            module: vec!["whatever".to_string()],
-            name: "Int".to_string(),
-            public: true,
-            args: vec![],
-        },
-        "Int",
-    );
-    assert_string!(
-        Type::App {
-            module: vec![],
-            name: "Pair".to_string(),
-            public: true,
-            args: vec![
-                Type::App {
-                    module: vec!["whatever".to_string()],
-                    name: "Int".to_string(),
-                    public: true,
-                    args: vec![],
-                },
-                Type::App {
-                    module: vec!["whatever".to_string()],
-                    name: "Bool".to_string(),
-                    public: true,
-                    args: vec![],
-                },
-            ],
-        },
-        "Pair(Int, Bool)",
-    );
-    assert_string!(
-        Type::Fn {
-            args: vec![
-                Type::App {
-                    args: vec![],
-                    module: vec!["whatever".to_string()],
-                    name: "Int".to_string(),
-                    public: true,
-                },
-                Type::App {
-                    args: vec![],
-                    module: vec!["whatever".to_string()],
-                    name: "Bool".to_string(),
-                    public: true,
-                },
-            ],
-            retrn: Box::new(Type::App {
-                args: vec![],
-                module: vec!["whatever".to_string()],
-                name: "Bool".to_string(),
-                public: true,
-            }),
-        },
-        "fn(Int, Bool) -> Bool",
-    );
-    assert_string!(
-        Type::Var {
-            typ: Rc::new(RefCell::new(TypeVar::Link {
-                typ: Box::new(Type::App {
-                    args: vec![],
-                    module: vec!["whatever".to_string()],
-                    name: "Int".to_string(),
-                    public: true,
-                }),
-            })),
-        },
-        "Int",
-    );
-    assert_string!(
-        Type::Var {
-            typ: Rc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 2231 })),
-        },
-        "a",
-    );
-    assert_string!(
-        Type::Fn {
-            args: vec![Type::Var {
-                typ: Rc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 78 })),
-            }],
-            retrn: Box::new(Type::Var {
-                typ: Rc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 2 })),
-            }),
-        },
-        "fn(a) -> b",
-    );
-    assert_string!(
-        Type::Fn {
-            args: vec![Type::Var {
-                typ: Rc::new(RefCell::new(TypeVar::Generic { id: 78 })),
-            }],
-            retrn: Box::new(Type::Var {
-                typ: Rc::new(RefCell::new(TypeVar::Generic { id: 2 })),
-            }),
-        },
-        "fn(a) -> b",
-    );
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -3109,19 +2800,14 @@ pub fn list(t: Type) -> Type {
 fn infer_test() {
     macro_rules! assert_infer {
         ($src:expr, $typ:expr $(,)?) => {
+            let mut printer = pretty::Printer::new();
             let ast = crate::grammar::ExprParser::new()
                 .parse($src)
                 .expect("syntax error");
             let result =
                 infer(ast, 1, &mut Env::new(&HashMap::new())).expect("should successfully infer");
             assert_eq!(
-                (
-                    $src,
-                    result
-                        .typ()
-                        .to_gleam_doc(&mut hashmap![], &mut 0)
-                        .format(80)
-                ),
+                ($src, printer.pretty_print(result.typ(), 0),),
                 ($src, $typ.to_string()),
             );
         };
@@ -3502,7 +3188,10 @@ fn infer_module_test() {
                 .type_info
                 .values
                 .iter()
-                .map(|(k, v)| (k.clone(), v.typ.pretty_print(0)))
+                .map(|(k, v)| {
+                    let mut printer = pretty::Printer::new();
+                    (k.clone(), printer.pretty_print(&v.typ, 0))
+                })
                 .collect();
             constructors.sort();
             let expected: Vec<_> = $module

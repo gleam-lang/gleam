@@ -1,3 +1,4 @@
+use crate::typ::pretty::Printer;
 use itertools::Itertools;
 use std::path::PathBuf;
 use termcolor::Buffer;
@@ -344,11 +345,12 @@ also be labelled.
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
+                    let mut printer = Printer::new();
 
                     write!(
                         buffer,
                         "This value is being called as a function but its type is:\n\n{}\n",
-                        typ.pretty_print(4)
+                        printer.pretty_print(typ, 4)
                     )
                     .unwrap();
                 }
@@ -362,6 +364,7 @@ also be labelled.
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
+                    let mut printer = Printer::new();
 
                     write!(
                         buffer,
@@ -370,7 +373,7 @@ a value with this type:
 
 {}
 ",
-                        typ.pretty_print(4)
+                        printer.pretty_print(typ, 4)
                     )
                     .unwrap();
                 }
@@ -388,6 +391,7 @@ a value with this type:
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
+                    let mut printer = Printer::new();
 
                     write!(
                         buffer,
@@ -399,8 +403,8 @@ Found type:
 
 {}
 ",
-                        expected.pretty_print(4),
-                        given.pretty_print(4)
+                        printer.pretty_print(expected, 4),
+                        printer.pretty_print(given, 4),
                     )
                     .unwrap();
                 }
@@ -479,6 +483,7 @@ Found type:
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
+                    let mut printer = Printer::new();
 
                     // TODO: be more precise.
                     // - is being returned by this public function
@@ -493,7 +498,7 @@ Found type:
 
 Private types can only be used within the module that defines them.
 ",
-                        leaked.pretty_print(4),
+                        printer.pretty_print(leaked, 4),
                     )
                     .unwrap();
                 }
