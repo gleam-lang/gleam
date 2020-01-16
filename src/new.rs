@@ -1,3 +1,4 @@
+use crate::error::{Error, FileIOAction, FileKind};
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Write;
@@ -12,11 +13,17 @@ pub enum Template {
     App,
 }
 
-pub fn create(template: Template, name: String, path: Option<String>, version: &'static str) {
+pub fn create(
+    template: Template,
+    name: String,
+    path: Option<String>,
+    version: &'static str,
+) -> Result<(), Error> {
     if !regex::Regex::new("^[a-z_]+$")
         .expect("new name regex could not be compiled")
         .is_match(&name)
     {
+        // TODO
         println!("error: Project name may only contain lowercase letters and underscores");
         std::process::exit(1);
     }
@@ -29,37 +36,37 @@ pub fn create(template: Template, name: String, path: Option<String>, version: &
     let workflows_dir = github_dir.join("workflows");
 
     // Create directories
-    std::fs::create_dir(&root_dir).expect("new create_dir path");
-    std::fs::create_dir(&src_dir).expect("new create_dir src");
-    std::fs::create_dir(&test_dir).expect("new create_dir test");
-    std::fs::create_dir(&github_dir).expect("new create_dir .github");
-    std::fs::create_dir(&workflows_dir).expect("new create_dir .github/workflows");
+    mkdir(&root_dir)?;
+    mkdir(&src_dir)?;
+    mkdir(&test_dir)?;
+    mkdir(&github_dir)?;
+    mkdir(&workflows_dir)?;
 
     // write files
-    write(root_dir.join("LICENSE"), APACHE_2);
-    write(root_dir.join(".gitignore"), GITIGNORE);
-    write(root_dir.join("README.md"), &readme(&name));
-    write(root_dir.join("gleam.toml"), &gleam_toml(&name));
-    write(test_dir.join(format!("{}_test.gleam", name)), &test(&name));
-    write(src_dir.join(format!("{}.gleam", name)), &src(&name));
-    write(workflows_dir.join("test.yml"), &github_ci(version));
+    write(root_dir.join("LICENSE"), APACHE_2)?;
+    write(root_dir.join(".gitignore"), GITIGNORE)?;
+    write(root_dir.join("README.md"), &readme(&name))?;
+    write(root_dir.join("gleam.toml"), &gleam_toml(&name))?;
+    write(test_dir.join(format!("{}_test.gleam", name)), &test(&name))?;
+    write(src_dir.join(format!("{}.gleam", name)), &src(&name))?;
+    write(workflows_dir.join("test.yml"), &github_ci(version))?;
 
     match template {
         Template::Lib => {
-            write(root_dir.join("rebar.config"), &rebar_config(""));
+            write(root_dir.join("rebar.config"), &rebar_config(""))?;
             write(
                 src_dir.join(format!("{}.app.src", name)),
                 &app_src(&name, false),
-            );
+            )?;
         }
 
         Template::App => {
-            write(root_dir.join("rebar.config"), &app_rebar_config(&name));
-            write(src_dir.join(format!("{}_app.erl", name)), &src_app(&name));
+            write(root_dir.join("rebar.config"), &app_rebar_config(&name))?;
+            write(src_dir.join(format!("{}_app.erl", name)), &src_app(&name))?;
             write(
                 src_dir.join(format!("{}.app.src", name)),
                 &app_src(&name, true),
-            );
+            )?;
         }
     }
 
@@ -75,16 +82,38 @@ The rebar3 program can be used to compile and test it.
         name,
         root_dir.to_str().expect("Unable to display path")
     );
+    Ok(())
 }
 
-fn write(path: PathBuf, contents: &str) {
+fn mkdir(path: &Path) -> Result<(), Error> {
+    std::fs::create_dir(path).map_err(|err| Error::FileIO {
+        kind: FileKind::Directory,
+        path: path.to_path_buf(),
+        action: FileIOAction::Create,
+        err: Some(err.to_string()),
+    })
+}
+
+fn write(path: PathBuf, contents: &str) -> Result<(), Error> {
     println!(
         "* creating {}",
         path.to_str().expect("Unable to display write path")
     );
-    let mut f = File::create(path).expect("Unable to create file");
+    let mut f = File::create(&*path).map_err(|err| Error::FileIO {
+        kind: FileKind::File,
+        path: path.clone(),
+        action: FileIOAction::Create,
+        err: Some(err.to_string()),
+    })?;
+
     f.write_all(contents.as_bytes())
-        .expect("Unable to write to file");
+        .map_err(|err| Error::FileIO {
+            kind: FileKind::File,
+            path: path,
+            action: FileIOAction::WriteTo,
+            err: Some(err.to_string()),
+        })?;
+    Ok(())
 }
 
 fn gleam_toml(name: &str) -> String {

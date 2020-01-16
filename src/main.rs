@@ -71,19 +71,19 @@ struct ProjectConfig {
 }
 
 fn main() {
-    match Command::from_args() {
-        Command::Build { path } => {
-            if let Err(e) = command_build(path) {
-                e.pretty_print();
-                std::process::exit(1);
-            }
-        }
+    let result = match Command::from_args() {
+        Command::Build { path } => command_build(path),
 
         Command::New {
             name,
             path,
             template,
         } => crate::new::create(template, name, path, VERSION),
+    };
+
+    if let Err(e) = result {
+        e.pretty_print();
+        std::process::exit(1);
     }
 }
 
