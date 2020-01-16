@@ -14,6 +14,8 @@
   improved by upgrading to a newer version of the codespan-reporting library.
 - Type variables in the given and expected types will now be printed with the
   same name in type error messages if they are equivilent.
+- A friendly error message is rendered when a case expression clause has the
+  incorrect number of patterns for the subjects.
 
 ## v0.6.0 - 2019-12-25 🎄
 
