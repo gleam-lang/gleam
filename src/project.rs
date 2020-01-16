@@ -1,4 +1,4 @@
-use crate::error::Error;
+use crate::error::{Error, FileIOAction, FileKind};
 use crate::typ;
 use petgraph::Graph;
 use std::collections::HashMap;
@@ -229,10 +229,14 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
         .collect())
 }
 
-pub fn collect_source(src_dir: PathBuf, origin: ModuleOrigin, srcs: &mut Vec<Input>) {
+pub fn collect_source(
+    src_dir: PathBuf,
+    origin: ModuleOrigin,
+    srcs: &mut Vec<Input>,
+) -> Result<(), Error> {
     let src_dir = match src_dir.canonicalize() {
         Ok(d) => d,
-        Err(_) => return,
+        Err(_) => return Ok(()),
     };
     let is_gleam_path = |e: &walkdir::DirEntry| {
         use regex::Regex;
@@ -250,25 +254,30 @@ pub fn collect_source(src_dir: PathBuf, origin: ModuleOrigin, srcs: &mut Vec<Inp
         )
     };
 
-    walkdir::WalkDir::new(src_dir.clone())
+    for dir_entry in walkdir::WalkDir::new(src_dir.clone())
         .into_iter()
         .filter_map(Result::ok)
         .filter(|e| e.file_type().is_file())
         .filter(is_gleam_path)
-        .for_each(|dir_entry| {
-            let src = std::fs::read_to_string(dir_entry.path())
-                .unwrap_or_else(|_| panic!("Unable to read {:?}", dir_entry.path()));
+    {
+        let src = std::fs::read_to_string(dir_entry.path()).map_err(|err| Error::FileIO {
+            action: FileIOAction::Read,
+            kind: FileKind::File,
+            path: dir_entry.path().to_path_buf(),
+            err: Some(err.to_string()),
+        })?;
 
-            srcs.push(Input {
-                path: dir_entry
-                    .path()
-                    .canonicalize()
-                    .expect("collect_source path canonicalize"),
-                source_base_path: src_dir.clone(),
-                origin: origin.clone(),
-                src,
-            })
-        });
+        srcs.push(Input {
+            path: dir_entry
+                .path()
+                .canonicalize()
+                .expect("collect_source path canonicalize"),
+            source_base_path: src_dir.clone(),
+            origin: origin.clone(),
+            src,
+        })
+    }
+    Ok(())
 }
 
 #[test]
@@ -790,7 +799,7 @@ x(P) ->\n    {point, X, _} = P,\n    X.\n"
                     origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/two.gleam"),
                     source_base_path: PathBuf::from("/src"),
-                    src: "import one.{div} 
+                    src: "import one.{div}
                     fn run() { 2 |> div(top: _, bottom: 4) |> div(2, bottom: _) }"
                         .to_string(),
                 },

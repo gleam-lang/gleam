@@ -97,7 +97,7 @@ fn command_build(root: String) -> Result<(), Error> {
     let lib_dir = root_path.join("_build").join("default").join("lib");
     let checkouts_dir = root_path.join("_checkouts");
 
-    [lib_dir, checkouts_dir]
+    for project_dir in [lib_dir, checkouts_dir]
         .iter()
         .filter_map(|d| std::fs::read_dir(d).ok())
         .flat_map(|d| d.filter_map(Result::ok))
@@ -105,13 +105,17 @@ fn command_build(root: String) -> Result<(), Error> {
         .filter(|p| {
             p.file_name().and_then(|os_string| os_string.to_str()) != Some(&project_config.name)
         })
-        .for_each(|p| {
-            crate::project::collect_source(p.join("src"), ModuleOrigin::Dependency, &mut srcs)
-        });
+    {
+        crate::project::collect_source(
+            project_dir.join("src"),
+            ModuleOrigin::Dependency,
+            &mut srcs,
+        )?;
+    }
 
     // Collect source code from top level project
-    crate::project::collect_source(root_path.join("src"), ModuleOrigin::Src, &mut srcs);
-    crate::project::collect_source(root_path.join("test"), ModuleOrigin::Test, &mut srcs);
+    crate::project::collect_source(root_path.join("src"), ModuleOrigin::Src, &mut srcs)?;
+    crate::project::collect_source(root_path.join("test"), ModuleOrigin::Test, &mut srcs)?;
 
     let compiled = crate::project::compile(srcs)?;
 
