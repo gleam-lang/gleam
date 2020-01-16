@@ -12,6 +12,8 @@
   keyword.
 - The format of compiler error messages printed to the console has been
   improved by upgrading to a newer version of the codespan-reporting library.
+- Type variables in the given and expected types will now be printed with the
+  same name in type error messages if they are equivilent.
 
 ## v0.6.0 - 2019-12-25 🎄
 
