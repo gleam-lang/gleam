@@ -17,6 +17,8 @@
 - A friendly error message is rendered when a case expression clause has the
   incorrect number of patterns for the subjects.
 - A friendly error message is rendered when a .gleam file cannot be read.
+- A friendly error message is rendered when the `gleam new` command fails to
+  write the new project to the file system.
 
 ## v0.6.0 - 2019-12-25 🎄
 
