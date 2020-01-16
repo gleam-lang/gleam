@@ -1,8 +1,6 @@
 use super::{Type, TypeVar};
 use crate::pretty::*;
 use itertools::Itertools;
-use std::cell::RefCell;
-use std::rc::Rc;
 
 const INDENT: isize = 2;
 
@@ -198,6 +196,9 @@ fn next_letter_test() {
 
 #[test]
 fn pretty_print_test() {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
     macro_rules! assert_string {
         ($src:expr, $typ:expr $(,)?) => {
             let mut printer = Printer::new();

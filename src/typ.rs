@@ -1198,6 +1198,12 @@ pub enum Error {
     PositionalArgumentAfterLabelled {
         meta: Meta,
     },
+
+    IncorrectNumClausePatterns {
+        meta: Meta,
+        expected: usize,
+        given: usize,
+    },
 }
 
 #[derive(Debug, PartialEq)]
@@ -1816,7 +1822,11 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             for clause in clauses.into_iter() {
                 let vars = env.local_values.clone();
                 if subjects_count != clause.patterns.len() {
-                    panic!("incorrect number of patterns")
+                    return Err(Error::IncorrectNumClausePatterns {
+                        meta: clause.meta,
+                        expected: subjects_count,
+                        given: clause.patterns.len(),
+                    });
                 }
 
                 let mut typed_patterns = Vec::new();
@@ -3126,6 +3136,15 @@ fn infer_error_test() {
             meta: Meta { start: 21, end: 22 },
             name: "x".to_string(),
             variables: Env::new(&HashMap::new()).local_values,
+        },
+    );
+
+    assert_error!(
+        "case 1 { _, _ -> 1 }",
+        Error::IncorrectNumClausePatterns {
+            meta: Meta { start: 9, end: 18 },
+            expected: 1,
+            given: 2,
         },
     );
 

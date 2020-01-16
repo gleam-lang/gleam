@@ -600,6 +600,21 @@ Private types can only be used within the module that defines them.
                     )
                     .unwrap();
                 }
+
+                IncorrectNumClausePatterns {
+                    meta,
+                    expected,
+                    given,
+                } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Incorrect number of pattern".to_string(),
+                        label: format!("Expected {} patterns, got {}", expected, given),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                }
             },
 
             Error::Parse { path, src, error } => {
