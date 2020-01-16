@@ -16,6 +16,7 @@
   same name in type error messages if they are equivilent.
 - A friendly error message is rendered when a case expression clause has the
   incorrect number of patterns for the subjects.
+- A friendly error message is rendered when a .gleam file cannot be read.
 
 ## v0.6.0 - 2019-12-25 🎄
 
