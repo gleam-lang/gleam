@@ -2278,12 +2278,12 @@ fn unify_enclosed_type(
 ) -> Result<(), UnifyError> {
     // If types cannot unify, show the type error with the enclosing types, e1 and e2.
     match result {
-        Err(_) => Err(UnifyError::CouldNotUnify {
+        Err(UnifyError::CouldNotUnify { .. }) => Err(UnifyError::CouldNotUnify {
             expected: (*e1).clone(),
             given: (*e2).clone(),
         }),
 
-        Ok(x) => Ok(x),
+        _ => result,
     }
 }
 fn unify(t1: &Type, t2: &Type, env: &mut Env) -> Result<(), UnifyError> {
