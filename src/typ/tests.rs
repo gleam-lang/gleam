@@ -582,6 +582,43 @@ fn infer_error_test() {
             },
         },
     );
+
+    assert_error!(
+        "[1.0] == [1]",
+        Error::CouldNotUnify {
+            meta: Meta { start: 9, end: 12 },
+            expected: Type::App {
+                args: vec![Type::Var {
+                    typ: Rc::new(RefCell::new(TypeVar::Link {
+                        typ: Box::new(Type::App {
+                            public: true,
+                            module: vec![],
+                            name: "Float".to_string(),
+                            args: vec![],
+                        }),
+                    }))
+                }],
+                public: true,
+                module: vec![],
+                name: "List".to_string(),
+            },
+            given: Type::App {
+                args: vec![Type::Var {
+                    typ: Rc::new(RefCell::new(TypeVar::Link {
+                        typ: Box::new(Type::App {
+                            public: true,
+                            module: vec![],
+                            name: "Int".to_string(),
+                            args: vec![],
+                        }),
+                    }))
+                }],
+                public: true,
+                module: vec![],
+                name: "List".to_string(),
+            },
+        },
+    );
 }
 
 #[test]
