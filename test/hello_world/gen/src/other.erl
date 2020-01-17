@@ -1,8 +1,8 @@
 -module(other).
 -compile(no_auto_import).
 
-id(X) ->
-    X.
-
 main() ->
-    id(fun id/1).
+    case {1, 2} of
+        {_, _} ->
+            1
+    end.
