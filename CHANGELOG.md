@@ -17,6 +17,7 @@
 - A friendly error message is rendered when a case expression clause has the
   incorrect number of patterns for the subjects.
 - A friendly error message is rendered when a .gleam file cannot be read.
+- Top level types are now printed in error messages for type parameter mismatches.
 
 ## v0.6.0 - 2019-12-25 🎄
 
