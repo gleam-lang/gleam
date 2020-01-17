@@ -569,6 +569,19 @@ fn infer_error_test() {
             },
         },
     );
+
+    assert_error!(
+        "tuple(1.0, 2, 3) == tuple(1, 2, 3)",
+        Error::CouldNotUnify {
+            meta: Meta { start: 20, end: 34 },
+            expected: Type::Tuple {
+                elems: vec![float(), int(), int()],
+            },
+            given: Type::Tuple {
+                elems: vec![int(), int(), int()],
+            },
+        },
+    );
 }
 
 #[test]
