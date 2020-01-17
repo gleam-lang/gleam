@@ -2271,10 +2271,10 @@ enum UnifyError {
     RecursiveType,
 }
 
-fn unifyEnclosedType(e1: &Type, e2: &Type, result: Result<(), UnifyError>) -> Result<(), UnifyError> {
+fn unify_enclosed_type(e1: &Type, e2: &Type, result: Result<(), UnifyError>) -> Result<(), UnifyError> {
     // If types cannot unify, show the type error with the enclosing types, e1 and e2.
     match result {
-        Err(e) =>  Err(UnifyError::CouldNotUnify {
+        Err(_) =>  Err(UnifyError::CouldNotUnify {
             expected: (*e1).clone(),
             given: (*e2).clone(),
         }),
@@ -2357,7 +2357,7 @@ fn unify(t1: &Type, t2: &Type, env: &mut Env) -> Result<(), UnifyError> {
             },
         ) if m1 == m2 && n1 == n2 && args1.len() == args2.len() => {
             for (a, b) in args1.iter().zip(args2) {
-                unifyEnclosedType(t1, t2, unify(a, b, env))?;
+                unify_enclosed_type(t1, t2, unify(a, b, env))?;
             }
             Ok(())
         }
@@ -2366,7 +2366,7 @@ fn unify(t1: &Type, t2: &Type, env: &mut Env) -> Result<(), UnifyError> {
             if elems1.len() == elems2.len() =>
         {
             for (a, b) in elems1.iter().zip(elems2) {
-                unifyEnclosedType(t1, t2, unify(a, b, env))?;
+                unify_enclosed_type(t1, t2, unify(a, b, env))?;
             }
             Ok(())
         }
