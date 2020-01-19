@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Types may now be used before they are defined within their defining module.
 - Fixed a bug where import paths would not be correctly resolved on Windows.
 - Added job to create precompiled binary for 64-bit Windows when releasing.
 - `gleam new` now creates a project that uses `actions/checkout@v2.0.0` in its
