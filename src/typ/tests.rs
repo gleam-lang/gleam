@@ -913,6 +913,18 @@ fn infer_module_test() {
         "pub fn always(ignore _a, return b) { b }",
         vec![("always", "fn(a, b) -> b")],
     );
+
+    // Using types before they are defined
+
+    assert_infer!(
+        "pub type I { I(Num) } pub type Num { Num }",
+        vec![("I", "fn(Num) -> I"), ("Num", "Num")]
+    );
+
+    assert_infer!(
+        "pub type I { I(Num) } pub external type Num",
+        vec![("I", "fn(Num) -> I")]
+    );
 }
 
 #[test]

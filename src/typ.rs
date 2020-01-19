@@ -1157,6 +1157,28 @@ pub fn infer_module(
     let mut env = Env::new(modules);
     let module_name = &module.name;
 
+    // Register types so they can be used in constructors and functions
+    // earlier in the file
+    for s in module.statements.iter() {
+        match s {
+            Statement::ExternalType {
+                name, public, args, ..
+            }
+            | Statement::CustomType {
+                name, public, args, ..
+            } => env.insert_type_constructor(
+                name.clone(),
+                TypeConstructor {
+                    module: module_name.clone(),
+                    public: *public,
+                    arity: args.len(),
+                },
+            ),
+
+            _ => {}
+        }
+    }
+
     let statements: Vec<Statement<_, _, _, Type>> = module
         .statements
         .into_iter()
@@ -1326,15 +1348,6 @@ pub fn infer_module(
                 args,
                 constructors,
             } => {
-                // Register type
-                env.insert_type_constructor(
-                    name.clone(),
-                    TypeConstructor {
-                        module: module_name.clone(),
-                        public,
-                        arity: args.len(),
-                    },
-                );
                 // Build return type and collect type vars that can be used in constructors
                 let mut type_vars = hashmap![];
                 let args_types: Vec<_> = args
@@ -1415,15 +1428,6 @@ pub fn infer_module(
                 name,
                 args,
             } => {
-                // Register type
-                env.insert_type_constructor(
-                    name.clone(),
-                    TypeConstructor {
-                        module: module_name.clone(),
-                        public,
-                        arity: args.len(),
-                    },
-                );
                 // Check contained types are valid
                 let mut type_vars = hashmap![];
                 for arg in args.iter() {
