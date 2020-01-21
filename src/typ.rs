@@ -1776,12 +1776,9 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         // This node is not created by the parser, it is constructed by the typer from
         // the more general FieldSelect. Because of this it should never be present in AST
         // being inferred.
-        Expr::ModuleSelect { .. } => panic!(
-            "Expr::ModuleSelect erroneously passed to typer.
-The is a bug in the Gleam compiler, please report it here:
-https://github.com/lpil/gleam/issues
-"
-        ),
+        Expr::ModuleSelect { .. } => {
+            crate::error::fatal_compiler_bug("Expr::ModuleSelect erroneously passed to typer.")
+        }
     }
 }
 
@@ -1956,10 +1953,8 @@ fn unify_pattern(
                     PatternConstructor::Record { name: name.clone() }
                 }
                 ValueConstructorVariant::LocalVariable
-                | ValueConstructorVariant::ModuleFn { .. } => panic!(
-                    "Unexpected value constructor type for a constructor pattern.
-This is a bug in the Gleam compiler.
-Please report this to https://github.com/lpil/gleam/issues"
+                | ValueConstructorVariant::ModuleFn { .. } => crate::error::fatal_compiler_bug(
+                    "Unexpected value constructor type for a constructor pattern.",
                 ),
             };
 
