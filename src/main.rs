@@ -119,6 +119,18 @@ fn command_build(root: String) -> Result<(), Error> {
 
     let compiled = crate::project::compile(srcs)?;
 
+    // Delete the gen directory before generating the newly compiled files
+    let gen_dir = root_path.parent().unwrap().join("gen");
+
+    if gen_dir.exists() {
+        std::fs::remove_dir_all(&gen_dir).map_err(|e| Error::FileIO {
+            action: error::FileIOAction::Delete,
+            kind: error::FileKind::Directory,
+            path: gen_dir,
+            err: Some(e.to_string()),
+        })?;
+    }
+
     for crate::project::Compiled { files, .. } in compiled {
         for crate::project::OutputFile { text, path } in files {
             let dir_path = path.parent().ok_or_else(|| Error::FileIO {
