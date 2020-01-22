@@ -6,6 +6,34 @@ use termcolor::Buffer;
 pub type Src = String;
 pub type Name = String;
 
+pub fn fatal_compiler_bug(msg: &str) -> ! {
+    let buffer_writer = termcolor::BufferWriter::stderr(termcolor::ColorChoice::Always);
+    let mut buffer = buffer_writer.buffer();
+    use std::io::Write;
+    use termcolor::{Color, ColorSpec, WriteColor};
+    buffer
+        .set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Red)))
+        .unwrap();
+    write!(buffer, "error").unwrap();
+    buffer.set_color(ColorSpec::new().set_bold(true)).unwrap();
+    write!(buffer, ": Fatal compiler bug!\n\n").unwrap();
+    buffer.set_color(&ColorSpec::new()).unwrap();
+    write!(
+        buffer,
+        "This is a bug in the Gleam compiler, sorry!
+
+Please report this crash to https://github.com/gleam-lang/gleam/issues/new
+with this information and the code that produces the crash:
+
+{}
+",
+        msg
+    )
+    .unwrap();
+    buffer_writer.print(&buffer).unwrap();
+    std::process::exit(1);
+}
+
 #[derive(Debug, PartialEq)]
 pub enum Error {
     Parse {
