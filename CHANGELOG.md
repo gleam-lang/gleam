@@ -21,6 +21,7 @@
 - A friendly error message is rendered when the `gleam new` command fails to
   write the new project to the file system.
 - Top level types are now printed in error messages for type parameter mismatches.
+- The `gen` directory is now deleted before each compilation.
 
 ## v0.6.0 - 2019-12-25 🎄
 
