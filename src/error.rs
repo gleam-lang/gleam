@@ -802,28 +802,7 @@ fn write(mut buffer: &mut Buffer, d: ErrorDiagnostic) {
         Label::new(file_id, (d.meta.start as u32)..(d.meta.end as u32), d.label),
     );
 
-    // Avoid non ascii characters as rebar3 currently handles them incorrectly
-    // https://github.com/erlang/rebar3/issues/2205
-    let mut config = codespan_reporting::term::Config::default();
-    config.chars = Chars {
-        source_border_top_left: '-',
-        source_border_top: '-',
-        source_border_left: '|',
-        source_border_left_break: '-',
-
-        note_bullet: '=',
-
-        primary_caret: '^',
-        secondary_caret: '-',
-
-        multiline_primary_caret: '^',
-        multiline_secondary_caret: '\'',
-        multiline_top_left: '-',
-        multiline_top: '-',
-        multiline_bottom_left: '|',
-        multiline_bottom: '_',
-        multiline_left: '|',
-    };
+    let config = codespan_reporting::term::Config::default();
     emit(&mut buffer, &config, &files, &diagnostic).unwrap();
 }
 
