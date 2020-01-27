@@ -792,7 +792,7 @@ struct ErrorDiagnostic {
 fn write(mut buffer: &mut Buffer, d: ErrorDiagnostic) {
     use codespan::Files;
     use codespan_reporting::diagnostic::{Diagnostic, Label};
-    use codespan_reporting::term::{emit, Chars};
+    use codespan_reporting::term::emit;
 
     let mut files = Files::new();
     let file_id = files.add(d.file, d.src);
