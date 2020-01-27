@@ -16,6 +16,7 @@ pub enum Template {
 pub fn create(
     template: Template,
     name: String,
+    description: Option<String>,
     path: Option<String>,
     version: &'static str,
 ) -> Result<(), Error> {
@@ -28,6 +29,7 @@ pub fn create(
         std::process::exit(1);
     }
 
+    let description = description.unwrap_or_else(|| String::from("A Gleam program"));
     let path = path.unwrap_or_else(|| name.clone());
     let root_dir = Path::new(&path);
     let src_dir = root_dir.join("src");
@@ -45,7 +47,7 @@ pub fn create(
     // write files
     write(root_dir.join("LICENSE"), APACHE_2)?;
     write(root_dir.join(".gitignore"), GITIGNORE)?;
-    write(root_dir.join("README.md"), &readme(&name))?;
+    write(root_dir.join("README.md"), &readme(&name, &description))?;
     write(root_dir.join("gleam.toml"), &gleam_toml(&name))?;
     write(test_dir.join(format!("{}_test.gleam", name)), &test(&name))?;
     write(src_dir.join(format!("{}.gleam", name)), &src(&name))?;
@@ -56,7 +58,7 @@ pub fn create(
             write(root_dir.join("rebar.config"), &rebar_config(""))?;
             write(
                 src_dir.join(format!("{}.app.src", name)),
-                &app_src(&name, false),
+                &app_src(&name, &description, false),
             )?;
         }
 
@@ -65,7 +67,7 @@ pub fn create(
             write(src_dir.join(format!("{}_app.erl", name)), &src_app(&name))?;
             write(
                 src_dir.join(format!("{}.app.src", name)),
-                &app_src(&name, true),
+                &app_src(&name, &description, true),
             )?;
         }
     }
@@ -120,11 +122,11 @@ fn gleam_toml(name: &str) -> String {
     format!("name = \"{}\"\n", name)
 }
 
-fn readme(name: &str) -> String {
+fn readme(name: &str, description: &str) -> String {
     format!(
         r#"# {}
 
-A Gleam program
+{}
 
 
 ## Quick start
@@ -152,7 +154,7 @@ this package can be installed by adding `{}` to your `rebar.config` dependencies
 ]}}.
 ```
 "#,
-        name, name, name
+        name, description, name, name
     )
 }
 
@@ -184,7 +186,7 @@ jobs:
     )
 }
 
-fn app_src(name: &str, is_application: bool) -> String {
+fn app_src(name: &str, description: &str, is_application: bool) -> String {
     let module = if is_application {
         format!("\n  {{mod, {{{}_app, []}}}},", name)
     } else {
@@ -192,7 +194,7 @@ fn app_src(name: &str, is_application: bool) -> String {
     };
     format!(
         r#"{{application, {},
- [{{description, "A Gleam program"}},
+ [{{description, "{}"}},
   {{vsn, "1.0.0"}},
   {{registered, []}},{}
   {{applications,
@@ -206,7 +208,7 @@ fn app_src(name: &str, is_application: bool) -> String {
   {{links, []}}
 ]}}.
 "#,
-        name, module,
+        name, description, module,
     )
 }
 
