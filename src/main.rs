@@ -52,6 +52,9 @@ enum Command {
         #[structopt(help = "name of the project")]
         name: String,
 
+        #[structopt(long = "description", help = "description of the project")]
+        description: Option<String>,
+
         #[structopt(help = "location of the project root")]
         path: Option<String>,
 
@@ -76,9 +79,10 @@ fn main() {
 
         Command::New {
             name,
+            description,
             path,
             template,
-        } => crate::new::create(template, name, path, VERSION),
+        } => crate::new::create(template, name, description, path, VERSION),
     };
 
     if let Err(e) = result {
