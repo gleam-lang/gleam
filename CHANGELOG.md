@@ -24,6 +24,8 @@
 - The `gen` directory is now deleted before each compilation.
 - `gleam new` now includes installation instructions for Hex packages in the
   generated README.
+- `gleam new` now accepts a `--description` flag for including a description of
+  the project in the README and `.app.src` file.
 
 ## v0.6.0 - 2019-12-25 🎄
 
