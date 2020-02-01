@@ -16,21 +16,24 @@ const INDENT: isize = 4;
 #[derive(Debug, Clone)]
 struct Env<'a> {
     module: &'a Vec<String>,
-    vars: im::HashMap<String, usize>,
+    current_scope_vars: im::HashMap<String, usize>,
+    erl_function_scope_vars: im::HashMap<String, usize>,
 }
 
 impl<'a> Env<'a> {
     pub fn new(module: &'a Vec<String>) -> Self {
         Self {
-            vars: Default::default(),
+            current_scope_vars: Default::default(),
+            erl_function_scope_vars: Default::default(),
             module,
         }
     }
 
     pub fn local_var_name(&mut self, name: String) -> Document {
-        match self.vars.get(&name) {
+        match self.current_scope_vars.get(&name) {
             None => {
-                self.vars.insert(name.clone(), 0);
+                self.current_scope_vars.insert(name.clone(), 0);
+                self.erl_function_scope_vars.insert(name.clone(), 0);
                 name.to_camel_case().to_doc()
             }
             Some(0) => name.to_camel_case().to_doc(),
@@ -39,8 +42,9 @@ impl<'a> Env<'a> {
     }
 
     pub fn next_local_var_name(&mut self, name: String) -> Document {
-        self.vars
-            .insert(name.clone(), self.vars.get(&name).map_or(0, |i| i + 1));
+        let next = self.erl_function_scope_vars.get(&name).map_or(0, |i| i + 1);
+        self.erl_function_scope_vars.insert(name.clone(), next);
+        self.current_scope_vars.insert(name.clone(), next);
         self.local_var_name(name)
     }
 }
@@ -450,9 +454,9 @@ fn clause(mut clause: TypedClause, env: &mut Env) -> Document {
 fn clauses(cs: Vec<TypedClause>, env: &mut Env) -> Document {
     cs.into_iter()
         .map(|c| {
-            let vars = env.vars.clone();
+            let vars = env.current_scope_vars.clone();
             let erl = clause(c, env);
-            env.vars = vars; // Reset the known variables now the clauses' scope has ended
+            env.current_scope_vars = vars; // Reset the known variables now the clauses' scope has ended
             erl
         })
         .intersperse(";".to_doc().append(lines(2)))

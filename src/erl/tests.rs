@@ -1282,6 +1282,35 @@ main() ->
     factory(fun(A) -> {box, A} end, 0).
 "#,
         },
+        // https://github.com/gleam-lang/gleam/issues/384
+        Case {
+            src: r#"
+pub fn main(args) {
+  case args {
+    _ -> {
+      let a = 1
+      a
+    }
+  }
+  let a = 2
+  a
+}
+"#,
+            erl: r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/1]).
+
+main(Args) ->
+    case Args of
+        _ ->
+            A = 1,
+            A
+    end,
+    A1 = 2,
+    A1.
+"#,
+        },
     ];
 
     for Case { src, erl } in cases.into_iter() {
