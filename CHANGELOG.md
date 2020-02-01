@@ -26,6 +26,9 @@
   generated README.
 - `gleam new` now accepts a `--description` flag for including a description of
   the project in the README and `.app.src` file.
+- Fixed a bug where variable names would be incorrectly generated in some
+  situations when variable names are reused during and after a case
+  expression.
 
 ## v0.6.0 - 2019-12-25 🎄
 
