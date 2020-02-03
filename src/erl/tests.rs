@@ -1139,7 +1139,7 @@ x() ->
     go(4, 3).
 "#,
         },
-        // https://github.com/lpil/gleam/issues/289
+        // https://github.com/gleam-lang/gleam/issues/289
         Case {
             src: r#"
 type User { User(id: Int, name: String, age: Int) }
