@@ -1,8 +1,7 @@
 import nest/bird
 
-fn main() {
-  [1.0] == [1]
-  case 1, 2 {
-    _, _ -> 1
+fn main(x) {
+  case x {
+    y if x == y -> 1
   }
 }

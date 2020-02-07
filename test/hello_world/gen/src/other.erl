@@ -1,8 +1,8 @@
 -module(other).
 -compile(no_auto_import).
 
-main() ->
-    case {1, 2} of
-        {_, _} ->
+main(X) ->
+    case X of
+        Y ->
             1
     end.
