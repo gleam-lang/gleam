@@ -896,6 +896,7 @@ fn expr_test() {
             clauses: vec![
                 Clause {
                     meta: Meta { start: 9, end: 16 },
+                    guard: None,
                     patterns: vec![Pattern::Int {
                         meta: Meta { start: 9, end: 10 },
                         value: 1
@@ -908,6 +909,7 @@ fn expr_test() {
                 },
                 Clause {
                     meta: Meta { start: 17, end: 24 },
+                    guard: None,
                     patterns: vec![Pattern::Int {
                         meta: Meta { start: 17, end: 18 },
                         value: 2

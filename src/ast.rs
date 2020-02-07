@@ -321,19 +321,19 @@ impl<A, B, C, D> Expr<A, B, C, D> {
 impl TypedExpr {
     pub fn typ(&self) -> &typ::Type {
         match self {
-            Expr::Int { typ, .. } => typ,
-            Expr::Float { typ, .. } => typ,
-            Expr::String { typ, .. } => typ,
-            Expr::Seq { then, .. } => then.typ(),
-            Expr::Var { constructor, .. } => &constructor.typ,
             Expr::Fn { typ, .. } => typ,
             Expr::Nil { typ, .. } => typ,
+            Expr::Let { typ, .. } => typ,
+            Expr::Int { typ, .. } => typ,
+            Expr::Case { typ, .. } => typ,
             Expr::Cons { typ, .. } => typ,
             Expr::Call { typ, .. } => typ,
+            Expr::Seq { then, .. } => then.typ(),
+            Expr::Float { typ, .. } => typ,
             Expr::BinOp { typ, .. } => typ,
-            Expr::Let { typ, .. } => typ,
-            Expr::Case { typ, .. } => typ,
             Expr::Tuple { typ, .. } => typ,
+            Expr::String { typ, .. } => typ,
+            Expr::Var { constructor, .. } => &constructor.typ,
             Expr::FieldSelect { typ, .. } => typ,
             Expr::ModuleSelect { typ, .. } => typ,
         }
@@ -349,7 +349,22 @@ pub type UntypedClause = Clause<(), (), (), ()>;
 pub struct Clause<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type> {
     pub meta: Meta,
     pub patterns: Vec<Pattern<PatternConstructor>>,
+    pub guard: Option<ClauseGuard>,
     pub then: Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum ClauseGuard {
+    Equals {
+        meta: Meta,
+        left: Box<ClauseGuard>,
+        right: Box<ClauseGuard>,
+    },
+
+    Var {
+        meta: Meta,
+        name: String,
+    },
 }
 
 #[derive(Debug, PartialEq, Default, Clone)]

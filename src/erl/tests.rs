@@ -612,6 +612,7 @@ moddy4() ->
                 clauses: vec![
                     Clause {
                         meta: Default::default(),
+                        guard: None,
                         patterns: vec![Pattern::Int {
                             meta: Default::default(),
                             value: 1,
@@ -624,6 +625,7 @@ moddy4() ->
                     },
                     Clause {
                         meta: Default::default(),
+                        guard: None,
                         patterns: vec![Pattern::Float {
                             meta: Default::default(),
                             value: 1.0,
@@ -636,6 +638,7 @@ moddy4() ->
                     },
                     Clause {
                         meta: Default::default(),
+                        guard: None,
                         patterns: vec![Pattern::String {
                             meta: Default::default(),
                             value: "hello".to_string(),
@@ -648,6 +651,7 @@ moddy4() ->
                     },
                     Clause {
                         meta: Default::default(),
+                        guard: None,
                         patterns: vec![Pattern::Nil {
                             meta: Default::default(),
                         }],
@@ -659,6 +663,7 @@ moddy4() ->
                     },
                     Clause {
                         meta: Default::default(),
+                        guard: None,
                         patterns: vec![Pattern::Constructor {
                             meta: Default::default(),
                             module: None,
@@ -683,6 +688,7 @@ moddy4() ->
                     },
                     Clause {
                         meta: Default::default(),
+                        guard: None,
                         patterns: vec![Pattern::Tuple {
                             meta: Default::default(),
                             elems: vec![

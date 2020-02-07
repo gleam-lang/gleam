@@ -227,6 +227,7 @@ Case: UntypedExpr = {
 Clause: UntypedClause = {
     <s:@L> <patterns:Comma<Pattern>> "->" <then:OpOrSimpleExpr> <e:@L> => Clause {
         meta: meta(s, e),
+        guard: None,
         patterns,
         then,
     }
