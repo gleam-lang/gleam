@@ -25,10 +25,21 @@ pub Module: UntypedModule = {
 
 Statement: UntypedStatement = {
     StatementFn => <>,
+    StatementTypeAlias => <>,
     StatementCustomType => <>,
     StatementExternalFn => <>,
     StatementExternalType => <>,
     StatementImport => <>,
+}
+
+StatementTypeAlias : UntypedStatement = {
+    <s:@L> <p:"pub"?> "type" <ta:TypeName> "=" <tr:Type> <e:@L> => Statement::TypeAlias {
+        meta: meta(s, e),
+        public: p.is_some(),
+        alias: ta.0,
+        args: ta.1,
+        resolved_type: tr,
+    }
 }
 
 StatementCustomType: UntypedStatement = {
