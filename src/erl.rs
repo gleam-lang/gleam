@@ -142,6 +142,7 @@ pub fn module(module: TypedModule) -> String {
 
 fn statement(statement: TypedStatement, module: &Vec<String>) -> Option<Document> {
     match statement {
+        Statement::TypeAlias { .. } => None,
         Statement::CustomType { .. } => None,
         Statement::Import { .. } => None,
         Statement::ExternalType { .. } => None,
