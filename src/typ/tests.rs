@@ -178,6 +178,7 @@ fn infer_module_type_retention_test() {
             name: vec!["ok".to_string()],
             types: HashMap::new(), // Core type constructors like String and Int are not included
             values: HashMap::new(),
+            type_aliases: HashMap::new(),
         }
     );
 }
@@ -925,6 +926,12 @@ fn infer_module_test() {
         "pub type I { I(Num) } pub external type Num",
         vec![("I", "fn(Num) -> I")]
     );
+
+    assert_infer!(
+        "type IntString = Result(Int, String)
+         pub fn ok_one() -> IntString { Ok(1) }",
+        vec![("ok_one", "fn() -> Result(Int, String)")]
+    );
 }
 
 #[test]
@@ -1172,4 +1179,13 @@ pub fn x() { id(1, 1.0) }
     // Cases were we can't so easily check for equality-
     // i.e. because the contents of the error are non-deterministic.
     assert_error!("fn inc(x: a) { x + 1 }");
+
+    assert_error!(
+        "type IntMap = IllMap(Int, Int)",
+        Error::UnknownType {
+            meta: Meta { start: 14, end: 30 },
+            name: "IllMap".to_string(),
+            types: { Env::new(&HashMap::new()).module_types },
+        }
+    );
 }

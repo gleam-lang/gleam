@@ -1567,4 +1567,101 @@ fn module_test() {
         }),
         ModuleParser::new().parse("import one/two/three as something"),
     );
+
+    assert_eq!(
+        Ok(Module {
+            type_info: (),
+            name: vec![],
+            statements: vec![Statement::TypeAlias {
+                meta: Meta { start: 0, end: 27 },
+                public: false,
+                alias: "IntMap".to_string(),
+                args: vec![],
+                resolved_type: TypeAst::Constructor {
+                    meta: Meta { start: 14, end: 27 },
+                    module: None,
+                    name: "Map".to_string(),
+                    args: vec![
+                        TypeAst::Constructor {
+                            meta: Meta { start: 18, end: 21 },
+                            module: None,
+                            name: "Int".to_string(),
+                            args: vec![],
+                        },
+                        TypeAst::Constructor {
+                            meta: Meta { start: 23, end: 26 },
+                            module: None,
+                            name: "Int".to_string(),
+                            args: vec![],
+                        },
+                    ]
+                }
+            }]
+        }),
+        ModuleParser::new().parse("type IntMap = Map(Int, Int)"),
+    );
+
+    assert_eq!(
+        Ok(Module {
+            type_info: (),
+            name: vec![],
+            statements: vec![Statement::TypeAlias {
+                meta: Meta { start: 0, end: 31 },
+                public: true,
+                alias: "IntMap".to_string(),
+                args: vec![],
+                resolved_type: TypeAst::Constructor {
+                    meta: Meta { start: 18, end: 31 },
+                    module: None,
+                    name: "Map".to_string(),
+                    args: vec![
+                        TypeAst::Constructor {
+                            meta: Meta { start: 22, end: 25 },
+                            module: None,
+                            name: "Int".to_string(),
+                            args: vec![],
+                        },
+                        TypeAst::Constructor {
+                            meta: Meta { start: 27, end: 30 },
+                            module: None,
+                            name: "Int".to_string(),
+                            args: vec![],
+                        },
+                    ]
+                }
+            }]
+        }),
+        ModuleParser::new().parse("pub type IntMap = Map(Int, Int)"),
+    );
+
+    assert_eq!(
+        Ok(Module {
+            type_info: (),
+            name: vec![],
+            statements: vec![Statement::TypeAlias {
+                meta: Meta { start: 0, end: 38 },
+                public: true,
+                alias: "Option".to_string(),
+                args: vec!["a".to_string()],
+                resolved_type: TypeAst::Constructor {
+                    meta: Meta { start: 21, end: 38 },
+                    module: None,
+                    name: "Result".to_string(),
+                    args: vec![
+                        TypeAst::Var {
+                            meta: Meta { start: 28, end: 29 },
+                            name: "a".to_string(),
+                        },
+                        TypeAst::Constructor {
+                            meta: Meta { start: 31, end: 37 },
+                            module: None,
+                            name: "String".to_string(),
+                            args: vec![],
+                        },
+                    ]
+                }
+            }]
+        }),
+        ModuleParser::new().parse("pub type Option(a) = Result(a, String)"),
+    );
 }

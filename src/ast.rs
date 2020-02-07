@@ -108,6 +108,14 @@ pub enum Statement<ValueConstructor, ModuleValueConstructor, PatternConstructor,
         return_annotation: Option<TypeAst>,
     },
 
+    TypeAlias {
+        meta: Meta,
+        alias: String,
+        args: Vec<String>,
+        resolved_type: TypeAst,
+        public: bool,
+    },
+
     CustomType {
         meta: Meta,
         name: String,

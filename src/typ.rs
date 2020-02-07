@@ -276,6 +276,15 @@ pub struct Module {
     pub name: Vec<String>,
     pub types: HashMap<String, TypeConstructor>,
     pub values: HashMap<String, ValueConstructor>,
+    pub type_aliases: HashMap<String, TypeAliasConstructor>,
+}
+
+impl Module {
+    pub fn resolve_module_type_alias(&self, name: &str) -> Option<&Type> {
+        self.type_aliases
+            .get(name)
+            .map(|TypeAliasConstructor { ref typ, .. }| typ)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -298,6 +307,9 @@ pub struct Env<'a> {
 
     // Values defined in the current module
     module_values: HashMap<String, ValueConstructor>,
+
+    // type alias defined in the current module (or the prelude)
+    module_type_aliases: HashMap<String, TypeAliasConstructor>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -320,6 +332,14 @@ pub struct ValueConstructor {
     pub origin: Meta,
     pub variant: ValueConstructorVariant,
     pub typ: Type,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypeAliasConstructor {
+    pub public: bool,
+    pub module: Vec<String>,
+    pub typ: Type,
+    pub arity: usize,
 }
 
 impl ValueConstructor {
@@ -345,6 +365,7 @@ impl<'a> Env<'a> {
             annotated_generic_types: im::HashSet::new(),
             module_types: HashMap::new(),
             module_values: HashMap::new(),
+            module_type_aliases: HashMap::new(),
             imported_modules: HashMap::new(),
             local_values: hashmap![],
             importable_modules,
@@ -777,6 +798,49 @@ impl<'a> Env<'a> {
         self.module_types.insert(name, info);
     }
 
+    pub fn resolve_module_type_alias(&self, name: &str) -> Option<&Type> {
+        self.module_type_aliases
+            .get(name)
+            .map(|TypeAliasConstructor { ref typ, .. }| typ)
+    }
+
+    /// Map a type alias in the current scope.
+    ///
+    pub fn insert_type_alias(&mut self, name: String, info: TypeAliasConstructor) {
+        self.module_type_aliases.insert(name, info);
+    }
+
+    /// Lookup a type alias in the current scope.
+    ///
+    pub fn resolve_type_alias(
+        &self,
+        module_alias: &Option<String>,
+        name: &str,
+    ) -> Result<&Type, GetRealTypeError> {
+        match module_alias {
+            None => self
+                .resolve_module_type_alias(name)
+                .ok_or(GetRealTypeError::UnknownRealType {
+                    name: name.to_string(),
+                }),
+
+            Some(m) => {
+                let module = &self.imported_modules.get(m).ok_or_else(|| {
+                    GetRealTypeError::UnknownModule {
+                        name: name.to_string(),
+                        imported_modules: self.importable_modules.clone(),
+                    }
+                })?;
+                module.resolve_module_type_alias(name).ok_or_else(|| {
+                    GetRealTypeError::UnknownModuledRealType {
+                        name: name.to_string(),
+                        module_name: module.name.clone(),
+                    }
+                })
+            }
+        }
+    }
+
     /// Lookup a type in the current scope.
     ///
     pub fn get_type_constructor(
@@ -865,6 +929,10 @@ impl<'a> Env<'a> {
                 name,
                 args,
             } => {
+                if let Ok(typ) = self.resolve_type_alias(module, name) {
+                    return Ok(typ.to_owned());
+                }
+
                 let args = args
                     .iter()
                     .map(|t| self.type_from_ast(t, vars, new))
@@ -1093,6 +1161,23 @@ fn convert_get_value_constructor_error(e: GetValueConstructorError, meta: &Meta)
             value_constructors,
         },
     }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum GetRealTypeError {
+    UnknownRealType {
+        name: String,
+    },
+
+    UnknownModule {
+        name: String,
+        imported_modules: HashMap<String, Module>,
+    },
+
+    UnknownModuledRealType {
+        name: String,
+        module_name: Vec<String>,
+    },
 }
 
 #[derive(Debug, PartialEq)]
@@ -1341,6 +1426,37 @@ pub fn infer_module(
                 })
             }
 
+            Statement::TypeAlias {
+                meta,
+                public,
+                alias,
+                args,
+                resolved_type,
+            } => {
+                let mut type_vars = hashmap![];
+                match env.type_from_ast(&resolved_type, &mut type_vars, NewTypeAction::MakeGeneric)
+                {
+                    Ok(typ) => env.insert_type_alias(
+                        alias.clone(),
+                        TypeAliasConstructor {
+                            public: public,
+                            module: module_name.clone(),
+                            typ: typ,
+                            arity: args.len(),
+                        },
+                    ),
+                    Err(e) => return Err(e),
+                }
+
+                Ok(Statement::TypeAlias {
+                    meta,
+                    public,
+                    alias,
+                    args,
+                    resolved_type,
+                })
+            }
+
             Statement::CustomType {
                 meta,
                 public,
@@ -1491,6 +1607,11 @@ This should not be possible. Please report this crash",
                         imported = true;
                     }
 
+                    if let Some(typ) = module_info.type_aliases.get(name) {
+                        env.insert_type_alias(imported_name.clone(), typ.clone());
+                        imported = true;
+                    }
+
                     if !imported {
                         return Err(Error::UnknownModuleField {
                             meta: meta.clone(),
@@ -1520,6 +1641,8 @@ This should not be possible. Please report this crash",
     env.module_types
         .retain(|_, info| info.public && &info.module == module_name);
     env.module_values.retain(|_, info| info.public);
+    env.module_type_aliases
+        .retain(|_, info| info.public && &info.module == module_name);
 
     // Ensure no exported values have private types in their type signature
     for (_, value) in env.module_values.iter() {
@@ -1538,6 +1661,7 @@ This should not be possible. Please report this crash",
             name: module.name,
             types: env.module_types,
             values: env.module_values,
+            type_aliases: env.module_type_aliases,
         },
     })
 }
