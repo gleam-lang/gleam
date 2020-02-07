@@ -1665,6 +1665,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
                     .map_err(|e| convert_unify_error(e, then.meta()))?;
                 typed_clauses.push(Clause {
                     meta: clause.meta,
+                    guard: clause.guard,
                     patterns: typed_patterns,
                     then,
                 });
