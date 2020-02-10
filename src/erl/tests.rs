@@ -1317,6 +1317,31 @@ main(Args) ->
     A1.
 "#,
         },
+        // Clause guards
+        Case {
+            src: r#"
+pub fn main(args) {
+  case args {
+    x if x == args -> 1
+    _ -> 0
+  }
+}
+"#,
+            erl: r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/1]).
+
+main(Args) ->
+    case Args of
+        X when X =:= Args ->
+            1;
+
+        _ ->
+            0
+    end.
+"#,
+        },
     ];
 
     for Case { src, erl } in cases.into_iter() {

@@ -447,8 +447,30 @@ fn clause(mut clause: TypedClause, env: &mut Env) -> Document {
         tuple(docs)
     };
     patterns_doc
+        .append(optional_clause_guard(clause.guard, env))
         .append(" ->")
         .append(line().append(expr(clause.then, env)).nest(INDENT).group())
+}
+
+fn optional_clause_guard(guard: Option<ClauseGuard>, env: &mut Env) -> Document {
+    match guard {
+        Some(guard) => " when ".to_doc().append(clause_guard(guard, env)),
+        None => nil(),
+    }
+}
+
+// TODO: indent, nest, break
+// TODO: surround subexpressions in parens
+fn clause_guard(guard: ClauseGuard, env: &mut Env) -> Document {
+    match guard {
+        ClauseGuard::Equals { left, right, .. } => clause_guard(*left, env)
+            .append(" =:= ")
+            .append(clause_guard(*right, env)),
+
+        // TODO: This only works for local variables! We need to work out what kind of
+        // variables we can allow and this disallow other kinds in guards.
+        ClauseGuard::Var { name, .. } => env.local_var_name(name),
+    }
 }
 
 fn clauses(cs: Vec<TypedClause>, env: &mut Env) -> Document {

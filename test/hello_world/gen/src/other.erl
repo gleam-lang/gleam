@@ -3,6 +3,6 @@
 
 main(X) ->
     case X of
-        Y ->
+        Y when X =:= Y ->
             1
     end.
