@@ -11,6 +11,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+type TypeVarCell = Rc<RefCell<TypeVar>>;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     App {
@@ -35,6 +37,13 @@ pub enum Type {
 }
 
 impl Type {
+    pub fn is_var(&self) -> bool {
+        match &self {
+            Type::Var { .. } => true,
+            _ => false,
+        }
+    }
+
     pub fn collapse_links(self) -> Type {
         if let Type::Var { typ } = &self {
             if let TypeVar::Link { typ } = &*typ.borrow() {
@@ -42,6 +51,38 @@ impl Type {
             }
         }
         self
+    }
+
+    pub fn get_generic_vars(&self) -> Vec<TypeVarCell> {
+        match &self {
+            Type::App { args, .. } => args
+                .iter()
+                .map(|t| t.get_generic_vars())
+                .collect::<Vec<_>>()
+                .concat(),
+            Type::Fn { args, .. } => args
+                .iter()
+                .map(|t| t.get_generic_vars())
+                .collect::<Vec<_>>()
+                .concat(),
+            Type::Tuple { elems } => elems
+                .iter()
+                .map(|t| t.get_generic_vars())
+                .collect::<Vec<_>>()
+                .concat(),
+            Type::Var { typ } => match &*typ.borrow() {
+                TypeVar::Generic { .. } => vec![typ.to_owned()],
+                _ => vec![],
+            },
+        }
+    }
+
+    pub fn bind_generic_args(&self, names: &Vec<String>) -> HashMap<String, TypeVarCell> {
+        names
+            .iter()
+            .zip(self.get_generic_vars().iter())
+            .map(|p| (p.0.to_owned(), p.1.to_owned()))
+            .collect::<HashMap<String, TypeVarCell>>()
     }
 
     /// Get the args for the type if the type is a specific Type::App.
@@ -280,10 +321,16 @@ pub struct Module {
 }
 
 impl Module {
-    pub fn resolve_module_type_alias(&self, name: &str) -> Option<&Type> {
+    pub fn resolve_module_type_alias(
+        &self,
+        name: &str,
+        vars: &mut im::HashMap<String, (usize, Type)>,
+        arg_asts: &Vec<TypeAst>,
+        arg_types: &Vec<Type>,
+    ) -> Option<&Type> {
         self.type_aliases
             .get(name)
-            .map(|TypeAliasConstructor { ref typ, .. }| typ)
+            .map(|ta| ta.resolve_type_alias(vars, arg_asts, arg_types))
     }
 }
 
@@ -334,14 +381,6 @@ pub struct ValueConstructor {
     pub typ: Type,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct TypeAliasConstructor {
-    pub public: bool,
-    pub module: Vec<String>,
-    pub typ: Type,
-    pub arity: usize,
-}
-
 impl ValueConstructor {
     fn field_map(&self) -> Option<&FieldMap> {
         match self.variant {
@@ -349,6 +388,56 @@ impl ValueConstructor {
             | ValueConstructorVariant::Record { ref field_map, .. } => field_map.as_ref(),
             _ => None,
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypeAliasConstructor {
+    pub public: bool,
+    pub module: Vec<String>,
+    pub typ: Type,
+    pub original_args: Vec<String>,
+    pub generic_dict: HashMap<String, TypeVarCell>,
+}
+
+impl TypeAliasConstructor {
+    fn bind_generic(&self, name: &String, new_type: &Type) {
+        if let Some(generic) = self.generic_dict.get(name) {
+            *generic.borrow_mut() = TypeVar::Link {
+                typ: Box::new(new_type.to_owned()),
+            };
+        }
+    }
+
+    fn resolve_type_alias(
+        &self,
+        vars: &mut im::HashMap<String, (usize, Type)>,
+        arg_asts: &Vec<TypeAst>,
+        arg_types: &Vec<Type>,
+    ) -> &Type {
+        let TypeAliasConstructor {
+            ref typ,
+            original_args,
+            ..
+        } = &self;
+        for (arg_name, (arg_ast, arg_type)) in original_args
+            .iter()
+            .zip(arg_asts.iter().zip(arg_types.iter()))
+        {
+            if !arg_type.is_var() {
+                self.bind_generic(arg_name, arg_type);
+            } else {
+                match arg_ast {
+                    TypeAst::Var { name, .. } => {
+                        if let Some((_, type_var)) = vars.get(name) {
+                            self.bind_generic(arg_name, type_var);
+                        }
+                    }
+                    _ => {}
+                };
+            }
+        }
+        typ
     }
 }
 
@@ -798,10 +887,16 @@ impl<'a> Env<'a> {
         self.module_types.insert(name, info);
     }
 
-    pub fn resolve_module_type_alias(&self, name: &str) -> Option<&Type> {
+    pub fn resolve_module_type_alias(
+        &self,
+        name: &str,
+        vars: &mut im::HashMap<String, (usize, Type)>,
+        arg_asts: &Vec<TypeAst>,
+        arg_types: &Vec<Type>,
+    ) -> Option<&Type> {
         self.module_type_aliases
             .get(name)
-            .map(|TypeAliasConstructor { ref typ, .. }| typ)
+            .map(|ta| ta.resolve_type_alias(vars, arg_asts, arg_types))
     }
 
     /// Map a type alias in the current scope.
@@ -816,10 +911,13 @@ impl<'a> Env<'a> {
         &self,
         module_alias: &Option<String>,
         name: &str,
+        vars: &mut im::HashMap<String, (usize, Type)>,
+        arg_asts: &Vec<TypeAst>,
+        arg_types: &Vec<Type>,
     ) -> Result<&Type, GetRealTypeError> {
         match module_alias {
             None => self
-                .resolve_module_type_alias(name)
+                .resolve_module_type_alias(name, vars, arg_asts, arg_types)
                 .ok_or(GetRealTypeError::UnknownRealType {
                     name: name.to_string(),
                 }),
@@ -831,12 +929,12 @@ impl<'a> Env<'a> {
                         imported_modules: self.importable_modules.clone(),
                     }
                 })?;
-                module.resolve_module_type_alias(name).ok_or_else(|| {
-                    GetRealTypeError::UnknownModuledRealType {
+                module
+                    .resolve_module_type_alias(name, vars, arg_asts, arg_types)
+                    .ok_or_else(|| GetRealTypeError::UnknownModuledRealType {
                         name: name.to_string(),
                         module_name: module.name.clone(),
-                    }
-                })
+                    })
             }
         }
     }
@@ -929,7 +1027,12 @@ impl<'a> Env<'a> {
                 name,
                 args,
             } => {
-                if let Ok(typ) = self.resolve_type_alias(module, name) {
+                let arg_types = args
+                    .iter()
+                    .map(|t| self.type_from_ast(t, vars, new))
+                    .collect::<Result<Vec<_>, _>>()?;
+
+                if let Ok(typ) = self.resolve_type_alias(module, name, vars, args, &arg_types) {
                     return Ok(typ.to_owned());
                 }
 
@@ -1434,17 +1537,23 @@ pub fn infer_module(
                 resolved_type,
             } => {
                 let mut type_vars = hashmap![];
+                let resolved_type_var_names = resolved_type.get_type_vars();
+
                 match env.type_from_ast(&resolved_type, &mut type_vars, NewTypeAction::MakeGeneric)
                 {
-                    Ok(typ) => env.insert_type_alias(
-                        alias.clone(),
-                        TypeAliasConstructor {
-                            public: public,
-                            module: module_name.clone(),
-                            typ: typ,
-                            arity: args.len(),
-                        },
-                    ),
+                    Ok(typ) => {
+                        let generics = typ.bind_generic_args(&resolved_type_var_names);
+                        env.insert_type_alias(
+                            alias.clone(),
+                            TypeAliasConstructor {
+                                public: public,
+                                module: module_name.clone(),
+                                typ: typ,
+                                original_args: args.to_owned(),
+                                generic_dict: generics,
+                            },
+                        )
+                    }
                     Err(e) => return Err(e),
                 }
 

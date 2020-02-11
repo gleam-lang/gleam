@@ -932,6 +932,12 @@ fn infer_module_test() {
          pub fn ok_one() -> IntString { Ok(1) }",
         vec![("ok_one", "fn() -> Result(Int, String)")]
     );
+
+    assert_infer!(
+        "type Option(a) = Result(a, String)
+         pub fn ok_one() -> Option(Int) { Ok(1) }",
+        vec![("ok_one", "fn() -> Result(Int, String)")]
+    );
 }
 
 #[test]

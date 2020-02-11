@@ -92,6 +92,44 @@ pub enum TypeAst {
     },
 }
 
+impl TypeAst {
+    pub fn get_type_asts(&self) -> TypeAsts {
+        match self {
+            TypeAst::Constructor { args, .. } => TypeAsts {
+                asts: args.to_owned(),
+            },
+            TypeAst::Fn { args, .. } => TypeAsts {
+                asts: args.to_owned(),
+            },
+            TypeAst::Tuple { elems, .. } => TypeAsts {
+                asts: elems.to_owned(),
+            },
+            _ => TypeAsts { asts: vec![] },
+        }
+    }
+
+    pub fn get_type_vars(&self) -> Vec<String> {
+        match self {
+            TypeAst::Var { name, .. } => vec![name.to_owned()],
+            _ => self.get_type_asts().get_type_vars(),
+        }
+    }
+}
+
+pub struct TypeAsts {
+    asts: Vec<TypeAst>,
+}
+
+impl TypeAsts {
+    pub fn get_type_vars(&self) -> Vec<String> {
+        self.asts
+            .iter()
+            .map(|ta| ta.get_type_vars())
+            .collect::<Vec<_>>()
+            .concat()
+    }
+}
+
 pub type TypedStatement =
     Statement<ValueConstructor, ModuleValueConstructor, PatternConstructor, typ::Type>;
 
