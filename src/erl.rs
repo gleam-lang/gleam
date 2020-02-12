@@ -452,7 +452,7 @@ fn clause(mut clause: TypedClause, env: &mut Env) -> Document {
         .append(line().append(expr(clause.then, env)).nest(INDENT).group())
 }
 
-fn optional_clause_guard(guard: Option<ClauseGuard>, env: &mut Env) -> Document {
+fn optional_clause_guard(guard: Option<TypedClauseGuard>, env: &mut Env) -> Document {
     match guard {
         Some(guard) => " when ".to_doc().append(clause_guard(guard, env)),
         None => nil(),
@@ -461,7 +461,7 @@ fn optional_clause_guard(guard: Option<ClauseGuard>, env: &mut Env) -> Document 
 
 // TODO: indent, nest, break
 // TODO: surround subexpressions in parens
-fn clause_guard(guard: ClauseGuard, env: &mut Env) -> Document {
+fn clause_guard(guard: TypedClauseGuard, env: &mut Env) -> Document {
     match guard {
         ClauseGuard::Equals { left, right, .. } => clause_guard(*left, env)
             .append(" =:= ")

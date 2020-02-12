@@ -619,6 +619,33 @@ fn infer_error_test() {
             },
         },
     );
+
+    assert_error!(
+        "let x = 1 let y = 1.0 case x { _ if x == y -> 1 }",
+        Error::CouldNotUnify {
+            meta: Meta { start: 36, end: 42 },
+            expected: int(),
+            given: float(),
+        },
+    );
+
+    assert_error!(
+        "let x = 1.0 let y = 1 case x { _ if x == y -> 1 }",
+        Error::CouldNotUnify {
+            meta: Meta { start: 36, end: 42 },
+            expected: float(),
+            given: int(),
+        },
+    );
+
+    assert_error!(
+        "let x = 1.0 case x { _ if x -> 1 }",
+        Error::CouldNotUnify {
+            meta: Meta { start: 26, end: 27 },
+            expected: bool(),
+            given: float(),
+        },
+    );
 }
 
 #[test]
