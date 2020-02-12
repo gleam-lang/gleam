@@ -366,6 +366,13 @@ pub enum ClauseGuard<Type> {
         right: Box<Self>,
     },
 
+    NotEquals {
+        meta: Meta,
+        typ: Type,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
     Var {
         meta: Meta,
         typ: Type,
@@ -378,6 +385,7 @@ impl<A> ClauseGuard<A> {
         match self {
             ClauseGuard::Var { meta, .. } => meta,
             ClauseGuard::Equals { meta, .. } => meta,
+            ClauseGuard::NotEquals { meta, .. } => meta,
         }
     }
 }
@@ -387,6 +395,7 @@ impl TypedClauseGuard {
         match self {
             ClauseGuard::Var { typ, .. } => typ,
             ClauseGuard::Equals { typ, .. } => typ,
+            ClauseGuard::NotEquals { typ, .. } => typ,
         }
     }
 }

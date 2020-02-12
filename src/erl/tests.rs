@@ -1346,7 +1346,7 @@ main(Args) ->
             src: r#"
 pub fn main(args) {
   case args {
-    x if {x == x} == {args == args} -> 1
+    x if {x != x} == {args == args} -> 1
     _ -> 0
   }
 }
@@ -1358,7 +1358,7 @@ pub fn main(args) {
 
 main(Args) ->
     case Args of
-        X when (X =:= X) =:= (Args =:= Args) ->
+        X when (X =/= X) =:= (Args =:= Args) ->
             1;
 
         _ ->
