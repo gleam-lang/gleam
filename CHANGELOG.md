@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Case expression clauses may have guards which can be used to require
+  equality between specified variables in order for the clause to match.
 - Types may now be used before they are defined within their defining module.
 - Fixed a bug where import paths would not be correctly resolved on Windows.
 - Added job to create precompiled binary for 64-bit Windows when releasing.
