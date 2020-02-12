@@ -3,9 +3,9 @@ pub mod pretty;
 mod tests;
 
 use crate::ast::{
-    self, Arg, ArgNames, BinOp, CallArg, Clause, Expr, Meta, Pattern, Statement, TypeAst,
-    TypedExpr, TypedModule, TypedPattern, UnqualifiedImport, UntypedExpr, UntypedModule,
-    UntypedPattern,
+    self, Arg, ArgNames, BinOp, CallArg, Clause, ClauseGuard, Expr, Meta, Pattern, Statement,
+    TypeAst, TypedClauseGuard, TypedExpr, TypedModule, TypedPattern, UnqualifiedImport,
+    UntypedClauseGuard, UntypedExpr, UntypedModule, UntypedPattern,
 };
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -1660,13 +1660,23 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
                     typed_patterns.push(pattern);
                 }
 
+                let guard = clause
+                    .guard
+                    .map(|guard| {
+                        let guard = infer_clause_guard(guard, level, env)?;
+                        unify(&bool(), guard.typ(), env)
+                            .map_err(|e| convert_unify_error(e, guard.meta()))?;
+                        Ok(guard)
+                    })
+                    .transpose()?;
+
                 let then = infer(clause.then, level, env)?;
                 unify(&return_type, then.typ(), env)
                     .map_err(|e| convert_unify_error(e, then.meta()))?;
                 typed_clauses.push(Clause {
                     meta: clause.meta,
-                    guard: clause.guard,
                     patterns: typed_patterns,
+                    guard,
                     then,
                 });
 
@@ -1779,6 +1789,48 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         // being inferred.
         Expr::ModuleSelect { .. } => {
             crate::error::fatal_compiler_bug("Expr::ModuleSelect erroneously passed to typer.")
+        }
+    }
+}
+
+fn infer_clause_guard(
+    guard: UntypedClauseGuard,
+    level: usize,
+    env: &mut Env,
+) -> Result<TypedClauseGuard, Error> {
+    match guard {
+        ClauseGuard::Var { meta, name, typ: _ } => {
+            let constructor = infer_var(&name, level, &meta, env)?;
+
+            // We cannot support all values in guard expressions as the BEAM does not
+            match &constructor.variant {
+                ValueConstructorVariant::LocalVariable => (),
+                ValueConstructorVariant::ModuleFn { .. } => unimplemented!(),
+                ValueConstructorVariant::Record { .. } => unimplemented!(),
+            };
+
+            Ok(ClauseGuard::Var {
+                meta,
+                name,
+                typ: constructor.typ,
+            })
+        }
+
+        ClauseGuard::Equals {
+            meta,
+            left,
+            right,
+            typ: _,
+        } => {
+            let left = infer_clause_guard(*left, level, env)?;
+            let right = infer_clause_guard(*right, level, env)?;
+            unify(left.typ(), right.typ(), env).map_err(|e| convert_unify_error(e, &meta))?;
+            Ok(ClauseGuard::Equals {
+                meta,
+                typ: bool(),
+                left: Box::new(left),
+                right: Box::new(right),
+            })
         }
     }
 }

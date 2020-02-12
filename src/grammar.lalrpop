@@ -5,7 +5,7 @@ use std::str::FromStr;
 use crate::ast::{
     UntypedExpr, Expr, Arg, UntypedModule, Module, UntypedStatement, Statement, TypeAst,
     UntypedPattern, BinOp, Clause, UntypedClause, RecordConstructor, Pattern, CallArg,
-    ExternalFnArg, ArgNames, UnqualifiedImport, ClauseGuard
+    ExternalFnArg, ArgNames, UnqualifiedImport, UntypedClauseGuard, ClauseGuard,
 };
 use crate::parser::*;
 
@@ -233,13 +233,14 @@ Clause: UntypedClause = {
     }
 }
 
-ClauseGuard: ClauseGuard = {
+ClauseGuard: UntypedClauseGuard = {
     ClauseGuard1 => <>
 }
 
-ClauseGuard1: ClauseGuard = {
+ClauseGuard1: UntypedClauseGuard = {
     <s:@L> <left:ClauseGuard1> "==" <right:ClauseGuard2> <e:@L> => ClauseGuard::Equals {
         meta: meta(s, e),
+        typ: (),
         left: Box::new(left),
         right: Box::new(right),
     },
@@ -247,9 +248,10 @@ ClauseGuard1: ClauseGuard = {
     ClauseGuard2 => <>,
 }
 
-ClauseGuard2: ClauseGuard = {
+ClauseGuard2: UntypedClauseGuard = {
     <s:@L> <name:VarName> <e:@L> => ClauseGuard::Var {
         meta: meta(s, e),
+        typ: (),
         name,
     },
 

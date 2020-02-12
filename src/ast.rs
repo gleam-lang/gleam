@@ -349,22 +349,46 @@ pub type UntypedClause = Clause<(), (), (), ()>;
 pub struct Clause<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type> {
     pub meta: Meta,
     pub patterns: Vec<Pattern<PatternConstructor>>,
-    pub guard: Option<ClauseGuard>,
+    pub guard: Option<ClauseGuard<Type>>,
     pub then: Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type>,
 }
 
+pub type TypedClauseGuard = ClauseGuard<typ::Type>;
+
+pub type UntypedClauseGuard = ClauseGuard<()>;
+
 #[derive(Debug, PartialEq, Clone)]
-pub enum ClauseGuard {
+pub enum ClauseGuard<Type> {
     Equals {
         meta: Meta,
-        left: Box<ClauseGuard>,
-        right: Box<ClauseGuard>,
+        typ: Type,
+        left: Box<Self>,
+        right: Box<Self>,
     },
 
     Var {
         meta: Meta,
+        typ: Type,
         name: String,
     },
+}
+
+impl<A> ClauseGuard<A> {
+    pub fn meta(&self) -> &Meta {
+        match self {
+            ClauseGuard::Var { meta, .. } => meta,
+            ClauseGuard::Equals { meta, .. } => meta,
+        }
+    }
+}
+
+impl TypedClauseGuard {
+    pub fn typ(&self) -> &typ::Type {
+        match self {
+            ClauseGuard::Var { typ, .. } => typ,
+            ClauseGuard::Equals { typ, .. } => typ,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Default, Clone)]
