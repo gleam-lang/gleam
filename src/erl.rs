@@ -461,6 +461,14 @@ fn optional_clause_guard(guard: Option<TypedClauseGuard>, env: &mut Env) -> Docu
 
 fn bare_clause_guard(guard: TypedClauseGuard, env: &mut Env) -> Document {
     match guard {
+        ClauseGuard::Or { left, right, .. } => clause_guard(*left, env)
+            .append(" orelse ")
+            .append(clause_guard(*right, env)),
+
+        ClauseGuard::And { left, right, .. } => clause_guard(*left, env)
+            .append(" andalso ")
+            .append(clause_guard(*right, env)),
+
         ClauseGuard::Equals { left, right, .. } => clause_guard(*left, env)
             .append(" =:= ")
             .append(clause_guard(*right, env)),
@@ -478,7 +486,10 @@ fn bare_clause_guard(guard: TypedClauseGuard, env: &mut Env) -> Document {
 fn clause_guard(guard: TypedClauseGuard, env: &mut Env) -> Document {
     match guard {
         // Binary ops are wrapped in parens
-        ClauseGuard::NotEquals { .. } | ClauseGuard::Equals { .. } => "("
+        ClauseGuard::Or { .. }
+        | ClauseGuard::And { .. }
+        | ClauseGuard::Equals { .. }
+        | ClauseGuard::NotEquals { .. } => "("
             .to_doc()
             .append(bare_clause_guard(guard, env))
             .append(")"),

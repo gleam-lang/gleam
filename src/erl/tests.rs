@@ -1366,6 +1366,30 @@ main(Args) ->
     end.
 "#,
         },
+        Case {
+            src: r#"
+pub fn main(args) {
+  case args {
+    x if x && x || x == x && x -> 1
+    _ -> 0
+  }
+}
+"#,
+            erl: r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/1]).
+
+main(Args) ->
+    case Args of
+        X when (X andalso X) orelse ((X =:= X) andalso X) ->
+            1;
+
+        _ ->
+            0
+    end.
+"#,
+        },
     ];
 
     for Case { src, erl } in cases.into_iter() {
