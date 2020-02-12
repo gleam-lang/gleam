@@ -1044,6 +1044,11 @@ pub enum Error {
         expected: usize,
         given: usize,
     },
+
+    NonLocalClauseGuardVariable {
+        meta: Meta,
+        name: String,
+    },
 }
 
 #[derive(Debug, PartialEq)]
@@ -1805,8 +1810,13 @@ fn infer_clause_guard(
             // We cannot support all values in guard expressions as the BEAM does not
             match &constructor.variant {
                 ValueConstructorVariant::LocalVariable => (),
-                ValueConstructorVariant::ModuleFn { .. } => unimplemented!(),
-                ValueConstructorVariant::Record { .. } => unimplemented!(),
+                ValueConstructorVariant::ModuleFn { .. }
+                | ValueConstructorVariant::Record { .. } => {
+                    return Err(Error::NonLocalClauseGuardVariable {
+                        meta: meta.clone(),
+                        name: name.to_string(),
+                    })
+                }
             };
 
             Ok(ClauseGuard::Var {

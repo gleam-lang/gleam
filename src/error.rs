@@ -645,6 +645,24 @@ Private types can only be used within the module that defines them.
                     };
                     write(buffer, diagnostic);
                 }
+
+                NonLocalClauseGuardVariable { meta, name } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Invalid guard varible".to_string(),
+                        label: "".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                    write!(
+                        buffer,
+                        "Variables used in guards must be either defined in the function, or be an
+argument to the function. The variable `{}` is not defined locally.\n",
+                        name
+                    )
+                    .unwrap();
+                }
             },
 
             Error::Parse { path, src, error } => {

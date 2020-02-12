@@ -1196,6 +1196,14 @@ pub fn x() { id(1, 1.0) }
         }
     );
 
+    assert_error!(
+        r#"fn one() { 1 }
+           fn main() { case 1 { _ if one -> 1 } }"#,
+        Error::NonLocalClauseGuardVariable {
+            meta: Meta { start: 52, end: 55 },
+            name: "one".to_string(),
+        }
+    );
     // Cases were we can't so easily check for equality-
     // i.e. because the contents of the error are non-deterministic.
     assert_error!("fn inc(x: a) { x + 1 }");

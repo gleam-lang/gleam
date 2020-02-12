@@ -467,8 +467,8 @@ fn clause_guard(guard: TypedClauseGuard, env: &mut Env) -> Document {
             .append(" =:= ")
             .append(clause_guard(*right, env)),
 
-        // TODO: This only works for local variables! We need to work out what kind of
-        // variables we can allow and this disallow other kinds in guards.
+        // Only local variables are supported and the typer ensures that all
+        // ClauseGuard::Vars are local variables
         ClauseGuard::Var { name, .. } => env.local_var_name(name),
     }
 }
