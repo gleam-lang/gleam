@@ -454,14 +454,12 @@ fn clause(mut clause: TypedClause, env: &mut Env) -> Document {
 
 fn optional_clause_guard(guard: Option<TypedClauseGuard>, env: &mut Env) -> Document {
     match guard {
-        Some(guard) => " when ".to_doc().append(clause_guard(guard, env)),
+        Some(guard) => " when ".to_doc().append(bare_clause_guard(guard, env)),
         None => nil(),
     }
 }
 
-// TODO: indent, nest, break
-// TODO: surround subexpressions in parens
-fn clause_guard(guard: TypedClauseGuard, env: &mut Env) -> Document {
+fn bare_clause_guard(guard: TypedClauseGuard, env: &mut Env) -> Document {
     match guard {
         ClauseGuard::Equals { left, right, .. } => clause_guard(*left, env)
             .append(" =:= ")
@@ -470,6 +468,19 @@ fn clause_guard(guard: TypedClauseGuard, env: &mut Env) -> Document {
         // Only local variables are supported and the typer ensures that all
         // ClauseGuard::Vars are local variables
         ClauseGuard::Var { name, .. } => env.local_var_name(name),
+    }
+}
+
+fn clause_guard(guard: TypedClauseGuard, env: &mut Env) -> Document {
+    match guard {
+        // Binary ops are wrapped in parens
+        ClauseGuard::Equals { .. } => "("
+            .to_doc()
+            .append(bare_clause_guard(guard, env))
+            .append(")"),
+
+        // Values are not wrapped
+        ClauseGuard::Var { .. } => bare_clause_guard(guard, env),
     }
 }
 
