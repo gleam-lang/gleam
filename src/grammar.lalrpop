@@ -237,15 +237,9 @@ ClauseGuard: UntypedClauseGuard = {
     ClauseGuard1 => <>
 }
 
-ClauseGuard1: UntypedClauseGuard = {
-    <s:@L> <left:ClauseGuard1> "==" <right:ClauseGuard2> <e:@L> => ClauseGuard::Equals {
-        meta: meta(s, e),
-        typ: (),
-        left: Box::new(left),
-        right: Box::new(right),
-    },
 
-    <s:@L> <left:ClauseGuard1> "!=" <right:ClauseGuard2> <e:@L> => ClauseGuard::NotEquals {
+ClauseGuard1: UntypedClauseGuard = {
+    <s:@L> <left:ClauseGuard1> "||" <right:ClauseGuard2> <e:@L> => ClauseGuard::Or {
         meta: meta(s, e),
         typ: (),
         left: Box::new(left),
@@ -256,6 +250,35 @@ ClauseGuard1: UntypedClauseGuard = {
 }
 
 ClauseGuard2: UntypedClauseGuard = {
+    <s:@L> <left:ClauseGuard2> "&&" <right:ClauseGuard3> <e:@L> => ClauseGuard::And {
+        meta: meta(s, e),
+        typ: (),
+        left: Box::new(left),
+        right: Box::new(right),
+    },
+
+    ClauseGuard3 => <>,
+}
+
+ClauseGuard3: UntypedClauseGuard = {
+    <s:@L> <left:ClauseGuard3> "==" <right:ClauseGuard4> <e:@L> => ClauseGuard::Equals {
+        meta: meta(s, e),
+        typ: (),
+        left: Box::new(left),
+        right: Box::new(right),
+    },
+
+    <s:@L> <left:ClauseGuard3> "!=" <right:ClauseGuard4> <e:@L> => ClauseGuard::NotEquals {
+        meta: meta(s, e),
+        typ: (),
+        left: Box::new(left),
+        right: Box::new(right),
+    },
+
+    ClauseGuard4 => <>,
+}
+
+ClauseGuard4: UntypedClauseGuard = {
     <s:@L> <name:VarName> <e:@L> => ClauseGuard::Var {
         meta: meta(s, e),
         typ: (),

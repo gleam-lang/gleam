@@ -1826,6 +1826,42 @@ fn infer_clause_guard(
             })
         }
 
+        ClauseGuard::And {
+            meta,
+            left,
+            right,
+            typ: _,
+        } => {
+            let left = infer_clause_guard(*left, level, env)?;
+            unify(&bool(), left.typ(), env).map_err(|e| convert_unify_error(e, left.meta()))?;
+            let right = infer_clause_guard(*right, level, env)?;
+            unify(&bool(), right.typ(), env).map_err(|e| convert_unify_error(e, right.meta()))?;
+            Ok(ClauseGuard::And {
+                meta,
+                typ: bool(),
+                left: Box::new(left),
+                right: Box::new(right),
+            })
+        }
+
+        ClauseGuard::Or {
+            meta,
+            left,
+            right,
+            typ: _,
+        } => {
+            let left = infer_clause_guard(*left, level, env)?;
+            unify(&bool(), left.typ(), env).map_err(|e| convert_unify_error(e, left.meta()))?;
+            let right = infer_clause_guard(*right, level, env)?;
+            unify(&bool(), right.typ(), env).map_err(|e| convert_unify_error(e, right.meta()))?;
+            Ok(ClauseGuard::Or {
+                meta,
+                typ: bool(),
+                left: Box::new(left),
+                right: Box::new(right),
+            })
+        }
+
         ClauseGuard::Equals {
             meta,
             left,

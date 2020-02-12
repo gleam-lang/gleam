@@ -373,6 +373,20 @@ pub enum ClauseGuard<Type> {
         right: Box<Self>,
     },
 
+    Or {
+        meta: Meta,
+        typ: Type,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    And {
+        meta: Meta,
+        typ: Type,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
     Var {
         meta: Meta,
         typ: Type,
@@ -383,6 +397,8 @@ pub enum ClauseGuard<Type> {
 impl<A> ClauseGuard<A> {
     pub fn meta(&self) -> &Meta {
         match self {
+            ClauseGuard::Or { meta, .. } => meta,
+            ClauseGuard::And { meta, .. } => meta,
             ClauseGuard::Var { meta, .. } => meta,
             ClauseGuard::Equals { meta, .. } => meta,
             ClauseGuard::NotEquals { meta, .. } => meta,
@@ -393,6 +409,8 @@ impl<A> ClauseGuard<A> {
 impl TypedClauseGuard {
     pub fn typ(&self) -> &typ::Type {
         match self {
+            ClauseGuard::Or { typ, .. } => typ,
+            ClauseGuard::And { typ, .. } => typ,
             ClauseGuard::Var { typ, .. } => typ,
             ClauseGuard::Equals { typ, .. } => typ,
             ClauseGuard::NotEquals { typ, .. } => typ,
