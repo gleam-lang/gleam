@@ -245,6 +245,13 @@ ClauseGuard1: UntypedClauseGuard = {
         right: Box::new(right),
     },
 
+    <s:@L> <left:ClauseGuard1> "!=" <right:ClauseGuard2> <e:@L> => ClauseGuard::NotEquals {
+        meta: meta(s, e),
+        typ: (),
+        left: Box::new(left),
+        right: Box::new(right),
+    },
+
     ClauseGuard2 => <>,
 }
 

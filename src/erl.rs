@@ -465,6 +465,10 @@ fn bare_clause_guard(guard: TypedClauseGuard, env: &mut Env) -> Document {
             .append(" =:= ")
             .append(clause_guard(*right, env)),
 
+        ClauseGuard::NotEquals { left, right, .. } => clause_guard(*left, env)
+            .append(" =/= ")
+            .append(clause_guard(*right, env)),
+
         // Only local variables are supported and the typer ensures that all
         // ClauseGuard::Vars are local variables
         ClauseGuard::Var { name, .. } => env.local_var_name(name),
@@ -474,7 +478,7 @@ fn bare_clause_guard(guard: TypedClauseGuard, env: &mut Env) -> Document {
 fn clause_guard(guard: TypedClauseGuard, env: &mut Env) -> Document {
     match guard {
         // Binary ops are wrapped in parens
-        ClauseGuard::Equals { .. } => "("
+        ClauseGuard::NotEquals { .. } | ClauseGuard::Equals { .. } => "("
             .to_doc()
             .append(bare_clause_guard(guard, env))
             .append(")"),

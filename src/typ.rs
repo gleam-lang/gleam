@@ -1842,6 +1842,23 @@ fn infer_clause_guard(
                 right: Box::new(right),
             })
         }
+
+        ClauseGuard::NotEquals {
+            meta,
+            left,
+            right,
+            typ: _,
+        } => {
+            let left = infer_clause_guard(*left, level, env)?;
+            let right = infer_clause_guard(*right, level, env)?;
+            unify(left.typ(), right.typ(), env).map_err(|e| convert_unify_error(e, &meta))?;
+            Ok(ClauseGuard::NotEquals {
+                meta,
+                typ: bool(),
+                left: Box::new(left),
+                right: Box::new(right),
+            })
+        }
     }
 }
 
