@@ -7,6 +7,6 @@ fn go() {
 fn main(x) {
   let b = True
   case x {
-    y if b == x -> 1
+    x if {x == x} == {b == b} -> 1
   }
 }

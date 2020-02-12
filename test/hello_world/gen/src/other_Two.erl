@@ -1,1 +1,0 @@
--record(two, {a, b}).

@@ -7,6 +7,6 @@ go() ->
 main(X) ->
     B = true,
     case X of
-        Y when B =:= X ->
+        X1 when (X1 =:= X1) =:= (B =:= B) ->
             1
     end.
