@@ -1,7 +1,12 @@
 import nest/bird
 
+fn go() {
+  1
+}
+
 fn main(x) {
+  let b = True
   case x {
-    y if x == y -> 1
+    y if b == x -> 1
   }
 }
