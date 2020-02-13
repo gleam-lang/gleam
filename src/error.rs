@@ -767,10 +767,7 @@ but this one uses {}. Rewrite this using the fn({}) {{ ... }} syntax.",
                 }
             }
 
-            Error::DependencyCycle { .. } => {
-                println!("{:?}", self);
-                unimplemented!();
-            }
+            Error::DependencyCycle { modules } => dependency_cycle(buffer, modules.as_ref()),
 
             Error::UnknownImport {
                 module,
@@ -812,6 +809,38 @@ but it cannot be found.",
     }
 }
 
+fn dependency_cycle(buffer: &mut Buffer, modules: &[Vec<String>]) {
+    use std::io::Write;
+    use termcolor::{Color, ColorSpec, WriteColor};
+    write_title(buffer, "Dependency cycle");
+    writeln!(
+        buffer,
+        "The import statements for these modules form a cycle:
+
+    ┌─────┐"
+    )
+    .unwrap();
+    for (index, name) in modules.iter().enumerate() {
+        if index != 0 {
+            writeln!(buffer, "    │     ↓").unwrap();
+        }
+        write!(buffer, "    │    ").unwrap();
+        buffer
+            .set_color(ColorSpec::new().set_fg(Some(Color::Cyan)))
+            .unwrap();
+        writeln!(buffer, "{}", name.join("/")).unwrap();
+        buffer.set_color(&ColorSpec::new()).unwrap();
+    }
+    writeln!(
+        buffer,
+        "    └─────┘
+
+Gleam doesn't support dependency cycles like these, please break the
+cycle to continue."
+    )
+    .unwrap();
+}
+
 struct ErrorDiagnostic {
     file: String,
     meta: crate::ast::Meta,
@@ -845,7 +874,7 @@ struct ProjectErrorDiagnostic {
     label: String,
 }
 
-fn write_project(buffer: &mut Buffer, d: ProjectErrorDiagnostic) {
+fn write_title(buffer: &mut Buffer, title: &str) {
     use std::io::Write;
     use termcolor::{Color, ColorSpec, WriteColor};
     buffer
@@ -853,7 +882,14 @@ fn write_project(buffer: &mut Buffer, d: ProjectErrorDiagnostic) {
         .unwrap();
     write!(buffer, "error").unwrap();
     buffer.set_color(ColorSpec::new().set_bold(true)).unwrap();
-    write!(buffer, ": {}\n\n", d.title).unwrap();
+    write!(buffer, ": {}\n\n", title).unwrap();
+    buffer.set_color(&ColorSpec::new()).unwrap();
+}
+
+fn write_project(buffer: &mut Buffer, d: ProjectErrorDiagnostic) {
+    use std::io::Write;
+    use termcolor::{ColorSpec, WriteColor};
+    write_title(buffer, d.title.as_ref());
     buffer.set_color(&ColorSpec::new()).unwrap();
     write!(buffer, "{}", d.label).unwrap();
 }

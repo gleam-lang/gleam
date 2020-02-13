@@ -1,3 +1,5 @@
+import other
+
 fn id(x: a, y: b) {
   x
 }
