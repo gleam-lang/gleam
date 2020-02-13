@@ -92,7 +92,7 @@ pub enum Error {
         test_module: Name,
     },
 
-    DependencyCycle {
+    ImportCycle {
         modules: Vec<Vec<String>>,
     },
 
@@ -767,7 +767,7 @@ but this one uses {}. Rewrite this using the fn({}) {{ ... }} syntax.",
                 }
             }
 
-            Error::DependencyCycle { modules } => dependency_cycle(buffer, modules.as_ref()),
+            Error::ImportCycle { modules } => import_cycle(buffer, modules.as_ref()),
 
             Error::UnknownImport {
                 module,
@@ -809,10 +809,10 @@ but it cannot be found.",
     }
 }
 
-fn dependency_cycle(buffer: &mut Buffer, modules: &[Vec<String>]) {
+fn import_cycle(buffer: &mut Buffer, modules: &[Vec<String>]) {
     use std::io::Write;
     use termcolor::{Color, ColorSpec, WriteColor};
-    write_title(buffer, "Dependency cycle");
+    write_title(buffer, "Import cycle");
     writeln!(
         buffer,
         "The import statements for these modules form a cycle:
@@ -835,7 +835,7 @@ fn dependency_cycle(buffer: &mut Buffer, modules: &[Vec<String>]) {
         buffer,
         "    └─────┘
 
-Gleam doesn't support dependency cycles like these, please break the
+Gleam doesn't support import cycles like these, please break the
 cycle to continue."
     )
     .unwrap();

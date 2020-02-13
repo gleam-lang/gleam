@@ -22,7 +22,7 @@ impl SourceTree {
 
     pub fn consume(&mut self) -> Result<impl Iterator<Item = Module> + '_, Error> {
         let iter = petgraph::algo::toposort(&self.graph, None)
-            .map_err(|e| self.dependency_cycle(e))?
+            .map_err(|e| self.import_cycle(e))?
             .into_iter()
             .map(move |i| {
                 self.modules
@@ -33,7 +33,7 @@ impl SourceTree {
     }
 
     // TODO: unit tests
-    fn dependency_cycle(&mut self, cycle: Cycle<NodeIndex>) -> Error {
+    fn import_cycle(&mut self, cycle: Cycle<NodeIndex>) -> Error {
         let origin = cycle.node_id();
         let mut path = vec![];
         self.find_cycle(origin, origin, &mut path, &mut HashSet::new());
@@ -42,12 +42,12 @@ impl SourceTree {
             .map(|index| {
                 self.modules
                     .remove(index)
-                    .gleam_expect("SourceTree.dependency_cycle(): cannot find module for index")
+                    .gleam_expect("SourceTree.import_cycle(): cannot find module for index")
                     .module
                     .name
             })
             .collect();
-        Error::DependencyCycle { modules }
+        Error::ImportCycle { modules }
     }
 
     fn find_cycle(
