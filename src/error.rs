@@ -92,7 +92,9 @@ pub enum Error {
         test_module: Name,
     },
 
-    DependencyCycle,
+    DependencyCycle {
+        modules: Vec<Vec<String>>,
+    },
 
     FileIO {
         kind: FileKind,
@@ -765,7 +767,7 @@ but this one uses {}. Rewrite this using the fn({}) {{ ... }} syntax.",
                 }
             }
 
-            Error::DependencyCycle => {
+            Error::DependencyCycle { .. } => {
                 println!("{:?}", self);
                 unimplemented!();
             }
