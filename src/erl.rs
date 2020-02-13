@@ -82,7 +82,7 @@ pub fn record_definition(name: &str, fields: &[&str]) -> String {
     for field in fields.iter().intersperse(&", ") {
         write!(buffer, "{}", field).unwrap();
     }
-    write!(buffer, "}}).\n").unwrap();
+    writeln!(buffer, "}}).").unwrap();
     buffer
 }
 

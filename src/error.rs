@@ -18,15 +18,14 @@ pub fn fatal_compiler_bug(msg: &str) -> ! {
     buffer.set_color(ColorSpec::new().set_bold(true)).unwrap();
     write!(buffer, ": Fatal compiler bug!\n\n").unwrap();
     buffer.set_color(&ColorSpec::new()).unwrap();
-    write!(
+    writeln!(
         buffer,
         "This is a bug in the Gleam compiler, sorry!
 
 Please report this crash to https://github.com/gleam-lang/gleam/issues/new
 with this information and the code that produces the crash:
 
-{}
-",
+{}",
         msg
     )
     .unwrap();
@@ -181,13 +180,12 @@ impl Error {
                     meta: meta.clone(),
                 };
                 write(buffer, diagnostic);
-                write!(
+                writeln!(
                     buffer,
                     "The application module `{}` is importing the test module `{}`.
 
 Test modules are not included in production builds so test modules
-cannot import them. Perhaps move the `{}` module to the src directory.
-",
+cannot import them. Perhaps move the `{}` module to the src directory.",
                     src_module, test_module, test_module,
                 )
                 .unwrap();
@@ -259,25 +257,22 @@ Second: {}
                         label: did_you_mean(label, &mut options, "Unexpected label"),
                     };
                     write(buffer, diagnostic);
-                    if options.len() > 0 {
-                        write!(
+                    if !options.is_empty() {
+                        writeln!(
                             buffer,
                             "This constructor does not accept the label `{}`.
-Expected one of `{}`.
-",
+Expected one of `{}`.",
                             label,
                             options.iter().join("`, `")
                         )
                         .unwrap();
                     } else {
-                        write!(
+                        writeln!(
                             buffer,
-                            "This constructor does not accept any labelled arguments.\n"
+                            "This constructor does not accept any labelled arguments."
                         )
                         .unwrap();
                     }
-
-                    if options.len() > 0 {}
                 }
 
                 UnexpectedLabelledArg { meta, label } => {
@@ -289,12 +284,11 @@ Expected one of `{}`.
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
-                    write!(
+                    writeln!(
                         buffer,
                         "
 This argument has been given a label but the constructor does not expect any.
-Please remove the label `{}`.
-",
+Please remove the label `{}`.",
                         label
                     )
                     .unwrap();
@@ -309,21 +303,21 @@ Please remove the label `{}`.
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
-                    write!(
+                    writeln!(
                         buffer,
                         "This unlablled argument has been supplied after a labelled argument.
 Once a labelled argument has been supplied all following arguments must
-also be labelled.
-",
+also be labelled.",
                     )
                     .unwrap();
                 }
 
-                // TODO: show previous location
                 DuplicateName {
                     location,
-                    previous_location: _,
                     name: fun,
+                    // TODO: show previous location
+                    // previous_location,
+                    ..
                 } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Duplicate name".to_string(),
@@ -333,11 +327,10 @@ also be labelled.
                         meta: location.clone(),
                     };
                     write(buffer, diagnostic);
-                    write!(
+                    writeln!(
                         buffer,
                         "A function has already been defined with the name
-`{}` in this module.
-",
+`{}` in this module.",
                         fun
                     )
                     .unwrap();
@@ -352,9 +345,9 @@ also be labelled.
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
-                    write!(
+                    writeln!(
                         buffer,
-                        "The field `{}` has already been defined. Rename this field.\n",
+                        "The field `{}` has already been defined. Rename this field.",
                         label
                     )
                     .unwrap();
@@ -369,9 +362,9 @@ also be labelled.
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
-                    write!(
+                    writeln!(
                         buffer,
-                        "The labelled argument `{}` has already been supplied.\n",
+                        "The labelled argument `{}` has already been supplied.",
                         label
                     )
                     .unwrap();
@@ -399,9 +392,9 @@ also be labelled.
                     write(buffer, diagnostic);
                     let mut printer = Printer::new();
 
-                    write!(
+                    writeln!(
                         buffer,
-                        "This value is being called as a function but its type is:\n\n{}\n",
+                        "This value is being called as a function but its type is:\n\n{}",
                         printer.pretty_print(typ, 4)
                     )
                     .unwrap();
@@ -418,13 +411,12 @@ also be labelled.
                     write(buffer, diagnostic);
                     let mut printer = Printer::new();
 
-                    write!(
+                    writeln!(
                         buffer,
                         "Fields can only be accessed on modules. This is not a module, it is
 a value with this type:
 
-{}
-",
+{}",
                         printer.pretty_print(typ, 4)
                     )
                     .unwrap();
@@ -445,7 +437,7 @@ a value with this type:
                     write(buffer, diagnostic);
                     let mut printer = Printer::new();
 
-                    write!(
+                    writeln!(
                         buffer,
                         "Expected type:
 
@@ -453,8 +445,7 @@ a value with this type:
 
 Found type:
 
-{}
-",
+{}",
                         printer.pretty_print(expected, 4),
                         printer.pretty_print(given, 4),
                     )
@@ -501,9 +492,9 @@ Found type:
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
-                    write!(
+                    writeln!(
                         buffer,
-                        "The type `{}` is not defined or imported in this module.\n",
+                        "The type `{}` is not defined or imported in this module.",
                         name
                     )
                     .unwrap();
@@ -523,7 +514,7 @@ Found type:
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
-                    write!(buffer, "The name `{}` is not in scope here.\n", name).unwrap();
+                    writeln!(buffer, "The name `{}` is not in scope here.", name).unwrap();
                 }
 
                 PrivateTypeLeak { meta, leaked } => {
@@ -542,14 +533,13 @@ Found type:
                     // - is taken as an argument by this public function
                     // - is taken as an argument by this public enum constructor
                     // etc
-                    write!(
+                    writeln!(
                         buffer,
                         "The following type is private, but is being used by this public export.
 
 {}
 
-Private types can only be used within the module that defines them.
-",
+Private types can only be used within the module that defines them.",
                         printer.pretty_print(leaked, 4),
                     )
                     .unwrap();
@@ -569,9 +559,9 @@ Private types can only be used within the module that defines them.
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
-                    write!(
+                    writeln!(
                         buffer,
-                        "No module has been imported with the name `{}`.\n",
+                        "No module has been imported with the name `{}`.",
                         name
                     )
                     .unwrap();
@@ -592,9 +582,9 @@ Private types can only be used within the module that defines them.
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
-                    write!(
+                    writeln!(
                         buffer,
-                        "The module `{}` does not have a `{}` type.\n",
+                        "The module `{}` does not have a `{}` type.",
                         module_name.join("/"),
                         name
                     )
@@ -616,9 +606,9 @@ Private types can only be used within the module that defines them.
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
-                    write!(
+                    writeln!(
                         buffer,
-                        "The module `{}` does not have a `{}` field.\n",
+                        "The module `{}` does not have a `{}` field.",
                         module_name.join("/"),
                         name
                     )
@@ -644,9 +634,9 @@ Private types can only be used within the module that defines them.
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
-                    write!(
+                    writeln!(
                         buffer,
-                        "The module `{}` does not have a `{}` field.\n",
+                        "The module `{}` does not have a `{}` field.",
                         module_name.join("/"),
                         name
                     )
@@ -677,10 +667,10 @@ Private types can only be used within the module that defines them.
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
-                    write!(
+                    writeln!(
                         buffer,
                         "Variables used in guards must be either defined in the function, or be an
-argument to the function. The variable `{}` is not defined locally.\n",
+argument to the function. The variable `{}` is not defined locally.",
                         name
                     )
                     .unwrap();
@@ -706,7 +696,7 @@ argument to the function. The variable `{}` is not defined locally.\n",
                             },
                         };
                         write(buffer, diagnostic);
-                        write!(buffer, "Expected one of {}\n", expected.join(", "))
+                        writeln!(buffer, "Expected one of {}", expected.join(", "))
                             .expect("error pretty buffer write");
                     }
 
@@ -736,9 +726,9 @@ argument to the function. The variable `{}` is not defined locally.\n",
                             },
                         };
                         write(buffer, diagnostic);
-                        write!(
+                        writeln!(
                             buffer,
-                            "I don't know what this character means. Is it a typo?\n"
+                            "I don't know what this character means. Is it a typo?"
                         )
                         .expect("error pretty buffer write");
                     }
@@ -762,10 +752,10 @@ argument to the function. The variable `{}` is not defined locally.\n",
                                     .map(|c| c.to_string())
                                     .intersperse(", ".to_string())
                                     .collect();
-                                write!(
+                                writeln!(
                                     buffer,
                                     "The function capture syntax can only be used with a single _ argument,
-but this one uses {}. Rewrite this using the fn({}) {{ ... }} syntax.\n",
+but this one uses {}. Rewrite this using the fn({}) {{ ... }} syntax.",
                                     count, chars
                                 )
                                 .expect("error pretty buffer write");
@@ -797,11 +787,10 @@ but this one uses {}. Rewrite this using the fn({}) {{ ... }} syntax.\n",
                     meta: meta.clone(),
                 };
                 write(buffer, diagnostic);
-                write!(
+                writeln!(
                     buffer,
                     "The module `{}` is trying to import the module `{}`,
-but it cannot be found.
-",
+but it cannot be found.",
                     module, import
                 )
                 .expect("error pretty buffer write");
