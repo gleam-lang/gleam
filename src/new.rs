@@ -1,4 +1,4 @@
-use crate::error::{Error, FileIOAction, FileKind};
+use crate::error::{Error, FileIOAction, FileKind, GleamExpect};
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Write;
@@ -21,7 +21,7 @@ pub fn create(
     version: &'static str,
 ) -> Result<(), Error> {
     if !regex::Regex::new("^[a-z_]+$")
-        .expect("new name regex could not be compiled")
+        .gleam_expect("new name regex could not be compiled")
         .is_match(&name)
     {
         // TODO
@@ -111,7 +111,7 @@ fn write(path: PathBuf, contents: &str) -> Result<(), Error> {
     f.write_all(contents.as_bytes())
         .map_err(|err| Error::FileIO {
             kind: FileKind::File,
-            path: path,
+            path,
             action: FileIOAction::WriteTo,
             err: Some(err.to_string()),
         })?;

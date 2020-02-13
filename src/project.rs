@@ -171,7 +171,7 @@ impl SourceTree {
 
         // Register the module
         let index = self.graph.add_node(name.clone());
-        self.indexes.insert(name.clone(), index);
+        self.indexes.insert(name, index);
         self.modules.insert(
             index,
             Module {

@@ -1240,7 +1240,7 @@ pub fn infer_module(
                 env.insert_module_value(
                     &name,
                     ValueConstructor {
-                        public: public,
+                        public,
                         origin: meta.clone(),
                         typ: typ.clone(),
                         variant: ValueConstructorVariant::ModuleFn {
@@ -1312,7 +1312,7 @@ pub fn infer_module(
                 env.insert_module_value(
                     &name,
                     ValueConstructor {
-                        public: public,
+                        public,
                         typ: typ.clone(),
                         origin: meta.clone(),
                         variant: ValueConstructorVariant::ModuleFn {
@@ -1398,7 +1398,7 @@ pub fn infer_module(
                     env.insert_module_value(
                         &constructor.name,
                         ValueConstructor {
-                            public: public,
+                            public,
                             typ: typ.clone(),
                             origin: constructor.meta.clone(),
                             variant: ValueConstructorVariant::Record {
@@ -1500,7 +1500,7 @@ This should not be possible. Please report this crash",
                         return Err(Error::UnknownModuleField {
                             meta: meta.clone(),
                             name: name.clone(),
-                            module_name: module.clone(),
+                            module_name: module,
                             value_constructors: module_info.values.clone(),
                             type_constructors: module_info.types.clone(),
                         });
@@ -1804,7 +1804,7 @@ fn infer_clause_guard(
     env: &mut Env,
 ) -> Result<TypedClauseGuard, Error> {
     match guard {
-        ClauseGuard::Var { meta, name, typ: _ } => {
+        ClauseGuard::Var { meta, name, .. } => {
             let constructor = infer_var(&name, level, &meta, env)?;
 
             // We cannot support all values in guard expressions as the BEAM does not
@@ -1812,10 +1812,7 @@ fn infer_clause_guard(
                 ValueConstructorVariant::LocalVariable => (),
                 ValueConstructorVariant::ModuleFn { .. }
                 | ValueConstructorVariant::Record { .. } => {
-                    return Err(Error::NonLocalClauseGuardVariable {
-                        meta: meta.clone(),
-                        name: name.to_string(),
-                    })
+                    return Err(Error::NonLocalClauseGuardVariable { meta, name })
                 }
             };
 
@@ -1827,10 +1824,7 @@ fn infer_clause_guard(
         }
 
         ClauseGuard::And {
-            meta,
-            left,
-            right,
-            typ: _,
+            meta, left, right, ..
         } => {
             let left = infer_clause_guard(*left, level, env)?;
             unify(&bool(), left.typ(), env).map_err(|e| convert_unify_error(e, left.meta()))?;
@@ -1845,10 +1839,7 @@ fn infer_clause_guard(
         }
 
         ClauseGuard::Or {
-            meta,
-            left,
-            right,
-            typ: _,
+            meta, left, right, ..
         } => {
             let left = infer_clause_guard(*left, level, env)?;
             unify(&bool(), left.typ(), env).map_err(|e| convert_unify_error(e, left.meta()))?;
@@ -1863,10 +1854,7 @@ fn infer_clause_guard(
         }
 
         ClauseGuard::Equals {
-            meta,
-            left,
-            right,
-            typ: _,
+            meta, left, right, ..
         } => {
             let left = infer_clause_guard(*left, level, env)?;
             let right = infer_clause_guard(*right, level, env)?;
@@ -1880,10 +1868,7 @@ fn infer_clause_guard(
         }
 
         ClauseGuard::NotEquals {
-            meta,
-            left,
-            right,
-            typ: _,
+            meta, left, right, ..
         } => {
             let left = infer_clause_guard(*left, level, env)?;
             let right = infer_clause_guard(*right, level, env)?;
@@ -1976,11 +1961,7 @@ fn unify_pattern(
         }
 
         Pattern::Let { name, pattern, .. } => {
-            env.insert_variable(
-                name.to_string(),
-                ValueConstructorVariant::LocalVariable,
-                typ.clone(),
-            );
+            env.insert_variable(name, ValueConstructorVariant::LocalVariable, typ.clone());
             unify_pattern(*pattern, typ, level, env)
         }
 
@@ -2015,7 +1996,7 @@ fn unify_pattern(
             None => Err(Error::CouldNotUnify {
                 given: list(env.new_unbound_var(level)),
                 expected: typ.clone(),
-                meta: meta.clone(),
+                meta,
             }),
         },
 
