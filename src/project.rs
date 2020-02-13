@@ -3,7 +3,6 @@ mod tests;
 
 use crate::error::{Error, FileIOAction, FileKind};
 use crate::typ;
-use petgraph::Graph;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -45,114 +44,149 @@ impl ModuleOrigin {
     }
 }
 
-pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
-    struct Module {
-        src: String,
-        path: PathBuf,
-        source_base_path: PathBuf,
-        origin: ModuleOrigin,
-        module: crate::ast::UntypedModule,
-    }
-    let module_count = srcs.len();
-    let mut deps_graph = Graph::new();
-    let mut indexes = HashMap::new();
-    let mut modules: HashMap<_, Module> = HashMap::new();
+#[derive(Debug)]
+struct Module {
+    src: String,
+    path: PathBuf,
+    source_base_path: PathBuf,
+    origin: ModuleOrigin,
+    module: crate::ast::UntypedModule,
+}
 
-    for Input {
-        source_base_path,
-        path,
-        src,
-        origin,
-    } in srcs
-    {
-        let name = path
-            .strip_prefix(source_base_path.clone())
+#[derive(Debug, Default)]
+struct SourceTree {
+    graph: petgraph::Graph<String, ()>,
+    indexes: HashMap<String, petgraph::graph::NodeIndex>,
+    modules: HashMap<petgraph::graph::NodeIndex, Module>,
+}
+
+impl SourceTree {
+    pub fn new(inputs: Vec<Input>) -> Result<Self, Error> {
+        let mut graph: SourceTree = Default::default();
+        for input in inputs.into_iter() {
+            graph.insert(input)?;
+        }
+        graph.calculate_dependencies()?;
+        Ok(graph)
+    }
+
+    pub fn consume(&mut self) -> Result<impl Iterator<Item = Module> + '_, Error> {
+        let iter = petgraph::algo::toposort(&self.graph, None)
+            .map_err(|_| Error::DependencyCycle)?
+            .into_iter()
+            .map(move |i| self.modules.remove(&i).expect("Unknown graph index"));
+        Ok(iter)
+    }
+
+    fn calculate_dependencies(&mut self) -> Result<(), Error> {
+        for module in self.modules.values() {
+            let module_name = module.module.name_string();
+            let src = module.src.clone();
+            let path = module.path.clone();
+            let deps = module.module.dependencies();
+            let module_index = self
+                .indexes
+                .get(&module_name)
+                .expect("Unable to find module index");
+            let module = self
+                .modules
+                .get(&module_index)
+                .expect("Unable to find module for index");
+
+            for (dep, meta) in deps {
+                let dep_index = self.indexes.get(&dep).ok_or_else(|| Error::UnknownImport {
+                    module: module_name.clone(),
+                    import: dep.clone(),
+                    src: src.clone(),
+                    path: path.clone(),
+                    modules: self
+                        .modules
+                        .values()
+                        .map(|m| m.module.name_string())
+                        .collect(),
+                    meta: meta.clone(),
+                })?;
+
+                if module.origin == ModuleOrigin::Src
+                    && self
+                        .modules
+                        .get(&dep_index)
+                        .expect("Unable to find module for dep index")
+                        .origin
+                        == ModuleOrigin::Test
+                {
+                    return Err(Error::SrcImportingTest {
+                        path: path.clone(),
+                        src: src.clone(),
+                        meta,
+                        src_module: module_name,
+                        test_module: dep,
+                    });
+                }
+
+                self.graph
+                    .add_edge(dep_index.clone(), module_index.clone(), ());
+            }
+        }
+        Ok(())
+    }
+
+    fn insert(&mut self, input: Input) -> Result<(), Error> {
+        // Determine the module name
+        let name = input
+            .path
+            .strip_prefix(input.source_base_path.clone())
             .unwrap()
             .parent()
             .unwrap()
-            .join(path.file_stem().unwrap())
+            .join(input.path.file_stem().unwrap())
             .to_str()
             .unwrap()
             .to_string()
             .replace("\\", "/");
+
+        // Parse the source
         let mut module = crate::grammar::ModuleParser::new()
-            .parse(&crate::parser::strip_extra(&src))
+            .parse(&crate::parser::strip_extra(&input.src))
             .map_err(|e| Error::Parse {
-                path: path.clone(),
-                src: src.clone(),
+                path: input.path.clone(),
+                src: input.src.clone(),
                 error: e.map_token(|crate::grammar::Token(a, b)| (a, b.to_string())),
             })?;
 
-        if let Some(Module {
-            path: first_path, ..
-        }) = indexes.get(&name).and_then(|i| modules.get(i))
+        // Store the name
+        module.name = name.split('/').map(|s| s.to_string()).collect();
+
+        // Check to see if we already have a module with this name
+        if let Some(Module { path, .. }) = self.indexes.get(&name).and_then(|i| self.modules.get(i))
         {
             return Err(Error::DuplicateModule {
-                module: name,
-                first: first_path.clone(),
-                second: path,
+                module: name.clone(),
+                first: path.clone(),
+                second: input.path,
             });
         }
 
-        module.name = name.split('/').map(|s| s.to_string()).collect();
-
-        let index = deps_graph.add_node(name.clone());
-        indexes.insert(name.clone(), index);
-        modules.insert(
+        // Register the module
+        let index = self.graph.add_node(name.clone());
+        self.indexes.insert(name.clone(), index);
+        self.modules.insert(
             index,
             Module {
-                src,
-                path,
+                src: input.src,
+                path: input.path,
+                origin: input.origin,
+                source_base_path: input.source_base_path,
                 module,
-                origin,
-                source_base_path,
             },
         );
+        Ok(())
     }
+}
 
-    // Register each module's deps so that we can determine a correct order to compile the modules.
-    for module in modules.values() {
-        let module_name = module.module.name_string();
-        let src = module.src.clone();
-        let path = module.path.clone();
-        let deps = module.module.dependencies();
-        let module_index = indexes
-            .get(&module_name)
-            .expect("Unable to find module index");
-        let module = modules
-            .get(&module_index)
-            .expect("Unable to find module for index");
-
-        for (dep, meta) in deps {
-            let dep_index = indexes.get(&dep).ok_or_else(|| Error::UnknownImport {
-                module: module_name.clone(),
-                import: dep.clone(),
-                src: src.clone(),
-                path: path.clone(),
-                modules: modules.values().map(|m| m.module.name_string()).collect(),
-                meta: meta.clone(),
-            })?;
-
-            if module.origin == ModuleOrigin::Src
-                && modules
-                    .get(&dep_index)
-                    .expect("Unable to find module for dep index")
-                    .origin
-                    == ModuleOrigin::Test
-            {
-                return Err(Error::SrcImportingTest {
-                    path: path.clone(),
-                    src: src.clone(),
-                    meta,
-                    src_module: module_name,
-                    test_module: dep,
-                });
-            }
-
-            deps_graph.add_edge(dep_index.clone(), module_index.clone(), ());
-        }
-    }
-
+pub fn compile(inputs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
+    let module_count = inputs.len();
+    let mut source_tree = SourceTree::new(inputs)?;
     let mut modules_type_infos = HashMap::new();
     let mut compiled_modules = Vec::with_capacity(module_count);
 
@@ -163,17 +197,14 @@ pub fn compile(srcs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
         files: Vec<OutputFile>,
     }
 
-    for i in petgraph::algo::toposort(&deps_graph, None)
-        .map_err(|_| Error::DependencyCycle)?
-        .into_iter()
+    for Module {
+        src,
+        path,
+        module,
+        origin,
+        source_base_path,
+    } in source_tree.consume()?
     {
-        let Module {
-            src,
-            path,
-            module,
-            origin,
-            source_base_path,
-        } = modules.remove(&i).expect("Unknown graph index");
         let name = module.name.clone();
         let name_string = module.name_string();
 
