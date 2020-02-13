@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests;
 
-use crate::error::{Error, FileIOAction, FileKind};
+use crate::error::{Error, FileIOAction, FileKind, GleamExpect};
 use crate::typ;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -74,7 +74,11 @@ impl SourceTree {
         let iter = petgraph::algo::toposort(&self.graph, None)
             .map_err(|_| Error::DependencyCycle)?
             .into_iter()
-            .map(move |i| self.modules.remove(&i).expect("Unknown graph index"));
+            .map(move |i| {
+                self.modules
+                    .remove(&i)
+                    .gleam_expect("SourceTree.consume(): Unknown graph index")
+            });
         Ok(iter)
     }
 
@@ -84,14 +88,12 @@ impl SourceTree {
             let src = module.src.clone();
             let path = module.path.clone();
             let deps = module.module.dependencies();
-            let module_index = self
-                .indexes
-                .get(&module_name)
-                .expect("Unable to find module index");
-            let module = self
-                .modules
-                .get(&module_index)
-                .expect("Unable to find module for index");
+            let module_index = self.indexes.get(&module_name).gleam_expect(
+                "SourceTree.calculate_dependencies(): Unable to find module index for name",
+            );
+            let module = self.modules.get(&module_index).gleam_expect(
+                "SourceTree.calculate_dependencies(): Unable to find module for index",
+            );
 
             for (dep, meta) in deps {
                 let dep_index = self.indexes.get(&dep).ok_or_else(|| Error::UnknownImport {
@@ -111,7 +113,7 @@ impl SourceTree {
                     && self
                         .modules
                         .get(&dep_index)
-                        .expect("Unable to find module for dep index")
+                        .gleam_expect("SourceTree.calculate_dependencies(): Unable to find module for dep index")
                         .origin
                         == ModuleOrigin::Test
                 {
@@ -257,7 +259,7 @@ pub fn compile(inputs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
                 origin,
                 type_info: modules_type_infos
                     .remove(&name_string)
-                    .expect("merging module type info"),
+                    .gleam_expect("project::compile(): Merging module type info"),
             },
         )
         .collect())
@@ -275,14 +277,14 @@ pub fn collect_source(
     let is_gleam_path = |e: &walkdir::DirEntry| {
         use regex::Regex;
         lazy_static! {
-            static ref RE: Regex =
-                Regex::new("^([a-z_]+(/|\\\\))*[a-z_]+\\.gleam$").expect("collect_source RE regex");
+            static ref RE: Regex = Regex::new("^([a-z_]+(/|\\\\))*[a-z_]+\\.gleam$")
+                .gleam_expect("project::collect_source() RE regex");
         }
 
         RE.is_match(
             e.path()
                 .strip_prefix(&*src_dir)
-                .expect("collect_source strip_prefix")
+                .gleam_expect("project::collect_source(): strip_prefix")
                 .to_str()
                 .unwrap_or(""),
         )
@@ -305,7 +307,7 @@ pub fn collect_source(
             path: dir_entry
                 .path()
                 .canonicalize()
-                .expect("collect_source path canonicalize"),
+                .gleam_expect("project::collect_source(): path canonicalize"),
             source_base_path: src_dir.clone(),
             origin: origin.clone(),
             src,

@@ -34,6 +34,28 @@ with this information and the code that produces the crash:
     std::process::exit(1);
 }
 
+pub trait GleamExpect<T> {
+    fn gleam_expect(self, msg: &str) -> T;
+}
+
+impl<T> GleamExpect<T> for Option<T> {
+    fn gleam_expect(self, msg: &str) -> T {
+        match self {
+            None => fatal_compiler_bug(msg),
+            Some(x) => x,
+        }
+    }
+}
+
+impl<T, E> GleamExpect<T> for Result<T, E> {
+    fn gleam_expect(self, msg: &str) -> T {
+        match self {
+            Err(_) => fatal_compiler_bug(msg),
+            Ok(x) => x,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum Error {
     Parse {
