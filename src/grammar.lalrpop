@@ -225,9 +225,13 @@ Case: UntypedExpr = {
 }
 
 Clause: UntypedClause = {
-    <s:@L> <patterns:Comma<Pattern>> <guard:("if" <ClauseGuard>)?> "->" <then:OpOrSimpleExpr> <e:@L> => Clause {
+    <s:@L> <patterns:DelimNoTrailing<Comma<Pattern>, "|">> <guard:("if" <ClauseGuard>)?> "->" <then:OpOrSimpleExpr> <e:@L> => Clause {
         meta: meta(s, e),
-        patterns,
+        patterns: {
+            let mut patterns = patterns;
+            let mut drain = patterns.drain(..);
+            drain.next().unwrap()
+        },
         guard,
         then,
     }
@@ -466,16 +470,16 @@ Float: UntypedExpr = {
     }
 }
 
-CommaNoTrailing<T>: Vec<T> = {
-    <v:(<T> ",")*> <e:T> => {
+DelimNoTrailing<T, Delimeter>: Vec<T> = {
+    <v:(<T> Delimeter)*> <e:T> => {
         let mut v = v;
         v.push(e);
         v
     }
 }
 
-Comma<T>: Vec<T> = {
-    <v:(<T> ",")*> <e:T?> => match e {
+Delim<T, Delimeter>: Vec<T> = {
+    <v:(<T> Delimeter)*> <e:T?> => match e {
         None => v,
         Some(e) => {
             let mut v = v;
@@ -483,6 +487,14 @@ Comma<T>: Vec<T> = {
             v
         }
     }
+}
+
+Comma<T>: Vec<T> = {
+    Delim<T, ","> => <>
+}
+
+CommaNoTrailing<T>: Vec<T> = {
+    DelimNoTrailing<T, ","> => <>
 }
 
 Op<Operator, Current, Next>: UntypedExpr = {
