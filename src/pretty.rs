@@ -60,6 +60,12 @@ impl Documentable for Vec<Document> {
     }
 }
 
+pub fn concat(docs: impl Iterator<Item = Document>) -> Document {
+    docs.fold(Document::Nil, |acc, doc| {
+        Document::Cons(Box::new(acc), Box::new(doc))
+    })
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Document {
     /// Returns a document entity used to represent nothingness
