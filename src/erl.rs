@@ -88,36 +88,45 @@ pub fn record_definition(name: &str, fields: &[&str]) -> String {
 
 pub fn module(module: TypedModule) -> String {
     let module_name = module.name;
-    let exports: Vec<_> = module
-        .statements
-        .iter()
-        .flat_map(|s| match s {
-            Statement::Fn {
-                public: true,
-                name,
-                args,
-                ..
-            } => Some((name.clone(), args.len())),
+    let exports = concat(
+        module
+            .statements
+            .iter()
+            .flat_map(|s| match s {
+                Statement::Fn {
+                    public: true,
+                    name,
+                    args,
+                    ..
+                } => Some((name.clone(), args.len())),
 
-            Statement::ExternalFn {
-                public: true,
-                name,
-                args,
-                ..
-            } => Some((name.clone(), args.len())),
+                Statement::ExternalFn {
+                    public: true,
+                    name,
+                    args,
+                    ..
+                } => Some((name.clone(), args.len())),
 
-            _ => None,
-        })
-        .map(|(n, a)| atom(n).append("/").append(a))
-        .intersperse(", ".to_doc())
-        .collect();
+                _ => None,
+            })
+            .map(|(n, a)| atom(n).append("/").append(a))
+            .intersperse(", ".to_doc()),
+    );
+
+    let statements = concat(
+        module
+            .statements
+            .into_iter()
+            .flat_map(|s| statement(s, &module_name))
+            .intersperse(lines(2)),
+    );
 
     format!("-module({}).", module_name.join("@"))
         .to_doc()
         .append(line())
         .append("-compile(no_auto_import).")
         .append(lines(2))
-        .append(if exports.is_empty() {
+        .append(if exports == nil() {
             nil()
         } else {
             "-export(["
@@ -126,14 +135,7 @@ pub fn module(module: TypedModule) -> String {
                 .append("]).")
                 .append(lines(2))
         })
-        .append(
-            module
-                .statements
-                .into_iter()
-                .flat_map(|s| statement(s, &module_name))
-                .intersperse(lines(2))
-                .collect::<Vec<_>>(),
-        )
+        .append(statements)
         .append(line())
         .format(80)
 }
@@ -184,7 +186,7 @@ where
     I: Iterator<Item = Document>,
 {
     break_("", "")
-        .append(args.intersperse(delim(",")).collect::<Vec<_>>())
+        .append(concat(args.intersperse(delim(","))))
         .nest(INDENT)
         .append(break_("", ""))
         .surround("(", ")")
@@ -215,12 +217,8 @@ fn string(value: String) -> Document {
     value.to_doc().surround("<<\"", "\">>")
 }
 
-fn tuple(elems: Vec<Document>) -> Document {
-    elems
-        .into_iter()
-        .intersperse(delim(","))
-        .collect::<Vec<_>>()
-        .to_doc()
+fn tuple(elems: impl Iterator<Item = Document>) -> Document {
+    concat(elems.intersperse(delim(",")))
         .nest_current()
         .surround("{", "}")
         .group()
@@ -312,7 +310,7 @@ fn pattern(p: TypedPattern, env: &mut Env) -> Document {
             ..
         } => tag_tuple_pattern(name, args, env),
 
-        Pattern::Tuple { elems, .. } => tuple(elems.into_iter().map(|p| pattern(p, env)).collect()),
+        Pattern::Tuple { elems, .. } => tuple(elems.into_iter().map(|p| pattern(p, env))),
     }
 }
 
@@ -356,15 +354,17 @@ where
     let mut elems = vec![head];
     let final_tail = collect_cons(tail, &mut elems, categorise_element);
 
-    let mut elems = elems
-        .into_iter()
-        .map(|e| to_doc(e, env))
-        .intersperse(delim(","))
-        .collect::<Vec<_>>();
+    let elems = concat(
+        elems
+            .into_iter()
+            .map(|e| to_doc(e, env))
+            .intersperse(delim(",")),
+    );
 
-    if let Some(final_tail) = final_tail {
-        elems.push(delim(" |"));
-        elems.push(to_doc(final_tail, env))
+    let elems = if let Some(final_tail) = final_tail {
+        elems.append(delim(" |")).append(to_doc(final_tail, env))
+    } else {
+        elems
     };
 
     elems.to_doc().nest_current().surround("[", "]").group()
@@ -428,10 +428,10 @@ fn tag_tuple_pattern(name: String, args: Vec<CallArg<TypedPattern>>, env: &mut E
     if args.is_empty() {
         atom(name.to_snake_case())
     } else {
-        let mut args: Vec<_> = args.into_iter().map(|p| pattern(p.value, env)).collect();
-        // FIXME: O(n), insert at start shuffles the elemes forward by one place
-        args.insert(0, atom(name.to_snake_case()));
-        tuple(args)
+        tuple(
+            std::iter::once(atom(name.to_snake_case()))
+                .chain(args.into_iter().map(|p| pattern(p.value, env))),
+        )
     }
 }
 
@@ -439,12 +439,7 @@ fn clause(mut clause: TypedClause, env: &mut Env) -> Document {
     let patterns_doc = if clause.patterns.len() == 1 {
         pattern(clause.patterns.remove(0), env)
     } else {
-        let docs = clause
-            .patterns
-            .into_iter()
-            .map(|p| pattern(p, env))
-            .collect();
-        tuple(docs)
+        tuple(clause.patterns.into_iter().map(|p| pattern(p, env)))
     };
     patterns_doc
         .append(optional_clause_guard(clause.guard, env))
@@ -500,23 +495,23 @@ fn clause_guard(guard: TypedClauseGuard, env: &mut Env) -> Document {
 }
 
 fn clauses(cs: Vec<TypedClause>, env: &mut Env) -> Document {
-    cs.into_iter()
-        .map(|c| {
-            let vars = env.current_scope_vars.clone();
-            let erl = clause(c, env);
-            env.current_scope_vars = vars; // Reset the known variables now the clauses' scope has ended
-            erl
-        })
-        .intersperse(";".to_doc().append(lines(2)))
-        .collect::<Vec<_>>()
-        .to_doc()
+    concat(
+        cs.into_iter()
+            .map(|c| {
+                let vars = env.current_scope_vars.clone();
+                let erl = clause(c, env);
+                env.current_scope_vars = vars; // Reset the known variables now the clauses' scope has ended
+                erl
+            })
+            .intersperse(";".to_doc().append(lines(2))),
+    )
 }
 
 fn case(mut subjects: Vec<TypedExpr>, cs: Vec<TypedClause>, env: &mut Env) -> Document {
     let subjects_doc = if subjects.len() == 1 {
         wrap_expr(subjects.remove(0), env).group()
     } else {
-        tuple(subjects.into_iter().map(|e| wrap_expr(e, env)).collect())
+        tuple(subjects.into_iter().map(|e| wrap_expr(e, env)))
     };
     "case "
         .to_doc()
@@ -526,13 +521,6 @@ fn case(mut subjects: Vec<TypedExpr>, cs: Vec<TypedClause>, env: &mut Env) -> Do
         .append(line())
         .append("end")
         .group()
-}
-
-fn tag_tuple(name: String, args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Document {
-    let mut args: Vec<_> = args.into_iter().map(|arg| expr(arg.value, env)).collect();
-    // FIXME: O(n), insert at start shuffles the elemes forward by one place
-    args.insert(0, atom(name.to_snake_case()));
-    tuple(args)
 }
 
 fn call(fun: TypedExpr, args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Document {
@@ -548,7 +536,10 @@ fn call(fun: TypedExpr, args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Documen
                     ..
                 },
             ..
-        } => tag_tuple(name, args, env),
+        } => tuple(
+            std::iter::once(atom(name.to_snake_case()))
+                .chain(args.into_iter().map(|arg| expr(arg.value, env))),
+        ),
 
         Expr::Var {
             constructor:
@@ -689,7 +680,7 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
             name, left, right, ..
         } => bin_op(name, *left, *right, env),
 
-        Expr::Tuple { elems, .. } => tuple(elems.into_iter().map(|e| wrap_expr(e, env)).collect()),
+        Expr::Tuple { elems, .. } => tuple(elems.into_iter().map(|e| wrap_expr(e, env))),
     }
 }
 
