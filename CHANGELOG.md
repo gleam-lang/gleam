@@ -33,6 +33,8 @@
 - Fixed a bug where variable names would be incorrectly generated in some
   situations when variable names are reused during and after a case
   expression.
+- Performance of the Erlang code generator has been improved by removing some
+  vector allocations.
 
 ## v0.6.0 - 2019-12-25 🎄
 
