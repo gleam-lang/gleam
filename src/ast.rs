@@ -348,7 +348,7 @@ pub type UntypedClause = Clause<(), (), (), ()>;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Clause<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type> {
     pub meta: Meta,
-    pub patterns: Vec<Pattern<PatternConstructor>>,
+    pub patterns: Vec<Vec<Pattern<PatternConstructor>>>,
     pub guard: Option<ClauseGuard<Type>>,
     pub then: Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type>,
 }

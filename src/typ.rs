@@ -1648,19 +1648,20 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
                 subject_types.push(subject_type);
             }
 
-            for clause in clauses.into_iter() {
+            for mut clause in clauses.into_iter() {
                 let vars = env.local_values.clone();
-                if subjects_count != clause.patterns.len() {
+                let patterns = clause.patterns.remove(0);
+                if subjects_count != patterns.len() {
                     return Err(Error::IncorrectNumClausePatterns {
                         meta: clause.meta,
                         expected: subjects_count,
-                        given: clause.patterns.len(),
+                        given: patterns.len(),
                     });
                 }
 
                 let mut typed_patterns = Vec::new();
-                for (pattern, subject_type) in clause.patterns.into_iter().zip(subject_types.iter())
-                {
+
+                for (pattern, subject_type) in patterns.into_iter().zip(subject_types.iter()) {
                     let pattern = unify_pattern(pattern, &subject_type, level, env)?;
                     typed_patterns.push(pattern);
                 }
@@ -1680,7 +1681,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
                     .map_err(|e| convert_unify_error(e, then.meta()))?;
                 typed_clauses.push(Clause {
                     meta: clause.meta,
-                    patterns: typed_patterns,
+                    patterns: vec![typed_patterns],
                     guard,
                     then,
                 });

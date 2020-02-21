@@ -613,10 +613,10 @@ moddy4() ->
                     Clause {
                         meta: Default::default(),
                         guard: None,
-                        patterns: vec![Pattern::Int {
+                        patterns: vec![vec![Pattern::Int {
                             meta: Default::default(),
                             value: 1,
-                        }],
+                        }]],
                         then: Expr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
@@ -626,10 +626,10 @@ moddy4() ->
                     Clause {
                         meta: Default::default(),
                         guard: None,
-                        patterns: vec![Pattern::Float {
+                        patterns: vec![vec![Pattern::Float {
                             meta: Default::default(),
                             value: 1.0,
-                        }],
+                        }]],
                         then: Expr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
@@ -639,10 +639,10 @@ moddy4() ->
                     Clause {
                         meta: Default::default(),
                         guard: None,
-                        patterns: vec![Pattern::String {
+                        patterns: vec![vec![Pattern::String {
                             meta: Default::default(),
                             value: "hello".to_string(),
-                        }],
+                        }]],
                         then: Expr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
@@ -652,9 +652,9 @@ moddy4() ->
                     Clause {
                         meta: Default::default(),
                         guard: None,
-                        patterns: vec![Pattern::Nil {
+                        patterns: vec![vec![Pattern::Nil {
                             meta: Default::default(),
-                        }],
+                        }]],
                         then: Expr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
@@ -664,7 +664,7 @@ moddy4() ->
                     Clause {
                         meta: Default::default(),
                         guard: None,
-                        patterns: vec![Pattern::Constructor {
+                        patterns: vec![vec![Pattern::Constructor {
                             meta: Default::default(),
                             module: None,
                             name: "Error".to_string(),
@@ -679,7 +679,7 @@ moddy4() ->
                             constructor: PatternConstructor::Record {
                                 name: "Error".to_string(),
                             },
-                        }],
+                        }]],
                         then: Expr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
@@ -689,7 +689,7 @@ moddy4() ->
                     Clause {
                         meta: Default::default(),
                         guard: None,
-                        patterns: vec![Pattern::Tuple {
+                        patterns: vec![vec![Pattern::Tuple {
                             meta: Default::default(),
                             elems: vec![
                                 Pattern::Int {
@@ -701,7 +701,7 @@ moddy4() ->
                                     value: 2,
                                 },
                             ],
-                        }],
+                        }]],
                         then: Expr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
