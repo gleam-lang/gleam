@@ -436,10 +436,11 @@ fn tag_tuple_pattern(name: String, args: Vec<CallArg<TypedPattern>>, env: &mut E
 }
 
 fn clause(mut clause: TypedClause, env: &mut Env) -> Document {
-    let patterns_doc = if clause.patterns.len() == 1 {
-        pattern(clause.patterns.remove(0), env)
+    let mut patterns = clause.patterns.remove(0);
+    let patterns_doc = if patterns.len() == 1 {
+        pattern(patterns.remove(0), env)
     } else {
-        tuple(clause.patterns.into_iter().map(|p| pattern(p, env)))
+        tuple(patterns.into_iter().map(|p| pattern(p, env)))
     };
     patterns_doc
         .append(optional_clause_guard(clause.guard, env))

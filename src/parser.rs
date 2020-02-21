@@ -897,10 +897,10 @@ fn expr_test() {
                 Clause {
                     meta: Meta { start: 9, end: 16 },
                     guard: None,
-                    patterns: vec![Pattern::Int {
+                    patterns: vec![vec![Pattern::Int {
                         meta: Meta { start: 9, end: 10 },
                         value: 1
-                    }],
+                    }]],
                     then: Expr::Int {
                         meta: Meta { start: 14, end: 16 },
                         typ: (),
@@ -910,10 +910,10 @@ fn expr_test() {
                 Clause {
                     meta: Meta { start: 17, end: 24 },
                     guard: None,
-                    patterns: vec![Pattern::Int {
+                    patterns: vec![vec![Pattern::Int {
                         meta: Meta { start: 17, end: 18 },
                         value: 2
-                    }],
+                    }]],
                     then: Expr::Int {
                         meta: Meta { start: 22, end: 24 },
                         typ: (),

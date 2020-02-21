@@ -227,11 +227,7 @@ Case: UntypedExpr = {
 Clause: UntypedClause = {
     <s:@L> <patterns:DelimNoTrailing<Comma<Pattern>, "|">> <guard:("if" <ClauseGuard>)?> "->" <then:OpOrSimpleExpr> <e:@L> => Clause {
         meta: meta(s, e),
-        patterns: {
-            let mut patterns = patterns;
-            let mut drain = patterns.drain(..);
-            drain.next().unwrap()
-        },
+        patterns,
         guard,
         then,
     }
