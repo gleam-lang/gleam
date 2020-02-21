@@ -4,8 +4,9 @@ mod tests;
 
 use crate::ast::{
     self, Arg, ArgNames, BinOp, CallArg, Clause, ClauseGuard, Expr, Meta, Pattern, Statement,
-    TypeAst, TypedClauseGuard, TypedExpr, TypedModule, TypedPattern, UnqualifiedImport,
-    UntypedClauseGuard, UntypedExpr, UntypedModule, UntypedPattern,
+    TypeAst, TypedClause, TypedClauseGuard, TypedExpr, TypedModule, TypedPattern,
+    UnqualifiedImport, UntypedClause, UntypedClauseGuard, UntypedExpr, UntypedModule,
+    UntypedPattern,
 };
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -1648,45 +1649,11 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
                 subject_types.push(subject_type);
             }
 
-            for mut clause in clauses.into_iter() {
-                let vars = env.local_values.clone();
-                let patterns = clause.patterns.remove(0);
-                if subjects_count != patterns.len() {
-                    return Err(Error::IncorrectNumClausePatterns {
-                        meta: clause.meta,
-                        expected: subjects_count,
-                        given: patterns.len(),
-                    });
-                }
-
-                let mut typed_patterns = Vec::new();
-
-                for (pattern, subject_type) in patterns.into_iter().zip(subject_types.iter()) {
-                    let pattern = unify_pattern(pattern, &subject_type, level, env)?;
-                    typed_patterns.push(pattern);
-                }
-
-                let guard = clause
-                    .guard
-                    .map(|guard| {
-                        let guard = infer_clause_guard(guard, level, env)?;
-                        unify(&bool(), guard.typ(), env)
-                            .map_err(|e| convert_unify_error(e, guard.meta()))?;
-                        Ok(guard)
-                    })
-                    .transpose()?;
-
-                let then = infer(clause.then, level, env)?;
-                unify(&return_type, then.typ(), env)
-                    .map_err(|e| convert_unify_error(e, then.meta()))?;
-                typed_clauses.push(Clause {
-                    meta: clause.meta,
-                    patterns: vec![typed_patterns],
-                    guard,
-                    then,
-                });
-
-                env.local_values = vars;
+            for clause in clauses.into_iter() {
+                let typed_clause = infer_clause(clause, &subject_types, level, env)?;
+                unify(&return_type, typed_clause.then.typ(), env)
+                    .map_err(|e| convert_unify_error(e, typed_clause.then.meta()))?;
+                typed_clauses.push(typed_clause);
             }
             Ok(Expr::Case {
                 meta,
@@ -1797,6 +1764,53 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             crate::error::fatal_compiler_bug("Expr::ModuleSelect erroneously passed to typer.")
         }
     }
+}
+
+fn infer_clause(
+    mut clause: UntypedClause,
+    subject_types: &Vec<Type>,
+    level: usize,
+    env: &mut Env,
+) -> Result<TypedClause, Error> {
+    // Store the local scope so it can be reset after the clause
+    let vars = env.local_values.clone();
+
+    let patterns = clause.patterns.remove(0);
+    if subject_types.len() != patterns.len() {
+        return Err(Error::IncorrectNumClausePatterns {
+            meta: clause.meta,
+            expected: subject_types.len(),
+            given: patterns.len(),
+        });
+    }
+
+    let mut typed_patterns = Vec::new();
+
+    for (pattern, subject_type) in patterns.into_iter().zip(subject_types.iter()) {
+        let pattern = unify_pattern(pattern, &subject_type, level, env)?;
+        typed_patterns.push(pattern);
+    }
+
+    let guard = clause
+        .guard
+        .map(|guard| {
+            let guard = infer_clause_guard(guard, level, env)?;
+            unify(&bool(), guard.typ(), env).map_err(|e| convert_unify_error(e, guard.meta()))?;
+            Ok(guard)
+        })
+        .transpose()?;
+
+    let then = infer(clause.then, level, env)?;
+
+    // Reset the local vars now the clause scope is done
+    env.local_values = vars;
+
+    Ok(Clause {
+        meta: clause.meta,
+        patterns: vec![typed_patterns],
+        guard,
+        then,
+    })
 }
 
 fn infer_clause_guard(
