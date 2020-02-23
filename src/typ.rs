@@ -1767,32 +1767,45 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
 }
 
 fn infer_clause(
-    mut clause: UntypedClause,
+    clause: UntypedClause,
     subject_types: &Vec<Type>,
     level: usize,
     env: &mut Env,
 ) -> Result<TypedClause, Error> {
+    let Clause {
+        patterns: alternatives,
+        guard,
+        then,
+        meta,
+    } = clause;
+
+    // TODO: ensure variables used in the guard are defined in each every pattern
+    // TODO: ensure all defined variables have the same type
+
     // Store the local scope so it can be reset after the clause
     let vars = env.local_values.clone();
 
-    let patterns = clause.patterns.remove(0);
-    if subject_types.len() != patterns.len() {
-        return Err(Error::IncorrectNumClausePatterns {
-            meta: clause.meta,
-            expected: subject_types.len(),
-            given: patterns.len(),
-        });
+    let mut typed_alternatives = Vec::new();
+
+    for patterns in alternatives {
+        if subject_types.len() != patterns.len() {
+            return Err(Error::IncorrectNumClausePatterns {
+                meta: meta,
+                expected: subject_types.len(),
+                given: patterns.len(),
+            });
+        }
+
+        let mut typed_patterns = Vec::new();
+        for (pattern, subject_type) in patterns.into_iter().zip(subject_types.iter()) {
+            let pattern = unify_pattern(pattern, &subject_type, level, env)?;
+            typed_patterns.push(pattern);
+        }
+
+        typed_alternatives.push(typed_patterns);
     }
 
-    let mut typed_patterns = Vec::new();
-
-    for (pattern, subject_type) in patterns.into_iter().zip(subject_types.iter()) {
-        let pattern = unify_pattern(pattern, &subject_type, level, env)?;
-        typed_patterns.push(pattern);
-    }
-
-    let guard = clause
-        .guard
+    let guard = guard
         .map(|guard| {
             let guard = infer_clause_guard(guard, level, env)?;
             unify(&bool(), guard.typ(), env).map_err(|e| convert_unify_error(e, guard.meta()))?;
@@ -1800,14 +1813,14 @@ fn infer_clause(
         })
         .transpose()?;
 
-    let then = infer(clause.then, level, env)?;
+    let then = infer(then, level, env)?;
 
     // Reset the local vars now the clause scope is done
     env.local_values = vars;
 
     Ok(Clause {
-        meta: clause.meta,
-        patterns: vec![typed_patterns],
+        meta: meta,
+        patterns: typed_alternatives,
         guard,
         then,
     })

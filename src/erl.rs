@@ -435,52 +435,65 @@ fn tag_tuple_pattern(name: String, args: Vec<CallArg<TypedPattern>>, env: &mut E
     }
 }
 
-fn clause(mut clause: TypedClause, env: &mut Env) -> Document {
-    let mut patterns = clause.patterns.remove(0);
-    let patterns_doc = if patterns.len() == 1 {
-        pattern(patterns.remove(0), env)
-    } else {
-        tuple(patterns.into_iter().map(|p| pattern(p, env)))
-    };
-    patterns_doc
-        .append(optional_clause_guard(clause.guard, env))
-        .append(" ->")
-        .append(line().append(expr(clause.then, env)).nest(INDENT).group())
+fn clause(clause: TypedClause, env: &mut Env) -> Document {
+    let Clause {
+        guard,
+        patterns,
+        then,
+        ..
+    } = clause;
+
+    let docs = patterns
+        .into_iter()
+        .map(|mut patterns| {
+            let patterns_doc = if patterns.len() == 1 {
+                pattern(patterns.remove(0), env)
+            } else {
+                tuple(patterns.into_iter().map(|p| pattern(p, env)))
+            };
+            let then = then.clone(); // TODO: remove this clone by having expr take a reference
+            patterns_doc
+                .append(optional_clause_guard(guard.as_ref(), env))
+                .append(" ->")
+                .append(line().append(expr(then, env)).nest(INDENT).group())
+        })
+        .intersperse(";".to_doc().append(lines(2)));
+    concat(docs)
 }
 
-fn optional_clause_guard(guard: Option<TypedClauseGuard>, env: &mut Env) -> Document {
+fn optional_clause_guard(guard: Option<&TypedClauseGuard>, env: &mut Env) -> Document {
     match guard {
         Some(guard) => " when ".to_doc().append(bare_clause_guard(guard, env)),
         None => nil(),
     }
 }
 
-fn bare_clause_guard(guard: TypedClauseGuard, env: &mut Env) -> Document {
+fn bare_clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
     match guard {
-        ClauseGuard::Or { left, right, .. } => clause_guard(*left, env)
+        ClauseGuard::Or { left, right, .. } => clause_guard(left.as_ref(), env)
             .append(" orelse ")
-            .append(clause_guard(*right, env)),
+            .append(clause_guard(right.as_ref(), env)),
 
-        ClauseGuard::And { left, right, .. } => clause_guard(*left, env)
+        ClauseGuard::And { left, right, .. } => clause_guard(left.as_ref(), env)
             .append(" andalso ")
-            .append(clause_guard(*right, env)),
+            .append(clause_guard(right.as_ref(), env)),
 
-        ClauseGuard::Equals { left, right, .. } => clause_guard(*left, env)
+        ClauseGuard::Equals { left, right, .. } => clause_guard(left.as_ref(), env)
             .append(" =:= ")
-            .append(clause_guard(*right, env)),
+            .append(clause_guard(right.as_ref(), env)),
 
-        ClauseGuard::NotEquals { left, right, .. } => clause_guard(*left, env)
+        ClauseGuard::NotEquals { left, right, .. } => clause_guard(left.as_ref(), env)
             .append(" =/= ")
-            .append(clause_guard(*right, env)),
+            .append(clause_guard(right.as_ref(), env)),
 
         // Only local variables are supported and the typer ensures that all
         // ClauseGuard::Vars are local variables
-        ClauseGuard::Var { name, .. } => env.local_var_name(name),
+        ClauseGuard::Var { name, .. } => env.local_var_name(name.to_string()),
     }
 }
 
-fn clause_guard(guard: TypedClauseGuard, env: &mut Env) -> Document {
-    match guard {
+fn clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
+    match *guard {
         // Binary ops are wrapped in parens
         ClauseGuard::Or { .. }
         | ClauseGuard::And { .. }
