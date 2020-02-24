@@ -1227,7 +1227,7 @@ pub fn infer_module(
 
                 // Infer the type
                 let (args_types, body) =
-                    infer_fun(&args, body, &return_annotation, level + 1, &mut env)?;
+                    do_infer_fn(&args, body, &return_annotation, level + 1, &mut env)?;
                 let typ = Type::Fn {
                     args: args_types,
                     retrn: Box::new(body.typ().clone()),
@@ -1553,38 +1553,13 @@ This should not be possible. Please report this crash",
 ///
 pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr, Error> {
     match expr {
-        Expr::Int { meta, value, .. } => Ok(Expr::Int {
-            meta,
-            value,
-            typ: int(),
-        }),
-
-        Expr::Float { meta, value, .. } => Ok(Expr::Float {
-            meta,
-            value,
-            typ: float(),
-        }),
-
-        Expr::String { meta, value, .. } => Ok(Expr::String {
-            meta,
-            value,
-            typ: string(),
-        }),
-
-        Expr::Nil { meta, .. } => Ok(Expr::Nil {
-            meta,
-            typ: list(env.new_unbound_var(level)),
-        }),
-
-        Expr::Seq { first, then, .. } => {
-            let first = infer(*first, level, env)?;
-            let then = infer(*then, level, env)?;
-            Ok(Expr::Seq {
-                typ: then.typ().clone(),
-                first: Box::new(first),
-                then: Box::new(then),
-            })
-        }
+        Expr::Nil { meta, .. } => infer_nil(meta, level, env),
+        Expr::Var { meta, name, .. } => infer_var(name, meta, level, env),
+        Expr::Int { meta, value, .. } => infer_int(value, meta),
+        Expr::Seq { first, then, .. } => infer_seq(*first, *then, level, env),
+        Expr::Tuple { meta, elems, .. } => infer_tuple(elems, meta, level, env),
+        Expr::Float { meta, value, .. } => infer_float(value, meta),
+        Expr::String { meta, value, .. } => infer_string(value, meta),
 
         Expr::Fn {
             meta,
@@ -1592,21 +1567,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             args,
             body,
             ..
-        } => {
-            let (args_types, body) = infer_fun(&args, *body, &None, level, env)?;
-            let typ = Type::Fn {
-                args: args_types,
-                retrn: Box::new(body.typ().clone()),
-            };
-
-            Ok(Expr::Fn {
-                meta,
-                typ,
-                is_capture,
-                args,
-                body: Box::new(body),
-            })
-        }
+        } => infer_fn(args, *body, is_capture, level, meta, env),
 
         Expr::Let {
             meta,
@@ -1614,92 +1575,22 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             value,
             then,
             ..
-        } => {
-            let value = infer(*value, level + 1, env)?;
-            let value_typ = generalise(value.typ().clone(), level + 1);
-            let pattern = unify_pattern(pattern, &value_typ, level, env)?;
-            let then = infer(*then, level, env)?;
-            let typ = then.typ().clone();
-            Ok(Expr::Let {
-                meta,
-                typ,
-                pattern,
-                value: Box::new(value),
-                then: Box::new(then),
-            })
-        }
+        } => infer_let(pattern, *value, *then, level, meta, env),
 
         Expr::Case {
             meta,
             subjects,
             clauses,
             ..
-        } => {
-            let subjects_count = subjects.len();
-            let mut typed_subjects = Vec::with_capacity(subjects_count);
-            let mut subject_types = Vec::with_capacity(subjects_count);
-            let mut typed_clauses = Vec::with_capacity(clauses.len());
-
-            let return_type = env.new_unbound_var(level); // TODO: should this be level + 1 ?
-
-            for subject in subjects.into_iter() {
-                let subject = infer(subject, level + 1, env)?;
-                let subject_type = generalise(subject.typ().clone(), level + 1);
-                typed_subjects.push(subject);
-                subject_types.push(subject_type);
-            }
-
-            for clause in clauses.into_iter() {
-                let typed_clause = infer_clause(clause, &subject_types, level, env)?;
-                unify(&return_type, typed_clause.then.typ(), env)
-                    .map_err(|e| convert_unify_error(e, typed_clause.then.meta()))?;
-                typed_clauses.push(typed_clause);
-            }
-            Ok(Expr::Case {
-                meta,
-                typ: return_type,
-                subjects: typed_subjects,
-                clauses: typed_clauses,
-            })
-        }
+        } => infer_case(subjects, clauses, level, meta, env),
 
         Expr::Cons {
             meta, head, tail, ..
-        } => {
-            let head = infer(*head, level, env)?;
-            let tail = infer(*tail, level, env)?;
-            unify(tail.typ(), &list(head.typ().clone()), env)
-                .map_err(|e| convert_unify_error(e, &meta))?;
-            Ok(Expr::Cons {
-                meta,
-                typ: tail.typ().clone(),
-                head: Box::new(head),
-                tail: Box::new(tail),
-            })
-        }
+        } => infer_cons(*head, *tail, meta, level, env),
 
         Expr::Call {
             meta, fun, args, ..
-        } => {
-            let (fun, args, typ) = infer_call(*fun, args, level, &meta, env)?;
-            Ok(Expr::Call {
-                meta,
-                typ,
-                args,
-                fun: Box::new(fun),
-            })
-        }
-
-        Expr::Tuple { meta, elems, .. } => {
-            let elems = elems
-                .into_iter()
-                .map(|e| infer(e, level, env))
-                .collect::<Result<Vec<_>, _>>()?;
-            let typ = Type::Tuple {
-                elems: elems.iter().map(|e| e.typ().clone()).collect(),
-            };
-            Ok(Expr::Tuple { meta, elems, typ })
-        }
+        } => infer_call(*fun, args, level, meta, env),
 
         Expr::BinOp {
             meta,
@@ -1707,55 +1598,14 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             left,
             right,
             ..
-        } => {
-            let fun = Expr::Var {
-                meta: meta.clone(),
-                constructor: (),
-                name: bin_op_name(&name),
-            };
-            let args = vec![
-                CallArg {
-                    meta: Default::default(),
-                    label: None,
-                    value: *left,
-                },
-                CallArg {
-                    meta: Default::default(),
-                    label: None,
-                    value: *right,
-                },
-            ];
-            let (_fun, mut args, typ) = infer_call(fun, args, level, &meta, env)?;
-            Ok(Expr::BinOp {
-                meta,
-                name,
-                typ,
-                right: Box::new(args.pop().unwrap().value),
-                left: Box::new(args.pop().unwrap().value),
-            })
-        }
-
-        Expr::Var { meta, name, .. } => {
-            let constructor = infer_var(&name, level, &meta, env)?;
-            Ok(Expr::Var {
-                constructor,
-                meta,
-                name,
-            })
-        }
+        } => infer_binop(name, *left, *right, level, meta, env),
 
         Expr::FieldSelect {
             meta: select_meta,
             label,
             container,
             ..
-        } => match &*container {
-            Expr::Var { name, meta, .. } if !env.local_values.contains_key(name) => {
-                infer_module_select(name, label, level, meta, select_meta, env)
-            }
-
-            _ => infer_value_field_select(*container, label, level, select_meta, env),
-        },
+        } => infer_field_select(*container, label, select_meta, level, env),
 
         // This node is not created by the parser, it is constructed by the typer from
         // the more general FieldSelect. Because of this it should never be present in AST
@@ -1766,15 +1616,244 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
     }
 }
 
+fn infer_nil(meta: Meta, level: usize, env: &mut Env) -> Result<TypedExpr, Error> {
+    Ok(Expr::Nil {
+        meta,
+        typ: list(env.new_unbound_var(level)),
+    })
+}
+
+fn infer_string(value: String, meta: Meta) -> Result<TypedExpr, Error> {
+    Ok(Expr::String {
+        meta,
+        value,
+        typ: string(),
+    })
+}
+
+fn infer_int(value: i64, meta: Meta) -> Result<TypedExpr, Error> {
+    Ok(Expr::Int {
+        meta,
+        value,
+        typ: int(),
+    })
+}
+
+fn infer_float(value: f64, meta: Meta) -> Result<TypedExpr, Error> {
+    Ok(Expr::Float {
+        meta,
+        value,
+        typ: float(),
+    })
+}
+
+fn infer_seq(
+    first: UntypedExpr,
+    then: UntypedExpr,
+    level: usize,
+    env: &mut Env,
+) -> Result<TypedExpr, Error> {
+    let first = infer(first, level, env)?;
+    let then = infer(then, level, env)?;
+    Ok(Expr::Seq {
+        typ: then.typ().clone(),
+        first: Box::new(first),
+        then: Box::new(then),
+    })
+}
+
+fn infer_fn(
+    args: Vec<Arg>,
+    body: UntypedExpr,
+    is_capture: bool,
+    level: usize,
+    meta: Meta,
+    env: &mut Env,
+) -> Result<TypedExpr, Error> {
+    let (args_types, body) = do_infer_fn(args.as_ref(), body, &None, level, env)?;
+    let typ = Type::Fn {
+        args: args_types,
+        retrn: Box::new(body.typ().clone()),
+    };
+    Ok(Expr::Fn {
+        meta,
+        typ,
+        is_capture,
+        args,
+        body: Box::new(body),
+    })
+}
+
+fn infer_call(
+    fun: UntypedExpr,
+    args: Vec<CallArg<UntypedExpr>>,
+    level: usize,
+    meta: Meta,
+    env: &mut Env,
+) -> Result<TypedExpr, Error> {
+    let (fun, args, typ) = do_infer_call(fun, args, level, &meta, env)?;
+    Ok(Expr::Call {
+        meta,
+        typ,
+        args,
+        fun: Box::new(fun),
+    })
+}
+
+fn infer_cons(
+    head: UntypedExpr,
+    tail: UntypedExpr,
+    meta: Meta,
+    level: usize,
+    env: &mut Env,
+) -> Result<TypedExpr, Error> {
+    let head = infer(head, level, env)?;
+    let tail = infer(tail, level, env)?;
+    unify(tail.typ(), &list(head.typ().clone()), env).map_err(|e| convert_unify_error(e, &meta))?;
+    Ok(Expr::Cons {
+        meta,
+        typ: tail.typ().clone(),
+        head: Box::new(head),
+        tail: Box::new(tail),
+    })
+}
+fn infer_tuple(
+    elems: Vec<UntypedExpr>,
+    meta: Meta,
+    level: usize,
+    env: &mut Env,
+) -> Result<TypedExpr, Error> {
+    let elems = elems
+        .into_iter()
+        .map(|e| infer(e, level, env))
+        .collect::<Result<Vec<_>, _>>()?;
+    let typ = Type::Tuple {
+        elems: elems.iter().map(|e| e.typ().clone()).collect(),
+    };
+    Ok(Expr::Tuple { meta, elems, typ })
+}
+fn infer_var(name: String, meta: Meta, level: usize, env: &mut Env) -> Result<TypedExpr, Error> {
+    let constructor = infer_value_constructor(&name, level, &meta, env)?;
+    Ok(Expr::Var {
+        constructor,
+        meta,
+        name,
+    })
+}
+fn infer_field_select(
+    container: UntypedExpr,
+    label: String,
+    select_meta: Meta,
+    level: usize,
+    env: &mut Env,
+) -> Result<TypedExpr, Error> {
+    match container {
+        Expr::Var { name, meta, .. } if !env.local_values.contains_key(&name) => {
+            infer_module_select(name.as_ref(), label, level, &meta, select_meta, env)
+        }
+
+        _ => infer_value_field_select(container, label, level, select_meta, env),
+    }
+}
+
+fn infer_binop(
+    name: BinOp,
+    left: UntypedExpr,
+    right: UntypedExpr,
+    level: usize,
+    meta: Meta,
+    env: &mut Env,
+) -> Result<TypedExpr, Error> {
+    let fun = Expr::Var {
+        meta: meta.clone(),
+        constructor: (),
+        name: bin_op_name(&name),
+    };
+    let args = vec![
+        CallArg {
+            meta: Default::default(),
+            label: None,
+            value: left,
+        },
+        CallArg {
+            meta: Default::default(),
+            label: None,
+            value: right,
+        },
+    ];
+    let (_fun, mut args, typ) = do_infer_call(fun, args, level, &meta, env)?;
+    Ok(Expr::BinOp {
+        meta,
+        name,
+        typ,
+        right: Box::new(args.pop().unwrap().value),
+        left: Box::new(args.pop().unwrap().value),
+    })
+}
+
+fn infer_let(
+    pattern: UntypedPattern,
+    value: UntypedExpr,
+    then: UntypedExpr,
+    level: usize,
+    meta: Meta,
+    env: &mut Env,
+) -> Result<TypedExpr, Error> {
+    let value = infer(value, level + 1, env)?;
+    let value_typ = generalise(value.typ().clone(), level + 1);
+    let pattern = unify_pattern(pattern, &value_typ, level, env)?;
+    let then = infer(then, level, env)?;
+    let typ = then.typ().clone();
+    Ok(Expr::Let {
+        meta,
+        typ,
+        pattern,
+        value: Box::new(value),
+        then: Box::new(then),
+    })
+}
+
+fn infer_case(
+    subjects: Vec<UntypedExpr>,
+    clauses: Vec<UntypedClause>,
+    level: usize,
+    meta: Meta,
+    env: &mut Env,
+) -> Result<TypedExpr, Error> {
+    let subjects_count = subjects.len();
+    let mut typed_subjects = Vec::with_capacity(subjects_count);
+    let mut subject_types = Vec::with_capacity(subjects_count);
+    let mut typed_clauses = Vec::with_capacity(clauses.len());
+
+    let return_type = env.new_unbound_var(level); // TODO: should this be level + 1 ?
+
+    for subject in subjects.into_iter() {
+        let subject = infer(subject, level + 1, env)?;
+        let subject_type = generalise(subject.typ().clone(), level + 1);
+        typed_subjects.push(subject);
+        subject_types.push(subject_type);
+    }
+
+    for clause in clauses.into_iter() {
+        let typed_clause = infer_clause(clause, &subject_types, level, env)?;
+        unify(&return_type, typed_clause.then.typ(), env)
+            .map_err(|e| convert_unify_error(e, typed_clause.then.meta()))?;
+        typed_clauses.push(typed_clause);
+    }
+    Ok(Expr::Case {
+        meta,
+        typ: return_type,
+        subjects: typed_subjects,
+        clauses: typed_clauses,
+    })
+}
+
 fn infer_clause(
     clause: UntypedClause,
     subjects: &Vec<Type>,
     level: usize,
     env: &mut Env,
 ) -> Result<TypedClause, Error> {
-    // TODO: ensure variables used in the guard are defined in each every pattern
-    // TODO: ensure all defined variables have the same type
-
     let Clause {
         patterns: alternatives,
         guard,
@@ -1785,12 +1864,9 @@ fn infer_clause(
     // Store the local scope so it can be reset after the clause
     let vars = env.local_values.clone();
 
-    let mut typed_alternatives = Vec::new();
-    for m in alternatives {
-        typed_alternatives.push(infer_multi_pattern(m, subjects, level, &meta, env)?);
-    }
-
-    let guard = infer_guard(guard, level, env)?;
+    // Check the types
+    let typed_alternatives = infer_clause_pattern(alternatives, subjects, level, &meta, env)?;
+    let guard = infer_optional_clause_guard(guard, level, env)?;
     let then = infer(then, level, env)?;
 
     // Reset the local vars now the clause scope is done
@@ -1804,13 +1880,36 @@ fn infer_clause(
     })
 }
 
-fn infer_guard(
+fn infer_clause_pattern(
+    alternatives: Vec<Vec<UntypedPattern>>,
+    subjects: &Vec<Type>,
+    level: usize,
+    meta: &Meta,
+    env: &mut Env,
+) -> Result<Vec<Vec<TypedPattern>>, Error> {
+    // TODO: ensure variables used in the guard are defined in each every pattern
+    // TODO: ensure all defined variables have the same type
+
+    // Each case clause has one or more patterns that may match the
+    // subject in order for the clause to be selected, so we must type
+    // check every pattern.
+    let mut typed_alternatives = Vec::with_capacity(alternatives.len());
+    for m in alternatives {
+        typed_alternatives.push(infer_multi_pattern(m, subjects, level, &meta, env)?);
+    }
+    Ok(typed_alternatives)
+}
+
+fn infer_optional_clause_guard(
     guard: Option<UntypedClauseGuard>,
     level: usize,
     env: &mut Env,
 ) -> Result<Option<TypedClauseGuard>, Error> {
     match guard {
+        // If there is no guard we do nothing
         None => Ok(None),
+
+        // If there is a guard we assert that it is of type Bool
         Some(guard) => {
             let guard = infer_clause_guard(guard, level, env)?;
             unify(&bool(), guard.typ(), env).map_err(|e| convert_unify_error(e, guard.meta()))?;
@@ -1826,6 +1925,7 @@ fn infer_multi_pattern(
     meta: &Meta,
     env: &mut Env,
 ) -> Result<Vec<TypedPattern>, Error> {
+    // If there are N subjects the multi-pattern is expected to be N patterns
     if subjects.len() != multi_pattern.len() {
         return Err(Error::IncorrectNumClausePatterns {
             meta: meta.clone(),
@@ -1834,12 +1934,13 @@ fn infer_multi_pattern(
         });
     }
 
-    let mut typed_patterns = Vec::new();
+    // Unify each pattern in the multi-pattern with the corresponding subject
+    let mut typed_multi = Vec::with_capacity(multi_pattern.len());
     for (pattern, subject_type) in multi_pattern.into_iter().zip(subjects.iter()) {
         let pattern = unify_pattern(pattern, &subject_type, level, env)?;
-        typed_patterns.push(pattern);
+        typed_multi.push(pattern);
     }
-    Ok(typed_patterns)
+    Ok(typed_multi)
 }
 
 fn infer_clause_guard(
@@ -1849,7 +1950,7 @@ fn infer_clause_guard(
 ) -> Result<TypedClauseGuard, Error> {
     match guard {
         ClauseGuard::Var { meta, name, .. } => {
-            let constructor = infer_var(&name, level, &meta, env)?;
+            let constructor = infer_value_constructor(&name, level, &meta, env)?;
 
             // We cannot support all values in guard expressions as the BEAM does not
             match &constructor.variant {
@@ -2156,7 +2257,7 @@ fn unify_pattern(
     }
 }
 
-fn infer_var(
+fn infer_value_constructor(
     name: &str,
     level: usize,
     meta: &Meta,
@@ -2184,7 +2285,7 @@ fn infer_var(
     })
 }
 
-fn infer_call(
+fn do_infer_call(
     fun: UntypedExpr,
     mut args: Vec<CallArg<UntypedExpr>>,
     level: usize,
@@ -2246,7 +2347,7 @@ fn get_field_map<'a>(
     Ok(env.get_value_constructor(module, name)?.field_map())
 }
 
-fn infer_fun(
+fn do_infer_fn(
     args: &[Arg],
     body: UntypedExpr,
     return_annotation: &Option<TypeAst>,
