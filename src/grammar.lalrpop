@@ -225,9 +225,10 @@ Case: UntypedExpr = {
 }
 
 Clause: UntypedClause = {
-    <s:@L> <patterns:DelimNoTrailing<Comma<Pattern>, "|">> <guard:("if" <ClauseGuard>)?> "->" <then:OpOrSimpleExpr> <e:@L> => Clause {
+    <s:@L> <pattern:Comma<Pattern>> <alternative_patterns:("|" <DelimNoTrailing<Comma<Pattern>, "|">>)?> <guard:("if" <ClauseGuard>)?> "->" <then:OpOrSimpleExpr> <e:@L> => Clause {
         meta: meta(s, e),
-        patterns,
+        pattern,
+        alternative_patterns: alternative_patterns.unwrap_or_else(|| vec![]),
         guard,
         then,
     }
