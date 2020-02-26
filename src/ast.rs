@@ -340,6 +340,10 @@ impl TypedExpr {
     }
 }
 
+pub type MultiPattern<PatternConstructor> = Vec<Pattern<PatternConstructor>>;
+pub type UntypedMultiPattern = MultiPattern<()>;
+pub type TypedMultiPattern = MultiPattern<PatternConstructor>;
+
 pub type TypedClause =
     Clause<ValueConstructor, ModuleValueConstructor, PatternConstructor, typ::Type>;
 
@@ -348,8 +352,8 @@ pub type UntypedClause = Clause<(), (), (), ()>;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Clause<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type> {
     pub meta: Meta,
-    pub pattern: Vec<Pattern<PatternConstructor>>,
-    pub alternative_patterns: Vec<Vec<Pattern<PatternConstructor>>>,
+    pub pattern: MultiPattern<PatternConstructor>,
+    pub alternative_patterns: Vec<MultiPattern<PatternConstructor>>,
     pub guard: Option<ClauseGuard<Type>>,
     pub then: Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type>,
 }
