@@ -1017,9 +1017,10 @@ fn infer_module_test() {
 fn infer_module_error_test() {
     macro_rules! assert_error {
         ($src:expr, $error:expr $(,)?) => {
-            let ast = crate::grammar::ModuleParser::new()
+            let mut ast = crate::grammar::ModuleParser::new()
                 .parse($src)
                 .expect("syntax error");
+            ast.name = vec!["my_module".to_string()];
             let result = infer_module(ast, &HashMap::new()).expect_err("should infer an error");
             assert_eq!(($src, $error), ($src, result));
         };
@@ -1072,6 +1073,7 @@ pub fn x() { id(1, 1.0) }
         }
     );
 
+    // We cannot declare two functions with the same name in a module
     assert_error!(
         "fn dupe() { 1 }
          fn dupe() { 2 }",
@@ -1082,6 +1084,7 @@ pub fn x() { id(1, 1.0) }
         }
     );
 
+    // We cannot declare two functions with the same name in a module
     assert_error!(
         "fn dupe() { 1 }
          fn dupe(x) { x }",
@@ -1092,6 +1095,7 @@ pub fn x() { id(1, 1.0) }
         }
     );
 
+    // We cannot declare two functions with the same name in a module
     assert_error!(
         "fn dupe() { 1 }
          external fn dupe(x) -> x = \"\" \"\"",
@@ -1102,6 +1106,7 @@ pub fn x() { id(1, 1.0) }
         }
     );
 
+    // We cannot declare two functions with the same name in a module
     assert_error!(
         "external fn dupe(x) -> x = \"\" \"\"
          fn dupe() { 1 }",
@@ -1112,6 +1117,7 @@ pub fn x() { id(1, 1.0) }
         }
     );
 
+    // We cannot declare two type constructors with the same name in a module
     assert_error!(
         "type Box { Box(x: Int) }
          type Boxy { Box(Int) }",
@@ -1122,6 +1128,7 @@ pub fn x() { id(1, 1.0) }
         }
     );
 
+    // We cannot declare two type constructors with the same name in a module
     assert_error!(
         "type Boxy { Box(Int) }
          type Box { Box(x: Int) }",
@@ -1132,12 +1139,24 @@ pub fn x() { id(1, 1.0) }
         }
     );
 
+    // We cannot declare two type constructors with the same name in a module
     assert_error!(
         "type Boxy { Box(Int) Box(Float) }",
         Error::DuplicateName {
             location: Meta { start: 21, end: 31 },
             previous_location: Meta { start: 12, end: 20 },
             name: "Box".to_string(),
+        }
+    );
+
+    // We cannot declare two types with the same name in a module
+    assert_error!(
+        "type DupType { A }
+         type DupType { B }",
+        Error::DuplicateTypeName {
+            location: Meta { start: 28, end: 41 },
+            previous_location: Meta { start: 0, end: 13 },
+            name: "DupType".to_string(),
         }
     );
 
@@ -1149,7 +1168,7 @@ pub fn x() { id(1, 1.0) }
             leaked: Type::App {
                 args: vec![],
                 public: false,
-                module: vec![],
+                module: vec!["my_module".to_string()],
                 name: "PrivateType".to_string(),
             },
         }
@@ -1167,7 +1186,7 @@ pub fn x() { id(1, 1.0) }
             leaked: Type::App {
                 args: vec![],
                 public: false,
-                module: vec![],
+                module: vec!["my_module".to_string()],
                 name: "PrivateType".to_string(),
             },
         }
@@ -1185,7 +1204,7 @@ pub fn x() { id(1, 1.0) }
             leaked: Type::App {
                 args: vec![],
                 public: false,
-                module: vec![],
+                module: vec!["my_module".to_string()],
                 name: "PrivateType".to_string(),
             },
         }
@@ -1199,7 +1218,7 @@ pub fn x() { id(1, 1.0) }
             leaked: Type::App {
                 args: vec![],
                 public: false,
-                module: vec![],
+                module: vec!["my_module".to_string()],
                 name: "PrivateType".to_string(),
             },
         }
@@ -1213,7 +1232,7 @@ pub fn x() { id(1, 1.0) }
             leaked: Type::App {
                 args: vec![],
                 public: false,
-                module: vec![],
+                module: vec!["my_module".to_string()],
                 name: "PrivateType".to_string(),
             },
         }
@@ -1245,8 +1264,9 @@ pub fn x() { id(1, 1.0) }
                 types.insert(
                     "Thing".to_string(),
                     TypeConstructor {
+                        origin: Meta { start: 0, end: 11 },
                         public: false,
-                        module: vec![],
+                        module: vec!["my_module".to_string()],
                         arity: 0,
                     },
                 );
@@ -1263,6 +1283,7 @@ pub fn x() { id(1, 1.0) }
             name: "one".to_string(),
         }
     );
+
     // Cases were we can't so easily check for equality-
     // i.e. because the contents of the error are non-deterministic.
     assert_error!("fn inc(x: a) { x + 1 }");

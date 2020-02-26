@@ -8,6 +8,7 @@ use crate::ast::{
     TypedPattern, UnqualifiedImport, UntypedClause, UntypedClauseGuard, UntypedExpr, UntypedModule,
     UntypedMultiPattern, UntypedPattern,
 };
+use crate::error::GleamExpect;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -311,6 +312,7 @@ pub enum TypeVar {
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeConstructor {
     pub public: bool,
+    pub origin: Meta,
     pub module: Vec<String>,
     pub arity: usize,
 }
@@ -355,10 +357,12 @@ impl<'a> Env<'a> {
             "Int".to_string(),
             TypeConstructor {
                 arity: 0,
+                origin: Default::default(),
                 module: vec![],
                 public: true,
             },
-        );
+        )
+        .gleam_expect("prelude inserting Int type");
 
         env.insert_variable(
             "True".to_string(),
@@ -381,47 +385,57 @@ impl<'a> Env<'a> {
         env.insert_type_constructor(
             "Bool".to_string(),
             TypeConstructor {
+                origin: Default::default(),
                 arity: 0,
                 module: vec![],
                 public: true,
             },
-        );
+        )
+        .gleam_expect("prelude inserting Bool type");
 
         env.insert_type_constructor(
             "List".to_string(),
             TypeConstructor {
+                origin: Default::default(),
                 arity: 1,
                 module: vec![],
                 public: true,
             },
-        );
+        )
+        .gleam_expect("prelude inserting List type");
 
         env.insert_type_constructor(
             "Float".to_string(),
             TypeConstructor {
+                origin: Default::default(),
                 arity: 0,
                 module: vec![],
                 public: true,
             },
-        );
+        )
+        .gleam_expect("prelude inserting Float type");
 
         env.insert_type_constructor(
             "String".to_string(),
             TypeConstructor {
+                origin: Default::default(),
                 arity: 0,
                 module: vec![],
                 public: true,
             },
-        );
+        )
+        .gleam_expect("prelude inserting String type");
 
         env.insert_type_constructor(
             "Result".to_string(),
             TypeConstructor {
+                origin: Default::default(),
                 arity: 2,
                 module: vec![],
                 public: true,
             },
-        );
+        )
+        .gleam_expect("prelude inserting Result type");
 
         env.insert_variable(
             "Nil".to_string(),
@@ -440,11 +454,13 @@ impl<'a> Env<'a> {
         env.insert_type_constructor(
             "Nil".to_string(),
             TypeConstructor {
+                origin: Default::default(),
                 arity: 0,
                 module: vec![],
                 public: true,
             },
-        );
+        )
+        .gleam_expect("prelude inserting Nil type");
 
         env.insert_variable(
             "+".to_string(),
@@ -773,9 +789,25 @@ impl<'a> Env<'a> {
     }
 
     /// Map a type in the current scope.
+    /// Errors if the module already has a type with that name, unless the type is from the
+    /// prelude.
     ///
-    pub fn insert_type_constructor(&mut self, name: String, info: TypeConstructor) {
-        self.module_types.insert(name, info);
+    pub fn insert_type_constructor(
+        &mut self,
+        type_name: String,
+        info: TypeConstructor,
+    ) -> Result<(), Error> {
+        let name = type_name.clone();
+        let location = info.origin.clone();
+        match self.module_types.insert(type_name, info) {
+            None => Ok(()),
+            Some(prelude_type) if prelude_type.module.is_empty() => Ok(()),
+            Some(previous) => Err(Error::DuplicateTypeName {
+                name,
+                location,
+                previous_location: previous.origin,
+            }),
+        }
     }
 
     /// Lookup a type in the current scope.
@@ -1016,6 +1048,12 @@ pub enum Error {
         name: String,
     },
 
+    DuplicateTypeName {
+        location: Meta,
+        previous_location: Meta,
+        name: String,
+    },
+
     DuplicateArgument {
         meta: Meta,
         label: String,
@@ -1173,18 +1211,29 @@ pub fn infer_module(
     for s in module.statements.iter() {
         match s {
             Statement::ExternalType {
-                name, public, args, ..
+                name,
+                public,
+                args,
+                meta,
+                ..
             }
             | Statement::CustomType {
-                name, public, args, ..
-            } => env.insert_type_constructor(
-                name.clone(),
-                TypeConstructor {
-                    module: module_name.clone(),
-                    public: *public,
-                    arity: args.len(),
-                },
-            ),
+                name,
+                public,
+                args,
+                meta,
+                ..
+            } => {
+                env.insert_type_constructor(
+                    name.clone(),
+                    TypeConstructor {
+                        origin: meta.clone(),
+                        module: module_name.clone(),
+                        public: *public,
+                        arity: args.len(),
+                    },
+                )?;
+            }
 
             _ => {}
         }
@@ -1498,7 +1547,7 @@ This should not be possible. Please report this crash",
                     }
 
                     if let Some(typ) = module_info.types.get(name) {
-                        env.insert_type_constructor(imported_name.clone(), typ.clone());
+                        env.insert_type_constructor(imported_name.clone(), typ.clone())?;
                         imported = true;
                     }
 
