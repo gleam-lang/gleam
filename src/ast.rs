@@ -92,6 +92,17 @@ pub enum TypeAst {
     },
 }
 
+impl TypeAst {
+    pub fn meta(&self) -> &Meta {
+        match self {
+            TypeAst::Fn { meta, .. } => meta,
+            TypeAst::Var { meta, .. } => meta,
+            TypeAst::Tuple { meta, .. } => meta,
+            TypeAst::Constructor { meta, .. } => meta,
+        }
+    }
+}
+
 pub type TypedStatement =
     Statement<ValueConstructor, ModuleValueConstructor, PatternConstructor, typ::Type>;
 

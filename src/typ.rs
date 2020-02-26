@@ -208,7 +208,7 @@ impl FieldMap {
                 None => {
                     return Err(Error::UnknownLabel {
                         meta: meta.clone(),
-                        labels: self.fields.clone(),
+                        labels: self.fields.keys().map(|t| t.to_string()).collect(),
                         label: label.to_string(),
                     })
                 }
@@ -326,7 +326,8 @@ pub struct TypeConstructor {
     pub public: bool,
     pub origin: Meta,
     pub module: Vec<String>,
-    pub arity: usize,
+    pub parameters: Vec<(String, Type)>,
+    pub typ: Type,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -377,7 +378,8 @@ impl<'a> Env<'a> {
         env.insert_type_constructor(
             "Int".to_string(),
             TypeConstructor {
-                arity: 0,
+                parameters: vec![],
+                typ: int(),
                 origin: Default::default(),
                 module: vec![],
                 public: true,
@@ -407,18 +409,21 @@ impl<'a> Env<'a> {
             "Bool".to_string(),
             TypeConstructor {
                 origin: Default::default(),
-                arity: 0,
+                parameters: vec![],
+                typ: bool(),
                 module: vec![],
                 public: true,
             },
         )
         .gleam_expect("prelude inserting Bool type");
 
+        let list_parameter = env.new_generic_var();
         env.insert_type_constructor(
             "List".to_string(),
             TypeConstructor {
                 origin: Default::default(),
-                arity: 1,
+                parameters: vec![("a".to_string(), list_parameter.clone())],
+                typ: list(list_parameter),
                 module: vec![],
                 public: true,
             },
@@ -429,7 +434,8 @@ impl<'a> Env<'a> {
             "Float".to_string(),
             TypeConstructor {
                 origin: Default::default(),
-                arity: 0,
+                parameters: vec![],
+                typ: float(),
                 module: vec![],
                 public: true,
             },
@@ -440,18 +446,25 @@ impl<'a> Env<'a> {
             "String".to_string(),
             TypeConstructor {
                 origin: Default::default(),
-                arity: 0,
+                parameters: vec![],
+                typ: string(),
                 module: vec![],
                 public: true,
             },
         )
         .gleam_expect("prelude inserting String type");
 
+        let result_value = env.new_generic_var();
+        let result_error = env.new_generic_var();
         env.insert_type_constructor(
             "Result".to_string(),
             TypeConstructor {
                 origin: Default::default(),
-                arity: 2,
+                parameters: vec![
+                    ("a".to_string(), result_value.clone()),
+                    ("e".to_string(), result_error.clone()),
+                ],
+                typ: result(result_value, result_error),
                 module: vec![],
                 public: true,
             },
@@ -476,7 +489,8 @@ impl<'a> Env<'a> {
             "Nil".to_string(),
             TypeConstructor {
                 origin: Default::default(),
-                arity: 0,
+                parameters: vec![],
+                typ: nil(),
                 module: vec![],
                 public: true,
             },
@@ -887,7 +901,11 @@ impl<'a> Env<'a> {
                     .get(name)
                     .ok_or_else(|| GetTypeConstructorError::UnknownType {
                         name: name.to_string(),
-                        type_constructors: self.module_types.clone(),
+                        type_constructors: self
+                            .module_types
+                            .keys()
+                            .map(|t| t.to_string())
+                            .collect(),
                     })
             }
 
@@ -895,7 +913,11 @@ impl<'a> Env<'a> {
                 let module = &self.imported_modules.get(m).ok_or_else(|| {
                     GetTypeConstructorError::UnknownModule {
                         name: name.to_string(),
-                        imported_modules: self.importable_modules.clone(),
+                        imported_modules: self
+                            .importable_modules
+                            .keys()
+                            .map(|t| t.to_string())
+                            .collect(),
                     }
                 })?;
                 module
@@ -904,7 +926,7 @@ impl<'a> Env<'a> {
                     .ok_or_else(|| GetTypeConstructorError::UnknownModuleType {
                         name: name.to_string(),
                         module_name: module.name.clone(),
-                        type_constructors: module.types.clone(),
+                        type_constructors: module.types.keys().map(|t| t.to_string()).collect(),
                     })
             }
         }
@@ -921,7 +943,7 @@ impl<'a> Env<'a> {
             None => self.local_values.get(name).ok_or_else(|| {
                 GetValueConstructorError::UnknownVariable {
                     name: name.to_string(),
-                    variables: self.local_values.clone(),
+                    variables: self.local_values.keys().map(|t| t.to_string()).collect(),
                 }
             }),
 
@@ -929,14 +951,18 @@ impl<'a> Env<'a> {
                 let module = self.imported_modules.get(&*module).ok_or_else(|| {
                     GetValueConstructorError::UnknownModule {
                         name: name.to_string(),
-                        imported_modules: self.importable_modules.clone(),
+                        imported_modules: self
+                            .importable_modules
+                            .keys()
+                            .map(|t| t.to_string())
+                            .collect(),
                     }
                 })?;
                 module.values.get(&*name).ok_or_else(|| {
                     GetValueConstructorError::UnknownModuleValue {
                         name: name.to_string(),
                         module_name: module.name.clone(),
-                        value_constructors: module.values.clone(),
+                        value_constructors: module.values.keys().map(|t| t.to_string()).collect(),
                     }
                 })
             }
@@ -966,27 +992,53 @@ impl<'a> Env<'a> {
                     return Ok(typ.to_owned());
                 }
 
-                let args = args
-                    .iter()
-                    .map(|t| self.type_from_ast(t, vars, new))
-                    .collect::<Result<Vec<_>, _>>()?;
-                let info = self
+                // Hydrate the type argument AST into types
+                let mut argument_types = Vec::with_capacity(args.len());
+                for t in args {
+                    let typ = self.type_from_ast(t, vars, new)?;
+                    argument_types.push((t.meta(), typ));
+                }
+
+                // Look up the constructor
+                let TypeConstructor {
+                    parameters,
+                    typ: return_type,
+                    ..
+                } = self
                     .get_type_constructor(module, name)
-                    .map_err(|e| convert_get_type_constructor_error(e, &meta))?;
-                if args.len() != info.arity {
+                    .map_err(|e| convert_get_type_constructor_error(e, &meta))?
+                    .clone();
+
+                // Ensure that the correct number of arguments have been given to the constructor
+                if args.len() != parameters.len() {
                     return Err(Error::IncorrectTypeArity {
                         meta: meta.clone(),
                         name: name.to_string(),
-                        expected: info.arity,
+                        expected: parameters.len(),
                         given: args.len(),
                     });
                 }
-                Ok(Type::App {
-                    name: name.to_string(),
-                    module: info.module.clone(),
-                    public: info.public,
-                    args,
-                })
+
+                // Instantiate the constructor type for this specific usage
+                let mut type_vars = hashmap![];
+                let mut parameter_types = Vec::with_capacity(parameters.len());
+                for (_, typ) in parameters {
+                    parameter_types.push(instantiate(typ, 0, &mut type_vars, self));
+                }
+                let return_type = instantiate(return_type, 0, &mut type_vars, self);
+
+                // Unify argument types with instantiated parameter types so that the correct types
+                // are inserted into the return type
+                for (parameter, (meta, argument)) in
+                    parameter_types.iter().zip(argument_types.iter())
+                {
+                    unify(parameter, argument, self).map_err(|e| convert_unify_error(e, &meta))?;
+                }
+
+                // TODO: remove special handling of type aliases
+                // TODO: make type aliases insert normal TypeConstructors
+
+                Ok(return_type)
             }
 
             TypeAst::Tuple { elems, .. } => {
@@ -1021,7 +1073,7 @@ impl<'a> Env<'a> {
                     NewTypeAction::Disallow => Err(Error::UnknownType {
                         name: name.to_string(),
                         meta: meta.clone(),
-                        types: self.module_types.clone(),
+                        types: self.module_types.keys().map(|t| t.to_string()).collect(),
                     }),
                 },
             },
@@ -1034,47 +1086,47 @@ pub enum Error {
     UnknownLabel {
         meta: Meta,
         label: String,
-        labels: HashMap<String, usize>,
+        labels: Vec<String>,
     },
 
     UnknownVariable {
         meta: Meta,
         name: String,
-        variables: im::HashMap<String, ValueConstructor>,
+        variables: Vec<String>,
     },
 
     UnknownType {
         meta: Meta,
         name: String,
-        types: HashMap<String, TypeConstructor>,
+        types: Vec<String>,
     },
 
     UnknownModule {
         meta: Meta,
         name: String,
-        imported_modules: HashMap<String, Module>,
+        imported_modules: Vec<String>,
     },
 
     UnknownModuleType {
         meta: Meta,
         name: String,
         module_name: Vec<String>,
-        type_constructors: HashMap<String, TypeConstructor>,
+        type_constructors: Vec<String>,
     },
 
     UnknownModuleValue {
         meta: Meta,
         name: String,
         module_name: Vec<String>,
-        value_constructors: HashMap<String, ValueConstructor>,
+        value_constructors: Vec<String>,
     },
 
     UnknownModuleField {
         meta: Meta,
         name: String,
         module_name: Vec<String>,
-        value_constructors: HashMap<String, ValueConstructor>,
-        type_constructors: HashMap<String, TypeConstructor>,
+        value_constructors: Vec<String>,
+        type_constructors: Vec<String>,
     },
 
     NotFn {
@@ -1167,18 +1219,18 @@ pub enum Error {
 pub enum GetValueConstructorError {
     UnknownVariable {
         name: String,
-        variables: im::HashMap<String, ValueConstructor>,
+        variables: Vec<String>,
     },
 
     UnknownModule {
         name: String,
-        imported_modules: HashMap<String, Module>,
+        imported_modules: Vec<String>,
     },
 
     UnknownModuleValue {
         name: String,
         module_name: Vec<String>,
-        value_constructors: HashMap<String, ValueConstructor>,
+        value_constructors: Vec<String>,
     },
 }
 
@@ -1233,18 +1285,18 @@ pub enum GetRealTypeError {
 pub enum GetTypeConstructorError {
     UnknownType {
         name: String,
-        type_constructors: HashMap<String, TypeConstructor>,
+        type_constructors: Vec<String>,
     },
 
     UnknownModule {
         name: String,
-        imported_modules: HashMap<String, Module>,
+        imported_modules: Vec<String>,
     },
 
     UnknownModuleType {
         name: String,
         module_name: Vec<String>,
-        type_constructors: HashMap<String, TypeConstructor>,
+        type_constructors: Vec<String>,
     },
 }
 
@@ -1309,13 +1361,33 @@ pub fn infer_module(
                 meta,
                 ..
             } => {
+                let mut type_vars = hashmap![];
+                let parameters: Vec<_> = args
+                    .iter()
+                    .map(|arg| TypeAst::Var {
+                        meta: meta.clone(),
+                        name: arg.to_string(),
+                    })
+                    .map(|ast| env.type_from_ast(&ast, &mut type_vars, NewTypeAction::MakeGeneric))
+                    .collect::<Result<_, _>>()?;
+                let typ = Type::App {
+                    public: *public,
+                    module: module_name.clone(),
+                    name: name.clone(),
+                    args: parameters.clone(),
+                };
                 env.insert_type_constructor(
                     name.clone(),
                     TypeConstructor {
                         origin: meta.clone(),
                         module: module_name.clone(),
                         public: *public,
-                        arity: args.len(),
+                        parameters: args
+                            .into_iter()
+                            .map(|s| s.to_string())
+                            .zip(parameters.into_iter())
+                            .collect(),
+                        typ,
                     },
                 )?;
             }
@@ -1524,7 +1596,6 @@ pub fn infer_module(
                 args,
                 constructors,
             } => {
-                // Build return type and collect type vars that can be used in constructors
                 let mut type_vars = hashmap![];
                 let args_types: Vec<_> = args
                     .iter()
@@ -1541,6 +1612,7 @@ pub fn infer_module(
                     name: name.clone(),
                     args: args_types,
                 };
+
                 // Check and register constructors
                 for constructor in constructors.iter() {
                     let mut field_map = FieldMap::new(constructor.args.len());
@@ -1677,8 +1749,16 @@ This should not be possible. Please report this crash",
                             meta: meta.clone(),
                             name: name.clone(),
                             module_name: module,
-                            value_constructors: module_info.values.clone(),
-                            type_constructors: module_info.types.clone(),
+                            value_constructors: module_info
+                                .values
+                                .keys()
+                                .map(|t| t.to_string())
+                                .collect(),
+                            type_constructors: module_info
+                                .types
+                                .keys()
+                                .map(|t| t.to_string())
+                                .collect(),
                         });
                     }
                 }
@@ -2201,7 +2281,7 @@ fn infer_module_select(
                 .ok_or_else(|| Error::UnknownModule {
                     name: module_alias.to_string(),
                     meta: module_meta.clone(),
-                    imported_modules: env.imported_modules.clone(),
+                    imported_modules: env.imported_modules.keys().map(|t| t.to_string()).collect(),
                 })?;
 
         let constructor =
@@ -2212,7 +2292,7 @@ fn infer_module_select(
                     name: label.clone(),
                     meta: select_meta.clone(),
                     module_name: module_info.name.clone(),
-                    value_constructors: module_info.values.clone(),
+                    value_constructors: module_info.values.keys().map(|t| t.to_string()).collect(),
                 })?;
 
         (module_info.name.clone(), constructor.clone())
@@ -2513,7 +2593,7 @@ fn infer_value_constructor(
         .ok_or_else(|| Error::UnknownVariable {
             meta: meta.clone(),
             name: name.to_string(),
-            variables: env.local_values.clone(),
+            variables: env.local_values.keys().map(|t| t.to_string()).collect(),
         })?;
     let typ = instantiate(typ, level, &mut hashmap![], env);
     Ok(ValueConstructor {
@@ -3119,11 +3199,29 @@ pub fn string() -> Type {
     }
 }
 
+pub fn nil() -> Type {
+    Type::App {
+        args: vec![],
+        public: true,
+        name: "Nil".to_string(),
+        module: vec![],
+    }
+}
+
 pub fn list(t: Type) -> Type {
     Type::App {
         public: true,
         name: "List".to_string(),
         module: vec![],
         args: vec![t],
+    }
+}
+
+pub fn result(a: Type, e: Type) -> Type {
+    Type::App {
+        public: true,
+        name: "Result".to_string(),
+        module: vec![],
+        args: vec![a, e],
     }
 }

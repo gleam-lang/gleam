@@ -339,7 +339,7 @@ fn infer_error_test() {
                 .expect("syntax error");
             let result =
                 infer(ast, 1, &mut Env::new(&HashMap::new())).expect_err("should infer an error");
-            assert_eq!(($src, $error), ($src, result));
+            assert_eq!(($src, sort_options($error)), ($src, sort_options(result)));
         };
     }
 
@@ -393,7 +393,11 @@ fn infer_error_test() {
         Error::UnknownVariable {
             meta: Meta { start: 0, end: 1 },
             name: "x".to_string(),
-            variables: Env::new(&HashMap::new()).local_values,
+            variables: Env::new(&HashMap::new())
+                .local_values
+                .keys()
+                .map(|t| t.to_string())
+                .collect(),
         },
     );
 
@@ -402,7 +406,11 @@ fn infer_error_test() {
         Error::UnknownVariable {
             meta: Meta { start: 0, end: 1 },
             name: "x".to_string(),
-            variables: Env::new(&HashMap::new()).local_values,
+            variables: Env::new(&HashMap::new())
+                .local_values
+                .keys()
+                .map(|t| t.to_string())
+                .collect(),
         },
     );
 
@@ -512,7 +520,11 @@ fn infer_error_test() {
         Error::UnknownVariable {
             meta: Meta { start: 21, end: 22 },
             name: "x".to_string(),
-            variables: Env::new(&HashMap::new()).local_values,
+            variables: Env::new(&HashMap::new())
+                .local_values
+                .keys()
+                .map(|t| t.to_string())
+                .collect(),
         },
     );
 
@@ -1013,10 +1025,18 @@ fn infer_module_test() {
         vec![("I", "fn(Num) -> I")]
     );
 
+    // We can create an aliases
     assert_infer!(
         "type IntString = Result(Int, String)
          pub fn ok_one() -> IntString { Ok(1) }",
         vec![("ok_one", "fn() -> Result(Int, String)")]
+    );
+
+    // We can create an alias with the same name as a built in type
+    assert_infer!(
+        "type Int = Float
+         pub fn ok_one() -> Int { 1.0 }",
+        vec![("ok_one", "fn() -> Float")]
     );
 }
 
@@ -1029,7 +1049,7 @@ fn infer_module_error_test() {
                 .expect("syntax error");
             ast.name = vec!["my_module".to_string()];
             let result = infer_module(ast, &HashMap::new()).expect_err("should infer an error");
-            assert_eq!(($src, $error), ($src, result));
+            assert_eq!(($src, sort_options($error)), ($src, sort_options(result)));
         };
 
         ($src:expr) => {
@@ -1267,16 +1287,12 @@ pub fn x() { id(1, 1.0) }
             meta: Meta { start: 28, end: 29 },
             name: "x".to_string(),
             types: {
-                let mut types = Env::new(&mut HashMap::new()).module_types;
-                types.insert(
-                    "Thing".to_string(),
-                    TypeConstructor {
-                        origin: Meta { start: 0, end: 11 },
-                        public: false,
-                        module: vec!["my_module".to_string()],
-                        arity: 0,
-                    },
-                );
+                let mut types: Vec<_> = Env::new(&HashMap::new())
+                    .module_types
+                    .keys()
+                    .map(|s| s.to_string())
+                    .collect();
+                types.push("Thing".to_string());
                 types
             },
         }
@@ -1291,16 +1307,74 @@ pub fn x() { id(1, 1.0) }
         }
     );
 
-    // Cases were we can't so easily check for equality-
-    // i.e. because the contents of the error are non-deterministic.
-    assert_error!("fn inc(x: a) { x + 1 }");
-
+    // We cannot refer to unknown types in an alias
     assert_error!(
         "type IntMap = IllMap(Int, Int)",
         Error::UnknownType {
             meta: Meta { start: 14, end: 30 },
             name: "IllMap".to_string(),
-            types: { Env::new(&HashMap::new()).module_types },
+            types: Env::new(&HashMap::new())
+                .module_types
+                .keys()
+                .map(|s| s.to_string())
+                .collect(),
         }
     );
+
+    // We cannot refer to unknown types in an alias
+    assert_error!(
+        "type IntMap = Map(Inf, Int)",
+        Error::UnknownType {
+            meta: Meta { start: 18, end: 21 },
+            name: "Inf".to_string(),
+            types: Env::new(&HashMap::new())
+                .module_types
+                .keys()
+                .map(|s| s.to_string())
+                .collect(),
+        }
+    );
+
+    // TODO
+    // // We cannot reuse an alias name in the same module
+    // assert_error!(
+    //     "type X = Int type X = Int",
+    //     Error::UnknownType {
+    //         meta: Meta { start: 18, end: 21 },
+    //         name: "Inf".to_string(),
+    //         types: { Env::new(&HashMap::new()).module_types },
+    //     }
+    // );
+
+    // Cases were we can't so easily check for equality-
+    // i.e. because the contents of the error are non-deterministic.
+    assert_error!("fn inc(x: a) { x + 1 }");
+}
+
+fn sort_options(e: Error) -> Error {
+    match e {
+        Error::UnknownType {
+            meta,
+            name,
+            mut types,
+        } => {
+            types.sort();
+            Error::UnknownType { meta, name, types }
+        }
+
+        Error::UnknownVariable {
+            meta,
+            name,
+            mut variables,
+        } => {
+            variables.sort();
+            Error::UnknownVariable {
+                meta,
+                name,
+                variables,
+            }
+        }
+
+        _ => e,
+    }
 }
