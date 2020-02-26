@@ -144,7 +144,7 @@ impl FileKind {
     }
 }
 
-fn did_you_mean(name: &str, options: &mut Vec<&String>, alt: &'static str) -> String {
+fn did_you_mean(name: &str, options: &mut Vec<String>, alt: &'static str) -> String {
     options.sort_by(|a, b| {
         strsim::levenshtein(a, name)
             .partial_cmp(&strsim::levenshtein(b, name))
@@ -250,22 +250,22 @@ Second: {}
                     meta,
                     labels,
                 } => {
-                    let mut options: Vec<_> = labels.keys().collect();
+                    let mut labels = labels.clone();
                     let diagnostic = ErrorDiagnostic {
                         title: "Unknown label".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
-                        label: did_you_mean(label, &mut options, "Unexpected label"),
+                        label: did_you_mean(label, &mut labels, "Unexpected label"),
                     };
                     write(buffer, diagnostic);
-                    if !options.is_empty() {
+                    if !labels.is_empty() {
                         writeln!(
                             buffer,
                             "This constructor does not accept the label `{}`.
 Expected one of `{}`.",
                             label,
-                            options.iter().join("`, `")
+                            labels.iter().join("`, `")
                         )
                         .unwrap();
                     } else {
@@ -510,9 +510,10 @@ Found type:
                 }
 
                 UnknownType { meta, name, types } => {
+                    let mut types = types.clone();
                     let diagnostic = ErrorDiagnostic {
                         title: "Unknown type".to_string(),
-                        label: did_you_mean(name, &mut types.keys().collect::<Vec<_>>(), ""),
+                        label: did_you_mean(name, &mut types, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
@@ -531,10 +532,10 @@ Found type:
                     variables,
                     name,
                 } => {
-                    let mut options: Vec<_> = variables.keys().collect();
+                    let mut variables = variables.clone();
                     let diagnostic = ErrorDiagnostic {
                         title: "Unknown variable".to_string(),
-                        label: did_you_mean(name, &mut options, ""),
+                        label: did_you_mean(name, &mut variables, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
@@ -576,10 +577,10 @@ Private types can only be used within the module that defines them.",
                     name,
                     imported_modules,
                 } => {
-                    let mut options: Vec<_> = imported_modules.keys().collect();
+                    let mut imported_modules = imported_modules.clone();
                     let diagnostic = ErrorDiagnostic {
                         title: "Unknown module".to_string(),
-                        label: did_you_mean(name, &mut options, ""),
+                        label: did_you_mean(name, &mut imported_modules, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
@@ -599,10 +600,10 @@ Private types can only be used within the module that defines them.",
                     module_name,
                     type_constructors,
                 } => {
-                    let mut options: Vec<_> = type_constructors.keys().collect();
+                    let mut type_constructors = type_constructors.clone();
                     let diagnostic = ErrorDiagnostic {
                         title: "Unknown module type".to_string(),
-                        label: did_you_mean(name, &mut options, ""),
+                        label: did_you_mean(name, &mut type_constructors, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
@@ -623,10 +624,10 @@ Private types can only be used within the module that defines them.",
                     module_name,
                     value_constructors,
                 } => {
-                    let mut options: Vec<_> = value_constructors.keys().collect();
+                    let mut value_constructors = value_constructors.clone();
                     let diagnostic = ErrorDiagnostic {
                         title: "Unknown module field".to_string(),
-                        label: did_you_mean(name, &mut options, ""),
+                        label: did_you_mean(name, &mut value_constructors, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
@@ -648,9 +649,10 @@ Private types can only be used within the module that defines them.",
                     type_constructors,
                     value_constructors,
                 } => {
-                    let mut options: Vec<_> = type_constructors
-                        .keys()
-                        .chain(value_constructors.keys())
+                    let mut options: Vec<String> = type_constructors
+                        .into_iter()
+                        .chain(value_constructors.into_iter())
+                        .map(|s| s.to_string())
                         .collect();
                     let diagnostic = ErrorDiagnostic {
                         title: "Unknown module field".to_string(),
@@ -819,7 +821,7 @@ but this one uses {}. Rewrite this using the fn({}) {{ ... }} syntax.",
                 src,
                 modules,
             } => {
-                let mut modules: Vec<&String> = modules.iter().collect();
+                let mut modules = modules.clone();
                 let diagnostic = ErrorDiagnostic {
                     title: "Unknown import".to_string(),
                     label: did_you_mean(import, &mut modules, ""),
