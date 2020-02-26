@@ -37,6 +37,8 @@
   expression.
 - Performance of the Erlang code generator has been improved by removing some
   vector allocations.
+- An error is emitted when multiple types with the same name are defined in or
+  imported into a module.
 
 ## v0.6.0 - 2019-12-25 🎄
 
