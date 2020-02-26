@@ -338,6 +338,30 @@ also be labelled.",
                     .unwrap();
                 }
 
+                DuplicateTypeName {
+                    name,
+                    location,
+                    // TODO: show previous location
+                    // previous_location,
+                    ..
+                } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Duplicate name".to_string(),
+                        label: "Redefined here".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        meta: location.clone(),
+                    };
+                    write(buffer, diagnostic);
+                    writeln!(
+                        buffer,
+                        "A type has already been defined with the name
+`{}` in this module.",
+                        name
+                    )
+                    .unwrap();
+                }
+
                 DuplicateField { meta, label } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Duplicate field".to_string(),
