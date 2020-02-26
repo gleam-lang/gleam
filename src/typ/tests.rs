@@ -647,14 +647,32 @@ fn infer_error_test() {
         },
     );
 
-    // assert_error!(
-    //     "case tuple(1, 1.0) { tuple(x, _) | tuple(_, x) -> 1 }",
-    //     Error::CouldNotUnify {
-    //         meta: Meta { start: 26, end: 27 },
-    //         expected: bool(),
-    //         given: float(),
-    //     },
-    // );
+    assert_error!(
+        "case tuple(1, 1.0) { tuple(x, _) | tuple(_, x) -> 1 }",
+        Error::CouldNotUnify {
+            meta: Meta { start: 44, end: 45 },
+            expected: int(),
+            given: float(),
+        },
+    );
+
+    assert_error!(
+        "case [1] { [x] | x -> 1 }",
+        Error::CouldNotUnify {
+            meta: Meta { start: 17, end: 18 },
+            expected: int(),
+            given: list(int()),
+        },
+    );
+
+    assert_error!(
+        "case [1] { [x] | [] as x -> 1 }",
+        Error::CouldNotUnify {
+            meta: Meta { start: 17, end: 19 },
+            expected: int(),
+            given: list(int()),
+        },
+    );
 }
 
 #[test]

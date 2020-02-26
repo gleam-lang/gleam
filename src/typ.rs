@@ -4,9 +4,9 @@ mod tests;
 
 use crate::ast::{
     self, Arg, ArgNames, BinOp, CallArg, Clause, ClauseGuard, Expr, Meta, Pattern, Statement,
-    TypeAst, TypedClause, TypedClauseGuard, TypedExpr, TypedModule, TypedPattern,
-    UnqualifiedImport, UntypedClause, UntypedClauseGuard, UntypedExpr, UntypedModule,
-    UntypedPattern,
+    TypeAst, TypedClause, TypedClauseGuard, TypedExpr, TypedModule, TypedMultiPattern,
+    TypedPattern, UnqualifiedImport, UntypedClause, UntypedClauseGuard, UntypedExpr, UntypedModule,
+    UntypedMultiPattern, UntypedPattern,
 };
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -1884,24 +1884,25 @@ fn infer_clause(
 }
 
 fn infer_clause_pattern(
-    pattern: Vec<UntypedPattern>,
-    alternatives: Vec<Vec<UntypedPattern>>,
+    pattern: UntypedMultiPattern,
+    alternatives: Vec<UntypedMultiPattern>,
     subjects: &Vec<Type>,
     level: usize,
     meta: &Meta,
     env: &mut Env,
-) -> Result<(Vec<TypedPattern>, Vec<Vec<TypedPattern>>), Error> {
+) -> Result<(TypedMultiPattern, Vec<TypedMultiPattern>), Error> {
     // TODO: ensure variables used in the guard are defined in each every pattern
     // TODO: ensure all defined variables have the same type
 
-    let typed_pattern = infer_multi_pattern(pattern, subjects, level, &meta, env)?;
+    let mut pattern_typer = PatternTyper::new(env, level);
+    let typed_pattern = pattern_typer.infer_multi_pattern(pattern, subjects, &meta)?;
 
     // Each case clause has one or more patterns that may match the
     // subject in order for the clause to be selected, so we must type
     // check every pattern.
     let mut typed_alternatives = Vec::with_capacity(alternatives.len());
     for m in alternatives {
-        typed_alternatives.push(infer_multi_pattern(m, subjects, level, &meta, env)?);
+        typed_alternatives.push(pattern_typer.infer_alternative_multi_pattern(m, subjects, &meta)?);
     }
 
     Ok((typed_pattern, typed_alternatives))
@@ -1923,32 +1924,6 @@ fn infer_optional_clause_guard(
             Ok(Some(guard))
         }
     }
-}
-
-fn infer_multi_pattern(
-    multi_pattern: Vec<UntypedPattern>,
-    subjects: &Vec<Type>,
-    level: usize,
-    meta: &Meta,
-    env: &mut Env,
-) -> Result<Vec<TypedPattern>, Error> {
-    // If there are N subjects the multi-pattern is expected to be N patterns
-    if subjects.len() != multi_pattern.len() {
-        return Err(Error::IncorrectNumClausePatterns {
-            meta: meta.clone(),
-            expected: subjects.len(),
-            given: multi_pattern.len(),
-        });
-    }
-
-    // Unify each pattern in the multi-pattern with the corresponding subject
-    let mut typed_multi = Vec::with_capacity(multi_pattern.len());
-    let mut pattern_typer = PatternTyper::new(env, level);
-    for (pattern, subject_type) in multi_pattern.into_iter().zip(subjects.iter()) {
-        let pattern = pattern_typer.unify(pattern, &subject_type)?;
-        typed_multi.push(pattern);
-    }
-    Ok(typed_multi)
 }
 
 fn infer_clause_guard(
@@ -2094,16 +2069,77 @@ fn infer_value_field_select(
 struct PatternTyper<'a, 'b> {
     env: &'a mut Env<'b>,
     level: usize,
+    mode: PatternMode,
+}
+
+enum PatternMode {
+    Initial,
+    Alternative,
 }
 
 impl<'a, 'b> PatternTyper<'a, 'b> {
     pub fn new(env: &'a mut Env<'b>, level: usize) -> Self {
-        Self { env, level }
+        Self {
+            env,
+            level,
+            mode: PatternMode::Initial,
+        }
     }
 
-    fn insert_variable(&mut self, name: String, typ: Type) {
-        self.env
-            .insert_variable(name, ValueConstructorVariant::LocalVariable, typ);
+    fn insert_variable(&mut self, name: &str, typ: &Type) -> Result<(), UnifyError> {
+        match self.mode {
+            PatternMode::Initial => {
+                self.env.insert_variable(
+                    name.to_string(),
+                    ValueConstructorVariant::LocalVariable,
+                    typ.clone(),
+                );
+                Ok(())
+            }
+
+            PatternMode::Alternative => match self.env.local_values.get(name) {
+                // This variable was not defined in the Initial multi-pattern
+                None => todo!(), // TODO: Var not defined in previous pattern
+
+                // This variable was defined in the Initial multi-pattern
+                Some(initial) => unify(&initial.typ, &typ, self.env),
+            },
+        }
+    }
+
+    fn infer_alternative_multi_pattern(
+        &mut self,
+        multi_pattern: UntypedMultiPattern,
+        subjects: &Vec<Type>,
+        meta: &Meta,
+    ) -> Result<Vec<TypedPattern>, Error> {
+        self.mode = PatternMode::Alternative;
+        let typed_multi = self.infer_multi_pattern(multi_pattern, subjects, meta)?;
+        Ok(typed_multi)
+    }
+
+    fn infer_multi_pattern(
+        &mut self,
+        multi_pattern: UntypedMultiPattern,
+        subjects: &Vec<Type>,
+        meta: &Meta,
+    ) -> Result<Vec<TypedPattern>, Error> {
+        // If there are N subjects the multi-pattern is expected to be N patterns
+        if subjects.len() != multi_pattern.len() {
+            return Err(Error::IncorrectNumClausePatterns {
+                meta: meta.clone(),
+                expected: subjects.len(),
+                given: multi_pattern.len(),
+            });
+        }
+
+        // Unify each pattern in the multi-pattern with the corresponding subject
+        let mut typed_multi = Vec::with_capacity(multi_pattern.len());
+        for (pattern, subject_type) in multi_pattern.into_iter().zip(subjects.iter()) {
+            let pattern = self.unify(pattern, &subject_type)?;
+            typed_multi.push(pattern);
+        }
+        Ok(typed_multi)
     }
 
     /// When we have an assignment or a case expression we unify the pattern with the
@@ -2115,12 +2151,14 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             Pattern::Discard { meta } => Ok(Pattern::Discard { meta }),
 
             Pattern::Var { name, meta } => {
-                self.insert_variable(name.clone(), typ.clone());
+                self.insert_variable(name.as_ref(), typ)
+                    .map_err(|e| convert_unify_error(e, &meta))?;
                 Ok(Pattern::Var { name, meta })
             }
 
             Pattern::Let { name, pattern, .. } => {
-                self.insert_variable(name.clone(), typ.clone());
+                self.insert_variable(name.as_ref(), typ)
+                    .map_err(|e| convert_unify_error(e, pattern.meta()))?;
                 self.unify(*pattern, typ)
             }
 
@@ -2546,7 +2584,7 @@ fn unify_enclosed_type(
         _ => result,
     }
 }
-fn unify(t1: &Type, t2: &Type, env: &mut Env) -> Result<(), UnifyError> {
+fn unify(t1: &Type, t2: &Type, env: &Env) -> Result<(), UnifyError> {
     if t1 == t2 {
         return Ok(());
     }
