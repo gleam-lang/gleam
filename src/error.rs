@@ -677,6 +677,24 @@ argument to the function. The variable `{}` is not defined locally.",
                     )
                     .unwrap();
                 }
+
+                ExtraVarInAlternativePattern { meta, name } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Extra alternative pattern variable".to_string(),
+                        label: "has not been previously defined".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                    writeln!(
+                        buffer,
+                        "All alternative patterns must define the same variables as the initial
+pattern. This variable `{}` has not been previously defined.",
+                        name
+                    )
+                    .unwrap();
+                }
             },
 
             Error::Parse { path, src, error } => {

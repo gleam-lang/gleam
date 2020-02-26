@@ -673,6 +673,38 @@ fn infer_error_test() {
             given: list(int()),
         },
     );
+
+    assert_error!(
+        "case [1] { [x] | [x, y] -> 1 }",
+        Error::ExtraVarInAlternativePattern {
+            meta: Meta { start: 21, end: 22 },
+            name: "y".to_string()
+        },
+    );
+
+    assert_error!(
+        "case tuple(1, 2) { tuple(1, y) | tuple(x, y) -> 1 }",
+        Error::ExtraVarInAlternativePattern {
+            meta: Meta { start: 39, end: 40 },
+            name: "x".to_string()
+        },
+    );
+
+    assert_error!(
+        "case tuple(1, 2) { tuple(1, y) | tuple(x, y) -> 1 }",
+        Error::ExtraVarInAlternativePattern {
+            meta: Meta { start: 39, end: 40 },
+            name: "x".to_string()
+        },
+    );
+
+    assert_error!(
+        "let x = 1 case tuple(1, 2) { tuple(1, y) | tuple(x, y) -> 1 }",
+        Error::ExtraVarInAlternativePattern {
+            meta: Meta { start: 49, end: 50 },
+            name: "x".to_string()
+        },
+    );
 }
 
 #[test]
