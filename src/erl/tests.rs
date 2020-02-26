@@ -613,10 +613,11 @@ moddy4() ->
                     Clause {
                         meta: Default::default(),
                         guard: None,
-                        patterns: vec![vec![Pattern::Int {
+                        pattern: vec![Pattern::Int {
                             meta: Default::default(),
                             value: 1,
-                        }]],
+                        }],
+                        alternative_patterns: vec![],
                         then: Expr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
@@ -626,10 +627,11 @@ moddy4() ->
                     Clause {
                         meta: Default::default(),
                         guard: None,
-                        patterns: vec![vec![Pattern::Float {
+                        pattern: vec![Pattern::Float {
                             meta: Default::default(),
                             value: 1.0,
-                        }]],
+                        }],
+                        alternative_patterns: vec![],
                         then: Expr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
@@ -639,10 +641,11 @@ moddy4() ->
                     Clause {
                         meta: Default::default(),
                         guard: None,
-                        patterns: vec![vec![Pattern::String {
+                        pattern: vec![Pattern::String {
                             meta: Default::default(),
                             value: "hello".to_string(),
-                        }]],
+                        }],
+                        alternative_patterns: vec![],
                         then: Expr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
@@ -652,9 +655,10 @@ moddy4() ->
                     Clause {
                         meta: Default::default(),
                         guard: None,
-                        patterns: vec![vec![Pattern::Nil {
+                        pattern: vec![Pattern::Nil {
                             meta: Default::default(),
-                        }]],
+                        }],
+                        alternative_patterns: vec![],
                         then: Expr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
@@ -664,7 +668,7 @@ moddy4() ->
                     Clause {
                         meta: Default::default(),
                         guard: None,
-                        patterns: vec![vec![Pattern::Constructor {
+                        pattern: vec![Pattern::Constructor {
                             meta: Default::default(),
                             module: None,
                             name: "Error".to_string(),
@@ -679,7 +683,8 @@ moddy4() ->
                             constructor: PatternConstructor::Record {
                                 name: "Error".to_string(),
                             },
-                        }]],
+                        }],
+                        alternative_patterns: vec![],
                         then: Expr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
@@ -689,7 +694,7 @@ moddy4() ->
                     Clause {
                         meta: Default::default(),
                         guard: None,
-                        patterns: vec![vec![Pattern::Tuple {
+                        pattern: vec![Pattern::Tuple {
                             meta: Default::default(),
                             elems: vec![
                                 Pattern::Int {
@@ -701,7 +706,8 @@ moddy4() ->
                                     value: 2,
                                 },
                             ],
-                        }]],
+                        }],
+                        alternative_patterns: vec![],
                         then: Expr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),

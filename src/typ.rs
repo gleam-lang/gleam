@@ -1855,7 +1855,8 @@ fn infer_clause(
     env: &mut Env,
 ) -> Result<TypedClause, Error> {
     let Clause {
-        patterns: alternatives,
+        pattern,
+        alternative_patterns,
         guard,
         then,
         meta,
@@ -1865,7 +1866,8 @@ fn infer_clause(
     let vars = env.local_values.clone();
 
     // Check the types
-    let typed_alternatives = infer_clause_pattern(alternatives, subjects, level, &meta, env)?;
+    let (typed_pattern, typed_alternatives) =
+        infer_clause_pattern(pattern, alternative_patterns, subjects, level, &meta, env)?;
     let guard = infer_optional_clause_guard(guard, level, env)?;
     let then = infer(then, level, env)?;
 
@@ -1874,21 +1876,25 @@ fn infer_clause(
 
     Ok(Clause {
         meta: meta,
-        patterns: typed_alternatives,
+        pattern: typed_pattern,
+        alternative_patterns: typed_alternatives,
         guard,
         then,
     })
 }
 
 fn infer_clause_pattern(
+    pattern: Vec<UntypedPattern>,
     alternatives: Vec<Vec<UntypedPattern>>,
     subjects: &Vec<Type>,
     level: usize,
     meta: &Meta,
     env: &mut Env,
-) -> Result<Vec<Vec<TypedPattern>>, Error> {
+) -> Result<(Vec<TypedPattern>, Vec<Vec<TypedPattern>>), Error> {
     // TODO: ensure variables used in the guard are defined in each every pattern
     // TODO: ensure all defined variables have the same type
+
+    let typed_pattern = infer_multi_pattern(pattern, subjects, level, &meta, env)?;
 
     // Each case clause has one or more patterns that may match the
     // subject in order for the clause to be selected, so we must type
@@ -1898,7 +1904,7 @@ fn infer_clause_pattern(
         typed_alternatives.push(infer_multi_pattern(m, subjects, level, &meta, env)?);
     }
 
-    Ok(typed_alternatives)
+    Ok((typed_pattern, typed_alternatives))
 }
 
 fn infer_optional_clause_guard(

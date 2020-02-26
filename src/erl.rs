@@ -438,13 +438,15 @@ fn tag_tuple_pattern(name: String, args: Vec<CallArg<TypedPattern>>, env: &mut E
 fn clause(clause: TypedClause, env: &mut Env) -> Document {
     let Clause {
         guard,
-        patterns,
+        pattern: pat,
+        alternative_patterns,
         then,
         ..
     } = clause;
 
-    let docs = patterns
+    let docs = std::iter::once(pat)
         .into_iter()
+        .chain(alternative_patterns.into_iter())
         .map(|mut patterns| {
             let patterns_doc = if patterns.len() == 1 {
                 pattern(patterns.remove(0), env)
