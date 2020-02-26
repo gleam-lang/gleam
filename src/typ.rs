@@ -9,7 +9,7 @@ use crate::ast::{
     UntypedMultiPattern, UntypedPattern,
 };
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1050,6 +1050,11 @@ pub enum Error {
         meta: Meta,
         name: String,
     },
+
+    ExtraVarInAlternativePattern {
+        meta: Meta,
+        name: String,
+    },
 }
 
 #[derive(Debug, PartialEq)]
@@ -1891,9 +1896,6 @@ fn infer_clause_pattern(
     meta: &Meta,
     env: &mut Env,
 ) -> Result<(TypedMultiPattern, Vec<TypedMultiPattern>), Error> {
-    // TODO: ensure variables used in the guard are defined in each every pattern
-    // TODO: ensure all defined variables have the same type
-
     let mut pattern_typer = PatternTyper::new(env, level);
     let typed_pattern = pattern_typer.infer_multi_pattern(pattern, subjects, &meta)?;
 
@@ -2070,6 +2072,7 @@ struct PatternTyper<'a, 'b> {
     env: &'a mut Env<'b>,
     level: usize,
     mode: PatternMode,
+    initial_pattern_vars: HashSet<String>,
 }
 
 enum PatternMode {
@@ -2083,12 +2086,14 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             env,
             level,
             mode: PatternMode::Initial,
+            initial_pattern_vars: HashSet::new(),
         }
     }
 
     fn insert_variable(&mut self, name: &str, typ: &Type) -> Result<(), UnifyError> {
         match self.mode {
             PatternMode::Initial => {
+                self.initial_pattern_vars.insert(name.to_string());
                 self.env.insert_variable(
                     name.to_string(),
                     ValueConstructorVariant::LocalVariable,
@@ -2098,11 +2103,15 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             }
 
             PatternMode::Alternative => match self.env.local_values.get(name) {
-                // This variable was not defined in the Initial multi-pattern
-                None => todo!(), // TODO: Var not defined in previous pattern
-
                 // This variable was defined in the Initial multi-pattern
-                Some(initial) => unify(&initial.typ, &typ, self.env),
+                Some(initial) if self.initial_pattern_vars.contains(name) => {
+                    unify(&initial.typ, &typ, self.env)
+                }
+
+                // This variable was not defined in the Initial multi-pattern
+                _ => Err(UnifyError::ExtraVarInAlternativePattern {
+                    name: name.to_string(),
+                }),
             },
         }
     }
@@ -2493,6 +2502,11 @@ fn convert_unify_error(e: UnifyError, meta: &Meta) -> Error {
             given,
         },
 
+        UnifyError::ExtraVarInAlternativePattern { name } => Error::ExtraVarInAlternativePattern {
+            meta: meta.clone(),
+            name,
+        },
+
         UnifyError::RecursiveType => Error::RecursiveType { meta: meta.clone() },
     }
 }
@@ -2565,6 +2579,8 @@ fn instantiate(
 #[derive(Debug, PartialEq)]
 enum UnifyError {
     CouldNotUnify { expected: Type, given: Type },
+
+    ExtraVarInAlternativePattern { name: String },
 
     RecursiveType,
 }
