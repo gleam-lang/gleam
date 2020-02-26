@@ -646,6 +646,15 @@ fn infer_error_test() {
             given: float(),
         },
     );
+
+    // assert_error!(
+    //     "case tuple(1, 1.0) { tuple(x, _) | tuple(_, x) -> 1 }",
+    //     Error::CouldNotUnify {
+    //         meta: Meta { start: 26, end: 27 },
+    //         expected: bool(),
+    //         given: float(),
+    //     },
+    // );
 }
 
 #[test]
