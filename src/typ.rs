@@ -6,7 +6,7 @@ use crate::ast::{
     self, Arg, ArgNames, BinOp, CallArg, Clause, ClauseGuard, Expr, Meta, Pattern, Statement,
     TypeAst, TypedClause, TypedClauseGuard, TypedExpr, TypedModule, TypedMultiPattern,
     TypedPattern, UnqualifiedImport, UntypedClause, UntypedClauseGuard, UntypedExpr, UntypedModule,
-    UntypedMultiPattern, UntypedPattern,
+    UntypedMultiPattern, UntypedPattern, UntypedStatement,
 };
 use crate::error::GleamExpect;
 use std::cell::RefCell;
@@ -1268,6 +1268,74 @@ fn make_type_vars(
         .collect::<Result<_, _>>()
 }
 
+/// Iterate over a module, registering any new types created by the module into the env
+fn register_types(
+    statement: &UntypedStatement,
+    module: &Vec<String>,
+    env: &mut Env,
+) -> Result<(), Error> {
+    match statement {
+        Statement::ExternalType {
+            name,
+            public,
+            args,
+            meta,
+            ..
+        }
+        | Statement::CustomType {
+            name,
+            public,
+            args,
+            meta,
+            ..
+        } => {
+            let mut type_vars = hashmap![];
+            let parameters = make_type_vars(args, &mut type_vars, meta, env)?;
+            let typ = Type::App {
+                public: *public,
+                module: module.clone(),
+                name: name.clone(),
+                args: parameters.clone(),
+            };
+            env.insert_type_constructor(
+                name.clone(),
+                TypeConstructor {
+                    origin: meta.clone(),
+                    module: module.clone(),
+                    public: *public,
+                    parameters,
+                    typ,
+                },
+            )?;
+        }
+
+        Statement::TypeAlias {
+            meta,
+            public,
+            args,
+            alias: name,
+            resolved_type,
+        } => {
+            let mut type_vars = hashmap![];
+            let parameters = make_type_vars(args, &mut type_vars, meta, env)?;
+            let typ = env.type_from_ast(&resolved_type, &mut type_vars, NewTypeAction::Disallow)?;
+            env.insert_type_constructor(
+                name.clone(),
+                TypeConstructor {
+                    origin: meta.clone(),
+                    module: module.clone(),
+                    public: *public,
+                    parameters,
+                    typ,
+                },
+            )?;
+        }
+
+        _ => {}
+    }
+    Ok(())
+}
+
 /// Crawl the AST, annotating each node with the inferred type or
 /// returning an error.
 ///
@@ -1281,66 +1349,7 @@ pub fn infer_module(
     // Register types so they can be used in constructors and functions
     // earlier in the file
     for s in module.statements.iter() {
-        match s {
-            Statement::ExternalType {
-                name,
-                public,
-                args,
-                meta,
-                ..
-            }
-            | Statement::CustomType {
-                name,
-                public,
-                args,
-                meta,
-                ..
-            } => {
-                let mut type_vars = hashmap![];
-                let parameters = make_type_vars(args, &mut type_vars, meta, &mut env)?;
-                let typ = Type::App {
-                    public: *public,
-                    module: module_name.clone(),
-                    name: name.clone(),
-                    args: parameters.clone(),
-                };
-                env.insert_type_constructor(
-                    name.clone(),
-                    TypeConstructor {
-                        origin: meta.clone(),
-                        module: module_name.clone(),
-                        public: *public,
-                        parameters,
-                        typ,
-                    },
-                )?;
-            }
-
-            Statement::TypeAlias {
-                meta,
-                public,
-                args,
-                alias: name,
-                resolved_type,
-            } => {
-                let mut type_vars = hashmap![];
-                let parameters = make_type_vars(args, &mut type_vars, meta, &mut env)?;
-                let typ =
-                    env.type_from_ast(&resolved_type, &mut type_vars, NewTypeAction::Disallow)?;
-                env.insert_type_constructor(
-                    name.clone(),
-                    TypeConstructor {
-                        origin: meta.clone(),
-                        module: module_name.clone(),
-                        public: *public,
-                        parameters,
-                        typ,
-                    },
-                )?;
-            }
-
-            _ => {}
-        }
+        register_types(s, module_name, &mut env)?;
     }
 
     let statements: Vec<Statement<_, _, _, Type>> = module
