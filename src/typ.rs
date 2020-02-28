@@ -972,9 +972,6 @@ impl<'a> Env<'a> {
                     unify(parameter, argument, self).map_err(|e| convert_unify_error(e, &meta))?;
                 }
 
-                // TODO: remove special handling of type aliases
-                // TODO: make type aliases insert normal TypeConstructors
-
                 Ok(return_type)
             }
 
