@@ -650,8 +650,8 @@ Private types can only be used within the module that defines them.",
                     value_constructors,
                 } => {
                     let mut options: Vec<String> = type_constructors
-                        .into_iter()
-                        .chain(value_constructors.into_iter())
+                        .iter()
+                        .chain(value_constructors.iter())
                         .map(|s| s.to_string())
                         .collect();
                     let diagnostic = ErrorDiagnostic {
