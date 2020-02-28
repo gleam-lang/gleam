@@ -1,4 +1,4 @@
-FROM ekidd/rust-musl-builder:1.37.0 as build
+FROM ekidd/rust-musl-builder:1.40.0 as build
 
 # Build
 COPY . .

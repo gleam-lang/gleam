@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.7.0-rc1 - 2020-02-28
 
 - Type aliases can be defined to give concise names to frequently used types.
 - Case expression clauses may have guards which can be used to require
