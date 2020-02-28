@@ -24,9 +24,9 @@
   incorrect number of patterns for the subjects.
 - A friendly error message is rendered when a .gleam file cannot be read.
 - A friendly error message is rendered when the `gleam new` command fails to
+  write the new project to the file system.
 - A friendly error message is rendered when there is a cycle formed by module
   imports.
-  write the new project to the file system.
 - Top level types are now printed in error messages for type parameter mismatches.
 - The `gen` directory is now deleted before each compilation.
 - `gleam new` now includes installation instructions for Hex packages in the
