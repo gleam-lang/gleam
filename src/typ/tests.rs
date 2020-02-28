@@ -392,11 +392,7 @@ fn infer_error_test() {
         Error::UnknownVariable {
             meta: Meta { start: 0, end: 1 },
             name: "x".to_string(),
-            variables: Env::new(&HashMap::new())
-                .local_values
-                .keys()
-                .map(|t| t.to_string())
-                .collect(),
+            variables: env_vars(),
         },
     );
 
@@ -405,11 +401,7 @@ fn infer_error_test() {
         Error::UnknownVariable {
             meta: Meta { start: 0, end: 1 },
             name: "x".to_string(),
-            variables: Env::new(&HashMap::new())
-                .local_values
-                .keys()
-                .map(|t| t.to_string())
-                .collect(),
+            variables: env_vars(),
         },
     );
 
@@ -519,11 +511,7 @@ fn infer_error_test() {
         Error::UnknownVariable {
             meta: Meta { start: 21, end: 22 },
             name: "x".to_string(),
-            variables: Env::new(&HashMap::new())
-                .local_values
-                .keys()
-                .map(|t| t.to_string())
-                .collect(),
+            variables: env_vars(),
         },
     );
 
@@ -1285,15 +1273,7 @@ pub fn x() { id(1, 1.0) }
         Error::UnknownType {
             meta: Meta { start: 28, end: 29 },
             name: "x".to_string(),
-            types: {
-                let mut types: Vec<_> = Env::new(&HashMap::new())
-                    .module_types
-                    .keys()
-                    .map(|s| s.to_string())
-                    .collect();
-                types.push("Thing".to_string());
-                types
-            },
+            types: env_types_with(&["Thing"]),
         }
     );
 
@@ -1312,11 +1292,7 @@ pub fn x() { id(1, 1.0) }
         Error::UnknownType {
             meta: Meta { start: 14, end: 30 },
             name: "IllMap".to_string(),
-            types: Env::new(&HashMap::new())
-                .module_types
-                .keys()
-                .map(|s| s.to_string())
-                .collect(),
+            types: env_types(),
         }
     );
 
@@ -1326,28 +1302,57 @@ pub fn x() { id(1, 1.0) }
         Error::UnknownType {
             meta: Meta { start: 18, end: 21 },
             name: "Inf".to_string(),
-            types: Env::new(&HashMap::new())
-                .module_types
-                .keys()
-                .map(|s| s.to_string())
-                .collect(),
+            types: env_types(),
         }
     );
 
-    // TODO
-    // // We cannot reuse an alias name in the same module
-    // assert_error!(
-    //     "type X = Int type X = Int",
-    //     Error::UnknownType {
-    //         meta: Meta { start: 18, end: 21 },
-    //         name: "Inf".to_string(),
-    //         types: { Env::new(&HashMap::new()).module_types },
-    //     }
-    // );
+    // We cannot reuse an alias name in the same module
+    assert_error!(
+        "type X = Int type X = Int",
+        Error::DuplicateTypeName {
+            location: Meta { start: 13, end: 25 },
+            previous_location: Meta { start: 0, end: 12 },
+            name: "X".to_string(),
+        }
+    );
+
+    // We cannot use undeclared type vars in a type alias
+    assert_error!(
+        "type X = List(a)",
+        Error::UnknownType {
+            meta: Meta { start: 14, end: 15 },
+            name: "a".to_string(),
+            types: env_types(),
+        }
+    );
 
     // Cases were we can't so easily check for equality-
     // i.e. because the contents of the error are non-deterministic.
     assert_error!("fn inc(x: a) { x + 1 }");
+}
+
+fn env_types_with(things: &[&str]) -> Vec<String> {
+    let mut types: Vec<_> = env_types();
+    for thing in things {
+        types.push(thing.to_string());
+    }
+    types
+}
+
+fn env_types() -> Vec<String> {
+    Env::new(&HashMap::new())
+        .module_types
+        .keys()
+        .map(|s| s.to_string())
+        .collect()
+}
+
+fn env_vars() -> Vec<String> {
+    Env::new(&HashMap::new())
+        .local_values
+        .keys()
+        .map(|s| s.to_string())
+        .collect()
 }
 
 fn sort_options(e: Error) -> Error {
