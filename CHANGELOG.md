@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Type aliases can be defined to give concise names to frequently used types.
 - Case expression clauses may have guards which can be used to require
   equality between specified variables in order for the clause to match.
 - Case expression clauses may have alternative patterns, enabling one clause
