@@ -1401,7 +1401,7 @@ pub fn infer_module(
                 };
 
                 // Assert that the inferred type matches the type of any recursive call
-                unify(&rec, &typ, &mut env).map_err(|e| convert_unify_error(e, &meta))?;
+                unify(&rec, &typ, &env).map_err(|e| convert_unify_error(e, &meta))?;
                 let typ = generalise(typ, level);
 
                 // Insert the function into the module's interface
@@ -2064,7 +2064,7 @@ fn infer_clause(
     env.local_values = vars;
 
     Ok(Clause {
-        meta: meta,
+        meta,
         pattern: typed_pattern,
         alternative_patterns: typed_alternatives,
         guard,

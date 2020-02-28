@@ -446,7 +446,6 @@ fn clause(clause: TypedClause, env: &mut Env) -> Document {
     } = clause;
 
     let docs = std::iter::once(pat)
-        .into_iter()
         .chain(alternative_patterns.into_iter())
         .map(|mut patterns| {
             let patterns_doc = if patterns.len() == 1 {
