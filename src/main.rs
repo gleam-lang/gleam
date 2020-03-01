@@ -1,6 +1,7 @@
 #![deny(warnings)]
 
 mod ast;
+mod doc;
 mod erl;
 mod error;
 mod format;
@@ -9,6 +10,7 @@ mod parser;
 mod pretty;
 mod project;
 mod typ;
+
 lalrpop_mod!(
     #[allow(deprecated)]
     #[allow(clippy::all)]
@@ -153,15 +155,8 @@ fn command_build(root: String) -> Result<(), Error> {
     let compiled = crate::project::compile(srcs)?;
 
     // Delete the gen directory before generating the newly compiled files
-    let gen_dir = root_path
-        .parent()
-        .ok_or_else(|| Error::FileIO {
-            action: error::FileIOAction::FindParent,
-            kind: error::FileKind::Directory,
-            path: root_path.clone(),
-            err: None,
-        })?
-        .join("gen");
+    let gen_dir = root_path.join("gen");
+    let doc_dir = root_path.join("doc");
 
     if gen_dir.exists() {
         std::fs::remove_dir_all(&gen_dir).map_err(|e| Error::FileIO {
@@ -172,7 +167,22 @@ fn command_build(root: String) -> Result<(), Error> {
         })?;
     }
 
-    for crate::project::Compiled { files, .. } in compiled {
+    if doc_dir.exists() {
+        std::fs::remove_dir_all(&doc_dir.clone()).map_err(|e| Error::FileIO {
+            action: error::FileIOAction::Delete,
+            kind: error::FileKind::Directory,
+            path: doc_dir.clone(),
+            err: Some(e.to_string()),
+        })?;
+    }
+
+    for crate::project::Compiled { files, doc, .. } in compiled {
+        write_doc(
+            doc_dir.clone(),
+            doc.filename(),
+            doc.doc_text(project_config.name.clone()),
+        )?;
+
         for crate::project::OutputFile { text, path } in files {
             let dir_path = path.parent().ok_or_else(|| Error::FileIO {
                 action: error::FileIOAction::FindParent,
@@ -206,6 +216,48 @@ fn command_build(root: String) -> Result<(), Error> {
 
     println!("Done!");
     Ok(())
+}
+
+fn write_doc(dir: PathBuf, filename: String, doc_text: String) -> Result<(), Error> {
+    if doc_text.is_empty() {
+        return Ok(());
+    }
+    let doc_dir_path = dir.join(&filename);
+    doc_dir_path
+        .parent()
+        .ok_or_else(|| Error::FileIO {
+            action: error::FileIOAction::FindParent,
+            kind: error::FileKind::Directory,
+            path: doc_dir_path.clone(),
+            err: None,
+        })
+        .and_then(|doc_parent_path| {
+            std::fs::create_dir_all(doc_parent_path).map_err(|e| Error::FileIO {
+                action: error::FileIOAction::Create,
+                kind: error::FileKind::Directory,
+                path: doc_parent_path.to_path_buf(),
+                err: Some(e.to_string()),
+            })
+        })
+        .and_then(|_| {
+            File::create(&doc_dir_path).map_err(|e| Error::FileIO {
+                action: error::FileIOAction::Create,
+                kind: error::FileKind::File,
+                path: doc_dir_path.clone(),
+                err: Some(e.to_string()),
+            })
+        })
+        .and_then(|mut doc_f| {
+            doc_f
+                .write_all(doc_text.as_bytes())
+                .map_err(|e| Error::FileIO {
+                    action: error::FileIOAction::WriteTo,
+                    kind: error::FileKind::File,
+                    path: doc_dir_path.clone(),
+                    err: Some(e.to_string()),
+                })
+        })
+        .and_then(|_| Ok(()))
 }
 
 fn read_project_config(root: &str) -> Result<ProjectConfig, Error> {

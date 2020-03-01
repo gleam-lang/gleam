@@ -139,9 +139,12 @@ impl SourceTree {
             .to_string()
             .replace("\\", "/");
 
+        // TODO: Create a mutable vec to pass in to strip_extra for comments
+
         // Parse the source
+        let (cleaned, doc) = crate::parser::strip_extra(&input.src);
         let mut module = crate::grammar::ModuleParser::new()
-            .parse(&crate::parser::strip_extra(&input.src))
+            .parse(&cleaned)
             .map_err(|e| Error::Parse {
                 path: input.path.clone(),
                 src: input.src.clone(),
@@ -172,6 +175,7 @@ impl SourceTree {
                 origin: input.origin,
                 source_base_path: input.source_base_path,
                 module,
+                doc,
             },
         );
         Ok(())

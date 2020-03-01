@@ -2,6 +2,7 @@ mod source_tree;
 #[cfg(test)]
 mod tests;
 
+use super::doc::{DocBlockManager, EEP48DocChunk};
 use crate::error::{Error, FileIOAction, FileKind, GleamExpect};
 use crate::typ;
 use source_tree::SourceTree;
@@ -22,6 +23,7 @@ pub struct Compiled {
     pub origin: ModuleOrigin,
     pub files: Vec<OutputFile>,
     pub type_info: typ::Module,
+    pub doc: EEP48DocChunk,
 }
 
 #[derive(Debug, PartialEq)]
@@ -53,6 +55,7 @@ pub struct Module {
     source_base_path: PathBuf,
     origin: ModuleOrigin,
     module: crate::ast::UntypedModule,
+    doc: DocBlockManager,
 }
 
 pub fn compile(inputs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
@@ -66,6 +69,7 @@ pub fn compile(inputs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
         name: Vec<String>,
         origin: ModuleOrigin,
         files: Vec<OutputFile>,
+        doc: EEP48DocChunk,
     }
 
     for Module {
@@ -74,6 +78,7 @@ pub fn compile(inputs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
         module,
         origin,
         source_base_path,
+        doc,
     } in source_tree.consume()?
     {
         let name = module.name.clone();
@@ -101,6 +106,8 @@ pub fn compile(inputs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
             })
             .collect();
 
+        let doc_chunk = doc.gen_doc_chunk(&module);
+
         files.push(OutputFile {
             path: gen_dir.join(format!("{}.erl", erl_module_name)),
             text: crate::erl::module(module),
@@ -111,6 +118,7 @@ pub fn compile(inputs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
             name_string,
             origin,
             files,
+            doc: doc_chunk,
         });
     }
 
@@ -122,6 +130,7 @@ pub fn compile(inputs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
                  name_string,
                  origin,
                  files,
+                 doc,
              }| Compiled {
                 name,
                 files,
@@ -129,6 +138,7 @@ pub fn compile(inputs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
                 type_info: modules_type_infos
                     .remove(&name_string)
                     .gleam_expect("project::compile(): Merging module type info"),
+                doc,
             },
         )
         .collect())

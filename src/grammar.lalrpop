@@ -16,10 +16,11 @@ extern {
 }
 
 pub Module: UntypedModule = {
-    Statement* => Module {
+    <statements:Statement*> => Module {
         type_info: (),
         name: vec![],
-        statements: <>,
+        statements: statements,
+        comments: vec![]
     }
 }
 
@@ -39,6 +40,7 @@ StatementTypeAlias : UntypedStatement = {
         alias: ta.0,
         args: ta.1,
         resolved_type: tr,
+        comments: vec![]
     }
 }
 
@@ -49,6 +51,7 @@ StatementCustomType: UntypedStatement = {
         name: t.0,
         args: t.1,
         constructors: cs,
+        comments: vec![],
     }
 }
 
@@ -77,6 +80,7 @@ StatementExternalFn: UntypedStatement = {
         module: m,
         fun: f,
         retrn: r,
+        comments: vec![],
     }
 }
 
@@ -95,6 +99,7 @@ StatementFn: UntypedStatement = {
         args: a,
         body: seq(b),
         return_annotation,
+        comments: vec![],
     }
 }
 
@@ -125,6 +130,7 @@ StatementExternalType: UntypedStatement = {
         public: p.is_some(),
         name: n.0,
         args: n.1,
+        comments: vec![],
     }
 }
 
