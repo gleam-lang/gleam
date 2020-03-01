@@ -677,13 +677,20 @@ Private types can only be used within the module that defines them.",
                     given,
                 } => {
                     let diagnostic = ErrorDiagnostic {
-                        title: "Incorrect number of pattern".to_string(),
+                        title: "Incorrect number of patterns".to_string(),
                         label: format!("Expected {} patterns, got {}", expected, given),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
+                    writeln!(
+                        buffer,
+                        "This case expression has {} subjects, but this pattern matches {}.
+Each clause must have a pattern for every subject value.",
+                        expected, given
+                    )
+                    .unwrap();
                 }
 
                 NonLocalClauseGuardVariable { meta, name } => {
