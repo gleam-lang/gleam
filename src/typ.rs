@@ -1271,7 +1271,6 @@ fn register_types(
             args,
             alias: name,
             resolved_type,
-            comments: _,
         } => {
             let mut type_vars = hashmap![];
             let parameters = make_type_vars(args, &mut type_vars, location, env)?;
@@ -1320,7 +1319,6 @@ pub fn infer_module(
                 args,
                 body,
                 return_annotation,
-                comments,
             } => {
                 let level = 1;
 
@@ -1394,7 +1392,6 @@ pub fn infer_module(
                     args,
                     body,
                     return_annotation,
-                    comments,
                 })
             }
 
@@ -1406,7 +1403,6 @@ pub fn infer_module(
                 retrn,
                 module,
                 fun,
-                comments,
             } => {
                 // Construct type of function from AST
                 let mut type_vars = hashmap![];
@@ -1465,7 +1461,6 @@ pub fn infer_module(
                     retrn,
                     module,
                     fun,
-                    comments,
                 })
             }
 
@@ -1475,14 +1470,12 @@ pub fn infer_module(
                 alias,
                 args,
                 resolved_type,
-                comments,
             } => Ok(Statement::TypeAlias {
                 location,
                 public,
                 alias,
                 args,
                 resolved_type,
-                comments,
             }),
 
             Statement::CustomType {
@@ -1491,7 +1484,6 @@ pub fn infer_module(
                 name,
                 args,
                 constructors,
-                comments,
             } => {
                 let mut type_vars = hashmap![];
 
@@ -1579,7 +1571,6 @@ pub fn infer_module(
                     name,
                     args,
                     constructors,
-                    comments,
                 })
             }
 
@@ -1588,7 +1579,6 @@ pub fn infer_module(
                 public,
                 name,
                 args,
-                comments,
             } => {
                 // Check contained types are valid
                 let mut type_vars = hashmap![];
@@ -1604,7 +1594,6 @@ pub fn infer_module(
                     public,
                     name,
                     args,
-                    comments,
                 })
             }
 

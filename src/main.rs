@@ -176,12 +176,11 @@ fn command_build(root: String) -> Result<(), Error> {
         })?;
     }
 
+    let mut doc_writer = doc::DocWriter::new(project_config.name.clone(), doc_dir);
+
+    println!("{:#?}", compiled);
     for crate::project::Compiled { files, doc, .. } in compiled {
-        write_doc(
-            doc_dir.clone(),
-            doc.filename(),
-            doc.doc_text(project_config.name.clone()),
-        )?;
+        doc_writer.add_chunk(doc);
 
         for crate::project::OutputFile { text, path } in files {
             let dir_path = path.parent().ok_or_else(|| Error::FileIO {
@@ -214,50 +213,10 @@ fn command_build(root: String) -> Result<(), Error> {
         }
     }
 
+    doc_writer.write()?;
+
     println!("Done!");
     Ok(())
-}
-
-fn write_doc(dir: PathBuf, filename: String, doc_text: String) -> Result<(), Error> {
-    if doc_text.is_empty() {
-        return Ok(());
-    }
-    let doc_dir_path = dir.join(&filename);
-    doc_dir_path
-        .parent()
-        .ok_or_else(|| Error::FileIO {
-            action: error::FileIOAction::FindParent,
-            kind: error::FileKind::Directory,
-            path: doc_dir_path.clone(),
-            err: None,
-        })
-        .and_then(|doc_parent_path| {
-            std::fs::create_dir_all(doc_parent_path).map_err(|e| Error::FileIO {
-                action: error::FileIOAction::Create,
-                kind: error::FileKind::Directory,
-                path: doc_parent_path.to_path_buf(),
-                err: Some(e.to_string()),
-            })
-        })
-        .and_then(|_| {
-            File::create(&doc_dir_path).map_err(|e| Error::FileIO {
-                action: error::FileIOAction::Create,
-                kind: error::FileKind::File,
-                path: doc_dir_path.clone(),
-                err: Some(e.to_string()),
-            })
-        })
-        .and_then(|mut doc_f| {
-            doc_f
-                .write_all(doc_text.as_bytes())
-                .map_err(|e| Error::FileIO {
-                    action: error::FileIOAction::WriteTo,
-                    kind: error::FileKind::File,
-                    path: doc_dir_path.clone(),
-                    err: Some(e.to_string()),
-                })
-        })
-        .and_then(|_| Ok(()))
 }
 
 fn read_project_config(root: &str) -> Result<ProjectConfig, Error> {

@@ -3,6 +3,9 @@
 
 -export([x/0]).
 
+fully_typed(First) ->
+    First + 1.
+
 id(X, Y) ->
     X.
 

@@ -1,3 +1,4 @@
+pub mod pretty;
 mod typed;
 mod untyped;
 
@@ -122,7 +123,6 @@ pub enum Statement<Expr> {
         body: Expr,
         public: bool,
         return_annotation: Option<TypeAst>,
-        comments: Vec<String>,
     },
 
     TypeAlias {
@@ -131,7 +131,6 @@ pub enum Statement<Expr> {
         args: Vec<String>,
         resolved_type: TypeAst,
         public: bool,
-        comments: Vec<String>,
     },
 
     CustomType {
@@ -140,7 +139,6 @@ pub enum Statement<Expr> {
         args: Vec<String>,
         public: bool,
         constructors: Vec<RecordConstructor>,
-        comments: Vec<String>,
     },
 
     ExternalFn {
@@ -151,7 +149,6 @@ pub enum Statement<Expr> {
         retrn: TypeAst,
         module: String,
         fun: String,
-        comments: Vec<String>,
     },
 
     ExternalType {
@@ -159,7 +156,6 @@ pub enum Statement<Expr> {
         public: bool,
         name: String,
         args: Vec<String>,
-        comments: Vec<String>,
     },
 
     Import {

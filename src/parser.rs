@@ -27,7 +27,7 @@ pub fn strip_extra(src: &str) -> (String, doc::DocBlockManager) {
     let mut doc_comment_buffer = String::with_capacity(500);
     let mut doc_block = doc::DocBlockManager::new();
 
-    while let Some((outerCharNo, c)) = chars.next() {
+    while let Some((outer_char_no, c)) = chars.next() {
         match mode {
             Mode::Normal => match c {
                 ';' => buffer.push(' '),
@@ -94,7 +94,7 @@ pub fn strip_extra(src: &str) -> (String, doc::DocBlockManager) {
                 '\n' => {
                     mode = Mode::Normal;
                     doc_block.add_line(
-                        outerCharNo - 3 - doc_comment_buffer.len(),
+                        outer_char_no - 3 - doc_comment_buffer.len(),
                         doc_comment_buffer.trim_start().to_string(),
                     );
                     doc_comment_buffer.clear();
@@ -149,8 +149,6 @@ pub fn() -> {}
     let multi_doc_result = strip_extra(&str);
 
     assert_eq!(multi_doc_result.0, expected.to_string());
-    assert_eq!(multi_doc_result.1.comment_count(), 3);
-    assert_eq!(multi_doc_result.1.block_count(), 2);
 }
 
 pub fn seq(mut exprs: Vec<crate::ast::UntypedExpr>) -> crate::ast::UntypedExpr {

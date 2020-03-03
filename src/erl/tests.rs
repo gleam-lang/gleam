@@ -26,7 +26,6 @@ fn module_test() {
                 public: true,
                 name: "Any".to_string(),
                 args: vec![],
-                comments: vec![],
             },
             Statement::CustomType {
                 location: Default::default(),
@@ -38,7 +37,6 @@ fn module_test() {
                     name: "Ok".to_string(),
                     args: vec![],
                 }],
-                comments: vec![],
             },
             Statement::Import {
                 location: Default::default(),
@@ -78,7 +76,6 @@ fn module_test() {
                     args: vec![],
                     name: "Int".to_string(),
                 },
-                comments: vec![],
             },
             Statement::ExternalFn {
                 location: Default::default(),
@@ -93,7 +90,6 @@ fn module_test() {
                     args: vec![],
                     name: "Map".to_string(),
                 },
-                comments: vec![],
             },
         ],
     };
@@ -131,7 +127,6 @@ map() ->
                     location: Default::default(),
                     value: "176".to_string(),
                 },
-                comments: vec![],
             },
             Statement::Fn {
                 return_annotation: None,
@@ -144,7 +139,6 @@ map() ->
                     typ: crate::typ::float(),
                     value: 11177.324401,
                 },
-                comments: vec![],
             },
             Statement::Fn {
                 return_annotation: None,
@@ -156,7 +150,6 @@ map() ->
                     location: Default::default(),
                     typ: crate::typ::int(),
                 },
-                comments: vec![],
             },
             Statement::Fn {
                 return_annotation: None,
@@ -169,7 +162,6 @@ map() ->
                     typ: crate::typ::string(),
                     value: "Hello there!".to_string(),
                 },
-                comments: vec![],
             },
             Statement::Fn {
                 return_annotation: None,
@@ -190,7 +182,6 @@ map() ->
                         value: "2".to_string(),
                     }),
                 },
-                comments: vec![],
             },
             Statement::Fn {
                 return_annotation: None,
@@ -213,7 +204,6 @@ map() ->
                         value: "2".to_string(),
                     }),
                 },
-                comments: vec![],
             },
             Statement::Fn {
                 return_annotation: None,
@@ -235,7 +225,6 @@ map() ->
                     },
                     name: "Nil".to_string(),
                 },
-                comments: vec![],
             },
             Statement::Fn {
                 return_annotation: None,
@@ -266,7 +255,6 @@ map() ->
                         name: "one_two".to_string(),
                     }),
                 },
-                comments: vec![],
             },
             Statement::Fn {
                 return_annotation: None,
@@ -296,7 +284,6 @@ map() ->
                         }),
                     }),
                 },
-                comments: vec![],
             },
             Statement::Fn {
                 return_annotation: None,
@@ -331,7 +318,6 @@ map() ->
                         value: "100000000000".to_string(),
                     }),
                 },
-                comments: vec![],
             },
             Statement::Fn {
                 return_annotation: None,
@@ -355,7 +341,6 @@ map() ->
                         },
                     ],
                 },
-                comments: vec![],
             },
         ],
     };
@@ -478,7 +463,6 @@ tup() ->
                 location: Default::default(),
                 value: "1".to_string(),
             },
-            comments: vec![],
         }],
     };
     let expected = "-module(term).
@@ -524,7 +508,6 @@ some_function(
                         variant: ValueConstructorVariant::LocalVariable,
                     },
                 },
-                comments: vec![],
             },
             Statement::Fn {
                 return_annotation: None,
@@ -540,7 +523,6 @@ some_function(
                     label: "two".to_string(),
                     constructor: ModuleValueConstructor::Fn,
                 },
-                comments: vec![],
             },
             Statement::Fn {
                 return_annotation: None,
@@ -559,7 +541,6 @@ some_function(
                     label: "two".to_string(),
                     constructor: ModuleValueConstructor::Fn,
                 },
-                comments: vec![],
             },
             Statement::Fn {
                 return_annotation: None,
@@ -588,7 +569,6 @@ some_function(
                         constructor: ModuleValueConstructor::Fn,
                     }),
                 },
-                comments: vec![],
             },
         ],
     };
@@ -739,7 +719,6 @@ moddy4() ->
                     },
                 ],
             },
-            comments: vec![],
         }],
     };
     let expected = "-module(my_mod).
@@ -812,7 +791,6 @@ go() ->
                         name: "one_two".to_string(),
                     }),
                 },
-                comments: vec![],
             },
             Statement::Fn {
                 return_annotation: None,
@@ -843,7 +821,6 @@ go() ->
                         name: "one_two".to_string(),
                     }),
                 },
-                comments: vec![],
             },
             Statement::Fn {
                 return_annotation: None,
@@ -892,7 +869,6 @@ go() ->
                         }),
                     }),
                 },
-                comments: vec![],
             },
         ],
     };

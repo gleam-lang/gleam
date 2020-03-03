@@ -1,6 +1,12 @@
 use super::ast::{Arg, ArgNames, Statement, TypeAst, TypedModule};
+use crate::ast::pretty;
+use crate::error::Error;
 use itertools::Itertools;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::Write;
+use std::path::PathBuf;
+
 #[derive(Debug, PartialEq)]
 struct RawComment {
   pub line_no: usize,
@@ -23,7 +29,7 @@ impl DocBlockManager {
     }
   }
 
-  pub fn block_count(self: &Self) -> usize {
+  pub(self) fn block_count(self: &Self) -> usize {
     if self.current_block.is_empty() {
       self.blocks.len()
     } else {
@@ -31,7 +37,7 @@ impl DocBlockManager {
     }
   }
 
-  pub fn comment_count(self: &Self) -> usize {
+  pub(self) fn comment_count(self: &Self) -> usize {
     self.num_comments
   }
 
@@ -79,8 +85,6 @@ impl DocBlockManager {
         } else {
           let copy = std::mem::replace(&mut self.current_block, vec![]);
           self.blocks.push(copy);
-          self.current_block = vec![];
-          self.current_block.push(new_line);
         }
       }
       None => {
@@ -128,51 +132,11 @@ impl DocBlockManager {
             typ: DocType::Fn,
           });
         }
-        Statement::TypeAlias {
-          meta,
-          alias,
-          args,
-          resolved_type,
-          public,
-          comments,
-        } => {
-          ();
-        }
-        Statement::CustomType {
-          meta,
-          name,
-          args,
-          public,
-          constructors,
-          comments,
-        } => {
-          ();
-        }
-        Statement::ExternalFn {
-          meta,
-          public,
-          args,
-          name,
-          retrn,
-          module,
-          fun,
-          comments,
-        } => {
-          ();
-        }
-        Statement::ExternalType {
-          meta,
-          public,
-          name,
-          args,
-          comments,
-        } => {
-          ();
-        }
-
-        Statement::Import { .. } => {
-          ();
-        }
+        Statement::TypeAlias { .. } => {}
+        Statement::CustomType { .. } => {}
+        Statement::ExternalFn { .. } => {}
+        Statement::ExternalType { .. } => {}
+        Statement::Import { .. } => {}
       }
     }
     // TODO: Not the real logic
@@ -206,7 +170,7 @@ impl DocBlockManager {
   }
 }
 
-fn type_to_string(typ: &TypeAst) -> String {
+fn type_to_string(_typ: &TypeAst) -> String {
   "".to_string()
 }
 
@@ -350,5 +314,80 @@ impl EEP48DocChunk {
         project_name, self.anno.file, self.anno.file, module_doc, function_docs
       )
     }
+  }
+}
+
+pub struct DocWriter {
+  chunks: Vec<EEP48DocChunk>,
+  project_name: String,
+  doc_dir: PathBuf,
+}
+
+impl DocWriter {
+  pub fn new(project_name: String, doc_dir: PathBuf) -> Self {
+    DocWriter {
+      chunks: vec![],
+      project_name,
+      doc_dir,
+    }
+  }
+
+  pub fn add_chunk(self: &mut Self, chunk: EEP48DocChunk) {
+    self.chunks.push(chunk);
+  }
+
+  pub fn write(self: &Self) -> Result<(), Error> {
+    let template_fn = move |s| "".to_string();
+
+    self
+      .chunks
+      .iter()
+      .map(|chunk| self.write_doc(chunk, template_fn))
+      .collect()
+  }
+
+  fn write_doc<F>(self: &Self, doc: &EEP48DocChunk, template_fn: F) -> Result<(), Error>
+  where
+    F: FnOnce(String) -> String,
+  {
+    use crate::error::{FileIOAction, FileKind};
+    let doc_text = doc.doc_text(self.project_name.clone());
+    let filename = doc.filename();
+    let doc_dir_path = self.doc_dir.join(&filename);
+    doc_dir_path
+      .parent()
+      .ok_or_else(|| Error::FileIO {
+        action: FileIOAction::FindParent,
+        kind: FileKind::Directory,
+        path: doc_dir_path.clone(),
+        err: None,
+      })
+      .and_then(|doc_parent_path| {
+        std::fs::create_dir_all(doc_parent_path).map_err(|e| Error::FileIO {
+          action: FileIOAction::Create,
+          kind: FileKind::Directory,
+          path: doc_parent_path.to_path_buf(),
+          err: Some(e.to_string()),
+        })
+      })
+      .and_then(|_| {
+        File::create(&doc_dir_path).map_err(|e| Error::FileIO {
+          action: FileIOAction::Create,
+          kind: FileKind::File,
+          path: doc_dir_path.clone(),
+          err: Some(e.to_string()),
+        })
+      })
+      .and_then(|mut doc_f| {
+        doc_f
+          .write_all(doc_text.as_bytes())
+          .map_err(|e| Error::FileIO {
+            action: FileIOAction::WriteTo,
+            kind: FileKind::File,
+            path: doc_dir_path.clone(),
+            err: Some(e.to_string()),
+          })
+      })
+      .and_then(|_| Ok(()))
   }
 }
