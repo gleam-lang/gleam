@@ -1752,8 +1752,9 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             is_capture,
             args,
             body,
+            return_annotation,
             ..
-        } => infer_fn(args, *body, is_capture, level, meta, env),
+        } => infer_fn(args, *body, is_capture, return_annotation, level, meta, env),
 
         Expr::Let {
             meta,
@@ -1852,11 +1853,12 @@ fn infer_fn(
     args: Vec<Arg>,
     body: UntypedExpr,
     is_capture: bool,
+    return_annotation: Option<TypeAst>,
     level: usize,
     meta: Meta,
     env: &mut Env,
 ) -> Result<TypedExpr, Error> {
-    let (args_types, body) = do_infer_fn(args.as_ref(), body, &None, level, env)?;
+    let (args_types, body) = do_infer_fn(args.as_ref(), body, &return_annotation, level, env)?;
     let typ = Type::Fn {
         args: args_types,
         retrn: Box::new(body.typ().clone()),
@@ -1867,6 +1869,7 @@ fn infer_fn(
         is_capture,
         args,
         body: Box::new(body),
+        return_annotation: return_annotation,
     })
 }
 

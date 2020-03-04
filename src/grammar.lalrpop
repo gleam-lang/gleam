@@ -320,12 +320,13 @@ FieldSelect: UntypedExpr = {
 }
 
 Fn: UntypedExpr = {
-    <s:@L> "fn(" <a:Comma<FnArg>> ")" "{" <b:Expr+> "}" <e:@L> => Expr::Fn {
+    <s:@L> "fn(" <a:Comma<FnArg>> ")" <return_annotation:("->" <Type>)?> "{" <b:Expr+> "}" <e:@L> => Expr::Fn {
         meta: meta(s, e),
         is_capture: false,
         typ: (),
         args: a,
         body: Box::new(seq(b)),
+        return_annotation,
     },
 }
 
@@ -390,6 +391,7 @@ Call: UntypedExpr = {
                     names: ArgNames::Named{ name: hole_arg_name.to_string() },
                 }],
                 body: Box::new(call),
+                return_annotation: None,
             }),
 
             count => Err(lalrpop_util::ParseError::User {
