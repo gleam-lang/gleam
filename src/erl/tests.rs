@@ -292,6 +292,7 @@ map() ->
                 body: Expr::Fn {
                     meta: Default::default(),
                     is_capture: false,
+                    return_annotation: None,
                     typ: crate::typ::int(),
                     args: vec![
                         Arg {

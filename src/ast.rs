@@ -248,6 +248,7 @@ pub enum Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type
         is_capture: bool,
         args: Vec<Arg>,
         body: Box<Self>,
+        return_annotation: Option<TypeAst>,
     },
 
     Nil {

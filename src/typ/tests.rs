@@ -302,6 +302,9 @@ fn infer_test() {
     assert_infer!("fn(x) { tuple(1, x) }", "fn(a) -> tuple(Int, a)");
     assert_infer!("fn(x, y) { tuple(x, y) }", "fn(a, b) -> tuple(a, b)");
     assert_infer!("fn(x) { tuple(x, x) }", "fn(a) -> tuple(a, a)");
+    assert_infer!("fn(x) -> Int { x }", "fn(Int) -> Int");
+    assert_infer!("fn(x) -> a { x }", "fn(a) -> a");
+    assert_infer!("fn() -> Int { 2 }", "fn() -> Int");
 
     // case
     assert_infer!("case 1 { a -> 1 }", "Int");
