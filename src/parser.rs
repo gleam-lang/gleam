@@ -651,13 +651,14 @@ fn expr_test() {
         Ok(Expr::Fn {
             meta: Meta { start: 0, end: 10 },
             is_capture: false,
+            return_annotation: None,
             typ: (),
             args: vec![],
             body: Box::new(Expr::Int {
                 typ: (),
                 meta: Meta { start: 7, end: 8 },
                 value: 1
-            })
+            }),
         }),
         ExprParser::new().parse("fn() { 1 }"),
     );
@@ -667,6 +668,7 @@ fn expr_test() {
             meta: Meta { start: 0, end: 10 },
             typ: (),
             is_capture: true,
+            return_annotation: None,
             args: vec![Arg {
                 meta: Meta { start: 0, end: 0 },
                 annotation: None,
@@ -711,7 +713,7 @@ fn expr_test() {
                         }
                     }
                 ]
-            })
+            }),
         }),
         ExprParser::new().parse("f(1, _, 3)"),
     );
@@ -720,6 +722,7 @@ fn expr_test() {
         Ok(Expr::Fn {
             meta: Meta { start: 0, end: 16 },
             is_capture: false,
+            return_annotation: None,
             typ: (),
             args: vec![
                 Arg {
@@ -749,7 +752,7 @@ fn expr_test() {
                     meta: Meta { start: 13, end: 14 },
                     value: 2
                 })
-            })
+            }),
         }),
         ExprParser::new().parse("fn(a, b) { 1 2 }"),
     );
