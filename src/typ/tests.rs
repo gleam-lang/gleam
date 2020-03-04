@@ -510,6 +510,44 @@ fn infer_error_test() {
     );
 
     assert_error!(
+        "fn() -> Int { 2.0 }",
+        Error::CouldNotUnify {
+            meta: Meta { start: 14, end: 17 },
+            expected: Type::App {
+                public: true,
+                module: vec![],
+                name: "Int".to_string(),
+                args: vec![],
+            },
+            given: Type::App {
+                public: true,
+                module: vec![],
+                name: "Float".to_string(),
+                args: vec![],
+            },
+        },
+    );
+
+    assert_error!(
+        "fn(x: Int) -> Float { x }",
+        Error::CouldNotUnify {
+            meta: Meta { start: 22, end: 23 },
+            expected: Type::App {
+                public: true,
+                module: vec![],
+                name: "Float".to_string(),
+                args: vec![],
+            },
+            given: Type::App {
+                public: true,
+                module: vec![],
+                name: "Int".to_string(),
+                args: vec![],
+            },
+        },
+    );
+
+    assert_error!(
         "case 1 { x -> 1 1 -> x }",
         Error::UnknownVariable {
             meta: Meta { start: 21, end: 22 },
