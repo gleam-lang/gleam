@@ -6,7 +6,10 @@
 
 use im::vector::Vector;
 
-pub trait Documentable {
+pub trait Documentable
+where
+    Self: Clone,
+{
     fn to_doc(self) -> Document;
 }
 
@@ -441,6 +444,13 @@ pub fn delim(d: &str) -> Document {
     Document::Break {
         broken: d.to_string(),
         unbroken: format!("{} ", d),
+    }
+}
+
+pub fn delim_end(d: &str) -> Document {
+    Document::Break {
+        broken: d.to_string(),
+        unbroken: format!(" {}", d),
     }
 }
 

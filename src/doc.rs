@@ -1,6 +1,7 @@
 use super::ast::{Arg, ArgNames, Statement, TypeAst, TypedModule};
 use crate::ast::pretty;
 use crate::error::Error;
+use crate::pretty::Documentable;
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::fs::File;
@@ -100,6 +101,8 @@ impl DocBlockManager {
     let mut docs = Vec::<EEP48Doc>::new();
     for statement in module.statements.iter() {
       match statement {
+        fun
+        @
         Statement::Fn {
           meta,
           name,
@@ -108,34 +111,83 @@ impl DocBlockManager {
           return_annotation,
           ..
         } => {
-          let public_str = if *public { "pub " } else { "" };
-          let mut parsed_arg_vec: Vec<String> = vec![];
-          for arg in args {
-            if let Some(a) = arg_to_string(arg) {
-              parsed_arg_vec.push(a)
-            };
-          }
-          let parsed_args = parsed_arg_vec.join(", ");
-          let return_type = return_annotation.as_ref().map(|a| type_to_string(&a));
+          let doc = fun.clone().to_doc();
           let fn_docs: Option<HashMap<String, String>> = self
             .find_block_for_line(meta.start)
             .map(|d| vec![("en-US".to_string(), d)].into_iter().collect());
           docs.push(EEP48Doc {
             name: name.to_string(),
             arity: args.len(),
-            signature: vec![match return_type {
-              Some(retrn) => format!("{} fn {}({}) -> {}", public_str, name, parsed_args, retrn),
-              None => format!("{} fn {}({})", public_str, name, parsed_args),
-            }],
+            signature: vec![crate::pretty::format(80, doc)],
             doc: fn_docs,
             meta: DocMeta::new("".to_string()),
             typ: DocType::Fn,
           });
         }
-        Statement::TypeAlias { .. } => {}
-        Statement::CustomType { .. } => {}
-        Statement::ExternalFn { .. } => {}
-        Statement::ExternalType { .. } => {}
+        ta @ Statement::TypeAlias {
+          meta, args, alias, ..
+        } => {
+          let doc = ta.clone().to_doc();
+          let fn_docs: Option<HashMap<String, String>> = self
+            .find_block_for_line(meta.start)
+            .map(|d| vec![("en-US".to_string(), d)].into_iter().collect());
+          docs.push(EEP48Doc {
+            name: alias.to_string(),
+            arity: args.len(),
+            signature: vec![crate::pretty::format(80, doc)],
+            doc: fn_docs,
+            meta: DocMeta::new("".to_string()),
+            typ: DocType::Fn,
+          });
+        }
+        ct @ Statement::CustomType {
+          meta, name, args, ..
+        } => {
+          let doc = ct.clone().to_doc();
+          let fn_docs: Option<HashMap<String, String>> = self
+            .find_block_for_line(meta.start)
+            .map(|d| vec![("en-US".to_string(), d)].into_iter().collect());
+          docs.push(EEP48Doc {
+            name: name.to_string(),
+            arity: args.len(),
+            signature: vec![crate::pretty::format(80, doc)],
+            doc: fn_docs,
+            meta: DocMeta::new("".to_string()),
+            typ: DocType::Fn,
+          });
+        }
+        fun @ Statement::ExternalFn {
+          meta, name, args, ..
+        } => {
+          let doc = fun.clone().to_doc();
+          let fn_docs: Option<HashMap<String, String>> = self
+            .find_block_for_line(meta.start)
+            .map(|d| vec![("en-US".to_string(), d)].into_iter().collect());
+          docs.push(EEP48Doc {
+            name: name.to_string(),
+            arity: args.len(),
+            signature: vec![crate::pretty::format(80, doc)],
+            doc: fn_docs,
+            meta: DocMeta::new("".to_string()),
+            typ: DocType::Fn,
+          });
+        }
+        et @ Statement::ExternalType {
+          meta, name, args, ..
+        } => {
+          let doc = et.clone().to_doc();
+          let fn_docs: Option<HashMap<String, String>> = self
+            .find_block_for_line(meta.start)
+            .map(|d| vec![("en-US".to_string(), d)].into_iter().collect());
+          docs.push(EEP48Doc {
+            name: name.to_string(),
+            arity: args.len(),
+            signature: vec![crate::pretty::format(80, doc)],
+            doc: fn_docs,
+            meta: DocMeta::new("".to_string()),
+            typ: DocType::Fn,
+          });
+        }
         Statement::Import { .. } => {}
       }
     }

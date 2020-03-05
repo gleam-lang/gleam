@@ -178,7 +178,6 @@ fn command_build(root: String) -> Result<(), Error> {
 
     let mut doc_writer = doc::DocWriter::new(project_config.name.clone(), doc_dir);
 
-    println!("{:#?}", compiled);
     for crate::project::Compiled { files, doc, .. } in compiled {
         doc_writer.add_chunk(doc);
 
