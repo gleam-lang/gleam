@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Anonymous functions can now have return type annotations.
+
 ## v0.7.1 - 2020-03-03
 
 - Projects generated with `gleam new` use `stdlib` version 0.7.0.
