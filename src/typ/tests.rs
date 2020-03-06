@@ -481,7 +481,7 @@ fn infer_error_test() {
             },
             given: Type::Fn {
                 args: vec![Type::Var {
-                    typ: Rc::new(RefCell::new(TypeVar::Link {
+                    typ: Arc::new(RefCell::new(TypeVar::Link {
                         typ: Box::new(int()),
                     })),
                 }],
@@ -630,7 +630,7 @@ fn infer_error_test() {
             meta: Meta { start: 9, end: 12 },
             expected: Type::App {
                 args: vec![Type::Var {
-                    typ: Rc::new(RefCell::new(TypeVar::Link {
+                    typ: Arc::new(RefCell::new(TypeVar::Link {
                         typ: Box::new(Type::App {
                             public: true,
                             module: vec![],
@@ -645,7 +645,7 @@ fn infer_error_test() {
             },
             given: Type::App {
                 args: vec![Type::Var {
-                    typ: Rc::new(RefCell::new(TypeVar::Link {
+                    typ: Arc::new(RefCell::new(TypeVar::Link {
                         typ: Box::new(Type::App {
                             public: true,
                             module: vec![],
