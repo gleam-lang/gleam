@@ -10,6 +10,7 @@ use heck::{CamelCase, SnakeCase};
 use itertools::Itertools;
 use std::char;
 use std::default::Default;
+use std::sync::Arc;
 
 const INDENT: isize = 4;
 
@@ -700,8 +701,12 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
     }
 }
 
-fn module_select_fn(typ: crate::typ::Type, module_name: Vec<String>, label: String) -> Document {
-    match typ.collapse_links() {
+fn module_select_fn(
+    typ: Arc<crate::typ::Type>,
+    module_name: Vec<String>,
+    label: String,
+) -> Document {
+    match (*typ).clone().collapse_links() {
         crate::typ::Type::Fn { args, .. } => "fun "
             .to_doc()
             .append(module_name.join("@"))

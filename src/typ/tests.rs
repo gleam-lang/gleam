@@ -193,7 +193,7 @@ fn infer_test() {
             let result =
                 infer(ast, 1, &mut Env::new(&HashMap::new())).expect("should successfully infer");
             assert_eq!(
-                ($src, printer.pretty_print(result.typ(), 0),),
+                ($src, printer.pretty_print(result.typ().as_ref(), 0),),
                 ($src, $typ.to_string()),
             );
         };
@@ -475,18 +475,16 @@ fn infer_error_test() {
         "fn() { 1 } == fn(x) { x + 1 }",
         Error::CouldNotUnify {
             meta: Meta { start: 14, end: 29 },
-            expected: Type::Fn {
+            expected: Arc::new(Type::Fn {
                 args: vec![],
-                retrn: Box::new(int()),
-            },
-            given: Type::Fn {
-                args: vec![Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Link {
-                        typ: Box::new(int()),
-                    })),
-                }],
-                retrn: Box::new(int()),
-            },
+                retrn: int(),
+            }),
+            given: Arc::new(Type::Fn {
+                args: vec![Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() })),
+                })],
+                retrn: int(),
+            }),
         },
     );
 
@@ -494,18 +492,8 @@ fn infer_error_test() {
         "let f = fn(x: Int) { x } f(1.0)",
         Error::CouldNotUnify {
             meta: Meta { start: 27, end: 30 },
-            expected: Type::App {
-                public: true,
-                module: vec![],
-                name: "Int".to_string(),
-                args: vec![],
-            },
-            given: Type::App {
-                public: true,
-                module: vec![],
-                name: "Float".to_string(),
-                args: vec![],
-            },
+            expected: int(),
+            given: float(),
         },
     );
 
@@ -513,18 +501,8 @@ fn infer_error_test() {
         "fn() -> Int { 2.0 }",
         Error::CouldNotUnify {
             meta: Meta { start: 14, end: 17 },
-            expected: Type::App {
-                public: true,
-                module: vec![],
-                name: "Int".to_string(),
-                args: vec![],
-            },
-            given: Type::App {
-                public: true,
-                module: vec![],
-                name: "Float".to_string(),
-                args: vec![],
-            },
+            expected: int(),
+            given: float(),
         },
     );
 
@@ -532,18 +510,8 @@ fn infer_error_test() {
         "fn(x: Int) -> Float { x }",
         Error::CouldNotUnify {
             meta: Meta { start: 22, end: 23 },
-            expected: Type::App {
-                public: true,
-                module: vec![],
-                name: "Float".to_string(),
-                args: vec![],
-            },
-            given: Type::App {
-                public: true,
-                module: vec![],
-                name: "Int".to_string(),
-                args: vec![],
-            },
+            expected: float(),
+            given: int(),
         },
     );
 
@@ -602,12 +570,8 @@ fn infer_error_test() {
         "tuple(1, 2) == tuple(1, 2, 3)",
         Error::CouldNotUnify {
             meta: Meta { start: 15, end: 29 },
-            expected: Type::Tuple {
-                elems: vec![int(), int()],
-            },
-            given: Type::Tuple {
-                elems: vec![int(), int(), int()],
-            },
+            expected: tuple(vec![int(), int()]),
+            given: tuple(vec![int(), int(), int()])
         },
     );
 
@@ -615,12 +579,8 @@ fn infer_error_test() {
         "tuple(1.0, 2, 3) == tuple(1, 2, 3)",
         Error::CouldNotUnify {
             meta: Meta { start: 20, end: 34 },
-            expected: Type::Tuple {
-                elems: vec![float(), int(), int()],
-            },
-            given: Type::Tuple {
-                elems: vec![int(), int(), int()],
-            },
+            expected: tuple(vec![float(), int(), int()]),
+            given: tuple(vec![int(), int(), int()]),
         },
     );
 
@@ -628,36 +588,12 @@ fn infer_error_test() {
         "[1.0] == [1]",
         Error::CouldNotUnify {
             meta: Meta { start: 9, end: 12 },
-            expected: Type::App {
-                args: vec![Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Link {
-                        typ: Box::new(Type::App {
-                            public: true,
-                            module: vec![],
-                            name: "Float".to_string(),
-                            args: vec![],
-                        }),
-                    }))
-                }],
-                public: true,
-                module: vec![],
-                name: "List".to_string(),
-            },
-            given: Type::App {
-                args: vec![Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Link {
-                        typ: Box::new(Type::App {
-                            public: true,
-                            module: vec![],
-                            name: "Int".to_string(),
-                            args: vec![],
-                        }),
-                    }))
-                }],
-                public: true,
-                module: vec![],
-                name: "List".to_string(),
-            },
+            expected: list(Arc::new(Type::Var {
+                typ: Arc::new(RefCell::new(TypeVar::Link { typ: float() }))
+            })),
+            given: list(Arc::new(Type::Var {
+                typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() }))
+            }))
         },
     );
 

@@ -1,7 +1,13 @@
 use crate::typ::{self, ModuleValueConstructor, PatternConstructor, ValueConstructor};
+use std::sync::Arc;
 
-pub type TypedModule =
-    Module<ValueConstructor, ModuleValueConstructor, PatternConstructor, typ::Type, typ::Module>;
+pub type TypedModule = Module<
+    ValueConstructor,
+    ModuleValueConstructor,
+    PatternConstructor,
+    Arc<typ::Type>,
+    typ::Module,
+>;
 
 pub type UntypedModule = Module<(), (), (), (), ()>;
 
@@ -104,7 +110,7 @@ impl TypeAst {
 }
 
 pub type TypedStatement =
-    Statement<ValueConstructor, ModuleValueConstructor, PatternConstructor, typ::Type>;
+    Statement<ValueConstructor, ModuleValueConstructor, PatternConstructor, Arc<typ::Type>>;
 
 pub type UntypedStatement = Statement<(), (), (), ()>;
 
@@ -206,7 +212,8 @@ pub struct CallArg<A> {
     pub value: A,
 }
 
-pub type TypedExpr = Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, typ::Type>;
+pub type TypedExpr =
+    Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, Arc<typ::Type>>;
 
 pub type UntypedExpr = Expr<(), (), (), ()>;
 
@@ -339,23 +346,23 @@ impl<A, B, C, D> Expr<A, B, C, D> {
 }
 
 impl TypedExpr {
-    pub fn typ(&self) -> &typ::Type {
+    pub fn typ(&self) -> Arc<typ::Type> {
         match self {
-            Expr::Fn { typ, .. } => typ,
-            Expr::Nil { typ, .. } => typ,
-            Expr::Let { typ, .. } => typ,
-            Expr::Int { typ, .. } => typ,
-            Expr::Case { typ, .. } => typ,
-            Expr::Cons { typ, .. } => typ,
-            Expr::Call { typ, .. } => typ,
+            Expr::Fn { typ, .. } => typ.clone(),
+            Expr::Nil { typ, .. } => typ.clone(),
+            Expr::Let { typ, .. } => typ.clone(),
+            Expr::Int { typ, .. } => typ.clone(),
+            Expr::Case { typ, .. } => typ.clone(),
+            Expr::Cons { typ, .. } => typ.clone(),
+            Expr::Call { typ, .. } => typ.clone(),
             Expr::Seq { then, .. } => then.typ(),
-            Expr::Float { typ, .. } => typ,
-            Expr::BinOp { typ, .. } => typ,
-            Expr::Tuple { typ, .. } => typ,
-            Expr::String { typ, .. } => typ,
-            Expr::Var { constructor, .. } => &constructor.typ,
-            Expr::FieldSelect { typ, .. } => typ,
-            Expr::ModuleSelect { typ, .. } => typ,
+            Expr::Float { typ, .. } => typ.clone(),
+            Expr::BinOp { typ, .. } => typ.clone(),
+            Expr::Tuple { typ, .. } => typ.clone(),
+            Expr::String { typ, .. } => typ.clone(),
+            Expr::Var { constructor, .. } => constructor.typ.clone(),
+            Expr::FieldSelect { typ, .. } => typ.clone(),
+            Expr::ModuleSelect { typ, .. } => typ.clone(),
         }
     }
 }
@@ -365,7 +372,7 @@ pub type UntypedMultiPattern = MultiPattern<()>;
 pub type TypedMultiPattern = MultiPattern<PatternConstructor>;
 
 pub type TypedClause =
-    Clause<ValueConstructor, ModuleValueConstructor, PatternConstructor, typ::Type>;
+    Clause<ValueConstructor, ModuleValueConstructor, PatternConstructor, Arc<typ::Type>>;
 
 pub type UntypedClause = Clause<(), (), (), ()>;
 
@@ -378,7 +385,7 @@ pub struct Clause<ValueConstructor, ModuleValueConstructor, PatternConstructor, 
     pub then: Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type>,
 }
 
-pub type TypedClauseGuard = ClauseGuard<typ::Type>;
+pub type TypedClauseGuard = ClauseGuard<Arc<typ::Type>>;
 
 pub type UntypedClauseGuard = ClauseGuard<()>;
 
@@ -432,13 +439,13 @@ impl<A> ClauseGuard<A> {
 }
 
 impl TypedClauseGuard {
-    pub fn typ(&self) -> &typ::Type {
+    pub fn typ(&self) -> Arc<typ::Type> {
         match self {
-            ClauseGuard::Or { typ, .. } => typ,
-            ClauseGuard::And { typ, .. } => typ,
-            ClauseGuard::Var { typ, .. } => typ,
-            ClauseGuard::Equals { typ, .. } => typ,
-            ClauseGuard::NotEquals { typ, .. } => typ,
+            ClauseGuard::Or { typ, .. } => typ.clone(),
+            ClauseGuard::And { typ, .. } => typ.clone(),
+            ClauseGuard::Var { typ, .. } => typ.clone(),
+            ClauseGuard::Equals { typ, .. } => typ.clone(),
+            ClauseGuard::NotEquals { typ, .. } => typ.clone(),
         }
     }
 }
