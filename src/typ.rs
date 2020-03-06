@@ -72,35 +72,27 @@ impl Type {
             }
 
             Type::Var { typ } => {
-                enum Action {
-                    Link(Vec<Type>),
-                }
-
-                let action = match &*typ.borrow() {
+                let args: Vec<_> = match &*typ.borrow() {
                     TypeVar::Link { typ } => {
                         return typ.get_app_args(public, module, name, arity, env);
                     }
 
                     TypeVar::Unbound { level, .. } => {
-                        Action::Link((0..arity).map(|_| env.new_unbound_var(*level)).collect())
+                        (0..arity).map(|_| env.new_unbound_var(*level)).collect()
                     }
 
                     TypeVar::Generic { .. } => return None,
                 };
 
-                match action {
-                    Action::Link(args) => {
-                        *typ.borrow_mut() = TypeVar::Link {
-                            typ: Box::new(Type::App {
-                                name: name.to_string(),
-                                module: module.to_owned(),
-                                args: args.clone(),
-                                public,
-                            }),
-                        };
-                        Some(args)
-                    }
-                }
+                *typ.borrow_mut() = TypeVar::Link {
+                    typ: Box::new(Type::App {
+                        name: name.to_string(),
+                        module: module.to_owned(),
+                        args: args.clone(),
+                        public,
+                    }),
+                };
+                Some(args)
             }
 
             _ => None,
