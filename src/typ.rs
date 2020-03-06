@@ -19,12 +19,12 @@ pub enum Type {
         public: bool,
         module: Vec<String>,
         name: String,
-        args: Vec<Type>,
+        args: Vec<Arc<Type>>,
     },
 
     Fn {
-        args: Vec<Type>,
-        retrn: Box<Type>,
+        args: Vec<Arc<Type>>,
+        retrn: Arc<Type>,
     },
 
     Var {
@@ -32,7 +32,7 @@ pub enum Type {
     },
 
     Tuple {
-        elems: Vec<Type>,
+        elems: Vec<Arc<Type>>,
     },
 }
 
@@ -40,7 +40,7 @@ impl Type {
     pub fn collapse_links(self) -> Type {
         if let Type::Var { typ } = &self {
             if let TypeVar::Link { typ } = &*typ.borrow() {
-                return *typ.clone();
+                return (**typ).clone();
             }
         }
         self
@@ -56,7 +56,7 @@ impl Type {
         name: &str,
         arity: usize,
         env: &mut Env,
-    ) -> Option<Vec<Type>> {
+    ) -> Option<Vec<Arc<Type>>> {
         match self {
             Type::App {
                 module: m,
@@ -85,7 +85,7 @@ impl Type {
                 };
 
                 *typ.borrow_mut() = TypeVar::Link {
-                    typ: Box::new(Type::App {
+                    typ: Arc::new(Type::App {
                         name: name.to_string(),
                         module: module.to_owned(),
                         args: args.clone(),
@@ -297,7 +297,7 @@ pub struct Env<'a> {
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeVar {
     Unbound { id: usize, level: usize },
-    Link { typ: Box<Type> },
+    Link { typ: Arc<Type> },
     Generic { id: usize },
 }
 
@@ -306,8 +306,8 @@ pub struct TypeConstructor {
     pub public: bool,
     pub origin: Meta,
     pub module: Vec<String>,
-    pub parameters: Vec<Type>,
-    pub typ: Type,
+    pub parameters: Vec<Arc<Type>>,
+    pub typ: Arc<Type>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -315,7 +315,7 @@ pub struct ValueConstructor {
     pub public: bool,
     pub origin: Meta,
     pub variant: ValueConstructorVariant,
-    pub typ: Type,
+    pub typ: Arc<Type>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -454,12 +454,7 @@ impl<'a> Env<'a> {
                 field_map: None,
                 arity: 0,
             },
-            Type::App {
-                args: vec![],
-                public: true,
-                name: "Nil".to_string(),
-                module: vec![],
-            },
+            nil(),
         );
         env.insert_type_constructor(
             "Nil".to_string(),
@@ -476,224 +471,145 @@ impl<'a> Env<'a> {
         env.insert_variable(
             "+".to_string(),
             ValueConstructorVariant::LocalVariable,
-            Type::Fn {
-                args: vec![int(), int()],
-                retrn: Box::new(int()),
-            },
+            fn_(vec![int(), int()], int()),
         );
 
         env.insert_variable(
             "-".to_string(),
             ValueConstructorVariant::LocalVariable,
-            Type::Fn {
-                args: vec![int(), int()],
-                retrn: Box::new(int()),
-            },
+            fn_(vec![int(), int()], int()),
         );
 
         env.insert_variable(
             "*".to_string(),
             ValueConstructorVariant::LocalVariable,
-            Type::Fn {
-                args: vec![int(), int()],
-                retrn: Box::new(int()),
-            },
+            fn_(vec![int(), int()], int()),
         );
 
         env.insert_variable(
             "/".to_string(),
             ValueConstructorVariant::LocalVariable,
-            Type::Fn {
-                args: vec![int(), int()],
-                retrn: Box::new(int()),
-            },
+            fn_(vec![int(), int()], int()),
         );
 
         env.insert_variable(
             "+.".to_string(),
             ValueConstructorVariant::LocalVariable,
-            Type::Fn {
-                args: vec![float(), float()],
-                retrn: Box::new(float()),
-            },
+            fn_(vec![float(), float()], float()),
         );
 
         env.insert_variable(
             "-.".to_string(),
             ValueConstructorVariant::LocalVariable,
-            Type::Fn {
-                args: vec![float(), float()],
-                retrn: Box::new(float()),
-            },
+            fn_(vec![float(), float()], float()),
         );
 
         env.insert_variable(
             "*.".to_string(),
             ValueConstructorVariant::LocalVariable,
-            Type::Fn {
-                args: vec![float(), float()],
-                retrn: Box::new(float()),
-            },
+            fn_(vec![float(), float()], float()),
         );
 
         env.insert_variable(
             "||".to_string(),
             ValueConstructorVariant::LocalVariable,
-            Type::Fn {
-                args: vec![bool(), bool()],
-                retrn: Box::new(bool()),
-            },
+            fn_(vec![bool(), bool()], bool()),
         );
 
         env.insert_variable(
             "&&".to_string(),
             ValueConstructorVariant::LocalVariable,
-            Type::Fn {
-                args: vec![bool(), bool()],
-                retrn: Box::new(bool()),
-            },
+            fn_(vec![bool(), bool()], bool()),
         );
 
         env.insert_variable(
             "%".to_string(),
             ValueConstructorVariant::LocalVariable,
-            Type::Fn {
-                args: vec![int(), int()],
-                retrn: Box::new(int()),
-            },
+            fn_(vec![int(), int()], int()),
         );
 
         env.insert_variable(
             "%.".to_string(),
             ValueConstructorVariant::LocalVariable,
-            Type::Fn {
-                args: vec![float(), float()],
-                retrn: Box::new(float()),
-            },
+            fn_(vec![float(), float()], float()),
         );
 
         env.insert_variable(
             "/.".to_string(),
             ValueConstructorVariant::LocalVariable,
-            Type::Fn {
-                args: vec![float(), float()],
-                retrn: Box::new(float()),
-            },
+            fn_(vec![float(), float()], float()),
         );
 
         let a = env.new_generic_var();
         let b = env.new_generic_var();
-        let f = Type::Fn {
-            args: vec![a.clone()],
-            retrn: Box::new(b.clone()),
-        };
+        let f = fn_(vec![a.clone()], b.clone());
         env.insert_variable(
             "|>".to_string(),
             ValueConstructorVariant::LocalVariable,
-            Type::Fn {
-                args: vec![a, f],
-                retrn: Box::new(b),
-            },
+            fn_(vec![a, f], b),
         );
 
         let a = env.new_generic_var();
         env.insert_variable(
             "==".to_string(),
             ValueConstructorVariant::LocalVariable,
-            Type::Fn {
-                args: vec![a.clone(), a],
-                retrn: Box::new(bool()),
-            },
+            fn_(vec![a.clone(), a], bool()),
         );
 
         env.insert_variable(
             ">".to_string(),
             ValueConstructorVariant::LocalVariable,
-            Type::Fn {
-                args: vec![int(), int()],
-                retrn: Box::new(bool()),
-            },
+            fn_(vec![int(), int()], bool()),
         );
 
         env.insert_variable(
             ">=".to_string(),
             ValueConstructorVariant::LocalVariable,
-            Type::Fn {
-                args: vec![int(), int()],
-                retrn: Box::new(bool()),
-            },
+            fn_(vec![int(), int()], bool()),
         );
 
         env.insert_variable(
             "<".to_string(),
             ValueConstructorVariant::LocalVariable,
-            Type::Fn {
-                args: vec![int(), int()],
-                retrn: Box::new(bool()),
-            },
+            fn_(vec![int(), int()], bool()),
         );
 
         env.insert_variable(
             "<=".to_string(),
             ValueConstructorVariant::LocalVariable,
-            Type::Fn {
-                args: vec![int(), int()],
-                retrn: Box::new(bool()),
-            },
+            fn_(vec![int(), int()], bool()),
         );
 
         env.insert_variable(
             ">.".to_string(),
             ValueConstructorVariant::LocalVariable,
-            Type::Fn {
-                args: vec![float(), float()],
-                retrn: Box::new(bool()),
-            },
+            fn_(vec![float(), float()], bool()),
         );
 
         env.insert_variable(
             ">=.".to_string(),
             ValueConstructorVariant::LocalVariable,
-            Type::Fn {
-                args: vec![float(), float()],
-                retrn: Box::new(bool()),
-            },
+            fn_(vec![float(), float()], bool()),
         );
 
         env.insert_variable(
             "<.".to_string(),
             ValueConstructorVariant::LocalVariable,
-            Type::Fn {
-                args: vec![float(), float()],
-                retrn: Box::new(bool()),
-            },
+            fn_(vec![float(), float()], bool()),
         );
 
         env.insert_variable(
             "<=.".to_string(),
             ValueConstructorVariant::LocalVariable,
-            Type::Fn {
-                args: vec![float(), float()],
-                retrn: Box::new(bool()),
-            },
+            fn_(vec![float(), float()], bool()),
         );
 
         let a = env.new_generic_var();
         env.insert_variable(
             "!=".to_string(),
             ValueConstructorVariant::LocalVariable,
-            Type::Fn {
-                args: vec![a.clone(), a],
-                retrn: Box::new(bool()),
-            },
+            fn_(vec![a.clone(), a], bool()),
         );
-
-        let result = |ok, error| Type::App {
-            name: "Result".to_string(),
-            module: vec![],
-            public: true,
-            args: vec![ok, error],
-        };
 
         let ok = env.new_generic_var();
         let error = env.new_generic_var();
@@ -704,10 +620,7 @@ impl<'a> Env<'a> {
                 field_map: None,
                 arity: 1,
             },
-            Type::Fn {
-                args: vec![ok.clone()],
-                retrn: Box::new(result(ok, error)),
-            },
+            fn_(vec![ok.clone()], result(ok, error)),
         );
 
         let ok = env.new_generic_var();
@@ -719,10 +632,7 @@ impl<'a> Env<'a> {
                 field_map: None,
                 arity: 1,
             },
-            Type::Fn {
-                args: vec![error.clone()],
-                retrn: Box::new(result(ok, error)),
-            },
+            fn_(vec![error.clone()], result(ok, error)),
         );
 
         env
@@ -741,28 +651,33 @@ impl<'a> Env<'a> {
     /// Create a new unbound type that is a specific type, we just don't
     /// know which one yet.
     ///
-    pub fn new_unbound_var(&mut self, level: usize) -> Type {
-        Type::Var {
+    pub fn new_unbound_var(&mut self, level: usize) -> Arc<Type> {
+        Arc::new(Type::Var {
             typ: Arc::new(RefCell::new(TypeVar::Unbound {
                 id: self.next_uid(),
                 level,
             })),
-        }
+        })
     }
 
     /// Create a new generic type that can stand in for any type.
     ///
-    pub fn new_generic_var(&mut self) -> Type {
-        Type::Var {
+    pub fn new_generic_var(&mut self) -> Arc<Type> {
+        Arc::new(Type::Var {
             typ: Arc::new(RefCell::new(TypeVar::Generic {
                 id: self.next_uid(),
             })),
-        }
+        })
     }
 
     /// Insert a variable in the current scope.
     ///
-    pub fn insert_variable(&mut self, name: String, variant: ValueConstructorVariant, typ: Type) {
+    pub fn insert_variable(
+        &mut self,
+        name: String,
+        variant: ValueConstructorVariant,
+        typ: Arc<Type>,
+    ) {
         self.local_values.insert(
             name,
             ValueConstructor {
@@ -911,9 +826,9 @@ impl<'a> Env<'a> {
     pub fn type_from_ast(
         &mut self,
         ast: &TypeAst,
-        vars: &mut im::HashMap<String, (usize, Type)>,
+        vars: &mut im::HashMap<String, (usize, Arc<Type>)>,
         new: NewTypeAction,
-    ) -> Result<Type, Error> {
+    ) -> Result<Arc<Type>, Error> {
         match ast {
             TypeAst::Constructor {
                 meta,
@@ -961,19 +876,19 @@ impl<'a> Env<'a> {
                 for (parameter, (meta, argument)) in
                     parameter_types.iter().zip(argument_types.iter())
                 {
-                    unify(parameter, argument, self).map_err(|e| convert_unify_error(e, &meta))?;
+                    unify(parameter.clone(), argument.clone(), self)
+                        .map_err(|e| convert_unify_error(e, &meta))?;
                 }
 
                 Ok(return_type)
             }
 
-            TypeAst::Tuple { elems, .. } => {
-                let elems = elems
+            TypeAst::Tuple { elems, .. } => Ok(tuple(
+                elems
                     .iter()
                     .map(|t| self.type_from_ast(t, vars, new))
-                    .collect::<Result<_, _>>()?;
-                Ok(Type::Tuple { elems })
-            }
+                    .collect::<Result<_, _>>()?,
+            )),
 
             TypeAst::Fn { args, retrn, .. } => {
                 let args = args
@@ -981,10 +896,7 @@ impl<'a> Env<'a> {
                     .map(|t| self.type_from_ast(t, vars, new))
                     .collect::<Result<_, _>>()?;
                 let retrn = self.type_from_ast(retrn, vars, new)?;
-                Ok(Type::Fn {
-                    args,
-                    retrn: Box::new(retrn),
-                })
+                Ok(fn_(args, retrn))
             }
 
             TypeAst::Var { name, meta, .. } => match vars.get(name) {
@@ -1057,12 +969,12 @@ pub enum Error {
 
     NotFn {
         meta: Meta,
-        typ: Type,
+        typ: Arc<Type>,
     },
 
     NotModule {
         meta: Meta,
-        typ: Type,
+        typ: Arc<Type>,
     },
 
     IncorrectArity {
@@ -1080,8 +992,8 @@ pub enum Error {
 
     CouldNotUnify {
         meta: Meta,
-        expected: Type,
-        given: Type,
+        expected: Arc<Type>,
+        given: Arc<Type>,
     },
 
     RecursiveType {
@@ -1244,10 +1156,10 @@ fn convert_get_type_constructor_error(e: GetTypeConstructorError, meta: &Meta) -
 
 fn make_type_vars(
     args: &[String],
-    vars: &mut im::HashMap<String, (usize, Type)>,
+    vars: &mut im::HashMap<String, (usize, Arc<Type>)>,
     meta: &Meta,
     env: &mut Env,
-) -> Result<Vec<Type>, Error> {
+) -> Result<Vec<Arc<Type>>, Error> {
     args.iter()
         .map(|arg| TypeAst::Var {
             meta: meta.clone(),
@@ -1280,12 +1192,12 @@ fn register_types(
         } => {
             let mut type_vars = hashmap![];
             let parameters = make_type_vars(args, &mut type_vars, meta, env)?;
-            let typ = Type::App {
+            let typ = Arc::new(Type::App {
                 public: *public,
                 module: module.clone(),
                 name: name.clone(),
                 args: parameters.clone(),
-            };
+            });
             env.insert_type_constructor(
                 name.clone(),
                 TypeConstructor {
@@ -1341,7 +1253,7 @@ pub fn infer_module(
         register_types(s, module_name, &mut env)?;
     }
 
-    let statements: Vec<Statement<_, _, _, Type>> = module
+    let statements: Vec<Statement<_, _, _, Arc<Type>>> = module
         .statements
         .into_iter()
         .map(|s| match s {
@@ -1384,14 +1296,11 @@ pub fn infer_module(
                 // Infer the type
                 let (args_types, body) =
                     do_infer_fn(&args, body, &return_annotation, level + 1, &mut env)?;
-                let typ = Type::Fn {
-                    args: args_types,
-                    retrn: Box::new(body.typ().clone()),
-                };
+                let typ = fn_(args_types, body.typ().clone());
 
                 // Assert that the inferred type matches the type of any recursive call
-                unify(&rec, &typ, &env).map_err(|e| convert_unify_error(e, &meta))?;
-                let typ = generalise(typ, level);
+                unify(rec, typ.clone(), &env).map_err(|e| convert_unify_error(e, &meta))?;
+                let typ = generalise(typ.clone(), level);
 
                 // Insert the function into the module's interface
                 env.insert_module_value(
@@ -1460,10 +1369,7 @@ pub fn infer_module(
                     }
                 }
                 let field_map = field_map.into_option();
-                let typ = Type::Fn {
-                    args: args_types,
-                    retrn: Box::new(retrn_type),
-                };
+                let typ = fn_(args_types, retrn_type);
 
                 // Insert function into module
                 env.insert_module_value(
@@ -1534,12 +1440,12 @@ pub fn infer_module(
                     .map(|ast| env.type_from_ast(&ast, &mut type_vars, NewTypeAction::MakeGeneric))
                     .collect::<Result<_, _>>()?;
 
-                let retrn = Type::App {
+                let retrn = Arc::new(Type::App {
                     public,
                     module: module_name.clone(),
                     name: name.clone(),
                     args: args_types,
-                };
+                });
 
                 // Check and register constructors
                 for constructor in constructors.iter() {
@@ -1561,10 +1467,7 @@ pub fn infer_module(
                     // Insert constructor function into module scope
                     let typ = match constructor.args.len() {
                         0 => retrn.clone(),
-                        _ => Type::Fn {
-                            args: args_types,
-                            retrn: Box::new(retrn.clone()),
-                        },
+                        _ => fn_(args_types, retrn.clone()),
                     };
                     env.insert_module_value(
                         &constructor.name,
@@ -1851,10 +1754,7 @@ fn infer_fn(
     env: &mut Env,
 ) -> Result<TypedExpr, Error> {
     let (args_types, body) = do_infer_fn(args.as_ref(), body, &return_annotation, level, env)?;
-    let typ = Type::Fn {
-        args: args_types,
-        retrn: Box::new(body.typ().clone()),
-    };
+    let typ = fn_(args_types, body.typ());
     Ok(Expr::Fn {
         meta,
         typ,
@@ -1890,7 +1790,7 @@ fn infer_cons(
 ) -> Result<TypedExpr, Error> {
     let head = infer(head, level, env)?;
     let tail = infer(tail, level, env)?;
-    unify(tail.typ(), &list(head.typ().clone()), env).map_err(|e| convert_unify_error(e, &meta))?;
+    unify(tail.typ(), list(head.typ().clone()), env).map_err(|e| convert_unify_error(e, &meta))?;
     Ok(Expr::Cons {
         meta,
         typ: tail.typ().clone(),
@@ -1908,9 +1808,7 @@ fn infer_tuple(
         .into_iter()
         .map(|e| infer(e, level, env))
         .collect::<Result<Vec<_>, _>>()?;
-    let typ = Type::Tuple {
-        elems: elems.iter().map(|e| e.typ().clone()).collect(),
-    };
+    let typ = tuple(elems.iter().map(|e| e.typ().clone()).collect());
     Ok(Expr::Tuple { meta, elems, typ })
 }
 fn infer_var(name: String, meta: Meta, level: usize, env: &mut Env) -> Result<TypedExpr, Error> {
@@ -1981,8 +1879,8 @@ fn infer_let(
     env: &mut Env,
 ) -> Result<TypedExpr, Error> {
     let value = infer(value, level + 1, env)?;
-    let value_typ = generalise(value.typ().clone(), level + 1);
-    let pattern = PatternTyper::new(env, level).unify(pattern, &value_typ)?;
+    let value_typ = generalise(value.typ(), level + 1);
+    let pattern = PatternTyper::new(env, level).unify(pattern, value_typ)?;
     let then = infer(then, level, env)?;
     let typ = then.typ().clone();
     Ok(Expr::Let {
@@ -2017,7 +1915,7 @@ fn infer_case(
 
     for clause in clauses.into_iter() {
         let typed_clause = infer_clause(clause, &subject_types, level, env)?;
-        unify(&return_type, typed_clause.then.typ(), env)
+        unify(return_type.clone(), typed_clause.then.typ(), env)
             .map_err(|e| convert_unify_error(e, typed_clause.then.meta()))?;
         typed_clauses.push(typed_clause);
     }
@@ -2031,7 +1929,7 @@ fn infer_case(
 
 fn infer_clause(
     clause: UntypedClause,
-    subjects: &Vec<Type>,
+    subjects: &Vec<Arc<Type>>,
     level: usize,
     env: &mut Env,
 ) -> Result<TypedClause, Error> {
@@ -2067,7 +1965,7 @@ fn infer_clause(
 fn infer_clause_pattern(
     pattern: UntypedMultiPattern,
     alternatives: Vec<UntypedMultiPattern>,
-    subjects: &Vec<Type>,
+    subjects: &Vec<Arc<Type>>,
     level: usize,
     meta: &Meta,
     env: &mut Env,
@@ -2098,7 +1996,7 @@ fn infer_optional_clause_guard(
         // If there is a guard we assert that it is of type Bool
         Some(guard) => {
             let guard = infer_clause_guard(guard, level, env)?;
-            unify(&bool(), guard.typ(), env).map_err(|e| convert_unify_error(e, guard.meta()))?;
+            unify(bool(), guard.typ(), env).map_err(|e| convert_unify_error(e, guard.meta()))?;
             Ok(Some(guard))
         }
     }
@@ -2133,9 +2031,9 @@ fn infer_clause_guard(
             meta, left, right, ..
         } => {
             let left = infer_clause_guard(*left, level, env)?;
-            unify(&bool(), left.typ(), env).map_err(|e| convert_unify_error(e, left.meta()))?;
+            unify(bool(), left.typ(), env).map_err(|e| convert_unify_error(e, left.meta()))?;
             let right = infer_clause_guard(*right, level, env)?;
-            unify(&bool(), right.typ(), env).map_err(|e| convert_unify_error(e, right.meta()))?;
+            unify(bool(), right.typ(), env).map_err(|e| convert_unify_error(e, right.meta()))?;
             Ok(ClauseGuard::And {
                 meta,
                 typ: bool(),
@@ -2148,9 +2046,9 @@ fn infer_clause_guard(
             meta, left, right, ..
         } => {
             let left = infer_clause_guard(*left, level, env)?;
-            unify(&bool(), left.typ(), env).map_err(|e| convert_unify_error(e, left.meta()))?;
+            unify(bool(), left.typ(), env).map_err(|e| convert_unify_error(e, left.meta()))?;
             let right = infer_clause_guard(*right, level, env)?;
-            unify(&bool(), right.typ(), env).map_err(|e| convert_unify_error(e, right.meta()))?;
+            unify(bool(), right.typ(), env).map_err(|e| convert_unify_error(e, right.meta()))?;
             Ok(ClauseGuard::Or {
                 meta,
                 typ: bool(),
@@ -2266,7 +2164,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         }
     }
 
-    fn insert_variable(&mut self, name: &str, typ: &Type) -> Result<(), UnifyError> {
+    fn insert_variable(&mut self, name: &str, typ: Arc<Type>) -> Result<(), UnifyError> {
         match self.mode {
             PatternMode::Initial => {
                 self.initial_pattern_vars.insert(name.to_string());
@@ -2281,7 +2179,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             PatternMode::Alternative => match self.env.local_values.get(name) {
                 // This variable was defined in the Initial multi-pattern
                 Some(initial) if self.initial_pattern_vars.contains(name) => {
-                    unify(&initial.typ, &typ, self.env)
+                    unify(initial.typ.clone(), typ, self.env)
                 }
 
                 // This variable was not defined in the Initial multi-pattern
@@ -2295,7 +2193,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
     fn infer_alternative_multi_pattern(
         &mut self,
         multi_pattern: UntypedMultiPattern,
-        subjects: &Vec<Type>,
+        subjects: &Vec<Arc<Type>>,
         meta: &Meta,
     ) -> Result<Vec<TypedPattern>, Error> {
         self.mode = PatternMode::Alternative;
@@ -2306,7 +2204,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
     fn infer_multi_pattern(
         &mut self,
         multi_pattern: UntypedMultiPattern,
-        subjects: &Vec<Type>,
+        subjects: &Vec<Arc<Type>>,
         meta: &Meta,
     ) -> Result<Vec<TypedPattern>, Error> {
         // If there are N subjects the multi-pattern is expected to be N patterns
@@ -2321,7 +2219,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         // Unify each pattern in the multi-pattern with the corresponding subject
         let mut typed_multi = Vec::with_capacity(multi_pattern.len());
         for (pattern, subject_type) in multi_pattern.into_iter().zip(subjects.iter()) {
-            let pattern = self.unify(pattern, &subject_type)?;
+            let pattern = self.unify(pattern, subject_type.clone())?;
             typed_multi.push(pattern);
         }
         Ok(typed_multi)
@@ -2331,7 +2229,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
     /// inferred type of the subject in order to determine what variables to insert
     /// into the environment (or to detect a type error).
     ///
-    fn unify(&mut self, pattern: UntypedPattern, typ: &Type) -> Result<TypedPattern, Error> {
+    fn unify(&mut self, pattern: UntypedPattern, typ: Arc<Type>) -> Result<TypedPattern, Error> {
         match pattern {
             Pattern::Discard { meta } => Ok(Pattern::Discard { meta }),
 
@@ -2342,28 +2240,28 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             }
 
             Pattern::Let { name, pattern, .. } => {
-                self.insert_variable(name.as_ref(), typ)
+                self.insert_variable(name.as_ref(), typ.clone())
                     .map_err(|e| convert_unify_error(e, pattern.meta()))?;
-                self.unify(*pattern, typ)
+                self.unify(*pattern, typ.clone())
             }
 
             Pattern::Int { meta, value } => {
-                unify(typ, &int(), self.env).map_err(|e| convert_unify_error(e, &meta))?;
+                unify(typ, int(), self.env).map_err(|e| convert_unify_error(e, &meta))?;
                 Ok(Pattern::Int { meta, value })
             }
 
             Pattern::Float { meta, value } => {
-                unify(typ, &float(), self.env).map_err(|e| convert_unify_error(e, &meta))?;
+                unify(typ, float(), self.env).map_err(|e| convert_unify_error(e, &meta))?;
                 Ok(Pattern::Float { meta, value })
             }
 
             Pattern::String { meta, value } => {
-                unify(typ, &string(), self.env).map_err(|e| convert_unify_error(e, &meta))?;
+                unify(typ, string(), self.env).map_err(|e| convert_unify_error(e, &meta))?;
                 Ok(Pattern::String { meta, value })
             }
 
             Pattern::Nil { meta } => {
-                unify(typ, &list(self.env.new_unbound_var(self.level)), self.env)
+                unify(typ, list(self.env.new_unbound_var(self.level)), self.env)
                     .map_err(|e| convert_unify_error(e, &meta))?;
                 Ok(Pattern::Nil { meta })
             }
@@ -2371,7 +2269,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             Pattern::Cons { meta, head, tail } => {
                 match typ.get_app_args(true, &[], "List", 1, self.env) {
                     Some(args) => {
-                        let head = Box::new(self.unify(*head, &args[0])?);
+                        let head = Box::new(self.unify(*head, args[0].clone())?);
                         let tail = Box::new(self.unify(*tail, typ)?);
                         Ok(Pattern::Cons { meta, head, tail })
                     }
@@ -2384,23 +2282,23 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 }
             }
 
-            Pattern::Tuple { elems, meta } => match typ.clone().collapse_links() {
+            Pattern::Tuple { elems, meta } => match (*typ).clone().collapse_links() {
                 Type::Tuple { elems: type_elems } => {
                     let elems = elems
                         .into_iter()
                         .zip(type_elems)
-                        .map(|(pattern, typ)| self.unify(pattern, &typ))
+                        .map(|(pattern, typ)| self.unify(pattern, typ.clone()))
                         .collect::<Result<Vec<_>, _>>()?;
                     Ok(Pattern::Tuple { elems, meta })
                 }
 
-                typ @ Type::Var { .. } => {
+                Type::Var { .. } => {
                     let elems_types = (0..(elems.len()))
                         .map(|_| self.env.new_unbound_var(self.level))
                         .collect();
-                    unify(&Type::Tuple { elems: elems_types }, &typ, self.env)
+                    unify(tuple(elems_types), typ.clone(), self.env)
                         .map_err(|e| convert_unify_error(e, &meta))?;
-                    self.unify(Pattern::Tuple { elems, meta }, &typ)
+                    self.unify(Pattern::Tuple { elems, meta }, typ)
                 }
 
                 other => {
@@ -2440,7 +2338,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     ),
                 };
 
-                match instantiate(constructor_typ, self.level, &mut hashmap![], self.env) {
+                let instantiated_constructor_type =
+                    instantiate(constructor_typ, self.level, &mut hashmap![], self.env);
+                match &*instantiated_constructor_type {
                     Type::Fn { args, retrn } => {
                         if args.len() == pattern_args.len() {
                             let pattern_args = pattern_args
@@ -2448,11 +2348,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                 .zip(args)
                                 .map(|(arg, typ)| {
                                     let CallArg { value, meta, label } = arg;
-                                    let value = self.unify(value, &typ)?;
+                                    let value = self.unify(value, typ.clone())?;
                                     Ok(CallArg { value, meta, label })
                                 })
                                 .collect::<Result<Vec<_>, _>>()?;
-                            unify(&typ, &retrn, self.env)
+                            unify(typ, retrn.clone(), self.env)
                                 .map_err(|e| convert_unify_error(e, &meta))?;
                             Ok(Pattern::Constructor {
                                 meta,
@@ -2470,9 +2370,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         }
                     }
 
-                    c @ Type::App { .. } => {
+                    Type::App { .. } => {
                         if pattern_args.is_empty() {
-                            unify(&typ, &c, self.env).map_err(|e| convert_unify_error(e, &meta))?;
+                            unify(typ, instantiated_constructor_type, self.env)
+                                .map_err(|e| convert_unify_error(e, &meta))?;
                             Ok(Pattern::Constructor {
                                 meta,
                                 module,
@@ -2533,7 +2434,7 @@ fn do_infer_call(
     level: usize,
     meta: &Meta,
     env: &mut Env,
-) -> Result<(TypedExpr, Vec<CallArg<TypedExpr>>, Type), Error> {
+) -> Result<(TypedExpr, Vec<CallArg<TypedExpr>>, Arc<Type>), Error> {
     let fun = infer(fun, level, env)?;
 
     match get_field_map(&fun, env).map_err(|e| convert_get_value_constructor_error(e, meta))? {
@@ -2549,11 +2450,14 @@ fn do_infer_call(
     let args = args_types
         .iter_mut()
         .zip(args)
-        .map(|(typ, CallArg { label, value, meta }): (&mut Type, _)| {
-            let value = infer(value, level, env)?;
-            unify(typ, value.typ(), env).map_err(|e| convert_unify_error(e, value.meta()))?;
-            Ok(CallArg { label, value, meta })
-        })
+        .map(
+            |(typ, CallArg { label, value, meta }): (&mut Arc<Type>, _)| {
+                let value = infer(value, level, env)?;
+                unify(typ.clone(), value.typ(), env)
+                    .map_err(|e| convert_unify_error(e, value.meta()))?;
+                Ok(CallArg { label, value, meta })
+            },
+        )
         .collect::<Result<_, _>>()?;
     Ok((fun, args, return_type))
 }
@@ -2595,7 +2499,7 @@ fn do_infer_fn(
     return_annotation: &Option<TypeAst>,
     level: usize,
     env: &mut Env,
-) -> Result<(Vec<Type>, TypedExpr), Error> {
+) -> Result<(Vec<Arc<Type>>, TypedExpr), Error> {
     // Construct an initial type for each argument of the function- either an unbound type variable
     // or a type provided by an annotation.
     let mut type_vars = hashmap![];
@@ -2634,7 +2538,7 @@ fn do_infer_fn(
     // Check that any return type annotation is accurate.
     if let Some(ann) = return_annotation {
         let ret_typ = env.type_from_ast(ann, &mut type_vars, NewTypeAction::MakeGeneric)?;
-        unify(&ret_typ, body.typ(), env).map_err(|e| convert_unify_error(e, body.meta()))?;
+        unify(ret_typ, body.typ(), env).map_err(|e| convert_unify_error(e, body.meta()))?;
     }
 
     // Reset the env now that the scope of the function has ended.
@@ -2690,12 +2594,12 @@ fn convert_unify_error(e: UnifyError, meta: &Meta) -> Error {
 /// Instantiate converts generic variables into unbound ones.
 ///
 fn instantiate(
-    t: Type,
+    t: Arc<Type>,
     ctx_level: usize,
-    ids: &mut im::HashMap<usize, Type>,
+    ids: &mut im::HashMap<usize, Arc<Type>>,
     env: &mut Env,
-) -> Type {
-    match t {
+) -> Arc<Type> {
+    match &*t {
         Type::App {
             public,
             name,
@@ -2704,21 +2608,21 @@ fn instantiate(
         } => {
             let args = args
                 .into_iter()
-                .map(|t| instantiate(t, ctx_level, ids, env))
+                .map(|t| instantiate(t.clone(), ctx_level, ids, env))
                 .collect();
-            Type::App {
-                public,
-                name,
-                module,
+            Arc::new(Type::App {
+                public: *public,
+                name: name.clone(),
+                module: module.clone(),
                 args,
-            }
+            })
         }
 
         Type::Var { typ } => {
             match &*typ.borrow() {
-                TypeVar::Link { typ } => return instantiate(*typ.clone(), ctx_level, ids, env),
+                TypeVar::Link { typ } => return instantiate(typ.clone(), ctx_level, ids, env),
 
-                TypeVar::Unbound { .. } => return Type::Var { typ: typ.clone() },
+                TypeVar::Unbound { .. } => return Arc::new(Type::Var { typ: typ.clone() }),
 
                 TypeVar::Generic { id } => match ids.get(id) {
                     Some(t) => return t.clone(),
@@ -2731,80 +2635,83 @@ fn instantiate(
                     }
                 },
             }
-            Type::Var { typ }
+            Arc::new(Type::Var { typ: typ.clone() })
         }
 
-        Type::Fn { args, retrn, .. } => {
-            let args = args
-                .into_iter()
-                .map(|t| instantiate(t, ctx_level, ids, env))
-                .collect();
-            let retrn = Box::new(instantiate(*retrn, ctx_level, ids, env));
-            Type::Fn { args, retrn }
-        }
-
-        Type::Tuple { elems } => Type::Tuple {
-            elems: elems
-                .into_iter()
-                .map(|t| instantiate(t, ctx_level, ids, env))
+        Type::Fn { args, retrn, .. } => fn_(
+            args.into_iter()
+                .map(|t| instantiate(t.clone(), ctx_level, ids, env))
                 .collect(),
-        },
+            instantiate(retrn.clone(), ctx_level, ids, env),
+        ),
+
+        Type::Tuple { elems } => tuple(
+            elems
+                .into_iter()
+                .map(|t| instantiate(t.clone(), ctx_level, ids, env))
+                .collect(),
+        ),
     }
 }
 
 #[derive(Debug, PartialEq)]
 enum UnifyError {
-    CouldNotUnify { expected: Type, given: Type },
+    CouldNotUnify {
+        expected: Arc<Type>,
+        given: Arc<Type>,
+    },
 
-    ExtraVarInAlternativePattern { name: String },
+    ExtraVarInAlternativePattern {
+        name: String,
+    },
 
     RecursiveType,
 }
 
 fn unify_enclosed_type(
-    e1: &Type,
-    e2: &Type,
+    e1: Arc<Type>,
+    e2: Arc<Type>,
     result: Result<(), UnifyError>,
 ) -> Result<(), UnifyError> {
     // If types cannot unify, show the type error with the enclosing types, e1 and e2.
     match result {
         Err(UnifyError::CouldNotUnify { .. }) => Err(UnifyError::CouldNotUnify {
-            expected: (*e1).clone(),
-            given: (*e2).clone(),
+            expected: e1.clone(),
+            given: e2.clone(),
         }),
 
         _ => result,
     }
 }
-fn unify(t1: &Type, t2: &Type, env: &Env) -> Result<(), UnifyError> {
+fn unify(t1: Arc<Type>, t2: Arc<Type>, env: &Env) -> Result<(), UnifyError> {
     if t1 == t2 {
         return Ok(());
     }
 
     // Collapse right hand side type links. Left hand side will be collapsed in the next block.
-    if let Type::Var { typ } = t2 {
+    if let Type::Var { typ } = &*t2 {
         if let TypeVar::Link { typ } = &*typ.borrow() {
-            return unify(t1, typ, env);
+            return unify(t1, typ.clone(), env);
         }
     }
 
-    if let Type::Var { typ } = t1 {
+    if let Type::Var { typ } = &*t1 {
         enum Action {
-            Unify(Type),
+            Unify(Arc<Type>),
             CouldNotUnify,
             Link,
         }
 
         let action = match &*typ.borrow() {
-            TypeVar::Link { typ } => Action::Unify((**typ).clone()),
+            TypeVar::Link { typ } => Action::Unify(typ.clone()),
 
             TypeVar::Unbound { id, level } => {
-                update_levels(t2, *level, *id)?;
+                update_levels(t2.clone(), *level, *id)?;
                 Action::Link
             }
 
             TypeVar::Generic { id } => {
-                if let Type::Var { typ } = t2 {
+                if let Type::Var { typ } = &*t2 {
                     if typ.borrow().is_unbound() {
                         *typ.borrow_mut() = TypeVar::Generic { id: *id };
                         return Ok(());
@@ -2816,26 +2723,24 @@ fn unify(t1: &Type, t2: &Type, env: &Env) -> Result<(), UnifyError> {
 
         return match action {
             Action::Link => {
-                *typ.borrow_mut() = TypeVar::Link {
-                    typ: Box::new((*t2).clone()),
-                };
+                *typ.borrow_mut() = TypeVar::Link { typ: t2.clone() };
                 Ok(())
             }
 
-            Action::Unify(t) => unify(&t, t2, env),
+            Action::Unify(t) => unify(t, t2.clone(), env),
 
             Action::CouldNotUnify => Err(UnifyError::CouldNotUnify {
-                expected: (*t1).clone(),
-                given: (*t2).clone(),
+                expected: t1.clone(),
+                given: t2.clone(),
             }),
         };
     }
 
-    if let Type::Var { .. } = t2 {
+    if let Type::Var { .. } = *t2 {
         return unify(t2, t1, env).map_err(flip_unify_error);
     }
 
-    match (t1, t2) {
+    match (&*t1, &*t2) {
         (
             Type::App {
                 module: m1,
@@ -2851,7 +2756,7 @@ fn unify(t1: &Type, t2: &Type, env: &Env) -> Result<(), UnifyError> {
             },
         ) if m1 == m2 && n1 == n2 && args1.len() == args2.len() => {
             for (a, b) in args1.iter().zip(args2) {
-                unify_enclosed_type(t1, t2, unify(a, b, env))?;
+                unify_enclosed_type(t1.clone(), t2.clone(), unify(a.clone(), b.clone(), env))?;
             }
             Ok(())
         }
@@ -2860,7 +2765,7 @@ fn unify(t1: &Type, t2: &Type, env: &Env) -> Result<(), UnifyError> {
             if elems1.len() == elems2.len() =>
         {
             for (a, b) in elems1.iter().zip(elems2) {
-                unify_enclosed_type(t1, t2, unify(a, b, env))?;
+                unify_enclosed_type(t1.clone(), t2.clone(), unify(a.clone(), b.clone(), env))?;
             }
             Ok(())
         }
@@ -2878,14 +2783,14 @@ fn unify(t1: &Type, t2: &Type, env: &Env) -> Result<(), UnifyError> {
             },
         ) if args1.len() == args2.len() => {
             for (a, b) in args1.iter().zip(args2) {
-                unify(a, b, env)?;
+                unify(a.clone(), b.clone(), env)?;
             }
-            unify(retrn1, retrn2, env)
+            unify(retrn1.clone(), retrn2.clone(), env)
         }
 
         (_, _) => Err(UnifyError::CouldNotUnify {
-            expected: (*t1).clone(),
-            given: (*t2).clone(),
+            expected: t1.clone(),
+            given: t2.clone(),
         }),
     }
 }
@@ -2908,10 +2813,10 @@ fn flip_unify_error(e: UnifyError) -> UnifyError {
 /// of updating the levels of the type variables appearing within
 /// the type, thus ensuring the type will be correctly generalized.
 ///
-fn update_levels(typ: &Type, own_level: usize, own_id: usize) -> Result<(), UnifyError> {
-    if let Type::Var { typ } = &typ {
+fn update_levels(typ: Arc<Type>, own_level: usize, own_id: usize) -> Result<(), UnifyError> {
+    if let Type::Var { typ } = &*typ {
         let new_value = match &*typ.borrow() {
-            TypeVar::Link { typ, .. } => return update_levels(typ, own_level, own_id),
+            TypeVar::Link { typ, .. } => return update_levels(typ.clone(), own_level, own_id),
 
             TypeVar::Unbound { id, level } => {
                 if id == &own_id {
@@ -2935,24 +2840,24 @@ fn update_levels(typ: &Type, own_level: usize, own_id: usize) -> Result<(), Unif
         return Ok(());
     }
 
-    match typ {
+    match &*typ {
         Type::App { args, .. } => {
             for arg in args.iter() {
-                update_levels(arg, own_level, own_id)?
+                update_levels(arg.clone(), own_level, own_id)?
             }
             Ok(())
         }
 
         Type::Fn { args, retrn } => {
             for arg in args.iter() {
-                update_levels(arg, own_level, own_id)?;
+                update_levels(arg.clone(), own_level, own_id)?;
             }
-            update_levels(retrn, own_level, own_id)
+            update_levels(retrn.clone(), own_level, own_id)
         }
 
         Type::Tuple { elems, .. } => {
             for elem in elems.iter() {
-                update_levels(elem, own_level, own_id)?
+                update_levels(elem.clone(), own_level, own_id)?
             }
             Ok(())
         }
@@ -2962,13 +2867,13 @@ fn update_levels(typ: &Type, own_level: usize, own_id: usize) -> Result<(), Unif
 }
 
 fn match_fun_type(
-    typ: &Type,
+    typ: Arc<Type>,
     arity: usize,
     env: &mut Env,
-) -> Result<(Vec<Type>, Type), MatchFunTypeError> {
-    if let Type::Var { typ } = &typ {
+) -> Result<(Vec<Arc<Type>>, Arc<Type>), MatchFunTypeError> {
+    if let Type::Var { typ } = &*typ {
         let new_value = match &*typ.borrow() {
-            TypeVar::Link { typ, .. } => return match_fun_type(typ, arity, env),
+            TypeVar::Link { typ, .. } => return match_fun_type(typ.clone(), arity, env),
 
             TypeVar::Unbound { level, .. } => {
                 let args: Vec<_> = (0..arity).map(|_| env.new_unbound_var(*level)).collect();
@@ -2981,23 +2886,20 @@ fn match_fun_type(
 
         if let Some((args, retrn)) = new_value {
             *typ.borrow_mut() = TypeVar::Link {
-                typ: Box::new(Type::Fn {
-                    args: args.clone(),
-                    retrn: Box::new(retrn.clone()),
-                }),
+                typ: fn_(args.clone(), retrn.clone()),
             };
             return Ok((args, retrn));
         }
     }
 
-    if let Type::Fn { args, retrn } = typ {
+    if let Type::Fn { args, retrn } = &*typ {
         return if args.len() != arity {
             Err(MatchFunTypeError::IncorrectArity {
                 expected: args.len(),
                 given: arity,
             })
         } else {
-            Ok((args.clone(), (**retrn).clone()))
+            Ok((args.clone(), retrn.clone()))
         };
     }
 
@@ -3006,7 +2908,7 @@ fn match_fun_type(
 
 enum MatchFunTypeError {
     IncorrectArity { expected: usize, given: usize },
-    NotFn { typ: Type },
+    NotFn { typ: Arc<Type> },
 }
 
 fn convert_not_fun_error(e: MatchFunTypeError, fn_meta: &Meta, call_meta: &Meta) -> Error {
@@ -3027,22 +2929,22 @@ fn convert_not_fun_error(e: MatchFunTypeError, fn_meta: &Meta, call_meta: &Meta)
 /// Takes a level and a type and turns all type variables within the type that have
 /// level higher than the input level into generalized (polymorphic) type variables.
 ///
-fn generalise(t: Type, ctx_level: usize) -> Type {
-    match t {
+fn generalise(t: Arc<Type>, ctx_level: usize) -> Arc<Type> {
+    match &*t {
         Type::Var { typ } => {
             let new_var = match &*typ.borrow() {
                 TypeVar::Unbound { id, level } => {
                     let id = *id;
                     if *level > ctx_level {
-                        return Type::Var {
+                        return Arc::new(Type::Var {
                             typ: Arc::new(RefCell::new(TypeVar::Generic { id })),
-                        };
+                        });
                     } else {
                         Some(TypeVar::Unbound { id, level: *level })
                     }
                 }
 
-                TypeVar::Link { typ } => return generalise((**typ).clone(), ctx_level),
+                TypeVar::Link { typ } => return generalise(typ.clone(), ctx_level),
 
                 TypeVar::Generic { .. } => None,
             };
@@ -3050,7 +2952,7 @@ fn generalise(t: Type, ctx_level: usize) -> Type {
             if let Some(v) = new_var {
                 *typ.borrow_mut() = v;
             }
-            Type::Var { typ }
+            Arc::new(Type::Var { typ: typ.clone() })
         }
 
         Type::App {
@@ -3059,92 +2961,101 @@ fn generalise(t: Type, ctx_level: usize) -> Type {
             name,
             args,
         } => {
-            let args = args.into_iter().map(|t| generalise(t, ctx_level)).collect();
-            Type::App {
-                public,
-                module,
-                name,
-                args,
-            }
-        }
-
-        Type::Fn { args, retrn } => {
-            let args = args.into_iter().map(|t| generalise(t, ctx_level)).collect();
-            let retrn = generalise(*retrn, ctx_level);
-            Type::Fn {
-                args,
-                retrn: Box::new(retrn),
-            }
-        }
-
-        Type::Tuple { elems } => Type::Tuple {
-            elems: elems
+            let args = args
                 .into_iter()
-                .map(|t| generalise(t, ctx_level))
+                .map(|t| generalise(t.clone(), ctx_level))
+                .collect();
+            Arc::new(Type::App {
+                public: *public,
+                module: module.clone(),
+                name: name.clone(),
+                args,
+            })
+        }
+
+        Type::Fn { args, retrn } => fn_(
+            args.into_iter()
+                .map(|t| generalise(t.clone(), ctx_level))
                 .collect(),
-        },
+            generalise(retrn.clone(), ctx_level),
+        ),
+
+        Type::Tuple { elems } => tuple(
+            elems
+                .into_iter()
+                .map(|t| generalise(t.clone(), ctx_level))
+                .collect(),
+        ),
     }
 }
 
-pub fn int() -> Type {
-    Type::App {
+pub fn int() -> Arc<Type> {
+    Arc::new(Type::App {
         public: true,
         name: "Int".to_string(),
         module: vec![],
         args: vec![],
-    }
+    })
 }
 
-pub fn float() -> Type {
-    Type::App {
+pub fn float() -> Arc<Type> {
+    Arc::new(Type::App {
         args: vec![],
         public: true,
         name: "Float".to_string(),
         module: vec![],
-    }
+    })
 }
 
-pub fn bool() -> Type {
-    Type::App {
+pub fn bool() -> Arc<Type> {
+    Arc::new(Type::App {
         args: vec![],
         public: true,
         name: "Bool".to_string(),
         module: vec![],
-    }
+    })
 }
 
-pub fn string() -> Type {
-    Type::App {
+pub fn string() -> Arc<Type> {
+    Arc::new(Type::App {
         args: vec![],
         public: true,
         name: "String".to_string(),
         module: vec![],
-    }
+    })
 }
 
-pub fn nil() -> Type {
-    Type::App {
+pub fn nil() -> Arc<Type> {
+    Arc::new(Type::App {
         args: vec![],
         public: true,
         name: "Nil".to_string(),
         module: vec![],
-    }
+    })
 }
 
-pub fn list(t: Type) -> Type {
-    Type::App {
+pub fn list(t: Arc<Type>) -> Arc<Type> {
+    Arc::new(Type::App {
         public: true,
         name: "List".to_string(),
         module: vec![],
         args: vec![t],
-    }
+    })
 }
 
-pub fn result(a: Type, e: Type) -> Type {
-    Type::App {
+pub fn result(a: Arc<Type>, e: Arc<Type>) -> Arc<Type> {
+    Arc::new(Type::App {
         public: true,
         name: "Result".to_string(),
         module: vec![],
         args: vec![a, e],
-    }
+    })
+}
+
+pub fn tuple(elems: Vec<Arc<Type>>) -> Arc<Type> {
+    Arc::new(Type::Tuple { elems })
+}
+
+pub fn fn_(args: Vec<Arc<Type>>, retrn: Arc<Type>) -> Arc<Type> {
+    Arc::new(Type::Fn { retrn, args })
 }

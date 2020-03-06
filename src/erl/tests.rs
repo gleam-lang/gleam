@@ -512,10 +512,7 @@ some_function(
                 args: vec![],
                 name: "moddy".to_string(),
                 body: Expr::ModuleSelect {
-                    typ: crate::typ::Type::Fn {
-                        args: vec![],
-                        retrn: Box::new(crate::typ::int()),
-                    },
+                    typ: crate::typ::fn_(vec![], crate::typ::int()),
                     meta: Default::default(),
                     module_alias: "zero".to_string(),
                     module_name: vec!["one".to_string()],
@@ -530,10 +527,10 @@ some_function(
                 args: vec![],
                 name: "moddy2".to_string(),
                 body: Expr::ModuleSelect {
-                    typ: crate::typ::Type::Fn {
-                        args: vec![crate::typ::int(), crate::typ::int()],
-                        retrn: Box::new(crate::typ::int()),
-                    },
+                    typ: crate::typ::fn_(
+                        vec![crate::typ::int(), crate::typ::int()],
+                        crate::typ::int(),
+                    ),
                     meta: Default::default(),
                     module_alias: "zero".to_string(),
                     module_name: vec!["one".to_string(), "zero".to_string()],
