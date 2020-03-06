@@ -197,7 +197,7 @@ fn next_letter_test() {
 #[test]
 fn pretty_print_test() {
     use std::cell::RefCell;
-    use std::rc::Rc;
+    use std::sync::Arc;
 
     macro_rules! assert_string {
         ($src:expr, $typ:expr $(,)?) => {
@@ -264,7 +264,7 @@ fn pretty_print_test() {
     );
     assert_string!(
         Type::Var {
-            typ: Rc::new(RefCell::new(TypeVar::Link {
+            typ: Arc::new(RefCell::new(TypeVar::Link {
                 typ: Box::new(Type::App {
                     args: vec![],
                     module: vec!["whatever".to_string()],
@@ -277,17 +277,17 @@ fn pretty_print_test() {
     );
     assert_string!(
         Type::Var {
-            typ: Rc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 2231 })),
+            typ: Arc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 2231 })),
         },
         "a",
     );
     assert_string!(
         Type::Fn {
             args: vec![Type::Var {
-                typ: Rc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 78 })),
+                typ: Arc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 78 })),
             }],
             retrn: Box::new(Type::Var {
-                typ: Rc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 2 })),
+                typ: Arc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 2 })),
             }),
         },
         "fn(a) -> b",
@@ -295,10 +295,10 @@ fn pretty_print_test() {
     assert_string!(
         Type::Fn {
             args: vec![Type::Var {
-                typ: Rc::new(RefCell::new(TypeVar::Generic { id: 78 })),
+                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 78 })),
             }],
             retrn: Box::new(Type::Var {
-                typ: Rc::new(RefCell::new(TypeVar::Generic { id: 2 })),
+                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 2 })),
             }),
         },
         "fn(a) -> b",

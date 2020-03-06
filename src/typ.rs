@@ -11,7 +11,7 @@ use crate::ast::{
 use crate::error::GleamExpect;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
-use std::rc::Rc;
+use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
@@ -28,7 +28,7 @@ pub enum Type {
     },
 
     Var {
-        typ: Rc<RefCell<TypeVar>>,
+        typ: Arc<RefCell<TypeVar>>,
     },
 
     Tuple {
@@ -743,7 +743,7 @@ impl<'a> Env<'a> {
     ///
     pub fn new_unbound_var(&mut self, level: usize) -> Type {
         Type::Var {
-            typ: Rc::new(RefCell::new(TypeVar::Unbound {
+            typ: Arc::new(RefCell::new(TypeVar::Unbound {
                 id: self.next_uid(),
                 level,
             })),
@@ -754,7 +754,7 @@ impl<'a> Env<'a> {
     ///
     pub fn new_generic_var(&mut self) -> Type {
         Type::Var {
-            typ: Rc::new(RefCell::new(TypeVar::Generic {
+            typ: Arc::new(RefCell::new(TypeVar::Generic {
                 id: self.next_uid(),
             })),
         }
@@ -3035,7 +3035,7 @@ fn generalise(t: Type, ctx_level: usize) -> Type {
                     let id = *id;
                     if *level > ctx_level {
                         return Type::Var {
-                            typ: Rc::new(RefCell::new(TypeVar::Generic { id })),
+                            typ: Arc::new(RefCell::new(TypeVar::Generic { id })),
                         };
                     } else {
                         Some(TypeVar::Unbound { id, level: *level })
