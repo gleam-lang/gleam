@@ -37,6 +37,7 @@ pub enum Type {
 }
 
 impl Type {
+    // TODO: Clone the Arc, not the Type.
     pub fn collapse_links(self) -> Type {
         if let Type::Var { typ } = &self {
             if let TypeVar::Link { typ } = &*typ.borrow() {
@@ -44,6 +45,13 @@ impl Type {
             }
         }
         self
+    }
+
+    pub fn is_unbound(&self) -> bool {
+        match self {
+            Type::Var { typ } => typ.borrow().is_unbound(),
+            _ => false,
+        }
     }
 
     /// Get the args for the type if the type is a specific Type::App.
@@ -1051,6 +1059,21 @@ pub enum Error {
         meta: Meta,
         name: String,
     },
+
+    OutOfBoundsTupleIndex {
+        meta: Meta,
+        index: u64,
+        size: usize,
+    },
+
+    NotATuple {
+        meta: Meta,
+        given: Arc<Type>,
+    },
+
+    NotATupleUnbound {
+        meta: Meta,
+    },
 }
 
 #[derive(Debug, PartialEq)]
@@ -1684,11 +1707,15 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         } => infer_binop(name, *left, *right, level, meta, env),
 
         Expr::FieldSelect {
-            meta: select_meta,
+            meta,
             label,
             container,
             ..
-        } => infer_field_select(*container, label, select_meta, level, env),
+        } => infer_field_select(*container, label, meta, level, env),
+
+        Expr::TupleIndex {
+            meta, index, tuple, ..
+        } => infer_tuple_index(*tuple, index, meta, level, env),
 
         // This node is not created by the parser, it is constructed by the typer from
         // the more general FieldSelect. Because of this it should never be present in AST
@@ -1827,6 +1854,7 @@ fn infer_var(name: String, meta: Meta, level: usize, env: &mut Env) -> Result<Ty
         name,
     })
 }
+
 fn infer_field_select(
     container: UntypedExpr,
     label: String,
@@ -1840,6 +1868,44 @@ fn infer_field_select(
         }
 
         _ => infer_value_field_select(container, label, level, select_meta, env),
+    }
+}
+
+fn infer_tuple_index(
+    tuple: UntypedExpr,
+    index: u64,
+    meta: Meta,
+    level: usize,
+    env: &mut Env,
+) -> Result<TypedExpr, Error> {
+    let tuple = infer(tuple, level, env)?;
+
+    match &*tuple.typ() {
+        Type::Tuple { elems } => {
+            let typ = elems
+                .get(index as usize)
+                .ok_or_else(|| Error::OutOfBoundsTupleIndex {
+                    meta: meta.clone(),
+                    index,
+                    size: elems.len(),
+                })?
+                .clone();
+            Ok(Expr::TupleIndex {
+                meta,
+                index,
+                tuple: Box::new(tuple),
+                typ,
+            })
+        }
+
+        typ if typ.is_unbound() => Err(Error::NotATupleUnbound {
+            meta: tuple.meta().clone(),
+        }),
+
+        _ => Err(Error::NotATuple {
+            meta: tuple.meta().clone(),
+            given: tuple.typ(),
+        }),
     }
 }
 

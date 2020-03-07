@@ -312,11 +312,18 @@ Let: UntypedExpr = {
 }
 
 FieldSelect: UntypedExpr = {
-    <s:@L> <r:SimpleExpr> "." <l:AnyName> <e:@L> => Expr::FieldSelect {
+    <r:SimpleExpr> <s:@L> "." <label:AnyName> <e:@L> => Expr::FieldSelect {
         meta: meta(s, e),
         typ: (),
-        label: l,
+        label,
         container: Box::new(r),
+    },
+
+    <r:SimpleExpr> <s:@L> "." <index:PositiveIntLiteral> <e:@L> => Expr::TupleIndex {
+        meta: meta(s, e),
+        typ: (),
+        index,
+        tuple: Box::new(r),
     },
 }
 
@@ -472,11 +479,24 @@ String: UntypedExpr = {
     }
 }
 
+PositiveIntLiteral: u64 = {
+    <pos:r"[0-9]+"> => u64::from_str(pos).unwrap(),
+}
+
+NegativeIntLiteral: i64 = {
+    <neg:r"-[0-9]+"> => i64::from_str(neg).unwrap(),
+}
+
+IntLiteral: i64 = {
+    <i:PositiveIntLiteral> => i as i64,
+    <i:NegativeIntLiteral> => i,
+}
+
 Int: UntypedExpr = {
-    <s:@L> <i:r"-?[0-9]+"> <e:@L> => Expr::Int {
+    <s:@L> <value:IntLiteral> <e:@L> => Expr::Int {
         meta: meta(s, e),
         typ: (),
-        value: i64::from_str(i).unwrap(),
+        value,
     }
 }
 
@@ -584,9 +604,9 @@ PatternString: UntypedPattern = {
 }
 
 PatternInt: UntypedPattern = {
-    <s:@L> <i:r"-?[0-9]+"> <e:@L> => Pattern::Int {
+    <s:@L> <value:IntLiteral> <e:@L> => Pattern::Int {
         meta: meta(s, e),
-        value: i64::from_str(i).unwrap(),
+        value,
     }
 }
 
