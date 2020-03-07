@@ -322,6 +322,13 @@ pub enum Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type
         elems: Vec<Self>,
     },
 
+    TupleIndex {
+        meta: Meta,
+        typ: Type,
+        index: u64,
+        tuple: Box<Self>,
+    },
+
     Todo {
         meta: Meta,
         typ: Type,
@@ -345,6 +352,7 @@ impl<A, B, C, D> Expr<A, B, C, D> {
             Expr::BinOp { meta, .. } => meta,
             Expr::String { meta, .. } => meta,
             Expr::Tuple { meta, .. } => meta,
+            Expr::TupleIndex { meta, .. } => meta,
             Expr::FieldSelect { meta, .. } => meta,
             Expr::ModuleSelect { meta, .. } => meta,
         }
@@ -367,6 +375,7 @@ impl TypedExpr {
             Expr::BinOp { typ, .. } => typ.clone(),
             Expr::Tuple { typ, .. } => typ.clone(),
             Expr::String { typ, .. } => typ.clone(),
+            Expr::TupleIndex { typ, .. } => typ.clone(),
             Expr::Var { constructor, .. } => constructor.typ.clone(),
             Expr::FieldSelect { typ, .. } => typ.clone(),
             Expr::ModuleSelect { typ, .. } => typ.clone(),

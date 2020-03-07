@@ -656,6 +656,8 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
         Expr::String { value, .. } => string(value),
         Expr::Seq { first, then, .. } => seq(*first, *then, env),
 
+        Expr::TupleIndex { tuple, index, .. } => tuple_index(*tuple, index, env),
+
         Expr::Var {
             name, constructor, ..
         } => var(name, constructor, env),
@@ -700,6 +702,14 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
 
         Expr::Tuple { elems, .. } => tuple(elems.into_iter().map(|e| wrap_expr(e, env))),
     }
+}
+
+fn tuple_index(tuple: TypedExpr, index: u64, env: &mut Env) -> Document {
+    use std::iter::once;
+    let index_doc = format!("{}", (index + 1)).to_doc();
+    let tuple_doc = expr(tuple, env);
+    let iter = once(index_doc).chain(once(tuple_doc));
+    "erlang:element".to_doc().append(wrap_args(iter))
 }
 
 fn module_select_fn(

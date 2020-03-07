@@ -610,7 +610,7 @@ fn expr_test() {
 
     assert_eq!(
         Ok(Expr::FieldSelect {
-            meta: Meta { start: 0, end: 11 },
+            meta: Meta { start: 6, end: 11 },
             typ: (),
             label: "name".to_string(),
             container: Box::new(Expr::Var {

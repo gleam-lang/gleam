@@ -339,6 +339,10 @@ fn infer_test() {
     assert_infer!("1 == todo", "Bool");
     assert_infer!("todo != 1", "Bool");
     assert_infer!("todo + 1", "Int");
+
+    // tuple index
+    assert_infer!("tuple(1, 2.0).0", "Int");
+    assert_infer!("tuple(1, 2.0).1", "Float");
 }
 
 #[test]
@@ -689,6 +693,30 @@ fn infer_error_test() {
         Error::ExtraVarInAlternativePattern {
             meta: Meta { start: 49, end: 50 },
             name: "x".to_string()
+        },
+    );
+
+    assert_error!(
+        "tuple(0, 1).2",
+        Error::OutOfBoundsTupleIndex {
+            meta: Meta { start: 11, end: 13 },
+            index: 2,
+            size: 2
+        },
+    );
+
+    assert_error!(
+        "Nil.2",
+        Error::NotATuple {
+            meta: Meta { start: 0, end: 3 },
+            given: nil(),
+        },
+    );
+
+    assert_error!(
+        "fn(a) { a.2 }",
+        Error::NotATupleUnbound {
+            meta: Meta { start: 8, end: 9 },
         },
     );
 }
