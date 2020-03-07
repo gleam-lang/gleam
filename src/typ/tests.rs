@@ -330,6 +330,15 @@ fn infer_test() {
     assert_infer!("let _ = 1 2.0", "Float");
     assert_infer!("let tuple(tag, x) = tuple(1.0, 1) x", "Int");
     assert_infer!("fn(x) { let tuple(a, b) = x a }", "fn(tuple(a, b)) -> a");
+
+    // Nil
+    assert_infer!("Nil", "Nil");
+
+    // todo
+    assert_infer!("todo", "a");
+    assert_infer!("1 == todo", "Bool");
+    assert_infer!("todo != 1", "Bool");
+    assert_infer!("todo + 1", "Int");
 }
 
 #[test]

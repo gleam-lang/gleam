@@ -1421,6 +1421,21 @@ main(Args) ->
     end.
 "#,
         },
+        Case {
+            src: r#"
+pub fn main() {
+  todo
+}
+"#,
+            erl: r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+main() ->
+    erlang:error({gleam_error, todo}).
+"#,
+        },
     ];
 
     for Case { src, erl } in cases.into_iter() {
