@@ -216,6 +216,7 @@ SimpleExpr: UntypedExpr = {
     Nil => <>,
     Int => <>,
     Var => <>,
+    Todo => <>,
     Case => <>,
     List => <>,
     Call => <>,
@@ -446,6 +447,13 @@ Var: UntypedExpr = {
         meta: meta(s, e),
         constructor: (),
         name: v,
+    }
+}
+
+Todo: UntypedExpr = {
+    <s:@L> "todo" <e:@L> => Expr::Todo {
+        meta: meta(s, e),
+        typ: (),
     }
 }
 

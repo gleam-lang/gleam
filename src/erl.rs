@@ -650,6 +650,7 @@ fn wrap_expr(expression: TypedExpr, env: &mut Env) -> Document {
 fn expr(expression: TypedExpr, env: &mut Env) -> Document {
     match expression {
         Expr::Nil { .. } => "[]".to_doc(),
+        Expr::Todo { .. } => "erlang:error({gleam_error, todo})".to_doc(),
         Expr::Int { value, .. } => value.to_doc(),
         Expr::Float { value, .. } => value.to_doc(),
         Expr::String { value, .. } => string(value),

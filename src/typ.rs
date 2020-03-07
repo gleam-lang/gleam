@@ -1635,6 +1635,7 @@ This should not be possible. Please report this crash",
 pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr, Error> {
     match expr {
         Expr::Nil { meta, .. } => infer_nil(meta, level, env),
+        Expr::Todo { meta, .. } => infer_todo(meta, level, env),
         Expr::Var { meta, name, .. } => infer_var(name, meta, level, env),
         Expr::Int { meta, value, .. } => infer_int(value, meta),
         Expr::Seq { first, then, .. } => infer_seq(*first, *then, level, env),
@@ -1702,6 +1703,13 @@ fn infer_nil(meta: Meta, level: usize, env: &mut Env) -> Result<TypedExpr, Error
     Ok(Expr::Nil {
         meta,
         typ: list(env.new_unbound_var(level)),
+    })
+}
+
+fn infer_todo(meta: Meta, level: usize, env: &mut Env) -> Result<TypedExpr, Error> {
+    Ok(Expr::Todo {
+        meta,
+        typ: env.new_unbound_var(level),
     })
 }
 
