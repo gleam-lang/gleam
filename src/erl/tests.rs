@@ -884,18 +884,25 @@ three() ->
 
 #[test]
 fn integration_test() {
-    struct Case {
-        src: &'static str,
-        erl: &'static str,
+    macro_rules! assert_erl {
+        ($src:expr, $erl:expr $(,)?) => {
+            let mut ast = crate::grammar::ModuleParser::new()
+                .parse($src)
+                .expect("syntax error");
+            ast.name = vec!["the_app".to_string()];
+            let ast = crate::typ::infer_module(ast, &std::collections::HashMap::new())
+                .expect("should successfully infer");
+            let output = module(ast);
+            assert_eq!(($src, output), ($src, $erl.to_string()));
+        };
     }
 
-    let cases = [
-        Case {
-            src: r#"fn go() {
+    assert_erl!(
+        r#"fn go() {
 let x = tuple(100000000000000000, tuple(2000000000, 3000000000000, 40000000000), 50000, 6000000000)
   x
 }"#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 go() ->
@@ -905,14 +912,15 @@ go() ->
          6000000000},
     X.
 "#,
-        },
-        Case {
-            src: r#"fn go() {
+    );
+
+    assert_erl!(
+        r#"fn go() {
   let y = 1
   let y = 2
   y
 }"#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 go() ->
@@ -920,10 +928,11 @@ go() ->
     Y1 = 2,
     Y1.
 "#,
-        },
-        Case {
-            src: r#"pub fn t() { True }"#,
-            erl: r#"-module(the_app).
+    );
+
+    assert_erl!(
+        r#"pub fn t() { True }"#,
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 -export([t/0]).
@@ -931,39 +940,43 @@ go() ->
 t() ->
     true.
 "#,
-        },
-        Case {
-            src: r#"pub type Money { Pound(Int) }
+    );
+
+    assert_erl!(
+        r#"pub type Money { Pound(Int) }
                     fn pound(x) { Pound(x) }"#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 pound(X) ->
     {pound, X}.
 "#,
-        },
-        Case {
-            src: r#"fn loop() { loop() }"#,
-            erl: r#"-module(the_app).
+    );
+
+    assert_erl!(
+        r#"fn loop() { loop() }"#,
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 loop() ->
     loop().
 "#,
-        },
-        Case {
-            src: r#"external fn run() -> Int = "Elixir.MyApp" "run""#,
-            erl: r#"-module(the_app).
+    );
+
+    assert_erl!(
+        r#"external fn run() -> Int = "Elixir.MyApp" "run""#,
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 run() ->
     'Elixir.MyApp':run().
 "#,
-        },
-        Case {
-            src: r#"fn inc(x) { x + 1 }
+    );
+
+    assert_erl!(
+        r#"fn inc(x) { x + 1 }
                     pub fn go() { 1 |> inc |> inc |> inc }"#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 -export([go/0]).
@@ -974,11 +987,12 @@ inc(X) ->
 go() ->
     inc(inc(inc(1))).
 "#,
-        },
-        Case {
-            src: r#"fn add(x, y) { x + y }
+    );
+
+    assert_erl!(
+        r#"fn add(x, y) { x + y }
                     pub fn go() { 1 |> add(_, 1) |> add(2, _) |> add(_, 3) }"#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 -export([go/0]).
@@ -989,13 +1003,14 @@ add(X, Y) ->
 go() ->
     add(add(2, add(1, 1)), 3).
 "#,
-        },
-        Case {
-            src: r#"fn and(x, y) { x && y }
+    );
+
+    assert_erl!(
+        r#"fn and(x, y) { x && y }
                     fn or(x, y) { x || y }
                     fn modulo(x, y) { x % y }
             "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 'and'(X, Y) ->
@@ -1007,12 +1022,13 @@ go() ->
 modulo(X, Y) ->
     X rem Y.
 "#,
-        },
-        Case {
-            src: r#"fn second(list) { case list { [x, y] -> y z -> 1 } }
+    );
+
+    assert_erl!(
+        r#"fn second(list) { case list { [x, y] -> y z -> 1 } }
                     fn tail(list) { case list { [x | xs] -> xs z -> list } }
             "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 second(List) ->
@@ -1033,10 +1049,11 @@ tail(List) ->
             List
     end.
 "#,
-        },
-        Case {
-            src: r#"fn x() { let x = 1 let x = x + 1 x }"#,
-            erl: r#"-module(the_app).
+    );
+
+    assert_erl!(
+        r#"fn x() { let x = 1 let x = x + 1 x }"#,
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 x() ->
@@ -1044,11 +1061,12 @@ x() ->
     X1 = X + 1,
     X1.
 "#,
-        },
-        Case {
-            src: r#"pub external fn receive() -> Int = "try" "and"
+    );
+
+    assert_erl!(
+        r#"pub external fn receive() -> Int = "try" "and"
                     pub fn catch(x) { receive() }"#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 -export(['receive'/0, 'catch'/1]).
@@ -1059,72 +1077,79 @@ x() ->
 'catch'(X) ->
     'receive'().
 "#,
-        },
-        // Translation of Float-specific BinOp into variable-type Erlang term comparison.
-        Case {
-            src: r#"fn x() { 1. <. 2.3 }"#,
-            erl: r#"-module(the_app).
+    );
+
+    // Translation of Float-specific BinOp into variable-type Erlang term comparison.
+    assert_erl!(
+        r#"fn x() { 1. <. 2.3 }"#,
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 x() ->
     1.0 < 2.3.
 "#,
-        },
-        // Custom type creation
-        Case {
-            src: r#"type Pair(x, y) { Pair(x: x, y: y) } fn x() { Pair(1, 2) Pair(3., 4.) }"#,
-            erl: r#"-module(the_app).
+    );
+
+    // Custom type creation
+    assert_erl!(
+        r#"type Pair(x, y) { Pair(x: x, y: y) } fn x() { Pair(1, 2) Pair(3., 4.) }"#,
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 x() ->
     {pair, 1, 2},
     {pair, 3.0, 4.0}.
 "#,
-        },
-        Case {
-            src: r#"type Null { Null } fn x() { Null }"#,
-            erl: r#"-module(the_app).
+    );
+
+    assert_erl!(
+        r#"type Null { Null } fn x() { Null }"#,
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 x() ->
     null.
 "#,
-        },
-        Case {
-            src: r#"type Point { Point(x: Int, y: Int) }
+    );
+
+    assert_erl!(
+        r#"type Point { Point(x: Int, y: Int) }
                 fn y() { fn() { Point }()(4, 6) }"#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 y() ->
     ((fun() -> fun(A, B) -> {point, A, B} end end)())(4, 6).
 "#,
-        },
-        Case {
-            src: r#"type Point { Point(x: Int, y: Int) }
+    );
+
+    assert_erl!(
+        r#"type Point { Point(x: Int, y: Int) }
                 fn x() { Point(x: 4, y: 6) Point(y: 1, x: 9) }"#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 x() ->
     {point, 4, 6},
     {point, 9, 1}.
 "#,
-        },
-        Case {
-            src: r#"type Point { Point(x: Int, y: Int) } fn x(y) { let Point(a, b) = y a }"#,
-            erl: r#"-module(the_app).
+    );
+
+    assert_erl!(
+        r#"type Point { Point(x: Int, y: Int) } fn x(y) { let Point(a, b) = y a }"#,
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 x(Y) ->
     {point, A, B} = Y,
     A.
 "#,
-        },
-        Case {
-            src: r#"external fn go(x: Int, y: Int) -> Int = "m" "f"
+    );
+
+    assert_erl!(
+        r#"external fn go(x: Int, y: Int) -> Int = "m" "f"
                     fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 go(A, B) ->
@@ -1134,11 +1159,12 @@ x() ->
     go(1, 2),
     go(4, 3).
 "#,
-        },
-        Case {
-            src: r#"fn go(x xx, y yy) { xx }
+    );
+
+    assert_erl!(
+        r#"fn go(x xx, y yy) { xx }
                     fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 go(Xx, Yy) ->
@@ -1148,23 +1174,25 @@ x() ->
     go(1, 2),
     go(4, 3).
 "#,
-        },
-        // https://github.com/gleam-lang/gleam/issues/289
-        Case {
-            src: r#"
+    );
+
+    // https://github.com/gleam-lang/gleam/issues/289
+    assert_erl!(
+        r#"
 type User { User(id: Int, name: String, age: Int) }
 fn create_user(user_id) { User(age: 22, id: user_id, name: "") }
                     "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 create_user(UserId) ->
     {user, UserId, <<"">>, 22}.
 "#,
-        },
-        Case {
-            src: r#"fn run() { case 1, 2 { a, b -> a } }"#,
-            erl: r#"-module(the_app).
+    );
+
+    assert_erl!(
+        r#"fn run() { case 1, 2 { a, b -> a } }"#,
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 run() ->
@@ -1173,21 +1201,23 @@ run() ->
             A
     end.
 "#,
-        },
-        Case {
-            src: r#"type X { X(x: Int, y: Float) }
+    );
+
+    assert_erl!(
+        r#"type X { X(x: Int, y: Float) }
                     fn x() { X(x: 1, y: 2.) X(y: 3., x: 4) }"#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 x() ->
     {x, 1, 2.0},
     {x, 4, 3.0}.
 "#,
-        },
-        // https://github.com/gleam-lang/gleam/issues/333
-        Case {
-            src: r#"
+    );
+
+    // https://github.com/gleam-lang/gleam/issues/333
+    assert_erl!(
+        r#"
 fn go(a) {
   case a {
     99 -> {
@@ -1199,7 +1229,7 @@ fn go(a) {
 }
 
                     "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 go(A) ->
@@ -1212,41 +1242,44 @@ go(A) ->
             A
     end.
 "#,
-        },
-        Case {
-            src: r#"
+    );
+
+    assert_erl!(
+        r#"
 fn go(a) {
   let a = a + 1
   a
 }
 
                     "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 go(A) ->
     A1 = A + 1,
     A1.
 "#,
-        },
-        Case {
-            src: r#"
+    );
+
+    assert_erl!(
+        r#"
 fn go(a) {
   let a = 1
   a
 }
 
                     "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 go(A) ->
     A1 = 1,
     A1.
 "#,
-        },
-        Case {
-            src: r#"
+    );
+
+    assert_erl!(
+        r#"
 fn id(x) {
   x
 }
@@ -1255,7 +1288,7 @@ fn main() {
   id(id)
 }
 "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 id(X) ->
@@ -1264,10 +1297,11 @@ id(X) ->
 main() ->
     id(fun id/1).
 "#,
-        },
-        // https://github.com/gleam-lang/gleam/issues/358
-        Case {
-            src: r#"
+    );
+
+    // https://github.com/gleam-lang/gleam/issues/358
+    assert_erl!(
+        r#"
 pub fn factory(f, i) {
   f(i)
 }
@@ -1280,7 +1314,7 @@ pub fn main() {
   factory(Box, 0)
 }
 "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 -export([factory/2, main/0]).
@@ -1291,10 +1325,11 @@ factory(F, I) ->
 main() ->
     factory(fun(A) -> {box, A} end, 0).
 "#,
-        },
-        // https://github.com/gleam-lang/gleam/issues/384
-        Case {
-            src: r#"
+    );
+
+    // https://github.com/gleam-lang/gleam/issues/384
+    assert_erl!(
+        r#"
 pub fn main(args) {
   case args {
     _ -> {
@@ -1306,7 +1341,7 @@ pub fn main(args) {
   a
 }
 "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 -export([main/1]).
@@ -1320,10 +1355,11 @@ main(Args) ->
     A1 = 2,
     A1.
 "#,
-        },
-        // Clause guards
-        Case {
-            src: r#"
+    );
+
+    // Clause guards
+    assert_erl!(
+        r#"
 pub fn main(args) {
   case args {
     x if x == args -> 1
@@ -1331,7 +1367,7 @@ pub fn main(args) {
   }
 }
 "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 -export([main/1]).
@@ -1345,9 +1381,10 @@ main(Args) ->
             0
     end.
 "#,
-        },
-        Case {
-            src: r#"
+    );
+
+    assert_erl!(
+        r#"
 pub fn main(args) {
   case args {
     x if {x != x} == {args == args} -> 1
@@ -1355,7 +1392,7 @@ pub fn main(args) {
   }
 }
 "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 -export([main/1]).
@@ -1369,9 +1406,10 @@ main(Args) ->
             0
     end.
 "#,
-        },
-        Case {
-            src: r#"
+    );
+
+    assert_erl!(
+        r#"
 pub fn main(args) {
   case args {
     x if x && x || x == x && x -> 1
@@ -1379,7 +1417,7 @@ pub fn main(args) {
   }
 }
 "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 -export([main/1]).
@@ -1393,9 +1431,10 @@ main(Args) ->
             0
     end.
 "#,
-        },
-        Case {
-            src: r#"
+    );
+
+    assert_erl!(
+        r#"
 pub fn main(args) {
   case args {
     [x] | [x, _] if x -> 1
@@ -1403,7 +1442,7 @@ pub fn main(args) {
   }
 }
 "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 -export([main/1]).
@@ -1420,14 +1459,15 @@ main(Args) ->
             0
     end.
 "#,
-        },
-        Case {
-            src: r#"
+    );
+
+    assert_erl!(
+        r#"
 pub fn main() {
   todo
 }
 "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 -export([main/0]).
@@ -1435,17 +1475,5 @@ pub fn main() {
 main() ->
     erlang:error({gleam_error, todo}).
 "#,
-        },
-    ];
-
-    for Case { src, erl } in cases.into_iter() {
-        let mut ast = crate::grammar::ModuleParser::new()
-            .parse(src)
-            .expect("syntax error");
-        ast.name = vec!["the_app".to_string()];
-        let ast = crate::typ::infer_module(ast, &std::collections::HashMap::new())
-            .expect("should successfully infer");
-        let output = module(ast);
-        assert_eq!((src, output), (src, erl.to_string()));
-    }
+    );
 }
