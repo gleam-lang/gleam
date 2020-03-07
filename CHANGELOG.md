@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Anonymous functions can now have return type annotations.
+- There is a `todo` keyword for type checking functions that have not yet been
+  implemented.
 
 ## v0.7.1 - 2020-03-03
 
