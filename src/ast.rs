@@ -321,6 +321,11 @@ pub enum Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type
         typ: Type,
         elems: Vec<Self>,
     },
+
+    Todo {
+        meta: Meta,
+        typ: Type,
+    },
 }
 
 impl<A, B, C, D> Expr<A, B, C, D> {
@@ -332,6 +337,7 @@ impl<A, B, C, D> Expr<A, B, C, D> {
             Expr::Var { meta, .. } => meta,
             Expr::Nil { meta, .. } => meta,
             Expr::Let { then, .. } => then.meta(),
+            Expr::Todo { meta, .. } => meta,
             Expr::Case { meta, .. } => meta,
             Expr::Cons { meta, .. } => meta,
             Expr::Call { meta, .. } => meta,
@@ -352,10 +358,11 @@ impl TypedExpr {
             Expr::Nil { typ, .. } => typ.clone(),
             Expr::Let { typ, .. } => typ.clone(),
             Expr::Int { typ, .. } => typ.clone(),
+            Expr::Seq { then, .. } => then.typ(),
+            Expr::Todo { typ, .. } => typ.clone(),
             Expr::Case { typ, .. } => typ.clone(),
             Expr::Cons { typ, .. } => typ.clone(),
             Expr::Call { typ, .. } => typ.clone(),
-            Expr::Seq { then, .. } => then.typ(),
             Expr::Float { typ, .. } => typ.clone(),
             Expr::BinOp { typ, .. } => typ.clone(),
             Expr::Tuple { typ, .. } => typ.clone(),
