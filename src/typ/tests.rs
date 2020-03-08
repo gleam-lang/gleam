@@ -2,9 +2,8 @@ use super::*;
 
 #[test]
 fn field_map_reorder_test() {
-    let int = |value| Expr::Int {
+    let int = |value| UntypedExpr::Int {
         value,
-        typ: (),
         meta: Meta { start: 0, end: 0 },
     };
 
