@@ -120,7 +120,7 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "int".to_string(),
-                body: Expr::Int {
+                body: TypedExpr::Int {
                     typ: crate::typ::int(),
                     meta: Default::default(),
                     value: 176,
@@ -132,7 +132,7 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "float".to_string(),
-                body: Expr::Float {
+                body: TypedExpr::Float {
                     meta: Default::default(),
                     typ: crate::typ::float(),
                     value: 11177.324401,
@@ -144,7 +144,7 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "nil".to_string(),
-                body: Expr::Nil {
+                body: TypedExpr::Nil {
                     meta: Default::default(),
                     typ: crate::typ::int(),
                 },
@@ -155,7 +155,7 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "string".to_string(),
-                body: Expr::String {
+                body: TypedExpr::String {
                     meta: Default::default(),
                     typ: crate::typ::string(),
                     value: "Hello there!".to_string(),
@@ -167,14 +167,14 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "seq".to_string(),
-                body: Expr::Seq {
+                body: TypedExpr::Seq {
                     typ: crate::typ::int(),
-                    first: Box::new(Expr::Int {
+                    first: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
                         meta: Default::default(),
                         value: 1,
                     }),
-                    then: Box::new(Expr::Int {
+                    then: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
                         meta: Default::default(),
                         value: 2,
@@ -187,16 +187,16 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "bin_op".to_string(),
-                body: Expr::BinOp {
+                body: TypedExpr::BinOp {
                     meta: Default::default(),
                     typ: crate::typ::int(),
                     name: BinOp::AddInt,
-                    left: Box::new(Expr::Int {
+                    left: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
                         meta: Default::default(),
                         value: 1,
                     }),
-                    right: Box::new(Expr::Int {
+                    right: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
                         meta: Default::default(),
                         value: 2,
@@ -209,7 +209,7 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "enum1".to_string(),
-                body: Expr::Var {
+                body: TypedExpr::Var {
                     meta: Default::default(),
                     constructor: ValueConstructor {
                         public: true,
@@ -230,10 +230,10 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "let".to_string(),
-                body: Expr::Let {
+                body: TypedExpr::Let {
                     meta: Default::default(),
                     typ: crate::typ::int(),
-                    value: Box::new(Expr::Int {
+                    value: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
                         meta: Default::default(),
                         value: 1,
@@ -242,7 +242,7 @@ map() ->
                         meta: Default::default(),
                         name: "OneTwo".to_string(),
                     },
-                    then: Box::new(Expr::Var {
+                    then: Box::new(TypedExpr::Var {
                         meta: Default::default(),
                         constructor: ValueConstructor {
                             public: true,
@@ -260,23 +260,23 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "conny".to_string(),
-                body: Expr::Cons {
+                body: TypedExpr::Cons {
                     meta: Default::default(),
                     typ: crate::typ::int(),
-                    head: Box::new(Expr::Int {
+                    head: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
                         meta: Default::default(),
                         value: 12,
                     }),
-                    tail: Box::new(Expr::Cons {
+                    tail: Box::new(TypedExpr::Cons {
                         meta: Default::default(),
                         typ: crate::typ::int(),
-                        head: Box::new(Expr::Int {
+                        head: Box::new(TypedExpr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
                             value: 34,
                         }),
-                        tail: Box::new(Expr::Nil {
+                        tail: Box::new(TypedExpr::Nil {
                             meta: Default::default(),
                             typ: crate::typ::int(),
                         }),
@@ -289,7 +289,7 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "funny".to_string(),
-                body: Expr::Fn {
+                body: TypedExpr::Fn {
                     meta: Default::default(),
                     is_capture: false,
                     return_annotation: None,
@@ -310,7 +310,7 @@ map() ->
                             },
                         },
                     ],
-                    body: Box::new(Expr::Int {
+                    body: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
                         meta: Default::default(),
                         value: 100000000000,
@@ -323,16 +323,16 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "tup".to_string(),
-                body: Expr::Tuple {
+                body: TypedExpr::Tuple {
                     meta: Default::default(),
                     typ: crate::typ::int(),
                     elems: vec![
-                        Expr::Int {
+                        TypedExpr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
                             value: 1,
                         },
-                        Expr::Float {
+                        TypedExpr::Float {
                             meta: Default::default(),
                             typ: crate::typ::float(),
                             value: 2.0,
@@ -455,7 +455,7 @@ tup() ->
                     },
                 },
             ],
-            body: Expr::Int {
+            body: TypedExpr::Int {
                 typ: crate::typ::int(),
                 meta: Default::default(),
                 value: 1,
@@ -494,7 +494,7 @@ some_function(
                 public: false,
                 args: vec![],
                 name: "arg".to_string(),
-                body: Expr::Var {
+                body: TypedExpr::Var {
                     meta: Default::default(),
                     name: "some_arg".to_string(),
                     constructor: ValueConstructor {
@@ -511,7 +511,7 @@ some_function(
                 public: false,
                 args: vec![],
                 name: "moddy".to_string(),
-                body: Expr::ModuleSelect {
+                body: TypedExpr::ModuleSelect {
                     typ: crate::typ::fn_(vec![], crate::typ::int()),
                     meta: Default::default(),
                     module_alias: "zero".to_string(),
@@ -526,7 +526,7 @@ some_function(
                 public: false,
                 args: vec![],
                 name: "moddy2".to_string(),
-                body: Expr::ModuleSelect {
+                body: TypedExpr::ModuleSelect {
                     typ: crate::typ::fn_(
                         vec![crate::typ::int(), crate::typ::int()],
                         crate::typ::int(),
@@ -544,19 +544,19 @@ some_function(
                 public: false,
                 args: vec![],
                 name: "moddy4".to_string(),
-                body: Expr::Call {
+                body: TypedExpr::Call {
                     meta: Default::default(),
                     typ: crate::typ::int(),
                     args: vec![CallArg {
                         label: None,
                         meta: Default::default(),
-                        value: Expr::Int {
+                        value: TypedExpr::Int {
                             meta: Default::default(),
                             typ: crate::typ::int(),
                             value: 1,
                         },
                     }],
-                    fun: Box::new(Expr::ModuleSelect {
+                    fun: Box::new(TypedExpr::ModuleSelect {
                         typ: crate::typ::int(),
                         meta: Default::default(),
                         module_alias: "zero".to_string(),
@@ -599,10 +599,10 @@ moddy4() ->
             public: false,
             args: vec![],
             name: "go".to_string(),
-            body: Expr::Case {
+            body: TypedExpr::Case {
                 meta: Default::default(),
                 typ: crate::typ::int(),
-                subjects: vec![Expr::Int {
+                subjects: vec![TypedExpr::Int {
                     typ: crate::typ::int(),
                     meta: Default::default(),
                     value: 1,
@@ -616,7 +616,7 @@ moddy4() ->
                             value: 1,
                         }],
                         alternative_patterns: vec![],
-                        then: Expr::Int {
+                        then: TypedExpr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
                             value: 1,
@@ -630,7 +630,7 @@ moddy4() ->
                             value: 1.0,
                         }],
                         alternative_patterns: vec![],
-                        then: Expr::Int {
+                        then: TypedExpr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
                             value: 1,
@@ -644,7 +644,7 @@ moddy4() ->
                             value: "hello".to_string(),
                         }],
                         alternative_patterns: vec![],
-                        then: Expr::Int {
+                        then: TypedExpr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
                             value: 1,
@@ -657,7 +657,7 @@ moddy4() ->
                             meta: Default::default(),
                         }],
                         alternative_patterns: vec![],
-                        then: Expr::Int {
+                        then: TypedExpr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
                             value: 1,
@@ -683,7 +683,7 @@ moddy4() ->
                             },
                         }],
                         alternative_patterns: vec![],
-                        then: Expr::Int {
+                        then: TypedExpr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
                             value: 1,
@@ -706,7 +706,7 @@ moddy4() ->
                             ],
                         }],
                         alternative_patterns: vec![],
-                        then: Expr::Int {
+                        then: TypedExpr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
                             value: 1,
@@ -757,19 +757,19 @@ go() ->
                 args: vec![],
                 name: "one".to_string(),
                 public: false,
-                body: Expr::Call {
+                body: TypedExpr::Call {
                     meta: Default::default(),
                     typ: crate::typ::int(),
                     args: vec![CallArg {
                         label: None,
                         meta: Default::default(),
-                        value: Expr::Int {
+                        value: TypedExpr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
                             value: 1,
                         },
                     }],
-                    fun: Box::new(Expr::Var {
+                    fun: Box::new(TypedExpr::Var {
                         meta: Default::default(),
                         constructor: ValueConstructor {
                             public: true,
@@ -792,19 +792,19 @@ go() ->
                 args: vec![],
                 name: "two".to_string(),
                 public: false,
-                body: Expr::Call {
+                body: TypedExpr::Call {
                     meta: Default::default(),
                     typ: crate::typ::int(),
                     args: vec![CallArg {
                         label: None,
                         meta: Default::default(),
-                        value: Expr::Int {
+                        value: TypedExpr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
                             value: 1,
                         },
                     }],
-                    fun: Box::new(Expr::Var {
+                    fun: Box::new(TypedExpr::Var {
                         meta: Default::default(),
                         constructor: ValueConstructor {
                             public: true,
@@ -822,31 +822,31 @@ go() ->
                 args: vec![],
                 name: "three".to_string(),
                 public: false,
-                body: Expr::Call {
+                body: TypedExpr::Call {
                     meta: Default::default(),
                     typ: crate::typ::int(),
                     args: vec![CallArg {
                         label: None,
                         meta: Default::default(),
-                        value: Expr::Int {
+                        value: TypedExpr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
                             value: 2,
                         },
                     }],
-                    fun: Box::new(Expr::Call {
+                    fun: Box::new(TypedExpr::Call {
                         meta: Default::default(),
                         typ: crate::typ::int(),
                         args: vec![CallArg {
                             label: None,
                             meta: Default::default(),
-                            value: Expr::Int {
+                            value: TypedExpr::Int {
                                 typ: crate::typ::int(),
                                 meta: Default::default(),
                                 value: 1,
                             },
                         }],
-                        fun: Box::new(Expr::Var {
+                        fun: Box::new(TypedExpr::Var {
                             meta: Default::default(),
                             constructor: ValueConstructor {
                                 public: true,

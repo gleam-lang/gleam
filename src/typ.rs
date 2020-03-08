@@ -3,9 +3,9 @@ pub mod pretty;
 mod tests;
 
 use crate::ast::{
-    self, Arg, ArgNames, BinOp, CallArg, Clause, ClauseGuard, Expr, Meta, Pattern, Statement,
-    TypeAst, TypedClause, TypedClauseGuard, TypedExpr, TypedModule, TypedMultiPattern,
-    TypedPattern, UnqualifiedImport, UntypedClause, UntypedClauseGuard, UntypedExpr, UntypedModule,
+    self, Arg, ArgNames, BinOp, CallArg, Clause, ClauseGuard, Meta, Pattern, Statement, TypeAst,
+    TypedClause, TypedClauseGuard, TypedExpr, TypedModule, TypedMultiPattern, TypedPattern,
+    UnqualifiedImport, UntypedClause, UntypedClauseGuard, UntypedExpr, UntypedModule,
     UntypedMultiPattern, UntypedPattern, UntypedStatement,
 };
 use crate::error::GleamExpect;
@@ -1275,7 +1275,7 @@ pub fn infer_module(
         register_types(s, module_name, &mut env)?;
     }
 
-    let statements: Vec<Statement<_, _, _, Arc<Type>>> = module
+    let statements: Vec<Statement<TypedExpr>> = module
         .statements
         .into_iter()
         .map(|s| match s {
@@ -1656,16 +1656,16 @@ This should not be possible. Please report this crash",
 ///
 pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr, Error> {
     match expr {
-        Expr::Nil { meta, .. } => infer_nil(meta, level, env),
-        Expr::Todo { meta, .. } => infer_todo(meta, level, env),
-        Expr::Var { meta, name, .. } => infer_var(name, meta, level, env),
-        Expr::Int { meta, value, .. } => infer_int(value, meta),
-        Expr::Seq { first, then, .. } => infer_seq(*first, *then, level, env),
-        Expr::Tuple { meta, elems, .. } => infer_tuple(elems, meta, level, env),
-        Expr::Float { meta, value, .. } => infer_float(value, meta),
-        Expr::String { meta, value, .. } => infer_string(value, meta),
+        UntypedExpr::Nil { meta, .. } => infer_nil(meta, level, env),
+        UntypedExpr::Todo { meta, .. } => infer_todo(meta, level, env),
+        UntypedExpr::Var { meta, name, .. } => infer_var(name, meta, level, env),
+        UntypedExpr::Int { meta, value, .. } => infer_int(value, meta),
+        UntypedExpr::Seq { first, then, .. } => infer_seq(*first, *then, level, env),
+        UntypedExpr::Tuple { meta, elems, .. } => infer_tuple(elems, meta, level, env),
+        UntypedExpr::Float { meta, value, .. } => infer_float(value, meta),
+        UntypedExpr::String { meta, value, .. } => infer_string(value, meta),
 
-        Expr::Fn {
+        UntypedExpr::Fn {
             meta,
             is_capture,
             args,
@@ -1674,7 +1674,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             ..
         } => infer_fn(args, *body, is_capture, return_annotation, level, meta, env),
 
-        Expr::Let {
+        UntypedExpr::Let {
             meta,
             pattern,
             value,
@@ -1682,22 +1682,22 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             ..
         } => infer_let(pattern, *value, *then, level, meta, env),
 
-        Expr::Case {
+        UntypedExpr::Case {
             meta,
             subjects,
             clauses,
             ..
         } => infer_case(subjects, clauses, level, meta, env),
 
-        Expr::Cons {
+        UntypedExpr::Cons {
             meta, head, tail, ..
         } => infer_cons(*head, *tail, meta, level, env),
 
-        Expr::Call {
+        UntypedExpr::Call {
             meta, fun, args, ..
         } => infer_call(*fun, args, level, meta, env),
 
-        Expr::BinOp {
+        UntypedExpr::BinOp {
             meta,
             name,
             left,
@@ -1705,42 +1705,35 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             ..
         } => infer_binop(name, *left, *right, level, meta, env),
 
-        Expr::FieldSelect {
+        UntypedExpr::FieldSelect {
             meta,
             label,
             container,
             ..
         } => infer_field_select(*container, label, meta, level, env),
 
-        Expr::TupleIndex {
+        UntypedExpr::TupleIndex {
             meta, index, tuple, ..
         } => infer_tuple_index(*tuple, index, meta, level, env),
-
-        // This node is not created by the parser, it is constructed by the typer from
-        // the more general FieldSelect. Because of this it should never be present in AST
-        // being inferred.
-        Expr::ModuleSelect { .. } => {
-            crate::error::fatal_compiler_bug("Expr::ModuleSelect erroneously passed to typer.")
-        }
     }
 }
 
 fn infer_nil(meta: Meta, level: usize, env: &mut Env) -> Result<TypedExpr, Error> {
-    Ok(Expr::Nil {
+    Ok(TypedExpr::Nil {
         meta,
         typ: list(env.new_unbound_var(level)),
     })
 }
 
 fn infer_todo(meta: Meta, level: usize, env: &mut Env) -> Result<TypedExpr, Error> {
-    Ok(Expr::Todo {
+    Ok(TypedExpr::Todo {
         meta,
         typ: env.new_unbound_var(level),
     })
 }
 
 fn infer_string(value: String, meta: Meta) -> Result<TypedExpr, Error> {
-    Ok(Expr::String {
+    Ok(TypedExpr::String {
         meta,
         value,
         typ: string(),
@@ -1748,7 +1741,7 @@ fn infer_string(value: String, meta: Meta) -> Result<TypedExpr, Error> {
 }
 
 fn infer_int(value: i64, meta: Meta) -> Result<TypedExpr, Error> {
-    Ok(Expr::Int {
+    Ok(TypedExpr::Int {
         meta,
         value,
         typ: int(),
@@ -1756,7 +1749,7 @@ fn infer_int(value: i64, meta: Meta) -> Result<TypedExpr, Error> {
 }
 
 fn infer_float(value: f64, meta: Meta) -> Result<TypedExpr, Error> {
-    Ok(Expr::Float {
+    Ok(TypedExpr::Float {
         meta,
         value,
         typ: float(),
@@ -1771,7 +1764,7 @@ fn infer_seq(
 ) -> Result<TypedExpr, Error> {
     let first = infer(first, level, env)?;
     let then = infer(then, level, env)?;
-    Ok(Expr::Seq {
+    Ok(TypedExpr::Seq {
         typ: then.typ(),
         first: Box::new(first),
         then: Box::new(then),
@@ -1789,7 +1782,7 @@ fn infer_fn(
 ) -> Result<TypedExpr, Error> {
     let (args_types, body) = do_infer_fn(args.as_ref(), body, &return_annotation, level, env)?;
     let typ = fn_(args_types, body.typ());
-    Ok(Expr::Fn {
+    Ok(TypedExpr::Fn {
         meta,
         typ,
         is_capture,
@@ -1807,7 +1800,7 @@ fn infer_call(
     env: &mut Env,
 ) -> Result<TypedExpr, Error> {
     let (fun, args, typ) = do_infer_call(fun, args, level, &meta, env)?;
-    Ok(Expr::Call {
+    Ok(TypedExpr::Call {
         meta,
         typ,
         args,
@@ -1825,7 +1818,7 @@ fn infer_cons(
     let head = infer(head, level, env)?;
     let tail = infer(tail, level, env)?;
     unify(tail.typ(), list(head.typ()), env).map_err(|e| convert_unify_error(e, &meta))?;
-    Ok(Expr::Cons {
+    Ok(TypedExpr::Cons {
         meta,
         typ: tail.typ(),
         head: Box::new(head),
@@ -1843,11 +1836,11 @@ fn infer_tuple(
         .map(|e| infer(e, level, env))
         .collect::<Result<Vec<_>, _>>()?;
     let typ = tuple(elems.iter().map(|e| e.typ()).collect());
-    Ok(Expr::Tuple { meta, elems, typ })
+    Ok(TypedExpr::Tuple { meta, elems, typ })
 }
 fn infer_var(name: String, meta: Meta, level: usize, env: &mut Env) -> Result<TypedExpr, Error> {
     let constructor = infer_value_constructor(&name, level, &meta, env)?;
-    Ok(Expr::Var {
+    Ok(TypedExpr::Var {
         constructor,
         meta,
         name,
@@ -1862,7 +1855,7 @@ fn infer_field_select(
     env: &mut Env,
 ) -> Result<TypedExpr, Error> {
     match container {
-        Expr::Var { name, meta, .. } if !env.local_values.contains_key(&name) => {
+        UntypedExpr::Var { name, meta, .. } if !env.local_values.contains_key(&name) => {
             infer_module_select(name.as_ref(), label, level, &meta, select_meta, env)
         }
 
@@ -1889,7 +1882,7 @@ fn infer_tuple_index(
                     size: elems.len(),
                 })?
                 .clone();
-            Ok(Expr::TupleIndex {
+            Ok(TypedExpr::TupleIndex {
                 meta,
                 index,
                 tuple: Box::new(tuple),
@@ -1916,9 +1909,8 @@ fn infer_binop(
     meta: Meta,
     env: &mut Env,
 ) -> Result<TypedExpr, Error> {
-    let fun = Expr::Var {
+    let fun = UntypedExpr::Var {
         meta: meta.clone(),
-        constructor: (),
         name: bin_op_name(&name),
     };
     let args = vec![
@@ -1934,7 +1926,7 @@ fn infer_binop(
         },
     ];
     let (_fun, mut args, typ) = do_infer_call(fun, args, level, &meta, env)?;
-    Ok(Expr::BinOp {
+    Ok(TypedExpr::BinOp {
         meta,
         name,
         typ,
@@ -1956,7 +1948,7 @@ fn infer_let(
     let pattern = PatternTyper::new(env, level).unify(pattern, value_typ)?;
     let then = infer(then, level, env)?;
     let typ = then.typ();
-    Ok(Expr::Let {
+    Ok(TypedExpr::Let {
         meta,
         typ,
         pattern,
@@ -1992,7 +1984,7 @@ fn infer_case(
             .map_err(|e| convert_unify_error(e, typed_clause.then.meta()))?;
         typed_clauses.push(typed_clause);
     }
-    Ok(Expr::Case {
+    Ok(TypedExpr::Case {
         meta,
         typ: return_type,
         subjects: typed_subjects,
@@ -2192,7 +2184,7 @@ fn infer_module_select(
         (module_info.name.clone(), constructor.clone())
     };
 
-    Ok(Expr::ModuleSelect {
+    Ok(TypedExpr::ModuleSelect {
         label,
         typ: instantiate(constructor.typ, level, &mut hashmap![], env),
         meta: select_meta,
@@ -2552,13 +2544,13 @@ fn get_field_map<'a>(
     env: &'a Env,
 ) -> Result<Option<&'a FieldMap>, GetValueConstructorError> {
     let (module, name) = match constructor {
-        Expr::ModuleSelect {
+        TypedExpr::ModuleSelect {
             module_alias,
             label,
             ..
         } => (Some(module_alias), label),
 
-        Expr::Var { name, .. } => (None, name),
+        TypedExpr::Var { name, .. } => (None, name),
 
         _ => return Ok(None),
     };
