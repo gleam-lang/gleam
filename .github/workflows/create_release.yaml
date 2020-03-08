@@ -1,8 +1,8 @@
-name: CI
+name: Test and build release
 
 on:
   release:
-    types: [created, published]
+    types: [published]
 
 jobs:
   build_release_macos:
@@ -15,7 +15,7 @@ jobs:
       - id: create_archive
         run: |
           ARCHIVE=gleam-$TAG_NAME-macos.tar.gz
-          tar -czvf $ARCHIVE -C target/release gleam 
+          tar -czvf $ARCHIVE -C target/release gleam
           echo ::set-output name=ASSET::$ARCHIVE
         env:
           TAG_NAME: ${{ github.event.release.tag_name }}
@@ -43,7 +43,7 @@ jobs:
           cd $TMP
           docker cp $CONTAINER_NAME:/gleam gleam
           docker rm $CONTAINER_NAME
-          tar -czvf $ARCHIVE gleam 
+          tar -czvf $ARCHIVE gleam
           echo ::set-output name=ASSET_NAME::"$ARCHIVE"
           echo ::set-output name=ASSET_PATH::"$TMP/$ARCHIVE"
         env:
