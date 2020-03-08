@@ -189,8 +189,8 @@ fn infer_test() {
             let ast = crate::grammar::ExprParser::new()
                 .parse($src)
                 .expect("syntax error");
-            let result =
-                infer(ast, 1, &mut Env::new(&HashMap::new())).expect("should successfully infer");
+            let result = infer(ast, 1, &mut Env::new(&[], &HashMap::new()))
+                .expect("should successfully infer");
             assert_eq!(
                 ($src, printer.pretty_print(result.typ().as_ref(), 0),),
                 ($src, $typ.to_string()),
@@ -351,8 +351,8 @@ fn infer_error_test() {
             let ast = crate::grammar::ExprParser::new()
                 .parse($src)
                 .expect("syntax error");
-            let result =
-                infer(ast, 1, &mut Env::new(&HashMap::new())).expect_err("should infer an error");
+            let result = infer(ast, 1, &mut Env::new(&[], &HashMap::new()))
+                .expect_err("should infer an error");
             assert_eq!(($src, sort_options($error)), ($src, sort_options(result)));
         };
     }
@@ -572,9 +572,11 @@ fn infer_error_test() {
 
     assert_error!(
         "let x = 1 x.whatever",
-        Error::NotModule {
-            meta: Meta { start: 10, end: 11 },
+        Error::UnknownField {
+            meta: Meta { start: 11, end: 20 },
             typ: int(),
+            label: "whatever".to_string(),
+            fields: vec![],
         },
     );
 
@@ -724,6 +726,7 @@ fn infer_error_test() {
 fn infer_module_test() {
     macro_rules! assert_infer {
         ($src:expr, $module:expr $(,)?) => {
+            print!("\n{}\n\n", $src);
             let ast = crate::grammar::ModuleParser::new()
                 .parse($src)
                 .expect("syntax error");
@@ -937,12 +940,11 @@ fn infer_module_test() {
     assert_infer!("pub fn go(x: b, y: c) { x }", vec![("go", "fn(a, b) -> a")],);
     assert_infer!("pub fn go(x) -> Int { x }", vec![("go", "fn(Int) -> Int")],);
 
-    // // Type aliases
-    // assert_infer!(     src: "
-    // type Html = String
-    // pub fn go() { 1 }",
-    //     vec![("go", "fn() -> Int")],
-    // );
+    assert_infer!(
+        "type Html = String
+         pub fn go() { 1 }",
+        vec![("go", "fn() -> Int")],
+    );
     assert_infer!(
         "pub fn length(list) {
            case list {
@@ -952,19 +954,6 @@ fn infer_module_test() {
         }",
         vec![("length", "fn(List(a)) -> Int")],
     );
-    //    // % {
-    //    // %pub fn length(list) {\n
-    //    // %  case list {\n
-    //    // %  | [] -> 0\n
-    //    // %  | _ :: tail -> helper_length(tail) + 1\n
-    //    // %  }\n
-    //    // %}
-    //    // %fn helper_length(list) { length(list) }
-    //    // %   ,
-    //    // %module {
-    //    // % fn length(List(a)) -> Int
-    //    // %}
-    //    // % }
 
     // Structs
     assert_infer!(
@@ -1037,6 +1026,18 @@ fn infer_module_test() {
         "type Int = Float
          pub fn ok_one() -> Int { 1.0 }",
         vec![("ok_one", "fn() -> Float")]
+    );
+
+    // We can access fields on custom types with only one record
+    assert_infer!(
+        "pub type Person { Person(name: String, age: Int) }
+         pub fn get_age(person: Person) { person.age }
+         pub fn get_name(person: Person) { person.name }",
+        vec![
+            ("Person", "fn(String, Int) -> Person"),
+            ("get_age", "fn(Person) -> Int"),
+            ("get_name", "fn(Person) -> String"),
+        ]
     );
 }
 
@@ -1353,7 +1354,7 @@ fn env_types_with(things: &[&str]) -> Vec<String> {
 }
 
 fn env_types() -> Vec<String> {
-    Env::new(&HashMap::new())
+    Env::new(&[], &HashMap::new())
         .module_types
         .keys()
         .map(|s| s.to_string())
@@ -1361,7 +1362,7 @@ fn env_types() -> Vec<String> {
 }
 
 fn env_vars() -> Vec<String> {
-    Env::new(&HashMap::new())
+    Env::new(&[], &HashMap::new())
         .local_values
         .keys()
         .map(|s| s.to_string())

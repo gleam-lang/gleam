@@ -426,10 +426,16 @@ also be labelled.",
                     .unwrap();
                 }
 
-                NotModule { meta, typ } => {
+                UnknownField {
+                    meta,
+                    typ,
+                    label,
+                    fields,
+                } => {
+                    let mut fields = fields.clone();
                     let diagnostic = ErrorDiagnostic {
-                        title: "Not a module".to_string(),
-                        label: "".to_string(),
+                        title: "Unknown field".to_string(),
+                        label: did_you_mean(label.as_ref(), &mut fields, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
@@ -439,13 +445,21 @@ also be labelled.",
 
                     writeln!(
                         buffer,
-                        "Fields can only be accessed on modules. This is not a module, it is
-a value with this type:
+                        "This value does not have the field `{}`.
+Type type of this value is:
 
-{}",
+{}
+",
+                        label,
                         printer.pretty_print(typ, 4)
                     )
                     .unwrap();
+
+                    if fields.is_empty() {
+                        writeln!(buffer, "It does not have any fields.",).unwrap();
+                    } else {
+                        writeln!(buffer, "It has these fields: {}", fields.join(", ")).unwrap();
+                    }
                 }
 
                 CouldNotUnify {
