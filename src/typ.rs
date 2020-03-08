@@ -37,16 +37,6 @@ pub enum Type {
 }
 
 impl Type {
-    // TODO: Clone the Arc, not the Type.
-    pub fn collapse_links(self) -> Type {
-        if let Type::Var { typ } = &self {
-            if let TypeVar::Link { typ } = &*typ.borrow() {
-                return (**typ).clone();
-            }
-        }
-        self
-    }
-
     pub fn is_unbound(&self) -> bool {
         match self {
             Type::Var { typ } => typ.borrow().is_unbound(),
@@ -128,6 +118,15 @@ impl Type {
             },
         }
     }
+}
+
+pub fn collapse_links(t: Arc<Type>) -> Arc<Type> {
+    if let Type::Var { typ } = &*t {
+        if let TypeVar::Link { typ } = &*typ.borrow() {
+            return typ.clone();
+        }
+    }
+    t
 }
 
 impl TypeVar {
@@ -2356,12 +2355,12 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 }
             }
 
-            Pattern::Tuple { elems, meta } => match (*typ).clone().collapse_links() {
+            Pattern::Tuple { elems, meta } => match &*collapse_links(typ.clone()) {
                 Type::Tuple { elems: type_elems } => {
                     let elems = elems
                         .into_iter()
                         .zip(type_elems)
-                        .map(|(pattern, typ)| self.unify(pattern, typ))
+                        .map(|(pattern, typ)| self.unify(pattern, typ.clone()))
                         .collect::<Result<Vec<_>, _>>()?;
                     Ok(Pattern::Tuple { elems, meta })
                 }

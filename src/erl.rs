@@ -717,7 +717,7 @@ fn module_select_fn(
     module_name: Vec<String>,
     label: String,
 ) -> Document {
-    match (*typ).clone().collapse_links() {
+    match &*crate::typ::collapse_links(typ) {
         crate::typ::Type::Fn { args, .. } => "fun "
             .to_doc()
             .append(module_name.join("@"))
