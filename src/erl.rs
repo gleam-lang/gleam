@@ -681,6 +681,8 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
             ..
         } => module_select_fn(typ, module_name, label),
 
+        TypedExpr::RecordAccess { record, index, .. } => tuple_index(*record, index + 1, env),
+
         TypedExpr::Let {
             value,
             pattern,

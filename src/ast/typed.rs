@@ -84,13 +84,14 @@ pub enum TypedExpr {
         clauses: Vec<Clause<Self, PatternConstructor, Arc<Type>>>,
     },
 
-    // TODO: RecordFieldSelect
-    // FieldSelect {
-    //     meta: Meta,
-    //     typ: Arc<Type>,
-    //     label: String,
-    //     container: Box<Self>,
-    // },
+    RecordAccess {
+        meta: Meta,
+        typ: Arc<Type>,
+        label: String,
+        index: u64,
+        record: Box<Self>,
+    },
+
     ModuleSelect {
         meta: Meta,
         typ: Arc<Type>,
@@ -134,10 +135,11 @@ impl TypedExpr {
             Self::Call { meta, .. } => meta,
             Self::Float { meta, .. } => meta,
             Self::BinOp { meta, .. } => meta,
-            Self::String { meta, .. } => meta,
             Self::Tuple { meta, .. } => meta,
+            Self::String { meta, .. } => meta,
             Self::TupleIndex { meta, .. } => meta,
             Self::ModuleSelect { meta, .. } => meta,
+            Self::RecordAccess { meta, .. } => meta,
         }
     }
 
@@ -159,6 +161,7 @@ impl TypedExpr {
             Self::TupleIndex { typ, .. } => typ.clone(),
             Self::Var { constructor, .. } => constructor.typ.clone(),
             Self::ModuleSelect { typ, .. } => typ.clone(),
+            Self::RecordAccess { typ, .. } => typ.clone(),
         }
     }
 }

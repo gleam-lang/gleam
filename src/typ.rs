@@ -3,9 +3,9 @@ pub mod pretty;
 mod tests;
 
 use crate::ast::{
-    self, Arg, ArgNames, BinOp, CallArg, Clause, ClauseGuard, Meta, Pattern, Statement, TypeAst,
-    TypedClause, TypedClauseGuard, TypedExpr, TypedModule, TypedMultiPattern, TypedPattern,
-    UnqualifiedImport, UntypedClause, UntypedClauseGuard, UntypedExpr, UntypedModule,
+    self, Arg, ArgNames, BinOp, CallArg, Clause, ClauseGuard, Meta, Pattern, RecordConstructor,
+    Statement, TypeAst, TypedClause, TypedClauseGuard, TypedExpr, TypedModule, TypedMultiPattern,
+    TypedPattern, UnqualifiedImport, UntypedClause, UntypedClauseGuard, UntypedExpr, UntypedModule,
     UntypedMultiPattern, UntypedPattern, UntypedStatement,
 };
 use crate::error::GleamExpect;
@@ -41,6 +41,13 @@ impl Type {
         match self {
             Type::Var { typ } => typ.borrow().is_unbound(),
             _ => false,
+        }
+    }
+
+    pub fn app_parameters(&self) -> Option<&[Arc<Type>]> {
+        match self {
+            Type::App { args, .. } => Some(args.as_slice()),
+            _ => None,
         }
     }
 
@@ -82,6 +89,7 @@ impl Type {
                     TypeVar::Generic { .. } => return None,
                 };
 
+                // TODO: use the real type here rather than making a copy
                 *typ.borrow_mut() = TypeVar::Link {
                     typ: Arc::new(Type::App {
                         name: name.to_string(),
@@ -129,13 +137,17 @@ pub fn collapse_links(t: Arc<Type>) -> Arc<Type> {
     t
 }
 
-impl TypeVar {
-    pub fn is_unbound(&self) -> bool {
-        match self {
-            TypeVar::Unbound { .. } => true,
-            _ => false,
-        }
-    }
+#[derive(Debug, PartialEq, Clone)]
+pub struct AccessorsMap {
+    pub public: bool,
+    pub accessors: HashMap<String, RecordAccessor>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct RecordAccessor {
+    pub index: u64,
+    pub label: String,
+    pub typ: Arc<Type>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -285,7 +297,8 @@ pub enum PatternConstructor {
 }
 
 #[derive(Debug, Clone)]
-pub struct Env<'a> {
+pub struct Env<'a, 'b> {
+    current_module: &'b [String],
     uid: usize,
     annotated_generic_types: im::HashSet<usize>,
     importable_modules: &'a HashMap<String, Module>,
@@ -299,66 +312,26 @@ pub struct Env<'a> {
 
     // Values defined in the current module
     module_values: HashMap<String, ValueConstructor>,
+
+    // Accessors defined in the current module
+    accessors: HashMap<String, AccessorsMap>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum TypeVar {
-    Unbound { id: usize, level: usize },
-    Link { typ: Arc<Type> },
-    Generic { id: usize },
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct TypeConstructor {
-    pub public: bool,
-    pub origin: Meta,
-    pub module: Vec<String>,
-    pub parameters: Vec<Arc<Type>>,
-    pub typ: Arc<Type>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct ValueConstructor {
-    pub public: bool,
-    pub origin: Meta,
-    pub variant: ValueConstructorVariant,
-    pub typ: Arc<Type>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct TypeAliasConstructor {
-    pub public: bool,
-    pub module: Vec<String>,
-    pub typ: Type,
-    pub arity: usize,
-}
-
-impl ValueConstructor {
-    fn field_map(&self) -> Option<&FieldMap> {
-        match self.variant {
-            ValueConstructorVariant::ModuleFn { ref field_map, .. }
-            | ValueConstructorVariant::Record { ref field_map, .. } => field_map.as_ref(),
-            _ => None,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum NewTypeAction {
-    Disallow,
-    MakeGeneric,
-}
-
-impl<'a> Env<'a> {
-    pub fn new(importable_modules: &'a HashMap<String, Module>) -> Self {
+impl<'a, 'b> Env<'a, 'b> {
+    pub fn new(
+        current_module: &'b [String],
+        importable_modules: &'a HashMap<String, Module>,
+    ) -> Self {
         let mut env = Self {
             uid: 0,
             annotated_generic_types: im::HashSet::new(),
             module_types: HashMap::new(),
             module_values: HashMap::new(),
             imported_modules: HashMap::new(),
+            accessors: HashMap::new(),
             local_values: hashmap![],
             importable_modules,
+            current_module,
         };
 
         env.insert_type_constructor(
@@ -924,6 +897,67 @@ impl<'a> Env<'a> {
             },
         }
     }
+
+    pub fn insert_accessors(&mut self, type_name: &str, accessors: AccessorsMap) {
+        self.accessors.insert(type_name.to_string(), accessors);
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum TypeVar {
+    Unbound { id: usize, level: usize },
+    Link { typ: Arc<Type> },
+    Generic { id: usize },
+}
+
+impl TypeVar {
+    pub fn is_unbound(&self) -> bool {
+        match self {
+            TypeVar::Unbound { .. } => true,
+            _ => false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypeConstructor {
+    pub public: bool,
+    pub origin: Meta,
+    pub module: Vec<String>,
+    pub parameters: Vec<Arc<Type>>,
+    pub typ: Arc<Type>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ValueConstructor {
+    pub public: bool,
+    pub origin: Meta,
+    pub variant: ValueConstructorVariant,
+    pub typ: Arc<Type>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypeAliasConstructor {
+    pub public: bool,
+    pub module: Vec<String>,
+    pub typ: Type,
+    pub arity: usize,
+}
+
+impl ValueConstructor {
+    fn field_map(&self) -> Option<&FieldMap> {
+        match self.variant {
+            ValueConstructorVariant::ModuleFn { ref field_map, .. }
+            | ValueConstructorVariant::Record { ref field_map, .. } => field_map.as_ref(),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum NewTypeAction {
+    Disallow,
+    MakeGeneric,
 }
 
 #[derive(Debug, PartialEq)]
@@ -979,9 +1013,11 @@ pub enum Error {
         typ: Arc<Type>,
     },
 
-    NotModule {
+    UnknownField {
         meta: Meta,
         typ: Arc<Type>,
+        label: String,
+        fields: Vec<String>,
     },
 
     IncorrectArity {
@@ -1266,7 +1302,7 @@ pub fn infer_module(
     module: UntypedModule,
     modules: &HashMap<String, Module>,
 ) -> Result<TypedModule, Error> {
-    let mut env = Env::new(modules);
+    let mut env = Env::new(module.name.as_slice(), modules);
     let module_name = &module.name;
 
     // Register types so they can be used in constructors and functions
@@ -1453,21 +1489,39 @@ pub fn infer_module(
                 constructors,
             } => {
                 let mut type_vars = hashmap![];
-                let args_types: Vec<_> = args
-                    .iter()
-                    .map(|arg| TypeAst::Var {
-                        meta: meta.clone(),
-                        name: arg.to_string(),
-                    })
-                    .map(|ast| env.type_from_ast(&ast, &mut type_vars, NewTypeAction::MakeGeneric))
-                    .collect::<Result<_, _>>()?;
 
-                let retrn = Arc::new(Type::App {
-                    public,
-                    module: module_name.clone(),
-                    name: name.clone(),
-                    args: args_types,
-                });
+                // This custom type was inserted into the module types in the `register_types`
+                // pass, so we can expect this type to exist already.
+                let retrn = env
+                    .module_types
+                    .get(&name)
+                    .gleam_expect("Type for custom type not found on constructor infer pass")
+                    .typ
+                    .clone();
+
+                // Register the parameterised types in the type into type_vars so that they are
+                // used when building the constructors below.
+                for (typ, name) in retrn
+                    .app_parameters()
+                    .unwrap_or(&[])
+                    .iter()
+                    .zip(args.iter())
+                {
+                    type_vars.insert(name.to_string(), (0, typ.clone()));
+                }
+
+                // TODO
+                // If the custom type only has a single constructor then we can access the
+                // fields using the record.field syntax, so store any fields accessors.
+                if let Some(accessors) =
+                    custom_type_accessors(constructors.as_slice(), &mut type_vars, &mut env)?
+                {
+                    let map = AccessorsMap {
+                        public: public.clone(),
+                        accessors,
+                    };
+                    env.insert_accessors(name.as_ref(), map)
+                }
 
                 // Check and register constructors
                 for constructor in constructors.iter() {
@@ -1629,6 +1683,7 @@ This should not be possible. Please report this crash",
     env.module_types
         .retain(|_, info| info.public && &info.module == module_name);
     env.module_values.retain(|_, info| info.public);
+    env.accessors.retain(|_, accessors| accessors.public);
 
     // Ensure no exported values have private types in their type signature
     for (_, value) in env.module_values.iter() {
@@ -1640,15 +1695,48 @@ This should not be possible. Please report this crash",
         }
     }
 
+    let Env {
+        module_types,
+        module_values,
+        ..
+    } = env;
+
     Ok(ast::Module {
         name: module.name.clone(),
         statements,
         type_info: Module {
             name: module.name,
-            types: env.module_types,
-            values: env.module_values,
+            types: module_types,
+            values: module_values,
         },
     })
+}
+
+fn custom_type_accessors(
+    constructors: &[RecordConstructor],
+    type_vars: &mut im::HashMap<String, (usize, Arc<Type>)>,
+    env: &mut Env,
+) -> Result<Option<HashMap<String, RecordAccessor>>, Error> {
+    let args = match constructors {
+        [constructor] if !constructor.args.is_empty() => &constructor.args,
+        _ => return Ok(None),
+    };
+
+    let mut fields = HashMap::with_capacity(args.len());
+    for (index, (label, arg)) in args.iter().enumerate() {
+        if let Some(label) = label {
+            let typ = env.type_from_ast(arg, type_vars, NewTypeAction::Disallow)?;
+            fields.insert(
+                label.to_string(),
+                RecordAccessor {
+                    index: index as u64,
+                    label: label.to_string(),
+                    typ,
+                },
+            );
+        }
+    }
+    Ok(Some(fields))
 }
 
 /// Crawl the AST, annotating each node with the inferred type or
@@ -1825,6 +1913,7 @@ fn infer_cons(
         tail: Box::new(tail),
     })
 }
+
 fn infer_tuple(
     elems: Vec<UntypedExpr>,
     meta: Meta,
@@ -1859,7 +1948,7 @@ fn infer_field_select(
             infer_module_select(name.as_ref(), label, level, &meta, select_meta, env)
         }
 
-        _ => infer_value_field_select(container, label, level, select_meta, env),
+        _ => infer_record_access(container, label, level, select_meta, env),
     }
 }
 
@@ -2194,21 +2283,58 @@ fn infer_module_select(
     })
 }
 
-fn infer_value_field_select(
-    container: UntypedExpr,
-    _label: String,
+fn infer_record_access(
+    record: UntypedExpr,
+    label: String,
     level: usize,
-    _meta: Meta,
+    meta: Meta,
     env: &mut Env,
 ) -> Result<TypedExpr, Error> {
-    Err(Error::NotModule {
-        meta: container.meta().clone(),
-        typ: infer(container, level, env)?.typ(),
+    // Infer the type of the (presumed) record
+    let record = Box::new(infer(record, level, env)?);
+
+    // Error constructor helper function
+    let unknown_field = |fields| Error::UnknownField {
+        typ: record.typ(),
+        meta: meta.clone(),
+        label: label.clone(),
+        fields,
+    };
+
+    // Check to see if it's a Type that can have accessible fields
+    let accessors = match record.typ().as_ref() {
+        // A type in the current module which may have fields
+        Type::App { module, name, .. } if module.as_slice() == env.current_module => {
+            env.accessors.get(name)
+        }
+
+        // A type in another module which may have fields
+        // TODO
+        Type::App { module, name, .. } => None,
+
+        _something_without_fields => return Err(unknown_field(vec![])),
+    }
+    .ok_or_else(|| unknown_field(vec![]))?;
+
+    let RecordAccessor {
+        index, label, typ, ..
+    } = accessors
+        .accessors
+        .get(&label)
+        .ok_or_else(|| unknown_field(accessors.accessors.keys().map(|t| t.to_string()).collect()))?
+        .clone();
+
+    Ok(TypedExpr::RecordAccess {
+        record,
+        label,
+        index,
+        meta,
+        typ,
     })
 }
 
-struct PatternTyper<'a, 'b> {
-    env: &'a mut Env<'b>,
+struct PatternTyper<'a, 'b, 'c> {
+    env: &'a mut Env<'b, 'c>,
     level: usize,
     mode: PatternMode,
     initial_pattern_vars: HashSet<String>,
@@ -2219,8 +2345,8 @@ enum PatternMode {
     Alternative,
 }
 
-impl<'a, 'b> PatternTyper<'a, 'b> {
-    pub fn new(env: &'a mut Env<'b>, level: usize) -> Self {
+impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
+    pub fn new(env: &'a mut Env<'b, 'c>, level: usize) -> Self {
         Self {
             env,
             level,

@@ -1476,4 +1476,24 @@ main() ->
     erlang:error({gleam_error, todo}).
 "#,
     );
+
+    // We can use record accessors for types with only one constructor
+    assert_erl!(
+        r#"
+pub type Person { Person(name: String, age: Int) }
+pub fn get_age(person: Person) { person.age }
+pub fn get_name(person: Person) { person.name }
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([get_age/1, get_name/1]).
+
+get_age(Person) ->
+    erlang:element(3, Person).
+
+get_name(Person) ->
+    erlang:element(2, Person).
+"#,
+    );
 }
