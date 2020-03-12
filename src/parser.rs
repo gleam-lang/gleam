@@ -12,7 +12,7 @@ pub type LalrpopError = lalrpop_util::ParseError<usize, (usize, String), Error>;
 
 /// Blanks out comments, semicolons, etc
 ///
-pub fn strip_extra(src: &str) -> (String, doc::DocBlockManager) {
+pub fn strip_extra(src: &str) -> (String, doc::block_manager::DocBlockManager) {
     enum Mode {
         Normal,
         String,
@@ -25,7 +25,7 @@ pub fn strip_extra(src: &str) -> (String, doc::DocBlockManager) {
     let mut chars = src.chars().enumerate();
     let mut at_bol = true;
     let mut doc_comment_buffer = String::with_capacity(500);
-    let mut doc_block = doc::DocBlockManager::new();
+    let mut doc_block = doc::block_manager::DocBlockManager::new();
 
     while let Some((outer_char_no, c)) = chars.next() {
         match mode {
@@ -93,10 +93,7 @@ pub fn strip_extra(src: &str) -> (String, doc::DocBlockManager) {
             Mode::DocComment => match c {
                 '\n' => {
                     mode = Mode::Normal;
-                    doc_block.add_line(
-                        outer_char_no - 3 - doc_comment_buffer.len(),
-                        doc_comment_buffer.trim_start().to_string(),
-                    );
+                    doc_block.add_line(outer_char_no, doc_comment_buffer.to_string());
                     doc_comment_buffer.clear();
                     buffer.push('\n');
                 }

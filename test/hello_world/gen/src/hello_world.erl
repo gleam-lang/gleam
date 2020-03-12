@@ -4,6 +4,7 @@
 -export([x/0]).
 
 fully_typed(First) ->
+    X = <<"This is a string\nThat has a newline">>,
     First + 1.
 
 id(X, Y) ->

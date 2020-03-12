@@ -47,25 +47,47 @@ impl Documentable for Arg {
 
 impl Documentable for RecordConstructor {
   fn to_doc(self) -> Document {
-    format!("{}(", self.name)
-      .to_doc()
-      .append(args_to_doc(
-        self
-          .args
-          .into_iter()
-          .map(|(label, typ)| match label {
-            Some(l) => Arg {
-              meta: empty_meta(),
-              names: ArgNames::Named { name: l.clone() },
-              annotation: Some(typ.clone()),
-            }
-            .to_doc(),
-            None => typ.to_doc(),
-          })
-          .collect(),
-      ))
-      .append(")")
+    if self.args.is_empty() {
+      self.name.to_doc()
+    } else {
+      format!("{}(", self.name)
+        .to_doc()
+        .append(args_to_doc(
+          self
+            .args
+            .into_iter()
+            .map(|(label, typ)| match label {
+              Some(l) => Arg {
+                meta: empty_meta(),
+                names: ArgNames::Named { name: l.clone() },
+                annotation: Some(typ.clone()),
+              }
+              .to_doc(),
+              None => typ.to_doc(),
+            })
+            .collect(),
+        ))
+        .append(")")
+    }
   }
+}
+
+pub fn function_signature(
+  meta: Meta,
+  name: String,
+  args: Vec<Arg>,
+  public: bool,
+  return_annotation: Option<TypeAst>,
+) -> Document {
+  if public { "pub ".to_doc() } else { nil() }
+    .append(format!("fn {}(", name))
+    .append(args_to_doc(args))
+    .append(")")
+    .append(if let Some(anno) = return_annotation {
+      " -> ".to_doc().append(anno)
+    } else {
+      nil()
+    })
 }
 
 impl Documentable for Statement<TypedExpr> {
@@ -438,6 +460,9 @@ impl Documentable for TypedExpr {
       TypedExpr::Tuple { meta, typ, elems } => {
         args_to_doc(elems).nest(4).group().surround("(", ")")
       }
+
+      TypedExpr::TupleIndex { index, tuple, .. } => tuple.to_doc().append(format!(".{}", index)),
+      TypedExpr::Todo { .. } => "todo".to_doc(),
     }
   }
 }
@@ -488,155 +513,4 @@ fn args_to_doc<A: Documentable>(args: Vec<A>) -> Document {
 
 fn empty_meta() -> Meta {
   Meta { start: 0, end: 0 }
-}
-
-////////////////////////////////////////////////////
-///
-///
-///
-///
-/// ////////////////////////////////////////////////
-
-#[test]
-fn end_to_end_test() {
-  let already_formatted = "
-import other
-import something/else
-import library.{ThingA, ThingB}
-import doctor as seuss
-
-pub type RoseTree(a) {
-  Node(val: a, children: List(RoseTree(a)))
-  Leaf(val: a)
-}
-
-type Option(a) = Result(a, Nil)
-
-pub external type Opaque
-
-pub external fn random_float() -> Float = \"rand\" \"uniform\"
-
-fn fully_typed(first: Int) -> Int {
-    first + 1
-}
-
-fn id(x: a, y: b) {
-    x
-}
-
-pub fn x() {
-    id(1.0, 1)
-}
-
-fn lets() {
-    let x = 1
-    let y = 2
-    x + y
-}
-
-fn patterns(x) {
-    case x {
-        1 -> 42
-        _other -> {
-            let x = 3
-            3 + 4
-        }
-    }
-}
-";
-  let (stripped, _) = crate::parser::strip_extra(already_formatted);
-  if let Ok(module) = crate::grammar::ModuleParser::new().parse(&stripped) {
-    // println!("MODULE\n----------------\n{:#?}", module);
-    println!("FORMATTED\n-------------\n{}", format(80, module.to_doc()));
-  } else {
-    println!("ERROR");
-  }
-}
-
-////////////////////////////////////////////////////
-///
-///
-///
-///
-/// ////////////////////////////////////////////////
-
-#[test]
-fn type_doc_test() {
-  let ast = TypeAst::Constructor {
-    meta: Meta { start: 0, end: 0 },
-    module: None,
-    name: "Test".to_string(),
-    args: vec![
-      TypeAst::Var {
-        meta: empty_meta(),
-        name: "Int".to_string(),
-      },
-      TypeAst::Var {
-        meta: empty_meta(),
-        name: "Int".to_string(),
-      },
-    ],
-  };
-  let expected = "
-Test(Int, Int)
-"
-  .trim();
-  assert_eq!(pretty::format(30, ast.clone().to_doc()), expected);
-
-  let expected = "
-Test(
-  Int,
-  Int
-)
-"
-  .trim();
-  assert_eq!(pretty::format(5, ast.clone().to_doc()), expected);
-}
-
-#[test]
-fn tuple_type_test() {
-  let ast = TypeAst::Tuple {
-    meta: Meta { start: 0, end: 0 },
-    elems: vec![
-      TypeAst::Var {
-        meta: Meta { start: 0, end: 0 },
-        name: "A".to_string(),
-      },
-      TypeAst::Var {
-        meta: Meta { start: 0, end: 0 },
-        name: "B".to_string(),
-      },
-    ],
-  };
-
-  assert_eq!(pretty::format(10, ast.clone().to_doc()), "(A, B)");
-  assert_eq!(pretty::format(3, ast.clone().to_doc()), "(A,\nB)");
-}
-
-#[test]
-fn function_type_test() {
-  let ast = TypeAst::Fn {
-    meta: empty_meta(),
-    args: vec![
-      TypeAst::Var {
-        meta: empty_meta(),
-        name: "Int".to_string(),
-      },
-      TypeAst::Var {
-        meta: empty_meta(),
-        name: "Int".to_string(),
-      },
-    ],
-    retrn: Box::new(TypeAst::Var {
-      meta: empty_meta(),
-      name: "Int".to_string(),
-    }),
-  };
-
-  let expected = "( Int, Int ) -> Int";
-
-  assert_eq!(format(30, ast.clone().to_doc()), expected);
-
-  let expected = "(Int, Int) -> Int";
-  assert_eq!(format(10, ast.clone().to_doc()), expected);
 }

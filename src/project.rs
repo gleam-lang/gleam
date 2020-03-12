@@ -2,7 +2,7 @@ mod source_tree;
 #[cfg(test)]
 mod tests;
 
-use super::doc::{DocBlockManager, EEP48DocChunk};
+use super::doc::{block_manager::DocBlockManager, doc::EEP48DocChunk};
 use crate::error::{Error, FileIOAction, FileKind, GleamExpect};
 use crate::typ;
 use source_tree::SourceTree;

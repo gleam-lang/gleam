@@ -32,6 +32,14 @@ extern crate lalrpop_util;
 #[macro_use]
 extern crate lazy_static;
 
+#[macro_use]
+extern crate serde_json;
+
+#[macro_use]
+extern crate handlebars;
+
+extern crate pulldown_cmark;
+
 use crate::error::Error;
 use crate::project::ModuleOrigin;
 use serde::Deserialize;
@@ -96,6 +104,7 @@ enum Command {
 #[derive(Deserialize)]
 struct ProjectConfig {
     name: String,
+    version: Option<String>,
 }
 
 fn main() {
@@ -176,7 +185,14 @@ fn command_build(root: String) -> Result<(), Error> {
         })?;
     }
 
-    let mut doc_writer = doc::DocWriter::new(project_config.name.clone(), doc_dir);
+    let mut doc_writer = doc::writer::DocWriter::new(
+        project_config.name.clone(),
+        project_config
+            .version
+            .unwrap_or("0.0.1".to_string())
+            .clone(),
+        doc_dir.clone(),
+    );
 
     for crate::project::Compiled { files, doc, .. } in compiled {
         doc_writer.add_chunk(doc);
@@ -211,10 +227,12 @@ fn command_build(root: String) -> Result<(), Error> {
             })?;
         }
     }
+    println!("Done!");
 
     doc_writer.write()?;
 
-    println!("Done!");
+    println!("Wrote docs to {}", doc_dir.to_str().unwrap());
+
     Ok(())
 }
 
