@@ -435,7 +435,11 @@ also be labelled.",
                     let mut fields = fields.clone();
                     let diagnostic = ErrorDiagnostic {
                         title: "Unknown field".to_string(),
-                        label: did_you_mean(label.as_ref(), &mut fields, ""),
+                        label: did_you_mean(
+                            label.as_ref(),
+                            &mut fields,
+                            "This field does not exist",
+                        ),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
@@ -445,12 +449,10 @@ also be labelled.",
 
                     writeln!(
                         buffer,
-                        "This value does not have the field `{}`.
-The type of this value is:
+                        "The value has this type:
 
 {}
 ",
-                        label,
                         printer.pretty_print(typ, 4)
                     )
                     .unwrap();

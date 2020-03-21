@@ -1077,6 +1077,26 @@ pub fn get(x: Two) { x.one.name }",
             ("get", "fn(Two) -> String"),
         ]
     );
+
+    // Field access correctly handles type parameters
+    assert_infer!(
+        "
+pub type Box(a) { Box(inner: a) }
+pub fn get_box(x: Box(Box(a))) { x.inner }
+pub fn get_generic(x: Box(a)) { x.inner }
+pub fn get_get_box(x: Box(Box(a))) { x.inner.inner }
+pub fn get_int(x: Box(Int)) { x.inner }
+pub fn get_string(x: Box(String)) { x.inner }
+",
+        vec![
+            ("Box", "fn(a) -> Box(a)"),
+            ("get_box", "fn(Box(Box(a))) -> Box(a)"),
+            ("get_generic", "fn(Box(a)) -> a"),
+            ("get_get_box", "fn(Box(Box(a))) -> a"),
+            ("get_int", "fn(Box(Int)) -> Int"),
+            ("get_string", "fn(Box(String)) -> String"),
+        ]
+    );
 }
 
 #[test]
@@ -1376,6 +1396,48 @@ pub fn x() { id(1, 1.0) }
             name: "a".to_string(),
             types: env_types(),
         }
+    );
+
+    // An unknown field should report the possible fields' labels
+    assert_error!(
+        "
+pub type Box(a) { Box(inner: a) }
+pub fn main(box: Box(Int)) { box.unknown }
+",
+        Error::UnknownField {
+            meta: Meta { start: 67, end: 75 },
+            label: "unknown".to_string(),
+            fields: vec!["inner".to_string()],
+            typ: Arc::new(Type::App {
+                args: vec![int()],
+                public: true,
+                module: vec!["my_module".to_string()],
+                name: "Box".to_string(),
+            }),
+        },
+    );
+
+    // An unknown field should report the possible fields' labels
+    assert_error!(
+        "
+pub type Box(a) { Box(inner: a) }
+pub fn main(box: Box(Box(Int))) { box.inner.unknown }
+    ",
+        Error::UnknownField {
+            meta: Meta { start: 78, end: 86 },
+            label: "unknown".to_string(),
+            fields: vec!["inner".to_string()],
+            typ: Arc::new(Type::Var {
+                typ: Arc::new(RefCell::new(TypeVar::Link {
+                    typ: Arc::new(Type::App {
+                        args: vec![int()],
+                        public: true,
+                        module: vec!["my_module".to_string()],
+                        name: "Box".to_string(),
+                    }),
+                })),
+            }),
+        },
     );
 
     // Cases were we can't so easily check for equality-
