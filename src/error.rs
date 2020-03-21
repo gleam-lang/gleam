@@ -446,7 +446,7 @@ also be labelled.",
                     writeln!(
                         buffer,
                         "This value does not have the field `{}`.
-Type type of this value is:
+The type of this value is:
 
 {}
 ",
