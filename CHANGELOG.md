@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- A `record.label` syntax can now be used to access the fields of a custom
+  type that have a single record variant.
 - Anonymous functions can now have return type annotations.
 - There is a `todo` keyword for type checking functions that have not yet been
   implemented.
