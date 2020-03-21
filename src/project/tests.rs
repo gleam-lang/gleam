@@ -530,9 +530,9 @@ x(P) ->\n    {point, X, _} = P,\n    X.\n"
                     name: vec!["one".to_string()],
                     files: vec![OutputFile {
                         path: PathBuf::from("/gen/src/one.erl"),
-                        text:
-                            "-module(one).\n-compile(no_auto_import).\n\n-export([\'div\'/2]).\n\n'div'(X, Y) ->\n    X div Y.\n"
-                                .to_string(),
+                        text: "-module(one).\n-compile(no_auto_import).\n\n-export([\'div\'/2]).\n
+'div'(X, Y) ->\n    X div Y.\n"
+                            .to_string(),
                     }],
                 },
                 Output {
@@ -540,7 +540,8 @@ x(P) ->\n    {point, X, _} = P,\n    X.\n"
                     name: vec!["two".to_string()],
                     files: vec![OutputFile {
                         path: PathBuf::from("/gen/src/two.erl"),
-                        text: "-module(two).\n-compile(no_auto_import).\n\nrun() ->\n    one:'div'(2, one:'div'(2, 4)).\n"
+                        text: "-module(two).\n-compile(no_auto_import).\n
+run() ->\n    one:'div'(2, one:'div'(2, 4)).\n"
                             .to_string(),
                     }],
                 },
@@ -577,7 +578,8 @@ x(P) ->\n    {point, X, _} = P,\n    X.\n"
                     name: vec!["two".to_string()],
                     files: vec![OutputFile {
                         path: PathBuf::from("/gen/src/two.erl"),
-                        text: "-module(two).\n-compile(no_auto_import).\n\nmake() ->\n    empty.\n"
+                        text: "-module(two).\n-compile(no_auto_import).\n
+make() ->\n    empty.\n"
                             .to_string(),
                     }],
                 },
@@ -644,7 +646,8 @@ make() ->
                     name: vec!["one".to_string()],
                     files: vec![OutputFile {
                         path: PathBuf::from("/gen/src/one.erl"),
-                        text: "-module(one).\n-compile(no_auto_import).\n\n-export([id/1]).\n
+                        text: "-module(one).\n-compile(no_auto_import).\n
+-export([id/1]).\n
 id(X) ->\n    X.\n"
                             .to_string(),
                     }],
@@ -775,6 +778,59 @@ funky() ->
                         path: PathBuf::from("/gen/src/two.erl"),
                         text: "-module(two).\n-compile(no_auto_import).\n\nfunky() ->
     one:'receive'(1).\n"
+                            .to_string(),
+                    }],
+                },
+            ]),
+        },
+        // We can use record accessors for types with only one constructor, defined in another
+        // module
+        Case {
+            input: vec![
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/one.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "pub type Person { Person(name: String, age: Int) }".to_string(),
+                },
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/two.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "import one.{Person}
+pub fn get_age(person: Person) { person.age }
+pub fn get_name(person: Person) { person.name }"
+                        .to_string(),
+                },
+            ],
+            expected: Ok(vec![
+                Output {
+                    origin: ModuleOrigin::Src,
+                    name: vec!["one".to_string()],
+                    files: vec![
+                        OutputFile {
+                            path: PathBuf::from("/gen/src/one_Person.hrl"),
+                            text: "-record(person, {name, age}).\n".to_string(),
+                        },
+                        OutputFile {
+                            path: PathBuf::from("/gen/src/one.erl"),
+                            text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                        },
+                    ],
+                },
+                Output {
+                    origin: ModuleOrigin::Src,
+                    name: vec!["two".to_string()],
+                    files: vec![OutputFile {
+                        path: PathBuf::from("/gen/src/two.erl"),
+                        text: "-module(two).\n-compile(no_auto_import).\n
+-export([get_age/1, get_name/1]).
+
+get_age(Person) ->
+    erlang:element(3, Person).
+
+get_name(Person) ->
+    erlang:element(2, Person).\n"
                             .to_string(),
                     }],
                 },

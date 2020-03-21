@@ -289,6 +289,7 @@ pub struct Module {
     pub name: Vec<String>,
     pub types: HashMap<String, TypeConstructor>,
     pub values: HashMap<String, ValueConstructor>,
+    pub accessors: HashMap<String, AccessorsMap>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1696,8 +1697,9 @@ This should not be possible. Please report this crash",
     }
 
     let Env {
-        module_types,
-        module_values,
+        module_types: types,
+        module_values: values,
+        accessors,
         ..
     } = env;
 
@@ -1706,8 +1708,9 @@ This should not be possible. Please report this crash",
         statements,
         type_info: Module {
             name: module.name,
-            types: module_types,
-            values: module_values,
+            types,
+            values,
+            accessors,
         },
     })
 }
@@ -2058,7 +2061,7 @@ fn infer_case(
     let mut subject_types = Vec::with_capacity(subjects_count);
     let mut typed_clauses = Vec::with_capacity(clauses.len());
 
-    let return_type = env.new_unbound_var(level); // TODO: should this be level + 1 ?
+    let return_type = env.new_unbound_var(level);
 
     for subject in subjects.into_iter() {
         let subject = infer(subject, level + 1, env)?;
@@ -2309,8 +2312,10 @@ fn infer_record_access(
         }
 
         // A type in another module which may have fields
-        // TODO
-        Type::App { module, name, .. } => None,
+        Type::App { module, name, .. } => env
+            .importable_modules
+            .get(&module.join("/"))
+            .and_then(|module| module.accessors.get(name)),
 
         _something_without_fields => return Err(unknown_field(vec![])),
     }
