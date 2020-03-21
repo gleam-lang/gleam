@@ -177,6 +177,7 @@ fn infer_module_type_retention_test() {
             name: vec!["ok".to_string()],
             types: HashMap::new(), // Core type constructors like String and Int are not included
             values: HashMap::new(),
+            accessors: HashMap::new(),
         }
     );
 }

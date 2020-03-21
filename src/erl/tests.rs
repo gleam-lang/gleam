@@ -17,6 +17,7 @@ fn module_test() {
             name: vec!["magic".to_string()],
             types: HashMap::new(),
             values: HashMap::new(),
+            accessors: HashMap::new(),
         },
         name: vec!["magic".to_string()],
         statements: vec![
@@ -111,6 +112,7 @@ map() ->
             name: vec!["term".to_string()],
             types: HashMap::new(),
             values: HashMap::new(),
+            accessors: HashMap::new(),
         },
         name: vec!["term".to_string()],
         statements: vec![
@@ -390,6 +392,7 @@ tup() ->
             name: vec!["term".to_string()],
             types: HashMap::new(),
             values: HashMap::new(),
+            accessors: HashMap::new(),
         },
         name: vec!["term".to_string()],
         statements: vec![Statement::Fn {
@@ -485,6 +488,7 @@ some_function(
             name: vec!["ok".to_string()],
             types: HashMap::new(),
             values: HashMap::new(),
+            accessors: HashMap::new(),
         },
         name: vec!["vars".to_string()],
         statements: vec![
@@ -591,6 +595,7 @@ moddy4() ->
             name: vec!["my_mod".to_string()],
             types: HashMap::new(),
             values: HashMap::new(),
+            accessors: HashMap::new(),
         },
         name: vec!["my_mod".to_string()],
         statements: vec![Statement::Fn {
@@ -748,6 +753,7 @@ go() ->
             name: vec!["funny".to_string()],
             types: HashMap::new(),
             values: HashMap::new(),
+            accessors: HashMap::new(),
         },
         name: vec!["funny".to_string()],
         statements: vec![
