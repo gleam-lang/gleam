@@ -817,6 +817,26 @@ about this type yet. Please add some type annotations so we can continue.",
                     )
                     .unwrap();
                 }
+
+                RecordAccessUnknownType { meta } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Unknown type for record access".to_string(),
+                        label: "I don't know what type this is".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+
+                    writeln!(
+                        buffer,
+                        "In order to access a record field we need to know what type it is, but
+I can't tell the type here. Try adding type annotations to your function
+and try again.
+",
+                    )
+                    .unwrap();
+                }
             },
 
             Error::Parse { path, src, error } => {

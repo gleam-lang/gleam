@@ -1110,6 +1110,10 @@ pub enum Error {
     NotATupleUnbound {
         meta: Meta,
     },
+
+    RecordAccessUnknownType {
+        meta: Meta,
+    },
 }
 
 #[derive(Debug, PartialEq)]
@@ -1511,7 +1515,6 @@ pub fn infer_module(
                     type_vars.insert(name.to_string(), (0, typ.clone()));
                 }
 
-                // TODO
                 // If the custom type only has a single constructor then we can access the
                 // fields using the record.field syntax, so store any fields accessors.
                 if let Some(accessors) =
@@ -1796,12 +1799,12 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             ..
         } => infer_binop(name, *left, *right, level, meta, env),
 
-        UntypedExpr::FieldSelect {
+        UntypedExpr::FieldAccess {
             meta,
             label,
             container,
             ..
-        } => infer_field_select(*container, label, meta, level, env),
+        } => infer_field_access(*container, label, meta, level, env),
 
         UntypedExpr::TupleIndex {
             meta, index, tuple, ..
@@ -1939,19 +1942,19 @@ fn infer_var(name: String, meta: Meta, level: usize, env: &mut Env) -> Result<Ty
     })
 }
 
-fn infer_field_select(
+fn infer_field_access(
     container: UntypedExpr,
     label: String,
-    select_meta: Meta,
+    access_meta: Meta,
     level: usize,
     env: &mut Env,
 ) -> Result<TypedExpr, Error> {
     match container {
         UntypedExpr::Var { name, meta, .. } if !env.local_values.contains_key(&name) => {
-            infer_module_select(name.as_ref(), label, level, &meta, select_meta, env)
+            infer_module_access(name.as_ref(), label, level, &meta, access_meta, env)
         }
 
-        _ => infer_record_access(container, label, level, select_meta, env),
+        _ => infer_record_access(container, label, level, access_meta, env),
     }
 }
 
@@ -2244,7 +2247,7 @@ fn infer_clause_guard(
     }
 }
 
-fn infer_module_select(
+fn infer_module_access(
     module_alias: &str,
     label: String,
     level: usize,
@@ -2295,6 +2298,11 @@ fn infer_record_access(
 ) -> Result<TypedExpr, Error> {
     // Infer the type of the (presumed) record
     let record = Box::new(infer(record, level, env)?);
+
+    // If we don't yet know the type of the record then we cannot use any accessors
+    if record.typ().is_unbound() {
+        return Err(Error::RecordAccessUnknownType { meta: meta.clone() });
+    }
 
     // Error constructor helper function
     let unknown_field = |fields| Error::UnknownField {
