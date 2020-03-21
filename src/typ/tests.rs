@@ -729,7 +729,7 @@ fn infer_error_test() {
     assert_error!(
         "fn(a) { a.field }",
         Error::RecordAccessUnknownType {
-            meta: Meta { start: 9, end: 15 },
+            meta: Meta { start: 8, end: 9 },
         },
     );
 

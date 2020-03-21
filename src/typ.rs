@@ -2298,7 +2298,9 @@ fn infer_record_access(
 
     // If we don't yet know the type of the record then we cannot use any accessors
     if record.typ().is_unbound() {
-        return Err(Error::RecordAccessUnknownType { meta });
+        return Err(Error::RecordAccessUnknownType {
+            meta: record.meta().clone(),
+        });
     }
 
     // Error constructor helper function
