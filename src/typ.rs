@@ -1520,10 +1520,7 @@ pub fn infer_module(
                 if let Some(accessors) =
                     custom_type_accessors(constructors.as_slice(), &mut type_vars, &mut env)?
                 {
-                    let map = AccessorsMap {
-                        public: public.clone(),
-                        accessors,
-                    };
+                    let map = AccessorsMap { public, accessors };
                     env.insert_accessors(name.as_ref(), map)
                 }
 
@@ -2301,7 +2298,7 @@ fn infer_record_access(
 
     // If we don't yet know the type of the record then we cannot use any accessors
     if record.typ().is_unbound() {
-        return Err(Error::RecordAccessUnknownType { meta: meta.clone() });
+        return Err(Error::RecordAccessUnknownType { meta });
     }
 
     // Error constructor helper function
@@ -2632,13 +2629,15 @@ fn infer_value_constructor(
     })
 }
 
+pub type TypedCallArg = CallArg<TypedExpr>;
+
 fn do_infer_call(
     fun: UntypedExpr,
     mut args: Vec<CallArg<UntypedExpr>>,
     level: usize,
     meta: &Meta,
     env: &mut Env,
-) -> Result<(TypedExpr, Vec<CallArg<TypedExpr>>, Arc<Type>), Error> {
+) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
     let fun = infer(fun, level, env)?;
 
     match get_field_map(&fun, env).map_err(|e| convert_get_value_constructor_error(e, meta))? {

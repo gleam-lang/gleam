@@ -16,13 +16,13 @@ const INDENT: isize = 4;
 
 #[derive(Debug, Clone)]
 struct Env<'a> {
-    module: &'a Vec<String>,
+    module: &'a [String],
     current_scope_vars: im::HashMap<String, usize>,
     erl_function_scope_vars: im::HashMap<String, usize>,
 }
 
 impl<'a> Env<'a> {
-    pub fn new(module: &'a Vec<String>) -> Self {
+    pub fn new(module: &'a [String]) -> Self {
         Self {
             current_scope_vars: Default::default(),
             erl_function_scope_vars: Default::default(),
@@ -141,7 +141,7 @@ pub fn module(module: TypedModule) -> String {
         .format(80)
 }
 
-fn statement(statement: TypedStatement, module: &Vec<String>) -> Option<Document> {
+fn statement(statement: TypedStatement, module: &[String]) -> Option<Document> {
     match statement {
         Statement::TypeAlias { .. } => None,
         Statement::CustomType { .. } => None,
@@ -160,7 +160,7 @@ fn statement(statement: TypedStatement, module: &Vec<String>) -> Option<Document
     }
 }
 
-fn mod_fun(name: String, args: Vec<Arg>, body: TypedExpr, module: &Vec<String>) -> Document {
+fn mod_fun(name: String, args: Vec<Arg>, body: TypedExpr, module: &[String]) -> Document {
     let mut env = Env::new(module);
 
     atom(name)
@@ -414,7 +414,9 @@ fn var(name: String, constructor: ValueConstructor, env: &mut Env) -> Document {
 
         ValueConstructorVariant::ModuleFn {
             arity, ref module, ..
-        } if module == env.module => "fun ".to_doc().append(atom(name)).append("/").append(arity),
+        } if module.as_slice() == env.module => {
+            "fun ".to_doc().append(atom(name)).append("/").append(arity)
+        }
 
         ValueConstructorVariant::ModuleFn { arity, module, .. } => "fun "
             .to_doc()
@@ -566,7 +568,7 @@ fn call(fun: TypedExpr, args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Documen
                 },
             ..
         } => {
-            if &module == env.module {
+            if module.as_slice() == env.module {
                 atom(name).append(call_args(args, env))
             } else {
                 module
