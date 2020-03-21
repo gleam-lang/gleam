@@ -698,6 +698,8 @@ fn infer_error_test() {
         },
     );
 
+    // Tuple indexing
+
     assert_error!(
         "tuple(0, 1).2",
         Error::OutOfBoundsTupleIndex {
@@ -719,6 +721,27 @@ fn infer_error_test() {
         "fn(a) { a.2 }",
         Error::NotATupleUnbound {
             meta: Meta { start: 8, end: 9 },
+        },
+    );
+
+    // Record field access
+
+    assert_error!(
+        "fn(a) { a.field }",
+        Error::RecordAccessUnknownType {
+            meta: Meta { start: 9, end: 15 },
+        },
+    );
+
+    assert_error!(
+        "fn(a: a) { a.field }",
+        Error::UnknownField {
+            meta: Meta { start: 12, end: 18 },
+            label: "field".to_string(),
+            fields: vec![],
+            typ: Arc::new(Type::Var {
+                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 11 })),
+            }),
         },
     );
 }
@@ -1031,13 +1054,27 @@ fn infer_module_test() {
 
     // We can access fields on custom types with only one record
     assert_infer!(
-        "pub type Person { Person(name: String, age: Int) }
-         pub fn get_age(person: Person) { person.age }
-         pub fn get_name(person: Person) { person.name }",
+        "
+pub type Person { Person(name: String, age: Int) }
+pub fn get_age(person: Person) { person.age }
+pub fn get_name(person: Person) { person.name }",
         vec![
             ("Person", "fn(String, Int) -> Person"),
             ("get_age", "fn(Person) -> Int"),
             ("get_name", "fn(Person) -> String"),
+        ]
+    );
+
+    // We can access fields on custom types with only one record
+    assert_infer!(
+        "
+pub type One { One(name: String) }
+pub type Two { Two(one: One) }
+pub fn get(x: Two) { x.one.name }",
+        vec![
+            ("One", "fn(String) -> One"),
+            ("Two", "fn(One) -> Two"),
+            ("get", "fn(Two) -> String"),
         ]
     );
 }

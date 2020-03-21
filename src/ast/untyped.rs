@@ -71,7 +71,7 @@ pub enum UntypedExpr {
         clauses: Vec<Clause<Self, (), ()>>,
     },
 
-    FieldSelect {
+    FieldAccess {
         meta: Meta,
         label: String,
         container: Box<Self>,
@@ -111,7 +111,7 @@ impl UntypedExpr {
             Self::String { meta, .. } => meta,
             Self::Tuple { meta, .. } => meta,
             Self::TupleIndex { meta, .. } => meta,
-            Self::FieldSelect { meta, .. } => meta,
+            Self::FieldAccess { meta, .. } => meta,
         }
     }
 }

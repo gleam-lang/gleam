@@ -223,7 +223,7 @@ SimpleExpr: UntypedExpr = {
     Float => <>,
     Tuple => <>,
     String => <>,
-    FieldSelect => <>,
+    FieldAccess => <>,
     "{" <e:Expr+> "}" => seq(e),
 }
 
@@ -309,8 +309,8 @@ Let: UntypedExpr = {
     }
 }
 
-FieldSelect: UntypedExpr = {
-    <r:SimpleExpr> <s:@L> "." <label:AnyName> <e:@L> => UntypedExpr::FieldSelect {
+FieldAccess: UntypedExpr = {
+    <r:SimpleExpr> <s:@L> "." <label:AnyName> <e:@L> => UntypedExpr::FieldAccess {
         meta: meta(s, e),
         label,
         container: Box::new(r),
