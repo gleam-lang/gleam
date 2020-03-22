@@ -8,27 +8,25 @@ use itertools::Itertools;
 const INDENT: isize = 2;
 
 pub fn pretty_module(m: &UntypedModule) -> String {
-    format(80, module(m))
+    format(80, module(m).append(line()))
 }
 
 fn module(module: &UntypedModule) -> Document {
-    module.to_doc()
-}
-
-impl Documentable for &UntypedModule {
-    fn to_doc(self) -> Document {
-        let imports = self.statements.iter().filter_map(|s| match s {
+    let imports = module
+        .statements
+        .iter()
+        .filter_map(|s| match s {
             import @ Statement::Import { .. } => Some(import.to_doc()),
             _ => None,
-        });
+        })
+        .intersperse(line());
 
-        let statements = self.statements.iter().filter_map(|s| match s {
-            Statement::Import { .. } => None,
-            something => Some(something.to_doc()),
-        });
+    let statements = module.statements.iter().filter_map(|s| match s {
+        Statement::Import { .. } => None,
+        statement => Some(lines(2).append(statement)),
+    });
 
-        concat(imports).append(line()).append(concat(statements))
-    }
+    concat(imports).append(concat(statements))
 }
 
 impl Documentable for &ArgNames {
@@ -215,8 +213,7 @@ impl Documentable for &UntypedStatement {
                     format!(" as {}", name).to_doc()
                 } else {
                     nil()
-                })
-                .append(line()),
+                }),
         }
     }
 }
