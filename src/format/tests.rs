@@ -145,6 +145,94 @@ pub external type Four
     );
 
     assert_format!(
+        "pub type Sixteen(element) =
+  fn(
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+  ) -> tuple(
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+  )
+"
+    );
+
+    //    assert_format!(
+    //        "pub type Curried(element) =
+    //  fn() ->
+    //  elementttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt
+    //"
+    //    );
+
+    //    assert_format!(
+    //        "pub type Sixteen(element) =
+    //  fn(element) ->
+    //  tuple(
+    //    element,
+    //    element,
+    //    element,
+    //    element,
+    //    element,
+    //    element,
+    //    element,
+    //    element,
+    //    element,
+    //    element,
+    //    element,
+    //    element,
+    //    element,
+    //    element,
+    //    element,
+    //    element,
+    //  )
+    //"
+    //    );
+
+    assert_format!(
+        "pub type Curried(element) =
+  fn(element) -> fn(element) -> element
+"
+    );
+
+    //    assert_format!(
+    //        "pub type Curried(element) =
+    //  fn(element)
+    //  -> fn(element)
+    //  -> fn(element)
+    //  -> fn(element)
+    //  -> fn(element)
+    //  -> element
+    //"
+    //    );
+
+    assert_format!(
         "type WowThisTypeHasJustTheLongestName =
   WowThisTypeHasAnEvenLongerNameHowIsThatPossible
 "
@@ -177,14 +265,71 @@ pub external type Four
   )
 "
     );
+
+    //
+    // Custom types
+    //
+
+    assert_format!(
+        "type WowThisTypeHasJustTheLongestName(
+  some_long_type_variable,
+  and_another,
+  and_another_again,
+) {
+  Make
+}
+"
+    );
+
+    assert_format!(
+        "type Result(a, e) {
+  Ok(a)
+  Error(e)
+}
+"
+    );
+
+    assert_format!(
+        "type Result(a, e) {
+  Ok(value: a)
+  Error(error: e)
+}
+"
+    );
+
+    assert_format!(
+        "type SillyResult(a, e) {
+  Ok(
+    first_value_with_really_long_name: a,
+    second_value_with_really_long_name: a,
+  )
+  Error(error: e)
+}
+"
+    );
+
+    assert_format!(
+        "type SillyResult(a, e) {
+  Ok(
+    first_value_with_really_long_name: a,
+    second_value_with_really_long_name: List(
+      tuple(Int, fn(a, a, a, a, a, a, a) -> List(a)),
+    ),
+  )
+  Error(error: e)
+}
+"
+    );
+
+    //
+    // Exprs...
+    //
 }
 
 // pub type RoseTree(a) {
 //   Node(val: a, children: List(RoseTree(a)))
 //   Leaf(val: a)
 // }
-
-// type Option(a) = Result(a, Nil)
 
 // fn fully_typed(first: Int) -> Int {
 //     first + 1

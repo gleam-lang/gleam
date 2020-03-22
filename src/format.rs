@@ -89,20 +89,15 @@ impl Documentable for &RecordConstructor {
         if self.args.is_empty() {
             self.name.clone().to_doc()
         } else {
-            format!("{}(", self.name)
+            self.name
+                .to_string()
                 .to_doc()
-                .append(wrap_args(self.args.iter().map(|(label, typ)| {
-                    match label {
-                        Some(l) => Arg {
-                            meta: empty_meta(),
-                            names: ArgNames::Named { name: l.clone() },
-                            annotation: Some(typ.clone()),
-                        }
-                        .to_doc(),
+                .append(wrap_args(self.args.iter().map(
+                    |(label, typ)| match label {
+                        Some(l) => l.to_string().to_doc().append(": ").append(typ),
                         None => typ.to_doc(),
-                    }
-                })))
-                .append(")")
+                    },
+                )))
         }
     }
 }
@@ -146,7 +141,7 @@ impl Documentable for &UntypedStatement {
                     wrap_args(args.iter().map(|e| e.clone().to_doc()))
                 })
                 .append(" =")
-                .append(line().append(resolved_type).nest(INDENT)),
+                .append(line().append(resolved_type).group().nest(INDENT)),
 
             Statement::CustomType {
                 name,
@@ -160,10 +155,9 @@ impl Documentable for &UntypedStatement {
                 .append(if args.is_empty() {
                     name.clone().to_doc()
                 } else {
-                    format!("{}(", name)
+                    name.to_string()
                         .to_doc()
                         .append(wrap_args(args.iter().map(|e| e.clone().to_doc())))
-                        .append(")")
                 })
                 .append(" {")
                 .append(concat(
@@ -172,8 +166,7 @@ impl Documentable for &UntypedStatement {
                         .map(|c| line().append(c).nest(INDENT).group()),
                 ))
                 .append(line())
-                .append("}")
-                .append(lines(2)),
+                .append("}"),
 
             Statement::ExternalFn {
                 public,
@@ -463,13 +456,11 @@ impl Documentable for &TypeAst {
                 })
             }
 
-            TypeAst::Fn { args, retrn, .. } => delim("(")
-                .append(
-                    wrap_args(args.iter().map(|e| e.to_doc()))
-                        .nest(INDENT)
-                        .group(),
-                )
-                .append(") -> ")
+            TypeAst::Fn { args, retrn, .. } => "fn"
+                .to_string()
+                .to_doc()
+                .append(wrap_args(args.iter().map(|e| e.to_doc())))
+                .append(delim(" ->"))
                 .append(retrn.to_doc()),
 
             TypeAst::Var { name, .. } => name.clone().to_doc(),
@@ -481,18 +472,14 @@ impl Documentable for &TypeAst {
     }
 }
 
-fn empty_meta() -> Meta {
-    Meta { start: 0, end: 0 }
-}
-
 pub fn wrap_args<I>(args: I) -> Document
 where
     I: Iterator<Item = Document>,
 {
-    break_("", "")
+    break_("(", "(")
         .append(concat(args.intersperse(delim(","))))
         .nest(INDENT)
         .append(break_(",", ""))
-        .surround("(", ")")
+        .append(")")
         .group()
 }
