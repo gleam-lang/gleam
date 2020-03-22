@@ -25,6 +25,14 @@ fn module_test() {
     assert_format!("import one/two/three as free\n");
     assert_format!("import one/two/three.{thunk} as free\n");
     assert_format!("import one/two/three.{thunk as funky} as free\n");
+
+    // External types
+    assert_format!("external type Private\n");
+    assert_format!("external type Box(a)\n");
+    assert_format!("external type Box(a, b, zero)\n");
+    assert_format!("pub external type Private\n");
+    assert_format!("pub external type Box(a)\n");
+    assert_format!("pub external type Box(a, b, zero)\n");
 }
 
 // #[test]

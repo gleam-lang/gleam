@@ -8,25 +8,31 @@ use itertools::Itertools;
 const INDENT: isize = 2;
 
 pub fn pretty_module(m: &UntypedModule) -> String {
-    format(80, module(m).append(line()))
+    format(80, module(m))
 }
 
 fn module(module: &UntypedModule) -> Document {
-    let imports = module
+    let imports = concat(
+        module
+            .statements
+            .iter()
+            .filter_map(|s| match s {
+                import @ Statement::Import { .. } => Some(import.to_doc()),
+                _ => None,
+            })
+            .intersperse(line()),
+    );
+
+    let statements = module
         .statements
         .iter()
         .filter_map(|s| match s {
-            import @ Statement::Import { .. } => Some(import.to_doc()),
-            _ => None,
+            Statement::Import { .. } => None,
+            statement => Some(statement.to_doc()),
         })
-        .intersperse(line());
+        .intersperse(lines(2));
 
-    let statements = module.statements.iter().filter_map(|s| match s {
-        Statement::Import { .. } => None,
-        statement => Some(lines(2).append(statement)),
-    });
-
-    concat(imports).append(concat(statements))
+    imports.append(concat(statements)).append(line())
 }
 
 impl Documentable for &ArgNames {
@@ -86,10 +92,9 @@ impl Documentable for &UntypedStatement {
                 public,
                 return_annotation,
                 ..
-            } => if *public { "pub ".to_doc() } else { nil() }
-                .append(format!("fn {}(", name))
+            } => pub_(public)
+                .append(format!("fn {}", name))
                 .append(wrap_args(args.iter().map(|e| e.to_doc())))
-                .append(")")
                 .append(if let Some(anno) = return_annotation {
                     " -> ".to_doc().append(anno)
                 } else {
@@ -107,8 +112,9 @@ impl Documentable for &UntypedStatement {
                 resolved_type,
                 public,
                 ..
-            } => format!("{}type {}", if *public { "pub " } else { "" }, alias)
-                .to_doc()
+            } => pub_(public)
+                .append("type ")
+                .append(alias.to_string())
                 .append(if args.is_empty() {
                     nil()
                 } else {
@@ -127,7 +133,7 @@ impl Documentable for &UntypedStatement {
                 public,
                 constructors,
                 ..
-            } => if *public { "pub ".to_doc() } else { nil() }
+            } => pub_(public)
                 .to_doc()
                 .append("type ")
                 .append(if args.is_empty() {
@@ -156,7 +162,7 @@ impl Documentable for &UntypedStatement {
                 module,
                 fun,
                 ..
-            } => if *public { "pub ".to_doc() } else { nil() }
+            } => pub_(public)
                 .to_doc()
                 .append("external fn ")
                 .group()
@@ -176,18 +182,14 @@ impl Documentable for &UntypedStatement {
 
             Statement::ExternalType {
                 public, name, args, ..
-            } => if *public { "pub ".to_doc() } else { nil() }
-                .to_doc()
+            } => pub_(public)
+                .append("external type ")
+                .append(name.to_string())
                 .append(if args.is_empty() {
-                    format!("external type {}", name).to_doc()
+                    nil()
                 } else {
-                    format!("external type {}(", name)
-                        .to_doc()
-                        .append(wrap_args(args.iter().map(|e| e.clone().to_doc())))
-                        .append(")")
-                })
-                .group()
-                .append("\n\n"),
+                    wrap_args(args.iter().map(|e| e.clone().to_doc()))
+                }),
 
             Statement::Import {
                 module,
@@ -215,6 +217,14 @@ impl Documentable for &UntypedStatement {
                     nil()
                 }),
         }
+    }
+}
+
+fn pub_(public: &bool) -> Document {
+    if *public {
+        "pub ".to_doc()
+    } else {
+        nil()
     }
 }
 
