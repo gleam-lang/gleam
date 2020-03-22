@@ -261,7 +261,7 @@ import gleam/expect
 
 pub fn hello_world_test() {{
   {}.hello_world()
-  |> expect.equal(_, "Hello, from {}!")
+  |> expect.equal("Hello, from {}!")
 }}
 "#,
         name, name, name
