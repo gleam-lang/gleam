@@ -1,6 +1,7 @@
 mod ast;
 mod erl;
 mod error;
+mod format;
 mod new;
 mod parser;
 mod pretty;
