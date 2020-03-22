@@ -33,15 +33,44 @@ fn module_test() {
     assert_format!("pub external type Private\n");
     assert_format!("pub external type Box(a)\n");
     assert_format!("pub external type Box(a, b, zero)\n");
-}
 
-// #[test]
-// fn end_to_end_test() {
-//     let already_formatted = "
-// import other
-// import something/else
-// import library.{ThingA, ThingB}
-// import doctor as seuss
+    // External fn
+    assert_format!(
+        r#"external fn main() -> Int =
+  "app" "main"
+"#
+    );
+    assert_format!(
+        r#"external fn main(List(String)) -> Int =
+  "app" "main"
+"#
+    );
+    assert_format!(
+        r#"external fn main(argv: List(String)) -> Int =
+  "app" "main"
+"#
+    );
+    assert_format!(
+        r#"external fn main(
+  a_really_long_argument_label: List(String),
+  another_really_long_argument_label: whatever,
+) -> Int =
+  "app" "main"
+"#
+    );
+    assert_format!(
+        r#"external fn main(
+  a_really_long_argument_label: List(String),
+  another_really_long_argument_label: whatever,
+) -> Container(
+  WowThisTypeHasJustTheLongestName,
+  WowThisTypeHasJustTheLongestName,
+  WowThisTypeHasJustTheLongestName,
+) =
+  "app" "main"
+"#
+    );
+}
 
 // pub type RoseTree(a) {
 //   Node(val: a, children: List(RoseTree(a)))
@@ -79,13 +108,5 @@ fn module_test() {
 //             let x = 3
 //             3 + 4
 //         }
-//     }
-// }
-// ";
-//     let stripped = crate::parser::strip_extra(already_formatted);
-//     if let Ok(module) = crate::grammar::ModuleParser::new().parse(&stripped) {
-//         println!("FORMATTED\n-------------\n{}", format(80, module.to_doc()));
-//     } else {
-//         println!("ERROR");
 //     }
 // }
