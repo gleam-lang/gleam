@@ -4,13 +4,14 @@
 //!
 //!  [0]: http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.34.2200
 
+pub mod helper;
 use im::vector::Vector;
 
 pub trait Documentable {
     fn to_doc(self) -> Document;
 }
 
-impl Documentable for &'static str {
+impl Documentable for &str {
     fn to_doc(self) -> Document {
         Document::Text(self.to_string())
     }

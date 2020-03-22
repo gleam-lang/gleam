@@ -183,16 +183,11 @@ fn call_args(args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Document {
     wrap_args(args.into_iter().map(|arg| wrap_expr(arg.value, env)))
 }
 
-fn wrap_args<I>(args: I) -> Document
+pub fn wrap_args<I>(args: I) -> Document
 where
     I: Iterator<Item = Document>,
 {
-    break_("", "")
-        .append(concat(args.intersperse(delim(","))))
-        .nest(INDENT)
-        .append(break_("", ""))
-        .surround("(", ")")
-        .group()
+    crate::pretty::helper::wrap_args(INDENT, args)
 }
 
 fn atom(value: String) -> Document {
