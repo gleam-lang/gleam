@@ -2,9 +2,8 @@ use super::*;
 
 #[test]
 fn field_map_reorder_test() {
-    let int = |value| Expr::Int {
+    let int = |value| UntypedExpr::Int {
         value,
-        typ: (),
         meta: Meta { start: 0, end: 0 },
     };
 
@@ -178,6 +177,7 @@ fn infer_module_type_retention_test() {
             name: vec!["ok".to_string()],
             types: HashMap::new(), // Core type constructors like String and Int are not included
             values: HashMap::new(),
+            accessors: HashMap::new(),
         }
     );
 }
@@ -190,10 +190,10 @@ fn infer_test() {
             let ast = crate::grammar::ExprParser::new()
                 .parse($src)
                 .expect("syntax error");
-            let result =
-                infer(ast, 1, &mut Env::new(&HashMap::new())).expect("should successfully infer");
+            let result = infer(ast, 1, &mut Env::new(&[], &HashMap::new()))
+                .expect("should successfully infer");
             assert_eq!(
-                ($src, printer.pretty_print(result.typ(), 0),),
+                ($src, printer.pretty_print(result.typ().as_ref(), 0),),
                 ($src, $typ.to_string()),
             );
         };
@@ -302,6 +302,9 @@ fn infer_test() {
     assert_infer!("fn(x) { tuple(1, x) }", "fn(a) -> tuple(Int, a)");
     assert_infer!("fn(x, y) { tuple(x, y) }", "fn(a, b) -> tuple(a, b)");
     assert_infer!("fn(x) { tuple(x, x) }", "fn(a) -> tuple(a, a)");
+    assert_infer!("fn(x) -> Int { x }", "fn(Int) -> Int");
+    assert_infer!("fn(x) -> a { x }", "fn(a) -> a");
+    assert_infer!("fn() -> Int { 2 }", "fn() -> Int");
 
     // case
     assert_infer!("case 1 { a -> 1 }", "Int");
@@ -327,6 +330,19 @@ fn infer_test() {
     assert_infer!("let _ = 1 2.0", "Float");
     assert_infer!("let tuple(tag, x) = tuple(1.0, 1) x", "Int");
     assert_infer!("fn(x) { let tuple(a, b) = x a }", "fn(tuple(a, b)) -> a");
+
+    // Nil
+    assert_infer!("Nil", "Nil");
+
+    // todo
+    assert_infer!("todo", "a");
+    assert_infer!("1 == todo", "Bool");
+    assert_infer!("todo != 1", "Bool");
+    assert_infer!("todo + 1", "Int");
+
+    // tuple index
+    assert_infer!("tuple(1, 2.0).0", "Int");
+    assert_infer!("tuple(1, 2.0).1", "Float");
 }
 
 #[test]
@@ -336,8 +352,8 @@ fn infer_error_test() {
             let ast = crate::grammar::ExprParser::new()
                 .parse($src)
                 .expect("syntax error");
-            let result =
-                infer(ast, 1, &mut Env::new(&HashMap::new())).expect_err("should infer an error");
+            let result = infer(ast, 1, &mut Env::new(&[], &HashMap::new()))
+                .expect_err("should infer an error");
             assert_eq!(($src, sort_options($error)), ($src, sort_options(result)));
         };
     }
@@ -472,18 +488,16 @@ fn infer_error_test() {
         "fn() { 1 } == fn(x) { x + 1 }",
         Error::CouldNotUnify {
             meta: Meta { start: 14, end: 29 },
-            expected: Type::Fn {
+            expected: Arc::new(Type::Fn {
                 args: vec![],
-                retrn: Box::new(int()),
-            },
-            given: Type::Fn {
-                args: vec![Type::Var {
-                    typ: Rc::new(RefCell::new(TypeVar::Link {
-                        typ: Box::new(int()),
-                    })),
-                }],
-                retrn: Box::new(int()),
-            },
+                retrn: int(),
+            }),
+            given: Arc::new(Type::Fn {
+                args: vec![Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() })),
+                })],
+                retrn: int(),
+            }),
         },
     );
 
@@ -491,18 +505,26 @@ fn infer_error_test() {
         "let f = fn(x: Int) { x } f(1.0)",
         Error::CouldNotUnify {
             meta: Meta { start: 27, end: 30 },
-            expected: Type::App {
-                public: true,
-                module: vec![],
-                name: "Int".to_string(),
-                args: vec![],
-            },
-            given: Type::App {
-                public: true,
-                module: vec![],
-                name: "Float".to_string(),
-                args: vec![],
-            },
+            expected: int(),
+            given: float(),
+        },
+    );
+
+    assert_error!(
+        "fn() -> Int { 2.0 }",
+        Error::CouldNotUnify {
+            meta: Meta { start: 14, end: 17 },
+            expected: int(),
+            given: float(),
+        },
+    );
+
+    assert_error!(
+        "fn(x: Int) -> Float { x }",
+        Error::CouldNotUnify {
+            meta: Meta { start: 22, end: 23 },
+            expected: float(),
+            given: int(),
         },
     );
 
@@ -551,9 +573,11 @@ fn infer_error_test() {
 
     assert_error!(
         "let x = 1 x.whatever",
-        Error::NotModule {
-            meta: Meta { start: 10, end: 11 },
+        Error::UnknownField {
+            meta: Meta { start: 11, end: 20 },
             typ: int(),
+            label: "whatever".to_string(),
+            fields: vec![],
         },
     );
 
@@ -561,12 +585,8 @@ fn infer_error_test() {
         "tuple(1, 2) == tuple(1, 2, 3)",
         Error::CouldNotUnify {
             meta: Meta { start: 15, end: 29 },
-            expected: Type::Tuple {
-                elems: vec![int(), int()],
-            },
-            given: Type::Tuple {
-                elems: vec![int(), int(), int()],
-            },
+            expected: tuple(vec![int(), int()]),
+            given: tuple(vec![int(), int(), int()])
         },
     );
 
@@ -574,12 +594,8 @@ fn infer_error_test() {
         "tuple(1.0, 2, 3) == tuple(1, 2, 3)",
         Error::CouldNotUnify {
             meta: Meta { start: 20, end: 34 },
-            expected: Type::Tuple {
-                elems: vec![float(), int(), int()],
-            },
-            given: Type::Tuple {
-                elems: vec![int(), int(), int()],
-            },
+            expected: tuple(vec![float(), int(), int()]),
+            given: tuple(vec![int(), int(), int()]),
         },
     );
 
@@ -587,36 +603,12 @@ fn infer_error_test() {
         "[1.0] == [1]",
         Error::CouldNotUnify {
             meta: Meta { start: 9, end: 12 },
-            expected: Type::App {
-                args: vec![Type::Var {
-                    typ: Rc::new(RefCell::new(TypeVar::Link {
-                        typ: Box::new(Type::App {
-                            public: true,
-                            module: vec![],
-                            name: "Float".to_string(),
-                            args: vec![],
-                        }),
-                    }))
-                }],
-                public: true,
-                module: vec![],
-                name: "List".to_string(),
-            },
-            given: Type::App {
-                args: vec![Type::Var {
-                    typ: Rc::new(RefCell::new(TypeVar::Link {
-                        typ: Box::new(Type::App {
-                            public: true,
-                            module: vec![],
-                            name: "Int".to_string(),
-                            args: vec![],
-                        }),
-                    }))
-                }],
-                public: true,
-                module: vec![],
-                name: "List".to_string(),
-            },
+            expected: list(Arc::new(Type::Var {
+                typ: Arc::new(RefCell::new(TypeVar::Link { typ: float() }))
+            })),
+            given: list(Arc::new(Type::Var {
+                typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() }))
+            }))
         },
     );
 
@@ -705,12 +697,60 @@ fn infer_error_test() {
             name: "x".to_string()
         },
     );
+
+    // Tuple indexing
+
+    assert_error!(
+        "tuple(0, 1).2",
+        Error::OutOfBoundsTupleIndex {
+            meta: Meta { start: 11, end: 13 },
+            index: 2,
+            size: 2
+        },
+    );
+
+    assert_error!(
+        "Nil.2",
+        Error::NotATuple {
+            meta: Meta { start: 0, end: 3 },
+            given: nil(),
+        },
+    );
+
+    assert_error!(
+        "fn(a) { a.2 }",
+        Error::NotATupleUnbound {
+            meta: Meta { start: 8, end: 9 },
+        },
+    );
+
+    // Record field access
+
+    assert_error!(
+        "fn(a) { a.field }",
+        Error::RecordAccessUnknownType {
+            meta: Meta { start: 8, end: 9 },
+        },
+    );
+
+    assert_error!(
+        "fn(a: a) { a.field }",
+        Error::UnknownField {
+            meta: Meta { start: 12, end: 18 },
+            label: "field".to_string(),
+            fields: vec![],
+            typ: Arc::new(Type::Var {
+                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 11 })),
+            }),
+        },
+    );
 }
 
 #[test]
 fn infer_module_test() {
     macro_rules! assert_infer {
         ($src:expr, $module:expr $(,)?) => {
+            print!("\n{}\n\n", $src);
             let ast = crate::grammar::ModuleParser::new()
                 .parse($src)
                 .expect("syntax error");
@@ -924,12 +964,11 @@ fn infer_module_test() {
     assert_infer!("pub fn go(x: b, y: c) { x }", vec![("go", "fn(a, b) -> a")],);
     assert_infer!("pub fn go(x) -> Int { x }", vec![("go", "fn(Int) -> Int")],);
 
-    // // Type aliases
-    // assert_infer!(     src: "
-    // type Html = String
-    // pub fn go() { 1 }",
-    //     vec![("go", "fn() -> Int")],
-    // );
+    assert_infer!(
+        "type Html = String
+         pub fn go() { 1 }",
+        vec![("go", "fn() -> Int")],
+    );
     assert_infer!(
         "pub fn length(list) {
            case list {
@@ -939,19 +978,6 @@ fn infer_module_test() {
         }",
         vec![("length", "fn(List(a)) -> Int")],
     );
-    //    // % {
-    //    // %pub fn length(list) {\n
-    //    // %  case list {\n
-    //    // %  | [] -> 0\n
-    //    // %  | _ :: tail -> helper_length(tail) + 1\n
-    //    // %  }\n
-    //    // %}
-    //    // %fn helper_length(list) { length(list) }
-    //    // %   ,
-    //    // %module {
-    //    // % fn length(List(a)) -> Int
-    //    // %}
-    //    // % }
 
     // Structs
     assert_infer!(
@@ -1024,6 +1050,52 @@ fn infer_module_test() {
         "type Int = Float
          pub fn ok_one() -> Int { 1.0 }",
         vec![("ok_one", "fn() -> Float")]
+    );
+
+    // We can access fields on custom types with only one record
+    assert_infer!(
+        "
+pub type Person { Person(name: String, age: Int) }
+pub fn get_age(person: Person) { person.age }
+pub fn get_name(person: Person) { person.name }",
+        vec![
+            ("Person", "fn(String, Int) -> Person"),
+            ("get_age", "fn(Person) -> Int"),
+            ("get_name", "fn(Person) -> String"),
+        ]
+    );
+
+    // We can access fields on custom types with only one record
+    assert_infer!(
+        "
+pub type One { One(name: String) }
+pub type Two { Two(one: One) }
+pub fn get(x: Two) { x.one.name }",
+        vec![
+            ("One", "fn(String) -> One"),
+            ("Two", "fn(One) -> Two"),
+            ("get", "fn(Two) -> String"),
+        ]
+    );
+
+    // Field access correctly handles type parameters
+    assert_infer!(
+        "
+pub type Box(a) { Box(inner: a) }
+pub fn get_box(x: Box(Box(a))) { x.inner }
+pub fn get_generic(x: Box(a)) { x.inner }
+pub fn get_get_box(x: Box(Box(a))) { x.inner.inner }
+pub fn get_int(x: Box(Int)) { x.inner }
+pub fn get_string(x: Box(String)) { x.inner }
+",
+        vec![
+            ("Box", "fn(a) -> Box(a)"),
+            ("get_box", "fn(Box(Box(a))) -> Box(a)"),
+            ("get_generic", "fn(Box(a)) -> a"),
+            ("get_get_box", "fn(Box(Box(a))) -> a"),
+            ("get_int", "fn(Box(Int)) -> Int"),
+            ("get_string", "fn(Box(String)) -> String"),
+        ]
     );
 }
 
@@ -1326,6 +1398,48 @@ pub fn x() { id(1, 1.0) }
         }
     );
 
+    // An unknown field should report the possible fields' labels
+    assert_error!(
+        "
+pub type Box(a) { Box(inner: a) }
+pub fn main(box: Box(Int)) { box.unknown }
+",
+        Error::UnknownField {
+            meta: Meta { start: 67, end: 75 },
+            label: "unknown".to_string(),
+            fields: vec!["inner".to_string()],
+            typ: Arc::new(Type::App {
+                args: vec![int()],
+                public: true,
+                module: vec!["my_module".to_string()],
+                name: "Box".to_string(),
+            }),
+        },
+    );
+
+    // An unknown field should report the possible fields' labels
+    assert_error!(
+        "
+pub type Box(a) { Box(inner: a) }
+pub fn main(box: Box(Box(Int))) { box.inner.unknown }
+    ",
+        Error::UnknownField {
+            meta: Meta { start: 78, end: 86 },
+            label: "unknown".to_string(),
+            fields: vec!["inner".to_string()],
+            typ: Arc::new(Type::Var {
+                typ: Arc::new(RefCell::new(TypeVar::Link {
+                    typ: Arc::new(Type::App {
+                        args: vec![int()],
+                        public: true,
+                        module: vec!["my_module".to_string()],
+                        name: "Box".to_string(),
+                    }),
+                })),
+            }),
+        },
+    );
+
     // Cases were we can't so easily check for equality-
     // i.e. because the contents of the error are non-deterministic.
     assert_error!("fn inc(x: a) { x + 1 }");
@@ -1340,7 +1454,7 @@ fn env_types_with(things: &[&str]) -> Vec<String> {
 }
 
 fn env_types() -> Vec<String> {
-    Env::new(&HashMap::new())
+    Env::new(&[], &HashMap::new())
         .module_types
         .keys()
         .map(|s| s.to_string())
@@ -1348,7 +1462,7 @@ fn env_types() -> Vec<String> {
 }
 
 fn env_vars() -> Vec<String> {
-    Env::new(&HashMap::new())
+    Env::new(&[], &HashMap::new())
         .local_values
         .keys()
         .map(|s| s.to_string())

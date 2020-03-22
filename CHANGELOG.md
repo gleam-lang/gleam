@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- A `record.label` syntax can now be used to access the fields of a custom
+  type that have a single record variant.
+- Anonymous functions can now have return type annotations.
+- There is a `todo` keyword for type checking functions that have not yet been
+  implemented.
+- Tuples can be indexed into using the `var.1` syntax.
+
+## v0.7.1 - 2020-03-03
+
+- Projects generated with `gleam new` use `stdlib` version 0.7.0.
+
+## v0.7.0 - 2020-03-01
 ## v0.7.0-rc1 - 2020-02-28
 
 - Type aliases can be defined to give concise names to frequently used types.

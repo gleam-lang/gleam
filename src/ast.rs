@@ -1,19 +1,24 @@
+mod typed;
+mod untyped;
+
+pub use self::typed::TypedExpr;
+pub use self::untyped::UntypedExpr;
+
 use crate::typ::{self, ModuleValueConstructor, PatternConstructor, ValueConstructor};
+use std::sync::Arc;
 
-pub type TypedModule =
-    Module<ValueConstructor, ModuleValueConstructor, PatternConstructor, typ::Type, typ::Module>;
+pub type TypedModule = Module<TypedExpr, typ::Module>;
 
-pub type UntypedModule = Module<(), (), (), (), ()>;
+pub type UntypedModule = Module<UntypedExpr, ()>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Module<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type, Info> {
+pub struct Module<Expr, Info> {
     pub name: Vec<String>,
     pub type_info: Info,
-    pub statements:
-        Vec<Statement<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type>>,
+    pub statements: Vec<Statement<Expr>>,
 }
 
-impl<A, B, C, D, E> Module<A, B, C, D, E> {
+impl<A, B> Module<A, B> {
     pub fn name_string(&self) -> String {
         self.name.join("/")
     }
@@ -103,18 +108,16 @@ impl TypeAst {
     }
 }
 
-pub type TypedStatement =
-    Statement<ValueConstructor, ModuleValueConstructor, PatternConstructor, typ::Type>;
-
-pub type UntypedStatement = Statement<(), (), (), ()>;
+pub type TypedStatement = Statement<TypedExpr>;
+pub type UntypedStatement = Statement<UntypedExpr>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Statement<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type> {
+pub enum Statement<Expr> {
     Fn {
         meta: Meta,
         name: String,
         args: Vec<Arg>,
-        body: Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type>,
+        body: Expr,
         public: bool,
         return_annotation: Option<TypeAst>,
     },
@@ -206,180 +209,25 @@ pub struct CallArg<A> {
     pub value: A,
 }
 
-pub type TypedExpr = Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, typ::Type>;
-
-pub type UntypedExpr = Expr<(), (), (), ()>;
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type> {
-    Int {
-        meta: Meta,
-        typ: Type,
-        value: i64,
-    },
-
-    Float {
-        meta: Meta,
-        typ: Type,
-        value: f64,
-    },
-
-    String {
-        meta: Meta,
-        typ: Type,
-        value: String,
-    },
-
-    Seq {
-        typ: Type,
-        first: Box<Self>,
-        then: Box<Self>,
-    },
-
-    Var {
-        meta: Meta,
-        constructor: ValueConstructor,
-        name: String,
-    },
-
-    Fn {
-        meta: Meta,
-        typ: Type,
-        is_capture: bool,
-        args: Vec<Arg>,
-        body: Box<Self>,
-    },
-
-    Nil {
-        meta: Meta,
-        typ: Type,
-    },
-
-    Cons {
-        meta: Meta,
-        typ: Type,
-        head: Box<Self>,
-        tail: Box<Self>,
-    },
-
-    Call {
-        meta: Meta,
-        typ: Type,
-        fun: Box<Self>,
-        args: Vec<CallArg<Self>>,
-    },
-
-    BinOp {
-        meta: Meta,
-        typ: Type,
-        name: BinOp,
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-
-    Let {
-        meta: Meta,
-        typ: Type,
-        value: Box<Self>,
-        pattern: Pattern<PatternConstructor>,
-        then: Box<Self>,
-    },
-
-    Case {
-        meta: Meta,
-        typ: Type,
-        subjects: Vec<Self>,
-        clauses: Vec<Clause<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type>>,
-    },
-
-    FieldSelect {
-        meta: Meta,
-        typ: Type,
-        label: String,
-        container: Box<Self>,
-    },
-
-    ModuleSelect {
-        meta: Meta,
-        typ: Type,
-        label: String,
-        module_name: Vec<String>,
-        module_alias: String,
-        constructor: ModuleValueConstructor,
-    },
-
-    Tuple {
-        meta: Meta,
-        typ: Type,
-        elems: Vec<Self>,
-    },
-}
-
-impl<A, B, C, D> Expr<A, B, C, D> {
-    pub fn meta(&self) -> &Meta {
-        match self {
-            Expr::Fn { meta, .. } => meta,
-            Expr::Int { meta, .. } => meta,
-            Expr::Seq { then, .. } => then.meta(),
-            Expr::Var { meta, .. } => meta,
-            Expr::Nil { meta, .. } => meta,
-            Expr::Let { then, .. } => then.meta(),
-            Expr::Case { meta, .. } => meta,
-            Expr::Cons { meta, .. } => meta,
-            Expr::Call { meta, .. } => meta,
-            Expr::Float { meta, .. } => meta,
-            Expr::BinOp { meta, .. } => meta,
-            Expr::String { meta, .. } => meta,
-            Expr::Tuple { meta, .. } => meta,
-            Expr::FieldSelect { meta, .. } => meta,
-            Expr::ModuleSelect { meta, .. } => meta,
-        }
-    }
-}
-
-impl TypedExpr {
-    pub fn typ(&self) -> &typ::Type {
-        match self {
-            Expr::Fn { typ, .. } => typ,
-            Expr::Nil { typ, .. } => typ,
-            Expr::Let { typ, .. } => typ,
-            Expr::Int { typ, .. } => typ,
-            Expr::Case { typ, .. } => typ,
-            Expr::Cons { typ, .. } => typ,
-            Expr::Call { typ, .. } => typ,
-            Expr::Seq { then, .. } => then.typ(),
-            Expr::Float { typ, .. } => typ,
-            Expr::BinOp { typ, .. } => typ,
-            Expr::Tuple { typ, .. } => typ,
-            Expr::String { typ, .. } => typ,
-            Expr::Var { constructor, .. } => &constructor.typ,
-            Expr::FieldSelect { typ, .. } => typ,
-            Expr::ModuleSelect { typ, .. } => typ,
-        }
-    }
-}
-
 pub type MultiPattern<PatternConstructor> = Vec<Pattern<PatternConstructor>>;
 pub type UntypedMultiPattern = MultiPattern<()>;
 pub type TypedMultiPattern = MultiPattern<PatternConstructor>;
 
-pub type TypedClause =
-    Clause<ValueConstructor, ModuleValueConstructor, PatternConstructor, typ::Type>;
+pub type TypedClause = Clause<TypedExpr, PatternConstructor, Arc<typ::Type>>;
 
-pub type UntypedClause = Clause<(), (), (), ()>;
+pub type UntypedClause = Clause<UntypedExpr, (), ()>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Clause<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type> {
+pub struct Clause<Expr, PatternConstructor, Type> {
     pub meta: Meta,
     pub pattern: MultiPattern<PatternConstructor>,
     pub alternative_patterns: Vec<MultiPattern<PatternConstructor>>,
     pub guard: Option<ClauseGuard<Type>>,
-    pub then: Expr<ValueConstructor, ModuleValueConstructor, PatternConstructor, Type>,
+    pub then: Expr,
 }
 
-pub type TypedClauseGuard = ClauseGuard<typ::Type>;
-
 pub type UntypedClauseGuard = ClauseGuard<()>;
+pub type TypedClauseGuard = ClauseGuard<Arc<typ::Type>>;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum ClauseGuard<Type> {
@@ -431,13 +279,13 @@ impl<A> ClauseGuard<A> {
 }
 
 impl TypedClauseGuard {
-    pub fn typ(&self) -> &typ::Type {
+    pub fn typ(&self) -> Arc<typ::Type> {
         match self {
-            ClauseGuard::Or { typ, .. } => typ,
-            ClauseGuard::And { typ, .. } => typ,
-            ClauseGuard::Var { typ, .. } => typ,
-            ClauseGuard::Equals { typ, .. } => typ,
-            ClauseGuard::NotEquals { typ, .. } => typ,
+            ClauseGuard::Or { typ, .. } => typ.clone(),
+            ClauseGuard::And { typ, .. } => typ.clone(),
+            ClauseGuard::Var { typ, .. } => typ.clone(),
+            ClauseGuard::Equals { typ, .. } => typ.clone(),
+            ClauseGuard::NotEquals { typ, .. } => typ.clone(),
         }
     }
 }

@@ -17,6 +17,7 @@ fn module_test() {
             name: vec!["magic".to_string()],
             types: HashMap::new(),
             values: HashMap::new(),
+            accessors: HashMap::new(),
         },
         name: vec!["magic".to_string()],
         statements: vec![
@@ -111,6 +112,7 @@ map() ->
             name: vec!["term".to_string()],
             types: HashMap::new(),
             values: HashMap::new(),
+            accessors: HashMap::new(),
         },
         name: vec!["term".to_string()],
         statements: vec![
@@ -120,7 +122,7 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "int".to_string(),
-                body: Expr::Int {
+                body: TypedExpr::Int {
                     typ: crate::typ::int(),
                     meta: Default::default(),
                     value: 176,
@@ -132,7 +134,7 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "float".to_string(),
-                body: Expr::Float {
+                body: TypedExpr::Float {
                     meta: Default::default(),
                     typ: crate::typ::float(),
                     value: 11177.324401,
@@ -144,7 +146,7 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "nil".to_string(),
-                body: Expr::Nil {
+                body: TypedExpr::Nil {
                     meta: Default::default(),
                     typ: crate::typ::int(),
                 },
@@ -155,7 +157,7 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "string".to_string(),
-                body: Expr::String {
+                body: TypedExpr::String {
                     meta: Default::default(),
                     typ: crate::typ::string(),
                     value: "Hello there!".to_string(),
@@ -167,14 +169,14 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "seq".to_string(),
-                body: Expr::Seq {
+                body: TypedExpr::Seq {
                     typ: crate::typ::int(),
-                    first: Box::new(Expr::Int {
+                    first: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
                         meta: Default::default(),
                         value: 1,
                     }),
-                    then: Box::new(Expr::Int {
+                    then: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
                         meta: Default::default(),
                         value: 2,
@@ -187,16 +189,16 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "bin_op".to_string(),
-                body: Expr::BinOp {
+                body: TypedExpr::BinOp {
                     meta: Default::default(),
                     typ: crate::typ::int(),
                     name: BinOp::AddInt,
-                    left: Box::new(Expr::Int {
+                    left: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
                         meta: Default::default(),
                         value: 1,
                     }),
-                    right: Box::new(Expr::Int {
+                    right: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
                         meta: Default::default(),
                         value: 2,
@@ -209,7 +211,7 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "enum1".to_string(),
-                body: Expr::Var {
+                body: TypedExpr::Var {
                     meta: Default::default(),
                     constructor: ValueConstructor {
                         public: true,
@@ -230,10 +232,10 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "let".to_string(),
-                body: Expr::Let {
+                body: TypedExpr::Let {
                     meta: Default::default(),
                     typ: crate::typ::int(),
-                    value: Box::new(Expr::Int {
+                    value: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
                         meta: Default::default(),
                         value: 1,
@@ -242,7 +244,7 @@ map() ->
                         meta: Default::default(),
                         name: "OneTwo".to_string(),
                     },
-                    then: Box::new(Expr::Var {
+                    then: Box::new(TypedExpr::Var {
                         meta: Default::default(),
                         constructor: ValueConstructor {
                             public: true,
@@ -260,23 +262,23 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "conny".to_string(),
-                body: Expr::Cons {
+                body: TypedExpr::Cons {
                     meta: Default::default(),
                     typ: crate::typ::int(),
-                    head: Box::new(Expr::Int {
+                    head: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
                         meta: Default::default(),
                         value: 12,
                     }),
-                    tail: Box::new(Expr::Cons {
+                    tail: Box::new(TypedExpr::Cons {
                         meta: Default::default(),
                         typ: crate::typ::int(),
-                        head: Box::new(Expr::Int {
+                        head: Box::new(TypedExpr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
                             value: 34,
                         }),
-                        tail: Box::new(Expr::Nil {
+                        tail: Box::new(TypedExpr::Nil {
                             meta: Default::default(),
                             typ: crate::typ::int(),
                         }),
@@ -289,9 +291,10 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "funny".to_string(),
-                body: Expr::Fn {
+                body: TypedExpr::Fn {
                     meta: Default::default(),
                     is_capture: false,
+                    return_annotation: None,
                     typ: crate::typ::int(),
                     args: vec![
                         Arg {
@@ -309,7 +312,7 @@ map() ->
                             },
                         },
                     ],
-                    body: Box::new(Expr::Int {
+                    body: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
                         meta: Default::default(),
                         value: 100000000000,
@@ -322,16 +325,16 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "tup".to_string(),
-                body: Expr::Tuple {
+                body: TypedExpr::Tuple {
                     meta: Default::default(),
                     typ: crate::typ::int(),
                     elems: vec![
-                        Expr::Int {
+                        TypedExpr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
                             value: 1,
                         },
-                        Expr::Float {
+                        TypedExpr::Float {
                             meta: Default::default(),
                             typ: crate::typ::float(),
                             value: 2.0,
@@ -389,6 +392,7 @@ tup() ->
             name: vec!["term".to_string()],
             types: HashMap::new(),
             values: HashMap::new(),
+            accessors: HashMap::new(),
         },
         name: vec!["term".to_string()],
         statements: vec![Statement::Fn {
@@ -454,7 +458,7 @@ tup() ->
                     },
                 },
             ],
-            body: Expr::Int {
+            body: TypedExpr::Int {
                 typ: crate::typ::int(),
                 meta: Default::default(),
                 value: 1,
@@ -484,6 +488,7 @@ some_function(
             name: vec!["ok".to_string()],
             types: HashMap::new(),
             values: HashMap::new(),
+            accessors: HashMap::new(),
         },
         name: vec!["vars".to_string()],
         statements: vec![
@@ -493,7 +498,7 @@ some_function(
                 public: false,
                 args: vec![],
                 name: "arg".to_string(),
-                body: Expr::Var {
+                body: TypedExpr::Var {
                     meta: Default::default(),
                     name: "some_arg".to_string(),
                     constructor: ValueConstructor {
@@ -510,11 +515,8 @@ some_function(
                 public: false,
                 args: vec![],
                 name: "moddy".to_string(),
-                body: Expr::ModuleSelect {
-                    typ: crate::typ::Type::Fn {
-                        args: vec![],
-                        retrn: Box::new(crate::typ::int()),
-                    },
+                body: TypedExpr::ModuleSelect {
+                    typ: crate::typ::fn_(vec![], crate::typ::int()),
                     meta: Default::default(),
                     module_alias: "zero".to_string(),
                     module_name: vec!["one".to_string()],
@@ -528,11 +530,11 @@ some_function(
                 public: false,
                 args: vec![],
                 name: "moddy2".to_string(),
-                body: Expr::ModuleSelect {
-                    typ: crate::typ::Type::Fn {
-                        args: vec![crate::typ::int(), crate::typ::int()],
-                        retrn: Box::new(crate::typ::int()),
-                    },
+                body: TypedExpr::ModuleSelect {
+                    typ: crate::typ::fn_(
+                        vec![crate::typ::int(), crate::typ::int()],
+                        crate::typ::int(),
+                    ),
                     meta: Default::default(),
                     module_alias: "zero".to_string(),
                     module_name: vec!["one".to_string(), "zero".to_string()],
@@ -546,19 +548,19 @@ some_function(
                 public: false,
                 args: vec![],
                 name: "moddy4".to_string(),
-                body: Expr::Call {
+                body: TypedExpr::Call {
                     meta: Default::default(),
                     typ: crate::typ::int(),
                     args: vec![CallArg {
                         label: None,
                         meta: Default::default(),
-                        value: Expr::Int {
+                        value: TypedExpr::Int {
                             meta: Default::default(),
                             typ: crate::typ::int(),
                             value: 1,
                         },
                     }],
-                    fun: Box::new(Expr::ModuleSelect {
+                    fun: Box::new(TypedExpr::ModuleSelect {
                         typ: crate::typ::int(),
                         meta: Default::default(),
                         module_alias: "zero".to_string(),
@@ -593,6 +595,7 @@ moddy4() ->
             name: vec!["my_mod".to_string()],
             types: HashMap::new(),
             values: HashMap::new(),
+            accessors: HashMap::new(),
         },
         name: vec!["my_mod".to_string()],
         statements: vec![Statement::Fn {
@@ -601,10 +604,10 @@ moddy4() ->
             public: false,
             args: vec![],
             name: "go".to_string(),
-            body: Expr::Case {
+            body: TypedExpr::Case {
                 meta: Default::default(),
                 typ: crate::typ::int(),
-                subjects: vec![Expr::Int {
+                subjects: vec![TypedExpr::Int {
                     typ: crate::typ::int(),
                     meta: Default::default(),
                     value: 1,
@@ -618,7 +621,7 @@ moddy4() ->
                             value: 1,
                         }],
                         alternative_patterns: vec![],
-                        then: Expr::Int {
+                        then: TypedExpr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
                             value: 1,
@@ -632,7 +635,7 @@ moddy4() ->
                             value: 1.0,
                         }],
                         alternative_patterns: vec![],
-                        then: Expr::Int {
+                        then: TypedExpr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
                             value: 1,
@@ -646,7 +649,7 @@ moddy4() ->
                             value: "hello".to_string(),
                         }],
                         alternative_patterns: vec![],
-                        then: Expr::Int {
+                        then: TypedExpr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
                             value: 1,
@@ -659,7 +662,7 @@ moddy4() ->
                             meta: Default::default(),
                         }],
                         alternative_patterns: vec![],
-                        then: Expr::Int {
+                        then: TypedExpr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
                             value: 1,
@@ -685,7 +688,7 @@ moddy4() ->
                             },
                         }],
                         alternative_patterns: vec![],
-                        then: Expr::Int {
+                        then: TypedExpr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
                             value: 1,
@@ -708,7 +711,7 @@ moddy4() ->
                             ],
                         }],
                         alternative_patterns: vec![],
-                        then: Expr::Int {
+                        then: TypedExpr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
                             value: 1,
@@ -750,6 +753,7 @@ go() ->
             name: vec!["funny".to_string()],
             types: HashMap::new(),
             values: HashMap::new(),
+            accessors: HashMap::new(),
         },
         name: vec!["funny".to_string()],
         statements: vec![
@@ -759,19 +763,19 @@ go() ->
                 args: vec![],
                 name: "one".to_string(),
                 public: false,
-                body: Expr::Call {
+                body: TypedExpr::Call {
                     meta: Default::default(),
                     typ: crate::typ::int(),
                     args: vec![CallArg {
                         label: None,
                         meta: Default::default(),
-                        value: Expr::Int {
+                        value: TypedExpr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
                             value: 1,
                         },
                     }],
-                    fun: Box::new(Expr::Var {
+                    fun: Box::new(TypedExpr::Var {
                         meta: Default::default(),
                         constructor: ValueConstructor {
                             public: true,
@@ -794,19 +798,19 @@ go() ->
                 args: vec![],
                 name: "two".to_string(),
                 public: false,
-                body: Expr::Call {
+                body: TypedExpr::Call {
                     meta: Default::default(),
                     typ: crate::typ::int(),
                     args: vec![CallArg {
                         label: None,
                         meta: Default::default(),
-                        value: Expr::Int {
+                        value: TypedExpr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
                             value: 1,
                         },
                     }],
-                    fun: Box::new(Expr::Var {
+                    fun: Box::new(TypedExpr::Var {
                         meta: Default::default(),
                         constructor: ValueConstructor {
                             public: true,
@@ -824,31 +828,31 @@ go() ->
                 args: vec![],
                 name: "three".to_string(),
                 public: false,
-                body: Expr::Call {
+                body: TypedExpr::Call {
                     meta: Default::default(),
                     typ: crate::typ::int(),
                     args: vec![CallArg {
                         label: None,
                         meta: Default::default(),
-                        value: Expr::Int {
+                        value: TypedExpr::Int {
                             typ: crate::typ::int(),
                             meta: Default::default(),
                             value: 2,
                         },
                     }],
-                    fun: Box::new(Expr::Call {
+                    fun: Box::new(TypedExpr::Call {
                         meta: Default::default(),
                         typ: crate::typ::int(),
                         args: vec![CallArg {
                             label: None,
                             meta: Default::default(),
-                            value: Expr::Int {
+                            value: TypedExpr::Int {
                                 typ: crate::typ::int(),
                                 meta: Default::default(),
                                 value: 1,
                             },
                         }],
-                        fun: Box::new(Expr::Var {
+                        fun: Box::new(TypedExpr::Var {
                             meta: Default::default(),
                             constructor: ValueConstructor {
                                 public: true,
@@ -886,18 +890,25 @@ three() ->
 
 #[test]
 fn integration_test() {
-    struct Case {
-        src: &'static str,
-        erl: &'static str,
+    macro_rules! assert_erl {
+        ($src:expr, $erl:expr $(,)?) => {
+            let mut ast = crate::grammar::ModuleParser::new()
+                .parse($src)
+                .expect("syntax error");
+            ast.name = vec!["the_app".to_string()];
+            let ast = crate::typ::infer_module(ast, &std::collections::HashMap::new())
+                .expect("should successfully infer");
+            let output = module(ast);
+            assert_eq!(($src, output), ($src, $erl.to_string()));
+        };
     }
 
-    let cases = [
-        Case {
-            src: r#"fn go() {
+    assert_erl!(
+        r#"fn go() {
 let x = tuple(100000000000000000, tuple(2000000000, 3000000000000, 40000000000), 50000, 6000000000)
   x
 }"#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 go() ->
@@ -907,14 +918,15 @@ go() ->
          6000000000},
     X.
 "#,
-        },
-        Case {
-            src: r#"fn go() {
+    );
+
+    assert_erl!(
+        r#"fn go() {
   let y = 1
   let y = 2
   y
 }"#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 go() ->
@@ -922,10 +934,11 @@ go() ->
     Y1 = 2,
     Y1.
 "#,
-        },
-        Case {
-            src: r#"pub fn t() { True }"#,
-            erl: r#"-module(the_app).
+    );
+
+    assert_erl!(
+        r#"pub fn t() { True }"#,
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 -export([t/0]).
@@ -933,39 +946,43 @@ go() ->
 t() ->
     true.
 "#,
-        },
-        Case {
-            src: r#"pub type Money { Pound(Int) }
+    );
+
+    assert_erl!(
+        r#"pub type Money { Pound(Int) }
                     fn pound(x) { Pound(x) }"#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 pound(X) ->
     {pound, X}.
 "#,
-        },
-        Case {
-            src: r#"fn loop() { loop() }"#,
-            erl: r#"-module(the_app).
+    );
+
+    assert_erl!(
+        r#"fn loop() { loop() }"#,
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 loop() ->
     loop().
 "#,
-        },
-        Case {
-            src: r#"external fn run() -> Int = "Elixir.MyApp" "run""#,
-            erl: r#"-module(the_app).
+    );
+
+    assert_erl!(
+        r#"external fn run() -> Int = "Elixir.MyApp" "run""#,
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 run() ->
     'Elixir.MyApp':run().
 "#,
-        },
-        Case {
-            src: r#"fn inc(x) { x + 1 }
+    );
+
+    assert_erl!(
+        r#"fn inc(x) { x + 1 }
                     pub fn go() { 1 |> inc |> inc |> inc }"#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 -export([go/0]).
@@ -976,11 +993,12 @@ inc(X) ->
 go() ->
     inc(inc(inc(1))).
 "#,
-        },
-        Case {
-            src: r#"fn add(x, y) { x + y }
+    );
+
+    assert_erl!(
+        r#"fn add(x, y) { x + y }
                     pub fn go() { 1 |> add(_, 1) |> add(2, _) |> add(_, 3) }"#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 -export([go/0]).
@@ -991,13 +1009,14 @@ add(X, Y) ->
 go() ->
     add(add(2, add(1, 1)), 3).
 "#,
-        },
-        Case {
-            src: r#"fn and(x, y) { x && y }
+    );
+
+    assert_erl!(
+        r#"fn and(x, y) { x && y }
                     fn or(x, y) { x || y }
                     fn modulo(x, y) { x % y }
             "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 'and'(X, Y) ->
@@ -1009,12 +1028,13 @@ go() ->
 modulo(X, Y) ->
     X rem Y.
 "#,
-        },
-        Case {
-            src: r#"fn second(list) { case list { [x, y] -> y z -> 1 } }
+    );
+
+    assert_erl!(
+        r#"fn second(list) { case list { [x, y] -> y z -> 1 } }
                     fn tail(list) { case list { [x | xs] -> xs z -> list } }
             "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 second(List) ->
@@ -1035,10 +1055,11 @@ tail(List) ->
             List
     end.
 "#,
-        },
-        Case {
-            src: r#"fn x() { let x = 1 let x = x + 1 x }"#,
-            erl: r#"-module(the_app).
+    );
+
+    assert_erl!(
+        r#"fn x() { let x = 1 let x = x + 1 x }"#,
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 x() ->
@@ -1046,11 +1067,12 @@ x() ->
     X1 = X + 1,
     X1.
 "#,
-        },
-        Case {
-            src: r#"pub external fn receive() -> Int = "try" "and"
+    );
+
+    assert_erl!(
+        r#"pub external fn receive() -> Int = "try" "and"
                     pub fn catch(x) { receive() }"#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 -export(['receive'/0, 'catch'/1]).
@@ -1061,72 +1083,79 @@ x() ->
 'catch'(X) ->
     'receive'().
 "#,
-        },
-        // Translation of Float-specific BinOp into variable-type Erlang term comparison.
-        Case {
-            src: r#"fn x() { 1. <. 2.3 }"#,
-            erl: r#"-module(the_app).
+    );
+
+    // Translation of Float-specific BinOp into variable-type Erlang term comparison.
+    assert_erl!(
+        r#"fn x() { 1. <. 2.3 }"#,
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 x() ->
     1.0 < 2.3.
 "#,
-        },
-        // Custom type creation
-        Case {
-            src: r#"type Pair(x, y) { Pair(x: x, y: y) } fn x() { Pair(1, 2) Pair(3., 4.) }"#,
-            erl: r#"-module(the_app).
+    );
+
+    // Custom type creation
+    assert_erl!(
+        r#"type Pair(x, y) { Pair(x: x, y: y) } fn x() { Pair(1, 2) Pair(3., 4.) }"#,
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 x() ->
     {pair, 1, 2},
     {pair, 3.0, 4.0}.
 "#,
-        },
-        Case {
-            src: r#"type Null { Null } fn x() { Null }"#,
-            erl: r#"-module(the_app).
+    );
+
+    assert_erl!(
+        r#"type Null { Null } fn x() { Null }"#,
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 x() ->
     null.
 "#,
-        },
-        Case {
-            src: r#"type Point { Point(x: Int, y: Int) }
+    );
+
+    assert_erl!(
+        r#"type Point { Point(x: Int, y: Int) }
                 fn y() { fn() { Point }()(4, 6) }"#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 y() ->
     ((fun() -> fun(A, B) -> {point, A, B} end end)())(4, 6).
 "#,
-        },
-        Case {
-            src: r#"type Point { Point(x: Int, y: Int) }
+    );
+
+    assert_erl!(
+        r#"type Point { Point(x: Int, y: Int) }
                 fn x() { Point(x: 4, y: 6) Point(y: 1, x: 9) }"#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 x() ->
     {point, 4, 6},
     {point, 9, 1}.
 "#,
-        },
-        Case {
-            src: r#"type Point { Point(x: Int, y: Int) } fn x(y) { let Point(a, b) = y a }"#,
-            erl: r#"-module(the_app).
+    );
+
+    assert_erl!(
+        r#"type Point { Point(x: Int, y: Int) } fn x(y) { let Point(a, b) = y a }"#,
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 x(Y) ->
     {point, A, B} = Y,
     A.
 "#,
-        },
-        Case {
-            src: r#"external fn go(x: Int, y: Int) -> Int = "m" "f"
+    );
+
+    assert_erl!(
+        r#"external fn go(x: Int, y: Int) -> Int = "m" "f"
                     fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 go(A, B) ->
@@ -1136,11 +1165,12 @@ x() ->
     go(1, 2),
     go(4, 3).
 "#,
-        },
-        Case {
-            src: r#"fn go(x xx, y yy) { xx }
+    );
+
+    assert_erl!(
+        r#"fn go(x xx, y yy) { xx }
                     fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 go(Xx, Yy) ->
@@ -1150,23 +1180,25 @@ x() ->
     go(1, 2),
     go(4, 3).
 "#,
-        },
-        // https://github.com/gleam-lang/gleam/issues/289
-        Case {
-            src: r#"
+    );
+
+    // https://github.com/gleam-lang/gleam/issues/289
+    assert_erl!(
+        r#"
 type User { User(id: Int, name: String, age: Int) }
 fn create_user(user_id) { User(age: 22, id: user_id, name: "") }
                     "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 create_user(UserId) ->
     {user, UserId, <<"">>, 22}.
 "#,
-        },
-        Case {
-            src: r#"fn run() { case 1, 2 { a, b -> a } }"#,
-            erl: r#"-module(the_app).
+    );
+
+    assert_erl!(
+        r#"fn run() { case 1, 2 { a, b -> a } }"#,
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 run() ->
@@ -1175,21 +1207,23 @@ run() ->
             A
     end.
 "#,
-        },
-        Case {
-            src: r#"type X { X(x: Int, y: Float) }
+    );
+
+    assert_erl!(
+        r#"type X { X(x: Int, y: Float) }
                     fn x() { X(x: 1, y: 2.) X(y: 3., x: 4) }"#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 x() ->
     {x, 1, 2.0},
     {x, 4, 3.0}.
 "#,
-        },
-        // https://github.com/gleam-lang/gleam/issues/333
-        Case {
-            src: r#"
+    );
+
+    // https://github.com/gleam-lang/gleam/issues/333
+    assert_erl!(
+        r#"
 fn go(a) {
   case a {
     99 -> {
@@ -1201,7 +1235,7 @@ fn go(a) {
 }
 
                     "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 go(A) ->
@@ -1214,41 +1248,44 @@ go(A) ->
             A
     end.
 "#,
-        },
-        Case {
-            src: r#"
+    );
+
+    assert_erl!(
+        r#"
 fn go(a) {
   let a = a + 1
   a
 }
 
                     "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 go(A) ->
     A1 = A + 1,
     A1.
 "#,
-        },
-        Case {
-            src: r#"
+    );
+
+    assert_erl!(
+        r#"
 fn go(a) {
   let a = 1
   a
 }
 
                     "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 go(A) ->
     A1 = 1,
     A1.
 "#,
-        },
-        Case {
-            src: r#"
+    );
+
+    assert_erl!(
+        r#"
 fn id(x) {
   x
 }
@@ -1257,7 +1294,7 @@ fn main() {
   id(id)
 }
 "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 id(X) ->
@@ -1266,10 +1303,11 @@ id(X) ->
 main() ->
     id(fun id/1).
 "#,
-        },
-        // https://github.com/gleam-lang/gleam/issues/358
-        Case {
-            src: r#"
+    );
+
+    // https://github.com/gleam-lang/gleam/issues/358
+    assert_erl!(
+        r#"
 pub fn factory(f, i) {
   f(i)
 }
@@ -1282,7 +1320,7 @@ pub fn main() {
   factory(Box, 0)
 }
 "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 -export([factory/2, main/0]).
@@ -1293,10 +1331,11 @@ factory(F, I) ->
 main() ->
     factory(fun(A) -> {box, A} end, 0).
 "#,
-        },
-        // https://github.com/gleam-lang/gleam/issues/384
-        Case {
-            src: r#"
+    );
+
+    // https://github.com/gleam-lang/gleam/issues/384
+    assert_erl!(
+        r#"
 pub fn main(args) {
   case args {
     _ -> {
@@ -1308,7 +1347,7 @@ pub fn main(args) {
   a
 }
 "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 -export([main/1]).
@@ -1322,10 +1361,11 @@ main(Args) ->
     A1 = 2,
     A1.
 "#,
-        },
-        // Clause guards
-        Case {
-            src: r#"
+    );
+
+    // Clause guards
+    assert_erl!(
+        r#"
 pub fn main(args) {
   case args {
     x if x == args -> 1
@@ -1333,7 +1373,7 @@ pub fn main(args) {
   }
 }
 "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 -export([main/1]).
@@ -1347,9 +1387,10 @@ main(Args) ->
             0
     end.
 "#,
-        },
-        Case {
-            src: r#"
+    );
+
+    assert_erl!(
+        r#"
 pub fn main(args) {
   case args {
     x if {x != x} == {args == args} -> 1
@@ -1357,7 +1398,7 @@ pub fn main(args) {
   }
 }
 "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 -export([main/1]).
@@ -1371,9 +1412,10 @@ main(Args) ->
             0
     end.
 "#,
-        },
-        Case {
-            src: r#"
+    );
+
+    assert_erl!(
+        r#"
 pub fn main(args) {
   case args {
     x if x && x || x == x && x -> 1
@@ -1381,7 +1423,7 @@ pub fn main(args) {
   }
 }
 "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 -export([main/1]).
@@ -1395,9 +1437,10 @@ main(Args) ->
             0
     end.
 "#,
-        },
-        Case {
-            src: r#"
+    );
+
+    assert_erl!(
+        r#"
 pub fn main(args) {
   case args {
     [x] | [x, _] if x -> 1
@@ -1405,7 +1448,7 @@ pub fn main(args) {
   }
 }
 "#,
-            erl: r#"-module(the_app).
+        r#"-module(the_app).
 -compile(no_auto_import).
 
 -export([main/1]).
@@ -1422,17 +1465,41 @@ main(Args) ->
             0
     end.
 "#,
-        },
-    ];
+    );
 
-    for Case { src, erl } in cases.into_iter() {
-        let mut ast = crate::grammar::ModuleParser::new()
-            .parse(src)
-            .expect("syntax error");
-        ast.name = vec!["the_app".to_string()];
-        let ast = crate::typ::infer_module(ast, &std::collections::HashMap::new())
-            .expect("should successfully infer");
-        let output = module(ast);
-        assert_eq!((src, output), (src, erl.to_string()));
-    }
+    assert_erl!(
+        r#"
+pub fn main() {
+  todo
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+main() ->
+    erlang:error({gleam_error, todo}).
+"#,
+    );
+
+    // We can use record accessors for types with only one constructor
+    assert_erl!(
+        r#"
+pub type Person { Person(name: String, age: Int) }
+pub fn get_age(person: Person) { person.age }
+pub fn get_name(person: Person) { person.name }
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([get_age/1, get_name/1]).
+
+get_age(Person) ->
+    erlang:element(3, Person).
+
+get_name(Person) ->
+    erlang:element(2, Person).
+"#,
+    );
 }

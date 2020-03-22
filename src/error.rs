@@ -152,7 +152,7 @@ fn did_you_mean(name: &str, options: &mut Vec<String>, alt: &'static str) -> Str
     });
 
     match options.get(0) {
-        Some(option) => format!("Did you mean `{}`?", option),
+        Some(option) => format!("did you mean `{}`?", option),
         None => alt.to_string(),
     }
 }
@@ -253,10 +253,10 @@ Second: {}
                     let mut labels = labels.clone();
                     let diagnostic = ErrorDiagnostic {
                         title: "Unknown label".to_string(),
+                        label: did_you_mean(label, &mut labels, "Unexpected label"),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
-                        label: did_you_mean(label, &mut labels, "Unexpected label"),
                     };
                     write(buffer, diagnostic);
                     if !labels.is_empty() {
@@ -323,7 +323,7 @@ also be labelled.",
                 } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Duplicate name".to_string(),
-                        label: "Redefined here".to_string(),
+                        label: "redefined here".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: location.clone(),
@@ -347,7 +347,7 @@ also be labelled.",
                 } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Duplicate name".to_string(),
-                        label: "Redefined here".to_string(),
+                        label: "redefined here".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: location.clone(),
@@ -426,10 +426,20 @@ also be labelled.",
                     .unwrap();
                 }
 
-                NotModule { meta, typ } => {
+                UnknownField {
+                    meta,
+                    typ,
+                    label,
+                    fields,
+                } => {
+                    let mut fields = fields.clone();
                     let diagnostic = ErrorDiagnostic {
-                        title: "Not a module".to_string(),
-                        label: "".to_string(),
+                        title: "Unknown field".to_string(),
+                        label: did_you_mean(
+                            label.as_ref(),
+                            &mut fields,
+                            "This field does not exist",
+                        ),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
@@ -439,13 +449,22 @@ also be labelled.",
 
                     writeln!(
                         buffer,
-                        "Fields can only be accessed on modules. This is not a module, it is
-a value with this type:
+                        "The value has this type:
 
-{}",
+{}
+",
                         printer.pretty_print(typ, 4)
                     )
                     .unwrap();
+
+                    if fields.is_empty() {
+                        writeln!(buffer, "It does not have any fields.",).unwrap();
+                    } else {
+                        write!(buffer, "It has these fields:\n\n").unwrap();
+                        for field in fields {
+                            writeln!(buffer, "    .{}", field).unwrap();
+                        }
+                    }
                 }
 
                 CouldNotUnify {
@@ -486,7 +505,7 @@ Found type:
                 } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Incorrect arity".to_string(),
-                        label: format!("Expected {} arguments, got {}", expected, given),
+                        label: format!("expected {} arguments, got {}", expected, given),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
@@ -501,7 +520,7 @@ Found type:
                 } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Incorrect arity".to_string(),
-                        label: format!("Expected {} arguments, got {}", expected, given),
+                        label: format!("expected {} arguments, got {}", expected, given),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
@@ -677,19 +696,26 @@ Private types can only be used within the module that defines them.",
                     given,
                 } => {
                     let diagnostic = ErrorDiagnostic {
-                        title: "Incorrect number of pattern".to_string(),
-                        label: format!("Expected {} patterns, got {}", expected, given),
+                        title: "Incorrect number of patterns".to_string(),
+                        label: format!("expected {} patterns, got {}", expected, given),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
                     };
                     write(buffer, diagnostic);
+                    writeln!(
+                        buffer,
+                        "This case expression has {} subjects, but this pattern matches {}.
+Each clause must have a pattern for every subject value.",
+                        expected, given
+                    )
+                    .unwrap();
                 }
 
                 NonLocalClauseGuardVariable { meta, name } => {
                     let diagnostic = ErrorDiagnostic {
-                        title: "Invalid guard varible".to_string(),
-                        label: "".to_string(),
+                        title: "Invalid guard variable".to_string(),
+                        label: "is not locally defined".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         meta: meta.clone(),
@@ -718,6 +744,101 @@ argument to the function. The variable `{}` is not defined locally.",
                         "All alternative patterns must define the same variables as the initial
 pattern. This variable `{}` has not been previously defined.",
                         name
+                    )
+                    .unwrap();
+                }
+
+                OutOfBoundsTupleIndex { meta, size: 0, .. } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Out of bounds tuple index".to_string(),
+                        label: "this index is too large".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                    writeln!(
+                        buffer,
+                        "This tuple has no elements so it cannot be indexed at all!"
+                    )
+                    .unwrap();
+                }
+
+                OutOfBoundsTupleIndex { meta, index, size } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Out of bounds tuple index".to_string(),
+                        label: "this index is too large".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                    writeln!(
+                        buffer,
+                        "The index being accessed for this tuple is {}, but this tuple has
+{} elements so the highest valid index is {}.",
+                        index,
+                        size,
+                        size - 1,
+                    )
+                    .unwrap();
+                }
+
+                NotATuple { meta, given } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Type mismatch".to_string(),
+                        label: "is not a tuple".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+                    let mut printer = Printer::new();
+
+                    writeln!(
+                        buffer,
+                        "To index into this value it needs to be a tuple, however it has this type:
+
+{}",
+                        printer.pretty_print(given, 4),
+                    )
+                    .unwrap();
+                }
+
+                NotATupleUnbound { meta } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Type mismatch".to_string(),
+                        label: "what type is this?".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+
+                    writeln!(
+                        buffer,
+                        "To index into a tuple we need to know it size, but we don't know anything
+about this type yet. Please add some type annotations so we can continue.",
+                    )
+                    .unwrap();
+                }
+
+                RecordAccessUnknownType { meta } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Unknown type for record access".to_string(),
+                        label: "I don't know what type this is".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        meta: meta.clone(),
+                    };
+                    write(buffer, diagnostic);
+
+                    writeln!(
+                        buffer,
+                        "In order to access a record field we need to know what type it is, but
+I can't tell the type here. Try adding type annotations to your function
+and try again.
+",
                     )
                     .unwrap();
                 }
@@ -839,10 +960,6 @@ but it cannot be found.",
                 .expect("error pretty buffer write");
             }
         }
-
-        buffer
-            .write_all(b"\n")
-            .expect("error pretty buffer write space after");
     }
 
     pub fn pretty_print(&self) {

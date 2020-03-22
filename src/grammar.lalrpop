@@ -3,7 +3,7 @@
 use std::str::FromStr;
 
 use crate::ast::{
-    UntypedExpr, Expr, Arg, UntypedModule, Module, UntypedStatement, Statement, TypeAst,
+    UntypedExpr, Arg, UntypedModule, Module, UntypedStatement, Statement, TypeAst,
     UntypedPattern, BinOp, Clause, UntypedClause, RecordConstructor, Pattern, CallArg,
     ExternalFnArg, ArgNames, UnqualifiedImport, UntypedClauseGuard, ClauseGuard,
 };
@@ -216,20 +216,20 @@ SimpleExpr: UntypedExpr = {
     Nil => <>,
     Int => <>,
     Var => <>,
+    Todo => <>,
     Case => <>,
     List => <>,
     Call => <>,
     Float => <>,
     Tuple => <>,
     String => <>,
-    FieldSelect => <>,
+    FieldAccess => <>,
     "{" <e:Expr+> "}" => seq(e),
 }
 
 Case: UntypedExpr = {
-    <s:@L> "case" <subjects:CommaNoTrailing<OpOrSimpleExpr>> "{" <clauses:Clause+> "}" <e:@L> => Expr::Case {
+    <s:@L> "case" <subjects:CommaNoTrailing<OpOrSimpleExpr>> "{" <clauses:Clause+> "}" <e:@L> => UntypedExpr::Case {
         meta: meta(s, e),
-        typ: (),
         subjects,
         clauses,
     },
@@ -301,31 +301,35 @@ ClauseGuard4: UntypedClauseGuard = {
 }
 
 Let: UntypedExpr = {
-    <s:@L> "let" <p:Pattern> "=" <v:OpOrSimpleExpr> <e:@L> <t:Expr> => Expr::Let {
+    <s:@L> "let" <p:Pattern> "=" <v:OpOrSimpleExpr> <e:@L> <t:Expr> => UntypedExpr::Let {
         meta: meta(s, e),
-        typ: (),
         value: Box::new(v),
         pattern: p,
         then: Box::new(t),
     }
 }
 
-FieldSelect: UntypedExpr = {
-    <s:@L> <r:SimpleExpr> "." <l:AnyName> <e:@L> => Expr::FieldSelect {
+FieldAccess: UntypedExpr = {
+    <r:SimpleExpr> <s:@L> "." <label:AnyName> <e:@L> => UntypedExpr::FieldAccess {
         meta: meta(s, e),
-        typ: (),
-        label: l,
+        label,
         container: Box::new(r),
+    },
+
+    <r:SimpleExpr> <s:@L> "." <index:PositiveIntLiteral> <e:@L> => UntypedExpr::TupleIndex {
+        meta: meta(s, e),
+        index,
+        tuple: Box::new(r),
     },
 }
 
 Fn: UntypedExpr = {
-    <s:@L> "fn(" <a:Comma<FnArg>> ")" "{" <b:Expr+> "}" <e:@L> => Expr::Fn {
+    <s:@L> "fn(" <a:Comma<FnArg>> ")" <return_annotation:("->" <Type>)?> "{" <b:Expr+> "}" <e:@L> => UntypedExpr::Fn {
         meta: meta(s, e),
         is_capture: false,
-        typ: (),
         args: a,
         body: Box::new(seq(b)),
+        return_annotation,
     },
 }
 
@@ -360,18 +364,16 @@ Call: UntypedExpr = {
                     CallArg {
                         label,
                         meta: Default::default(),
-                        value: Expr::Var {
+                        value: UntypedExpr::Var {
                             meta,
-                            constructor: (),
                             name: hole_arg_name.to_string(),
                         }
                     }
                 }
             })
             .collect();
-        let call = Expr::Call {
+        let call = UntypedExpr::Call {
             meta: meta(s, e),
-            typ: (),
             fun: Box::new(fun),
             args,
         };
@@ -380,9 +382,8 @@ Call: UntypedExpr = {
             0 => Ok(call),
 
             // An anon function using the capture syntax run(_, 1, 2)
-            1 => Ok(Expr::Fn {
+            1 => Ok(UntypedExpr::Fn {
                 meta: call.meta().clone(),
-                typ: (),
                 is_capture: true,
                 args: vec![Arg {
                     meta: meta(0, 0),
@@ -390,6 +391,7 @@ Call: UntypedExpr = {
                     names: ArgNames::Named{ name: hole_arg_name.to_string() },
                 }],
                 body: Box::new(call),
+                return_annotation: None,
             }),
 
             count => Err(lalrpop_util::ParseError::User {
@@ -408,24 +410,21 @@ CallArg: Result<CallArg<UntypedExpr>, (crate::ast::Meta, Option<String>)> = {
 }
 
 Tuple: UntypedExpr = {
-    <s:@L> "tuple" "(" <elems:Comma<OpOrSimpleExpr>> ")" <e:@L> => Expr::Tuple {
+    <s:@L> "tuple" "(" <elems:Comma<OpOrSimpleExpr>> ")" <e:@L> => UntypedExpr::Tuple {
         meta: meta(s, e),
-        typ: (),
         elems: elems,
     }
 }
 
 List: UntypedExpr = {
     <s:@L> "[" <elems:Comma<OpOrSimpleExpr>> <tail:("|" <OpOrSimpleExpr>)?>"]" <e:@L> => {
-        let tail = tail.unwrap_or_else(|| Expr::Nil {
+        let tail = tail.unwrap_or_else(|| UntypedExpr::Nil {
             meta: meta(s, e),
-            typ: (),
         });
         elems.into_iter().rev().fold(
             tail,
-            |t, h| Expr::Cons {
+            |t, h| UntypedExpr::Cons {
                 meta: t.meta().clone(),
-                typ: (),
                 head: Box::new(h),
                 tail: Box::new(t),
             }
@@ -434,46 +433,59 @@ List: UntypedExpr = {
 }
 
 Var: UntypedExpr = {
-    <s:@L> <v:VarName> <e:@L> => Expr::Var {
+    <s:@L> <v:VarName> <e:@L> => UntypedExpr::Var {
         meta: meta(s, e),
-        constructor: (),
         name: v,
     },
 
-    <s:@L> <v:UpName> <e:@L> => Expr::Var {
+    <s:@L> <v:UpName> <e:@L> => UntypedExpr::Var {
         meta: meta(s, e),
-        constructor: (),
         name: v,
+    }
+}
+
+Todo: UntypedExpr = {
+    <s:@L> "todo" <e:@L> => UntypedExpr::Todo {
+        meta: meta(s, e),
     }
 }
 
 Nil: UntypedExpr = {
-    <s:@L> "[]" <e:@L> => Expr::Nil {
+    <s:@L> "[]" <e:@L> => UntypedExpr::Nil {
         meta: meta(s, e),
-        typ: (),
     }
 }
 
 String: UntypedExpr = {
-    <s:@L> <x:RawString> <e:@L> => Expr::String {
+    <s:@L> <x:RawString> <e:@L> => UntypedExpr::String {
         meta: meta(s, e),
-        typ: (),
         value: x,
     }
 }
 
+PositiveIntLiteral: u64 = {
+    <pos:r"[0-9]+"> => u64::from_str(pos).unwrap(),
+}
+
+NegativeIntLiteral: i64 = {
+    <neg:r"-[0-9]+"> => i64::from_str(neg).unwrap(),
+}
+
+IntLiteral: i64 = {
+    <i:PositiveIntLiteral> => i as i64,
+    <i:NegativeIntLiteral> => i,
+}
+
 Int: UntypedExpr = {
-    <s:@L> <i:r"-?[0-9]+"> <e:@L> => Expr::Int {
+    <s:@L> <value:IntLiteral> <e:@L> => UntypedExpr::Int {
         meta: meta(s, e),
-        typ: (),
-        value: i64::from_str(i).unwrap(),
+        value,
     }
 }
 
 Float: UntypedExpr = {
-    <s:@L> <f:r"-?[0-9]+\.+[0-9]*"> <e:@L> => Expr::Float {
+    <s:@L> <f:r"-?[0-9]+\.+[0-9]*"> <e:@L> => UntypedExpr::Float {
         meta: meta(s, e),
-        typ: (),
         value: f64::from_str(f).unwrap(),
     }
 }
@@ -506,9 +518,8 @@ CommaNoTrailing<T>: Vec<T> = {
 }
 
 Op<Operator, Current, Next>: UntypedExpr = {
-    <s:@L> <l:(<Current>)> <o:(<Operator>)> <r:Next> <e:@L> => Expr::BinOp {
+    <s:@L> <l:(<Current>)> <o:(<Operator>)> <r:Next> <e:@L> => UntypedExpr::BinOp {
         meta: meta(s, e),
-        typ: (),
         name: o,
         left: Box::new(l),
         right: Box::new(r),
@@ -574,9 +585,9 @@ PatternString: UntypedPattern = {
 }
 
 PatternInt: UntypedPattern = {
-    <s:@L> <i:r"-?[0-9]+"> <e:@L> => Pattern::Int {
+    <s:@L> <value:IntLiteral> <e:@L> => Pattern::Int {
         meta: meta(s, e),
-        value: i64::from_str(i).unwrap(),
+        value,
     }
 }
 

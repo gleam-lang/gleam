@@ -1,6 +1,7 @@
 use super::{Type, TypeVar};
 use crate::pretty::*;
 use itertools::Itertools;
+use std::sync::Arc;
 
 const INDENT: isize = 2;
 
@@ -40,19 +41,21 @@ impl Printer {
                     name.clone()
                         .to_doc()
                         .append("(")
-                        .append(self.args_to_gleam_doc(args))
+                        .append(self.args_to_gleam_doc(args.as_slice()))
                         .append(")")
                 }
             }
             Type::Fn { args, retrn } => "fn("
                 .to_doc()
-                .append(self.args_to_gleam_doc(args))
+                .append(self.args_to_gleam_doc(args.as_slice()))
                 .append(") -> ")
                 .append(self.type_doc(retrn)),
 
             Type::Var { typ, .. } => self.type_var_doc(&*typ.borrow()),
 
-            Type::Tuple { elems, .. } => self.args_to_gleam_doc(elems).surround("tuple(", ")"),
+            Type::Tuple { elems, .. } => self
+                .args_to_gleam_doc(elems.as_slice())
+                .surround("tuple(", ")"),
         }
     }
 
@@ -95,7 +98,7 @@ impl Printer {
         chars.into_iter().rev().collect()
     }
 
-    fn args_to_gleam_doc(&mut self, args: &[Type]) -> Document {
+    fn args_to_gleam_doc(&mut self, args: &[Arc<Type>]) -> Document {
         match args.len() {
             0 => nil(),
             _ => args
@@ -197,7 +200,7 @@ fn next_letter_test() {
 #[test]
 fn pretty_print_test() {
     use std::cell::RefCell;
-    use std::rc::Rc;
+    use std::sync::Arc;
 
     macro_rules! assert_string {
         ($src:expr, $typ:expr $(,)?) => {
@@ -221,18 +224,18 @@ fn pretty_print_test() {
             name: "Pair".to_string(),
             public: true,
             args: vec![
-                Type::App {
+                Arc::new(Type::App {
                     module: vec!["whatever".to_string()],
                     name: "Int".to_string(),
                     public: true,
                     args: vec![],
-                },
-                Type::App {
+                }),
+                Arc::new(Type::App {
                     module: vec!["whatever".to_string()],
                     name: "Bool".to_string(),
                     public: true,
                     args: vec![],
-                },
+                }),
             ],
         },
         "Pair(Int, Bool)",
@@ -240,20 +243,20 @@ fn pretty_print_test() {
     assert_string!(
         Type::Fn {
             args: vec![
-                Type::App {
+                Arc::new(Type::App {
                     args: vec![],
                     module: vec!["whatever".to_string()],
                     name: "Int".to_string(),
                     public: true,
-                },
-                Type::App {
+                }),
+                Arc::new(Type::App {
                     args: vec![],
                     module: vec!["whatever".to_string()],
                     name: "Bool".to_string(),
                     public: true,
-                },
+                }),
             ],
-            retrn: Box::new(Type::App {
+            retrn: Arc::new(Type::App {
                 args: vec![],
                 module: vec!["whatever".to_string()],
                 name: "Bool".to_string(),
@@ -264,8 +267,8 @@ fn pretty_print_test() {
     );
     assert_string!(
         Type::Var {
-            typ: Rc::new(RefCell::new(TypeVar::Link {
-                typ: Box::new(Type::App {
+            typ: Arc::new(RefCell::new(TypeVar::Link {
+                typ: Arc::new(Type::App {
                     args: vec![],
                     module: vec!["whatever".to_string()],
                     name: "Int".to_string(),
@@ -277,30 +280,30 @@ fn pretty_print_test() {
     );
     assert_string!(
         Type::Var {
-            typ: Rc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 2231 })),
+            typ: Arc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 2231 })),
         },
         "a",
     );
     assert_string!(
-        Type::Fn {
-            args: vec![Type::Var {
-                typ: Rc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 78 })),
-            }],
-            retrn: Box::new(Type::Var {
-                typ: Rc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 2 })),
+        crate::typ::fn_(
+            vec![Arc::new(Type::Var {
+                typ: Arc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 78 })),
+            })],
+            Arc::new(Type::Var {
+                typ: Arc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 2 })),
             }),
-        },
+        ),
         "fn(a) -> b",
     );
     assert_string!(
-        Type::Fn {
-            args: vec![Type::Var {
-                typ: Rc::new(RefCell::new(TypeVar::Generic { id: 78 })),
-            }],
-            retrn: Box::new(Type::Var {
-                typ: Rc::new(RefCell::new(TypeVar::Generic { id: 2 })),
+        crate::typ::fn_(
+            vec![Arc::new(Type::Var {
+                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 78 })),
+            })],
+            Arc::new(Type::Var {
+                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 2 })),
             }),
-        },
+        ),
         "fn(a) -> b",
     );
 }
