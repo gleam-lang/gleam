@@ -2,7 +2,7 @@ use crate::ast::*;
 use crate::pretty::*;
 use itertools::Itertools;
 
-impl<A: Clone, B: Clone, C: Clone, D: Clone, E: Clone> Documentable for Module<A, B, C, D, E> {
+impl Documentable for UntypedModule {
     fn to_doc(self) -> Document {
         let imports = self.statements.iter().filter_map(|s| match s {
             import @ Statement::Import { .. } => Some(import.clone().to_doc()),
@@ -87,7 +87,7 @@ pub fn function_signature(
         })
 }
 
-impl<A: Clone, B: Clone, C: Clone, D: Clone> Documentable for Statement<A, B, C, D> {
+impl Documentable for UntypedStatement {
     fn to_doc(self) -> Document {
         match self {
             Statement::Fn {
@@ -148,12 +148,11 @@ impl<A: Clone, B: Clone, C: Clone, D: Clone> Documentable for Statement<A, B, C,
                         .append(")")
                 })
                 .append(" {")
-                .append_all(
+                .append(concat(
                     constructors
                         .into_iter()
-                        .map(|c| line().append(c).nest(4).group())
-                        .collect(),
-                )
+                        .map(|c| line().append(c).nest(4).group()),
+                ))
                 .append(line())
                 .append("}")
                 .append(lines(2)),
@@ -258,7 +257,6 @@ impl<A: Documentable> Documentable for CallArg<A> {
 impl Documentable for BinOp {
     fn to_doc(self) -> Document {
         match self {
-            BinOp::Pipe => " |> ",
             BinOp::And => " && ",
             BinOp::Or => " || ",
             BinOp::LtInt => " < ",
@@ -285,7 +283,7 @@ impl Documentable for BinOp {
     }
 }
 
-impl<C: Clone> Documentable for Pattern<C> {
+impl Documentable for UntypedPattern {
     fn to_doc(self) -> Document {
         match self {
             Pattern::Int { meta, value } => value.to_doc(),
@@ -321,14 +319,14 @@ impl<C: Clone> Documentable for Pattern<C> {
     }
 }
 
-impl<A: Clone, B: Clone, C: Clone, D: Clone> Documentable for Clause<A, B, C, D> {
+impl Documentable for UntypedClause {
     fn to_doc(self) -> Document {
         "pattern"
             .to_doc()
             .append(self.guard.map(|g| g.to_doc()).unwrap_or(nil()))
             .append(" -> ")
             .append(match self.then {
-                Expr::Let { .. } => "{"
+                UntypedExpr::Let { .. } => "{"
                     .to_doc()
                     .append(line().append(self.then).nest(4).group())
                     .append(line())
@@ -344,27 +342,31 @@ impl<A: Clone> Documentable for ClauseGuard<A> {
     }
 }
 
-impl<A: Clone, B: Clone, C: Clone, D: Clone> Documentable for Expr<A, B, C, D> {
+impl Documentable for UntypedExpr {
     fn to_doc(self) -> Document {
         match self {
-            Expr::Int { meta, typ, value } => value.to_doc(),
+            UntypedExpr::Todo { .. } => "todo".to_doc(),
 
-            Expr::Float { meta, typ, value } => value.to_doc(),
+            UntypedExpr::Pipe { left, right, .. } => left.to_doc().append(" |> ").append(*right),
 
-            Expr::String { meta, typ, value } => value.to_doc().surround("\"", "\""),
+            UntypedExpr::Int { meta, value } => value.to_doc(),
 
-            Expr::Seq { typ, first, then } => nil(),
+            UntypedExpr::Float { meta, value } => value.to_doc(),
 
-            Expr::Var {
+            UntypedExpr::String { meta, value } => value.to_doc().surround("\"", "\""),
+
+            UntypedExpr::Seq { first, then } => nil(),
+
+            UntypedExpr::Var { meta, name } => name.to_doc(),
+
+            UntypedExpr::TupleIndex { tuple, index, .. } => {
+                tuple.to_doc().append(".").append(index)
+            }
+
+            UntypedExpr::Fn {
                 meta,
-                constructor,
-                name,
-            } => name.to_doc(),
-
-            Expr::Fn {
-                meta,
-                typ,
                 is_capture,
+                return_annotation, // TODO: render this annotation
                 args,
                 body,
             } => "fn("
@@ -375,36 +377,26 @@ impl<A: Clone, B: Clone, C: Clone, D: Clone> Documentable for Expr<A, B, C, D> {
                 .append((*body).clone())
                 .append("\n}"),
 
-            Expr::Nil { meta, typ } => "[]".to_doc(),
+            UntypedExpr::Nil { meta } => "[]".to_doc(),
 
-            Expr::Cons {
-                meta,
-                typ,
-                head,
-                tail,
-            } => Document::Cons(Box::new(head.to_doc().append("|")), Box::new(tail.to_doc()))
-                .surround("[", "]"),
+            UntypedExpr::Cons { meta, head, tail } => {
+                Document::Cons(Box::new(head.to_doc().append("|")), Box::new(tail.to_doc()))
+                    .surround("[", "]")
+            }
 
-            Expr::Call {
-                meta,
-                typ,
-                fun,
-                args,
-            } => fun
+            UntypedExpr::Call { meta, fun, args } => fun
                 .to_doc()
                 .append(args_to_doc(args).nest_current().surround("(", ")")),
 
-            Expr::BinOp {
+            UntypedExpr::BinOp {
                 meta,
-                typ,
                 name,
                 left,
                 right,
             } => left.to_doc().append(name).append(*right.clone()),
 
-            Expr::Let {
+            UntypedExpr::Let {
                 meta,
-                typ,
                 value,
                 pattern,
                 then,
@@ -416,47 +408,34 @@ impl<A: Clone, B: Clone, C: Clone, D: Clone> Documentable for Expr<A, B, C, D> {
                 .append(line())
                 .append(*then),
 
-            Expr::Case {
+            UntypedExpr::Case {
                 meta,
-                typ,
                 subjects,
                 clauses,
             } => "case "
                 .to_doc()
-                .append_all(
+                .append(concat(
                     subjects
                         .into_iter()
                         .map(|s| s.to_doc())
-                        .intersperse(", ".to_doc())
-                        .collect(),
-                )
+                        .intersperse(", ".to_doc()),
+                ))
                 .append(" {")
-                .append_all(
+                .append(concat(
                     clauses
                         .into_iter()
-                        .map(|c| line().append(c).nest(4).group())
-                        .collect(),
-                )
+                        .map(|c| line().append(c).nest(4).group()),
+                ))
                 .append(line())
                 .append("}"),
 
-            Expr::FieldSelect {
+            UntypedExpr::FieldAccess {
                 meta,
-                typ,
                 label,
                 container,
             } => container.to_doc().append(format!(".{}", label)),
 
-            Expr::ModuleSelect {
-                meta,
-                typ,
-                label,
-                module_name,
-                module_alias,
-                constructor,
-            } => nil(),
-
-            Expr::Tuple { meta, typ, elems } => {
+            UntypedExpr::Tuple { meta, elems } => {
                 args_to_doc(elems).nest(4).group().surround("(", ")")
             }
         }
@@ -484,7 +463,7 @@ impl Documentable for TypeAst {
 
             TypeAst::Fn { meta, args, retrn } => delim("(")
                 .append(args_to_doc(args).nest(4))
-                .append(delim_end(") -> "))
+                .append(") -> ")
                 .append(retrn.to_doc()),
 
             TypeAst::Var { meta, name } => name.to_doc(),
@@ -494,14 +473,14 @@ impl Documentable for TypeAst {
     }
 }
 
-fn args_to_doc<A: Documentable>(args: Vec<A>) -> Document {
+fn args_to_doc<A: Documentable + Clone>(args: Vec<A>) -> Document {
     args.split_last()
         .map(|(tail, head)| {
             let elems: Vec<Document> = head
                 .into_iter()
                 .map(|a| a.clone().to_doc().append(", ").group())
                 .collect();
-            nil().append_all(vec![elems, vec![tail.clone().to_doc()]].concat())
+            elems.to_doc().append(tail.clone().to_doc())
         })
         .unwrap_or(nil())
 }
@@ -509,13 +488,6 @@ fn args_to_doc<A: Documentable>(args: Vec<A>) -> Document {
 fn empty_meta() -> Meta {
     Meta { start: 0, end: 0 }
 }
-
-////////////////////////////////////////////////////
-///
-///
-///
-///
-/// ////////////////////////////////////////////////
 
 #[test]
 fn end_to_end_test() {
@@ -564,7 +536,7 @@ fn patterns(x) {
     }
 }
 ";
-    let (stripped, _) = crate::parser::strip_extra(already_formatted);
+    let stripped = crate::parser::strip_extra(already_formatted);
     if let Ok(module) = crate::grammar::ModuleParser::new().parse(&stripped) {
         // println!("MODULE\n----------------\n{:#?}", module);
         println!("FORMATTED\n-------------\n{}", format(80, module.to_doc()));

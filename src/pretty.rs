@@ -46,6 +46,12 @@ impl Documentable for f64 {
     }
 }
 
+impl Documentable for u64 {
+    fn to_doc(self) -> Document {
+        Document::Text(format!("{:?}", self))
+    }
+}
+
 impl Documentable for Document {
     fn to_doc(self) -> Document {
         self
