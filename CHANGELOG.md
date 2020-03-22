@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- The pipe operator `|>` will now attempt to insert the left hand side as the
+  first argument to the right hand side if the right hand side is a call,
+  removing the need for function capture boilerplate.
 - A `record.label` syntax can now be used to access the fields of a custom
   type that have a single record variant.
 - Anonymous functions can now have return type annotations.
