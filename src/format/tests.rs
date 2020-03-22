@@ -13,7 +13,18 @@ fn module_test() {
         };
     }
 
+    // Imports
     assert_format!("\n");
+    assert_format!("import one\n");
+    assert_format!("import one\nimport two\n");
+    assert_format!("import one/two/three\n");
+    assert_format!("import one/two/three\nimport four/five\n");
+    assert_format!("import one.{fun, fun2, fun3}\n");
+    assert_format!("import one.{One, Two, fun1, fun2}\n");
+    assert_format!("import one.{main as entrypoint}\n");
+    assert_format!("import one/two/three as free\n");
+    assert_format!("import one/two/three.{thunk} as free\n");
+    assert_format!("import one/two/three.{thunk as funky} as free\n");
 }
 
 // #[test]
