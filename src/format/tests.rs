@@ -5,11 +5,7 @@ fn module_test() {
     macro_rules! assert_format {
         ($src:expr $(,)?) => {
             let src = $src.to_string();
-            let stripped = crate::parser::strip_extra(src.as_ref());
-            let ast = crate::grammar::ModuleParser::new()
-                .parse(&stripped)
-                .unwrap();
-            assert_eq!(src, pretty_module(&ast));
+            assert_eq!(src, pretty($src).unwrap());
         };
     }
 
@@ -28,6 +24,25 @@ fn module_test() {
     assert_format!("import one/two/three as free\n");
     assert_format!("import one/two/three.{thunk} as free\n");
     assert_format!("import one/two/three.{thunk as funky} as free\n");
+
+    //
+    // Multiple statements
+    //
+
+    assert_format!(
+        r#"import one
+import two
+import three
+
+pub external type One
+
+pub external type Two
+
+pub external type Three
+
+pub external type Four
+"#
+    );
 
     //
     // External types

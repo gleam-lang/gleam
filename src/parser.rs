@@ -6,6 +6,8 @@ pub enum Error {
     },
 }
 
+pub type LalrpopError = lalrpop_util::ParseError<usize, (usize, String), Error>;
+
 /// Blanks out comments, semicolons, etc
 ///
 pub fn strip_extra(src: &str) -> String {

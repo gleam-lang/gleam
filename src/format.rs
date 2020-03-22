@@ -7,32 +7,57 @@ use itertools::Itertools;
 
 const INDENT: isize = 2;
 
+pub fn pretty(src: &str) -> Result<String, crate::parser::LalrpopError> {
+    let stripped = crate::parser::strip_extra(src.as_ref());
+    let ast = crate::grammar::ModuleParser::new()
+        .parse(&stripped)
+        .map_err(|e| e.map_token(|crate::grammar::Token(a, b)| (a, b.to_string())))?;
+    Ok(pretty_module(&ast))
+}
+
 pub fn pretty_module(m: &UntypedModule) -> String {
     format(80, module(m))
 }
 
 fn module(module: &UntypedModule) -> Document {
+    let mut has_imports = false;
+    let mut has_other = false;
+
     let imports = concat(
         module
             .statements
             .iter()
             .filter_map(|s| match s {
-                import @ Statement::Import { .. } => Some(import.to_doc()),
+                import @ Statement::Import { .. } => {
+                    has_imports = true;
+                    Some(import.to_doc())
+                }
                 _ => None,
             })
             .intersperse(line()),
     );
 
-    let statements = module
-        .statements
-        .iter()
-        .filter_map(|s| match s {
-            Statement::Import { .. } => None,
-            statement => Some(statement.to_doc()),
-        })
-        .intersperse(lines(2));
+    let statements = concat(
+        module
+            .statements
+            .iter()
+            .filter_map(|s| match s {
+                Statement::Import { .. } => None,
+                statement => {
+                    has_other = true;
+                    Some(statement.to_doc())
+                }
+            })
+            .intersperse(lines(2)),
+    );
 
-    imports.append(concat(statements)).append(line())
+    let sep = if has_imports && has_other {
+        lines(2)
+    } else {
+        nil()
+    };
+
+    imports.append(sep).append(statements).append(line())
 }
 
 impl Documentable for &ArgNames {
