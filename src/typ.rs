@@ -1813,11 +1813,48 @@ fn infer_pipe(
     level: usize,
     env: &mut Env,
 ) -> Result<TypedExpr, Error> {
-    // Infer types of left and right hand side
+    infer_insert_pipe(&left, &right, level, env)
+        .or_else(|()| infer_apply_pipe(left, right, meta, level, env))
+}
+
+/// Attempt to infer a |> b(c) as b(a, c)
+fn infer_insert_pipe(
+    left: &UntypedExpr,
+    right: &UntypedExpr,
+    level: usize,
+    env: &mut Env,
+) -> Result<TypedExpr, ()> {
+    if let UntypedExpr::Call { meta, fun, args } = right {
+        // TODO: This clones the full tree under the args. :(
+        let mut new_args = Vec::with_capacity(args.len() + 1);
+        new_args.push(CallArg {
+            label: None,
+            meta: left.meta().clone(),
+            value: left.clone(),
+        });
+        for arg in args {
+            new_args.push(arg.clone());
+        }
+        let call = UntypedExpr::Call {
+            meta: meta.clone(),
+            fun: fun.clone(),
+            args: new_args,
+        };
+        return infer(call, level, env).map_err(|_| ());
+    }
+    Err(())
+}
+
+/// Attempt to infer a |> b as b(a)
+fn infer_apply_pipe(
+    left: UntypedExpr,
+    right: UntypedExpr,
+    meta: Meta,
+    level: usize,
+    env: &mut Env,
+) -> Result<TypedExpr, Error> {
     let left = Box::new(infer(left, level, env)?);
     let right = Box::new(infer(right, level, env)?);
-
-    // Attempt to infer a |> b as b(a)
     let typ = env.new_unbound_var(level);
     let fn_typ = Arc::new(Type::Fn {
         args: vec![left.typ()],

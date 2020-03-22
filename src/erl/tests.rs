@@ -1517,4 +1517,19 @@ apply(F, A) ->
     F(A).
 "#,
     );
+
+    // a |> b(c)
+    assert_erl!(
+        r#"
+pub fn apply(f: fn(a, Int) -> b, a: a) { a |> f(1) }
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([apply/2]).
+
+apply(F, A) ->
+    F(A, 1).
+"#,
+    );
 }

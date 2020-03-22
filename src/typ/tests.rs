@@ -351,7 +351,8 @@ fn infer_test() {
     assert_infer!("let id = fn(x) { x } 1.0 |> id", "Float");
     assert_infer!("let add = fn(x, y) { x + y } 1 |> add(_, 2)", "Int");
     assert_infer!("let add = fn(x, y) { x + y } 1 |> add(2, _)", "Int");
-    // assert_infer!("let add = fn(x, y) { x + y } 1 |> add(2)", "Int");
+    assert_infer!("let add = fn(x, y) { x + y } 1 |> add(2)", "Int");
+    assert_infer!("let id = fn(x) { x } 1 |> id()", "Int");
 }
 
 #[test]
