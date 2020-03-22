@@ -69,6 +69,13 @@ pub enum TypedExpr {
         right: Box<Self>,
     },
 
+    Pipe {
+        meta: Meta,
+        typ: Arc<Type>,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
     Let {
         meta: Meta,
         typ: Arc<Type>,
@@ -133,6 +140,7 @@ impl TypedExpr {
             Self::Case { meta, .. } => meta,
             Self::Cons { meta, .. } => meta,
             Self::Call { meta, .. } => meta,
+            Self::Pipe { meta, .. } => meta,
             Self::Float { meta, .. } => meta,
             Self::BinOp { meta, .. } => meta,
             Self::Tuple { meta, .. } => meta,
@@ -154,6 +162,7 @@ impl TypedExpr {
             Self::Case { typ, .. } => typ.clone(),
             Self::Cons { typ, .. } => typ.clone(),
             Self::Call { typ, .. } => typ.clone(),
+            Self::Pipe { typ, .. } => typ.clone(),
             Self::Float { typ, .. } => typ.clone(),
             Self::BinOp { typ, .. } => typ.clone(),
             Self::Tuple { typ, .. } => typ.clone(),

@@ -343,6 +343,15 @@ fn infer_test() {
     // tuple index
     assert_infer!("tuple(1, 2.0).0", "Int");
     assert_infer!("tuple(1, 2.0).1", "Float");
+
+    // pipe |>
+    assert_infer!("1 |> fn(x) { x }", "Int");
+    assert_infer!("1.0 |> fn(x) { x }", "Float");
+    assert_infer!("let id = fn(x) { x } 1 |> id", "Int");
+    assert_infer!("let id = fn(x) { x } 1.0 |> id", "Float");
+    assert_infer!("let add = fn(x, y) { x + y } 1 |> add(_, 2)", "Int");
+    assert_infer!("let add = fn(x, y) { x + y } 1 |> add(2, _)", "Int");
+    // assert_infer!("let add = fn(x, y) { x + y } 1 |> add(2)", "Int");
 }
 
 #[test]
@@ -740,7 +749,7 @@ fn infer_error_test() {
             label: "field".to_string(),
             fields: vec![],
             typ: Arc::new(Type::Var {
-                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 11 })),
+                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 9 })),
             }),
         },
     );

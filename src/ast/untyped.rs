@@ -58,6 +58,12 @@ pub enum UntypedExpr {
         right: Box<Self>,
     },
 
+    Pipe {
+        meta: Meta,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
     Let {
         meta: Meta,
         value: Box<Self>,
@@ -106,6 +112,7 @@ impl UntypedExpr {
             Self::Case { meta, .. } => meta,
             Self::Cons { meta, .. } => meta,
             Self::Call { meta, .. } => meta,
+            Self::Pipe { meta, .. } => meta,
             Self::Float { meta, .. } => meta,
             Self::BinOp { meta, .. } => meta,
             Self::String { meta, .. } => meta,
