@@ -118,14 +118,10 @@ impl Documentable for &UntypedStatement {
                 .append(if args.is_empty() {
                     nil()
                 } else {
-                    "(".to_doc()
-                        .append(wrap_args(args.iter().map(|e| e.clone().to_doc())))
-                        .append(")")
+                    wrap_args(args.iter().map(|e| e.clone().to_doc()))
                 })
-                .append(" = ")
-                .group()
-                .append(resolved_type)
-                .append(lines(2)),
+                .append(" =")
+                .append(line().append(resolved_type).nest(INDENT)),
 
             Statement::CustomType {
                 name,

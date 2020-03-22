@@ -13,7 +13,10 @@ fn module_test() {
         };
     }
 
+    //
     // Imports
+    //
+
     assert_format!("\n");
     assert_format!("import one\n");
     assert_format!("import one\nimport two\n");
@@ -26,7 +29,10 @@ fn module_test() {
     assert_format!("import one/two/three.{thunk} as free\n");
     assert_format!("import one/two/three.{thunk as funky} as free\n");
 
+    //
     // External types
+    //
+
     assert_format!("external type Private\n");
     assert_format!("external type Box(a)\n");
     assert_format!("external type Box(a, b, zero)\n");
@@ -34,22 +40,28 @@ fn module_test() {
     assert_format!("pub external type Box(a)\n");
     assert_format!("pub external type Box(a, b, zero)\n");
 
+    //
     // External fn
+    //
+
     assert_format!(
         r#"external fn main() -> Int =
   "app" "main"
 "#
     );
+
     assert_format!(
         r#"external fn main(List(String)) -> Int =
   "app" "main"
 "#
     );
+
     assert_format!(
         r#"external fn main(argv: List(String)) -> Int =
   "app" "main"
 "#
     );
+
     assert_format!(
         r#"external fn main(
   a_really_long_argument_label: List(String),
@@ -58,6 +70,7 @@ fn module_test() {
   "app" "main"
 "#
     );
+
     assert_format!(
         r#"external fn main(
   a_really_long_argument_label: List(String),
@@ -70,6 +83,85 @@ fn module_test() {
   "app" "main"
 "#
     );
+
+    //
+    // Type aliases
+    //
+
+    assert_format!(
+        "type Option(a) =
+  Result(a, Nil)
+"
+    );
+
+    assert_format!(
+        "pub type Option(a) =
+  Result(a, Nil)
+"
+    );
+
+    assert_format!(
+        "pub type Pair(a, b) =
+  tuple(a, b)
+"
+    );
+
+    assert_format!(
+        "pub type Sixteen(element) =
+  tuple(
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+  )
+"
+    );
+
+    assert_format!(
+        "type WowThisTypeHasJustTheLongestName =
+  WowThisTypeHasAnEvenLongerNameHowIsThatPossible
+"
+    );
+
+    assert_format!(
+        "type WowThisTypeHasJustTheLongestName =
+  Container(
+    Int,
+    String,
+    List(a),
+    SomethingElse,
+    WowThisTypeHasJustTheLongestName,
+  )
+"
+    );
+
+    assert_format!(
+        "type WowThisTypeHasJustTheLongestName(
+  some_long_type_variable,
+  and_another,
+  and_another_again,
+) =
+  Container(
+    Int,
+    String,
+    List(a),
+    SomethingElse,
+    WowThisTypeHasJustTheLongestName,
+  )
+"
+    );
 }
 
 // pub type RoseTree(a) {
@@ -78,10 +170,6 @@ fn module_test() {
 // }
 
 // type Option(a) = Result(a, Nil)
-
-// pub external type Opaque
-
-// pub external fn random_float() -> Float = \"rand\" \"uniform\"
 
 // fn fully_typed(first: Int) -> Int {
 //     first + 1
