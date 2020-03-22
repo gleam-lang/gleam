@@ -60,14 +60,13 @@ impl Documentable for Document {
 
 impl Documentable for Vec<Document> {
     fn to_doc(self) -> Document {
-        self.into_iter().rev().fold(Document::Nil, |acc, doc| {
-            Document::Cons(Box::new(doc), Box::new(acc))
-        })
+        concat(self.into_iter())
     }
 }
 
-pub fn concat(docs: impl Iterator<Item = Document>) -> Document {
-    docs.fold(Document::Nil, |acc, doc| {
+pub fn concat(mut docs: impl Iterator<Item = Document>) -> Document {
+    let init = docs.next().unwrap_or_else(|| nil());
+    docs.fold(init, |acc, doc| {
         Document::Cons(Box::new(acc), Box::new(doc))
     })
 }
