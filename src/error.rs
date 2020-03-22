@@ -460,7 +460,10 @@ also be labelled.",
                     if fields.is_empty() {
                         writeln!(buffer, "It does not have any fields.",).unwrap();
                     } else {
-                        writeln!(buffer, "It has these fields: {}", fields.join(", ")).unwrap();
+                        write!(buffer, "It has these fields:\n\n").unwrap();
+                        for field in fields {
+                            writeln!(buffer, "    .{}", field).unwrap();
+                        }
                     }
                 }
 
@@ -957,10 +960,6 @@ but it cannot be found.",
                 .expect("error pretty buffer write");
             }
         }
-
-        buffer
-            .write_all(b"\n")
-            .expect("error pretty buffer write space after");
     }
 
     pub fn pretty_print(&self) {
