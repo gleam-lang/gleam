@@ -1502,4 +1502,19 @@ get_name(Person) ->
     erlang:element(2, Person).
 "#,
     );
+
+    // a |> b
+    assert_erl!(
+        r#"
+pub fn apply(f: fn(a) -> b, a: a) { a |> f }
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([apply/2]).
+
+apply(F, A) ->
+    F(A).
+"#,
+    );
 }

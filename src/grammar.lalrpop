@@ -178,12 +178,13 @@ CompareOp: BinOp = {
 }
 
 Op5: UntypedExpr = {
-    <o:Op<PipeOp, Op5, Op6>> => <>,
-    Op6 => <>,
-}
+    <s:@L> <l:Op5> "|>" <r:Op6> <e:@L> => UntypedExpr::Pipe {
+        meta: meta(s, e),
+        left: Box::new(l),
+        right: Box::new(r),
+    },
 
-PipeOp: BinOp = {
-    "|>" => BinOp::Pipe,
+    Op6 => <>,
 }
 
 Op6: UntypedExpr = {

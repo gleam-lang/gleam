@@ -523,15 +523,6 @@ impl<'a, 'b> Env<'a, 'b> {
         );
 
         let a = env.new_generic_var();
-        let b = env.new_generic_var();
-        let f = fn_(vec![a.clone()], b.clone());
-        env.insert_variable(
-            "|>".to_string(),
-            ValueConstructorVariant::LocalVariable,
-            fn_(vec![a, f], b),
-        );
-
-        let a = env.new_generic_var();
         env.insert_variable(
             "==".to_string(),
             ValueConstructorVariant::LocalVariable,
@@ -1760,6 +1751,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
         UntypedExpr::Tuple { meta, elems, .. } => infer_tuple(elems, meta, level, env),
         UntypedExpr::Float { meta, value, .. } => infer_float(value, meta),
         UntypedExpr::String { meta, value, .. } => infer_string(value, meta),
+        UntypedExpr::Pipe { left, right, meta } => infer_pipe(*left, *right, meta, level, env),
 
         UntypedExpr::Fn {
             meta,
@@ -1812,6 +1804,33 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             meta, index, tuple, ..
         } => infer_tuple_index(*tuple, index, meta, level, env),
     }
+}
+
+fn infer_pipe(
+    left: UntypedExpr,
+    right: UntypedExpr,
+    meta: Meta,
+    level: usize,
+    env: &mut Env,
+) -> Result<TypedExpr, Error> {
+    // Infer types of left and right hand side
+    let left = Box::new(infer(left, level, env)?);
+    let right = Box::new(infer(right, level, env)?);
+
+    // Attempt to infer a |> b as b(a)
+    let typ = env.new_unbound_var(level);
+    let fn_typ = Arc::new(Type::Fn {
+        args: vec![left.typ()],
+        retrn: typ.clone(),
+    });
+    unify(right.typ(), fn_typ, env).map_err(|e| convert_unify_error(e, &meta))?;
+
+    Ok(TypedExpr::Pipe {
+        meta,
+        typ,
+        right,
+        left,
+    })
 }
 
 fn infer_nil(meta: Meta, level: usize, env: &mut Env) -> Result<TypedExpr, Error> {
@@ -2770,7 +2789,6 @@ fn do_infer_fn(
 
 fn bin_op_name(name: &BinOp) -> String {
     match name {
-        BinOp::Pipe => "|>".to_string(),
         BinOp::And => "&&".to_string(),
         BinOp::Or => "||".to_string(),
         BinOp::LtInt => "<".to_string(),

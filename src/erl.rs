@@ -237,7 +237,6 @@ fn seq(first: TypedExpr, then: TypedExpr, env: &mut Env) -> Document {
 // TODO: Surround left or right in parens if required
 fn bin_op(name: BinOp, left: TypedExpr, right: TypedExpr, env: &mut Env) -> Document {
     let op = match name {
-        BinOp::Pipe => return pipe(left, right, env),
         BinOp::And => "andalso",
         BinOp::Or => "orelse",
         BinOp::LtInt | BinOp::LtFloat => "<",
@@ -657,6 +656,7 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
         TypedExpr::Float { value, .. } => value.to_doc(),
         TypedExpr::String { value, .. } => string(value),
         TypedExpr::Seq { first, then, .. } => seq(*first, *then, env),
+        TypedExpr::Pipe { left, right, .. } => pipe(*left, *right, env),
 
         TypedExpr::TupleIndex { tuple, index, .. } => tuple_index(*tuple, index, env),
 
