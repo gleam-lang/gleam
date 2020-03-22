@@ -69,34 +69,16 @@ impl Documentable for RecordConstructor {
     }
 }
 
-pub fn function_signature(
-    meta: Meta,
-    name: String,
-    args: Vec<Arg>,
-    public: bool,
-    return_annotation: Option<TypeAst>,
-) -> Document {
-    if public { "pub ".to_doc() } else { nil() }
-        .append(format!("fn {}(", name))
-        .append(args_to_doc(args))
-        .append(")")
-        .append(if let Some(anno) = return_annotation {
-            " -> ".to_doc().append(anno)
-        } else {
-            nil()
-        })
-}
-
 impl Documentable for UntypedStatement {
     fn to_doc(self) -> Document {
         match self {
             Statement::Fn {
-                meta,
                 name,
                 args,
                 body,
                 public,
                 return_annotation,
+                ..
             } => if public { "pub ".to_doc() } else { nil() }
                 .append(format!("fn {}(", name))
                 .append(args_to_doc(args))
@@ -113,11 +95,11 @@ impl Documentable for UntypedStatement {
                 .append(lines(2)),
 
             Statement::TypeAlias {
-                meta,
                 alias,
                 args,
                 resolved_type,
                 public,
+                ..
             } => format!("{}type {}", if public { "pub " } else { "" }, alias)
                 .to_doc()
                 .append(if args.is_empty() {
@@ -131,11 +113,11 @@ impl Documentable for UntypedStatement {
                 .append(lines(2)),
 
             Statement::CustomType {
-                meta,
                 name,
                 args,
                 public,
                 constructors,
+                ..
             } => if public { "pub ".to_doc() } else { nil() }
                 .to_doc()
                 .append("type ")
@@ -158,13 +140,13 @@ impl Documentable for UntypedStatement {
                 .append(lines(2)),
 
             Statement::ExternalFn {
-                meta,
                 public,
                 args,
                 name,
                 retrn,
                 module,
                 fun,
+                ..
             } => if public { "pub ".to_doc() } else { nil() }
                 .to_doc()
                 .append("external fn ")
@@ -184,10 +166,7 @@ impl Documentable for UntypedStatement {
                 .append("\n\n"),
 
             Statement::ExternalType {
-                meta,
-                public,
-                name,
-                args,
+                public, name, args, ..
             } => if public { "pub ".to_doc() } else { nil() }
                 .to_doc()
                 .append(if args.is_empty() {
@@ -202,10 +181,10 @@ impl Documentable for UntypedStatement {
                 .append("\n\n"),
 
             Statement::Import {
-                meta,
                 module,
                 as_name,
                 unqualified,
+                ..
             } => nil()
                 .append("import ")
                 .append(module.join("/"))
@@ -286,35 +265,29 @@ impl Documentable for BinOp {
 impl Documentable for UntypedPattern {
     fn to_doc(self) -> Document {
         match self {
-            Pattern::Int { meta, value } => value.to_doc(),
+            Pattern::Int { value, .. } => value.to_doc(),
 
-            Pattern::Float { meta, value } => value.to_doc(),
+            Pattern::Float { value, .. } => value.to_doc(),
 
-            Pattern::String { meta, value } => value.to_doc().surround("\"", "\""),
+            Pattern::String { value, .. } => value.to_doc().surround("\"", "\""),
 
-            Pattern::Var { meta, name } => name.to_doc(),
+            Pattern::Var { name, .. } => name.to_doc(),
 
-            Pattern::Let { name, pattern } => pattern.to_doc().append("as").append(name),
+            Pattern::Let { name, pattern, .. } => pattern.to_doc().append("as").append(name),
 
-            Pattern::Discard { meta } => "_".to_doc(),
+            Pattern::Discard { .. } => "_".to_doc(),
 
-            Pattern::Nil { meta } => "[]".to_doc(),
+            Pattern::Nil { .. } => "[]".to_doc(),
 
-            Pattern::Cons { meta, head, tail } => head
+            Pattern::Cons { head, tail, .. } => head
                 .to_doc()
                 .append("|")
                 .append((*tail).clone())
                 .surround("[", "]"),
 
-            Pattern::Constructor {
-                meta,
-                name,
-                args,
-                module,
-                constructor,
-            } => nil(),
+            Pattern::Constructor { .. } => todo!(), // TODO
 
-            Pattern::Tuple { meta, elems } => args_to_doc(elems).surround("(", ")"),
+            Pattern::Tuple { elems, .. } => args_to_doc(elems).surround("(", ")"),
         }
     }
 }
@@ -349,26 +322,26 @@ impl Documentable for UntypedExpr {
 
             UntypedExpr::Pipe { left, right, .. } => left.to_doc().append(" |> ").append(*right),
 
-            UntypedExpr::Int { meta, value } => value.to_doc(),
+            UntypedExpr::Int { value, .. } => value.to_doc(),
 
-            UntypedExpr::Float { meta, value } => value.to_doc(),
+            UntypedExpr::Float { value, .. } => value.to_doc(),
 
-            UntypedExpr::String { meta, value } => value.to_doc().surround("\"", "\""),
+            UntypedExpr::String { value, .. } => value.to_doc().surround("\"", "\""),
 
-            UntypedExpr::Seq { first, then } => nil(),
+            UntypedExpr::Seq { .. } => todo!(),
 
-            UntypedExpr::Var { meta, name } => name.to_doc(),
+            UntypedExpr::Var { name, .. } => name.to_doc(),
 
             UntypedExpr::TupleIndex { tuple, index, .. } => {
                 tuple.to_doc().append(".").append(index)
             }
 
             UntypedExpr::Fn {
-                meta,
-                is_capture,
-                return_annotation, // TODO: render this annotation
+                // is_capture, // TODO: render captures
+                // return_annotation, // TODO: render this annotation
                 args,
                 body,
+                ..
             } => "fn("
                 .to_doc()
                 .append(args_to_doc(args).nest_current())
@@ -377,29 +350,26 @@ impl Documentable for UntypedExpr {
                 .append((*body).clone())
                 .append("\n}"),
 
-            UntypedExpr::Nil { meta } => "[]".to_doc(),
+            UntypedExpr::Nil { .. } => "[]".to_doc(),
 
-            UntypedExpr::Cons { meta, head, tail } => {
+            UntypedExpr::Cons { head, tail, .. } => {
                 Document::Cons(Box::new(head.to_doc().append("|")), Box::new(tail.to_doc()))
                     .surround("[", "]")
             }
 
-            UntypedExpr::Call { meta, fun, args } => fun
+            UntypedExpr::Call { fun, args, .. } => fun
                 .to_doc()
                 .append(args_to_doc(args).nest_current().surround("(", ")")),
 
             UntypedExpr::BinOp {
-                meta,
-                name,
-                left,
-                right,
+                name, left, right, ..
             } => left.to_doc().append(name).append(*right.clone()),
 
             UntypedExpr::Let {
-                meta,
                 value,
                 pattern,
                 then,
+                ..
             } => "let "
                 .to_doc()
                 .append(pattern)
@@ -409,9 +379,7 @@ impl Documentable for UntypedExpr {
                 .append(*then),
 
             UntypedExpr::Case {
-                meta,
-                subjects,
-                clauses,
+                subjects, clauses, ..
             } => "case "
                 .to_doc()
                 .append(concat(
@@ -430,12 +398,10 @@ impl Documentable for UntypedExpr {
                 .append("}"),
 
             UntypedExpr::FieldAccess {
-                meta,
-                label,
-                container,
+                label, container, ..
             } => container.to_doc().append(format!(".{}", label)),
 
-            UntypedExpr::Tuple { meta, elems } => {
+            UntypedExpr::Tuple { elems, .. } => {
                 args_to_doc(elems).nest(4).group().surround("(", ")")
             }
         }
@@ -445,12 +411,7 @@ impl Documentable for UntypedExpr {
 impl Documentable for TypeAst {
     fn to_doc(self) -> Document {
         match self {
-            TypeAst::Constructor {
-                meta,
-                module,
-                name,
-                args,
-            } => {
+            TypeAst::Constructor { name, args, .. } => {
                 if args.is_empty() {
                     name.to_doc()
                 } else {
@@ -461,14 +422,14 @@ impl Documentable for TypeAst {
                 }
             }
 
-            TypeAst::Fn { meta, args, retrn } => delim("(")
+            TypeAst::Fn { args, retrn, .. } => delim("(")
                 .append(args_to_doc(args).nest(4))
                 .append(") -> ")
                 .append(retrn.to_doc()),
 
-            TypeAst::Var { meta, name } => name.to_doc(),
+            TypeAst::Var { name, .. } => name.to_doc(),
 
-            TypeAst::Tuple { meta, elems } => args_to_doc(elems).nest(4).surround("(", ")"),
+            TypeAst::Tuple { elems, .. } => args_to_doc(elems).nest(4).surround("(", ")"),
         }
     }
 }
