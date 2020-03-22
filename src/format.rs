@@ -101,7 +101,7 @@ impl Documentable for &UntypedStatement {
                     nil()
                 })
                 .append(" {")
-                .append(line().append(body).nest(4).group())
+                .append(line().append(body).nest(INDENT).group())
                 .append(line())
                 .append("}")
                 .append(lines(2)),
@@ -148,7 +148,7 @@ impl Documentable for &UntypedStatement {
                 .append(concat(
                     constructors
                         .into_iter()
-                        .map(|c| line().append(c).nest(4).group()),
+                        .map(|c| line().append(c).nest(INDENT).group()),
                 ))
                 .append(line())
                 .append("}")
@@ -166,19 +166,14 @@ impl Documentable for &UntypedStatement {
                 .to_doc()
                 .append("external fn ")
                 .group()
-                .append(format!("{}(", name))
+                .append(name.to_string())
                 .append(wrap_args(args.iter().map(|e| e.to_doc())))
-                .append(")")
-                .append(" -> ".to_doc().append(retrn))
+                .append(" -> ".to_doc())
+                .append(retrn)
                 .append(" =")
-                .append(
-                    line()
-                        .append(format!("\"{}\" ", module))
-                        .append(format!("\"{}\"", fun))
-                        .nest(4)
-                        .group(),
-                )
-                .append("\n\n"),
+                .append(line())
+                .append(format!("  \"{}\" ", module))
+                .append(format!("\"{}\"", fun)),
 
             Statement::ExternalType {
                 public, name, args, ..
@@ -420,7 +415,7 @@ impl Documentable for &UntypedExpr {
                 .append(concat(
                     clauses
                         .into_iter()
-                        .map(|c| line().append(c).nest(4).group()),
+                        .map(|c| line().append(c).nest(INDENT).group()),
                 ))
                 .append(line())
                 .append("}"),
@@ -443,20 +438,24 @@ impl Documentable for &TypeAst {
                 name.to_string().to_doc().append(if args.is_empty() {
                     nil()
                 } else {
-                    wrap_args(args.iter().map(|e| e.to_doc())).nest(4).group()
+                    wrap_args(args.iter().map(|e| e.to_doc()))
                 })
             }
 
             TypeAst::Fn { args, retrn, .. } => delim("(")
-                .append(wrap_args(args.iter().map(|e| e.to_doc())).nest(4).group())
+                .append(
+                    wrap_args(args.iter().map(|e| e.to_doc()))
+                        .nest(INDENT)
+                        .group(),
+                )
                 .append(") -> ")
                 .append(retrn.to_doc()),
 
             TypeAst::Var { name, .. } => name.clone().to_doc(),
 
-            TypeAst::Tuple { elems, .. } => wrap_args(elems.iter().map(|e| e.to_doc()))
-                .nest(4)
-                .surround("(", ")"),
+            TypeAst::Tuple { elems, .. } => "tuple"
+                .to_doc()
+                .append(wrap_args(elems.iter().map(|e| e.to_doc()))),
         }
     }
 }
@@ -469,5 +468,10 @@ pub fn wrap_args<I>(args: I) -> Document
 where
     I: Iterator<Item = Document>,
 {
-    crate::pretty::helper::wrap_args(INDENT, args)
+    break_("", "")
+        .append(concat(args.intersperse(delim(","))))
+        .nest(INDENT)
+        .append(break_(",", ""))
+        .surround("(", ")")
+        .group()
 }
