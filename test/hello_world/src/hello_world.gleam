@@ -1,9 +1,16 @@
-import other
+import first import second import another
+/ one
+/ yes
 
-fn id(x: a, y: b) {
-  x
-}
+import other / ok
 
-pub fn x() {
-  id(1.0, 1)
-}
+pub
+external
+            type
+                Thing
+
+fn my_formatting_rocks
+() -> Nil
+    {
+        todo
+    }

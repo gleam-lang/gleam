@@ -31,7 +31,7 @@ use crate::error::Error;
 use crate::project::ModuleOrigin;
 use serde::Deserialize;
 use std::fs::File;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::PathBuf;
 use structopt::clap::AppSettings;
 use structopt::StructOpt;
@@ -67,6 +67,9 @@ enum Command {
         )]
         template: new::Template,
     },
+
+    #[structopt(name = "format", about = "Format Gleam code")]
+    Format {},
 }
 
 #[derive(Deserialize)]
@@ -77,6 +80,8 @@ struct ProjectConfig {
 fn main() {
     let result = match Command::from_args() {
         Command::Build { path } => command_build(path),
+
+        Command::Format {} => command_format(),
 
         Command::New {
             name,
@@ -181,7 +186,6 @@ fn command_build(root: String) -> Result<(), Error> {
 }
 
 fn read_project_config(root: &str) -> Result<ProjectConfig, Error> {
-    use std::io::Read;
     let config_path = PathBuf::from(root).join("gleam.toml");
 
     let mut file = File::open(&config_path).map_err(|e| Error::FileIO {
@@ -207,4 +211,22 @@ fn read_project_config(root: &str) -> Result<ProjectConfig, Error> {
     })?;
 
     Ok(project_config)
+}
+
+fn command_format() -> Result<(), Error> {
+    let mut src = String::new();
+    std::io::stdin()
+        .read_to_string(&mut src)
+        .expect("Reading stdin");
+
+    let formatted = crate::format::pretty(src.as_ref()).map_err(|error| Error::Parse {
+        path: PathBuf::new(), // TODO
+        error,
+        src,
+    })?;
+
+    std::io::stdout()
+        .write(formatted.as_bytes())
+        .expect("Writing stdout");
+    Ok(())
 }
