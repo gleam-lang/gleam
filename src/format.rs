@@ -268,6 +268,16 @@ impl Documentable for &CallArg<UntypedExpr> {
     }
 }
 
+impl Documentable for &CallArg<UntypedPattern> {
+    fn to_doc(self) -> Document {
+        match &self.label {
+            Some(s) => s.clone().to_doc().append(": "),
+            None => nil(),
+        }
+        .append(&self.value)
+    }
+}
+
 impl Documentable for &BinOp {
     fn to_doc(self) -> Document {
         match self {
@@ -306,10 +316,10 @@ impl Documentable for &UntypedPattern {
 
             Pattern::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
 
-            Pattern::Var { name, .. } => name.clone().to_doc(),
+            Pattern::Var { name, .. } => name.to_string().to_doc(),
 
             Pattern::Let { name, pattern, .. } => {
-                pattern.to_doc().append("as").append(name.clone())
+                pattern.to_doc().append(" as ").append(name.to_string())
             }
 
             Pattern::Discard { .. } => "_".to_doc(),
@@ -322,11 +332,45 @@ impl Documentable for &UntypedPattern {
                 .append(tail.as_ref())
                 .surround("[", "]"),
 
-            Pattern::Constructor { .. } => todo!(), // TODO
+            Pattern::Constructor {
+                name,
+                args,
+                module: None,
+                ..
+            } if args.is_empty() => name.to_string().to_doc(),
 
-            Pattern::Tuple { elems, .. } => {
-                wrap_args(elems.iter().map(|e| e.to_doc())).surround("(", ")")
-            }
+            Pattern::Constructor {
+                name,
+                args,
+                module: Some(m),
+                ..
+            } if args.is_empty() => m.to_string().to_doc().append(".").append(name.to_string()),
+
+            Pattern::Constructor {
+                name,
+                args,
+                module: None,
+                ..
+            } => name
+                .to_string()
+                .to_doc()
+                .append(wrap_args(args.iter().map(|a| a.to_doc()))),
+
+            Pattern::Constructor {
+                name,
+                args,
+                module: Some(m),
+                ..
+            } => m
+                .to_string()
+                .to_doc()
+                .append(".")
+                .append(name.to_string())
+                .append(wrap_args(args.iter().map(|a| a.to_doc()))),
+
+            Pattern::Tuple { elems, .. } => "tuple"
+                .to_doc()
+                .append(wrap_args(elems.iter().map(|e| e.to_doc()))),
         }
     }
 }
@@ -352,9 +396,12 @@ impl Documentable for &UntypedExpr {
         match self {
             UntypedExpr::Todo { .. } => "todo".to_doc(),
 
-            UntypedExpr::Pipe { left, right, .. } => {
-                left.to_doc().append(" |> ").append(right.as_ref())
-            }
+            UntypedExpr::Pipe { left, right, .. } => left
+                .to_doc()
+                .append(force_break())
+                .append(line())
+                .append("|> ")
+                .append(right.as_ref()),
 
             UntypedExpr::Int { value, .. } => value.to_doc(),
 
@@ -362,7 +409,11 @@ impl Documentable for &UntypedExpr {
 
             UntypedExpr::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
 
-            UntypedExpr::Seq { .. } => todo!(),
+            UntypedExpr::Seq { first, then, .. } => first
+                .to_doc()
+                .append(force_break())
+                .append(line())
+                .append(then.as_ref()),
 
             UntypedExpr::Var { name, .. } => name.clone().to_doc(),
 
