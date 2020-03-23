@@ -322,25 +322,213 @@ pub external type Four
     );
 
     //
-    // Exprs...
+    // Simple exprs
     //
-}
 
-// pub type RoseTree(a) {
-//   Node(val: a, children: List(RoseTree(a)))
-//   Leaf(val: a)
-// }
+    assert_format!(
+        "fn main() {
+  todo
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  1
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  1.0
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  Nil
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  tuple(-1, -2.9)
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  []
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  Ok(1)
+}
+"
+    );
+
+    assert_format!(
+        r#"fn main() {
+  Person(name: "Al", is_cool: VeryTrue)
+}
+"#
+    );
+
+    //
+    // Call exprs
+    //
+
+    assert_format!(
+        r#"fn main() {
+  run()
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  run(1)
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  run(with: 1)
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  run(
+    with: 1,
+    loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong: 1,
+  )
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  run(
+    with: something(1, 2, 3),
+    loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong: 1,
+  )
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  run(
+    with: something(
+      loooooooooooooooooooooooooooooooooooooooong: 1,
+      looooooooooooooooooooooooooooooooooooooooong: 2,
+    ),
+    loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong: 1,
+  )
+}
+"#
+    );
+
+    //
+    // Module function args
+    //
+
+    assert_format!(
+        r#"fn main(one, two, three) {
+  Nil
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main(label_one one, label_two two, label_three three) {
+  Nil
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main(label_one one: One, label_two two: Two) {
+  Nil
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main(
+  label_one one: One,
+  label_two two: Two,
+  label_three three: Three,
+  label_four four: Four,
+) {
+  Nil
+}
+"#
+    );
+
+    //
+    // Module function return annotations
+    //
+
+    assert_format!(
+        r#"fn main() -> Nil {
+  Nil
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main(
+) -> Loooooooooooooooooooong(
+  Looooooooooooooong,
+  Looooooooooooooooooong,
+  Loooooooooooooooooooooong,
+  Looooooooooooooooooooooooong,
+) {
+  Nil
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main(
+) -> Loooooooooooooooooooong(Loooooooooooooooooooooooooooooooooooooooooong) {
+  Nil
+}
+"#
+    );
+
+    //
+    // Field access
+    //
+
+    assert_format!(
+        r#"fn main() {
+  one.two
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  one.two.three.four
+}
+"#
+    );
+}
 
 // fn fully_typed(first: Int) -> Int {
 //     first + 1
-// }
-
-// fn id(x: a, y: b) {
-//     x
-// }
-
-// pub fn x() {
-//     id(1.0, 1)
 // }
 
 // fn lets() {
