@@ -322,66 +322,6 @@ pub external type Four
     );
 
     //
-    // Simple exprs
-    //
-
-    assert_format!(
-        "fn main() {
-  todo
-}
-"
-    );
-
-    assert_format!(
-        "fn main() {
-  1
-}
-"
-    );
-
-    assert_format!(
-        "fn main() {
-  1.0
-}
-"
-    );
-
-    assert_format!(
-        "fn main() {
-  Nil
-}
-"
-    );
-
-    assert_format!(
-        "fn main() {
-  tuple(-1, -2.9)
-}
-"
-    );
-
-    assert_format!(
-        "fn main() {
-  []
-}
-"
-    );
-
-    assert_format!(
-        "fn main() {
-  Ok(1)
-}
-"
-    );
-
-    assert_format!(
-        r#"fn main() {
-  Person(name: "Al", is_cool: VeryTrue)
-}
-"#
-    );
-
-    //
     // Call exprs
     //
 
@@ -440,7 +380,7 @@ pub external type Four
     );
 
     //
-    // Module function args
+    // Fn
     //
 
     assert_format!(
@@ -509,7 +449,567 @@ pub external type Four
     );
 
     //
-    // Field access
+    // Binary operators
+    //
+
+    assert_format!(
+        r#"fn main() {
+  True && False
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  True || False
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  1 < 1
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  1 <= 1
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  1.0 <. 1.0
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  1.0 <=. 1.0
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  1 == 1
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  1 != 1
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  1 >= 1
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  1 > 1
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  1.0 >=. 1.0
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  1.0 >. 1.0
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  1 + 1
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  1.0 +. 1.0
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  1 - 1
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  1.0 -. 1.0
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  1 * 1
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  1.0 *. 1.0
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  1 / 1
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  1.0 /. 1.0
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  1 % 1
+}
+"#
+    );
+
+    //
+    // Int
+    //
+
+    assert_format!(
+        r#"fn main() {
+  1
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  121234345989000
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  -12928347925
+}
+"#
+    );
+
+    //
+    // Float
+    //
+
+    assert_format!(
+        r#"fn main() {
+  1.0
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  -1.0
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  9999.6666
+}
+"#
+    );
+
+    //
+    // String
+    //
+
+    assert_format!(
+        r#"fn main() {
+  "Hello"
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  "Hello
+
+World"
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  "\\n\\t"
+}
+"#
+    );
+
+    //
+    // Seq
+    //
+
+    assert_format!(
+        r#"fn main() {
+  1
+  2
+  3
+}
+"#
+    );
+
+    //
+    // Var
+    //
+
+    assert_format!(
+        r#"fn main() {
+  one
+}
+"#
+    );
+
+    //
+    // ListNil
+    //
+
+    assert_format!(
+        "fn main() {
+  Nil
+}
+"
+    );
+
+    //
+    // ListCons
+    //
+
+    // TODO
+
+    //
+    // Call
+    //
+
+    assert_format!(
+        "fn main() {
+  succ(1)
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  add(1)(2)(3)
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  Ok(1)
+}
+"
+    );
+
+    assert_format!(
+        r#"fn main() {
+  Person("Al", is_cool: VeryTrue)
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  Person(name: "Al", is_cool: VeryTrue)
+}
+"#
+    );
+
+    //
+    // Pipe
+    //
+
+    // TODO
+    //    assert_format!(
+    //        r#"fn main() {
+    //  1 |> succ
+    //}
+    //"#
+    //    );
+
+    // TODO
+    //    assert_format!(
+    //        r#"fn main() {
+    //  1 |> succ |> succ |> succ
+    //}
+    //"#
+    //    );
+
+    assert_format!(
+        r#"fn main() {
+  1
+  |> really_long_variable_name
+  |> really_long_variable_name
+  |> really_long_variable_name
+  |> really_long_variable_name
+  |> really_long_variable_name
+  |> really_long_variable_name
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  tuple(
+    1
+    |> succ
+    |> succ,
+  )
+}
+"#
+    );
+
+    //
+    // Let
+    //
+
+    assert_format!(
+        r#"fn main() {
+  let x = 1
+  Nil
+}
+"#
+    );
+
+    //
+    // Pattern::Int
+    //
+
+    //
+    // Pattern::Float
+    //
+
+    //
+    // Pattern::String
+    //
+
+    //
+    // Pattern::Var
+    //
+
+    assert_format!(
+        r#"fn main() {
+  let x = 1
+  let y = 1
+  Nil
+}
+"#
+    );
+
+    //
+    // Pattern::Let
+    //
+
+    assert_format!(
+        r#"fn main() {
+  let x as y = 1
+  Nil
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  let tuple(x, y, 123 as z) = 1
+  Nil
+}
+"#
+    );
+
+    //
+    // Pattern::Discard
+    //
+
+    assert_format!(
+        r#"fn main() {
+  let _ = 1
+  Nil
+}
+"#
+    );
+
+    // TODO
+    //    assert_format!(
+    //        r#"fn main() {
+    //  let _foo = 1
+    //  Nil
+    //}
+    //"#
+    //    );
+
+    //
+    // Pattern::Nil
+    //
+
+    assert_format!(
+        r#"fn main() {
+  let [] = 1
+  Nil
+}
+"#
+    );
+
+    //
+    // Pattern::Cons
+    //
+
+    // TODO: more lists
+    //    assert_format!(
+    //        r#"fn main() {
+    //  let [1] = 1
+    //  Nil
+    //}
+    //"#
+    //    );
+
+    //
+    // Pattern::Constructor
+    //
+
+    assert_format!(
+        r#"fn main() {
+  let True = 1
+  Nil
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  let False = 1
+  Nil
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  let Ok(1) = 1
+  Nil
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  let Person(name, age: age) = 1
+  Nil
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  let Person(name: name, age: age) = 1
+  Nil
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  let Person(age: age, name: name) = 1
+  Nil
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  let Person(
+    age: really_long_variable_name,
+    name: really_long_variable_name,
+  ) = 1
+  Nil
+}
+"#
+    );
+
+    //
+    // Pattern::Tuple
+    //
+
+    assert_format!(
+        r#"fn main() {
+  let tuple() = 1
+  Nil
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  let tuple(x) = 1
+  Nil
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  let tuple(x, y) = 1
+  Nil
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  let tuple(x, y, z) = 1
+  Nil
+}
+"#
+    );
+
+    //
+    // Case
+    //
+
+    // TODO
+
+    //
+    // FieldAccess
     //
 
     assert_format!(
@@ -525,24 +1025,93 @@ pub external type Four
 }
 "#
     );
+
+    //
+    // Tuple
+    //
+
+    assert_format!(
+        r#"fn main() {
+  tuple()
 }
+"#
+    );
 
-// fn fully_typed(first: Int) -> Int {
-//     first + 1
-// }
+    assert_format!(
+        r#"fn main() {
+  tuple(1)
+}
+"#
+    );
 
-// fn lets() {
-//     let x = 1
-//     let y = 2
-//     x + y
-// }
+    assert_format!(
+        r#"fn main() {
+  tuple(1, 2)
+}
+"#
+    );
 
-// fn patterns(x) {
-//     case x {
-//         1 -> 42
-//         _other -> {
-//             let x = 3
-//             3 + 4
-//         }
-//     }
-// }
+    assert_format!(
+        r#"fn main() {
+  tuple(1, 2, 3)
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  tuple(
+    really_long_variable_name,
+    really_long_variable_name,
+    really_long_variable_name,
+    really_long_variable_name,
+    really_long_variable_name,
+  )
+}
+"#
+    );
+
+    //
+    // TupleIndex
+    //
+
+    assert_format!(
+        r#"fn main() {
+  tup.0
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  tup.1
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  tup.777
+}
+"#
+    );
+
+    // TODO
+    //    assert_format!(
+    //        r#"fn main() {
+    //  {tup.1}.2
+    //}
+    //"#
+    //    );
+
+    //
+    // Todo
+    //
+
+    assert_format!(
+        "fn main() {
+  todo
+}
+"
+    );
+}
