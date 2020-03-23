@@ -123,8 +123,7 @@ impl Documentable for &UntypedStatement {
                 .append(" {")
                 .append(line().append(body).nest(INDENT).group())
                 .append(line())
-                .append("}")
-                .append(lines(2)),
+                .append("}"),
 
             Statement::TypeAlias {
                 alias,
@@ -392,11 +391,9 @@ impl Documentable for &UntypedExpr {
                     .surround("[", "]")
             }
 
-            UntypedExpr::Call { fun, args, .. } => fun.to_doc().append(
-                wrap_args(args.iter().map(|e| e.to_doc()))
-                    .nest_current()
-                    .surround("(", ")"),
-            ),
+            UntypedExpr::Call { fun, args, .. } => fun
+                .to_doc()
+                .append(wrap_args(args.iter().map(|e| e.to_doc()))),
 
             UntypedExpr::BinOp {
                 name, left, right, ..
@@ -448,13 +445,12 @@ impl Documentable for &UntypedExpr {
 impl Documentable for &TypeAst {
     fn to_doc(self) -> Document {
         match self {
-            TypeAst::Constructor { name, args, .. } => {
-                name.to_string().to_doc().append(if args.is_empty() {
-                    nil()
-                } else {
-                    wrap_args(args.iter().map(|e| e.to_doc()))
-                })
-            }
+            TypeAst::Constructor { name, args, .. } if args.is_empty() => name.to_string().to_doc(),
+
+            TypeAst::Constructor { name, args, .. } => name
+                .to_string()
+                .to_doc()
+                .append(wrap_args(args.iter().map(|e| e.to_doc()))),
 
             TypeAst::Fn { args, retrn, .. } => "fn"
                 .to_string()
@@ -476,6 +472,10 @@ pub fn wrap_args<I>(args: I) -> Document
 where
     I: Iterator<Item = Document>,
 {
+    let mut args = args.peekable();
+    if let None = args.peek() {
+        return "(".to_doc().append(break_("", "")).append(")").group();
+    }
     break_("(", "(")
         .append(concat(args.intersperse(delim(","))))
         .nest(INDENT)
