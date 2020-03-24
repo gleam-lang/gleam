@@ -32,7 +32,6 @@ extern crate lalrpop_util;
 #[macro_use]
 extern crate lazy_static;
 
-#[macro_use]
 extern crate serde_json;
 
 #[macro_use]

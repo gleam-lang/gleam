@@ -6,7 +6,8 @@ use std::collections::HashMap;
 
 #[derive(Debug, PartialEq)]
 struct RawComment {
-  pub line_no: usize,
+  pub start: usize,
+  pub end: usize,
   pub content: String,
 }
 
@@ -26,23 +27,11 @@ impl DocBlockManager {
     }
   }
 
-  pub(self) fn block_count(self: &Self) -> usize {
-    if self.current_block.is_empty() {
-      self.blocks.len()
-    } else {
-      self.blocks.len() + 1
-    }
-  }
-
-  pub(self) fn comment_count(self: &Self) -> usize {
-    self.num_comments
-  }
-
   pub(self) fn find_block_for_line(self: &Self, line_no: usize) -> Option<String> {
     for block in &self.blocks {
       if block
         .last()
-        .and_then(|b: &RawComment| Some(b.line_no == line_no - 1))
+        .and_then(|b: &RawComment| Some(b.end + 1 == line_no))
         .unwrap_or(false)
       {
         let doc_text = block.iter().map(|b| b.content.to_string()).join("\n");
@@ -53,7 +42,7 @@ impl DocBlockManager {
     if self
       .current_block
       .last()
-      .and_then(|b: &RawComment| Some(b.line_no == line_no - 1))
+      .and_then(|b: &RawComment| Some(b.end + 1 == line_no))
       .unwrap_or(false)
     {
       let doc_text = self
@@ -67,18 +56,17 @@ impl DocBlockManager {
     None
   }
 
-  pub fn add_line(self: &mut Self, line_no: usize, content: String) {
+  pub fn add_line(self: &mut Self, end: usize, content: String) {
+    let length = content.len();
+    let start = end - length - 3;
+    let new_line = RawComment {
+      start,
+      end,
+      content,
+    };
     match self.current_block.last() {
-      Some(RawComment {
-        line_no: l,
-        content: c,
-      }) => {
-        let length = content.len();
-        let new_line = RawComment {
-          line_no: line_no,
-          content,
-        };
-        if (line_no - length - 4) == *l {
+      Some(RawComment { end: e, .. }) => {
+        if (new_line.start) == *e + 1 {
           self.current_block.push(new_line);
         } else {
           let copy = std::mem::replace(&mut self.current_block, vec![]);
@@ -87,7 +75,7 @@ impl DocBlockManager {
         }
       }
       None => {
-        self.current_block.push(RawComment { line_no, content });
+        self.current_block.push(new_line);
       }
     }
     self.num_comments = self.num_comments + 1;
@@ -95,6 +83,7 @@ impl DocBlockManager {
 
   pub fn gen_doc_chunk(self: &Self, module: &TypedModule) -> EEP48DocChunk {
     let mut module_doc = HashMap::new();
+    let mut first_statement_line_no = None;
 
     let mut docs = Vec::<EEP48Doc>::new();
     for statement in module.statements.iter() {
@@ -107,8 +96,10 @@ impl DocBlockManager {
           return_annotation,
           ..
         } => {
+          if first_statement_line_no.is_none() {
+            first_statement_line_no = Some(meta.start);
+          }
           let doc = crate::ast::pretty::function_signature(
-            meta.clone(),
             name.clone(),
             args.clone(),
             true,
@@ -120,6 +111,7 @@ impl DocBlockManager {
                 .into_iter()
                 .collect()
             });
+
           docs.push(EEP48Doc {
             name: name.to_string(),
             arity: args.len(),
@@ -136,6 +128,9 @@ impl DocBlockManager {
           resolved_type,
           public: true,
         } => {
+          if first_statement_line_no.is_none() {
+            first_statement_line_no = Some(meta.start);
+          }
           let doc = Statement::<crate::ast::TypedExpr>::TypeAlias {
             meta: meta.clone(),
             args: args.clone(),
@@ -163,6 +158,9 @@ impl DocBlockManager {
           constructors,
           ..
         } => {
+          if first_statement_line_no.is_none() {
+            first_statement_line_no = Some(meta.start);
+          }
           let doc = Statement::<crate::ast::TypedExpr>::CustomType {
             meta: meta.clone(),
             args: args.clone(),
@@ -188,27 +186,17 @@ impl DocBlockManager {
           name,
           args,
           retrn,
+          public: true,
           ..
         } => {
-          use crate::ast;
-          let doc = crate::ast::pretty::function_signature(
-            meta.clone(),
+          if first_statement_line_no.is_none() {
+            first_statement_line_no = Some(meta.start);
+          }
+          let doc = crate::ast::pretty::external_function_signature(
             name.clone(),
-            args
-              .clone()
-              .iter()
-              .map(|arg: &ast::ExternalFnArg| ast::Arg {
-                names: arg
-                  .label
-                  .clone()
-                  .map(|l| ast::ArgNames::LabelledDiscard { label: l })
-                  .unwrap_or(ast::ArgNames::Discard),
-                annotation: Some(arg.typ.clone()),
-                meta: ast::Meta { start: 0, end: 0 },
-              })
-              .collect(),
             true,
-            Some(retrn.clone()),
+            args.clone(),
+            retrn.clone(),
           );
           let fn_docs: Option<HashMap<String, String>> = self
             .find_block_for_line(meta.start)
@@ -225,6 +213,9 @@ impl DocBlockManager {
         Statement::ExternalType {
           meta, name, args, ..
         } => {
+          if first_statement_line_no.is_none() {
+            first_statement_line_no = Some(meta.start);
+          }
           let doc = Statement::<crate::ast::TypedExpr>::ExternalType {
             meta: meta.clone(),
             args: args.clone(),
@@ -247,12 +238,22 @@ impl DocBlockManager {
         _ => {}
       }
     }
+
     // TODO: Not the real logic
     module_doc.insert(
       "en-US".to_string(),
       self
         .blocks
         .first()
+        .or(Some(&self.current_block))
+        .filter(|block| {
+          block
+            .first()
+            .map(|comment| {
+              comment.start == 0 && first_statement_line_no.map(|no| no > 0).unwrap_or(true)
+            })
+            .unwrap_or(false)
+        })
         .unwrap_or(&vec![])
         .iter()
         .map(|rc| rc.content.to_string())

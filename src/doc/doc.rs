@@ -22,11 +22,11 @@ pub enum DocType {
 impl std::hash::Hash for DocType {
   fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
     match self {
-      Fn => 1.hash(state),
-      TypeAlias => 2.hash(state),
-      CustomType => 3.hash(state),
-      ExternalFn => 4.hash(state),
-      ExternalType => 5.hash(state),
+      DocType::Fn => 1.hash(state),
+      DocType::TypeAlias => 2.hash(state),
+      DocType::CustomType => 3.hash(state),
+      DocType::ExternalFn => 4.hash(state),
+      DocType::ExternalType => 5.hash(state),
     }
   }
 }
@@ -40,9 +40,9 @@ pub struct ErlAnno {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum CrossReference {
-  ModuleReference {
-    module: Vec<String>,
-  },
+  #[allow(dead_code)]
+  ModuleReference { module: Vec<String> },
+  #[allow(dead_code)]
   ModuleItemReference {
     module: Vec<String>,
     name: String,

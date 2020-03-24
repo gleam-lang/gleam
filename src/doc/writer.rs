@@ -3,7 +3,6 @@ use crate::error::Error;
 use handlebars::Handlebars;
 use pulldown_cmark;
 use serde::Serialize;
-use serde_json::value::{Map, Value as Json};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
@@ -29,7 +28,6 @@ struct Module {
 }
 
 pub struct DocWriter<'a> {
-  chunks: Vec<EEP48DocChunk>,
   project_name: String,
   project_version: String,
   doc_dir: PathBuf,
@@ -49,7 +47,6 @@ handlebars_helper!(markdown: |text: str| render_markdown(text.to_string()));
 impl DocWriter<'_> {
   pub fn new(project_name: String, project_version: String, doc_dir: PathBuf) -> Self {
     DocWriter {
-      chunks: vec![],
       project_name,
       project_version,
       doc_dir,
@@ -59,7 +56,7 @@ impl DocWriter<'_> {
         registry.register_helper("markdown", Box::new(markdown));
         registry
           .register_template_string("module", template)
-          .unwrap_or_else(|e| panic!("Doc Template is missing"));
+          .unwrap_or_else(|_e| panic!("Doc Template is missing"));
         registry
       },
       modules: vec![],
@@ -218,7 +215,7 @@ impl DocWriter<'_> {
     let doc_text = self
       .registry
       .render("module", &module)
-      .map_err(|e| Error::FileIO {
+      .map_err(|_e| Error::FileIO {
         action: FileIOAction::Parse,
         kind: FileKind::File,
         path: doc_dir_path.clone(),
