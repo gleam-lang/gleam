@@ -706,7 +706,7 @@ World"
 
     assert_format!(
         "fn main() {
-  Nil
+  []
 }
 "
     );
@@ -715,7 +715,92 @@ World"
     // ListCons
     //
 
-    // TODO
+    assert_format!(
+        "fn main() {
+  [1]
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  [1, 2, 3]
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  [
+    really_long_variable_name,
+    really_long_variable_name,
+    really_long_variable_name,
+    [1, 2, 3],
+    really_long_variable_name,
+  ]
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  [
+    really_long_variable_name,
+    really_long_variable_name,
+    really_long_variable_name,
+    [
+      really_long_variable_name,
+      really_long_variable_name,
+      really_long_variable_name,
+      2,
+      3,
+      [1, 2, 3, 4],
+    ],
+    really_long_variable_name,
+  ]
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  [1, 2, 3 | x]
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  [
+    really_long_variable_name,
+    really_long_variable_name,
+    really_long_variable_name,
+    | tail
+  ]
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  [
+    really_long_variable_name,
+    really_long_variable_name,
+    really_long_variable_name,
+    [
+      really_long_variable_name,
+      really_long_variable_name,
+      really_long_variable_name,
+      2,
+      3,
+      [1, 2, 3, 4],
+      | tail
+    ],
+    really_long_variable_name,
+  ]
+}
+"
+    );
 
     //
     // Call

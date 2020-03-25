@@ -463,10 +463,12 @@ impl Documentable for &UntypedExpr {
 
             UntypedExpr::Nil { .. } => "[]".to_doc(),
 
-            UntypedExpr::Cons { head, tail, .. } => {
-                Document::Cons(Box::new(head.to_doc().append("|")), Box::new(tail.to_doc()))
-                    .surround("[", "]")
-            }
+            UntypedExpr::Cons { head, tail, .. } => list_cons(
+                head.as_ref(),
+                tail.as_ref(),
+                |e| e.to_doc(),
+                categorise_list_expr,
+            ),
 
             UntypedExpr::Call { fun, args, .. } => fun
                 .to_doc()
@@ -550,6 +552,16 @@ impl Documentable for &TypeAst {
     }
 }
 
+fn categorise_list_expr(expr: &UntypedExpr) -> ListType<&UntypedExpr, &UntypedExpr> {
+    match expr {
+        UntypedExpr::Nil { .. } => ListType::Nil,
+
+        UntypedExpr::Cons { head, tail, .. } => ListType::Cons { head, tail },
+
+        other => ListType::NotList(other),
+    }
+}
+
 pub fn wrap_args<I>(args: I) -> Document
 where
     I: Iterator<Item = Document>,
@@ -564,4 +576,57 @@ where
         .append(break_(",", ""))
         .append(")")
         .group()
+}
+
+fn list_cons<ToDoc: Copy, Categorise, Elem>(
+    head: Elem,
+    tail: Elem,
+    to_doc: ToDoc,
+    categorise_element: Categorise,
+) -> Document
+where
+    ToDoc: Fn(Elem) -> Document,
+    Categorise: Fn(Elem) -> ListType<Elem, Elem>,
+{
+    let mut elems = vec![head];
+    let final_tail = collect_cons(tail, &mut elems, categorise_element);
+
+    let elems = concat(elems.into_iter().map(to_doc).intersperse(delim(",")));
+
+    let doc = break_("[", "[").append(elems);
+
+    match final_tail {
+        None => doc.nest(INDENT).append(break_(",", "")),
+
+        Some(final_tail) => doc
+            .append(break_(",", " "))
+            .append("| ")
+            .append(to_doc(final_tail))
+            .nest(INDENT)
+            .append(break_("", "")),
+    }
+    .append("]")
+    .group()
+}
+
+fn collect_cons<F, E, T>(e: T, elems: &mut Vec<E>, f: F) -> Option<T>
+where
+    F: Fn(T) -> ListType<E, T>,
+{
+    match f(e) {
+        ListType::Nil => None,
+
+        ListType::Cons { head, tail } => {
+            elems.push(head);
+            collect_cons(tail, elems, f)
+        }
+
+        ListType::NotList(other) => Some(other),
+    }
+}
+
+enum ListType<E, T> {
+    Nil,
+    Cons { head: E, tail: T },
+    NotList(T),
 }
