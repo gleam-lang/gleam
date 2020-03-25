@@ -385,15 +385,36 @@ impl Documentable for &UntypedClause {
         );
         match &self.guard {
             None => doc,
-            Some(guard) => clause_guard(&guard),
+            Some(guard) => doc.append(" if ").append(guard),
         }
         .append(" ->")
         .append(line().append(&self.then).nest(INDENT))
     }
 }
 
-fn clause_guard(_guard: &UntypedClauseGuard) -> Document {
-    todo!()
+// TODO: surround sub-expressions where needed
+impl Documentable for &UntypedClauseGuard {
+    fn to_doc(self) -> Document {
+        match self {
+            ClauseGuard::And { left, right, .. } => {
+                left.as_ref().to_doc().append(" && ").append(right.as_ref())
+            }
+
+            ClauseGuard::Or { left, right, .. } => {
+                left.as_ref().to_doc().append(" || ").append(right.as_ref())
+            }
+
+            ClauseGuard::Equals { left, right, .. } => {
+                left.as_ref().to_doc().append(" == ").append(right.as_ref())
+            }
+
+            ClauseGuard::NotEquals { left, right, .. } => {
+                left.as_ref().to_doc().append(" != ").append(right.as_ref())
+            }
+
+            ClauseGuard::Var { name, .. } => name.to_string().to_doc(),
+        }
+    }
 }
 
 impl Documentable for &UntypedExpr {
