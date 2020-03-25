@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Gleam code can be formatted the `gleam format` command.
 - The pipe operator `|>` will now attempt to insert the left hand side as the
   first argument to the right hand side if the right hand side is a call,
   removing the need for function capture boilerplate.
