@@ -377,17 +377,22 @@ impl Documentable for &UntypedPattern {
 
 impl Documentable for &UntypedClause {
     fn to_doc(self) -> Document {
-        "pattern"
-            .to_doc()
-            .append(clause_guard(&self.guard))
-            .append(" -> ")
-            .append(&self.then)
-            .append(line());
-        todo!()
+        let doc = concat(
+            std::iter::once(&self.pattern)
+                .chain(self.alternative_patterns.iter())
+                .map(|p| concat(p.iter().map(|p| p.to_doc()).intersperse(", ".to_doc())))
+                .intersperse(" | ".to_doc()),
+        );
+        match &self.guard {
+            None => doc,
+            Some(guard) => clause_guard(&guard),
+        }
+        .append(" ->")
+        .append(line().append(&self.then).nest(INDENT))
     }
 }
 
-fn clause_guard(_guard: &Option<UntypedClauseGuard>) -> Document {
+fn clause_guard(_guard: &UntypedClauseGuard) -> Document {
     todo!()
 }
 
@@ -474,11 +479,16 @@ impl Documentable for &UntypedExpr {
                         .intersperse(", ".to_doc()),
                 ))
                 .append(" {")
-                .append(concat(
-                    clauses
-                        .into_iter()
-                        .map(|c| line().append(c).nest(INDENT).group()),
-                ))
+                .append(
+                    line()
+                        .append(concat(
+                            clauses
+                                .into_iter()
+                                .map(|c| c.to_doc().group())
+                                .intersperse(lines(2)),
+                        ))
+                        .nest(INDENT),
+                )
                 .append(line())
                 .append("}"),
 

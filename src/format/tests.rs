@@ -813,16 +813,28 @@ World"
     );
 
     //
-    // Pattern::Int
-    //
-
-    //
     // Pattern::Float
     //
+
+    assert_format!(
+        r#"fn main() {
+  let 1 = 1
+  Nil
+}
+"#
+    );
 
     //
     // Pattern::String
     //
+
+    assert_format!(
+        r#"fn main() {
+  let 1.0 = 1
+  Nil
+}
+"#
+    );
 
     //
     // Pattern::Var
@@ -1006,7 +1018,51 @@ World"
     // Case
     //
 
-    // TODO
+    assert_format!(
+        r#"fn main() {
+  case 1 {
+    1 ->
+      1
+
+    1 ->
+      1
+  }
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  case 1, 2, 3, 4 {
+    1, 2, 3, 4 ->
+      1
+
+    1, 2, 3, 4 ->
+      1
+  }
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  case 1 {
+    1 | 2 | 3 ->
+      Nil
+  }
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  case 1, 2 {
+    1, 1 | 2, 2 | 3, 3 ->
+      Nil
+  }
+}
+"#
+    );
 
     //
     // FieldAccess
