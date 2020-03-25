@@ -186,6 +186,7 @@ fn infer_module_type_retention_test() {
 fn infer_test() {
     macro_rules! assert_infer {
         ($src:expr, $typ:expr $(,)?) => {
+            println!("\n{}\n", $src);
             let mut printer = pretty::Printer::new();
             let ast = crate::grammar::ExprParser::new()
                 .parse($src)
@@ -323,7 +324,7 @@ fn infer_test() {
     assert_infer!("let [] = [] 1", "Int");
     assert_infer!("let [a] = [1] a", "Int");
     assert_infer!("let [a, 2] = [1] a", "Int");
-    assert_infer!("let [a | [b | []]] = [1] a", "Int");
+    assert_infer!("let [a | b] = [1] a", "Int");
     assert_infer!("fn(x) { let [a] = x a }", "fn(List(a)) -> a");
     assert_infer!("fn(x) { let [a] = x a + 1 }", "fn(List(Int)) -> Int");
     assert_infer!("let _x = 1 2.0", "Float");

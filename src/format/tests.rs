@@ -991,14 +991,43 @@ World"
     // Pattern::Cons
     //
 
-    // TODO: more lists
-    //    assert_format!(
-    //        r#"fn main() {
-    //  let [1] = 1
-    //  Nil
-    //}
-    //"#
-    //    );
+    assert_format!(
+        r#"fn main() {
+  let [1] = 1
+  Nil
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  let [1, 2, 3, 4] = 1
+  Nil
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  let [1, 2, 3, 4 | x] = 1
+  Nil
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  let [
+    really_long_variable_name,
+    really_long_variable_name,
+    really_long_variable_name,
+    [1, 2, 3, 4, xyz],
+    | thingy
+  ] = 1
+  Nil
+}
+"#
+    );
 
     //
     // Pattern::Constructor

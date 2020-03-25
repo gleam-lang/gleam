@@ -532,7 +532,6 @@ Pattern: UntypedPattern = {
     PatternLet => <>,
     PatternInt => <>,
     PatternNil => <>,
-    PatternCons => <>,
     PatternList => <>,
     PatternFloat => <>,
     PatternString => <>,
@@ -619,25 +618,18 @@ PatternNil: UntypedPattern = {
 }
 
 PatternList: UntypedPattern = {
-    <s:@L> "[" <elems:Comma<Pattern>> "]" <e:@L> => {
+    <s:@L> "[" <elems:Comma<Pattern>> <tail:("|" <PatternVar>)?> "]" <e:@L> => {
+        let tail = tail.unwrap_or_else(|| Pattern::Nil {
+            meta: meta(e - 1, e),
+        });
         elems.into_iter().rev().fold(
-            Pattern::Nil {
-                meta: meta(e - 1, e),
-            },
+            tail,
             |a, e| Pattern::Cons {
                 meta: e.meta().clone(),
                 head: Box::new(e),
                 tail: Box::new(a),
             }
         )
-    }
-}
-
-PatternCons: UntypedPattern = {
-    <s:@L> "[" <head:Pattern> "|" <tail:Pattern> "]" <e:@L> => Pattern::Cons {
-        meta: meta(s, e),
-        head: Box::new(head),
-        tail: Box::new(tail),
     }
 }
 

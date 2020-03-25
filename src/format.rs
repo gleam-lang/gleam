@@ -326,11 +326,12 @@ impl Documentable for &UntypedPattern {
 
             Pattern::Nil { .. } => "[]".to_doc(),
 
-            Pattern::Cons { head, tail, .. } => head
-                .to_doc()
-                .append("|")
-                .append(tail.as_ref())
-                .surround("[", "]"),
+            Pattern::Cons { head, tail, .. } => list_cons(
+                head.as_ref(),
+                tail.as_ref(),
+                |e| e.to_doc(),
+                categorise_list_pattern,
+            ),
 
             Pattern::Constructor {
                 name,
@@ -557,6 +558,16 @@ fn categorise_list_expr(expr: &UntypedExpr) -> ListType<&UntypedExpr, &UntypedEx
         UntypedExpr::Nil { .. } => ListType::Nil,
 
         UntypedExpr::Cons { head, tail, .. } => ListType::Cons { head, tail },
+
+        other => ListType::NotList(other),
+    }
+}
+
+fn categorise_list_pattern(expr: &UntypedPattern) -> ListType<&UntypedPattern, &UntypedPattern> {
+    match expr {
+        UntypedPattern::Nil { .. } => ListType::Nil,
+
+        UntypedPattern::Cons { head, tail, .. } => ListType::Cons { head, tail },
 
         other => ListType::NotList(other),
     }
