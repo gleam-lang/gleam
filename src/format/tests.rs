@@ -1015,7 +1015,7 @@ World"
     );
 
     //
-    // Case
+    // Multiple subjects
     //
 
     assert_format!(
@@ -1044,6 +1044,10 @@ World"
 "#
     );
 
+    //
+    // Alternative patterns
+    //
+
     assert_format!(
         r#"fn main() {
   case 1 {
@@ -1058,6 +1062,69 @@ World"
         r#"fn main() {
   case 1, 2 {
     1, 1 | 2, 2 | 3, 3 ->
+      Nil
+
+    1, 1 | 2, 2 | 3, 3 ->
+      Nil
+
+    1, 1 | 2, 2 | 3, 3 ->
+      Nil
+
+    1, 1 | 2, 2 | 3, 3 ->
+      Nil
+  }
+}
+"#
+    );
+
+    //
+    // Clause guards
+    //
+
+    assert_format!(
+        r#"fn main() {
+  case 1 {
+    _ if x == y ->
+      Nil
+  }
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  case 1 {
+    _ if x != y ->
+      Nil
+  }
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  case 1 {
+    _ if x || y ->
+      Nil
+  }
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  case 1 {
+    _ if x && y ->
+      Nil
+  }
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  case 1 {
+    _ if x != y && x == z ->
       Nil
   }
 }
