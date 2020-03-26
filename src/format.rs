@@ -388,8 +388,8 @@ impl Documentable for &UntypedClause {
             None => doc,
             Some(guard) => doc.append(" if ").append(guard),
         }
-        .append(" ->")
-        .append(line().append(&self.then).nest(INDENT))
+        .append(" -> ")
+        .append(clause_then(&self.then))
     }
 }
 
@@ -507,7 +507,7 @@ impl Documentable for &UntypedExpr {
                             clauses
                                 .into_iter()
                                 .map(|c| c.to_doc().group())
-                                .intersperse(lines(2)),
+                                .intersperse(lines(1)),
                         ))
                         .nest(INDENT),
                 )
@@ -544,6 +544,19 @@ fn wrap_expr(expr: &UntypedExpr) -> Document {
             .append("}"),
 
         _ => expr.to_doc(),
+    }
+}
+
+fn clause_then(expr: &UntypedExpr) -> Document {
+    match expr {
+        UntypedExpr::Seq { .. } | UntypedExpr::Let { .. } => "{"
+            .to_doc()
+            .append(force_break())
+            .append(line().append(expr).nest(INDENT))
+            .append(line())
+            .append("}"),
+
+        _ => expr.to_doc().nest(INDENT),
     }
 }
 

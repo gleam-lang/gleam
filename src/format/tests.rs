@@ -1207,17 +1207,44 @@ World"
     );
 
     //
+    // Block causes
+    //
+
+    assert_format!(
+        r#"fn main() {
+  case 1 {
+    1 -> {
+      1
+      2
+    }
+    1 -> 1
+  }
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  case 1 {
+    1 -> {
+      let x = 1
+      x
+    }
+    1 -> 1
+  }
+}
+"#
+    );
+
+    //
     // Multiple subjects
     //
 
     assert_format!(
         r#"fn main() {
   case 1 {
-    1 ->
-      1
-
-    1 ->
-      1
+    1 -> 1
+    1 -> 1
   }
 }
 "#
@@ -1226,11 +1253,8 @@ World"
     assert_format!(
         r#"fn main() {
   case 1, 2, 3, 4 {
-    1, 2, 3, 4 ->
-      1
-
-    1, 2, 3, 4 ->
-      1
+    1, 2, 3, 4 -> 1
+    1, 2, 3, 4 -> 1
   }
 }
 "#
@@ -1243,8 +1267,7 @@ World"
     assert_format!(
         r#"fn main() {
   case 1 {
-    1 | 2 | 3 ->
-      Nil
+    1 | 2 | 3 -> Nil
   }
 }
 "#
@@ -1253,17 +1276,10 @@ World"
     assert_format!(
         r#"fn main() {
   case 1, 2 {
-    1, 1 | 2, 2 | 3, 3 ->
-      Nil
-
-    1, 1 | 2, 2 | 3, 3 ->
-      Nil
-
-    1, 1 | 2, 2 | 3, 3 ->
-      Nil
-
-    1, 1 | 2, 2 | 3, 3 ->
-      Nil
+    1, 1 | 2, 2 | 3, 3 -> Nil
+    1, 1 | 2, 2 | 3, 3 -> Nil
+    1, 1 | 2, 2 | 3, 3 -> Nil
+    1, 1 | 2, 2 | 3, 3 -> Nil
   }
 }
 "#
@@ -1276,8 +1292,7 @@ World"
     assert_format!(
         r#"fn main() {
   case 1 {
-    _ if x == y ->
-      Nil
+    _ if x == y -> Nil
   }
 }
 "#
@@ -1286,8 +1301,7 @@ World"
     assert_format!(
         r#"fn main() {
   case 1 {
-    _ if x != y ->
-      Nil
+    _ if x != y -> Nil
   }
 }
 "#
@@ -1296,8 +1310,7 @@ World"
     assert_format!(
         r#"fn main() {
   case 1 {
-    _ if x || y ->
-      Nil
+    _ if x || y -> Nil
   }
 }
 "#
@@ -1306,8 +1319,7 @@ World"
     assert_format!(
         r#"fn main() {
   case 1 {
-    _ if x && y ->
-      Nil
+    _ if x && y -> Nil
   }
 }
 "#
@@ -1316,8 +1328,7 @@ World"
     assert_format!(
         r#"fn main() {
   case 1 {
-    _ if x != y && x == z ->
-      Nil
+    _ if x != y && x == z -> Nil
   }
 }
 "#
