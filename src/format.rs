@@ -444,9 +444,7 @@ impl Documentable for &UntypedExpr {
 
             UntypedExpr::Var { name, .. } => name.clone().to_doc(),
 
-            UntypedExpr::TupleIndex { tuple, index, .. } => {
-                tuple.to_doc().append(".").append(*index)
-            }
+            UntypedExpr::TupleIndex { tuple, index, .. } => tuple_index(tuple, *index),
 
             UntypedExpr::Fn {
                 // is_capture, // TODO: render captures
@@ -525,6 +523,15 @@ impl Documentable for &UntypedExpr {
                 .append(wrap_args(elems.iter().map(wrap_expr))),
         }
     }
+}
+
+fn tuple_index(tuple: &UntypedExpr, index: u64) -> Document {
+    match tuple {
+        UntypedExpr::TupleIndex { .. } => tuple.to_doc().surround("{", "}"),
+        _ => tuple.to_doc(),
+    }
+    .append(".")
+    .append(index)
 }
 
 fn wrap_expr(expr: &UntypedExpr) -> Document {
