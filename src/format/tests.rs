@@ -322,6 +322,37 @@ pub external type Four
     );
 
     //
+    // Expr::Fn
+    //
+
+    assert_format!(
+        r#"fn main() {
+  fn(x) { x }
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  fn() {
+    1
+    2
+  }
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  fn() {
+    let y = x
+    y
+  }
+}
+"#
+    );
+
+    //
     // Call exprs
     //
 
@@ -445,8 +476,7 @@ pub external type Four
     );
 
     assert_format!(
-        r#"fn main(
-) -> Loooooooooooooooooooong(
+        r#"fn main() -> Loooooooooooooooooooong(
   Looooooooooooooong,
   Looooooooooooooooooong,
   Loooooooooooooooooooooong,
@@ -458,8 +488,9 @@ pub external type Four
     );
 
     assert_format!(
-        r#"fn main(
-) -> Loooooooooooooooooooong(Loooooooooooooooooooooooooooooooooooooooooong) {
+        r#"fn main() -> Loooooooooooooooooooong(
+  Loooooooooooooooooooooooooooooooooooooooooong,
+) {
   Nil
 }
 "#
@@ -1247,6 +1278,20 @@ World"
       1 -> 1
       _ -> 0
     }
+    1 -> 1
+  }
+}
+"#
+    );
+
+    //
+    // Case then fn
+    //
+
+    assert_format!(
+        r#"fn main() {
+  case 1 {
+    1 -> fn(x) { x }
     1 -> 1
   }
 }

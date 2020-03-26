@@ -452,13 +452,7 @@ impl Documentable for &UntypedExpr {
                 args,
                 body,
                 ..
-            } => "fn("
-                .to_doc()
-                .append(wrap_args(args.iter().map(|e| e.to_doc())).nest_current())
-                .append(")")
-                .append(" {\n")
-                .append(body.as_ref())
-                .append("\n}"),
+            } => expr_fn(args.as_slice(), body.as_ref()),
 
             UntypedExpr::Nil { .. } => "[]".to_doc(),
 
@@ -482,8 +476,8 @@ impl Documentable for &UntypedExpr {
                 pattern,
                 then,
                 ..
-            } => "let "
-                .to_doc()
+            } => force_break()
+                .append("let ")
                 .append(pattern)
                 .append(" = ")
                 .append(wrap_expr(value.as_ref()))
@@ -523,6 +517,19 @@ impl Documentable for &UntypedExpr {
                 .append(wrap_args(elems.iter().map(wrap_expr))),
         }
     }
+}
+
+fn expr_fn(args: &[Arg], body: &UntypedExpr) -> Document {
+    "fn".to_doc()
+        .append(wrap_args(args.iter().map(|e| e.to_doc())).nest_current())
+        .append(
+            break_(" {", " { ")
+                .append(body)
+                .nest(INDENT)
+                .append(delim(""))
+                .append("}")
+                .group(),
+        )
 }
 
 fn tuple_index(tuple: &UntypedExpr, index: u64) -> Document {
@@ -614,7 +621,7 @@ where
 {
     let mut args = args.peekable();
     if let None = args.peek() {
-        return "(".to_doc().append(break_("", "")).append(")").group();
+        return "()".to_doc();
     }
     break_("(", "(")
         .append(concat(args.intersperse(delim(","))))
