@@ -897,6 +897,28 @@ World"
 "#
     );
 
+    assert_format!(
+        r#"fn main() {
+  let x = {
+    let y = 1
+    y
+  }
+  Nil
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  let x = {
+    1
+    2
+  }
+  Nil
+}
+"#
+    );
+
     //
     // Pattern::Float
     //

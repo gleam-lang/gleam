@@ -488,7 +488,7 @@ impl Documentable for &UntypedExpr {
                 .to_doc()
                 .append(pattern)
                 .append(" = ")
-                .append(value.as_ref())
+                .append(wrap_expr(value.as_ref()))
                 .append(line())
                 .append(then.as_ref()),
 
@@ -524,6 +524,19 @@ impl Documentable for &UntypedExpr {
                 .to_doc()
                 .append(wrap_args(elems.iter().map(|e| e.to_doc()))),
         }
+    }
+}
+
+fn wrap_expr(expr: &UntypedExpr) -> Document {
+    match expr {
+        UntypedExpr::Seq { .. } | UntypedExpr::Let { .. } => "{"
+            .to_doc()
+            .append(force_break())
+            .append(line().append(expr).nest(INDENT))
+            .append(line())
+            .append("}"),
+
+        _ => expr.to_doc(),
     }
 }
 
