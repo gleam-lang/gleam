@@ -380,6 +380,23 @@ pub external type Four
     );
 
     //
+    // Tuple
+    //
+
+    assert_format!(
+        r#"fn main(one, two, three) {
+  tuple(
+    1,
+    {
+      1
+      2
+    },
+  )
+}
+"#
+    );
+
+    //
     // Fn
     //
 

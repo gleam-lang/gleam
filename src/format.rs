@@ -522,7 +522,7 @@ impl Documentable for &UntypedExpr {
 
             UntypedExpr::Tuple { elems, .. } => "tuple"
                 .to_doc()
-                .append(wrap_args(elems.iter().map(|e| e.to_doc()))),
+                .append(wrap_args(elems.iter().map(wrap_expr))),
         }
     }
 }
