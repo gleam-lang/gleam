@@ -617,8 +617,13 @@ PatternNil: UntypedPattern = {
     }
 }
 
+PatternVarOrDiscard: UntypedPattern = {
+    PatternVar => <>,
+    PatternDiscard => <>,
+}
+
 PatternList: UntypedPattern = {
-    <s:@L> "[" <elems:Comma<Pattern>> <tail:("|" <PatternVar>)?> "]" <e:@L> => {
+    <s:@L> "[" <elems:Comma<Pattern>> <tail:("|" <PatternVarOrDiscard>)?> "]" <e:@L> => {
         let tail = tail.unwrap_or_else(|| Pattern::Nil {
             meta: meta(e - 1, e),
         });
