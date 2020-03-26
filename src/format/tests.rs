@@ -854,6 +854,19 @@ World"
     );
 
     assert_format!(
+        "fn main() {
+  Ok(
+    1,
+    {
+      1
+      2
+    },
+  )
+}
+"
+    );
+
+    assert_format!(
         r#"fn main() {
   Person("Al", is_cool: VeryTrue)
 }

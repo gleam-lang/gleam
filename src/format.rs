@@ -264,7 +264,7 @@ impl Documentable for &CallArg<UntypedExpr> {
             Some(s) => s.clone().to_doc().append(": "),
             None => nil(),
         }
-        .append(&self.value)
+        .append(wrap_expr(&self.value))
     }
 }
 
@@ -473,7 +473,7 @@ impl Documentable for &UntypedExpr {
 
             UntypedExpr::Call { fun, args, .. } => fun
                 .to_doc()
-                .append(wrap_args(args.iter().map(|e| e.to_doc()))),
+                .append(wrap_args(args.iter().map(|a| a.to_doc()))),
 
             UntypedExpr::BinOp {
                 name, left, right, ..
