@@ -9,4 +9,8 @@ fn main(x) {
   case x {
     x if {x == x} == {b == b} -> 1
   }
+
+  one
+  |> two(_, 2)
+  |> three
 }

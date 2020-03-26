@@ -563,7 +563,7 @@ fn clause_then(expr: &UntypedExpr) -> Document {
             .append(line())
             .append("}"),
 
-        UntypedExpr::Case { .. } => expr.to_doc(),
+        UntypedExpr::Fn { .. } | UntypedExpr::Case { .. } => expr.to_doc(),
 
         _ => expr.to_doc().nest(INDENT),
     }
