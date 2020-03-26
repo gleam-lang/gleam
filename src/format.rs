@@ -467,7 +467,7 @@ impl Documentable for &UntypedExpr {
             UntypedExpr::Cons { head, tail, .. } => list_cons(
                 head.as_ref(),
                 tail.as_ref(),
-                |e| e.to_doc(),
+                wrap_expr,
                 categorise_list_expr,
             ),
 

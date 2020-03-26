@@ -724,7 +724,33 @@ World"
 
     assert_format!(
         "fn main() {
+  [
+    {
+      1
+      2
+    },
+  ]
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
   [1, 2, 3]
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  [
+    1,
+    {
+      2
+      3
+    },
+    3,
+  ]
 }
 "
     );
