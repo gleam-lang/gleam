@@ -1,0 +1,77 @@
+<html>
+
+<head>
+  <title>{{module_name}} - {{project_name}}</title>
+  <link rel="stylesheet" href="/index.css" />
+</head>
+
+<body class="night-mode">
+  <div class="main">
+    <button class="sidebar-button sidebar-toggle">
+      <span class="icon-menu" title="Collapse/expand sidebar"></span>
+    </button>
+    <section class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-projectDetails">
+          <a href="/" class="sidebar-projectName">{{project_name}}</a>
+          <h2 class="sidebar-projectVersion">
+            <form autocomplete="off">{{project_version}}
+          </h2>
+        </div>
+      </div>
+
+      <ul id="full-list">
+        {{#each all_modules}}
+        <li class="">
+          <a href="/{{this.module_name}}.html" class="expand">
+            {{this.module_name}}
+            <span class="icon-goto" title="Go to {{this.module_name}}"></span>
+          </a>
+          <ul>
+            <li>
+              <a href="/{{this.module_name}}.html#content">Top</a>
+            </li>
+            <li class="docs">
+              <a href="/{{this.module_name}}.html#functions" class="expand">
+                Functions
+                <span class="icon-goto" title="Go to Functions"></span>
+              </a>
+              <ul class="functions-list deflist">
+                {{#each this.functions_doc}}
+                <li>
+                  <a href="/{{../this.module_name}}.html#{{this.name}}">{{this.name}}</a>
+                </li>
+                {{/each}}
+              </ul>
+            </li>
+            <li class="docs">
+              <a href="/{{this.module_name}}.html#types" class="expand">
+                Types
+                <span class="icon-goto" title="Go to Types"></span>
+              </a>
+              <ul class="types-list deflist">
+                {{#each this.types_doc}}
+                <li>
+                  <a href="/{{../this.module_name}}.html#{{this.name}}">{{this.name}}</a>
+                </li>
+                {{/each}}
+              </ul>
+            </li>
+          </ul>
+        </li>
+        {{/each}}
+      </ul>
+
+    </section>
+    <section class="content">
+      <div class="content-outer">
+        <div id="content" class="content-inner">
+          {{markdown readme}}
+        </div>
+      </div>
+    </section>
+  </div>
+  <script src="/index.js"></script>
+</body>
+
+</html>

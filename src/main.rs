@@ -191,6 +191,7 @@ fn command_build(root: String) -> Result<(), Error> {
             .unwrap_or("0.0.1".to_string())
             .clone(),
         doc_dir.clone(),
+        root_path,
     );
 
     for crate::project::Compiled { files, doc, .. } in compiled {

@@ -1,10 +1,11 @@
 use crate::doc::doc::*;
-use crate::error::Error;
+use crate::error::{Error, FileIOAction, FileKind};
 use handlebars::Handlebars;
 use pulldown_cmark;
 use serde::Serialize;
 use std::collections::HashMap;
-use std::fs::File;
+use std::fs::{read_to_string, File};
+use std::io::Read;
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -25,6 +26,7 @@ struct Module {
   pub module_src: String,
   pub types_doc: Vec<ModuleItem>,
   pub functions_doc: Vec<ModuleItem>,
+  pub readme: String,
 }
 
 pub struct DocWriter<'a> {
@@ -33,6 +35,7 @@ pub struct DocWriter<'a> {
   doc_dir: PathBuf,
   modules: Vec<Module>,
   registry: Handlebars<'a>,
+  package_root: PathBuf,
 }
 
 fn render_markdown(text: String) -> String {
@@ -45,21 +48,31 @@ fn render_markdown(text: String) -> String {
 handlebars_helper!(markdown: |text: str| render_markdown(text.to_string()));
 
 impl DocWriter<'_> {
-  pub fn new(project_name: String, project_version: String, doc_dir: PathBuf) -> Self {
+  pub fn new(
+    project_name: String,
+    project_version: String,
+    doc_dir: PathBuf,
+    package_root: PathBuf,
+  ) -> Self {
     DocWriter {
       project_name,
       project_version,
       doc_dir,
       registry: {
-        let template = std::include_str!("views/module.hbs");
+        let module_template = std::include_str!("views/module.hbs");
+        let index_template = std::include_str!("views/index.hbs");
         let mut registry = Handlebars::new();
         registry.register_helper("markdown", Box::new(markdown));
         registry
-          .register_template_string("module", template)
+          .register_template_string("module", module_template)
+          .unwrap_or_else(|_e| panic!("Doc Template is missing"));
+        registry
+          .register_template_string("index", index_template)
           .unwrap_or_else(|_e| panic!("Doc Template is missing"));
         registry
       },
       modules: vec![],
+      package_root,
     }
   }
 
@@ -70,7 +83,29 @@ impl DocWriter<'_> {
     self.modules.push(self.chunk_to_module(chunk));
   }
 
+  fn write_index(self: &Self, module: &Module) -> Result<(), Error> {
+    let rendered = self
+      .registry
+      .render("index", module)
+      .map_err(|_| Error::FileIO {
+        path: self.doc_dir.join("index.html"),
+        action: FileIOAction::Create,
+        kind: FileKind::File,
+        err: Some("Could not parse README as valid markdown".to_string()),
+      })?;
+
+    self.write_to_path(rendered.as_bytes(), self.doc_dir.join("index.html"))
+  }
+
   pub fn write(self: &Self) -> Result<(), Error> {
+    let readme =
+      read_to_string(self.package_root.join("README.md")).map_err(|_| Error::FileIO {
+        path: self.package_root.join("README.md"),
+        action: FileIOAction::Read,
+        kind: FileKind::File,
+        err: Some("Could not read README.md for doc index".to_string()),
+      })?;
+
     self.write_to_path(
       std::include_str!("views/index.css").as_bytes(),
       self.doc_dir.join("index.css"),
@@ -90,7 +125,7 @@ impl DocWriter<'_> {
       .modules
       .iter()
       .map(|module| {
-        self.write_doc(Module {
+        let module = Module {
           all_modules: Some(self.modules.clone()),
           module_name: module.module_name.clone(),
           project_name: module.project_name.clone(),
@@ -107,7 +142,10 @@ impl DocWriter<'_> {
             .iter()
             .map(|d| d.clone().to_owned())
             .collect(),
-        })
+          readme: readme.to_string(),
+        };
+        self.write_index(&module)?;
+        self.write_doc(module)
       })
       .collect()
   }
@@ -168,6 +206,7 @@ impl DocWriter<'_> {
       functions_doc: functions_doc.iter().map(|d| d.clone().to_owned()).collect(),
       types_doc: types_doc.iter().map(|d| d.clone().to_owned()).collect(),
       all_modules: None,
+      readme: "".to_string(),
     }
   }
 
@@ -209,7 +248,6 @@ impl DocWriter<'_> {
   }
 
   fn write_doc(self: &Self, module: Module) -> Result<(), Error> {
-    use crate::error::{FileIOAction, FileKind};
     let filename = format!("{}.html", module.module_name);
     let doc_dir_path = self.doc_dir.join(&filename);
     let doc_text = self
