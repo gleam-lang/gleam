@@ -268,7 +268,7 @@ fn pipe(value: TypedExpr, fun: TypedExpr, env: &mut Env) -> Document {
         fun,
         vec![CallArg {
             label: None,
-            meta: Default::default(),
+            location: Default::default(),
             value,
         }],
         env,

@@ -86,7 +86,7 @@ fn compile_test() {
             expected: Err(Error::SrcImportingTest {
                 path: PathBuf::from("/src/one.gleam"),
                 src: "import two".to_string(),
-                meta: crate::ast::Meta { start: 7, end: 10 },
+                location: crate::ast::SrcSpan { start: 7, end: 10 },
                 src_module: "one".to_string(),
                 test_module: "two".to_string(),
             }),

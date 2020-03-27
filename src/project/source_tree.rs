@@ -87,7 +87,7 @@ impl SourceTree {
                 "SourceTree.calculate_dependencies(): Unable to find module for index",
             );
 
-            for (dep, meta) in deps {
+            for (dep, location) in deps {
                 let dep_index = self.indexes.get(&dep).ok_or_else(|| Error::UnknownImport {
                     module: module_name.clone(),
                     import: dep.clone(),
@@ -98,7 +98,7 @@ impl SourceTree {
                         .values()
                         .map(|m| m.module.name_string())
                         .collect(),
-                    meta: meta.clone(),
+                    location: location.clone(),
                 })?;
 
                 if module.origin == ModuleOrigin::Src
@@ -112,7 +112,7 @@ impl SourceTree {
                     return Err(Error::SrcImportingTest {
                         path: path.clone(),
                         src: src.clone(),
-                        meta,
+                        location,
                         src_module: module_name,
                         test_module: dep,
                     });
