@@ -389,7 +389,7 @@ impl Documentable for &UntypedClause {
             Some(guard) => doc.append(" if ").append(guard),
         }
         .append(" -> ")
-        .append(clause_then(&self.then))
+        .append(hanging_expr(&self.then))
     }
 }
 
@@ -480,7 +480,7 @@ impl Documentable for &UntypedExpr {
                 .append("let ")
                 .append(pattern)
                 .append(" = ")
-                .append(wrap_expr(value.as_ref()))
+                .append(hanging_expr(value.as_ref()))
                 .append(line())
                 .append(then.as_ref()),
 
@@ -554,7 +554,7 @@ fn wrap_expr(expr: &UntypedExpr) -> Document {
     }
 }
 
-fn clause_then(expr: &UntypedExpr) -> Document {
+fn hanging_expr(expr: &UntypedExpr) -> Document {
     match expr {
         UntypedExpr::Seq { .. } | UntypedExpr::Let { .. } => "{"
             .to_doc()

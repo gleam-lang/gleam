@@ -967,7 +967,45 @@ World"
     1
     |> succ
     |> succ,
+    2,
+    3,
   )
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  some_call(
+    1
+    |> succ
+    |> succ,
+    2,
+    3,
+  )
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  [
+    1
+    |> succ
+    |> succ,
+    2,
+    3,
+  ]
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  let x = 1
+    |> succ
+    |> succ
+  x
 }
 "#
     );
