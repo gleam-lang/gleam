@@ -349,7 +349,7 @@ ArgNames: ArgNames = {
 
     <label:VarName> <name:VarName> => ArgNames::NamedLabelled { name, label },
 
-    <label:VarName> DiscardName => ArgNames::LabelledDiscard { label },
+    <label:VarName> <name:DiscardName> => ArgNames::LabelledDiscard { label, name },
 }
 
 Call: UntypedExpr = {

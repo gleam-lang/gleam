@@ -1592,13 +1592,12 @@ World"
 "#
     );
 
-    // TODO
-    //    assert_format!(
-    //        r#"fn main() {
-    //  {tup.1}.2
-    //}
-    //"#
-    //    );
+    assert_format!(
+        r#"fn main() {
+  {tup.1}.2
+}
+"#
+    );
 
     //
     // Todo

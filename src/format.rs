@@ -64,7 +64,7 @@ impl Documentable for &ArgNames {
     fn to_doc(self) -> Document {
         match self {
             ArgNames::Discard { name } => name.to_string(),
-            ArgNames::LabelledDiscard { label } => format!("{} _", label),
+            ArgNames::LabelledDiscard { label, name } => format!("{} {}", label, name),
             ArgNames::Named { name } => name.to_string(),
             ArgNames::NamedLabelled { name, label } => format!("{} {}", label, name),
         }
