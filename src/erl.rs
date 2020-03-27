@@ -330,9 +330,9 @@ fn pattern_list_cons(head: TypedPattern, tail: TypedPattern, env: &mut Env) -> D
 
 fn expr_list_cons(head: TypedExpr, tail: TypedExpr, env: &mut Env) -> Document {
     list_cons(head, tail, env, wrap_expr, |expr| match expr {
-        TypedExpr::Nil { .. } => ListType::Nil,
+        TypedExpr::ListNil { .. } => ListType::Nil,
 
-        TypedExpr::Cons { head, tail, .. } => ListType::Cons {
+        TypedExpr::ListCons { head, tail, .. } => ListType::Cons {
             head: *head,
             tail: *tail,
         },
@@ -650,7 +650,7 @@ fn wrap_expr(expression: TypedExpr, env: &mut Env) -> Document {
 
 fn expr(expression: TypedExpr, env: &mut Env) -> Document {
     match expression {
-        TypedExpr::Nil { .. } => "[]".to_doc(),
+        TypedExpr::ListNil { .. } => "[]".to_doc(),
         TypedExpr::Todo { .. } => "erlang:error({gleam_error, todo})".to_doc(),
         TypedExpr::Int { value, .. } => value.to_doc(),
         TypedExpr::Float { value, .. } => value.to_doc(),
@@ -666,7 +666,7 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
 
         TypedExpr::Fn { args, body, .. } => fun(args, *body, env),
 
-        TypedExpr::Cons { head, tail, .. } => expr_list_cons(*head, *tail, env),
+        TypedExpr::ListCons { head, tail, .. } => expr_list_cons(*head, *tail, env),
 
         TypedExpr::Call { fun, args, .. } => call(*fun, args, env),
 

@@ -454,9 +454,9 @@ impl Documentable for &UntypedExpr {
                 ..
             } => expr_fn(args.as_slice(), body.as_ref()),
 
-            UntypedExpr::Nil { .. } => "[]".to_doc(),
+            UntypedExpr::ListNil { .. } => "[]".to_doc(),
 
-            UntypedExpr::Cons { head, tail, .. } => list_cons(
+            UntypedExpr::ListCons { head, tail, .. } => list_cons(
                 head.as_ref(),
                 tail.as_ref(),
                 wrap_expr,
@@ -597,9 +597,9 @@ impl Documentable for &TypeAst {
 
 fn categorise_list_expr(expr: &UntypedExpr) -> ListType<&UntypedExpr, &UntypedExpr> {
     match expr {
-        UntypedExpr::Nil { .. } => ListType::Nil,
+        UntypedExpr::ListNil { .. } => ListType::Nil,
 
-        UntypedExpr::Cons { head, tail, .. } => ListType::Cons { head, tail },
+        UntypedExpr::ListCons { head, tail, .. } => ListType::Cons { head, tail },
 
         other => ListType::NotList(other),
     }

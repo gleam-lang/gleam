@@ -1743,7 +1743,7 @@ fn custom_type_accessors(
 ///
 pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr, Error> {
     match expr {
-        UntypedExpr::Nil { meta, .. } => infer_nil(meta, level, env),
+        UntypedExpr::ListNil { meta, .. } => infer_nil(meta, level, env),
         UntypedExpr::Todo { meta, .. } => infer_todo(meta, level, env),
         UntypedExpr::Var { meta, name, .. } => infer_var(name, meta, level, env),
         UntypedExpr::Int { meta, value, .. } => infer_int(value, meta),
@@ -1777,7 +1777,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             ..
         } => infer_case(subjects, clauses, level, meta, env),
 
-        UntypedExpr::Cons {
+        UntypedExpr::ListCons {
             meta, head, tail, ..
         } => infer_cons(*head, *tail, meta, level, env),
 
@@ -1871,7 +1871,7 @@ fn infer_apply_pipe(
 }
 
 fn infer_nil(meta: Meta, level: usize, env: &mut Env) -> Result<TypedExpr, Error> {
-    Ok(TypedExpr::Nil {
+    Ok(TypedExpr::ListNil {
         meta,
         typ: list(env.new_unbound_var(level)),
     })
@@ -1970,7 +1970,7 @@ fn infer_cons(
     let head = infer(head, level, env)?;
     let tail = infer(tail, level, env)?;
     unify(tail.typ(), list(head.typ()), env).map_err(|e| convert_unify_error(e, &meta))?;
-    Ok(TypedExpr::Cons {
+    Ok(TypedExpr::ListCons {
         meta,
         typ: tail.typ(),
         head: Box::new(head),

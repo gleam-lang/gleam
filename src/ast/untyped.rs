@@ -35,11 +35,11 @@ pub enum UntypedExpr {
         return_annotation: Option<TypeAst>,
     },
 
-    Nil {
+    ListNil {
         meta: Meta,
     },
 
-    Cons {
+    ListCons {
         meta: Meta,
         head: Box<Self>,
         tail: Box<Self>,
@@ -106,11 +106,11 @@ impl UntypedExpr {
             Self::Int { meta, .. } => meta,
             Self::Seq { then, .. } => then.meta(),
             Self::Var { meta, .. } => meta,
-            Self::Nil { meta, .. } => meta,
+            Self::ListNil { meta, .. } => meta,
             Self::Let { then, .. } => then.meta(),
             Self::Todo { meta, .. } => meta,
             Self::Case { meta, .. } => meta,
-            Self::Cons { meta, .. } => meta,
+            Self::ListCons { meta, .. } => meta,
             Self::Call { meta, .. } => meta,
             Self::Pipe { meta, .. } => meta,
             Self::Float { meta, .. } => meta,

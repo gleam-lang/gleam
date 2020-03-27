@@ -146,7 +146,7 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "nil".to_string(),
-                body: TypedExpr::Nil {
+                body: TypedExpr::ListNil {
                     meta: Default::default(),
                     typ: crate::typ::int(),
                 },
@@ -262,7 +262,7 @@ map() ->
                 public: false,
                 args: vec![],
                 name: "conny".to_string(),
-                body: TypedExpr::Cons {
+                body: TypedExpr::ListCons {
                     meta: Default::default(),
                     typ: crate::typ::int(),
                     head: Box::new(TypedExpr::Int {
@@ -270,7 +270,7 @@ map() ->
                         meta: Default::default(),
                         value: 12,
                     }),
-                    tail: Box::new(TypedExpr::Cons {
+                    tail: Box::new(TypedExpr::ListCons {
                         meta: Default::default(),
                         typ: crate::typ::int(),
                         head: Box::new(TypedExpr::Int {
@@ -278,7 +278,7 @@ map() ->
                             meta: Default::default(),
                             value: 34,
                         }),
-                        tail: Box::new(TypedExpr::Nil {
+                        tail: Box::new(TypedExpr::ListNil {
                             meta: Default::default(),
                             typ: crate::typ::int(),
                         }),
