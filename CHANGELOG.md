@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Nice, clean documentation can now be generated at build time by running `gleam build --doc <PATH>`. The files can be moved from the `doc/` directory and served from any static file host.
 - Gleam code can be formatted the `gleam format` command.
 - The pipe operator `|>` will now attempt to insert the left hand side as the
   first argument to the right hand side if the right hand side is a call,
@@ -18,6 +19,7 @@
 - Projects generated with `gleam new` use `stdlib` version 0.7.0.
 
 ## v0.7.0 - 2020-03-01
+
 ## v0.7.0-rc1 - 2020-02-28
 
 - Type aliases can be defined to give concise names to frequently used types.
