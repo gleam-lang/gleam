@@ -343,7 +343,7 @@ FnArg: Arg = {
 }
 
 ArgNames: ArgNames = {
-    DiscardName => ArgNames::Discard,
+    <name:DiscardName> => ArgNames::Discard { name },
 
     <name:VarName> => ArgNames::Named { name },
 
@@ -606,8 +606,9 @@ PatternVar: UntypedPattern = {
 }
 
 PatternDiscard: UntypedPattern = {
-    <s:@L> <_d:DiscardName> <e:@L> => Pattern::Discard {
+    <s:@L> <name:DiscardName> <e:@L> => Pattern::Discard {
         location: location(s, e),
+        name,
     }
 }
 
@@ -706,8 +707,8 @@ UpName: String = {
     <v:r"[A-Z][0-9A-Za-z]*"> => v.to_string()
 }
 
-DiscardName: () = {
-    <v:r"_[A-Za-z_]*"> => ()
+DiscardName: String = {
+    <v:r"_[A-Za-z_]*"> => v.to_string()
 }
 
 AnyName: String = {

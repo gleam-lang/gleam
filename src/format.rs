@@ -63,7 +63,7 @@ fn module(module: &UntypedModule) -> Document {
 impl Documentable for &ArgNames {
     fn to_doc(self) -> Document {
         match self {
-            ArgNames::Discard => "_".to_string(),
+            ArgNames::Discard { name } => name.to_string(),
             ArgNames::LabelledDiscard { label } => format!("{} _", label),
             ArgNames::Named { name } => name.to_string(),
             ArgNames::NamedLabelled { name, label } => format!("{} {}", label, name),
@@ -322,7 +322,7 @@ impl Documentable for &UntypedPattern {
                 pattern.to_doc().append(" as ").append(name.to_string())
             }
 
-            Pattern::Discard { .. } => "_".to_doc(),
+            Pattern::Discard { name, .. } => name.to_string().to_doc(),
 
             Pattern::Nil { .. } => "[]".to_doc(),
 

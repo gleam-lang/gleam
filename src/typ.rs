@@ -2571,7 +2571,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
     ///
     fn unify(&mut self, pattern: UntypedPattern, typ: Arc<Type>) -> Result<TypedPattern, Error> {
         match pattern {
-            Pattern::Discard { location } => Ok(Pattern::Discard { location }),
+            Pattern::Discard { name, location } => Ok(Pattern::Discard { name, location }),
 
             Pattern::Var { name, location } => {
                 self.insert_variable(name.as_ref(), typ)
@@ -2896,7 +2896,7 @@ fn do_infer_fn(
                 ValueConstructorVariant::LocalVariable,
                 (*t).clone(),
             ),
-            ArgNames::Discard | ArgNames::LabelledDiscard { .. } => (),
+            ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => (),
         };
     }
 

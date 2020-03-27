@@ -60,7 +60,7 @@ pub struct Arg {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ArgNames {
-    Discard,
+    Discard { name: String },
     LabelledDiscard { label: String },
     Named { name: String },
     NamedLabelled { name: String, label: String },
@@ -328,6 +328,7 @@ pub enum Pattern<Constructor> {
     },
 
     Discard {
+        name: String,
         location: SrcSpan,
     },
 

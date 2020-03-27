@@ -334,6 +334,20 @@ pub external type Four
 
     assert_format!(
         r#"fn main() {
+  fn(_) { x }
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  fn(_discarded) { x }
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
   fn() {
     1
     2
@@ -459,6 +473,20 @@ pub external type Four
   label_three three: Three,
   label_four four: Four,
 ) {
+  Nil
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main(_discarded) {
+  Nil
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main(label _discarded) {
   Nil
 }
 "#
@@ -1143,14 +1171,13 @@ World"
 "#
     );
 
-    // TODO
-    //    assert_format!(
-    //        r#"fn main() {
-    //  let _foo = 1
-    //  Nil
-    //}
-    //"#
-    //    );
+    assert_format!(
+        r#"fn main() {
+  let _foo = 1
+  Nil
+}
+"#
+    );
 
     //
     // Pattern::Nil
