@@ -23,11 +23,13 @@ impl<A, B> Module<A, B> {
         self.name.join("/")
     }
 
-    pub fn dependencies(&self) -> Vec<(String, Meta)> {
+    pub fn dependencies(&self) -> Vec<(String, SrcSpan)> {
         self.statements
             .iter()
             .flat_map(|s| match s {
-                Statement::Import { module, meta, .. } => Some((module.join("/"), meta.clone())),
+                Statement::Import {
+                    module, location, ..
+                } => Some((module.join("/"), location.clone())),
                 _ => None,
             })
             .collect()
@@ -38,9 +40,9 @@ impl<A, B> Module<A, B> {
 fn module_dependencies_test() {
     assert_eq!(
         vec![
-            ("foo".to_string(), Meta { start: 7, end: 10 }),
-            ("bar".to_string(), Meta { start: 18, end: 21 }),
-            ("foo_bar".to_string(), Meta { start: 29, end: 36 }),
+            ("foo".to_string(), SrcSpan { start: 7, end: 10 }),
+            ("bar".to_string(), SrcSpan { start: 18, end: 21 }),
+            ("foo_bar".to_string(), SrcSpan { start: 29, end: 36 }),
         ],
         crate::grammar::ModuleParser::new()
             .parse("import foo import bar import foo_bar")
@@ -52,7 +54,7 @@ fn module_dependencies_test() {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Arg {
     pub names: ArgNames,
-    pub meta: Meta,
+    pub location: SrcSpan,
     pub annotation: Option<TypeAst>,
 }
 
@@ -66,7 +68,7 @@ pub enum ArgNames {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct RecordConstructor {
-    pub meta: Meta,
+    pub location: SrcSpan,
     pub name: String,
     pub args: Vec<(Option<String>, TypeAst)>,
 }
@@ -74,36 +76,36 @@ pub struct RecordConstructor {
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeAst {
     Constructor {
-        meta: Meta,
+        location: SrcSpan,
         module: Option<String>,
         name: String,
         args: Vec<Self>,
     },
 
     Fn {
-        meta: Meta,
+        location: SrcSpan,
         args: Vec<Self>,
         retrn: Box<Self>,
     },
 
     Var {
-        meta: Meta,
+        location: SrcSpan,
         name: String,
     },
 
     Tuple {
-        meta: Meta,
+        location: SrcSpan,
         elems: Vec<Self>,
     },
 }
 
 impl TypeAst {
-    pub fn meta(&self) -> &Meta {
+    pub fn location(&self) -> &SrcSpan {
         match self {
-            TypeAst::Fn { meta, .. } => meta,
-            TypeAst::Var { meta, .. } => meta,
-            TypeAst::Tuple { meta, .. } => meta,
-            TypeAst::Constructor { meta, .. } => meta,
+            TypeAst::Fn { location, .. } => location,
+            TypeAst::Var { location, .. } => location,
+            TypeAst::Tuple { location, .. } => location,
+            TypeAst::Constructor { location, .. } => location,
         }
     }
 }
@@ -114,7 +116,7 @@ pub type UntypedStatement = Statement<UntypedExpr>;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement<Expr> {
     Fn {
-        meta: Meta,
+        location: SrcSpan,
         name: String,
         args: Vec<Arg>,
         body: Expr,
@@ -123,7 +125,7 @@ pub enum Statement<Expr> {
     },
 
     TypeAlias {
-        meta: Meta,
+        location: SrcSpan,
         alias: String,
         args: Vec<String>,
         resolved_type: TypeAst,
@@ -131,7 +133,7 @@ pub enum Statement<Expr> {
     },
 
     CustomType {
-        meta: Meta,
+        location: SrcSpan,
         name: String,
         args: Vec<String>,
         public: bool,
@@ -139,7 +141,7 @@ pub enum Statement<Expr> {
     },
 
     ExternalFn {
-        meta: Meta,
+        location: SrcSpan,
         public: bool,
         args: Vec<ExternalFnArg>,
         name: String,
@@ -149,14 +151,14 @@ pub enum Statement<Expr> {
     },
 
     ExternalType {
-        meta: Meta,
+        location: SrcSpan,
         public: bool,
         name: String,
         args: Vec<String>,
     },
 
     Import {
-        meta: Meta,
+        location: SrcSpan,
         module: Vec<String>,
         as_name: Option<String>,
         unqualified: Vec<UnqualifiedImport>,
@@ -165,7 +167,7 @@ pub enum Statement<Expr> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnqualifiedImport {
-    pub meta: Meta,
+    pub location: SrcSpan,
     pub name: String,
     pub as_name: Option<String>,
 }
@@ -204,7 +206,7 @@ pub enum BinOp {
 #[derive(Debug, PartialEq, Clone)]
 pub struct CallArg<A> {
     pub label: Option<String>,
-    pub meta: Meta,
+    pub location: SrcSpan,
     pub value: A,
 }
 
@@ -218,7 +220,7 @@ pub type UntypedClause = Clause<UntypedExpr, (), ()>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Clause<Expr, PatternConstructor, Type> {
-    pub meta: Meta,
+    pub location: SrcSpan,
     pub pattern: MultiPattern<PatternConstructor>,
     pub alternative_patterns: Vec<MultiPattern<PatternConstructor>>,
     pub guard: Option<ClauseGuard<Type>>,
@@ -231,48 +233,48 @@ pub type TypedClauseGuard = ClauseGuard<Arc<typ::Type>>;
 #[derive(Debug, PartialEq, Clone)]
 pub enum ClauseGuard<Type> {
     Equals {
-        meta: Meta,
+        location: SrcSpan,
         typ: Type,
         left: Box<Self>,
         right: Box<Self>,
     },
 
     NotEquals {
-        meta: Meta,
+        location: SrcSpan,
         typ: Type,
         left: Box<Self>,
         right: Box<Self>,
     },
 
     Or {
-        meta: Meta,
+        location: SrcSpan,
         typ: Type,
         left: Box<Self>,
         right: Box<Self>,
     },
 
     And {
-        meta: Meta,
+        location: SrcSpan,
         typ: Type,
         left: Box<Self>,
         right: Box<Self>,
     },
 
     Var {
-        meta: Meta,
+        location: SrcSpan,
         typ: Type,
         name: String,
     },
 }
 
 impl<A> ClauseGuard<A> {
-    pub fn meta(&self) -> &Meta {
+    pub fn location(&self) -> &SrcSpan {
         match self {
-            ClauseGuard::Or { meta, .. } => meta,
-            ClauseGuard::And { meta, .. } => meta,
-            ClauseGuard::Var { meta, .. } => meta,
-            ClauseGuard::Equals { meta, .. } => meta,
-            ClauseGuard::NotEquals { meta, .. } => meta,
+            ClauseGuard::Or { location, .. } => location,
+            ClauseGuard::And { location, .. } => location,
+            ClauseGuard::Var { location, .. } => location,
+            ClauseGuard::Equals { location, .. } => location,
+            ClauseGuard::NotEquals { location, .. } => location,
         }
     }
 }
@@ -290,7 +292,7 @@ impl TypedClauseGuard {
 }
 
 #[derive(Debug, PartialEq, Default, Clone)]
-pub struct Meta {
+pub struct SrcSpan {
     pub start: usize,
     pub end: usize,
 }
@@ -301,22 +303,22 @@ pub type TypedPattern = Pattern<PatternConstructor>;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Pattern<Constructor> {
     Int {
-        meta: Meta,
+        location: SrcSpan,
         value: i64,
     },
 
     Float {
-        meta: Meta,
+        location: SrcSpan,
         value: f64,
     },
 
     String {
-        meta: Meta,
+        location: SrcSpan,
         value: String,
     },
 
     Var {
-        meta: Meta,
+        location: SrcSpan,
         name: String,
     },
 
@@ -326,21 +328,21 @@ pub enum Pattern<Constructor> {
     },
 
     Discard {
-        meta: Meta,
+        location: SrcSpan,
     },
 
     Nil {
-        meta: Meta,
+        location: SrcSpan,
     },
 
     Cons {
-        meta: Meta,
+        location: SrcSpan,
         head: Box<Self>,
         tail: Box<Self>,
     },
 
     Constructor {
-        meta: Meta,
+        location: SrcSpan,
         name: String,
         args: Vec<CallArg<Self>>,
         module: Option<String>,
@@ -348,24 +350,24 @@ pub enum Pattern<Constructor> {
     },
 
     Tuple {
-        meta: Meta,
+        location: SrcSpan,
         elems: Vec<Self>,
     },
 }
 
 impl<A> Pattern<A> {
-    pub fn meta(&self) -> &Meta {
+    pub fn location(&self) -> &SrcSpan {
         match self {
-            Pattern::Let { pattern, .. } => pattern.meta(),
-            Pattern::Int { meta, .. } => meta,
-            Pattern::Var { meta, .. } => meta,
-            Pattern::Nil { meta, .. } => meta,
-            Pattern::Cons { meta, .. } => meta,
-            Pattern::Float { meta, .. } => meta,
-            Pattern::Discard { meta, .. } => meta,
-            Pattern::String { meta, .. } => meta,
-            Pattern::Tuple { meta, .. } => meta,
-            Pattern::Constructor { meta, .. } => meta,
+            Pattern::Let { pattern, .. } => pattern.location(),
+            Pattern::Int { location, .. } => location,
+            Pattern::Var { location, .. } => location,
+            Pattern::Nil { location, .. } => location,
+            Pattern::Cons { location, .. } => location,
+            Pattern::Float { location, .. } => location,
+            Pattern::Discard { location, .. } => location,
+            Pattern::String { location, .. } => location,
+            Pattern::Tuple { location, .. } => location,
+            Pattern::Constructor { location, .. } => location,
         }
     }
 }

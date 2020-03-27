@@ -72,7 +72,7 @@ pub enum Error {
     UnknownImport {
         module: Name,
         import: Name,
-        meta: crate::ast::Meta,
+        location: crate::ast::SrcSpan,
         path: PathBuf,
         src: String,
         modules: Vec<String>,
@@ -87,7 +87,7 @@ pub enum Error {
     SrcImportingTest {
         path: PathBuf,
         src: Src,
-        meta: crate::ast::Meta,
+        location: crate::ast::SrcSpan,
         src_module: Name,
         test_module: Name,
     },
@@ -170,7 +170,7 @@ impl Error {
             Error::SrcImportingTest {
                 path,
                 src,
-                meta,
+                location,
                 src_module,
                 test_module,
             } => {
@@ -179,7 +179,7 @@ impl Error {
                     label: "Imported here".to_string(),
                     file: path.to_str().unwrap().to_string(),
                     src: src.to_string(),
-                    meta: meta.clone(),
+                    location: location.clone(),
                 };
                 write(buffer, diagnostic);
                 writeln!(
@@ -247,7 +247,7 @@ Second: {}
             Error::Type { path, src, error } => match error {
                 UnknownLabel {
                     label,
-                    meta,
+                    location,
                     labels,
                 } => {
                     let mut labels = labels.clone();
@@ -256,7 +256,7 @@ Second: {}
                         label: did_you_mean(label, &mut labels, "Unexpected label"),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
                     if !labels.is_empty() {
@@ -277,13 +277,13 @@ Expected one of `{}`.",
                     }
                 }
 
-                UnexpectedLabelledArg { meta, label } => {
+                UnexpectedLabelledArg { location, label } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Unexpected labelled argument".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
                     writeln!(
@@ -296,13 +296,13 @@ Please remove the label `{}`.",
                     .unwrap();
                 }
 
-                PositionalArgumentAfterLabelled { meta } => {
+                PositionalArgumentAfterLabelled { location } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Unexpected positional argument".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
                     writeln!(
@@ -326,7 +326,7 @@ also be labelled.",
                         label: "redefined here".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: location.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
                     writeln!(
@@ -350,7 +350,7 @@ also be labelled.",
                         label: "redefined here".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: location.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
                     writeln!(
@@ -362,13 +362,13 @@ also be labelled.",
                     .unwrap();
                 }
 
-                DuplicateField { meta, label } => {
+                DuplicateField { location, label } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Duplicate field".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
                     writeln!(
@@ -379,13 +379,13 @@ also be labelled.",
                     .unwrap();
                 }
 
-                DuplicateArgument { meta, label } => {
+                DuplicateArgument { location, label } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Duplicate argument".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
                     writeln!(
@@ -396,24 +396,24 @@ also be labelled.",
                     .unwrap();
                 }
 
-                RecursiveType { meta } => {
+                RecursiveType { location } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Recursive type".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
                 }
 
-                NotFn { meta, typ } => {
+                NotFn { location, typ } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Type mismatch".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
                     let mut printer = Printer::new();
@@ -427,7 +427,7 @@ also be labelled.",
                 }
 
                 UnknownField {
-                    meta,
+                    location,
                     typ,
                     label,
                     fields,
@@ -442,7 +442,7 @@ also be labelled.",
                         ),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
                     let mut printer = Printer::new();
@@ -468,7 +468,7 @@ also be labelled.",
                 }
 
                 CouldNotUnify {
-                    meta,
+                    location,
                     expected,
                     given,
                 } => {
@@ -477,7 +477,7 @@ also be labelled.",
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
                     let mut printer = Printer::new();
@@ -498,7 +498,7 @@ Found type:
                 }
 
                 IncorrectTypeArity {
-                    meta,
+                    location,
                     expected,
                     given,
                     ..
@@ -508,13 +508,13 @@ Found type:
                         label: format!("expected {} arguments, got {}", expected, given),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
                 }
 
                 IncorrectArity {
-                    meta,
+                    location,
                     expected,
                     given,
                 } => {
@@ -523,19 +523,23 @@ Found type:
                         label: format!("expected {} arguments, got {}", expected, given),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
                 }
 
-                UnknownType { meta, name, types } => {
+                UnknownType {
+                    location,
+                    name,
+                    types,
+                } => {
                     let mut types = types.clone();
                     let diagnostic = ErrorDiagnostic {
                         title: "Unknown type".to_string(),
                         label: did_you_mean(name, &mut types, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
                     writeln!(
@@ -547,7 +551,7 @@ Found type:
                 }
 
                 UnknownVariable {
-                    meta,
+                    location,
                     variables,
                     name,
                 } => {
@@ -557,19 +561,19 @@ Found type:
                         label: did_you_mean(name, &mut variables, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
                     writeln!(buffer, "The name `{}` is not in scope here.", name).unwrap();
                 }
 
-                PrivateTypeLeak { meta, leaked } => {
+                PrivateTypeLeak { location, leaked } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Private type used in public interface".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
                     let mut printer = Printer::new();
@@ -592,7 +596,7 @@ Private types can only be used within the module that defines them.",
                 }
 
                 UnknownModule {
-                    meta,
+                    location,
                     name,
                     imported_modules,
                 } => {
@@ -602,7 +606,7 @@ Private types can only be used within the module that defines them.",
                         label: did_you_mean(name, &mut imported_modules, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
                     writeln!(
@@ -614,7 +618,7 @@ Private types can only be used within the module that defines them.",
                 }
 
                 UnknownModuleType {
-                    meta,
+                    location,
                     name,
                     module_name,
                     type_constructors,
@@ -625,7 +629,7 @@ Private types can only be used within the module that defines them.",
                         label: did_you_mean(name, &mut type_constructors, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
                     writeln!(
@@ -638,7 +642,7 @@ Private types can only be used within the module that defines them.",
                 }
 
                 UnknownModuleValue {
-                    meta,
+                    location,
                     name,
                     module_name,
                     value_constructors,
@@ -649,7 +653,7 @@ Private types can only be used within the module that defines them.",
                         label: did_you_mean(name, &mut value_constructors, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
                     writeln!(
@@ -662,7 +666,7 @@ Private types can only be used within the module that defines them.",
                 }
 
                 UnknownModuleField {
-                    meta,
+                    location,
                     name,
                     module_name,
                     type_constructors,
@@ -678,7 +682,7 @@ Private types can only be used within the module that defines them.",
                         label: did_you_mean(name, &mut options, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
                     writeln!(
@@ -691,7 +695,7 @@ Private types can only be used within the module that defines them.",
                 }
 
                 IncorrectNumClausePatterns {
-                    meta,
+                    location,
                     expected,
                     given,
                 } => {
@@ -700,7 +704,7 @@ Private types can only be used within the module that defines them.",
                         label: format!("expected {} patterns, got {}", expected, given),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
                     writeln!(
@@ -712,13 +716,13 @@ Each clause must have a pattern for every subject value.",
                     .unwrap();
                 }
 
-                NonLocalClauseGuardVariable { meta, name } => {
+                NonLocalClauseGuardVariable { location, name } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Invalid guard variable".to_string(),
                         label: "is not locally defined".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
                     writeln!(
@@ -730,13 +734,13 @@ argument to the function. The variable `{}` is not defined locally.",
                     .unwrap();
                 }
 
-                ExtraVarInAlternativePattern { meta, name } => {
+                ExtraVarInAlternativePattern { location, name } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Extra alternative pattern variable".to_string(),
                         label: "has not been previously defined".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
                     writeln!(
@@ -748,13 +752,15 @@ pattern. This variable `{}` has not been previously defined.",
                     .unwrap();
                 }
 
-                OutOfBoundsTupleIndex { meta, size: 0, .. } => {
+                OutOfBoundsTupleIndex {
+                    location, size: 0, ..
+                } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Out of bounds tuple index".to_string(),
                         label: "this index is too large".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
                     writeln!(
@@ -764,13 +770,17 @@ pattern. This variable `{}` has not been previously defined.",
                     .unwrap();
                 }
 
-                OutOfBoundsTupleIndex { meta, index, size } => {
+                OutOfBoundsTupleIndex {
+                    location,
+                    index,
+                    size,
+                } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Out of bounds tuple index".to_string(),
                         label: "this index is too large".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
                     writeln!(
@@ -784,13 +794,13 @@ pattern. This variable `{}` has not been previously defined.",
                     .unwrap();
                 }
 
-                NotATuple { meta, given } => {
+                NotATuple { location, given } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Type mismatch".to_string(),
                         label: "is not a tuple".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
                     let mut printer = Printer::new();
@@ -805,13 +815,13 @@ pattern. This variable `{}` has not been previously defined.",
                     .unwrap();
                 }
 
-                NotATupleUnbound { meta } => {
+                NotATupleUnbound { location } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Type mismatch".to_string(),
                         label: "what type is this?".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
 
@@ -823,13 +833,13 @@ about this type yet. Please add some type annotations so we can continue.",
                     .unwrap();
                 }
 
-                RecordAccessUnknownType { meta } => {
+                RecordAccessUnknownType { location } => {
                     let diagnostic = ErrorDiagnostic {
                         title: "Unknown type for record access".to_string(),
                         label: "I don't know what type this is".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        meta: meta.clone(),
+                        location: location.clone(),
                     };
                     write(buffer, diagnostic);
 
@@ -857,7 +867,7 @@ and try again.
                             label: "Unexpected token".to_string(),
                             file: path.to_str().unwrap().to_string(),
                             src: src.to_string(),
-                            meta: crate::ast::Meta {
+                            location: crate::ast::SrcSpan {
                                 start: *start,
                                 end: *end,
                             },
@@ -873,7 +883,7 @@ and try again.
                             label: "Unexpected end of file".to_string(),
                             file: path.to_str().unwrap().to_string(),
                             src: src.to_string(),
-                            meta: crate::ast::Meta {
+                            location: crate::ast::SrcSpan {
                                 start: src.len() - 2,
                                 end: src.len() - 1,
                             },
@@ -887,7 +897,7 @@ and try again.
                             label: "Unknown token".to_string(),
                             file: path.to_str().unwrap().to_string(),
                             src: src.to_string(),
-                            meta: crate::ast::Meta {
+                            location: crate::ast::SrcSpan {
                                 start: *location,
                                 end: *location + 1,
                             },
@@ -905,13 +915,13 @@ and try again.
                     User { error } => {
                         use crate::parser::Error;
                         match error {
-                            Error::TooManyHolesInCapture { meta, count } => {
+                            Error::TooManyHolesInCapture { location, count } => {
                                 let diagnostic = ErrorDiagnostic {
                                     title: "Invalid capture".to_string(),
                                     label: "".to_string(),
                                     file: path.to_str().unwrap().to_string(),
                                     src: src.to_string(),
-                                    meta: meta.clone(),
+                                    location: location.clone(),
                                 };
                                 write(buffer, diagnostic);
                                 let chars: String = (97..(97 + count))
@@ -937,7 +947,7 @@ but this one uses {}. Rewrite this using the fn({}) {{ ... }} syntax.",
             Error::UnknownImport {
                 module,
                 import,
-                meta,
+                location,
                 path,
                 src,
                 modules,
@@ -948,7 +958,7 @@ but this one uses {}. Rewrite this using the fn({}) {{ ... }} syntax.",
                     label: did_you_mean(import, &mut modules, ""),
                     file: path.to_str().unwrap().to_string(),
                     src: src.to_string(),
-                    meta: meta.clone(),
+                    location: location.clone(),
                 };
                 write(buffer, diagnostic);
                 writeln!(
@@ -1004,7 +1014,7 @@ cycle to continue."
 
 struct ErrorDiagnostic {
     file: String,
-    meta: crate::ast::Meta,
+    location: crate::ast::SrcSpan,
     src: String,
     title: String,
     label: String,
@@ -1020,7 +1030,11 @@ fn write(mut buffer: &mut Buffer, d: ErrorDiagnostic) {
 
     let diagnostic = Diagnostic::new_error(
         d.title,
-        Label::new(file_id, (d.meta.start as u32)..(d.meta.end as u32), d.label),
+        Label::new(
+            file_id,
+            (d.location.start as u32)..(d.location.end as u32),
+            d.label,
+        ),
     );
 
     let config = codespan_reporting::term::Config::default();

@@ -22,35 +22,35 @@ fn module_test() {
         name: vec!["magic".to_string()],
         statements: vec![
             Statement::ExternalType {
-                meta: Default::default(),
+                location: Default::default(),
                 public: true,
                 name: "Any".to_string(),
                 args: vec![],
             },
             Statement::CustomType {
-                meta: Default::default(),
+                location: Default::default(),
                 public: true,
                 name: "Any".to_string(),
                 args: vec![],
                 constructors: vec![RecordConstructor {
-                    meta: Default::default(),
+                    location: Default::default(),
                     name: "Ok".to_string(),
                     args: vec![],
                 }],
             },
             Statement::Import {
-                meta: Default::default(),
+                location: Default::default(),
                 module: vec!["result".to_string()],
                 as_name: None,
                 unqualified: vec![],
             },
             Statement::ExternalFn {
-                meta: Default::default(),
+                location: Default::default(),
                 args: vec![
                     ExternalFnArg {
                         label: None,
                         typ: TypeAst::Constructor {
-                            meta: Default::default(),
+                            location: Default::default(),
                             module: None,
                             args: vec![],
                             name: "Int".to_string(),
@@ -59,7 +59,7 @@ fn module_test() {
                     ExternalFnArg {
                         label: None,
                         typ: TypeAst::Constructor {
-                            meta: Default::default(),
+                            location: Default::default(),
                             module: None,
                             args: vec![],
                             name: "Int".to_string(),
@@ -71,21 +71,21 @@ fn module_test() {
                 module: "int".to_string(),
                 public: false,
                 retrn: TypeAst::Constructor {
-                    meta: Default::default(),
+                    location: Default::default(),
                     module: None,
                     args: vec![],
                     name: "Int".to_string(),
                 },
             },
             Statement::ExternalFn {
-                meta: Default::default(),
+                location: Default::default(),
                 args: vec![],
                 name: "map".to_string(),
                 fun: "new".to_string(),
                 module: "maps".to_string(),
                 public: true,
                 retrn: TypeAst::Constructor {
-                    meta: Default::default(),
+                    location: Default::default(),
                     module: None,
                     args: vec![],
                     name: "Map".to_string(),
@@ -118,54 +118,54 @@ map() ->
         statements: vec![
             Statement::Fn {
                 return_annotation: None,
-                meta: Default::default(),
+                location: Default::default(),
                 public: false,
                 args: vec![],
                 name: "int".to_string(),
                 body: TypedExpr::Int {
                     typ: crate::typ::int(),
-                    meta: Default::default(),
+                    location: Default::default(),
                     value: 176,
                 },
             },
             Statement::Fn {
                 return_annotation: None,
-                meta: Default::default(),
+                location: Default::default(),
                 public: false,
                 args: vec![],
                 name: "float".to_string(),
                 body: TypedExpr::Float {
-                    meta: Default::default(),
+                    location: Default::default(),
                     typ: crate::typ::float(),
                     value: 11177.324401,
                 },
             },
             Statement::Fn {
                 return_annotation: None,
-                meta: Default::default(),
+                location: Default::default(),
                 public: false,
                 args: vec![],
                 name: "nil".to_string(),
                 body: TypedExpr::ListNil {
-                    meta: Default::default(),
+                    location: Default::default(),
                     typ: crate::typ::int(),
                 },
             },
             Statement::Fn {
                 return_annotation: None,
-                meta: Default::default(),
+                location: Default::default(),
                 public: false,
                 args: vec![],
                 name: "string".to_string(),
                 body: TypedExpr::String {
-                    meta: Default::default(),
+                    location: Default::default(),
                     typ: crate::typ::string(),
                     value: "Hello there!".to_string(),
                 },
             },
             Statement::Fn {
                 return_annotation: None,
-                meta: Default::default(),
+                location: Default::default(),
                 public: false,
                 args: vec![],
                 name: "seq".to_string(),
@@ -173,46 +173,46 @@ map() ->
                     typ: crate::typ::int(),
                     first: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
-                        meta: Default::default(),
+                        location: Default::default(),
                         value: 1,
                     }),
                     then: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
-                        meta: Default::default(),
+                        location: Default::default(),
                         value: 2,
                     }),
                 },
             },
             Statement::Fn {
                 return_annotation: None,
-                meta: Default::default(),
+                location: Default::default(),
                 public: false,
                 args: vec![],
                 name: "bin_op".to_string(),
                 body: TypedExpr::BinOp {
-                    meta: Default::default(),
+                    location: Default::default(),
                     typ: crate::typ::int(),
                     name: BinOp::AddInt,
                     left: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
-                        meta: Default::default(),
+                        location: Default::default(),
                         value: 1,
                     }),
                     right: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
-                        meta: Default::default(),
+                        location: Default::default(),
                         value: 2,
                     }),
                 },
             },
             Statement::Fn {
                 return_annotation: None,
-                meta: Default::default(),
+                location: Default::default(),
                 public: false,
                 args: vec![],
                 name: "enum1".to_string(),
                 body: TypedExpr::Var {
-                    meta: Default::default(),
+                    location: Default::default(),
                     constructor: ValueConstructor {
                         public: true,
                         origin: Default::default(),
@@ -228,24 +228,24 @@ map() ->
             },
             Statement::Fn {
                 return_annotation: None,
-                meta: Default::default(),
+                location: Default::default(),
                 public: false,
                 args: vec![],
                 name: "let".to_string(),
                 body: TypedExpr::Let {
-                    meta: Default::default(),
+                    location: Default::default(),
                     typ: crate::typ::int(),
                     value: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
-                        meta: Default::default(),
+                        location: Default::default(),
                         value: 1,
                     }),
                     pattern: Pattern::Var {
-                        meta: Default::default(),
+                        location: Default::default(),
                         name: "OneTwo".to_string(),
                     },
                     then: Box::new(TypedExpr::Var {
-                        meta: Default::default(),
+                        location: Default::default(),
                         constructor: ValueConstructor {
                             public: true,
                             origin: Default::default(),
@@ -258,28 +258,28 @@ map() ->
             },
             Statement::Fn {
                 return_annotation: None,
-                meta: Default::default(),
+                location: Default::default(),
                 public: false,
                 args: vec![],
                 name: "conny".to_string(),
                 body: TypedExpr::ListCons {
-                    meta: Default::default(),
+                    location: Default::default(),
                     typ: crate::typ::int(),
                     head: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
-                        meta: Default::default(),
+                        location: Default::default(),
                         value: 12,
                     }),
                     tail: Box::new(TypedExpr::ListCons {
-                        meta: Default::default(),
+                        location: Default::default(),
                         typ: crate::typ::int(),
                         head: Box::new(TypedExpr::Int {
                             typ: crate::typ::int(),
-                            meta: Default::default(),
+                            location: Default::default(),
                             value: 34,
                         }),
                         tail: Box::new(TypedExpr::ListNil {
-                            meta: Default::default(),
+                            location: Default::default(),
                             typ: crate::typ::int(),
                         }),
                     }),
@@ -287,25 +287,25 @@ map() ->
             },
             Statement::Fn {
                 return_annotation: None,
-                meta: Default::default(),
+                location: Default::default(),
                 public: false,
                 args: vec![],
                 name: "funny".to_string(),
                 body: TypedExpr::Fn {
-                    meta: Default::default(),
+                    location: Default::default(),
                     is_capture: false,
                     return_annotation: None,
                     typ: crate::typ::int(),
                     args: vec![
                         Arg {
-                            meta: Meta { start: 0, end: 0 },
+                            location: SrcSpan { start: 0, end: 0 },
                             annotation: None,
                             names: ArgNames::Named {
                                 name: "one_really_long_arg_to_cause_wrapping".to_string(),
                             },
                         },
                         Arg {
-                            meta: Meta { start: 0, end: 0 },
+                            location: SrcSpan { start: 0, end: 0 },
                             annotation: None,
                             names: ArgNames::Named {
                                 name: "also_really_quite_long".to_string(),
@@ -314,28 +314,28 @@ map() ->
                     ],
                     body: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
-                        meta: Default::default(),
+                        location: Default::default(),
                         value: 100000000000,
                     }),
                 },
             },
             Statement::Fn {
                 return_annotation: None,
-                meta: Default::default(),
+                location: Default::default(),
                 public: false,
                 args: vec![],
                 name: "tup".to_string(),
                 body: TypedExpr::Tuple {
-                    meta: Default::default(),
+                    location: Default::default(),
                     typ: crate::typ::int(),
                     elems: vec![
                         TypedExpr::Int {
                             typ: crate::typ::int(),
-                            meta: Default::default(),
+                            location: Default::default(),
                             value: 1,
                         },
                         TypedExpr::Float {
-                            meta: Default::default(),
+                            location: Default::default(),
                             typ: crate::typ::float(),
                             value: 2.0,
                         },
@@ -397,61 +397,61 @@ tup() ->
         name: vec!["term".to_string()],
         statements: vec![Statement::Fn {
             return_annotation: None,
-            meta: Default::default(),
+            location: Default::default(),
             public: false,
             name: "some_function".to_string(),
             args: vec![
                 Arg {
-                    meta: Meta { start: 0, end: 0 },
+                    location: SrcSpan { start: 0, end: 0 },
                     annotation: None,
                     names: ArgNames::Named {
                         name: "arg_one".to_string(),
                     },
                 },
                 Arg {
-                    meta: Meta { start: 0, end: 0 },
+                    location: SrcSpan { start: 0, end: 0 },
                     annotation: None,
                     names: ArgNames::Named {
                         name: "arg_two".to_string(),
                     },
                 },
                 Arg {
-                    meta: Meta { start: 0, end: 0 },
+                    location: SrcSpan { start: 0, end: 0 },
                     annotation: None,
                     names: ArgNames::Named {
                         name: "arg_3".to_string(),
                     },
                 },
                 Arg {
-                    meta: Meta { start: 0, end: 0 },
+                    location: SrcSpan { start: 0, end: 0 },
                     annotation: None,
                     names: ArgNames::Named {
                         name: "arg4".to_string(),
                     },
                 },
                 Arg {
-                    meta: Meta { start: 0, end: 0 },
+                    location: SrcSpan { start: 0, end: 0 },
                     annotation: None,
                     names: ArgNames::Named {
                         name: "arg_four".to_string(),
                     },
                 },
                 Arg {
-                    meta: Meta { start: 0, end: 0 },
+                    location: SrcSpan { start: 0, end: 0 },
                     annotation: None,
                     names: ArgNames::Named {
                         name: "arg__five".to_string(),
                     },
                 },
                 Arg {
-                    meta: Meta { start: 0, end: 0 },
+                    location: SrcSpan { start: 0, end: 0 },
                     annotation: None,
                     names: ArgNames::Named {
                         name: "arg_six".to_string(),
                     },
                 },
                 Arg {
-                    meta: Meta { start: 0, end: 0 },
+                    location: SrcSpan { start: 0, end: 0 },
                     annotation: None,
                     names: ArgNames::Named {
                         name: "arg_that_is_long".to_string(),
@@ -460,7 +460,7 @@ tup() ->
             ],
             body: TypedExpr::Int {
                 typ: crate::typ::int(),
-                meta: Default::default(),
+                location: Default::default(),
                 value: 1,
             },
         }],
@@ -494,12 +494,12 @@ some_function(
         statements: vec![
             Statement::Fn {
                 return_annotation: None,
-                meta: Default::default(),
+                location: Default::default(),
                 public: false,
                 args: vec![],
                 name: "arg".to_string(),
                 body: TypedExpr::Var {
-                    meta: Default::default(),
+                    location: Default::default(),
                     name: "some_arg".to_string(),
                     constructor: ValueConstructor {
                         public: true,
@@ -511,13 +511,13 @@ some_function(
             },
             Statement::Fn {
                 return_annotation: None,
-                meta: Default::default(),
+                location: Default::default(),
                 public: false,
                 args: vec![],
                 name: "moddy".to_string(),
                 body: TypedExpr::ModuleSelect {
                     typ: crate::typ::fn_(vec![], crate::typ::int()),
-                    meta: Default::default(),
+                    location: Default::default(),
                     module_alias: "zero".to_string(),
                     module_name: vec!["one".to_string()],
                     label: "two".to_string(),
@@ -526,7 +526,7 @@ some_function(
             },
             Statement::Fn {
                 return_annotation: None,
-                meta: Default::default(),
+                location: Default::default(),
                 public: false,
                 args: vec![],
                 name: "moddy2".to_string(),
@@ -535,7 +535,7 @@ some_function(
                         vec![crate::typ::int(), crate::typ::int()],
                         crate::typ::int(),
                     ),
-                    meta: Default::default(),
+                    location: Default::default(),
                     module_alias: "zero".to_string(),
                     module_name: vec!["one".to_string(), "zero".to_string()],
                     label: "two".to_string(),
@@ -544,25 +544,25 @@ some_function(
             },
             Statement::Fn {
                 return_annotation: None,
-                meta: Default::default(),
+                location: Default::default(),
                 public: false,
                 args: vec![],
                 name: "moddy4".to_string(),
                 body: TypedExpr::Call {
-                    meta: Default::default(),
+                    location: Default::default(),
                     typ: crate::typ::int(),
                     args: vec![CallArg {
                         label: None,
-                        meta: Default::default(),
+                        location: Default::default(),
                         value: TypedExpr::Int {
-                            meta: Default::default(),
+                            location: Default::default(),
                             typ: crate::typ::int(),
                             value: 1,
                         },
                     }],
                     fun: Box::new(TypedExpr::ModuleSelect {
                         typ: crate::typ::int(),
-                        meta: Default::default(),
+                        location: Default::default(),
                         module_alias: "zero".to_string(),
                         module_name: vec!["one".to_string(), "zero".to_string()],
                         label: "two".to_string(),
@@ -600,86 +600,86 @@ moddy4() ->
         name: vec!["my_mod".to_string()],
         statements: vec![Statement::Fn {
             return_annotation: None,
-            meta: Default::default(),
+            location: Default::default(),
             public: false,
             args: vec![],
             name: "go".to_string(),
             body: TypedExpr::Case {
-                meta: Default::default(),
+                location: Default::default(),
                 typ: crate::typ::int(),
                 subjects: vec![TypedExpr::Int {
                     typ: crate::typ::int(),
-                    meta: Default::default(),
+                    location: Default::default(),
                     value: 1,
                 }],
                 clauses: vec![
                     Clause {
-                        meta: Default::default(),
+                        location: Default::default(),
                         guard: None,
                         pattern: vec![Pattern::Int {
-                            meta: Default::default(),
+                            location: Default::default(),
                             value: 1,
                         }],
                         alternative_patterns: vec![],
                         then: TypedExpr::Int {
                             typ: crate::typ::int(),
-                            meta: Default::default(),
+                            location: Default::default(),
                             value: 1,
                         },
                     },
                     Clause {
-                        meta: Default::default(),
+                        location: Default::default(),
                         guard: None,
                         pattern: vec![Pattern::Float {
-                            meta: Default::default(),
+                            location: Default::default(),
                             value: 1.0,
                         }],
                         alternative_patterns: vec![],
                         then: TypedExpr::Int {
                             typ: crate::typ::int(),
-                            meta: Default::default(),
+                            location: Default::default(),
                             value: 1,
                         },
                     },
                     Clause {
-                        meta: Default::default(),
+                        location: Default::default(),
                         guard: None,
                         pattern: vec![Pattern::String {
-                            meta: Default::default(),
+                            location: Default::default(),
                             value: "hello".to_string(),
                         }],
                         alternative_patterns: vec![],
                         then: TypedExpr::Int {
                             typ: crate::typ::int(),
-                            meta: Default::default(),
+                            location: Default::default(),
                             value: 1,
                         },
                     },
                     Clause {
-                        meta: Default::default(),
+                        location: Default::default(),
                         guard: None,
                         pattern: vec![Pattern::Nil {
-                            meta: Default::default(),
+                            location: Default::default(),
                         }],
                         alternative_patterns: vec![],
                         then: TypedExpr::Int {
                             typ: crate::typ::int(),
-                            meta: Default::default(),
+                            location: Default::default(),
                             value: 1,
                         },
                     },
                     Clause {
-                        meta: Default::default(),
+                        location: Default::default(),
                         guard: None,
                         pattern: vec![Pattern::Constructor {
-                            meta: Default::default(),
+                            location: Default::default(),
                             module: None,
                             name: "Error".to_string(),
                             args: vec![CallArg {
                                 label: None,
-                                meta: Default::default(),
+                                location: Default::default(),
                                 value: Pattern::Int {
-                                    meta: Default::default(),
+                                    location: Default::default(),
                                     value: 2,
                                 },
                             }],
@@ -690,22 +690,22 @@ moddy4() ->
                         alternative_patterns: vec![],
                         then: TypedExpr::Int {
                             typ: crate::typ::int(),
-                            meta: Default::default(),
+                            location: Default::default(),
                             value: 1,
                         },
                     },
                     Clause {
-                        meta: Default::default(),
+                        location: Default::default(),
                         guard: None,
                         pattern: vec![Pattern::Tuple {
-                            meta: Default::default(),
+                            location: Default::default(),
                             elems: vec![
                                 Pattern::Int {
-                                    meta: Default::default(),
+                                    location: Default::default(),
                                     value: 1,
                                 },
                                 Pattern::Int {
-                                    meta: Default::default(),
+                                    location: Default::default(),
                                     value: 2,
                                 },
                             ],
@@ -713,7 +713,7 @@ moddy4() ->
                         alternative_patterns: vec![],
                         then: TypedExpr::Int {
                             typ: crate::typ::int(),
-                            meta: Default::default(),
+                            location: Default::default(),
                             value: 1,
                         },
                     },
@@ -759,24 +759,24 @@ go() ->
         statements: vec![
             Statement::Fn {
                 return_annotation: None,
-                meta: Default::default(),
+                location: Default::default(),
                 args: vec![],
                 name: "one".to_string(),
                 public: false,
                 body: TypedExpr::Call {
-                    meta: Default::default(),
+                    location: Default::default(),
                     typ: crate::typ::int(),
                     args: vec![CallArg {
                         label: None,
-                        meta: Default::default(),
+                        location: Default::default(),
                         value: TypedExpr::Int {
                             typ: crate::typ::int(),
-                            meta: Default::default(),
+                            location: Default::default(),
                             value: 1,
                         },
                     }],
                     fun: Box::new(TypedExpr::Var {
-                        meta: Default::default(),
+                        location: Default::default(),
                         constructor: ValueConstructor {
                             public: true,
                             origin: Default::default(),
@@ -794,24 +794,24 @@ go() ->
             },
             Statement::Fn {
                 return_annotation: None,
-                meta: Default::default(),
+                location: Default::default(),
                 args: vec![],
                 name: "two".to_string(),
                 public: false,
                 body: TypedExpr::Call {
-                    meta: Default::default(),
+                    location: Default::default(),
                     typ: crate::typ::int(),
                     args: vec![CallArg {
                         label: None,
-                        meta: Default::default(),
+                        location: Default::default(),
                         value: TypedExpr::Int {
                             typ: crate::typ::int(),
-                            meta: Default::default(),
+                            location: Default::default(),
                             value: 1,
                         },
                     }],
                     fun: Box::new(TypedExpr::Var {
-                        meta: Default::default(),
+                        location: Default::default(),
                         constructor: ValueConstructor {
                             public: true,
                             origin: Default::default(),
@@ -824,36 +824,36 @@ go() ->
             },
             Statement::Fn {
                 return_annotation: None,
-                meta: Default::default(),
+                location: Default::default(),
                 args: vec![],
                 name: "three".to_string(),
                 public: false,
                 body: TypedExpr::Call {
-                    meta: Default::default(),
+                    location: Default::default(),
                     typ: crate::typ::int(),
                     args: vec![CallArg {
                         label: None,
-                        meta: Default::default(),
+                        location: Default::default(),
                         value: TypedExpr::Int {
                             typ: crate::typ::int(),
-                            meta: Default::default(),
+                            location: Default::default(),
                             value: 2,
                         },
                     }],
                     fun: Box::new(TypedExpr::Call {
-                        meta: Default::default(),
+                        location: Default::default(),
                         typ: crate::typ::int(),
                         args: vec![CallArg {
                             label: None,
-                            meta: Default::default(),
+                            location: Default::default(),
                             value: TypedExpr::Int {
                                 typ: crate::typ::int(),
-                                meta: Default::default(),
+                                location: Default::default(),
                                 value: 1,
                             },
                         }],
                         fun: Box::new(TypedExpr::Var {
-                            meta: Default::default(),
+                            location: Default::default(),
                             constructor: ValueConstructor {
                                 public: true,
                                 origin: Default::default(),
