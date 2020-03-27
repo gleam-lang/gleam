@@ -1,4 +1,4 @@
-use crate::ast::{Statement, TypedModule};
+use crate::ast::{Statement, TypedModule, UntypedStatement};
 use crate::doc::doc::*;
 use crate::pretty::Documentable;
 use itertools::Itertools;
@@ -99,12 +99,7 @@ impl DocBlockManager {
           if first_statement_line_no.is_none() {
             first_statement_line_no = Some(meta.start);
           }
-          let doc = crate::ast::pretty::function_signature(
-            name.clone(),
-            args.clone(),
-            true,
-            return_annotation.clone(),
-          );
+          let doc = crate::format::fn_signature(&true, name, args, return_annotation);
           let fn_docs: Option<HashMap<String, String>> =
             self.find_block_for_line(meta.start).map(|d| {
               vec![("en-US".to_string(), d.trim().to_string())]
@@ -131,14 +126,14 @@ impl DocBlockManager {
           if first_statement_line_no.is_none() {
             first_statement_line_no = Some(meta.start);
           }
-          let doc = Statement::<crate::ast::TypedExpr>::TypeAlias {
+          let doc = (&UntypedStatement::TypeAlias {
             meta: meta.clone(),
             args: args.clone(),
             alias: alias.clone(),
             resolved_type: resolved_type.clone(),
             public: true,
-          }
-          .to_doc();
+          })
+            .to_doc();
           let fn_docs: Option<HashMap<String, String>> = self
             .find_block_for_line(meta.start)
             .map(|d| vec![("en-US".to_string(), d)].into_iter().collect());
@@ -161,14 +156,14 @@ impl DocBlockManager {
           if first_statement_line_no.is_none() {
             first_statement_line_no = Some(meta.start);
           }
-          let doc = Statement::<crate::ast::TypedExpr>::CustomType {
+          let statement = UntypedStatement::CustomType {
             meta: meta.clone(),
             args: args.clone(),
             name: name.clone(),
             constructors: constructors.clone(),
             public: true,
-          }
-          .to_doc();
+          };
+          let doc = (&statement).to_doc();
           let fn_docs: Option<HashMap<String, String>> = self
             .find_block_for_line(meta.start)
             .map(|d| vec![("en-US".to_string(), d)].into_iter().collect());
@@ -192,12 +187,7 @@ impl DocBlockManager {
           if first_statement_line_no.is_none() {
             first_statement_line_no = Some(meta.start);
           }
-          let doc = crate::ast::pretty::external_function_signature(
-            name.clone(),
-            true,
-            args.clone(),
-            retrn.clone(),
-          );
+          let doc = crate::format::external_fn_signature(&true, name, args, retrn);
           let fn_docs: Option<HashMap<String, String>> = self
             .find_block_for_line(meta.start)
             .map(|d| vec![("en-US".to_string(), d)].into_iter().collect());
@@ -216,7 +206,7 @@ impl DocBlockManager {
           if first_statement_line_no.is_none() {
             first_statement_line_no = Some(meta.start);
           }
-          let doc = Statement::<crate::ast::TypedExpr>::ExternalType {
+          let doc = UntypedStatement::ExternalType {
             meta: meta.clone(),
             args: args.clone(),
             name: name.clone(),
