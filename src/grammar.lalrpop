@@ -419,12 +419,12 @@ Tuple: UntypedExpr = {
 
 List: UntypedExpr = {
     <s:@L> "[" <elems:Comma<OpOrSimpleExpr>> <tail:("|" <OpOrSimpleExpr>)?>"]" <e:@L> => {
-        let tail = tail.unwrap_or_else(|| UntypedExpr::Nil {
+        let tail = tail.unwrap_or_else(|| UntypedExpr::ListNil {
             meta: meta(s, e),
         });
         elems.into_iter().rev().fold(
             tail,
-            |t, h| UntypedExpr::Cons {
+            |t, h| UntypedExpr::ListCons {
                 meta: t.meta().clone(),
                 head: Box::new(h),
                 tail: Box::new(t),
@@ -452,7 +452,7 @@ Todo: UntypedExpr = {
 }
 
 Nil: UntypedExpr = {
-    <s:@L> "[]" <e:@L> => UntypedExpr::Nil {
+    <s:@L> "[]" <e:@L> => UntypedExpr::ListNil {
         meta: meta(s, e),
     }
 }

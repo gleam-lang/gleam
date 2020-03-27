@@ -42,12 +42,12 @@ pub enum TypedExpr {
         return_annotation: Option<TypeAst>,
     },
 
-    Nil {
+    ListNil {
         meta: Meta,
         typ: Arc<Type>,
     },
 
-    Cons {
+    ListCons {
         meta: Meta,
         typ: Arc<Type>,
         head: Box<Self>,
@@ -134,11 +134,11 @@ impl TypedExpr {
             Self::Int { meta, .. } => meta,
             Self::Seq { then, .. } => then.meta(),
             Self::Var { meta, .. } => meta,
-            Self::Nil { meta, .. } => meta,
+            Self::ListNil { meta, .. } => meta,
             Self::Let { then, .. } => then.meta(),
             Self::Todo { meta, .. } => meta,
             Self::Case { meta, .. } => meta,
-            Self::Cons { meta, .. } => meta,
+            Self::ListCons { meta, .. } => meta,
             Self::Call { meta, .. } => meta,
             Self::Pipe { meta, .. } => meta,
             Self::Float { meta, .. } => meta,
@@ -154,13 +154,13 @@ impl TypedExpr {
     pub fn typ(&self) -> Arc<typ::Type> {
         match self {
             Self::Fn { typ, .. } => typ.clone(),
-            Self::Nil { typ, .. } => typ.clone(),
+            Self::ListNil { typ, .. } => typ.clone(),
             Self::Let { typ, .. } => typ.clone(),
             Self::Int { typ, .. } => typ.clone(),
             Self::Seq { then, .. } => then.typ(),
             Self::Todo { typ, .. } => typ.clone(),
             Self::Case { typ, .. } => typ.clone(),
-            Self::Cons { typ, .. } => typ.clone(),
+            Self::ListCons { typ, .. } => typ.clone(),
             Self::Call { typ, .. } => typ.clone(),
             Self::Pipe { typ, .. } => typ.clone(),
             Self::Float { typ, .. } => typ.clone(),
