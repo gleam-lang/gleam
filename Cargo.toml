@@ -35,7 +35,12 @@ walkdir = "2"
 # Enum trait impl macros
 strum = "0.17"
 strum_macros = "0.17"
-
+# Doc rendering
+handlebars = "3.0"
+# Markdown in docs
+pulldown-cmark = "0.7.0"
+# JSON serialization
+serde_json = "1.0.39"
 
 [build-dependencies]
 lalrpop = "0.17"

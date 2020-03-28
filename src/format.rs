@@ -11,7 +11,7 @@ const INDENT: isize = 2;
 pub fn pretty(src: &str) -> Result<String, crate::parser::LalrpopError> {
     let stripped = crate::parser::strip_extra(src.as_ref());
     let ast = crate::grammar::ModuleParser::new()
-        .parse(&stripped)
+        .parse(&stripped.0)
         .map_err(|e| e.map_token(|crate::grammar::Token(a, b)| (a, b.to_string())))?;
     Ok(pretty_module(&ast))
 }
@@ -113,14 +113,7 @@ impl Documentable for &UntypedStatement {
                 public,
                 return_annotation,
                 ..
-            } => pub_(public)
-                .append(format!("fn {}", name))
-                .append(wrap_args(args.iter().map(|e| e.to_doc())))
-                .append(if let Some(anno) = return_annotation {
-                    " -> ".to_doc().append(anno)
-                } else {
-                    nil()
-                })
+            } => fn_signature(public, name, args, return_annotation)
                 .append(" {")
                 .append(line().append(body).nest(INDENT).group())
                 .append(line())
@@ -176,14 +169,7 @@ impl Documentable for &UntypedStatement {
                 module,
                 fun,
                 ..
-            } => pub_(public)
-                .to_doc()
-                .append("external fn ")
-                .group()
-                .append(name.to_string())
-                .append(wrap_args(args.iter().map(|e| e.to_doc())))
-                .append(" -> ".to_doc())
-                .append(retrn)
+            } => external_fn_signature(public, name, args, retrn)
                 .append(" =")
                 .append(line())
                 .append(format!("  \"{}\" ", module))
@@ -227,6 +213,38 @@ impl Documentable for &UntypedStatement {
                 }),
         }
     }
+}
+
+pub fn fn_signature(
+    public: &bool,
+    name: &str,
+    args: &Vec<Arg>,
+    return_annotation: &Option<TypeAst>,
+) -> Document {
+    pub_(public)
+        .append(format!("fn {}", name))
+        .append(wrap_args(args.iter().map(|e| e.to_doc())))
+        .append(if let Some(anno) = return_annotation {
+            " -> ".to_doc().append(anno)
+        } else {
+            nil()
+        })
+}
+
+pub fn external_fn_signature(
+    public: &bool,
+    name: &str,
+    args: &Vec<ExternalFnArg>,
+    retrn: &TypeAst,
+) -> Document {
+    pub_(public)
+        .to_doc()
+        .append("external fn ")
+        .group()
+        .append(name.to_string())
+        .append(wrap_args(args.iter().map(|e| e.to_doc())))
+        .append(" -> ".to_doc())
+        .append(retrn)
 }
 
 fn pub_(public: &bool) -> Document {

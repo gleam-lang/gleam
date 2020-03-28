@@ -1,6 +1,7 @@
 #![deny(warnings)]
 
 mod ast;
+mod doc;
 mod erl;
 mod error;
 mod format;
@@ -9,6 +10,7 @@ mod parser;
 mod pretty;
 mod project;
 mod typ;
+
 lalrpop_mod!(
     #[allow(deprecated)]
     #[allow(clippy::all)]
@@ -30,6 +32,9 @@ extern crate lalrpop_util;
 #[macro_use]
 extern crate lazy_static;
 
+#[macro_use]
+extern crate handlebars;
+
 use crate::error::Error;
 use crate::project::ModuleOrigin;
 use serde::Deserialize;
@@ -49,6 +54,8 @@ enum Command {
     Build {
         #[structopt(help = "location of the project root", default_value = ".")]
         path: String,
+        #[structopt(help = "generate docs for this package as well", long)]
+        doc: bool,
     },
 
     #[structopt(name = "new", about = "Create a new project")]
@@ -94,11 +101,12 @@ enum Command {
 #[derive(Deserialize)]
 struct ProjectConfig {
     name: String,
+    version: Option<String>,
 }
 
 fn main() {
     let result = match Command::from_args() {
-        Command::Build { path } => command_build(path),
+        Command::Build { path, doc } => command_build(path, doc),
 
         Command::Format {
             stdin,
@@ -120,7 +128,7 @@ fn main() {
     }
 }
 
-fn command_build(root: String) -> Result<(), Error> {
+fn command_build(root: String, write_docs: bool) -> Result<(), Error> {
     let mut srcs = vec![];
 
     // Read gleam.toml
@@ -153,16 +161,7 @@ fn command_build(root: String) -> Result<(), Error> {
     let compiled = crate::project::compile(srcs)?;
 
     // Delete the gen directory before generating the newly compiled files
-    let gen_dir = root_path
-        .parent()
-        .ok_or_else(|| Error::FileIO {
-            action: error::FileIOAction::FindParent,
-            kind: error::FileKind::Directory,
-            path: root_path.clone(),
-            err: None,
-        })?
-        .join("gen");
-
+    let gen_dir = root_path.join("gen");
     if gen_dir.exists() {
         std::fs::remove_dir_all(&gen_dir).map_err(|e| Error::FileIO {
             action: error::FileIOAction::Delete,
@@ -171,8 +170,33 @@ fn command_build(root: String) -> Result<(), Error> {
             err: Some(e.to_string()),
         })?;
     }
+    let doc_dir = root_path.join("doc");
+    if write_docs {
+        if doc_dir.exists() {
+            std::fs::remove_dir_all(&doc_dir.clone()).map_err(|e| Error::FileIO {
+                action: error::FileIOAction::Delete,
+                kind: error::FileKind::Directory,
+                path: doc_dir.clone(),
+                err: Some(e.to_string()),
+            })?;
+        }
+    }
 
-    for crate::project::Compiled { files, .. } in compiled {
+    let mut doc_writer = doc::writer::DocWriter::new(
+        project_config.name.clone(),
+        project_config
+            .version
+            .unwrap_or("1.0.0".to_string())
+            .clone(),
+        doc_dir.clone(),
+        root_path,
+    );
+
+    for crate::project::Compiled { files, doc, .. } in compiled {
+        if write_docs {
+            doc_writer.add_chunk(doc);
+        }
+
         for crate::project::OutputFile { text, path } in files {
             let dir_path = path.parent().ok_or_else(|| Error::FileIO {
                 action: error::FileIOAction::FindParent,
@@ -203,8 +227,13 @@ fn command_build(root: String) -> Result<(), Error> {
             })?;
         }
     }
-
     println!("Done!");
+
+    if write_docs {
+        doc_writer.write()?;
+        println!("Wrote docs to {}", doc_dir.to_str().unwrap());
+    }
+
     Ok(())
 }
 

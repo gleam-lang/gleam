@@ -1,0 +1,144 @@
+<html>
+
+<head>
+  <title>{{module_name}} - {{project_name}}</title>
+  <link rel="stylesheet" href="/index.css" />
+</head>
+
+<body class="night-mode">
+  <div class="main">
+    <button class="sidebar-button sidebar-toggle">
+      <span class="icon-menu" title="Collapse/expand sidebar"></span>
+    </button>
+    <section class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-projectDetails">
+          <a href="/" class="sidebar-projectName">{{project_name}}</a>
+          <h2 class="sidebar-projectVersion">
+            <form autocomplete="off">{{project_version}}
+          </h2>
+        </div>
+      </div>
+
+      <ul id="full-list">
+        {{#each all_modules}}
+        <li class="">
+          <a href="/{{this.module_name}}.html" class="expand">
+            {{this.module_name}}
+            <span class="icon-goto" title="Go to {{this.module_name}}"></span>
+          </a>
+          <ul>
+            <li>
+              <a href="/{{this.module_name}}.html#content">Top</a>
+            </li>
+            <li class="docs">
+              <a href="/{{this.module_name}}.html#functions" class="expand">
+                Functions
+                <span class="icon-goto" title="Go to Functions"></span>
+              </a>
+              <ul class="functions-list deflist">
+                {{#each this.functions_doc}}
+                <li>
+                  <a href="/{{../this.module_name}}.html#{{this.name}}">{{this.name}}</a>
+                </li>
+                {{/each}}
+              </ul>
+            </li>
+            <li class="docs">
+              <a href="/{{this.module_name}}.html#types" class="expand">
+                Types
+                <span class="icon-goto" title="Go to Types"></span>
+              </a>
+              <ul class="types-list deflist">
+                {{#each this.types_doc}}
+                <li>
+                  <a href="/{{../this.module_name}}.html#{{this.name}}">{{this.name}}</a>
+                </li>
+                {{/each}}
+              </ul>
+            </li>
+          </ul>
+        </li>
+        {{/each}}
+      </ul>
+
+    </section>
+    <section class="content">
+      <div class="content-outer">
+        <div id="content" class="content-inner">
+          <h1>
+            <small class="app-vsn">{{project_name}}</small>
+            {{module_name}}
+            <a href="/{{module_src}}" title="View Source">&lt;/&gt;</a>
+          </h1>
+          <section id="moduledoc">
+            {{markdown module_doc}}
+          </section>
+          {{#if types_doc}}
+          <section id="types">
+            <h2>Types</h2>
+            {{#each types_doc}}
+            <section class="detail" id="call/2">
+              <div class="detail-header">
+                <a href="#{{this.name}}" class="detail-link" title="Link to this function">
+                  <span class="icon-link" aria-hidden="true"></span>
+                  <span class="sr-only">Link to this function</span>
+                </a>
+                <h1 class="signature">
+                  <pre>{{{this.signature}}}</pre>
+                </h1>
+              </div>
+              {{#if this.doc}}
+              <section class="docstring">
+                <p>{{markdown this.doc}}</p>
+              </section>
+              {{/if}}
+            </section>
+            {{/each}}
+          </section>
+          {{/if}}
+          {{#if functions_doc}}
+          <section id="functions">
+            <h2>Functions</h2>
+            {{#each functions_doc}}
+            <section class="detail" id="call/2">
+              <div class="detail-header">
+                <a href="#{{this.name}}" class="detail-link" title="Link to this function">
+                  <span class="icon-link" aria-hidden="true"></span>
+                  <span class="sr-only">Link to this function</span>
+                </a>
+                <h1 class="signature">{{{this.signature}}}</h1>
+              </div>
+              {{#if this.doc}}
+              <section class="docstring">
+                <p>{{markdown this.doc}}</p>
+              </section>
+              {{/if}}
+            </section>
+            {{/each}}
+          </section>
+          {{/if}}
+          <footer class="footer">
+            <p>
+              <span class="line">
+                Original design by
+                <a href="https://twitter.com/dignifiedquire" target="_blank" rel="noopener"
+                  title="@dignifiedquire">Friedel
+                  Ziegelmayer</a> for <a href="https://hexdocs.pm/" target="_blank" rel="noopener"
+                  title="Hexdocs">Hexdocs</a>.
+              </span>
+            </p>
+            <p>
+              <button class="line footer-button night-mode-toggle">
+                Toggle night mode
+              </button>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script src="/index.js"></script>
+</body>
+
+</html>

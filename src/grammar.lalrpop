@@ -16,10 +16,10 @@ extern {
 }
 
 pub Module: UntypedModule = {
-    Statement* => Module {
+    <statements:Statement*> => Module {
         type_info: (),
         name: vec![],
-        statements: <>,
+        statements: statements,
     }
 }
 
