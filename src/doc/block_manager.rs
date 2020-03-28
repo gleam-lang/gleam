@@ -15,7 +15,6 @@ struct RawComment {
 pub struct DocBlockManager {
     pub(self) current_block: Vec<RawComment>,
     pub(self) blocks: Vec<Vec<RawComment>>,
-    num_comments: usize,
 }
 
 impl DocBlockManager {
@@ -23,7 +22,6 @@ impl DocBlockManager {
         DocBlockManager {
             current_block: vec![],
             blocks: vec![],
-            num_comments: 0,
         }
     }
 
@@ -78,7 +76,6 @@ impl DocBlockManager {
                 self.current_block.push(new_line);
             }
         }
-        self.num_comments = self.num_comments + 1;
     }
 
     pub fn gen_doc_chunk(self: &Self, module: &TypedModule) -> EEP48DocChunk {
