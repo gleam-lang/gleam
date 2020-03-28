@@ -317,7 +317,7 @@ FieldAccess: UntypedExpr = {
         container: Box::new(r),
     },
 
-    <r:SimpleExpr> <s:@L> "." <index:PositiveIntLiteral> <e:@L> => UntypedExpr::TupleIndex {
+    <r:SimpleExpr> <s:@L> "." <index:PositiveRawInt> <e:@L> => UntypedExpr::TupleIndex {
         location: location(s, e),
         index,
         tuple: Box::new(r),
@@ -464,17 +464,21 @@ String: UntypedExpr = {
     }
 }
 
-PositiveIntLiteral: u64 = {
-    <pos:r"[0-9]+"> => u64::from_str(pos).unwrap(),
+PositiveIntLiteral: String = {
+    <pos:r"[0-9]+"> => pos.to_string()
 }
 
-NegativeIntLiteral: i64 = {
-    <neg:r"-[0-9]+"> => i64::from_str(neg).unwrap(),
+NegativeIntLiteral: String = {
+    <neg:r"-[0-9]+"> => neg.to_string()
 }
 
 IntLiteral: String = {
-    <i:PositiveIntLiteral> => i.to_string(),
-    <i:NegativeIntLiteral> => i.to_string(),
+    PositiveIntLiteral => <>,
+    NegativeIntLiteral => <>,
+}
+
+PositiveRawInt: u64 = {
+    <pos:PositiveIntLiteral> => u64::from_str(pos.as_ref()).unwrap(),
 }
 
 Int: UntypedExpr = {
