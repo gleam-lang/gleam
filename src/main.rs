@@ -13,6 +13,7 @@ lalrpop_mod!(
     #[allow(deprecated)]
     #[allow(clippy::all)]
     #[allow(dead_code)]
+    #[allow(unused_parens)]
     grammar
 );
 
