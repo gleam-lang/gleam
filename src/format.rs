@@ -1,3 +1,4 @@
+pub(crate) mod command;
 #[cfg(test)]
 mod tests;
 
@@ -63,8 +64,8 @@ fn module(module: &UntypedModule) -> Document {
 impl Documentable for &ArgNames {
     fn to_doc(self) -> Document {
         match self {
-            ArgNames::Discard => "_".to_string(),
-            ArgNames::LabelledDiscard { label } => format!("{} _", label),
+            ArgNames::Discard { name } => name.to_string(),
+            ArgNames::LabelledDiscard { label, name } => format!("{} {}", label, name),
             ArgNames::Named { name } => name.to_string(),
             ArgNames::NamedLabelled { name, label } => format!("{} {}", label, name),
         }
@@ -310,7 +311,7 @@ impl Documentable for &BinOp {
 impl Documentable for &UntypedPattern {
     fn to_doc(self) -> Document {
         match self {
-            Pattern::Int { value, .. } => value.to_doc(),
+            Pattern::Int { value, .. } => value.clone().to_doc(),
 
             Pattern::Float { value, .. } => value.to_doc(),
 
@@ -322,7 +323,7 @@ impl Documentable for &UntypedPattern {
                 pattern.to_doc().append(" as ").append(name.to_string())
             }
 
-            Pattern::Discard { .. } => "_".to_doc(),
+            Pattern::Discard { name, .. } => name.to_string().to_doc(),
 
             Pattern::Nil { .. } => "[]".to_doc(),
 
@@ -389,7 +390,7 @@ impl Documentable for &UntypedClause {
             Some(guard) => doc.append(" if ").append(guard),
         }
         .append(" -> ")
-        .append(clause_then(&self.then))
+        .append(hanging_expr(&self.then))
     }
 }
 
@@ -430,7 +431,7 @@ impl Documentable for &UntypedExpr {
                 .append("|> ")
                 .append(right.as_ref()),
 
-            UntypedExpr::Int { value, .. } => value.to_doc(),
+            UntypedExpr::Int { value, .. } => value.clone().to_doc(),
 
             UntypedExpr::Float { value, .. } => value.to_doc(),
 
@@ -454,9 +455,9 @@ impl Documentable for &UntypedExpr {
                 ..
             } => expr_fn(args.as_slice(), body.as_ref()),
 
-            UntypedExpr::Nil { .. } => "[]".to_doc(),
+            UntypedExpr::ListNil { .. } => "[]".to_doc(),
 
-            UntypedExpr::Cons { head, tail, .. } => list_cons(
+            UntypedExpr::ListCons { head, tail, .. } => list_cons(
                 head.as_ref(),
                 tail.as_ref(),
                 wrap_expr,
@@ -480,7 +481,7 @@ impl Documentable for &UntypedExpr {
                 .append("let ")
                 .append(pattern)
                 .append(" = ")
-                .append(wrap_expr(value.as_ref()))
+                .append(hanging_expr(value.as_ref()))
                 .append(line())
                 .append(then.as_ref()),
 
@@ -554,7 +555,7 @@ fn wrap_expr(expr: &UntypedExpr) -> Document {
     }
 }
 
-fn clause_then(expr: &UntypedExpr) -> Document {
+fn hanging_expr(expr: &UntypedExpr) -> Document {
     match expr {
         UntypedExpr::Seq { .. } | UntypedExpr::Let { .. } => "{"
             .to_doc()
@@ -597,9 +598,9 @@ impl Documentable for &TypeAst {
 
 fn categorise_list_expr(expr: &UntypedExpr) -> ListType<&UntypedExpr, &UntypedExpr> {
     match expr {
-        UntypedExpr::Nil { .. } => ListType::Nil,
+        UntypedExpr::ListNil { .. } => ListType::Nil,
 
-        UntypedExpr::Cons { head, tail, .. } => ListType::Cons { head, tail },
+        UntypedExpr::ListCons { head, tail, .. } => ListType::Cons { head, tail },
 
         other => ListType::NotList(other),
     }

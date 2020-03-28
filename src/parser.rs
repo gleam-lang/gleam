@@ -1,7 +1,7 @@
 #[derive(Debug, PartialEq)]
 pub enum Error {
     TooManyHolesInCapture {
-        meta: crate::ast::Meta,
+        location: crate::ast::SrcSpan,
         count: usize,
     },
 }
@@ -95,6 +95,6 @@ pub fn seq(mut exprs: Vec<crate::ast::UntypedExpr>) -> crate::ast::UntypedExpr {
         })
 }
 
-pub fn meta(start: usize, end: usize) -> crate::ast::Meta {
-    crate::ast::Meta { start, end }
+pub fn location(start: usize, end: usize) -> crate::ast::SrcSpan {
+    crate::ast::SrcSpan { start, end }
 }

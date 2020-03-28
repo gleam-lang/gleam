@@ -2,9 +2,9 @@ use super::*;
 
 #[test]
 fn field_map_reorder_test() {
-    let int = |value| UntypedExpr::Int {
-        value,
-        meta: Meta { start: 0, end: 0 },
+    let int = |value: &str| UntypedExpr::Int {
+        value: value.to_string(),
+        location: SrcSpan { start: 0, end: 0 },
     };
 
     struct Case {
@@ -22,8 +22,8 @@ fn field_map_reorder_test() {
                 arity: self.arity,
                 fields: self.fields,
             };
-            let meta = &Meta { start: 0, end: 0 };
-            assert_eq!(self.expected_result, fm.reorder(&mut args, meta));
+            let location = &SrcSpan { start: 0, end: 0 };
+            assert_eq!(self.expected_result, fm.reorder(&mut args, location));
             assert_eq!(self.expected_args, args);
         }
     }
@@ -42,37 +42,37 @@ fn field_map_reorder_test() {
         fields: HashMap::new(),
         args: vec![
             CallArg {
-                meta: Default::default(),
+                location: Default::default(),
                 label: None,
-                value: int(1),
+                value: int("1"),
             },
             CallArg {
-                meta: Default::default(),
+                location: Default::default(),
                 label: None,
-                value: int(2),
+                value: int("2"),
             },
             CallArg {
-                meta: Default::default(),
+                location: Default::default(),
                 label: None,
-                value: int(3),
+                value: int("3"),
             },
         ],
         expected_result: Ok(()),
         expected_args: vec![
             CallArg {
-                meta: Default::default(),
+                location: Default::default(),
                 label: None,
-                value: int(1),
+                value: int("1"),
             },
             CallArg {
-                meta: Default::default(),
+                location: Default::default(),
                 label: None,
-                value: int(2),
+                value: int("2"),
             },
             CallArg {
-                meta: Default::default(),
+                location: Default::default(),
                 label: None,
-                value: int(3),
+                value: int("3"),
             },
         ],
     }
@@ -83,37 +83,37 @@ fn field_map_reorder_test() {
         fields: [("last".to_string(), 2)].iter().cloned().collect(),
         args: vec![
             CallArg {
-                meta: Default::default(),
+                location: Default::default(),
                 label: None,
-                value: int(1),
+                value: int("1"),
             },
             CallArg {
-                meta: Default::default(),
+                location: Default::default(),
                 label: Some("last".to_string()),
-                value: int(2),
+                value: int("2"),
             },
             CallArg {
-                meta: Default::default(),
+                location: Default::default(),
                 label: None,
-                value: int(3),
+                value: int("3"),
             },
         ],
         expected_result: Ok(()),
         expected_args: vec![
             CallArg {
-                meta: Default::default(),
+                location: Default::default(),
                 label: None,
-                value: int(1),
+                value: int("1"),
             },
             CallArg {
-                meta: Default::default(),
+                location: Default::default(),
                 label: None,
-                value: int(3),
+                value: int("3"),
             },
             CallArg {
-                meta: Default::default(),
+                location: Default::default(),
                 label: Some("last".to_string()),
-                value: int(2),
+                value: int("2"),
             },
         ],
     }
@@ -124,37 +124,37 @@ fn field_map_reorder_test() {
         fields: [("last".to_string(), 2)].iter().cloned().collect(),
         args: vec![
             CallArg {
-                meta: Default::default(),
+                location: Default::default(),
                 label: None,
-                value: int(1),
+                value: int("1"),
             },
             CallArg {
-                meta: Default::default(),
+                location: Default::default(),
                 label: None,
-                value: int(2),
+                value: int("2"),
             },
             CallArg {
-                meta: Default::default(),
+                location: Default::default(),
                 label: Some("last".to_string()),
-                value: int(3),
+                value: int("3"),
             },
         ],
         expected_result: Ok(()),
         expected_args: vec![
             CallArg {
-                meta: Default::default(),
+                location: Default::default(),
                 label: None,
-                value: int(1),
+                value: int("1"),
             },
             CallArg {
-                meta: Default::default(),
+                location: Default::default(),
                 label: None,
-                value: int(2),
+                value: int("2"),
             },
             CallArg {
-                meta: Default::default(),
+                location: Default::default(),
                 label: Some("last".to_string()),
-                value: int(3),
+                value: int("3"),
             },
         ],
     }
@@ -373,7 +373,7 @@ fn infer_error_test() {
     assert_error!(
         "1 + 1.0",
         Error::CouldNotUnify {
-            meta: Meta { start: 4, end: 7 },
+            location: SrcSpan { start: 4, end: 7 },
             expected: int(),
             given: float(),
         },
@@ -382,7 +382,7 @@ fn infer_error_test() {
     assert_error!(
         "1 +. 1.0",
         Error::CouldNotUnify {
-            meta: Meta { start: 0, end: 1 },
+            location: SrcSpan { start: 0, end: 1 },
             expected: float(),
             given: int(),
         },
@@ -391,7 +391,7 @@ fn infer_error_test() {
     assert_error!(
         "1 == 1.0",
         Error::CouldNotUnify {
-            meta: Meta { start: 5, end: 8 },
+            location: SrcSpan { start: 5, end: 8 },
             expected: int(),
             given: float(),
         },
@@ -400,7 +400,7 @@ fn infer_error_test() {
     assert_error!(
         "1 > 1.0",
         Error::CouldNotUnify {
-            meta: Meta { start: 4, end: 7 },
+            location: SrcSpan { start: 4, end: 7 },
             expected: int(),
             given: float(),
         },
@@ -409,7 +409,7 @@ fn infer_error_test() {
     assert_error!(
         "1.0 >. 1",
         Error::CouldNotUnify {
-            meta: Meta { start: 7, end: 8 },
+            location: SrcSpan { start: 7, end: 8 },
             expected: float(),
             given: int(),
         },
@@ -418,7 +418,7 @@ fn infer_error_test() {
     assert_error!(
         "x",
         Error::UnknownVariable {
-            meta: Meta { start: 0, end: 1 },
+            location: SrcSpan { start: 0, end: 1 },
             name: "x".to_string(),
             variables: env_vars(),
         },
@@ -427,7 +427,7 @@ fn infer_error_test() {
     assert_error!(
         "x",
         Error::UnknownVariable {
-            meta: Meta { start: 0, end: 1 },
+            location: SrcSpan { start: 0, end: 1 },
             name: "x".to_string(),
             variables: env_vars(),
         },
@@ -436,7 +436,7 @@ fn infer_error_test() {
     assert_error!(
         "let id = fn(x) { x } id()",
         Error::IncorrectArity {
-            meta: Meta { start: 21, end: 25 },
+            location: SrcSpan { start: 21, end: 25 },
             expected: 1,
             given: 0,
         },
@@ -445,7 +445,7 @@ fn infer_error_test() {
     assert_error!(
         "let id = fn(x) { x } id(1, 2)",
         Error::IncorrectArity {
-            meta: Meta { start: 21, end: 29 },
+            location: SrcSpan { start: 21, end: 29 },
             expected: 1,
             given: 2,
         },
@@ -454,7 +454,7 @@ fn infer_error_test() {
     assert_error!(
         "case 1 { a -> 1 b -> 2.0 }",
         Error::CouldNotUnify {
-            meta: Meta { start: 21, end: 24 },
+            location: SrcSpan { start: 21, end: 24 },
             expected: int(),
             given: float(),
         },
@@ -463,7 +463,7 @@ fn infer_error_test() {
     assert_error!(
         "case 1.0 { 1 -> 1 }",
         Error::CouldNotUnify {
-            meta: Meta { start: 11, end: 12 },
+            location: SrcSpan { start: 11, end: 12 },
             expected: float(),
             given: int(),
         },
@@ -472,7 +472,7 @@ fn infer_error_test() {
     assert_error!(
         "case 1 { 1.0 -> 1 }",
         Error::CouldNotUnify {
-            meta: Meta { start: 9, end: 12 },
+            location: SrcSpan { start: 9, end: 12 },
             expected: int(),
             given: float(),
         },
@@ -481,7 +481,7 @@ fn infer_error_test() {
     assert_error!(
         "case 1, 2.0 { a, b -> a + b }",
         Error::CouldNotUnify {
-            meta: Meta { start: 26, end: 27 },
+            location: SrcSpan { start: 26, end: 27 },
             expected: int(),
             given: float(),
         },
@@ -490,7 +490,7 @@ fn infer_error_test() {
     assert_error!(
         "case 1, 2.0 { a, b -> a 1, 2 -> 0 }",
         Error::CouldNotUnify {
-            meta: Meta { start: 27, end: 28 },
+            location: SrcSpan { start: 27, end: 28 },
             expected: float(),
             given: int(),
         },
@@ -499,7 +499,7 @@ fn infer_error_test() {
     assert_error!(
         "fn() { 1 } == fn(x) { x + 1 }",
         Error::CouldNotUnify {
-            meta: Meta { start: 14, end: 29 },
+            location: SrcSpan { start: 14, end: 29 },
             expected: Arc::new(Type::Fn {
                 args: vec![],
                 retrn: int(),
@@ -516,7 +516,7 @@ fn infer_error_test() {
     assert_error!(
         "let f = fn(x: Int) { x } f(1.0)",
         Error::CouldNotUnify {
-            meta: Meta { start: 27, end: 30 },
+            location: SrcSpan { start: 27, end: 30 },
             expected: int(),
             given: float(),
         },
@@ -525,7 +525,7 @@ fn infer_error_test() {
     assert_error!(
         "fn() -> Int { 2.0 }",
         Error::CouldNotUnify {
-            meta: Meta { start: 14, end: 17 },
+            location: SrcSpan { start: 14, end: 17 },
             expected: int(),
             given: float(),
         },
@@ -534,7 +534,7 @@ fn infer_error_test() {
     assert_error!(
         "fn(x: Int) -> Float { x }",
         Error::CouldNotUnify {
-            meta: Meta { start: 22, end: 23 },
+            location: SrcSpan { start: 22, end: 23 },
             expected: float(),
             given: int(),
         },
@@ -543,7 +543,7 @@ fn infer_error_test() {
     assert_error!(
         "case 1 { x -> 1 1 -> x }",
         Error::UnknownVariable {
-            meta: Meta { start: 21, end: 22 },
+            location: SrcSpan { start: 21, end: 22 },
             name: "x".to_string(),
             variables: env_vars(),
         },
@@ -552,7 +552,7 @@ fn infer_error_test() {
     assert_error!(
         "case 1 { _, _ -> 1 }",
         Error::IncorrectNumClausePatterns {
-            meta: Meta { start: 9, end: 18 },
+            location: SrcSpan { start: 9, end: 18 },
             expected: 1,
             given: 2,
         },
@@ -561,14 +561,14 @@ fn infer_error_test() {
     assert_error!(
         "let id = fn(x) { x(x) } 1",
         Error::RecursiveType {
-            meta: Meta { start: 19, end: 20 },
+            location: SrcSpan { start: 19, end: 20 },
         },
     );
 
     assert_error!(
         "let True(x) = 1 x",
         Error::IncorrectArity {
-            meta: Meta { start: 4, end: 11 },
+            location: SrcSpan { start: 4, end: 11 },
             expected: 0,
             given: 1,
         },
@@ -577,7 +577,7 @@ fn infer_error_test() {
     assert_error!(
         "let Ok(1, x) = 1 x",
         Error::IncorrectArity {
-            meta: Meta { start: 4, end: 12 },
+            location: SrcSpan { start: 4, end: 12 },
             expected: 1,
             given: 2,
         },
@@ -586,7 +586,7 @@ fn infer_error_test() {
     assert_error!(
         "let x = 1 x.whatever",
         Error::UnknownField {
-            meta: Meta { start: 11, end: 20 },
+            location: SrcSpan { start: 11, end: 20 },
             typ: int(),
             label: "whatever".to_string(),
             fields: vec![],
@@ -596,7 +596,7 @@ fn infer_error_test() {
     assert_error!(
         "tuple(1, 2) == tuple(1, 2, 3)",
         Error::CouldNotUnify {
-            meta: Meta { start: 15, end: 29 },
+            location: SrcSpan { start: 15, end: 29 },
             expected: tuple(vec![int(), int()]),
             given: tuple(vec![int(), int(), int()])
         },
@@ -605,7 +605,7 @@ fn infer_error_test() {
     assert_error!(
         "tuple(1.0, 2, 3) == tuple(1, 2, 3)",
         Error::CouldNotUnify {
-            meta: Meta { start: 20, end: 34 },
+            location: SrcSpan { start: 20, end: 34 },
             expected: tuple(vec![float(), int(), int()]),
             given: tuple(vec![int(), int(), int()]),
         },
@@ -614,7 +614,7 @@ fn infer_error_test() {
     assert_error!(
         "[1.0] == [1]",
         Error::CouldNotUnify {
-            meta: Meta { start: 9, end: 12 },
+            location: SrcSpan { start: 9, end: 12 },
             expected: list(Arc::new(Type::Var {
                 typ: Arc::new(RefCell::new(TypeVar::Link { typ: float() }))
             })),
@@ -627,7 +627,7 @@ fn infer_error_test() {
     assert_error!(
         "let x = 1 let y = 1.0 case x { _ if x == y -> 1 }",
         Error::CouldNotUnify {
-            meta: Meta { start: 36, end: 42 },
+            location: SrcSpan { start: 36, end: 42 },
             expected: int(),
             given: float(),
         },
@@ -636,7 +636,7 @@ fn infer_error_test() {
     assert_error!(
         "let x = 1.0 let y = 1 case x { _ if x == y -> 1 }",
         Error::CouldNotUnify {
-            meta: Meta { start: 36, end: 42 },
+            location: SrcSpan { start: 36, end: 42 },
             expected: float(),
             given: int(),
         },
@@ -645,7 +645,7 @@ fn infer_error_test() {
     assert_error!(
         "let x = 1.0 case x { _ if x -> 1 }",
         Error::CouldNotUnify {
-            meta: Meta { start: 26, end: 27 },
+            location: SrcSpan { start: 26, end: 27 },
             expected: bool(),
             given: float(),
         },
@@ -654,7 +654,7 @@ fn infer_error_test() {
     assert_error!(
         "case tuple(1, 1.0) { tuple(x, _) | tuple(_, x) -> 1 }",
         Error::CouldNotUnify {
-            meta: Meta { start: 44, end: 45 },
+            location: SrcSpan { start: 44, end: 45 },
             expected: int(),
             given: float(),
         },
@@ -663,7 +663,7 @@ fn infer_error_test() {
     assert_error!(
         "case [1] { [x] | x -> 1 }",
         Error::CouldNotUnify {
-            meta: Meta { start: 17, end: 18 },
+            location: SrcSpan { start: 17, end: 18 },
             expected: int(),
             given: list(int()),
         },
@@ -672,7 +672,7 @@ fn infer_error_test() {
     assert_error!(
         "case [1] { [x] | [] as x -> 1 }",
         Error::CouldNotUnify {
-            meta: Meta { start: 17, end: 19 },
+            location: SrcSpan { start: 17, end: 19 },
             expected: int(),
             given: list(int()),
         },
@@ -681,7 +681,7 @@ fn infer_error_test() {
     assert_error!(
         "case [1] { [x] | [x, y] -> 1 }",
         Error::ExtraVarInAlternativePattern {
-            meta: Meta { start: 21, end: 22 },
+            location: SrcSpan { start: 21, end: 22 },
             name: "y".to_string()
         },
     );
@@ -689,7 +689,7 @@ fn infer_error_test() {
     assert_error!(
         "case tuple(1, 2) { tuple(1, y) | tuple(x, y) -> 1 }",
         Error::ExtraVarInAlternativePattern {
-            meta: Meta { start: 39, end: 40 },
+            location: SrcSpan { start: 39, end: 40 },
             name: "x".to_string()
         },
     );
@@ -697,7 +697,7 @@ fn infer_error_test() {
     assert_error!(
         "case tuple(1, 2) { tuple(1, y) | tuple(x, y) -> 1 }",
         Error::ExtraVarInAlternativePattern {
-            meta: Meta { start: 39, end: 40 },
+            location: SrcSpan { start: 39, end: 40 },
             name: "x".to_string()
         },
     );
@@ -705,7 +705,7 @@ fn infer_error_test() {
     assert_error!(
         "let x = 1 case tuple(1, 2) { tuple(1, y) | tuple(x, y) -> 1 }",
         Error::ExtraVarInAlternativePattern {
-            meta: Meta { start: 49, end: 50 },
+            location: SrcSpan { start: 49, end: 50 },
             name: "x".to_string()
         },
     );
@@ -715,7 +715,7 @@ fn infer_error_test() {
     assert_error!(
         "tuple(0, 1).2",
         Error::OutOfBoundsTupleIndex {
-            meta: Meta { start: 11, end: 13 },
+            location: SrcSpan { start: 11, end: 13 },
             index: 2,
             size: 2
         },
@@ -724,7 +724,7 @@ fn infer_error_test() {
     assert_error!(
         "Nil.2",
         Error::NotATuple {
-            meta: Meta { start: 0, end: 3 },
+            location: SrcSpan { start: 0, end: 3 },
             given: nil(),
         },
     );
@@ -732,7 +732,7 @@ fn infer_error_test() {
     assert_error!(
         "fn(a) { a.2 }",
         Error::NotATupleUnbound {
-            meta: Meta { start: 8, end: 9 },
+            location: SrcSpan { start: 8, end: 9 },
         },
     );
 
@@ -741,14 +741,14 @@ fn infer_error_test() {
     assert_error!(
         "fn(a) { a.field }",
         Error::RecordAccessUnknownType {
-            meta: Meta { start: 8, end: 9 },
+            location: SrcSpan { start: 8, end: 9 },
         },
     );
 
     assert_error!(
         "fn(a: a) { a.field }",
         Error::UnknownField {
-            meta: Meta { start: 12, end: 18 },
+            location: SrcSpan { start: 12, end: 18 },
             label: "field".to_string(),
             fields: vec![],
             typ: Arc::new(Type::Var {
@@ -1134,7 +1134,7 @@ fn infer_module_error_test() {
     assert_error!(
         "fn go() { 1 + 2.0 }",
         Error::CouldNotUnify {
-            meta: Meta { start: 14, end: 17 },
+            location: SrcSpan { start: 14, end: 17 },
             expected: int(),
             given: float(),
         }
@@ -1143,7 +1143,7 @@ fn infer_module_error_test() {
     assert_error!(
         "fn go() { 1 + 2.0 }",
         Error::CouldNotUnify {
-            meta: Meta { start: 14, end: 17 },
+            location: SrcSpan { start: 14, end: 17 },
             expected: int(),
             given: float(),
         }
@@ -1155,7 +1155,7 @@ fn id(x: a, y: a) { x }
 pub fn x() { id(1, 1.0) }
                 ",
         Error::CouldNotUnify {
-            meta: Meta { start: 44, end: 47 },
+            location: SrcSpan { start: 44, end: 47 },
             expected: int(),
             given: float(),
         }
@@ -1164,7 +1164,7 @@ pub fn x() { id(1, 1.0) }
     assert_error!(
         "external fn go(List(a, b)) -> a = \"\" \"\"",
         Error::IncorrectTypeArity {
-            meta: Meta { start: 15, end: 25 },
+            location: SrcSpan { start: 15, end: 25 },
             name: "List".to_string(),
             expected: 1,
             given: 2,
@@ -1176,8 +1176,8 @@ pub fn x() { id(1, 1.0) }
         "fn dupe() { 1 }
          fn dupe() { 2 }",
         Error::DuplicateName {
-            location: Meta { start: 25, end: 40 },
-            previous_location: Meta { start: 0, end: 15 },
+            location: SrcSpan { start: 25, end: 40 },
+            previous_location: SrcSpan { start: 0, end: 15 },
             name: "dupe".to_string(),
         }
     );
@@ -1187,8 +1187,8 @@ pub fn x() { id(1, 1.0) }
         "fn dupe() { 1 }
          fn dupe(x) { x }",
         Error::DuplicateName {
-            location: Meta { start: 25, end: 41 },
-            previous_location: Meta { start: 0, end: 15 },
+            location: SrcSpan { start: 25, end: 41 },
+            previous_location: SrcSpan { start: 0, end: 15 },
             name: "dupe".to_string(),
         }
     );
@@ -1198,8 +1198,8 @@ pub fn x() { id(1, 1.0) }
         "fn dupe() { 1 }
          external fn dupe(x) -> x = \"\" \"\"",
         Error::DuplicateName {
-            location: Meta { start: 25, end: 57 },
-            previous_location: Meta { start: 0, end: 15 },
+            location: SrcSpan { start: 25, end: 57 },
+            previous_location: SrcSpan { start: 0, end: 15 },
             name: "dupe".to_string(),
         }
     );
@@ -1209,8 +1209,8 @@ pub fn x() { id(1, 1.0) }
         "external fn dupe(x) -> x = \"\" \"\"
          fn dupe() { 1 }",
         Error::DuplicateName {
-            location: Meta { start: 42, end: 57 },
-            previous_location: Meta { start: 0, end: 32 },
+            location: SrcSpan { start: 42, end: 57 },
+            previous_location: SrcSpan { start: 0, end: 32 },
             name: "dupe".to_string(),
         }
     );
@@ -1220,8 +1220,8 @@ pub fn x() { id(1, 1.0) }
         "type Box { Box(x: Int) }
          type Boxy { Box(Int) }",
         Error::DuplicateName {
-            location: Meta { start: 46, end: 54 },
-            previous_location: Meta { start: 11, end: 22 },
+            location: SrcSpan { start: 46, end: 54 },
+            previous_location: SrcSpan { start: 11, end: 22 },
             name: "Box".to_string(),
         }
     );
@@ -1231,8 +1231,8 @@ pub fn x() { id(1, 1.0) }
         "type Boxy { Box(Int) }
          type Box { Box(x: Int) }",
         Error::DuplicateName {
-            location: Meta { start: 43, end: 54 },
-            previous_location: Meta { start: 12, end: 20 },
+            location: SrcSpan { start: 43, end: 54 },
+            previous_location: SrcSpan { start: 12, end: 20 },
             name: "Box".to_string(),
         }
     );
@@ -1241,8 +1241,8 @@ pub fn x() { id(1, 1.0) }
     assert_error!(
         "type Boxy { Box(Int) Box(Float) }",
         Error::DuplicateName {
-            location: Meta { start: 21, end: 31 },
-            previous_location: Meta { start: 12, end: 20 },
+            location: SrcSpan { start: 21, end: 31 },
+            previous_location: SrcSpan { start: 12, end: 20 },
             name: "Box".to_string(),
         }
     );
@@ -1252,8 +1252,8 @@ pub fn x() { id(1, 1.0) }
         "type DupType { A }
          type DupType { B }",
         Error::DuplicateTypeName {
-            location: Meta { start: 28, end: 41 },
-            previous_location: Meta { start: 0, end: 13 },
+            location: SrcSpan { start: 28, end: 41 },
+            previous_location: SrcSpan { start: 0, end: 13 },
             name: "DupType".to_string(),
         }
     );
@@ -1262,7 +1262,7 @@ pub fn x() { id(1, 1.0) }
         r#"external type PrivateType
            pub external fn leak_type() -> PrivateType = "" """#,
         Error::PrivateTypeLeak {
-            meta: Meta { start: 37, end: 87 },
+            location: SrcSpan { start: 37, end: 87 },
             leaked: Type::App {
                 args: vec![],
                 public: false,
@@ -1277,7 +1277,7 @@ pub fn x() { id(1, 1.0) }
            external fn go() -> PrivateType = "" ""
            pub fn leak_type() { go() }"#,
         Error::PrivateTypeLeak {
-            meta: Meta {
+            location: SrcSpan {
                 start: 88,
                 end: 115,
             },
@@ -1295,7 +1295,7 @@ pub fn x() { id(1, 1.0) }
            external fn go() -> PrivateType = "" ""
            pub fn leak_type() { [go()] }"#,
         Error::PrivateTypeLeak {
-            meta: Meta {
+            location: SrcSpan {
                 start: 88,
                 end: 117,
             },
@@ -1312,7 +1312,7 @@ pub fn x() { id(1, 1.0) }
         r#"external type PrivateType
                     pub external fn go(PrivateType) -> Int = "" """#,
         Error::PrivateTypeLeak {
-            meta: Meta { start: 46, end: 92 },
+            location: SrcSpan { start: 46, end: 92 },
             leaked: Type::App {
                 args: vec![],
                 public: false,
@@ -1326,7 +1326,7 @@ pub fn x() { id(1, 1.0) }
         r#"external type PrivateType
            pub type LeakType { Variant(PrivateType) }"#,
         Error::PrivateTypeLeak {
-            meta: Meta { start: 57, end: 77 },
+            location: SrcSpan { start: 57, end: 77 },
             leaked: Type::App {
                 args: vec![],
                 public: false,
@@ -1340,7 +1340,7 @@ pub fn x() { id(1, 1.0) }
         r#"fn id(x) { x } fn y() { id(x: 4) }"#,
         Error::UnexpectedLabelledArg {
             label: "x".to_string(),
-            meta: Meta { start: 27, end: 31 },
+            location: SrcSpan { start: 27, end: 31 },
         }
     );
 
@@ -1348,14 +1348,14 @@ pub fn x() { id(1, 1.0) }
         r#"type X { X(a: Int, b: Int, c: Int) }
                     fn x() { X(b: 1, a: 1, 1) }"#,
         Error::PositionalArgumentAfterLabelled {
-            meta: Meta { start: 80, end: 81 },
+            location: SrcSpan { start: 80, end: 81 },
         }
     );
 
     assert_error!(
         r#"type Thing { Thing(unknown: x) }"#,
         Error::UnknownType {
-            meta: Meta { start: 28, end: 29 },
+            location: SrcSpan { start: 28, end: 29 },
             name: "x".to_string(),
             types: env_types_with(&["Thing"]),
         }
@@ -1365,7 +1365,7 @@ pub fn x() { id(1, 1.0) }
         r#"fn one() { 1 }
            fn main() { case 1 { _ if one -> 1 } }"#,
         Error::NonLocalClauseGuardVariable {
-            meta: Meta { start: 52, end: 55 },
+            location: SrcSpan { start: 52, end: 55 },
             name: "one".to_string(),
         }
     );
@@ -1374,7 +1374,7 @@ pub fn x() { id(1, 1.0) }
     assert_error!(
         "type IntMap = IllMap(Int, Int)",
         Error::UnknownType {
-            meta: Meta { start: 14, end: 30 },
+            location: SrcSpan { start: 14, end: 30 },
             name: "IllMap".to_string(),
             types: env_types(),
         }
@@ -1384,7 +1384,7 @@ pub fn x() { id(1, 1.0) }
     assert_error!(
         "type IntMap = Map(Inf, Int)",
         Error::UnknownType {
-            meta: Meta { start: 18, end: 21 },
+            location: SrcSpan { start: 18, end: 21 },
             name: "Inf".to_string(),
             types: env_types(),
         }
@@ -1394,8 +1394,8 @@ pub fn x() { id(1, 1.0) }
     assert_error!(
         "type X = Int type X = Int",
         Error::DuplicateTypeName {
-            location: Meta { start: 13, end: 25 },
-            previous_location: Meta { start: 0, end: 12 },
+            location: SrcSpan { start: 13, end: 25 },
+            previous_location: SrcSpan { start: 0, end: 12 },
             name: "X".to_string(),
         }
     );
@@ -1404,7 +1404,7 @@ pub fn x() { id(1, 1.0) }
     assert_error!(
         "type X = List(a)",
         Error::UnknownType {
-            meta: Meta { start: 14, end: 15 },
+            location: SrcSpan { start: 14, end: 15 },
             name: "a".to_string(),
             types: env_types(),
         }
@@ -1417,7 +1417,7 @@ pub type Box(a) { Box(inner: a) }
 pub fn main(box: Box(Int)) { box.unknown }
 ",
         Error::UnknownField {
-            meta: Meta { start: 67, end: 75 },
+            location: SrcSpan { start: 67, end: 75 },
             label: "unknown".to_string(),
             fields: vec!["inner".to_string()],
             typ: Arc::new(Type::App {
@@ -1436,7 +1436,7 @@ pub type Box(a) { Box(inner: a) }
 pub fn main(box: Box(Box(Int))) { box.inner.unknown }
     ",
         Error::UnknownField {
-            meta: Meta { start: 78, end: 86 },
+            location: SrcSpan { start: 78, end: 86 },
             label: "unknown".to_string(),
             fields: vec!["inner".to_string()],
             typ: Arc::new(Type::Var {
@@ -1484,22 +1484,26 @@ fn env_vars() -> Vec<String> {
 fn sort_options(e: Error) -> Error {
     match e {
         Error::UnknownType {
-            meta,
+            location,
             name,
             mut types,
         } => {
             types.sort();
-            Error::UnknownType { meta, name, types }
+            Error::UnknownType {
+                location,
+                name,
+                types,
+            }
         }
 
         Error::UnknownVariable {
-            meta,
+            location,
             name,
             mut variables,
         } => {
             variables.sort();
             Error::UnknownVariable {
-                meta,
+                location,
                 name,
                 variables,
             }

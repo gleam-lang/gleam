@@ -3,17 +3,17 @@ use super::*;
 #[derive(Debug, PartialEq, Clone)]
 pub enum UntypedExpr {
     Int {
-        meta: Meta,
-        value: i64,
+        location: SrcSpan,
+        value: String,
     },
 
     Float {
-        meta: Meta,
+        location: SrcSpan,
         value: f64,
     },
 
     String {
-        meta: Meta,
+        location: SrcSpan,
         value: String,
     },
 
@@ -23,102 +23,102 @@ pub enum UntypedExpr {
     },
 
     Var {
-        meta: Meta,
+        location: SrcSpan,
         name: String,
     },
 
     Fn {
-        meta: Meta,
+        location: SrcSpan,
         is_capture: bool,
         args: Vec<Arg>,
         body: Box<Self>,
         return_annotation: Option<TypeAst>,
     },
 
-    Nil {
-        meta: Meta,
+    ListNil {
+        location: SrcSpan,
     },
 
-    Cons {
-        meta: Meta,
+    ListCons {
+        location: SrcSpan,
         head: Box<Self>,
         tail: Box<Self>,
     },
 
     Call {
-        meta: Meta,
+        location: SrcSpan,
         fun: Box<Self>,
         args: Vec<CallArg<Self>>,
     },
 
     BinOp {
-        meta: Meta,
+        location: SrcSpan,
         name: BinOp,
         left: Box<Self>,
         right: Box<Self>,
     },
 
     Pipe {
-        meta: Meta,
+        location: SrcSpan,
         left: Box<Self>,
         right: Box<Self>,
     },
 
     Let {
-        meta: Meta,
+        location: SrcSpan,
         value: Box<Self>,
         pattern: Pattern<()>,
         then: Box<Self>,
     },
 
     Case {
-        meta: Meta,
+        location: SrcSpan,
         subjects: Vec<Self>,
         clauses: Vec<Clause<Self, (), ()>>,
     },
 
     FieldAccess {
-        meta: Meta,
+        location: SrcSpan,
         label: String,
         container: Box<Self>,
     },
 
     Tuple {
-        meta: Meta,
+        location: SrcSpan,
         elems: Vec<Self>,
     },
 
     TupleIndex {
-        meta: Meta,
+        location: SrcSpan,
         index: u64,
         tuple: Box<Self>,
     },
 
     Todo {
-        meta: Meta,
+        location: SrcSpan,
     },
 }
 
 impl UntypedExpr {
-    pub fn meta(&self) -> &Meta {
+    pub fn location(&self) -> &SrcSpan {
         match self {
-            Self::Fn { meta, .. } => meta,
-            Self::Int { meta, .. } => meta,
-            Self::Seq { then, .. } => then.meta(),
-            Self::Var { meta, .. } => meta,
-            Self::Nil { meta, .. } => meta,
-            Self::Let { then, .. } => then.meta(),
-            Self::Todo { meta, .. } => meta,
-            Self::Case { meta, .. } => meta,
-            Self::Cons { meta, .. } => meta,
-            Self::Call { meta, .. } => meta,
-            Self::Pipe { meta, .. } => meta,
-            Self::Float { meta, .. } => meta,
-            Self::BinOp { meta, .. } => meta,
-            Self::String { meta, .. } => meta,
-            Self::Tuple { meta, .. } => meta,
-            Self::TupleIndex { meta, .. } => meta,
-            Self::FieldAccess { meta, .. } => meta,
+            Self::Fn { location, .. } => location,
+            Self::Int { location, .. } => location,
+            Self::Seq { then, .. } => then.location(),
+            Self::Var { location, .. } => location,
+            Self::ListNil { location, .. } => location,
+            Self::Let { then, .. } => then.location(),
+            Self::Todo { location, .. } => location,
+            Self::Case { location, .. } => location,
+            Self::ListCons { location, .. } => location,
+            Self::Call { location, .. } => location,
+            Self::Pipe { location, .. } => location,
+            Self::Float { location, .. } => location,
+            Self::BinOp { location, .. } => location,
+            Self::String { location, .. } => location,
+            Self::Tuple { location, .. } => location,
+            Self::TupleIndex { location, .. } => location,
+            Self::FieldAccess { location, .. } => location,
         }
     }
 }

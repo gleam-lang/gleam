@@ -4,19 +4,19 @@ use crate::typ::Type;
 #[derive(Debug, PartialEq, Clone)]
 pub enum TypedExpr {
     Int {
-        meta: Meta,
+        location: SrcSpan,
         typ: Arc<Type>,
-        value: i64,
+        value: String,
     },
 
     Float {
-        meta: Meta,
+        location: SrcSpan,
         typ: Arc<Type>,
         value: f64,
     },
 
     String {
-        meta: Meta,
+        location: SrcSpan,
         typ: Arc<Type>,
         value: String,
     },
@@ -28,13 +28,13 @@ pub enum TypedExpr {
     },
 
     Var {
-        meta: Meta,
+        location: SrcSpan,
         constructor: ValueConstructor,
         name: String,
     },
 
     Fn {
-        meta: Meta,
+        location: SrcSpan,
         typ: Arc<Type>,
         is_capture: bool,
         args: Vec<Arg>,
@@ -42,27 +42,27 @@ pub enum TypedExpr {
         return_annotation: Option<TypeAst>,
     },
 
-    Nil {
-        meta: Meta,
+    ListNil {
+        location: SrcSpan,
         typ: Arc<Type>,
     },
 
-    Cons {
-        meta: Meta,
+    ListCons {
+        location: SrcSpan,
         typ: Arc<Type>,
         head: Box<Self>,
         tail: Box<Self>,
     },
 
     Call {
-        meta: Meta,
+        location: SrcSpan,
         typ: Arc<Type>,
         fun: Box<Self>,
         args: Vec<CallArg<Self>>,
     },
 
     BinOp {
-        meta: Meta,
+        location: SrcSpan,
         typ: Arc<Type>,
         name: BinOp,
         left: Box<Self>,
@@ -70,14 +70,14 @@ pub enum TypedExpr {
     },
 
     Pipe {
-        meta: Meta,
+        location: SrcSpan,
         typ: Arc<Type>,
         left: Box<Self>,
         right: Box<Self>,
     },
 
     Let {
-        meta: Meta,
+        location: SrcSpan,
         typ: Arc<Type>,
         value: Box<Self>,
         pattern: Pattern<PatternConstructor>,
@@ -85,14 +85,14 @@ pub enum TypedExpr {
     },
 
     Case {
-        meta: Meta,
+        location: SrcSpan,
         typ: Arc<Type>,
         subjects: Vec<Self>,
         clauses: Vec<Clause<Self, PatternConstructor, Arc<Type>>>,
     },
 
     RecordAccess {
-        meta: Meta,
+        location: SrcSpan,
         typ: Arc<Type>,
         label: String,
         index: u64,
@@ -100,7 +100,7 @@ pub enum TypedExpr {
     },
 
     ModuleSelect {
-        meta: Meta,
+        location: SrcSpan,
         typ: Arc<Type>,
         label: String,
         module_name: Vec<String>,
@@ -109,58 +109,58 @@ pub enum TypedExpr {
     },
 
     Tuple {
-        meta: Meta,
+        location: SrcSpan,
         typ: Arc<Type>,
         elems: Vec<Self>,
     },
 
     TupleIndex {
-        meta: Meta,
+        location: SrcSpan,
         typ: Arc<Type>,
         index: u64,
         tuple: Box<Self>,
     },
 
     Todo {
-        meta: Meta,
+        location: SrcSpan,
         typ: Arc<Type>,
     },
 }
 
 impl TypedExpr {
-    pub fn meta(&self) -> &Meta {
+    pub fn location(&self) -> &SrcSpan {
         match self {
-            Self::Fn { meta, .. } => meta,
-            Self::Int { meta, .. } => meta,
-            Self::Seq { then, .. } => then.meta(),
-            Self::Var { meta, .. } => meta,
-            Self::Nil { meta, .. } => meta,
-            Self::Let { then, .. } => then.meta(),
-            Self::Todo { meta, .. } => meta,
-            Self::Case { meta, .. } => meta,
-            Self::Cons { meta, .. } => meta,
-            Self::Call { meta, .. } => meta,
-            Self::Pipe { meta, .. } => meta,
-            Self::Float { meta, .. } => meta,
-            Self::BinOp { meta, .. } => meta,
-            Self::Tuple { meta, .. } => meta,
-            Self::String { meta, .. } => meta,
-            Self::TupleIndex { meta, .. } => meta,
-            Self::ModuleSelect { meta, .. } => meta,
-            Self::RecordAccess { meta, .. } => meta,
+            Self::Fn { location, .. } => location,
+            Self::Int { location, .. } => location,
+            Self::Seq { then, .. } => then.location(),
+            Self::Var { location, .. } => location,
+            Self::ListNil { location, .. } => location,
+            Self::Let { then, .. } => then.location(),
+            Self::Todo { location, .. } => location,
+            Self::Case { location, .. } => location,
+            Self::ListCons { location, .. } => location,
+            Self::Call { location, .. } => location,
+            Self::Pipe { location, .. } => location,
+            Self::Float { location, .. } => location,
+            Self::BinOp { location, .. } => location,
+            Self::Tuple { location, .. } => location,
+            Self::String { location, .. } => location,
+            Self::TupleIndex { location, .. } => location,
+            Self::ModuleSelect { location, .. } => location,
+            Self::RecordAccess { location, .. } => location,
         }
     }
 
     pub fn typ(&self) -> Arc<typ::Type> {
         match self {
             Self::Fn { typ, .. } => typ.clone(),
-            Self::Nil { typ, .. } => typ.clone(),
+            Self::ListNil { typ, .. } => typ.clone(),
             Self::Let { typ, .. } => typ.clone(),
             Self::Int { typ, .. } => typ.clone(),
             Self::Seq { then, .. } => then.typ(),
             Self::Todo { typ, .. } => typ.clone(),
             Self::Case { typ, .. } => typ.clone(),
-            Self::Cons { typ, .. } => typ.clone(),
+            Self::ListCons { typ, .. } => typ.clone(),
             Self::Call { typ, .. } => typ.clone(),
             Self::Pipe { typ, .. } => typ.clone(),
             Self::Float { typ, .. } => typ.clone(),

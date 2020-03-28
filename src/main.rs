@@ -42,13 +42,13 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[derive(StructOpt, Debug)]
 #[structopt(global_settings = &[AppSettings::ColoredHelp, AppSettings::VersionlessSubcommands])]
 enum Command {
-    #[structopt(name = "build", about = "Compile a Gleam project")]
+    #[structopt(name = "build", about = "Compile a project")]
     Build {
         #[structopt(help = "location of the project root", default_value = ".")]
         path: String,
     },
 
-    #[structopt(name = "new", about = "Create a new Gleam project")]
+    #[structopt(name = "new", about = "Create a new project")]
     New {
         #[structopt(help = "name of the project")]
         name: String,
@@ -68,8 +68,24 @@ enum Command {
         template: new::Template,
     },
 
-    #[structopt(name = "format", about = "Format Gleam code")]
-    Format {},
+    #[structopt(name = "format", about = "Format source code")]
+    Format {
+        #[structopt(help = "files to format", required_unless = "stdin")]
+        files: Vec<String>,
+
+        #[structopt(
+            help = "read source from standard in",
+            long = "stdin",
+            conflicts_with = "files"
+        )]
+        stdin: bool,
+
+        #[structopt(
+            help = "check if inputs are formatted without changing them",
+            long = "check"
+        )]
+        check: bool,
+    },
 }
 
 #[derive(Deserialize)]
@@ -81,7 +97,11 @@ fn main() {
     let result = match Command::from_args() {
         Command::Build { path } => command_build(path),
 
-        Command::Format {} => command_format(),
+        Command::Format {
+            stdin,
+            files,
+            check,
+        } => crate::format::command::run(stdin, check, files),
 
         Command::New {
             name,
@@ -211,22 +231,4 @@ fn read_project_config(root: &str) -> Result<ProjectConfig, Error> {
     })?;
 
     Ok(project_config)
-}
-
-fn command_format() -> Result<(), Error> {
-    let mut src = String::new();
-    std::io::stdin()
-        .read_to_string(&mut src)
-        .expect("Reading stdin");
-
-    let formatted = crate::format::pretty(src.as_ref()).map_err(|error| Error::Parse {
-        path: PathBuf::new(), // TODO
-        error,
-        src,
-    })?;
-
-    std::io::stdout()
-        .write(formatted.as_bytes())
-        .expect("Writing stdout");
-    Ok(())
 }
