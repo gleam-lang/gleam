@@ -44,17 +44,17 @@ fn field_map_reorder_test() {
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int(1),
+                value: int("1".to_string()),
             },
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int(2),
+                value: int("2".to_string()),
             },
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int(3),
+                value: int("3".to_string()),
             },
         ],
         expected_result: Ok(()),
@@ -62,17 +62,17 @@ fn field_map_reorder_test() {
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int(1),
+                value: int("1".to_string()),
             },
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int(2),
+                value: int("2".to_string()),
             },
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int(3),
+                value: int("3".to_string()),
             },
         ],
     }
@@ -85,17 +85,17 @@ fn field_map_reorder_test() {
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int(1),
+                value: int("1".to_string()),
             },
             CallArg {
                 location: Default::default(),
                 label: Some("last".to_string()),
-                value: int(2),
+                value: int("2".to_string()),
             },
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int(3),
+                value: int("3".to_string()),
             },
         ],
         expected_result: Ok(()),
@@ -103,17 +103,17 @@ fn field_map_reorder_test() {
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int(1),
+                value: int("1".to_string()),
             },
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int(3),
+                value: int("3".to_string()),
             },
             CallArg {
                 location: Default::default(),
                 label: Some("last".to_string()),
-                value: int(2),
+                value: int("2".to_string()),
             },
         ],
     }
@@ -126,17 +126,17 @@ fn field_map_reorder_test() {
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int(1),
+                value: int("1".to_string()),
             },
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int(2),
+                value: int("2".to_string()),
             },
             CallArg {
                 location: Default::default(),
                 label: Some("last".to_string()),
-                value: int(3),
+                value: int("3".to_string()),
             },
         ],
         expected_result: Ok(()),
@@ -144,17 +144,17 @@ fn field_map_reorder_test() {
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int(1),
+                value: int("1".to_string()),
             },
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int(2),
+                value: int("2".to_string()),
             },
             CallArg {
                 location: Default::default(),
                 label: Some("last".to_string()),
-                value: int(3),
+                value: int("3".to_string()),
             },
         ],
     }

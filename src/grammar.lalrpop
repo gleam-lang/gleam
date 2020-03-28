@@ -480,7 +480,7 @@ IntLiteral: i64 = {
 Int: UntypedExpr = {
     <s:@L> <value:IntLiteral> <e:@L> => UntypedExpr::Int {
         location: location(s, e),
-        value,
+        value: value.to_string(),
     }
 }
 
@@ -587,7 +587,7 @@ PatternString: UntypedPattern = {
 PatternInt: UntypedPattern = {
     <s:@L> <value:IntLiteral> <e:@L> => Pattern::Int {
         location: location(s, e),
-        value,
+        value: value.to_string(),
     }
 }
 

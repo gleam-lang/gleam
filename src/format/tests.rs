@@ -349,8 +349,8 @@ pub external type Four
     assert_format!(
         r#"fn main() {
   fn() {
-    1
-    2
+    "1"
+    "2"
   }
 }
 "#
@@ -379,14 +379,14 @@ pub external type Four
 
     assert_format!(
         r#"fn main() {
-  run(1)
+  run("1")
 }
 "#
     );
 
     assert_format!(
         r#"fn main() {
-  run(with: 1)
+  run(with: "1")
 }
 "#
     );
@@ -394,8 +394,8 @@ pub external type Four
     assert_format!(
         r#"fn main() {
   run(
-    with: 1,
-    loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong: 1,
+    with: "1",
+    loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong: "1",
   )
 }
 "#
@@ -404,8 +404,8 @@ pub external type Four
     assert_format!(
         r#"fn main() {
   run(
-    with: something(1, 2, 3),
-    loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong: 1,
+    with: something("1", "2", "3"),
+    loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong: "1",
   )
 }
 "#
@@ -415,10 +415,10 @@ pub external type Four
         r#"fn main() {
   run(
     with: something(
-      loooooooooooooooooooooooooooooooooooooooong: 1,
-      looooooooooooooooooooooooooooooooooooooooong: 2,
+      loooooooooooooooooooooooooooooooooooooooong: "1",
+      looooooooooooooooooooooooooooooooooooooooong: "2",
     ),
-    loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong: 1,
+    loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong: "1",
   )
 }
 "#
@@ -431,10 +431,10 @@ pub external type Four
     assert_format!(
         r#"fn main(one, two, three) {
   tuple(
-    1,
+    "1",
     {
-      1
-      2
+      "1"
+      "2"
     },
   )
 }
@@ -544,14 +544,14 @@ pub external type Four
 
     assert_format!(
         r#"fn main() {
-  1 < 1
+  "1" < "1"
 }
 "#
     );
 
     assert_format!(
         r#"fn main() {
-  1 <= 1
+  "1" <= "1"
 }
 "#
     );
@@ -572,28 +572,28 @@ pub external type Four
 
     assert_format!(
         r#"fn main() {
-  1 == 1
+  "1" == "1"
 }
 "#
     );
 
     assert_format!(
         r#"fn main() {
-  1 != 1
+  "1" != "1"
 }
 "#
     );
 
     assert_format!(
         r#"fn main() {
-  1 >= 1
+  "1" >= "1"
 }
 "#
     );
 
     assert_format!(
         r#"fn main() {
-  1 > 1
+  "1" > "1"
 }
 "#
     );
@@ -614,7 +614,7 @@ pub external type Four
 
     assert_format!(
         r#"fn main() {
-  1 + 1
+  "1" + "1"
 }
 "#
     );
@@ -628,7 +628,7 @@ pub external type Four
 
     assert_format!(
         r#"fn main() {
-  1 - 1
+  "1" - "1"
 }
 "#
     );
@@ -642,7 +642,7 @@ pub external type Four
 
     assert_format!(
         r#"fn main() {
-  1 * 1
+  "1" * "1"
 }
 "#
     );
@@ -656,7 +656,7 @@ pub external type Four
 
     assert_format!(
         r#"fn main() {
-  1 / 1
+  "1" / "1"
 }
 "#
     );
@@ -670,7 +670,7 @@ pub external type Four
 
     assert_format!(
         r#"fn main() {
-  1 % 1
+  "1" % "1"
 }
 "#
     );
@@ -681,21 +681,21 @@ pub external type Four
 
     assert_format!(
         r#"fn main() {
-  1
+  "1"
 }
 "#
     );
 
     assert_format!(
         r#"fn main() {
-  121234345989000
+  "121234345989000"
 }
 "#
     );
 
     assert_format!(
         r#"fn main() {
-  -12928347925
+  "-12928347925"
 }
 "#
     );
@@ -758,9 +758,9 @@ World"
 
     assert_format!(
         r#"fn main() {
-  1
-  2
-  3
+  "1"
+  "2"
+  "3"
 }
 "#
     );
@@ -793,7 +793,7 @@ World"
 
     assert_format!(
         "fn main() {
-  [1]
+  [\"1\"]
 }
 "
     );
@@ -802,8 +802,8 @@ World"
         "fn main() {
   [
     {
-      1
-      2
+      \"1\"
+      \"2\"
     },
   ]
 }
@@ -812,7 +812,7 @@ World"
 
     assert_format!(
         "fn main() {
-  [1, 2, 3]
+  [\"1\", \"2\", \"3\"]
 }
 "
     );
@@ -820,12 +820,12 @@ World"
     assert_format!(
         "fn main() {
   [
-    1,
+    \"1\",
     {
-      2
-      3
+      \"2\"
+      \"3\"
     },
-    3,
+    \"3\",
   ]
 }
 "
@@ -837,7 +837,7 @@ World"
     really_long_variable_name,
     really_long_variable_name,
     really_long_variable_name,
-    [1, 2, 3],
+    [\"1\", \"2\", \"3\"],
     really_long_variable_name,
   ]
 }
@@ -854,9 +854,9 @@ World"
       really_long_variable_name,
       really_long_variable_name,
       really_long_variable_name,
-      2,
-      3,
-      [1, 2, 3, 4],
+      \"2\",
+      \"3\",
+      [\"1\", \"2\", \"3\", \"4\"],
     ],
     really_long_variable_name,
   ]
@@ -866,7 +866,7 @@ World"
 
     assert_format!(
         "fn main() {
-  [1, 2, 3 | x]
+  [\"1\", \"2\", \"3\" | x]
 }
 "
     );
@@ -893,9 +893,9 @@ World"
       really_long_variable_name,
       really_long_variable_name,
       really_long_variable_name,
-      2,
-      3,
-      [1, 2, 3, 4],
+      \"3\",
+      \"3\",
+      [\"1\", \"2\", \"3\", \"4\"],
       | tail
     ],
     really_long_variable_name,
@@ -910,21 +910,21 @@ World"
 
     assert_format!(
         "fn main() {
-  succ(1)
+  succ(\"1\")
 }
 "
     );
 
     assert_format!(
         "fn main() {
-  add(1)(2)(3)
+  add(\"1\")(\"2\")(\"3\")
 }
 "
     );
 
     assert_format!(
         "fn main() {
-  Ok(1)
+  Ok(\"1\")
 }
 "
     );
@@ -932,10 +932,10 @@ World"
     assert_format!(
         "fn main() {
   Ok(
-    1,
+    \"1\",
     {
-      1
-      2
+      \"1\"
+      \"2\"
     },
   )
 }
@@ -978,7 +978,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  1
+  "1"
   |> really_long_variable_name
   |> really_long_variable_name
   |> really_long_variable_name
@@ -992,11 +992,11 @@ World"
     assert_format!(
         r#"fn main() {
   tuple(
-    1
+    "1"
     |> succ
     |> succ,
-    2,
-    3,
+    "2",
+    "3",
   )
 }
 "#
@@ -1005,11 +1005,11 @@ World"
     assert_format!(
         r#"fn main() {
   some_call(
-    1
+    "1"
     |> succ
     |> succ,
-    2,
-    3,
+    "2",
+    "3",
   )
 }
 "#
@@ -1018,11 +1018,11 @@ World"
     assert_format!(
         r#"fn main() {
   [
-    1
+    "1"
     |> succ
     |> succ,
-    2,
-    3,
+    "2",
+    "3",
   ]
 }
 "#
@@ -1030,7 +1030,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  let x = 1
+  let x = "1"
     |> succ
     |> succ
   x
@@ -1044,7 +1044,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  let x = 1
+  let x = "1"
   Nil
 }
 "#
@@ -1053,7 +1053,7 @@ World"
     assert_format!(
         r#"fn main() {
   let x = {
-    let y = 1
+    let y = "1"
     y
   }
   Nil
@@ -1064,8 +1064,8 @@ World"
     assert_format!(
         r#"fn main() {
   let x = {
-    1
-    2
+    "1"
+    "2"
   }
   Nil
 }
@@ -1075,8 +1075,8 @@ World"
     assert_format!(
         r#"fn main() {
   let y = case x {
-    1 -> 1
-    _ -> 0
+    "1" -> "1"
+    _ -> "0"
   }
   y
 }
@@ -1094,8 +1094,8 @@ World"
     assert_format!(
         r#"fn main() {
   let x = fn() {
-    1
-    2
+    "1"
+    "2"
   }
   x
 }
@@ -1108,7 +1108,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  let 1 = 1
+  let "1" = "1"
   Nil
 }
 "#
@@ -1120,7 +1120,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  let 1.0 = 1
+  let 1.0 = "1"
   Nil
 }
 "#
@@ -1132,8 +1132,8 @@ World"
 
     assert_format!(
         r#"fn main() {
-  let x = 1
-  let y = 1
+  let x = "1"
+  let y = "1"
   Nil
 }
 "#
@@ -1145,7 +1145,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  let x as y = 1
+  let x as y = "1"
   Nil
 }
 "#
@@ -1153,7 +1153,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  let tuple(x, y, 123 as z) = 1
+  let tuple(x, y, "123" as z) = "1"
   Nil
 }
 "#
@@ -1165,7 +1165,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  let _ = 1
+  let _ = "1"
   Nil
 }
 "#
@@ -1173,7 +1173,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  let _foo = 1
+  let _foo = "1"
   Nil
 }
 "#
@@ -1185,7 +1185,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  let [] = 1
+  let [] = "1"
   Nil
 }
 "#
@@ -1197,7 +1197,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  let [1] = 1
+  let ["1"] = "1"
   Nil
 }
 "#
@@ -1205,7 +1205,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  let [1, 2, 3, 4] = 1
+  let ["1", "2", "3", "4"] = "1"
   Nil
 }
 "#
@@ -1213,7 +1213,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  let [1, 2, 3, 4 | x] = 1
+  let ["1", "2", "3", "4" | x] = "1"
   Nil
 }
 "#
@@ -1225,9 +1225,9 @@ World"
     really_long_variable_name,
     really_long_variable_name,
     really_long_variable_name,
-    [1, 2, 3, 4, xyz],
+    ["1", "2", "3", "4", xyz],
     | thingy
-  ] = 1
+  ] = "1"
   Nil
 }
 "#
@@ -1239,7 +1239,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  let True = 1
+  let True = "1"
   Nil
 }
 "#
@@ -1247,7 +1247,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  let False = 1
+  let False = "1"
   Nil
 }
 "#
@@ -1255,7 +1255,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  let Ok(1) = 1
+  let Ok("1") = "1"
   Nil
 }
 "#
@@ -1263,7 +1263,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  let Person(name, age: age) = 1
+  let Person(name, age: age) = "1"
   Nil
 }
 "#
@@ -1271,7 +1271,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  let Person(name: name, age: age) = 1
+  let Person(name: name, age: age) = "1"
   Nil
 }
 "#
@@ -1279,7 +1279,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  let Person(age: age, name: name) = 1
+  let Person(age: age, name: name) = "1"
   Nil
 }
 "#
@@ -1290,7 +1290,7 @@ World"
   let Person(
     age: really_long_variable_name,
     name: really_long_variable_name,
-  ) = 1
+  ) = "1"
   Nil
 }
 "#
@@ -1302,7 +1302,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  let tuple() = 1
+  let tuple() = "1"
   Nil
 }
 "#
@@ -1310,7 +1310,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  let tuple(x) = 1
+  let tuple(x) = "1"
   Nil
 }
 "#
@@ -1318,7 +1318,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  let tuple(x, y) = 1
+  let tuple(x, y) = "1"
   Nil
 }
 "#
@@ -1326,7 +1326,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  let tuple(x, y, z) = 1
+  let tuple(x, y, z) = "1"
   Nil
 }
 "#
@@ -1338,12 +1338,12 @@ World"
 
     assert_format!(
         r#"fn main() {
-  case 1 {
-    1 -> {
-      1
-      2
+  case "1" {
+    "1" -> {
+      "1"
+      "2"
     }
-    1 -> 1
+    "1" -> "1"
   }
 }
 "#
@@ -1351,12 +1351,12 @@ World"
 
     assert_format!(
         r#"fn main() {
-  case 1 {
-    1 -> {
-      let x = 1
+  case "1" {
+    "1" -> {
+      let x = "1"
       x
     }
-    1 -> 1
+    "1" -> "1"
   }
 }
 "#
@@ -1368,12 +1368,12 @@ World"
 
     assert_format!(
         r#"fn main() {
-  case 1 {
-    1 -> case x {
-      1 -> 1
-      _ -> 0
+  case "1" {
+    "1" -> case x {
+      "1" -> "1"
+      _ -> "0"
     }
-    1 -> 1
+    "1" -> "1"
   }
 }
 "#
@@ -1385,9 +1385,9 @@ World"
 
     assert_format!(
         r#"fn main() {
-  case 1 {
-    1 -> fn(x) { x }
-    1 -> 1
+  case "1" {
+    "1" -> fn(x) { x }
+    "1" -> "1"
   }
 }
 "#
@@ -1395,12 +1395,12 @@ World"
 
     assert_format!(
         r#"fn main() {
-  case 1 {
-    1 -> fn() {
-      1
-      2
+  case "1" {
+    "1" -> fn() {
+      "1"
+      "2"
     }
-    1 -> 1
+    "1" -> "1"
   }
 }
 "#
@@ -1412,9 +1412,9 @@ World"
 
     assert_format!(
         r#"fn main() {
-  case 1 {
-    1 -> 1
-    1 -> 1
+  case "1" {
+    "1" -> "1"
+    "1" -> "1"
   }
 }
 "#
@@ -1422,9 +1422,9 @@ World"
 
     assert_format!(
         r#"fn main() {
-  case 1, 2, 3, 4 {
-    1, 2, 3, 4 -> 1
-    1, 2, 3, 4 -> 1
+  case "1", "2", "3", "4" {
+    "1", "2", "3", "4" -> "1"
+    "1", "2", "3", "4" -> "1"
   }
 }
 "#
@@ -1436,8 +1436,8 @@ World"
 
     assert_format!(
         r#"fn main() {
-  case 1 {
-    1 | 2 | 3 -> Nil
+  case "1" {
+    "1" | "2" | "3" -> Nil
   }
 }
 "#
@@ -1445,11 +1445,11 @@ World"
 
     assert_format!(
         r#"fn main() {
-  case 1, 2 {
-    1, 1 | 2, 2 | 3, 3 -> Nil
-    1, 1 | 2, 2 | 3, 3 -> Nil
-    1, 1 | 2, 2 | 3, 3 -> Nil
-    1, 1 | 2, 2 | 3, 3 -> Nil
+  case "1", "2" {
+    "1", "1" | "2", "2" | "3", "3" -> Nil
+    "1", "1" | "2", "2" | "3", "3" -> Nil
+    "1", "1" | "2", "2" | "3", "3" -> Nil
+    "1", "1" | "2", "2" | "3", "3" -> Nil
   }
 }
 "#
@@ -1461,7 +1461,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  case 1 {
+  case "1" {
     _ if x == y -> Nil
   }
 }
@@ -1470,7 +1470,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  case 1 {
+  case "1" {
     _ if x != y -> Nil
   }
 }
@@ -1479,7 +1479,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  case 1 {
+  case "1" {
     _ if x || y -> Nil
   }
 }
@@ -1488,7 +1488,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  case 1 {
+  case "1" {
     _ if x && y -> Nil
   }
 }
@@ -1497,7 +1497,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  case 1 {
+  case "1" {
     _ if x != y && x == z -> Nil
   }
 }
@@ -1535,21 +1535,21 @@ World"
 
     assert_format!(
         r#"fn main() {
-  tuple(1)
+  tuple("1")
 }
 "#
     );
 
     assert_format!(
         r#"fn main() {
-  tuple(1, 2)
+  tuple("1", "2")
 }
 "#
     );
 
     assert_format!(
         r#"fn main() {
-  tuple(1, 2, 3)
+  tuple("1", "2", "3")
 }
 "#
     );

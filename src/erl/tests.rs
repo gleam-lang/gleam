@@ -125,7 +125,7 @@ map() ->
                 body: TypedExpr::Int {
                     typ: crate::typ::int(),
                     location: Default::default(),
-                    value: 176,
+                    value: "176".to_string(),
                 },
             },
             Statement::Fn {
@@ -174,12 +174,12 @@ map() ->
                     first: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
                         location: Default::default(),
-                        value: 1,
+                        value: "1".to_string(),
                     }),
                     then: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
                         location: Default::default(),
-                        value: 2,
+                        value: "2".to_string(),
                     }),
                 },
             },
@@ -196,12 +196,12 @@ map() ->
                     left: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
                         location: Default::default(),
-                        value: 1,
+                        value: "1".to_string(),
                     }),
                     right: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
                         location: Default::default(),
-                        value: 2,
+                        value: "2".to_string(),
                     }),
                 },
             },
@@ -238,7 +238,7 @@ map() ->
                     value: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
                         location: Default::default(),
-                        value: 1,
+                        value: "1".to_string(),
                     }),
                     pattern: Pattern::Var {
                         location: Default::default(),
@@ -268,7 +268,7 @@ map() ->
                     head: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
                         location: Default::default(),
-                        value: 12,
+                        value: "12".to_string(),
                     }),
                     tail: Box::new(TypedExpr::ListCons {
                         location: Default::default(),
@@ -276,7 +276,7 @@ map() ->
                         head: Box::new(TypedExpr::Int {
                             typ: crate::typ::int(),
                             location: Default::default(),
-                            value: 34,
+                            value: "34".to_string(),
                         }),
                         tail: Box::new(TypedExpr::ListNil {
                             location: Default::default(),
@@ -315,7 +315,7 @@ map() ->
                     body: Box::new(TypedExpr::Int {
                         typ: crate::typ::int(),
                         location: Default::default(),
-                        value: 100000000000,
+                        value: "100000000000".to_string(),
                     }),
                 },
             },
@@ -332,7 +332,7 @@ map() ->
                         TypedExpr::Int {
                             typ: crate::typ::int(),
                             location: Default::default(),
-                            value: 1,
+                            value: "1".to_string(),
                         },
                         TypedExpr::Float {
                             location: Default::default(),
@@ -461,7 +461,7 @@ tup() ->
             body: TypedExpr::Int {
                 typ: crate::typ::int(),
                 location: Default::default(),
-                value: 1,
+                value: "1".to_string(),
             },
         }],
     };
@@ -557,7 +557,7 @@ some_function(
                         value: TypedExpr::Int {
                             location: Default::default(),
                             typ: crate::typ::int(),
-                            value: 1,
+                            value: "1".to_string(),
                         },
                     }],
                     fun: Box::new(TypedExpr::ModuleSelect {
@@ -610,7 +610,7 @@ moddy4() ->
                 subjects: vec![TypedExpr::Int {
                     typ: crate::typ::int(),
                     location: Default::default(),
-                    value: 1,
+                    value: "1".to_string(),
                 }],
                 clauses: vec![
                     Clause {
@@ -618,13 +618,13 @@ moddy4() ->
                         guard: None,
                         pattern: vec![Pattern::Int {
                             location: Default::default(),
-                            value: 1,
+                            value: "1".to_string(),
                         }],
                         alternative_patterns: vec![],
                         then: TypedExpr::Int {
                             typ: crate::typ::int(),
                             location: Default::default(),
-                            value: 1,
+                            value: "1".to_string(),
                         },
                     },
                     Clause {
@@ -638,7 +638,7 @@ moddy4() ->
                         then: TypedExpr::Int {
                             typ: crate::typ::int(),
                             location: Default::default(),
-                            value: 1,
+                            value: "1".to_string(),
                         },
                     },
                     Clause {
@@ -652,7 +652,7 @@ moddy4() ->
                         then: TypedExpr::Int {
                             typ: crate::typ::int(),
                             location: Default::default(),
-                            value: 1,
+                            value: "1".to_string(),
                         },
                     },
                     Clause {
@@ -665,7 +665,7 @@ moddy4() ->
                         then: TypedExpr::Int {
                             typ: crate::typ::int(),
                             location: Default::default(),
-                            value: 1,
+                            value: "1".to_string(),
                         },
                     },
                     Clause {
@@ -680,7 +680,7 @@ moddy4() ->
                                 location: Default::default(),
                                 value: Pattern::Int {
                                     location: Default::default(),
-                                    value: 2,
+                                    value: "2".to_string(),
                                 },
                             }],
                             constructor: PatternConstructor::Record {
@@ -691,7 +691,7 @@ moddy4() ->
                         then: TypedExpr::Int {
                             typ: crate::typ::int(),
                             location: Default::default(),
-                            value: 1,
+                            value: "1".to_string(),
                         },
                     },
                     Clause {
@@ -702,11 +702,11 @@ moddy4() ->
                             elems: vec![
                                 Pattern::Int {
                                     location: Default::default(),
-                                    value: 1,
+                                    value: "1".to_string(),
                                 },
                                 Pattern::Int {
                                     location: Default::default(),
-                                    value: 2,
+                                    value: "2".to_string(),
                                 },
                             ],
                         }],
@@ -714,7 +714,7 @@ moddy4() ->
                         then: TypedExpr::Int {
                             typ: crate::typ::int(),
                             location: Default::default(),
-                            value: 1,
+                            value: "1".to_string(),
                         },
                     },
                 ],
@@ -772,7 +772,7 @@ go() ->
                         value: TypedExpr::Int {
                             typ: crate::typ::int(),
                             location: Default::default(),
-                            value: 1,
+                            value: "1".to_string(),
                         },
                     }],
                     fun: Box::new(TypedExpr::Var {
@@ -807,7 +807,7 @@ go() ->
                         value: TypedExpr::Int {
                             typ: crate::typ::int(),
                             location: Default::default(),
-                            value: 1,
+                            value: "1".to_string(),
                         },
                     }],
                     fun: Box::new(TypedExpr::Var {
@@ -837,7 +837,7 @@ go() ->
                         value: TypedExpr::Int {
                             typ: crate::typ::int(),
                             location: Default::default(),
-                            value: 2,
+                            value: "2".to_string(),
                         },
                     }],
                     fun: Box::new(TypedExpr::Call {
@@ -849,7 +849,7 @@ go() ->
                             value: TypedExpr::Int {
                                 typ: crate::typ::int(),
                                 location: Default::default(),
-                                value: 1,
+                                value: "1".to_string(),
                             },
                         }],
                         fun: Box::new(TypedExpr::Var {

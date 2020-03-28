@@ -304,7 +304,7 @@ pub type TypedPattern = Pattern<PatternConstructor>;
 pub enum Pattern<Constructor> {
     Int {
         location: SrcSpan,
-        value: i64,
+        value: String,
     },
 
     Float {

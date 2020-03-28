@@ -6,7 +6,7 @@ pub enum TypedExpr {
     Int {
         location: SrcSpan,
         typ: Arc<Type>,
-        value: i64,
+        value: String,
     },
 
     Float {
