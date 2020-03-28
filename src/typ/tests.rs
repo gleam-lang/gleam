@@ -2,8 +2,8 @@ use super::*;
 
 #[test]
 fn field_map_reorder_test() {
-    let int = |value| UntypedExpr::Int {
-        value,
+    let int = |value: &str| UntypedExpr::Int {
+        value: value.to_string(),
         location: SrcSpan { start: 0, end: 0 },
     };
 
@@ -44,17 +44,17 @@ fn field_map_reorder_test() {
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int("1".to_string()),
+                value: int("1"),
             },
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int("2".to_string()),
+                value: int("2"),
             },
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int("3".to_string()),
+                value: int("3"),
             },
         ],
         expected_result: Ok(()),
@@ -62,17 +62,17 @@ fn field_map_reorder_test() {
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int("1".to_string()),
+                value: int("1"),
             },
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int("2".to_string()),
+                value: int("2"),
             },
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int("3".to_string()),
+                value: int("3"),
             },
         ],
     }
@@ -85,17 +85,17 @@ fn field_map_reorder_test() {
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int("1".to_string()),
+                value: int("1"),
             },
             CallArg {
                 location: Default::default(),
                 label: Some("last".to_string()),
-                value: int("2".to_string()),
+                value: int("2"),
             },
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int("3".to_string()),
+                value: int("3"),
             },
         ],
         expected_result: Ok(()),
@@ -103,17 +103,17 @@ fn field_map_reorder_test() {
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int("1".to_string()),
+                value: int("1"),
             },
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int("3".to_string()),
+                value: int("3"),
             },
             CallArg {
                 location: Default::default(),
                 label: Some("last".to_string()),
-                value: int("2".to_string()),
+                value: int("2"),
             },
         ],
     }
@@ -126,17 +126,17 @@ fn field_map_reorder_test() {
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int("1".to_string()),
+                value: int("1"),
             },
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int("2".to_string()),
+                value: int("2"),
             },
             CallArg {
                 location: Default::default(),
                 label: Some("last".to_string()),
-                value: int("3".to_string()),
+                value: int("3"),
             },
         ],
         expected_result: Ok(()),
@@ -144,17 +144,17 @@ fn field_map_reorder_test() {
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int("1".to_string()),
+                value: int("1"),
             },
             CallArg {
                 location: Default::default(),
                 label: None,
-                value: int("2".to_string()),
+                value: int("2"),
             },
             CallArg {
                 location: Default::default(),
                 label: Some("last".to_string()),
-                value: int("3".to_string()),
+                value: int("3"),
             },
         ],
     }

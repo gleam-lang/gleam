@@ -472,15 +472,15 @@ NegativeIntLiteral: i64 = {
     <neg:r"-[0-9]+"> => i64::from_str(neg).unwrap(),
 }
 
-IntLiteral: i64 = {
-    <i:PositiveIntLiteral> => i as i64,
-    <i:NegativeIntLiteral> => i,
+IntLiteral: String = {
+    <i:PositiveIntLiteral> => i.to_string(),
+    <i:NegativeIntLiteral> => i.to_string(),
 }
 
 Int: UntypedExpr = {
     <s:@L> <value:IntLiteral> <e:@L> => UntypedExpr::Int {
         location: location(s, e),
-        value: value.to_string(),
+        value,
     }
 }
 
@@ -587,7 +587,7 @@ PatternString: UntypedPattern = {
 PatternInt: UntypedPattern = {
     <s:@L> <value:IntLiteral> <e:@L> => Pattern::Int {
         location: location(s, e),
-        value: value.to_string(),
+        value,
     }
 }
 
