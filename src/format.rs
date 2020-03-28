@@ -1,3 +1,4 @@
+pub(crate) mod command;
 #[cfg(test)]
 mod tests;
 
