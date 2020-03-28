@@ -1926,7 +1926,7 @@ fn infer_string(value: String, location: SrcSpan) -> Result<TypedExpr, Error> {
     })
 }
 
-fn infer_int(value: i64, location: SrcSpan) -> Result<TypedExpr, Error> {
+fn infer_int(value: String, location: SrcSpan) -> Result<TypedExpr, Error> {
     Ok(TypedExpr::Int {
         location,
         value,

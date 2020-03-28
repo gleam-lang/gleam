@@ -472,9 +472,9 @@ NegativeIntLiteral: i64 = {
     <neg:r"-[0-9]+"> => i64::from_str(neg).unwrap(),
 }
 
-IntLiteral: i64 = {
-    <i:PositiveIntLiteral> => i as i64,
-    <i:NegativeIntLiteral> => i,
+IntLiteral: String = {
+    <i:PositiveIntLiteral> => i.to_string(),
+    <i:NegativeIntLiteral> => i.to_string(),
 }
 
 Int: UntypedExpr = {

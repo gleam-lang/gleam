@@ -4,7 +4,7 @@ use super::*;
 pub enum UntypedExpr {
     Int {
         location: SrcSpan,
-        value: i64,
+        value: String,
     },
 
     Float {

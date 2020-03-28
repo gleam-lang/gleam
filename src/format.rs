@@ -310,7 +310,7 @@ impl Documentable for &BinOp {
 impl Documentable for &UntypedPattern {
     fn to_doc(self) -> Document {
         match self {
-            Pattern::Int { value, .. } => value.to_doc(),
+            Pattern::Int { value, .. } => value.clone().to_doc(),
 
             Pattern::Float { value, .. } => value.to_doc(),
 
@@ -430,7 +430,7 @@ impl Documentable for &UntypedExpr {
                 .append("|> ")
                 .append(right.as_ref()),
 
-            UntypedExpr::Int { value, .. } => value.to_doc(),
+            UntypedExpr::Int { value, .. } => value.clone().to_doc(),
 
             UntypedExpr::Float { value, .. } => value.to_doc(),
 
