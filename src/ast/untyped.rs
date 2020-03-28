@@ -9,7 +9,7 @@ pub enum UntypedExpr {
 
     Float {
         location: SrcSpan,
-        value: f64,
+        value: String,
     },
 
     String {
