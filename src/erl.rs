@@ -301,7 +301,7 @@ fn pattern(p: TypedPattern, env: &mut Env) -> Document {
 
         Pattern::Int { value, .. } => value.to_doc(),
 
-        Pattern::Float { value, .. } => {  
+        Pattern::Float { value, .. } => {
             if value.ends_with(".") {
                 format!("{}0", value).to_doc()
             } else {
@@ -659,7 +659,7 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
         TypedExpr::ListNil { .. } => "[]".to_doc(),
         TypedExpr::Todo { .. } => "erlang:error({gleam_error, todo})".to_doc(),
         TypedExpr::Int { value, .. } => value.to_doc(),
-        TypedExpr::Float { value, .. } => {  
+        TypedExpr::Float { value, .. } => {
             if value.ends_with(".") {
                 format!("{}0", value).to_doc()
             } else {
