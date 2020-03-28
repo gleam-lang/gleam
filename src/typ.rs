@@ -1934,7 +1934,7 @@ fn infer_int(value: String, location: SrcSpan) -> Result<TypedExpr, Error> {
     })
 }
 
-fn infer_float(value: f64, location: SrcSpan) -> Result<TypedExpr, Error> {
+fn infer_float(value: String, location: SrcSpan) -> Result<TypedExpr, Error> {
     Ok(TypedExpr::Float {
         location,
         value,

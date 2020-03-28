@@ -137,7 +137,7 @@ map() ->
                 body: TypedExpr::Float {
                     location: Default::default(),
                     typ: crate::typ::float(),
-                    value: 11177.324401,
+                    value: "11177.324401".to_string(),
                 },
             },
             Statement::Fn {
@@ -337,7 +337,7 @@ map() ->
                         TypedExpr::Float {
                             location: Default::default(),
                             typ: crate::typ::float(),
-                            value: 2.0,
+                            value: "2.0".to_string(),
                         },
                     ],
                 },
@@ -632,7 +632,7 @@ moddy4() ->
                         guard: None,
                         pattern: vec![Pattern::Float {
                             location: Default::default(),
-                            value: 1.0,
+                            value: "1.0".to_string(),
                         }],
                         alternative_patterns: vec![],
                         then: TypedExpr::Int {

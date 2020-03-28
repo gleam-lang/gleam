@@ -12,7 +12,7 @@ pub enum TypedExpr {
     Float {
         location: SrcSpan,
         typ: Arc<Type>,
-        value: f64,
+        value: String,
     },
 
     String {
