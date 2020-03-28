@@ -331,7 +331,7 @@ impl Documentable for &UntypedPattern {
         match self {
             Pattern::Int { value, .. } => value.clone().to_doc(),
 
-            Pattern::Float { value, .. } => value.to_doc(),
+            Pattern::Float { value, .. } => value.clone().to_doc(),
 
             Pattern::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
 
@@ -451,7 +451,7 @@ impl Documentable for &UntypedExpr {
 
             UntypedExpr::Int { value, .. } => value.clone().to_doc(),
 
-            UntypedExpr::Float { value, .. } => value.to_doc(),
+            UntypedExpr::Float { value, .. } => value.clone().to_doc(),
 
             UntypedExpr::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
 

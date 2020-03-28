@@ -301,7 +301,7 @@ fn pattern(p: TypedPattern, env: &mut Env) -> Document {
 
         Pattern::Int { value, .. } => value.to_doc(),
 
-        Pattern::Float { value, .. } => value.to_doc(),
+        Pattern::Float { value, .. } => float(value.as_ref()),
 
         Pattern::String { value, .. } => string(value),
 
@@ -312,6 +312,14 @@ fn pattern(p: TypedPattern, env: &mut Env) -> Document {
         } => tag_tuple_pattern(name, args, env),
 
         Pattern::Tuple { elems, .. } => tuple(elems.into_iter().map(|p| pattern(p, env))),
+    }
+}
+
+fn float(value: &str) -> Document {
+    if value.ends_with(".") {
+        format!("{}0", value).to_doc()
+    } else {
+        value.to_string().to_doc()
     }
 }
 
@@ -653,7 +661,7 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
         TypedExpr::ListNil { .. } => "[]".to_doc(),
         TypedExpr::Todo { .. } => "erlang:error({gleam_error, todo})".to_doc(),
         TypedExpr::Int { value, .. } => value.to_doc(),
-        TypedExpr::Float { value, .. } => value.to_doc(),
+        TypedExpr::Float { value, .. } => float(value.as_ref()),
         TypedExpr::String { value, .. } => string(value),
         TypedExpr::Seq { first, then, .. } => seq(*first, *then, env),
         TypedExpr::Pipe { left, right, .. } => pipe(*left, *right, env),

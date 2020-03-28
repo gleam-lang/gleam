@@ -309,7 +309,7 @@ pub enum Pattern<Constructor> {
 
     Float {
         location: SrcSpan,
-        value: f64,
+        value: String,
     },
 
     String {
