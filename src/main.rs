@@ -220,7 +220,7 @@ fn command_format() -> Result<(), Error> {
         .expect("Reading stdin");
 
     let formatted = crate::format::pretty(src.as_ref()).map_err(|error| Error::Parse {
-        path: PathBuf::new(), // TODO
+        path: PathBuf::from("<standard input>"),
         error,
         src,
     })?;
