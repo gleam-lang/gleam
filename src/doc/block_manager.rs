@@ -109,10 +109,10 @@ impl DocBlockManager {
                         arity: args.len(),
                         signature: vec![crate::pretty::format(80, doc)],
                         doc: fn_docs,
-                        location: DocMeta::new("".to_string()),
                         typ: DocType::Fn,
                     });
                 }
+
                 Statement::TypeAlias {
                     location,
                     args,
@@ -139,10 +139,10 @@ impl DocBlockManager {
                         arity: args.len(),
                         signature: vec![crate::pretty::format(80, doc)],
                         doc: fn_docs,
-                        location: DocMeta::new("".to_string()),
                         typ: DocType::TypeAlias,
                     });
                 }
+
                 Statement::CustomType {
                     location,
                     name,
@@ -169,10 +169,10 @@ impl DocBlockManager {
                         arity: args.len(),
                         signature: vec![crate::pretty::format(80, doc)],
                         doc: fn_docs,
-                        location: DocMeta::new("".to_string()),
                         typ: DocType::CustomType,
                     });
                 }
+
                 Statement::ExternalFn {
                     location,
                     name,
@@ -193,10 +193,10 @@ impl DocBlockManager {
                         arity: args.len(),
                         signature: vec![crate::pretty::format(80, doc.to_doc())],
                         doc: fn_docs,
-                        location: DocMeta::new("".to_string()),
                         typ: DocType::Fn,
                     });
                 }
+
                 Statement::ExternalType {
                     location,
                     name,
@@ -221,7 +221,6 @@ impl DocBlockManager {
                         arity: args.len(),
                         signature: vec![crate::pretty::format(80, doc)],
                         doc: fn_docs,
-                        location: DocMeta::new("".to_string()),
                         typ: DocType::ExternalType,
                     });
                 }
@@ -229,7 +228,6 @@ impl DocBlockManager {
             }
         }
 
-        // TODO: Not the real logic
         module_doc.insert(
             "en-US".to_string(),
             self.blocks
@@ -257,13 +255,6 @@ impl DocBlockManager {
                 file: module.name_string(),
             },
             module_doc: module_doc,
-            location: DocMeta {
-                authors: None,
-                deprecated: None,
-                since: None,
-                cross_references: None,
-                edit_url: format!("https://www.example.com/{}", module.name_string()),
-            },
             docs,
         }
     }

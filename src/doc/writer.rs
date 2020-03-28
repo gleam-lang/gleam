@@ -22,7 +22,6 @@ struct Module {
     pub project_version: String,
     pub all_modules: Option<Vec<Module>>,
     pub module_doc: String,
-    pub module_src: String,
     pub types_doc: Vec<ModuleItem>,
     pub functions_doc: Vec<ModuleItem>,
     pub readme: String,
@@ -129,7 +128,6 @@ impl DocWriter<'_> {
                     project_name: module.project_name.clone(),
                     project_version: module.project_version.clone(),
                     module_doc: module.module_doc.clone(),
-                    module_src: module.module_src.clone(),
                     types_doc: module
                         .types_doc
                         .iter()
@@ -194,7 +192,6 @@ impl DocWriter<'_> {
             project_name: self.project_name.clone(),
             project_version: self.project_version.clone(),
             module_name: chunk.anno.file.clone(),
-            module_src: format!("/src/{}.gleam", chunk.anno.file.clone()),
             module_doc: chunk
                 .module_doc
                 .get("en-US")

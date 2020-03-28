@@ -6,7 +6,7 @@ pub struct EEP48Doc {
     pub arity: usize,
     pub signature: Vec<String>,
     pub doc: Option<HashMap<String, String>>,
-    pub location: DocMeta,
+    // pub location: DocMeta,
     pub typ: DocType,
 }
 
@@ -51,34 +51,12 @@ pub enum CrossReference {
     },
 }
 
-/// Our supported meta keys
-#[derive(Debug, PartialEq, Eq)]
-pub struct DocMeta {
-    pub authors: Option<Vec<String>>,
-    pub deprecated: Option<bool>,
-    pub since: Option<String>,
-    pub cross_references: Option<Vec<CrossReference>>,
-    pub edit_url: String,
-}
-
-impl DocMeta {
-    pub fn new(edit_url: String) -> Self {
-        DocMeta {
-            authors: None,
-            deprecated: None,
-            since: None,
-            cross_references: None,
-            edit_url,
-        }
-    }
-}
-
 /// A data structure to hold data to generate a BEAM chunk
 /// in compliance with http://erlang.org/eeps/eep-0048.html
 #[derive(Debug, PartialEq)]
 pub struct EEP48DocChunk {
     pub anno: ErlAnno,
     pub module_doc: HashMap<String, String>,
-    pub location: DocMeta,
+    // pub location: DocMeta,
     pub docs: Vec<EEP48Doc>,
 }
