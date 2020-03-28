@@ -37,14 +37,14 @@ pub struct DocWriter<'a> {
     package_root: PathBuf,
 }
 
-fn render_markdown(text: String) -> String {
+fn render_markdown(text: &str) -> String {
     let mut s = String::with_capacity(text.len() * 3 / 2);
     let p = pulldown_cmark::Parser::new(&*text);
     pulldown_cmark::html::push_html(&mut s, p);
     s
 }
 
-handlebars_helper!(markdown: |text: str| render_markdown(text.to_string()));
+handlebars_helper!(markdown: |text: str| render_markdown(&text));
 
 impl DocWriter<'_> {
     pub fn new(
@@ -86,11 +86,11 @@ impl DocWriter<'_> {
         let rendered = self
             .registry
             .render("index", module)
-            .map_err(|_| Error::FileIO {
+            .map_err(|err| Error::FileIO {
                 path: self.doc_dir.join("index.html"),
                 action: FileIOAction::Create,
                 kind: FileKind::File,
-                err: Some("Could not parse README as valid markdown".to_string()),
+                err: Some(err.to_string()),
             })?;
 
         self.write_to_path(rendered.as_bytes(), self.doc_dir.join("index.html"))
@@ -248,11 +248,11 @@ impl DocWriter<'_> {
         let doc_text = self
             .registry
             .render("module", &module)
-            .map_err(|_e| Error::FileIO {
+            .map_err(|err| Error::FileIO {
                 action: FileIOAction::Parse,
                 kind: FileKind::File,
                 path: doc_dir_path.clone(),
-                err: None,
+                err: Some(err.to_string()),
             })?;
         self.write_to_path(doc_text.as_bytes(), doc_dir_path)
     }

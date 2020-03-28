@@ -6,10 +6,7 @@
 
 use im::vector::Vector;
 
-pub trait Documentable
-where
-    Self: Clone,
-{
+pub trait Documentable {
     fn to_doc(self) -> Document;
 }
 

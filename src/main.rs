@@ -32,12 +32,8 @@ extern crate lalrpop_util;
 #[macro_use]
 extern crate lazy_static;
 
-extern crate serde_json;
-
 #[macro_use]
 extern crate handlebars;
-
-extern crate pulldown_cmark;
 
 use crate::error::Error;
 use crate::project::ModuleOrigin;
@@ -190,7 +186,7 @@ fn command_build(root: String, write_docs: bool) -> Result<(), Error> {
         project_config.name.clone(),
         project_config
             .version
-            .unwrap_or("0.0.1".to_string())
+            .unwrap_or("1.0.0".to_string())
             .clone(),
         doc_dir.clone(),
         root_path,
