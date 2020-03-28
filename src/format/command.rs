@@ -1,5 +1,5 @@
 use crate::error::Error;
-use std::io::{Read, Write};
+use std::io::Read;
 use std::path::PathBuf;
 
 pub fn run(stdin: bool, check: bool, files: Vec<String>) -> Result<(), Error> {
@@ -26,8 +26,6 @@ pub fn format_stdin(_check: bool) -> Result<(), Error> {
         src,
     })?;
 
-    std::io::stdout()
-        .write(formatted.as_bytes())
-        .expect("Writing stdout");
+    print!("{}", formatted);
     Ok(())
 }
