@@ -5,7 +5,6 @@ use pulldown_cmark;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::fs::{read_to_string, File};
-use std::io::Read;
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -209,7 +208,6 @@ impl DocWriter<'_> {
     }
 
     fn write_to_path(self: &Self, text: &[u8], path: PathBuf) -> Result<(), Error> {
-        use crate::error::{FileIOAction, FileKind};
         path.parent()
             .ok_or_else(|| Error::FileIO {
                 action: FileIOAction::FindParent,

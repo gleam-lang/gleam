@@ -6,7 +6,7 @@ pub struct EEP48Doc {
     pub arity: usize,
     pub signature: Vec<String>,
     pub doc: Option<HashMap<String, String>>,
-    pub meta: DocMeta,
+    pub location: DocMeta,
     pub typ: DocType,
 }
 
@@ -79,6 +79,6 @@ impl DocMeta {
 pub struct EEP48DocChunk {
     pub anno: ErlAnno,
     pub module_doc: HashMap<String, String>,
-    pub meta: DocMeta,
+    pub location: DocMeta,
     pub docs: Vec<EEP48Doc>,
 }

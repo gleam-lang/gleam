@@ -89,7 +89,7 @@ impl DocBlockManager {
         for statement in module.statements.iter() {
             match statement {
                 Statement::Fn {
-                    meta,
+                    location,
                     name,
                     args,
                     public: true,
@@ -97,11 +97,11 @@ impl DocBlockManager {
                     ..
                 } => {
                     if first_statement_line_no.is_none() {
-                        first_statement_line_no = Some(meta.start);
+                        first_statement_line_no = Some(location.start);
                     }
                     let doc = crate::format::fn_signature(&true, name, args, return_annotation);
                     let fn_docs: Option<HashMap<String, String>> =
-                        self.find_block_for_line(meta.start).map(|d| {
+                        self.find_block_for_line(location.start).map(|d| {
                             vec![("en-US".to_string(), d.trim().to_string())]
                                 .into_iter()
                                 .collect()
@@ -112,22 +112,22 @@ impl DocBlockManager {
                         arity: args.len(),
                         signature: vec![crate::pretty::format(80, doc)],
                         doc: fn_docs,
-                        meta: DocMeta::new("".to_string()),
+                        location: DocMeta::new("".to_string()),
                         typ: DocType::Fn,
                     });
                 }
                 Statement::TypeAlias {
-                    meta,
+                    location,
                     args,
                     alias,
                     resolved_type,
                     public: true,
                 } => {
                     if first_statement_line_no.is_none() {
-                        first_statement_line_no = Some(meta.start);
+                        first_statement_line_no = Some(location.start);
                     }
                     let doc = (&UntypedStatement::TypeAlias {
-                        meta: meta.clone(),
+                        location: location.clone(),
                         args: args.clone(),
                         alias: alias.clone(),
                         resolved_type: resolved_type.clone(),
@@ -135,29 +135,29 @@ impl DocBlockManager {
                     })
                         .to_doc();
                     let fn_docs: Option<HashMap<String, String>> = self
-                        .find_block_for_line(meta.start)
+                        .find_block_for_line(location.start)
                         .map(|d| vec![("en-US".to_string(), d)].into_iter().collect());
                     docs.push(EEP48Doc {
                         name: alias.to_string(),
                         arity: args.len(),
                         signature: vec![crate::pretty::format(80, doc)],
                         doc: fn_docs,
-                        meta: DocMeta::new("".to_string()),
+                        location: DocMeta::new("".to_string()),
                         typ: DocType::TypeAlias,
                     });
                 }
                 Statement::CustomType {
-                    meta,
+                    location,
                     name,
                     args,
                     constructors,
                     ..
                 } => {
                     if first_statement_line_no.is_none() {
-                        first_statement_line_no = Some(meta.start);
+                        first_statement_line_no = Some(location.start);
                     }
                     let statement = UntypedStatement::CustomType {
-                        meta: meta.clone(),
+                        location: location.clone(),
                         args: args.clone(),
                         name: name.clone(),
                         constructors: constructors.clone(),
@@ -165,19 +165,19 @@ impl DocBlockManager {
                     };
                     let doc = (&statement).to_doc();
                     let fn_docs: Option<HashMap<String, String>> = self
-                        .find_block_for_line(meta.start)
+                        .find_block_for_line(location.start)
                         .map(|d| vec![("en-US".to_string(), d)].into_iter().collect());
                     docs.push(EEP48Doc {
                         name: name.to_string(),
                         arity: args.len(),
                         signature: vec![crate::pretty::format(80, doc)],
                         doc: fn_docs,
-                        meta: DocMeta::new("".to_string()),
+                        location: DocMeta::new("".to_string()),
                         typ: DocType::CustomType,
                     });
                 }
                 Statement::ExternalFn {
-                    meta,
+                    location,
                     name,
                     args,
                     retrn,
@@ -185,43 +185,46 @@ impl DocBlockManager {
                     ..
                 } => {
                     if first_statement_line_no.is_none() {
-                        first_statement_line_no = Some(meta.start);
+                        first_statement_line_no = Some(location.start);
                     }
                     let doc = crate::format::external_fn_signature(&true, name, args, retrn);
                     let fn_docs: Option<HashMap<String, String>> = self
-                        .find_block_for_line(meta.start)
+                        .find_block_for_line(location.start)
                         .map(|d| vec![("en-US".to_string(), d)].into_iter().collect());
                     docs.push(EEP48Doc {
                         name: name.to_string(),
                         arity: args.len(),
                         signature: vec![crate::pretty::format(80, doc.to_doc())],
                         doc: fn_docs,
-                        meta: DocMeta::new("".to_string()),
+                        location: DocMeta::new("".to_string()),
                         typ: DocType::Fn,
                     });
                 }
                 Statement::ExternalType {
-                    meta, name, args, ..
+                    location,
+                    name,
+                    args,
+                    ..
                 } => {
                     if first_statement_line_no.is_none() {
-                        first_statement_line_no = Some(meta.start);
+                        first_statement_line_no = Some(location.start);
                     }
                     let doc = UntypedStatement::ExternalType {
-                        meta: meta.clone(),
+                        location: location.clone(),
                         args: args.clone(),
                         name: name.clone(),
                         public: true,
                     }
                     .to_doc();
                     let fn_docs: Option<HashMap<String, String>> = self
-                        .find_block_for_line(meta.start)
+                        .find_block_for_line(location.start)
                         .map(|d| vec![("en-US".to_string(), d)].into_iter().collect());
                     docs.push(EEP48Doc {
                         name: name.to_string(),
                         arity: args.len(),
                         signature: vec![crate::pretty::format(80, doc)],
                         doc: fn_docs,
-                        meta: DocMeta::new("".to_string()),
+                        location: DocMeta::new("".to_string()),
                         typ: DocType::ExternalType,
                     });
                 }
@@ -257,7 +260,7 @@ impl DocBlockManager {
                 file: module.name_string(),
             },
             module_doc: module_doc,
-            meta: DocMeta {
+            location: DocMeta {
                 authors: None,
                 deprecated: None,
                 since: None,

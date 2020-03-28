@@ -447,13 +447,6 @@ pub fn delim(d: &str) -> Document {
     }
 }
 
-pub fn delim_end(d: &str) -> Document {
-    Document::Break {
-        broken: d.to_string(),
-        unbroken: format!(" {}", d),
-    }
-}
-
 impl Document {
     pub fn group(self) -> Document {
         Document::Group(Box::new(self))
@@ -469,12 +462,6 @@ impl Document {
 
     pub fn append(self, x: impl Documentable) -> Document {
         Document::Cons(Box::new(self), Box::new(x.to_doc()))
-    }
-
-    pub fn append_all(self, x: Vec<impl Documentable>) -> Document {
-        x.into_iter().fold(self, |acc, d| {
-            Document::Cons(Box::new(acc), Box::new(d.to_doc()))
-        })
     }
 
     pub fn format(self, limit: isize) -> String {
