@@ -1,3 +1,5 @@
+#![deny(warnings)]
+
 mod ast;
 mod erl;
 mod error;
