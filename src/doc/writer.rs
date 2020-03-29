@@ -57,16 +57,16 @@ impl DocWriter<'_> {
             project_version,
             doc_dir,
             registry: {
-                let module_template = std::include_str!("views/module.hbs");
-                let index_template = std::include_str!("views/index.hbs");
+                let module_template = std::include_str!("views/module.html");
+                let index_template = std::include_str!("views/index.html");
                 let mut registry = Handlebars::new();
                 registry.register_helper("markdown", Box::new(markdown));
                 registry
                     .register_template_string("module", module_template)
-                    .unwrap_or_else(|_e| panic!("Doc Template is missing"));
+                    .expect("module template");
                 registry
                     .register_template_string("index", index_template)
-                    .unwrap_or_else(|_e| panic!("Doc Template is missing"));
+                    .expect("index template");
                 registry
             },
             modules: vec![],
@@ -107,16 +107,6 @@ impl DocWriter<'_> {
         self.write_to_path(
             std::include_str!("views/index.css").as_bytes(),
             self.doc_dir.join("index.css"),
-        )?;
-
-        self.write_to_path(
-            std::include_str!("views/index.js").as_bytes(),
-            self.doc_dir.join("index.js"),
-        )?;
-
-        self.write_to_path(
-            std::include_bytes!("views/icomoon.ttf"),
-            self.doc_dir.join("icomoon.ttf"),
         )?;
 
         self.modules
@@ -240,7 +230,7 @@ impl DocWriter<'_> {
     }
 
     fn write_doc(self: &Self, module: Module) -> Result<(), Error> {
-        let filename = format!("{}.html", module.module_name);
+        let filename = format!("{}/index.html", module.module_name);
         let doc_dir_path = self.doc_dir.join(&filename);
         let doc_text = self
             .registry

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>{{module_name}} - {{ project_name }}</title>
+    <link rel="stylesheet" href="./index.css" type="text/css" />
+  </head>
+  <body>
+    <header class="page-header">
+      <h2>
+        {{project_name}} - {{project_version}}
+      </h2>
+    </header>
+
+    <div class="page">
+      <nav class="sidebar">
+        <a class="sidebar-toggle" href="#">
+          <svg
+            aria-hidden="true"
+            focusable="false"
+            data-prefix="fas"
+            data-icon="bars"
+            class="svg-inline--fa fa-bars fa-w-14"
+            role="img"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 448 512"
+          >
+            <path
+              fill="#fff"
+              d="M16 132h416c8.837 0 16-7.163 16-16V76c0-8.837-7.163-16-16-16H16C7.163 60 0 67.163 0 76v40c0 8.837 7.163 16 16 16zm0 160h416c8.837 0 16-7.163 16-16v-40c0-8.837-7.163-16-16-16H16c-8.837 0-16 7.163-16 16v40c0 8.837 7.163 16 16 16zm0 160h416c8.837 0 16-7.163 16-16v-40c0-8.837-7.163-16-16-16H16c-8.837 0-16 7.163-16 16v40c0 8.837 7.163 16 16 16z"
+            ></path>
+          </svg>
+        </a>
+
+        {{#if pages}}
+        <h2>Pages</h2>
+        <ul>
+        {{#each pages}}
+          <li><a href="/{{this.path}}">{{ this.title }}</a></li>
+        {{/each}}
+        </ul>
+        {{/if}}
+
+        {{#if links}}
+        <h2>Pages</h2>
+        <ul>
+        {{#each links}}
+          <li><a href="/{{this.path}}">{{ this.title }}</a></li>
+        {{/each}}
+        </ul>
+        {{/if}}
+
+        <h2>Modules</h2>
+        <ul>
+        {{#each all_modules}}
+          <li><a href="/{{this.module_name}}">{{this.module_name}}</a></li>
+        {{/each}}
+        </ul>
+
+        {{#if types_doc}}
+        <h2>Types</h2>
+        <ul>
+          {{#each types_doc}}
+          <li><a href="#{{type.name}}">{{type.name}}</a></li>
+          {{/each}}
+        </ul>
+        {{/if}}
+
+        {{#if functions_doc}}
+        <h2>Functions</h2>
+        <ul>
+          {{#each functions_doc}}
+          <li><a href="#{{this.name}}">{{this.name}}</a></li>
+          {{/each}}
+        </ul>
+        {{/if}}
+      </nav>
+
+      <div class="content">
+        {{markdown readme}}
+      </div>
+    </div>
+  </body>
+</html>

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
     <title>gleam/string - gleam_stdlib</title>
-    <link rel="stylesheet" href="./index.css" type="text/css" />
+    <link rel="stylesheet" href="/index.css" type="text/css" />
   </head>
   <body>
     <header class="page-header">
@@ -108,23 +108,21 @@
           gleam/string
         </h1>
 
-        <article class="moduledoc">
-          <p>
-            A built-in representation for efficient string manipulation. String
-            literals are enclosed in <code>"double quotes"</code>.
-          </p>
-          <p>
-            Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam
-            nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam
-            erat, sed diam voluptua. At vero eos et accusam et justo duo dolores
-            et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est
-            Lorem ipsum dolor sit amet.
-          </p>
-        </article>
+        <p>
+          A built-in representation for efficient string manipulation. String
+          literals are enclosed in <code>"double quotes"</code>.
+        </p>
+        <p>
+          Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam
+          nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat,
+          sed diam voluptua. At vero eos et accusam et justo duo dolores et ea
+          rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem
+          ipsum dolor sit amet.
+        </p>
 
         <article class="module-members">
-          <a href="#types">
-            <h1 id="types" class="module-member-kind">
+          <a href="#module-types">
+            <h1 id="module-types" class="module-member-kind">
               Types
             </h1>
           </a>
@@ -229,7 +227,7 @@
               </h2>
             </a>
             <pre>
-fn append(
+pub fn append(
   to first: String,
   suffix second: String
 ) -&gt; String
