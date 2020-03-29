@@ -1,31 +1,41 @@
-@import url("https://fonts.googleapis.com/css?family=Karla:400,700&display=swap");
+@import url('https://fonts.googleapis.com/css?family=Karla:400,700|Ubuntu+Mono&display=swap');
 
 :root {
   /* Colours */
   --black: #2a2020;
   --hard-black: #000;
   --pink: #ffaff3;
-  /* --hot-pink: #e200c0; */
   --hot-pink: #d900b8;
   --white: #fff;
+  --pink-white: #fff8fe;
+  --light-grey: #f5f5f5;
 
   /* Derived colours */
   --text: var(--black);
   --background: var(--white);
+  --accented-background: var(--pink-white);
+  --code-border: var(--pink);
+  --code-background: var(--light-grey);
   --links: var(--hot-pink);
+  --accent: var(--pink);
 
   /* Sizes */
   --max-page-width: 720px;
   --sidebar-width: 240px;
   --gap: 24px;
   --small-gap: calc(var(--gap) / 2);
+  --tiny-gap: calc(var(--small-gap) / 2);
+  --large-gap: calc(var(--gap) * 2);
+
+  /* etc */
+  --shadow: 0 0 0 1px rgba(50,50,93,0.075),0 0 1px #e9ecef,0 2px 4px -2px rgba(138,141,151,0.6);
 }
 
 body,
 html {
   padding: 0;
   margin: 0;
-  font-family: 'Karla', sans-serif;
+  font-family: "Karla", sans-serif;
   font-size: 1.05rem;
   line-height: 1.4;
 }
@@ -40,6 +50,37 @@ a:hover {
   text-decoration: underline;
 }
 
+li {
+  margin-bottom: 4px;
+}
+
+p {
+  margin: var(--small-gap) 0;
+}
+
+/* Code */
+
+pre,
+code {
+  font-family: "Ubuntu Mono", monospace;
+  line-height: 1.2;
+}
+
+pre {
+  padding: var(--small-gap) var(--gap);
+  margin: var(--gap) 0;
+  background: var(--code-background);
+  border-radius: 1px;
+  overflow: auto;
+  box-shadow: var(--shadow);
+}
+
+p code {
+  margin: 0 2px;
+}
+
+/* Page layout */
+
 .page {
   display: flex;
   justify-content: flex-start;
@@ -48,10 +89,6 @@ a:hover {
 .content {
   max-width: var(--max-page-width);
   padding: 0 var(--gap);
-}
-
-h1 {
-  margin: 0;
 }
 
 /* Page header */
@@ -71,6 +108,7 @@ h1 {
 /* Module doc */
 
 .module-name {
+  margin: 0;
   font-weight: 700;
 }
 
@@ -94,5 +132,33 @@ h1 {
 
 .sidebar li {
   line-height: 1.2;
-  padding-bottom: 4px;
+  margin-bottom: 4px;
+}
+
+/* Module members (types, functions) */
+
+.module-members {
+  margin-top: var(--large-gap);
+}
+
+.module-member-kind {
+  font-size: 2rem;
+}
+
+.member {
+  margin: var(--large-gap) 0;
+  padding-bottom: var(--gap);
+}
+
+.member-name {
+  border-left: 4px solid var(--accent);
+  padding: var(--small-gap) var(--gap);
+  background-color: var(--accented-background);
+  color: var(--text);
+}
+
+/* Custom type constructors */
+
+.constructor-name {
+  margin-bottom: 0;
 }

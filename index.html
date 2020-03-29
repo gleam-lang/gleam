@@ -47,6 +47,7 @@
 
         <h2>Types</h2>
         <ul>
+          <li><a href="#">Cardinal</a></li>
           <li><a href="#">Char</a></li>
           <li><a href="#">Charlist</a></li>
           <li><a href="#">Grapheme</a></li>
@@ -102,79 +103,131 @@
             et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est
             Lorem ipsum dolor sit amet.
           </p>
-          <p>
-            Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam
-            nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam
-            erat, sed diam voluptua. At vero eos et accusam et justo duo dolores
-            et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est
-            Lorem ipsum dolor sit amet.
-          </p>
-          <p>
-            Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam
-            nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam
-            erat, sed diam voluptua. At vero eos et accusam et justo duo dolores
-            et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est
-            Lorem ipsum dolor sit amet.
-          </p>
-          <p>
-            Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam
-            nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam
-            erat, sed diam voluptua. At vero eos et accusam et justo duo dolores
-            et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est
-            Lorem ipsum dolor sit amet.
-          </p>
-          <p>
-            Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam
-            nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam
-            erat, sed diam voluptua. At vero eos et accusam et justo duo dolores
-            et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est
-            Lorem ipsum dolor sit amet.
-          </p>
-          <p>
-            Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam
-            nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam
-            erat, sed diam voluptua. At vero eos et accusam et justo duo dolores
-            et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est
-            Lorem ipsum dolor sit amet.
-          </p>
-          <p>
-            Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam
-            nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam
-            erat, sed diam voluptua. At vero eos et accusam et justo duo dolores
-            et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est
-            Lorem ipsum dolor sit amet.
-          </p>
+        </article>
+
+        <article class="module-members">
+          <h1 class="module-member-kind">
+            Types
+          </h1>
+          <div class="member">
+            <a href="#">
+              <h2 class="member-name">
+                Cardinal
+              </h2>
+            </a>
+            <pre>pub type Cardinal(a) {
+  North
+  South
+  East
+  West
+  Other(a)
+  Jumbo(String, <a href="#">Char</a>, <a href="#">Cardinal</a>, List(a))
+}</pre>
+            <div class="custom-type-constructors">
+              <h3>
+                Constructors
+              </h3>
+              <ul>
+                <li>
+                  <code class="constructor-name">North</code>
+                  <p>
+                    At vero eos et accusam et justo duo dolores et ea rebum.
+                    Stet clita kasd gubergren, no sea takimata sanctus est Lorem
+                    ipsum dolor sit amet.
+                  </p>
+                </li>
+
+                <li><code>South</code></li>
+                <li><code>East</code></li>
+                <li><code>West</code></li>
+                <li><code>Other(a)</code></li>
+                <li>
+                  <code
+                    >Jumbo(String, <a href="#">Char</a>,
+                    <a href="#">Cardinal</a>, List(a))</code
+                  >
+                  <div class="inline-doc">
+                    <p>
+                      At vero eos et accusam et justo duo dolores et ea rebum.
+                      Stet clita kasd gubergren, no sea takimata sanctus est
+                      Lorem ipsum dolor sit amet.
+                    </p>
+                    <p>
+                      Maybe not the best design...
+                    </p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <p>
+              Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam
+              nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam
+              erat, sed diam voluptua. At vero eos et accusam et justo duo
+              dolores et ea rebum. Stet clita kasd gubergren, no sea takimata
+              sanctus est Lorem ipsum dolor sit amet.
+            </p>
+          </div>
+
+          <div class="member">
+            <h2 class="member-name">
+              Char
+            </h2>
+            <pre>pub type Char</pre>
+            <p>
+              Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam
+              nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam
+              erat, sed diam voluptua. At vero eos et accusam et justo duo
+              dolores et ea rebum. Stet clita kasd gubergren, no sea takimata
+              sanctus est Lorem ipsum dolor sit amet.
+            </p>
+          </div>
+
+          <div class="member">
+            <h2 class="member-name">
+              Charlist
+            </h2>
+            <pre>pub type Charlist =
+  List(<a href="#">Char</a>)
+</pre>
+            <p>
+              Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam
+              nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam
+              erat, sed diam voluptua. At vero eos et accusam et justo duo
+              dolores et ea rebum. Stet clita kasd gubergren, no sea takimata
+              sanctus est Lorem ipsum dolor sit amet.
+            </p>
+          </div>
+        </article>
+
+        <article class="module-members">
+          <h1 class="module-member-kind">
+            Functions
+          </h1>
+          <div class="member">
+            <a href="#">
+              <h2 class="member-name">
+                append
+              </h2>
+            </a>
+            <pre>
+fn append(
+  to first: String,
+  suffix second: String
+) -&gt; String
+</pre
+            >
+            <p>
+              Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam
+              nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam
+              erat, sed diam voluptua. At vero eos et accusam et justo duo
+              dolores et ea rebum. Stet clita kasd gubergren, no sea takimata
+              sanctus est Lorem ipsum dolor sit amet.
+            </p>
+            <h1>Examples</h1>
+            <pre>append(to: "butter", suffix: "fly") == "butterfly"</pre>
+          </div>
         </article>
       </div>
     </div>
   </body>
 </html>
-
-<!--
-fn is_empty(str: String) -> Bool {
-fn length(String) -> Int = "string" "length"
-fn repeat(string: String, times n: Int) -> String {}
-fn reverse(string: String) -> String {
-fn replace(
-fn lowercase(String) -> String = "string" "lowercase"
-fn uppercase(String) -> String = "string" "uppercase"
-fn compare(String, String) -> order.Order =
-fn slice(out_of string: String, from start: Int, end: Int) -> String {}
-fn drop_left(from string: String, up_to num_graphemes: Int) -> String {}
-fn drop_right(from string: String, up_to num_graphemes: Int) -> String {}
-fn contains(does haystack: String, contain needle: String) -> String {}
-fn starts_with(does string: String, start_with prefix: String) -> String {}
-fn ends_with(does string: String, end_with suffix: String) -> String {}
-fn split(x: String, on substring: String) -> List(String) {
-fn append(to first: String, suffix second: String) -> String {
-fn concat(strings: List(String)) -> String {
-fn join(strings: List(String), with separator: String) -> String {
-fn pad_left(string: String, to size: Int, with: String) {}
-fn pad_right(string: String, to size: Int, with: String) {}
-fn trim(string: String) -> String {}
-fn trim_left(string: String) -> String {}
-fn trim_right(string: String) -> String {}
-fn to_graphemes(string: String) -> List(String) {}
-fn from_graphemes(graphemes: List(Grapheme)) -> String {}
-fn next_grapheme(string: String) -> Option(tuple(Grapheme, String)) {}
--->
