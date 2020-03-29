@@ -107,7 +107,7 @@ impl DocBlockManager {
                     docs.push(EEP48Doc {
                         name: name.to_string(),
                         arity: args.len(),
-                        signature: vec![crate::pretty::format(80, doc)],
+                        signature: vec![crate::pretty::format(70, doc)],
                         doc: fn_docs,
                         typ: DocType::Fn,
                     });
