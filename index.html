@@ -15,9 +15,26 @@
 
     <div class="page">
       <nav class="sidebar">
+        <a class="sidebar-toggle" href="#">
+          <svg
+            aria-hidden="true"
+            focusable="false"
+            data-prefix="fas"
+            data-icon="bars"
+            class="svg-inline--fa fa-bars fa-w-14"
+            role="img"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 448 512"
+          >
+            <path
+              fill="#fff"
+              d="M16 132h416c8.837 0 16-7.163 16-16V76c0-8.837-7.163-16-16-16H16C7.163 60 0 67.163 0 76v40c0 8.837 7.163 16 16 16zm0 160h416c8.837 0 16-7.163 16-16v-40c0-8.837-7.163-16-16-16H16c-8.837 0-16 7.163-16 16v40c0 8.837 7.163 16 16 16zm0 160h416c8.837 0 16-7.163 16-16v-40c0-8.837-7.163-16-16-16H16c-8.837 0-16 7.163-16 16v40c0 8.837 7.163 16 16 16z"
+            ></path>
+          </svg>
+        </a>
         <h2>Pages</h2>
         <ul>
-          <li><a href="#">README</a></li>
+          <li><a tabindex="0" href="#">README</a></li>
           <li><a href="#">About</a></li>
         </ul>
 
@@ -47,7 +64,7 @@
 
         <h2>Types</h2>
         <ul>
-          <li><a href="#">Cardinal</a></li>
+          <li><a href="#Cardinal">Cardinal</a></li>
           <li><a href="#">Char</a></li>
           <li><a href="#">Charlist</a></li>
           <li><a href="#">Grapheme</a></li>
@@ -106,12 +123,14 @@
         </article>
 
         <article class="module-members">
-          <h1 class="module-member-kind">
-            Types
-          </h1>
+          <a href="#types">
+            <h1 id="types" class="module-member-kind">
+              Types
+            </h1>
+          </a>
           <div class="member">
-            <a href="#">
-              <h2 class="member-name">
+            <a href="#Cardinal">
+              <h2 id="Cardinal" class="member-name">
                 Cardinal
               </h2>
             </a>
@@ -121,7 +140,7 @@
   East
   West
   Other(a)
-  Jumbo(String, <a href="#">Char</a>, <a href="#">Cardinal</a>, List(a))
+  Jumbo(String, <a href="#">Char</a>, <a href="#Cardinal">Cardinal</a>, List(a))
 }</pre>
             <div class="custom-type-constructors">
               <h3>
@@ -144,7 +163,7 @@
                 <li>
                   <code
                     >Jumbo(String, <a href="#">Char</a>,
-                    <a href="#">Cardinal</a>, List(a))</code
+                    <a href="#Cardinal">Cardinal</a>, List(a))</code
                   >
                   <div class="inline-doc">
                     <p>

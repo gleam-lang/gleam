@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css?family=Karla:400,700|Ubuntu+Mono&display=swap');
+@import url("https://fonts.googleapis.com/css?family=Karla:400,700|Ubuntu+Mono&display=swap");
 
 :root {
   /* Colours */
@@ -22,13 +22,20 @@
   /* Sizes */
   --max-page-width: 720px;
   --sidebar-width: 240px;
+  --sidebar-width-inverted: -240px;
   --gap: 24px;
   --small-gap: calc(var(--gap) / 2);
   --tiny-gap: calc(var(--small-gap) / 2);
   --large-gap: calc(var(--gap) * 2);
+  --sidebar-toggle-size: 33px;
 
   /* etc */
-  --shadow: 0 0 0 1px rgba(50,50,93,0.075),0 0 1px #e9ecef,0 2px 4px -2px rgba(138,141,151,0.6);
+  --shadow: 0 0 0 1px rgba(50, 50, 93, 0.075), 0 0 1px #e9ecef,
+    0 2px 4px -2px rgba(138, 141, 151, 0.6);
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body,
@@ -115,9 +122,12 @@ p code {
 /* Sidebar */
 
 .sidebar {
+  background-color: var(--background);
   max-width: var(--sidebar-width);
   padding: 0 var(--gap);
   font-size: 0.95rem;
+  transition: transform 0.5s ease;
+  z-index: 100;
 }
 
 .sidebar h2 {
@@ -135,6 +145,12 @@ p code {
   margin-bottom: 4px;
 }
 
+.sidebar-toggle {
+  display: none;
+  transition: opacity 1s ease;
+  opacity: 0;
+}
+
 /* Module members (types, functions) */
 
 .module-members {
@@ -143,6 +159,7 @@ p code {
 
 .module-member-kind {
   font-size: 2rem;
+  color: var(--text);
 }
 
 .member {
@@ -161,4 +178,40 @@ p code {
 
 .constructor-name {
   margin-bottom: 0;
+}
+
+/* Small displays */
+@media (max-width: 720px) {
+  .page-header {
+    padding-left: calc(var(--sidebar-toggle-size) + var(--gap));
+  }
+
+  .sidebar {
+    padding: var(--gap);
+    position: absolute;
+    height: 100vh;
+    top: 0;
+    transform: translate(var(--sidebar-width-inverted));
+    overflow: visible;
+  }
+
+  .sidebar:focus-within {
+    overflow-y: auto;
+    overflow-x: visible;
+    transform: translate(0);
+  }
+
+  .sidebar:focus-within .sidebar-toggle {
+    opacity: 0;
+  }
+
+  .sidebar-toggle {
+    display: block;
+    opacity: 1;
+    position: absolute;
+    top: var(--small-gap);
+    left: calc(var(--small-gap) + var(--sidebar-width));
+    height: var(--sidebar-toggle-size);
+    width: var(--sidebar-toggle-size);
+  }
 }
