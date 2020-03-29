@@ -32,9 +32,6 @@ extern crate lalrpop_util;
 #[macro_use]
 extern crate lazy_static;
 
-#[macro_use]
-extern crate handlebars;
-
 use crate::error::Error;
 use crate::project::ModuleOrigin;
 use serde::Deserialize;

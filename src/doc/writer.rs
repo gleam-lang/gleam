@@ -1,7 +1,8 @@
 use crate::doc::doc::*;
 use crate::error::{Error, FileIOAction, FileKind};
-use handlebars::Handlebars;
-use pulldown_cmark;
+use askama::Template;
+// use pulldown_cmark;
+use crate::error::GleamExpect;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::fs::{read_to_string, File};
@@ -27,25 +28,23 @@ struct Module {
     pub readme: String,
 }
 
-pub struct DocWriter<'a> {
+pub struct DocWriter {
     project_name: String,
     project_version: String,
     doc_dir: PathBuf,
     modules: Vec<Module>,
-    registry: Handlebars<'a>,
     package_root: PathBuf,
 }
 
-fn render_markdown(text: &str) -> String {
-    let mut s = String::with_capacity(text.len() * 3 / 2);
-    let p = pulldown_cmark::Parser::new(&*text);
-    pulldown_cmark::html::push_html(&mut s, p);
-    s
-}
+// TODO
+// fn render_markdown(text: &str) -> String {
+//     let mut s = String::with_capacity(text.len() * 3 / 2);
+//     let p = pulldown_cmark::Parser::new(text);
+//     pulldown_cmark::html::push_html(&mut s, p);
+//     s
+// }
 
-handlebars_helper!(markdown: |text: str| render_markdown(&text));
-
-impl DocWriter<'_> {
+impl DocWriter {
     pub fn new(
         project_name: String,
         project_version: String,
@@ -56,19 +55,6 @@ impl DocWriter<'_> {
             project_name,
             project_version,
             doc_dir,
-            registry: {
-                let module_template = std::include_str!("views/module.html");
-                let index_template = std::include_str!("views/index.html");
-                let mut registry = Handlebars::new();
-                registry.register_helper("markdown", Box::new(markdown));
-                registry
-                    .register_template_string("module", module_template)
-                    .expect("module template");
-                registry
-                    .register_template_string("index", index_template)
-                    .expect("index template");
-                registry
-            },
             modules: vec![],
             package_root,
         }
@@ -82,17 +68,34 @@ impl DocWriter<'_> {
     }
 
     fn write_index(self: &Self, module: &Module) -> Result<(), Error> {
-        let rendered = self
-            .registry
-            .render("index", module)
-            .map_err(|err| Error::FileIO {
-                path: self.doc_dir.join("index.html"),
-                action: FileIOAction::Create,
-                kind: FileKind::File,
-                err: Some(err.to_string()),
-            })?;
+        // let rendered = self
+        //     .registry
+        //     .render("index", module)
+        //     .map_err(|err| Error::FileIO {
+        //         path: self.doc_dir.join("index.html"),
+        //         action: FileIOAction::Create,
+        //         kind: FileKind::File,
+        //         err: Some(err.to_string()),
+        //     })?;
+        let index = PageTemplate {
+            content: module.readme.as_ref(),
+            functions: &[],
+            links: &[],
+            pages: &[],
+            modules: &[],
+            types: &[],
+            page_title: module.project_name.as_ref(),
+            project_name: module.project_name.as_ref(),
+            project_version: module.project_version.as_ref(),
+        };
 
-        self.write_to_path(rendered.as_bytes(), self.doc_dir.join("index.html"))
+        self.write_to_path(
+            index
+                .render()
+                .gleam_expect("Template rendering failed")
+                .as_bytes(),
+            self.doc_dir.join("index.html"),
+        )
     }
 
     pub fn write(self: &Self) -> Result<(), Error> {
@@ -105,7 +108,7 @@ impl DocWriter<'_> {
             })?;
 
         self.write_to_path(
-            std::include_str!("views/index.css").as_bytes(),
+            std::include_str!("index.css").as_bytes(),
             self.doc_dir.join("index.css"),
         )?;
 
@@ -229,18 +232,65 @@ impl DocWriter<'_> {
             .and_then(|_| Ok(()))
     }
 
-    fn write_doc(self: &Self, module: Module) -> Result<(), Error> {
-        let filename = format!("{}/index.html", module.module_name);
-        let doc_dir_path = self.doc_dir.join(&filename);
-        let doc_text = self
-            .registry
-            .render("module", &module)
-            .map_err(|err| Error::FileIO {
-                action: FileIOAction::Parse,
-                kind: FileKind::File,
-                path: doc_dir_path.clone(),
-                err: Some(err.to_string()),
-            })?;
-        self.write_to_path(doc_text.as_bytes(), doc_dir_path)
+    fn write_doc(self: &Self, _module: Module) -> Result<(), Error> {
+        // let filename = format!("{}/index.html", module.module_name);
+        // let doc_dir_path = self.doc_dir.join(&filename);
+        // let doc_text = self
+        //     .registry
+        //     .render("module", &module)
+        //     .map_err(|err| Error::FileIO {
+        //         action: FileIOAction::Parse,
+        //         kind: FileKind::File,
+        //         path: doc_dir_path.clone(),
+        //         err: Some(err.to_string()),
+        //     })?;
+        // self.write_to_path(doc_text.as_bytes(), doc_dir_path)
+        todo!()
     }
+}
+
+struct Link<'a> {
+    name: &'a str,
+    path: &'a str,
+}
+
+struct Function<'a> {
+    name: &'a str,
+    signature: &'a str,
+    documentation: &'a str,
+}
+
+struct Type<'a> {
+    name: &'a str,
+    definition: &'a str,
+    documentation: &'a str,
+}
+
+#[derive(Template)]
+#[template(path = "documentation_page.html")]
+struct PageTemplate<'a> {
+    page_title: &'a str,
+    project_name: &'a str,
+    project_version: &'a str,
+    pages: &'a [Link<'a>],
+    links: &'a [Link<'a>],
+    modules: &'a [Link<'a>],
+    functions: &'a [Function<'a>],
+    types: &'a [Type<'a>],
+    content: &'a str,
+}
+
+#[derive(Template)]
+#[template(path = "documentation_module.html")]
+struct ModuleTemplate<'a> {
+    page_title: &'a str,
+    module_name: &'a str,
+    project_name: &'a str,
+    project_version: &'a str,
+    module_doc: &'a str,
+    pages: &'a [Link<'a>],
+    links: &'a [Link<'a>],
+    modules: &'a [Link<'a>],
+    functions: &'a [Function<'a>],
+    types: &'a [Type<'a>],
 }
