@@ -39,8 +39,6 @@ strum_macros = "0.17"
 handlebars = "3.0"
 # Markdown in docs
 pulldown-cmark = "0.7.0"
-# JSON serialization
-serde_json = "1.0.39"
 
 [build-dependencies]
 lalrpop = "0.17"
