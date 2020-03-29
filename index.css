@@ -1,0 +1,98 @@
+@import url("https://fonts.googleapis.com/css?family=Karla:400,700&display=swap");
+
+:root {
+  /* Colours */
+  --black: #2a2020;
+  --hard-black: #000;
+  --pink: #ffaff3;
+  /* --hot-pink: #e200c0; */
+  --hot-pink: #d900b8;
+  --white: #fff;
+
+  /* Derived colours */
+  --text: var(--black);
+  --background: var(--white);
+  --links: var(--hot-pink);
+
+  /* Sizes */
+  --max-page-width: 720px;
+  --sidebar-width: 240px;
+  --gap: 24px;
+  --small-gap: calc(var(--gap) / 2);
+}
+
+body,
+html {
+  padding: 0;
+  margin: 0;
+  font-family: 'Karla', sans-serif;
+  font-size: 1.05rem;
+  line-height: 1.4;
+}
+
+a,
+a:visited {
+  color: var(--links);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.page {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.content {
+  max-width: var(--max-page-width);
+  padding: 0 var(--gap);
+}
+
+h1 {
+  margin: 0;
+}
+
+/* Page header */
+
+.page-header {
+  color: black;
+  color: var(--hard-black);
+  background-color: var(--pink);
+  padding: var(--small-gap) var(--gap);
+  margin-bottom: var(--gap);
+}
+
+.page-header h2 {
+  margin: 0;
+}
+
+/* Module doc */
+
+.module-name {
+  font-weight: 700;
+}
+
+/* Sidebar */
+
+.sidebar {
+  max-width: var(--sidebar-width);
+  padding: 0 var(--gap);
+  font-size: 0.95rem;
+}
+
+.sidebar h2 {
+  margin: 0;
+}
+
+.sidebar ul {
+  list-style: none;
+  margin: var(--small-gap) 0;
+  padding: 0;
+}
+
+.sidebar li {
+  line-height: 1.2;
+  padding-bottom: 4px;
+}
