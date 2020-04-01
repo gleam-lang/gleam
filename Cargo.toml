@@ -39,6 +39,8 @@ strum_macros = "0.17"
 handlebars = "3.0"
 # Markdown in docs
 pulldown-cmark = "0.7.0"
+# Iteration over strings by unicode grapheme clusters
+unicode-segmentation = "1.6.0"
 
 [build-dependencies]
 lalrpop = "0.17"

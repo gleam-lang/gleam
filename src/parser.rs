@@ -1,3 +1,5 @@
+mod token;
+
 use super::doc;
 
 #[derive(Debug, PartialEq)]
@@ -137,12 +139,8 @@ pub fn() -> {}
 "
     .trim_start();
 
-    let expected = "             
-                  
-
-                      
-pub fn() -> {}
-";
+    let expected = "             \n                  \n
+                      \npub fn() -> {}\n";
     let multi_doc_result = strip_extra(&str);
 
     assert_eq!(multi_doc_result.0, expected.to_string());
