@@ -122,6 +122,7 @@ pub enum Statement<Expr> {
         body: Expr,
         public: bool,
         return_annotation: Option<TypeAst>,
+        doc: Option<String>,
     },
 
     TypeAlias {
@@ -130,6 +131,7 @@ pub enum Statement<Expr> {
         args: Vec<String>,
         resolved_type: TypeAst,
         public: bool,
+        doc: Option<String>,
     },
 
     CustomType {
@@ -138,6 +140,7 @@ pub enum Statement<Expr> {
         args: Vec<String>,
         public: bool,
         constructors: Vec<RecordConstructor>,
+        doc: Option<String>,
     },
 
     ExternalFn {
@@ -148,6 +151,7 @@ pub enum Statement<Expr> {
         retrn: TypeAst,
         module: String,
         fun: String,
+        doc: Option<String>,
     },
 
     ExternalType {
@@ -155,6 +159,7 @@ pub enum Statement<Expr> {
         public: bool,
         name: String,
         args: Vec<String>,
+        doc: Option<String>,
     },
 
     Import {
@@ -163,6 +168,33 @@ pub enum Statement<Expr> {
         as_name: Option<String>,
         unqualified: Vec<UnqualifiedImport>,
     },
+}
+
+impl<A> Statement<A> {
+    pub fn location(&self) -> &SrcSpan {
+        match self {
+            Statement::Import { location, .. }
+            | Statement::Fn { location, .. }
+            | Statement::TypeAlias { location, .. }
+            | Statement::CustomType { location, .. }
+            | Statement::ExternalFn { location, .. }
+            | Statement::ExternalType { location, .. } => location,
+        }
+    }
+
+    pub fn put_doc(&mut self, new_doc: Option<String>) {
+        match self {
+            Statement::Import { .. } => (),
+
+            Statement::Fn { doc, .. }
+            | Statement::TypeAlias { doc, .. }
+            | Statement::CustomType { doc, .. }
+            | Statement::ExternalFn { doc, .. }
+            | Statement::ExternalType { doc, .. } => {
+                std::mem::replace(doc, new_doc);
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

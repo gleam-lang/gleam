@@ -22,12 +22,14 @@ fn module_test() {
         name: vec!["magic".to_string()],
         statements: vec![
             Statement::ExternalType {
+                doc: None,
                 location: Default::default(),
                 public: true,
                 name: "Any".to_string(),
                 args: vec![],
             },
             Statement::CustomType {
+                doc: None,
                 location: Default::default(),
                 public: true,
                 name: "Any".to_string(),
@@ -45,6 +47,7 @@ fn module_test() {
                 unqualified: vec![],
             },
             Statement::ExternalFn {
+                doc: None,
                 location: Default::default(),
                 args: vec![
                     ExternalFnArg {
@@ -78,6 +81,7 @@ fn module_test() {
                 },
             },
             Statement::ExternalFn {
+                doc: None,
                 location: Default::default(),
                 args: vec![],
                 name: "map".to_string(),
@@ -117,6 +121,7 @@ map() ->
         name: vec!["term".to_string()],
         statements: vec![
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
                 location: Default::default(),
                 public: false,
@@ -129,6 +134,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
                 location: Default::default(),
                 public: false,
@@ -141,6 +147,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
                 location: Default::default(),
                 public: false,
@@ -152,6 +159,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
                 location: Default::default(),
                 public: false,
@@ -164,6 +172,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
                 location: Default::default(),
                 public: false,
@@ -184,6 +193,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
                 location: Default::default(),
                 public: false,
@@ -206,6 +216,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
                 location: Default::default(),
                 public: false,
@@ -227,6 +238,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
                 location: Default::default(),
                 public: false,
@@ -257,6 +269,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
                 location: Default::default(),
                 public: false,
@@ -286,6 +299,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
                 location: Default::default(),
                 public: false,
@@ -320,6 +334,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
                 location: Default::default(),
                 public: false,
@@ -396,6 +411,7 @@ tup() ->
         },
         name: vec!["term".to_string()],
         statements: vec![Statement::Fn {
+            doc: None,
             return_annotation: None,
             location: Default::default(),
             public: false,
@@ -493,6 +509,7 @@ some_function(
         name: vec!["vars".to_string()],
         statements: vec![
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
                 location: Default::default(),
                 public: false,
@@ -510,6 +527,7 @@ some_function(
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
                 location: Default::default(),
                 public: false,
@@ -525,6 +543,7 @@ some_function(
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
                 location: Default::default(),
                 public: false,
@@ -543,6 +562,7 @@ some_function(
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
                 location: Default::default(),
                 public: false,
@@ -599,6 +619,7 @@ moddy4() ->
         },
         name: vec!["my_mod".to_string()],
         statements: vec![Statement::Fn {
+            doc: None,
             return_annotation: None,
             location: Default::default(),
             public: false,
@@ -758,6 +779,7 @@ go() ->
         name: vec!["funny".to_string()],
         statements: vec![
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
                 location: Default::default(),
                 args: vec![],
@@ -793,6 +815,7 @@ go() ->
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
                 location: Default::default(),
                 args: vec![],
@@ -823,6 +846,7 @@ go() ->
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
                 location: Default::default(),
                 args: vec![],
