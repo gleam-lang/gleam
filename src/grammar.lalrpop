@@ -34,6 +34,7 @@ Statement: UntypedStatement = {
 
 StatementTypeAlias : UntypedStatement = {
     <s:@L> <p:"pub"?> "type" <ta:TypeName> "=" <tr:Type> <e:@L> => Statement::TypeAlias {
+        doc: None,
         location: location(s, e),
         public: p.is_some(),
         alias: ta.0,
@@ -44,6 +45,7 @@ StatementTypeAlias : UntypedStatement = {
 
 StatementCustomType: UntypedStatement = {
     <s:@L> <p:"pub"?> "type" <t:TypeName> <e:@L> "{" <cs:RecordConstructor+> "}" => Statement::CustomType {
+        doc: None,
         location: location(s, e),
         public: p.is_some(),
         name: t.0,
@@ -70,6 +72,7 @@ RecordConstructorArg: (Option<String>, TypeAst) = {
 
 StatementExternalFn: UntypedStatement = {
     <s:@L> <p:"pub"?> "external" "fn" <n:VarName> "(" <a:Comma<ExternalFnArg>> ")" "->" <r:Type> "=" <m:RawString> <f:RawString> <e:@L> => Statement::ExternalFn {
+        doc: None,
         location: location(s, e),
         public: p.is_some(),
         name: n,
@@ -89,6 +92,7 @@ ExternalFnArg: ExternalFnArg = {
 
 StatementFn: UntypedStatement = {
     <s:@L> <p:"pub"?> "fn" <n:VarName> "(" <a:Comma<FnArg>> ")" <return_annotation:("->" <Type>)?> "{" <b:Expr+> "}" <e:@L> => Statement::Fn {
+        doc: None,
         location: location(s, e),
         public: p.is_some(),
         name: n,
@@ -121,6 +125,7 @@ UnqualifiedImport: UnqualifiedImport = {
 
 StatementExternalType: UntypedStatement = {
     <s:@L> <p:"pub"?> "external" "type" <n:TypeName> <e:@L> => Statement::ExternalType {
+        doc: None,
         location: location(s, e),
         public: p.is_some(),
         name: n.0,

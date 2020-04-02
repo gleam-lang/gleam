@@ -1266,6 +1266,7 @@ fn register_types(
         }
 
         Statement::TypeAlias {
+            doc: _,
             location,
             public,
             args,
@@ -1313,6 +1314,7 @@ pub fn infer_module(
         .into_iter()
         .map(|s| match s {
             Statement::Fn {
+                doc,
                 location,
                 name,
                 public,
@@ -1386,6 +1388,7 @@ pub fn infer_module(
                 );
 
                 Ok(Statement::Fn {
+                    doc,
                     location,
                     name,
                     public,
@@ -1396,6 +1399,7 @@ pub fn infer_module(
             }
 
             Statement::ExternalFn {
+                doc,
                 location,
                 name,
                 public,
@@ -1454,6 +1458,7 @@ pub fn infer_module(
                     typ,
                 );
                 Ok(Statement::ExternalFn {
+                    doc,
                     location,
                     name,
                     public,
@@ -1465,12 +1470,14 @@ pub fn infer_module(
             }
 
             Statement::TypeAlias {
+                doc,
                 location,
                 public,
                 alias,
                 args,
                 resolved_type,
             } => Ok(Statement::TypeAlias {
+                doc,
                 location,
                 public,
                 alias,
@@ -1479,6 +1486,7 @@ pub fn infer_module(
             }),
 
             Statement::CustomType {
+                doc,
                 location,
                 public,
                 name,
@@ -1566,6 +1574,7 @@ pub fn infer_module(
                     );
                 }
                 Ok(Statement::CustomType {
+                    doc,
                     location,
                     public,
                     name,
@@ -1575,6 +1584,7 @@ pub fn infer_module(
             }
 
             Statement::ExternalType {
+                doc,
                 location,
                 public,
                 name,
@@ -1590,6 +1600,7 @@ pub fn infer_module(
                     env.type_from_ast(&var, &mut type_vars, NewTypeAction::MakeGeneric)?;
                 }
                 Ok(Statement::ExternalType {
+                    doc,
                     location,
                     public,
                     name,

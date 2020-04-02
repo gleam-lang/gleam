@@ -1,5 +1,6 @@
 use super::{GleamExpect, Input, Module, ModuleOrigin};
 use crate::error::Error;
+use crate::parser::{self, Comment};
 use petgraph::{algo::Cycle, graph::NodeIndex, Direction};
 use std::collections::{HashMap, HashSet};
 
@@ -139,10 +140,8 @@ impl SourceTree {
             .to_string()
             .replace("\\", "/");
 
-        // TODO: Create a mutable vec to pass in to strip_extra for comments
-
         // Parse the source
-        let (cleaned, doc) = crate::parser::strip_extra(&input.src);
+        let (cleaned, doc, comments) = parser::strip_extra(&input.src);
         let mut module = crate::grammar::ModuleParser::new()
             .parse(&cleaned)
             .map_err(|e| Error::Parse {
@@ -150,6 +149,8 @@ impl SourceTree {
                 src: input.src.clone(),
                 error: e.map_token(|crate::grammar::Token(a, b)| (a, b.to_string())),
             })?;
+
+        attach_doc_comments(&mut module, &comments.doc_comments);
 
         // Store the name
         module.name = name.split('/').map(|s| s.to_string()).collect();
@@ -179,5 +180,19 @@ impl SourceTree {
             },
         );
         Ok(())
+    }
+}
+
+fn attach_doc_comments<'a, A, B>(
+    module: &mut crate::ast::Module<A, B>,
+    mut comments: &'a [Comment<'a>],
+) {
+    for statement in &mut module.statements {
+        let location = statement.location();
+        // TODO: be more fine grained with how we apply the comments.
+        // i.e. Apply them to custom type constructors.
+        let (doc, rest) = parser::take_before(comments, location.end);
+        comments = rest;
+        statement.put_doc(doc);
     }
 }

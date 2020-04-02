@@ -1,4 +1,5 @@
 use super::doc;
+use itertools::Itertools;
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
@@ -10,22 +11,63 @@ pub enum Error {
 
 pub type LalrpopError = lalrpop_util::ParseError<usize, (usize, String), Error>;
 
+#[derive(Debug)]
+pub struct ModuleComments<'a> {
+    pub doc_comments: Vec<Comment<'a>>,
+    pub comments: Vec<Comment<'a>>,
+}
+
+#[derive(Debug)]
+pub struct Comment<'a> {
+    pub start: usize,
+    pub content: &'a str,
+}
+
+pub fn take_before<'a>(
+    comments: &'a [Comment<'a>],
+    limit: usize,
+) -> (Option<String>, &'a [Comment<'a>]) {
+    let mut end = 0;
+    for (i, comment) in comments.iter().enumerate() {
+        if comment.start > limit {
+            break;
+        }
+        end = i;
+    }
+
+    if end == 0 {
+        (None, comments)
+    } else {
+        let comment = comments[0..end].iter().map(|c| c.content).join("\n");
+        (Some(comment), &comments[end..])
+    }
+}
+
 /// Blanks out comments, semicolons, etc
 ///
-pub fn strip_extra(src: &str) -> (String, doc::block_manager::DocBlockManager) {
+pub fn strip_extra(
+    src: &str,
+) -> (
+    String,
+    doc::block_manager::DocBlockManager,
+    ModuleComments<'_>,
+) {
     enum Mode {
         Normal,
         String,
-        Comment,
-        DocComment,
+        Comment(usize),
+        DocComment(usize),
     };
 
     let mut buffer = String::with_capacity(src.len());
     let mut mode = Mode::Normal;
     let mut chars = src.chars().enumerate();
-    let mut at_bol = true;
     let mut doc_comment_buffer = String::with_capacity(500);
     let mut doc_block = doc::block_manager::DocBlockManager::new();
+    let mut comments = ModuleComments {
+        doc_comments: vec![],
+        comments: vec![],
+    };
 
     while let Some((outer_char_no, c)) = chars.next() {
         match mode {
@@ -41,17 +83,16 @@ pub fn strip_extra(src: &str) -> (String, doc::block_manager::DocBlockManager) {
                     Some((_, '/')) => {
                         buffer.push(' ');
                         buffer.push(' ');
-                        match (chars.next(), at_bol) {
-                            (Some((_, '/')), true) => {
-                                mode = Mode::DocComment;
+                        match chars.next() {
+                            Some((i, '/')) => {
+                                mode = Mode::DocComment(i);
                                 buffer.push(' ');
                             }
-
-                            (Some((_, _c2)), _) => {
-                                mode = Mode::Comment;
+                            Some((i, _c2)) => {
+                                mode = Mode::Comment(i);
                                 buffer.push(' ');
                             }
-                            (None, _) => {
+                            None => {
                                 buffer.push(c);
                             }
                         }
@@ -82,19 +123,27 @@ pub fn strip_extra(src: &str) -> (String, doc::block_manager::DocBlockManager) {
                 _ => buffer.push(c),
             },
 
-            Mode::Comment => match c {
+            Mode::Comment(start) => match c {
                 '\n' => {
                     mode = Mode::Normal;
+                    comments.comments.push(Comment {
+                        start,
+                        content: &src[start..outer_char_no],
+                    });
                     buffer.push('\n');
                 }
                 _ => buffer.push(' '),
             },
 
-            Mode::DocComment => match c {
+            Mode::DocComment(start) => match c {
                 '\n' => {
                     mode = Mode::Normal;
                     doc_block.add_line(outer_char_no, doc_comment_buffer.to_string());
                     doc_comment_buffer.clear();
+                    comments.doc_comments.push(Comment {
+                        start,
+                        content: &src[start..outer_char_no],
+                    });
                     buffer.push('\n');
                 }
                 c => {
@@ -103,15 +152,9 @@ pub fn strip_extra(src: &str) -> (String, doc::block_manager::DocBlockManager) {
                 }
             },
         }
-
-        if c == '\n' {
-            at_bol = true;
-        } else {
-            at_bol = false;
-        }
     }
 
-    (buffer, doc_block)
+    (buffer, doc_block, comments)
 }
 
 #[test]
@@ -137,12 +180,8 @@ pub fn() -> {}
 "
     .trim_start();
 
-    let expected = "             
-                  
-
-                      
-pub fn() -> {}
-";
+    let expected = "             \n                  \n
+                      \npub fn() -> {}\n";
     let multi_doc_result = strip_extra(&str);
 
     assert_eq!(multi_doc_result.0, expected.to_string());

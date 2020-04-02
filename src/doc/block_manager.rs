@@ -114,6 +114,7 @@ impl DocBlockManager {
                 }
 
                 Statement::TypeAlias {
+                    doc: _,
                     location,
                     args,
                     alias,
@@ -124,6 +125,7 @@ impl DocBlockManager {
                         first_statement_line_no = Some(location.start);
                     }
                     let doc = (&UntypedStatement::TypeAlias {
+                        doc: None,
                         location: location.clone(),
                         args: args.clone(),
                         alias: alias.clone(),
@@ -154,6 +156,7 @@ impl DocBlockManager {
                         first_statement_line_no = Some(location.start);
                     }
                     let statement = UntypedStatement::CustomType {
+                        doc: None,
                         location: location.clone(),
                         args: args.clone(),
                         name: name.clone(),
@@ -207,6 +210,7 @@ impl DocBlockManager {
                         first_statement_line_no = Some(location.start);
                     }
                     let doc = UntypedStatement::ExternalType {
+                        doc: None,
                         location: location.clone(),
                         args: args.clone(),
                         name: name.clone(),
