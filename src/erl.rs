@@ -2,6 +2,7 @@
 mod tests;
 
 use crate::ast::*;
+use crate::error::GleamExpect;
 use crate::pretty::*;
 use crate::typ::{
     ModuleValueConstructor, PatternConstructor, ValueConstructor, ValueConstructorVariant,
@@ -87,8 +88,8 @@ pub fn record_definition(name: &str, fields: &[&str]) -> String {
     buffer
 }
 
-pub fn module(module: TypedModule) -> String {
-    let module_name = module.name;
+pub fn module(module: &TypedModule) -> String {
+    let module_name = module.name.as_slice();
     let exports = concat(
         module
             .statements
@@ -117,7 +118,7 @@ pub fn module(module: TypedModule) -> String {
     let statements = concat(
         module
             .statements
-            .into_iter()
+            .iter()
             .flat_map(|s| statement(s, &module_name))
             .intersperse(lines(2)),
     );
@@ -141,46 +142,53 @@ pub fn module(module: TypedModule) -> String {
         .format(80)
 }
 
-fn statement(statement: TypedStatement, module: &[String]) -> Option<Document> {
+fn statement(statement: &TypedStatement, module: &[String]) -> Option<Document> {
     match statement {
         Statement::TypeAlias { .. } => None,
         Statement::CustomType { .. } => None,
         Statement::Import { .. } => None,
         Statement::ExternalType { .. } => None,
+
         Statement::Fn {
             args, name, body, ..
-        } => Some(mod_fun(name, args, body, module)),
+        } => Some(mod_fun(name.as_ref(), args.as_slice(), body, module)),
+
         Statement::ExternalFn {
             fun,
             module,
             args,
             name,
             ..
-        } => Some(external_fun(name, module, fun, args.len())),
+        } => Some(external_fun(
+            name.as_ref(),
+            module.as_ref(),
+            fun.as_ref(),
+            args.len(),
+        )),
     }
 }
 
-fn mod_fun(name: String, args: Vec<Arg>, body: TypedExpr, module: &[String]) -> Document {
+fn mod_fun(name: &str, args: &[Arg], body: &TypedExpr, module: &[String]) -> Document {
     let mut env = Env::new(module);
 
-    atom(name)
+    atom(name.to_string())
         .append(fun_args(args, &mut env))
         .append(" ->")
         .append(line().append(expr(body, &mut env)).nest(INDENT).group())
         .append(".")
 }
 
-fn fun_args(args: Vec<Arg>, env: &mut Env) -> Document {
-    wrap_args(args.into_iter().map(|a| match a.names {
+fn fun_args(args: &[Arg], env: &mut Env) -> Document {
+    wrap_args(args.into_iter().map(|a| match &a.names {
         ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => "_".to_doc(),
         ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
-            env.next_local_var_name(name)
+            env.next_local_var_name(name.to_string())
         }
     }))
 }
 
-fn call_args(args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Document {
-    wrap_args(args.into_iter().map(|arg| wrap_expr(arg.value, env)))
+fn call_args(args: &[CallArg<TypedExpr>], env: &mut Env) -> Document {
+    wrap_args(args.into_iter().map(|arg| wrap_expr(&arg.value, env)))
 }
 
 fn wrap_args<I>(args: I) -> Document
@@ -215,7 +223,7 @@ fn atom(value: String) -> Document {
     }
 }
 
-fn string(value: String) -> Document {
+fn string(value: &str) -> Document {
     value.to_doc().surround("<<\"", "\">>")
 }
 
@@ -226,7 +234,7 @@ fn tuple(elems: impl Iterator<Item = Document>) -> Document {
         .group()
 }
 
-fn seq(first: TypedExpr, then: TypedExpr, env: &mut Env) -> Document {
+fn seq(first: &TypedExpr, then: &TypedExpr, env: &mut Env) -> Document {
     force_break()
         .append(expr(first, env))
         .append(",")
@@ -235,7 +243,7 @@ fn seq(first: TypedExpr, then: TypedExpr, env: &mut Env) -> Document {
 }
 
 // TODO: Surround left or right in parens if required
-fn bin_op(name: BinOp, left: TypedExpr, right: TypedExpr, env: &mut Env) -> Document {
+fn bin_op(name: &BinOp, left: &TypedExpr, right: &TypedExpr, env: &mut Env) -> Document {
     let op = match name {
         BinOp::And => "andalso",
         BinOp::Or => "orelse",
@@ -263,19 +271,17 @@ fn bin_op(name: BinOp, left: TypedExpr, right: TypedExpr, env: &mut Env) -> Docu
         .append(expr(right, env))
 }
 
-fn pipe(value: TypedExpr, fun: TypedExpr, env: &mut Env) -> Document {
-    call(
-        fun,
-        vec![CallArg {
-            label: None,
-            location: Default::default(),
-            value,
-        }],
-        env,
-    )
+fn pipe(value: &TypedExpr, fun: &TypedExpr, env: &mut Env) -> Document {
+    let arg = CallArg {
+        label: None,
+        location: Default::default(),
+        // TODO: remove this clone
+        value: value.clone(),
+    };
+    call(fun, &[arg], env)
 }
 
-fn let_(value: TypedExpr, pat: TypedPattern, then: TypedExpr, env: &mut Env) -> Document {
+fn let_(value: &TypedExpr, pat: &TypedPattern, then: &TypedExpr, env: &mut Env) -> Document {
     let body = expr(value, env);
     pattern(pat, env)
         .append(" = ")
@@ -285,21 +291,21 @@ fn let_(value: TypedExpr, pat: TypedPattern, then: TypedExpr, env: &mut Env) -> 
         .append(expr(then, env))
 }
 
-fn pattern(p: TypedPattern, env: &mut Env) -> Document {
+fn pattern(p: &TypedPattern, env: &mut Env) -> Document {
     match p {
         Pattern::Nil { .. } => "[]".to_doc(),
 
-        Pattern::Let { name, pattern: p } => pattern(*p, env)
+        Pattern::Let { name, pattern: p } => pattern(p, env)
             .append(" = ")
-            .append(env.next_local_var_name(name)),
+            .append(env.next_local_var_name(name.to_string())),
 
-        Pattern::Cons { head, tail, .. } => pattern_list_cons(*head, *tail, env),
+        Pattern::Cons { head, tail, .. } => pattern_list_cons(head, tail, env),
 
         Pattern::Discard { .. } => "_".to_doc(),
 
-        Pattern::Var { name, .. } => env.next_local_var_name(name),
+        Pattern::Var { name, .. } => env.next_local_var_name(name.to_string()),
 
-        Pattern::Int { value, .. } => value.to_doc(),
+        Pattern::Int { value, .. } => value.as_str().to_doc(),
 
         Pattern::Float { value, .. } => float(value.as_ref()),
 
@@ -323,27 +329,21 @@ fn float(value: &str) -> Document {
     }
 }
 
-fn pattern_list_cons(head: TypedPattern, tail: TypedPattern, env: &mut Env) -> Document {
+fn pattern_list_cons(head: &TypedPattern, tail: &TypedPattern, env: &mut Env) -> Document {
     list_cons(head, tail, env, pattern, |expr| match expr {
         Pattern::Nil { .. } => ListType::Nil,
 
-        Pattern::Cons { head, tail, .. } => ListType::Cons {
-            head: *head,
-            tail: *tail,
-        },
+        Pattern::Cons { head, tail, .. } => ListType::Cons { head, tail },
 
         other => ListType::NotList(other),
     })
 }
 
-fn expr_list_cons(head: TypedExpr, tail: TypedExpr, env: &mut Env) -> Document {
+fn expr_list_cons(head: &TypedExpr, tail: &TypedExpr, env: &mut Env) -> Document {
     list_cons(head, tail, env, wrap_expr, |expr| match expr {
         TypedExpr::ListNil { .. } => ListType::Nil,
 
-        TypedExpr::ListCons { head, tail, .. } => ListType::Cons {
-            head: *head,
-            tail: *tail,
-        },
+        TypedExpr::ListCons { head, tail, .. } => ListType::Cons { head, tail },
 
         other => ListType::NotList(other),
     })
@@ -401,12 +401,12 @@ enum ListType<E, T> {
     NotList(T),
 }
 
-fn var(name: String, constructor: ValueConstructor, env: &mut Env) -> Document {
-    match constructor.variant {
+fn var(name: &str, constructor: &ValueConstructor, env: &mut Env) -> Document {
+    match &constructor.variant {
         ValueConstructorVariant::Record { name, arity: 0, .. } => atom(name.to_snake_case()),
 
         ValueConstructorVariant::Record { arity, .. } => {
-            let chars = incrementing_args_list(arity);
+            let chars = incrementing_args_list(*arity);
             "fun("
                 .to_doc()
                 .append(chars.clone())
@@ -417,36 +417,38 @@ fn var(name: String, constructor: ValueConstructor, env: &mut Env) -> Document {
                 .append("} end")
         }
 
-        ValueConstructorVariant::LocalVariable => env.local_var_name(name),
+        ValueConstructorVariant::LocalVariable => env.local_var_name(name.to_string()),
 
         ValueConstructorVariant::ModuleFn {
             arity, ref module, ..
-        } if module.as_slice() == env.module => {
-            "fun ".to_doc().append(atom(name)).append("/").append(arity)
-        }
+        } if module.as_slice() == env.module => "fun "
+            .to_doc()
+            .append(atom(name.to_string()))
+            .append("/")
+            .append(*arity),
 
         ValueConstructorVariant::ModuleFn { arity, module, .. } => "fun "
             .to_doc()
             .append(module.join("@"))
             .append(":")
-            .append(atom(name))
+            .append(atom(name.to_string()))
             .append("/")
-            .append(arity),
+            .append(*arity),
     }
 }
 
-fn tag_tuple_pattern(name: String, args: Vec<CallArg<TypedPattern>>, env: &mut Env) -> Document {
+fn tag_tuple_pattern(name: &str, args: &[CallArg<TypedPattern>], env: &mut Env) -> Document {
     if args.is_empty() {
         atom(name.to_snake_case())
     } else {
         tuple(
             std::iter::once(atom(name.to_snake_case()))
-                .chain(args.into_iter().map(|p| pattern(p.value, env))),
+                .chain(args.into_iter().map(|p| pattern(&p.value, env))),
         )
     }
 }
 
-fn clause(clause: TypedClause, env: &mut Env) -> Document {
+fn clause(clause: &TypedClause, env: &mut Env) -> Document {
     let Clause {
         guard,
         pattern: pat,
@@ -457,13 +459,15 @@ fn clause(clause: TypedClause, env: &mut Env) -> Document {
 
     let docs = std::iter::once(pat)
         .chain(alternative_patterns.into_iter())
-        .map(|mut patterns| {
+        .map(|patterns| {
             let patterns_doc = if patterns.len() == 1 {
-                pattern(patterns.remove(0), env)
+                let p = patterns
+                    .get(0)
+                    .gleam_expect("Single pattern clause printing");
+                pattern(p, env)
             } else {
-                tuple(patterns.into_iter().map(|p| pattern(p, env)))
+                tuple(patterns.iter().map(|p| pattern(p, env)))
             };
-            let then = then.clone(); // TODO: remove this clone by having expr take a reference
             patterns_doc
                 .append(optional_clause_guard(guard.as_ref(), env))
                 .append(" ->")
@@ -505,7 +509,7 @@ fn bare_clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
 }
 
 fn clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
-    match *guard {
+    match guard {
         // Binary ops are wrapped in parens
         ClauseGuard::Or { .. }
         | ClauseGuard::And { .. }
@@ -520,7 +524,7 @@ fn clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
     }
 }
 
-fn clauses(cs: Vec<TypedClause>, env: &mut Env) -> Document {
+fn clauses(cs: &[TypedClause], env: &mut Env) -> Document {
     concat(
         cs.into_iter()
             .map(|c| {
@@ -533,9 +537,12 @@ fn clauses(cs: Vec<TypedClause>, env: &mut Env) -> Document {
     )
 }
 
-fn case(mut subjects: Vec<TypedExpr>, cs: Vec<TypedClause>, env: &mut Env) -> Document {
+fn case(subjects: &[TypedExpr], cs: &[TypedClause], env: &mut Env) -> Document {
     let subjects_doc = if subjects.len() == 1 {
-        wrap_expr(subjects.remove(0), env).group()
+        let subject = subjects
+            .get(0)
+            .gleam_expect("erl case printing of single subject");
+        wrap_expr(subject, env).group()
     } else {
         tuple(subjects.into_iter().map(|e| wrap_expr(e, env)))
     };
@@ -549,7 +556,7 @@ fn case(mut subjects: Vec<TypedExpr>, cs: Vec<TypedClause>, env: &mut Env) -> Do
         .group()
 }
 
-fn call(fun: TypedExpr, args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Document {
+fn call(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env) -> Document {
     match fun {
         TypedExpr::ModuleSelect {
             constructor: ModuleValueConstructor::Record { name },
@@ -564,7 +571,7 @@ fn call(fun: TypedExpr, args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Documen
             ..
         } => tuple(
             std::iter::once(atom(name.to_snake_case()))
-                .chain(args.into_iter().map(|arg| expr(arg.value, env))),
+                .chain(args.into_iter().map(|arg| expr(&arg.value, env))),
         ),
 
         TypedExpr::Var {
@@ -576,13 +583,13 @@ fn call(fun: TypedExpr, args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Documen
             ..
         } => {
             if module.as_slice() == env.module {
-                atom(name).append(call_args(args, env))
+                atom(name.to_string()).append(call_args(args, env))
             } else {
                 module
                     .join("@")
                     .to_doc()
                     .append(":")
-                    .append(atom(name))
+                    .append(atom(name.to_string()))
                     .append(call_args(args, env))
             }
         }
@@ -596,7 +603,7 @@ fn call(fun: TypedExpr, args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Documen
             .join("@")
             .to_doc()
             .append(":")
-            .append(atom(label))
+            .append(atom(label.to_string()))
             .append(call_args(args, env)),
 
         call @ TypedExpr::Call { .. } => expr(call, env)
@@ -612,17 +619,20 @@ fn call(fun: TypedExpr, args: Vec<CallArg<TypedExpr>>, env: &mut Env) -> Documen
                 fun,
                 args: inner_args,
                 ..
-            } = *body
+            } = body.as_ref()
             {
-                let mut args = args;
+                // TODO: this is a mess of cloning.
                 let merged_args = inner_args
-                    .into_iter()
+                    .iter()
                     .map(|a| match &a.value {
-                        TypedExpr::Var { name, .. } if name == "capture@1" => args.pop().unwrap(),
-                        _ => a,
+                        TypedExpr::Var { name, .. } if name == "capture@1" => args
+                            .get(0)
+                            .gleam_expect("Erl printing: capture call replacing arg")
+                            .clone(),
+                        _ => a.clone(),
                     })
-                    .collect();
-                call(*fun, merged_args, env)
+                    .collect::<Vec<_>>();
+                call(fun, merged_args.as_slice(), env)
             } else {
                 unreachable!()
             }
@@ -648,7 +658,7 @@ fn begin_end(document: Document) -> Document {
 
 /// Same as expr, expect it wraps seq, let, etc in begin end
 ///
-fn wrap_expr(expression: TypedExpr, env: &mut Env) -> Document {
+fn wrap_expr(expression: &TypedExpr, env: &mut Env) -> Document {
     match &expression {
         TypedExpr::Seq { .. } => begin_end(expr(expression, env)),
         TypedExpr::Let { .. } => begin_end(expr(expression, env)),
@@ -656,27 +666,27 @@ fn wrap_expr(expression: TypedExpr, env: &mut Env) -> Document {
     }
 }
 
-fn expr(expression: TypedExpr, env: &mut Env) -> Document {
+fn expr(expression: &TypedExpr, env: &mut Env) -> Document {
     match expression {
         TypedExpr::ListNil { .. } => "[]".to_doc(),
         TypedExpr::Todo { .. } => "erlang:error({gleam_error, todo})".to_doc(),
-        TypedExpr::Int { value, .. } => value.to_doc(),
+        TypedExpr::Int { value, .. } => value.as_str().to_doc(),
         TypedExpr::Float { value, .. } => float(value.as_ref()),
         TypedExpr::String { value, .. } => string(value),
-        TypedExpr::Seq { first, then, .. } => seq(*first, *then, env),
-        TypedExpr::Pipe { left, right, .. } => pipe(*left, *right, env),
+        TypedExpr::Seq { first, then, .. } => seq(first, then, env),
+        TypedExpr::Pipe { left, right, .. } => pipe(left, right, env),
 
-        TypedExpr::TupleIndex { tuple, index, .. } => tuple_index(*tuple, index, env),
+        TypedExpr::TupleIndex { tuple, index, .. } => tuple_index(tuple, *index, env),
 
         TypedExpr::Var {
             name, constructor, ..
         } => var(name, constructor, env),
 
-        TypedExpr::Fn { args, body, .. } => fun(args, *body, env),
+        TypedExpr::Fn { args, body, .. } => fun(args, body, env),
 
-        TypedExpr::ListCons { head, tail, .. } => expr_list_cons(*head, *tail, env),
+        TypedExpr::ListCons { head, tail, .. } => expr_list_cons(head, tail, env),
 
-        TypedExpr::Call { fun, args, .. } => call(*fun, args, env),
+        TypedExpr::Call { fun, args, .. } => call(fun, args, env),
 
         TypedExpr::ModuleSelect {
             constructor: ModuleValueConstructor::Record { name },
@@ -689,30 +699,30 @@ fn expr(expression: TypedExpr, env: &mut Env) -> Document {
             module_name,
             constructor: ModuleValueConstructor::Fn,
             ..
-        } => module_select_fn(typ, module_name, label),
+        } => module_select_fn(typ.clone(), module_name, label),
 
-        TypedExpr::RecordAccess { record, index, .. } => tuple_index(*record, index + 1, env),
+        TypedExpr::RecordAccess { record, index, .. } => tuple_index(record, index + 1, env),
 
         TypedExpr::Let {
             value,
             pattern,
             then,
             ..
-        } => let_(*value, pattern, *then, env),
+        } => let_(value, pattern, then, env),
 
         TypedExpr::Case {
             subjects, clauses, ..
-        } => case(subjects, clauses, env),
+        } => case(subjects, clauses.as_slice(), env),
 
         TypedExpr::BinOp {
             name, left, right, ..
-        } => bin_op(name, *left, *right, env),
+        } => bin_op(&name, left, right, env),
 
         TypedExpr::Tuple { elems, .. } => tuple(elems.into_iter().map(|e| wrap_expr(e, env))),
     }
 }
 
-fn tuple_index(tuple: TypedExpr, index: u64, env: &mut Env) -> Document {
+fn tuple_index(tuple: &TypedExpr, index: u64, env: &mut Env) -> Document {
     use std::iter::once;
     let index_doc = format!("{}", (index + 1)).to_doc();
     let tuple_doc = expr(tuple, env);
@@ -720,17 +730,13 @@ fn tuple_index(tuple: TypedExpr, index: u64, env: &mut Env) -> Document {
     "erlang:element".to_doc().append(wrap_args(iter))
 }
 
-fn module_select_fn(
-    typ: Arc<crate::typ::Type>,
-    module_name: Vec<String>,
-    label: String,
-) -> Document {
-    match &*crate::typ::collapse_links(typ) {
+fn module_select_fn(typ: Arc<crate::typ::Type>, module_name: &[String], label: &str) -> Document {
+    match crate::typ::collapse_links(typ).as_ref() {
         crate::typ::Type::Fn { args, .. } => "fun "
             .to_doc()
             .append(module_name.join("@"))
             .append(":")
-            .append(atom(label))
+            .append(atom(label.to_string()))
             .append("/")
             .append(args.len()),
 
@@ -738,12 +744,12 @@ fn module_select_fn(
             .join("@")
             .to_doc()
             .append(":")
-            .append(label)
+            .append(label.to_string())
             .append("()"),
     }
 }
 
-fn fun(args: Vec<Arg>, body: TypedExpr, env: &mut Env) -> Document {
+fn fun(args: &[Arg], body: &TypedExpr, env: &mut Env) -> Document {
     "fun"
         .to_doc()
         .append(fun_args(args, env).append(" ->"))
@@ -761,15 +767,15 @@ fn incrementing_args_list(arity: usize) -> String {
         .collect()
 }
 
-fn external_fun(name: String, module: String, fun: String, arity: usize) -> Document {
+fn external_fun(name: &str, module: &str, fun: &str, arity: usize) -> Document {
     let chars: String = incrementing_args_list(arity);
 
-    atom(name)
+    atom(name.to_string())
         .append(format!("({}) ->", chars))
         .append(line())
-        .append(atom(module))
+        .append(atom(module.to_string()))
         .append(":")
-        .append(atom(fun))
+        .append(atom(fun.to_string()))
         .append(format!("({}).", chars))
         .nest(INDENT)
 }

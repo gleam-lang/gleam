@@ -109,7 +109,7 @@ map() ->
     maps:new().
 "
     .to_string();
-    assert_eq!(expected, module(m));
+    assert_eq!(expected, module(&m));
 
     let m = Module {
         type_info: crate::typ::Module {
@@ -400,7 +400,7 @@ tup() ->
     {1, 2.0}.
 "
     .to_string();
-    assert_eq!(expected, module(m));
+    assert_eq!(expected, module(&m));
 
     let m = Module {
         type_info: crate::typ::Module {
@@ -497,7 +497,7 @@ some_function(
     1.
 "
     .to_string();
-    assert_eq!(expected, module(m));
+    assert_eq!(expected, module(&m));
 
     let m = Module {
         type_info: crate::typ::Module {
@@ -608,7 +608,7 @@ moddy4() ->
     one@zero:two(1).
 "
     .to_string();
-    assert_eq!(expected, module(m));
+    assert_eq!(expected, module(&m));
 
     let m = Module {
         type_info: crate::typ::Module {
@@ -767,7 +767,7 @@ go() ->
     end.
 "
     .to_string();
-    assert_eq!(expected, module(m));
+    assert_eq!(expected, module(&m));
 
     let m = Module {
         type_info: crate::typ::Module {
@@ -909,7 +909,7 @@ three() ->
     (one_two_actual(1))(2).
 "
     .to_string();
-    assert_eq!(expected, module(m));
+    assert_eq!(expected, module(&m));
 }
 
 #[test]
@@ -922,7 +922,7 @@ fn integration_test() {
             ast.name = vec!["the_app".to_string()];
             let ast = crate::typ::infer_module(ast, &std::collections::HashMap::new())
                 .expect("should successfully infer");
-            let output = module(ast);
+            let output = module(&ast);
             assert_eq!(($src, output), ($src, $erl.to_string()));
         };
     }

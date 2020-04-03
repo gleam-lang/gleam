@@ -108,7 +108,7 @@ pub fn compile(inputs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
 
         files.push(OutputFile {
             path: gen_dir.join(format!("{}.erl", erl_module_name)),
-            text: crate::erl::module(module),
+            text: crate::erl::module(&module),
         });
 
         compiled_modules.push(Out {
