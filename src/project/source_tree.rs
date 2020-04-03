@@ -141,7 +141,7 @@ impl SourceTree {
             .replace("\\", "/");
 
         // Parse the source
-        let (cleaned, doc, comments) = parser::strip_extra(&input.src);
+        let (cleaned, comments) = parser::strip_extra(&input.src);
         let mut module = crate::grammar::ModuleParser::new()
             .parse(&cleaned)
             .map_err(|e| Error::Parse {
@@ -150,6 +150,7 @@ impl SourceTree {
                 error: e.map_token(|crate::grammar::Token(a, b)| (a, b.to_string())),
             })?;
 
+        // Annotate statements with their inline documentation
         attach_doc_comments(&mut module, &comments.doc_comments);
 
         // Store the name
@@ -176,7 +177,6 @@ impl SourceTree {
                 origin: input.origin,
                 source_base_path: input.source_base_path,
                 module,
-                doc,
             },
         );
         Ok(())

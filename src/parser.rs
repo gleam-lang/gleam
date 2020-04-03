@@ -1,4 +1,3 @@
-use super::doc;
 use itertools::Itertools;
 
 #[derive(Debug, PartialEq)]
@@ -45,13 +44,7 @@ pub fn take_before<'a>(
 
 /// Blanks out comments, semicolons, etc
 ///
-pub fn strip_extra(
-    src: &str,
-) -> (
-    String,
-    doc::block_manager::DocBlockManager,
-    ModuleComments<'_>,
-) {
+pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
     enum Mode {
         Normal,
         String,
@@ -62,8 +55,6 @@ pub fn strip_extra(
     let mut buffer = String::with_capacity(src.len());
     let mut mode = Mode::Normal;
     let mut chars = src.chars().enumerate();
-    let mut doc_comment_buffer = String::with_capacity(500);
-    let mut doc_block = doc::block_manager::DocBlockManager::new();
     let mut comments = ModuleComments {
         doc_comments: vec![],
         comments: vec![],
@@ -138,23 +129,20 @@ pub fn strip_extra(
             Mode::DocComment(start) => match c {
                 '\n' => {
                     mode = Mode::Normal;
-                    doc_block.add_line(outer_char_no, doc_comment_buffer.to_string());
-                    doc_comment_buffer.clear();
                     comments.doc_comments.push(Comment {
                         start,
                         content: &src[start..outer_char_no],
                     });
                     buffer.push('\n');
                 }
-                c => {
-                    doc_comment_buffer.push(c);
+                _ => {
                     buffer.push(' ');
                 }
             },
         }
     }
 
-    (buffer, doc_block, comments)
+    (buffer, comments)
 }
 
 #[test]
