@@ -2,7 +2,7 @@ mod source_tree;
 #[cfg(test)]
 mod tests;
 
-use super::doc::{block_manager::DocBlockManager, doc::EEP48DocChunk};
+use super::doc::doc::EEP48DocChunk;
 use crate::error::{Error, FileIOAction, FileKind, GleamExpect};
 use crate::typ;
 use source_tree::SourceTree;
@@ -55,7 +55,6 @@ pub struct Module {
     source_base_path: PathBuf,
     origin: ModuleOrigin,
     module: crate::ast::UntypedModule,
-    doc: DocBlockManager,
 }
 
 pub fn compile(inputs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
@@ -78,7 +77,6 @@ pub fn compile(inputs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
         module,
         origin,
         source_base_path,
-        doc,
     } in source_tree.consume()?
     {
         let name = module.name.clone();
@@ -106,7 +104,7 @@ pub fn compile(inputs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
             })
             .collect();
 
-        let doc_chunk = doc.gen_doc_chunk(&module);
+        let doc_chunk = crate::doc::block_manager::gen_doc_chunk(&module);
 
         files.push(OutputFile {
             path: gen_dir.join(format!("{}.erl", erl_module_name)),
