@@ -246,7 +246,7 @@ init([]) ->
 
 fn src(name: &str) -> String {
     format!(
-        r#"pub fn hello_world() {{
+        r#"pub fn hello_world() -> String {{
   "Hello, from {}!"
 }}
 "#,
