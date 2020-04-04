@@ -45,11 +45,15 @@ pub fn take_before<'a>(
 /// Blanks out comments, semicolons, etc
 ///
 pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
+    #[derive(Clone, Copy)]
+    enum Kind {
+        Regular,
+        Doc,
+    }
     enum Mode {
         Normal,
         String,
-        Comment(usize),
-        DocComment(usize),
+        Comment(Kind, usize),
     };
 
     let mut buffer = String::with_capacity(src.len());
@@ -76,12 +80,12 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
                         buffer.push(' ');
                         match chars.peek() {
                             Some((i, '/')) => {
-                                mode = Mode::DocComment(*i);
+                                mode = Mode::Comment(Kind::Doc, *i);
                                 buffer.push(' ');
                                 chars.next();
                             }
                             Some((i, _c2)) => {
-                                mode = Mode::Comment(*i);
+                                mode = Mode::Comment(Kind::Regular, *i);
                             }
                             None => {
                                 buffer.push(c);
@@ -115,30 +119,21 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
                 _ => buffer.push(c),
             },
 
-            Mode::Comment(start) => match c {
+            Mode::Comment(kind, start) => match c {
                 '\n' => {
                     mode = Mode::Normal;
-                    comments.comments.push(Comment {
+                    let comment = Comment {
                         start,
                         content: &src[start..outer_char_no],
-                    });
+                    };
+                    match &kind {
+                        Kind::Doc => &mut comments.doc_comments,
+                        Kind::Regular => &mut comments.comments,
+                    }
+                    .push(comment);
                     buffer.push('\n');
                 }
                 _ => buffer.push(' '),
-            },
-
-            Mode::DocComment(start) => match c {
-                '\n' => {
-                    mode = Mode::Normal;
-                    comments.doc_comments.push(Comment {
-                        start,
-                        content: &src[start..outer_char_no],
-                    });
-                    buffer.push('\n');
-                }
-                _ => {
-                    buffer.push(' ');
-                }
             },
         }
     }
