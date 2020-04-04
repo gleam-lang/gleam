@@ -54,7 +54,7 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
 
     let mut buffer = String::with_capacity(src.len());
     let mut mode = Mode::Normal;
-    let mut chars = src.chars().enumerate();
+    let mut chars = src.chars().enumerate().peekable();
     let mut comments = ModuleComments {
         doc_comments: vec![],
         comments: vec![],
@@ -74,17 +74,18 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
                     Some((_, '/')) => {
                         buffer.push(' ');
                         buffer.push(' ');
-                        match chars.next() {
+                        match chars.peek() {
                             Some((i, '/')) => {
-                                mode = Mode::DocComment(i);
+                                mode = Mode::DocComment(*i);
                                 buffer.push(' ');
+                                chars.next();
                             }
                             Some((i, _c2)) => {
-                                mode = Mode::Comment(i);
-                                buffer.push(' ');
+                                mode = Mode::Comment(*i);
                             }
                             None => {
                                 buffer.push(c);
+                                chars.next();
                             }
                         }
                     }
@@ -147,32 +148,43 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
 
 #[test]
 fn strip_extra_test() {
-    assert_eq!(strip_extra(&"").0, "".to_string());
-    assert_eq!(strip_extra(&" ; ").0, "   ".to_string());
-    assert_eq!(strip_extra(&" // hi\n ").0, "      \n ".to_string());
-    assert_eq!(strip_extra(&r#""\"//" hi"#).0, r#""\"//" hi"#.to_string());
-    assert_eq!(
-        strip_extra(&"/// Something\n").0,
-        "             \n".to_string()
-    );
-    assert_eq!(
-        strip_extra(&" /// Something\n").0,
-        "              \n".to_string()
-    );
-    let str = "
-/// Something
+    macro_rules! assert_stripped {
+        ($input:expr, $out:expr $(,)?) => {
+            println!("\n\n{:?}", $input);
+            assert_eq!($out, strip_extra($input).0.as_str());
+        };
+    }
+
+    assert_stripped!("", "");
+    assert_stripped!(" ; ", "   ");
+    assert_stripped!("//\n", "  \n");
+    assert_stripped!("// \n", "   \n");
+    assert_stripped!(" // hi\n ", "      \n ");
+    assert_stripped!(r#""\"//" hi"#, r#""\"//" hi"#);
+    assert_stripped!("/// Something\n", "             \n");
+    assert_stripped!(" /// Something\n", "              \n");
+    assert_stripped!(
+        "/// Something
 /// Something else
 
 /// This is a function
 pub fn() -> {}
-"
-    .trim_start();
+",
+        "             \n                  \n
+                      \npub fn() -> {}\n"
+    );
 
-    let expected = "             \n                  \n
-                      \npub fn() -> {}\n";
-    let multi_doc_result = strip_extra(&str);
-
-    assert_eq!(multi_doc_result.0, expected.to_string());
+    // https://github.com/gleam-lang/gleam/issues/449
+    assert_stripped!("//\nexternal type A\n", "  \nexternal type A\n",);
+    assert_stripped!(
+        r#"//
+pub external fn a() -> Nil =
+"1" "2"
+"#,
+        "  \npub external fn a() -> Nil =
+\"1\" \"2\"
+",
+    );
 }
 
 pub fn seq(mut exprs: Vec<crate::ast::UntypedExpr>) -> crate::ast::UntypedExpr {

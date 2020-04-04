@@ -762,9 +762,9 @@ fn infer_error_test() {
 fn infer_module_test() {
     macro_rules! assert_infer {
         ($src:expr, $module:expr $(,)?) => {
-            print!("\n{}\n\n", $src);
+            let (src, _) = crate::parser::strip_extra($src);
             let ast = crate::grammar::ModuleParser::new()
-                .parse($src)
+                .parse(&src)
                 .expect("syntax error");
             let result = infer_module(ast, &HashMap::new()).expect("should successfully infer");
             let mut constructors: Vec<(_, _)> = result
@@ -1115,8 +1115,9 @@ pub fn get_string(x: Box(String)) { x.inner }
 fn infer_module_error_test() {
     macro_rules! assert_error {
         ($src:expr, $error:expr $(,)?) => {
+            let (src, _) = crate::parser::strip_extra($src);
             let mut ast = crate::grammar::ModuleParser::new()
-                .parse($src)
+                .parse(&src)
                 .expect("syntax error");
             ast.name = vec!["my_module".to_string()];
             let result = infer_module(ast, &HashMap::new()).expect_err("should infer an error");
