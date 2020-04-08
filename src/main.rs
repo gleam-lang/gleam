@@ -38,6 +38,7 @@ extern crate handlebars;
 
 use crate::error::Error;
 use crate::project::ModuleOrigin;
+use crate::project::OutputFile;
 use serde::Deserialize;
 use std::fs::File;
 use std::io::{Read, Write};
@@ -102,7 +103,6 @@ enum Command {
 #[derive(Deserialize)]
 struct ProjectConfig {
     name: String,
-    version: Option<String>,
 }
 
 fn main() {
@@ -159,82 +159,66 @@ fn command_build(root: String, write_docs: bool) -> Result<(), Error> {
     crate::project::collect_source(root_path.join("src"), ModuleOrigin::Src, &mut srcs)?;
     crate::project::collect_source(root_path.join("test"), ModuleOrigin::Test, &mut srcs)?;
 
-    let compiled = crate::project::compile(srcs)?;
+    let analysed = crate::project::analysed(srcs)?;
+
+    // Generate outputs (Erlang code, html documentation, etc)
+    let mut output_files = vec![];
+    if write_docs {
+        todo!()
+    } else {
+        crate::project::generate_erlang(analysed.as_slice(), &mut output_files);
+    }
 
     // Delete the gen directory before generating the newly compiled files
-    let gen_dir = root_path.join("gen");
-    if gen_dir.exists() {
-        std::fs::remove_dir_all(&gen_dir).map_err(|e| Error::FileIO {
-            action: error::FileIOAction::Delete,
-            kind: error::FileKind::Directory,
-            path: gen_dir,
-            err: Some(e.to_string()),
-        })?;
-    }
-    let doc_dir = root_path.join("doc");
-    if write_docs {
-        if doc_dir.exists() {
-            std::fs::remove_dir_all(&doc_dir.clone()).map_err(|e| Error::FileIO {
+    for dir in ["gen", "doc"].iter() {
+        let dir = root_path.join(dir);
+        if dir.exists() {
+            std::fs::remove_dir_all(&dir).map_err(|e| Error::FileIO {
                 action: error::FileIOAction::Delete,
                 kind: error::FileKind::Directory,
-                path: doc_dir.clone(),
+                path: dir,
                 err: Some(e.to_string()),
             })?;
         }
     }
-
-    let mut doc_writer = doc::writer::DocWriter::new(
-        project_config.name.clone(),
-        project_config
-            .version
-            .unwrap_or("1.0.0".to_string())
-            .clone(),
-        doc_dir.clone(),
-        root_path,
-    );
-
-    for crate::project::Compiled { files, doc, .. } in compiled {
-        if write_docs {
-            doc_writer.add_chunk(doc);
-        }
-
-        for crate::project::OutputFile { text, path } in files {
-            let dir_path = path.parent().ok_or_else(|| Error::FileIO {
-                action: error::FileIOAction::FindParent,
-                kind: error::FileKind::Directory,
-                path: path.clone(),
-                err: None,
-            })?;
-
-            std::fs::create_dir_all(dir_path).map_err(|e| Error::FileIO {
-                action: error::FileIOAction::Create,
-                kind: error::FileKind::Directory,
-                path: dir_path.to_path_buf(),
-                err: Some(e.to_string()),
-            })?;
-
-            let mut f = File::create(&path).map_err(|e| Error::FileIO {
-                action: error::FileIOAction::Create,
-                kind: error::FileKind::File,
-                path: path.clone(),
-                err: Some(e.to_string()),
-            })?;
-
-            f.write_all(text.as_bytes()).map_err(|e| Error::FileIO {
-                action: error::FileIOAction::WriteTo,
-                kind: error::FileKind::File,
-                path: path.clone(),
-                err: Some(e.to_string()),
-            })?;
-        }
+    for file in output_files {
+        write_file(file)?;
     }
     println!("Done!");
 
-    if write_docs {
-        doc_writer.write()?;
-        println!("Wrote docs to {}", doc_dir.to_str().unwrap());
-    }
+    Ok(())
+}
 
+pub fn write_file(file: OutputFile) -> Result<(), Error> {
+    let OutputFile { path, text } = file;
+
+    let dir_path = path.parent().ok_or_else(|| Error::FileIO {
+        action: error::FileIOAction::FindParent,
+        kind: error::FileKind::Directory,
+        path: path.clone(),
+        err: None,
+    })?;
+
+    std::fs::create_dir_all(dir_path).map_err(|e| Error::FileIO {
+        action: error::FileIOAction::Create,
+        kind: error::FileKind::Directory,
+        path: dir_path.to_path_buf(),
+        err: Some(e.to_string()),
+    })?;
+
+    let mut f = File::create(&path).map_err(|e| Error::FileIO {
+        action: error::FileIOAction::Create,
+        kind: error::FileKind::File,
+        path: path.clone(),
+        err: Some(e.to_string()),
+    })?;
+
+    f.write_all(text.as_bytes()).map_err(|e| Error::FileIO {
+        action: error::FileIOAction::WriteTo,
+        kind: error::FileKind::File,
+        path: path.clone(),
+        err: Some(e.to_string()),
+    })?;
     Ok(())
 }
 
