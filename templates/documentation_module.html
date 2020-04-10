@@ -1,0 +1,111 @@
+{% extends "documentation_layout.html" %}
+
+{% block sidebar_content %}
+<h2>Modules</h2>
+<ul>
+{% for module in modules %}
+    <li><a href="/{{ module.path }}">{{ module.name }}</a></li>
+{% endfor %}
+</ul>
+
+{% if !types.is_empty() %}
+<h2>Types</h2>
+<ul>
+    {% for typ in types %}
+    <li><a href="#{{ typ.name }}">{{ typ.name }}</a></li>
+    {% endfor %}
+</ul>
+{% endif %}
+
+{% if !functions.is_empty() %}
+<h2>Functions</h2>
+<ul>
+    {% for function in functions %}
+    <li><a href="#{{ function.name }}">{{ function.name }}</a></li>
+    {% endfor %}
+</ul>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<h1 class="module-name">{{ module_name }}</h1>
+{{ documentation }}
+
+{% if !types.is_empty() %}
+<section class="module-members">
+  <a href="#module-types">
+    <h1 id="module-types" class="module-member-kind">Types</h1>
+  </a>
+
+  {% for typ in types %}
+  <div class="member">
+    <a href="#{{ typ.name }}">
+      <h2 id="{{ typ.name }}" class="member-name">
+        {{ typ.name }}
+      </h2>
+    </a>
+    <h3>Definition</h3>
+    <pre>{{ typ.definition }}</pre>
+    <!-- TODO: constructors -->
+    <!-- <div class="custom-type-constructors"> -->
+    <!--   <h3> -->
+    <!--     Constructors -->
+    <!--   </h3> -->
+    <!--   <ul> -->
+    <!--     <li> -->
+    <!--       <code class="constructor-name">North</code> -->
+    <!--       <p> -->
+    <!--         At vero eos et accusam et justo duo dolores et ea rebum. -->
+    <!--         Stet clita kasd gubergren, no sea takimata sanctus est Lorem -->
+    <!--         ipsum dolor sit amet. -->
+    <!--       </p> -->
+    <!--     </li> -->
+
+    <!--     <li><code>South</code></li> -->
+    <!--     <li><code>East</code></li> -->
+    <!--     <li><code>West</code></li> -->
+    <!--     <li><code>Other(a)</code></li> -->
+    <!--     <li> -->
+    <!--       <code -->
+    <!--         >Jumbo(String, <a href="#">Char</a>, -->
+    <!--         <a href="#Cardinal">Cardinal</a>, List(a))</code -->
+    <!--       > -->
+    <!--       <div class="inline-doc"> -->
+    <!--         <p> -->
+    <!--           At vero eos et accusam et justo duo dolores et ea rebum. -->
+    <!--           Stet clita kasd gubergren, no sea takimata sanctus est -->
+    <!--           Lorem ipsum dolor sit amet. -->
+    <!--         </p> -->
+    <!--         <p> -->
+    <!--           Maybe not the best design... -->
+    <!--         </p> -->
+    <!--       </div> -->
+    <!--     </li> -->
+    <!--   </ul> -->
+    <!-- </div> -->
+    <div class="rendered-markdown">{{ typ.documentation }}</div>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if !functions.is_empty() %}
+<section class="module-members">
+ <a href="#module-functions">
+   <h1 id="module-functions" class="module-member-kind">Functions</h1>
+ </a>
+ {% for function in functions %}
+ <div class="member">
+    <a href="#{{ function.name }}">
+      <h2 id="{{ function.name }}" class="member-name">
+        {{ function.name }}
+      </h2>
+    </a>
+    <h3>Signature</h3>
+    <pre>{{ function.signature }}</pre>
+    <div class="rendered-markdown">{{ function.documentation }}</div>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+{% endblock %}

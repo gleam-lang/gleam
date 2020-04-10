@@ -2,12 +2,20 @@ mod source_tree;
 #[cfg(test)]
 mod tests;
 
-use crate::ast::TypedModule;
-use crate::error::{Error, FileIOAction, FileKind, GleamExpect};
-use crate::typ;
+use crate::{
+    ast::TypedModule,
+    error::{Error, FileIOAction, FileKind, GleamExpect},
+    typ,
+};
+use serde::Deserialize;
 use source_tree::SourceTree;
 use std::collections::HashMap;
 use std::path::PathBuf;
+
+#[derive(Deserialize)]
+pub struct ProjectConfig {
+    pub name: String,
+}
 
 #[derive(Debug, PartialEq)]
 pub struct Input {
