@@ -1,5 +1,4 @@
-// TODO
-// #![deny(warnings)]
+#![deny(warnings)]
 
 mod ast;
 mod doc;
@@ -33,13 +32,10 @@ extern crate lalrpop_util;
 #[macro_use]
 extern crate lazy_static;
 
-#[macro_use]
-extern crate handlebars;
-
-use crate::error::Error;
-use crate::project::ModuleOrigin;
-use crate::project::OutputFile;
-use serde::Deserialize;
+use crate::{
+    error::Error,
+    project::{ModuleOrigin, OutputFile, ProjectConfig},
+};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::PathBuf;
@@ -100,11 +96,6 @@ enum Command {
     },
 }
 
-#[derive(Deserialize)]
-struct ProjectConfig {
-    name: String,
-}
-
 fn main() {
     let result = match Command::from_args() {
         Command::Build { path, doc } => command_build(path, doc),
@@ -161,22 +152,28 @@ fn command_build(root: String, write_docs: bool) -> Result<(), Error> {
 
     let analysed = crate::project::analysed(srcs)?;
 
+    let doc_dir = root_path.join("doc");
+    let gen_dir = root_path.join("gen");
     // Generate outputs (Erlang code, html documentation, etc)
     let mut output_files = vec![];
     if write_docs {
-        todo!()
+        crate::doc::generate_html(
+            &project_config,
+            analysed.as_slice(),
+            &mut output_files,
+            &gen_dir,
+        );
     } else {
         crate::project::generate_erlang(analysed.as_slice(), &mut output_files);
     }
 
     // Delete the gen directory before generating the newly compiled files
-    for dir in ["gen", "doc"].iter() {
-        let dir = root_path.join(dir);
+    for dir in [doc_dir, gen_dir].iter() {
         if dir.exists() {
             std::fs::remove_dir_all(&dir).map_err(|e| Error::FileIO {
                 action: error::FileIOAction::Delete,
                 kind: error::FileKind::Directory,
-                path: dir,
+                path: dir.clone(),
                 err: Some(e.to_string()),
             })?;
         }
