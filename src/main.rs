@@ -152,37 +152,41 @@ fn command_build(root: String, write_docs: bool) -> Result<(), Error> {
 
     let analysed = crate::project::analysed(srcs)?;
 
-    let doc_dir = root_path.join("doc");
-    let gen_dir = root_path.join("gen");
     // Generate outputs (Erlang code, html documentation, etc)
     let mut output_files = vec![];
     if write_docs {
+        let dir = root_path.join("doc");
         crate::doc::generate_html(
             &project_config,
             analysed.as_slice(),
             &mut output_files,
-            &gen_dir,
+            &dir,
         );
+        delete_dir(&dir)?;
     } else {
+        let dir = root_path.join("gen");
         crate::project::generate_erlang(analysed.as_slice(), &mut output_files);
+        delete_dir(&dir)?;
     }
 
     // Delete the gen directory before generating the newly compiled files
-    for dir in [doc_dir, gen_dir].iter() {
-        if dir.exists() {
-            std::fs::remove_dir_all(&dir).map_err(|e| Error::FileIO {
-                action: error::FileIOAction::Delete,
-                kind: error::FileKind::Directory,
-                path: dir.clone(),
-                err: Some(e.to_string()),
-            })?;
-        }
-    }
     for file in output_files {
         write_file(file)?;
     }
     println!("Done!");
 
+    Ok(())
+}
+
+fn delete_dir(dir: &PathBuf) -> Result<(), Error> {
+    if dir.exists() {
+        std::fs::remove_dir_all(&dir).map_err(|e| Error::FileIO {
+            action: error::FileIOAction::Delete,
+            kind: error::FileKind::Directory,
+            path: dir.clone(),
+            err: Some(e.to_string()),
+        })?;
+    }
     Ok(())
 }
 
