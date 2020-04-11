@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
     <title>{{ page_title }}</title>
-    <link rel="stylesheet" href="./index.css" type="text/css" />
+    <link rel="stylesheet" href="{{ unnest }}/index.css" type="text/css" />
   </head>
   <body>
     <header class="page-header">
@@ -37,7 +37,7 @@
         <h2>Pages</h2>
         <ul>
         {% for page in pages %}
-          <li><a href="/{{ page.path }}">{{ page.name }}</a></li>
+          <li><a href="{{ unnest }}/{{ page.path }}">{{ page.name }}</a></li>
         {% endfor %}
         </ul>
         {% endif %}
@@ -46,10 +46,17 @@
         <h2>Pages</h2>
         <ul>
         {% for link in links %}
-          <li><a href="/{{ link.path }}">{{ link.name }}</a></li>
+          <li><a href="{{ unnest }}/{{ link.path }}">{{ link.name }}</a></li>
         {% endfor %}
         </ul>
         {% endif %}
+
+        <h2>Modules</h2>
+        <ul>
+        {% for module in modules %}
+          <li><a href="{{ unnest }}/{{ module.path }}">{{ module.name }}</a></li>
+        {% endfor %}
+        </ul>
 
         {% block sidebar_content %}{% endblock %}
       </nav>

@@ -1,13 +1,6 @@
 {% extends "documentation_layout.html" %}
 
 {% block sidebar_content %}
-<h2>Modules</h2>
-<ul>
-{% for module in modules %}
-    <li><a href="/{{ module.path }}">{{ module.name }}</a></li>
-{% endfor %}
-</ul>
-
 {% if !types.is_empty() %}
 <h2>Types</h2>
 <ul>
