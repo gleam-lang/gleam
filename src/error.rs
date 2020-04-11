@@ -102,6 +102,24 @@ pub enum Error {
         path: PathBuf,
         err: Option<String>,
     },
+
+    StandardIO {
+        action: StandardIOAction,
+        err: Option<std::io::ErrorKind>,
+    },
+}
+
+#[derive(Debug, PartialEq)]
+pub enum StandardIOAction {
+    Read,
+}
+
+impl StandardIOAction {
+    fn text(&self) -> &'static str {
+        match self {
+            StandardIOAction::Read => "read from",
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -969,6 +987,28 @@ but it cannot be found.",
                 )
                 .expect("error pretty buffer write");
             }
+
+            Error::StandardIO { action, err } => {
+                let err = match err {
+                    Some(e) => format!(
+                        "\nThe error message from the stdio library was:\n\n    {}\n",
+                        std_io_error_kind_text(e)
+                    ),
+                    None => "".to_string(),
+                };
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Standard IO failure".to_string(),
+                    label: format!(
+                        "An error occurred while trying to {}:
+
+{}
+",
+                        action.text(),
+                        err,
+                    ),
+                };
+                write_project(buffer, diagnostic);
+            }
         }
     }
 
@@ -977,6 +1017,30 @@ but it cannot be found.",
         let mut buffer = buffer_writer.buffer();
         self.pretty(&mut buffer);
         buffer_writer.print(&buffer).unwrap();
+    }
+}
+
+fn std_io_error_kind_text(kind: &std::io::ErrorKind) -> String {
+    use std::io::ErrorKind::*;
+    match kind {
+        NotFound => "Could not find the stdio stream".to_string(),
+        PermissionDenied => "Permission was denied".to_string(),
+        ConnectionRefused => "Connection was refused".to_string(),
+        ConnectionReset => "Connection was reset".to_string(),
+        ConnectionAborted => "Connection was aborted".to_string(),
+        NotConnected => "Was not connected".to_string(),
+        AddrInUse => "The stream was already in use".to_string(),
+        AddrNotAvailable => "The stream was not available".to_string(),
+        BrokenPipe => "The pipe was broken".to_string(),
+        AlreadyExists => "A handle to the stream already exists".to_string(),
+        WouldBlock => "This operation would block when it was requested not to".to_string(),
+        InvalidInput => "Some parameter was invalid".to_string(),
+        InvalidData => "The data was invalid.  Check that the encoding is UTF-8".to_string(),
+        TimedOut => "The operation timed out".to_string(),
+        WriteZero => "An attempt was made to write, but all bytes could not be written".to_string(),
+        Interrupted => "The operation was interrupted".to_string(),
+        UnexpectedEof => "The end of file was reached before it was expected".to_string(),
+        _ => "An unknown error occurred".to_string(),
     }
 }
 
