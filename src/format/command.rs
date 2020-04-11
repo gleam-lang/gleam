@@ -1,4 +1,4 @@
-use crate::error::{Error, FileIOAction, FileKind};
+use crate::error::{Error, FileIOAction, FileKind, StandardIOAction};
 use std::fs::OpenOptions;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
@@ -58,7 +58,10 @@ pub fn format_stdin(_check: bool) -> Result<(), Error> {
     let mut src = String::new();
     std::io::stdin()
         .read_to_string(&mut src)
-        .expect("Reading stdin");
+        .map_err(|e| Error::StandardIO {
+            action: StandardIOAction::Read,
+            err: Some(e.kind()),
+        })?;
 
     let formatted = crate::format::pretty(src.as_ref()).map_err(|error| Error::Parse {
         path: PathBuf::from("<standard input>"),
