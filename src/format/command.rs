@@ -17,22 +17,31 @@ pub fn format_files(files: Vec<String>, _check: bool) -> Result<(), Error> {
         let path = PathBuf::from_str(&file_path).map_err(|e| Error::FileIO {
             action: FileIOAction::Open,
             kind: FileKind::File,
-            path: PathBuf::new(),
-            err: Some(format!("Invalid path: {}\n{}", file_path, e.to_string())),
+            path: PathBuf::from(file_path),
+            err: Some(e.to_string()),
         })?;
 
         let mut file = OpenOptions::new()
             .write(true)
             .read(true)
             .open(path.clone())
-            .expect(&format!("Could not open file: {}", file_path));
+            .map_err(|e| Error::FileIO {
+                action: FileIOAction::Open,
+                kind: FileKind::File,
+                path: path.clone(),
+                err: Some(e.to_string()),
+            })?;
 
         let mut src = String::new();
-        file.read_to_string(&mut src)
-            .expect(&format!("Could not read file: {}", file_path));
+        file.read_to_string(&mut src).map_err(|e| Error::FileIO {
+            action: FileIOAction::Read,
+            kind: FileKind::File,
+            path: path.clone(),
+            err: Some(e.to_string()),
+        })?;
 
         let formatted = crate::format::pretty(src.as_ref()).map_err(|error| Error::Parse {
-            path: PathBuf::from("<standard input>"),
+            path: path.clone(),
             src: src.clone(),
             error,
         })?;
