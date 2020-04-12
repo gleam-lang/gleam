@@ -10,13 +10,13 @@ pub enum Error {
 
 pub type LalrpopError = lalrpop_util::ParseError<usize, (usize, String), Error>;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ModuleComments<'a> {
     pub doc_comments: Vec<Comment<'a>>,
     pub comments: Vec<Comment<'a>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Comment<'a> {
     pub start: usize,
     pub content: &'a str,
@@ -79,13 +79,13 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
                         buffer.push(' ');
                         buffer.push(' ');
                         match chars.peek() {
-                            Some((i, '/')) => {
-                                mode = Mode::Comment(Kind::Doc, *i);
+                            Some((_, '/')) => {
+                                mode = Mode::Comment(Kind::Doc, outer_char_no);
                                 buffer.push(' ');
                                 chars.next();
                             }
-                            Some((i, _c2)) => {
-                                mode = Mode::Comment(Kind::Regular, *i);
+                            Some((_, _c2)) => {
+                                mode = Mode::Comment(Kind::Regular, outer_char_no);
                             }
                             None => {
                                 buffer.push(c);
@@ -122,9 +122,13 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
             Mode::Comment(kind, start) => match c {
                 '\n' => {
                     mode = Mode::Normal;
+                    let content_start = match &kind {
+                        Kind::Doc => start + 3,
+                        Kind::Regular => start + 2,
+                    };
                     let comment = Comment {
                         start,
-                        content: &src[start..outer_char_no],
+                        content: &src[content_start..outer_char_no],
                     };
                     match &kind {
                         Kind::Doc => &mut comments.doc_comments,
@@ -138,6 +142,22 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
         }
     }
 
+    if let Mode::Comment(kind, start) = mode {
+        let content_start = match &kind {
+            Kind::Doc => start + 3,
+            Kind::Regular => start + 2,
+        };
+        let comment = Comment {
+            start,
+            content: &src[content_start..],
+        };
+        match &kind {
+            Kind::Doc => &mut comments.doc_comments,
+            Kind::Regular => &mut comments.comments,
+        }
+        .push(comment);
+    };
+
     (buffer, comments)
 }
 
@@ -148,7 +168,13 @@ fn strip_extra_test() {
             println!("\n\n{:?}", $input);
             assert_eq!($out, strip_extra($input).0.as_str());
         };
-    }
+        ($input:expr, $out:expr, $comments:expr $(,)?) => {
+            println!("\n\n{:?}", $input);
+            let (stripped, comments) = strip_extra($input);
+            assert_eq!($out, stripped.as_str());
+            assert_eq!($comments, comments);
+        };
+    };
 
     assert_stripped!("", "");
     assert_stripped!(" ; ", "   ");
@@ -179,6 +205,58 @@ pub external fn a() -> Nil =
         "  \npub external fn a() -> Nil =
 \"1\" \"2\"
 ",
+    );
+
+    // Testing comment collection
+
+    assert_stripped!(
+        "// hello\n",
+        "        \n",
+        ModuleComments {
+            doc_comments: vec![],
+            comments: vec![Comment {
+                start: 0,
+                content: " hello",
+            }],
+        }
+    );
+
+    assert_stripped!(
+        "// hello",
+        "        ",
+        ModuleComments {
+            doc_comments: vec![],
+            comments: vec![Comment {
+                start: 0,
+                content: " hello",
+            }],
+        }
+    );
+
+    // Testing doc comment collection
+
+    assert_stripped!(
+        "/// hello\n",
+        "         \n",
+        ModuleComments {
+            doc_comments: vec![Comment {
+                start: 0,
+                content: " hello",
+            }],
+            comments: vec![],
+        }
+    );
+
+    assert_stripped!(
+        "/// hello",
+        "         ",
+        ModuleComments {
+            doc_comments: vec![Comment {
+                start: 0,
+                content: " hello",
+            }],
+            comments: vec![],
+        }
     );
 }
 
