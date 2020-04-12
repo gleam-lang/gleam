@@ -51,11 +51,15 @@ fn module_dependencies_test() {
     );
 }
 
+pub type TypedArg = Arg<Arc<Type>>;
+pub type UntypedArg = Arg<()>;
+
 #[derive(Debug, Clone, PartialEq)]
-pub struct Arg {
+pub struct Arg<T> {
     pub names: ArgNames,
     pub location: SrcSpan,
     pub annotation: Option<TypeAst>,
+    pub typ: T,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -118,7 +122,7 @@ pub enum Statement<T, Expr> {
     Fn {
         location: SrcSpan,
         name: String,
-        args: Vec<Arg>,
+        args: Vec<Arg<T>>,
         body: Expr,
         public: bool,
         return_annotation: Option<TypeAst>,

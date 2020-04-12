@@ -4,9 +4,10 @@ mod tests;
 
 use crate::ast::{
     self, Arg, ArgNames, BinOp, CallArg, Clause, ClauseGuard, Pattern, RecordConstructor, SrcSpan,
-    Statement, TypeAst, TypedClause, TypedClauseGuard, TypedExpr, TypedModule, TypedMultiPattern,
-    TypedPattern, TypedStatement, UnqualifiedImport, UntypedClause, UntypedClauseGuard,
-    UntypedExpr, UntypedModule, UntypedMultiPattern, UntypedPattern, UntypedStatement,
+    Statement, TypeAst, TypedArg, TypedClause, TypedClauseGuard, TypedExpr, TypedModule,
+    TypedMultiPattern, TypedPattern, TypedStatement, UnqualifiedImport, UntypedArg, UntypedClause,
+    UntypedClauseGuard, UntypedExpr, UntypedModule, UntypedMultiPattern, UntypedPattern,
+    UntypedStatement,
 };
 use crate::error::GleamExpect;
 use std::cell::RefCell;
@@ -1352,8 +1353,9 @@ pub fn infer_module(
                 );
 
                 // Infer the type
-                let (args_types, body) =
-                    do_infer_fn(&args, body, &return_annotation, level + 1, &mut env)?;
+                let (args, body) =
+                    do_infer_fn(args, body, &return_annotation, level + 1, &mut env)?;
+                let args_types = args.iter().map(|a| a.typ.clone()).collect();
                 let typ = fn_(args_types, body.typ());
 
                 // Assert that the inferred type matches the type of any recursive call
@@ -1388,7 +1390,7 @@ pub fn infer_module(
                     typ,
                 );
 
-                Ok(Statement::Fn {
+                let statement: TypedStatement = Statement::Fn {
                     doc,
                     location,
                     name,
@@ -1397,7 +1399,9 @@ pub fn infer_module(
                     return_annotation,
                     return_type: body.typ(),
                     body,
-                })
+                };
+
+                Ok(statement)
             }
 
             Statement::ExternalFn {
@@ -1982,7 +1986,7 @@ fn infer_seq(
 }
 
 fn infer_fn(
-    args: Vec<Arg>,
+    args: Vec<UntypedArg>,
     body: UntypedExpr,
     is_capture: bool,
     return_annotation: Option<TypeAst>,
@@ -1990,7 +1994,8 @@ fn infer_fn(
     location: SrcSpan,
     env: &mut Env,
 ) -> Result<TypedExpr, Error> {
-    let (args_types, body) = do_infer_fn(args.as_ref(), body, &return_annotation, level, env)?;
+    let (args, body) = do_infer_fn(args, body, &return_annotation, level, env)?;
+    let args_types = args.iter().map(|a| a.typ.clone()).collect();
     let typ = fn_(args_types, body.typ());
     Ok(TypedExpr::Fn {
         location,
@@ -2884,24 +2889,43 @@ fn get_field_map<'a>(
     Ok(env.get_value_constructor(module, name)?.field_map())
 }
 
+fn infer_arg(
+    arg: UntypedArg,
+    type_vars: &mut im::HashMap<String, (usize, Arc<Type>)>,
+    level: usize,
+    env: &mut Env,
+) -> Result<TypedArg, Error> {
+    let Arg {
+        names,
+        annotation,
+        location,
+        ..
+    } = arg;
+    let typ = annotation
+        .clone()
+        .map(|t| env.type_from_ast(&t, type_vars, NewTypeAction::MakeGeneric))
+        .unwrap_or_else(|| Ok(env.new_unbound_var(level)))?;
+    Ok(Arg {
+        names,
+        location,
+        annotation,
+        typ,
+    })
+}
+
 fn do_infer_fn(
-    args: &[Arg],
+    args: Vec<UntypedArg>,
     body: UntypedExpr,
     return_annotation: &Option<TypeAst>,
     level: usize,
     env: &mut Env,
-) -> Result<(Vec<Arc<Type>>, TypedExpr), Error> {
+) -> Result<(Vec<TypedArg>, TypedExpr), Error> {
     // Construct an initial type for each argument of the function- either an unbound type variable
     // or a type provided by an annotation.
     let mut type_vars = hashmap![];
-    let args_types: Vec<_> = args
-        .iter()
-        .map(|arg| {
-            arg.annotation
-                .clone()
-                .map(|t| env.type_from_ast(&t, &mut type_vars, NewTypeAction::MakeGeneric))
-                .unwrap_or_else(|| Ok(env.new_unbound_var(level)))
-        })
+    let args: Vec<_> = args
+        .into_iter()
+        .map(|arg| infer_arg(arg, &mut type_vars, level, env))
         .collect::<Result<_, _>>()?;
 
     // Record generic type variables that comes from type annotations.
@@ -2913,13 +2937,11 @@ fn do_infer_fn(
 
     // Insert arguments into function body scope.
     let previous_vars = env.local_values.clone();
-    for (arg, t) in args.iter().zip(args_types.iter()) {
+    for (arg, t) in args.iter().zip(args.iter().map(|arg| arg.typ.clone())) {
         match &arg.names {
-            ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => env.insert_variable(
-                name.to_string(),
-                ValueConstructorVariant::LocalVariable,
-                (*t).clone(),
-            ),
+            ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
+                env.insert_variable(name.to_string(), ValueConstructorVariant::LocalVariable, t)
+            }
             ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => (),
         };
     }
@@ -2935,7 +2957,7 @@ fn do_infer_fn(
     // Reset the env now that the scope of the function has ended.
     env.local_values = previous_vars;
     env.annotated_generic_types = previous_annotated_generic_types;
-    Ok((args_types, body))
+    Ok((args, body))
 }
 
 fn bin_op_name(name: &BinOp) -> String {

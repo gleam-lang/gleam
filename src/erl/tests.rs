@@ -325,6 +325,7 @@ map() ->
                     typ: crate::typ::int(),
                     args: vec![
                         Arg {
+                            typ: typ::int(),
                             location: SrcSpan { start: 0, end: 0 },
                             annotation: None,
                             names: ArgNames::Named {
@@ -332,6 +333,7 @@ map() ->
                             },
                         },
                         Arg {
+                            typ: typ::int(),
                             location: SrcSpan { start: 0, end: 0 },
                             annotation: None,
                             names: ArgNames::Named {
@@ -433,6 +435,7 @@ tup() ->
             name: "some_function".to_string(),
             args: vec![
                 Arg {
+                    typ: typ::int(),
                     location: SrcSpan { start: 0, end: 0 },
                     annotation: None,
                     names: ArgNames::Named {
@@ -440,6 +443,7 @@ tup() ->
                     },
                 },
                 Arg {
+                    typ: typ::int(),
                     location: SrcSpan { start: 0, end: 0 },
                     annotation: None,
                     names: ArgNames::Named {
@@ -447,6 +451,7 @@ tup() ->
                     },
                 },
                 Arg {
+                    typ: typ::int(),
                     location: SrcSpan { start: 0, end: 0 },
                     annotation: None,
                     names: ArgNames::Named {
@@ -454,6 +459,7 @@ tup() ->
                     },
                 },
                 Arg {
+                    typ: typ::int(),
                     location: SrcSpan { start: 0, end: 0 },
                     annotation: None,
                     names: ArgNames::Named {
@@ -461,6 +467,7 @@ tup() ->
                     },
                 },
                 Arg {
+                    typ: typ::int(),
                     location: SrcSpan { start: 0, end: 0 },
                     annotation: None,
                     names: ArgNames::Named {
@@ -468,6 +475,7 @@ tup() ->
                     },
                 },
                 Arg {
+                    typ: typ::int(),
                     location: SrcSpan { start: 0, end: 0 },
                     annotation: None,
                     names: ArgNames::Named {
@@ -475,6 +483,7 @@ tup() ->
                     },
                 },
                 Arg {
+                    typ: typ::int(),
                     location: SrcSpan { start: 0, end: 0 },
                     annotation: None,
                     names: ArgNames::Named {
@@ -482,6 +491,7 @@ tup() ->
                     },
                 },
                 Arg {
+                    typ: typ::int(),
                     location: SrcSpan { start: 0, end: 0 },
                     annotation: None,
                     names: ArgNames::Named {

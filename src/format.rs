@@ -73,7 +73,7 @@ impl Documentable for &ArgNames {
     }
 }
 
-impl Documentable for &Arg {
+impl<A> Documentable for &Arg<A> {
     fn to_doc(self) -> Document {
         self.names
             .to_doc()
@@ -218,7 +218,7 @@ impl Documentable for &UntypedStatement {
 pub fn fn_signature(
     public: &bool,
     name: &str,
-    args: &Vec<Arg>,
+    args: &Vec<UntypedArg>,
     return_annotation: &Option<TypeAst>,
 ) -> Document {
     pub_(public)
@@ -538,7 +538,7 @@ impl Documentable for &UntypedExpr {
     }
 }
 
-fn expr_fn(args: &[Arg], body: &UntypedExpr) -> Document {
+fn expr_fn(args: &[UntypedArg], body: &UntypedExpr) -> Document {
     "fn".to_doc()
         .append(wrap_args(args.iter().map(|e| e.to_doc())).nest_current())
         .append(

@@ -168,7 +168,7 @@ fn statement(statement: &TypedStatement, module: &[String]) -> Option<Document> 
     }
 }
 
-fn mod_fun(name: &str, args: &[Arg], body: &TypedExpr, module: &[String]) -> Document {
+fn mod_fun(name: &str, args: &[TypedArg], body: &TypedExpr, module: &[String]) -> Document {
     let mut env = Env::new(module);
 
     atom(name.to_string())
@@ -178,7 +178,7 @@ fn mod_fun(name: &str, args: &[Arg], body: &TypedExpr, module: &[String]) -> Doc
         .append(".")
 }
 
-fn fun_args(args: &[Arg], env: &mut Env) -> Document {
+fn fun_args(args: &[TypedArg], env: &mut Env) -> Document {
     wrap_args(args.into_iter().map(|a| match &a.names {
         ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => "_".to_doc(),
         ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
@@ -749,7 +749,7 @@ fn module_select_fn(typ: Arc<crate::typ::Type>, module_name: &[String], label: &
     }
 }
 
-fn fun(args: &[Arg], body: &TypedExpr, env: &mut Env) -> Document {
+fn fun(args: &[TypedArg], body: &TypedExpr, env: &mut Env) -> Document {
     "fun"
         .to_doc()
         .append(fun_args(args, env).append(" ->"))
