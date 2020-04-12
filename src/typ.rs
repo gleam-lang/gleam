@@ -5,8 +5,8 @@ mod tests;
 use crate::ast::{
     self, Arg, ArgNames, BinOp, CallArg, Clause, ClauseGuard, Pattern, RecordConstructor, SrcSpan,
     Statement, TypeAst, TypedClause, TypedClauseGuard, TypedExpr, TypedModule, TypedMultiPattern,
-    TypedPattern, UnqualifiedImport, UntypedClause, UntypedClauseGuard, UntypedExpr, UntypedModule,
-    UntypedMultiPattern, UntypedPattern, UntypedStatement,
+    TypedPattern, TypedStatement, UnqualifiedImport, UntypedClause, UntypedClauseGuard,
+    UntypedExpr, UntypedModule, UntypedMultiPattern, UntypedPattern, UntypedStatement,
 };
 use crate::error::GleamExpect;
 use std::cell::RefCell;
@@ -1266,12 +1266,12 @@ fn register_types(
         }
 
         Statement::TypeAlias {
-            doc: _,
             location,
             public,
             args,
             alias: name,
             resolved_type,
+            ..
         } => {
             let mut type_vars = hashmap![];
             let parameters = make_type_vars(args, &mut type_vars, location, env)?;
@@ -1309,7 +1309,7 @@ pub fn infer_module(
         register_types(s, module_name, &mut env)?;
     }
 
-    let statements: Vec<Statement<TypedExpr>> = module
+    let statements: Vec<TypedStatement> = module
         .statements
         .into_iter()
         .map(|s| match s {
@@ -1321,6 +1321,7 @@ pub fn infer_module(
                 args,
                 body,
                 return_annotation,
+                ..
             } => {
                 let level = 1;
 
@@ -1393,8 +1394,9 @@ pub fn infer_module(
                     name,
                     public,
                     args,
-                    body,
                     return_annotation,
+                    return_type: body.typ(),
+                    body,
                 })
             }
 
@@ -1407,10 +1409,11 @@ pub fn infer_module(
                 retrn,
                 module,
                 fun,
+                ..
             } => {
                 // Construct type of function from AST
                 let mut type_vars = hashmap![];
-                let retrn_type =
+                let return_type =
                     env.type_from_ast(&retrn, &mut type_vars, NewTypeAction::MakeGeneric)?;
                 let mut args_types = Vec::with_capacity(args.len());
                 let mut field_map = FieldMap::new(args.len());
@@ -1428,7 +1431,7 @@ pub fn infer_module(
                     }
                 }
                 let field_map = field_map.into_option();
-                let typ = fn_(args_types, retrn_type);
+                let typ = fn_(args_types, return_type.clone());
 
                 // Insert function into module
                 env.insert_module_value(
@@ -1458,6 +1461,7 @@ pub fn infer_module(
                     typ,
                 );
                 Ok(Statement::ExternalFn {
+                    return_type,
                     doc,
                     location,
                     name,
@@ -1476,14 +1480,23 @@ pub fn infer_module(
                 alias,
                 args,
                 resolved_type,
-            } => Ok(Statement::TypeAlias {
-                doc,
-                location,
-                public,
-                alias,
-                args,
-                resolved_type,
-            }),
+                ..
+            } => {
+                let typ = env
+                    .get_type_constructor(&None, alias.as_str())
+                    .gleam_expect("Could not find existing type for type alias")
+                    .typ
+                    .clone();
+                Ok(Statement::TypeAlias {
+                    doc,
+                    location,
+                    public,
+                    alias,
+                    args,
+                    resolved_type,
+                    typ,
+                })
+            }
 
             Statement::CustomType {
                 doc,

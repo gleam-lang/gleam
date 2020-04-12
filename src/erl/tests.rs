@@ -1,4 +1,5 @@
 use super::*;
+use crate::typ;
 use std::default::Default;
 
 #[test]
@@ -47,6 +48,7 @@ fn module_test() {
                 unqualified: vec![],
             },
             Statement::ExternalFn {
+                return_type: typ::int(),
                 doc: None,
                 location: Default::default(),
                 args: vec![
@@ -88,6 +90,7 @@ fn module_test() {
                 fun: "new".to_string(),
                 module: "maps".to_string(),
                 public: true,
+                return_type: typ::int(),
                 retrn: TypeAst::Constructor {
                     location: Default::default(),
                     module: None,
@@ -123,6 +126,7 @@ map() ->
             Statement::Fn {
                 doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -136,6 +140,7 @@ map() ->
             Statement::Fn {
                 doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -149,6 +154,7 @@ map() ->
             Statement::Fn {
                 doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -161,6 +167,7 @@ map() ->
             Statement::Fn {
                 doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -174,6 +181,7 @@ map() ->
             Statement::Fn {
                 doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -195,6 +203,7 @@ map() ->
             Statement::Fn {
                 doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -218,6 +227,7 @@ map() ->
             Statement::Fn {
                 doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -240,6 +250,7 @@ map() ->
             Statement::Fn {
                 doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -271,6 +282,7 @@ map() ->
             Statement::Fn {
                 doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -301,6 +313,7 @@ map() ->
             Statement::Fn {
                 doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -336,6 +349,7 @@ map() ->
             Statement::Fn {
                 doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -412,6 +426,7 @@ tup() ->
         name: vec!["term".to_string()],
         statements: vec![Statement::Fn {
             doc: None,
+            return_type: typ::int(),
             return_annotation: None,
             location: Default::default(),
             public: false,
@@ -511,6 +526,7 @@ some_function(
             Statement::Fn {
                 doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -529,6 +545,7 @@ some_function(
             Statement::Fn {
                 doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -545,6 +562,7 @@ some_function(
             Statement::Fn {
                 doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -564,6 +582,7 @@ some_function(
             Statement::Fn {
                 doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -620,6 +639,7 @@ moddy4() ->
         name: vec!["my_mod".to_string()],
         statements: vec![Statement::Fn {
             doc: None,
+            return_type: typ::int(),
             return_annotation: None,
             location: Default::default(),
             public: false,
@@ -780,6 +800,7 @@ go() ->
         statements: vec![
             Statement::Fn {
                 doc: None,
+                return_type: typ::int(),
                 return_annotation: None,
                 location: Default::default(),
                 args: vec![],
@@ -816,6 +837,7 @@ go() ->
             },
             Statement::Fn {
                 doc: None,
+                return_type: typ::int(),
                 return_annotation: None,
                 location: Default::default(),
                 args: vec![],
@@ -847,6 +869,7 @@ go() ->
             },
             Statement::Fn {
                 doc: None,
+                return_type: typ::int(),
                 return_annotation: None,
                 location: Default::default(),
                 args: vec![],

@@ -1,11 +1,11 @@
 #[cfg(test)]
 mod tests;
 
-use crate::ast::*;
-use crate::error::GleamExpect;
-use crate::pretty::*;
-use crate::typ::{
-    ModuleValueConstructor, PatternConstructor, ValueConstructor, ValueConstructorVariant,
+use crate::{
+    ast::*,
+    error::GleamExpect,
+    pretty::*,
+    typ::{ModuleValueConstructor, PatternConstructor, ValueConstructor, ValueConstructorVariant},
 };
 use heck::{CamelCase, SnakeCase};
 use itertools::Itertools;

@@ -4,21 +4,21 @@ mod untyped;
 pub use self::typed::TypedExpr;
 pub use self::untyped::UntypedExpr;
 
-use crate::typ::{self, ModuleValueConstructor, PatternConstructor, ValueConstructor};
+use crate::typ::{self, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor};
 use std::sync::Arc;
 
-pub type TypedModule = Module<TypedExpr, typ::Module>;
+pub type TypedModule = Module<Arc<Type>, TypedExpr, typ::Module>;
 
-pub type UntypedModule = Module<UntypedExpr, ()>;
+pub type UntypedModule = Module<(), UntypedExpr, ()>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Module<Expr, Info> {
+pub struct Module<T, Expr, Info> {
     pub name: Vec<String>,
     pub type_info: Info,
-    pub statements: Vec<Statement<Expr>>,
+    pub statements: Vec<Statement<T, Expr>>,
 }
 
-impl<A, B> Module<A, B> {
+impl<A, B, C> Module<A, B, C> {
     pub fn name_string(&self) -> String {
         self.name.join("/")
     }
@@ -110,11 +110,11 @@ impl TypeAst {
     }
 }
 
-pub type TypedStatement = Statement<TypedExpr>;
-pub type UntypedStatement = Statement<UntypedExpr>;
+pub type TypedStatement = Statement<Arc<Type>, TypedExpr>;
+pub type UntypedStatement = Statement<(), UntypedExpr>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Statement<Expr> {
+pub enum Statement<T, Expr> {
     Fn {
         location: SrcSpan,
         name: String,
@@ -122,6 +122,7 @@ pub enum Statement<Expr> {
         body: Expr,
         public: bool,
         return_annotation: Option<TypeAst>,
+        return_type: T,
         doc: Option<String>,
     },
 
@@ -130,6 +131,7 @@ pub enum Statement<Expr> {
         alias: String,
         args: Vec<String>,
         resolved_type: TypeAst,
+        typ: T,
         public: bool,
         doc: Option<String>,
     },
@@ -149,6 +151,7 @@ pub enum Statement<Expr> {
         args: Vec<ExternalFnArg>,
         name: String,
         retrn: TypeAst,
+        return_type: T,
         module: String,
         fun: String,
         doc: Option<String>,
@@ -170,7 +173,7 @@ pub enum Statement<Expr> {
     },
 }
 
-impl<A> Statement<A> {
+impl<A, B> Statement<A, B> {
     pub fn location(&self) -> &SrcSpan {
         match self {
             Statement::Import { location, .. }

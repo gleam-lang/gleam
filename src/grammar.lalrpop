@@ -40,6 +40,7 @@ StatementTypeAlias : UntypedStatement = {
         alias: ta.0,
         args: ta.1,
         resolved_type: tr,
+        typ: (),
     }
 }
 
@@ -80,6 +81,7 @@ StatementExternalFn: UntypedStatement = {
         module: m,
         fun: f,
         retrn: r,
+        return_type: (),
     }
 }
 
@@ -98,6 +100,7 @@ StatementFn: UntypedStatement = {
         name: n,
         args: a,
         body: seq(b),
+        return_type: (),
         return_annotation,
     }
 }
