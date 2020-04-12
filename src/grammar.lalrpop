@@ -3,7 +3,7 @@
 use std::str::FromStr;
 
 use crate::ast::{
-    UntypedExpr, Arg, UntypedModule, Module, UntypedStatement, Statement, TypeAst,
+    UntypedExpr, UntypedArg, Arg, UntypedModule, Module, UntypedStatement, Statement, TypeAst,
     UntypedPattern, BinOp, Clause, UntypedClause, RecordConstructor, Pattern, CallArg,
     ExternalFnArg, ArgNames, UnqualifiedImport, UntypedClauseGuard, ClauseGuard,
 };
@@ -40,6 +40,7 @@ StatementTypeAlias : UntypedStatement = {
         alias: ta.0,
         args: ta.1,
         resolved_type: tr,
+        typ: (),
     }
 }
 
@@ -80,6 +81,7 @@ StatementExternalFn: UntypedStatement = {
         module: m,
         fun: f,
         retrn: r,
+        return_type: (),
     }
 }
 
@@ -98,6 +100,7 @@ StatementFn: UntypedStatement = {
         name: n,
         args: a,
         body: seq(b),
+        return_type: (),
         return_annotation,
     }
 }
@@ -339,9 +342,10 @@ Fn: UntypedExpr = {
     },
 }
 
-FnArg: Arg = {
+FnArg: UntypedArg = {
     <s:@L> <names:ArgNames> <annotation:(":" <Type>)?> <e:@L> => Arg {
         location: location(s, e),
+        typ: (),
         names,
         annotation,
     },
@@ -395,6 +399,7 @@ Call: UntypedExpr = {
                     location: location(0, 0),
                     annotation: None,
                     names: ArgNames::Named{ name: hole_arg_name.to_string() },
+                    typ: (),
                 }],
                 body: Box::new(call),
                 return_annotation: None,

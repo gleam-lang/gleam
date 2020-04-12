@@ -183,8 +183,8 @@ impl SourceTree {
     }
 }
 
-fn attach_doc_comments<'a, A, B>(
-    module: &mut crate::ast::Module<A, B>,
+fn attach_doc_comments<'a, A, B, C>(
+    module: &mut crate::ast::Module<A, B, C>,
     mut comments: &'a [Comment<'a>],
 ) {
     for statement in &mut module.statements {

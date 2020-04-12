@@ -36,7 +36,7 @@ walkdir = "2"
 strum = "0.17"
 strum_macros = "0.17"
 # Doc rendering
-handlebars = "3.0"
+askama = "0.8"
 # Markdown in docs
 pulldown-cmark = "0.7.0"
 

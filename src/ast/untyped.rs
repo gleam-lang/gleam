@@ -30,7 +30,7 @@ pub enum UntypedExpr {
     Fn {
         location: SrcSpan,
         is_capture: bool,
-        args: Vec<Arg>,
+        args: Vec<Arg<()>>,
         body: Box<Self>,
         return_annotation: Option<TypeAst>,
     },

@@ -20,7 +20,7 @@ test:
 
 .PHONY: test-watch
 test-watch: ## Run compiler tests when files change
-	watchexec -e rs,lalrpop "echo; cargo test; echo; echo"
+	watchexec -e rs,lalrpop,html "echo; cargo test; echo; echo"
 
 # Debug print vars with `make print-VAR_NAME`
 print-%: ; @echo $*=$($*)

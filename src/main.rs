@@ -1,5 +1,4 @@
-// TODO
-// #![deny(warnings)]
+#![deny(warnings)]
 
 mod ast;
 mod doc;
@@ -33,13 +32,10 @@ extern crate lalrpop_util;
 #[macro_use]
 extern crate lazy_static;
 
-#[macro_use]
-extern crate handlebars;
-
-use crate::error::Error;
-use crate::project::ModuleOrigin;
-use crate::project::OutputFile;
-use serde::Deserialize;
+use crate::{
+    error::Error,
+    project::{ModuleOrigin, OutputFile, ProjectConfig},
+};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::PathBuf;
@@ -98,11 +94,6 @@ enum Command {
         )]
         check: bool,
     },
-}
-
-#[derive(Deserialize)]
-struct ProjectConfig {
-    name: String,
 }
 
 fn main() {
@@ -164,28 +155,38 @@ fn command_build(root: String, write_docs: bool) -> Result<(), Error> {
     // Generate outputs (Erlang code, html documentation, etc)
     let mut output_files = vec![];
     if write_docs {
-        todo!()
+        let dir = root_path.join("doc");
+        crate::doc::generate_html(
+            &project_config,
+            analysed.as_slice(),
+            &mut output_files,
+            &dir,
+        );
+        delete_dir(&dir)?;
     } else {
+        let dir = root_path.join("gen");
         crate::project::generate_erlang(analysed.as_slice(), &mut output_files);
+        delete_dir(&dir)?;
     }
 
     // Delete the gen directory before generating the newly compiled files
-    for dir in ["gen", "doc"].iter() {
-        let dir = root_path.join(dir);
-        if dir.exists() {
-            std::fs::remove_dir_all(&dir).map_err(|e| Error::FileIO {
-                action: error::FileIOAction::Delete,
-                kind: error::FileKind::Directory,
-                path: dir,
-                err: Some(e.to_string()),
-            })?;
-        }
-    }
     for file in output_files {
         write_file(file)?;
     }
     println!("Done!");
 
+    Ok(())
+}
+
+fn delete_dir(dir: &PathBuf) -> Result<(), Error> {
+    if dir.exists() {
+        std::fs::remove_dir_all(&dir).map_err(|e| Error::FileIO {
+            action: error::FileIOAction::Delete,
+            kind: error::FileKind::Directory,
+            path: dir.clone(),
+            err: Some(e.to_string()),
+        })?;
+    }
     Ok(())
 }
 

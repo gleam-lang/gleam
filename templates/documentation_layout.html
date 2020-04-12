@@ -3,13 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
-    <title>{{module_name}} - {{ project_name }}</title>
-    <link rel="stylesheet" href="./index.css" type="text/css" />
+    <title>{{ page_title }}</title>
+    <link rel="stylesheet" href="{{ unnest }}/index.css" type="text/css" />
   </head>
   <body>
     <header class="page-header">
       <h2>
-        {{project_name}} - {{project_version}}
+        {{ project_name }} - {{ project_version }}
       </h2>
     </header>
 
@@ -33,52 +33,36 @@
           </svg>
         </a>
 
-        {{#if pages}}
+        {% if !pages.is_empty() %}
         <h2>Pages</h2>
         <ul>
-        {{#each pages}}
-          <li><a href="/{{this.path}}">{{ this.title }}</a></li>
-        {{/each}}
+        {% for page in pages %}
+          <li><a href="{{ unnest }}/{{ page.path }}">{{ page.name }}</a></li>
+        {% endfor %}
         </ul>
-        {{/if}}
+        {% endif %}
 
-        {{#if links}}
+        {% if !links.is_empty() %}
         <h2>Pages</h2>
         <ul>
-        {{#each links}}
-          <li><a href="/{{this.path}}">{{ this.title }}</a></li>
-        {{/each}}
+        {% for link in links %}
+          <li><a href="{{ unnest }}/{{ link.path }}">{{ link.name }}</a></li>
+        {% endfor %}
         </ul>
-        {{/if}}
+        {% endif %}
 
         <h2>Modules</h2>
         <ul>
-        {{#each all_modules}}
-          <li><a href="/{{this.module_name}}">{{this.module_name}}</a></li>
-        {{/each}}
+        {% for module in modules %}
+          <li><a href="{{ unnest }}/{{ module.path }}">{{ module.name }}</a></li>
+        {% endfor %}
         </ul>
 
-        {{#if types_doc}}
-        <h2>Types</h2>
-        <ul>
-          {{#each types_doc}}
-          <li><a href="#{{type.name}}">{{type.name}}</a></li>
-          {{/each}}
-        </ul>
-        {{/if}}
-
-        {{#if functions_doc}}
-        <h2>Functions</h2>
-        <ul>
-          {{#each functions_doc}}
-          <li><a href="#{{this.name}}">{{this.name}}</a></li>
-          {{/each}}
-        </ul>
-        {{/if}}
+        {% block sidebar_content %}{% endblock %}
       </nav>
 
       <div class="content">
-        {{markdown readme}}
+        {% block content %}{% endblock %}
       </div>
     </div>
 
