@@ -78,7 +78,7 @@ enum Command {
 
     #[structopt(name = "format", about = "Format source code")]
     Format {
-        #[structopt(help = "files to format", required_unless = "stdin")]
+        #[structopt(help = "files to format", conflicts_with = "stdin")]
         files: Vec<String>,
 
         #[structopt(
