@@ -4,24 +4,23 @@ use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
 use std::str::FromStr;
 
-pub fn run(stdin: bool, check: bool, files: Vec<String>, root_path: String) -> Result<(), Error> {
+pub fn run(stdin: bool, check: bool, files: Vec<String>) -> Result<(), Error> {
     if stdin {
         format_stdin(check)
     } else {
-        format_files(files, check, root_path)
+        format_files(files, check)
     }
 }
 
-pub fn format_files(files: Vec<String>, _check: bool, root_path: String) -> Result<(), Error> {
+pub fn format_files(files: Vec<String>, _check: bool) -> Result<(), Error> {
     for file_path in files {
-        let path = PathBuf::from_str(&root_path)
+        let path = PathBuf::from_str(&file_path)
             .map_err(|e| Error::FileIO {
                 action: FileIOAction::Open,
                 kind: FileKind::File,
                 path: PathBuf::new(),
                 err: Some(format!("Invalid path: {}\n{}", file_path, e.to_string())),
-            })?
-            .join(&file_path);
+            })?;
 
         let mut file = OpenOptions::new()
             .write(true)

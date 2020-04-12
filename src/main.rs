@@ -82,9 +82,6 @@ enum Command {
 
     #[structopt(name = "format", about = "Format source code")]
     Format {
-        #[structopt(help = "location of the project root", default_value = ".")]
-        root: String,
-
         #[structopt(help = "files to format", conflicts_with = "stdin")]
         files: Vec<String>,
 
@@ -116,10 +113,8 @@ fn main() {
             stdin,
             files,
             check,
-            root,
         } => {
-            println!("{}", root);
-            crate::format::command::run(stdin, check, files, root)
+            crate::format::command::run(stdin, check, files)
         }
 
         Command::New {
