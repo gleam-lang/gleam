@@ -113,9 +113,7 @@ fn main() {
             stdin,
             files,
             check,
-        } => {
-            crate::format::command::run(stdin, check, files)
-        }
+        } => crate::format::command::run(stdin, check, files),
 
         Command::New {
             name,
