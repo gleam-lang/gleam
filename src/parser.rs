@@ -1,5 +1,3 @@
-use itertools::Itertools;
-
 #[derive(Debug, PartialEq)]
 pub enum Error {
     TooManyHolesInCapture {
@@ -25,21 +23,17 @@ pub struct Comment<'a> {
 pub fn take_before<'a>(
     comments: &'a [Comment<'a>],
     limit: usize,
-) -> (Option<String>, &'a [Comment<'a>]) {
+) -> (impl Iterator<Item = &'a str>, &'a [Comment<'a>]) {
     let mut end = 0;
     for (i, comment) in comments.iter().enumerate() {
         if comment.start > limit {
             break;
         }
-        end = i;
+        end = i + 1;
     }
 
-    if end == 0 {
-        (None, comments)
-    } else {
-        let comment = comments[0..end].iter().map(|c| c.content).join("\n");
-        (Some(comment), &comments[end..])
-    }
+    let popped = comments[0..end].iter().map(|c| c.content);
+    (popped, &comments[end..])
 }
 
 /// Blanks out comments, semicolons, etc
@@ -255,6 +249,32 @@ pub external fn a() -> Nil =
                 start: 0,
                 content: " hello",
             }],
+            comments: vec![],
+        }
+    );
+
+    assert_stripped!(
+        "/// one
+///two
+fn main() {
+  Nil
+}
+",
+        "       \n      \nfn main() {
+  Nil
+}
+",
+        ModuleComments {
+            doc_comments: vec![
+                Comment {
+                    start: 0,
+                    content: " one",
+                },
+                Comment {
+                    start: 8,
+                    content: "two",
+                }
+            ],
             comments: vec![],
         }
     );

@@ -5,6 +5,7 @@ pub use self::typed::TypedExpr;
 pub use self::untyped::UntypedExpr;
 
 use crate::typ::{self, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor};
+use itertools::Itertools;
 use std::sync::Arc;
 
 pub type TypedModule = Module<Arc<Type>, TypedExpr, typ::Module>;
@@ -189,7 +190,14 @@ impl<A, B> Statement<A, B> {
         }
     }
 
-    pub fn put_doc(&mut self, new_doc: Option<String>) {
+    pub fn put_doc<'a>(&mut self, new_doc: impl Iterator<Item = &'a str>) {
+        let mut new_doc = new_doc.peekable();
+        if new_doc.peek().is_none() {
+            return;
+        }
+
+        let new_doc = Some(new_doc.join("\n"));
+
         match self {
             Statement::Import { .. } => (),
 
@@ -200,6 +208,17 @@ impl<A, B> Statement<A, B> {
             | Statement::ExternalType { doc, .. } => {
                 std::mem::replace(doc, new_doc);
             }
+        }
+    }
+
+    pub fn is_declaration(&self) -> bool {
+        match self {
+            Statement::Import { .. } => false,
+            Statement::Fn { .. }
+            | Statement::TypeAlias { .. }
+            | Statement::CustomType { .. }
+            | Statement::ExternalFn { .. }
+            | Statement::ExternalType { .. } => true,
         }
     }
 }
