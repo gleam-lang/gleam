@@ -9,6 +9,7 @@
   --white: #fff;
   --pink-white: #fff8fe;
   --light-grey: #f5f5f5;
+  --boi-blue: #a6f0fc;
 
   /* Derived colours */
   --text: var(--black);
@@ -188,6 +189,29 @@ p code {
 
 .constructor-name {
   margin-bottom: 0;
+}
+
+/* Footer */
+
+.page-footer {
+  display: flex;
+  flex-direction: row;
+}
+
+.page-footer * {
+  flex: 1;
+  text-align: center;
+  padding: var(--tiny-gap);
+}
+
+.page-footer .white {
+  background-color: var(--white);
+}
+.page-footer .pink {
+  background-color: var(--pink);
+}
+.page-footer .blue {
+  background-color: var(--boi-blue);
 }
 
 /* Small displays */
