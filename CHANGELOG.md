@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- Nice, clean documentation can now be generated at build time by running `gleam build --doc <PATH>`. The files can be moved from the `doc/` directory and served from any static file host.
+- HTML documentation can now be generated from Gleam code by running `gleam
+  build --doc`.
 - Gleam code can be formatted the `gleam format` command.
 - The pipe operator `|>` will now attempt to insert the left hand side as the
   first argument to the right hand side if the right hand side is a call,
