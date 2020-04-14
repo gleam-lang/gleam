@@ -22,7 +22,7 @@
 
 {% block content %}
 <h1 class="module-name">{{ module_name }}</h1>
-{{ documentation }}
+{{ documentation|safe }}
 
 {% if !types.is_empty() %}
 <section class="module-members">
@@ -76,7 +76,7 @@
     <!--     </li> -->
     <!--   </ul> -->
     <!-- </div> -->
-    <div class="rendered-markdown">{{ typ.documentation }}</div>
+    <div class="rendered-markdown">{{ typ.documentation|safe }}</div>
   </div>
   {% endfor %}
 </section>
@@ -96,7 +96,7 @@
     </a>
     <h3>Signature</h3>
     <pre>{{ function.signature }}</pre>
-    <div class="rendered-markdown">{{ function.documentation }}</div>
+    <div class="rendered-markdown">{{ function.documentation|safe }}</div>
   </div>
   {% endfor %}
 </section>

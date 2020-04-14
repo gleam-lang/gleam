@@ -91,8 +91,8 @@ fn function<'a>(statement: &'a TypedStatement) -> Option<Function<'a>> {
             name,
             signature: "".to_string(),
             documentation: match doc {
-                None => "",
-                Some(d) => d.as_str(),
+                None => "".to_string(),
+                Some(d) => render_markdown(d),
             },
         }),
 
@@ -105,13 +105,20 @@ fn function<'a>(statement: &'a TypedStatement) -> Option<Function<'a>> {
             name,
             signature: "".to_string(),
             documentation: match doc {
-                None => "",
-                Some(d) => d.as_str(),
+                None => "".to_string(),
+                Some(d) => render_markdown(d),
             },
         }),
 
         _ => None,
     }
+}
+
+fn render_markdown(text: &str) -> String {
+    let mut s = String::with_capacity(text.len() * 3 / 2);
+    let p = pulldown_cmark::Parser::new(&*text);
+    pulldown_cmark::html::push_html(&mut s, p);
+    s
 }
 
 fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
@@ -125,8 +132,8 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
             name,
             definition: "",
             documentation: match doc {
-                None => "",
-                Some(d) => d.as_str(),
+                None => "".to_string(),
+                Some(d) => render_markdown(d),
             },
         }),
 
@@ -139,8 +146,8 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
             name,
             definition: "",
             documentation: match doc {
-                None => "",
-                Some(d) => d.as_str(),
+                None => "".to_string(),
+                Some(d) => render_markdown(d),
             },
         }),
 
@@ -153,8 +160,8 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
             name,
             definition: "",
             documentation: match doc {
-                None => "",
-                Some(d) => d.as_str(),
+                None => "".to_string(),
+                Some(d) => render_markdown(d),
             },
         }),
 
@@ -170,13 +177,13 @@ struct Link {
 struct Function<'a> {
     name: &'a str,
     signature: String,
-    documentation: &'a str,
+    documentation: String,
 }
 
 struct Type<'a> {
     name: &'a str,
     definition: &'a str,
-    documentation: &'a str,
+    documentation: String,
 }
 
 #[derive(Template)]
