@@ -1,4 +1,5 @@
 use crate::{
+    ast,
     ast::{Statement, TypedStatement},
     error::GleamExpect,
     format, pretty,
@@ -9,6 +10,7 @@ use itertools::Itertools;
 use std::path::PathBuf;
 
 const MAX_COLUMNS: isize = 65;
+const INDENT: isize = format::INDENT;
 
 pub fn generate_html(
     project_config: &ProjectConfig,
@@ -158,11 +160,13 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
         Statement::TypeAlias {
             public: true,
             alias: name,
+            resolved_type: typ,
             doc,
+            args,
             ..
         } => Some(Type {
             name,
-            definition: "".to_string(),
+            definition: type_alias(name, args, typ),
             documentation: match doc {
                 None => "".to_string(),
                 Some(d) => render_markdown(d),
@@ -183,6 +187,21 @@ fn external_type(name: &str, args: &[String]) -> String {
         } else {
             format::wrap_args(args.iter().map(|e| e.clone().to_doc()))
         });
+    pretty::format(MAX_COLUMNS, doc)
+}
+
+fn type_alias(name: &str, args: &[String], typ: &ast::TypeAst) -> String {
+    use crate::pretty::*;
+    let doc = "pub type "
+        .to_doc()
+        .append(name.to_string())
+        .append(if args.is_empty() {
+            nil()
+        } else {
+            format::wrap_args(args.iter().map(|e| e.clone().to_doc()))
+        })
+        .append(" =")
+        .append(line().append(format::type_ast(typ)).group().nest(INDENT));
     pretty::format(MAX_COLUMNS, doc)
 }
 

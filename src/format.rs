@@ -9,7 +9,7 @@ use crate::{
 };
 use itertools::Itertools;
 
-const INDENT: isize = 2;
+pub const INDENT: isize = 2;
 
 pub fn pretty(src: &str) -> Result<String, crate::parser::LalrpopError> {
     let (stripped_src, comments) = crate::parser::strip_extra(src.as_ref());
@@ -641,29 +641,33 @@ fn hanging_expr(expr: &UntypedExpr) -> Document {
     }
 }
 
+pub fn type_ast(t: &TypeAst) -> Document {
+    match t {
+        TypeAst::Constructor { name, args, .. } if args.is_empty() => name.to_string().to_doc(),
+
+        TypeAst::Constructor { name, args, .. } => name
+            .to_string()
+            .to_doc()
+            .append(wrap_args(args.iter().map(|e| e.to_doc()))),
+
+        TypeAst::Fn { args, retrn, .. } => "fn"
+            .to_string()
+            .to_doc()
+            .append(wrap_args(args.iter().map(|e| e.to_doc())))
+            .append(delim(" ->"))
+            .append(retrn.to_doc()),
+
+        TypeAst::Var { name, .. } => name.clone().to_doc(),
+
+        TypeAst::Tuple { elems, .. } => "tuple"
+            .to_doc()
+            .append(wrap_args(elems.iter().map(|e| e.to_doc()))),
+    }
+}
+
 impl Documentable for &TypeAst {
     fn to_doc(self) -> Document {
-        match self {
-            TypeAst::Constructor { name, args, .. } if args.is_empty() => name.to_string().to_doc(),
-
-            TypeAst::Constructor { name, args, .. } => name
-                .to_string()
-                .to_doc()
-                .append(wrap_args(args.iter().map(|e| e.to_doc()))),
-
-            TypeAst::Fn { args, retrn, .. } => "fn"
-                .to_string()
-                .to_doc()
-                .append(wrap_args(args.iter().map(|e| e.to_doc())))
-                .append(delim(" ->"))
-                .append(retrn.to_doc()),
-
-            TypeAst::Var { name, .. } => name.clone().to_doc(),
-
-            TypeAst::Tuple { elems, .. } => "tuple"
-                .to_doc()
-                .append(wrap_args(elems.iter().map(|e| e.to_doc()))),
-        }
+        type_ast(self)
     }
 }
 
