@@ -127,10 +127,11 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
             public: true,
             name,
             doc,
+            args,
             ..
         } => Some(Type {
             name,
-            definition: "",
+            definition: external_type(name.as_str(), args),
             documentation: match doc {
                 None => "".to_string(),
                 Some(d) => render_markdown(d),
@@ -144,7 +145,7 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
             ..
         } => Some(Type {
             name,
-            definition: "",
+            definition: "".to_string(),
             documentation: match doc {
                 None => "".to_string(),
                 Some(d) => render_markdown(d),
@@ -158,7 +159,7 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
             ..
         } => Some(Type {
             name,
-            definition: "",
+            definition: "".to_string(),
             documentation: match doc {
                 None => "".to_string(),
                 Some(d) => render_markdown(d),
@@ -166,6 +167,14 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
         }),
 
         _ => None,
+    }
+}
+
+fn external_type(name: &str, args: &[String]) -> String {
+    if args.is_empty() {
+        format!("pub external type {}", name)
+    } else {
+        format!("pub external type {}({})", name, args.join(", "))
     }
 }
 
@@ -182,7 +191,7 @@ struct Function<'a> {
 
 struct Type<'a> {
     name: &'a str,
-    definition: &'a str,
+    definition: String,
     documentation: String,
 }
 
