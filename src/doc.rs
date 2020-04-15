@@ -1,11 +1,14 @@
 use crate::{
     ast::{Statement, TypedStatement},
     error::GleamExpect,
+    format, pretty,
     project::{Analysed, ModuleOrigin, OutputFile, ProjectConfig},
 };
 use askama::Template;
 use itertools::Itertools;
 use std::path::PathBuf;
+
+const MAX_COLUMNS: isize = 65;
 
 pub fn generate_html(
     project_config: &ProjectConfig,
@@ -171,11 +174,16 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
 }
 
 fn external_type(name: &str, args: &[String]) -> String {
-    if args.is_empty() {
-        format!("pub external type {}", name)
-    } else {
-        format!("pub external type {}({})", name, args.join(", "))
-    }
+    use crate::pretty::*;
+    let doc = "pub external type "
+        .to_doc()
+        .append(name.to_string())
+        .append(if args.is_empty() {
+            nil()
+        } else {
+            format::wrap_args(args.iter().map(|e| e.clone().to_doc()))
+        });
+    pretty::format(MAX_COLUMNS, doc)
 }
 
 struct Link {
