@@ -1,5 +1,4 @@
 use crate::{
-    ast,
     ast::{Statement, TypedStatement},
     error::GleamExpect,
     format, pretty,
@@ -10,7 +9,6 @@ use itertools::Itertools;
 use std::path::PathBuf;
 
 const MAX_COLUMNS: isize = 65;
-const INDENT: isize = format::INDENT;
 
 pub fn generate_html(
     project_config: &ProjectConfig,
@@ -95,10 +93,7 @@ fn function<'a>(statement: &'a TypedStatement) -> Option<Function<'a>> {
         } => Some(Function {
             name,
             signature: "".to_string(),
-            documentation: match doc {
-                None => "".to_string(),
-                Some(d) => render_markdown(d),
-            },
+            documentation: markdown_documentation(doc),
         }),
 
         Statement::Fn {
@@ -109,13 +104,17 @@ fn function<'a>(statement: &'a TypedStatement) -> Option<Function<'a>> {
         } => Some(Function {
             name,
             signature: "".to_string(),
-            documentation: match doc {
-                None => "".to_string(),
-                Some(d) => render_markdown(d),
-            },
+            documentation: markdown_documentation(doc),
         }),
 
         _ => None,
+    }
+}
+
+fn markdown_documentation(doc: &Option<String>) -> String {
+    match doc {
+        None => "".to_string(),
+        Some(d) => render_markdown(d),
     }
 }
 
@@ -136,25 +135,21 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
             ..
         } => Some(Type {
             name,
-            definition: external_type(name.as_str(), args),
-            documentation: match doc {
-                None => "".to_string(),
-                Some(d) => render_markdown(d),
-            },
+            definition: print(format::external_type(true, name.as_str(), args)),
+            documentation: markdown_documentation(doc),
         }),
 
         Statement::CustomType {
             public: true,
             name,
+            args,
             doc,
+            constructors: cs,
             ..
         } => Some(Type {
             name,
-            definition: "".to_string(),
-            documentation: match doc {
-                None => "".to_string(),
-                Some(d) => render_markdown(d),
-            },
+            definition: print(format::custom_type(true, name, args, cs.as_slice())),
+            documentation: markdown_documentation(doc),
         }),
 
         Statement::TypeAlias {
@@ -166,42 +161,15 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
             ..
         } => Some(Type {
             name,
-            definition: type_alias(name, args, typ),
-            documentation: match doc {
-                None => "".to_string(),
-                Some(d) => render_markdown(d),
-            },
+            definition: print(format::type_alias(true, name, args, typ)),
+            documentation: markdown_documentation(doc),
         }),
 
         _ => None,
     }
 }
 
-fn external_type(name: &str, args: &[String]) -> String {
-    use crate::pretty::*;
-    let doc = "pub external type "
-        .to_doc()
-        .append(name.to_string())
-        .append(if args.is_empty() {
-            nil()
-        } else {
-            format::wrap_args(args.iter().map(|e| e.clone().to_doc()))
-        });
-    pretty::format(MAX_COLUMNS, doc)
-}
-
-fn type_alias(name: &str, args: &[String], typ: &ast::TypeAst) -> String {
-    use crate::pretty::*;
-    let doc = "pub type "
-        .to_doc()
-        .append(name.to_string())
-        .append(if args.is_empty() {
-            nil()
-        } else {
-            format::wrap_args(args.iter().map(|e| e.clone().to_doc()))
-        })
-        .append(" =")
-        .append(line().append(format::type_ast(typ)).group().nest(INDENT));
+fn print(doc: pretty::Document) -> String {
     pretty::format(MAX_COLUMNS, doc)
 }
 

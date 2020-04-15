@@ -9,7 +9,7 @@ use crate::{
 };
 use itertools::Itertools;
 
-pub const INDENT: isize = 2;
+const INDENT: isize = 2;
 
 pub fn pretty(src: &str) -> Result<String, crate::parser::LalrpopError> {
     let (stripped_src, comments) = crate::parser::strip_extra(src.as_ref());
@@ -179,16 +179,7 @@ fn statement(statement: &UntypedStatement, _env: &mut Env) -> Document {
             resolved_type,
             public,
             ..
-        } => pub_(public)
-            .append("type ")
-            .append(alias.to_string())
-            .append(if args.is_empty() {
-                nil()
-            } else {
-                wrap_args(args.iter().map(|e| e.clone().to_doc()))
-            })
-            .append(" =")
-            .append(line().append(resolved_type).group().nest(INDENT)),
+        } => type_alias(*public, alias, args, resolved_type),
 
         Statement::CustomType {
             name,
@@ -196,24 +187,7 @@ fn statement(statement: &UntypedStatement, _env: &mut Env) -> Document {
             public,
             constructors,
             ..
-        } => pub_(public)
-            .to_doc()
-            .append("type ")
-            .append(if args.is_empty() {
-                name.clone().to_doc()
-            } else {
-                name.to_string()
-                    .to_doc()
-                    .append(wrap_args(args.iter().map(|e| e.clone().to_doc())))
-            })
-            .append(" {")
-            .append(concat(
-                constructors
-                    .into_iter()
-                    .map(|c| line().append(c).nest(INDENT).group()),
-            ))
-            .append(line())
-            .append("}"),
+        } => custom_type(*public, name, args.as_slice(), constructors),
 
         Statement::ExternalFn {
             public,
@@ -231,14 +205,7 @@ fn statement(statement: &UntypedStatement, _env: &mut Env) -> Document {
 
         Statement::ExternalType {
             public, name, args, ..
-        } => pub_(public)
-            .append("external type ")
-            .append(name.to_string())
-            .append(if args.is_empty() {
-                nil()
-            } else {
-                wrap_args(args.iter().map(|e| e.clone().to_doc()))
-            }),
+        } => external_type(*public, name, args),
 
         Statement::Import {
             module,
@@ -268,13 +235,63 @@ fn statement(statement: &UntypedStatement, _env: &mut Env) -> Document {
     }
 }
 
+pub fn external_type(public: bool, name: &str, args: &[String]) -> Document {
+    pub_(public)
+        .append("external type ")
+        .append(name.to_string())
+        .append(if args.is_empty() {
+            nil()
+        } else {
+            wrap_args(args.iter().map(|e| e.clone().to_doc()))
+        })
+}
+
+pub fn type_alias(public: bool, name: &str, args: &[String], typ: &TypeAst) -> Document {
+    pub_(public)
+        .append("type ")
+        .append(name.to_string())
+        .append(if args.is_empty() {
+            nil()
+        } else {
+            wrap_args(args.iter().map(|e| e.clone().to_doc()))
+        })
+        .append(" =")
+        .append(line().append(type_ast(typ)).group().nest(INDENT))
+}
+
+pub fn custom_type(
+    public: bool,
+    name: &str,
+    args: &[String],
+    constructors: &[RecordConstructor],
+) -> Document {
+    pub_(public)
+        .to_doc()
+        .append("type ")
+        .append(if args.is_empty() {
+            name.clone().to_doc()
+        } else {
+            name.to_string()
+                .to_doc()
+                .append(wrap_args(args.iter().map(|e| e.clone().to_doc())))
+        })
+        .append(" {")
+        .append(concat(
+            constructors
+                .into_iter()
+                .map(|c| line().append(c).nest(INDENT).group()),
+        ))
+        .append(line())
+        .append("}")
+}
+
 pub fn fn_signature(
     public: &bool,
     name: &str,
     args: &Vec<UntypedArg>,
     return_annotation: &Option<TypeAst>,
 ) -> Document {
-    pub_(public)
+    pub_(*public)
         .append(format!("fn {}", name))
         .append(wrap_args(args.iter().map(|e| e.to_doc())))
         .append(if let Some(anno) = return_annotation {
@@ -290,7 +307,7 @@ pub fn external_fn_signature(
     args: &Vec<ExternalFnArg>,
     retrn: &TypeAst,
 ) -> Document {
-    pub_(public)
+    pub_(*public)
         .to_doc()
         .append("external fn ")
         .group()
@@ -300,8 +317,8 @@ pub fn external_fn_signature(
         .append(retrn)
 }
 
-fn pub_(public: &bool) -> Document {
-    if *public {
+fn pub_(public: bool) -> Document {
+    if public {
         "pub ".to_doc()
     } else {
         nil()
