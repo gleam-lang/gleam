@@ -89,10 +89,12 @@ fn function<'a>(statement: &'a TypedStatement) -> Option<Function<'a>> {
             public: true,
             name,
             doc,
+            retrn,
+            args,
             ..
         } => Some(Function {
             name,
-            signature: "".to_string(),
+            signature: print(format::external_fn_signature(true, name, args, retrn)),
             documentation: markdown_documentation(doc),
         }),
 
@@ -100,11 +102,13 @@ fn function<'a>(statement: &'a TypedStatement) -> Option<Function<'a>> {
             public: true,
             name,
             doc,
+            args,
+            return_type: ret,
             ..
         } => Some(Function {
             name,
-            signature: "".to_string(),
             documentation: markdown_documentation(doc),
+            signature: print(format::docs_fn_signature(true, name, args, ret.clone())),
         }),
 
         _ => None,

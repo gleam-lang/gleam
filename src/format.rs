@@ -6,8 +6,10 @@ use crate::{
     ast::*,
     parser::{Comment, ModuleComments},
     pretty::*,
+    typ::{self, Type},
 };
 use itertools::Itertools;
+use std::sync::Arc;
 
 const INDENT: isize = 2;
 
@@ -167,11 +169,7 @@ fn statement(statement: &UntypedStatement, _env: &mut Env) -> Document {
             public,
             return_annotation,
             ..
-        } => fn_signature(public, name, args, return_annotation)
-            .append(" {")
-            .append(line().append(body).nest(INDENT).group())
-            .append(line())
-            .append("}"),
+        } => fn_(public, name, args, return_annotation, body),
 
         Statement::TypeAlias {
             alias,
@@ -197,7 +195,7 @@ fn statement(statement: &UntypedStatement, _env: &mut Env) -> Document {
             module,
             fun,
             ..
-        } => external_fn_signature(public, name, args, retrn)
+        } => external_fn_signature(*public, name, args, retrn)
             .append(" =")
             .append(line())
             .append(format!("  \"{}\" ", module))
@@ -285,29 +283,35 @@ pub fn custom_type(
         .append("}")
 }
 
-pub fn fn_signature(
+pub fn fn_(
     public: &bool,
     name: &str,
     args: &Vec<UntypedArg>,
     return_annotation: &Option<TypeAst>,
+    body: &UntypedExpr,
 ) -> Document {
     pub_(*public)
-        .append(format!("fn {}", name))
+        .append("fn ")
+        .append(name)
         .append(wrap_args(args.iter().map(|e| e.to_doc())))
         .append(if let Some(anno) = return_annotation {
             " -> ".to_doc().append(anno)
         } else {
             nil()
         })
+        .append(" {")
+        .append(line().append(body).nest(INDENT).group())
+        .append(line())
+        .append("}")
 }
 
 pub fn external_fn_signature(
-    public: &bool,
+    public: bool,
     name: &str,
-    args: &Vec<ExternalFnArg>,
+    args: &[ExternalFnArg],
     retrn: &TypeAst,
 ) -> Document {
-    pub_(*public)
+    pub_(public)
         .to_doc()
         .append("external fn ")
         .group()
@@ -315,6 +319,20 @@ pub fn external_fn_signature(
         .append(wrap_args(args.iter().map(|e| e.to_doc())))
         .append(" -> ".to_doc())
         .append(retrn)
+}
+
+pub fn docs_fn_signature(
+    public: bool,
+    name: &str,
+    args: &[TypedArg],
+    return_type: Arc<Type>,
+) -> Document {
+    pub_(public)
+        .append("fn ")
+        .append(name.to_string())
+        .append(wrap_args(args.iter().map(|e| e.to_doc())))
+        .append(" -> ".to_doc())
+        .append(typ::pretty::Printer::new().to_doc(return_type.as_ref()))
 }
 
 fn pub_(public: bool) -> Document {
