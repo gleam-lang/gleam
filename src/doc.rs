@@ -52,15 +52,16 @@ pub fn generate_html(
 
     // Generate module documentation pages
     for module in modules {
+        let name = module.name.join("/");
         let template = ModuleTemplate {
             unnest: module.name.iter().map(|_| "..").intersperse("/").collect(),
             links,
             pages,
-            module_name: module.name.join("/"),
             documentation: "",
             modules: modules_links.as_slice(),
             project_name: &project_config.name,
-            page_title: &project_config.name,
+            page_title: &format!("{} - {}", name, project_config.name),
+            module_name: name,
             project_version: "", // TODO
             functions: {
                 let mut f: Vec<_> = module.ast.statements.iter().flat_map(function).collect();
