@@ -18,7 +18,7 @@ pub fn generate_html(
 ) {
     let modules = analysed.iter().filter(|m| m.origin == ModuleOrigin::Src);
 
-    let modules_links: Vec<_> = modules
+    let mut modules_links: Vec<_> = modules
         .clone()
         .map(|m| {
             let name = m.name.join("/");
@@ -26,6 +26,8 @@ pub fn generate_html(
             Link { path, name }
         })
         .collect();
+    modules_links.sort();
+
     let pages = &[Link {
         name: "README".to_string(),
         path: "".to_string(),
@@ -60,8 +62,16 @@ pub fn generate_html(
             project_name: &project_config.name,
             page_title: &project_config.name,
             project_version: "", // TODO
-            functions: module.ast.statements.iter().flat_map(function).collect(),
-            types: module.ast.statements.iter().flat_map(type_).collect(),
+            functions: {
+                let mut f: Vec<_> = module.ast.statements.iter().flat_map(function).collect();
+                f.sort();
+                f
+            },
+            types: {
+                let mut t: Vec<_> = module.ast.statements.iter().flat_map(type_).collect();
+                t.sort();
+                t
+            },
         };
         let mut path = dir.clone();
         for segment in module.name.iter() {
@@ -177,17 +187,20 @@ fn print(doc: pretty::Document) -> String {
     pretty::format(MAX_COLUMNS, doc)
 }
 
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 struct Link {
     name: String,
     path: String,
 }
 
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 struct Function<'a> {
     name: &'a str,
     signature: String,
     documentation: String,
 }
 
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 struct Type<'a> {
     name: &'a str,
     definition: String,
