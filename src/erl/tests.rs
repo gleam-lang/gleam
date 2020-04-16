@@ -1498,6 +1498,31 @@ main(Args) ->
 
     assert_erl!(
         r#"
+pub fn main() {
+  case 1, 0 {
+    x, y if x > y -> 1
+    _, _ -> 0  
+  }
+} 
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+main() ->
+    case {1, 0} of
+        {X, Y} when X > Y ->
+            1;
+
+        {_, _} ->
+            0
+    end.
+"#,
+    );
+
+    assert_erl!(
+        r#"
 pub fn main(args) {
   case args {
     [x] | [x, _] if x -> 1
