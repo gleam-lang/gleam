@@ -300,6 +300,17 @@ ClauseGuard3: UntypedClauseGuard = {
 }
 
 ClauseGuard4: UntypedClauseGuard = {
+    <s:@L> <left:ClauseGuard4> ">" <right:ClauseGuard5> <e:@L> => ClauseGuard::GreaterThan {
+        location: location(s, e),
+        typ: (),
+        left: Box::new(left),
+        right: Box::new(right),
+    },
+
+    ClauseGuard5 => <>,
+}
+
+ClauseGuard5: UntypedClauseGuard = {
     <s:@L> <name:VarName> <e:@L> => ClauseGuard::Var {
         location: location(s, e),
         typ: (),

@@ -502,6 +502,10 @@ fn bare_clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
             .append(" =/= ")
             .append(clause_guard(right.as_ref(), env)),
 
+        ClauseGuard::GreaterThan { left, right, .. } => clause_guard(left.as_ref(), env)
+            .append(" > ")
+            .append(clause_guard(right.as_ref(), env)),
+
         // Only local variables are supported and the typer ensures that all
         // ClauseGuard::Vars are local variables
         ClauseGuard::Var { name, .. } => env.local_var_name(name.to_string()),
@@ -514,7 +518,8 @@ fn clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
         ClauseGuard::Or { .. }
         | ClauseGuard::And { .. }
         | ClauseGuard::Equals { .. }
-        | ClauseGuard::NotEquals { .. } => "("
+        | ClauseGuard::NotEquals { .. }
+        | ClauseGuard::GreaterThan { .. } => "("
             .to_doc()
             .append(bare_clause_guard(guard, env))
             .append(")"),

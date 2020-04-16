@@ -2396,6 +2396,26 @@ fn infer_clause_guard(
                 right: Box::new(right),
             })
         }
+        
+        ClauseGuard::GreaterThan {
+            location,
+            left,
+            right,
+            ..
+        } => {
+            let left = infer_clause_guard(*left, level, env)?;
+            unify(int(), left.typ(), env)
+                .map_err(|e| convert_unify_error(e, left.location()))?;
+            let right = infer_clause_guard(*right, level, env)?;
+            unify(int(), right.typ(), env)
+                .map_err(|e| convert_unify_error(e, right.location()))?;
+            Ok(ClauseGuard::GreaterThan {
+                location,
+                typ: bool(),
+                left: Box::new(left),
+                right: Box::new(right),
+            })
+        }
     }
 }
 
