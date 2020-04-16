@@ -1,0 +1,11 @@
+{application,core_language_tests,
+             [{description,"Core language tests for the Gleam programming language"},
+              {vsn,"0.7.0"},
+              {registered,[]},
+              {applications,[kernel,stdlib]},
+              {env,[]},
+              {modules,[]},
+              {licenses,["Apache 2.0"]},
+              {links,[]},
+              {include_files, ["gleam.toml", "gen"]}]}.
+

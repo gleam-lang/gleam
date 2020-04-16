@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Strings are now encoded as utf8 binaries in erlang.
 - HTML documentation can now be generated from Gleam code by running `gleam
   build --doc`.
 - Gleam code can be formatted the `gleam format` command.

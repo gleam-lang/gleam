@@ -224,7 +224,7 @@ fn atom(value: String) -> Document {
 }
 
 fn string(value: &str) -> Document {
-    value.to_doc().surround("<<\"", "\">>")
+    value.to_doc().surround("<<\"", "\"/utf8>>")
 }
 
 fn tuple(elems: impl Iterator<Item = Document>) -> Document {
