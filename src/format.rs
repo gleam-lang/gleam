@@ -520,6 +520,10 @@ impl Documentable for &UntypedClauseGuard {
                 left.as_ref().to_doc().append(" != ").append(right.as_ref())
             }
 
+            ClauseGuard::GreaterThan { left, right, .. } => {
+                left.as_ref().to_doc().append(" > ").append(right.as_ref())
+            }
+
             ClauseGuard::Var { name, .. } => name.to_string().to_doc(),
         }
     }
