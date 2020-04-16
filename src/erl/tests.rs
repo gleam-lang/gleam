@@ -388,7 +388,7 @@ nil() ->
     [].
 
 string() ->
-    <<\"Hello there!\">>.
+    <<\"Hello there!\"/utf8>>.
 
 seq() ->
     1,
@@ -783,7 +783,7 @@ go() ->
         1.0 ->
             1;
 
-        <<\"hello\">> ->
+        <<\"hello\"/utf8>> ->
             1;
 
         [] ->
@@ -1249,7 +1249,7 @@ fn create_user(user_id) { User(age: 22, id: user_id, name: "") }
 -compile(no_auto_import).
 
 create_user(UserId) ->
-    {user, UserId, <<"">>, 22}.
+    {user, UserId, <<""/utf8>>, 22}.
 "#,
     );
 
