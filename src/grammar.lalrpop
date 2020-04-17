@@ -300,7 +300,7 @@ ClauseGuard3: UntypedClauseGuard = {
 }
 
 ClauseGuard4: UntypedClauseGuard = {
-    <s:@L> <left:ClauseGuard4> ">" <right:ClauseGuard5> <e:@L> => ClauseGuard::GreaterThan {
+    <s:@L> <left:ClauseGuard4> ">" <right:ClauseGuard5> <e:@L> => ClauseGuard::GtInt {
         location: location(s, e),
         typ: (),
         left: Box::new(left),

@@ -304,7 +304,7 @@ pub enum ClauseGuard<Type> {
         right: Box<Self>,
     },
 
-    GreaterThan {
+    GtInt {
         location: SrcSpan,
         typ: Type,
         left: Box<Self>,
@@ -340,7 +340,7 @@ impl<A> ClauseGuard<A> {
             ClauseGuard::Var { location, .. } => location,
             ClauseGuard::Equals { location, .. } => location,
             ClauseGuard::NotEquals { location, .. } => location,
-            ClauseGuard::GreaterThan { location, ..} => location
+            ClauseGuard::GtInt { location, .. } => location,
         }
     }
 }
@@ -353,7 +353,7 @@ impl TypedClauseGuard {
             ClauseGuard::Var { typ, .. } => typ.clone(),
             ClauseGuard::Equals { typ, .. } => typ.clone(),
             ClauseGuard::NotEquals { typ, .. } => typ.clone(),
-            ClauseGuard::GreaterThan { typ, .. } => typ.clone(),
+            ClauseGuard::GtInt { typ, .. } => typ.clone(),
         }
     }
 }
