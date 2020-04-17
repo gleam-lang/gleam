@@ -659,13 +659,13 @@ fn infer_error_test() {
             given: float(),
         },
     );
-    
+
     assert_error!(
         "case [3.33], 1 { x, y if x > y -> 1 }",
         Error::CouldNotUnify {
             location: SrcSpan { start: 25, end: 26 },
             expected: int(),
-            given: list(float()) 
+            given: list(float())
         }
     );
 
