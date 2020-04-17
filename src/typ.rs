@@ -2397,7 +2397,7 @@ fn infer_clause_guard(
             })
         }
         
-        ClauseGuard::GreaterThan {
+        ClauseGuard::GtInt {
             location,
             left,
             right,
@@ -2409,7 +2409,7 @@ fn infer_clause_guard(
             let right = infer_clause_guard(*right, level, env)?;
             unify(int(), right.typ(), env)
                 .map_err(|e| convert_unify_error(e, right.location()))?;
-            Ok(ClauseGuard::GreaterThan {
+            Ok(ClauseGuard::GtInt {
                 location,
                 typ: bool(),
                 left: Box::new(left),

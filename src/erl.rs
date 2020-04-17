@@ -502,7 +502,7 @@ fn bare_clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
             .append(" =/= ")
             .append(clause_guard(right.as_ref(), env)),
 
-        ClauseGuard::GreaterThan { left, right, .. } => clause_guard(left.as_ref(), env)
+        ClauseGuard::GtInt { left, right, .. } => clause_guard(left.as_ref(), env)
             .append(" > ")
             .append(clause_guard(right.as_ref(), env)),
 
@@ -519,7 +519,7 @@ fn clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
         | ClauseGuard::And { .. }
         | ClauseGuard::Equals { .. }
         | ClauseGuard::NotEquals { .. }
-        | ClauseGuard::GreaterThan { .. } => "("
+        | ClauseGuard::GtInt { .. } => "("
             .to_doc()
             .append(bare_clause_guard(guard, env))
             .append(")"),
