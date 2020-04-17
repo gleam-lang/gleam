@@ -308,7 +308,7 @@ pub enum ClauseGuard<Type> {
         location: SrcSpan,
         typ: Type,
         left: Box<Self>,
-        right: Box<Self>
+        right: Box<Self>,
     },
 
     Or {
