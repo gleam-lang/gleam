@@ -1,3 +1,5 @@
 **/*.rs.bk
 /target/
 /tmp
+.idea/
+.idea/*

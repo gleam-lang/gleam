@@ -368,6 +368,12 @@ pub enum ClauseGuard<Type> {
         typ: Type,
         name: String,
     },
+
+    IntLiteral {
+        location: SrcSpan,
+        typ: Type,
+        value: String,
+    }
 }
 
 impl<A> ClauseGuard<A> {
@@ -386,6 +392,7 @@ impl<A> ClauseGuard<A> {
             ClauseGuard::GtEqFloat { location, .. } => location,
             ClauseGuard::LtFloat { location, .. } => location,
             ClauseGuard::LtEqFloat { location, .. } => location,
+            ClauseGuard::IntLiteral { location, .. } => location,
         }
     }
 }
@@ -406,6 +413,7 @@ impl TypedClauseGuard {
             ClauseGuard::GtEqFloat { typ, .. } => typ.clone(),
             ClauseGuard::LtFloat { typ, .. } => typ.clone(),
             ClauseGuard::LtEqFloat { typ, .. } => typ.clone(),
+            ClauseGuard::IntLiteral { typ, .. } => typ.clone(),
         }
     }
 }
