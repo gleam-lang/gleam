@@ -1,3 +1,5 @@
+use unicode_segmentation::UnicodeSegmentation;
+
 #[derive(Debug, PartialEq)]
 pub enum Error {
     TooManyHolesInCapture {
@@ -52,7 +54,7 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
 
     let mut buffer = String::with_capacity(src.len());
     let mut mode = Mode::Normal;
-    let mut chars = src.chars().enumerate().peekable();
+    let mut chars = UnicodeSegmentation::grapheme_indices(src, true).peekable();
     let mut comments = ModuleComments {
         doc_comments: vec![],
         comments: vec![],
@@ -61,19 +63,19 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
     while let Some((outer_char_no, c)) = chars.next() {
         match mode {
             Mode::Normal => match c {
-                ';' => buffer.push(' '),
+                ";" => buffer.push(' '),
 
-                '"' => {
+                "\"" => {
                     mode = Mode::String;
-                    buffer.push(c);
+                    buffer.push_str(c);
                 }
 
-                '/' => match chars.next() {
-                    Some((_, '/')) => {
+                "/" => match chars.next() {
+                    Some((_, "/")) => {
                         buffer.push(' ');
                         buffer.push(' ');
                         match chars.peek() {
-                            Some((_, '/')) => {
+                            Some((_, "/")) => {
                                 mode = Mode::Comment(Kind::Doc, outer_char_no);
                                 buffer.push(' ');
                                 chars.next();
@@ -82,39 +84,39 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
                                 mode = Mode::Comment(Kind::Regular, outer_char_no);
                             }
                             None => {
-                                buffer.push(c);
+                                buffer.push_str(c);
                                 chars.next();
                             }
                         }
                     }
                     Some((_, c2)) => {
-                        buffer.push(c);
-                        buffer.push(c2);
+                        buffer.push_str(c);
+                        buffer.push_str(c2);
                     }
-                    None => buffer.push(c),
+                    None => buffer.push_str(c),
                 },
 
-                _ => buffer.push(c),
+                _ => buffer.push_str(c),
             },
 
             Mode::String => match c {
-                '\\' => {
-                    buffer.push(c);
+                "\\" => {
+                    buffer.push_str(c);
                     if let Some((_, c)) = chars.next() {
-                        buffer.push(c)
+                        buffer.push_str(c)
                     }
                 }
 
-                '"' => {
+                "\"" => {
                     mode = Mode::Normal;
-                    buffer.push(c);
+                    buffer.push_str(c);
                 }
 
-                _ => buffer.push(c),
+                _ => buffer.push_str(c),
             },
 
             Mode::Comment(kind, start) => match c {
-                '\n' => {
+                "\n" => {
                     mode = Mode::Normal;
                     let content_start = match &kind {
                         Kind::Doc => start + 3,
@@ -202,6 +204,17 @@ pub external fn a() -> Nil =
     );
 
     // Testing comment collection
+    assert_stripped!(
+        "// 👨‍👩‍👧‍👧 unicode\n",
+        "            \n",
+        ModuleComments {
+            doc_comments: vec![],
+            comments: vec![Comment {
+                start: 0,
+                content: " 👨‍👩‍👧‍👧 unicode",
+            }],
+        }
+    );
 
     assert_stripped!(
         "// hello\n",

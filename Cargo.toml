@@ -39,6 +39,8 @@ strum_macros = "0.17"
 askama = "0.8"
 # Markdown in docs
 pulldown-cmark = "0.7.0"
+# Support unicode in gleam source
+unicode-segmentation = "1.6.0"
 
 [build-dependencies]
 lalrpop = "0.17"
