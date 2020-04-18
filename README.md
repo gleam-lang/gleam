@@ -15,6 +15,8 @@
 <!-- A spacer -->
 <div>&nbsp;</div>
 
+Master ![CI](https://github.com/gleam-lang/gleam/workflows/CI/badge.svg?branch=master)
+
 Gleam is a statically typed functional programming language for building
 scalable concurrent systems. It compiles to [Erlang](http://www.erlang.org/)
 and has straightforward interop with other BEAM languages such as Erlang,
