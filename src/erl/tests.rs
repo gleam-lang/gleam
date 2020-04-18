@@ -1520,7 +1520,7 @@ main() ->
     end.
 "#,
     );
-    
+
     assert_erl!(
         r#"
 pub fn main() {
@@ -1570,7 +1570,7 @@ main() ->
     end.
 "#,
     );
-    
+
     assert_erl!(
         r#"
 pub fn main() {
