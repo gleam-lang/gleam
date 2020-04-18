@@ -300,6 +300,27 @@ pub enum ClauseGuard<Type> {
         right: Box<Self>,
     },
 
+    GtEqInt {
+        location: SrcSpan,
+        typ: Type,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    LtInt {
+        location: SrcSpan,
+        typ: Type,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    LtEqInt {
+        location: SrcSpan,
+        typ: Type,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
     GtFloat {
         location: SrcSpan,
         typ: Type,
@@ -358,6 +379,9 @@ impl<A> ClauseGuard<A> {
             ClauseGuard::Equals { location, .. } => location,
             ClauseGuard::NotEquals { location, .. } => location,
             ClauseGuard::GtInt { location, .. } => location,
+            ClauseGuard::GtEqInt { location, .. } => location,
+            ClauseGuard::LtInt { location, .. } => location,
+            ClauseGuard::LtEqInt { location, .. } => location,
             ClauseGuard::GtFloat { location, .. } => location,
             ClauseGuard::GtEqFloat { location, .. } => location,
             ClauseGuard::LtFloat { location, .. } => location,
@@ -375,6 +399,9 @@ impl TypedClauseGuard {
             ClauseGuard::Equals { typ, .. } => typ.clone(),
             ClauseGuard::NotEquals { typ, .. } => typ.clone(),
             ClauseGuard::GtInt { typ, .. } => typ.clone(),
+            ClauseGuard::GtEqInt { typ, .. } => typ.clone(),
+            ClauseGuard::LtInt { typ, .. } => typ.clone(),
+            ClauseGuard::LtEqInt { typ, .. } => typ.clone(),
             ClauseGuard::GtFloat { typ, .. } => typ.clone(),
             ClauseGuard::GtEqFloat { typ, .. } => typ.clone(),
             ClauseGuard::LtFloat { typ, .. } => typ.clone(),

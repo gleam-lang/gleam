@@ -737,6 +737,18 @@ impl Documentable for &UntypedClauseGuard {
                 left.as_ref().to_doc().append(" > ").append(right.as_ref())
             }
 
+            ClauseGuard::GtEqInt { left, right, .. } => {
+                left.as_ref().to_doc().append(" >= ").append(right.as_ref())
+            }
+
+            ClauseGuard::LtInt { left, right, .. } => {
+                left.as_ref().to_doc().append(" < ").append(right.as_ref())
+            }
+
+            ClauseGuard::LtEqInt { left, right, .. } => {
+                left.as_ref().to_doc().append(" <= ").append(right.as_ref())
+            }
+
             ClauseGuard::GtFloat { left, right, .. } => {
                 left.as_ref().to_doc().append(" >. ").append(right.as_ref())
             }

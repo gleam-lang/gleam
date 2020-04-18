@@ -2415,6 +2415,60 @@ fn infer_clause_guard(
             })
         }
 
+        ClauseGuard::GtEqInt {
+            location,
+            left,
+            right,
+            ..
+        } => {
+            let left = infer_clause_guard(*left, level, env)?;
+            unify(int(), left.typ(), env).map_err(|e| convert_unify_error(e, left.location()))?;
+            let right = infer_clause_guard(*right, level, env)?;
+            unify(int(), right.typ(), env).map_err(|e| convert_unify_error(e, right.location()))?;
+            Ok(ClauseGuard::GtEqInt {
+                location,
+                typ: bool(),
+                left: Box::new(left),
+                right: Box::new(right),
+            })
+        }
+
+        ClauseGuard::LtInt {
+            location,
+            left,
+            right,
+            ..
+        } => {
+            let left = infer_clause_guard(*left, level, env)?;
+            unify(int(), left.typ(), env).map_err(|e| convert_unify_error(e, left.location()))?;
+            let right = infer_clause_guard(*right, level, env)?;
+            unify(int(), right.typ(), env).map_err(|e| convert_unify_error(e, right.location()))?;
+            Ok(ClauseGuard::LtInt {
+                location,
+                typ: bool(),
+                left: Box::new(left),
+                right: Box::new(right),
+            })
+        }
+
+        ClauseGuard::LtEqInt {
+            location,
+            left,
+            right,
+            ..
+        } => {
+            let left = infer_clause_guard(*left, level, env)?;
+            unify(int(), left.typ(), env).map_err(|e| convert_unify_error(e, left.location()))?;
+            let right = infer_clause_guard(*right, level, env)?;
+            unify(int(), right.typ(), env).map_err(|e| convert_unify_error(e, right.location()))?;
+            Ok(ClauseGuard::LtEqInt {
+                location,
+                typ: bool(),
+                left: Box::new(left),
+                right: Box::new(right),
+            })
+        }
+
         ClauseGuard::GtFloat {
             location,
             left,

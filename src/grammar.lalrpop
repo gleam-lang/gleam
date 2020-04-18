@@ -306,6 +306,27 @@ ClauseGuard4: UntypedClauseGuard = {
         left: Box::new(left),
         right: Box::new(right),
     },
+    
+    <s:@L> <left:ClauseGuard4> ">=" <right:ClauseGuard5> <e:@L> => ClauseGuard::GtEqInt {
+        location: location(s, e),
+        typ: (),
+        left: Box::new(left),
+        right: Box::new(right),
+    },
+    
+    <s:@L> <left:ClauseGuard4> "<" <right:ClauseGuard5> <e:@L> => ClauseGuard::LtInt {
+        location: location(s, e),
+        typ: (),
+        left: Box::new(left),
+        right: Box::new(right),
+    },
+    
+    <s:@L> <left:ClauseGuard4> "<=" <right:ClauseGuard5> <e:@L> => ClauseGuard::LtEqInt {
+        location: location(s, e),
+        typ: (),
+        left: Box::new(left),
+        right: Box::new(right),
+    },
 
     <s:@L> <left:ClauseGuard4> ">." <right:ClauseGuard5> <e:@L> => ClauseGuard::GtFloat {
         location: location(s, e),
