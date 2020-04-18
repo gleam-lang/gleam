@@ -18,17 +18,25 @@ pub fn pretty(src: &str) -> Result<String, crate::parser::LalrpopError> {
     let ast = crate::grammar::ModuleParser::new()
         .parse(&stripped_src)
         .map_err(|e| e.map_token(|crate::grammar::Token(a, b)| (a, b.to_string())))?;
-    let mut formatter = Formatter::new(&comments);
+    let mut formatter = Formatter::with_comments(&comments);
     Ok(pretty_module(&ast, &mut formatter))
 }
 
+#[derive(Debug, Clone)]
 pub struct Formatter<'a> {
     comments: &'a [Comment<'a>],
     doc_comments: &'a [Comment<'a>],
 }
 
 impl<'a> Formatter<'a> {
-    pub fn new(comments: &'a ModuleComments) -> Self {
+    pub fn new() -> Self {
+        Self {
+            comments: &[],
+            doc_comments: &[],
+        }
+    }
+
+    pub fn with_comments(comments: &'a ModuleComments) -> Self {
         Self {
             comments: comments.comments.as_slice(),
             doc_comments: comments.doc_comments.as_slice(),
@@ -108,7 +116,7 @@ impl<'a> Formatter<'a> {
                 public,
                 return_annotation,
                 ..
-            } => fn_(public, name, args, return_annotation, body),
+            } => self.fn_(public, name, args, return_annotation, body),
 
             Statement::TypeAlias {
                 alias,
@@ -116,7 +124,7 @@ impl<'a> Formatter<'a> {
                 resolved_type,
                 public,
                 ..
-            } => type_alias(*public, alias, args, resolved_type),
+            } => self.type_alias(*public, alias, args, resolved_type),
 
             Statement::CustomType {
                 name,
@@ -124,7 +132,7 @@ impl<'a> Formatter<'a> {
                 public,
                 constructors,
                 ..
-            } => custom_type(*public, name, args.as_slice(), constructors),
+            } => self.custom_type(*public, name, args.as_slice(), constructors),
 
             Statement::ExternalFn {
                 public,
@@ -134,7 +142,8 @@ impl<'a> Formatter<'a> {
                 module,
                 fun,
                 ..
-            } => external_fn_signature(*public, name, args, retrn)
+            } => self
+                .external_fn_signature(*public, name, args, retrn)
                 .append(" =")
                 .append(line())
                 .append(format!("  \"{}\" ", module))
@@ -142,7 +151,7 @@ impl<'a> Formatter<'a> {
 
             Statement::ExternalType {
                 public, name, args, ..
-            } => external_type(*public, name, args),
+            } => self.external_type(*public, name, args),
 
             Statement::Import {
                 module,
@@ -173,8 +182,385 @@ impl<'a> Formatter<'a> {
     }
 
     fn documented_statement(&mut self, s: &UntypedStatement) -> Document {
-        let comments = doc_comments(s.location().start, self);
+        let comments = self.doc_comments(s.location().start);
         comments.append(self.statement(s)).group()
+    }
+
+    fn doc_comments(&mut self, limit: usize) -> Document {
+        let mut comments = self.pop_doc_comments(limit).peekable();
+        match comments.peek() {
+            None => nil(),
+            Some(_) => concat(
+                comments
+                    .map(|c| "///".to_doc().append(c))
+                    .intersperse(line()),
+            )
+            .append(force_break())
+            .append(line()),
+        }
+    }
+
+    fn type_ast(&mut self, t: &TypeAst) -> Document {
+        match t {
+            TypeAst::Constructor { name, args, .. } if args.is_empty() => name.to_string().to_doc(),
+
+            TypeAst::Constructor { name, args, .. } => {
+                name.to_string().to_doc().append(self.type_arguments(args))
+            }
+
+            TypeAst::Fn { args, retrn, .. } => "fn"
+                .to_string()
+                .to_doc()
+                .append(self.type_arguments(args))
+                .append(delim(" ->"))
+                .append(self.type_ast(retrn)),
+
+            TypeAst::Var { name, .. } => name.clone().to_doc(),
+
+            TypeAst::Tuple { elems, .. } => "tuple".to_doc().append(self.type_arguments(elems)),
+        }
+    }
+
+    fn type_arguments(&mut self, args: &[TypeAst]) -> Document {
+        wrap_args(args.iter().map(|t| self.type_ast(t)))
+    }
+
+    pub fn type_alias(
+        &mut self,
+        public: bool,
+        name: &str,
+        args: &[String],
+        typ: &TypeAst,
+    ) -> Document {
+        pub_(public)
+            .append("type ")
+            .append(name.to_string())
+            .append(if args.is_empty() {
+                nil()
+            } else {
+                wrap_args(args.iter().map(|e| e.clone().to_doc()))
+            })
+            .append(" =")
+            .append(line().append(self.type_ast(typ)).group().nest(INDENT))
+    }
+
+    fn fn_args<A>(&mut self, args: &[Arg<A>]) -> Document {
+        wrap_args(args.iter().map(|e| self.fn_arg(e)))
+    }
+
+    fn fn_arg<A>(&mut self, arg: &Arg<A>) -> Document {
+        arg.names
+            .to_doc()
+            .append(match &arg.annotation {
+                Some(a) => ": ".to_doc().append(self.type_ast(a)),
+                None => nil(),
+            })
+            .group()
+    }
+
+    fn fn_(
+        &mut self,
+        public: &bool,
+        name: &str,
+        args: &Vec<UntypedArg>,
+        return_annotation: &Option<TypeAst>,
+        body: &UntypedExpr,
+    ) -> Document {
+        pub_(*public)
+            .append("fn ")
+            .append(name)
+            .append(self.fn_args(args))
+            .append(if let Some(anno) = return_annotation {
+                " -> ".to_doc().append(self.type_ast(anno))
+            } else {
+                nil()
+            })
+            .append(" {")
+            .append(line().append(self.expr(body)).nest(INDENT).group())
+            .append(line())
+            .append("}")
+    }
+
+    pub fn external_fn_signature(
+        &mut self,
+        public: bool,
+        name: &str,
+        args: &[ExternalFnArg],
+        retrn: &TypeAst,
+    ) -> Document {
+        pub_(public)
+            .to_doc()
+            .append("external fn ")
+            .group()
+            .append(name.to_string())
+            .append(self.external_fn_args(args))
+            .append(" -> ".to_doc())
+            .append(self.type_ast(retrn))
+    }
+
+    fn expr_fn(&mut self, args: &[UntypedArg], body: &UntypedExpr) -> Document {
+        "fn".to_doc()
+            .append(self.fn_args(args).nest_current())
+            .append(
+                break_(" {", " { ")
+                    .append(self.expr(body))
+                    .nest(INDENT)
+                    .append(delim(""))
+                    .append("}")
+                    .group(),
+            )
+    }
+
+    fn expr(&mut self, expr: &UntypedExpr) -> Document {
+        match expr {
+            UntypedExpr::Todo { .. } => "todo".to_doc(),
+
+            UntypedExpr::Pipe { left, right, .. } => self
+                .expr(left)
+                .append(force_break())
+                .append(line())
+                .append("|> ")
+                .append(self.expr(right.as_ref())),
+
+            UntypedExpr::Int { value, .. } => value.clone().to_doc(),
+
+            UntypedExpr::Float { value, .. } => value.clone().to_doc(),
+
+            UntypedExpr::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
+
+            UntypedExpr::Seq { first, then, .. } => self
+                .expr(first)
+                .append(force_break())
+                .append(line())
+                .append(self.expr(then.as_ref())),
+
+            UntypedExpr::Var { name, .. } => name.clone().to_doc(),
+
+            UntypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
+
+            UntypedExpr::Fn {
+                // is_capture, // TODO: render captures
+                // return_annotation, // TODO: render this annotation
+                args,
+                body,
+                ..
+            } => self.expr_fn(args.as_slice(), body.as_ref()),
+
+            UntypedExpr::ListNil { .. } => "[]".to_doc(),
+
+            UntypedExpr::ListCons { head, tail, .. } => self.list_cons(head, tail),
+
+            UntypedExpr::Call { fun, args, .. } => self
+                .expr(fun)
+                .append(wrap_args(args.iter().map(|a| self.call_arg(a)))),
+
+            UntypedExpr::BinOp {
+                name, left, right, ..
+            } => self
+                .expr(left)
+                .append(name)
+                .append(self.expr(right.as_ref())),
+
+            UntypedExpr::Let {
+                value,
+                pattern,
+                then,
+                ..
+            } => force_break()
+                .append("let ")
+                .append(pattern)
+                .append(" = ")
+                .append(self.hanging_expr(value.as_ref()))
+                .append(line())
+                .append(self.expr(then.as_ref())),
+
+            UntypedExpr::Case {
+                subjects, clauses, ..
+            } => "case "
+                .to_doc()
+                .append(concat(
+                    subjects
+                        .into_iter()
+                        .map(|s| self.expr(s))
+                        .intersperse(", ".to_doc()),
+                ))
+                .append(" {")
+                .append(
+                    line()
+                        .append(concat(
+                            clauses
+                                .into_iter()
+                                .map(|c| self.clause(c).group())
+                                .intersperse(lines(1)),
+                        ))
+                        .nest(INDENT),
+                )
+                .append(line())
+                .append("}"),
+
+            UntypedExpr::FieldAccess {
+                label, container, ..
+            } => self.expr(container).append(".").append(label.clone()),
+
+            UntypedExpr::Tuple { elems, .. } => "tuple"
+                .to_doc()
+                .append(wrap_args(elems.iter().map(|e| self.wrap_expr(e)))),
+        }
+    }
+
+    fn record_constructor(&mut self, constructor: &RecordConstructor) -> Document {
+        if constructor.args.is_empty() {
+            constructor.name.clone().to_doc()
+        } else {
+            constructor
+                .name
+                .to_string()
+                .to_doc()
+                .append(wrap_args(constructor.args.iter().map(|(label, typ)| {
+                    match label {
+                        Some(l) => l
+                            .to_string()
+                            .to_doc()
+                            .append(": ")
+                            .append(self.type_ast(typ)),
+                        None => self.type_ast(typ),
+                    }
+                })))
+        }
+    }
+
+    pub fn custom_type(
+        &mut self,
+        public: bool,
+        name: &str,
+        args: &[String],
+        constructors: &[RecordConstructor],
+    ) -> Document {
+        pub_(public)
+            .to_doc()
+            .append("type ")
+            .append(if args.is_empty() {
+                name.clone().to_doc()
+            } else {
+                name.to_string()
+                    .to_doc()
+                    .append(wrap_args(args.iter().map(|e| e.clone().to_doc())))
+            })
+            .append(" {")
+            .append(concat(constructors.into_iter().map(|c| {
+                line()
+                    .append(self.record_constructor(c))
+                    .nest(INDENT)
+                    .group()
+            })))
+            .append(line())
+            .append("}")
+    }
+
+    pub fn docs_fn_signature(
+        &mut self,
+        public: bool,
+        name: &str,
+        args: &[TypedArg],
+        return_type: Arc<Type>,
+    ) -> Document {
+        pub_(public)
+            .append("fn ")
+            .append(name.to_string())
+            .append(self.fn_args(args)) // TODO: Always show types
+            .append(" -> ".to_doc())
+            .append(typ::pretty::Printer::new().to_doc(return_type.as_ref()))
+    }
+
+    fn external_fn_arg(&mut self, arg: &ExternalFnArg) -> Document {
+        label(&arg.label).append(self.type_ast(&arg.typ))
+    }
+
+    fn external_fn_args(&mut self, args: &[ExternalFnArg]) -> Document {
+        wrap_args(args.iter().map(|e| self.external_fn_arg(e)))
+    }
+
+    fn wrap_expr(&mut self, expr: &UntypedExpr) -> Document {
+        match expr {
+            UntypedExpr::Seq { .. } | UntypedExpr::Let { .. } => "{"
+                .to_doc()
+                .append(force_break())
+                .append(line().append(self.expr(expr)).nest(INDENT))
+                .append(line())
+                .append("}"),
+
+            _ => self.expr(expr),
+        }
+    }
+
+    fn call_arg(&mut self, arg: &CallArg<UntypedExpr>) -> Document {
+        match &arg.label {
+            Some(s) => s.clone().to_doc().append(": "),
+            None => nil(),
+        }
+        .append(self.wrap_expr(&arg.value))
+    }
+
+    fn tuple_index(&mut self, tuple: &UntypedExpr, index: u64) -> Document {
+        match tuple {
+            UntypedExpr::TupleIndex { .. } => self.expr(tuple).surround("{", "}"),
+            _ => self.expr(tuple),
+        }
+        .append(".")
+        .append(index)
+    }
+
+    fn hanging_expr(&mut self, expr: &UntypedExpr) -> Document {
+        match expr {
+            UntypedExpr::Seq { .. } | UntypedExpr::Let { .. } => "{"
+                .to_doc()
+                .append(force_break())
+                .append(line().append(self.expr(expr)).nest(INDENT))
+                .append(line())
+                .append("}"),
+
+            UntypedExpr::Fn { .. } | UntypedExpr::Case { .. } => self.expr(expr),
+
+            _ => self.expr(expr).nest(INDENT),
+        }
+    }
+
+    fn clause(&mut self, clause: &UntypedClause) -> Document {
+        let doc = concat(
+            std::iter::once(&clause.pattern)
+                .chain(clause.alternative_patterns.iter())
+                .map(|p| concat(p.iter().map(|p| p.to_doc()).intersperse(", ".to_doc())))
+                .intersperse(" | ".to_doc()),
+        );
+        match &clause.guard {
+            None => doc,
+            Some(guard) => doc.append(" if ").append(guard),
+        }
+        .append(" -> ")
+        .append(self.hanging_expr(&clause.then))
+    }
+
+    pub fn external_type(&mut self, public: bool, name: &str, args: &[String]) -> Document {
+        pub_(public)
+            .append("external type ")
+            .append(name.to_string())
+            .append(if args.is_empty() {
+                nil()
+            } else {
+                wrap_args(args.iter().map(|e| e.clone().to_doc()))
+            })
+    }
+
+    fn list_cons(&mut self, head: &UntypedExpr, tail: &UntypedExpr) -> Document {
+        let (elems, tail) = list_cons(head, tail, categorise_list_expr);
+        let elems = concat(
+            elems
+                .iter()
+                .map(|e| self.wrap_expr(e))
+                .intersperse(delim(",")),
+        );
+        let tail = tail.map(|e| self.expr(e));
+        list(elems, tail)
     }
 }
 
@@ -194,152 +580,6 @@ impl Documentable for &ArgNames {
     }
 }
 
-impl<A> Documentable for &Arg<A> {
-    fn to_doc(self) -> Document {
-        self.names
-            .to_doc()
-            .append(match &self.annotation {
-                Some(a) => ": ".to_doc().append(a),
-                None => nil(),
-            })
-            .group()
-    }
-}
-
-impl Documentable for &RecordConstructor {
-    fn to_doc(self) -> Document {
-        if self.args.is_empty() {
-            self.name.clone().to_doc()
-        } else {
-            self.name
-                .to_string()
-                .to_doc()
-                .append(wrap_args(self.args.iter().map(
-                    |(label, typ)| match label {
-                        Some(l) => l.to_string().to_doc().append(": ").append(typ),
-                        None => typ.to_doc(),
-                    },
-                )))
-        }
-    }
-}
-
-fn doc_comments(limit: usize, env: &mut Formatter) -> Document {
-    let mut comments = env.pop_doc_comments(limit).peekable();
-    match comments.peek() {
-        None => nil(),
-        Some(_) => concat(
-            comments
-                .map(|c| "///".to_doc().append(c))
-                .intersperse(line()),
-        )
-        .append(force_break())
-        .append(line()),
-    }
-}
-
-pub fn external_type(public: bool, name: &str, args: &[String]) -> Document {
-    pub_(public)
-        .append("external type ")
-        .append(name.to_string())
-        .append(if args.is_empty() {
-            nil()
-        } else {
-            wrap_args(args.iter().map(|e| e.clone().to_doc()))
-        })
-}
-
-pub fn type_alias(public: bool, name: &str, args: &[String], typ: &TypeAst) -> Document {
-    pub_(public)
-        .append("type ")
-        .append(name.to_string())
-        .append(if args.is_empty() {
-            nil()
-        } else {
-            wrap_args(args.iter().map(|e| e.clone().to_doc()))
-        })
-        .append(" =")
-        .append(line().append(type_ast(typ)).group().nest(INDENT))
-}
-
-pub fn custom_type(
-    public: bool,
-    name: &str,
-    args: &[String],
-    constructors: &[RecordConstructor],
-) -> Document {
-    pub_(public)
-        .to_doc()
-        .append("type ")
-        .append(if args.is_empty() {
-            name.clone().to_doc()
-        } else {
-            name.to_string()
-                .to_doc()
-                .append(wrap_args(args.iter().map(|e| e.clone().to_doc())))
-        })
-        .append(" {")
-        .append(concat(
-            constructors
-                .into_iter()
-                .map(|c| line().append(c).nest(INDENT).group()),
-        ))
-        .append(line())
-        .append("}")
-}
-
-pub fn fn_(
-    public: &bool,
-    name: &str,
-    args: &Vec<UntypedArg>,
-    return_annotation: &Option<TypeAst>,
-    body: &UntypedExpr,
-) -> Document {
-    pub_(*public)
-        .append("fn ")
-        .append(name)
-        .append(wrap_args(args.iter().map(|e| e.to_doc())))
-        .append(if let Some(anno) = return_annotation {
-            " -> ".to_doc().append(anno)
-        } else {
-            nil()
-        })
-        .append(" {")
-        .append(line().append(body).nest(INDENT).group())
-        .append(line())
-        .append("}")
-}
-
-pub fn external_fn_signature(
-    public: bool,
-    name: &str,
-    args: &[ExternalFnArg],
-    retrn: &TypeAst,
-) -> Document {
-    pub_(public)
-        .to_doc()
-        .append("external fn ")
-        .group()
-        .append(name.to_string())
-        .append(wrap_args(args.iter().map(|e| e.to_doc())))
-        .append(" -> ".to_doc())
-        .append(retrn)
-}
-
-pub fn docs_fn_signature(
-    public: bool,
-    name: &str,
-    args: &[TypedArg],
-    return_type: Arc<Type>,
-) -> Document {
-    pub_(public)
-        .append("fn ")
-        .append(name.to_string())
-        .append(wrap_args(args.iter().map(|e| e.to_doc())))
-        .append(" -> ".to_doc())
-        .append(typ::pretty::Printer::new().to_doc(return_type.as_ref()))
-}
-
 fn pub_(public: bool) -> Document {
     if public {
         "pub ".to_doc()
@@ -357,26 +597,10 @@ impl Documentable for &UnqualifiedImport {
     }
 }
 
-impl Documentable for &ExternalFnArg {
-    fn to_doc(self) -> Document {
-        label(&self.label).append(self.typ.to_doc())
-    }
-}
-
 fn label(label: &Option<String>) -> Document {
     match label {
         Some(s) => s.clone().to_doc().append(": "),
         None => nil(),
-    }
-}
-
-impl Documentable for &CallArg<UntypedExpr> {
-    fn to_doc(self) -> Document {
-        match &self.label {
-            Some(s) => s.clone().to_doc().append(": "),
-            None => nil(),
-        }
-        .append(wrap_expr(&self.value))
     }
 }
 
@@ -438,12 +662,13 @@ impl Documentable for &UntypedPattern {
 
             Pattern::Nil { .. } => "[]".to_doc(),
 
-            Pattern::Cons { head, tail, .. } => list_cons(
-                head.as_ref(),
-                tail.as_ref(),
-                |e| e.to_doc(),
-                categorise_list_pattern,
-            ),
+            Pattern::Cons { head, tail, .. } => {
+                let (elems, tail) =
+                    list_cons(head.as_ref(), tail.as_ref(), categorise_list_pattern);
+                let elems = concat(elems.iter().map(|e| e.to_doc()).intersperse(delim(",")));
+                let tail = tail.map(|e| e.to_doc());
+                list(elems, tail)
+            }
 
             Pattern::Constructor {
                 name,
@@ -485,23 +710,6 @@ impl Documentable for &UntypedPattern {
                 .to_doc()
                 .append(wrap_args(elems.iter().map(|e| e.to_doc()))),
         }
-    }
-}
-
-impl Documentable for &UntypedClause {
-    fn to_doc(self) -> Document {
-        let doc = concat(
-            std::iter::once(&self.pattern)
-                .chain(self.alternative_patterns.iter())
-                .map(|p| concat(p.iter().map(|p| p.to_doc()).intersperse(", ".to_doc())))
-                .intersperse(" | ".to_doc()),
-        );
-        match &self.guard {
-            None => doc,
-            Some(guard) => doc.append(" if ").append(guard),
-        }
-        .append(" -> ")
-        .append(hanging_expr(&self.then))
     }
 }
 
@@ -554,187 +762,6 @@ impl Documentable for &UntypedClauseGuard {
     }
 }
 
-impl Documentable for &UntypedExpr {
-    fn to_doc(self) -> Document {
-        match self {
-            UntypedExpr::Todo { .. } => "todo".to_doc(),
-
-            UntypedExpr::Pipe { left, right, .. } => left
-                .to_doc()
-                .append(force_break())
-                .append(line())
-                .append("|> ")
-                .append(right.as_ref()),
-
-            UntypedExpr::Int { value, .. } => value.clone().to_doc(),
-
-            UntypedExpr::Float { value, .. } => value.clone().to_doc(),
-
-            UntypedExpr::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
-
-            UntypedExpr::Seq { first, then, .. } => first
-                .to_doc()
-                .append(force_break())
-                .append(line())
-                .append(then.as_ref()),
-
-            UntypedExpr::Var { name, .. } => name.clone().to_doc(),
-
-            UntypedExpr::TupleIndex { tuple, index, .. } => tuple_index(tuple, *index),
-
-            UntypedExpr::Fn {
-                // is_capture, // TODO: render captures
-                // return_annotation, // TODO: render this annotation
-                args,
-                body,
-                ..
-            } => expr_fn(args.as_slice(), body.as_ref()),
-
-            UntypedExpr::ListNil { .. } => "[]".to_doc(),
-
-            UntypedExpr::ListCons { head, tail, .. } => list_cons(
-                head.as_ref(),
-                tail.as_ref(),
-                wrap_expr,
-                categorise_list_expr,
-            ),
-
-            UntypedExpr::Call { fun, args, .. } => fun
-                .to_doc()
-                .append(wrap_args(args.iter().map(|a| a.to_doc()))),
-
-            UntypedExpr::BinOp {
-                name, left, right, ..
-            } => left.to_doc().append(name).append(right.as_ref()),
-
-            UntypedExpr::Let {
-                value,
-                pattern,
-                then,
-                ..
-            } => force_break()
-                .append("let ")
-                .append(pattern)
-                .append(" = ")
-                .append(hanging_expr(value.as_ref()))
-                .append(line())
-                .append(then.as_ref()),
-
-            UntypedExpr::Case {
-                subjects, clauses, ..
-            } => "case "
-                .to_doc()
-                .append(concat(
-                    subjects
-                        .into_iter()
-                        .map(|s| s.to_doc())
-                        .intersperse(", ".to_doc()),
-                ))
-                .append(" {")
-                .append(
-                    line()
-                        .append(concat(
-                            clauses
-                                .into_iter()
-                                .map(|c| c.to_doc().group())
-                                .intersperse(lines(1)),
-                        ))
-                        .nest(INDENT),
-                )
-                .append(line())
-                .append("}"),
-
-            UntypedExpr::FieldAccess {
-                label, container, ..
-            } => container.to_doc().append(format!(".{}", label)),
-
-            UntypedExpr::Tuple { elems, .. } => "tuple"
-                .to_doc()
-                .append(wrap_args(elems.iter().map(wrap_expr))),
-        }
-    }
-}
-
-fn expr_fn(args: &[UntypedArg], body: &UntypedExpr) -> Document {
-    "fn".to_doc()
-        .append(wrap_args(args.iter().map(|e| e.to_doc())).nest_current())
-        .append(
-            break_(" {", " { ")
-                .append(body)
-                .nest(INDENT)
-                .append(delim(""))
-                .append("}")
-                .group(),
-        )
-}
-
-fn tuple_index(tuple: &UntypedExpr, index: u64) -> Document {
-    match tuple {
-        UntypedExpr::TupleIndex { .. } => tuple.to_doc().surround("{", "}"),
-        _ => tuple.to_doc(),
-    }
-    .append(".")
-    .append(index)
-}
-
-fn wrap_expr(expr: &UntypedExpr) -> Document {
-    match expr {
-        UntypedExpr::Seq { .. } | UntypedExpr::Let { .. } => "{"
-            .to_doc()
-            .append(force_break())
-            .append(line().append(expr).nest(INDENT))
-            .append(line())
-            .append("}"),
-
-        _ => expr.to_doc(),
-    }
-}
-
-fn hanging_expr(expr: &UntypedExpr) -> Document {
-    match expr {
-        UntypedExpr::Seq { .. } | UntypedExpr::Let { .. } => "{"
-            .to_doc()
-            .append(force_break())
-            .append(line().append(expr).nest(INDENT))
-            .append(line())
-            .append("}"),
-
-        UntypedExpr::Fn { .. } | UntypedExpr::Case { .. } => expr.to_doc(),
-
-        _ => expr.to_doc().nest(INDENT),
-    }
-}
-
-pub fn type_ast(t: &TypeAst) -> Document {
-    match t {
-        TypeAst::Constructor { name, args, .. } if args.is_empty() => name.to_string().to_doc(),
-
-        TypeAst::Constructor { name, args, .. } => name
-            .to_string()
-            .to_doc()
-            .append(wrap_args(args.iter().map(|e| e.to_doc()))),
-
-        TypeAst::Fn { args, retrn, .. } => "fn"
-            .to_string()
-            .to_doc()
-            .append(wrap_args(args.iter().map(|e| e.to_doc())))
-            .append(delim(" ->"))
-            .append(retrn.to_doc()),
-
-        TypeAst::Var { name, .. } => name.clone().to_doc(),
-
-        TypeAst::Tuple { elems, .. } => "tuple"
-            .to_doc()
-            .append(wrap_args(elems.iter().map(|e| e.to_doc()))),
-    }
-}
-
-impl Documentable for &TypeAst {
-    fn to_doc(self) -> Document {
-        type_ast(self)
-    }
-}
-
 fn categorise_list_expr(expr: &UntypedExpr) -> ListType<&UntypedExpr, &UntypedExpr> {
     match expr {
         UntypedExpr::ListNil { .. } => ListType::Nil,
@@ -771,30 +798,29 @@ where
         .group()
 }
 
-fn list_cons<ToDoc: Copy, Categorise, Elem>(
+fn list_cons<Categorise, Elem>(
     head: Elem,
     tail: Elem,
-    to_doc: ToDoc,
     categorise_element: Categorise,
-) -> Document
+) -> (Vec<Elem>, Option<Elem>)
 where
-    ToDoc: Fn(Elem) -> Document,
     Categorise: Fn(Elem) -> ListType<Elem, Elem>,
 {
     let mut elems = vec![head];
-    let final_tail = collect_cons(tail, &mut elems, categorise_element);
+    let tail = collect_cons(tail, &mut elems, categorise_element);
+    (elems, tail)
+}
 
-    let elems = concat(elems.into_iter().map(to_doc).intersperse(delim(",")));
-
+fn list(elems: Document, tail: Option<Document>) -> Document {
     let doc = break_("[", "[").append(elems);
 
-    match final_tail {
+    match tail {
         None => doc.nest(INDENT).append(break_(",", "")),
 
         Some(final_tail) => doc
             .append(break_(",", " "))
             .append("| ")
-            .append(to_doc(final_tail))
+            .append(final_tail)
             .nest(INDENT)
             .append(break_("", "")),
     }

@@ -95,6 +95,7 @@ pub fn generate_html(
 }
 
 fn function<'a>(statement: &'a TypedStatement) -> Option<Function<'a>> {
+    let mut formatter = format::Formatter::new();
     match statement {
         Statement::ExternalFn {
             public: true,
@@ -105,7 +106,7 @@ fn function<'a>(statement: &'a TypedStatement) -> Option<Function<'a>> {
             ..
         } => Some(Function {
             name,
-            signature: print(format::external_fn_signature(true, name, args, retrn)),
+            signature: print(formatter.external_fn_signature(true, name, args, retrn)),
             documentation: markdown_documentation(doc),
         }),
 
@@ -119,7 +120,7 @@ fn function<'a>(statement: &'a TypedStatement) -> Option<Function<'a>> {
         } => Some(Function {
             name,
             documentation: markdown_documentation(doc),
-            signature: print(format::docs_fn_signature(true, name, args, ret.clone())),
+            signature: print(formatter.docs_fn_signature(true, name, args, ret.clone())),
         }),
 
         _ => None,
@@ -141,6 +142,7 @@ fn render_markdown(text: &str) -> String {
 }
 
 fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
+    let mut formatter = format::Formatter::new();
     match statement {
         Statement::ExternalType {
             public: true,
@@ -150,7 +152,7 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
             ..
         } => Some(Type {
             name,
-            definition: print(format::external_type(true, name.as_str(), args)),
+            definition: print(formatter.external_type(true, name.as_str(), args)),
             documentation: markdown_documentation(doc),
         }),
 
@@ -163,7 +165,7 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
             ..
         } => Some(Type {
             name,
-            definition: print(format::custom_type(true, name, args, cs.as_slice())),
+            definition: print(formatter.custom_type(true, name, args, cs.as_slice())),
             documentation: markdown_documentation(doc),
         }),
 
@@ -176,7 +178,7 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
             ..
         } => Some(Type {
             name,
-            definition: print(format::type_alias(true, name, args, typ)),
+            definition: print(formatter.type_alias(true, name, args, typ)),
             documentation: markdown_documentation(doc),
         }),
 
