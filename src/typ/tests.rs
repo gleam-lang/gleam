@@ -677,7 +677,7 @@ fn infer_error_test() {
             given: string()
         }
     );
-    
+
     assert_error!(
         "case [3.33], 1 { x, y if x >= y -> 1 }",
         Error::CouldNotUnify {
@@ -686,7 +686,7 @@ fn infer_error_test() {
             given: list(float())
         }
     );
-    
+
     assert_error!(
         "case 1, 2.22, \"three\" { x, _, y if x >= y -> 1 }",
         Error::CouldNotUnify {
@@ -695,7 +695,7 @@ fn infer_error_test() {
             given: string()
         }
     );
-    
+
     assert_error!(
         "case [3.33], 1 { x, y if x < y -> 1 }",
         Error::CouldNotUnify {
@@ -704,7 +704,7 @@ fn infer_error_test() {
             given: list(float())
         }
     );
-    
+
     assert_error!(
         "case 1, 2.22, \"three\" { x, _, y if x < y -> 1 }",
         Error::CouldNotUnify {
@@ -722,7 +722,7 @@ fn infer_error_test() {
             given: list(float())
         }
     );
-    
+
     assert_error!(
         "case 1, 2.22, \"three\" { x, _, y if x <= y -> 1 }",
         Error::CouldNotUnify {
