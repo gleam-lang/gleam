@@ -506,6 +506,18 @@ fn bare_clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
             .append(" > ")
             .append(clause_guard(right.as_ref(), env)),
 
+        ClauseGuard::GtEqInt { left, right, .. } => clause_guard(left.as_ref(), env)
+            .append(" >= ")
+            .append(clause_guard(right.as_ref(), env)),
+
+        ClauseGuard::LtInt { left, right, .. } => clause_guard(left.as_ref(), env)
+            .append(" < ")
+            .append(clause_guard(right.as_ref(), env)),
+
+        ClauseGuard::LtEqInt { left, right, .. } => clause_guard(left.as_ref(), env)
+            .append(" =< ")
+            .append(clause_guard(right.as_ref(), env)),
+
         ClauseGuard::GtFloat { left, right, .. } => clause_guard(left.as_ref(), env)
             .append(" > ")
             .append(clause_guard(right.as_ref(), env)),
@@ -536,6 +548,9 @@ fn clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
         | ClauseGuard::Equals { .. }
         | ClauseGuard::NotEquals { .. }
         | ClauseGuard::GtInt { .. }
+        | ClauseGuard::GtEqInt { .. }
+        | ClauseGuard::LtInt { .. }
+        | ClauseGuard::LtEqInt { .. }
         | ClauseGuard::GtFloat { .. }
         | ClauseGuard::GtEqFloat { .. }
         | ClauseGuard::LtFloat { .. }
