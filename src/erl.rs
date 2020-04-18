@@ -507,19 +507,19 @@ fn bare_clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
             .append(clause_guard(right.as_ref(), env)),
 
         ClauseGuard::GtFloat { left, right, .. } => clause_guard(left.as_ref(), env)
-            .append(" >. ")
+            .append(" > ")
             .append(clause_guard(right.as_ref(), env)),
 
         ClauseGuard::GtEqFloat { left, right, .. } => clause_guard(left.as_ref(), env)
-            .append(" >=. ")
+            .append(" >= ")
             .append(clause_guard(right.as_ref(), env)),
 
         ClauseGuard::LtFloat { left, right, .. } => clause_guard(left.as_ref(), env)
-            .append(" <. ")
+            .append(" < ")
             .append(clause_guard(right.as_ref(), env)),
 
         ClauseGuard::LtEqFloat { left, right, .. } => clause_guard(left.as_ref(), env)
-            .append(" <=. ")
+            .append(" =< ")
             .append(clause_guard(right.as_ref(), env)),
 
         // Only local variables are supported and the typer ensures that all
