@@ -15,6 +15,8 @@
 - There is a `todo` keyword for type checking functions that have not yet been
   implemented.
 - Tuples can be indexed into using the `var.1` syntax.
+- `>`, `>=`, `<`, and `<=` operators are now supported in case clause guards
+  and can be used to check the ordering of integers.
 - `>.`, `>=.`, `<.`, and `<=.` operators are now supported in case clause guards
   and can be used to check the ordering of floats.
 
