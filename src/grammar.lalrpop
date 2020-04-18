@@ -311,6 +311,17 @@ ClauseGuard4: UntypedClauseGuard = {
 }
 
 ClauseGuard5: UntypedClauseGuard = {
+    <s:@L> <left:ClauseGuard5> ">." <right:ClauseGuard6> <e:@L> => ClauseGuard::GtFloat {
+        location: location(s, e),
+        typ: (),
+        left: Box::new(left),
+        right: Box::new(right),
+    },
+
+    ClauseGuard6 => <>,
+}
+
+ClauseGuard6: UntypedClauseGuard = {
     <s:@L> <name:VarName> <e:@L> => ClauseGuard::Var {
         location: location(s, e),
         typ: (),

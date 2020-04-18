@@ -2414,6 +2414,25 @@ fn infer_clause_guard(
                 right: Box::new(right),
             })
         }
+
+        ClauseGuard::GtFloat {
+            location,
+            left,
+            right,
+            ..
+        } => {
+            let left = infer_clause_guard(*left, level, env)?;
+            unify(float(), left.typ(), env).map_err(|e| convert_unify_error(e, left.location()))?;
+            let right = infer_clause_guard(*right, level, env)?;
+            unify(float(), right.typ(), env)
+                .map_err(|e| convert_unify_error(e, right.location()))?;
+            Ok(ClauseGuard::GtFloat {
+                location,
+                typ: bool(),
+                left: Box::new(left),
+                right: Box::new(right),
+            })
+        }
     }
 }
 
