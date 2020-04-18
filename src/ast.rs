@@ -373,7 +373,7 @@ pub enum ClauseGuard<Type> {
         location: SrcSpan,
         typ: Type,
         value: String,
-    }
+    },
 }
 
 impl<A> ClauseGuard<A> {
