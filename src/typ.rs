@@ -2544,6 +2544,18 @@ fn infer_clause_guard(
                 right: Box::new(right),
             })
         }
+
+        ClauseGuard::IntLiteral {
+            location,
+            value,
+            ..
+        } => {
+            Ok(ClauseGuard::IntLiteral {
+                location,
+                value,
+                typ: int()
+            })
+        }
     }
 }
 
