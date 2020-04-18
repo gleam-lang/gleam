@@ -695,6 +695,59 @@ fn infer_error_test() {
             given: string()
         }
     );
+    assert_error!(
+        "case [3], 1.1 { x, y if x >=. y -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 24, end: 25 },
+            expected: float(),
+            given: list(int())
+        }
+    );
+
+    assert_error!(
+        "case 2.22, 1, \"three\" { x, _, y if x >=. y -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 41, end: 42 },
+            expected: float(),
+            given: string()
+        }
+    );
+
+    assert_error!(
+        "case [3], 1.1 { x, y if x <. y -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 24, end: 25 },
+            expected: float(),
+            given: list(int())
+        }
+    );
+
+    assert_error!(
+        "case 2.22, 1, \"three\" { x, _, y if x <. y -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 40, end: 41 },
+            expected: float(),
+            given: string()
+        }
+    );
+
+    assert_error!(
+        "case [3], 1.1 { x, y if x <=. y -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 24, end: 25 },
+            expected: float(),
+            given: list(int())
+        }
+    );
+
+    assert_error!(
+        "case 2.22, 1, \"three\" { x, _, y if x <=. y -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 41, end: 42 },
+            expected: float(),
+            given: string()
+        }
+    );
 
     assert_error!(
         "case [1] { [x] | x -> 1 }",
