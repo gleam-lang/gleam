@@ -510,6 +510,18 @@ fn bare_clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
             .append(" >. ")
             .append(clause_guard(right.as_ref(), env)),
 
+        ClauseGuard::GtEqFloat { left, right, .. } => clause_guard(left.as_ref(), env)
+            .append(" >=. ")
+            .append(clause_guard(right.as_ref(), env)),
+
+        ClauseGuard::LtFloat { left, right, .. } => clause_guard(left.as_ref(), env)
+            .append(" <. ")
+            .append(clause_guard(right.as_ref(), env)),
+
+        ClauseGuard::LtEqFloat { left, right, .. } => clause_guard(left.as_ref(), env)
+            .append(" <=. ")
+            .append(clause_guard(right.as_ref(), env)),
+
         // Only local variables are supported and the typer ensures that all
         // ClauseGuard::Vars are local variables
         ClauseGuard::Var { name, .. } => env.local_var_name(name.to_string()),
@@ -524,7 +536,10 @@ fn clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
         | ClauseGuard::Equals { .. }
         | ClauseGuard::NotEquals { .. }
         | ClauseGuard::GtInt { .. }
-        | ClauseGuard::GtFloat { .. } => "("
+        | ClauseGuard::GtFloat { .. }
+        | ClauseGuard::GtEqFloat { .. }
+        | ClauseGuard::LtFloat { .. }
+        | ClauseGuard::LtEqFloat { .. } => "("
             .to_doc()
             .append(bare_clause_guard(guard, env))
             .append(")"),

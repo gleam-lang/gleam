@@ -318,6 +318,27 @@ pub enum ClauseGuard<Type> {
         right: Box<Self>,
     },
 
+    GtEqFloat {
+        location: SrcSpan,
+        typ: Type,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    LtFloat {
+        location: SrcSpan,
+        typ: Type,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    LtEqFloat {
+        location: SrcSpan,
+        typ: Type,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
     Or {
         location: SrcSpan,
         typ: Type,
@@ -349,6 +370,9 @@ impl<A> ClauseGuard<A> {
             ClauseGuard::NotEquals { location, .. } => location,
             ClauseGuard::GtInt { location, .. } => location,
             ClauseGuard::GtFloat { location, .. } => location,
+            ClauseGuard::GtEqFloat { location, .. } => location,
+            ClauseGuard::LtFloat { location, .. } => location,
+            ClauseGuard::LtEqFloat { location, .. } => location,
         }
     }
 }
@@ -363,6 +387,9 @@ impl TypedClauseGuard {
             ClauseGuard::NotEquals { typ, .. } => typ.clone(),
             ClauseGuard::GtInt { typ, .. } => typ.clone(),
             ClauseGuard::GtFloat { typ, .. } => typ.clone(),
+            ClauseGuard::GtEqFloat { typ, .. } => typ.clone(),
+            ClauseGuard::LtFloat { typ, .. } => typ.clone(),
+            ClauseGuard::LtEqFloat { typ, .. } => typ.clone(),
         }
     }
 }

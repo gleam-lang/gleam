@@ -528,6 +528,18 @@ impl Documentable for &UntypedClauseGuard {
                 left.as_ref().to_doc().append(" > ").append(right.as_ref())
             }
 
+            ClauseGuard::GtEqFloat { left, right, .. } => {
+                left.as_ref().to_doc().append(" >= ").append(right.as_ref())
+            }
+
+            ClauseGuard::LtFloat { left, right, .. } => {
+                left.as_ref().to_doc().append(" < ").append(right.as_ref())
+            }
+
+            ClauseGuard::LtEqFloat { left, right, .. } => {
+                left.as_ref().to_doc().append(" =< ").append(right.as_ref())
+            }
+
             ClauseGuard::Var { name, .. } => name.to_string().to_doc(),
         }
     }
