@@ -1537,7 +1537,7 @@ pub fn main() {
 
 main() ->
     case {1.0, 0.1} of
-        {X, Y} when X >. Y ->
+        {X, Y} when X > Y ->
             1;
 
         {_, _} ->
@@ -1562,7 +1562,7 @@ pub fn main() {
 
 main() ->
     case {1.0, 0.1} of
-        {X, Y} when X >=. Y ->
+        {X, Y} when X >= Y ->
             1;
 
         {_, _} ->
@@ -1587,7 +1587,7 @@ pub fn main() {
 
 main() ->
     case {0.1, 1.0} of
-        {X, Y} when X <. Y ->
+        {X, Y} when X < Y ->
             1;
 
         {_, _} ->
@@ -1612,7 +1612,7 @@ pub fn main() {
 
 main() ->
     case {0.1, 1.0} of
-        {X, Y} when X <=. Y ->
+        {X, Y} when X =< Y ->
             1;
 
         {_, _} ->
