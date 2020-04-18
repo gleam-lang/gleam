@@ -210,17 +210,6 @@ impl<A, B> Statement<A, B> {
             }
         }
     }
-
-    pub fn is_declaration(&self) -> bool {
-        match self {
-            Statement::Import { .. } => false,
-            Statement::Fn { .. }
-            | Statement::TypeAlias { .. }
-            | Statement::CustomType { .. }
-            | Statement::ExternalFn { .. }
-            | Statement::ExternalType { .. } => true,
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

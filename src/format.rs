@@ -18,81 +18,168 @@ pub fn pretty(src: &str) -> Result<String, crate::parser::LalrpopError> {
     let ast = crate::grammar::ModuleParser::new()
         .parse(&stripped_src)
         .map_err(|e| e.map_token(|crate::grammar::Token(a, b)| (a, b.to_string())))?;
-    let mut env = Env::new(&comments);
-    Ok(pretty_module(&ast, &mut env))
+    let mut formatter = Formatter::new(&comments);
+    Ok(pretty_module(&ast, &mut formatter))
 }
 
-pub struct Env<'a> {
-    // comments: &'a [Comment<'a>],
+pub struct Formatter<'a> {
+    comments: &'a [Comment<'a>],
     doc_comments: &'a [Comment<'a>],
 }
 
-impl<'a> Env<'a> {
+impl<'a> Formatter<'a> {
     pub fn new(comments: &'a ModuleComments) -> Self {
         Self {
-            // comments: comments.comments.as_slice(),
+            comments: comments.comments.as_slice(),
             doc_comments: comments.doc_comments.as_slice(),
         }
     }
 
-    // // Pop comments that occur before a byte-index in the source
-    // pub fn pop_comments(&mut self, limit: usize) -> impl Iterator<Item = &'a str> {
-    //     let (popped, rest) = crate::parser::take_before(self.comments, limit);
-    //     self.comments = rest;
-    //     popped
-    // }
+    // Pop comments that occur before a byte-index in the source
+    fn pop_comments(&mut self, limit: usize) -> impl Iterator<Item = &'a str> {
+        let (popped, rest) = crate::parser::take_before(self.comments, limit);
+        self.comments = rest;
+        popped
+    }
 
     // Pop doc comments that occur before a byte-index in the source
-    pub fn pop_doc_comments(&mut self, limit: usize) -> impl Iterator<Item = &'a str> {
+    fn pop_doc_comments(&mut self, limit: usize) -> impl Iterator<Item = &'a str> {
         let (popped, rest) = crate::parser::take_before(self.doc_comments, limit);
         self.doc_comments = rest;
         popped
     }
-}
 
-pub fn pretty_module(m: &UntypedModule, env: &mut Env<'_>) -> String {
-    format(80, module(m, env))
-}
+    fn commented(&mut self, limit: usize, doc: Document) -> Document {
+        let mut comments = self.pop_comments(limit).peekable();
+        match comments.peek() {
+            None => doc,
+            Some(_) => concat(
+                comments
+                    .map(|c| "//".to_doc().append(c))
+                    .intersperse(line()),
+            )
+            .append(force_break())
+            .append(line())
+            .append(doc),
+        }
+    }
 
-fn module(module: &UntypedModule, env: &mut Env<'_>) -> Document {
-    let mut has_imports = false;
-    let mut has_declarations = false;
+    fn module(&mut self, module: &UntypedModule) -> Document {
+        let mut has_imports = false;
+        let mut has_declarations = false;
+        let mut imports = Vec::new();
+        let mut declarations = Vec::with_capacity(module.statements.len());
 
-    let imports = concat(
-        module
-            .statements
-            .iter()
-            .filter_map(|s| match s {
-                import @ Statement::Import { .. } => {
+        for statement in module.statements.iter() {
+            let start = statement.location().start;
+            match statement {
+                Statement::Import { .. } => {
                     has_imports = true;
-                    Some(statement(import, env))
+                    let statement = self.statement(statement);
+                    imports.push(self.commented(start, statement))
                 }
-                _ => None,
-            })
-            .intersperse(line()),
-    );
 
-    let statements = concat(
-        module
-            .statements
-            .iter()
-            .filter_map(|s| match s {
-                Statement::Import { .. } => None,
-                declaration => {
+                _other => {
                     has_declarations = true;
-                    Some(documented_statement(declaration, env))
+                    let statement = self.documented_statement(statement);
+                    declarations.push(self.commented(start, statement))
                 }
-            })
-            .intersperse(lines(2)),
-    );
+            }
+        }
 
-    let sep = if has_imports && has_declarations {
-        lines(2)
-    } else {
-        nil()
-    };
+        let imports = concat(imports.into_iter().intersperse(line()));
+        let declarations = concat(declarations.into_iter().intersperse(lines(2)));
 
-    imports.append(sep).append(statements).append(line())
+        let sep = if has_imports && has_declarations {
+            lines(2)
+        } else {
+            nil()
+        };
+
+        imports.append(sep).append(declarations).append(line())
+    }
+
+    fn statement(&mut self, statement: &UntypedStatement) -> Document {
+        match statement {
+            Statement::Fn {
+                name,
+                args,
+                body,
+                public,
+                return_annotation,
+                ..
+            } => fn_(public, name, args, return_annotation, body),
+
+            Statement::TypeAlias {
+                alias,
+                args,
+                resolved_type,
+                public,
+                ..
+            } => type_alias(*public, alias, args, resolved_type),
+
+            Statement::CustomType {
+                name,
+                args,
+                public,
+                constructors,
+                ..
+            } => custom_type(*public, name, args.as_slice(), constructors),
+
+            Statement::ExternalFn {
+                public,
+                args,
+                name,
+                retrn,
+                module,
+                fun,
+                ..
+            } => external_fn_signature(*public, name, args, retrn)
+                .append(" =")
+                .append(line())
+                .append(format!("  \"{}\" ", module))
+                .append(format!("\"{}\"", fun)),
+
+            Statement::ExternalType {
+                public, name, args, ..
+            } => external_type(*public, name, args),
+
+            Statement::Import {
+                module,
+                as_name,
+                unqualified,
+                ..
+            } => nil()
+                .append("import ")
+                .append(module.join("/"))
+                .append(if unqualified.is_empty() {
+                    nil()
+                } else {
+                    ".{".to_doc()
+                        .append(concat(
+                            unqualified
+                                .iter()
+                                .map(|e| e.clone().to_doc())
+                                .intersperse(", ".to_doc()),
+                        ))
+                        .append("}")
+                })
+                .append(if let Some(name) = as_name {
+                    format!(" as {}", name).to_doc()
+                } else {
+                    nil()
+                }),
+        }
+    }
+
+    fn documented_statement(&mut self, s: &UntypedStatement) -> Document {
+        let comments = doc_comments(s.location().start, self);
+        comments.append(self.statement(s)).group()
+    }
+}
+
+pub fn pretty_module(m: &UntypedModule, formatter: &mut Formatter<'_>) -> String {
+    format(80, formatter.module(m))
 }
 
 impl Documentable for &ArgNames {
@@ -137,7 +224,7 @@ impl Documentable for &RecordConstructor {
     }
 }
 
-fn doc_comments(limit: usize, env: &mut Env) -> Document {
+fn doc_comments(limit: usize, env: &mut Formatter) -> Document {
     let mut comments = env.pop_doc_comments(limit).peekable();
     match comments.peek() {
         None => nil(),
@@ -148,88 +235,6 @@ fn doc_comments(limit: usize, env: &mut Env) -> Document {
         )
         .append(force_break())
         .append(line()),
-    }
-}
-
-fn documented_statement(s: &UntypedStatement, env: &mut Env) -> Document {
-    if s.is_declaration() {
-        let comments = doc_comments(s.location().start, env);
-        comments.append(statement(s, env)).group()
-    } else {
-        statement(s, env)
-    }
-}
-
-fn statement(statement: &UntypedStatement, _env: &mut Env) -> Document {
-    match statement {
-        Statement::Fn {
-            name,
-            args,
-            body,
-            public,
-            return_annotation,
-            ..
-        } => fn_(public, name, args, return_annotation, body),
-
-        Statement::TypeAlias {
-            alias,
-            args,
-            resolved_type,
-            public,
-            ..
-        } => type_alias(*public, alias, args, resolved_type),
-
-        Statement::CustomType {
-            name,
-            args,
-            public,
-            constructors,
-            ..
-        } => custom_type(*public, name, args.as_slice(), constructors),
-
-        Statement::ExternalFn {
-            public,
-            args,
-            name,
-            retrn,
-            module,
-            fun,
-            ..
-        } => external_fn_signature(*public, name, args, retrn)
-            .append(" =")
-            .append(line())
-            .append(format!("  \"{}\" ", module))
-            .append(format!("\"{}\"", fun)),
-
-        Statement::ExternalType {
-            public, name, args, ..
-        } => external_type(*public, name, args),
-
-        Statement::Import {
-            module,
-            as_name,
-            unqualified,
-            ..
-        } => nil()
-            .append("import ")
-            .append(module.join("/"))
-            .append(if unqualified.is_empty() {
-                nil()
-            } else {
-                ".{".to_doc()
-                    .append(concat(
-                        unqualified
-                            .iter()
-                            .map(|e| e.clone().to_doc())
-                            .intersperse(", ".to_doc()),
-                    ))
-                    .append("}")
-            })
-            .append(if let Some(name) = as_name {
-                format!(" as {}", name).to_doc()
-            } else {
-                nil()
-            }),
     }
 }
 

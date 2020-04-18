@@ -1679,4 +1679,99 @@ type Whatever {
 }
 "#
     );
+
+    //
+    // Comments
+    //
+
+    assert_format!(
+        r#"import one
+
+// one
+//two
+type Whatever {
+  Whatever
+}
+"#
+    );
+
+    assert_format!(
+        r#"import one
+
+// one
+//two
+/// three
+type Whatever {
+  Whatever
+}
+"#
+    );
+
+    assert_format!(
+        "// one
+fn main() {
+  Nil
+}
+"
+    );
+
+    assert_format!(
+        "// one
+//two
+fn main() {
+  Nil
+}
+"
+    );
+
+    assert_format!(
+        r#"// one
+//two
+external fn whatever() -> Nil =
+  "" ""
+"#
+    );
+
+    assert_format!(
+        r#"// one
+//two
+external type Thingy
+"#
+    );
+
+    assert_format!(
+        r#"// one
+//two
+external type Thingy
+"#
+    );
+
+    assert_format!(
+        r#"// one
+//two
+type Whatever {
+  Whatever
+}
+"#
+    );
+
+    assert_format!(
+        r#"// one
+//two
+type Whatever =
+  Int
+"#
+    );
+
+    assert_format!(
+        r#"// zero
+import one
+
+// one
+//two
+type Whatever {
+  Whatever
+}
+"#
+    );
 }
