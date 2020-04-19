@@ -9,13 +9,12 @@
 <p align="center">
   <a href="https://github.com/gleam-lang/gleam/releases"><img src="https://img.shields.io/github/release/gleam-lang/gleam" alt="GitHub release"></a>
   <a href="https://webchat.freenode.net/#gleam-lang"><img src="https://img.shields.io/badge/freenode%20chat-%23gleam--lang-blue" alt="IRC: #gleam-lang on chat.freenode.net"></a>
+  <a><img src="https://github.com/gleam-lang/gleam/workflows/CI/badge.svg?branch=master"></a>
 </p>
 
 
 <!-- A spacer -->
 <div>&nbsp;</div>
-
-Master ![CI](https://github.com/gleam-lang/gleam/workflows/CI/badge.svg?branch=master)
 
 Gleam is a statically typed functional programming language for building
 scalable concurrent systems. It compiles to [Erlang](http://www.erlang.org/)
