@@ -281,84 +281,72 @@ pub type TypedClauseGuard = ClauseGuard<Arc<typ::Type>>;
 pub enum ClauseGuard<Type> {
     Equals {
         location: SrcSpan,
-        typ: Type,
         left: Box<Self>,
         right: Box<Self>,
     },
 
     NotEquals {
         location: SrcSpan,
-        typ: Type,
         left: Box<Self>,
         right: Box<Self>,
     },
 
     GtInt {
         location: SrcSpan,
-        typ: Type,
         left: Box<Self>,
         right: Box<Self>,
     },
 
     GtEqInt {
         location: SrcSpan,
-        typ: Type,
         left: Box<Self>,
         right: Box<Self>,
     },
 
     LtInt {
         location: SrcSpan,
-        typ: Type,
         left: Box<Self>,
         right: Box<Self>,
     },
 
     LtEqInt {
         location: SrcSpan,
-        typ: Type,
         left: Box<Self>,
         right: Box<Self>,
     },
 
     GtFloat {
         location: SrcSpan,
-        typ: Type,
         left: Box<Self>,
         right: Box<Self>,
     },
 
     GtEqFloat {
         location: SrcSpan,
-        typ: Type,
         left: Box<Self>,
         right: Box<Self>,
     },
 
     LtFloat {
         location: SrcSpan,
-        typ: Type,
         left: Box<Self>,
         right: Box<Self>,
     },
 
     LtEqFloat {
         location: SrcSpan,
-        typ: Type,
         left: Box<Self>,
         right: Box<Self>,
     },
 
     Or {
         location: SrcSpan,
-        typ: Type,
         left: Box<Self>,
         right: Box<Self>,
     },
 
     And {
         location: SrcSpan,
-        typ: Type,
         left: Box<Self>,
         right: Box<Self>,
     },
@@ -371,7 +359,6 @@ pub enum ClauseGuard<Type> {
 
     Int {
         location: SrcSpan,
-        typ: Type,
         value: String,
     },
 }
@@ -400,20 +387,9 @@ impl<A> ClauseGuard<A> {
 impl TypedClauseGuard {
     pub fn typ(&self) -> Arc<typ::Type> {
         match self {
-            ClauseGuard::Or { typ, .. } => typ.clone(),
-            ClauseGuard::And { typ, .. } => typ.clone(),
             ClauseGuard::Var { typ, .. } => typ.clone(),
-            ClauseGuard::Equals { typ, .. } => typ.clone(),
-            ClauseGuard::NotEquals { typ, .. } => typ.clone(),
-            ClauseGuard::GtInt { typ, .. } => typ.clone(),
-            ClauseGuard::GtEqInt { typ, .. } => typ.clone(),
-            ClauseGuard::LtInt { typ, .. } => typ.clone(),
-            ClauseGuard::LtEqInt { typ, .. } => typ.clone(),
-            ClauseGuard::GtFloat { typ, .. } => typ.clone(),
-            ClauseGuard::GtEqFloat { typ, .. } => typ.clone(),
-            ClauseGuard::LtFloat { typ, .. } => typ.clone(),
-            ClauseGuard::LtEqFloat { typ, .. } => typ.clone(),
-            ClauseGuard::Int { typ, .. } => typ.clone(),
+            ClauseGuard::Int { .. } => typ::int(),
+            _ => typ::bool(),
         }
     }
 }

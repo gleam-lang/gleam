@@ -2338,7 +2338,6 @@ fn infer_clause_guard(
                 .map_err(|e| convert_unify_error(e, right.location()))?;
             Ok(ClauseGuard::And {
                 location,
-                typ: bool(),
                 left: Box::new(left),
                 right: Box::new(right),
             })
@@ -2357,7 +2356,6 @@ fn infer_clause_guard(
                 .map_err(|e| convert_unify_error(e, right.location()))?;
             Ok(ClauseGuard::Or {
                 location,
-                typ: bool(),
                 left: Box::new(left),
                 right: Box::new(right),
             })
@@ -2374,7 +2372,6 @@ fn infer_clause_guard(
             unify(left.typ(), right.typ(), env).map_err(|e| convert_unify_error(e, &location))?;
             Ok(ClauseGuard::Equals {
                 location,
-                typ: bool(),
                 left: Box::new(left),
                 right: Box::new(right),
             })
@@ -2391,7 +2388,6 @@ fn infer_clause_guard(
             unify(left.typ(), right.typ(), env).map_err(|e| convert_unify_error(e, &location))?;
             Ok(ClauseGuard::NotEquals {
                 location,
-                typ: bool(),
                 left: Box::new(left),
                 right: Box::new(right),
             })
@@ -2409,7 +2405,6 @@ fn infer_clause_guard(
             unify(int(), right.typ(), env).map_err(|e| convert_unify_error(e, right.location()))?;
             Ok(ClauseGuard::GtInt {
                 location,
-                typ: bool(),
                 left: Box::new(left),
                 right: Box::new(right),
             })
@@ -2427,7 +2422,6 @@ fn infer_clause_guard(
             unify(int(), right.typ(), env).map_err(|e| convert_unify_error(e, right.location()))?;
             Ok(ClauseGuard::GtEqInt {
                 location,
-                typ: bool(),
                 left: Box::new(left),
                 right: Box::new(right),
             })
@@ -2445,7 +2439,6 @@ fn infer_clause_guard(
             unify(int(), right.typ(), env).map_err(|e| convert_unify_error(e, right.location()))?;
             Ok(ClauseGuard::LtInt {
                 location,
-                typ: bool(),
                 left: Box::new(left),
                 right: Box::new(right),
             })
@@ -2463,7 +2456,6 @@ fn infer_clause_guard(
             unify(int(), right.typ(), env).map_err(|e| convert_unify_error(e, right.location()))?;
             Ok(ClauseGuard::LtEqInt {
                 location,
-                typ: bool(),
                 left: Box::new(left),
                 right: Box::new(right),
             })
@@ -2482,7 +2474,6 @@ fn infer_clause_guard(
                 .map_err(|e| convert_unify_error(e, right.location()))?;
             Ok(ClauseGuard::GtFloat {
                 location,
-                typ: bool(),
                 left: Box::new(left),
                 right: Box::new(right),
             })
@@ -2501,7 +2492,6 @@ fn infer_clause_guard(
                 .map_err(|e| convert_unify_error(e, right.location()))?;
             Ok(ClauseGuard::GtEqFloat {
                 location,
-                typ: bool(),
                 left: Box::new(left),
                 right: Box::new(right),
             })
@@ -2520,7 +2510,6 @@ fn infer_clause_guard(
                 .map_err(|e| convert_unify_error(e, right.location()))?;
             Ok(ClauseGuard::LtFloat {
                 location,
-                typ: bool(),
                 left: Box::new(left),
                 right: Box::new(right),
             })
@@ -2539,7 +2528,6 @@ fn infer_clause_guard(
                 .map_err(|e| convert_unify_error(e, right.location()))?;
             Ok(ClauseGuard::LtEqFloat {
                 location,
-                typ: bool(),
                 left: Box::new(left),
                 right: Box::new(right),
             })
@@ -2547,11 +2535,7 @@ fn infer_clause_guard(
 
         ClauseGuard::Int {
             location, value, ..
-        } => Ok(ClauseGuard::Int {
-            location,
-            value,
-            typ: int(),
-        }),
+        } => Ok(ClauseGuard::Int { location, value }),
     }
 }
 
