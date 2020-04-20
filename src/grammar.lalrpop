@@ -365,7 +365,7 @@ ClauseGuard5: UntypedClauseGuard = {
         typ: (),
         name,
     },
-    <s:@L> <value:IntLiteral> <e:@L> => ClauseGuard::IntLiteral {
+    <s:@L> <value:IntLiteral> <e:@L> => ClauseGuard::Int {
         location: location(s, e),
         typ: (),
         value,

@@ -769,7 +769,7 @@ impl Documentable for &UntypedClauseGuard {
                 .append(" <=. ")
                 .append(right.as_ref()),
 
-            ClauseGuard::IntLiteral { value, .. } => value.to_string().to_doc(),
+            ClauseGuard::Int { value, .. } => value.to_string().to_doc(),
 
             ClauseGuard::Var { name, .. } => name.to_string().to_doc(),
         }

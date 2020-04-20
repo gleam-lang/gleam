@@ -534,7 +534,7 @@ fn bare_clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
             .append(" =< ")
             .append(clause_guard(right.as_ref(), env)),
 
-        ClauseGuard::IntLiteral { value, .. } => value.to_string().to_doc(),
+        ClauseGuard::Int { value, .. } => value.to_string().to_doc(),
 
         // Only local variables are supported and the typer ensures that all
         // ClauseGuard::Vars are local variables
@@ -562,7 +562,7 @@ fn clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
             .append(")"),
 
         // Values are not wrapped
-        ClauseGuard::Var { .. } | ClauseGuard::IntLiteral { .. } => bare_clause_guard(guard, env),
+        ClauseGuard::Var { .. } | ClauseGuard::Int { .. } => bare_clause_guard(guard, env),
     }
 }
 
