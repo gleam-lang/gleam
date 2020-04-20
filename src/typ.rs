@@ -2545,9 +2545,9 @@ fn infer_clause_guard(
             })
         }
 
-        ClauseGuard::IntLiteral {
+        ClauseGuard::Int {
             location, value, ..
-        } => Ok(ClauseGuard::IntLiteral {
+        } => Ok(ClauseGuard::Int {
             location,
             value,
             typ: int(),
