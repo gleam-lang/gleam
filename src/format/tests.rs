@@ -4,6 +4,7 @@ use super::*;
 fn module_test() {
     macro_rules! assert_format {
         ($src:expr $(,)?) => {
+            println!("\n\n\n{}", $src);
             let src = $src.to_string();
             assert_eq!(src, pretty($src).unwrap());
         };
@@ -1774,4 +1775,116 @@ type Whatever {
 }
 "#
     );
+
+    assert_format!(
+        "fn main() {
+  // Hello
+  \"world\"
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  // Hello
+  // world
+  1
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  // Hello
+  // world
+  1.0
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  // Hello
+  // world
+  Nil
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  // Hello
+  // world
+  []
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  // Hello
+  // world
+  [
+    // One
+    1,
+    // Two
+    2,
+  ]
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  // Hello
+  // world
+  [
+    // One
+    1,
+    // Two
+    2,
+    [
+      // Five
+      3,
+      [
+        // Four
+        4,
+      ],
+    ],
+  ]
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  // Hello
+  // world
+  one(
+    // One
+    1,
+    // Two
+    2,
+    two(
+      // Five
+      3,
+      three(
+        // Four
+        4,
+      ),
+    ),
+  )
+}
+"
+    );
+
+    //    assert_format!(
+    //        "fn main() {
+    //  // Hello
+    //  1
+    //  // world
+    //  2
+    //}
+    //"
+    //    );
 }

@@ -57,21 +57,6 @@ impl<'a> Formatter<'a> {
         popped
     }
 
-    fn commented(&mut self, limit: usize, doc: Document) -> Document {
-        let mut comments = self.pop_comments(limit).peekable();
-        match comments.peek() {
-            None => doc,
-            Some(_) => concat(
-                comments
-                    .map(|c| "//".to_doc().append(c))
-                    .intersperse(line()),
-            )
-            .append(force_break())
-            .append(line())
-            .append(doc),
-        }
-    }
-
     fn module(&mut self, module: &UntypedModule) -> Document {
         let mut has_imports = false;
         let mut has_declarations = false;
@@ -83,14 +68,16 @@ impl<'a> Formatter<'a> {
             match statement {
                 Statement::Import { .. } => {
                     has_imports = true;
+                    let comments = self.pop_comments(start).peekable();
                     let statement = self.statement(statement);
-                    imports.push(self.commented(start, statement))
+                    imports.push(commented(statement, comments))
                 }
 
                 _other => {
                     has_declarations = true;
-                    let statement = self.documented_statement(statement);
-                    declarations.push(self.commented(start, statement))
+                    let comments = self.pop_comments(start).peekable();
+                    let declaration = self.documented_statement(statement);
+                    declarations.push(commented(declaration, comments))
                 }
             }
         }
@@ -312,7 +299,9 @@ impl<'a> Formatter<'a> {
     }
 
     fn expr(&mut self, expr: &UntypedExpr) -> Document {
-        match expr {
+        let comments = self.pop_comments(expr.location().start).peekable();
+
+        let document = match expr {
             UntypedExpr::Todo { .. } => "todo".to_doc(),
 
             UntypedExpr::Pipe { left, right, .. } => self
@@ -405,7 +394,8 @@ impl<'a> Formatter<'a> {
             UntypedExpr::Tuple { elems, .. } => "tuple"
                 .to_doc()
                 .append(wrap_args(elems.iter().map(|e| self.wrap_expr(e)))),
-        }
+        };
+        commented(document, comments)
     }
 
     fn record_constructor(&mut self, constructor: &RecordConstructor) -> Document {
@@ -862,4 +852,19 @@ enum ListType<E, T> {
     Nil,
     Cons { head: E, tail: T },
     NotList(T),
+}
+
+fn commented<'a>(doc: Document, comments: impl Iterator<Item = &'a str>) -> Document {
+    let mut comments = comments.peekable();
+    match comments.peek() {
+        None => doc,
+        Some(_) => concat(
+            comments
+                .map(|c| "//".to_doc().append(c))
+                .intersperse(line()),
+        )
+        .append(force_break())
+        .append(line())
+        .append(doc),
+    }
 }
