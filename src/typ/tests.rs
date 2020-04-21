@@ -896,7 +896,7 @@ fn infer_error_test() {
             label: "field".to_string(),
             fields: vec![],
             typ: Arc::new(Type::Var {
-                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 9 })),
+                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 7 })),
             }),
         },
     );
