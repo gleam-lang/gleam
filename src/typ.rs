@@ -451,140 +451,6 @@ impl<'a, 'b> Env<'a, 'b> {
         )
         .gleam_expect("prelude inserting Nil type");
 
-        env.insert_variable(
-            "+".to_string(),
-            ValueConstructorVariant::LocalVariable,
-            fn_(vec![int(), int()], int()),
-        );
-
-        env.insert_variable(
-            "-".to_string(),
-            ValueConstructorVariant::LocalVariable,
-            fn_(vec![int(), int()], int()),
-        );
-
-        env.insert_variable(
-            "*".to_string(),
-            ValueConstructorVariant::LocalVariable,
-            fn_(vec![int(), int()], int()),
-        );
-
-        env.insert_variable(
-            "/".to_string(),
-            ValueConstructorVariant::LocalVariable,
-            fn_(vec![int(), int()], int()),
-        );
-
-        env.insert_variable(
-            "+.".to_string(),
-            ValueConstructorVariant::LocalVariable,
-            fn_(vec![float(), float()], float()),
-        );
-
-        env.insert_variable(
-            "-.".to_string(),
-            ValueConstructorVariant::LocalVariable,
-            fn_(vec![float(), float()], float()),
-        );
-
-        env.insert_variable(
-            "*.".to_string(),
-            ValueConstructorVariant::LocalVariable,
-            fn_(vec![float(), float()], float()),
-        );
-
-        env.insert_variable(
-            "||".to_string(),
-            ValueConstructorVariant::LocalVariable,
-            fn_(vec![bool(), bool()], bool()),
-        );
-
-        env.insert_variable(
-            "&&".to_string(),
-            ValueConstructorVariant::LocalVariable,
-            fn_(vec![bool(), bool()], bool()),
-        );
-
-        env.insert_variable(
-            "%".to_string(),
-            ValueConstructorVariant::LocalVariable,
-            fn_(vec![int(), int()], int()),
-        );
-
-        env.insert_variable(
-            "%.".to_string(),
-            ValueConstructorVariant::LocalVariable,
-            fn_(vec![float(), float()], float()),
-        );
-
-        env.insert_variable(
-            "/.".to_string(),
-            ValueConstructorVariant::LocalVariable,
-            fn_(vec![float(), float()], float()),
-        );
-
-        let a = env.new_generic_var();
-        env.insert_variable(
-            "==".to_string(),
-            ValueConstructorVariant::LocalVariable,
-            fn_(vec![a.clone(), a], bool()),
-        );
-
-        env.insert_variable(
-            ">".to_string(),
-            ValueConstructorVariant::LocalVariable,
-            fn_(vec![int(), int()], bool()),
-        );
-
-        env.insert_variable(
-            ">=".to_string(),
-            ValueConstructorVariant::LocalVariable,
-            fn_(vec![int(), int()], bool()),
-        );
-
-        env.insert_variable(
-            "<".to_string(),
-            ValueConstructorVariant::LocalVariable,
-            fn_(vec![int(), int()], bool()),
-        );
-
-        env.insert_variable(
-            "<=".to_string(),
-            ValueConstructorVariant::LocalVariable,
-            fn_(vec![int(), int()], bool()),
-        );
-
-        env.insert_variable(
-            ">.".to_string(),
-            ValueConstructorVariant::LocalVariable,
-            fn_(vec![float(), float()], bool()),
-        );
-
-        env.insert_variable(
-            ">=.".to_string(),
-            ValueConstructorVariant::LocalVariable,
-            fn_(vec![float(), float()], bool()),
-        );
-
-        env.insert_variable(
-            "<.".to_string(),
-            ValueConstructorVariant::LocalVariable,
-            fn_(vec![float(), float()], bool()),
-        );
-
-        env.insert_variable(
-            "<=.".to_string(),
-            ValueConstructorVariant::LocalVariable,
-            fn_(vec![float(), float()], bool()),
-        );
-
-        let a = env.new_generic_var();
-        env.insert_variable(
-            "!=".to_string(),
-            ValueConstructorVariant::LocalVariable,
-            fn_(vec![a.clone(), a], bool()),
-        );
-
         let ok = env.new_generic_var();
         let error = env.new_generic_var();
         env.insert_variable(
@@ -2134,29 +2000,54 @@ fn infer_binop(
     location: SrcSpan,
     env: &mut Env,
 ) -> Result<TypedExpr, Error> {
-    let fun = UntypedExpr::Var {
-        location: location.clone(),
-        name: bin_op_name(&name),
+    let (input_type, output_type) = match name {
+        BinOp::Eq | BinOp::NotEq => {
+            let left = infer(left, level, env)?;
+            let right = infer(right, level, env)?;
+            unify(left.typ(), right.typ(), env)
+                .map_err(|e| convert_unify_error(e, right.location()))?;
+
+            return Ok(TypedExpr::BinOp {
+                location,
+                name,
+                typ: bool(),
+                left: Box::new(left),
+                right: Box::new(right),
+            });
+        }
+        BinOp::And => (bool(), bool()),
+        BinOp::Or => (bool(), bool()),
+        BinOp::LtInt => (int(), bool()),
+        BinOp::LtEqInt => (int(), bool()),
+        BinOp::LtFloat => (float(), bool()),
+        BinOp::LtEqFloat => (float(), bool()),
+        BinOp::GtEqInt => (int(), bool()),
+        BinOp::GtInt => (int(), bool()),
+        BinOp::GtEqFloat => (float(), bool()),
+        BinOp::GtFloat => (float(), bool()),
+        BinOp::AddInt => (int(), int()),
+        BinOp::AddFloat => (float(), float()),
+        BinOp::SubInt => (int(), int()),
+        BinOp::SubFloat => (float(), float()),
+        BinOp::MultInt => (int(), int()),
+        BinOp::MultFloat => (float(), float()),
+        BinOp::DivInt => (int(), int()),
+        BinOp::DivFloat => (float(), float()),
+        BinOp::ModuloInt => (int(), int()),
     };
-    let args = vec![
-        CallArg {
-            location: Default::default(),
-            label: None,
-            value: left,
-        },
-        CallArg {
-            location: Default::default(),
-            label: None,
-            value: right,
-        },
-    ];
-    let (_fun, mut args, typ) = do_infer_call(fun, args, level, &location, env)?;
+
+    let left = infer(left, level, env)?;
+    unify(input_type.clone(), left.typ(), env)
+        .map_err(|e| convert_unify_error(e, left.location()))?;
+    let right = infer(right, level, env)?;
+    unify(input_type, right.typ(), env).map_err(|e| convert_unify_error(e, right.location()))?;
+
     Ok(TypedExpr::BinOp {
         location,
         name,
-        typ,
-        right: Box::new(args.pop().unwrap().value),
-        left: Box::new(args.pop().unwrap().value),
+        typ: output_type,
+        left: Box::new(left),
+        right: Box::new(right),
     })
 }
 
@@ -3098,32 +2989,6 @@ fn do_infer_fn(
     env.local_values = previous_vars;
     env.annotated_generic_types = previous_annotated_generic_types;
     Ok((args, body))
-}
-
-fn bin_op_name(name: &BinOp) -> String {
-    match name {
-        BinOp::And => "&&".to_string(),
-        BinOp::Or => "||".to_string(),
-        BinOp::LtInt => "<".to_string(),
-        BinOp::LtEqInt => "<=".to_string(),
-        BinOp::LtFloat => "<.".to_string(),
-        BinOp::LtEqFloat => "<=.".to_string(),
-        BinOp::Eq => "==".to_string(),
-        BinOp::NotEq => "!=".to_string(),
-        BinOp::GtEqInt => ">=".to_string(),
-        BinOp::GtInt => ">".to_string(),
-        BinOp::GtEqFloat => ">=.".to_string(),
-        BinOp::GtFloat => ">.".to_string(),
-        BinOp::AddInt => "+".to_string(),
-        BinOp::AddFloat => "+.".to_string(),
-        BinOp::SubInt => "-".to_string(),
-        BinOp::SubFloat => "-.".to_string(),
-        BinOp::MultInt => "*".to_string(),
-        BinOp::MultFloat => "*.".to_string(),
-        BinOp::DivInt => "/".to_string(),
-        BinOp::DivFloat => "/.".to_string(),
-        BinOp::ModuloInt => "%".to_string(),
-    }
 }
 
 fn convert_unify_error(e: UnifyError, location: &SrcSpan) -> Error {
