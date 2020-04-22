@@ -2088,4 +2088,29 @@ type Whatever {
     //
     // Commented type constructor parameters
     //
+
+    //
+    // Function captures
+    //
+
+    assert_format!(
+        "pub fn main() {
+  run(_)
+}
+"
+    );
+
+    assert_format!(
+        "pub fn main() {
+  run(1, 2, _, 4, 5)
+}
+"
+    );
+
+    assert_format!(
+        "pub fn main() {
+  run(1, 2, _, 4, 5)(_)
+}
+"
+    );
 }

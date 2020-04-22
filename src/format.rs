@@ -341,9 +341,17 @@ impl<'a> Formatter<'a> {
                 .append(line())
                 .append(self.expr(then.as_ref())),
 
+            UntypedExpr::Var { name, .. } if name == CAPTURE_VARIABLE => "_".to_doc(),
+
             UntypedExpr::Var { name, .. } => name.clone().to_doc(),
 
             UntypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
+
+            UntypedExpr::Fn {
+                is_capture: true, // TODO: render captures
+                body,
+                ..
+            } => self.fn_capture(body.as_ref()),
 
             UntypedExpr::Fn {
                 // is_capture, // TODO: render captures
@@ -415,6 +423,19 @@ impl<'a> Formatter<'a> {
                 .append(wrap_args(elems.iter().map(|e| self.wrap_expr(e)))),
         };
         commented(document, comments)
+    }
+
+    fn fn_capture(&mut self, call: &UntypedExpr) -> Document {
+        match call {
+            UntypedExpr::Call { fun, args, .. } => self
+                .expr(fun)
+                .append(wrap_args(args.iter().map(|a| self.call_arg(a)))),
+
+            // The body of a capture being not a fn shouldn't be possible...
+            _ => crate::error::fatal_compiler_bug(
+                "Function capture body found not to be a call in the formatter",
+            ),
+        }
     }
 
     fn record_constructor(&mut self, constructor: &RecordConstructor) -> Document {
