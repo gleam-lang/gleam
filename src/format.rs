@@ -91,7 +91,23 @@ impl<'a> Formatter<'a> {
             nil()
         };
 
-        imports.append(sep).append(declarations).append(line())
+        let doc_comments = concat(
+            self.doc_comments
+                .into_iter()
+                .map(|comment| line().append("///").append(comment.content)),
+        );
+        let comments = concat(
+            self.comments
+                .into_iter()
+                .map(|comment| line().append("//").append(comment.content)),
+        );
+
+        imports
+            .append(sep)
+            .append(declarations)
+            .append(doc_comments)
+            .append(comments)
+            .append(line())
     }
 
     fn statement(&mut self, statement: &UntypedStatement) -> Document {

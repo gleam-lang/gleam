@@ -1917,4 +1917,36 @@ type Whatever {
 }
 "
     );
+
+    //
+    // Trailing comments
+    //
+
+    assert_format!(
+        "fn main() {
+  x
+}
+// Hello world
+// ok!
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  x
+}
+/// Hello world
+/// ok!
+"
+    );
+    assert_format!(
+        "fn main() {
+  x
+}
+/// Hello world
+/// ok!
+// Hello world
+// ok!
+"
+    );
 }
