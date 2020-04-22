@@ -351,9 +351,8 @@ impl<'a> Formatter<'a> {
 
             UntypedExpr::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
 
-            UntypedExpr::Seq { first, then, .. } => self
-                .expr(first)
-                .append(force_break())
+            UntypedExpr::Seq { first, then, .. } => force_break()
+                .append(self.expr(first).group())
                 .append(line())
                 .append(self.expr(then.as_ref())),
 

@@ -779,6 +779,14 @@ World"
 "#
     );
 
+    assert_format!(
+        r#"fn main() {
+  first(1)
+  1
+}
+"#
+    );
+
     //
     // Var
     //
