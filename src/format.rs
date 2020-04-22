@@ -555,9 +555,6 @@ impl<'a> Formatter<'a> {
     }
 
     fn pattern(&mut self, pattern: &UntypedPattern) -> Document {
-        dbg!(&self.comments);
-        dbg!(pattern);
-
         let comments = self.pop_comments(pattern.location().start).peekable();
         let doc = match pattern {
             Pattern::Int { value, .. } => value.clone().to_doc(),
