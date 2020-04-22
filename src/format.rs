@@ -68,14 +68,14 @@ impl<'a> Formatter<'a> {
             match statement {
                 Statement::Import { .. } => {
                     has_imports = true;
-                    let comments = self.pop_comments(start).peekable();
+                    let comments = self.pop_comments(start);
                     let statement = self.statement(statement);
                     imports.push(commented(statement, comments))
                 }
 
                 _other => {
                     has_declarations = true;
-                    let comments = self.pop_comments(start).peekable();
+                    let comments = self.pop_comments(start);
                     let declaration = self.documented_statement(statement);
                     declarations.push(commented(declaration, comments))
                 }
@@ -252,7 +252,7 @@ impl<'a> Formatter<'a> {
     }
 
     fn fn_arg<A>(&mut self, arg: &Arg<A>) -> Document {
-        let comments = self.pop_comments(arg.location.start).peekable();
+        let comments = self.pop_comments(arg.location.start);
         let doc = arg
             .names
             .to_doc()
@@ -318,7 +318,7 @@ impl<'a> Formatter<'a> {
     }
 
     fn expr(&mut self, expr: &UntypedExpr) -> Document {
-        let comments = self.pop_comments(expr.start_byte_index()).peekable();
+        let comments = self.pop_comments(expr.start_byte_index());
 
         let document = match expr {
             UntypedExpr::Todo { .. } => "todo".to_doc(),
@@ -419,24 +419,28 @@ impl<'a> Formatter<'a> {
     }
 
     fn record_constructor(&mut self, constructor: &RecordConstructor) -> Document {
-        if constructor.args.is_empty() {
-            constructor.name.clone().to_doc()
-        } else {
-            constructor
-                .name
-                .to_string()
-                .to_doc()
-                .append(wrap_args(constructor.args.iter().map(|(label, typ)| {
-                    match label {
+        let comments = self.pop_comments(constructor.location.start);
+
+        let doc =
+            if constructor.args.is_empty() {
+                constructor.name.clone().to_doc()
+            } else {
+                constructor.name.to_string().to_doc().append(wrap_args(
+                    constructor.args.iter().map(|(label, typ)| match label {
                         Some(l) => l
                             .to_string()
                             .to_doc()
                             .append(": ")
                             .append(self.type_ast(typ)),
                         None => self.type_ast(typ),
-                    }
-                })))
-        }
+                    }),
+                ))
+            };
+
+        commented(
+            self.doc_comments(constructor.location.start).append(doc),
+            comments,
+        )
     }
 
     pub fn custom_type(
@@ -483,7 +487,7 @@ impl<'a> Formatter<'a> {
     }
 
     fn external_fn_arg(&mut self, arg: &ExternalFnArg) -> Document {
-        let comments = self.pop_comments(arg.location.start).peekable();
+        let comments = self.pop_comments(arg.location.start);
         let doc = label(&arg.label).append(self.type_ast(&arg.typ));
         commented(doc, comments)
     }
@@ -576,7 +580,7 @@ impl<'a> Formatter<'a> {
     }
 
     fn pattern(&mut self, pattern: &UntypedPattern) -> Document {
-        let comments = self.pop_comments(pattern.location().start).peekable();
+        let comments = self.pop_comments(pattern.location().start);
         let doc = match pattern {
             Pattern::Int { value, .. } => value.clone().to_doc(),
 

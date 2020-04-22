@@ -2017,6 +2017,52 @@ type Whatever {
     // Commented type constructors
     //
 
+    assert_format!(
+        "pub type Number {
+  // 1
+  One
+  // 2
+  Two
+  // 3
+  Three
+  // ???
+  More
+}
+"
+    );
+
+    assert_format!(
+        "pub type Number {
+  /// 1
+  One
+  /// 2
+  Two
+  /// 3
+  Three
+  /// ???
+  More
+}
+"
+    );
+
+    assert_format!(
+        "pub type Number {
+  // a
+  /// 1
+  One
+  // b
+  /// 2
+  Two
+  // c
+  /// 3
+  Three
+  // defg
+  /// ???
+  More
+}
+"
+    );
+
     //
     // Commented type constructor arguments
     //
