@@ -787,6 +787,16 @@ World"
 "#
     );
 
+    assert_format!(
+        r#"fn main() {
+  fn(_) {
+    1
+    2
+  }
+}
+"#
+    );
+
     //
     // Var
     //

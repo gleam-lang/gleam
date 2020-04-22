@@ -1,3 +1,5 @@
+https://github.com/elixir-lang/elixir/blob/138c1bd9ed199a39f6b036230675e60ca6777cb5/lib/elixir/lib/inspect/algebra.ex#L623-L669
+
 <p align="center">
   <img src="img/gleam-logo-readme.png" alt="Gleam logo">
 </p>
