@@ -354,9 +354,10 @@ impl<'a> Formatter<'a> {
                 value,
                 pattern,
                 then,
+                assert,
                 ..
             } => force_break()
-                .append("let ")
+                .append(if *assert { "assert " } else { "let " })
                 .append(pattern)
                 .append(" = ")
                 .append(self.hanging_expr(value.as_ref()))

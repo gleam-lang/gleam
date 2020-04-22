@@ -338,6 +338,19 @@ fn infer_test() {
     assert_infer!("let tuple(tag, x) = tuple(1.0, 1) x", "Int");
     assert_infer!("fn(x) { let tuple(a, b) = x a }", "fn(tuple(a, b)) -> a");
 
+    // assert
+    assert_infer!("assert [] = [] 1", "Int");
+    assert_infer!("assert [a] = [1] a", "Int");
+    assert_infer!("assert [a, 2] = [1] a", "Int");
+    assert_infer!("assert [a | b] = [1] a", "Int");
+    assert_infer!("assert [a | _] = [1] a", "Int");
+    assert_infer!("fn(x) { assert [a] = x a }", "fn(List(a)) -> a");
+    assert_infer!("fn(x) { assert [a] = x a + 1 }", "fn(List(Int)) -> Int");
+    assert_infer!("assert _x = 1 2.0", "Float");
+    assert_infer!("assert _ = 1 2.0", "Float");
+    assert_infer!("assert tuple(tag, x) = tuple(1.0, 1) x", "Int");
+    assert_infer!("fn(x) { assert tuple(a, b) = x a }", "fn(tuple(a, b)) -> a");
+
     // Nil
     assert_infer!("Nil", "Nil");
 

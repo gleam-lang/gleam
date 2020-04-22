@@ -367,6 +367,15 @@ Let: UntypedExpr = {
         value: Box::new(v),
         pattern: p,
         then: Box::new(t),
+        assert: false,
+    },
+
+    <s:@L> "assert" <p:Pattern> "=" <v:OpOrSimpleExpr> <e:@L> <t:Expr> => UntypedExpr::Let {
+        location: location(s, e),
+        value: Box::new(v),
+        pattern: p,
+        then: Box::new(t),
+        assert: true,
     }
 }
 

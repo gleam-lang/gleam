@@ -1681,8 +1681,9 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             pattern,
             value,
             then,
+            assert,
             ..
-        } => infer_let(pattern, *value, *then, level, location, env),
+        } => infer_let(pattern, *value, *then, assert, level, location, env),
 
         UntypedExpr::Case {
             location,
@@ -2055,6 +2056,7 @@ fn infer_let(
     pattern: UntypedPattern,
     value: UntypedExpr,
     then: UntypedExpr,
+    assert: bool,
     level: usize,
     location: SrcSpan,
     env: &mut Env,
@@ -2070,6 +2072,7 @@ fn infer_let(
         pattern,
         value: Box::new(value),
         then: Box::new(then),
+        assert: assert,
     })
 }
 
