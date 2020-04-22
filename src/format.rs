@@ -252,13 +252,16 @@ impl<'a> Formatter<'a> {
     }
 
     fn fn_arg<A>(&mut self, arg: &Arg<A>) -> Document {
-        arg.names
+        let comments = self.pop_comments(arg.location.start).peekable();
+        let doc = arg
+            .names
             .to_doc()
             .append(match &arg.annotation {
                 Some(a) => ": ".to_doc().append(self.type_ast(a)),
                 None => nil(),
             })
-            .group()
+            .group();
+        commented(doc, comments)
     }
 
     fn fn_(

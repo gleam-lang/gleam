@@ -1949,4 +1949,68 @@ type Whatever {
 // ok!
 "
     );
+
+    //
+    // Commented function arguments
+    //
+
+    assert_format!(
+        "fn main(
+  // comment
+  label argument: Type,
+) {
+  x
+}
+"
+    );
+
+    assert_format!(
+        "fn main(
+  // comment1
+  label argument1: Type,
+  // comment2
+  label argument2: Type,
+) {
+  x
+}
+"
+    );
+
+    //
+    // Commented bin op expressions
+    //
+
+    assert_format!(
+        "fn main() {
+  1 + // hello
+  2
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  // one
+  1 + // two
+  2 + // three
+  3
+}
+"
+    );
+
+    //
+    // Commented external function arguments
+    //
+
+    //
+    // Commented type constructors
+    //
+
+    //
+    // Commented type constructor arguments
+    //
+
+    //
+    // Commented type constructor parameters
+    //
 }
