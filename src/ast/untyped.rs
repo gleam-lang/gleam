@@ -126,6 +126,7 @@ impl UntypedExpr {
     pub fn start_byte_index(&self) -> usize {
         match self {
             Self::Seq { first, .. } => first.location().start,
+            Self::Let { location, .. } => location.start,
             _ => self.location().start,
         }
     }

@@ -720,7 +720,7 @@ PatternList: UntypedPattern = {
                 head: Box::new(e),
                 tail: Box::new(a),
             }
-        )
+        ).put_list_cons_location_start(s)
     },
 
     <s:@L> "[" <elems:Comma<Pattern>> <tail:(".." <PatternVarOrDiscard>)?> "]" <e:@L> => {
@@ -734,7 +734,7 @@ PatternList: UntypedPattern = {
                 head: Box::new(e),
                 tail: Box::new(a),
             }
-        )
+        ).put_list_cons_location_start(s)
     },
 }
 

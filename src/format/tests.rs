@@ -1895,4 +1895,26 @@ type Whatever {
 }
 "
     );
+
+    assert_format!(
+        "fn main() {
+  let // hello
+  x = 1
+  x
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  let [
+    // 1
+    1,
+    // 2
+    2,
+  ] = xs
+  x
+}
+"
+    );
 }

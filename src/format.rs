@@ -358,7 +358,7 @@ impl<'a> Formatter<'a> {
                 ..
             } => force_break()
                 .append(if *assert { "assert " } else { "let " })
-                .append(pattern)
+                .append(self.pattern(pattern))
                 .append(" = ")
                 .append(self.hanging_expr(value.as_ref()))
                 .append(line())
@@ -520,7 +520,7 @@ impl<'a> Formatter<'a> {
         let doc = concat(
             std::iter::once(&clause.pattern)
                 .chain(clause.alternative_patterns.iter())
-                .map(|p| concat(p.iter().map(|p| p.to_doc()).intersperse(", ".to_doc())))
+                .map(|p| concat(p.iter().map(|p| self.pattern(p)).intersperse(", ".to_doc())))
                 .intersperse(" | ".to_doc()),
         );
         match &clause.guard {
@@ -552,6 +552,93 @@ impl<'a> Formatter<'a> {
         );
         let tail = tail.map(|e| self.expr(e));
         list(elems, tail)
+    }
+
+    fn pattern(&mut self, pattern: &UntypedPattern) -> Document {
+        dbg!(&self.comments);
+        dbg!(pattern);
+
+        let comments = self.pop_comments(pattern.location().start).peekable();
+        let doc = match pattern {
+            Pattern::Int { value, .. } => value.clone().to_doc(),
+
+            Pattern::Float { value, .. } => value.clone().to_doc(),
+
+            Pattern::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
+
+            Pattern::Var { name, .. } => name.to_string().to_doc(),
+
+            Pattern::Let { name, pattern, .. } => self
+                .pattern(&pattern)
+                .append(" as ")
+                .append(name.to_string()),
+
+            Pattern::Discard { name, .. } => name.to_string().to_doc(),
+
+            Pattern::Nil { .. } => "[]".to_doc(),
+
+            Pattern::Cons { head, tail, .. } => {
+                let (elems, tail) =
+                    list_cons(head.as_ref(), tail.as_ref(), categorise_list_pattern);
+                let elems = concat(
+                    elems
+                        .iter()
+                        .map(|e| self.pattern(e))
+                        .intersperse(delim(",")),
+                );
+                let tail = tail.map(|e| self.pattern(e));
+                list(elems, tail)
+            }
+
+            Pattern::Constructor {
+                name,
+                args,
+                module: None,
+                ..
+            } if args.is_empty() => name.to_string().to_doc(),
+
+            Pattern::Constructor {
+                name,
+                args,
+                module: Some(m),
+                ..
+            } if args.is_empty() => m.to_string().to_doc().append(".").append(name.to_string()),
+
+            Pattern::Constructor {
+                name,
+                args,
+                module: None,
+                ..
+            } => name
+                .to_string()
+                .to_doc()
+                .append(wrap_args(args.iter().map(|a| self.pattern_call_arg(a)))),
+
+            Pattern::Constructor {
+                name,
+                args,
+                module: Some(m),
+                ..
+            } => m
+                .to_string()
+                .to_doc()
+                .append(".")
+                .append(name.to_string())
+                .append(wrap_args(args.iter().map(|a| self.pattern_call_arg(a)))),
+
+            Pattern::Tuple { elems, .. } => "tuple"
+                .to_doc()
+                .append(wrap_args(elems.iter().map(|e| self.pattern(e)))),
+        };
+        commented(doc, comments)
+    }
+
+    fn pattern_call_arg(&mut self, arg: &CallArg<UntypedPattern>) -> Document {
+        match &arg.label {
+            Some(s) => s.clone().to_doc().append(": "),
+            None => nil(),
+        }
+        .append(self.pattern(&arg.value))
     }
 }
 
@@ -595,16 +682,6 @@ fn label(label: &Option<String>) -> Document {
     }
 }
 
-impl Documentable for &CallArg<UntypedPattern> {
-    fn to_doc(self) -> Document {
-        match &self.label {
-            Some(s) => s.clone().to_doc().append(": "),
-            None => nil(),
-        }
-        .append(&self.value)
-    }
-}
-
 impl Documentable for &BinOp {
     fn to_doc(self) -> Document {
         match self {
@@ -631,76 +708,6 @@ impl Documentable for &BinOp {
             BinOp::ModuloInt => " % ",
         }
         .to_doc()
-    }
-}
-
-impl Documentable for &UntypedPattern {
-    fn to_doc(self) -> Document {
-        match self {
-            Pattern::Int { value, .. } => value.clone().to_doc(),
-
-            Pattern::Float { value, .. } => value.clone().to_doc(),
-
-            Pattern::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
-
-            Pattern::Var { name, .. } => name.to_string().to_doc(),
-
-            Pattern::Let { name, pattern, .. } => {
-                pattern.to_doc().append(" as ").append(name.to_string())
-            }
-
-            Pattern::Discard { name, .. } => name.to_string().to_doc(),
-
-            Pattern::Nil { .. } => "[]".to_doc(),
-
-            Pattern::Cons { head, tail, .. } => {
-                let (elems, tail) =
-                    list_cons(head.as_ref(), tail.as_ref(), categorise_list_pattern);
-                let elems = concat(elems.iter().map(|e| e.to_doc()).intersperse(delim(",")));
-                let tail = tail.map(|e| e.to_doc());
-                list(elems, tail)
-            }
-
-            Pattern::Constructor {
-                name,
-                args,
-                module: None,
-                ..
-            } if args.is_empty() => name.to_string().to_doc(),
-
-            Pattern::Constructor {
-                name,
-                args,
-                module: Some(m),
-                ..
-            } if args.is_empty() => m.to_string().to_doc().append(".").append(name.to_string()),
-
-            Pattern::Constructor {
-                name,
-                args,
-                module: None,
-                ..
-            } => name
-                .to_string()
-                .to_doc()
-                .append(wrap_args(args.iter().map(|a| a.to_doc()))),
-
-            Pattern::Constructor {
-                name,
-                args,
-                module: Some(m),
-                ..
-            } => m
-                .to_string()
-                .to_doc()
-                .append(".")
-                .append(name.to_string())
-                .append(wrap_args(args.iter().map(|a| a.to_doc()))),
-
-            Pattern::Tuple { elems, .. } => "tuple"
-                .to_doc()
-                .append(wrap_args(elems.iter().map(|e| e.to_doc()))),
-        }
     }
 }
 

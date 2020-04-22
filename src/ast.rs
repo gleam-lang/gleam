@@ -474,4 +474,20 @@ impl<A> Pattern<A> {
             Pattern::Constructor { location, .. } => location,
         }
     }
+
+    pub fn put_list_cons_location_start(self, start: usize) -> Self {
+        match self {
+            Pattern::Cons {
+                location: SrcSpan { end, .. },
+                head,
+                tail,
+            } => Pattern::Cons {
+                location: SrcSpan { start, end },
+                head,
+                tail,
+            },
+
+            _ => self,
+        }
+    }
 }
