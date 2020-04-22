@@ -822,8 +822,8 @@ fn list(elems: Document, tail: Option<Document>) -> Document {
         None => doc.nest(INDENT).append(break_(",", "")),
 
         Some(final_tail) => doc
-            .append(break_(",", " "))
-            .append("| ")
+            .append(break_(",", ", "))
+            .append("..")
             .append(final_tail)
             .nest(INDENT)
             .append(break_("", "")),

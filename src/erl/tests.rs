@@ -1089,6 +1089,34 @@ modulo(X, Y) ->
 
     assert_erl!(
         r#"fn second(list) { case list { [x, y] -> y z -> 1 } }
+                    fn tail(list) { case list { [x, ..xs] -> xs z -> list } }
+            "#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+second(List) ->
+    case List of
+        [X, Y] ->
+            Y;
+
+        Z ->
+            1
+    end.
+
+tail(List) ->
+    case List of
+        [X | Xs] ->
+            Xs;
+
+        Z ->
+            List
+    end.
+"#,
+    );
+
+    // Deprecated syntax
+    assert_erl!(
+        r#"fn second(list) { case list { [x, y] -> y z -> 1 } }
                     fn tail(list) { case list { [x | xs] -> xs z -> list } }
             "#,
         r#"-module(the_app).
