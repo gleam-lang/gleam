@@ -19,6 +19,8 @@
   and can be used to check the ordering of integers.
 - `>.`, `>=.`, `<.`, and `<=.` operators are now supported in case clause guards
   and can be used to check the ordering of floats.
+- The list prepend syntax is now [x, ..y]. The old [x | y] syntax is deprecated
+  but will continue to work for now. The formatter will output the new syntax.
 
 ## v0.7.1 - 2020-03-03
 
