@@ -277,6 +277,7 @@ map() ->
                         },
                         name: "one_two".to_string(),
                     }),
+                    assert: false,
                 },
             },
             Statement::Fn {
@@ -981,6 +982,22 @@ go() ->
         r#"fn go() {
   let y = 1
   let y = 2
+  y
+}"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+go() ->
+    Y = 1,
+    Y1 = 2,
+    Y1.
+"#,
+    );
+
+    assert_erl!(
+        r#"fn go() {
+  assert y = 1
+  assert y = 2
   y
 }"#,
         r#"-module(the_app).

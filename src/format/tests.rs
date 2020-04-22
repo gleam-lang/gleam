@@ -1053,6 +1053,14 @@ World"
 
     assert_format!(
         r#"fn main() {
+  assert x = 1
+  Nil
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
   let x = {
     let y = 1
     y
