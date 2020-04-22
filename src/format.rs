@@ -323,12 +323,11 @@ impl<'a> Formatter<'a> {
         let document = match expr {
             UntypedExpr::Todo { .. } => "todo".to_doc(),
 
-            UntypedExpr::Pipe { left, right, .. } => self
-                .expr(left)
-                .append(force_break())
+            UntypedExpr::Pipe { left, right, .. } => force_break()
+                .append(self.expr(left))
                 .append(line())
                 .append("|> ")
-                .append(self.expr(right.as_ref())),
+                .append(self.expr(right)),
 
             UntypedExpr::Int { value, .. } => value.clone().to_doc(),
 

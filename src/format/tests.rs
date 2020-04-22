@@ -1039,6 +1039,24 @@ World"
 "#
     );
 
+    assert_format!(
+        r#"fn main() {
+  tuple(1, 2)
+  |> pair.first
+  |> should.equal(1)
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  tuple(1, 2)
+  |> pair.first(1, 2, 4)
+  |> should.equal(1)
+}
+"#
+    );
+
     //
     // Let
     //
