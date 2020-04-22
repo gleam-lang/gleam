@@ -163,6 +163,10 @@ impl FileKind {
 }
 
 fn did_you_mean(name: &str, options: &mut Vec<String>, alt: &'static str) -> String {
+    // Remove magic variables
+    options.retain(|option| option != crate::ast::CAPTURE_VARIABLE);
+
+    // Find best match
     options.sort_by(|a, b| {
         strsim::levenshtein(a, name)
             .partial_cmp(&strsim::levenshtein(b, name))

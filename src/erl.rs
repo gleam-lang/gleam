@@ -667,7 +667,7 @@ fn call(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env) -> Document
                 let merged_args = inner_args
                     .iter()
                     .map(|a| match &a.value {
-                        TypedExpr::Var { name, .. } if name == "capture@1" => args
+                        TypedExpr::Var { name, .. } if name == CAPTURE_VARIABLE => args
                             .get(0)
                             .gleam_expect("Erl printing: capture call replacing arg")
                             .clone(),

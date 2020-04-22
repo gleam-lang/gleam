@@ -425,7 +425,6 @@ ArgNames: ArgNames = {
 
 Call: UntypedExpr = {
     <s:@L> <fun:SimpleExpr> "(" <args:Comma<CallArg>> ")" <e:@L> =>? {
-        let hole_arg_name = "capture@1"; // TODO: model placeholder arguments in a less hacky way. This value can leak to the user in error messages.
         let mut num_holes = 0;
         let args = args
             .into_iter()
@@ -438,7 +437,7 @@ Call: UntypedExpr = {
                         location: Default::default(),
                         value: UntypedExpr::Var {
                             location,
-                            name: hole_arg_name.to_string(),
+                            name: crate::ast::CAPTURE_VARIABLE.to_string(),
                         }
                     }
                 }
@@ -460,7 +459,7 @@ Call: UntypedExpr = {
                 args: vec![Arg {
                     location: location(0, 0),
                     annotation: None,
-                    names: ArgNames::Named{ name: hole_arg_name.to_string() },
+                    names: ArgNames::Named { name: crate::ast::CAPTURE_VARIABLE.to_string() },
                     typ: (),
                 }],
                 body: Box::new(call),
