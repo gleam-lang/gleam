@@ -1886,13 +1886,13 @@ type Whatever {
 "
     );
 
-    //    assert_format!(
-    //        "fn main() {
-    //  // Hello
-    //  1
-    //  // world
-    //  2
-    //}
-    //"
-    //    );
+    assert_format!(
+        "fn main() {
+  // Hello
+  1
+  // world
+  2
+}
+"
+    );
 }

@@ -122,4 +122,11 @@ impl UntypedExpr {
             Self::FieldAccess { location, .. } => location,
         }
     }
+
+    pub fn start_byte_index(&self) -> usize {
+        match self {
+            Self::Seq { first, .. } => first.location().start,
+            _ => self.location().start,
+        }
+    }
 }

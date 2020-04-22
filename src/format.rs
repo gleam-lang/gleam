@@ -299,7 +299,7 @@ impl<'a> Formatter<'a> {
     }
 
     fn expr(&mut self, expr: &UntypedExpr) -> Document {
-        let comments = self.pop_comments(expr.location().start).peekable();
+        let comments = self.pop_comments(expr.start_byte_index()).peekable();
 
         let document = match expr {
             UntypedExpr::Todo { .. } => "todo".to_doc(),
