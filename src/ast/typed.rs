@@ -12,7 +12,7 @@ pub enum TypedExpr {
     Float {
         location: SrcSpan,
         typ: Arc<Type>,
-        value: f64,
+        value: String,
     },
 
     String {
@@ -37,7 +37,7 @@ pub enum TypedExpr {
         location: SrcSpan,
         typ: Arc<Type>,
         is_capture: bool,
-        args: Vec<Arg>,
+        args: Vec<Arg<Arc<Type>>>,
         body: Box<Self>,
         return_annotation: Option<TypeAst>,
     },
@@ -82,6 +82,7 @@ pub enum TypedExpr {
         value: Box<Self>,
         pattern: Pattern<PatternConstructor>,
         then: Box<Self>,
+        assert: bool,
     },
 
     Case {

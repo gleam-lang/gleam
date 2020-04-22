@@ -1,4 +1,7 @@
+#![deny(warnings)]
+
 mod ast;
+mod doc;
 mod erl;
 mod error;
 mod format;
@@ -7,10 +10,12 @@ mod parser;
 mod pretty;
 mod project;
 mod typ;
+
 lalrpop_mod!(
     #[allow(deprecated)]
     #[allow(clippy::all)]
     #[allow(dead_code)]
+    #[allow(unused_parens)]
     grammar
 );
 
@@ -27,9 +32,10 @@ extern crate lalrpop_util;
 #[macro_use]
 extern crate lazy_static;
 
-use crate::error::Error;
-use crate::project::ModuleOrigin;
-use serde::Deserialize;
+use crate::{
+    error::Error,
+    project::{ModuleOrigin, OutputFile, ProjectConfig},
+};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::PathBuf;
@@ -46,6 +52,8 @@ enum Command {
     Build {
         #[structopt(help = "location of the project root", default_value = ".")]
         path: String,
+        #[structopt(help = "generate docs for this package as well", long)]
+        doc: bool,
     },
 
     #[structopt(name = "new", about = "Create a new project")]
@@ -70,7 +78,7 @@ enum Command {
 
     #[structopt(name = "format", about = "Format source code")]
     Format {
-        #[structopt(help = "files to format", required_unless = "stdin")]
+        #[structopt(help = "files to format", conflicts_with = "stdin")]
         files: Vec<String>,
 
         #[structopt(
@@ -88,14 +96,9 @@ enum Command {
     },
 }
 
-#[derive(Deserialize)]
-struct ProjectConfig {
-    name: String,
-}
-
 fn main() {
     let result = match Command::from_args() {
-        Command::Build { path } => command_build(path),
+        Command::Build { path, doc } => command_build(path, doc),
 
         Command::Format {
             stdin,
@@ -117,7 +120,7 @@ fn main() {
     }
 }
 
-fn command_build(root: String) -> Result<(), Error> {
+fn command_build(root: String, write_docs: bool) -> Result<(), Error> {
     let mut srcs = vec![];
 
     // Read gleam.toml
@@ -147,61 +150,76 @@ fn command_build(root: String) -> Result<(), Error> {
     crate::project::collect_source(root_path.join("src"), ModuleOrigin::Src, &mut srcs)?;
     crate::project::collect_source(root_path.join("test"), ModuleOrigin::Test, &mut srcs)?;
 
-    let compiled = crate::project::compile(srcs)?;
+    let analysed = crate::project::analysed(srcs)?;
+
+    // Generate outputs (Erlang code, html documentation, etc)
+    let mut output_files = vec![];
+    if write_docs {
+        let dir = root_path.join("doc");
+        crate::doc::generate_html(
+            &project_config,
+            analysed.as_slice(),
+            &mut output_files,
+            &dir,
+        );
+        delete_dir(&dir)?;
+    } else {
+        let dir = root_path.join("gen");
+        crate::project::generate_erlang(analysed.as_slice(), &mut output_files);
+        delete_dir(&dir)?;
+    }
 
     // Delete the gen directory before generating the newly compiled files
-    let gen_dir = root_path
-        .parent()
-        .ok_or_else(|| Error::FileIO {
-            action: error::FileIOAction::FindParent,
-            kind: error::FileKind::Directory,
-            path: root_path.clone(),
-            err: None,
-        })?
-        .join("gen");
+    for file in output_files {
+        write_file(file)?;
+    }
+    println!("Done!");
 
-    if gen_dir.exists() {
-        std::fs::remove_dir_all(&gen_dir).map_err(|e| Error::FileIO {
+    Ok(())
+}
+
+fn delete_dir(dir: &PathBuf) -> Result<(), Error> {
+    if dir.exists() {
+        std::fs::remove_dir_all(&dir).map_err(|e| Error::FileIO {
             action: error::FileIOAction::Delete,
             kind: error::FileKind::Directory,
-            path: gen_dir,
+            path: dir.clone(),
             err: Some(e.to_string()),
         })?;
     }
+    Ok(())
+}
 
-    for crate::project::Compiled { files, .. } in compiled {
-        for crate::project::OutputFile { text, path } in files {
-            let dir_path = path.parent().ok_or_else(|| Error::FileIO {
-                action: error::FileIOAction::FindParent,
-                kind: error::FileKind::Directory,
-                path: path.clone(),
-                err: None,
-            })?;
+pub fn write_file(file: OutputFile) -> Result<(), Error> {
+    let OutputFile { path, text } = file;
 
-            std::fs::create_dir_all(dir_path).map_err(|e| Error::FileIO {
-                action: error::FileIOAction::Create,
-                kind: error::FileKind::Directory,
-                path: dir_path.to_path_buf(),
-                err: Some(e.to_string()),
-            })?;
+    let dir_path = path.parent().ok_or_else(|| Error::FileIO {
+        action: error::FileIOAction::FindParent,
+        kind: error::FileKind::Directory,
+        path: path.clone(),
+        err: None,
+    })?;
 
-            let mut f = File::create(&path).map_err(|e| Error::FileIO {
-                action: error::FileIOAction::Create,
-                kind: error::FileKind::File,
-                path: path.clone(),
-                err: Some(e.to_string()),
-            })?;
+    std::fs::create_dir_all(dir_path).map_err(|e| Error::FileIO {
+        action: error::FileIOAction::Create,
+        kind: error::FileKind::Directory,
+        path: dir_path.to_path_buf(),
+        err: Some(e.to_string()),
+    })?;
 
-            f.write_all(text.as_bytes()).map_err(|e| Error::FileIO {
-                action: error::FileIOAction::WriteTo,
-                kind: error::FileKind::File,
-                path: path.clone(),
-                err: Some(e.to_string()),
-            })?;
-        }
-    }
+    let mut f = File::create(&path).map_err(|e| Error::FileIO {
+        action: error::FileIOAction::Create,
+        kind: error::FileKind::File,
+        path: path.clone(),
+        err: Some(e.to_string()),
+    })?;
 
-    println!("Done!");
+    f.write_all(text.as_bytes()).map_err(|e| Error::FileIO {
+        action: error::FileIOAction::WriteTo,
+        kind: error::FileKind::File,
+        path: path.clone(),
+        err: Some(e.to_string()),
+    })?;
     Ok(())
 }
 

@@ -1,5 +1,10 @@
 import hello_world
 
+fn run(x, y) {
+  x + y
+}
+
 pub fn app_test() {
-  hello_world.x()
+  1
+  |> run(_, gleam_capture)
 }

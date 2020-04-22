@@ -4,6 +4,7 @@ use super::*;
 fn module_test() {
     macro_rules! assert_format {
         ($src:expr $(,)?) => {
+            println!("\n\n\n{}", $src);
             let src = $src.to_string();
             assert_eq!(src, pretty($src).unwrap());
         };
@@ -61,6 +62,12 @@ pub external type Four
 
     assert_format!(
         r#"external fn main() -> Int =
+  "app" "main"
+"#
+    );
+
+    assert_format!(
+        r#"external fn main() -> program.Exit =
   "app" "main"
 "#
     );
@@ -524,6 +531,13 @@ pub external type Four
 "#
     );
 
+    assert_format!(
+        r#"fn main() -> program.Exit {
+  Nil
+}
+"#
+    );
+
     //
     // Binary operators
     //
@@ -866,7 +880,7 @@ World"
 
     assert_format!(
         "fn main() {
-  [1, 2, 3 | x]
+  [1, 2, 3, ..x]
 }
 "
     );
@@ -877,7 +891,7 @@ World"
     really_long_variable_name,
     really_long_variable_name,
     really_long_variable_name,
-    | tail
+    ..tail
   ]
 }
 "
@@ -896,7 +910,7 @@ World"
       2,
       3,
       [1, 2, 3, 4],
-      | tail
+      ..tail
     ],
     really_long_variable_name,
   ]
@@ -1038,6 +1052,24 @@ World"
 "#
     );
 
+    assert_format!(
+        r#"fn main() {
+  tuple(1, 2)
+  |> pair.first
+  |> should.equal(1)
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  tuple(1, 2)
+  |> pair.first(1, 2, 4)
+  |> should.equal(1)
+}
+"#
+    );
+
     //
     // Let
     //
@@ -1045,6 +1077,14 @@ World"
     assert_format!(
         r#"fn main() {
   let x = 1
+  Nil
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  assert x = 1
   Nil
 }
 "#
@@ -1213,7 +1253,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  let [1, 2, 3, 4 | x] = 1
+  let [1, 2, 3, 4, ..x] = 1
   Nil
 }
 "#
@@ -1226,7 +1266,7 @@ World"
     really_long_variable_name,
     really_long_variable_name,
     [1, 2, 3, 4, xyz],
-    | thingy
+    ..thingy
   ] = 1
   Nil
 }
@@ -1606,6 +1646,483 @@ World"
     assert_format!(
         "fn main() {
   todo
+}
+"
+    );
+
+    //
+    // Doc comments
+    //
+    assert_format!(
+        "/// one
+fn main() {
+  Nil
+}
+"
+    );
+
+    assert_format!(
+        "/// one
+///two
+fn main() {
+  Nil
+}
+"
+    );
+
+    assert_format!(
+        r#"/// one
+///two
+external fn whatever() -> Nil =
+  "" ""
+"#
+    );
+
+    assert_format!(
+        r#"/// one
+///two
+external type Thingy
+"#
+    );
+
+    assert_format!(
+        r#"/// one
+///two
+external type Thingy
+"#
+    );
+
+    assert_format!(
+        r#"/// one
+///two
+type Whatever {
+  Whatever
+}
+"#
+    );
+
+    assert_format!(
+        r#"/// one
+///two
+type Whatever =
+  Int
+"#
+    );
+
+    assert_format!(
+        r#"import one
+
+/// one
+///two
+type Whatever {
+  Whatever
+}
+"#
+    );
+
+    //
+    // Comments
+    //
+
+    assert_format!(
+        r#"import one
+
+// one
+//two
+type Whatever {
+  Whatever
+}
+"#
+    );
+
+    assert_format!(
+        r#"import one
+
+// one
+//two
+/// three
+type Whatever {
+  Whatever
+}
+"#
+    );
+
+    assert_format!(
+        "// one
+fn main() {
+  Nil
+}
+"
+    );
+
+    assert_format!(
+        "// one
+//two
+fn main() {
+  Nil
+}
+"
+    );
+
+    assert_format!(
+        r#"// one
+//two
+external fn whatever() -> Nil =
+  "" ""
+"#
+    );
+
+    assert_format!(
+        r#"// one
+//two
+external type Thingy
+"#
+    );
+
+    assert_format!(
+        r#"// one
+//two
+external type Thingy
+"#
+    );
+
+    assert_format!(
+        r#"// one
+//two
+type Whatever {
+  Whatever
+}
+"#
+    );
+
+    assert_format!(
+        r#"// one
+//two
+type Whatever =
+  Int
+"#
+    );
+
+    assert_format!(
+        r#"// zero
+import one
+
+// one
+//two
+type Whatever {
+  Whatever
+}
+"#
+    );
+
+    assert_format!(
+        "fn main() {
+  // Hello
+  \"world\"
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  // Hello
+  // world
+  1
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  // Hello
+  // world
+  1.0
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  // Hello
+  // world
+  Nil
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  // Hello
+  // world
+  []
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  // Hello
+  // world
+  [
+    // One
+    1,
+    // Two
+    2,
+  ]
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  // Hello
+  // world
+  [
+    // One
+    1,
+    // Two
+    2,
+    [
+      // Five
+      3,
+      [
+        // Four
+        4,
+      ],
+    ],
+  ]
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  // Hello
+  // world
+  one(
+    // One
+    1,
+    // Two
+    2,
+    two(
+      // Five
+      3,
+      three(
+        // Four
+        4,
+      ),
+    ),
+  )
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  // Hello
+  1
+  // world
+  2
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  let // hello
+  x = 1
+  x
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  let [
+    // 1
+    1,
+    // 2
+    2,
+  ] = xs
+  x
+}
+"
+    );
+
+    //
+    // Trailing comments
+    //
+
+    assert_format!(
+        "fn main() {
+  x
+}
+// Hello world
+// ok!
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  x
+}
+/// Hello world
+/// ok!
+"
+    );
+    assert_format!(
+        "fn main() {
+  x
+}
+/// Hello world
+/// ok!
+// Hello world
+// ok!
+"
+    );
+
+    //
+    // Commented function arguments
+    //
+
+    assert_format!(
+        "fn main(
+  // comment
+  label argument: Type,
+) {
+  x
+}
+"
+    );
+
+    assert_format!(
+        "fn main(
+  // comment1
+  label argument1: Type,
+  // comment2
+  label argument2: Type,
+) {
+  x
+}
+"
+    );
+
+    //
+    // Commented bin op expressions
+    //
+
+    assert_format!(
+        "fn main() {
+  1 + // hello
+  2
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  // one
+  1 + // two
+  2 + // three
+  3
+}
+"
+    );
+
+    //
+    // Commented external function arguments
+    //
+
+    assert_format!(
+        "pub external fn main(
+  // comment1
+  argument1: Type,
+  // comment2
+  argument2: Type,
+) -> Int =
+  \"\" \"\"
+"
+    );
+
+    //
+    // Commented type constructors
+    //
+
+    assert_format!(
+        "pub type Number {
+  // 1
+  One
+  // 2
+  Two
+  // 3
+  Three
+  // ???
+  More
+}
+"
+    );
+
+    assert_format!(
+        "pub type Number {
+  /// 1
+  One
+  /// 2
+  Two
+  /// 3
+  Three
+  /// ???
+  More
+}
+"
+    );
+
+    assert_format!(
+        "pub type Number {
+  // a
+  /// 1
+  One
+  // b
+  /// 2
+  Two
+  // c
+  /// 3
+  Three
+  // defg
+  /// ???
+  More
+}
+"
+    );
+
+    //
+    // Commented type constructor arguments
+    //
+
+    //
+    // Commented type constructor parameters
+    //
+
+    //
+    // Function captures
+    //
+
+    assert_format!(
+        "pub fn main() {
+  run(_)
+}
+"
+    );
+
+    assert_format!(
+        "pub fn main() {
+  run(1, 2, _, 4, 5)
+}
+"
+    );
+
+    assert_format!(
+        "pub fn main() {
+  run(1, 2, _, 4, 5)(_)
 }
 "
     );

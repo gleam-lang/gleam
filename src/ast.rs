@@ -4,21 +4,24 @@ mod untyped;
 pub use self::typed::TypedExpr;
 pub use self::untyped::UntypedExpr;
 
-use crate::typ::{self, ModuleValueConstructor, PatternConstructor, ValueConstructor};
+use crate::typ::{self, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor};
+use itertools::Itertools;
 use std::sync::Arc;
 
-pub type TypedModule = Module<TypedExpr, typ::Module>;
+pub const CAPTURE_VARIABLE: &'static str = "gleam@capture_variable";
 
-pub type UntypedModule = Module<UntypedExpr, ()>;
+pub type TypedModule = Module<Arc<Type>, TypedExpr, typ::Module>;
+
+pub type UntypedModule = Module<(), UntypedExpr, ()>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Module<Expr, Info> {
+pub struct Module<T, Expr, Info> {
     pub name: Vec<String>,
     pub type_info: Info,
-    pub statements: Vec<Statement<Expr>>,
+    pub statements: Vec<Statement<T, Expr>>,
 }
 
-impl<A, B> Module<A, B> {
+impl<A, B, C> Module<A, B, C> {
     pub fn name_string(&self) -> String {
         self.name.join("/")
     }
@@ -51,11 +54,15 @@ fn module_dependencies_test() {
     );
 }
 
+pub type TypedArg = Arg<Arc<Type>>;
+pub type UntypedArg = Arg<()>;
+
 #[derive(Debug, Clone, PartialEq)]
-pub struct Arg {
+pub struct Arg<T> {
     pub names: ArgNames,
     pub location: SrcSpan,
     pub annotation: Option<TypeAst>,
+    pub typ: T,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -110,18 +117,20 @@ impl TypeAst {
     }
 }
 
-pub type TypedStatement = Statement<TypedExpr>;
-pub type UntypedStatement = Statement<UntypedExpr>;
+pub type TypedStatement = Statement<Arc<Type>, TypedExpr>;
+pub type UntypedStatement = Statement<(), UntypedExpr>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Statement<Expr> {
+pub enum Statement<T, Expr> {
     Fn {
         location: SrcSpan,
         name: String,
-        args: Vec<Arg>,
+        args: Vec<Arg<T>>,
         body: Expr,
         public: bool,
         return_annotation: Option<TypeAst>,
+        return_type: T,
+        doc: Option<String>,
     },
 
     TypeAlias {
@@ -129,7 +138,9 @@ pub enum Statement<Expr> {
         alias: String,
         args: Vec<String>,
         resolved_type: TypeAst,
+        typ: T,
         public: bool,
+        doc: Option<String>,
     },
 
     CustomType {
@@ -138,6 +149,7 @@ pub enum Statement<Expr> {
         args: Vec<String>,
         public: bool,
         constructors: Vec<RecordConstructor>,
+        doc: Option<String>,
     },
 
     ExternalFn {
@@ -146,8 +158,10 @@ pub enum Statement<Expr> {
         args: Vec<ExternalFnArg>,
         name: String,
         retrn: TypeAst,
+        return_type: T,
         module: String,
         fun: String,
+        doc: Option<String>,
     },
 
     ExternalType {
@@ -155,6 +169,7 @@ pub enum Statement<Expr> {
         public: bool,
         name: String,
         args: Vec<String>,
+        doc: Option<String>,
     },
 
     Import {
@@ -163,6 +178,40 @@ pub enum Statement<Expr> {
         as_name: Option<String>,
         unqualified: Vec<UnqualifiedImport>,
     },
+}
+
+impl<A, B> Statement<A, B> {
+    pub fn location(&self) -> &SrcSpan {
+        match self {
+            Statement::Import { location, .. }
+            | Statement::Fn { location, .. }
+            | Statement::TypeAlias { location, .. }
+            | Statement::CustomType { location, .. }
+            | Statement::ExternalFn { location, .. }
+            | Statement::ExternalType { location, .. } => location,
+        }
+    }
+
+    pub fn put_doc<'a>(&mut self, new_doc: impl Iterator<Item = &'a str>) {
+        let mut new_doc = new_doc.peekable();
+        if new_doc.peek().is_none() {
+            return;
+        }
+
+        let new_doc = Some(new_doc.join("\n"));
+
+        match self {
+            Statement::Import { .. } => (),
+
+            Statement::Fn { doc, .. }
+            | Statement::TypeAlias { doc, .. }
+            | Statement::CustomType { doc, .. }
+            | Statement::ExternalFn { doc, .. }
+            | Statement::ExternalType { doc, .. } => {
+                std::mem::replace(doc, new_doc);
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -174,6 +223,7 @@ pub struct UnqualifiedImport {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExternalFnArg {
+    pub location: SrcSpan,
     pub label: Option<String>,
     pub typ: TypeAst,
 }
@@ -234,28 +284,72 @@ pub type TypedClauseGuard = ClauseGuard<Arc<typ::Type>>;
 pub enum ClauseGuard<Type> {
     Equals {
         location: SrcSpan,
-        typ: Type,
         left: Box<Self>,
         right: Box<Self>,
     },
 
     NotEquals {
         location: SrcSpan,
-        typ: Type,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    GtInt {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    GtEqInt {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    LtInt {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    LtEqInt {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    GtFloat {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    GtEqFloat {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    LtFloat {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    LtEqFloat {
+        location: SrcSpan,
         left: Box<Self>,
         right: Box<Self>,
     },
 
     Or {
         location: SrcSpan,
-        typ: Type,
         left: Box<Self>,
         right: Box<Self>,
     },
 
     And {
         location: SrcSpan,
-        typ: Type,
         left: Box<Self>,
         right: Box<Self>,
     },
@@ -264,6 +358,11 @@ pub enum ClauseGuard<Type> {
         location: SrcSpan,
         typ: Type,
         name: String,
+    },
+
+    Int {
+        location: SrcSpan,
+        value: String,
     },
 }
 
@@ -275,6 +374,15 @@ impl<A> ClauseGuard<A> {
             ClauseGuard::Var { location, .. } => location,
             ClauseGuard::Equals { location, .. } => location,
             ClauseGuard::NotEquals { location, .. } => location,
+            ClauseGuard::GtInt { location, .. } => location,
+            ClauseGuard::GtEqInt { location, .. } => location,
+            ClauseGuard::LtInt { location, .. } => location,
+            ClauseGuard::LtEqInt { location, .. } => location,
+            ClauseGuard::GtFloat { location, .. } => location,
+            ClauseGuard::GtEqFloat { location, .. } => location,
+            ClauseGuard::LtFloat { location, .. } => location,
+            ClauseGuard::LtEqFloat { location, .. } => location,
+            ClauseGuard::Int { location, .. } => location,
         }
     }
 }
@@ -282,11 +390,9 @@ impl<A> ClauseGuard<A> {
 impl TypedClauseGuard {
     pub fn typ(&self) -> Arc<typ::Type> {
         match self {
-            ClauseGuard::Or { typ, .. } => typ.clone(),
-            ClauseGuard::And { typ, .. } => typ.clone(),
             ClauseGuard::Var { typ, .. } => typ.clone(),
-            ClauseGuard::Equals { typ, .. } => typ.clone(),
-            ClauseGuard::NotEquals { typ, .. } => typ.clone(),
+            ClauseGuard::Int { .. } => typ::int(),
+            _ => typ::bool(),
         }
     }
 }
@@ -309,7 +415,7 @@ pub enum Pattern<Constructor> {
 
     Float {
         location: SrcSpan,
-        value: f64,
+        value: String,
     },
 
     String {
@@ -369,6 +475,22 @@ impl<A> Pattern<A> {
             Pattern::String { location, .. } => location,
             Pattern::Tuple { location, .. } => location,
             Pattern::Constructor { location, .. } => location,
+        }
+    }
+
+    pub fn put_list_cons_location_start(self, start: usize) -> Self {
+        match self {
+            Pattern::Cons {
+                location: SrcSpan { end, .. },
+                head,
+                tail,
+            } => Pattern::Cons {
+                location: SrcSpan { start, end },
+                head,
+                tail,
+            },
+
+            _ => self,
         }
     }
 }

@@ -237,10 +237,15 @@ fn infer_test() {
     assert_infer!("[fn(x) { x + 1 }, fn(x) { x }]", "List(fn(Int) -> Int)");
     assert_infer!("[[], []]", "List(List(a))");
     assert_infer!("[[], [1]]", "List(List(Int))");
-    assert_infer!("[1 | [2 | []]]", "List(Int)");
-    assert_infer!("[fn(x) { x } | []]", "List(fn(a) -> a)");
+
+    assert_infer!("[1, ..[2, ..[]]]", "List(Int)");
+    assert_infer!("[1 | [2 | []]]", "List(Int)"); // Deprecated syntax
+    assert_infer!("[fn(x) { x }, ..[]]", "List(fn(a) -> a)");
+    assert_infer!("[fn(x) { x } | []]", "List(fn(a) -> a)"); // Deprecated syntax
+    assert_infer!("let x = [1, ..[]] [2, ..x]", "List(Int)");
+    assert_infer!("let x = [1 | []] [2 | x]", "List(Int)"); // Deprecated syntax
+
     assert_infer!("let f = fn(x) { x } [f, f]", "List(fn(a) -> a)");
-    assert_infer!("let x = [1 | []] [2 | x]", "List(Int)");
     assert_infer!("[tuple([], [])]", "List(tuple(List(a), List(b)))");
 
     // anon structs
@@ -332,6 +337,19 @@ fn infer_test() {
     assert_infer!("let _ = 1 2.0", "Float");
     assert_infer!("let tuple(tag, x) = tuple(1.0, 1) x", "Int");
     assert_infer!("fn(x) { let tuple(a, b) = x a }", "fn(tuple(a, b)) -> a");
+
+    // assert
+    assert_infer!("assert [] = [] 1", "Int");
+    assert_infer!("assert [a] = [1] a", "Int");
+    assert_infer!("assert [a, 2] = [1] a", "Int");
+    assert_infer!("assert [a | b] = [1] a", "Int");
+    assert_infer!("assert [a | _] = [1] a", "Int");
+    assert_infer!("fn(x) { assert [a] = x a }", "fn(List(a)) -> a");
+    assert_infer!("fn(x) { assert [a] = x a + 1 }", "fn(List(Int)) -> Int");
+    assert_infer!("assert _x = 1 2.0", "Float");
+    assert_infer!("assert _ = 1 2.0", "Float");
+    assert_infer!("assert tuple(tag, x) = tuple(1.0, 1) x", "Int");
+    assert_infer!("fn(x) { assert tuple(a, b) = x a }", "fn(tuple(a, b)) -> a");
 
     // Nil
     assert_infer!("Nil", "Nil");
@@ -661,6 +679,150 @@ fn infer_error_test() {
     );
 
     assert_error!(
+        "case [3.33], 1 { x, y if x > y -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 25, end: 26 },
+            expected: int(),
+            given: list(float())
+        }
+    );
+
+    assert_error!(
+        "case 1, 2.22, \"three\" { x, _, y if x > y -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 39, end: 40 },
+            expected: int(),
+            given: string()
+        }
+    );
+
+    assert_error!(
+        "case [3.33], 1 { x, y if x >= y -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 25, end: 26 },
+            expected: int(),
+            given: list(float())
+        }
+    );
+
+    assert_error!(
+        "case 1, 2.22, \"three\" { x, _, y if x >= y -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 40, end: 41 },
+            expected: int(),
+            given: string()
+        }
+    );
+
+    assert_error!(
+        "case [3.33], 1 { x, y if x < y -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 25, end: 26 },
+            expected: int(),
+            given: list(float())
+        }
+    );
+
+    assert_error!(
+        "case 1, 2.22, \"three\" { x, _, y if x < y -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 39, end: 40 },
+            expected: int(),
+            given: string()
+        }
+    );
+
+    assert_error!(
+        "case [3.33], 1 { x, y if x <= y -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 25, end: 26 },
+            expected: int(),
+            given: list(float())
+        }
+    );
+
+    assert_error!(
+        "case 1, 2.22, \"three\" { x, _, y if x <= y -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 40, end: 41 },
+            expected: int(),
+            given: string()
+        }
+    );
+
+    assert_error!(
+        "case [3], 1.1 { x, y if x >. y -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 24, end: 25 },
+            expected: float(),
+            given: list(int())
+        }
+    );
+
+    assert_error!(
+        "case 2.22, 1, \"three\" { x, _, y if x >. y -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 40, end: 41 },
+            expected: float(),
+            given: string()
+        }
+    );
+
+    assert_error!(
+        "case [3], 1.1 { x, y if x >=. y -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 24, end: 25 },
+            expected: float(),
+            given: list(int())
+        }
+    );
+
+    assert_error!(
+        "case 2.22, 1, \"three\" { x, _, y if x >=. y -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 41, end: 42 },
+            expected: float(),
+            given: string()
+        }
+    );
+
+    assert_error!(
+        "case [3], 1.1 { x, y if x <. y -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 24, end: 25 },
+            expected: float(),
+            given: list(int())
+        }
+    );
+
+    assert_error!(
+        "case 2.22, 1, \"three\" { x, _, y if x <. y -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 40, end: 41 },
+            expected: float(),
+            given: string()
+        }
+    );
+
+    assert_error!(
+        "case [3], 1.1 { x, y if x <=. y -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 24, end: 25 },
+            expected: float(),
+            given: list(int())
+        }
+    );
+
+    assert_error!(
+        "case 2.22, 1, \"three\" { x, _, y if x <=. y -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 41, end: 42 },
+            expected: float(),
+            given: string()
+        }
+    );
+
+    assert_error!(
         "case [1] { [x] | x -> 1 }",
         Error::CouldNotUnify {
             location: SrcSpan { start: 17, end: 18 },
@@ -752,7 +914,7 @@ fn infer_error_test() {
             label: "field".to_string(),
             fields: vec![],
             typ: Arc::new(Type::Var {
-                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 9 })),
+                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 7 })),
             }),
         },
     );
@@ -762,9 +924,9 @@ fn infer_error_test() {
 fn infer_module_test() {
     macro_rules! assert_infer {
         ($src:expr, $module:expr $(,)?) => {
-            print!("\n{}\n\n", $src);
+            let (src, _) = crate::parser::strip_extra($src);
             let ast = crate::grammar::ModuleParser::new()
-                .parse($src)
+                .parse(&src)
                 .expect("syntax error");
             let result = infer_module(ast, &HashMap::new()).expect("should successfully infer");
             let mut constructors: Vec<(_, _)> = result
@@ -1115,8 +1277,9 @@ pub fn get_string(x: Box(String)) { x.inner }
 fn infer_module_error_test() {
     macro_rules! assert_error {
         ($src:expr, $error:expr $(,)?) => {
+            let (src, _) = crate::parser::strip_extra($src);
             let mut ast = crate::grammar::ModuleParser::new()
-                .parse($src)
+                .parse(&src)
                 .expect("syntax error");
             ast.name = vec!["my_module".to_string()];
             let result = infer_module(ast, &HashMap::new()).expect_err("should infer an error");

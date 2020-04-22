@@ -9,7 +9,7 @@ pub enum UntypedExpr {
 
     Float {
         location: SrcSpan,
-        value: f64,
+        value: String,
     },
 
     String {
@@ -30,7 +30,7 @@ pub enum UntypedExpr {
     Fn {
         location: SrcSpan,
         is_capture: bool,
-        args: Vec<Arg>,
+        args: Vec<Arg<()>>,
         body: Box<Self>,
         return_annotation: Option<TypeAst>,
     },
@@ -69,6 +69,7 @@ pub enum UntypedExpr {
         value: Box<Self>,
         pattern: Pattern<()>,
         then: Box<Self>,
+        assert: bool,
     },
 
     Case {
@@ -119,6 +120,14 @@ impl UntypedExpr {
             Self::Tuple { location, .. } => location,
             Self::TupleIndex { location, .. } => location,
             Self::FieldAccess { location, .. } => location,
+        }
+    }
+
+    pub fn start_byte_index(&self) -> usize {
+        match self {
+            Self::Seq { first, .. } => first.location().start,
+            Self::Let { location, .. } => location.start,
+            _ => self.location().start,
         }
     }
 }

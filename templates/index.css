@@ -1,0 +1,257 @@
+@import url("https://fonts.googleapis.com/css2?family=Karla:wght@400;700&family=Ubuntu+Mono&display=swap");
+
+:root {
+  /* Colours */
+  --black: #2a2020;
+  --hard-black: #000;
+  --pink: #ffaff3;
+  --hot-pink: #d900b8;
+  --white: #fff;
+  --pink-white: #fff8fe;
+  --light-grey: #f5f5f5;
+  --boi-blue: #a6f0fc;
+
+  /* Derived colours */
+  --text: var(--black);
+  --background: var(--white);
+  --accented-background: var(--pink-white);
+  --code-border: var(--pink);
+  --code-background: var(--light-grey);
+  --links: var(--hot-pink);
+  --accent: var(--pink);
+
+  /* Sizes */
+  --max-page-width: 720px;
+  --sidebar-width: 240px;
+  --sidebar-width-inverted: -240px;
+  --gap: 24px;
+  --small-gap: calc(var(--gap) / 2);
+  --tiny-gap: calc(var(--small-gap) / 2);
+  --large-gap: calc(var(--gap) * 2);
+  --sidebar-toggle-size: 33px;
+
+  /* etc */
+  --shadow: 0 0 0 1px rgba(50, 50, 93, 0.075), 0 0 1px #e9ecef,
+    0 2px 4px -2px rgba(138, 141, 151, 0.6);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body,
+html {
+  padding: 0;
+  margin: 0;
+  font-family: "Karla", sans-serif;
+  font-size: 1.05rem;
+  line-height: 1.4;
+  position: relative;
+  min-height: 100vh;
+}
+
+a,
+a:visited {
+  color: var(--links);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+li {
+  margin-bottom: 4px;
+}
+
+p {
+  margin: var(--small-gap) 0;
+}
+
+.rendered-markdown h1,
+.rendered-markdown h2,
+.rendered-markdown h3,
+.rendered-markdown h4,
+.rendered-markdown h5 {
+  font-size: 1.3rem;
+}
+
+/* Code */
+
+pre,
+code {
+  font-family: "Ubuntu Mono", monospace;
+  line-height: 1.2;
+}
+
+pre {
+  padding: var(--small-gap) var(--gap);
+  margin: var(--gap) 0;
+  background: var(--code-background);
+  border-radius: 1px;
+  overflow: auto;
+  box-shadow: var(--shadow);
+}
+
+p code {
+  margin: 0 2px;
+}
+
+/* Page layout */
+
+.page {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.content {
+  width: var(--max-page-width);
+  max-width: var(--max-page-width);
+  padding: 0 var(--gap);
+}
+
+/* Page header */
+
+.page-header {
+  color: black;
+  color: var(--hard-black);
+  background-color: var(--pink);
+  padding: var(--small-gap) var(--gap);
+  margin-bottom: var(--gap);
+}
+
+.page-header h2 {
+  margin: 0;
+}
+
+/* Module doc */
+
+.module-name {
+  margin: 0;
+  font-weight: 700;
+}
+
+/* Sidebar */
+
+.sidebar {
+  background-color: var(--background);
+  width: var(--sidebar-width);
+  max-width: var(--sidebar-width);
+  padding: 0 var(--gap);
+  font-size: 0.95rem;
+  transition: transform 0.5s ease;
+  z-index: 100;
+}
+
+.sidebar h2 {
+  margin: 0;
+}
+
+.sidebar ul {
+  list-style: none;
+  margin: var(--small-gap) 0;
+  padding: 0;
+}
+
+.sidebar li {
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.sidebar-toggle {
+  display: none;
+  transition: opacity 1s ease;
+  opacity: 0;
+}
+
+/* Module members (types, functions) */
+
+.module-members {
+  margin-top: var(--large-gap);
+}
+
+.module-member-kind {
+  font-size: 2rem;
+  color: var(--text);
+}
+
+.member {
+  margin: var(--large-gap) 0;
+  padding-bottom: var(--gap);
+}
+
+.member-name {
+  border-left: 4px solid var(--accent);
+  padding: var(--small-gap) var(--gap);
+  background-color: var(--accented-background);
+  color: var(--text);
+}
+
+/* Custom type constructors */
+
+.constructor-name {
+  margin-bottom: 0;
+}
+
+/* Footer */
+
+.pride {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  position: absolute;
+  bottom: 0;
+  z-index: 100;
+}
+
+.pride * {
+  flex: 1;
+  text-align: center;
+  padding: var(--tiny-gap);
+}
+
+.pride .white {
+  background-color: var(--white);
+}
+.pride .pink {
+  background-color: var(--pink);
+}
+.pride .blue {
+  background-color: var(--boi-blue);
+}
+
+/* Small displays */
+@media (max-width: 720px) {
+  .page-header {
+    padding-left: calc(var(--sidebar-toggle-size) + var(--gap));
+  }
+
+  .sidebar {
+    padding: var(--gap);
+    position: absolute;
+    height: 100vh;
+    top: 0;
+    transform: translate(var(--sidebar-width-inverted));
+    overflow: visible;
+  }
+
+  .sidebar:focus-within {
+    overflow-y: auto;
+    overflow-x: visible;
+    transform: translate(0);
+  }
+
+  .sidebar:focus-within .sidebar-toggle {
+    opacity: 0;
+  }
+
+  .sidebar-toggle {
+    display: block;
+    opacity: 1;
+    position: absolute;
+    top: var(--small-gap);
+    left: calc(var(--small-gap) + var(--sidebar-width));
+    height: var(--sidebar-toggle-size);
+    width: var(--sidebar-toggle-size);
+  }
+}

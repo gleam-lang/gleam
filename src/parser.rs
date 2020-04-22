@@ -1,3 +1,5 @@
+use unicode_segmentation::UnicodeSegmentation;
+
 #[derive(Debug, PartialEq)]
 pub enum Error {
     TooManyHolesInCapture {
@@ -8,78 +10,287 @@ pub enum Error {
 
 pub type LalrpopError = lalrpop_util::ParseError<usize, (usize, String), Error>;
 
+#[derive(Debug, PartialEq)]
+pub struct ModuleComments<'a> {
+    pub doc_comments: Vec<Comment<'a>>,
+    pub comments: Vec<Comment<'a>>,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Comment<'a> {
+    pub start: usize,
+    pub content: &'a str,
+}
+
+pub fn take_before<'a>(
+    comments: &'a [Comment<'a>],
+    limit: usize,
+) -> (impl Iterator<Item = &'a str>, &'a [Comment<'a>]) {
+    let mut end = 0;
+    for (i, comment) in comments.iter().enumerate() {
+        if comment.start > limit {
+            break;
+        }
+        end = i + 1;
+    }
+
+    let popped = comments[0..end].iter().map(|c| c.content);
+    (popped, &comments[end..])
+}
+
 /// Blanks out comments, semicolons, etc
 ///
-pub fn strip_extra(src: &str) -> String {
+pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
+    #[derive(Clone, Copy)]
+    enum Kind {
+        Regular,
+        Doc,
+    }
     enum Mode {
         Normal,
         String,
-        Comment,
+        Comment(Kind, usize),
     };
 
     let mut buffer = String::with_capacity(src.len());
     let mut mode = Mode::Normal;
-    let mut chars = src.chars();
-    while let Some(c) = chars.next() {
+    let mut chars = UnicodeSegmentation::grapheme_indices(src, true).peekable();
+    let mut comments = ModuleComments {
+        doc_comments: vec![],
+        comments: vec![],
+    };
+
+    while let Some((outer_char_no, c)) = chars.next() {
         match mode {
             Mode::Normal => match c {
-                ';' => buffer.push(' '),
+                ";" => buffer.push(' '),
 
-                '"' => {
+                "\"" => {
                     mode = Mode::String;
-                    buffer.push(c);
+                    buffer.push_str(c);
                 }
 
-                '/' => match chars.next() {
-                    Some('/') => {
-                        mode = Mode::Comment;
+                "/" => match chars.next() {
+                    Some((_, "/")) => {
                         buffer.push(' ');
                         buffer.push(' ');
+                        match chars.peek() {
+                            Some((_, "/")) => {
+                                mode = Mode::Comment(Kind::Doc, outer_char_no);
+                                buffer.push(' ');
+                                chars.next();
+                            }
+                            Some((_, _c2)) => {
+                                mode = Mode::Comment(Kind::Regular, outer_char_no);
+                            }
+                            None => {
+                                buffer.push_str(c);
+                                chars.next();
+                            }
+                        }
                     }
-                    Some(c2) => {
-                        buffer.push(c);
-                        buffer.push(c2);
+                    Some((_, c2)) => {
+                        buffer.push_str(c);
+                        buffer.push_str(c2);
                     }
-                    None => buffer.push(c),
+                    None => buffer.push_str(c),
                 },
 
-                _ => buffer.push(c),
+                _ => buffer.push_str(c),
             },
 
             Mode::String => match c {
-                '\\' => {
-                    buffer.push(c);
-                    if let Some(c) = chars.next() {
-                        buffer.push(c)
+                "\\" => {
+                    buffer.push_str(c);
+                    if let Some((_, c)) = chars.next() {
+                        buffer.push_str(c)
                     }
                 }
 
-                '"' => {
+                "\"" => {
                     mode = Mode::Normal;
-                    buffer.push(c);
+                    buffer.push_str(c);
                 }
 
-                _ => buffer.push(c),
+                _ => buffer.push_str(c),
             },
 
-            Mode::Comment => match c {
-                '\n' => {
+            Mode::Comment(kind, start) => match c {
+                "\n" => {
                     mode = Mode::Normal;
+                    let content_start = match &kind {
+                        Kind::Doc => start + 3,
+                        Kind::Regular => start + 2,
+                    };
+                    let comment = Comment {
+                        start,
+                        content: &src[content_start..outer_char_no],
+                    };
+                    match &kind {
+                        Kind::Doc => &mut comments.doc_comments,
+                        Kind::Regular => &mut comments.comments,
+                    }
+                    .push(comment);
                     buffer.push('\n');
                 }
                 _ => buffer.push(' '),
             },
         }
     }
-    buffer
+
+    if let Mode::Comment(kind, start) = mode {
+        let content_start = match &kind {
+            Kind::Doc => start + 3,
+            Kind::Regular => start + 2,
+        };
+        let comment = Comment {
+            start,
+            content: &src[content_start..],
+        };
+        match &kind {
+            Kind::Doc => &mut comments.doc_comments,
+            Kind::Regular => &mut comments.comments,
+        }
+        .push(comment);
+    };
+
+    (buffer, comments)
 }
 
 #[test]
 fn strip_extra_test() {
-    assert_eq!(strip_extra(&""), "".to_string());
-    assert_eq!(strip_extra(&" ; "), "   ".to_string());
-    assert_eq!(strip_extra(&" // hi\n "), "      \n ".to_string());
-    assert_eq!(strip_extra(&r#""\"//" hi"#), r#""\"//" hi"#.to_string());
+    macro_rules! assert_stripped {
+        ($input:expr, $out:expr $(,)?) => {
+            println!("\n\n{:?}", $input);
+            assert_eq!($out, strip_extra($input).0.as_str());
+        };
+        ($input:expr, $out:expr, $comments:expr $(,)?) => {
+            println!("\n\n{:?}", $input);
+            let (stripped, comments) = strip_extra($input);
+            assert_eq!($out, stripped.as_str());
+            assert_eq!($comments, comments);
+        };
+    };
+
+    assert_stripped!("", "");
+    assert_stripped!(" ; ", "   ");
+    assert_stripped!("//\n", "  \n");
+    assert_stripped!("// \n", "   \n");
+    assert_stripped!(" // hi\n ", "      \n ");
+    assert_stripped!(r#""\"//" hi"#, r#""\"//" hi"#);
+    assert_stripped!("/// Something\n", "             \n");
+    assert_stripped!(" /// Something\n", "              \n");
+    assert_stripped!(
+        "/// Something
+/// Something else
+
+/// This is a function
+pub fn() -> {}
+",
+        "             \n                  \n
+                      \npub fn() -> {}\n"
+    );
+
+    // https://github.com/gleam-lang/gleam/issues/449
+    assert_stripped!("//\nexternal type A\n", "  \nexternal type A\n",);
+    assert_stripped!(
+        r#"//
+pub external fn a() -> Nil =
+"1" "2"
+"#,
+        "  \npub external fn a() -> Nil =
+\"1\" \"2\"
+",
+    );
+
+    // Testing comment collection
+    assert_stripped!(
+        "// 👨‍👩‍👧‍👧 unicode\n",
+        "            \n",
+        ModuleComments {
+            doc_comments: vec![],
+            comments: vec![Comment {
+                start: 0,
+                content: " 👨‍👩‍👧‍👧 unicode",
+            }],
+        }
+    );
+
+    assert_stripped!(
+        "// hello\n",
+        "        \n",
+        ModuleComments {
+            doc_comments: vec![],
+            comments: vec![Comment {
+                start: 0,
+                content: " hello",
+            }],
+        }
+    );
+
+    assert_stripped!(
+        "// hello",
+        "        ",
+        ModuleComments {
+            doc_comments: vec![],
+            comments: vec![Comment {
+                start: 0,
+                content: " hello",
+            }],
+        }
+    );
+
+    // Testing doc comment collection
+
+    assert_stripped!(
+        "/// hello\n",
+        "         \n",
+        ModuleComments {
+            doc_comments: vec![Comment {
+                start: 0,
+                content: " hello",
+            }],
+            comments: vec![],
+        }
+    );
+
+    assert_stripped!(
+        "/// hello",
+        "         ",
+        ModuleComments {
+            doc_comments: vec![Comment {
+                start: 0,
+                content: " hello",
+            }],
+            comments: vec![],
+        }
+    );
+
+    assert_stripped!(
+        "/// one
+///two
+fn main() {
+  Nil
+}
+",
+        "       \n      \nfn main() {
+  Nil
+}
+",
+        ModuleComments {
+            doc_comments: vec![
+                Comment {
+                    start: 0,
+                    content: " one",
+                },
+                Comment {
+                    start: 8,
+                    content: "two",
+                }
+            ],
+            comments: vec![],
+        }
+    );
 }
 
 pub fn seq(mut exprs: Vec<crate::ast::UntypedExpr>) -> crate::ast::UntypedExpr {

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Strings are now encoded as utf8 binaries in the generated Erlang.
+- HTML documentation can now be generated from Gleam code by running `gleam
+  build --doc`.
 - Gleam code can be formatted the `gleam format` command.
 - The pipe operator `|>` will now attempt to insert the left hand side as the
   first argument to the right hand side if the right hand side is a call,
@@ -12,12 +15,21 @@
 - There is a `todo` keyword for type checking functions that have not yet been
   implemented.
 - Tuples can be indexed into using the `var.1` syntax.
+- `>`, `>=`, `<`, and `<=` operators are now supported in case clause guards
+  and can be used to check the ordering of integers.
+- `>.`, `>=.`, `<.`, and `<=.` operators are now supported in case clause guards
+  and can be used to check the ordering of floats.
+- The list prepend syntax is now [x, ..y]. The old [x | y] syntax is deprecated
+  but will continue to work for now. The formatter will output the new syntax.
+- Add new assert syntx for binding variables `assert Ok(x) = result`. In the future
+  this will allow you to use a pattern that does not match all values.
 
 ## v0.7.1 - 2020-03-03
 
 - Projects generated with `gleam new` use `stdlib` version 0.7.0.
 
 ## v0.7.0 - 2020-03-01
+
 ## v0.7.0-rc1 - 2020-02-28
 
 - Type aliases can be defined to give concise names to frequently used types.

@@ -3,7 +3,7 @@
 use std::str::FromStr;
 
 use crate::ast::{
-    UntypedExpr, Arg, UntypedModule, Module, UntypedStatement, Statement, TypeAst,
+    UntypedExpr, UntypedArg, Arg, UntypedModule, Module, UntypedStatement, Statement, TypeAst,
     UntypedPattern, BinOp, Clause, UntypedClause, RecordConstructor, Pattern, CallArg,
     ExternalFnArg, ArgNames, UnqualifiedImport, UntypedClauseGuard, ClauseGuard,
 };
@@ -16,10 +16,10 @@ extern {
 }
 
 pub Module: UntypedModule = {
-    Statement* => Module {
+    <statements:Statement*> => Module {
         type_info: (),
         name: vec![],
-        statements: <>,
+        statements: statements,
     }
 }
 
@@ -34,16 +34,19 @@ Statement: UntypedStatement = {
 
 StatementTypeAlias : UntypedStatement = {
     <s:@L> <p:"pub"?> "type" <ta:TypeName> "=" <tr:Type> <e:@L> => Statement::TypeAlias {
+        doc: None,
         location: location(s, e),
         public: p.is_some(),
         alias: ta.0,
         args: ta.1,
         resolved_type: tr,
+        typ: (),
     }
 }
 
 StatementCustomType: UntypedStatement = {
     <s:@L> <p:"pub"?> "type" <t:TypeName> <e:@L> "{" <cs:RecordConstructor+> "}" => Statement::CustomType {
+        doc: None,
         location: location(s, e),
         public: p.is_some(),
         name: t.0,
@@ -70,6 +73,7 @@ RecordConstructorArg: (Option<String>, TypeAst) = {
 
 StatementExternalFn: UntypedStatement = {
     <s:@L> <p:"pub"?> "external" "fn" <n:VarName> "(" <a:Comma<ExternalFnArg>> ")" "->" <r:Type> "=" <m:RawString> <f:RawString> <e:@L> => Statement::ExternalFn {
+        doc: None,
         location: location(s, e),
         public: p.is_some(),
         name: n,
@@ -77,11 +81,13 @@ StatementExternalFn: UntypedStatement = {
         module: m,
         fun: f,
         retrn: r,
+        return_type: (),
     }
 }
 
 ExternalFnArg: ExternalFnArg = {
-    <label:(<VarName> ":")?> <typ:Type> => ExternalFnArg {
+    <s:@L> <label:(<VarName> ":")?> <typ:Type> <e:@L> => ExternalFnArg {
+        location: location(s, e),
         label,
         typ,
     },
@@ -89,11 +95,13 @@ ExternalFnArg: ExternalFnArg = {
 
 StatementFn: UntypedStatement = {
     <s:@L> <p:"pub"?> "fn" <n:VarName> "(" <a:Comma<FnArg>> ")" <return_annotation:("->" <Type>)?> "{" <b:Expr+> "}" <e:@L> => Statement::Fn {
+        doc: None,
         location: location(s, e),
         public: p.is_some(),
         name: n,
         args: a,
         body: seq(b),
+        return_type: (),
         return_annotation,
     }
 }
@@ -121,6 +129,7 @@ UnqualifiedImport: UnqualifiedImport = {
 
 StatementExternalType: UntypedStatement = {
     <s:@L> <p:"pub"?> "external" "type" <n:TypeName> <e:@L> => Statement::ExternalType {
+        doc: None,
         location: location(s, e),
         public: p.is_some(),
         name: n.0,
@@ -254,7 +263,6 @@ ClauseGuard: UntypedClauseGuard = {
 ClauseGuard1: UntypedClauseGuard = {
     <s:@L> <left:ClauseGuard1> "||" <right:ClauseGuard2> <e:@L> => ClauseGuard::Or {
         location: location(s, e),
-        typ: (),
         left: Box::new(left),
         right: Box::new(right),
     },
@@ -265,7 +273,6 @@ ClauseGuard1: UntypedClauseGuard = {
 ClauseGuard2: UntypedClauseGuard = {
     <s:@L> <left:ClauseGuard2> "&&" <right:ClauseGuard3> <e:@L> => ClauseGuard::And {
         location: location(s, e),
-        typ: (),
         left: Box::new(left),
         right: Box::new(right),
     },
@@ -276,14 +283,12 @@ ClauseGuard2: UntypedClauseGuard = {
 ClauseGuard3: UntypedClauseGuard = {
     <s:@L> <left:ClauseGuard3> "==" <right:ClauseGuard4> <e:@L> => ClauseGuard::Equals {
         location: location(s, e),
-        typ: (),
         left: Box::new(left),
         right: Box::new(right),
     },
 
     <s:@L> <left:ClauseGuard3> "!=" <right:ClauseGuard4> <e:@L> => ClauseGuard::NotEquals {
         location: location(s, e),
-        typ: (),
         left: Box::new(left),
         right: Box::new(right),
     },
@@ -292,10 +297,66 @@ ClauseGuard3: UntypedClauseGuard = {
 }
 
 ClauseGuard4: UntypedClauseGuard = {
+    <s:@L> <left:ClauseGuard4> ">" <right:ClauseGuard5> <e:@L> => ClauseGuard::GtInt {
+        location: location(s, e),
+        left: Box::new(left),
+        right: Box::new(right),
+    },
+
+    <s:@L> <left:ClauseGuard4> ">=" <right:ClauseGuard5> <e:@L> => ClauseGuard::GtEqInt {
+        location: location(s, e),
+        left: Box::new(left),
+        right: Box::new(right),
+    },
+
+    <s:@L> <left:ClauseGuard4> "<" <right:ClauseGuard5> <e:@L> => ClauseGuard::LtInt {
+        location: location(s, e),
+        left: Box::new(left),
+        right: Box::new(right),
+    },
+
+    <s:@L> <left:ClauseGuard4> "<=" <right:ClauseGuard5> <e:@L> => ClauseGuard::LtEqInt {
+        location: location(s, e),
+        left: Box::new(left),
+        right: Box::new(right),
+    },
+
+    <s:@L> <left:ClauseGuard4> ">." <right:ClauseGuard5> <e:@L> => ClauseGuard::GtFloat {
+        location: location(s, e),
+        left: Box::new(left),
+        right: Box::new(right),
+    },
+
+    <s:@L> <left:ClauseGuard4> ">=." <right:ClauseGuard5> <e:@L> => ClauseGuard::GtEqFloat {
+        location: location(s, e),
+        left: Box::new(left),
+        right: Box::new(right),
+    },
+
+    <s:@L> <left:ClauseGuard4> "<." <right:ClauseGuard5> <e:@L> => ClauseGuard::LtFloat {
+        location: location(s, e),
+        left: Box::new(left),
+        right: Box::new(right),
+    },
+
+    <s:@L> <left:ClauseGuard4> "<=." <right:ClauseGuard5> <e:@L> => ClauseGuard::LtEqFloat {
+        location: location(s, e),
+        left: Box::new(left),
+        right: Box::new(right),
+    },
+
+    ClauseGuard5 => <>,
+}
+
+ClauseGuard5: UntypedClauseGuard = {
     <s:@L> <name:VarName> <e:@L> => ClauseGuard::Var {
         location: location(s, e),
         typ: (),
         name,
+    },
+    <s:@L> <value:IntLiteral> <e:@L> => ClauseGuard::Int {
+        location: location(s, e),
+        value,
     },
 
     "{" <ClauseGuard> "}" => <>,
@@ -307,6 +368,15 @@ Let: UntypedExpr = {
         value: Box::new(v),
         pattern: p,
         then: Box::new(t),
+        assert: false,
+    },
+
+    <s:@L> "assert" <p:Pattern> "=" <v:OpOrSimpleExpr> <e:@L> <t:Expr> => UntypedExpr::Let {
+        location: location(s, e),
+        value: Box::new(v),
+        pattern: p,
+        then: Box::new(t),
+        assert: true,
     }
 }
 
@@ -334,9 +404,10 @@ Fn: UntypedExpr = {
     },
 }
 
-FnArg: Arg = {
+FnArg: UntypedArg = {
     <s:@L> <names:ArgNames> <annotation:(":" <Type>)?> <e:@L> => Arg {
         location: location(s, e),
+        typ: (),
         names,
         annotation,
     },
@@ -354,7 +425,6 @@ ArgNames: ArgNames = {
 
 Call: UntypedExpr = {
     <s:@L> <fun:SimpleExpr> "(" <args:Comma<CallArg>> ")" <e:@L> =>? {
-        let hole_arg_name = "capture@1"; // TODO: model placeholder arguments in a less hacky way. This value can leak to the user in error messages.
         let mut num_holes = 0;
         let args = args
             .into_iter()
@@ -367,7 +437,7 @@ Call: UntypedExpr = {
                         location: Default::default(),
                         value: UntypedExpr::Var {
                             location,
-                            name: hole_arg_name.to_string(),
+                            name: crate::ast::CAPTURE_VARIABLE.to_string(),
                         }
                     }
                 }
@@ -389,7 +459,8 @@ Call: UntypedExpr = {
                 args: vec![Arg {
                     location: location(0, 0),
                     annotation: None,
-                    names: ArgNames::Named{ name: hole_arg_name.to_string() },
+                    names: ArgNames::Named { name: crate::ast::CAPTURE_VARIABLE.to_string() },
+                    typ: (),
                 }],
                 body: Box::new(call),
                 return_annotation: None,
@@ -418,7 +489,19 @@ Tuple: UntypedExpr = {
 }
 
 List: UntypedExpr = {
-    <s:@L> "[" <elems:Comma<OpOrSimpleExpr>> <tail:("|" <OpOrSimpleExpr>)?>"]" <e:@L> => {
+    // [x | y] preprend syntax is deprecated, [x, ..y] is the new one
+    <s:@L> "[" <elems:Comma<OpOrSimpleExpr>> <tail:("|" <OpOrSimpleExpr>)>"]" <e:@L> => {
+        elems.into_iter().rev().fold(
+            tail,
+            |t, h| UntypedExpr::ListCons {
+                location: t.location().clone(),
+                head: Box::new(h),
+                tail: Box::new(t),
+            }
+        )
+    },
+
+    <s:@L> "[" <elems:Comma<OpOrSimpleExpr>> <tail:(".." <OpOrSimpleExpr>)?>"]" <e:@L> => {
         let tail = tail.unwrap_or_else(|| UntypedExpr::ListNil {
             location: location(s, e),
         });
@@ -430,7 +513,7 @@ List: UntypedExpr = {
                 tail: Box::new(t),
             }
         )
-    }
+    },
 }
 
 Var: UntypedExpr = {
@@ -491,7 +574,7 @@ Int: UntypedExpr = {
 Float: UntypedExpr = {
     <s:@L> <f:r"-?[0-9]+\.+[0-9]*"> <e:@L> => UntypedExpr::Float {
         location: location(s, e),
-        value: f64::from_str(f).unwrap(),
+        value: f.to_string(),
     }
 }
 
@@ -577,7 +660,7 @@ PatternTuple: UntypedPattern = {
 PatternFloat: UntypedPattern = {
     <s:@L> <f:r"-?[0-9]+\.+[0-9]*"> <e:@L> => Pattern::Float {
         location: location(s, e),
-        value: f64::from_str(f).unwrap(),
+        value: f.to_string(),
     }
 }
 
@@ -628,7 +711,19 @@ PatternVarOrDiscard: UntypedPattern = {
 }
 
 PatternList: UntypedPattern = {
-    <s:@L> "[" <elems:Comma<Pattern>> <tail:("|" <PatternVarOrDiscard>)?> "]" <e:@L> => {
+    // [x | y] preprend syntax is deprecated, [x, ..y] is the new one
+    <s:@L> "[" <elems:Comma<Pattern>> <tail:("|" <PatternVarOrDiscard>)> "]" <e:@L> => {
+        elems.into_iter().rev().fold(
+            tail,
+            |a, e| Pattern::Cons {
+                location: e.location().clone(),
+                head: Box::new(e),
+                tail: Box::new(a),
+            }
+        ).put_list_cons_location_start(s)
+    },
+
+    <s:@L> "[" <elems:Comma<Pattern>> <tail:(".." <PatternVarOrDiscard>)?> "]" <e:@L> => {
         let tail = tail.unwrap_or_else(|| Pattern::Nil {
             location: location(e - 1, e),
         });
@@ -639,8 +734,8 @@ PatternList: UntypedPattern = {
                 head: Box::new(e),
                 tail: Box::new(a),
             }
-        )
-    }
+        ).put_list_cons_location_start(s)
+    },
 }
 
 Type: TypeAst = {

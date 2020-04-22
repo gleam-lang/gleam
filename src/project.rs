@@ -2,11 +2,20 @@ mod source_tree;
 #[cfg(test)]
 mod tests;
 
-use crate::error::{Error, FileIOAction, FileKind, GleamExpect};
-use crate::typ;
+use crate::{
+    ast::TypedModule,
+    error::{Error, FileIOAction, FileKind, GleamExpect},
+    typ,
+};
+use serde::Deserialize;
 use source_tree::SourceTree;
 use std::collections::HashMap;
 use std::path::PathBuf;
+
+#[derive(Deserialize)]
+pub struct ProjectConfig {
+    pub name: String,
+}
 
 #[derive(Debug, PartialEq)]
 pub struct Input {
@@ -17,11 +26,12 @@ pub struct Input {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Compiled {
+pub struct Analysed {
+    pub ast: TypedModule,
     pub name: Vec<String>,
     pub origin: ModuleOrigin,
-    pub files: Vec<OutputFile>,
     pub type_info: typ::Module,
+    pub source_base_path: PathBuf,
 }
 
 #[derive(Debug, PartialEq)]
@@ -55,17 +65,18 @@ pub struct Module {
     module: crate::ast::UntypedModule,
 }
 
-pub fn compile(inputs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
+pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
     let module_count = inputs.len();
     let mut source_tree = SourceTree::new(inputs)?;
     let mut modules_type_infos = HashMap::new();
     let mut compiled_modules = Vec::with_capacity(module_count);
 
     struct Out {
+        source_base_path: PathBuf,
         name_string: String,
         name: Vec<String>,
         origin: ModuleOrigin,
-        files: Vec<OutputFile>,
+        ast: TypedModule,
     }
 
     for Module {
@@ -81,57 +92,71 @@ pub fn compile(inputs: Vec<Input>) -> Result<Vec<Compiled>, Error> {
 
         println!("Compiling {}", name_string);
 
-        let module = crate::typ::infer_module(module, &modules_type_infos)
+        let ast = crate::typ::infer_module(module, &modules_type_infos)
             .map_err(|error| Error::Type { path, src, error })?;
 
-        modules_type_infos.insert(name_string.clone(), module.type_info.clone());
-
-        let gen_dir = source_base_path
-            .parent()
-            .unwrap()
-            .join("gen")
-            .join(origin.dir_name());
-        let erl_module_name = module.name.join("@");
-
-        let mut files: Vec<_> = crate::erl::records(&module)
-            .into_iter()
-            .map(|(name, text)| OutputFile {
-                path: gen_dir.join(format!("{}_{}.hrl", erl_module_name, name)),
-                text,
-            })
-            .collect();
-
-        files.push(OutputFile {
-            path: gen_dir.join(format!("{}.erl", erl_module_name)),
-            text: crate::erl::module(module),
-        });
+        modules_type_infos.insert(name_string.clone(), ast.type_info.clone());
 
         compiled_modules.push(Out {
             name,
             name_string,
+            source_base_path,
             origin,
-            files,
+            ast,
         });
     }
 
     Ok(compiled_modules
         .into_iter()
-        .map(
-            |Out {
-                 name,
-                 name_string,
-                 origin,
-                 files,
-             }| Compiled {
+        .map(|out| {
+            let Out {
                 name,
-                files,
+                source_base_path,
+                name_string,
+                origin,
+                ast,
+            } = out;
+            Analysed {
+                ast,
+                name,
+                source_base_path,
                 origin,
                 type_info: modules_type_infos
                     .remove(&name_string)
                     .gleam_expect("project::compile(): Merging module type info"),
-            },
-        )
+            }
+        })
         .collect())
+}
+
+pub fn generate_erlang(analysed: &[Analysed], files: &mut Vec<OutputFile>) {
+    for Analysed {
+        name,
+        origin,
+        source_base_path,
+        ast,
+        ..
+    } in analysed
+    {
+        let gen_dir = source_base_path
+            .parent()
+            .unwrap()
+            .join("gen")
+            .join(origin.dir_name());
+        let erl_module_name = name.join("@");
+
+        for (name, text) in crate::erl::records(&ast).into_iter() {
+            files.push(OutputFile {
+                path: gen_dir.join(format!("{}_{}.hrl", erl_module_name, name)),
+                text,
+            })
+        }
+
+        files.push(OutputFile {
+            path: gen_dir.join(format!("{}.erl", erl_module_name)),
+            text: crate::erl::module(&ast),
+        });
+    }
 }
 
 pub fn collect_source(

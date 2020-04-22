@@ -35,7 +35,12 @@ walkdir = "2"
 # Enum trait impl macros
 strum = "0.17"
 strum_macros = "0.17"
-
+# Doc rendering
+askama = "0.8"
+# Markdown in docs
+pulldown-cmark = "0.7.0"
+# Support unicode in gleam source
+unicode-segmentation = "1.6.0"
 
 [build-dependencies]
 lalrpop = "0.17"

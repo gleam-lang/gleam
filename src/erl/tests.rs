@@ -1,4 +1,5 @@
 use super::*;
+use crate::typ;
 use std::default::Default;
 
 #[test]
@@ -22,12 +23,14 @@ fn module_test() {
         name: vec!["magic".to_string()],
         statements: vec![
             Statement::ExternalType {
+                doc: None,
                 location: Default::default(),
                 public: true,
                 name: "Any".to_string(),
                 args: vec![],
             },
             Statement::CustomType {
+                doc: None,
                 location: Default::default(),
                 public: true,
                 name: "Any".to_string(),
@@ -45,9 +48,12 @@ fn module_test() {
                 unqualified: vec![],
             },
             Statement::ExternalFn {
+                return_type: typ::int(),
+                doc: None,
                 location: Default::default(),
                 args: vec![
                     ExternalFnArg {
+                        location: Default::default(),
                         label: None,
                         typ: TypeAst::Constructor {
                             location: Default::default(),
@@ -57,6 +63,7 @@ fn module_test() {
                         },
                     },
                     ExternalFnArg {
+                        location: Default::default(),
                         label: None,
                         typ: TypeAst::Constructor {
                             location: Default::default(),
@@ -78,12 +85,14 @@ fn module_test() {
                 },
             },
             Statement::ExternalFn {
+                doc: None,
                 location: Default::default(),
                 args: vec![],
                 name: "map".to_string(),
                 fun: "new".to_string(),
                 module: "maps".to_string(),
                 public: true,
+                return_type: typ::int(),
                 retrn: TypeAst::Constructor {
                     location: Default::default(),
                     module: None,
@@ -105,7 +114,7 @@ map() ->
     maps:new().
 "
     .to_string();
-    assert_eq!(expected, module(m));
+    assert_eq!(expected, module(&m));
 
     let m = Module {
         type_info: crate::typ::Module {
@@ -117,7 +126,9 @@ map() ->
         name: vec!["term".to_string()],
         statements: vec![
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -129,7 +140,9 @@ map() ->
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -137,11 +150,13 @@ map() ->
                 body: TypedExpr::Float {
                     location: Default::default(),
                     typ: crate::typ::float(),
-                    value: 11177.324401,
+                    value: "11177.324401".to_string(),
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -152,7 +167,9 @@ map() ->
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -164,7 +181,9 @@ map() ->
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -184,7 +203,9 @@ map() ->
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -206,7 +227,9 @@ map() ->
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -227,7 +250,9 @@ map() ->
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -254,10 +279,13 @@ map() ->
                         },
                         name: "one_two".to_string(),
                     }),
+                    assert: false,
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -286,7 +314,9 @@ map() ->
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -298,6 +328,7 @@ map() ->
                     typ: crate::typ::int(),
                     args: vec![
                         Arg {
+                            typ: typ::int(),
                             location: SrcSpan { start: 0, end: 0 },
                             annotation: None,
                             names: ArgNames::Named {
@@ -305,6 +336,7 @@ map() ->
                             },
                         },
                         Arg {
+                            typ: typ::int(),
                             location: SrcSpan { start: 0, end: 0 },
                             annotation: None,
                             names: ArgNames::Named {
@@ -320,7 +352,9 @@ map() ->
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -337,7 +371,7 @@ map() ->
                         TypedExpr::Float {
                             location: Default::default(),
                             typ: crate::typ::float(),
-                            value: 2.0,
+                            value: "2.0".to_string(),
                         },
                     ],
                 },
@@ -357,7 +391,7 @@ nil() ->
     [].
 
 string() ->
-    <<\"Hello there!\">>.
+    <<\"Hello there!\"/utf8>>.
 
 seq() ->
     1,
@@ -385,7 +419,7 @@ tup() ->
     {1, 2.0}.
 "
     .to_string();
-    assert_eq!(expected, module(m));
+    assert_eq!(expected, module(&m));
 
     let m = Module {
         type_info: crate::typ::Module {
@@ -396,12 +430,15 @@ tup() ->
         },
         name: vec!["term".to_string()],
         statements: vec![Statement::Fn {
+            doc: None,
+            return_type: typ::int(),
             return_annotation: None,
             location: Default::default(),
             public: false,
             name: "some_function".to_string(),
             args: vec![
                 Arg {
+                    typ: typ::int(),
                     location: SrcSpan { start: 0, end: 0 },
                     annotation: None,
                     names: ArgNames::Named {
@@ -409,6 +446,7 @@ tup() ->
                     },
                 },
                 Arg {
+                    typ: typ::int(),
                     location: SrcSpan { start: 0, end: 0 },
                     annotation: None,
                     names: ArgNames::Named {
@@ -416,6 +454,7 @@ tup() ->
                     },
                 },
                 Arg {
+                    typ: typ::int(),
                     location: SrcSpan { start: 0, end: 0 },
                     annotation: None,
                     names: ArgNames::Named {
@@ -423,6 +462,7 @@ tup() ->
                     },
                 },
                 Arg {
+                    typ: typ::int(),
                     location: SrcSpan { start: 0, end: 0 },
                     annotation: None,
                     names: ArgNames::Named {
@@ -430,6 +470,7 @@ tup() ->
                     },
                 },
                 Arg {
+                    typ: typ::int(),
                     location: SrcSpan { start: 0, end: 0 },
                     annotation: None,
                     names: ArgNames::Named {
@@ -437,6 +478,7 @@ tup() ->
                     },
                 },
                 Arg {
+                    typ: typ::int(),
                     location: SrcSpan { start: 0, end: 0 },
                     annotation: None,
                     names: ArgNames::Named {
@@ -444,6 +486,7 @@ tup() ->
                     },
                 },
                 Arg {
+                    typ: typ::int(),
                     location: SrcSpan { start: 0, end: 0 },
                     annotation: None,
                     names: ArgNames::Named {
@@ -451,6 +494,7 @@ tup() ->
                     },
                 },
                 Arg {
+                    typ: typ::int(),
                     location: SrcSpan { start: 0, end: 0 },
                     annotation: None,
                     names: ArgNames::Named {
@@ -481,7 +525,7 @@ some_function(
     1.
 "
     .to_string();
-    assert_eq!(expected, module(m));
+    assert_eq!(expected, module(&m));
 
     let m = Module {
         type_info: crate::typ::Module {
@@ -493,7 +537,9 @@ some_function(
         name: vec!["vars".to_string()],
         statements: vec![
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -510,7 +556,9 @@ some_function(
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -525,7 +573,9 @@ some_function(
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -543,7 +593,9 @@ some_function(
                 },
             },
             Statement::Fn {
+                doc: None,
                 return_annotation: None,
+                return_type: typ::int(),
                 location: Default::default(),
                 public: false,
                 args: vec![],
@@ -588,7 +640,7 @@ moddy4() ->
     one@zero:two(1).
 "
     .to_string();
-    assert_eq!(expected, module(m));
+    assert_eq!(expected, module(&m));
 
     let m = Module {
         type_info: crate::typ::Module {
@@ -599,6 +651,8 @@ moddy4() ->
         },
         name: vec!["my_mod".to_string()],
         statements: vec![Statement::Fn {
+            doc: None,
+            return_type: typ::int(),
             return_annotation: None,
             location: Default::default(),
             public: false,
@@ -632,7 +686,7 @@ moddy4() ->
                         guard: None,
                         pattern: vec![Pattern::Float {
                             location: Default::default(),
-                            value: 1.0,
+                            value: "1.0".to_string(),
                         }],
                         alternative_patterns: vec![],
                         then: TypedExpr::Int {
@@ -732,7 +786,7 @@ go() ->
         1.0 ->
             1;
 
-        <<\"hello\">> ->
+        <<\"hello\"/utf8>> ->
             1;
 
         [] ->
@@ -746,7 +800,7 @@ go() ->
     end.
 "
     .to_string();
-    assert_eq!(expected, module(m));
+    assert_eq!(expected, module(&m));
 
     let m = Module {
         type_info: crate::typ::Module {
@@ -758,6 +812,8 @@ go() ->
         name: vec!["funny".to_string()],
         statements: vec![
             Statement::Fn {
+                doc: None,
+                return_type: typ::int(),
                 return_annotation: None,
                 location: Default::default(),
                 args: vec![],
@@ -793,6 +849,8 @@ go() ->
                 },
             },
             Statement::Fn {
+                doc: None,
+                return_type: typ::int(),
                 return_annotation: None,
                 location: Default::default(),
                 args: vec![],
@@ -823,6 +881,8 @@ go() ->
                 },
             },
             Statement::Fn {
+                doc: None,
+                return_type: typ::int(),
                 return_annotation: None,
                 location: Default::default(),
                 args: vec![],
@@ -885,7 +945,7 @@ three() ->
     (one_two_actual(1))(2).
 "
     .to_string();
-    assert_eq!(expected, module(m));
+    assert_eq!(expected, module(&m));
 }
 
 #[test]
@@ -898,7 +958,7 @@ fn integration_test() {
             ast.name = vec!["the_app".to_string()];
             let ast = crate::typ::infer_module(ast, &std::collections::HashMap::new())
                 .expect("should successfully infer");
-            let output = module(ast);
+            let output = module(&ast);
             assert_eq!(($src, output), ($src, $erl.to_string()));
         };
     }
@@ -924,6 +984,22 @@ go() ->
         r#"fn go() {
   let y = 1
   let y = 2
+  y
+}"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+go() ->
+    Y = 1,
+    Y1 = 2,
+    Y1.
+"#,
+    );
+
+    assert_erl!(
+        r#"fn go() {
+  assert y = 1
+  assert y = 2
   y
 }"#,
         r#"-module(the_app).
@@ -1030,6 +1106,34 @@ modulo(X, Y) ->
 "#,
     );
 
+    assert_erl!(
+        r#"fn second(list) { case list { [x, y] -> y z -> 1 } }
+                    fn tail(list) { case list { [x, ..xs] -> xs z -> list } }
+            "#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+second(List) ->
+    case List of
+        [X, Y] ->
+            Y;
+
+        Z ->
+            1
+    end.
+
+tail(List) ->
+    case List of
+        [X | Xs] ->
+            Xs;
+
+        Z ->
+            List
+    end.
+"#,
+    );
+
+    // Deprecated syntax
     assert_erl!(
         r#"fn second(list) { case list { [x, y] -> y z -> 1 } }
                     fn tail(list) { case list { [x | xs] -> xs z -> list } }
@@ -1192,7 +1296,7 @@ fn create_user(user_id) { User(age: 22, id: user_id, name: "") }
 -compile(no_auto_import).
 
 create_user(UserId) ->
-    {user, UserId, <<"">>, 22}.
+    {user, UserId, <<""/utf8>>, 22}.
 "#,
     );
 
@@ -1434,6 +1538,279 @@ main(Args) ->
             1;
 
         _ ->
+            0
+    end.
+"#,
+    );
+
+    assert_erl!(
+        r#"
+pub fn main() {
+  case 1, 0 {
+    x, y if x > y -> 1
+    _, _ -> 0
+  }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+main() ->
+    case {1, 0} of
+        {X, Y} when X > Y ->
+            1;
+
+        {_, _} ->
+            0
+    end.
+"#,
+    );
+
+    assert_erl!(
+        r#"
+pub fn main() {
+  case 1, 0 {
+    x, y if x >= y -> 1
+    _, _ -> 0
+  }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+main() ->
+    case {1, 0} of
+        {X, Y} when X >= Y ->
+            1;
+
+        {_, _} ->
+            0
+    end.
+"#,
+    );
+
+    assert_erl!(
+        r#"
+pub fn main() {
+  case 1, 0 {
+    x, y if x < y -> 1
+    _, _ -> 0
+  }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+main() ->
+    case {1, 0} of
+        {X, Y} when X < Y ->
+            1;
+
+        {_, _} ->
+            0
+    end.
+"#,
+    );
+
+    assert_erl!(
+        r#"
+pub fn main() {
+  case 1, 0 {
+    x, y if x <= y -> 1
+    _, _ -> 0
+  }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+main() ->
+    case {1, 0} of
+        {X, Y} when X =< Y ->
+            1;
+
+        {_, _} ->
+            0
+    end.
+"#,
+    );
+
+    assert_erl!(
+        r#"
+pub fn main() {
+  case 1.0, 0.1 {
+    x, y if x >. y -> 1
+    _, _ -> 0
+  }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+main() ->
+    case {1.0, 0.1} of
+        {X, Y} when X > Y ->
+            1;
+
+        {_, _} ->
+            0
+    end.
+"#,
+    );
+
+    assert_erl!(
+        r#"
+pub fn main() {
+  case 1.0, 0.1 {
+    x, y if x >=. y -> 1
+    _, _ -> 0
+  }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+main() ->
+    case {1.0, 0.1} of
+        {X, Y} when X >= Y ->
+            1;
+
+        {_, _} ->
+            0
+    end.
+"#,
+    );
+
+    assert_erl!(
+        r#"
+pub fn main() {
+  let x = 0
+  case x {
+    0 -> 1
+    _ -> 0
+  }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+main() ->
+    X = 0,
+    case X of
+        0 ->
+            1;
+
+        _ ->
+            0
+    end.
+"#,
+    );
+
+    assert_erl!(
+        r#"
+pub fn main() {
+  let x = 0
+  case x {
+    _ if x == 0 -> 1
+  }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+main() ->
+    X = 0,
+    case X of
+        _ when X =:= 0 ->
+            1
+    end.
+"#,
+    );
+
+    assert_erl!(
+        r#"
+pub fn main() {
+  let x = 0
+  case x {
+    _ if 0 < x -> 1
+  }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+main() ->
+    X = 0,
+    case X of
+        _ when 0 < X ->
+            1
+    end.
+"#,
+    );
+
+    assert_erl!(
+        r#"
+pub fn main() {
+  case 0.1, 1.0 {
+    x, y if x <. y -> 1
+    _, _ -> 0
+  }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+main() ->
+    case {0.1, 1.0} of
+        {X, Y} when X < Y ->
+            1;
+
+        {_, _} ->
+            0
+    end.
+"#,
+    );
+
+    assert_erl!(
+        r#"
+pub fn main() {
+  case 0.1, 1.0 {
+    x, y if x <=. y -> 1
+    _, _ -> 0
+  }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+main() ->
+    case {0.1, 1.0} of
+        {X, Y} when X =< Y ->
+            1;
+
+        {_, _} ->
             0
     end.
 "#,
