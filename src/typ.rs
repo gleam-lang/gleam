@@ -1169,6 +1169,81 @@ pub fn infer_module(
 ) -> Result<TypedModule, Error> {
     let mut env = Env::new(module.name.as_slice(), modules);
     let module_name = &module.name;
+    
+    for s in module.statements.iter() {
+        match s {
+            Statement::Import {
+                module,
+                as_name,
+                unqualified,
+            } => {
+                // Find imported module
+                let module_info = env.importable_modules.get(&module.join("/")).expect(
+                    "COMPILER BUG: Typer could not find a module being imported.
+    This should not be possible. Please report this crash",
+                );
+
+                // Determine local alias of imported module
+                let module_name = match &as_name {
+                    None => module[module.len() - 1].clone(),
+                    Some(name) => name.clone(),
+                };
+
+                // Insert unqualified imports into scope
+                for UnqualifiedImport {
+                    name,
+                    location,
+                    as_name,
+                } in unqualified
+                {
+                    let mut imported = false;
+
+                    let imported_name = match &as_name {
+                        None => name,
+                        Some(alias) => alias,
+                    };
+
+                    if let Some(value) = module_info.values.get(name) {
+                        env.insert_variable(
+                            imported_name.clone(),
+                            value.variant.clone(),
+                            value.typ.clone(),
+                        );
+                        imported = true;
+                    }
+
+                    if let Some(typ) = module_info.types.get(name) {
+                        env.insert_type_constructor(imported_name.clone(), typ.clone())?;
+                        imported = true;
+                    }
+
+                    if !imported {
+                        return Err(Error::UnknownModuleField {
+                            location: location.clone(),
+                            name: name.clone(),
+                            module_name: module.clone(),
+                            value_constructors: module_info
+                                .values
+                                .keys()
+                                .map(|t| t.to_string())
+                                .collect(),
+                            type_constructors: module_info
+                                .types
+                                .keys()
+                                .map(|t| t.to_string())
+                                .collect(),
+                        });
+                    }
+                }
+
+                // Insert imported module into scope
+                env.imported_modules
+                    .insert(module_name, module_info.clone());
+            }
+
+            _ => break,
+        }
+    }
 
     // Register types so they can be used in constructors and functions
     // earlier in the file
@@ -1497,69 +1572,6 @@ pub fn infer_module(
                 as_name,
                 unqualified,
             } => {
-                // Find imported module
-                let module_info = env.importable_modules.get(&module.join("/")).expect(
-                    "COMPILER BUG: Typer could not find a module being imported.
-This should not be possible. Please report this crash",
-                );
-
-                // Determine local alias of imported module
-                let module_name = match &as_name {
-                    None => module[module.len() - 1].clone(),
-                    Some(name) => name.clone(),
-                };
-
-                // Insert unqualified imports into scope
-                for UnqualifiedImport {
-                    name,
-                    location,
-                    as_name,
-                } in &unqualified
-                {
-                    let mut imported = false;
-
-                    let imported_name = match &as_name {
-                        None => name,
-                        Some(alias) => alias,
-                    };
-
-                    if let Some(value) = module_info.values.get(name) {
-                        env.insert_variable(
-                            imported_name.clone(),
-                            value.variant.clone(),
-                            value.typ.clone(),
-                        );
-                        imported = true;
-                    }
-
-                    if let Some(typ) = module_info.types.get(name) {
-                        env.insert_type_constructor(imported_name.clone(), typ.clone())?;
-                        imported = true;
-                    }
-
-                    if !imported {
-                        return Err(Error::UnknownModuleField {
-                            location: location.clone(),
-                            name: name.clone(),
-                            module_name: module,
-                            value_constructors: module_info
-                                .values
-                                .keys()
-                                .map(|t| t.to_string())
-                                .collect(),
-                            type_constructors: module_info
-                                .types
-                                .keys()
-                                .map(|t| t.to_string())
-                                .collect(),
-                        });
-                    }
-                }
-
-                // Insert imported module into scope
-                env.imported_modules
-                    .insert(module_name, module_info.clone());
-
                 Ok(Statement::Import {
                     location,
                     module,
