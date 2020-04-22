@@ -1169,13 +1169,14 @@ pub fn infer_module(
 ) -> Result<TypedModule, Error> {
     let mut env = Env::new(module.name.as_slice(), modules);
     let module_name = &module.name;
-    
+
     for s in module.statements.iter() {
         match s {
             Statement::Import {
                 module,
                 as_name,
                 unqualified,
+                ..
             } => {
                 // Find imported module
                 let module_info = env.importable_modules.get(&module.join("/")).expect(
@@ -1571,14 +1572,12 @@ pub fn infer_module(
                 module,
                 as_name,
                 unqualified,
-            } => {
-                Ok(Statement::Import {
-                    location,
-                    module,
-                    as_name,
-                    unqualified,
-                })
-            }
+            } => Ok(Statement::Import {
+                location,
+                module,
+                as_name,
+                unqualified,
+            }),
         })
         .collect::<Result<Vec<_>, _>>()?;
 
