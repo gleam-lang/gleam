@@ -237,10 +237,15 @@ fn infer_test() {
     assert_infer!("[fn(x) { x + 1 }, fn(x) { x }]", "List(fn(Int) -> Int)");
     assert_infer!("[[], []]", "List(List(a))");
     assert_infer!("[[], [1]]", "List(List(Int))");
-    assert_infer!("[1 | [2 | []]]", "List(Int)");
-    assert_infer!("[fn(x) { x } | []]", "List(fn(a) -> a)");
+
+    assert_infer!("[1, ..[2, ..[]]]", "List(Int)");
+    assert_infer!("[1 | [2 | []]]", "List(Int)"); // Deprecated syntax
+    assert_infer!("[fn(x) { x }, ..[]]", "List(fn(a) -> a)");
+    assert_infer!("[fn(x) { x } | []]", "List(fn(a) -> a)"); // Deprecated syntax
+    assert_infer!("let x = [1, ..[]] [2, ..x]", "List(Int)");
+    assert_infer!("let x = [1 | []] [2 | x]", "List(Int)"); // Deprecated syntax
+
     assert_infer!("let f = fn(x) { x } [f, f]", "List(fn(a) -> a)");
-    assert_infer!("let x = [1 | []] [2 | x]", "List(Int)");
     assert_infer!("[tuple([], [])]", "List(tuple(List(a), List(b)))");
 
     // anon structs

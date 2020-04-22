@@ -867,7 +867,7 @@ World"
 
     assert_format!(
         "fn main() {
-  [1, 2, 3 | x]
+  [1, 2, 3, ..x]
 }
 "
     );
@@ -878,7 +878,7 @@ World"
     really_long_variable_name,
     really_long_variable_name,
     really_long_variable_name,
-    | tail
+    ..tail
   ]
 }
 "
@@ -897,7 +897,7 @@ World"
       2,
       3,
       [1, 2, 3, 4],
-      | tail
+      ..tail
     ],
     really_long_variable_name,
   ]
@@ -1214,7 +1214,7 @@ World"
 
     assert_format!(
         r#"fn main() {
-  let [1, 2, 3, 4 | x] = 1
+  let [1, 2, 3, 4, ..x] = 1
   Nil
 }
 "#
@@ -1227,7 +1227,7 @@ World"
     really_long_variable_name,
     really_long_variable_name,
     [1, 2, 3, 4, xyz],
-    | thingy
+    ..thingy
   ] = 1
   Nil
 }

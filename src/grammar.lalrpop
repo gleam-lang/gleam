@@ -480,7 +480,19 @@ Tuple: UntypedExpr = {
 }
 
 List: UntypedExpr = {
-    <s:@L> "[" <elems:Comma<OpOrSimpleExpr>> <tail:("|" <OpOrSimpleExpr>)?>"]" <e:@L> => {
+    // [x | y] preprend syntax is deprecated, [x, ..y] is the new one
+    <s:@L> "[" <elems:Comma<OpOrSimpleExpr>> <tail:("|" <OpOrSimpleExpr>)>"]" <e:@L> => {
+        elems.into_iter().rev().fold(
+            tail,
+            |t, h| UntypedExpr::ListCons {
+                location: t.location().clone(),
+                head: Box::new(h),
+                tail: Box::new(t),
+            }
+        )
+    },
+
+    <s:@L> "[" <elems:Comma<OpOrSimpleExpr>> <tail:(".." <OpOrSimpleExpr>)?>"]" <e:@L> => {
         let tail = tail.unwrap_or_else(|| UntypedExpr::ListNil {
             location: location(s, e),
         });
@@ -492,7 +504,7 @@ List: UntypedExpr = {
                 tail: Box::new(t),
             }
         )
-    }
+    },
 }
 
 Var: UntypedExpr = {
@@ -690,7 +702,19 @@ PatternVarOrDiscard: UntypedPattern = {
 }
 
 PatternList: UntypedPattern = {
-    <s:@L> "[" <elems:Comma<Pattern>> <tail:("|" <PatternVarOrDiscard>)?> "]" <e:@L> => {
+    // [x | y] preprend syntax is deprecated, [x, ..y] is the new one
+    <s:@L> "[" <elems:Comma<Pattern>> <tail:("|" <PatternVarOrDiscard>)> "]" <e:@L> => {
+        elems.into_iter().rev().fold(
+            tail,
+            |a, e| Pattern::Cons {
+                location: e.location().clone(),
+                head: Box::new(e),
+                tail: Box::new(a),
+            }
+        )
+    },
+
+    <s:@L> "[" <elems:Comma<Pattern>> <tail:(".." <PatternVarOrDiscard>)?> "]" <e:@L> => {
         let tail = tail.unwrap_or_else(|| Pattern::Nil {
             location: location(e - 1, e),
         });
@@ -702,7 +726,7 @@ PatternList: UntypedPattern = {
                 tail: Box::new(a),
             }
         )
-    }
+    },
 }
 
 Type: TypeAst = {
