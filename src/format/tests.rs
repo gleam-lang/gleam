@@ -67,6 +67,12 @@ pub external type Four
     );
 
     assert_format!(
+        r#"external fn main() -> program.Exit =
+  "app" "main"
+"#
+    );
+
+    assert_format!(
         r#"external fn main(List(String)) -> Int =
   "app" "main"
 "#
@@ -520,6 +526,13 @@ pub external type Four
         r#"fn main() -> Loooooooooooooooooooong(
   Loooooooooooooooooooooooooooooooooooooooooong,
 ) {
+  Nil
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() -> program.Exit {
   Nil
 }
 "#

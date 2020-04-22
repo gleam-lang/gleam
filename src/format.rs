@@ -203,13 +203,29 @@ impl<'a> Formatter<'a> {
         }
     }
 
+    fn type_ast_constructor(
+        &mut self,
+        module: &Option<String>,
+        name: &str,
+        args: &[TypeAst],
+    ) -> Document {
+        let head = match module {
+            None => name.to_doc(),
+            Some(qualifier) => qualifier.to_string().to_doc().append(".").append(name),
+        };
+
+        if args.is_empty() {
+            head
+        } else {
+            head.append(self.type_arguments(args))
+        }
+    }
+
     fn type_ast(&mut self, t: &TypeAst) -> Document {
         match t {
-            TypeAst::Constructor { name, args, .. } if args.is_empty() => name.to_string().to_doc(),
-
-            TypeAst::Constructor { name, args, .. } => {
-                name.to_string().to_doc().append(self.type_arguments(args))
-            }
+            TypeAst::Constructor {
+                name, args, module, ..
+            } => self.type_ast_constructor(module, name, args),
 
             TypeAst::Fn { args, retrn, .. } => "fn"
                 .to_string()
