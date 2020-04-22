@@ -86,7 +86,8 @@ StatementExternalFn: UntypedStatement = {
 }
 
 ExternalFnArg: ExternalFnArg = {
-    <label:(<VarName> ":")?> <typ:Type> => ExternalFnArg {
+    <s:@L> <label:(<VarName> ":")?> <typ:Type> <e:@L> => ExternalFnArg {
+        location: location(s, e),
         label,
         typ,
     },

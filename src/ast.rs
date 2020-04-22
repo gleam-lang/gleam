@@ -221,6 +221,7 @@ pub struct UnqualifiedImport {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExternalFnArg {
+    pub location: SrcSpan,
     pub label: Option<String>,
     pub typ: TypeAst,
 }

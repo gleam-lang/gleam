@@ -2002,6 +2002,17 @@ type Whatever {
     // Commented external function arguments
     //
 
+    assert_format!(
+        "pub external fn main(
+  // comment1
+  argument1: Type,
+  // comment2
+  argument2: Type,
+) -> Int =
+  \"\" \"\"
+"
+    );
+
     //
     // Commented type constructors
     //

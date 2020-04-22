@@ -53,6 +53,7 @@ fn module_test() {
                 location: Default::default(),
                 args: vec![
                     ExternalFnArg {
+                        location: Default::default(),
                         label: None,
                         typ: TypeAst::Constructor {
                             location: Default::default(),
@@ -62,6 +63,7 @@ fn module_test() {
                         },
                     },
                     ExternalFnArg {
+                        location: Default::default(),
                         label: None,
                         typ: TypeAst::Constructor {
                             location: Default::default(),
