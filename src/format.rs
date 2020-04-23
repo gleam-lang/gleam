@@ -665,6 +665,7 @@ impl<'a> Formatter<'a> {
                 name,
                 args,
                 module: None,
+                with_spread: false,
                 ..
             } => name
                 .to_string()
@@ -674,7 +675,18 @@ impl<'a> Formatter<'a> {
             Pattern::Constructor {
                 name,
                 args,
+                module: None,
+                with_spread: true,
+                ..
+            } => name.to_string().to_doc().append(wrap_args_with_spread(
+                args.iter().map(|a| self.pattern_call_arg(a)),
+            )),
+
+            Pattern::Constructor {
+                name,
+                args,
                 module: Some(m),
+                with_spread: false,
                 ..
             } => m
                 .to_string()
@@ -682,6 +694,21 @@ impl<'a> Formatter<'a> {
                 .append(".")
                 .append(name.to_string())
                 .append(wrap_args(args.iter().map(|a| self.pattern_call_arg(a)))),
+
+            Pattern::Constructor {
+                name,
+                args,
+                module: Some(m),
+                with_spread: true,
+                ..
+            } => m
+                .to_string()
+                .to_doc()
+                .append(".")
+                .append(name.to_string())
+                .append(wrap_args_with_spread(
+                    args.iter().map(|a| self.pattern_call_arg(a)),
+                )),
 
             Pattern::Tuple { elems, .. } => "tuple"
                 .to_doc()
@@ -863,6 +890,25 @@ where
         .append(concat(args.intersperse(delim(","))))
         .nest(INDENT)
         .append(break_(",", ""))
+        .append(")")
+        .group()
+}
+
+pub fn wrap_args_with_spread<I>(args: I) -> Document
+where
+    I: Iterator<Item = Document>,
+{
+    let mut args = args.peekable();
+    if let None = args.peek() {
+        return "()".to_doc();
+    }
+
+    break_("(", "(")
+        .append(concat(args.intersperse(delim(","))))
+        .append(break_(",", ", "))
+        .append("..")
+        .nest(INDENT)
+        .append(break_("", ""))
         .append(")")
         .group()
 }

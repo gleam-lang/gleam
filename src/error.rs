@@ -550,6 +550,24 @@ Found type:
                     write(buffer, diagnostic);
                 }
 
+                UnnecessarySpreadOperator { location, arity } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Unnecessary spread operator".to_string(),
+                        label: format!(""),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: location.clone(),
+                    };
+                    write(buffer, diagnostic);
+
+                    writeln!(
+                        buffer,
+                        "This record has {} fields and you have already assigned variables to all of them.",
+                        arity
+                    )
+                    .unwrap();
+                }
+
                 UnknownType {
                     location,
                     name,

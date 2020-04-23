@@ -740,6 +740,7 @@ moddy4() ->
                             constructor: PatternConstructor::Record {
                                 name: "Error".to_string(),
                             },
+                            with_spread: false,
                         }],
                         alternative_patterns: vec![],
                         then: TypedExpr::Int {
@@ -1877,6 +1878,101 @@ get_age(Person) ->
 
 get_name(Person) ->
     erlang:element(2, Person).
+"#,
+    );
+
+    // Test binding to a record field with the spread operator
+    assert_erl!(
+        r#"
+type Triple {
+    Triple(a: Int, b: Int, c: Int)
+}
+
+fn main() {
+  let triple = Triple(1,2,3)
+  let Triple(the_a, ..) = triple
+  the_a
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main() ->
+    Triple = {triple, 1, 2, 3},
+    {triple, TheA, _, _} = Triple,
+    TheA.
+"#,
+    );
+
+    // Test binding to a record field with the spread operator and a labelled argument
+    assert_erl!(
+        r#"
+type Triple {
+  Triple(a: Int, b: Int, c: Int)
+}
+
+fn main() {
+  let triple = Triple(1,2,3)
+  let Triple(b: the_b, ..) = triple
+  the_b
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main() ->
+    Triple = {triple, 1, 2, 3},
+    {triple, _, TheB, _} = Triple,
+    TheB.
+"#,
+    );
+
+    // Test binding to a record field with the spread operator with both a labelled argument and a positional argument
+    assert_erl!(
+        r#"
+type Triple {
+  Triple(a: Int, b: Int, c: Int)
+}
+
+fn main() {
+  let triple = Triple(1,2,3)
+  let Triple(the_a, c: the_c, ..) = triple
+  the_c
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main() ->
+    Triple = {triple, 1, 2, 3},
+    {triple, TheA, _, TheC} = Triple,
+    TheC.
+"#,
+    );
+
+    // Test binding to a record field with the spread operator in a match
+    assert_erl!(
+        r#"
+type Triple {
+  Triple(a: Int, b: Int, c: Int)
+}
+
+fn main() {
+  let triple = Triple(1,2,3)
+  case triple {
+    Triple(b: the_b, ..) -> the_b
+  }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main() ->
+    Triple = {triple, 1, 2, 3},
+    case Triple of
+        {triple, _, TheB, _} ->
+            TheB
+    end.
 "#,
     );
 

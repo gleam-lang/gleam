@@ -1621,6 +1621,26 @@ pub fn main(box: Box(Box(Int))) { box.inner.unknown }
         },
     );
 
+    assert_error!(
+        "
+type Triple {
+    Triple(a: Int, b: Int, c: Int)
+}
+
+fn main() {
+  let triple = Triple(1,2,3)
+  let Triple(a, b, c, ..) = triple
+  a
+}",
+        Error::UnnecessarySpreadOperator {
+            location: SrcSpan {
+                start: 116,
+                end: 118
+            },
+            arity: 3
+        }
+    );
+
     // Cases were we can't so easily check for equality-
     // i.e. because the contents of the error are non-deterministic.
     assert_error!("fn inc(x: a) { x + 1 }");

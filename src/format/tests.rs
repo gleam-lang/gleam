@@ -2134,4 +2134,36 @@ type Whatever {
 }
 "
     );
+
+    // Formats the operator spread syntax
+    assert_format!(
+        "type Triple {
+  Triple(a: Int, b: Int, c: Int)
+}
+
+fn main() {
+  let triple = Triple(1, 2, 3)
+  let Triple(the_a, c: the_c, ..) = triple
+  the_c
+}
+"
+    );
+
+    // Formats the operator spread syntax with long names
+    assert_format!(
+        "type Triple {
+  Triple(a: Int, b: Int, c: Int)
+}
+
+fn main() {
+  let triple = Triple(1, 2, 3)
+  let Triple(
+    really_long_variable_name_a,
+    c: really_long_variable_name_c,
+    ..
+  ) = triple
+  really_long_variable_name_c
+}
+"
+    );
 }
