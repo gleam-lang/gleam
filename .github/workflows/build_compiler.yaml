@@ -17,7 +17,6 @@ jobs:
       - run: cargo fmt -- --check
 
   build_compiler_linux:
-    needs: rustfmt
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2.0.0
@@ -37,7 +36,6 @@ jobs:
           path: target/release/gleam
 
   build_compiler_macos:
-    needs: rustfmt
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2.0.0
@@ -54,7 +52,6 @@ jobs:
       - run: target/release/gleam --version
 
   build_compiler_win:
-    needs: rustfmt
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2.0.0
