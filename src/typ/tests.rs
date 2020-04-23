@@ -245,6 +245,10 @@ fn infer_test() {
     assert_infer!("let x = [1, ..[]] [2, ..x]", "List(Int)");
     assert_infer!("let x = [1 | []] [2 | x]", "List(Int)"); // Deprecated syntax
 
+    // Trailing commas
+    assert_infer!("[1, ..[2, ..[],]]", "List(Int)");
+    assert_infer!("[fn(x) { x },..[]]", "List(fn(a) -> a)");
+
     assert_infer!("let f = fn(x) { x } [f, f]", "List(fn(a) -> a)");
     assert_infer!("[tuple([], [])]", "List(tuple(List(a), List(b)))");
 
@@ -344,6 +348,8 @@ fn infer_test() {
     assert_infer!("assert [a, 2] = [1] a", "Int");
     assert_infer!("assert [a | b] = [1] a", "Int");
     assert_infer!("assert [a | _] = [1] a", "Int");
+    assert_infer!("assert [a, .._] = [1] a", "Int");
+    assert_infer!("assert [a, .._,] = [1] a", "Int");
     assert_infer!("fn(x) { assert [a] = x a }", "fn(List(a)) -> a");
     assert_infer!("fn(x) { assert [a] = x a + 1 }", "fn(List(Int)) -> Int");
     assert_infer!("assert _x = 1 2.0", "Float");

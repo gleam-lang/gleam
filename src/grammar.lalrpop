@@ -501,7 +501,7 @@ List: UntypedExpr = {
         )
     },
 
-    <s:@L> "[" <elems:Comma<OpOrSimpleExpr>> <tail:(".." <OpOrSimpleExpr>)?>"]" <e:@L> => {
+    <s:@L> "[" <elems:Comma<OpOrSimpleExpr>> <tail:(".." <OpOrSimpleExpr> ","?)?>"]" <e:@L> => {
         let tail = tail.unwrap_or_else(|| UntypedExpr::ListNil {
             location: location(s, e),
         });
@@ -723,7 +723,7 @@ PatternList: UntypedPattern = {
         ).put_list_cons_location_start(s)
     },
 
-    <s:@L> "[" <elems:Comma<Pattern>> <tail:(".." <PatternVarOrDiscard>)?> "]" <e:@L> => {
+    <s:@L> "[" <elems:Comma<Pattern>> <tail:(".." <PatternVarOrDiscard> (",")?)?> "]" <e:@L> => {
         let tail = tail.unwrap_or_else(|| Pattern::Nil {
             location: location(e - 1, e),
         });
