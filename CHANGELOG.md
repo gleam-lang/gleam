@@ -25,6 +25,7 @@
   this will allow you to use a pattern that does not match all values.
 - Added support for int and float literals in guards.
 - Color codes are now only emitted in error output for interactive terminal sessions.
+- Added a new `..` syntax for discarding the remaining fields of a record.
 
 ## v0.7.1 - 2020-03-03
 

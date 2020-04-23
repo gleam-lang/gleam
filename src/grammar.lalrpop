@@ -636,18 +636,22 @@ Pattern: UntypedPattern = {
 }
 
 PatternConstructor: UntypedPattern = {
-    <s:@L> <module:(<VarName> ".")?> <name:UpName> <args:PatternConstructorArgs?> <e:@L> => Pattern::Constructor {
-        location: location(s, e),
-        args: args.unwrap_or_else(|| vec![]),
-        constructor: (),
-        module,
-        name,
+    <s:@L> <module:(<VarName> ".")?> <name:UpName> <args:PatternConstructorArgs?> <e:@L> => {
+        let (args, with_spread) = args.unwrap_or_else(|| (vec![], false));
+
+        Pattern::Constructor {
+            location: location(s, e),
+            args: args,
+            constructor: (),
+            module,
+            name,
+            with_spread,
+        }
     },
 }
 
-PatternConstructorArgs: Vec<CallArg<UntypedPattern>> = {
-    "(" <args:Comma<PatternConstructorArg>> ")" => args
-
+PatternConstructorArgs: (Vec<CallArg<UntypedPattern>>, bool) = {
+    "(" <args:Comma<PatternConstructorArg>> <spread:".."?> ")" => (args, spread.is_some())
 }
 
 PatternConstructorArg: CallArg<UntypedPattern> = {

@@ -461,6 +461,7 @@ pub enum Pattern<Constructor> {
         args: Vec<CallArg<Self>>,
         module: Option<String>,
         constructor: Constructor,
+        with_spread: bool,
     },
 
     Tuple {

@@ -886,6 +886,11 @@ pub enum Error {
         given: usize,
     },
 
+    UnnecessarySpreadOperator {
+        location: SrcSpan,
+        arity: usize,
+    },
+
     IncorrectTypeArity {
         location: SrcSpan,
         name: String,
@@ -2736,6 +2741,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 module,
                 name,
                 args: mut pattern_args,
+                with_spread,
                 ..
             } => {
                 let cons = self
@@ -2745,7 +2751,53 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
 
                 match cons.field_map() {
                     // The fun has a field map so labelled arguments may be present and need to be reordered.
-                    Some(field_map) => field_map.reorder(&mut pattern_args, &location)?,
+                    Some(field_map) => {
+                        if with_spread {
+                            // Using the spread operator when you have already provided variables for all of the
+                            // record's fields throws an error
+                            if pattern_args.len() == field_map.arity {
+                                return Err(Error::UnnecessarySpreadOperator {
+                                    location: SrcSpan {
+                                        start: location.end - 3,
+                                        end: location.end - 1,
+                                    },
+                                    arity: field_map.arity,
+                                });
+                            }
+
+                            // The location of the spread operator itself
+                            let spread_location = SrcSpan {
+                                start: location.end - 3,
+                                end: location.end - 1,
+                            };
+
+                            // Insert discard variables to match the unspecified fields
+                            // In order to support both positional and labelled arguments we have to insert
+                            // them after all positional variables and before the labelled ones. This means
+                            // we have calculate that index and then insert() the discards. It would be faster
+                            // if we could put the discards anywhere which would let us use push().
+                            // Potential future optimisation.
+                            let index_of_first_labelled_arg = pattern_args
+                                .iter()
+                                .position(|a| a.label.is_some())
+                                .unwrap_or_else(|| pattern_args.len());
+
+                            while pattern_args.len() < field_map.arity {
+                                let new_call_arg = CallArg {
+                                    value: Pattern::Discard {
+                                        name: "_".to_string(),
+                                        location: spread_location.clone(),
+                                    },
+                                    location: spread_location.clone(),
+                                    label: None,
+                                };
+
+                                pattern_args.insert(index_of_first_labelled_arg, new_call_arg);
+                            }
+                        }
+
+                        field_map.reorder(&mut pattern_args, &location)?
+                    }
 
                     // The fun has no field map and so we error if arguments have been labelled
                     None => assert_no_labelled_arguments(&pattern_args)?,
@@ -2792,6 +2844,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                                 name,
                                 args: pattern_args,
                                 constructor,
+                                with_spread: with_spread,
                             })
                         } else {
                             Err(Error::IncorrectArity {
@@ -2812,6 +2865,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                                 name,
                                 args: vec![],
                                 constructor,
+                                with_spread: with_spread,
                             })
                         } else {
                             Err(Error::IncorrectArity {
