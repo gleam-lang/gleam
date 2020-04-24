@@ -1017,7 +1017,12 @@ but it cannot be found.",
     }
 
     pub fn pretty_print(&self) {
-        let buffer_writer = termcolor::BufferWriter::stderr(termcolor::ColorChoice::Always);
+        let color_choice = if atty::is(atty::Stream::Stderr) {
+            termcolor::ColorChoice::Auto
+        } else {
+            termcolor::ColorChoice::Never
+        };
+        let buffer_writer = termcolor::BufferWriter::stderr(color_choice);
         let mut buffer = buffer_writer.buffer();
         self.pretty(&mut buffer);
         buffer_writer.print(&buffer).unwrap();
