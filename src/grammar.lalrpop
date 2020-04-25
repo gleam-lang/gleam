@@ -358,6 +358,10 @@ ClauseGuard5: UntypedClauseGuard = {
         location: location(s, e),
         value,
     },
+    <s:@L> <value:FloatLiteral> <e:@L> => ClauseGuard::Float {
+        location: location(s, e),
+        value,
+    },
 
     "{" <ClauseGuard> "}" => <>,
 }
@@ -571,10 +575,14 @@ Int: UntypedExpr = {
     }
 }
 
+FloatLiteral: String = {
+    <pos:r"-?[0-9]+\.+[0-9]*"> => pos.to_string()
+}
+
 Float: UntypedExpr = {
-    <s:@L> <f:r"-?[0-9]+\.+[0-9]*"> <e:@L> => UntypedExpr::Float {
+    <s:@L> <value:FloatLiteral> <e:@L> => UntypedExpr::Float {
         location: location(s, e),
-        value: f.to_string(),
+        value
     }
 }
 

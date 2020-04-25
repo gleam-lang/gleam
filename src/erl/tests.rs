@@ -1696,6 +1696,79 @@ main() ->
     assert_erl!(
         r#"
 pub fn main() {
+  let x = 0.123
+  case x {
+    99.9854 -> 1
+    _ -> 0
+  }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+main() ->
+    X = 0.123,
+    case X of
+        99.9854 ->
+            1;
+
+        _ ->
+            0
+    end.
+"#,
+    );
+
+    assert_erl!(
+        r#"
+pub fn main() {
+  let x = 0.123
+  case x {
+    _ if x == 3.14 -> 1
+  }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+main() ->
+    X = 0.123,
+    case X of
+        _ when X =:= 3.14 ->
+            1
+    end.
+"#,
+    );
+
+    assert_erl!(
+        r#"
+pub fn main() {
+  let x = 0.123
+  case x {
+    _ if 0.123 <. x -> 1
+  }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+main() ->
+    X = 0.123,
+    case X of
+        _ when 0.123 < X ->
+            1
+    end.
+"#,
+    );
+
+    assert_erl!(
+        r#"
+pub fn main() {
   let x = 0
   case x {
     0 -> 1
