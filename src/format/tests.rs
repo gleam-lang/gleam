@@ -1150,6 +1150,45 @@ World"
 "#
     );
 
+    assert_format!(
+        r#"fn main() {
+  let x = fn(
+    state: state,
+    acc: visitor_acc,
+    visitor: fn(visitor_acc, Pid(a)) -> new_visitor_acc,
+  ) {
+    1
+    2
+  }
+  x
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  let x = fn(
+    state: state,
+    acc: visitor_acc,
+    visitor: fn(visitor_acc, Pid(a)) -> new_visitor_acc,
+  ) {
+    2
+  }
+  x
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  fn(_) {
+    1
+    2
+  }
+}
+"#
+    );
+
     //
     // Pattern::Float
     //
