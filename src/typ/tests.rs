@@ -878,6 +878,32 @@ fn infer_error_test() {
         },
     );
 
+    // Duplicate vars
+
+    assert_error!(
+        "case tuple(1, 2) { tuple(x, x) -> 1 }",
+        Error::DuplicateVarInPattern {
+            location: SrcSpan { start: 28, end: 29 },
+            name: "x".to_string()
+        },
+    );
+
+    assert_error!(
+        "case [3.33], 1 { x, x if x > x -> 1 }",
+        Error::DuplicateVarInPattern {
+            location: SrcSpan { start: 20, end: 21 },
+            name: "x".to_string()
+        },
+    );
+
+    assert_error!(
+        "case [1, 2, 3] { [x, x, y] -> 1 }",
+        Error::DuplicateVarInPattern {
+            location: SrcSpan { start: 21, end: 22 },
+            name: "x".to_string()
+        },
+    );
+
     // Tuple indexing
 
     assert_error!(
@@ -1639,6 +1665,21 @@ fn main() {
             },
             arity: 3
         }
+    );
+
+    // Duplicate var in record
+    assert_error!(
+        r#"type X { X(a: Int, b: Int, c: Int) }
+                    fn x() {
+                        case X(1,2,3) { X(x, y, x) -> 1 }
+                    }"#,
+        Error::DuplicateVarInPattern {
+            location: SrcSpan {
+                start: 114,
+                end: 115
+            },
+            name: "x".to_string()
+        },
     );
 
     // Cases were we can't so easily check for equality-

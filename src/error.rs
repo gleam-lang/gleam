@@ -792,6 +792,26 @@ pattern. This variable `{}` has not been previously defined.",
                     .unwrap();
                 }
 
+                DuplicateVarInPattern { location, name } => {
+                    let diagnostic = ErrorDiagnostic {
+                        title: "Duplicate variable in pattern".to_string(),
+                        label: "has already been used".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: location.clone(),
+                    };
+                    write(buffer, diagnostic);
+
+                    writeln!(
+                        buffer,
+                        "Variables can only be used once per pattern. This variable {} appears multiple times.
+If you used the same variable twice deliberately in order to check for equality
+please use a guard clause instead e.g. (x, y) if x == y -> ...",
+                        name
+                    )
+                    .unwrap();
+                }
+
                 OutOfBoundsTupleIndex {
                     location, size: 0, ..
                 } => {
