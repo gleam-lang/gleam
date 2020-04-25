@@ -853,6 +853,8 @@ impl Documentable for &UntypedClauseGuard {
 
             ClauseGuard::Int { value, .. } => value.to_string().to_doc(),
 
+            ClauseGuard::Float { value, .. } => value.to_string().to_doc(),
+
             ClauseGuard::Var { name, .. } => name.to_string().to_doc(),
         }
     }

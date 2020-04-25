@@ -3,5 +3,8 @@
 
 -export([app_test/0]).
 
+run(X, Y) ->
+    X + Y.
+
 app_test() ->
-    hello_world:x().
+    1.....1.

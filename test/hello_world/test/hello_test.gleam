@@ -5,6 +5,5 @@ fn run(x, y) {
 }
 
 pub fn app_test() {
-  1
-  |> run(_, gleam_capture)
+  1.....1
 }
