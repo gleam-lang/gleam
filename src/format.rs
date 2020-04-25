@@ -322,15 +322,15 @@ impl<'a> Formatter<'a> {
 
     fn expr_fn(&mut self, args: &[UntypedArg], body: &UntypedExpr) -> Document {
         "fn".to_doc()
-            .append(self.fn_args(args).nest_current())
+            .append(self.fn_args(args))
             .append(
                 break_(" {", " { ")
                     .append(self.expr(body))
                     .nest(INDENT)
                     .append(delim(""))
-                    .append("}")
-                    .group(),
+                    .append("}"),
             )
+            .group()
     }
 
     fn expr(&mut self, expr: &UntypedExpr) -> Document {
@@ -363,13 +363,13 @@ impl<'a> Formatter<'a> {
             UntypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
 
             UntypedExpr::Fn {
-                is_capture: true, // TODO: render captures
+                is_capture: true,
                 body,
                 ..
             } => self.fn_capture(body.as_ref()),
 
             UntypedExpr::Fn {
-                // is_capture, // TODO: render captures
+                // is_capture,
                 // return_annotation, // TODO: render this annotation
                 args,
                 body,
