@@ -1,1 +1,0 @@
--record(node, {val, children}).
