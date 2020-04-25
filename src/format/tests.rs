@@ -106,6 +106,15 @@ pub external type Four
 "#
     );
 
+    assert_format!(
+        r#"external fn erl_filter(
+  fn(key, value) -> Bool,
+  Map(key, value),
+) -> Map(key, value) =
+  "maps" "filter"
+"#
+    );
+
     //
     // Type aliases
     //
