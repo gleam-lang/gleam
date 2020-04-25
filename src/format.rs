@@ -908,7 +908,7 @@ where
         .append(break_(",", ", "))
         .append("..")
         .nest(INDENT)
-        .append(break_("", ""))
+        .append(break_(",", ""))
         .append(")")
         .group()
 }
