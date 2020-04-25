@@ -14,6 +14,7 @@ pub type LalrpopError = lalrpop_util::ParseError<usize, (usize, String), Error>;
 pub struct ModuleComments<'a> {
     pub doc_comments: Vec<Comment<'a>>,
     pub comments: Vec<Comment<'a>>,
+    pub spaces: Vec<usize>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -58,6 +59,7 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
     let mut comments = ModuleComments {
         doc_comments: vec![],
         comments: vec![],
+        spaces: vec![],
     };
 
     while let Some((outer_char_no, c)) = chars.next() {
@@ -96,6 +98,11 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
                     None => buffer.push_str(c),
                 },
 
+                "\n" => {
+                    buffer.push_str(c);
+                    chomp_newlines(&mut buffer, outer_char_no, &mut comments, &mut chars);
+                }
+
                 _ => buffer.push_str(c),
             },
 
@@ -132,6 +139,8 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
                     }
                     .push(comment);
                     buffer.push('\n');
+
+                    chomp_newlines(&mut buffer, start, &mut comments, &mut chars)
                 }
                 _ => buffer.push(' '),
             },
@@ -155,6 +164,24 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
     };
 
     (buffer, comments)
+}
+
+fn chomp_newlines(
+    buffer: &mut String,
+    position: usize,
+    comments: &mut ModuleComments,
+    chars: &mut std::iter::Peekable<unicode_segmentation::GraphemeIndices<'_>>,
+) {
+    match chars.peek() {
+        Some((_, "\n")) => {
+            comments.spaces.push(position + 1);
+            while let Some((_, "\n")) = chars.peek() {
+                buffer.push('\n');
+                chars.next();
+            }
+        }
+        _ => (),
+    }
 }
 
 #[test]
@@ -213,6 +240,7 @@ pub external fn a() -> Nil =
                 start: 0,
                 content: " 👨‍👩‍👧‍👧 unicode",
             }],
+            spaces: vec![],
         }
     );
 
@@ -225,6 +253,7 @@ pub external fn a() -> Nil =
                 start: 0,
                 content: " hello",
             }],
+            spaces: vec![],
         }
     );
 
@@ -237,6 +266,7 @@ pub external fn a() -> Nil =
                 start: 0,
                 content: " hello",
             }],
+            spaces: vec![],
         }
     );
 
@@ -250,6 +280,7 @@ pub external fn a() -> Nil =
                 start: 0,
                 content: " hello",
             }],
+            spaces: vec![],
             comments: vec![],
         }
     );
@@ -263,6 +294,7 @@ pub external fn a() -> Nil =
                 content: " hello",
             }],
             comments: vec![],
+            spaces: vec![],
         }
     );
 
@@ -289,6 +321,49 @@ fn main() {
                 }
             ],
             comments: vec![],
+            spaces: vec![],
+        }
+    );
+
+    assert_stripped!(
+        "
+
+fn main() {
+  //
+
+  ///
+
+  Nil
+
+  Nil
+
+
+
+}
+",
+        "
+
+fn main() {
+    \n
+     \n
+  Nil
+
+  Nil
+
+
+
+}
+",
+        ModuleComments {
+            doc_comments: vec![Comment {
+                start: 22,
+                content: ""
+            }],
+            comments: vec![Comment {
+                start: 16,
+                content: ""
+            }],
+            spaces: vec![1, 17, 23, 33, 40],
         }
     );
 }
