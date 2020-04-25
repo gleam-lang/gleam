@@ -23,6 +23,7 @@
   but will continue to work for now. The formatter will output the new syntax.
 - Add new assert syntx for binding variables `assert Ok(x) = result`. In the future
   this will allow you to use a pattern that does not match all values.
+ - Added support for int and float literals in guards
 
 ## v0.7.1 - 2020-03-03
 

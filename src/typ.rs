@@ -2441,6 +2441,10 @@ fn infer_clause_guard(
         ClauseGuard::Int {
             location, value, ..
         } => Ok(ClauseGuard::Int { location, value }),
+
+        ClauseGuard::Float {
+            location, value, ..
+        } => Ok(ClauseGuard::Float { location, value }),
     }
 }
 
