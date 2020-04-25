@@ -23,6 +23,7 @@
   but will continue to work for now. The formatter will output the new syntax.
 - Add new assert syntx for binding variables `assert Ok(x) = result`. In the future
   this will allow you to use a pattern that does not match all values.
+- Color codes are now only emitted in error output for interactive terminal sessions.
 
 ## v0.7.1 - 2020-03-03
 
