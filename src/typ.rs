@@ -960,6 +960,11 @@ pub enum Error {
         name: String,
     },
 
+    DuplicateVarInPattern {
+        location: SrcSpan,
+        name: String,
+    },
+
     OutOfBoundsTupleIndex {
         location: SrcSpan,
         index: u64,
@@ -2590,6 +2595,11 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
     fn insert_variable(&mut self, name: &str, typ: Arc<Type>) -> Result<(), UnifyError> {
         match self.mode {
             PatternMode::Initial => {
+                if self.initial_pattern_vars.contains(name) {
+                    return Err(UnifyError::DuplicateVarInPattern {
+                        name: name.to_string(),
+                    });
+                }
                 self.initial_pattern_vars.insert(name.to_string());
                 self.env.insert_variable(
                     name.to_string(),
@@ -3076,6 +3086,11 @@ fn convert_unify_error(e: UnifyError, location: &SrcSpan) -> Error {
             name,
         },
 
+        UnifyError::DuplicateVarInPattern { name } => Error::DuplicateVarInPattern {
+            location: location.clone(),
+            name,
+        },
+
         UnifyError::RecursiveType => Error::RecursiveType {
             location: location.clone(),
         },
@@ -3153,6 +3168,10 @@ enum UnifyError {
     },
 
     ExtraVarInAlternativePattern {
+        name: String,
+    },
+
+    DuplicateVarInPattern {
         name: String,
     },
 

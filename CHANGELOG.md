@@ -26,6 +26,8 @@
 - Added support for int and float literals in guards.
 - Color codes are now only emitted in error output for interactive terminal sessions.
 - Added a new `..` syntax for discarding the remaining fields of a record.
+- Using the same variable name multiple times in the same pattern will now raise
+  an error.
 
 ## v0.7.1 - 2020-03-03
 
