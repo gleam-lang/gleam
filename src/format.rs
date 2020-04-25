@@ -524,7 +524,7 @@ impl<'a> Formatter<'a> {
     fn external_fn_arg(&mut self, arg: &ExternalFnArg) -> Document {
         let comments = self.pop_comments(arg.location.start);
         let doc = label(&arg.label).append(self.type_ast(&arg.typ));
-        commented(doc, comments)
+        commented(doc.group(), comments)
     }
 
     fn external_fn_args(&mut self, args: &[ExternalFnArg]) -> Document {
