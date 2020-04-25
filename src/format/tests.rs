@@ -2160,7 +2160,7 @@ fn main() {
   let Triple(
     really_long_variable_name_a,
     c: really_long_variable_name_c,
-    ..
+    ..,
   ) = triple
   really_long_variable_name_c
 }

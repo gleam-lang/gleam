@@ -651,7 +651,7 @@ PatternConstructor: UntypedPattern = {
 }
 
 PatternConstructorArgs: (Vec<CallArg<UntypedPattern>>, bool) = {
-    "(" <args:Comma<PatternConstructorArg>> <spread:".."?> ")" => (args, spread.is_some())
+    "(" <args:Comma<PatternConstructorArg>> <spread:(".."(",")?)?> ")" => (args, spread.is_some())
 }
 
 PatternConstructorArg: CallArg<UntypedPattern> = {
