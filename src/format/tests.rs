@@ -1459,6 +1459,38 @@ World"
     );
 
     //
+    // Case
+    //
+
+    assert_format!(
+        r#"fn do() {
+  case list {
+    [x, ..xs] -> {
+      let x = 1
+      x
+    }
+  }
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn do() {
+  case list {
+    [x, ..xs] -> {
+      let x = 1
+      x
+      1
+      2
+      3
+      4
+    }
+  }
+}
+"#
+    );
+
+    //
     // Nested case
     //
 

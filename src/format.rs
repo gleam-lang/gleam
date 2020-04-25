@@ -421,7 +421,7 @@ impl<'a> Formatter<'a> {
                         .append(concat(
                             clauses
                                 .into_iter()
-                                .map(|c| self.clause(c).group())
+                                .map(|c| self.clause(c))
                                 .intersperse(lines(1)),
                         ))
                         .nest(INDENT),
@@ -565,9 +565,9 @@ impl<'a> Formatter<'a> {
         match expr {
             UntypedExpr::Seq { .. } | UntypedExpr::Let { .. } => "{"
                 .to_doc()
-                .append(force_break())
-                .append(line().append(self.expr(expr)).nest(INDENT))
+                .append(line().append(self.expr(expr)).nest(INDENT).group())
                 .append(line())
+                .append(force_break())
                 .append("}"),
 
             UntypedExpr::Fn { .. } | UntypedExpr::Case { .. } => self.expr(expr),
