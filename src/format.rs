@@ -352,11 +352,16 @@ impl<'a> Formatter<'a> {
     }
 
     fn expr_fn(&mut self, args: &[UntypedArg], body: &UntypedExpr) -> Document {
+        let args = self.fn_args(args);
+        let body = match body {
+            UntypedExpr::Case { .. } => force_break().append(self.expr(body)),
+            _ => self.expr(body),
+        };
         "fn".to_doc()
-            .append(self.fn_args(args))
+            .append(args)
             .append(
                 break_(" {", " { ")
-                    .append(self.expr(body))
+                    .append(body)
                     .nest(INDENT)
                     .append(delim(""))
                     .append("}"),
@@ -463,8 +468,8 @@ impl<'a> Formatter<'a> {
 
             UntypedExpr::Case {
                 subjects, clauses, ..
-            } => force_break()
-                .append("case ")
+            } => "case "
+                .to_doc()
                 .append(concat(
                     subjects
                         .into_iter()
@@ -474,6 +479,7 @@ impl<'a> Formatter<'a> {
                 .append(" {")
                 .append(
                     line()
+                        .append(force_break())
                         .append(concat(
                             clauses
                                 .into_iter()
@@ -699,8 +705,9 @@ impl<'a> Formatter<'a> {
             None => doc,
             Some(guard) => doc.append(" if ").append(guard),
         }
+        .group()
         .append(" -> ")
-        .append(self.hanging_expr(&clause.then))
+        .append(self.hanging_expr(&clause.then).group())
     }
 
     pub fn external_type(&mut self, public: bool, name: &str, args: &[String]) -> Document {

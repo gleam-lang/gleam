@@ -1529,6 +1529,17 @@ World"
 "#
     );
 
+    assert_format!(
+        r#"fn main() {
+  case list {
+    [x] -> case x {
+      _ -> 1
+    }
+  }
+}
+"#
+    );
+
     //
     // Case then fn
     //
