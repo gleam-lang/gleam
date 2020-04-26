@@ -705,9 +705,8 @@ impl<'a> Formatter<'a> {
             None => doc,
             Some(guard) => doc.append(" if ").append(guard),
         }
-        .group()
         .append(" -> ")
-        .append(self.hanging_expr(&clause.then).group())
+        .append(self.hanging_expr(&clause.then))
     }
 
     pub fn external_type(&mut self, public: bool, name: &str, args: &[String]) -> Document {
