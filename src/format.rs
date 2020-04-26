@@ -934,6 +934,13 @@ fn list(elems: Document, tail: Option<Document>) -> Document {
     match tail {
         None => doc.nest(INDENT).append(break_(",", "")),
 
+        // Don't print tail if it is a discard
+        Some(Document::Text(t)) if t == "_".to_string() => doc
+            .append(break_(",", ", "))
+            .append("..")
+            .nest(INDENT)
+            .append(break_("", "")),
+
         Some(final_tail) => doc
             .append(break_(",", ", "))
             .append("..")
