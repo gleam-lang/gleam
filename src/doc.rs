@@ -57,7 +57,7 @@ pub fn generate_html(
             unnest: module.name.iter().map(|_| "..").intersperse("/").collect(),
             links,
             pages,
-            documentation: "",
+            documentation: render_markdown(module.ast.documentation.iter().join("\n").as_str()),
             modules: modules_links.as_slice(),
             project_name: &project_config.name,
             page_title: &format!("{} - {}", name, project_config.name),
@@ -238,5 +238,5 @@ struct ModuleTemplate<'a> {
     modules: &'a [Link],
     functions: Vec<Function<'a>>,
     types: Vec<Type<'a>>,
-    documentation: &'a str,
+    documentation: String,
 }

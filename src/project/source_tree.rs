@@ -152,6 +152,11 @@ impl SourceTree {
 
         // Annotate statements with their inline documentation
         attach_doc_comments(&mut module, &comments.doc_comments);
+        module.documentation = comments
+            .module_comments
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
 
         // Store the name
         module.name = name.split('/').map(|s| s.to_string()).collect();
