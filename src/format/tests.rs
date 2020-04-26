@@ -394,6 +394,23 @@ pub external type Four
 
     assert_format!(
         r#"fn main() {
+  fn(_) -> Int {
+    1
+    2
+  }
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  fn(_: Int) -> Int { 2 }
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
   fn(x) {
     case x {
       Ok(i) -> i + 1

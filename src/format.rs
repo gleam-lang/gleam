@@ -351,14 +351,26 @@ impl<'a> Formatter<'a> {
             .append(self.type_ast(retrn))
     }
 
-    fn expr_fn(&mut self, args: &[UntypedArg], body: &UntypedExpr) -> Document {
+    fn expr_fn(
+        &mut self,
+        args: &[UntypedArg],
+        return_annotation: Option<&TypeAst>,
+        body: &UntypedExpr,
+    ) -> Document {
         let args = self.fn_args(args);
         let body = match body {
             UntypedExpr::Case { .. } => force_break().append(self.expr(body)),
             _ => self.expr(body),
         };
-        "fn".to_doc()
-            .append(args)
+
+        let header = "fn".to_doc().append(args);
+
+        let header = match return_annotation {
+            None => header,
+            Some(t) => header.append(" -> ").append(self.type_ast(&t)),
+        };
+
+        header
             .append(
                 break_(" {", " { ")
                     .append(body)
@@ -437,11 +449,11 @@ impl<'a> Formatter<'a> {
 
             UntypedExpr::Fn {
                 // is_capture,
-                // return_annotation, // TODO: render this annotation
+                return_annotation,
                 args,
                 body,
                 ..
-            } => self.expr_fn(args.as_slice(), body.as_ref()),
+            } => self.expr_fn(args.as_slice(), return_annotation.as_ref(), body.as_ref()),
 
             UntypedExpr::ListNil { .. } => "[]".to_doc(),
 
