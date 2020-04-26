@@ -453,8 +453,8 @@ impl<'a> Formatter<'a> {
 
             UntypedExpr::Case {
                 subjects, clauses, ..
-            } => "case "
-                .to_doc()
+            } => force_break()
+                .append("case ")
                 .append(concat(
                     subjects
                         .into_iter()

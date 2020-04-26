@@ -392,6 +392,18 @@ pub external type Four
 "#
     );
 
+    assert_format!(
+        r#"fn main() {
+  fn(x) {
+    case x {
+      Ok(i) -> i + 1
+      Error(_) -> 0
+    }
+  }
+}
+"#
+    );
+
     //
     // Call exprs
     //
