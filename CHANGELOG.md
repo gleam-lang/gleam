@@ -28,6 +28,9 @@
 - Added a new `..` syntax for discarding the remaining fields of a record.
 - Using the same variable name multiple times in the same pattern will now raise
   an error.
+- Discard can now be omitted in list tails in patterns, ie `[x, ..]` is the
+  same as `[x, .._]`. The former is the prefered version and is emitted by the
+  formatter.
 
 ## v0.7.1 - 2020-03-03
 
