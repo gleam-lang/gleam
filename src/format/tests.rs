@@ -2295,6 +2295,15 @@ fn main() {
 }
 "
     );
+
+    assert_format!(
+        "pub fn main() {
+  let x = 1
+
+  x
+}
+"
+    );
 }
 
 #[test]
