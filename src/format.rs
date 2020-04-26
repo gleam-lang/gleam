@@ -26,6 +26,7 @@ pub fn pretty(src: &str) -> Result<String, crate::parser::LalrpopError> {
 pub struct Formatter<'a> {
     comments: &'a [Comment<'a>],
     doc_comments: &'a [Comment<'a>],
+    module_comments: &'a [&'a str],
     empty_lines: &'a [usize],
 }
 
@@ -34,6 +35,7 @@ impl<'a> Formatter<'a> {
         Self {
             comments: &[],
             doc_comments: &[],
+            module_comments: &[],
             empty_lines: &[],
         }
     }
@@ -43,6 +45,7 @@ impl<'a> Formatter<'a> {
             comments: comments.comments.as_slice(),
             doc_comments: comments.doc_comments.as_slice(),
             empty_lines: comments.empty_lines.as_slice(),
+            module_comments: comments.module_comments.as_slice(),
         }
     }
 
@@ -118,7 +121,18 @@ impl<'a> Formatter<'a> {
                 .map(|comment| line().append("//").append(comment.content)),
         );
 
-        imports
+        let module_comments = if !self.module_comments.is_empty() {
+            let comments = self
+                .module_comments
+                .iter()
+                .map(|s| "////".to_doc().append(s.to_string()).append(line()));
+            concat(comments).append(line())
+        } else {
+            nil()
+        };
+
+        module_comments
+            .append(imports)
             .append(sep)
             .append(declarations)
             .append(doc_comments)
