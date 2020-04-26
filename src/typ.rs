@@ -1615,6 +1615,7 @@ pub fn infer_module(
     } = env;
 
     Ok(ast::Module {
+        documentation: module.documentation,
         name: module.name.clone(),
         statements,
         type_info: Module {
@@ -2093,7 +2094,7 @@ fn infer_let(
         pattern,
         value: Box::new(value),
         then: Box::new(then),
-        assert: assert,
+        assert,
     })
 }
 
@@ -2854,7 +2855,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                                 name,
                                 args: pattern_args,
                                 constructor,
-                                with_spread: with_spread,
+                                with_spread,
                             })
                         } else {
                             Err(Error::IncorrectArity {
@@ -2875,7 +2876,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                                 name,
                                 args: vec![],
                                 constructor,
-                                with_spread: with_spread,
+                                with_spread,
                             })
                         } else {
                             Err(Error::IncorrectArity {

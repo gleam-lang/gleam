@@ -17,6 +17,7 @@ extern {
 
 pub Module: UntypedModule = {
     <statements:Statement*> => Module {
+        documentation: vec![],
         type_info: (),
         name: vec![],
         statements: statements,

@@ -14,6 +14,7 @@ fn record_definition_test() {
 fn module_test() {
     use std::collections::HashMap;
     let m = Module {
+        documentation: vec![],
         type_info: crate::typ::Module {
             name: vec!["magic".to_string()],
             types: HashMap::new(),
@@ -117,6 +118,8 @@ map() ->
     assert_eq!(expected, module(&m));
 
     let m = Module {
+        documentation: vec![],
+
         type_info: crate::typ::Module {
             name: vec!["term".to_string()],
             types: HashMap::new(),
@@ -422,6 +425,7 @@ tup() ->
     assert_eq!(expected, module(&m));
 
     let m = Module {
+        documentation: vec![],
         type_info: crate::typ::Module {
             name: vec!["term".to_string()],
             types: HashMap::new(),
@@ -528,6 +532,7 @@ some_function(
     assert_eq!(expected, module(&m));
 
     let m = Module {
+        documentation: vec![],
         type_info: crate::typ::Module {
             name: vec!["ok".to_string()],
             types: HashMap::new(),
@@ -643,6 +648,7 @@ moddy4() ->
     assert_eq!(expected, module(&m));
 
     let m = Module {
+        documentation: vec![],
         type_info: crate::typ::Module {
             name: vec!["my_mod".to_string()],
             types: HashMap::new(),
@@ -804,6 +810,7 @@ go() ->
     assert_eq!(expected, module(&m));
 
     let m = Module {
+        documentation: vec![],
         type_info: crate::typ::Module {
             name: vec!["funny".to_string()],
             types: HashMap::new(),

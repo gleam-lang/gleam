@@ -164,6 +164,7 @@ fn field_map_reorder_test() {
 #[test]
 fn infer_module_type_retention_test() {
     let module: UntypedModule = crate::ast::Module {
+        documentation: vec![],
         name: vec!["ok".to_string()],
         statements: vec![],
         type_info: (),
