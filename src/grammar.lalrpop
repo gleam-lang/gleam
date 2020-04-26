@@ -735,10 +735,23 @@ PatternList: UntypedPattern = {
         ).put_list_cons_location_start(s)
     },
 
-    <s:@L> "[" <elems:Comma<Pattern>> <tail:(".." <PatternVarOrDiscard> (",")?)?> "]" <e:@L> => {
-        let tail = tail.unwrap_or_else(|| Pattern::Nil {
-            location: location(e - 1, e),
-        });
+    <s:@L> "[" <elems:Comma<Pattern>> <tail:(".." <PatternVarOrDiscard?> (",")?)?> "]" <e:@L> => {
+        let tail = match tail {
+            // There is a tail and it has a PatternVarOrDiscard
+            Some(Some(p)) => p,
+
+            // There is a tail and but it has no content, implicit discard
+            Some(None) => Pattern::Discard {
+                location: location(e - 1, e),
+                name: "_".to_string()
+            },
+
+            // No tail specified
+            None => Pattern::Nil {
+                location: location(e - 1, e),
+            },
+        };
+
         elems.into_iter().rev().fold(
             tail,
             |a, e| Pattern::Cons {
