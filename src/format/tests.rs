@@ -382,6 +382,16 @@ pub external type Four
 "#
     );
 
+    assert_format!(
+        r#"fn main() {
+  fn(_) {
+    1
+    2
+  }
+}
+"#
+    );
+
     //
     // Call exprs
     //
@@ -1190,10 +1200,10 @@ World"
 
     assert_format!(
         r#"fn main() {
-  fn(_) {
-    1
-    2
-  }
+  let dict = map.from_list(
+    [tuple("a", 0), tuple("b", 1), tuple("c", 2), tuple("d", 3)],
+  )
+  1
 }
 "#
     );
@@ -2301,6 +2311,19 @@ fn main() {
   let x = 1
 
   x
+}
+"
+    );
+
+    assert_format!(
+        "pub fn main() {
+  let inc = fn(a) { a + 1 }
+
+  pair.map_first(tuple(1, 2), inc)
+  |> should.equal(_, tuple(2, 2))
+
+  pair.map_first(tuple(1, 2), inc)
+  |> should.equal(_, tuple(2, 2))
 }
 "
     );

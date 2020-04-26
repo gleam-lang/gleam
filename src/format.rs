@@ -351,11 +351,17 @@ impl<'a> Formatter<'a> {
     }
 
     fn seq(&mut self, first: &UntypedExpr, then: &UntypedExpr) -> Document {
-        self.pop_empty_lines(first.location().end);
-        let has_lines = self.pop_empty_lines(then.start_byte_index());
         force_break()
-            .append(self.expr(first).group())
-            .append(if has_lines { lines(2) } else { line() })
+            .append({
+                let doc = self.expr(first).group();
+                self.pop_empty_lines(first.location().end);
+                doc
+            })
+            .append(if self.pop_empty_lines(then.start_byte_index()) {
+                lines(2)
+            } else {
+                line()
+            })
             .append(self.expr(then))
     }
 
@@ -367,6 +373,7 @@ impl<'a> Formatter<'a> {
         assert: bool,
     ) -> Document {
         self.pop_empty_lines(pattern.location().end);
+
         let line = if self.pop_empty_lines(then.start_byte_index()) {
             lines(2)
         } else {
@@ -615,7 +622,9 @@ impl<'a> Formatter<'a> {
                 .append(force_break())
                 .append("}"),
 
-            UntypedExpr::Fn { .. } | UntypedExpr::Case { .. } => self.expr(expr),
+            UntypedExpr::Call { .. } | UntypedExpr::Fn { .. } | UntypedExpr::Case { .. } => {
+                self.expr(expr)
+            }
 
             _ => self.expr(expr).nest(INDENT),
         }
