@@ -1134,6 +1134,19 @@ tail(List) ->
 "#,
     );
 
+    assert_erl!(
+        "fn tail(list) { case list { [x, ..] -> x } }",
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+tail(List) ->
+    case List of
+        [X | _] ->
+            X
+    end.
+"#,
+    );
+
     // Deprecated syntax
     assert_erl!(
         r#"fn second(list) { case list { [x, y] -> y z -> 1 } }
