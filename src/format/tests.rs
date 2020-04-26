@@ -2332,10 +2332,10 @@ fn main() {
   let inc = fn(a) { a + 1 }
 
   pair.map_first(tuple(1, 2), inc)
-  |> should.equal(_, tuple(2, 2))
+  |> should.equal(tuple(2, 2))
 
   pair.map_first(tuple(1, 2), inc)
-  |> should.equal(_, tuple(2, 2))
+  |> should.equal(tuple(2, 2))
 }
 "
     );
@@ -2458,6 +2458,33 @@ fn main() {
 
 fn main() {
   1
+}
+",
+    );
+
+    // Superfluous function captures are removed from pipe expressions
+    assert_format_rewrite!(
+        "fn main() {
+  1
+  |> run(_, 1)
+}
+",
+        "fn main() {
+  1
+  |> run(1)
+}
+",
+    );
+
+    assert_format_rewrite!(
+        "fn main() {
+  1
+  |> run(_)
+}
+",
+        "fn main() {
+  1
+  |> run
 }
 ",
     );

@@ -408,11 +408,7 @@ impl<'a> Formatter<'a> {
         let document = match expr {
             UntypedExpr::Todo { .. } => "todo".to_doc(),
 
-            UntypedExpr::Pipe { left, right, .. } => force_break()
-                .append(self.expr(left))
-                .append(line())
-                .append("|> ")
-                .append(self.expr(right)),
+            UntypedExpr::Pipe { left, right, .. } => self.pipe(left, right),
 
             UntypedExpr::Int { value, .. } => value.clone().to_doc(),
 
@@ -498,6 +494,54 @@ impl<'a> Formatter<'a> {
                 .append(wrap_args(elems.iter().map(|e| self.wrap_expr(e)))),
         };
         commented(document, comments)
+    }
+
+    fn pipe(&mut self, left: &UntypedExpr, right: &UntypedExpr) -> Document {
+        let left = self.expr(left);
+        let right = match right {
+            UntypedExpr::Fn {
+                is_capture: true,
+                body,
+                ..
+            } => self.pipe_capture_right_hand_side(body),
+
+            _ => self.expr(right),
+        };
+        force_break()
+            .append(left)
+            .append(line())
+            .append("|> ")
+            .append(right)
+    }
+
+    fn pipe_capture_right_hand_side(&mut self, fun: &UntypedExpr) -> Document {
+        let (fun, args) = match fun {
+            UntypedExpr::Call { fun, args, .. } => (fun, args),
+            _ => crate::error::fatal_compiler_bug(
+                "Function capture found not to have a function call body when formatting",
+            ),
+        };
+
+        let hole_in_first_position = match args.get(0) {
+            Some(CallArg {
+                value: UntypedExpr::Var { name, .. },
+                ..
+            }) => name == CAPTURE_VARIABLE,
+            _ => false,
+        };
+
+        if hole_in_first_position && args.len() == 1 {
+            // x |> fun(_)
+            self.expr(fun)
+        } else if hole_in_first_position {
+            // x |> fun(_, 2, 3)
+            self.expr(fun)
+                .append(wrap_args(args.iter().skip(1).map(|a| self.call_arg(a))))
+        } else {
+            // x |> fun(1, _, 3)
+            self.expr(fun)
+                .append(wrap_args(args.iter().map(|a| self.call_arg(a))))
+        }
     }
 
     fn fn_capture(&mut self, call: &UntypedExpr) -> Document {
