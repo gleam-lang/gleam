@@ -21,42 +21,54 @@ pub fn format_files(files: Vec<String>, _check: bool) -> Result<(), Error> {
             err: Some(e.to_string()),
         })?;
 
-        let mut file = OpenOptions::new()
-            .write(true)
-            .read(true)
-            .open(path.clone())
-            .map_err(|e| Error::FileIO {
-                action: FileIOAction::Open,
-                kind: FileKind::File,
-                path: path.clone(),
-                err: Some(e.to_string()),
-            })?;
+        if path.is_dir() {
+            for path in crate::project::gleam_files(&path).into_iter().flatten() {
+                format_file(&path)?;
+            }
+        } else {
+            format_file(&path)?;
+        }
+    }
 
-        let mut src = String::new();
-        file.read_to_string(&mut src).map_err(|e| Error::FileIO {
-            action: FileIOAction::Read,
+    Ok(())
+}
+
+fn format_file(path: &PathBuf) -> Result<(), Error> {
+    let mut file = OpenOptions::new()
+        .write(true)
+        .read(true)
+        .open(path.clone())
+        .map_err(|e| Error::FileIO {
+            action: FileIOAction::Open,
             kind: FileKind::File,
             path: path.clone(),
             err: Some(e.to_string()),
         })?;
 
-        let formatted = crate::format::pretty(src.as_ref()).map_err(|error| Error::Parse {
+    let mut src = String::new();
+    file.read_to_string(&mut src).map_err(|e| Error::FileIO {
+        action: FileIOAction::Read,
+        kind: FileKind::File,
+        path: path.clone(),
+        err: Some(e.to_string()),
+    })?;
+
+    let formatted = crate::format::pretty(src.as_ref()).map_err(|error| Error::Parse {
+        path: path.clone(),
+        src: src.clone(),
+        error,
+    })?;
+
+    file.seek(SeekFrom::Start(0)).unwrap();
+    file.set_len(0).unwrap();
+
+    file.write(&mut formatted.as_bytes())
+        .map_err(|e| Error::FileIO {
+            action: FileIOAction::WriteTo,
+            kind: FileKind::File,
+            err: Some(e.to_string()),
             path: path.clone(),
-            src: src.clone(),
-            error,
         })?;
-
-        file.seek(SeekFrom::Start(0)).unwrap();
-        file.set_len(0).unwrap();
-
-        file.write(&mut formatted.as_bytes())
-            .map_err(|e| Error::FileIO {
-                action: FileIOAction::WriteTo,
-                kind: FileKind::File,
-                err: Some(e.to_string()),
-                path,
-            })?;
-    }
 
     Ok(())
 }

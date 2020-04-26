@@ -159,47 +159,57 @@ pub fn generate_erlang(analysed: &[Analysed], files: &mut Vec<OutputFile>) {
     }
 }
 
+fn is_gleam_path(path: &PathBuf, dir: &PathBuf) -> bool {
+    use regex::Regex;
+    lazy_static! {
+        static ref RE: Regex = Regex::new("^([a-z_]+(/|\\\\))*[a-z_]+\\.gleam$")
+            .gleam_expect("project::collect_source() RE regex");
+    }
+
+    RE.is_match(
+        path.strip_prefix(dir)
+            .gleam_expect("project::collect_source(): strip_prefix")
+            .to_str()
+            .unwrap_or(""),
+    )
+}
+
+pub fn gleam_files(dir: &PathBuf) -> Option<impl Iterator<Item = PathBuf>> {
+    let dir = match dir.canonicalize() {
+        Ok(d) => d,
+        Err(_) => return None,
+    };
+
+    Some(
+        walkdir::WalkDir::new(dir.clone())
+            .into_iter()
+            .filter_map(Result::ok)
+            .filter(|e| e.file_type().is_file())
+            .map(|d| d.path().to_path_buf())
+            .filter(move |d| is_gleam_path(d, &dir)),
+    )
+}
+
 pub fn collect_source(
     src_dir: PathBuf,
     origin: ModuleOrigin,
     srcs: &mut Vec<Input>,
 ) -> Result<(), Error> {
-    let src_dir = match src_dir.canonicalize() {
-        Ok(d) => d,
-        Err(_) => return Ok(()),
-    };
-    let is_gleam_path = |e: &walkdir::DirEntry| {
-        use regex::Regex;
-        lazy_static! {
-            static ref RE: Regex = Regex::new("^([a-z_]+(/|\\\\))*[a-z_]+\\.gleam$")
-                .gleam_expect("project::collect_source() RE regex");
-        }
-
-        RE.is_match(
-            e.path()
-                .strip_prefix(&*src_dir)
-                .gleam_expect("project::collect_source(): strip_prefix")
-                .to_str()
-                .unwrap_or(""),
-        )
+    let paths = match gleam_files(&src_dir) {
+        Some(paths) => paths,
+        None => return Ok(()),
     };
 
-    for dir_entry in walkdir::WalkDir::new(src_dir.clone())
-        .into_iter()
-        .filter_map(Result::ok)
-        .filter(|e| e.file_type().is_file())
-        .filter(is_gleam_path)
-    {
-        let src = std::fs::read_to_string(dir_entry.path()).map_err(|err| Error::FileIO {
+    for path in paths {
+        let src = std::fs::read_to_string(&path).map_err(|err| Error::FileIO {
             action: FileIOAction::Read,
             kind: FileKind::File,
-            path: dir_entry.path().to_path_buf(),
             err: Some(err.to_string()),
+            path: path.clone(),
         })?;
 
         srcs.push(Input {
-            path: dir_entry
-                .path()
+            path: path
                 .canonicalize()
                 .gleam_expect("project::collect_source(): path canonicalize"),
             source_base_path: src_dir.clone(),

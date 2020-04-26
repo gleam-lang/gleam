@@ -1030,22 +1030,6 @@ World"
     // Pipe
     //
 
-    // TODO
-    //    assert_format!(
-    //        r#"fn main() {
-    //  1 |> succ
-    //}
-    //"#
-    //    );
-
-    // TODO
-    //    assert_format!(
-    //        r#"fn main() {
-    //  1 |> succ |> succ |> succ
-    //}
-    //"#
-    //    );
-
     assert_format!(
         r#"fn main() {
   1
