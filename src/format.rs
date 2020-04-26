@@ -359,6 +359,28 @@ impl<'a> Formatter<'a> {
             .append(self.expr(then))
     }
 
+    fn let_(
+        &mut self,
+        pattern: &UntypedPattern,
+        value: &UntypedExpr,
+        then: &UntypedExpr,
+        assert: bool,
+    ) -> Document {
+        self.pop_empty_lines(pattern.location().end);
+        let line = if self.pop_empty_lines(then.start_byte_index()) {
+            lines(2)
+        } else {
+            line()
+        };
+        force_break()
+            .append(if assert { "assert " } else { "let " })
+            .append(self.pattern(pattern))
+            .append(" = ")
+            .append(self.hanging_expr(value))
+            .append(line)
+            .append(self.expr(then))
+    }
+
     fn expr(&mut self, expr: &UntypedExpr) -> Document {
         let comments = self.pop_comments(expr.start_byte_index());
 
@@ -420,13 +442,7 @@ impl<'a> Formatter<'a> {
                 then,
                 assert,
                 ..
-            } => force_break()
-                .append(if *assert { "assert " } else { "let " })
-                .append(self.pattern(pattern))
-                .append(" = ")
-                .append(self.hanging_expr(value.as_ref()))
-                .append(line())
-                .append(self.expr(then.as_ref())),
+            } => self.let_(pattern, value, then, *assert),
 
             UntypedExpr::Case {
                 subjects, clauses, ..
