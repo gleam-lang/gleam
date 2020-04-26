@@ -2247,3 +2247,46 @@ fn main() {
 "
     );
 }
+
+#[test]
+fn module_rewrites_test() {
+    macro_rules! assert_format_rewrite {
+        ($src:expr, $output:expr  $(,)?) => {
+            assert_eq!(pretty($src).unwrap(), $output);
+        };
+    }
+
+    // Formatter rewrites old [x | y] list prepend syntax to [x, ..y]
+    assert_format_rewrite!(
+        "fn main() {
+  [1, 2, 3 | x]
+}
+",
+        "fn main() {
+  [1, 2, 3, ..x]
+}
+",
+    );
+
+    // Formatter rewrites old [x | y] list prepend syntax to [x, ..y] with line breaks
+    assert_format_rewrite!(
+        "fn main() {
+  [
+    really_long_variable_name,
+    really_long_variable_name,
+    really_long_variable_name
+    | tail
+  ]
+}
+",
+        "fn main() {
+  [
+    really_long_variable_name,
+    really_long_variable_name,
+    really_long_variable_name,
+    ..tail
+  ]
+}
+",
+    );
+}
