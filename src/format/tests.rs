@@ -2339,6 +2339,23 @@ fn main() {
 }
 "
     );
+
+    //
+    // Module docs
+    //
+
+    assert_format!(
+        "//// One
+//// Two
+//// Three
+
+pub fn main() {
+  let x = 1
+
+  x
+}
+"
+    );
 }
 
 #[test]
@@ -2397,7 +2414,7 @@ fn module_rewrites_test() {
 ",
     );
 
-    // Formatter removes discard list prefix with line breaks
+    // formatter removes discard list prefix with line breaks
     assert_format_rewrite!(
         "fn main() {
   let [
@@ -2417,6 +2434,30 @@ fn module_rewrites_test() {
     ..
   ] = [1, 2, 3, 4]
   really_long_variable_name_1
+}
+",
+    );
+
+    // Module comments are moved to the top
+    assert_format_rewrite!(
+        "//// One
+
+//// Two
+
+fn main() {
+  1
+}
+//// Three
+
+//// Four
+",
+        "//// One
+//// Two
+//// Three
+//// Four
+
+fn main() {
+  1
 }
 ",
     );
