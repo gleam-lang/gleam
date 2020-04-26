@@ -12,6 +12,7 @@ pub type LalrpopError = lalrpop_util::ParseError<usize, (usize, String), Error>;
 
 #[derive(Debug, PartialEq)]
 pub struct ModuleComments<'a> {
+    pub module_comments: Vec<&'a str>,
     pub doc_comments: Vec<Comment<'a>>,
     pub comments: Vec<Comment<'a>>,
     pub empty_lines: Vec<usize>,
@@ -44,6 +45,7 @@ pub fn take_before<'a>(
 pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
     #[derive(Clone, Copy)]
     enum Kind {
+        Module,
         Regular,
         Doc,
     }
@@ -57,6 +59,7 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
     let mut mode = Mode::Normal;
     let mut chars = UnicodeSegmentation::grapheme_indices(src, true).peekable();
     let mut comments = ModuleComments {
+        module_comments: vec![],
         doc_comments: vec![],
         comments: vec![],
         empty_lines: vec![],
@@ -81,6 +84,10 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
                                 mode = Mode::Comment(Kind::Doc, outer_char_no);
                                 buffer.push(' ');
                                 chars.next();
+                                if let Some((_, "/")) = chars.peek() {
+                                    mode = Mode::Comment(Kind::Module, outer_char_no);
+                                    buffer.push(' ');
+                                }
                             }
                             Some((_, _c2)) => {
                                 mode = Mode::Comment(Kind::Regular, outer_char_no);
@@ -126,6 +133,7 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
                 "\n" => {
                     mode = Mode::Normal;
                     let content_start = match &kind {
+                        Kind::Module => start + 4,
                         Kind::Doc => start + 3,
                         Kind::Regular => start + 2,
                     };
@@ -134,10 +142,10 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
                         content: &src[content_start..outer_char_no],
                     };
                     match &kind {
-                        Kind::Doc => &mut comments.doc_comments,
-                        Kind::Regular => &mut comments.comments,
-                    }
-                    .push(comment);
+                        Kind::Module => comments.module_comments.push(comment.content),
+                        Kind::Doc => comments.doc_comments.push(comment),
+                        Kind::Regular => comments.comments.push(comment),
+                    };
                     buffer.push('\n');
 
                     chomp_newlines(&mut buffer, start, &mut comments, &mut chars)
@@ -149,6 +157,7 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
 
     if let Mode::Comment(kind, start) = mode {
         let content_start = match &kind {
+            Kind::Module => start + 4,
             Kind::Doc => start + 3,
             Kind::Regular => start + 2,
         };
@@ -157,10 +166,10 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
             content: &src[content_start..],
         };
         match &kind {
-            Kind::Doc => &mut comments.doc_comments,
-            Kind::Regular => &mut comments.comments,
-        }
-        .push(comment);
+            Kind::Module => comments.module_comments.push(comment.content),
+            Kind::Doc => comments.doc_comments.push(comment),
+            Kind::Regular => comments.comments.push(comment),
+        };
     };
 
     (buffer, comments)
@@ -235,6 +244,7 @@ pub external fn a() -> Nil =
         "// 👨‍👩‍👧‍👧 unicode\n",
         "            \n",
         ModuleComments {
+            module_comments: vec![],
             doc_comments: vec![],
             comments: vec![Comment {
                 start: 0,
@@ -248,6 +258,7 @@ pub external fn a() -> Nil =
         "// hello\n",
         "        \n",
         ModuleComments {
+            module_comments: vec![],
             doc_comments: vec![],
             comments: vec![Comment {
                 start: 0,
@@ -261,6 +272,7 @@ pub external fn a() -> Nil =
         "// hello",
         "        ",
         ModuleComments {
+            module_comments: vec![],
             doc_comments: vec![],
             comments: vec![Comment {
                 start: 0,
@@ -276,6 +288,7 @@ pub external fn a() -> Nil =
         "/// hello\n",
         "         \n",
         ModuleComments {
+            module_comments: vec![],
             doc_comments: vec![Comment {
                 start: 0,
                 content: " hello",
@@ -289,6 +302,7 @@ pub external fn a() -> Nil =
         "/// hello",
         "         ",
         ModuleComments {
+            module_comments: vec![],
             doc_comments: vec![Comment {
                 start: 0,
                 content: " hello",
@@ -310,6 +324,7 @@ fn main() {
 }
 ",
         ModuleComments {
+            module_comments: vec![],
             doc_comments: vec![
                 Comment {
                     start: 0,
@@ -355,6 +370,7 @@ fn main() {
 }
 ",
         ModuleComments {
+            module_comments: vec![],
             doc_comments: vec![Comment {
                 start: 22,
                 content: ""
@@ -364,6 +380,28 @@ fn main() {
                 content: ""
             }],
             empty_lines: vec![1, 17, 23, 33, 40],
+        }
+    );
+
+    assert_stripped!(
+        "//// This module rocks!
+//// Yes it does
+
+fn main() {
+  1
+}
+//// OK?
+",
+        "                        \n                 \n
+fn main() {
+  1
+}
+         \n",
+        ModuleComments {
+            module_comments: vec![" This module rocks!", " Yes it does", " OK?"],
+            doc_comments: vec![],
+            comments: vec![],
+            empty_lines: vec![25],
         }
     );
 }
