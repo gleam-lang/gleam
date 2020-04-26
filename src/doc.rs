@@ -162,10 +162,12 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
             args,
             doc,
             constructors: cs,
+            location,
             ..
         } => Some(Type {
             name,
-            definition: print(formatter.custom_type(true, name, args, cs.as_slice())),
+            // TODO: Don't use the same printer for docs as for the formatter
+            definition: print(formatter.custom_type(true, name, args, cs.as_slice(), location)),
             documentation: markdown_documentation(doc),
         }),
 

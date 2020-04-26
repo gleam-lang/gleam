@@ -26,6 +26,7 @@ pub fn pretty(src: &str) -> Result<String, crate::parser::LalrpopError> {
 pub struct Formatter<'a> {
     comments: &'a [Comment<'a>],
     doc_comments: &'a [Comment<'a>],
+    empty_lines: &'a [usize],
 }
 
 impl<'a> Formatter<'a> {
@@ -33,6 +34,7 @@ impl<'a> Formatter<'a> {
         Self {
             comments: &[],
             doc_comments: &[],
+            empty_lines: &[],
         }
     }
 
@@ -40,6 +42,7 @@ impl<'a> Formatter<'a> {
         Self {
             comments: comments.comments.as_slice(),
             doc_comments: comments.doc_comments.as_slice(),
+            empty_lines: comments.empty_lines.as_slice(),
         }
     }
 
@@ -55,6 +58,19 @@ impl<'a> Formatter<'a> {
         let (popped, rest) = crate::parser::take_before(self.doc_comments, limit);
         self.doc_comments = rest;
         popped
+    }
+
+    fn pop_empty_lines(&mut self, limit: usize) -> bool {
+        let mut end = 0;
+        for (i, postition) in self.empty_lines.iter().enumerate() {
+            if *postition > limit {
+                break;
+            }
+            end = i + 1;
+        }
+
+        self.empty_lines = &self.empty_lines[end..];
+        end != 0
     }
 
     fn module(&mut self, module: &UntypedModule) -> Document {
@@ -134,8 +150,9 @@ impl<'a> Formatter<'a> {
                 args,
                 public,
                 constructors,
+                location,
                 ..
-            } => self.custom_type(*public, name, args.as_slice(), constructors),
+            } => self.custom_type(*public, name, args.as_slice(), constructors, location),
 
             Statement::ExternalFn {
                 public,
@@ -333,6 +350,15 @@ impl<'a> Formatter<'a> {
             .group()
     }
 
+    fn seq(&mut self, first: &UntypedExpr, then: &UntypedExpr) -> Document {
+        self.pop_empty_lines(first.location().end);
+        let has_lines = self.pop_empty_lines(then.start_byte_index());
+        force_break()
+            .append(self.expr(first).group())
+            .append(if has_lines { lines(2) } else { line() })
+            .append(self.expr(then))
+    }
+
     fn expr(&mut self, expr: &UntypedExpr) -> Document {
         let comments = self.pop_comments(expr.start_byte_index());
 
@@ -351,10 +377,7 @@ impl<'a> Formatter<'a> {
 
             UntypedExpr::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
 
-            UntypedExpr::Seq { first, then, .. } => force_break()
-                .append(self.expr(first).group())
-                .append(line())
-                .append(self.expr(then.as_ref())),
+            UntypedExpr::Seq { first, then, .. } => self.seq(first, then),
 
             UntypedExpr::Var { name, .. } if name == CAPTURE_VARIABLE => "_".to_doc(),
 
@@ -484,7 +507,9 @@ impl<'a> Formatter<'a> {
         name: &str,
         args: &[String],
         constructors: &[RecordConstructor],
+        location: &SrcSpan,
     ) -> Document {
+        self.pop_empty_lines(location.start);
         pub_(public)
             .to_doc()
             .append("type ")
@@ -497,10 +522,14 @@ impl<'a> Formatter<'a> {
             })
             .append(" {")
             .append(concat(constructors.into_iter().map(|c| {
-                line()
-                    .append(self.record_constructor(c))
-                    .nest(INDENT)
-                    .group()
+                if self.pop_empty_lines(c.location.start) {
+                    lines(2)
+                } else {
+                    line()
+                }
+                .append(self.record_constructor(c))
+                .nest(INDENT)
+                .group()
             })))
             .append(line())
             .append("}")
