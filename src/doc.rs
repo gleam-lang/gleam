@@ -40,10 +40,14 @@ pub fn generate_html(
         links,
         pages,
         modules: &modules_links,
-        content: "", // TODO
         project_name: &project_config.name,
         page_title: &project_config.name,
         project_version: "", // TODO
+        content: render_markdown(
+            std::fs::read_to_string(dir.join("..").join("README.md"))
+                .unwrap_or_default()
+                .as_ref(),
+        ),
     };
     files.push(OutputFile {
         path: dir.join("index.html"),
@@ -222,7 +226,7 @@ struct PageTemplate<'a> {
     pages: &'a [Link],
     links: &'a [Link],
     modules: &'a [Link],
-    content: &'a str,
+    content: String,
 }
 
 #[derive(Template)]
