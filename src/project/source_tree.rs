@@ -33,7 +33,6 @@ impl SourceTree {
         Ok(iter)
     }
 
-    // TODO: unit tests
     fn import_cycle(&mut self, cycle: Cycle<NodeIndex>) -> Error {
         let origin = cycle.node_id();
         let mut path = vec![];

@@ -174,20 +174,13 @@ fn is_gleam_path(path: &PathBuf, dir: &PathBuf) -> bool {
     )
 }
 
-pub fn gleam_files(dir: &PathBuf) -> Option<impl Iterator<Item = PathBuf>> {
-    let dir = match dir.canonicalize() {
-        Ok(d) => d,
-        Err(_) => return None,
-    };
-
-    Some(
-        walkdir::WalkDir::new(dir.clone())
-            .into_iter()
-            .filter_map(Result::ok)
-            .filter(|e| e.file_type().is_file())
-            .map(|d| d.path().to_path_buf())
-            .filter(move |d| is_gleam_path(d, &dir)),
-    )
+pub fn gleam_files(dir: &PathBuf) -> impl Iterator<Item = PathBuf> + '_ {
+    walkdir::WalkDir::new(dir.clone())
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|e| e.file_type().is_file())
+        .map(|d| d.path().to_path_buf())
+        .filter(move |d| is_gleam_path(d, &dir))
 }
 
 pub fn collect_source(
@@ -195,12 +188,12 @@ pub fn collect_source(
     origin: ModuleOrigin,
     srcs: &mut Vec<Input>,
 ) -> Result<(), Error> {
-    let paths = match gleam_files(&src_dir) {
-        Some(paths) => paths,
-        None => return Ok(()),
+    let src_dir = match src_dir.canonicalize() {
+        Ok(d) => d,
+        Err(_) => return Ok(()),
     };
 
-    for path in paths {
+    for path in gleam_files(&src_dir) {
         let src = std::fs::read_to_string(&path).map_err(|err| Error::FileIO {
             action: FileIOAction::Read,
             kind: FileKind::File,

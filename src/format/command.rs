@@ -22,7 +22,7 @@ pub fn format_files(files: Vec<String>, _check: bool) -> Result<(), Error> {
         })?;
 
         if path.is_dir() {
-            for path in crate::project::gleam_files(&path).into_iter().flatten() {
+            for path in crate::project::gleam_files(&path).into_iter() {
                 format_file(&path)?;
             }
         } else {
