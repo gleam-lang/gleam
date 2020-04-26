@@ -2246,6 +2246,55 @@ fn main() {
 }
 "
     );
+
+    //
+    // Empty lines
+    //
+
+    assert_format!(
+        "pub fn main() {
+  1
+
+  2
+}
+"
+    );
+
+    assert_format!(
+        "pub fn main() {
+  // one
+  1
+
+  // two
+  2
+}
+"
+    );
+
+    assert_format!(
+        "pub fn main() {
+  // one
+  1
+
+  // two
+  2
+
+  // three
+  3
+}
+"
+    );
+
+    assert_format!(
+        "pub type Number {
+  One
+
+  Two
+
+  Three
+}
+"
+    );
 }
 
 #[test]

@@ -14,7 +14,7 @@ pub type LalrpopError = lalrpop_util::ParseError<usize, (usize, String), Error>;
 pub struct ModuleComments<'a> {
     pub doc_comments: Vec<Comment<'a>>,
     pub comments: Vec<Comment<'a>>,
-    pub spaces: Vec<usize>,
+    pub empty_lines: Vec<usize>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -59,7 +59,7 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
     let mut comments = ModuleComments {
         doc_comments: vec![],
         comments: vec![],
-        spaces: vec![],
+        empty_lines: vec![],
     };
 
     while let Some((outer_char_no, c)) = chars.next() {
@@ -174,7 +174,7 @@ fn chomp_newlines(
 ) {
     match chars.peek() {
         Some((_, "\n")) => {
-            comments.spaces.push(position + 1);
+            comments.empty_lines.push(position + 1);
             while let Some((_, "\n")) = chars.peek() {
                 buffer.push('\n');
                 chars.next();
@@ -240,7 +240,7 @@ pub external fn a() -> Nil =
                 start: 0,
                 content: " 👨‍👩‍👧‍👧 unicode",
             }],
-            spaces: vec![],
+            empty_lines: vec![],
         }
     );
 
@@ -253,7 +253,7 @@ pub external fn a() -> Nil =
                 start: 0,
                 content: " hello",
             }],
-            spaces: vec![],
+            empty_lines: vec![],
         }
     );
 
@@ -266,7 +266,7 @@ pub external fn a() -> Nil =
                 start: 0,
                 content: " hello",
             }],
-            spaces: vec![],
+            empty_lines: vec![],
         }
     );
 
@@ -280,7 +280,7 @@ pub external fn a() -> Nil =
                 start: 0,
                 content: " hello",
             }],
-            spaces: vec![],
+            empty_lines: vec![],
             comments: vec![],
         }
     );
@@ -294,7 +294,7 @@ pub external fn a() -> Nil =
                 content: " hello",
             }],
             comments: vec![],
-            spaces: vec![],
+            empty_lines: vec![],
         }
     );
 
@@ -321,7 +321,7 @@ fn main() {
                 }
             ],
             comments: vec![],
-            spaces: vec![],
+            empty_lines: vec![],
         }
     );
 
@@ -363,7 +363,7 @@ fn main() {
                 start: 16,
                 content: ""
             }],
-            spaces: vec![1, 17, 23, 33, 40],
+            empty_lines: vec![1, 17, 23, 33, 40],
         }
     );
 }
