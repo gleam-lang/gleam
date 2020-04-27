@@ -37,45 +37,24 @@
         {{ typ.name }}
       </h2>
     </a>
-    <pre>{{ typ.definition }}</pre>
-    <!-- TODO: constructors -->
-    <!-- <div class="custom-type-constructors"> -->
-    <!--   <h3> -->
-    <!--     Constructors -->
-    <!--   </h3> -->
-    <!--   <ul> -->
-    <!--     <li> -->
-    <!--       <code class="constructor-name">North</code> -->
-    <!--       <p> -->
-    <!--         At vero eos et accusam et justo duo dolores et ea rebum. -->
-    <!--         Stet clita kasd gubergren, no sea takimata sanctus est Lorem -->
-    <!--         ipsum dolor sit amet. -->
-    <!--       </p> -->
-    <!--     </li> -->
-
-    <!--     <li><code>South</code></li> -->
-    <!--     <li><code>East</code></li> -->
-    <!--     <li><code>West</code></li> -->
-    <!--     <li><code>Other(a)</code></li> -->
-    <!--     <li> -->
-    <!--       <code -->
-    <!--         >Jumbo(String, <a href="#">Char</a>, -->
-    <!--         <a href="#Cardinal">Cardinal</a>, List(a))</code -->
-    <!--       > -->
-    <!--       <div class="inline-doc"> -->
-    <!--         <p> -->
-    <!--           At vero eos et accusam et justo duo dolores et ea rebum. -->
-    <!--           Stet clita kasd gubergren, no sea takimata sanctus est -->
-    <!--           Lorem ipsum dolor sit amet. -->
-    <!--         </p> -->
-    <!--         <p> -->
-    <!--           Maybe not the best design... -->
-    <!--         </p> -->
-    <!--       </div> -->
-    <!--     </li> -->
-    <!--   </ul> -->
-    <!-- </div> -->
-    <div class="rendered-markdown">{{ typ.documentation|safe }}</div>
+    <div class="custom-type-constructors">
+      <div class="rendered-markdown">{{ typ.documentation|safe }}</div>
+      <pre>{{ typ.definition }}</pre>
+      {% if !typ.constructors.is_empty() %}
+      <h3>
+        Constructors
+      </h3>
+      <ul>
+        {% for constructor in typ.constructors %}
+        <li>
+          <code class="constructor-name">{{ constructor.name }}</code>
+          <pre>{{ constructor.definition }}</pre>
+          <p>{{ constructor.documentation|safe }}</p>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
   </div>
   {% endfor %}
 </section>

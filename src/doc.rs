@@ -53,6 +53,7 @@ pub fn generate_html(
     // Generate module documentation pages
     for module in modules {
         let name = module.name.join("/");
+        println!("{}", name);
         let template = ModuleTemplate {
             unnest: module.name.iter().map(|_| "..").intersperse("/").collect(),
             links,
@@ -71,6 +72,7 @@ pub fn generate_html(
             types: {
                 let mut t: Vec<_> = module.ast.statements.iter().flat_map(type_).collect();
                 t.sort();
+                println!("{:#?}", t);
                 t
             },
         };
@@ -154,6 +156,7 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
             name,
             definition: print(formatter.external_type(true, name.as_str(), args)),
             documentation: markdown_documentation(doc),
+            constructors: vec![],
         }),
 
         Statement::CustomType {
@@ -167,6 +170,11 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
             name,
             definition: print(formatter.custom_type(true, name, args, cs.as_slice())),
             documentation: markdown_documentation(doc),
+            constructors: cs.into_iter().map(|constructor| TypeConstructor {
+                name: constructor.name.as_ref(),
+                definition: print(formatter.record_constructor(constructor)),
+                documentation: "".to_string(),
+            }).collect()
         }),
 
         Statement::TypeAlias {
@@ -180,6 +188,7 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
             name,
             definition: print(formatter.type_alias(true, name, args, typ)),
             documentation: markdown_documentation(doc),
+            constructors: vec![],
         }),
 
         _ => None,
@@ -203,11 +212,19 @@ struct Function<'a> {
     documentation: String,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
+struct TypeConstructor<'a> {
+    name: &'a str,
+    definition: String,
+    documentation: String,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
 struct Type<'a> {
     name: &'a str,
     definition: String,
     documentation: String,
+    constructors: Vec<TypeConstructor<'a>>,
 }
 
 #[derive(Template)]
