@@ -170,11 +170,14 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
             name,
             definition: print(formatter.custom_type(true, name, args, cs.as_slice())),
             documentation: markdown_documentation(doc),
-            constructors: cs.into_iter().map(|constructor| TypeConstructor {
-                name: constructor.name.as_ref(),
-                definition: print(formatter.record_constructor(constructor)),
-                documentation: "".to_string(),
-            }).collect()
+            constructors: cs
+                .into_iter()
+                .map(|constructor| TypeConstructor {
+                    name: constructor.name.as_ref(),
+                    definition: print(formatter.record_constructor(constructor)),
+                    documentation: "".to_string(),
+                })
+                .collect(),
         }),
 
         Statement::TypeAlias {
