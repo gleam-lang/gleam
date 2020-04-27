@@ -53,7 +53,6 @@ pub fn generate_html(
     // Generate module documentation pages
     for module in modules {
         let name = module.name.join("/");
-        println!("{}", name);
         let template = ModuleTemplate {
             unnest: module.name.iter().map(|_| "..").intersperse("/").collect(),
             links,
@@ -72,7 +71,6 @@ pub fn generate_html(
             types: {
                 let mut t: Vec<_> = module.ast.statements.iter().flat_map(type_).collect();
                 t.sort();
-                println!("{:#?}", t);
                 t
             },
         };
