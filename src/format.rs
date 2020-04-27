@@ -2,6 +2,7 @@ pub(crate) mod command;
 #[cfg(test)]
 mod tests;
 
+use crate::typ::pretty::Printer;
 use crate::{
     ast::*,
     parser::{Comment, ModuleComments},
@@ -644,9 +645,20 @@ impl<'a> Formatter<'a> {
         pub_(public)
             .append("fn ")
             .append(name.to_string())
-            .append(self.fn_args(args)) // TODO: Always show types
+            .append(self.docs_fn_args(args))
             .append(" -> ".to_doc())
             .append(typ::pretty::Printer::new().to_doc(return_type.as_ref()))
+    }
+
+    // Like fn_args but will always print the types, even if they were implicit in the original source
+    pub fn docs_fn_args(&mut self, args: &[TypedArg]) -> Document {
+        let mut printer = Printer::new();
+        wrap_args(args.iter().map(|arg| {
+            arg.names
+                .to_doc()
+                .append(": ".to_doc().append(printer.to_doc(&arg.typ)))
+                .group()
+        }))
     }
 
     fn external_fn_arg(&mut self, arg: &ExternalFnArg) -> Document {
