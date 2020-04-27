@@ -1,4 +1,5 @@
 use crate::typ::pretty::Printer;
+use crate::typ::Type;
 use itertools::Itertools;
 use std::path::PathBuf;
 use termcolor::Buffer;
@@ -504,6 +505,27 @@ also be labelled.",
                     write(buffer, diagnostic);
                     let mut printer = Printer::new();
 
+                    // Include the module name of the given type if it has the
+                    // same name as the expected type
+                    let given_desc = match (&**expected, &**given) {
+                        (
+                            Type::App {
+                                name: expected_name,
+                                ..
+                            },
+                            Type::App {
+                                name: given_name,
+                                module: given_module,
+                                ..
+                            },
+                        ) if expected_name == given_name => {
+                            let qualified_name =
+                                [given_module.join("."), given_name.clone()].join(".");
+                            printer.pretty_print_string(qualified_name, 4)
+                        }
+                        (_, g) => printer.pretty_print(g, 4),
+                    };
+
                     writeln!(
                         buffer,
                         "Expected type:
@@ -514,7 +536,7 @@ Found type:
 
 {}",
                         printer.pretty_print(expected, 4),
-                        printer.pretty_print(given, 4),
+                        given_desc
                     )
                     .unwrap();
                 }

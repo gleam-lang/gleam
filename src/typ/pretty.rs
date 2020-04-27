@@ -32,6 +32,18 @@ impl Printer {
             .format(80)
     }
 
+    pub fn pretty_print_string(&mut self, string: String, initial_indent: usize) -> String {
+        let mut buffer = String::with_capacity(initial_indent);
+        for _ in 0..initial_indent {
+            buffer.push(' ');
+        }
+        buffer
+            .to_doc()
+            .append(string.to_doc())
+            .nest(initial_indent as isize)
+            .format(80)
+    }
+
     pub fn to_doc(&mut self, typ: &Type) -> Document {
         match typ {
             Type::App { name, args, .. } => {
