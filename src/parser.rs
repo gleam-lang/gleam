@@ -87,6 +87,7 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
                                 if let Some((_, "/")) = chars.peek() {
                                     mode = Mode::Comment(Kind::Module, outer_char_no);
                                     buffer.push(' ');
+                                    chars.next();
                                 }
                             }
                             Some((_, _c2)) => {
@@ -387,21 +388,27 @@ fn main() {
         "//// This module rocks!
 //// Yes it does
 
+// ok
+
 fn main() {
   1
 }
 //// OK?
 ",
-        "                        \n                 \n
+        "                       \n                \n
+     \n
 fn main() {
   1
 }
-         \n",
+        \n",
         ModuleComments {
             module_comments: vec![" This module rocks!", " Yes it does", " OK?"],
             doc_comments: vec![],
-            comments: vec![],
-            empty_lines: vec![25],
+            comments: vec![Comment {
+                start: 42,
+                content: " ok",
+            }],
+            empty_lines: vec![25, 43],
         }
     );
 }

@@ -2368,6 +2368,20 @@ pub fn main() {
 }
 "
     );
+
+    assert_format!(
+        "////
+////
+////
+////
+////
+
+type X {
+  X
+}
+// Hello
+"
+    );
 }
 
 #[test]
