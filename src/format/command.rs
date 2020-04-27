@@ -27,18 +27,26 @@ pub fn format_files(files: Vec<String>, check: bool) -> Result<(), Error> {
                 match format_file(&path, check) {
                     Ok(_) => (),
                     Err(e) => match e {
-                        Error::Format {..} => { formatting_errors.push(e); },
-                        _ => { return Err(e); }
-                    }
+                        Error::Format { .. } => {
+                            formatting_errors.push(e);
+                        }
+                        _ => {
+                            return Err(e);
+                        }
+                    },
                 }
             }
         } else {
             match format_file(&path, check) {
                 Ok(_) => (),
                 Err(e) => match e {
-                    Error::Format {..} => { formatting_errors.push(e); },
-                    _ => { return Err(e); }
-                }
+                    Error::Format { .. } => {
+                        formatting_errors.push(e);
+                    }
+                    _ => {
+                        return Err(e);
+                    }
+                },
             }
         }
     }

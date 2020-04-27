@@ -109,8 +109,8 @@ pub enum Error {
     },
 
     Format {
-        path: PathBuf
-    }
+        path: PathBuf,
+    },
 }
 
 #[derive(Debug, PartialEq)]
@@ -1054,10 +1054,8 @@ but it cannot be found.",
                     ),
                 };
                 write_project(buffer, diagnostic);
-            },
-            Error::Format {
-                path
-            } => {
+            }
+            Error::Format { path } => {
                 let diagnostic = ProjectErrorDiagnostic {
                     title: "File needs formatting".to_string(),
                     label: format!("{}", path.to_str().unwrap()),
