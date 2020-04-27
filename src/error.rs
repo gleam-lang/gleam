@@ -107,6 +107,10 @@ pub enum Error {
         action: StandardIOAction,
         err: Option<std::io::ErrorKind>,
     },
+
+    Format {
+        path: PathBuf
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -1049,6 +1053,16 @@ but it cannot be found.",
                         err,
                     ),
                 };
+                write_project(buffer, diagnostic);
+            },
+            Error::Format {
+                path
+            } => {
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "File needs formatting".to_string(),
+                    label: format!("{}", path.to_str().unwrap()),
+                };
+
                 write_project(buffer, diagnostic);
             }
         }
