@@ -17,17 +17,19 @@
 - Tuples can be indexed into using the `var.1` syntax.
 - `>`, `>=`, `<`, and `<=` operators are now supported in case clause guards
   and can be used to check the ordering of integers.
-- `>.`, `>=.`, `<.`, and `<=.` operators are now supported in case clause guards
-  and can be used to check the ordering of floats.
-- The list prepend syntax is now [x, ..y]. The old [x | y] syntax is deprecated
-  but will continue to work for now. The formatter will output the new syntax.
-- Add new assert syntx for binding variables `assert Ok(x) = result`. In the future
-  this will allow you to use a pattern that does not match all values.
+- `>.`, `>=.`, `<.`, and `<=.` operators are now supported in case clause
+  guards and can be used to check the ordering of floats.
+- The list prepend syntax is now `[x, ..y]`. The old `[x | y]` syntax is
+  deprecated but will continue to work for now. The formatter will rewrite the
+  old syntax to the new.
+- Add new assert syntax for binding variables `assert Ok(x) = result`. In the
+  future this will allow you to use a pattern that does not match all values.
 - Added support for int and float literals in guards.
-- Color codes are now only emitted in error output for interactive terminal sessions.
+- Color codes are now only emitted in error output for interactive terminal
+  sessions.
 - Added a new `..` syntax for discarding the remaining fields of a record.
-- Using the same variable name multiple times in the same pattern will now raise
-  an error.
+- Using the same variable name multiple times in the same pattern will now
+  raise an error.
 - Discard can now be omitted in list tails in patterns, ie `[x, ..]` is the
   same as `[x, .._]`. The former is the prefered version and is emitted by the
   formatter.
