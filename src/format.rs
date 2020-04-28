@@ -576,7 +576,7 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    fn record_constructor(&mut self, constructor: &RecordConstructor) -> Document {
+    pub fn record_constructor(&mut self, constructor: &RecordConstructor) -> Document {
         let comments = self.pop_comments(constructor.location.start);
 
         let doc =

@@ -158,6 +158,7 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
             name,
             definition: print(formatter.external_type(true, name.as_str(), args)),
             documentation: markdown_documentation(doc),
+            constructors: vec![],
         }),
 
         Statement::CustomType {
@@ -173,6 +174,14 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
             // TODO: Don't use the same printer for docs as for the formatter
             definition: print(formatter.custom_type(true, name, args, cs.as_slice(), location)),
             documentation: markdown_documentation(doc),
+            constructors: cs
+                .into_iter()
+                .map(|constructor| TypeConstructor {
+                    name: constructor.name.as_ref(),
+                    definition: print(formatter.record_constructor(constructor)),
+                    documentation: "".to_string(),
+                })
+                .collect(),
         }),
 
         Statement::TypeAlias {
@@ -186,6 +195,7 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
             name,
             definition: print(formatter.type_alias(true, name, args, typ)),
             documentation: markdown_documentation(doc),
+            constructors: vec![],
         }),
 
         _ => None,
@@ -209,11 +219,19 @@ struct Function<'a> {
     documentation: String,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
+struct TypeConstructor<'a> {
+    name: &'a str,
+    definition: String,
+    documentation: String,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
 struct Type<'a> {
     name: &'a str,
     definition: String,
     documentation: String,
+    constructors: Vec<TypeConstructor<'a>>,
 }
 
 #[derive(Template)]
