@@ -5,7 +5,7 @@
 - Strings are now encoded as utf8 binaries in the generated Erlang.
 - HTML documentation can now be generated from Gleam code by running `gleam
   build --doc`.
-- Gleam code can be formatted the `gleam format` command.
+- Gleam code can be formatted using the `gleam format` command.
 - The pipe operator `|>` will now attempt to insert the left hand side as the
   first argument to the right hand side if the right hand side is a call,
   removing the need for function capture boilerplate.
