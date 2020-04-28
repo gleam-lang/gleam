@@ -130,4 +130,12 @@ impl UntypedExpr {
             _ => self.location().start,
         }
     }
+
+    pub fn binop_precedence(&self) -> u8 {
+        match self {
+            Self::BinOp { name, .. } => name.precedence(),
+            Self::Pipe { .. } => 5,
+            _ => std::u8::MAX,
+        }
+    }
 }

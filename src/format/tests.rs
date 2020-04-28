@@ -2382,6 +2382,60 @@ type X {
 // Hello
 "
     );
+
+    //
+    // Binary operator precedence
+    //
+
+    assert_format!(
+        "fn main() {
+  { 1 + 2 } * 3
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  3 * { 1 + 2 }
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  3 * {
+    1
+    |> inc
+  }
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  {
+    1
+    |> inc
+  } * 3
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  1
+  |> { a || b }
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  { a || b }
+  |> go
+}
+"
+    );
 }
 
 #[test]

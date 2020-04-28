@@ -231,18 +231,25 @@ pub struct ExternalFnArg {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum BinOp {
+    // Boolean logic
     And,
     Or,
+
+    // Equality
+    Eq,
+    NotEq,
+
+    // Order comparison
     LtInt,
     LtEqInt,
     LtFloat,
     LtEqFloat,
-    Eq,
-    NotEq,
     GtEqInt,
     GtInt,
     GtEqFloat,
     GtFloat,
+
+    // Maths
     AddInt,
     AddFloat,
     SubInt,
@@ -252,6 +259,32 @@ pub enum BinOp {
     DivInt,
     DivFloat,
     ModuloInt,
+}
+
+impl BinOp {
+    pub fn precedence(&self) -> u8 {
+        match self {
+            Self::Or => 1,
+
+            Self::And => 2,
+
+            Self::Eq | Self::NotEq => 3,
+
+            Self::LtInt
+            | Self::LtEqInt
+            | Self::LtFloat
+            | Self::LtEqFloat
+            | Self::GtEqInt
+            | Self::GtInt
+            | Self::GtEqFloat
+            | Self::GtFloat => 4,
+
+            // Pipe is 5
+            Self::AddInt | Self::AddFloat | Self::SubInt | Self::SubFloat => 6,
+
+            Self::MultInt | Self::MultFloat | Self::DivInt | Self::DivFloat | Self::ModuloInt => 7,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]

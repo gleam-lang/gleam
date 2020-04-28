@@ -466,10 +466,7 @@ impl<'a> Formatter<'a> {
 
             UntypedExpr::BinOp {
                 name, left, right, ..
-            } => self
-                .expr(left)
-                .append(name)
-                .append(self.expr(right.as_ref())),
+            } => self.bin_op(name, left, right),
 
             UntypedExpr::Let {
                 value,
@@ -515,7 +512,33 @@ impl<'a> Formatter<'a> {
         commented(document, comments)
     }
 
+    pub fn bin_op(&mut self, name: &BinOp, left: &UntypedExpr, right: &UntypedExpr) -> Document {
+        let precedence = name.precedence();
+        let left_precedence = left.binop_precedence();
+        let right_precedence = right.binop_precedence();
+        let left = self.expr(left);
+        let right = self.expr(right);
+        self.operator_side(left, precedence, left_precedence)
+            .append(name)
+            .append(self.operator_side(right, precedence, right_precedence))
+    }
+
+    pub fn operator_side(&mut self, doc: Document, op: u8, side: u8) -> Document {
+        if op > side {
+            delim("{")
+                .append(doc)
+                .nest(INDENT)
+                .append(break_("", " "))
+                .append("}")
+                .group()
+        } else {
+            doc
+        }
+    }
+
     fn pipe(&mut self, left: &UntypedExpr, right: &UntypedExpr) -> Document {
+        let left_precedence = left.binop_precedence();
+        let right_precedence = right.binop_precedence();
         let left = self.expr(left);
         let right = match right {
             UntypedExpr::Fn {
@@ -527,10 +550,10 @@ impl<'a> Formatter<'a> {
             _ => self.expr(right),
         };
         force_break()
-            .append(left)
+            .append(self.operator_side(left, 4, left_precedence))
             .append(line())
             .append("|> ")
-            .append(right)
+            .append(self.operator_side(right, 4, right_precedence))
     }
 
     fn pipe_capture_right_hand_side(&mut self, fun: &UntypedExpr) -> Document {
