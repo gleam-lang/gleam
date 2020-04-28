@@ -177,9 +177,8 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
             constructors: cs
                 .into_iter()
                 .map(|constructor| TypeConstructor {
-                    name: constructor.name.as_ref(),
                     definition: print(formatter.record_constructor(constructor)),
-                    documentation: "".to_string(),
+                    documentation: markdown_documentation(&constructor.documentation),
                 })
                 .collect(),
         }),
@@ -220,8 +219,7 @@ struct Function<'a> {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
-struct TypeConstructor<'a> {
-    name: &'a str,
+struct TypeConstructor {
     definition: String,
     documentation: String,
 }
@@ -231,7 +229,7 @@ struct Type<'a> {
     name: &'a str,
     definition: String,
     documentation: String,
-    constructors: Vec<TypeConstructor<'a>>,
+    constructors: Vec<TypeConstructor>,
 }
 
 #[derive(Template)]

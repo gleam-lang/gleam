@@ -61,6 +61,7 @@ RecordConstructor: RecordConstructor = {
         location: location(s, e),
         name: t,
         args: args.unwrap_or_else(|| vec![]),
+        documentation: None,
     },
 }
 

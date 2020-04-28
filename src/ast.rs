@@ -79,6 +79,18 @@ pub struct RecordConstructor {
     pub location: SrcSpan,
     pub name: String,
     pub args: Vec<(Option<String>, TypeAst)>,
+    pub documentation: Option<String>,
+}
+
+impl RecordConstructor {
+    pub fn put_doc<'a>(&mut self, new_doc: impl Iterator<Item = &'a str>) {
+        let mut new_doc = new_doc.peekable();
+        if new_doc.peek().is_none() {
+            return;
+        }
+
+        self.documentation = Some(new_doc.join("\n"));
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

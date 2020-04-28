@@ -40,6 +40,7 @@ fn module_test() {
                     location: Default::default(),
                     name: "Ok".to_string(),
                     args: vec![],
+                    documentation: None,
                 }],
             },
             Statement::Import {

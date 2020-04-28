@@ -47,9 +47,8 @@
       <ul>
         {% for constructor in typ.constructors %}
         <li>
-          <code class="constructor-name">{{ constructor.name }}</code>
-          <pre>{{ constructor.definition }}</pre>
-          <p>{{ constructor.documentation|safe }}</p>
+          <code class="constructor-name">{{ constructor.definition }}</code>
+          {{ constructor.documentation|safe }}
         </li>
         {% endfor %}
       </ul>

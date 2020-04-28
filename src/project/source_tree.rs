@@ -193,10 +193,16 @@ fn attach_doc_comments<'a, A, B, C>(
 ) {
     for statement in &mut module.statements {
         let location = statement.location();
-        // TODO: be more fine grained with how we apply the comments.
-        // i.e. Apply them to custom type constructors.
-        let (doc, rest) = parser::take_before(comments, location.end);
+        let (doc, rest) = parser::take_before(comments, location.start);
         comments = rest;
         statement.put_doc(doc);
+
+        if let crate::ast::Statement::CustomType { constructors, .. } = statement {
+            for constructor in constructors {
+                let (doc, rest) = parser::take_before(comments, constructor.location.start);
+                comments = rest;
+                constructor.put_doc(doc);
+            }
+        }
     }
 }

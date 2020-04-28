@@ -364,7 +364,7 @@ dependencies = [
 
 [[package]]
 name = "gleam"
-version = "0.8.0-dev"
+version = "0.8.0-rc1"
 dependencies = [
  "askama 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "atty 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
