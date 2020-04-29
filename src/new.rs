@@ -257,11 +257,11 @@ fn src(name: &str) -> String {
 fn test(name: &str) -> String {
     format!(
         r#"import {}
-import gleam/expect
+import gleam/should
 
 pub fn hello_world_test() {{
   {}.hello_world()
-  |> expect.equal("Hello, from {}!")
+  |> should.equal("Hello, from {}!")
 }}
 "#,
         name, name, name
@@ -496,7 +496,7 @@ fn rebar_config(insert: &str) -> String {
 {{project_plugins, [rebar_gleam]}}.
 
 {{deps, [
-    {{gleam_stdlib, "0.7.0"}}
+    {{gleam_stdlib, "0.8.0"}}
 ]}}.
 "#,
         insert

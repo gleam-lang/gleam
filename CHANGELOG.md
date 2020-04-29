@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Newly generated projects use stdlib v0.8.0.
+
 ## v0.8.0-rc1 - 2020-04-28
 
 - Strings are now encoded as utf8 binaries in the generated Erlang.
