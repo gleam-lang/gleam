@@ -475,6 +475,7 @@ const GITIGNORE: &str = "*.beam
 .rebar3
 _*
 _build
+docs
 ebin
 erl_crash.dump
 gen
