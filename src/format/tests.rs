@@ -2569,3 +2569,15 @@ fn main() {
 ",
     );
 }
+
+
+type EUnitSuite(state) {
+  Setup(
+    start: fn() ->
+    state,
+    stop: fn(state) ->
+    Nil,
+    tests: fn(state) ->
+    List(fn() -> Expectation),
+  )
+}
