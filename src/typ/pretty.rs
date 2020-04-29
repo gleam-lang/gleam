@@ -49,7 +49,8 @@ impl Printer {
                 .to_doc()
                 .append(self.args_to_gleam_doc(args.as_slice()))
                 .append(") -> ")
-                .append(self.to_doc(retrn)),
+                .append(self.to_doc(retrn))
+                .group(),
 
             Type::Var { typ, .. } => self.type_var_doc(&*typ.borrow()),
 

@@ -263,13 +263,14 @@ impl<'a> Formatter<'a> {
                 .to_string()
                 .to_doc()
                 .append(self.type_arguments(args))
-                .append(delim(" ->"))
+                .append(" -> ")
                 .append(self.type_ast(retrn)),
 
             TypeAst::Var { name, .. } => name.clone().to_doc(),
 
             TypeAst::Tuple { elems, .. } => "tuple".to_doc().append(self.type_arguments(elems)),
         }
+        .group()
     }
 
     fn type_arguments(&mut self, args: &[TypeAst]) -> Document {
@@ -619,7 +620,9 @@ impl<'a> Formatter<'a> {
             };
 
         commented(
-            self.doc_comments(constructor.location.start).append(doc),
+            self.doc_comments(constructor.location.start)
+                .append(doc)
+                .group(),
             comments,
         )
     }

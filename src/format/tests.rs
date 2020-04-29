@@ -337,6 +337,16 @@ pub external type Four
 "
     );
 
+    assert_format!(
+        "type X {
+  X(
+    start: fn() -> a_reall_really_long_name_goes_here,
+    stop: fn() -> a_reall_really_long_name_goes_here,
+  )
+}
+"
+    );
+
     //
     // Expr::Fn
     //
@@ -2568,16 +2578,4 @@ fn main() {
 }
 ",
     );
-}
-
-
-type EUnitSuite(state) {
-  Setup(
-    start: fn() ->
-    state,
-    stop: fn(state) ->
-    Nil,
-    tests: fn(state) ->
-    List(fn() -> Expectation),
-  )
 }
