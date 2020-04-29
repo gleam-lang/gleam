@@ -155,7 +155,7 @@ fn command_build(root: String, write_docs: bool) -> Result<(), Error> {
     // Generate outputs (Erlang code, html documentation, etc)
     let mut output_files = vec![];
     if write_docs {
-        let dir = root_path.join("doc");
+        let dir = root_path.join("docs");
         crate::doc::generate_html(
             &project_config,
             analysed.as_slice(),
