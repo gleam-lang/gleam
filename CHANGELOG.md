@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Type error reporting has been improved when using the pipe operator.
 - Newly generated projects use stdlib v0.8.0.
 - The compiler can now emit warnings. Currently there are warnings for using
   the old '|' syntax in lists and for todos.
