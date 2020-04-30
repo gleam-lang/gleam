@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Type error reporting has been improved when using the pipe operator.
 - Newly generated projects use stdlib v0.8.0.
 
 ## v0.8.0-rc1 - 2020-04-28
