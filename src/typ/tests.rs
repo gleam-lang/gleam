@@ -1738,6 +1738,14 @@ fn infer_module_warning_test() {
 
     // New list tail pattern matching syntax does not emit a warning
     assert_no_warnings!("fn main() { let x = [] ; case x { [x, ..] -> 1 } }",);
+
+    // Todos emit warnings
+    assert_warning!(
+        "fn main() { 1 == todo }",
+        Warning::Todo {
+            location: SrcSpan { start: 17, end: 21 }
+        },
+    );
 }
 
 fn env_types_with(things: &[&str]) -> Vec<String> {

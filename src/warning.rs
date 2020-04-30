@@ -39,6 +39,17 @@ impl Warning {
                         )
                         .unwrap();
                 }
+                Todo { location } => {
+                    let diagnostic = Diagnostic {
+                        title: "Todo found".to_string(),
+                        label: "".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: location.clone(),
+                    };
+                    write(buffer, diagnostic, Severity::Warning);
+                    writeln!(buffer, "This code will crash if it is run. Be sure to remove this todo before running your program.").unwrap();
+                }
             },
         }
     }

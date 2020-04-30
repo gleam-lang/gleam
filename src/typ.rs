@@ -991,6 +991,8 @@ pub enum Error {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Warning {
     DeprecatedListPrependSyntax { location: SrcSpan },
+
+    Todo { location: SrcSpan },
 }
 
 #[derive(Debug, PartialEq)]
@@ -1840,6 +1842,10 @@ fn infer_nil(location: SrcSpan, level: usize, env: &mut Env) -> Result<TypedExpr
 }
 
 fn infer_todo(location: SrcSpan, level: usize, env: &mut Env) -> Result<TypedExpr, Error> {
+    env.warnings.push(Warning::Todo {
+        location: location.clone(),
+    });
+
     Ok(TypedExpr::Todo {
         location,
         typ: env.new_unbound_var(level),
