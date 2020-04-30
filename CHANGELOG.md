@@ -3,12 +3,13 @@
 ## Unreleased
 
 - Newly generated projects use stdlib v0.8.0.
+- Will give a clearer error when a function given as an argument to another function
+  doesn't match the type of the parameter.
 
 ## v0.8.0-rc1 - 2020-04-28
 
 - Strings are now encoded as utf8 binaries in the generated Erlang.
-- HTML documentation can now be generated from Gleam code by running `gleam
-  build --doc`.
+- HTML documentation can now be generated from Gleam code by running `gleam build --doc`.
 - Gleam code can be formatted using the `gleam format` command.
 - The pipe operator `|>` will now attempt to insert the left hand side as the
   first argument to the right hand side if the right hand side is a call,
