@@ -103,6 +103,7 @@ fn module_test() {
                 },
             },
         ],
+        warnings: vec![],
     };
     let expected = "-module(magic).
 -compile(no_auto_import).
@@ -381,6 +382,7 @@ map() ->
                 },
             },
         ],
+        warnings: vec![],
     };
     let expected = "-module(term).
 -compile(no_auto_import).
@@ -513,6 +515,7 @@ tup() ->
                 value: "1".to_string(),
             },
         }],
+        warnings: vec![],
     };
     let expected = "-module(term).
 -compile(no_auto_import).
@@ -629,6 +632,7 @@ some_function(
                 },
             },
         ],
+        warnings: vec![],
     };
     let expected = "-module(vars).
 -compile(no_auto_import).
@@ -782,6 +786,7 @@ moddy4() ->
                 ],
             },
         }],
+        warnings: vec![],
     };
     let expected = "-module(my_mod).
 -compile(no_auto_import).
@@ -940,6 +945,7 @@ go() ->
                 },
             },
         ],
+        warnings: vec![],
     };
     let expected = "-module(funny).
 -compile(no_auto_import).

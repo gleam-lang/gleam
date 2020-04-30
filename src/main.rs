@@ -1,6 +1,7 @@
 #![deny(warnings)]
 
 mod ast;
+mod diagnostic;
 mod doc;
 mod erl;
 mod error;
@@ -10,6 +11,7 @@ mod parser;
 mod pretty;
 mod project;
 mod typ;
+mod warning;
 
 lalrpop_mod!(
     #[allow(deprecated)]
@@ -173,6 +175,14 @@ fn command_build(root: String, write_docs: bool) -> Result<(), Error> {
     for file in output_files {
         write_file(file)?;
     }
+
+    // Print warnings
+    for a in analysed.iter() {
+        for w in a.warnings.iter() {
+            w.pretty_print()
+        }
+    }
+
     println!("Done!");
 
     Ok(())

@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Newly generated projects use stdlib v0.8.0.
+- The compiler can now emit warnings. Currently there are warnings for using
+  the old '|' syntax in lists and for todos.
 
 ## v0.8.0-rc1 - 2020-04-28
 
