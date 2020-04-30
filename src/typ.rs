@@ -820,7 +820,7 @@ pub enum NewTypeAction {
     MakeGeneric,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Error {
     UnknownLabel {
         location: SrcSpan,
@@ -3294,7 +3294,10 @@ fn unify(t1: Arc<Type>, t2: Arc<Type>, env: &Env) -> Result<(), UnifyError> {
             },
         ) if args1.len() == args2.len() => {
             for (a, b) in args1.iter().zip(args2) {
-                unify(a.clone(), b.clone(), env)?;
+                unify(a.clone(), b.clone(), env).map_err(|_| UnifyError::CouldNotUnify {
+                    expected: t1.clone(),
+                    given: t2.clone(),
+                })?;
             }
             unify(retrn1.clone(), retrn2.clone(), env).map_err(|_| UnifyError::CouldNotUnify {
                 expected: t1.clone(),
