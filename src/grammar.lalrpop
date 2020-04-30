@@ -21,6 +21,7 @@ pub Module: UntypedModule = {
         type_info: (),
         name: vec![],
         statements: statements,
+        warnings: vec![],
     }
 }
 
@@ -503,6 +504,7 @@ List: UntypedExpr = {
                 location: t.location().clone(),
                 head: Box::new(h),
                 tail: Box::new(t),
+                deprecated_syntax: true,
             }
         )
     },
@@ -517,6 +519,7 @@ List: UntypedExpr = {
                 location: t.location().clone(),
                 head: Box::new(h),
                 tail: Box::new(t),
+                deprecated_syntax: false,
             }
         )
     },
@@ -733,6 +736,7 @@ PatternList: UntypedPattern = {
                 location: e.location().clone(),
                 head: Box::new(e),
                 tail: Box::new(a),
+                deprecated_syntax: true
             }
         ).put_list_cons_location_start(s)
     },
@@ -760,6 +764,7 @@ PatternList: UntypedPattern = {
                 location: e.location().clone(),
                 head: Box::new(e),
                 tail: Box::new(a),
+                deprecated_syntax: false
             }
         ).put_list_cons_location_start(s)
     },

@@ -43,6 +43,7 @@ pub enum UntypedExpr {
         location: SrcSpan,
         head: Box<Self>,
         tail: Box<Self>,
+        deprecated_syntax: bool,
     },
 
     Call {

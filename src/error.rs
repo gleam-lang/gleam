@@ -1,3 +1,6 @@
+use crate::diagnostic::{
+    buffer_writer, write, write_project, Diagnostic, ProjectErrorDiagnostic, Severity,
+};
 use crate::typ::pretty::Printer;
 use itertools::Itertools;
 use std::path::PathBuf;
@@ -7,7 +10,7 @@ pub type Src = String;
 pub type Name = String;
 
 pub fn fatal_compiler_bug(msg: &str) -> ! {
-    let buffer_writer = error_buffer_writer();
+    let buffer_writer = buffer_writer();
     let mut buffer = buffer_writer.buffer();
     use std::io::Write;
     use termcolor::{Color, ColorSpec, WriteColor};
@@ -200,14 +203,14 @@ impl Error {
                 src_module,
                 test_module,
             } => {
-                let diagnostic = ErrorDiagnostic {
+                let diagnostic = Diagnostic {
                     title: "App importing test module".to_string(),
                     label: "Imported here".to_string(),
                     file: path.to_str().unwrap().to_string(),
                     src: src.to_string(),
                     location: location.clone(),
                 };
-                write(buffer, diagnostic);
+                write(buffer, diagnostic, Severity::Error);
                 writeln!(
                     buffer,
                     "The application module `{}` is importing the test module `{}`.
@@ -277,14 +280,14 @@ Second: {}
                     labels,
                 } => {
                     let mut labels = labels.clone();
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Unknown label".to_string(),
                         label: did_you_mean(label, &mut labels, "Unexpected label"),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
                     if !labels.is_empty() {
                         writeln!(
                             buffer,
@@ -304,14 +307,14 @@ Expected one of `{}`.",
                 }
 
                 UnexpectedLabelledArg { location, label } => {
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Unexpected labelled argument".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
                     writeln!(
                         buffer,
                         "
@@ -323,14 +326,14 @@ Please remove the label `{}`.",
                 }
 
                 PositionalArgumentAfterLabelled { location } => {
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Unexpected positional argument".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
                     writeln!(
                         buffer,
                         "This unlablled argument has been supplied after a labelled argument.
@@ -347,14 +350,14 @@ also be labelled.",
                     // previous_location,
                     ..
                 } => {
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Duplicate name".to_string(),
                         label: "redefined here".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
                     writeln!(
                         buffer,
                         "A function has already been defined with the name
@@ -371,14 +374,14 @@ also be labelled.",
                     // previous_location,
                     ..
                 } => {
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Duplicate name".to_string(),
                         label: "redefined here".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
                     writeln!(
                         buffer,
                         "A type has already been defined with the name
@@ -389,14 +392,14 @@ also be labelled.",
                 }
 
                 DuplicateField { location, label } => {
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Duplicate field".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
                     writeln!(
                         buffer,
                         "The field `{}` has already been defined. Rename this field.",
@@ -406,14 +409,14 @@ also be labelled.",
                 }
 
                 DuplicateArgument { location, label } => {
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Duplicate argument".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
                     writeln!(
                         buffer,
                         "The labelled argument `{}` has already been supplied.",
@@ -423,25 +426,25 @@ also be labelled.",
                 }
 
                 RecursiveType { location } => {
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Recursive type".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
                 }
 
                 NotFn { location, typ } => {
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Type mismatch".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
                     let mut printer = Printer::new();
 
                     writeln!(
@@ -459,7 +462,7 @@ also be labelled.",
                     fields,
                 } => {
                     let mut fields = fields.clone();
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Unknown field".to_string(),
                         label: did_you_mean(
                             label.as_ref(),
@@ -470,7 +473,7 @@ also be labelled.",
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
                     let mut printer = Printer::new();
 
                     writeln!(
@@ -498,14 +501,14 @@ also be labelled.",
                     expected,
                     given,
                 } => {
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Type mismatch".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
                     let mut printer = Printer::new();
 
                     writeln!(
@@ -529,14 +532,14 @@ Found type:
                     given,
                     ..
                 } => {
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Incorrect arity".to_string(),
                         label: format!("expected {} arguments, got {}", expected, given),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
                 }
 
                 IncorrectArity {
@@ -544,25 +547,25 @@ Found type:
                     expected,
                     given,
                 } => {
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Incorrect arity".to_string(),
                         label: format!("expected {} arguments, got {}", expected, given),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
                 }
 
                 UnnecessarySpreadOperator { location, arity } => {
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Unnecessary spread operator".to_string(),
                         label: format!(""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
 
                     writeln!(
                         buffer,
@@ -578,14 +581,14 @@ Found type:
                     types,
                 } => {
                     let mut types = types.clone();
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Unknown type".to_string(),
                         label: did_you_mean(name, &mut types, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
                     writeln!(
                         buffer,
                         "The type `{}` is not defined or imported in this module.",
@@ -600,26 +603,26 @@ Found type:
                     name,
                 } => {
                     let mut variables = variables.clone();
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Unknown variable".to_string(),
                         label: did_you_mean(name, &mut variables, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
                     writeln!(buffer, "The name `{}` is not in scope here.", name).unwrap();
                 }
 
                 PrivateTypeLeak { location, leaked } => {
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Private type used in public interface".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
                     let mut printer = Printer::new();
 
                     // TODO: be more precise.
@@ -645,14 +648,14 @@ Private types can only be used within the module that defines them.",
                     imported_modules,
                 } => {
                     let mut imported_modules = imported_modules.clone();
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Unknown module".to_string(),
                         label: did_you_mean(name, &mut imported_modules, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
                     writeln!(
                         buffer,
                         "No module has been imported with the name `{}`.",
@@ -668,14 +671,14 @@ Private types can only be used within the module that defines them.",
                     type_constructors,
                 } => {
                     let mut type_constructors = type_constructors.clone();
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Unknown module type".to_string(),
                         label: did_you_mean(name, &mut type_constructors, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
                     writeln!(
                         buffer,
                         "The module `{}` does not have a `{}` type.",
@@ -692,14 +695,14 @@ Private types can only be used within the module that defines them.",
                     value_constructors,
                 } => {
                     let mut value_constructors = value_constructors.clone();
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Unknown module field".to_string(),
                         label: did_you_mean(name, &mut value_constructors, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
                     writeln!(
                         buffer,
                         "The module `{}` does not have a `{}` field.",
@@ -721,14 +724,14 @@ Private types can only be used within the module that defines them.",
                         .chain(value_constructors.iter())
                         .map(|s| s.to_string())
                         .collect();
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Unknown module field".to_string(),
                         label: did_you_mean(name, &mut options, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
                     writeln!(
                         buffer,
                         "The module `{}` does not have a `{}` field.",
@@ -743,14 +746,14 @@ Private types can only be used within the module that defines them.",
                     expected,
                     given,
                 } => {
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Incorrect number of patterns".to_string(),
                         label: format!("expected {} patterns, got {}", expected, given),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
                     writeln!(
                         buffer,
                         "This case expression has {} subjects, but this pattern matches {}.
@@ -761,14 +764,14 @@ Each clause must have a pattern for every subject value.",
                 }
 
                 NonLocalClauseGuardVariable { location, name } => {
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Invalid guard variable".to_string(),
                         label: "is not locally defined".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
                     writeln!(
                         buffer,
                         "Variables used in guards must be either defined in the function, or be an
@@ -779,14 +782,14 @@ argument to the function. The variable `{}` is not defined locally.",
                 }
 
                 ExtraVarInAlternativePattern { location, name } => {
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Extra alternative pattern variable".to_string(),
                         label: "has not been previously defined".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
                     writeln!(
                         buffer,
                         "All alternative patterns must define the same variables as the initial
@@ -797,14 +800,14 @@ pattern. This variable `{}` has not been previously defined.",
                 }
 
                 DuplicateVarInPattern { location, name } => {
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Duplicate variable in pattern".to_string(),
                         label: "has already been used".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
 
                     writeln!(
                         buffer,
@@ -819,14 +822,14 @@ please use a guard clause instead e.g. (x, y) if x == y -> ...",
                 OutOfBoundsTupleIndex {
                     location, size: 0, ..
                 } => {
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Out of bounds tuple index".to_string(),
                         label: "this index is too large".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
                     writeln!(
                         buffer,
                         "This tuple has no elements so it cannot be indexed at all!"
@@ -839,14 +842,14 @@ please use a guard clause instead e.g. (x, y) if x == y -> ...",
                     index,
                     size,
                 } => {
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Out of bounds tuple index".to_string(),
                         label: "this index is too large".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
                     writeln!(
                         buffer,
                         "The index being accessed for this tuple is {}, but this tuple has
@@ -859,14 +862,14 @@ please use a guard clause instead e.g. (x, y) if x == y -> ...",
                 }
 
                 NotATuple { location, given } => {
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Type mismatch".to_string(),
                         label: "is not a tuple".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
                     let mut printer = Printer::new();
 
                     writeln!(
@@ -880,14 +883,14 @@ please use a guard clause instead e.g. (x, y) if x == y -> ...",
                 }
 
                 NotATupleUnbound { location } => {
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Type mismatch".to_string(),
                         label: "what type is this?".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
 
                     writeln!(
                         buffer,
@@ -898,14 +901,14 @@ about this type yet. Please add some type annotations so we can continue.",
                 }
 
                 RecordAccessUnknownType { location } => {
-                    let diagnostic = ErrorDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Unknown type for record access".to_string(),
                         label: "I don't know what type this is".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
-                    write(buffer, diagnostic);
+                    write(buffer, diagnostic, Severity::Error);
 
                     writeln!(
                         buffer,
@@ -926,7 +929,7 @@ and try again.
                         token: (start, _, end),
                         expected,
                     } => {
-                        let diagnostic = ErrorDiagnostic {
+                        let diagnostic = Diagnostic {
                             title: "Syntax error".to_string(),
                             label: "Unexpected token".to_string(),
                             file: path.to_str().unwrap().to_string(),
@@ -936,13 +939,13 @@ and try again.
                                 end: *end,
                             },
                         };
-                        write(buffer, diagnostic);
+                        write(buffer, diagnostic, Severity::Error);
                         writeln!(buffer, "Expected one of {}", expected.join(", "))
                             .expect("error pretty buffer write");
                     }
 
                     UnrecognizedEOF { .. } => {
-                        let diagnostic = ErrorDiagnostic {
+                        let diagnostic = Diagnostic {
                             title: "Syntax error".to_string(),
                             label: "Unexpected end of file".to_string(),
                             file: path.to_str().unwrap().to_string(),
@@ -952,11 +955,11 @@ and try again.
                                 end: src.len() - 1,
                             },
                         };
-                        write(buffer, diagnostic);
+                        write(buffer, diagnostic, Severity::Error);
                     }
 
                     InvalidToken { location } => {
-                        let diagnostic = ErrorDiagnostic {
+                        let diagnostic = Diagnostic {
                             title: "Syntax error".to_string(),
                             label: "Unknown token".to_string(),
                             file: path.to_str().unwrap().to_string(),
@@ -966,7 +969,7 @@ and try again.
                                 end: *location + 1,
                             },
                         };
-                        write(buffer, diagnostic);
+                        write(buffer, diagnostic, Severity::Error);
                         writeln!(
                             buffer,
                             "I don't know what this character means. Is it a typo?"
@@ -980,14 +983,14 @@ and try again.
                         use crate::parser::Error;
                         match error {
                             Error::TooManyHolesInCapture { location, count } => {
-                                let diagnostic = ErrorDiagnostic {
+                                let diagnostic = Diagnostic {
                                     title: "Invalid capture".to_string(),
                                     label: "".to_string(),
                                     file: path.to_str().unwrap().to_string(),
                                     src: src.to_string(),
                                     location: location.clone(),
                                 };
-                                write(buffer, diagnostic);
+                                write(buffer, diagnostic, Severity::Error);
                                 let chars: String = (97..(97 + count))
                                     .map(|x| x as u8 as char)
                                     .map(|c| c.to_string())
@@ -1017,14 +1020,14 @@ but this one uses {}. Rewrite this using the fn({}) {{ ... }} syntax.",
                 modules,
             } => {
                 let mut modules = modules.clone();
-                let diagnostic = ErrorDiagnostic {
+                let diagnostic = Diagnostic {
                     title: "Unknown import".to_string(),
                     label: did_you_mean(import, &mut modules, ""),
                     file: path.to_str().unwrap().to_string(),
                     src: src.to_string(),
                     location: location.clone(),
                 };
-                write(buffer, diagnostic);
+                write(buffer, diagnostic, Severity::Error);
                 writeln!(
                     buffer,
                     "The module `{}` is trying to import the module `{}`,
@@ -1067,21 +1070,11 @@ but it cannot be found.",
     }
 
     pub fn pretty_print(&self) {
-        let buffer_writer = error_buffer_writer();
+        let buffer_writer = buffer_writer();
         let mut buffer = buffer_writer.buffer();
         self.pretty(&mut buffer);
         buffer_writer.print(&buffer).unwrap();
     }
-}
-
-fn error_buffer_writer() -> termcolor::BufferWriter {
-    // Don't add color codes to the output if standard error isn't connected to a terminal
-    let color_choice = if atty::is(atty::Stream::Stderr) {
-        termcolor::ColorChoice::Auto
-    } else {
-        termcolor::ColorChoice::Never
-    };
-    termcolor::BufferWriter::stderr(color_choice)
 }
 
 fn std_io_error_kind_text(kind: &std::io::ErrorKind) -> String {
@@ -1111,7 +1104,7 @@ fn std_io_error_kind_text(kind: &std::io::ErrorKind) -> String {
 fn import_cycle(buffer: &mut Buffer, modules: &[Vec<String>]) {
     use std::io::Write;
     use termcolor::{Color, ColorSpec, WriteColor};
-    write_title(buffer, "Import cycle");
+    crate::diagnostic::write_title(buffer, "Import cycle");
     writeln!(
         buffer,
         "The import statements for these modules form a cycle:
@@ -1138,61 +1131,4 @@ Gleam doesn't support import cycles like these, please break the
 cycle to continue."
     )
     .unwrap();
-}
-
-struct ErrorDiagnostic {
-    file: String,
-    location: crate::ast::SrcSpan,
-    src: String,
-    title: String,
-    label: String,
-}
-
-fn write(mut buffer: &mut Buffer, d: ErrorDiagnostic) {
-    use codespan::Files;
-    use codespan_reporting::diagnostic::{Diagnostic, Label};
-    use codespan_reporting::term::emit;
-
-    let mut files = Files::new();
-    let file_id = files.add(d.file, d.src);
-
-    let diagnostic = Diagnostic::new_error(
-        d.title,
-        Label::new(
-            file_id,
-            (d.location.start as u32)..(d.location.end as u32),
-            d.label,
-        ),
-    );
-
-    let config = codespan_reporting::term::Config::default();
-    emit(&mut buffer, &config, &files, &diagnostic).unwrap();
-}
-
-/// Describes an error encountered while compiling the project (eg. a name collision
-/// between files).
-///
-struct ProjectErrorDiagnostic {
-    title: String,
-    label: String,
-}
-
-fn write_title(buffer: &mut Buffer, title: &str) {
-    use std::io::Write;
-    use termcolor::{Color, ColorSpec, WriteColor};
-    buffer
-        .set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Red)))
-        .unwrap();
-    write!(buffer, "error").unwrap();
-    buffer.set_color(ColorSpec::new().set_bold(true)).unwrap();
-    write!(buffer, ": {}\n\n", title).unwrap();
-    buffer.set_color(&ColorSpec::new()).unwrap();
-}
-
-fn write_project(buffer: &mut Buffer, d: ProjectErrorDiagnostic) {
-    use std::io::Write;
-    use termcolor::{ColorSpec, WriteColor};
-    write_title(buffer, d.title.as_ref());
-    buffer.set_color(&ColorSpec::new()).unwrap();
-    write!(buffer, "{}", d.label).unwrap();
 }

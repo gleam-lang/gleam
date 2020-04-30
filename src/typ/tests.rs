@@ -168,6 +168,7 @@ fn infer_module_type_retention_test() {
         name: vec!["ok".to_string()],
         statements: vec![],
         type_info: (),
+        warnings: vec![],
     };
 
     let module = infer_module(module, &HashMap::new()).expect("Should infer OK");
@@ -1686,6 +1687,57 @@ fn main() {
     // Cases were we can't so easily check for equality-
     // i.e. because the contents of the error are non-deterministic.
     assert_error!("fn inc(x: a) { x + 1 }");
+}
+
+#[test]
+fn infer_module_warning_test() {
+    macro_rules! assert_warning {
+        ($src:expr, $warning:expr $(,)?) => {
+            let (src, _) = crate::parser::strip_extra($src);
+            let mut ast = crate::grammar::ModuleParser::new()
+                .parse(&src)
+                .expect("syntax error");
+            ast.name = vec!["my_module".to_string()];
+            let result = infer_module(ast, &HashMap::new()).expect("should successfully infer");
+
+            assert_eq!($warning, result.warnings[0]);
+        };
+    }
+
+    macro_rules! assert_no_warnings {
+        ($src:expr $(,)?) => {
+            let (src, _) = crate::parser::strip_extra($src);
+            let mut ast = crate::grammar::ModuleParser::new()
+                .parse(&src)
+                .expect("syntax error");
+            ast.name = vec!["my_module".to_string()];
+            let result = infer_module(ast, &HashMap::new()).expect("should successfully infer");
+
+            assert_eq!(true, result.warnings.is_empty());
+        };
+    }
+
+    // Old list prepend syntax emits a warning
+    assert_warning!(
+        "fn main() { [1 | [2, 3]] }",
+        Warning::DeprecatedListPrependSyntax {
+            location: SrcSpan { start: 15, end: 16 }
+        },
+    );
+
+    // New list prepend syntax does not emit a warning
+    assert_no_warnings!("fn main() { [1 ..[2, 3]] }",);
+
+    // Old list tail pattern matching syntax emits a warning
+    assert_warning!(
+        "fn main() { let x = [] ; case x { [x | _] -> 1 } }",
+        Warning::DeprecatedListPrependSyntax {
+            location: SrcSpan { start: 37, end: 38 }
+        },
+    );
+
+    // New list tail pattern matching syntax does not emit a warning
+    assert_no_warnings!("fn main() { let x = [] ; case x { [x, ..] -> 1 } }",);
 }
 
 fn env_types_with(things: &[&str]) -> Vec<String> {

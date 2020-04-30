@@ -6,6 +6,7 @@ use crate::{
     ast::TypedModule,
     error::{Error, FileIOAction, FileKind, GleamExpect},
     typ,
+    warning::Warning,
 };
 use serde::Deserialize;
 use source_tree::SourceTree;
@@ -32,6 +33,7 @@ pub struct Analysed {
     pub origin: ModuleOrigin,
     pub type_info: typ::Module,
     pub source_base_path: PathBuf,
+    pub warnings: Vec<Warning>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -77,6 +79,7 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
         name: Vec<String>,
         origin: ModuleOrigin,
         ast: TypedModule,
+        warnings: Vec<Warning>,
     }
 
     for Module {
@@ -92,10 +95,23 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
 
         println!("Compiling {}", name_string);
 
-        let ast = crate::typ::infer_module(module, &modules_type_infos)
-            .map_err(|error| Error::Type { path, src, error })?;
+        let mut ast =
+            crate::typ::infer_module(module, &modules_type_infos).map_err(|error| Error::Type {
+                path: path.clone(),
+                src: src.clone(),
+                error,
+            })?;
 
         modules_type_infos.insert(name_string.clone(), ast.type_info.clone());
+
+        let mut warnings = Vec::with_capacity(ast.warnings.len());
+        ast.warnings.drain(..).for_each(|warning| {
+            warnings.push(Warning::Type {
+                path: path.clone(),
+                src: src.clone(),
+                warning,
+            })
+        });
 
         compiled_modules.push(Out {
             name,
@@ -103,6 +119,7 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
             source_base_path,
             origin,
             ast,
+            warnings,
         });
     }
 
@@ -115,6 +132,7 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
                 name_string,
                 origin,
                 ast,
+                warnings,
             } = out;
             Analysed {
                 ast,
@@ -124,6 +142,7 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
                 type_info: modules_type_infos
                     .remove(&name_string)
                     .gleam_expect("project::compile(): Merging module type info"),
+                warnings,
             }
         })
         .collect())

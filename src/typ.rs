@@ -318,6 +318,9 @@ pub struct Env<'a, 'b> {
 
     // Accessors defined in the current module
     accessors: HashMap<String, AccessorsMap>,
+
+    // Warnings
+    warnings: Vec<Warning>,
 }
 
 impl<'a, 'b> Env<'a, 'b> {
@@ -332,6 +335,7 @@ impl<'a, 'b> Env<'a, 'b> {
             module_values: HashMap::new(),
             imported_modules: HashMap::new(),
             accessors: HashMap::new(),
+            warnings: Vec::new(),
             local_values: hashmap![],
             importable_modules,
             current_module,
@@ -984,6 +988,10 @@ pub enum Error {
         location: SrcSpan,
     },
 }
+#[derive(Debug, PartialEq, Clone)]
+pub enum Warning {
+    DeprecatedListPrependSyntax { location: SrcSpan },
+}
 
 #[derive(Debug, PartialEq)]
 pub enum GetValueConstructorError {
@@ -1611,6 +1619,7 @@ pub fn infer_module(
         module_types: types,
         module_values: values,
         accessors,
+        warnings,
         ..
     } = env;
 
@@ -1624,6 +1633,7 @@ pub fn infer_module(
             values,
             accessors,
         },
+        warnings,
     })
 }
 
@@ -1718,8 +1728,9 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             location,
             head,
             tail,
+            deprecated_syntax,
             ..
-        } => infer_cons(*head, *tail, location, level, env),
+        } => infer_cons(*head, *tail, deprecated_syntax, location, level, env),
 
         UntypedExpr::Call {
             location,
@@ -1915,6 +1926,7 @@ fn infer_call(
 fn infer_cons(
     head: UntypedExpr,
     tail: UntypedExpr,
+    deprecated_syntax: bool,
     location: SrcSpan,
     level: usize,
     env: &mut Env,
@@ -1922,6 +1934,16 @@ fn infer_cons(
     let head = infer(head, level, env)?;
     let tail = infer(tail, level, env)?;
     unify(tail.typ(), list(head.typ()), env).map_err(|e| convert_unify_error(e, &location))?;
+
+    if deprecated_syntax {
+        env.warnings.push(Warning::DeprecatedListPrependSyntax {
+            location: SrcSpan {
+                start: location.start - 2,
+                end: location.start - 1,
+            },
+        });
+    }
+
     Ok(TypedExpr::ListCons {
         location,
         typ: tail.typ(),
@@ -2704,14 +2726,28 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 location,
                 head,
                 tail,
+                deprecated_syntax,
             } => match typ.get_app_args(true, &[], "List", 1, self.env) {
                 Some(args) => {
                     let head = Box::new(self.unify(*head, args[0].clone())?);
                     let tail = Box::new(self.unify(*tail, typ)?);
+
+                    if deprecated_syntax {
+                        self.env
+                            .warnings
+                            .push(Warning::DeprecatedListPrependSyntax {
+                                location: SrcSpan {
+                                    start: location.end + 1,
+                                    end: location.end + 2,
+                                },
+                            });
+                    }
+
                     Ok(Pattern::Cons {
                         location,
                         head,
                         tail,
+                        deprecated_syntax,
                     })
                 }
 
