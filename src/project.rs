@@ -95,23 +95,23 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
 
         println!("Compiling {}", name_string);
 
-        let mut ast =
-            crate::typ::infer_module(module, &modules_type_infos).map_err(|error| Error::Type {
-                path: path.clone(),
-                src: src.clone(),
-                error,
-            })?;
-
-        modules_type_infos.insert(name_string.clone(), ast.type_info.clone());
-
-        let mut warnings = Vec::with_capacity(ast.warnings.len());
-        ast.warnings.drain(..).for_each(|warning| {
+        let mut warnings = Vec::new();
+        let (result, mut module_warnings) = crate::typ::infer_module(module, &modules_type_infos);
+        module_warnings.drain(..).for_each(|warning| {
             warnings.push(Warning::Type {
                 path: path.clone(),
                 src: src.clone(),
                 warning,
             })
         });
+
+        let ast = result.map_err(|error| Error::Type {
+            path: path.clone(),
+            src: src.clone(),
+            error,
+        })?;
+
+        modules_type_infos.insert(name_string.clone(), ast.type_info.clone());
 
         compiled_modules.push(Out {
             name,

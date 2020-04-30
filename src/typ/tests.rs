@@ -168,10 +168,10 @@ fn infer_module_type_retention_test() {
         name: vec!["ok".to_string()],
         statements: vec![],
         type_info: (),
-        warnings: vec![],
     };
 
-    let module = infer_module(module, &HashMap::new()).expect("Should infer OK");
+    let (result, _) = infer_module(module, &HashMap::new());
+    let module = result.expect("Should infer OK");
 
     assert_eq!(
         module.type_info,
@@ -962,8 +962,9 @@ fn infer_module_test() {
             let ast = crate::grammar::ModuleParser::new()
                 .parse(&src)
                 .expect("syntax error");
-            let result = infer_module(ast, &HashMap::new()).expect("should successfully infer");
-            let mut constructors: Vec<(_, _)> = result
+            let (result, _) = infer_module(ast, &HashMap::new());
+            let ast = result.expect("should successfully infer");
+            let mut constructors: Vec<(_, _)> = ast
                 .type_info
                 .values
                 .iter()
@@ -1316,15 +1317,17 @@ fn infer_module_error_test() {
                 .parse(&src)
                 .expect("syntax error");
             ast.name = vec!["my_module".to_string()];
-            let result = infer_module(ast, &HashMap::new()).expect_err("should infer an error");
-            assert_eq!(($src, sort_options($error)), ($src, sort_options(result)));
+            let (result, _) = infer_module(ast, &HashMap::new());
+            let ast = result.expect_err("should infer an error");
+            assert_eq!(($src, sort_options($error)), ($src, sort_options(ast)));
         };
 
         ($src:expr) => {
             let ast = crate::grammar::ModuleParser::new()
                 .parse($src)
                 .expect("syntax error");
-            infer_module(ast, &HashMap::new()).expect_err("should infer an error");
+            let (result, _) = infer_module(ast, &HashMap::new());
+            result.expect_err("should infer an error");
         };
     }
 
@@ -1698,9 +1701,9 @@ fn infer_module_warning_test() {
                 .parse(&src)
                 .expect("syntax error");
             ast.name = vec!["my_module".to_string()];
-            let result = infer_module(ast, &HashMap::new()).expect("should successfully infer");
+            let (_, warnings) = infer_module(ast, &HashMap::new());
 
-            assert_eq!($warning, result.warnings[0]);
+            assert_eq!($warning, warnings[0]);
         };
     }
 
@@ -1711,9 +1714,9 @@ fn infer_module_warning_test() {
                 .parse(&src)
                 .expect("syntax error");
             ast.name = vec!["my_module".to_string()];
-            let result = infer_module(ast, &HashMap::new()).expect("should successfully infer");
+            let (_, warnings) = infer_module(ast, &HashMap::new());
 
-            assert_eq!(true, result.warnings.is_empty());
+            assert_eq!(true, warnings.is_empty());
         };
     }
 
