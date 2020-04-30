@@ -2959,6 +2959,9 @@ fn do_infer_call(
                 },
             ): (&mut Arc<Type>, _)| {
                 let value = infer(value, level, env)?;
+                println!("/-----------------");
+                println!("{:#?}\n\n=======\n\n{:#?}", typ, value.typ());
+                println!("-----------------/");
                 unify(typ.clone(), value.typ(), env)
                     .map_err(|e| convert_unify_error(e, value.location()))?;
                 Ok(CallArg {
@@ -3296,7 +3299,10 @@ fn unify(t1: Arc<Type>, t2: Arc<Type>, env: &Env) -> Result<(), UnifyError> {
             for (a, b) in args1.iter().zip(args2) {
                 unify(a.clone(), b.clone(), env)?;
             }
-            unify(retrn1.clone(), retrn2.clone(), env)
+            unify(retrn1.clone(), retrn2.clone(), env).map_err(|_| UnifyError::CouldNotUnify {
+                expected: t1.clone(),
+                given: t2.clone(),
+            })
         }
 
         (_, _) => Err(UnifyError::CouldNotUnify {
