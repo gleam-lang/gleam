@@ -4,9 +4,7 @@ mod untyped;
 pub use self::typed::TypedExpr;
 pub use self::untyped::UntypedExpr;
 
-use crate::typ::{
-    self, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor, Warning,
-};
+use crate::typ::{self, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor};
 use itertools::Itertools;
 use std::sync::Arc;
 
@@ -22,7 +20,6 @@ pub struct Module<T, Expr, Info> {
     pub documentation: Vec<String>,
     pub type_info: Info,
     pub statements: Vec<Statement<T, Expr>>,
-    pub warnings: Vec<Warning>,
 }
 
 impl<A, B, C> Module<A, B, C> {

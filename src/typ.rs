@@ -1186,7 +1186,7 @@ fn register_types(
 pub fn infer_module(
     module: UntypedModule,
     modules: &HashMap<String, Module>,
-) -> Result<TypedModule, Error> {
+) -> (Result<TypedModule, Error>, Vec<Warning>) {
     let mut env = Env::new(module.name.as_slice(), modules);
     let module_name = &module.name;
 
@@ -1234,26 +1234,33 @@ pub fn infer_module(
                     }
 
                     if let Some(typ) = module_info.types.get(name) {
-                        env.insert_type_constructor(imported_name.clone(), typ.clone())?;
+                        match env.insert_type_constructor(imported_name.clone(), typ.clone()) {
+                            Ok(_) => (),
+                            Err(e) => return (Err(e), env.warnings),
+                        }
+
                         imported = true;
                     }
 
                     if !imported {
-                        return Err(Error::UnknownModuleField {
-                            location: location.clone(),
-                            name: name.clone(),
-                            module_name: module.clone(),
-                            value_constructors: module_info
-                                .values
-                                .keys()
-                                .map(|t| t.to_string())
-                                .collect(),
-                            type_constructors: module_info
-                                .types
-                                .keys()
-                                .map(|t| t.to_string())
-                                .collect(),
-                        });
+                        return (
+                            Err(Error::UnknownModuleField {
+                                location: location.clone(),
+                                name: name.clone(),
+                                module_name: module.clone(),
+                                value_constructors: module_info
+                                    .values
+                                    .keys()
+                                    .map(|t| t.to_string())
+                                    .collect(),
+                                type_constructors: module_info
+                                    .types
+                                    .keys()
+                                    .map(|t| t.to_string())
+                                    .collect(),
+                            }),
+                            env.warnings,
+                        );
                     }
                 }
 
@@ -1269,10 +1276,13 @@ pub fn infer_module(
     // Register types so they can be used in constructors and functions
     // earlier in the file
     for s in module.statements.iter() {
-        register_types(s, module_name, &mut env)?;
+        match register_types(s, module_name, &mut env) {
+            Ok(_) => (),
+            Err(e) => return (Err(e), env.warnings),
+        }
     }
 
-    let statements: Vec<TypedStatement> = module
+    let statements_result: Result<Vec<_>, _> = module
         .statements
         .into_iter()
         .map(|s| match s {
@@ -1599,7 +1609,12 @@ pub fn infer_module(
                 unqualified,
             }),
         })
-        .collect::<Result<Vec<_>, _>>()?;
+        .collect::<Result<Vec<_>, Error>>();
+
+    let statements = match statements_result {
+        Ok(o) => o,
+        Err(e) => return (Err(e), env.warnings),
+    };
 
     // Remove private and imported types and values to create the public interface
     env.module_types
@@ -1610,10 +1625,13 @@ pub fn infer_module(
     // Ensure no exported values have private types in their type signature
     for (_, value) in env.module_values.iter() {
         if let Some(leaked) = value.typ.find_private_type() {
-            return Err(Error::PrivateTypeLeak {
-                location: value.origin.clone(),
-                leaked,
-            });
+            return (
+                Err(Error::PrivateTypeLeak {
+                    location: value.origin.clone(),
+                    leaked,
+                }),
+                env.warnings,
+            );
         }
     }
 
@@ -1625,18 +1643,20 @@ pub fn infer_module(
         ..
     } = env;
 
-    Ok(ast::Module {
-        documentation: module.documentation,
-        name: module.name.clone(),
-        statements,
-        type_info: Module {
-            name: module.name,
-            types,
-            values,
-            accessors,
-        },
+    (
+        Ok(ast::Module {
+            documentation: module.documentation,
+            name: module.name.clone(),
+            statements,
+            type_info: Module {
+                name: module.name,
+                types,
+                values,
+                accessors,
+            },
+        }),
         warnings,
-    })
+    )
 }
 
 fn custom_type_accessors(
