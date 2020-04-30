@@ -127,6 +127,13 @@ impl Type {
             },
         }
     }
+
+    pub fn fn_arity(&self) -> Option<usize> {
+        match self {
+            Type::Fn { args, .. } => Some(args.len()),
+            _ => None,
+        }
+    }
 }
 
 pub fn collapse_links(t: Arc<Type>) -> Arc<Type> {
@@ -1660,21 +1667,29 @@ fn custom_type_accessors(
 pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr, Error> {
     match expr {
         UntypedExpr::ListNil { location, .. } => infer_nil(location, level, env),
+
         UntypedExpr::Todo { location, .. } => infer_todo(location, level, env),
+
         UntypedExpr::Var { location, name, .. } => infer_var(name, location, level, env),
+
         UntypedExpr::Int {
             location, value, ..
         } => infer_int(value, location),
+
         UntypedExpr::Seq { first, then, .. } => infer_seq(*first, *then, level, env),
+
         UntypedExpr::Tuple {
             location, elems, ..
         } => infer_tuple(elems, location, level, env),
+
         UntypedExpr::Float {
             location, value, ..
         } => infer_float(value, location),
+
         UntypedExpr::String {
             location, value, ..
         } => infer_string(value, location),
+
         UntypedExpr::Pipe {
             left,
             right,
@@ -1759,41 +1774,82 @@ fn infer_pipe(
     level: usize,
     env: &mut Env,
 ) -> Result<TypedExpr, Error> {
-    infer_insert_pipe(&left, &right, level, env)
-        .or_else(|()| infer_apply_pipe(left, right, location, level, env))
+    match right {
+        // left |> right(..args)
+        UntypedExpr::Call { fun, args, .. } => {
+            let fun = infer(*fun, level, env)?;
+            match fun.typ().fn_arity() {
+                // Rewrite as right(left, ..args)
+                Some(arity) if arity == args.len() + 1 => {
+                    infer_insert_pipe(fun, args, left, level, env)
+                }
+
+                // Rewrite as right(..args)(left)
+                _ => infer_apply_to_call_pipe(fun, args, left, location, level, env),
+            }
+        }
+
+        // right(left)
+        right => infer_apply_pipe(left, right, location, level, env),
+    }
+}
+
+/// Attempt to infer a |> b(..c) as b(..c)(a)
+fn infer_apply_to_call_pipe(
+    fun: TypedExpr,
+    args: Vec<CallArg<UntypedExpr>>,
+    left: UntypedExpr,
+    location: SrcSpan,
+    level: usize,
+    env: &mut Env,
+) -> Result<TypedExpr, Error> {
+    let right_location = left.location().clone();
+    let (fun, args, typ) = do_infer_call_with_known_fun(fun, args, level, &right_location, env)?;
+    let fun = TypedExpr::Call {
+        location: right_location,
+        typ,
+        args,
+        fun: Box::new(fun),
+    };
+    let args = vec![CallArg {
+        label: None,
+        location: left.location().clone(),
+        value: left,
+    }];
+    let (fun, args, typ) = do_infer_call_with_known_fun(fun, args, level, &location, env)?;
+    Ok(TypedExpr::Call {
+        location,
+        typ,
+        args,
+        fun: Box::new(fun),
+    })
 }
 
 /// Attempt to infer a |> b(c) as b(a, c)
 fn infer_insert_pipe(
-    left: &UntypedExpr,
-    right: &UntypedExpr,
+    fun: TypedExpr,
+    args: Vec<CallArg<UntypedExpr>>,
+    left: UntypedExpr,
     level: usize,
     env: &mut Env,
-) -> Result<TypedExpr, ()> {
-    if let UntypedExpr::Call {
-        location,
-        fun,
-        args,
-    } = right
-    {
-        // TODO: This clones the full tree under the args. :(
-        let mut new_args = Vec::with_capacity(args.len() + 1);
-        new_args.push(CallArg {
-            label: None,
-            location: left.location().clone(),
-            value: left.clone(),
-        });
-        for arg in args {
-            new_args.push(arg.clone());
-        }
-        let call = UntypedExpr::Call {
-            location: location.clone(),
-            fun: fun.clone(),
-            args: new_args,
-        };
-        return infer(call, level, env).map_err(|_| ());
+) -> Result<TypedExpr, Error> {
+    let location = left.location().clone();
+    let mut new_args = Vec::with_capacity(args.len() + 1);
+    new_args.push(CallArg {
+        label: None,
+        location: left.location().clone(),
+        value: left,
+    });
+    for arg in args {
+        new_args.push(arg.clone());
     }
-    Err(())
+    let (fun, args, typ) = do_infer_call_with_known_fun(fun, new_args, level, &location, env)?;
+    Ok(TypedExpr::Call {
+        location,
+        typ,
+        args,
+        fun: Box::new(fun),
+    })
 }
 
 /// Attempt to infer a |> b as b(a)
@@ -2929,13 +2985,23 @@ pub type TypedCallArg = CallArg<TypedExpr>;
 
 fn do_infer_call(
     fun: UntypedExpr,
-    mut args: Vec<CallArg<UntypedExpr>>,
+    args: Vec<CallArg<UntypedExpr>>,
     level: usize,
     location: &SrcSpan,
     env: &mut Env,
 ) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
     let fun = infer(fun, level, env)?;
+    let (fun, args, typ) = do_infer_call_with_known_fun(fun, args, level, location, env)?;
+    Ok((fun, args, typ))
+}
 
+fn do_infer_call_with_known_fun(
+    fun: TypedExpr,
+    mut args: Vec<CallArg<UntypedExpr>>,
+    level: usize,
+    location: &SrcSpan,
+    env: &mut Env,
+) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
     match get_field_map(&fun, env).map_err(|e| convert_get_value_constructor_error(e, location))? {
         // The fun has a field map so labelled arguments may be present and need to be reordered.
         Some(field_map) => field_map.reorder(&mut args, location)?,

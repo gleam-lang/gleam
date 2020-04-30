@@ -380,6 +380,11 @@ fn infer_test() {
     assert_infer!("let add = fn(x, y) { x + y } 1 |> add(2, _)", "Int");
     assert_infer!("let add = fn(x, y) { x + y } 1 |> add(2)", "Int");
     assert_infer!("let id = fn(x) { x } 1 |> id()", "Int");
+    assert_infer!("let add = fn(x) { fn(y) { y + x } } 1 |> add(1)", "Int");
+    assert_infer!(
+        "let add = fn(x, _, _) { fn(y) { y + x } } 1 |> add(1, 2, 3)",
+        "Int"
+    );
 }
 
 #[test]
@@ -949,6 +954,15 @@ fn infer_error_test() {
             typ: Arc::new(Type::Var {
                 typ: Arc::new(RefCell::new(TypeVar::Generic { id: 7 })),
             }),
+        },
+    );
+
+    assert_error!(
+        "let add = fn(x, y) { x + y } 1 |> add(unknown)",
+        Error::UnknownVariable {
+            location: SrcSpan { start: 38, end: 45 },
+            name: "unknown".to_string(),
+            variables: env_vars_with(&["add"]),
         },
     );
 }
@@ -1702,6 +1716,14 @@ fn env_types() -> Vec<String> {
         .keys()
         .map(|s| s.to_string())
         .collect()
+}
+
+fn env_vars_with(things: &[&str]) -> Vec<String> {
+    let mut types: Vec<_> = env_vars();
+    for thing in things {
+        types.push(thing.to_string());
+    }
+    types
 }
 
 fn env_vars() -> Vec<String> {
