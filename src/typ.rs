@@ -3087,9 +3087,6 @@ fn do_infer_call_with_known_fun(
                 },
             ): (&mut Arc<Type>, _)| {
                 let value = infer(value, level, env)?;
-                println!("/-----------------");
-                println!("{:#?}\n\n=======\n\n{:#?}", typ, value.typ());
-                println!("-----------------/");
                 unify(typ.clone(), value.typ(), env)
                     .map_err(|e| convert_unify_error(e, value.location()))?;
                 Ok(CallArg {
