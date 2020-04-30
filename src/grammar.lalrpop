@@ -21,7 +21,6 @@ pub Module: UntypedModule = {
         type_info: (),
         name: vec![],
         statements: statements,
-        warnings: vec![],
     }
 }
 
