@@ -54,9 +54,10 @@ enum Command {
     Build {
         #[structopt(help = "location of the project root", default_value = ".")]
         path: String,
-        #[structopt(help = "generate docs for this package as well", long)]
-        doc: bool,
     },
+
+    #[structopt(name = "docs", about = "Render HTML documentation for a project")]
+    Docs(Docs),
 
     #[structopt(name = "new", about = "Create a new project")]
     New {
@@ -98,9 +99,24 @@ enum Command {
     },
 }
 
+#[derive(StructOpt, Debug)]
+enum Docs {
+    #[structopt(name = "build", about = "Render HTML docs locally")]
+    Build,
+
+    #[structopt(name = "format", about = "Publish HTML docs to hexdocs")]
+    Publish,
+    // #[structopt(name = "format", about = "Remove docs from hexdocs")]
+    // Revoke,
+}
+
 fn main() {
     let result = match Command::from_args() {
-        Command::Build { path, doc } => command_build(path, doc),
+        Command::Build { path } => command_build(path, false),
+
+        Command::Docs(Docs::Build) => command_build(".".to_string(), true),
+
+        Command::Docs(Docs::Publish) => command_build(".".to_string(), true).and_then(|_| todo!()),
 
         Command::Format {
             stdin,
