@@ -1376,6 +1376,34 @@ pub fn x() { id(1, 1.0) }
     );
 
     assert_error!(
+        "fn bar() -> Int {
+             5
+         }
+         
+         fn run(foo: fn() -> String) {
+             foo()
+         }
+         
+         fn demo() {
+             run(bar)
+         }",
+        Error::CouldNotUnify {
+            location: SrcSpan {
+                start: 171,
+                end: 174
+            },
+            expected: Arc::new(Type::Fn {
+                args: vec![],
+                retrn: string(),
+            }),
+            given: Arc::new(Type::Fn {
+                args: vec![],
+                retrn: int(),
+            }),
+        },
+    );
+
+    assert_error!(
         "external fn go(List(a, b)) -> a = \"\" \"\"",
         Error::IncorrectTypeArity {
             location: SrcSpan { start: 15, end: 25 },
