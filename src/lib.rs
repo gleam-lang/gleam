@@ -1,14 +1,63 @@
 #[cfg(test)]
 mod tests;
 
+// TODO: push docs to hex
+// TODO: replace panic!() with unexpected response variant
+
+use async_trait::async_trait;
 use reqwest::StatusCode;
 use serde::Deserialize;
 use serde_json::json;
 use thiserror::Error;
 
+#[async_trait]
 pub trait Client {
     fn http_client(&self) -> reqwest::Client;
     fn base_url(&self) -> &url::Url;
+
+    /// Authenticate with the Hex API using a username and password in order
+    /// to get an API token, enabling accessing of more APIs and raising the
+    /// rate limit.
+    async fn authenticate(
+        &self,
+        username: &str,
+        password: &str,
+        token_name: &str,
+    ) -> Result<AuthenticatedClient, AuthenticateError> {
+        let body = json!({
+            "name": token_name,
+            "permissions": [{
+                "domain": "api",
+                "resource": "write",
+            }],
+        });
+
+        let response = self
+            .http_client()
+            .post(self.base_url().join("keys").unwrap())
+            .basic_auth(username, Some(password))
+            .json(&body)
+            .send()
+            .await
+            .map_err(AuthenticateError::Http)?;
+
+        match response.status() {
+            StatusCode::CREATED => {
+                let body: AuthenticateResponseCreated =
+                    response.json().await.map_err(AuthenticateError::Http)?;
+                Ok(AuthenticatedClient {
+                    api_base_url: self.base_url().clone(),
+                    api_token: body.secret,
+                })
+            }
+
+            StatusCode::TOO_MANY_REQUESTS => Err(AuthenticateError::RateLimited),
+
+            StatusCode::UNAUTHORIZED => Err(AuthenticateError::InvalidCredentials),
+
+            code => panic!("code: {}, resp: {:?}", code, response.text().await.unwrap()),
+        }
+    }
 }
 
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), " (", env!("CARGO_PKG_VERSION"), ")");
@@ -39,50 +88,6 @@ impl UnauthenticatedClient {
     pub fn new() -> Self {
         Self {
             api_base_url: url::Url::parse("https://hex.pm/api/").unwrap(),
-        }
-    }
-
-    /// Authenticate with the Hex API using a username and password in order
-    /// to get an API token, enabling accessing of more APIs and raising the
-    /// rate limit.
-    pub async fn authenticate(
-        self,
-        username: &str,
-        password: &str,
-        token_name: &str,
-    ) -> Result<AuthenticatedClient, AuthenticateError> {
-        let body = json!({
-            "name": token_name,
-            "permissions": [{
-                "domain": "api",
-                "resource": "write",
-            }],
-        });
-
-        let response = dbg!(self
-            .http_client()
-            .post(self.api_base_url.join("keys").unwrap()))
-        .basic_auth(username, Some(password))
-        .json(&body)
-        .send()
-        .await
-        .map_err(AuthenticateError::Http)?;
-
-        match response.status() {
-            StatusCode::CREATED => {
-                let body: AuthenticateResponseCreated =
-                    response.json().await.map_err(AuthenticateError::Http)?;
-                Ok(AuthenticatedClient {
-                    api_base_url: self.api_base_url,
-                    api_token: body.secret,
-                })
-            }
-
-            StatusCode::TOO_MANY_REQUESTS => Err(AuthenticateError::RateLimited),
-
-            StatusCode::UNAUTHORIZED => Err(AuthenticateError::InvalidCredentials),
-
-            code => panic!("code: {}, resp: {:?}", code, response.text().await.unwrap()),
         }
     }
 }
