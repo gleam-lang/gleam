@@ -1818,6 +1818,23 @@ fn infer_module_warning_test() {
             location: SrcSpan { start: 17, end: 21 }
         },
     );
+
+    // Implicitly discarded Results emit warnings
+    assert_warning!(
+        "
+fn foo() { Ok(5) }
+fn main() { foo(); 5 }",
+        Warning::ImplicitlyDiscardedResult {
+            location: SrcSpan { start: 32, end: 37 }
+        }
+    );
+
+    // Explicitly discarded Results do not emit warnings
+    assert_no_warnings!(
+        "
+fn foo() { Ok(5) }
+fn main() { let _ = foo(); 5 }",
+    );
 }
 
 fn env_types_with(things: &[&str]) -> Vec<String> {

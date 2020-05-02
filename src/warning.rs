@@ -50,6 +50,17 @@ impl Warning {
                     write(buffer, diagnostic, Severity::Warning);
                     writeln!(buffer, "This code will crash if it is run. Be sure to remove this todo before running your program.").unwrap();
                 }
+                ImplicitlyDiscardedResult { location } => {
+                    let diagnostic = Diagnostic {
+                        title: "Unused result value".to_string(),
+                        label: "".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: location.clone(),
+                    };
+                    write(buffer, diagnostic, Severity::Warning);
+                    writeln!(buffer, "The Result value returned by this code is not being used, so any error is being silently ignored. Check for an error with a case statement, or assign it to the variable _ if you are sure the error does not matter.").unwrap();
+                }
             },
         }
     }
