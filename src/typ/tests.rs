@@ -1376,21 +1376,22 @@ pub fn x() { id(1, 1.0) }
     );
 
     assert_error!(
-        "fn bar() -> Int {
-             5
-         }
-         
-         fn run(foo: fn() -> String) {
-             foo()
-         }
-         
-         fn demo() {
-             run(bar)
-         }",
+        "
+fn bar() -> Int {
+    5
+}
+
+fn run(foo: fn() -> String) {
+    foo()
+}
+
+fn demo() {
+    run(bar)
+}",
         Error::CouldNotUnify {
             location: SrcSpan {
-                start: 171,
-                end: 174
+                start: 91,
+                end: 94
             },
             expected: Arc::new(Type::Fn {
                 args: vec![],
@@ -1404,21 +1405,22 @@ pub fn x() { id(1, 1.0) }
     );
 
     assert_error!(
-        "fn bar(x: Int) -> Int {
-             x * 5
-         }
-         
-         fn run(foo: fn(String) -> Int) {
-             foo(\"Foo.\")
-         }
-         
-         fn demo() {
-             run(bar)
-         }",
+        "
+fn bar(x: Int) -> Int {
+    x * 5
+}
+
+fn run(foo: fn(String) -> Int) {
+    foo(\"Foo.\")
+}
+
+fn demo() {
+    run(bar)
+}",
         Error::CouldNotUnify {
             location: SrcSpan {
-                start: 190,
-                end: 193
+                start: 110,
+                end: 113
             },
             expected: Arc::new(Type::Fn {
                 args: vec![string()],
