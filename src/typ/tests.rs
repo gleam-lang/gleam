@@ -1389,10 +1389,7 @@ fn demo() {
     run(bar)
 }",
         Error::CouldNotUnify {
-            location: SrcSpan {
-                start: 91,
-                end: 94
-            },
+            location: SrcSpan { start: 91, end: 94 },
             expected: Arc::new(Type::Fn {
                 args: vec![],
                 retrn: string(),
