@@ -33,7 +33,7 @@ async fn authenticate_test_success() {
         .create();
 
     let mut client = UnauthenticatedClient::new();
-    client.api_base_url = mockito::server_url();
+    client.api_base_url = url::Url::parse(&mockito::server_url()).unwrap();
 
     let authed_client = client
         .authenticate(username, password, name)
@@ -41,8 +41,10 @@ async fn authenticate_test_success() {
         .expect("should be ok");
 
     assert_eq!(expected_secret, authed_client.api_token);
-    assert_eq!(mockito::server_url(), authed_client.api_base_url);
-
+    assert_eq!(
+        url::Url::parse(&mockito::server_url()).unwrap(),
+        authed_client.api_base_url
+    );
     mock.assert();
 }
 
@@ -64,7 +66,7 @@ async fn authenticate_test_rate_limted() {
         .create();
 
     let mut client = UnauthenticatedClient::new();
-    client.api_base_url = mockito::server_url();
+    client.api_base_url = url::Url::parse(&mockito::server_url()).unwrap();
 
     match client.authenticate(username, password, name).await {
         Err(AuthenticateError::RateLimited) => (),
@@ -101,7 +103,7 @@ async fn authenticate_test_bad_creds() {
         .create();
 
     let mut client = UnauthenticatedClient::new();
-    client.api_base_url = mockito::server_url();
+    client.api_base_url = url::Url::parse(&mockito::server_url()).unwrap();
 
     match client.authenticate(username, password, name).await {
         Err(AuthenticateError::InvalidCredentials) => (),

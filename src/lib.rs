@@ -6,17 +6,17 @@ use serde::Deserialize;
 use serde_json::json;
 use thiserror::Error;
 
-static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), " (", env!("CARGO_PKG_VERSION"), ")",);
+static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), " (", env!("CARGO_PKG_VERSION"), ")");
 
 #[derive(Debug)]
 pub struct UnauthenticatedClient {
-    pub api_base_url: String,
+    pub api_base_url: url::Url,
 }
 
 impl UnauthenticatedClient {
     pub fn new() -> Self {
         Self {
-            api_base_url: "https://hex.pm/api".to_string(),
+            api_base_url: url::Url::parse("https://hex.pm/api").unwrap(),
         }
     }
 
@@ -46,7 +46,7 @@ impl UnauthenticatedClient {
 
         let response = self
             .http_client()
-            .post(&self.path("/keys"))
+            .post(self.api_base_url.join("keys").unwrap())
             .basic_auth(username, Some(password))
             .json(&body)
             .send()
@@ -70,10 +70,6 @@ impl UnauthenticatedClient {
             code => panic!("code: {}, resp: {:?}", code, response.text().await.unwrap()),
         }
     }
-
-    fn path(&self, path: &str) -> String {
-        format!("{}{}", self.api_base_url, path)
-    }
 }
 
 #[derive(Error, Debug)]
@@ -95,6 +91,6 @@ struct AuthenticateResponseCreated {
 
 #[derive(Debug)]
 pub struct AuthenticatedClient {
-    pub api_base_url: String,
+    pub api_base_url: url::Url,
     pub api_token: String,
 }

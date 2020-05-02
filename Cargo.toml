@@ -19,6 +19,8 @@ thiserror = "1.0"
 # JSON (de)serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+# URL handling
+url = "2.1"
 
 [dev-dependencies]
 # HTTP mock server
