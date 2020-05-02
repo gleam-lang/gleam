@@ -6,7 +6,7 @@ use serde_json::json;
 async fn authenticate_test_success() {
     let username = "me@example.com";
     let password = "password";
-    let name = "authenticate_test_1";
+    let name = "louis-test";
     let expected_secret = "some-secret-here";
 
     let resp_body = json!({
@@ -24,6 +24,7 @@ async fn authenticate_test_success() {
         .expect(1)
         .match_header("authorization", "Basic bWVAZXhhbXBsZS5jb206cGFzc3dvcmQ=")
         .match_header("content-type", "application/json")
+        .match_header("accept", "application/json")
         .match_body(Matcher::Json(json!({
             "name": name,
             "permissions":[{ "domain": "api", "resource": "write" }]
@@ -58,6 +59,7 @@ async fn authenticate_test_rate_limted() {
         .expect(1)
         .match_header("authorization", "Basic bWVAZXhhbXBsZS5jb206cGFzc3dvcmQ=")
         .match_header("content-type", "application/json")
+        .match_header("accept", "application/json")
         .match_body(Matcher::Json(json!({
             "name": name,
             "permissions":[{ "domain": "api", "resource": "write" }]
@@ -94,6 +96,7 @@ async fn authenticate_test_bad_creds() {
         .expect(1)
         .match_header("authorization", "Basic bWVAZXhhbXBsZS5jb206cGFzc3dvcmQ=")
         .match_header("content-type", "application/json")
+        .match_header("accept", "application/json")
         .match_body(Matcher::Json(json!({
             "name": name,
             "permissions":[{ "domain": "api", "resource": "write" }]
@@ -111,6 +114,164 @@ async fn authenticate_test_bad_creds() {
             "expected Err(AuthenticateError::InvalidCredentials), got {:?}",
             result
         ),
+    }
+
+    mock.assert();
+}
+
+#[tokio::test]
+async fn remove_docs_success() {
+    let token = "my-api-token-here";
+    let package = "gleam_experimental_stdlib";
+    let version = "0.8.0";
+
+    let mock = mockito::mock(
+        "DELETE",
+        format!("/packages/{}/releases/{}/docs", package, version).as_ref(),
+    )
+    .expect(1)
+    .match_header("authorization", token)
+    .match_header("accept", "application/json")
+    .with_status(204)
+    .create();
+
+    let mut client = AuthenticatedClient::new(token.to_string());
+    client.api_base_url = url::Url::parse(&mockito::server_url()).unwrap();
+
+    client
+        .remove_docs(package, version)
+        .await
+        .expect("should be ok");
+
+    mock.assert();
+}
+
+#[tokio::test]
+async fn remove_docs_unknown_package_version() {
+    let token = "my-api-token-here";
+    let package = "gleam_experimental_stdlib_this_does_not_exist";
+    let version = "0.8.0";
+
+    let mock = mockito::mock(
+        "DELETE",
+        format!("/packages/{}/releases/{}/docs", package, version).as_ref(),
+    )
+    .expect(1)
+    .match_header("authorization", token)
+    .match_header("accept", "application/json")
+    .with_status(404)
+    .create();
+
+    let mut client = AuthenticatedClient::new(token.to_string());
+    client.api_base_url = url::Url::parse(&mockito::server_url()).unwrap();
+
+    match client.remove_docs(package, version).await {
+        Err(RemoveDocsError::NotFound(p, v)) if p == package && v == version => (),
+        result => panic!(
+            "expected Err(RemoveDocsError::NotFound(package, version)) got {:?}",
+            result
+        ),
+    }
+
+    mock.assert();
+}
+
+#[tokio::test]
+async fn remove_docs_rate_limted() {
+    let token = "my-api-token-here";
+    let package = "gleam_experimental_stdlib";
+    let version = "0.8.0";
+
+    let mock = mockito::mock(
+        "DELETE",
+        format!("/packages/{}/releases/{}/docs", package, version).as_ref(),
+    )
+    .expect(1)
+    .match_header("authorization", token)
+    .match_header("accept", "application/json")
+    .with_status(429)
+    .create();
+
+    let mut client = AuthenticatedClient::new(token.to_string());
+    client.api_base_url = url::Url::parse(&mockito::server_url()).unwrap();
+
+    match client.remove_docs(package, version).await {
+        Err(RemoveDocsError::RateLimited) => (),
+        result => panic!(
+            "expected Err(RemoveDocsError::RateLimited), got {:?}",
+            result
+        ),
+    }
+
+    mock.assert();
+}
+
+#[tokio::test]
+async fn remove_docs_invalid_token() {
+    let token = "my-api-token-here";
+    let package = "gleam_experimental_stdlib";
+    let version = "0.8.0";
+
+    let mock = mockito::mock(
+        "DELETE",
+        format!("/packages/{}/releases/{}/docs", package, version).as_ref(),
+    )
+    .expect(1)
+    .match_header("authorization", token)
+    .match_header("accept", "application/json")
+    .with_status(401)
+    .with_body(
+        json!({
+            "message": "invalid API key",
+            "status": 401,
+        })
+        .to_string(),
+    )
+    .create();
+
+    let mut client = AuthenticatedClient::new(token.to_string());
+    client.api_base_url = url::Url::parse(&mockito::server_url()).unwrap();
+
+    match client.remove_docs(package, version).await {
+        Err(RemoveDocsError::InvalidApiKey) => (),
+        result => panic!(
+            "expected Err(RemoveDocsError::InvalidApiKey), got {:?}",
+            result
+        ),
+    }
+
+    mock.assert();
+}
+
+#[tokio::test]
+async fn remove_docs_forbidden() {
+    let token = "my-api-token-here";
+    let package = "jason";
+    let version = "1.2.0";
+
+    let mock = mockito::mock(
+        "DELETE",
+        format!("/packages/{}/releases/{}/docs", package, version).as_ref(),
+    )
+    .expect(1)
+    .match_header("authorization", token)
+    .match_header("accept", "application/json")
+    .with_status(403)
+    .with_body(
+        json!({
+            "message": "account is not authorized for this action",
+            "status": 403,
+        })
+        .to_string(),
+    )
+    .create();
+
+    let mut client = AuthenticatedClient::new(token.to_string());
+    client.api_base_url = url::Url::parse(&mockito::server_url()).unwrap();
+
+    match client.remove_docs(package, version).await {
+        Err(RemoveDocsError::Forbidden) => (),
+        result => panic!("expected Err(RemoveDocsError::Forbidden), got {:?}", result),
     }
 
     mock.assert();
