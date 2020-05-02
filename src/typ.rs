@@ -329,6 +329,7 @@ pub struct Env<'a, 'b> {
 
     // Values defined in the current module
     module_values: HashMap<String, ValueConstructor>,
+    referenced_values: HashSet<String>,
 
     // Accessors defined in the current module
     accessors: HashMap<String, AccessorsMap>,
@@ -347,6 +348,7 @@ impl<'a, 'b> Env<'a, 'b> {
             annotated_generic_types: im::HashSet::new(),
             module_types: HashMap::new(),
             module_values: HashMap::new(),
+            referenced_values: HashSet::new(),
             imported_modules: HashMap::new(),
             accessors: HashMap::new(),
             warnings: Vec::new(),
@@ -1009,6 +1011,8 @@ pub enum Warning {
     Todo { location: SrcSpan },
 
     ImplicitlyDiscardedResult { location: SrcSpan },
+
+    PrivateFunctionNeverCalled { location: SrcSpan },
 }
 
 #[derive(Debug, PartialEq)]
@@ -1635,11 +1639,24 @@ pub fn infer_module(
     // Remove private and imported types and values to create the public interface
     env.module_types
         .retain(|_, info| info.public && &info.module == module_name);
-    env.module_values.retain(|_, info| info.public);
+
+    // Move the hashmap of module values out of the env struct, then iterate over it.
+    // Create warnings for uncalled private functions
+    // Finally, keep only the public values.
+    let mut module_values = std::mem::replace(&mut env.module_values, HashMap::new());
+    module_values.retain(|name, info| {
+        if !info.public && !env.referenced_values.contains(name) {
+            env.warnings.push(Warning::PrivateFunctionNeverCalled {
+                location: info.origin.clone(),
+            })
+        }
+        info.public
+    });
+
     env.accessors.retain(|_, accessors| accessors.public);
 
     // Ensure no exported values have private types in their type signature
-    for (_, value) in env.module_values.iter() {
+    for (_, value) in module_values.iter() {
         if let Some(leaked) = value.typ.find_private_type() {
             return (
                 Err(Error::PrivateTypeLeak {
@@ -1653,7 +1670,6 @@ pub fn infer_module(
 
     let Env {
         module_types: types,
-        module_values: values,
         accessors,
         warnings,
         ..
@@ -1667,7 +1683,7 @@ pub fn infer_module(
             type_info: Module {
                 name: module.name,
                 types,
-                values,
+                values: module_values,
                 accessors,
             },
         }),
@@ -2017,6 +2033,10 @@ fn infer_call(
     env: &mut Env,
 ) -> Result<TypedExpr, Error> {
     let (fun, args, typ) = do_infer_call(fun, args, level, &location, env)?;
+    if let TypedExpr::Var { name, .. } = &fun {
+        env.referenced_values.insert(name.clone());
+    }
+
     Ok(TypedExpr::Call {
         location,
         typ,

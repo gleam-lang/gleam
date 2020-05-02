@@ -1772,6 +1772,7 @@ fn infer_module_warning_test() {
             ast.name = vec!["my_module".to_string()];
             let (_, warnings) = infer_module(ast, &HashMap::new());
 
+            assert!(warnings.len() > 0);
             assert_eq!($warning, warnings[0]);
         };
     }
@@ -1798,7 +1799,7 @@ fn infer_module_warning_test() {
     );
 
     // New list prepend syntax does not emit a warning
-    assert_no_warnings!("fn main() { [1 ..[2, 3]] }",);
+    assert_no_warnings!("pub fn main() { [1 ..[2, 3]] }");
 
     // Old list tail pattern matching syntax emits a warning
     assert_warning!(
@@ -1809,7 +1810,7 @@ fn infer_module_warning_test() {
     );
 
     // New list tail pattern matching syntax does not emit a warning
-    assert_no_warnings!("fn main() { let x = [] ; case x { [x, ..] -> 1 } }",);
+    assert_no_warnings!("pub fn main() { let x = [] ; case x { [x, ..] -> 1 } }");
 
     // Todos emit warnings
     assert_warning!(
@@ -1822,18 +1823,32 @@ fn infer_module_warning_test() {
     // Implicitly discarded Results emit warnings
     assert_warning!(
         "
-fn foo() { Ok(5) }
-fn main() { foo(); 5 }",
+pub fn foo() { Ok(5) }
+pub fn main() { foo(); 5 }",
         Warning::ImplicitlyDiscardedResult {
-            location: SrcSpan { start: 32, end: 37 }
+            location: SrcSpan { start: 40, end: 45 }
         }
     );
 
     // Explicitly discarded Results do not emit warnings
     assert_no_warnings!(
         "
-fn foo() { Ok(5) }
-fn main() { let _ = foo(); 5 }",
+pub fn foo() { Ok(5) }
+pub fn main() { let _ = foo(); 5 }"
+    );
+
+    // Defining a private function and never calling it emits a warning
+    assert_warning!(
+        "fn hello() { 1 }",
+        Warning::PrivateFunctionNeverCalled {
+            location: SrcSpan { start: 0, end: 10 }
+        },
+    );
+
+    // Defining a private function and calling it does not emit a warning
+    assert_no_warnings!(
+        "fn hello() { 1 }
+pub fn another() { hello() }"
     );
 }
 
