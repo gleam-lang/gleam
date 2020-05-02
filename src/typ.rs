@@ -2110,7 +2110,7 @@ fn infer_tuple_index(
 ) -> Result<TypedExpr, Error> {
     let tuple = infer(tuple, level, env)?;
 
-    match &*tuple.typ() {
+    match tuple.typ().as_ref() {
         Type::Tuple { elems } => {
             let typ = elems
                 .get(index as usize)
