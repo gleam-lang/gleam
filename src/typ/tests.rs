@@ -1448,8 +1448,8 @@ fn demo() {
         "fn dupe() { 1 }
          fn dupe() { 2 }",
         Error::DuplicateName {
-            location: SrcSpan { start: 25, end: 40 },
-            previous_location: SrcSpan { start: 0, end: 15 },
+            location: SrcSpan { start: 25, end: 34 },
+            previous_location: SrcSpan { start: 0, end: 9 },
             name: "dupe".to_string(),
         }
     );
@@ -1459,8 +1459,8 @@ fn demo() {
         "fn dupe() { 1 }
          fn dupe(x) { x }",
         Error::DuplicateName {
-            location: SrcSpan { start: 25, end: 41 },
-            previous_location: SrcSpan { start: 0, end: 15 },
+            location: SrcSpan { start: 25, end: 35 },
+            previous_location: SrcSpan { start: 0, end: 9 },
             name: "dupe".to_string(),
         }
     );
@@ -1471,7 +1471,7 @@ fn demo() {
          external fn dupe(x) -> x = \"\" \"\"",
         Error::DuplicateName {
             location: SrcSpan { start: 25, end: 57 },
-            previous_location: SrcSpan { start: 0, end: 15 },
+            previous_location: SrcSpan { start: 0, end: 9 },
             name: "dupe".to_string(),
         }
     );
@@ -1481,7 +1481,7 @@ fn demo() {
         "external fn dupe(x) -> x = \"\" \"\"
          fn dupe() { 1 }",
         Error::DuplicateName {
-            location: SrcSpan { start: 42, end: 57 },
+            location: SrcSpan { start: 42, end: 51 },
             previous_location: SrcSpan { start: 0, end: 32 },
             name: "dupe".to_string(),
         }
@@ -1551,7 +1551,7 @@ fn demo() {
         Error::PrivateTypeLeak {
             location: SrcSpan {
                 start: 88,
-                end: 115,
+                end: 106,
             },
             leaked: Type::App {
                 args: vec![],
@@ -1569,7 +1569,7 @@ fn demo() {
         Error::PrivateTypeLeak {
             location: SrcSpan {
                 start: 88,
-                end: 117,
+                end: 106,
             },
             leaked: Type::App {
                 args: vec![],
