@@ -38,6 +38,13 @@ pub enum Type {
 }
 
 impl Type {
+    pub fn is_result(&self) -> bool {
+        match self {
+            Type::App { name, module, .. } if "Result" == name && module.is_empty() => true,
+            _ => false,
+        }
+    }
+
     pub fn is_unbound(&self) -> bool {
         match self {
             Type::Var { typ } => typ.borrow().is_unbound(),
@@ -1000,6 +1007,8 @@ pub enum Warning {
     DeprecatedListPrependSyntax { location: SrcSpan },
 
     Todo { location: SrcSpan },
+
+    ImplicitlyDiscardedResult { location: SrcSpan },
 }
 
 #[derive(Debug, PartialEq)]
@@ -1960,6 +1969,17 @@ fn infer_seq(
 ) -> Result<TypedExpr, Error> {
     let first = infer(first, level, env)?;
     let then = infer(then, level, env)?;
+
+    match first.typ().as_ref() {
+        typ if typ.is_result() => {
+            env.warnings.push(Warning::ImplicitlyDiscardedResult {
+                location: first.location().clone(),
+            });
+        }
+
+        _ => {}
+    }
+
     Ok(TypedExpr::Seq {
         typ: then.typ(),
         first: Box::new(first),
