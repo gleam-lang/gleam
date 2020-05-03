@@ -1,6 +1,6 @@
 [package]
 name = "hexpm"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2018"
 
