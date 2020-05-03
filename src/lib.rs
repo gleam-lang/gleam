@@ -55,7 +55,10 @@ pub trait Client {
 
             StatusCode::UNAUTHORIZED => Err(AuthenticateError::InvalidCredentials),
 
-            code => panic!("code: {}, resp: {:?}", code, response.text().await.unwrap()),
+            status => Err(AuthenticateError::UnexpectedResponse(
+                status,
+                response.text().await.unwrap_or_default(),
+            )),
         }
     }
 }
@@ -102,6 +105,9 @@ pub enum AuthenticateError {
 
     #[error("invalid username and password combination")]
     InvalidCredentials,
+
+    #[error("an unexpected response was sent by Hex")]
+    UnexpectedResponse(StatusCode, String),
 }
 
 #[derive(Debug, Deserialize)]
@@ -163,7 +169,10 @@ impl AuthenticatedClient {
             StatusCode::TOO_MANY_REQUESTS => Err(RemoveDocsError::RateLimited),
             StatusCode::UNAUTHORIZED => Err(RemoveDocsError::InvalidApiKey),
             StatusCode::FORBIDDEN => Err(RemoveDocsError::Forbidden),
-            code => panic!("code: {}, resp: {:?}", code, response.text().await.unwrap()),
+            status => Err(RemoveDocsError::UnexpectedResponse(
+                status,
+                response.text().await.unwrap_or_default(),
+            )),
         }
     }
 }
@@ -187,4 +196,7 @@ pub enum RemoveDocsError<'a> {
 
     #[error("this account is not authorized for this action")]
     Forbidden,
+
+    #[error("an unexpected response was sent by Hex")]
+    UnexpectedResponse(StatusCode, String),
 }
