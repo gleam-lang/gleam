@@ -28,6 +28,8 @@ async-trait = "0.1"
 lazy_static = "1.4"
 # Text parsing with regular expressions
 regex = "1.3.7"
+# Byte collections
+bytes = "0.5"
 
 [dev-dependencies]
 # HTTP mock server

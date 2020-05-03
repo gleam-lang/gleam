@@ -147,6 +147,7 @@ impl AuthenticatedClient {
             api_token,
         }
     }
+
     pub async fn remove_docs<'a>(
         &self,
         package_name: &'a str,
@@ -179,10 +180,69 @@ impl AuthenticatedClient {
             )),
         }
     }
+
+    pub async fn publish_docs<'a>(
+        &self,
+        package_name: &'a str,
+        version: &'a str,
+        gzipped_tarball: bytes::Bytes,
+    ) -> Result<(), PublishDocsError<'a>> {
+        validate_package_and_version(package_name, version)
+            .map_err(|_| PublishDocsError::BadPackage(package_name, version))?;
+
+        let url = self
+            .api_base_url
+            .join(format!("packages/{}/releases/{}/docs", package_name, version).as_str())
+            .expect("building remove_docs url");
+
+        let response = self
+            .http_client()
+            .post(url.to_string().as_str())
+            .body(gzipped_tarball)
+            .send()
+            .await
+            .map_err(PublishDocsError::Http)?;
+
+        match response.status() {
+            StatusCode::CREATED => Ok(()),
+            StatusCode::NOT_FOUND => Err(PublishDocsError::NotFound(package_name, version)),
+            StatusCode::TOO_MANY_REQUESTS => Err(PublishDocsError::RateLimited),
+            StatusCode::UNAUTHORIZED => Err(PublishDocsError::InvalidApiKey),
+            StatusCode::FORBIDDEN => Err(PublishDocsError::Forbidden),
+            status => Err(PublishDocsError::UnexpectedResponse(
+                status,
+                response.text().await.unwrap_or_default(),
+            )),
+        }
+    }
 }
 
 #[derive(Error, Debug)]
 pub enum RemoveDocsError<'a> {
+    #[error(transparent)]
+    Http(#[from] reqwest::Error),
+
+    #[error("the given package name and version {0} {1} are not valid")]
+    BadPackage(&'a str, &'a str),
+
+    #[error("could not find package {0} with version {1}")]
+    NotFound(&'a str, &'a str),
+
+    #[error("the rate limit for the Hex API has been exceeded for this IP")]
+    RateLimited,
+
+    #[error("the given API key was not valid")]
+    InvalidApiKey,
+
+    #[error("this account is not authorized for this action")]
+    Forbidden,
+
+    #[error("an unexpected response was sent by Hex")]
+    UnexpectedResponse(StatusCode, String),
+}
+
+#[derive(Error, Debug)]
+pub enum PublishDocsError<'a> {
     #[error(transparent)]
     Http(#[from] reqwest::Error),
 
