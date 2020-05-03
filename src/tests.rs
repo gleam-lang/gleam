@@ -276,3 +276,39 @@ async fn remove_docs_forbidden() {
 
     mock.assert();
 }
+
+#[tokio::test]
+async fn remove_docs_bad_package_name() {
+    let token = "my-api-token-here";
+    let package = "not valid";
+    let version = "1.2.0";
+
+    let mut client = AuthenticatedClient::new(token.to_string());
+    client.api_base_url = url::Url::parse(&mockito::server_url()).unwrap();
+
+    match client.remove_docs(package, version).await {
+        Err(RemoveDocsError::BadPackage(p, v)) if p == package && v == version => (),
+        result => panic!(
+            "expected Err(RemoveDocsError::BadPackage), got {:?}",
+            result
+        ),
+    }
+}
+
+#[tokio::test]
+async fn remove_docs_bad_package_version() {
+    let token = "my-api-token-here";
+    let package = "valid";
+    let version = "1 2 3 4 5";
+
+    let mut client = AuthenticatedClient::new(token.to_string());
+    client.api_base_url = url::Url::parse(&mockito::server_url()).unwrap();
+
+    match client.remove_docs(package, version).await {
+        Err(RemoveDocsError::BadPackage(p, v)) if p == package && v == version => (),
+        result => panic!(
+            "expected Err(RemoveDocsError::BadPackage), got {:?}",
+            result
+        ),
+    }
+}

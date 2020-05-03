@@ -2,9 +2,10 @@
 mod tests;
 
 // TODO: push docs to hex
-// TODO: replace panic!() with unexpected response variant
 
 use async_trait::async_trait;
+use lazy_static::lazy_static;
+use regex::Regex;
 use reqwest::StatusCode;
 use serde::Deserialize;
 use serde_json::json;
@@ -151,10 +152,13 @@ impl AuthenticatedClient {
         package_name: &'a str,
         version: &'a str,
     ) -> Result<(), RemoveDocsError<'a>> {
+        validate_package_and_version(package_name, version)
+            .map_err(|_| RemoveDocsError::BadPackage(package_name, version))?;
+
         let url = self
             .api_base_url
             .join(format!("packages/{}/releases/{}/docs", package_name, version).as_str())
-            .map_err(|_| RemoveDocsError::BadUrl(package_name, version))?;
+            .expect("building remove_docs url");
 
         let response = self
             .http_client()
@@ -182,8 +186,8 @@ pub enum RemoveDocsError<'a> {
     #[error(transparent)]
     Http(#[from] reqwest::Error),
 
-    #[error("the given package name and version {0} {1} are not URL safe")]
-    BadUrl(&'a str, &'a str),
+    #[error("the given package name and version {0} {1} are not valid")]
+    BadPackage(&'a str, &'a str),
 
     #[error("could not find package {0} with version {1}")]
     NotFound(&'a str, &'a str),
@@ -199,4 +203,18 @@ pub enum RemoveDocsError<'a> {
 
     #[error("an unexpected response was sent by Hex")]
     UnexpectedResponse(StatusCode, String),
+}
+
+fn validate_package_and_version(package: &str, version: &str) -> Result<(), ()> {
+    lazy_static! {
+        static ref PACKAGE_PATTERN: Regex = Regex::new(r#"^[a-z_-]+$"#).unwrap();
+        static ref VERSION_PATTERN: Regex = Regex::new(r#"^[a-zA-Z-0-9\._-]+$"#).unwrap();
+    }
+    if !PACKAGE_PATTERN.is_match(package) {
+        return Err(());
+    }
+    if !VERSION_PATTERN.is_match(version) {
+        return Err(());
+    }
+    Ok(())
 }
