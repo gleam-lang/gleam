@@ -2365,6 +2365,16 @@ fn infer_clause_guard(
             })
         }
 
+        ClauseGuard::Tuple { location, elems , typ} => {
+
+            // TODO: How to do the type check here?
+            Ok(ClauseGuard::Tuple {
+                location,
+                elems,
+                typ,
+            })
+        }
+
         ClauseGuard::And {
             location,
             left,

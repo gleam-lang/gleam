@@ -538,6 +538,12 @@ fn bare_clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
 
         ClauseGuard::Float { value, .. } => value.to_string().to_doc(),
 
+        // TODO: .to_string() is not implemented?
+        ClauseGuard::Tuple { elems, ..} => elems
+            .map(|&x| x.to_string())
+            .collect::<Vec<&str>>()
+            .join(",").to_doc(),
+
         // Only local variables are supported and the typer ensures that all
         // ClauseGuard::Vars are local variables
         ClauseGuard::Var { name, .. } => env.local_var_name(name.to_string()),
@@ -566,7 +572,12 @@ fn clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
         // Values are not wrapped
         ClauseGuard::Var { .. } | ClauseGuard::Int { .. } | ClauseGuard::Float { .. } => {
             bare_clause_guard(guard, env)
-        }
+        },
+
+        ClauseGuard::Tuple { .. } => "{"
+            .to_doc()
+            .append(bare_clause_guard(guard, env))
+            .append("}"),
     }
 }
 
