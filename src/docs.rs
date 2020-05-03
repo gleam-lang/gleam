@@ -1,3 +1,5 @@
+pub(crate) mod command;
+
 use crate::{
     ast::{Statement, TypedStatement},
     error::GleamExpect,

@@ -11,6 +11,8 @@ use crate::{
 use serde::Deserialize;
 use source_tree::SourceTree;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::Read;
 use std::path::PathBuf;
 
 #[derive(Deserialize)]
@@ -230,4 +232,32 @@ pub fn collect_source(
         })
     }
     Ok(())
+}
+
+pub fn read_project_config(root: &str) -> Result<ProjectConfig, Error> {
+    let config_path = PathBuf::from(root).join("gleam.toml");
+
+    let mut file = File::open(&config_path).map_err(|e| Error::FileIO {
+        action: FileIOAction::Open,
+        kind: FileKind::File,
+        path: config_path.clone(),
+        err: Some(e.to_string()),
+    })?;
+
+    let mut toml = String::new();
+    file.read_to_string(&mut toml).map_err(|e| Error::FileIO {
+        action: FileIOAction::Read,
+        kind: FileKind::File,
+        path: config_path.clone(),
+        err: Some(e.to_string()),
+    })?;
+
+    let project_config = toml::from_str(&toml).map_err(|e| Error::FileIO {
+        action: FileIOAction::Parse,
+        kind: FileKind::File,
+        path: config_path.clone(),
+        err: Some(e.to_string()),
+    })?;
+
+    Ok(project_config)
 }

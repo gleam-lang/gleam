@@ -2,7 +2,7 @@
 
 mod ast;
 mod diagnostic;
-mod doc;
+mod docs;
 mod erl;
 mod error;
 mod format;
@@ -36,10 +36,10 @@ extern crate lazy_static;
 
 use crate::{
     error::Error,
-    project::{ModuleOrigin, OutputFile, ProjectConfig},
+    project::{ModuleOrigin, OutputFile},
 };
 use std::fs::File;
-use std::io::{Read, Write};
+use std::io::Write;
 use std::path::PathBuf;
 use structopt::clap::AppSettings;
 use structopt::StructOpt;
@@ -104,10 +104,17 @@ enum Docs {
     #[structopt(name = "build", about = "Render HTML docs locally")]
     Build,
 
-    #[structopt(name = "format", about = "Publish HTML docs to hexdocs")]
+    #[structopt(name = "format", about = "Publish HTML docs to HexDocs")]
     Publish,
-    // #[structopt(name = "format", about = "Remove docs from hexdocs")]
-    // Revoke,
+
+    #[structopt(name = "revoke", about = "Remove HTML docs from HexDocs")]
+    Revoke {
+        #[structopt(help = "the name of the package", long = "package")]
+        package: String,
+
+        #[structopt(help = "the version to revoke the docs of", long = "version")]
+        version: String,
+    },
 }
 
 fn main() {
@@ -117,6 +124,10 @@ fn main() {
         Command::Docs(Docs::Build) => command_build(".".to_string(), true),
 
         Command::Docs(Docs::Publish) => command_build(".".to_string(), true).and_then(|_| todo!()),
+
+        Command::Docs(Docs::Revoke { package, version }) => {
+            crate::docs::command::revoke(package, version)
+        }
 
         Command::Format {
             stdin,
@@ -142,7 +153,7 @@ fn command_build(root: String, write_docs: bool) -> Result<(), Error> {
     let mut srcs = vec![];
 
     // Read gleam.toml
-    let project_config = read_project_config(&root)?;
+    let project_config = project::read_project_config(&root)?;
 
     let root_path = PathBuf::from(&root);
     let lib_dir = root_path.join("_build").join("default").join("lib");
@@ -174,7 +185,7 @@ fn command_build(root: String, write_docs: bool) -> Result<(), Error> {
     let mut output_files = vec![];
     if write_docs {
         let dir = root_path.join("docs");
-        crate::doc::generate_html(
+        crate::docs::generate_html(
             &project_config,
             analysed.as_slice(),
             &mut output_files,
@@ -247,32 +258,4 @@ pub fn write_file(file: OutputFile) -> Result<(), Error> {
         err: Some(e.to_string()),
     })?;
     Ok(())
-}
-
-fn read_project_config(root: &str) -> Result<ProjectConfig, Error> {
-    let config_path = PathBuf::from(root).join("gleam.toml");
-
-    let mut file = File::open(&config_path).map_err(|e| Error::FileIO {
-        action: error::FileIOAction::Open,
-        kind: error::FileKind::File,
-        path: config_path.clone(),
-        err: Some(e.to_string()),
-    })?;
-
-    let mut toml = String::new();
-    file.read_to_string(&mut toml).map_err(|e| Error::FileIO {
-        action: error::FileIOAction::Read,
-        kind: error::FileKind::File,
-        path: config_path.clone(),
-        err: Some(e.to_string()),
-    })?;
-
-    let project_config = toml::from_str(&toml).map_err(|e| Error::FileIO {
-        action: error::FileIOAction::Parse,
-        kind: error::FileKind::File,
-        path: config_path.clone(),
-        err: Some(e.to_string()),
-    })?;
-
-    Ok(project_config)
 }
