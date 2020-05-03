@@ -1061,7 +1061,7 @@ but it cannot be found.",
             Error::Format { problem_files } => {
                 let mut files: Vec<_> = problem_files
                     .iter()
-                    .flat_map(|formatted| formatted.path.to_str())
+                    .flat_map(|formatted| formatted.source.to_str())
                     .map(|p| format!("  - {}", p))
                     .collect();
                 files.sort();
