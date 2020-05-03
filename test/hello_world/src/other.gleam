@@ -4,3 +4,7 @@ type X {
     stop: fn() -> a_reall_really_long_name_goes_here,
   )
 }
+
+type X {
+  One
+}

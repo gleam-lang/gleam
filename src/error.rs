@@ -112,7 +112,7 @@ pub enum Error {
     },
 
     Format {
-        path: PathBuf,
+        problem_files: Vec<crate::format::command::Formatted>,
     },
 }
 
@@ -1058,10 +1058,19 @@ but it cannot be found.",
                 };
                 write_project(buffer, diagnostic);
             }
-            Error::Format { path } => {
+            Error::Format { problem_files } => {
+                let mut files: Vec<_> = problem_files
+                    .iter()
+                    .flat_map(|formatted| formatted.path.to_str())
+                    .map(|p| format!("  - {}", p))
+                    .collect();
+                files.sort();
+                let mut label = files.iter().join("\n");
+                label.push('\n');
+                label.push('\n');
                 let diagnostic = ProjectErrorDiagnostic {
-                    title: "File needs formatting".to_string(),
-                    label: format!("{}", path.to_str().unwrap()),
+                    title: "These files have not been formatted".to_string(),
+                    label,
                 };
 
                 write_project(buffer, diagnostic);

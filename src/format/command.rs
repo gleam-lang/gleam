@@ -1,19 +1,67 @@
 use crate::error::{Error, FileIOAction, FileKind, StandardIOAction};
-use std::fs::OpenOptions;
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::fs::File;
+use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::str::FromStr;
+
+#[derive(Debug, PartialEq)]
+pub struct Formatted {
+    pub path: PathBuf,
+    pub input: String,
+    pub output: String,
+}
 
 pub fn run(stdin: bool, check: bool, files: Vec<String>) -> Result<(), Error> {
     if stdin {
         format_stdin(check)
     } else {
-        format_files(files, check)
+        let formatted = read_and_format_paths(files)?;
+        if check {
+            check_formatting(formatted)
+        } else {
+            write_formatted(formatted)
+        }
     }
 }
 
-pub fn format_files(files: Vec<String>, check: bool) -> Result<(), Error> {
-    let mut formatting_errors = vec![];
+fn check_formatting(formatted_files: Vec<Formatted>) -> Result<(), Error> {
+    let problem_files: Vec<_> = formatted_files
+        .into_iter()
+        .filter(|formatted| formatted.input != formatted.output)
+        .collect();
+
+    if problem_files.is_empty() {
+        Ok(())
+    } else {
+        Err(Error::Format { problem_files })
+    }
+}
+
+fn write_formatted(formatted_files: Vec<Formatted>) -> Result<(), Error> {
+    for formatted in formatted_files {
+        let path = formatted.path;
+        let mut f = File::open(&path).map_err(|e| Error::FileIO {
+            action: FileIOAction::Create,
+            kind: FileKind::File,
+            path: path.clone(),
+            err: Some(e.to_string()),
+        })?;
+
+        f.write_all(formatted.output.as_bytes())
+            .map_err(|e| Error::FileIO {
+                action: FileIOAction::WriteTo,
+                kind: FileKind::File,
+                path: path.clone(),
+                err: Some(e.to_string()),
+            })?;
+    }
+
+    Ok(())
+}
+
+pub fn read_and_format_paths(files: Vec<String>) -> Result<Vec<Formatted>, Error> {
+    let mut formatted_files = Vec::with_capacity(files.len());
+
     for file_path in files {
         let path = PathBuf::from_str(&file_path).map_err(|e| Error::FileIO {
             action: FileIOAction::Open,
@@ -24,57 +72,18 @@ pub fn format_files(files: Vec<String>, check: bool) -> Result<(), Error> {
 
         if path.is_dir() {
             for path in crate::project::gleam_files(&path).into_iter() {
-                match format_file(&path, check) {
-                    Ok(_) => (),
-                    Err(e) => match e {
-                        Error::Format { .. } => {
-                            formatting_errors.push(e);
-                        }
-                        _ => {
-                            return Err(e);
-                        }
-                    },
-                }
+                formatted_files.push(format_file(path)?);
             }
         } else {
-            match format_file(&path, check) {
-                Ok(_) => (),
-                Err(e) => match e {
-                    Error::Format { .. } => {
-                        formatting_errors.push(e);
-                    }
-                    _ => {
-                        return Err(e);
-                    }
-                },
-            }
+            formatted_files.push(format_file(path)?);
         }
     }
 
-    if check && !formatting_errors.is_empty() {
-        for error in formatting_errors {
-            error.pretty_print();
-        }
-        std::process::exit(1);
-    }
-
-    Ok(())
+    Ok(formatted_files)
 }
 
-fn format_file(path: &PathBuf, check: bool) -> Result<(), Error> {
-    let mut file = OpenOptions::new()
-        .write(true)
-        .read(true)
-        .open(path.clone())
-        .map_err(|e| Error::FileIO {
-            action: FileIOAction::Open,
-            kind: FileKind::File,
-            path: path.clone(),
-            err: Some(e.to_string()),
-        })?;
-
-    let mut src = String::new();
-    file.read_to_string(&mut src).map_err(|e| Error::FileIO {
+fn format_file(path: PathBuf) -> Result<Formatted, Error> {
+    let src = std::fs::read_to_string(&path).map_err(|e| Error::FileIO {
         action: FileIOAction::Read,
         kind: FileKind::File,
         path: path.clone(),
@@ -87,26 +96,11 @@ fn format_file(path: &PathBuf, check: bool) -> Result<(), Error> {
         error,
     })?;
 
-    if check && src != formatted {
-        return Err(Error::Format { path: path.clone() });
-    }
-
-    if check {
-        return Ok(());
-    }
-
-    file.seek(SeekFrom::Start(0)).unwrap();
-    file.set_len(0).unwrap();
-
-    file.write(&mut formatted.as_bytes())
-        .map_err(|e| Error::FileIO {
-            action: FileIOAction::WriteTo,
-            kind: FileKind::File,
-            err: Some(e.to_string()),
-            path: path.clone(),
-        })?;
-
-    Ok(())
+    Ok(Formatted {
+        path,
+        input: src,
+        output: formatted,
+    })
 }
 
 pub fn format_stdin(_check: bool) -> Result<(), Error> {
