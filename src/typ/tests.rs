@@ -1772,6 +1772,7 @@ fn infer_module_warning_test() {
             ast.name = vec!["my_module".to_string()];
             let (_, warnings) = infer_module(ast, &HashMap::new());
 
+            assert!(!warnings.is_empty());
             assert_eq!($warning, warnings[0]);
         };
     }
@@ -1785,7 +1786,7 @@ fn infer_module_warning_test() {
             ast.name = vec!["my_module".to_string()];
             let (_, warnings) = infer_module(ast, &HashMap::new());
 
-            assert_eq!(true, warnings.is_empty());
+            assert!(warnings.is_empty());
         };
     }
 
