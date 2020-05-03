@@ -199,7 +199,8 @@ fn app_src(name: &str, description: &str, is_application: bool) -> String {
   {{registered, []}},{}
   {{applications,
    [kernel,
-    stdlib
+    stdlib,
+    gleam_stdlib
    ]}},
   {{env,[]}},
   {{modules, []}},
