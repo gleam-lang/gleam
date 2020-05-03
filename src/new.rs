@@ -181,6 +181,7 @@ jobs:
           gleam-version: {}
       - run: rebar3 install_deps
       - run: rebar3 eunit
+      - run: gleam format --check src test
 "#,
         version
     )
