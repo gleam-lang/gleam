@@ -2358,6 +2358,23 @@ fn infer_clause_guard(
             })
         }
 
+        ClauseGuard::Tuple {
+            location, elems, ..
+        } => {
+            let elems = elems
+                .into_iter()
+                .map(|x| infer_clause_guard(x, level, env))
+                .collect::<Result<Vec<_>, _>>()?;
+
+            let typ = tuple(elems.iter().map(|e| e.typ()).collect());
+
+            Ok(ClauseGuard::Tuple {
+                location,
+                elems,
+                typ,
+            })
+        }
+
         ClauseGuard::And {
             location,
             left,

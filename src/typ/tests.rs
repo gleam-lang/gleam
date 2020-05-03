@@ -581,6 +581,33 @@ fn infer_error_test() {
     );
 
     assert_error!(
+        "case tuple(1, 2, 3) { x if x == tuple(1, 1.0) -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 27, end: 45 },
+            expected: tuple(vec![int(), int(), int()]),
+            given: tuple(vec![int(), float()]),
+        },
+    );
+
+    assert_error!(
+        "case tuple(1, 2) { x if x == tuple(1, 1.0) -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 24, end: 42 },
+            expected: tuple(vec![int(), int()]),
+            given: tuple(vec![int(), float()]),
+        },
+    );
+
+    assert_error!(
+        "case 1 { x if x == tuple() -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 14, end: 26 },
+            expected: int(),
+            given: tuple(vec![]),
+        },
+    );
+
+    assert_error!(
         "case 1 { _, _ -> 1 }",
         Error::IncorrectNumClausePatterns {
             location: SrcSpan { start: 9, end: 18 },

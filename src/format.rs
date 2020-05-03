@@ -1022,6 +1022,10 @@ impl Documentable for &UntypedClauseGuard {
 
             ClauseGuard::Float { value, .. } => value.to_string().to_doc(),
 
+            ClauseGuard::Tuple { elems, .. } => "tuple"
+                .to_doc()
+                .append(wrap_args(elems.iter().map(|e| e.to_doc()))),
+
             ClauseGuard::Var { name, .. } => name.to_string().to_doc(),
         }
     }
