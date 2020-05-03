@@ -40,7 +40,7 @@ fn check_formatting(formatted_files: Vec<Formatted>) -> Result<(), Error> {
 fn write_formatted(formatted_files: Vec<Formatted>) -> Result<(), Error> {
     for formatted in formatted_files {
         let path = formatted.path;
-        let mut f = File::open(&path).map_err(|e| Error::FileIO {
+        let mut f = File::create(&path).map_err(|e| Error::FileIO {
             action: FileIOAction::Create,
             kind: FileKind::File,
             path: path.clone(),
