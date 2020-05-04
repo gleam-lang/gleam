@@ -1,8 +1,13 @@
-use crate::error::{Error, FileIOAction, FileKind, StandardIOAction};
-use std::fs::File;
-use std::io::{Read, Write};
-use std::path::PathBuf;
-use std::str::FromStr;
+use crate::{
+    error::{Error, FileIOAction, FileKind, StandardIOAction},
+    file,
+};
+use std::{
+    fs::File,
+    io::{Read, Write},
+    path::PathBuf,
+    str::FromStr,
+};
 
 #[derive(Debug, PartialEq)]
 pub struct Formatted {
@@ -91,7 +96,7 @@ pub fn read_and_format_paths(files: Vec<String>) -> Result<Vec<Formatted>, Error
         })?;
 
         if path.is_dir() {
-            for path in crate::project::gleam_files(&path).into_iter() {
+            for path in file::gleam_files(&path).into_iter() {
                 formatted_files.push(format_file(path)?);
             }
         } else {

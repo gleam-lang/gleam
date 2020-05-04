@@ -5,7 +5,7 @@ mod tests;
 use crate::{
     ast::TypedModule,
     error::{Error, FileIOAction, FileKind, GleamExpect},
-    typ,
+    file, typ,
     warning::Warning,
 };
 use serde::Deserialize;
@@ -67,6 +67,36 @@ pub struct Module {
     source_base_path: PathBuf,
     origin: ModuleOrigin,
     module: crate::ast::UntypedModule,
+}
+
+pub fn read_and_analyse(root: &PathBuf) -> Result<(ProjectConfig, Vec<Analysed>), Error> {
+    let project_config = read_project_config(root)?;
+
+    let mut srcs = vec![];
+
+    let lib_dir = root.join("_build").join("default").join("lib");
+    let checkouts_dir = root.join("_checkouts");
+
+    for project_dir in [lib_dir, checkouts_dir]
+        .iter()
+        .filter_map(|d| std::fs::read_dir(d).ok())
+        .flat_map(|d| d.filter_map(Result::ok))
+        .map(|d| d.path())
+        .filter(|p| {
+            p.file_name().and_then(|os_string| os_string.to_str()) != Some(&project_config.name)
+        })
+    {
+        collect_source(project_dir.join("src"), ModuleOrigin::Dependency, &mut srcs)?;
+    }
+
+    // Collect source code from top level project
+    collect_source(root.join("src"), ModuleOrigin::Src, &mut srcs)?;
+    collect_source(root.join("test"), ModuleOrigin::Test, &mut srcs)?;
+
+    // Analyse source
+    let analysed = analysed(srcs)?;
+
+    Ok((project_config, analysed))
 }
 
 pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
@@ -150,60 +180,6 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
         .collect())
 }
 
-pub fn generate_erlang(analysed: &[Analysed], files: &mut Vec<OutputFile>) {
-    for Analysed {
-        name,
-        origin,
-        source_base_path,
-        ast,
-        ..
-    } in analysed
-    {
-        let gen_dir = source_base_path
-            .parent()
-            .unwrap()
-            .join("gen")
-            .join(origin.dir_name());
-        let erl_module_name = name.join("@");
-
-        for (name, text) in crate::erl::records(&ast).into_iter() {
-            files.push(OutputFile {
-                path: gen_dir.join(format!("{}_{}.hrl", erl_module_name, name)),
-                text,
-            })
-        }
-
-        files.push(OutputFile {
-            path: gen_dir.join(format!("{}.erl", erl_module_name)),
-            text: crate::erl::module(&ast),
-        });
-    }
-}
-
-fn is_gleam_path(path: &PathBuf, dir: &PathBuf) -> bool {
-    use regex::Regex;
-    lazy_static! {
-        static ref RE: Regex = Regex::new("^([a-z_]+(/|\\\\))*[a-z_]+\\.gleam$")
-            .gleam_expect("project::collect_source() RE regex");
-    }
-
-    RE.is_match(
-        path.strip_prefix(dir)
-            .gleam_expect("project::collect_source(): strip_prefix")
-            .to_str()
-            .unwrap_or(""),
-    )
-}
-
-pub fn gleam_files(dir: &PathBuf) -> impl Iterator<Item = PathBuf> + '_ {
-    walkdir::WalkDir::new(dir.clone())
-        .into_iter()
-        .filter_map(Result::ok)
-        .filter(|e| e.file_type().is_file())
-        .map(|d| d.path().to_path_buf())
-        .filter(move |d| is_gleam_path(d, &dir))
-}
-
 pub fn collect_source(
     src_dir: PathBuf,
     origin: ModuleOrigin,
@@ -214,7 +190,7 @@ pub fn collect_source(
         Err(_) => return Ok(()),
     };
 
-    for path in gleam_files(&src_dir) {
+    for path in file::gleam_files(&src_dir) {
         let src = std::fs::read_to_string(&path).map_err(|err| Error::FileIO {
             action: FileIOAction::Read,
             kind: FileKind::File,
@@ -234,8 +210,8 @@ pub fn collect_source(
     Ok(())
 }
 
-pub fn read_project_config(root: &str) -> Result<ProjectConfig, Error> {
-    let config_path = PathBuf::from(root).join("gleam.toml");
+pub fn read_project_config(root: &PathBuf) -> Result<ProjectConfig, Error> {
+    let config_path = root.join("gleam.toml");
 
     let mut file = File::open(&config_path).map_err(|e| Error::FileIO {
         action: FileIOAction::Open,

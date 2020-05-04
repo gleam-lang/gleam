@@ -49,6 +49,10 @@ hexpm = "1.0"
 rpassword = "4.0"
 # Async runtime
 tokio = "0.2"
+# Creation of tar file archives
+tar = "0.4"
+# gzip compression
+flate2 = "1.0"
 
 [build-dependencies]
 lalrpop = "0.17"

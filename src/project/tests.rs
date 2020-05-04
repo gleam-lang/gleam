@@ -1,4 +1,5 @@
 use super::*;
+use crate::erl;
 
 #[test]
 fn compile_test() {
@@ -839,11 +840,7 @@ fn main() { one.C }"
     ];
 
     for Case { input, expected } in cases.into_iter() {
-        let actual = analysed(input).map(|analysed| {
-            let mut output = Vec::with_capacity(analysed.len());
-            crate::project::generate_erlang(analysed.as_slice(), &mut output);
-            output
-        });
+        let actual = analysed(input).map(|analysed| erl::generate_erlang(analysed.as_slice()));
         assert_eq!(expected, actual);
     }
 }
