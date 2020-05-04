@@ -2,9 +2,9 @@ pub(crate) mod command;
 
 use crate::{
     ast::{Statement, TypedStatement},
-    error::GleamExpect,
+    error::{Error, GleamExpect},
     format, pretty,
-    project::{Analysed, ModuleOrigin, OutputFile, ProjectConfig},
+    project::{self, Analysed, ModuleOrigin, OutputFile, ProjectConfig},
 };
 use askama::Template;
 use itertools::Itertools;
@@ -12,13 +12,33 @@ use std::path::PathBuf;
 
 const MAX_COLUMNS: isize = 65;
 
+pub fn build_project(
+    project_root: &PathBuf,
+    output_dir: &PathBuf,
+) -> Result<Vec<OutputFile>, Error> {
+    // Read and type check project
+    let (config, analysed) = project::read_and_analyse(&project_root)?;
+
+    // Get README content
+    let readme = std::fs::read_to_string(project_root.join("README.md")).unwrap_or_default();
+
+    // Generate HTML
+    Ok(generate_html(
+        &config,
+        analysed.as_slice(),
+        readme.as_str(),
+        &output_dir,
+    ))
+}
+
 pub fn generate_html(
     project_config: &ProjectConfig,
     analysed: &[Analysed],
-    files: &mut Vec<OutputFile>,
     readme_content: &str,
-) {
+    output_dir: &PathBuf,
+) -> Vec<OutputFile> {
     let modules = analysed.iter().filter(|m| m.origin == ModuleOrigin::Src);
+    let mut files = Vec::with_capacity(analysed.len() + 3);
 
     let mut modules_links: Vec<_> = modules
         .clone()
@@ -48,7 +68,7 @@ pub fn generate_html(
         content: render_markdown(readme_content),
     };
     files.push(OutputFile {
-        path: PathBuf::from("index.html"),
+        path: output_dir.join("index.html"),
         text: readme.render().gleam_expect("README template rendering"),
     });
 
@@ -76,8 +96,14 @@ pub fn generate_html(
                 t
             },
         };
+
+        let mut path = output_dir.clone();
+        for segment in module.name.iter() {
+            path.push(segment)
+        }
+        path.push("index.html");
         files.push(OutputFile {
-            path: PathBuf::from(module.name.iter().join("/")).join("index.html"),
+            path,
             text: template
                 .render()
                 .gleam_expect("Module documentation template rendering"),
@@ -89,6 +115,8 @@ pub fn generate_html(
         path: PathBuf::from("index.css"),
         text: std::include_str!("../templates/index.css").to_string(),
     });
+
+    files
 }
 
 fn function<'a>(statement: &'a TypedStatement) -> Option<Function<'a>> {

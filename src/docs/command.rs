@@ -1,6 +1,6 @@
 use crate::{
     error::{Error, GleamExpect, StandardIOAction},
-    project,
+    file,
 };
 use hexpm::Client;
 use std::io::Write;
@@ -9,9 +9,11 @@ use std::path::PathBuf;
 static TOKEN_NAME: &str = concat!(env!("CARGO_PKG_NAME"), " (", env!("CARGO_PKG_VERSION"), ")");
 
 pub fn revoke(package: String, version: String) -> Result<(), Error> {
+    // Get login creds from user
     let username = ask("https://hex.pm username")?;
     let password = ask_password("https://hex.pm password")?;
 
+    // Start event loop so we can run async functions to call the Hex API
     let mut runtime =
         tokio::runtime::Runtime::new().gleam_expect("Unable to start Tokio async runtime");
 
@@ -25,6 +27,7 @@ pub fn revoke(package: String, version: String) -> Result<(), Error> {
             .map_err(|_| todo!())
     })?;
 
+    // Done!
     println!(
         "The docs for {} {} have been removed from HexDocs",
         package, version
@@ -33,30 +36,19 @@ pub fn revoke(package: String, version: String) -> Result<(), Error> {
 }
 
 pub fn build(project_root: String, to: Option<String>) -> Result<(), Error> {
-    let root = PathBuf::from(&project_root);
-
+    let project_root = PathBuf::from(&project_root);
     let output_dir = to
         .map(PathBuf::from)
-        .unwrap_or_else(|| root.join("gen").join("docs"));
+        .unwrap_or_else(|| project_root.join("gen").join("docs"));
 
-    // Read and type check project
-    let (config, analysed) = project::read_and_analyse(&root)?;
+    // Build
+    let outputs = super::build_project(&project_root, &output_dir)?;
 
-    // Get README content
-    let readme = std::fs::read_to_string(root.join("README.md")).unwrap_or_default();
-
-    // Generate HTML
-    let mut output_files = vec![];
-    super::generate_html(
-        &config,
-        analysed.as_slice(),
-        &mut output_files,
-        readme.as_str(),
-    );
-
-    // Reset output directory
+    // Write
     crate::file::delete_dir(&output_dir)?;
+    file::write_outputs(outputs.as_slice())?;
 
+    // We're done!
     Ok(())
 }
 
