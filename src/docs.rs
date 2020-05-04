@@ -16,7 +16,7 @@ pub fn generate_html(
     project_config: &ProjectConfig,
     analysed: &[Analysed],
     files: &mut Vec<OutputFile>,
-    dir: &PathBuf,
+    readme_content: &str,
 ) {
     let modules = analysed.iter().filter(|m| m.origin == ModuleOrigin::Src);
 
@@ -45,14 +45,10 @@ pub fn generate_html(
         project_name: &project_config.name,
         page_title: &project_config.name,
         project_version: "", // TODO
-        content: render_markdown(
-            std::fs::read_to_string(dir.join("..").join("README.md"))
-                .unwrap_or_default()
-                .as_ref(),
-        ),
+        content: render_markdown(readme_content),
     };
     files.push(OutputFile {
-        path: dir.join("index.html"),
+        path: PathBuf::from("index.html"),
         text: readme.render().gleam_expect("README template rendering"),
     });
 
@@ -80,13 +76,8 @@ pub fn generate_html(
                 t
             },
         };
-        let mut path = dir.clone();
-        for segment in module.name.iter() {
-            path.push(segment);
-        }
-        path.push("index.html");
         files.push(OutputFile {
-            path,
+            path: PathBuf::from(module.name.iter().join("/")).join("index.html"),
             text: template
                 .render()
                 .gleam_expect("Module documentation template rendering"),
@@ -95,7 +86,7 @@ pub fn generate_html(
 
     // Render static assets
     files.push(OutputFile {
-        path: dir.join("index.css"),
+        path: PathBuf::from("index.css"),
         text: std::include_str!("../templates/index.css").to_string(),
     });
 }

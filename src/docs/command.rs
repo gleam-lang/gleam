@@ -1,6 +1,10 @@
-use crate::error::{Error, GleamExpect, StandardIOAction};
+use crate::{
+    error::{Error, GleamExpect, StandardIOAction},
+    project,
+};
 use hexpm::Client;
 use std::io::Write;
+use std::path::PathBuf;
 
 static TOKEN_NAME: &str = concat!(env!("CARGO_PKG_NAME"), " (", env!("CARGO_PKG_VERSION"), ")");
 
@@ -25,6 +29,34 @@ pub fn revoke(package: String, version: String) -> Result<(), Error> {
         "The docs for {} {} have been removed from HexDocs",
         package, version
     );
+    Ok(())
+}
+
+pub fn build(project_root: String, to: Option<String>) -> Result<(), Error> {
+    let root = PathBuf::from(&project_root);
+
+    let output_dir = to
+        .map(PathBuf::from)
+        .unwrap_or_else(|| root.join("gen").join("docs"));
+
+    // Read and type check project
+    let (config, analysed) = project::read_and_analyse(&root)?;
+
+    // Get README content
+    let readme = std::fs::read_to_string(root.join("README.md")).unwrap_or_default();
+
+    // Generate HTML
+    let mut output_files = vec![];
+    super::generate_html(
+        &config,
+        analysed.as_slice(),
+        &mut output_files,
+        readme.as_str(),
+    );
+
+    // Reset output directory
+    crate::file::delete_dir(&output_dir)?;
+
     Ok(())
 }
 
