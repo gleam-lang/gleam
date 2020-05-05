@@ -8,6 +8,10 @@
   the old '|' syntax in lists and for todos.
 - Will give a clearer error when a function given as an argument to another
   function doesn't match the type of the parameter.
+- Fixed bug where imported type constructors had the incorrect arity.
+- Fixed bug where a doing an unqualified import of a type constructor and
+  giving it an alias would use the wrong name if it contained any values.
+- Fixed a bug trying to access an imported constructor which contained values.
 
 ## v0.8.0-rc1 - 2020-04-28
 
