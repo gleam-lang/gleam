@@ -15,7 +15,7 @@ const MAX_COLUMNS: isize = 65;
 pub fn build_project(
     project_root: &PathBuf,
     output_dir: &PathBuf,
-) -> Result<Vec<OutputFile>, Error> {
+) -> Result<(ProjectConfig, Vec<OutputFile>), Error> {
     // Read and type check project
     let (config, analysed) = project::read_and_analyse(&project_root)?;
 
@@ -23,12 +23,8 @@ pub fn build_project(
     let readme = std::fs::read_to_string(project_root.join("README.md")).unwrap_or_default();
 
     // Generate HTML
-    Ok(generate_html(
-        &config,
-        analysed.as_slice(),
-        readme.as_str(),
-        &output_dir,
-    ))
+    let outputs = generate_html(&config, analysed.as_slice(), readme.as_str(), &output_dir);
+    Ok((config, outputs))
 }
 
 pub fn generate_html(

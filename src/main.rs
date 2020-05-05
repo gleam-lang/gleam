@@ -106,8 +106,14 @@ enum Docs {
         to: Option<String>,
     },
 
-    #[structopt(name = "format", about = "Publish HTML docs to HexDocs")]
-    Publish,
+    #[structopt(name = "publish", about = "Publish HTML docs to HexDocs")]
+    Publish {
+        #[structopt(help = "location of the project root", default_value = ".")]
+        project_root: String,
+
+        #[structopt(help = "the version to publish ah", long = "version")]
+        version: String,
+    },
 
     #[structopt(name = "revoke", about = "Remove HTML docs from HexDocs")]
     Revoke {
@@ -125,7 +131,10 @@ fn main() {
 
         Command::Docs(Docs::Build { project_root, to }) => docs::command::build(project_root, to),
 
-        Command::Docs(Docs::Publish) => todo!(),
+        Command::Docs(Docs::Publish {
+            project_root,
+            version,
+        }) => docs::command::publish(project_root, version),
 
         Command::Docs(Docs::Revoke { package, version }) => docs::command::revoke(package, version),
 

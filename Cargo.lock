@@ -530,6 +530,7 @@ version = "0.8.0-rc1"
 dependencies = [
  "askama 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "atty 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bytes 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "codespan 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "codespan-reporting 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
