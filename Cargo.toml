@@ -53,6 +53,8 @@ tokio = "0.2"
 tar = "0.4"
 # gzip compression
 flate2 = "1.0"
+# Byte array data type
+bytes = "0.5"
 
 [build-dependencies]
 lalrpop = "0.17"
