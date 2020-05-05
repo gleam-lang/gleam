@@ -204,10 +204,28 @@ p code {
   z-index: 100;
 }
 
-.pride * {
+.pride:focus-within div {
+  opacity: 1;
+}
+
+.pride:focus-within a {
+  display: none;
+}
+
+.pride a {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  font-size: 0.9rem;
+  text-decoration: none;
+  cursor: normal;
+}
+
+.pride div {
   flex: 1;
   text-align: center;
   padding: var(--tiny-gap);
+  opacity: 0;
 }
 
 .pride .white {
