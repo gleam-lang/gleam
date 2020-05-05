@@ -1563,7 +1563,7 @@ pub fn infer_module(
                             origin: constructor.location.clone(),
                             variant: ValueConstructorVariant::Record {
                                 name: constructor.name.clone(),
-                                arity: args.len(),
+                                arity: constructor.args.len(),
                                 field_map: field_map.clone(),
                             },
                         },
