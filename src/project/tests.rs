@@ -801,6 +801,40 @@ make() ->\n    one:id(fun(A) -> {x, A} end).\n"
                 },
             ]),
         },
+
+        // Imported type constructors have the correct arity
+        Case {
+            input: vec![
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/one.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "pub type T(x) { C(a: Int, b: Int) }".to_string(),
+                },
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/two.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "import one
+fn main() { one.C }"
+                        .to_string(),
+                },
+            ],
+            expected: Ok(vec![
+                OutputFile {
+                    path: PathBuf::from("/gen/src/one_C.hrl"),
+                    text: "-record(c, {a, b}).\n".to_string(),
+                },
+                OutputFile {
+                    path: PathBuf::from("/gen/src/one.erl"),
+                    text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                },
+                OutputFile {
+                    path: PathBuf::from("/gen/src/two.erl"),
+                    text: "-module(two).\n-compile(no_auto_import).\n\nmain() ->\n    fun(A, B) -> {c, A, B} end.\n".to_string(),
+                },
+            ]),
+        },
     ];
 
     for Case { input, expected } in cases.into_iter() {
