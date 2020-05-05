@@ -277,7 +277,6 @@ pub enum ValueConstructorVariant {
     Record {
         name: String,
         field_map: Option<FieldMap>,
-        arity: usize,
     },
 }
 
@@ -372,7 +371,6 @@ impl<'a, 'b> Env<'a, 'b> {
             ValueConstructorVariant::Record {
                 name: "True".to_string(),
                 field_map: None,
-                arity: 0,
             },
             bool(),
         );
@@ -381,7 +379,6 @@ impl<'a, 'b> Env<'a, 'b> {
             ValueConstructorVariant::Record {
                 name: "False".to_string(),
                 field_map: None,
-                arity: 0,
             },
             bool(),
         );
@@ -453,7 +450,6 @@ impl<'a, 'b> Env<'a, 'b> {
             ValueConstructorVariant::Record {
                 name: "Nil".to_string(),
                 field_map: None,
-                arity: 0,
             },
             nil(),
         );
@@ -476,7 +472,6 @@ impl<'a, 'b> Env<'a, 'b> {
             ValueConstructorVariant::Record {
                 name: "Ok".to_string(),
                 field_map: None,
-                arity: 1,
             },
             fn_(vec![ok.clone()], result(ok, error)),
         );
@@ -488,7 +483,6 @@ impl<'a, 'b> Env<'a, 'b> {
             ValueConstructorVariant::Record {
                 name: "Error".to_string(),
                 field_map: None,
-                arity: 1,
             },
             fn_(vec![error.clone()], result(ok, error)),
         );
@@ -1563,7 +1557,6 @@ pub fn infer_module(
                             origin: constructor.location.clone(),
                             variant: ValueConstructorVariant::Record {
                                 name: constructor.name.clone(),
-                                arity: constructor.args.len(),
                                 field_map: field_map.clone(),
                             },
                         },
@@ -1572,7 +1565,6 @@ pub fn infer_module(
                         constructor.name.clone(),
                         ValueConstructorVariant::Record {
                             name: constructor.name.clone(),
-                            arity: constructor.args.len(),
                             field_map,
                         },
                         typ,
