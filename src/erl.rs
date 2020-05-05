@@ -405,7 +405,7 @@ fn var(name: &str, constructor: &ValueConstructor, env: &mut Env) -> Document {
     match &constructor.variant {
         ValueConstructorVariant::Record { name, arity: 0, .. } => atom(name.to_snake_case()),
 
-        ValueConstructorVariant::Record { arity, .. } => {
+        ValueConstructorVariant::Record { name, arity, .. } => {
             let chars = incrementing_args_list(*arity);
             "fun("
                 .to_doc()
