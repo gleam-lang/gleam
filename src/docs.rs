@@ -40,7 +40,8 @@ pub fn generate_html(
         .clone()
         .map(|m| {
             let name = m.name.join("/");
-            let path = name.clone();
+            let mut path = name.clone();
+            path.push('/');
             Link { path, name }
         })
         .collect();
@@ -108,7 +109,7 @@ pub fn generate_html(
 
     // Render static assets
     files.push(OutputFile {
-        path: PathBuf::from("index.css"),
+        path: output_dir.join("index.css"),
         text: std::include_str!("../templates/index.css").to_string(),
     });
 
