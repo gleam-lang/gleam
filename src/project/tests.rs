@@ -764,6 +764,43 @@ fn main() { C }"
                 },
             ]),
         },
+
+        Case {
+            input: vec![
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/one.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "pub fn id(x) { x } pub type T { X(x: Int) }".to_string(),
+                },
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/two.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "import one.{X as e, id as i} fn make() { i(e) }".to_string(),
+                },
+            ],
+            expected: Ok(vec![
+                OutputFile {
+                    path: PathBuf::from("/gen/src/one_X.hrl"),
+                    text: "-record(x, {x}).\n".to_string(),
+
+                },
+                OutputFile {
+                    path: PathBuf::from("/gen/src/one.erl"),
+                    text: "-module(one).\n-compile(no_auto_import).\n
+-export([id/1]).\n
+id(X) ->\n    X.\n"
+                        .to_string(),
+                },
+                OutputFile {
+                    path: PathBuf::from("/gen/src/two.erl"),
+                    text: "-module(two).\n-compile(no_auto_import).\n
+make() ->\n    one:id(fun(A) -> {x, A} end).\n"
+                        .to_string(),
+                },
+            ]),
+        },
     ];
 
     for Case { input, expected } in cases.into_iter() {
