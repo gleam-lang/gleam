@@ -5,7 +5,9 @@ use crate::{
     ast::*,
     error::GleamExpect,
     pretty::*,
-    typ::{ModuleValueConstructor, PatternConstructor, ValueConstructor, ValueConstructorVariant},
+    typ::{
+        ModuleValueConstructor, PatternConstructor, Type, ValueConstructor, ValueConstructorVariant,
+    },
 };
 use heck::{CamelCase, SnakeCase};
 use itertools::Itertools;
@@ -403,19 +405,22 @@ enum ListType<E, T> {
 
 fn var(name: &str, constructor: &ValueConstructor, env: &mut Env) -> Document {
     match &constructor.variant {
-        ValueConstructorVariant::Record { name, arity: 0, .. } => atom(name.to_snake_case()),
-
-        ValueConstructorVariant::Record { name, arity, .. } => {
-            let chars = incrementing_args_list(*arity);
-            "fun("
-                .to_doc()
-                .append(chars.clone())
-                .append(") -> {")
-                .append(name.to_snake_case())
-                .append(", ")
-                .append(chars)
-                .append("} end")
-        }
+        ValueConstructorVariant::Record {
+            name: record_name, ..
+        } => match &*constructor.typ {
+            Type::Fn { args, .. } => {
+                let chars = incrementing_args_list(args.len());
+                "fun("
+                    .to_doc()
+                    .append(chars.clone())
+                    .append(") -> {")
+                    .append(record_name.to_snake_case())
+                    .append(", ")
+                    .append(chars)
+                    .append("} end")
+            }
+            _ => atom(record_name.to_snake_case()),
+        },
 
         ValueConstructorVariant::LocalVariable => env.local_var_name(name.to_string()),
 

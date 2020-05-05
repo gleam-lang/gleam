@@ -247,7 +247,6 @@ map() ->
                         variant: ValueConstructorVariant::Record {
                             name: "Nil".to_string(),
                             field_map: None,
-                            arity: 0,
                         },
                     },
                     name: "Nil".to_string(),
