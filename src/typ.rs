@@ -283,9 +283,10 @@ pub enum ValueConstructorVariant {
 impl ValueConstructorVariant {
     fn to_module_value_constructor(&self) -> ModuleValueConstructor {
         match self {
-            ValueConstructorVariant::Record { name, .. } => {
-                ModuleValueConstructor::Record { name: name.clone() }
-            }
+            ValueConstructorVariant::Record { name, field_map } => ModuleValueConstructor::Record {
+                name: name.clone(),
+                arity: field_map.as_ref().map_or(0, |fm| fm.arity),
+            },
 
             ValueConstructorVariant::LocalVariable { .. }
             | ValueConstructorVariant::ModuleFn { .. } => ModuleValueConstructor::Fn,
@@ -295,7 +296,7 @@ impl ValueConstructorVariant {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ModuleValueConstructor {
-    Record { name: String },
+    Record { name: String, arity: usize },
     Fn,
 }
 

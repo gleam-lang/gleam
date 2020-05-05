@@ -765,6 +765,7 @@ fn main() { C }"
             ]),
         },
 
+        // Unqualified and aliased type constructor imports use the correct name
         Case {
             input: vec![
                 Input {

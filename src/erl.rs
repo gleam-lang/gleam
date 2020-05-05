@@ -610,7 +610,7 @@ fn case(subjects: &[TypedExpr], cs: &[TypedClause], env: &mut Env) -> Document {
 fn call(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env) -> Document {
     match fun {
         TypedExpr::ModuleSelect {
-            constructor: ModuleValueConstructor::Record { name },
+            constructor: ModuleValueConstructor::Record { name, .. },
             ..
         }
         | TypedExpr::Var {
@@ -740,9 +740,24 @@ fn expr(expression: &TypedExpr, env: &mut Env) -> Document {
         TypedExpr::Call { fun, args, .. } => call(fun, args, env),
 
         TypedExpr::ModuleSelect {
-            constructor: ModuleValueConstructor::Record { name },
+            constructor: ModuleValueConstructor::Record { name, arity: 0 },
             ..
         } => atom(name.to_snake_case()),
+
+        TypedExpr::ModuleSelect {
+            constructor: ModuleValueConstructor::Record { name, arity },
+            ..
+        } => {
+            let chars = incrementing_args_list(*arity);
+            "fun("
+                .to_doc()
+                .append(chars.clone())
+                .append(") -> {")
+                .append(name.to_snake_case())
+                .append(", ")
+                .append(chars)
+                .append("} end")
+        }
 
         TypedExpr::ModuleSelect {
             typ,
