@@ -1,24 +1,25 @@
 use crate::{
-    error::{Error, GleamExpect, StandardIOAction},
-    file,
+    cli,
+    error::{Error, GleamExpect},
+    file, project,
 };
 use bytes::Bytes;
-use flate2::{write::GzEncoder, Compression};
 use hexpm::Client;
-use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 static TOKEN_NAME: &str = concat!(env!("CARGO_PKG_NAME"), " (", env!("CARGO_PKG_VERSION"), ")");
+static DOCS_DIR_NAME: &str = "docs";
 
-pub fn revoke(package: String, version: String) -> Result<(), Error> {
-    // Get login creds from user
-    let username = ask("https://hex.pm username")?;
-    let password = ask_password("https://hex.pm password")?;
-
+pub fn remove(package: String, version: String) -> Result<(), Error> {
     // Start event loop so we can run async functions to call the Hex API
     let mut runtime =
         tokio::runtime::Runtime::new().gleam_expect("Unable to start Tokio async runtime");
 
+    // Get login creds from user
+    let username = cli::ask("https://hex.pm username")?;
+    let password = cli::ask_password("https://hex.pm password")?;
+
+    // Remove docs from API
     runtime.block_on(async {
         hexpm::UnauthenticatedClient::new()
             .authenticate(username.as_str(), password.as_str(), TOKEN_NAME)
@@ -37,11 +38,13 @@ pub fn revoke(package: String, version: String) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn build(project_root: String, to: Option<String>) -> Result<(), Error> {
-    let project_root = PathBuf::from(&project_root);
-    let output_dir = to
-        .map(PathBuf::from)
-        .unwrap_or_else(|| project_root.join("gen").join("docs"));
+pub fn build(project_root: impl AsRef<Path>, to: Option<String>) -> Result<(), Error> {
+    let output_dir = to.map(PathBuf::from).unwrap_or_else(|| {
+        project_root
+            .as_ref()
+            .join(project::OUTPUT_DIR_NAME)
+            .join(DOCS_DIR_NAME)
+    });
 
     // Build
     let (_config, outputs) = super::build_project(&project_root, &output_dir)?;
@@ -54,34 +57,22 @@ pub fn build(project_root: String, to: Option<String>) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn publish(project_root: String, version: String) -> Result<(), Error> {
-    let project_root = PathBuf::from(&project_root);
+pub fn publish(project_root: impl AsRef<Path>, version: String) -> Result<(), Error> {
     let output_dir = PathBuf::new();
 
     // Build
     let (config, outputs) = super::build_project(&project_root, &output_dir)?;
 
     // Create gzipped tarball of docs
-    let encoder = GzEncoder::new(vec![], Compression::default());
-    let mut builder = tar::Builder::new(encoder);
-
-    for file in outputs {
-        let mut header = tar::Header::new_gnu();
-        header.set_path(file.path).expect("todo");
-        header.set_size(file.text.as_bytes().len() as u64);
-        header.set_cksum();
-        builder.append(&header, file.text.as_bytes()).expect("todo");
-    }
-
-    let archive = builder.into_inner().expect("todo").finish().expect("todo");
+    let archive = file::create_tar_archive(outputs)?;
 
     // Start event loop so we can run async functions to call the Hex API
     let mut runtime =
         tokio::runtime::Runtime::new().gleam_expect("Unable to start Tokio async runtime");
 
     // Get login creds from user
-    let username = ask("https://hex.pm username")?;
-    let password = ask_password("https://hex.pm password")?;
+    let username = cli::ask("https://hex.pm username")?;
+    let password = cli::ask_password("https://hex.pm password")?;
 
     // Upload to hex
     runtime.block_on(async {
@@ -96,27 +87,4 @@ pub fn publish(project_root: String, version: String) -> Result<(), Error> {
 
     // We're done!
     Ok(())
-}
-
-pub fn ask(question: &str) -> Result<String, Error> {
-    print!("{}: ", question);
-    std::io::stdout().flush().unwrap();
-    let mut answer = String::new();
-    std::io::stdin()
-        .read_line(&mut answer)
-        .map_err(|e| Error::StandardIO {
-            action: StandardIOAction::Read,
-            err: Some(e.kind()),
-        })?;
-    Ok(answer.trim().to_string())
-}
-
-pub fn ask_password(question: &str) -> Result<String, Error> {
-    let prompt = format!("{} (will not be printed as you type): ", question);
-    rpassword::read_password_from_tty(Some(prompt.as_str()))
-        .map_err(|e| Error::StandardIO {
-            action: StandardIOAction::Read,
-            err: Some(e.kind()),
-        })
-        .map(|s| s.trim().to_string())
 }

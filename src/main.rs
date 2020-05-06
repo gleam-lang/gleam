@@ -1,6 +1,7 @@
 #![deny(warnings)]
 
 mod ast;
+mod cli;
 mod diagnostic;
 mod docs;
 mod erl;
@@ -115,12 +116,12 @@ enum Docs {
         version: String,
     },
 
-    #[structopt(name = "revoke", about = "Remove HTML docs from HexDocs")]
-    Revoke {
+    #[structopt(name = "remove", about = "Remove HTML docs from HexDocs")]
+    Remove {
         #[structopt(help = "the name of the package", long = "package")]
         package: String,
 
-        #[structopt(help = "the version to revoke the docs of", long = "version")]
+        #[structopt(help = "the version to remove the docs of", long = "version")]
         version: String,
     },
 }
@@ -136,7 +137,7 @@ fn main() {
             version,
         }) => docs::command::publish(project_root, version),
 
-        Command::Docs(Docs::Revoke { package, version }) => docs::command::revoke(package, version),
+        Command::Docs(Docs::Remove { package, version }) => docs::command::remove(package, version),
 
         Command::Format {
             stdin,
@@ -168,7 +169,7 @@ fn command_build(root: String) -> Result<(), Error> {
     let output_files = erl::generate_erlang(analysed.as_slice());
 
     // Reset output directory
-    file::delete_dir(&root.join("gen"))?;
+    file::delete_dir(&root.join(project::OUTPUT_DIR_NAME))?;
 
     // Print warnings
     warning::print_all(analysed.as_slice());
