@@ -48,6 +48,7 @@ html {
   line-height: 1.4;
   position: relative;
   min-height: 100vh;
+  word-break: break-word;
 }
 
 a,
@@ -204,11 +205,11 @@ p code {
   z-index: 100;
 }
 
-.pride:focus-within div {
+.pride.show div {
   opacity: 1;
 }
 
-.pride:focus-within a {
+.pride.show a {
   display: none;
 }
 
