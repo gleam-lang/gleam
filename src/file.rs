@@ -61,14 +61,14 @@ fn is_gleam_path(path: &PathBuf, dir: &PathBuf) -> bool {
     use regex::Regex;
     lazy_static! {
         static ref RE: Regex = Regex::new("^([a-z_]+(/|\\\\))*[a-z_]+\\.gleam$")
-            .gleam_expect("project::collect_source() RE regex");
+            .gleam_expect("is_gleam_path() RE regex");
     }
 
     RE.is_match(
         path.strip_prefix(dir)
-            .gleam_expect("project::collect_source(): strip_prefix")
+            .gleam_expect("is_gleam_path(): strip_prefix")
             .to_str()
-            .unwrap_or(""),
+            .gleam_expect("is_gleam_path(): to_str"),
     )
 }
 
@@ -87,13 +87,23 @@ pub fn create_tar_archive(outputs: Vec<OutputFile>) -> Result<Vec<u8>, Error> {
 
     for file in outputs {
         let mut header = tar::Header::new_gnu();
-        header.set_path(file.path).expect("todo");
+        header.set_path(&file.path).map_err(|e| Error::Tar {
+            path: file.path.clone(),
+            err: e.to_string(),
+        })?;
         header.set_size(file.text.as_bytes().len() as u64);
         header.set_cksum();
-        builder.append(&header, file.text.as_bytes()).expect("todo");
+        builder
+            .append(&header, file.text.as_bytes())
+            .map_err(|e| Error::Tar {
+                path: file.path.clone(),
+                err: e.to_string(),
+            })?;
     }
 
-    let archive = builder.into_inner().expect("todo").finish().expect("todo");
-
-    Ok(archive)
+    builder
+        .into_inner()
+        .map_err(|e| Error::TarFinish(e.to_string()))?
+        .finish()
+        .map_err(|e| Error::Gzip(e.to_string()))
 }

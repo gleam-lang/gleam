@@ -66,5 +66,5 @@ pub fn write_project(buffer: &mut Buffer, d: ProjectErrorDiagnostic) {
     use termcolor::{ColorSpec, WriteColor};
     write_title(buffer, d.title.as_ref());
     buffer.set_color(&ColorSpec::new()).unwrap();
-    write!(buffer, "{}", d.label).unwrap();
+    writeln!(buffer, "{}", d.label).unwrap();
 }

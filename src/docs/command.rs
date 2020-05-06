@@ -24,11 +24,11 @@ pub fn remove(package: String, version: String) -> Result<(), Error> {
         hexpm::UnauthenticatedClient::new()
             .authenticate(username.as_str(), password.as_str(), TOKEN_NAME)
             .await
-            .expect("todo")
+            .map_err(|e| Error::Hex(e.to_string()))?
             .remove_docs(package.as_str(), version.as_str())
             .await
-            .expect("todo")
-    });
+            .map_err(|e| Error::Hex(e.to_string()))
+    })?;
 
     // Done!
     println!(
@@ -79,11 +79,11 @@ pub fn publish(project_root: impl AsRef<Path>, version: String) -> Result<(), Er
         hexpm::UnauthenticatedClient::new()
             .authenticate(username.as_str(), password.as_str(), TOKEN_NAME)
             .await
-            .expect("todo")
+            .map_err(|e| Error::Hex(e.to_string()))?
             .publish_docs(config.name.as_str(), version.as_str(), Bytes::from(archive))
             .await
-            .expect("todo")
-    });
+            .map_err(|e| Error::Hex(e.to_string()))
+    })?;
 
     // We're done!
     Ok(())

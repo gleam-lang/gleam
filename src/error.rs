@@ -3,6 +3,7 @@ use crate::diagnostic::{
 };
 use crate::typ::pretty::Printer;
 use itertools::Itertools;
+use std::fmt::Debug;
 use std::path::PathBuf;
 use termcolor::Buffer;
 
@@ -49,10 +50,10 @@ impl<T> GleamExpect<T> for Option<T> {
     }
 }
 
-impl<T, E> GleamExpect<T> for Result<T, E> {
+impl<T, E: Debug> GleamExpect<T> for Result<T, E> {
     fn gleam_expect(self, msg: &str) -> T {
         match self {
-            Err(_) => fatal_compiler_bug(msg),
+            Err(e) => fatal_compiler_bug(format!("{}\n\n{:?}", msg, e).as_str()),
             Ok(x) => x,
         }
     }
@@ -114,6 +115,17 @@ pub enum Error {
     Format {
         problem_files: Vec<crate::format::command::Formatted>,
     },
+
+    Hex(String),
+
+    Tar {
+        path: PathBuf,
+        err: String,
+    },
+
+    TarFinish(String),
+
+    Gzip(String),
 }
 
 #[derive(Debug, PartialEq)]
@@ -196,6 +208,68 @@ impl Error {
             .expect("error pretty buffer write space before");
 
         match self {
+            Error::Gzip(detail) => {
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Gzip compression failure".to_string(),
+                    label: format!(
+                        "There was a problem when applying gzip compression.
+
+This was error from the gzip library:
+
+    {}",
+                        detail
+                    ),
+                };
+                write_project(buffer, diagnostic);
+            }
+
+            Error::Tar { path, err } => {
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Failure creating tar archive".to_string(),
+                    label: format!(
+                        "There was a problem when attempting to add the file {}
+to a tar archive.
+
+This was error from the tar library:
+
+    {}",
+                        path.to_str().unwrap(),
+                        err.to_string()
+                    ),
+                };
+                write_project(buffer, diagnostic);
+            }
+
+            Error::TarFinish(detail) => {
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Failure creating tar archive".to_string(),
+                    label: format!(
+                        "There was a problem when creating a tar archive.
+
+This was error from the tar library:
+
+    {}",
+                        detail
+                    ),
+                };
+                write_project(buffer, diagnostic);
+            }
+
+            Error::Hex(detail) => {
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Hex API failure".to_string(),
+                    label: format!(
+                        "There was a problem when using the Hex API.
+
+This was error from the Hex client library:
+
+    {}",
+                        detail
+                    ),
+                };
+                write_project(buffer, diagnostic);
+            }
+
             Error::SrcImportingTest {
                 path,
                 src,
@@ -233,8 +307,7 @@ cannot import them. Perhaps move the `{}` module to the src directory.",
                         "The module `{}` is defined multiple times.
 
 First:  {}
-Second: {}
-",
+Second: {}",
                         module,
                         first.to_str().expect("pretty error print PathBuf to_str"),
                         second.to_str().expect("pretty error print PathBuf to_str"),
@@ -262,8 +335,7 @@ Second: {}
                         "An error occurred while trying to {} this {}:
 
     {}
-{}
-",
+{}",
                         action.text(),
                         kind.text(),
                         path.to_string_lossy(),
@@ -1050,8 +1122,7 @@ but it cannot be found.",
                     label: format!(
                         "An error occurred while trying to {}:
 
-{}
-",
+{}",
                         action.text(),
                         err,
                     ),
@@ -1066,7 +1137,6 @@ but it cannot be found.",
                     .collect();
                 files.sort();
                 let mut label = files.iter().join("\n");
-                label.push('\n');
                 label.push('\n');
                 let diagnostic = ProjectErrorDiagnostic {
                     title: "These files have not been formatted".to_string(),
