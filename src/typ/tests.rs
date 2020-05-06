@@ -643,6 +643,22 @@ fn infer_error_test() {
     );
 
     assert_error!(
+        "let tuple(a, b) = 1 a",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 4, end: 15 },
+            expected: int(),
+            given: tuple(vec![
+                Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Unbound { id: 7, level: 1 })),
+                }),
+                Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Unbound { id: 8, level: 1 })),
+                })
+            ]),
+        },
+    );
+
+    assert_error!(
         "[1.0] == [1]",
         Error::CouldNotUnify {
             location: SrcSpan { start: 9, end: 12 },

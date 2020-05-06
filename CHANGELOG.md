@@ -15,6 +15,8 @@
 - Fixed bug where a doing an unqualified import of a type constructor and
   giving it an alias would use the wrong name if it contained any values.
 - Fixed a bug trying to access an imported constructor which contained values.
+- Fixed a compiler crash that occured when trying to unify a tuple with something
+  other than another tuple or a variable.
 
 ## v0.8.0-rc1 - 2020-04-28
 
