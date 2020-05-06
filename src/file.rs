@@ -2,6 +2,7 @@ use crate::{
     error::{Error, FileIOAction, FileKind, GleamExpect},
     project::OutputFile,
 };
+use flate2::{write::GzEncoder, Compression};
 use std::{fs::File, io::Write, path::PathBuf};
 
 pub fn delete_dir(dir: &PathBuf) -> Result<(), Error> {
@@ -78,4 +79,21 @@ pub fn gleam_files(dir: &PathBuf) -> impl Iterator<Item = PathBuf> + '_ {
         .filter(|e| e.file_type().is_file())
         .map(|d| d.path().to_path_buf())
         .filter(move |d| is_gleam_path(d, &dir))
+}
+
+pub fn create_tar_archive(outputs: Vec<OutputFile>) -> Result<Vec<u8>, Error> {
+    let encoder = GzEncoder::new(vec![], Compression::default());
+    let mut builder = tar::Builder::new(encoder);
+
+    for file in outputs {
+        let mut header = tar::Header::new_gnu();
+        header.set_path(file.path).expect("todo");
+        header.set_size(file.text.as_bytes().len() as u64);
+        header.set_cksum();
+        builder.append(&header, file.text.as_bytes()).expect("todo");
+    }
+
+    let archive = builder.into_inner().expect("todo").finish().expect("todo");
+
+    Ok(archive)
 }

@@ -5,7 +5,7 @@ use crate::{
     ast::*,
     error::GleamExpect,
     pretty::*,
-    project::{Analysed, OutputFile},
+    project::{self, Analysed, OutputFile},
     typ::{
         ModuleValueConstructor, PatternConstructor, Type, ValueConstructor, ValueConstructorVariant,
     },
@@ -32,7 +32,7 @@ pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
         let gen_dir = source_base_path
             .parent()
             .unwrap()
-            .join("gen")
+            .join(project::OUTPUT_DIR_NAME)
             .join(origin.dir_name());
         let erl_module_name = name.join("@");
 

@@ -13,7 +13,9 @@ use source_tree::SourceTree;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+
+pub const OUTPUT_DIR_NAME: &'static str = "gen";
 
 #[derive(Deserialize)]
 pub struct ProjectConfig {
@@ -69,11 +71,12 @@ pub struct Module {
     module: crate::ast::UntypedModule,
 }
 
-pub fn read_and_analyse(root: &PathBuf) -> Result<(ProjectConfig, Vec<Analysed>), Error> {
-    let project_config = read_project_config(root)?;
+pub fn read_and_analyse(root: impl AsRef<Path>) -> Result<(ProjectConfig, Vec<Analysed>), Error> {
+    let project_config = read_project_config(&root)?;
 
     let mut srcs = vec![];
 
+    let root = root.as_ref();
     let lib_dir = root.join("_build").join("default").join("lib");
     let checkouts_dir = root.join("_checkouts");
 
@@ -210,8 +213,8 @@ pub fn collect_source(
     Ok(())
 }
 
-pub fn read_project_config(root: &PathBuf) -> Result<ProjectConfig, Error> {
-    let config_path = root.join("gleam.toml");
+pub fn read_project_config(root: impl AsRef<Path>) -> Result<ProjectConfig, Error> {
+    let config_path = root.as_ref().join("gleam.toml");
 
     let mut file = File::open(&config_path).map_err(|e| Error::FileIO {
         action: FileIOAction::Open,
