@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- The `docs build`, `docs publish`, and `docs remove` commands can be used to
+  compile HTML documentation locally, publish them to HexDocs, and remove them
+  from HexDocs respectively.
 - Type error reporting has been improved when using the pipe operator.
 - Newly generated projects use stdlib v0.8.0.
 - The compiler can now emit warnings. Currently there are warnings for using
