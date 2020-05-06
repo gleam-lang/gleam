@@ -2872,9 +2872,16 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                     self.unify(Pattern::Tuple { elems, location }, typ)
                 }
 
-                other => {
-                    dbg!(&other);
-                    unimplemented!();
+                _ => {
+                    let elems_types = (0..(elems.len()))
+                        .map(|_| self.env.new_unbound_var(self.level))
+                        .collect();
+
+                    Err(Error::CouldNotUnify {
+                        given: tuple(elems_types),
+                        expected: typ.clone(),
+                        location,
+                    })
                 }
             },
 
