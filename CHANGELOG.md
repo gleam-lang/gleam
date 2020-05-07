@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.8.0 - 2020-05-07
 
 - The `docs build`, `docs publish`, and `docs remove` commands can be used to
   compile HTML documentation locally, publish them to HexDocs, and remove them
