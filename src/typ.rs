@@ -3025,10 +3025,9 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                         }
                     }
 
-                    typ => {
-                        dbg!(typ);
-                        unimplemented!();
-                    }
+                    _ => crate::error::fatal_compiler_bug(
+                        "Unexpected constructor type for a constructor pattern.",
+                    ),
                 }
             }
         }
