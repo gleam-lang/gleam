@@ -21,7 +21,7 @@
   --accent: var(--pink);
 
   /* Sizes */
-  --max-page-width: 720px;
+  --content-width: 680px;
   --sidebar-width: 240px;
   --sidebar-width-inverted: -240px;
   --gap: 24px;
@@ -106,8 +106,8 @@ p code {
 }
 
 .content {
-  width: var(--max-page-width);
-  max-width: var(--max-page-width);
+  width: var(--content-width);
+  max-width: 100%;
   padding: 0 var(--gap);
 }
 
@@ -137,7 +137,6 @@ p code {
 .sidebar {
   background-color: var(--background);
   width: var(--sidebar-width);
-  max-width: var(--sidebar-width);
   padding: 0 var(--gap);
   font-size: 0.95rem;
   transition: transform 0.5s ease;
@@ -240,9 +239,13 @@ p code {
 }
 
 /* Small displays */
-@media (max-width: 720px) {
+@media (max-width: 920px) {
   .page-header {
     padding-left: calc(var(--sidebar-toggle-size) + var(--gap));
+  }
+
+  .content {
+    width: unset;
   }
 
   .sidebar {
@@ -256,7 +259,7 @@ p code {
 
   .sidebar:focus-within {
     overflow-y: auto;
-    overflow-x: visible;
+    overflow-x: hidden;
     transform: translate(0);
   }
 
