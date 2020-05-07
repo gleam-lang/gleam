@@ -27,12 +27,12 @@ impl Printer {
         }
         buffer
             .to_doc()
-            .append(self.to_doc(typ))
+            .append(self.print(typ))
             .nest(initial_indent as isize)
             .format(80)
     }
 
-    pub fn to_doc(&mut self, typ: &Type) -> Document {
+    pub fn print(&mut self, typ: &Type) -> Document {
         match typ {
             Type::App { name, args, .. } => {
                 if args.is_empty() {
@@ -49,8 +49,7 @@ impl Printer {
                 .to_doc()
                 .append(self.args_to_gleam_doc(args.as_slice()))
                 .append(") -> ")
-                .append(self.to_doc(retrn))
-                .group(),
+                .append(self.print(retrn)),
 
             Type::Var { typ, .. } => self.type_var_doc(&*typ.borrow()),
 
@@ -62,7 +61,7 @@ impl Printer {
 
     fn type_var_doc(&mut self, typ: &TypeVar) -> Document {
         match typ {
-            TypeVar::Link { ref typ, .. } => self.to_doc(typ),
+            TypeVar::Link { ref typ, .. } => self.print(typ),
 
             TypeVar::Unbound { id, .. } => self.type_var_doc(&TypeVar::Generic { id: *id }),
 
@@ -104,7 +103,7 @@ impl Printer {
             0 => nil(),
             _ => args
                 .iter()
-                .map(|t| self.to_doc(t).group())
+                .map(|t| self.print(t).group())
                 .intersperse(break_(",", ", "))
                 .collect::<Vec<_>>()
                 .to_doc()

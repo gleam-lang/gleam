@@ -15,7 +15,7 @@ use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-pub const OUTPUT_DIR_NAME: &'static str = "gen";
+pub const OUTPUT_DIR_NAME: &str = "gen";
 
 #[derive(Deserialize)]
 pub struct ProjectConfig {

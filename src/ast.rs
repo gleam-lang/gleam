@@ -8,7 +8,7 @@ use crate::typ::{self, ModuleValueConstructor, PatternConstructor, Type, ValueCo
 use itertools::Itertools;
 use std::sync::Arc;
 
-pub const CAPTURE_VARIABLE: &'static str = "gleam@capture_variable";
+pub const CAPTURE_VARIABLE: &str = "gleam@capture_variable";
 
 pub type TypedModule = Module<Arc<Type>, TypedExpr, typ::Module>;
 

@@ -2644,7 +2644,7 @@ fn infer_record_access(
     };
 
     // Check to see if it's a Type that can have accessible fields
-    let accessors = match collapse_links(record.typ().clone()).as_ref() {
+    let accessors = match collapse_links(record.typ()).as_ref() {
         // A type in the current module which may have fields
         Type::App { module, name, .. } if module.as_slice() == env.current_module => {
             env.accessors.get(name)
@@ -2676,7 +2676,7 @@ fn infer_record_access(
     let mut type_vars = hashmap![];
     let accessor_record_type = instantiate(accessor_record_type, 0, &mut type_vars, env);
     let typ = instantiate(typ, 0, &mut type_vars, env);
-    unify(accessor_record_type, record.typ().clone(), env)
+    unify(accessor_record_type, record.typ(), env)
         .map_err(|e| convert_unify_error(e, record.location()))?;
 
     Ok(TypedExpr::RecordAccess {

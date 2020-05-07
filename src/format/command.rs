@@ -123,7 +123,7 @@ fn format_file(path: PathBuf) -> Result<Formatted, Error> {
 
     Ok(Formatted {
         source: path.clone(),
-        destination: Destination::File { path: path },
+        destination: Destination::File { path },
         input: src,
         output: formatted,
     })
