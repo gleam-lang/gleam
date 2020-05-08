@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Numbers are now permitted in module names.
+
 ## v0.8.0 - 2020-05-07
 
 - The `docs build`, `docs publish`, and `docs remove` commands can be used to
