@@ -1,2 +1,3 @@
 _build
 gen/
+*.beam
