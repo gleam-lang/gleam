@@ -2156,4 +2156,23 @@ apply(F, A) ->
     F(A, 1).
 "#,
     );
+
+    // Parentheses are added for binop subexpressions
+    assert_erl!(
+        r#"
+fn main() {
+    let a = 2 * {3 + 1} / 2
+    let b = 5 + 3 / 3 * 2 - 6 * 4
+    b
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main() ->
+    A = (2 * (3 + 1)) div 2,
+    B = (5 + ((3 div 3) * 2)) - (6 * 4),
+    B.
+"#,
+    );
 }

@@ -279,7 +279,6 @@ fn seq(first: &TypedExpr, then: &TypedExpr, env: &mut Env) -> Document {
         .append(expr(then, env))
 }
 
-// TODO: Surround left or right in parens if required
 fn bin_op(name: &BinOp, left: &TypedExpr, right: &TypedExpr, env: &mut Env) -> Document {
     let op = match name {
         BinOp::And => "andalso",
@@ -301,11 +300,21 @@ fn bin_op(name: &BinOp, left: &TypedExpr, right: &TypedExpr, env: &mut Env) -> D
         BinOp::ModuloInt => "rem",
     };
 
-    expr(left, env)
+    let left_expr = match left {
+        TypedExpr::BinOp { .. } => expr(left, env).surround("(", ")"),
+        _ => expr(left, env),
+    };
+
+    let right_expr = match right {
+        TypedExpr::BinOp { .. } => expr(right, env).surround("(", ")"),
+        _ => expr(right, env),
+    };
+
+    left_expr
         .append(break_("", " "))
         .append(op)
         .append(" ")
-        .append(expr(right, env))
+        .append(right_expr)
 }
 
 fn pipe(value: &TypedExpr, fun: &TypedExpr, env: &mut Env) -> Document {
