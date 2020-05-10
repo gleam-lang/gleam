@@ -538,11 +538,7 @@ fn bare_clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
 
         ClauseGuard::Float { value, .. } => value.to_string().to_doc(),
 
-        // TODO: .to_string() is not implemented?
-        ClauseGuard::Tuple { elems, ..} => elems
-            .map(|&x| x.to_string())
-            .collect::<Vec<&str>>()
-            .join(",").to_doc(),
+        ClauseGuard::Tuple { elems, ..} => tuple(elems.into_iter().map(|e| bare_clause_guard(e, env))),
 
         // Only local variables are supported and the typer ensures that all
         // ClauseGuard::Vars are local variables

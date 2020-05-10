@@ -1818,6 +1818,64 @@ main() ->
     assert_erl!(
         r#"
 pub fn main() {
+  let x = tuple(1, 2, 3)
+  case x {
+    tuple(1, 2, 3) -> 1
+    _ -> 0
+  }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+main() ->
+    X = {1, 2, 3},
+    case X of
+        {1, 2, 3} ->
+            1;
+
+        _ ->
+            0
+    end.
+"#,
+    );
+
+    assert_erl!(
+        r#"
+pub fn main() {
+  let x = tuple(1, 2, 3)
+  case x {
+    tuple(1, 2, 3) -> 1
+    tuple(2, 3, 4) -> 2
+    _ -> 0
+  }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+main() ->
+    X = {1, 2, 3},
+    case X of
+        {1, 2, 3} ->
+            1;
+
+        {2, 3, 4} ->
+            2;
+
+        _ ->
+            0
+    end.
+"#,
+    );
+
+    assert_erl!(
+        r#"
+pub fn main() {
   let x = 0
   case x {
     _ if x == 0 -> 1

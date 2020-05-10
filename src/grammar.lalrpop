@@ -366,7 +366,8 @@ ClauseGuard5: UntypedClauseGuard = {
     },
     <s:@L> "tuple" "(" <elems:Comma<ClauseGuard>> ")" <e:@L> => ClauseGuard::Tuple {
         location: location(s, e),
-        elems
+        typ: (),
+        elems,
     },
     "{" <ClauseGuard> "}" => <>,
 }

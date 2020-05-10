@@ -452,7 +452,8 @@ impl TypedClauseGuard {
             ClauseGuard::Var { typ, .. } => typ.clone(),
             ClauseGuard::Int { .. } => typ::int(),
             ClauseGuard::Float { .. } => typ::float(),
-            ClauseGuard::Tuple { typ, .. } => typ.clone(),
+            // TODO: This doesn't seem right
+            //ClauseGuard::Tuple { typ, .. } => typ.clone(),
             _ => typ::bool(),
         }
     }

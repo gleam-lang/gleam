@@ -2365,13 +2365,18 @@ fn infer_clause_guard(
             })
         }
 
-        ClauseGuard::Tuple { location, elems , typ} => {
+        ClauseGuard::Tuple { location, elems, .. } => {
+            let elems = elems
+                .into_iter()
+                .map(|x| infer_clause_guard(x, level, env))
+                .collect::<Result<Vec<_>, _>>()?;
 
-            // TODO: How to do the type check here?
+            let typ = tuple(elems.iter().map(|e| e.typ()).collect());
+
             Ok(ClauseGuard::Tuple {
                 location,
                 elems,
-                typ,
+                typ
             })
         }
 
