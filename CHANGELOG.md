@@ -21,6 +21,7 @@
 - Fixed a bug trying to access an imported constructor which contained values.
 - Fixed a compiler crash that occured when trying to unify a tuple with something
   other than another tuple or a variable.
+- Added support for tuple literals in guards.
 
 ## v0.8.0-rc1 - 2020-04-28
 
