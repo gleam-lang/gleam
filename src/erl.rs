@@ -578,7 +578,9 @@ fn bare_clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
 
         ClauseGuard::Float { value, .. } => value.to_string().to_doc(),
 
-        ClauseGuard::Tuple { elems, ..} => tuple(elems.into_iter().map(|e| bare_clause_guard(e, env))),
+        ClauseGuard::Tuple { elems, .. } => {
+            tuple(elems.into_iter().map(|e| bare_clause_guard(e, env)))
+        }
 
         // Only local variables are supported and the typer ensures that all
         // ClauseGuard::Vars are local variables
@@ -608,7 +610,7 @@ fn clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
         // Values are not wrapped
         ClauseGuard::Var { .. } | ClauseGuard::Int { .. } | ClauseGuard::Float { .. } => {
             bare_clause_guard(guard, env)
-        },
+        }
 
         ClauseGuard::Tuple { .. } => "{"
             .to_doc()

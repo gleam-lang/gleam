@@ -419,8 +419,8 @@ pub enum ClauseGuard<Type> {
     Tuple {
         location: SrcSpan,
         elems: Vec<Self>,
-        typ: Type
-    }
+        typ: Type,
+    },
 }
 
 impl<A> ClauseGuard<A> {
@@ -441,7 +441,7 @@ impl<A> ClauseGuard<A> {
             ClauseGuard::LtEqFloat { location, .. } => location,
             ClauseGuard::Int { location, .. } => location,
             ClauseGuard::Float { location, .. } => location,
-            ClauseGuard::Tuple { location, ..} => location,
+            ClauseGuard::Tuple { location, .. } => location,
         }
     }
 }
