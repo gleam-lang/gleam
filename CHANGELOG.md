@@ -2,12 +2,25 @@
 
 ## Unreleased
 
+- Numbers are now permitted in module names.
+
+## v0.8.0 - 2020-05-07
+
+- The `docs build`, `docs publish`, and `docs remove` commands can be used to
+  compile HTML documentation locally, publish them to HexDocs, and remove them
+  from HexDocs respectively.
 - Type error reporting has been improved when using the pipe operator.
 - Newly generated projects use stdlib v0.8.0.
 - The compiler can now emit warnings. Currently there are warnings for using
   the old '|' syntax in lists and for todos.
 - Will give a clearer error when a function given as an argument to another
   function doesn't match the type of the parameter.
+- Fixed bug where imported type constructors had the incorrect arity.
+- Fixed bug where a doing an unqualified import of a type constructor and
+  giving it an alias would use the wrong name if it contained any values.
+- Fixed a bug trying to access an imported constructor which contained values.
+- Fixed a compiler crash that occured when trying to unify a tuple with something
+  other than another tuple or a variable.
 
 ## v0.8.0-rc1 - 2020-04-28
 

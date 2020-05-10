@@ -277,16 +277,16 @@ pub enum ValueConstructorVariant {
     Record {
         name: String,
         field_map: Option<FieldMap>,
-        arity: usize,
     },
 }
 
 impl ValueConstructorVariant {
     fn to_module_value_constructor(&self) -> ModuleValueConstructor {
         match self {
-            ValueConstructorVariant::Record { name, .. } => {
-                ModuleValueConstructor::Record { name: name.clone() }
-            }
+            ValueConstructorVariant::Record { name, field_map } => ModuleValueConstructor::Record {
+                name: name.clone(),
+                arity: field_map.as_ref().map_or(0, |fm| fm.arity),
+            },
 
             ValueConstructorVariant::LocalVariable { .. }
             | ValueConstructorVariant::ModuleFn { .. } => ModuleValueConstructor::Fn,
@@ -296,7 +296,7 @@ impl ValueConstructorVariant {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ModuleValueConstructor {
-    Record { name: String },
+    Record { name: String, arity: usize },
     Fn,
 }
 
@@ -372,7 +372,6 @@ impl<'a, 'b> Env<'a, 'b> {
             ValueConstructorVariant::Record {
                 name: "True".to_string(),
                 field_map: None,
-                arity: 0,
             },
             bool(),
         );
@@ -381,7 +380,6 @@ impl<'a, 'b> Env<'a, 'b> {
             ValueConstructorVariant::Record {
                 name: "False".to_string(),
                 field_map: None,
-                arity: 0,
             },
             bool(),
         );
@@ -453,7 +451,6 @@ impl<'a, 'b> Env<'a, 'b> {
             ValueConstructorVariant::Record {
                 name: "Nil".to_string(),
                 field_map: None,
-                arity: 0,
             },
             nil(),
         );
@@ -476,7 +473,6 @@ impl<'a, 'b> Env<'a, 'b> {
             ValueConstructorVariant::Record {
                 name: "Ok".to_string(),
                 field_map: None,
-                arity: 1,
             },
             fn_(vec![ok.clone()], result(ok, error)),
         );
@@ -488,7 +484,6 @@ impl<'a, 'b> Env<'a, 'b> {
             ValueConstructorVariant::Record {
                 name: "Error".to_string(),
                 field_map: None,
-                arity: 1,
             },
             fn_(vec![error.clone()], result(ok, error)),
         );
@@ -1563,7 +1558,6 @@ pub fn infer_module(
                             origin: constructor.location.clone(),
                             variant: ValueConstructorVariant::Record {
                                 name: constructor.name.clone(),
-                                arity: args.len(),
                                 field_map: field_map.clone(),
                             },
                         },
@@ -1572,7 +1566,6 @@ pub fn infer_module(
                         constructor.name.clone(),
                         ValueConstructorVariant::Record {
                             name: constructor.name.clone(),
-                            arity: constructor.args.len(),
                             field_map,
                         },
                         typ,
@@ -2666,7 +2659,7 @@ fn infer_record_access(
     };
 
     // Check to see if it's a Type that can have accessible fields
-    let accessors = match collapse_links(record.typ().clone()).as_ref() {
+    let accessors = match collapse_links(record.typ()).as_ref() {
         // A type in the current module which may have fields
         Type::App { module, name, .. } if module.as_slice() == env.current_module => {
             env.accessors.get(name)
@@ -2698,7 +2691,7 @@ fn infer_record_access(
     let mut type_vars = hashmap![];
     let accessor_record_type = instantiate(accessor_record_type, 0, &mut type_vars, env);
     let typ = instantiate(typ, 0, &mut type_vars, env);
-    unify(accessor_record_type, record.typ().clone(), env)
+    unify(accessor_record_type, record.typ(), env)
         .map_err(|e| convert_unify_error(e, record.location()))?;
 
     Ok(TypedExpr::RecordAccess {
@@ -2894,9 +2887,16 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                     self.unify(Pattern::Tuple { elems, location }, typ)
                 }
 
-                other => {
-                    dbg!(&other);
-                    unimplemented!();
+                _ => {
+                    let elems_types = (0..(elems.len()))
+                        .map(|_| self.env.new_unbound_var(self.level))
+                        .collect();
+
+                    Err(Error::CouldNotUnify {
+                        given: tuple(elems_types),
+                        expected: typ.clone(),
+                        location,
+                    })
                 }
             },
 
@@ -3040,10 +3040,9 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                         }
                     }
 
-                    typ => {
-                        dbg!(typ);
-                        unimplemented!();
-                    }
+                    _ => crate::error::fatal_compiler_bug(
+                        "Unexpected constructor type for a constructor pattern.",
+                    ),
                 }
             }
         }

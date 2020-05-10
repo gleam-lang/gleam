@@ -1,38 +1,60 @@
+pub(crate) mod command;
+
 use crate::{
     ast::{Statement, TypedStatement},
-    error::GleamExpect,
+    error::{Error, GleamExpect},
     format, pretty,
-    project::{Analysed, ModuleOrigin, OutputFile, ProjectConfig},
+    project::{self, Analysed, ModuleOrigin, OutputFile, ProjectConfig},
 };
 use askama::Template;
 use itertools::Itertools;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 const MAX_COLUMNS: isize = 65;
+
+pub fn build_project(
+    project_root: impl AsRef<Path>,
+    output_dir: &PathBuf,
+) -> Result<(ProjectConfig, Vec<OutputFile>), Error> {
+    // Read and type check project
+    let (config, analysed) = project::read_and_analyse(&project_root)?;
+
+    // Get README content
+    let readme =
+        std::fs::read_to_string(project_root.as_ref().join("README.md")).unwrap_or_default();
+
+    // Generate HTML
+    let outputs = generate_html(&config, analysed.as_slice(), readme.as_str(), &output_dir);
+    Ok((config, outputs))
+}
 
 pub fn generate_html(
     project_config: &ProjectConfig,
     analysed: &[Analysed],
-    files: &mut Vec<OutputFile>,
-    dir: &PathBuf,
-) {
+    readme_content: &str,
+    output_dir: &PathBuf,
+) -> Vec<OutputFile> {
     let modules = analysed.iter().filter(|m| m.origin == ModuleOrigin::Src);
-
-    let mut modules_links: Vec<_> = modules
-        .clone()
-        .map(|m| {
-            let name = m.name.join("/");
-            let path = name.clone();
-            Link { path, name }
-        })
-        .collect();
-    modules_links.sort();
 
     let pages = &[Link {
         name: "README".to_string(),
         path: "".to_string(),
     }];
     let links = &[];
+
+    // index.css
+    let num_asset_files = 1;
+    let mut files = Vec::with_capacity(analysed.len() + pages.len() + 1 + num_asset_files);
+
+    let mut modules_links: Vec<_> = modules
+        .clone()
+        .map(|m| {
+            let name = m.name.join("/");
+            let path = [&name, "/"].concat();
+            Link { path, name }
+        })
+        .collect();
+    modules_links.sort();
 
     // Generate README page
     let readme = PageTemplate {
@@ -43,14 +65,10 @@ pub fn generate_html(
         project_name: &project_config.name,
         page_title: &project_config.name,
         project_version: "", // TODO
-        content: render_markdown(
-            std::fs::read_to_string(dir.join("..").join("README.md"))
-                .unwrap_or_default()
-                .as_ref(),
-        ),
+        content: render_markdown(readme_content),
     };
     files.push(OutputFile {
-        path: dir.join("index.html"),
+        path: output_dir.join("index.html"),
         text: readme.render().gleam_expect("README template rendering"),
     });
 
@@ -78,9 +96,10 @@ pub fn generate_html(
                 t
             },
         };
-        let mut path = dir.clone();
+
+        let mut path = output_dir.clone();
         for segment in module.name.iter() {
-            path.push(segment);
+            path.push(segment)
         }
         path.push("index.html");
         files.push(OutputFile {
@@ -93,9 +112,11 @@ pub fn generate_html(
 
     // Render static assets
     files.push(OutputFile {
-        path: dir.join("index.css"),
+        path: output_dir.join("index.css"),
         text: std::include_str!("../templates/index.css").to_string(),
     });
+
+    files
 }
 
 fn function<'a>(statement: &'a TypedStatement) -> Option<Function<'a>> {

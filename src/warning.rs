@@ -72,3 +72,11 @@ impl Warning {
         buffer_writer.print(&buffer).unwrap();
     }
 }
+
+pub fn print_all(analysed: &[crate::project::Analysed]) {
+    for a in analysed.iter() {
+        for w in a.warnings.iter() {
+            w.pretty_print()
+        }
+    }
+}

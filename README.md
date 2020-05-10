@@ -44,3 +44,16 @@ pub fn has_even_leaf(tree: Tree(Int)) -> Bool {
 ```
 
 For more information see the Gleam website: [https://gleam.run](https://gleam.run).
+
+## Sponsors
+
+Gleam is kindly supported its sponsors. If you would like to support Gleam
+please consider sponsoring its development [on GitHub](https://github.com/sponsors/lpil).
+
+These people are sponsoring at least $10 a month, enabling further Gleam
+development.
+
+- [Parker Selbert](https://github.com/sorentwo)
+- [Quinn Wilton](http://quinnwilton.com/)
+- [ontofractal](https://github.com/ontofractal)
+- [John Palgut](https://github.com/Jwsonic)

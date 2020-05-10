@@ -5,7 +5,10 @@ use crate::{
     ast::*,
     error::GleamExpect,
     pretty::*,
-    typ::{ModuleValueConstructor, PatternConstructor, ValueConstructor, ValueConstructorVariant},
+    project::{self, Analysed, OutputFile},
+    typ::{
+        ModuleValueConstructor, PatternConstructor, Type, ValueConstructor, ValueConstructorVariant,
+    },
 };
 use heck::{CamelCase, SnakeCase};
 use itertools::Itertools;
@@ -14,6 +17,40 @@ use std::default::Default;
 use std::sync::Arc;
 
 const INDENT: isize = 4;
+
+pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
+    let mut files = Vec::with_capacity(analysed.len() * 2);
+
+    for Analysed {
+        name,
+        origin,
+        source_base_path,
+        ast,
+        ..
+    } in analysed
+    {
+        let gen_dir = source_base_path
+            .parent()
+            .unwrap()
+            .join(project::OUTPUT_DIR_NAME)
+            .join(origin.dir_name());
+        let erl_module_name = name.join("@");
+
+        for (name, text) in crate::erl::records(&ast).into_iter() {
+            files.push(OutputFile {
+                path: gen_dir.join(format!("{}_{}.hrl", erl_module_name, name)),
+                text,
+            })
+        }
+
+        files.push(OutputFile {
+            path: gen_dir.join(format!("{}.erl", erl_module_name)),
+            text: crate::erl::module(&ast),
+        });
+    }
+
+    files
+}
 
 #[derive(Debug, Clone)]
 struct Env<'a> {
@@ -403,19 +440,22 @@ enum ListType<E, T> {
 
 fn var(name: &str, constructor: &ValueConstructor, env: &mut Env) -> Document {
     match &constructor.variant {
-        ValueConstructorVariant::Record { name, arity: 0, .. } => atom(name.to_snake_case()),
-
-        ValueConstructorVariant::Record { arity, .. } => {
-            let chars = incrementing_args_list(*arity);
-            "fun("
-                .to_doc()
-                .append(chars.clone())
-                .append(") -> {")
-                .append(name.to_snake_case())
-                .append(", ")
-                .append(chars)
-                .append("} end")
-        }
+        ValueConstructorVariant::Record {
+            name: record_name, ..
+        } => match &*constructor.typ {
+            Type::Fn { args, .. } => {
+                let chars = incrementing_args_list(args.len());
+                "fun("
+                    .to_doc()
+                    .append(chars.clone())
+                    .append(") -> {")
+                    .append(record_name.to_snake_case())
+                    .append(", ")
+                    .append(chars)
+                    .append("} end")
+            }
+            _ => atom(record_name.to_snake_case()),
+        },
 
         ValueConstructorVariant::LocalVariable => env.local_var_name(name.to_string()),
 
@@ -612,7 +652,7 @@ fn case(subjects: &[TypedExpr], cs: &[TypedClause], env: &mut Env) -> Document {
 fn call(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env) -> Document {
     match fun {
         TypedExpr::ModuleSelect {
-            constructor: ModuleValueConstructor::Record { name },
+            constructor: ModuleValueConstructor::Record { name, .. },
             ..
         }
         | TypedExpr::Var {
@@ -742,9 +782,24 @@ fn expr(expression: &TypedExpr, env: &mut Env) -> Document {
         TypedExpr::Call { fun, args, .. } => call(fun, args, env),
 
         TypedExpr::ModuleSelect {
-            constructor: ModuleValueConstructor::Record { name },
+            constructor: ModuleValueConstructor::Record { name, arity: 0 },
             ..
         } => atom(name.to_snake_case()),
+
+        TypedExpr::ModuleSelect {
+            constructor: ModuleValueConstructor::Record { name, arity },
+            ..
+        } => {
+            let chars = incrementing_args_list(*arity);
+            "fun("
+                .to_doc()
+                .append(chars.clone())
+                .append(") -> {")
+                .append(name.to_snake_case())
+                .append(", ")
+                .append(chars)
+                .append("} end")
+        }
 
         TypedExpr::ModuleSelect {
             typ,

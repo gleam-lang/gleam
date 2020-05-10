@@ -1,4 +1,5 @@
 use super::*;
+use crate::erl;
 
 #[test]
 fn compile_test() {
@@ -730,14 +731,116 @@ type Two = Person"
                 },
             ]),
         },
+
+        // Imported type constructors have the correct arity
+        Case {
+            input: vec![
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/one.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "pub type T(x) { C(a: Int, b: Int) }".to_string(),
+                },
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/two.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "import one.{C}
+fn main() { C }"
+                        .to_string(),
+                },
+            ],
+            expected: Ok(vec![
+                OutputFile {
+                    path: PathBuf::from("/gen/src/one_C.hrl"),
+                    text: "-record(c, {a, b}).\n".to_string(),
+                },
+                OutputFile {
+                    path: PathBuf::from("/gen/src/one.erl"),
+                    text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                },
+                OutputFile {
+                    path: PathBuf::from("/gen/src/two.erl"),
+                    text: "-module(two).\n-compile(no_auto_import).\n\nmain() ->\n    fun(A, B) -> {c, A, B} end.\n".to_string(),
+                },
+            ]),
+        },
+
+        // Unqualified and aliased type constructor imports use the correct name
+        Case {
+            input: vec![
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/one.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "pub fn id(x) { x } pub type T { X(x: Int) }".to_string(),
+                },
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/two.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "import one.{X as e, id as i} fn make() { i(e) }".to_string(),
+                },
+            ],
+            expected: Ok(vec![
+                OutputFile {
+                    path: PathBuf::from("/gen/src/one_X.hrl"),
+                    text: "-record(x, {x}).\n".to_string(),
+
+                },
+                OutputFile {
+                    path: PathBuf::from("/gen/src/one.erl"),
+                    text: "-module(one).\n-compile(no_auto_import).\n
+-export([id/1]).\n
+id(X) ->\n    X.\n"
+                        .to_string(),
+                },
+                OutputFile {
+                    path: PathBuf::from("/gen/src/two.erl"),
+                    text: "-module(two).\n-compile(no_auto_import).\n
+make() ->\n    one:id(fun(A) -> {x, A} end).\n"
+                        .to_string(),
+                },
+            ]),
+        },
+
+        // Imported type constructors have the correct arity
+        Case {
+            input: vec![
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/one.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "pub type T(x) { C(a: Int, b: Int) }".to_string(),
+                },
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/two.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "import one
+fn main() { one.C }"
+                        .to_string(),
+                },
+            ],
+            expected: Ok(vec![
+                OutputFile {
+                    path: PathBuf::from("/gen/src/one_C.hrl"),
+                    text: "-record(c, {a, b}).\n".to_string(),
+                },
+                OutputFile {
+                    path: PathBuf::from("/gen/src/one.erl"),
+                    text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                },
+                OutputFile {
+                    path: PathBuf::from("/gen/src/two.erl"),
+                    text: "-module(two).\n-compile(no_auto_import).\n\nmain() ->\n    fun(A, B) -> {c, A, B} end.\n".to_string(),
+                },
+            ]),
+        },
     ];
 
     for Case { input, expected } in cases.into_iter() {
-        let actual = analysed(input).map(|analysed| {
-            let mut output = Vec::with_capacity(analysed.len());
-            crate::project::generate_erlang(analysed.as_slice(), &mut output);
-            output
-        });
+        let actual = analysed(input).map(|analysed| erl::generate_erlang(analysed.as_slice()));
         assert_eq!(expected, actual);
     }
 }
