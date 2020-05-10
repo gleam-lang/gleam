@@ -1819,7 +1819,7 @@ main() ->
 pub fn main() {
   let x = tuple(1, 2, 3)
   case x {
-    tuple(1, 2, 3) -> 1
+    _ if x == tuple(1, 2, 3) -> 1
     _ -> 0
   }
 }
@@ -1832,7 +1832,7 @@ pub fn main() {
 main() ->
     X = {1, 2, 3},
     case X of
-        {1, 2, 3} ->
+        _ when X =:= {1, 2, 3} ->
             1;
 
         _ ->
@@ -1846,8 +1846,8 @@ main() ->
 pub fn main() {
   let x = tuple(1, 2, 3)
   case x {
-    tuple(1, 2, 3) -> 1
-    tuple(2, 3, 4) -> 2
+    _ if x == tuple(1, 2, 3) -> 1
+    _ if x == tuple(2, 3, 4) -> 2
     _ -> 0
   }
 }
@@ -1860,10 +1860,10 @@ pub fn main() {
 main() ->
     X = {1, 2, 3},
     case X of
-        {1, 2, 3} ->
+        _ when X =:= {1, 2, 3} ->
             1;
 
-        {2, 3, 4} ->
+        _ when X =:= {2, 3, 4} ->
             2;
 
         _ ->

@@ -608,14 +608,9 @@ fn clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
             .append(")"),
 
         // Values are not wrapped
-        ClauseGuard::Var { .. } | ClauseGuard::Int { .. } | ClauseGuard::Float { .. } => {
+        ClauseGuard::Var { .. } | ClauseGuard::Int { .. } | ClauseGuard::Float { .. } | ClauseGuard::Tuple { .. } => {
             bare_clause_guard(guard, env)
         }
-
-        ClauseGuard::Tuple { .. } => "{"
-            .to_doc()
-            .append(bare_clause_guard(guard, env))
-            .append("}"),
     }
 }
 
