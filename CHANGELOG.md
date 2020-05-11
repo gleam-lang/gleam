@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Numbers are now permitted in module names.
+- Emitted Erlang code correctly adds parentheses around binary subexpressions
+  to preserve precedence.
 
 ## v0.8.0 - 2020-05-07
 
