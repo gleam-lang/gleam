@@ -7,6 +7,7 @@
   to preserve precedence.
 - Record names and fields are now escaped in `.hrl` files if they conflict
   with Erlang reserved words
+- Annotations are now supported on `let` and `assert` expressions
 
 ## v0.8.0 - 2020-05-07
 
