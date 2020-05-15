@@ -373,20 +373,22 @@ ClauseGuard5: UntypedClauseGuard = {
 }
 
 Let: UntypedExpr = {
-    <s:@L> "let" <p:Pattern> "=" <v:OpOrSimpleExpr> <e:@L> <t:Expr> => UntypedExpr::Let {
+    <s:@L> "let" <p:Pattern> <annotation:(":" <Type>)?> "=" <v:OpOrSimpleExpr> <e:@L> <t:Expr> => UntypedExpr::Let {
         location: location(s, e),
         value: Box::new(v),
         pattern: p,
         then: Box::new(t),
         assert: false,
+        annotation,
     },
 
-    <s:@L> "assert" <p:Pattern> "=" <v:OpOrSimpleExpr> <e:@L> <t:Expr> => UntypedExpr::Let {
+    <s:@L> "assert" <p:Pattern> <annotation:(":" <Type>)?> "=" <v:OpOrSimpleExpr> <e:@L> <t:Expr> => UntypedExpr::Let {
         location: location(s, e),
         value: Box::new(v),
         pattern: p,
         then: Box::new(t),
         assert: true,
+        annotation,
     }
 }
 

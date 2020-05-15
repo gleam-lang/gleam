@@ -226,6 +226,7 @@ fn infer_test() {
         "let tuple(tuple(_, _) as x, _) = tuple(tuple(0, 1.0), []) x",
         "tuple(Int, Float)"
     );
+    assert_infer!("let x: String = \"\" x", "String");
 
     // list
     assert_infer!("[]", "List(a)");
@@ -358,6 +359,7 @@ fn infer_test() {
     assert_infer!("assert _ = 1 2.0", "Float");
     assert_infer!("assert tuple(tag, x) = tuple(1.0, 1) x", "Int");
     assert_infer!("fn(x) { assert tuple(a, b) = x a }", "fn(tuple(a, b)) -> a");
+    assert_infer!("assert 5: Int = 5 5", "Int");
 
     // Nil
     assert_infer!("Nil", "Nil");
@@ -1470,6 +1472,24 @@ fn demo() {
                 args: vec![int()],
                 retrn: int(),
             }),
+        },
+    );
+
+    assert_error!(
+        "fn main() { let x: String = 5 x }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 28, end: 29 },
+            expected: string(),
+            given: int(),
+        },
+    );
+
+    assert_error!(
+        "fn main() { assert 5: Int = \"\" 5 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 19, end: 20 },
+            expected: string(),
+            given: int(),
         },
     );
 

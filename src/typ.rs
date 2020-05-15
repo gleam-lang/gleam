@@ -1753,8 +1753,18 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             value,
             then,
             assert,
+            annotation,
             ..
-        } => infer_let(pattern, *value, *then, assert, level, location, env),
+        } => infer_let(
+            pattern,
+            *value,
+            *then,
+            assert,
+            &annotation,
+            level,
+            location,
+            env,
+        ),
 
         UntypedExpr::Case {
             location,
@@ -2196,6 +2206,7 @@ fn infer_let(
     value: UntypedExpr,
     then: UntypedExpr,
     assert: bool,
+    annotation: &Option<TypeAst>,
     level: usize,
     location: SrcSpan,
     env: &mut Env,
@@ -2205,6 +2216,13 @@ fn infer_let(
     let pattern = PatternTyper::new(env, level).unify(pattern, value_typ)?;
     let then = infer(then, level, env)?;
     let typ = then.typ();
+
+    // Check that any type annotation is accurate.
+    if let Some(ann) = annotation {
+        let ann_typ = env.type_from_ast(ann, &mut hashmap![], NewTypeAction::MakeGeneric)?;
+        unify(ann_typ, value.typ(), env).map_err(|e| convert_unify_error(e, value.location()))?;
+    }
+
     Ok(TypedExpr::Let {
         location,
         typ,
