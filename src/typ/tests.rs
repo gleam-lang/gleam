@@ -227,6 +227,17 @@ fn infer_test() {
         "tuple(Int, Float)"
     );
     assert_infer!("let x: String = \"\" x", "String");
+    assert_infer!("let x: tuple(x, x) = tuple(5, 5) x", "tuple(Int, Int)",);
+    assert_infer!("let x: tuple(x, y) = tuple(5, 5.0) x", "tuple(Int, Float)",);
+    assert_infer!("let [1, 2, ..x]: List(Int) = [1,2,3] x", "List(Int)",);
+    assert_infer!(
+        "let tuple(5, [..x]): tuple(x, List(x)) = tuple(5, [1,2,3]) x",
+        "List(Int)",
+    );
+    assert_infer!(
+        "let tuple(5.0, [..x]): tuple(y, List(x)) = tuple(5.0, [1,2,3]) x",
+        "List(Int)",
+    );
 
     // list
     assert_infer!("[]", "List(a)");
@@ -1490,6 +1501,50 @@ fn demo() {
             location: SrcSpan { start: 19, end: 20 },
             expected: string(),
             given: int(),
+        },
+    );
+
+    assert_error!(
+        "fn main() { let x: tuple(x, x) = tuple(5, 5.0) x }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 33, end: 46 },
+            expected: tuple(vec![
+                Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() }))
+                }),
+                Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() }))
+                })
+            ]),
+            given: tuple(vec![int(), float()]),
+        },
+    );
+
+    assert_error!(
+        "fn main() { let [1, 2, ..x]: List(String) = [1,2,3] x }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 44, end: 51 },
+            expected: list(string()),
+            given: list(int()),
+        },
+    );
+
+    assert_error!(
+        "fn main() {
+            let tuple(y, [..x]): tuple(x, List(x)) = tuple(\"foo\", [1,2,3])
+            x
+        }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 65, end: 86 },
+            expected: tuple(vec![
+                Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: string() }))
+                }),
+                list(Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: string() }))
+                }))
+            ]),
+            given: tuple(vec![string(), list(int())]),
         },
     );
 
