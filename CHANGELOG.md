@@ -5,6 +5,8 @@
 - Numbers are now permitted in module names.
 - Emitted Erlang code correctly adds parentheses around binary subexpressions
   to preserve precedence.
+- Record names and fields are now escaped in `.hrl` files if they conflict
+  with Erlang reserved words
 
 ## v0.8.0 - 2020-05-07
 
