@@ -2213,14 +2213,16 @@ fn infer_let(
 ) -> Result<TypedExpr, Error> {
     let value = infer(value, level + 1, env)?;
     let value_typ = generalise(value.typ(), level + 1);
-    let pattern = PatternTyper::new(env, level).unify(pattern, value_typ)?;
+    let pattern = PatternTyper::new(env, level).unify(pattern, value_typ.clone())?;
     let then = infer(then, level, env)?;
     let typ = then.typ();
 
     // Check that any type annotation is accurate.
     if let Some(ann) = annotation {
-        let ann_typ = env.type_from_ast(ann, &mut hashmap![], NewTypeAction::MakeGeneric)?;
-        unify(ann_typ, value.typ(), env).map_err(|e| convert_unify_error(e, value.location()))?;
+        let ann_typ = env
+            .type_from_ast(ann, &mut hashmap![], NewTypeAction::MakeGeneric)
+            .map(|t| instantiate(t, level, &mut hashmap![], env))?;
+        unify(ann_typ, value_typ, env).map_err(|e| convert_unify_error(e, value.location()))?;
     }
 
     Ok(TypedExpr::Let {
