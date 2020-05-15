@@ -71,6 +71,7 @@ pub enum UntypedExpr {
         pattern: Pattern<()>,
         then: Box<Self>,
         assert: bool,
+        annotation: Option<TypeAst>,
     },
 
     Case {
