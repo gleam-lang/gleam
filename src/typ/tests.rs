@@ -1376,6 +1376,45 @@ pub fn get_string(x: Box(String)) { x.inner }
             ("get_string", "fn(Box(String)) -> String"),
         ]
     );
+
+    // We can annotate let with custom types
+    assert_infer!(
+        "
+        pub type Person {
+            Person(name: String, age: Int)
+        }
+
+        pub fn create_person(name: String) {
+            let x: Person = Person(name: name, age: 1)
+            x
+        }",
+        vec![
+            ("Person", "fn(String, Int) -> Person"),
+            ("create_person", "fn(String) -> Person"),
+        ]
+    );
+
+    assert_infer!(
+        "
+        pub type Box(inner) {
+            Box(inner)
+        }
+
+        pub fn create_int_box(value: Int) {
+            let x: Box(Int) = Box(value)
+            x
+        }
+        
+        pub fn create_float_box(value: Float) {
+            let x: Box(x) = Box(value)
+            x
+        }",
+        vec![
+            ("Box", "fn(a) -> Box(a)"),
+            ("create_float_box", "fn(Float) -> Box(Float)"),
+            ("create_int_box", "fn(Int) -> Box(Int)"),
+        ]
+    );
 }
 
 #[test]
@@ -1545,6 +1584,56 @@ fn demo() {
                 }))
             ]),
             given: tuple(vec![string(), list(int())]),
+        },
+    );
+
+    assert_error!(
+        "
+        pub type Box(inner) {
+            Box(inner)
+        }
+
+        pub fn create_int_box(value: Int) {
+            let x: Box(Float) = Box(value)
+            x
+        }",
+        Error::CouldNotUnify {
+            location: SrcSpan {
+                start: 141,
+                end: 151
+            },
+            expected: Arc::new(Type::App {
+                public: true,
+                module: vec!["my_module".to_string()],
+                name: "Box".to_string(),
+                args: vec![float()]
+            }),
+            given: Arc::new(Type::App {
+                public: true,
+                module: vec!["my_module".to_string()],
+                name: "Box".to_string(),
+                args: vec![int()]
+            }),
+        },
+    );
+
+    assert_error!(
+        "
+        pub type Person {
+            Person(name: String, age: Int)
+        }
+
+        pub fn create_person(age: Float) {
+            let x: Person = Person(name: \"Quinn\", age: age)
+            x
+        }",
+        Error::CouldNotUnify {
+            location: SrcSpan {
+                start: 179,
+                end: 182
+            },
+            expected: int(),
+            given: float(),
         },
     );
 
