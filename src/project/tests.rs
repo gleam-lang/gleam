@@ -325,7 +325,9 @@ call() ->
                     source_base_path: PathBuf::from("/src"),
                     src: "import nested/one
                         pub fn go() { one.go() }
-                        pub external fn thing() -> one.Thing = \"thing\" \"new\""
+                        pub external fn thing() -> one.Thing = \"thing\" \"new\"
+                        pub fn call_thing() { thing() }
+                        "
                         .to_string(),
                 },
             ],
@@ -338,9 +340,10 @@ go() ->\n    1.\n"
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two.erl"),
-                    text: "-module(two).\n-compile(no_auto_import).\n\n-export([go/0, thing/0]).\n
+                    text: "-module(two).\n-compile(no_auto_import).\n\n-export([go/0, thing/0, call_thing/0]).\n
 go() ->\n    nested@one:go().\n
-thing() ->\n    thing:new().\n"
+thing() ->\n    thing:new().\n
+call_thing() ->\n    thing:new().\n"
                         .to_string(),
                 },
             ]),

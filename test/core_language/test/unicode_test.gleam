@@ -1,6 +1,6 @@
 import should
 
-external fn to_graphemes(String) -> List(List(Int))
+pub external fn to_graphemes(String) -> List(List(Int))
  = "string" "to_graphemes"
 
 pub fn unicode_overflow_test() {
