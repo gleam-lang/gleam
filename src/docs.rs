@@ -4,7 +4,7 @@ use crate::{
     ast::{Statement, TypedStatement},
     error::{Error, GleamExpect},
     format, pretty,
-    project::{self, Analysed, ModuleOrigin, OutputFile, ProjectConfig},
+    project::{self, Analysed, DocsPage, ModuleOrigin, OutputFile, ProjectConfig},
 };
 use askama::Template;
 use itertools::Itertools;
@@ -19,27 +19,40 @@ pub fn build_project(
     // Read and type check project
     let (config, analysed) = project::read_and_analyse(&project_root)?;
 
-    // Get README content
-    let readme =
-        std::fs::read_to_string(project_root.as_ref().join("README.md")).unwrap_or_default();
+    // Initialize pages with the README
+    let mut pages = vec![DocsPage {
+        title: "README".to_string(),
+        path: "index.html".to_string(),
+        source: project_root.as_ref().join("README.md"),
+    }];
+
+    // Add user-supplied pages, if defined
+    if let Some(docs) = &config.docs {
+        pages.extend(docs.pages.to_vec());
+    }
 
     // Generate HTML
-    let outputs = generate_html(&config, analysed.as_slice(), readme.as_str(), &output_dir);
+    let outputs = generate_html(&config, analysed.as_slice(), &pages, &output_dir);
     Ok((config, outputs))
 }
 
 pub fn generate_html(
     project_config: &ProjectConfig,
     analysed: &[Analysed],
-    readme_content: &str,
+    docspages: &[DocsPage],
     output_dir: &PathBuf,
 ) -> Vec<OutputFile> {
     let modules = analysed.iter().filter(|m| m.origin == ModuleOrigin::Src);
 
-    let pages = &[Link {
-        name: "README".to_string(),
-        path: "".to_string(),
-    }];
+    // Define user-supplied (or README) pages
+    let pages = docspages
+        .iter()
+        .map(|page| Link {
+            name: page.title.to_string(),
+            path: page.path.to_string(),
+        })
+        .collect::<Vec<_>>();
+
     let links = &[];
 
     // index.css
@@ -56,21 +69,26 @@ pub fn generate_html(
         .collect();
     modules_links.sort();
 
-    // Generate README page
-    let readme = PageTemplate {
-        unnest: ".".to_string(),
-        links,
-        pages,
-        modules: &modules_links,
-        project_name: &project_config.name,
-        page_title: &project_config.name,
-        project_version: "", // TODO
-        content: render_markdown(readme_content),
-    };
-    files.push(OutputFile {
-        path: output_dir.join("index.html"),
-        text: readme.render().gleam_expect("README template rendering"),
-    });
+    // Generate user-supplied (or README) pages
+    for page in docspages {
+        let content = std::fs::read_to_string(&page.source).unwrap_or_default();
+
+        let temp = PageTemplate {
+            unnest: ".".to_string(),
+            links,
+            pages: &pages,
+            modules: &modules_links,
+            project_name: &project_config.name,
+            page_title: &project_config.name,
+            project_version: "", // TODO
+            content: render_markdown(&content),
+        };
+
+        files.push(OutputFile {
+            path: output_dir.join(&page.path),
+            text: temp.render().gleam_expect("Page template rendering"),
+        });
+    }
 
     // Generate module documentation pages
     for module in modules {
@@ -78,7 +96,7 @@ pub fn generate_html(
         let template = ModuleTemplate {
             unnest: module.name.iter().map(|_| "..").intersperse("/").collect(),
             links,
-            pages,
+            pages: &pages,
             documentation: render_markdown(module.ast.documentation.iter().join("\n").as_str()),
             modules: modules_links.as_slice(),
             project_name: &project_config.name,

@@ -20,6 +20,19 @@ pub const OUTPUT_DIR_NAME: &str = "gen";
 #[derive(Deserialize)]
 pub struct ProjectConfig {
     pub name: String,
+    pub docs: Option<DocsPages>,
+}
+
+#[derive(Deserialize)]
+pub struct DocsPages {
+    pub pages: Vec<DocsPage>,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct DocsPage {
+    pub title: String,
+    pub path: String,
+    pub source: PathBuf,
 }
 
 #[derive(Debug, PartialEq)]
