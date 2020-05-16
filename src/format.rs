@@ -607,13 +607,21 @@ impl<'a> Formatter<'a> {
                 constructor.name.clone().to_doc()
             } else {
                 constructor.name.to_string().to_doc().append(wrap_args(
-                    constructor.args.iter().map(|(label, typ)| match label {
-                        Some(l) => l
-                            .to_string()
-                            .to_doc()
-                            .append(": ")
-                            .append(self.type_ast(typ)),
-                        None => self.type_ast(typ),
+                    constructor.args.iter().map(|(label, typ, arg_location)| {
+                        let arg_comments = self.pop_comments(arg_location.start);
+                        let arg = match label {
+                            Some(l) => l
+                                .to_string()
+                                .to_doc()
+                                .append(": ")
+                                .append(self.type_ast(typ)),
+                            None => self.type_ast(typ),
+                        };
+
+                        commented(
+                            self.doc_comments(arg_location.start).append(arg).group(),
+                            arg_comments,
+                        )
                     }),
                 ))
             };

@@ -65,12 +65,12 @@ RecordConstructor: RecordConstructor = {
     },
 }
 
-RecordConstructorArgs: Vec<(Option<String>, TypeAst)> = {
+RecordConstructorArgs: Vec<(Option<String>, TypeAst, crate::ast::SrcSpan)> = {
     "(" <ts:Comma<RecordConstructorArg>> ")" => ts
 }
 
-RecordConstructorArg: (Option<String>, TypeAst) = {
-    <label:(<VarName> ":")?> <typ:Type> => (label, typ),
+RecordConstructorArg: (Option<String>, TypeAst, crate::ast::SrcSpan) = {
+    <s:@L> <label:(<VarName> ":")?> <typ:Type> <e:@L> => (label, typ, location(s, e)),
 }
 
 StatementExternalFn: UntypedStatement = {

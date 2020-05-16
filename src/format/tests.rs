@@ -2455,6 +2455,18 @@ type X {
 }
 "
     );
+
+    assert_format!(
+        "pub type Spec {
+  Spec(
+    // Hello
+    hello: Int,
+    // World
+    world: Int,
+  )
+}
+"
+    );
 }
 
 #[test]

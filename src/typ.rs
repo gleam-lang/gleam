@@ -1532,7 +1532,7 @@ pub fn infer_module(
                 for constructor in constructors.iter() {
                     let mut field_map = FieldMap::new(constructor.args.len());
                     let mut args_types = Vec::with_capacity(constructor.args.len());
-                    for (i, (label, arg)) in constructor.args.iter().enumerate() {
+                    for (i, (label, arg, ..)) in constructor.args.iter().enumerate() {
                         let t = env.type_from_ast(&arg, &mut type_vars, NewTypeAction::Disallow)?;
                         args_types.push(t);
                         if let Some(label) = label {
@@ -1679,7 +1679,7 @@ fn custom_type_accessors(
     };
 
     let mut fields = HashMap::with_capacity(args.len());
-    for (index, (label, arg)) in args.iter().enumerate() {
+    for (index, (label, arg, ..)) in args.iter().enumerate() {
         if let Some(label) = label {
             let typ = env.type_from_ast(arg, type_vars, NewTypeAction::Disallow)?;
             fields.insert(
