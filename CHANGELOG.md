@@ -11,6 +11,8 @@
 - Formatter now accepts comments for the fields of a custom type's constructors
 - Added opaque custom types, which have constructors that cannot be accessed
   from outside their own modules.
+- Additional (arbitrary) markdown documentation pages can now be added and
+  built with `docs build`.
 
 ## v0.8.1 - 2020-05-19
 
