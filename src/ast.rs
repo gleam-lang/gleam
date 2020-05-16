@@ -78,7 +78,7 @@ pub enum ArgNames {
 pub struct RecordConstructor {
     pub location: SrcSpan,
     pub name: String,
-    pub args: Vec<(Option<String>, TypeAst)>,
+    pub args: Vec<(Option<String>, TypeAst, SrcSpan)>,
     pub documentation: Option<String>,
 }
 

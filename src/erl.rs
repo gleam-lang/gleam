@@ -103,7 +103,7 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
         .filter(|constructor| !constructor.args.is_empty())
         .flat_map(|constructor| {
             let mut fields = Vec::with_capacity(constructor.args.len());
-            for (label, _) in constructor.args.iter() {
+            for (label, ..) in constructor.args.iter() {
                 match label {
                     Some(s) => fields.push(&**s),
                     None => return None,
