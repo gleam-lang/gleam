@@ -1428,9 +1428,9 @@ pub fn infer_module(
                         typ: typ.clone(),
                         origin: location.clone(),
                         variant: ValueConstructorVariant::ModuleFn {
-                            name: name.clone(),
+                            name: fun.clone(),
                             field_map: field_map.clone(),
-                            module: module_name.clone(),
+                            module: vec![module.clone()],
                             arity: args.len(),
                         },
                     },
@@ -1440,8 +1440,8 @@ pub fn infer_module(
                 env.insert_variable(
                     name.clone(),
                     ValueConstructorVariant::ModuleFn {
-                        name: name.clone(),
-                        module: module_name.clone(),
+                        name: fun.clone(),
+                        module: vec![module.clone()],
                         arity: args.len(),
                         field_map,
                     },
