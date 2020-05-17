@@ -116,9 +116,6 @@ fn module_test() {
 
 -export([map/0]).
 
-add_ints(A, B) ->
-    int:add(A, B).
-
 map() ->
     maps:new().
 "
@@ -1061,9 +1058,11 @@ loop() ->
     );
 
     assert_erl!(
-        r#"external fn run() -> Int = "Elixir.MyApp" "run""#,
+        r#"pub external fn run() -> Int = "Elixir.MyApp" "run""#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([run/0]).
 
 run() ->
     'Elixir.MyApp':run().
@@ -1284,11 +1283,28 @@ x(Y) ->
 "#,
     );
 
+    // Private external functions are simply inlined
     assert_erl!(
         r#"external fn go(x: Int, y: Int) -> Int = "m" "f"
                     fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+x() ->
+    m:f(1, 2),
+    m:f(4, 3).
+"#,
+    );
+
+    // Public external functions are inlined but the wrapper function is
+    // also printed in the erlang output and exported
+    assert_erl!(
+        r#"pub external fn go(x: Int, y: Int) -> Int = "m" "f"
+                    fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([go/2]).
 
 go(A, B) ->
     m:f(A, B).

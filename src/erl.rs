@@ -201,6 +201,7 @@ fn statement(statement: &TypedStatement, module: &[String]) -> Option<Document> 
             args, name, body, ..
         } => Some(mod_fun(name.as_ref(), args.as_slice(), body, module)),
 
+        Statement::ExternalFn { public: false, .. } => None,
         Statement::ExternalFn {
             fun,
             module,
