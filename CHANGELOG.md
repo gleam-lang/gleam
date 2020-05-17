@@ -9,6 +9,8 @@
   with Erlang reserved words
 - Annotations are now supported on `let` and `assert` expressions
 - Formatter now accepts comments for the fields of a custom type's constructors
+- Added opaque custom types, which have constructors that cannot be accessed
+  from outside their own modules.
 
 ## v0.8.0 - 2020-05-07
 
