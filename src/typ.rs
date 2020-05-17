@@ -1522,7 +1522,7 @@ pub fn infer_module(
                     custom_type_accessors(constructors.as_slice(), &mut type_vars, &mut env)?
                 {
                     let map = AccessorsMap {
-                        public,
+                        public: (public && !opaque),
                         accessors,
                         typ: retrn.clone(),
                     };

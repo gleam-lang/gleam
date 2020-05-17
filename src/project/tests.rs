@@ -1,5 +1,6 @@
 use super::*;
 use crate::erl;
+use std::sync::Arc;
 
 #[test]
 fn compile_test() {
@@ -868,6 +869,45 @@ fn main() { one.C }"
                     name: "C".to_string(),
                     module_name: vec!["one".to_string(),],
                     value_constructors: vec![],
+                }
+            }),
+        },
+
+        // A custom type marked as opaque cannot have its fields accessed
+        // from a different module
+        Case {
+            input: vec![
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/one.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "pub opaque type T { C(a: Int, b: Int) }".to_string(),
+                },
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/two.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "import one
+fn test(t: one.T) { t.a }"
+                        .to_string(),
+                },
+            ],
+            expected: Err(Error::Type {
+                path: PathBuf::from("/src/two.gleam"),
+                src: "import one\nfn test(t: one.T) { t.a }".to_string(),
+                error: crate::typ::Error::UnknownField {
+                    location: crate::ast::SrcSpan {
+                        start: 32,
+                        end: 34,
+                    },
+                    typ: Arc::new(crate::typ::Type::App {
+                        public: true,
+                        module: vec!["one".to_string(),],
+                        name: "T".to_string(),
+                        args: vec![],
+                    }),
+                    label: "a".to_string(),
+                    fields: vec![],
                 }
             }),
         },
