@@ -8,6 +8,7 @@
 - Record names and fields are now escaped in `.hrl` files if they conflict
   with Erlang reserved words
 - Annotations are now supported on `let` and `assert` expressions
+- Formatter now accepts comments for the fields of a custom type's constructors
 
 ## v0.8.0 - 2020-05-07
 
