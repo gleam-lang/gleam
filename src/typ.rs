@@ -1489,6 +1489,7 @@ pub fn infer_module(
                 doc,
                 location,
                 public,
+                opaque,
                 name,
                 args,
                 constructors,
@@ -1550,18 +1551,22 @@ pub fn infer_module(
                         0 => retrn.clone(),
                         _ => fn_(args_types, retrn.clone()),
                     };
-                    env.insert_module_value(
-                        &constructor.name,
-                        ValueConstructor {
-                            public,
-                            typ: typ.clone(),
-                            origin: constructor.location.clone(),
-                            variant: ValueConstructorVariant::Record {
-                                name: constructor.name.clone(),
-                                field_map: field_map.clone(),
+
+                    if !opaque {
+                        env.insert_module_value(
+                            &constructor.name,
+                            ValueConstructor {
+                                public,
+                                typ: typ.clone(),
+                                origin: constructor.location.clone(),
+                                variant: ValueConstructorVariant::Record {
+                                    name: constructor.name.clone(),
+                                    field_map: field_map.clone(),
+                                },
                             },
-                        },
-                    )?;
+                        )?;
+                    }
+
                     env.insert_variable(
                         constructor.name.clone(),
                         ValueConstructorVariant::Record {
@@ -1575,6 +1580,7 @@ pub fn infer_module(
                     doc,
                     location,
                     public,
+                    opaque,
                     name,
                     args,
                     constructors,

@@ -46,10 +46,11 @@ StatementTypeAlias : UntypedStatement = {
 }
 
 StatementCustomType: UntypedStatement = {
-    <s:@L> <p:"pub"?> "type" <t:TypeName> <e:@L> "{" <cs:RecordConstructor+> "}" => Statement::CustomType {
+    <s:@L> <p:"pub"?> <o:"opaque"?> "type" <t:TypeName> <e:@L> "{" <cs:RecordConstructor+> "}" => Statement::CustomType {
         doc: None,
         location: location(s, e),
         public: p.is_some(),
+        opaque: o.is_some(),
         name: t.0,
         args: t.1,
         constructors: cs,
