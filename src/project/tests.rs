@@ -837,6 +837,40 @@ fn main() { one.C }"
                 },
             ]),
         },
+
+        // A custom type marked as opaque cannot have its constructors accessed
+        // from other modules
+        Case {
+            input: vec![
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/one.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "pub opaque type T(x) { C(a: Int, b: Int) }".to_string(),
+                },
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/two.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "import one
+fn main() { one.C }"
+                        .to_string(),
+                },
+            ],
+            expected: Err(Error::Type {
+                path: PathBuf::from("/src/two.gleam"),
+                src: "import one\nfn main() { one.C }".to_string(),
+                error: crate::typ::Error::UnknownModuleValue {
+                    location: crate::ast::SrcSpan {
+                        start: 26,
+                        end: 28,
+                    },
+                    name: "C".to_string(),
+                    module_name: vec!["one".to_string(),],
+                    value_constructors: vec![],
+                }
+            }),
+        },
     ];
 
     for Case { input, expected } in cases.into_iter() {

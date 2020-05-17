@@ -163,6 +163,7 @@ pub enum Statement<T, Expr> {
         public: bool,
         constructors: Vec<RecordConstructor>,
         doc: Option<String>,
+        opaque: bool,
     },
 
     ExternalFn {

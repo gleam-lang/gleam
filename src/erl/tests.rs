@@ -40,6 +40,7 @@ fn module_test() {
                 doc: None,
                 location: Default::default(),
                 public: true,
+                opaque: false,
                 name: "Any".to_string(),
                 args: vec![],
                 constructors: vec![RecordConstructor {

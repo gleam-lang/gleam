@@ -1415,6 +1415,15 @@ pub fn get_string(x: Box(String)) { x.inner }
             ("create_int_box", "fn(Int) -> Box(Int)"),
         ]
     );
+
+    // Opaque type constructors are available in the module where they are defined
+    // but are not exported
+    assert_infer!(
+        "
+pub opaque type One { One(name: String) }
+pub fn get(x: One) { x.name }",
+        vec![("get", "fn(One) -> String"),]
+    );
 }
 
 #[test]
