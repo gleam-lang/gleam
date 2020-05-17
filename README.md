@@ -53,7 +53,8 @@ please consider sponsoring its development [on GitHub](https://github.com/sponso
 These people are sponsoring at least $10 a month, enabling further Gleam
 development.
 
+- [Bryan Paxton](https://github.com/starbelly)
+- [John Palgut](https://github.com/Jwsonic)
 - [Parker Selbert](https://github.com/sorentwo)
 - [Quinn Wilton](http://quinnwilton.com/)
 - [ontofractal](https://github.com/ontofractal)
-- [John Palgut](https://github.com/Jwsonic)
