@@ -286,7 +286,7 @@ map() ->
                         },
                         name: "one_two".to_string(),
                     }),
-                    assert: false,
+                    kind: BindingKind::Let,
                 },
             },
             Statement::Fn {
@@ -2196,6 +2196,31 @@ main() ->
     A = (2 * (3 + 1)) div 2,
     B = (5 + ((3 div 3) * 2)) - (6 * 4),
     B.
+"#,
+    );
+
+    // try
+    assert_erl!(
+        r#"
+fn main() {
+    try a = Ok(1)
+    try b = Ok(2)
+    Ok(a + b)
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main() ->
+    case {ok, 1} of
+        {error, GleamTryError} -> {error, GleamTryError};
+        {ok, A} ->
+            case {ok, 2} of
+                {error, GleamTryError1} -> {error, GleamTryError1};
+                {ok, B} ->
+                    {ok, A + B}
+            end
+    end.
 "#,
     );
 }

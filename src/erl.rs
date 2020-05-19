@@ -337,6 +337,35 @@ fn pipe(value: &TypedExpr, fun: &TypedExpr, env: &mut Env) -> Document {
     call(fun, &[arg], env)
 }
 
+fn try_(value: &TypedExpr, pat: &TypedPattern, then: &TypedExpr, env: &mut Env) -> Document {
+    let try_error_name = "gleam@try_error";
+
+    "case "
+        .to_doc()
+        .append(expr(value, env))
+        .append(" of")
+        .append(
+            line()
+                .append("{error, ")
+                .append(env.next_local_var_name(try_error_name.to_string()))
+                .append("} -> {error, ")
+                .append(env.local_var_name(try_error_name.to_string()))
+                .append("};")
+                .nest(INDENT),
+        )
+        .append(
+            line()
+                .append("{ok, ")
+                .append(pattern(pat, env))
+                .append("} ->")
+                .append(line().append(expr(then, env)).nest(INDENT))
+                .nest(INDENT),
+        )
+        .append(line())
+        .append("end")
+        .group()
+}
+
 fn let_(value: &TypedExpr, pat: &TypedPattern, then: &TypedExpr, env: &mut Env) -> Document {
     let body = expr(value, env);
     pattern(pat, env)
@@ -823,6 +852,14 @@ fn expr(expression: &TypedExpr, env: &mut Env) -> Document {
         } => module_select_fn(typ.clone(), module_name, label),
 
         TypedExpr::RecordAccess { record, index, .. } => tuple_index(record, index + 1, env),
+
+        TypedExpr::Let {
+            value,
+            pattern,
+            then,
+            kind: BindingKind::Try,
+            ..
+        } => try_(value, pattern, then, env),
 
         TypedExpr::Let {
             value,

@@ -372,6 +372,19 @@ fn infer_test() {
     assert_infer!("fn(x) { assert tuple(a, b) = x a }", "fn(tuple(a, b)) -> a");
     assert_infer!("assert 5: Int = 5 5", "Int");
 
+    // try
+    assert_infer!("try x = Ok(1) Ok(x)", "Result(Int, a)");
+    assert_infer!("try x = Ok(1) try y = Ok(1) Ok(x + y)", "Result(Int, a)");
+    assert_infer!(
+        "try x = Error(Nil) try y = Ok(1) Ok(x + 1)",
+        "Result(Int, Nil)"
+    );
+    assert_infer!(
+        "try x = Error(Nil) try y = Error(Nil) Ok(x + 1)",
+        "Result(Int, Nil)"
+    );
+    assert_infer!("try x = Error(Nil) Ok(x + 1)", "Result(Int, Nil)");
+
     // Nil
     assert_infer!("Nil", "Nil");
 
@@ -689,10 +702,10 @@ fn infer_error_test() {
             expected: int(),
             given: tuple(vec![
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Unbound { id: 7, level: 1 })),
+                    typ: Arc::new(RefCell::new(TypeVar::Unbound { id: 9, level: 1 })),
                 }),
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Unbound { id: 8, level: 1 })),
+                    typ: Arc::new(RefCell::new(TypeVar::Unbound { id: 10, level: 1 })),
                 })
             ]),
         },
@@ -1404,7 +1417,7 @@ pub fn get_string(x: Box(String)) { x.inner }
             let x: Box(Int) = Box(value)
             x
         }
-        
+
         pub fn create_float_box(value: Float) {
             let x: Box(x) = Box(value)
             x

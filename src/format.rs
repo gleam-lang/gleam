@@ -402,9 +402,15 @@ impl<'a> Formatter<'a> {
         pattern: &UntypedPattern,
         value: &UntypedExpr,
         then: &UntypedExpr,
-        assert: bool,
+        kind: BindingKind,
     ) -> Document {
         self.pop_empty_lines(pattern.location().end);
+
+        let keyword = match kind {
+            BindingKind::Let => "let ",
+            BindingKind::Try => "try ",
+            BindingKind::Assert => "assert ",
+        };
 
         let line = if self.pop_empty_lines(then.start_byte_index()) {
             lines(2)
@@ -412,7 +418,7 @@ impl<'a> Formatter<'a> {
             line()
         };
         force_break()
-            .append(if assert { "assert " } else { "let " })
+            .append(keyword)
             .append(self.pattern(pattern))
             .append(" = ")
             .append(self.hanging_expr(value))
@@ -472,9 +478,9 @@ impl<'a> Formatter<'a> {
                 value,
                 pattern,
                 then,
-                assert,
+                kind,
                 ..
-            } => self.let_(pattern, value, then, *assert),
+            } => self.let_(pattern, value, then, *kind),
 
             UntypedExpr::Case {
                 subjects, clauses, ..

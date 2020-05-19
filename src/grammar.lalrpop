@@ -5,7 +5,7 @@ use std::str::FromStr;
 use crate::ast::{
     UntypedExpr, UntypedArg, Arg, UntypedModule, Module, UntypedStatement, Statement, TypeAst,
     UntypedPattern, BinOp, Clause, UntypedClause, RecordConstructor, Pattern, CallArg,
-    ExternalFnArg, ArgNames, UnqualifiedImport, UntypedClauseGuard, ClauseGuard,
+    ExternalFnArg, ArgNames, UnqualifiedImport, UntypedClauseGuard, ClauseGuard, BindingKind,
 };
 use crate::parser::*;
 
@@ -373,24 +373,21 @@ ClauseGuard5: UntypedClauseGuard = {
     "{" <ClauseGuard> "}" => <>,
 }
 
-Let: UntypedExpr = {
-    <s:@L> "let" <p:Pattern> <annotation:(":" <Type>)?> "=" <v:OpOrSimpleExpr> <e:@L> <t:Expr> => UntypedExpr::Let {
-        location: location(s, e),
-        value: Box::new(v),
-        pattern: p,
-        then: Box::new(t),
-        assert: false,
-        annotation,
-    },
+BindingKind: BindingKind = {
+    "let" => BindingKind::Let,
+    "try" => BindingKind::Try,
+    "assert" => BindingKind::Assert,
+}
 
-    <s:@L> "assert" <p:Pattern> <annotation:(":" <Type>)?> "=" <v:OpOrSimpleExpr> <e:@L> <t:Expr> => UntypedExpr::Let {
+Let: UntypedExpr = {
+    <s:@L> <kind:BindingKind> <p:Pattern> <annotation:(":" <Type>)?> "=" <v:OpOrSimpleExpr> <e:@L> <t:Expr> => UntypedExpr::Let {
         location: location(s, e),
         value: Box::new(v),
         pattern: p,
         then: Box::new(t),
-        assert: true,
         annotation,
-    }
+        kind,
+    },
 }
 
 FieldAccess: UntypedExpr = {

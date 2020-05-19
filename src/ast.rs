@@ -560,3 +560,10 @@ impl<A> Pattern<A> {
         }
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum BindingKind {
+    Let,
+    Assert,
+    Try,
+}
