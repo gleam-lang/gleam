@@ -151,7 +151,11 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
 
                     chomp_newlines(&mut buffer, start, &mut comments, &mut chars)
                 }
-                _ => buffer.push(' '),
+                grapheme => {
+                    for _ in 0..grapheme.len() {
+                        buffer.push(' ');
+                    }
+                }
             },
         }
     }
@@ -243,7 +247,7 @@ pub external fn a() -> Nil =
     // Testing comment collection
     assert_stripped!(
         "// 👨‍👩‍👧‍👧 unicode\n",
-        "            \n",
+        "                                    \n",
         ModuleComments {
             module_comments: vec![],
             doc_comments: vec![],
