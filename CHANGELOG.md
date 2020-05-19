@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.8.1 - 2020-05-19
+
+- The formatter now correctly handles unicode comments.
+
 ## v0.8.0 - 2020-05-07
 
 - The `docs build`, `docs publish`, and `docs remove` commands can be used to
