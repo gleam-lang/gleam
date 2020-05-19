@@ -216,9 +216,6 @@ impl<'a> Formatter<'a> {
     }
 
     fn documented_statement(&mut self, s: &UntypedStatement) -> Document {
-        dbg!(&self.doc_comments);
-        dbg!(s.location());
-
         let comments = self.doc_comments(s.location().start);
         comments.append(self.statement(s)).group()
     }
