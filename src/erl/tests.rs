@@ -1212,7 +1212,7 @@ x() ->
     'try':'and'().
 
 'catch'(X) ->
-    try:'and'().
+    'try':'and'().
 "#,
     );
 
