@@ -3,11 +3,11 @@ pub mod pretty;
 mod tests;
 
 use crate::ast::{
-    self, Arg, ArgNames, BinOp, CallArg, Clause, ClauseGuard, Pattern, RecordConstructor, SrcSpan,
-    Statement, TypeAst, TypedArg, TypedClause, TypedClauseGuard, TypedExpr, TypedModule,
-    TypedMultiPattern, TypedPattern, TypedStatement, UnqualifiedImport, UntypedArg, UntypedClause,
-    UntypedClauseGuard, UntypedExpr, UntypedModule, UntypedMultiPattern, UntypedPattern,
-    UntypedStatement,
+    self, Arg, ArgNames, BinOp, BindingKind, CallArg, Clause, ClauseGuard, Pattern,
+    RecordConstructor, SrcSpan, Statement, TypeAst, TypedArg, TypedClause, TypedClauseGuard,
+    TypedExpr, TypedModule, TypedMultiPattern, TypedPattern, TypedStatement, UnqualifiedImport,
+    UntypedArg, UntypedClause, UntypedClauseGuard, UntypedExpr, UntypedModule, UntypedMultiPattern,
+    UntypedPattern, UntypedStatement,
 };
 use crate::error::GleamExpect;
 use std::cell::RefCell;
@@ -1758,14 +1758,14 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             pattern,
             value,
             then,
-            assert,
+            kind,
             annotation,
             ..
         } => infer_let(
             pattern,
             *value,
             *then,
-            assert,
+            kind,
             &annotation,
             level,
             location,
@@ -2211,17 +2211,43 @@ fn infer_let(
     pattern: UntypedPattern,
     value: UntypedExpr,
     then: UntypedExpr,
-    assert: bool,
+    kind: BindingKind,
     annotation: &Option<TypeAst>,
     level: usize,
     location: SrcSpan,
     env: &mut Env,
 ) -> Result<TypedExpr, Error> {
     let value = infer(value, level + 1, env)?;
-    let value_typ = generalise(value.typ(), level + 1);
+    let try_value_type = env.new_unbound_var(level);
+    let try_error_type = env.new_unbound_var(level);
+
+    let value_typ = match kind {
+        // Ensure that the value is a result if this is a `try` binding
+        BindingKind::Try => {
+            let v = try_value_type.clone();
+            let e = try_error_type.clone();
+            unify(result(v, e), value.typ(), env)
+                .map_err(|e| convert_unify_error(e, value.location()))?;
+            try_value_type.clone()
+        }
+        _ => value.typ(),
+    };
+
+    let value_typ = generalise(value_typ, level + 1);
+
+    // Ensure the pattern matches the type of the value
     let pattern = PatternTyper::new(env, level).unify(pattern, value_typ.clone())?;
+
+    // Check the type of the following code
     let then = infer(then, level, env)?;
     let typ = then.typ();
+
+    // Ensure that a Result with the right error type is returned for `try`
+    if kind == BindingKind::Try {
+        let value = env.new_unbound_var(level);
+        unify(result(value, try_error_type), typ.clone(), env)
+            .map_err(|e| convert_unify_error(e, then.location()))?;
+    }
 
     // Check that any type annotation is accurate.
     if let Some(ann) = annotation {
@@ -2234,10 +2260,10 @@ fn infer_let(
     Ok(TypedExpr::Let {
         location,
         typ,
+        kind,
         pattern,
         value: Box::new(value),
         then: Box::new(then),
-        assert,
     })
 }
 

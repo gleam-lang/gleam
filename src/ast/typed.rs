@@ -82,7 +82,7 @@ pub enum TypedExpr {
         value: Box<Self>,
         pattern: Pattern<PatternConstructor>,
         then: Box<Self>,
-        assert: bool,
+        kind: BindingKind,
     },
 
     Case {

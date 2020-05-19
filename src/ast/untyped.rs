@@ -70,7 +70,7 @@ pub enum UntypedExpr {
         value: Box<Self>,
         pattern: Pattern<()>,
         then: Box<Self>,
-        assert: bool,
+        kind: BindingKind,
         annotation: Option<TypeAst>,
     },
 
