@@ -695,9 +695,7 @@ fn call(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env) -> Document
             if module.as_slice() == env.module {
                 atom(name.to_string()).append(call_args(args, env))
             } else {
-                module
-                    .join("@")
-                    .to_doc()
+                atom(module.join("@"))
                     .append(":")
                     .append(atom(name.to_string()))
                     .append(call_args(args, env))
@@ -709,9 +707,7 @@ fn call(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env) -> Document
             label,
             constructor: ModuleValueConstructor::Fn,
             ..
-        } => module_name
-            .join("@")
-            .to_doc()
+        } => atom(module_name.join("@"))
             .append(":")
             .append(atom(label.to_string()))
             .append(call_args(args, env)),
