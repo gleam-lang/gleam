@@ -1039,7 +1039,7 @@ fn infer_error_test() {
     assert_error!(
         "try x = Error(1) try y = Error(1.) Ok(x)",
         Error::CouldNotUnify {
-            location: SrcSpan { start: 35, end: 40 },
+            location: SrcSpan { start: 17, end: 34 },
             expected: result(
                 Arc::new(Type::Var {
                     typ: Arc::new(RefCell::new(TypeVar::Link {
@@ -1107,6 +1107,29 @@ fn infer_error_test() {
                 }),
             ),
             given: int(),
+        },
+    );
+
+    assert_error!(
+        "try y = Error(1) try z = Error(1.) Ok(1)",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 17, end: 34 },
+            expected: result(
+                Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() }))
+                }),
+                Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() })),
+                }),
+            ),
+            given: result(
+                Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() }))
+                }),
+                Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: float() })),
+                }),
+            ),
         },
     );
 }

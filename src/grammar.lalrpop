@@ -380,9 +380,9 @@ BindingKind: BindingKind = {
 }
 
 Let: UntypedExpr = {
-    <s:@L> <kind:BindingKind> <p:Pattern> <annotation:(":" <Type>)?> "=" <v:OpOrSimpleExpr> <e:@L> <t:Expr> => UntypedExpr::Let {
-        location: location(s, e),
-        value: Box::new(v),
+    <s:@L> <kind:BindingKind> <p:Pattern> <annotation:(":" <Type>)?> "=" <value:OpOrSimpleExpr> <t:Expr> => UntypedExpr::Let {
+        location: location(s, value.location().end),
+        value: Box::new(value),
         pattern: p,
         then: Box::new(t),
         annotation,

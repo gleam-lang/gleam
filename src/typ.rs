@@ -2246,7 +2246,7 @@ fn infer_let(
     if kind == BindingKind::Try {
         let value = env.new_unbound_var(level);
         unify(result(value, try_error_type), typ.clone(), env)
-            .map_err(|e| convert_unify_error(e, then.location()))?;
+            .map_err(|e| convert_unify_error(e, then.binding_location()))?;
     }
 
     // Check that any type annotation is accurate.
