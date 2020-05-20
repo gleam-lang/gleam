@@ -131,21 +131,44 @@ pub enum TypedExpr {
 impl TypedExpr {
     pub fn location(&self) -> &SrcSpan {
         match self {
+            Self::Let { then, .. } => then.location(),
+            Self::Seq { then, .. } => then.location(),
             Self::Fn { location, .. } => location,
             Self::Int { location, .. } => location,
-            Self::Seq { then, .. } => then.location(),
             Self::Var { location, .. } => location,
-            Self::ListNil { location, .. } => location,
-            Self::Let { then, .. } => then.location(),
             Self::Todo { location, .. } => location,
             Self::Case { location, .. } => location,
-            Self::ListCons { location, .. } => location,
             Self::Call { location, .. } => location,
             Self::Pipe { location, .. } => location,
             Self::Float { location, .. } => location,
             Self::BinOp { location, .. } => location,
             Self::Tuple { location, .. } => location,
             Self::String { location, .. } => location,
+            Self::ListNil { location, .. } => location,
+            Self::ListCons { location, .. } => location,
+            Self::TupleIndex { location, .. } => location,
+            Self::ModuleSelect { location, .. } => location,
+            Self::RecordAccess { location, .. } => location,
+        }
+    }
+
+    pub fn binding_location(&self) -> &SrcSpan {
+        match self {
+            Self::Seq { then, .. } => then.binding_location(),
+            Self::Fn { location, .. } => location,
+            Self::Int { location, .. } => location,
+            Self::Var { location, .. } => location,
+            Self::Let { location, .. } => location,
+            Self::Todo { location, .. } => location,
+            Self::Case { location, .. } => location,
+            Self::Call { location, .. } => location,
+            Self::Pipe { location, .. } => location,
+            Self::Float { location, .. } => location,
+            Self::BinOp { location, .. } => location,
+            Self::Tuple { location, .. } => location,
+            Self::String { location, .. } => location,
+            Self::ListNil { location, .. } => location,
+            Self::ListCons { location, .. } => location,
             Self::TupleIndex { location, .. } => location,
             Self::ModuleSelect { location, .. } => location,
             Self::RecordAccess { location, .. } => location,
