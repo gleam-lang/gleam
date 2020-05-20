@@ -2243,4 +2243,22 @@ main() ->
     (erlang:element(2, B))(5).
 "#,
     );
+
+    // Parentheses are added when calling functions returned by tuple access
+    assert_erl!(
+        r#"
+fn main() {
+    let t = tuple(fn(x) { x })
+
+    t.0(5)
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main() ->
+    T = {fun(X) -> X end},
+    (erlang:element(1, T))(5).
+"#,
+    );
 }
