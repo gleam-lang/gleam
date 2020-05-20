@@ -13,6 +13,8 @@
   from outside their own modules.
 - Additional (arbitrary) markdown documentation pages can now be added and
   built with `docs build`.
+- Fix code generation when calling functions returned through either record
+  or tuple access
 
 ## v0.8.1 - 2020-05-19
 
