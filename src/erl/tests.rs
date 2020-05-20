@@ -2223,4 +2223,24 @@ main() ->
     end.
 "#,
     );
+
+    // Parentheses are added when calling functions returned by record access
+    assert_erl!(
+        r#"
+type FnBox {
+  FnBox(f: fn(Int) -> Int)
+}
+fn main() {
+    let b = FnBox(f: fn(x) { x })
+    b.f(5)
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main() ->
+    B = {fn_box, fun(X) -> X end},
+    (erlang:element(2, B))(5).
+"#,
+    );
 }

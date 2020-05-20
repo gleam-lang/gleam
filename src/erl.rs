@@ -777,6 +777,10 @@ fn call(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env) -> Document
             .surround("(", ")")
             .append(call_args(args, env)),
 
+        TypedExpr::RecordAccess { .. } => expr(fun, env)
+            .surround("(", ")")
+            .append(call_args(args, env)),
+
         other => expr(other, env).append(call_args(args, env)),
     }
 }
