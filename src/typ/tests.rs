@@ -1035,6 +1035,80 @@ fn infer_error_test() {
             variables: env_vars_with(&["add"]),
         },
     );
+
+    assert_error!(
+        "try x = Error(1) try y = Error(1.) Ok(x)",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 35, end: 40 },
+            expected: result(
+                Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Link {
+                        typ: Arc::new(Type::Var {
+                            typ: Arc::new(RefCell::new(TypeVar::Unbound { id: 8, level: 1 }))
+                        })
+                    })),
+                }),
+                Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() })),
+                }),
+            ),
+            given: result(
+                Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Link {
+                        typ: Arc::new(Type::Var {
+                            typ: Arc::new(RefCell::new(TypeVar::Unbound { id: 8, level: 1 }))
+                        })
+                    })),
+                }),
+                Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: float() })),
+                }),
+            ),
+        },
+    );
+
+    assert_error!(
+        "try x = Error(1) Error(1.)",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 17, end: 26 },
+            expected: result(
+                Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Link {
+                        typ: Arc::new(Type::Var {
+                            typ: Arc::new(RefCell::new(TypeVar::Unbound { id: 12, level: 1 }))
+                        })
+                    })),
+                }),
+                Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() })),
+                }),
+            ),
+            given: result(
+                Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Unbound { id: 12, level: 1 }))
+                }),
+                Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: float() })),
+                }),
+            ),
+        },
+    );
+
+    assert_error!(
+        "try x = Error(1) 1",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 17, end: 18 },
+            expected: result(
+                Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Unbound { id: 11, level: 1 }))
+                }),
+                Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() })),
+                }),
+            ),
+            given: int(),
+        },
+    );
 }
 
 #[test]
