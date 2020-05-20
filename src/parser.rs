@@ -417,19 +417,6 @@ fn main() {
     );
 }
 
-pub fn seq(mut exprs: Vec<crate::ast::UntypedExpr>) -> crate::ast::UntypedExpr {
-    use crate::ast::*;
-
-    let head = exprs.pop().unwrap();
-    exprs
-        .into_iter()
-        .rev()
-        .fold(head, |acc, expr| UntypedExpr::Seq {
-            first: Box::new(expr),
-            then: Box::new(acc),
-        })
-}
-
 pub fn location(start: usize, end: usize) -> crate::ast::SrcSpan {
     crate::ast::SrcSpan { start, end }
 }

@@ -190,7 +190,7 @@ fn infer_test() {
         ($src:expr, $typ:expr $(,)?) => {
             println!("\n{}\n", $src);
             let mut printer = pretty::Printer::new();
-            let ast = crate::grammar::ExprParser::new()
+            let ast = crate::grammar::ExprSequenceParser::new()
                 .parse($src)
                 .expect("syntax error");
             let result = infer(ast, 1, &mut Env::new(&[], &HashMap::new()))
@@ -418,7 +418,7 @@ fn infer_test() {
 fn infer_error_test() {
     macro_rules! assert_error {
         ($src:expr, $error:expr $(,)?) => {
-            let ast = crate::grammar::ExprParser::new()
+            let ast = crate::grammar::ExprSequenceParser::new()
                 .parse($src)
                 .expect("syntax error");
             let result = infer(ast, 1, &mut Env::new(&[], &HashMap::new()))
@@ -1128,6 +1128,33 @@ fn infer_error_test() {
                 }),
                 Arc::new(Type::Var {
                     typ: Arc::new(RefCell::new(TypeVar::Link { typ: float() })),
+                }),
+            ),
+        },
+    );
+
+    assert_error!(
+        r#"try x = Error(1) Error("Not this one") Error("This one")"#,
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 39, end: 56 },
+            expected: result(
+                Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Link {
+                        typ: Arc::new(Type::Var {
+                            typ: Arc::new(RefCell::new(TypeVar::Unbound { id: 14, level: 1 }))
+                        })
+                    }))
+                }),
+                Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() })),
+                }),
+            ),
+            given: result(
+                Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Unbound { id: 14, level: 1 }))
+                }),
+                Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: string() })),
                 }),
             ),
         },

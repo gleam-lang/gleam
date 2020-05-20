@@ -152,13 +152,19 @@ impl TypedExpr {
         }
     }
 
-    pub fn binding_location(&self) -> &SrcSpan {
+    pub fn try_binding_location(&self) -> &SrcSpan {
         match self {
-            Self::Seq { then, .. } => then.binding_location(),
+            Self::Let {
+                kind: BindingKind::Try,
+                location,
+                ..
+            } => location,
+
+            Self::Let { then, .. } => then.try_binding_location(),
+            Self::Seq { then, .. } => then.try_binding_location(),
             Self::Fn { location, .. } => location,
             Self::Int { location, .. } => location,
             Self::Var { location, .. } => location,
-            Self::Let { location, .. } => location,
             Self::Todo { location, .. } => location,
             Self::Case { location, .. } => location,
             Self::Call { location, .. } => location,
