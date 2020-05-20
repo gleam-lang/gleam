@@ -97,13 +97,13 @@ ExternalFnArg: ExternalFnArg = {
 }
 
 StatementFn: UntypedStatement = {
-    <s:@L> <p:"pub"?> "fn" <n:VarName> "(" <a:Comma<FnArg>> ")" <return_annotation:("->" <Type>)?> <e:@L> "{" <b:Expr+> "}"  => Statement::Fn {
+    <s:@L> <p:"pub"?> "fn" <n:VarName> "(" <a:Comma<FnArg>> ")" <return_annotation:("->" <Type>)?> <e:@L> "{" <body:ExprSequence> "}"  => Statement::Fn {
         doc: None,
         location: location(s, e - 1),
         public: p.is_some(),
         name: n,
         args: a,
-        body: seq(b),
+        body,
         return_type: (),
         return_annotation,
     }
@@ -140,8 +140,25 @@ StatementExternalType: UntypedStatement = {
     }
 }
 
+pub ExprSequence: UntypedExpr = {
+    <s:@L> <kind:BindingKind> <p:Pattern> <annotation:(":" <Type>)?> "=" <value:OpOrSimpleExpr> <t:ExprSequence> => UntypedExpr::Let {
+        location: location(s, value.location().end),
+        value: Box::new(value),
+        pattern: p,
+        then: Box::new(t),
+        annotation,
+        kind,
+    },
+
+    <first:Expr> <then:ExprSequence> => UntypedExpr::Seq {
+        first: Box::new(first),
+        then: Box::new(then),
+    },
+
+    Expr => <>
+}
+
 pub Expr: UntypedExpr = {
-    Let => <>,
     OpOrSimpleExpr => <>,
 }
 
@@ -237,7 +254,7 @@ SimpleExpr: UntypedExpr = {
     Tuple => <>,
     String => <>,
     FieldAccess => <>,
-    "{" <e:Expr+> "}" => seq(e),
+    "{" <expr:ExprSequence> "}" => expr,
 }
 
 Case: UntypedExpr = {
@@ -379,17 +396,6 @@ BindingKind: BindingKind = {
     "assert" => BindingKind::Assert,
 }
 
-Let: UntypedExpr = {
-    <s:@L> <kind:BindingKind> <p:Pattern> <annotation:(":" <Type>)?> "=" <value:OpOrSimpleExpr> <t:Expr> => UntypedExpr::Let {
-        location: location(s, value.location().end),
-        value: Box::new(value),
-        pattern: p,
-        then: Box::new(t),
-        annotation,
-        kind,
-    },
-}
-
 FieldAccess: UntypedExpr = {
     <r:SimpleExpr> <s:@L> "." <label:AnyName> <e:@L> => UntypedExpr::FieldAccess {
         location: location(s, e),
@@ -405,11 +411,11 @@ FieldAccess: UntypedExpr = {
 }
 
 Fn: UntypedExpr = {
-    <s:@L> "fn(" <a:Comma<FnArg>> ")" <return_annotation:("->" <Type>)?> "{" <b:Expr+> "}" <e:@L> => UntypedExpr::Fn {
+    <s:@L> "fn(" <a:Comma<FnArg>> ")" <return_annotation:("->" <Type>)?> "{" <b:ExprSequence> "}" <e:@L> => UntypedExpr::Fn {
         location: location(s, e),
         is_capture: false,
         args: a,
-        body: Box::new(seq(b)),
+        body: Box::new(b),
         return_annotation,
     },
 }
