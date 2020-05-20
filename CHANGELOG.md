@@ -20,6 +20,8 @@
 
 ## v0.8.0 - 2020-05-07
 
+#### [Detailed Release Notes](https://lpil.uk/blog/gleam-v0.8-released/)
+
 - The `docs build`, `docs publish`, and `docs remove` commands can be used to
   compile HTML documentation locally, publish them to HexDocs, and remove them
   from HexDocs respectively.
@@ -76,6 +78,8 @@
 
 ## v0.7.0 - 2020-03-01
 
+#### [Detailed Release Notes](https://lpil.uk/blog/gleam-v0.7-released/)
+
 ## v0.7.0-rc1 - 2020-02-28
 
 - Type aliases can be defined to give concise names to frequently used types.
@@ -119,6 +123,8 @@
 
 ## v0.6.0 - 2019-12-25 🎄
 
+#### [Detailed Release Notes](https://lpil.uk/blog/gleam-v0.6-released/)
+
 - Function capture syntax now supports labelled arguments.
 
 ## v0.6.0-rc1 - 2019-12-23
@@ -138,6 +144,8 @@
   private function as a value.
 
 ## v0.5.0 - 2019-12-16
+
+#### [Detailed Release Notes](https://lpil.uk/blog/gleam-v0.5-released/)
 
 - Enum constructor arguments can now be labelled, allowing arguments to be
   given by name at the call site.
@@ -194,6 +202,8 @@
 
 ## v0.4.0 - 2019-09-19
 
+#### [Detailed Release Notes](https://lpil.uk/blog/gleam-v0.4-released/)
+
 - The struct data type has be introduced. Structs are pre-declared user
   defined data types with named fields and constant access time.
 - The map and tuple data types has been removed, replaced by the struct data
@@ -211,6 +221,8 @@
 - The `Nil` constructor will no longer erroneously be of type `Int`.
 
 ## v0.3.0 - 2019-08-08
+
+#### [Detailed Release Notes](https://lpil.uk/blog/gleam-v0.3-released/)
 
 - New project structure can be generated with the `gleam new` command.
 - Functions can be annotated with their argument and return types. This may be
@@ -263,5 +275,7 @@
   fail to type check when there is no error.
 
 ## v0.1.0 - 2019-04-15
+
+#### [Detailed Release Notes](https://lpil.uk/blog/hello-gleam/)
 
 - Initial release!
