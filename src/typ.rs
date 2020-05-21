@@ -781,6 +781,91 @@ impl<'a, 'b> Typer<'a, 'b> {
     pub fn insert_accessors(&mut self, type_name: &str, accessors: AccessorsMap) {
         self.accessors.insert(type_name.to_string(), accessors);
     }
+
+    fn make_type_vars(
+        &mut self,
+        args: &[String],
+        vars: &mut im::HashMap<String, (usize, Arc<Type>)>,
+        location: &SrcSpan,
+    ) -> Result<Vec<Arc<Type>>, Error> {
+        args.iter()
+            .map(|arg| TypeAst::Var {
+                location: location.clone(),
+                name: arg.to_string(),
+            })
+            .map(|ast| self.type_from_ast(&ast, vars, NewTypeAction::MakeGeneric))
+            .collect::<Result<_, _>>()
+    }
+
+    /// Iterate over a module, registering any new types created by the module into the typer
+    fn register_types(
+        &mut self,
+        statement: &UntypedStatement,
+        module: &[String],
+    ) -> Result<(), Error> {
+        match statement {
+            Statement::ExternalType {
+                name,
+                public,
+                args,
+                location,
+                ..
+            }
+            | Statement::CustomType {
+                name,
+                public,
+                args,
+                location,
+                ..
+            } => {
+                let mut type_vars = hashmap![];
+                let parameters = self.make_type_vars(args, &mut type_vars, location)?;
+                let typ = Arc::new(Type::App {
+                    public: *public,
+                    module: module.to_owned(),
+                    name: name.clone(),
+                    args: parameters.clone(),
+                });
+                self.insert_type_constructor(
+                    name.clone(),
+                    TypeConstructor {
+                        origin: location.clone(),
+                        module: module.to_owned(),
+                        public: *public,
+                        parameters,
+                        typ,
+                    },
+                )?;
+            }
+
+            Statement::TypeAlias {
+                location,
+                public,
+                args,
+                alias: name,
+                resolved_type,
+                ..
+            } => {
+                let mut type_vars = hashmap![];
+                let parameters = self.make_type_vars(args, &mut type_vars, location)?;
+                let typ =
+                    self.type_from_ast(&resolved_type, &mut type_vars, NewTypeAction::Disallow)?;
+                self.insert_type_constructor(
+                    name.clone(),
+                    TypeConstructor {
+                        origin: location.clone(),
+                        module: module.to_owned(),
+                        public: *public,
+                        parameters,
+                        typ,
+                    },
+                )?;
+            }
+
+            _ => {}
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1114,91 +1199,6 @@ fn convert_get_type_constructor_error(e: GetTypeConstructorError, location: &Src
     }
 }
 
-fn make_type_vars(
-    args: &[String],
-    vars: &mut im::HashMap<String, (usize, Arc<Type>)>,
-    location: &SrcSpan,
-    typer: &mut Typer,
-) -> Result<Vec<Arc<Type>>, Error> {
-    args.iter()
-        .map(|arg| TypeAst::Var {
-            location: location.clone(),
-            name: arg.to_string(),
-        })
-        .map(|ast| typer.type_from_ast(&ast, vars, NewTypeAction::MakeGeneric))
-        .collect::<Result<_, _>>()
-}
-
-/// Iterate over a module, registering any new types created by the module into the typer
-fn register_types(
-    statement: &UntypedStatement,
-    module: &[String],
-    typer: &mut Typer,
-) -> Result<(), Error> {
-    match statement {
-        Statement::ExternalType {
-            name,
-            public,
-            args,
-            location,
-            ..
-        }
-        | Statement::CustomType {
-            name,
-            public,
-            args,
-            location,
-            ..
-        } => {
-            let mut type_vars = hashmap![];
-            let parameters = make_type_vars(args, &mut type_vars, location, typer)?;
-            let typ = Arc::new(Type::App {
-                public: *public,
-                module: module.to_owned(),
-                name: name.clone(),
-                args: parameters.clone(),
-            });
-            typer.insert_type_constructor(
-                name.clone(),
-                TypeConstructor {
-                    origin: location.clone(),
-                    module: module.to_owned(),
-                    public: *public,
-                    parameters,
-                    typ,
-                },
-            )?;
-        }
-
-        Statement::TypeAlias {
-            location,
-            public,
-            args,
-            alias: name,
-            resolved_type,
-            ..
-        } => {
-            let mut type_vars = hashmap![];
-            let parameters = make_type_vars(args, &mut type_vars, location, typer)?;
-            let typ =
-                typer.type_from_ast(&resolved_type, &mut type_vars, NewTypeAction::Disallow)?;
-            typer.insert_type_constructor(
-                name.clone(),
-                TypeConstructor {
-                    origin: location.clone(),
-                    module: module.to_owned(),
-                    public: *public,
-                    parameters,
-                    typ,
-                },
-            )?;
-        }
-
-        _ => {}
-    }
-    Ok(())
-}
-
 /// Crawl the AST, annotating each node with the inferred type or
 /// returning an error.
 ///
@@ -1296,7 +1296,7 @@ pub fn infer_module(
     // Register types so they can be used in constructors and functions
     // earlier in the file
     for s in module.statements.iter() {
-        match register_types(s, module_name, &mut typer) {
+        match typer.register_types(s, module_name) {
             Ok(_) => (),
             Err(e) => return (Err(e), typer.warnings),
         }
