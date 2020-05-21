@@ -887,7 +887,7 @@ impl<'a, 'b> Typer<'a, 'b> {
         location: SrcSpan,
         level: usize,
     ) -> Result<TypedExpr, Error> {
-        let constructor = infer_value_constructor(&name, level, &location, self)?;
+        let constructor = self.infer_value_constructor(&name, level, &location)?;
         Ok(TypedExpr::Var {
             constructor,
             location,
@@ -1453,7 +1453,7 @@ impl<'a, 'b> Typer<'a, 'b> {
     ) -> Result<TypedClauseGuard, Error> {
         match guard {
             ClauseGuard::Var { location, name, .. } => {
-                let constructor = infer_value_constructor(&name, level, &location, self)?;
+                let constructor = self.infer_value_constructor(&name, level, &location)?;
 
                 // We cannot support all values in guard expressions as the BEAM does not
                 match &constructor.variant {
@@ -1840,6 +1840,34 @@ impl<'a, 'b> Typer<'a, 'b> {
             label,
             index,
             location,
+            typ,
+        })
+    }
+
+    fn infer_value_constructor(
+        &mut self,
+        name: &str,
+        level: usize,
+        location: &SrcSpan,
+    ) -> Result<ValueConstructor, Error> {
+        let ValueConstructor {
+            public,
+            variant,
+            origin,
+            typ,
+        } = self
+            .get_variable(name)
+            .cloned()
+            .ok_or_else(|| Error::UnknownVariable {
+                location: location.clone(),
+                name: name.to_string(),
+                variables: self.local_values.keys().map(|t| t.to_string()).collect(),
+            })?;
+        let typ = self.instantiate(typ, level, &mut hashmap![]);
+        Ok(ValueConstructor {
+            public,
+            variant,
+            origin,
             typ,
         })
     }
@@ -3229,34 +3257,6 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
             }
         }
     }
-}
-
-fn infer_value_constructor(
-    name: &str,
-    level: usize,
-    location: &SrcSpan,
-    typer: &mut Typer,
-) -> Result<ValueConstructor, Error> {
-    let ValueConstructor {
-        public,
-        variant,
-        origin,
-        typ,
-    } = typer
-        .get_variable(name)
-        .cloned()
-        .ok_or_else(|| Error::UnknownVariable {
-            location: location.clone(),
-            name: name.to_string(),
-            variables: typer.local_values.keys().map(|t| t.to_string()).collect(),
-        })?;
-    let typ = typer.instantiate(typ, level, &mut hashmap![]);
-    Ok(ValueConstructor {
-        public,
-        variant,
-        origin,
-        typ,
-    })
 }
 
 pub type TypedCallArg = CallArg<TypedExpr>;
