@@ -834,16 +834,7 @@ impl<'a, 'b> Typer<'a, 'b> {
                 kind,
                 annotation,
                 ..
-            } => infer_let(
-                pattern,
-                *value,
-                *then,
-                kind,
-                &annotation,
-                level,
-                location,
-                self,
-            ),
+            } => self.infer_let(pattern, *value, *then, kind, &annotation, level, location),
 
             UntypedExpr::Case {
                 location,
@@ -1286,6 +1277,67 @@ impl<'a, 'b> Typer<'a, 'b> {
             typ: output_type,
             left: Box::new(left),
             right: Box::new(right),
+        })
+    }
+
+    fn infer_let(
+        &mut self,
+        pattern: UntypedPattern,
+        value: UntypedExpr,
+        then: UntypedExpr,
+        kind: BindingKind,
+        annotation: &Option<TypeAst>,
+        level: usize,
+        location: SrcSpan,
+    ) -> Result<TypedExpr, Error> {
+        let value = self.infer(value, level + 1)?;
+        let try_value_type = self.new_unbound_var(level);
+        let try_error_type = self.new_unbound_var(level);
+
+        let value_typ = match kind {
+            // Ensure that the value is a result if this is a `try` binding
+            BindingKind::Try => {
+                let v = try_value_type.clone();
+                let e = try_error_type.clone();
+                unify(result(v, e), value.typ(), self)
+                    .map_err(|e| convert_unify_error(e, value.location()))?;
+                try_value_type.clone()
+            }
+            _ => value.typ(),
+        };
+
+        let value_typ = generalise(value_typ, level + 1);
+
+        // Ensure the pattern matches the type of the value
+        let pattern = PatternTyper::new(self, level).unify(pattern, value_typ.clone())?;
+
+        // Check the type of the following code
+        let then = self.infer(then, level)?;
+        let typ = then.typ();
+
+        // Ensure that a Result with the right error type is returned for `try`
+        if kind == BindingKind::Try {
+            let value = self.new_unbound_var(level);
+            unify(result(value, try_error_type), typ.clone(), self)
+                .map_err(|e| convert_unify_error(e, then.try_binding_location()))?;
+        }
+
+        // Check that any type annotation is accurate.
+        if let Some(ann) = annotation {
+            let ann_typ = self
+                .type_from_ast(ann, &mut hashmap![], NewTypeAction::MakeGeneric)
+                .map(|t| self.instantiate(t, level, &mut hashmap![]))?;
+            unify(ann_typ, value_typ, self)
+                .map_err(|e| convert_unify_error(e, value.location()))?;
+        }
+
+        Ok(TypedExpr::Let {
+            location,
+            typ,
+            kind,
+            pattern,
+            value: Box::new(value),
+            then: Box::new(then),
         })
     }
 
@@ -2323,66 +2375,6 @@ pub fn infer_module(
         }),
         warnings,
     )
-}
-
-fn infer_let(
-    pattern: UntypedPattern,
-    value: UntypedExpr,
-    then: UntypedExpr,
-    kind: BindingKind,
-    annotation: &Option<TypeAst>,
-    level: usize,
-    location: SrcSpan,
-    typer: &mut Typer,
-) -> Result<TypedExpr, Error> {
-    let value = typer.infer(value, level + 1)?;
-    let try_value_type = typer.new_unbound_var(level);
-    let try_error_type = typer.new_unbound_var(level);
-
-    let value_typ = match kind {
-        // Ensure that the value is a result if this is a `try` binding
-        BindingKind::Try => {
-            let v = try_value_type.clone();
-            let e = try_error_type.clone();
-            unify(result(v, e), value.typ(), typer)
-                .map_err(|e| convert_unify_error(e, value.location()))?;
-            try_value_type.clone()
-        }
-        _ => value.typ(),
-    };
-
-    let value_typ = generalise(value_typ, level + 1);
-
-    // Ensure the pattern matches the type of the value
-    let pattern = PatternTyper::new(typer, level).unify(pattern, value_typ.clone())?;
-
-    // Check the type of the following code
-    let then = typer.infer(then, level)?;
-    let typ = then.typ();
-
-    // Ensure that a Result with the right error type is returned for `try`
-    if kind == BindingKind::Try {
-        let value = typer.new_unbound_var(level);
-        unify(result(value, try_error_type), typ.clone(), typer)
-            .map_err(|e| convert_unify_error(e, then.try_binding_location()))?;
-    }
-
-    // Check that any type annotation is accurate.
-    if let Some(ann) = annotation {
-        let ann_typ = typer
-            .type_from_ast(ann, &mut hashmap![], NewTypeAction::MakeGeneric)
-            .map(|t| typer.instantiate(t, level, &mut hashmap![]))?;
-        unify(ann_typ, value_typ, typer).map_err(|e| convert_unify_error(e, value.location()))?;
-    }
-
-    Ok(TypedExpr::Let {
-        location,
-        typ,
-        kind,
-        pattern,
-        value: Box::new(value),
-        then: Box::new(then),
-    })
 }
 
 fn infer_case(
