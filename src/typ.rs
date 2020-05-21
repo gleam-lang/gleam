@@ -873,7 +873,7 @@ impl<'a, 'b> Typer<'a, 'b> {
                 left,
                 right,
                 ..
-            } => infer_binop(name, *left, *right, level, location, self),
+            } => self.infer_binop(name, *left, *right, level, location),
 
             UntypedExpr::FieldAccess {
                 location,
@@ -1227,6 +1227,66 @@ impl<'a, 'b> Typer<'a, 'b> {
                 given: tuple.typ(),
             }),
         }
+    }
+
+    fn infer_binop(
+        &mut self,
+        name: BinOp,
+        left: UntypedExpr,
+        right: UntypedExpr,
+        level: usize,
+        location: SrcSpan,
+    ) -> Result<TypedExpr, Error> {
+        let (input_type, output_type) = match name {
+            BinOp::Eq | BinOp::NotEq => {
+                let left = self.infer(left, level)?;
+                let right = self.infer(right, level)?;
+                unify(left.typ(), right.typ(), self)
+                    .map_err(|e| convert_unify_error(e, right.location()))?;
+
+                return Ok(TypedExpr::BinOp {
+                    location,
+                    name,
+                    typ: bool(),
+                    left: Box::new(left),
+                    right: Box::new(right),
+                });
+            }
+            BinOp::And => (bool(), bool()),
+            BinOp::Or => (bool(), bool()),
+            BinOp::LtInt => (int(), bool()),
+            BinOp::LtEqInt => (int(), bool()),
+            BinOp::LtFloat => (float(), bool()),
+            BinOp::LtEqFloat => (float(), bool()),
+            BinOp::GtEqInt => (int(), bool()),
+            BinOp::GtInt => (int(), bool()),
+            BinOp::GtEqFloat => (float(), bool()),
+            BinOp::GtFloat => (float(), bool()),
+            BinOp::AddInt => (int(), int()),
+            BinOp::AddFloat => (float(), float()),
+            BinOp::SubInt => (int(), int()),
+            BinOp::SubFloat => (float(), float()),
+            BinOp::MultInt => (int(), int()),
+            BinOp::MultFloat => (float(), float()),
+            BinOp::DivInt => (int(), int()),
+            BinOp::DivFloat => (float(), float()),
+            BinOp::ModuloInt => (int(), int()),
+        };
+
+        let left = self.infer(left, level)?;
+        unify(input_type.clone(), left.typ(), self)
+            .map_err(|e| convert_unify_error(e, left.location()))?;
+        let right = self.infer(right, level)?;
+        unify(input_type, right.typ(), self)
+            .map_err(|e| convert_unify_error(e, right.location()))?;
+
+        Ok(TypedExpr::BinOp {
+            location,
+            name,
+            typ: output_type,
+            left: Box::new(left),
+            right: Box::new(right),
+        })
     }
 
     fn make_type_vars(
@@ -2263,65 +2323,6 @@ pub fn infer_module(
         }),
         warnings,
     )
-}
-
-fn infer_binop(
-    name: BinOp,
-    left: UntypedExpr,
-    right: UntypedExpr,
-    level: usize,
-    location: SrcSpan,
-    typer: &mut Typer,
-) -> Result<TypedExpr, Error> {
-    let (input_type, output_type) = match name {
-        BinOp::Eq | BinOp::NotEq => {
-            let left = typer.infer(left, level)?;
-            let right = typer.infer(right, level)?;
-            unify(left.typ(), right.typ(), typer)
-                .map_err(|e| convert_unify_error(e, right.location()))?;
-
-            return Ok(TypedExpr::BinOp {
-                location,
-                name,
-                typ: bool(),
-                left: Box::new(left),
-                right: Box::new(right),
-            });
-        }
-        BinOp::And => (bool(), bool()),
-        BinOp::Or => (bool(), bool()),
-        BinOp::LtInt => (int(), bool()),
-        BinOp::LtEqInt => (int(), bool()),
-        BinOp::LtFloat => (float(), bool()),
-        BinOp::LtEqFloat => (float(), bool()),
-        BinOp::GtEqInt => (int(), bool()),
-        BinOp::GtInt => (int(), bool()),
-        BinOp::GtEqFloat => (float(), bool()),
-        BinOp::GtFloat => (float(), bool()),
-        BinOp::AddInt => (int(), int()),
-        BinOp::AddFloat => (float(), float()),
-        BinOp::SubInt => (int(), int()),
-        BinOp::SubFloat => (float(), float()),
-        BinOp::MultInt => (int(), int()),
-        BinOp::MultFloat => (float(), float()),
-        BinOp::DivInt => (int(), int()),
-        BinOp::DivFloat => (float(), float()),
-        BinOp::ModuloInt => (int(), int()),
-    };
-
-    let left = typer.infer(left, level)?;
-    unify(input_type.clone(), left.typ(), typer)
-        .map_err(|e| convert_unify_error(e, left.location()))?;
-    let right = typer.infer(right, level)?;
-    unify(input_type, right.typ(), typer).map_err(|e| convert_unify_error(e, right.location()))?;
-
-    Ok(TypedExpr::BinOp {
-        location,
-        name,
-        typ: output_type,
-        left: Box::new(left),
-        right: Box::new(right),
-    })
 }
 
 fn infer_let(
