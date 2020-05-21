@@ -824,15 +824,7 @@ impl<'a, 'b> Typer<'a, 'b> {
                 body,
                 return_annotation,
                 ..
-            } => infer_fn(
-                args,
-                *body,
-                is_capture,
-                return_annotation,
-                level,
-                location,
-                self,
-            ),
+            } => self.infer_fn(args, *body, is_capture, return_annotation, level, location),
 
             UntypedExpr::Let {
                 location,
@@ -1075,6 +1067,28 @@ impl<'a, 'b> Typer<'a, 'b> {
             typ: then.typ(),
             first: Box::new(first),
             then: Box::new(then),
+        })
+    }
+
+    fn infer_fn(
+        &mut self,
+        args: Vec<UntypedArg>,
+        body: UntypedExpr,
+        is_capture: bool,
+        return_annotation: Option<TypeAst>,
+        level: usize,
+        location: SrcSpan,
+    ) -> Result<TypedExpr, Error> {
+        let (args, body) = do_infer_fn(args, body, &return_annotation, level, self)?;
+        let args_types = args.iter().map(|a| a.typ.clone()).collect();
+        let typ = fn_(args_types, body.typ());
+        Ok(TypedExpr::Fn {
+            location,
+            typ,
+            is_capture,
+            args,
+            body: Box::new(body),
+            return_annotation,
         })
     }
 
@@ -2112,28 +2126,6 @@ pub fn infer_module(
         }),
         warnings,
     )
-}
-
-fn infer_fn(
-    args: Vec<UntypedArg>,
-    body: UntypedExpr,
-    is_capture: bool,
-    return_annotation: Option<TypeAst>,
-    level: usize,
-    location: SrcSpan,
-    typer: &mut Typer,
-) -> Result<TypedExpr, Error> {
-    let (args, body) = do_infer_fn(args, body, &return_annotation, level, typer)?;
-    let args_types = args.iter().map(|a| a.typ.clone()).collect();
-    let typ = fn_(args_types, body.typ());
-    Ok(TypedExpr::Fn {
-        location,
-        typ,
-        is_capture,
-        args,
-        body: Box::new(body),
-        return_annotation,
-    })
 }
 
 fn infer_call(
