@@ -866,6 +866,33 @@ impl<'a, 'b> Typer<'a, 'b> {
         }
         Ok(())
     }
+
+    fn custom_type_accessors(
+        &mut self,
+        constructors: &[RecordConstructor],
+        type_vars: &mut im::HashMap<String, (usize, Arc<Type>)>,
+    ) -> Result<Option<HashMap<String, RecordAccessor>>, Error> {
+        let args = match constructors {
+            [constructor] if !constructor.args.is_empty() => &constructor.args,
+            _ => return Ok(None),
+        };
+
+        let mut fields = HashMap::with_capacity(args.len());
+        for (index, (label, arg, ..)) in args.iter().enumerate() {
+            if let Some(label) = label {
+                let typ = self.type_from_ast(arg, type_vars, NewTypeAction::Disallow)?;
+                fields.insert(
+                    label.to_string(),
+                    RecordAccessor {
+                        index: index as u64,
+                        label: label.to_string(),
+                        typ,
+                    },
+                );
+            }
+        }
+        Ok(Some(fields))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1531,7 +1558,7 @@ pub fn infer_module(
                 // If the custom type only has a single constructor then we can access the
                 // fields using the record.field syntax, so store any fields accessors.
                 if let Some(accessors) =
-                    custom_type_accessors(constructors.as_slice(), &mut type_vars, &mut typer)?
+                    typer.custom_type_accessors(constructors.as_slice(), &mut type_vars)?
                 {
                     let map = AccessorsMap {
                         public: (public && !opaque),
@@ -1686,33 +1713,6 @@ pub fn infer_module(
         }),
         warnings,
     )
-}
-
-fn custom_type_accessors(
-    constructors: &[RecordConstructor],
-    type_vars: &mut im::HashMap<String, (usize, Arc<Type>)>,
-    typer: &mut Typer,
-) -> Result<Option<HashMap<String, RecordAccessor>>, Error> {
-    let args = match constructors {
-        [constructor] if !constructor.args.is_empty() => &constructor.args,
-        _ => return Ok(None),
-    };
-
-    let mut fields = HashMap::with_capacity(args.len());
-    for (index, (label, arg, ..)) in args.iter().enumerate() {
-        if let Some(label) = label {
-            let typ = typer.type_from_ast(arg, type_vars, NewTypeAction::Disallow)?;
-            fields.insert(
-                label.to_string(),
-                RecordAccessor {
-                    index: index as u64,
-                    label: label.to_string(),
-                    typ,
-                },
-            );
-        }
-    }
-    Ok(Some(fields))
 }
 
 /// Crawl the AST, annotating each node with the inferred type or
