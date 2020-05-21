@@ -805,7 +805,7 @@ impl<'a, 'b> Typer<'a, 'b> {
 
             UntypedExpr::Float {
                 location, value, ..
-            } => infer_float(value, location),
+            } => self.infer_float(value, location),
 
             UntypedExpr::String {
                 location, value, ..
@@ -1041,6 +1041,14 @@ impl<'a, 'b> Typer<'a, 'b> {
             location,
             value,
             typ: int(),
+        })
+    }
+
+    fn infer_float(&mut self, value: String, location: SrcSpan) -> Result<TypedExpr, Error> {
+        Ok(TypedExpr::Float {
+            location,
+            value,
+            typ: float(),
         })
     }
 
@@ -2078,14 +2086,6 @@ pub fn infer_module(
         }),
         warnings,
     )
-}
-
-fn infer_float(value: String, location: SrcSpan) -> Result<TypedExpr, Error> {
-    Ok(TypedExpr::Float {
-        location,
-        value,
-        typ: float(),
-    })
 }
 
 fn infer_seq(
