@@ -904,17 +904,10 @@ impl<'a, 'b> Typer<'a, 'b> {
     ) -> Result<TypedExpr, Error> {
         match container {
             UntypedExpr::Var { name, location, .. } if !self.local_values.contains_key(&name) => {
-                infer_module_access(
-                    name.as_ref(),
-                    label,
-                    level,
-                    &location,
-                    access_location,
-                    self,
-                )
+                self.infer_module_access(name.as_ref(), label, level, &location, access_location)
             }
 
-            _ => infer_record_access(container, label, level, access_location, self),
+            _ => self.infer_record_access(container, label, level, access_location),
         }
     }
 
@@ -1727,6 +1720,128 @@ impl<'a, 'b> Typer<'a, 'b> {
                 location, value, ..
             } => Ok(ClauseGuard::Float { location, value }),
         }
+    }
+
+    fn infer_module_access(
+        &mut self,
+        module_alias: &str,
+        label: String,
+        level: usize,
+        module_location: &SrcSpan,
+        select_location: SrcSpan,
+    ) -> Result<TypedExpr, Error> {
+        let (module_name, constructor) = {
+            let module_info =
+                self.imported_modules
+                    .get(&*module_alias)
+                    .ok_or_else(|| Error::UnknownModule {
+                        name: module_alias.to_string(),
+                        location: module_location.clone(),
+                        imported_modules: self
+                            .imported_modules
+                            .keys()
+                            .map(|t| t.to_string())
+                            .collect(),
+                    })?;
+
+            let constructor =
+                module_info
+                    .values
+                    .get(&label)
+                    .ok_or_else(|| Error::UnknownModuleValue {
+                        name: label.clone(),
+                        location: select_location.clone(),
+                        module_name: module_info.name.clone(),
+                        value_constructors: module_info
+                            .values
+                            .keys()
+                            .map(|t| t.to_string())
+                            .collect(),
+                    })?;
+
+            (module_info.name.clone(), constructor.clone())
+        };
+
+        Ok(TypedExpr::ModuleSelect {
+            label,
+            typ: self.instantiate(constructor.typ, level, &mut hashmap![]),
+            location: select_location,
+            module_name,
+            module_alias: module_alias.to_string(),
+            constructor: constructor.variant.to_module_value_constructor(),
+        })
+    }
+
+    fn infer_record_access(
+        &mut self,
+        record: UntypedExpr,
+        label: String,
+        level: usize,
+        location: SrcSpan,
+    ) -> Result<TypedExpr, Error> {
+        // Infer the type of the (presumed) record
+        let record = Box::new(self.infer(record, level)?);
+
+        // If we don't yet know the type of the record then we cannot use any accessors
+        if record.typ().is_unbound() {
+            return Err(Error::RecordAccessUnknownType {
+                location: record.location().clone(),
+            });
+        }
+
+        // Error constructor helper function
+        let unknown_field = |fields| Error::UnknownField {
+            typ: record.typ(),
+            location: location.clone(),
+            label: label.clone(),
+            fields,
+        };
+
+        // Check to see if it's a Type that can have accessible fields
+        let accessors = match collapse_links(record.typ()).as_ref() {
+            // A type in the current module which may have fields
+            Type::App { module, name, .. } if module.as_slice() == self.current_module => {
+                self.accessors.get(name)
+            }
+
+            // A type in another module which may have fields
+            Type::App { module, name, .. } => self
+                .importable_modules
+                .get(&module.join("/"))
+                .and_then(|module| module.accessors.get(name)),
+
+            _something_without_fields => return Err(unknown_field(vec![])),
+        }
+        .ok_or_else(|| unknown_field(vec![]))?;
+
+        // Find the accessor, if the type has one with the same label
+        let RecordAccessor {
+            index, label, typ, ..
+        } = accessors
+            .accessors
+            .get(&label)
+            .ok_or_else(|| {
+                unknown_field(accessors.accessors.keys().map(|t| t.to_string()).collect())
+            })?
+            .clone();
+
+        // Unify the record type with the accessor's stored copy of the record type.
+        // This ensure that the type parameters of the retrieved value have the correct
+        // types for this instance of the record.
+        let accessor_record_type = accessors.typ.clone();
+        let mut type_vars = hashmap![];
+        let accessor_record_type = self.instantiate(accessor_record_type, 0, &mut type_vars);
+        let typ = self.instantiate(typ, 0, &mut type_vars);
+        unify(accessor_record_type, record.typ(), self)
+            .map_err(|e| convert_unify_error(e, record.location()))?;
+
+        Ok(TypedExpr::RecordAccess {
+            record,
+            label,
+            index,
+            location,
+            typ,
+        })
     }
 
     fn make_type_vars(
@@ -2763,123 +2878,6 @@ pub fn infer_module(
         }),
         warnings,
     )
-}
-
-fn infer_module_access(
-    module_alias: &str,
-    label: String,
-    level: usize,
-    module_location: &SrcSpan,
-    select_location: SrcSpan,
-    typer: &mut Typer,
-) -> Result<TypedExpr, Error> {
-    let (module_name, constructor) = {
-        let module_info =
-            typer
-                .imported_modules
-                .get(&*module_alias)
-                .ok_or_else(|| Error::UnknownModule {
-                    name: module_alias.to_string(),
-                    location: module_location.clone(),
-                    imported_modules: typer
-                        .imported_modules
-                        .keys()
-                        .map(|t| t.to_string())
-                        .collect(),
-                })?;
-
-        let constructor =
-            module_info
-                .values
-                .get(&label)
-                .ok_or_else(|| Error::UnknownModuleValue {
-                    name: label.clone(),
-                    location: select_location.clone(),
-                    module_name: module_info.name.clone(),
-                    value_constructors: module_info.values.keys().map(|t| t.to_string()).collect(),
-                })?;
-
-        (module_info.name.clone(), constructor.clone())
-    };
-
-    Ok(TypedExpr::ModuleSelect {
-        label,
-        typ: typer.instantiate(constructor.typ, level, &mut hashmap![]),
-        location: select_location,
-        module_name,
-        module_alias: module_alias.to_string(),
-        constructor: constructor.variant.to_module_value_constructor(),
-    })
-}
-
-fn infer_record_access(
-    record: UntypedExpr,
-    label: String,
-    level: usize,
-    location: SrcSpan,
-    typer: &mut Typer,
-) -> Result<TypedExpr, Error> {
-    // Infer the type of the (presumed) record
-    let record = Box::new(typer.infer(record, level)?);
-
-    // If we don't yet know the type of the record then we cannot use any accessors
-    if record.typ().is_unbound() {
-        return Err(Error::RecordAccessUnknownType {
-            location: record.location().clone(),
-        });
-    }
-
-    // Error constructor helper function
-    let unknown_field = |fields| Error::UnknownField {
-        typ: record.typ(),
-        location: location.clone(),
-        label: label.clone(),
-        fields,
-    };
-
-    // Check to see if it's a Type that can have accessible fields
-    let accessors = match collapse_links(record.typ()).as_ref() {
-        // A type in the current module which may have fields
-        Type::App { module, name, .. } if module.as_slice() == typer.current_module => {
-            typer.accessors.get(name)
-        }
-
-        // A type in another module which may have fields
-        Type::App { module, name, .. } => typer
-            .importable_modules
-            .get(&module.join("/"))
-            .and_then(|module| module.accessors.get(name)),
-
-        _something_without_fields => return Err(unknown_field(vec![])),
-    }
-    .ok_or_else(|| unknown_field(vec![]))?;
-
-    // Find the accessor, if the type has one with the same label
-    let RecordAccessor {
-        index, label, typ, ..
-    } = accessors
-        .accessors
-        .get(&label)
-        .ok_or_else(|| unknown_field(accessors.accessors.keys().map(|t| t.to_string()).collect()))?
-        .clone();
-
-    // Unify the record type with the accessor's stored copy of the record type.
-    // This ensure that the type parameters of the retrieved value have the correct
-    // types for this instance of the record.
-    let accessor_record_type = accessors.typ.clone();
-    let mut type_vars = hashmap![];
-    let accessor_record_type = typer.instantiate(accessor_record_type, 0, &mut type_vars);
-    let typ = typer.instantiate(typ, 0, &mut type_vars);
-    unify(accessor_record_type, record.typ(), typer)
-        .map_err(|e| convert_unify_error(e, record.location()))?;
-
-    Ok(TypedExpr::RecordAccess {
-        record,
-        label,
-        index,
-        location,
-        typ,
-    })
 }
 
 struct PatternTyper<'a, 'b, 'c> {
