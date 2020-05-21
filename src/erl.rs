@@ -630,6 +630,17 @@ fn bare_clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
             tuple(elems.into_iter().map(|e| bare_clause_guard(e, env)))
         }
 
+        ClauseGuard::Constructor { name, args, .. } => {
+            if args.is_empty() {
+                atom(name.to_snake_case())
+            } else {
+                tuple(
+                    std::iter::once(atom(name.to_snake_case()))
+                        .chain(args.into_iter().map(|a| bare_clause_guard(&a.value, env))),
+                )
+            }
+        }
+
         // Only local variables are supported and the typer ensures that all
         // ClauseGuard::Vars are local variables
         ClauseGuard::Var { name, .. } => env.local_var_name(name.to_string()),
@@ -659,7 +670,8 @@ fn clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
         ClauseGuard::Var { .. }
         | ClauseGuard::Int { .. }
         | ClauseGuard::Float { .. }
-        | ClauseGuard::Tuple { .. } => bare_clause_guard(guard, env),
+        | ClauseGuard::Tuple { .. }
+        | ClauseGuard::Constructor { .. } => bare_clause_guard(guard, env),
     }
 }
 

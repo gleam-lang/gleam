@@ -18,6 +18,7 @@
 - Add lookup for Gleam source code in Mix's `deps` directory.
 - Newly generated Gleam projects use the GitHub action
   `gleam-lang/setup-erlang` v1.1.0.
+- Added support for custom type record literals in guards.
 
 ## v0.8.1 - 2020-05-19
 

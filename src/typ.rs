@@ -2427,6 +2427,74 @@ fn infer_clause_guard(
             })
         }
 
+        ClauseGuard::Constructor {
+            module,
+            location,
+            name,
+            mut args,
+            ..
+        } => {
+            let constructor = infer_value_constructor(&name, level, &location, env)?;
+
+            match &constructor.variant {
+                ValueConstructorVariant::Record { .. } => (),
+                ValueConstructorVariant::ModuleFn { .. }
+                | ValueConstructorVariant::LocalVariable => {
+                    return Err(Error::NonLocalClauseGuardVariable { location, name })
+                }
+            };
+
+            let fun = TypedExpr::Var {
+                constructor,
+                location: location.clone(),
+                name: name.clone(),
+            };
+
+            match get_field_map(&fun, env)
+                .map_err(|e| convert_get_value_constructor_error(e, &location))?
+            {
+                // The fun has a field map so labelled arguments may be present and need to be reordered.
+                Some(field_map) => field_map.reorder(&mut args, &location)?,
+
+                // The fun has no field map and so we error if arguments have been labelled
+                None => assert_no_labelled_arguments(&args)?,
+            }
+
+            let (mut args_types, return_type) = match_fun_type(fun.typ(), args.len(), env)
+                .map_err(|e| convert_not_fun_error(e, fun.location(), &location))?;
+            let args = args_types
+                .iter_mut()
+                .zip(args)
+                .map(
+                    |(
+                        typ,
+                        CallArg {
+                            label,
+                            value,
+                            location,
+                        },
+                    ): (&mut Arc<Type>, _)| {
+                        let value = infer_clause_guard(value, level, env)?;
+                        unify(typ.clone(), value.typ(), env)
+                            .map_err(|e| convert_unify_error(e, value.location()))?;
+                        Ok(CallArg {
+                            label,
+                            value,
+                            location,
+                        })
+                    },
+                )
+                .collect::<Result<_, _>>()?;
+
+            Ok(ClauseGuard::Constructor {
+                module,
+                location,
+                name,
+                args,
+                typ: return_type,
+            })
+        }
+
         ClauseGuard::And {
             location,
             left,
