@@ -865,7 +865,7 @@ impl<'a, 'b> Typer<'a, 'b> {
                 fun,
                 args,
                 ..
-            } => infer_call(*fun, args, level, location, self),
+            } => self.infer_call(*fun, args, level, location),
 
             UntypedExpr::BinOp {
                 location,
@@ -1089,6 +1089,22 @@ impl<'a, 'b> Typer<'a, 'b> {
             args,
             body: Box::new(body),
             return_annotation,
+        })
+    }
+
+    fn infer_call(
+        &mut self,
+        fun: UntypedExpr,
+        args: Vec<CallArg<UntypedExpr>>,
+        level: usize,
+        location: SrcSpan,
+    ) -> Result<TypedExpr, Error> {
+        let (fun, args, typ) = do_infer_call(fun, args, level, &location, self)?;
+        Ok(TypedExpr::Call {
+            location,
+            typ,
+            args,
+            fun: Box::new(fun),
         })
     }
 
@@ -2126,22 +2142,6 @@ pub fn infer_module(
         }),
         warnings,
     )
-}
-
-fn infer_call(
-    fun: UntypedExpr,
-    args: Vec<CallArg<UntypedExpr>>,
-    level: usize,
-    location: SrcSpan,
-    typer: &mut Typer,
-) -> Result<TypedExpr, Error> {
-    let (fun, args, typ) = do_infer_call(fun, args, level, &location, typer)?;
-    Ok(TypedExpr::Call {
-        location,
-        typ,
-        args,
-        fun: Box::new(fun),
-    })
 }
 
 fn infer_cons(
