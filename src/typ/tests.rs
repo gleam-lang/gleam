@@ -2109,6 +2109,48 @@ fn main() {
         },
     );
 
+    // Constructor in guard clause errors
+
+    assert_error!(
+        r#"type X { X(a: Int, b: Float) }
+                    fn x() {
+                        case X(1, 2.0) { x if x == X(1) -> 1 }
+                    }"#,
+        Error::IncorrectArity {
+            location: SrcSpan {
+                start: 111,
+                end: 115
+            },
+            expected: 2,
+            given: 1,
+        },
+    );
+
+    assert_error!(
+        r#"type X { X(a: Int, b: Float) }
+                    fn x() {
+                        case X(1, 2.0) { x if x == X(2.0, 1) -> 1 }
+                    }"#,
+        Error::CouldNotUnify {
+            location: SrcSpan {
+                start: 113,
+                end: 116
+            },
+            expected: Arc::new(Type::App {
+                public: true,
+                module: vec![],
+                name: "Int".to_string(),
+                args: vec![],
+            }),
+            given: Arc::new(Type::App {
+                public: true,
+                module: vec![],
+                name: "Float".to_string(),
+                args: vec![],
+            }),
+        },
+    );
+
     // Cases were we can't so easily check for equality-
     // i.e. because the contents of the error are non-deterministic.
     assert_error!("fn inc(x: a) { x + 1 }");

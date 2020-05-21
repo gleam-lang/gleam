@@ -387,7 +387,30 @@ ClauseGuard5: UntypedClauseGuard = {
         typ: (),
         elems,
     },
+    <s:@L> <module:(<VarName> ".")?> <name:UpName> <args:ClauseGuardConstructorArgs?> <e:@L> => {
+        let args = args.unwrap_or_else(|| vec![]);
+
+        ClauseGuard::Constructor {
+            location: location(s, e),
+            args: args,
+            module,
+            typ: (),
+            name,
+        }
+    },
     "{" <ClauseGuard> "}" => <>,
+}
+
+ClauseGuardConstructorArgs: Vec<CallArg<UntypedClauseGuard>> = {
+    "(" <args:Comma<ClauseGuardConstructorArg>> ")" => args
+}
+
+ClauseGuardConstructorArg: CallArg<UntypedClauseGuard> = {
+    <s:@L> <label:(<VarName> ":")?> <value:ClauseGuard> <e:@L> => CallArg {
+        location: location(s, e),
+        label,
+        value,
+    },
 }
 
 BindingKind: BindingKind = {
