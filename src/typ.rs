@@ -913,7 +913,7 @@ impl<'a, 'b> Typer<'a, 'b> {
                 match fun.typ().fn_arity() {
                     // Rewrite as right(left, ..args)
                     Some(arity) if arity == args.len() + 1 => {
-                        infer_insert_pipe(fun, args, left, level, self)
+                        self.infer_insert_pipe(fun, args, left, level)
                     }
 
                     // Rewrite as right(..args)(left)
@@ -950,6 +950,33 @@ impl<'a, 'b> Typer<'a, 'b> {
             value: left,
         }];
         let (fun, args, typ) = do_infer_call_with_known_fun(fun, args, level, &location, self)?;
+        Ok(TypedExpr::Call {
+            location,
+            typ,
+            args,
+            fun: Box::new(fun),
+        })
+    }
+
+    /// Attempt to infer a |> b(c) as b(a, c)
+    fn infer_insert_pipe(
+        &mut self,
+        fun: TypedExpr,
+        args: Vec<CallArg<UntypedExpr>>,
+        left: UntypedExpr,
+        level: usize,
+    ) -> Result<TypedExpr, Error> {
+        let location = left.location().clone();
+        let mut new_args = Vec::with_capacity(args.len() + 1);
+        new_args.push(CallArg {
+            label: None,
+            location: left.location().clone(),
+            value: left,
+        });
+        for arg in args {
+            new_args.push(arg.clone());
+        }
+        let (fun, args, typ) = do_infer_call_with_known_fun(fun, new_args, level, &location, self)?;
         Ok(TypedExpr::Call {
             location,
             typ,
@@ -1992,33 +2019,6 @@ pub fn infer_module(
         }),
         warnings,
     )
-}
-
-/// Attempt to infer a |> b(c) as b(a, c)
-fn infer_insert_pipe(
-    fun: TypedExpr,
-    args: Vec<CallArg<UntypedExpr>>,
-    left: UntypedExpr,
-    level: usize,
-    typer: &mut Typer,
-) -> Result<TypedExpr, Error> {
-    let location = left.location().clone();
-    let mut new_args = Vec::with_capacity(args.len() + 1);
-    new_args.push(CallArg {
-        label: None,
-        location: left.location().clone(),
-        value: left,
-    });
-    for arg in args {
-        new_args.push(arg.clone());
-    }
-    let (fun, args, typ) = do_infer_call_with_known_fun(fun, new_args, level, &location, typer)?;
-    Ok(TypedExpr::Call {
-        location,
-        typ,
-        args,
-        fun: Box::new(fun),
-    })
 }
 
 /// Attempt to infer a |> b as b(a)
