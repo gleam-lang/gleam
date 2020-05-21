@@ -841,7 +841,7 @@ impl<'a, 'b> Typer<'a, 'b> {
                 subjects,
                 clauses,
                 ..
-            } => infer_case(subjects, clauses, level, location, self),
+            } => self.infer_case(subjects, clauses, level, location),
 
             UntypedExpr::ListCons {
                 location,
@@ -1338,6 +1338,41 @@ impl<'a, 'b> Typer<'a, 'b> {
             pattern,
             value: Box::new(value),
             then: Box::new(then),
+        })
+    }
+
+    fn infer_case(
+        &mut self,
+        subjects: Vec<UntypedExpr>,
+        clauses: Vec<UntypedClause>,
+        level: usize,
+        location: SrcSpan,
+    ) -> Result<TypedExpr, Error> {
+        let subjects_count = subjects.len();
+        let mut typed_subjects = Vec::with_capacity(subjects_count);
+        let mut subject_types = Vec::with_capacity(subjects_count);
+        let mut typed_clauses = Vec::with_capacity(clauses.len());
+
+        let return_type = self.new_unbound_var(level);
+
+        for subject in subjects.into_iter() {
+            let subject = self.infer(subject, level + 1)?;
+            let subject_type = generalise(subject.typ(), level + 1);
+            typed_subjects.push(subject);
+            subject_types.push(subject_type);
+        }
+
+        for clause in clauses.into_iter() {
+            let typed_clause = infer_clause(clause, &subject_types, level, self)?;
+            unify(return_type.clone(), typed_clause.then.typ(), self)
+                .map_err(|e| convert_unify_error(e, typed_clause.then.location()))?;
+            typed_clauses.push(typed_clause);
+        }
+        Ok(TypedExpr::Case {
+            location,
+            typ: return_type,
+            subjects: typed_subjects,
+            clauses: typed_clauses,
         })
     }
 
@@ -2375,41 +2410,6 @@ pub fn infer_module(
         }),
         warnings,
     )
-}
-
-fn infer_case(
-    subjects: Vec<UntypedExpr>,
-    clauses: Vec<UntypedClause>,
-    level: usize,
-    location: SrcSpan,
-    typer: &mut Typer,
-) -> Result<TypedExpr, Error> {
-    let subjects_count = subjects.len();
-    let mut typed_subjects = Vec::with_capacity(subjects_count);
-    let mut subject_types = Vec::with_capacity(subjects_count);
-    let mut typed_clauses = Vec::with_capacity(clauses.len());
-
-    let return_type = typer.new_unbound_var(level);
-
-    for subject in subjects.into_iter() {
-        let subject = typer.infer(subject, level + 1)?;
-        let subject_type = generalise(subject.typ(), level + 1);
-        typed_subjects.push(subject);
-        subject_types.push(subject_type);
-    }
-
-    for clause in clauses.into_iter() {
-        let typed_clause = infer_clause(clause, &subject_types, level, typer)?;
-        unify(return_type.clone(), typed_clause.then.typ(), typer)
-            .map_err(|e| convert_unify_error(e, typed_clause.then.location()))?;
-        typed_clauses.push(typed_clause);
-    }
-    Ok(TypedExpr::Case {
-        location,
-        typ: return_type,
-        subjects: typed_subjects,
-        clauses: typed_clauses,
-    })
 }
 
 fn infer_clause(
