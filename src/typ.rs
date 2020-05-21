@@ -956,6 +956,46 @@ impl<'a, 'b> Typer<'a, 'b> {
             ),
         }
     }
+
+    fn match_fun_type(
+        &mut self,
+        typ: Arc<Type>,
+        arity: usize,
+    ) -> Result<(Vec<Arc<Type>>, Arc<Type>), MatchFunTypeError> {
+        if let Type::Var { typ } = &*typ {
+            let new_value = match &*typ.borrow() {
+                TypeVar::Link { typ, .. } => return self.match_fun_type(typ.clone(), arity),
+
+                TypeVar::Unbound { level, .. } => {
+                    let args: Vec<_> = (0..arity).map(|_| self.new_unbound_var(*level)).collect();
+                    let retrn = self.new_unbound_var(*level);
+                    Some((args, retrn))
+                }
+
+                TypeVar::Generic { .. } => None,
+            };
+
+            if let Some((args, retrn)) = new_value {
+                *typ.borrow_mut() = TypeVar::Link {
+                    typ: fn_(args.clone(), retrn.clone()),
+                };
+                return Ok((args, retrn));
+            }
+        }
+
+        if let Type::Fn { args, retrn } = &*typ {
+            return if args.len() != arity {
+                Err(MatchFunTypeError::IncorrectArity {
+                    expected: args.len(),
+                    given: arity,
+                })
+            } else {
+                Ok((args.clone(), retrn.clone()))
+            };
+        }
+
+        Err(MatchFunTypeError::NotFn { typ })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -3266,7 +3306,8 @@ fn do_infer_call_with_known_fun(
         None => assert_no_labelled_arguments(&args)?,
     }
 
-    let (mut args_types, return_type) = match_fun_type(fun.typ(), args.len(), typer)
+    let (mut args_types, return_type) = typer
+        .match_fun_type(fun.typ(), args.len())
         .map_err(|e| convert_not_fun_error(e, fun.location(), &location))?;
     let args = args_types
         .iter_mut()
@@ -3640,46 +3681,6 @@ fn update_levels(typ: Arc<Type>, own_level: usize, own_id: usize) -> Result<(), 
 
         Type::Var { .. } => unreachable!(),
     }
-}
-
-fn match_fun_type(
-    typ: Arc<Type>,
-    arity: usize,
-    typer: &mut Typer,
-) -> Result<(Vec<Arc<Type>>, Arc<Type>), MatchFunTypeError> {
-    if let Type::Var { typ } = &*typ {
-        let new_value = match &*typ.borrow() {
-            TypeVar::Link { typ, .. } => return match_fun_type(typ.clone(), arity, typer),
-
-            TypeVar::Unbound { level, .. } => {
-                let args: Vec<_> = (0..arity).map(|_| typer.new_unbound_var(*level)).collect();
-                let retrn = typer.new_unbound_var(*level);
-                Some((args, retrn))
-            }
-
-            TypeVar::Generic { .. } => None,
-        };
-
-        if let Some((args, retrn)) = new_value {
-            *typ.borrow_mut() = TypeVar::Link {
-                typ: fn_(args.clone(), retrn.clone()),
-            };
-            return Ok((args, retrn));
-        }
-    }
-
-    if let Type::Fn { args, retrn } = &*typ {
-        return if args.len() != arity {
-            Err(MatchFunTypeError::IncorrectArity {
-                expected: args.len(),
-                given: arity,
-            })
-        } else {
-            Ok((args.clone(), retrn.clone()))
-        };
-    }
-
-    Err(MatchFunTypeError::NotFn { typ })
 }
 
 enum MatchFunTypeError {
