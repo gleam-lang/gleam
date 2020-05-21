@@ -858,7 +858,7 @@ impl<'a, 'b> Typer<'a, 'b> {
                 tail,
                 deprecated_syntax,
                 ..
-            } => infer_cons(*head, *tail, deprecated_syntax, location, level, self),
+            } => self.infer_cons(*head, *tail, deprecated_syntax, location, level),
 
             UntypedExpr::Call {
                 location,
@@ -1105,6 +1105,35 @@ impl<'a, 'b> Typer<'a, 'b> {
             typ,
             args,
             fun: Box::new(fun),
+        })
+    }
+
+    fn infer_cons(
+        &mut self,
+        head: UntypedExpr,
+        tail: UntypedExpr,
+        deprecated_syntax: bool,
+        location: SrcSpan,
+        level: usize,
+    ) -> Result<TypedExpr, Error> {
+        let head = self.infer(head, level)?;
+        let tail = self.infer(tail, level)?;
+        unify(tail.typ(), list(head.typ()), self).map_err(|e| convert_unify_error(e, &location))?;
+
+        if deprecated_syntax {
+            self.warnings.push(Warning::DeprecatedListPrependSyntax {
+                location: SrcSpan {
+                    start: location.start - 2,
+                    end: location.start - 1,
+                },
+            });
+        }
+
+        Ok(TypedExpr::ListCons {
+            location,
+            typ: tail.typ(),
+            head: Box::new(head),
+            tail: Box::new(tail),
         })
     }
 
@@ -2142,35 +2171,6 @@ pub fn infer_module(
         }),
         warnings,
     )
-}
-
-fn infer_cons(
-    head: UntypedExpr,
-    tail: UntypedExpr,
-    deprecated_syntax: bool,
-    location: SrcSpan,
-    level: usize,
-    typer: &mut Typer,
-) -> Result<TypedExpr, Error> {
-    let head = typer.infer(head, level)?;
-    let tail = typer.infer(tail, level)?;
-    unify(tail.typ(), list(head.typ()), typer).map_err(|e| convert_unify_error(e, &location))?;
-
-    if deprecated_syntax {
-        typer.warnings.push(Warning::DeprecatedListPrependSyntax {
-            location: SrcSpan {
-                start: location.start - 2,
-                end: location.start - 1,
-            },
-        });
-    }
-
-    Ok(TypedExpr::ListCons {
-        location,
-        typ: tail.typ(),
-        head: Box::new(head),
-        tail: Box::new(tail),
-    })
 }
 
 fn infer_tuple(
