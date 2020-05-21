@@ -1363,7 +1363,7 @@ impl<'a, 'b> Typer<'a, 'b> {
         }
 
         for clause in clauses.into_iter() {
-            let typed_clause = infer_clause(clause, &subject_types, level, self)?;
+            let typed_clause = self.infer_clause(clause, &subject_types, level)?;
             unify(return_type.clone(), typed_clause.then.typ(), self)
                 .map_err(|e| convert_unify_error(e, typed_clause.then.location()))?;
             typed_clauses.push(typed_clause);
@@ -1374,6 +1374,359 @@ impl<'a, 'b> Typer<'a, 'b> {
             subjects: typed_subjects,
             clauses: typed_clauses,
         })
+    }
+
+    fn infer_clause(
+        &mut self,
+        clause: UntypedClause,
+        subjects: &[Arc<Type>],
+        level: usize,
+    ) -> Result<TypedClause, Error> {
+        let Clause {
+            pattern,
+            alternative_patterns,
+            guard,
+            then,
+            location,
+        } = clause;
+
+        // Store the local scope so it can be reset after the clause
+        let vars = self.local_values.clone();
+
+        // Check the types
+        let (typed_pattern, typed_alternatives) =
+            self.infer_clause_pattern(pattern, alternative_patterns, subjects, level, &location)?;
+        let guard = self.infer_optional_clause_guard(guard, level)?;
+        let then = self.infer(then, level)?;
+
+        // Reset the local vars now the clause scope is done
+        self.local_values = vars;
+
+        Ok(Clause {
+            location,
+            pattern: typed_pattern,
+            alternative_patterns: typed_alternatives,
+            guard,
+            then,
+        })
+    }
+
+    fn infer_clause_pattern(
+        &mut self,
+        pattern: UntypedMultiPattern,
+        alternatives: Vec<UntypedMultiPattern>,
+        subjects: &[Arc<Type>],
+        level: usize,
+        location: &SrcSpan,
+    ) -> Result<(TypedMultiPattern, Vec<TypedMultiPattern>), Error> {
+        let mut pattern_typer = PatternTyper::new(self, level);
+        let typed_pattern = pattern_typer.infer_multi_pattern(pattern, subjects, &location)?;
+
+        // Each case clause has one or more patterns that may match the
+        // subject in order for the clause to be selected, so we must type
+        // check every pattern.
+        let mut typed_alternatives = Vec::with_capacity(alternatives.len());
+        for m in alternatives {
+            typed_alternatives
+                .push(pattern_typer.infer_alternative_multi_pattern(m, subjects, &location)?);
+        }
+
+        Ok((typed_pattern, typed_alternatives))
+    }
+
+    fn infer_optional_clause_guard(
+        &mut self,
+        guard: Option<UntypedClauseGuard>,
+        level: usize,
+    ) -> Result<Option<TypedClauseGuard>, Error> {
+        match guard {
+            // If there is no guard we do nothing
+            None => Ok(None),
+
+            // If there is a guard we assert that it is of type Bool
+            Some(guard) => {
+                let guard = self.infer_clause_guard(guard, level)?;
+                unify(bool(), guard.typ(), self)
+                    .map_err(|e| convert_unify_error(e, guard.location()))?;
+                Ok(Some(guard))
+            }
+        }
+    }
+
+    fn infer_clause_guard(
+        &mut self,
+        guard: UntypedClauseGuard,
+        level: usize,
+    ) -> Result<TypedClauseGuard, Error> {
+        match guard {
+            ClauseGuard::Var { location, name, .. } => {
+                let constructor = infer_value_constructor(&name, level, &location, self)?;
+
+                // We cannot support all values in guard expressions as the BEAM does not
+                match &constructor.variant {
+                    ValueConstructorVariant::LocalVariable => (),
+                    ValueConstructorVariant::ModuleFn { .. }
+                    | ValueConstructorVariant::Record { .. } => {
+                        return Err(Error::NonLocalClauseGuardVariable { location, name })
+                    }
+                };
+
+                Ok(ClauseGuard::Var {
+                    location,
+                    name,
+                    typ: constructor.typ,
+                })
+            }
+
+            ClauseGuard::Tuple {
+                location, elems, ..
+            } => {
+                let elems = elems
+                    .into_iter()
+                    .map(|x| self.infer_clause_guard(x, level))
+                    .collect::<Result<Vec<_>, _>>()?;
+
+                let typ = tuple(elems.iter().map(|e| e.typ()).collect());
+
+                Ok(ClauseGuard::Tuple {
+                    location,
+                    elems,
+                    typ,
+                })
+            }
+
+            ClauseGuard::And {
+                location,
+                left,
+                right,
+                ..
+            } => {
+                let left = self.infer_clause_guard(*left, level)?;
+                unify(bool(), left.typ(), self)
+                    .map_err(|e| convert_unify_error(e, left.location()))?;
+                let right = self.infer_clause_guard(*right, level)?;
+                unify(bool(), right.typ(), self)
+                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                Ok(ClauseGuard::And {
+                    location,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                })
+            }
+
+            ClauseGuard::Or {
+                location,
+                left,
+                right,
+                ..
+            } => {
+                let left = self.infer_clause_guard(*left, level)?;
+                unify(bool(), left.typ(), self)
+                    .map_err(|e| convert_unify_error(e, left.location()))?;
+                let right = self.infer_clause_guard(*right, level)?;
+                unify(bool(), right.typ(), self)
+                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                Ok(ClauseGuard::Or {
+                    location,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                })
+            }
+
+            ClauseGuard::Equals {
+                location,
+                left,
+                right,
+                ..
+            } => {
+                let left = self.infer_clause_guard(*left, level)?;
+                let right = self.infer_clause_guard(*right, level)?;
+                unify(left.typ(), right.typ(), self)
+                    .map_err(|e| convert_unify_error(e, &location))?;
+                Ok(ClauseGuard::Equals {
+                    location,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                })
+            }
+
+            ClauseGuard::NotEquals {
+                location,
+                left,
+                right,
+                ..
+            } => {
+                let left = self.infer_clause_guard(*left, level)?;
+                let right = self.infer_clause_guard(*right, level)?;
+                unify(left.typ(), right.typ(), self)
+                    .map_err(|e| convert_unify_error(e, &location))?;
+                Ok(ClauseGuard::NotEquals {
+                    location,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                })
+            }
+
+            ClauseGuard::GtInt {
+                location,
+                left,
+                right,
+                ..
+            } => {
+                let left = self.infer_clause_guard(*left, level)?;
+                unify(int(), left.typ(), self)
+                    .map_err(|e| convert_unify_error(e, left.location()))?;
+                let right = self.infer_clause_guard(*right, level)?;
+                unify(int(), right.typ(), self)
+                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                Ok(ClauseGuard::GtInt {
+                    location,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                })
+            }
+
+            ClauseGuard::GtEqInt {
+                location,
+                left,
+                right,
+                ..
+            } => {
+                let left = self.infer_clause_guard(*left, level)?;
+                unify(int(), left.typ(), self)
+                    .map_err(|e| convert_unify_error(e, left.location()))?;
+                let right = self.infer_clause_guard(*right, level)?;
+                unify(int(), right.typ(), self)
+                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                Ok(ClauseGuard::GtEqInt {
+                    location,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                })
+            }
+
+            ClauseGuard::LtInt {
+                location,
+                left,
+                right,
+                ..
+            } => {
+                let left = self.infer_clause_guard(*left, level)?;
+                unify(int(), left.typ(), self)
+                    .map_err(|e| convert_unify_error(e, left.location()))?;
+                let right = self.infer_clause_guard(*right, level)?;
+                unify(int(), right.typ(), self)
+                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                Ok(ClauseGuard::LtInt {
+                    location,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                })
+            }
+
+            ClauseGuard::LtEqInt {
+                location,
+                left,
+                right,
+                ..
+            } => {
+                let left = self.infer_clause_guard(*left, level)?;
+                unify(int(), left.typ(), self)
+                    .map_err(|e| convert_unify_error(e, left.location()))?;
+                let right = self.infer_clause_guard(*right, level)?;
+                unify(int(), right.typ(), self)
+                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                Ok(ClauseGuard::LtEqInt {
+                    location,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                })
+            }
+
+            ClauseGuard::GtFloat {
+                location,
+                left,
+                right,
+                ..
+            } => {
+                let left = self.infer_clause_guard(*left, level)?;
+                unify(float(), left.typ(), self)
+                    .map_err(|e| convert_unify_error(e, left.location()))?;
+                let right = self.infer_clause_guard(*right, level)?;
+                unify(float(), right.typ(), self)
+                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                Ok(ClauseGuard::GtFloat {
+                    location,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                })
+            }
+
+            ClauseGuard::GtEqFloat {
+                location,
+                left,
+                right,
+                ..
+            } => {
+                let left = self.infer_clause_guard(*left, level)?;
+                unify(float(), left.typ(), self)
+                    .map_err(|e| convert_unify_error(e, left.location()))?;
+                let right = self.infer_clause_guard(*right, level)?;
+                unify(float(), right.typ(), self)
+                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                Ok(ClauseGuard::GtEqFloat {
+                    location,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                })
+            }
+
+            ClauseGuard::LtFloat {
+                location,
+                left,
+                right,
+                ..
+            } => {
+                let left = self.infer_clause_guard(*left, level)?;
+                unify(float(), left.typ(), self)
+                    .map_err(|e| convert_unify_error(e, left.location()))?;
+                let right = self.infer_clause_guard(*right, level)?;
+                unify(float(), right.typ(), self)
+                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                Ok(ClauseGuard::LtFloat {
+                    location,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                })
+            }
+
+            ClauseGuard::LtEqFloat {
+                location,
+                left,
+                right,
+                ..
+            } => {
+                let left = self.infer_clause_guard(*left, level)?;
+                unify(float(), left.typ(), self)
+                    .map_err(|e| convert_unify_error(e, left.location()))?;
+                let right = self.infer_clause_guard(*right, level)?;
+                unify(float(), right.typ(), self)
+                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                Ok(ClauseGuard::LtEqFloat {
+                    location,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                })
+            }
+
+            ClauseGuard::Int {
+                location, value, ..
+            } => Ok(ClauseGuard::Int { location, value }),
+
+            ClauseGuard::Float {
+                location, value, ..
+            } => Ok(ClauseGuard::Float { location, value }),
+        }
     }
 
     fn make_type_vars(
@@ -2410,359 +2763,6 @@ pub fn infer_module(
         }),
         warnings,
     )
-}
-
-fn infer_clause(
-    clause: UntypedClause,
-    subjects: &[Arc<Type>],
-    level: usize,
-    typer: &mut Typer,
-) -> Result<TypedClause, Error> {
-    let Clause {
-        pattern,
-        alternative_patterns,
-        guard,
-        then,
-        location,
-    } = clause;
-
-    // Store the local scope so it can be reset after the clause
-    let vars = typer.local_values.clone();
-
-    // Check the types
-    let (typed_pattern, typed_alternatives) = infer_clause_pattern(
-        pattern,
-        alternative_patterns,
-        subjects,
-        level,
-        &location,
-        typer,
-    )?;
-    let guard = infer_optional_clause_guard(guard, level, typer)?;
-    let then = typer.infer(then, level)?;
-
-    // Reset the local vars now the clause scope is done
-    typer.local_values = vars;
-
-    Ok(Clause {
-        location,
-        pattern: typed_pattern,
-        alternative_patterns: typed_alternatives,
-        guard,
-        then,
-    })
-}
-
-fn infer_clause_pattern(
-    pattern: UntypedMultiPattern,
-    alternatives: Vec<UntypedMultiPattern>,
-    subjects: &[Arc<Type>],
-    level: usize,
-    location: &SrcSpan,
-    typer: &mut Typer,
-) -> Result<(TypedMultiPattern, Vec<TypedMultiPattern>), Error> {
-    let mut pattern_typer = PatternTyper::new(typer, level);
-    let typed_pattern = pattern_typer.infer_multi_pattern(pattern, subjects, &location)?;
-
-    // Each case clause has one or more patterns that may match the
-    // subject in order for the clause to be selected, so we must type
-    // check every pattern.
-    let mut typed_alternatives = Vec::with_capacity(alternatives.len());
-    for m in alternatives {
-        typed_alternatives
-            .push(pattern_typer.infer_alternative_multi_pattern(m, subjects, &location)?);
-    }
-
-    Ok((typed_pattern, typed_alternatives))
-}
-
-fn infer_optional_clause_guard(
-    guard: Option<UntypedClauseGuard>,
-    level: usize,
-    typer: &mut Typer,
-) -> Result<Option<TypedClauseGuard>, Error> {
-    match guard {
-        // If there is no guard we do nothing
-        None => Ok(None),
-
-        // If there is a guard we assert that it is of type Bool
-        Some(guard) => {
-            let guard = infer_clause_guard(guard, level, typer)?;
-            unify(bool(), guard.typ(), typer)
-                .map_err(|e| convert_unify_error(e, guard.location()))?;
-            Ok(Some(guard))
-        }
-    }
-}
-
-fn infer_clause_guard(
-    guard: UntypedClauseGuard,
-    level: usize,
-    typer: &mut Typer,
-) -> Result<TypedClauseGuard, Error> {
-    match guard {
-        ClauseGuard::Var { location, name, .. } => {
-            let constructor = infer_value_constructor(&name, level, &location, typer)?;
-
-            // We cannot support all values in guard expressions as the BEAM does not
-            match &constructor.variant {
-                ValueConstructorVariant::LocalVariable => (),
-                ValueConstructorVariant::ModuleFn { .. }
-                | ValueConstructorVariant::Record { .. } => {
-                    return Err(Error::NonLocalClauseGuardVariable { location, name })
-                }
-            };
-
-            Ok(ClauseGuard::Var {
-                location,
-                name,
-                typ: constructor.typ,
-            })
-        }
-
-        ClauseGuard::Tuple {
-            location, elems, ..
-        } => {
-            let elems = elems
-                .into_iter()
-                .map(|x| infer_clause_guard(x, level, typer))
-                .collect::<Result<Vec<_>, _>>()?;
-
-            let typ = tuple(elems.iter().map(|e| e.typ()).collect());
-
-            Ok(ClauseGuard::Tuple {
-                location,
-                elems,
-                typ,
-            })
-        }
-
-        ClauseGuard::And {
-            location,
-            left,
-            right,
-            ..
-        } => {
-            let left = infer_clause_guard(*left, level, typer)?;
-            unify(bool(), left.typ(), typer)
-                .map_err(|e| convert_unify_error(e, left.location()))?;
-            let right = infer_clause_guard(*right, level, typer)?;
-            unify(bool(), right.typ(), typer)
-                .map_err(|e| convert_unify_error(e, right.location()))?;
-            Ok(ClauseGuard::And {
-                location,
-                left: Box::new(left),
-                right: Box::new(right),
-            })
-        }
-
-        ClauseGuard::Or {
-            location,
-            left,
-            right,
-            ..
-        } => {
-            let left = infer_clause_guard(*left, level, typer)?;
-            unify(bool(), left.typ(), typer)
-                .map_err(|e| convert_unify_error(e, left.location()))?;
-            let right = infer_clause_guard(*right, level, typer)?;
-            unify(bool(), right.typ(), typer)
-                .map_err(|e| convert_unify_error(e, right.location()))?;
-            Ok(ClauseGuard::Or {
-                location,
-                left: Box::new(left),
-                right: Box::new(right),
-            })
-        }
-
-        ClauseGuard::Equals {
-            location,
-            left,
-            right,
-            ..
-        } => {
-            let left = infer_clause_guard(*left, level, typer)?;
-            let right = infer_clause_guard(*right, level, typer)?;
-            unify(left.typ(), right.typ(), typer).map_err(|e| convert_unify_error(e, &location))?;
-            Ok(ClauseGuard::Equals {
-                location,
-                left: Box::new(left),
-                right: Box::new(right),
-            })
-        }
-
-        ClauseGuard::NotEquals {
-            location,
-            left,
-            right,
-            ..
-        } => {
-            let left = infer_clause_guard(*left, level, typer)?;
-            let right = infer_clause_guard(*right, level, typer)?;
-            unify(left.typ(), right.typ(), typer).map_err(|e| convert_unify_error(e, &location))?;
-            Ok(ClauseGuard::NotEquals {
-                location,
-                left: Box::new(left),
-                right: Box::new(right),
-            })
-        }
-
-        ClauseGuard::GtInt {
-            location,
-            left,
-            right,
-            ..
-        } => {
-            let left = infer_clause_guard(*left, level, typer)?;
-            unify(int(), left.typ(), typer).map_err(|e| convert_unify_error(e, left.location()))?;
-            let right = infer_clause_guard(*right, level, typer)?;
-            unify(int(), right.typ(), typer)
-                .map_err(|e| convert_unify_error(e, right.location()))?;
-            Ok(ClauseGuard::GtInt {
-                location,
-                left: Box::new(left),
-                right: Box::new(right),
-            })
-        }
-
-        ClauseGuard::GtEqInt {
-            location,
-            left,
-            right,
-            ..
-        } => {
-            let left = infer_clause_guard(*left, level, typer)?;
-            unify(int(), left.typ(), typer).map_err(|e| convert_unify_error(e, left.location()))?;
-            let right = infer_clause_guard(*right, level, typer)?;
-            unify(int(), right.typ(), typer)
-                .map_err(|e| convert_unify_error(e, right.location()))?;
-            Ok(ClauseGuard::GtEqInt {
-                location,
-                left: Box::new(left),
-                right: Box::new(right),
-            })
-        }
-
-        ClauseGuard::LtInt {
-            location,
-            left,
-            right,
-            ..
-        } => {
-            let left = infer_clause_guard(*left, level, typer)?;
-            unify(int(), left.typ(), typer).map_err(|e| convert_unify_error(e, left.location()))?;
-            let right = infer_clause_guard(*right, level, typer)?;
-            unify(int(), right.typ(), typer)
-                .map_err(|e| convert_unify_error(e, right.location()))?;
-            Ok(ClauseGuard::LtInt {
-                location,
-                left: Box::new(left),
-                right: Box::new(right),
-            })
-        }
-
-        ClauseGuard::LtEqInt {
-            location,
-            left,
-            right,
-            ..
-        } => {
-            let left = infer_clause_guard(*left, level, typer)?;
-            unify(int(), left.typ(), typer).map_err(|e| convert_unify_error(e, left.location()))?;
-            let right = infer_clause_guard(*right, level, typer)?;
-            unify(int(), right.typ(), typer)
-                .map_err(|e| convert_unify_error(e, right.location()))?;
-            Ok(ClauseGuard::LtEqInt {
-                location,
-                left: Box::new(left),
-                right: Box::new(right),
-            })
-        }
-
-        ClauseGuard::GtFloat {
-            location,
-            left,
-            right,
-            ..
-        } => {
-            let left = infer_clause_guard(*left, level, typer)?;
-            unify(float(), left.typ(), typer)
-                .map_err(|e| convert_unify_error(e, left.location()))?;
-            let right = infer_clause_guard(*right, level, typer)?;
-            unify(float(), right.typ(), typer)
-                .map_err(|e| convert_unify_error(e, right.location()))?;
-            Ok(ClauseGuard::GtFloat {
-                location,
-                left: Box::new(left),
-                right: Box::new(right),
-            })
-        }
-
-        ClauseGuard::GtEqFloat {
-            location,
-            left,
-            right,
-            ..
-        } => {
-            let left = infer_clause_guard(*left, level, typer)?;
-            unify(float(), left.typ(), typer)
-                .map_err(|e| convert_unify_error(e, left.location()))?;
-            let right = infer_clause_guard(*right, level, typer)?;
-            unify(float(), right.typ(), typer)
-                .map_err(|e| convert_unify_error(e, right.location()))?;
-            Ok(ClauseGuard::GtEqFloat {
-                location,
-                left: Box::new(left),
-                right: Box::new(right),
-            })
-        }
-
-        ClauseGuard::LtFloat {
-            location,
-            left,
-            right,
-            ..
-        } => {
-            let left = infer_clause_guard(*left, level, typer)?;
-            unify(float(), left.typ(), typer)
-                .map_err(|e| convert_unify_error(e, left.location()))?;
-            let right = infer_clause_guard(*right, level, typer)?;
-            unify(float(), right.typ(), typer)
-                .map_err(|e| convert_unify_error(e, right.location()))?;
-            Ok(ClauseGuard::LtFloat {
-                location,
-                left: Box::new(left),
-                right: Box::new(right),
-            })
-        }
-
-        ClauseGuard::LtEqFloat {
-            location,
-            left,
-            right,
-            ..
-        } => {
-            let left = infer_clause_guard(*left, level, typer)?;
-            unify(float(), left.typ(), typer)
-                .map_err(|e| convert_unify_error(e, left.location()))?;
-            let right = infer_clause_guard(*right, level, typer)?;
-            unify(float(), right.typ(), typer)
-                .map_err(|e| convert_unify_error(e, right.location()))?;
-            Ok(ClauseGuard::LtEqFloat {
-                location,
-                left: Box::new(left),
-                right: Box::new(right),
-            })
-        }
-
-        ClauseGuard::Int {
-            location, value, ..
-        } => Ok(ClauseGuard::Int { location, value }),
-
-        ClauseGuard::Float {
-            location, value, ..
-        } => Ok(ClauseGuard::Float { location, value }),
-    }
 }
 
 fn infer_module_access(
