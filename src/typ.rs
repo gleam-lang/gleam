@@ -791,7 +791,7 @@ impl<'a, 'b> Typer<'a, 'b> {
 
             UntypedExpr::Todo { location, .. } => self.infer_todo(location, level),
 
-            UntypedExpr::Var { location, name, .. } => infer_var(name, location, level, self),
+            UntypedExpr::Var { location, name, .. } => self.infer_var(name, location, level),
 
             UntypedExpr::Int {
                 location, value, ..
@@ -889,6 +889,19 @@ impl<'a, 'b> Typer<'a, 'b> {
                 ..
             } => infer_tuple_index(*tuple, index, location, level, self),
         }
+    }
+    fn infer_var(
+        &mut self,
+        name: String,
+        location: SrcSpan,
+        level: usize,
+    ) -> Result<TypedExpr, Error> {
+        let constructor = infer_value_constructor(&name, level, &location, self)?;
+        Ok(TypedExpr::Var {
+            constructor,
+            location,
+            name,
+        })
     }
 
     fn infer_pipe(
@@ -2189,19 +2202,6 @@ pub fn infer_module(
         }),
         warnings,
     )
-}
-fn infer_var(
-    name: String,
-    location: SrcSpan,
-    level: usize,
-    typer: &mut Typer,
-) -> Result<TypedExpr, Error> {
-    let constructor = infer_value_constructor(&name, level, &location, typer)?;
-    Ok(TypedExpr::Var {
-        constructor,
-        location,
-        name,
-    })
 }
 
 fn infer_field_access(
