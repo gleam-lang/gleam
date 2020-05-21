@@ -797,7 +797,7 @@ impl<'a, 'b> Typer<'a, 'b> {
                 location, value, ..
             } => self.infer_int(value, location),
 
-            UntypedExpr::Seq { first, then, .. } => infer_seq(*first, *then, level, self),
+            UntypedExpr::Seq { first, then, .. } => self.infer_seq(*first, *then, level),
 
             UntypedExpr::Tuple {
                 location, elems, ..
@@ -1049,6 +1049,32 @@ impl<'a, 'b> Typer<'a, 'b> {
             location,
             value,
             typ: float(),
+        })
+    }
+
+    fn infer_seq(
+        &mut self,
+        first: UntypedExpr,
+        then: UntypedExpr,
+        level: usize,
+    ) -> Result<TypedExpr, Error> {
+        let first = self.infer(first, level)?;
+        let then = self.infer(then, level)?;
+
+        match first.typ().as_ref() {
+            typ if typ.is_result() => {
+                self.warnings.push(Warning::ImplicitlyDiscardedResult {
+                    location: first.location().clone(),
+                });
+            }
+
+            _ => {}
+        }
+
+        Ok(TypedExpr::Seq {
+            typ: then.typ(),
+            first: Box::new(first),
+            then: Box::new(then),
         })
     }
 
@@ -2086,32 +2112,6 @@ pub fn infer_module(
         }),
         warnings,
     )
-}
-
-fn infer_seq(
-    first: UntypedExpr,
-    then: UntypedExpr,
-    level: usize,
-    typer: &mut Typer,
-) -> Result<TypedExpr, Error> {
-    let first = typer.infer(first, level)?;
-    let then = typer.infer(then, level)?;
-
-    match first.typ().as_ref() {
-        typ if typ.is_result() => {
-            typer.warnings.push(Warning::ImplicitlyDiscardedResult {
-                location: first.location().clone(),
-            });
-        }
-
-        _ => {}
-    }
-
-    Ok(TypedExpr::Seq {
-        typ: then.typ(),
-        first: Box::new(first),
-        then: Box::new(then),
-    })
 }
 
 fn infer_fn(
