@@ -949,7 +949,7 @@ impl<'a, 'b> Typer<'a, 'b> {
     ) -> Result<TypedExpr, Error> {
         let right_location = left.location().clone();
         let (fun, args, typ) =
-            do_infer_call_with_known_fun(fun, args, level, &right_location, self)?;
+            self.do_infer_call_with_known_fun(fun, args, level, &right_location)?;
         let fun = TypedExpr::Call {
             location: right_location,
             typ,
@@ -961,7 +961,7 @@ impl<'a, 'b> Typer<'a, 'b> {
             location: left.location().clone(),
             value: left,
         }];
-        let (fun, args, typ) = do_infer_call_with_known_fun(fun, args, level, &location, self)?;
+        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, level, &location)?;
         Ok(TypedExpr::Call {
             location,
             typ,
@@ -988,7 +988,8 @@ impl<'a, 'b> Typer<'a, 'b> {
         for arg in args {
             new_args.push(arg.clone());
         }
-        let (fun, args, typ) = do_infer_call_with_known_fun(fun, new_args, level, &location, self)?;
+        let (fun, args, typ) =
+            self.do_infer_call_with_known_fun(fun, new_args, level, &location)?;
         Ok(TypedExpr::Call {
             location,
             typ,
@@ -1119,7 +1120,7 @@ impl<'a, 'b> Typer<'a, 'b> {
         level: usize,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        let (fun, args, typ) = do_infer_call(fun, args, level, &location, self)?;
+        let (fun, args, typ) = self.do_infer_call(fun, args, level, &location)?;
         Ok(TypedExpr::Call {
             location,
             typ,
@@ -1842,6 +1843,64 @@ impl<'a, 'b> Typer<'a, 'b> {
             location,
             typ,
         })
+    }
+
+    fn do_infer_call(
+        &mut self,
+        fun: UntypedExpr,
+        args: Vec<CallArg<UntypedExpr>>,
+        level: usize,
+        location: &SrcSpan,
+    ) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
+        let fun = self.infer(fun, level)?;
+        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, level, location)?;
+        Ok((fun, args, typ))
+    }
+
+    fn do_infer_call_with_known_fun(
+        &mut self,
+        fun: TypedExpr,
+        mut args: Vec<CallArg<UntypedExpr>>,
+        level: usize,
+        location: &SrcSpan,
+    ) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
+        match get_field_map(&fun, self)
+            .map_err(|e| convert_get_value_constructor_error(e, location))?
+        {
+            // The fun has a field map so labelled arguments may be present and need to be reordered.
+            Some(field_map) => field_map.reorder(&mut args, location)?,
+
+            // The fun has no field map and so we error if arguments have been labelled
+            None => assert_no_labelled_arguments(&args)?,
+        }
+
+        let (mut args_types, return_type) = self
+            .match_fun_type(fun.typ(), args.len())
+            .map_err(|e| convert_not_fun_error(e, fun.location(), &location))?;
+        let args = args_types
+            .iter_mut()
+            .zip(args)
+            .map(
+                |(
+                    typ,
+                    CallArg {
+                        label,
+                        value,
+                        location,
+                    },
+                ): (&mut Arc<Type>, _)| {
+                    let value = self.infer(value, level)?;
+                    unify(typ.clone(), value.typ(), self)
+                        .map_err(|e| convert_unify_error(e, value.location()))?;
+                    Ok(CallArg {
+                        label,
+                        value,
+                        location,
+                    })
+                },
+            )
+            .collect::<Result<_, _>>()?;
+        Ok((fun, args, return_type))
     }
 
     fn infer_value_constructor(
@@ -3330,64 +3389,6 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
 }
 
 pub type TypedCallArg = CallArg<TypedExpr>;
-
-fn do_infer_call(
-    fun: UntypedExpr,
-    args: Vec<CallArg<UntypedExpr>>,
-    level: usize,
-    location: &SrcSpan,
-    typer: &mut Typer,
-) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
-    let fun = typer.infer(fun, level)?;
-    let (fun, args, typ) = do_infer_call_with_known_fun(fun, args, level, location, typer)?;
-    Ok((fun, args, typ))
-}
-
-fn do_infer_call_with_known_fun(
-    fun: TypedExpr,
-    mut args: Vec<CallArg<UntypedExpr>>,
-    level: usize,
-    location: &SrcSpan,
-    typer: &mut Typer,
-) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
-    match get_field_map(&fun, typer)
-        .map_err(|e| convert_get_value_constructor_error(e, location))?
-    {
-        // The fun has a field map so labelled arguments may be present and need to be reordered.
-        Some(field_map) => field_map.reorder(&mut args, location)?,
-
-        // The fun has no field map and so we error if arguments have been labelled
-        None => assert_no_labelled_arguments(&args)?,
-    }
-
-    let (mut args_types, return_type) = typer
-        .match_fun_type(fun.typ(), args.len())
-        .map_err(|e| convert_not_fun_error(e, fun.location(), &location))?;
-    let args = args_types
-        .iter_mut()
-        .zip(args)
-        .map(
-            |(
-                typ,
-                CallArg {
-                    label,
-                    value,
-                    location,
-                },
-            ): (&mut Arc<Type>, _)| {
-                let value = typer.infer(value, level)?;
-                unify(typ.clone(), value.typ(), typer)
-                    .map_err(|e| convert_unify_error(e, value.location()))?;
-                Ok(CallArg {
-                    label,
-                    value,
-                    location,
-                })
-            },
-        )
-        .collect::<Result<_, _>>()?;
-    Ok((fun, args, return_type))
-}
 
 fn assert_no_labelled_arguments<A>(args: &[CallArg<A>]) -> Result<(), Error> {
     for arg in args {
