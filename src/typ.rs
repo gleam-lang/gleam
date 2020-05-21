@@ -880,7 +880,7 @@ impl<'a, 'b> Typer<'a, 'b> {
                 label,
                 container,
                 ..
-            } => infer_field_access(*container, label, location, level, self),
+            } => self.infer_field_access(*container, label, location, level),
 
             UntypedExpr::TupleIndex {
                 location,
@@ -902,6 +902,29 @@ impl<'a, 'b> Typer<'a, 'b> {
             location,
             name,
         })
+    }
+
+    fn infer_field_access(
+        &mut self,
+        container: UntypedExpr,
+        label: String,
+        access_location: SrcSpan,
+        level: usize,
+    ) -> Result<TypedExpr, Error> {
+        match container {
+            UntypedExpr::Var { name, location, .. } if !self.local_values.contains_key(&name) => {
+                infer_module_access(
+                    name.as_ref(),
+                    label,
+                    level,
+                    &location,
+                    access_location,
+                    self,
+                )
+            }
+
+            _ => infer_record_access(container, label, level, access_location, self),
+        }
     }
 
     fn infer_pipe(
@@ -2202,29 +2225,6 @@ pub fn infer_module(
         }),
         warnings,
     )
-}
-
-fn infer_field_access(
-    container: UntypedExpr,
-    label: String,
-    access_location: SrcSpan,
-    level: usize,
-    typer: &mut Typer,
-) -> Result<TypedExpr, Error> {
-    match container {
-        UntypedExpr::Var { name, location, .. } if !typer.local_values.contains_key(&name) => {
-            infer_module_access(
-                name.as_ref(),
-                label,
-                level,
-                &location,
-                access_location,
-                typer,
-            )
-        }
-
-        _ => infer_record_access(container, label, level, access_location, typer),
-    }
 }
 
 fn infer_tuple_index(
