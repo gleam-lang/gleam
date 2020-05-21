@@ -801,7 +801,7 @@ impl<'a, 'b> Typer<'a, 'b> {
 
             UntypedExpr::Tuple {
                 location, elems, ..
-            } => infer_tuple(elems, location, level, self),
+            } => self.infer_tuple(elems, location, level),
 
             UntypedExpr::Float {
                 location, value, ..
@@ -1134,6 +1134,24 @@ impl<'a, 'b> Typer<'a, 'b> {
             typ: tail.typ(),
             head: Box::new(head),
             tail: Box::new(tail),
+        })
+    }
+
+    fn infer_tuple(
+        &mut self,
+        elems: Vec<UntypedExpr>,
+        location: SrcSpan,
+        level: usize,
+    ) -> Result<TypedExpr, Error> {
+        let elems = elems
+            .into_iter()
+            .map(|e| self.infer(e, level))
+            .collect::<Result<Vec<_>, _>>()?;
+        let typ = tuple(elems.iter().map(|e| e.typ()).collect());
+        Ok(TypedExpr::Tuple {
+            location,
+            elems,
+            typ,
         })
     }
 
@@ -2171,24 +2189,6 @@ pub fn infer_module(
         }),
         warnings,
     )
-}
-
-fn infer_tuple(
-    elems: Vec<UntypedExpr>,
-    location: SrcSpan,
-    level: usize,
-    typer: &mut Typer,
-) -> Result<TypedExpr, Error> {
-    let elems = elems
-        .into_iter()
-        .map(|e| typer.infer(e, level))
-        .collect::<Result<Vec<_>, _>>()?;
-    let typ = tuple(elems.iter().map(|e| e.typ()).collect());
-    Ok(TypedExpr::Tuple {
-        location,
-        elems,
-        typ,
-    })
 }
 fn infer_var(
     name: String,
