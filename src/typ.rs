@@ -727,9 +727,9 @@ impl<'a, 'b> Typer<'a, 'b> {
                 let mut type_vars = hashmap![];
                 let mut parameter_types = Vec::with_capacity(parameters.len());
                 for typ in parameters {
-                    parameter_types.push(instantiate(typ, 0, &mut type_vars, self));
+                    parameter_types.push(self.instantiate(typ, 0, &mut type_vars));
                 }
-                let return_type = instantiate(return_type, 0, &mut type_vars, self);
+                let return_type = self.instantiate(return_type, 0, &mut type_vars);
 
                 // Unify argument types with instantiated parameter types so that the correct types
                 // are inserted into the return type
@@ -892,6 +892,69 @@ impl<'a, 'b> Typer<'a, 'b> {
             }
         }
         Ok(Some(fields))
+    }
+
+    /// Instantiate converts generic variables into unbound ones.
+    ///
+    fn instantiate(
+        &mut self,
+        t: Arc<Type>,
+        ctx_level: usize,
+        ids: &mut im::HashMap<usize, Arc<Type>>,
+    ) -> Arc<Type> {
+        match &*t {
+            Type::App {
+                public,
+                name,
+                module,
+                args,
+            } => {
+                let args = args
+                    .iter()
+                    .map(|t| self.instantiate(t.clone(), ctx_level, ids))
+                    .collect();
+                Arc::new(Type::App {
+                    public: *public,
+                    name: name.clone(),
+                    module: module.clone(),
+                    args,
+                })
+            }
+
+            Type::Var { typ } => {
+                match &*typ.borrow() {
+                    TypeVar::Link { typ } => return self.instantiate(typ.clone(), ctx_level, ids),
+
+                    TypeVar::Unbound { .. } => return Arc::new(Type::Var { typ: typ.clone() }),
+
+                    TypeVar::Generic { id } => match ids.get(id) {
+                        Some(t) => return t.clone(),
+                        None => {
+                            if !self.annotated_generic_types.contains(id) {
+                                let v = self.new_unbound_var(ctx_level);
+                                ids.insert(*id, v.clone());
+                                return v;
+                            }
+                        }
+                    },
+                }
+                Arc::new(Type::Var { typ: typ.clone() })
+            }
+
+            Type::Fn { args, retrn, .. } => fn_(
+                args.iter()
+                    .map(|t| self.instantiate(t.clone(), ctx_level, ids))
+                    .collect(),
+                self.instantiate(retrn.clone(), ctx_level, ids),
+            ),
+
+            Type::Tuple { elems } => tuple(
+                elems
+                    .iter()
+                    .map(|t| self.instantiate(t.clone(), ctx_level, ids))
+                    .collect(),
+            ),
+        }
     }
 }
 
@@ -2274,7 +2337,7 @@ fn infer_let(
     if let Some(ann) = annotation {
         let ann_typ = typer
             .type_from_ast(ann, &mut hashmap![], NewTypeAction::MakeGeneric)
-            .map(|t| instantiate(t, level, &mut hashmap![], typer))?;
+            .map(|t| typer.instantiate(t, level, &mut hashmap![]))?;
         unify(ann_typ, value_typ, typer).map_err(|e| convert_unify_error(e, value.location()))?;
     }
 
@@ -2715,7 +2778,7 @@ fn infer_module_access(
 
     Ok(TypedExpr::ModuleSelect {
         label,
-        typ: instantiate(constructor.typ, level, &mut hashmap![], typer),
+        typ: typer.instantiate(constructor.typ, level, &mut hashmap![]),
         location: select_location,
         module_name,
         module_alias: module_alias.to_string(),
@@ -2779,8 +2842,8 @@ fn infer_record_access(
     // types for this instance of the record.
     let accessor_record_type = accessors.typ.clone();
     let mut type_vars = hashmap![];
-    let accessor_record_type = instantiate(accessor_record_type, 0, &mut type_vars, typer);
-    let typ = instantiate(typ, 0, &mut type_vars, typer);
+    let accessor_record_type = typer.instantiate(accessor_record_type, 0, &mut type_vars);
+    let typ = typer.instantiate(typ, 0, &mut type_vars);
     unify(accessor_record_type, record.typ(), typer)
         .map_err(|e| convert_unify_error(e, record.location()))?;
 
@@ -3073,7 +3136,8 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 };
 
                 let instantiated_constructor_type =
-                    instantiate(constructor_typ, self.level, &mut hashmap![], self.typer);
+                    self.typer
+                        .instantiate(constructor_typ, self.level, &mut hashmap![]);
                 match &*instantiated_constructor_type {
                     Type::Fn { args, retrn } => {
                         if args.len() == pattern_args.len() {
@@ -3162,7 +3226,7 @@ fn infer_value_constructor(
             name: name.to_string(),
             variables: typer.local_values.keys().map(|t| t.to_string()).collect(),
         })?;
-    let typ = instantiate(typ, level, &mut hashmap![], typer);
+    let typ = typer.instantiate(typ, level, &mut hashmap![]);
     Ok(ValueConstructor {
         public,
         variant,
@@ -3353,69 +3417,6 @@ fn convert_unify_error(e: UnifyError, location: &SrcSpan) -> Error {
         UnifyError::RecursiveType => Error::RecursiveType {
             location: location.clone(),
         },
-    }
-}
-
-/// Instantiate converts generic variables into unbound ones.
-///
-fn instantiate(
-    t: Arc<Type>,
-    ctx_level: usize,
-    ids: &mut im::HashMap<usize, Arc<Type>>,
-    typer: &mut Typer,
-) -> Arc<Type> {
-    match &*t {
-        Type::App {
-            public,
-            name,
-            module,
-            args,
-        } => {
-            let args = args
-                .iter()
-                .map(|t| instantiate(t.clone(), ctx_level, ids, typer))
-                .collect();
-            Arc::new(Type::App {
-                public: *public,
-                name: name.clone(),
-                module: module.clone(),
-                args,
-            })
-        }
-
-        Type::Var { typ } => {
-            match &*typ.borrow() {
-                TypeVar::Link { typ } => return instantiate(typ.clone(), ctx_level, ids, typer),
-
-                TypeVar::Unbound { .. } => return Arc::new(Type::Var { typ: typ.clone() }),
-
-                TypeVar::Generic { id } => match ids.get(id) {
-                    Some(t) => return t.clone(),
-                    None => {
-                        if !typer.annotated_generic_types.contains(id) {
-                            let v = typer.new_unbound_var(ctx_level);
-                            ids.insert(*id, v.clone());
-                            return v;
-                        }
-                    }
-                },
-            }
-            Arc::new(Type::Var { typ: typ.clone() })
-        }
-
-        Type::Fn { args, retrn, .. } => fn_(
-            args.iter()
-                .map(|t| instantiate(t.clone(), ctx_level, ids, typer))
-                .collect(),
-            instantiate(retrn.clone(), ctx_level, ids, typer),
-        ),
-
-        Type::Tuple { elems } => tuple(
-            elems
-                .iter()
-                .map(|t| instantiate(t.clone(), ctx_level, ids, typer))
-                .collect(),
-        ),
     }
 }
 
