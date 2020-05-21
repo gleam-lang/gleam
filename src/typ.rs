@@ -68,7 +68,7 @@ impl Type {
         module: &[String],
         name: &str,
         arity: usize,
-        env: &mut Env,
+        typer: &mut Typer,
     ) -> Option<Vec<Arc<Type>>> {
         match self {
             Type::App {
@@ -87,11 +87,11 @@ impl Type {
             Type::Var { typ } => {
                 let args: Vec<_> = match &*typ.borrow() {
                     TypeVar::Link { typ } => {
-                        return typ.get_app_args(public, module, name, arity, env);
+                        return typ.get_app_args(public, module, name, arity, typer);
                     }
 
                     TypeVar::Unbound { level, .. } => {
-                        (0..arity).map(|_| env.new_unbound_var(*level)).collect()
+                        (0..arity).map(|_| typer.new_unbound_var(*level)).collect()
                     }
 
                     TypeVar::Generic { .. } => return None,
@@ -314,7 +314,7 @@ pub enum PatternConstructor {
 }
 
 #[derive(Debug, Clone)]
-pub struct Env<'a, 'b> {
+pub struct Typer<'a, 'b> {
     current_module: &'b [String],
     uid: usize,
     annotated_generic_types: im::HashSet<usize>,
@@ -337,12 +337,12 @@ pub struct Env<'a, 'b> {
     warnings: Vec<Warning>,
 }
 
-impl<'a, 'b> Env<'a, 'b> {
+impl<'a, 'b> Typer<'a, 'b> {
     pub fn new(
         current_module: &'b [String],
         importable_modules: &'a HashMap<String, Module>,
     ) -> Self {
-        let mut env = Self {
+        let mut typer = Typer {
             uid: 0,
             annotated_generic_types: im::HashSet::new(),
             module_types: HashMap::new(),
@@ -355,19 +355,20 @@ impl<'a, 'b> Env<'a, 'b> {
             current_module,
         };
 
-        env.insert_type_constructor(
-            "Int".to_string(),
-            TypeConstructor {
-                parameters: vec![],
-                typ: int(),
-                origin: Default::default(),
-                module: vec![],
-                public: true,
-            },
-        )
-        .gleam_expect("prelude inserting Int type");
+        typer
+            .insert_type_constructor(
+                "Int".to_string(),
+                TypeConstructor {
+                    parameters: vec![],
+                    typ: int(),
+                    origin: Default::default(),
+                    module: vec![],
+                    public: true,
+                },
+            )
+            .gleam_expect("prelude inserting Int type");
 
-        env.insert_variable(
+        typer.insert_variable(
             "True".to_string(),
             ValueConstructorVariant::Record {
                 name: "True".to_string(),
@@ -375,7 +376,7 @@ impl<'a, 'b> Env<'a, 'b> {
             },
             bool(),
         );
-        env.insert_variable(
+        typer.insert_variable(
             "False".to_string(),
             ValueConstructorVariant::Record {
                 name: "False".to_string(),
@@ -383,70 +384,75 @@ impl<'a, 'b> Env<'a, 'b> {
             },
             bool(),
         );
-        env.insert_type_constructor(
-            "Bool".to_string(),
-            TypeConstructor {
-                origin: Default::default(),
-                parameters: vec![],
-                typ: bool(),
-                module: vec![],
-                public: true,
-            },
-        )
-        .gleam_expect("prelude inserting Bool type");
+        typer
+            .insert_type_constructor(
+                "Bool".to_string(),
+                TypeConstructor {
+                    origin: Default::default(),
+                    parameters: vec![],
+                    typ: bool(),
+                    module: vec![],
+                    public: true,
+                },
+            )
+            .gleam_expect("prelude inserting Bool type");
 
-        let list_parameter = env.new_generic_var();
-        env.insert_type_constructor(
-            "List".to_string(),
-            TypeConstructor {
-                origin: Default::default(),
-                parameters: vec![list_parameter.clone()],
-                typ: list(list_parameter),
-                module: vec![],
-                public: true,
-            },
-        )
-        .gleam_expect("prelude inserting List type");
+        let list_parameter = typer.new_generic_var();
+        typer
+            .insert_type_constructor(
+                "List".to_string(),
+                TypeConstructor {
+                    origin: Default::default(),
+                    parameters: vec![list_parameter.clone()],
+                    typ: list(list_parameter),
+                    module: vec![],
+                    public: true,
+                },
+            )
+            .gleam_expect("prelude inserting List type");
 
-        env.insert_type_constructor(
-            "Float".to_string(),
-            TypeConstructor {
-                origin: Default::default(),
-                parameters: vec![],
-                typ: float(),
-                module: vec![],
-                public: true,
-            },
-        )
-        .gleam_expect("prelude inserting Float type");
+        typer
+            .insert_type_constructor(
+                "Float".to_string(),
+                TypeConstructor {
+                    origin: Default::default(),
+                    parameters: vec![],
+                    typ: float(),
+                    module: vec![],
+                    public: true,
+                },
+            )
+            .gleam_expect("prelude inserting Float type");
 
-        env.insert_type_constructor(
-            "String".to_string(),
-            TypeConstructor {
-                origin: Default::default(),
-                parameters: vec![],
-                typ: string(),
-                module: vec![],
-                public: true,
-            },
-        )
-        .gleam_expect("prelude inserting String type");
+        typer
+            .insert_type_constructor(
+                "String".to_string(),
+                TypeConstructor {
+                    origin: Default::default(),
+                    parameters: vec![],
+                    typ: string(),
+                    module: vec![],
+                    public: true,
+                },
+            )
+            .gleam_expect("prelude inserting String type");
 
-        let result_value = env.new_generic_var();
-        let result_error = env.new_generic_var();
-        env.insert_type_constructor(
-            "Result".to_string(),
-            TypeConstructor {
-                origin: Default::default(),
-                parameters: vec![result_value.clone(), result_error.clone()],
-                typ: result(result_value, result_error),
-                module: vec![],
-                public: true,
-            },
-        )
-        .gleam_expect("prelude inserting Result type");
+        let result_value = typer.new_generic_var();
+        let result_error = typer.new_generic_var();
+        typer
+            .insert_type_constructor(
+                "Result".to_string(),
+                TypeConstructor {
+                    origin: Default::default(),
+                    parameters: vec![result_value.clone(), result_error.clone()],
+                    typ: result(result_value, result_error),
+                    module: vec![],
+                    public: true,
+                },
+            )
+            .gleam_expect("prelude inserting Result type");
 
-        env.insert_variable(
+        typer.insert_variable(
             "Nil".to_string(),
             ValueConstructorVariant::Record {
                 name: "Nil".to_string(),
@@ -454,21 +460,22 @@ impl<'a, 'b> Env<'a, 'b> {
             },
             nil(),
         );
-        env.insert_type_constructor(
-            "Nil".to_string(),
-            TypeConstructor {
-                origin: Default::default(),
-                parameters: vec![],
-                typ: nil(),
-                module: vec![],
-                public: true,
-            },
-        )
-        .gleam_expect("prelude inserting Nil type");
+        typer
+            .insert_type_constructor(
+                "Nil".to_string(),
+                TypeConstructor {
+                    origin: Default::default(),
+                    parameters: vec![],
+                    typ: nil(),
+                    module: vec![],
+                    public: true,
+                },
+            )
+            .gleam_expect("prelude inserting Nil type");
 
-        let ok = env.new_generic_var();
-        let error = env.new_generic_var();
-        env.insert_variable(
+        let ok = typer.new_generic_var();
+        let error = typer.new_generic_var();
+        typer.insert_variable(
             "Ok".to_string(),
             ValueConstructorVariant::Record {
                 name: "Ok".to_string(),
@@ -477,9 +484,9 @@ impl<'a, 'b> Env<'a, 'b> {
             fn_(vec![ok.clone()], result(ok, error)),
         );
 
-        let ok = env.new_generic_var();
-        let error = env.new_generic_var();
-        env.insert_variable(
+        let ok = typer.new_generic_var();
+        let error = typer.new_generic_var();
+        typer.insert_variable(
             "Error".to_string(),
             ValueConstructorVariant::Record {
                 name: "Error".to_string(),
@@ -488,7 +495,7 @@ impl<'a, 'b> Env<'a, 'b> {
             fn_(vec![error.clone()], result(ok, error)),
         );
 
-        env
+        typer
     }
 
     fn next_uid(&mut self) -> usize {
@@ -1111,22 +1118,22 @@ fn make_type_vars(
     args: &[String],
     vars: &mut im::HashMap<String, (usize, Arc<Type>)>,
     location: &SrcSpan,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<Vec<Arc<Type>>, Error> {
     args.iter()
         .map(|arg| TypeAst::Var {
             location: location.clone(),
             name: arg.to_string(),
         })
-        .map(|ast| env.type_from_ast(&ast, vars, NewTypeAction::MakeGeneric))
+        .map(|ast| typer.type_from_ast(&ast, vars, NewTypeAction::MakeGeneric))
         .collect::<Result<_, _>>()
 }
 
-/// Iterate over a module, registering any new types created by the module into the env
+/// Iterate over a module, registering any new types created by the module into the typer
 fn register_types(
     statement: &UntypedStatement,
     module: &[String],
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<(), Error> {
     match statement {
         Statement::ExternalType {
@@ -1144,14 +1151,14 @@ fn register_types(
             ..
         } => {
             let mut type_vars = hashmap![];
-            let parameters = make_type_vars(args, &mut type_vars, location, env)?;
+            let parameters = make_type_vars(args, &mut type_vars, location, typer)?;
             let typ = Arc::new(Type::App {
                 public: *public,
                 module: module.to_owned(),
                 name: name.clone(),
                 args: parameters.clone(),
             });
-            env.insert_type_constructor(
+            typer.insert_type_constructor(
                 name.clone(),
                 TypeConstructor {
                     origin: location.clone(),
@@ -1172,9 +1179,10 @@ fn register_types(
             ..
         } => {
             let mut type_vars = hashmap![];
-            let parameters = make_type_vars(args, &mut type_vars, location, env)?;
-            let typ = env.type_from_ast(&resolved_type, &mut type_vars, NewTypeAction::Disallow)?;
-            env.insert_type_constructor(
+            let parameters = make_type_vars(args, &mut type_vars, location, typer)?;
+            let typ =
+                typer.type_from_ast(&resolved_type, &mut type_vars, NewTypeAction::Disallow)?;
+            typer.insert_type_constructor(
                 name.clone(),
                 TypeConstructor {
                     origin: location.clone(),
@@ -1198,7 +1206,7 @@ pub fn infer_module(
     module: UntypedModule,
     modules: &HashMap<String, Module>,
 ) -> (Result<TypedModule, Error>, Vec<Warning>) {
-    let mut env = Env::new(module.name.as_slice(), modules);
+    let mut typer = Typer::new(module.name.as_slice(), modules);
     let module_name = &module.name;
 
     for s in module.statements.iter() {
@@ -1210,7 +1218,7 @@ pub fn infer_module(
                 ..
             } => {
                 // Find imported module
-                let module_info = env.importable_modules.get(&module.join("/")).expect(
+                let module_info = typer.importable_modules.get(&module.join("/")).expect(
                     "COMPILER BUG: Typer could not find a module being imported.
     This should not be possible. Please report this crash",
                 );
@@ -1236,7 +1244,7 @@ pub fn infer_module(
                     };
 
                     if let Some(value) = module_info.values.get(name) {
-                        env.insert_variable(
+                        typer.insert_variable(
                             imported_name.clone(),
                             value.variant.clone(),
                             value.typ.clone(),
@@ -1245,9 +1253,9 @@ pub fn infer_module(
                     }
 
                     if let Some(typ) = module_info.types.get(name) {
-                        match env.insert_type_constructor(imported_name.clone(), typ.clone()) {
+                        match typer.insert_type_constructor(imported_name.clone(), typ.clone()) {
                             Ok(_) => (),
-                            Err(e) => return (Err(e), env.warnings),
+                            Err(e) => return (Err(e), typer.warnings),
                         }
 
                         imported = true;
@@ -1270,13 +1278,14 @@ pub fn infer_module(
                                     .map(|t| t.to_string())
                                     .collect(),
                             }),
-                            env.warnings,
+                            typer.warnings,
                         );
                     }
                 }
 
                 // Insert imported module into scope
-                env.imported_modules
+                typer
+                    .imported_modules
                     .insert(module_name, module_info.clone());
             }
 
@@ -1287,9 +1296,9 @@ pub fn infer_module(
     // Register types so they can be used in constructors and functions
     // earlier in the file
     for s in module.statements.iter() {
-        match register_types(s, module_name, &mut env) {
+        match register_types(s, module_name, &mut typer) {
             Ok(_) => (),
-            Err(e) => return (Err(e), env.warnings),
+            Err(e) => return (Err(e), typer.warnings),
         }
     }
 
@@ -1323,8 +1332,8 @@ pub fn infer_module(
                 let field_map = field_map.into_option();
 
                 // Register a var for the function so that it can call itself recursively
-                let rec = env.new_unbound_var(level + 1);
-                env.insert_variable(
+                let rec = typer.new_unbound_var(level + 1);
+                typer.insert_variable(
                     name.clone(),
                     ValueConstructorVariant::ModuleFn {
                         name: name.clone(),
@@ -1337,16 +1346,16 @@ pub fn infer_module(
 
                 // Infer the type
                 let (args, body) =
-                    do_infer_fn(args, body, &return_annotation, level + 1, &mut env)?;
+                    do_infer_fn(args, body, &return_annotation, level + 1, &mut typer)?;
                 let args_types = args.iter().map(|a| a.typ.clone()).collect();
                 let typ = fn_(args_types, body.typ());
 
                 // Assert that the inferred type matches the type of any recursive call
-                unify(rec, typ.clone(), &env).map_err(|e| convert_unify_error(e, &location))?;
+                unify(rec, typ.clone(), &typer).map_err(|e| convert_unify_error(e, &location))?;
                 let typ = generalise(typ, level);
 
                 // Insert the function into the module's interface
-                env.insert_module_value(
+                typer.insert_module_value(
                     &name,
                     ValueConstructor {
                         public,
@@ -1361,8 +1370,8 @@ pub fn infer_module(
                     },
                 )?;
 
-                // Insert the function into the environment
-                env.insert_variable(
+                // Insert the function into the typerironment
+                typer.insert_variable(
                     name.clone(),
                     ValueConstructorVariant::ModuleFn {
                         name: name.clone(),
@@ -1401,12 +1410,15 @@ pub fn infer_module(
                 // Construct type of function from AST
                 let mut type_vars = hashmap![];
                 let return_type =
-                    env.type_from_ast(&retrn, &mut type_vars, NewTypeAction::MakeGeneric)?;
+                    typer.type_from_ast(&retrn, &mut type_vars, NewTypeAction::MakeGeneric)?;
                 let mut args_types = Vec::with_capacity(args.len());
                 let mut field_map = FieldMap::new(args.len());
                 for (i, arg) in args.iter().enumerate() {
-                    let t =
-                        env.type_from_ast(&arg.typ, &mut type_vars, NewTypeAction::MakeGeneric)?;
+                    let t = typer.type_from_ast(
+                        &arg.typ,
+                        &mut type_vars,
+                        NewTypeAction::MakeGeneric,
+                    )?;
                     args_types.push(t);
                     if let Some(label) = &arg.label {
                         field_map
@@ -1421,7 +1433,7 @@ pub fn infer_module(
                 let typ = fn_(args_types, return_type.clone());
 
                 // Insert function into module
-                env.insert_module_value(
+                typer.insert_module_value(
                     &name,
                     ValueConstructor {
                         public,
@@ -1437,7 +1449,7 @@ pub fn infer_module(
                 )?;
 
                 // Insert function into module's internal scope
-                env.insert_variable(
+                typer.insert_variable(
                     name.clone(),
                     ValueConstructorVariant::ModuleFn {
                         name: fun.clone(),
@@ -1469,7 +1481,7 @@ pub fn infer_module(
                 resolved_type,
                 ..
             } => {
-                let typ = env
+                let typ = typer
                     .get_type_constructor(&None, alias.as_str())
                     .gleam_expect("Could not find existing type for type alias")
                     .typ
@@ -1498,7 +1510,7 @@ pub fn infer_module(
 
                 // This custom type was inserted into the module types in the `register_types`
                 // pass, so we can expect this type to exist already.
-                let retrn = env
+                let retrn = typer
                     .module_types
                     .get(&name)
                     .gleam_expect("Type for custom type not found on constructor infer pass")
@@ -1519,14 +1531,14 @@ pub fn infer_module(
                 // If the custom type only has a single constructor then we can access the
                 // fields using the record.field syntax, so store any fields accessors.
                 if let Some(accessors) =
-                    custom_type_accessors(constructors.as_slice(), &mut type_vars, &mut env)?
+                    custom_type_accessors(constructors.as_slice(), &mut type_vars, &mut typer)?
                 {
                     let map = AccessorsMap {
                         public: (public && !opaque),
                         accessors,
                         typ: retrn.clone(),
                     };
-                    env.insert_accessors(name.as_ref(), map)
+                    typer.insert_accessors(name.as_ref(), map)
                 }
 
                 // Check and register constructors
@@ -1534,7 +1546,8 @@ pub fn infer_module(
                     let mut field_map = FieldMap::new(constructor.args.len());
                     let mut args_types = Vec::with_capacity(constructor.args.len());
                     for (i, (label, arg, ..)) in constructor.args.iter().enumerate() {
-                        let t = env.type_from_ast(&arg, &mut type_vars, NewTypeAction::Disallow)?;
+                        let t =
+                            typer.type_from_ast(&arg, &mut type_vars, NewTypeAction::Disallow)?;
                         args_types.push(t);
                         if let Some(label) = label {
                             field_map.insert(label.clone(), i).map_err(|_| {
@@ -1553,7 +1566,7 @@ pub fn infer_module(
                     };
 
                     if !opaque {
-                        env.insert_module_value(
+                        typer.insert_module_value(
                             &constructor.name,
                             ValueConstructor {
                                 public,
@@ -1567,7 +1580,7 @@ pub fn infer_module(
                         )?;
                     }
 
-                    env.insert_variable(
+                    typer.insert_variable(
                         constructor.name.clone(),
                         ValueConstructorVariant::Record {
                             name: constructor.name.clone(),
@@ -1601,7 +1614,7 @@ pub fn infer_module(
                         location: location.clone(),
                         name: arg.to_string(),
                     };
-                    env.type_from_ast(&var, &mut type_vars, NewTypeAction::MakeGeneric)?;
+                    typer.type_from_ast(&var, &mut type_vars, NewTypeAction::MakeGeneric)?;
                 }
                 Ok(Statement::ExternalType {
                     doc,
@@ -1628,35 +1641,36 @@ pub fn infer_module(
 
     let statements = match statements_result {
         Ok(o) => o,
-        Err(e) => return (Err(e), env.warnings),
+        Err(e) => return (Err(e), typer.warnings),
     };
 
     // Remove private and imported types and values to create the public interface
-    env.module_types
+    typer
+        .module_types
         .retain(|_, info| info.public && &info.module == module_name);
-    env.module_values.retain(|_, info| info.public);
-    env.accessors.retain(|_, accessors| accessors.public);
+    typer.module_values.retain(|_, info| info.public);
+    typer.accessors.retain(|_, accessors| accessors.public);
 
     // Ensure no exported values have private types in their type signature
-    for (_, value) in env.module_values.iter() {
+    for (_, value) in typer.module_values.iter() {
         if let Some(leaked) = value.typ.find_private_type() {
             return (
                 Err(Error::PrivateTypeLeak {
                     location: value.origin.clone(),
                     leaked,
                 }),
-                env.warnings,
+                typer.warnings,
             );
         }
     }
 
-    let Env {
+    let Typer {
         module_types: types,
         module_values: values,
         accessors,
         warnings,
         ..
-    } = env;
+    } = typer;
 
     (
         Ok(ast::Module {
@@ -1677,7 +1691,7 @@ pub fn infer_module(
 fn custom_type_accessors(
     constructors: &[RecordConstructor],
     type_vars: &mut im::HashMap<String, (usize, Arc<Type>)>,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<Option<HashMap<String, RecordAccessor>>, Error> {
     let args = match constructors {
         [constructor] if !constructor.args.is_empty() => &constructor.args,
@@ -1687,7 +1701,7 @@ fn custom_type_accessors(
     let mut fields = HashMap::with_capacity(args.len());
     for (index, (label, arg, ..)) in args.iter().enumerate() {
         if let Some(label) = label {
-            let typ = env.type_from_ast(arg, type_vars, NewTypeAction::Disallow)?;
+            let typ = typer.type_from_ast(arg, type_vars, NewTypeAction::Disallow)?;
             fields.insert(
                 label.to_string(),
                 RecordAccessor {
@@ -1704,23 +1718,23 @@ fn custom_type_accessors(
 /// Crawl the AST, annotating each node with the inferred type or
 /// returning an error.
 ///
-pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr, Error> {
+pub fn infer(expr: UntypedExpr, level: usize, typer: &mut Typer) -> Result<TypedExpr, Error> {
     match expr {
-        UntypedExpr::ListNil { location, .. } => infer_nil(location, level, env),
+        UntypedExpr::ListNil { location, .. } => infer_nil(location, level, typer),
 
-        UntypedExpr::Todo { location, .. } => infer_todo(location, level, env),
+        UntypedExpr::Todo { location, .. } => infer_todo(location, level, typer),
 
-        UntypedExpr::Var { location, name, .. } => infer_var(name, location, level, env),
+        UntypedExpr::Var { location, name, .. } => infer_var(name, location, level, typer),
 
         UntypedExpr::Int {
             location, value, ..
         } => infer_int(value, location),
 
-        UntypedExpr::Seq { first, then, .. } => infer_seq(*first, *then, level, env),
+        UntypedExpr::Seq { first, then, .. } => infer_seq(*first, *then, level, typer),
 
         UntypedExpr::Tuple {
             location, elems, ..
-        } => infer_tuple(elems, location, level, env),
+        } => infer_tuple(elems, location, level, typer),
 
         UntypedExpr::Float {
             location, value, ..
@@ -1734,7 +1748,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             left,
             right,
             location,
-        } => infer_pipe(*left, *right, location, level, env),
+        } => infer_pipe(*left, *right, location, level, typer),
 
         UntypedExpr::Fn {
             location,
@@ -1750,7 +1764,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             return_annotation,
             level,
             location,
-            env,
+            typer,
         ),
 
         UntypedExpr::Let {
@@ -1769,7 +1783,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             &annotation,
             level,
             location,
-            env,
+            typer,
         ),
 
         UntypedExpr::Case {
@@ -1777,7 +1791,7 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             subjects,
             clauses,
             ..
-        } => infer_case(subjects, clauses, level, location, env),
+        } => infer_case(subjects, clauses, level, location, typer),
 
         UntypedExpr::ListCons {
             location,
@@ -1785,14 +1799,14 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             tail,
             deprecated_syntax,
             ..
-        } => infer_cons(*head, *tail, deprecated_syntax, location, level, env),
+        } => infer_cons(*head, *tail, deprecated_syntax, location, level, typer),
 
         UntypedExpr::Call {
             location,
             fun,
             args,
             ..
-        } => infer_call(*fun, args, level, location, env),
+        } => infer_call(*fun, args, level, location, typer),
 
         UntypedExpr::BinOp {
             location,
@@ -1800,21 +1814,21 @@ pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr
             left,
             right,
             ..
-        } => infer_binop(name, *left, *right, level, location, env),
+        } => infer_binop(name, *left, *right, level, location, typer),
 
         UntypedExpr::FieldAccess {
             location,
             label,
             container,
             ..
-        } => infer_field_access(*container, label, location, level, env),
+        } => infer_field_access(*container, label, location, level, typer),
 
         UntypedExpr::TupleIndex {
             location,
             index,
             tuple,
             ..
-        } => infer_tuple_index(*tuple, index, location, level, env),
+        } => infer_tuple_index(*tuple, index, location, level, typer),
     }
 }
 
@@ -1823,25 +1837,25 @@ fn infer_pipe(
     right: UntypedExpr,
     location: SrcSpan,
     level: usize,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     match right {
         // left |> right(..args)
         UntypedExpr::Call { fun, args, .. } => {
-            let fun = infer(*fun, level, env)?;
+            let fun = infer(*fun, level, typer)?;
             match fun.typ().fn_arity() {
                 // Rewrite as right(left, ..args)
                 Some(arity) if arity == args.len() + 1 => {
-                    infer_insert_pipe(fun, args, left, level, env)
+                    infer_insert_pipe(fun, args, left, level, typer)
                 }
 
                 // Rewrite as right(..args)(left)
-                _ => infer_apply_to_call_pipe(fun, args, left, location, level, env),
+                _ => infer_apply_to_call_pipe(fun, args, left, location, level, typer),
             }
         }
 
         // right(left)
-        right => infer_apply_pipe(left, right, location, level, env),
+        right => infer_apply_pipe(left, right, location, level, typer),
     }
 }
 
@@ -1852,10 +1866,10 @@ fn infer_apply_to_call_pipe(
     left: UntypedExpr,
     location: SrcSpan,
     level: usize,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     let right_location = left.location().clone();
-    let (fun, args, typ) = do_infer_call_with_known_fun(fun, args, level, &right_location, env)?;
+    let (fun, args, typ) = do_infer_call_with_known_fun(fun, args, level, &right_location, typer)?;
     let fun = TypedExpr::Call {
         location: right_location,
         typ,
@@ -1867,7 +1881,7 @@ fn infer_apply_to_call_pipe(
         location: left.location().clone(),
         value: left,
     }];
-    let (fun, args, typ) = do_infer_call_with_known_fun(fun, args, level, &location, env)?;
+    let (fun, args, typ) = do_infer_call_with_known_fun(fun, args, level, &location, typer)?;
     Ok(TypedExpr::Call {
         location,
         typ,
@@ -1882,7 +1896,7 @@ fn infer_insert_pipe(
     args: Vec<CallArg<UntypedExpr>>,
     left: UntypedExpr,
     level: usize,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     let location = left.location().clone();
     let mut new_args = Vec::with_capacity(args.len() + 1);
@@ -1894,7 +1908,7 @@ fn infer_insert_pipe(
     for arg in args {
         new_args.push(arg.clone());
     }
-    let (fun, args, typ) = do_infer_call_with_known_fun(fun, new_args, level, &location, env)?;
+    let (fun, args, typ) = do_infer_call_with_known_fun(fun, new_args, level, &location, typer)?;
     Ok(TypedExpr::Call {
         location,
         typ,
@@ -1909,16 +1923,16 @@ fn infer_apply_pipe(
     right: UntypedExpr,
     location: SrcSpan,
     level: usize,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<TypedExpr, Error> {
-    let left = Box::new(infer(left, level, env)?);
-    let right = Box::new(infer(right, level, env)?);
-    let typ = env.new_unbound_var(level);
+    let left = Box::new(infer(left, level, typer)?);
+    let right = Box::new(infer(right, level, typer)?);
+    let typ = typer.new_unbound_var(level);
     let fn_typ = Arc::new(Type::Fn {
         args: vec![left.typ()],
         retrn: typ.clone(),
     });
-    unify(right.typ(), fn_typ, env).map_err(|e| convert_unify_error(e, &location))?;
+    unify(right.typ(), fn_typ, typer).map_err(|e| convert_unify_error(e, &location))?;
 
     Ok(TypedExpr::Pipe {
         location,
@@ -1928,21 +1942,21 @@ fn infer_apply_pipe(
     })
 }
 
-fn infer_nil(location: SrcSpan, level: usize, env: &mut Env) -> Result<TypedExpr, Error> {
+fn infer_nil(location: SrcSpan, level: usize, typer: &mut Typer) -> Result<TypedExpr, Error> {
     Ok(TypedExpr::ListNil {
         location,
-        typ: list(env.new_unbound_var(level)),
+        typ: list(typer.new_unbound_var(level)),
     })
 }
 
-fn infer_todo(location: SrcSpan, level: usize, env: &mut Env) -> Result<TypedExpr, Error> {
-    env.warnings.push(Warning::Todo {
+fn infer_todo(location: SrcSpan, level: usize, typer: &mut Typer) -> Result<TypedExpr, Error> {
+    typer.warnings.push(Warning::Todo {
         location: location.clone(),
     });
 
     Ok(TypedExpr::Todo {
         location,
-        typ: env.new_unbound_var(level),
+        typ: typer.new_unbound_var(level),
     })
 }
 
@@ -1974,14 +1988,14 @@ fn infer_seq(
     first: UntypedExpr,
     then: UntypedExpr,
     level: usize,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<TypedExpr, Error> {
-    let first = infer(first, level, env)?;
-    let then = infer(then, level, env)?;
+    let first = infer(first, level, typer)?;
+    let then = infer(then, level, typer)?;
 
     match first.typ().as_ref() {
         typ if typ.is_result() => {
-            env.warnings.push(Warning::ImplicitlyDiscardedResult {
+            typer.warnings.push(Warning::ImplicitlyDiscardedResult {
                 location: first.location().clone(),
             });
         }
@@ -2003,9 +2017,9 @@ fn infer_fn(
     return_annotation: Option<TypeAst>,
     level: usize,
     location: SrcSpan,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<TypedExpr, Error> {
-    let (args, body) = do_infer_fn(args, body, &return_annotation, level, env)?;
+    let (args, body) = do_infer_fn(args, body, &return_annotation, level, typer)?;
     let args_types = args.iter().map(|a| a.typ.clone()).collect();
     let typ = fn_(args_types, body.typ());
     Ok(TypedExpr::Fn {
@@ -2023,9 +2037,9 @@ fn infer_call(
     args: Vec<CallArg<UntypedExpr>>,
     level: usize,
     location: SrcSpan,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<TypedExpr, Error> {
-    let (fun, args, typ) = do_infer_call(fun, args, level, &location, env)?;
+    let (fun, args, typ) = do_infer_call(fun, args, level, &location, typer)?;
     Ok(TypedExpr::Call {
         location,
         typ,
@@ -2040,14 +2054,14 @@ fn infer_cons(
     deprecated_syntax: bool,
     location: SrcSpan,
     level: usize,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<TypedExpr, Error> {
-    let head = infer(head, level, env)?;
-    let tail = infer(tail, level, env)?;
-    unify(tail.typ(), list(head.typ()), env).map_err(|e| convert_unify_error(e, &location))?;
+    let head = infer(head, level, typer)?;
+    let tail = infer(tail, level, typer)?;
+    unify(tail.typ(), list(head.typ()), typer).map_err(|e| convert_unify_error(e, &location))?;
 
     if deprecated_syntax {
-        env.warnings.push(Warning::DeprecatedListPrependSyntax {
+        typer.warnings.push(Warning::DeprecatedListPrependSyntax {
             location: SrcSpan {
                 start: location.start - 2,
                 end: location.start - 1,
@@ -2067,11 +2081,11 @@ fn infer_tuple(
     elems: Vec<UntypedExpr>,
     location: SrcSpan,
     level: usize,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     let elems = elems
         .into_iter()
-        .map(|e| infer(e, level, env))
+        .map(|e| infer(e, level, typer))
         .collect::<Result<Vec<_>, _>>()?;
     let typ = tuple(elems.iter().map(|e| e.typ()).collect());
     Ok(TypedExpr::Tuple {
@@ -2084,9 +2098,9 @@ fn infer_var(
     name: String,
     location: SrcSpan,
     level: usize,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<TypedExpr, Error> {
-    let constructor = infer_value_constructor(&name, level, &location, env)?;
+    let constructor = infer_value_constructor(&name, level, &location, typer)?;
     Ok(TypedExpr::Var {
         constructor,
         location,
@@ -2099,14 +2113,21 @@ fn infer_field_access(
     label: String,
     access_location: SrcSpan,
     level: usize,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     match container {
-        UntypedExpr::Var { name, location, .. } if !env.local_values.contains_key(&name) => {
-            infer_module_access(name.as_ref(), label, level, &location, access_location, env)
+        UntypedExpr::Var { name, location, .. } if !typer.local_values.contains_key(&name) => {
+            infer_module_access(
+                name.as_ref(),
+                label,
+                level,
+                &location,
+                access_location,
+                typer,
+            )
         }
 
-        _ => infer_record_access(container, label, level, access_location, env),
+        _ => infer_record_access(container, label, level, access_location, typer),
     }
 }
 
@@ -2115,9 +2136,9 @@ fn infer_tuple_index(
     index: u64,
     location: SrcSpan,
     level: usize,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<TypedExpr, Error> {
-    let tuple = infer(tuple, level, env)?;
+    let tuple = infer(tuple, level, typer)?;
 
     match tuple.typ().as_ref() {
         Type::Tuple { elems } => {
@@ -2154,13 +2175,13 @@ fn infer_binop(
     right: UntypedExpr,
     level: usize,
     location: SrcSpan,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     let (input_type, output_type) = match name {
         BinOp::Eq | BinOp::NotEq => {
-            let left = infer(left, level, env)?;
-            let right = infer(right, level, env)?;
-            unify(left.typ(), right.typ(), env)
+            let left = infer(left, level, typer)?;
+            let right = infer(right, level, typer)?;
+            unify(left.typ(), right.typ(), typer)
                 .map_err(|e| convert_unify_error(e, right.location()))?;
 
             return Ok(TypedExpr::BinOp {
@@ -2192,11 +2213,11 @@ fn infer_binop(
         BinOp::ModuloInt => (int(), int()),
     };
 
-    let left = infer(left, level, env)?;
-    unify(input_type.clone(), left.typ(), env)
+    let left = infer(left, level, typer)?;
+    unify(input_type.clone(), left.typ(), typer)
         .map_err(|e| convert_unify_error(e, left.location()))?;
-    let right = infer(right, level, env)?;
-    unify(input_type, right.typ(), env).map_err(|e| convert_unify_error(e, right.location()))?;
+    let right = infer(right, level, typer)?;
+    unify(input_type, right.typ(), typer).map_err(|e| convert_unify_error(e, right.location()))?;
 
     Ok(TypedExpr::BinOp {
         location,
@@ -2215,18 +2236,18 @@ fn infer_let(
     annotation: &Option<TypeAst>,
     level: usize,
     location: SrcSpan,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<TypedExpr, Error> {
-    let value = infer(value, level + 1, env)?;
-    let try_value_type = env.new_unbound_var(level);
-    let try_error_type = env.new_unbound_var(level);
+    let value = infer(value, level + 1, typer)?;
+    let try_value_type = typer.new_unbound_var(level);
+    let try_error_type = typer.new_unbound_var(level);
 
     let value_typ = match kind {
         // Ensure that the value is a result if this is a `try` binding
         BindingKind::Try => {
             let v = try_value_type.clone();
             let e = try_error_type.clone();
-            unify(result(v, e), value.typ(), env)
+            unify(result(v, e), value.typ(), typer)
                 .map_err(|e| convert_unify_error(e, value.location()))?;
             try_value_type.clone()
         }
@@ -2236,25 +2257,25 @@ fn infer_let(
     let value_typ = generalise(value_typ, level + 1);
 
     // Ensure the pattern matches the type of the value
-    let pattern = PatternTyper::new(env, level).unify(pattern, value_typ.clone())?;
+    let pattern = PatternTyper::new(typer, level).unify(pattern, value_typ.clone())?;
 
     // Check the type of the following code
-    let then = infer(then, level, env)?;
+    let then = infer(then, level, typer)?;
     let typ = then.typ();
 
     // Ensure that a Result with the right error type is returned for `try`
     if kind == BindingKind::Try {
-        let value = env.new_unbound_var(level);
-        unify(result(value, try_error_type), typ.clone(), env)
+        let value = typer.new_unbound_var(level);
+        unify(result(value, try_error_type), typ.clone(), typer)
             .map_err(|e| convert_unify_error(e, then.try_binding_location()))?;
     }
 
     // Check that any type annotation is accurate.
     if let Some(ann) = annotation {
-        let ann_typ = env
+        let ann_typ = typer
             .type_from_ast(ann, &mut hashmap![], NewTypeAction::MakeGeneric)
-            .map(|t| instantiate(t, level, &mut hashmap![], env))?;
-        unify(ann_typ, value_typ, env).map_err(|e| convert_unify_error(e, value.location()))?;
+            .map(|t| instantiate(t, level, &mut hashmap![], typer))?;
+        unify(ann_typ, value_typ, typer).map_err(|e| convert_unify_error(e, value.location()))?;
     }
 
     Ok(TypedExpr::Let {
@@ -2272,25 +2293,25 @@ fn infer_case(
     clauses: Vec<UntypedClause>,
     level: usize,
     location: SrcSpan,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     let subjects_count = subjects.len();
     let mut typed_subjects = Vec::with_capacity(subjects_count);
     let mut subject_types = Vec::with_capacity(subjects_count);
     let mut typed_clauses = Vec::with_capacity(clauses.len());
 
-    let return_type = env.new_unbound_var(level);
+    let return_type = typer.new_unbound_var(level);
 
     for subject in subjects.into_iter() {
-        let subject = infer(subject, level + 1, env)?;
+        let subject = infer(subject, level + 1, typer)?;
         let subject_type = generalise(subject.typ(), level + 1);
         typed_subjects.push(subject);
         subject_types.push(subject_type);
     }
 
     for clause in clauses.into_iter() {
-        let typed_clause = infer_clause(clause, &subject_types, level, env)?;
-        unify(return_type.clone(), typed_clause.then.typ(), env)
+        let typed_clause = infer_clause(clause, &subject_types, level, typer)?;
+        unify(return_type.clone(), typed_clause.then.typ(), typer)
             .map_err(|e| convert_unify_error(e, typed_clause.then.location()))?;
         typed_clauses.push(typed_clause);
     }
@@ -2306,7 +2327,7 @@ fn infer_clause(
     clause: UntypedClause,
     subjects: &[Arc<Type>],
     level: usize,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<TypedClause, Error> {
     let Clause {
         pattern,
@@ -2317,7 +2338,7 @@ fn infer_clause(
     } = clause;
 
     // Store the local scope so it can be reset after the clause
-    let vars = env.local_values.clone();
+    let vars = typer.local_values.clone();
 
     // Check the types
     let (typed_pattern, typed_alternatives) = infer_clause_pattern(
@@ -2326,13 +2347,13 @@ fn infer_clause(
         subjects,
         level,
         &location,
-        env,
+        typer,
     )?;
-    let guard = infer_optional_clause_guard(guard, level, env)?;
-    let then = infer(then, level, env)?;
+    let guard = infer_optional_clause_guard(guard, level, typer)?;
+    let then = infer(then, level, typer)?;
 
     // Reset the local vars now the clause scope is done
-    env.local_values = vars;
+    typer.local_values = vars;
 
     Ok(Clause {
         location,
@@ -2349,9 +2370,9 @@ fn infer_clause_pattern(
     subjects: &[Arc<Type>],
     level: usize,
     location: &SrcSpan,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<(TypedMultiPattern, Vec<TypedMultiPattern>), Error> {
-    let mut pattern_typer = PatternTyper::new(env, level);
+    let mut pattern_typer = PatternTyper::new(typer, level);
     let typed_pattern = pattern_typer.infer_multi_pattern(pattern, subjects, &location)?;
 
     // Each case clause has one or more patterns that may match the
@@ -2369,7 +2390,7 @@ fn infer_clause_pattern(
 fn infer_optional_clause_guard(
     guard: Option<UntypedClauseGuard>,
     level: usize,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<Option<TypedClauseGuard>, Error> {
     match guard {
         // If there is no guard we do nothing
@@ -2377,8 +2398,8 @@ fn infer_optional_clause_guard(
 
         // If there is a guard we assert that it is of type Bool
         Some(guard) => {
-            let guard = infer_clause_guard(guard, level, env)?;
-            unify(bool(), guard.typ(), env)
+            let guard = infer_clause_guard(guard, level, typer)?;
+            unify(bool(), guard.typ(), typer)
                 .map_err(|e| convert_unify_error(e, guard.location()))?;
             Ok(Some(guard))
         }
@@ -2388,11 +2409,11 @@ fn infer_optional_clause_guard(
 fn infer_clause_guard(
     guard: UntypedClauseGuard,
     level: usize,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<TypedClauseGuard, Error> {
     match guard {
         ClauseGuard::Var { location, name, .. } => {
-            let constructor = infer_value_constructor(&name, level, &location, env)?;
+            let constructor = infer_value_constructor(&name, level, &location, typer)?;
 
             // We cannot support all values in guard expressions as the BEAM does not
             match &constructor.variant {
@@ -2415,7 +2436,7 @@ fn infer_clause_guard(
         } => {
             let elems = elems
                 .into_iter()
-                .map(|x| infer_clause_guard(x, level, env))
+                .map(|x| infer_clause_guard(x, level, typer))
                 .collect::<Result<Vec<_>, _>>()?;
 
             let typ = tuple(elems.iter().map(|e| e.typ()).collect());
@@ -2433,10 +2454,11 @@ fn infer_clause_guard(
             right,
             ..
         } => {
-            let left = infer_clause_guard(*left, level, env)?;
-            unify(bool(), left.typ(), env).map_err(|e| convert_unify_error(e, left.location()))?;
-            let right = infer_clause_guard(*right, level, env)?;
-            unify(bool(), right.typ(), env)
+            let left = infer_clause_guard(*left, level, typer)?;
+            unify(bool(), left.typ(), typer)
+                .map_err(|e| convert_unify_error(e, left.location()))?;
+            let right = infer_clause_guard(*right, level, typer)?;
+            unify(bool(), right.typ(), typer)
                 .map_err(|e| convert_unify_error(e, right.location()))?;
             Ok(ClauseGuard::And {
                 location,
@@ -2451,10 +2473,11 @@ fn infer_clause_guard(
             right,
             ..
         } => {
-            let left = infer_clause_guard(*left, level, env)?;
-            unify(bool(), left.typ(), env).map_err(|e| convert_unify_error(e, left.location()))?;
-            let right = infer_clause_guard(*right, level, env)?;
-            unify(bool(), right.typ(), env)
+            let left = infer_clause_guard(*left, level, typer)?;
+            unify(bool(), left.typ(), typer)
+                .map_err(|e| convert_unify_error(e, left.location()))?;
+            let right = infer_clause_guard(*right, level, typer)?;
+            unify(bool(), right.typ(), typer)
                 .map_err(|e| convert_unify_error(e, right.location()))?;
             Ok(ClauseGuard::Or {
                 location,
@@ -2469,9 +2492,9 @@ fn infer_clause_guard(
             right,
             ..
         } => {
-            let left = infer_clause_guard(*left, level, env)?;
-            let right = infer_clause_guard(*right, level, env)?;
-            unify(left.typ(), right.typ(), env).map_err(|e| convert_unify_error(e, &location))?;
+            let left = infer_clause_guard(*left, level, typer)?;
+            let right = infer_clause_guard(*right, level, typer)?;
+            unify(left.typ(), right.typ(), typer).map_err(|e| convert_unify_error(e, &location))?;
             Ok(ClauseGuard::Equals {
                 location,
                 left: Box::new(left),
@@ -2485,9 +2508,9 @@ fn infer_clause_guard(
             right,
             ..
         } => {
-            let left = infer_clause_guard(*left, level, env)?;
-            let right = infer_clause_guard(*right, level, env)?;
-            unify(left.typ(), right.typ(), env).map_err(|e| convert_unify_error(e, &location))?;
+            let left = infer_clause_guard(*left, level, typer)?;
+            let right = infer_clause_guard(*right, level, typer)?;
+            unify(left.typ(), right.typ(), typer).map_err(|e| convert_unify_error(e, &location))?;
             Ok(ClauseGuard::NotEquals {
                 location,
                 left: Box::new(left),
@@ -2501,10 +2524,11 @@ fn infer_clause_guard(
             right,
             ..
         } => {
-            let left = infer_clause_guard(*left, level, env)?;
-            unify(int(), left.typ(), env).map_err(|e| convert_unify_error(e, left.location()))?;
-            let right = infer_clause_guard(*right, level, env)?;
-            unify(int(), right.typ(), env).map_err(|e| convert_unify_error(e, right.location()))?;
+            let left = infer_clause_guard(*left, level, typer)?;
+            unify(int(), left.typ(), typer).map_err(|e| convert_unify_error(e, left.location()))?;
+            let right = infer_clause_guard(*right, level, typer)?;
+            unify(int(), right.typ(), typer)
+                .map_err(|e| convert_unify_error(e, right.location()))?;
             Ok(ClauseGuard::GtInt {
                 location,
                 left: Box::new(left),
@@ -2518,10 +2542,11 @@ fn infer_clause_guard(
             right,
             ..
         } => {
-            let left = infer_clause_guard(*left, level, env)?;
-            unify(int(), left.typ(), env).map_err(|e| convert_unify_error(e, left.location()))?;
-            let right = infer_clause_guard(*right, level, env)?;
-            unify(int(), right.typ(), env).map_err(|e| convert_unify_error(e, right.location()))?;
+            let left = infer_clause_guard(*left, level, typer)?;
+            unify(int(), left.typ(), typer).map_err(|e| convert_unify_error(e, left.location()))?;
+            let right = infer_clause_guard(*right, level, typer)?;
+            unify(int(), right.typ(), typer)
+                .map_err(|e| convert_unify_error(e, right.location()))?;
             Ok(ClauseGuard::GtEqInt {
                 location,
                 left: Box::new(left),
@@ -2535,10 +2560,11 @@ fn infer_clause_guard(
             right,
             ..
         } => {
-            let left = infer_clause_guard(*left, level, env)?;
-            unify(int(), left.typ(), env).map_err(|e| convert_unify_error(e, left.location()))?;
-            let right = infer_clause_guard(*right, level, env)?;
-            unify(int(), right.typ(), env).map_err(|e| convert_unify_error(e, right.location()))?;
+            let left = infer_clause_guard(*left, level, typer)?;
+            unify(int(), left.typ(), typer).map_err(|e| convert_unify_error(e, left.location()))?;
+            let right = infer_clause_guard(*right, level, typer)?;
+            unify(int(), right.typ(), typer)
+                .map_err(|e| convert_unify_error(e, right.location()))?;
             Ok(ClauseGuard::LtInt {
                 location,
                 left: Box::new(left),
@@ -2552,10 +2578,11 @@ fn infer_clause_guard(
             right,
             ..
         } => {
-            let left = infer_clause_guard(*left, level, env)?;
-            unify(int(), left.typ(), env).map_err(|e| convert_unify_error(e, left.location()))?;
-            let right = infer_clause_guard(*right, level, env)?;
-            unify(int(), right.typ(), env).map_err(|e| convert_unify_error(e, right.location()))?;
+            let left = infer_clause_guard(*left, level, typer)?;
+            unify(int(), left.typ(), typer).map_err(|e| convert_unify_error(e, left.location()))?;
+            let right = infer_clause_guard(*right, level, typer)?;
+            unify(int(), right.typ(), typer)
+                .map_err(|e| convert_unify_error(e, right.location()))?;
             Ok(ClauseGuard::LtEqInt {
                 location,
                 left: Box::new(left),
@@ -2569,10 +2596,11 @@ fn infer_clause_guard(
             right,
             ..
         } => {
-            let left = infer_clause_guard(*left, level, env)?;
-            unify(float(), left.typ(), env).map_err(|e| convert_unify_error(e, left.location()))?;
-            let right = infer_clause_guard(*right, level, env)?;
-            unify(float(), right.typ(), env)
+            let left = infer_clause_guard(*left, level, typer)?;
+            unify(float(), left.typ(), typer)
+                .map_err(|e| convert_unify_error(e, left.location()))?;
+            let right = infer_clause_guard(*right, level, typer)?;
+            unify(float(), right.typ(), typer)
                 .map_err(|e| convert_unify_error(e, right.location()))?;
             Ok(ClauseGuard::GtFloat {
                 location,
@@ -2587,10 +2615,11 @@ fn infer_clause_guard(
             right,
             ..
         } => {
-            let left = infer_clause_guard(*left, level, env)?;
-            unify(float(), left.typ(), env).map_err(|e| convert_unify_error(e, left.location()))?;
-            let right = infer_clause_guard(*right, level, env)?;
-            unify(float(), right.typ(), env)
+            let left = infer_clause_guard(*left, level, typer)?;
+            unify(float(), left.typ(), typer)
+                .map_err(|e| convert_unify_error(e, left.location()))?;
+            let right = infer_clause_guard(*right, level, typer)?;
+            unify(float(), right.typ(), typer)
                 .map_err(|e| convert_unify_error(e, right.location()))?;
             Ok(ClauseGuard::GtEqFloat {
                 location,
@@ -2605,10 +2634,11 @@ fn infer_clause_guard(
             right,
             ..
         } => {
-            let left = infer_clause_guard(*left, level, env)?;
-            unify(float(), left.typ(), env).map_err(|e| convert_unify_error(e, left.location()))?;
-            let right = infer_clause_guard(*right, level, env)?;
-            unify(float(), right.typ(), env)
+            let left = infer_clause_guard(*left, level, typer)?;
+            unify(float(), left.typ(), typer)
+                .map_err(|e| convert_unify_error(e, left.location()))?;
+            let right = infer_clause_guard(*right, level, typer)?;
+            unify(float(), right.typ(), typer)
                 .map_err(|e| convert_unify_error(e, right.location()))?;
             Ok(ClauseGuard::LtFloat {
                 location,
@@ -2623,10 +2653,11 @@ fn infer_clause_guard(
             right,
             ..
         } => {
-            let left = infer_clause_guard(*left, level, env)?;
-            unify(float(), left.typ(), env).map_err(|e| convert_unify_error(e, left.location()))?;
-            let right = infer_clause_guard(*right, level, env)?;
-            unify(float(), right.typ(), env)
+            let left = infer_clause_guard(*left, level, typer)?;
+            unify(float(), left.typ(), typer)
+                .map_err(|e| convert_unify_error(e, left.location()))?;
+            let right = infer_clause_guard(*right, level, typer)?;
+            unify(float(), right.typ(), typer)
                 .map_err(|e| convert_unify_error(e, right.location()))?;
             Ok(ClauseGuard::LtEqFloat {
                 location,
@@ -2651,16 +2682,21 @@ fn infer_module_access(
     level: usize,
     module_location: &SrcSpan,
     select_location: SrcSpan,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     let (module_name, constructor) = {
         let module_info =
-            env.imported_modules
+            typer
+                .imported_modules
                 .get(&*module_alias)
                 .ok_or_else(|| Error::UnknownModule {
                     name: module_alias.to_string(),
                     location: module_location.clone(),
-                    imported_modules: env.imported_modules.keys().map(|t| t.to_string()).collect(),
+                    imported_modules: typer
+                        .imported_modules
+                        .keys()
+                        .map(|t| t.to_string())
+                        .collect(),
                 })?;
 
         let constructor =
@@ -2679,7 +2715,7 @@ fn infer_module_access(
 
     Ok(TypedExpr::ModuleSelect {
         label,
-        typ: instantiate(constructor.typ, level, &mut hashmap![], env),
+        typ: instantiate(constructor.typ, level, &mut hashmap![], typer),
         location: select_location,
         module_name,
         module_alias: module_alias.to_string(),
@@ -2692,10 +2728,10 @@ fn infer_record_access(
     label: String,
     level: usize,
     location: SrcSpan,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     // Infer the type of the (presumed) record
-    let record = Box::new(infer(record, level, env)?);
+    let record = Box::new(infer(record, level, typer)?);
 
     // If we don't yet know the type of the record then we cannot use any accessors
     if record.typ().is_unbound() {
@@ -2715,12 +2751,12 @@ fn infer_record_access(
     // Check to see if it's a Type that can have accessible fields
     let accessors = match collapse_links(record.typ()).as_ref() {
         // A type in the current module which may have fields
-        Type::App { module, name, .. } if module.as_slice() == env.current_module => {
-            env.accessors.get(name)
+        Type::App { module, name, .. } if module.as_slice() == typer.current_module => {
+            typer.accessors.get(name)
         }
 
         // A type in another module which may have fields
-        Type::App { module, name, .. } => env
+        Type::App { module, name, .. } => typer
             .importable_modules
             .get(&module.join("/"))
             .and_then(|module| module.accessors.get(name)),
@@ -2743,9 +2779,9 @@ fn infer_record_access(
     // types for this instance of the record.
     let accessor_record_type = accessors.typ.clone();
     let mut type_vars = hashmap![];
-    let accessor_record_type = instantiate(accessor_record_type, 0, &mut type_vars, env);
-    let typ = instantiate(typ, 0, &mut type_vars, env);
-    unify(accessor_record_type, record.typ(), env)
+    let accessor_record_type = instantiate(accessor_record_type, 0, &mut type_vars, typer);
+    let typ = instantiate(typ, 0, &mut type_vars, typer);
+    unify(accessor_record_type, record.typ(), typer)
         .map_err(|e| convert_unify_error(e, record.location()))?;
 
     Ok(TypedExpr::RecordAccess {
@@ -2758,7 +2794,7 @@ fn infer_record_access(
 }
 
 struct PatternTyper<'a, 'b, 'c> {
-    env: &'a mut Env<'b, 'c>,
+    typer: &'a mut Typer<'b, 'c>,
     level: usize,
     mode: PatternMode,
     initial_pattern_vars: HashSet<String>,
@@ -2770,9 +2806,9 @@ enum PatternMode {
 }
 
 impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
-    pub fn new(env: &'a mut Env<'b, 'c>, level: usize) -> Self {
+    pub fn new(typer: &'a mut Typer<'b, 'c>, level: usize) -> Self {
         Self {
-            env,
+            typer,
             level,
             mode: PatternMode::Initial,
             initial_pattern_vars: HashSet::new(),
@@ -2788,7 +2824,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                     });
                 }
                 self.initial_pattern_vars.insert(name.to_string());
-                self.env.insert_variable(
+                self.typer.insert_variable(
                     name.to_string(),
                     ValueConstructorVariant::LocalVariable,
                     typ,
@@ -2796,10 +2832,10 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 Ok(())
             }
 
-            PatternMode::Alternative => match self.env.local_values.get(name) {
+            PatternMode::Alternative => match self.typer.local_values.get(name) {
                 // This variable was defined in the Initial multi-pattern
                 Some(initial) if self.initial_pattern_vars.contains(name) => {
-                    unify(initial.typ.clone(), typ, self.env)
+                    unify(initial.typ.clone(), typ, self.typer)
                 }
 
                 // This variable was not defined in the Initial multi-pattern
@@ -2847,7 +2883,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
 
     /// When we have an assignment or a case expression we unify the pattern with the
     /// inferred type of the subject in order to determine what variables to insert
-    /// into the environment (or to detect a type error).
+    /// into the typerironment (or to detect a type error).
     ///
     fn unify(&mut self, pattern: UntypedPattern, typ: Arc<Type>) -> Result<TypedPattern, Error> {
         match pattern {
@@ -2866,23 +2902,27 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
             }
 
             Pattern::Int { location, value } => {
-                unify(typ, int(), self.env).map_err(|e| convert_unify_error(e, &location))?;
+                unify(typ, int(), self.typer).map_err(|e| convert_unify_error(e, &location))?;
                 Ok(Pattern::Int { location, value })
             }
 
             Pattern::Float { location, value } => {
-                unify(typ, float(), self.env).map_err(|e| convert_unify_error(e, &location))?;
+                unify(typ, float(), self.typer).map_err(|e| convert_unify_error(e, &location))?;
                 Ok(Pattern::Float { location, value })
             }
 
             Pattern::String { location, value } => {
-                unify(typ, string(), self.env).map_err(|e| convert_unify_error(e, &location))?;
+                unify(typ, string(), self.typer).map_err(|e| convert_unify_error(e, &location))?;
                 Ok(Pattern::String { location, value })
             }
 
             Pattern::Nil { location } => {
-                unify(typ, list(self.env.new_unbound_var(self.level)), self.env)
-                    .map_err(|e| convert_unify_error(e, &location))?;
+                unify(
+                    typ,
+                    list(self.typer.new_unbound_var(self.level)),
+                    self.typer,
+                )
+                .map_err(|e| convert_unify_error(e, &location))?;
                 Ok(Pattern::Nil { location })
             }
 
@@ -2891,13 +2931,13 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 head,
                 tail,
                 deprecated_syntax,
-            } => match typ.get_app_args(true, &[], "List", 1, self.env) {
+            } => match typ.get_app_args(true, &[], "List", 1, self.typer) {
                 Some(args) => {
                     let head = Box::new(self.unify(*head, args[0].clone())?);
                     let tail = Box::new(self.unify(*tail, typ)?);
 
                     if deprecated_syntax {
-                        self.env
+                        self.typer
                             .warnings
                             .push(Warning::DeprecatedListPrependSyntax {
                                 location: SrcSpan {
@@ -2916,7 +2956,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 }
 
                 None => Err(Error::CouldNotUnify {
-                    given: list(self.env.new_unbound_var(self.level)),
+                    given: list(self.typer.new_unbound_var(self.level)),
                     expected: typ.clone(),
                     location,
                 }),
@@ -2934,16 +2974,16 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
 
                 Type::Var { .. } => {
                     let elems_types = (0..(elems.len()))
-                        .map(|_| self.env.new_unbound_var(self.level))
+                        .map(|_| self.typer.new_unbound_var(self.level))
                         .collect();
-                    unify(tuple(elems_types), typ.clone(), self.env)
+                    unify(tuple(elems_types), typ.clone(), self.typer)
                         .map_err(|e| convert_unify_error(e, &location))?;
                     self.unify(Pattern::Tuple { elems, location }, typ)
                 }
 
                 _ => {
                     let elems_types = (0..(elems.len()))
-                        .map(|_| self.env.new_unbound_var(self.level))
+                        .map(|_| self.typer.new_unbound_var(self.level))
                         .collect();
 
                     Err(Error::CouldNotUnify {
@@ -2963,7 +3003,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 ..
             } => {
                 let cons = self
-                    .env
+                    .typer
                     .get_value_constructor(module.as_ref(), &name)
                     .map_err(|e| convert_get_value_constructor_error(e, &location))?;
 
@@ -3033,7 +3073,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 };
 
                 let instantiated_constructor_type =
-                    instantiate(constructor_typ, self.level, &mut hashmap![], self.env);
+                    instantiate(constructor_typ, self.level, &mut hashmap![], self.typer);
                 match &*instantiated_constructor_type {
                     Type::Fn { args, retrn } => {
                         if args.len() == pattern_args.len() {
@@ -3054,7 +3094,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                                     })
                                 })
                                 .collect::<Result<Vec<_>, _>>()?;
-                            unify(typ, retrn.clone(), self.env)
+                            unify(typ, retrn.clone(), self.typer)
                                 .map_err(|e| convert_unify_error(e, &location))?;
                             Ok(Pattern::Constructor {
                                 location,
@@ -3075,7 +3115,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
 
                     Type::App { .. } => {
                         if pattern_args.is_empty() {
-                            unify(typ, instantiated_constructor_type, self.env)
+                            unify(typ, instantiated_constructor_type, self.typer)
                                 .map_err(|e| convert_unify_error(e, &location))?;
                             Ok(Pattern::Constructor {
                                 location,
@@ -3107,22 +3147,22 @@ fn infer_value_constructor(
     name: &str,
     level: usize,
     location: &SrcSpan,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<ValueConstructor, Error> {
     let ValueConstructor {
         public,
         variant,
         origin,
         typ,
-    } = env
+    } = typer
         .get_variable(name)
         .cloned()
         .ok_or_else(|| Error::UnknownVariable {
             location: location.clone(),
             name: name.to_string(),
-            variables: env.local_values.keys().map(|t| t.to_string()).collect(),
+            variables: typer.local_values.keys().map(|t| t.to_string()).collect(),
         })?;
-    let typ = instantiate(typ, level, &mut hashmap![], env);
+    let typ = instantiate(typ, level, &mut hashmap![], typer);
     Ok(ValueConstructor {
         public,
         variant,
@@ -3138,10 +3178,10 @@ fn do_infer_call(
     args: Vec<CallArg<UntypedExpr>>,
     level: usize,
     location: &SrcSpan,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
-    let fun = infer(fun, level, env)?;
-    let (fun, args, typ) = do_infer_call_with_known_fun(fun, args, level, location, env)?;
+    let fun = infer(fun, level, typer)?;
+    let (fun, args, typ) = do_infer_call_with_known_fun(fun, args, level, location, typer)?;
     Ok((fun, args, typ))
 }
 
@@ -3150,9 +3190,11 @@ fn do_infer_call_with_known_fun(
     mut args: Vec<CallArg<UntypedExpr>>,
     level: usize,
     location: &SrcSpan,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
-    match get_field_map(&fun, env).map_err(|e| convert_get_value_constructor_error(e, location))? {
+    match get_field_map(&fun, typer)
+        .map_err(|e| convert_get_value_constructor_error(e, location))?
+    {
         // The fun has a field map so labelled arguments may be present and need to be reordered.
         Some(field_map) => field_map.reorder(&mut args, location)?,
 
@@ -3160,7 +3202,7 @@ fn do_infer_call_with_known_fun(
         None => assert_no_labelled_arguments(&args)?,
     }
 
-    let (mut args_types, return_type) = match_fun_type(fun.typ(), args.len(), env)
+    let (mut args_types, return_type) = match_fun_type(fun.typ(), args.len(), typer)
         .map_err(|e| convert_not_fun_error(e, fun.location(), &location))?;
     let args = args_types
         .iter_mut()
@@ -3174,8 +3216,8 @@ fn do_infer_call_with_known_fun(
                     location,
                 },
             ): (&mut Arc<Type>, _)| {
-                let value = infer(value, level, env)?;
-                unify(typ.clone(), value.typ(), env)
+                let value = infer(value, level, typer)?;
+                unify(typ.clone(), value.typ(), typer)
                     .map_err(|e| convert_unify_error(e, value.location()))?;
                 Ok(CallArg {
                     label,
@@ -3202,7 +3244,7 @@ fn assert_no_labelled_arguments<A>(args: &[CallArg<A>]) -> Result<(), Error> {
 
 fn get_field_map<'a>(
     constructor: &TypedExpr,
-    env: &'a Env,
+    typer: &'a Typer,
 ) -> Result<Option<&'a FieldMap>, GetValueConstructorError> {
     let (module, name) = match constructor {
         TypedExpr::ModuleSelect {
@@ -3216,14 +3258,14 @@ fn get_field_map<'a>(
         _ => return Ok(None),
     };
 
-    Ok(env.get_value_constructor(module, name)?.field_map())
+    Ok(typer.get_value_constructor(module, name)?.field_map())
 }
 
 fn infer_arg(
     arg: UntypedArg,
     type_vars: &mut im::HashMap<String, (usize, Arc<Type>)>,
     level: usize,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<TypedArg, Error> {
     let Arg {
         names,
@@ -3233,8 +3275,8 @@ fn infer_arg(
     } = arg;
     let typ = annotation
         .clone()
-        .map(|t| env.type_from_ast(&t, type_vars, NewTypeAction::MakeGeneric))
-        .unwrap_or_else(|| Ok(env.new_unbound_var(level)))?;
+        .map(|t| typer.type_from_ast(&t, type_vars, NewTypeAction::MakeGeneric))
+        .unwrap_or_else(|| Ok(typer.new_unbound_var(level)))?;
     Ok(Arg {
         names,
         location,
@@ -3248,45 +3290,45 @@ fn do_infer_fn(
     body: UntypedExpr,
     return_annotation: &Option<TypeAst>,
     level: usize,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<(Vec<TypedArg>, TypedExpr), Error> {
     // Construct an initial type for each argument of the function- either an unbound type variable
     // or a type provided by an annotation.
     let mut type_vars = hashmap![];
     let args: Vec<_> = args
         .into_iter()
-        .map(|arg| infer_arg(arg, &mut type_vars, level, env))
+        .map(|arg| infer_arg(arg, &mut type_vars, level, typer))
         .collect::<Result<_, _>>()?;
 
     // Record generic type variables that comes from type annotations.
     // They cannot be instantiated so we need to keep track of them.
-    let previous_annotated_generic_types = env.annotated_generic_types.clone();
+    let previous_annotated_generic_types = typer.annotated_generic_types.clone();
     for (id, _type) in type_vars.values() {
-        env.annotated_generic_types.insert(*id);
+        typer.annotated_generic_types.insert(*id);
     }
 
     // Insert arguments into function body scope.
-    let previous_vars = env.local_values.clone();
+    let previous_vars = typer.local_values.clone();
     for (arg, t) in args.iter().zip(args.iter().map(|arg| arg.typ.clone())) {
         match &arg.names {
             ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
-                env.insert_variable(name.to_string(), ValueConstructorVariant::LocalVariable, t)
+                typer.insert_variable(name.to_string(), ValueConstructorVariant::LocalVariable, t)
             }
             ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => (),
         };
     }
 
-    let body = infer(body, level, env)?;
+    let body = infer(body, level, typer)?;
 
     // Check that any return type annotation is accurate.
     if let Some(ann) = return_annotation {
-        let ret_typ = env.type_from_ast(ann, &mut type_vars, NewTypeAction::MakeGeneric)?;
-        unify(ret_typ, body.typ(), env).map_err(|e| convert_unify_error(e, body.location()))?;
+        let ret_typ = typer.type_from_ast(ann, &mut type_vars, NewTypeAction::MakeGeneric)?;
+        unify(ret_typ, body.typ(), typer).map_err(|e| convert_unify_error(e, body.location()))?;
     }
 
-    // Reset the env now that the scope of the function has ended.
-    env.local_values = previous_vars;
-    env.annotated_generic_types = previous_annotated_generic_types;
+    // Reset the typer now that the scope of the function has ended.
+    typer.local_values = previous_vars;
+    typer.annotated_generic_types = previous_annotated_generic_types;
     Ok((args, body))
 }
 
@@ -3320,7 +3362,7 @@ fn instantiate(
     t: Arc<Type>,
     ctx_level: usize,
     ids: &mut im::HashMap<usize, Arc<Type>>,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Arc<Type> {
     match &*t {
         Type::App {
@@ -3331,7 +3373,7 @@ fn instantiate(
         } => {
             let args = args
                 .iter()
-                .map(|t| instantiate(t.clone(), ctx_level, ids, env))
+                .map(|t| instantiate(t.clone(), ctx_level, ids, typer))
                 .collect();
             Arc::new(Type::App {
                 public: *public,
@@ -3343,15 +3385,15 @@ fn instantiate(
 
         Type::Var { typ } => {
             match &*typ.borrow() {
-                TypeVar::Link { typ } => return instantiate(typ.clone(), ctx_level, ids, env),
+                TypeVar::Link { typ } => return instantiate(typ.clone(), ctx_level, ids, typer),
 
                 TypeVar::Unbound { .. } => return Arc::new(Type::Var { typ: typ.clone() }),
 
                 TypeVar::Generic { id } => match ids.get(id) {
                     Some(t) => return t.clone(),
                     None => {
-                        if !env.annotated_generic_types.contains(id) {
-                            let v = env.new_unbound_var(ctx_level);
+                        if !typer.annotated_generic_types.contains(id) {
+                            let v = typer.new_unbound_var(ctx_level);
                             ids.insert(*id, v.clone());
                             return v;
                         }
@@ -3363,15 +3405,15 @@ fn instantiate(
 
         Type::Fn { args, retrn, .. } => fn_(
             args.iter()
-                .map(|t| instantiate(t.clone(), ctx_level, ids, env))
+                .map(|t| instantiate(t.clone(), ctx_level, ids, typer))
                 .collect(),
-            instantiate(retrn.clone(), ctx_level, ids, env),
+            instantiate(retrn.clone(), ctx_level, ids, typer),
         ),
 
         Type::Tuple { elems } => tuple(
             elems
                 .iter()
-                .map(|t| instantiate(t.clone(), ctx_level, ids, env))
+                .map(|t| instantiate(t.clone(), ctx_level, ids, typer))
                 .collect(),
         ),
     }
@@ -3410,7 +3452,7 @@ fn unify_enclosed_type(
         _ => result,
     }
 }
-fn unify(t1: Arc<Type>, t2: Arc<Type>, env: &Env) -> Result<(), UnifyError> {
+fn unify(t1: Arc<Type>, t2: Arc<Type>, typer: &Typer) -> Result<(), UnifyError> {
     if t1 == t2 {
         return Ok(());
     }
@@ -3418,7 +3460,7 @@ fn unify(t1: Arc<Type>, t2: Arc<Type>, env: &Env) -> Result<(), UnifyError> {
     // Collapse right hand side type links. Left hand side will be collapsed in the next block.
     if let Type::Var { typ } = &*t2 {
         if let TypeVar::Link { typ } = &*typ.borrow() {
-            return unify(t1, typ.clone(), env);
+            return unify(t1, typ.clone(), typer);
         }
     }
 
@@ -3454,7 +3496,7 @@ fn unify(t1: Arc<Type>, t2: Arc<Type>, env: &Env) -> Result<(), UnifyError> {
                 Ok(())
             }
 
-            Action::Unify(t) => unify(t, t2, env),
+            Action::Unify(t) => unify(t, t2, typer),
 
             Action::CouldNotUnify => Err(UnifyError::CouldNotUnify {
                 expected: t1.clone(),
@@ -3464,7 +3506,7 @@ fn unify(t1: Arc<Type>, t2: Arc<Type>, env: &Env) -> Result<(), UnifyError> {
     }
 
     if let Type::Var { .. } = *t2 {
-        return unify(t2, t1, env).map_err(flip_unify_error);
+        return unify(t2, t1, typer).map_err(flip_unify_error);
     }
 
     match (&*t1, &*t2) {
@@ -3483,7 +3525,7 @@ fn unify(t1: Arc<Type>, t2: Arc<Type>, env: &Env) -> Result<(), UnifyError> {
             },
         ) if m1 == m2 && n1 == n2 && args1.len() == args2.len() => {
             for (a, b) in args1.iter().zip(args2) {
-                unify_enclosed_type(t1.clone(), t2.clone(), unify(a.clone(), b.clone(), env))?;
+                unify_enclosed_type(t1.clone(), t2.clone(), unify(a.clone(), b.clone(), typer))?;
             }
             Ok(())
         }
@@ -3492,7 +3534,7 @@ fn unify(t1: Arc<Type>, t2: Arc<Type>, env: &Env) -> Result<(), UnifyError> {
             if elems1.len() == elems2.len() =>
         {
             for (a, b) in elems1.iter().zip(elems2) {
-                unify_enclosed_type(t1.clone(), t2.clone(), unify(a.clone(), b.clone(), env))?;
+                unify_enclosed_type(t1.clone(), t2.clone(), unify(a.clone(), b.clone(), typer))?;
             }
             Ok(())
         }
@@ -3510,12 +3552,12 @@ fn unify(t1: Arc<Type>, t2: Arc<Type>, env: &Env) -> Result<(), UnifyError> {
             },
         ) if args1.len() == args2.len() => {
             for (a, b) in args1.iter().zip(args2) {
-                unify(a.clone(), b.clone(), env).map_err(|_| UnifyError::CouldNotUnify {
+                unify(a.clone(), b.clone(), typer).map_err(|_| UnifyError::CouldNotUnify {
                     expected: t1.clone(),
                     given: t2.clone(),
                 })?;
             }
-            unify(retrn1.clone(), retrn2.clone(), env).map_err(|_| UnifyError::CouldNotUnify {
+            unify(retrn1.clone(), retrn2.clone(), typer).map_err(|_| UnifyError::CouldNotUnify {
                 expected: t1.clone(),
                 given: t2.clone(),
             })
@@ -3602,15 +3644,15 @@ fn update_levels(typ: Arc<Type>, own_level: usize, own_id: usize) -> Result<(), 
 fn match_fun_type(
     typ: Arc<Type>,
     arity: usize,
-    env: &mut Env,
+    typer: &mut Typer,
 ) -> Result<(Vec<Arc<Type>>, Arc<Type>), MatchFunTypeError> {
     if let Type::Var { typ } = &*typ {
         let new_value = match &*typ.borrow() {
-            TypeVar::Link { typ, .. } => return match_fun_type(typ.clone(), arity, env),
+            TypeVar::Link { typ, .. } => return match_fun_type(typ.clone(), arity, typer),
 
             TypeVar::Unbound { level, .. } => {
-                let args: Vec<_> = (0..arity).map(|_| env.new_unbound_var(*level)).collect();
-                let retrn = env.new_unbound_var(*level);
+                let args: Vec<_> = (0..arity).map(|_| typer.new_unbound_var(*level)).collect();
+                let retrn = typer.new_unbound_var(*level);
                 Some((args, retrn))
             }
 
