@@ -795,7 +795,7 @@ impl<'a, 'b> Typer<'a, 'b> {
 
             UntypedExpr::Int {
                 location, value, ..
-            } => infer_int(value, location),
+            } => self.infer_int(value, location),
 
             UntypedExpr::Seq { first, then, .. } => infer_seq(*first, *then, level, self),
 
@@ -1033,6 +1033,14 @@ impl<'a, 'b> Typer<'a, 'b> {
             location,
             value,
             typ: string(),
+        })
+    }
+
+    fn infer_int(&mut self, value: String, location: SrcSpan) -> Result<TypedExpr, Error> {
+        Ok(TypedExpr::Int {
+            location,
+            value,
+            typ: int(),
         })
     }
 
@@ -2070,14 +2078,6 @@ pub fn infer_module(
         }),
         warnings,
     )
-}
-
-fn infer_int(value: String, location: SrcSpan) -> Result<TypedExpr, Error> {
-    Ok(TypedExpr::Int {
-        location,
-        value,
-        typ: int(),
-    })
 }
 
 fn infer_float(value: String, location: SrcSpan) -> Result<TypedExpr, Error> {
