@@ -815,7 +815,7 @@ impl<'a, 'b> Typer<'a, 'b> {
                 left,
                 right,
                 location,
-            } => infer_pipe(*left, *right, location, level, self),
+            } => self.infer_pipe(*left, *right, location, level),
 
             UntypedExpr::Fn {
                 location,
@@ -896,6 +896,33 @@ impl<'a, 'b> Typer<'a, 'b> {
                 tuple,
                 ..
             } => infer_tuple_index(*tuple, index, location, level, self),
+        }
+    }
+
+    fn infer_pipe(
+        &mut self,
+        left: UntypedExpr,
+        right: UntypedExpr,
+        location: SrcSpan,
+        level: usize,
+    ) -> Result<TypedExpr, Error> {
+        match right {
+            // left |> right(..args)
+            UntypedExpr::Call { fun, args, .. } => {
+                let fun = self.infer(*fun, level)?;
+                match fun.typ().fn_arity() {
+                    // Rewrite as right(left, ..args)
+                    Some(arity) if arity == args.len() + 1 => {
+                        infer_insert_pipe(fun, args, left, level, self)
+                    }
+
+                    // Rewrite as right(..args)(left)
+                    _ => infer_apply_to_call_pipe(fun, args, left, location, level, self),
+                }
+            }
+
+            // right(left)
+            right => infer_apply_pipe(left, right, location, level, self),
         }
     }
 
@@ -1933,33 +1960,6 @@ pub fn infer_module(
         }),
         warnings,
     )
-}
-
-fn infer_pipe(
-    left: UntypedExpr,
-    right: UntypedExpr,
-    location: SrcSpan,
-    level: usize,
-    typer: &mut Typer,
-) -> Result<TypedExpr, Error> {
-    match right {
-        // left |> right(..args)
-        UntypedExpr::Call { fun, args, .. } => {
-            let fun = typer.infer(*fun, level)?;
-            match fun.typ().fn_arity() {
-                // Rewrite as right(left, ..args)
-                Some(arity) if arity == args.len() + 1 => {
-                    infer_insert_pipe(fun, args, left, level, typer)
-                }
-
-                // Rewrite as right(..args)(left)
-                _ => infer_apply_to_call_pipe(fun, args, left, location, level, typer),
-            }
-        }
-
-        // right(left)
-        right => infer_apply_pipe(left, right, location, level, typer),
-    }
 }
 
 /// Attempt to infer a |> b(..c) as b(..c)(a)
