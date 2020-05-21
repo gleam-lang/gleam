@@ -787,7 +787,7 @@ impl<'a, 'b> Typer<'a, 'b> {
     ///
     pub fn infer(&mut self, expr: UntypedExpr, level: usize) -> Result<TypedExpr, Error> {
         match expr {
-            UntypedExpr::ListNil { location, .. } => infer_nil(location, level, self),
+            UntypedExpr::ListNil { location, .. } => self.infer_nil(location, level),
 
             UntypedExpr::Todo { location, .. } => infer_todo(location, level, self),
 
@@ -1007,6 +1007,13 @@ impl<'a, 'b> Typer<'a, 'b> {
             typ,
             right,
             left,
+        })
+    }
+
+    fn infer_nil(&mut self, location: SrcSpan, level: usize) -> Result<TypedExpr, Error> {
+        Ok(TypedExpr::ListNil {
+            location,
+            typ: list(self.new_unbound_var(level)),
         })
     }
 
@@ -2044,13 +2051,6 @@ pub fn infer_module(
         }),
         warnings,
     )
-}
-
-fn infer_nil(location: SrcSpan, level: usize, typer: &mut Typer) -> Result<TypedExpr, Error> {
-    Ok(TypedExpr::ListNil {
-        location,
-        typ: list(typer.new_unbound_var(level)),
-    })
 }
 
 fn infer_todo(location: SrcSpan, level: usize, typer: &mut Typer) -> Result<TypedExpr, Error> {
