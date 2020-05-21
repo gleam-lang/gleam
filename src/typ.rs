@@ -782,6 +782,123 @@ impl<'a, 'b> Typer<'a, 'b> {
         self.accessors.insert(type_name.to_string(), accessors);
     }
 
+    /// Crawl the AST, annotating each node with the inferred type or
+    /// returning an error.
+    ///
+    pub fn infer(&mut self, expr: UntypedExpr, level: usize) -> Result<TypedExpr, Error> {
+        match expr {
+            UntypedExpr::ListNil { location, .. } => infer_nil(location, level, self),
+
+            UntypedExpr::Todo { location, .. } => infer_todo(location, level, self),
+
+            UntypedExpr::Var { location, name, .. } => infer_var(name, location, level, self),
+
+            UntypedExpr::Int {
+                location, value, ..
+            } => infer_int(value, location),
+
+            UntypedExpr::Seq { first, then, .. } => infer_seq(*first, *then, level, self),
+
+            UntypedExpr::Tuple {
+                location, elems, ..
+            } => infer_tuple(elems, location, level, self),
+
+            UntypedExpr::Float {
+                location, value, ..
+            } => infer_float(value, location),
+
+            UntypedExpr::String {
+                location, value, ..
+            } => infer_string(value, location),
+
+            UntypedExpr::Pipe {
+                left,
+                right,
+                location,
+            } => infer_pipe(*left, *right, location, level, self),
+
+            UntypedExpr::Fn {
+                location,
+                is_capture,
+                args,
+                body,
+                return_annotation,
+                ..
+            } => infer_fn(
+                args,
+                *body,
+                is_capture,
+                return_annotation,
+                level,
+                location,
+                self,
+            ),
+
+            UntypedExpr::Let {
+                location,
+                pattern,
+                value,
+                then,
+                kind,
+                annotation,
+                ..
+            } => infer_let(
+                pattern,
+                *value,
+                *then,
+                kind,
+                &annotation,
+                level,
+                location,
+                self,
+            ),
+
+            UntypedExpr::Case {
+                location,
+                subjects,
+                clauses,
+                ..
+            } => infer_case(subjects, clauses, level, location, self),
+
+            UntypedExpr::ListCons {
+                location,
+                head,
+                tail,
+                deprecated_syntax,
+                ..
+            } => infer_cons(*head, *tail, deprecated_syntax, location, level, self),
+
+            UntypedExpr::Call {
+                location,
+                fun,
+                args,
+                ..
+            } => infer_call(*fun, args, level, location, self),
+
+            UntypedExpr::BinOp {
+                location,
+                name,
+                left,
+                right,
+                ..
+            } => infer_binop(name, *left, *right, level, location, self),
+
+            UntypedExpr::FieldAccess {
+                location,
+                label,
+                container,
+                ..
+            } => infer_field_access(*container, label, location, level, self),
+
+            UntypedExpr::TupleIndex {
+                location,
+                index,
+                tuple,
+                ..
+            } => infer_tuple_index(*tuple, index, location, level, self),
+        }
+    }
+
     fn make_type_vars(
         &mut self,
         args: &[String],
@@ -1818,123 +1935,6 @@ pub fn infer_module(
     )
 }
 
-/// Crawl the AST, annotating each node with the inferred type or
-/// returning an error.
-///
-pub fn infer(expr: UntypedExpr, level: usize, typer: &mut Typer) -> Result<TypedExpr, Error> {
-    match expr {
-        UntypedExpr::ListNil { location, .. } => infer_nil(location, level, typer),
-
-        UntypedExpr::Todo { location, .. } => infer_todo(location, level, typer),
-
-        UntypedExpr::Var { location, name, .. } => infer_var(name, location, level, typer),
-
-        UntypedExpr::Int {
-            location, value, ..
-        } => infer_int(value, location),
-
-        UntypedExpr::Seq { first, then, .. } => infer_seq(*first, *then, level, typer),
-
-        UntypedExpr::Tuple {
-            location, elems, ..
-        } => infer_tuple(elems, location, level, typer),
-
-        UntypedExpr::Float {
-            location, value, ..
-        } => infer_float(value, location),
-
-        UntypedExpr::String {
-            location, value, ..
-        } => infer_string(value, location),
-
-        UntypedExpr::Pipe {
-            left,
-            right,
-            location,
-        } => infer_pipe(*left, *right, location, level, typer),
-
-        UntypedExpr::Fn {
-            location,
-            is_capture,
-            args,
-            body,
-            return_annotation,
-            ..
-        } => infer_fn(
-            args,
-            *body,
-            is_capture,
-            return_annotation,
-            level,
-            location,
-            typer,
-        ),
-
-        UntypedExpr::Let {
-            location,
-            pattern,
-            value,
-            then,
-            kind,
-            annotation,
-            ..
-        } => infer_let(
-            pattern,
-            *value,
-            *then,
-            kind,
-            &annotation,
-            level,
-            location,
-            typer,
-        ),
-
-        UntypedExpr::Case {
-            location,
-            subjects,
-            clauses,
-            ..
-        } => infer_case(subjects, clauses, level, location, typer),
-
-        UntypedExpr::ListCons {
-            location,
-            head,
-            tail,
-            deprecated_syntax,
-            ..
-        } => infer_cons(*head, *tail, deprecated_syntax, location, level, typer),
-
-        UntypedExpr::Call {
-            location,
-            fun,
-            args,
-            ..
-        } => infer_call(*fun, args, level, location, typer),
-
-        UntypedExpr::BinOp {
-            location,
-            name,
-            left,
-            right,
-            ..
-        } => infer_binop(name, *left, *right, level, location, typer),
-
-        UntypedExpr::FieldAccess {
-            location,
-            label,
-            container,
-            ..
-        } => infer_field_access(*container, label, location, level, typer),
-
-        UntypedExpr::TupleIndex {
-            location,
-            index,
-            tuple,
-            ..
-        } => infer_tuple_index(*tuple, index, location, level, typer),
-    }
-}
-
 fn infer_pipe(
     left: UntypedExpr,
     right: UntypedExpr,
@@ -1945,7 +1945,7 @@ fn infer_pipe(
     match right {
         // left |> right(..args)
         UntypedExpr::Call { fun, args, .. } => {
-            let fun = infer(*fun, level, typer)?;
+            let fun = typer.infer(*fun, level)?;
             match fun.typ().fn_arity() {
                 // Rewrite as right(left, ..args)
                 Some(arity) if arity == args.len() + 1 => {
@@ -2028,8 +2028,8 @@ fn infer_apply_pipe(
     level: usize,
     typer: &mut Typer,
 ) -> Result<TypedExpr, Error> {
-    let left = Box::new(infer(left, level, typer)?);
-    let right = Box::new(infer(right, level, typer)?);
+    let left = Box::new(typer.infer(left, level)?);
+    let right = Box::new(typer.infer(right, level)?);
     let typ = typer.new_unbound_var(level);
     let fn_typ = Arc::new(Type::Fn {
         args: vec![left.typ()],
@@ -2093,8 +2093,8 @@ fn infer_seq(
     level: usize,
     typer: &mut Typer,
 ) -> Result<TypedExpr, Error> {
-    let first = infer(first, level, typer)?;
-    let then = infer(then, level, typer)?;
+    let first = typer.infer(first, level)?;
+    let then = typer.infer(then, level)?;
 
     match first.typ().as_ref() {
         typ if typ.is_result() => {
@@ -2159,8 +2159,8 @@ fn infer_cons(
     level: usize,
     typer: &mut Typer,
 ) -> Result<TypedExpr, Error> {
-    let head = infer(head, level, typer)?;
-    let tail = infer(tail, level, typer)?;
+    let head = typer.infer(head, level)?;
+    let tail = typer.infer(tail, level)?;
     unify(tail.typ(), list(head.typ()), typer).map_err(|e| convert_unify_error(e, &location))?;
 
     if deprecated_syntax {
@@ -2188,7 +2188,7 @@ fn infer_tuple(
 ) -> Result<TypedExpr, Error> {
     let elems = elems
         .into_iter()
-        .map(|e| infer(e, level, typer))
+        .map(|e| typer.infer(e, level))
         .collect::<Result<Vec<_>, _>>()?;
     let typ = tuple(elems.iter().map(|e| e.typ()).collect());
     Ok(TypedExpr::Tuple {
@@ -2241,7 +2241,7 @@ fn infer_tuple_index(
     level: usize,
     typer: &mut Typer,
 ) -> Result<TypedExpr, Error> {
-    let tuple = infer(tuple, level, typer)?;
+    let tuple = typer.infer(tuple, level)?;
 
     match tuple.typ().as_ref() {
         Type::Tuple { elems } => {
@@ -2282,8 +2282,8 @@ fn infer_binop(
 ) -> Result<TypedExpr, Error> {
     let (input_type, output_type) = match name {
         BinOp::Eq | BinOp::NotEq => {
-            let left = infer(left, level, typer)?;
-            let right = infer(right, level, typer)?;
+            let left = typer.infer(left, level)?;
+            let right = typer.infer(right, level)?;
             unify(left.typ(), right.typ(), typer)
                 .map_err(|e| convert_unify_error(e, right.location()))?;
 
@@ -2316,10 +2316,10 @@ fn infer_binop(
         BinOp::ModuloInt => (int(), int()),
     };
 
-    let left = infer(left, level, typer)?;
+    let left = typer.infer(left, level)?;
     unify(input_type.clone(), left.typ(), typer)
         .map_err(|e| convert_unify_error(e, left.location()))?;
-    let right = infer(right, level, typer)?;
+    let right = typer.infer(right, level)?;
     unify(input_type, right.typ(), typer).map_err(|e| convert_unify_error(e, right.location()))?;
 
     Ok(TypedExpr::BinOp {
@@ -2341,7 +2341,7 @@ fn infer_let(
     location: SrcSpan,
     typer: &mut Typer,
 ) -> Result<TypedExpr, Error> {
-    let value = infer(value, level + 1, typer)?;
+    let value = typer.infer(value, level + 1)?;
     let try_value_type = typer.new_unbound_var(level);
     let try_error_type = typer.new_unbound_var(level);
 
@@ -2363,7 +2363,7 @@ fn infer_let(
     let pattern = PatternTyper::new(typer, level).unify(pattern, value_typ.clone())?;
 
     // Check the type of the following code
-    let then = infer(then, level, typer)?;
+    let then = typer.infer(then, level)?;
     let typ = then.typ();
 
     // Ensure that a Result with the right error type is returned for `try`
@@ -2406,7 +2406,7 @@ fn infer_case(
     let return_type = typer.new_unbound_var(level);
 
     for subject in subjects.into_iter() {
-        let subject = infer(subject, level + 1, typer)?;
+        let subject = typer.infer(subject, level + 1)?;
         let subject_type = generalise(subject.typ(), level + 1);
         typed_subjects.push(subject);
         subject_types.push(subject_type);
@@ -2453,7 +2453,7 @@ fn infer_clause(
         typer,
     )?;
     let guard = infer_optional_clause_guard(guard, level, typer)?;
-    let then = infer(then, level, typer)?;
+    let then = typer.infer(then, level)?;
 
     // Reset the local vars now the clause scope is done
     typer.local_values = vars;
@@ -2834,7 +2834,7 @@ fn infer_record_access(
     typer: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     // Infer the type of the (presumed) record
-    let record = Box::new(infer(record, level, typer)?);
+    let record = Box::new(typer.infer(record, level)?);
 
     // If we don't yet know the type of the record then we cannot use any accessors
     if record.typ().is_unbound() {
@@ -3284,7 +3284,7 @@ fn do_infer_call(
     location: &SrcSpan,
     typer: &mut Typer,
 ) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
-    let fun = infer(fun, level, typer)?;
+    let fun = typer.infer(fun, level)?;
     let (fun, args, typ) = do_infer_call_with_known_fun(fun, args, level, location, typer)?;
     Ok((fun, args, typ))
 }
@@ -3321,7 +3321,7 @@ fn do_infer_call_with_known_fun(
                     location,
                 },
             ): (&mut Arc<Type>, _)| {
-                let value = infer(value, level, typer)?;
+                let value = typer.infer(value, level)?;
                 unify(typ.clone(), value.typ(), typer)
                     .map_err(|e| convert_unify_error(e, value.location()))?;
                 Ok(CallArg {
@@ -3423,7 +3423,7 @@ fn do_infer_fn(
         };
     }
 
-    let body = infer(body, level, typer)?;
+    let body = typer.infer(body, level)?;
 
     // Check that any return type annotation is accurate.
     if let Some(ann) = return_annotation {
