@@ -809,7 +809,7 @@ impl<'a, 'b> Typer<'a, 'b> {
 
             UntypedExpr::String {
                 location, value, ..
-            } => infer_string(value, location),
+            } => self.infer_string(value, location),
 
             UntypedExpr::Pipe {
                 left,
@@ -1025,6 +1025,14 @@ impl<'a, 'b> Typer<'a, 'b> {
         Ok(TypedExpr::Todo {
             location,
             typ: self.new_unbound_var(level),
+        })
+    }
+
+    fn infer_string(&mut self, value: String, location: SrcSpan) -> Result<TypedExpr, Error> {
+        Ok(TypedExpr::String {
+            location,
+            value,
+            typ: string(),
         })
     }
 
@@ -2062,14 +2070,6 @@ pub fn infer_module(
         }),
         warnings,
     )
-}
-
-fn infer_string(value: String, location: SrcSpan) -> Result<TypedExpr, Error> {
-    Ok(TypedExpr::String {
-        location,
-        value,
-        typ: string(),
-    })
 }
 
 fn infer_int(value: String, location: SrcSpan) -> Result<TypedExpr, Error> {
