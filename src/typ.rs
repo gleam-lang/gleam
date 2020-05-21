@@ -1099,7 +1099,7 @@ impl<'a, 'b> Typer<'a, 'b> {
         level: usize,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        let (args, body) = do_infer_fn(args, body, &return_annotation, level, self)?;
+        let (args, body) = self.do_infer_fn(args, body, &return_annotation, level)?;
         let args_types = args.iter().map(|a| a.typ.clone()).collect();
         let typ = fn_(args_types, body.typ());
         Ok(TypedExpr::Fn {
@@ -1872,6 +1872,77 @@ impl<'a, 'b> Typer<'a, 'b> {
         })
     }
 
+    fn infer_arg(
+        &mut self,
+        arg: UntypedArg,
+        type_vars: &mut im::HashMap<String, (usize, Arc<Type>)>,
+        level: usize,
+    ) -> Result<TypedArg, Error> {
+        let Arg {
+            names,
+            annotation,
+            location,
+            ..
+        } = arg;
+        let typ = annotation
+            .clone()
+            .map(|t| self.type_from_ast(&t, type_vars, NewTypeAction::MakeGeneric))
+            .unwrap_or_else(|| Ok(self.new_unbound_var(level)))?;
+        Ok(Arg {
+            names,
+            location,
+            annotation,
+            typ,
+        })
+    }
+
+    fn do_infer_fn(
+        &mut self,
+        args: Vec<UntypedArg>,
+        body: UntypedExpr,
+        return_annotation: &Option<TypeAst>,
+        level: usize,
+    ) -> Result<(Vec<TypedArg>, TypedExpr), Error> {
+        // Construct an initial type for each argument of the function- either an unbound type variable
+        // or a type provided by an annotation.
+        let mut type_vars = hashmap![];
+        let args: Vec<_> = args
+            .into_iter()
+            .map(|arg| self.infer_arg(arg, &mut type_vars, level))
+            .collect::<Result<_, _>>()?;
+
+        // Record generic type variables that comes from type annotations.
+        // They cannot be instantiated so we need to keep track of them.
+        let previous_annotated_generic_types = self.annotated_generic_types.clone();
+        for (id, _type) in type_vars.values() {
+            self.annotated_generic_types.insert(*id);
+        }
+
+        // Insert arguments into function body scope.
+        let previous_vars = self.local_values.clone();
+        for (arg, t) in args.iter().zip(args.iter().map(|arg| arg.typ.clone())) {
+            match &arg.names {
+                ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => self
+                    .insert_variable(name.to_string(), ValueConstructorVariant::LocalVariable, t),
+                ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => (),
+            };
+        }
+
+        let body = self.infer(body, level)?;
+
+        // Check that any return type annotation is accurate.
+        if let Some(ann) = return_annotation {
+            let ret_typ = self.type_from_ast(ann, &mut type_vars, NewTypeAction::MakeGeneric)?;
+            unify(ret_typ, body.typ(), self)
+                .map_err(|e| convert_unify_error(e, body.location()))?;
+        }
+
+        // Reset the typer now that the scope of the function has ended.
+        self.local_values = previous_vars;
+        self.annotated_generic_types = previous_annotated_generic_types;
+        Ok((args, body))
+    }
+
     fn make_type_vars(
         &mut self,
         args: &[String],
@@ -2565,8 +2636,7 @@ pub fn infer_module(
                 );
 
                 // Infer the type
-                let (args, body) =
-                    do_infer_fn(args, body, &return_annotation, level + 1, &mut typer)?;
+                let (args, body) = typer.do_infer_fn(args, body, &return_annotation, level + 1)?;
                 let args_types = args.iter().map(|a| a.typ.clone()).collect();
                 let typ = fn_(args_types, body.typ());
 
@@ -3348,77 +3418,6 @@ fn get_field_map<'a>(
     };
 
     Ok(typer.get_value_constructor(module, name)?.field_map())
-}
-
-fn infer_arg(
-    arg: UntypedArg,
-    type_vars: &mut im::HashMap<String, (usize, Arc<Type>)>,
-    level: usize,
-    typer: &mut Typer,
-) -> Result<TypedArg, Error> {
-    let Arg {
-        names,
-        annotation,
-        location,
-        ..
-    } = arg;
-    let typ = annotation
-        .clone()
-        .map(|t| typer.type_from_ast(&t, type_vars, NewTypeAction::MakeGeneric))
-        .unwrap_or_else(|| Ok(typer.new_unbound_var(level)))?;
-    Ok(Arg {
-        names,
-        location,
-        annotation,
-        typ,
-    })
-}
-
-fn do_infer_fn(
-    args: Vec<UntypedArg>,
-    body: UntypedExpr,
-    return_annotation: &Option<TypeAst>,
-    level: usize,
-    typer: &mut Typer,
-) -> Result<(Vec<TypedArg>, TypedExpr), Error> {
-    // Construct an initial type for each argument of the function- either an unbound type variable
-    // or a type provided by an annotation.
-    let mut type_vars = hashmap![];
-    let args: Vec<_> = args
-        .into_iter()
-        .map(|arg| infer_arg(arg, &mut type_vars, level, typer))
-        .collect::<Result<_, _>>()?;
-
-    // Record generic type variables that comes from type annotations.
-    // They cannot be instantiated so we need to keep track of them.
-    let previous_annotated_generic_types = typer.annotated_generic_types.clone();
-    for (id, _type) in type_vars.values() {
-        typer.annotated_generic_types.insert(*id);
-    }
-
-    // Insert arguments into function body scope.
-    let previous_vars = typer.local_values.clone();
-    for (arg, t) in args.iter().zip(args.iter().map(|arg| arg.typ.clone())) {
-        match &arg.names {
-            ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
-                typer.insert_variable(name.to_string(), ValueConstructorVariant::LocalVariable, t)
-            }
-            ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => (),
-        };
-    }
-
-    let body = typer.infer(body, level)?;
-
-    // Check that any return type annotation is accurate.
-    if let Some(ann) = return_annotation {
-        let ret_typ = typer.type_from_ast(ann, &mut type_vars, NewTypeAction::MakeGeneric)?;
-        unify(ret_typ, body.typ(), typer).map_err(|e| convert_unify_error(e, body.location()))?;
-    }
-
-    // Reset the typer now that the scope of the function has ended.
-    typer.local_values = previous_vars;
-    typer.annotated_generic_types = previous_annotated_generic_types;
-    Ok((args, body))
 }
 
 fn convert_unify_error(e: UnifyError, location: &SrcSpan) -> Error {
