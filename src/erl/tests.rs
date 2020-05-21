@@ -1837,6 +1837,8 @@ main() ->
 "#,
     );
 
+    // Tuple literals in guards
+
     assert_erl!(
         r#"
 pub fn main() {
@@ -1895,6 +1897,8 @@ main() ->
 "#,
     );
 
+    // Int literals in guards
+
     assert_erl!(
         r#"
 pub fn main() {
@@ -1940,6 +1944,46 @@ main() ->
     end.
 "#,
     );
+
+    // Record literals in guards
+
+    assert_erl!(
+        r#"
+    type Test { Test(x: Int, y: Float) }
+    pub fn main() {
+      let x = Test(1, 3.0)
+      case x {
+        _ if x == Test(1, 1.0) -> 1
+        _ if x == Test(y: 2.0, x: 2) -> 2
+        _ if x != Test(2, 3.0) -> 2
+        _ -> 0
+      }
+    }
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+main() ->
+    X = {test, 1, 3.0},
+    case X of
+        _ when X =:= {test, 1, 1.0} ->
+            1;
+
+        _ when X =:= {test, 2, 2.0} ->
+            2;
+
+        _ when X =/= {test, 2, 3.0} ->
+            2;
+
+        _ ->
+            0
+    end.
+"#,
+    );
+
+    // Float vars in guards
 
     assert_erl!(
         r#"

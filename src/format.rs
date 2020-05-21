@@ -1049,9 +1049,53 @@ impl Documentable for &UntypedClauseGuard {
                 .to_doc()
                 .append(wrap_args(elems.iter().map(|e| e.to_doc()))),
 
+            ClauseGuard::Constructor {
+                name,
+                args,
+                module: None,
+                ..
+            } if args.is_empty() => name.to_string().to_doc(),
+
+            ClauseGuard::Constructor {
+                name,
+                args,
+                module: Some(m),
+                ..
+            } if args.is_empty() => m.to_string().to_doc().append(".").append(name.to_string()),
+
+            ClauseGuard::Constructor {
+                name,
+                args,
+                module: None,
+                ..
+            } => name
+                .to_string()
+                .to_doc()
+                .append(wrap_args(args.iter().map(|a| clause_guard_call_arg(&a)))),
+
+            ClauseGuard::Constructor {
+                name,
+                args,
+                module: Some(m),
+                ..
+            } => m
+                .to_string()
+                .to_doc()
+                .append(".")
+                .append(name.to_string())
+                .append(wrap_args(args.iter().map(|a| clause_guard_call_arg(&a)))),
+
             ClauseGuard::Var { name, .. } => name.to_string().to_doc(),
         }
     }
+}
+
+fn clause_guard_call_arg(arg: &CallArg<UntypedClauseGuard>) -> Document {
+    match &arg.label {
+        Some(s) => s.clone().to_doc().append(": "),
+        None => nil(),
+    }
+    .append(arg.value.to_doc())
 }
 
 fn categorise_list_expr(expr: &UntypedExpr) -> ListType<&UntypedExpr, &UntypedExpr> {
