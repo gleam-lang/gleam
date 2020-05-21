@@ -887,7 +887,7 @@ impl<'a, 'b> Typer<'a, 'b> {
                 index,
                 tuple,
                 ..
-            } => infer_tuple_index(*tuple, index, location, level, self),
+            } => self.infer_tuple_index(*tuple, index, location, level),
         }
     }
     fn infer_var(
@@ -1189,6 +1189,44 @@ impl<'a, 'b> Typer<'a, 'b> {
             elems,
             typ,
         })
+    }
+
+    fn infer_tuple_index(
+        &mut self,
+        tuple: UntypedExpr,
+        index: u64,
+        location: SrcSpan,
+        level: usize,
+    ) -> Result<TypedExpr, Error> {
+        let tuple = self.infer(tuple, level)?;
+
+        match tuple.typ().as_ref() {
+            Type::Tuple { elems } => {
+                let typ = elems
+                    .get(index as usize)
+                    .ok_or_else(|| Error::OutOfBoundsTupleIndex {
+                        location: location.clone(),
+                        index,
+                        size: elems.len(),
+                    })?
+                    .clone();
+                Ok(TypedExpr::TupleIndex {
+                    location,
+                    index,
+                    tuple: Box::new(tuple),
+                    typ,
+                })
+            }
+
+            typ if typ.is_unbound() => Err(Error::NotATupleUnbound {
+                location: tuple.location().clone(),
+            }),
+
+            _ => Err(Error::NotATuple {
+                location: tuple.location().clone(),
+                given: tuple.typ(),
+            }),
+        }
     }
 
     fn make_type_vars(
@@ -2225,44 +2263,6 @@ pub fn infer_module(
         }),
         warnings,
     )
-}
-
-fn infer_tuple_index(
-    tuple: UntypedExpr,
-    index: u64,
-    location: SrcSpan,
-    level: usize,
-    typer: &mut Typer,
-) -> Result<TypedExpr, Error> {
-    let tuple = typer.infer(tuple, level)?;
-
-    match tuple.typ().as_ref() {
-        Type::Tuple { elems } => {
-            let typ = elems
-                .get(index as usize)
-                .ok_or_else(|| Error::OutOfBoundsTupleIndex {
-                    location: location.clone(),
-                    index,
-                    size: elems.len(),
-                })?
-                .clone();
-            Ok(TypedExpr::TupleIndex {
-                location,
-                index,
-                tuple: Box::new(tuple),
-                typ,
-            })
-        }
-
-        typ if typ.is_unbound() => Err(Error::NotATupleUnbound {
-            location: tuple.location().clone(),
-        }),
-
-        _ => Err(Error::NotATuple {
-            location: tuple.location().clone(),
-            given: tuple.typ(),
-        }),
-    }
 }
 
 fn infer_binop(
