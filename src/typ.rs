@@ -917,13 +917,45 @@ impl<'a, 'b> Typer<'a, 'b> {
                     }
 
                     // Rewrite as right(..args)(left)
-                    _ => infer_apply_to_call_pipe(fun, args, left, location, level, self),
+                    _ => self.infer_apply_to_call_pipe(fun, args, left, location, level),
                 }
             }
 
             // right(left)
             right => infer_apply_pipe(left, right, location, level, self),
         }
+    }
+
+    /// Attempt to infer a |> b(..c) as b(..c)(a)
+    fn infer_apply_to_call_pipe(
+        &mut self,
+        fun: TypedExpr,
+        args: Vec<CallArg<UntypedExpr>>,
+        left: UntypedExpr,
+        location: SrcSpan,
+        level: usize,
+    ) -> Result<TypedExpr, Error> {
+        let right_location = left.location().clone();
+        let (fun, args, typ) =
+            do_infer_call_with_known_fun(fun, args, level, &right_location, self)?;
+        let fun = TypedExpr::Call {
+            location: right_location,
+            typ,
+            args,
+            fun: Box::new(fun),
+        };
+        let args = vec![CallArg {
+            label: None,
+            location: left.location().clone(),
+            value: left,
+        }];
+        let (fun, args, typ) = do_infer_call_with_known_fun(fun, args, level, &location, self)?;
+        Ok(TypedExpr::Call {
+            location,
+            typ,
+            args,
+            fun: Box::new(fun),
+        })
     }
 
     fn make_type_vars(
@@ -1960,37 +1992,6 @@ pub fn infer_module(
         }),
         warnings,
     )
-}
-
-/// Attempt to infer a |> b(..c) as b(..c)(a)
-fn infer_apply_to_call_pipe(
-    fun: TypedExpr,
-    args: Vec<CallArg<UntypedExpr>>,
-    left: UntypedExpr,
-    location: SrcSpan,
-    level: usize,
-    typer: &mut Typer,
-) -> Result<TypedExpr, Error> {
-    let right_location = left.location().clone();
-    let (fun, args, typ) = do_infer_call_with_known_fun(fun, args, level, &right_location, typer)?;
-    let fun = TypedExpr::Call {
-        location: right_location,
-        typ,
-        args,
-        fun: Box::new(fun),
-    };
-    let args = vec![CallArg {
-        label: None,
-        location: left.location().clone(),
-        value: left,
-    }];
-    let (fun, args, typ) = do_infer_call_with_known_fun(fun, args, level, &location, typer)?;
-    Ok(TypedExpr::Call {
-        location,
-        typ,
-        args,
-        fun: Box::new(fun),
-    })
 }
 
 /// Attempt to infer a |> b(c) as b(a, c)
