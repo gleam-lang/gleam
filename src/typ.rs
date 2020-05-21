@@ -922,7 +922,7 @@ impl<'a, 'b> Typer<'a, 'b> {
             }
 
             // right(left)
-            right => infer_apply_pipe(left, right, location, level, self),
+            right => self.infer_apply_pipe(left, right, location, level),
         }
     }
 
@@ -982,6 +982,31 @@ impl<'a, 'b> Typer<'a, 'b> {
             typ,
             args,
             fun: Box::new(fun),
+        })
+    }
+
+    /// Attempt to infer a |> b as b(a)
+    fn infer_apply_pipe(
+        &mut self,
+        left: UntypedExpr,
+        right: UntypedExpr,
+        location: SrcSpan,
+        level: usize,
+    ) -> Result<TypedExpr, Error> {
+        let left = Box::new(self.infer(left, level)?);
+        let right = Box::new(self.infer(right, level)?);
+        let typ = self.new_unbound_var(level);
+        let fn_typ = Arc::new(Type::Fn {
+            args: vec![left.typ()],
+            retrn: typ.clone(),
+        });
+        unify(right.typ(), fn_typ, self).map_err(|e| convert_unify_error(e, &location))?;
+
+        Ok(TypedExpr::Pipe {
+            location,
+            typ,
+            right,
+            left,
         })
     }
 
@@ -2019,31 +2044,6 @@ pub fn infer_module(
         }),
         warnings,
     )
-}
-
-/// Attempt to infer a |> b as b(a)
-fn infer_apply_pipe(
-    left: UntypedExpr,
-    right: UntypedExpr,
-    location: SrcSpan,
-    level: usize,
-    typer: &mut Typer,
-) -> Result<TypedExpr, Error> {
-    let left = Box::new(typer.infer(left, level)?);
-    let right = Box::new(typer.infer(right, level)?);
-    let typ = typer.new_unbound_var(level);
-    let fn_typ = Arc::new(Type::Fn {
-        args: vec![left.typ()],
-        retrn: typ.clone(),
-    });
-    unify(right.typ(), fn_typ, typer).map_err(|e| convert_unify_error(e, &location))?;
-
-    Ok(TypedExpr::Pipe {
-        location,
-        typ,
-        right,
-        left,
-    })
 }
 
 fn infer_nil(location: SrcSpan, level: usize, typer: &mut Typer) -> Result<TypedExpr, Error> {
