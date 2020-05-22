@@ -202,6 +202,7 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
 
         Statement::CustomType {
             public: true,
+            opaque,
             name,
             args,
             doc,
@@ -211,7 +212,14 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
         } => Some(Type {
             name,
             // TODO: Don't use the same printer for docs as for the formatter
-            definition: print(formatter.custom_type(true, name, args, cs.as_slice(), location)),
+            definition: print(formatter.custom_type(
+                true,
+                *opaque,
+                name,
+                args,
+                cs.as_slice(),
+                location,
+            )),
             documentation: markdown_documentation(doc),
             constructors: cs
                 .into_iter()
