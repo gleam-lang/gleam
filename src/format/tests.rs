@@ -347,6 +347,13 @@ pub external type Four
 "
     );
 
+    assert_format!(
+        "pub opaque type X {
+  X
+}
+"
+    );
+
     //
     // Expr::Fn
     //

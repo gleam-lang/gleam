@@ -165,8 +165,16 @@ impl<'a> Formatter<'a> {
                 public,
                 constructors,
                 location,
+                opaque,
                 ..
-            } => self.custom_type(*public, name, args.as_slice(), constructors, location),
+            } => self.custom_type(
+                *public,
+                *opaque,
+                name,
+                args.as_slice(),
+                constructors,
+                location,
+            ),
 
             Statement::ExternalFn {
                 public,
@@ -643,6 +651,7 @@ impl<'a> Formatter<'a> {
     pub fn custom_type(
         &mut self,
         public: bool,
+        opaque: bool,
         name: &str,
         args: &[String],
         constructors: &[RecordConstructor],
@@ -651,7 +660,7 @@ impl<'a> Formatter<'a> {
         self.pop_empty_lines(location.start);
         pub_(public)
             .to_doc()
-            .append("type ")
+            .append(if opaque { "opaque type " } else { "type " })
             .append(if args.is_empty() {
                 name.clone().to_doc()
             } else {
