@@ -72,7 +72,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2.0.0
-      - uses: gleam-lang/setup-erlang@v1.0.0
+      - uses: gleam-lang/setup-erlang@v1.1.0
         with:
           otp-version: 22.1
       - uses: actions/download-artifact@v1
