@@ -15,6 +15,7 @@
   built with `docs build`.
 - Fix code generation when calling functions returned through either record
   or tuple access
+- Add lookup for Gleam source code in Mix's `deps` directory.
 
 ## v0.8.1 - 2020-05-19
 
