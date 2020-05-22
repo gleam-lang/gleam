@@ -2444,12 +2444,19 @@ fn infer_clause_guard(
                 }
             };
 
+            // Pretty much all the other infer functions operate on UntypedExpr
+            // or TypedExpr rather than ClauseGuard. To make things easier we
+            // build the TypedExpr equivalent of the constructor and use that
             let fun = TypedExpr::Var {
                 constructor,
                 location: location.clone(),
                 name: name.clone(),
             };
 
+            // This is basically the same code as do_infer_call_with_known_fun()
+            // except the args are typed with infer_clause_guard() here.
+            // This duplication is a bit awkward but it works!
+            // Potentially this could be improved later
             match get_field_map(&fun, env)
                 .map_err(|e| convert_get_value_constructor_error(e, &location))?
             {
