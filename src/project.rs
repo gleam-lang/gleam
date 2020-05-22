@@ -92,8 +92,9 @@ pub fn read_and_analyse(root: impl AsRef<Path>) -> Result<(ProjectConfig, Vec<An
     let root = root.as_ref();
     let lib_dir = root.join("_build").join("default").join("lib");
     let checkouts_dir = root.join("_checkouts");
+    let mix_lib_dir = root.join("deps");
 
-    for project_dir in [lib_dir, checkouts_dir]
+    for project_dir in [lib_dir, checkouts_dir, mix_lib_dir]
         .iter()
         .filter_map(|d| std::fs::read_dir(d).ok())
         .flat_map(|d| d.filter_map(Result::ok))
