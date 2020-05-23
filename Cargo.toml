@@ -6,58 +6,60 @@ edition = "2018"
 
 [dependencies]
 # Command line interface
-clap = "2"
-structopt = "0.3"
+clap = "2.33.1"
+structopt = "0.3.14"
 # Immutable data structures
-im = "14"
+im = "15.0.0"
 # Extra iter methods
-itertools = "0.8"
+itertools = "0.9.0"
 # String case conversion
 heck = "0.3"
 # Parsing
-lalrpop-util = "0.17"
+lalrpop-util = "0.19.0"
 regex = "1.1"
 # Graph data structures
-petgraph = "0.4"
+petgraph = "0.5.0"
 # Pretty error messages
-codespan = "0.9"
-codespan-reporting = "0.9"
-termcolor = "1.0.4"
+codespan = "0.7"
+codespan-reporting = "0.7"
+termcolor = "1.1.0"
 # Initialize complex static values at runtime
 lazy_static = "1.3"
 # toml parsing
-serde = { version = "1.0", features = ["derive"] }
-toml = "0.5"
+serde = { version = "1.0.110", features = ["derive"]}
+toml = "0.5.6"
 # Levenshtein string distance for typo suggestions
-strsim = "0.9"
+strsim = "0.10.0"
 # Recursively traversing directories
 walkdir = "2"
 # Enum trait impl macros
-strum = "0.17"
-strum_macros = "0.17"
+strum = "0.18.0"
+strum_macros = "0.18.0"
 # Doc rendering
-askama = "0.8"
+askama = "0.9.0"
 # Markdown in docs
-pulldown-cmark = "0.7.0"
+pulldown-cmark = "0.7.1"
 # Support unicode in gleam source
 unicode-segmentation = "1.6.0"
 # Check for tty
-atty = "0.2.13"
+atty = "0.2.14"
 # Hex package manager client
 hexpm = "1.0"
 # Allow user to type in sensitive information without showing it in the shell
 rpassword = "4.0"
 # Async runtime
-tokio = "0.2"
+tokio = "0.2.21"
 # Creation of tar file archives
-tar = "0.4"
+tar = "0.4.28"
 # gzip compression
 flate2 = "1.0"
 # Byte array data type
 bytes = "0.5"
 
 [build-dependencies]
-lalrpop = "0.17"
+# lalrpop = "0.19.0"
+lalrpop = { version = "0.19.0", features = ["lexer"] }
+
 
 [dev-dependencies]
 pretty_assertions = "0.6"
