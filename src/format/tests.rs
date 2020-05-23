@@ -1649,6 +1649,15 @@ World"
 
     assert_format!(
         r#"fn main() {
+  case "x" {
+    _ if x == "x" -> Nil
+  }
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
   case tuple(1, 2, 3) {
     _ if x == tuple(1, 2, 3) -> Nil
   }
