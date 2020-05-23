@@ -417,6 +417,11 @@ pub enum ClauseGuard<Type> {
         value: String,
     },
 
+    String {
+        location: SrcSpan,
+        value: String,
+    },
+
     Tuple {
         location: SrcSpan,
         elems: Vec<Self>,
@@ -450,6 +455,7 @@ impl<A> ClauseGuard<A> {
             ClauseGuard::LtEqFloat { location, .. } => location,
             ClauseGuard::Int { location, .. } => location,
             ClauseGuard::Float { location, .. } => location,
+            ClauseGuard::String { location, .. } => location,
             ClauseGuard::Tuple { location, .. } => location,
             ClauseGuard::Constructor { location, .. } => location,
         }
@@ -462,6 +468,7 @@ impl TypedClauseGuard {
             ClauseGuard::Var { typ, .. } => typ.clone(),
             ClauseGuard::Int { .. } => typ::int(),
             ClauseGuard::Float { .. } => typ::float(),
+            ClauseGuard::String { .. } => typ::string(),
             ClauseGuard::Tuple { typ, .. } => typ.clone(),
             ClauseGuard::Constructor { typ, .. } => typ.clone(),
             _ => typ::bool(),

@@ -626,6 +626,8 @@ fn bare_clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
 
         ClauseGuard::Float { value, .. } => value.to_string().to_doc(),
 
+        ClauseGuard::String { value, .. } => string(value),
+
         ClauseGuard::Tuple { elems, .. } => {
             tuple(elems.into_iter().map(|e| bare_clause_guard(e, env)))
         }
@@ -670,6 +672,7 @@ fn clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
         ClauseGuard::Var { .. }
         | ClauseGuard::Int { .. }
         | ClauseGuard::Float { .. }
+        | ClauseGuard::String { .. }
         | ClauseGuard::Tuple { .. }
         | ClauseGuard::Constructor { .. } => bare_clause_guard(guard, env),
     }

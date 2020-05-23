@@ -1945,6 +1945,29 @@ main() ->
 "#,
     );
 
+    // String literals in guards
+
+    assert_erl!(
+        r#"
+pub fn main() {
+  case "test" {
+    x if x == "test" -> 1
+  }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+main() ->
+    case <<"test"/utf8>> of
+        X when X =:= <<"test"/utf8>> ->
+            1
+    end.
+"#,
+    );
+
     // Record literals in guards
 
     assert_erl!(
