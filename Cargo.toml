@@ -20,8 +20,8 @@ regex = "1.1"
 # Graph data structures
 petgraph = "0.4"
 # Pretty error messages
-codespan = "0.7"
-codespan-reporting = "0.7"
+codespan = "0.9"
+codespan-reporting = "0.9"
 termcolor = "1.0.4"
 # Initialize complex static values at runtime
 lazy_static = "1.3"

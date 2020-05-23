@@ -1,4 +1,9 @@
+use codespan::{FileId, Files};
 pub use codespan_reporting::diagnostic::Severity;
+use codespan_reporting::{
+    diagnostic::{Label, LabelStyle},
+    term::emit,
+};
 use termcolor::Buffer;
 
 pub struct Diagnostic {
@@ -10,22 +15,19 @@ pub struct Diagnostic {
 }
 
 pub fn write(mut buffer: &mut Buffer, d: Diagnostic, severity: Severity) {
-    use codespan::Files;
-    use codespan_reporting::diagnostic::Label;
-    use codespan_reporting::term::emit;
-
     let mut files = Files::new();
-    let file_id = files.add(d.file, d.src);
+    let file_id: FileId = files.add(d.file, d.src);
 
-    let diagnostic = codespan_reporting::diagnostic::Diagnostic::new(
-        severity,
-        d.title,
-        Label::new(
-            file_id,
-            (d.location.start as u32)..(d.location.end as u32),
-            d.label,
-        ),
-    );
+    let label: Label<FileId> = Label::new(
+        LabelStyle::Primary,
+        file_id,
+        (d.location.start as usize)..(d.location.end as usize),
+    )
+    .with_message(d.label);
+
+    let diagnostic = codespan_reporting::diagnostic::Diagnostic::new(severity)
+        .with_message(d.title)
+        .with_labels(vec![label]);
 
     let config = codespan_reporting::term::Config::default();
     emit(&mut buffer, &config, &files, &diagnostic).unwrap();
