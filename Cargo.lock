@@ -209,18 +209,17 @@ dependencies = [
 
 [[package]]
 name = "codespan"
-version = "0.7.0"
+version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "unicode-segmentation 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "codespan-reporting 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "codespan-reporting"
-version = "0.7.0"
+version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "codespan 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "termcolor 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "unicode-width 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -467,8 +466,8 @@ dependencies = [
  "atty 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytes 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.33.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "codespan 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "codespan-reporting 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "codespan 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "codespan-reporting 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2 1.0.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "heck 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "hexpm 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -477,7 +476,7 @@ dependencies = [
  "lalrpop 0.19.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lalrpop-util 0.19.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "petgraph 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "petgraph 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "pretty_assertions 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "pulldown-cmark 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -492,7 +491,7 @@ dependencies = [
  "tokio 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "unicode-segmentation 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "walkdir 2.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "walkdir 2.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -692,7 +691,7 @@ dependencies = [
  "ena 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lalrpop-util 0.19.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "petgraph 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "petgraph 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex-syntax 0.6.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -889,7 +888,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "petgraph"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "fixedbitset 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1562,7 +1561,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "walkdir"
-version = "2.2.9"
+version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "same-file 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1746,8 +1745,8 @@ dependencies = [
 "checksum cc 1.0.48 (registry+https://github.com/rust-lang/crates.io-index)" = "f52a465a666ca3d838ebbf08b241383421412fe7ebb463527bba275526d89f76"
 "checksum cfg-if 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)" = "4785bdd1c96b2a846b2bd7cc02e86b6b3dbf14e7e53446c4f54c92a361040822"
 "checksum clap 2.33.1 (registry+https://github.com/rust-lang/crates.io-index)" = "bdfa80d47f954d53a35a64987ca1422f495b8d6483c0fe9f7117b36c2a792129"
-"checksum codespan 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "21094c000d5db8035900662bbfddec754e79f795324254ac0817f36e5ccfc3f5"
-"checksum codespan-reporting 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "657b2c99e1f17bc3e5153808d9f704c8ba6171c3fe45e69fde26e2876156938b"
+"checksum codespan 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)" = "7216bea5dad777b759fc5360cc35ad9151643a84a9b8a9fcea0d15889cc8f3ca"
+"checksum codespan-reporting 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)" = "2ceface2475f2f57a7ece9ba239b96e06bda8323ee68aa6df539752f13a74f60"
 "checksum constant_time_eq 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 "checksum core-foundation 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "57d24c7a13c43e870e37c1556b74555437870a04514f7685f5b354e090567171"
 "checksum core-foundation-sys 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "b3a71ab494c0b5b860bdc8407ae08978052417070c2ced38573a9157ad75b8ac"
@@ -1821,7 +1820,7 @@ dependencies = [
 "checksum openssl-sys 0.9.55 (registry+https://github.com/rust-lang/crates.io-index)" = "7717097d810a0f2e2323f9e5d11e71608355e24828410b55b9d4f18aa5f9a5d8"
 "checksum output_vt100 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "53cdc5b785b7a58c5aad8216b3dfa114df64b0b06ae6e1501cef91df2fbdf8f9"
 "checksum percent-encoding 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d4fd5641d01c8f18a23da7b6fe29298ff4b55afcccdf78973b24cf3175fee32e"
-"checksum petgraph 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "29c127eea4a29ec6c85d153c59dc1213f33ec74cead30fe4730aecc88cc1fd92"
+"checksum petgraph 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)" = "467d164a6de56270bd7c4d070df81d07beace25012d5103ced4e9ff08d6afdb7"
 "checksum phf_shared 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c00cf8b9eafe68dde5e9eaa2cef8ee84a9336a47d566ec55ca16589633b65af7"
 "checksum pin-project 0.4.9 (registry+https://github.com/rust-lang/crates.io-index)" = "6f6a7f5eee6292c559c793430c55c00aea9d3b3d1905e855806ca4d7253426a2"
 "checksum pin-project-internal 0.4.9 (registry+https://github.com/rust-lang/crates.io-index)" = "8988430ce790d8682672117bc06dda364c0be32d3abd738234f19f3240bad99a"
@@ -1899,7 +1898,7 @@ dependencies = [
 "checksum vcpkg 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)" = "3fc439f2794e98976c88a2a2dafce96b930fe8010b0a256b3c2199a773933168"
 "checksum vec_map 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)" = "05c78687fb1a80548ae3250346c3db86a80a7cdd77bda190189f2d0a0987c81a"
 "checksum version_check 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)" = "078775d0255232fb988e6fccf26ddc9d1ac274299aaedcedce21c6f72cc533ce"
-"checksum walkdir 2.2.9 (registry+https://github.com/rust-lang/crates.io-index)" = "9658c94fa8b940eab2250bd5a457f9c48b748420d71293b165c8cdbe2f55f71e"
+"checksum walkdir 2.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "777182bc735b6424e1a57516d35ed72cb8019d85c8c9bf536dccb3445c1a2f7d"
 "checksum want 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1ce8a968cb1cd110d136ff8b819a556d6fb6d919363c61534f6860c7eb172ba0"
 "checksum wasi 0.9.0+wasi-snapshot-preview1 (registry+https://github.com/rust-lang/crates.io-index)" = "cccddf32554fecc6acb585f82a32a72e28b48f8c4c1883ddfeeeaa96f7d8e519"
 "checksum wasm-bindgen 0.2.62 (registry+https://github.com/rust-lang/crates.io-index)" = "e3c7d40d09cdbf0f4895ae58cf57d92e1e57a9dd8ed2e8390514b54a47cc5551"

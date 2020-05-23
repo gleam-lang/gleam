@@ -4,8 +4,9 @@ set -euo pipefail
 function replace-version () {
     pkg=$1
     version=$2
-    echo pkg $pkg version $version
-    sed -i "s/$pkg = .*/$pkg = \"$version\"/g" Cargo.toml
+    major_minor=$(echo $version | awk -F"." '{print $1"."$2}')
+    echo pkg $pkg version $major_minor
+    sed -i "s/$pkg = .*/$pkg = \"$major_minor\"/g" Cargo.toml
 }
 
 ## so parallel can pick it up
