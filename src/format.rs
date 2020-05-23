@@ -463,7 +463,6 @@ impl<'a> Formatter<'a> {
             } => self.fn_capture(body.as_ref()),
 
             UntypedExpr::Fn {
-                // is_capture,
                 return_annotation,
                 args,
                 body,
@@ -492,28 +491,7 @@ impl<'a> Formatter<'a> {
 
             UntypedExpr::Case {
                 subjects, clauses, ..
-            } => "case "
-                .to_doc()
-                .append(concat(
-                    subjects
-                        .into_iter()
-                        .map(|s| self.expr(s))
-                        .intersperse(", ".to_doc()),
-                ))
-                .append(" {")
-                .append(
-                    line()
-                        .append(force_break())
-                        .append(concat(
-                            clauses
-                                .into_iter()
-                                .map(|c| self.clause(c))
-                                .intersperse(lines(1)),
-                        ))
-                        .nest(INDENT),
-                )
-                .append(line())
-                .append("}"),
+            } => self.case(subjects, clauses),
 
             UntypedExpr::FieldAccess {
                 label, container, ..
@@ -524,6 +502,35 @@ impl<'a> Formatter<'a> {
                 .append(wrap_args(elems.iter().map(|e| self.wrap_expr(e)))),
         };
         commented(document, comments)
+    }
+
+    pub fn case(&mut self, subjects: &[UntypedExpr], clauses: &[UntypedClause]) -> Document {
+        let subjects_doc = concat(
+            subjects
+                .into_iter()
+                .map(|s| self.expr(s))
+                .intersperse(", ".to_doc()),
+        );
+
+        let clauses_doc = concat(
+            clauses
+                .into_iter()
+                .enumerate()
+                .map(|(i, c)| self.clause(c, i)),
+        );
+
+        "case "
+            .to_doc()
+            .append(subjects_doc)
+            .append(" {")
+            .append(
+                line()
+                    .append(force_break())
+                    .append(clauses_doc)
+                    .nest(INDENT),
+            )
+            .append(line())
+            .append("}")
     }
 
     pub fn bin_op(&mut self, name: &BinOp, left: &UntypedExpr, right: &UntypedExpr) -> Document {
@@ -766,16 +773,22 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    fn clause(&mut self, clause: &UntypedClause) -> Document {
-        let doc = concat(
+    fn clause(&mut self, clause: &UntypedClause, index: usize) -> Document {
+        let clause_doc = concat(
             std::iter::once(&clause.pattern)
                 .chain(clause.alternative_patterns.iter())
                 .map(|p| concat(p.iter().map(|p| self.pattern(p)).intersperse(", ".to_doc())))
                 .intersperse(" | ".to_doc()),
         );
-        match &clause.guard {
-            None => doc,
-            Some(guard) => doc.append(" if ").append(guard),
+        let clause_doc = match &clause.guard {
+            None => clause_doc,
+            Some(guard) => clause_doc.append(" if ").append(guard),
+        };
+
+        if index == 0 {
+            clause_doc
+        } else {
+            line().append(clause_doc)
         }
         .append(" -> ")
         .append(self.hanging_expr(&clause.then))
