@@ -905,6 +905,15 @@ fn infer_error_test() {
     );
 
     assert_error!(
+        "case 1 { x if x == \"x\" -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 14, end: 22 },
+            expected: int(),
+            given: string()
+        }
+    );
+
+    assert_error!(
         "case [1] { [x] | x -> 1 }",
         Error::CouldNotUnify {
             location: SrcSpan { start: 17, end: 18 },
