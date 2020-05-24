@@ -401,6 +401,16 @@ pub external type Four
 
     assert_format!(
         r#"fn main() {
+  fn() {
+    let x: Int = 1
+    x
+  }
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
   fn(_) {
     1
     2
