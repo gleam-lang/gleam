@@ -411,6 +411,7 @@ impl<'a> Formatter<'a> {
         value: &UntypedExpr,
         then: &UntypedExpr,
         kind: BindingKind,
+        annotation: &Option<TypeAst>,
     ) -> Document {
         self.pop_empty_lines(pattern.location().end);
 
@@ -428,6 +429,11 @@ impl<'a> Formatter<'a> {
         force_break()
             .append(keyword)
             .append(self.pattern(pattern))
+            .append(
+                annotation
+                    .as_ref()
+                    .map(|a| ": ".to_doc().append(self.type_ast(a))),
+            )
             .append(" = ")
             .append(self.hanging_expr(value))
             .append(line)
@@ -484,10 +490,11 @@ impl<'a> Formatter<'a> {
             UntypedExpr::Let {
                 value,
                 pattern,
+                annotation,
                 then,
                 kind,
                 ..
-            } => self.let_(pattern, value, then, *kind),
+            } => self.let_(pattern, value, then, *kind, annotation),
 
             UntypedExpr::Case {
                 subjects, clauses, ..

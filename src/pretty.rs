@@ -64,6 +64,15 @@ impl Documentable for Vec<Document> {
     }
 }
 
+impl<D: Documentable> Documentable for Option<D> {
+    fn to_doc(self) -> Document {
+        match self {
+            Some(d) => d.to_doc(),
+            None => Document::Nil,
+        }
+    }
+}
+
 pub fn concat(mut docs: impl Iterator<Item = Document>) -> Document {
     let init = docs.next().unwrap_or_else(|| nil());
     docs.fold(init, |acc, doc| {
