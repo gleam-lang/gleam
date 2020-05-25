@@ -68,7 +68,7 @@ impl Type {
         module: &[String],
         name: &str,
         arity: usize,
-        env: &mut Env,
+        env: &mut Typer,
     ) -> Option<Vec<Arc<Type>>> {
         match self {
             Type::App {
@@ -314,7 +314,7 @@ pub enum PatternConstructor {
 }
 
 #[derive(Debug, Clone)]
-pub struct Env<'a, 'b> {
+pub struct Typer<'a, 'b> {
     current_module: &'b [String],
     uid: usize,
     annotated_generic_types: im::HashSet<usize>,
@@ -337,7 +337,7 @@ pub struct Env<'a, 'b> {
     warnings: Vec<Warning>,
 }
 
-impl<'a, 'b> Env<'a, 'b> {
+impl<'a, 'b> Typer<'a, 'b> {
     pub fn new(
         current_module: &'b [String],
         importable_modules: &'a HashMap<String, Module>,
@@ -1111,7 +1111,7 @@ fn make_type_vars(
     args: &[String],
     vars: &mut im::HashMap<String, (usize, Arc<Type>)>,
     location: &SrcSpan,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<Vec<Arc<Type>>, Error> {
     args.iter()
         .map(|arg| TypeAst::Var {
@@ -1126,7 +1126,7 @@ fn make_type_vars(
 fn register_types(
     statement: &UntypedStatement,
     module: &[String],
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<(), Error> {
     match statement {
         Statement::ExternalType {
@@ -1198,7 +1198,7 @@ pub fn infer_module(
     module: UntypedModule,
     modules: &HashMap<String, Module>,
 ) -> (Result<TypedModule, Error>, Vec<Warning>) {
-    let mut env = Env::new(module.name.as_slice(), modules);
+    let mut env = Typer::new(module.name.as_slice(), modules);
     let module_name = &module.name;
 
     for s in module.statements.iter() {
@@ -1650,7 +1650,7 @@ pub fn infer_module(
         }
     }
 
-    let Env {
+    let Typer {
         module_types: types,
         module_values: values,
         accessors,
@@ -1677,7 +1677,7 @@ pub fn infer_module(
 fn custom_type_accessors(
     constructors: &[RecordConstructor],
     type_vars: &mut im::HashMap<String, (usize, Arc<Type>)>,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<Option<HashMap<String, RecordAccessor>>, Error> {
     let args = match constructors {
         [constructor] if !constructor.args.is_empty() => &constructor.args,
@@ -1704,7 +1704,7 @@ fn custom_type_accessors(
 /// Crawl the AST, annotating each node with the inferred type or
 /// returning an error.
 ///
-pub fn infer(expr: UntypedExpr, level: usize, env: &mut Env) -> Result<TypedExpr, Error> {
+pub fn infer(expr: UntypedExpr, level: usize, env: &mut Typer) -> Result<TypedExpr, Error> {
     match expr {
         UntypedExpr::ListNil { location, .. } => infer_nil(location, level, env),
 
@@ -1823,7 +1823,7 @@ fn infer_pipe(
     right: UntypedExpr,
     location: SrcSpan,
     level: usize,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     match right {
         // left |> right(..args)
@@ -1852,7 +1852,7 @@ fn infer_apply_to_call_pipe(
     left: UntypedExpr,
     location: SrcSpan,
     level: usize,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     let right_location = left.location().clone();
     let (fun, args, typ) = do_infer_call_with_known_fun(fun, args, level, &right_location, env)?;
@@ -1882,7 +1882,7 @@ fn infer_insert_pipe(
     args: Vec<CallArg<UntypedExpr>>,
     left: UntypedExpr,
     level: usize,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     let location = left.location().clone();
     let mut new_args = Vec::with_capacity(args.len() + 1);
@@ -1909,7 +1909,7 @@ fn infer_apply_pipe(
     right: UntypedExpr,
     location: SrcSpan,
     level: usize,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     let left = Box::new(infer(left, level, env)?);
     let right = Box::new(infer(right, level, env)?);
@@ -1928,14 +1928,14 @@ fn infer_apply_pipe(
     })
 }
 
-fn infer_nil(location: SrcSpan, level: usize, env: &mut Env) -> Result<TypedExpr, Error> {
+fn infer_nil(location: SrcSpan, level: usize, env: &mut Typer) -> Result<TypedExpr, Error> {
     Ok(TypedExpr::ListNil {
         location,
         typ: list(env.new_unbound_var(level)),
     })
 }
 
-fn infer_todo(location: SrcSpan, level: usize, env: &mut Env) -> Result<TypedExpr, Error> {
+fn infer_todo(location: SrcSpan, level: usize, env: &mut Typer) -> Result<TypedExpr, Error> {
     env.warnings.push(Warning::Todo {
         location: location.clone(),
     });
@@ -1974,7 +1974,7 @@ fn infer_seq(
     first: UntypedExpr,
     then: UntypedExpr,
     level: usize,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     let first = infer(first, level, env)?;
     let then = infer(then, level, env)?;
@@ -2003,7 +2003,7 @@ fn infer_fn(
     return_annotation: Option<TypeAst>,
     level: usize,
     location: SrcSpan,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     let (args, body) = do_infer_fn(args, body, &return_annotation, level, env)?;
     let args_types = args.iter().map(|a| a.typ.clone()).collect();
@@ -2023,7 +2023,7 @@ fn infer_call(
     args: Vec<CallArg<UntypedExpr>>,
     level: usize,
     location: SrcSpan,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     let (fun, args, typ) = do_infer_call(fun, args, level, &location, env)?;
     Ok(TypedExpr::Call {
@@ -2040,7 +2040,7 @@ fn infer_cons(
     deprecated_syntax: bool,
     location: SrcSpan,
     level: usize,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     let head = infer(head, level, env)?;
     let tail = infer(tail, level, env)?;
@@ -2067,7 +2067,7 @@ fn infer_tuple(
     elems: Vec<UntypedExpr>,
     location: SrcSpan,
     level: usize,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     let elems = elems
         .into_iter()
@@ -2084,7 +2084,7 @@ fn infer_var(
     name: String,
     location: SrcSpan,
     level: usize,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     let constructor = infer_value_constructor(&name, level, &location, env)?;
     Ok(TypedExpr::Var {
@@ -2099,7 +2099,7 @@ fn infer_field_access(
     label: String,
     access_location: SrcSpan,
     level: usize,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     match container {
         UntypedExpr::Var { name, location, .. } if !env.local_values.contains_key(&name) => {
@@ -2115,7 +2115,7 @@ fn infer_tuple_index(
     index: u64,
     location: SrcSpan,
     level: usize,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     let tuple = infer(tuple, level, env)?;
 
@@ -2154,7 +2154,7 @@ fn infer_binop(
     right: UntypedExpr,
     level: usize,
     location: SrcSpan,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     let (input_type, output_type) = match name {
         BinOp::Eq | BinOp::NotEq => {
@@ -2215,7 +2215,7 @@ fn infer_let(
     annotation: &Option<TypeAst>,
     level: usize,
     location: SrcSpan,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     let value = infer(value, level + 1, env)?;
     let try_value_type = env.new_unbound_var(level);
@@ -2272,7 +2272,7 @@ fn infer_case(
     clauses: Vec<UntypedClause>,
     level: usize,
     location: SrcSpan,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     let subjects_count = subjects.len();
     let mut typed_subjects = Vec::with_capacity(subjects_count);
@@ -2306,7 +2306,7 @@ fn infer_clause(
     clause: UntypedClause,
     subjects: &[Arc<Type>],
     level: usize,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<TypedClause, Error> {
     let Clause {
         pattern,
@@ -2349,7 +2349,7 @@ fn infer_clause_pattern(
     subjects: &[Arc<Type>],
     level: usize,
     location: &SrcSpan,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<(TypedMultiPattern, Vec<TypedMultiPattern>), Error> {
     let mut pattern_typer = PatternTyper::new(env, level);
     let typed_pattern = pattern_typer.infer_multi_pattern(pattern, subjects, &location)?;
@@ -2369,7 +2369,7 @@ fn infer_clause_pattern(
 fn infer_optional_clause_guard(
     guard: Option<UntypedClauseGuard>,
     level: usize,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<Option<TypedClauseGuard>, Error> {
     match guard {
         // If there is no guard we do nothing
@@ -2388,7 +2388,7 @@ fn infer_optional_clause_guard(
 fn infer_clause_guard(
     guard: UntypedClauseGuard,
     level: usize,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<TypedClauseGuard, Error> {
     match guard {
         ClauseGuard::Var { location, name, .. } => {
@@ -2730,7 +2730,7 @@ fn infer_module_access(
     level: usize,
     module_location: &SrcSpan,
     select_location: SrcSpan,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     let (module_name, constructor) = {
         let module_info =
@@ -2771,7 +2771,7 @@ fn infer_record_access(
     label: String,
     level: usize,
     location: SrcSpan,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<TypedExpr, Error> {
     // Infer the type of the (presumed) record
     let record = Box::new(infer(record, level, env)?);
@@ -2837,7 +2837,7 @@ fn infer_record_access(
 }
 
 struct PatternTyper<'a, 'b, 'c> {
-    env: &'a mut Env<'b, 'c>,
+    env: &'a mut Typer<'b, 'c>,
     level: usize,
     mode: PatternMode,
     initial_pattern_vars: HashSet<String>,
@@ -2849,7 +2849,7 @@ enum PatternMode {
 }
 
 impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
-    pub fn new(env: &'a mut Env<'b, 'c>, level: usize) -> Self {
+    pub fn new(env: &'a mut Typer<'b, 'c>, level: usize) -> Self {
         Self {
             env,
             level,
@@ -3186,7 +3186,7 @@ fn infer_value_constructor(
     name: &str,
     level: usize,
     location: &SrcSpan,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<ValueConstructor, Error> {
     let ValueConstructor {
         public,
@@ -3217,7 +3217,7 @@ fn do_infer_call(
     args: Vec<CallArg<UntypedExpr>>,
     level: usize,
     location: &SrcSpan,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
     let fun = infer(fun, level, env)?;
     let (fun, args, typ) = do_infer_call_with_known_fun(fun, args, level, location, env)?;
@@ -3229,7 +3229,7 @@ fn do_infer_call_with_known_fun(
     mut args: Vec<CallArg<UntypedExpr>>,
     level: usize,
     location: &SrcSpan,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
     match get_field_map(&fun, env).map_err(|e| convert_get_value_constructor_error(e, location))? {
         // The fun has a field map so labelled arguments may be present and need to be reordered.
@@ -3281,7 +3281,7 @@ fn assert_no_labelled_arguments<A>(args: &[CallArg<A>]) -> Result<(), Error> {
 
 fn get_field_map<'a>(
     constructor: &TypedExpr,
-    env: &'a Env,
+    env: &'a Typer,
 ) -> Result<Option<&'a FieldMap>, GetValueConstructorError> {
     let (module, name) = match constructor {
         TypedExpr::ModuleSelect {
@@ -3302,7 +3302,7 @@ fn infer_arg(
     arg: UntypedArg,
     type_vars: &mut im::HashMap<String, (usize, Arc<Type>)>,
     level: usize,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<TypedArg, Error> {
     let Arg {
         names,
@@ -3327,7 +3327,7 @@ fn do_infer_fn(
     body: UntypedExpr,
     return_annotation: &Option<TypeAst>,
     level: usize,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<(Vec<TypedArg>, TypedExpr), Error> {
     // Construct an initial type for each argument of the function- either an unbound type variable
     // or a type provided by an annotation.
@@ -3399,7 +3399,7 @@ fn instantiate(
     t: Arc<Type>,
     ctx_level: usize,
     ids: &mut im::HashMap<usize, Arc<Type>>,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Arc<Type> {
     match &*t {
         Type::App {
@@ -3489,7 +3489,7 @@ fn unify_enclosed_type(
         _ => result,
     }
 }
-fn unify(t1: Arc<Type>, t2: Arc<Type>, env: &Env) -> Result<(), UnifyError> {
+fn unify(t1: Arc<Type>, t2: Arc<Type>, env: &Typer) -> Result<(), UnifyError> {
     if t1 == t2 {
         return Ok(());
     }
@@ -3681,7 +3681,7 @@ fn update_levels(typ: Arc<Type>, own_level: usize, own_id: usize) -> Result<(), 
 fn match_fun_type(
     typ: Arc<Type>,
     arity: usize,
-    env: &mut Env,
+    env: &mut Typer,
 ) -> Result<(Vec<Arc<Type>>, Arc<Type>), MatchFunTypeError> {
     if let Type::Var { typ } = &*typ {
         let new_value = match &*typ.borrow() {
