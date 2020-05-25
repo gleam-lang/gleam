@@ -202,7 +202,7 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
 
         Statement::CustomType {
             public: true,
-            opaque,
+            opaque: false,
             name,
             args,
             doc,
@@ -214,7 +214,7 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
             // TODO: Don't use the same printer for docs as for the formatter
             definition: print(formatter.custom_type(
                 true,
-                *opaque,
+                false,
                 name,
                 args,
                 cs.as_slice(),
@@ -228,6 +228,21 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
                     documentation: markdown_documentation(&constructor.documentation),
                 })
                 .collect(),
+        }),
+
+        Statement::CustomType {
+            public: true,
+            opaque: true,
+            name,
+            args,
+            doc,
+            location,
+            ..
+        } => Some(Type {
+            name,
+            definition: print(formatter.docs_opaque_custom_type(true, name, args, location)),
+            documentation: markdown_documentation(doc),
+            constructors: vec![],
         }),
 
         Statement::TypeAlias {

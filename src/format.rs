@@ -697,6 +697,26 @@ impl<'a> Formatter<'a> {
             .append("}")
     }
 
+    pub fn docs_opaque_custom_type(
+        &mut self,
+        public: bool,
+        name: &str,
+        args: &[String],
+        location: &SrcSpan,
+    ) -> Document {
+        self.pop_empty_lines(location.start);
+        pub_(public)
+            .to_doc()
+            .append("opaque type ")
+            .append(if args.is_empty() {
+                name.clone().to_doc()
+            } else {
+                name.to_string()
+                    .to_doc()
+                    .append(wrap_args(args.iter().map(|e| e.clone().to_doc())))
+            })
+    }
+
     pub fn docs_fn_signature(
         &mut self,
         public: bool,
