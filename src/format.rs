@@ -801,6 +801,8 @@ impl<'a> Formatter<'a> {
     }
 
     fn clause(&mut self, clause: &UntypedClause, index: usize) -> Document {
+        let space_before = self.pop_empty_lines(clause.location.start);
+        let after_position = clause.location.end;
         let clause_doc = concat(
             std::iter::once(&clause.pattern)
                 .chain(clause.alternative_patterns.iter())
@@ -812,10 +814,15 @@ impl<'a> Formatter<'a> {
             Some(guard) => clause_doc.append(" if ").append(guard),
         };
 
+        // Remove any unused empty lines within the clause
+        self.pop_empty_lines(after_position);
+
         if index == 0 {
             clause_doc
+        } else if space_before {
+            lines(2).append(clause_doc)
         } else {
-            line().append(clause_doc)
+            lines(1).append(clause_doc)
         }
         .append(" -> ")
         .append(self.hanging_expr(&clause.then))
