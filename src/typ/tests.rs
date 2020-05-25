@@ -193,7 +193,8 @@ fn infer_test() {
             let ast = crate::grammar::ExprSequenceParser::new()
                 .parse($src)
                 .expect("syntax error");
-            let result = infer(ast, 1, &mut Typer::new(&[], &HashMap::new()))
+            let result = Typer::new(&[], &HashMap::new())
+                .infer(ast, 1)
                 .expect("should successfully infer");
             assert_eq!(
                 ($src, printer.pretty_print(result.typ().as_ref(), 0),),
@@ -421,7 +422,8 @@ fn infer_error_test() {
             let ast = crate::grammar::ExprSequenceParser::new()
                 .parse($src)
                 .expect("syntax error");
-            let result = infer(ast, 1, &mut Typer::new(&[], &HashMap::new()))
+            let result = Typer::new(&[], &HashMap::new())
+                .infer(ast, 1)
                 .expect_err("should infer an error");
             assert_eq!(($src, sort_options($error)), ($src, sort_options(result)));
         };
