@@ -194,7 +194,7 @@ fn infer_test() {
                 .parse($src)
                 .expect("syntax error");
             let result = Typer::new(&[], &HashMap::new())
-                .infer(ast, 1)
+                .infer(ast)
                 .expect("should successfully infer");
             assert_eq!(
                 ($src, printer.pretty_print(result.typ().as_ref(), 0),),
@@ -423,7 +423,7 @@ fn infer_error_test() {
                 .parse($src)
                 .expect("syntax error");
             let result = Typer::new(&[], &HashMap::new())
-                .infer(ast, 1)
+                .infer(ast)
                 .expect_err("should infer an error");
             assert_eq!(($src, sort_options($error)), ($src, sort_options(result)));
         };
