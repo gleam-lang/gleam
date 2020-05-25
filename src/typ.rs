@@ -1107,24 +1107,21 @@ impl<'a, 'b> Typer<'a, 'b> {
             .map(|arg| self.infer_arg(arg, &mut type_vars))
             .collect::<Result<_, _>>()?;
 
-        // Record generic type variables that comes from type annotations.
-        // They cannot be instantiated so we need to keep track of them.
-        let previous_annotated_generic_types = self.annotated_generic_types.clone();
         for (id, _type) in type_vars.values() {
             self.annotated_generic_types.insert(*id);
         }
 
-        // Insert arguments into function body scope.
-        let previous_vars = self.local_values.clone();
+        let mut body_typer = self.new_scope();
+
         for (arg, t) in args.iter().zip(args.iter().map(|arg| arg.typ.clone())) {
             match &arg.names {
-                ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => self
+                ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => body_typer
                     .insert_variable(name.to_string(), ValueConstructorVariant::LocalVariable, t),
                 ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => (),
             };
         }
 
-        let body = self.infer(body)?;
+        let body = body_typer.infer(body)?;
 
         // Check that any return type annotation is accurate.
         if let Some(ann) = return_annotation {
@@ -1133,9 +1130,8 @@ impl<'a, 'b> Typer<'a, 'b> {
                 .map_err(|e| convert_unify_error(e, body.location()))?;
         }
 
-        // Reset the typer now that the scope of the function has ended.
-        self.local_values = previous_vars;
-        self.annotated_generic_types = previous_annotated_generic_types;
+        self.end_scope(&body_typer);
+
         Ok((args, body))
     }
 
