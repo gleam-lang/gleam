@@ -1452,17 +1452,19 @@ impl<'a, 'b> Typer<'a, 'b> {
             location,
         } = clause;
 
-        // Store the local scope so it can be reset after the clause
-        let vars = self.local_values.clone();
+        let mut clause_typer = self.new_scope();
 
         // Check the types
-        let (typed_pattern, typed_alternatives) =
-            self.infer_clause_pattern(pattern, alternative_patterns, subjects, &location)?;
-        let guard = self.infer_optional_clause_guard(guard)?;
-        let then = self.infer(then)?;
+        let (typed_pattern, typed_alternatives) = clause_typer.infer_clause_pattern(
+            pattern,
+            alternative_patterns,
+            subjects,
+            &location,
+        )?;
+        let guard = clause_typer.infer_optional_clause_guard(guard)?;
+        let then = clause_typer.infer(then)?;
 
-        // Reset the local vars now the clause scope is done
-        self.local_values = vars;
+        self.end_scope(&clause_typer);
 
         Ok(Clause {
             location,
