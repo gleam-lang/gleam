@@ -105,21 +105,21 @@ pub enum UntypedExpr {
 impl UntypedExpr {
     pub fn location(&self) -> &SrcSpan {
         match self {
-            Self::Fn { location, .. } => location,
-            Self::Int { location, .. } => location,
             Self::Seq { then, .. } => then.location(),
-            Self::Var { location, .. } => location,
-            Self::ListNil { location, .. } => location,
             Self::Let { then, .. } => then.location(),
+            Self::Pipe { right, .. } => right.location(),
+            Self::Fn { location, .. } => location,
+            Self::Var { location, .. } => location,
+            Self::Int { location, .. } => location,
             Self::Todo { location, .. } => location,
             Self::Case { location, .. } => location,
-            Self::ListCons { location, .. } => location,
             Self::Call { location, .. } => location,
-            Self::Pipe { location, .. } => location,
             Self::Float { location, .. } => location,
             Self::BinOp { location, .. } => location,
-            Self::String { location, .. } => location,
             Self::Tuple { location, .. } => location,
+            Self::String { location, .. } => location,
+            Self::ListNil { location, .. } => location,
+            Self::ListCons { location, .. } => location,
             Self::TupleIndex { location, .. } => location,
             Self::FieldAccess { location, .. } => location,
         }
@@ -128,6 +128,7 @@ impl UntypedExpr {
     pub fn start_byte_index(&self) -> usize {
         match self {
             Self::Seq { first, .. } => first.start_byte_index(),
+            Self::Pipe { left, .. } => left.start_byte_index(),
             Self::Let { location, .. } => location.start,
             _ => self.location().start,
         }

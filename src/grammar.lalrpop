@@ -207,7 +207,7 @@ CompareOp: BinOp = {
 }
 
 Op5: UntypedExpr = {
-    <s:@L> <l:Op5> "|>" <r:Op6> <e:@L> => UntypedExpr::Pipe {
+    <l:Op5> <s:@L> "|>" <r:Op6> <e:@L> => UntypedExpr::Pipe {
         location: location(s, e),
         left: Box::new(l),
         right: Box::new(r),

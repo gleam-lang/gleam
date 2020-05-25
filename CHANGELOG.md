@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The formatter style has been improved.
 - Numbers are now permitted in module names.
 - Emitted Erlang code correctly adds parentheses around binary subexpressions
   to preserve precedence.

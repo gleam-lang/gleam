@@ -446,7 +446,12 @@ impl<'a> Formatter<'a> {
         let document = match expr {
             UntypedExpr::Todo { .. } => "todo".to_doc(),
 
-            UntypedExpr::Pipe { left, right, .. } => self.pipe(left, right),
+            UntypedExpr::Pipe {
+                left,
+                right,
+                location,
+                ..
+            } => self.pipe(left, right, location.start),
 
             UntypedExpr::Int { value, .. } => value.clone().to_doc(),
 
@@ -564,10 +569,14 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    fn pipe(&mut self, left: &UntypedExpr, right: &UntypedExpr) -> Document {
+    fn pipe(&mut self, left: &UntypedExpr, right: &UntypedExpr, location_start: usize) -> Document {
         let left_precedence = left.binop_precedence();
         let right_precedence = right.binop_precedence();
         let left = self.expr(left);
+
+        // Get comments before right but after left
+        let comments = self.pop_comments(location_start);
+
         let right = match right {
             UntypedExpr::Fn {
                 is_capture: true,
@@ -577,11 +586,15 @@ impl<'a> Formatter<'a> {
 
             _ => self.expr(right),
         };
+
+        // Wrap sides if required
+        let left = self.operator_side(left, 4, left_precedence);
+        let right = self.operator_side(right, 4, right_precedence);
+
         force_break()
-            .append(self.operator_side(left, 4, left_precedence))
+            .append(left)
             .append(line())
-            .append("|> ")
-            .append(self.operator_side(right, 4, right_precedence))
+            .append(commented("|> ".to_doc().append(right), comments))
     }
 
     fn pipe_capture_right_hand_side(&mut self, fun: &UntypedExpr) -> Document {
