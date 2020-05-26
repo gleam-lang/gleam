@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Newly generated projects use stdlib v0.9.0.
+
 ## v0.9.0-rc1 - 2020-05-26
 
 - The formatter style has been improved.
