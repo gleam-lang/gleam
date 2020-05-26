@@ -342,22 +342,27 @@ pub struct Typer<'a, 'b> {
 }
 
 impl<'a, 'b> Typer<'a, 'b> {
-    pub fn new_scope(&mut self) -> Self {
-        Self {
+    pub fn in_new_scope<T, O: FnOnce(&mut Self) -> Result<T, Error>>(
+        &mut self,
+        op: O,
+    ) -> Result<T, Error> {
+        let mut new_scope = Self {
             level: self.level + 1,
             warnings: Vec::new(),
             ..self.clone()
-        }
-    }
+        };
 
-    pub fn end_scope(&mut self, other: &Typer) {
+        let result = op(&mut new_scope);
+
         // Keep uids in sync between scopes to duplicate uids being used
-        self.uid = other.uid;
+        self.uid = new_scope.uid;
 
         // Propagate the warnings to the parent scope so they get logged at the end
-        for warning in other.warnings.iter() {
+        for warning in new_scope.warnings.iter() {
             self.warnings.push(warning.clone());
         }
+
+        result
     }
 
     pub fn new(
@@ -1110,17 +1115,21 @@ impl<'a, 'b> Typer<'a, 'b> {
             self.annotated_generic_types.insert(*id);
         }
 
-        let mut body_typer = self.new_scope();
+        let body = self.in_new_scope(|body_typer| {
+            for (arg, t) in args.iter().zip(args.iter().map(|arg| arg.typ.clone())) {
+                match &arg.names {
+                    ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => body_typer
+                        .insert_variable(
+                            name.to_string(),
+                            ValueConstructorVariant::LocalVariable,
+                            t,
+                        ),
+                    ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => (),
+                };
+            }
 
-        for (arg, t) in args.iter().zip(args.iter().map(|arg| arg.typ.clone())) {
-            match &arg.names {
-                ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => body_typer
-                    .insert_variable(name.to_string(), ValueConstructorVariant::LocalVariable, t),
-                ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => (),
-            };
-        }
-
-        let body = body_typer.infer(body)?;
+            body_typer.infer(body)
+        })?;
 
         // Check that any return type annotation is accurate.
         if let Some(ann) = return_annotation {
@@ -1128,8 +1137,6 @@ impl<'a, 'b> Typer<'a, 'b> {
             self.unify(ret_typ, body.typ())
                 .map_err(|e| convert_unify_error(e, body.location()))?;
         }
-
-        self.end_scope(&body_typer);
 
         Ok((args, body))
     }
@@ -1342,10 +1349,7 @@ impl<'a, 'b> Typer<'a, 'b> {
         annotation: &Option<TypeAst>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        let mut value_typer = self.new_scope();
-        let value = value_typer.infer(value)?;
-
-        self.end_scope(&value_typer);
+        let value = self.in_new_scope(|value_typer| value_typer.infer(value))?;
 
         let try_value_type = self.new_unbound_var(self.level);
         let try_error_type = self.new_unbound_var(self.level);
@@ -1411,13 +1415,15 @@ impl<'a, 'b> Typer<'a, 'b> {
         let return_type = self.new_unbound_var(self.level);
 
         for subject in subjects.into_iter() {
-            let mut subject_typer = self.new_scope();
-            let subject = subject_typer.infer(subject)?;
-            let subject_type = generalise(subject.typ(), subject_typer.level);
+            let (subject, subject_type) = self.in_new_scope(|subject_typer| {
+                let subject = subject_typer.infer(subject)?;
+                let subject_type = generalise(subject.typ(), subject_typer.level);
+
+                Ok((subject, subject_type))
+            })?;
+
             typed_subjects.push(subject);
             subject_types.push(subject_type);
-
-            self.end_scope(&subject_typer)
         }
 
         for clause in clauses.into_iter() {
@@ -1447,19 +1453,20 @@ impl<'a, 'b> Typer<'a, 'b> {
             location,
         } = clause;
 
-        let mut clause_typer = self.new_scope();
+        let (guard, then, typed_pattern, typed_alternatives) =
+            self.in_new_scope(|clause_typer| {
+                // Check the types
+                let (typed_pattern, typed_alternatives) = clause_typer.infer_clause_pattern(
+                    pattern,
+                    alternative_patterns,
+                    subjects,
+                    &location,
+                )?;
+                let guard = clause_typer.infer_optional_clause_guard(guard)?;
+                let then = clause_typer.infer(then)?;
 
-        // Check the types
-        let (typed_pattern, typed_alternatives) = clause_typer.infer_clause_pattern(
-            pattern,
-            alternative_patterns,
-            subjects,
-            &location,
-        )?;
-        let guard = clause_typer.infer_optional_clause_guard(guard)?;
-        let then = clause_typer.infer(then)?;
-
-        self.end_scope(&clause_typer);
+                Ok((guard, then, typed_pattern, typed_alternatives))
+            })?;
 
         Ok(Clause {
             location,
@@ -2853,13 +2860,13 @@ pub fn infer_module(
                 );
 
                 // Infer the type
-                let mut fn_typer = typer.new_scope();
-                fn_typer.annotated_type_vars.clear();
-                let (args, body) = fn_typer.do_infer_fn(args, body, &return_annotation)?;
-                let args_types = args.iter().map(|a| a.typ.clone()).collect();
-                let typ = fn_(args_types, body.typ());
-
-                typer.end_scope(&fn_typer);
+                let (typ, args, body) = typer.in_new_scope(|fn_typer| {
+                    fn_typer.annotated_type_vars.clear();
+                    let (args, body) = fn_typer.do_infer_fn(args, body, &return_annotation)?;
+                    let args_types = args.iter().map(|a| a.typ.clone()).collect();
+                    let typ = fn_(args_types, body.typ());
+                    Ok((typ, args, body))
+                })?;
 
                 // Assert that the inferred type matches the type of any recursive call
                 typer
@@ -2921,26 +2928,27 @@ pub fn infer_module(
                 ..
             } => {
                 // Construct type of function from AST
-                let mut fn_typer = typer.new_scope();
-                let return_type = fn_typer.type_from_ast(&retrn, NewTypeAction::MakeGeneric)?;
-                let mut args_types = Vec::with_capacity(args.len());
-                let mut field_map = FieldMap::new(args.len());
-                for (i, arg) in args.iter().enumerate() {
-                    let t = fn_typer.type_from_ast(&arg.typ, NewTypeAction::MakeGeneric)?;
-                    args_types.push(t);
-                    if let Some(label) = &arg.label {
-                        field_map
-                            .insert(label.clone(), i)
-                            .map_err(|_| Error::DuplicateField {
-                                label: label.to_string(),
-                                location: location.clone(),
+                let (return_type, typ, field_map) = typer.in_new_scope(|fn_typer| {
+                    let return_type = fn_typer.type_from_ast(&retrn, NewTypeAction::MakeGeneric)?;
+                    let mut args_types = Vec::with_capacity(args.len());
+                    let mut field_map = FieldMap::new(args.len());
+                    for (i, arg) in args.iter().enumerate() {
+                        let t = fn_typer.type_from_ast(&arg.typ, NewTypeAction::MakeGeneric)?;
+                        args_types.push(t);
+                        if let Some(label) = &arg.label {
+                            field_map.insert(label.clone(), i).map_err(|_| {
+                                Error::DuplicateField {
+                                    label: label.to_string(),
+                                    location: location.clone(),
+                                }
                             })?;
+                        }
                     }
-                }
-                let field_map = field_map.into_option();
-                let typ = fn_(args_types, return_type.clone());
+                    let field_map = field_map.into_option();
+                    let typ = fn_(args_types, return_type.clone());
 
-                typer.end_scope(&fn_typer);
+                    Ok((return_type, typ, field_map))
+                })?;
 
                 // Insert function into module
                 typer.insert_module_value(
