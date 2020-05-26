@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.9.0-rc1 - 2020-05-26
 
 - The formatter style has been improved.
 - Numbers are now permitted in module names.
