@@ -1332,6 +1332,24 @@ fn infer_module_test() {
         ],
     );
 
+    // type variables are not shared between custom types and external functions
+    assert_infer!(
+        "
+        pub type Box(a) { Box(inner: a) }
+        pub fn get_box(x: Box(Box(a))) { x.inner }
+        external fn id(a) -> a = \"\" \"\"
+        pub fn i(x) { id(x) }
+        pub fn a() { id(1) }
+        pub fn b() { id(1.0) }",
+        vec![
+            ("Box", "fn(a) -> Box(a)"),
+            ("a", "fn() -> Int"),
+            ("b", "fn() -> Float"),
+            ("get_box", "fn(Box(Box(a))) -> Box(a)"),
+            ("i", "fn(a) -> a"),
+        ],
+    );
+
     assert_infer!(
         "pub external fn len(List(a)) -> Int = \"\" \"\"",
         vec![("len", "fn(List(a)) -> Int")],
@@ -1571,6 +1589,37 @@ pub fn get_string(x: Box(String)) { x.inner }
 pub opaque type One { One(name: String) }
 pub fn get(x: One) { x.name }",
         vec![("get", "fn(One) -> String"),]
+    );
+
+    // Type variables are shared between function annotations and function annotations within their body
+    assert_infer!(
+        "
+        pub type Box(a) {
+            Box(value: a)
+        };
+        pub fn go(box1: Box(a)) {
+            fn(box2: Box(a)) { box1.value == box2.value }
+        }",
+        vec![
+            ("Box", "fn(a) -> Box(a)"),
+            ("go", "fn(Box(a)) -> fn(Box(a)) -> Bool")
+        ]
+    );
+
+    // Type variables are shared between function annotations and let annotations within their body
+    assert_infer!(
+        "
+        pub type Box(a) {
+            Box(value: a)
+        };
+        pub fn go(box1: Box(a)) {
+            let x: Box(a) = box1
+            fn(box2: Box(a)) { x.value == box2.value }
+        }",
+        vec![
+            ("Box", "fn(a) -> Box(a)"),
+            ("go", "fn(Box(a)) -> fn(Box(a)) -> Bool")
+        ]
     );
 }
 
@@ -2165,6 +2214,41 @@ fn main() {
     // Cases were we can't so easily check for equality-
     // i.e. because the contents of the error are non-deterministic.
     assert_error!("fn inc(x: a) { x + 1 }");
+
+    // Type variables are shared between function annotations and let annotations within their body
+    assert_error!(
+        "
+        pub type Box(a) {
+            Box(value: a)
+        }
+        pub fn go(box1: Box(a), box2: Box(b)) {
+            let _: Box(a) = box2
+            let _: Box(b) = box1
+            5
+        }",
+        Error::CouldNotUnify {
+            location: SrcSpan {
+                start: 172,
+                end: 176
+            },
+            expected: Arc::new(Type::App {
+                public: true,
+                module: vec!["my_module".to_string()],
+                name: "Box".to_string(),
+                args: vec![Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Generic { id: 11 })),
+                })]
+            }),
+            given: Arc::new(Type::App {
+                public: true,
+                module: vec!["my_module".to_string()],
+                name: "Box".to_string(),
+                args: vec![Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Generic { id: 9 })),
+                })]
+            }),
+        },
+    );
 }
 
 #[test]

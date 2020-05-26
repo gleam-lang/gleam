@@ -325,6 +325,9 @@ pub struct Typer<'a, 'b> {
     // Values defined in the current function (or the prelude)
     local_values: im::HashMap<String, ValueConstructor>,
 
+    // Type variables in the current scope taken from annotations
+    annotated_type_vars: im::HashMap<String, (usize, Arc<Type>)>,
+
     // Types defined in the current module (or the prelude)
     module_types: HashMap<String, TypeConstructor>,
 
@@ -371,6 +374,7 @@ impl<'a, 'b> Typer<'a, 'b> {
             accessors: HashMap::new(),
             warnings: Vec::new(),
             local_values: hashmap![],
+            annotated_type_vars: hashmap![],
             importable_modules,
             current_module,
         };
@@ -703,12 +707,7 @@ impl<'a, 'b> Typer<'a, 'b> {
     /// same type vars being shared between multiple annotations (such as in the arguments
     /// of an external function declaration)
     ///
-    pub fn type_from_ast(
-        &mut self,
-        ast: &TypeAst,
-        vars: &mut im::HashMap<String, (usize, Arc<Type>)>,
-        new: NewTypeAction,
-    ) -> Result<Arc<Type>, Error> {
+    pub fn type_from_ast(&mut self, ast: &TypeAst, new: NewTypeAction) -> Result<Arc<Type>, Error> {
         match ast {
             TypeAst::Constructor {
                 location,
@@ -719,7 +718,7 @@ impl<'a, 'b> Typer<'a, 'b> {
                 // Hydrate the type argument AST into types
                 let mut argument_types = Vec::with_capacity(args.len());
                 for t in args {
-                    let typ = self.type_from_ast(t, vars, new)?;
+                    let typ = self.type_from_ast(t, new)?;
                     argument_types.push((t.location(), typ));
                 }
 
@@ -744,12 +743,12 @@ impl<'a, 'b> Typer<'a, 'b> {
                 }
 
                 // Instantiate the constructor type for this specific usage
-                let mut type_vars = hashmap![];
+                let mut annotated_type_vars = hashmap![];
                 let mut parameter_types = Vec::with_capacity(parameters.len());
                 for typ in parameters {
-                    parameter_types.push(self.instantiate(typ, 0, &mut type_vars));
+                    parameter_types.push(self.instantiate(typ, 0, &mut annotated_type_vars));
                 }
-                let return_type = self.instantiate(return_type, 0, &mut type_vars);
+                let return_type = self.instantiate(return_type, 0, &mut annotated_type_vars);
 
                 // Unify argument types with instantiated parameter types so that the correct types
                 // are inserted into the return type
@@ -766,26 +765,27 @@ impl<'a, 'b> Typer<'a, 'b> {
             TypeAst::Tuple { elems, .. } => Ok(tuple(
                 elems
                     .iter()
-                    .map(|t| self.type_from_ast(t, vars, new))
+                    .map(|t| self.type_from_ast(t, new))
                     .collect::<Result<_, _>>()?,
             )),
 
             TypeAst::Fn { args, retrn, .. } => {
                 let args = args
                     .iter()
-                    .map(|t| self.type_from_ast(t, vars, new))
+                    .map(|t| self.type_from_ast(t, new))
                     .collect::<Result<_, _>>()?;
-                let retrn = self.type_from_ast(retrn, vars, new)?;
+                let retrn = self.type_from_ast(retrn, new)?;
                 Ok(fn_(args, retrn))
             }
 
-            TypeAst::Var { name, location, .. } => match vars.get(name) {
+            TypeAst::Var { name, location, .. } => match self.annotated_type_vars.get(name) {
                 Some((_, var)) => Ok(var.clone()),
 
                 None => match new {
                     NewTypeAction::MakeGeneric => {
                         let var = self.new_generic_var();
-                        vars.insert(name.to_string(), (self.previous_uid(), var.clone()));
+                        self.annotated_type_vars
+                            .insert(name.to_string(), (self.previous_uid(), var.clone()));
                         Ok(var)
                     }
                     NewTypeAction::Disallow => Err(Error::UnknownType {
@@ -1101,13 +1101,12 @@ impl<'a, 'b> Typer<'a, 'b> {
     ) -> Result<(Vec<TypedArg>, TypedExpr), Error> {
         // Construct an initial type for each argument of the function- either an unbound type variable
         // or a type provided by an annotation.
-        let mut type_vars = hashmap![];
         let args: Vec<_> = args
             .into_iter()
-            .map(|arg| self.infer_arg(arg, &mut type_vars))
+            .map(|arg| self.infer_arg(arg))
             .collect::<Result<_, _>>()?;
 
-        for (id, _type) in type_vars.values() {
+        for (id, _type) in self.annotated_type_vars.values() {
             self.annotated_generic_types.insert(*id);
         }
 
@@ -1125,7 +1124,7 @@ impl<'a, 'b> Typer<'a, 'b> {
 
         // Check that any return type annotation is accurate.
         if let Some(ann) = return_annotation {
-            let ret_typ = self.type_from_ast(ann, &mut type_vars, NewTypeAction::MakeGeneric)?;
+            let ret_typ = self.type_from_ast(ann, NewTypeAction::MakeGeneric)?;
             self.unify(ret_typ, body.typ())
                 .map_err(|e| convert_unify_error(e, body.location()))?;
         }
@@ -1135,11 +1134,7 @@ impl<'a, 'b> Typer<'a, 'b> {
         Ok((args, body))
     }
 
-    fn infer_arg(
-        &mut self,
-        arg: UntypedArg,
-        type_vars: &mut im::HashMap<String, (usize, Arc<Type>)>,
-    ) -> Result<TypedArg, Error> {
+    fn infer_arg(&mut self, arg: UntypedArg) -> Result<TypedArg, Error> {
         let Arg {
             names,
             annotation,
@@ -1148,7 +1143,7 @@ impl<'a, 'b> Typer<'a, 'b> {
         } = arg;
         let typ = annotation
             .clone()
-            .map(|t| self.type_from_ast(&t, type_vars, NewTypeAction::MakeGeneric))
+            .map(|t| self.type_from_ast(&t, NewTypeAction::MakeGeneric))
             .unwrap_or_else(|| Ok(self.new_unbound_var(self.level)))?;
         Ok(Arg {
             names,
@@ -1386,7 +1381,7 @@ impl<'a, 'b> Typer<'a, 'b> {
         // Check that any type annotation is accurate.
         if let Some(ann) = annotation {
             let ann_typ = self
-                .type_from_ast(ann, &mut hashmap![], NewTypeAction::MakeGeneric)
+                .type_from_ast(ann, NewTypeAction::MakeGeneric)
                 .map(|t| self.instantiate(t, self.level, &mut hashmap![]))?;
             self.unify(ann_typ, value_typ)
                 .map_err(|e| convert_unify_error(e, value.location()))?;
@@ -1972,9 +1967,10 @@ impl<'a, 'b> Typer<'a, 'b> {
         // This ensure that the type parameters of the retrieved value have the correct
         // types for this instance of the record.
         let accessor_record_type = accessors.typ.clone();
-        let mut type_vars = hashmap![];
-        let accessor_record_type = self.instantiate(accessor_record_type, 0, &mut type_vars);
-        let typ = self.instantiate(typ, 0, &mut type_vars);
+        let mut annotated_type_vars = hashmap![];
+        let accessor_record_type =
+            self.instantiate(accessor_record_type, 0, &mut annotated_type_vars);
+        let typ = self.instantiate(typ, 0, &mut annotated_type_vars);
         self.unify(accessor_record_type, record.typ())
             .map_err(|e| convert_unify_error(e, record.location()))?;
 
@@ -2133,10 +2129,9 @@ impl<'a, 'b> Typer<'a, 'b> {
         }
     }
 
-    fn make_type_vars(
+    fn make_annotated_type_vars(
         &mut self,
         args: &[String],
-        vars: &mut im::HashMap<String, (usize, Arc<Type>)>,
         location: &SrcSpan,
     ) -> Result<Vec<Arc<Type>>, Error> {
         args.iter()
@@ -2144,14 +2139,13 @@ impl<'a, 'b> Typer<'a, 'b> {
                 location: location.clone(),
                 name: arg.to_string(),
             })
-            .map(|ast| self.type_from_ast(&ast, vars, NewTypeAction::MakeGeneric))
+            .map(|ast| self.type_from_ast(&ast, NewTypeAction::MakeGeneric))
             .collect::<Result<_, _>>()
     }
 
     fn custom_type_accessors(
         &mut self,
         constructors: &[RecordConstructor],
-        type_vars: &mut im::HashMap<String, (usize, Arc<Type>)>,
     ) -> Result<Option<HashMap<String, RecordAccessor>>, Error> {
         let args = match constructors {
             [constructor] if !constructor.args.is_empty() => &constructor.args,
@@ -2161,7 +2155,7 @@ impl<'a, 'b> Typer<'a, 'b> {
         let mut fields = HashMap::with_capacity(args.len());
         for (index, (label, arg, ..)) in args.iter().enumerate() {
             if let Some(label) = label {
-                let typ = self.type_from_ast(arg, type_vars, NewTypeAction::Disallow)?;
+                let typ = self.type_from_ast(arg, NewTypeAction::Disallow)?;
                 fields.insert(
                     label.to_string(),
                     RecordAccessor {
@@ -2667,8 +2661,7 @@ fn register_types(
             location,
             ..
         } => {
-            let mut type_vars = hashmap![];
-            let parameters = typer.make_type_vars(args, &mut type_vars, location)?;
+            let parameters = typer.make_annotated_type_vars(args, location)?;
             let typ = Arc::new(Type::App {
                 public: *public,
                 module: module.to_owned(),
@@ -2695,10 +2688,8 @@ fn register_types(
             resolved_type,
             ..
         } => {
-            let mut type_vars = hashmap![];
-            let parameters = typer.make_type_vars(args, &mut type_vars, location)?;
-            let typ =
-                typer.type_from_ast(&resolved_type, &mut type_vars, NewTypeAction::Disallow)?;
+            let parameters = typer.make_annotated_type_vars(args, location)?;
+            let typ = typer.type_from_ast(&resolved_type, NewTypeAction::Disallow)?;
             typer.insert_type_constructor(
                 name.clone(),
                 TypeConstructor {
@@ -2863,6 +2854,7 @@ pub fn infer_module(
 
                 // Infer the type
                 let mut fn_typer = typer.new_scope();
+                fn_typer.annotated_type_vars.clear();
                 let (args, body) = fn_typer.do_infer_fn(args, body, &return_annotation)?;
                 let args_types = args.iter().map(|a| a.typ.clone()).collect();
                 let typ = fn_(args_types, body.typ());
@@ -2929,17 +2921,12 @@ pub fn infer_module(
                 ..
             } => {
                 // Construct type of function from AST
-                let mut type_vars = hashmap![];
-                let return_type =
-                    typer.type_from_ast(&retrn, &mut type_vars, NewTypeAction::MakeGeneric)?;
+                let mut fn_typer = typer.new_scope();
+                let return_type = fn_typer.type_from_ast(&retrn, NewTypeAction::MakeGeneric)?;
                 let mut args_types = Vec::with_capacity(args.len());
                 let mut field_map = FieldMap::new(args.len());
                 for (i, arg) in args.iter().enumerate() {
-                    let t = typer.type_from_ast(
-                        &arg.typ,
-                        &mut type_vars,
-                        NewTypeAction::MakeGeneric,
-                    )?;
+                    let t = fn_typer.type_from_ast(&arg.typ, NewTypeAction::MakeGeneric)?;
                     args_types.push(t);
                     if let Some(label) = &arg.label {
                         field_map
@@ -2952,6 +2939,8 @@ pub fn infer_module(
                 }
                 let field_map = field_map.into_option();
                 let typ = fn_(args_types, return_type.clone());
+
+                typer.end_scope(&fn_typer);
 
                 // Insert function into module
                 typer.insert_module_value(
@@ -3027,7 +3016,7 @@ pub fn infer_module(
                 args,
                 constructors,
             } => {
-                let mut type_vars = hashmap![];
+                let mut annotated_type_vars = hashmap![];
 
                 // This custom type was inserted into the module types in the `register_types`
                 // pass, so we can expect this type to exist already.
@@ -3038,7 +3027,7 @@ pub fn infer_module(
                     .typ
                     .clone();
 
-                // Register the parameterised types in the type into type_vars so that they are
+                // Register the parameterised types in the type into annotated_type_vars so that they are
                 // used when building the constructors below.
                 for (typ, name) in retrn
                     .app_parameters()
@@ -3046,14 +3035,12 @@ pub fn infer_module(
                     .iter()
                     .zip(args.iter())
                 {
-                    type_vars.insert(name.to_string(), (0, typ.clone()));
+                    annotated_type_vars.insert(name.to_string(), (0, typ.clone()));
                 }
 
                 // If the custom type only has a single constructor then we can access the
                 // fields using the record.field syntax, so store any fields accessors.
-                if let Some(accessors) =
-                    typer.custom_type_accessors(constructors.as_slice(), &mut type_vars)?
-                {
+                if let Some(accessors) = typer.custom_type_accessors(constructors.as_slice())? {
                     let map = AccessorsMap {
                         public: (public && !opaque),
                         accessors,
@@ -3067,8 +3054,7 @@ pub fn infer_module(
                     let mut field_map = FieldMap::new(constructor.args.len());
                     let mut args_types = Vec::with_capacity(constructor.args.len());
                     for (i, (label, arg, ..)) in constructor.args.iter().enumerate() {
-                        let t =
-                            typer.type_from_ast(&arg, &mut type_vars, NewTypeAction::Disallow)?;
+                        let t = typer.type_from_ast(&arg, NewTypeAction::Disallow)?;
                         args_types.push(t);
                         if let Some(label) = label {
                             field_map.insert(label.clone(), i).map_err(|_| {
@@ -3129,13 +3115,12 @@ pub fn infer_module(
                 args,
             } => {
                 // Check contained types are valid
-                let mut type_vars = hashmap![];
                 for arg in args.iter() {
                     let var = TypeAst::Var {
                         location: location.clone(),
                         name: arg.to_string(),
                     };
-                    typer.type_from_ast(&var, &mut type_vars, NewTypeAction::MakeGeneric)?;
+                    typer.type_from_ast(&var, NewTypeAction::MakeGeneric)?;
                 }
                 Ok(Statement::ExternalType {
                     doc,
