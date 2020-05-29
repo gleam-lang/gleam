@@ -47,12 +47,17 @@ pub fn build(project_root: impl AsRef<Path>, to: Option<String>) -> Result<(), E
     });
 
     // Build
-    let (_config, outputs) = super::build_project(&project_root, &output_dir)?;
+    let (config, outputs) = super::build_project(&project_root, &output_dir)?;
 
     // Write
     crate::file::delete_dir(&output_dir)?;
     file::write_outputs(outputs.as_slice())?;
 
+    println!(
+        "\nThe docs for {package} have been rendered to {output_dir}",
+        package = config.name,
+        output_dir = output_dir.to_string_lossy()
+    );
     // We're done!
     Ok(())
 }
@@ -84,6 +89,14 @@ pub fn publish(project_root: impl AsRef<Path>, version: String) -> Result<(), Er
             .await
             .map_err(|e| Error::Hex(e.to_string()))
     })?;
+
+    println!(
+        "
+The docs for {package} have been published to HexDocs:
+
+    https://hexdocs.pm/{package}",
+        package = config.name
+    );
 
     // We're done!
     Ok(())
