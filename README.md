@@ -54,6 +54,7 @@ These people are sponsoring at least $10 a month, enabling further Gleam
 development.
 
 - [Bryan Paxton](https://github.com/starbelly)
+- [Hécate](https://github.com/Kleidukos)
 - [John Palgut](https://github.com/Jwsonic)
 - [Parker Selbert](https://github.com/sorentwo)
 - [Quinn Wilton](http://quinnwilton.com/)
