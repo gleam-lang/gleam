@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Newly generated projects use stdlib v0.9.0.
+- Additional information is printed to the console when generating HTML
+  documentation from Gleam code.
 
 ## v0.9.0-rc1 - 2020-05-26
 
