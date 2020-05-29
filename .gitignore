@@ -1,4 +1,5 @@
 **/*.rs.bk
+**/*.beam
 /target/
 /tmp
 .idea/

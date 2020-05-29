@@ -3,7 +3,11 @@ use crate::{
     project::OutputFile,
 };
 use flate2::{write::GzEncoder, Compression};
-use std::{fs::File, io::Write, path::PathBuf};
+use std::{
+    fs::File,
+    io::Write,
+    path::{Path, PathBuf},
+};
 
 pub fn delete_dir(dir: &PathBuf) -> Result<(), Error> {
     if dir.exists() {
@@ -136,4 +140,13 @@ pub fn create_tar_archive(outputs: Vec<OutputFile>) -> Result<Vec<u8>, Error> {
         .map_err(|e| Error::TarFinish(e.to_string()))?
         .finish()
         .map_err(|e| Error::Gzip(e.to_string()))
+}
+
+pub fn mkdir(path: impl AsRef<Path>) -> Result<(), Error> {
+    std::fs::create_dir(&path).map_err(|err| Error::FileIO {
+        kind: FileKind::Directory,
+        path: PathBuf::from(path.as_ref()),
+        action: FileIOAction::Create,
+        err: Some(err.to_string()),
+    })
 }
