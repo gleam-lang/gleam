@@ -4,9 +4,10 @@ mod tests;
 
 use crate::{
     ast::{Statement, TypedStatement},
+    config::{DocsPage, ProjectConfig},
     error::{Error, GleamExpect},
     format, pretty,
-    project::{self, Analysed, DocsPage, ModuleOrigin, OutputFile, ProjectConfig},
+    project::{self, Analysed, ModuleOrigin, OutputFile},
 };
 use askama::Template;
 use itertools::Itertools;
