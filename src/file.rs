@@ -143,7 +143,7 @@ pub fn create_tar_archive(outputs: Vec<OutputFile>) -> Result<Vec<u8>, Error> {
 }
 
 pub fn mkdir(path: impl AsRef<Path>) -> Result<(), Error> {
-    std::fs::create_dir(&path).map_err(|err| Error::FileIO {
+    std::fs::create_dir_all(&path).map_err(|err| Error::FileIO {
         kind: FileKind::Directory,
         path: PathBuf::from(path.as_ref()),
         action: FileIOAction::Create,

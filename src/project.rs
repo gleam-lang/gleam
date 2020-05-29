@@ -4,51 +4,16 @@ mod tests;
 
 use crate::{
     ast::TypedModule,
+    config::{self, ProjectConfig},
     error::{Error, FileIOAction, FileKind, GleamExpect},
     file, typ,
     warning::Warning,
 };
-use serde::Deserialize;
 use source_tree::SourceTree;
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::Read;
 use std::path::{Path, PathBuf};
 
 pub const OUTPUT_DIR_NAME: &str = "gen";
-
-#[derive(Deserialize, Debug)]
-pub struct ProjectConfig {
-    pub name: String,
-    #[serde(default = "BuildTool::default")]
-    pub tool: BuildTool,
-    pub docs: Option<DocsPages>,
-}
-
-#[derive(Deserialize, Debug, PartialEq)]
-#[serde(rename_all = "kebab-case")]
-pub enum BuildTool {
-    Gleam,
-    Other,
-}
-
-impl BuildTool {
-    pub fn default() -> Self {
-        Self::Other
-    }
-}
-
-#[derive(Deserialize, Debug)]
-pub struct DocsPages {
-    pub pages: Vec<DocsPage>,
-}
-
-#[derive(Deserialize, Debug, Clone)]
-pub struct DocsPage {
-    pub title: String,
-    pub path: String,
-    pub source: PathBuf,
-}
 
 #[derive(Debug, PartialEq)]
 pub struct Input {
@@ -100,7 +65,7 @@ pub struct Module {
 }
 
 pub fn read_and_analyse(root: impl AsRef<Path>) -> Result<(ProjectConfig, Vec<Analysed>), Error> {
-    let project_config = read_project_config(&root)?;
+    let project_config = config::read_project_config(&root)?;
     let mut srcs = vec![];
 
     let root = root.as_ref();
@@ -240,32 +205,4 @@ pub fn collect_source(
         })
     }
     Ok(())
-}
-
-pub fn read_project_config(root: impl AsRef<Path>) -> Result<ProjectConfig, Error> {
-    let config_path = root.as_ref().join("gleam.toml");
-
-    let mut file = File::open(&config_path).map_err(|e| Error::FileIO {
-        action: FileIOAction::Open,
-        kind: FileKind::File,
-        path: config_path.clone(),
-        err: Some(e.to_string()),
-    })?;
-
-    let mut toml = String::new();
-    file.read_to_string(&mut toml).map_err(|e| Error::FileIO {
-        action: FileIOAction::Read,
-        kind: FileKind::File,
-        path: config_path.clone(),
-        err: Some(e.to_string()),
-    })?;
-
-    let project_config = toml::from_str(&toml).map_err(|e| Error::FileIO {
-        action: FileIOAction::Parse,
-        kind: FileKind::File,
-        path: config_path.clone(),
-        err: Some(e.to_string()),
-    })?;
-
-    Ok(project_config)
 }

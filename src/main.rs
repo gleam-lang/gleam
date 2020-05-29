@@ -3,6 +3,7 @@
 mod ast;
 mod bit_string;
 mod cli;
+mod config;
 mod diagnostic;
 mod docs;
 mod erl;
@@ -179,26 +180,47 @@ fn command_build(root: String) -> Result<(), Error> {
     file::write_outputs(output_files.as_slice())?;
 
     // Compile Erlang to .beam files
-    if config.tool == project::BuildTool::Gleam {
-        let ebin_dir = root.join("gen").join("ebin");
+    if config.tool == config::BuildTool::Gleam {
+        compile_erlang(output_files.as_slice());
+    }
+
+    println!("Done!");
+
+    Ok(())
+}
+
+fn compile_erlang(output_files: &[project::OutputFile]) {
+    use itertools::Itertools;
+
+    let projects = output_files.iter().group_by(|out| {
+        out.path
+            .parent()
+            .gleam_expect("compile_erlang path parent 1")
+            .parent()
+            .gleam_expect("compile_erlang path parent 2")
+    });
+
+    for (path, files) in projects.into_iter() {
+        let ebin_dir = path.join("ebin");
         file::mkdir(&ebin_dir).gleam_expect("command_build mkdir ebin");
         let ebin_dir_string = ebin_dir
             .to_str()
             .gleam_expect("command_build ebin_dir to_str")
             .to_string();
         let mut command = process::Command::new("erlc");
+        let erl_files = files
+            .filter(|out| out.path.extension().map(|s| s.to_str()) == Some(Some("erl")))
+            .map(|out| {
+                out.path
+                    .to_str()
+                    .gleam_expect("command_build out path to_str")
+                    .to_string()
+            });
         command.arg("-o");
         command.arg(ebin_dir_string);
-        command.args(output_files.iter().map(|out| {
-            out.path
-                .to_str()
-                .gleam_expect("command_build out path to_str")
-                .to_string()
-        }));
+        command.args(erl_files);
+
+        println!("Compiling beam: {}", path.to_str().unwrap_or_default());
         command.status().gleam_expect("Command erlc");
     }
-
-    println!("Done!");
-
-    Ok(())
 }
