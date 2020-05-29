@@ -37,8 +37,8 @@ extern crate lalrpop_util;
 #[macro_use]
 extern crate lazy_static;
 
-use crate::error::Error;
-use std::path::PathBuf;
+use crate::error::{Error, GleamExpect};
+use std::{path::PathBuf, process};
 use structopt::clap::AppSettings;
 use structopt::StructOpt;
 use strum::VariantNames;
@@ -164,7 +164,7 @@ fn command_build(root: String) -> Result<(), Error> {
     let root = PathBuf::from(&root);
 
     // Read and type check project
-    let (_config, analysed) = project::read_and_analyse(&root)?;
+    let (config, analysed) = project::read_and_analyse(&root)?;
 
     // Generate Erlang code
     let output_files = erl::generate_erlang(analysed.as_slice());
@@ -177,6 +177,26 @@ fn command_build(root: String) -> Result<(), Error> {
 
     // Delete the gen directory before generating the newly compiled files
     file::write_outputs(output_files.as_slice())?;
+
+    // Compile Erlang to .beam files
+    if config.tool == project::BuildTool::Gleam {
+        let ebin_dir = root.join("gen").join("ebin");
+        file::mkdir(&ebin_dir).gleam_expect("command_build mkdir ebin");
+        let ebin_dir_string = ebin_dir
+            .to_str()
+            .gleam_expect("command_build ebin_dir to_str")
+            .to_string();
+        let mut command = process::Command::new("erlc");
+        command.arg("-o");
+        command.arg(ebin_dir_string);
+        command.args(output_files.iter().map(|out| {
+            out.path
+                .to_str()
+                .gleam_expect("command_build out path to_str")
+                .to_string()
+        }));
+        command.status().gleam_expect("Command erlc");
+    }
 
     println!("Done!");
 

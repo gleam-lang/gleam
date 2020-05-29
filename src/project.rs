@@ -17,18 +17,33 @@ use std::path::{Path, PathBuf};
 
 pub const OUTPUT_DIR_NAME: &str = "gen";
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct ProjectConfig {
     pub name: String,
+    #[serde(default = "BuildTool::default")]
+    pub tool: BuildTool,
     pub docs: Option<DocsPages>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub enum BuildTool {
+    Gleam,
+    Other,
+}
+
+impl BuildTool {
+    pub fn default() -> Self {
+        Self::Other
+    }
+}
+
+#[derive(Deserialize, Debug)]
 pub struct DocsPages {
     pub pages: Vec<DocsPage>,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct DocsPage {
     pub title: String,
     pub path: String,
@@ -86,7 +101,6 @@ pub struct Module {
 
 pub fn read_and_analyse(root: impl AsRef<Path>) -> Result<(ProjectConfig, Vec<Analysed>), Error> {
     let project_config = read_project_config(&root)?;
-
     let mut srcs = vec![];
 
     let root = root.as_ref();
