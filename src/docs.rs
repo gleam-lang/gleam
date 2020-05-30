@@ -4,7 +4,7 @@ mod tests;
 
 use crate::{
     ast::{Statement, TypedStatement},
-    config::{DocsPage, ProjectConfig},
+    config::{DocsPage, PackageConfig},
     error::{Error, GleamExpect},
     format, pretty,
     project::{self, Analysed, ModuleOrigin, OutputFile},
@@ -18,7 +18,7 @@ const MAX_COLUMNS: isize = 65;
 pub fn build_project(
     project_root: impl AsRef<Path>,
     output_dir: &PathBuf,
-) -> Result<(ProjectConfig, Vec<OutputFile>), Error> {
+) -> Result<(PackageConfig, Vec<OutputFile>), Error> {
     // Read and type check project
     let (config, analysed) = project::read_and_analyse(&project_root)?;
 
@@ -29,10 +29,8 @@ pub fn build_project(
         source: project_root.as_ref().join("README.md"),
     }];
 
-    // Add user-supplied pages, if defined
-    if let Some(docs) = &config.docs {
-        pages.extend(docs.pages.to_vec());
-    }
+    // Add any user-supplied pages
+    pages.extend(config.docs.pages.to_vec());
 
     // Generate HTML
     let outputs = generate_html(&config, analysed.as_slice(), &pages, &output_dir);
@@ -40,7 +38,7 @@ pub fn build_project(
 }
 
 pub fn generate_html(
-    project_config: &ProjectConfig,
+    project_config: &PackageConfig,
     analysed: &[Analysed],
     docspages: &[DocsPage],
     output_dir: &PathBuf,

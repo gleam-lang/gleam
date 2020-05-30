@@ -1,15 +1,19 @@
 use crate::error::{Error, FileIOAction, FileKind};
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-#[derive(Deserialize, Debug)]
-pub struct ProjectConfig {
+#[derive(Deserialize, Debug, PartialEq)]
+pub struct PackageConfig {
     pub name: String,
     #[serde(default = "BuildTool::default")]
     pub tool: BuildTool,
-    pub docs: Option<DocsPages>,
+    #[serde(default)]
+    pub docs: Docs,
+    #[serde(default)]
+    pub dependencies: HashMap<String, String>,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
@@ -25,19 +29,19 @@ impl BuildTool {
     }
 }
 
-#[derive(Deserialize, Debug)]
-pub struct DocsPages {
+#[derive(Deserialize, Default, Debug, PartialEq)]
+pub struct Docs {
     pub pages: Vec<DocsPage>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, PartialEq, Clone)]
 pub struct DocsPage {
     pub title: String,
     pub path: String,
     pub source: PathBuf,
 }
 
-pub fn read_project_config(root: impl AsRef<Path>) -> Result<ProjectConfig, Error> {
+pub fn read_project_config(root: impl AsRef<Path>) -> Result<PackageConfig, Error> {
     let config_path = root.as_ref().join("gleam.toml");
 
     let mut file = File::open(&config_path).map_err(|e| Error::FileIO {

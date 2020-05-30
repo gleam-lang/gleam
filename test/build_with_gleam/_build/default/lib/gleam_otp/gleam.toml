@@ -1,0 +1,6 @@
+name = "gleam_otp"
+tool = "gleam"
+version = "0.2.0"
+
+[dependencies]
+gleam_helper = "1.0.0"

@@ -4,7 +4,7 @@ mod tests;
 
 use crate::{
     ast::TypedModule,
-    config::{self, ProjectConfig},
+    config::{self, PackageConfig},
     error::{Error, FileIOAction, FileKind, GleamExpect},
     file, typ,
     warning::Warning,
@@ -64,7 +64,7 @@ pub struct Module {
     module: crate::ast::UntypedModule,
 }
 
-pub fn read_and_analyse(root: impl AsRef<Path>) -> Result<(ProjectConfig, Vec<Analysed>), Error> {
+pub fn read_and_analyse(root: impl AsRef<Path>) -> Result<(PackageConfig, Vec<Analysed>), Error> {
     let project_config = config::read_project_config(&root)?;
     let mut srcs = vec![];
 
