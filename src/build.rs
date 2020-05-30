@@ -1,118 +1,83 @@
-// ## Get all gleam.toml
-//
-// Read the top level gleam.toml
-// Read the gleam.toml for each of the dependencies
-// Loop for each of their deps until we have them all
-// TODO: ensure the gleam.toml name matches the project name
-//
-//
-// ## Sort packages into processing order
-//
-// Build deps graph for packages (petgraph)
-// Toposort graph to get processing order
-//
-//
-// ## Process each package
-//
-// For each package:
-//
-// Read and parse all the module source files for the package
-//
-//    {
-//      ast: ast::UntypedModule
-//      code: String,
-//      package: String,
-//    }
-//
-// Build deps graph for modules
-// Toposort graph to get processing order
-//
-// For each module:
-// Run the typer
-//   When importing a module ensure that it is a module that belongs
-//   to a package in the deps of the current package.
-//
-//    {
-//      ast: ast::TypedModule
-//      manifest: ModuleTypeManifest
-//      code: String,
-//      package: String,
-//    }
-//
-
 #![allow(warnings)]
 
 mod dep_tree;
+mod project_root;
 
 use crate::{
     config::{self, PackageConfig},
-    error::{Error, FileIOAction, FileKind},
-    file,
+    error::{Error, FileIOAction, FileKind, GleamExpect},
+    file, typ,
 };
 use itertools::Itertools;
+use project_root::ProjectRoot;
 use std::collections::HashMap;
 use std::fs::DirEntry;
 use std::path::PathBuf;
-
-// Directory names
-const DIR_NAME_BUILD: &str = "_build";
-const DIR_NAME_PROFILE_DEFAULT: &str = "default";
-const DIR_NAME_LIB: &str = "lib";
-const DIR_NAME_PACKAGE_SRC: &str = "src";
-const DIR_NAME_PACKAGE_EBIN: &str = "ebin";
 
 pub fn main(package_config: PackageConfig, root: PathBuf) -> Result<(), Error> {
     let root = ProjectRoot::new(root);
 
     // Collect all package configs
-    let packages = root.package_configs()?;
+    let configs = root.package_configs()?;
 
     // Determine package processing order
-    let deps: Vec<_> = packages
-        .values()
-        .map(|config| {
-            let name = config.name.as_str();
-            let deps: Vec<_> = config
-                .dependencies
-                .iter()
-                .map(|(dep, _)| dep.as_str())
-                .collect();
-            (name, deps)
-        })
-        .collect();
+    let deps: Vec<_> = configs.values().map(package_deps_for_graph).collect();
+    let sequence = dep_tree::toposort_deps(deps.as_slice()).map_err(convert_deps_tree_error)?;
 
-    let sequence = dep_tree::toposort_deps(deps.as_slice());
+    // Read and type check packages
+    let packages = analyse_packages(&root, &configs, sequence)?;
 
-    dbg!(&sequence);
+    // TODO: generate Erlang, etc
+    // TODO: compile Erlang into .beam
 
     todo!()
 }
 
-struct ProjectRoot {
-    path: PathBuf,
+fn analyse_packages<'a>(
+    root: &ProjectRoot,
+    configs: &'a HashMap<String, PackageConfig>,
+    sequence: Vec<&'a str>,
+) -> Result<HashMap<&'a str, Package<'a>>, Error> {
+    let mut packages = HashMap::with_capacity(configs.len());
+    let mut public_modules = HashMap::with_capacity(configs.len() * 5);
+
+    for name in sequence {
+        let config = configs.get(name).gleam_expect("Missing package config");
+        let analysed = analyse_package(root, config, &public_modules)?;
+        packages.insert(name, analysed);
+        // TODO: insert public modules for package into public_modules
+    }
+
+    Ok(packages)
 }
 
-impl ProjectRoot {
-    pub fn new(path: PathBuf) -> Self {
-        Self { path }
-    }
+fn analyse_package<'a>(
+    root: &ProjectRoot,
+    config: &'a PackageConfig,
+    other_package_modules: &HashMap<&str, typ::Module>,
+) -> Result<Package<'a>, Error> {
+    // TODO: read package modules
+    // TODO: parse modules
+    // TODO: type modules
+    todo!()
+}
 
-    pub fn package_configs(&self) -> Result<HashMap<String, PackageConfig>, Error> {
-        file::read_dir(self.default_build_lib_path())?
-            .filter_map(Result::ok)
-            .map(|dir_entry| {
-                let config = config::read_project_config(dir_entry.path())?;
-                Ok((config.name.clone(), config))
-            })
-            .collect::<Result<_, _>>()
-    }
+pub struct Package<'a> {
+    name: &'a str,
+}
 
-    pub fn default_build_lib_path(&self) -> PathBuf {
-        self.path
-            .join(DIR_NAME_BUILD)
-            .join(DIR_NAME_PROFILE_DEFAULT)
-            .join(DIR_NAME_LIB)
-    }
+fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
+    todo!()
+}
+
+fn package_deps_for_graph(config: &PackageConfig) -> (&str, Vec<&str>) {
+    let name = config.name.as_str();
+    let deps: Vec<_> = config
+        .dependencies
+        .iter()
+        .map(|(dep, _)| dep.as_str())
+        .collect();
+    (name, deps)
 }
 
 // // Compile Erlang to .beam files
