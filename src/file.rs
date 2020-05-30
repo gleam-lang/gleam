@@ -150,3 +150,12 @@ pub fn mkdir(path: impl AsRef<Path>) -> Result<(), Error> {
         err: Some(err.to_string()),
     })
 }
+
+pub fn read_dir(path: impl AsRef<Path>) -> Result<std::fs::ReadDir, Error> {
+    std::fs::read_dir(&path).map_err(|e| Error::FileIO {
+        action: FileIOAction::Read,
+        kind: FileKind::Directory,
+        path: PathBuf::from(path.as_ref()),
+        err: Some(e.to_string()),
+    })
+}
