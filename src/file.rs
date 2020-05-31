@@ -108,6 +108,7 @@ fn is_gleam_path_test() {
 
 pub fn gleam_files(dir: &PathBuf) -> impl Iterator<Item = PathBuf> + '_ {
     walkdir::WalkDir::new(dir.clone())
+        .follow_links(true)
         .into_iter()
         .filter_map(Result::ok)
         .filter(|e| e.file_type().is_file())
