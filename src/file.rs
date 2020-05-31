@@ -159,3 +159,12 @@ pub fn read_dir(path: impl AsRef<Path>) -> Result<std::fs::ReadDir, Error> {
         err: Some(e.to_string()),
     })
 }
+
+pub fn read(path: impl AsRef<Path>) -> Result<String, Error> {
+    std::fs::read_to_string(&path).map_err(|err| Error::FileIO {
+        action: FileIOAction::Read,
+        kind: FileKind::File,
+        path: PathBuf::from(path.as_ref()),
+        err: Some(err.to_string()),
+    })
+}

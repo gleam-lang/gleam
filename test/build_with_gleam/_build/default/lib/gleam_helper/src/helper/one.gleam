@@ -1,3 +1,1 @@
-pub type One {
-  One
-}
+pub external type One

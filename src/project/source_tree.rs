@@ -1,6 +1,6 @@
 use super::{GleamExpect, Input, Module, ModuleOrigin};
 use crate::error::Error;
-use crate::parser::{self, Comment};
+use crate::parser;
 use petgraph::{algo::Cycle, graph::NodeIndex, Direction};
 use std::collections::{HashMap, HashSet};
 
@@ -150,7 +150,7 @@ impl SourceTree {
             })?;
 
         // Annotate statements with their inline documentation
-        attach_doc_comments(&mut module, &comments.doc_comments);
+        parser::attach_doc_comments(&mut module, &comments.doc_comments);
         module.documentation = comments
             .module_comments
             .iter()
@@ -184,25 +184,5 @@ impl SourceTree {
             },
         );
         Ok(())
-    }
-}
-
-fn attach_doc_comments<'a, A, B, C>(
-    module: &mut crate::ast::Module<A, B, C>,
-    mut comments: &'a [Comment<'a>],
-) {
-    for statement in &mut module.statements {
-        let location = statement.location();
-        let (doc, rest) = parser::take_before(comments, location.start);
-        comments = rest;
-        statement.put_doc(doc);
-
-        if let crate::ast::Statement::CustomType { constructors, .. } = statement {
-            for constructor in constructors {
-                let (doc, rest) = parser::take_before(comments, constructor.location.start);
-                comments = rest;
-                constructor.put_doc(doc);
-            }
-        }
     }
 }

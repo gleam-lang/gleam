@@ -4,9 +4,10 @@ mod dep_tree;
 mod project_root;
 
 use crate::{
+    ast::UntypedModule,
     config::{self, PackageConfig},
     error::{Error, FileIOAction, FileKind, GleamExpect},
-    file, typ,
+    file, grammar, parser, typ,
 };
 use itertools::Itertools;
 use project_root::ProjectRoot;
@@ -63,20 +64,14 @@ fn analyse_package<'a>(
 
     for path in file::gleam_files(&package_path) {
         let name = module_name(root, &package_path, &path);
-
-        // TODO: read source
-
-        //     let src = std::fs::read_to_string(&path).map_err(|err| Error::FileIO {
-        //         action: FileIOAction::Read,
-        //         kind: FileKind::File,
-        //         err: Some(err.to_string()),
-        //         path: path.clone(),
-        //     })?;
+        let code = file::read(&path)?;
+        let ast = parse_source(code.as_str(), name.as_str(), &path)?;
 
         // TODO: parse
         // TODO: type check
+        // TODO: ensure this is not a duplicate module
 
-        let module = Module { name };
+        let module = Module { name, code, ast };
 
         modules.insert(module.name.clone(), module);
     }
@@ -85,6 +80,33 @@ fn analyse_package<'a>(
         name: config.name.as_str(),
         modules,
     })
+}
+
+fn parse_source(src: &str, name: &str, path: &PathBuf) -> Result<UntypedModule, Error> {
+    // Strip comments, etc
+    let (cleaned, comments) = parser::strip_extra(src);
+
+    // Parse source into AST
+    let mut module = grammar::ModuleParser::new()
+        .parse(&cleaned)
+        .map_err(|e| Error::Parse {
+            path: path.clone(),
+            src: src.to_string(),
+            error: e.map_token(|crate::grammar::Token(a, b)| (a, b.to_string())),
+        })?;
+
+    // Attach documentation
+    parser::attach_doc_comments(&mut module, &comments.doc_comments);
+    module.documentation = comments
+        .module_comments
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+
+    // Store the name
+    module.name = name.split("/").map(String::from).collect(); // TODO: store the module name as a string
+
+    Ok(module)
 }
 
 fn module_name(root: &ProjectRoot, package_path: &PathBuf, full_module_path: &PathBuf) -> String {
@@ -131,6 +153,8 @@ pub struct Package<'a> {
 #[derive(Debug)]
 pub struct Module {
     name: String,
+    code: String,
+    ast: UntypedModule, // TODO: typed module
 }
 
 fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
