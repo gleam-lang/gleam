@@ -13,6 +13,7 @@ const DIR_NAME_LIB: &str = "lib";
 const DIR_NAME_PACKAGE_SRC: &str = "src";
 const DIR_NAME_PACKAGE_EBIN: &str = "ebin";
 
+#[derive(Debug)]
 pub struct ProjectRoot {
     path: PathBuf,
 }
@@ -37,5 +38,9 @@ impl ProjectRoot {
             .join(DIR_NAME_BUILD)
             .join(DIR_NAME_PROFILE_DEFAULT)
             .join(DIR_NAME_LIB)
+    }
+
+    pub fn default_build_lib_package_path(&self, name: &str) -> PathBuf {
+        self.default_build_lib_path().join(name)
     }
 }

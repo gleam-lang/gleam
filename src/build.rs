@@ -30,6 +30,8 @@ pub fn main(package_config: PackageConfig, root: PathBuf) -> Result<(), Error> {
     // TODO: generate Erlang, etc
     // TODO: compile Erlang into .beam
 
+    dbg!(&packages);
+
     todo!()
 }
 
@@ -56,14 +58,79 @@ fn analyse_package<'a>(
     config: &'a PackageConfig,
     other_package_modules: &HashMap<&str, typ::Module>,
 ) -> Result<Package<'a>, Error> {
-    // TODO: read package modules
-    // TODO: parse modules
-    // TODO: type modules
-    todo!()
+    let package_path = root.default_build_lib_package_path(&config.name);
+    let mut modules = HashMap::with_capacity(20); // A guess at how many modules will be in a package
+
+    for path in file::gleam_files(&package_path) {
+        let name = module_name(root, &package_path, &path);
+
+        // TODO: read source
+
+        //     let src = std::fs::read_to_string(&path).map_err(|err| Error::FileIO {
+        //         action: FileIOAction::Read,
+        //         kind: FileKind::File,
+        //         err: Some(err.to_string()),
+        //         path: path.clone(),
+        //     })?;
+
+        // TODO: parse
+        // TODO: type check
+
+        let module = Module { name };
+
+        modules.insert(module.name.clone(), module);
+    }
+
+    Ok(Package {
+        name: config.name.as_str(),
+        modules,
+    })
 }
 
+fn module_name(root: &ProjectRoot, package_path: &PathBuf, full_module_path: &PathBuf) -> String {
+    // /path/to/project/_build/default/lib/the_package/src/my/module.gleam
+
+    // src/my/module.gleam
+    let project_path = full_module_path
+        .strip_prefix(package_path)
+        .gleam_expect("Stripping package prefix from module path");
+
+    // my/module.gleam
+    let mut module_path = project_path
+        .strip_prefix("src")
+        .or_else(|_| project_path.strip_prefix("test"))
+        .gleam_expect("Stripping src/test prefix")
+        .to_path_buf();
+
+    // my/module
+    module_path.set_extension("");
+
+    // Stringify
+    let name = module_path
+        .to_str()
+        .gleam_expect("Module name path to str")
+        .to_string();
+
+    // normalise windows paths
+    name.replace("\\", "/")
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Input {
+    pub name: Vec<String>,
+    pub path: PathBuf,
+    pub src: String,
+}
+
+#[derive(Debug)]
 pub struct Package<'a> {
     name: &'a str,
+    modules: HashMap<String, Module>,
+}
+
+#[derive(Debug)]
+pub struct Module {
+    name: String,
 }
 
 fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
