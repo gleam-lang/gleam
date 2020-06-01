@@ -2,6 +2,8 @@
 
 ## v0.9.0 - 2020-06-01
 
+#### [Release blog post](https://lpil.uk/blog/gleam-v0.9-released/)
+
 - Newly generated projects use stdlib v0.9.0.
 - Additional information is printed to the console when generating HTML
   documentation from Gleam code.
