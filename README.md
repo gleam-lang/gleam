@@ -53,9 +53,14 @@ please consider sponsoring its development [on GitHub](https://github.com/sponso
 These people are sponsoring at least $10 a month, enabling further Gleam
 development.
 
+- [Arian Daneshvar](https://github.com/bees)
 - [Bryan Paxton](https://github.com/starbelly)
+- [Clever Bunny LTD](https://github.com/cleverbunny)
+- [Hasan YILDIZ](https://github.com/hsnyildiz)
 - [Hécate](https://github.com/Kleidukos)
 - [John Palgut](https://github.com/Jwsonic)
+- [José Valim](https://github.com/josevalim)
+- [Lars Wikman](https://github.com/lawik)
 - [Parker Selbert](https://github.com/sorentwo)
 - [Quinn Wilton](http://quinnwilton.com/)
 - [ontofractal](https://github.com/ontofractal)
