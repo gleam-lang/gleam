@@ -101,7 +101,7 @@ pub enum UntypedExpr {
         location: SrcSpan,
     },
 
-    Bin {
+    Bitstring {
         location: SrcSpan,
         elems: Vec<UntypedExprBinSegment>,
     },
@@ -127,7 +127,7 @@ impl UntypedExpr {
             Self::ListCons { location, .. } => location,
             Self::TupleIndex { location, .. } => location,
             Self::FieldAccess { location, .. } => location,
-            Self::Bin { location, .. } => location,
+            Self::Bitstring { location, .. } => location,
         }
     }
 

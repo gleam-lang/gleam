@@ -513,7 +513,7 @@ impl<'a> Formatter<'a> {
                 .to_doc()
                 .append(wrap_args(elems.iter().map(|e| self.wrap_expr(e)))),
 
-            UntypedExpr::Bin { elems, .. } => {
+            UntypedExpr::Bitstring { elems, .. } => {
                 let elems = elems.iter().map(|s| self.segment(s));
 
                 break_("<<", "<<")

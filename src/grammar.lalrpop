@@ -585,7 +585,7 @@ Todo: UntypedExpr = {
 
 Bitstring: UntypedExpr = {
     <s:@L> "<<" <elems:Comma<BinSegment>> ">>" <e:@L> => {
-        UntypedExpr::Bin {
+        UntypedExpr::Bitstring {
             location: location(s, e),
             elems: elems,
         }
@@ -887,7 +887,7 @@ PatternList: UntypedPattern = {
 
 PatternBitstring: UntypedPattern = {
     <s:@L> "<<" <elems:Comma<PatternBinSegment>> ">>" <e:@L> => {
-        Pattern::Bin {
+        Pattern::Bitstring {
             location: location(s, e),
             elems: elems,
         }

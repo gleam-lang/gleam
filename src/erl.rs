@@ -993,7 +993,7 @@ fn expr(expression: &TypedExpr, env: &mut Env) -> Document {
 
         TypedExpr::Tuple { elems, .. } => tuple(elems.into_iter().map(|e| wrap_expr(e, env))),
 
-        TypedExpr::Bin { elems, .. } => bitstring(
+        TypedExpr::Bitstring { elems, .. } => bitstring(
             elems
                 .into_iter()
                 .map(|s| segment(&s.value, s.options.clone(), env)),

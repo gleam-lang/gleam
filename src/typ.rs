@@ -11,7 +11,7 @@ use crate::ast::{
     UntypedExprBinSegment, UntypedExprBinSegmentOption, UntypedModule, UntypedMultiPattern,
     UntypedPattern, UntypedPatternBinSegment, UntypedPatternBinSegmentOption, UntypedStatement,
 };
-use crate::binary::{BinaryTypeSpecifier, Error as BinaryError};
+use crate::bitstring::{BinaryTypeSpecifier, Error as BinaryError};
 use crate::error::GleamExpect;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -911,7 +911,7 @@ impl<'a> Typer<'a> {
                 ..
             } => self.infer_tuple_index(*tuple, index, location),
 
-            UntypedExpr::Bin { location, elems } => self.infer_bin(elems, location),
+            UntypedExpr::Bitstring { location, elems } => self.infer_bin(elems, location),
         }
     }
 
@@ -1299,7 +1299,7 @@ impl<'a> Typer<'a> {
             .map(|s| self.infer_segment(*s.value, s.options, s.location))
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(TypedExpr::Bin {
+        Ok(TypedExpr::Bitstring {
             location,
             elems,
             typ: bitstring(),
@@ -1321,7 +1321,7 @@ impl<'a> Typer<'a> {
 
         let type_specifier = BinaryTypeSpecifier::new(&options, true)
             .map_err(|e| convert_binary_error(e, &location))?;
-        let typ = type_specifier.typ().unwrap_or_else(|| binary());
+        let typ = type_specifier.typ().unwrap_or_else(|| bitstring());
 
         self.unify(typ.clone(), value.typ())
             .map_err(|e| convert_unify_error(e, value.location()))?;
@@ -3856,7 +3856,7 @@ fn convert_unify_error(e: UnifyError, location: &SrcSpan) -> Error {
     }
 }
 
-fn convert_binary_error(e: crate::binary::Error, location: &SrcSpan) -> Error {
+fn convert_binary_error(e: crate::bitstring::Error, location: &SrcSpan) -> Error {
     match e {
         BinaryError::ConflictingSignednessOptions {
             location,
@@ -4218,38 +4218,11 @@ pub fn fn_(args: Vec<Arc<Type>>, retrn: Arc<Type>) -> Arc<Type> {
     Arc::new(Type::Fn { retrn, args })
 }
 
-pub fn binary() -> Arc<Type> {
-    Arc::new(Type::App {
-        args: vec![],
-        public: true,
-        name: "Binary".to_string(),
-        module: vec![],
-    })
-}
-
 pub fn bitstring() -> Arc<Type> {
     Arc::new(Type::App {
         args: vec![],
         public: true,
         name: "Bitstring".to_string(),
-        module: vec![],
-    })
-}
-
-pub fn utf16() -> Arc<Type> {
-    Arc::new(Type::App {
-        args: vec![],
-        public: true,
-        name: "Utf16".to_string(),
-        module: vec![],
-    })
-}
-
-pub fn utf32() -> Arc<Type> {
-    Arc::new(Type::App {
-        args: vec![],
-        public: true,
-        name: "Utf32".to_string(),
         module: vec![],
     })
 }
