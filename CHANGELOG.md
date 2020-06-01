@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.9.0 - 2020-06-01
 
 - Newly generated projects use stdlib v0.9.0.
 - Additional information is printed to the console when generating HTML
