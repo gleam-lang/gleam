@@ -1040,7 +1040,7 @@ impl<'a> Formatter<'a> {
                 .to_doc()
                 .append(wrap_args(elems.iter().map(|e| self.pattern(e)))),
 
-            Pattern::Bin { elems, .. } => {
+            Pattern::Bitstring { elems, .. } => {
                 let elems = elems.iter().map(|s| self.pattern_segment(s));
 
                 break_("<<", "<<")

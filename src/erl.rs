@@ -490,7 +490,7 @@ fn pattern(p: &TypedPattern, env: &mut Env) -> Document {
 
         Pattern::Tuple { elems, .. } => tuple(elems.into_iter().map(|p| pattern(p, env))),
 
-        Pattern::Bin { elems, .. } => bitstring(
+        Pattern::Bitstring { elems, .. } => bitstring(
             elems
                 .into_iter()
                 .map(|s| pattern_segment(&s.value, s.options.clone(), env)),

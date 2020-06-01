@@ -542,7 +542,7 @@ pub enum Pattern<Constructor, Type> {
         elems: Vec<Self>,
     },
 
-    Bin {
+    Bitstring {
         location: SrcSpan,
         elems: Vec<BinSegment<Self, Type>>,
     },
@@ -561,7 +561,7 @@ impl<A, B> Pattern<A, B> {
             Pattern::String { location, .. } => location,
             Pattern::Tuple { location, .. } => location,
             Pattern::Constructor { location, .. } => location,
-            Pattern::Bin { location, .. } => location,
+            Pattern::Bitstring { location, .. } => location,
         }
     }
 
