@@ -3466,7 +3466,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             None => (),
         }
 
-        Ok(TypedPattern::Bin {
+        Ok(TypedPattern::Bitstring {
             location,
             elems: typed_segments,
         })
@@ -3677,7 +3677,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 }
             },
 
-            Pattern::Bin { location, elems } => self.infer_pattern_bitstring(elems, location),
+            Pattern::Bitstring { location, elems } => self.infer_pattern_bitstring(elems, location),
 
             Pattern::Constructor {
                 location,
