@@ -656,13 +656,12 @@ impl<'a> Formatter<'a> {
             UntypedExprBinSegment { value, options, .. } if *options == [] => self.expr(&value),
 
             UntypedExprBinSegment { value, options, .. } => {
-                // TODO: Is there a better option than these self.clone() calls?
-                let options = options.iter().map(|o| self.clone().segment_option(o));
-
-                self.clone()
-                    .expr(&value)
-                    .append("::")
-                    .append(concat(options.intersperse("-".to_doc())))
+                self.expr(&value).append("::").append(concat(
+                    options
+                        .iter()
+                        .map(|o| self.segment_option(o))
+                        .intersperse("-".to_doc()),
+                ))
             }
         }
     }
@@ -1071,15 +1070,12 @@ impl<'a> Formatter<'a> {
             }
 
             UntypedPatternBinSegment { value, options, .. } => {
-                // TODO: Is there a better option than these self.clone() calls?
-                let options = options
-                    .iter()
-                    .map(|o| self.clone().pattern_segment_option(o));
-
-                self.clone()
-                    .pattern(&value)
-                    .append("::")
-                    .append(concat(options.intersperse("-".to_doc())))
+                self.pattern(&value).append("::").append(concat(
+                    options
+                        .iter()
+                        .map(|o| self.pattern_segment_option(o))
+                        .intersperse("-".to_doc()),
+                ))
             }
         }
     }
