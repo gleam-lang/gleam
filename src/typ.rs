@@ -508,6 +508,19 @@ impl<'a> Typer<'a> {
             )
             .gleam_expect("prelude inserting Nil type");
 
+        typer
+            .insert_type_constructor(
+                "Bitstring".to_string(),
+                TypeConstructor {
+                    origin: Default::default(),
+                    parameters: vec![],
+                    typ: bitstring(),
+                    module: vec![],
+                    public: true,
+                },
+            )
+            .gleam_expect("prelude inserting Bitstring type");
+
         let ok = typer.new_generic_var();
         let error = typer.new_generic_var();
         typer.insert_variable(
