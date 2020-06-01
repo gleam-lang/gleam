@@ -1148,6 +1148,30 @@ World"
 "#
     );
 
+    // https://github.com/gleam-lang/gleam/issues/618
+
+    assert_format!(
+        r#"fn main() {
+  {
+    1
+    2
+  }
+  |> func
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  1
+  |> {
+    1
+    2
+  }
+}
+"#
+    );
+
     //
     // Let
     //

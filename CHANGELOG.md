@@ -5,6 +5,8 @@
 - Newly generated projects use stdlib v0.9.0.
 - Additional information is printed to the console when generating HTML
   documentation from Gleam code.
+- Fixed a bug where blocks on either side of a binary operator would be
+  rendered without `{ }`.
 
 ## v0.9.0-rc1 - 2020-05-26
 

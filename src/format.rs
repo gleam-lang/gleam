@@ -572,7 +572,7 @@ impl<'a> Formatter<'a> {
     fn pipe(&mut self, left: &UntypedExpr, right: &UntypedExpr, location_start: usize) -> Document {
         let left_precedence = left.binop_precedence();
         let right_precedence = right.binop_precedence();
-        let left = self.expr(left);
+        let left = self.wrap_expr(left);
 
         // Get comments before right but after left
         let comments = self.pop_comments(location_start);
@@ -584,7 +584,7 @@ impl<'a> Formatter<'a> {
                 ..
             } => self.pipe_capture_right_hand_side(body),
 
-            _ => self.expr(right),
+            _ => self.wrap_expr(right),
         };
 
         // Wrap sides if required
