@@ -417,13 +417,13 @@ fn infer_test() {
     assert_infer!("let <<x>> = <<1::integer>> x", "Int");
     assert_infer!("let <<x::integer>> = <<1::integer>> x", "Int");
     assert_infer!("let <<x::float>> = <<1::integer>> x", "Float");
-    assert_infer!("let <<x::binary>> = <<1::integer>> x", "Binary");
-    assert_infer!("let <<x::bytes>> = <<1::integer>> x", "Binary");
+    assert_infer!("let <<x::binary>> = <<1::integer>> x", "Bitstring");
+    assert_infer!("let <<x::bytes>> = <<1::integer>> x", "Bitstring");
     assert_infer!("let <<x::bitstring>> = <<1::integer>> x", "Bitstring");
     assert_infer!("let <<x::bits>> = <<1::integer>> x", "Bitstring");
     assert_infer!("let <<x::utf8>> = <<1::integer>> x", "String");
-    assert_infer!("let <<x::utf16>> = <<1::integer>> x", "Utf16");
-    assert_infer!("let <<x::utf32>> = <<1::integer>> x", "Utf32");
+    assert_infer!("let <<x::utf16>> = <<1::integer>> x", "Bitstring");
+    assert_infer!("let <<x::utf32>> = <<1::integer>> x", "Bitstring");
 }
 
 #[test]
@@ -455,7 +455,7 @@ fn infer_bitstring_error_test() {
         "let x = <<1>> x",
         Error::CouldNotUnify {
             location: SrcSpan { start: 10, end: 11 },
-            expected: binary(),
+            expected: bitstring(),
             given: int(),
         },
     );
@@ -474,7 +474,7 @@ fn infer_bitstring_error_test() {
         Error::CouldNotUnify {
             location: SrcSpan { start: 39, end: 40 },
             expected: int(),
-            given: binary(),
+            given: bitstring(),
         },
     );
 
@@ -482,7 +482,7 @@ fn infer_bitstring_error_test() {
         "case <<1::integer>> { <<a::utf16>> if a == \"test\" -> 1 }",
         Error::CouldNotUnify {
             location: SrcSpan { start: 38, end: 49 },
-            expected: utf16(),
+            expected: bitstring(),
             given: string(),
         },
     );

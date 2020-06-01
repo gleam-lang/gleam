@@ -138,11 +138,11 @@ impl<T> BinaryTypeSpecifier<T> {
         match self.typ {
             Some(BinSegmentOption::Integer { .. }) => Some(crate::typ::int()),
             Some(BinSegmentOption::Float { .. }) => Some(crate::typ::float()),
-            Some(BinSegmentOption::Binary { .. }) => Some(crate::typ::binary()),
+            Some(BinSegmentOption::Binary { .. }) => Some(crate::typ::bitstring()),
             Some(BinSegmentOption::Bitstring { .. }) => Some(crate::typ::bitstring()),
             Some(BinSegmentOption::UTF8 { .. }) => Some(crate::typ::string()),
-            Some(BinSegmentOption::UTF16 { .. }) => Some(crate::typ::utf16()),
-            Some(BinSegmentOption::UTF32 { .. }) => Some(crate::typ::utf32()),
+            Some(BinSegmentOption::UTF16 { .. }) => Some(crate::typ::bitstring()),
+            Some(BinSegmentOption::UTF32 { .. }) => Some(crate::typ::bitstring()),
             _ => None,
         }
     }
