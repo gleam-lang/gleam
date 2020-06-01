@@ -412,6 +412,242 @@ fn infer_test() {
         "let add = fn(x, _, _) { fn(y) { y + x } } 1 |> add(1, 2, 3)",
         "Int"
     );
+
+    // Bitstrings
+    assert_infer!("let <<x>> = <<1::integer>> x", "Int");
+    assert_infer!("let <<x::integer>> = <<1::integer>> x", "Int");
+    assert_infer!("let <<x::float>> = <<1::integer>> x", "Float");
+    assert_infer!("let <<x::binary>> = <<1::integer>> x", "Binary");
+    assert_infer!("let <<x::bytes>> = <<1::integer>> x", "Binary");
+    assert_infer!("let <<x::bitstring>> = <<1::integer>> x", "Bitstring");
+    assert_infer!("let <<x::bits>> = <<1::integer>> x", "Bitstring");
+    assert_infer!("let <<x::utf8>> = <<1::integer>> x", "String");
+    assert_infer!("let <<x::utf16>> = <<1::integer>> x", "Utf16");
+    assert_infer!("let <<x::utf32>> = <<1::integer>> x", "Utf32");
+}
+
+#[test]
+fn infer_bitstring_error_test() {
+    macro_rules! assert_error {
+        ($src:expr, $error:expr $(,)?) => {
+            let ast = crate::grammar::ExprSequenceParser::new()
+                .parse($src)
+                .expect("syntax error");
+            let result = Typer::new(&[], &HashMap::new())
+                .infer(ast)
+                .expect_err("should infer an error");
+            assert_eq!(($src, sort_options($error)), ($src, sort_options(result)));
+        };
+    }
+
+    // Unify
+
+    assert_error!(
+        "case <<1::integer>> { <<2.0, a>> -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 24, end: 27 },
+            expected: int(),
+            given: float(),
+        },
+    );
+
+    assert_error!(
+        "let x = <<1>> x",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 10, end: 11 },
+            expected: binary(),
+            given: int(),
+        },
+    );
+
+    assert_error!(
+        "case <<1::integer>> { <<a::float>> if a > 1 -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 38, end: 39 },
+            expected: int(),
+            given: float(),
+        },
+    );
+
+    assert_error!(
+        "case <<1::integer>> { <<a::binary>> if a > 1 -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 39, end: 40 },
+            expected: int(),
+            given: binary(),
+        },
+    );
+
+    assert_error!(
+        "case <<1::integer>> { <<a::utf16>> if a == \"test\" -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 38, end: 49 },
+            expected: utf16(),
+            given: string(),
+        },
+    );
+
+    assert_error!(
+        "let x = <<1::size(\"1\")>> x",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 18, end: 21 },
+            expected: int(),
+            given: string(),
+        },
+    );
+
+    assert_error!(
+        "case <<1::integer>> { <<1::size(2.0)>> -> a }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 32, end: 35 },
+            expected: int(),
+            given: float(),
+        },
+    );
+
+    // Segments
+
+    assert_error!(
+        "case <<1::integer>> { <<1::binary, _::binary>> -> 1 }",
+        Error::BinarySegmentMustHaveSize {
+            location: SrcSpan { start: 24, end: 33 },
+        },
+    );
+
+    assert_error!(
+        "case <<1::integer>> { <<1::bitstring, _::binary>> -> 1 }",
+        Error::BinarySegmentMustHaveSize {
+            location: SrcSpan { start: 24, end: 36 },
+        },
+    );
+
+    assert_error!(
+        "let x = <<1::binary>> x",
+        Error::BinarySegmentMustHaveSize {
+            location: SrcSpan { start: 10, end: 19 },
+        },
+    );
+
+    // Options
+
+    assert_error!(
+        "let x = <<1::invalid>> x",
+        Error::InvalidBinarySegmentOption {
+            location: SrcSpan { start: 13, end: 20 },
+            label: "invalid".to_string(),
+        },
+    );
+
+    assert_error!(
+        "case <<1::integer>> { <<1::binary-wrong>> -> 1 }",
+        Error::InvalidBinarySegmentOption {
+            location: SrcSpan { start: 34, end: 39 },
+            label: "wrong".to_string(),
+        },
+    );
+
+    assert_error!(
+        "let x = <<1::integer-binary>> x",
+        Error::ConflictingBinaryTypeOptions {
+            previous_location: SrcSpan { start: 13, end: 20 },
+            location: SrcSpan { start: 21, end: 27 },
+            name: "integer".to_string(),
+        },
+    );
+
+    assert_error!(
+        "case <<1::integer>> { <<1::bitstring-binary>> -> 1 }",
+        Error::ConflictingBinaryTypeOptions {
+            previous_location: SrcSpan { start: 27, end: 36 },
+            location: SrcSpan { start: 37, end: 43 },
+
+            name: "bitstring".to_string(),
+        },
+    );
+
+    assert_error!(
+        "let x = <<1::signed-unsigned>> x",
+        Error::ConflictingBinarySignednessOptions {
+            previous_location: SrcSpan { start: 13, end: 19 },
+            location: SrcSpan { start: 20, end: 28 },
+            name: "signed".to_string(),
+        }
+    );
+
+    assert_error!(
+        "case <<1::integer>> { <<1::unsigned-signed>> -> 1 }",
+        Error::ConflictingBinarySignednessOptions {
+            previous_location: SrcSpan { start: 27, end: 35 },
+            location: SrcSpan { start: 36, end: 42 },
+            name: "unsigned".to_string(),
+        }
+    );
+
+    assert_error!(
+        "let x = <<1::big-little>> x",
+        Error::ConflictingBinaryEndiannessOptions {
+            previous_location: SrcSpan { start: 13, end: 16 },
+            location: SrcSpan { start: 17, end: 23 },
+            name: "big".to_string(),
+        }
+    );
+
+    assert_error!(
+        "case <<1::integer>> { <<1::native-big>> -> 1 }",
+        Error::ConflictingBinaryEndiannessOptions {
+            previous_location: SrcSpan { start: 27, end: 33 },
+            location: SrcSpan { start: 34, end: 37 },
+            name: "native".to_string(),
+        }
+    );
+
+    assert_error!(
+        "let x = <<1::8-size(5)>> x",
+        Error::ConflictingBinarySizeOptions {
+            previous_location: SrcSpan { start: 13, end: 14 },
+            location: SrcSpan { start: 15, end: 22 },
+        }
+    );
+
+    assert_error!(
+        "case <<1::integer>> { <<1::size(2)-size(8)>> -> a }",
+        Error::ConflictingBinarySizeOptions {
+            previous_location: SrcSpan { start: 27, end: 34 },
+            location: SrcSpan { start: 35, end: 42 },
+        }
+    );
+
+    assert_error!(
+        "let x = <<1::unit(2)-unit(5)>> x",
+        Error::ConflictingBinaryUnitOptions {
+            previous_location: SrcSpan { start: 13, end: 20 },
+            location: SrcSpan { start: 21, end: 28 },
+        }
+    );
+
+    assert_error!(
+        "let x = <<1::utf8-unit(5)>> x",
+        Error::BinaryTypeDoesNotAllowUnit {
+            typ: "utf8".to_string(),
+            location: SrcSpan { start: 18, end: 25 },
+        }
+    );
+
+    assert_error!(
+        "let x = <<1::utf16-unit(5)>> x",
+        Error::BinaryTypeDoesNotAllowUnit {
+            typ: "utf16".to_string(),
+            location: SrcSpan { start: 19, end: 26 },
+        }
+    );
+
+    assert_error!(
+        "case <<1::integer>> { <<1::utf32-unit(2)>> -> a }",
+        Error::BinaryTypeDoesNotAllowUnit {
+            typ: "utf32".to_string(),
+            location: SrcSpan { start: 33, end: 40 },
+        }
+    );
 }
 
 #[test]

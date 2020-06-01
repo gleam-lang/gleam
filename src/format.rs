@@ -512,6 +512,17 @@ impl<'a> Formatter<'a> {
             UntypedExpr::Tuple { elems, .. } => "tuple"
                 .to_doc()
                 .append(wrap_args(elems.iter().map(|e| self.wrap_expr(e)))),
+
+            UntypedExpr::Bin { elems, .. } => {
+                let elems = elems.iter().map(|s| self.segment(s));
+
+                break_("<<", "<<")
+                    .append(concat(elems.intersperse(delim(","))))
+                    .nest(INDENT)
+                    .append(break_(",", ""))
+                    .append(">>")
+                    .group()
+            }
         };
         commented(document, comments)
     }
@@ -637,6 +648,71 @@ impl<'a> Formatter<'a> {
             _ => crate::error::fatal_compiler_bug(
                 "Function capture body found not to be a call in the formatter",
             ),
+        }
+    }
+
+    fn segment(&mut self, segment: &UntypedExprBinSegment) -> Document {
+        match segment {
+            UntypedExprBinSegment { value, options, .. } if *options == [] => self.expr(&value),
+
+            UntypedExprBinSegment { value, options, .. } => {
+                // TODO: Is there a better option than these self.clone() calls?
+                let options = options.iter().map(|o| self.clone().segment_option(o));
+
+                self.clone()
+                    .expr(&value)
+                    .append("::")
+                    .append(concat(options.intersperse("-".to_doc())))
+            }
+        }
+    }
+
+    fn segment_option(&mut self, option: &UntypedExprBinSegmentOption) -> Document {
+        match option {
+            BinSegmentOption::Invalid { label, .. } => label.clone().to_doc(),
+
+            BinSegmentOption::Binary { .. } => "binary".to_doc(),
+            BinSegmentOption::Integer { .. } => "integer".to_doc(),
+            BinSegmentOption::Float { .. } => "float".to_doc(),
+            BinSegmentOption::Bitstring { .. } => "bitstring".to_doc(),
+            BinSegmentOption::UTF8 { .. } => "utf8".to_doc(),
+            BinSegmentOption::UTF16 { .. } => "utf16".to_doc(),
+            BinSegmentOption::UTF32 { .. } => "utf32".to_doc(),
+            BinSegmentOption::Signed { .. } => "signed".to_doc(),
+            BinSegmentOption::Unsigned { .. } => "unsigned".to_doc(),
+            BinSegmentOption::Big { .. } => "big".to_doc(),
+            BinSegmentOption::Little { .. } => "little".to_doc(),
+            BinSegmentOption::Native { .. } => "native".to_doc(),
+
+            UntypedExprBinSegmentOption::Size {
+                value,
+                short_form: false,
+                ..
+            } => "size"
+                .to_doc()
+                .append("(")
+                .append(self.expr(value))
+                .append(")"),
+            UntypedExprBinSegmentOption::Size {
+                value,
+                short_form: true,
+                ..
+            } => self.expr(value),
+
+            UntypedExprBinSegmentOption::Unit {
+                value,
+                short_form: false,
+                ..
+            } => "unit"
+                .to_doc()
+                .append("(")
+                .append(self.expr(value))
+                .append(")"),
+            UntypedExprBinSegmentOption::Unit {
+                value,
+                short_form: true,
+                ..
+            } => self.expr(value),
         }
     }
 
@@ -964,6 +1040,17 @@ impl<'a> Formatter<'a> {
             Pattern::Tuple { elems, .. } => "tuple"
                 .to_doc()
                 .append(wrap_args(elems.iter().map(|e| self.pattern(e)))),
+
+            Pattern::Bin { elems, .. } => {
+                let elems = elems.iter().map(|s| self.pattern_segment(s));
+
+                break_("<<", "<<")
+                    .append(concat(elems.intersperse(delim(","))))
+                    .nest(INDENT)
+                    .append(break_(",", ""))
+                    .append(">>")
+                    .group()
+            }
         };
         commented(doc, comments)
     }
@@ -974,6 +1061,77 @@ impl<'a> Formatter<'a> {
             None => nil(),
         }
         .append(self.pattern(&arg.value))
+    }
+
+    // TODO: Merge with segment_option() somehow
+    fn pattern_segment(&mut self, segment: &UntypedPatternBinSegment) -> Document {
+        match segment {
+            UntypedPatternBinSegment { value, options, .. } if *options == [] => {
+                self.pattern(&value)
+            }
+
+            UntypedPatternBinSegment { value, options, .. } => {
+                // TODO: Is there a better option than these self.clone() calls?
+                let options = options
+                    .iter()
+                    .map(|o| self.clone().pattern_segment_option(o));
+
+                self.clone()
+                    .pattern(&value)
+                    .append("::")
+                    .append(concat(options.intersperse("-".to_doc())))
+            }
+        }
+    }
+
+    // TODO: Merge with segment_option() somehow
+    fn pattern_segment_option(&mut self, option: &UntypedPatternBinSegmentOption) -> Document {
+        match option {
+            BinSegmentOption::Invalid { label, .. } => label.clone().to_doc(),
+
+            BinSegmentOption::Binary { .. } => "binary".to_doc(),
+            BinSegmentOption::Integer { .. } => "integer".to_doc(),
+            BinSegmentOption::Float { .. } => "float".to_doc(),
+            BinSegmentOption::Bitstring { .. } => "bitstring".to_doc(),
+            BinSegmentOption::UTF8 { .. } => "utf8".to_doc(),
+            BinSegmentOption::UTF16 { .. } => "utf16".to_doc(),
+            BinSegmentOption::UTF32 { .. } => "utf32".to_doc(),
+            BinSegmentOption::Signed { .. } => "signed".to_doc(),
+            BinSegmentOption::Unsigned { .. } => "unsigned".to_doc(),
+            BinSegmentOption::Big { .. } => "big".to_doc(),
+            BinSegmentOption::Little { .. } => "little".to_doc(),
+            BinSegmentOption::Native { .. } => "native".to_doc(),
+
+            UntypedPatternBinSegmentOption::Size {
+                value,
+                short_form: false,
+                ..
+            } => "size"
+                .to_doc()
+                .append("(")
+                .append(self.pattern(value))
+                .append(")"),
+            UntypedPatternBinSegmentOption::Size {
+                value,
+                short_form: true,
+                ..
+            } => self.pattern(value),
+
+            UntypedPatternBinSegmentOption::Unit {
+                value,
+                short_form: false,
+                ..
+            } => "unit"
+                .to_doc()
+                .append("(")
+                .append(self.pattern(value))
+                .append(")"),
+            UntypedPatternBinSegmentOption::Unit {
+                value,
+                short_form: true,
+                ..
+            } => self.pattern(value),
+        }
     }
 }
 

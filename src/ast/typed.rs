@@ -80,7 +80,7 @@ pub enum TypedExpr {
         location: SrcSpan,
         typ: Arc<Type>,
         value: Box<Self>,
-        pattern: Pattern<PatternConstructor>,
+        pattern: Pattern<PatternConstructor, Arc<Type>>,
         then: Box<Self>,
         kind: BindingKind,
     },
@@ -126,6 +126,12 @@ pub enum TypedExpr {
         location: SrcSpan,
         typ: Arc<Type>,
     },
+
+    Bin {
+        location: SrcSpan,
+        typ: Arc<Type>,
+        elems: Vec<TypedExprBinSegment>,
+    },
 }
 
 impl TypedExpr {
@@ -149,6 +155,7 @@ impl TypedExpr {
             Self::TupleIndex { location, .. } => location,
             Self::ModuleSelect { location, .. } => location,
             Self::RecordAccess { location, .. } => location,
+            Self::Bin { location, .. } => location,
         }
     }
 
@@ -178,6 +185,7 @@ impl TypedExpr {
             Self::TupleIndex { location, .. } => location,
             Self::ModuleSelect { location, .. } => location,
             Self::RecordAccess { location, .. } => location,
+            Self::Bin { location, .. } => location,
         }
     }
 
@@ -201,6 +209,7 @@ impl TypedExpr {
             Self::Var { constructor, .. } => constructor.typ.clone(),
             Self::ModuleSelect { typ, .. } => typ.clone(),
             Self::RecordAccess { typ, .. } => typ.clone(),
+            Self::Bin { typ, .. } => typ.clone(),
         }
     }
 }

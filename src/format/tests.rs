@@ -1,6 +1,41 @@
 use super::*;
 
 #[test]
+fn bitstring_test() {
+    macro_rules! assert_format {
+        ($src:expr $(,)?) => {
+            println!("\n\n\n{}", $src);
+            let src = $src.to_string();
+            assert_eq!(src, pretty($src).unwrap());
+        };
+    }
+
+    // Bitstring construction
+
+    assert_format!(
+        "fn main() {
+  let a = 1
+  let x = <<1, a, 2::binary>>
+  let size = <<3::2, 4::size(3), 5::binary-size(4), 6::size(a)>>
+  let unit = <<7::unit(1), 8::binary-unit(2)>>
+  x
+}
+",
+    );
+
+    // Bitstring
+
+    assert_format!(
+        "fn main() {
+  let a = 1
+  let <<b, c, d::binary>> = <<1, a, 2::binary>>
+  b
+}
+",
+    );
+}
+
+#[test]
 fn module_test() {
     macro_rules! assert_format {
         ($src:expr $(,)?) => {
@@ -2581,6 +2616,8 @@ pub fn two() {
 }
 ",
     );
+
+    // Bitstrings
 }
 
 #[test]
