@@ -1,9 +1,10 @@
 use crate::{
-    ast::UntypedModule,
-    build::{project_root::ProjectRoot, Module, Package},
+    ast::{SrcSpan, TypedModule, UntypedModule},
+    build::{dep_tree, project_root::ProjectRoot, Module, Package},
     config::PackageConfig,
     error::{self, Error, GleamExpect},
     file, grammar, parser, typ,
+    warning::Warning,
 };
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -15,6 +16,9 @@ pub struct PackageAnalyser<'a> {
     pub sources: Vec<Source>,
 }
 
+// TODO: tests
+// Including cases for:
+// - modules that don't import anything
 impl<'a> PackageAnalyser<'a> {
     pub fn new(root: &'a ProjectRoot, config: &'a PackageConfig) -> Self {
         Self {
@@ -26,19 +30,21 @@ impl<'a> PackageAnalyser<'a> {
 
     pub fn analyse(
         self,
-        _existing_modules: &HashMap<&str, typ::Module>,
+        existing_modules: &mut HashMap<String, typ::Module>,
     ) -> Result<Package<'a>, Error> {
-        let mut modules = HashMap::with_capacity(self.sources.len());
-        for Source { name, code, path } in self.sources.into_iter() {
-            let ast = parse_source(code.as_str(), name.as_str(), &path)?;
+        // Parse source code into abstract syntax trees
+        let parsed_modules = parse_sources(self.sources)?;
 
-            // TODO: type check
-            // TODO: ensure this is not a duplicate module
+        // Determine order in which modules are to be processed
+        let deps: Vec<_> = parsed_modules.values().map(module_deps_for_graph).collect();
+        let str_deps = toposort_format_deps(deps.as_slice());
+        let sequence =
+            dep_tree::toposort_deps(str_deps.as_slice()).map_err(convert_deps_tree_error)?;
 
-            let module = Module { name, code, ast };
+        // Type check modules
+        let modules = type_check(sequence, parsed_modules, existing_modules)?;
 
-            modules.insert(module.name.clone(), module);
-        }
+        // TODO: ensure this is not a duplicate module
 
         Ok(Package {
             name: self.config.name.as_str(),
@@ -46,6 +52,8 @@ impl<'a> PackageAnalyser<'a> {
         })
     }
 
+    // TODO: if we inject in this functionality with some kind of SourceProvider
+    // trait then we can test the compilation of multiple packages easily.
     pub fn read_package_source_files(&mut self) -> Result<(), Error> {
         let package_path = self.root.default_build_lib_package_path(&self.config.name);
         for path in file::gleam_files(&package_path) {
@@ -55,6 +63,82 @@ impl<'a> PackageAnalyser<'a> {
         }
         Ok(())
     }
+}
+
+fn type_check(
+    sequence: Vec<&str>,
+    mut parsed_modules: HashMap<String, Parsed>,
+    module_types: &mut HashMap<String, typ::Module>,
+) -> Result<Vec<Module>, Error> {
+    let mut warnings = vec![];
+    let mut modules = Vec::with_capacity(parsed_modules.len());
+
+    for name in sequence {
+        let Parsed {
+            name,
+            code,
+            ast,
+            path,
+        } = parsed_modules
+            .remove(name)
+            .gleam_expect("Getting parsed module for name");
+
+        let ast =
+            typ::infer_module(ast, module_types, &mut warnings).map_err(|error| Error::Type {
+                path: path.clone(),
+                src: code.clone(),
+                error,
+            })?;
+
+        module_types.insert(name.clone(), ast.type_info.clone());
+
+        modules.push(Module {
+            name,
+            code,
+            ast,
+            path,
+        });
+    }
+
+    // TODO: do something with warnings
+
+    Ok(modules)
+}
+
+fn toposort_format_deps<'a>(
+    deps: &'a [(String, Vec<(String, SrcSpan)>)],
+) -> Vec<(&'a str, Vec<&'a str>)> {
+    deps.iter()
+        .map(|(name, deps)| {
+            let deps = deps.iter().map(|(dep, _)| dep.as_str()).collect();
+            (name.as_str(), deps)
+        })
+        .collect()
+}
+
+fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
+    todo!()
+}
+
+fn module_deps_for_graph(module: &Parsed) -> (String, Vec<(String, SrcSpan)>) {
+    let name = module.name.clone();
+    let deps: Vec<_> = module.ast.dependencies();
+    (name, deps)
+}
+
+fn parse_sources(sources: Vec<Source>) -> Result<HashMap<String, Parsed>, Error> {
+    let mut parsed_modules = HashMap::with_capacity(sources.len());
+    for Source { name, code, path } in sources.into_iter() {
+        let ast = parse_source(code.as_str(), name.as_str(), &path)?;
+        let module = Parsed {
+            path,
+            name,
+            code,
+            ast,
+        };
+        parsed_modules.insert(module.name.clone(), module);
+    }
+    Ok(parsed_modules)
 }
 
 fn parse_source(src: &str, name: &str, path: &PathBuf) -> Result<UntypedModule, Error> {
@@ -117,4 +201,12 @@ pub struct Source {
     path: PathBuf,
     name: String,
     code: String,
+}
+
+#[derive(Debug)]
+struct Parsed {
+    path: PathBuf,
+    name: String,
+    code: String,
+    ast: UntypedModule,
 }
