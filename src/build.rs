@@ -5,7 +5,7 @@ mod package_analyser;
 mod project_root;
 
 use crate::{
-    ast::UntypedModule,
+    ast::TypedModule,
     config::{self, PackageConfig},
     error::{Error, FileIOAction, FileKind, GleamExpect},
     file, grammar, parser, typ,
@@ -44,13 +44,13 @@ fn analyse_packages<'a>(
     sequence: Vec<&'a str>,
 ) -> Result<HashMap<&'a str, Package<'a>>, Error> {
     let mut packages = HashMap::with_capacity(configs.len());
-    let mut public_modules = HashMap::with_capacity(configs.len() * 5);
+    let mut module_type_manifests = HashMap::with_capacity(configs.len() * 5);
 
     for name in sequence {
         let config = configs.get(name).gleam_expect("Missing package config");
         let mut analyser = PackageAnalyser::new(root, config);
         analyser.read_package_source_files()?;
-        let analysed = analyser.analyse(&public_modules)?;
+        let analysed = analyser.analyse(&mut module_type_manifests)?;
         packages.insert(name, analysed);
         // TODO: insert public modules for package into public_modules
     }
@@ -61,14 +61,15 @@ fn analyse_packages<'a>(
 #[derive(Debug)]
 pub struct Package<'a> {
     name: &'a str,
-    modules: HashMap<String, Module>,
+    modules: Vec<Module>,
 }
 
 #[derive(Debug)]
 pub struct Module {
     name: String,
     code: String,
-    ast: UntypedModule, // TODO: typed module
+    path: PathBuf,
+    ast: TypedModule,
 }
 
 fn convert_deps_tree_error(e: dep_tree::Error) -> Error {

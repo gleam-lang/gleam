@@ -13,65 +13,61 @@ pub struct DependencyTree<T> {
 /// Take a sequence of values and their deps, and return the values in
 /// order so that deps come before the dependants.
 ///
+/// Any deps that are not nodes are ignored and presumed to be nodes
+/// that do not need processing.
+///
 /// Errors if there are duplicate values, unknown deps, or cycles.
 ///
 pub fn toposort_deps<'a>(inputs: &'a [(&'a str, Vec<&'a str>)]) -> Result<Vec<&'a str>, Error<'a>> {
-    let mut indexes = Indexes::new();
-    let mut edges = Vec::with_capacity(inputs.len());
+    let mut graph = petgraph::Graph::<(), ()>::with_capacity(inputs.len(), inputs.len() * 5);
+    let mut values = HashMap::with_capacity(inputs.len());
+    let mut indexes = HashMap::with_capacity(inputs.len());
 
-    for (value, deps) in inputs {
-        let index = indexes.get_index(value);
-        for dep in deps.into_iter() {
-            edges.push((indexes.get_index(value), indexes.get_index(dep)))
-        }
+    for (value, _deps) in inputs {
+        let index = graph.add_node(());
+        indexes.insert(value, index);
+        values.insert(index, value);
     }
 
-    let mut graph = petgraph::Graph::<(), ()>::from_edges(edges.into_iter());
+    for (value, deps) in inputs {
+        let from_index = indexes.get(value).gleam_expect("Finding index for value");
+        for dep in deps.into_iter() {
+            if let Some(to_index) = indexes.get(dep) {
+                graph.add_edge(*from_index, *to_index, ());
+            }
+        }
+    }
 
     let sequence: Vec<_> = petgraph::algo::toposort(&graph, None)
         // .map_err(import_cycle)?
         .unwrap() // TODO
         .into_iter()
-        .map(move |i| indexes.pop_value(&i))
+        .map(move |i| *values.remove(&i).gleam_expect("Finding value for index"))
         .rev()
         .collect();
 
     Ok(sequence)
 }
 
-struct Indexes<'a> {
-    next: usize,
-    indexes: HashMap<&'a str, NodeIndex<u32>>,
-    values: HashMap<NodeIndex<u32>, &'a str>,
-}
+#[test]
+fn toposort_deps_test() {
+    // All deps are nodes
+    assert_eq!(
+        toposort_deps(&[("a", vec!["b"]), ("c", vec![]), ("b", vec!["c"])]),
+        Ok(vec!["c", "b", "a"])
+    );
 
-impl<'a> Indexes<'a> {
-    pub fn new() -> Self {
-        Self {
-            next: 0,
-            indexes: Default::default(),
-            values: Default::default(),
-        }
-    }
+    // No deps
+    assert_eq!(
+        toposort_deps(&[("no-deps-1", vec![]), ("no-deps-2", vec![])]),
+        Ok(vec!["no-deps-1", "no-deps-2",])
+    );
 
-    pub fn get_index(&mut self, value: &'a str) -> NodeIndex<u32> {
-        match self.indexes.get(value) {
-            Some(i) => *i,
-            None => {
-                let index = NodeIndex::new(self.next);
-                self.next += 1;
-                self.indexes.insert(value, index);
-                self.values.insert(index, value);
-                index
-            }
-        }
-    }
-
-    pub fn pop_value(&mut self, index: &NodeIndex<u32>) -> &'a str {
-        self.values
-            .get(index)
-            .gleam_expect("DependencyTree.pop_value(): Unknown graph index")
-    }
+    // Some deps are not nodes (and thus are ignored)
+    assert_eq!(
+        toposort_deps(&[("a", vec!["b", "z"]), ("b", vec!["x"])]),
+        Ok(vec!["b", "a"])
+    );
 }
 
 //     // fn calculate_dependencies(&mut self) -> Result<(), CreateError<T>> {

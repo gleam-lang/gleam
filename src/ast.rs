@@ -27,6 +27,7 @@ impl<A, B, C> Module<A, B, C> {
         self.name.join("/")
     }
 
+    // TODO: return &str not String once module is a String not a Vector
     pub fn dependencies(&self) -> Vec<(String, SrcSpan)> {
         self.statements
             .iter()
