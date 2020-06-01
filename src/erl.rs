@@ -281,6 +281,92 @@ fn tuple(elems: impl Iterator<Item = Document>) -> Document {
         .group()
 }
 
+fn bitstring(elems: impl Iterator<Item = Document>) -> Document {
+    concat(elems.intersperse(delim(",")))
+        .nest_current()
+        .surround("<<", ">>")
+        .group()
+}
+
+fn segment(value: &TypedExpr, options: Vec<TypedExprBinSegmentOption>, env: &mut Env) -> Document {
+    let mut document = expr(value, env);
+
+    let mut size: Option<Document> = None;
+    let mut unit: Option<Document> = None;
+    let mut others = Vec::new();
+
+    options.iter().for_each(|option| match option {
+        BinSegmentOption::Invalid { .. } => (),
+
+        BinSegmentOption::Integer { .. } => others.push("integer"),
+        BinSegmentOption::Float { .. } => others.push("float"),
+        BinSegmentOption::Binary { .. } => others.push("binary"),
+        BinSegmentOption::Bitstring { .. } => others.push("bitstring"),
+        BinSegmentOption::UTF8 { .. } => others.push("utf8"),
+        BinSegmentOption::UTF16 { .. } => others.push("utf16"),
+        BinSegmentOption::UTF32 { .. } => others.push("utf32"),
+        BinSegmentOption::Signed { .. } => others.push("signed"),
+        BinSegmentOption::Unsigned { .. } => others.push("unsigned"),
+        BinSegmentOption::Big { .. } => others.push("big"),
+        BinSegmentOption::Little { .. } => others.push("little"),
+        BinSegmentOption::Native { .. } => others.push("native"),
+        BinSegmentOption::Size { value, .. } => size = Some(":".to_doc().append(expr(value, env))),
+        BinSegmentOption::Unit { value, .. } => unit = Some(":".to_doc().append(expr(value, env))),
+    });
+
+    document = document.append(size);
+
+    if !others.is_empty() || unit.is_some() {
+        document = document.append("/").append(others.join("-"));
+    }
+
+    document.append(unit)
+}
+
+// TODO: Merge segment() and pattern_segment() somehow
+fn pattern_segment(
+    value: &TypedPattern,
+    options: Vec<TypedPatternBinSegmentOption>,
+    env: &mut Env,
+) -> Document {
+    let mut document = pattern(value, env);
+
+    let mut size: Option<Document> = None;
+    let mut unit: Option<Document> = None;
+    let mut others = Vec::new();
+
+    options.iter().for_each(|option| match option {
+        BinSegmentOption::Invalid { .. } => (),
+
+        BinSegmentOption::Integer { .. } => others.push("integer"),
+        BinSegmentOption::Float { .. } => others.push("float"),
+        BinSegmentOption::Binary { .. } => others.push("binary"),
+        BinSegmentOption::Bitstring { .. } => others.push("bitstring"),
+        BinSegmentOption::UTF8 { .. } => others.push("utf8"),
+        BinSegmentOption::UTF16 { .. } => others.push("utf16"),
+        BinSegmentOption::UTF32 { .. } => others.push("utf32"),
+        BinSegmentOption::Signed { .. } => others.push("signed"),
+        BinSegmentOption::Unsigned { .. } => others.push("unsigned"),
+        BinSegmentOption::Big { .. } => others.push("big"),
+        BinSegmentOption::Little { .. } => others.push("little"),
+        BinSegmentOption::Native { .. } => others.push("native"),
+        BinSegmentOption::Size { value, .. } => {
+            size = Some(":".to_doc().append(pattern(value, env)))
+        }
+        BinSegmentOption::Unit { value, .. } => {
+            unit = Some(":".to_doc().append(pattern(value, env)))
+        }
+    });
+
+    document = document.append(size);
+
+    if !others.is_empty() || unit.is_some() {
+        document = document.append("/").append(others.join("-"));
+    }
+
+    document.append(unit)
+}
+
 fn seq(first: &TypedExpr, then: &TypedExpr, env: &mut Env) -> Document {
     force_break()
         .append(expr(first, env))
@@ -403,6 +489,12 @@ fn pattern(p: &TypedPattern, env: &mut Env) -> Document {
         } => tag_tuple_pattern(name, args, env),
 
         Pattern::Tuple { elems, .. } => tuple(elems.into_iter().map(|p| pattern(p, env))),
+
+        Pattern::Bin { elems, .. } => bitstring(
+            elems
+                .into_iter()
+                .map(|s| pattern_segment(&s.value, s.options.clone(), env)),
+        ),
     }
 }
 
@@ -900,6 +992,12 @@ fn expr(expression: &TypedExpr, env: &mut Env) -> Document {
         } => bin_op(&name, left, right, env),
 
         TypedExpr::Tuple { elems, .. } => tuple(elems.into_iter().map(|e| wrap_expr(e, env))),
+
+        TypedExpr::Bin { elems, .. } => bitstring(
+            elems
+                .into_iter()
+                .map(|s| segment(&s.value, s.options.clone(), env)),
+        ),
     }
 }
 

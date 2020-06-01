@@ -3,12 +3,15 @@ pub mod pretty;
 mod tests;
 
 use crate::ast::{
-    self, Arg, ArgNames, BinOp, BindingKind, CallArg, Clause, ClauseGuard, Pattern,
-    RecordConstructor, SrcSpan, Statement, TypeAst, TypedArg, TypedClause, TypedClauseGuard,
-    TypedExpr, TypedModule, TypedMultiPattern, TypedPattern, TypedStatement, UnqualifiedImport,
-    UntypedArg, UntypedClause, UntypedClauseGuard, UntypedExpr, UntypedModule, UntypedMultiPattern,
-    UntypedPattern, UntypedStatement,
+    self, Arg, ArgNames, BinOp, BinSegmentOption, BindingKind, CallArg, Clause, ClauseGuard,
+    Pattern, RecordConstructor, SrcSpan, Statement, TypeAst, TypedArg, TypedClause,
+    TypedClauseGuard, TypedExpr, TypedExprBinSegment, TypedExprBinSegmentOption, TypedModule,
+    TypedMultiPattern, TypedPattern, TypedPatternBinSegment, TypedPatternBinSegmentOption,
+    TypedStatement, UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard, UntypedExpr,
+    UntypedExprBinSegment, UntypedExprBinSegmentOption, UntypedModule, UntypedMultiPattern,
+    UntypedPattern, UntypedPatternBinSegment, UntypedPatternBinSegmentOption, UntypedStatement,
 };
+use crate::binary::{BinaryTypeSpecifier, Error as BinaryError};
 use crate::error::GleamExpect;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -907,6 +910,8 @@ impl<'a> Typer<'a> {
                 tuple,
                 ..
             } => self.infer_tuple_index(*tuple, index, location),
+
+            UntypedExpr::Bin { location, elems } => self.infer_bin(elems, location),
         }
     }
 
@@ -1281,6 +1286,111 @@ impl<'a> Typer<'a> {
                 location: tuple.location().clone(),
                 given: tuple.typ(),
             }),
+        }
+    }
+
+    fn infer_bin(
+        &mut self,
+        elems: Vec<UntypedExprBinSegment>,
+        location: SrcSpan,
+    ) -> Result<TypedExpr, Error> {
+        let elems = elems
+            .into_iter()
+            .map(|s| self.infer_segment(*s.value, s.options, s.location))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(TypedExpr::Bin {
+            location,
+            elems,
+            typ: bitstring(),
+        })
+    }
+
+    fn infer_segment(
+        &mut self,
+        value: UntypedExpr,
+        options: Vec<UntypedExprBinSegmentOption>,
+        location: SrcSpan,
+    ) -> Result<TypedExprBinSegment, Error> {
+        let value = self.infer(value)?;
+
+        let options = options
+            .into_iter()
+            .map(|option| self.infer_segment_option(option))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let type_specifier = BinaryTypeSpecifier::new(options.clone(), true)
+            .map_err(|e| convert_binary_error(e, &location))?;
+        let typ = type_specifier.typ().unwrap_or_else(|| binary());
+
+        self.unify(typ.clone(), value.typ())
+            .map_err(|e| convert_unify_error(e, value.location()))?;
+
+        Ok(TypedExprBinSegment {
+            location,
+            typ: typ,
+            value: Box::new(value),
+            options,
+        })
+    }
+
+    fn infer_segment_option(
+        &mut self,
+        segment_option: UntypedExprBinSegmentOption,
+    ) -> Result<TypedExprBinSegmentOption, Error> {
+        match segment_option {
+            BinSegmentOption::Invalid {
+                label, location, ..
+            } => Err(Error::InvalidBinarySegmentOption { label, location }),
+
+            BinSegmentOption::Size {
+                value,
+                location,
+                short_form,
+                ..
+            } => {
+                let typed_value = self.infer(*value)?;
+                self.unify(int(), typed_value.typ())
+                    .map_err(|e| convert_unify_error(e, typed_value.location()))?;
+
+                Ok(BinSegmentOption::Size {
+                    location,
+                    short_form,
+                    value: Box::new(typed_value),
+                })
+            }
+
+            BinSegmentOption::Unit {
+                value,
+                location,
+                short_form,
+                ..
+            } => {
+                let typed_value = self.infer(*value)?;
+                self.unify(int(), typed_value.typ())
+                    .map_err(|e| convert_unify_error(e, &location))?;
+
+                Ok(BinSegmentOption::Unit {
+                    location,
+                    short_form,
+                    value: Box::new(typed_value),
+                })
+            }
+
+            BinSegmentOption::Binary { location } => Ok(BinSegmentOption::Binary { location }),
+            BinSegmentOption::Integer { location } => Ok(BinSegmentOption::Integer { location }),
+            BinSegmentOption::Float { location } => Ok(BinSegmentOption::Float { location }),
+            BinSegmentOption::Bitstring { location } => {
+                Ok(BinSegmentOption::Bitstring { location })
+            }
+            BinSegmentOption::UTF8 { location } => Ok(BinSegmentOption::UTF8 { location }),
+            BinSegmentOption::UTF16 { location } => Ok(BinSegmentOption::UTF16 { location }),
+            BinSegmentOption::UTF32 { location } => Ok(BinSegmentOption::UTF32 { location }),
+            BinSegmentOption::Signed { location } => Ok(BinSegmentOption::Signed { location }),
+            BinSegmentOption::Unsigned { location } => Ok(BinSegmentOption::Unsigned { location }),
+            BinSegmentOption::Big { location } => Ok(BinSegmentOption::Big { location }),
+            BinSegmentOption::Little { location } => Ok(BinSegmentOption::Little { location }),
+            BinSegmentOption::Native { location } => Ok(BinSegmentOption::Native { location }),
         }
     }
 
@@ -2539,7 +2649,50 @@ pub enum Error {
     RecordAccessUnknownType {
         location: SrcSpan,
     },
+
+    ConflictingBinaryTypeOptions {
+        previous_location: SrcSpan,
+        location: SrcSpan,
+        name: String,
+    },
+
+    ConflictingBinarySignednessOptions {
+        previous_location: SrcSpan,
+        location: SrcSpan,
+        name: String,
+    },
+
+    ConflictingBinaryEndiannessOptions {
+        previous_location: SrcSpan,
+        location: SrcSpan,
+        name: String,
+    },
+
+    ConflictingBinarySizeOptions {
+        previous_location: SrcSpan,
+        location: SrcSpan,
+    },
+
+    ConflictingBinaryUnitOptions {
+        previous_location: SrcSpan,
+        location: SrcSpan,
+    },
+
+    BinaryTypeDoesNotAllowUnit {
+        location: SrcSpan,
+        typ: String,
+    },
+
+    BinarySegmentMustHaveSize {
+        location: SrcSpan,
+    },
+
+    InvalidBinarySegmentOption {
+        location: SrcSpan,
+        label: String,
+    },
 }
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum Warning {
     DeprecatedListPrependSyntax { location: SrcSpan },
@@ -3280,6 +3433,119 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         Ok(typed_multi)
     }
 
+    fn infer_pattern_bitstring(
+        &mut self,
+        mut elems: Vec<UntypedPatternBinSegment>,
+        location: SrcSpan,
+    ) -> Result<TypedPattern, Error> {
+        let last_segment = elems.pop();
+
+        let mut typed_segments = elems
+            .into_iter()
+            .map(|s| self.infer_pattern_segment(s, false))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        match last_segment {
+            Some(s) => {
+                let typed_last_segment = self.infer_pattern_segment(s, true)?;
+                typed_segments.push(typed_last_segment)
+            }
+            None => (),
+        }
+
+        Ok(TypedPattern::Bin {
+            location,
+            elems: typed_segments,
+        })
+    }
+
+    fn infer_pattern_segment(
+        &mut self,
+        segment: UntypedPatternBinSegment,
+        is_last_segment: bool,
+    ) -> Result<TypedPatternBinSegment, Error> {
+        let UntypedPatternBinSegment {
+            location,
+            options,
+            value,
+            ..
+        } = segment;
+
+        let options = options
+            .into_iter()
+            .map(|option| self.infer_pattern_segment_option(option))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let typed_segment = BinaryTypeSpecifier::new(options.clone(), !is_last_segment)
+            .map_err(|e| convert_binary_error(e, &location))?;
+
+        let typ = typed_segment.typ().unwrap_or_else(|| int());
+        let typed_value = self.unify(*value, typ.clone())?;
+
+        Ok(TypedPatternBinSegment {
+            location: location,
+            value: Box::new(typed_value),
+            options,
+            typ: typ,
+        })
+    }
+
+    fn infer_pattern_segment_option(
+        &mut self,
+        segment_option: UntypedPatternBinSegmentOption,
+    ) -> Result<TypedPatternBinSegmentOption, Error> {
+        match segment_option {
+            BinSegmentOption::Invalid {
+                label, location, ..
+            } => Err(Error::InvalidBinarySegmentOption { label, location }),
+
+            BinSegmentOption::Size {
+                value,
+                location,
+                short_form,
+                ..
+            } => {
+                let unified_pattern = self.unify(*value, int())?;
+
+                Ok(BinSegmentOption::Size {
+                    location,
+                    short_form,
+                    value: Box::new(unified_pattern),
+                })
+            }
+
+            BinSegmentOption::Unit {
+                value,
+                location,
+                short_form,
+                ..
+            } => {
+                let unified_pattern = self.unify(*value, int())?;
+
+                Ok(BinSegmentOption::Unit {
+                    location,
+                    short_form,
+                    value: Box::new(unified_pattern),
+                })
+            }
+
+            BinSegmentOption::Binary { location } => Ok(BinSegmentOption::Binary { location }),
+            BinSegmentOption::Integer { location } => Ok(BinSegmentOption::Integer { location }),
+            BinSegmentOption::Float { location } => Ok(BinSegmentOption::Float { location }),
+            BinSegmentOption::Bitstring { location } => {
+                Ok(BinSegmentOption::Bitstring { location })
+            }
+            BinSegmentOption::UTF8 { location } => Ok(BinSegmentOption::UTF8 { location }),
+            BinSegmentOption::UTF16 { location } => Ok(BinSegmentOption::UTF16 { location }),
+            BinSegmentOption::UTF32 { location } => Ok(BinSegmentOption::UTF32 { location }),
+            BinSegmentOption::Signed { location } => Ok(BinSegmentOption::Signed { location }),
+            BinSegmentOption::Unsigned { location } => Ok(BinSegmentOption::Unsigned { location }),
+            BinSegmentOption::Big { location } => Ok(BinSegmentOption::Big { location }),
+            BinSegmentOption::Little { location } => Ok(BinSegmentOption::Little { location }),
+            BinSegmentOption::Native { location } => Ok(BinSegmentOption::Native { location }),
+        }
+    }
+
     /// When we have an assignment or a case expression we unify the pattern with the
     /// inferred type of the subject in order to determine what variables to insert
     /// into the typerironment (or to detect a type error).
@@ -3397,6 +3663,8 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     })
                 }
             },
+
+            Pattern::Bin { location, elems } => self.infer_pattern_bitstring(elems, location),
 
             Pattern::Constructor {
                 location,
@@ -3583,6 +3851,65 @@ fn convert_unify_error(e: UnifyError, location: &SrcSpan) -> Error {
         },
 
         UnifyError::RecursiveType => Error::RecursiveType {
+            location: location.clone(),
+        },
+    }
+}
+
+fn convert_binary_error(e: crate::binary::Error, location: &SrcSpan) -> Error {
+    match e {
+        BinaryError::ConflictingSignednessOptions {
+            location,
+            previous_location,
+            name,
+        } => Error::ConflictingBinarySignednessOptions {
+            location: location.clone(),
+            previous_location: previous_location.clone(),
+            name: name.clone(),
+        },
+
+        BinaryError::ConflictingEndiannessOptions {
+            location,
+            previous_location,
+            name,
+        } => Error::ConflictingBinaryEndiannessOptions {
+            location: location.clone(),
+            previous_location: previous_location.clone(),
+            name: name.clone(),
+        },
+
+        BinaryError::ConflictingTypeOptions {
+            location,
+            previous_location,
+            name,
+        } => Error::ConflictingBinaryTypeOptions {
+            location: location.clone(),
+            previous_location: previous_location.clone(),
+            name: name.clone(),
+        },
+
+        BinaryError::ConflictingSizeOptions {
+            location,
+            previous_location,
+        } => Error::ConflictingBinarySizeOptions {
+            location: location.clone(),
+            previous_location: previous_location.clone(),
+        },
+
+        BinaryError::ConflictingUnitOptions {
+            location,
+            previous_location,
+        } => Error::ConflictingBinaryUnitOptions {
+            location: location.clone(),
+            previous_location: previous_location.clone(),
+        },
+
+        BinaryError::TypeDoesNotAllowUnit { location, typ } => Error::BinaryTypeDoesNotAllowUnit {
+            location: location.clone(),
+            typ: typ.clone(),
+        },
+
+        BinaryError::SegmentMustHaveSize => Error::BinarySegmentMustHaveSize {
             location: location.clone(),
         },
     }
@@ -3889,4 +4216,40 @@ pub fn tuple(elems: Vec<Arc<Type>>) -> Arc<Type> {
 
 pub fn fn_(args: Vec<Arc<Type>>, retrn: Arc<Type>) -> Arc<Type> {
     Arc::new(Type::Fn { retrn, args })
+}
+
+pub fn binary() -> Arc<Type> {
+    Arc::new(Type::App {
+        args: vec![],
+        public: true,
+        name: "Binary".to_string(),
+        module: vec![],
+    })
+}
+
+pub fn bitstring() -> Arc<Type> {
+    Arc::new(Type::App {
+        args: vec![],
+        public: true,
+        name: "Bitstring".to_string(),
+        module: vec![],
+    })
+}
+
+pub fn utf16() -> Arc<Type> {
+    Arc::new(Type::App {
+        args: vec![],
+        public: true,
+        name: "Utf16".to_string(),
+        module: vec![],
+    })
+}
+
+pub fn utf32() -> Arc<Type> {
+    Arc::new(Type::App {
+        args: vec![],
+        public: true,
+        name: "Utf32".to_string(),
+        module: vec![],
+    })
 }
