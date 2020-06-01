@@ -47,7 +47,7 @@ For more information see the Gleam website: [https://gleam.run](https://gleam.ru
 
 ## Sponsors
 
-Gleam is kindly supported its sponsors. If you would like to support Gleam
+Gleam is kindly supported by its sponsors. If you would like to support Gleam
 please consider sponsoring its development [on GitHub](https://github.com/sponsors/lpil).
 
 These people are sponsoring at least $10 a month, enabling further Gleam
