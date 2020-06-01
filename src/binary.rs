@@ -12,7 +12,7 @@ pub struct BinaryTypeSpecifier<T> {
 }
 
 impl<T> BinaryTypeSpecifier<T> {
-    pub fn new(options: Vec<BinSegmentOption<T>>, must_have_size: bool) -> Result<Self, Error>
+    pub fn new(options: &Vec<BinSegmentOption<T>>, must_have_size: bool) -> Result<Self, Error>
     where
         T: Clone,
     {

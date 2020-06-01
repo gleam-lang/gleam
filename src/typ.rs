@@ -1319,7 +1319,7 @@ impl<'a> Typer<'a> {
             .map(|option| self.infer_segment_option(option))
             .collect::<Result<Vec<_>, _>>()?;
 
-        let type_specifier = BinaryTypeSpecifier::new(options.clone(), true)
+        let type_specifier = BinaryTypeSpecifier::new(&options, true)
             .map_err(|e| convert_binary_error(e, &location))?;
         let typ = type_specifier.typ().unwrap_or_else(|| binary());
 
@@ -3476,7 +3476,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             .map(|option| self.infer_pattern_segment_option(option))
             .collect::<Result<Vec<_>, _>>()?;
 
-        let typed_segment = BinaryTypeSpecifier::new(options.clone(), !is_last_segment)
+        let typed_segment = BinaryTypeSpecifier::new(&options, !is_last_segment)
             .map_err(|e| convert_binary_error(e, &location))?;
 
         let typ = typed_segment.typ().unwrap_or_else(|| int());
