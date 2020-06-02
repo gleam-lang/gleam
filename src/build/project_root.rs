@@ -33,9 +33,12 @@ impl ProjectRoot {
             .collect::<Result<_, _>>()
     }
 
+    pub fn build_path(&self) -> PathBuf {
+        self.path.join(DIR_NAME_BUILD)
+    }
+
     pub fn default_build_lib_path(&self) -> PathBuf {
-        self.path
-            .join(DIR_NAME_BUILD)
+        self.build_path()
             .join(DIR_NAME_PROFILE_DEFAULT)
             .join(DIR_NAME_LIB)
     }
@@ -47,5 +50,10 @@ impl ProjectRoot {
     pub fn default_build_lib_package_src_path(&self, name: &str) -> PathBuf {
         self.default_build_lib_package_path(name)
             .join(DIR_NAME_PACKAGE_SRC)
+    }
+
+    pub fn default_build_lib_package_ebin_path(&self, name: &str) -> PathBuf {
+        self.default_build_lib_package_path(name)
+            .join(DIR_NAME_PACKAGE_EBIN)
     }
 }

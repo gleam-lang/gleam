@@ -1,5 +1,10 @@
 #![allow(warnings)]
 
+// TODO: Avoid rebuilding clean modules
+// TODO: Download deps from Hex
+// TODO: Support compilation of rebar3 packages
+// TODO: Support flexible compiler interface for use by rebar3 + mix
+
 mod dep_tree;
 mod erlang_code_generator;
 mod package_analyser;
@@ -22,9 +27,12 @@ use itertools::Itertools;
 use std::collections::HashMap;
 use std::fs::DirEntry;
 use std::path::PathBuf;
+use std::process;
 
 pub fn main(package_config: PackageConfig, root: PathBuf) -> Result<(), Error> {
     let root = ProjectRoot::new(root);
+
+    // TODO: copy any Erlang source code from src to _build
 
     // Collect all package configs
     let configs = root.package_configs()?;
@@ -38,8 +46,8 @@ pub fn main(package_config: PackageConfig, root: PathBuf) -> Result<(), Error> {
     // Write compiled Erlang disc
     file::write_outputs(compiled_erlang.as_slice())?;
 
-    // TODO: copy any Erlang source code from src to _build
     // TODO: compile Erlang into .beam
+    compile_erlang_to_beam(&root, &packages)?;
 
     Ok(())
 }
@@ -58,41 +66,30 @@ pub struct Module {
     ast: TypedModule,
 }
 
-// // Compile Erlang to .beam files
-// if config.tool == config::BuildTool::Gleam {
-//     compile_erlang(output_files.as_slice());
-// }
-// pub fn compile_erlang(output_files: &[project::OutputFile]) {
+pub fn compile_erlang_to_beam(
+    root: &ProjectRoot,
+    packages: &HashMap<String, Package>,
+) -> Result<(), Error> {
+    let escript_path = root.build_path().join("compile_escript.erl");
+    let escript_source = std::include_str!("build/compile_escript.erl").to_string();
 
-// let projects = output_files.iter().group_by(|out| {
-//     out.path
-//         .parent()
-//         .gleam_expect("compile_erlang path parent 1")
-//         .parent()
-//         .gleam_expect("compile_erlang path parent 2")
-// });
+    file::write_output(&OutputFile {
+        path: escript_path.clone(),
+        text: escript_source,
+    })?;
 
-// for (path, files) in projects.into_iter() {
-//     let ebin_dir = path.join("ebin");
-//     file::mkdir(&ebin_dir).gleam_expect("command_build mkdir ebin");
-//     let ebin_dir_string = ebin_dir
-//         .to_str()
-//         .gleam_expect("command_build ebin_dir to_str")
-//         .to_string();
-//     let mut command = process::Command::new("erlc");
-//     let erl_files = files
-//         .filter(|out| out.path.extension().map(|s| s.to_str()) == Some(Some("erl")))
-//         .map(|out| {
-//             out.path
-//                 .to_str()
-//                 .gleam_expect("command_build out path to_str")
-//                 .to_string()
-//         });
-//     command.arg("-o");
-//     command.arg(ebin_dir_string);
-//     command.args(erl_files);
+    // Run escript to compile Erlang to beam files
+    let status = process::Command::new("escript")
+        .arg(escript_path)
+        .arg(root.build_path())
+        .status()
+        .unwrap(); // TODO
 
-//     println!("Compiling beam: {}", path.to_str().unwrap_or_default());
-//     command.status().gleam_expect("Command erlc");
-// }
-// }
+    dbg!(&status);
+
+    // println!("Compiling beam: {}", path.to_str().unwrap_or_default());
+    // command.status().gleam_expect("Command erlc");
+    // }
+
+    Ok(())
+}
