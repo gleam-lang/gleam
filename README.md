@@ -64,3 +64,7 @@ development.
 - [Parker Selbert](https://github.com/sorentwo)
 - [Quinn Wilton](http://quinnwilton.com/)
 - [ontofractal](https://github.com/ontofractal)
+
+## Disclosure
+
+Gleam is a political project. By contributing to Gleam you affirm that you're not a racist, bigot or fascist and agree that products of your labor can and will be used to achieve politcal goals as author sees it right. 
