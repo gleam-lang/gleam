@@ -18,21 +18,23 @@ pub struct DependencyTree<T> {
 ///
 /// Errors if there are duplicate values, unknown deps, or cycles.
 ///
-pub fn toposort_deps<'a>(inputs: &'a [(&'a str, Vec<&'a str>)]) -> Result<Vec<&'a str>, Error<'a>> {
+pub fn toposort_deps(inputs: Vec<(String, Vec<String>)>) -> Result<Vec<String>, Error> {
     let mut graph = petgraph::Graph::<(), ()>::with_capacity(inputs.len(), inputs.len() * 5);
     let mut values = HashMap::with_capacity(inputs.len());
     let mut indexes = HashMap::with_capacity(inputs.len());
 
-    for (value, _deps) in inputs {
+    for (value, _deps) in inputs.iter() {
         let index = graph.add_node(());
-        indexes.insert(value, index);
-        values.insert(index, value);
+        indexes.insert(value.clone(), index);
+        values.insert(index, value.clone());
     }
 
     for (value, deps) in inputs {
-        let from_index = indexes.get(value).gleam_expect("Finding index for value");
+        let from_index = indexes
+            .get(value.as_str())
+            .gleam_expect("Finding index for value");
         for dep in deps.into_iter() {
-            if let Some(to_index) = indexes.get(dep) {
+            if let Some(to_index) = indexes.get(dep.as_str()) {
                 graph.add_edge(*from_index, *to_index, ());
             }
         }
@@ -42,7 +44,7 @@ pub fn toposort_deps<'a>(inputs: &'a [(&'a str, Vec<&'a str>)]) -> Result<Vec<&'
         // .map_err(import_cycle)?
         .unwrap() // TODO
         .into_iter()
-        .map(move |i| *values.remove(&i).gleam_expect("Finding value for index"))
+        .map(|i| values.remove(&i).gleam_expect("Finding value for index"))
         .rev()
         .collect();
 
@@ -53,20 +55,34 @@ pub fn toposort_deps<'a>(inputs: &'a [(&'a str, Vec<&'a str>)]) -> Result<Vec<&'
 fn toposort_deps_test() {
     // All deps are nodes
     assert_eq!(
-        toposort_deps(&[("a", vec!["b"]), ("c", vec![]), ("b", vec!["c"])]),
-        Ok(vec!["c", "b", "a"])
+        toposort_deps(vec![
+            ("a".to_string(), vec!["b".to_string()]),
+            ("c".to_string(), vec![]),
+            ("b".to_string(), vec!["c".to_string()])
+        ]),
+        Ok(vec![
+            "c".to_string().to_string(),
+            "b".to_string().to_string(),
+            "a".to_string().to_string()
+        ])
     );
 
     // No deps
     assert_eq!(
-        toposort_deps(&[("no-deps-1", vec![]), ("no-deps-2", vec![])]),
-        Ok(vec!["no-deps-1", "no-deps-2",])
+        toposort_deps(vec![
+            ("no-deps-1".to_string(), vec![]),
+            ("no-deps-2".to_string(), vec![])
+        ]),
+        Ok(vec!["no-deps-1".to_string(), "no-deps-2".to_string(),])
     );
 
     // Some deps are not nodes (and thus are ignored)
     assert_eq!(
-        toposort_deps(&[("a", vec!["b", "z"]), ("b", vec!["x"])]),
-        Ok(vec!["b", "a"])
+        toposort_deps(vec![
+            ("a".to_string(), vec!["b".to_string(), "z".to_string()]),
+            ("b".to_string(), vec!["x".to_string()])
+        ]),
+        Ok(vec!["b".to_string(), "a".to_string()])
     );
 }
 
@@ -155,8 +171,8 @@ fn toposort_deps_test() {
 //     }
 
 #[derive(Debug, PartialEq)]
-pub enum Error<'a> {
-    DuplicateNode(&'a str),
-    NodeNotFound(&'a str),
-    Cycle(Vec<&'a str>),
+pub enum Error {
+    DuplicateNode(String),
+    NodeNotFound(String),
+    Cycle(Vec<String>),
 }

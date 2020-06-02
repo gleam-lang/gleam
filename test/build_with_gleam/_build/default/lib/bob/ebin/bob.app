@@ -1,7 +1,7 @@
 {application, bob, [
     {applications, []},
-    {description, ""},
+    {description, "Construction documentary"},
     {modules, []},
     {registered, []},
-    {vsn, ""}
+    {vsn, "1.1.0"}
 ]}.

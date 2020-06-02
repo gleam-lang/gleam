@@ -9,6 +9,10 @@ use std::path::{Path, PathBuf};
 #[derive(Deserialize, Debug, PartialEq)]
 pub struct PackageConfig {
     pub name: String,
+    #[serde(default)]
+    pub version: Option<String>,
+    #[serde(default)]
+    pub description: String,
     #[serde(default = "BuildTool::default")]
     pub tool: BuildTool,
     #[serde(default)]
