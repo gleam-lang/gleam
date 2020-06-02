@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Single letter module names are now permitted.
+
+
 ## v0.9.0 - 2020-06-01
 
 #### [Release blog post](https://lpil.uk/blog/gleam-v0.9-released/)
