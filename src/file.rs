@@ -63,7 +63,7 @@ fn is_gleam_path(path: &PathBuf, dir: &PathBuf) -> bool {
         static ref RE: Regex = Regex::new(
             format!(
                 "^({module}{slash})*{module}\\.gleam$",
-                module = "[a-z][_a-z0-9]+",
+                module = "[a-z][_a-z0-9]*",
                 slash = "(/|\\\\)",
             )
             .as_str()
@@ -77,6 +77,29 @@ fn is_gleam_path(path: &PathBuf, dir: &PathBuf) -> bool {
             .to_str()
             .gleam_expect("is_gleam_path(): to_str"),
     )
+}
+
+#[test]
+fn is_gleam_path_test() {
+    assert!(is_gleam_path(
+        &PathBuf::from("/some-prefix/a.gleam"),
+        &PathBuf::from("/some-prefix/")
+    ));
+
+    assert!(is_gleam_path(
+        &PathBuf::from("/some-prefix/one_two/a.gleam"),
+        &PathBuf::from("/some-prefix/")
+    ));
+
+    assert!(is_gleam_path(
+        &PathBuf::from("/some-prefix/one_two/a123.gleam"),
+        &PathBuf::from("/some-prefix/")
+    ));
+
+    assert!(is_gleam_path(
+        &PathBuf::from("/some-prefix/one_2/a123.gleam"),
+        &PathBuf::from("/some-prefix/")
+    ));
 }
 
 pub fn gleam_files(dir: &PathBuf) -> impl Iterator<Item = PathBuf> + '_ {
