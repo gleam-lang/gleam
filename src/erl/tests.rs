@@ -961,65 +961,6 @@ three() ->
 }
 
 #[test]
-fn bitstring_test() {
-    macro_rules! assert_erl {
-        ($src:expr, $erl:expr $(,)?) => {
-            let mut ast = crate::grammar::ModuleParser::new()
-                .parse($src)
-                .expect("syntax error");
-            ast.name = vec!["the_app".to_string()];
-            let (result, _) = crate::typ::infer_module(ast, &std::collections::HashMap::new());
-            let ast = result.expect("should successfully infer");
-            let output = module(&ast);
-            assert_eq!(($src, output), ($src, $erl.to_string()));
-        };
-    }
-
-    assert_erl!(
-        r#"fn main() {
-  let a = 1
-  let simple = <<1:integer, a:integer>>
-  let complex = <<4:integer-unsigned-big, 5.0:little-float, 6:native-integer-signed>>
-  let <<7:2, 8:size(3), b:binary-size(4)>> = <<1:integer>>
-  let <<c:unit(1), d:binary-size(2)-unit(2)>> = <<1:integer>>
-
-  simple
-}
-"#,
-        r#"-module(the_app).
--compile(no_auto_import).
-
-main() ->
-    A = 1,
-    Simple = <<1/integer, A/integer>>,
-    Complex = <<4/integer-unsigned-big,
-                5.0/little-float,
-                6/native-integer-signed>>,
-    <<7:2, 8:3, B:4/binary>> = <<1/integer>>,
-    <<C/:1, D:2/binary:2>> = <<1/integer>>,
-    Simple.
-"#,
-    );
-
-    assert_erl!(
-        r#"fn main() {
-  let a = 1
-  let <<b, 1>> = <<1:integer, a:integer>>
-  b
-}
-"#,
-        r#"-module(the_app).
--compile(no_auto_import).
-
-main() ->
-    A = 1,
-    <<B, 1>> = <<1/integer, A/integer>>,
-    B.
-"#,
-    );
-}
-
-#[test]
 fn integration_test() {
     macro_rules! assert_erl {
         ($src:expr, $erl:expr $(,)?) => {
@@ -2385,6 +2326,51 @@ fn main() {
 main() ->
     T = {fun(X) -> X end},
     (erlang:element(1, T))(5).
+"#,
+    );
+
+    // Bitstrings
+
+    assert_erl!(
+        r#"fn main() {
+  let a = 1
+  let simple = <<1:integer, a:integer>>
+  let complex = <<4:integer-unsigned-big, 5.0:little-float, 6:native-integer-signed>>
+  let <<7:2, 8:size(3), b:binary-size(4)>> = <<1:integer>>
+  let <<c:unit(1), d:binary-size(2)-unit(2)>> = <<1:integer>>
+
+  simple
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main() ->
+    A = 1,
+    Simple = <<1/integer, A/integer>>,
+    Complex = <<4/integer-unsigned-big,
+                5.0/little-float,
+                6/native-integer-signed>>,
+    <<7:2, 8:3, B:4/binary>> = <<1/integer>>,
+    <<C/:1, D:2/binary:2>> = <<1/integer>>,
+    Simple.
+"#,
+    );
+
+    assert_erl!(
+        r#"fn main() {
+  let a = 1
+  let <<b, 1>> = <<1:integer, a:integer>>
+  b
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main() ->
+    A = 1,
+    <<B, 1>> = <<1/integer, A/integer>>,
+    B.
 "#,
     );
 }
