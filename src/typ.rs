@@ -346,22 +346,24 @@ impl<'a, 'b> Typer<'a, 'b> {
         &mut self,
         op: O,
     ) -> Result<T, Error> {
-        let mut new_scope = Self {
-            level: self.level + 1,
-            warnings: Vec::new(),
-            ..self.clone()
-        };
+        // Record initial scope state
+        let initial_local_values = self.local_values.clone();
+        let initial_annotated_type_vars = self.annotated_type_vars.clone();
+        let initial_annotated_generic_types = self.annotated_generic_types.clone();
 
-        let result = op(&mut new_scope);
+        // Create state for new scope
+        self.level += 1;
 
-        // Keep uids in sync between scopes to duplicate uids being used
-        self.uid = new_scope.uid;
+        // Process scope
+        let result = op(self);
 
-        // Propagate the warnings to the parent scope so they get logged at the end
-        for warning in new_scope.warnings.iter() {
-            self.warnings.push(warning.clone());
-        }
+        // Discard local state now scope is over
+        self.level -= 1;
+        self.local_values = initial_local_values;
+        self.annotated_type_vars = initial_annotated_type_vars;
+        self.annotated_generic_types = initial_annotated_generic_types;
 
+        // Return result of typing the scope
         result
     }
 

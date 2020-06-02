@@ -419,6 +419,7 @@ fn infer_test() {
 fn infer_error_test() {
     macro_rules! assert_error {
         ($src:expr, $error:expr $(,)?) => {
+            println!("\n\n{}", $src);
             let ast = crate::grammar::ExprSequenceParser::new()
                 .parse($src)
                 .expect("syntax error");
