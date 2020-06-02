@@ -16,9 +16,11 @@ pub struct PackageAnalyser<'a> {
     pub sources: Vec<Source>,
 }
 
+// TODO: ensure this is not a duplicate module
 // TODO: tests
 // Including cases for:
 // - modules that don't import anything
+// - modules with names that collide with modules in an already compiled package
 impl<'a> PackageAnalyser<'a> {
     pub fn new(root: &'a ProjectRoot, config: &'a PackageConfig) -> Self {
         Self {
@@ -43,8 +45,6 @@ impl<'a> PackageAnalyser<'a> {
 
         // Type check modules
         let modules = type_check(sequence, parsed_modules, existing_modules)?;
-
-        // TODO: ensure this is not a duplicate module
 
         Ok(Package {
             name: self.config.name.as_str(),
