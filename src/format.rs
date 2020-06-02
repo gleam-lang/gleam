@@ -805,9 +805,10 @@ impl<'a> Formatter<'a> {
                 .append(force_break())
                 .append("}"),
 
-            UntypedExpr::Call { .. } | UntypedExpr::Fn { .. } | UntypedExpr::Case { .. } => {
-                self.expr(expr)
-            }
+            UntypedExpr::Call { .. }
+            | UntypedExpr::Fn { .. }
+            | UntypedExpr::Case { .. }
+            | UntypedExpr::Tuple { .. } => self.expr(expr),
 
             _ => self.expr(expr).nest(INDENT),
         }
