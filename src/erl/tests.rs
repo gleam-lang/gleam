@@ -978,10 +978,10 @@ fn bitstring_test() {
     assert_erl!(
         r#"fn main() {
   let a = 1
-  let simple = <<1::integer, a::integer>>
-  let complex = <<4::integer-unsigned-big, 5.0::little-float, 6::native-integer-signed>>
-  let <<7::2, 8::size(3), b::binary-size(4)>> = <<1::integer>>
-  let <<c::unit(1), d::binary-size(2)-unit(2)>> = <<1::integer>>
+  let simple = <<1:integer, a:integer>>
+  let complex = <<4:integer-unsigned-big, 5.0:little-float, 6:native-integer-signed>>
+  let <<7:2, 8:size(3), b:binary-size(4)>> = <<1:integer>>
+  let <<c:unit(1), d:binary-size(2)-unit(2)>> = <<1:integer>>
 
   simple
 }
@@ -1004,7 +1004,7 @@ main() ->
     assert_erl!(
         r#"fn main() {
   let a = 1
-  let <<b, 1>> = <<1::integer, a::integer>>
+  let <<b, 1>> = <<1:integer, a:integer>>
   b
 }
 "#,

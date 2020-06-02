@@ -593,7 +593,7 @@ Bitstring: UntypedExpr = {
 }
 
 BinSegment: UntypedExprBinSegment = {
-    <s:@L> <v:SimpleExpr> <options:("::" <HyphensNoTrailing<BinSegmentOption>>)?>  <e:@L> =>
+    <s:@L> <v:SimpleExpr> <options:(":" <HyphensNoTrailing<BinSegmentOption>>)?>  <e:@L> =>
         UntypedExprBinSegment {
             location: location(s, e),
             value: Box::new(v),
@@ -895,7 +895,7 @@ PatternBitstring: UntypedPattern = {
 }
 
 PatternBinSegment: UntypedPatternBinSegment = {
-    <s:@L> <v:Pattern> <options:("::" <HyphensNoTrailing<PatternBinSegmentOption>>)?>  <e:@L> =>
+    <s:@L> <v:Pattern> <options:(":" <HyphensNoTrailing<PatternBinSegmentOption>>)?>  <e:@L> =>
         UntypedPatternBinSegment {
             location: location(s, e),
             value: Box::new(v),

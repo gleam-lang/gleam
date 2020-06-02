@@ -656,7 +656,7 @@ impl<'a> Formatter<'a> {
             UntypedExprBinSegment { value, options, .. } if *options == [] => self.expr(&value),
 
             UntypedExprBinSegment { value, options, .. } => {
-                self.expr(&value).append("::").append(concat(
+                self.expr(&value).append(":").append(concat(
                     options
                         .iter()
                         .map(|o| self.segment_option(o))
@@ -1070,7 +1070,7 @@ impl<'a> Formatter<'a> {
             }
 
             UntypedPatternBinSegment { value, options, .. } => {
-                self.pattern(&value).append("::").append(concat(
+                self.pattern(&value).append(":").append(concat(
                     options
                         .iter()
                         .map(|o| self.pattern_segment_option(o))
