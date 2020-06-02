@@ -33,12 +33,6 @@ pub struct Analysed {
     pub warnings: Vec<Warning>,
 }
 
-#[derive(Debug, PartialEq)]
-pub struct OutputFile {
-    pub text: String,
-    pub path: PathBuf,
-}
-
 #[derive(Debug, PartialEq, Clone)]
 pub enum ModuleOrigin {
     Src,

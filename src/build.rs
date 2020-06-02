@@ -1,16 +1,22 @@
 #![allow(warnings)]
 
 mod dep_tree;
+mod erlang_code_generator;
 mod package_analyser;
 mod project_analyser;
 mod project_root;
 
 use crate::{
     ast::TypedModule,
-    build::{project_analyser::ProjectAnalyser, project_root::ProjectRoot},
+    build::{
+        erlang_code_generator::ErlangCodeGenerator, project_analyser::ProjectAnalyser,
+        project_root::ProjectRoot,
+    },
     config::{self, PackageConfig},
+    erl,
     error::{Error, FileIOAction, FileKind, GleamExpect},
-    file, grammar, parser, typ,
+    file::{self, OutputFile},
+    grammar, parser, typ,
 };
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -26,12 +32,16 @@ pub fn main(package_config: PackageConfig, root: PathBuf) -> Result<(), Error> {
     // Read and type check all packages in project
     let packages = ProjectAnalyser::new(&root, &configs).analyse()?;
 
-    // TODO: generate Erlang, etc
+    // Generate Erlang source code
+    let compiled_erlang = ErlangCodeGenerator::new(&root, &packages).render();
+
+    // Write compiled Erlang disc
+    file::write_outputs(compiled_erlang.as_slice())?;
+
+    // TODO: copy any Erlang source code from src to _build
     // TODO: compile Erlang into .beam
 
-    dbg!(&packages);
-
-    todo!()
+    Ok(())
 }
 
 #[derive(Debug)]

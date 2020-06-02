@@ -6,8 +6,9 @@ use crate::{
     ast::{Statement, TypedStatement},
     config::{DocsPage, PackageConfig},
     error::{Error, GleamExpect},
+    file::OutputFile,
     format, pretty,
-    project::{self, Analysed, ModuleOrigin, OutputFile},
+    project::{self, Analysed, ModuleOrigin},
 };
 use askama::Template;
 use itertools::Itertools;

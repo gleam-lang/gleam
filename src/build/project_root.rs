@@ -43,4 +43,9 @@ impl ProjectRoot {
     pub fn default_build_lib_package_path(&self, name: &str) -> PathBuf {
         self.default_build_lib_path().join(name)
     }
+
+    pub fn default_build_lib_package_src_path(&self, name: &str) -> PathBuf {
+        self.default_build_lib_package_path(name)
+            .join(DIR_NAME_PACKAGE_SRC)
+    }
 }
