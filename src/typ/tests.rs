@@ -430,20 +430,21 @@ fn infer_test() {
     );
 }
 
+macro_rules! assert_error {
+    ($src:expr, $error:expr $(,)?) => {
+        println!("\n\n{}", $src);
+        let ast = crate::grammar::ExprSequenceParser::new()
+            .parse($src)
+            .expect("syntax error");
+        let result = Typer::new(&[], &HashMap::new(), &mut vec![])
+            .infer(ast)
+            .expect_err("should infer an error");
+        assert_eq!(($src, sort_options($error)), ($src, sort_options(result)));
+    };
+}
+
 #[test]
 fn infer_bitstring_error_test() {
-    macro_rules! assert_error {
-        ($src:expr, $error:expr $(,)?) => {
-            let ast = crate::grammar::ExprSequenceParser::new()
-                .parse($src)
-                .expect("syntax error");
-            let result = Typer::new(&[], &HashMap::new())
-                .infer(ast)
-                .expect_err("should infer an error");
-            assert_eq!(($src, sort_options($error)), ($src, sort_options(result)));
-        };
-    }
-
     // Unify
 
     assert_error!(
@@ -656,19 +657,6 @@ fn infer_bitstring_error_test() {
 
 #[test]
 fn infer_error_test() {
-    macro_rules! assert_error {
-        ($src:expr, $error:expr $(,)?) => {
-            println!("\n\n{}", $src);
-            let ast = crate::grammar::ExprSequenceParser::new()
-                .parse($src)
-                .expect("syntax error");
-            let result = Typer::new(&[], &HashMap::new(), &mut vec![])
-                .infer(ast)
-                .expect_err("should infer an error");
-            assert_eq!(($src, sort_options($error)), ($src, sort_options(result)));
-        };
-    }
-
     assert_error!(
         "1 + 1.0",
         Error::CouldNotUnify {
