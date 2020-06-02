@@ -12,7 +12,7 @@ use std::path::PathBuf;
 #[derive(Debug)]
 pub struct PackageAnalyser<'a> {
     pub root: &'a ProjectRoot,
-    pub config: &'a PackageConfig,
+    pub config: PackageConfig,
     pub sources: Vec<Source>,
 }
 
@@ -22,7 +22,7 @@ pub struct PackageAnalyser<'a> {
 // - modules that don't import anything
 // - modules with names that collide with modules in an already compiled package
 impl<'a> PackageAnalyser<'a> {
-    pub fn new(root: &'a ProjectRoot, config: &'a PackageConfig) -> Self {
+    pub fn new(root: &'a ProjectRoot, config: PackageConfig) -> Self {
         Self {
             root,
             config,
@@ -33,21 +33,20 @@ impl<'a> PackageAnalyser<'a> {
     pub fn analyse(
         self,
         existing_modules: &mut HashMap<String, typ::Module>,
-    ) -> Result<Package<'a>, Error> {
+    ) -> Result<Package, Error> {
         // Parse source code into abstract syntax trees
         let parsed_modules = parse_sources(self.sources)?;
 
         // Determine order in which modules are to be processed
-        let deps: Vec<_> = parsed_modules.values().map(module_deps_for_graph).collect();
-        let str_deps = toposort_format_deps(deps.as_slice());
         let sequence =
-            dep_tree::toposort_deps(str_deps.as_slice()).map_err(convert_deps_tree_error)?;
+            dep_tree::toposort_deps(parsed_modules.values().map(module_deps_for_graph).collect())
+                .map_err(convert_deps_tree_error)?;
 
         // Type check modules
         let modules = type_check(sequence, parsed_modules, existing_modules)?;
 
         Ok(Package {
-            name: self.config.name.as_str(),
+            config: self.config,
             modules,
         })
     }
@@ -66,7 +65,7 @@ impl<'a> PackageAnalyser<'a> {
 }
 
 fn type_check(
-    sequence: Vec<&str>,
+    sequence: Vec<String>,
     mut parsed_modules: HashMap<String, Parsed>,
     module_types: &mut HashMap<String, typ::Module>,
 ) -> Result<Vec<Module>, Error> {
@@ -80,7 +79,7 @@ fn type_check(
             ast,
             path,
         } = parsed_modules
-            .remove(name)
+            .remove(&name)
             .gleam_expect("Getting parsed module for name");
 
         let ast =
@@ -105,24 +104,18 @@ fn type_check(
     Ok(modules)
 }
 
-fn toposort_format_deps<'a>(
-    deps: &'a [(String, Vec<(String, SrcSpan)>)],
-) -> Vec<(&'a str, Vec<&'a str>)> {
-    deps.iter()
-        .map(|(name, deps)| {
-            let deps = deps.iter().map(|(dep, _)| dep.as_str()).collect();
-            (name.as_str(), deps)
-        })
-        .collect()
-}
-
 fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
     todo!()
 }
 
-fn module_deps_for_graph(module: &Parsed) -> (String, Vec<(String, SrcSpan)>) {
+fn module_deps_for_graph(module: &Parsed) -> (String, Vec<String>) {
     let name = module.name.clone();
-    let deps: Vec<_> = module.ast.dependencies();
+    let deps: Vec<_> = module
+        .ast
+        .dependencies()
+        .into_iter()
+        .map(|(dep, _span)| dep)
+        .collect();
     (name, deps)
 }
 

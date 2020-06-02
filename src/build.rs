@@ -38,7 +38,7 @@ pub fn main(package_config: PackageConfig, root: PathBuf) -> Result<(), Error> {
     let configs = root.package_configs()?;
 
     // Read and type check all packages in project
-    let packages = ProjectAnalyser::new(&root, &configs).analyse()?;
+    let packages = ProjectAnalyser::new(&root, configs).analyse()?;
 
     // Generate Erlang source code
     let compiled_erlang = ErlangCodeGenerator::new(&root, &packages).render();
@@ -53,8 +53,8 @@ pub fn main(package_config: PackageConfig, root: PathBuf) -> Result<(), Error> {
 }
 
 #[derive(Debug)]
-pub struct Package<'a> {
-    name: &'a str,
+pub struct Package {
+    config: PackageConfig,
     modules: Vec<Module>,
 }
 
@@ -85,11 +85,7 @@ pub fn compile_erlang_to_beam(
         .status()
         .unwrap(); // TODO
 
-    dbg!(&status);
-
-    // println!("Compiling beam: {}", path.to_str().unwrap_or_default());
-    // command.status().gleam_expect("Command erlc");
-    // }
+    dbg!(&status); // TODO: check status
 
     Ok(())
 }

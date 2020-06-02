@@ -3,5 +3,5 @@
     {description, ""},
     {modules, []},
     {registered, []},
-    {vsn, ""}
+    {vsn, "0.2.0"}
 ]}.
