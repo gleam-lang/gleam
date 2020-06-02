@@ -523,6 +523,16 @@ pub external type Four
 "#
     );
 
+    assert_format!(
+        r#"fn main() {
+  tuple(
+    atom.create_from_string("module"),
+    atom.create_from_string("gleam@otp@actor"),
+  )
+}
+"#
+    );
+
     //
     // Fn
     //
