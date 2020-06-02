@@ -1,13 +1,16 @@
-use crate::{
-    error::{Error, FileIOAction, FileKind, GleamExpect},
-    project::OutputFile,
-};
+use crate::error::{Error, FileIOAction, FileKind, GleamExpect};
 use flate2::{write::GzEncoder, Compression};
 use std::{
     fs::File,
     io::Write,
     path::{Path, PathBuf},
 };
+
+#[derive(Debug, PartialEq)]
+pub struct OutputFile {
+    pub text: String,
+    pub path: PathBuf,
+}
 
 pub fn delete_dir(dir: &PathBuf) -> Result<(), Error> {
     if dir.exists() {

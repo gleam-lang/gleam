@@ -4,8 +4,9 @@ mod tests;
 use crate::{
     ast::*,
     error::GleamExpect,
+    file::OutputFile,
     pretty::*,
-    project::{self, Analysed, OutputFile},
+    project::{self, Analysed},
     typ::{
         ModuleValueConstructor, PatternConstructor, Type, ValueConstructor, ValueConstructorVariant,
     },
