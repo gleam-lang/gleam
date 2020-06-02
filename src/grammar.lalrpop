@@ -843,19 +843,6 @@ PatternVarOrDiscard: UntypedPattern = {
 }
 
 PatternList: UntypedPattern = {
-    // [x | y] preprend syntax is deprecated, [x, ..y] is the new one
-    <s:@L> "[" <elems:Comma<Pattern>> <tail:("|" <PatternVarOrDiscard>)> "]" <e:@L> => {
-        elems.into_iter().rev().fold(
-            tail,
-            |a, e| Pattern::Cons {
-                location: e.location().clone(),
-                head: Box::new(e),
-                tail: Box::new(a),
-                deprecated_syntax: true
-            }
-        ).put_list_cons_location_start(s)
-    },
-
     <s:@L> "[" <elems:Comma<Pattern>> <tail:(".." <PatternVarOrDiscard?> (",")?)?> "]" <e:@L> => {
         let tail = match tail {
             // There is a tail and it has a PatternVarOrDiscard
@@ -879,7 +866,6 @@ PatternList: UntypedPattern = {
                 location: e.location().clone(),
                 head: Box::new(e),
                 tail: Box::new(a),
-                deprecated_syntax: false
             }
         ).put_list_cons_location_start(s)
     },

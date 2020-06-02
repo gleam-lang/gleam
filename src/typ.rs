@@ -891,9 +891,8 @@ impl<'a> Typer<'a> {
                 location,
                 head,
                 tail,
-                deprecated_syntax,
                 ..
-            } => self.infer_cons(*head, *tail, deprecated_syntax, location),
+            } => self.infer_cons(*head, *tail, location),
 
             UntypedExpr::Call {
                 location,
@@ -1200,22 +1199,12 @@ impl<'a> Typer<'a> {
         &mut self,
         head: UntypedExpr,
         tail: UntypedExpr,
-        deprecated_syntax: bool,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         let head = self.infer(head)?;
         let tail = self.infer(tail)?;
         self.unify(tail.typ(), list(head.typ()))
             .map_err(|e| convert_unify_error(e, &location))?;
-
-        if deprecated_syntax {
-            self.warnings.push(Warning::DeprecatedListPrependSyntax {
-                location: SrcSpan {
-                    start: location.start - 2,
-                    end: location.start - 1,
-                },
-            });
-        }
 
         Ok(TypedExpr::ListCons {
             location,
@@ -2708,8 +2697,6 @@ pub enum Error {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Warning {
-    DeprecatedListPrependSyntax { location: SrcSpan },
-
     Todo { location: SrcSpan },
 
     ImplicitlyDiscardedResult { location: SrcSpan },
@@ -3612,28 +3599,15 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 location,
                 head,
                 tail,
-                deprecated_syntax,
             } => match typ.get_app_args(true, &[], "List", 1, self.typer) {
                 Some(args) => {
                     let head = Box::new(self.unify(*head, args[0].clone())?);
                     let tail = Box::new(self.unify(*tail, typ)?);
 
-                    if deprecated_syntax {
-                        self.typer
-                            .warnings
-                            .push(Warning::DeprecatedListPrependSyntax {
-                                location: SrcSpan {
-                                    start: location.end + 1,
-                                    end: location.end + 2,
-                                },
-                            });
-                    }
-
                     Ok(Pattern::Cons {
                         location,
                         head,
                         tail,
-                        deprecated_syntax,
                     })
                 }
 

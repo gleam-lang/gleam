@@ -2615,18 +2615,6 @@ fn module_rewrites_test() {
         };
     }
 
-    // Formatter rewrites old [x | y] list prepend syntax to [x, ..y]
-    assert_format_rewrite!(
-        "fn main() {
-  [1, 2, 3 | x]
-}
-",
-        "fn main() {
-  [1, 2, 3, ..x]
-}
-",
-    );
-
     // Formatter rewrites old [x | y] list prepend syntax to [x, ..y] with line breaks
     assert_format_rewrite!(
         "fn main() {
@@ -2645,44 +2633,6 @@ fn module_rewrites_test() {
     really_long_variable_name,
     ..tail
   ]
-}
-",
-    );
-
-    // Formatter removes discard list prefix
-    assert_format_rewrite!(
-        "fn main() {
-  let [x, y, z | _] = [1, 2, 3, 4]
-  x
-}
-",
-        "fn main() {
-  let [x, y, z, ..] = [1, 2, 3, 4]
-  x
-}
-",
-    );
-
-    // formatter removes discard list prefix with line breaks
-    assert_format_rewrite!(
-        "fn main() {
-  let [
-    really_long_variable_name_1,
-    really_long_variable_name_2,
-    really_long_variable_name_3
-    | _
-  ] = [1, 2, 3, 4]
-  really_long_variable_name_1
-}
-",
-        "fn main() {
-  let [
-    really_long_variable_name_1,
-    really_long_variable_name_2,
-    really_long_variable_name_3,
-    ..
-  ] = [1, 2, 3, 4]
-  really_long_variable_name_1
 }
 ",
     );

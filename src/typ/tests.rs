@@ -347,8 +347,8 @@ fn infer_test() {
     assert_infer!("let [] = [] 1", "Int");
     assert_infer!("let [a] = [1] a", "Int");
     assert_infer!("let [a, 2] = [1] a", "Int");
-    assert_infer!("let [a | b] = [1] a", "Int");
-    assert_infer!("let [a | _] = [1] a", "Int");
+    assert_infer!("let [a .. b] = [1] a", "Int");
+    assert_infer!("let [a .. _] = [1] a", "Int");
     assert_infer!("fn(x) { let [a] = x a }", "fn(List(a)) -> a");
     assert_infer!("fn(x) { let [a] = x a + 1 }", "fn(List(Int)) -> Int");
     assert_infer!("let _x = 1 2.0", "Float");
@@ -360,8 +360,6 @@ fn infer_test() {
     assert_infer!("assert [] = [] 1", "Int");
     assert_infer!("assert [a] = [1] a", "Int");
     assert_infer!("assert [a, 2] = [1] a", "Int");
-    assert_infer!("assert [a | b] = [1] a", "Int");
-    assert_infer!("assert [a | _] = [1] a", "Int");
     assert_infer!("assert [a, .._] = [1] a", "Int");
     assert_infer!("assert [a, .._,] = [1] a", "Int");
     assert_infer!("fn(x) { assert [a] = x a }", "fn(List(a)) -> a");
@@ -1646,7 +1644,7 @@ fn infer_module_test() {
         "pub fn length(list) {
            case list {
            [] -> 0
-           [x | xs] -> length(xs) + 1
+           [x .. xs] -> length(xs) + 1
            }
         }",
         vec![("length", "fn(List(a)) -> Int")],
@@ -2509,24 +2507,8 @@ fn infer_module_warning_test() {
         };
     }
 
-    // Old list prepend syntax emits a warning
-    assert_warning!(
-        "fn main() { [1 | [2, 3]] }",
-        Warning::DeprecatedListPrependSyntax {
-            location: SrcSpan { start: 15, end: 16 }
-        },
-    );
-
     // New list prepend syntax does not emit a warning
     assert_no_warnings!("fn main() { [1 ..[2, 3]] }",);
-
-    // Old list tail pattern matching syntax emits a warning
-    assert_warning!(
-        "fn main() { let x = [] ; case x { [x | _] -> 1 } }",
-        Warning::DeprecatedListPrependSyntax {
-            location: SrcSpan { start: 37, end: 38 }
-        },
-    );
 
     // New list tail pattern matching syntax does not emit a warning
     assert_no_warnings!("fn main() { let x = [] ; case x { [x, ..] -> 1 } }",);

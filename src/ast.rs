@@ -525,7 +525,6 @@ pub enum Pattern<Constructor, Type> {
         location: SrcSpan,
         head: Box<Self>,
         tail: Box<Self>,
-        deprecated_syntax: bool,
     },
 
     Constructor {
@@ -571,12 +570,10 @@ impl<A, B> Pattern<A, B> {
                 location: SrcSpan { end, .. },
                 head,
                 tail,
-                deprecated_syntax,
             } => Pattern::Cons {
                 location: SrcSpan { start, end },
                 head,
                 tail,
-                deprecated_syntax,
             },
 
             _ => self,
