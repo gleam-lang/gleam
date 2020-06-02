@@ -47,5 +47,39 @@ impl<'a> ErlangCodeGenerator<'a> {
             let path = src_dir.join(format!("{}.erl", erl_name));
             outputs.push(OutputFile { path, text });
         }
+
+        // Render ebin/package.app
+        outputs.push(self.package_app_file(package))
+    }
+
+    pub fn package_app_file(&self, package: &Package) -> OutputFile {
+        let path = self
+            .root
+            .default_build_lib_package_ebin_path(package.name)
+            .join(format!("{}.app", package.name));
+
+        // TODO: include a `mod` field if there is a start function to call
+        let start_module = "";
+
+        // TODO: applications, description, modules, registered, vsn
+        let text = format!(
+            r#"{{application, {package}, [
+{start_module}    {{applications, [{applications}]}},
+    {{description, "{description}"}},
+    {{modules, [{modules}]}},
+    {{registered, [{registered}]}},
+    {{vsn, "{version}"}}
+]}}.
+"#,
+            applications = "",
+            description = "",
+            modules = "",
+            package = package.name,
+            registered = "",
+            start_module = start_module,
+            version = "",
+        );
+
+        OutputFile { path, text }
     }
 }

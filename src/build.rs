@@ -46,7 +46,7 @@ pub fn main(package_config: PackageConfig, root: PathBuf) -> Result<(), Error> {
     // Write compiled Erlang disc
     file::write_outputs(compiled_erlang.as_slice())?;
 
-    // TODO: compile Erlang into .beam
+    // Compile Erlang source into VM bytecode
     compile_erlang_to_beam(&root, &packages)?;
 
     Ok(())
