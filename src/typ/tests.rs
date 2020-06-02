@@ -253,11 +253,8 @@ fn infer_test() {
     assert_infer!("[[], [1]]", "List(List(Int))");
 
     assert_infer!("[1, ..[2, ..[]]]", "List(Int)");
-    assert_infer!("[1 | [2 | []]]", "List(Int)"); // Deprecated syntax
     assert_infer!("[fn(x) { x }, ..[]]", "List(fn(a) -> a)");
-    assert_infer!("[fn(x) { x } | []]", "List(fn(a) -> a)"); // Deprecated syntax
     assert_infer!("let x = [1, ..[]] [2, ..x]", "List(Int)");
-    assert_infer!("let x = [1 | []] [2 | x]", "List(Int)"); // Deprecated syntax
 
     // Trailing commas
     assert_infer!("[1, ..[2, ..[],]]", "List(Int)");
@@ -347,8 +344,8 @@ fn infer_test() {
     assert_infer!("let [] = [] 1", "Int");
     assert_infer!("let [a] = [1] a", "Int");
     assert_infer!("let [a, 2] = [1] a", "Int");
-    assert_infer!("let [a .. b] = [1] a", "Int");
-    assert_infer!("let [a .. _] = [1] a", "Int");
+    assert_infer!("let [a, .. b] = [1] a", "Int");
+    assert_infer!("let [a, .. _] = [1] a", "Int");
     assert_infer!("fn(x) { let [a] = x a }", "fn(List(a)) -> a");
     assert_infer!("fn(x) { let [a] = x a + 1 }", "fn(List(Int)) -> Int");
     assert_infer!("let _x = 1 2.0", "Float");
@@ -1430,7 +1427,7 @@ fn infer_module_test() {
         "pub fn repeat(i, x) {
            case i {
              0 -> []
-             i -> [x | repeat(i - 1, x)]
+             i -> [x .. repeat(i - 1, x)]
            }
          }",
         vec![("repeat", "fn(Int, a) -> List(a)")],
