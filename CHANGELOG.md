@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Single letter module names are now permitted.
+- Added support for bitstring syntax.
 
 
 ## v0.9.0 - 2020-06-01
