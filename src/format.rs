@@ -812,17 +812,22 @@ impl<'a> Formatter<'a> {
         args: &[TypedArg],
         return_type: Arc<Type>,
     ) -> Document {
+        let mut printer = typ::pretty::Printer::new();
+
         pub_(public)
             .append("fn ")
-            .append(name.to_string())
-            .append(self.docs_fn_args(args))
+            .append(name)
+            .append(self.docs_fn_args(args, &mut printer))
             .append(" -> ".to_doc())
-            .append(typ::pretty::Printer::new().print(return_type.as_ref()))
+            .append(printer.print(return_type.as_ref()))
     }
 
     // Like fn_args but will always print the types, even if they were implicit in the original source
-    pub fn docs_fn_args(&mut self, args: &[TypedArg]) -> Document {
-        let mut printer = typ::pretty::Printer::new();
+    pub fn docs_fn_args(
+        &mut self,
+        args: &[TypedArg],
+        printer: &mut typ::pretty::Printer,
+    ) -> Document {
         wrap_args(args.iter().map(|arg| {
             arg.names
                 .to_doc()
