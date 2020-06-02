@@ -536,19 +536,6 @@ Tuple: UntypedExpr = {
 }
 
 List: UntypedExpr = {
-    // [x | y] preprend syntax is deprecated, [x, ..y] is the new one
-    <s:@L> "[" <elems:Comma<OpOrSimpleExpr>> <tail:("|" <OpOrSimpleExpr>)>"]" <e:@L> => {
-        elems.into_iter().rev().fold(
-            tail,
-            |t, h| UntypedExpr::ListCons {
-                location: t.location().clone(),
-                head: Box::new(h),
-                tail: Box::new(t),
-                deprecated_syntax: true,
-            }
-        )
-    },
-
     <s:@L> "[" <elems:Comma<OpOrSimpleExpr>> <tail:(".." <OpOrSimpleExpr> ","?)?>"]" <e:@L> => {
         let tail = tail.unwrap_or_else(|| UntypedExpr::ListNil {
             location: location(s, e),
@@ -559,7 +546,6 @@ List: UntypedExpr = {
                 location: t.location().clone(),
                 head: Box::new(h),
                 tail: Box::new(t),
-                deprecated_syntax: false,
             }
         )
     },
