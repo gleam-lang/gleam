@@ -313,9 +313,9 @@ pub enum PatternConstructor {
     Record { name: String },
 }
 
-#[derive(Debug, Clone)]
-pub struct Typer<'a, 'b> {
-    current_module: &'b [String],
+#[derive(Debug)]
+pub struct Typer<'a> {
+    current_module: &'a [String],
     uid: usize,
     level: usize,
     annotated_generic_types: im::HashSet<usize>,
@@ -338,10 +338,10 @@ pub struct Typer<'a, 'b> {
     accessors: HashMap<String, AccessorsMap>,
 
     // Warnings
-    warnings: Vec<Warning>,
+    warnings: &'a mut Vec<Warning>,
 }
 
-impl<'a, 'b> Typer<'a, 'b> {
+impl<'a> Typer<'a> {
     pub fn in_new_scope<T, O: FnOnce(&mut Self) -> Result<T, Error>>(
         &mut self,
         op: O,
@@ -368,8 +368,9 @@ impl<'a, 'b> Typer<'a, 'b> {
     }
 
     pub fn new(
-        current_module: &'b [String],
+        current_module: &'a [String],
         importable_modules: &'a HashMap<String, Module>,
+        warnings: &'a mut Vec<Warning>,
     ) -> Self {
         let mut typer = Self {
             uid: 0,
@@ -379,11 +380,11 @@ impl<'a, 'b> Typer<'a, 'b> {
             module_values: HashMap::new(),
             imported_modules: HashMap::new(),
             accessors: HashMap::new(),
-            warnings: Vec::new(),
             local_values: hashmap![],
             annotated_type_vars: hashmap![],
             importable_modules,
             current_module,
+            warnings,
         };
 
         typer
@@ -2722,8 +2723,9 @@ fn register_types(
 pub fn infer_module(
     module: UntypedModule,
     modules: &HashMap<String, Module>,
-) -> (Result<TypedModule, Error>, Vec<Warning>) {
-    let mut typer = Typer::new(module.name.as_slice(), modules);
+    warnings: &mut Vec<Warning>,
+) -> Result<TypedModule, Error> {
+    let mut typer = Typer::new(module.name.as_slice(), modules, warnings);
     let module_name = &module.name;
 
     for s in module.statements.iter() {
@@ -2772,31 +2774,28 @@ pub fn infer_module(
                     if let Some(typ) = module_info.types.get(name) {
                         match typer.insert_type_constructor(imported_name.clone(), typ.clone()) {
                             Ok(_) => (),
-                            Err(e) => return (Err(e), typer.warnings),
+                            Err(e) => return Err(e),
                         }
 
                         imported = true;
                     }
 
                     if !imported {
-                        return (
-                            Err(Error::UnknownModuleField {
-                                location: location.clone(),
-                                name: name.clone(),
-                                module_name: module.clone(),
-                                value_constructors: module_info
-                                    .values
-                                    .keys()
-                                    .map(|t| t.to_string())
-                                    .collect(),
-                                type_constructors: module_info
-                                    .types
-                                    .keys()
-                                    .map(|t| t.to_string())
-                                    .collect(),
-                            }),
-                            typer.warnings,
-                        );
+                        return Err(Error::UnknownModuleField {
+                            location: location.clone(),
+                            name: name.clone(),
+                            module_name: module.clone(),
+                            value_constructors: module_info
+                                .values
+                                .keys()
+                                .map(|t| t.to_string())
+                                .collect(),
+                            type_constructors: module_info
+                                .types
+                                .keys()
+                                .map(|t| t.to_string())
+                                .collect(),
+                        });
                     }
                 }
 
@@ -2815,11 +2814,11 @@ pub fn infer_module(
     for s in module.statements.iter() {
         match register_types(s, module_name, &mut typer) {
             Ok(_) => (),
-            Err(e) => return (Err(e), typer.warnings),
+            Err(e) => return Err(e),
         }
     }
 
-    let statements_result: Result<Vec<_>, _> = module
+    let statements = module
         .statements
         .into_iter()
         .map(|s| match s {
@@ -3153,12 +3152,7 @@ pub fn infer_module(
                 unqualified,
             }),
         })
-        .collect::<Result<Vec<_>, Error>>();
-
-    let statements = match statements_result {
-        Ok(o) => o,
-        Err(e) => return (Err(e), typer.warnings),
-    };
+        .collect::<Result<Vec<_>, Error>>()?;
 
     // Remove private and imported types and values to create the public interface
     typer
@@ -3170,13 +3164,10 @@ pub fn infer_module(
     // Ensure no exported values have private types in their type signature
     for (_, value) in typer.module_values.iter() {
         if let Some(leaked) = value.typ.find_private_type() {
-            return (
-                Err(Error::PrivateTypeLeak {
-                    location: value.origin.clone(),
-                    leaked,
-                }),
-                typer.warnings,
-            );
+            return Err(Error::PrivateTypeLeak {
+                location: value.origin.clone(),
+                leaked,
+            });
         }
     }
 
@@ -3184,28 +3175,24 @@ pub fn infer_module(
         module_types: types,
         module_values: values,
         accessors,
-        warnings,
         ..
     } = typer;
 
-    (
-        Ok(ast::Module {
-            documentation: module.documentation,
-            name: module.name.clone(),
-            statements,
-            type_info: Module {
-                name: module.name,
-                types,
-                values,
-                accessors,
-            },
-        }),
-        warnings,
-    )
+    Ok(ast::Module {
+        documentation: module.documentation,
+        name: module.name.clone(),
+        statements,
+        type_info: Module {
+            name: module.name,
+            types,
+            values,
+            accessors,
+        },
+    })
 }
 
-struct PatternTyper<'a, 'b, 'c> {
-    typer: &'a mut Typer<'b, 'c>,
+struct PatternTyper<'a, 'b> {
+    typer: &'a mut Typer<'b>,
     level: usize,
     mode: PatternMode,
     initial_pattern_vars: HashSet<String>,
@@ -3216,8 +3203,8 @@ enum PatternMode {
     Alternative,
 }
 
-impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
-    pub fn new(typer: &'a mut Typer<'b, 'c>, level: usize) -> Self {
+impl<'a, 'b> PatternTyper<'a, 'b> {
+    pub fn new(typer: &'a mut Typer<'b>, level: usize) -> Self {
         Self {
             typer,
             level,

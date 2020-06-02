@@ -968,8 +968,8 @@ fn integration_test() {
                 .parse($src)
                 .expect("syntax error");
             ast.name = vec!["the_app".to_string()];
-            let (result, _) = crate::typ::infer_module(ast, &std::collections::HashMap::new());
-            let ast = result.expect("should successfully infer");
+            let ast = crate::typ::infer_module(ast, &std::collections::HashMap::new(), &mut vec![])
+                .expect("should successfully infer");
             let output = module(&ast);
             assert_eq!(($src, output), ($src, $erl.to_string()));
         };

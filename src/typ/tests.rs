@@ -170,8 +170,7 @@ fn infer_module_type_retention_test() {
         type_info: (),
     };
 
-    let (result, _) = infer_module(module, &HashMap::new());
-    let module = result.expect("Should infer OK");
+    let module = infer_module(module, &HashMap::new(), &mut vec![]).expect("Should infer OK");
 
     assert_eq!(
         module.type_info,
@@ -193,7 +192,7 @@ fn infer_test() {
             let ast = crate::grammar::ExprSequenceParser::new()
                 .parse($src)
                 .expect("syntax error");
-            let result = Typer::new(&[], &HashMap::new())
+            let result = Typer::new(&[], &HashMap::new(), &mut vec![])
                 .infer(ast)
                 .expect("should successfully infer");
             assert_eq!(
@@ -423,7 +422,7 @@ fn infer_error_test() {
             let ast = crate::grammar::ExprSequenceParser::new()
                 .parse($src)
                 .expect("syntax error");
-            let result = Typer::new(&[], &HashMap::new())
+            let result = Typer::new(&[], &HashMap::new(), &mut vec![])
                 .infer(ast)
                 .expect_err("should infer an error");
             assert_eq!(($src, sort_options($error)), ($src, sort_options(result)));
@@ -1181,8 +1180,8 @@ fn infer_module_test() {
             let ast = crate::grammar::ModuleParser::new()
                 .parse(&src)
                 .expect("syntax error");
-            let (result, _) = infer_module(ast, &HashMap::new());
-            let ast = result.expect("should successfully infer");
+            let ast =
+                infer_module(ast, &HashMap::new(), &mut vec![]).expect("should successfully infer");
             let mut constructors: Vec<(_, _)> = ast
                 .type_info
                 .values
@@ -1633,8 +1632,8 @@ fn infer_module_error_test() {
                 .parse(&src)
                 .expect("syntax error");
             ast.name = vec!["my_module".to_string()];
-            let (result, _) = infer_module(ast, &HashMap::new());
-            let ast = result.expect_err("should infer an error");
+            let ast =
+                infer_module(ast, &HashMap::new(), &mut vec![]).expect_err("should infer an error");
             assert_eq!(($src, sort_options($error)), ($src, sort_options(ast)));
         };
 
@@ -1642,8 +1641,7 @@ fn infer_module_error_test() {
             let ast = crate::grammar::ModuleParser::new()
                 .parse($src)
                 .expect("syntax error");
-            let (result, _) = infer_module(ast, &HashMap::new());
-            result.expect_err("should infer an error");
+            infer_module(ast, &HashMap::new(), &mut vec![]).expect_err("should infer an error");
         };
     }
 
@@ -2261,7 +2259,8 @@ fn infer_module_warning_test() {
                 .parse(&src)
                 .expect("syntax error");
             ast.name = vec!["my_module".to_string()];
-            let (_, warnings) = infer_module(ast, &HashMap::new());
+            let mut warnings = vec![];
+            let _ = infer_module(ast, &HashMap::new(), &mut warnings);
 
             assert!(!warnings.is_empty());
             assert_eq!($warning, warnings[0]);
@@ -2275,7 +2274,8 @@ fn infer_module_warning_test() {
                 .parse(&src)
                 .expect("syntax error");
             ast.name = vec!["my_module".to_string()];
-            let (_, warnings) = infer_module(ast, &HashMap::new());
+            let mut warnings = vec![];
+            let _ = infer_module(ast, &HashMap::new(), &mut warnings);
 
             assert!(warnings.is_empty());
         };
@@ -2338,7 +2338,7 @@ fn env_types_with(things: &[&str]) -> Vec<String> {
 }
 
 fn env_types() -> Vec<String> {
-    Typer::new(&[], &HashMap::new())
+    Typer::new(&[], &HashMap::new(), &mut vec![])
         .module_types
         .keys()
         .map(|s| s.to_string())
@@ -2354,7 +2354,7 @@ fn env_vars_with(things: &[&str]) -> Vec<String> {
 }
 
 fn env_vars() -> Vec<String> {
-    Typer::new(&[], &HashMap::new())
+    Typer::new(&[], &HashMap::new(), &mut vec![])
         .local_values
         .keys()
         .map(|s| s.to_string())
