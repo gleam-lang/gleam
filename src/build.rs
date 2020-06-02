@@ -2,17 +2,17 @@
 
 mod dep_tree;
 mod package_analyser;
+mod project_analyser;
 mod project_root;
 
 use crate::{
     ast::TypedModule,
+    build::{project_analyser::ProjectAnalyser, project_root::ProjectRoot},
     config::{self, PackageConfig},
     error::{Error, FileIOAction, FileKind, GleamExpect},
     file, grammar, parser, typ,
 };
 use itertools::Itertools;
-use package_analyser::PackageAnalyser;
-use project_root::ProjectRoot;
 use std::collections::HashMap;
 use std::fs::DirEntry;
 use std::path::PathBuf;
@@ -23,12 +23,8 @@ pub fn main(package_config: PackageConfig, root: PathBuf) -> Result<(), Error> {
     // Collect all package configs
     let configs = root.package_configs()?;
 
-    // Determine package processing order
-    let deps: Vec<_> = configs.values().map(package_deps_for_graph).collect();
-    let sequence = dep_tree::toposort_deps(deps.as_slice()).map_err(convert_deps_tree_error)?;
-
-    // Read and type check packages
-    let packages = analyse_packages(&root, &configs, sequence)?;
+    // Read and type check all packages in project
+    let packages = ProjectAnalyser::new(&root, &configs).analyse()?;
 
     // TODO: generate Erlang, etc
     // TODO: compile Erlang into .beam
@@ -36,26 +32,6 @@ pub fn main(package_config: PackageConfig, root: PathBuf) -> Result<(), Error> {
     dbg!(&packages);
 
     todo!()
-}
-
-fn analyse_packages<'a>(
-    root: &'a ProjectRoot,
-    configs: &'a HashMap<String, PackageConfig>,
-    sequence: Vec<&'a str>,
-) -> Result<HashMap<&'a str, Package<'a>>, Error> {
-    let mut packages = HashMap::with_capacity(configs.len());
-    let mut module_type_manifests = HashMap::with_capacity(configs.len() * 5);
-
-    for name in sequence {
-        let config = configs.get(name).gleam_expect("Missing package config");
-        let mut analyser = PackageAnalyser::new(root, config);
-        analyser.read_package_source_files()?;
-        let analysed = analyser.analyse(&mut module_type_manifests)?;
-        packages.insert(name, analysed);
-        // TODO: insert public modules for package into public_modules
-    }
-
-    Ok(packages)
 }
 
 #[derive(Debug)]
@@ -70,20 +46,6 @@ pub struct Module {
     code: String,
     path: PathBuf,
     ast: TypedModule,
-}
-
-fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
-    todo!()
-}
-
-fn package_deps_for_graph(config: &PackageConfig) -> (&str, Vec<&str>) {
-    let name = config.name.as_str();
-    let deps: Vec<_> = config
-        .dependencies
-        .iter()
-        .map(|(dep, _)| dep.as_str())
-        .collect();
-    (name, deps)
 }
 
 // // Compile Erlang to .beam files
