@@ -424,6 +424,10 @@ fn infer_test() {
     assert_infer!("let <<x:utf8>> = <<1:integer>> x", "String");
     assert_infer!("let <<x:utf16>> = <<1:integer>> x", "Bitstring");
     assert_infer!("let <<x:utf32>> = <<1:integer>> x", "Bitstring");
+    assert_infer!(
+        "let a = <<1:integer>> let <<x:binary>> = <<1:integer, a:2>> x",
+        "Bitstring"
+    );
 }
 
 #[test]
