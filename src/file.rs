@@ -172,3 +172,15 @@ pub fn read(path: impl AsRef<Path>) -> Result<String, Error> {
         err: Some(err.to_string()),
     })
 }
+
+pub fn copy(path: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<(), Error> {
+    // TODO: include the destination in the error message
+    std::fs::copy(&path, &to)
+        .map_err(|err| Error::FileIO {
+            action: FileIOAction::Copy,
+            kind: FileKind::File,
+            path: PathBuf::from(path.as_ref()),
+            err: Some(err.to_string()),
+        })
+        .map(|_| ())
+}

@@ -15,12 +15,16 @@ const DIR_NAME_PACKAGE_EBIN: &str = "ebin";
 
 #[derive(Debug)]
 pub struct ProjectRoot {
-    path: PathBuf,
+    root: PathBuf,
 }
 
 impl ProjectRoot {
-    pub fn new(path: PathBuf) -> Self {
-        Self { path }
+    pub fn new(root: PathBuf) -> Self {
+        Self { root }
+    }
+
+    pub fn root_config(&self) -> Result<PackageConfig, Error> {
+        config::read_project_config(&self.root)
     }
 
     pub fn package_configs(&self) -> Result<HashMap<String, PackageConfig>, Error> {
@@ -33,8 +37,12 @@ impl ProjectRoot {
             .collect::<Result<_, _>>()
     }
 
+    pub fn src_path(&self) -> PathBuf {
+        self.root.join(DIR_NAME_PACKAGE_SRC)
+    }
+
     pub fn build_path(&self) -> PathBuf {
-        self.path.join(DIR_NAME_BUILD)
+        self.root.join(DIR_NAME_BUILD)
     }
 
     pub fn default_build_lib_path(&self) -> PathBuf {
