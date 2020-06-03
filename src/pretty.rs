@@ -6,66 +6,68 @@
 
 use im::vector::Vector;
 
-pub trait Documentable {
-    fn to_doc(self) -> Document;
+use std::marker::PhantomData;
+
+pub trait Documentable<'a> {
+    fn to_doc(self) -> Document<'a>;
 }
 
-impl Documentable for &str {
-    fn to_doc(self) -> Document {
+impl Documentable<'static> for &str {
+    fn to_doc(self) -> Document<'static> {
         Document::Text(self.to_string())
     }
 }
 
-impl Documentable for String {
-    fn to_doc(self) -> Document {
+impl Documentable<'static> for String {
+    fn to_doc(self) -> Document<'static> {
         Document::Text(self)
     }
 }
 
-impl Documentable for isize {
-    fn to_doc(self) -> Document {
+impl Documentable<'static> for isize {
+    fn to_doc(self) -> Document<'static> {
         Document::Text(format!("{}", self))
     }
 }
 
-impl Documentable for i64 {
-    fn to_doc(self) -> Document {
+impl Documentable<'static> for i64 {
+    fn to_doc(self) -> Document<'static> {
         Document::Text(format!("{}", self))
     }
 }
 
-impl Documentable for usize {
-    fn to_doc(self) -> Document {
+impl Documentable<'static> for usize {
+    fn to_doc(self) -> Document<'static> {
         Document::Text(format!("{}", self))
     }
 }
 
-impl Documentable for f64 {
-    fn to_doc(self) -> Document {
+impl Documentable<'static> for f64 {
+    fn to_doc(self) -> Document<'static> {
         Document::Text(format!("{:?}", self))
     }
 }
 
-impl Documentable for u64 {
-    fn to_doc(self) -> Document {
+impl Documentable<'static> for u64 {
+    fn to_doc(self) -> Document<'static> {
         Document::Text(format!("{:?}", self))
     }
 }
 
-impl Documentable for Document {
-    fn to_doc(self) -> Document {
+impl Documentable<'static> for Document<'static> {
+    fn to_doc(self) -> Document<'static> {
         self
     }
 }
 
-impl Documentable for Vec<Document> {
-    fn to_doc(self) -> Document {
+impl Documentable<'static> for Vec<Document<'static>> {
+    fn to_doc(self) -> Document<'static> {
         concat(self.into_iter())
     }
 }
 
-impl<D: Documentable> Documentable for Option<D> {
-    fn to_doc(self) -> Document {
+impl<D: Documentable<'static>> Documentable<'static> for Option<D> {
+    fn to_doc(self) -> Document<'static> {
         match self {
             Some(d) => d.to_doc(),
             None => Document::Nil,
@@ -73,7 +75,7 @@ impl<D: Documentable> Documentable for Option<D> {
     }
 }
 
-pub fn concat(mut docs: impl Iterator<Item = Document>) -> Document {
+pub fn concat(mut docs: impl Iterator<Item = Document<'static>>) -> Document<'static> {
     let init = docs.next().unwrap_or_else(|| nil());
     docs.fold(init, |acc, doc| {
         Document::Cons(Box::new(acc), Box::new(doc))
@@ -81,7 +83,7 @@ pub fn concat(mut docs: impl Iterator<Item = Document>) -> Document {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Document {
+pub enum Document<'a> {
     /// Returns a document entity used to represent nothingness
     Nil,
 
@@ -92,19 +94,27 @@ pub enum Document {
     ForceBreak,
 
     /// Renders `broken` if group is broken, `unbroken` otherwise
-    Break { broken: String, unbroken: String },
+    // Notice the phantom here. This allows us to put a generic lifetime for
+    // Document.
+    //
+    // If you see it in a PR, then something wen wrong.
+    Break {
+        broken: String,
+        unbroken: String,
+        phantom: PhantomData<&'a ()>,
+    },
 
     /// Join 2 documents together
-    Cons(Box<Document>, Box<Document>),
+    Cons(Box<Document<'a>>, Box<Document<'a>>),
 
     /// Nests the given document by the given indent
-    Nest(isize, Box<Document>),
+    Nest(isize, Box<Document<'a>>),
 
     /// Nests the given document to the current cursor position
-    NestCurrent(Box<Document>),
+    NestCurrent(Box<Document<'a>>),
 
     /// Nests the given document to the current cursor position
-    Group(Box<Document>),
+    Group(Box<Document<'a>>),
 
     /// A string to render
     Text(String),
@@ -179,7 +189,9 @@ fn fmt(b: &mut String, limit: isize, mut width: isize, mut docs: Vector<(isize, 
                 width = indent;
             }
 
-            Document::Break { broken, unbroken } => {
+            Document::Break {
+                broken, unbroken, ..
+            } => {
                 width = match mode {
                     Mode::Unbroken => {
                         b.push_str(unbroken.as_str());
@@ -245,7 +257,8 @@ fn fits_test() {
             Broken,
             Break {
                 broken: "12".to_string(),
-                unbroken: "".to_string()
+                unbroken: "".to_string(),
+                phantom: PhantomData,
             }
         )]
     ));
@@ -258,7 +271,8 @@ fn fits_test() {
             Unbroken,
             Break {
                 broken: "".to_string(),
-                unbroken: "123".to_string()
+                unbroken: "123".to_string(),
+                phantom: PhantomData,
             }
         )]
     ));
@@ -269,7 +283,8 @@ fn fits_test() {
             Unbroken,
             Break {
                 broken: "".to_string(),
-                unbroken: "123".to_string()
+                unbroken: "123".to_string(),
+                phantom: PhantomData,
             }
         )]
     ));
@@ -386,12 +401,14 @@ fn format_test() {
     let doc = Break {
         broken: "broken".to_string(),
         unbroken: "unbroken".to_string(),
+        phantom: PhantomData,
     };
     assert_eq!("unbroken".to_string(), format(10, doc));
 
     let doc = Break {
         broken: "broken".to_string(),
         unbroken: "unbroken".to_string(),
+        phantom: PhantomData,
     };
     assert_eq!("broken\n".to_string(), format(5, doc));
 
@@ -418,55 +435,58 @@ fn format_test() {
         Box::new(Break {
             broken: "broken".to_string(),
             unbroken: "unbroken".to_string(),
+            phantom: PhantomData,
         }),
     );
     assert_eq!("broken\n".to_string(), format(100, doc));
 }
 
-pub fn nil() -> Document {
+pub fn nil() -> Document<'static> {
     Document::Nil
 }
 
-pub fn line() -> Document {
+pub fn line() -> Document<'static> {
     Document::Line(1)
 }
 
-pub fn lines(i: usize) -> Document {
+pub fn lines(i: usize) -> Document<'static> {
     Document::Line(i)
 }
 
-pub fn force_break() -> Document {
+pub fn force_break() -> Document<'static> {
     Document::ForceBreak
 }
 
-pub fn break_(broken: &str, unbroken: &str) -> Document {
+pub fn break_(broken: &str, unbroken: &str) -> Document<'static> {
     Document::Break {
         broken: broken.to_string(),
         unbroken: unbroken.to_string(),
+        phantom: PhantomData,
     }
 }
 
-pub fn delim(d: &str) -> Document {
+pub fn delim(d: &str) -> Document<'static> {
     Document::Break {
         broken: d.to_string(),
         unbroken: format!("{} ", d),
+        phantom: PhantomData,
     }
 }
 
-impl Document {
-    pub fn group(self) -> Document {
+impl Document<'static> {
+    pub fn group(self) -> Document<'static> {
         Document::Group(Box::new(self))
     }
 
-    pub fn nest(self, indent: isize) -> Document {
+    pub fn nest(self, indent: isize) -> Document<'static> {
         Document::Nest(indent, Box::new(self))
     }
 
-    pub fn nest_current(self) -> Document {
+    pub fn nest_current(self) -> Document<'static> {
         Document::NestCurrent(Box::new(self))
     }
 
-    pub fn append(self, x: impl Documentable) -> Document {
+    pub fn append(self, x: impl Documentable<'static>) -> Document<'static> {
         Document::Cons(Box::new(self), Box::new(x.to_doc()))
     }
 
@@ -474,7 +494,11 @@ impl Document {
         format(limit, self)
     }
 
-    pub fn surround(self, open: impl Documentable, closed: impl Documentable) -> Document {
+    pub fn surround(
+        self,
+        open: impl Documentable<'static>,
+        closed: impl Documentable<'static>,
+    ) -> Document<'static> {
         open.to_doc().append(self).append(closed)
     }
 }
