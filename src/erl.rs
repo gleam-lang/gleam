@@ -289,7 +289,19 @@ fn bitstring(elems: impl Iterator<Item = Document>) -> Document {
 }
 
 fn segment(value: &TypedExpr, options: Vec<TypedExprBinSegmentOption>, env: &mut Env) -> Document {
-    let mut document = expr(value, env);
+    let mut document = match value {
+        // Skip the normal <<value/utf8>> surrounds
+        TypedExpr::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
+
+        // As normal
+        TypedExpr::Int { .. }
+        | TypedExpr::Float { .. }
+        | TypedExpr::Var { .. }
+        | TypedExpr::Bitstring { .. } => expr(value, env),
+
+        // Wrap anything else in parentheses
+        value => expr(value, env).surround("(", ")"),
+    };
 
     let mut size: Option<Document> = None;
     let mut unit: Option<Document> = None;
