@@ -11,7 +11,7 @@ mod dep_tree;
 mod erlang_code_generator;
 mod package_analyser;
 mod project_analyser;
-mod project_root;
+pub mod project_root;
 
 use crate::{
     ast::TypedModule,
@@ -32,9 +32,8 @@ use std::fs::DirEntry;
 use std::path::PathBuf;
 use std::process;
 
-pub fn main(package_config: PackageConfig, root: PathBuf) -> Result<(), Error> {
+pub fn main(root_config: PackageConfig, root: PathBuf) -> Result<(), Error> {
     let root = ProjectRoot::new(root);
-    let root_config = root.root_config()?;
 
     // Copy any native Erlang source code from src to _build
     copy_erlang_code_to_build(&root, &root_config)?;
@@ -90,7 +89,7 @@ fn compile_erlang_to_beam(
         .status()
         .unwrap(); // TODO
 
-    dbg!(&status); // TODO: check status
+    // TODO: check status
 
     Ok(())
 }
