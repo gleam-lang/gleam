@@ -144,6 +144,7 @@ impl StandardIOAction {
 #[derive(Debug, PartialEq)]
 pub enum FileIOAction {
     Open,
+    Copy,
     Read,
     Parse,
     Delete,
@@ -156,6 +157,7 @@ impl FileIOAction {
     fn text(&self) -> &'static str {
         match self {
             FileIOAction::Open => "open",
+            FileIOAction::Copy => "copy",
             FileIOAction::Read => "read",
             FileIOAction::Parse => "parse",
             FileIOAction::Delete => "delete",

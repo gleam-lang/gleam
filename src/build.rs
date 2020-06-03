@@ -1,9 +1,11 @@
 #![allow(warnings)]
 
+// TODO: Compilation of ./test
 // TODO: Avoid rebuilding clean modules
 // TODO: Download deps from Hex
 // TODO: Support compilation of rebar3 packages
 // TODO: Support flexible compiler interface for use by rebar3 + mix
+// TODO: Track removed files in src and test so they can be removed from _build
 
 mod dep_tree;
 mod erlang_code_generator;
@@ -25,14 +27,17 @@ use crate::{
 };
 use itertools::Itertools;
 use std::collections::HashMap;
+use std::ffi::OsString;
 use std::fs::DirEntry;
 use std::path::PathBuf;
 use std::process;
 
 pub fn main(package_config: PackageConfig, root: PathBuf) -> Result<(), Error> {
     let root = ProjectRoot::new(root);
+    let root_config = root.root_config()?;
 
-    // TODO: copy any Erlang source code from src to _build
+    // Copy any native Erlang source code from src to _build
+    copy_erlang_code_to_build(&root, &root_config)?;
 
     // Collect all package configs
     let configs = root.package_configs()?;
@@ -66,7 +71,7 @@ pub struct Module {
     ast: TypedModule,
 }
 
-pub fn compile_erlang_to_beam(
+fn compile_erlang_to_beam(
     root: &ProjectRoot,
     packages: &HashMap<String, Package>,
 ) -> Result<(), Error> {
@@ -87,5 +92,20 @@ pub fn compile_erlang_to_beam(
 
     dbg!(&status); // TODO: check status
 
+    Ok(())
+}
+
+// TODO: Test the copying of native erlang module, possibly with a integration test
+fn copy_erlang_code_to_build(root: &ProjectRoot, config: &PackageConfig) -> Result<(), Error> {
+    let erl = OsString::from("erl");
+    for src_file in file::read_dir(root.src_path())?.filter_map(Result::ok) {
+        let path = src_file.path();
+        if path.extension() == Some(erl.as_os_str()) {
+            let dest = root
+                .default_build_lib_package_src_path(&config.name)
+                .join(src_file.file_name());
+            file::copy(&path, dest)?;
+        }
+    }
     Ok(())
 }
