@@ -2345,4 +2345,21 @@ main() ->
     B.
 "#,
     );
+
+    assert_erl!(
+        r#"fn main() {
+  let a = <<"test":utf8>>
+  let <<b:utf8, "st":utf8>> = a
+  b
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main() ->
+    A = <<"test"/utf8>>,
+    <<B/utf8, "st"/utf8>> = A,
+    B.
+"#,
+    );
 }

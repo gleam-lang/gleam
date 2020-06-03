@@ -329,7 +329,16 @@ fn pattern_segment(
     options: Vec<TypedPatternBinSegmentOption>,
     env: &mut Env,
 ) -> Document {
-    let mut document = pattern(value, env);
+    let mut document = match value {
+        // Skip the normal <<value/utf8>> surrounds
+        Pattern::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
+
+        // As normal
+        Pattern::Var { .. } | Pattern::Int { .. } | Pattern::Float { .. } => pattern(value, env),
+
+        // No other pattern variants are allowed in pattern bit string segments
+        _ => Document::Nil,
+    };
 
     let mut size: Option<Document> = None;
     let mut unit: Option<Document> = None;
