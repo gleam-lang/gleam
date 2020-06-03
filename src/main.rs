@@ -15,6 +15,7 @@ mod new;
 mod parser;
 mod pretty;
 mod project;
+mod shell;
 mod typ;
 mod warning;
 
@@ -97,6 +98,12 @@ enum Command {
         )]
         check: bool,
     },
+
+    #[structopt(name = "shell", about = "Start an Erlang shell")]
+    Shell {
+        #[structopt(help = "location of the project root", default_value = ".")]
+        project_root: String,
+    },
 }
 
 #[derive(StructOpt, Debug)]
@@ -154,6 +161,8 @@ fn main() {
             project_root,
             template,
         } => new::create(template, name, description, project_root, VERSION),
+
+        Command::Shell { project_root } => shell::command(project_root),
     };
 
     if let Err(e) = result {
