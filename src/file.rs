@@ -24,6 +24,18 @@ pub fn delete_dir(dir: &PathBuf) -> Result<(), Error> {
     Ok(())
 }
 
+pub fn delete(file: &PathBuf) -> Result<(), Error> {
+    if file.exists() {
+        std::fs::remove_file(&file).map_err(|e| Error::FileIO {
+            action: FileIOAction::Delete,
+            kind: FileKind::File,
+            path: file.clone(),
+            err: Some(e.to_string()),
+        })?;
+    }
+    Ok(())
+}
+
 pub fn write_outputs(outputs: &[OutputFile]) -> Result<(), Error> {
     for file in outputs {
         write_output(file)?;
@@ -179,6 +191,18 @@ pub fn copy(path: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<(), Error> {
         .map_err(|err| Error::FileIO {
             action: FileIOAction::Copy,
             kind: FileKind::File,
+            path: PathBuf::from(path.as_ref()),
+            err: Some(err.to_string()),
+        })
+        .map(|_| ())
+}
+
+pub fn copy_dir(path: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<(), Error> {
+    // TODO: include the destination in the error message
+    fs_extra::dir::copy(&path, &to, &fs_extra::dir::CopyOptions::new())
+        .map_err(|err| Error::FileIO {
+            action: FileIOAction::Copy,
+            kind: FileKind::Directory,
             path: PathBuf::from(path.as_ref()),
             err: Some(err.to_string()),
         })

@@ -15,7 +15,7 @@ const DIR_NAME_PACKAGE_EBIN: &str = "ebin";
 
 #[derive(Debug)]
 pub struct ProjectRoot {
-    root: PathBuf,
+    pub root: PathBuf,
 }
 
 impl ProjectRoot {

@@ -1,1 +1,21 @@
-../../../../gleam.toml
+name = "bob"
+tool = "gleam"
+version = "1.1.0"
+description = "Construction documentary"
+
+public_modules = [
+  "bob",
+  "bob/the/builder",
+]
+
+[dependencies]
+gleam_stdlib = "0.8.0"
+gleam_otp = "0.2.0"
+
+[dev-dependencies]
+gleam_test = "0.3.0"
+
+[docs]
+pages = [
+  { title = "t", path = "p", source = "s" },
+]
