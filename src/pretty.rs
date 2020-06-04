@@ -54,8 +54,8 @@ impl Documentable<'static> for u64 {
     }
 }
 
-impl Documentable<'static> for Document<'static> {
-    fn to_doc(self) -> Document<'static> {
+impl<'a> Documentable<'a> for Document<'a> {
+    fn to_doc(self) -> Document<'a> {
         self
     }
 }
@@ -461,20 +461,20 @@ pub fn delim(d: &str) -> Document<'static> {
     }
 }
 
-impl Document<'static> {
-    pub fn group(self) -> Document<'static> {
+impl<'a> Document<'a> {
+    pub fn group(self) -> Document<'a> {
         Document::Group(Box::new(self))
     }
 
-    pub fn nest(self, indent: isize) -> Document<'static> {
+    pub fn nest(self, indent: isize) -> Document<'a> {
         Document::Nest(indent, Box::new(self))
     }
 
-    pub fn nest_current(self) -> Document<'static> {
+    pub fn nest_current(self) -> Document<'a> {
         Document::NestCurrent(Box::new(self))
     }
 
-    pub fn append(self, x: impl Documentable<'static>) -> Document<'static> {
+    pub fn append(self, x: impl Documentable<'a>) -> Document<'a> {
         Document::Cons(Box::new(self), Box::new(x.to_doc()))
     }
 
@@ -484,9 +484,9 @@ impl Document<'static> {
 
     pub fn surround(
         self,
-        open: impl Documentable<'static>,
-        closed: impl Documentable<'static>,
-    ) -> Document<'static> {
+        open: impl Documentable<'a>,
+        closed: impl Documentable<'a>,
+    ) -> Document<'a> {
         open.to_doc().append(self).append(closed)
     }
 }
