@@ -32,11 +32,11 @@ use std::fs::DirEntry;
 use std::path::PathBuf;
 use std::process;
 
-pub fn main(root_config: PackageConfig, root: PathBuf) -> Result<(), Error> {
-    let root = ProjectRoot::new(root);
+pub fn main(root_config: PackageConfig, path: PathBuf) -> Result<(), Error> {
+    let root = ProjectRoot::new(path);
 
-    // Copy any native Erlang source code from src to _build
-    copy_erlang_code_to_build(&root, &root_config)?;
+    // Copy root package to _build
+    copy_root_package_to_build(&root, &root_config)?;
 
     // Collect all package configs
     let configs = root.package_configs()?;
@@ -94,17 +94,23 @@ fn compile_erlang_to_beam(
     Ok(())
 }
 
-// TODO: Test the copying of native erlang module, possibly with a integration test
-fn copy_erlang_code_to_build(root: &ProjectRoot, config: &PackageConfig) -> Result<(), Error> {
-    let erl = OsString::from("erl");
-    for src_file in file::read_dir(root.src_path())?.filter_map(Result::ok) {
-        let path = src_file.path();
-        if path.extension() == Some(erl.as_os_str()) {
-            let dest = root
-                .default_build_lib_package_src_path(&config.name)
-                .join(src_file.file_name());
-            file::copy(&path, dest)?;
-        }
-    }
+fn copy_root_package_to_build(
+    root: &ProjectRoot,
+    root_config: &PackageConfig,
+) -> Result<(), Error> {
+    let target = root.default_build_lib_package_path(&root_config.name);
+    let path = &root.root;
+
+    // Ensure _build package dir exists
+    file::mkdir(&target)?;
+
+    // gleam.toml
+    file::delete(&target.join("gleam.toml"))?;
+    file::copy(path.join("gleam.toml"), target.join("gleam.toml"))?;
+
+    // src
+    file::delete_dir(&target.join("src"))?;
+    file::copy_dir(path.join("src"), target)?;
+
     Ok(())
 }
