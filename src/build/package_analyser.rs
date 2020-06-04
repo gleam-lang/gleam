@@ -34,7 +34,10 @@ impl<'a> PackageAnalyser<'a> {
         self,
         existing_modules: &mut HashMap<String, typ::Module>,
     ) -> Result<Package, Error> {
-        // Parse source code into abstract syntax trees
+        let span = tracing::info_span!("analyse", package = self.config.name.as_str());
+        let _enter = span.enter();
+
+        tracing::info!("Parsing source code");
         let parsed_modules = parse_sources(self.sources)?;
 
         // Determine order in which modules are to be processed
@@ -42,7 +45,7 @@ impl<'a> PackageAnalyser<'a> {
             dep_tree::toposort_deps(parsed_modules.values().map(module_deps_for_graph).collect())
                 .map_err(convert_deps_tree_error)?;
 
-        // Type check modules
+        tracing::info!("Type checking modules");
         let modules = type_check(sequence, parsed_modules, existing_modules)?;
 
         Ok(Package {
@@ -54,6 +57,10 @@ impl<'a> PackageAnalyser<'a> {
     // TODO: if we inject in this functionality with some kind of SourceProvider
     // trait then we can test the compilation of multiple packages easily.
     pub fn read_package_source_files(&mut self) -> Result<(), Error> {
+        let span = tracing::info_span!("analyse", package = self.config.name.as_str());
+        let _enter = span.enter();
+
+        tracing::info!("Reading source code");
         let package_path = self.root.default_build_lib_package_path(&self.config.name);
         for path in file::gleam_files(&package_path) {
             let name = module_name(&package_path, &path);
