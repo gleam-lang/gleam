@@ -6,7 +6,7 @@
 
 use im::vector::Vector;
 
-use std::marker::PhantomData;
+use std::{borrow::Cow, marker::PhantomData};
 
 pub trait Documentable<'a> {
     fn to_doc(self) -> Document<'a>;
@@ -14,43 +14,43 @@ pub trait Documentable<'a> {
 
 impl Documentable<'static> for &str {
     fn to_doc(self) -> Document<'static> {
-        Document::Text(self.to_string())
+        Document::Text(self.to_string().into())
     }
 }
 
 impl Documentable<'static> for String {
     fn to_doc(self) -> Document<'static> {
-        Document::Text(self)
+        Document::Text(self.into())
     }
 }
 
 impl Documentable<'static> for isize {
     fn to_doc(self) -> Document<'static> {
-        Document::Text(format!("{}", self))
+        Document::Text(format!("{}", self).into())
     }
 }
 
 impl Documentable<'static> for i64 {
     fn to_doc(self) -> Document<'static> {
-        Document::Text(format!("{}", self))
+        Document::Text(format!("{}", self).into())
     }
 }
 
 impl Documentable<'static> for usize {
     fn to_doc(self) -> Document<'static> {
-        Document::Text(format!("{}", self))
+        Document::Text(format!("{}", self).into())
     }
 }
 
 impl Documentable<'static> for f64 {
     fn to_doc(self) -> Document<'static> {
-        Document::Text(format!("{:?}", self))
+        Document::Text(format!("{:?}", self).into())
     }
 }
 
 impl Documentable<'static> for u64 {
     fn to_doc(self) -> Document<'static> {
-        Document::Text(format!("{:?}", self))
+        Document::Text(format!("{:?}", self).into())
     }
 }
 
@@ -99,8 +99,8 @@ pub enum Document<'a> {
     //
     // If you see it in a PR, then something wen wrong.
     Break {
-        broken: String,
-        unbroken: String,
+        broken: Cow<'a, str>,
+        unbroken: Cow<'a, str>,
         phantom: PhantomData<&'a ()>,
     },
 
@@ -117,7 +117,7 @@ pub enum Document<'a> {
     Group(Box<Document<'a>>),
 
     /// A string to render
-    Text(String),
+    Text(Cow<'a, str>),
 }
 
 #[derive(Debug, Clone)]
@@ -194,11 +194,11 @@ fn fmt(b: &mut String, limit: isize, mut width: isize, mut docs: Vector<(isize, 
             } => {
                 width = match mode {
                     Mode::Unbroken => {
-                        b.push_str(unbroken.as_str());
+                        b.push_str(unbroken.as_ref());
                         width + unbroken.len() as isize
                     }
                     Mode::Broken => {
-                        b.push_str(broken.as_str());
+                        b.push_str(broken.as_ref());
                         b.push_str("\n");
                         b.push_str(" ".repeat(indent as usize).as_str());
                         indent as isize
@@ -208,7 +208,7 @@ fn fmt(b: &mut String, limit: isize, mut width: isize, mut docs: Vector<(isize, 
 
             Document::Text(s) => {
                 width += s.len() as isize;
-                b.push_str(s.as_str());
+                b.push_str(s.as_ref());
             }
 
             Document::Cons(left, right) => {
@@ -256,8 +256,8 @@ fn fits_test() {
             0,
             Broken,
             Break {
-                broken: "12".to_string(),
-                unbroken: "".to_string(),
+                broken: "12".to_string().into(),
+                unbroken: "".to_string().into(),
                 phantom: PhantomData,
             }
         )]
@@ -270,8 +270,8 @@ fn fits_test() {
             0,
             Unbroken,
             Break {
-                broken: "".to_string(),
-                unbroken: "123".to_string(),
+                broken: "".to_string().into(),
+                unbroken: "123".to_string().into(),
                 phantom: PhantomData,
             }
         )]
@@ -282,8 +282,8 @@ fn fits_test() {
             0,
             Unbroken,
             Break {
-                broken: "".to_string(),
-                unbroken: "123".to_string(),
+                broken: "".to_string().into(),
+                unbroken: "123".to_string().into(),
                 phantom: PhantomData,
             }
         )]
@@ -294,10 +294,22 @@ fn fits_test() {
     assert!(fits(0, vector![(0, Unbroken, Line(100))]));
 
     // String fits if smaller than limit
-    assert!(fits(5, vector![(0, Broken, Text("Hello".to_string()))]));
-    assert!(fits(5, vector![(0, Unbroken, Text("Hello".to_string()))]));
-    assert!(!fits(4, vector![(0, Broken, Text("Hello".to_string()))]));
-    assert!(!fits(4, vector![(0, Unbroken, Text("Hello".to_string()))]));
+    assert!(fits(
+        5,
+        vector![(0, Broken, Text("Hello".to_string().into()))]
+    ));
+    assert!(fits(
+        5,
+        vector![(0, Unbroken, Text("Hello".to_string().into()))]
+    ));
+    assert!(!fits(
+        4,
+        vector![(0, Broken, Text("Hello".to_string().into()))]
+    ));
+    assert!(!fits(
+        4,
+        vector![(0, Unbroken, Text("Hello".to_string().into()))]
+    ));
 
     // Cons fits if combined smaller than limit
     assert!(fits(
@@ -306,8 +318,8 @@ fn fits_test() {
             0,
             Broken,
             Cons(
-                Box::new(Text("1".to_string())),
-                Box::new(Text("2".to_string()))
+                Box::new(Text("1".to_string().into())),
+                Box::new(Text("2".to_string().into()))
             )
         )]
     ));
@@ -317,8 +329,8 @@ fn fits_test() {
             0,
             Unbroken,
             Cons(
-                Box::new(Text("1".to_string())),
-                Box::new(Text("2".to_string()))
+                Box::new(Text("1".to_string().into())),
+                Box::new(Text("2".to_string().into()))
             )
         )]
     ));
@@ -328,8 +340,8 @@ fn fits_test() {
             0,
             Broken,
             Cons(
-                Box::new(Text("1".to_string())),
-                Box::new(Text("2".to_string()))
+                Box::new(Text("1".to_string().into())),
+                Box::new(Text("2".to_string().into()))
             )
         )]
     ));
@@ -339,8 +351,8 @@ fn fits_test() {
             0,
             Unbroken,
             Cons(
-                Box::new(Text("1".to_string())),
-                Box::new(Text("2".to_string()))
+                Box::new(Text("1".to_string().into())),
+                Box::new(Text("2".to_string().into()))
             )
         )]
     ));
@@ -348,37 +360,61 @@ fn fits_test() {
     // Nest fits if combined smaller than limit
     assert!(fits(
         2,
-        vector![(0, Broken, Nest(1, Box::new(Text("12".to_string())),))]
+        vector![(0, Broken, Nest(1, Box::new(Text("12".to_string().into()))))]
     ));
     assert!(fits(
         2,
-        vector![(0, Unbroken, Nest(1, Box::new(Text("12".to_string())),))]
+        vector![(
+            0,
+            Unbroken,
+            Nest(1, Box::new(Text("12".to_string().into())))
+        )]
     ));
     assert!(!fits(
         1,
-        vector![(0, Broken, Nest(1, Box::new(Text("12".to_string())),))]
+        vector![(0, Broken, Nest(1, Box::new(Text("12".to_string().into()))))]
     ));
     assert!(!fits(
         1,
-        vector![(0, Unbroken, Nest(1, Box::new(Text("12".to_string()))))]
+        vector![(
+            0,
+            Unbroken,
+            Nest(1, Box::new(Text("12".to_string().into())))
+        )]
     ));
 
     // Nest fits if combined smaller than limit
     assert!(fits(
         2,
-        vector![(0, Broken, NestCurrent(Box::new(Text("12".to_string())),))]
+        vector![(
+            0,
+            Broken,
+            NestCurrent(Box::new(Text("12".to_string().into())))
+        )]
     ));
     assert!(fits(
         2,
-        vector![(0, Unbroken, NestCurrent(Box::new(Text("12".to_string())),))]
+        vector![(
+            0,
+            Unbroken,
+            NestCurrent(Box::new(Text("12".to_string().into())))
+        )]
     ));
     assert!(!fits(
         1,
-        vector![(0, Broken, NestCurrent(Box::new(Text("12".to_string())),))]
+        vector![(
+            0,
+            Broken,
+            NestCurrent(Box::new(Text("12".to_string().into())))
+        )]
     ));
     assert!(!fits(
         1,
-        vector![(0, Unbroken, NestCurrent(Box::new(Text("12".to_string()))))]
+        vector![(
+            0,
+            Unbroken,
+            NestCurrent(Box::new(Text("12".to_string().into())))
+        )]
     ));
 }
 
@@ -386,12 +422,12 @@ fn fits_test() {
 fn format_test() {
     use self::Document::*;
 
-    let doc = Text("Hi".to_string());
+    let doc = Text("Hi".to_string().into());
     assert_eq!("Hi".to_string(), format(10, doc));
 
     let doc = Cons(
-        Box::new(Text("Hi".to_string())),
-        Box::new(Text(", world!".to_string())),
+        Box::new(Text("Hi".to_string().into())),
+        Box::new(Text(", world!".to_string().into())),
     );
     assert_eq!("Hi, world!".to_string(), format(10, doc));
 
@@ -399,15 +435,15 @@ fn format_test() {
     assert_eq!("".to_string(), format(10, doc));
 
     let doc = Break {
-        broken: "broken".to_string(),
-        unbroken: "unbroken".to_string(),
+        broken: "broken".to_string().into(),
+        unbroken: "unbroken".to_string().into(),
         phantom: PhantomData,
     };
     assert_eq!("unbroken".to_string(), format(10, doc));
 
     let doc = Break {
-        broken: "broken".to_string(),
-        unbroken: "unbroken".to_string(),
+        broken: "broken".to_string().into(),
+        unbroken: "unbroken".to_string().into(),
         phantom: PhantomData,
     };
     assert_eq!("broken\n".to_string(), format(5, doc));
@@ -415,17 +451,20 @@ fn format_test() {
     let doc = Nest(
         2,
         Box::new(Cons(
-            Box::new(Text("1".to_string())),
-            Box::new(Cons(Box::new(Line(1)), Box::new(Text("2".to_string())))),
+            Box::new(Text("1".to_string().into())),
+            Box::new(Cons(
+                Box::new(Line(1)),
+                Box::new(Text("2".to_string().into())),
+            )),
         )),
     );
     assert_eq!("1\n  2".to_string(), format(1, doc));
 
     let doc = Cons(
-        Box::new(Text("111".to_string())),
+        Box::new(Text("111".to_string().into())),
         Box::new(NestCurrent(Box::new(Cons(
             Box::new(Line(1)),
-            Box::new(Text("2".to_string())),
+            Box::new(Text("2".to_string().into())),
         )))),
     );
     assert_eq!("111\n   2".to_string(), format(1, doc));
@@ -433,8 +472,8 @@ fn format_test() {
     let doc = Cons(
         Box::new(ForceBreak),
         Box::new(Break {
-            broken: "broken".to_string(),
-            unbroken: "unbroken".to_string(),
+            broken: "broken".to_string().into(),
+            unbroken: "unbroken".to_string().into(),
             phantom: PhantomData,
         }),
     );
@@ -459,16 +498,16 @@ pub fn force_break() -> Document<'static> {
 
 pub fn break_(broken: &str, unbroken: &str) -> Document<'static> {
     Document::Break {
-        broken: broken.to_string(),
-        unbroken: unbroken.to_string(),
+        broken: broken.to_string().into(),
+        unbroken: unbroken.to_string().into(),
         phantom: PhantomData,
     }
 }
 
 pub fn delim(d: &str) -> Document<'static> {
     Document::Break {
-        broken: d.to_string(),
-        unbroken: format!("{} ", d),
+        broken: d.to_string().into(),
+        unbroken: format!("{} ", d).into(),
         phantom: PhantomData,
     }
 }
