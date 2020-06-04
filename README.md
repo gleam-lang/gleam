@@ -58,6 +58,7 @@ development.
 - [Clever Bunny LTD](https://github.com/cleverbunny)
 - [Hasan YILDIZ](https://github.com/hsnyildiz)
 - [Hécate](https://github.com/Kleidukos)
+- [James MacAulay](https://github.com/jamesmacaulay)
 - [John Palgut](https://github.com/Jwsonic)
 - [José Valim](https://github.com/josevalim)
 - [Lars Wikman](https://github.com/lawik)
