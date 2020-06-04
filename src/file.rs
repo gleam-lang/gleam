@@ -52,7 +52,7 @@ pub fn write_outputs(outputs: &[OutputFile]) -> Result<(), Error> {
 
 pub fn write_output(file: &OutputFile) -> Result<(), Error> {
     let OutputFile { path, text } = file;
-    tracing::trace!("Writing output file {:?}", path);
+    tracing::trace!("Writing file {:?}", path);
 
     let dir_path = path.parent().ok_or_else(|| Error::FileIO {
         action: FileIOAction::FindParent,

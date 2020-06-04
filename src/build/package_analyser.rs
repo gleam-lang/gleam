@@ -1,6 +1,6 @@
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
-    build::{dep_tree, project_root::ProjectRoot, Module, Package},
+    build::{dep_tree, project_root::ProjectRoot, Module, Origin, Package},
     config::PackageConfig,
     error::{self, Error, GleamExpect},
     file, grammar, parser, typ,
@@ -56,16 +56,24 @@ impl<'a> PackageAnalyser<'a> {
 
     // TODO: if we inject in this functionality with some kind of SourceProvider
     // trait then we can test the compilation of multiple packages easily.
-    pub fn read_package_source_files(&mut self) -> Result<(), Error> {
-        let span = tracing::info_span!("analyse", package = self.config.name.as_str());
+    pub fn read_package_source_files(&mut self, origin: Origin) -> Result<(), Error> {
+        let span =
+            tracing::info_span!("analyse", package = self.config.name.as_str(), origin = ?origin);
         let _enter = span.enter();
 
         tracing::info!("Reading source code");
-        let package_path = self.root.default_build_lib_package_path(&self.config.name);
+        let package_path = self
+            .root
+            .default_build_lib_package_source_path(&self.config.name, origin);
         for path in file::gleam_files(&package_path) {
             let name = module_name(&package_path, &path);
             let code = file::read(&path)?;
-            self.sources.push(Source { name, path, code });
+            self.sources.push(Source {
+                name,
+                path,
+                code,
+                origin,
+            });
         }
         Ok(())
     }
@@ -85,10 +93,12 @@ fn type_check(
             code,
             ast,
             path,
+            origin,
         } = parsed_modules
             .remove(&name)
             .gleam_expect("Getting parsed module for name");
 
+        tracing::trace!(module = ?name, "Type checking");
         let ast =
             typ::infer_module(ast, module_types, &mut warnings).map_err(|error| Error::Type {
                 path: path.clone(),
@@ -99,6 +109,7 @@ fn type_check(
         module_types.insert(name.clone(), ast.type_info.clone());
 
         modules.push(Module {
+            origin,
             name,
             code,
             ast,
@@ -128,9 +139,16 @@ fn module_deps_for_graph(module: &Parsed) -> (String, Vec<String>) {
 
 fn parse_sources(sources: Vec<Source>) -> Result<HashMap<String, Parsed>, Error> {
     let mut parsed_modules = HashMap::with_capacity(sources.len());
-    for Source { name, code, path } in sources.into_iter() {
+    for source in sources.into_iter() {
+        let Source {
+            name,
+            code,
+            path,
+            origin,
+        } = source;
         let ast = parse_source(code.as_str(), name.as_str(), &path)?;
         let module = Parsed {
+            origin,
             path,
             name,
             code,
@@ -171,16 +189,10 @@ fn parse_source(src: &str, name: &str, path: &PathBuf) -> Result<UntypedModule, 
 fn module_name(package_path: &PathBuf, full_module_path: &PathBuf) -> String {
     // /path/to/project/_build/default/lib/the_package/src/my/module.gleam
 
-    // src/my/module.gleam
-    let project_path = full_module_path
-        .strip_prefix(package_path)
-        .gleam_expect("Stripping package prefix from module path");
-
     // my/module.gleam
-    let mut module_path = project_path
-        .strip_prefix("src")
-        .or_else(|_| project_path.strip_prefix("test"))
-        .gleam_expect("Stripping src/test prefix")
+    let mut module_path = full_module_path
+        .strip_prefix(package_path)
+        .gleam_expect("Stripping package prefix from module path")
         .to_path_buf();
 
     // my/module
@@ -201,6 +213,7 @@ pub struct Source {
     path: PathBuf,
     name: String,
     code: String,
+    origin: Origin,
 }
 
 #[derive(Debug)]
@@ -208,5 +221,6 @@ struct Parsed {
     path: PathBuf,
     name: String,
     code: String,
+    origin: Origin,
     ast: UntypedModule,
 }
