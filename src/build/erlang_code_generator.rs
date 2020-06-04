@@ -30,23 +30,27 @@ impl<'a> ErlangCodeGenerator<'a> {
     }
 
     pub fn render_package(&self, package: &Package, outputs: &mut Vec<OutputFile>) {
-        let src_dir = self
-            .root
-            .default_build_lib_package_src_path(&package.config.name);
         for module in &package.modules {
             let erl_name = module.name.replace("/", "@");
+            let dir = self
+                .root
+                .default_build_lib_package_source_path(&package.config.name, module.origin);
 
             // Render record header files
             for (name, text) in erl::records(&module.ast).into_iter() {
+                let name = format!("{}_{}.hrl", erl_name, name);
+                tracing::trace!(name = ?name, "Generated Erlang header");
                 outputs.push(OutputFile {
-                    path: src_dir.join(format!("{}_{}.hrl", erl_name, name)),
+                    path: dir.join(name),
                     text,
                 });
             }
 
             // Render Erlang module file
             let text = erl::module(&module.ast);
-            let path = src_dir.join(format!("{}.erl", erl_name));
+            let name = format!("{}.erl", erl_name);
+            tracing::trace!(name = ?name, "Generated Erlang module");
+            let path = dir.join(name);
             outputs.push(OutputFile { path, text });
         }
 

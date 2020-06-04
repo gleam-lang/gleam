@@ -6,6 +6,8 @@
 // TODO: Support compilation of rebar3 packages
 // TODO: Support flexible compiler interface for use by rebar3 + mix
 // TODO: Track removed files in src and test so they can be removed from _build
+// TODO: test profile and default profile
+// TODO: only compile test code in test profile
 
 mod dep_tree;
 mod erlang_code_generator;
@@ -39,10 +41,10 @@ pub fn main(root_config: PackageConfig, path: PathBuf) -> Result<(), Error> {
     copy_root_package_to_build(&root, &root_config)?;
 
     tracing::info!("Reading package configs from _build");
-    let configs = root.package_configs()?;
+    let configs = root.package_configs(&root_config.name)?;
 
     tracing::info!("Reading and analysing packages");
-    let packages = ProjectAnalyser::new(&root, configs).analyse()?;
+    let packages = ProjectAnalyser::new(&root, root_config, configs).analyse()?;
 
     tracing::info!("Generating Erlang source code");
     let compiled_erlang = ErlangCodeGenerator::new(&root, &packages).render();
@@ -67,7 +69,14 @@ pub struct Module {
     name: String,
     code: String,
     path: PathBuf,
+    origin: Origin,
     ast: TypedModule,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Origin {
+    Src,
+    Test,
 }
 
 fn compile_erlang_to_beam(
@@ -87,7 +96,7 @@ fn compile_erlang_to_beam(
     command.arg(escript_path);
     command.arg(root.build_path());
 
-    tracing::debug!("Running OS process {:?}", command);
+    tracing::trace!("Running OS process {:?}", command);
     let status = command.status().unwrap(); // TODO
 
     // TODO: check status

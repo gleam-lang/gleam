@@ -1,42 +1,86 @@
 use crate::{
-    build::{dep_tree, package_analyser::PackageAnalyser, project_root::ProjectRoot, Package},
+    build::{
+        dep_tree, package_analyser::PackageAnalyser, project_root::ProjectRoot, Origin, Package,
+    },
     config::PackageConfig,
     error::{Error, GleamExpect},
+    typ,
 };
 use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct ProjectAnalyser<'a> {
     root: &'a ProjectRoot,
+    root_config: PackageConfig,
     configs: HashMap<String, PackageConfig>,
+    packages: HashMap<String, Package>,
+    type_manifests: HashMap<String, typ::Module>,
 }
 
+// TODO: test top level package has test modules analysed
+// TODO: test that tests cannot be imported into src
+
 impl<'a> ProjectAnalyser<'a> {
-    pub fn new(root: &'a ProjectRoot, configs: HashMap<String, PackageConfig>) -> Self {
-        Self { root, configs }
+    pub fn new(
+        root: &'a ProjectRoot,
+        root_config: PackageConfig,
+        configs: HashMap<String, PackageConfig>,
+    ) -> Self {
+        Self {
+            packages: HashMap::with_capacity(configs.len()),
+            type_manifests: HashMap::with_capacity(configs.len() * 5),
+            root_config,
+            configs,
+            root,
+        }
     }
 
     pub fn analyse(mut self) -> Result<HashMap<String, Package>, Error> {
-        let mut packages = HashMap::with_capacity(self.configs.len());
-        let mut module_type_manifests = HashMap::with_capacity(self.configs.len() * 5);
-
         // Determine package processing order
         let sequence = order_packges(&self.configs)?;
 
-        // Read and type check packages
+        // Read and type check deps packages
         for name in sequence.into_iter() {
             let config = self
                 .configs
                 .remove(name.as_str())
                 .gleam_expect("Missing package config");
-            let mut analyser = PackageAnalyser::new(self.root, config);
-            analyser.read_package_source_files()?;
-            let analysed = analyser.analyse(&mut module_type_manifests)?;
-            packages.insert(name, analysed);
+            self.analyse_package(name, config, SourceLocations::Src)?;
         }
 
-        Ok(packages)
+        // Read and type check top level package
+        let root_config = std::mem::replace(&mut self.root_config, Default::default());
+        let name = root_config.name.clone();
+        self.analyse_package(name, root_config, SourceLocations::SrcAndTest)?;
+
+        Ok(self.packages)
     }
+
+    fn analyse_package(
+        &mut self,
+        name: String,
+        config: PackageConfig,
+        locations: SourceLocations,
+    ) -> Result<(), Error> {
+        let mut analyser = PackageAnalyser::new(self.root, config);
+
+        // Read source files
+        analyser.read_package_source_files(Origin::Src)?;
+        if locations == SourceLocations::SrcAndTest {
+            analyser.read_package_source_files(Origin::Test)?;
+        }
+
+        // Parse and type check
+        let analysed = analyser.analyse(&mut self.type_manifests)?;
+        self.packages.insert(name, analysed);
+        Ok(())
+    }
+}
+
+#[derive(Debug, PartialEq)]
+enum SourceLocations {
+    Src,
+    SrcAndTest,
 }
 
 fn order_packges(configs: &HashMap<String, PackageConfig>) -> Result<Vec<String>, Error> {

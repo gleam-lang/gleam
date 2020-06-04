@@ -26,7 +26,7 @@ pub fn command(root_string: String) -> Result<(), Error> {
     }
 
     // Run the shell
-    tracing::debug!("Running OS process {:?}", command);
+    tracing::trace!("Running OS process {:?}", command);
     command.spawn().unwrap().wait().unwrap();
 
     Ok(())

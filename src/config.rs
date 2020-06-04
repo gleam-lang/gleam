@@ -6,14 +6,14 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-#[derive(Deserialize, Debug, PartialEq)]
+#[derive(Deserialize, Debug, PartialEq, Default)]
 pub struct PackageConfig {
     pub name: String,
     #[serde(default)]
     pub version: Option<String>,
     #[serde(default)]
     pub description: String,
-    #[serde(default = "BuildTool::default")]
+    #[serde(default)]
     pub tool: BuildTool,
     #[serde(default)]
     pub docs: Docs,
@@ -28,8 +28,8 @@ pub enum BuildTool {
     Other,
 }
 
-impl BuildTool {
-    pub fn default() -> Self {
+impl Default for BuildTool {
+    fn default() -> Self {
         Self::Other
     }
 }
