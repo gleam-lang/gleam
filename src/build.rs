@@ -34,7 +34,7 @@ use std::fs::DirEntry;
 use std::path::PathBuf;
 use std::process;
 
-pub fn main(root_config: PackageConfig, path: PathBuf) -> Result<(), Error> {
+pub fn main(root_config: PackageConfig, path: PathBuf) -> Result<HashMap<String, Package>, Error> {
     let root = ProjectRoot::new(path);
 
     tracing::info!("Copying root package to _build");
@@ -55,22 +55,22 @@ pub fn main(root_config: PackageConfig, path: PathBuf) -> Result<(), Error> {
     tracing::info!("Compiling Erlang source code to BEAM bytecode");
     compile_erlang_to_beam(&root, &packages)?;
 
-    Ok(())
+    Ok(packages)
 }
 
 #[derive(Debug)]
 pub struct Package {
-    config: PackageConfig,
-    modules: Vec<Module>,
+    pub config: PackageConfig,
+    pub modules: Vec<Module>,
 }
 
 #[derive(Debug)]
 pub struct Module {
-    name: String,
-    code: String,
-    path: PathBuf,
-    origin: Origin,
-    ast: TypedModule,
+    pub name: String,
+    pub code: String,
+    pub path: PathBuf,
+    pub origin: Origin,
+    pub ast: TypedModule,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -111,16 +111,14 @@ fn copy_root_package_to_build(
     let target = root.default_build_lib_package_path(&root_config.name);
     let path = &root.root;
 
-    // Ensure _build package dir exists
+    // Reset _build dir
+    file::delete_dir(&target)?;
     file::mkdir(&target)?;
 
-    // gleam.toml
-    file::delete(&target.join("gleam.toml"))?;
+    // Copy source files across
     file::copy(path.join("gleam.toml"), target.join("gleam.toml"))?;
-
-    // src
-    file::delete_dir(&target.join("src"))?;
-    file::copy_dir(path.join("src"), target)?;
+    file::copy_dir(path.join("src"), &target)?;
+    file::copy_dir(path.join("test"), &target)?;
 
     Ok(())
 }

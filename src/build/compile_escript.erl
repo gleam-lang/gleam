@@ -2,7 +2,7 @@
 
 % TODO: build in parallel
 main([ProfilePath]) ->
-    ErlangFiles = filelib:wildcard([ProfilePath, "/**/src/*.erl"]),
+    ErlangFiles = filelib:wildcard([ProfilePath, "/**/{src,test}/*.erl"]),
     lists:foreach(fun(F) -> compile(F) end, ErlangFiles).
 
 compile(ErlangFile) ->
