@@ -1,1 +1,0 @@
--record(box, {inner}).

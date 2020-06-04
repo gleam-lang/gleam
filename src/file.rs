@@ -28,20 +28,20 @@ pub fn delete_dir(dir: &PathBuf) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn delete(file: &PathBuf) -> Result<(), Error> {
-    tracing::trace!("Deleting file {:?}", file);
-    if file.exists() {
-        std::fs::remove_file(&file).map_err(|e| Error::FileIO {
-            action: FileIOAction::Delete,
-            kind: FileKind::File,
-            path: file.clone(),
-            err: Some(e.to_string()),
-        })?;
-    } else {
-        tracing::trace!("Did not exist for deletion: {:?}", file);
-    }
-    Ok(())
-}
+// pub fn delete(file: &PathBuf) -> Result<(), Error> {
+//     tracing::trace!("Deleting file {:?}", file);
+//     if file.exists() {
+//         std::fs::remove_file(&file).map_err(|e| Error::FileIO {
+//             action: FileIOAction::Delete,
+//             kind: FileKind::File,
+//             path: file.clone(),
+//             err: Some(e.to_string()),
+//         })?;
+//     } else {
+//         tracing::trace!("Did not exist for deletion: {:?}", file);
+//     }
+//     Ok(())
+// }
 
 pub fn write_outputs(outputs: &[OutputFile]) -> Result<(), Error> {
     for file in outputs {

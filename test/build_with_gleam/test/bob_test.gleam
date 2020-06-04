@@ -1,3 +1,4 @@
 pub fn bob_test() {
-  "It works!"
+  assert 1 = 2
+  1
 }

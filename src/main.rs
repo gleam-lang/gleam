@@ -9,6 +9,7 @@ mod diagnostic;
 mod docs;
 mod erl;
 mod error;
+mod eunit;
 mod file;
 mod format;
 mod new;
@@ -104,6 +105,12 @@ enum Command {
         #[structopt(help = "location of the project root", default_value = ".")]
         project_root: String,
     },
+
+    #[structopt(name = "eunit", about = "Run eunit tests")]
+    Eunit {
+        #[structopt(help = "location of the project root", default_value = ".")]
+        project_root: String,
+    },
 }
 
 #[derive(StructOpt, Debug)]
@@ -165,6 +172,8 @@ fn main() {
         } => new::create(template, name, description, project_root, VERSION),
 
         Command::Shell { project_root } => shell::command(project_root),
+
+        Command::Eunit { project_root } => eunit::command(project_root),
     };
 
     match result {
@@ -185,7 +194,7 @@ fn command_build(root: String) -> Result<(), Error> {
 
     // Use new build tool
     if config.tool == config::BuildTool::Gleam {
-        return build::main(config, root);
+        return build::main(config, root).map(|_| ());
     }
 
     // Read and type check project
