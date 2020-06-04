@@ -2390,4 +2390,23 @@ main() ->
     B.
 "#,
     );
+
+    assert_erl!(
+        r#"fn x() { 1 }
+fn main() {
+  let a = <<x():integer>>
+  a
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+x() ->
+    1.
+
+main() ->
+    A = <<(x())/integer>>,
+    A.
+"#,
+    );
 }
