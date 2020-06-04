@@ -49,7 +49,6 @@ pub struct DocsPage {
 pub fn read_project_config(root: impl AsRef<Path>) -> Result<PackageConfig, Error> {
     let config_path = root.as_ref().join("gleam.toml");
     let toml = file::read(&config_path)?;
-
     toml::from_str(&toml).map_err(|e| Error::FileIO {
         action: FileIOAction::Parse,
         kind: FileKind::File,

@@ -57,6 +57,9 @@ flate2 = "1.0"
 bytes = "0.5"
 # Further file system functions (i.e. copy directory)
 fs_extra = "1.1"
+# Logging
+tracing = "0.1"
+tracing-subscriber = "0.2"
 
 [build-dependencies]
 lalrpop = { version = "0.19", features = ["lexer"] }

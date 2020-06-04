@@ -137,6 +137,8 @@ enum Docs {
 }
 
 fn main() {
+    initialise_logger();
+
     let result = match Command::from_args() {
         Command::Build { project_root } => command_build(project_root),
 
@@ -165,9 +167,15 @@ fn main() {
         Command::Shell { project_root } => shell::command(project_root),
     };
 
-    if let Err(e) = result {
-        e.pretty_print();
-        std::process::exit(1);
+    match result {
+        Ok(_) => {
+            tracing::info!("Successfully completed");
+        }
+        Err(error) => {
+            tracing::error!(error = ?error, "Failed");
+            error.pretty_print();
+            std::process::exit(1);
+        }
     }
 }
 
@@ -198,4 +206,12 @@ fn command_build(root: String) -> Result<(), Error> {
     println!("Done!");
 
     Ok(())
+}
+
+fn initialise_logger() {
+    tracing_subscriber::fmt()
+        .with_env_filter(&std::env::var("GLEAM_LOG").unwrap_or_else(|_| "error".to_string()))
+        .with_target(false)
+        .without_time()
+        .init();
 }

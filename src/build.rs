@@ -35,22 +35,22 @@ use std::process;
 pub fn main(root_config: PackageConfig, path: PathBuf) -> Result<(), Error> {
     let root = ProjectRoot::new(path);
 
-    // Copy root package to _build
+    tracing::info!("Copying root package to _build");
     copy_root_package_to_build(&root, &root_config)?;
 
-    // Collect all package configs
+    tracing::info!("Reading package configs from _build");
     let configs = root.package_configs()?;
 
-    // Read and type check all packages in project
+    tracing::info!("Reading and analysing packages");
     let packages = ProjectAnalyser::new(&root, configs).analyse()?;
 
-    // Generate Erlang source code
+    tracing::info!("Generating Erlang source code");
     let compiled_erlang = ErlangCodeGenerator::new(&root, &packages).render();
 
-    // Write compiled Erlang disc
+    tracing::info!("Writing generated Erlang source code to disc");
     file::write_outputs(compiled_erlang.as_slice())?;
 
-    // Compile Erlang source into VM bytecode
+    tracing::info!("Compiling Erlang source code to BEAM bytecode");
     compile_erlang_to_beam(&root, &packages)?;
 
     Ok(())
@@ -83,11 +83,12 @@ fn compile_erlang_to_beam(
     })?;
 
     // Run escript to compile Erlang to beam files
-    let status = process::Command::new("escript")
-        .arg(escript_path)
-        .arg(root.build_path())
-        .status()
-        .unwrap(); // TODO
+    let mut command = process::Command::new("escript");
+    command.arg(escript_path);
+    command.arg(root.build_path());
+
+    tracing::debug!("Running OS process {:?}", command);
+    let status = command.status().unwrap(); // TODO
 
     // TODO: check status
 
