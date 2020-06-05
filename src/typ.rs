@@ -1323,7 +1323,7 @@ impl<'a> Typer<'a> {
 
         let type_specifier = BinaryTypeSpecifier::new(&options, true)
             .map_err(|e| convert_binary_error(e, &location))?;
-        let typ = type_specifier.typ().unwrap_or_else(|| bitstring());
+        let typ = type_specifier.typ().unwrap_or_else(|| int());
 
         self.unify(typ.clone(), value.typ())
             .map_err(|e| convert_unify_error(e, value.location()))?;

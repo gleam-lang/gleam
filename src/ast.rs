@@ -731,7 +731,7 @@ impl<A> BinSegmentOption<A> {
     pub fn label(&self) -> String {
         match self {
             BinSegmentOption::Binary { .. } => "binary".to_string(),
-            BinSegmentOption::Integer { .. } => "integer".to_string(),
+            BinSegmentOption::Integer { .. } => "int".to_string(),
             BinSegmentOption::Float { .. } => "float".to_string(),
             BinSegmentOption::Bitstring { .. } => "bitstring".to_string(),
             BinSegmentOption::UTF8 { .. } => "utf8".to_string(),

@@ -9,7 +9,7 @@ fn integer_fn() {
 // Valid values
 
 pub fn function_as_value_test() {
-  let <<a>> = <<integer_fn():integer>>
+  let <<a>> = <<integer_fn():int>>
 
   should.equal(a, 1)
 }
