@@ -10,7 +10,6 @@ pub fn call_record_access_function_test() {
   should.equal(5, b.f(5))
 }
 
-
 pub fn call_tuple_access_function_test() {
   let t = tuple(fn(x) { x })
 
