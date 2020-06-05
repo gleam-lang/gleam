@@ -57,6 +57,7 @@ development.
 - [Bryan Paxton](https://github.com/starbelly)
 - [Clever Bunny LTD](https://github.com/cleverbunny)
 - [Hasan YILDIZ](https://github.com/hsnyildiz)
+- [Hendrik Richter](https://github.com/hendi)
 - [Hécate](https://github.com/Kleidukos)
 - [James MacAulay](https://github.com/jamesmacaulay)
 - [John Palgut](https://github.com/Jwsonic)
