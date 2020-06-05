@@ -671,7 +671,7 @@ impl<'a> Formatter<'a> {
             BinSegmentOption::Invalid { label, .. } => label.clone().to_doc(),
 
             BinSegmentOption::Binary { .. } => "binary".to_doc(),
-            BinSegmentOption::Integer { .. } => "integer".to_doc(),
+            BinSegmentOption::Integer { .. } => "int".to_doc(),
             BinSegmentOption::Float { .. } => "float".to_doc(),
             BinSegmentOption::Bitstring { .. } => "bitstring".to_doc(),
             BinSegmentOption::UTF8 { .. } => "utf8".to_doc(),
@@ -1086,7 +1086,7 @@ impl<'a> Formatter<'a> {
             BinSegmentOption::Invalid { label, .. } => label.clone().to_doc(),
 
             BinSegmentOption::Binary { .. } => "binary".to_doc(),
-            BinSegmentOption::Integer { .. } => "integer".to_doc(),
+            BinSegmentOption::Integer { .. } => "int".to_doc(),
             BinSegmentOption::Float { .. } => "float".to_doc(),
             BinSegmentOption::Bitstring { .. } => "bitstring".to_doc(),
             BinSegmentOption::UTF8 { .. } => "utf8".to_doc(),

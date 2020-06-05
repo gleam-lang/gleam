@@ -2306,10 +2306,10 @@ main() ->
     assert_erl!(
         r#"fn main() {
   let a = 1
-  let simple = <<1:integer, a:integer>>
-  let complex = <<4:integer-unsigned-big, 5.0:little-float, 6:native-integer-signed>>
-  let <<7:2, 8:size(3), b:binary-size(4)>> = <<1:integer>>
-  let <<c:unit(1), d:binary-size(2)-unit(2)>> = <<1:integer>>
+  let simple = <<1, a>>
+  let complex = <<4:int-unsigned-big, 5.0:little-float, 6:native-int-signed>>
+  let <<7:2, 8:size(3), b:binary-size(4)>> = <<1>>
+  let <<c:unit(1), d:binary-size(2)-unit(2)>> = <<1>>
 
   simple
 }
@@ -2319,12 +2319,12 @@ main() ->
 
 main() ->
     A = 1,
-    Simple = <<1/integer, A/integer>>,
+    Simple = <<1, A>>,
     Complex = <<4/integer-unsigned-big,
                 5.0/little-float,
                 6/native-integer-signed>>,
-    <<7:2, 8:3, B:4/binary>> = <<1/integer>>,
-    <<C/:1, D:2/binary:2>> = <<1/integer>>,
+    <<7:2, 8:3, B:4/binary>> = <<1>>,
+    <<C/:1, D:2/binary:2>> = <<1>>,
     Simple.
 "#,
     );
@@ -2332,7 +2332,7 @@ main() ->
     assert_erl!(
         r#"fn main() {
   let a = 1
-  let <<b, 1>> = <<1:integer, a:integer>>
+  let <<b, 1>> = <<1, a>>
   b
 }
 "#,
@@ -2341,7 +2341,7 @@ main() ->
 
 main() ->
     A = 1,
-    <<B, 1>> = <<1/integer, A/integer>>,
+    <<B, 1>> = <<1, A>>,
     B.
 "#,
     );
@@ -2366,7 +2366,7 @@ main() ->
     assert_erl!(
         r#"fn x() { 1 }
 fn main() {
-  let a = <<x():integer>>
+  let a = <<x():int>>
   a
 }
 "#,

@@ -409,18 +409,18 @@ fn infer_test() {
     );
 
     // Bitstrings
-    assert_infer!("let <<x>> = <<1:integer>> x", "Int");
-    assert_infer!("let <<x:integer>> = <<1:integer>> x", "Int");
-    assert_infer!("let <<x:float>> = <<1:integer>> x", "Float");
-    assert_infer!("let <<x:binary>> = <<1:integer>> x", "Bitstring");
-    assert_infer!("let <<x:bytes>> = <<1:integer>> x", "Bitstring");
-    assert_infer!("let <<x:bitstring>> = <<1:integer>> x", "Bitstring");
-    assert_infer!("let <<x:bits>> = <<1:integer>> x", "Bitstring");
-    assert_infer!("let <<x:utf8>> = <<1:integer>> x", "String");
-    assert_infer!("let <<x:utf16>> = <<1:integer>> x", "Bitstring");
-    assert_infer!("let <<x:utf32>> = <<1:integer>> x", "Bitstring");
+    assert_infer!("let <<x>> = <<1>> x", "Int");
+    assert_infer!("let <<x>> = <<1>> x", "Int");
+    assert_infer!("let <<x:float>> = <<1>> x", "Float");
+    assert_infer!("let <<x:binary>> = <<1>> x", "Bitstring");
+    assert_infer!("let <<x:bytes>> = <<1>> x", "Bitstring");
+    assert_infer!("let <<x:bitstring>> = <<1>> x", "Bitstring");
+    assert_infer!("let <<x:bits>> = <<1>> x", "Bitstring");
+    assert_infer!("let <<x:utf8>> = <<1>> x", "String");
+    assert_infer!("let <<x:utf16>> = <<1>> x", "Bitstring");
+    assert_infer!("let <<x:utf32>> = <<1>> x", "Bitstring");
     assert_infer!(
-        "let a = <<1:integer>> let <<x:binary>> = <<1:integer, a:2>> x",
+        "let a = <<1>> let <<x:binary>> = <<1, a:2-binary>> x",
         "Bitstring"
     );
 }
@@ -443,45 +443,36 @@ fn infer_bitstring_error_test() {
     // Unify
 
     assert_error!(
-        "case <<1:integer>> { <<2.0, a>> -> 1 }",
+        "case <<1>> { <<2.0, a>> -> 1 }",
         Error::CouldNotUnify {
-            location: SrcSpan { start: 23, end: 26 },
+            location: SrcSpan { start: 15, end: 18 },
             expected: int(),
             given: float(),
         },
     );
 
     assert_error!(
-        "let x = <<1>> x",
+        "case <<1>> { <<a:float>> if a > 1 -> 1 }",
         Error::CouldNotUnify {
-            location: SrcSpan { start: 10, end: 11 },
-            expected: bitstring(),
-            given: int(),
-        },
-    );
-
-    assert_error!(
-        "case <<1:integer>> { <<a:float>> if a > 1 -> 1 }",
-        Error::CouldNotUnify {
-            location: SrcSpan { start: 36, end: 37 },
+            location: SrcSpan { start: 28, end: 29 },
             expected: int(),
             given: float(),
         },
     );
 
     assert_error!(
-        "case <<1:integer>> { <<a:binary>> if a > 1 -> 1 }",
+        "case <<1>> { <<a:binary>> if a > 1 -> 1 }",
         Error::CouldNotUnify {
-            location: SrcSpan { start: 37, end: 38 },
+            location: SrcSpan { start: 29, end: 30 },
             expected: int(),
             given: bitstring(),
         },
     );
 
     assert_error!(
-        "case <<1:integer>> { <<a:utf16>> if a == \"test\" -> 1 }",
+        "case <<1>> { <<a:utf16>> if a == \"test\" -> 1 }",
         Error::CouldNotUnify {
-            location: SrcSpan { start: 36, end: 47 },
+            location: SrcSpan { start: 28, end: 39 },
             expected: bitstring(),
             given: string(),
         },
@@ -497,9 +488,9 @@ fn infer_bitstring_error_test() {
     );
 
     assert_error!(
-        "case <<1:integer>> { <<1:size(2.0)>> -> a }",
+        "case <<1>> { <<1:size(2.0)>> -> a }",
         Error::CouldNotUnify {
-            location: SrcSpan { start: 30, end: 33 },
+            location: SrcSpan { start: 22, end: 25 },
             expected: int(),
             given: float(),
         },
@@ -508,16 +499,16 @@ fn infer_bitstring_error_test() {
     // Segments
 
     assert_error!(
-        "case <<1:integer>> { <<1:binary, _:binary>> -> 1 }",
+        "case <<1>> { <<1:binary, _:binary>> -> 1 }",
         Error::BinarySegmentMustHaveSize {
-            location: SrcSpan { start: 23, end: 31 },
+            location: SrcSpan { start: 15, end: 23 },
         },
     );
 
     assert_error!(
-        "case <<1:integer>> { <<1:bitstring, _:binary>> -> 1 }",
+        "case <<1>> { <<1:bitstring, _:binary>> -> 1 }",
         Error::BinarySegmentMustHaveSize {
-            location: SrcSpan { start: 23, end: 34 },
+            location: SrcSpan { start: 15, end: 26 },
         },
     );
 
@@ -539,27 +530,27 @@ fn infer_bitstring_error_test() {
     );
 
     assert_error!(
-        "case <<1:integer>> { <<1:binary-wrong>> -> 1 }",
+        "case <<1>> { <<1:binary-wrong>> -> 1 }",
         Error::InvalidBinarySegmentOption {
-            location: SrcSpan { start: 32, end: 37 },
+            location: SrcSpan { start: 24, end: 29 },
             label: "wrong".to_string(),
         },
     );
 
     assert_error!(
-        "let x = <<1:integer-binary>> x",
+        "let x = <<1:int-binary>> x",
         Error::ConflictingBinaryTypeOptions {
-            previous_location: SrcSpan { start: 12, end: 19 },
-            location: SrcSpan { start: 20, end: 26 },
-            name: "integer".to_string(),
+            previous_location: SrcSpan { start: 12, end: 15 },
+            location: SrcSpan { start: 16, end: 22 },
+            name: "int".to_string(),
         },
     );
 
     assert_error!(
-        "case <<1:integer>> { <<1:bitstring-binary>> -> 1 }",
+        "case <<1>> { <<1:bitstring-binary>> -> 1 }",
         Error::ConflictingBinaryTypeOptions {
-            previous_location: SrcSpan { start: 25, end: 34 },
-            location: SrcSpan { start: 35, end: 41 },
+            previous_location: SrcSpan { start: 17, end: 26 },
+            location: SrcSpan { start: 27, end: 33 },
 
             name: "bitstring".to_string(),
         },
@@ -575,10 +566,10 @@ fn infer_bitstring_error_test() {
     );
 
     assert_error!(
-        "case <<1:integer>> { <<1:unsigned-signed>> -> 1 }",
+        "case <<1>> { <<1:unsigned-signed>> -> 1 }",
         Error::ConflictingBinarySignednessOptions {
-            previous_location: SrcSpan { start: 25, end: 33 },
-            location: SrcSpan { start: 34, end: 40 },
+            previous_location: SrcSpan { start: 17, end: 25 },
+            location: SrcSpan { start: 26, end: 32 },
             name: "unsigned".to_string(),
         }
     );
@@ -593,10 +584,10 @@ fn infer_bitstring_error_test() {
     );
 
     assert_error!(
-        "case <<1:integer>> { <<1:native-big>> -> 1 }",
+        "case <<1>> { <<1:native-big>> -> 1 }",
         Error::ConflictingBinaryEndiannessOptions {
-            previous_location: SrcSpan { start: 25, end: 31 },
-            location: SrcSpan { start: 32, end: 35 },
+            previous_location: SrcSpan { start: 17, end: 23 },
+            location: SrcSpan { start: 24, end: 27 },
             name: "native".to_string(),
         }
     );
@@ -610,10 +601,10 @@ fn infer_bitstring_error_test() {
     );
 
     assert_error!(
-        "case <<1:integer>> { <<1:size(2)-size(8)>> -> a }",
+        "case <<1>> { <<1:size(2)-size(8)>> -> a }",
         Error::ConflictingBinarySizeOptions {
-            previous_location: SrcSpan { start: 25, end: 32 },
-            location: SrcSpan { start: 33, end: 40 },
+            previous_location: SrcSpan { start: 17, end: 24 },
+            location: SrcSpan { start: 25, end: 32 },
         }
     );
 
@@ -642,10 +633,10 @@ fn infer_bitstring_error_test() {
     );
 
     assert_error!(
-        "case <<1:integer>> { <<1:utf32-unit(2)>> -> a }",
+        "case <<1>> { <<1:utf32-unit(2)>> -> a }",
         Error::BinaryTypeDoesNotAllowUnit {
             typ: "utf32".to_string(),
-            location: SrcSpan { start: 31, end: 38 },
+            location: SrcSpan { start: 23, end: 30 },
         }
     );
 }

@@ -622,7 +622,7 @@ BinSegmentOptionLiteral<T>: T = {
         match o.as_str() {
             "binary" => BinSegmentOption::Binary { location: location(s, e) },
             "bytes" => BinSegmentOption::Binary { location: location(s, e) },
-            "integer" => BinSegmentOption::Integer { location: location(s, e) },
+            "int" => BinSegmentOption::Integer { location: location(s, e) },
             "float" => BinSegmentOption::Float { location: location(s, e) },
             "bitstring" => BinSegmentOption::Bitstring { location: location(s, e) },
             "bits" => BinSegmentOption::Bitstring { location: location(s, e) },
