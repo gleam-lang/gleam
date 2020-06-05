@@ -3560,6 +3560,34 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 Ok(Pattern::Var { name, location })
             }
 
+            Pattern::VarCall { name, location, .. } => {
+                let ValueConstructor { typ, .. } =
+                    self.typer.get_variable(&name).cloned().ok_or_else(|| {
+                        Error::UnknownVariable {
+                            location: location.clone(),
+                            name: name.to_string(),
+                            variables: self
+                                .typer
+                                .local_values
+                                .keys()
+                                .map(|t| t.to_string())
+                                .collect(),
+                        }
+                    })?;
+                let typ = self
+                    .typer
+                    .instantiate(typ, self.typer.level, &mut hashmap![]);
+                self.typer
+                    .unify(int(), typ.clone())
+                    .map_err(|e| convert_unify_error(e, &location))?;
+
+                Ok(Pattern::VarCall {
+                    name,
+                    location,
+                    typ,
+                })
+            }
+
             Pattern::Let { name, pattern, .. } => {
                 self.insert_variable(name.as_ref(), typ.clone())
                     .map_err(|e| convert_unify_error(e, pattern.location()))?;
