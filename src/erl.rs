@@ -497,6 +497,8 @@ fn pattern(p: &TypedPattern, env: &mut Env) -> Document {
 
         Pattern::Var { name, .. } => env.next_local_var_name(name.to_string()),
 
+        Pattern::VarCall { name, .. } => env.local_var_name(name.to_string()),
+
         Pattern::Int { value, .. } => value.as_str().to_doc(),
 
         Pattern::Float { value, .. } => float(value.as_ref()),

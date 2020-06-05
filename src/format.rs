@@ -951,6 +951,8 @@ impl<'a> Formatter<'a> {
 
             Pattern::Var { name, .. } => name.to_string().to_doc(),
 
+            Pattern::VarCall { name, .. } => name.to_string().to_doc(),
+
             Pattern::Let { name, pattern, .. } => self
                 .pattern(&pattern)
                 .append(" as ")

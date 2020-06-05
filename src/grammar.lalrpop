@@ -741,6 +741,11 @@ Pattern: UntypedPattern = {
     PatternBitstring => <>,
 }
 
+PatternVarCallOrInt: UntypedPattern = {
+    PatternVarCall => <>,
+    PatternInt => <>,
+}
+
 PatternConstructor: UntypedPattern = {
     <s:@L> <module:(<VarName> ".")?> <name:UpName> <args:PatternConstructorArgs?> <e:@L> => {
         let (args, with_spread) = args.unwrap_or_else(|| (vec![], false));
@@ -807,6 +812,14 @@ PatternVar: UntypedPattern = {
     <s:@L> <v:VarName> <e:@L> => Pattern::Var {
         location: location(s, e),
         name: v,
+    }
+}
+
+PatternVarCall: UntypedPattern = {
+    <s:@L> <v:VarName> <e:@L> => Pattern::VarCall {
+        location: location(s, e),
+        name: v,
+        typ: (),
     }
 }
 
@@ -877,7 +890,7 @@ PatternBinSegment: UntypedPatternBinSegment = {
 }
 
 PatternBinSegmentOption: UntypedPatternBinSegmentOption = {
-    <s:@L> <o:VarName> "(" <value:Pattern> ")" <e:@L> => {
+    <s:@L> <o:VarName> "(" <value:PatternVarCallOrInt> ")" <e:@L> => {
         if o.as_str() == "unit" {
             BinSegmentOption::Unit {
                 location: location(s, e),

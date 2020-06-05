@@ -440,7 +440,7 @@ macro_rules! assert_error {
 
 #[test]
 fn infer_bitstring_error_test() {
-    // Unify
+    // Values
 
     assert_error!(
         "case <<1>> { <<2.0, a>> -> 1 }",
@@ -475,24 +475,6 @@ fn infer_bitstring_error_test() {
             location: SrcSpan { start: 28, end: 39 },
             expected: bitstring(),
             given: string(),
-        },
-    );
-
-    assert_error!(
-        "let x = <<1:size(\"1\")>> x",
-        Error::CouldNotUnify {
-            location: SrcSpan { start: 17, end: 20 },
-            expected: int(),
-            given: string(),
-        },
-    );
-
-    assert_error!(
-        "case <<1>> { <<1:size(2.0)>> -> a }",
-        Error::CouldNotUnify {
-            location: SrcSpan { start: 22, end: 25 },
-            expected: int(),
-            given: float(),
         },
     );
 
@@ -592,6 +574,8 @@ fn infer_bitstring_error_test() {
         }
     );
 
+    // Size and unit options
+
     assert_error!(
         "let x = <<1:8-size(5)>> x",
         Error::ConflictingBinarySizeOptions {
@@ -638,6 +622,26 @@ fn infer_bitstring_error_test() {
             typ: "utf32".to_string(),
             location: SrcSpan { start: 23, end: 30 },
         }
+    );
+
+    // Size and unit values
+
+    assert_error!(
+        "let x = <<1:size(\"1\")>> x",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 17, end: 20 },
+            expected: int(),
+            given: string(),
+        },
+    );
+
+    assert_error!(
+        "let a = 2.0 case <<1>> { <<1:size(a)>> -> a }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 34, end: 35 },
+            expected: int(),
+            given: float(),
+        },
     );
 }
 
@@ -2460,6 +2464,22 @@ fn main() {
                     typ: Arc::new(RefCell::new(TypeVar::Generic { id: 9 })),
                 })]
             }),
+        },
+    );
+
+    // Bit strings
+
+    assert_error!(
+        "fn x() { \"test\" }
+
+fn main() {
+    let a = <<1:size(x())>>
+    a
+}",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 52, end: 55 },
+            expected: int(),
+            given: string(),
         },
     );
 }
