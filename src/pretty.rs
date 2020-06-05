@@ -71,6 +71,40 @@ pub fn concat(mut docs: impl Iterator<Item = Document>) -> Document {
     })
 }
 
+pub fn flex_concat(limit: isize, mut docs: Box<Vec<Document>>) -> Document {
+    let mut size: isize = 0;
+    let mut broken: bool = false;
+    let mut current_size: isize = 0;
+    for (pos, e) in docs.clone().iter().enumerate() {
+        match e {
+            Document::Cons(left, _) => match &**left {
+                Document::Text(v) => {
+                    current_size = v.len() as isize;
+                    size += current_size
+                }
+                _ => (),
+            },
+            Document::Text(s) => {
+                current_size = s.len() as isize;
+                size += current_size
+            }
+            _ => (),
+        }
+        if size > limit {
+            docs.insert(pos, line());
+            broken = true;
+            size = current_size;
+        }
+    }
+    if broken {
+        docs.insert(0, line());
+        docs.append(&mut vec![line()]);
+    }
+    docs.iter().fold(nil(), |acc, doc| {
+        Document::Cons(Box::new(acc), Box::new(doc.clone()))
+    })
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Document {
     /// Returns a document entity used to represent nothingness
@@ -81,6 +115,9 @@ pub enum Document {
 
     /// Forces contained groups to break
     ForceBreak,
+
+    /// Breaks included docs if width > limit
+    FlexBreak(Box<Vec<Document>>),
 
     /// Renders `broken` if group is broken, `unbroken` otherwise
     Break { broken: String, unbroken: String },
@@ -124,6 +161,8 @@ fn fits(mut limit: isize, mut docs: Vector<(isize, Mode, Document)>) -> bool {
             Document::Line(_) => return true,
 
             Document::ForceBreak => return false,
+
+            Document::FlexBreak(_) => return true,
 
             Document::Nest(i, doc) => docs.push_front((i + indent, mode, *doc)),
 
@@ -208,6 +247,10 @@ fn fmt(b: &mut String, limit: isize, mut width: isize, mut docs: Vector<(isize, 
                 if !fits(limit - width, docs.clone()) {
                     docs[0] = (indent, Mode::Broken, (*doc).clone());
                 }
+            }
+
+            Document::FlexBreak(v) => {
+                docs.push_front((indent, mode.clone(), (flex_concat(limit, v))));
             }
         }
     }
@@ -435,6 +478,10 @@ pub fn break_(broken: &str, unbroken: &str) -> Document {
         broken: broken.to_string(),
         unbroken: unbroken.to_string(),
     }
+}
+
+pub fn flex_break(docs: Vec<Document>) -> Document {
+    Document::FlexBreak(Box::new(docs))
 }
 
 pub fn delim(d: &str) -> Document {
