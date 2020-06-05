@@ -12,15 +12,24 @@ pub trait Documentable<'a> {
     fn to_doc(self) -> Document<'a>;
 }
 
-impl Documentable<'static> for &str {
-    fn to_doc(self) -> Document<'static> {
-        Document::Text(self.to_string().into())
+impl<'a> Documentable<'a> for &'a str {
+    fn to_doc(self) -> Document<'a> {
+        Document::Text(self.into())
     }
 }
 
 impl Documentable<'static> for String {
     fn to_doc(self) -> Document<'static> {
         Document::Text(self.into())
+    }
+}
+
+impl<'a> Documentable<'a> for Cow<'a, str> {
+    fn to_doc(self) -> Document<'a> {
+        match self {
+            Cow::Borrowed(content) => content.to_doc(),
+            Cow::Owned(content) => content.to_doc(),
+        }
     }
 }
 
@@ -66,8 +75,8 @@ impl Documentable<'static> for Vec<Document<'static>> {
     }
 }
 
-impl<D: Documentable<'static>> Documentable<'static> for Option<D> {
-    fn to_doc(self) -> Document<'static> {
+impl<'a, D: Documentable<'a>> Documentable<'a> for Option<D> {
+    fn to_doc(self) -> Document<'a> {
         match self {
             Some(d) => d.to_doc(),
             None => Document::Nil,
@@ -75,7 +84,7 @@ impl<D: Documentable<'static>> Documentable<'static> for Option<D> {
     }
 }
 
-pub fn concat(mut docs: impl Iterator<Item = Document<'static>>) -> Document<'static> {
+pub fn concat<'a>(mut docs: impl Iterator<Item = Document<'a>>) -> Document<'a> {
     let init = docs.next().unwrap_or_else(|| nil());
     docs.fold(init, |acc, doc| {
         Document::Cons(Box::new(acc), Box::new(doc))
@@ -474,7 +483,7 @@ impl<'a> Document<'a> {
         Document::NestCurrent(Box::new(self))
     }
 
-    pub fn append(self, x: impl Documentable<'a>) -> Document<'a> {
+    pub fn append<'b: 'a>(self, x: impl Documentable<'b>) -> Document<'a> {
         Document::Cons(Box::new(self), Box::new(x.to_doc()))
     }
 
