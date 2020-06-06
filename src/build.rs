@@ -1,13 +1,13 @@
 #![allow(warnings)]
 
-// TODO: Compilation of ./test
 // TODO: Avoid rebuilding clean modules
 // TODO: Download deps from Hex
 // TODO: Support compilation of rebar3 packages
 // TODO: Support flexible compiler interface for use by rebar3 + mix
 // TODO: Track removed files in src and test so they can be removed from _build
-// TODO: test profile and default profile
-// TODO: only compile test code in test profile
+// TODO: Test profile and default profile
+// TODO: Only compile test code in test profile
+// TODO: Print some progress information to the user
 
 mod dep_tree;
 mod erlang_code_generator;
@@ -97,11 +97,19 @@ fn compile_erlang_to_beam(
     command.arg(root.build_path());
 
     tracing::trace!("Running OS process {:?}", command);
-    let status = command.status().unwrap(); // TODO
+    let status = command.status().map_err(|e| Error::ShellCommand {
+        command: "escript".to_string(),
+        err: Some(e.kind()),
+    })?;
 
-    // TODO: check status
-
-    Ok(())
+    if status.success() {
+        Ok(())
+    } else {
+        Err(Error::ShellCommand {
+            command: "escript".to_string(),
+            err: None,
+        })
+    }
 }
 
 fn copy_root_package_to_build(

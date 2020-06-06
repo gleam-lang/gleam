@@ -126,6 +126,11 @@ pub enum Error {
     TarFinish(String),
 
     Gzip(String),
+
+    ShellCommand {
+        command: String,
+        err: Option<std::io::ErrorKind>,
+    },
 }
 
 #[derive(Debug, PartialEq)]
@@ -210,6 +215,36 @@ impl Error {
             .expect("error pretty buffer write space before");
 
         match self {
+            Error::ShellCommand { command, err: None } => {
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Gzip compression failure".to_string(),
+                    label: format!(
+                        "There was a problem when running the shell command `{}`.",
+                        command
+                    ),
+                };
+                write_project(buffer, diagnostic);
+            }
+
+            Error::ShellCommand {
+                command,
+                err: Some(err),
+            } => {
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Gzip compression failure".to_string(),
+                    label: format!(
+                        "There was a problem when running the shell command `{}`.
+
+The error from the shell command library was:
+
+    {}",
+                        command,
+                        std_io_error_kind_text(err)
+                    ),
+                };
+                write_project(buffer, diagnostic);
+            }
+
             Error::Gzip(detail) => {
                 let diagnostic = ProjectErrorDiagnostic {
                     title: "Gzip compression failure".to_string(),
