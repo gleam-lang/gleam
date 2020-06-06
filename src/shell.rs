@@ -6,7 +6,6 @@ use crate::{
 use std::path::PathBuf;
 use std::process::Command;
 
-// TODO: error handling
 // TODO: correct handling of ctrl+c
 pub fn command(root_string: String) -> Result<(), Error> {
     let root_path = PathBuf::from(root_string);
@@ -27,7 +26,17 @@ pub fn command(root_string: String) -> Result<(), Error> {
 
     // Run the shell
     tracing::trace!("Running OS process {:?}", command);
-    command.spawn().unwrap().wait().unwrap();
+    let status = command.status().map_err(|e| Error::ShellCommand {
+        command: "erl".to_string(),
+        err: Some(e.kind()),
+    })?;
 
-    Ok(())
+    if status.success() {
+        Ok(())
+    } else {
+        Err(Error::ShellCommand {
+            command: "erl".to_string(),
+            err: None,
+        })
+    }
 }
