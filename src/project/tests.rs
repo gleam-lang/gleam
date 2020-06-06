@@ -14,6 +14,7 @@ fn compile_test() {
             input: vec![],
             expected: Ok(vec![]),
         },
+
         Case {
             input: vec![
                 Input {
@@ -40,6 +41,7 @@ fn compile_test() {
                 },
             ]),
         },
+
         Case {
             input: vec![Input {
                 origin: ModuleOrigin::Test,
@@ -52,6 +54,7 @@ fn compile_test() {
                 text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
             }]),
         },
+
         Case {
             input: vec![
                 Input {
@@ -75,6 +78,7 @@ fn compile_test() {
                 test_module: "two".to_string(),
             }),
         },
+
         Case {
             input: vec![
                 Input {
@@ -101,6 +105,7 @@ fn compile_test() {
                 },
             ]),
         },
+
         Case {
             input: vec![
                 Input {
@@ -127,6 +132,7 @@ fn compile_test() {
                 },
             ]),
         },
+
         Case {
             input: vec![
                 Input {
@@ -155,6 +161,7 @@ unbox(X) ->\n    {box, I} = X,\n    I.\n"
                 },
             ]),
         },
+
         Case {
             input: vec![
                 Input {
@@ -183,6 +190,7 @@ box(X) ->\n    {box, X}.\n"
                 },
             ]),
         },
+
         Case {
             input: vec![Input {
                 origin: ModuleOrigin::Src,
@@ -195,6 +203,7 @@ box(X) ->\n    {box, X}.\n"
                 text: "-module(one@two).\n-compile(no_auto_import).\n\n\n".to_string(),
             }]),
         },
+
         Case {
             input: vec![
                 Input {
@@ -223,6 +232,7 @@ box() ->\n    box.\n"
                 },
             ]),
         },
+
         Case {
             input: vec![
                 Input {
@@ -255,6 +265,7 @@ call() ->
                 },
             ]),
         },
+
         Case {
             input: vec![
                 Input {
@@ -283,6 +294,7 @@ call() ->
                 },
             ]),
         },
+
         Case {
             input: vec![
                 Input {
@@ -312,6 +324,7 @@ call() ->
                 },
             ]),
         },
+
         Case {
             input: vec![
                 Input {
@@ -349,6 +362,7 @@ call_thing() ->\n    thing:new().\n"
                 },
             ]),
         },
+
         Case {
             input: vec![
                 Input {
@@ -370,6 +384,7 @@ call_thing() ->\n    thing:new().\n"
                 second: PathBuf::from("/other/src/one.gleam"),
             }),
         },
+
         Case {
             input: vec![
                 Input {
@@ -406,6 +421,7 @@ x(P) ->\n    {point, X, _} = P,\n    X.\n"
                 },
             ]),
         },
+
         Case {
             input: vec![
                 Input {
@@ -438,6 +454,7 @@ run() ->\n    one:'div'(2, one:'div'(2, 4)).\n"
                 },
             ]),
         },
+
         Case {
             input: vec![
                 Input {
@@ -468,6 +485,7 @@ make() ->\n    empty.\n"
                 },
             ]),
         },
+
         Case {
             input: vec![
                 Input {
@@ -499,6 +517,7 @@ make() ->
                 },
             ]),
         },
+
         // https://github.com/gleam-lang/gleam/issues/303
         Case {
             input: vec![
@@ -531,6 +550,7 @@ make() ->\n    one:id(empty).\n"
                 },
             ]),
         },
+
         Case {
             input: vec![
                 Input {
@@ -563,6 +583,7 @@ funky() ->
                 },
             ]),
         },
+
         Case {
             input: vec![
                 Input {
@@ -594,6 +615,7 @@ funky() ->
                 },
             ]),
         },
+
         // https://github.com/gleam-lang/gleam/issues/340
         Case {
             input: vec![
@@ -626,6 +648,7 @@ funky() ->
                 },
             ]),
         },
+
         // We can use record accessors for types with only one constructor, defined in another
         // module
         Case {
@@ -669,6 +692,7 @@ get_name(Person) ->
                 },
             ]),
         },
+
         // Can use imported types in Type Constructors
         Case {
             input: vec![

@@ -212,10 +212,10 @@ fn module_name(package_path: &PathBuf, full_module_path: &PathBuf) -> String {
 
 #[derive(Debug)]
 pub struct Source {
-    path: PathBuf,
-    name: String,
-    code: String,
-    origin: Origin,
+    pub path: PathBuf,
+    pub name: String,
+    pub code: String,
+    pub origin: Origin, // TODO: is this used?
 }
 
 #[derive(Debug)]
