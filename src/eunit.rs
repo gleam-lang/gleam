@@ -15,6 +15,8 @@ pub fn command(root_string: String) -> Result<(), Error> {
     // Build project
     let packages = build::main(config, root_path)?;
 
+    println!("Running eunit");
+
     // Build a list of test modules
     let test_modules = packages
         .into_iter()

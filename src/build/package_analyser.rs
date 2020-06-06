@@ -34,6 +34,8 @@ impl<'a> PackageAnalyser<'a> {
         self,
         existing_modules: &mut HashMap<String, typ::Module>,
     ) -> Result<Package, Error> {
+        println!(" Analysing {}", self.config.name);
+
         let span = tracing::info_span!("analyse", package = self.config.name.as_str());
         let _enter = span.enter();
 

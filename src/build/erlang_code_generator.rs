@@ -19,6 +19,8 @@ impl<'a> ErlangCodeGenerator<'a> {
     }
 
     pub fn render(&self) -> Vec<OutputFile> {
+        println!("Generating Erlang");
+
         let num_modules = self.packages.values().fold(0, |a, p| p.modules.len() + a);
         let mut outputs = Vec::with_capacity(num_modules);
 
