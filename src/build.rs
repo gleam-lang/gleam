@@ -14,6 +14,9 @@ mod package_analyser;
 mod project_analyser;
 pub mod project_root;
 
+#[cfg(test)]
+mod package_compilation_tests;
+
 use crate::{
     ast::TypedModule,
     build::{
