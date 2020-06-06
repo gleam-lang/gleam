@@ -1124,7 +1124,14 @@ at the end of a bin pattern",
                         location: location.clone(),
                     };
                     write(buffer, diagnostic, Severity::Error);
-                    writeln!(buffer, "{} is not a valid option.", label).unwrap();
+                    writeln!(
+                        buffer,
+                        "{} is not a valid option.
+Valid options are: binary, int, float, bitstring, utf8, utf16, utf32,
+signed, unsigned, big, little, native, size, unit",
+                        label
+                    )
+                    .unwrap();
                 }
             },
 
