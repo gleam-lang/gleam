@@ -1000,7 +1000,7 @@ and try again.
                     ..
                 } => {
                     let diagnostic = Diagnostic {
-                        title: "Duplicate type option".to_string(),
+                        title: "Duplicate bit string type option".to_string(),
                         label: "given here".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
@@ -1018,7 +1018,7 @@ and try again.
                     ..
                 } => {
                     let diagnostic = Diagnostic {
-                        title: "Duplicate signedness".to_string(),
+                        title: "Duplicate bit string signedness".to_string(),
                         label: "redefined here".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
@@ -1036,7 +1036,7 @@ and try again.
                     ..
                 } => {
                     let diagnostic = Diagnostic {
-                        title: "Duplicate endianness".to_string(),
+                        title: "Duplicate bit string endianness".to_string(),
                         label: "redefined here".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
@@ -1053,7 +1053,7 @@ and try again.
                     ..
                 } => {
                     let diagnostic = Diagnostic {
-                        title: "Duplicate binary size".to_string(),
+                        title: "Duplicate bit string size".to_string(),
                         label: "redefined here".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
@@ -1070,7 +1070,7 @@ and try again.
                     ..
                 } => {
                     let diagnostic = Diagnostic {
-                        title: "Duplicate binary unit".to_string(),
+                        title: "Duplicate bit string unit".to_string(),
                         label: "redefined here".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
@@ -1100,7 +1100,7 @@ This segment has a type of {}.",
 
                 BinarySegmentMustHaveSize { location, .. } => {
                     let diagnostic = Diagnostic {
-                        title: "Binary segment without required size".to_string(),
+                        title: "Bit string segment without required size".to_string(),
                         label: "specified here".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
@@ -1109,7 +1109,7 @@ This segment has a type of {}.",
                     write(buffer, diagnostic, Severity::Error);
                     writeln!(
                         buffer,
-                        "Binary and bitstring segments without a size are only allowed
+                        "Bit string segments without a size are only allowed
 at the end of a bin pattern",
                     )
                     .unwrap();
@@ -1117,7 +1117,7 @@ at the end of a bin pattern",
 
                 InvalidBinarySegmentOption { label, location } => {
                     let diagnostic = Diagnostic {
-                        title: "Invalid binary segment option".to_string(),
+                        title: "Invalid bit string segment option".to_string(),
                         label: "specified here".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
@@ -1126,7 +1126,7 @@ at the end of a bin pattern",
                     write(buffer, diagnostic, Severity::Error);
                     writeln!(
                         buffer,
-                        "{} is not a valid option.
+                        "{} is not a valid option for a bit string segment.
 Valid options are: binary, int, float, bitstring, utf8, utf16, utf32,
 signed, unsigned, big, little, native, size, unit",
                         label
