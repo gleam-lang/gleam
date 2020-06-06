@@ -7,7 +7,6 @@
 // TODO: Track removed files in src and test so they can be removed from _build
 // TODO: Test profile and default profile
 // TODO: Only compile test code in test profile
-// TODO: Print some progress information to the user
 
 mod dep_tree;
 mod erlang_code_generator;
@@ -83,6 +82,8 @@ fn compile_erlang_to_beam(
     root: &ProjectRoot,
     packages: &HashMap<String, Package>,
 ) -> Result<(), Error> {
+    println!(" Compiling Erlang");
+
     let escript_path = root.build_path().join("compile_escript.erl");
     let escript_source = std::include_str!("build/compile_escript.erl").to_string();
 
