@@ -968,8 +968,8 @@ fn integration_test() {
                 .parse($src)
                 .expect("syntax error");
             ast.name = vec!["the_app".to_string()];
-            let (result, _) = crate::typ::infer_module(ast, &std::collections::HashMap::new());
-            let ast = result.expect("should successfully infer");
+            let ast = crate::typ::infer_module(ast, &std::collections::HashMap::new(), &mut vec![])
+                .expect("should successfully infer");
             let output = module(&ast);
             assert_eq!(($src, output), ($src, $erl.to_string()));
         };
@@ -1160,34 +1160,6 @@ tail(List) ->
 "#,
     );
 
-    // Deprecated syntax
-    assert_erl!(
-        r#"fn second(list) { case list { [x, y] -> y z -> 1 } }
-                    fn tail(list) { case list { [x | xs] -> xs z -> list } }
-            "#,
-        r#"-module(the_app).
--compile(no_auto_import).
-
-second(List) ->
-    case List of
-        [X, Y] ->
-            Y;
-
-        Z ->
-            1
-    end.
-
-tail(List) ->
-    case List of
-        [X | Xs] ->
-            Xs;
-
-        Z ->
-            List
-    end.
-"#,
-    );
-
     assert_erl!(
         r#"fn x() { let x = 1 let x = x + 1 x }"#,
         r#"-module(the_app).
@@ -1283,7 +1255,7 @@ x(Y) ->
 "#,
     );
 
-    // Private external functions are simply inlined
+    // Private external function calls are simply inlined
     assert_erl!(
         r#"external fn go(x: Int, y: Int) -> Int = "m" "f"
                     fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"#,
@@ -1296,7 +1268,7 @@ x() ->
 "#,
     );
 
-    // Public external functions are inlined but the wrapper function is
+    // Public external function calls are inlined but the wrapper function is
     // also printed in the erlang output and exported
     assert_erl!(
         r#"pub external fn go(x: Int, y: Int) -> Int = "m" "f"
@@ -1312,6 +1284,18 @@ go(A, B) ->
 x() ->
     m:f(1, 2),
     m:f(4, 3).
+"#,
+    );
+
+    // Private external function references are inlined
+    assert_erl!(
+        r#"external fn go(x: Int, y: Int) -> Int = "m" "f"
+                    fn x() { go }"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+x() ->
+    fun m:f/2.
 "#,
     );
 
@@ -2326,6 +2310,87 @@ fn main() {
 main() ->
     T = {fun(X) -> X end},
     (erlang:element(1, T))(5).
+"#,
+    );
+
+    // Bitstrings
+
+    assert_erl!(
+        r#"fn main() {
+  let a = 1
+  let simple = <<1, a>>
+  let complex = <<4:int-unsigned-big, 5.0:little-float, 6:native-int-signed>>
+  let <<7:2, 8:size(3), b:binary-size(4)>> = <<1>>
+  let <<c:unit(1), d:binary-size(2)-unit(2)>> = <<1>>
+
+  simple
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main() ->
+    A = 1,
+    Simple = <<1, A>>,
+    Complex = <<4/integer-unsigned-big,
+                5.0/little-float,
+                6/native-integer-signed>>,
+    <<7:2, 8:3, B:4/binary>> = <<1>>,
+    <<C/:1, D:2/binary:2>> = <<1>>,
+    Simple.
+"#,
+    );
+
+    assert_erl!(
+        r#"fn main() {
+  let a = 1
+  let <<b, 1>> = <<1, a>>
+  b
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main() ->
+    A = 1,
+    <<B, 1>> = <<1, A>>,
+    B.
+"#,
+    );
+
+    assert_erl!(
+        r#"fn main() {
+  let a = <<"test":utf8>>
+  let <<b:utf8, "st":utf8>> = a
+  b
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main() ->
+    A = <<"test"/utf8>>,
+    <<B/utf8, "st"/utf8>> = A,
+    B.
+"#,
+    );
+
+    assert_erl!(
+        r#"fn x() { 1 }
+fn main() {
+  let a = <<x():int>>
+  a
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+x() ->
+    1.
+
+main() ->
+    A = <<(x())/integer>>,
+    A.
 "#,
     );
 }

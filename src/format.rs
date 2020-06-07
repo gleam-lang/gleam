@@ -407,7 +407,7 @@ impl<'a> Formatter<'a> {
 
     fn let_(
         &mut self,
-        pattern: &UntypedPattern,
+        pattern: &'a UntypedPattern,
         value: &'a UntypedExpr,
         then: &'a UntypedExpr,
         kind: BindingKind,
@@ -513,6 +513,17 @@ impl<'a> Formatter<'a> {
             UntypedExpr::Tuple { elems, .. } => "tuple"
                 .to_doc()
                 .append(wrap_args(elems.iter().map(|e| self.wrap_expr(e)))),
+
+            UntypedExpr::Bitstring { elems, .. } => {
+                let elems = elems.iter().map(|s| self.segment(s));
+
+                break_("<<", "<<")
+                    .append(concat(elems.intersperse(delim(","))))
+                    .nest(INDENT)
+                    .append(break_(",", ""))
+                    .append(">>")
+                    .group()
+            }
         };
         commented(document, comments)
     }
@@ -652,6 +663,70 @@ impl<'a> Formatter<'a> {
             _ => crate::error::fatal_compiler_bug(
                 "Function capture body found not to be a call in the formatter",
             ),
+        }
+    }
+
+    fn segment(&mut self, segment: &'a UntypedExprBinSegment) -> Document<'a> {
+        match segment {
+            UntypedExprBinSegment { value, options, .. } if *options == [] => self.expr(&value),
+
+            UntypedExprBinSegment { value, options, .. } => {
+                self.expr(&value).append(":").append(concat(
+                    options
+                        .iter()
+                        .map(|o| self.segment_option(o))
+                        .intersperse("-".to_doc()),
+                ))
+            }
+        }
+    }
+
+    fn segment_option(&mut self, option: &'a UntypedExprBinSegmentOption) -> Document<'a> {
+        match option {
+            BinSegmentOption::Invalid { label, .. } => label.clone().to_doc(),
+
+            BinSegmentOption::Binary { .. } => "binary".to_doc(),
+            BinSegmentOption::Integer { .. } => "int".to_doc(),
+            BinSegmentOption::Float { .. } => "float".to_doc(),
+            BinSegmentOption::Bitstring { .. } => "bitstring".to_doc(),
+            BinSegmentOption::UTF8 { .. } => "utf8".to_doc(),
+            BinSegmentOption::UTF16 { .. } => "utf16".to_doc(),
+            BinSegmentOption::UTF32 { .. } => "utf32".to_doc(),
+            BinSegmentOption::Signed { .. } => "signed".to_doc(),
+            BinSegmentOption::Unsigned { .. } => "unsigned".to_doc(),
+            BinSegmentOption::Big { .. } => "big".to_doc(),
+            BinSegmentOption::Little { .. } => "little".to_doc(),
+            BinSegmentOption::Native { .. } => "native".to_doc(),
+
+            UntypedExprBinSegmentOption::Size {
+                value,
+                short_form: false,
+                ..
+            } => "size"
+                .to_doc()
+                .append("(")
+                .append(self.expr(value))
+                .append(")"),
+            UntypedExprBinSegmentOption::Size {
+                value,
+                short_form: true,
+                ..
+            } => self.expr(value),
+
+            UntypedExprBinSegmentOption::Unit {
+                value,
+                short_form: false,
+                ..
+            } => "unit"
+                .to_doc()
+                .append("(")
+                .append(self.expr(value))
+                .append(")"),
+            UntypedExprBinSegmentOption::Unit {
+                value,
+                short_form: true,
+                ..
+            } => self.expr(value),
         }
     }
 
@@ -880,7 +955,7 @@ impl<'a> Formatter<'a> {
         list(elems, tail)
     }
 
-    fn pattern(&mut self, pattern: &UntypedPattern) -> Document<'a> {
+    fn pattern(&mut self, pattern: &'a UntypedPattern) -> Document<'a> {
         let comments = self.pop_comments(pattern.location().start);
         let doc = match pattern {
             Pattern::Int { value, .. } => value.clone().to_doc(),
@@ -890,6 +965,8 @@ impl<'a> Formatter<'a> {
             Pattern::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
 
             Pattern::Var { name, .. } => name.to_string().to_doc(),
+
+            Pattern::VarCall { name, .. } => name.to_string().to_doc(),
 
             Pattern::Let { name, pattern, .. } => self
                 .pattern(&pattern)
@@ -979,16 +1056,98 @@ impl<'a> Formatter<'a> {
             Pattern::Tuple { elems, .. } => "tuple"
                 .to_doc()
                 .append(wrap_args(elems.iter().map(|e| self.pattern(e)))),
+
+            Pattern::Bitstring { elems, .. } => {
+                let elems = elems.iter().map(|s| self.pattern_segment(s));
+
+                break_("<<", "<<")
+                    .append(concat(elems.intersperse(delim(","))))
+                    .nest(INDENT)
+                    .append(break_(",", ""))
+                    .append(">>")
+                    .group()
+            }
         };
         commented(doc, comments)
     }
 
-    fn pattern_call_arg(&mut self, arg: &CallArg<UntypedPattern>) -> Document<'a> {
+    fn pattern_call_arg(&mut self, arg: &'a CallArg<UntypedPattern>) -> Document<'a> {
         match &arg.label {
             Some(s) => s.clone().to_doc().append(": "),
             None => nil(),
         }
         .append(self.pattern(&arg.value))
+    }
+
+    // TODO: Merge with segment_option() somehow
+    fn pattern_segment(&mut self, segment: &'a UntypedPatternBinSegment) -> Document<'a> {
+        match segment {
+            UntypedPatternBinSegment { value, options, .. } if *options == [] => {
+                self.pattern(&value)
+            }
+
+            UntypedPatternBinSegment { value, options, .. } => {
+                self.pattern(&value).append(":").append(concat(
+                    options
+                        .iter()
+                        .map(|o| self.pattern_segment_option(o))
+                        .intersperse("-".to_doc()),
+                ))
+            }
+        }
+    }
+
+    // TODO: Merge with segment_option() somehow
+    fn pattern_segment_option(
+        &mut self,
+        option: &'a UntypedPatternBinSegmentOption,
+    ) -> Document<'a> {
+        match option {
+            BinSegmentOption::Invalid { label, .. } => label.clone().to_doc(),
+
+            BinSegmentOption::Binary { .. } => "binary".to_doc(),
+            BinSegmentOption::Integer { .. } => "int".to_doc(),
+            BinSegmentOption::Float { .. } => "float".to_doc(),
+            BinSegmentOption::Bitstring { .. } => "bitstring".to_doc(),
+            BinSegmentOption::UTF8 { .. } => "utf8".to_doc(),
+            BinSegmentOption::UTF16 { .. } => "utf16".to_doc(),
+            BinSegmentOption::UTF32 { .. } => "utf32".to_doc(),
+            BinSegmentOption::Signed { .. } => "signed".to_doc(),
+            BinSegmentOption::Unsigned { .. } => "unsigned".to_doc(),
+            BinSegmentOption::Big { .. } => "big".to_doc(),
+            BinSegmentOption::Little { .. } => "little".to_doc(),
+            BinSegmentOption::Native { .. } => "native".to_doc(),
+
+            UntypedPatternBinSegmentOption::Size {
+                value,
+                short_form: false,
+                ..
+            } => "size"
+                .to_doc()
+                .append("(")
+                .append(self.pattern(value))
+                .append(")"),
+            UntypedPatternBinSegmentOption::Size {
+                value,
+                short_form: true,
+                ..
+            } => self.pattern(value),
+
+            UntypedPatternBinSegmentOption::Unit {
+                value,
+                short_form: false,
+                ..
+            } => "unit"
+                .to_doc()
+                .append("(")
+                .append(self.pattern(value))
+                .append(")"),
+            UntypedPatternBinSegmentOption::Unit {
+                value,
+                short_form: true,
+                ..
+            } => self.pattern(value),
+        }
     }
 }
 

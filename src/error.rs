@@ -991,6 +991,148 @@ and try again.
                     )
                     .unwrap();
                 }
+
+                ConflictingBinaryTypeOptions {
+                    location,
+                    name,
+                    // TODO: show previous location
+                    // previous_location,
+                    ..
+                } => {
+                    let diagnostic = Diagnostic {
+                        title: "Duplicate bit string type option".to_string(),
+                        label: "given here".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: location.clone(),
+                    };
+                    write(buffer, diagnostic, Severity::Error);
+                    writeln!(buffer, "This segment already has the type {}", name).unwrap();
+                }
+
+                ConflictingBinarySignednessOptions {
+                    location,
+                    name,
+                    // TODO: show previous location
+                    // previous_location,
+                    ..
+                } => {
+                    let diagnostic = Diagnostic {
+                        title: "Duplicate bit string signedness".to_string(),
+                        label: "redefined here".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: location.clone(),
+                    };
+                    write(buffer, diagnostic, Severity::Error);
+                    writeln!(buffer, "This segment already has a signedness of {}", name).unwrap();
+                }
+
+                ConflictingBinaryEndiannessOptions {
+                    location,
+                    name,
+                    // TODO: show previous location
+                    // previous_location,
+                    ..
+                } => {
+                    let diagnostic = Diagnostic {
+                        title: "Duplicate bit string endianness".to_string(),
+                        label: "redefined here".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: location.clone(),
+                    };
+                    write(buffer, diagnostic, Severity::Error);
+                    writeln!(buffer, "This segment already has an endianness of {}", name).unwrap();
+                }
+
+                ConflictingBinarySizeOptions {
+                    location,
+                    // TODO: show previous location
+                    // previous_location,
+                    ..
+                } => {
+                    let diagnostic = Diagnostic {
+                        title: "Duplicate bit string size".to_string(),
+                        label: "redefined here".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: location.clone(),
+                    };
+                    write(buffer, diagnostic, Severity::Error);
+                    writeln!(buffer, "This segment already has a size",).unwrap();
+                }
+
+                ConflictingBinaryUnitOptions {
+                    location,
+                    // TODO: show previous location
+                    // previous_location,
+                    ..
+                } => {
+                    let diagnostic = Diagnostic {
+                        title: "Duplicate bit string unit".to_string(),
+                        label: "redefined here".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: location.clone(),
+                    };
+                    write(buffer, diagnostic, Severity::Error);
+                    writeln!(buffer, "This segment already has a unit",).unwrap();
+                }
+
+                BinaryTypeDoesNotAllowUnit { location, typ, .. } => {
+                    let diagnostic = Diagnostic {
+                        title: "Unit cannot be specified for given type".to_string(),
+                        label: "".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: location.clone(),
+                    };
+                    write(buffer, diagnostic, Severity::Error);
+                    writeln!(
+                        buffer,
+                        "No unit specifier must be given for the types utf8, utf16, and utf32.
+This segment has a type of {}.",
+                        typ
+                    )
+                    .unwrap();
+                }
+
+                BinarySegmentMustHaveSize { location, .. } => {
+                    let diagnostic = Diagnostic {
+                        title: "Bit string segment without required size".to_string(),
+                        label: "specified here".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: location.clone(),
+                    };
+                    write(buffer, diagnostic, Severity::Error);
+                    writeln!(
+                        buffer,
+                        "Bit string segments without a size are only allowed
+at the end of a bin pattern",
+                    )
+                    .unwrap();
+                }
+
+                InvalidBinarySegmentOption { label, location } => {
+                    let diagnostic = Diagnostic {
+                        title: "Invalid bit string segment option".to_string(),
+                        label: "specified here".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: location.clone(),
+                    };
+                    write(buffer, diagnostic, Severity::Error);
+                    writeln!(
+                        buffer,
+                        "{} is not a valid option for a bit string segment.
+Valid options are: binary, int, float, bitstring, utf8, utf16, utf32,
+signed, unsigned, big, little, native, size, unit",
+                        label
+                    )
+                    .unwrap();
+                }
             },
 
             Error::Parse { path, src, error } => {

@@ -43,7 +43,6 @@ pub enum UntypedExpr {
         location: SrcSpan,
         head: Box<Self>,
         tail: Box<Self>,
-        deprecated_syntax: bool,
     },
 
     Call {
@@ -68,7 +67,7 @@ pub enum UntypedExpr {
     Let {
         location: SrcSpan,
         value: Box<Self>,
-        pattern: Pattern<()>,
+        pattern: Pattern<(), ()>,
         then: Box<Self>,
         kind: BindingKind,
         annotation: Option<TypeAst>,
@@ -100,6 +99,11 @@ pub enum UntypedExpr {
     Todo {
         location: SrcSpan,
     },
+
+    Bitstring {
+        location: SrcSpan,
+        elems: Vec<UntypedExprBinSegment>,
+    },
 }
 
 impl UntypedExpr {
@@ -122,6 +126,7 @@ impl UntypedExpr {
             Self::ListCons { location, .. } => location,
             Self::TupleIndex { location, .. } => location,
             Self::FieldAccess { location, .. } => location,
+            Self::Bitstring { location, .. } => location,
         }
     }
 

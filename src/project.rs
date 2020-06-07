@@ -144,9 +144,10 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
 
         println!("Compiling {}", name_string);
 
-        let (result, mut module_warnings) = crate::typ::infer_module(module, &modules_type_infos);
-        let warnings = module_warnings
-            .drain(..)
+        let mut warnings = vec![];
+        let result = crate::typ::infer_module(module, &modules_type_infos, &mut warnings);
+        let warnings = warnings
+            .into_iter()
             .map(|warning| Warning::Type {
                 path: path.clone(),
                 src: src.clone(),

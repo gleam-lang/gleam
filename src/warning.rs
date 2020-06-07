@@ -24,21 +24,6 @@ impl Warning {
 
         match self {
             Warning::Type { path, src, warning } => match warning {
-                DeprecatedListPrependSyntax { location } => {
-                    let diagnostic = Diagnostic {
-                        title: "Deprecated syntax".to_string(),
-                        label: "The | operator in lists is deprecated".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: location.clone(),
-                    };
-                    write(buffer, diagnostic, Severity::Warning);
-                    writeln!(
-                            buffer,
-                            "The new syntax is [x, ..y]. If you run gleam format it will automatically update your code."
-                        )
-                        .unwrap();
-                }
                 Todo { location } => {
                     let diagnostic = Diagnostic {
                         title: "Todo found".to_string(),

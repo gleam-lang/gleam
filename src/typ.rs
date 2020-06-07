@@ -3,12 +3,15 @@ pub mod pretty;
 mod tests;
 
 use crate::ast::{
-    self, Arg, ArgNames, BinOp, BindingKind, CallArg, Clause, ClauseGuard, Pattern,
-    RecordConstructor, SrcSpan, Statement, TypeAst, TypedArg, TypedClause, TypedClauseGuard,
-    TypedExpr, TypedModule, TypedMultiPattern, TypedPattern, TypedStatement, UnqualifiedImport,
-    UntypedArg, UntypedClause, UntypedClauseGuard, UntypedExpr, UntypedModule, UntypedMultiPattern,
-    UntypedPattern, UntypedStatement,
+    self, Arg, ArgNames, BinOp, BinSegmentOption, BindingKind, CallArg, Clause, ClauseGuard,
+    Pattern, RecordConstructor, SrcSpan, Statement, TypeAst, TypedArg, TypedClause,
+    TypedClauseGuard, TypedExpr, TypedExprBinSegment, TypedExprBinSegmentOption, TypedModule,
+    TypedMultiPattern, TypedPattern, TypedPatternBinSegment, TypedPatternBinSegmentOption,
+    TypedStatement, UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard, UntypedExpr,
+    UntypedExprBinSegment, UntypedExprBinSegmentOption, UntypedModule, UntypedMultiPattern,
+    UntypedPattern, UntypedPatternBinSegment, UntypedPatternBinSegmentOption, UntypedStatement,
 };
+use crate::bitstring::{BinaryTypeSpecifier, Error as BinaryError};
 use crate::error::GleamExpect;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -313,9 +316,9 @@ pub enum PatternConstructor {
     Record { name: String },
 }
 
-#[derive(Debug, Clone)]
-pub struct Typer<'a, 'b> {
-    current_module: &'b [String],
+#[derive(Debug)]
+pub struct Typer<'a> {
+    current_module: &'a [String],
     uid: usize,
     level: usize,
     annotated_generic_types: im::HashSet<usize>,
@@ -338,10 +341,10 @@ pub struct Typer<'a, 'b> {
     accessors: HashMap<String, AccessorsMap>,
 
     // Warnings
-    warnings: Vec<Warning>,
+    warnings: &'a mut Vec<Warning>,
 }
 
-impl<'a, 'b> Typer<'a, 'b> {
+impl<'a> Typer<'a> {
     pub fn in_new_scope<T, O: FnOnce(&mut Self) -> Result<T, Error>>(
         &mut self,
         op: O,
@@ -368,8 +371,9 @@ impl<'a, 'b> Typer<'a, 'b> {
     }
 
     pub fn new(
-        current_module: &'b [String],
+        current_module: &'a [String],
         importable_modules: &'a HashMap<String, Module>,
+        warnings: &'a mut Vec<Warning>,
     ) -> Self {
         let mut typer = Self {
             uid: 0,
@@ -379,11 +383,11 @@ impl<'a, 'b> Typer<'a, 'b> {
             module_values: HashMap::new(),
             imported_modules: HashMap::new(),
             accessors: HashMap::new(),
-            warnings: Vec::new(),
             local_values: hashmap![],
             annotated_type_vars: hashmap![],
             importable_modules,
             current_module,
+            warnings,
         };
 
         typer
@@ -503,6 +507,19 @@ impl<'a, 'b> Typer<'a, 'b> {
                 },
             )
             .gleam_expect("prelude inserting Nil type");
+
+        typer
+            .insert_type_constructor(
+                "Bitstring".to_string(),
+                TypeConstructor {
+                    origin: Default::default(),
+                    parameters: vec![],
+                    typ: bitstring(),
+                    module: vec![],
+                    public: true,
+                },
+            )
+            .gleam_expect("prelude inserting Bitstring type");
 
         let ok = typer.new_generic_var();
         let error = typer.new_generic_var();
@@ -874,9 +891,8 @@ impl<'a, 'b> Typer<'a, 'b> {
                 location,
                 head,
                 tail,
-                deprecated_syntax,
                 ..
-            } => self.infer_cons(*head, *tail, deprecated_syntax, location),
+            } => self.infer_cons(*head, *tail, location),
 
             UntypedExpr::Call {
                 location,
@@ -906,6 +922,8 @@ impl<'a, 'b> Typer<'a, 'b> {
                 tuple,
                 ..
             } => self.infer_tuple_index(*tuple, index, location),
+
+            UntypedExpr::Bitstring { location, elems } => self.infer_bin(elems, location),
         }
     }
 
@@ -1181,22 +1199,12 @@ impl<'a, 'b> Typer<'a, 'b> {
         &mut self,
         head: UntypedExpr,
         tail: UntypedExpr,
-        deprecated_syntax: bool,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         let head = self.infer(head)?;
         let tail = self.infer(tail)?;
         self.unify(tail.typ(), list(head.typ()))
             .map_err(|e| convert_unify_error(e, &location))?;
-
-        if deprecated_syntax {
-            self.warnings.push(Warning::DeprecatedListPrependSyntax {
-                location: SrcSpan {
-                    start: location.start - 2,
-                    end: location.start - 1,
-                },
-            });
-        }
 
         Ok(TypedExpr::ListCons {
             location,
@@ -1280,6 +1288,111 @@ impl<'a, 'b> Typer<'a, 'b> {
                 location: tuple.location().clone(),
                 given: tuple.typ(),
             }),
+        }
+    }
+
+    fn infer_bin(
+        &mut self,
+        elems: Vec<UntypedExprBinSegment>,
+        location: SrcSpan,
+    ) -> Result<TypedExpr, Error> {
+        let elems = elems
+            .into_iter()
+            .map(|s| self.infer_segment(*s.value, s.options, s.location))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(TypedExpr::Bitstring {
+            location,
+            elems,
+            typ: bitstring(),
+        })
+    }
+
+    fn infer_segment(
+        &mut self,
+        value: UntypedExpr,
+        options: Vec<UntypedExprBinSegmentOption>,
+        location: SrcSpan,
+    ) -> Result<TypedExprBinSegment, Error> {
+        let value = self.infer(value)?;
+
+        let options = options
+            .into_iter()
+            .map(|option| self.infer_segment_option(option))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let type_specifier = BinaryTypeSpecifier::new(&options, true)
+            .map_err(|e| convert_binary_error(e, &location))?;
+        let typ = type_specifier.typ().unwrap_or_else(|| int());
+
+        self.unify(typ.clone(), value.typ())
+            .map_err(|e| convert_unify_error(e, value.location()))?;
+
+        Ok(TypedExprBinSegment {
+            location,
+            typ: typ,
+            value: Box::new(value),
+            options,
+        })
+    }
+
+    fn infer_segment_option(
+        &mut self,
+        segment_option: UntypedExprBinSegmentOption,
+    ) -> Result<TypedExprBinSegmentOption, Error> {
+        match segment_option {
+            BinSegmentOption::Invalid {
+                label, location, ..
+            } => Err(Error::InvalidBinarySegmentOption { label, location }),
+
+            BinSegmentOption::Size {
+                value,
+                location,
+                short_form,
+                ..
+            } => {
+                let typed_value = self.infer(*value)?;
+                self.unify(int(), typed_value.typ())
+                    .map_err(|e| convert_unify_error(e, typed_value.location()))?;
+
+                Ok(BinSegmentOption::Size {
+                    location,
+                    short_form,
+                    value: Box::new(typed_value),
+                })
+            }
+
+            BinSegmentOption::Unit {
+                value,
+                location,
+                short_form,
+                ..
+            } => {
+                let typed_value = self.infer(*value)?;
+                self.unify(int(), typed_value.typ())
+                    .map_err(|e| convert_unify_error(e, &location))?;
+
+                Ok(BinSegmentOption::Unit {
+                    location,
+                    short_form,
+                    value: Box::new(typed_value),
+                })
+            }
+
+            BinSegmentOption::Binary { location } => Ok(BinSegmentOption::Binary { location }),
+            BinSegmentOption::Integer { location } => Ok(BinSegmentOption::Integer { location }),
+            BinSegmentOption::Float { location } => Ok(BinSegmentOption::Float { location }),
+            BinSegmentOption::Bitstring { location } => {
+                Ok(BinSegmentOption::Bitstring { location })
+            }
+            BinSegmentOption::UTF8 { location } => Ok(BinSegmentOption::UTF8 { location }),
+            BinSegmentOption::UTF16 { location } => Ok(BinSegmentOption::UTF16 { location }),
+            BinSegmentOption::UTF32 { location } => Ok(BinSegmentOption::UTF32 { location }),
+            BinSegmentOption::Signed { location } => Ok(BinSegmentOption::Signed { location }),
+            BinSegmentOption::Unsigned { location } => Ok(BinSegmentOption::Unsigned { location }),
+            BinSegmentOption::Big { location } => Ok(BinSegmentOption::Big { location }),
+            BinSegmentOption::Little { location } => Ok(BinSegmentOption::Little { location }),
+            BinSegmentOption::Native { location } => Ok(BinSegmentOption::Native { location }),
         }
     }
 
@@ -2538,11 +2651,52 @@ pub enum Error {
     RecordAccessUnknownType {
         location: SrcSpan,
     },
+
+    ConflictingBinaryTypeOptions {
+        previous_location: SrcSpan,
+        location: SrcSpan,
+        name: String,
+    },
+
+    ConflictingBinarySignednessOptions {
+        previous_location: SrcSpan,
+        location: SrcSpan,
+        name: String,
+    },
+
+    ConflictingBinaryEndiannessOptions {
+        previous_location: SrcSpan,
+        location: SrcSpan,
+        name: String,
+    },
+
+    ConflictingBinarySizeOptions {
+        previous_location: SrcSpan,
+        location: SrcSpan,
+    },
+
+    ConflictingBinaryUnitOptions {
+        previous_location: SrcSpan,
+        location: SrcSpan,
+    },
+
+    BinaryTypeDoesNotAllowUnit {
+        location: SrcSpan,
+        typ: String,
+    },
+
+    BinarySegmentMustHaveSize {
+        location: SrcSpan,
+    },
+
+    InvalidBinarySegmentOption {
+        location: SrcSpan,
+        label: String,
+    },
 }
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum Warning {
-    DeprecatedListPrependSyntax { location: SrcSpan },
-
     Todo { location: SrcSpan },
 
     ImplicitlyDiscardedResult { location: SrcSpan },
@@ -2722,8 +2876,9 @@ fn register_types(
 pub fn infer_module(
     module: UntypedModule,
     modules: &HashMap<String, Module>,
-) -> (Result<TypedModule, Error>, Vec<Warning>) {
-    let mut typer = Typer::new(module.name.as_slice(), modules);
+    warnings: &mut Vec<Warning>,
+) -> Result<TypedModule, Error> {
+    let mut typer = Typer::new(module.name.as_slice(), modules, warnings);
     let module_name = &module.name;
 
     for s in module.statements.iter() {
@@ -2772,31 +2927,28 @@ pub fn infer_module(
                     if let Some(typ) = module_info.types.get(name) {
                         match typer.insert_type_constructor(imported_name.clone(), typ.clone()) {
                             Ok(_) => (),
-                            Err(e) => return (Err(e), typer.warnings),
+                            Err(e) => return Err(e),
                         }
 
                         imported = true;
                     }
 
                     if !imported {
-                        return (
-                            Err(Error::UnknownModuleField {
-                                location: location.clone(),
-                                name: name.clone(),
-                                module_name: module.clone(),
-                                value_constructors: module_info
-                                    .values
-                                    .keys()
-                                    .map(|t| t.to_string())
-                                    .collect(),
-                                type_constructors: module_info
-                                    .types
-                                    .keys()
-                                    .map(|t| t.to_string())
-                                    .collect(),
-                            }),
-                            typer.warnings,
-                        );
+                        return Err(Error::UnknownModuleField {
+                            location: location.clone(),
+                            name: name.clone(),
+                            module_name: module.clone(),
+                            value_constructors: module_info
+                                .values
+                                .keys()
+                                .map(|t| t.to_string())
+                                .collect(),
+                            type_constructors: module_info
+                                .types
+                                .keys()
+                                .map(|t| t.to_string())
+                                .collect(),
+                        });
                     }
                 }
 
@@ -2815,11 +2967,11 @@ pub fn infer_module(
     for s in module.statements.iter() {
         match register_types(s, module_name, &mut typer) {
             Ok(_) => (),
-            Err(e) => return (Err(e), typer.warnings),
+            Err(e) => return Err(e),
         }
     }
 
-    let statements_result: Result<Vec<_>, _> = module
+    let statements = module
         .statements
         .into_iter()
         .map(|s| match s {
@@ -3153,12 +3305,7 @@ pub fn infer_module(
                 unqualified,
             }),
         })
-        .collect::<Result<Vec<_>, Error>>();
-
-    let statements = match statements_result {
-        Ok(o) => o,
-        Err(e) => return (Err(e), typer.warnings),
-    };
+        .collect::<Result<Vec<_>, Error>>()?;
 
     // Remove private and imported types and values to create the public interface
     typer
@@ -3170,13 +3317,10 @@ pub fn infer_module(
     // Ensure no exported values have private types in their type signature
     for (_, value) in typer.module_values.iter() {
         if let Some(leaked) = value.typ.find_private_type() {
-            return (
-                Err(Error::PrivateTypeLeak {
-                    location: value.origin.clone(),
-                    leaked,
-                }),
-                typer.warnings,
-            );
+            return Err(Error::PrivateTypeLeak {
+                location: value.origin.clone(),
+                leaked,
+            });
         }
     }
 
@@ -3184,28 +3328,24 @@ pub fn infer_module(
         module_types: types,
         module_values: values,
         accessors,
-        warnings,
         ..
     } = typer;
 
-    (
-        Ok(ast::Module {
-            documentation: module.documentation,
-            name: module.name.clone(),
-            statements,
-            type_info: Module {
-                name: module.name,
-                types,
-                values,
-                accessors,
-            },
-        }),
-        warnings,
-    )
+    Ok(ast::Module {
+        documentation: module.documentation,
+        name: module.name.clone(),
+        statements,
+        type_info: Module {
+            name: module.name,
+            types,
+            values,
+            accessors,
+        },
+    })
 }
 
-struct PatternTyper<'a, 'b, 'c> {
-    typer: &'a mut Typer<'b, 'c>,
+struct PatternTyper<'a, 'b> {
+    typer: &'a mut Typer<'b>,
     level: usize,
     mode: PatternMode,
     initial_pattern_vars: HashSet<String>,
@@ -3216,8 +3356,8 @@ enum PatternMode {
     Alternative,
 }
 
-impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
-    pub fn new(typer: &'a mut Typer<'b, 'c>, level: usize) -> Self {
+impl<'a, 'b> PatternTyper<'a, 'b> {
+    pub fn new(typer: &'a mut Typer<'b>, level: usize) -> Self {
         Self {
             typer,
             level,
@@ -3293,6 +3433,119 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
         Ok(typed_multi)
     }
 
+    fn infer_pattern_bitstring(
+        &mut self,
+        mut elems: Vec<UntypedPatternBinSegment>,
+        location: SrcSpan,
+    ) -> Result<TypedPattern, Error> {
+        let last_segment = elems.pop();
+
+        let mut typed_segments = elems
+            .into_iter()
+            .map(|s| self.infer_pattern_segment(s, false))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        match last_segment {
+            Some(s) => {
+                let typed_last_segment = self.infer_pattern_segment(s, true)?;
+                typed_segments.push(typed_last_segment)
+            }
+            None => (),
+        }
+
+        Ok(TypedPattern::Bitstring {
+            location,
+            elems: typed_segments,
+        })
+    }
+
+    fn infer_pattern_segment(
+        &mut self,
+        segment: UntypedPatternBinSegment,
+        is_last_segment: bool,
+    ) -> Result<TypedPatternBinSegment, Error> {
+        let UntypedPatternBinSegment {
+            location,
+            options,
+            value,
+            ..
+        } = segment;
+
+        let options = options
+            .into_iter()
+            .map(|option| self.infer_pattern_segment_option(option))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let typed_segment = BinaryTypeSpecifier::new(&options, !is_last_segment)
+            .map_err(|e| convert_binary_error(e, &location))?;
+
+        let typ = typed_segment.typ().unwrap_or_else(|| int());
+        let typed_value = self.unify(*value, typ.clone())?;
+
+        Ok(TypedPatternBinSegment {
+            location: location,
+            value: Box::new(typed_value),
+            options,
+            typ: typ,
+        })
+    }
+
+    fn infer_pattern_segment_option(
+        &mut self,
+        segment_option: UntypedPatternBinSegmentOption,
+    ) -> Result<TypedPatternBinSegmentOption, Error> {
+        match segment_option {
+            BinSegmentOption::Invalid {
+                label, location, ..
+            } => Err(Error::InvalidBinarySegmentOption { label, location }),
+
+            BinSegmentOption::Size {
+                value,
+                location,
+                short_form,
+                ..
+            } => {
+                let unified_pattern = self.unify(*value, int())?;
+
+                Ok(BinSegmentOption::Size {
+                    location,
+                    short_form,
+                    value: Box::new(unified_pattern),
+                })
+            }
+
+            BinSegmentOption::Unit {
+                value,
+                location,
+                short_form,
+                ..
+            } => {
+                let unified_pattern = self.unify(*value, int())?;
+
+                Ok(BinSegmentOption::Unit {
+                    location,
+                    short_form,
+                    value: Box::new(unified_pattern),
+                })
+            }
+
+            BinSegmentOption::Binary { location } => Ok(BinSegmentOption::Binary { location }),
+            BinSegmentOption::Integer { location } => Ok(BinSegmentOption::Integer { location }),
+            BinSegmentOption::Float { location } => Ok(BinSegmentOption::Float { location }),
+            BinSegmentOption::Bitstring { location } => {
+                Ok(BinSegmentOption::Bitstring { location })
+            }
+            BinSegmentOption::UTF8 { location } => Ok(BinSegmentOption::UTF8 { location }),
+            BinSegmentOption::UTF16 { location } => Ok(BinSegmentOption::UTF16 { location }),
+            BinSegmentOption::UTF32 { location } => Ok(BinSegmentOption::UTF32 { location }),
+            BinSegmentOption::Signed { location } => Ok(BinSegmentOption::Signed { location }),
+            BinSegmentOption::Unsigned { location } => Ok(BinSegmentOption::Unsigned { location }),
+            BinSegmentOption::Big { location } => Ok(BinSegmentOption::Big { location }),
+            BinSegmentOption::Little { location } => Ok(BinSegmentOption::Little { location }),
+            BinSegmentOption::Native { location } => Ok(BinSegmentOption::Native { location }),
+        }
+    }
+
     /// When we have an assignment or a case expression we unify the pattern with the
     /// inferred type of the subject in order to determine what variables to insert
     /// into the typerironment (or to detect a type error).
@@ -3305,6 +3558,34 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 self.insert_variable(name.as_ref(), typ)
                     .map_err(|e| convert_unify_error(e, &location))?;
                 Ok(Pattern::Var { name, location })
+            }
+
+            Pattern::VarCall { name, location, .. } => {
+                let ValueConstructor { typ, .. } =
+                    self.typer.get_variable(&name).cloned().ok_or_else(|| {
+                        Error::UnknownVariable {
+                            location: location.clone(),
+                            name: name.to_string(),
+                            variables: self
+                                .typer
+                                .local_values
+                                .keys()
+                                .map(|t| t.to_string())
+                                .collect(),
+                        }
+                    })?;
+                let typ = self
+                    .typer
+                    .instantiate(typ, self.typer.level, &mut hashmap![]);
+                self.typer
+                    .unify(int(), typ.clone())
+                    .map_err(|e| convert_unify_error(e, &location))?;
+
+                Ok(Pattern::VarCall {
+                    name,
+                    location,
+                    typ,
+                })
             }
 
             Pattern::Let { name, pattern, .. } => {
@@ -3346,28 +3627,15 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 location,
                 head,
                 tail,
-                deprecated_syntax,
             } => match typ.get_app_args(true, &[], "List", 1, self.typer) {
                 Some(args) => {
                     let head = Box::new(self.unify(*head, args[0].clone())?);
                     let tail = Box::new(self.unify(*tail, typ)?);
 
-                    if deprecated_syntax {
-                        self.typer
-                            .warnings
-                            .push(Warning::DeprecatedListPrependSyntax {
-                                location: SrcSpan {
-                                    start: location.end + 1,
-                                    end: location.end + 2,
-                                },
-                            });
-                    }
-
                     Ok(Pattern::Cons {
                         location,
                         head,
                         tail,
-                        deprecated_syntax,
                     })
                 }
 
@@ -3410,6 +3678,8 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                     })
                 }
             },
+
+            Pattern::Bitstring { location, elems } => self.infer_pattern_bitstring(elems, location),
 
             Pattern::Constructor {
                 location,
@@ -3596,6 +3866,65 @@ fn convert_unify_error(e: UnifyError, location: &SrcSpan) -> Error {
         },
 
         UnifyError::RecursiveType => Error::RecursiveType {
+            location: location.clone(),
+        },
+    }
+}
+
+fn convert_binary_error(e: crate::bitstring::Error, location: &SrcSpan) -> Error {
+    match e {
+        BinaryError::ConflictingSignednessOptions {
+            location,
+            previous_location,
+            name,
+        } => Error::ConflictingBinarySignednessOptions {
+            location: location.clone(),
+            previous_location: previous_location.clone(),
+            name: name.clone(),
+        },
+
+        BinaryError::ConflictingEndiannessOptions {
+            location,
+            previous_location,
+            name,
+        } => Error::ConflictingBinaryEndiannessOptions {
+            location: location.clone(),
+            previous_location: previous_location.clone(),
+            name: name.clone(),
+        },
+
+        BinaryError::ConflictingTypeOptions {
+            location,
+            previous_location,
+            name,
+        } => Error::ConflictingBinaryTypeOptions {
+            location: location.clone(),
+            previous_location: previous_location.clone(),
+            name: name.clone(),
+        },
+
+        BinaryError::ConflictingSizeOptions {
+            location,
+            previous_location,
+        } => Error::ConflictingBinarySizeOptions {
+            location: location.clone(),
+            previous_location: previous_location.clone(),
+        },
+
+        BinaryError::ConflictingUnitOptions {
+            location,
+            previous_location,
+        } => Error::ConflictingBinaryUnitOptions {
+            location: location.clone(),
+            previous_location: previous_location.clone(),
+        },
+
+        BinaryError::TypeDoesNotAllowUnit { location, typ } => Error::BinaryTypeDoesNotAllowUnit {
+            location: location.clone(),
+            typ: typ.clone(),
+        },
+
+        BinaryError::SegmentMustHaveSize => Error::BinarySegmentMustHaveSize {
             location: location.clone(),
         },
     }
@@ -3902,4 +4231,13 @@ pub fn tuple(elems: Vec<Arc<Type>>) -> Arc<Type> {
 
 pub fn fn_(args: Vec<Arc<Type>>, retrn: Arc<Type>) -> Arc<Type> {
     Arc::new(Type::Fn { retrn, args })
+}
+
+pub fn bitstring() -> Arc<Type> {
+    Arc::new(Type::App {
+        args: vec![],
+        public: true,
+        name: "Bitstring".to_string(),
+        module: vec![],
+    })
 }

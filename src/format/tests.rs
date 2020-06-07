@@ -2581,6 +2581,30 @@ pub fn two() {
 }
 ",
     );
+
+    // Bitstring construction
+
+    assert_format!(
+        "fn main() {
+  let a = 1
+  let x = <<1, a, 2:binary>>
+  let size = <<3:2, 4:size(3), 5:binary-size(4), 6:size(a)>>
+  let unit = <<7:unit(1), 8:binary-unit(2)>>
+  x
+}
+",
+    );
+
+    // Bitstring
+
+    assert_format!(
+        "fn main() {
+  let a = 1
+  let <<b, c, d:binary>> = <<1, a, 2:binary>>
+  b
+}
+",
+    );
 }
 
 #[test]
@@ -2590,78 +2614,6 @@ fn module_rewrites_test() {
             assert_eq!(pretty($src).unwrap(), $output);
         };
     }
-
-    // Formatter rewrites old [x | y] list prepend syntax to [x, ..y]
-    assert_format_rewrite!(
-        "fn main() {
-  [1, 2, 3 | x]
-}
-",
-        "fn main() {
-  [1, 2, 3, ..x]
-}
-",
-    );
-
-    // Formatter rewrites old [x | y] list prepend syntax to [x, ..y] with line breaks
-    assert_format_rewrite!(
-        "fn main() {
-  [
-    really_long_variable_name,
-    really_long_variable_name,
-    really_long_variable_name
-    | tail
-  ]
-}
-",
-        "fn main() {
-  [
-    really_long_variable_name,
-    really_long_variable_name,
-    really_long_variable_name,
-    ..tail
-  ]
-}
-",
-    );
-
-    // Formatter removes discard list prefix
-    assert_format_rewrite!(
-        "fn main() {
-  let [x, y, z | _] = [1, 2, 3, 4]
-  x
-}
-",
-        "fn main() {
-  let [x, y, z, ..] = [1, 2, 3, 4]
-  x
-}
-",
-    );
-
-    // formatter removes discard list prefix with line breaks
-    assert_format_rewrite!(
-        "fn main() {
-  let [
-    really_long_variable_name_1,
-    really_long_variable_name_2,
-    really_long_variable_name_3
-    | _
-  ] = [1, 2, 3, 4]
-  really_long_variable_name_1
-}
-",
-        "fn main() {
-  let [
-    really_long_variable_name_1,
-    really_long_variable_name_2,
-    really_long_variable_name_3,
-    ..
-  ] = [1, 2, 3, 4]
-  really_long_variable_name_1
-}
-",
-    );
 
     // Module comments are moved to the top
     assert_format_rewrite!(

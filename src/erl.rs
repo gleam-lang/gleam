@@ -324,6 +324,138 @@ fn tuple<'a>(elems: impl Iterator<Item = Document<'a>>) -> Document<'a> {
         .group()
 }
 
+fn bitstring<'a>(elems: impl Iterator<Item = Document<'a>>) -> Document<'a> {
+    concat(elems.intersperse(delim(",")))
+        .nest_current()
+        .surround("<<", ">>")
+        .group()
+}
+
+fn segment<'a>(
+    value: Cow<'a, TypedExpr>,
+    options: Vec<TypedExprBinSegmentOption>,
+    env: &mut Env<'_, 'a>,
+) -> Document<'a> {
+    use Cow::*;
+    use TypedExpr::*;
+
+    let mut document = match value {
+        // Skip the normal <<value/utf8>> surrounds
+        Borrowed(String { value, .. }) => value.as_str().to_doc().surround("\"", "\""),
+        Owned(String { value, .. }) => value.to_doc().surround("\"", "\""),
+
+        // As normal
+        Borrowed(TypedExpr::Int { .. })
+        | Borrowed(Float { .. })
+        | Borrowed(Var { .. })
+        | Borrowed(Bitstring { .. })
+        | Owned(TypedExpr::Int { .. })
+        | Owned(Float { .. })
+        | Owned(Var { .. })
+        | Owned(Bitstring { .. }) => expr(value, env),
+
+        // Wrap anything else in parentheses
+        value => expr(value, env).surround("(", ")"),
+    };
+
+    let mut size: Option<Document> = None;
+    let mut unit: Option<Document> = None;
+    let mut others = Vec::new();
+
+    options.into_iter().for_each(|option| match option {
+        BinSegmentOption::Invalid { .. } => (),
+
+        BinSegmentOption::Integer { .. } => others.push("integer"),
+        BinSegmentOption::Float { .. } => others.push("float"),
+        BinSegmentOption::Binary { .. } => others.push("binary"),
+        BinSegmentOption::Bitstring { .. } => others.push("bitstring"),
+        BinSegmentOption::UTF8 { .. } => others.push("utf8"),
+        BinSegmentOption::UTF16 { .. } => others.push("utf16"),
+        BinSegmentOption::UTF32 { .. } => others.push("utf32"),
+        BinSegmentOption::Signed { .. } => others.push("signed"),
+        BinSegmentOption::Unsigned { .. } => others.push("unsigned"),
+        BinSegmentOption::Big { .. } => others.push("big"),
+        BinSegmentOption::Little { .. } => others.push("little"),
+        BinSegmentOption::Native { .. } => others.push("native"),
+        BinSegmentOption::Size { value, .. } => {
+            size = Some(":".to_doc().append(expr(Cow::Owned(*value), env)))
+        }
+        BinSegmentOption::Unit { value, .. } => {
+            unit = Some(":".to_doc().append(expr(Cow::Owned(*value), env)))
+        }
+    });
+
+    document = document.append(size);
+
+    if !others.is_empty() || unit.is_some() {
+        document = document.append("/").append(others.join("-"));
+    }
+
+    document.append(unit)
+}
+
+// TODO: Merge segment() and pattern_segment() somehow
+fn pattern_segment<'a>(
+    value: Cow<'a, TypedPattern>,
+    options: Vec<TypedPatternBinSegmentOption>,
+    env: &mut Env<'_, 'a>,
+) -> Document<'a> {
+    use Cow::*;
+    use Pattern::*;
+
+    let mut document = match value {
+        // Skip the normal <<value/utf8>> surrounds
+        Borrowed(String { value, .. }) => value.as_str().to_doc().surround("\"", "\""),
+        Owned(String { value, .. }) => value.to_doc().surround("\"", "\""),
+
+        // As normal
+        Borrowed(Var { .. })
+        | Borrowed(Int { .. })
+        | Borrowed(Float { .. })
+        | Owned(Var { .. })
+        | Owned(Int { .. })
+        | Owned(Float { .. }) => pattern(value, env),
+
+        // No other pattern variants are allowed in pattern bit string segments
+        _ => Document::Nil,
+    };
+
+    let mut size: Option<Document> = None;
+    let mut unit: Option<Document> = None;
+    let mut others = Vec::new();
+
+    options.into_iter().for_each(|option| match option {
+        BinSegmentOption::Invalid { .. } => (),
+
+        BinSegmentOption::Integer { .. } => others.push("integer"),
+        BinSegmentOption::Float { .. } => others.push("float"),
+        BinSegmentOption::Binary { .. } => others.push("binary"),
+        BinSegmentOption::Bitstring { .. } => others.push("bitstring"),
+        BinSegmentOption::UTF8 { .. } => others.push("utf8"),
+        BinSegmentOption::UTF16 { .. } => others.push("utf16"),
+        BinSegmentOption::UTF32 { .. } => others.push("utf32"),
+        BinSegmentOption::Signed { .. } => others.push("signed"),
+        BinSegmentOption::Unsigned { .. } => others.push("unsigned"),
+        BinSegmentOption::Big { .. } => others.push("big"),
+        BinSegmentOption::Little { .. } => others.push("little"),
+        BinSegmentOption::Native { .. } => others.push("native"),
+        BinSegmentOption::Size { value, .. } => {
+            size = Some(":".to_doc().append(pattern(Cow::Owned(*value), env)))
+        }
+        BinSegmentOption::Unit { value, .. } => {
+            unit = Some(":".to_doc().append(pattern(Cow::Owned(*value), env)))
+        }
+    });
+
+    document = document.append(size);
+
+    if !others.is_empty() || unit.is_some() {
+        document = document.append("/").append(others.join("-"));
+    }
+
+    document.append(unit)
+}
+
 fn seq<'a>(
     first: Cow<'a, TypedExpr>,
     then: Cow<'a, TypedExpr>,
@@ -467,11 +599,14 @@ fn pattern<'a>(p: Cow<'a, TypedPattern>, env: &mut Env<'_, 'a>) -> Document<'a> 
         Borrowed(Var { name, .. }) => env.next_local_var_name(Borrowed(name)),
         Owned(Var { name, .. }) => env.next_local_var_name(Owned(name)),
 
-        Borrowed(Int { value, .. }) => value.to_string().to_doc(),
+        Borrowed(Int { value, .. }) => value.as_str().to_doc(),
         Owned(Int { value, .. }) => value.to_doc(),
 
         Borrowed(Float { value, .. }) => float(Borrowed(value)),
         Owned(Float { value, .. }) => float(Owned(value)),
+
+        Borrowed(VarCall { name, .. }) => env.local_var_name(Borrowed(name)),
+        Owned(VarCall { name, .. }) => env.local_var_name(Owned(name)),
 
         Borrowed(String { value, .. }) => string(Borrowed(value)),
         Owned(String { value, .. }) => string(Owned(value)),
@@ -492,6 +627,19 @@ fn pattern<'a>(p: Cow<'a, TypedPattern>, env: &mut Env<'_, 'a>) -> Document<'a> 
             tuple(elems.into_iter().map(|p| pattern(Borrowed(p), env)))
         }
         Owned(Tuple { elems, .. }) => tuple(elems.into_iter().map(|p| pattern(Owned(p), env))),
+
+        // TODO: investigate if the clone here is necessary (replacing it with a
+        // Cow.
+        Borrowed(Bitstring { elems, .. }) => bitstring(
+            elems
+                .into_iter()
+                .map(|s| pattern_segment(Borrowed(&s.value), s.options.clone(), env)),
+        ),
+        Owned(Bitstring { elems, .. }) => bitstring(
+            elems
+                .into_iter()
+                .map(|s| pattern_segment(Owned(*s.value), s.options.clone(), env)),
+        ),
     }
 }
 
@@ -610,13 +758,37 @@ enum ListType<E, T> {
 
 fn var<'a>(
     name: Cow<'a, str>,
-    constructor: Cow<ValueConstructor>,
+    constructor: Cow<'a, ValueConstructor>,
     env: &mut Env<'_, 'a>,
 ) -> Document<'a> {
-    match &constructor.variant {
-        ValueConstructorVariant::Record {
+    use Cow::*;
+    use ValueConstructorVariant::*;
+
+    let (variant, typ) = match constructor {
+        Borrowed(constructor) => (Borrowed(&constructor.variant), Borrowed(&constructor.typ)),
+        Owned(constructor) => (Owned(constructor.variant), Owned(constructor.typ)),
+    };
+
+    match variant {
+        Borrowed(Record {
             name: record_name, ..
-        } => match &*constructor.typ {
+        }) => match typ.as_ref().as_ref() {
+            Type::Fn { args, .. } => {
+                let chars = incrementing_args_list(args.len());
+                "fun("
+                    .to_doc()
+                    .append(chars.clone())
+                    .append(") -> {")
+                    .append(record_name.to_snake_case())
+                    .append(", ")
+                    .append(chars)
+                    .append("} end")
+            }
+            _ => atom(record_name.to_snake_case().into()),
+        },
+        Owned(Record {
+            name: record_name, ..
+        }) => match typ.as_ref().as_ref() {
             Type::Fn { args, .. } => {
                 let chars = incrementing_args_list(args.len());
                 "fun("
@@ -631,23 +803,48 @@ fn var<'a>(
             _ => atom(record_name.to_snake_case().into()),
         },
 
-        ValueConstructorVariant::LocalVariable => env.local_var_name(name),
+        Borrowed(LocalVariable) | Owned(LocalVariable) => env.local_var_name(name),
 
-        ValueConstructorVariant::ModuleFn {
+        Borrowed(ModuleFn {
             arity, ref module, ..
-        } if module.as_slice() == env.module => "fun "
+        }) if module.as_slice() == env.module => "fun "
             .to_doc()
             .append(atom(name.into()))
             .append("/")
             .append(*arity),
 
-        ValueConstructorVariant::ModuleFn { arity, module, .. } => "fun "
+        Owned(ModuleFn {
+            arity, ref module, ..
+        }) if module.as_slice() == env.module => "fun "
+            .to_doc()
+            .append(atom(name.into()))
+            .append("/")
+            .append(arity),
+
+        Borrowed(ModuleFn {
+            arity,
+            module,
+            name,
+            ..
+        }) => "fun "
             .to_doc()
             .append(module.join("@"))
             .append(":")
             .append(atom(name.into()))
             .append("/")
             .append(*arity),
+        Owned(ModuleFn {
+            arity,
+            module,
+            name,
+            ..
+        }) => "fun "
+            .to_doc()
+            .append(module.join("@"))
+            .append(":")
+            .append(atom(name.into()))
+            .append("/")
+            .append(arity),
     }
 }
 
@@ -1208,7 +1405,7 @@ fn wrap_expr<'a, E: Into<Cow<'a, TypedExpr>>>(
     }
 }
 
-fn expr<'a, E: Into<Cow<'a, TypedExpr>>>(expression: E, env: &mut Env<'_, 'a>) -> Document<'a> {
+fn expr<'a>(expression: Cow<'a, TypedExpr>, env: &mut Env<'_, 'a>) -> Document<'a> {
     let expression = expression.into();
 
     // Some imports here - they will make next match less hard to read.
@@ -1369,6 +1566,17 @@ fn expr<'a, E: Into<Cow<'a, TypedExpr>>>(expression: E, env: &mut Env<'_, 'a>) -
         Owned(Tuple { elems, .. }) => {
             tuple(elems.into_iter().map(|e| wrap_expr(Cow::Owned(e), env)))
         }
+
+        Borrowed(Bitstring { elems, .. }) => bitstring(
+            elems
+                .into_iter()
+                .map(|s| segment(Borrowed(&s.value), s.options.clone(), env)),
+        ),
+        Owned(Bitstring { elems, .. }) => bitstring(
+            elems
+                .into_iter()
+                .map(|s| segment(Owned(*s.value), s.options.clone(), env)),
+        ),
     }
 }
 

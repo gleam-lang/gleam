@@ -9,4 +9,3 @@ pub fn not_equal_test() {
   should.not_equal(1, 2)
   should.not_equal(True, False)
 }
-

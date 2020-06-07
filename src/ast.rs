@@ -307,9 +307,9 @@ pub struct CallArg<A> {
     pub value: A,
 }
 
-pub type MultiPattern<PatternConstructor> = Vec<Pattern<PatternConstructor>>;
-pub type UntypedMultiPattern = MultiPattern<()>;
-pub type TypedMultiPattern = MultiPattern<PatternConstructor>;
+pub type MultiPattern<PatternConstructor, Type> = Vec<Pattern<PatternConstructor, Type>>;
+pub type UntypedMultiPattern = MultiPattern<(), ()>;
+pub type TypedMultiPattern = MultiPattern<PatternConstructor, Arc<typ::Type>>;
 
 pub type TypedClause = Clause<TypedExpr, PatternConstructor, Arc<typ::Type>>;
 
@@ -318,8 +318,8 @@ pub type UntypedClause = Clause<UntypedExpr, (), ()>;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Clause<Expr, PatternConstructor, Type> {
     pub location: SrcSpan,
-    pub pattern: MultiPattern<PatternConstructor>,
-    pub alternative_patterns: Vec<MultiPattern<PatternConstructor>>,
+    pub pattern: MultiPattern<PatternConstructor, Type>,
+    pub alternative_patterns: Vec<MultiPattern<PatternConstructor, Type>>,
     pub guard: Option<ClauseGuard<Type>>,
     pub then: Expr,
 }
@@ -482,11 +482,11 @@ pub struct SrcSpan {
     pub end: usize,
 }
 
-pub type UntypedPattern = Pattern<()>;
-pub type TypedPattern = Pattern<PatternConstructor>;
+pub type UntypedPattern = Pattern<(), ()>;
+pub type TypedPattern = Pattern<PatternConstructor, Arc<typ::Type>>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Pattern<Constructor> {
+pub enum Pattern<Constructor, Type> {
     Int {
         location: SrcSpan,
         value: String,
@@ -507,6 +507,12 @@ pub enum Pattern<Constructor> {
         name: String,
     },
 
+    VarCall {
+        location: SrcSpan,
+        name: String,
+        typ: Type,
+    },
+
     Let {
         name: String,
         pattern: Box<Self>,
@@ -525,7 +531,6 @@ pub enum Pattern<Constructor> {
         location: SrcSpan,
         head: Box<Self>,
         tail: Box<Self>,
-        deprecated_syntax: bool,
     },
 
     Constructor {
@@ -541,14 +546,20 @@ pub enum Pattern<Constructor> {
         location: SrcSpan,
         elems: Vec<Self>,
     },
+
+    Bitstring {
+        location: SrcSpan,
+        elems: Vec<BinSegment<Self, Type>>,
+    },
 }
 
-impl<A> Pattern<A> {
+impl<A, B> Pattern<A, B> {
     pub fn location(&self) -> &SrcSpan {
         match self {
             Pattern::Let { pattern, .. } => pattern.location(),
             Pattern::Int { location, .. } => location,
             Pattern::Var { location, .. } => location,
+            Pattern::VarCall { location, .. } => location,
             Pattern::Nil { location, .. } => location,
             Pattern::Cons { location, .. } => location,
             Pattern::Float { location, .. } => location,
@@ -556,6 +567,7 @@ impl<A> Pattern<A> {
             Pattern::String { location, .. } => location,
             Pattern::Tuple { location, .. } => location,
             Pattern::Constructor { location, .. } => location,
+            Pattern::Bitstring { location, .. } => location,
         }
     }
 
@@ -565,12 +577,10 @@ impl<A> Pattern<A> {
                 location: SrcSpan { end, .. },
                 head,
                 tail,
-                deprecated_syntax,
             } => Pattern::Cons {
                 location: SrcSpan { start, end },
                 head,
                 tail,
-                deprecated_syntax,
             },
 
             _ => self,
@@ -583,4 +593,165 @@ pub enum BindingKind {
     Let,
     Assert,
     Try,
+}
+
+// Bitstrings
+
+pub type UntypedExprBinSegment = BinSegment<UntypedExpr, ()>;
+pub type TypedExprBinSegment = BinSegment<TypedExpr, Arc<typ::Type>>;
+
+pub type UntypedPatternBinSegment = BinSegment<UntypedPattern, ()>;
+pub type TypedPatternBinSegment = BinSegment<TypedPattern, Arc<typ::Type>>;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct BinSegment<Value, Type> {
+    pub location: SrcSpan,
+    pub value: Box<Value>,
+    pub options: Vec<BinSegmentOption<Value>>,
+    pub typ: Type,
+}
+
+pub type UntypedExprBinSegmentOption = BinSegmentOption<UntypedExpr>;
+pub type TypedExprBinSegmentOption = BinSegmentOption<TypedExpr>;
+
+pub type UntypedPatternBinSegmentOption = BinSegmentOption<UntypedPattern>;
+pub type TypedPatternBinSegmentOption = BinSegmentOption<TypedPattern>;
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum BinSegmentOption<Value> {
+    Binary {
+        location: SrcSpan,
+    },
+
+    Integer {
+        location: SrcSpan,
+    },
+
+    Float {
+        location: SrcSpan,
+    },
+
+    Bitstring {
+        location: SrcSpan,
+    },
+
+    UTF8 {
+        location: SrcSpan,
+    },
+
+    UTF16 {
+        location: SrcSpan,
+    },
+
+    UTF32 {
+        location: SrcSpan,
+    },
+
+    Signed {
+        location: SrcSpan,
+    },
+
+    Unsigned {
+        location: SrcSpan,
+    },
+
+    Big {
+        location: SrcSpan,
+    },
+
+    Little {
+        location: SrcSpan,
+    },
+
+    Native {
+        location: SrcSpan,
+    },
+
+    Size {
+        location: SrcSpan,
+        value: Box<Value>,
+        short_form: bool,
+    },
+
+    Unit {
+        location: SrcSpan,
+        value: Box<Value>,
+        short_form: bool,
+    },
+
+    Invalid {
+        location: SrcSpan,
+        label: String,
+    },
+}
+#[derive(Debug, PartialEq, Clone)]
+pub enum SegmentOptionCategory {
+    Type,
+    Endianness,
+    Signedness,
+    Size,
+    Unit,
+    Error,
+}
+
+impl<A> BinSegmentOption<A> {
+    pub fn location(&self) -> &SrcSpan {
+        match self {
+            BinSegmentOption::Binary { location } => location,
+            BinSegmentOption::Integer { location } => location,
+            BinSegmentOption::Float { location } => location,
+            BinSegmentOption::Bitstring { location } => location,
+            BinSegmentOption::UTF8 { location } => location,
+            BinSegmentOption::UTF16 { location } => location,
+            BinSegmentOption::UTF32 { location } => location,
+            BinSegmentOption::Signed { location } => location,
+            BinSegmentOption::Unsigned { location } => location,
+            BinSegmentOption::Big { location } => location,
+            BinSegmentOption::Little { location } => location,
+            BinSegmentOption::Native { location } => location,
+            BinSegmentOption::Size { location, .. } => location,
+            BinSegmentOption::Unit { location, .. } => location,
+            BinSegmentOption::Invalid { location, .. } => location,
+        }
+    }
+
+    pub fn category(&self) -> SegmentOptionCategory {
+        match self {
+            BinSegmentOption::Binary { .. } => SegmentOptionCategory::Type,
+            BinSegmentOption::Integer { .. } => SegmentOptionCategory::Type,
+            BinSegmentOption::Float { .. } => SegmentOptionCategory::Type,
+            BinSegmentOption::Bitstring { .. } => SegmentOptionCategory::Type,
+            BinSegmentOption::UTF8 { .. } => SegmentOptionCategory::Type,
+            BinSegmentOption::UTF16 { .. } => SegmentOptionCategory::Type,
+            BinSegmentOption::UTF32 { .. } => SegmentOptionCategory::Type,
+            BinSegmentOption::Signed { .. } => SegmentOptionCategory::Signedness,
+            BinSegmentOption::Unsigned { .. } => SegmentOptionCategory::Signedness,
+            BinSegmentOption::Big { .. } => SegmentOptionCategory::Endianness,
+            BinSegmentOption::Little { .. } => SegmentOptionCategory::Endianness,
+            BinSegmentOption::Native { .. } => SegmentOptionCategory::Endianness,
+            BinSegmentOption::Size { .. } => SegmentOptionCategory::Size,
+            BinSegmentOption::Unit { .. } => SegmentOptionCategory::Unit,
+            BinSegmentOption::Invalid { .. } => SegmentOptionCategory::Error,
+        }
+    }
+
+    pub fn label(&self) -> String {
+        match self {
+            BinSegmentOption::Binary { .. } => "binary".to_string(),
+            BinSegmentOption::Integer { .. } => "int".to_string(),
+            BinSegmentOption::Float { .. } => "float".to_string(),
+            BinSegmentOption::Bitstring { .. } => "bitstring".to_string(),
+            BinSegmentOption::UTF8 { .. } => "utf8".to_string(),
+            BinSegmentOption::UTF16 { .. } => "utf16".to_string(),
+            BinSegmentOption::UTF32 { .. } => "utf32".to_string(),
+            BinSegmentOption::Signed { .. } => "signed".to_string(),
+            BinSegmentOption::Unsigned { .. } => "unsigned".to_string(),
+            BinSegmentOption::Big { .. } => "big".to_string(),
+            BinSegmentOption::Little { .. } => "little".to_string(),
+            BinSegmentOption::Native { .. } => "native".to_string(),
+            BinSegmentOption::Size { .. } => "size".to_string(),
+            BinSegmentOption::Unit { .. } => "unit".to_string(),
+            BinSegmentOption::Invalid { label, .. } => label.clone(),
+        }
+    }
 }

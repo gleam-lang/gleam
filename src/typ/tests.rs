@@ -170,8 +170,7 @@ fn infer_module_type_retention_test() {
         type_info: (),
     };
 
-    let (result, _) = infer_module(module, &HashMap::new());
-    let module = result.expect("Should infer OK");
+    let module = infer_module(module, &HashMap::new(), &mut vec![]).expect("Should infer OK");
 
     assert_eq!(
         module.type_info,
@@ -193,7 +192,7 @@ fn infer_test() {
             let ast = crate::grammar::ExprSequenceParser::new()
                 .parse($src)
                 .expect("syntax error");
-            let result = Typer::new(&[], &HashMap::new())
+            let result = Typer::new(&[], &HashMap::new(), &mut vec![])
                 .infer(ast)
                 .expect("should successfully infer");
             assert_eq!(
@@ -254,11 +253,8 @@ fn infer_test() {
     assert_infer!("[[], [1]]", "List(List(Int))");
 
     assert_infer!("[1, ..[2, ..[]]]", "List(Int)");
-    assert_infer!("[1 | [2 | []]]", "List(Int)"); // Deprecated syntax
     assert_infer!("[fn(x) { x }, ..[]]", "List(fn(a) -> a)");
-    assert_infer!("[fn(x) { x } | []]", "List(fn(a) -> a)"); // Deprecated syntax
     assert_infer!("let x = [1, ..[]] [2, ..x]", "List(Int)");
-    assert_infer!("let x = [1 | []] [2 | x]", "List(Int)"); // Deprecated syntax
 
     // Trailing commas
     assert_infer!("[1, ..[2, ..[],]]", "List(Int)");
@@ -348,8 +344,8 @@ fn infer_test() {
     assert_infer!("let [] = [] 1", "Int");
     assert_infer!("let [a] = [1] a", "Int");
     assert_infer!("let [a, 2] = [1] a", "Int");
-    assert_infer!("let [a | b] = [1] a", "Int");
-    assert_infer!("let [a | _] = [1] a", "Int");
+    assert_infer!("let [a, .. b] = [1] a", "Int");
+    assert_infer!("let [a, .. _] = [1] a", "Int");
     assert_infer!("fn(x) { let [a] = x a }", "fn(List(a)) -> a");
     assert_infer!("fn(x) { let [a] = x a + 1 }", "fn(List(Int)) -> Int");
     assert_infer!("let _x = 1 2.0", "Float");
@@ -361,8 +357,6 @@ fn infer_test() {
     assert_infer!("assert [] = [] 1", "Int");
     assert_infer!("assert [a] = [1] a", "Int");
     assert_infer!("assert [a, 2] = [1] a", "Int");
-    assert_infer!("assert [a | b] = [1] a", "Int");
-    assert_infer!("assert [a | _] = [1] a", "Int");
     assert_infer!("assert [a, .._] = [1] a", "Int");
     assert_infer!("assert [a, .._,] = [1] a", "Int");
     assert_infer!("fn(x) { assert [a] = x a }", "fn(List(a)) -> a");
@@ -413,23 +407,246 @@ fn infer_test() {
         "let add = fn(x, _, _) { fn(y) { y + x } } 1 |> add(1, 2, 3)",
         "Int"
     );
+
+    // Bitstrings
+    assert_infer!("let <<x>> = <<1>> x", "Int");
+    assert_infer!("let <<x>> = <<1>> x", "Int");
+    assert_infer!("let <<x:float>> = <<1>> x", "Float");
+    assert_infer!("let <<x:binary>> = <<1>> x", "Bitstring");
+    assert_infer!("let <<x:bytes>> = <<1>> x", "Bitstring");
+    assert_infer!("let <<x:bitstring>> = <<1>> x", "Bitstring");
+    assert_infer!("let <<x:bits>> = <<1>> x", "Bitstring");
+    assert_infer!("let <<x:utf8>> = <<1>> x", "String");
+    assert_infer!("let <<x:utf16>> = <<1>> x", "Bitstring");
+    assert_infer!("let <<x:utf32>> = <<1>> x", "Bitstring");
+    assert_infer!(
+        "let a = <<1>> let <<x:binary>> = <<1, a:2-binary>> x",
+        "Bitstring"
+    );
+}
+
+macro_rules! assert_error {
+    ($src:expr, $error:expr $(,)?) => {
+        println!("\n\n{}", $src);
+        let ast = crate::grammar::ExprSequenceParser::new()
+            .parse($src)
+            .expect("syntax error");
+        let result = Typer::new(&[], &HashMap::new(), &mut vec![])
+            .infer(ast)
+            .expect_err("should infer an error");
+        assert_eq!(($src, sort_options($error)), ($src, sort_options(result)));
+    };
+}
+
+#[test]
+fn infer_bitstring_error_test() {
+    // Values
+
+    assert_error!(
+        "case <<1>> { <<2.0, a>> -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 15, end: 18 },
+            expected: int(),
+            given: float(),
+        },
+    );
+
+    assert_error!(
+        "case <<1>> { <<a:float>> if a > 1 -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 28, end: 29 },
+            expected: int(),
+            given: float(),
+        },
+    );
+
+    assert_error!(
+        "case <<1>> { <<a:binary>> if a > 1 -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 29, end: 30 },
+            expected: int(),
+            given: bitstring(),
+        },
+    );
+
+    assert_error!(
+        "case <<1>> { <<a:utf16>> if a == \"test\" -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 28, end: 39 },
+            expected: bitstring(),
+            given: string(),
+        },
+    );
+
+    // Segments
+
+    assert_error!(
+        "case <<1>> { <<1:binary, _:binary>> -> 1 }",
+        Error::BinarySegmentMustHaveSize {
+            location: SrcSpan { start: 15, end: 23 },
+        },
+    );
+
+    assert_error!(
+        "case <<1>> { <<1:bitstring, _:binary>> -> 1 }",
+        Error::BinarySegmentMustHaveSize {
+            location: SrcSpan { start: 15, end: 26 },
+        },
+    );
+
+    assert_error!(
+        "let x = <<1:binary>> x",
+        Error::BinarySegmentMustHaveSize {
+            location: SrcSpan { start: 10, end: 18 },
+        },
+    );
+
+    // Options
+
+    assert_error!(
+        "let x = <<1:invalid>> x",
+        Error::InvalidBinarySegmentOption {
+            location: SrcSpan { start: 12, end: 19 },
+            label: "invalid".to_string(),
+        },
+    );
+
+    assert_error!(
+        "case <<1>> { <<1:binary-wrong>> -> 1 }",
+        Error::InvalidBinarySegmentOption {
+            location: SrcSpan { start: 24, end: 29 },
+            label: "wrong".to_string(),
+        },
+    );
+
+    assert_error!(
+        "let x = <<1:int-binary>> x",
+        Error::ConflictingBinaryTypeOptions {
+            previous_location: SrcSpan { start: 12, end: 15 },
+            location: SrcSpan { start: 16, end: 22 },
+            name: "int".to_string(),
+        },
+    );
+
+    assert_error!(
+        "case <<1>> { <<1:bitstring-binary>> -> 1 }",
+        Error::ConflictingBinaryTypeOptions {
+            previous_location: SrcSpan { start: 17, end: 26 },
+            location: SrcSpan { start: 27, end: 33 },
+
+            name: "bitstring".to_string(),
+        },
+    );
+
+    assert_error!(
+        "let x = <<1:signed-unsigned>> x",
+        Error::ConflictingBinarySignednessOptions {
+            previous_location: SrcSpan { start: 12, end: 18 },
+            location: SrcSpan { start: 19, end: 27 },
+            name: "signed".to_string(),
+        }
+    );
+
+    assert_error!(
+        "case <<1>> { <<1:unsigned-signed>> -> 1 }",
+        Error::ConflictingBinarySignednessOptions {
+            previous_location: SrcSpan { start: 17, end: 25 },
+            location: SrcSpan { start: 26, end: 32 },
+            name: "unsigned".to_string(),
+        }
+    );
+
+    assert_error!(
+        "let x = <<1:big-little>> x",
+        Error::ConflictingBinaryEndiannessOptions {
+            previous_location: SrcSpan { start: 12, end: 15 },
+            location: SrcSpan { start: 16, end: 22 },
+            name: "big".to_string(),
+        }
+    );
+
+    assert_error!(
+        "case <<1>> { <<1:native-big>> -> 1 }",
+        Error::ConflictingBinaryEndiannessOptions {
+            previous_location: SrcSpan { start: 17, end: 23 },
+            location: SrcSpan { start: 24, end: 27 },
+            name: "native".to_string(),
+        }
+    );
+
+    // Size and unit options
+
+    assert_error!(
+        "let x = <<1:8-size(5)>> x",
+        Error::ConflictingBinarySizeOptions {
+            previous_location: SrcSpan { start: 12, end: 13 },
+            location: SrcSpan { start: 14, end: 21 },
+        }
+    );
+
+    assert_error!(
+        "case <<1>> { <<1:size(2)-size(8)>> -> a }",
+        Error::ConflictingBinarySizeOptions {
+            previous_location: SrcSpan { start: 17, end: 24 },
+            location: SrcSpan { start: 25, end: 32 },
+        }
+    );
+
+    assert_error!(
+        "let x = <<1:unit(2)-unit(5)>> x",
+        Error::ConflictingBinaryUnitOptions {
+            previous_location: SrcSpan { start: 12, end: 19 },
+            location: SrcSpan { start: 20, end: 27 },
+        }
+    );
+
+    assert_error!(
+        "let x = <<1:utf8-unit(5)>> x",
+        Error::BinaryTypeDoesNotAllowUnit {
+            typ: "utf8".to_string(),
+            location: SrcSpan { start: 17, end: 24 },
+        }
+    );
+
+    assert_error!(
+        "let x = <<1:utf16-unit(5)>> x",
+        Error::BinaryTypeDoesNotAllowUnit {
+            typ: "utf16".to_string(),
+            location: SrcSpan { start: 18, end: 25 },
+        }
+    );
+
+    assert_error!(
+        "case <<1>> { <<1:utf32-unit(2)>> -> a }",
+        Error::BinaryTypeDoesNotAllowUnit {
+            typ: "utf32".to_string(),
+            location: SrcSpan { start: 23, end: 30 },
+        }
+    );
+
+    // Size and unit values
+
+    assert_error!(
+        "let x = <<1:size(\"1\")>> x",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 17, end: 20 },
+            expected: int(),
+            given: string(),
+        },
+    );
+
+    assert_error!(
+        "let a = 2.0 case <<1>> { <<1:size(a)>> -> a }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 34, end: 35 },
+            expected: int(),
+            given: float(),
+        },
+    );
 }
 
 #[test]
 fn infer_error_test() {
-    macro_rules! assert_error {
-        ($src:expr, $error:expr $(,)?) => {
-            println!("\n\n{}", $src);
-            let ast = crate::grammar::ExprSequenceParser::new()
-                .parse($src)
-                .expect("syntax error");
-            let result = Typer::new(&[], &HashMap::new())
-                .infer(ast)
-                .expect_err("should infer an error");
-            assert_eq!(($src, sort_options($error)), ($src, sort_options(result)));
-        };
-    }
-
     assert_error!(
         "1 + 1.0",
         Error::CouldNotUnify {
@@ -1181,8 +1398,8 @@ fn infer_module_test() {
             let ast = crate::grammar::ModuleParser::new()
                 .parse(&src)
                 .expect("syntax error");
-            let (result, _) = infer_module(ast, &HashMap::new());
-            let ast = result.expect("should successfully infer");
+            let ast =
+                infer_module(ast, &HashMap::new(), &mut vec![]).expect("should successfully infer");
             let mut constructors: Vec<(_, _)> = ast
                 .type_info
                 .values
@@ -1205,7 +1422,7 @@ fn infer_module_test() {
         "pub fn repeat(i, x) {
            case i {
              0 -> []
-             i -> [x | repeat(i - 1, x)]
+             i -> [x .. repeat(i - 1, x)]
            }
          }",
         vec![("repeat", "fn(Int, a) -> List(a)")],
@@ -1419,7 +1636,7 @@ fn infer_module_test() {
         "pub fn length(list) {
            case list {
            [] -> 0
-           [x | xs] -> length(xs) + 1
+           [x .. xs] -> length(xs) + 1
            }
         }",
         vec![("length", "fn(List(a)) -> Int")],
@@ -1633,8 +1850,8 @@ fn infer_module_error_test() {
                 .parse(&src)
                 .expect("syntax error");
             ast.name = vec!["my_module".to_string()];
-            let (result, _) = infer_module(ast, &HashMap::new());
-            let ast = result.expect_err("should infer an error");
+            let ast =
+                infer_module(ast, &HashMap::new(), &mut vec![]).expect_err("should infer an error");
             assert_eq!(($src, sort_options($error)), ($src, sort_options(ast)));
         };
 
@@ -1642,8 +1859,7 @@ fn infer_module_error_test() {
             let ast = crate::grammar::ModuleParser::new()
                 .parse($src)
                 .expect("syntax error");
-            let (result, _) = infer_module(ast, &HashMap::new());
-            result.expect_err("should infer an error");
+            infer_module(ast, &HashMap::new(), &mut vec![]).expect_err("should infer an error");
         };
     }
 
@@ -2250,6 +2466,22 @@ fn main() {
             }),
         },
     );
+
+    // Bit strings
+
+    assert_error!(
+        "fn x() { \"test\" }
+
+fn main() {
+    let a = <<1:size(x())>>
+    a
+}",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 52, end: 55 },
+            expected: int(),
+            given: string(),
+        },
+    );
 }
 
 #[test]
@@ -2261,7 +2493,8 @@ fn infer_module_warning_test() {
                 .parse(&src)
                 .expect("syntax error");
             ast.name = vec!["my_module".to_string()];
-            let (_, warnings) = infer_module(ast, &HashMap::new());
+            let mut warnings = vec![];
+            let _ = infer_module(ast, &HashMap::new(), &mut warnings);
 
             assert!(!warnings.is_empty());
             assert_eq!($warning, warnings[0]);
@@ -2275,30 +2508,15 @@ fn infer_module_warning_test() {
                 .parse(&src)
                 .expect("syntax error");
             ast.name = vec!["my_module".to_string()];
-            let (_, warnings) = infer_module(ast, &HashMap::new());
+            let mut warnings = vec![];
+            let _ = infer_module(ast, &HashMap::new(), &mut warnings);
 
             assert!(warnings.is_empty());
         };
     }
 
-    // Old list prepend syntax emits a warning
-    assert_warning!(
-        "fn main() { [1 | [2, 3]] }",
-        Warning::DeprecatedListPrependSyntax {
-            location: SrcSpan { start: 15, end: 16 }
-        },
-    );
-
     // New list prepend syntax does not emit a warning
     assert_no_warnings!("fn main() { [1 ..[2, 3]] }",);
-
-    // Old list tail pattern matching syntax emits a warning
-    assert_warning!(
-        "fn main() { let x = [] ; case x { [x | _] -> 1 } }",
-        Warning::DeprecatedListPrependSyntax {
-            location: SrcSpan { start: 37, end: 38 }
-        },
-    );
 
     // New list tail pattern matching syntax does not emit a warning
     assert_no_warnings!("fn main() { let x = [] ; case x { [x, ..] -> 1 } }",);
@@ -2338,7 +2556,7 @@ fn env_types_with(things: &[&str]) -> Vec<String> {
 }
 
 fn env_types() -> Vec<String> {
-    Typer::new(&[], &HashMap::new())
+    Typer::new(&[], &HashMap::new(), &mut vec![])
         .module_types
         .keys()
         .map(|s| s.to_string())
@@ -2354,7 +2572,7 @@ fn env_vars_with(things: &[&str]) -> Vec<String> {
 }
 
 fn env_vars() -> Vec<String> {
-    Typer::new(&[], &HashMap::new())
+    Typer::new(&[], &HashMap::new(), &mut vec![])
         .local_values
         .keys()
         .map(|s| s.to_string())
