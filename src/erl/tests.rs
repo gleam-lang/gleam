@@ -1255,7 +1255,7 @@ x(Y) ->
 "#,
     );
 
-    // Private external functions are simply inlined
+    // Private external function calls are simply inlined
     assert_erl!(
         r#"external fn go(x: Int, y: Int) -> Int = "m" "f"
                     fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"#,
@@ -1268,7 +1268,7 @@ x() ->
 "#,
     );
 
-    // Public external functions are inlined but the wrapper function is
+    // Public external function calls are inlined but the wrapper function is
     // also printed in the erlang output and exported
     assert_erl!(
         r#"pub external fn go(x: Int, y: Int) -> Int = "m" "f"
@@ -1284,6 +1284,18 @@ go(A, B) ->
 x() ->
     m:f(1, 2),
     m:f(4, 3).
+"#,
+    );
+
+    // Private external function references are inlined
+    assert_erl!(
+        r#"external fn go(x: Int, y: Int) -> Int = "m" "f"
+                    fn x() { go }"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+x() ->
+    fun m:f/2.
 "#,
     );
 
