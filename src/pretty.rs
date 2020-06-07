@@ -6,7 +6,7 @@
 
 use im::vector::Vector;
 
-use std::{borrow::Cow, marker::PhantomData};
+use std::borrow::Cow;
 
 pub trait Documentable<'a> {
     fn to_doc(self) -> Document<'a>;
@@ -103,14 +103,9 @@ pub enum Document<'a> {
     ForceBreak,
 
     /// Renders `broken` if group is broken, `unbroken` otherwise
-    // Notice the phantom here. This allows us to put a generic lifetime for
-    // Document.
-    //
-    // If you see it in a PR, then something wen wrong.
     Break {
         broken: Cow<'a, str>,
         unbroken: Cow<'a, str>,
-        phantom: PhantomData<&'a ()>,
     },
 
     /// Join 2 documents together
@@ -267,7 +262,6 @@ fn fits_test() {
             Break {
                 broken: "12".into(),
                 unbroken: "".into(),
-                phantom: PhantomData,
             }
         )]
     ));
@@ -281,7 +275,6 @@ fn fits_test() {
             Break {
                 broken: "".into(),
                 unbroken: "123".into(),
-                phantom: PhantomData,
             }
         )]
     ));
@@ -293,7 +286,6 @@ fn fits_test() {
             Break {
                 broken: "".into(),
                 unbroken: "123".into(),
-                phantom: PhantomData,
             }
         )]
     ));
@@ -398,14 +390,12 @@ fn format_test() {
     let doc = Break {
         broken: "broken".into(),
         unbroken: "unbroken".into(),
-        phantom: PhantomData,
     };
     assert_eq!("unbroken", format(10, doc));
 
     let doc = Break {
         broken: "broken".into(),
         unbroken: "unbroken".into(),
-        phantom: PhantomData,
     };
     assert_eq!("broken\n".to_string(), format(5, doc));
 
@@ -432,7 +422,6 @@ fn format_test() {
         Box::new(Break {
             broken: "broken".into(),
             unbroken: "unbroken".into(),
-            phantom: PhantomData,
         }),
     );
     assert_eq!("broken\n".to_string(), format(100, doc));
@@ -458,7 +447,6 @@ pub fn break_(broken: &str, unbroken: &str) -> Document<'static> {
     Document::Break {
         broken: broken.to_string().into(),
         unbroken: unbroken.to_string().into(),
-        phantom: PhantomData,
     }
 }
 
@@ -466,7 +454,6 @@ pub fn delim(d: &str) -> Document<'static> {
     Document::Break {
         broken: d.to_string().into(),
         unbroken: format!("{} ", d).into(),
-        phantom: PhantomData,
     }
 }
 
