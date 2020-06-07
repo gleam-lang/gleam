@@ -1,4 +1,6 @@
 pub(crate) mod command;
+#[cfg(test)]
+mod tests;
 
 use crate::{
     ast::{Statement, TypedStatement},
