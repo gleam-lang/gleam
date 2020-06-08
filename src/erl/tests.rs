@@ -2313,7 +2313,7 @@ main() ->
 "#,
     );
 
-    // Bitstrings
+    // BitStrings
 
     assert_erl!(
         r#"fn main() {

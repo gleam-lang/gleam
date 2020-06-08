@@ -547,7 +547,7 @@ pub enum Pattern<Constructor, Type> {
         elems: Vec<Self>,
     },
 
-    Bitstring {
+    BitString {
         location: SrcSpan,
         elems: Vec<BinSegment<Self, Type>>,
     },
@@ -567,7 +567,7 @@ impl<A, B> Pattern<A, B> {
             Pattern::String { location, .. } => location,
             Pattern::Tuple { location, .. } => location,
             Pattern::Constructor { location, .. } => location,
-            Pattern::Bitstring { location, .. } => location,
+            Pattern::BitString { location, .. } => location,
         }
     }
 
@@ -595,7 +595,7 @@ pub enum BindingKind {
     Try,
 }
 
-// Bitstrings
+// BitStrings
 
 pub type UntypedExprBinSegment = BinSegment<UntypedExpr, ()>;
 pub type TypedExprBinSegment = BinSegment<TypedExpr, Arc<typ::Type>>;
@@ -631,7 +631,7 @@ pub enum BinSegmentOption<Value> {
         location: SrcSpan,
     },
 
-    Bitstring {
+    BitString {
         location: SrcSpan,
     },
 
@@ -700,7 +700,7 @@ impl<A> BinSegmentOption<A> {
             BinSegmentOption::Binary { location } => location,
             BinSegmentOption::Integer { location } => location,
             BinSegmentOption::Float { location } => location,
-            BinSegmentOption::Bitstring { location } => location,
+            BinSegmentOption::BitString { location } => location,
             BinSegmentOption::UTF8 { location } => location,
             BinSegmentOption::UTF16 { location } => location,
             BinSegmentOption::UTF32 { location } => location,
@@ -720,7 +720,7 @@ impl<A> BinSegmentOption<A> {
             BinSegmentOption::Binary { .. } => SegmentOptionCategory::Type,
             BinSegmentOption::Integer { .. } => SegmentOptionCategory::Type,
             BinSegmentOption::Float { .. } => SegmentOptionCategory::Type,
-            BinSegmentOption::Bitstring { .. } => SegmentOptionCategory::Type,
+            BinSegmentOption::BitString { .. } => SegmentOptionCategory::Type,
             BinSegmentOption::UTF8 { .. } => SegmentOptionCategory::Type,
             BinSegmentOption::UTF16 { .. } => SegmentOptionCategory::Type,
             BinSegmentOption::UTF32 { .. } => SegmentOptionCategory::Type,
@@ -740,7 +740,7 @@ impl<A> BinSegmentOption<A> {
             BinSegmentOption::Binary { .. } => "binary".to_string(),
             BinSegmentOption::Integer { .. } => "int".to_string(),
             BinSegmentOption::Float { .. } => "float".to_string(),
-            BinSegmentOption::Bitstring { .. } => "bit_string".to_string(),
+            BinSegmentOption::BitString { .. } => "bit_string".to_string(),
             BinSegmentOption::UTF8 { .. } => "utf8".to_string(),
             BinSegmentOption::UTF16 { .. } => "utf16".to_string(),
             BinSegmentOption::UTF32 { .. } => "utf32".to_string(),

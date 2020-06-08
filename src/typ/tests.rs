@@ -408,20 +408,20 @@ fn infer_test() {
         "Int"
     );
 
-    // Bitstrings
+    // BitStrings
     assert_infer!("let <<x>> = <<1>> x", "Int");
     assert_infer!("let <<x>> = <<1>> x", "Int");
     assert_infer!("let <<x:float>> = <<1>> x", "Float");
-    assert_infer!("let <<x:binary>> = <<1>> x", "Bitstring");
-    assert_infer!("let <<x:bytes>> = <<1>> x", "Bitstring");
-    assert_infer!("let <<x:bit_string>> = <<1>> x", "Bitstring");
-    assert_infer!("let <<x:bits>> = <<1>> x", "Bitstring");
+    assert_infer!("let <<x:binary>> = <<1>> x", "BitString");
+    assert_infer!("let <<x:bytes>> = <<1>> x", "BitString");
+    assert_infer!("let <<x:bit_string>> = <<1>> x", "BitString");
+    assert_infer!("let <<x:bits>> = <<1>> x", "BitString");
     assert_infer!("let <<x:utf8>> = <<1>> x", "String");
-    assert_infer!("let <<x:utf16>> = <<1>> x", "Bitstring");
-    assert_infer!("let <<x:utf32>> = <<1>> x", "Bitstring");
+    assert_infer!("let <<x:utf16>> = <<1>> x", "BitString");
+    assert_infer!("let <<x:utf32>> = <<1>> x", "BitString");
     assert_infer!(
         "let a = <<1>> let <<x:binary>> = <<1, a:2-binary>> x",
-        "Bitstring"
+        "BitString"
     );
 }
 

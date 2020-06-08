@@ -2582,7 +2582,7 @@ pub fn two() {
 ",
     );
 
-    // Bitstring construction
+    // BitString construction
 
     assert_format!(
         "fn main() {
@@ -2595,7 +2595,7 @@ pub fn two() {
 ",
     );
 
-    // Bitstring
+    // BitString
 
     assert_format!(
         "fn main() {
