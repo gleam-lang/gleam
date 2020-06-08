@@ -54,6 +54,7 @@ These people are sponsoring at least $10 a month, enabling further Gleam
 development.
 
 - [Arian Daneshvar](https://github.com/bees)
+- [Ben Myles](https://github.com/benmyles)
 - [Bryan Paxton](https://github.com/starbelly)
 - [Clever Bunny LTD](https://github.com/cleverbunny)
 - [Hasan YILDIZ](https://github.com/hsnyildiz)
