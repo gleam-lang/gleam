@@ -67,4 +67,5 @@ development.
 - [Parker Selbert](https://github.com/sorentwo)
 - [Quinn Wilton](http://quinnwilton.com/)
 - [Shritesh Bhattarai](https://github.com/shritesh)
+- [Wojtek Mach](https://github.com/wojtekmach)
 - [ontofractal](https://github.com/ontofractal)
