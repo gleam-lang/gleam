@@ -197,6 +197,7 @@ fn statement(statement: &TypedStatement, module: &[String]) -> Option<Document> 
         Statement::CustomType { .. } => None,
         Statement::Import { .. } => None,
         Statement::ExternalType { .. } => None,
+        Statement::ModuleConstant { .. } => None,
 
         Statement::Fn {
             args, name, body, ..
