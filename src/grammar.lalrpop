@@ -34,6 +34,7 @@ Statement: UntypedStatement = {
     StatementExternalFn => <>,
     StatementExternalType => <>,
     StatementImport => <>,
+    StatementModuleConstant => <>,
 }
 
 StatementTypeAlias : UntypedStatement = {
@@ -123,6 +124,23 @@ StatementImport: UntypedStatement = {
             as_name,
         }
     }
+}
+
+StatementModuleConstant: UntypedStatement = {
+    <s:@L> <p:"pub"?> "const" <name:VarName> "=" <lit:LiteralExpr> <e:@L> => UntypedStatement::ModuleConstant {
+        doc: None,
+        location: location(s, e),
+        public: p.is_some(),
+        name,
+        value: Box::new(lit),
+        typ: (),
+    }
+}
+
+LiteralExpr: UntypedExpr = {
+    Int => <>,
+    Float => <>,
+    String => <>,
 }
 
 UnqualifiedImport: UnqualifiedImport = {
