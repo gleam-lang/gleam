@@ -197,7 +197,8 @@ fn statement(statement: &TypedStatement, module: &[String]) -> Option<Document> 
         Statement::CustomType { .. } => None,
         Statement::Import { .. } => None,
         Statement::ExternalType { .. } => None,
-        Statement::ModuleConstant { .. } => None,
+
+        Statement::ModuleConstant { name, value, .. } => Some(mod_const(name, value, module)),
 
         Statement::Fn {
             args, name, body, ..
@@ -217,6 +218,15 @@ fn statement(statement: &TypedStatement, module: &[String]) -> Option<Document> 
             args.len(),
         )),
     }
+}
+
+fn mod_const(name: &str, value: &TypedExpr, module: &[String]) -> Document {
+    let mut env = Env::new(module);
+
+    atom(name.to_string())
+        .append("() -> ")
+        .append(expr(value, &mut env))
+        .append(".")
 }
 
 fn mod_fun(name: &str, args: &[TypedArg], body: &TypedExpr, module: &[String]) -> Document {
