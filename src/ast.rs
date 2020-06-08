@@ -193,6 +193,15 @@ pub enum Statement<T, Expr> {
         as_name: Option<String>,
         unqualified: Vec<UnqualifiedImport>,
     },
+
+    ModuleConstant {
+        doc: Option<String>,
+        location: SrcSpan,
+        public: bool,
+        name: String,
+        value: Box<Expr>,
+        typ: T,
+    },
 }
 
 impl<A, B> Statement<A, B> {
@@ -203,7 +212,8 @@ impl<A, B> Statement<A, B> {
             | Statement::TypeAlias { location, .. }
             | Statement::CustomType { location, .. }
             | Statement::ExternalFn { location, .. }
-            | Statement::ExternalType { location, .. } => location,
+            | Statement::ExternalType { location, .. }
+            | Statement::ModuleConstant { location, .. } => location,
         }
     }
 
@@ -222,7 +232,8 @@ impl<A, B> Statement<A, B> {
             | Statement::TypeAlias { doc, .. }
             | Statement::CustomType { doc, .. }
             | Statement::ExternalFn { doc, .. }
-            | Statement::ExternalType { doc, .. } => {
+            | Statement::ExternalType { doc, .. }
+            | Statement::ModuleConstant { doc, .. } => {
                 std::mem::replace(doc, new_doc);
             }
         }
