@@ -207,13 +207,23 @@ impl<'a> Formatter<'a> {
                     nil()
                 } else {
                     ".{".to_doc()
-                        .append(flex_break(
-                            unqualified
-                                .iter()
-                                .map(|e| e.clone().to_doc())
-                                .intersperse(", ".to_doc())
-                                .collect(),
-                        ))
+                        .append(
+                            concat(
+                                unqualified
+                                    .iter()
+                                    .map(|e| {
+                                        break_(&e.clone().name, &e.clone().name).append(
+                                            if let Some(name) = &e.as_name {
+                                                format!(" as {}", name).to_doc()
+                                            } else {
+                                                nil()
+                                            },
+                                        )
+                                    })
+                                    .intersperse(delim(",")),
+                            )
+                            .flex_group(),
+                        )
                         .append("}")
                 })
                 .append(if let Some(name) = as_name {

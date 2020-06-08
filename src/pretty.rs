@@ -71,40 +71,6 @@ pub fn concat(mut docs: impl Iterator<Item = Document>) -> Document {
     })
 }
 
-pub fn flex_concat(limit: isize, mut docs: Box<Vec<Document>>) -> Document {
-    let mut size: isize = 0;
-    let mut broken: bool = false;
-    let mut current_size: isize = 0;
-    for (pos, e) in docs.clone().iter().enumerate() {
-        match e {
-            Document::Cons(left, _) => match &**left {
-                Document::Text(v) => {
-                    current_size = v.len() as isize;
-                    size += current_size
-                }
-                _ => (),
-            },
-            Document::Text(s) => {
-                current_size = s.len() as isize;
-                size += current_size
-            }
-            _ => (),
-        }
-        if size > limit {
-            docs.insert(pos, line());
-            broken = true;
-            size = current_size;
-        }
-    }
-    if broken {
-        docs.insert(0, line());
-        docs.append(&mut vec![line()]);
-    }
-    docs.iter().fold(nil(), |acc, doc| {
-        Document::Cons(Box::new(acc), Box::new(doc.clone()))
-    })
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Document {
     /// Returns a document entity used to represent nothingness
@@ -115,9 +81,6 @@ pub enum Document {
 
     /// Forces contained groups to break
     ForceBreak,
-
-    /// Breaks included docs if width > limit
-    FlexBreak(Box<Vec<Document>>),
 
     /// Renders `broken` if group is broken, `unbroken` otherwise
     Break { broken: String, unbroken: String },
@@ -131,8 +94,11 @@ pub enum Document {
     /// Nests the given document to the current cursor position
     NestCurrent(Box<Document>),
 
-    /// Nests the given document to the current cursor position
+    /// Sets Broken/Unbroken Mode for entire group
     Group(Box<Document>),
+
+    /// Surrounds the given doc group based on flex break
+    FlexGroup(Box<Document>),
 
     /// A string to render
     Text(String),
@@ -142,6 +108,7 @@ pub enum Document {
 enum Mode {
     Broken,
     Unbroken,
+    Flex,
 }
 
 fn fits(mut limit: isize, mut docs: Vector<(isize, Mode, Document)>) -> bool {
@@ -162,8 +129,6 @@ fn fits(mut limit: isize, mut docs: Vector<(isize, Mode, Document)>) -> bool {
 
             Document::ForceBreak => return false,
 
-            Document::FlexBreak(_) => return true,
-
             Document::Nest(i, doc) => docs.push_front((i + indent, mode, *doc)),
 
             Document::NestCurrent(doc) => docs.push_front((indent, mode, *doc)),
@@ -175,11 +140,21 @@ fn fits(mut limit: isize, mut docs: Vector<(isize, Mode, Document)>) -> bool {
             Document::Break { unbroken, .. } => match mode {
                 Mode::Broken => return true,
                 Mode::Unbroken => limit -= unbroken.len() as isize,
+                Mode::Flex => {
+                    limit -= unbroken.len() as isize;
+                    if limit <= unbroken.len() as isize {
+                        return false;
+                    }
+                }
             },
 
             Document::Cons(left, right) => {
                 docs.push_front((indent, mode.clone(), *right));
                 docs.push_front((indent, mode, *left));
+            }
+
+            Document::FlexGroup(doc) => {
+                docs.push_front((indent, Mode::Flex, (*doc).clone()));
             }
         }
     }
@@ -221,6 +196,17 @@ fn fmt(b: &mut String, limit: isize, mut width: isize, mut docs: Vector<(isize, 
                         b.push_str(" ".repeat(indent as usize).as_str());
                         indent as isize
                     }
+                    Mode::Flex => {
+                        if limit - width <= unbroken.len() as isize {
+                            b.push_str("\n");
+                            b.push_str(" ".repeat(2).as_str());
+                            b.push_str(broken.as_str());
+                            broken.len() as isize
+                        } else {
+                            b.push_str(unbroken.as_str());
+                            width + unbroken.len() as isize
+                        }
+                    }
                 };
             }
 
@@ -249,8 +235,16 @@ fn fmt(b: &mut String, limit: isize, mut width: isize, mut docs: Vector<(isize, 
                 }
             }
 
-            Document::FlexBreak(v) => {
-                docs.push_front((indent, mode.clone(), (flex_concat(limit, v))));
+            Document::FlexGroup(doc) => {
+                if !fits(limit - width, vector![(indent, Mode::Flex, (*doc).clone())]) {
+                    docs.push_front((
+                        indent,
+                        Mode::Flex,
+                        line().nest(2).append((*doc).clone()).append(line()),
+                    ));
+                } else {
+                    docs.push_front((indent, Mode::Unbroken, (*doc).clone()));
+                }
             }
         }
     }
@@ -480,10 +474,6 @@ pub fn break_(broken: &str, unbroken: &str) -> Document {
     }
 }
 
-pub fn flex_break(docs: Vec<Document>) -> Document {
-    Document::FlexBreak(Box::new(docs))
-}
-
 pub fn delim(d: &str) -> Document {
     Document::Break {
         broken: d.to_string(),
@@ -494,6 +484,10 @@ pub fn delim(d: &str) -> Document {
 impl Document {
     pub fn group(self) -> Document {
         Document::Group(Box::new(self))
+    }
+
+    pub fn flex_group(self) -> Document {
+        Document::FlexGroup(Box::new(self))
     }
 
     pub fn nest(self, indent: isize) -> Document {
