@@ -823,6 +823,18 @@ go() ->
         },
         name: vec!["funny".to_string()],
         statements: vec![
+            Statement::ModuleConstant {
+                doc: None,
+                location: Default::default(),
+                name: "test".to_string(),
+                public: true,
+                typ: crate::typ::int(),
+                value: Box::new(TypedExpr::Int {
+                    typ: crate::typ::int(),
+                    location: Default::default(),
+                    value: "42".to_string(),
+                }),
+            },
             Statement::Fn {
                 doc: None,
                 return_type: typ::int(),
@@ -946,6 +958,8 @@ go() ->
     };
     let expected = "-module(funny).
 -compile(no_auto_import).
+
+test() -> 42.
 
 one() ->
     one_two(1).
