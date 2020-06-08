@@ -3304,6 +3304,37 @@ pub fn infer_module(
                 as_name,
                 unqualified,
             }),
+
+            Statement::ModuleConstant {
+                doc,
+                location,
+                name,
+                public,
+                value,
+                ..
+            } => {
+                let typed_value = typer.infer(*value)?;
+                let typ = typed_value.typ();
+
+                typer.insert_module_value(
+                    &name,
+                    ValueConstructor {
+                        public: public,
+                        origin: location.clone(),
+                        variant: ValueConstructorVariant::LocalVariable,
+                        typ: typ.clone(),
+                    },
+                )?;
+
+                Ok(Statement::ModuleConstant {
+                    doc,
+                    location,
+                    name,
+                    public,
+                    value: Box::new(typed_value),
+                    typ,
+                })
+            }
         })
         .collect::<Result<Vec<_>, Error>>()?;
 

@@ -220,6 +220,16 @@ impl<'a> Formatter<'a> {
                 } else {
                     nil()
                 }),
+            Statement::ModuleConstant {
+                public,
+                name,
+                value,
+                ..
+            } => pub_(*public)
+                .append("const ")
+                .append(name.to_string())
+                .append(" = ")
+                .append(self.expr(value)),
         }
     }
 
