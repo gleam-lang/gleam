@@ -3679,7 +3679,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 }
             },
 
-            Pattern::BitString { location, elems } => self.infer_pattern_bit_string(elems, location),
+            Pattern::BitString { location, elems } => {
+                self.infer_pattern_bit_string(elems, location)
+            }
 
             Pattern::Constructor {
                 location,
