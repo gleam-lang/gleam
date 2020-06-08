@@ -510,7 +510,7 @@ impl<'a> Typer<'a> {
 
         typer
             .insert_type_constructor(
-                "Bitstring".to_string(),
+                "BitString".to_string(),
                 TypeConstructor {
                     origin: Default::default(),
                     parameters: vec![],
@@ -519,7 +519,7 @@ impl<'a> Typer<'a> {
                     public: true,
                 },
             )
-            .gleam_expect("prelude inserting Bitstring type");
+            .gleam_expect("prelude inserting BitString type");
 
         let ok = typer.new_generic_var();
         let error = typer.new_generic_var();
@@ -923,7 +923,7 @@ impl<'a> Typer<'a> {
                 ..
             } => self.infer_tuple_index(*tuple, index, location),
 
-            UntypedExpr::Bitstring { location, elems } => self.infer_bin(elems, location),
+            UntypedExpr::BitString { location, elems } => self.infer_bin(elems, location),
         }
     }
 
@@ -1301,7 +1301,7 @@ impl<'a> Typer<'a> {
             .map(|s| self.infer_segment(*s.value, s.options, s.location))
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(TypedExpr::Bitstring {
+        Ok(TypedExpr::BitString {
             location,
             elems,
             typ: bit_string(),
@@ -1382,8 +1382,8 @@ impl<'a> Typer<'a> {
             BinSegmentOption::Binary { location } => Ok(BinSegmentOption::Binary { location }),
             BinSegmentOption::Integer { location } => Ok(BinSegmentOption::Integer { location }),
             BinSegmentOption::Float { location } => Ok(BinSegmentOption::Float { location }),
-            BinSegmentOption::Bitstring { location } => {
-                Ok(BinSegmentOption::Bitstring { location })
+            BinSegmentOption::BitString { location } => {
+                Ok(BinSegmentOption::BitString { location })
             }
             BinSegmentOption::UTF8 { location } => Ok(BinSegmentOption::UTF8 { location }),
             BinSegmentOption::UTF16 { location } => Ok(BinSegmentOption::UTF16 { location }),
@@ -3453,7 +3453,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             None => (),
         }
 
-        Ok(TypedPattern::Bitstring {
+        Ok(TypedPattern::BitString {
             location,
             elems: typed_segments,
         })
@@ -3532,8 +3532,8 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             BinSegmentOption::Binary { location } => Ok(BinSegmentOption::Binary { location }),
             BinSegmentOption::Integer { location } => Ok(BinSegmentOption::Integer { location }),
             BinSegmentOption::Float { location } => Ok(BinSegmentOption::Float { location }),
-            BinSegmentOption::Bitstring { location } => {
-                Ok(BinSegmentOption::Bitstring { location })
+            BinSegmentOption::BitString { location } => {
+                Ok(BinSegmentOption::BitString { location })
             }
             BinSegmentOption::UTF8 { location } => Ok(BinSegmentOption::UTF8 { location }),
             BinSegmentOption::UTF16 { location } => Ok(BinSegmentOption::UTF16 { location }),
@@ -3679,7 +3679,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 }
             },
 
-            Pattern::Bitstring { location, elems } => self.infer_pattern_bit_string(elems, location),
+            Pattern::BitString { location, elems } => self.infer_pattern_bit_string(elems, location),
 
             Pattern::Constructor {
                 location,
@@ -4237,7 +4237,7 @@ pub fn bit_string() -> Arc<Type> {
     Arc::new(Type::App {
         args: vec![],
         public: true,
-        name: "Bitstring".to_string(),
+        name: "BitString".to_string(),
         module: vec![],
     })
 }

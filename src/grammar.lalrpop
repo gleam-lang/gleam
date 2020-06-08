@@ -257,7 +257,7 @@ SimpleExpr: UntypedExpr = {
     Tuple => <>,
     String => <>,
     FieldAccess => <>,
-    Bitstring => <>,
+    BitString => <>,
     "{" <expr:ExprSequence> "}" => expr,
 }
 
@@ -569,9 +569,9 @@ Todo: UntypedExpr = {
     }
 }
 
-Bitstring: UntypedExpr = {
+BitString: UntypedExpr = {
     <s:@L> "<<" <elems:Comma<BinSegment>> ">>" <e:@L> => {
-        UntypedExpr::Bitstring {
+        UntypedExpr::BitString {
             location: location(s, e),
             elems: elems,
         }
@@ -624,8 +624,8 @@ BinSegmentOptionLiteral<T>: T = {
             "bytes" => BinSegmentOption::Binary { location: location(s, e) },
             "int" => BinSegmentOption::Integer { location: location(s, e) },
             "float" => BinSegmentOption::Float { location: location(s, e) },
-            "bit_string" => BinSegmentOption::Bitstring { location: location(s, e) },
-            "bits" => BinSegmentOption::Bitstring { location: location(s, e) },
+            "bit_string" => BinSegmentOption::BitString { location: location(s, e) },
+            "bits" => BinSegmentOption::BitString { location: location(s, e) },
             "utf8" => BinSegmentOption::UTF8 { location: location(s, e) },
             "utf16" => BinSegmentOption::UTF16 { location: location(s, e) },
             "utf32" => BinSegmentOption::UTF32 { location: location(s, e) },
@@ -738,7 +738,7 @@ Pattern: UntypedPattern = {
     PatternDiscard => <>,
     PatternTuple => <>,
     PatternConstructor => <>,
-    PatternBitstring => <>,
+    PatternBitString => <>,
 }
 
 PatternVarCallOrInt: UntypedPattern = {
@@ -870,9 +870,9 @@ PatternList: UntypedPattern = {
     },
 }
 
-PatternBitstring: UntypedPattern = {
+PatternBitString: UntypedPattern = {
     <s:@L> "<<" <elems:Comma<PatternBinSegment>> ">>" <e:@L> => {
-        Pattern::Bitstring {
+        Pattern::BitString {
             location: location(s, e),
             elems: elems,
         }
