@@ -281,7 +281,7 @@ fn tuple(elems: impl Iterator<Item = Document>) -> Document {
         .group()
 }
 
-fn bitstring(elems: impl Iterator<Item = Document>) -> Document {
+fn bit_string(elems: impl Iterator<Item = Document>) -> Document {
     concat(elems.intersperse(delim(",")))
         .nest_current()
         .surround("<<", ">>")
@@ -313,7 +313,7 @@ fn segment(value: &TypedExpr, options: Vec<TypedExprBinSegmentOption>, env: &mut
         BinSegmentOption::Integer { .. } => others.push("integer"),
         BinSegmentOption::Float { .. } => others.push("float"),
         BinSegmentOption::Binary { .. } => others.push("binary"),
-        BinSegmentOption::Bitstring { .. } => others.push("bitstring"),
+        BinSegmentOption::Bitstring { .. } => others.push("bit_string"),
         BinSegmentOption::UTF8 { .. } => others.push("utf8"),
         BinSegmentOption::UTF16 { .. } => others.push("utf16"),
         BinSegmentOption::UTF32 { .. } => others.push("utf32"),
@@ -362,7 +362,7 @@ fn pattern_segment(
         BinSegmentOption::Integer { .. } => others.push("integer"),
         BinSegmentOption::Float { .. } => others.push("float"),
         BinSegmentOption::Binary { .. } => others.push("binary"),
-        BinSegmentOption::Bitstring { .. } => others.push("bitstring"),
+        BinSegmentOption::Bitstring { .. } => others.push("bit_string"),
         BinSegmentOption::UTF8 { .. } => others.push("utf8"),
         BinSegmentOption::UTF16 { .. } => others.push("utf16"),
         BinSegmentOption::UTF32 { .. } => others.push("utf32"),
@@ -513,7 +513,7 @@ fn pattern(p: &TypedPattern, env: &mut Env) -> Document {
 
         Pattern::Tuple { elems, .. } => tuple(elems.into_iter().map(|p| pattern(p, env))),
 
-        Pattern::Bitstring { elems, .. } => bitstring(
+        Pattern::Bitstring { elems, .. } => bit_string(
             elems
                 .into_iter()
                 .map(|s| pattern_segment(&s.value, s.options.clone(), env)),
@@ -1021,7 +1021,7 @@ fn expr(expression: &TypedExpr, env: &mut Env) -> Document {
 
         TypedExpr::Tuple { elems, .. } => tuple(elems.into_iter().map(|e| wrap_expr(e, env))),
 
-        TypedExpr::Bitstring { elems, .. } => bitstring(
+        TypedExpr::Bitstring { elems, .. } => bit_string(
             elems
                 .into_iter()
                 .map(|s| segment(&s.value, s.options.clone(), env)),

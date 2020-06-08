@@ -740,7 +740,7 @@ impl<A> BinSegmentOption<A> {
             BinSegmentOption::Binary { .. } => "binary".to_string(),
             BinSegmentOption::Integer { .. } => "int".to_string(),
             BinSegmentOption::Float { .. } => "float".to_string(),
-            BinSegmentOption::Bitstring { .. } => "bitstring".to_string(),
+            BinSegmentOption::Bitstring { .. } => "bit_string".to_string(),
             BinSegmentOption::UTF8 { .. } => "utf8".to_string(),
             BinSegmentOption::UTF16 { .. } => "utf16".to_string(),
             BinSegmentOption::UTF32 { .. } => "utf32".to_string(),

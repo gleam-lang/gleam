@@ -11,7 +11,7 @@ use crate::ast::{
     UntypedExprBinSegment, UntypedExprBinSegmentOption, UntypedModule, UntypedMultiPattern,
     UntypedPattern, UntypedPatternBinSegment, UntypedPatternBinSegmentOption, UntypedStatement,
 };
-use crate::bitstring::{BinaryTypeSpecifier, Error as BinaryError};
+use crate::bit_string::{BinaryTypeSpecifier, Error as BinaryError};
 use crate::error::GleamExpect;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -514,7 +514,7 @@ impl<'a> Typer<'a> {
                 TypeConstructor {
                     origin: Default::default(),
                     parameters: vec![],
-                    typ: bitstring(),
+                    typ: bit_string(),
                     module: vec![],
                     public: true,
                 },
@@ -1304,7 +1304,7 @@ impl<'a> Typer<'a> {
         Ok(TypedExpr::Bitstring {
             location,
             elems,
-            typ: bitstring(),
+            typ: bit_string(),
         })
     }
 
@@ -3433,7 +3433,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         Ok(typed_multi)
     }
 
-    fn infer_pattern_bitstring(
+    fn infer_pattern_bit_string(
         &mut self,
         mut elems: Vec<UntypedPatternBinSegment>,
         location: SrcSpan,
@@ -3679,7 +3679,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 }
             },
 
-            Pattern::Bitstring { location, elems } => self.infer_pattern_bitstring(elems, location),
+            Pattern::Bitstring { location, elems } => self.infer_pattern_bit_string(elems, location),
 
             Pattern::Constructor {
                 location,
@@ -3871,7 +3871,7 @@ fn convert_unify_error(e: UnifyError, location: &SrcSpan) -> Error {
     }
 }
 
-fn convert_binary_error(e: crate::bitstring::Error, location: &SrcSpan) -> Error {
+fn convert_binary_error(e: crate::bit_string::Error, location: &SrcSpan) -> Error {
     match e {
         BinaryError::ConflictingSignednessOptions {
             location,
@@ -4233,7 +4233,7 @@ pub fn fn_(args: Vec<Arc<Type>>, retrn: Arc<Type>) -> Arc<Type> {
     Arc::new(Type::Fn { retrn, args })
 }
 
-pub fn bitstring() -> Arc<Type> {
+pub fn bit_string() -> Arc<Type> {
     Arc::new(Type::App {
         args: vec![],
         public: true,

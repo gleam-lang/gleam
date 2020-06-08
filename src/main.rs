@@ -1,7 +1,7 @@
 #![deny(warnings)]
 
 mod ast;
-mod bitstring;
+mod bit_string;
 mod cli;
 mod diagnostic;
 mod docs;
