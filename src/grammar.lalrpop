@@ -7,7 +7,7 @@ use crate::ast::{
     UntypedPattern, BinOp, Clause, UntypedClause, RecordConstructor, Pattern, CallArg,
     ExternalFnArg, ArgNames, UnqualifiedImport, UntypedClauseGuard, ClauseGuard, BindingKind,
     UntypedExprBinSegment, UntypedPatternBinSegment, BinSegmentOption, UntypedExprBinSegmentOption,
-    UntypedPatternBinSegmentOption,
+    UntypedPatternBinSegmentOption, ConstValue
 
 };
 use crate::parser::*;
@@ -127,7 +127,7 @@ StatementImport: UntypedStatement = {
 }
 
 StatementModuleConstant: UntypedStatement = {
-    <s:@L> <p:"pub"?> "const" <name:VarName> "=" <lit:LiteralExpr> <e:@L> => Statement::ModuleConstant {
+    <s:@L> <p:"pub"?> "const" <name:VarName> "=" <lit:ConstValue> <e:@L> => Statement::ModuleConstant {
         doc: None,
         location: location(s, e),
         public: p.is_some(),
@@ -137,10 +137,10 @@ StatementModuleConstant: UntypedStatement = {
     }
 }
 
-LiteralExpr: UntypedExpr = {
-    Int => <>,
-    Float => <>,
-    String => <>,
+ConstValue: ConstValue<()> = {
+    ConstInt => <>,
+    ConstFloat => <>,
+    ConstString => <>,
 }
 
 UnqualifiedImport: UnqualifiedImport = {
@@ -670,6 +670,14 @@ String: UntypedExpr = {
     }
 }
 
+ConstString: ConstValue<()> = {
+    <s:@L> <x:RawString> <e:@L> => ConstValue::<()>::String {
+        location: location(s, e),
+        typ: (),
+        value: x,
+    }
+}
+
 PositiveIntLiteral: String = {
     <pos:r"[0-9]+"> => pos.to_string()
 }
@@ -694,6 +702,14 @@ Int: UntypedExpr = {
     }
 }
 
+ConstInt: ConstValue<()> = {
+    <s:@L> <value:IntLiteral> <e:@L> => ConstValue::<()>::Int {
+        location: location(s, e),
+        typ: (),
+        value,
+    }
+}
+
 FloatLiteral: String = {
     <f:r"-?[0-9]+\.[0-9]*"> => f.to_string()
 }
@@ -702,6 +718,14 @@ Float: UntypedExpr = {
     <s:@L> <value:FloatLiteral> <e:@L> => UntypedExpr::Float {
         location: location(s, e),
         value
+    }
+}
+
+ConstFloat: ConstValue<()> = {
+    <s:@L> <value:FloatLiteral> <e:@L> => ConstValue::<()>::Float {
+        location: location(s, e),
+        typ: (),
+        value,
     }
 }
 
