@@ -4,12 +4,13 @@ mod tests;
 
 use crate::ast::{
     self, Arg, ArgNames, BinOp, BinSegmentOption, BindingKind, CallArg, Clause, ClauseGuard,
-    Pattern, RecordConstructor, SrcSpan, Statement, TypeAst, TypedArg, TypedClause,
-    TypedClauseGuard, TypedExpr, TypedExprBinSegment, TypedExprBinSegmentOption, TypedModule,
-    TypedMultiPattern, TypedPattern, TypedPatternBinSegment, TypedPatternBinSegmentOption,
-    TypedStatement, UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard, UntypedExpr,
-    UntypedExprBinSegment, UntypedExprBinSegmentOption, UntypedModule, UntypedMultiPattern,
-    UntypedPattern, UntypedPatternBinSegment, UntypedPatternBinSegmentOption, UntypedStatement,
+    ConstValue, Pattern, RecordConstructor, SrcSpan, Statement, TypeAst, TypedArg, TypedClause,
+    TypedClauseGuard, TypedConstValue, TypedExpr, TypedExprBinSegment, TypedExprBinSegmentOption,
+    TypedModule, TypedMultiPattern, TypedPattern, TypedPatternBinSegment,
+    TypedPatternBinSegmentOption, TypedStatement, UnqualifiedImport, UntypedArg, UntypedClause,
+    UntypedClauseGuard, UntypedConstValue, UntypedExpr, UntypedExprBinSegment,
+    UntypedExprBinSegmentOption, UntypedModule, UntypedMultiPattern, UntypedPattern,
+    UntypedPatternBinSegment, UntypedPatternBinSegmentOption, UntypedStatement,
 };
 use crate::bitstring::{BinaryTypeSpecifier, Error as BinaryError};
 use crate::error::GleamExpect;
@@ -2188,6 +2189,32 @@ impl<'a> Typer<'a> {
         Ok((fun, args, return_type))
     }
 
+    fn infer_const(&mut self, expr: UntypedConstValue) -> Result<TypedConstValue, Error> {
+        Ok(match expr {
+            ConstValue::Int {
+                location, value, ..
+            } => ConstValue::Int {
+                location,
+                typ: int(),
+                value,
+            },
+            ConstValue::Float {
+                location, value, ..
+            } => ConstValue::Int {
+                location,
+                typ: float(),
+                value,
+            },
+            ConstValue::String {
+                location, value, ..
+            } => ConstValue::String {
+                location,
+                typ: string(),
+                value,
+            },
+        })
+    }
+
     /// Instantiate converts generic variables into unbound ones.
     ///
     fn instantiate(
@@ -3313,8 +3340,8 @@ pub fn infer_module(
                 value,
                 ..
             } => {
-                let typed_value = typer.infer(*value)?;
-                let typ = typed_value.typ();
+                let typed_expr = typer.infer_const(*value)?;
+                let typ = typed_expr.typ();
 
                 typer.insert_module_value(
                     &name,
@@ -3331,7 +3358,7 @@ pub fn infer_module(
                     location,
                     name,
                     public,
-                    value: Box::new(typed_value),
+                    value: Box::new(typed_expr),
                     typ,
                 })
             }
