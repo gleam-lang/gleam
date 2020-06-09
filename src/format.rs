@@ -212,13 +212,8 @@ impl<'a> Formatter<'a> {
                                 unqualified
                                     .iter()
                                     .map(|e| {
-                                        break_(&e.clone().name, &e.clone().name).append(
-                                            if let Some(name) = &e.as_name {
-                                                format!(" as {}", name).to_doc()
-                                            } else {
-                                                nil()
-                                            },
-                                        )
+                                        break_(&e.clone().name, &e.clone().name)
+                                            .append(import_as(&e.clone().as_name))
                                     })
                                     .intersperse(delim(",")),
                             )
@@ -226,11 +221,7 @@ impl<'a> Formatter<'a> {
                         )
                         .append("}")
                 })
-                .append(if let Some(name) = as_name {
-                    format!(" as {}", name).to_doc()
-                } else {
-                    nil()
-                }),
+                .append(import_as(&as_name)),
         }
     }
 
@@ -964,12 +955,16 @@ fn pub_(public: bool) -> Document {
     }
 }
 
+fn import_as(as_: &Option<String>) -> Document {
+    match as_ {
+        None => nil(),
+        Some(s) => " as ".to_doc().append(s.clone()),
+    }
+}
+
 impl Documentable for &UnqualifiedImport {
     fn to_doc(self) -> Document {
-        self.name.clone().to_doc().append(match &self.as_name {
-            None => nil(),
-            Some(s) => " as ".to_doc().append(s.clone()),
-        })
+        self.name.clone().to_doc().append(import_as(&self.as_name))
     }
 }
 

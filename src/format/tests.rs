@@ -25,8 +25,8 @@ fn module_test() {
     assert_format!("import one/two/three as free\n");
     assert_format!("import one/two/three.{thunk} as free\n");
     assert_format!("import one/two/three.{thunk as funky} as free\n");
-    assert_format!("import my/cool/module.{\n  One, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Eleven, Twelve, \n  Thirteen, Fifteen, Sixteen\n}\n");
-    assert_format!("import my/cool/module.{\n  One, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Eleven, Twelve, \n  Thirteen, Fourteen, Fifteen, Sixteen, Seventeen, Eighteen, Nineteen, Twenty, \n  Thirty, Forty, Fifty, Sixty, Seventy\n}\n");
+    assert_format!("import my/cool/module.{\n  One, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Eleven, Twelve,\n  Thirteen, Fifteen, Sixteen\n}\n");
+    assert_format!("import my/cool/module.{\n  One, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Eleven, Twelve,\n  Thirteen, Fourteen, Fifteen, Sixteen, Seventeen, Eighteen, Nineteen, Twenty,\n  Thirty, Forty, Fifty, Sixty, Seventy\n}\n");
 
     //
     // Multiple statements

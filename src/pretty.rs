@@ -198,6 +198,7 @@ fn fmt(b: &mut String, limit: isize, mut width: isize, mut docs: Vector<(isize, 
                     }
                     Mode::Flex => {
                         if limit - width <= unbroken.len() as isize {
+                            b.pop();
                             b.push_str("\n");
                             b.push_str(" ".repeat(2).as_str());
                             b.push_str(broken.as_str());
