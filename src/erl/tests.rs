@@ -829,7 +829,7 @@ go() ->
                 name: "test".to_string(),
                 public: true,
                 typ: crate::typ::int(),
-                value: Box::new(TypedExpr::Int {
+                value: Box::new(TypedConstValue::Int {
                     typ: crate::typ::int(),
                     location: Default::default(),
                     value: "42".to_string(),

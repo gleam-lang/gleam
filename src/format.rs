@@ -229,8 +229,18 @@ impl<'a> Formatter<'a> {
                 .append("const ")
                 .append(name.to_string())
                 .append(" = ")
-                .append(self.expr(value)),
+                .append(self.const_expr(value)),
         }
+    }
+
+    fn const_expr(&mut self, value: &ConstValue<()>) -> Document {
+        match value {
+            ConstValue::Int { value, .. }
+            | ConstValue::Float { value, .. }
+            | ConstValue::String { value, .. } => value,
+        }
+        .clone()
+        .to_doc()
     }
 
     fn documented_statement(&mut self, s: &UntypedStatement) -> Document {

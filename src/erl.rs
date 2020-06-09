@@ -198,7 +198,12 @@ fn statement(statement: &TypedStatement, module: &[String]) -> Option<Document> 
         Statement::Import { .. } => None,
         Statement::ExternalType { .. } => None,
 
-        Statement::ModuleConstant { name, value, .. } => Some(mod_const(name, value, module)),
+        Statement::ModuleConstant {
+            public,
+            name,
+            value,
+            ..
+        } => mod_const(*public, name, value),
 
         Statement::Fn {
             args, name, body, ..
@@ -220,13 +225,22 @@ fn statement(statement: &TypedStatement, module: &[String]) -> Option<Document> 
     }
 }
 
-fn mod_const(name: &str, value: &TypedExpr, module: &[String]) -> Document {
-    let mut env = Env::new(module);
+fn mod_const(public: bool, name: &str, value: &TypedConstValue) -> Option<Document> {
+    if !public {
+        return None;
+    }
+    let value: &str = match value {
+        TypedConstValue::Int { value, .. } => value,
+        TypedConstValue::Float { value, .. } => value,
+        TypedConstValue::String { value, .. } => value,
+    };
 
-    atom(name.to_string())
-        .append("() -> ")
-        .append(expr(value, &mut env))
-        .append(".")
+    Some(
+        atom(name.to_string())
+            .append("() -> ")
+            .append(value)
+            .append("."),
+    )
 }
 
 fn mod_fun(name: &str, args: &[TypedArg], body: &TypedExpr, module: &[String]) -> Document {
