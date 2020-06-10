@@ -31,7 +31,7 @@ impl<'a> PackageAnalyser<'a> {
 
     pub fn analyse(
         self,
-        existing_modules: &mut HashMap<String, typ::Module>,
+        existing_modules: &mut HashMap<String, (Origin, typ::Module)>,
         already_defined_modules: &mut HashMap<String, PathBuf>,
     ) -> Result<Package, Error> {
         println!(" Analysing {}", self.config.name);
@@ -56,8 +56,6 @@ impl<'a> PackageAnalyser<'a> {
         })
     }
 
-    // TODO: if we inject in this functionality with some kind of SourceProvider
-    // trait then we can test the compilation of multiple packages easily.
     pub fn read_package_source_files(&mut self, origin: Origin) -> Result<(), Error> {
         let span =
             tracing::info_span!("analyse", package = self.config.name.as_str(), origin = ?origin);
@@ -84,7 +82,7 @@ impl<'a> PackageAnalyser<'a> {
 fn type_check(
     sequence: Vec<String>,
     mut parsed_modules: HashMap<String, Parsed>,
-    module_types: &mut HashMap<String, typ::Module>,
+    module_types: &mut HashMap<String, (Origin, typ::Module)>,
 ) -> Result<Vec<Module>, Error> {
     let mut warnings = vec![];
     let mut modules = Vec::with_capacity(parsed_modules.len());
@@ -108,7 +106,7 @@ fn type_check(
                 error,
             })?;
 
-        module_types.insert(name.clone(), ast.type_info.clone());
+        module_types.insert(name.clone(), (origin, ast.type_info.clone()));
 
         modules.push(Module {
             origin,

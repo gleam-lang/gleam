@@ -14,7 +14,7 @@ pub struct ProjectAnalyser<'a> {
     root_config: PackageConfig,
     configs: HashMap<String, PackageConfig>,
     packages: HashMap<String, Package>,
-    type_manifests: HashMap<String, typ::Module>,
+    type_manifests: HashMap<String, (Origin, typ::Module)>,
     defined_modules: HashMap<String, PathBuf>,
 }
 
