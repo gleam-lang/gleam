@@ -4,6 +4,7 @@ mod tests;
 
 use crate::{
     ast::TypedModule,
+    build::Origin,
     config::{self, PackageConfig},
     error::{Error, FileIOAction, FileKind, GleamExpect},
     file, typ,
@@ -45,6 +46,13 @@ impl ModuleOrigin {
         match self {
             ModuleOrigin::Src | ModuleOrigin::Dependency => "src",
             ModuleOrigin::Test => "test",
+        }
+    }
+
+    pub fn to_origin(&self) -> Origin {
+        match self {
+            ModuleOrigin::Test => Origin::Test,
+            ModuleOrigin::Src | ModuleOrigin::Dependency => Origin::Src,
         }
     }
 }
@@ -134,7 +142,10 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
             error,
         })?;
 
-        modules_type_infos.insert(name_string.clone(), ast.type_info.clone());
+        modules_type_infos.insert(
+            name_string.clone(),
+            (origin.to_origin(), ast.type_info.clone()),
+        );
 
         compiled_modules.push(Out {
             name,
@@ -164,7 +175,8 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
                 origin,
                 type_info: modules_type_infos
                     .remove(&name_string)
-                    .gleam_expect("project::compile(): Merging module type info"),
+                    .gleam_expect("project::compile(): Merging module type info")
+                    .1,
                 warnings,
             }
         })
