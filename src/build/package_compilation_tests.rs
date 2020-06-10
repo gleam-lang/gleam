@@ -26,13 +26,15 @@ fn package_analyser_test() {
             let root = ProjectRoot::new(PathBuf::new());
             let mut analyser = PackageAnalyser::new(&root, config);
             analyser.sources = $sources;
-            let outputs = analyser.analyse(&mut modules).map(|package| {
-                let mut packages = HashMap::with_capacity(1);
-                packages.insert(package.config.name.clone(), package);
-                let mut outputs = ErlangCodeGenerator::new(&root, &packages).render();
-                outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
-                outputs
-            });
+            let outputs = analyser
+                .analyse(&mut modules, &mut HashMap::with_capacity(4))
+                .map(|package| {
+                    let mut packages = HashMap::with_capacity(1);
+                    packages.insert(package.config.name.clone(), package);
+                    let mut outputs = ErlangCodeGenerator::new(&root, &packages).render();
+                    outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
+                    outputs
+                });
             assert_eq!($expected_output, outputs);
         };
     }
@@ -435,28 +437,27 @@ call_thing() ->\n    thing:new().\n"
         ]),
     );
 
-    // TODO: Multiple modules with the same name are not permitted
-    // assert_erlang_compile!(
-    //     vec![
-    //         Source {
-    //             origin: Origin::Src,
-    //             path: PathBuf::from("/src/one.gleam"),
-    //             name: "one".to_string(),
-    //             code: "".to_string(),
-    //         },
-    //         Source {
-    //             origin: Origin::Src,
-    //             path: PathBuf::from("/test/one.gleam"),
-    //             name: "one".to_string(),
-    //             code: "".to_string(),
-    //         },
-    //     ],
-    //     Err(Error::DuplicateModule {
-    //         module: "one".to_string(),
-    //         first: PathBuf::from("/src/one.gleam"),
-    //         second: PathBuf::from("/test/one.gleam"),
-    //     }),
-    // );
+    assert_erlang_compile!(
+        vec![
+            Source {
+                origin: Origin::Src,
+                path: PathBuf::from("/src/one.gleam"),
+                name: "one".to_string(),
+                code: "".to_string(),
+            },
+            Source {
+                origin: Origin::Src,
+                path: PathBuf::from("/test/one.gleam"),
+                name: "one".to_string(),
+                code: "".to_string(),
+            },
+        ],
+        Err(Error::DuplicateModule {
+            module: "one".to_string(),
+            first: PathBuf::from("/src/one.gleam"),
+            second: PathBuf::from("/test/one.gleam"),
+        }),
+    );
 
     assert_erlang_compile!(
         vec![

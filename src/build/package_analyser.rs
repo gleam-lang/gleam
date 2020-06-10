@@ -20,7 +20,6 @@ pub struct PackageAnalyser<'a> {
 // TODO: tests
 // Including cases for:
 // - modules that don't import anything
-// - modules with names that collide with modules in an already compiled package
 impl<'a> PackageAnalyser<'a> {
     pub fn new(root: &'a ProjectRoot, config: PackageConfig) -> Self {
         Self {
@@ -33,6 +32,7 @@ impl<'a> PackageAnalyser<'a> {
     pub fn analyse(
         self,
         existing_modules: &mut HashMap<String, typ::Module>,
+        already_defined_modules: &mut HashMap<String, PathBuf>,
     ) -> Result<Package, Error> {
         println!(" Analysing {}", self.config.name);
 
@@ -40,7 +40,7 @@ impl<'a> PackageAnalyser<'a> {
         let _enter = span.enter();
 
         tracing::info!("Parsing source code");
-        let parsed_modules = parse_sources(self.sources)?;
+        let parsed_modules = parse_sources(self.sources, already_defined_modules)?;
 
         // Determine order in which modules are to be processed
         let sequence =
@@ -139,7 +139,10 @@ fn module_deps_for_graph(module: &Parsed) -> (String, Vec<String>) {
     (name, deps)
 }
 
-fn parse_sources(sources: Vec<Source>) -> Result<HashMap<String, Parsed>, Error> {
+fn parse_sources(
+    sources: Vec<Source>,
+    already_defined_modules: &mut HashMap<String, PathBuf>,
+) -> Result<HashMap<String, Parsed>, Error> {
     let mut parsed_modules = HashMap::with_capacity(sources.len());
     for source in sources.into_iter() {
         let Source {
@@ -156,6 +159,19 @@ fn parse_sources(sources: Vec<Source>) -> Result<HashMap<String, Parsed>, Error>
             code,
             ast,
         };
+
+        // Ensure there are no modules defined that already have this name
+        if let Some(first) =
+            already_defined_modules.insert(module.name.clone(), module.path.clone())
+        {
+            return Err(Error::DuplicateModule {
+                module: module.name.clone(),
+                first,
+                second: module.path.clone(),
+            });
+        }
+
+        // Register the parsed module
         parsed_modules.insert(module.name.clone(), module);
     }
     Ok(parsed_modules)
