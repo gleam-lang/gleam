@@ -1,5 +1,5 @@
 use super::*;
-use crate::project::{Input, OutputFile, ProjectConfig};
+use crate::{config::PackageConfig, file::OutputFile, project::Input};
 
 #[test]
 fn module_docs_test() {
@@ -36,9 +36,13 @@ pub fn complicated_fun(
         src: src.to_string(),
     };
 
-    let config = ProjectConfig {
+    let config = PackageConfig {
         name: "test".to_string(),
-        docs: None,
+        docs: Default::default(),
+        tool: Default::default(),
+        version: Default::default(),
+        description: Default::default(),
+        dependencies: Default::default(),
     };
 
     let analysed = crate::project::analysed(vec![input]).expect("Compilation failed");
