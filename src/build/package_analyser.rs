@@ -123,7 +123,9 @@ fn type_check(
 }
 
 fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
-    todo!()
+    match e {
+        dep_tree::Error::Cycle(modules) => Error::ImportCycle { modules },
+    }
 }
 
 fn module_deps_for_graph(module: &Parsed) -> (String, Vec<String>) {

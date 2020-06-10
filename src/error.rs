@@ -97,7 +97,11 @@ pub enum Error {
     },
 
     ImportCycle {
-        modules: Vec<Vec<String>>,
+        modules: Vec<String>,
+    },
+
+    PackageCycle {
+        packages: Vec<String>,
     },
 
     FileIO {
@@ -1260,7 +1264,38 @@ but this one uses {}. Rewrite this using the fn({}) {{ ... }} syntax.",
                 }
             }
 
-            Error::ImportCycle { modules } => import_cycle(buffer, modules.as_ref()),
+            Error::ImportCycle { modules } => {
+                crate::diagnostic::write_title(buffer, "Import cycle");
+                writeln!(
+                    buffer,
+                    "The import statements for these modules form a cycle:\n"
+                )
+                .unwrap();
+                import_cycle(buffer, modules.as_ref());
+
+                writeln!(
+                    buffer,
+                    "Gleam doesn't support import cycles like these, please break the
+cycle to continue."
+                )
+                .unwrap();
+            }
+
+            Error::PackageCycle { packages } => {
+                crate::diagnostic::write_title(buffer, "Dependency cycle");
+                writeln!(
+                    buffer,
+                    "The dependencies for these packages form a cycle:\n"
+                )
+                .unwrap();
+                import_cycle(buffer, packages.as_ref());
+                writeln!(
+                    buffer,
+                    "Gleam doesn't support dependency cycles like these, please break the
+cycle to continue."
+                )
+                .unwrap();
+            }
 
             Error::UnknownImport {
                 module,
@@ -1359,14 +1394,13 @@ fn std_io_error_kind_text(kind: &std::io::ErrorKind) -> String {
     }
 }
 
-fn import_cycle(buffer: &mut Buffer, modules: &[Vec<String>]) {
+fn import_cycle(buffer: &mut Buffer, modules: &[String]) {
     use std::io::Write;
     use termcolor::{Color, ColorSpec, WriteColor};
-    crate::diagnostic::write_title(buffer, "Import cycle");
+
     writeln!(
         buffer,
-        "The import statements for these modules form a cycle:
-
+        "
     ┌─────┐"
     )
     .unwrap();
@@ -1378,15 +1412,8 @@ fn import_cycle(buffer: &mut Buffer, modules: &[Vec<String>]) {
         buffer
             .set_color(ColorSpec::new().set_fg(Some(Color::Cyan)))
             .unwrap();
-        writeln!(buffer, "{}", name.join("/")).unwrap();
+        writeln!(buffer, "{}", name).unwrap();
         buffer.set_color(&ColorSpec::new()).unwrap();
     }
-    writeln!(
-        buffer,
-        "    └─────┘
-
-Gleam doesn't support import cycles like these, please break the
-cycle to continue."
-    )
-    .unwrap();
+    writeln!(buffer, "    └─────┘\n").unwrap();
 }

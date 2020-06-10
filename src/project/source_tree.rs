@@ -45,6 +45,7 @@ impl SourceTree {
                     .gleam_expect("SourceTree.import_cycle(): cannot find module for index")
                     .module
                     .name
+                    .join("/")
             })
             .collect();
         Error::ImportCycle { modules }
