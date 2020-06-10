@@ -34,7 +34,8 @@ fn package_analyser_test() {
                     let mut outputs = ErlangCodeGenerator::new(&root, &packages).render();
                     outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
                     outputs
-                });
+                })
+                .map_err(|e| normalise_error(e));
             assert_eq!($expected_output, outputs);
         };
     }
@@ -1007,4 +1008,41 @@ main() ->\n    fun(A, B) -> {c, A, B} end.\n"
             }
         }),
     );
+
+    // Import cycles between modules are not allowed
+    assert_erlang_compile!(
+        vec![
+            Source {
+                origin: Origin::Src,
+                path: PathBuf::from("/src/one.gleam"),
+                name: "one".to_string(),
+                code: "import two".to_string(),
+            },
+            Source {
+                origin: Origin::Src,
+                path: PathBuf::from("/src/two.gleam"),
+                name: "two".to_string(),
+                code: "import three".to_string(),
+            },
+            Source {
+                origin: Origin::Src,
+                path: PathBuf::from("/src/three.gleam"),
+                name: "three".to_string(),
+                code: "import one".to_string(),
+            },
+        ],
+        Err(Error::ImportCycle {
+            modules: vec!["one".to_string(), "three".to_string(), "two".to_string()],
+        }),
+    );
+}
+
+fn normalise_error(e: Error) -> Error {
+    match e {
+        Error::ImportCycle { mut modules } => {
+            modules.sort();
+            Error::ImportCycle { modules }
+        }
+        e => e,
+    }
 }

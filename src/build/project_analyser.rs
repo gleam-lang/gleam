@@ -20,6 +20,7 @@ pub struct ProjectAnalyser<'a> {
 
 // TODO: test top level package has test modules analysed
 // TODO: test that tests cannot be imported into src
+// TODO: test that dep cycles are not allowed between packages
 
 impl<'a> ProjectAnalyser<'a> {
     pub fn new(
@@ -92,7 +93,9 @@ fn order_packges(configs: &HashMap<String, PackageConfig>) -> Result<Vec<String>
 }
 
 fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
-    todo!()
+    match e {
+        dep_tree::Error::Cycle(packages) => Error::PackageCycle { packages },
+    }
 }
 
 fn package_deps_for_graph(config: &PackageConfig) -> (String, Vec<String>) {
