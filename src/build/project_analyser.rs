@@ -6,7 +6,7 @@ use crate::{
     error::{Error, GleamExpect},
     typ,
 };
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 
 #[derive(Debug)]
 pub struct ProjectAnalyser<'a> {
@@ -15,6 +15,7 @@ pub struct ProjectAnalyser<'a> {
     configs: HashMap<String, PackageConfig>,
     packages: HashMap<String, Package>,
     type_manifests: HashMap<String, typ::Module>,
+    defined_modules: HashMap<String, PathBuf>,
 }
 
 // TODO: test top level package has test modules analysed
@@ -26,9 +27,11 @@ impl<'a> ProjectAnalyser<'a> {
         root_config: PackageConfig,
         configs: HashMap<String, PackageConfig>,
     ) -> Self {
+        let estimated_number_of_modules = configs.len() * 5;
         Self {
             packages: HashMap::with_capacity(configs.len()),
-            type_manifests: HashMap::with_capacity(configs.len() * 5),
+            type_manifests: HashMap::with_capacity(estimated_number_of_modules),
+            defined_modules: HashMap::with_capacity(estimated_number_of_modules),
             root_config,
             configs,
             root,
@@ -71,7 +74,7 @@ impl<'a> ProjectAnalyser<'a> {
         }
 
         // Parse and type check
-        let analysed = analyser.analyse(&mut self.type_manifests)?;
+        let analysed = analyser.analyse(&mut self.type_manifests, &mut self.defined_modules)?;
         self.packages.insert(name, analysed);
         Ok(())
     }
