@@ -353,7 +353,7 @@ fn infer_test() {
     assert_infer!("let tuple(tag, x) = tuple(1.0, 1) x", "Int");
     assert_infer!("fn(x) { let tuple(a, b) = x a }", "fn(tuple(a, b)) -> a");
 
-    // assert
+    // assert (same behaviour as let)
     assert_infer!("assert [] = [] 1", "Int");
     assert_infer!("assert [a] = [1] a", "Int");
     assert_infer!("assert [a, 2] = [1] a", "Int");
@@ -366,6 +366,9 @@ fn infer_test() {
     assert_infer!("assert tuple(tag, x) = tuple(1.0, 1) x", "Int");
     assert_infer!("fn(x) { assert tuple(a, b) = x a }", "fn(tuple(a, b)) -> a");
     assert_infer!("assert 5: Int = 5 5", "Int");
+
+    // assert specific behaviour
+    assert_infer!("assert Ok(x) = Ok(1) x", "Int");
 
     // try
     assert_infer!("try x = Ok(1) Ok(x)", "Result(Int, a)");
@@ -1417,6 +1420,15 @@ fn infer_error_test() {
             ),
         },
     );
+
+    assert_error!(
+        "let Ok(x) = Error(1) x",
+        Error::NonExhaustiveLet {
+            location: SrcSpan { start: 4, end: 9 },
+            constructor: "Ok".to_string(),
+            unhandled_constructors: vec!["Error".to_string()]
+        }
+    );
 }
 
 #[test]
@@ -1885,6 +1897,23 @@ pub fn get(x: One) { x.name }",
             ("test_list", "List(Int)"),
             ("test_string", "String"),
             ("test_tuple", "tuple(String, Int)"),
+        ],
+    );
+
+    // Assert with custom type constructors
+    assert_infer!(
+        "pub type X {
+    One(x: Int)
+    Two(x: Int)
+}
+pub fn test(x) {
+    assert Two(y) = x
+    y
+}",
+        vec![
+            ("One", "fn(Int) -> X"),
+            ("Two", "fn(Int) -> X"),
+            ("test", "fn(X) -> Int"),
         ],
     );
 }
@@ -2602,6 +2631,22 @@ fn main() {
             expected: int(),
             given: float(),
         },
+    );
+
+    assert_error!(
+        "type X {
+    One(x: Int)
+    Two(x: Int)
+}
+fn test(x) {
+    let Two(y) = x
+    y
+}",
+        Error::NonExhaustiveLet {
+            location: SrcSpan { start: 64, end: 70 },
+            constructor: "Two".to_string(),
+            unhandled_constructors: vec!["One".to_string()]
+        }
     );
 }
 

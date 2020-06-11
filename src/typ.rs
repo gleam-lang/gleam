@@ -293,13 +293,16 @@ pub enum ValueConstructorVariant {
     Record {
         name: String,
         field_map: Option<FieldMap>,
+        other_constructor_names: Vec<String>,
     },
 }
 
 impl ValueConstructorVariant {
     fn to_module_value_constructor(&self) -> ModuleValueConstructor {
         match self {
-            ValueConstructorVariant::Record { name, field_map } => ModuleValueConstructor::Record {
+            ValueConstructorVariant::Record {
+                name, field_map, ..
+            } => ModuleValueConstructor::Record {
                 name: name.clone(),
                 arity: field_map.as_ref().map_or(0, |fm| fm.arity),
             },
@@ -428,6 +431,7 @@ impl<'a> Typer<'a> {
             ValueConstructorVariant::Record {
                 name: "True".to_string(),
                 field_map: None,
+                other_constructor_names: vec!["False".to_string()],
             },
             bool(),
         );
@@ -436,6 +440,7 @@ impl<'a> Typer<'a> {
             ValueConstructorVariant::Record {
                 name: "False".to_string(),
                 field_map: None,
+                other_constructor_names: vec!["True".to_string()],
             },
             bool(),
         );
@@ -512,6 +517,7 @@ impl<'a> Typer<'a> {
             ValueConstructorVariant::Record {
                 name: "Nil".to_string(),
                 field_map: None,
+                other_constructor_names: vec![],
             },
             nil(),
         );
@@ -561,6 +567,7 @@ impl<'a> Typer<'a> {
             ValueConstructorVariant::Record {
                 name: "Ok".to_string(),
                 field_map: None,
+                other_constructor_names: vec!["Error".to_string()],
             },
             fn_(vec![ok.clone()], result(ok, error)),
         );
@@ -572,6 +579,7 @@ impl<'a> Typer<'a> {
             ValueConstructorVariant::Record {
                 name: "Error".to_string(),
                 field_map: None,
+                other_constructor_names: vec!["Ok".to_string()],
             },
             fn_(vec![error.clone()], result(ok, error)),
         );
@@ -1521,6 +1529,29 @@ impl<'a> Typer<'a> {
             let value = self.new_unbound_var(self.level);
             self.unify(result(value, try_error_type), typ.clone())
                 .map_err(|e| convert_unify_error(e, then.try_binding_location()))?;
+        }
+
+        // Ensure exhaustiveness of value if this is a `let` binding
+        if kind == BindingKind::Let {
+            if let Pattern::Constructor { name, module, .. } = &pattern {
+                let value_constructor = self
+                    .get_value_constructor(module.as_ref(), &name)
+                    .map_err(|e| convert_get_value_constructor_error(e, &location))?;
+
+                if let ValueConstructorVariant::Record {
+                    ref other_constructor_names,
+                    ..
+                } = value_constructor.variant
+                {
+                    if other_constructor_names.len() > 0 {
+                        return Err(Error::NonExhaustiveLet {
+                            location: pattern.location().clone(),
+                            constructor: name.clone(),
+                            unhandled_constructors: other_constructor_names.clone(),
+                        });
+                    }
+                }
+            }
         }
 
         // Check that any type annotation is accurate.
@@ -2783,6 +2814,12 @@ pub enum Error {
         location: SrcSpan,
         label: String,
     },
+
+    NonExhaustiveLet {
+        location: SrcSpan,
+        constructor: String,
+        unhandled_constructors: Vec<String>,
+    },
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -2906,8 +2943,27 @@ fn register_types(
             args,
             location,
             ..
+        } => {
+            let parameters = typer.make_annotated_type_vars(args, location)?;
+            let typ = Arc::new(Type::App {
+                public: *public,
+                module: module.to_owned(),
+                name: name.clone(),
+                args: parameters.clone(),
+            });
+            typer.insert_type_constructor(
+                name.clone(),
+                TypeConstructor {
+                    origin: location.clone(),
+                    module: module.to_owned(),
+                    public: *public,
+                    parameters,
+                    typ,
+                },
+            )?;
         }
-        | Statement::CustomType {
+
+        Statement::CustomType {
             name,
             public,
             args,
@@ -2921,6 +2977,7 @@ fn register_types(
                 name: name.clone(),
                 args: parameters.clone(),
             });
+
             typer.insert_type_constructor(
                 name.clone(),
                 TypeConstructor {
@@ -3329,6 +3386,17 @@ pub fn infer_module(
                         _ => fn_(args_types, retrn.clone()),
                     };
 
+                    let other_constructor_names: Vec<String> = constructors
+                        .iter()
+                        .filter_map(|c| {
+                            if c.name == constructor.name {
+                                None
+                            } else {
+                                Some(c.name.clone())
+                            }
+                        })
+                        .collect();
+
                     if !opaque {
                         typer.insert_module_value(
                             &constructor.name,
@@ -3339,6 +3407,7 @@ pub fn infer_module(
                                 variant: ValueConstructorVariant::Record {
                                     name: constructor.name.clone(),
                                     field_map: field_map.clone(),
+                                    other_constructor_names: other_constructor_names.clone(),
                                 },
                             },
                         )?;
@@ -3349,6 +3418,7 @@ pub fn infer_module(
                         ValueConstructorVariant::Record {
                             name: constructor.name.clone(),
                             field_map,
+                            other_constructor_names: other_constructor_names.clone(),
                         },
                         typ,
                     );

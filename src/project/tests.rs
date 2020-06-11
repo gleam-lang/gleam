@@ -1039,6 +1039,87 @@ main(Arg1, Arg2, Arg3) ->
                 },
             ]),
         },
+
+        // Assert with custom type constructors defined in a different file
+        Case {
+            input: vec![
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/one.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "pub type X {
+    One(x: Int)
+    Two(x: Int)
+}".to_string(),
+                },
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/two.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "import one.{Two}
+pub fn test(x) {
+    assert Two(y) = x
+    y
+}".to_string(),
+                },
+            ],
+            expected: Ok(vec![
+                OutputFile {
+                    text: "-record(one, {x}).\n".to_string(),
+                    path: PathBuf::from("/gen/src/one_One.hrl"),
+                },
+                OutputFile {
+                    text: "-record(two, {x}).\n".to_string(),
+                    path: PathBuf::from("/gen/src/one_Two.hrl"),
+                },
+                OutputFile {
+                    path: PathBuf::from("/gen/src/one.erl"),
+                    text: "-module(one).\n-compile(no_auto_import).\n\n\n"
+                        .to_string(),
+                },
+                OutputFile {
+                    path: PathBuf::from("/gen/src/two.erl"),
+                    text: "-module(two).\n-compile(no_auto_import).\n\n-export([test/1]).\n\ntest(X) ->\n    {two, Y} = X,\n    Y.\n".to_string(),
+                },
+            ]),
+        },
+
+        // Let with custom type constructors defined in a different file
+        Case {
+            input: vec![
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/one.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "pub type X {
+    One(x: Int)
+    Two(x: Int)
+}".to_string(),
+                },
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/two.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "import one.{Two}
+pub fn test(x) {
+    let Two(y) = x
+    y
+}".to_string(),
+                },
+            ],
+            expected: Err(Error::Type {
+                path: PathBuf::from("/src/two.gleam"),
+                src: "import one.{Two}\npub fn test(x) {\n    let Two(y) = x\n    y\n}".to_string(),
+                error: crate::typ::Error::NonExhaustiveLet {
+                    location: crate::ast::SrcSpan { start: 42, end: 48 },
+                    constructor: "Two".to_string(),
+                    unhandled_constructors: vec!["One".to_string()]
+                }
+            }),
+        },
+
+
+
     ];
 
     for Case { input, expected } in cases.into_iter() {

@@ -1176,6 +1176,33 @@ signed, unsigned, big, little, native, size, unit",
                     )
                     .unwrap();
                 }
+
+                NonExhaustiveLet {
+                    location,
+                    constructor,
+                    unhandled_constructors,
+                } => {
+                    let diagnostic = Diagnostic {
+                        title: "Non-exhaustive let binding".to_string(),
+                        label: "used here".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: location.clone(),
+                    };
+                    write(buffer, diagnostic, Severity::Error);
+                    writeln!(
+                        buffer,
+                        "You are handling the {} constructor, but this could also be one of:
+{}
+
+Either use a case expression to handle all possibilities, or use assert instead
+of let if you are sure you don't want to handle the others. This will cause a
+runtime error if they occur.",
+                        constructor,
+                        unhandled_constructors.join(", "),
+                    )
+                    .unwrap();
+                }
             },
 
             Error::Parse { path, src, error } => {
