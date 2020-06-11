@@ -160,6 +160,19 @@ fn fits(mut limit: isize, mut docs: Vector<(isize, Mode, Document)>) -> bool {
     }
 }
 
+pub fn remove_ws_end(b: &mut String, ws: usize) {
+    for _i in 0..ws {
+        match b.pop() {
+            Some(c) => {
+                if !(c == ' ') {
+                    b.push(c);
+                }
+            }
+            None => (),
+        }
+    }
+}
+
 pub fn format(limit: isize, doc: Document) -> String {
     let mut buffer = String::new();
     fmt(
@@ -197,8 +210,8 @@ fn fmt(b: &mut String, limit: isize, mut width: isize, mut docs: Vector<(isize, 
                         indent as isize
                     }
                     Mode::Flex => {
-                        if limit - width <= unbroken.len() as isize {
-                            b.pop();
+                        if limit - width < broken.len() as isize {
+                            remove_ws_end(b, 1);
                             b.push_str("\n");
                             b.push_str(" ".repeat(2).as_str());
                             b.push_str(broken.as_str());
