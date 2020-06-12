@@ -6,6 +6,10 @@
 - Added support for bit_string syntax.
 - Remove old list prepend syntax `[x | y]`, use `[x .. y]` instead.
 
+## v0.9.1 - 2020-06-12
+
+- Fixed a bug where binary operators may lose required `{ }`s when formatted.
+
 ## v0.9.0 - 2020-06-01
 
 #### [Release blog post](https://lpil.uk/blog/gleam-v0.9-released/)
