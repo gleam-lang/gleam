@@ -24,6 +24,8 @@ pub fn command(root_string: String) -> Result<(), Error> {
         command.arg(entry.path().join("ebin"));
     }
 
+    crate::cli::print_running("erl");
+
     // Run the shell
     tracing::trace!("Running OS process {:?}", command);
     let status = command.status().map_err(|e| Error::ShellCommand {

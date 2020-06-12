@@ -29,6 +29,10 @@ pub fn print_compiling(text: &str) {
     print_green_prefix("Compiling", text)
 }
 
+pub fn print_running(text: &str) {
+    print_green_prefix("  Running", text)
+}
+
 pub fn print_green_prefix(prefix: &str, text: &str) {
     let buffer_writer = stdout_buffer_writer();
     let mut buffer = buffer_writer.buffer();

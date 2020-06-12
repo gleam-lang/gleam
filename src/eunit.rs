@@ -15,14 +15,14 @@ pub fn command(root_string: String) -> Result<(), Error> {
     // Build project
     let packages = build::main(config, root_path)?;
 
-    println!("Running eunit");
+    crate::cli::print_running("eunit");
 
     // Build a list of test modules
     let test_modules = packages
         .into_iter()
         .flat_map(|(_, p)| p.modules.into_iter())
         .filter(|m| m.origin == Origin::Test)
-        .map(|m| m.name)
+        .map(|m| m.name.replace("/", "@"))
         .join(",");
 
     // Prepare the Erlang shell command

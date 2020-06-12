@@ -86,7 +86,7 @@ impl<'a> ErlangCodeGenerator<'a> {
             .map(|m| m.name.replace("/", "@"))
             .collect();
         modules.sort();
-        let modules = modules.join(", ");
+        let modules = modules.join(",\n               ");
 
         // TODO: applications
         let text = format!(
