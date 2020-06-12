@@ -323,7 +323,16 @@ fn segment(value: &TypedExpr, options: Vec<TypedExprBinSegmentOption>, env: &mut
         BinSegmentOption::Big { .. } => others.push("big"),
         BinSegmentOption::Little { .. } => others.push("little"),
         BinSegmentOption::Native { .. } => others.push("native"),
-        BinSegmentOption::Size { value, .. } => size = Some(":".to_doc().append(expr(value, env))),
+        BinSegmentOption::Size { value, .. } => {
+            size = {
+                match &**value {
+                    TypedExpr::Int { .. } | TypedExpr::Var { .. } => {
+                        Some(":".to_doc().append(expr(value, env)))
+                    }
+                    _ => Some(":".to_doc().append(expr(value, env).surround("(", ")"))),
+                }
+            }
+        }
         BinSegmentOption::Unit { value, .. } => unit = Some(":".to_doc().append(expr(value, env))),
     });
 

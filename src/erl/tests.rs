@@ -2342,6 +2342,28 @@ main() ->
     );
 
     assert_erl!(
+        r#"fn x() { 2 }
+fn main() {
+  let a = 1
+  let b = <<a:unit(2)-size(a * 2), a:size(3 + x())-unit(1)>>
+
+  b
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+x() ->
+    2.
+
+main() ->
+    A = 1,
+    B = <<A:(A * 2)/unit:2, A:(3 + x())/unit:1>>,
+    B.
+"#,
+    );
+
+    assert_erl!(
         r#"fn main() {
   let a = 1
   let <<b, 1>> = <<1, a>>
