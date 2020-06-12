@@ -1182,6 +1182,24 @@ World"
 "#
     );
 
+    // https://github.com/gleam-lang/gleam/issues/658
+    assert_format!(
+        r#"fn main() {
+  { os.system_time(os.Millisecond) < june_12_2020 * 1000000 }
+  |> should.equal(True)
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  { os.system_time(os.Millisecond) < june_12_2020 * 1000000 }
+  |> transform
+  |> should.equal(True)
+}
+"#
+    );
+
     //
     // Let
     //
