@@ -2336,7 +2336,7 @@ main() ->
                 5.0/little-float,
                 6/native-integer-signed>>,
     <<7:2, 8:3, B:4/binary>> = <<1>>,
-    <<C/:1, D:2/binary:2>> = <<1>>,
+    <<C/unit:1, D:2/binary-unit:2>> = <<1>>,
     Simple.
 "#,
     );
