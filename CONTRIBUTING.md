@@ -5,7 +5,7 @@ Thanks for contributing to Gleam!
 Before continuing please read our [code of conduct][code-of-conduct] which all
 contributors are expected to adhere to.
 
-[code-of-conduct]: https://github.com/gleam-lang/gleam/blob/master/CODE_OF_CONDUCT.md
+[code-of-conduct]: https://github.com/gleam-lang/gleam/blob/main/CODE_OF_CONDUCT.md
 
 
 ## Contributing bug reports
@@ -36,4 +36,4 @@ Code changes to Gleam are welcomed via the process below.
 3. A Gleam team member will review the changes and may provide feedback to
    work on. Depending on the change there may be multiple rounds of feedback.
 4. Once the changes have been approved the code will be rebased into the
-   master branch.
+   `main` branch.
