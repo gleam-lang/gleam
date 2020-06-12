@@ -4,6 +4,7 @@ use crate::{
     erl,
     file::{self, OutputFile},
 };
+use itertools::Itertools;
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -79,7 +80,15 @@ impl<'a> ErlangCodeGenerator<'a> {
             Some(version) => tuple("vsn", format!("\"{}\"", version).as_str()),
         };
 
-        // TODO: applications, modules
+        let mut modules: Vec<_> = self
+            .modules
+            .iter()
+            .map(|m| m.name.replace("/", "@"))
+            .collect();
+        modules.sort();
+        let modules = modules.join(", ");
+
+        // TODO: applications
         let text = format!(
             r#"{{application, {package}, [
 {start_module}{version}    {{applications, [{applications}]}},
@@ -90,7 +99,7 @@ impl<'a> ErlangCodeGenerator<'a> {
 "#,
             applications = "",
             description = self.config.description,
-            modules = "",
+            modules = modules,
             package = self.config.name,
             start_module = start_module,
             version = version,

@@ -1,2 +1,3 @@
 _build/**/*.erl
+_build/**/*.app
 _build/default/lib/bob

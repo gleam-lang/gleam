@@ -41,7 +41,6 @@ impl<'a> PackageCompiler<'a> {
     ) -> Result<Package, Error> {
         if self.print_progress {
             crate::cli::print_compiling(self.config.name.as_str());
-            panic!("no");
         }
 
         let span = tracing::info_span!("compile", package = self.config.name.as_str());

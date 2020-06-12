@@ -36,20 +36,24 @@ fn package_compiler_test() {
         };
     }
 
-    let package_app_file = OutputFile {
-        text: r#"{application, the_package, [
-    {vsn, "1.1.0"}
-    {applications, []},
-    {description, "the description"},
-    {modules, []},
-    {registered, []},
-]}.
-"#
-        .to_string(),
-        path: PathBuf::from("_build/default/lib/the_package/ebin/the_package.app"),
-    };
+    fn package_app_file(modules: &str) -> OutputFile {
+        OutputFile {
+            text: format!(
+                r#"{{application, the_package, [
+    {{vsn, "1.1.0"}}
+    {{applications, []}},
+    {{description, "the description"}},
+    {{modules, [{}]}},
+    {{registered, []}},
+]}}.
+"#,
+                modules
+            ),
+            path: PathBuf::from("_build/default/lib/the_package/ebin/the_package.app"),
+        }
+    }
 
-    assert_erlang_compile!(vec![], Ok(vec![package_app_file.clone()]));
+    assert_erlang_compile!(vec![], Ok(vec![package_app_file("")]));
 
     assert_erlang_compile!(
         vec![Source {
@@ -59,7 +63,7 @@ fn package_compiler_test() {
             origin: Origin::Src,
         }],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("one"),
             OutputFile {
                 text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
@@ -83,7 +87,7 @@ fn package_compiler_test() {
             },
         ],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("one, two"),
             OutputFile {
                 text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
@@ -103,7 +107,7 @@ fn package_compiler_test() {
             code: "".to_string(),
         }],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("one"),
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
                 text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
@@ -153,7 +157,7 @@ fn package_compiler_test() {
             },
         ],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("one, two"),
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
                 text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
@@ -181,7 +185,7 @@ fn package_compiler_test() {
             },
         ],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("one, two"),
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
                 text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
@@ -209,7 +213,7 @@ fn package_compiler_test() {
             },
         ],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("one, two"),
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
                 text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
@@ -239,7 +243,7 @@ unbox(X) ->\n    {box, I} = X,\n    I.\n"
             },
         ],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("one, two"),
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/test/one.erl"),
                 text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
@@ -261,7 +265,7 @@ box(X) ->\n    {box, X}.\n"
             code: "pub type Box { Box }".to_string(),
         }],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("one@two"),
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one@two.erl"),
                 text: "-module(one@two).\n-compile(no_auto_import).\n\n\n".to_string(),
@@ -285,7 +289,7 @@ box(X) ->\n    {box, X}.\n"
             },
         ],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("one, two"),
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
                 text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
@@ -315,7 +319,7 @@ box() ->\n    box.\n"
             },
         ],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("one, two"),
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
                 text: "-module(one).\n-compile(no_auto_import).\n\n-export([go/0]).\n
@@ -349,7 +353,7 @@ call() ->
             },
         ],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("nested@one, two"),
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/nested@one.erl"),
                 text: "-module(nested@one).\n-compile(no_auto_import).\n\n\n".to_string(),
@@ -380,7 +384,7 @@ call() ->
             },
         ],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("nested@one, two"),
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/nested@one.erl"),
                 text: "-module(nested@one).\n-compile(no_auto_import).\n\n\n".to_string(),
@@ -415,7 +419,7 @@ call() ->
             },
         ],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("nested@one, two"),
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/nested@one.erl"),
                 text: "-module(nested@one).\n-compile(no_auto_import).\n
@@ -475,7 +479,7 @@ call_thing() ->\n    thing:new().\n"
             },
         ],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("one, two"),
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
                 text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
@@ -513,7 +517,7 @@ x(P) ->\n    {point, X, _} = P,\n    X.\n"
             },
         ],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("one, two"),
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
                 text: "-module(one).\n-compile(no_auto_import).\n\n-export([\'div\'/2]).\n
@@ -547,7 +551,7 @@ run() ->\n    one:'div'(2, one:'div'(2, 4)).\n"
             },
         ],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("one, two"),
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
                 text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
@@ -577,7 +581,7 @@ make() ->\n    empty.\n"
             },
         ],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("one, two"),
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
                 text: "-module(one).\n-compile(no_auto_import).\n\n-export([id/1]).\n
@@ -610,7 +614,7 @@ make() ->\n    one:id(empty).\n"
             },
         ],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("one, two"),
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
                 text: "-module(one).\n-compile(no_auto_import).\n
@@ -643,7 +647,7 @@ make() ->\n    one:id(empty).\n"
             },
         ],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("one, two"),
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
                 text: "-module(one).\n-compile(no_auto_import).\n
@@ -676,7 +680,7 @@ funky() ->\n    fun one:'receive'/0.\n"
             },
         ],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("one, two"),
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
                 text: "-module(one).\n-compile(no_auto_import).\n
@@ -710,7 +714,7 @@ funky() ->\n    fun one:'receive'/0.\n"
             },
         ],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("one, two"),
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
                 text: "-module(one).\n-compile(no_auto_import).\n
@@ -748,7 +752,7 @@ funky() ->\n    one:'receive'(1).\n"
             },
         ],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("one, two"),
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
                 text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
@@ -785,7 +789,7 @@ get_name(Person) ->\n    erlang:element(2, Person).\n"
             },
         ],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("one, two"),
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
                 text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
@@ -818,7 +822,7 @@ get_name(Person) ->\n    erlang:element(2, Person).\n"
             },
         ],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("one, two"),
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
                 text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
@@ -851,7 +855,7 @@ get_name(Person) ->\n    erlang:element(2, Person).\n"
             },
         ],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("one, two"),
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
                 text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
@@ -886,7 +890,7 @@ main() ->\n    fun(A, B) -> {c, A, B} end.\n"
             },
         ],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("one, two"),
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
                 text: "-module(one).\n-compile(no_auto_import).\n
@@ -924,7 +928,7 @@ make() ->\n    one:id(fun(A) -> {x, A} end).\n"
             },
         ],
         Ok(vec![
-            package_app_file.clone(),
+            package_app_file("one, two"),
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
                 text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
