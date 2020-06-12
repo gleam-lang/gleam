@@ -43,6 +43,7 @@ pub fn complicated_fun(
         version: Default::default(),
         description: Default::default(),
         dependencies: Default::default(),
+        otp_start_module: None,
     };
 
     let analysed = crate::project::analysed(vec![input]).expect("Compilation failed");

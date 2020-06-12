@@ -19,6 +19,8 @@ pub struct PackageConfig {
     pub docs: Docs,
     #[serde(default)]
     pub dependencies: HashMap<String, String>,
+    #[serde(default)]
+    pub otp_start_module: Option<String>,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]

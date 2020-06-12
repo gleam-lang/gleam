@@ -123,7 +123,7 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
         let name = module.name.clone();
         let name_string = module.name_string();
 
-        crate::cli::print_compiling(name_string.as_str());
+        println!("Compiling {}", name_string.as_str());
 
         let mut warnings = vec![];
         let result = crate::typ::infer_module(module, &modules_type_infos, &mut warnings);

@@ -21,18 +21,16 @@ fn package_compiler_test() {
                 version: Some("1.1.0".to_string()),
                 name: "the_package".to_string(),
                 docs: Default::default(),
+                otp_start_module: None,
                 tool: BuildTool::Gleam,
             };
             let root = ProjectRoot::new(PathBuf::new());
             let mut compiler = PackageCompiler::new(&root, config);
             compiler.sources = $sources;
+            compiler.print_progress = false;
             let outputs = compiler
                 .compile(&mut modules, &mut HashMap::with_capacity(4))
-                .map(|package| {
-                    let mut outputs = package.outputs;
-                    outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
-                    outputs
-                })
+                .map(get_sorted_outputs)
                 .map_err(|e| normalise_error(e));
             assert_eq!($expected_output, outputs);
         };
@@ -40,11 +38,11 @@ fn package_compiler_test() {
 
     let package_app_file = OutputFile {
         text: r#"{application, the_package, [
+    {vsn, "1.1.0"}
     {applications, []},
     {description, "the description"},
     {modules, []},
     {registered, []},
-    {vsn, "1.1.0"}
 ]}.
 "#
         .to_string(),
@@ -1035,6 +1033,91 @@ main() ->\n    fun(A, B) -> {c, A, B} end.\n"
     );
 }
 
+#[test]
+fn config_compilation_test() {
+    macro_rules! assert_config_compile {
+        ($config:expr, $sources:expr, $expected_output:expr $(,)?) => {
+            let mut modules = HashMap::new();
+            let root = ProjectRoot::new(PathBuf::new());
+            let mut compiler = PackageCompiler::new(&root, $config);
+            compiler.print_progress = false;
+            compiler.sources = $sources;
+            let outputs = compiler
+                .compile(&mut modules, &mut HashMap::with_capacity(4))
+                .map(get_sorted_outputs)
+                .expect("Should compile OK");
+            assert_eq!($expected_output, outputs);
+        };
+    };
+
+    fn make_config() -> PackageConfig {
+        PackageConfig {
+            dependencies: HashMap::new(),
+            description: "".to_string(),
+            version: None,
+            name: "the_package".to_string(),
+            docs: Default::default(),
+            otp_start_module: None,
+            tool: BuildTool::Gleam,
+        }
+    }
+
+    assert_config_compile!(
+        make_config(),
+        vec![],
+        vec![OutputFile {
+            text: r#"{application, the_package, [
+    {applications, []},
+    {description, ""},
+    {modules, []},
+    {registered, []},
+]}.
+"#
+            .to_string(),
+            path: PathBuf::from("_build/default/lib/the_package/ebin/the_package.app"),
+        }]
+    );
+
+    // Version is included if given
+    let mut config = make_config();
+    config.version = Some("1.3.5".to_string());
+    assert_config_compile!(
+        config,
+        vec![],
+        vec![OutputFile {
+            text: r#"{application, the_package, [
+    {vsn, "1.3.5"}
+    {applications, []},
+    {description, ""},
+    {modules, []},
+    {registered, []},
+]}.
+"#
+            .to_string(),
+            path: PathBuf::from("_build/default/lib/the_package/ebin/the_package.app"),
+        }]
+    );
+
+    // We can specify a description
+    let mut config = make_config();
+    config.description = "Very exciting".to_string();
+    assert_config_compile!(
+        config,
+        vec![],
+        vec![OutputFile {
+            text: r#"{application, the_package, [
+    {applications, []},
+    {description, "Very exciting"},
+    {modules, []},
+    {registered, []},
+]}.
+"#
+            .to_string(),
+            path: PathBuf::from("_build/default/lib/the_package/ebin/the_package.app"),
+        }]
+    );
+}
+
 fn normalise_error(e: Error) -> Error {
     match e {
         Error::ImportCycle { mut modules } => {
@@ -1043,4 +1126,10 @@ fn normalise_error(e: Error) -> Error {
         }
         e => e,
     }
+}
+
+fn get_sorted_outputs(package: Package) -> Vec<OutputFile> {
+    let mut outputs = package.outputs;
+    outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
+    outputs
 }

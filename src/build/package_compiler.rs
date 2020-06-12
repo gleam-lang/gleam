@@ -17,6 +17,7 @@ pub struct PackageCompiler<'a> {
     pub root: &'a ProjectRoot,
     pub config: PackageConfig,
     pub sources: Vec<Source>,
+    pub print_progress: bool,
 }
 
 // TODO: ensure this is not a duplicate module
@@ -29,6 +30,7 @@ impl<'a> PackageCompiler<'a> {
             root,
             config,
             sources: vec![],
+            print_progress: true,
         }
     }
 
@@ -37,7 +39,10 @@ impl<'a> PackageCompiler<'a> {
         existing_modules: &mut HashMap<String, (Origin, typ::Module)>,
         already_defined_modules: &mut HashMap<String, PathBuf>,
     ) -> Result<Package, Error> {
-        crate::cli::print_compiling(self.config.name.as_str());
+        if self.print_progress {
+            crate::cli::print_compiling(self.config.name.as_str());
+            panic!("no");
+        }
 
         let span = tracing::info_span!("compile", package = self.config.name.as_str());
         let _enter = span.enter();
