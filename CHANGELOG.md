@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.9.1 - 2020-06-12
+
+- Fixed a bug where binary operators may lose required `{ }`s when formatted.
+
 ## v0.9.0 - 2020-06-01
 
 - Newly generated projects use stdlib v0.9.0.
