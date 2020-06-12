@@ -85,7 +85,7 @@ fn compile_erlang_to_beam(
     root: &ProjectRoot,
     packages: &HashMap<String, Package>,
 ) -> Result<(), Error> {
-    println!("Compiling Erlang");
+    crate::cli::print_compiling("Erlang code");
 
     let escript_path = root.build_path().join("compile_escript.erl");
     let escript_source = std::include_str!("build/compile_escript.erl").to_string();

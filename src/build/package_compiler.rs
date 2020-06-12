@@ -37,7 +37,7 @@ impl<'a> PackageCompiler<'a> {
         existing_modules: &mut HashMap<String, (Origin, typ::Module)>,
         already_defined_modules: &mut HashMap<String, PathBuf>,
     ) -> Result<Package, Error> {
-        println!("Compiling {}", self.config.name);
+        crate::cli::print_compiling(self.config.name.as_str());
 
         let span = tracing::info_span!("compile", package = self.config.name.as_str());
         let _enter = span.enter();

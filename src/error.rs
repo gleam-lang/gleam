@@ -1,7 +1,8 @@
-use crate::diagnostic::{
-    buffer_writer, write, write_project, Diagnostic, ProjectErrorDiagnostic, Severity,
+use crate::{
+    cli,
+    diagnostic::{write, write_project, Diagnostic, ProjectErrorDiagnostic, Severity},
+    typ::pretty::Printer,
 };
-use crate::typ::pretty::Printer;
 use itertools::Itertools;
 use std::fmt::Debug;
 use std::path::PathBuf;
@@ -11,7 +12,7 @@ pub type Src = String;
 pub type Name = String;
 
 pub fn fatal_compiler_bug(msg: &str) -> ! {
-    let buffer_writer = buffer_writer();
+    let buffer_writer = cli::stderr_buffer_writer();
     let mut buffer = buffer_writer.buffer();
     use std::io::Write;
     use termcolor::{Color, ColorSpec, WriteColor};
@@ -1363,7 +1364,7 @@ but it cannot be found.",
     }
 
     pub fn pretty_print(&self) {
-        let buffer_writer = buffer_writer();
+        let buffer_writer = cli::stderr_buffer_writer();
         let mut buffer = buffer_writer.buffer();
         self.pretty(&mut buffer);
         buffer_writer.print(&buffer).unwrap();

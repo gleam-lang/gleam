@@ -1,4 +1,7 @@
-use crate::diagnostic::{buffer_writer, write, Diagnostic, Severity};
+use crate::{
+    cli,
+    diagnostic::{write, Diagnostic, Severity},
+};
 use std::path::PathBuf;
 use termcolor::Buffer;
 
@@ -51,7 +54,7 @@ impl Warning {
     }
 
     pub fn pretty_print(&self) {
-        let buffer_writer = buffer_writer();
+        let buffer_writer = cli::stderr_buffer_writer();
         let mut buffer = buffer_writer.buffer();
         self.pretty(&mut buffer);
         buffer_writer.print(&buffer).unwrap();
