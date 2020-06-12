@@ -1,3 +1,5 @@
+mod proto;
+
 #[cfg(test)]
 mod tests;
 
@@ -12,7 +14,8 @@ use thiserror::Error;
 #[async_trait]
 pub trait Client {
     fn http_client(&self) -> reqwest::Client;
-    fn base_url(&self) -> &url::Url;
+    fn api_base_url(&self) -> &url::Url;
+    fn repository_base_url(&self) -> &url::Url;
 
     /// Authenticate with the Hex API using a username and password in order
     /// to get an API token, enabling accessing of more APIs and raising the
@@ -33,7 +36,7 @@ pub trait Client {
 
         let response = self
             .http_client()
-            .post(self.base_url().join("keys").unwrap())
+            .post(self.api_base_url().join("keys").unwrap())
             .basic_auth(username, Some(password))
             .json(&body)
             .send()
@@ -45,7 +48,8 @@ pub trait Client {
                 let body: AuthenticateResponseCreated =
                     response.json().await.map_err(AuthenticateError::Http)?;
                 Ok(AuthenticatedClient {
-                    api_base_url: self.base_url().clone(),
+                    repository_base: self.repository_base_url().clone(),
+                    api_base: self.api_base_url().clone(),
                     api_token: body.secret,
                 })
             }
@@ -66,7 +70,8 @@ static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), " (", env!("CARGO_PKG_
 
 #[derive(Debug)]
 pub struct UnauthenticatedClient {
-    pub api_base_url: url::Url,
+    pub api_base: url::Url,
+    pub repository_base: url::Url,
 }
 
 impl Client for UnauthenticatedClient {
@@ -81,15 +86,20 @@ impl Client for UnauthenticatedClient {
             .expect("failed to build API client")
     }
 
-    fn base_url(&self) -> &url::Url {
-        &self.api_base_url
+    fn api_base_url(&self) -> &url::Url {
+        &self.api_base
+    }
+
+    fn repository_base_url(&self) -> &url::Url {
+        &self.repository_base
     }
 }
 
 impl UnauthenticatedClient {
     pub fn new() -> Self {
         Self {
-            api_base_url: url::Url::parse("https://hex.pm/api/").unwrap(),
+            api_base: url::Url::parse("https://hex.pm/api/").unwrap(),
+            repository_base: url::Url::parse("https://repo.hex.pm/").unwrap(),
         }
     }
 }
@@ -116,7 +126,8 @@ struct AuthenticateResponseCreated {
 
 #[derive(Debug)]
 pub struct AuthenticatedClient {
-    pub api_base_url: url::Url,
+    pub api_base: url::Url,
+    pub repository_base: url::Url,
     pub api_token: String,
 }
 
@@ -133,15 +144,20 @@ impl Client for AuthenticatedClient {
             .expect("failed to build API client")
     }
 
-    fn base_url(&self) -> &url::Url {
-        &self.api_base_url
+    fn api_base_url(&self) -> &url::Url {
+        &self.api_base
+    }
+
+    fn repository_base_url(&self) -> &url::Url {
+        &self.repository_base
     }
 }
 
 impl AuthenticatedClient {
     pub fn new(api_token: String) -> Self {
         Self {
-            api_base_url: url::Url::parse("https://hex.pm/api/").unwrap(),
+            api_base: url::Url::parse("https://hex.pm/api/").unwrap(),
+            repository_base: url::Url::parse("https://repo.hex.pm/").unwrap(),
             api_token,
         }
     }
@@ -155,7 +171,7 @@ impl AuthenticatedClient {
             .map_err(|_| RemoveDocsError::BadPackage(package_name, version))?;
 
         let url = self
-            .api_base_url
+            .api_base
             .join(format!("packages/{}/releases/{}/docs", package_name, version).as_str())
             .expect("building remove_docs url");
 
@@ -189,7 +205,7 @@ impl AuthenticatedClient {
             .map_err(|_| PublishDocsError::BadPackage(package_name, version))?;
 
         let url = self
-            .api_base_url
+            .api_base
             .join(format!("packages/{}/releases/{}/docs", package_name, version).as_str())
             .expect("building remove_docs url");
 

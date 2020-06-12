@@ -35,7 +35,7 @@ async fn authenticate_test_success() {
         .create();
 
     let mut client = UnauthenticatedClient::new();
-    client.api_base_url = url::Url::parse(&mockito::server_url()).unwrap();
+    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
 
     let authed_client = client
         .authenticate(username, password, name)
@@ -45,7 +45,7 @@ async fn authenticate_test_success() {
     assert_eq!(expected_secret, authed_client.api_token);
     assert_eq!(
         url::Url::parse(&mockito::server_url()).unwrap(),
-        authed_client.api_base_url
+        authed_client.api_base
     );
     mock.assert();
 }
@@ -69,7 +69,7 @@ async fn authenticate_test_rate_limted() {
         .create();
 
     let mut client = UnauthenticatedClient::new();
-    client.api_base_url = url::Url::parse(&mockito::server_url()).unwrap();
+    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
 
     match client.authenticate(username, password, name).await {
         Err(AuthenticateError::RateLimited) => (),
@@ -107,7 +107,7 @@ async fn authenticate_test_bad_creds() {
         .create();
 
     let mut client = UnauthenticatedClient::new();
-    client.api_base_url = url::Url::parse(&mockito::server_url()).unwrap();
+    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
 
     match client.authenticate(username, password, name).await {
         Err(AuthenticateError::InvalidCredentials) => (),
@@ -137,7 +137,7 @@ async fn remove_docs_success() {
     .create();
 
     let mut client = AuthenticatedClient::new(token.to_string());
-    client.api_base_url = url::Url::parse(&mockito::server_url()).unwrap();
+    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
 
     client
         .remove_docs(package, version)
@@ -164,7 +164,7 @@ async fn remove_docs_unknown_package_version() {
     .create();
 
     let mut client = AuthenticatedClient::new(token.to_string());
-    client.api_base_url = url::Url::parse(&mockito::server_url()).unwrap();
+    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
 
     match client.remove_docs(package, version).await {
         Err(RemoveDocsError::NotFound(p, v)) if p == package && v == version => (),
@@ -194,7 +194,7 @@ async fn remove_docs_rate_limted() {
     .create();
 
     let mut client = AuthenticatedClient::new(token.to_string());
-    client.api_base_url = url::Url::parse(&mockito::server_url()).unwrap();
+    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
 
     match client.remove_docs(package, version).await {
         Err(RemoveDocsError::RateLimited) => (),
@@ -231,7 +231,7 @@ async fn remove_docs_invalid_token() {
     .create();
 
     let mut client = AuthenticatedClient::new(token.to_string());
-    client.api_base_url = url::Url::parse(&mockito::server_url()).unwrap();
+    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
 
     match client.remove_docs(package, version).await {
         Err(RemoveDocsError::InvalidApiKey) => (),
@@ -268,7 +268,7 @@ async fn remove_docs_forbidden() {
     .create();
 
     let mut client = AuthenticatedClient::new(token.to_string());
-    client.api_base_url = url::Url::parse(&mockito::server_url()).unwrap();
+    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
 
     match client.remove_docs(package, version).await {
         Err(RemoveDocsError::Forbidden) => (),
@@ -285,7 +285,7 @@ async fn remove_docs_bad_package_name() {
     let version = "1.2.0";
 
     let mut client = AuthenticatedClient::new(token.to_string());
-    client.api_base_url = url::Url::parse(&mockito::server_url()).unwrap();
+    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
 
     match client.remove_docs(package, version).await {
         Err(RemoveDocsError::BadPackage(p, v)) if p == package && v == version => (),
@@ -314,7 +314,7 @@ async fn publish_docs_success() {
     .create();
 
     let mut client = AuthenticatedClient::new(token.to_string());
-    client.api_base_url = url::Url::parse(&mockito::server_url()).unwrap();
+    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
 
     match client.publish_docs(package, version, tarball).await {
         Ok(()) => (),
@@ -372,7 +372,7 @@ async fn publish_docs_not_found() {
     .create();
 
     let mut client = AuthenticatedClient::new(token.to_string());
-    client.api_base_url = url::Url::parse(&mockito::server_url()).unwrap();
+    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
 
     match client.publish_docs(package, version, tarball).await {
         Err(PublishDocsError::NotFound(p, v)) if p == package && v == version => (),
@@ -400,7 +400,7 @@ async fn publish_docs_rate_limit() {
     .create();
 
     let mut client = AuthenticatedClient::new(token.to_string());
-    client.api_base_url = url::Url::parse(&mockito::server_url()).unwrap();
+    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
 
     match client.publish_docs(package, version, tarball).await {
         Err(PublishDocsError::RateLimited) => (),
@@ -435,7 +435,7 @@ async fn publish_docs_invalid_api_token() {
     .create();
 
     let mut client = AuthenticatedClient::new(token.to_string());
-    client.api_base_url = url::Url::parse(&mockito::server_url()).unwrap();
+    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
 
     match client.publish_docs(package, version, tarball).await {
         Err(PublishDocsError::InvalidApiKey) => (),
@@ -473,7 +473,7 @@ async fn publish_docs_forbidden() {
     .create();
 
     let mut client = AuthenticatedClient::new(token.to_string());
-    client.api_base_url = url::Url::parse(&mockito::server_url()).unwrap();
+    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
 
     match client.publish_docs(package, version, tarball).await {
         Err(PublishDocsError::Forbidden) => (),
