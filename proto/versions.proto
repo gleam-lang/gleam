@@ -1,0 +1,19 @@
+syntax = "proto2";
+
+message Versions {
+  // All packages in the repository
+  repeated Package packages = 1;
+  // Name of repository
+  required string repository = 2;
+}
+
+message Package {
+  // Package name
+  required string name = 1;
+  // All released versions of the package
+  repeated string versions = 2;
+  // Zero-based indexes of retired versions in the versions field, see package.proto
+  repeated int32 retired = 3 [packed=true];
+  // If set, the name of the package repository (NEVER USED, DEPRECATED)
+  // string repository = 4;
+}
