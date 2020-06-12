@@ -1,7 +1,7 @@
 use super::*;
 use crate::{
     build::{
-        package_analyser::{PackageAnalyser, Source},
+        package_compiler::{PackageCompiler, Source},
         project_root::ProjectRoot,
         Origin,
     },
@@ -11,7 +11,7 @@ use crate::{
 use std::{path::PathBuf, sync::Arc};
 
 #[test]
-fn package_analyser_test() {
+fn package_compiler_test() {
     macro_rules! assert_erlang_compile {
         ($sources:expr, $expected_output:expr  $(,)?) => {
             let mut modules = HashMap::new();
@@ -24,14 +24,12 @@ fn package_analyser_test() {
                 tool: BuildTool::Gleam,
             };
             let root = ProjectRoot::new(PathBuf::new());
-            let mut analyser = PackageAnalyser::new(&root, config);
-            analyser.sources = $sources;
-            let outputs = analyser
-                .analyse(&mut modules, &mut HashMap::with_capacity(4))
+            let mut compiler = PackageCompiler::new(&root, config);
+            compiler.sources = $sources;
+            let outputs = compiler
+                .compile(&mut modules, &mut HashMap::with_capacity(4))
                 .map(|package| {
-                    let mut packages = HashMap::with_capacity(1);
-                    packages.insert(package.config.name.clone(), package);
-                    let mut outputs = ErlangCodeGenerator::new(&root, &packages).render();
+                    let mut outputs = package.outputs;
                     outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
                     outputs
                 })

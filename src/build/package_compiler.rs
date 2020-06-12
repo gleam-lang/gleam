@@ -1,6 +1,9 @@
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
-    build::{dep_tree, project_root::ProjectRoot, Module, Origin, Package},
+    build::{
+        dep_tree, erlang_code_generator::ErlangCodeGenerator, project_root::ProjectRoot, Module,
+        Origin, Package,
+    },
     config::PackageConfig,
     error::{self, Error, GleamExpect},
     file, grammar, parser, typ,
@@ -10,7 +13,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 #[derive(Debug)]
-pub struct PackageAnalyser<'a> {
+pub struct PackageCompiler<'a> {
     pub root: &'a ProjectRoot,
     pub config: PackageConfig,
     pub sources: Vec<Source>,
@@ -20,7 +23,7 @@ pub struct PackageAnalyser<'a> {
 // TODO: tests
 // Including cases for:
 // - modules that don't import anything
-impl<'a> PackageAnalyser<'a> {
+impl<'a> PackageCompiler<'a> {
     pub fn new(root: &'a ProjectRoot, config: PackageConfig) -> Self {
         Self {
             root,
@@ -29,14 +32,14 @@ impl<'a> PackageAnalyser<'a> {
         }
     }
 
-    pub fn analyse(
+    pub fn compile(
         self,
         existing_modules: &mut HashMap<String, (Origin, typ::Module)>,
         already_defined_modules: &mut HashMap<String, PathBuf>,
     ) -> Result<Package, Error> {
-        println!(" Analysing {}", self.config.name);
+        println!("Compiling {}", self.config.name);
 
-        let span = tracing::info_span!("analyse", package = self.config.name.as_str());
+        let span = tracing::info_span!("compile", package = self.config.name.as_str());
         let _enter = span.enter();
 
         tracing::info!("Parsing source code");
@@ -50,15 +53,20 @@ impl<'a> PackageAnalyser<'a> {
         tracing::info!("Type checking modules");
         let modules = type_check(sequence, parsed_modules, existing_modules)?;
 
+        tracing::info!("Generating Erlang source code");
+        let outputs =
+            ErlangCodeGenerator::new(&self.root, &self.config, modules.as_slice()).render();
+
         Ok(Package {
             config: self.config,
             modules,
+            outputs,
         })
     }
 
     pub fn read_package_source_files(&mut self, origin: Origin) -> Result<(), Error> {
         let span =
-            tracing::info_span!("analyse", package = self.config.name.as_str(), origin = ?origin);
+            tracing::info_span!("load", package = self.config.name.as_str(), origin = ?origin);
         let _enter = span.enter();
 
         tracing::info!("Reading source code");

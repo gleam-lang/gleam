@@ -1,5 +1,6 @@
 use crate::{
-    build::{project_root::ProjectRoot, Package},
+    build::{project_root::ProjectRoot, Module},
+    config::PackageConfig,
     erl,
     file::{self, OutputFile},
 };
@@ -8,35 +9,30 @@ use std::collections::HashMap;
 #[derive(Debug)]
 pub struct ErlangCodeGenerator<'a> {
     root: &'a ProjectRoot,
-    packages: &'a HashMap<String, Package>,
+    config: &'a PackageConfig,
+    modules: &'a [Module],
 }
 
 // TODO: test: A couple of packages with a couple of modules and headers.
 // Make sure all file names are right etc.
 impl<'a> ErlangCodeGenerator<'a> {
-    pub fn new(root: &'a ProjectRoot, packages: &'a HashMap<String, Package>) -> Self {
-        Self { root, packages }
+    pub fn new(root: &'a ProjectRoot, config: &'a PackageConfig, modules: &'a [Module]) -> Self {
+        Self {
+            root,
+            config,
+            modules,
+        }
     }
 
     pub fn render(&self) -> Vec<OutputFile> {
-        println!("Generating Erlang");
-
-        let num_modules = self.packages.values().fold(0, |a, p| p.modules.len() + a);
+        let num_modules = self.modules.len();
         let mut outputs = Vec::with_capacity(num_modules);
 
-        for (_name, package) in self.packages {
-            self.render_package(package, &mut outputs);
-        }
-
-        outputs
-    }
-
-    pub fn render_package(&self, package: &Package, outputs: &mut Vec<OutputFile>) {
-        for module in &package.modules {
+        for module in self.modules {
             let erl_name = module.name.replace("/", "@");
             let dir = self
                 .root
-                .default_build_lib_package_source_path(&package.config.name, module.origin);
+                .default_build_lib_package_source_path(&self.config.name, module.origin);
 
             // Render record header files
             for (name, text) in erl::records(&module.ast).into_iter() {
@@ -57,14 +53,16 @@ impl<'a> ErlangCodeGenerator<'a> {
         }
 
         // Render ebin/package.app
-        outputs.push(self.package_app_file(package))
+        outputs.push(self.package_app_file());
+
+        outputs
     }
 
-    pub fn package_app_file(&self, package: &Package) -> OutputFile {
+    pub fn package_app_file(&self) -> OutputFile {
         let path = self
             .root
-            .default_build_lib_package_ebin_path(&package.config.name)
-            .join(format!("{}.app", &package.config.name));
+            .default_build_lib_package_ebin_path(&self.config.name)
+            .join(format!("{}.app", &self.config.name));
 
         // TODO: include a `mod` field if there is a start function to call
         let start_module = "";
@@ -80,12 +78,12 @@ impl<'a> ErlangCodeGenerator<'a> {
 ]}}.
 "#,
             applications = "",
-            description = package.config.description,
+            description = self.config.description,
             modules = "",
-            package = package.config.name,
+            package = self.config.name,
             registered = "",
             start_module = start_module,
-            version = package
+            version = self
                 .config
                 .version
                 .as_ref()

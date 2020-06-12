@@ -10,8 +10,8 @@
 
 mod dep_tree;
 mod erlang_code_generator;
-mod package_analyser;
-mod project_analyser;
+mod package_compiler;
+mod project_compiler;
 pub mod project_root;
 
 #[cfg(test)]
@@ -20,7 +20,7 @@ mod package_compilation_tests;
 use crate::{
     ast::TypedModule,
     build::{
-        erlang_code_generator::ErlangCodeGenerator, project_analyser::ProjectAnalyser,
+        erlang_code_generator::ErlangCodeGenerator, project_compiler::ProjectCompiler,
         project_root::ProjectRoot,
     },
     config::{self, PackageConfig},
@@ -45,14 +45,13 @@ pub fn main(root_config: PackageConfig, path: PathBuf) -> Result<HashMap<String,
     tracing::info!("Reading package configs from _build");
     let configs = root.package_configs(&root_config.name)?;
 
-    tracing::info!("Reading and analysing packages");
-    let packages = ProjectAnalyser::new(&root, root_config, configs).analyse()?;
-
-    tracing::info!("Generating Erlang source code");
-    let compiled_erlang = ErlangCodeGenerator::new(&root, &packages).render();
+    tracing::info!("Compiling packages");
+    let packages = ProjectCompiler::new(&root, root_config, configs).compile()?;
 
     tracing::info!("Writing generated Erlang source code to disc");
-    file::write_outputs(compiled_erlang.as_slice())?;
+    for package in packages.values() {
+        file::write_outputs(package.outputs.as_slice())?;
+    }
 
     tracing::info!("Compiling Erlang source code to BEAM bytecode");
     compile_erlang_to_beam(&root, &packages)?;
@@ -64,6 +63,7 @@ pub fn main(root_config: PackageConfig, path: PathBuf) -> Result<HashMap<String,
 pub struct Package {
     pub config: PackageConfig,
     pub modules: Vec<Module>,
+    pub outputs: Vec<OutputFile>,
 }
 
 #[derive(Debug)]
@@ -85,7 +85,7 @@ fn compile_erlang_to_beam(
     root: &ProjectRoot,
     packages: &HashMap<String, Package>,
 ) -> Result<(), Error> {
-    println!(" Compiling Erlang");
+    println!("Compiling Erlang");
 
     let escript_path = root.build_path().join("compile_escript.erl");
     let escript_source = std::include_str!("build/compile_escript.erl").to_string();

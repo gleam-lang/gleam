@@ -1,6 +1,6 @@
 use crate::{
     build::{
-        dep_tree, package_analyser::PackageAnalyser, project_root::ProjectRoot, Origin, Package,
+        dep_tree, package_compiler::PackageCompiler, project_root::ProjectRoot, Origin, Package,
     },
     config::PackageConfig,
     error::{Error, GleamExpect},
@@ -9,7 +9,7 @@ use crate::{
 use std::{collections::HashMap, path::PathBuf};
 
 #[derive(Debug)]
-pub struct ProjectAnalyser<'a> {
+pub struct ProjectCompiler<'a> {
     root: &'a ProjectRoot,
     root_config: PackageConfig,
     configs: HashMap<String, PackageConfig>,
@@ -18,11 +18,11 @@ pub struct ProjectAnalyser<'a> {
     defined_modules: HashMap<String, PathBuf>,
 }
 
-// TODO: test top level package has test modules analysed
+// TODO: test top level package has test modules compiled
 // TODO: test that tests cannot be imported into src
 // TODO: test that dep cycles are not allowed between packages
 
-impl<'a> ProjectAnalyser<'a> {
+impl<'a> ProjectCompiler<'a> {
     pub fn new(
         root: &'a ProjectRoot,
         root_config: PackageConfig,
@@ -39,7 +39,7 @@ impl<'a> ProjectAnalyser<'a> {
         }
     }
 
-    pub fn analyse(mut self) -> Result<HashMap<String, Package>, Error> {
+    pub fn compile(mut self) -> Result<HashMap<String, Package>, Error> {
         // Determine package processing order
         let sequence = order_packges(&self.configs)?;
 
@@ -49,34 +49,34 @@ impl<'a> ProjectAnalyser<'a> {
                 .configs
                 .remove(name.as_str())
                 .gleam_expect("Missing package config");
-            self.analyse_package(name, config, SourceLocations::Src)?;
+            self.compile_package(name, config, SourceLocations::Src)?;
         }
 
         // Read and type check top level package
         let root_config = std::mem::replace(&mut self.root_config, Default::default());
         let name = root_config.name.clone();
-        self.analyse_package(name, root_config, SourceLocations::SrcAndTest)?;
+        self.compile_package(name, root_config, SourceLocations::SrcAndTest)?;
 
         Ok(self.packages)
     }
 
-    fn analyse_package(
+    fn compile_package(
         &mut self,
         name: String,
         config: PackageConfig,
         locations: SourceLocations,
     ) -> Result<(), Error> {
-        let mut analyser = PackageAnalyser::new(self.root, config);
+        let mut compiler = PackageCompiler::new(self.root, config);
 
         // Read source files
-        analyser.read_package_source_files(Origin::Src)?;
+        compiler.read_package_source_files(Origin::Src)?;
         if locations == SourceLocations::SrcAndTest {
-            analyser.read_package_source_files(Origin::Test)?;
+            compiler.read_package_source_files(Origin::Test)?;
         }
 
         // Parse and type check
-        let analysed = analyser.analyse(&mut self.type_manifests, &mut self.defined_modules)?;
-        self.packages.insert(name, analysed);
+        let compiled = compiler.compile(&mut self.type_manifests, &mut self.defined_modules)?;
+        self.packages.insert(name, compiled);
         Ok(())
     }
 }
