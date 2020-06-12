@@ -588,7 +588,7 @@ impl<'a> Formatter<'a> {
         };
 
         // Wrap sides if required
-        let left = self.operator_side(left, 4, left_precedence);
+        let left = self.operator_side(left, 5, left_precedence);
         let right = self.operator_side(right, 4, right_precedence);
 
         force_break()
