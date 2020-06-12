@@ -333,16 +333,31 @@ fn segment(value: &TypedExpr, options: Vec<TypedExprBinSegmentOption>, env: &mut
                 }
             }
         }
-        BinSegmentOption::Unit { value, .. } => unit = Some(":".to_doc().append(expr(value, env))),
+        BinSegmentOption::Unit { value, .. } => {
+            unit = {
+                match &**value {
+                    TypedExpr::Int { .. } => Some("unit:".to_doc().append(expr(value, env))),
+                    _ => None,
+                }
+            }
+        }
     });
 
     document = document.append(size);
 
-    if !others.is_empty() || unit.is_some() {
+    if !others.is_empty() {
         document = document.append("/").append(others.join("-"));
     }
 
-    document.append(unit)
+    if unit.is_some() {
+        if !others.is_empty() {
+            document = document.append("-").append(unit)
+        } else {
+            document = document.append("/").append(unit)
+        }
+    }
+
+    document
 }
 
 // TODO: Merge segment() and pattern_segment() somehow
@@ -385,17 +400,30 @@ fn pattern_segment(
             size = Some(":".to_doc().append(pattern(value, env)))
         }
         BinSegmentOption::Unit { value, .. } => {
-            unit = Some(":".to_doc().append(pattern(value, env)))
+            unit = {
+                match &**value {
+                    Pattern::Int { .. } => Some("unit:".to_doc().append(pattern(value, env))),
+                    _ => None,
+                }
+            }
         }
     });
 
     document = document.append(size);
 
-    if !others.is_empty() || unit.is_some() {
+    if !others.is_empty() {
         document = document.append("/").append(others.join("-"));
     }
 
-    document.append(unit)
+    if unit.is_some() {
+        if !others.is_empty() {
+            document = document.append("-").append(unit)
+        } else {
+            document = document.append("/").append(unit)
+        }
+    }
+
+    document
 }
 
 fn seq(first: &TypedExpr, then: &TypedExpr, env: &mut Env) -> Document {
