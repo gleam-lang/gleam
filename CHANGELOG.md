@@ -5,6 +5,7 @@
 - Single letter module names are now permitted.
 - Added support for bit_string syntax.
 - Remove old list prepend syntax `[x | y]`, use `[x .. y]` instead.
+- Format bitstring as a hanging expression as the value of a let.
 
 ## v0.9.1 - 2020-06-12
 
