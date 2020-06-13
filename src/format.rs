@@ -888,7 +888,8 @@ impl<'a> Formatter<'a> {
             UntypedExpr::Call { .. }
             | UntypedExpr::Fn { .. }
             | UntypedExpr::Case { .. }
-            | UntypedExpr::Tuple { .. } => self.expr(expr),
+            | UntypedExpr::Tuple { .. }
+            | UntypedExpr::BitString { .. } => self.expr(expr),
 
             _ => self.expr(expr).nest(INDENT),
         }
