@@ -3,7 +3,7 @@ mod proto;
 #[cfg(test)]
 mod tests;
 
-use crate::proto::{names::Names, signed::Signed};
+use crate::proto::{signed::Signed, versions::Versions};
 use async_trait::async_trait;
 use bytes::buf::ext::BufExt;
 use flate2::read::GzDecoder;
@@ -12,6 +12,7 @@ use regex::Regex;
 use reqwest::StatusCode;
 use serde::Deserialize;
 use serde_json::json;
+use std::collections::HashMap;
 use thiserror::Error;
 
 #[async_trait]
@@ -69,20 +70,22 @@ pub trait Client {
     }
 
     // TODO: verify signature
-    /// Get the names of all of the packages on the package registry.
+    /// Get the names and versions of all of the packages on the package registry.
     ///
-    async fn get_repository_names(&self) -> Result<Vec<String>, GetRepositoryNamesError> {
+    async fn get_repository_versions(
+        &self,
+    ) -> Result<HashMap<String, Vec<String>>, GetRepositoryVersionsError> {
         let response = self
             .http_client()
-            .get(self.repository_base_url().join("names").unwrap())
+            .get(self.repository_base_url().join("versions").unwrap())
             .send()
             .await
-            .map_err(GetRepositoryNamesError::Http)?;
+            .map_err(GetRepositoryVersionsError::Http)?;
 
         match response.status() {
             StatusCode::OK => (),
             status => {
-                return Err(GetRepositoryNamesError::UnexpectedResponse(
+                return Err(GetRepositoryVersionsError::UnexpectedResponse(
                     status,
                     response.text().await.unwrap_or_default(),
                 ));
@@ -92,27 +95,27 @@ pub trait Client {
         let body = response
             .bytes()
             .await
-            .map_err(GetRepositoryNamesError::Http)?
+            .map_err(GetRepositoryVersionsError::Http)?
             .reader();
 
         let mut body = GzDecoder::new(body);
         let signed = protobuf::parse_from_reader::<Signed>(&mut body)
-            .map_err(GetRepositoryNamesError::DecodeFailed)?;
+            .map_err(GetRepositoryVersionsError::DecodeFailed)?;
         let payload = signed.get_payload();
 
-        let names = protobuf::parse_from_bytes::<Names>(payload)
-            .map_err(GetRepositoryNamesError::DecodeFailed)?
+        let versions = protobuf::parse_from_bytes::<Versions>(payload)
+            .map_err(GetRepositoryVersionsError::DecodeFailed)?
             .take_packages()
             .into_iter()
-            .map(|mut n| n.take_name())
+            .map(|mut n| (n.take_name(), n.take_versions().into_vec()))
             .collect();
 
-        Ok(names)
+        Ok(versions)
     }
 }
 
 #[derive(Error, Debug)]
-pub enum GetRepositoryNamesError {
+pub enum GetRepositoryVersionsError {
     #[error(transparent)]
     Http(#[from] reqwest::Error),
 
