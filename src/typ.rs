@@ -273,6 +273,9 @@ pub enum ValueConstructorVariant {
     /// A locally defined variable or function parameter
     LocalVariable,
 
+    /// A module constant
+    ModuleConstValue { literal: ConstValue<Arc<Type>> },
+
     /// A function belonging to the module
     ModuleFn {
         name: String,
@@ -296,6 +299,12 @@ impl ValueConstructorVariant {
                 arity: field_map.as_ref().map_or(0, |fm| fm.arity),
             },
 
+            ValueConstructorVariant::ModuleConstValue { literal } => {
+                ModuleValueConstructor::ConstValue {
+                    literal: literal.clone(),
+                }
+            }
+
             ValueConstructorVariant::LocalVariable { .. }
             | ValueConstructorVariant::ModuleFn { .. } => ModuleValueConstructor::Fn,
         }
@@ -306,6 +315,7 @@ impl ValueConstructorVariant {
 pub enum ModuleValueConstructor {
     Record { name: String, arity: usize },
     Fn,
+    ConstValue { literal: ConstValue<Arc<Type>> },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -625,6 +635,20 @@ impl<'a> Typer<'a> {
     ///
     pub fn get_variable(&self, name: &str) -> Option<&ValueConstructor> {
         self.local_values.get(name)
+    }
+
+    /// Lookup a module constant in the current scope.
+    ///
+    pub fn get_module_const(&self, name: &str) -> Option<&ValueConstructor> {
+        self.module_values
+            .get(name)
+            .filter(|ValueConstructor { variant, .. }| {
+                if let ValueConstructorVariant::ModuleConstValue { .. } = variant {
+                    true
+                } else {
+                    false
+                }
+            })
     }
 
     /// Map a type in the current scope.
@@ -1650,6 +1674,23 @@ impl<'a> Typer<'a> {
                     | ValueConstructorVariant::Record { .. } => {
                         return Err(Error::NonLocalClauseGuardVariable { location, name })
                     }
+
+                    ValueConstructorVariant::ModuleConstValue { literal } => {
+                        return Ok(match literal {
+                            TypedConstValue::Int { value, .. } => ClauseGuard::Int {
+                                location: literal.location().clone(),
+                                value: value.clone(),
+                            },
+                            TypedConstValue::Float { value, .. } => ClauseGuard::Float {
+                                location: literal.location().clone(),
+                                value: value.clone(),
+                            },
+                            TypedConstValue::String { value, .. } => ClauseGuard::String {
+                                location: literal.location().clone(),
+                                value: value.clone(),
+                            },
+                        })
+                    }
                 };
 
                 Ok(ClauseGuard::Var {
@@ -1690,6 +1731,23 @@ impl<'a> Typer<'a> {
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::LocalVariable => {
                         return Err(Error::NonLocalClauseGuardVariable { location, name })
+                    }
+
+                    ValueConstructorVariant::ModuleConstValue { literal } => {
+                        return Ok(match literal {
+                            TypedConstValue::Int { value, .. } => ClauseGuard::Int {
+                                location: literal.location().clone(),
+                                value: value.clone(),
+                            },
+                            TypedConstValue::Float { value, .. } => ClauseGuard::Float {
+                                location: literal.location().clone(),
+                                value: value.clone(),
+                            },
+                            TypedConstValue::String { value, .. } => ClauseGuard::String {
+                                location: literal.location().clone(),
+                                value: value.clone(),
+                            },
+                        })
                     }
                 };
 
@@ -2125,6 +2183,7 @@ impl<'a> Typer<'a> {
             typ,
         } = self
             .get_variable(name)
+            .or_else(|| self.get_module_const(name))
             .cloned()
             .ok_or_else(|| Error::UnknownVariable {
                 location: location.clone(),
@@ -2207,7 +2266,7 @@ impl<'a> Typer<'a> {
             },
             ConstValue::Float {
                 location, value, ..
-            } => ConstValue::Int {
+            } => ConstValue::Float {
                 location,
                 typ: float(),
                 value,
@@ -3356,9 +3415,11 @@ pub fn infer_module(
                 typer.insert_module_value(
                     &name,
                     ValueConstructor {
-                        public: public,
+                        public,
                         origin: location.clone(),
-                        variant: ValueConstructorVariant::LocalVariable,
+                        variant: ValueConstructorVariant::ModuleConstValue {
+                            literal: typed_expr.clone(),
+                        },
                         typ: typ.clone(),
                     },
                 )?;
@@ -3824,6 +3885,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         PatternConstructor::Record { name: name.clone() }
                     }
                     ValueConstructorVariant::LocalVariable
+                    | ValueConstructorVariant::ModuleConstValue { .. }
                     | ValueConstructorVariant::ModuleFn { .. } => crate::error::fatal_compiler_bug(
                         "Unexpected value constructor type for a constructor pattern.",
                     ),
