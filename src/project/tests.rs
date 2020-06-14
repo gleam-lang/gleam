@@ -938,6 +938,107 @@ fn test(t: one.T) { t.a }"
                 }
             }),
         },
+
+        // Can import qualified and unqualified module constants
+        Case {
+            input: vec![
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/one.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "pub const const_string = \"hello!\"".to_string(),
+                },
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/two.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "pub const cool_number = 4
+pub const cool_number2 = 3.14".to_string(),
+                },
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/three.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "import one
+import two.{cool_number, cool_number2 as pi}
+fn test() { one.const_string pi cool_number }"
+                        .to_string(),
+                },
+            ],
+            expected: Ok(vec![
+                OutputFile {
+                    path: PathBuf::from("/gen/src/two.erl"),
+                    text: "-module(two).\n-compile(no_auto_import).\n\n\n"
+                        .to_string(),
+                },
+                OutputFile {
+                    path: PathBuf::from("/gen/src/one.erl"),
+                    text: "-module(one).\n-compile(no_auto_import).\n\n\n"
+                        .to_string(),
+                },
+                OutputFile {
+                    path: PathBuf::from("/gen/src/three.erl"),
+                    text: "-module(three).\n-compile(no_auto_import).\n
+test() ->\n    <<\"hello!\"/utf8>>,\n    3.14,\n    4.\n"
+                        .to_string(),
+                },
+            ]),
+        },
+
+        // Can use module constants in case guards
+        Case {
+            input: vec![
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/one.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "pub const string_value = \"constant value\"
+pub const float_value = 3.14
+pub const int_value = 42
+                    ".to_string(),
+                },
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/two.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "import one.{string_value, float_value, int_value}
+pub fn main(arg1, arg2, arg3) {
+    case tuple(arg1, arg2, arg3) {
+        tuple(
+        x,
+        y,
+        z,
+        ) if x == string_value && y >. float_value && z == int_value -> 1
+        _ -> 0
+    }
+}"
+                        .to_string(),
+                },
+            ],
+            expected: Ok(vec![
+                OutputFile {
+                    path: PathBuf::from("/gen/src/one.erl"),
+                    text: "-module(one).\n-compile(no_auto_import).\n\n\n"
+                        .to_string(),
+                },
+                OutputFile {
+                    path: PathBuf::from("/gen/src/two.erl"),
+                    text: "-module(two).\n-compile(no_auto_import).\n\n-export([main/3]).\n
+main(Arg1, Arg2, Arg3) ->
+    case {Arg1, Arg2, Arg3} of
+        {X,
+         Y,
+         Z} when ((X =:= <<\"constant value\"/utf8>>) andalso (Y > 3.14)) andalso (Z =:= 42) ->
+            1;
+
+        _ ->
+            0
+    end.
+"
+                        .to_string(),
+                },
+            ]),
+        },
     ];
 
     for Case { input, expected } in cases.into_iter() {
