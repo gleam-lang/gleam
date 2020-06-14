@@ -126,7 +126,7 @@ impl<T> BinaryTypeSpecifier<T> {
             }
             | Self {
                 size: None,
-                typ: Some(BinSegmentOption::Bitstring { .. }),
+                typ: Some(BinSegmentOption::BitString { .. }),
                 ..
             } if must_have_size => Err(Error::SegmentMustHaveSize),
 
@@ -138,11 +138,11 @@ impl<T> BinaryTypeSpecifier<T> {
         match self.typ {
             Some(BinSegmentOption::Integer { .. }) => Some(crate::typ::int()),
             Some(BinSegmentOption::Float { .. }) => Some(crate::typ::float()),
-            Some(BinSegmentOption::Binary { .. }) => Some(crate::typ::bitstring()),
-            Some(BinSegmentOption::Bitstring { .. }) => Some(crate::typ::bitstring()),
+            Some(BinSegmentOption::Binary { .. }) => Some(crate::typ::bit_string()),
+            Some(BinSegmentOption::BitString { .. }) => Some(crate::typ::bit_string()),
             Some(BinSegmentOption::UTF8 { .. }) => Some(crate::typ::string()),
-            Some(BinSegmentOption::UTF16 { .. }) => Some(crate::typ::bitstring()),
-            Some(BinSegmentOption::UTF32 { .. }) => Some(crate::typ::bitstring()),
+            Some(BinSegmentOption::UTF16 { .. }) => Some(crate::typ::bit_string()),
+            Some(BinSegmentOption::UTF32 { .. }) => Some(crate::typ::bit_string()),
             _ => None,
         }
     }

@@ -9,7 +9,7 @@
 <p align="center">
   <a href="https://github.com/gleam-lang/gleam/releases"><img src="https://img.shields.io/github/release/gleam-lang/gleam" alt="GitHub release"></a>
   <a href="https://webchat.freenode.net/#gleam-lang"><img src="https://img.shields.io/badge/freenode%20chat-%23gleam--lang-blue" alt="IRC: #gleam-lang on chat.freenode.net"></a>
-  <a><img src="https://github.com/gleam-lang/gleam/workflows/CI/badge.svg?branch=master"></a>
+  <a><img src="https://github.com/gleam-lang/gleam/workflows/CI/badge.svg?branch=main"></a>
 </p>
 
 
@@ -54,6 +54,7 @@ These people are sponsoring at least $10 a month, enabling further Gleam
 development.
 
 - [Arian Daneshvar](https://github.com/bees)
+- [Ben Myles](https://github.com/benmyles)
 - [Bryan Paxton](https://github.com/starbelly)
 - [Clever Bunny LTD](https://github.com/cleverbunny)
 - [Hasan YILDIZ](https://github.com/hsnyildiz)
@@ -66,4 +67,5 @@ development.
 - [Parker Selbert](https://github.com/sorentwo)
 - [Quinn Wilton](http://quinnwilton.com/)
 - [Shritesh Bhattarai](https://github.com/shritesh)
+- [Wojtek Mach](https://github.com/wojtekmach)
 - [ontofractal](https://github.com/ontofractal)

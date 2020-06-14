@@ -1,11 +1,20 @@
-use crate::{
-    error::{Error, FileIOAction, FileKind, GleamExpect},
-    project::OutputFile,
-};
+use crate::error::{Error, FileIOAction, FileKind, GleamExpect};
 use flate2::{write::GzEncoder, Compression};
-use std::{fs::File, io::Write, path::PathBuf};
+use std::{
+    fmt::Debug,
+    fs::File,
+    io::Write,
+    path::{Path, PathBuf},
+};
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct OutputFile {
+    pub text: String,
+    pub path: PathBuf,
+}
 
 pub fn delete_dir(dir: &PathBuf) -> Result<(), Error> {
+    tracing::trace!("Deleting directory {:?}", dir);
     if dir.exists() {
         std::fs::remove_dir_all(&dir).map_err(|e| Error::FileIO {
             action: FileIOAction::Delete,
@@ -13,9 +22,26 @@ pub fn delete_dir(dir: &PathBuf) -> Result<(), Error> {
             path: dir.clone(),
             err: Some(e.to_string()),
         })?;
+    } else {
+        tracing::trace!("Did not exist for deletion: {:?}", dir);
     }
     Ok(())
 }
+
+// pub fn delete(file: &PathBuf) -> Result<(), Error> {
+//     tracing::trace!("Deleting file {:?}", file);
+//     if file.exists() {
+//         std::fs::remove_file(&file).map_err(|e| Error::FileIO {
+//             action: FileIOAction::Delete,
+//             kind: FileKind::File,
+//             path: file.clone(),
+//             err: Some(e.to_string()),
+//         })?;
+//     } else {
+//         tracing::trace!("Did not exist for deletion: {:?}", file);
+//     }
+//     Ok(())
+// }
 
 pub fn write_outputs(outputs: &[OutputFile]) -> Result<(), Error> {
     for file in outputs {
@@ -26,6 +52,7 @@ pub fn write_outputs(outputs: &[OutputFile]) -> Result<(), Error> {
 
 pub fn write_output(file: &OutputFile) -> Result<(), Error> {
     let OutputFile { path, text } = file;
+    tracing::trace!("Writing file {:?}", path);
 
     let dir_path = path.parent().ok_or_else(|| Error::FileIO {
         action: FileIOAction::FindParent,
@@ -104,6 +131,7 @@ fn is_gleam_path_test() {
 
 pub fn gleam_files(dir: &PathBuf) -> impl Iterator<Item = PathBuf> + '_ {
     walkdir::WalkDir::new(dir.clone())
+        .follow_links(true)
         .into_iter()
         .filter_map(Result::ok)
         .filter(|e| e.file_type().is_file())
@@ -112,6 +140,8 @@ pub fn gleam_files(dir: &PathBuf) -> impl Iterator<Item = PathBuf> + '_ {
 }
 
 pub fn create_tar_archive(outputs: Vec<OutputFile>) -> Result<Vec<u8>, Error> {
+    tracing::trace!("Creating tarball archive");
+
     let encoder = GzEncoder::new(vec![], Compression::default());
     let mut builder = tar::Builder::new(encoder);
 
@@ -136,4 +166,65 @@ pub fn create_tar_archive(outputs: Vec<OutputFile>) -> Result<Vec<u8>, Error> {
         .map_err(|e| Error::TarFinish(e.to_string()))?
         .finish()
         .map_err(|e| Error::Gzip(e.to_string()))
+}
+
+pub fn mkdir(path: impl AsRef<Path> + Debug) -> Result<(), Error> {
+    tracing::trace!("Creating directory {:?}", path);
+
+    std::fs::create_dir_all(&path).map_err(|err| Error::FileIO {
+        kind: FileKind::Directory,
+        path: PathBuf::from(path.as_ref()),
+        action: FileIOAction::Create,
+        err: Some(err.to_string()),
+    })
+}
+
+pub fn read_dir(path: impl AsRef<Path> + Debug) -> Result<std::fs::ReadDir, Error> {
+    tracing::trace!("Reading directory {:?}", path);
+
+    std::fs::read_dir(&path).map_err(|e| Error::FileIO {
+        action: FileIOAction::Read,
+        kind: FileKind::Directory,
+        path: PathBuf::from(path.as_ref()),
+        err: Some(e.to_string()),
+    })
+}
+
+pub fn read(path: impl AsRef<Path> + Debug) -> Result<String, Error> {
+    tracing::trace!("Reading file {:?}", path);
+
+    std::fs::read_to_string(&path).map_err(|err| Error::FileIO {
+        action: FileIOAction::Read,
+        kind: FileKind::File,
+        path: PathBuf::from(path.as_ref()),
+        err: Some(err.to_string()),
+    })
+}
+
+pub fn copy(path: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) -> Result<(), Error> {
+    tracing::trace!("Copying file {:?} to {:?}", path, to);
+
+    // TODO: include the destination in the error message
+    std::fs::copy(&path, &to)
+        .map_err(|err| Error::FileIO {
+            action: FileIOAction::Copy,
+            kind: FileKind::File,
+            path: PathBuf::from(path.as_ref()),
+            err: Some(err.to_string()),
+        })
+        .map(|_| ())
+}
+
+pub fn copy_dir(path: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) -> Result<(), Error> {
+    tracing::trace!("Copying directory {:?} to {:?}", path, to);
+
+    // TODO: include the destination in the error message
+    fs_extra::dir::copy(&path, &to, &fs_extra::dir::CopyOptions::new())
+        .map_err(|err| Error::FileIO {
+            action: FileIOAction::Copy,
+            kind: FileKind::Directory,
+            path: PathBuf::from(path.as_ref()),
+            err: Some(err.to_string()),
+        })
+        .map(|_| ())
 }

@@ -408,20 +408,20 @@ fn infer_test() {
         "Int"
     );
 
-    // Bitstrings
+    // BitStrings
     assert_infer!("let <<x>> = <<1>> x", "Int");
     assert_infer!("let <<x>> = <<1>> x", "Int");
     assert_infer!("let <<x:float>> = <<1>> x", "Float");
-    assert_infer!("let <<x:binary>> = <<1>> x", "Bitstring");
-    assert_infer!("let <<x:bytes>> = <<1>> x", "Bitstring");
-    assert_infer!("let <<x:bitstring>> = <<1>> x", "Bitstring");
-    assert_infer!("let <<x:bits>> = <<1>> x", "Bitstring");
+    assert_infer!("let <<x:binary>> = <<1>> x", "BitString");
+    assert_infer!("let <<x:bytes>> = <<1>> x", "BitString");
+    assert_infer!("let <<x:bit_string>> = <<1>> x", "BitString");
+    assert_infer!("let <<x:bits>> = <<1>> x", "BitString");
     assert_infer!("let <<x:utf8>> = <<1>> x", "String");
-    assert_infer!("let <<x:utf16>> = <<1>> x", "Bitstring");
-    assert_infer!("let <<x:utf32>> = <<1>> x", "Bitstring");
+    assert_infer!("let <<x:utf16>> = <<1>> x", "BitString");
+    assert_infer!("let <<x:utf32>> = <<1>> x", "BitString");
     assert_infer!(
         "let a = <<1>> let <<x:binary>> = <<1, a:2-binary>> x",
-        "Bitstring"
+        "BitString"
     );
 }
 
@@ -439,7 +439,7 @@ macro_rules! assert_error {
 }
 
 #[test]
-fn infer_bitstring_error_test() {
+fn infer_bit_string_error_test() {
     // Values
 
     assert_error!(
@@ -465,7 +465,7 @@ fn infer_bitstring_error_test() {
         Error::CouldNotUnify {
             location: SrcSpan { start: 29, end: 30 },
             expected: int(),
-            given: bitstring(),
+            given: bit_string(),
         },
     );
 
@@ -473,7 +473,7 @@ fn infer_bitstring_error_test() {
         "case <<1>> { <<a:utf16>> if a == \"test\" -> 1 }",
         Error::CouldNotUnify {
             location: SrcSpan { start: 28, end: 39 },
-            expected: bitstring(),
+            expected: bit_string(),
             given: string(),
         },
     );
@@ -488,9 +488,9 @@ fn infer_bitstring_error_test() {
     );
 
     assert_error!(
-        "case <<1>> { <<1:bitstring, _:binary>> -> 1 }",
+        "case <<1>> { <<1:bit_string, _:binary>> -> 1 }",
         Error::BinarySegmentMustHaveSize {
-            location: SrcSpan { start: 15, end: 26 },
+            location: SrcSpan { start: 15, end: 27 },
         },
     );
 
@@ -529,12 +529,12 @@ fn infer_bitstring_error_test() {
     );
 
     assert_error!(
-        "case <<1>> { <<1:bitstring-binary>> -> 1 }",
+        "case <<1>> { <<1:bit_string-binary>> -> 1 }",
         Error::ConflictingBinaryTypeOptions {
-            previous_location: SrcSpan { start: 17, end: 26 },
-            location: SrcSpan { start: 27, end: 33 },
+            previous_location: SrcSpan { start: 17, end: 27 },
+            location: SrcSpan { start: 28, end: 34 },
 
-            name: "bitstring".to_string(),
+            name: "bit_string".to_string(),
         },
     );
 

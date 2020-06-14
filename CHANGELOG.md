@@ -2,9 +2,16 @@
 
 ## Unreleased
 
+- Gleam can now compile Gleam projects without an external build tool.
+- Gleam can now run eunit without an external build tool.
+- Gleam can now run an Erlang shell without an external build tool.
 - Single letter module names are now permitted.
-- Added support for bitstring syntax.
-- Remove old list prepend syntax `[x | y]`, use `[x .. y]` instead.
+- Added support for bit string syntax.
+- Support for the deprecated list prepend syntax has been removed.
+
+## v0.9.1 - 2020-06-12
+
+- Fixed a bug where binary operators may lose required `{ }`s when formatted.
 
 ## v0.9.0 - 2020-06-01
 

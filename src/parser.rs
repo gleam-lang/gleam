@@ -420,3 +420,23 @@ fn main() {
 pub fn location(start: usize, end: usize) -> crate::ast::SrcSpan {
     crate::ast::SrcSpan { start, end }
 }
+
+pub fn attach_doc_comments<'a, A, B, C>(
+    module: &mut crate::ast::Module<A, B, C>,
+    mut comments: &'a [Comment<'a>],
+) {
+    for statement in &mut module.statements {
+        let location = statement.location();
+        let (doc, rest) = take_before(comments, location.start);
+        comments = rest;
+        statement.put_doc(doc);
+
+        if let crate::ast::Statement::CustomType { constructors, .. } = statement {
+            for constructor in constructors {
+                let (doc, rest) = take_before(comments, constructor.location.start);
+                comments = rest;
+                constructor.put_doc(doc);
+            }
+        }
+    }
+}

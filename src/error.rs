@@ -1,7 +1,8 @@
-use crate::diagnostic::{
-    buffer_writer, write, write_project, Diagnostic, ProjectErrorDiagnostic, Severity,
+use crate::{
+    cli,
+    diagnostic::{write, write_project, Diagnostic, ProjectErrorDiagnostic, Severity},
+    typ::pretty::Printer,
 };
-use crate::typ::pretty::Printer;
 use itertools::Itertools;
 use std::fmt::Debug;
 use std::path::PathBuf;
@@ -11,7 +12,7 @@ pub type Src = String;
 pub type Name = String;
 
 pub fn fatal_compiler_bug(msg: &str) -> ! {
-    let buffer_writer = buffer_writer();
+    let buffer_writer = cli::stderr_buffer_writer();
     let mut buffer = buffer_writer.buffer();
     use std::io::Write;
     use termcolor::{Color, ColorSpec, WriteColor};
@@ -97,7 +98,11 @@ pub enum Error {
     },
 
     ImportCycle {
-        modules: Vec<Vec<String>>,
+        modules: Vec<String>,
+    },
+
+    PackageCycle {
+        packages: Vec<String>,
     },
 
     FileIO {
@@ -126,6 +131,11 @@ pub enum Error {
     TarFinish(String),
 
     Gzip(String),
+
+    ShellCommand {
+        command: String,
+        err: Option<std::io::ErrorKind>,
+    },
 }
 
 #[derive(Debug, PartialEq)]
@@ -144,6 +154,7 @@ impl StandardIOAction {
 #[derive(Debug, PartialEq)]
 pub enum FileIOAction {
     Open,
+    Copy,
     Read,
     Parse,
     Delete,
@@ -156,6 +167,7 @@ impl FileIOAction {
     fn text(&self) -> &'static str {
         match self {
             FileIOAction::Open => "open",
+            FileIOAction::Copy => "copy",
             FileIOAction::Read => "read",
             FileIOAction::Parse => "parse",
             FileIOAction::Delete => "delete",
@@ -208,6 +220,36 @@ impl Error {
             .expect("error pretty buffer write space before");
 
         match self {
+            Error::ShellCommand { command, err: None } => {
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Gzip compression failure".to_string(),
+                    label: format!(
+                        "There was a problem when running the shell command `{}`.",
+                        command
+                    ),
+                };
+                write_project(buffer, diagnostic);
+            }
+
+            Error::ShellCommand {
+                command,
+                err: Some(err),
+            } => {
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Gzip compression failure".to_string(),
+                    label: format!(
+                        "There was a problem when running the shell command `{}`.
+
+The error from the shell command library was:
+
+    {}",
+                        command,
+                        std_io_error_kind_text(err)
+                    ),
+                };
+                write_project(buffer, diagnostic);
+            }
+
             Error::Gzip(detail) => {
                 let diagnostic = ProjectErrorDiagnostic {
                     title: "Gzip compression failure".to_string(),
@@ -1127,7 +1169,7 @@ at the end of a bin pattern",
                     writeln!(
                         buffer,
                         "{} is not a valid option for a bit string segment.
-Valid options are: binary, int, float, bitstring, utf8, utf16, utf32,
+Valid options are: binary, int, float, bit_string, utf8, utf16, utf32,
 signed, unsigned, big, little, native, size, unit",
                         label
                     )
@@ -1223,7 +1265,38 @@ but this one uses {}. Rewrite this using the fn({}) {{ ... }} syntax.",
                 }
             }
 
-            Error::ImportCycle { modules } => import_cycle(buffer, modules.as_ref()),
+            Error::ImportCycle { modules } => {
+                crate::diagnostic::write_title(buffer, "Import cycle");
+                writeln!(
+                    buffer,
+                    "The import statements for these modules form a cycle:\n"
+                )
+                .unwrap();
+                import_cycle(buffer, modules.as_ref());
+
+                writeln!(
+                    buffer,
+                    "Gleam doesn't support import cycles like these, please break the
+cycle to continue."
+                )
+                .unwrap();
+            }
+
+            Error::PackageCycle { packages } => {
+                crate::diagnostic::write_title(buffer, "Dependency cycle");
+                writeln!(
+                    buffer,
+                    "The dependencies for these packages form a cycle:\n"
+                )
+                .unwrap();
+                import_cycle(buffer, packages.as_ref());
+                writeln!(
+                    buffer,
+                    "Gleam doesn't support dependency cycles like these, please break the
+cycle to continue."
+                )
+                .unwrap();
+            }
 
             Error::UnknownImport {
                 module,
@@ -1291,7 +1364,7 @@ but it cannot be found.",
     }
 
     pub fn pretty_print(&self) {
-        let buffer_writer = buffer_writer();
+        let buffer_writer = cli::stderr_buffer_writer();
         let mut buffer = buffer_writer.buffer();
         self.pretty(&mut buffer);
         buffer_writer.print(&buffer).unwrap();
@@ -1322,14 +1395,13 @@ fn std_io_error_kind_text(kind: &std::io::ErrorKind) -> String {
     }
 }
 
-fn import_cycle(buffer: &mut Buffer, modules: &[Vec<String>]) {
+fn import_cycle(buffer: &mut Buffer, modules: &[String]) {
     use std::io::Write;
     use termcolor::{Color, ColorSpec, WriteColor};
-    crate::diagnostic::write_title(buffer, "Import cycle");
+
     writeln!(
         buffer,
-        "The import statements for these modules form a cycle:
-
+        "
     ┌─────┐"
     )
     .unwrap();
@@ -1341,15 +1413,8 @@ fn import_cycle(buffer: &mut Buffer, modules: &[Vec<String>]) {
         buffer
             .set_color(ColorSpec::new().set_fg(Some(Color::Cyan)))
             .unwrap();
-        writeln!(buffer, "{}", name.join("/")).unwrap();
+        writeln!(buffer, "{}", name).unwrap();
         buffer.set_color(&ColorSpec::new()).unwrap();
     }
-    writeln!(
-        buffer,
-        "    └─────┘
-
-Gleam doesn't support import cycles like these, please break the
-cycle to continue."
-    )
-    .unwrap();
+    writeln!(buffer, "    └─────┘\n").unwrap();
 }

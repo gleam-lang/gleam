@@ -533,7 +533,7 @@ impl<'a> Formatter<'a> {
                 .to_doc()
                 .append(wrap_args(elems.iter().map(|e| self.wrap_expr(e)))),
 
-            UntypedExpr::Bitstring { elems, .. } => {
+            UntypedExpr::BitString { elems, .. } => {
                 let elems = elems.iter().map(|s| self.segment(s));
 
                 break_("<<", "<<")
@@ -619,7 +619,7 @@ impl<'a> Formatter<'a> {
         };
 
         // Wrap sides if required
-        let left = self.operator_side(left, 4, left_precedence);
+        let left = self.operator_side(left, 5, left_precedence);
         let right = self.operator_side(right, 4, right_precedence);
 
         force_break()
@@ -693,7 +693,7 @@ impl<'a> Formatter<'a> {
             BinSegmentOption::Binary { .. } => "binary".to_doc(),
             BinSegmentOption::Integer { .. } => "int".to_doc(),
             BinSegmentOption::Float { .. } => "float".to_doc(),
-            BinSegmentOption::Bitstring { .. } => "bitstring".to_doc(),
+            BinSegmentOption::BitString { .. } => "bit_string".to_doc(),
             BinSegmentOption::UTF8 { .. } => "utf8".to_doc(),
             BinSegmentOption::UTF16 { .. } => "utf16".to_doc(),
             BinSegmentOption::UTF32 { .. } => "utf32".to_doc(),
@@ -908,7 +908,8 @@ impl<'a> Formatter<'a> {
             UntypedExpr::Call { .. }
             | UntypedExpr::Fn { .. }
             | UntypedExpr::Case { .. }
-            | UntypedExpr::Tuple { .. } => self.expr(expr),
+            | UntypedExpr::Tuple { .. }
+            | UntypedExpr::BitString { .. } => self.expr(expr),
 
             _ => self.expr(expr).nest(INDENT),
         }
@@ -1067,7 +1068,7 @@ impl<'a> Formatter<'a> {
                 .to_doc()
                 .append(wrap_args(elems.iter().map(|e| self.pattern(e)))),
 
-            Pattern::Bitstring { elems, .. } => {
+            Pattern::BitString { elems, .. } => {
                 let elems = elems.iter().map(|s| self.pattern_segment(s));
 
                 break_("<<", "<<")
@@ -1115,7 +1116,7 @@ impl<'a> Formatter<'a> {
             BinSegmentOption::Binary { .. } => "binary".to_doc(),
             BinSegmentOption::Integer { .. } => "int".to_doc(),
             BinSegmentOption::Float { .. } => "float".to_doc(),
-            BinSegmentOption::Bitstring { .. } => "bitstring".to_doc(),
+            BinSegmentOption::BitString { .. } => "bit_string".to_doc(),
             BinSegmentOption::UTF8 { .. } => "utf8".to_doc(),
             BinSegmentOption::UTF16 { .. } => "utf16".to_doc(),
             BinSegmentOption::UTF32 { .. } => "utf32".to_doc(),

@@ -4,8 +4,9 @@ mod tests;
 use crate::{
     ast::*,
     error::GleamExpect,
+    file::OutputFile,
     pretty::*,
-    project::{self, Analysed, OutputFile},
+    project::{self, Analysed},
     typ::{
         ModuleValueConstructor, PatternConstructor, Type, ValueConstructor, ValueConstructorVariant,
     },
@@ -282,7 +283,7 @@ fn tuple(elems: impl Iterator<Item = Document>) -> Document {
         .group()
 }
 
-fn bitstring(elems: impl Iterator<Item = Document>) -> Document {
+fn bit_string(elems: impl Iterator<Item = Document>) -> Document {
     concat(elems.intersperse(delim(",")))
         .nest_current()
         .surround("<<", ">>")
@@ -298,7 +299,7 @@ fn segment(value: &TypedExpr, options: Vec<TypedExprBinSegmentOption>, env: &mut
         TypedExpr::Int { .. }
         | TypedExpr::Float { .. }
         | TypedExpr::Var { .. }
-        | TypedExpr::Bitstring { .. } => expr(value, env),
+        | TypedExpr::BitString { .. } => expr(value, env),
 
         // Wrap anything else in parentheses
         value => expr(value, env).surround("(", ")"),
@@ -314,7 +315,7 @@ fn segment(value: &TypedExpr, options: Vec<TypedExprBinSegmentOption>, env: &mut
         BinSegmentOption::Integer { .. } => others.push("integer"),
         BinSegmentOption::Float { .. } => others.push("float"),
         BinSegmentOption::Binary { .. } => others.push("binary"),
-        BinSegmentOption::Bitstring { .. } => others.push("bitstring"),
+        BinSegmentOption::BitString { .. } => others.push("bitstring"),
         BinSegmentOption::UTF8 { .. } => others.push("utf8"),
         BinSegmentOption::UTF16 { .. } => others.push("utf16"),
         BinSegmentOption::UTF32 { .. } => others.push("utf32"),
@@ -323,17 +324,41 @@ fn segment(value: &TypedExpr, options: Vec<TypedExprBinSegmentOption>, env: &mut
         BinSegmentOption::Big { .. } => others.push("big"),
         BinSegmentOption::Little { .. } => others.push("little"),
         BinSegmentOption::Native { .. } => others.push("native"),
-        BinSegmentOption::Size { value, .. } => size = Some(":".to_doc().append(expr(value, env))),
-        BinSegmentOption::Unit { value, .. } => unit = Some(":".to_doc().append(expr(value, env))),
+        BinSegmentOption::Size { value, .. } => {
+            size = {
+                match &**value {
+                    TypedExpr::Int { .. } | TypedExpr::Var { .. } => {
+                        Some(":".to_doc().append(expr(value, env)))
+                    }
+                    _ => Some(":".to_doc().append(expr(value, env).surround("(", ")"))),
+                }
+            }
+        }
+        BinSegmentOption::Unit { value, .. } => {
+            unit = {
+                match &**value {
+                    TypedExpr::Int { .. } => Some("unit:".to_doc().append(expr(value, env))),
+                    _ => None,
+                }
+            }
+        }
     });
 
     document = document.append(size);
 
-    if !others.is_empty() || unit.is_some() {
+    if !others.is_empty() {
         document = document.append("/").append(others.join("-"));
     }
 
-    document.append(unit)
+    if unit.is_some() {
+        if !others.is_empty() {
+            document = document.append("-").append(unit)
+        } else {
+            document = document.append("/").append(unit)
+        }
+    }
+
+    document
 }
 
 // TODO: Merge segment() and pattern_segment() somehow
@@ -363,7 +388,7 @@ fn pattern_segment(
         BinSegmentOption::Integer { .. } => others.push("integer"),
         BinSegmentOption::Float { .. } => others.push("float"),
         BinSegmentOption::Binary { .. } => others.push("binary"),
-        BinSegmentOption::Bitstring { .. } => others.push("bitstring"),
+        BinSegmentOption::BitString { .. } => others.push("bitstring"),
         BinSegmentOption::UTF8 { .. } => others.push("utf8"),
         BinSegmentOption::UTF16 { .. } => others.push("utf16"),
         BinSegmentOption::UTF32 { .. } => others.push("utf32"),
@@ -376,17 +401,30 @@ fn pattern_segment(
             size = Some(":".to_doc().append(pattern(value, env)))
         }
         BinSegmentOption::Unit { value, .. } => {
-            unit = Some(":".to_doc().append(pattern(value, env)))
+            unit = {
+                match &**value {
+                    Pattern::Int { .. } => Some("unit:".to_doc().append(pattern(value, env))),
+                    _ => None,
+                }
+            }
         }
     });
 
     document = document.append(size);
 
-    if !others.is_empty() || unit.is_some() {
+    if !others.is_empty() {
         document = document.append("/").append(others.join("-"));
     }
 
-    document.append(unit)
+    if unit.is_some() {
+        if !others.is_empty() {
+            document = document.append("-").append(unit)
+        } else {
+            document = document.append("/").append(unit)
+        }
+    }
+
+    document
 }
 
 fn seq(first: &TypedExpr, then: &TypedExpr, env: &mut Env) -> Document {
@@ -514,7 +552,7 @@ fn pattern(p: &TypedPattern, env: &mut Env) -> Document {
 
         Pattern::Tuple { elems, .. } => tuple(elems.into_iter().map(|p| pattern(p, env))),
 
-        Pattern::Bitstring { elems, .. } => bitstring(
+        Pattern::BitString { elems, .. } => bit_string(
             elems
                 .into_iter()
                 .map(|s| pattern_segment(&s.value, s.options.clone(), env)),
@@ -1037,7 +1075,7 @@ fn expr(expression: &TypedExpr, env: &mut Env) -> Document {
 
         TypedExpr::Tuple { elems, .. } => tuple(elems.into_iter().map(|e| wrap_expr(e, env))),
 
-        TypedExpr::Bitstring { elems, .. } => bitstring(
+        TypedExpr::BitString { elems, .. } => bit_string(
             elems
                 .into_iter()
                 .map(|s| segment(&s.value, s.options.clone(), env)),

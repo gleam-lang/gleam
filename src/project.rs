@@ -4,36 +4,17 @@ mod tests;
 
 use crate::{
     ast::TypedModule,
+    build::Origin,
+    config::{self, PackageConfig},
     error::{Error, FileIOAction, FileKind, GleamExpect},
     file, typ,
     warning::Warning,
 };
-use serde::Deserialize;
 use source_tree::SourceTree;
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::Read;
 use std::path::{Path, PathBuf};
 
 pub const OUTPUT_DIR_NAME: &str = "gen";
-
-#[derive(Deserialize)]
-pub struct ProjectConfig {
-    pub name: String,
-    pub docs: Option<DocsPages>,
-}
-
-#[derive(Deserialize)]
-pub struct DocsPages {
-    pub pages: Vec<DocsPage>,
-}
-
-#[derive(Deserialize, Clone)]
-pub struct DocsPage {
-    pub title: String,
-    pub path: String,
-    pub source: PathBuf,
-}
 
 #[derive(Debug, PartialEq)]
 pub struct Input {
@@ -53,12 +34,6 @@ pub struct Analysed {
     pub warnings: Vec<Warning>,
 }
 
-#[derive(Debug, PartialEq)]
-pub struct OutputFile {
-    pub text: String,
-    pub path: PathBuf,
-}
-
 #[derive(Debug, PartialEq, Clone)]
 pub enum ModuleOrigin {
     Src,
@@ -73,6 +48,13 @@ impl ModuleOrigin {
             ModuleOrigin::Test => "test",
         }
     }
+
+    pub fn to_origin(&self) -> Origin {
+        match self {
+            ModuleOrigin::Test => Origin::Test,
+            ModuleOrigin::Src | ModuleOrigin::Dependency => Origin::Src,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -84,9 +66,8 @@ pub struct Module {
     module: crate::ast::UntypedModule,
 }
 
-pub fn read_and_analyse(root: impl AsRef<Path>) -> Result<(ProjectConfig, Vec<Analysed>), Error> {
-    let project_config = read_project_config(&root)?;
-
+pub fn read_and_analyse(root: impl AsRef<Path>) -> Result<(PackageConfig, Vec<Analysed>), Error> {
+    let project_config = config::read_project_config(&root)?;
     let mut srcs = vec![];
 
     let root = root.as_ref();
@@ -142,7 +123,7 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
         let name = module.name.clone();
         let name_string = module.name_string();
 
-        println!("Compiling {}", name_string);
+        println!("Compiling {}", name_string.as_str());
 
         let mut warnings = vec![];
         let result = crate::typ::infer_module(module, &modules_type_infos, &mut warnings);
@@ -161,7 +142,10 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
             error,
         })?;
 
-        modules_type_infos.insert(name_string.clone(), ast.type_info.clone());
+        modules_type_infos.insert(
+            name_string.clone(),
+            (origin.to_origin(), ast.type_info.clone()),
+        );
 
         compiled_modules.push(Out {
             name,
@@ -191,7 +175,8 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
                 origin,
                 type_info: modules_type_infos
                     .remove(&name_string)
-                    .gleam_expect("project::compile(): Merging module type info"),
+                    .gleam_expect("project::compile(): Merging module type info")
+                    .1,
                 warnings,
             }
         })
@@ -226,32 +211,4 @@ pub fn collect_source(
         })
     }
     Ok(())
-}
-
-pub fn read_project_config(root: impl AsRef<Path>) -> Result<ProjectConfig, Error> {
-    let config_path = root.as_ref().join("gleam.toml");
-
-    let mut file = File::open(&config_path).map_err(|e| Error::FileIO {
-        action: FileIOAction::Open,
-        kind: FileKind::File,
-        path: config_path.clone(),
-        err: Some(e.to_string()),
-    })?;
-
-    let mut toml = String::new();
-    file.read_to_string(&mut toml).map_err(|e| Error::FileIO {
-        action: FileIOAction::Read,
-        kind: FileKind::File,
-        path: config_path.clone(),
-        err: Some(e.to_string()),
-    })?;
-
-    let project_config = toml::from_str(&toml).map_err(|e| Error::FileIO {
-        action: FileIOAction::Parse,
-        kind: FileKind::File,
-        path: config_path.clone(),
-        err: Some(e.to_string()),
-    })?;
-
-    Ok(project_config)
 }

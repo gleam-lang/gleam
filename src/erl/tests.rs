@@ -2313,7 +2313,7 @@ main() ->
 "#,
     );
 
-    // Bitstrings
+    // BitStrings
 
     assert_erl!(
         r#"fn main() {
@@ -2336,8 +2336,30 @@ main() ->
                 5.0/little-float,
                 6/native-integer-signed>>,
     <<7:2, 8:3, B:4/binary>> = <<1>>,
-    <<C/:1, D:2/binary:2>> = <<1>>,
+    <<C/unit:1, D:2/binary-unit:2>> = <<1>>,
     Simple.
+"#,
+    );
+
+    assert_erl!(
+        r#"fn x() { 2 }
+fn main() {
+  let a = 1
+  let b = <<a:unit(2)-size(a * 2), a:size(3 + x())-unit(1)>>
+
+  b
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+x() ->
+    2.
+
+main() ->
+    A = 1,
+    B = <<A:(A * 2)/unit:2, A:(3 + x())/unit:1>>,
+    B.
 "#,
     );
 

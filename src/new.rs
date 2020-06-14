@@ -1,4 +1,7 @@
-use crate::error::{Error, FileIOAction, FileKind, GleamExpect};
+use crate::{
+    error::{Error, FileIOAction, FileKind, GleamExpect},
+    file,
+};
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Write;
@@ -38,11 +41,11 @@ pub fn create(
     let workflows_dir = github_dir.join("workflows");
 
     // Create directories
-    mkdir(&root_dir)?;
-    mkdir(&src_dir)?;
-    mkdir(&test_dir)?;
-    mkdir(&github_dir)?;
-    mkdir(&workflows_dir)?;
+    file::mkdir(&root_dir)?;
+    file::mkdir(&src_dir)?;
+    file::mkdir(&test_dir)?;
+    file::mkdir(&github_dir)?;
+    file::mkdir(&workflows_dir)?;
 
     // write files
     write(root_dir.join("LICENSE"), APACHE_2)?;
@@ -85,15 +88,6 @@ The rebar3 program can be used to compile and test it.
         root_dir.to_str().expect("Unable to display path")
     );
     Ok(())
-}
-
-fn mkdir(path: &Path) -> Result<(), Error> {
-    std::fs::create_dir(path).map_err(|err| Error::FileIO {
-        kind: FileKind::Directory,
-        path: path.to_path_buf(),
-        action: FileIOAction::Create,
-        err: Some(err.to_string()),
-    })
 }
 
 fn write(path: PathBuf, contents: &str) -> Result<(), Error> {
@@ -166,6 +160,7 @@ on:
   push:
     branches:
       - master
+      - main
   pull_request:
 
 jobs:

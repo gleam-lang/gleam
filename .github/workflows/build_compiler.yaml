@@ -3,7 +3,7 @@ name: Test compiler
 on:
   push:
     branches:
-      - 'master'
+      - 'main'
       - 'v*.*'
   pull_request:
 

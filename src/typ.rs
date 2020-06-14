@@ -2,18 +2,22 @@ pub mod pretty;
 #[cfg(test)]
 mod tests;
 
-use crate::ast::{
-    self, Arg, ArgNames, BinOp, BinSegmentOption, BindingKind, CallArg, Clause, ClauseGuard,
-    ConstValue, Pattern, RecordConstructor, SrcSpan, Statement, TypeAst, TypedArg, TypedClause,
-    TypedClauseGuard, TypedConstValue, TypedExpr, TypedExprBinSegment, TypedExprBinSegmentOption,
-    TypedModule, TypedMultiPattern, TypedPattern, TypedPatternBinSegment,
-    TypedPatternBinSegmentOption, TypedStatement, UnqualifiedImport, UntypedArg, UntypedClause,
-    UntypedClauseGuard, UntypedConstValue, UntypedExpr, UntypedExprBinSegment,
-    UntypedExprBinSegmentOption, UntypedModule, UntypedMultiPattern, UntypedPattern,
-    UntypedPatternBinSegment, UntypedPatternBinSegmentOption, UntypedStatement,
+use crate::{
+    ast::{
+        self, Arg, ArgNames, BinOp, BinSegmentOption, BindingKind, CallArg, Clause, ClauseGuard,
+        ConstValue, Pattern, RecordConstructor, SrcSpan, Statement, TypeAst, TypedArg, TypedClause,
+        TypedClauseGuard, TypedConstValue, TypedExpr, TypedExprBinSegment,
+        TypedExprBinSegmentOption, TypedModule, TypedMultiPattern, TypedPattern,
+        TypedPatternBinSegment, TypedPatternBinSegmentOption, TypedStatement, UnqualifiedImport,
+        UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstValue, UntypedExpr,
+        UntypedExprBinSegment, UntypedExprBinSegmentOption, UntypedModule, UntypedMultiPattern,
+        UntypedPattern, UntypedPatternBinSegment, UntypedPatternBinSegmentOption, UntypedStatement,
+    },
+    bit_string::{BinaryTypeSpecifier, Error as BinaryError},
+    build::Origin,
+    error::GleamExpect,
 };
-use crate::bitstring::{BinaryTypeSpecifier, Error as BinaryError};
-use crate::error::GleamExpect;
+
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -333,8 +337,8 @@ pub struct Typer<'a> {
     uid: usize,
     level: usize,
     annotated_generic_types: im::HashSet<usize>,
-    importable_modules: &'a HashMap<String, Module>,
-    imported_modules: HashMap<String, Module>,
+    importable_modules: &'a HashMap<String, (Origin, Module)>,
+    imported_modules: HashMap<String, (Origin, Module)>,
 
     // Values defined in the current function (or the prelude)
     local_values: im::HashMap<String, ValueConstructor>,
@@ -383,7 +387,7 @@ impl<'a> Typer<'a> {
 
     pub fn new(
         current_module: &'a [String],
-        importable_modules: &'a HashMap<String, Module>,
+        importable_modules: &'a HashMap<String, (Origin, Module)>,
         warnings: &'a mut Vec<Warning>,
     ) -> Self {
         let mut typer = Self {
@@ -521,16 +525,16 @@ impl<'a> Typer<'a> {
 
         typer
             .insert_type_constructor(
-                "Bitstring".to_string(),
+                "BitString".to_string(),
                 TypeConstructor {
                     origin: Default::default(),
                     parameters: vec![],
-                    typ: bitstring(),
+                    typ: bit_string(),
                     module: vec![],
                     public: true,
                 },
             )
-            .gleam_expect("prelude inserting Bitstring type");
+            .gleam_expect("prelude inserting BitString type");
 
         let ok = typer.new_generic_var();
         let error = typer.new_generic_var();
@@ -702,12 +706,13 @@ impl<'a> Typer<'a> {
                     }
                 })?;
                 module
+                    .1
                     .types
                     .get(name)
                     .ok_or_else(|| GetTypeConstructorError::UnknownModuleType {
                         name: name.to_string(),
-                        module_name: module.name.clone(),
-                        type_constructors: module.types.keys().map(|t| t.to_string()).collect(),
+                        module_name: module.1.name.clone(),
+                        type_constructors: module.1.types.keys().map(|t| t.to_string()).collect(),
                     })
             }
         }
@@ -739,11 +744,11 @@ impl<'a> Typer<'a> {
                             .collect(),
                     }
                 })?;
-                module.values.get(&*name).ok_or_else(|| {
+                module.1.values.get(&*name).ok_or_else(|| {
                     GetValueConstructorError::UnknownModuleValue {
                         name: name.to_string(),
-                        module_name: module.name.clone(),
-                        value_constructors: module.values.keys().map(|t| t.to_string()).collect(),
+                        module_name: module.1.name.clone(),
+                        value_constructors: module.1.values.keys().map(|t| t.to_string()).collect(),
                     }
                 })
             }
@@ -948,7 +953,7 @@ impl<'a> Typer<'a> {
                 ..
             } => self.infer_tuple_index(*tuple, index, location),
 
-            UntypedExpr::Bitstring { location, elems } => self.infer_bin(elems, location),
+            UntypedExpr::BitString { location, elems } => self.infer_bin(elems, location),
         }
     }
 
@@ -1326,10 +1331,10 @@ impl<'a> Typer<'a> {
             .map(|s| self.infer_segment(*s.value, s.options, s.location))
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(TypedExpr::Bitstring {
+        Ok(TypedExpr::BitString {
             location,
             elems,
-            typ: bitstring(),
+            typ: bit_string(),
         })
     }
 
@@ -1355,7 +1360,7 @@ impl<'a> Typer<'a> {
 
         Ok(TypedExprBinSegment {
             location,
-            typ: typ,
+            typ,
             value: Box::new(value),
             options,
         })
@@ -1407,8 +1412,8 @@ impl<'a> Typer<'a> {
             BinSegmentOption::Binary { location } => Ok(BinSegmentOption::Binary { location }),
             BinSegmentOption::Integer { location } => Ok(BinSegmentOption::Integer { location }),
             BinSegmentOption::Float { location } => Ok(BinSegmentOption::Float { location }),
-            BinSegmentOption::Bitstring { location } => {
-                Ok(BinSegmentOption::Bitstring { location })
+            BinSegmentOption::BitString { location } => {
+                Ok(BinSegmentOption::BitString { location })
             }
             BinSegmentOption::UTF8 { location } => Ok(BinSegmentOption::UTF8 { location }),
             BinSegmentOption::UTF16 { location } => Ok(BinSegmentOption::UTF16 { location }),
@@ -2066,20 +2071,22 @@ impl<'a> Typer<'a> {
 
             let constructor =
                 module_info
+                    .1
                     .values
                     .get(&label)
                     .ok_or_else(|| Error::UnknownModuleValue {
                         name: label.clone(),
                         location: select_location.clone(),
-                        module_name: module_info.name.clone(),
+                        module_name: module_info.1.name.clone(),
                         value_constructors: module_info
+                            .1
                             .values
                             .keys()
                             .map(|t| t.to_string())
                             .collect(),
                     })?;
 
-            (module_info.name.clone(), constructor.clone())
+            (module_info.1.name.clone(), constructor.clone())
         };
 
         Ok(TypedExpr::ModuleSelect {
@@ -2127,7 +2134,7 @@ impl<'a> Typer<'a> {
             Type::App { module, name, .. } => self
                 .importable_modules
                 .get(&module.join("/"))
-                .and_then(|module| module.accessors.get(name)),
+                .and_then(|module| module.1.accessors.get(name)),
 
             _something_without_fields => return Err(unknown_field(vec![])),
         }
@@ -2961,7 +2968,7 @@ fn register_types(
 ///
 pub fn infer_module(
     module: UntypedModule,
-    modules: &HashMap<String, Module>,
+    modules: &HashMap<String, (Origin, Module)>,
     warnings: &mut Vec<Warning>,
 ) -> Result<TypedModule, Error> {
     let mut typer = Typer::new(module.name.as_slice(), modules, warnings);
@@ -3001,7 +3008,7 @@ pub fn infer_module(
                         Some(alias) => alias,
                     };
 
-                    if let Some(value) = module_info.values.get(name) {
+                    if let Some(value) = module_info.1.values.get(name) {
                         typer.insert_variable(
                             imported_name.clone(),
                             value.variant.clone(),
@@ -3010,7 +3017,7 @@ pub fn infer_module(
                         imported = true;
                     }
 
-                    if let Some(typ) = module_info.types.get(name) {
+                    if let Some(typ) = module_info.1.types.get(name) {
                         match typer.insert_type_constructor(imported_name.clone(), typ.clone()) {
                             Ok(_) => (),
                             Err(e) => return Err(e),
@@ -3025,11 +3032,13 @@ pub fn infer_module(
                             name: name.clone(),
                             module_name: module.clone(),
                             value_constructors: module_info
+                                .1
                                 .values
                                 .keys()
                                 .map(|t| t.to_string())
                                 .collect(),
                             type_constructors: module_info
+                                .1
                                 .types
                                 .keys()
                                 .map(|t| t.to_string())
@@ -3039,6 +3048,7 @@ pub fn infer_module(
                 }
 
                 // Insert imported module into scope
+                // TODO: use a refernce to the module to avoid copying
                 typer
                     .imported_modules
                     .insert(module_name, module_info.clone());
@@ -3552,7 +3562,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         Ok(typed_multi)
     }
 
-    fn infer_pattern_bitstring(
+    fn infer_pattern_bit_string(
         &mut self,
         mut elems: Vec<UntypedPatternBinSegment>,
         location: SrcSpan,
@@ -3572,7 +3582,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             None => (),
         }
 
-        Ok(TypedPattern::Bitstring {
+        Ok(TypedPattern::BitString {
             location,
             elems: typed_segments,
         })
@@ -3602,10 +3612,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         let typed_value = self.unify(*value, typ.clone())?;
 
         Ok(TypedPatternBinSegment {
-            location: location,
+            location,
             value: Box::new(typed_value),
             options,
-            typ: typ,
+            typ,
         })
     }
 
@@ -3651,8 +3661,8 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             BinSegmentOption::Binary { location } => Ok(BinSegmentOption::Binary { location }),
             BinSegmentOption::Integer { location } => Ok(BinSegmentOption::Integer { location }),
             BinSegmentOption::Float { location } => Ok(BinSegmentOption::Float { location }),
-            BinSegmentOption::Bitstring { location } => {
-                Ok(BinSegmentOption::Bitstring { location })
+            BinSegmentOption::BitString { location } => {
+                Ok(BinSegmentOption::BitString { location })
             }
             BinSegmentOption::UTF8 { location } => Ok(BinSegmentOption::UTF8 { location }),
             BinSegmentOption::UTF16 { location } => Ok(BinSegmentOption::UTF16 { location }),
@@ -3798,7 +3808,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 }
             },
 
-            Pattern::Bitstring { location, elems } => self.infer_pattern_bitstring(elems, location),
+            Pattern::BitString { location, elems } => {
+                self.infer_pattern_bit_string(elems, location)
+            }
 
             Pattern::Constructor {
                 location,
@@ -3991,7 +4003,7 @@ fn convert_unify_error(e: UnifyError, location: &SrcSpan) -> Error {
     }
 }
 
-fn convert_binary_error(e: crate::bitstring::Error, location: &SrcSpan) -> Error {
+fn convert_binary_error(e: crate::bit_string::Error, location: &SrcSpan) -> Error {
     match e {
         BinaryError::ConflictingSignednessOptions {
             location,
@@ -4353,11 +4365,11 @@ pub fn fn_(args: Vec<Arc<Type>>, retrn: Arc<Type>) -> Arc<Type> {
     Arc::new(Type::Fn { retrn, args })
 }
 
-pub fn bitstring() -> Arc<Type> {
+pub fn bit_string() -> Arc<Type> {
     Arc::new(Type::App {
         args: vec![],
         public: true,
-        name: "Bitstring".to_string(),
+        name: "BitString".to_string(),
         module: vec![],
     })
 }

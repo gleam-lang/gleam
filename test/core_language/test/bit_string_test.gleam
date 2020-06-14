@@ -32,6 +32,20 @@ pub fn size_variable_from_match_test() {
   should.equal(species, <<"Walrus":utf8>>)
 }
 
+pub fn sizes_with_expressions_test() {
+  let a = 1
+  let b = <<a:size(a * 2), a:size(3 + integer_fn())>>
+
+  should.equal(b, <<1:2, 1:4>>)
+}
+
+// Units
+pub fn units_test() {
+  let a = <<1:size(1)-unit(8), 2:size(1)-unit(16)>>
+
+  should.equal(a, <<1, 0, 2>>)
+}
+
 // Strings
 pub fn string_test() {
   let a = "test"

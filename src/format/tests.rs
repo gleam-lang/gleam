@@ -1182,6 +1182,24 @@ World"
 "#
     );
 
+    // https://github.com/gleam-lang/gleam/issues/658
+    assert_format!(
+        r#"fn main() {
+  { os.system_time(os.Millisecond) < june_12_2020 * 1000000 }
+  |> should.equal(True)
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  { os.system_time(os.Millisecond) < june_12_2020 * 1000000 }
+  |> transform
+  |> should.equal(True)
+}
+"#
+    );
+
     //
     // Let
     //
@@ -2582,7 +2600,7 @@ pub fn two() {
 ",
     );
 
-    // Bitstring construction
+    // BitString construction
 
     assert_format!(
         "fn main() {
@@ -2595,13 +2613,25 @@ pub fn two() {
 ",
     );
 
-    // Bitstring
+    // BitString
 
     assert_format!(
         "fn main() {
   let a = 1
   let <<b, c, d:binary>> = <<1, a, 2:binary>>
   b
+}
+",
+    );
+
+    assert_format!(
+        "fn main() {
+  let some_really_long_variable_name_to_force_wrapping = 1
+  let bits = <<
+    some_really_long_variable_name_to_force_wrapping,
+    some_really_long_variable_name_to_force_wrapping,
+  >>
+  bits
 }
 ",
     );
@@ -2662,6 +2692,27 @@ fn main() {
         "fn main() {
   1
   |> run
+}
+",
+    );
+
+    assert_format_rewrite!(
+        "fn main() {
+  let some_really_long_variable_name_to_force_wrapping = 1
+  let bits = <<
+      some_really_long_variable_name_to_force_wrapping,
+      some_really_long_variable_name_to_force_wrapping,
+    >>
+  bits
+}
+",
+        "fn main() {
+  let some_really_long_variable_name_to_force_wrapping = 1
+  let bits = <<
+    some_really_long_variable_name_to_force_wrapping,
+    some_really_long_variable_name_to_force_wrapping,
+  >>
+  bits
 }
 ",
     );

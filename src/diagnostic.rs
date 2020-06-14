@@ -33,16 +33,6 @@ pub fn write(mut buffer: &mut Buffer, d: Diagnostic, severity: Severity) {
     emit(&mut buffer, &config, &files, &diagnostic).unwrap();
 }
 
-pub fn buffer_writer() -> termcolor::BufferWriter {
-    // Don't add color codes to the output if standard error isn't connected to a terminal
-    let color_choice = if atty::is(atty::Stream::Stderr) {
-        termcolor::ColorChoice::Auto
-    } else {
-        termcolor::ColorChoice::Never
-    };
-    termcolor::BufferWriter::stderr(color_choice)
-}
-
 /// Describes an error encountered while compiling the project (eg. a name collision
 /// between files).
 ///

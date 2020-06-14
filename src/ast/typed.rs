@@ -127,7 +127,7 @@ pub enum TypedExpr {
         typ: Arc<Type>,
     },
 
-    Bitstring {
+    BitString {
         location: SrcSpan,
         typ: Arc<Type>,
         elems: Vec<TypedExprBinSegment>,
@@ -155,7 +155,7 @@ impl TypedExpr {
             Self::TupleIndex { location, .. } => location,
             Self::ModuleSelect { location, .. } => location,
             Self::RecordAccess { location, .. } => location,
-            Self::Bitstring { location, .. } => location,
+            Self::BitString { location, .. } => location,
         }
     }
 
@@ -185,7 +185,7 @@ impl TypedExpr {
             Self::TupleIndex { location, .. } => location,
             Self::ModuleSelect { location, .. } => location,
             Self::RecordAccess { location, .. } => location,
-            Self::Bitstring { location, .. } => location,
+            Self::BitString { location, .. } => location,
         }
     }
 
@@ -209,7 +209,7 @@ impl TypedExpr {
             Self::Var { constructor, .. } => constructor.typ.clone(),
             Self::ModuleSelect { typ, .. } => typ.clone(),
             Self::RecordAccess { typ, .. } => typ.clone(),
-            Self::Bitstring { typ, .. } => typ.clone(),
+            Self::BitString { typ, .. } => typ.clone(),
         }
     }
 }

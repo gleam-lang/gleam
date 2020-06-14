@@ -1,18 +1,22 @@
 #![deny(warnings)]
 
 mod ast;
-mod bitstring;
+mod bit_string;
+mod build;
 mod cli;
+mod config;
 mod diagnostic;
 mod docs;
 mod erl;
 mod error;
+mod eunit;
 mod file;
 mod format;
 mod new;
 mod parser;
 mod pretty;
 mod project;
+mod shell;
 mod typ;
 mod warning;
 
@@ -95,6 +99,18 @@ enum Command {
         )]
         check: bool,
     },
+
+    #[structopt(name = "shell", about = "Start an Erlang shell")]
+    Shell {
+        #[structopt(help = "location of the project root", default_value = ".")]
+        project_root: String,
+    },
+
+    #[structopt(name = "eunit", about = "Run eunit tests")]
+    Eunit {
+        #[structopt(help = "location of the project root", default_value = ".")]
+        project_root: String,
+    },
 }
 
 #[derive(StructOpt, Debug)]
@@ -128,6 +144,8 @@ enum Docs {
 }
 
 fn main() {
+    initialise_logger();
+
     let result = match Command::from_args() {
         Command::Build { project_root } => command_build(project_root),
 
@@ -152,16 +170,32 @@ fn main() {
             project_root,
             template,
         } => new::create(template, name, description, project_root, VERSION),
+
+        Command::Shell { project_root } => shell::command(project_root),
+
+        Command::Eunit { project_root } => eunit::command(project_root),
     };
 
-    if let Err(e) = result {
-        e.pretty_print();
-        std::process::exit(1);
+    match result {
+        Ok(_) => {
+            tracing::info!("Successfully completed");
+        }
+        Err(error) => {
+            tracing::error!(error = ?error, "Failed");
+            error.pretty_print();
+            std::process::exit(1);
+        }
     }
 }
 
 fn command_build(root: String) -> Result<(), Error> {
     let root = PathBuf::from(&root);
+    let config = config::read_project_config(&root)?;
+
+    // Use new build tool
+    if config.tool == config::BuildTool::Gleam {
+        return build::main(config, root).map(|_| ());
+    }
 
     // Read and type check project
     let (_config, analysed) = project::read_and_analyse(&root)?;
@@ -181,4 +215,12 @@ fn command_build(root: String) -> Result<(), Error> {
     println!("Done!");
 
     Ok(())
+}
+
+fn initialise_logger() {
+    tracing_subscriber::fmt()
+        .with_env_filter(&std::env::var("GLEAM_LOG").unwrap_or_else(|_| "error".to_string()))
+        .with_target(false)
+        .without_time()
+        .init();
 }
