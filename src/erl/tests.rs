@@ -958,6 +958,64 @@ three() ->
 "
     .to_string();
     assert_eq!(expected, module(&m));
+
+    let m = Module {
+        documentation: vec![],
+        type_info: crate::typ::Module {
+            name: vec!["constants".to_string()],
+            types: HashMap::new(),
+            values: HashMap::new(),
+            accessors: HashMap::new(),
+        },
+        name: vec!["constants".to_string()],
+        statements: vec![
+            Statement::ModuleConstant {
+                doc: None,
+                location: Default::default(),
+                public: false,
+                name: "smiley".to_string(),
+                value: Box::new(ConstValue::String {
+                    location: Default::default(),
+                    typ: crate::typ::string(),
+                    value: ":)".to_string(),
+                }),
+                typ: crate::typ::string(),
+            },
+            Statement::Fn {
+                doc: None,
+                return_type: typ::int(),
+                return_annotation: None,
+                location: Default::default(),
+                args: vec![],
+                name: "str_const".to_string(),
+                public: false,
+                body: TypedExpr::Var {
+                    location: Default::default(),
+                    constructor: ValueConstructor {
+                        public: true,
+                        origin: Default::default(),
+                        variant: ValueConstructorVariant::ModuleConstValue {
+                            literal: ConstValue::String {
+                                location: Default::default(),
+                                typ: crate::typ::string(),
+                                value: ":)".to_string(),
+                            },
+                        },
+                        typ: crate::typ::int(),
+                    },
+                    name: "smiley".to_string(),
+                },
+            },
+        ],
+    };
+    let expected = "-module(constants).
+-compile(no_auto_import).
+
+str_const() ->
+    <<\":)\"/utf8>>.
+"
+    .to_string();
+    assert_eq!(expected, module(&m));
 }
 
 #[test]
@@ -2413,6 +2471,37 @@ x() ->
 main() ->
     A = <<(x())/integer>>,
     A.
+"#,
+    );
+
+    assert_erl!(
+        r#"
+pub const string_value = "constant value"
+pub const float_value = 3.14
+pub const int_value = 42
+
+pub fn main(arg1, arg2, arg3) {
+  case tuple(arg1, arg2, arg3) {
+    tuple(x, y, z) if x == string_value && y >. float_value && z == int_value -> 1
+    _ -> 0
+  }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/3]).
+
+main(Arg1, Arg2, Arg3) ->
+    case {Arg1, Arg2, Arg3} of
+        {X,
+         Y,
+         Z} when ((X =:= <<"constant value"/utf8>>) andalso (Y > 3.14)) andalso (Z =:= 42) ->
+            1;
+
+        _ ->
+            0
+    end.
 "#,
     );
 }
