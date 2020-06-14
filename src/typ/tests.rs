@@ -423,6 +423,10 @@ fn infer_test() {
         "let a = <<1>> let <<x:binary>> = <<1, a:2-binary>> x",
         "BitString"
     );
+    assert_infer!(
+        "let x = <<<<1>>:bit_string, <<2>>:bit_string>> x",
+        "BitString"
+    );
 }
 
 macro_rules! assert_error {
@@ -495,9 +499,9 @@ fn infer_bit_string_error_test() {
     );
 
     assert_error!(
-        "let x = <<1:binary>> x",
+        "case <<1>> { <<1:binary, _:binary>> -> 1 }",
         Error::BinarySegmentMustHaveSize {
-            location: SrcSpan { start: 10, end: 18 },
+            location: SrcSpan { start: 15, end: 23 },
         },
     );
 
