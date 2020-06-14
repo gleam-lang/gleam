@@ -196,13 +196,7 @@ fn statement(statement: &TypedStatement, module: &[String]) -> Option<Document> 
         Statement::CustomType { .. } => None,
         Statement::Import { .. } => None,
         Statement::ExternalType { .. } => None,
-
-        Statement::ModuleConstant {
-            public,
-            name,
-            value,
-            ..
-        } => mod_const(*public, name, value),
+        Statement::ModuleConstant { .. } => None,
 
         Statement::Fn {
             args, name, body, ..
@@ -222,24 +216,6 @@ fn statement(statement: &TypedStatement, module: &[String]) -> Option<Document> 
             args.len(),
         )),
     }
-}
-
-fn mod_const(public: bool, name: &str, value: &TypedConstValue) -> Option<Document> {
-    if !public {
-        return None;
-    }
-    let value: &str = match value {
-        TypedConstValue::Int { value, .. } => value,
-        TypedConstValue::Float { value, .. } => value,
-        TypedConstValue::String { value, .. } => value,
-    };
-
-    Some(
-        atom(name.to_string())
-            .append("() -> ")
-            .append(value)
-            .append("."),
-    )
 }
 
 fn mod_fun(name: &str, args: &[TypedArg], body: &TypedExpr, module: &[String]) -> Document {
@@ -647,6 +623,8 @@ fn var(name: &str, constructor: &ValueConstructor, env: &mut Env) -> Document {
 
         ValueConstructorVariant::LocalVariable => env.local_var_name(name.to_string()),
 
+        ValueConstructorVariant::ModuleConstValue { literal } => const_inline(literal),
+
         ValueConstructorVariant::ModuleFn {
             arity, ref module, ..
         } if module.as_slice() == env.module => "fun "
@@ -667,6 +645,14 @@ fn var(name: &str, constructor: &ValueConstructor, env: &mut Env) -> Document {
             .append(atom(name.to_string()))
             .append("/")
             .append(*arity),
+    }
+}
+
+fn const_inline(literal: &ConstValue<Arc<Type>>) -> Document {
+    match literal {
+        ConstValue::Int { value, .. } => value.to_string().to_doc(),
+        ConstValue::Float { value, .. } => value.to_string().to_doc(),
+        ConstValue::String { value, .. } => string(value),
     }
 }
 
@@ -995,6 +981,11 @@ fn expr(expression: &TypedExpr, env: &mut Env) -> Document {
             constructor: ModuleValueConstructor::Record { name, arity: 0 },
             ..
         } => atom(name.to_snake_case()),
+
+        TypedExpr::ModuleSelect {
+            constructor: ModuleValueConstructor::ConstValue { literal },
+            ..
+        } => const_inline(literal), //module_select_fn(typ.clone(), module_name, label),
 
         TypedExpr::ModuleSelect {
             constructor: ModuleValueConstructor::Record { name, arity },

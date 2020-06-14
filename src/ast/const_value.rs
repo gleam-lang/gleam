@@ -29,4 +29,12 @@ impl TypedConstValue {
             TypedConstValue::String { typ, .. } => typ.clone(),
         }
     }
+
+    pub fn location(&self) -> &SrcSpan {
+        match self {
+            TypedConstValue::Int { location, .. } => location,
+            TypedConstValue::Float { location, .. } => location,
+            TypedConstValue::String { location, .. } => location,
+        }
+    }
 }
