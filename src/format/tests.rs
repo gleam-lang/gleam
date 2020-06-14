@@ -2635,6 +2635,19 @@ pub fn two() {
 }
 ",
     );
+
+    //
+    // Module level constants
+    //
+
+    assert_format!(
+        "pub const str = \"a string\"
+
+pub const int = 4
+
+pub const float = 3.14
+"
+    );
 }
 
 #[test]
