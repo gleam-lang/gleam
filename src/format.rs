@@ -235,12 +235,12 @@ impl<'a> Formatter<'a> {
 
     fn const_expr(&mut self, value: &ConstValue<()>) -> Document {
         match value {
-            ConstValue::Int { value, .. }
-            | ConstValue::Float { value, .. }
-            | ConstValue::String { value, .. } => value,
+            ConstValue::Int { value, .. } | ConstValue::Float { value, .. } => {
+                value.clone().to_doc()
+            }
+
+            ConstValue::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
         }
-        .clone()
-        .to_doc()
     }
 
     fn documented_statement(&mut self, s: &UntypedStatement) -> Document {
