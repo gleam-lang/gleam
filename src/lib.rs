@@ -68,31 +68,40 @@ pub trait Client {
         }
     }
 
-    // TODO: document
-    // TODO: test
     // TODO: verify signature
-    // TODO: error type
-    async fn get_repository_names(&self) -> Result<Vec<String>, ()> {
+    /// Get the names of all of the packages on the package registry.
+    ///
+    async fn get_repository_names(&self) -> Result<Vec<String>, GetRepositoryNamesError> {
         let response = self
             .http_client()
             .get(self.repository_base_url().join("names").unwrap())
             .send()
             .await
-            .map_err(|_| ())?;
+            .map_err(GetRepositoryNamesError::Http)?;
 
-        if response.status() != StatusCode::OK {
-            return Err(());
-        }
+        match response.status() {
+            StatusCode::OK => (),
+            status => {
+                return Err(GetRepositoryNamesError::UnexpectedResponse(
+                    status,
+                    response.text().await.unwrap_or_default(),
+                ));
+            }
+        };
 
-        let body = response.bytes().await.map_err(|_| ())?.reader();
+        let body = response
+            .bytes()
+            .await
+            .map_err(GetRepositoryNamesError::Http)?
+            .reader();
+
         let mut body = GzDecoder::new(body);
-
-        let signed = protobuf::parse_from_reader::<Signed>(&mut body).map_err(|_| ())?;
-
+        let signed = protobuf::parse_from_reader::<Signed>(&mut body)
+            .map_err(GetRepositoryNamesError::DecodeFailed)?;
         let payload = signed.get_payload();
 
         let names = protobuf::parse_from_bytes::<Names>(payload)
-            .map_err(|_| ())?
+            .map_err(GetRepositoryNamesError::DecodeFailed)?
             .take_packages()
             .into_iter()
             .map(|mut n| n.take_name())
@@ -100,6 +109,18 @@ pub trait Client {
 
         Ok(names)
     }
+}
+
+#[derive(Error, Debug)]
+pub enum GetRepositoryNamesError {
+    #[error(transparent)]
+    Http(#[from] reqwest::Error),
+
+    #[error("an unexpected response was sent by Hex")]
+    UnexpectedResponse(StatusCode, String),
+
+    #[error(transparent)]
+    DecodeFailed(#[from] protobuf::ProtobufError),
 }
 
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), " (", env!("CARGO_PKG_VERSION"), ")");
