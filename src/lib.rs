@@ -3,7 +3,10 @@ mod proto;
 #[cfg(test)]
 mod tests;
 
+use crate::proto::{names::Names, signed::Signed};
 use async_trait::async_trait;
+use bytes::buf::ext::BufExt;
+use flate2::read::GzDecoder;
 use lazy_static::lazy_static;
 use regex::Regex;
 use reqwest::StatusCode;
@@ -63,6 +66,39 @@ pub trait Client {
                 response.text().await.unwrap_or_default(),
             )),
         }
+    }
+
+    // TODO: document
+    // TODO: test
+    // TODO: verify signature
+    // TODO: error type
+    async fn get_repository_names(&self) -> Result<Vec<String>, ()> {
+        let response = self
+            .http_client()
+            .get(self.repository_base_url().join("names").unwrap())
+            .send()
+            .await
+            .map_err(|_| ())?;
+
+        if response.status() != StatusCode::OK {
+            return Err(());
+        }
+
+        let body = response.bytes().await.map_err(|_| ())?.reader();
+        let mut body = GzDecoder::new(body);
+
+        let signed = protobuf::parse_from_reader::<Signed>(&mut body).map_err(|_| ())?;
+
+        let payload = signed.get_payload();
+
+        let names = protobuf::parse_from_bytes::<Names>(payload)
+            .map_err(|_| ())?
+            .take_packages()
+            .into_iter()
+            .map(|mut n| n.take_name())
+            .collect();
+
+        Ok(names)
     }
 }
 

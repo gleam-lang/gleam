@@ -1,4 +1,4 @@
-mod names;
-mod package;
-mod signed;
-mod versions;
+pub mod names;
+pub mod signed;
+// pub mod package;
+// pub mod versions;

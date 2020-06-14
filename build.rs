@@ -3,9 +3,9 @@ fn main() {
         .out_dir("src/proto")
         .inputs(&[
             "proto/names.proto",
-            "proto/package.proto",
             "proto/signed.proto",
-            "proto/versions.proto",
+            // "proto/package.proto",
+            // "proto/versions.proto",
         ])
         .include("proto")
         .run()

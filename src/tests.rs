@@ -1,7 +1,9 @@
 use super::*;
 use bytes::Bytes;
 use mockito::Matcher;
+use protobuf::Message;
 use serde_json::json;
+use std::io::Write;
 
 #[tokio::test]
 async fn authenticate_test_success() {
@@ -482,6 +484,57 @@ async fn publish_docs_forbidden() {
             result
         ),
     }
+
+    mock.assert();
+}
+
+#[tokio::test]
+async fn get_repository_names_ok_test() {
+    let mut package1 = proto::names::Package::new();
+    package1.set_name("one".to_string());
+    let mut package2 = proto::names::Package::new();
+    package2.set_name("two".to_string());
+    let mut package3 = proto::names::Package::new();
+    package3.set_name("three".to_string());
+    let mut names = proto::names::Names::new();
+    names.set_packages(protobuf::RepeatedField::from(vec![
+        package1, package2, package3,
+    ]));
+    names.set_repository("".to_string());
+    let names_protobuffer: Vec<u8> = names.write_to_bytes().unwrap();
+
+    // Wrap in Signed object
+    let mut signed = proto::signed::Signed::new();
+    signed.set_payload(names_protobuffer);
+    signed.set_signature(vec![]); // TODO: sign
+    let protobuffer: Vec<u8> = signed.write_to_bytes().unwrap();
+
+    // Compress
+    let mut compressor = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+    compressor.write_all(&protobuffer).unwrap();
+    let response_body = compressor.finish().unwrap();
+
+    // Set up test server
+    let mock = mockito::mock("GET", "/names")
+        .expect(1)
+        .with_status(200)
+        .with_body(response_body)
+        .create();
+
+    // Test!
+    let mut client = UnauthenticatedClient::new();
+    client.repository_base = url::Url::parse(&mockito::server_url()).unwrap();
+
+    let names = client.get_repository_names().await;
+
+    assert_eq!(
+        Ok(vec![
+            "one".to_string(),
+            "two".to_string(),
+            "three".to_string(),
+        ]),
+        names,
+    );
 
     mock.assert();
 }
