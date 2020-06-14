@@ -1023,7 +1023,7 @@ fn expr(expression: &TypedExpr, env: &mut Env) -> Document {
         TypedExpr::ModuleSelect {
             constructor: ModuleValueConstructor::ConstValue { literal },
             ..
-        } => const_inline(literal), //module_select_fn(typ.clone(), module_name, label),
+        } => const_inline(literal),
 
         TypedExpr::ModuleSelect {
             constructor: ModuleValueConstructor::Record { name, arity },
