@@ -1327,7 +1327,7 @@ impl<'a> Typer<'a> {
             .map(|option| self.infer_segment_option(option))
             .collect::<Result<Vec<_>, _>>()?;
 
-        let type_specifier = BinaryTypeSpecifier::new(&options, true)
+        let type_specifier = BinaryTypeSpecifier::new(&options, false)
             .map_err(|e| convert_binary_error(e, &location))?;
         let typ = type_specifier.typ().unwrap_or_else(|| int());
 
