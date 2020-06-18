@@ -219,7 +219,7 @@ fn command_build(root: String) -> Result<(), Error> {
 
 fn initialise_logger() {
     tracing_subscriber::fmt()
-        .with_env_filter(&std::env::var("GLEAM_LOG").unwrap_or_else(|_| "error".to_string()))
+        .with_env_filter(&std::env::var("GLEAM_LOG").unwrap_or_else(|_| "off".to_string()))
         .with_target(false)
         .without_time()
         .init();
