@@ -416,9 +416,24 @@ fn infer_test() {
     assert_infer!("let <<x:bytes>> = <<1>> x", "BitString");
     assert_infer!("let <<x:bit_string>> = <<1>> x", "BitString");
     assert_infer!("let <<x:bits>> = <<1>> x", "BitString");
-    assert_infer!("let <<x:utf8>> = <<1>> x", "String");
-    assert_infer!("let <<x:utf16>> = <<1>> x", "BitString");
-    assert_infer!("let <<x:utf32>> = <<1>> x", "BitString");
+
+    assert_infer!("let <<x:utf8>> = <<1>> x", "UtfCodepoint");
+    assert_infer!("let <<x:utf16>> = <<1>> x", "UtfCodepoint");
+    assert_infer!("let <<x:utf32>> = <<1>> x", "UtfCodepoint");
+    assert_infer!("let <<x:utf8>> = <<1>> <<x:utf8_codepoint>>", "BitString");
+    assert_infer!(
+        "let <<x:utf16>> = <<1>> x <<x:utf16_codepoint>>",
+        "BitString"
+    );
+    assert_infer!(
+        "let <<x:utf32>> = <<1>> x <<x:utf32_codepoint>>",
+        "BitString"
+    );
+    assert_infer!(
+        "let <<x:utf8>> = <<128013:32>> <<x:utf32_codepoint>>",
+        "BitString"
+    );
+
     assert_infer!(
         "let a = <<1>> let <<x:binary>> = <<1, a:2-binary>> x",
         "BitString"
@@ -477,7 +492,7 @@ fn infer_bit_string_error_test() {
         "case <<1>> { <<a:utf16>> if a == \"test\" -> 1 }",
         Error::CouldNotUnify {
             location: SrcSpan { start: 28, end: 39 },
-            expected: bit_string(),
+            expected: utf_codepoint(),
             given: string(),
         },
     );

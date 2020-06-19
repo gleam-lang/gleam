@@ -536,6 +536,19 @@ impl<'a> Typer<'a> {
             )
             .gleam_expect("prelude inserting BitString type");
 
+        typer
+            .insert_type_constructor(
+                "UtfCodepoint".to_string(),
+                TypeConstructor {
+                    origin: Default::default(),
+                    parameters: vec![],
+                    typ: utf_codepoint(),
+                    module: vec![],
+                    public: true,
+                },
+            )
+            .gleam_expect("prelude inserting UTF Codepoint type");
+
         let ok = typer.new_generic_var();
         let error = typer.new_generic_var();
         typer.insert_variable(
@@ -1353,7 +1366,7 @@ impl<'a> Typer<'a> {
 
         let type_specifier = BinaryTypeSpecifier::new(&options, false)
             .map_err(|e| convert_binary_error(e, &location))?;
-        let typ = type_specifier.typ().unwrap_or_else(|| int());
+        let typ = type_specifier.construction_typ().unwrap_or_else(|| int());
 
         self.unify(typ.clone(), value.typ())
             .map_err(|e| convert_unify_error(e, value.location()))?;
@@ -1418,6 +1431,15 @@ impl<'a> Typer<'a> {
             BinSegmentOption::UTF8 { location } => Ok(BinSegmentOption::UTF8 { location }),
             BinSegmentOption::UTF16 { location } => Ok(BinSegmentOption::UTF16 { location }),
             BinSegmentOption::UTF32 { location } => Ok(BinSegmentOption::UTF32 { location }),
+            BinSegmentOption::UTF8Codepoint { location } => {
+                Ok(BinSegmentOption::UTF8Codepoint { location })
+            }
+            BinSegmentOption::UTF16Codepoint { location } => {
+                Ok(BinSegmentOption::UTF16Codepoint { location })
+            }
+            BinSegmentOption::UTF32Codepoint { location } => {
+                Ok(BinSegmentOption::UTF32Codepoint { location })
+            }
             BinSegmentOption::Signed { location } => Ok(BinSegmentOption::Signed { location }),
             BinSegmentOption::Unsigned { location } => Ok(BinSegmentOption::Unsigned { location }),
             BinSegmentOption::Big { location } => Ok(BinSegmentOption::Big { location }),
@@ -3608,7 +3630,12 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         let typed_segment = BinaryTypeSpecifier::new(&options, !is_last_segment)
             .map_err(|e| convert_binary_error(e, &location))?;
 
-        let typ = typed_segment.typ().unwrap_or_else(|| int());
+        let typ = {
+            match &*value {
+                Pattern::Var { .. } => typed_segment.match_typ().unwrap_or_else(|| int()),
+                _ => typed_segment.construction_typ().unwrap_or_else(|| int()),
+            }
+        };
         let typed_value = self.unify(*value, typ.clone())?;
 
         Ok(TypedPatternBinSegment {
@@ -3667,6 +3694,15 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             BinSegmentOption::UTF8 { location } => Ok(BinSegmentOption::UTF8 { location }),
             BinSegmentOption::UTF16 { location } => Ok(BinSegmentOption::UTF16 { location }),
             BinSegmentOption::UTF32 { location } => Ok(BinSegmentOption::UTF32 { location }),
+            BinSegmentOption::UTF8Codepoint { location } => {
+                Ok(BinSegmentOption::UTF8Codepoint { location })
+            }
+            BinSegmentOption::UTF16Codepoint { location } => {
+                Ok(BinSegmentOption::UTF16Codepoint { location })
+            }
+            BinSegmentOption::UTF32Codepoint { location } => {
+                Ok(BinSegmentOption::UTF32Codepoint { location })
+            }
             BinSegmentOption::Signed { location } => Ok(BinSegmentOption::Signed { location }),
             BinSegmentOption::Unsigned { location } => Ok(BinSegmentOption::Unsigned { location }),
             BinSegmentOption::Big { location } => Ok(BinSegmentOption::Big { location }),
@@ -4370,6 +4406,15 @@ pub fn bit_string() -> Arc<Type> {
         args: vec![],
         public: true,
         name: "BitString".to_string(),
+        module: vec![],
+    })
+}
+
+pub fn utf_codepoint() -> Arc<Type> {
+    Arc::new(Type::App {
+        args: vec![],
+        public: true,
+        name: "UtfCodepoint".to_string(),
         module: vec![],
     })
 }

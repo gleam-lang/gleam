@@ -1169,7 +1169,8 @@ at the end of a bin pattern",
                     writeln!(
                         buffer,
                         "{} is not a valid option for a bit string segment.
-Valid options are: binary, int, float, bit_string, utf8, utf16, utf32,
+Valid options are: binary, int, float, bit_string,
+utf8, utf16, utf32, utf8_codepoint, utf16_codepoint, utf32_codepoint,
 signed, unsigned, big, little, native, size, unit",
                         label
                     )
