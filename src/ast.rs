@@ -662,6 +662,18 @@ pub enum BinSegmentOption<Value> {
         location: SrcSpan,
     },
 
+    UTF8Codepoint {
+        location: SrcSpan,
+    },
+
+    UTF16Codepoint {
+        location: SrcSpan,
+    },
+
+    UTF32Codepoint {
+        location: SrcSpan,
+    },
+
     Signed {
         location: SrcSpan,
     },
@@ -719,6 +731,9 @@ impl<A> BinSegmentOption<A> {
             BinSegmentOption::UTF8 { location } => location,
             BinSegmentOption::UTF16 { location } => location,
             BinSegmentOption::UTF32 { location } => location,
+            BinSegmentOption::UTF8Codepoint { location } => location,
+            BinSegmentOption::UTF16Codepoint { location } => location,
+            BinSegmentOption::UTF32Codepoint { location } => location,
             BinSegmentOption::Signed { location } => location,
             BinSegmentOption::Unsigned { location } => location,
             BinSegmentOption::Big { location } => location,
@@ -739,6 +754,9 @@ impl<A> BinSegmentOption<A> {
             BinSegmentOption::UTF8 { .. } => SegmentOptionCategory::Type,
             BinSegmentOption::UTF16 { .. } => SegmentOptionCategory::Type,
             BinSegmentOption::UTF32 { .. } => SegmentOptionCategory::Type,
+            BinSegmentOption::UTF8Codepoint { .. } => SegmentOptionCategory::Type,
+            BinSegmentOption::UTF16Codepoint { .. } => SegmentOptionCategory::Type,
+            BinSegmentOption::UTF32Codepoint { .. } => SegmentOptionCategory::Type,
             BinSegmentOption::Signed { .. } => SegmentOptionCategory::Signedness,
             BinSegmentOption::Unsigned { .. } => SegmentOptionCategory::Signedness,
             BinSegmentOption::Big { .. } => SegmentOptionCategory::Endianness,
@@ -759,6 +777,9 @@ impl<A> BinSegmentOption<A> {
             BinSegmentOption::UTF8 { .. } => "utf8".to_string(),
             BinSegmentOption::UTF16 { .. } => "utf16".to_string(),
             BinSegmentOption::UTF32 { .. } => "utf32".to_string(),
+            BinSegmentOption::UTF8Codepoint { .. } => "utf8_codepoint".to_string(),
+            BinSegmentOption::UTF16Codepoint { .. } => "utf16_codepoint".to_string(),
+            BinSegmentOption::UTF32Codepoint { .. } => "utf32_codepoint".to_string(),
             BinSegmentOption::Signed { .. } => "signed".to_string(),
             BinSegmentOption::Unsigned { .. } => "unsigned".to_string(),
             BinSegmentOption::Big { .. } => "big".to_string(),

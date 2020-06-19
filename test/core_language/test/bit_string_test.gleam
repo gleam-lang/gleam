@@ -67,3 +67,10 @@ pub fn emoji_test() {
 
   should.equal(b, <<"😁":utf8>>)
 }
+
+pub fn codepoint_conversion_test() {
+  let <<snake:utf8>> = <<"🐍":utf8>>
+  let <<snake_int:32>> = <<snake:utf32_codepoint>>
+
+  should.equal(snake_int, 128013)
+}

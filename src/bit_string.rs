@@ -134,15 +134,34 @@ impl<T> BinaryTypeSpecifier<T> {
         }
     }
 
-    pub fn typ(&self) -> Option<Arc<Type>> {
+    pub fn construction_typ(&self) -> Option<Arc<Type>> {
         match self.typ {
             Some(BinSegmentOption::Integer { .. }) => Some(crate::typ::int()),
             Some(BinSegmentOption::Float { .. }) => Some(crate::typ::float()),
             Some(BinSegmentOption::Binary { .. }) => Some(crate::typ::bit_string()),
             Some(BinSegmentOption::BitString { .. }) => Some(crate::typ::bit_string()),
             Some(BinSegmentOption::UTF8 { .. }) => Some(crate::typ::string()),
-            Some(BinSegmentOption::UTF16 { .. }) => Some(crate::typ::bit_string()),
-            Some(BinSegmentOption::UTF32 { .. }) => Some(crate::typ::bit_string()),
+            Some(BinSegmentOption::UTF16 { .. }) => Some(crate::typ::string()),
+            Some(BinSegmentOption::UTF32 { .. }) => Some(crate::typ::string()),
+            Some(BinSegmentOption::UTF8Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
+            Some(BinSegmentOption::UTF16Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
+            Some(BinSegmentOption::UTF32Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
+            _ => None,
+        }
+    }
+
+    pub fn match_typ(&self) -> Option<Arc<Type>> {
+        match self.typ {
+            Some(BinSegmentOption::Integer { .. }) => Some(crate::typ::int()),
+            Some(BinSegmentOption::Float { .. }) => Some(crate::typ::float()),
+            Some(BinSegmentOption::Binary { .. }) => Some(crate::typ::bit_string()),
+            Some(BinSegmentOption::BitString { .. }) => Some(crate::typ::bit_string()),
+            Some(BinSegmentOption::UTF8 { .. }) => Some(crate::typ::utf_codepoint()),
+            Some(BinSegmentOption::UTF16 { .. }) => Some(crate::typ::utf_codepoint()),
+            Some(BinSegmentOption::UTF32 { .. }) => Some(crate::typ::utf_codepoint()),
+            Some(BinSegmentOption::UTF8Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
+            Some(BinSegmentOption::UTF16Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
+            Some(BinSegmentOption::UTF32Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
             _ => None,
         }
     }
