@@ -8,7 +8,9 @@
 - Single letter module names are now permitted.
 - Added support for bit string syntax.
 - Support for the deprecated list prepend syntax has been removed.
-- Added module level constants that can contain int, float and string values and are inlined at compile time.
+- Added module level constants that can contain int, float and string values
+  and are inlined at compile time.
+- The formatter style has been improved to wrap and sort imports.
 
 ## v0.9.1 - 2020-06-12
 

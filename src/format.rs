@@ -206,16 +206,13 @@ impl<'a> Formatter<'a> {
                 .append(if unqualified.is_empty() {
                     nil()
                 } else {
+                    let unqualified = unqualified
+                        .iter()
+                        .sorted_by(|a, b| a.name.cmp(&b.name))
+                        .map(|e| e.to_doc().flex_break())
+                        .intersperse(delim(",").flex_break());
                     ".{".to_doc()
-                        .append(
-                            concat(
-                                unqualified
-                                    .iter()
-                                    .map(|e| e.clone().to_doc().flex_break())
-                                    .intersperse(delim(",").flex_break()),
-                            )
-                            .flex_group(INDENT),
-                        )
+                        .append(concat(unqualified).flex_group(INDENT))
                         .append("}")
                 })
                 .append(if let Some(name) = as_name {
@@ -223,6 +220,7 @@ impl<'a> Formatter<'a> {
                 } else {
                     nil()
                 }),
+
             Statement::ModuleConstant {
                 public,
                 name,
