@@ -34,6 +34,8 @@ bytes = "0.5"
 protobuf = "2.3"
 # gzip (de)compression
 flate2 = "1.0"
+# RSA signature verification
+ring = "0.16"
 
 [dev-dependencies]
 # HTTP mock server

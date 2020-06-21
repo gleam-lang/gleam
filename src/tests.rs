@@ -1,9 +1,7 @@
 use super::*;
 use bytes::Bytes;
 use mockito::Matcher;
-use protobuf::Message;
 use serde_json::json;
-use std::io::Write;
 
 #[tokio::test]
 async fn authenticate_test_success() {
@@ -490,54 +488,22 @@ async fn publish_docs_forbidden() {
 
 #[tokio::test]
 async fn get_repository_versions_ok_test() {
-    let mut package1 = proto::versions::Package::new();
-    package1.set_name("one".to_string());
-    package1.set_versions(protobuf::RepeatedField::from_vec(vec![
-        "1.0.0".to_string(),
-        "2.0.0".to_string(),
-    ]));
-    let mut package2 = proto::versions::Package::new();
-    package2.set_name("two".to_string());
-    package2.set_versions(protobuf::RepeatedField::from_vec(vec![
-        "1.0.0".to_string(),
-        "1.1.0".to_string(),
-    ]));
-    let mut package3 = proto::versions::Package::new();
-    package3.set_name("three".to_string());
-    package3.set_versions(protobuf::RepeatedField::from_vec(vec![
-        "0.0.0".to_string(),
-        "8.0.0".to_string(),
-    ]));
-    let mut versions = proto::versions::Versions::new();
-    versions.set_packages(protobuf::RepeatedField::from(vec![
-        package1, package2, package3,
-    ]));
-    versions.set_repository("".to_string());
-    let versions_protobuffer: Vec<u8> = versions.write_to_bytes().unwrap();
-
-    // Wrap in Signed object
-    let mut signed = proto::signed::Signed::new();
-    signed.set_payload(versions_protobuffer);
-    signed.set_signature(vec![]); // TODO: sign
-    let protobuffer: Vec<u8> = signed.write_to_bytes().unwrap();
-
-    // Compress
-    let mut compressor = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
-    compressor.write_all(&protobuffer).unwrap();
-    let response_body = compressor.finish().unwrap();
+    let response_body = std::include_bytes!("../test/versions");
 
     // Set up test server
     let mock = mockito::mock("GET", "/versions")
         .expect(1)
         .with_status(200)
-        .with_body(response_body)
+        .with_body(&response_body[..])
         .create();
 
     // Test!
     let mut client = UnauthenticatedClient::new();
     client.repository_base = url::Url::parse(&mockito::server_url()).unwrap();
 
-    let versions = client.get_repository_versions().await;
+    let versions = client
+        .get_repository_versions(std::include_bytes!("../test/public_key"))
+        .await;
 
     let mut expected = HashMap::with_capacity(3);
     expected.insert(

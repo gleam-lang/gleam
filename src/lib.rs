@@ -69,11 +69,11 @@ pub trait Client {
         }
     }
 
-    // TODO: verify signature
     /// Get the names and versions of all of the packages on the package registry.
     ///
     async fn get_repository_versions(
         &self,
+        public_key: &[u8],
     ) -> Result<HashMap<String, Vec<String>>, GetRepositoryVersionsError> {
         let response = self
             .http_client()
@@ -101,9 +101,11 @@ pub trait Client {
         let mut body = GzDecoder::new(body);
         let signed = protobuf::parse_from_reader::<Signed>(&mut body)
             .map_err(GetRepositoryVersionsError::DecodeFailed)?;
-        let payload = signed.get_payload();
 
-        let versions = protobuf::parse_from_bytes::<Versions>(payload)
+        let payload = verify_payload(signed, public_key)
+            .map_err(|_| GetRepositoryVersionsError::IncorrectPayloadSignature)?;
+
+        let versions = protobuf::parse_from_bytes::<Versions>(&payload)
             .map_err(GetRepositoryVersionsError::DecodeFailed)?
             .take_packages()
             .into_iter()
@@ -121,6 +123,9 @@ pub enum GetRepositoryVersionsError {
 
     #[error("an unexpected response was sent by Hex")]
     UnexpectedResponse(StatusCode, String),
+
+    #[error("the payload signature does not match the downloaded payload")]
+    IncorrectPayloadSignature,
 
     #[error(transparent)]
     DecodeFailed(#[from] protobuf::ProtobufError),
@@ -351,4 +356,33 @@ fn validate_package_and_version(package: &str, version: &str) -> Result<(), ()> 
         return Err(());
     }
     Ok(())
+}
+
+// To quote the docs:
+//
+// > All resources will be signed by the repository's private key.
+// > A signed resource is wrapped in a Signed message. The data under
+// > the payload field is signed by the signature field.
+// >
+// > The signature is an (unencoded) RSA signature of the (unencoded)
+// > SHA-512 digest of the payload.
+//
+// https://github.com/hexpm/specifications/blob/master/registry-v2.md#signing
+//
+fn verify_payload(mut signed: Signed, pem_public_key: &[u8]) -> Result<Vec<u8>, ()> {
+    // TODO: convert the public key to the right format? ...Maybe? I've tried to do this quite a
+    // few different ways now but I've not had any success.
+    // https://twitter.com/obmarg/status/1274722498286956545
+    let payload = signed.take_payload();
+    let verification = ring::signature::UnparsedPublicKey::new(
+        &ring::signature::RSA_PKCS1_2048_8192_SHA512,
+        pem_public_key,
+    )
+    .verify(payload.as_slice(), signed.get_signature());
+
+    if verification.is_ok() {
+        Ok(payload)
+    } else {
+        Err(())
+    }
 }
