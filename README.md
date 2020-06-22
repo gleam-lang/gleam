@@ -57,6 +57,7 @@ development.
 - [Ben Myles](https://github.com/benmyles)
 - [Bryan Paxton](https://github.com/starbelly)
 - [Clever Bunny LTD](https://github.com/cleverbunny)
+- [David McKay](https://github.com/rawkode)
 - [Hasan YILDIZ](https://github.com/hsnyildiz)
 - [Hendrik Richter](https://github.com/hendi)
 - [Hécate](https://github.com/Kleidukos)
