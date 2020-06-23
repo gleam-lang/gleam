@@ -974,6 +974,7 @@ three() ->
                 location: Default::default(),
                 public: false,
                 name: "smiley".to_string(),
+                annotation: None,
                 value: Box::new(ConstValue::String {
                     location: Default::default(),
                     typ: crate::typ::string(),

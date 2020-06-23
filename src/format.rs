@@ -224,11 +224,13 @@ impl<'a> Formatter<'a> {
             Statement::ModuleConstant {
                 public,
                 name,
+                annotation,
                 value,
                 ..
             } => pub_(*public)
                 .append("const ")
                 .append(name.to_string())
+                .append(self.annotation_(": ", annotation))
                 .append(" = ")
                 .append(self.const_expr(value)),
         }
@@ -333,12 +335,17 @@ impl<'a> Formatter<'a> {
         let doc = arg
             .names
             .to_doc()
-            .append(match &arg.annotation {
-                Some(a) => ": ".to_doc().append(self.type_ast(a)),
-                None => nil(),
-            })
+            .append(self.annotation_(": ", &arg.annotation))
             .group();
         commented(doc, comments)
+    }
+
+    fn annotation_(&mut self, prefix: &str, annotation: &Option<TypeAst>) -> Document {
+        if let Some(anno) = annotation {
+            prefix.to_doc().append(self.type_ast(anno))
+        } else {
+            nil()
+        }
     }
 
     fn fn_(
@@ -353,11 +360,7 @@ impl<'a> Formatter<'a> {
             .append("fn ")
             .append(name)
             .append(self.fn_args(args))
-            .append(if let Some(anno) = return_annotation {
-                " -> ".to_doc().append(self.type_ast(anno))
-            } else {
-                nil()
-            })
+            .append(self.annotation_(" -> ", return_annotation))
             .append(" {")
             .append(line().append(self.expr(body)).nest(INDENT).group())
             .append(line())

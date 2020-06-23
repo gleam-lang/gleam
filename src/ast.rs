@@ -202,6 +202,7 @@ pub enum Statement<T, Expr> {
         location: SrcSpan,
         public: bool,
         name: String,
+        annotation: Option<TypeAst>,
         value: Box<const_value::ConstValue<T>>,
         typ: T,
     },
