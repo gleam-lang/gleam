@@ -128,11 +128,12 @@ StatementImport: UntypedStatement = {
 }
 
 StatementModuleConstant: UntypedStatement = {
-    <s:@L> <p:"pub"?> "const" <name:VarName> "=" <lit:ConstValue> <e:@L> => Statement::ModuleConstant {
+    <s:@L> <p:"pub"?> "const" <name:VarName> <annotation:(":" <Type>)?> "=" <lit:ConstValue> <e:@L> => Statement::ModuleConstant {
         doc: None,
         location: location(s, e),
         public: p.is_some(),
         name,
+        annotation,
         value: Box::new(lit),
         typ: (),
     }

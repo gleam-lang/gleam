@@ -3438,6 +3438,7 @@ pub fn infer_module(
                 doc,
                 location,
                 name,
+                annotation,
                 public,
                 value,
                 ..
@@ -3461,6 +3462,7 @@ pub fn infer_module(
                     doc,
                     location,
                     name,
+                    annotation,
                     public,
                     value: Box::new(typed_expr),
                     typ,

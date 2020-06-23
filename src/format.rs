@@ -225,13 +225,17 @@ impl<'a> Formatter<'a> {
             Statement::ModuleConstant {
                 public,
                 name,
+                annotation,
                 value,
                 ..
-            } => pub_(*public)
-                .append("const ")
-                .append(name.to_string())
-                .append(" = ")
-                .append(self.const_expr(value)),
+            } => {
+                let head = pub_(*public).append("const ").append(name.to_string());
+                let head = match annotation {
+                    None => head,
+                    Some(t) => head.append(": ").append(self.type_ast(t)),
+                };
+                head.append(" = ").append(self.const_expr(value))
+            }
         }
     }
 
@@ -343,14 +347,11 @@ impl<'a> Formatter<'a> {
 
     fn fn_arg<A>(&mut self, arg: &Arg<A>) -> Document {
         let comments = self.pop_comments(arg.location.start);
-        let doc = arg
-            .names
-            .to_doc()
-            .append(match &arg.annotation {
-                Some(a) => ": ".to_doc().append(self.type_ast(a)),
-                None => nil(),
-            })
-            .group();
+        let doc = match &arg.annotation {
+            None => arg.names.to_doc(),
+            Some(a) => arg.names.to_doc().append(": ").append(self.type_ast(a)),
+        }
+        .group();
         commented(doc, comments)
     }
 
