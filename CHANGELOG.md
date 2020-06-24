@@ -11,6 +11,8 @@
 - Added module level constants that can contain int, float and string values
   and are inlined at compile time.
 - The formatter style has been improved to wrap and sort imports.
+- Error message diagnostic code previews for type errors when using the the
+  pipe operator have been made more accurate.
 
 ## v0.9.1 - 2020-06-12
 
@@ -18,7 +20,7 @@
 
 ## v0.9.0 - 2020-06-01
 
-#### [Release blog post](https://lpil.uk/blog/gleam-v0.9-released/)
+#### [Release Blog Post](https://lpil.uk/blog/gleam-v0.9-released/)
 
 - Newly generated projects use stdlib v0.9.0.
 - Additional information is printed to the console when generating HTML
