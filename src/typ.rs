@@ -2273,8 +2273,12 @@ impl<'a> Typer<'a> {
         Ok((fun, args, return_type))
     }
 
-    fn infer_const(&mut self, value: UntypedConstValue) -> Result<TypedConstValue, Error> {
-        match value {
+    fn infer_const(
+        &mut self,
+        annotation: &Option<TypeAst>,
+        value: UntypedConstValue,
+    ) -> Result<TypedConstValue, Error> {
+        let inferred = match value {
             ConstValue::Int {
                 location, value, ..
             } => Ok(ConstValue::Int { location, value }),
@@ -2294,7 +2298,16 @@ impl<'a> Typer<'a> {
             ConstValue::List {
                 elements, location, ..
             } => self.infer_const_list(elements, location),
-        }
+        }?;
+
+        // Check type annotation is accurate.
+        if let Some(ann) = annotation {
+            let const_ann = self.type_from_ast(&ann, NewTypeAction::Disallow)?;
+            self.unify(const_ann, inferred.typ())
+                .map_err(|e| convert_unify_error(e, inferred.location()))?;
+        };
+
+        Ok(inferred)
     }
 
     fn infer_const_tuple(
@@ -2305,7 +2318,7 @@ impl<'a> Typer<'a> {
         let mut elements = Vec::with_capacity(untyped_elements.len());
 
         for element in untyped_elements.into_iter() {
-            let element = self.infer_const(element)?;
+            let element = self.infer_const(&None, element)?;
             elements.push(element);
         }
 
@@ -2321,7 +2334,7 @@ impl<'a> Typer<'a> {
         let mut elements = Vec::with_capacity(untyped_elements.len());
 
         for element in untyped_elements.into_iter() {
-            let element = self.infer_const(element)?;
+            let element = self.infer_const(&None, element)?;
             self.unify(typ.clone(), element.typ())
                 .map_err(|e| convert_unify_error(e, element.location()))?;
             elements.push(element);
@@ -3465,7 +3478,7 @@ pub fn infer_module(
                 value,
                 ..
             } => {
-                let typed_expr = typer.infer_const(*value)?;
+                let typed_expr = typer.infer_const(&annotation, *value)?;
                 let typ = typed_expr.typ();
 
                 typer.insert_module_value(
