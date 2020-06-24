@@ -2343,7 +2343,7 @@ impl<'a> Typer<'a> {
         Ok(ConstValue::List {
             elements,
             location,
-            typ,
+            typ: list(typ),
         })
     }
 
