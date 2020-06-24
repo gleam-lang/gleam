@@ -6,35 +6,35 @@ pub type UntypedConstValue = ConstValue<()>;
 pub enum ConstValue<T> {
     Int {
         location: SrcSpan,
-        typ: T,
         value: String,
     },
+
     Float {
         location: SrcSpan,
-        typ: T,
         value: String,
     },
+
     String {
         location: SrcSpan,
-        typ: T,
         value: String,
+    },
+
+    Tuple {
+        location: SrcSpan,
+        typ: std::marker::PhantomData<T>,
+        elements: Vec<Self>,
     },
 }
 
 impl TypedConstValue {
     pub fn typ(&self) -> Arc<typ::Type> {
         match self {
-            TypedConstValue::Int { typ, .. } => typ.clone(),
-            TypedConstValue::Float { typ, .. } => typ.clone(),
-            TypedConstValue::String { typ, .. } => typ.clone(),
-        }
-    }
-
-    pub fn location(&self) -> &SrcSpan {
-        match self {
-            TypedConstValue::Int { location, .. } => location,
-            TypedConstValue::Float { location, .. } => location,
-            TypedConstValue::String { location, .. } => location,
+            ConstValue::Int { .. } => crate::typ::int(),
+            ConstValue::Float { .. } => crate::typ::float(),
+            ConstValue::String { .. } => crate::typ::string(),
+            ConstValue::Tuple { elements, .. } => {
+                crate::typ::tuple(elements.iter().map(|e| e.typ()).collect())
+            }
         }
     }
 }

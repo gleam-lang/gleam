@@ -1698,20 +1698,7 @@ impl<'a> Typer<'a> {
                     }
 
                     ValueConstructorVariant::ModuleConstValue { literal } => {
-                        return Ok(match literal {
-                            TypedConstValue::Int { value, .. } => ClauseGuard::Int {
-                                location: literal.location().clone(),
-                                value: value.clone(),
-                            },
-                            TypedConstValue::Float { value, .. } => ClauseGuard::Float {
-                                location: literal.location().clone(),
-                                value: value.clone(),
-                            },
-                            TypedConstValue::String { value, .. } => ClauseGuard::String {
-                                location: literal.location().clone(),
-                                value: value.clone(),
-                            },
-                        })
+                        return Ok(const_to_clause_guard(literal))
                     }
                 };
 
@@ -1756,20 +1743,7 @@ impl<'a> Typer<'a> {
                     }
 
                     ValueConstructorVariant::ModuleConstValue { literal } => {
-                        return Ok(match literal {
-                            TypedConstValue::Int { value, .. } => ClauseGuard::Int {
-                                location: literal.location().clone(),
-                                value: value.clone(),
-                            },
-                            TypedConstValue::Float { value, .. } => ClauseGuard::Float {
-                                location: literal.location().clone(),
-                                value: value.clone(),
-                            },
-                            TypedConstValue::String { value, .. } => ClauseGuard::String {
-                                location: literal.location().clone(),
-                                value: value.clone(),
-                            },
-                        })
+                        return Ok(const_to_clause_guard(literal))
                     }
                 };
 
@@ -2277,29 +2251,42 @@ impl<'a> Typer<'a> {
         Ok((fun, args, return_type))
     }
 
-    fn infer_const(&mut self, expr: UntypedConstValue) -> Result<TypedConstValue, Error> {
-        Ok(match expr {
+    fn infer_const(&mut self, value: UntypedConstValue) -> Result<TypedConstValue, Error> {
+        match value {
             ConstValue::Int {
                 location, value, ..
-            } => ConstValue::Int {
-                location,
-                typ: int(),
-                value,
-            },
+            } => Ok(ConstValue::Int { location, value }),
+
             ConstValue::Float {
                 location, value, ..
-            } => ConstValue::Float {
-                location,
-                typ: float(),
-                value,
-            },
+            } => Ok(ConstValue::Float { location, value }),
+
             ConstValue::String {
                 location, value, ..
-            } => ConstValue::String {
-                location,
-                typ: string(),
-                value,
-            },
+            } => Ok(ConstValue::String { location, value }),
+
+            ConstValue::Tuple {
+                elements, location, ..
+            } => self.infer_const_tuple(elements, location),
+        }
+    }
+
+    fn infer_const_tuple(
+        &mut self,
+        untyped_elements: Vec<UntypedConstValue>,
+        location: SrcSpan,
+    ) -> Result<TypedConstValue, Error> {
+        let mut elements = Vec::with_capacity(untyped_elements.len());
+
+        for element in untyped_elements.into_iter() {
+            let element = self.infer_const(element)?;
+            elements.push(element);
+        }
+
+        Ok(ConstValue::Tuple {
+            typ: std::marker::PhantomData,
+            elements,
+            location,
         })
     }
 
@@ -4330,6 +4317,39 @@ fn generalise(t: Arc<Type>, ctx_level: usize) -> Arc<Type> {
                 .map(|t| generalise(t.clone(), ctx_level))
                 .collect(),
         ),
+    }
+}
+
+fn const_to_clause_guard(const_value: &TypedConstValue) -> TypedClauseGuard {
+    match const_value {
+        ConstValue::Int {
+            location, value, ..
+        } => ClauseGuard::Int {
+            location: location.clone(),
+            value: value.clone(),
+        },
+
+        ConstValue::Float {
+            location, value, ..
+        } => ClauseGuard::Float {
+            location: location.clone(),
+            value: value.clone(),
+        },
+
+        ConstValue::String {
+            location, value, ..
+        } => ClauseGuard::String {
+            location: location.clone(),
+            value: value.clone(),
+        },
+
+        ConstValue::Tuple {
+            location, elements, ..
+        } => ClauseGuard::Tuple {
+            location: location.clone(),
+            elems: elements.iter().map(|v| const_to_clause_guard(v)).collect(),
+            typ: const_value.typ(),
+        },
     }
 }
 

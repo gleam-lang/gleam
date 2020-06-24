@@ -697,6 +697,7 @@ fn const_inline(literal: &ConstValue<Arc<Type>>) -> Document {
         ConstValue::Int { value, .. } => value.to_string().to_doc(),
         ConstValue::Float { value, .. } => value.to_string().to_doc(),
         ConstValue::String { value, .. } => string(value),
+        ConstValue::Tuple { elements, .. } => tuple(elements.iter().map(const_inline)),
     }
 }
 

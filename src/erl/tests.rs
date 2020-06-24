@@ -996,7 +996,6 @@ three() ->
                 name: "smiley".to_string(),
                 value: Box::new(ConstValue::String {
                     location: Default::default(),
-                    typ: crate::typ::string(),
                     value: ":)".to_string(),
                 }),
                 typ: crate::typ::string(),
@@ -1018,7 +1017,6 @@ three() ->
                         variant: ValueConstructorVariant::ModuleConstValue {
                             literal: ConstValue::String {
                                 location: Default::default(),
-                                typ: crate::typ::string(),
                                 value: ":)".to_string(),
                             },
                         },
@@ -2500,10 +2498,11 @@ main() ->
 pub const string_value = "constant value"
 pub const float_value = 3.14
 pub const int_value = 42
+pub const tuple_value = tuple(1, 2.0, "3")
 
-pub fn main(arg1, arg2, arg3) {
-  case tuple(arg1, arg2, arg3) {
-    tuple(x, y, z) if x == string_value && y >. float_value && z == int_value -> 1
+pub fn main(arg) {
+  case arg {
+    tuple(w, x, y, z) if w == tuple_value && x == string_value && y >. float_value && z == int_value -> 1
     _ -> 0
   }
 }
@@ -2511,13 +2510,16 @@ pub fn main(arg1, arg2, arg3) {
         r#"-module(the_app).
 -compile(no_auto_import).
 
--export([main/3]).
+-export([main/1]).
 
-main(Arg1, Arg2, Arg3) ->
-    case {Arg1, Arg2, Arg3} of
-        {X,
+main(Arg) ->
+    case Arg of
+        {W,
+         X,
          Y,
-         Z} when ((X =:= <<"constant value"/utf8>>) andalso (Y > 3.14)) andalso (Z =:= 42) ->
+         Z} when (((W =:= {1,
+                           2.0,
+                           <<"3"/utf8>>}) andalso (X =:= <<"constant value"/utf8>>)) andalso (Y > 3.14)) andalso (Z =:= 42) ->
             1;
 
         _ ->

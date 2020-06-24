@@ -2514,6 +2514,16 @@ fn main() {
             given: 0,
         },
     );
+
+    assert_error!(
+        "const pair = tuple(1, 2.0)
+         fn main() { 1 == pair }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 53, end: 57 },
+            expected: int(),
+            given: tuple(vec![int(), float()]),
+        },
+    );
 }
 
 #[test]
