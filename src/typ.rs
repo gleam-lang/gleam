@@ -1004,10 +1004,9 @@ impl<'a> Typer<'a> {
         left: UntypedExpr,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        let right_location = left.location().clone();
-        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, &right_location)?;
+        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, &location)?;
         let fun = TypedExpr::Call {
-            location: right_location,
+            location: location.clone(),
             typ,
             args,
             fun: Box::new(fun),
@@ -1043,6 +1042,7 @@ impl<'a> Typer<'a> {
         for arg in args {
             new_args.push(arg.clone());
         }
+
         let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, new_args, &location)?;
         Ok(TypedExpr::Call {
             location,
@@ -2238,6 +2238,7 @@ impl<'a> Typer<'a> {
         mut args: Vec<CallArg<UntypedExpr>>,
         location: &SrcSpan,
     ) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
+        // Check to see if the function accepts labelled arguments
         match self
             .get_field_map(&fun)
             .map_err(|e| convert_get_value_constructor_error(e, location))?
@@ -2249,30 +2250,29 @@ impl<'a> Typer<'a> {
             None => assert_no_labelled_arguments(&args)?,
         }
 
+        // Extract the type of the fun, ensuring it actually is a function
         let (mut args_types, return_type) = match_fun_type(fun.typ(), args.len(), self)
-            .map_err(|e| convert_not_fun_error(e, fun.location(), &location))?;
+            .map_err(|e| convert_not_fun_error(e, fun.location(), location))?;
+
+        // Ensure that the given args have the correct types
         let args = args_types
             .iter_mut()
             .zip(args)
-            .map(
-                |(
-                    typ,
-                    CallArg {
-                        label,
-                        value,
-                        location,
-                    },
-                ): (&mut Arc<Type>, _)| {
-                    let value = self.infer(value)?;
-                    self.unify(typ.clone(), value.typ())
-                        .map_err(|e| convert_unify_error(e, value.location()))?;
-                    Ok(CallArg {
-                        label,
-                        value,
-                        location,
-                    })
-                },
-            )
+            .map(|(typ, arg): (&mut Arc<Type>, _)| {
+                let CallArg {
+                    label,
+                    value,
+                    location,
+                } = arg;
+                let value = self.infer(value)?;
+                self.unify(typ.clone(), value.typ())
+                    .map_err(|e| convert_unify_error(e, value.location()))?;
+                Ok(CallArg {
+                    label,
+                    value,
+                    location,
+                })
+            })
             .collect::<Result<_, _>>()?;
         Ok((fun, args, return_type))
     }
@@ -4243,6 +4243,7 @@ fn match_fun_type(
     Err(MatchFunTypeError::NotFn { typ })
 }
 
+#[derive(Debug)]
 enum MatchFunTypeError {
     IncorrectArity { expected: usize, given: usize },
     NotFn { typ: Arc<Type> },

@@ -2501,6 +2501,19 @@ fn main() {
             given: string(),
         },
     );
+
+    // Correct pipe arity error location
+    // https://github.com/gleam-lang/gleam/issues/672
+
+    assert_error!(
+        "fn x(x, y) { x }
+         fn main() { 1 |> x() }",
+        Error::IncorrectArity {
+            location: SrcSpan { start: 40, end: 46 },
+            expected: 2,
+            given: 0,
+        },
+    );
 }
 
 #[test]
