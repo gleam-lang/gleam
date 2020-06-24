@@ -104,13 +104,21 @@ enum Command {
         check: bool,
     },
 
-    #[structopt(name = "shell", about = "Start an Erlang shell")]
+    #[structopt(
+        name = "shell",
+        about = "Start an Erlang shell",
+        setting = AppSettings::Hidden,
+    )]
     Shell {
         #[structopt(help = "location of the project root", default_value = ".")]
         project_root: String,
     },
 
-    #[structopt(name = "eunit", about = "Run eunit tests")]
+    #[structopt(
+        name = "eunit",
+        about = "Run eunit tests",
+        setting = AppSettings::Hidden,
+    )]
     Eunit {
         #[structopt(help = "location of the project root", default_value = ".")]
         project_root: String,
