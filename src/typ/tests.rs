@@ -1867,6 +1867,25 @@ pub fn get(x: One) { x.name }",
             ("go", "fn(Box(a)) -> fn(Box(a)) -> Bool")
         ]
     );
+
+    // Module constants
+    assert_infer!(
+        "
+    pub const test_int1 = 123
+    pub const test_int2: Int = 321
+    pub const test_float: Float = 4.2
+    pub const test_string = \"hey!\"
+    pub const test_list = [1,2,3]
+    pub const test_tuple = tuple(\"yes!\", 42)",
+        vec![
+            ("test_float", "Float"),
+            ("test_int1", "Int"),
+            ("test_int2", "Int"),
+            ("test_list", "List(Int)"),
+            ("test_string", "String"),
+            ("test_tuple", "tuple(String, Int)"),
+        ],
+    );
 }
 
 #[test]
@@ -2522,6 +2541,47 @@ fn main() {
             expected: 2,
             given: 0,
         },
+    );
+
+    // Module constants
+    assert_error!(
+        "pub const group_id: Int = \"42\"",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 26, end: 30 },
+            expected: int(),
+            given: string(),
+        }
+    );
+
+    assert_error!(
+        "pub const numbers: List(Int) = [1, 2, 2.3]",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 38, end: 41 },
+            expected: int(),
+            given: float(),
+        }
+    );
+
+    assert_error!(
+        "pub const numbers: List(Int) = [1.1, 2.2, 3.3]",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 31, end: 46 },
+            expected: list(Arc::new(Type::Var {
+                typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() }))
+            })),
+            given: list(Arc::new(Type::Var {
+                typ: Arc::new(RefCell::new(TypeVar::Link { typ: float() }))
+            }))
+        }
+    );
+
+    assert_error!(
+        "pub const pair: tuple(Int, Float) = tuple(4.1, 1)",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 36, end: 49 },
+            expected: tuple(vec![int(), float()]),
+            given: tuple(vec![float(), int()]),
+        }
     );
 
     assert_error!(
