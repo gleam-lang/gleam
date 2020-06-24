@@ -2356,6 +2356,16 @@ type Whatever {
 "
     );
 
+    assert_format!(
+        "pub type Number {
+  /// 1
+  One(value: Int)
+  /// > 1
+  Many(value: Int)
+}
+"
+    );
+
     //
     // Commented type constructor arguments
     //

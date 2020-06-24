@@ -741,6 +741,7 @@ impl<'a> Formatter<'a> {
 
     pub fn record_constructor(&mut self, constructor: &RecordConstructor) -> Document {
         let comments = self.pop_comments(constructor.location.start);
+        let doc_comments = self.doc_comments(constructor.location.start);
 
         let doc =
             if constructor.args.is_empty() {
@@ -766,12 +767,7 @@ impl<'a> Formatter<'a> {
                 ))
             };
 
-        commented(
-            self.doc_comments(constructor.location.start)
-                .append(doc)
-                .group(),
-            comments,
-        )
+        commented(doc_comments.append(doc).group(), comments)
     }
 
     pub fn custom_type(
