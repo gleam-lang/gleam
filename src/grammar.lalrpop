@@ -101,9 +101,10 @@ ExternalFnArg: ExternalFnArg = {
 }
 
 StatementFn: UntypedStatement = {
-    <s:@L> <p:"pub"?> "fn" <n:VarName> "(" <a:Comma<FnArg>> ")" <return_annotation:("->" <Type>)?> <e:@L> "{" <body:ExprSequence> "}"  => Statement::Fn {
+    <s:@L> <p:"pub"?> "fn" <n:VarName> "(" <a:Comma<FnArg>> ")" <return_annotation:("->" <Type>)?> <e:@L> "{" <body:ExprSequence>  <end_location:@L> "}" => Statement::Fn {
         doc: None,
         location: location(s, e - 1),
+        end_location,
         public: p.is_some(),
         name: n,
         args: a,

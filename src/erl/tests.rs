@@ -134,6 +134,7 @@ map() ->
         name: vec!["term".to_string()],
         statements: vec![
             Statement::Fn {
+                end_location: 0,
                 doc: None,
                 return_annotation: None,
                 return_type: typ::int(),
@@ -148,6 +149,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                end_location: 0,
                 doc: None,
                 return_annotation: None,
                 return_type: typ::int(),
@@ -162,6 +164,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                end_location: 0,
                 doc: None,
                 return_annotation: None,
                 return_type: typ::int(),
@@ -175,6 +178,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                end_location: 0,
                 doc: None,
                 return_annotation: None,
                 return_type: typ::int(),
@@ -189,6 +193,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                end_location: 0,
                 doc: None,
                 return_annotation: None,
                 return_type: typ::int(),
@@ -211,6 +216,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                end_location: 0,
                 doc: None,
                 return_annotation: None,
                 return_type: typ::int(),
@@ -235,6 +241,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                end_location: 0,
                 doc: None,
                 return_annotation: None,
                 return_type: typ::int(),
@@ -257,6 +264,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                end_location: 0,
                 doc: None,
                 return_annotation: None,
                 return_type: typ::int(),
@@ -290,6 +298,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                end_location: 0,
                 doc: None,
                 return_annotation: None,
                 return_type: typ::int(),
@@ -321,6 +330,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                end_location: 0,
                 doc: None,
                 return_annotation: None,
                 return_type: typ::int(),
@@ -359,6 +369,7 @@ map() ->
                 },
             },
             Statement::Fn {
+                end_location: 0,
                 doc: None,
                 return_annotation: None,
                 return_type: typ::int(),
@@ -438,6 +449,7 @@ tup() ->
         },
         name: vec!["term".to_string()],
         statements: vec![Statement::Fn {
+            end_location: 0,
             doc: None,
             return_type: typ::int(),
             return_annotation: None,
@@ -546,6 +558,7 @@ some_function(
         name: vec!["vars".to_string()],
         statements: vec![
             Statement::Fn {
+                end_location: 0,
                 doc: None,
                 return_annotation: None,
                 return_type: typ::int(),
@@ -565,6 +578,7 @@ some_function(
                 },
             },
             Statement::Fn {
+                end_location: 0,
                 doc: None,
                 return_annotation: None,
                 return_type: typ::int(),
@@ -582,6 +596,7 @@ some_function(
                 },
             },
             Statement::Fn {
+                end_location: 0,
                 doc: None,
                 return_annotation: None,
                 return_type: typ::int(),
@@ -602,6 +617,7 @@ some_function(
                 },
             },
             Statement::Fn {
+                end_location: 0,
                 doc: None,
                 return_annotation: None,
                 return_type: typ::int(),
@@ -661,6 +677,7 @@ moddy4() ->
         },
         name: vec!["my_mod".to_string()],
         statements: vec![Statement::Fn {
+            end_location: 0,
             doc: None,
             return_type: typ::int(),
             return_annotation: None,
@@ -824,6 +841,7 @@ go() ->
         name: vec!["funny".to_string()],
         statements: vec![
             Statement::Fn {
+                end_location: 0,
                 doc: None,
                 return_type: typ::int(),
                 return_annotation: None,
@@ -861,6 +879,7 @@ go() ->
                 },
             },
             Statement::Fn {
+                end_location: 0,
                 doc: None,
                 return_type: typ::int(),
                 return_annotation: None,
@@ -893,6 +912,7 @@ go() ->
                 },
             },
             Statement::Fn {
+                end_location: 0,
                 doc: None,
                 return_type: typ::int(),
                 return_annotation: None,
@@ -982,6 +1002,7 @@ three() ->
                 typ: crate::typ::string(),
             },
             Statement::Fn {
+                end_location: 0,
                 doc: None,
                 return_type: typ::int(),
                 return_annotation: None,

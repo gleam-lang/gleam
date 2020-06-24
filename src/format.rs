@@ -148,8 +148,9 @@ impl<'a> Formatter<'a> {
                 body,
                 public,
                 return_annotation,
+                end_location,
                 ..
-            } => self.fn_(public, name, args, return_annotation, body),
+            } => self.fn_(public, name, args, return_annotation, body, *end_location),
 
             Statement::TypeAlias {
                 alias,
@@ -348,18 +349,32 @@ impl<'a> Formatter<'a> {
         args: &Vec<UntypedArg>,
         return_annotation: &Option<TypeAst>,
         body: &UntypedExpr,
+        end_location: usize,
     ) -> Document {
-        pub_(*public)
+        // Fn name and args
+        let head = pub_(*public)
             .append("fn ")
             .append(name)
-            .append(self.fn_args(args))
-            .append(if let Some(anno) = return_annotation {
-                " -> ".to_doc().append(self.type_ast(anno))
-            } else {
-                nil()
-            })
-            .append(" {")
-            .append(line().append(self.expr(body)).nest(INDENT).group())
+            .append(self.fn_args(args));
+
+        // Add return annotation
+        let head = match return_annotation {
+            Some(anno) => head.append(" -> ").append(self.type_ast(anno)),
+            None => head,
+        };
+
+        // Format body
+        let body = self.expr(body);
+
+        // Add any trailing comments
+        let body = match printed_comments(self.pop_comments(end_location)) {
+            Some(comments) => body.append(line()).append(comments),
+            None => body,
+        };
+
+        // Stick it all together
+        head.append(" {")
+            .append(line().append(body).nest(INDENT).group())
             .append(line())
             .append("}")
     }
@@ -1460,17 +1475,21 @@ enum ListType<E, T> {
     NotList(T),
 }
 
-fn commented<'a>(doc: Document, comments: impl Iterator<Item = &'a str>) -> Document {
+fn printed_comments<'a>(comments: impl Iterator<Item = &'a str>) -> Option<Document> {
     let mut comments = comments.peekable();
     match comments.peek() {
-        None => doc,
-        Some(_) => concat(
+        None => None,
+        Some(_) => Some(concat(
             comments
                 .map(|c| "//".to_doc().append(c))
                 .intersperse(line()),
-        )
-        .append(force_break())
-        .append(line())
-        .append(doc),
+        )),
+    }
+}
+
+fn commented<'a>(doc: Document, comments: impl Iterator<Item = &'a str>) -> Document {
+    match printed_comments(comments) {
+        Some(comments) => comments.append(force_break()).append(line()).append(doc),
+        _ => doc,
     }
 }

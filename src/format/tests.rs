@@ -586,6 +586,15 @@ pub external type Four
 "#
     );
 
+    // https://github.com/gleam-lang/gleam/issues/613
+    assert_format!(
+        r#"fn main() {
+  Nil
+  // Done
+}
+"#
+    );
+
     //
     // Module function return annotations
     //

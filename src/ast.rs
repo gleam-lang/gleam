@@ -140,6 +140,7 @@ pub type UntypedStatement = Statement<(), UntypedExpr>;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement<T, Expr> {
     Fn {
+        end_location: usize,
         location: SrcSpan,
         name: String,
         args: Vec<Arg<T>>,

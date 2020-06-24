@@ -3101,6 +3101,7 @@ pub fn infer_module(
                 args,
                 body,
                 return_annotation,
+                end_location,
                 ..
             } => {
                 let level = 1;
@@ -3180,6 +3181,7 @@ pub fn infer_module(
                     name,
                     public,
                     args,
+                    end_location,
                     return_annotation,
                     return_type: body.typ(),
                     body,
