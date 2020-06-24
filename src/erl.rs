@@ -698,6 +698,11 @@ fn const_inline(literal: &ConstValue<Arc<Type>>) -> Document {
         ConstValue::Float { value, .. } => value.to_string().to_doc(),
         ConstValue::String { value, .. } => string(value),
         ConstValue::Tuple { elements, .. } => tuple(elements.iter().map(const_inline)),
+
+        ConstValue::List { elements, .. } => {
+            let elements = elements.iter().map(const_inline).intersperse(delim(","));
+            concat(elements).nest_current().surround("[", "]").group()
+        }
     }
 }
 

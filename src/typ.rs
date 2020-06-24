@@ -2268,6 +2268,10 @@ impl<'a> Typer<'a> {
             ConstValue::Tuple {
                 elements, location, ..
             } => self.infer_const_tuple(elements, location),
+
+            ConstValue::List {
+                elements, location, ..
+            } => self.infer_const_list(elements, location),
         }
     }
 
@@ -2283,10 +2287,28 @@ impl<'a> Typer<'a> {
             elements.push(element);
         }
 
-        Ok(ConstValue::Tuple {
-            typ: std::marker::PhantomData,
+        Ok(ConstValue::Tuple { elements, location })
+    }
+
+    fn infer_const_list(
+        &mut self,
+        untyped_elements: Vec<UntypedConstValue>,
+        location: SrcSpan,
+    ) -> Result<TypedConstValue, Error> {
+        let typ = self.new_unbound_var(0);
+        let mut elements = Vec::with_capacity(untyped_elements.len());
+
+        for element in untyped_elements.into_iter() {
+            let element = self.infer_const(element)?;
+            self.unify(typ.clone(), element.typ())
+                .map_err(|e| convert_unify_error(e, element.location()))?;
+            elements.push(element);
+        }
+
+        Ok(ConstValue::List {
             elements,
             location,
+            typ,
         })
     }
 
@@ -4342,6 +4364,11 @@ fn const_to_clause_guard(const_value: &TypedConstValue) -> TypedClauseGuard {
             location: location.clone(),
             value: value.clone(),
         },
+
+        ConstValue::List { .. } => {
+            // TODO: we need lists supported in clause guards for this first.
+            todo!()
+        }
 
         ConstValue::Tuple {
             location, elements, ..

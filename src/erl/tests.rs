@@ -2499,8 +2499,10 @@ pub const string_value = "constant value"
 pub const float_value = 3.14
 pub const int_value = 42
 pub const tuple_value = tuple(1, 2.0, "3")
+pub const list_value = [1, 2, 3]
 
 pub fn main(arg) {
+  let _ = list_value
   case arg {
     tuple(w, x, y, z) if w == tuple_value && x == string_value && y >. float_value && z == int_value -> 1
     _ -> 0
@@ -2513,6 +2515,7 @@ pub fn main(arg) {
 -export([main/1]).
 
 main(Arg) ->
+    _ = [1, 2, 3],
     case Arg of
         {W,
          X,

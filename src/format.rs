@@ -243,6 +243,14 @@ impl<'a> Formatter<'a> {
 
             ConstValue::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
 
+            ConstValue::List { elements, .. } => {
+                let elements = elements
+                    .iter()
+                    .map(|e| self.const_expr(e))
+                    .intersperse(delim(","));
+                list(concat(elements), None)
+            }
+
             ConstValue::Tuple { elements, .. } => "tuple"
                 .to_doc()
                 .append(wrap_args(elements.iter().map(|e| self.const_expr(e)))),

@@ -140,15 +140,23 @@ StatementModuleConstant: UntypedStatement = {
 
 ConstValue: ConstValue<()> = {
     ConstInt => <>,
+    ConstList => <>,
     ConstFloat => <>,
     ConstTuple => <>,
     ConstString => <>,
 }
 
+ConstList: ConstValue<()> = {
+    <s:@L> "[" <elements:Comma<ConstValue>> "]" <e:@L> => ConstValue::List {
+        location: location(s, e),
+        elements,
+        typ: (),
+    },
+}
+
 ConstTuple: ConstValue<()> = {
     <s:@L> "tuple" "(" <elements:Comma<ConstValue>> ")" <e:@L> => ConstValue::Tuple {
         location: location(s, e),
-        typ: std::marker::PhantomData,
         elements,
     }
 }
