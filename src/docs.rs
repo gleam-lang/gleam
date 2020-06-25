@@ -115,6 +115,11 @@ pub fn generate_html(
                 t.sort();
                 t
             },
+            constants: {
+                let mut c: Vec<_> = module.ast.statements.iter().flat_map(constant).collect();
+                c.sort();
+                c
+            },
         };
 
         let mut path = output_dir.clone();
@@ -265,6 +270,25 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
     }
 }
 
+fn constant<'a>(statement: &'a TypedStatement) -> Option<Constant<'a>> {
+    let mut formatter = format::Formatter::new();
+    match statement {
+        Statement::ModuleConstant {
+            public: true,
+            doc,
+            name,
+            value,
+            ..
+        } => Some(Constant {
+            name,
+            definition: print(formatter.docs_const_expr(true, name, value)),
+            documentation: markdown_documentation(doc),
+        }),
+
+        _ => None,
+    }
+}
+
 fn print(doc: pretty::Document) -> String {
     pretty::format(MAX_COLUMNS, doc)
 }
@@ -296,6 +320,13 @@ struct Type<'a> {
     constructors: Vec<TypeConstructor>,
 }
 
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+struct Constant<'a> {
+    name: &'a str,
+    definition: String,
+    documentation: String,
+}
+
 #[derive(Template)]
 #[template(path = "documentation_page.html")]
 struct PageTemplate<'a> {
@@ -322,5 +353,6 @@ struct ModuleTemplate<'a> {
     modules: &'a [Link],
     functions: Vec<Function<'a>>,
     types: Vec<Type<'a>>,
+    constants: Vec<Constant<'a>>,
     documentation: String,
 }

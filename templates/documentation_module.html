@@ -10,6 +10,15 @@
 </ul>
 {% endif %}
 
+{% if !constants.is_empty() %}
+<h2>Constants</h2>
+<ul>
+    {% for constant in constants %}
+    <li><a href="#{{ constant.name }}">{{ constant.name }}</a></li>
+    {% endfor %}
+</ul>
+{% endif %}
+
 {% if !functions.is_empty() %}
 <h2>Functions</h2>
 <ul>
@@ -54,6 +63,26 @@
       </ul>
       {% endif %}
     </div>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if !constants.is_empty() %}
+<section class="module-members">
+  <a href="#module-constants">
+    <h1 id="module-constants" class="module-member-kind">Constants</h1>
+  </a>
+
+  {% for constant in constants %}
+  <div class="member">
+    <a href="#{{ constant.name }}">
+      <h2 id="{{ constant.name }}" class="member-name">
+        {{ constant.name }}
+      </h2>
+    </a>
+    <pre>{{ constant.definition }}</pre>
+    <div class="rendered-markdown">{{ constant.documentation|safe }}</div>
   </div>
   {% endfor %}
 </section>
