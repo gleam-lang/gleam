@@ -13,6 +13,7 @@
 - The formatter now permits comments at the end of module function bodies.
 - Error message diagnostic code previews for type errors when using the the
   pipe operator have been made more accurate.
+- Added support for list literals in clause guards.
 
 ## v0.9.1 - 2020-06-12
 
