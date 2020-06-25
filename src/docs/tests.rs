@@ -6,6 +6,9 @@ fn module_docs_test() {
     let src = r#"
 //// module comment
 
+/// A constant value
+pub const hello = "test" 
+
 /// doc comment
 // regular comment
 pub fn public_fun(x: Int) -> Int {
@@ -58,6 +61,10 @@ pub fn complicated_fun(
     module_page.should_contain("module comment");
     module_page.should_contain("doc comment");
     module_page.should_not_contain("regular comment");
+
+    // Constants
+    module_page.should_contain("pub const hello: String = &quot;test&quot;");
+    module_page.should_contain("A constant value");
 
     // Functions
     module_page.should_contain("pub fn public_fun(x: Int) -&gt; Int");

@@ -239,7 +239,7 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    fn const_expr(&mut self, value: &ConstValue<()>) -> Document {
+    pub fn const_expr<T>(&mut self, value: &ConstValue<T>) -> Document {
         match value {
             ConstValue::Int { value, .. } | ConstValue::Float { value, .. } => {
                 value.clone().to_doc()
@@ -259,6 +259,23 @@ impl<'a> Formatter<'a> {
                 .to_doc()
                 .append(wrap_args(elements.iter().map(|e| self.const_expr(e)))),
         }
+    }
+
+    pub fn docs_const_expr(
+        &mut self,
+        public: bool,
+        name: &str,
+        value: &TypedConstValue,
+    ) -> Document {
+        let mut printer = typ::pretty::Printer::new();
+
+        pub_(public)
+            .append("const ")
+            .append(name.to_string())
+            .append(": ")
+            .append(printer.print(&value.typ().as_ref()))
+            .append(" = ")
+            .append(self.const_expr(value))
     }
 
     fn documented_statement(&mut self, s: &UntypedStatement) -> Document {
