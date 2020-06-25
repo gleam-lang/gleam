@@ -813,6 +813,16 @@ fn bare_clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
             tuple(elems.into_iter().map(|e| bare_clause_guard(e, env)))
         }
 
+        ClauseGuard::List { elems, .. } => concat(
+            elems
+                .iter()
+                .map(|e| bare_clause_guard(e, env))
+                .intersperse(delim(",")),
+        )
+        .nest_current()
+        .surround("[", "]")
+        .group(),
+
         ClauseGuard::Constructor { name, args, .. } => {
             if args.is_empty() {
                 atom(name.to_snake_case())
@@ -852,9 +862,10 @@ fn clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
         // Values are not wrapped
         ClauseGuard::Var { .. }
         | ClauseGuard::Int { .. }
+        | ClauseGuard::List { .. }
         | ClauseGuard::Float { .. }
-        | ClauseGuard::String { .. }
         | ClauseGuard::Tuple { .. }
+        | ClauseGuard::String { .. }
         | ClauseGuard::Constructor { .. } => bare_clause_guard(guard, env),
     }
 }

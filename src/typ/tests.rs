@@ -855,6 +855,15 @@ fn infer_error_test() {
     );
 
     assert_error!(
+        "case [1] { x if x == [1, 2.0] -> 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 25, end: 28 },
+            expected: int(),
+            given: float(),
+        },
+    );
+
+    assert_error!(
         "case tuple(1, 2) { x if x == tuple(1, 1.0) -> 1 }",
         Error::CouldNotUnify {
             location: SrcSpan { start: 24, end: 42 },

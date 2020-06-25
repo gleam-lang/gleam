@@ -1726,6 +1726,28 @@ impl<'a> Typer<'a> {
                 })
             }
 
+            ClauseGuard::List {
+                location,
+                elems: untyped_elems,
+                ..
+            } => {
+                let inner_type = self.new_unbound_var(self.level);
+                let mut elems = Vec::with_capacity(untyped_elems.len());
+
+                for elem in untyped_elems {
+                    let elem = self.infer_clause_guard(elem)?;
+                    self.unify(inner_type.clone(), elem.typ())
+                        .map_err(|e| convert_unify_error(e, elem.location()))?;
+                    elems.push(elem);
+                }
+
+                Ok(ClauseGuard::List {
+                    location,
+                    elems,
+                    typ: list(inner_type),
+                })
+            }
+
             ClauseGuard::Constructor {
                 module,
                 location,

@@ -1325,6 +1325,11 @@ impl Documentable for &UntypedClauseGuard {
                 .to_doc()
                 .append(wrap_args(elems.iter().map(|e| e.to_doc()))),
 
+            ClauseGuard::List { elems, .. } => list(
+                concat(elems.iter().map(|e| e.to_doc()).intersperse(delim(","))),
+                None,
+            ),
+
             ClauseGuard::Constructor {
                 name,
                 args,

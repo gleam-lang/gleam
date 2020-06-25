@@ -1874,6 +1874,27 @@ main() ->
 
     assert_erl!(
         r#"
+pub fn main(x) {
+  case x {
+    _ if x == [1, 2, 3] -> 1
+  }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/1]).
+
+main(X) ->
+    case X of
+        _ when X =:= [1, 2, 3] ->
+            1
+    end.
+"#,
+    );
+
+    assert_erl!(
+        r#"
 pub fn main() {
   let x = 0
   case x {

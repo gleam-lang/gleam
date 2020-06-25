@@ -445,6 +445,12 @@ pub enum ClauseGuard<Type> {
         typ: Type,
     },
 
+    List {
+        location: SrcSpan,
+        elems: Vec<Self>,
+        typ: Type,
+    },
+
     Constructor {
         location: SrcSpan,
         module: Option<String>,
@@ -474,6 +480,7 @@ impl<A> ClauseGuard<A> {
             ClauseGuard::Float { location, .. } => location,
             ClauseGuard::String { location, .. } => location,
             ClauseGuard::Tuple { location, .. } => location,
+            ClauseGuard::List { location, .. } => location,
             ClauseGuard::Constructor { location, .. } => location,
         }
     }
