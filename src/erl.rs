@@ -726,8 +726,7 @@ fn clause(clause: &TypedClause, env: &mut Env) -> Document {
         ..
     } = clause;
 
-    let mut pattern_already_printed = false;
-    let env_clone = &mut env.clone();
+    let mut then_doc = Document::Nil;
 
     let docs = std::iter::once(pat)
         .chain(alternative_patterns.into_iter())
@@ -741,28 +740,18 @@ fn clause(clause: &TypedClause, env: &mut Env) -> Document {
                 tuple(patterns.iter().map(|p| pattern(p, env)))
             };
 
-            let full_clause_doc = patterns_doc
-                .append(optional_clause_guard(guard.as_ref(), env))
-                .append(" ->")
-                .append(
-                    line()
-                        .append(expr(
-                            then,
-                            if pattern_already_printed {
-                                env_clone
-                            } else {
-                                env
-                            },
-                        ))
-                        .nest(INDENT)
-                        .group(),
-                );
+            if then_doc == Document::Nil {
+                then_doc = expr(then, env);
+            }
 
-            pattern_already_printed = true;
-
-            full_clause_doc
+            patterns_doc.append(
+                optional_clause_guard(guard.as_ref(), env)
+                    .append(" ->")
+                    .append(line().append(then_doc.clone()).nest(INDENT).group()),
+            )
         })
         .intersperse(";".to_doc().append(lines(2)));
+
     concat(docs)
 }
 
