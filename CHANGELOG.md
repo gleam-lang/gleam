@@ -14,6 +14,8 @@
 - Error message diagnostic code previews for type errors when using the the
   pipe operator have been made more accurate.
 - Added support for list literals in clause guards.
+- Fixed bug when reassigning a variable inside a case clause with alternative
+  patterns.
 
 ## v0.9.1 - 2020-06-12
 
