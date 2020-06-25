@@ -2552,4 +2552,36 @@ main(Arg) ->
     end.
 "#,
     );
+
+    // reassigning name in alternative patterns
+    assert_erl!(
+        r#"
+pub fn test() {
+  let duplicate_name = 1
+
+  case 1 {
+    1 | 2 -> {
+      let duplicate_name = duplicate_name + 1
+      duplicate_name
+    }
+  }
+}"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([test/0]).
+
+test() ->
+    DuplicateName = 1,
+    case 1 of
+        1 ->
+            DuplicateName1 = DuplicateName + 1,
+            DuplicateName1;
+
+        2 ->
+            DuplicateName1 = DuplicateName + 1,
+            DuplicateName1
+    end.
+"#,
+    );
 }
