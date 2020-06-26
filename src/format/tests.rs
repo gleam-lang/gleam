@@ -1921,6 +1921,13 @@ pub fn main() {
 "
     );
 
+    assert_format!(
+        r#"fn main() {
+  todo("todo with a label")
+}
+"#
+    );
+
     //
     // Doc comments
     //

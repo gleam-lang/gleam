@@ -388,6 +388,7 @@ fn infer_test() {
     assert_infer!("1 == todo", "Bool");
     assert_infer!("todo != 1", "Bool");
     assert_infer!("todo + 1", "Int");
+    assert_infer!("todo(\"test\") + 1", "Int");
 
     // tuple index
     assert_infer!("tuple(1, 2.0).0", "Int");

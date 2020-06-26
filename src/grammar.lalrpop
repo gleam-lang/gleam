@@ -633,8 +633,14 @@ Var: UntypedExpr = {
 }
 
 Todo: UntypedExpr = {
+    <s:@L> "todo(" <label:RawString> ")" <e:@L> => UntypedExpr::Todo {
+        location: location(s, e),
+        label: Some(label),
+    },
+
     <s:@L> "todo" <e:@L> => UntypedExpr::Todo {
         location: location(s, e),
+        label: None,
     }
 }
 

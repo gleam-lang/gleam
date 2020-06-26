@@ -510,7 +510,9 @@ impl<'a> Formatter<'a> {
         let comments = self.pop_comments(expr.start_byte_index());
 
         let document = match expr {
-            UntypedExpr::Todo { .. } => "todo".to_doc(),
+            UntypedExpr::Todo { label: None, .. } => "todo".to_doc(),
+
+            UntypedExpr::Todo { label: Some(l), .. } => ["todo", "(\"", l, "\")"].join("").to_doc(),
 
             UntypedExpr::Pipe {
                 left,
