@@ -70,4 +70,5 @@ development.
 - [Quinn Wilton](http://quinnwilton.com/)
 - [Shritesh Bhattarai](https://github.com/shritesh)
 - [Wojtek Mach](https://github.com/wojtekmach)
+- [mario](https://github.com/mario-mazo)
 - [ontofractal](https://github.com/ontofractal)
