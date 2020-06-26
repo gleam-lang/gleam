@@ -98,6 +98,7 @@ pub enum UntypedExpr {
 
     Todo {
         location: SrcSpan,
+        label: Option<String>,
     },
 
     BitString {

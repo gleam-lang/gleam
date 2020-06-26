@@ -124,6 +124,7 @@ pub enum TypedExpr {
 
     Todo {
         location: SrcSpan,
+        label: Option<String>,
         typ: Arc<Type>,
     },
 
