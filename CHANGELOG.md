@@ -17,6 +17,7 @@
 - Added support for list literals in clause guards.
 - Fixed bug when reassigning a variable inside a case clause with alternative
   patterns.
+- Todos can now take an optional label.
 
 ## v0.9.1 - 2020-06-12
 
