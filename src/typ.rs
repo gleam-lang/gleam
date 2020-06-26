@@ -876,7 +876,9 @@ impl<'a> Typer<'a> {
         match expr {
             UntypedExpr::ListNil { location, .. } => self.infer_nil(location),
 
-            UntypedExpr::Todo { location, label, .. } => self.infer_todo(location, label),
+            UntypedExpr::Todo {
+                location, label, ..
+            } => self.infer_todo(location, label),
 
             UntypedExpr::Var { location, name, .. } => self.infer_var(name, location),
 
