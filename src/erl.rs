@@ -692,12 +692,17 @@ fn var(name: &str, constructor: &ValueConstructor, env: &mut Env) -> Document {
     }
 }
 
-fn const_inline(literal: &ConstValue<Arc<Type>>) -> Document {
+fn const_inline(literal: &TypedConstValue) -> Document {
     match literal {
         ConstValue::Int { value, .. } => value.to_string().to_doc(),
         ConstValue::Float { value, .. } => value.to_string().to_doc(),
         ConstValue::String { value, .. } => string(value),
         ConstValue::Tuple { elements, .. } => tuple(elements.iter().map(const_inline)),
+
+        ConstValue::Record { name, elements, .. } => tuple(
+            std::iter::once(atom(name.to_snake_case()))
+                .chain(elements.into_iter().map(const_inline)),
+        ),
 
         ConstValue::List { elements, .. } => {
             let elements = elements.iter().map(const_inline).intersperse(delim(","));

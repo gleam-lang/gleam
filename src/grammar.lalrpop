@@ -7,7 +7,7 @@ use crate::ast::{
     UntypedPattern, BinOp, Clause, UntypedClause, RecordConstructor, Pattern, CallArg,
     ExternalFnArg, ArgNames, UnqualifiedImport, UntypedClauseGuard, ClauseGuard, BindingKind,
     UntypedExprBinSegment, UntypedPatternBinSegment, BinSegmentOption, UntypedExprBinSegmentOption,
-    UntypedPatternBinSegmentOption, ConstValue
+    UntypedPatternBinSegmentOption, UntypedConstValue, ConstValue
 
 };
 use crate::parser::*;
@@ -139,7 +139,7 @@ StatementModuleConstant: UntypedStatement = {
     }
 }
 
-ConstValue: ConstValue<()> = {
+ConstValue: UntypedConstValue = {
     ConstInt => <>,
     ConstList => <>,
     ConstFloat => <>,
@@ -147,7 +147,7 @@ ConstValue: ConstValue<()> = {
     ConstString => <>,
 }
 
-ConstList: ConstValue<()> = {
+ConstList: UntypedConstValue = {
     <s:@L> "[" <elements:Comma<ConstValue>> "]" <e:@L> => ConstValue::List {
         location: location(s, e),
         elements,
@@ -155,29 +155,29 @@ ConstList: ConstValue<()> = {
     },
 }
 
-ConstTuple: ConstValue<()> = {
+ConstTuple: UntypedConstValue = {
     <s:@L> "tuple" "(" <elements:Comma<ConstValue>> ")" <e:@L> => ConstValue::Tuple {
         location: location(s, e),
         elements,
     }
 }
 
-ConstInt: ConstValue<()> = {
-    <s:@L> <value:IntLiteral> <e:@L> => ConstValue::<()>::Int {
+ConstInt: UntypedConstValue = {
+    <s:@L> <value:IntLiteral> <e:@L> => ConstValue::Int {
         location: location(s, e),
         value,
     }
 }
 
-ConstFloat: ConstValue<()> = {
-    <s:@L> <value:FloatLiteral> <e:@L> => ConstValue::<()>::Float {
+ConstFloat: UntypedConstValue = {
+    <s:@L> <value:FloatLiteral> <e:@L> => ConstValue::Float {
         location: location(s, e),
         value,
     }
 }
 
-ConstString: ConstValue<()> = {
-    <s:@L> <x:RawString> <e:@L> => ConstValue::<()>::String {
+ConstString: UntypedConstValue = {
+    <s:@L> <x:RawString> <e:@L> => ConstValue::String {
         location: location(s, e),
         value: x,
     }

@@ -274,7 +274,7 @@ pub enum ValueConstructorVariant {
     LocalVariable,
 
     /// A module constant
-    ModuleConstValue { literal: ConstValue<Arc<Type>> },
+    ModuleConstValue { literal: TypedConstValue },
 
     /// A function belonging to the module
     ModuleFn {
@@ -315,7 +315,7 @@ impl ValueConstructorVariant {
 pub enum ModuleValueConstructor {
     Record { name: String, arity: usize },
     Fn,
-    ConstValue { literal: ConstValue<Arc<Type>> },
+    ConstValue { literal: TypedConstValue },
 }
 
 #[derive(Debug, Clone, PartialEq)]

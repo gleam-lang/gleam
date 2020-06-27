@@ -13,19 +13,19 @@ use std::sync::Arc;
 
 pub const CAPTURE_VARIABLE: &str = "gleam@capture_variable";
 
-pub type TypedModule = Module<Arc<Type>, TypedExpr, typ::Module>;
+pub type TypedModule = Module<Arc<Type>, TypedExpr, typ::Module, String>;
 
-pub type UntypedModule = Module<(), UntypedExpr, ()>;
+pub type UntypedModule = Module<(), UntypedExpr, (), ()>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Module<T, Expr, Info> {
+pub struct Module<T, Expr, Info, ConstRecordTag> {
     pub name: Vec<String>,
     pub documentation: Vec<String>,
     pub type_info: Info,
-    pub statements: Vec<Statement<T, Expr>>,
+    pub statements: Vec<Statement<T, ConstRecordTag, Expr>>,
 }
 
-impl<A, B, C> Module<A, B, C> {
+impl<A, B, C, D> Module<A, B, C, D> {
     pub fn name_string(&self) -> String {
         self.name.join("/")
     }
@@ -134,11 +134,11 @@ impl TypeAst {
     }
 }
 
-pub type TypedStatement = Statement<Arc<Type>, TypedExpr>;
-pub type UntypedStatement = Statement<(), UntypedExpr>;
+pub type TypedStatement = Statement<Arc<Type>, String, TypedExpr>;
+pub type UntypedStatement = Statement<(), (), UntypedExpr>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Statement<T, Expr> {
+pub enum Statement<T, N, Expr> {
     Fn {
         end_location: usize,
         location: SrcSpan,
@@ -204,12 +204,12 @@ pub enum Statement<T, Expr> {
         public: bool,
         name: String,
         annotation: Option<TypeAst>,
-        value: Box<const_value::ConstValue<T>>,
+        value: Box<const_value::ConstValue<T, N>>,
         typ: T,
     },
 }
 
-impl<A, B> Statement<A, B> {
+impl<A, B, C> Statement<A, B, C> {
     pub fn location(&self) -> &SrcSpan {
         match self {
             Statement::Import { location, .. }

@@ -1,9 +1,10 @@
 use super::*;
 
-pub type TypedConstValue = ConstValue<Arc<Type>>;
-pub type UntypedConstValue = ConstValue<()>;
+pub type TypedConstValue = ConstValue<Arc<Type>, String>;
+pub type UntypedConstValue = ConstValue<(), ()>;
+
 #[derive(Debug, PartialEq, Clone)]
-pub enum ConstValue<T> {
+pub enum ConstValue<T, RecordTag> {
     Int {
         location: SrcSpan,
         value: String,
@@ -29,6 +30,14 @@ pub enum ConstValue<T> {
         elements: Vec<Self>,
         typ: T,
     },
+
+    Record {
+        location: SrcSpan,
+        elements: Vec<Self>,
+        name: String,
+        tag: RecordTag,
+        typ: T,
+    },
 }
 
 impl TypedConstValue {
@@ -38,6 +47,7 @@ impl TypedConstValue {
             ConstValue::Float { .. } => crate::typ::float(),
             ConstValue::String { .. } => crate::typ::string(),
             ConstValue::List { typ, .. } => typ.clone(),
+            ConstValue::Record { typ, .. } => typ.clone(),
             ConstValue::Tuple { elements, .. } => {
                 crate::typ::tuple(elements.iter().map(|e| e.typ()).collect())
             }
@@ -45,14 +55,15 @@ impl TypedConstValue {
     }
 }
 
-impl<T> ConstValue<T> {
+impl<T, N> ConstValue<T, N> {
     pub fn location(&self) -> &SrcSpan {
         match self {
             ConstValue::Int { location, .. } => location,
-            ConstValue::Float { location, .. } => location,
-            ConstValue::String { location, .. } => location,
             ConstValue::List { location, .. } => location,
+            ConstValue::Float { location, .. } => location,
             ConstValue::Tuple { location, .. } => location,
+            ConstValue::String { location, .. } => location,
+            ConstValue::Record { location, .. } => location,
         }
     }
 }
