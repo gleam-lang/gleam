@@ -1162,6 +1162,22 @@ main() ->
 "#,
     );
 
+    assert_erl!(
+        r#"
+pub fn main() {
+  todo("testing")
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+main() ->
+    erlang:error({gleam_error, todo, "testing"}).
+"#,
+    );
+
     // We can use record accessors for types with only one constructor
     assert_erl!(
         r#"
