@@ -7,7 +7,7 @@ use crate::ast::{
     UntypedPattern, BinOp, Clause, UntypedClause, RecordConstructor, Pattern, CallArg,
     ExternalFnArg, ArgNames, UnqualifiedImport, UntypedClauseGuard, ClauseGuard, BindingKind,
     UntypedExprBinSegment, UntypedPatternBinSegment, BinSegmentOption, UntypedExprBinSegmentOption,
-    UntypedPatternBinSegmentOption, ConstValue
+    UntypedPatternBinSegmentOption, Constant
 
 };
 use crate::parser::*;
@@ -128,7 +128,7 @@ StatementImport: UntypedStatement = {
 }
 
 StatementModuleConstant: UntypedStatement = {
-    <s:@L> <p:"pub"?> "const" <name:VarName> <annotation:(":" <Type>)?> "=" <lit:ConstValue> <e:@L> => Statement::ModuleConstant {
+    <s:@L> <p:"pub"?> "const" <name:VarName> <annotation:(":" <Type>)?> "=" <lit:Constant> <e:@L> => Statement::ModuleConstant {
         doc: None,
         location: location(s, e),
         public: p.is_some(),
@@ -139,7 +139,7 @@ StatementModuleConstant: UntypedStatement = {
     }
 }
 
-ConstValue: ConstValue<()> = {
+Constant: Constant<()> = {
     ConstInt => <>,
     ConstList => <>,
     ConstFloat => <>,
@@ -147,37 +147,37 @@ ConstValue: ConstValue<()> = {
     ConstString => <>,
 }
 
-ConstList: ConstValue<()> = {
-    <s:@L> "[" <elements:Comma<ConstValue>> "]" <e:@L> => ConstValue::List {
+ConstList: Constant<()> = {
+    <s:@L> "[" <elements:Comma<Constant>> "]" <e:@L> => Constant::List {
         location: location(s, e),
         elements,
         typ: (),
     },
 }
 
-ConstTuple: ConstValue<()> = {
-    <s:@L> "tuple" "(" <elements:Comma<ConstValue>> ")" <e:@L> => ConstValue::Tuple {
+ConstTuple: Constant<()> = {
+    <s:@L> "tuple" "(" <elements:Comma<Constant>> ")" <e:@L> => Constant::Tuple {
         location: location(s, e),
         elements,
     }
 }
 
-ConstInt: ConstValue<()> = {
-    <s:@L> <value:IntLiteral> <e:@L> => ConstValue::<()>::Int {
+ConstInt: Constant<()> = {
+    <s:@L> <value:IntLiteral> <e:@L> => Constant::<()>::Int {
         location: location(s, e),
         value,
     }
 }
 
-ConstFloat: ConstValue<()> = {
-    <s:@L> <value:FloatLiteral> <e:@L> => ConstValue::<()>::Float {
+ConstFloat: Constant<()> = {
+    <s:@L> <value:FloatLiteral> <e:@L> => Constant::<()>::Float {
         location: location(s, e),
         value,
     }
 }
 
-ConstString: ConstValue<()> = {
-    <s:@L> <x:RawString> <e:@L> => ConstValue::<()>::String {
+ConstString: Constant<()> = {
+    <s:@L> <x:RawString> <e:@L> => Constant::<()>::String {
         location: location(s, e),
         value: x,
     }

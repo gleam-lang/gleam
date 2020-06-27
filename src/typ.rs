@@ -5,11 +5,11 @@ mod tests;
 use crate::{
     ast::{
         self, Arg, ArgNames, BinOp, BinSegmentOption, BindingKind, CallArg, Clause, ClauseGuard,
-        ConstValue, Pattern, RecordConstructor, SrcSpan, Statement, TypeAst, TypedArg, TypedClause,
-        TypedClauseGuard, TypedConstValue, TypedExpr, TypedExprBinSegment,
+        Constant, Pattern, RecordConstructor, SrcSpan, Statement, TypeAst, TypedArg, TypedClause,
+        TypedClauseGuard, TypedConstant, TypedExpr, TypedExprBinSegment,
         TypedExprBinSegmentOption, TypedModule, TypedMultiPattern, TypedPattern,
         TypedPatternBinSegment, TypedPatternBinSegmentOption, TypedStatement, UnqualifiedImport,
-        UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstValue, UntypedExpr,
+        UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedExpr,
         UntypedExprBinSegment, UntypedExprBinSegmentOption, UntypedModule, UntypedMultiPattern,
         UntypedPattern, UntypedPatternBinSegment, UntypedPatternBinSegmentOption, UntypedStatement,
     },
@@ -274,7 +274,7 @@ pub enum ValueConstructorVariant {
     LocalVariable,
 
     /// A module constant
-    ModuleConstValue { literal: ConstValue<Arc<Type>> },
+    ModuleConstant { literal: Constant<Arc<Type>> },
 
     /// A function belonging to the module
     ModuleFn {
@@ -299,8 +299,8 @@ impl ValueConstructorVariant {
                 arity: field_map.as_ref().map_or(0, |fm| fm.arity),
             },
 
-            ValueConstructorVariant::ModuleConstValue { literal } => {
-                ModuleValueConstructor::ConstValue {
+            ValueConstructorVariant::ModuleConstant { literal } => {
+                ModuleValueConstructor::Constant {
                     literal: literal.clone(),
                 }
             }
@@ -315,7 +315,7 @@ impl ValueConstructorVariant {
 pub enum ModuleValueConstructor {
     Record { name: String, arity: usize },
     Fn,
-    ConstValue { literal: ConstValue<Arc<Type>> },
+    Constant { literal: Constant<Arc<Type>> },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -656,7 +656,7 @@ impl<'a> Typer<'a> {
         self.module_values
             .get(name)
             .filter(|ValueConstructor { variant, .. }| {
-                if let ValueConstructorVariant::ModuleConstValue { .. } = variant {
+                if let ValueConstructorVariant::ModuleConstant { .. } = variant {
                     true
                 } else {
                     false
@@ -1697,7 +1697,7 @@ impl<'a> Typer<'a> {
                         return Err(Error::NonLocalClauseGuardVariable { location, name })
                     }
 
-                    ValueConstructorVariant::ModuleConstValue { literal } => {
+                    ValueConstructorVariant::ModuleConstant { literal } => {
                         return Ok(const_to_clause_guard(literal))
                     }
                 };
@@ -1764,7 +1764,7 @@ impl<'a> Typer<'a> {
                         return Err(Error::NonLocalClauseGuardVariable { location, name })
                     }
 
-                    ValueConstructorVariant::ModuleConstValue { literal } => {
+                    ValueConstructorVariant::ModuleConstant { literal } => {
                         return Ok(const_to_clause_guard(literal))
                     }
                 };
@@ -2276,26 +2276,26 @@ impl<'a> Typer<'a> {
     fn infer_const(
         &mut self,
         annotation: &Option<TypeAst>,
-        value: UntypedConstValue,
-    ) -> Result<TypedConstValue, Error> {
+        value: UntypedConstant,
+    ) -> Result<TypedConstant, Error> {
         let inferred = match value {
-            ConstValue::Int {
+            Constant::Int {
                 location, value, ..
-            } => Ok(ConstValue::Int { location, value }),
+            } => Ok(Constant::Int { location, value }),
 
-            ConstValue::Float {
+            Constant::Float {
                 location, value, ..
-            } => Ok(ConstValue::Float { location, value }),
+            } => Ok(Constant::Float { location, value }),
 
-            ConstValue::String {
+            Constant::String {
                 location, value, ..
-            } => Ok(ConstValue::String { location, value }),
+            } => Ok(Constant::String { location, value }),
 
-            ConstValue::Tuple {
+            Constant::Tuple {
                 elements, location, ..
             } => self.infer_const_tuple(elements, location),
 
-            ConstValue::List {
+            Constant::List {
                 elements, location, ..
             } => self.infer_const_list(elements, location),
         }?;
@@ -2312,9 +2312,9 @@ impl<'a> Typer<'a> {
 
     fn infer_const_tuple(
         &mut self,
-        untyped_elements: Vec<UntypedConstValue>,
+        untyped_elements: Vec<UntypedConstant>,
         location: SrcSpan,
-    ) -> Result<TypedConstValue, Error> {
+    ) -> Result<TypedConstant, Error> {
         let mut elements = Vec::with_capacity(untyped_elements.len());
 
         for element in untyped_elements.into_iter() {
@@ -2322,14 +2322,14 @@ impl<'a> Typer<'a> {
             elements.push(element);
         }
 
-        Ok(ConstValue::Tuple { elements, location })
+        Ok(Constant::Tuple { elements, location })
     }
 
     fn infer_const_list(
         &mut self,
-        untyped_elements: Vec<UntypedConstValue>,
+        untyped_elements: Vec<UntypedConstant>,
         location: SrcSpan,
-    ) -> Result<TypedConstValue, Error> {
+    ) -> Result<TypedConstant, Error> {
         let typ = self.new_unbound_var(0);
         let mut elements = Vec::with_capacity(untyped_elements.len());
 
@@ -2340,7 +2340,7 @@ impl<'a> Typer<'a> {
             elements.push(element);
         }
 
-        Ok(ConstValue::List {
+        Ok(Constant::List {
             elements,
             location,
             typ: list(typ),
@@ -3486,7 +3486,7 @@ pub fn infer_module(
                     ValueConstructor {
                         public,
                         origin: location.clone(),
-                        variant: ValueConstructorVariant::ModuleConstValue {
+                        variant: ValueConstructorVariant::ModuleConstant {
                             literal: typed_expr.clone(),
                         },
                         typ: typ.clone(),
@@ -3969,7 +3969,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         PatternConstructor::Record { name: name.clone() }
                     }
                     ValueConstructorVariant::LocalVariable
-                    | ValueConstructorVariant::ModuleConstValue { .. }
+                    | ValueConstructorVariant::ModuleConstant { .. }
                     | ValueConstructorVariant::ModuleFn { .. } => crate::error::fatal_compiler_bug(
                         "Unexpected value constructor type for a constructor pattern.",
                     ),
@@ -4381,30 +4381,30 @@ fn generalise(t: Arc<Type>, ctx_level: usize) -> Arc<Type> {
 
 // TODO: Remove this convertion and instead have the clause guard
 // hold a reference to the const value?
-fn const_to_clause_guard(const_value: &TypedConstValue) -> TypedClauseGuard {
-    match const_value {
-        ConstValue::Int {
+fn const_to_clause_guard(constant: &TypedConstant) -> TypedClauseGuard {
+    match constant {
+        Constant::Int {
             location, value, ..
         } => ClauseGuard::Int {
             location: location.clone(),
             value: value.clone(),
         },
 
-        ConstValue::Float {
+        Constant::Float {
             location, value, ..
         } => ClauseGuard::Float {
             location: location.clone(),
             value: value.clone(),
         },
 
-        ConstValue::String {
+        Constant::String {
             location, value, ..
         } => ClauseGuard::String {
             location: location.clone(),
             value: value.clone(),
         },
 
-        ConstValue::List {
+        Constant::List {
             location,
             elements,
             typ,
@@ -4415,12 +4415,12 @@ fn const_to_clause_guard(const_value: &TypedConstValue) -> TypedClauseGuard {
             typ: typ.clone(),
         },
 
-        ConstValue::Tuple {
+        Constant::Tuple {
             location, elements, ..
         } => ClauseGuard::Tuple {
             location: location.clone(),
             elems: elements.iter().map(|v| const_to_clause_guard(v)).collect(),
-            typ: const_value.typ(),
+            typ: constant.typ(),
         },
     }
 }

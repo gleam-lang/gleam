@@ -667,7 +667,7 @@ fn var(name: &str, constructor: &ValueConstructor, env: &mut Env) -> Document {
 
         ValueConstructorVariant::LocalVariable => env.local_var_name(name.to_string()),
 
-        ValueConstructorVariant::ModuleConstValue { literal } => const_inline(literal),
+        ValueConstructorVariant::ModuleConstant { literal } => const_inline(literal),
 
         ValueConstructorVariant::ModuleFn {
             arity, ref module, ..
@@ -692,14 +692,14 @@ fn var(name: &str, constructor: &ValueConstructor, env: &mut Env) -> Document {
     }
 }
 
-fn const_inline(literal: &ConstValue<Arc<Type>>) -> Document {
+fn const_inline(literal: &Constant<Arc<Type>>) -> Document {
     match literal {
-        ConstValue::Int { value, .. } => value.to_string().to_doc(),
-        ConstValue::Float { value, .. } => value.to_string().to_doc(),
-        ConstValue::String { value, .. } => string(value),
-        ConstValue::Tuple { elements, .. } => tuple(elements.iter().map(const_inline)),
+        Constant::Int { value, .. } => value.to_string().to_doc(),
+        Constant::Float { value, .. } => value.to_string().to_doc(),
+        Constant::String { value, .. } => string(value),
+        Constant::Tuple { elements, .. } => tuple(elements.iter().map(const_inline)),
 
-        ConstValue::List { elements, .. } => {
+        Constant::List { elements, .. } => {
             let elements = elements.iter().map(const_inline).intersperse(delim(","));
             concat(elements).nest_current().surround("[", "]").group()
         }
@@ -1053,7 +1053,7 @@ fn expr(expression: &TypedExpr, env: &mut Env) -> Document {
         } => atom(name.to_snake_case()),
 
         TypedExpr::ModuleSelect {
-            constructor: ModuleValueConstructor::ConstValue { literal },
+            constructor: ModuleValueConstructor::Constant { literal },
             ..
         } => const_inline(literal),
 

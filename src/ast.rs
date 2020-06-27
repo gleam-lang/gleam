@@ -1,11 +1,11 @@
-mod const_value;
+mod constant;
 mod typed;
 mod untyped;
 
 pub use self::typed::TypedExpr;
 pub use self::untyped::UntypedExpr;
 
-pub use self::const_value::{ConstValue, TypedConstValue, UntypedConstValue};
+pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
 use crate::typ::{self, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor};
 use itertools::Itertools;
@@ -204,7 +204,7 @@ pub enum Statement<T, Expr> {
         public: bool,
         name: String,
         annotation: Option<TypeAst>,
-        value: Box<const_value::ConstValue<T>>,
+        value: Box<constant::Constant<T>>,
         typ: T,
     },
 }

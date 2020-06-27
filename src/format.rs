@@ -239,15 +239,15 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    fn const_expr<T>(&mut self, value: &ConstValue<T>) -> Document {
+    fn const_expr<T>(&mut self, value: &Constant<T>) -> Document {
         match value {
-            ConstValue::Int { value, .. } | ConstValue::Float { value, .. } => {
+            Constant::Int { value, .. } | Constant::Float { value, .. } => {
                 value.clone().to_doc()
             }
 
-            ConstValue::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
+            Constant::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
 
-            ConstValue::List { elements, .. } => {
+            Constant::List { elements, .. } => {
                 let elements = elements
                     .iter()
                     .map(|e| self.const_expr(e))
@@ -255,7 +255,7 @@ impl<'a> Formatter<'a> {
                 list(concat(elements), None)
             }
 
-            ConstValue::Tuple { elements, .. } => "tuple"
+            Constant::Tuple { elements, .. } => "tuple"
                 .to_doc()
                 .append(wrap_args(elements.iter().map(|e| self.const_expr(e)))),
         }
@@ -265,7 +265,7 @@ impl<'a> Formatter<'a> {
         &mut self,
         public: bool,
         name: &str,
-        value: &TypedConstValue,
+        value: &TypedConstant,
     ) -> Document {
         let mut printer = typ::pretty::Printer::new();
 
