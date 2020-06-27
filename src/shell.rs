@@ -5,8 +5,8 @@ use crate::{
 };
 use std::path::PathBuf;
 use std::process::Command;
+extern crate ctrlc;
 
-// TODO: correct handling of ctrl+c
 pub fn command(root_string: String) -> Result<(), Error> {
     let root_path = PathBuf::from(root_string);
     let root = ProjectRoot::new(root_path.clone());
@@ -14,6 +14,12 @@ pub fn command(root_string: String) -> Result<(), Error> {
 
     // Build project
     build::main(config, root_path)?;
+
+    // Don't exit on ctrl+c as it is used by child erlang shell
+    ctrlc::set_handler(move || {
+        println!("\nIf you would like to exit this shell, please use Ctrl+g to switch to user switch prompt and type `q` to quit");
+    })
+    .expect("Error setting Ctrl-C handler");
 
     // Prepare the Erlang shell command
     let mut command = Command::new("erl");
