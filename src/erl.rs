@@ -1028,7 +1028,11 @@ fn wrap_expr(expression: &TypedExpr, env: &mut Env) -> Document {
 fn expr(expression: &TypedExpr, env: &mut Env) -> Document {
     match expression {
         TypedExpr::ListNil { .. } => "[]".to_doc(),
-        TypedExpr::Todo { .. } => "erlang:error({gleam_error, todo})".to_doc(),
+        TypedExpr::Todo { label: None, .. } => "erlang:error({gleam_error, todo})".to_doc(),
+        TypedExpr::Todo { label: Some(l), .. } => l
+            .clone()
+            .to_doc()
+            .surround("erlang:error({gleam_error, todo, \"", "\"})"),
         TypedExpr::Int { value, .. } => value.as_str().to_doc(),
         TypedExpr::Float { value, .. } => float(value.as_ref()),
         TypedExpr::String { value, .. } => string(value),
