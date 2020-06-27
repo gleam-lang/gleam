@@ -2553,6 +2553,33 @@ main(Arg) ->
 "#,
     );
 
+    assert_erl!(
+        r#"
+pub const list = [1, 2, 3]
+
+pub fn main(arg) {
+  case arg {
+    _ if arg == list -> 1
+    _ -> 0
+  }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/1]).
+
+main(Arg) ->
+    case Arg of
+        _ when Arg =:= [1, 2, 3] ->
+            1;
+
+        _ ->
+            0
+    end.
+"#,
+    );
+
     // reassigning name in alternative patterns
     assert_erl!(
         r#"

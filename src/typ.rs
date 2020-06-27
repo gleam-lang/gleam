@@ -4379,6 +4379,8 @@ fn generalise(t: Arc<Type>, ctx_level: usize) -> Arc<Type> {
     }
 }
 
+// TODO: Remove this convertion and instead have the clause guard
+// hold a reference to the const value?
 fn const_to_clause_guard(const_value: &TypedConstValue) -> TypedClauseGuard {
     match const_value {
         ConstValue::Int {
@@ -4402,10 +4404,16 @@ fn const_to_clause_guard(const_value: &TypedConstValue) -> TypedClauseGuard {
             value: value.clone(),
         },
 
-        ConstValue::List { .. } => {
-            // TODO: we need lists supported in clause guards for this first.
-            todo!()
-        }
+        ConstValue::List {
+            location,
+            elements,
+            typ,
+            ..
+        } => ClauseGuard::List {
+            location: location.clone(),
+            elems: elements.iter().map(|v| const_to_clause_guard(v)).collect(),
+            typ: typ.clone(),
+        },
 
         ConstValue::Tuple {
             location, elements, ..
