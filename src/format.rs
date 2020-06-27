@@ -241,9 +241,7 @@ impl<'a> Formatter<'a> {
 
     fn const_expr<T>(&mut self, value: &Constant<T>) -> Document {
         match value {
-            Constant::Int { value, .. } | Constant::Float { value, .. } => {
-                value.clone().to_doc()
-            }
+            Constant::Int { value, .. } | Constant::Float { value, .. } => value.clone().to_doc(),
 
             Constant::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
 
@@ -261,12 +259,7 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    pub fn docs_const_expr(
-        &mut self,
-        public: bool,
-        name: &str,
-        value: &TypedConstant,
-    ) -> Document {
+    pub fn docs_const_expr(&mut self, public: bool, name: &str, value: &TypedConstant) -> Document {
         let mut printer = typ::pretty::Printer::new();
 
         pub_(public)
@@ -971,7 +964,7 @@ impl<'a> Formatter<'a> {
         );
         let clause_doc = match &clause.guard {
             None => clause_doc,
-            Some(guard) => clause_doc.append(" if ").append(guard),
+            Some(guard) => clause_doc.append(" if ").append(self.clause_guard(guard)),
         };
 
         // Remove any unused empty lines within the clause
@@ -1205,6 +1198,122 @@ impl<'a> Formatter<'a> {
             } => self.pattern(value),
         }
     }
+
+    fn clause_guard(&mut self, clause_guard: &UntypedClauseGuard) -> Document {
+        match clause_guard {
+            ClauseGuard::And { left, right, .. } => self
+                .clause_guard(left.as_ref())
+                .append(" && ")
+                .append(self.clause_guard(right.as_ref())),
+
+            ClauseGuard::Or { left, right, .. } => self
+                .clause_guard(left.as_ref())
+                .append(" || ")
+                .append(self.clause_guard(right.as_ref())),
+
+            ClauseGuard::Equals { left, right, .. } => self
+                .clause_guard(left.as_ref())
+                .append(" == ")
+                .append(self.clause_guard(right.as_ref())),
+
+            ClauseGuard::NotEquals { left, right, .. } => self
+                .clause_guard(left.as_ref())
+                .append(" != ")
+                .append(self.clause_guard(right.as_ref())),
+
+            ClauseGuard::GtInt { left, right, .. } => self
+                .clause_guard(left.as_ref())
+                .append(" > ")
+                .append(self.clause_guard(right.as_ref())),
+
+            ClauseGuard::GtEqInt { left, right, .. } => self
+                .clause_guard(left.as_ref())
+                .append(" >= ")
+                .append(self.clause_guard(right.as_ref())),
+
+            ClauseGuard::LtInt { left, right, .. } => self
+                .clause_guard(left.as_ref())
+                .append(" < ")
+                .append(self.clause_guard(right.as_ref())),
+
+            ClauseGuard::LtEqInt { left, right, .. } => self
+                .clause_guard(left.as_ref())
+                .append(" <= ")
+                .append(self.clause_guard(right.as_ref())),
+
+            ClauseGuard::GtFloat { left, right, .. } => self
+                .clause_guard(left.as_ref())
+                .append(" >. ")
+                .append(self.clause_guard(right.as_ref())),
+
+            ClauseGuard::GtEqFloat { left, right, .. } => self
+                .clause_guard(left.as_ref())
+                .append(" >=. ")
+                .append(self.clause_guard(right.as_ref())),
+
+            ClauseGuard::LtFloat { left, right, .. } => self
+                .clause_guard(left.as_ref())
+                .append(" <. ")
+                .append(self.clause_guard(right.as_ref())),
+
+            ClauseGuard::LtEqFloat { left, right, .. } => self
+                .clause_guard(left.as_ref())
+                .append(" <=. ")
+                .append(self.clause_guard(right.as_ref())),
+
+            ClauseGuard::Constructor {
+                name,
+                args,
+                module: None,
+                ..
+            } if args.is_empty() => name.to_string().to_doc(),
+
+            ClauseGuard::Constructor {
+                name,
+                args,
+                module: Some(m),
+                ..
+            } if args.is_empty() => m.to_string().to_doc().append(".").append(name.to_string()),
+
+            ClauseGuard::Constructor {
+                name,
+                args,
+                module: None,
+                ..
+            } => name.to_string().to_doc().append(wrap_args(
+                args.iter().map(|a| self.clause_guard_call_arg(&a)),
+            )),
+
+            ClauseGuard::Constructor {
+                name,
+                args,
+                module: Some(m),
+                ..
+            } => m
+                .to_string()
+                .to_doc()
+                .append(".")
+                .append(name.to_string())
+                .append(wrap_args(
+                    args.iter().map(|a| self.clause_guard_call_arg(&a)),
+                )),
+
+            ClauseGuard::Var { name, .. } => name.to_string().to_doc(),
+
+            ClauseGuard::Constant(constant) => self.const_expr(constant),
+        }
+    }
+
+    fn clause_guard_call_arg(&mut self, arg: &CallArg<UntypedClauseGuard>) -> Document {
+        match &arg.label {
+            None => self.clause_guard(&arg.value),
+            Some(s) => s
+                .clone()
+                .to_doc()
+                .append(": ")
+                .append(self.clause_guard(&arg.value)),
+        }
+    }
 }
 
 pub fn pretty_module(m: &UntypedModule, formatter: &mut Formatter<'_>) -> String {
@@ -1274,126 +1383,6 @@ impl Documentable for &BinOp {
         }
         .to_doc()
     }
-}
-
-// TODO: surround sub-expressions where needed
-impl Documentable for &UntypedClauseGuard {
-    fn to_doc(self) -> Document {
-        match self {
-            ClauseGuard::And { left, right, .. } => {
-                left.as_ref().to_doc().append(" && ").append(right.as_ref())
-            }
-
-            ClauseGuard::Or { left, right, .. } => {
-                left.as_ref().to_doc().append(" || ").append(right.as_ref())
-            }
-
-            ClauseGuard::Equals { left, right, .. } => {
-                left.as_ref().to_doc().append(" == ").append(right.as_ref())
-            }
-
-            ClauseGuard::NotEquals { left, right, .. } => {
-                left.as_ref().to_doc().append(" != ").append(right.as_ref())
-            }
-
-            ClauseGuard::GtInt { left, right, .. } => {
-                left.as_ref().to_doc().append(" > ").append(right.as_ref())
-            }
-
-            ClauseGuard::GtEqInt { left, right, .. } => {
-                left.as_ref().to_doc().append(" >= ").append(right.as_ref())
-            }
-
-            ClauseGuard::LtInt { left, right, .. } => {
-                left.as_ref().to_doc().append(" < ").append(right.as_ref())
-            }
-
-            ClauseGuard::LtEqInt { left, right, .. } => {
-                left.as_ref().to_doc().append(" <= ").append(right.as_ref())
-            }
-
-            ClauseGuard::GtFloat { left, right, .. } => {
-                left.as_ref().to_doc().append(" >. ").append(right.as_ref())
-            }
-
-            ClauseGuard::GtEqFloat { left, right, .. } => left
-                .as_ref()
-                .to_doc()
-                .append(" >=. ")
-                .append(right.as_ref()),
-
-            ClauseGuard::LtFloat { left, right, .. } => {
-                left.as_ref().to_doc().append(" <. ").append(right.as_ref())
-            }
-
-            ClauseGuard::LtEqFloat { left, right, .. } => left
-                .as_ref()
-                .to_doc()
-                .append(" <=. ")
-                .append(right.as_ref()),
-
-            ClauseGuard::Int { value, .. } => value.to_string().to_doc(),
-
-            ClauseGuard::Float { value, .. } => value.to_string().to_doc(),
-
-            ClauseGuard::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
-
-            ClauseGuard::Tuple { elems, .. } => "tuple"
-                .to_doc()
-                .append(wrap_args(elems.iter().map(|e| e.to_doc()))),
-
-            ClauseGuard::List { elems, .. } => list(
-                concat(elems.iter().map(|e| e.to_doc()).intersperse(delim(","))),
-                None,
-            ),
-
-            ClauseGuard::Constructor {
-                name,
-                args,
-                module: None,
-                ..
-            } if args.is_empty() => name.to_string().to_doc(),
-
-            ClauseGuard::Constructor {
-                name,
-                args,
-                module: Some(m),
-                ..
-            } if args.is_empty() => m.to_string().to_doc().append(".").append(name.to_string()),
-
-            ClauseGuard::Constructor {
-                name,
-                args,
-                module: None,
-                ..
-            } => name
-                .to_string()
-                .to_doc()
-                .append(wrap_args(args.iter().map(|a| clause_guard_call_arg(&a)))),
-
-            ClauseGuard::Constructor {
-                name,
-                args,
-                module: Some(m),
-                ..
-            } => m
-                .to_string()
-                .to_doc()
-                .append(".")
-                .append(name.to_string())
-                .append(wrap_args(args.iter().map(|a| clause_guard_call_arg(&a)))),
-
-            ClauseGuard::Var { name, .. } => name.to_string().to_doc(),
-        }
-    }
-}
-
-fn clause_guard_call_arg(arg: &CallArg<UntypedClauseGuard>) -> Document {
-    match &arg.label {
-        Some(s) => s.clone().to_doc().append(": "),
-        None => nil(),
-    }
-    .append(arg.value.to_doc())
 }
 
 fn categorise_list_expr(expr: &UntypedExpr) -> ListType<&UntypedExpr, &UntypedExpr> {

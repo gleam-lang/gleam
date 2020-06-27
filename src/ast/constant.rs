@@ -2,6 +2,7 @@ use super::*;
 
 pub type TypedConstant = Constant<Arc<Type>>;
 pub type UntypedConstant = Constant<()>;
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum Constant<T> {
     Int {

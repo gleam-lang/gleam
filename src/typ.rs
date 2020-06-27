@@ -6,12 +6,12 @@ use crate::{
     ast::{
         self, Arg, ArgNames, BinOp, BinSegmentOption, BindingKind, CallArg, Clause, ClauseGuard,
         Constant, Pattern, RecordConstructor, SrcSpan, Statement, TypeAst, TypedArg, TypedClause,
-        TypedClauseGuard, TypedConstant, TypedExpr, TypedExprBinSegment,
-        TypedExprBinSegmentOption, TypedModule, TypedMultiPattern, TypedPattern,
-        TypedPatternBinSegment, TypedPatternBinSegmentOption, TypedStatement, UnqualifiedImport,
-        UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedExpr,
-        UntypedExprBinSegment, UntypedExprBinSegmentOption, UntypedModule, UntypedMultiPattern,
-        UntypedPattern, UntypedPatternBinSegment, UntypedPatternBinSegmentOption, UntypedStatement,
+        TypedClauseGuard, TypedConstant, TypedExpr, TypedExprBinSegment, TypedExprBinSegmentOption,
+        TypedModule, TypedMultiPattern, TypedPattern, TypedPatternBinSegment,
+        TypedPatternBinSegmentOption, TypedStatement, UnqualifiedImport, UntypedArg, UntypedClause,
+        UntypedClauseGuard, UntypedConstant, UntypedExpr, UntypedExprBinSegment,
+        UntypedExprBinSegmentOption, UntypedModule, UntypedMultiPattern, UntypedPattern,
+        UntypedPatternBinSegment, UntypedPatternBinSegmentOption, UntypedStatement,
     },
     bit_string::{BinaryTypeSpecifier, Error as BinaryError},
     build::Origin,
@@ -1698,7 +1698,7 @@ impl<'a> Typer<'a> {
                     }
 
                     ValueConstructorVariant::ModuleConstant { literal } => {
-                        return Ok(const_to_clause_guard(literal))
+                        return Ok(ClauseGuard::Constant(literal.clone()))
                     }
                 };
 
@@ -1706,45 +1706,6 @@ impl<'a> Typer<'a> {
                     location,
                     name,
                     typ: constructor.typ,
-                })
-            }
-
-            ClauseGuard::Tuple {
-                location, elems, ..
-            } => {
-                let elems = elems
-                    .into_iter()
-                    .map(|x| self.infer_clause_guard(x))
-                    .collect::<Result<Vec<_>, _>>()?;
-
-                let typ = tuple(elems.iter().map(|e| e.typ()).collect());
-
-                Ok(ClauseGuard::Tuple {
-                    location,
-                    elems,
-                    typ,
-                })
-            }
-
-            ClauseGuard::List {
-                location,
-                elems: untyped_elems,
-                ..
-            } => {
-                let inner_type = self.new_unbound_var(self.level);
-                let mut elems = Vec::with_capacity(untyped_elems.len());
-
-                for elem in untyped_elems {
-                    let elem = self.infer_clause_guard(elem)?;
-                    self.unify(inner_type.clone(), elem.typ())
-                        .map_err(|e| convert_unify_error(e, elem.location()))?;
-                    elems.push(elem);
-                }
-
-                Ok(ClauseGuard::List {
-                    location,
-                    elems,
-                    typ: list(inner_type),
                 })
             }
 
@@ -1765,7 +1726,7 @@ impl<'a> Typer<'a> {
                     }
 
                     ValueConstructorVariant::ModuleConstant { literal } => {
-                        return Ok(const_to_clause_guard(literal))
+                        return Ok(ClauseGuard::Constant(literal.clone()))
                     }
                 };
 
@@ -1798,25 +1759,21 @@ impl<'a> Typer<'a> {
                 let args = args_types
                     .iter_mut()
                     .zip(args)
-                    .map(
-                        |(
-                            typ,
-                            CallArg {
-                                label,
-                                value,
-                                location,
-                            },
-                        ): (&mut Arc<Type>, _)| {
-                            let value = self.infer_clause_guard(value)?;
-                            self.unify(typ.clone(), value.typ())
-                                .map_err(|e| convert_unify_error(e, value.location()))?;
-                            Ok(CallArg {
-                                label,
-                                value,
-                                location,
-                            })
-                        },
-                    )
+                    .map(|(typ, arg): (&mut Arc<Type>, _)| {
+                        let CallArg {
+                            label,
+                            value,
+                            location,
+                        } = arg;
+                        let value = self.infer_clause_guard(value)?;
+                        self.unify(typ.clone(), value.typ())
+                            .map_err(|e| convert_unify_error(e, value.location()))?;
+                        Ok(CallArg {
+                            label,
+                            value,
+                            location,
+                        })
+                    })
                     .collect::<Result<_, _>>()?;
 
                 Ok(ClauseGuard::Constructor {
@@ -2052,17 +2009,9 @@ impl<'a> Typer<'a> {
                 })
             }
 
-            ClauseGuard::Int {
-                location, value, ..
-            } => Ok(ClauseGuard::Int { location, value }),
-
-            ClauseGuard::Float {
-                location, value, ..
-            } => Ok(ClauseGuard::Float { location, value }),
-
-            ClauseGuard::String {
-                location, value, ..
-            } => Ok(ClauseGuard::String { location, value }),
+            ClauseGuard::Constant(constant) => {
+                self.infer_const(&None, constant).map(ClauseGuard::Constant)
+            }
         }
     }
 
@@ -4376,52 +4325,6 @@ fn generalise(t: Arc<Type>, ctx_level: usize) -> Arc<Type> {
                 .map(|t| generalise(t.clone(), ctx_level))
                 .collect(),
         ),
-    }
-}
-
-// TODO: Remove this convertion and instead have the clause guard
-// hold a reference to the const value?
-fn const_to_clause_guard(constant: &TypedConstant) -> TypedClauseGuard {
-    match constant {
-        Constant::Int {
-            location, value, ..
-        } => ClauseGuard::Int {
-            location: location.clone(),
-            value: value.clone(),
-        },
-
-        Constant::Float {
-            location, value, ..
-        } => ClauseGuard::Float {
-            location: location.clone(),
-            value: value.clone(),
-        },
-
-        Constant::String {
-            location, value, ..
-        } => ClauseGuard::String {
-            location: location.clone(),
-            value: value.clone(),
-        },
-
-        Constant::List {
-            location,
-            elements,
-            typ,
-            ..
-        } => ClauseGuard::List {
-            location: location.clone(),
-            elems: elements.iter().map(|v| const_to_clause_guard(v)).collect(),
-            typ: typ.clone(),
-        },
-
-        Constant::Tuple {
-            location, elements, ..
-        } => ClauseGuard::Tuple {
-            location: location.clone(),
-            elems: elements.iter().map(|v| const_to_clause_guard(v)).collect(),
-            typ: constant.typ(),
-        },
     }
 }
 

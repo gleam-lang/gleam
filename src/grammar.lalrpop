@@ -431,37 +431,12 @@ ClauseGuard4: UntypedClauseGuard = {
 }
 
 ClauseGuard5: UntypedClauseGuard = {
+    Constant => ClauseGuard::Constant(<>),
+
     <s:@L> <name:VarName> <e:@L> => ClauseGuard::Var {
         location: location(s, e),
         typ: (),
         name,
-    },
-
-    <s:@L> <value:IntLiteral> <e:@L> => ClauseGuard::Int {
-        location: location(s, e),
-        value,
-    },
-
-    <s:@L> <value:FloatLiteral> <e:@L> => ClauseGuard::Float {
-        location: location(s, e),
-        value,
-    },
-
-    <s:@L> <value:RawString> <e:@L> => ClauseGuard::String {
-        location: location(s, e),
-        value,
-    },
-
-    <s:@L> "tuple" "(" <elems:Comma<ClauseGuard>> ")" <e:@L> => ClauseGuard::Tuple {
-        location: location(s, e),
-        typ: (),
-        elems,
-    },
-
-    <s:@L> "[" <elems:Comma<ClauseGuard>> "]" <e:@L> => ClauseGuard::List {
-        location: location(s, e),
-        typ: (),
-        elems,
     },
 
     <s:@L> <module:(<VarName> ".")?> <name:UpName> <args:ClauseGuardConstructorArgs?> <e:@L> => {
@@ -475,6 +450,7 @@ ClauseGuard5: UntypedClauseGuard = {
             name,
         }
     },
+
     "{" <ClauseGuard> "}" => <>,
 }
 

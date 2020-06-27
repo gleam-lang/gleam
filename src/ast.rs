@@ -424,32 +424,7 @@ pub enum ClauseGuard<Type> {
         name: String,
     },
 
-    Int {
-        location: SrcSpan,
-        value: String,
-    },
-
-    Float {
-        location: SrcSpan,
-        value: String,
-    },
-
-    String {
-        location: SrcSpan,
-        value: String,
-    },
-
-    Tuple {
-        location: SrcSpan,
-        elems: Vec<Self>,
-        typ: Type,
-    },
-
-    List {
-        location: SrcSpan,
-        elems: Vec<Self>,
-        typ: Type,
-    },
+    Constant(Constant<Type>),
 
     Constructor {
         location: SrcSpan,
@@ -463,6 +438,7 @@ pub enum ClauseGuard<Type> {
 impl<A> ClauseGuard<A> {
     pub fn location(&self) -> &SrcSpan {
         match self {
+            ClauseGuard::Constant(constant) => constant.location(),
             ClauseGuard::Or { location, .. } => location,
             ClauseGuard::And { location, .. } => location,
             ClauseGuard::Var { location, .. } => location,
@@ -476,11 +452,6 @@ impl<A> ClauseGuard<A> {
             ClauseGuard::GtEqFloat { location, .. } => location,
             ClauseGuard::LtFloat { location, .. } => location,
             ClauseGuard::LtEqFloat { location, .. } => location,
-            ClauseGuard::Int { location, .. } => location,
-            ClauseGuard::Float { location, .. } => location,
-            ClauseGuard::String { location, .. } => location,
-            ClauseGuard::Tuple { location, .. } => location,
-            ClauseGuard::List { location, .. } => location,
             ClauseGuard::Constructor { location, .. } => location,
         }
     }
@@ -490,12 +461,21 @@ impl TypedClauseGuard {
     pub fn typ(&self) -> Arc<typ::Type> {
         match self {
             ClauseGuard::Var { typ, .. } => typ.clone(),
-            ClauseGuard::Int { .. } => typ::int(),
-            ClauseGuard::Float { .. } => typ::float(),
-            ClauseGuard::String { .. } => typ::string(),
-            ClauseGuard::Tuple { typ, .. } => typ.clone(),
             ClauseGuard::Constructor { typ, .. } => typ.clone(),
-            _ => typ::bool(),
+            ClauseGuard::Constant(constant) => constant.typ(),
+
+            ClauseGuard::Or { .. }
+            | ClauseGuard::And { .. }
+            | ClauseGuard::Equals { .. }
+            | ClauseGuard::NotEquals { .. }
+            | ClauseGuard::GtInt { .. }
+            | ClauseGuard::GtEqInt { .. }
+            | ClauseGuard::LtInt { .. }
+            | ClauseGuard::LtEqInt { .. }
+            | ClauseGuard::GtFloat { .. }
+            | ClauseGuard::GtEqFloat { .. }
+            | ClauseGuard::LtFloat { .. }
+            | ClauseGuard::LtEqFloat { .. } => typ::bool(),
         }
     }
 }

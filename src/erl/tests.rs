@@ -18,6 +18,7 @@ fn record_definition_test() {
 fn integration_test() {
     macro_rules! assert_erl {
         ($src:expr, $erl:expr $(,)?) => {
+            println!("\n\n\n{}\n", $src);
             let mut ast = crate::grammar::ModuleParser::new()
                 .parse($src)
                 .expect("syntax error");
@@ -1488,6 +1489,87 @@ x() ->
 main() ->
     A = <<(x())/integer>>,
     A.
+"#,
+    );
+
+    assert_erl!(
+        r#"
+pub const string_value = "constant value"
+
+pub fn main(arg) {
+  case arg {
+    _ if arg == string_value -> 1
+    _ -> 0
+  }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/1]).
+
+main(Arg) ->
+    case Arg of
+        _ when Arg =:= <<"constant value"/utf8>> ->
+            1;
+
+        _ ->
+            0
+    end.
+"#,
+    );
+
+    assert_erl!(
+        r#"
+pub const constant = tuple(1, 2.0)
+
+pub fn main(arg) {
+  case arg {
+    _ if arg == constant -> 1
+    _ -> 0
+  }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/1]).
+
+main(Arg) ->
+    case Arg of
+        _ when Arg =:= {1, 2.0} ->
+            1;
+
+        _ ->
+            0
+    end.
+"#,
+    );
+
+    assert_erl!(
+        r#"
+pub const float_value = 3.14
+
+pub fn main(arg) {
+  case arg {
+    _ if arg >. float_value -> 1
+    _ -> 0
+  }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/1]).
+
+main(Arg) ->
+    case Arg of
+        _ when Arg > 3.14 ->
+            1;
+
+        _ ->
+            0
+    end.
 "#,
     );
 

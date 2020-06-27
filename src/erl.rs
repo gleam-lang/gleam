@@ -812,26 +812,6 @@ fn bare_clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
             .append(" =< ")
             .append(clause_guard(right.as_ref(), env)),
 
-        ClauseGuard::Int { value, .. } => value.to_string().to_doc(),
-
-        ClauseGuard::Float { value, .. } => value.to_string().to_doc(),
-
-        ClauseGuard::String { value, .. } => string(value),
-
-        ClauseGuard::Tuple { elems, .. } => {
-            tuple(elems.into_iter().map(|e| bare_clause_guard(e, env)))
-        }
-
-        ClauseGuard::List { elems, .. } => concat(
-            elems
-                .iter()
-                .map(|e| bare_clause_guard(e, env))
-                .intersperse(delim(",")),
-        )
-        .nest_current()
-        .surround("[", "]")
-        .group(),
-
         ClauseGuard::Constructor { name, args, .. } => {
             if args.is_empty() {
                 atom(name.to_snake_case())
@@ -846,6 +826,8 @@ fn bare_clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
         // Only local variables are supported and the typer ensures that all
         // ClauseGuard::Vars are local variables
         ClauseGuard::Var { name, .. } => env.local_var_name(name.to_string()),
+
+        ClauseGuard::Constant(constant) => const_inline(constant),
     }
 }
 
@@ -869,13 +851,9 @@ fn clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
             .append(")"),
 
         // Values are not wrapped
-        ClauseGuard::Var { .. }
-        | ClauseGuard::Int { .. }
-        | ClauseGuard::List { .. }
-        | ClauseGuard::Float { .. }
-        | ClauseGuard::Tuple { .. }
-        | ClauseGuard::String { .. }
-        | ClauseGuard::Constructor { .. } => bare_clause_guard(guard, env),
+        ClauseGuard::Constant(_) | ClauseGuard::Var { .. } | ClauseGuard::Constructor { .. } => {
+            bare_clause_guard(guard, env)
+        }
     }
 }
 
