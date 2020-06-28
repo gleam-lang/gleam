@@ -96,10 +96,7 @@ pub fn read_and_format_paths(files: Vec<String>) -> Result<Vec<Formatted>, Error
         })?;
 
         if path.is_dir() {
-            let mut gitignore_file = path.clone();
-            gitignore_file.push(".gitignore");
-
-            if let Ok(ignore) = gitignore::File::new(&gitignore_file) {
+            if let Ok(ignore) = gitignore::File::new(&path.join(".gitignore")) {
                 for path in file::gleam_files(&path)
                     .filter(|f| {
                         let excluded = ignore.is_excluded(f).unwrap_or(false);
