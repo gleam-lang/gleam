@@ -6,8 +6,7 @@ use crate::ast::{
     UntypedExpr, UntypedArg, Arg, UntypedModule, Module, UntypedStatement, Statement, TypeAst,
     UntypedPattern, BinOp, Clause, UntypedClause, RecordConstructor, Pattern, CallArg,
     ExternalFnArg, ArgNames, UnqualifiedImport, UntypedClauseGuard, ClauseGuard, BindingKind,
-    UntypedExprBinSegment, UntypedPatternBinSegment, BinSegmentOption, UntypedExprBinSegmentOption,
-    UntypedPatternBinSegmentOption, Constant, UntypedConstant,
+    BinSegment, BinSegmentOption, Constant, UntypedConstant,
 };
 use crate::parser::*;
 
@@ -145,6 +144,54 @@ Constant: UntypedConstant = {
     ConstTuple => <>,
     ConstString => <>,
     ConstRecord => <>,
+    ConstBitString => <>,
+}
+
+ConstBitString: UntypedConstant = {
+    <s:@L> "<<" <elems:Comma<ConstBinSegment>> ">>" <e:@L> => {
+        Constant::BitString {
+            location: location(s, e),
+            elems: elems,
+        }
+    }
+}
+
+ConstBinSegment: BinSegment<UntypedConstant, ()> = {
+    <s:@L> <v:Constant> <options:(":" <HyphensNoTrailing<ConstBinSegmentOption>>)?> <e:@L> => BinSegment {
+        location: location(s, e),
+        value: Box::new(v),
+        typ: (),
+        options: options.unwrap_or_else(|| vec![]),
+    }
+}
+
+ConstBinSegmentOption: BinSegmentOption<UntypedConstant> = {
+    <s:@L> <o:VarName> "(" <value:ConstInt> ")" <e:@L> => {
+        if o.as_str() == "unit" {
+            BinSegmentOption::Unit {
+                location: location(s, e),
+                value: Box::new(value),
+                short_form: false
+            }
+        } else if o.as_str() == "size" {
+            BinSegmentOption::Size {
+                location: location(s, e),
+                value: Box::new(value),
+                short_form: false
+            }
+        } else {
+            BinSegmentOption::Invalid { label: o, location: location(s, e) }
+        }
+    },
+
+    <s:@L> <value:ConstInt> <e:@L> =>
+        BinSegmentOption::Size {
+            location: location(s, e),
+            value: Box::new(value),
+            short_form: true
+        },
+
+    BinSegmentOptionLiteral<ConstBinSegmentOption> => <>,
 }
 
 ConstRecord: UntypedConstant = {
@@ -628,9 +675,9 @@ BitString: UntypedExpr = {
     }
 }
 
-BinSegment: UntypedExprBinSegment = {
+BinSegment: BinSegment<UntypedExpr, ()> = {
     <s:@L> <v:SimpleExpr> <options:(":" <HyphensNoTrailing<BinSegmentOption>>)?>  <e:@L> =>
-        UntypedExprBinSegment {
+        BinSegment {
             location: location(s, e),
             value: Box::new(v),
             typ: (),
@@ -638,7 +685,7 @@ BinSegment: UntypedExprBinSegment = {
         }
 }
 
-BinSegmentOption: UntypedExprBinSegmentOption = {
+BinSegmentOption: BinSegmentOption<UntypedExpr> = {
     <s:@L> <o:VarName> "(" <value:OpOrSimpleExpr> ")" <e:@L> => {
         if o.as_str() == "unit" {
             BinSegmentOption::Unit {
@@ -932,9 +979,9 @@ PatternBitString: UntypedPattern = {
     }
 }
 
-PatternBinSegment: UntypedPatternBinSegment = {
+PatternBinSegment: BinSegment<UntypedPattern, ()> = {
     <s:@L> <v:Pattern> <options:(":" <HyphensNoTrailing<PatternBinSegmentOption>>)?>  <e:@L> =>
-        UntypedPatternBinSegment {
+        BinSegment {
             location: location(s, e),
             value: Box::new(v),
             typ: (),
@@ -942,7 +989,7 @@ PatternBinSegment: UntypedPatternBinSegment = {
         }
 }
 
-PatternBinSegmentOption: UntypedPatternBinSegmentOption = {
+PatternBinSegmentOption: BinSegmentOption<UntypedPattern> = {
     <s:@L> <o:VarName> "(" <value:PatternVarCallOrInt> ")" <e:@L> => {
         if o.as_str() == "unit" {
             BinSegmentOption::Unit {

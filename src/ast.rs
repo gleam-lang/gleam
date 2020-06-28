@@ -13,6 +13,10 @@ use std::sync::Arc;
 
 pub const CAPTURE_VARIABLE: &str = "gleam@capture_variable";
 
+pub trait HasLocation {
+    fn location(&self) -> &SrcSpan;
+}
+
 pub type TypedModule = Module<Arc<Type>, TypedExpr, typ::Module, String>;
 
 pub type UntypedModule = Module<(), UntypedExpr, (), ()>;
@@ -595,6 +599,9 @@ pub enum BindingKind {
 pub type UntypedExprBinSegment = BinSegment<UntypedExpr, ()>;
 pub type TypedExprBinSegment = BinSegment<TypedExpr, Arc<typ::Type>>;
 
+pub type UntypedConstantBinSegment = BinSegment<UntypedConstant, ()>;
+// pub type TypedConstantBinSegment = BinSegment<TypedConstant, Arc<typ::Type>>;
+
 pub type UntypedPatternBinSegment = BinSegment<UntypedPattern, ()>;
 pub type TypedPatternBinSegment = BinSegment<TypedPattern, Arc<typ::Type>>;
 
@@ -605,12 +612,6 @@ pub struct BinSegment<Value, Type> {
     pub options: Vec<BinSegmentOption<Value>>,
     pub typ: Type,
 }
-
-pub type UntypedExprBinSegmentOption = BinSegmentOption<UntypedExpr>;
-pub type TypedExprBinSegmentOption = BinSegmentOption<TypedExpr>;
-
-pub type UntypedPatternBinSegmentOption = BinSegmentOption<UntypedPattern>;
-pub type TypedPatternBinSegmentOption = BinSegmentOption<TypedPattern>;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum BinSegmentOption<Value> {

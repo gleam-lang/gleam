@@ -1,4 +1,5 @@
 use super::*;
+use crate::typ::HasType;
 
 pub type TypedConstant = Constant<Arc<Type>, String>;
 pub type UntypedConstant = Constant<(), ()>;
@@ -39,6 +40,11 @@ pub enum Constant<T, RecordTag> {
         tag: RecordTag,
         typ: T,
     },
+
+    BitString {
+        location: SrcSpan,
+        elems: Vec<BinSegment<Self, T>>,
+    },
 }
 
 impl TypedConstant {
@@ -49,10 +55,17 @@ impl TypedConstant {
             Constant::String { .. } => crate::typ::string(),
             Constant::List { typ, .. } => typ.clone(),
             Constant::Record { typ, .. } => typ.clone(),
+            Constant::BitString { .. } => crate::typ::bit_string(),
             Constant::Tuple { elements, .. } => {
                 crate::typ::tuple(elements.iter().map(|e| e.typ()).collect())
             }
         }
+    }
+}
+
+impl HasType for TypedConstant {
+    fn typ(&self) -> Arc<typ::Type> {
+        self.typ()
     }
 }
 
@@ -65,6 +78,13 @@ impl<A, B> Constant<A, B> {
             Constant::Tuple { location, .. } => location,
             Constant::String { location, .. } => location,
             Constant::Record { location, .. } => location,
+            Constant::BitString { location, .. } => location,
         }
+    }
+}
+
+impl<A, B> HasLocation for Constant<A, B> {
+    fn location(&self) -> &SrcSpan {
+        self.location()
     }
 }

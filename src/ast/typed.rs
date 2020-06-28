@@ -1,5 +1,5 @@
 use super::*;
-use crate::typ::Type;
+use crate::typ::{HasType, Type};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TypedExpr {
@@ -189,8 +189,16 @@ impl TypedExpr {
             Self::BitString { location, .. } => location,
         }
     }
+}
 
-    pub fn typ(&self) -> Arc<typ::Type> {
+impl HasLocation for TypedExpr {
+    fn location(&self) -> &SrcSpan {
+        self.location()
+    }
+}
+
+impl TypedExpr {
+    fn typ(&self) -> Arc<typ::Type> {
         match self {
             Self::Fn { typ, .. } => typ.clone(),
             Self::ListNil { typ, .. } => typ.clone(),
@@ -212,5 +220,11 @@ impl TypedExpr {
             Self::RecordAccess { typ, .. } => typ.clone(),
             Self::BitString { typ, .. } => typ.clone(),
         }
+    }
+}
+
+impl HasType for TypedExpr {
+    fn typ(&self) -> Arc<typ::Type> {
+        self.typ()
     }
 }
