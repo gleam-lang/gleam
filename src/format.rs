@@ -610,16 +610,11 @@ impl<'a> Formatter<'a> {
                 .to_doc()
                 .append(wrap_args(elems.iter().map(|e| self.wrap_expr(e)))),
 
-            UntypedExpr::BitString { elems, .. } => {
-                let elems = elems.iter().map(|s| self.segment(s));
-
-                break_("<<", "<<")
-                    .append(concat(elems.intersperse(delim(","))))
-                    .nest(INDENT)
-                    .append(break_(",", ""))
-                    .append(">>")
-                    .group()
-            }
+            UntypedExpr::BitString { elems, .. } => bit_string(
+                elems
+                    .iter()
+                    .map(|s| bit_string_segment(s, |e| self.expr(e))),
+            ),
         };
         commented(document, comments)
     }
@@ -745,73 +740,6 @@ impl<'a> Formatter<'a> {
             _ => crate::error::fatal_compiler_bug(
                 "Function capture body found not to be a call in the formatter",
             ),
-        }
-    }
-
-    fn segment(&mut self, segment: &UntypedExprBinSegment) -> Document {
-        match segment {
-            UntypedExprBinSegment { value, options, .. } if *options == [] => self.expr(&value),
-
-            UntypedExprBinSegment { value, options, .. } => {
-                self.expr(&value).append(":").append(concat(
-                    options
-                        .iter()
-                        .map(|o| self.segment_option(o))
-                        .intersperse("-".to_doc()),
-                ))
-            }
-        }
-    }
-
-    fn segment_option(&mut self, option: &UntypedExprBinSegmentOption) -> Document {
-        match option {
-            BinSegmentOption::Invalid { label, .. } => label.clone().to_doc(),
-
-            BinSegmentOption::Binary { .. } => "binary".to_doc(),
-            BinSegmentOption::Integer { .. } => "int".to_doc(),
-            BinSegmentOption::Float { .. } => "float".to_doc(),
-            BinSegmentOption::BitString { .. } => "bit_string".to_doc(),
-            BinSegmentOption::UTF8 { .. } => "utf8".to_doc(),
-            BinSegmentOption::UTF16 { .. } => "utf16".to_doc(),
-            BinSegmentOption::UTF32 { .. } => "utf32".to_doc(),
-            BinSegmentOption::UTF8Codepoint { .. } => "utf8_codepoint".to_doc(),
-            BinSegmentOption::UTF16Codepoint { .. } => "utf16_codepoint".to_doc(),
-            BinSegmentOption::UTF32Codepoint { .. } => "utf32_codepoint".to_doc(),
-            BinSegmentOption::Signed { .. } => "signed".to_doc(),
-            BinSegmentOption::Unsigned { .. } => "unsigned".to_doc(),
-            BinSegmentOption::Big { .. } => "big".to_doc(),
-            BinSegmentOption::Little { .. } => "little".to_doc(),
-            BinSegmentOption::Native { .. } => "native".to_doc(),
-
-            UntypedExprBinSegmentOption::Size {
-                value,
-                short_form: false,
-                ..
-            } => "size"
-                .to_doc()
-                .append("(")
-                .append(self.expr(value))
-                .append(")"),
-            UntypedExprBinSegmentOption::Size {
-                value,
-                short_form: true,
-                ..
-            } => self.expr(value),
-
-            UntypedExprBinSegmentOption::Unit {
-                value,
-                short_form: false,
-                ..
-            } => "unit"
-                .to_doc()
-                .append("(")
-                .append(self.expr(value))
-                .append(")"),
-            UntypedExprBinSegmentOption::Unit {
-                value,
-                short_form: true,
-                ..
-            } => self.expr(value),
         }
     }
 
@@ -1144,16 +1072,11 @@ impl<'a> Formatter<'a> {
                 .to_doc()
                 .append(wrap_args(elems.iter().map(|e| self.pattern(e)))),
 
-            Pattern::BitString { elems, .. } => {
-                let elems = elems.iter().map(|s| self.pattern_segment(s));
-
-                break_("<<", "<<")
-                    .append(concat(elems.intersperse(delim(","))))
-                    .nest(INDENT)
-                    .append(break_(",", ""))
-                    .append(">>")
-                    .group()
-            }
+            Pattern::BitString { elems, .. } => bit_string(
+                elems
+                    .iter()
+                    .map(|s| bit_string_segment(s, |e| self.pattern(e))),
+            ),
         };
         commented(doc, comments)
     }
@@ -1164,77 +1087,6 @@ impl<'a> Formatter<'a> {
             None => nil(),
         }
         .append(self.pattern(&arg.value))
-    }
-
-    // TODO: Merge with segment_option() somehow
-    fn pattern_segment(&mut self, segment: &UntypedPatternBinSegment) -> Document {
-        match segment {
-            UntypedPatternBinSegment { value, options, .. } if *options == [] => {
-                self.pattern(&value)
-            }
-
-            UntypedPatternBinSegment { value, options, .. } => {
-                self.pattern(&value).append(":").append(concat(
-                    options
-                        .iter()
-                        .map(|o| self.pattern_segment_option(o))
-                        .intersperse("-".to_doc()),
-                ))
-            }
-        }
-    }
-
-    // TODO: Merge with segment_option() somehow
-    fn pattern_segment_option(&mut self, option: &UntypedPatternBinSegmentOption) -> Document {
-        match option {
-            BinSegmentOption::Invalid { label, .. } => label.clone().to_doc(),
-
-            BinSegmentOption::Binary { .. } => "binary".to_doc(),
-            BinSegmentOption::Integer { .. } => "int".to_doc(),
-            BinSegmentOption::Float { .. } => "float".to_doc(),
-            BinSegmentOption::BitString { .. } => "bit_string".to_doc(),
-            BinSegmentOption::UTF8 { .. } => "utf8".to_doc(),
-            BinSegmentOption::UTF16 { .. } => "utf16".to_doc(),
-            BinSegmentOption::UTF32 { .. } => "utf32".to_doc(),
-            BinSegmentOption::UTF8Codepoint { .. } => "utf8_codepoint".to_doc(),
-            BinSegmentOption::UTF16Codepoint { .. } => "utf16_codepoint".to_doc(),
-            BinSegmentOption::UTF32Codepoint { .. } => "utf32_codepoint".to_doc(),
-            BinSegmentOption::Signed { .. } => "signed".to_doc(),
-            BinSegmentOption::Unsigned { .. } => "unsigned".to_doc(),
-            BinSegmentOption::Big { .. } => "big".to_doc(),
-            BinSegmentOption::Little { .. } => "little".to_doc(),
-            BinSegmentOption::Native { .. } => "native".to_doc(),
-
-            UntypedPatternBinSegmentOption::Size {
-                value,
-                short_form: false,
-                ..
-            } => "size"
-                .to_doc()
-                .append("(")
-                .append(self.pattern(value))
-                .append(")"),
-            UntypedPatternBinSegmentOption::Size {
-                value,
-                short_form: true,
-                ..
-            } => self.pattern(value),
-
-            UntypedPatternBinSegmentOption::Unit {
-                value,
-                short_form: false,
-                ..
-            } => "unit"
-                .to_doc()
-                .append("(")
-                .append(self.pattern(value))
-                .append(")"),
-            UntypedPatternBinSegmentOption::Unit {
-                value,
-                short_form: true,
-                ..
-            } => self.pattern(value),
-        }
     }
 
     fn clause_guard(&mut self, clause_guard: &UntypedClauseGuard) -> Document {
@@ -1422,6 +1274,18 @@ where
         .group()
 }
 
+pub fn bit_string<Segments>(segments: Segments) -> Document
+where
+    Segments: Iterator<Item = Document>,
+{
+    break_("<<", "<<")
+        .append(concat(segments.intersperse(delim(","))))
+        .nest(INDENT)
+        .append(break_(",", ""))
+        .append(">>")
+        .group()
+}
+
 pub fn wrap_args_with_spread<I>(args: I) -> Document
 where
     I: Iterator<Item = Document>,
@@ -1516,5 +1380,81 @@ fn commented<'a>(doc: Document, comments: impl Iterator<Item = &'a str>) -> Docu
     match printed_comments(comments) {
         Some(comments) => comments.append(force_break()).append(line()).append(doc),
         _ => doc,
+    }
+}
+
+fn bit_string_segment<Value, Type, ToDoc>(
+    segment: &BinSegment<Value, Type>,
+    mut to_doc: ToDoc,
+) -> Document
+where
+    ToDoc: FnMut(&Value) -> Document,
+{
+    match segment {
+        BinSegment { value, options, .. } if options.is_empty() => to_doc(&value),
+
+        BinSegment { value, options, .. } => to_doc(&value).append(":").append(concat(
+            options
+                .iter()
+                .map(|o| segment_option(o, |e| to_doc(e)))
+                .intersperse("-".to_doc()),
+        )),
+    }
+}
+
+fn segment_option<ToDoc, Value>(option: &BinSegmentOption<Value>, mut to_doc: ToDoc) -> Document
+where
+    ToDoc: FnMut(&Value) -> Document,
+{
+    match option {
+        BinSegmentOption::Invalid { label, .. } => label.clone().to_doc(),
+
+        BinSegmentOption::Binary { .. } => "binary".to_doc(),
+        BinSegmentOption::Integer { .. } => "int".to_doc(),
+        BinSegmentOption::Float { .. } => "float".to_doc(),
+        BinSegmentOption::BitString { .. } => "bit_string".to_doc(),
+        BinSegmentOption::UTF8 { .. } => "utf8".to_doc(),
+        BinSegmentOption::UTF16 { .. } => "utf16".to_doc(),
+        BinSegmentOption::UTF32 { .. } => "utf32".to_doc(),
+        BinSegmentOption::UTF8Codepoint { .. } => "utf8_codepoint".to_doc(),
+        BinSegmentOption::UTF16Codepoint { .. } => "utf16_codepoint".to_doc(),
+        BinSegmentOption::UTF32Codepoint { .. } => "utf32_codepoint".to_doc(),
+        BinSegmentOption::Signed { .. } => "signed".to_doc(),
+        BinSegmentOption::Unsigned { .. } => "unsigned".to_doc(),
+        BinSegmentOption::Big { .. } => "big".to_doc(),
+        BinSegmentOption::Little { .. } => "little".to_doc(),
+        BinSegmentOption::Native { .. } => "native".to_doc(),
+
+        BinSegmentOption::Size {
+            value,
+            short_form: false,
+            ..
+        } => "size"
+            .to_doc()
+            .append("(")
+            .append(to_doc(value.as_ref()))
+            .append(")"),
+
+        BinSegmentOption::Size {
+            value,
+            short_form: true,
+            ..
+        } => to_doc(value.as_ref()),
+
+        BinSegmentOption::Unit {
+            value,
+            short_form: false,
+            ..
+        } => "unit"
+            .to_doc()
+            .append("(")
+            .append(to_doc(value.as_ref()))
+            .append(")"),
+
+        BinSegmentOption::Unit {
+            value,
+            short_form: true,
+            ..
+        } => to_doc(value.as_ref()),
     }
 }

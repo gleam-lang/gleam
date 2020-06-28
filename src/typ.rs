@@ -1388,69 +1388,12 @@ impl<'a> Typer<'a> {
         &mut self,
         segment_option: UntypedExprBinSegmentOption,
     ) -> Result<TypedExprBinSegmentOption, Error> {
-        match segment_option {
-            BinSegmentOption::Invalid {
-                label, location, ..
-            } => Err(Error::InvalidBinarySegmentOption { label, location }),
-
-            BinSegmentOption::Size {
-                value,
-                location,
-                short_form,
-                ..
-            } => {
-                let typed_value = self.infer(*value)?;
-                self.unify(int(), typed_value.typ())
-                    .map_err(|e| convert_unify_error(e, typed_value.location()))?;
-
-                Ok(BinSegmentOption::Size {
-                    location,
-                    short_form,
-                    value: Box::new(typed_value),
-                })
-            }
-
-            BinSegmentOption::Unit {
-                value,
-                location,
-                short_form,
-                ..
-            } => {
-                let typed_value = self.infer(*value)?;
-                self.unify(int(), typed_value.typ())
-                    .map_err(|e| convert_unify_error(e, &location))?;
-
-                Ok(BinSegmentOption::Unit {
-                    location,
-                    short_form,
-                    value: Box::new(typed_value),
-                })
-            }
-
-            BinSegmentOption::Binary { location } => Ok(BinSegmentOption::Binary { location }),
-            BinSegmentOption::Integer { location } => Ok(BinSegmentOption::Integer { location }),
-            BinSegmentOption::Float { location } => Ok(BinSegmentOption::Float { location }),
-            BinSegmentOption::BitString { location } => {
-                Ok(BinSegmentOption::BitString { location })
-            }
-            BinSegmentOption::UTF8 { location } => Ok(BinSegmentOption::UTF8 { location }),
-            BinSegmentOption::UTF16 { location } => Ok(BinSegmentOption::UTF16 { location }),
-            BinSegmentOption::UTF32 { location } => Ok(BinSegmentOption::UTF32 { location }),
-            BinSegmentOption::UTF8Codepoint { location } => {
-                Ok(BinSegmentOption::UTF8Codepoint { location })
-            }
-            BinSegmentOption::UTF16Codepoint { location } => {
-                Ok(BinSegmentOption::UTF16Codepoint { location })
-            }
-            BinSegmentOption::UTF32Codepoint { location } => {
-                Ok(BinSegmentOption::UTF32Codepoint { location })
-            }
-            BinSegmentOption::Signed { location } => Ok(BinSegmentOption::Signed { location }),
-            BinSegmentOption::Unsigned { location } => Ok(BinSegmentOption::Unsigned { location }),
-            BinSegmentOption::Big { location } => Ok(BinSegmentOption::Big { location }),
-            BinSegmentOption::Little { location } => Ok(BinSegmentOption::Little { location }),
-            BinSegmentOption::Native { location } => Ok(BinSegmentOption::Native { location }),
-        }
+        infer_bit_string_segment_option(segment_option, |value, typ| {
+            let typed_value = self.infer(value)?;
+            self.unify(typ, typed_value.typ())
+                .map_err(|e| convert_unify_error(e, typed_value.location()))?;
+            Ok(typed_value)
+        })
     }
 
     fn infer_binop(
@@ -3656,65 +3599,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         &mut self,
         segment_option: UntypedPatternBinSegmentOption,
     ) -> Result<TypedPatternBinSegmentOption, Error> {
-        match segment_option {
-            BinSegmentOption::Invalid {
-                label, location, ..
-            } => Err(Error::InvalidBinarySegmentOption { label, location }),
-
-            BinSegmentOption::Size {
-                value,
-                location,
-                short_form,
-                ..
-            } => {
-                let unified_pattern = self.unify(*value, int())?;
-
-                Ok(BinSegmentOption::Size {
-                    location,
-                    short_form,
-                    value: Box::new(unified_pattern),
-                })
-            }
-
-            BinSegmentOption::Unit {
-                value,
-                location,
-                short_form,
-                ..
-            } => {
-                let unified_pattern = self.unify(*value, int())?;
-
-                Ok(BinSegmentOption::Unit {
-                    location,
-                    short_form,
-                    value: Box::new(unified_pattern),
-                })
-            }
-
-            BinSegmentOption::Binary { location } => Ok(BinSegmentOption::Binary { location }),
-            BinSegmentOption::Integer { location } => Ok(BinSegmentOption::Integer { location }),
-            BinSegmentOption::Float { location } => Ok(BinSegmentOption::Float { location }),
-            BinSegmentOption::BitString { location } => {
-                Ok(BinSegmentOption::BitString { location })
-            }
-            BinSegmentOption::UTF8 { location } => Ok(BinSegmentOption::UTF8 { location }),
-            BinSegmentOption::UTF16 { location } => Ok(BinSegmentOption::UTF16 { location }),
-            BinSegmentOption::UTF32 { location } => Ok(BinSegmentOption::UTF32 { location }),
-            BinSegmentOption::UTF8Codepoint { location } => {
-                Ok(BinSegmentOption::UTF8Codepoint { location })
-            }
-            BinSegmentOption::UTF16Codepoint { location } => {
-                Ok(BinSegmentOption::UTF16Codepoint { location })
-            }
-            BinSegmentOption::UTF32Codepoint { location } => {
-                Ok(BinSegmentOption::UTF32Codepoint { location })
-            }
-            BinSegmentOption::Signed { location } => Ok(BinSegmentOption::Signed { location }),
-            BinSegmentOption::Unsigned { location } => Ok(BinSegmentOption::Unsigned { location }),
-            BinSegmentOption::Big { location } => Ok(BinSegmentOption::Big { location }),
-            BinSegmentOption::Little { location } => Ok(BinSegmentOption::Little { location }),
-            BinSegmentOption::Native { location } => Ok(BinSegmentOption::Native { location }),
-        }
+        infer_bit_string_segment_option(segment_option, |value, typ| self.unify(value, typ))
     }
 
     /// When we have an assignment or a case expression we unify the pattern with the
@@ -4004,6 +3889,71 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 }
             }
         }
+    }
+}
+
+fn infer_bit_string_segment_option<UntypedValue, TypedValue, Typer>(
+    segment_option: BinSegmentOption<UntypedValue>,
+    mut type_check: Typer,
+) -> Result<BinSegmentOption<TypedValue>, Error>
+where
+    Typer: FnMut(UntypedValue, Arc<Type>) -> Result<TypedValue, Error>,
+{
+    match segment_option {
+        BinSegmentOption::Invalid {
+            label, location, ..
+        } => Err(Error::InvalidBinarySegmentOption { label, location }),
+
+        BinSegmentOption::Size {
+            value,
+            location,
+            short_form,
+            ..
+        } => {
+            let value = type_check(*value, int())?;
+            Ok(BinSegmentOption::Size {
+                location,
+                short_form,
+                value: Box::new(value),
+            })
+        }
+
+        BinSegmentOption::Unit {
+            value,
+            location,
+            short_form,
+            ..
+        } => {
+            let value = type_check(*value, int())?;
+
+            Ok(BinSegmentOption::Unit {
+                location,
+                short_form,
+                value: Box::new(value),
+            })
+        }
+
+        BinSegmentOption::Binary { location } => Ok(BinSegmentOption::Binary { location }),
+        BinSegmentOption::Integer { location } => Ok(BinSegmentOption::Integer { location }),
+        BinSegmentOption::Float { location } => Ok(BinSegmentOption::Float { location }),
+        BinSegmentOption::BitString { location } => Ok(BinSegmentOption::BitString { location }),
+        BinSegmentOption::UTF8 { location } => Ok(BinSegmentOption::UTF8 { location }),
+        BinSegmentOption::UTF16 { location } => Ok(BinSegmentOption::UTF16 { location }),
+        BinSegmentOption::UTF32 { location } => Ok(BinSegmentOption::UTF32 { location }),
+        BinSegmentOption::UTF8Codepoint { location } => {
+            Ok(BinSegmentOption::UTF8Codepoint { location })
+        }
+        BinSegmentOption::UTF16Codepoint { location } => {
+            Ok(BinSegmentOption::UTF16Codepoint { location })
+        }
+        BinSegmentOption::UTF32Codepoint { location } => {
+            Ok(BinSegmentOption::UTF32Codepoint { location })
+        }
+        BinSegmentOption::Signed { location } => Ok(BinSegmentOption::Signed { location }),
+        BinSegmentOption::Unsigned { location } => Ok(BinSegmentOption::Unsigned { location }),
+        BinSegmentOption::Big { location } => Ok(BinSegmentOption::Big { location }),
+        BinSegmentOption::Little { location } => Ok(BinSegmentOption::Little { location }),
+        BinSegmentOption::Native { location } => Ok(BinSegmentOption::Native { location }),
     }
 }
 
