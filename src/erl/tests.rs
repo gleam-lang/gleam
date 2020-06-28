@@ -1537,6 +1537,33 @@ main(Arg) ->
 
     assert_erl!(
         r#"
+pub const bits = <<1, "ok":utf8, 3, 4:50>>
+
+pub fn main(arg) {
+  case arg {
+    _ if arg == bits -> 1
+    _ -> 0
+  }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/1]).
+
+main(Arg) ->
+    case Arg of
+        _ when Arg =:= <<1, "ok"/utf8, 3, 4:50>> ->
+            1;
+
+        _ ->
+            0
+    end.
+"#,
+    );
+
+    assert_erl!(
+        r#"
 pub const constant = tuple(1, 2.0)
 
 pub fn main(arg) {

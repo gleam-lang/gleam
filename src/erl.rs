@@ -290,7 +290,45 @@ fn bit_string(elems: impl Iterator<Item = Document>) -> Document {
         .group()
 }
 
-fn segment(value: &TypedExpr, options: Vec<TypedExprBinSegmentOption>, env: &mut Env) -> Document {
+fn const_segment(
+    value: &TypedConstant,
+    options: Vec<BinSegmentOption<TypedConstant>>,
+    env: &mut Env,
+) -> Document {
+    let document = match value {
+        // Skip the normal <<value/utf8>> surrounds
+        Constant::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
+
+        // As normal
+        Constant::Int { .. } | Constant::Float { .. } | Constant::BitString { .. } => {
+            const_inline(value, env)
+        }
+
+        // Wrap anything else in parentheses
+        value => const_inline(value, env).surround("(", ")"),
+    };
+
+    let size = |value: &TypedConstant, env: &mut Env| match value {
+        Constant::Int { .. } => Some(":".to_doc().append(const_inline(value, env))),
+        _ => Some(
+            ":".to_doc()
+                .append(const_inline(value, env).surround("(", ")")),
+        ),
+    };
+
+    let unit = |value: &TypedConstant, env: &mut Env| match value {
+        Constant::Int { .. } => Some("unit:".to_doc().append(const_inline(value, env))),
+        _ => None,
+    };
+
+    bit_string_segment(document, options, size, unit, env)
+}
+
+fn expr_segment(
+    value: &TypedExpr,
+    options: Vec<BinSegmentOption<TypedExpr>>,
+    env: &mut Env,
+) -> Document {
     let document = match value {
         // Skip the normal <<value/utf8>> surrounds
         TypedExpr::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
@@ -322,7 +360,7 @@ fn segment(value: &TypedExpr, options: Vec<TypedExprBinSegmentOption>, env: &mut
 
 fn pattern_segment(
     value: &TypedPattern,
-    options: Vec<TypedPatternBinSegmentOption>,
+    options: Vec<BinSegmentOption<TypedPattern>>,
     env: &mut Env,
 ) -> Document {
     let document = match value {
@@ -633,7 +671,7 @@ fn var(name: &str, constructor: &ValueConstructor, env: &mut Env) -> Document {
 
         ValueConstructorVariant::LocalVariable => env.local_var_name(name.to_string()),
 
-        ValueConstructorVariant::ModuleConstant { literal } => const_inline(literal),
+        ValueConstructorVariant::ModuleConstant { literal } => const_inline(literal, env),
 
         ValueConstructorVariant::ModuleFn {
             arity, ref module, ..
@@ -658,30 +696,32 @@ fn var(name: &str, constructor: &ValueConstructor, env: &mut Env) -> Document {
     }
 }
 
-fn const_inline(literal: &TypedConstant) -> Document {
+fn const_inline(literal: &TypedConstant, env: &mut Env) -> Document {
     match literal {
         Constant::Int { value, .. } => value.to_string().to_doc(),
         Constant::Float { value, .. } => value.to_string().to_doc(),
         Constant::String { value, .. } => string(value),
-        Constant::Tuple { elements, .. } => tuple(elements.iter().map(const_inline)),
+        Constant::Tuple { elements, .. } => tuple(elements.iter().map(|e| const_inline(e, env))),
 
         Constant::List { elements, .. } => {
-            let elements = elements.iter().map(const_inline).intersperse(delim(","));
+            let elements = elements
+                .iter()
+                .map(|e| const_inline(e, env))
+                .intersperse(delim(","));
             concat(elements).nest_current().surround("[", "]").group()
         }
 
         Constant::BitString { elems, .. } => bit_string(
             elems
                 .into_iter()
-                fwjkefwkjefhwkjfehkwjfkjwefkjh
-                .map(|s| segment(&s.value, s.options.clone(), env)),
+                .map(|s| const_segment(&s.value, s.options.clone(), env)),
         ),
 
         Constant::Record { tag, args, .. } => {
             if args.is_empty() {
                 atom(tag.to_snake_case())
             } else {
-                let args = args.into_iter().map(|a| const_inline(&a.value));
+                let args = args.into_iter().map(|a| const_inline(&a.value, env));
                 let tag = atom(tag.to_snake_case());
                 tuple(std::iter::once(tag).chain(args))
             }
@@ -799,7 +839,7 @@ fn bare_clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
         // ClauseGuard::Vars are local variables
         ClauseGuard::Var { name, .. } => env.local_var_name(name.to_string()),
 
-        ClauseGuard::Constant(constant) => const_inline(constant),
+        ClauseGuard::Constant(constant) => const_inline(constant, env),
     }
 }
 
@@ -1007,7 +1047,7 @@ fn expr(expression: &TypedExpr, env: &mut Env) -> Document {
         TypedExpr::ModuleSelect {
             constructor: ModuleValueConstructor::Constant { literal },
             ..
-        } => const_inline(literal),
+        } => const_inline(literal, env),
 
         TypedExpr::ModuleSelect {
             constructor: ModuleValueConstructor::Record { name, arity },
@@ -1062,7 +1102,7 @@ fn expr(expression: &TypedExpr, env: &mut Env) -> Document {
         TypedExpr::BitString { elems, .. } => bit_string(
             elems
                 .into_iter()
-                .map(|s| segment(&s.value, s.options.clone(), env)),
+                .map(|s| expr_segment(&s.value, s.options.clone(), env)),
         ),
     }
 }

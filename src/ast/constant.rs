@@ -1,4 +1,5 @@
 use super::*;
+use crate::typ::HasType;
 
 pub type TypedConstant = Constant<Arc<Type>, String>;
 pub type UntypedConstant = Constant<(), ()>;
@@ -47,7 +48,7 @@ pub enum Constant<T, RecordTag> {
 }
 
 impl TypedConstant {
-    pub fn typ(&self) -> Arc<typ::Type> {
+    fn typ(&self) -> Arc<typ::Type> {
         match self {
             Constant::Int { .. } => crate::typ::int(),
             Constant::Float { .. } => crate::typ::float(),
@@ -62,8 +63,14 @@ impl TypedConstant {
     }
 }
 
+impl HasType for TypedConstant {
+    fn typ(&self) -> Arc<typ::Type> {
+        self.typ()
+    }
+}
+
 impl<A, B> Constant<A, B> {
-    pub fn location(&self) -> &SrcSpan {
+    fn location(&self) -> &SrcSpan {
         match self {
             Constant::Int { location, .. } => location,
             Constant::List { location, .. } => location,
@@ -73,5 +80,11 @@ impl<A, B> Constant<A, B> {
             Constant::Record { location, .. } => location,
             Constant::BitString { location, .. } => location,
         }
+    }
+}
+
+impl<A, B> HasLocation for Constant<A, B> {
+    fn location(&self) -> &SrcSpan {
+        self.location()
     }
 }

@@ -4,14 +4,13 @@ mod tests;
 
 use crate::{
     ast::{
-        self, Arg, ArgNames, BinOp, BinSegmentOption, BindingKind, CallArg, Clause, ClauseGuard,
-        Constant, Pattern, RecordConstructor, SrcSpan, Statement, TypeAst, TypedArg, TypedClause,
-        TypedClauseGuard, TypedConstant, TypedExpr, TypedExprBinSegment, TypedModule,
-        TypedMultiPattern, TypedPattern, TypedPatternBinSegment, TypedPatternBinSegmentOption,
-        TypedStatement, UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard,
-        UntypedConstant, UntypedExpr, UntypedExprBinSegment, UntypedExprBinSegmentOption,
-        UntypedModule, UntypedMultiPattern, UntypedPattern, UntypedPatternBinSegment,
-        UntypedPatternBinSegmentOption, UntypedStatement,
+        self, Arg, ArgNames, BinOp, BinSegment, BinSegmentOption, BindingKind, CallArg, Clause,
+        ClauseGuard, Constant, HasLocation, Pattern, RecordConstructor, SrcSpan, Statement,
+        TypeAst, TypedArg, TypedClause, TypedClauseGuard, TypedConstant, TypedExpr, TypedModule,
+        TypedMultiPattern, TypedPattern, TypedPatternBinSegment, TypedStatement, UnqualifiedImport,
+        UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedConstantBinSegment,
+        UntypedExpr, UntypedExprBinSegment, UntypedModule, UntypedMultiPattern, UntypedPattern,
+        UntypedPatternBinSegment, UntypedStatement,
     },
     bit_string::{BinaryTypeSpecifier, Error as BinaryError},
     build::Origin,
@@ -21,6 +20,10 @@ use crate::{
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+
+pub trait HasType {
+    fn typ(&self) -> Arc<Type>;
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
@@ -970,7 +973,7 @@ impl<'a> Typer<'a> {
                 ..
             } => self.infer_tuple_index(*tuple, index, location),
 
-            UntypedExpr::BitString { location, elems } => self.infer_bin(elems, location),
+            UntypedExpr::BitString { location, elems } => self.infer_bit_string(elems, location),
         }
     }
 
@@ -1339,14 +1342,16 @@ impl<'a> Typer<'a> {
         }
     }
 
-    fn infer_bin(
+    fn infer_bit_string(
         &mut self,
         elems: Vec<UntypedExprBinSegment>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         let elems = elems
             .into_iter()
-            .map(|s| self.infer_segment(*s.value, s.options, s.location))
+            .map(|s| {
+                self.infer_bit_segment(*s.value, s.options, s.location, |env, expr| env.infer(expr))
+            })
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(TypedExpr::BitString {
@@ -1356,17 +1361,39 @@ impl<'a> Typer<'a> {
         })
     }
 
-    fn infer_segment(
+    fn infer_constant_bit_string(
         &mut self,
-        value: UntypedExpr,
-        options: Vec<UntypedExprBinSegmentOption>,
+        elems: Vec<UntypedConstantBinSegment>,
         location: SrcSpan,
-    ) -> Result<TypedExprBinSegment, Error> {
-        let value = self.infer(value)?;
+    ) -> Result<TypedConstant, Error> {
+        let elems = elems
+            .into_iter()
+            .map(|s| {
+                self.infer_bit_segment(*s.value, s.options, s.location, |env, expr| {
+                    env.infer_const(&None, expr)
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
 
-        let infer_option = |segment_option| {
+        Ok(Constant::BitString { location, elems })
+    }
+
+    fn infer_bit_segment<UntypedValue, TypedValue, InferFn>(
+        &mut self,
+        value: UntypedValue,
+        options: Vec<BinSegmentOption<UntypedValue>>,
+        location: SrcSpan,
+        mut infer: InferFn,
+    ) -> Result<BinSegment<TypedValue, Arc<Type>>, Error>
+    where
+        InferFn: FnMut(&mut Self, UntypedValue) -> Result<TypedValue, Error>,
+        TypedValue: HasType + HasLocation + Clone,
+    {
+        let value = infer(self, value)?;
+
+        let infer_option = |segment_option: BinSegmentOption<UntypedValue>| {
             infer_bit_string_segment_option(segment_option, |value, typ| {
-                let typed_value = self.infer(value)?;
+                let typed_value = infer(self, value)?;
                 self.unify(typ, typed_value.typ())
                     .map_err(|e| convert_unify_error(e, typed_value.location()))?;
                 Ok(typed_value)
@@ -1385,7 +1412,7 @@ impl<'a> Typer<'a> {
         self.unify(typ.clone(), value.typ())
             .map_err(|e| convert_unify_error(e, value.location()))?;
 
-        Ok(TypedExprBinSegment {
+        Ok(BinSegment {
             location,
             typ,
             value: Box::new(value),
@@ -2119,8 +2146,9 @@ impl<'a> Typer<'a> {
                 elements, location, ..
             } => self.infer_const_list(elements, location),
 
-            // TODO
-            Constant::BitString { location, elems } => todo!(),
+            Constant::BitString { location, elems } => {
+                self.infer_constant_bit_string(elems, location)
+            }
 
             Constant::Record {
                 module,
@@ -3573,7 +3601,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
         let options = options
             .into_iter()
-            .map(|option| self.infer_pattern_segment_option(option))
+            .map(|o| infer_bit_string_segment_option(o, |value, typ| self.unify(value, typ)))
             .collect::<Result<Vec<_>, _>>()?;
 
         let typed_segment = BinaryTypeSpecifier::new(&options, !is_last_segment)
@@ -3587,19 +3615,12 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         };
         let typed_value = self.unify(*value, typ.clone())?;
 
-        Ok(TypedPatternBinSegment {
+        Ok(BinSegment {
             location,
             value: Box::new(typed_value),
             options,
             typ,
         })
-    }
-
-    fn infer_pattern_segment_option(
-        &mut self,
-        segment_option: UntypedPatternBinSegmentOption,
-    ) -> Result<TypedPatternBinSegmentOption, Error> {
-        infer_bit_string_segment_option(segment_option, |value, typ| self.unify(value, typ))
     }
 
     /// When we have an assignment or a case expression we unify the pattern with the
