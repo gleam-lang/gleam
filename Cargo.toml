@@ -33,6 +33,7 @@ toml = "0.5"
 # Levenshtein string distance for typo suggestions
 strsim = "0.10"
 # Recursively traversing directories
+ignore = "0.4"
 walkdir = "2"
 # Enum trait impl macros
 strum = "0.18"

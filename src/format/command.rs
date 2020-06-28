@@ -96,7 +96,7 @@ pub fn read_and_format_paths(files: Vec<String>) -> Result<Vec<Formatted>, Error
         })?;
 
         if path.is_dir() {
-            for path in file::gleam_files(&path).into_iter() {
+            for path in file::gleam_files_excluding_gitignore(&path).into_iter() {
                 formatted_files.push(format_file(path)?);
             }
         } else {

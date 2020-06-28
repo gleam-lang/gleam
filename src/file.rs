@@ -139,6 +139,18 @@ pub fn gleam_files(dir: &PathBuf) -> impl Iterator<Item = PathBuf> + '_ {
         .filter(move |d| is_gleam_path(d, &dir))
 }
 
+pub fn gleam_files_excluding_gitignore(dir: &PathBuf) -> impl Iterator<Item = PathBuf> + '_ {
+    ignore::WalkBuilder::new(&dir)
+        .follow_links(true)
+        .require_git(false)
+        .build()
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
+        .map(|d| d.into_path())
+        .filter(move |d| is_gleam_path(d, &dir))
+}
+
 pub fn create_tar_archive(outputs: Vec<OutputFile>) -> Result<Vec<u8>, Error> {
     tracing::trace!("Creating tarball archive");
 
