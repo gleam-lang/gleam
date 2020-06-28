@@ -9,7 +9,7 @@ use std::{
     str::FromStr,
 };
 
-use ignore::{Walk};
+use ignore::Walk;
 
 #[derive(Debug, PartialEq)]
 pub struct Formatted {
@@ -88,7 +88,7 @@ fn write_formatted(formatted_files: Vec<Formatted>) -> Result<(), Error> {
 
 pub fn read_and_format_paths(files: Vec<String>) -> Result<Vec<Formatted>, Error> {
     let mut formatted_files = Vec::with_capacity(files.len());
-    let mut visible_files_from_git=Vec::new();
+    let mut visible_files_from_git = Vec::new();
 
     for result in Walk::new("./") {
         // Each item yielded by the iterator is either a directory entry or an
@@ -109,10 +109,9 @@ pub fn read_and_format_paths(files: Vec<String>) -> Result<Vec<Formatted>, Error
 
         if path.is_dir() {
             for current_path in file::gleam_files(&path).into_iter() {
-                if visible_files_from_git.contains(&current_path){
+                if visible_files_from_git.contains(&current_path) {
                     formatted_files.push(format_file(current_path)?);
                 }
-                
             }
         } else {
             formatted_files.push(format_file(path)?);
