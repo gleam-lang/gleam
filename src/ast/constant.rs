@@ -48,7 +48,7 @@ pub enum Constant<T, RecordTag> {
 }
 
 impl TypedConstant {
-    fn typ(&self) -> Arc<typ::Type> {
+    pub fn typ(&self) -> Arc<typ::Type> {
         match self {
             Constant::Int { .. } => crate::typ::int(),
             Constant::Float { .. } => crate::typ::float(),
@@ -70,7 +70,7 @@ impl HasType for TypedConstant {
 }
 
 impl<A, B> Constant<A, B> {
-    fn location(&self) -> &SrcSpan {
+    pub fn location(&self) -> &SrcSpan {
         match self {
             Constant::Int { location, .. } => location,
             Constant::List { location, .. } => location,

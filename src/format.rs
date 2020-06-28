@@ -6,7 +6,7 @@ use crate::{
     ast::*,
     parser::{Comment, ModuleComments},
     pretty::*,
-    typ::{self, HasType, Type},
+    typ::{self, Type},
 };
 use itertools::Itertools;
 use std::sync::Arc;

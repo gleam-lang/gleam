@@ -7,9 +7,7 @@ pub use self::untyped::UntypedExpr;
 
 pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
-use crate::typ::{
-    self, HasType, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor,
-};
+use crate::typ::{self, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor};
 use itertools::Itertools;
 use std::sync::Arc;
 

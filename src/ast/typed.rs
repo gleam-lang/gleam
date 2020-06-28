@@ -197,7 +197,7 @@ impl HasLocation for TypedExpr {
     }
 }
 
-impl HasType for TypedExpr {
+impl TypedExpr {
     fn typ(&self) -> Arc<typ::Type> {
         match self {
             Self::Fn { typ, .. } => typ.clone(),
@@ -220,5 +220,11 @@ impl HasType for TypedExpr {
             Self::RecordAccess { typ, .. } => typ.clone(),
             Self::BitString { typ, .. } => typ.clone(),
         }
+    }
+}
+
+impl HasType for TypedExpr {
+    fn typ(&self) -> Arc<typ::Type> {
+        self.typ()
     }
 }
