@@ -291,7 +291,7 @@ fn bit_string(elems: impl Iterator<Item = Document>) -> Document {
 }
 
 fn segment(value: &TypedExpr, options: Vec<TypedExprBinSegmentOption>, env: &mut Env) -> Document {
-    let mut document = match value {
+    let document = match value {
         // Skip the normal <<value/utf8>> surrounds
         TypedExpr::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
 
@@ -305,72 +305,27 @@ fn segment(value: &TypedExpr, options: Vec<TypedExprBinSegmentOption>, env: &mut
         value => expr(value, env).surround("(", ")"),
     };
 
-    let mut size: Option<Document> = None;
-    let mut unit: Option<Document> = None;
-    let mut others = Vec::new();
-
-    options.iter().for_each(|option| match option {
-        BinSegmentOption::Invalid { .. } => (),
-
-        BinSegmentOption::Integer { .. } => others.push("integer"),
-        BinSegmentOption::Float { .. } => others.push("float"),
-        BinSegmentOption::Binary { .. } => others.push("binary"),
-        BinSegmentOption::BitString { .. } => others.push("bitstring"),
-        BinSegmentOption::UTF8 { .. } => others.push("utf8"),
-        BinSegmentOption::UTF16 { .. } => others.push("utf16"),
-        BinSegmentOption::UTF32 { .. } => others.push("utf32"),
-        BinSegmentOption::UTF8Codepoint { .. } => others.push("utf8"),
-        BinSegmentOption::UTF16Codepoint { .. } => others.push("utf16"),
-        BinSegmentOption::UTF32Codepoint { .. } => others.push("utf32"),
-        BinSegmentOption::Signed { .. } => others.push("signed"),
-        BinSegmentOption::Unsigned { .. } => others.push("unsigned"),
-        BinSegmentOption::Big { .. } => others.push("big"),
-        BinSegmentOption::Little { .. } => others.push("little"),
-        BinSegmentOption::Native { .. } => others.push("native"),
-        BinSegmentOption::Size { value, .. } => {
-            size = {
-                match &**value {
-                    TypedExpr::Int { .. } | TypedExpr::Var { .. } => {
-                        Some(":".to_doc().append(expr(value, env)))
-                    }
-                    _ => Some(":".to_doc().append(expr(value, env).surround("(", ")"))),
-                }
-            }
+    let size = |value: &TypedExpr, env: &mut Env| match value {
+        TypedExpr::Int { .. } | TypedExpr::Var { .. } => {
+            Some(":".to_doc().append(expr(value, env)))
         }
-        BinSegmentOption::Unit { value, .. } => {
-            unit = {
-                match &**value {
-                    TypedExpr::Int { .. } => Some("unit:".to_doc().append(expr(value, env))),
-                    _ => None,
-                }
-            }
-        }
-    });
+        _ => Some(":".to_doc().append(expr(value, env).surround("(", ")"))),
+    };
 
-    document = document.append(size);
+    let unit = |value: &TypedExpr, env: &mut Env| match value {
+        TypedExpr::Int { .. } => Some("unit:".to_doc().append(expr(value, env))),
+        _ => None,
+    };
 
-    if !others.is_empty() {
-        document = document.append("/").append(others.join("-"));
-    }
-
-    if unit.is_some() {
-        if !others.is_empty() {
-            document = document.append("-").append(unit)
-        } else {
-            document = document.append("/").append(unit)
-        }
-    }
-
-    document
+    bit_string_segment(document, options, size, unit, env)
 }
 
-// TODO: Merge segment() and pattern_segment() somehow
 fn pattern_segment(
     value: &TypedPattern,
     options: Vec<TypedPatternBinSegmentOption>,
     env: &mut Env,
 ) -> Document {
-    let mut document = match value {
+    let document = match value {
         // Skip the normal <<value/utf8>> surrounds
         Pattern::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
 
@@ -381,13 +336,33 @@ fn pattern_segment(
         _ => Document::Nil,
     };
 
+    let size = |value: &TypedPattern, env: &mut Env| Some(":".to_doc().append(pattern(value, env)));
+
+    let unit = |value: &TypedPattern, env: &mut Env| match value {
+        Pattern::Int { .. } => Some("unit:".to_doc().append(pattern(value, env))),
+        _ => None,
+    };
+
+    bit_string_segment(document, options, size, unit, env)
+}
+
+fn bit_string_segment<Value, SizeToDoc, UnitToDoc>(
+    mut document: Document,
+    options: Vec<BinSegmentOption<Value>>,
+    mut size_to_doc: SizeToDoc,
+    mut unit_to_doc: UnitToDoc,
+    env: &mut Env,
+) -> Document
+where
+    SizeToDoc: FnMut(&Value, &mut Env) -> Option<Document>,
+    UnitToDoc: FnMut(&Value, &mut Env) -> Option<Document>,
+{
     let mut size: Option<Document> = None;
     let mut unit: Option<Document> = None;
     let mut others = Vec::new();
 
     options.iter().for_each(|option| match option {
         BinSegmentOption::Invalid { .. } => (),
-
         BinSegmentOption::Integer { .. } => others.push("integer"),
         BinSegmentOption::Float { .. } => others.push("float"),
         BinSegmentOption::Binary { .. } => others.push("binary"),
@@ -403,17 +378,8 @@ fn pattern_segment(
         BinSegmentOption::Big { .. } => others.push("big"),
         BinSegmentOption::Little { .. } => others.push("little"),
         BinSegmentOption::Native { .. } => others.push("native"),
-        BinSegmentOption::Size { value, .. } => {
-            size = Some(":".to_doc().append(pattern(value, env)))
-        }
-        BinSegmentOption::Unit { value, .. } => {
-            unit = {
-                match &**value {
-                    Pattern::Int { .. } => Some("unit:".to_doc().append(pattern(value, env))),
-                    _ => None,
-                }
-            }
-        }
+        BinSegmentOption::Size { value, .. } => size = size_to_doc(value, env),
+        BinSegmentOption::Unit { value, .. } => unit = unit_to_doc(value, env),
     });
 
     document = document.append(size);
