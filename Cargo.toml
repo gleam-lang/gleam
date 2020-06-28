@@ -62,6 +62,8 @@ fs_extra = "1.1"
 # Logging
 tracing = "0.1"
 tracing-subscriber = "0.2"
+#To ignore files on gleam format
+ignore = "0.4"
 
 [build-dependencies]
 lalrpop = { version = "0.19", features = ["lexer"] }

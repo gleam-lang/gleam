@@ -41,6 +41,8 @@ extern crate lalrpop_util;
 #[macro_use]
 extern crate lazy_static;
 
+extern crate ignore;
+
 use crate::error::Error;
 use std::path::PathBuf;
 use structopt::clap::AppSettings;

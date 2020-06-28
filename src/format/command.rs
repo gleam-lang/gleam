@@ -5,9 +5,11 @@ use crate::{
 use std::{
     fs::File,
     io::{Read, Write},
-    path::PathBuf,
+    path::{PathBuf},
     str::FromStr,
 };
+
+use ignore::{Walk};
 
 #[derive(Debug, PartialEq)]
 pub struct Formatted {
@@ -86,6 +88,16 @@ fn write_formatted(formatted_files: Vec<Formatted>) -> Result<(), Error> {
 
 pub fn read_and_format_paths(files: Vec<String>) -> Result<Vec<Formatted>, Error> {
     let mut formatted_files = Vec::with_capacity(files.len());
+    let mut visible_files_from_git=Vec::new();
+
+    for result in Walk::new("./") {
+        // Each item yielded by the iterator is either a directory entry or an
+        // error, so either print the path or the error.
+        match result {
+            Ok(entry) => visible_files_from_git.push(entry.into_path()),
+            Err(err) => println!("ERROR: {}", err),
+        }
+    }
 
     for file_path in files {
         let path = PathBuf::from_str(&file_path).map_err(|e| Error::FileIO {
@@ -96,8 +108,11 @@ pub fn read_and_format_paths(files: Vec<String>) -> Result<Vec<Formatted>, Error
         })?;
 
         if path.is_dir() {
-            for path in file::gleam_files(&path).into_iter() {
-                formatted_files.push(format_file(path)?);
+            for current_path in file::gleam_files(&path).into_iter() {
+                if visible_files_from_git.contains(&current_path){
+                    formatted_files.push(format_file(current_path)?);
+                }
+                
             }
         } else {
             formatted_files.push(format_file(path)?);
