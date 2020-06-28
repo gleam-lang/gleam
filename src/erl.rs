@@ -692,7 +692,7 @@ fn var(name: &str, constructor: &ValueConstructor, env: &mut Env) -> Document {
     }
 }
 
-fn const_inline(literal: &Constant<Arc<Type>>) -> Document {
+fn const_inline(literal: &TypedConstant) -> Document {
     match literal {
         Constant::Int { value, .. } => value.to_string().to_doc(),
         Constant::Float { value, .. } => value.to_string().to_doc(),
@@ -702,6 +702,16 @@ fn const_inline(literal: &Constant<Arc<Type>>) -> Document {
         Constant::List { elements, .. } => {
             let elements = elements.iter().map(const_inline).intersperse(delim(","));
             concat(elements).nest_current().surround("[", "]").group()
+        }
+
+        Constant::Record { tag, args, .. } => {
+            if args.is_empty() {
+                atom(tag.to_snake_case())
+            } else {
+                let args = args.into_iter().map(|a| const_inline(&a.value));
+                let tag = atom(tag.to_snake_case());
+                tuple(std::iter::once(tag).chain(args))
+            }
         }
     }
 }
@@ -812,17 +822,6 @@ fn bare_clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
             .append(" =< ")
             .append(clause_guard(right.as_ref(), env)),
 
-        ClauseGuard::Constructor { tag, args, .. } => {
-            if args.is_empty() {
-                atom(tag.to_snake_case())
-            } else {
-                tuple(
-                    std::iter::once(atom(tag.to_snake_case()))
-                        .chain(args.into_iter().map(|a| bare_clause_guard(&a.value, env))),
-                )
-            }
-        }
-
         // Only local variables are supported and the typer ensures that all
         // ClauseGuard::Vars are local variables
         ClauseGuard::Var { name, .. } => env.local_var_name(name.to_string()),
@@ -851,9 +850,7 @@ fn clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
             .append(")"),
 
         // Values are not wrapped
-        ClauseGuard::Constant(_) | ClauseGuard::Var { .. } | ClauseGuard::Constructor { .. } => {
-            bare_clause_guard(guard, env)
-        }
+        ClauseGuard::Constant(_) | ClauseGuard::Var { .. } => bare_clause_guard(guard, env),
     }
 }
 

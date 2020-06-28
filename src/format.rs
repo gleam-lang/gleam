@@ -239,7 +239,7 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    fn const_expr<T>(&mut self, value: &Constant<T>) -> Document {
+    fn const_expr<A, B>(&mut self, value: &Constant<A, B>) -> Document {
         match value {
             Constant::Int { value, .. } | Constant::Float { value, .. } => value.clone().to_doc(),
 
@@ -256,6 +256,42 @@ impl<'a> Formatter<'a> {
             Constant::Tuple { elements, .. } => "tuple"
                 .to_doc()
                 .append(wrap_args(elements.iter().map(|e| self.const_expr(e)))),
+
+            Constant::Record {
+                name,
+                args,
+                module: None,
+                ..
+            } if args.is_empty() => name.to_string().to_doc(),
+
+            Constant::Record {
+                name,
+                args,
+                module: Some(m),
+                ..
+            } if args.is_empty() => m.to_string().to_doc().append(".").append(name.to_string()),
+
+            Constant::Record {
+                name,
+                args,
+                module: None,
+                ..
+            } => name
+                .to_string()
+                .to_doc()
+                .append(wrap_args(args.iter().map(|a| self.constant_call_arg(a)))),
+
+            Constant::Record {
+                name,
+                args,
+                module: Some(m),
+                ..
+            } => m
+                .to_string()
+                .to_doc()
+                .append(".")
+                .append(name.to_string())
+                .append(wrap_args(args.iter().map(|a| self.constant_call_arg(a)))),
         }
     }
 
@@ -1263,57 +1299,20 @@ impl<'a> Formatter<'a> {
                 .append(" <=. ")
                 .append(self.clause_guard(right.as_ref())),
 
-            ClauseGuard::Constructor {
-                name,
-                args,
-                module: None,
-                ..
-            } if args.is_empty() => name.to_string().to_doc(),
-
-            ClauseGuard::Constructor {
-                name,
-                args,
-                module: Some(m),
-                ..
-            } if args.is_empty() => m.to_string().to_doc().append(".").append(name.to_string()),
-
-            ClauseGuard::Constructor {
-                name,
-                args,
-                module: None,
-                ..
-            } => name.to_string().to_doc().append(wrap_args(
-                args.iter().map(|a| self.clause_guard_call_arg(&a)),
-            )),
-
-            ClauseGuard::Constructor {
-                name,
-                args,
-                module: Some(m),
-                ..
-            } => m
-                .to_string()
-                .to_doc()
-                .append(".")
-                .append(name.to_string())
-                .append(wrap_args(
-                    args.iter().map(|a| self.clause_guard_call_arg(&a)),
-                )),
-
             ClauseGuard::Var { name, .. } => name.to_string().to_doc(),
 
             ClauseGuard::Constant(constant) => self.const_expr(constant),
         }
     }
 
-    fn clause_guard_call_arg(&mut self, arg: &CallArg<UntypedClauseGuard>) -> Document {
+    fn constant_call_arg<A, B>(&mut self, arg: &CallArg<Constant<A, B>>) -> Document {
         match &arg.label {
-            None => self.clause_guard(&arg.value),
+            None => self.const_expr(&arg.value),
             Some(s) => s
                 .clone()
                 .to_doc()
                 .append(": ")
-                .append(self.clause_guard(&arg.value)),
+                .append(self.const_expr(&arg.value)),
         }
     }
 }

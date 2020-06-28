@@ -13,19 +13,19 @@ use std::sync::Arc;
 
 pub const CAPTURE_VARIABLE: &str = "gleam@capture_variable";
 
-pub type TypedModule = Module<Arc<Type>, TypedExpr, typ::Module>;
+pub type TypedModule = Module<Arc<Type>, TypedExpr, typ::Module, String>;
 
-pub type UntypedModule = Module<(), UntypedExpr, ()>;
+pub type UntypedModule = Module<(), UntypedExpr, (), ()>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Module<T, Expr, Info> {
+pub struct Module<T, Expr, Info, ConstantRecordTag> {
     pub name: Vec<String>,
     pub documentation: Vec<String>,
     pub type_info: Info,
-    pub statements: Vec<Statement<T, Expr>>,
+    pub statements: Vec<Statement<T, Expr, ConstantRecordTag>>,
 }
 
-impl<A, B, C> Module<A, B, C> {
+impl<A, B, C, D> Module<A, B, C, D> {
     pub fn name_string(&self) -> String {
         self.name.join("/")
     }
@@ -134,11 +134,11 @@ impl TypeAst {
     }
 }
 
-pub type TypedStatement = Statement<Arc<Type>, TypedExpr>;
-pub type UntypedStatement = Statement<(), UntypedExpr>;
+pub type TypedStatement = Statement<Arc<Type>, TypedExpr, String>;
+pub type UntypedStatement = Statement<(), UntypedExpr, ()>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Statement<T, Expr> {
+pub enum Statement<T, Expr, ConstantRecordTag> {
     Fn {
         end_location: usize,
         location: SrcSpan,
@@ -204,12 +204,12 @@ pub enum Statement<T, Expr> {
         public: bool,
         name: String,
         annotation: Option<TypeAst>,
-        value: Box<constant::Constant<T>>,
+        value: Box<constant::Constant<T, ConstantRecordTag>>,
         typ: T,
     },
 }
 
-impl<A, B> Statement<A, B> {
+impl<A, B, C> Statement<A, B, C> {
     pub fn location(&self) -> &SrcSpan {
         match self {
             Statement::Import { location, .. }
@@ -425,16 +425,7 @@ pub enum ClauseGuard<Type, RecordTag> {
         name: String,
     },
 
-    Constant(Constant<Type>),
-
-    Constructor {
-        location: SrcSpan,
-        module: Option<String>,
-        name: String,
-        args: Vec<CallArg<Self>>,
-        tag: RecordTag,
-        typ: Type,
-    },
+    Constant(Constant<Type, RecordTag>),
 }
 
 impl<A, B> ClauseGuard<A, B> {
@@ -454,7 +445,6 @@ impl<A, B> ClauseGuard<A, B> {
             ClauseGuard::GtEqFloat { location, .. } => location,
             ClauseGuard::LtFloat { location, .. } => location,
             ClauseGuard::LtEqFloat { location, .. } => location,
-            ClauseGuard::Constructor { location, .. } => location,
         }
     }
 }
@@ -463,7 +453,6 @@ impl TypedClauseGuard {
     pub fn typ(&self) -> Arc<typ::Type> {
         match self {
             ClauseGuard::Var { typ, .. } => typ.clone(),
-            ClauseGuard::Constructor { typ, .. } => typ.clone(),
             ClauseGuard::Constant(constant) => constant.typ(),
 
             ClauseGuard::Or { .. }

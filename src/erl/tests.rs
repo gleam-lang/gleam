@@ -1685,4 +1685,33 @@ test() ->
     end.
 "#,
     );
+
+    assert_erl!(
+        r#"
+pub const constant = Ok(1)
+
+pub fn main(arg) {
+  let _ = constant
+  case arg {
+    _ if arg == constant -> 1
+    _ -> 0
+  }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/1]).
+
+main(Arg) ->
+    _ = {ok, 1},
+    case Arg of
+        _ when Arg =:= {ok, 1} ->
+            1;
+
+        _ ->
+            0
+    end.
+"#,
+    );
 }

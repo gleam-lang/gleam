@@ -421,8 +421,8 @@ pub fn location(start: usize, end: usize) -> crate::ast::SrcSpan {
     crate::ast::SrcSpan { start, end }
 }
 
-pub fn attach_doc_comments<'a, A, B, C>(
-    module: &mut crate::ast::Module<A, B, C>,
+pub fn attach_doc_comments<'a, A, B, C, D>(
+    module: &mut crate::ast::Module<A, B, C, D>,
     mut comments: &'a [Comment<'a>],
 ) {
     for statement in &mut module.statements {

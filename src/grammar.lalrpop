@@ -7,8 +7,7 @@ use crate::ast::{
     UntypedPattern, BinOp, Clause, UntypedClause, RecordConstructor, Pattern, CallArg,
     ExternalFnArg, ArgNames, UnqualifiedImport, UntypedClauseGuard, ClauseGuard, BindingKind,
     UntypedExprBinSegment, UntypedPatternBinSegment, BinSegmentOption, UntypedExprBinSegmentOption,
-    UntypedPatternBinSegmentOption, Constant
-
+    UntypedPatternBinSegmentOption, Constant, UntypedConstant,
 };
 use crate::parser::*;
 
@@ -139,15 +138,39 @@ StatementModuleConstant: UntypedStatement = {
     }
 }
 
-Constant: Constant<()> = {
+Constant: UntypedConstant = {
     ConstInt => <>,
     ConstList => <>,
     ConstFloat => <>,
     ConstTuple => <>,
     ConstString => <>,
+    ConstRecord => <>,
 }
 
-ConstList: Constant<()> = {
+ConstRecord: UntypedConstant = {
+    <s:@L> <module:(<VarName> ".")?> <name:UpName> <args:ConstRecordArgs?> <e:@L> => Constant::Record {
+        location: location(s, e),
+        args: args.unwrap_or_else(|| vec![]),
+        module,
+        typ: (),
+        tag: (),
+        name,
+    },
+}
+
+ConstRecordArgs: Vec<CallArg<UntypedConstant>> = {
+    "(" <args:Comma<ConstRecordArg>> ")" => args
+}
+
+ConstRecordArg: CallArg<UntypedConstant> = {
+    <s:@L> <label:(<VarName> ":")?> <value:Constant> <e:@L> => CallArg {
+        location: location(s, e),
+        label,
+        value,
+    },
+}
+
+ConstList: UntypedConstant = {
     <s:@L> "[" <elements:Comma<Constant>> "]" <e:@L> => Constant::List {
         location: location(s, e),
         elements,
@@ -155,29 +178,29 @@ ConstList: Constant<()> = {
     },
 }
 
-ConstTuple: Constant<()> = {
+ConstTuple: UntypedConstant = {
     <s:@L> "tuple" "(" <elements:Comma<Constant>> ")" <e:@L> => Constant::Tuple {
         location: location(s, e),
         elements,
     }
 }
 
-ConstInt: Constant<()> = {
-    <s:@L> <value:IntLiteral> <e:@L> => Constant::<()>::Int {
+ConstInt: UntypedConstant = {
+    <s:@L> <value:IntLiteral> <e:@L> => Constant::Int {
         location: location(s, e),
         value,
     }
 }
 
-ConstFloat: Constant<()> = {
-    <s:@L> <value:FloatLiteral> <e:@L> => Constant::<()>::Float {
+ConstFloat: UntypedConstant = {
+    <s:@L> <value:FloatLiteral> <e:@L> => Constant::Float {
         location: location(s, e),
         value,
     }
 }
 
-ConstString: Constant<()> = {
-    <s:@L> <x:RawString> <e:@L> => Constant::<()>::String {
+ConstString: UntypedConstant = {
+    <s:@L> <x:RawString> <e:@L> => Constant::String {
         location: location(s, e),
         value: x,
     }
@@ -439,32 +462,7 @@ ClauseGuard5: UntypedClauseGuard = {
         name,
     },
 
-    <s:@L> <module:(<VarName> ".")?> <name:UpName> <args:ClauseGuardConstructorArgs?> <e:@L> => {
-        let args = args.unwrap_or_else(|| vec![]);
-
-        ClauseGuard::Constructor {
-            location: location(s, e),
-            args: args,
-            module,
-            typ: (),
-            tag: (),
-            name,
-        }
-    },
-
     "{" <ClauseGuard> "}" => <>,
-}
-
-ClauseGuardConstructorArgs: Vec<CallArg<UntypedClauseGuard>> = {
-    "(" <args:Comma<ClauseGuardConstructorArg>> ")" => args
-}
-
-ClauseGuardConstructorArg: CallArg<UntypedClauseGuard> = {
-    <s:@L> <label:(<VarName> ":")?> <value:ClauseGuard> <e:@L> => CallArg {
-        location: location(s, e),
-        label,
-        value,
-    },
 }
 
 BindingKind: BindingKind = {

@@ -274,7 +274,9 @@ pub enum ValueConstructorVariant {
     LocalVariable,
 
     /// A module constant
-    ModuleConstant { literal: Constant<Arc<Type>> },
+    ModuleConstant {
+        literal: Constant<Arc<Type>, String>,
+    },
 
     /// A function belonging to the module
     ModuleFn {
@@ -315,7 +317,7 @@ impl ValueConstructorVariant {
 pub enum ModuleValueConstructor {
     Record { name: String, arity: usize },
     Fn,
-    Constant { literal: Constant<Arc<Type>> },
+    Constant { literal: TypedConstant },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1712,84 +1714,6 @@ impl<'a> Typer<'a> {
                 })
             }
 
-            ClauseGuard::Constructor {
-                module,
-                location,
-                name,
-                mut args,
-                ..
-            } => {
-                let constructor = self.infer_value_constructor(&name, &location)?;
-
-                let tag = match &constructor.variant {
-                    ValueConstructorVariant::Record { name, .. } => name.clone(),
-
-                    ValueConstructorVariant::ModuleFn { .. }
-                    | ValueConstructorVariant::LocalVariable => {
-                        return Err(Error::NonLocalClauseGuardVariable { location, name })
-                    }
-
-                    ValueConstructorVariant::ModuleConstant { literal } => {
-                        return Ok(ClauseGuard::Constant(literal.clone()))
-                    }
-                };
-
-                // Pretty much all the other infer functions operate on UntypedExpr
-                // or TypedExpr rather than ClauseGuard. To make things easier we
-                // build the TypedExpr equivalent of the constructor and use that
-                let fun = TypedExpr::Var {
-                    constructor,
-                    location: location.clone(),
-                    name: name.clone(),
-                };
-
-                // This is basically the same code as do_infer_call_with_known_fun()
-                // except the args are typed with infer_clause_guard() here.
-                // This duplication is a bit awkward but it works!
-                // Potentially this could be improved later
-                match self
-                    .get_field_map(&fun)
-                    .map_err(|e| convert_get_value_constructor_error(e, &location))?
-                {
-                    // The fun has a field map so labelled arguments may be present and need to be reordered.
-                    Some(field_map) => field_map.reorder(&mut args, &location)?,
-
-                    // The fun has no field map and so we error if arguments have been labelled
-                    None => assert_no_labelled_arguments(&args)?,
-                }
-
-                let (mut args_types, return_type) = match_fun_type(fun.typ(), args.len(), self)
-                    .map_err(|e| convert_not_fun_error(e, fun.location(), &location))?;
-                let args = args_types
-                    .iter_mut()
-                    .zip(args)
-                    .map(|(typ, arg): (&mut Arc<Type>, _)| {
-                        let CallArg {
-                            label,
-                            value,
-                            location,
-                        } = arg;
-                        let value = self.infer_clause_guard(value)?;
-                        self.unify(typ.clone(), value.typ())
-                            .map_err(|e| convert_unify_error(e, value.location()))?;
-                        Ok(CallArg {
-                            label,
-                            value,
-                            location,
-                        })
-                    })
-                    .collect::<Result<_, _>>()?;
-
-                Ok(ClauseGuard::Constructor {
-                    module,
-                    location,
-                    name,
-                    args,
-                    typ: return_type,
-                    tag,
-                })
-            }
-
             ClauseGuard::And {
                 location,
                 left,
@@ -2227,6 +2151,8 @@ impl<'a> Typer<'a> {
         Ok((fun, args, return_type))
     }
 
+    // TODO: extract the type annotation checking into a infer_module_const
+    // function that uses this function internally
     fn infer_const(
         &mut self,
         annotation: &Option<TypeAst>,
@@ -2252,6 +2178,84 @@ impl<'a> Typer<'a> {
             Constant::List {
                 elements, location, ..
             } => self.infer_const_list(elements, location),
+
+            Constant::Record {
+                module,
+                location,
+                name,
+                mut args,
+                ..
+            } => {
+                let constructor = self.infer_value_constructor(&name, &location)?;
+
+                let tag = match &constructor.variant {
+                    ValueConstructorVariant::Record { name, .. } => name.clone(),
+
+                    ValueConstructorVariant::ModuleFn { .. }
+                    | ValueConstructorVariant::LocalVariable => {
+                        return Err(Error::NonLocalClauseGuardVariable { location, name })
+                    }
+
+                    ValueConstructorVariant::ModuleConstant { literal } => {
+                        return Ok(literal.clone())
+                    }
+                };
+
+                // Pretty much all the other infer functions operate on UntypedExpr
+                // or TypedExpr rather than ClauseGuard. To make things easier we
+                // build the TypedExpr equivalent of the constructor and use that
+                let fun = TypedExpr::Var {
+                    constructor,
+                    location: location.clone(),
+                    name: name.clone(),
+                };
+
+                // This is basically the same code as do_infer_call_with_known_fun()
+                // except the args are typed with infer_clause_guard() here.
+                // This duplication is a bit awkward but it works!
+                // Potentially this could be improved later
+                match self
+                    .get_field_map(&fun)
+                    .map_err(|e| convert_get_value_constructor_error(e, &location))?
+                {
+                    // The fun has a field map so labelled arguments may be present and need to be reordered.
+                    Some(field_map) => field_map.reorder(&mut args, &location)?,
+
+                    // The fun has no field map and so we error if arguments have been labelled
+                    None => assert_no_labelled_arguments(&args)?,
+                }
+
+                let (mut args_types, return_type) = match_fun_type(fun.typ(), args.len(), self)
+                    .map_err(|e| convert_not_fun_error(e, fun.location(), &location))?;
+                let args = args_types
+                    .iter_mut()
+                    .zip(args)
+                    .map(|(typ, arg): (&mut Arc<Type>, _)| {
+                        let CallArg {
+                            label,
+                            value,
+                            location,
+                        } = arg;
+                        let value = self.infer_const(&None, value)?;
+                        self.unify(typ.clone(), value.typ())
+                            .map_err(|e| convert_unify_error(e, value.location()))?;
+                        Ok(CallArg {
+                            label,
+                            value,
+                            location,
+                        })
+                    })
+                    .collect::<Result<_, _>>()?;
+
+                Ok(Constant::Record {
+                    module,
+                    location,
+                    name,
+                    args,
+                    typ: return_type,
+                    tag,
+                })
+            }
         }?;
 
         // Check type annotation is accurate.
