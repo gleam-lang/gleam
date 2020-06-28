@@ -222,7 +222,7 @@ impl Error {
         match self {
             Error::ShellCommand { command, err: None } => {
                 let diagnostic = ProjectErrorDiagnostic {
-                    title: "Gzip compression failure".to_string(),
+                    title: "Shell command failure".to_string(),
                     label: format!(
                         "There was a problem when running the shell command `{}`.",
                         command
@@ -236,7 +236,7 @@ impl Error {
                 err: Some(err),
             } => {
                 let diagnostic = ProjectErrorDiagnostic {
-                    title: "Gzip compression failure".to_string(),
+                    title: "Shell command failure".to_string(),
                     label: format!(
                         "There was a problem when running the shell command `{}`.
 
