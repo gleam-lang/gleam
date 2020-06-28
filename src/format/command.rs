@@ -5,7 +5,7 @@ use crate::{
 use std::{
     fs::File,
     io::{Read, Write},
-    path::{PathBuf},
+    path::PathBuf,
     str::FromStr,
 };
 
