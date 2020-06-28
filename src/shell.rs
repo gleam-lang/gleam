@@ -1,11 +1,10 @@
 use crate::{
     build::{self, project_root::ProjectRoot},
-    error::Error,
+    error::{Error, GleamExpect},
     file,
 };
 use std::path::PathBuf;
 use std::process::Command;
-extern crate ctrlc;
 
 pub fn command(root_string: String) -> Result<(), Error> {
     let root_path = PathBuf::from(root_string);
@@ -16,10 +15,7 @@ pub fn command(root_string: String) -> Result<(), Error> {
     build::main(config, root_path)?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell
-    ctrlc::set_handler(move || {
-        println!("\nIf you would like to exit this shell, please use Ctrl+g to switch to user switch prompt and type `q` to quit");
-    })
-    .expect("Error setting Ctrl-C handler");
+    ctrlc::set_handler(move || {}).gleam_expect("Error setting Ctrl-C handler");
 
     // Prepare the Erlang shell command
     let mut command = Command::new("erl");
