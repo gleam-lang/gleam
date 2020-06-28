@@ -68,6 +68,7 @@ development.
 - [Mike R](https://github.com/mroach)
 - [Parker Selbert](https://github.com/sorentwo)
 - [Quinn Wilton](http://quinnwilton.com/)
+- [Sean Jensen-Grey](https://github.com/seanjensengrey)
 - [Shritesh Bhattarai](https://github.com/shritesh)
 - [Wojtek Mach](https://github.com/wojtekmach)
 - [mario](https://github.com/mario-mazo)
