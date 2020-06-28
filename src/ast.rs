@@ -239,7 +239,7 @@ impl<A, B, C> Statement<A, B, C> {
             | Statement::ExternalFn { doc, .. }
             | Statement::ExternalType { doc, .. }
             | Statement::ModuleConstant { doc, .. } => {
-                std::mem::replace(doc, new_doc);
+                let _ = std::mem::replace(doc, new_doc);
             }
         }
     }
