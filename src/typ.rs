@@ -1721,8 +1721,9 @@ impl<'a> Typer<'a> {
             } => {
                 let constructor = self.infer_value_constructor(&name, &location)?;
 
-                match &constructor.variant {
-                    ValueConstructorVariant::Record { .. } => (),
+                let tag = match &constructor.variant {
+                    ValueConstructorVariant::Record { name, .. } => name.clone(),
+
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::LocalVariable => {
                         return Err(Error::NonLocalClauseGuardVariable { location, name })
@@ -1785,6 +1786,7 @@ impl<'a> Typer<'a> {
                     name,
                     args,
                     typ: return_type,
+                    tag,
                 })
             }
 

@@ -812,12 +812,12 @@ fn bare_clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
             .append(" =< ")
             .append(clause_guard(right.as_ref(), env)),
 
-        ClauseGuard::Constructor { name, args, .. } => {
+        ClauseGuard::Constructor { tag, args, .. } => {
             if args.is_empty() {
-                atom(name.to_snake_case())
+                atom(tag.to_snake_case())
             } else {
                 tuple(
-                    std::iter::once(atom(name.to_snake_case()))
+                    std::iter::once(atom(tag.to_snake_case()))
                         .chain(args.into_iter().map(|a| bare_clause_guard(&a.value, env))),
                 )
             }

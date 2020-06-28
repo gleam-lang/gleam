@@ -325,27 +325,28 @@ pub struct CallArg<A> {
 }
 
 pub type MultiPattern<PatternConstructor, Type> = Vec<Pattern<PatternConstructor, Type>>;
+
 pub type UntypedMultiPattern = MultiPattern<(), ()>;
 pub type TypedMultiPattern = MultiPattern<PatternConstructor, Arc<typ::Type>>;
 
-pub type TypedClause = Clause<TypedExpr, PatternConstructor, Arc<typ::Type>>;
+pub type TypedClause = Clause<TypedExpr, PatternConstructor, Arc<typ::Type>, String>;
 
-pub type UntypedClause = Clause<UntypedExpr, (), ()>;
+pub type UntypedClause = Clause<UntypedExpr, (), (), ()>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Clause<Expr, PatternConstructor, Type> {
+pub struct Clause<Expr, PatternConstructor, Type, RecordTag> {
     pub location: SrcSpan,
     pub pattern: MultiPattern<PatternConstructor, Type>,
     pub alternative_patterns: Vec<MultiPattern<PatternConstructor, Type>>,
-    pub guard: Option<ClauseGuard<Type>>,
+    pub guard: Option<ClauseGuard<Type, RecordTag>>,
     pub then: Expr,
 }
 
-pub type UntypedClauseGuard = ClauseGuard<()>;
-pub type TypedClauseGuard = ClauseGuard<Arc<typ::Type>>;
+pub type UntypedClauseGuard = ClauseGuard<(), ()>;
+pub type TypedClauseGuard = ClauseGuard<Arc<typ::Type>, String>;
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum ClauseGuard<Type> {
+pub enum ClauseGuard<Type, RecordTag> {
     Equals {
         location: SrcSpan,
         left: Box<Self>,
@@ -431,11 +432,12 @@ pub enum ClauseGuard<Type> {
         module: Option<String>,
         name: String,
         args: Vec<CallArg<Self>>,
+        tag: RecordTag,
         typ: Type,
     },
 }
 
-impl<A> ClauseGuard<A> {
+impl<A, B> ClauseGuard<A, B> {
     pub fn location(&self) -> &SrcSpan {
         match self {
             ClauseGuard::Constant(constant) => constant.location(),

@@ -89,7 +89,7 @@ pub enum TypedExpr {
         location: SrcSpan,
         typ: Arc<Type>,
         subjects: Vec<Self>,
-        clauses: Vec<Clause<Self, PatternConstructor, Arc<Type>>>,
+        clauses: Vec<Clause<Self, PatternConstructor, Arc<Type>, String>>,
     },
 
     RecordAccess {

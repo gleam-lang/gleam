@@ -76,7 +76,7 @@ pub enum UntypedExpr {
     Case {
         location: SrcSpan,
         subjects: Vec<Self>,
-        clauses: Vec<Clause<Self, (), ()>>,
+        clauses: Vec<Clause<Self, (), (), ()>>,
     },
 
     FieldAccess {

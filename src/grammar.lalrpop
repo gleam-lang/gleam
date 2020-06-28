@@ -447,6 +447,7 @@ ClauseGuard5: UntypedClauseGuard = {
             args: args,
             module,
             typ: (),
+            tag: (),
             name,
         }
     },
