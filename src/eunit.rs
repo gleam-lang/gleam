@@ -6,7 +6,6 @@ use crate::{
 use itertools::Itertools;
 use std::{path::PathBuf, process::Command};
 
-// TODO: exit status
 pub fn command(root_string: String) -> Result<(), Error> {
     let root_path = PathBuf::from(root_string);
     let root = ProjectRoot::new(root_path.clone());
@@ -37,16 +36,23 @@ pub fn command(root_string: String) -> Result<(), Error> {
     command.arg("-noshell");
     command.arg("-eval");
     command.arg(format!(
-        "eunit:test([{}], [verbose]),init:stop()", // TODO: exit 1 if failed
+        "init:stop(case eunit:test([{}], [verbose]) of ok -> 0; error -> 1 end)",
         test_modules
     ));
 
     // Run the shell
     tracing::trace!("Running OS process {:?}", command);
-    let _status = command.status().map_err(|e| Error::ShellCommand {
+    let status = command.status().map_err(|e| Error::ShellCommand {
         command: "erl".to_string(),
         err: Some(e.kind()),
     })?;
 
-    Ok(())
+    if status.success() {
+        Ok(())
+    } else {
+        Err(Error::ShellCommand {
+            command: "erl".to_string(),
+            err: None,
+        })
+    }
 }
