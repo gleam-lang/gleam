@@ -6,12 +6,12 @@ use crate::{
     ast::{
         self, Arg, ArgNames, BinOp, BinSegmentOption, BindingKind, CallArg, Clause, ClauseGuard,
         Constant, Pattern, RecordConstructor, SrcSpan, Statement, TypeAst, TypedArg, TypedClause,
-        TypedClauseGuard, TypedConstant, TypedExpr, TypedExprBinSegment, TypedExprBinSegmentOption,
-        TypedModule, TypedMultiPattern, TypedPattern, TypedPatternBinSegment,
-        TypedPatternBinSegmentOption, TypedStatement, UnqualifiedImport, UntypedArg, UntypedClause,
-        UntypedClauseGuard, UntypedConstant, UntypedExpr, UntypedExprBinSegment,
-        UntypedExprBinSegmentOption, UntypedModule, UntypedMultiPattern, UntypedPattern,
-        UntypedPatternBinSegment, UntypedPatternBinSegmentOption, UntypedStatement,
+        TypedClauseGuard, TypedConstant, TypedExpr, TypedExprBinSegment, TypedModule,
+        TypedMultiPattern, TypedPattern, TypedPatternBinSegment, TypedPatternBinSegmentOption,
+        TypedStatement, UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard,
+        UntypedConstant, UntypedExpr, UntypedExprBinSegment, UntypedExprBinSegmentOption,
+        UntypedModule, UntypedMultiPattern, UntypedPattern, UntypedPatternBinSegment,
+        UntypedPatternBinSegmentOption, UntypedStatement,
     },
     bit_string::{BinaryTypeSpecifier, Error as BinaryError},
     build::Origin,
@@ -1364,9 +1364,18 @@ impl<'a> Typer<'a> {
     ) -> Result<TypedExprBinSegment, Error> {
         let value = self.infer(value)?;
 
+        let infer_option = |segment_option| {
+            infer_bit_string_segment_option(segment_option, |value, typ| {
+                let typed_value = self.infer(value)?;
+                self.unify(typ, typed_value.typ())
+                    .map_err(|e| convert_unify_error(e, typed_value.location()))?;
+                Ok(typed_value)
+            })
+        };
+
         let options = options
             .into_iter()
-            .map(|option| self.infer_segment_option(option))
+            .map(infer_option)
             .collect::<Result<Vec<_>, _>>()?;
 
         let type_specifier = BinaryTypeSpecifier::new(&options, false)
@@ -1381,18 +1390,6 @@ impl<'a> Typer<'a> {
             typ,
             value: Box::new(value),
             options,
-        })
-    }
-
-    fn infer_segment_option(
-        &mut self,
-        segment_option: UntypedExprBinSegmentOption,
-    ) -> Result<TypedExprBinSegmentOption, Error> {
-        infer_bit_string_segment_option(segment_option, |value, typ| {
-            let typed_value = self.infer(value)?;
-            self.unify(typ, typed_value.typ())
-                .map_err(|e| convert_unify_error(e, typed_value.location()))?;
-            Ok(typed_value)
         })
     }
 

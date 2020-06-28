@@ -670,6 +670,13 @@ fn const_inline(literal: &TypedConstant) -> Document {
             concat(elements).nest_current().surround("[", "]").group()
         }
 
+        Constant::BitString { elems, .. } => bit_string(
+            elems
+                .into_iter()
+                fwjkefwkjefhwkjfehkwjfkjwefkjh
+                .map(|s| segment(&s.value, s.options.clone(), env)),
+        ),
+
         Constant::Record { tag, args, .. } => {
             if args.is_empty() {
                 atom(tag.to_snake_case())
