@@ -2122,6 +2122,9 @@ impl<'a> Typer<'a> {
                 elements, location, ..
             } => self.infer_const_list(elements, location),
 
+            // TODO
+            Constant::BitString { location, elems } => todo!(),
+
             Constant::Record {
                 module,
                 location,

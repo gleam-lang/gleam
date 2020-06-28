@@ -257,6 +257,12 @@ impl<'a> Formatter<'a> {
                 .to_doc()
                 .append(wrap_args(elements.iter().map(|e| self.const_expr(e)))),
 
+            Constant::BitString { elems, .. } => bit_string(
+                elems
+                    .iter()
+                    .map(|s| bit_string_segment(s, |e| self.const_expr(e))),
+            ),
+
             Constant::Record {
                 name,
                 args,
@@ -1274,18 +1280,6 @@ where
         .group()
 }
 
-pub fn bit_string<Segments>(segments: Segments) -> Document
-where
-    Segments: Iterator<Item = Document>,
-{
-    break_("<<", "<<")
-        .append(concat(segments.intersperse(delim(","))))
-        .nest(INDENT)
-        .append(break_(",", ""))
-        .append(">>")
-        .group()
-}
-
 pub fn wrap_args_with_spread<I>(args: I) -> Document
 where
     I: Iterator<Item = Document>,
@@ -1316,6 +1310,15 @@ where
     let mut elems = vec![head];
     let tail = collect_cons(tail, &mut elems, categorise_element);
     (elems, tail)
+}
+
+fn bit_string<'a>(segments: impl Iterator<Item = Document>) -> Document {
+    break_("<<", "<<")
+        .append(concat(segments.intersperse(delim(","))))
+        .nest(INDENT)
+        .append(break_(",", ""))
+        .append(">>")
+        .group()
 }
 
 fn list(elems: Document, tail: Option<Document>) -> Document {
