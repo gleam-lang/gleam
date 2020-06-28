@@ -96,8 +96,23 @@ pub fn read_and_format_paths(files: Vec<String>) -> Result<Vec<Formatted>, Error
         })?;
 
         if path.is_dir() {
-            for path in file::gleam_files(&path).into_iter() {
-                formatted_files.push(format_file(path)?);
+            let mut gitignore_file = path.clone();
+            gitignore_file.push(".gitignore");
+
+            if let Ok(ignore) = gitignore::File::new(&gitignore_file) {
+                for path in file::gleam_files(&path)
+                    .filter(|f| {
+                        let excluded = ignore.is_excluded(f).unwrap_or(false);
+                        !excluded
+                    })
+                    .into_iter()
+                {
+                    formatted_files.push(format_file(path)?);
+                }
+            } else {
+                for path in file::gleam_files(&path).into_iter() {
+                    formatted_files.push(format_file(path)?);
+                }
             }
         } else {
             formatted_files.push(format_file(path)?);

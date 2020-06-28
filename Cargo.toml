@@ -32,6 +32,8 @@ toml = "0.5"
 strsim = "0.10"
 # Recursively traversing directories
 walkdir = "2"
+# Ignoring .gitignore files
+gitignore = "1.0"
 # Enum trait impl macros
 strum = "0.18"
 strum_macros = "0.18"
