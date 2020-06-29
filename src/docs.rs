@@ -65,7 +65,7 @@ pub fn generate_html(
         .clone()
         .map(|m| {
             let name = m.name.join("/");
-            let path = [&name, "/"].concat();
+            let path = [&name, "/index.html"].concat();
             Link { path, name }
         })
         .collect();
