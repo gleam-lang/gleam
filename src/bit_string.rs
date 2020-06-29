@@ -12,7 +12,10 @@ pub struct BinaryTypeSpecifier<T> {
 }
 
 impl<T> BinaryTypeSpecifier<T> {
-    pub fn new(options: &Vec<BitStringSegmentOption<T>>, must_have_size: bool) -> Result<Self, Error>
+    pub fn new(
+        options: &Vec<BitStringSegmentOption<T>>,
+        must_have_size: bool,
+    ) -> Result<Self, Error>
     where
         T: Clone,
     {
@@ -144,8 +147,12 @@ impl<T> BinaryTypeSpecifier<T> {
             Some(BitStringSegmentOption::UTF16 { .. }) => Some(crate::typ::string()),
             Some(BitStringSegmentOption::UTF32 { .. }) => Some(crate::typ::string()),
             Some(BitStringSegmentOption::UTF8Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
-            Some(BitStringSegmentOption::UTF16Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
-            Some(BitStringSegmentOption::UTF32Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
+            Some(BitStringSegmentOption::UTF16Codepoint { .. }) => {
+                Some(crate::typ::utf_codepoint())
+            }
+            Some(BitStringSegmentOption::UTF32Codepoint { .. }) => {
+                Some(crate::typ::utf_codepoint())
+            }
             _ => None,
         }
     }
@@ -160,8 +167,12 @@ impl<T> BinaryTypeSpecifier<T> {
             Some(BitStringSegmentOption::UTF16 { .. }) => Some(crate::typ::utf_codepoint()),
             Some(BitStringSegmentOption::UTF32 { .. }) => Some(crate::typ::utf_codepoint()),
             Some(BitStringSegmentOption::UTF8Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
-            Some(BitStringSegmentOption::UTF16Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
-            Some(BitStringSegmentOption::UTF32Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
+            Some(BitStringSegmentOption::UTF16Codepoint { .. }) => {
+                Some(crate::typ::utf_codepoint())
+            }
+            Some(BitStringSegmentOption::UTF32Codepoint { .. }) => {
+                Some(crate::typ::utf_codepoint())
+            }
             _ => None,
         }
     }
