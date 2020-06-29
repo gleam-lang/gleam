@@ -12,6 +12,7 @@
 - Public module level constants generate documentation.
 - The formatter style has been improved to wrap and sort imports.
 - The formatter now permits comments at the end of module function bodies.
+- The formatter now skips files that match patterns defined in ignore files such as .gitignore and .ignore.
 - Error message diagnostic code previews for type errors when using the the
   pipe operator have been made more accurate.
 - Added support for list literals in clause guards.
