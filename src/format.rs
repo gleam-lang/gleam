@@ -1405,7 +1405,10 @@ where
     }
 }
 
-fn segment_option<ToDoc, Value>(option: &BitStringSegmentOption<Value>, mut to_doc: ToDoc) -> Document
+fn segment_option<ToDoc, Value>(
+    option: &BitStringSegmentOption<Value>,
+    mut to_doc: ToDoc,
+) -> Document
 where
     ToDoc: FnMut(&Value) -> Document,
 {

@@ -4,13 +4,13 @@ mod tests;
 
 use crate::{
     ast::{
-        self, Arg, ArgNames, BinOp, BitStringSegment, BitStringSegmentOption, BindingKind, CallArg, Clause,
-        ClauseGuard, Constant, HasLocation, Pattern, RecordConstructor, SrcSpan, Statement,
+        self, Arg, ArgNames, BinOp, BindingKind, BitStringSegment, BitStringSegmentOption, CallArg,
+        Clause, ClauseGuard, Constant, HasLocation, Pattern, RecordConstructor, SrcSpan, Statement,
         TypeAst, TypedArg, TypedClause, TypedClauseGuard, TypedConstant, TypedExpr, TypedModule,
-        TypedMultiPattern, TypedPattern, TypedPatternBitStringSegment, TypedStatement, UnqualifiedImport,
-        UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedConstantBitStringSegment,
-        UntypedExpr, UntypedExprBitStringSegment, UntypedModule, UntypedMultiPattern, UntypedPattern,
-        UntypedPatternBitStringSegment, UntypedStatement,
+        TypedMultiPattern, TypedPattern, TypedPatternBitStringSegment, TypedStatement,
+        UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant,
+        UntypedConstantBitStringSegment, UntypedExpr, UntypedExprBitStringSegment, UntypedModule,
+        UntypedMultiPattern, UntypedPattern, UntypedPatternBitStringSegment, UntypedStatement,
     },
     bit_string::{BinaryTypeSpecifier, Error as BinaryError},
     build::Origin,
@@ -3956,13 +3956,25 @@ where
             })
         }
 
-        BitStringSegmentOption::Binary { location } => Ok(BitStringSegmentOption::Binary { location }),
-        BitStringSegmentOption::Integer { location } => Ok(BitStringSegmentOption::Integer { location }),
-        BitStringSegmentOption::Float { location } => Ok(BitStringSegmentOption::Float { location }),
-        BitStringSegmentOption::BitString { location } => Ok(BitStringSegmentOption::BitString { location }),
+        BitStringSegmentOption::Binary { location } => {
+            Ok(BitStringSegmentOption::Binary { location })
+        }
+        BitStringSegmentOption::Integer { location } => {
+            Ok(BitStringSegmentOption::Integer { location })
+        }
+        BitStringSegmentOption::Float { location } => {
+            Ok(BitStringSegmentOption::Float { location })
+        }
+        BitStringSegmentOption::BitString { location } => {
+            Ok(BitStringSegmentOption::BitString { location })
+        }
         BitStringSegmentOption::UTF8 { location } => Ok(BitStringSegmentOption::UTF8 { location }),
-        BitStringSegmentOption::UTF16 { location } => Ok(BitStringSegmentOption::UTF16 { location }),
-        BitStringSegmentOption::UTF32 { location } => Ok(BitStringSegmentOption::UTF32 { location }),
+        BitStringSegmentOption::UTF16 { location } => {
+            Ok(BitStringSegmentOption::UTF16 { location })
+        }
+        BitStringSegmentOption::UTF32 { location } => {
+            Ok(BitStringSegmentOption::UTF32 { location })
+        }
         BitStringSegmentOption::UTF8Codepoint { location } => {
             Ok(BitStringSegmentOption::UTF8Codepoint { location })
         }
@@ -3972,11 +3984,19 @@ where
         BitStringSegmentOption::UTF32Codepoint { location } => {
             Ok(BitStringSegmentOption::UTF32Codepoint { location })
         }
-        BitStringSegmentOption::Signed { location } => Ok(BitStringSegmentOption::Signed { location }),
-        BitStringSegmentOption::Unsigned { location } => Ok(BitStringSegmentOption::Unsigned { location }),
+        BitStringSegmentOption::Signed { location } => {
+            Ok(BitStringSegmentOption::Signed { location })
+        }
+        BitStringSegmentOption::Unsigned { location } => {
+            Ok(BitStringSegmentOption::Unsigned { location })
+        }
         BitStringSegmentOption::Big { location } => Ok(BitStringSegmentOption::Big { location }),
-        BitStringSegmentOption::Little { location } => Ok(BitStringSegmentOption::Little { location }),
-        BitStringSegmentOption::Native { location } => Ok(BitStringSegmentOption::Native { location }),
+        BitStringSegmentOption::Little { location } => {
+            Ok(BitStringSegmentOption::Little { location })
+        }
+        BitStringSegmentOption::Native { location } => {
+            Ok(BitStringSegmentOption::Native { location })
+        }
     }
 }
 
