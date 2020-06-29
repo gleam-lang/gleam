@@ -6,7 +6,7 @@ use crate::ast::{
     UntypedExpr, UntypedArg, Arg, UntypedModule, Module, UntypedStatement, Statement, TypeAst,
     UntypedPattern, BinOp, Clause, UntypedClause, RecordConstructor, Pattern, CallArg,
     ExternalFnArg, ArgNames, UnqualifiedImport, UntypedClauseGuard, ClauseGuard, BindingKind,
-    BinSegment, BinSegmentOption, Constant, UntypedConstant,
+    BitStringSegment, BitStringSegmentOption, Constant, UntypedConstant,
 };
 use crate::parser::*;
 
@@ -148,7 +148,7 @@ Constant: UntypedConstant = {
 }
 
 ConstBitString: UntypedConstant = {
-    <s:@L> "<<" <segments:Comma<ConstBinSegment>> ">>" <e:@L> => {
+    <s:@L> "<<" <segments:Comma<ConstBitStringSegment>> ">>" <e:@L> => {
         Constant::BitString {
             location: location(s, e),
             segments,
@@ -156,8 +156,8 @@ ConstBitString: UntypedConstant = {
     }
 }
 
-ConstBinSegment: BinSegment<UntypedConstant, ()> = {
-    <s:@L> <v:Constant> <options:(":" <HyphensNoTrailing<ConstBinSegmentOption>>)?> <e:@L> => BinSegment {
+ConstBitStringSegment: BitStringSegment<UntypedConstant, ()> = {
+    <s:@L> <v:Constant> <options:(":" <HyphensNoTrailing<ConstBitStringSegmentOption>>)?> <e:@L> => BitStringSegment {
         location: location(s, e),
         value: Box::new(v),
         typ: (),
@@ -165,33 +165,33 @@ ConstBinSegment: BinSegment<UntypedConstant, ()> = {
     }
 }
 
-ConstBinSegmentOption: BinSegmentOption<UntypedConstant> = {
+ConstBitStringSegmentOption: BitStringSegmentOption<UntypedConstant> = {
     <s:@L> <o:VarName> "(" <value:ConstInt> ")" <e:@L> => {
         if o.as_str() == "unit" {
-            BinSegmentOption::Unit {
+            BitStringSegmentOption::Unit {
                 location: location(s, e),
                 value: Box::new(value),
                 short_form: false
             }
         } else if o.as_str() == "size" {
-            BinSegmentOption::Size {
+            BitStringSegmentOption::Size {
                 location: location(s, e),
                 value: Box::new(value),
                 short_form: false
             }
         } else {
-            BinSegmentOption::Invalid { label: o, location: location(s, e) }
+            BitStringSegmentOption::Invalid { label: o, location: location(s, e) }
         }
     },
 
     <s:@L> <value:ConstInt> <e:@L> =>
-        BinSegmentOption::Size {
+        BitStringSegmentOption::Size {
             location: location(s, e),
             value: Box::new(value),
             short_form: true
         },
 
-    BinSegmentOptionLiteral<ConstBinSegmentOption> => <>,
+    BitStringSegmentOptionLiteral<ConstBitStringSegmentOption> => <>,
 }
 
 ConstRecord: UntypedConstant = {
@@ -667,7 +667,7 @@ Todo: UntypedExpr = {
 }
 
 BitString: UntypedExpr = {
-    <s:@L> "<<" <segments:Comma<BinSegment>> ">>" <e:@L> => {
+    <s:@L> "<<" <segments:Comma<BitStringSegment>> ">>" <e:@L> => {
         UntypedExpr::BitString {
             location: location(s, e),
             segments,
@@ -675,9 +675,9 @@ BitString: UntypedExpr = {
     }
 }
 
-BinSegment: BinSegment<UntypedExpr, ()> = {
-    <s:@L> <v:SimpleExpr> <options:(":" <HyphensNoTrailing<BinSegmentOption>>)?>  <e:@L> =>
-        BinSegment {
+BitStringSegment: BitStringSegment<UntypedExpr, ()> = {
+    <s:@L> <v:SimpleExpr> <options:(":" <HyphensNoTrailing<BitStringSegmentOption>>)?>  <e:@L> =>
+        BitStringSegment {
             location: location(s, e),
             value: Box::new(v),
             typ: (),
@@ -685,56 +685,56 @@ BinSegment: BinSegment<UntypedExpr, ()> = {
         }
 }
 
-BinSegmentOption: BinSegmentOption<UntypedExpr> = {
+BitStringSegmentOption: BitStringSegmentOption<UntypedExpr> = {
     <s:@L> <o:VarName> "(" <value:OpOrSimpleExpr> ")" <e:@L> => {
         if o.as_str() == "unit" {
-            BinSegmentOption::Unit {
+            BitStringSegmentOption::Unit {
                 location: location(s, e),
                 value: Box::new(value),
                 short_form: false
             }
         } else if o.as_str() == "size" {
-            BinSegmentOption::Size {
+            BitStringSegmentOption::Size {
                 location: location(s, e),
                 value: Box::new(value),
                 short_form: false
             }
         } else {
-            BinSegmentOption::Invalid { label: o, location: location(s, e) }
+            BitStringSegmentOption::Invalid { label: o, location: location(s, e) }
         }
     },
 
     <s:@L> <value:Int> <e:@L> =>
-        BinSegmentOption::Size {
+        BitStringSegmentOption::Size {
             location: location(s, e),
             value: Box::new(value),
             short_form: true
         },
 
-    BinSegmentOptionLiteral<BinSegmentOption> => <>,
+    BitStringSegmentOptionLiteral<BitStringSegmentOption> => <>,
 }
 
-BinSegmentOptionLiteral<T>: T = {
+BitStringSegmentOptionLiteral<T>: T = {
     <s:@L> <o:VarName> <e:@L> => {
         match o.as_str() {
-            "binary" => BinSegmentOption::Binary { location: location(s, e) },
-            "bytes" => BinSegmentOption::Binary { location: location(s, e) },
-            "int" => BinSegmentOption::Integer { location: location(s, e) },
-            "float" => BinSegmentOption::Float { location: location(s, e) },
-            "bit_string" => BinSegmentOption::BitString { location: location(s, e) },
-            "bits" => BinSegmentOption::BitString { location: location(s, e) },
-            "utf8" => BinSegmentOption::UTF8 { location: location(s, e) },
-            "utf16" => BinSegmentOption::UTF16 { location: location(s, e) },
-            "utf32" => BinSegmentOption::UTF32 { location: location(s, e) },
-            "utf8_codepoint" => BinSegmentOption::UTF8Codepoint { location: location(s, e) },
-            "utf16_codepoint" => BinSegmentOption::UTF16Codepoint { location: location(s, e) },
-            "utf32_codepoint" => BinSegmentOption::UTF32Codepoint { location: location(s, e) },
-            "signed" => BinSegmentOption::Signed { location: location(s, e) },
-            "unsigned" => BinSegmentOption::Unsigned { location: location(s, e) },
-            "big" => BinSegmentOption::Big { location: location(s, e) },
-            "little" => BinSegmentOption::Little { location: location(s, e) },
-            "native" => BinSegmentOption::Native { location: location(s, e) },
-            _ => BinSegmentOption::Invalid { label: o, location: location(s, e) },
+            "binary" => BitStringSegmentOption::Binary { location: location(s, e) },
+            "bytes" => BitStringSegmentOption::Binary { location: location(s, e) },
+            "int" => BitStringSegmentOption::Integer { location: location(s, e) },
+            "float" => BitStringSegmentOption::Float { location: location(s, e) },
+            "bit_string" => BitStringSegmentOption::BitString { location: location(s, e) },
+            "bits" => BitStringSegmentOption::BitString { location: location(s, e) },
+            "utf8" => BitStringSegmentOption::UTF8 { location: location(s, e) },
+            "utf16" => BitStringSegmentOption::UTF16 { location: location(s, e) },
+            "utf32" => BitStringSegmentOption::UTF32 { location: location(s, e) },
+            "utf8_codepoint" => BitStringSegmentOption::UTF8Codepoint { location: location(s, e) },
+            "utf16_codepoint" => BitStringSegmentOption::UTF16Codepoint { location: location(s, e) },
+            "utf32_codepoint" => BitStringSegmentOption::UTF32Codepoint { location: location(s, e) },
+            "signed" => BitStringSegmentOption::Signed { location: location(s, e) },
+            "unsigned" => BitStringSegmentOption::Unsigned { location: location(s, e) },
+            "big" => BitStringSegmentOption::Big { location: location(s, e) },
+            "little" => BitStringSegmentOption::Little { location: location(s, e) },
+            "native" => BitStringSegmentOption::Native { location: location(s, e) },
+            _ => BitStringSegmentOption::Invalid { label: o, location: location(s, e) },
         }
     }
 }
@@ -971,7 +971,7 @@ PatternList: UntypedPattern = {
 }
 
 PatternBitString: UntypedPattern = {
-    <s:@L> "<<" <segments:Comma<PatternBinSegment>> ">>" <e:@L> => {
+    <s:@L> "<<" <segments:Comma<PatternBitStringSegment>> ">>" <e:@L> => {
         Pattern::BitString {
             location: location(s, e),
             segments,
@@ -979,9 +979,9 @@ PatternBitString: UntypedPattern = {
     }
 }
 
-PatternBinSegment: BinSegment<UntypedPattern, ()> = {
-    <s:@L> <v:Pattern> <options:(":" <HyphensNoTrailing<PatternBinSegmentOption>>)?>  <e:@L> =>
-        BinSegment {
+PatternBitStringSegment: BitStringSegment<UntypedPattern, ()> = {
+    <s:@L> <v:Pattern> <options:(":" <HyphensNoTrailing<PatternBitStringSegmentOption>>)?>  <e:@L> =>
+        BitStringSegment {
             location: location(s, e),
             value: Box::new(v),
             typ: (),
@@ -989,33 +989,33 @@ PatternBinSegment: BinSegment<UntypedPattern, ()> = {
         }
 }
 
-PatternBinSegmentOption: BinSegmentOption<UntypedPattern> = {
+PatternBitStringSegmentOption: BitStringSegmentOption<UntypedPattern> = {
     <s:@L> <o:VarName> "(" <value:PatternVarCallOrInt> ")" <e:@L> => {
         if o.as_str() == "unit" {
-            BinSegmentOption::Unit {
+            BitStringSegmentOption::Unit {
                 location: location(s, e),
                 value: Box::new(value),
                 short_form: false
             }
         } else if o.as_str() == "size" {
-            BinSegmentOption::Size {
+            BitStringSegmentOption::Size {
                 location: location(s, e),
                 value: Box::new(value),
                 short_form: false
             }
         } else {
-            BinSegmentOption::Invalid { label: o, location: location(s, e) }
+            BitStringSegmentOption::Invalid { label: o, location: location(s, e) }
         }
     },
 
     <s:@L> <value:PatternInt> <e:@L> =>
-        BinSegmentOption::Size {
+        BitStringSegmentOption::Size {
             location: location(s, e),
             value: Box::new(value),
             short_form: true
         },
 
-    BinSegmentOptionLiteral<PatternBinSegmentOption> => <>,
+    BitStringSegmentOptionLiteral<PatternBitStringSegmentOption> => <>,
 }
 
 Type: TypeAst = {

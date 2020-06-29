@@ -103,7 +103,7 @@ pub enum UntypedExpr {
 
     BitString {
         location: SrcSpan,
-        segments: Vec<UntypedExprBinSegment>,
+        segments: Vec<UntypedExprBitStringSegment>,
     },
 }
 

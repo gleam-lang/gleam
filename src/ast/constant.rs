@@ -43,7 +43,7 @@ pub enum Constant<T, RecordTag> {
 
     BitString {
         location: SrcSpan,
-        segments: Vec<BinSegment<Self, T>>,
+        segments: Vec<BitStringSegment<Self, T>>,
     },
 }
 

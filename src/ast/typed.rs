@@ -131,7 +131,7 @@ pub enum TypedExpr {
     BitString {
         location: SrcSpan,
         typ: Arc<Type>,
-        segments: Vec<TypedExprBinSegment>,
+        segments: Vec<TypedExprBitStringSegment>,
     },
 }
 

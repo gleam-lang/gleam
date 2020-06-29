@@ -1,18 +1,18 @@
-use crate::ast::{BinSegmentOption, SegmentOptionCategory as Category, SrcSpan};
+use crate::ast::{BitStringSegmentOption, SegmentOptionCategory as Category, SrcSpan};
 use crate::typ::Type;
 use std::sync::Arc;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct BinaryTypeSpecifier<T> {
-    typ: Option<BinSegmentOption<T>>,
-    signedness: Option<BinSegmentOption<T>>,
-    endianness: Option<BinSegmentOption<T>>,
-    unit: Option<BinSegmentOption<T>>,
-    size: Option<BinSegmentOption<T>>,
+    typ: Option<BitStringSegmentOption<T>>,
+    signedness: Option<BitStringSegmentOption<T>>,
+    endianness: Option<BitStringSegmentOption<T>>,
+    unit: Option<BitStringSegmentOption<T>>,
+    size: Option<BitStringSegmentOption<T>>,
 }
 
 impl<T> BinaryTypeSpecifier<T> {
-    pub fn new(options: &Vec<BinSegmentOption<T>>, must_have_size: bool) -> Result<Self, Error>
+    pub fn new(options: &Vec<BitStringSegmentOption<T>>, must_have_size: bool) -> Result<Self, Error>
     where
         T: Clone,
     {
@@ -121,12 +121,12 @@ impl<T> BinaryTypeSpecifier<T> {
 
             Self {
                 size: None,
-                typ: Some(BinSegmentOption::Binary { .. }),
+                typ: Some(BitStringSegmentOption::Binary { .. }),
                 ..
             }
             | Self {
                 size: None,
-                typ: Some(BinSegmentOption::BitString { .. }),
+                typ: Some(BitStringSegmentOption::BitString { .. }),
                 ..
             } if must_have_size => Err(Error::SegmentMustHaveSize),
 
@@ -136,32 +136,32 @@ impl<T> BinaryTypeSpecifier<T> {
 
     pub fn construction_typ(&self) -> Option<Arc<Type>> {
         match self.typ {
-            Some(BinSegmentOption::Integer { .. }) => Some(crate::typ::int()),
-            Some(BinSegmentOption::Float { .. }) => Some(crate::typ::float()),
-            Some(BinSegmentOption::Binary { .. }) => Some(crate::typ::bit_string()),
-            Some(BinSegmentOption::BitString { .. }) => Some(crate::typ::bit_string()),
-            Some(BinSegmentOption::UTF8 { .. }) => Some(crate::typ::string()),
-            Some(BinSegmentOption::UTF16 { .. }) => Some(crate::typ::string()),
-            Some(BinSegmentOption::UTF32 { .. }) => Some(crate::typ::string()),
-            Some(BinSegmentOption::UTF8Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
-            Some(BinSegmentOption::UTF16Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
-            Some(BinSegmentOption::UTF32Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
+            Some(BitStringSegmentOption::Integer { .. }) => Some(crate::typ::int()),
+            Some(BitStringSegmentOption::Float { .. }) => Some(crate::typ::float()),
+            Some(BitStringSegmentOption::Binary { .. }) => Some(crate::typ::bit_string()),
+            Some(BitStringSegmentOption::BitString { .. }) => Some(crate::typ::bit_string()),
+            Some(BitStringSegmentOption::UTF8 { .. }) => Some(crate::typ::string()),
+            Some(BitStringSegmentOption::UTF16 { .. }) => Some(crate::typ::string()),
+            Some(BitStringSegmentOption::UTF32 { .. }) => Some(crate::typ::string()),
+            Some(BitStringSegmentOption::UTF8Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
+            Some(BitStringSegmentOption::UTF16Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
+            Some(BitStringSegmentOption::UTF32Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
             _ => None,
         }
     }
 
     pub fn match_typ(&self) -> Option<Arc<Type>> {
         match self.typ {
-            Some(BinSegmentOption::Integer { .. }) => Some(crate::typ::int()),
-            Some(BinSegmentOption::Float { .. }) => Some(crate::typ::float()),
-            Some(BinSegmentOption::Binary { .. }) => Some(crate::typ::bit_string()),
-            Some(BinSegmentOption::BitString { .. }) => Some(crate::typ::bit_string()),
-            Some(BinSegmentOption::UTF8 { .. }) => Some(crate::typ::utf_codepoint()),
-            Some(BinSegmentOption::UTF16 { .. }) => Some(crate::typ::utf_codepoint()),
-            Some(BinSegmentOption::UTF32 { .. }) => Some(crate::typ::utf_codepoint()),
-            Some(BinSegmentOption::UTF8Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
-            Some(BinSegmentOption::UTF16Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
-            Some(BinSegmentOption::UTF32Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
+            Some(BitStringSegmentOption::Integer { .. }) => Some(crate::typ::int()),
+            Some(BitStringSegmentOption::Float { .. }) => Some(crate::typ::float()),
+            Some(BitStringSegmentOption::Binary { .. }) => Some(crate::typ::bit_string()),
+            Some(BitStringSegmentOption::BitString { .. }) => Some(crate::typ::bit_string()),
+            Some(BitStringSegmentOption::UTF8 { .. }) => Some(crate::typ::utf_codepoint()),
+            Some(BitStringSegmentOption::UTF16 { .. }) => Some(crate::typ::utf_codepoint()),
+            Some(BitStringSegmentOption::UTF32 { .. }) => Some(crate::typ::utf_codepoint()),
+            Some(BitStringSegmentOption::UTF8Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
+            Some(BitStringSegmentOption::UTF16Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
+            Some(BitStringSegmentOption::UTF32Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
             _ => None,
         }
     }
@@ -205,12 +205,12 @@ pub enum Error {
     SegmentMustHaveSize,
 }
 
-impl<A> BinSegmentOption<A> {
+impl<A> BitStringSegmentOption<A> {
     pub fn unit_is_allowed(&self) -> bool {
         match self {
-            BinSegmentOption::UTF8 { .. }
-            | BinSegmentOption::UTF16 { .. }
-            | BinSegmentOption::UTF32 { .. } => false,
+            BitStringSegmentOption::UTF8 { .. }
+            | BitStringSegmentOption::UTF16 { .. }
+            | BitStringSegmentOption::UTF32 { .. } => false,
             _ => true,
         }
     }
