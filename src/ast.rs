@@ -548,7 +548,7 @@ pub enum Pattern<Constructor, Type> {
 
     BitString {
         location: SrcSpan,
-        elems: Vec<BinSegment<Self, Type>>,
+        segments: Vec<BinSegment<Self, Type>>,
     },
 }
 

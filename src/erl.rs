@@ -562,8 +562,8 @@ fn pattern(p: &TypedPattern, env: &mut Env) -> Document {
 
         Pattern::Tuple { elems, .. } => tuple(elems.into_iter().map(|p| pattern(p, env))),
 
-        Pattern::BitString { elems, .. } => bit_string(
-            elems
+        Pattern::BitString { segments, .. } => bit_string(
+            segments
                 .into_iter()
                 .map(|s| pattern_segment(&s.value, s.options.clone(), env)),
         ),
@@ -711,8 +711,8 @@ fn const_inline(literal: &TypedConstant, env: &mut Env) -> Document {
             concat(elements).nest_current().surround("[", "]").group()
         }
 
-        Constant::BitString { elems, .. } => bit_string(
-            elems
+        Constant::BitString { segments, .. } => bit_string(
+            segments
                 .into_iter()
                 .map(|s| const_segment(&s.value, s.options.clone(), env)),
         ),
@@ -1099,8 +1099,8 @@ fn expr(expression: &TypedExpr, env: &mut Env) -> Document {
 
         TypedExpr::Tuple { elems, .. } => tuple(elems.into_iter().map(|e| wrap_expr(e, env))),
 
-        TypedExpr::BitString { elems, .. } => bit_string(
-            elems
+        TypedExpr::BitString { segments, .. } => bit_string(
+            segments
                 .into_iter()
                 .map(|s| expr_segment(&s.value, s.options.clone(), env)),
         ),

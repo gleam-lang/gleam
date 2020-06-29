@@ -973,7 +973,9 @@ impl<'a> Typer<'a> {
                 ..
             } => self.infer_tuple_index(*tuple, index, location),
 
-            UntypedExpr::BitString { location, elems } => self.infer_bit_string(elems, location),
+            UntypedExpr::BitString { location, segments } => {
+                self.infer_bit_string(segments, location)
+            }
         }
     }
 
@@ -1344,10 +1346,10 @@ impl<'a> Typer<'a> {
 
     fn infer_bit_string(
         &mut self,
-        elems: Vec<UntypedExprBinSegment>,
+        segments: Vec<UntypedExprBinSegment>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        let elems = elems
+        let segments = segments
             .into_iter()
             .map(|s| {
                 self.infer_bit_segment(*s.value, s.options, s.location, |env, expr| env.infer(expr))
@@ -1356,17 +1358,17 @@ impl<'a> Typer<'a> {
 
         Ok(TypedExpr::BitString {
             location,
-            elems,
+            segments,
             typ: bit_string(),
         })
     }
 
     fn infer_constant_bit_string(
         &mut self,
-        elems: Vec<UntypedConstantBinSegment>,
+        segments: Vec<UntypedConstantBinSegment>,
         location: SrcSpan,
     ) -> Result<TypedConstant, Error> {
-        let elems = elems
+        let segments = segments
             .into_iter()
             .map(|s| {
                 self.infer_bit_segment(*s.value, s.options, s.location, |env, expr| {
@@ -1375,7 +1377,7 @@ impl<'a> Typer<'a> {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(Constant::BitString { location, elems })
+        Ok(Constant::BitString { location, segments })
     }
 
     fn infer_bit_segment<UntypedValue, TypedValue, InferFn>(
@@ -2146,8 +2148,8 @@ impl<'a> Typer<'a> {
                 elements, location, ..
             } => self.infer_const_list(elements, location),
 
-            Constant::BitString { location, elems } => {
-                self.infer_constant_bit_string(elems, location)
+            Constant::BitString { location, segments } => {
+                self.infer_constant_bit_string(segments, location)
             }
 
             Constant::Record {
@@ -3563,12 +3565,12 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
     fn infer_pattern_bit_string(
         &mut self,
-        mut elems: Vec<UntypedPatternBinSegment>,
+        mut segments: Vec<UntypedPatternBinSegment>,
         location: SrcSpan,
     ) -> Result<TypedPattern, Error> {
-        let last_segment = elems.pop();
+        let last_segment = segments.pop();
 
-        let mut typed_segments = elems
+        let mut typed_segments = segments
             .into_iter()
             .map(|s| self.infer_pattern_segment(s, false))
             .collect::<Result<Vec<_>, _>>()?;
@@ -3583,7 +3585,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
         Ok(TypedPattern::BitString {
             location,
-            elems: typed_segments,
+            segments: typed_segments,
         })
     }
 
@@ -3756,8 +3758,8 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 }
             },
 
-            Pattern::BitString { location, elems } => {
-                self.infer_pattern_bit_string(elems, location)
+            Pattern::BitString { location, segments } => {
+                self.infer_pattern_bit_string(segments, location)
             }
 
             Pattern::Constructor {

@@ -257,8 +257,8 @@ impl<'a> Formatter<'a> {
                 .to_doc()
                 .append(wrap_args(elements.iter().map(|e| self.const_expr(e)))),
 
-            Constant::BitString { elems, .. } => bit_string(
-                elems
+            Constant::BitString { segments, .. } => bit_string(
+                segments
                     .iter()
                     .map(|s| bit_string_segment(s, |e| self.const_expr(e))),
             ),
@@ -616,8 +616,8 @@ impl<'a> Formatter<'a> {
                 .to_doc()
                 .append(wrap_args(elems.iter().map(|e| self.wrap_expr(e)))),
 
-            UntypedExpr::BitString { elems, .. } => bit_string(
-                elems
+            UntypedExpr::BitString { segments, .. } => bit_string(
+                segments
                     .iter()
                     .map(|s| bit_string_segment(s, |e| self.expr(e))),
             ),
@@ -1078,8 +1078,8 @@ impl<'a> Formatter<'a> {
                 .to_doc()
                 .append(wrap_args(elems.iter().map(|e| self.pattern(e)))),
 
-            Pattern::BitString { elems, .. } => bit_string(
-                elems
+            Pattern::BitString { segments, .. } => bit_string(
+                segments
                     .iter()
                     .map(|s| bit_string_segment(s, |e| self.pattern(e))),
             ),

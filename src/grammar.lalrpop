@@ -148,10 +148,10 @@ Constant: UntypedConstant = {
 }
 
 ConstBitString: UntypedConstant = {
-    <s:@L> "<<" <elems:Comma<ConstBinSegment>> ">>" <e:@L> => {
+    <s:@L> "<<" <segments:Comma<ConstBinSegment>> ">>" <e:@L> => {
         Constant::BitString {
             location: location(s, e),
-            elems: elems,
+            segments,
         }
     }
 }
@@ -667,10 +667,10 @@ Todo: UntypedExpr = {
 }
 
 BitString: UntypedExpr = {
-    <s:@L> "<<" <elems:Comma<BinSegment>> ">>" <e:@L> => {
+    <s:@L> "<<" <segments:Comma<BinSegment>> ">>" <e:@L> => {
         UntypedExpr::BitString {
             location: location(s, e),
-            elems: elems,
+            segments,
         }
     }
 }
@@ -971,10 +971,10 @@ PatternList: UntypedPattern = {
 }
 
 PatternBitString: UntypedPattern = {
-    <s:@L> "<<" <elems:Comma<PatternBinSegment>> ">>" <e:@L> => {
+    <s:@L> "<<" <segments:Comma<PatternBinSegment>> ">>" <e:@L> => {
         Pattern::BitString {
             location: location(s, e),
-            elems: elems,
+            segments,
         }
     }
 }
