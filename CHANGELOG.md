@@ -5,6 +5,9 @@
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
+
+# v0.10.0-rc1 - 2020-06-29
+
 - Single letter module names are now permitted.
 - Added support for bit string syntax.
 - Support for the deprecated list prepend syntax has been removed.
@@ -12,7 +15,8 @@
 - Public module level constants generate documentation.
 - The formatter style has been improved to wrap and sort imports.
 - The formatter now permits comments at the end of module function bodies.
-- The formatter now skips files that match patterns defined in ignore files such as .gitignore and .ignore.
+- The formatter now skips files that match patterns defined in ignore files
+  such as .gitignore and .ignore.
 - Error message diagnostic code previews for type errors when using the the
   pipe operator have been made more accurate.
 - Added support for list literals in clause guards.
