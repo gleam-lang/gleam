@@ -4,13 +4,13 @@ mod tests;
 
 use crate::{
     ast::{
-        self, Arg, ArgNames, BinOp, BinSegment, BinSegmentOption, BindingKind, CallArg, Clause,
+        self, Arg, ArgNames, BinOp, BitStringSegment, BitStringSegmentOption, BindingKind, CallArg, Clause,
         ClauseGuard, Constant, HasLocation, Pattern, RecordConstructor, SrcSpan, Statement,
         TypeAst, TypedArg, TypedClause, TypedClauseGuard, TypedConstant, TypedExpr, TypedModule,
-        TypedMultiPattern, TypedPattern, TypedPatternBinSegment, TypedStatement, UnqualifiedImport,
-        UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedConstantBinSegment,
-        UntypedExpr, UntypedExprBinSegment, UntypedModule, UntypedMultiPattern, UntypedPattern,
-        UntypedPatternBinSegment, UntypedStatement,
+        TypedMultiPattern, TypedPattern, TypedPatternBitStringSegment, TypedStatement, UnqualifiedImport,
+        UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedConstantBitStringSegment,
+        UntypedExpr, UntypedExprBitStringSegment, UntypedModule, UntypedMultiPattern, UntypedPattern,
+        UntypedPatternBitStringSegment, UntypedStatement,
     },
     bit_string::{BinaryTypeSpecifier, Error as BinaryError},
     build::Origin,
@@ -1346,7 +1346,7 @@ impl<'a> Typer<'a> {
 
     fn infer_bit_string(
         &mut self,
-        segments: Vec<UntypedExprBinSegment>,
+        segments: Vec<UntypedExprBitStringSegment>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         let segments = segments
@@ -1365,7 +1365,7 @@ impl<'a> Typer<'a> {
 
     fn infer_constant_bit_string(
         &mut self,
-        segments: Vec<UntypedConstantBinSegment>,
+        segments: Vec<UntypedConstantBitStringSegment>,
         location: SrcSpan,
     ) -> Result<TypedConstant, Error> {
         let segments = segments
@@ -1383,17 +1383,17 @@ impl<'a> Typer<'a> {
     fn infer_bit_segment<UntypedValue, TypedValue, InferFn>(
         &mut self,
         value: UntypedValue,
-        options: Vec<BinSegmentOption<UntypedValue>>,
+        options: Vec<BitStringSegmentOption<UntypedValue>>,
         location: SrcSpan,
         mut infer: InferFn,
-    ) -> Result<BinSegment<TypedValue, Arc<Type>>, Error>
+    ) -> Result<BitStringSegment<TypedValue, Arc<Type>>, Error>
     where
         InferFn: FnMut(&mut Self, UntypedValue) -> Result<TypedValue, Error>,
         TypedValue: HasType + HasLocation + Clone,
     {
         let value = infer(self, value)?;
 
-        let infer_option = |segment_option: BinSegmentOption<UntypedValue>| {
+        let infer_option = |segment_option: BitStringSegmentOption<UntypedValue>| {
             infer_bit_string_segment_option(segment_option, |value, typ| {
                 let typed_value = infer(self, value)?;
                 self.unify(typ, typed_value.typ())
@@ -1414,7 +1414,7 @@ impl<'a> Typer<'a> {
         self.unify(typ.clone(), value.typ())
             .map_err(|e| convert_unify_error(e, value.location()))?;
 
-        Ok(BinSegment {
+        Ok(BitStringSegment {
             location,
             typ,
             value: Box::new(value),
@@ -3565,7 +3565,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
     fn infer_pattern_bit_string(
         &mut self,
-        mut segments: Vec<UntypedPatternBinSegment>,
+        mut segments: Vec<UntypedPatternBitStringSegment>,
         location: SrcSpan,
     ) -> Result<TypedPattern, Error> {
         let last_segment = segments.pop();
@@ -3591,10 +3591,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
     fn infer_pattern_segment(
         &mut self,
-        segment: UntypedPatternBinSegment,
+        segment: UntypedPatternBitStringSegment,
         is_last_segment: bool,
-    ) -> Result<TypedPatternBinSegment, Error> {
-        let UntypedPatternBinSegment {
+    ) -> Result<TypedPatternBitStringSegment, Error> {
+        let UntypedPatternBitStringSegment {
             location,
             options,
             value,
@@ -3617,7 +3617,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         };
         let typed_value = self.unify(*value, typ.clone())?;
 
-        Ok(BinSegment {
+        Ok(BitStringSegment {
             location,
             value: Box::new(typed_value),
             options,
@@ -3916,32 +3916,32 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 }
 
 fn infer_bit_string_segment_option<UntypedValue, TypedValue, Typer>(
-    segment_option: BinSegmentOption<UntypedValue>,
+    segment_option: BitStringSegmentOption<UntypedValue>,
     mut type_check: Typer,
-) -> Result<BinSegmentOption<TypedValue>, Error>
+) -> Result<BitStringSegmentOption<TypedValue>, Error>
 where
     Typer: FnMut(UntypedValue, Arc<Type>) -> Result<TypedValue, Error>,
 {
     match segment_option {
-        BinSegmentOption::Invalid {
+        BitStringSegmentOption::Invalid {
             label, location, ..
         } => Err(Error::InvalidBinarySegmentOption { label, location }),
 
-        BinSegmentOption::Size {
+        BitStringSegmentOption::Size {
             value,
             location,
             short_form,
             ..
         } => {
             let value = type_check(*value, int())?;
-            Ok(BinSegmentOption::Size {
+            Ok(BitStringSegmentOption::Size {
                 location,
                 short_form,
                 value: Box::new(value),
             })
         }
 
-        BinSegmentOption::Unit {
+        BitStringSegmentOption::Unit {
             value,
             location,
             short_form,
@@ -3949,34 +3949,34 @@ where
         } => {
             let value = type_check(*value, int())?;
 
-            Ok(BinSegmentOption::Unit {
+            Ok(BitStringSegmentOption::Unit {
                 location,
                 short_form,
                 value: Box::new(value),
             })
         }
 
-        BinSegmentOption::Binary { location } => Ok(BinSegmentOption::Binary { location }),
-        BinSegmentOption::Integer { location } => Ok(BinSegmentOption::Integer { location }),
-        BinSegmentOption::Float { location } => Ok(BinSegmentOption::Float { location }),
-        BinSegmentOption::BitString { location } => Ok(BinSegmentOption::BitString { location }),
-        BinSegmentOption::UTF8 { location } => Ok(BinSegmentOption::UTF8 { location }),
-        BinSegmentOption::UTF16 { location } => Ok(BinSegmentOption::UTF16 { location }),
-        BinSegmentOption::UTF32 { location } => Ok(BinSegmentOption::UTF32 { location }),
-        BinSegmentOption::UTF8Codepoint { location } => {
-            Ok(BinSegmentOption::UTF8Codepoint { location })
+        BitStringSegmentOption::Binary { location } => Ok(BitStringSegmentOption::Binary { location }),
+        BitStringSegmentOption::Integer { location } => Ok(BitStringSegmentOption::Integer { location }),
+        BitStringSegmentOption::Float { location } => Ok(BitStringSegmentOption::Float { location }),
+        BitStringSegmentOption::BitString { location } => Ok(BitStringSegmentOption::BitString { location }),
+        BitStringSegmentOption::UTF8 { location } => Ok(BitStringSegmentOption::UTF8 { location }),
+        BitStringSegmentOption::UTF16 { location } => Ok(BitStringSegmentOption::UTF16 { location }),
+        BitStringSegmentOption::UTF32 { location } => Ok(BitStringSegmentOption::UTF32 { location }),
+        BitStringSegmentOption::UTF8Codepoint { location } => {
+            Ok(BitStringSegmentOption::UTF8Codepoint { location })
         }
-        BinSegmentOption::UTF16Codepoint { location } => {
-            Ok(BinSegmentOption::UTF16Codepoint { location })
+        BitStringSegmentOption::UTF16Codepoint { location } => {
+            Ok(BitStringSegmentOption::UTF16Codepoint { location })
         }
-        BinSegmentOption::UTF32Codepoint { location } => {
-            Ok(BinSegmentOption::UTF32Codepoint { location })
+        BitStringSegmentOption::UTF32Codepoint { location } => {
+            Ok(BitStringSegmentOption::UTF32Codepoint { location })
         }
-        BinSegmentOption::Signed { location } => Ok(BinSegmentOption::Signed { location }),
-        BinSegmentOption::Unsigned { location } => Ok(BinSegmentOption::Unsigned { location }),
-        BinSegmentOption::Big { location } => Ok(BinSegmentOption::Big { location }),
-        BinSegmentOption::Little { location } => Ok(BinSegmentOption::Little { location }),
-        BinSegmentOption::Native { location } => Ok(BinSegmentOption::Native { location }),
+        BitStringSegmentOption::Signed { location } => Ok(BitStringSegmentOption::Signed { location }),
+        BitStringSegmentOption::Unsigned { location } => Ok(BitStringSegmentOption::Unsigned { location }),
+        BitStringSegmentOption::Big { location } => Ok(BitStringSegmentOption::Big { location }),
+        BitStringSegmentOption::Little { location } => Ok(BitStringSegmentOption::Little { location }),
+        BitStringSegmentOption::Native { location } => Ok(BitStringSegmentOption::Native { location }),
     }
 }
 

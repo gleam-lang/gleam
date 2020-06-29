@@ -548,7 +548,7 @@ pub enum Pattern<Constructor, Type> {
 
     BitString {
         location: SrcSpan,
-        segments: Vec<BinSegment<Self, Type>>,
+        segments: Vec<BitStringSegment<Self, Type>>,
     },
 }
 
@@ -596,25 +596,25 @@ pub enum BindingKind {
 
 // BitStrings
 
-pub type UntypedExprBinSegment = BinSegment<UntypedExpr, ()>;
-pub type TypedExprBinSegment = BinSegment<TypedExpr, Arc<typ::Type>>;
+pub type UntypedExprBitStringSegment = BitStringSegment<UntypedExpr, ()>;
+pub type TypedExprBitStringSegment = BitStringSegment<TypedExpr, Arc<typ::Type>>;
 
-pub type UntypedConstantBinSegment = BinSegment<UntypedConstant, ()>;
-// pub type TypedConstantBinSegment = BinSegment<TypedConstant, Arc<typ::Type>>;
+pub type UntypedConstantBitStringSegment = BitStringSegment<UntypedConstant, ()>;
+// pub type TypedConstantBitStringSegment = BitStringSegment<TypedConstant, Arc<typ::Type>>;
 
-pub type UntypedPatternBinSegment = BinSegment<UntypedPattern, ()>;
-pub type TypedPatternBinSegment = BinSegment<TypedPattern, Arc<typ::Type>>;
+pub type UntypedPatternBitStringSegment = BitStringSegment<UntypedPattern, ()>;
+pub type TypedPatternBitStringSegment = BitStringSegment<TypedPattern, Arc<typ::Type>>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct BinSegment<Value, Type> {
+pub struct BitStringSegment<Value, Type> {
     pub location: SrcSpan,
     pub value: Box<Value>,
-    pub options: Vec<BinSegmentOption<Value>>,
+    pub options: Vec<BitStringSegmentOption<Value>>,
     pub typ: Type,
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum BinSegmentOption<Value> {
+pub enum BitStringSegmentOption<Value> {
     Binary {
         location: SrcSpan,
     },
@@ -702,73 +702,73 @@ pub enum SegmentOptionCategory {
     Error,
 }
 
-impl<A> BinSegmentOption<A> {
+impl<A> BitStringSegmentOption<A> {
     pub fn location(&self) -> &SrcSpan {
         match self {
-            BinSegmentOption::Binary { location } => location,
-            BinSegmentOption::Integer { location } => location,
-            BinSegmentOption::Float { location } => location,
-            BinSegmentOption::BitString { location } => location,
-            BinSegmentOption::UTF8 { location } => location,
-            BinSegmentOption::UTF16 { location } => location,
-            BinSegmentOption::UTF32 { location } => location,
-            BinSegmentOption::UTF8Codepoint { location } => location,
-            BinSegmentOption::UTF16Codepoint { location } => location,
-            BinSegmentOption::UTF32Codepoint { location } => location,
-            BinSegmentOption::Signed { location } => location,
-            BinSegmentOption::Unsigned { location } => location,
-            BinSegmentOption::Big { location } => location,
-            BinSegmentOption::Little { location } => location,
-            BinSegmentOption::Native { location } => location,
-            BinSegmentOption::Size { location, .. } => location,
-            BinSegmentOption::Unit { location, .. } => location,
-            BinSegmentOption::Invalid { location, .. } => location,
+            BitStringSegmentOption::Binary { location } => location,
+            BitStringSegmentOption::Integer { location } => location,
+            BitStringSegmentOption::Float { location } => location,
+            BitStringSegmentOption::BitString { location } => location,
+            BitStringSegmentOption::UTF8 { location } => location,
+            BitStringSegmentOption::UTF16 { location } => location,
+            BitStringSegmentOption::UTF32 { location } => location,
+            BitStringSegmentOption::UTF8Codepoint { location } => location,
+            BitStringSegmentOption::UTF16Codepoint { location } => location,
+            BitStringSegmentOption::UTF32Codepoint { location } => location,
+            BitStringSegmentOption::Signed { location } => location,
+            BitStringSegmentOption::Unsigned { location } => location,
+            BitStringSegmentOption::Big { location } => location,
+            BitStringSegmentOption::Little { location } => location,
+            BitStringSegmentOption::Native { location } => location,
+            BitStringSegmentOption::Size { location, .. } => location,
+            BitStringSegmentOption::Unit { location, .. } => location,
+            BitStringSegmentOption::Invalid { location, .. } => location,
         }
     }
 
     pub fn category(&self) -> SegmentOptionCategory {
         match self {
-            BinSegmentOption::Binary { .. } => SegmentOptionCategory::Type,
-            BinSegmentOption::Integer { .. } => SegmentOptionCategory::Type,
-            BinSegmentOption::Float { .. } => SegmentOptionCategory::Type,
-            BinSegmentOption::BitString { .. } => SegmentOptionCategory::Type,
-            BinSegmentOption::UTF8 { .. } => SegmentOptionCategory::Type,
-            BinSegmentOption::UTF16 { .. } => SegmentOptionCategory::Type,
-            BinSegmentOption::UTF32 { .. } => SegmentOptionCategory::Type,
-            BinSegmentOption::UTF8Codepoint { .. } => SegmentOptionCategory::Type,
-            BinSegmentOption::UTF16Codepoint { .. } => SegmentOptionCategory::Type,
-            BinSegmentOption::UTF32Codepoint { .. } => SegmentOptionCategory::Type,
-            BinSegmentOption::Signed { .. } => SegmentOptionCategory::Signedness,
-            BinSegmentOption::Unsigned { .. } => SegmentOptionCategory::Signedness,
-            BinSegmentOption::Big { .. } => SegmentOptionCategory::Endianness,
-            BinSegmentOption::Little { .. } => SegmentOptionCategory::Endianness,
-            BinSegmentOption::Native { .. } => SegmentOptionCategory::Endianness,
-            BinSegmentOption::Size { .. } => SegmentOptionCategory::Size,
-            BinSegmentOption::Unit { .. } => SegmentOptionCategory::Unit,
-            BinSegmentOption::Invalid { .. } => SegmentOptionCategory::Error,
+            BitStringSegmentOption::Binary { .. } => SegmentOptionCategory::Type,
+            BitStringSegmentOption::Integer { .. } => SegmentOptionCategory::Type,
+            BitStringSegmentOption::Float { .. } => SegmentOptionCategory::Type,
+            BitStringSegmentOption::BitString { .. } => SegmentOptionCategory::Type,
+            BitStringSegmentOption::UTF8 { .. } => SegmentOptionCategory::Type,
+            BitStringSegmentOption::UTF16 { .. } => SegmentOptionCategory::Type,
+            BitStringSegmentOption::UTF32 { .. } => SegmentOptionCategory::Type,
+            BitStringSegmentOption::UTF8Codepoint { .. } => SegmentOptionCategory::Type,
+            BitStringSegmentOption::UTF16Codepoint { .. } => SegmentOptionCategory::Type,
+            BitStringSegmentOption::UTF32Codepoint { .. } => SegmentOptionCategory::Type,
+            BitStringSegmentOption::Signed { .. } => SegmentOptionCategory::Signedness,
+            BitStringSegmentOption::Unsigned { .. } => SegmentOptionCategory::Signedness,
+            BitStringSegmentOption::Big { .. } => SegmentOptionCategory::Endianness,
+            BitStringSegmentOption::Little { .. } => SegmentOptionCategory::Endianness,
+            BitStringSegmentOption::Native { .. } => SegmentOptionCategory::Endianness,
+            BitStringSegmentOption::Size { .. } => SegmentOptionCategory::Size,
+            BitStringSegmentOption::Unit { .. } => SegmentOptionCategory::Unit,
+            BitStringSegmentOption::Invalid { .. } => SegmentOptionCategory::Error,
         }
     }
 
     pub fn label(&self) -> String {
         match self {
-            BinSegmentOption::Binary { .. } => "binary".to_string(),
-            BinSegmentOption::Integer { .. } => "int".to_string(),
-            BinSegmentOption::Float { .. } => "float".to_string(),
-            BinSegmentOption::BitString { .. } => "bit_string".to_string(),
-            BinSegmentOption::UTF8 { .. } => "utf8".to_string(),
-            BinSegmentOption::UTF16 { .. } => "utf16".to_string(),
-            BinSegmentOption::UTF32 { .. } => "utf32".to_string(),
-            BinSegmentOption::UTF8Codepoint { .. } => "utf8_codepoint".to_string(),
-            BinSegmentOption::UTF16Codepoint { .. } => "utf16_codepoint".to_string(),
-            BinSegmentOption::UTF32Codepoint { .. } => "utf32_codepoint".to_string(),
-            BinSegmentOption::Signed { .. } => "signed".to_string(),
-            BinSegmentOption::Unsigned { .. } => "unsigned".to_string(),
-            BinSegmentOption::Big { .. } => "big".to_string(),
-            BinSegmentOption::Little { .. } => "little".to_string(),
-            BinSegmentOption::Native { .. } => "native".to_string(),
-            BinSegmentOption::Size { .. } => "size".to_string(),
-            BinSegmentOption::Unit { .. } => "unit".to_string(),
-            BinSegmentOption::Invalid { label, .. } => label.clone(),
+            BitStringSegmentOption::Binary { .. } => "binary".to_string(),
+            BitStringSegmentOption::Integer { .. } => "int".to_string(),
+            BitStringSegmentOption::Float { .. } => "float".to_string(),
+            BitStringSegmentOption::BitString { .. } => "bit_string".to_string(),
+            BitStringSegmentOption::UTF8 { .. } => "utf8".to_string(),
+            BitStringSegmentOption::UTF16 { .. } => "utf16".to_string(),
+            BitStringSegmentOption::UTF32 { .. } => "utf32".to_string(),
+            BitStringSegmentOption::UTF8Codepoint { .. } => "utf8_codepoint".to_string(),
+            BitStringSegmentOption::UTF16Codepoint { .. } => "utf16_codepoint".to_string(),
+            BitStringSegmentOption::UTF32Codepoint { .. } => "utf32_codepoint".to_string(),
+            BitStringSegmentOption::Signed { .. } => "signed".to_string(),
+            BitStringSegmentOption::Unsigned { .. } => "unsigned".to_string(),
+            BitStringSegmentOption::Big { .. } => "big".to_string(),
+            BitStringSegmentOption::Little { .. } => "little".to_string(),
+            BitStringSegmentOption::Native { .. } => "native".to_string(),
+            BitStringSegmentOption::Size { .. } => "size".to_string(),
+            BitStringSegmentOption::Unit { .. } => "unit".to_string(),
+            BitStringSegmentOption::Invalid { label, .. } => label.clone(),
         }
     }
 }

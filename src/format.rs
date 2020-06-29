@@ -1387,16 +1387,16 @@ fn commented<'a>(doc: Document, comments: impl Iterator<Item = &'a str>) -> Docu
 }
 
 fn bit_string_segment<Value, Type, ToDoc>(
-    segment: &BinSegment<Value, Type>,
+    segment: &BitStringSegment<Value, Type>,
     mut to_doc: ToDoc,
 ) -> Document
 where
     ToDoc: FnMut(&Value) -> Document,
 {
     match segment {
-        BinSegment { value, options, .. } if options.is_empty() => to_doc(&value),
+        BitStringSegment { value, options, .. } if options.is_empty() => to_doc(&value),
 
-        BinSegment { value, options, .. } => to_doc(&value).append(":").append(concat(
+        BitStringSegment { value, options, .. } => to_doc(&value).append(":").append(concat(
             options
                 .iter()
                 .map(|o| segment_option(o, |e| to_doc(e)))
@@ -1405,30 +1405,30 @@ where
     }
 }
 
-fn segment_option<ToDoc, Value>(option: &BinSegmentOption<Value>, mut to_doc: ToDoc) -> Document
+fn segment_option<ToDoc, Value>(option: &BitStringSegmentOption<Value>, mut to_doc: ToDoc) -> Document
 where
     ToDoc: FnMut(&Value) -> Document,
 {
     match option {
-        BinSegmentOption::Invalid { label, .. } => label.clone().to_doc(),
+        BitStringSegmentOption::Invalid { label, .. } => label.clone().to_doc(),
 
-        BinSegmentOption::Binary { .. } => "binary".to_doc(),
-        BinSegmentOption::Integer { .. } => "int".to_doc(),
-        BinSegmentOption::Float { .. } => "float".to_doc(),
-        BinSegmentOption::BitString { .. } => "bit_string".to_doc(),
-        BinSegmentOption::UTF8 { .. } => "utf8".to_doc(),
-        BinSegmentOption::UTF16 { .. } => "utf16".to_doc(),
-        BinSegmentOption::UTF32 { .. } => "utf32".to_doc(),
-        BinSegmentOption::UTF8Codepoint { .. } => "utf8_codepoint".to_doc(),
-        BinSegmentOption::UTF16Codepoint { .. } => "utf16_codepoint".to_doc(),
-        BinSegmentOption::UTF32Codepoint { .. } => "utf32_codepoint".to_doc(),
-        BinSegmentOption::Signed { .. } => "signed".to_doc(),
-        BinSegmentOption::Unsigned { .. } => "unsigned".to_doc(),
-        BinSegmentOption::Big { .. } => "big".to_doc(),
-        BinSegmentOption::Little { .. } => "little".to_doc(),
-        BinSegmentOption::Native { .. } => "native".to_doc(),
+        BitStringSegmentOption::Binary { .. } => "binary".to_doc(),
+        BitStringSegmentOption::Integer { .. } => "int".to_doc(),
+        BitStringSegmentOption::Float { .. } => "float".to_doc(),
+        BitStringSegmentOption::BitString { .. } => "bit_string".to_doc(),
+        BitStringSegmentOption::UTF8 { .. } => "utf8".to_doc(),
+        BitStringSegmentOption::UTF16 { .. } => "utf16".to_doc(),
+        BitStringSegmentOption::UTF32 { .. } => "utf32".to_doc(),
+        BitStringSegmentOption::UTF8Codepoint { .. } => "utf8_codepoint".to_doc(),
+        BitStringSegmentOption::UTF16Codepoint { .. } => "utf16_codepoint".to_doc(),
+        BitStringSegmentOption::UTF32Codepoint { .. } => "utf32_codepoint".to_doc(),
+        BitStringSegmentOption::Signed { .. } => "signed".to_doc(),
+        BitStringSegmentOption::Unsigned { .. } => "unsigned".to_doc(),
+        BitStringSegmentOption::Big { .. } => "big".to_doc(),
+        BitStringSegmentOption::Little { .. } => "little".to_doc(),
+        BitStringSegmentOption::Native { .. } => "native".to_doc(),
 
-        BinSegmentOption::Size {
+        BitStringSegmentOption::Size {
             value,
             short_form: false,
             ..
@@ -1438,13 +1438,13 @@ where
             .append(to_doc(value.as_ref()))
             .append(")"),
 
-        BinSegmentOption::Size {
+        BitStringSegmentOption::Size {
             value,
             short_form: true,
             ..
         } => to_doc(value.as_ref()),
 
-        BinSegmentOption::Unit {
+        BitStringSegmentOption::Unit {
             value,
             short_form: false,
             ..
@@ -1454,7 +1454,7 @@ where
             .append(to_doc(value.as_ref()))
             .append(")"),
 
-        BinSegmentOption::Unit {
+        BitStringSegmentOption::Unit {
             value,
             short_form: true,
             ..

@@ -292,7 +292,7 @@ fn bit_string(elems: impl Iterator<Item = Document>) -> Document {
 
 fn const_segment(
     value: &TypedConstant,
-    options: Vec<BinSegmentOption<TypedConstant>>,
+    options: Vec<BitStringSegmentOption<TypedConstant>>,
     env: &mut Env,
 ) -> Document {
     let document = match value {
@@ -326,7 +326,7 @@ fn const_segment(
 
 fn expr_segment(
     value: &TypedExpr,
-    options: Vec<BinSegmentOption<TypedExpr>>,
+    options: Vec<BitStringSegmentOption<TypedExpr>>,
     env: &mut Env,
 ) -> Document {
     let document = match value {
@@ -360,7 +360,7 @@ fn expr_segment(
 
 fn pattern_segment(
     value: &TypedPattern,
-    options: Vec<BinSegmentOption<TypedPattern>>,
+    options: Vec<BitStringSegmentOption<TypedPattern>>,
     env: &mut Env,
 ) -> Document {
     let document = match value {
@@ -386,7 +386,7 @@ fn pattern_segment(
 
 fn bit_string_segment<Value, SizeToDoc, UnitToDoc>(
     mut document: Document,
-    options: Vec<BinSegmentOption<Value>>,
+    options: Vec<BitStringSegmentOption<Value>>,
     mut size_to_doc: SizeToDoc,
     mut unit_to_doc: UnitToDoc,
     env: &mut Env,
@@ -400,24 +400,24 @@ where
     let mut others = Vec::new();
 
     options.iter().for_each(|option| match option {
-        BinSegmentOption::Invalid { .. } => (),
-        BinSegmentOption::Integer { .. } => others.push("integer"),
-        BinSegmentOption::Float { .. } => others.push("float"),
-        BinSegmentOption::Binary { .. } => others.push("binary"),
-        BinSegmentOption::BitString { .. } => others.push("bitstring"),
-        BinSegmentOption::UTF8 { .. } => others.push("utf8"),
-        BinSegmentOption::UTF16 { .. } => others.push("utf16"),
-        BinSegmentOption::UTF32 { .. } => others.push("utf32"),
-        BinSegmentOption::UTF8Codepoint { .. } => others.push("utf8"),
-        BinSegmentOption::UTF16Codepoint { .. } => others.push("utf16"),
-        BinSegmentOption::UTF32Codepoint { .. } => others.push("utf32"),
-        BinSegmentOption::Signed { .. } => others.push("signed"),
-        BinSegmentOption::Unsigned { .. } => others.push("unsigned"),
-        BinSegmentOption::Big { .. } => others.push("big"),
-        BinSegmentOption::Little { .. } => others.push("little"),
-        BinSegmentOption::Native { .. } => others.push("native"),
-        BinSegmentOption::Size { value, .. } => size = size_to_doc(value, env),
-        BinSegmentOption::Unit { value, .. } => unit = unit_to_doc(value, env),
+        BitStringSegmentOption::Invalid { .. } => (),
+        BitStringSegmentOption::Integer { .. } => others.push("integer"),
+        BitStringSegmentOption::Float { .. } => others.push("float"),
+        BitStringSegmentOption::Binary { .. } => others.push("binary"),
+        BitStringSegmentOption::BitString { .. } => others.push("bitstring"),
+        BitStringSegmentOption::UTF8 { .. } => others.push("utf8"),
+        BitStringSegmentOption::UTF16 { .. } => others.push("utf16"),
+        BitStringSegmentOption::UTF32 { .. } => others.push("utf32"),
+        BitStringSegmentOption::UTF8Codepoint { .. } => others.push("utf8"),
+        BitStringSegmentOption::UTF16Codepoint { .. } => others.push("utf16"),
+        BitStringSegmentOption::UTF32Codepoint { .. } => others.push("utf32"),
+        BitStringSegmentOption::Signed { .. } => others.push("signed"),
+        BitStringSegmentOption::Unsigned { .. } => others.push("unsigned"),
+        BitStringSegmentOption::Big { .. } => others.push("big"),
+        BitStringSegmentOption::Little { .. } => others.push("little"),
+        BitStringSegmentOption::Native { .. } => others.push("native"),
+        BitStringSegmentOption::Size { value, .. } => size = size_to_doc(value, env),
+        BitStringSegmentOption::Unit { value, .. } => unit = unit_to_doc(value, env),
     });
 
     document = document.append(size);
