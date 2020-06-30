@@ -56,6 +56,7 @@ development.
 - [Arian Daneshvar](https://github.com/bees)
 - [Ben Myles](https://github.com/benmyles)
 - [Bryan Paxton](https://github.com/starbelly)
+- [Christian Meunier](https://github.com/tlvenn)
 - [Clever Bunny LTD](https://github.com/cleverbunny)
 - [David McKay](https://github.com/rawkode)
 - [Hasan YILDIZ](https://github.com/hsnyildiz)
