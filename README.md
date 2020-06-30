@@ -27,7 +27,7 @@ It looks like this:
 pub type Tree(value) {
   Leaf(value)
   Branch(Tree(value), Tree(value))
-};
+}
 
 pub fn any(tree: Tree(a), check: fn(a) -> Bool) -> Bool {
   case tree {
