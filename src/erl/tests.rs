@@ -1137,7 +1137,7 @@ main(Args) ->
         [X] when X ->
             1;
 
-        [X1, _] when X1 ->
+        [X, _] when X ->
             1;
 
         _ ->
@@ -1709,6 +1709,29 @@ test() ->
         2 ->
             DuplicateName1 = DuplicateName + 1,
             DuplicateName1
+    end.
+"#,
+    );
+
+    assert_erl!(
+        r#"
+pub fn test() {
+  case Ok(1) {
+    Ok(duplicate_name) | Error(duplicate_name) -> duplicate_name
+  }
+}"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([test/0]).
+
+test() ->
+    case {ok, 1} of
+        {ok, DuplicateName} ->
+            DuplicateName;
+
+        {error, DuplicateName} ->
+            DuplicateName
     end.
 "#,
     );
