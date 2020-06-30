@@ -1713,6 +1713,7 @@ test() ->
 "#,
     );
 
+    // Alternative patterns with a clause containing vars
     assert_erl!(
         r#"
 pub fn test() {
@@ -1731,6 +1732,33 @@ test() ->
             DuplicateName;
 
         {error, DuplicateName} ->
+            DuplicateName
+    end.
+"#,
+    );
+
+    // Alternative patterns with a guard clause containing vars
+    assert_erl!(
+        r#"
+pub fn test() {
+    let duplicate_name = 1
+
+    case 1 {
+        1 | 2 if duplicate_name == 1 -> duplicate_name
+    }
+}"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([test/0]).
+
+test() ->
+    DuplicateName = 1,
+    case 1 of
+        1 when DuplicateName =:= 1 ->
+            DuplicateName;
+
+        2 when DuplicateName =:= 1 ->
             DuplicateName
     end.
 "#,
