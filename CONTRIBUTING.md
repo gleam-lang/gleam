@@ -37,3 +37,18 @@ Code changes to Gleam are welcomed via the process below.
    work on. Depending on the change there may be multiple rounds of feedback.
 4. Once the changes have been approved the code will be rebased into the
    `main` branch.
+
+## Local development
+
+To run the compiler tests.
+
+```
+cargo test
+```
+
+If you don't have Rust or Cargo installed you can run the above command in a docker sandbox.
+Run the command below from this directory.
+
+```
+docker run -v $(pwd):/opt/app -it -w /opt/app rust:1.44.0 bash
+```
