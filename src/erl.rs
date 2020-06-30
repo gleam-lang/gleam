@@ -749,11 +749,16 @@ fn clause(clause: &TypedClause, env: &mut Env) -> Document {
         ..
     } = clause;
 
+    // These are required to get the alternative patterns working properly.
+    // Simply rendering the duplicate erlang clauses breaks the variable rewriting
     let mut then_doc = Document::Nil;
+    let erlang_vars = env.erl_function_scope_vars.clone();
 
     let docs = std::iter::once(pat)
         .chain(alternative_patterns.into_iter())
         .map(|patterns| {
+            env.erl_function_scope_vars = erlang_vars.clone();
+
             let patterns_doc = if patterns.len() == 1 {
                 let p = patterns
                     .get(0)
