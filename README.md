@@ -58,6 +58,7 @@ development.
 - [Bryan Paxton](https://github.com/starbelly)
 - [Christian Meunier](https://github.com/tlvenn)
 - [Clever Bunny LTD](https://github.com/cleverbunny)
+- [Dave Lucia](https://github.com/davydog187)
 - [David McKay](https://github.com/rawkode)
 - [Hasan YILDIZ](https://github.com/hsnyildiz)
 - [Hendrik Richter](https://github.com/hendi)
