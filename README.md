@@ -67,6 +67,7 @@ development.
 - [John Palgut](https://github.com/Jwsonic)
 - [José Valim](https://github.com/josevalim)
 - [Lars Wikman](https://github.com/lawik)
+- [Mario Vellandi](https://github.com/mvellandi)
 - [Mike R](https://github.com/mroach)
 - [Parker Selbert](https://github.com/sorentwo)
 - [Quinn Wilton](http://quinnwilton.com/)
