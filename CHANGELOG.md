@@ -5,6 +5,8 @@
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
+- Fixed a bug where variables names would be incorrectly generated when using
+  alternative patterns.
 
 # v0.10.0-rc1 - 2020-06-29
 
