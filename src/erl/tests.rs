@@ -1715,6 +1715,34 @@ test() ->
 
     assert_erl!(
         r#"
+pub fn test() {
+  case Ok(1) {
+    Ok(duplicate_name) | Error(duplicate_name) -> {
+      let duplicate_name = duplicate_name + 1
+      duplicate_name
+    }
+  }
+}"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([test/0]).
+
+test() ->
+    case {ok, 1} of
+        {ok, DuplicateName} ->
+            DuplicateName1 = DuplicateName + 1,
+            DuplicateName1;
+
+        {error, DuplicateName} ->
+            DuplicateName1 = DuplicateName + 1,
+            DuplicateName1
+    end.
+"#,
+    );
+
+    assert_erl!(
+        r#"
 pub const constant = Ok(1)
 
 pub fn main(arg) {
