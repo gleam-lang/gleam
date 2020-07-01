@@ -370,8 +370,11 @@ fn pattern_segment(
         // As normal
         Pattern::Var { .. } | Pattern::Int { .. } | Pattern::Float { .. } => pattern(value, env),
 
+        // Discard pattern
+        Pattern::Discard { name, .. } => name.clone().to_doc().surround("", ""),
+
         // No other pattern variants are allowed in pattern bit string segments
-        _ => Document::Nil,
+        _ => crate::error::fatal_compiler_bug("Pattern segment match not recognized"),
     };
 
     let size = |value: &TypedPattern, env: &mut Env| Some(":".to_doc().append(pattern(value, env)));

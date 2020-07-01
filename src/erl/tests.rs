@@ -549,7 +549,56 @@ main(Args) ->
     A1.
 "#,
     );
+    // https://github.com/gleam-lang/gleam/issues/704
 
+    assert_erl!(
+        r#"
+pub fn bitstring_discard(x: String) -> Bool {
+ case x {
+  <<_:utf8, rest:binary>> -> True
+   _ -> False
+ } 
+}
+                    "#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([bitstring_discard/1]).
+
+bitstring_discard(X) ->
+    case X of
+        <<_/utf8, Rest/binary>> ->
+            true;
+
+        _ ->
+            false
+    end.
+"#,
+    );
+    assert_erl!(
+        r#"
+pub fn bitstring_discard(x: String) -> Bool {
+ case x {
+  <<_Discardme:utf8, rest:binary>> -> True
+   _ -> False
+ } 
+}
+                    "#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([bitstring_discard/1]).
+
+bitstring_discard(X) ->
+    case X of
+        <<_Discardme/utf8, Rest/binary>> ->
+            true;
+
+        _ ->
+            false
+    end.
+"#,
+    );
     // Clause guards
     assert_erl!(
         r#"
