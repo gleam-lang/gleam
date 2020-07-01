@@ -368,13 +368,13 @@ fn pattern_segment(
         Pattern::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
 
         // As normal
-        Pattern::Var { .. } | Pattern::Int { .. } | Pattern::Float { .. } => pattern(value, env),
-
-        // Discard pattern
-        Pattern::Discard { name, .. } => name.clone().to_doc().surround("", ""),
+        Pattern::Discard { .. }
+        | Pattern::Var { .. }
+        | Pattern::Int { .. }
+        | Pattern::Float { .. } => pattern(value, env),
 
         // No other pattern variants are allowed in pattern bit string segments
-        _ => crate::error::fatal_compiler_bug("Pattern segment match not recognized"),
+        _ => crate::error::fatal_compiler_bug("Pattern segment match not recognised"),
     };
 
     let size = |value: &TypedPattern, env: &mut Env| Some(":".to_doc().append(pattern(value, env)));
@@ -545,7 +545,7 @@ fn pattern(p: &TypedPattern, env: &mut Env) -> Document {
 
         Pattern::Cons { head, tail, .. } => pattern_list_cons(head, tail, env),
 
-        Pattern::Discard { .. } => "_".to_doc(),
+        Pattern::Discard { name, .. } => name.clone().to_doc(),
 
         Pattern::Var { name, .. } => env.next_local_var_name(name.to_string()),
 
