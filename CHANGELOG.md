@@ -5,10 +5,19 @@
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
-- Bugfixes:
-  - Fixed a bug where variables names would be incorrectly generated when using
-    alternative patterns.
-  - Discarding variables inside bitstring matches now works properly
+
+# v0.10.0 - 2020-07-01
+
+#### [Release Blog Post](https://lpil.uk/blog/gleam-v0.10-released/)
+
+- Newly generated projects use stdlib v0.10.1.
+- Fixed a bug where discards inside bit string patterns generated invalid
+  code.
+
+# v0.10.0-rc2 - 2020-06-30
+
+- Fixed a bug where variables names would be incorrectly generated when using
+  alternative patterns.
 
 # v0.10.0-rc1 - 2020-06-29
 
