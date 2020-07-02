@@ -88,7 +88,10 @@ impl<'a> ErlangCodeGenerator<'a> {
         modules.sort();
         let modules = modules.join(",\n               ");
 
-        // TODO: applications
+        let mut applications: Vec<_> = self.config.dependencies.iter().map(|m| m.0).collect();
+        applications.sort();
+        let applications = applications.into_iter().join(",\n                    ");
+
         let text = format!(
             r#"{{application, {package}, [
 {start_module}{version}    {{applications, [{applications}]}},
@@ -97,7 +100,7 @@ impl<'a> ErlangCodeGenerator<'a> {
     {{registered, []}},
 ]}}.
 "#,
-            applications = "",
+            applications = applications,
             description = self.config.description,
             modules = modules,
             package = self.config.name,

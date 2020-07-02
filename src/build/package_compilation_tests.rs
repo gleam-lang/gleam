@@ -1120,6 +1120,36 @@ fn config_compilation_test() {
             path: PathBuf::from("_build/default/lib/the_package/ebin/the_package.app"),
         }]
     );
+
+    // Deps applications are listed
+    let mut config = make_config();
+    config.dependencies = [
+        ("gleam_stdlib", "1.0.0"),
+        ("gleam_otp", "1.0.0"),
+        ("midas", "1.0.0"),
+        ("simple_json", "1.0.0"),
+    ]
+    .into_iter()
+    .map(|(a, b)| (a.to_string(), b.to_string()))
+    .collect();
+    assert_config_compile!(
+        config,
+        vec![],
+        vec![OutputFile {
+            text: r#"{application, the_package, [
+    {applications, [gleam_otp,
+                    gleam_stdlib,
+                    midas,
+                    simple_json]},
+    {description, ""},
+    {modules, []},
+    {registered, []},
+]}.
+"#
+            .to_string(),
+            path: PathBuf::from("_build/default/lib/the_package/ebin/the_package.app"),
+        }]
+    );
 }
 
 fn normalise_error(e: Error) -> Error {
