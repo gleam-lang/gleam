@@ -1177,7 +1177,7 @@ signed, unsigned, big, little, native, size, unit",
                     .unwrap();
                 }
 
-                NonExhaustiveLet {
+                NonExhaustiveBinding {
                     location,
                     constructor,
                     unhandled_constructors,

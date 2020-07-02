@@ -1544,7 +1544,7 @@ impl<'a> Typer<'a> {
                 } = value_constructor.variant
                 {
                     if other_constructor_names.len() > 0 {
-                        return Err(Error::NonExhaustiveLet {
+                        return Err(Error::NonExhaustiveBinding {
                             location: pattern.location().clone(),
                             constructor: name.clone(),
                             unhandled_constructors: other_constructor_names.clone(),
@@ -2815,7 +2815,7 @@ pub enum Error {
         label: String,
     },
 
-    NonExhaustiveLet {
+    NonExhaustiveBinding {
         location: SrcSpan,
         constructor: String,
         unhandled_constructors: Vec<String>,

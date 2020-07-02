@@ -1423,7 +1423,7 @@ fn infer_error_test() {
 
     assert_error!(
         "let Ok(x) = Error(1) x",
-        Error::NonExhaustiveLet {
+        Error::NonExhaustiveBinding {
             location: SrcSpan { start: 4, end: 9 },
             constructor: "Ok".to_string(),
             unhandled_constructors: vec!["Error".to_string()]
@@ -2642,7 +2642,7 @@ fn test(x) {
     let Two(y) = x
     y
 }",
-        Error::NonExhaustiveLet {
+        Error::NonExhaustiveBinding {
             location: SrcSpan { start: 64, end: 70 },
             constructor: "Two".to_string(),
             unhandled_constructors: vec!["One".to_string()]
