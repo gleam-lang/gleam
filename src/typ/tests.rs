@@ -902,18 +902,18 @@ fn infer_error_test() {
     );
 
     assert_error!(
-        "let True(x) = 1 x",
+        "let Nil(x) = 1 x",
         Error::IncorrectArity {
-            location: SrcSpan { start: 4, end: 11 },
+            location: SrcSpan { start: 4, end: 10 },
             expected: 0,
             given: 1,
         },
     );
 
     assert_error!(
-        "let Ok(1, x) = 1 x",
+        "assert Ok(1, x) = 1 x",
         Error::IncorrectArity {
-            location: SrcSpan { start: 4, end: 12 },
+            location: SrcSpan { start: 7, end: 15 },
             expected: 1,
             given: 2,
         },
@@ -2645,7 +2645,23 @@ fn test(x) {
         Error::NonExhaustiveBinding {
             location: SrcSpan { start: 64, end: 70 },
             constructor: "Two".to_string(),
-            unhandled_constructors: vec!["One".to_string()]
+            unhandled_constructors: vec!["One".to_string()],
+        }
+    );
+
+    assert_error!(
+        "pub type Thing {
+  Thing(Result(Int, Int))
+};
+
+pub fn main(x) {
+  let Thing(Ok(y)) = x
+  y
+}",
+        Error::NonExhaustiveBinding {
+            location: SrcSpan { start: 76, end: 81 },
+            constructor: "Ok".to_string(),
+            unhandled_constructors: vec!["Error".to_string()],
         }
     );
 }

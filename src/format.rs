@@ -520,6 +520,7 @@ impl<'a> Formatter<'a> {
             BindingKind::Let => "let ",
             BindingKind::Try => "try ",
             BindingKind::Assert => "assert ",
+            BindingKind::Clause => "",
         };
 
         let line = if self.pop_empty_lines(then.start_byte_index()) {

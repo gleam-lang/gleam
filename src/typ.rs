@@ -1518,7 +1518,8 @@ impl<'a> Typer<'a> {
         let value_typ = generalise(value_typ, self.level + 1);
 
         // Ensure the pattern matches the type of the value
-        let pattern = PatternTyper::new(self, self.level).unify(pattern, value_typ.clone())?;
+        let pattern =
+            PatternTyper::new(self, kind, self.level).unify(pattern, value_typ.clone())?;
 
         // Check the type of the following code
         let then = self.infer(then)?;
@@ -1529,29 +1530,6 @@ impl<'a> Typer<'a> {
             let value = self.new_unbound_var(self.level);
             self.unify(result(value, try_error_type), typ.clone())
                 .map_err(|e| convert_unify_error(e, then.try_binding_location()))?;
-        }
-
-        // Ensure exhaustiveness of value if this is a `let` binding
-        if kind == BindingKind::Let {
-            if let Pattern::Constructor { name, module, .. } = &pattern {
-                let value_constructor = self
-                    .get_value_constructor(module.as_ref(), &name)
-                    .map_err(|e| convert_get_value_constructor_error(e, &location))?;
-
-                if let ValueConstructorVariant::Record {
-                    ref other_constructor_names,
-                    ..
-                } = value_constructor.variant
-                {
-                    if other_constructor_names.len() > 0 {
-                        return Err(Error::NonExhaustiveBinding {
-                            location: pattern.location().clone(),
-                            constructor: name.clone(),
-                            unhandled_constructors: other_constructor_names.clone(),
-                        });
-                    }
-                }
-            }
         }
 
         // Check that any type annotation is accurate.
@@ -1656,7 +1634,7 @@ impl<'a> Typer<'a> {
         subjects: &[Arc<Type>],
         location: &SrcSpan,
     ) -> Result<(TypedMultiPattern, Vec<TypedMultiPattern>), Error> {
-        let mut pattern_typer = PatternTyper::new(self, self.level);
+        let mut pattern_typer = PatternTyper::new(self, BindingKind::Clause, self.level);
         let typed_pattern = pattern_typer.infer_multi_pattern(pattern, subjects, &location)?;
 
         // Each case clause has one or more patterns that may match the
@@ -3548,6 +3526,7 @@ struct PatternTyper<'a, 'b> {
     typer: &'a mut Typer<'b>,
     level: usize,
     mode: PatternMode,
+    binding_kind: BindingKind,
     initial_pattern_vars: HashSet<String>,
 }
 
@@ -3557,11 +3536,12 @@ enum PatternMode {
 }
 
 impl<'a, 'b> PatternTyper<'a, 'b> {
-    pub fn new(typer: &'a mut Typer<'b>, level: usize) -> Self {
+    pub fn new(typer: &'a mut Typer<'b>, binding_kind: BindingKind, level: usize) -> Self {
         Self {
             typer,
             level,
             mode: PatternMode::Initial,
+            binding_kind,
             initial_pattern_vars: HashSet::new(),
         }
     }
@@ -3910,6 +3890,23 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         "Unexpected value constructor type for a constructor pattern.",
                     ),
                 };
+
+                // Ensure exhaustiveness of constructor if this is a `let` or `try` binding
+                if [BindingKind::Let, BindingKind::Try].contains(&self.binding_kind) {
+                    if let ValueConstructorVariant::Record {
+                        ref other_constructor_names,
+                        ..
+                    } = cons.variant
+                    {
+                        if other_constructor_names.len() > 0 {
+                            return Err(Error::NonExhaustiveBinding {
+                                location: location.clone(),
+                                constructor: name.clone(),
+                                unhandled_constructors: other_constructor_names.clone(),
+                            });
+                        }
+                    }
+                }
 
                 let instantiated_constructor_type =
                     self.typer
