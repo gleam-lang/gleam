@@ -2795,6 +2795,7 @@ pub enum Error {
 
     NonExhaustiveBinding {
         location: SrcSpan,
+        kind: BindingKind,
         constructor: String,
         unhandled_constructors: Vec<String>,
     },
@@ -3902,6 +3903,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             return Err(Error::NonExhaustiveBinding {
                                 location: location.clone(),
                                 constructor: name.clone(),
+                                kind: self.binding_kind,
                                 unhandled_constructors: other_constructor_names.clone(),
                             });
                         }

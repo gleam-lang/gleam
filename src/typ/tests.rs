@@ -1426,6 +1426,7 @@ fn infer_error_test() {
         Error::NonExhaustiveBinding {
             location: SrcSpan { start: 4, end: 9 },
             constructor: "Ok".to_string(),
+            kind: crate::ast::BindingKind::Let,
             unhandled_constructors: vec!["Error".to_string()]
         }
     );
@@ -2645,6 +2646,7 @@ fn test(x) {
         Error::NonExhaustiveBinding {
             location: SrcSpan { start: 64, end: 70 },
             constructor: "Two".to_string(),
+            kind: crate::ast::BindingKind::Let,
             unhandled_constructors: vec!["One".to_string()],
         }
     );
@@ -2661,7 +2663,26 @@ pub fn main(x) {
         Error::NonExhaustiveBinding {
             location: SrcSpan { start: 76, end: 81 },
             constructor: "Ok".to_string(),
+            kind: crate::ast::BindingKind::Let,
             unhandled_constructors: vec!["Error".to_string()],
+        }
+    );
+
+    assert_error!(
+        "pub type Thing {
+  One(Int)
+  Two(Int)
+};
+
+pub fn main(x) {
+  try One(y) = x
+  Ok(y)
+}",
+        Error::NonExhaustiveBinding {
+            location: SrcSpan { start: 66, end: 72 },
+            constructor: "One".to_string(),
+            kind: crate::ast::BindingKind::Try,
+            unhandled_constructors: vec!["Two".to_string()],
         }
     );
 }

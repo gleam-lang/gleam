@@ -1180,26 +1180,35 @@ signed, unsigned, big, little, native, size, unit",
                 NonExhaustiveBinding {
                     location,
                     constructor,
+                    kind,
                     unhandled_constructors,
                 } => {
                     let diagnostic = Diagnostic {
-                        title: "Non-exhaustive let binding".to_string(),
+                        title: "Non-exhaustive binding".to_string(),
                         label: "used here".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: location.clone(),
                     };
                     write(buffer, diagnostic, Severity::Error);
+
+                    let suggestion = match kind {
+                        crate::ast::BindingKind::Let => "Either use a case expression to handle all possibilities, or use assert instead
+of let if you are sure you don't want to handle the others. This will cause a
+runtime error if they occur.",
+                        crate::ast::BindingKind::Try => "You will need to use a case expression to handle all possibilities.",
+                        _ => "Additionally, you have found a compiler bug. Sorry! Please submit a bug report on GitHub."
+                    };
+
                     writeln!(
                         buffer,
                         "You are handling the {} constructor, but this could also be one of:
 {}
 
-Either use a case expression to handle all possibilities, or use assert instead
-of let if you are sure you don't want to handle the others. This will cause a
-runtime error if they occur.",
+{}",
                         constructor,
                         unhandled_constructors.join(", "),
+                        suggestion
                     )
                     .unwrap();
                 }

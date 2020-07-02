@@ -1112,6 +1112,7 @@ pub fn test(x) {
                 src: "import one.{Two}\npub fn test(x) {\n    let Two(y) = x\n    y\n}".to_string(),
                 error: crate::typ::Error::NonExhaustiveBinding {
                     location: crate::ast::SrcSpan { start: 42, end: 48 },
+                    kind: crate::ast::BindingKind::Let,
                     constructor: "Two".to_string(),
                     unhandled_constructors: vec!["One".to_string()]
                 }
