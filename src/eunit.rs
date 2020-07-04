@@ -1,10 +1,18 @@
 use crate::{
     build::{self, project_root::ProjectRoot, Origin},
     error::Error,
-    file,
+    file::{self, OutputFile},
+    //file,
 };
 use itertools::Itertools;
 use std::{path::PathBuf, process::Command};
+
+#[derive(Debug)]
+struct EunitFile {
+    should_be_compiled: bool,
+    path: PathBuf,
+    content: String,
+}
 
 pub fn command(root_string: String) -> Result<(), Error> {
     let root_path = PathBuf::from(root_string);
@@ -24,26 +32,62 @@ pub fn command(root_string: String) -> Result<(), Error> {
         .map(|m| m.name.replace("/", "@"))
         .join(",");
 
-    // Prepare the Erlang shell command
-    let mut command = Command::new("erl");
+    // Prepare eunit runner and its dependencies.
+    let eunit_files = vec![
+        EunitFile {
+            should_be_compiled: true,
+            path: root.build_path().join("eunit_progress.erl"),
+            content: std::include_str!("eunit/eunit_progress.erl").to_string(),
+        },
+        EunitFile {
+            should_be_compiled: false,
+            path: root.build_path().join("eunit_runner.erl"),
+            content: std::include_str!("eunit/eunit_runner.erl").to_string(),
+        },
+    ];
 
-    // Specify locations of .beam files
-    for entry in file::read_dir(root.default_build_lib_path())?.filter_map(Result::ok) {
-        command.arg("-pa");
-        command.arg(entry.path().join("ebin"));
-    }
+    eunit_files.iter().try_for_each(|file| {
+        file::write_output(&OutputFile {
+            path: file.path.clone(),
+            text: file.content.to_owned(),
+        })
+    })?;
 
-    command.arg("-noshell");
-    command.arg("-eval");
-    command.arg(format!(
-        "init:stop(case eunit:test([{}], [verbose]) of ok -> 0; error -> 1 end)",
-        test_modules
-    ));
+    // compile eunit runner dependencies in the build path
+    let mut compile_command = Command::new("erlc");
+    compile_command.arg("-o");
+    compile_command.arg(root.build_path());
+
+    eunit_files
+        .iter()
+        .filter(|&file| file.should_be_compiled)
+        .for_each(|file| {
+            compile_command.arg(file.path.clone());
+        });
+
+    tracing::trace!("Running OS process {:?}", compile_command);
+    compile_command.status().map_err(|e| Error::ShellCommand {
+        command: "erlc".to_string(),
+        err: Some(e.kind()),
+    })?;
+
+    // Prepare the escript command for running tests
+    let mut command = Command::new("escript");
+    command.arg(root.build_path().join("eunit_runner.erl"));
+
+    let ebin_paths: String = file::read_dir(root.default_build_lib_path())?
+        .filter_map(Result::ok)
+        .map(|entry| entry.path().join("ebin").as_path().display().to_string())
+        .join(",");
+
+    // we supply two parameters to the escript. First is a comma seperated
+    command.arg(ebin_paths);
+    command.arg(test_modules);
 
     // Run the shell
     tracing::trace!("Running OS process {:?}", command);
     let status = command.status().map_err(|e| Error::ShellCommand {
-        command: "erl".to_string(),
+        command: "escript".to_string(),
         err: Some(e.kind()),
     })?;
 
@@ -51,7 +95,7 @@ pub fn command(root_string: String) -> Result<(), Error> {
         Ok(())
     } else {
         Err(Error::ShellCommand {
-            command: "erl".to_string(),
+            command: "escript".to_string(),
             err: None,
         })
     }
