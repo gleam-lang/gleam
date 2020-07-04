@@ -70,6 +70,7 @@ development.
 - [Lars Wikman](https://github.com/lawik)
 - [Mario Vellandi](https://github.com/mvellandi)
 - [Mike R](https://github.com/mroach)
+- [Milad](https://github.com/slashmili)
 - [Parker Selbert](https://github.com/sorentwo)
 - [Quinn Wilton](http://quinnwilton.com/)
 - [Sean Jensen-Grey](https://github.com/seanjensengrey)
