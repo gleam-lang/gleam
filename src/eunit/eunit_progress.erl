@@ -1,6 +1,6 @@
 %% eunit_formatters https://github.com/seancribbs/eunit_formatters
-%% Changes made to the code from original:
-%% - Embedded hrl file contents.
+%% Changes made to the original code:
+%% - Embedded binomial_heap.erl file contents into current file.
 %% - ignore warnings for heap implementation to keep complete implementation.
 %% - removed "namespaced_dicts" dependant preprocessor directive, 
 %%   as it does not apply for our project, we just assume OTP version >= 17.
@@ -44,15 +44,6 @@
           children = new() :: binomial_heap()
         }).
 
--record(state, {
-          status = dict:new() :: euf_dict(),
-          failures = []       :: [[pos_integer()]],
-          skips = []          :: [[pos_integer()]],
-          timings = new()     :: binomial_heap(),
-          colored = true      :: boolean(),
-          profile = false     :: boolean()
-        }).
-
 -export_type([binomial_heap/0, heap_node/0]).
 -type binomial_heap() :: [ heap_node() ].
 -type heap_node() :: #node{}.
@@ -67,6 +58,17 @@
          start/0,
          start/1
         ]).
+
+%% -- binomial_heap.erl content start --
+
+-record(state, {
+          status = dict:new() :: euf_dict(),
+          failures = []       :: [[pos_integer()]],
+          skips = []          :: [[pos_integer()]],
+          timings = new()     :: binomial_heap(),
+          colored = true      :: boolean(),
+          profile = false     :: boolean()
+        }).
 
 -type euf_dict() :: dict:dict().
 
@@ -159,6 +161,8 @@ getMin([#node{key=K} = T|TS]) ->
         true -> {T,TS};
         _ -> {T1,[T|TS1]}
     end.
+
+%% -- binomial_heap.erl content end --
 
 %% Startup
 start() ->

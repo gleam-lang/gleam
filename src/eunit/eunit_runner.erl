@@ -7,4 +7,4 @@ main([Ebin, Args])->
     Strings = string:tokens(Args, ","),
     Modules = lists:map(fun(X) -> list_to_atom(X) end, Strings),
     code:load_file(eunit_progress),
-    init:stop(case eunit:test(Modules, [inparallel, verbose, no_tty, {report, {eunit_progress, [{colored, true}]}}]) of ok -> 0; error -> 1 end).
+    halt(case eunit:test(Modules, [inparallel, verbose, no_tty, {report, {eunit_progress, [{colored, true}]}}]) of ok -> 0; error -> 1 end).
