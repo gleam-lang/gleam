@@ -5,6 +5,8 @@
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
+- Fixed a bug where the compiler failed to return an error when type checking
+  a tuple with the wrong arity in a pattern.
 
 # v0.10.0 - 2020-07-01
 
