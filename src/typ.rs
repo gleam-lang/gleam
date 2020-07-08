@@ -3727,6 +3727,14 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
             Pattern::Tuple { elems, location } => match &*collapse_links(typ.clone()) {
                 Type::Tuple { elems: type_elems } => {
+                    if elems.len() != type_elems.len() {
+                        return Err(Error::IncorrectArity {
+                            location,
+                            expected: type_elems.len(),
+                            given: elems.len(),
+                        });
+                    }
+
                     let elems = elems
                         .into_iter()
                         .zip(type_elems)

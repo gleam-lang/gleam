@@ -1212,6 +1212,16 @@ fn infer_error_test() {
         },
     );
 
+    // https://github.com/gleam-lang/gleam/issues/714
+    assert_error!(
+        "case tuple(1, 2) { tuple(1, _, _, _) -> 1 }",
+        Error::IncorrectArity {
+            location: SrcSpan { start: 19, end: 36 },
+            expected: 2,
+            given: 4,
+        },
+    );
+
     // Duplicate vars
 
     assert_error!(
