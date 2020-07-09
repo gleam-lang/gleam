@@ -1,12 +1,14 @@
 use codespan::{FileId, Files};
-pub use codespan_reporting::diagnostic::Severity;
-use codespan_reporting::{
-    diagnostic::{Label, LabelStyle},
-    term::emit,
-};
+pub use codespan_reporting::diagnostic::{LabelStyle, Severity};
+use codespan_reporting::{diagnostic::Label, term::emit};
 use termcolor::Buffer;
 
-pub struct Diagnostic {
+pub struct DiagnosticLabel {
+    pub style: LabelStyle,
+    pub location: crate::ast::SrcSpan,
+    pub label: String,
+}
+pub struct SingleLineDiagnostic {
     pub file: String,
     pub location: crate::ast::SrcSpan,
     pub src: String,
@@ -14,20 +16,48 @@ pub struct Diagnostic {
     pub label: String,
 }
 
-pub fn write(mut buffer: &mut Buffer, d: Diagnostic, severity: Severity) {
+pub struct Diagnostic {
+    pub file: String,
+    pub src: String,
+    pub title: String,
+    pub labels: Vec<DiagnosticLabel>,
+}
+
+pub fn write(buffer: &mut Buffer, d: SingleLineDiagnostic, severity: Severity) {
+    let diagnostic = Diagnostic {
+        file: d.file,
+        src: d.src,
+        title: d.title,
+        labels: vec![DiagnosticLabel {
+            style: LabelStyle::Primary,
+            location: d.location,
+            label: d.label,
+        }],
+    };
+
+    write_diagnostic(buffer, diagnostic, severity)
+}
+
+pub fn write_diagnostic(mut buffer: &mut Buffer, d: Diagnostic, severity: Severity) {
     let mut files = Files::new();
     let file_id: FileId = files.add(d.file, d.src);
 
-    let label: Label<FileId> = Label::new(
-        LabelStyle::Primary,
-        file_id,
-        (d.location.start as usize)..(d.location.end as usize),
-    )
-    .with_message(d.label);
+    let labels: Vec<Label<FileId>> = d
+        .labels
+        .iter()
+        .map(|l| {
+            Label::new(
+                l.style,
+                file_id,
+                (l.location.start as usize)..(l.location.end as usize),
+            )
+            .with_message(l.label.clone())
+        })
+        .collect();
 
     let diagnostic = codespan_reporting::diagnostic::Diagnostic::new(severity)
         .with_message(d.title)
-        .with_labels(vec![label]);
+        .with_labels(labels);
 
     let config = codespan_reporting::term::Config::default();
     emit(&mut buffer, &config, &files, &diagnostic).unwrap();
