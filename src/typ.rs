@@ -3627,7 +3627,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
     /// When we have an assignment or a case expression we unify the pattern with the
     /// inferred type of the subject in order to determine what variables to insert
-    /// into the typerironment (or to detect a type error).
+    /// into the typer (or to detect a type error).
     ///
     fn unify(&mut self, pattern: UntypedPattern, typ: Arc<Type>) -> Result<TypedPattern, Error> {
         match pattern {
