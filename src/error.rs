@@ -2,7 +2,7 @@ use crate::{
     cli,
     diagnostic::{
         write, write_diagnostic, write_project, Diagnostic, DiagnosticLabel, LabelStyle,
-        ProjectErrorDiagnostic, Severity, SingleLineDiagnostic,
+        MultiLineDiagnostic, ProjectErrorDiagnostic, Severity,
     },
     typ::pretty::Printer,
 };
@@ -322,7 +322,7 @@ This was error from the Hex client library:
                 src_module,
                 test_module,
             } => {
-                let diagnostic = SingleLineDiagnostic {
+                let diagnostic = Diagnostic {
                     title: "App importing test module".to_string(),
                     label: "Imported here".to_string(),
                     file: path.to_str().unwrap().to_string(),
@@ -397,7 +397,7 @@ Second: {}",
                     labels,
                 } => {
                     let mut labels = labels.clone();
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Unknown label".to_string(),
                         label: did_you_mean(label, &mut labels, "Unexpected label"),
                         file: path.to_str().unwrap().to_string(),
@@ -424,7 +424,7 @@ Expected one of `{}`.",
                 }
 
                 UnexpectedLabelledArg { location, label } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Unexpected labelled argument".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -443,7 +443,7 @@ Please remove the label `{}`.",
                 }
 
                 PositionalArgumentAfterLabelled { location } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Unexpected positional argument".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -466,7 +466,7 @@ also be labelled.",
                     previous_location,
                     ..
                 } => {
-                    let diagnostic = Diagnostic {
+                    let diagnostic = MultiLineDiagnostic {
                         title: format!("Duplicate function definition with name `{}`", fun),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
@@ -492,7 +492,7 @@ also be labelled.",
                     previous_location,
                     ..
                 } => {
-                    let diagnostic = Diagnostic {
+                    let diagnostic = MultiLineDiagnostic {
                         title: format!("Duplicate type definition with name `{}`", name),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
@@ -513,7 +513,7 @@ also be labelled.",
                 }
 
                 DuplicateField { location, label } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Duplicate field".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -530,7 +530,7 @@ also be labelled.",
                 }
 
                 DuplicateArgument { location, label } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Duplicate argument".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -547,7 +547,7 @@ also be labelled.",
                 }
 
                 RecursiveType { location } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Recursive type".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -558,7 +558,7 @@ also be labelled.",
                 }
 
                 NotFn { location, typ } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Type mismatch".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -583,7 +583,7 @@ also be labelled.",
                     fields,
                 } => {
                     let mut fields = fields.clone();
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Unknown field".to_string(),
                         label: did_you_mean(
                             label.as_ref(),
@@ -622,7 +622,7 @@ also be labelled.",
                     expected,
                     given,
                 } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Type mismatch".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -653,7 +653,7 @@ Found type:
                     given,
                     ..
                 } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Incorrect arity".to_string(),
                         label: format!("expected {} arguments, got {}", expected, given),
                         file: path.to_str().unwrap().to_string(),
@@ -668,7 +668,7 @@ Found type:
                     expected,
                     given,
                 } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Incorrect arity".to_string(),
                         label: format!("expected {} arguments, got {}", expected, given),
                         file: path.to_str().unwrap().to_string(),
@@ -679,7 +679,7 @@ Found type:
                 }
 
                 UnnecessarySpreadOperator { location, arity } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Unnecessary spread operator".to_string(),
                         label: format!(""),
                         file: path.to_str().unwrap().to_string(),
@@ -702,7 +702,7 @@ Found type:
                     types,
                 } => {
                     let mut types = types.clone();
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Unknown type".to_string(),
                         label: did_you_mean(name, &mut types, ""),
                         file: path.to_str().unwrap().to_string(),
@@ -724,7 +724,7 @@ Found type:
                     name,
                 } => {
                     let mut variables = variables.clone();
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Unknown variable".to_string(),
                         label: did_you_mean(name, &mut variables, ""),
                         file: path.to_str().unwrap().to_string(),
@@ -736,7 +736,7 @@ Found type:
                 }
 
                 PrivateTypeLeak { location, leaked } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Private type used in public interface".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -769,7 +769,7 @@ Private types can only be used within the module that defines them.",
                     imported_modules,
                 } => {
                     let mut imported_modules = imported_modules.clone();
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Unknown module".to_string(),
                         label: did_you_mean(name, &mut imported_modules, ""),
                         file: path.to_str().unwrap().to_string(),
@@ -792,7 +792,7 @@ Private types can only be used within the module that defines them.",
                     type_constructors,
                 } => {
                     let mut type_constructors = type_constructors.clone();
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Unknown module type".to_string(),
                         label: did_you_mean(name, &mut type_constructors, ""),
                         file: path.to_str().unwrap().to_string(),
@@ -816,7 +816,7 @@ Private types can only be used within the module that defines them.",
                     value_constructors,
                 } => {
                     let mut value_constructors = value_constructors.clone();
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Unknown module field".to_string(),
                         label: did_you_mean(name, &mut value_constructors, ""),
                         file: path.to_str().unwrap().to_string(),
@@ -845,7 +845,7 @@ Private types can only be used within the module that defines them.",
                         .chain(value_constructors.iter())
                         .map(|s| s.to_string())
                         .collect();
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Unknown module field".to_string(),
                         label: did_you_mean(name, &mut options, ""),
                         file: path.to_str().unwrap().to_string(),
@@ -867,7 +867,7 @@ Private types can only be used within the module that defines them.",
                     expected,
                     given,
                 } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Incorrect number of patterns".to_string(),
                         label: format!("expected {} patterns, got {}", expected, given),
                         file: path.to_str().unwrap().to_string(),
@@ -885,7 +885,7 @@ Each clause must have a pattern for every subject value.",
                 }
 
                 NonLocalClauseGuardVariable { location, name } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Invalid guard variable".to_string(),
                         label: "is not locally defined".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -903,7 +903,7 @@ argument to the function. The variable `{}` is not defined locally.",
                 }
 
                 ExtraVarInAlternativePattern { location, name } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Extra alternative pattern variable".to_string(),
                         label: "has not been previously defined".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -921,7 +921,7 @@ pattern. This variable `{}` has not been previously defined.",
                 }
 
                 DuplicateVarInPattern { location, name } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Duplicate variable in pattern".to_string(),
                         label: "has already been used".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -943,7 +943,7 @@ please use a guard clause instead e.g. (x, y) if x == y -> ...",
                 OutOfBoundsTupleIndex {
                     location, size: 0, ..
                 } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Out of bounds tuple index".to_string(),
                         label: "this index is too large".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -963,7 +963,7 @@ please use a guard clause instead e.g. (x, y) if x == y -> ...",
                     index,
                     size,
                 } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Out of bounds tuple index".to_string(),
                         label: "this index is too large".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -983,7 +983,7 @@ please use a guard clause instead e.g. (x, y) if x == y -> ...",
                 }
 
                 NotATuple { location, given } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Type mismatch".to_string(),
                         label: "is not a tuple".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -1004,7 +1004,7 @@ please use a guard clause instead e.g. (x, y) if x == y -> ...",
                 }
 
                 NotATupleUnbound { location } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Type mismatch".to_string(),
                         label: "what type is this?".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -1022,7 +1022,7 @@ about this type yet. Please add some type annotations so we can continue.",
                 }
 
                 RecordAccessUnknownType { location } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Unknown type for record access".to_string(),
                         label: "I don't know what type this is".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -1042,7 +1042,7 @@ and try again.
                 }
 
                 ConflictingBinaryTypeOptions { location, name, .. } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Duplicate bit string type option".to_string(),
                         label: "given here".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -1054,7 +1054,7 @@ and try again.
                 }
 
                 ConflictingBinarySignednessOptions { location, name, .. } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Duplicate bit string signedness".to_string(),
                         label: "redefined here".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -1066,7 +1066,7 @@ and try again.
                 }
 
                 ConflictingBinaryEndiannessOptions { location, name, .. } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Duplicate bit string endianness".to_string(),
                         label: "redefined here".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -1078,7 +1078,7 @@ and try again.
                 }
 
                 ConflictingBinarySizeOptions { location, .. } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Duplicate bit string size".to_string(),
                         label: "redefined here".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -1090,7 +1090,7 @@ and try again.
                 }
 
                 ConflictingBinaryUnitOptions { location, .. } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Duplicate bit string unit".to_string(),
                         label: "redefined here".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -1102,7 +1102,7 @@ and try again.
                 }
 
                 BinaryTypeDoesNotAllowUnit { location, typ, .. } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Unit cannot be specified for given type".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -1120,7 +1120,7 @@ This segment has a type of {}.",
                 }
 
                 BinarySegmentMustHaveSize { location, .. } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Bit string segment without required size".to_string(),
                         label: "specified here".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -1137,7 +1137,7 @@ at the end of a bin pattern",
                 }
 
                 InvalidBinarySegmentOption { label, location } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Invalid bit string segment option".to_string(),
                         label: "specified here".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -1165,7 +1165,7 @@ signed, unsigned, big, little, native, size, unit",
                         token: (start, _, end),
                         expected,
                     } => {
-                        let diagnostic = SingleLineDiagnostic {
+                        let diagnostic = Diagnostic {
                             title: "Syntax error".to_string(),
                             label: "Unexpected token".to_string(),
                             file: path.to_str().unwrap().to_string(),
@@ -1181,7 +1181,7 @@ signed, unsigned, big, little, native, size, unit",
                     }
 
                     UnrecognizedEOF { .. } => {
-                        let diagnostic = SingleLineDiagnostic {
+                        let diagnostic = Diagnostic {
                             title: "Syntax error".to_string(),
                             label: "Unexpected end of file".to_string(),
                             file: path.to_str().unwrap().to_string(),
@@ -1195,7 +1195,7 @@ signed, unsigned, big, little, native, size, unit",
                     }
 
                     InvalidToken { location } => {
-                        let diagnostic = SingleLineDiagnostic {
+                        let diagnostic = Diagnostic {
                             title: "Syntax error".to_string(),
                             label: "Unknown token".to_string(),
                             file: path.to_str().unwrap().to_string(),
@@ -1219,7 +1219,7 @@ signed, unsigned, big, little, native, size, unit",
                         use crate::parser::Error;
                         match error {
                             Error::TooManyHolesInCapture { location, count } => {
-                                let diagnostic = SingleLineDiagnostic {
+                                let diagnostic = Diagnostic {
                                     title: "Invalid capture".to_string(),
                                     label: "".to_string(),
                                     file: path.to_str().unwrap().to_string(),
@@ -1287,7 +1287,7 @@ cycle to continue."
                 modules,
             } => {
                 let mut modules = modules.clone();
-                let diagnostic = SingleLineDiagnostic {
+                let diagnostic = Diagnostic {
                     title: "Unknown import".to_string(),
                     label: did_you_mean(import, &mut modules, ""),
                     file: path.to_str().unwrap().to_string(),
