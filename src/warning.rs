@@ -1,6 +1,6 @@
 use crate::{
     cli,
-    diagnostic::{write, Severity, SingleLineDiagnostic},
+    diagnostic::{write, Diagnostic, Severity},
 };
 use std::path::PathBuf;
 use termcolor::Buffer;
@@ -28,7 +28,7 @@ impl Warning {
         match self {
             Warning::Type { path, src, warning } => match warning {
                 Todo { location } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Todo found".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -39,7 +39,7 @@ impl Warning {
                     writeln!(buffer, "This code will crash if it is run. Be sure to remove this todo before running your program.").unwrap();
                 }
                 ImplicitlyDiscardedResult { location } => {
-                    let diagnostic = SingleLineDiagnostic {
+                    let diagnostic = Diagnostic {
                         title: "Unused result value".to_string(),
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),

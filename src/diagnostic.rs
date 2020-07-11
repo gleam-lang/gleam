@@ -8,7 +8,7 @@ pub struct DiagnosticLabel {
     pub location: crate::ast::SrcSpan,
     pub label: String,
 }
-pub struct SingleLineDiagnostic {
+pub struct Diagnostic {
     pub file: String,
     pub location: crate::ast::SrcSpan,
     pub src: String,
@@ -16,15 +16,15 @@ pub struct SingleLineDiagnostic {
     pub label: String,
 }
 
-pub struct Diagnostic {
+pub struct MultiLineDiagnostic {
     pub file: String,
     pub src: String,
     pub title: String,
     pub labels: Vec<DiagnosticLabel>,
 }
 
-pub fn write(buffer: &mut Buffer, d: SingleLineDiagnostic, severity: Severity) {
-    let diagnostic = Diagnostic {
+pub fn write(buffer: &mut Buffer, d: Diagnostic, severity: Severity) {
+    let diagnostic = MultiLineDiagnostic {
         file: d.file,
         src: d.src,
         title: d.title,
@@ -38,7 +38,7 @@ pub fn write(buffer: &mut Buffer, d: SingleLineDiagnostic, severity: Severity) {
     write_diagnostic(buffer, diagnostic, severity)
 }
 
-pub fn write_diagnostic(mut buffer: &mut Buffer, d: Diagnostic, severity: Severity) {
+pub fn write_diagnostic(mut buffer: &mut Buffer, d: MultiLineDiagnostic, severity: Severity) {
     let mut files = Files::new();
     let file_id: FileId = files.add(d.file, d.src);
 
