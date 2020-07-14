@@ -224,20 +224,30 @@ impl FieldMap {
         }
 
         for i in 0..args.len() {
-            let (label, location) = match &args[i].label {
-                // A labelled argument, we may need to reposition it in the array vector
-                Some(l) => {
+            match &args[i].label {
+                Some(_) => {
                     labelled_arguments_given = true;
-                    (l, &args[i].location)
                 }
 
-                // Not a labelled argument
                 None => {
                     if labelled_arguments_given {
                         return Err(Error::PositionalArgumentAfterLabelled {
                             location: args[i].location.clone(),
                         });
                     }
+                }
+            }
+        }
+
+        let mut i = 0;
+        while i < args.len() {
+            let (label, location) = match &args[i].label {
+                // A labelled argument, we may need to reposition it in the array vector
+                Some(l) => (l, &args[i].location),
+
+                // Not a labelled argument
+                None => {
+                    i = i + 1;
                     continue;
                 }
             };
@@ -254,6 +264,7 @@ impl FieldMap {
             };
 
             if *position == i {
+                i = i + 1;
                 continue;
             }
 
@@ -267,6 +278,7 @@ impl FieldMap {
             seen.insert(*position);
             args.swap(*position, i);
         }
+
         Ok(())
     }
 }

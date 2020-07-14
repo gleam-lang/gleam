@@ -89,47 +89,6 @@ fn field_map_reorder_test() {
             },
             CallArg {
                 location: Default::default(),
-                label: Some("last".to_string()),
-                value: int("2"),
-            },
-            CallArg {
-                location: Default::default(),
-                label: None,
-                value: int("3"),
-            },
-        ],
-        expected_result: Ok(()),
-        expected_args: vec![
-            CallArg {
-                location: Default::default(),
-                label: None,
-                value: int("1"),
-            },
-            CallArg {
-                location: Default::default(),
-                label: None,
-                value: int("3"),
-            },
-            CallArg {
-                location: Default::default(),
-                label: Some("last".to_string()),
-                value: int("2"),
-            },
-        ],
-    }
-    .test();
-
-    Case {
-        arity: 3,
-        fields: [("last".to_string(), 2)].iter().cloned().collect(),
-        args: vec![
-            CallArg {
-                location: Default::default(),
-                label: None,
-                value: int("1"),
-            },
-            CallArg {
-                location: Default::default(),
                 label: None,
                 value: int("2"),
             },
@@ -1692,7 +1651,7 @@ fn infer_module_test() {
     );
     assert_infer!(
         "pub type Tup(a, b, c) { Tup(first: a, second: b, third: c) }
-         pub fn third(t) { let Tup(_, third: a, _) = t a }",
+         pub fn third(t) { let Tup(_ , _, third: a) = t a }",
         vec![
             ("Tup", "fn(a, b, c) -> Tup(a, b, c)"),
             ("third", "fn(Tup(a, b, c)) -> c"),
@@ -1895,6 +1854,21 @@ pub fn get(x: One) { x.name }",
             ("test_list", "List(Int)"),
             ("test_string", "String"),
             ("test_tuple", "tuple(String, Int)"),
+        ],
+    );
+
+    assert_infer!(
+        "
+pub type Box {
+  Box(a: Nil, b: Int, c: Int, d: Int)
+}
+
+pub fn main() {
+  Box(b: 1, c: 1, d: 1, a: Nil)
+}",
+        vec![
+            ("Box", "fn(Nil, Int, Int, Int) -> Box"),
+            ("main", "fn() -> Box"),
         ],
     );
 }
