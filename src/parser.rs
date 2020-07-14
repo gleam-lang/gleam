@@ -1,3 +1,4 @@
+use crate::ast::*;
 use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Debug, PartialEq)]
@@ -438,5 +439,61 @@ pub fn attach_doc_comments<'a, A, B, C, D>(
                 constructor.put_doc(doc);
             }
         }
+    }
+}
+
+pub fn make_call(
+    fun: UntypedExpr,
+    args: Vec<Result<CallArg<UntypedExpr>, (crate::ast::SrcSpan, Option<String>)>>,
+    s: usize,
+    e: usize,
+) -> Result<UntypedExpr, Error> {
+    let mut num_holes = 0;
+    let args = args
+        .into_iter()
+        .map(|a| match a {
+            Ok(arg) => arg,
+            Err((location, label)) => {
+                num_holes += 1;
+                CallArg {
+                    label,
+                    location: Default::default(),
+                    value: UntypedExpr::Var {
+                        location,
+                        name: crate::ast::CAPTURE_VARIABLE.to_string(),
+                    },
+                }
+            }
+        })
+        .collect();
+    let call = UntypedExpr::Call {
+        location: location(s, e),
+        fun: Box::new(fun),
+        args,
+    };
+    match num_holes {
+        // A normal call
+        0 => Ok(call),
+
+        // An anon function using the capture syntax run(_, 1, 2)
+        1 => Ok(UntypedExpr::Fn {
+            location: call.location().clone(),
+            is_capture: true,
+            args: vec![Arg {
+                location: location(0, 0),
+                annotation: None,
+                names: ArgNames::Named {
+                    name: crate::ast::CAPTURE_VARIABLE.to_string(),
+                },
+                typ: (),
+            }],
+            body: Box::new(call),
+            return_annotation: None,
+        }),
+
+        count => Err(Error::TooManyHolesInCapture {
+            location: call.location().clone(),
+            count,
+        }),
     }
 }

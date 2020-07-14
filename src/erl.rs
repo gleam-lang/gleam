@@ -1001,6 +1001,25 @@ fn call(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env) -> Document
     }
 }
 
+fn record_update(spread: &TypedExpr, args: &[TypedRecordUpdateArg], env: &mut Env) -> Document {
+    use std::convert::TryInto;
+    use std::iter::once;
+
+    args.iter().fold(expr(spread, env), |tuple_doc, arg| {
+        // Increment the index by 2, because the first element
+        // is the name of the record, so our fields are 2-indexed
+        let index: u64 = arg.index.try_into().unwrap();
+        let index_doc = format!("{}", (index + 2)).to_doc();
+        let value_doc = expr(&arg.value, env);
+
+        let iter = once(index_doc)
+            .chain(once(tuple_doc))
+            .chain(once(value_doc));
+
+        "erlang:setelement".to_doc().append(wrap_args(iter))
+    })
+}
+
 /// Wrap a document in begin end
 ///
 fn begin_end(document: Document) -> Document {
@@ -1081,6 +1100,8 @@ fn expr(expression: &TypedExpr, env: &mut Env) -> Document {
         } => module_select_fn(typ.clone(), module_name, label),
 
         TypedExpr::RecordAccess { record, index, .. } => tuple_index(record, index + 1, env),
+
+        TypedExpr::RecordUpdate { spread, args, .. } => record_update(spread, args, env),
 
         TypedExpr::Let {
             value,

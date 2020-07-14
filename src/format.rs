@@ -624,6 +624,12 @@ impl<'a> Formatter<'a> {
                     .iter()
                     .map(|s| bit_string_segment(s, |e| self.expr(e))),
             ),
+            UntypedExpr::RecordUpdate {
+                constructor,
+                spread,
+                args,
+                ..
+            } => self.record_update(constructor, spread, args),
         };
         commented(document, comments)
     }
@@ -655,6 +661,20 @@ impl<'a> Formatter<'a> {
             )
             .append(line())
             .append("}")
+    }
+
+    pub fn record_update(
+        &mut self,
+        constructor: &UntypedExpr,
+        spread: &RecordUpdateSpread,
+        args: &[UntypedRecordUpdateArg],
+    ) -> Document {
+        use std::iter::once;
+        let constructor_doc = self.expr(constructor);
+        let spread_doc = "..".to_doc().append(spread.clone().name.to_doc());
+        let arg_docs = args.into_iter().map(|a| self.record_update_arg(a));
+        let all_arg_docs = once(spread_doc).chain(arg_docs);
+        constructor_doc.append(wrap_args(all_arg_docs))
     }
 
     pub fn bin_op(&mut self, name: &BinOp, left: &UntypedExpr, right: &UntypedExpr) -> Document {
@@ -900,6 +920,14 @@ impl<'a> Formatter<'a> {
         .append(self.wrap_expr(&arg.value))
     }
 
+    fn record_update_arg(&mut self, arg: &UntypedRecordUpdateArg) -> Document {
+        arg.label
+            .clone()
+            .to_doc()
+            .append(": ")
+            .append(self.wrap_expr(&arg.value))
+    }
+
     fn tuple_index(&mut self, tuple: &UntypedExpr, index: u64) -> Document {
         match tuple {
             UntypedExpr::TupleIndex { .. } => self.expr(tuple).surround("{", "}"),
@@ -922,7 +950,8 @@ impl<'a> Formatter<'a> {
             | UntypedExpr::Fn { .. }
             | UntypedExpr::Case { .. }
             | UntypedExpr::Tuple { .. }
-            | UntypedExpr::BitString { .. } => self.expr(expr),
+            | UntypedExpr::BitString { .. }
+            | UntypedExpr::RecordUpdate { .. } => self.expr(expr),
 
             _ => self.expr(expr).nest(INDENT),
         }

@@ -4,11 +4,12 @@ use std::str::FromStr;
 
 use crate::ast::{
     UntypedExpr, UntypedArg, Arg, UntypedModule, Module, UntypedStatement, Statement, TypeAst,
-    UntypedPattern, BinOp, Clause, UntypedClause, RecordConstructor, Pattern, CallArg,
+    UntypedPattern, BinOp, Clause, UntypedClause, RecordConstructor, Pattern, RecordUpdateSpread, UntypedRecordUpdateArg, CallArg,
     ExternalFnArg, ArgNames, UnqualifiedImport, UntypedClauseGuard, ClauseGuard, BindingKind,
     BitStringSegment, BitStringSegmentOption, Constant, UntypedConstant,
 };
 use crate::parser::*;
+use lalrpop_util::ParseError;
 
 grammar;
 
@@ -562,56 +563,38 @@ ArgNames: ArgNames = {
 }
 
 Call: UntypedExpr = {
+    <s:@L> <constructor:SimpleExpr> "(" <spread:RecordUpdateSpread> ")" <e:@L> => UntypedExpr::RecordUpdate {
+        location: location(s, e),
+        constructor: Box::new(constructor),
+        spread: spread,
+        args: vec![],
+    },
+
+    <s:@L> <constructor:SimpleExpr> "(" <spread:RecordUpdateSpread> "," <args:Comma<RecordUpdateArg>> ")" <e:@L> => UntypedExpr::RecordUpdate {
+        location: location(s, e),
+        constructor: Box::new(constructor),
+        spread: spread,
+        args: args,
+    },
+
     <s:@L> <fun:SimpleExpr> "(" <args:Comma<CallArg>> ")" <e:@L> =>? {
-        let mut num_holes = 0;
-        let args = args
-            .into_iter()
-            .map(|a| match a {
-                Ok(arg) => arg,
-                Err((location, label)) => {
-                    num_holes += 1;
-                    CallArg {
-                        label,
-                        location: Default::default(),
-                        value: UntypedExpr::Var {
-                            location,
-                            name: crate::ast::CAPTURE_VARIABLE.to_string(),
-                        }
-                    }
-                }
-            })
-            .collect();
-        let call = UntypedExpr::Call {
-            location: location(s, e),
-            fun: Box::new(fun),
-            args,
-        };
-        match num_holes {
-            // A normal call
-            0 => Ok(call),
-
-            // An anon function using the capture syntax run(_, 1, 2)
-            1 => Ok(UntypedExpr::Fn {
-                location: call.location().clone(),
-                is_capture: true,
-                args: vec![Arg {
-                    location: location(0, 0),
-                    annotation: None,
-                    names: ArgNames::Named { name: crate::ast::CAPTURE_VARIABLE.to_string() },
-                    typ: (),
-                }],
-                body: Box::new(call),
-                return_annotation: None,
-            }),
-
-            count => Err(lalrpop_util::ParseError::User {
-                error: Error::TooManyHolesInCapture {
-                    location: call.location().clone(),
-                    count
-                },
-            })
-        }
+        make_call(fun, args, s, e).map_err(|e| ParseError::User { error: e })
     }
+}
+
+RecordUpdateSpread: RecordUpdateSpread = {
+    <s:@L> ".." <name:VarName> <e:@L> => RecordUpdateSpread {
+        name: name,
+        location: location(s, e),
+    }
+}
+
+RecordUpdateArg: UntypedRecordUpdateArg = {
+    <s:@L> <label:(<VarName> ":")> <value:OpOrSimpleExpr> <e:@L> => UntypedRecordUpdateArg {
+        label,
+        value,
+        location: location(s, e)
+    },
 }
 
 CallArg: Result<CallArg<UntypedExpr>, (crate::ast::SrcSpan, Option<String>)> = {

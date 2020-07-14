@@ -1841,4 +1841,67 @@ main(Arg) ->
     end.
 "#,
     );
+
+    // Record updates
+    assert_erl!(
+        r#"
+pub type Person { Person(name: String, age: Int) }
+
+fn main() {
+    let p = Person("Quinn", 27)
+    let new_p = Person(..p, age: 28)
+    new_p
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main() ->
+    P = {person, <<"Quinn"/utf8>>, 27},
+    NewP = erlang:setelement(3, P, 28),
+    NewP.
+"#,
+    );
+
+    // Record updates with field accesses
+    assert_erl!(
+        r#"
+pub type Person { Person(name: String, age: Int) }
+
+fn main() {
+    let p = Person("Quinn", 27)
+    let new_p = Person(..p, age: p.age + 1)
+    new_p
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main() ->
+    P = {person, <<"Quinn"/utf8>>, 27},
+    NewP = erlang:setelement(3, P, erlang:element(3, P) + 1),
+    NewP.
+"#,
+    );
+
+    // Record updates with multiple fields
+    assert_erl!(
+        r#"
+pub type Person { Person(name: String, age: Int) }
+
+fn main() {
+    let p = Person("Quinn", 27)
+    let new_p = Person(..p, age: 28, name: "Riley")
+    new_p
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main() ->
+    P = {person, <<"Quinn"/utf8>>, 27},
+    NewP = erlang:setelement(2, erlang:setelement(3, P, 28), <<"Riley"/utf8>>),
+    NewP.
+"#,
+    );
 }

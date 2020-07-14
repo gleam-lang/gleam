@@ -133,6 +133,13 @@ pub enum TypedExpr {
         typ: Arc<Type>,
         segments: Vec<TypedExprBitStringSegment>,
     },
+
+    RecordUpdate {
+        location: SrcSpan,
+        typ: Arc<Type>,
+        spread: Box<Self>,
+        args: Vec<TypedRecordUpdateArg>,
+    },
 }
 
 impl TypedExpr {
@@ -157,6 +164,7 @@ impl TypedExpr {
             Self::ModuleSelect { location, .. } => location,
             Self::RecordAccess { location, .. } => location,
             Self::BitString { location, .. } => location,
+            Self::RecordUpdate { location, .. } => location,
         }
     }
 
@@ -187,6 +195,7 @@ impl TypedExpr {
             Self::ModuleSelect { location, .. } => location,
             Self::RecordAccess { location, .. } => location,
             Self::BitString { location, .. } => location,
+            Self::RecordUpdate { location, .. } => location,
         }
     }
 }
@@ -219,6 +228,7 @@ impl TypedExpr {
             Self::ModuleSelect { typ, .. } => typ.clone(),
             Self::RecordAccess { typ, .. } => typ.clone(),
             Self::BitString { typ, .. } => typ.clone(),
+            Self::RecordUpdate { typ, .. } => typ.clone(),
         }
     }
 }
