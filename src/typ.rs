@@ -5,12 +5,13 @@ mod tests;
 use crate::{
     ast::{
         self, Arg, ArgNames, BinOp, BindingKind, BitStringSegment, BitStringSegmentOption, CallArg,
-        Clause, ClauseGuard, Constant, HasLocation, Pattern, RecordConstructor, SrcSpan, Statement,
-        TypeAst, TypedArg, TypedClause, TypedClauseGuard, TypedConstant, TypedExpr, TypedModule,
-        TypedMultiPattern, TypedPattern, TypedPatternBitStringSegment, TypedStatement,
-        UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant,
-        UntypedConstantBitStringSegment, UntypedExpr, UntypedExprBitStringSegment, UntypedModule,
-        UntypedMultiPattern, UntypedPattern, UntypedPatternBitStringSegment, UntypedStatement,
+        Clause, ClauseGuard, Constant, HasLocation, Pattern, RecordConstructor, RecordUpdateSpread,
+        SrcSpan, Statement, TypeAst, TypedArg, TypedClause, TypedClauseGuard, TypedConstant,
+        TypedExpr, TypedModule, TypedMultiPattern, TypedPattern, TypedPatternBitStringSegment,
+        TypedRecordUpdateArg, TypedStatement, UnqualifiedImport, UntypedArg, UntypedClause,
+        UntypedClauseGuard, UntypedConstant, UntypedConstantBitStringSegment, UntypedExpr,
+        UntypedExprBitStringSegment, UntypedModule, UntypedMultiPattern, UntypedPattern,
+        UntypedPatternBitStringSegment, UntypedRecordUpdateArg, UntypedStatement,
     },
     bit_string::{BinaryTypeSpecifier, Error as BinaryError},
     build::Origin,
@@ -990,6 +991,13 @@ impl<'a> Typer<'a> {
             UntypedExpr::BitString { location, segments } => {
                 self.infer_bit_string(segments, location)
             }
+
+            UntypedExpr::RecordUpdate {
+                location,
+                constructor,
+                spread,
+                args,
+            } => self.infer_record_update(*constructor, spread, args, location),
         }
     }
 
@@ -1985,7 +1993,18 @@ impl<'a> Typer<'a> {
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         // Infer the type of the (presumed) record
-        let record = Box::new(self.infer(record)?);
+        let record = self.infer(record)?;
+
+        self.infer_known_record_access(record, label, location)
+    }
+
+    fn infer_known_record_access(
+        &mut self,
+        record: TypedExpr,
+        label: String,
+        location: SrcSpan,
+    ) -> Result<TypedExpr, Error> {
+        let record = Box::new(record);
 
         // If we don't yet know the type of the record then we cannot use any accessors
         if record.typ().is_unbound() {
@@ -2289,6 +2308,103 @@ impl<'a> Typer<'a> {
             elements,
             location,
             typ: list(typ),
+        })
+    }
+
+    fn infer_record_update(
+        &mut self,
+        constructor: UntypedExpr,
+        spread: RecordUpdateSpread,
+        args: Vec<UntypedRecordUpdateArg>,
+        location: SrcSpan,
+    ) -> Result<TypedExpr, Error> {
+        let (module, name) = match self.infer(constructor.clone())? {
+            TypedExpr::ModuleSelect {
+                module_alias,
+                label,
+                ..
+            } => (Some(module_alias), label),
+
+            TypedExpr::Var { name, .. } => (None, name),
+
+            constructor => {
+                return Err(Error::RecordUpdateInvalidConstructor {
+                    location: constructor.location().clone(),
+                })
+            }
+        };
+
+        let value_constructor = self
+            .get_value_constructor(module.as_ref(), &name)
+            .map_err(|e| convert_get_value_constructor_error(e, &location))?
+            .clone();
+
+        if let ValueConstructor {
+            variant:
+                ValueConstructorVariant::Record {
+                    field_map: Some(field_map),
+                    ..
+                },
+            ..
+        } = value_constructor
+        {
+            if let Type::Fn { retrn, .. } = value_constructor.typ.as_ref() {
+                let spread = self.infer_var(spread.name, spread.location)?;
+                let return_type = self.instantiate(retrn.clone(), self.level, &mut hashmap![]);
+
+                // Check that the spread variable unifies with the return type of the constructor
+                self.unify(return_type.clone(), spread.typ())
+                    .map_err(|e| convert_unify_error(e, spread.location()))?;
+
+                let args: Vec<TypedRecordUpdateArg> = args
+                    .iter()
+                    .map(
+                        |UntypedRecordUpdateArg {
+                             label,
+                             value,
+                             location,
+                             ..
+                         }| {
+                            let value = self.infer(value.clone())?;
+                            let spread_field = self.infer_known_record_access(
+                                spread.clone(),
+                                label.to_string(),
+                                location.clone(),
+                            )?;
+
+                            // Check that the update argument unifies with the corresponding
+                            // field in the record contained within the spread variable. We
+                            // need to check the spread, and not the constructor, in order
+                            // to handle polymorphic types.
+                            self.unify(spread_field.typ(), value.typ())
+                                .map_err(|e| convert_unify_error(e, value.location()))?;
+
+                            match field_map.fields.get(label) {
+                                None => crate::error::fatal_compiler_bug(
+                                    "Failed to lookup record field after successfully inferring that field",
+                                ),
+                                Some(p) => Ok(TypedRecordUpdateArg {
+                                    location: location.clone(),
+                                    label: label.to_string(),
+                                    value,
+                                    index: *p,
+                                }),
+                            }
+                        },
+                    )
+                    .collect::<Result<_, _>>()?;
+
+                return Ok(TypedExpr::RecordUpdate {
+                    location,
+                    typ: spread.typ(),
+                    spread: Box::new(spread),
+                    args,
+                });
+            }
+        };
+
+        Err(Error::RecordUpdateInvalidConstructor {
+            location: constructor.location().clone(),
         })
     }
 
@@ -2753,6 +2869,10 @@ pub enum Error {
     },
 
     RecordAccessUnknownType {
+        location: SrcSpan,
+    },
+
+    RecordUpdateInvalidConstructor {
         location: SrcSpan,
     },
 

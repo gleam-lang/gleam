@@ -1884,6 +1884,101 @@ pub fn main() {
             ("main", "fn() -> Box"),
         ],
     );
+
+    // No arguments given to a record update
+    assert_infer!(
+        "
+        pub type Person {
+            Person(name: String, age: Int)
+        };
+        pub fn identity(person: Person) {
+            Person(..person)
+        }",
+        vec![
+            ("Person", "fn(String, Int) -> Person"),
+            ("identity", "fn(Person) -> Person")
+        ]
+    );
+
+    // Some arguments given to a record update
+    assert_infer!(
+        "
+        pub type Person {
+            Person(name: String, age: Int)
+        };
+        pub fn update_name(person: Person, name: String) {
+            Person(..person, name: name)
+        }",
+        vec![
+            ("Person", "fn(String, Int) -> Person"),
+            ("update_name", "fn(Person, String) -> Person")
+        ]
+    );
+
+    // All arguments given in order to a record update
+    assert_infer!(
+        "
+        pub type Person {
+            Person(name: String, age: Int)
+        };
+        pub fn update_person(person: Person, name: String, age: Int) {
+            Person(..person, name: name, age: age, )
+        }",
+        vec![
+            ("Person", "fn(String, Int) -> Person"),
+            ("update_person", "fn(Person, String, Int) -> Person")
+        ]
+    );
+
+    // All arguments given out of order to a record update
+    assert_infer!(
+        "
+        pub type Person {
+            Person(name: String, age: Int)
+        };
+        pub fn update_person(person: Person, name: String, age: Int) {
+            Person(..person, age: age, name: name)
+        }",
+        vec![
+            ("Person", "fn(String, Int) -> Person"),
+            ("update_person", "fn(Person, String, Int) -> Person")
+        ]
+    );
+
+    // A record update with polymorphic types
+    assert_infer!(
+        "
+        pub type Box(a, b) {
+            Box(left: a, right: b)
+        };
+
+        pub fn combine_boxes(a: Box(Int, Bool), b: Box(Bool, Int)) {
+            Box(..a, left: a.left + b.right, right: b.left)
+        }",
+        vec![
+            ("Box", "fn(a, b) -> Box(a, b)"),
+            (
+                "combine_boxes",
+                "fn(Box(Int, Bool), Box(Bool, Int)) -> Box(Int, Bool)"
+            )
+        ]
+    );
+
+    // A record update with unannotated polymorphic types
+    assert_infer!(
+        "
+        pub type Box(a, b) {
+            Box(left: a, right: b)
+        };
+
+        pub fn combine_boxes(a: Box(t1, t2), b: Box(t2, t1)) {
+            Box(..a, left: b.right, right: b.left)
+        }",
+        vec![
+            ("Box", "fn(a, b) -> Box(a, b)"),
+            ("combine_boxes", "fn(Box(a, b), Box(b, a)) -> Box(a, b)")
+        ]
+    );
 }
 
 #[test]
@@ -2614,6 +2709,191 @@ fn x() {
             valid: vec!["a".to_string(), "b".to_string()],
             supplied: vec!["a".to_string()],
         })
+    );
+
+    // A variable of the wrong type given to a record update
+    assert_error!(
+        "
+        pub type Person {
+            Person(name: String, age: Int)
+        };
+        pub type Box(a) {
+            Box(a)
+        };
+        pub fn update_person(person: Person, box: Box(a)) {
+            Person(..box)
+        }",
+        Error::CouldNotUnify {
+            location: SrcSpan {
+                start: 216,
+                end: 221
+            },
+            expected: Arc::new(Type::App {
+                public: true,
+                module: vec!["my_module".to_string()],
+                name: "Person".to_string(),
+                args: vec![]
+            }),
+            given: Arc::new(Type::App {
+                public: true,
+                module: vec!["my_module".to_string()],
+                name: "Box".to_string(),
+                args: vec![Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Generic { id: 9 })),
+                })]
+            }),
+        },
+    );
+
+    // An undefined variable given to a record update
+    assert_error!(
+        "
+        pub type Person {
+            Person(name: String, age: Int)
+        };
+        pub fn update_person() {
+            Person(..person)
+        }",
+        Error::UnknownVariable {
+            location: SrcSpan {
+                start: 133,
+                end: 141
+            },
+            name: "person".to_string(),
+            variables: env_vars_with(&["Person", "update_person"]),
+        },
+    );
+
+    // An unknown field given to a record update
+    assert_error!(
+        "
+        pub type Person {
+            Person(name: String)
+        };
+        pub fn update_person(person: Person) {
+            Person(..person, foo: 5)
+        }",
+        Error::UnknownField {
+            location: SrcSpan {
+                start: 147,
+                end: 153
+            },
+            label: "foo".to_string(),
+            fields: vec!["name".to_string()],
+            typ: Arc::new(Type::App {
+                args: vec![],
+                public: true,
+                module: vec!["my_module".to_string()],
+                name: "Person".to_string(),
+            })
+        },
+    );
+
+    // An unknown record constructor being used in a record update
+    assert_error!(
+        "
+        pub type Person {
+            Person(name: String, age: Int)
+        };
+        pub fn update_person(person: Person) {
+            NotAPerson(..person)
+        }",
+        Error::UnknownVariable {
+            location: SrcSpan {
+                start: 140,
+                end: 150
+            },
+            name: "NotAPerson".to_string(),
+            variables: env_vars_with(&["Person", "update_person", "person"]),
+        },
+    );
+
+    // Something other than a record constructor being used in a record update
+    assert_error!(
+        "
+        pub type Person {
+            Person(name: String, age: Int)
+        };
+        pub fn identity(a) { a }
+        pub fn update_person(person: Person) {
+            identity(..person)
+        }",
+        Error::RecordUpdateInvalidConstructor {
+            location: SrcSpan {
+                start: 173,
+                end: 181,
+            },
+        },
+    );
+
+    // A record update with a constructor returned from an expression
+    assert_error!(
+        "
+        pub type Person {
+            Person(name: String, age: Int)
+        };
+        pub fn update_person(person: Person) {
+            let constructor = Person
+            constructor(..person)
+        }",
+        Error::RecordUpdateInvalidConstructor {
+            location: SrcSpan {
+                start: 177,
+                end: 188,
+            },
+        },
+    );
+
+    // A record update on polymorphic types with a field of the wrong type
+    assert_error!(
+        "
+        pub type Box(a) {
+            Box(value: a, i: Int)
+        };
+        pub fn update_box(box: Box(Int), value: String) {
+            Box(..box, value: value)
+        };",
+        Error::CouldNotUnify {
+            location: SrcSpan {
+                start: 160,
+                end: 165,
+            },
+            expected: Arc::new(Type::App {
+                args: vec![],
+                public: true,
+                module: vec![],
+                name: "Int".to_string(),
+            }),
+            given: Arc::new(Type::App {
+                args: vec![],
+                public: true,
+                module: vec![],
+                name: "String".to_string(),
+            })
+        },
+    );
+
+    // A record update on polymorphic types with generic fields of the wrong type
+    assert_error!(
+        "
+        pub type Box(a) {
+            Box(value: a, i: Int)
+        };
+        pub fn update_box(box: Box(a), value: b) {
+            Box(..box, value: value)
+        };",
+        Error::CouldNotUnify {
+            location: SrcSpan {
+                start: 153,
+                end: 158,
+            },
+            expected: Arc::new(Type::Var {
+                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 9 })),
+            }),
+            given: Arc::new(Type::Var {
+                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 11 })),
+            }),
+        },
     );
 }
 
