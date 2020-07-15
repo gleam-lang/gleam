@@ -2918,13 +2918,6 @@ fn register_types(
             args,
             location,
             ..
-        }
-        | Statement::CustomType {
-            name,
-            public,
-            args,
-            location,
-            ..
         } => {
             let parameters = typer.make_annotated_type_vars(args, location)?;
             let typ = Arc::new(Type::App {
@@ -2933,6 +2926,7 @@ fn register_types(
                 name: name.clone(),
                 args: parameters.clone(),
             });
+
             typer.insert_type_constructor(
                 name.clone(),
                 TypeConstructor {
@@ -2943,6 +2937,46 @@ fn register_types(
                     typ,
                 },
             )?;
+        }
+
+        Statement::CustomType {
+            name,
+            public,
+            opaque,
+            args,
+            constructors,
+            location,
+            ..
+        } => {
+            let parameters = typer.make_annotated_type_vars(args, location)?;
+            let typ = Arc::new(Type::App {
+                public: *public,
+                module: module.to_owned(),
+                name: name.clone(),
+                args: parameters.clone(),
+            });
+
+            typer.insert_type_constructor(
+                name.clone(),
+                TypeConstructor {
+                    origin: location.clone(),
+                    module: module.to_owned(),
+                    public: *public,
+                    parameters,
+                    typ: typ.clone(),
+                },
+            )?;
+
+            // If the custom type only has a single constructor then we can access the
+            // fields using the record.field syntax, so store any fields accessors.
+            if let Some(accessors) = typer.custom_type_accessors(constructors.as_slice())? {
+                let map = AccessorsMap {
+                    public: (*public && !*opaque),
+                    accessors,
+                    typ: typ.clone(),
+                };
+                typer.insert_accessors(name.as_ref(), map)
+            }
         }
 
         Statement::TypeAlias {
@@ -3305,17 +3339,6 @@ pub fn infer_module(
                     .zip(args.iter())
                 {
                     annotated_type_vars.insert(name.to_string(), (0, typ.clone()));
-                }
-
-                // If the custom type only has a single constructor then we can access the
-                // fields using the record.field syntax, so store any fields accessors.
-                if let Some(accessors) = typer.custom_type_accessors(constructors.as_slice())? {
-                    let map = AccessorsMap {
-                        public: (public && !opaque),
-                        accessors,
-                        typ: retrn.clone(),
-                    };
-                    typer.insert_accessors(name.as_ref(), map)
                 }
 
                 // Check and register constructors
