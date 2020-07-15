@@ -1759,6 +1759,19 @@ pub fn get_string(x: Box(String)) { x.inner }
         ]
     );
 
+    // Field access works before type is defined
+    assert_infer!(
+        "
+pub fn name(cat: Cat) {
+  cat.name
+}
+
+pub opaque type Cat {
+  Cat(name: String)
+}",
+        vec![("name", "fn(Cat) -> String"),]
+    );
+
     // We can annotate let with custom types
     assert_infer!(
         "
