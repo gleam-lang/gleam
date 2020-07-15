@@ -5,6 +5,7 @@
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
+- Field access now works before the custom type is defined.
 
 ## v0.10.1 - 2020-07-15
 
