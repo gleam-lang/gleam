@@ -20,6 +20,7 @@
 - The error message for a duplicate module member now shows the location of
   both definitions.
 - Fix compiler bug where labelled arguments were being reordered incorrectly.
+- Support updating records with a new spread syntax
 
 # v0.10.0 - 2020-07-01
 
