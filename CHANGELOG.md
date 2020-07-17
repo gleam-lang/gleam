@@ -6,6 +6,9 @@
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 - Field access now works before the custom type is defined.
+- The error message returned by the compiler when the user tries to use unknown
+  labelled arguments now handles multiple labels at once, and does not suggest
+  labels they have already supplied.
 
 ## v0.10.1 - 2020-07-15
 
