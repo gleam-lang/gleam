@@ -391,35 +391,59 @@ Second: {}",
             }
 
             Error::Type { path, src, error } => match error {
-                UnknownLabel {
-                    label,
-                    location,
-                    labels,
+                UnknownLabels {
+                    unknown,
+                    valid,
+                    supplied,
                 } => {
-                    let mut labels = labels.clone();
-                    let diagnostic = Diagnostic {
-                        title: "Unknown label".to_string(),
-                        label: did_you_mean(label, &mut labels, "Unexpected label"),
+                    let mut other_labels = valid
+                        .into_iter()
+                        .cloned()
+                        .filter(|label| !supplied.contains(label))
+                        .collect();
+
+                    let title = if unknown.len() > 1 {
+                        "Unknown labels"
+                    } else {
+                        "Unknown label"
+                    };
+
+                    let diagnostic = MultiLineDiagnostic {
+                        title: title.to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        labels: unknown
+                            .iter()
+                            .map(|(label, location)| DiagnosticLabel {
+                                label: did_you_mean(label, &mut other_labels, "Unexpected label"),
+                                location: location.clone(),
+                                style: LabelStyle::Primary,
+                            })
+                            .collect(),
                     };
-                    write(buffer, diagnostic, Severity::Error);
-                    if !labels.is_empty() {
-                        writeln!(
-                            buffer,
-                            "This constructor does not accept the label `{}`.
-Expected one of `{}`.",
-                            label,
-                            labels.iter().join("`, `")
-                        )
-                        .unwrap();
-                    } else {
+                    write_diagnostic(buffer, diagnostic, Severity::Error);
+
+                    if valid.is_empty() {
                         writeln!(
                             buffer,
                             "This constructor does not accept any labelled arguments."
                         )
                         .unwrap();
+                    } else {
+                        if other_labels.is_empty() {
+                            writeln!(
+                                buffer,
+                                "You have already supplied all the labelled arguments that this constructor accepts."
+                            )
+                            .unwrap();
+                        } else {
+                            writeln!(
+                                buffer,
+                                "The other labelled arguments that this constructor accepts are `{}`.",
+                                other_labels.iter().join("`, `")
+                            )
+                            .unwrap();
+                        }
                     }
                 }
 

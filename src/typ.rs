@@ -213,7 +213,8 @@ impl FieldMap {
     ///
     fn reorder<A>(&self, args: &mut Vec<CallArg<A>>, location: &SrcSpan) -> Result<(), Error> {
         let mut labelled_arguments_given = false;
-        let mut seen = std::collections::HashSet::new();
+        let mut seen_labels = std::collections::HashSet::new();
+        let mut unknown_labels = Vec::new();
 
         if self.arity != args.len() {
             return Err(Error::IncorrectArity {
@@ -254,32 +255,40 @@ impl FieldMap {
 
             let position = match self.fields.get(label) {
                 None => {
-                    return Err(Error::UnknownLabel {
-                        location: location.clone(),
-                        labels: self.fields.keys().map(|t| t.to_string()).collect(),
-                        label: label.to_string(),
-                    })
+                    unknown_labels.push((label.clone(), location.clone()));
+                    i = i + 1;
+                    continue;
                 }
-                Some(p) => p,
+
+                Some(p) => *p,
             };
 
-            if *position == i {
+            // If the argument is already in the right place
+            if position == i {
+                seen_labels.insert(label.clone());
                 i = i + 1;
-                continue;
-            }
+            } else {
+                if seen_labels.contains(label) {
+                    return Err(Error::DuplicateArgument {
+                        location: location.clone(),
+                        label: label.to_string(),
+                    });
+                }
+                seen_labels.insert(label.clone());
 
-            if seen.contains(position) {
-                return Err(Error::DuplicateArgument {
-                    location: location.clone(),
-                    label: label.to_string(),
-                });
+                args.swap(position, i);
             }
-
-            seen.insert(*position);
-            args.swap(*position, i);
         }
 
-        Ok(())
+        if unknown_labels.len() > 0 {
+            Err(Error::UnknownLabels {
+                valid: self.fields.keys().map(|t| t.to_string()).collect(),
+                unknown: unknown_labels,
+                supplied: seen_labels.into_iter().collect(),
+            })
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -2592,10 +2601,10 @@ pub enum NewTypeAction {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Error {
-    UnknownLabel {
-        location: SrcSpan,
-        label: String,
-        labels: Vec<String>,
+    UnknownLabels {
+        unknown: Vec<(String, SrcSpan)>,
+        valid: Vec<String>,
+        supplied: Vec<String>,
     },
 
     UnknownVariable {
