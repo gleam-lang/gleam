@@ -2609,11 +2609,11 @@ fn x() {
     let x = X(a: 1, c: 2.0)
     x
 }"#,
-        Error::UnknownLabels {
+        sort_options(Error::UnknownLabels {
             unknown: vec![("c".to_string(), SrcSpan { start: 60, end: 66 })],
             valid: vec!["a".to_string(), "b".to_string()],
             supplied: vec!["a".to_string()],
-        }
+        })
     );
 }
 
@@ -2737,6 +2737,19 @@ fn sort_options(e: Error) -> Error {
                 location,
                 name,
                 variables,
+            }
+        }
+
+        Error::UnknownLabels {
+            unknown,
+            mut valid,
+            supplied,
+        } => {
+            valid.sort();
+            Error::UnknownLabels {
+                unknown,
+                valid,
+                supplied,
             }
         }
 
