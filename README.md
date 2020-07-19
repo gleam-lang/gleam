@@ -70,6 +70,7 @@ development.
 - [José Valim](https://github.com/josevalim)
 - [Lars Wikman](https://github.com/lawik)
 - [Mario Vellandi](https://github.com/mvellandi)
+- [Matthew Cheely](https://github.com/MattCheely)
 - [Mike R](https://github.com/mroach)
 - [Milad](https://github.com/slashmili)
 - [Parker Selbert](https://github.com/sorentwo)
