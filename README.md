@@ -60,6 +60,7 @@ development.
 - [Clever Bunny LTD](https://github.com/cleverbunny)
 - [Dave Lucia](https://github.com/davydog187)
 - [David McKay](https://github.com/rawkode)
+- [Eric Meadows-Jönsson](https://github.com/ericmj)
 - [Guilherme Pasqualino](https://github.com/ggpasqualino)
 - [Hasan YILDIZ](https://github.com/hsnyildiz)
 - [Hendrik Richter](https://github.com/hendi)
