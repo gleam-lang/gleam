@@ -36,6 +36,8 @@ protobuf = "2.3"
 flate2 = "1.0"
 # RSA signature verification
 ring = "0.16"
+# PEM -> DER conversion
+x509-parser = "0.8.0-beta4"
 
 [dev-dependencies]
 # HTTP mock server
