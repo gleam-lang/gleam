@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.1.0 - 2020-07-20
 
 - The `get_repository_versions` method has been added.
 - The `repository_base` field has been added to both authenticated and
