@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.1 - 2020-07-20
+
+- Updated generated protobuffer deserialisation code.
+
 ## v1.1.0 - 2020-07-20
 
 - The `get_repository_versions` method has been added.

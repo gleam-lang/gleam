@@ -1,6 +1,6 @@
 [package]
 name = "hexpm"
-version = "1.1.0"
+version = "1.1.1"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2018"
 
@@ -45,6 +45,6 @@ mockito = "0.25.1"
 # Async runtime
 tokio = { version = "0.2", features = ["full"] }
 
-# [build-dependencies]
-# # Protobuf code generation
-# protobuf-codegen-pure = "2.3"
+[build-dependencies]
+# Protobuf code generation
+protobuf-codegen-pure = "2.16.2"
