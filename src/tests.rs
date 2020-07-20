@@ -505,20 +505,21 @@ async fn get_repository_versions_ok_test() {
         .get_repository_versions(std::include_bytes!("../test/public_key"))
         .await;
 
-    let mut expected = HashMap::with_capacity(3);
-    expected.insert(
-        "one".to_string(),
-        vec!["1.0.0".to_string(), "2.0.0".to_string()],
+    assert_eq!(
+        &vec![
+            "0.0.0".to_string(),
+            "0.1.0".to_string(),
+            "0.2.0".to_string(),
+            "0.2.1".to_string(),
+            "0.2.2".to_string(),
+            "0.2.3".to_string(),
+            "0.2.4".to_string(),
+            "0.3.0".to_string(),
+            "0.4.0".to_string(),
+            "0.5.0".to_string(),
+        ],
+        versions.unwrap().get("exfmt").unwrap(),
     );
-    expected.insert(
-        "two".to_string(),
-        vec!["1.0.0".to_string(), "1.1.0".to_string()],
-    );
-    expected.insert(
-        "three".to_string(),
-        vec!["0.0.0".to_string(), "8.0.0".to_string()],
-    );
-    assert_eq!(expected, versions.unwrap());
 
     mock.assert();
 }
