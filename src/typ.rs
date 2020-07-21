@@ -63,13 +63,6 @@ impl Type {
         }
     }
 
-    pub fn app_parameters(&self) -> Option<&[Arc<Type>]> {
-        match self {
-            Type::App { args, .. } => Some(args.as_slice()),
-            _ => None,
-        }
-    }
-
     /// Get the args for the type if the type is a specific Type::App.
     /// Returns None if the type is not a Type::App or is an incorrect Type:App
     ///
@@ -3328,8 +3321,6 @@ pub fn infer_module(
                 args,
                 constructors,
             } => {
-                let mut annotated_type_vars = hashmap![];
-
                 // This custom type was inserted into the module types in the `register_types`
                 // pass, so we can expect this type to exist already.
                 let retrn = typer
@@ -3338,17 +3329,6 @@ pub fn infer_module(
                     .gleam_expect("Type for custom type not found on constructor infer pass")
                     .typ
                     .clone();
-
-                // Register the parameterised types in the type into annotated_type_vars so that they are
-                // used when building the constructors below.
-                for (typ, name) in retrn
-                    .app_parameters()
-                    .unwrap_or(&[])
-                    .iter()
-                    .zip(args.iter())
-                {
-                    annotated_type_vars.insert(name.to_string(), (0, typ.clone()));
-                }
 
                 // Check and register constructors
                 for constructor in constructors.iter() {
