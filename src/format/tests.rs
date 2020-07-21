@@ -25,8 +25,8 @@ fn module_test() {
     assert_format!("import one/two/three as free\n");
     assert_format!("import one/two/three.{thunk} as free\n");
     assert_format!("import one/two/three.{thunk as funky} as free\n");
-    assert_format!("import my/cool/module.{\n  Ane, Bwo, Chree, Dour, Eive, Fix, Geven, Hight, Iine, Jen, Kleven, Lwelve,\n  Mhirteen, Nifteen, Oixteen\n}\n");
-    assert_format!("import gleam/result.{\n  Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, Abcde,\n  End\n}\n");
+    assert_format!("import my/cool/module.{\n  Ane, Bwo, Chree, Dour, Eive, Fix, Geven, Hight, Iine, Jen, Kleven, Lwelve,\n  Mhirteen, Nifteen, Oixteen,\n}\n");
+    assert_format!("import gleam/result.{\n  Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, Abcde,\n  End,\n}\n");
 
     //
     // Multiple statements

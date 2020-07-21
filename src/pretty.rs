@@ -95,10 +95,7 @@ pub enum Document {
     FlexBreak(Box<Document>),
 
     /// Renders `broken` if group is broken, `unbroken` otherwise
-    Break {
-        broken: String,
-        unbroken: String,
-    },
+    Break { broken: String, unbroken: String },
 
     /// Join 2 documents together
     Cons(Box<Document>, Box<Document>),
@@ -111,9 +108,6 @@ pub enum Document {
 
     /// Nests the given document to the current cursor position
     Group(Box<Document>),
-
-    // May nest the given document based on best fit, thus flex group
-    FlexGroup(isize, Box<Document>),
 
     /// A string to render
     Text(String),
@@ -142,8 +136,6 @@ fn fits(mut limit: isize, mut docs: Vector<(isize, Mode, Document)>) -> bool {
             Document::Line(_) => return true,
 
             Document::ForceBreak => return false,
-
-            Document::FlexGroup(i, doc) => docs.push_front((i + indent, mode, *doc)),
 
             Document::Nest(i, doc) => docs.push_front((i + indent, mode, *doc)),
 
@@ -236,14 +228,6 @@ fn fmt(b: &mut String, limit: isize, mut width: isize, mut docs: Vector<(isize, 
                 docs.push_front((indent, Mode::Unbroken, (*doc).clone()));
                 if !fits(limit - width, docs.clone()) {
                     docs[0] = (indent, Mode::Broken, (*doc).clone());
-                }
-            }
-
-            Document::FlexGroup(i, doc) => {
-                docs.push_front((indent, Mode::Unbroken, (*doc).clone()));
-                if !fits(limit - width, docs.clone()) {
-                    docs.insert(1, (indent, Mode::Broken, line()));
-                    docs[0] = (indent + i, Mode::Broken, line().append((*doc).clone()));
                 }
             }
         }
@@ -484,10 +468,6 @@ pub fn delim(d: &str) -> Document {
 impl Document {
     pub fn group(self) -> Document {
         Document::Group(Box::new(self))
-    }
-
-    pub fn flex_group(self, indent: isize) -> Document {
-        Document::FlexGroup(indent, Box::new(self))
     }
 
     pub fn flex_break(self) -> Document {

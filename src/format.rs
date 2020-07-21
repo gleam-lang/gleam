@@ -210,11 +210,14 @@ impl<'a> Formatter<'a> {
                     let unqualified = unqualified
                         .iter()
                         .sorted_by(|a, b| a.name.cmp(&b.name))
-                        .map(|e| e.to_doc().flex_break())
+                        .map(|e| e.to_doc())
                         .intersperse(delim(",").flex_break());
-                    ".{".to_doc()
-                        .append(concat(unqualified).flex_group(INDENT))
-                        .append("}")
+                    let unqualified = break_("", "")
+                        .append(concat(unqualified))
+                        .nest(INDENT)
+                        .append(break_(",", ""))
+                        .group();
+                    ".{".to_doc().append(unqualified).append("}")
                 })
                 .append(if let Some(name) = as_name {
                     format!(" as {}", name).to_doc()

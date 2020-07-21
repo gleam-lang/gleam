@@ -9,6 +9,9 @@
 - The error message returned by the compiler when the user tries to use unknown
   labelled arguments now handles multiple labels at once, and does not suggest
   labels they have already supplied.
+- The formatter style has been improved to use a trailing comma on imports
+  broken over multiple lines.
+- The performance of the formatter has been improved.
 
 ## v0.10.1 - 2020-07-15
 
