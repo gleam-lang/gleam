@@ -65,6 +65,7 @@ development.
 - [Hasan YILDIZ](https://github.com/hsnyildiz)
 - [Hendrik Richter](https://github.com/hendi)
 - [Hécate](https://github.com/Kleidukos)
+- [Ingmar Gagen](https://github.com/igagen)
 - [Ivar Vong](https://github.com/ivarvong)
 - [James MacAulay](https://github.com/jamesmacaulay)
 - [John Palgut](https://github.com/Jwsonic)
