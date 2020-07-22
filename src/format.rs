@@ -76,7 +76,7 @@ impl<'a> Formatter<'a> {
         end != 0
     }
 
-    fn module(&mut self, module: &UntypedModule) -> Document {
+    fn module<'b>(&mut self, module: &'b UntypedModule) -> Document<'b> {
         let mut has_imports = false;
         let mut has_declarations = false;
         let mut imports = Vec::new();
@@ -140,7 +140,7 @@ impl<'a> Formatter<'a> {
             .append(line())
     }
 
-    fn statement(&mut self, statement: &UntypedStatement) -> Document {
+    fn statement<'b>(&mut self, statement: &'b UntypedStatement) -> Document<'b> {
         match statement {
             Statement::Fn {
                 name,
@@ -242,7 +242,7 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    fn const_expr<A, B>(&mut self, value: &Constant<A, B>) -> Document {
+    fn const_expr<'b, A, B>(&mut self, value: &'b Constant<A, B>) -> Document<'b> {
         match value {
             Constant::Int { value, .. } | Constant::Float { value, .. } => value.clone().to_doc(),
 
@@ -304,7 +304,12 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    pub fn docs_const_expr(&mut self, public: bool, name: &str, value: &TypedConstant) -> Document {
+    pub fn docs_const_expr<'b>(
+        &mut self,
+        public: bool,
+        name: &str,
+        value: &'b TypedConstant,
+    ) -> Document<'b> {
         let mut printer = typ::pretty::Printer::new();
 
         pub_(public)
@@ -316,12 +321,12 @@ impl<'a> Formatter<'a> {
             .append(self.const_expr(value))
     }
 
-    fn documented_statement(&mut self, s: &UntypedStatement) -> Document {
+    fn documented_statement<'b>(&mut self, s: &'b UntypedStatement) -> Document<'b> {
         let comments = self.doc_comments(s.location().start);
         comments.append(self.statement(s)).group()
     }
 
-    fn doc_comments(&mut self, limit: usize) -> Document {
+    fn doc_comments<'b>(&mut self, limit: usize) -> Document<'b> {
         let mut comments = self.pop_doc_comments(limit).peekable();
         match comments.peek() {
             None => nil(),
@@ -335,12 +340,12 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    fn type_ast_constructor(
+    fn type_ast_constructor<'b>(
         &mut self,
         module: &Option<String>,
         name: &str,
-        args: &[TypeAst],
-    ) -> Document {
+        args: &'b [TypeAst],
+    ) -> Document<'b> {
         let head = match module {
             None => name.to_doc(),
             Some(qualifier) => qualifier.to_string().to_doc().append(".").append(name),
@@ -353,7 +358,7 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    fn type_ast(&mut self, t: &TypeAst) -> Document {
+    fn type_ast<'b>(&mut self, t: &'b TypeAst) -> Document<'b> {
         match t {
             TypeAst::Constructor {
                 name, args, module, ..
@@ -373,17 +378,17 @@ impl<'a> Formatter<'a> {
         .group()
     }
 
-    fn type_arguments(&mut self, args: &[TypeAst]) -> Document {
+    fn type_arguments<'b>(&mut self, args: &'b [TypeAst]) -> Document<'b> {
         wrap_args(args.iter().map(|t| self.type_ast(t)))
     }
 
-    pub fn type_alias(
+    pub fn type_alias<'b>(
         &mut self,
         public: bool,
         name: &str,
         args: &[String],
-        typ: &TypeAst,
-    ) -> Document {
+        typ: &'b TypeAst,
+    ) -> Document<'b> {
         pub_(public)
             .append("type ")
             .append(name.to_string())
@@ -396,11 +401,11 @@ impl<'a> Formatter<'a> {
             .append(line().append(self.type_ast(typ)).group().nest(INDENT))
     }
 
-    fn fn_args<A>(&mut self, args: &[Arg<A>]) -> Document {
+    fn fn_args<'b, A>(&mut self, args: &'b [Arg<A>]) -> Document<'b> {
         wrap_args(args.iter().map(|e| self.fn_arg(e)))
     }
 
-    fn fn_arg<A>(&mut self, arg: &Arg<A>) -> Document {
+    fn fn_arg<'b, A>(&mut self, arg: &'b Arg<A>) -> Document<'b> {
         let comments = self.pop_comments(arg.location.start);
         let doc = match &arg.annotation {
             None => arg.names.to_doc(),
@@ -410,15 +415,15 @@ impl<'a> Formatter<'a> {
         commented(doc, comments)
     }
 
-    fn fn_(
+    fn fn_<'b>(
         &mut self,
         public: &bool,
         name: &str,
-        args: &Vec<UntypedArg>,
-        return_annotation: &Option<TypeAst>,
-        body: &UntypedExpr,
+        args: &'b Vec<UntypedArg>,
+        return_annotation: &'b Option<TypeAst>,
+        body: &'b UntypedExpr,
         end_location: usize,
-    ) -> Document {
+    ) -> Document<'b> {
         // Fn name and args
         let head = pub_(*public)
             .append("fn ")
@@ -447,13 +452,13 @@ impl<'a> Formatter<'a> {
             .append("}")
     }
 
-    pub fn external_fn_signature(
+    pub fn external_fn_signature<'b>(
         &mut self,
         public: bool,
         name: &str,
-        args: &[ExternalFnArg],
-        retrn: &TypeAst,
-    ) -> Document {
+        args: &'b [ExternalFnArg],
+        retrn: &'b TypeAst,
+    ) -> Document<'b> {
         pub_(public)
             .to_doc()
             .append("external fn ")
@@ -464,12 +469,12 @@ impl<'a> Formatter<'a> {
             .append(self.type_ast(retrn))
     }
 
-    fn expr_fn(
+    fn expr_fn<'b>(
         &mut self,
-        args: &[UntypedArg],
-        return_annotation: Option<&TypeAst>,
-        body: &UntypedExpr,
-    ) -> Document {
+        args: &'b [UntypedArg],
+        return_annotation: Option<&'b TypeAst>,
+        body: &'b UntypedExpr,
+    ) -> Document<'b> {
         let args = self.fn_args(args);
         let body = match body {
             UntypedExpr::Case { .. } => force_break().append(self.expr(body)),
@@ -494,7 +499,7 @@ impl<'a> Formatter<'a> {
             .group()
     }
 
-    fn seq(&mut self, first: &UntypedExpr, then: &UntypedExpr) -> Document {
+    fn seq<'b>(&mut self, first: &'b UntypedExpr, then: &'b UntypedExpr) -> Document<'b> {
         force_break()
             .append({
                 let doc = self.expr(first).group();
@@ -509,14 +514,14 @@ impl<'a> Formatter<'a> {
             .append(self.expr(then))
     }
 
-    fn let_(
+    fn let_<'b>(
         &mut self,
-        pattern: &UntypedPattern,
-        value: &UntypedExpr,
-        then: &UntypedExpr,
+        pattern: &'b UntypedPattern,
+        value: &'b UntypedExpr,
+        then: &'b UntypedExpr,
         kind: BindingKind,
-        annotation: &Option<TypeAst>,
-    ) -> Document {
+        annotation: &'b Option<TypeAst>,
+    ) -> Document<'b> {
         self.pop_empty_lines(pattern.location().end);
 
         let keyword = match kind {
@@ -544,7 +549,7 @@ impl<'a> Formatter<'a> {
             .append(self.expr(then))
     }
 
-    fn expr(&mut self, expr: &UntypedExpr) -> Document {
+    fn expr<'b>(&mut self, expr: &'b UntypedExpr) -> Document<'b> {
         let comments = self.pop_comments(expr.start_byte_index());
 
         let document = match expr {
@@ -628,7 +633,11 @@ impl<'a> Formatter<'a> {
         commented(document, comments)
     }
 
-    pub fn case(&mut self, subjects: &[UntypedExpr], clauses: &[UntypedClause]) -> Document {
+    pub fn case<'b>(
+        &mut self,
+        subjects: &'b [UntypedExpr],
+        clauses: &'b [UntypedClause],
+    ) -> Document<'b> {
         let subjects_doc = concat(
             subjects
                 .into_iter()
@@ -657,7 +666,12 @@ impl<'a> Formatter<'a> {
             .append("}")
     }
 
-    pub fn bin_op(&mut self, name: &BinOp, left: &UntypedExpr, right: &UntypedExpr) -> Document {
+    pub fn bin_op<'b>(
+        &mut self,
+        name: &'b BinOp,
+        left: &'b UntypedExpr,
+        right: &'b UntypedExpr,
+    ) -> Document<'b> {
         let precedence = name.precedence();
         let left_precedence = left.binop_precedence();
         let right_precedence = right.binop_precedence();
@@ -668,7 +682,7 @@ impl<'a> Formatter<'a> {
             .append(self.operator_side(right, precedence, right_precedence))
     }
 
-    pub fn operator_side(&mut self, doc: Document, op: u8, side: u8) -> Document {
+    pub fn operator_side<'b>(&mut self, doc: Document<'b>, op: u8, side: u8) -> Document<'b> {
         if op > side {
             delim("{")
                 .append(doc)
@@ -681,7 +695,12 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    fn pipe(&mut self, left: &UntypedExpr, right: &UntypedExpr, location_start: usize) -> Document {
+    fn pipe<'b>(
+        &mut self,
+        left: &'b UntypedExpr,
+        right: &'b UntypedExpr,
+        location_start: usize,
+    ) -> Document<'b> {
         let left_precedence = left.binop_precedence();
         let right_precedence = right.binop_precedence();
         let left = self.wrap_expr(left);
@@ -709,7 +728,7 @@ impl<'a> Formatter<'a> {
             .append(commented("|> ".to_doc().append(right), comments))
     }
 
-    fn pipe_capture_right_hand_side(&mut self, fun: &UntypedExpr) -> Document {
+    fn pipe_capture_right_hand_side<'b>(&mut self, fun: &'b UntypedExpr) -> Document<'b> {
         let (fun, args) = match fun {
             UntypedExpr::Call { fun, args, .. } => (fun, args),
             _ => crate::error::fatal_compiler_bug(
@@ -739,7 +758,7 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    fn fn_capture(&mut self, call: &UntypedExpr) -> Document {
+    fn fn_capture<'b>(&mut self, call: &'b UntypedExpr) -> Document<'b> {
         match call {
             UntypedExpr::Call { fun, args, .. } => self
                 .expr(fun)
@@ -752,7 +771,7 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    pub fn record_constructor(&mut self, constructor: &RecordConstructor) -> Document {
+    pub fn record_constructor<'b>(&mut self, constructor: &'b RecordConstructor) -> Document<'b> {
         let comments = self.pop_comments(constructor.location.start);
         let doc_comments = self.doc_comments(constructor.location.start);
 
@@ -783,15 +802,15 @@ impl<'a> Formatter<'a> {
         commented(doc_comments.append(doc).group(), comments)
     }
 
-    pub fn custom_type(
+    pub fn custom_type<'b>(
         &mut self,
         public: bool,
         opaque: bool,
         name: &str,
         args: &[String],
-        constructors: &[RecordConstructor],
+        constructors: &'b [RecordConstructor],
         location: &SrcSpan,
-    ) -> Document {
+    ) -> Document<'b> {
         self.pop_empty_lines(location.start);
         pub_(public)
             .to_doc()
@@ -818,13 +837,13 @@ impl<'a> Formatter<'a> {
             .append("}")
     }
 
-    pub fn docs_opaque_custom_type(
+    pub fn docs_opaque_custom_type<'b>(
         &mut self,
         public: bool,
         name: &str,
         args: &[String],
         location: &SrcSpan,
-    ) -> Document {
+    ) -> Document<'b> {
         self.pop_empty_lines(location.start);
         pub_(public)
             .to_doc()
@@ -838,13 +857,13 @@ impl<'a> Formatter<'a> {
             })
     }
 
-    pub fn docs_fn_signature(
+    pub fn docs_fn_signature<'b>(
         &mut self,
         public: bool,
         name: &str,
         args: &[TypedArg],
         return_type: Arc<Type>,
-    ) -> Document {
+    ) -> Document<'b> {
         let mut printer = typ::pretty::Printer::new();
 
         pub_(public)
@@ -856,11 +875,11 @@ impl<'a> Formatter<'a> {
     }
 
     // Like fn_args but will always print the types, even if they were implicit in the original source
-    pub fn docs_fn_args(
+    pub fn docs_fn_args<'b>(
         &mut self,
         args: &[TypedArg],
         printer: &mut typ::pretty::Printer,
-    ) -> Document {
+    ) -> Document<'b> {
         wrap_args(args.iter().map(|arg| {
             arg.names
                 .to_doc()
@@ -869,17 +888,17 @@ impl<'a> Formatter<'a> {
         }))
     }
 
-    fn external_fn_arg(&mut self, arg: &ExternalFnArg) -> Document {
+    fn external_fn_arg<'b>(&mut self, arg: &'b ExternalFnArg) -> Document<'b> {
         let comments = self.pop_comments(arg.location.start);
         let doc = label(&arg.label).append(self.type_ast(&arg.typ));
         commented(doc.group(), comments)
     }
 
-    fn external_fn_args(&mut self, args: &[ExternalFnArg]) -> Document {
+    fn external_fn_args<'b>(&mut self, args: &'b [ExternalFnArg]) -> Document<'b> {
         wrap_args(args.iter().map(|e| self.external_fn_arg(e)))
     }
 
-    fn wrap_expr(&mut self, expr: &UntypedExpr) -> Document {
+    fn wrap_expr<'b>(&mut self, expr: &'b UntypedExpr) -> Document<'b> {
         match expr {
             UntypedExpr::Seq { .. } | UntypedExpr::Let { .. } => "{"
                 .to_doc()
@@ -892,7 +911,7 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    fn call_arg(&mut self, arg: &CallArg<UntypedExpr>) -> Document {
+    fn call_arg<'b>(&mut self, arg: &'b CallArg<UntypedExpr>) -> Document<'b> {
         match &arg.label {
             Some(s) => s.clone().to_doc().append(": "),
             None => nil(),
@@ -900,7 +919,7 @@ impl<'a> Formatter<'a> {
         .append(self.wrap_expr(&arg.value))
     }
 
-    fn tuple_index(&mut self, tuple: &UntypedExpr, index: u64) -> Document {
+    fn tuple_index<'b>(&mut self, tuple: &'b UntypedExpr, index: u64) -> Document<'b> {
         match tuple {
             UntypedExpr::TupleIndex { .. } => self.expr(tuple).surround("{", "}"),
             _ => self.expr(tuple),
@@ -909,7 +928,7 @@ impl<'a> Formatter<'a> {
         .append(index)
     }
 
-    fn hanging_expr(&mut self, expr: &UntypedExpr) -> Document {
+    fn hanging_expr<'b>(&mut self, expr: &'b UntypedExpr) -> Document<'b> {
         match expr {
             UntypedExpr::Seq { .. } | UntypedExpr::Let { .. } => "{"
                 .to_doc()
@@ -928,7 +947,7 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    fn clause(&mut self, clause: &UntypedClause, index: usize) -> Document {
+    fn clause<'b>(&mut self, clause: &'b UntypedClause, index: usize) -> Document<'b> {
         let space_before = self.pop_empty_lines(clause.location.start);
         let after_position = clause.location.end;
         let clause_doc = concat(
@@ -956,7 +975,7 @@ impl<'a> Formatter<'a> {
         .append(self.hanging_expr(&clause.then))
     }
 
-    pub fn external_type(&mut self, public: bool, name: &str, args: &[String]) -> Document {
+    pub fn external_type<'b>(&mut self, public: bool, name: &str, args: &[String]) -> Document<'b> {
         pub_(public)
             .append("external type ")
             .append(name.to_string())
@@ -967,7 +986,7 @@ impl<'a> Formatter<'a> {
             })
     }
 
-    fn list_cons(&mut self, head: &UntypedExpr, tail: &UntypedExpr) -> Document {
+    fn list_cons<'b>(&mut self, head: &'b UntypedExpr, tail: &'b UntypedExpr) -> Document<'b> {
         let (elems, tail) = list_cons(head, tail, categorise_list_expr);
         let elems = concat(
             elems
@@ -979,7 +998,7 @@ impl<'a> Formatter<'a> {
         list(elems, tail)
     }
 
-    fn pattern(&mut self, pattern: &UntypedPattern) -> Document {
+    fn pattern<'b>(&mut self, pattern: &'b UntypedPattern) -> Document<'b> {
         let comments = self.pop_comments(pattern.location().start);
         let doc = match pattern {
             Pattern::Int { value, .. } => value.clone().to_doc(),
@@ -992,10 +1011,9 @@ impl<'a> Formatter<'a> {
 
             Pattern::VarCall { name, .. } => name.to_string().to_doc(),
 
-            Pattern::Let { name, pattern, .. } => self
-                .pattern(&pattern)
-                .append(" as ")
-                .append(name.to_string()),
+            Pattern::Let { name, pattern, .. } => {
+                self.pattern(&pattern).append(" as ").append(name.as_str())
+            }
 
             Pattern::Discard { name, .. } => name.to_string().to_doc(),
 
@@ -1090,7 +1108,7 @@ impl<'a> Formatter<'a> {
         commented(doc, comments)
     }
 
-    fn pattern_call_arg(&mut self, arg: &CallArg<UntypedPattern>) -> Document {
+    fn pattern_call_arg<'b>(&mut self, arg: &'b CallArg<UntypedPattern>) -> Document<'b> {
         match &arg.label {
             Some(s) => s.clone().to_doc().append(": "),
             None => nil(),
@@ -1098,7 +1116,7 @@ impl<'a> Formatter<'a> {
         .append(self.pattern(&arg.value))
     }
 
-    fn clause_guard(&mut self, clause_guard: &UntypedClauseGuard) -> Document {
+    fn clause_guard<'b>(&mut self, clause_guard: &'b UntypedClauseGuard) -> Document<'b> {
         match clause_guard {
             ClauseGuard::And { left, right, .. } => self
                 .clause_guard(left.as_ref())
@@ -1166,7 +1184,7 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    fn constant_call_arg<A, B>(&mut self, arg: &CallArg<Constant<A, B>>) -> Document {
+    fn constant_call_arg<'b, A, B>(&mut self, arg: &'b CallArg<Constant<A, B>>) -> Document<'b> {
         match &arg.label {
             None => self.const_expr(&arg.value),
             Some(s) => s
@@ -1182,8 +1200,8 @@ pub fn pretty_module(m: &UntypedModule, formatter: &mut Formatter<'_>) -> String
     format(80, formatter.module(m))
 }
 
-impl Documentable for &ArgNames {
-    fn to_doc(self) -> Document {
+impl<'a> Documentable<'a> for &ArgNames {
+    fn to_doc(self) -> Document<'a> {
         match self {
             ArgNames::Discard { name } => name.to_string(),
             ArgNames::LabelledDiscard { label, name } => format!("{} {}", label, name),
@@ -1194,7 +1212,7 @@ impl Documentable for &ArgNames {
     }
 }
 
-fn pub_(public: bool) -> Document {
+fn pub_<'a>(public: bool) -> Document<'a> {
     if public {
         "pub ".to_doc()
     } else {
@@ -1202,24 +1220,24 @@ fn pub_(public: bool) -> Document {
     }
 }
 
-impl Documentable for &UnqualifiedImport {
-    fn to_doc(self) -> Document {
-        self.name.clone().to_doc().append(match &self.as_name {
+impl<'a> Documentable<'a> for &'a UnqualifiedImport {
+    fn to_doc(self) -> Document<'a> {
+        self.name.as_str().to_doc().append(match &self.as_name {
             None => nil(),
             Some(s) => " as ".to_doc().append(s.clone()),
         })
     }
 }
 
-fn label(label: &Option<String>) -> Document {
+fn label<'a>(label: &Option<String>) -> Document<'a> {
     match label {
         Some(s) => s.clone().to_doc().append(": "),
         None => nil(),
     }
 }
 
-impl Documentable for &BinOp {
-    fn to_doc(self) -> Document {
+impl<'a, 'b> Documentable<'b> for &'a BinOp {
+    fn to_doc(self) -> Document<'b> {
         match self {
             BinOp::And => " && ",
             BinOp::Or => " || ",
@@ -1267,9 +1285,9 @@ fn categorise_list_pattern(expr: &UntypedPattern) -> ListType<&UntypedPattern, &
     }
 }
 
-pub fn wrap_args<I>(args: I) -> Document
+pub fn wrap_args<'a, I>(args: I) -> Document<'a>
 where
-    I: Iterator<Item = Document>,
+    I: Iterator<Item = Document<'a>>,
 {
     let mut args = args.peekable();
     if let None = args.peek() {
@@ -1283,9 +1301,9 @@ where
         .group()
 }
 
-pub fn wrap_args_with_spread<I>(args: I) -> Document
+pub fn wrap_args_with_spread<'a, I>(args: I) -> Document<'a>
 where
-    I: Iterator<Item = Document>,
+    I: Iterator<Item = Document<'a>>,
 {
     let mut args = args.peekable();
     if let None = args.peek() {
@@ -1315,7 +1333,7 @@ where
     (elems, tail)
 }
 
-fn bit_string<'a>(segments: impl Iterator<Item = Document>) -> Document {
+fn bit_string<'a>(segments: impl Iterator<Item = Document<'a>>) -> Document<'a> {
     break_("<<", "<<")
         .append(concat(segments.intersperse(delim(","))))
         .nest(INDENT)
@@ -1324,7 +1342,7 @@ fn bit_string<'a>(segments: impl Iterator<Item = Document>) -> Document {
         .group()
 }
 
-fn list(elems: Document, tail: Option<Document>) -> Document {
+fn list<'a>(elems: Document<'a>, tail: Option<Document<'a>>) -> Document<'a> {
     let doc = break_("[", "[").append(elems);
 
     match tail {
@@ -1370,7 +1388,7 @@ enum ListType<E, T> {
     NotList(T),
 }
 
-fn printed_comments<'a>(comments: impl Iterator<Item = &'a str>) -> Option<Document> {
+fn printed_comments<'a, 'b>(comments: impl Iterator<Item = &'a str>) -> Option<Document<'b>> {
     let mut comments = comments.peekable();
     match comments.peek() {
         None => None,
@@ -1382,19 +1400,19 @@ fn printed_comments<'a>(comments: impl Iterator<Item = &'a str>) -> Option<Docum
     }
 }
 
-fn commented<'a>(doc: Document, comments: impl Iterator<Item = &'a str>) -> Document {
+fn commented<'a, 'b>(doc: Document<'b>, comments: impl Iterator<Item = &'a str>) -> Document<'b> {
     match printed_comments(comments) {
         Some(comments) => comments.append(force_break()).append(line()).append(doc),
         _ => doc,
     }
 }
 
-fn bit_string_segment<Value, Type, ToDoc>(
-    segment: &BitStringSegment<Value, Type>,
+fn bit_string_segment<'a, Value, Type, ToDoc>(
+    segment: &'a BitStringSegment<Value, Type>,
     mut to_doc: ToDoc,
-) -> Document
+) -> Document<'a>
 where
-    ToDoc: FnMut(&Value) -> Document,
+    ToDoc: FnMut(&'a Value) -> Document<'a>,
 {
     match segment {
         BitStringSegment { value, options, .. } if options.is_empty() => to_doc(&value),
@@ -1408,12 +1426,13 @@ where
     }
 }
 
-fn segment_option<ToDoc, Value>(
-    option: &BitStringSegmentOption<Value>,
+fn segment_option<'a, ToDoc, Value>(
+    option: &'a BitStringSegmentOption<Value>,
     mut to_doc: ToDoc,
-) -> Document
+) -> Document<'a>
 where
-    ToDoc: FnMut(&Value) -> Document,
+    Value: 'a,
+    ToDoc: FnMut(&'a Value) -> Document<'a>,
 {
     match option {
         BitStringSegmentOption::Invalid { label, .. } => label.clone().to_doc(),

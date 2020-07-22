@@ -32,7 +32,7 @@ impl Printer {
             .format(80)
     }
 
-    pub fn print(&mut self, typ: &Type) -> Document {
+    pub fn print<'a>(&mut self, typ: &Type) -> Document<'a> {
         match typ {
             Type::App { name, args, .. } => {
                 if args.is_empty() {
@@ -59,7 +59,7 @@ impl Printer {
         }
     }
 
-    fn type_var_doc(&mut self, typ: &TypeVar) -> Document {
+    fn type_var_doc<'a>(&mut self, typ: &TypeVar) -> Document<'a> {
         match typ {
             TypeVar::Link { ref typ, .. } => self.print(typ),
 
@@ -98,7 +98,7 @@ impl Printer {
         chars.into_iter().rev().collect()
     }
 
-    fn args_to_gleam_doc(&mut self, args: &[Arc<Type>]) -> Document {
+    fn args_to_gleam_doc<'a>(&mut self, args: &[Arc<Type>]) -> Document<'a> {
         match args.len() {
             0 => nil(),
             _ => args
