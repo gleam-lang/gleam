@@ -97,7 +97,10 @@ pub enum Document<'a> {
     FlexBreak(Box<Document<'a>>),
 
     /// Renders `broken` if group is broken, `unbroken` otherwise
-    Break { broken: String, unbroken: String },
+    Break {
+        broken: Cow<'a, str>,
+        unbroken: Cow<'a, str>,
+    },
 
     /// Join 2 documents together
     Cons(Box<Document<'a>>, Box<Document<'a>>),
@@ -189,11 +192,11 @@ fn fmt(b: &mut String, limit: isize, mut width: isize, mut docs: Vector<(isize, 
             Document::Break { broken, unbroken } => {
                 width = match mode {
                     Mode::Unbroken => {
-                        b.push_str(unbroken.as_str());
+                        b.push_str(unbroken.as_ref());
                         width + unbroken.len() as isize
                     }
                     Mode::Broken => {
-                        b.push_str(broken.as_str());
+                        b.push_str(broken.as_ref());
                         b.push_str("\n");
                         b.push_str(" ".repeat(indent as usize).as_str());
                         indent as isize
@@ -260,8 +263,8 @@ fn fits_test() {
             0,
             Broken,
             Break {
-                broken: "12".to_string(),
-                unbroken: "".to_string()
+                broken: Borrowed("12"),
+                unbroken: Borrowed("")
             }
         )]
     ));
@@ -273,8 +276,8 @@ fn fits_test() {
             0,
             Unbroken,
             Break {
-                broken: "".to_string(),
-                unbroken: "123".to_string()
+                broken: Borrowed(""),
+                unbroken: Borrowed("123")
             }
         )]
     ));
@@ -284,8 +287,8 @@ fn fits_test() {
             0,
             Unbroken,
             Break {
-                broken: "".to_string(),
-                unbroken: "123".to_string()
+                broken: Borrowed(""),
+                unbroken: Borrowed("123")
             }
         )]
     ));
@@ -389,14 +392,14 @@ fn format_test() {
     assert_eq!("".to_string(), format(10, doc));
 
     let doc = Break {
-        broken: "broken".to_string(),
-        unbroken: "unbroken".to_string(),
+        broken: Borrowed("broken"),
+        unbroken: Borrowed("unbroken"),
     };
     assert_eq!("unbroken".to_string(), format(10, doc));
 
     let doc = Break {
-        broken: "broken".to_string(),
-        unbroken: "unbroken".to_string(),
+        broken: Borrowed("broken"),
+        unbroken: Borrowed("unbroken"),
     };
     assert_eq!("broken\n".to_string(), format(5, doc));
 
@@ -421,8 +424,8 @@ fn format_test() {
     let doc = Cons(
         Box::new(ForceBreak),
         Box::new(Break {
-            broken: "broken".to_string(),
-            unbroken: "unbroken".to_string(),
+            broken: Borrowed("broken"),
+            unbroken: Borrowed("unbroken"),
         }),
     );
     assert_eq!("broken\n".to_string(), format(100, doc));
@@ -444,17 +447,17 @@ pub fn force_break() -> Document<'static> {
     Document::ForceBreak
 }
 
-pub fn break_(broken: &str, unbroken: &str) -> Document<'static> {
+pub fn break_<'a>(broken: &'a str, unbroken: &'a str) -> Document<'a> {
     Document::Break {
-        broken: broken.to_string(),
-        unbroken: unbroken.to_string(),
+        broken: Cow::Borrowed(broken),
+        unbroken: Cow::Borrowed(unbroken),
     }
 }
 
-pub fn delim(d: &str) -> Document<'static> {
+pub fn delim<'a>(d: &'a str) -> Document<'a> {
     Document::Break {
-        broken: d.to_string(),
-        unbroken: format!("{} ", d),
+        broken: Cow::Borrowed(d),
+        unbroken: Cow::Owned(format!("{} ", d)),
     }
 }
 
