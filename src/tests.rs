@@ -487,6 +487,130 @@ async fn publish_docs_forbidden() {
 }
 
 #[tokio::test]
+async fn get_package_ok_test() {
+    let response_body = std::include_bytes!("../test/package_exfmt");
+
+    // Set up test server
+    let mock = mockito::mock("GET", "/packages/exfmt")
+        .expect(1)
+        .with_status(200)
+        .with_body(&response_body[..])
+        .create();
+
+    // Test!
+    let mut client = UnauthenticatedClient::new();
+    client.repository_base = url::Url::parse(&mockito::server_url()).unwrap();
+
+    let package = client
+        .get_package("exfmt", std::include_bytes!("../test/public_key"))
+        .await
+        .unwrap();
+
+    assert_eq!(
+        Package {
+            name: "exfmt".to_string(),
+            repository: "hexpm".to_string(),
+            releases: vec![
+                Release {
+                    version: "0.0.0".to_string(),
+                    dependencies: vec![],
+                    retirement_status: None,
+                    outer_checksum: vec![
+                        82, 48, 191, 145, 92, 172, 0, 108, 238, 71, 57, 23, 101, 177, 161, 83, 91,
+                        182, 18, 232, 249, 225, 29, 12, 246, 5, 215, 165, 32, 57, 179, 110
+                    ]
+                },
+                Release {
+                    version: "0.1.0".to_string(),
+                    dependencies: vec![],
+                    retirement_status: None,
+                    outer_checksum: vec![
+                        111, 246, 240, 176, 118, 229, 12, 15, 164, 61, 186, 3, 89, 106, 153, 225,
+                        247, 52, 245, 8, 216, 139, 21, 232, 200, 16, 214, 59, 241, 188, 9, 6
+                    ]
+                },
+                Release {
+                    version: "0.2.0".to_string(),
+                    dependencies: vec![],
+                    retirement_status: None,
+                    outer_checksum: vec![
+                        149, 9, 192, 229, 84, 162, 110, 207, 161, 43, 31, 0, 126, 168, 14, 243, 31,
+                        43, 195, 238, 100, 91, 78, 100, 213, 181, 101, 154, 106, 168, 170, 107
+                    ]
+                },
+                Release {
+                    version: "0.2.1".to_string(),
+                    dependencies: vec![],
+                    retirement_status: None,
+                    outer_checksum: vec![
+                        157, 229, 28, 212, 92, 249, 14, 240, 235, 104, 31, 12, 160, 199, 83, 195,
+                        154, 105, 222, 37, 221, 80, 181, 183, 113, 240, 234, 107, 144, 85, 255, 65
+                    ]
+                },
+                Release {
+                    version: "0.2.2".to_string(),
+                    dependencies: vec![],
+                    retirement_status: None,
+                    outer_checksum: vec![
+                        112, 250, 133, 189, 183, 192, 54, 218, 115, 55, 216, 97, 204, 201, 191,
+                        168, 250, 133, 138, 252, 202, 240, 74, 197, 228, 235, 81, 18, 241, 7, 155,
+                        38
+                    ]
+                },
+                Release {
+                    version: "0.2.3".to_string(),
+                    dependencies: vec![],
+                    retirement_status: None,
+                    outer_checksum: vec![
+                        131, 20, 29, 160, 171, 124, 7, 125, 210, 88, 17, 189, 199, 49, 191, 190,
+                        14, 162, 38, 247, 52, 176, 189, 17, 7, 188, 151, 152, 24, 64, 170, 29
+                    ]
+                },
+                Release {
+                    version: "0.2.4".to_string(),
+                    dependencies: vec![],
+                    retirement_status: None,
+                    outer_checksum: vec![
+                        109, 162, 185, 169, 26, 4, 62, 60, 167, 54, 182, 161, 140, 197, 75, 113,
+                        183, 117, 247, 201, 218, 228, 14, 160, 115, 157, 196, 51, 108, 16, 96, 217
+                    ]
+                },
+                Release {
+                    version: "0.3.0".to_string(),
+                    dependencies: vec![],
+                    retirement_status: None,
+                    outer_checksum: vec![
+                        97, 50, 95, 212, 242, 59, 245, 177, 140, 78, 79, 180, 108, 174, 119, 176,
+                        24, 80, 218, 152, 178, 227, 152, 242, 32, 126, 72, 67, 222, 0, 173, 170
+                    ]
+                },
+                Release {
+                    version: "0.4.0".to_string(),
+                    dependencies: vec![],
+                    retirement_status: None,
+                    outer_checksum: vec![
+                        246, 178, 237, 214, 217, 158, 143, 52, 130, 186, 64, 50, 94, 175, 161, 81,
+                        68, 186, 4, 73, 53, 226, 235, 144, 209, 84, 231, 136, 165, 119, 122, 126
+                    ]
+                },
+                Release {
+                    version: "0.5.0".to_string(),
+                    dependencies: vec![],
+                    retirement_status: None,
+                    outer_checksum: vec![
+                        151, 86, 157, 218, 218, 131, 240, 119, 198, 216, 202, 240, 65, 17, 57, 228,
+                        84, 252, 59, 207, 246, 49, 22, 21, 52, 47, 51, 139, 190, 9, 95, 109
+                    ]
+                }
+            ],
+        },
+        package,
+    );
+
+    mock.assert();
+}
+
+#[tokio::test]
 async fn get_repository_versions_ok_test() {
     let response_body = std::include_bytes!("../test/versions");
 

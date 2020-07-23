@@ -114,6 +114,193 @@ pub trait Client {
 
         Ok(versions)
     }
+
+    /// Get the information for a package in the repository.
+    ///
+    async fn get_package(&self, name: &str, public_key: &[u8]) -> Result<Package, GetPackageError> {
+        let response = self
+            .http_client()
+            .get(
+                self.repository_base_url()
+                    .join(&format!("packages/{}", name))
+                    .unwrap(),
+            )
+            .send()
+            .await
+            .map_err(GetPackageError::Http)?;
+
+        match response.status() {
+            StatusCode::OK => (),
+            StatusCode::NOT_FOUND => return Err(GetPackageError::NotFound),
+            status => {
+                return Err(GetPackageError::UnexpectedResponse(
+                    status,
+                    response.text().await.unwrap_or_default(),
+                ));
+            }
+        };
+
+        let body = response
+            .bytes()
+            .await
+            .map_err(GetPackageError::Http)?
+            .reader();
+
+        let mut body = GzDecoder::new(body);
+        let signed = protobuf::parse_from_reader::<Signed>(&mut body)
+            .map_err(GetPackageError::DecodeFailed)?;
+
+        let payload = verify_payload(signed, public_key)
+            .map_err(|_| GetPackageError::IncorrectPayloadSignature)?;
+
+        let mut package = protobuf::parse_from_bytes::<proto::package::Package>(&payload)
+            .map_err(GetPackageError::DecodeFailed)?;
+
+        let package = Package {
+            name: package.take_name(),
+            repository: package.take_repository(),
+            releases: package
+                .take_releases()
+                .into_iter()
+                .map(proto_to_release)
+                .collect(),
+        };
+
+        Ok(package)
+    }
+}
+
+fn proto_to_retirement_status(
+    mut status: proto::package::RetirementStatus,
+) -> Option<RetirementStatus> {
+    if status.has_reason() {
+        Some(RetirementStatus {
+            message: status.take_message(),
+            reason: proto_to_retirement_reason(status.get_reason()),
+        })
+    } else {
+        None
+    }
+}
+
+fn proto_to_retirement_reason(reason: proto::package::RetirementReason) -> RetirementReason {
+    use proto::package::RetirementReason::*;
+    match reason {
+        RETIRED_OTHER => RetirementReason::Other,
+        RETIRED_INVALID => RetirementReason::Invalid,
+        RETIRED_SECURITY => RetirementReason::Security,
+        RETIRED_DEPRECATED => RetirementReason::Deprecated,
+        RETIRED_RENAMED => RetirementReason::Renamed,
+    }
+}
+
+fn proto_to_dep(mut dep: proto::package::Dependency) -> Dependency {
+    let app = if dep.has_app() {
+        Some(dep.take_app())
+    } else {
+        None
+    };
+    let repository = if dep.has_repository() {
+        Some(dep.take_repository())
+    } else {
+        None
+    };
+    Dependency {
+        package: dep.take_package(),
+        requirement: dep.take_requirement(),
+        optional: dep.has_optional(),
+        app,
+        repository,
+    }
+}
+
+fn proto_to_release(mut release: proto::package::Release) -> Release {
+    Release {
+        version: release.take_version(),
+        outer_checksum: release.take_outer_checksum(),
+        retirement_status: proto_to_retirement_status(release.take_retired()),
+        dependencies: release
+            .take_dependencies()
+            .into_iter()
+            .map(proto_to_dep)
+            .collect(),
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct Package {
+    pub name: String,
+    pub repository: String,
+    pub releases: Vec<Release>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct Release {
+    /// Release version
+    pub version: String,
+    /// All dependencies of the release
+    pub dependencies: Vec<Dependency>,
+    /// If set the release is retired, a retired release should only be
+    /// resolved if it has already been locked in a project
+    pub retirement_status: Option<RetirementStatus>,
+    /// sha256 checksum of outer package tarball
+    /// required when encoding but optional when decoding
+    pub outer_checksum: Vec<u8>,
+}
+
+impl Release {
+    pub fn is_retired(&self) -> bool {
+        self.retirement_status.is_some()
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct RetirementStatus {
+    pub reason: RetirementReason,
+    pub message: String,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum RetirementReason {
+    Other,
+    Invalid,
+    Security,
+    Deprecated,
+    Renamed,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct Dependency {
+    /// Package name of dependency
+    pub package: String,
+    /// Version requirement of dependency
+    pub requirement: String,
+    /// If true the package is optional and does not need to be resolved
+    /// unless another package has specified it as a non-optional dependency.
+    pub optional: bool,
+    /// If set is the OTP application name of the dependency, if not set the
+    /// application name is the same as the package name
+    pub app: Option<String>,
+    /// If set, the repository where the dependency is located
+    pub repository: Option<String>,
+}
+
+#[derive(Error, Debug)]
+pub enum GetPackageError {
+    #[error(transparent)]
+    Http(#[from] reqwest::Error),
+
+    #[error("an unexpected response was sent by Hex")]
+    UnexpectedResponse(StatusCode, String),
+
+    #[error("the payload signature does not match the downloaded payload")]
+    IncorrectPayloadSignature,
+
+    #[error("no package was found in the repository with the given name")]
+    NotFound,
+
+    #[error(transparent)]
+    DecodeFailed(#[from] protobuf::ProtobufError),
 }
 
 #[derive(Error, Debug)]
