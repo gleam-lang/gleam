@@ -225,14 +225,14 @@ fn fmt(b: &mut String, limit: isize, mut width: isize, mut docs: Vector<(isize, 
             Document::Group(doc) => {
                 docs.push_front((indent, Mode::Unbroken, (*doc).clone()));
                 if !fits(limit - width, docs.clone()) {
-                    docs[0] = (indent, Mode::Broken, (*doc).clone());
+                    docs[0] = (indent, Mode::Broken, *doc);
                 }
             }
 
             Document::FlexBreak(doc) => {
                 docs.push_front((indent, Mode::Unbroken, (*doc).clone()));
                 if !fits(limit - width, docs.clone()) {
-                    docs[0] = (indent, Mode::Broken, (*doc).clone());
+                    docs[0] = (indent, Mode::Broken, *doc);
                 }
             }
         }

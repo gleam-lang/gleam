@@ -73,8 +73,9 @@ impl<'a> Env<'a> {
         match self.current_scope_vars.get(&name) {
             None => {
                 self.current_scope_vars.insert(name.clone(), 0);
-                self.erl_function_scope_vars.insert(name.clone(), 0);
-                name.to_camel_case().to_doc()
+                let tmp = name.to_camel_case().to_doc();
+                self.erl_function_scope_vars.insert(name, 0);
+                tmp
             }
             Some(0) => name.to_camel_case().to_doc(),
             Some(n) => name.to_camel_case().to_doc().append(*n),
@@ -160,7 +161,7 @@ pub fn module(module: &TypedModule) -> String {
 
                 _ => None,
             })
-            .map(|(n, a)| atom(n).append("/").append(a))
+            .map(|(n, a)| atom(n.as_ref()).append("/").append(a))
             .intersperse(", ".to_doc()),
     );
 
@@ -222,7 +223,7 @@ fn statement<'a>(statement: &TypedStatement, module: &[String]) -> Option<Docume
 fn mod_fun<'a>(name: &str, args: &[TypedArg], body: &TypedExpr, module: &[String]) -> Document<'a> {
     let mut env = Env::new(module);
 
-    atom(name.to_string())
+    atom(name)
         .append(fun_args(args, &mut env))
         .append(" ->")
         .append(line().append(expr(body, &mut env)).nest(INDENT).group())
@@ -254,13 +255,13 @@ where
         .group()
 }
 
-fn atom<'a>(value: String) -> Document<'a> {
+fn atom<'a>(value: &str) -> Document<'a> {
     use regex::Regex;
     lazy_static! {
         static ref RE: Regex = Regex::new(r"^[a-z][a-z0-9_@]*$").unwrap();
     }
 
-    match &*value {
+    match value {
         // Escape because of keyword collision
         value if is_reserved_word(value) => format!("'{}'", value).to_doc(),
 
@@ -365,7 +366,7 @@ fn pattern_segment<'a>(
 ) -> Document<'a> {
     let document = match value {
         // Skip the normal <<value/utf8>> surrounds
-        Pattern::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
+        Pattern::String { value, .. } => value.as_str().to_doc().surround("\"", "\""),
 
         // As normal
         Pattern::Discard { .. }
@@ -555,7 +556,7 @@ fn pattern<'a>(p: &TypedPattern, env: &mut Env) -> Document<'a> {
 
         Pattern::Cons { head, tail, .. } => pattern_list_cons(head, tail, env),
 
-        Pattern::Discard { name, .. } => name.clone().to_doc(),
+        Pattern::Discard { name, .. } => name.as_str().to_doc(),
 
         Pattern::Var { name, .. } => env.next_local_var_name(name.to_string()),
 
@@ -672,14 +673,14 @@ fn var<'a>(name: &str, constructor: &ValueConstructor, env: &mut Env) -> Documen
                 let chars = incrementing_args_list(args.len());
                 "fun("
                     .to_doc()
-                    .append(chars.clone())
+                    .append(chars.as_str())
                     .append(") -> {")
                     .append(record_name.to_snake_case())
                     .append(", ")
                     .append(chars)
                     .append("} end")
             }
-            _ => atom(record_name.to_snake_case()),
+            _ => atom(record_name.to_snake_case().as_str()),
         },
 
         ValueConstructorVariant::LocalVariable => env.local_var_name(name.to_string()),
@@ -690,7 +691,7 @@ fn var<'a>(name: &str, constructor: &ValueConstructor, env: &mut Env) -> Documen
             arity, ref module, ..
         } if module.as_slice() == env.module => "fun "
             .to_doc()
-            .append(atom(name.to_string()))
+            .append(atom(name))
             .append("/")
             .append(*arity),
 
@@ -703,7 +704,7 @@ fn var<'a>(name: &str, constructor: &ValueConstructor, env: &mut Env) -> Documen
             .to_doc()
             .append(module.join("@"))
             .append(":")
-            .append(atom(name.to_string()))
+            .append(atom(name))
             .append("/")
             .append(*arity),
     }
@@ -732,10 +733,10 @@ fn const_inline<'a>(literal: &TypedConstant, env: &mut Env) -> Document<'a> {
 
         Constant::Record { tag, args, .. } => {
             if args.is_empty() {
-                atom(tag.to_snake_case())
+                atom(tag.to_snake_case().as_str())
             } else {
                 let args = args.into_iter().map(|a| const_inline(&a.value, env));
-                let tag = atom(tag.to_snake_case());
+                let tag = atom(tag.to_snake_case().as_str());
                 tuple(std::iter::once(tag).chain(args))
             }
         }
@@ -748,10 +749,10 @@ fn tag_tuple_pattern<'a>(
     env: &mut Env,
 ) -> Document<'a> {
     if args.is_empty() {
-        atom(name.to_snake_case())
+        atom(name.to_snake_case().as_str())
     } else {
         tuple(
-            std::iter::once(atom(name.to_snake_case()))
+            std::iter::once(atom(name.to_snake_case().as_str()))
                 .chain(args.into_iter().map(|p| pattern(&p.value, env))),
         )
     }
@@ -935,7 +936,7 @@ fn call<'a>(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env) -> Docu
                 },
             ..
         } => tuple(
-            std::iter::once(atom(name.to_snake_case()))
+            std::iter::once(atom(name.to_snake_case().as_str()))
                 .chain(args.into_iter().map(|arg| expr(&arg.value, env))),
         ),
 
@@ -948,11 +949,11 @@ fn call<'a>(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env) -> Docu
             ..
         } => {
             if module.as_slice() == env.module {
-                atom(name.to_string()).append(call_args(args, env))
+                atom(name).append(call_args(args, env))
             } else {
-                atom(module.join("@"))
+                atom(module.join("@").as_str())
                     .append(":")
-                    .append(atom(name.to_string()))
+                    .append(atom(name))
                     .append(call_args(args, env))
             }
         }
@@ -962,9 +963,9 @@ fn call<'a>(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env) -> Docu
             label,
             constructor: ModuleValueConstructor::Fn,
             ..
-        } => atom(module_name.join("@"))
+        } => atom(module_name.join("@").as_str())
             .append(":")
-            .append(atom(label.to_string()))
+            .append(atom(label.as_str()))
             .append(call_args(args, env)),
 
         call @ TypedExpr::Call { .. } => expr(call, env)
@@ -1040,7 +1041,7 @@ fn expr<'a>(expression: &TypedExpr, env: &mut Env) -> Document<'a> {
         TypedExpr::ListNil { .. } => "[]".to_doc(),
         TypedExpr::Todo { label: None, .. } => "erlang:error({gleam_error, todo})".to_doc(),
         TypedExpr::Todo { label: Some(l), .. } => l
-            .clone()
+            .as_str()
             .to_doc()
             .surround("erlang:error({gleam_error, todo, \"", "\"})"),
         TypedExpr::Int { value, .. } => value.as_str().to_doc(),
@@ -1064,7 +1065,7 @@ fn expr<'a>(expression: &TypedExpr, env: &mut Env) -> Document<'a> {
         TypedExpr::ModuleSelect {
             constructor: ModuleValueConstructor::Record { name, arity: 0 },
             ..
-        } => atom(name.to_snake_case()),
+        } => atom(name.to_snake_case().as_str()),
 
         TypedExpr::ModuleSelect {
             constructor: ModuleValueConstructor::Constant { literal },
@@ -1078,9 +1079,9 @@ fn expr<'a>(expression: &TypedExpr, env: &mut Env) -> Document<'a> {
             let chars = incrementing_args_list(*arity);
             "fun("
                 .to_doc()
-                .append(chars.clone())
+                .append(chars.as_str())
                 .append(") -> {")
-                .append(name.to_snake_case())
+                .append(name.to_snake_case().as_str())
                 .append(", ")
                 .append(chars)
                 .append("} end")
@@ -1147,7 +1148,7 @@ fn module_select_fn<'a>(
             .to_doc()
             .append(module_name.join("@"))
             .append(":")
-            .append(atom(label.to_string()))
+            .append(atom(label))
             .append("/")
             .append(args.len()),
 
@@ -1155,7 +1156,7 @@ fn module_select_fn<'a>(
             .join("@")
             .to_doc()
             .append(":")
-            .append(label.to_string())
+            .append(label)
             .append("()"),
     }
 }
@@ -1181,12 +1182,12 @@ fn incrementing_args_list(arity: usize) -> String {
 fn external_fun<'a>(name: &str, module: &str, fun: &str, arity: usize) -> Document<'a> {
     let chars: String = incrementing_args_list(arity);
 
-    atom(name.to_string())
+    atom(name)
         .append(format!("({}) ->", chars))
         .append(line())
-        .append(atom(module.to_string()))
+        .append(atom(module))
         .append(":")
-        .append(atom(fun.to_string()))
+        .append(atom(fun))
         .append(format!("({}).", chars))
         .nest(INDENT)
 }
