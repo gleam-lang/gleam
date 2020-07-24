@@ -795,7 +795,7 @@ impl<'a> Typer<'a> {
     pub fn type_from_ast(
         &mut self,
         ast: &TypeAst,
-        vars: &mut im::HashMap<String, (usize, Arc<Type>)>,
+        vars: &mut im::HashMap<String, Arc<Type>>,
         new: NewTypeAction,
     ) -> Result<Arc<Type>, Error> {
         match ast {
@@ -869,12 +869,13 @@ impl<'a> Typer<'a> {
             }
 
             TypeAst::Var { name, location, .. } => match vars.get(name) {
-                Some((_, var)) => Ok(var.clone()),
+                Some(var) => Ok(var.clone()),
 
                 None => match new {
                     NewTypeAction::MakeGeneric => {
                         let var = self.new_generic_var();
-                        vars.insert(name.to_string(), (self.previous_uid(), var.clone()));
+                        self.annotated_generic_types.insert(self.previous_uid());
+                        vars.insert(name.to_string(), var.clone());
                         Ok(var)
                     }
                     NewTypeAction::Disallow => Err(Error::UnknownType {
@@ -1209,10 +1210,6 @@ impl<'a> Typer<'a> {
             .map(|arg| self.infer_arg(arg, &mut type_vars))
             .collect::<Result<_, _>>()?;
 
-        for (id, _type) in type_vars.values() {
-            self.annotated_generic_types.insert(*id);
-        }
-
         let body = self.in_new_scope(|body_typer| {
             for (arg, t) in args.iter().zip(args.iter().map(|arg| arg.typ.clone())) {
                 match &arg.names {
@@ -1242,7 +1239,7 @@ impl<'a> Typer<'a> {
     fn infer_arg(
         &mut self,
         arg: UntypedArg,
-        type_vars: &mut im::HashMap<String, (usize, Arc<Type>)>,
+        type_vars: &mut im::HashMap<String, Arc<Type>>,
     ) -> Result<TypedArg, Error> {
         let Arg {
             names,
@@ -2481,7 +2478,7 @@ impl<'a> Typer<'a> {
     fn make_type_vars(
         &mut self,
         args: &[String],
-        vars: &mut im::HashMap<String, (usize, Arc<Type>)>,
+        vars: &mut im::HashMap<String, Arc<Type>>,
         location: &SrcSpan,
     ) -> Result<Vec<Arc<Type>>, Error> {
         args.iter()
@@ -2496,7 +2493,7 @@ impl<'a> Typer<'a> {
     fn custom_type_accessors(
         &mut self,
         constructors: &[RecordConstructor],
-        type_vars: &mut im::HashMap<String, (usize, Arc<Type>)>,
+        type_vars: &mut im::HashMap<String, Arc<Type>>,
     ) -> Result<Option<HashMap<String, RecordAccessor>>, Error> {
         let args = match constructors {
             [constructor] if !constructor.args.is_empty() => &constructor.args,
@@ -3466,12 +3463,18 @@ pub fn infer_module(
                 let mut type_vars = hashmap![];
                 // This custom type was inserted into the module types in the `register_types`
                 // pass, so we can expect this type to exist already.
-                let retrn = typer
+                let return_type_constructor = typer
                     .module_types
                     .get(&name)
-                    .gleam_expect("Type for custom type not found on constructor infer pass")
-                    .typ
-                    .clone();
+                    .gleam_expect("Type for custom type not found on constructor infer pass");
+
+                // Insert the parameter types (previously created in `register_types`) into the
+                // type environment so that the constructor can reference them.
+                for (typ, param) in return_type_constructor.parameters.iter().zip(args.iter()) {
+                    type_vars.insert(param.clone(), typ.clone());
+                }
+
+                let retrn = return_type_constructor.typ.clone();
 
                 // Check and register constructors
                 for constructor in constructors.iter() {

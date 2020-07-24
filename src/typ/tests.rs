@@ -186,15 +186,18 @@ fn infer_test() {
         "tuple(Int, Float)"
     );
     assert_infer!("let x: String = \"\" x", "String");
-    assert_infer!("let x: tuple(x, x) = tuple(5, 5) x", "tuple(Int, Int)",);
-    assert_infer!("let x: tuple(x, y) = tuple(5, 5.0) x", "tuple(Int, Float)",);
+    assert_infer!("let x: tuple(Int, Int) = tuple(5, 5) x", "tuple(Int, Int)",);
+    assert_infer!(
+        "let x: tuple(Int, Float) = tuple(5, 5.0) x",
+        "tuple(Int, Float)",
+    );
     assert_infer!("let [1, 2, ..x]: List(Int) = [1,2,3] x", "List(Int)",);
     assert_infer!(
-        "let tuple(5, [..x]): tuple(x, List(x)) = tuple(5, [1,2,3]) x",
+        "let tuple(5, [..x]): tuple(Int, List(Int)) = tuple(5, [1,2,3]) x",
         "List(Int)",
     );
     assert_infer!(
-        "let tuple(5.0, [..x]): tuple(y, List(x)) = tuple(5.0, [1,2,3]) x",
+        "let tuple(5.0, [..x]): tuple(Float, List(Int)) = tuple(5.0, [1,2,3]) x",
         "List(Int)",
     );
 
@@ -2094,10 +2097,10 @@ fn demo() {
             location: SrcSpan { start: 33, end: 46 },
             expected: tuple(vec![
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() }))
+                    typ: Arc::new(RefCell::new(TypeVar::Generic { id: 10 }))
                 }),
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() }))
+                    typ: Arc::new(RefCell::new(TypeVar::Generic { id: 10 }))
                 })
             ]),
             given: tuple(vec![int(), float()]),
@@ -2122,10 +2125,10 @@ fn demo() {
             location: SrcSpan { start: 65, end: 86 },
             expected: tuple(vec![
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: string() }))
+                    typ: Arc::new(RefCell::new(TypeVar::Generic { id: 11 }))
                 }),
                 list(Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: string() }))
+                    typ: Arc::new(RefCell::new(TypeVar::Generic { id: 11 }))
                 }))
             ]),
             given: tuple(vec![string(), list(int())]),
