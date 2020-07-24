@@ -1,9 +1,28 @@
+//
+//
+//
+// TODO!
+// ExprTyper that holds on to a hydrator so we don't need to pass it as an argument everywhere.
+//
+//
+//
+//
+//
+//
+//
+//
+
 mod error;
+mod fields;
+mod hydrator;
 mod pattern;
 mod prelude;
 pub mod pretty;
 #[cfg(test)]
 mod tests;
+
+pub use error::{Error, Warning};
+pub use prelude::*;
 
 use crate::{
     ast::{
@@ -26,8 +45,8 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use error::*;
-pub use error::{Error, Warning};
-pub use prelude::*;
+use fields::FieldMap;
+use hydrator::Hydrator;
 
 pub trait HasType {
     fn typ(&self) -> Arc<Type>;
@@ -179,121 +198,6 @@ pub struct RecordAccessor {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct FieldMap {
-    arity: usize,
-    fields: HashMap<String, usize>,
-}
-
-pub struct DuplicateField {}
-
-impl FieldMap {
-    pub fn new(arity: usize) -> Self {
-        Self {
-            arity,
-            fields: HashMap::new(),
-        }
-    }
-
-    pub fn insert(&mut self, label: String, index: usize) -> Result<(), DuplicateField> {
-        match self.fields.insert(label, index) {
-            Some(_) => Err(DuplicateField {}),
-            None => Ok(()),
-        }
-    }
-
-    pub fn into_option(self) -> Option<Self> {
-        if self.fields.is_empty() {
-            None
-        } else {
-            Some(self)
-        }
-    }
-
-    /// Reorder an argument list so that labelled fields supplied out-of-order are in the correct
-    /// order.
-    ///
-    fn reorder<A>(&self, args: &mut Vec<CallArg<A>>, location: &SrcSpan) -> Result<(), Error> {
-        let mut labelled_arguments_given = false;
-        let mut seen_labels = std::collections::HashSet::new();
-        let mut unknown_labels = Vec::new();
-
-        if self.arity != args.len() {
-            return Err(Error::IncorrectArity {
-                location: location.clone(),
-                expected: self.arity,
-                given: args.len(),
-            });
-        }
-
-        for i in 0..args.len() {
-            match &args[i].label {
-                Some(_) => {
-                    labelled_arguments_given = true;
-                }
-
-                None => {
-                    if labelled_arguments_given {
-                        return Err(Error::PositionalArgumentAfterLabelled {
-                            location: args[i].location.clone(),
-                        });
-                    }
-                }
-            }
-        }
-
-        let mut i = 0;
-        while i < args.len() {
-            let (label, location) = match &args[i].label {
-                // A labelled argument, we may need to reposition it in the array vector
-                Some(l) => (l, &args[i].location),
-
-                // Not a labelled argument
-                None => {
-                    i = i + 1;
-                    continue;
-                }
-            };
-
-            let position = match self.fields.get(label) {
-                None => {
-                    unknown_labels.push((label.clone(), location.clone()));
-                    i = i + 1;
-                    continue;
-                }
-
-                Some(p) => *p,
-            };
-
-            // If the argument is already in the right place
-            if position == i {
-                seen_labels.insert(label.clone());
-                i = i + 1;
-            } else {
-                if seen_labels.contains(label) {
-                    return Err(Error::DuplicateArgument {
-                        location: location.clone(),
-                        label: label.to_string(),
-                    });
-                }
-                seen_labels.insert(label.clone());
-
-                args.swap(position, i);
-            }
-        }
-
-        if unknown_labels.len() > 0 {
-            Err(Error::UnknownLabels {
-                valid: self.fields.keys().map(|t| t.to_string()).collect(),
-                unknown: unknown_labels,
-                supplied: seen_labels.into_iter().collect(),
-            })
-        } else {
-            Ok(())
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub enum ValueConstructorVariant {
     /// A locally defined variable or function parameter
     LocalVariable,
@@ -363,12 +267,9 @@ pub struct Typer<'a> {
     current_module: &'a [String],
     uid: usize,
     level: usize,
-    // TODO: Maybe remove this and merge it into the hashmap that is passed into the type_from_ast
-    // function? As that is were we track what type vars came from annotations. Need to check if
-    // the usage of it becomes awkward or not.
-    annotated_generic_types: im::HashSet<usize>,
     importable_modules: &'a HashMap<String, (Origin, Module)>,
     imported_modules: HashMap<String, (Origin, Module)>,
+    annotated_generic_types: im::HashSet<usize>,
 
     // Values defined in the current function (or the prelude)
     local_values: im::HashMap<String, ValueConstructor>,
@@ -389,11 +290,11 @@ pub struct Typer<'a> {
 impl<'a> Typer<'a> {
     pub fn in_new_scope<T, O: FnOnce(&mut Self) -> Result<T, Error>>(
         &mut self,
-        op: O,
+        process_scope: O,
     ) -> Result<T, Error> {
         // Record initial scope state
         let initial_local_values = self.local_values.clone();
-        // TODO
+        // TODO: introduce scope for the hydrator
         // let initial_annotated_type_vars = self.annotated_type_vars.clone();
         let initial_annotated_generic_types = self.annotated_generic_types.clone();
 
@@ -401,7 +302,7 @@ impl<'a> Typer<'a> {
         self.level += 1;
 
         // Process scope
-        let result = op(self);
+        let result = process_scope(self);
 
         // Discard local state now scope is over
         self.level -= 1;
@@ -629,108 +530,6 @@ impl<'a> Typer<'a> {
         }
     }
 
-    /// Construct a Type from an AST Type annotation.
-    ///
-    /// Type variables are managed using a HashMap of names to types- this permits the
-    /// same type vars being shared between multiple annotations (such as in the arguments
-    /// of an external function declaration)
-    ///
-    pub fn type_from_ast(
-        &mut self,
-        ast: &TypeAst,
-        vars: &mut im::HashMap<String, Arc<Type>>,
-        new: NewTypeAction,
-    ) -> Result<Arc<Type>, Error> {
-        match ast {
-            TypeAst::Constructor {
-                location,
-                module,
-                name,
-                args,
-            } => {
-                // Hydrate the type argument AST into types
-                let mut argument_types = Vec::with_capacity(args.len());
-                for t in args {
-                    let typ = self.type_from_ast(t, vars, new)?;
-                    argument_types.push((t.location(), typ));
-                }
-
-                // Look up the constructor
-                let TypeConstructor {
-                    parameters,
-                    typ: return_type,
-                    ..
-                } = self
-                    .get_type_constructor(module, name)
-                    .map_err(|e| convert_get_type_constructor_error(e, &location))?
-                    .clone();
-
-                // Ensure that the correct number of arguments have been given to the constructor
-                if args.len() != parameters.len() {
-                    return Err(Error::IncorrectTypeArity {
-                        location: location.clone(),
-                        name: name.to_string(),
-                        expected: parameters.len(),
-                        given: args.len(),
-                    });
-                }
-
-                // Instantiate the constructor type for this specific usage
-                let mut type_vars = hashmap![];
-                let mut parameter_types = Vec::with_capacity(parameters.len());
-                for typ in parameters {
-                    parameter_types.push(self.instantiate(typ, 0, &mut type_vars));
-                }
-                let return_type = self.instantiate(return_type, 0, &mut type_vars);
-
-                // Unify argument types with instantiated parameter types so that the correct types
-                // are inserted into the return type
-                for (parameter, (location, argument)) in
-                    parameter_types.iter().zip(argument_types.iter())
-                {
-                    self.unify(parameter.clone(), argument.clone())
-                        .map_err(|e| convert_unify_error(e, &location))?;
-                }
-
-                Ok(return_type)
-            }
-
-            TypeAst::Tuple { elems, .. } => Ok(tuple(
-                elems
-                    .iter()
-                    .map(|t| self.type_from_ast(t, vars, new))
-                    .collect::<Result<_, _>>()?,
-            )),
-
-            TypeAst::Fn { args, retrn, .. } => {
-                let args = args
-                    .iter()
-                    .map(|t| self.type_from_ast(t, vars, new))
-                    .collect::<Result<_, _>>()?;
-                let retrn = self.type_from_ast(retrn, vars, new)?;
-                Ok(fn_(args, retrn))
-            }
-
-            TypeAst::Var { name, location, .. } => match vars.get(name) {
-                Some(var) => Ok(var.clone()),
-
-                None => match new {
-                    NewTypeAction::MakeGeneric => {
-                        let var = self.new_generic_var();
-                        self.annotated_generic_types.insert(self.previous_uid());
-                        vars.insert(name.to_string(), var.clone());
-                        Ok(var)
-                    }
-                    NewTypeAction::Disallow => Err(Error::UnknownType {
-                        name: name.to_string(),
-                        location: location.clone(),
-                        types: self.module_types.keys().map(|t| t.to_string()).collect(),
-                    }),
-                },
-            },
-        }
-    }
-
     pub fn insert_accessors(&mut self, type_name: &str, accessors: AccessorsMap) {
         self.accessors.insert(type_name.to_string(), accessors);
     }
@@ -789,7 +588,18 @@ impl<'a> Typer<'a> {
                 kind,
                 annotation,
                 ..
-            } => self.infer_let(pattern, *value, *then, kind, &annotation, location),
+            } => {
+                let mut hydrator = Hydrator::new(); // TODO: expr typer with this embedded in it
+                self.infer_let(
+                    pattern,
+                    *value,
+                    *then,
+                    kind,
+                    &annotation,
+                    location,
+                    &mut hydrator,
+                )
+            }
 
             UntypedExpr::Case {
                 location,
@@ -1079,11 +889,7 @@ impl<'a> Typer<'a> {
         Ok((args, body))
     }
 
-    fn infer_arg(
-        &mut self,
-        arg: UntypedArg,
-        type_vars: &mut im::HashMap<String, Arc<Type>>,
-    ) -> Result<TypedArg, Error> {
+    fn infer_arg(&mut self, arg: UntypedArg, hydrator: &mut Hydrator) -> Result<TypedArg, Error> {
         let Arg {
             names,
             annotation,
@@ -1092,7 +898,7 @@ impl<'a> Typer<'a> {
         } = arg;
         let typ = annotation
             .clone()
-            .map(|t| self.type_from_ast(&t, type_vars, NewTypeAction::MakeGeneric))
+            .map(|t| hydrator.type_from_ast(&t, self))
             .unwrap_or_else(|| Ok(self.new_unbound_var(self.level)))?;
         Ok(Arg {
             names,
@@ -1358,6 +1164,7 @@ impl<'a> Typer<'a> {
         kind: BindingKind,
         annotation: &Option<TypeAst>,
         location: SrcSpan,
+        hydrator: &mut Hydrator,
     ) -> Result<TypedExpr, Error> {
         let value = self.in_new_scope(|value_typer| value_typer.infer(value))?;
 
@@ -1395,8 +1202,8 @@ impl<'a> Typer<'a> {
 
         // Check that any type annotation is accurate.
         if let Some(ann) = annotation {
-            let ann_typ = self
-                .type_from_ast(ann, &mut hashmap![], NewTypeAction::MakeGeneric)
+            let ann_typ = hydrator
+                .type_from_ast(ann, self)
                 .map(|t| self.instantiate(t, self.level, &mut hashmap![]))?;
             self.unify(ann_typ, value_typ)
                 .map_err(|e| convert_unify_error(e, value.location()))?;
@@ -2006,6 +1813,7 @@ impl<'a> Typer<'a> {
         &mut self,
         annotation: &Option<TypeAst>,
         value: UntypedConstant,
+        hydrator: &mut Hydrator,
     ) -> Result<TypedConstant, Error> {
         let inferred = match value {
             Constant::Int {
@@ -2114,7 +1922,7 @@ impl<'a> Typer<'a> {
         // Check type annotation is accurate.
         if let Some(ann) = annotation {
             let mut type_vars = hashmap![]; // TODO: use the one for this scope
-            let const_ann = self.type_from_ast(&ann, &mut type_vars, NewTypeAction::Disallow)?;
+            let const_ann = hydrator.type_from_ast(&ann, self)?;
             self.unify(const_ann, inferred.typ())
                 .map_err(|e| convert_unify_error(e, inferred.location()))?;
         };
@@ -2293,6 +2101,7 @@ impl<'a> Typer<'a> {
                         Some(t) => return t.clone(),
                         None => {
                             if !self.annotated_generic_types.contains(id) {
+                                // Check this in the hydrator, i.e. is it a created type
                                 let v = self.new_unbound_var(ctx_level);
                                 ids.insert(*id, v.clone());
                                 return v;
@@ -2322,32 +2131,36 @@ impl<'a> Typer<'a> {
     fn make_type_vars(
         &mut self,
         args: &[String],
-        vars: &mut im::HashMap<String, Arc<Type>>,
         location: &SrcSpan,
+        hydrator: &mut Hydrator,
     ) -> Result<Vec<Arc<Type>>, Error> {
         args.iter()
             .map(|arg| TypeAst::Var {
                 location: location.clone(),
                 name: arg.to_string(),
             })
-            .map(|ast| self.type_from_ast(&ast, vars, NewTypeAction::MakeGeneric))
+            .map(|ast| hydrator.type_from_ast(&ast, self))
             .collect::<Result<_, _>>()
     }
 
     fn custom_type_accessors(
         &mut self,
         constructors: &[RecordConstructor],
-        type_vars: &mut im::HashMap<String, Arc<Type>>,
+        hydrator: &mut Hydrator,
     ) -> Result<Option<HashMap<String, RecordAccessor>>, Error> {
+        // Get the constructor for this custom type.
         let args = match constructors {
-            [constructor] if !constructor.args.is_empty() => &constructor.args,
+            // If there is not exactly 1 constructor we return as we cannot
+            // build any constructors.
             _ => return Ok(None),
+            [constructor] if !constructor.args.is_empty() => &constructor.args,
         };
 
         let mut fields = HashMap::with_capacity(args.len());
+        hydrator.disallow_new_type_variables();
         for (index, (label, arg, ..)) in args.iter().enumerate() {
             if let Some(label) = label {
-                let typ = self.type_from_ast(arg, type_vars, NewTypeAction::Disallow)?;
+                let typ = hydrator.type_from_ast(arg, self)?;
                 fields.insert(
                     label.to_string(),
                     RecordAccessor {
@@ -2504,6 +2317,203 @@ impl<'a> Typer<'a> {
             }),
         }
     }
+
+    fn register_import(&mut self, s: &UntypedStatement) -> Result<(), Error> {
+        match s {
+            Statement::Import {
+                module,
+                as_name,
+                unqualified,
+                ..
+            } => {
+                // Find imported module
+                let module_info = self
+                    .importable_modules
+                    .get(&module.join("/"))
+                    .gleam_expect("Typer could not find a module being imported.");
+
+                // Determine local alias of imported module
+                let module_name = match &as_name {
+                    None => module[module.len() - 1].clone(),
+                    Some(name) => name.clone(),
+                };
+
+                // Insert unqualified imports into scope
+                for UnqualifiedImport {
+                    name,
+                    location,
+                    as_name,
+                } in unqualified
+                {
+                    let mut imported = false;
+
+                    let imported_name = match &as_name {
+                        None => name,
+                        Some(alias) => alias,
+                    };
+
+                    if let Some(value) = module_info.1.values.get(name) {
+                        self.insert_variable(
+                            imported_name.clone(),
+                            value.variant.clone(),
+                            value.typ.clone(),
+                        );
+                        imported = true;
+                    }
+
+                    if let Some(typ) = module_info.1.types.get(name) {
+                        match self.insert_type_constructor(imported_name.clone(), typ.clone()) {
+                            Ok(_) => (),
+                            Err(e) => return Err(e),
+                        }
+
+                        imported = true;
+                    }
+
+                    if !imported {
+                        return Err(Error::UnknownModuleField {
+                            location: location.clone(),
+                            name: name.clone(),
+                            module_name: module.clone(),
+                            value_constructors: module_info
+                                .1
+                                .values
+                                .keys()
+                                .map(|t| t.to_string())
+                                .collect(),
+                            type_constructors: module_info
+                                .1
+                                .types
+                                .keys()
+                                .map(|t| t.to_string())
+                                .collect(),
+                        });
+                    }
+                }
+
+                // Insert imported module into scope
+                // TODO: use a refernce to the module to avoid copying
+                self.imported_modules
+                    .insert(module_name, module_info.clone());
+                Ok(())
+            }
+
+            _ => Ok(()),
+        }
+    }
+
+    /// Iterate over a module, registering any new types created by the module into the typer
+    fn register_types(
+        &mut self,
+        statement: &UntypedStatement,
+        module: &[String],
+    ) -> Result<(), Error> {
+        match statement {
+            Statement::ExternalType {
+                name,
+                public,
+                args,
+                location,
+                ..
+            } => {
+                let mut hydrator = Hydrator::new();
+                let parameters = self.make_type_vars(args, location, &mut hydrator)?;
+                let typ = Arc::new(Type::App {
+                    public: *public,
+                    module: module.to_owned(),
+                    name: name.clone(),
+                    args: parameters.clone(),
+                });
+
+                self.insert_type_constructor(
+                    name.clone(),
+                    TypeConstructor {
+                        origin: location.clone(),
+                        module: module.to_owned(),
+                        public: *public,
+                        parameters,
+                        typ,
+                    },
+                )?;
+            }
+
+            Statement::CustomType {
+                name,
+                public,
+                opaque,
+                args,
+                constructors,
+                location,
+                ..
+            } => {
+                let mut hydrator = Hydrator::new();
+                let parameters = self.make_type_vars(args, location, &mut hydrator)?;
+                let typ = Arc::new(Type::App {
+                    public: *public,
+                    module: module.to_owned(),
+                    name: name.clone(),
+                    args: parameters.clone(),
+                });
+
+                self.insert_type_constructor(
+                    name.clone(),
+                    TypeConstructor {
+                        origin: location.clone(),
+                        module: module.to_owned(),
+                        public: *public,
+                        parameters,
+                        typ: typ.clone(),
+                    },
+                )?;
+
+                // If the custom type only has a single constructor then we can access the
+                // fields using the record.field syntax, so store any fields accessors.
+                if let Some(accessors) =
+                    self.custom_type_accessors(constructors.as_slice(), &mut hydrator)?
+                {
+                    let map = AccessorsMap {
+                        public: (*public && !*opaque),
+                        accessors,
+                        typ: typ.clone(),
+                    };
+                    self.insert_accessors(name.as_ref(), map)
+                }
+            }
+
+            Statement::TypeAlias {
+                location,
+                public,
+                args,
+                alias: name,
+                resolved_type,
+                ..
+            } => {
+                let mut hydrator = Hydrator::new();
+                // Register the paramerterised types
+                let parameters = self.make_type_vars(args, location, &mut hydrator)?;
+
+                // Disallow creation of new types outside the paramerterised types
+                hydrator.disallow_new_type_variables();
+
+                // Create the type that the alias resolves to
+                let typ = hydrator.type_from_ast(&resolved_type, self)?;
+                self.insert_type_constructor(
+                    name.clone(),
+                    TypeConstructor {
+                        origin: location.clone(),
+                        module: module.to_owned(),
+                        public: *public,
+                        parameters,
+                        typ,
+                    },
+                )?;
+            }
+
+            _ => {}
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -2557,125 +2567,6 @@ impl ValueConstructor {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum NewTypeAction {
-    Disallow,
-    MakeGeneric,
-}
-
-/// Iterate over a module, registering any new types created by the module into the typer
-fn register_types(
-    statement: &UntypedStatement,
-    module: &[String],
-    typer: &mut Typer,
-) -> Result<(), Error> {
-    match statement {
-        Statement::ExternalType {
-            name,
-            public,
-            args,
-            location,
-            ..
-        } => {
-            let mut type_vars = hashmap![];
-            let parameters = typer.make_type_vars(args, &mut type_vars, location)?;
-            let typ = Arc::new(Type::App {
-                public: *public,
-                module: module.to_owned(),
-                name: name.clone(),
-                args: parameters.clone(),
-            });
-
-            typer.insert_type_constructor(
-                name.clone(),
-                TypeConstructor {
-                    origin: location.clone(),
-                    module: module.to_owned(),
-                    public: *public,
-                    parameters,
-                    typ,
-                },
-            )?;
-        }
-
-        Statement::CustomType {
-            name,
-            public,
-            opaque,
-            args,
-            constructors,
-            location,
-            ..
-        } => {
-            let mut type_vars = hashmap![];
-            let parameters = typer.make_type_vars(args, &mut type_vars, location)?;
-            let typ = Arc::new(Type::App {
-                public: *public,
-                module: module.to_owned(),
-                name: name.clone(),
-                args: parameters.clone(),
-            });
-
-            typer.insert_type_constructor(
-                name.clone(),
-                TypeConstructor {
-                    origin: location.clone(),
-                    module: module.to_owned(),
-                    public: *public,
-                    parameters,
-                    typ: typ.clone(),
-                },
-            )?;
-
-            // If the custom type only has a single constructor then we can access the
-            // fields using the record.field syntax, so store any fields accessors.
-            if let Some(accessors) =
-                typer.custom_type_accessors(constructors.as_slice(), &mut type_vars)?
-            {
-                let map = AccessorsMap {
-                    public: (*public && !*opaque),
-                    accessors,
-                    typ: typ.clone(),
-                };
-                typer.insert_accessors(name.as_ref(), map)
-            }
-        }
-
-        Statement::TypeAlias {
-            location,
-            public,
-            args,
-            alias: name,
-            resolved_type,
-            ..
-        } => {
-            let mut type_vars = hashmap![];
-            let parameters = typer.make_type_vars(args, &mut type_vars, location)?;
-            let typ =
-                typer.type_from_ast(&resolved_type, &mut type_vars, NewTypeAction::Disallow)?;
-            typer.insert_type_constructor(
-                name.clone(),
-                TypeConstructor {
-                    origin: location.clone(),
-                    module: module.to_owned(),
-                    public: *public,
-                    parameters,
-                    typ,
-                },
-            )?;
-        }
-
-        _ => {}
-    }
-
-    // Wipe clean all memory of any types specifically being annotations
-    // as outside of the statement they're defined in they should not have
-    // different behaviour to any other type.
-    typer.annotated_generic_types.clear();
-
-    Ok(())
-}
-
 /// Crawl the AST, annotating each node with the inferred type or
 /// returning an error.
 ///
@@ -2687,462 +2578,24 @@ pub fn infer_module(
     let mut typer = Typer::new(module.name.as_slice(), modules, warnings);
     let module_name = &module.name;
 
+    // Register any modules, types, and values being imported
+    // We process imports first so that anything imported can be referenced
+    // anywhere in the module.
     for s in module.statements.iter() {
-        match s {
-            Statement::Import {
-                module,
-                as_name,
-                unqualified,
-                ..
-            } => {
-                // Find imported module
-                let module_info = typer.importable_modules.get(&module.join("/")).expect(
-                    "COMPILER BUG: Typer could not find a module being imported.
-    This should not be possible. Please report this crash",
-                );
-
-                // Determine local alias of imported module
-                let module_name = match &as_name {
-                    None => module[module.len() - 1].clone(),
-                    Some(name) => name.clone(),
-                };
-
-                // Insert unqualified imports into scope
-                for UnqualifiedImport {
-                    name,
-                    location,
-                    as_name,
-                } in unqualified
-                {
-                    let mut imported = false;
-
-                    let imported_name = match &as_name {
-                        None => name,
-                        Some(alias) => alias,
-                    };
-
-                    if let Some(value) = module_info.1.values.get(name) {
-                        typer.insert_variable(
-                            imported_name.clone(),
-                            value.variant.clone(),
-                            value.typ.clone(),
-                        );
-                        imported = true;
-                    }
-
-                    if let Some(typ) = module_info.1.types.get(name) {
-                        match typer.insert_type_constructor(imported_name.clone(), typ.clone()) {
-                            Ok(_) => (),
-                            Err(e) => return Err(e),
-                        }
-
-                        imported = true;
-                    }
-
-                    if !imported {
-                        return Err(Error::UnknownModuleField {
-                            location: location.clone(),
-                            name: name.clone(),
-                            module_name: module.clone(),
-                            value_constructors: module_info
-                                .1
-                                .values
-                                .keys()
-                                .map(|t| t.to_string())
-                                .collect(),
-                            type_constructors: module_info
-                                .1
-                                .types
-                                .keys()
-                                .map(|t| t.to_string())
-                                .collect(),
-                        });
-                    }
-                }
-
-                // Insert imported module into scope
-                // TODO: use a refernce to the module to avoid copying
-                typer
-                    .imported_modules
-                    .insert(module_name, module_info.clone());
-            }
-
-            _ => break,
-        }
+        typer.register_import(s)?;
     }
 
     // Register types so they can be used in constructors and functions
-    // earlier in the file
+    // earlier in the module.
     for s in module.statements.iter() {
-        match register_types(s, module_name, &mut typer) {
-            Ok(_) => (),
-            Err(e) => return Err(e),
-        }
+        typer.register_types(s, module_name)?;
     }
 
+    // Infer the types of each statement in the module
     let statements = module
         .statements
         .into_iter()
-        .map(|s| match s {
-            Statement::Fn {
-                doc,
-                location,
-                name,
-                public,
-                args,
-                body,
-                return_annotation,
-                end_location,
-                ..
-            } => {
-                let level = 1;
-
-                let mut field_map = FieldMap::new(args.len());
-                for (i, arg) in args.iter().enumerate() {
-                    if let ArgNames::NamedLabelled { label, .. } = &arg.names {
-                        field_map
-                            .insert(label.clone(), i)
-                            .map_err(|_| Error::DuplicateField {
-                                label: label.to_string(),
-                                location: location.clone(),
-                            })?;
-                    }
-                }
-                let field_map = field_map.into_option();
-
-                // Register a var for the function so that it can call itself recursively
-                let rec = typer.new_unbound_var(level + 1);
-                typer.insert_variable(
-                    name.clone(),
-                    ValueConstructorVariant::ModuleFn {
-                        name: name.clone(),
-                        field_map: field_map.clone(),
-                        module: module_name.clone(),
-                        arity: args.len(),
-                    },
-                    rec.clone(),
-                );
-
-                // Infer the type
-                let (typ, args, body) = typer.in_new_scope(|typer| {
-                    // TODO
-                    // typer.annotated_type_vars.clear();
-                    let (args, body) = typer.do_infer_fn(args, body, &return_annotation)?;
-                    let args_types = args.iter().map(|a| a.typ.clone()).collect();
-                    let typ = fn_(args_types, body.typ());
-                    Ok((typ, args, body))
-                })?;
-
-                // Assert that the inferred type matches the type of any recursive call
-                typer
-                    .unify(rec, typ.clone())
-                    .map_err(|e| convert_unify_error(e, &location))?;
-                let typ = generalise(typ, level);
-
-                // Insert the function into the module's interface
-                typer.insert_module_value(
-                    &name,
-                    ValueConstructor {
-                        public,
-                        origin: location.clone(),
-                        typ: typ.clone(),
-                        variant: ValueConstructorVariant::ModuleFn {
-                            name: name.clone(),
-                            field_map: field_map.clone(),
-                            module: module_name.clone(),
-                            arity: args.len(),
-                        },
-                    },
-                )?;
-
-                // Insert the function into the typerironment
-                typer.insert_variable(
-                    name.clone(),
-                    ValueConstructorVariant::ModuleFn {
-                        name: name.clone(),
-                        field_map,
-                        module: module_name.clone(),
-                        arity: args.len(),
-                    },
-                    typ,
-                );
-
-                let statement: TypedStatement = Statement::Fn {
-                    doc,
-                    location,
-                    name,
-                    public,
-                    args,
-                    end_location,
-                    return_annotation,
-                    return_type: body.typ(),
-                    body,
-                };
-
-                Ok(statement)
-            }
-
-            Statement::ExternalFn {
-                doc,
-                location,
-                name,
-                public,
-                args,
-                retrn,
-                module,
-                fun,
-                ..
-            } => {
-                // Construct type of function from AST
-                let (return_type, typ, field_map) = typer.in_new_scope(|typer| {
-                    let mut type_vars = hashmap![];
-                    let return_type =
-                        typer.type_from_ast(&retrn, &mut type_vars, NewTypeAction::MakeGeneric)?;
-                    let mut args_types = Vec::with_capacity(args.len());
-                    let mut field_map = FieldMap::new(args.len());
-                    for (i, arg) in args.iter().enumerate() {
-                        let t = typer.type_from_ast(
-                            &arg.typ,
-                            &mut type_vars,
-                            NewTypeAction::MakeGeneric,
-                        )?;
-                        args_types.push(t);
-                        if let Some(label) = &arg.label {
-                            field_map.insert(label.clone(), i).map_err(|_| {
-                                Error::DuplicateField {
-                                    label: label.to_string(),
-                                    location: location.clone(),
-                                }
-                            })?;
-                        }
-                    }
-                    let field_map = field_map.into_option();
-                    let typ = fn_(args_types, return_type.clone());
-
-                    Ok((return_type, typ, field_map))
-                })?;
-
-                // Insert function into module
-                typer.insert_module_value(
-                    &name,
-                    ValueConstructor {
-                        public,
-                        typ: typ.clone(),
-                        origin: location.clone(),
-                        variant: ValueConstructorVariant::ModuleFn {
-                            name: fun.clone(),
-                            field_map: field_map.clone(),
-                            module: vec![module.clone()],
-                            arity: args.len(),
-                        },
-                    },
-                )?;
-
-                // Insert function into module's internal scope
-                typer.insert_variable(
-                    name.clone(),
-                    ValueConstructorVariant::ModuleFn {
-                        name: fun.clone(),
-                        module: vec![module.clone()],
-                        arity: args.len(),
-                        field_map,
-                    },
-                    typ,
-                );
-                Ok(Statement::ExternalFn {
-                    return_type,
-                    doc,
-                    location,
-                    name,
-                    public,
-                    args,
-                    retrn,
-                    module,
-                    fun,
-                })
-            }
-
-            Statement::TypeAlias {
-                doc,
-                location,
-                public,
-                alias,
-                args,
-                resolved_type,
-                ..
-            } => {
-                let typ = typer
-                    .get_type_constructor(&None, alias.as_str())
-                    .gleam_expect("Could not find existing type for type alias")
-                    .typ
-                    .clone();
-                Ok(Statement::TypeAlias {
-                    doc,
-                    location,
-                    public,
-                    alias,
-                    args,
-                    resolved_type,
-                    typ,
-                })
-            }
-
-            Statement::CustomType {
-                doc,
-                location,
-                public,
-                opaque,
-                name,
-                args,
-                constructors,
-            } => {
-                let mut type_vars = hashmap![];
-                // This custom type was inserted into the module types in the `register_types`
-                // pass, so we can expect this type to exist already.
-                let return_type_constructor = typer
-                    .module_types
-                    .get(&name)
-                    .gleam_expect("Type for custom type not found on constructor infer pass");
-
-                // Insert the parameter types (previously created in `register_types`) into the
-                // type environment so that the constructor can reference them.
-                for (typ, param) in return_type_constructor.parameters.iter().zip(args.iter()) {
-                    type_vars.insert(param.clone(), typ.clone());
-                }
-
-                let retrn = return_type_constructor.typ.clone();
-
-                // Check and register constructors
-                for constructor in constructors.iter() {
-                    let mut field_map = FieldMap::new(constructor.args.len());
-                    let mut args_types = Vec::with_capacity(constructor.args.len());
-                    for (i, (label, arg, ..)) in constructor.args.iter().enumerate() {
-                        let t =
-                            typer.type_from_ast(&arg, &mut type_vars, NewTypeAction::Disallow)?;
-                        args_types.push(t);
-                        if let Some(label) = label {
-                            field_map.insert(label.clone(), i).map_err(|_| {
-                                Error::DuplicateField {
-                                    label: label.to_string(),
-                                    location: location.clone(),
-                                }
-                            })?;
-                        }
-                    }
-                    let field_map = field_map.into_option();
-                    // Insert constructor function into module scope
-                    let typ = match constructor.args.len() {
-                        0 => retrn.clone(),
-                        _ => fn_(args_types, retrn.clone()),
-                    };
-
-                    if !opaque {
-                        typer.insert_module_value(
-                            &constructor.name,
-                            ValueConstructor {
-                                public,
-                                typ: typ.clone(),
-                                origin: constructor.location.clone(),
-                                variant: ValueConstructorVariant::Record {
-                                    name: constructor.name.clone(),
-                                    field_map: field_map.clone(),
-                                },
-                            },
-                        )?;
-                    }
-
-                    typer.insert_variable(
-                        constructor.name.clone(),
-                        ValueConstructorVariant::Record {
-                            name: constructor.name.clone(),
-                            field_map,
-                        },
-                        typ,
-                    );
-                }
-                Ok(Statement::CustomType {
-                    doc,
-                    location,
-                    public,
-                    opaque,
-                    name,
-                    args,
-                    constructors,
-                })
-            }
-
-            Statement::ExternalType {
-                doc,
-                location,
-                public,
-                name,
-                args,
-            } => {
-                // Check contained types are valid
-                let mut type_vars = hashmap![];
-                for arg in args.iter() {
-                    let var = TypeAst::Var {
-                        location: location.clone(),
-                        name: arg.to_string(),
-                    };
-                    typer.type_from_ast(&var, &mut type_vars, NewTypeAction::MakeGeneric)?;
-                }
-                Ok(Statement::ExternalType {
-                    doc,
-                    location,
-                    public,
-                    name,
-                    args,
-                })
-            }
-
-            Statement::Import {
-                location,
-                module,
-                as_name,
-                unqualified,
-            } => Ok(Statement::Import {
-                location,
-                module,
-                as_name,
-                unqualified,
-            }),
-
-            Statement::ModuleConstant {
-                doc,
-                location,
-                name,
-                annotation,
-                public,
-                value,
-                ..
-            } => {
-                let typed_expr = typer.infer_const(&annotation, *value)?;
-                let typ = typed_expr.typ();
-
-                typer.insert_module_value(
-                    &name,
-                    ValueConstructor {
-                        public,
-                        origin: location.clone(),
-                        variant: ValueConstructorVariant::ModuleConstant {
-                            literal: typed_expr.clone(),
-                        },
-                        typ: typ.clone(),
-                    },
-                )?;
-
-                Ok(Statement::ModuleConstant {
-                    doc,
-                    location,
-                    name,
-                    annotation,
-                    public,
-                    value: Box::new(typed_expr),
-                    typ,
-                })
-            }
-        })
+        .map(|s| infer_statement(s, module_name, &mut typer))
         .collect::<Result<Vec<_>, Error>>()?;
 
     // Remove private and imported types and values to create the public interface
@@ -3180,6 +2633,371 @@ pub fn infer_module(
             accessors,
         },
     })
+}
+
+fn infer_statement(
+    s: UntypedStatement,
+    module_name: &Vec<String>,
+    typer: &mut Typer,
+) -> Result<TypedStatement, Error> {
+    match s {
+        Statement::Fn {
+            doc,
+            location,
+            name,
+            public,
+            args,
+            body,
+            return_annotation,
+            end_location,
+            ..
+        } => {
+            let level = 1;
+
+            let mut field_map = FieldMap::new(args.len());
+            for (i, arg) in args.iter().enumerate() {
+                if let ArgNames::NamedLabelled { label, .. } = &arg.names {
+                    field_map
+                        .insert(label.clone(), i)
+                        .map_err(|_| Error::DuplicateField {
+                            label: label.to_string(),
+                            location: location.clone(),
+                        })?;
+                }
+            }
+            let field_map = field_map.into_option();
+
+            // Register a var for the function so that it can call itself recursively
+            let rec = typer.new_unbound_var(level + 1);
+            typer.insert_variable(
+                name.clone(),
+                ValueConstructorVariant::ModuleFn {
+                    name: name.clone(),
+                    field_map: field_map.clone(),
+                    module: module_name.clone(),
+                    arity: args.len(),
+                },
+                rec.clone(),
+            );
+
+            // Infer the type
+            let (typ, args, body) = typer.in_new_scope(|typer| {
+                // TODO
+                // typer.annotated_type_vars.clear();
+                let (args, body) = typer.do_infer_fn(args, body, &return_annotation)?;
+                let args_types = args.iter().map(|a| a.typ.clone()).collect();
+                let typ = fn_(args_types, body.typ());
+                Ok((typ, args, body))
+            })?;
+
+            // Assert that the inferred type matches the type of any recursive call
+            typer
+                .unify(rec, typ.clone())
+                .map_err(|e| convert_unify_error(e, &location))?;
+            let typ = generalise(typ, level);
+
+            // Insert the function into the module's interface
+            typer.insert_module_value(
+                &name,
+                ValueConstructor {
+                    public,
+                    origin: location.clone(),
+                    typ: typ.clone(),
+                    variant: ValueConstructorVariant::ModuleFn {
+                        name: name.clone(),
+                        field_map: field_map.clone(),
+                        module: module_name.clone(),
+                        arity: args.len(),
+                    },
+                },
+            )?;
+
+            // Insert the function into the typerironment
+            typer.insert_variable(
+                name.clone(),
+                ValueConstructorVariant::ModuleFn {
+                    name: name.clone(),
+                    field_map,
+                    module: module_name.clone(),
+                    arity: args.len(),
+                },
+                typ,
+            );
+
+            let statement: TypedStatement = Statement::Fn {
+                doc,
+                location,
+                name,
+                public,
+                args,
+                end_location,
+                return_annotation,
+                return_type: body.typ(),
+                body,
+            };
+
+            Ok(statement)
+        }
+
+        Statement::ExternalFn {
+            doc,
+            location,
+            name,
+            public,
+            args,
+            retrn,
+            module,
+            fun,
+            ..
+        } => {
+            let mut hydrator = Hydrator::new();
+            // Construct type of function from AST
+            let (return_type, typ, field_map) = typer.in_new_scope(|typer| {
+                let mut type_vars = hashmap![];
+                let return_type = hydrator.type_from_ast(&retrn, typer)?;
+                let mut args_types = Vec::with_capacity(args.len());
+                let mut field_map = FieldMap::new(args.len());
+                for (i, arg) in args.iter().enumerate() {
+                    let t = hydrator.type_from_ast(&arg.typ, typer)?;
+                    args_types.push(t);
+                    if let Some(label) = &arg.label {
+                        field_map
+                            .insert(label.clone(), i)
+                            .map_err(|_| Error::DuplicateField {
+                                label: label.to_string(),
+                                location: location.clone(),
+                            })?;
+                    }
+                }
+                let field_map = field_map.into_option();
+                let typ = fn_(args_types, return_type.clone());
+
+                Ok((return_type, typ, field_map))
+            })?;
+
+            // Insert function into module
+            typer.insert_module_value(
+                &name,
+                ValueConstructor {
+                    public,
+                    typ: typ.clone(),
+                    origin: location.clone(),
+                    variant: ValueConstructorVariant::ModuleFn {
+                        name: fun.clone(),
+                        field_map: field_map.clone(),
+                        module: vec![module.clone()],
+                        arity: args.len(),
+                    },
+                },
+            )?;
+
+            // Insert function into module's internal scope
+            typer.insert_variable(
+                name.clone(),
+                ValueConstructorVariant::ModuleFn {
+                    name: fun.clone(),
+                    module: vec![module.clone()],
+                    arity: args.len(),
+                    field_map,
+                },
+                typ,
+            );
+            Ok(Statement::ExternalFn {
+                return_type,
+                doc,
+                location,
+                name,
+                public,
+                args,
+                retrn,
+                module,
+                fun,
+            })
+        }
+
+        Statement::TypeAlias {
+            doc,
+            location,
+            public,
+            alias,
+            args,
+            resolved_type,
+            ..
+        } => {
+            let typ = typer
+                .get_type_constructor(&None, alias.as_str())
+                .gleam_expect("Could not find existing type for type alias")
+                .typ
+                .clone();
+            Ok(Statement::TypeAlias {
+                doc,
+                location,
+                public,
+                alias,
+                args,
+                resolved_type,
+                typ,
+            })
+        }
+
+        Statement::CustomType {
+            doc,
+            location,
+            public,
+            opaque,
+            name,
+            args,
+            constructors,
+        } => {
+            let mut hydrator = Hydrator::new();
+            hydrator.disallow_new_type_variables();
+
+            // This custom type was inserted into the module types in the `register_types`
+            // pass, so we can expect this type to exist already.
+            let return_type_constructor = typer
+                .module_types
+                .get(&name)
+                .gleam_expect("Type for custom type not found on constructor infer pass");
+
+            // Insert the parameter types (previously created in `register_types`) into the
+            // type environment so that the constructor can reference them.
+            for (typ, name) in return_type_constructor.parameters.iter().zip(args.iter()) {
+                hydrator.register_type_as_created(name.clone(), typ.clone());
+            }
+
+            let retrn = return_type_constructor.typ.clone();
+
+            // Check and register constructors
+            for constructor in constructors.iter() {
+                let mut field_map = FieldMap::new(constructor.args.len());
+                let mut args_types = Vec::with_capacity(constructor.args.len());
+                for (i, (label, arg, ..)) in constructor.args.iter().enumerate() {
+                    let t = hydrator.type_from_ast(&arg, typer)?;
+                    args_types.push(t);
+                    if let Some(label) = label {
+                        field_map
+                            .insert(label.clone(), i)
+                            .map_err(|_| Error::DuplicateField {
+                                label: label.to_string(),
+                                location: location.clone(),
+                            })?;
+                    }
+                }
+                let field_map = field_map.into_option();
+                // Insert constructor function into module scope
+                let typ = match constructor.args.len() {
+                    0 => retrn.clone(),
+                    _ => fn_(args_types, retrn.clone()),
+                };
+
+                if !opaque {
+                    typer.insert_module_value(
+                        &constructor.name,
+                        ValueConstructor {
+                            public,
+                            typ: typ.clone(),
+                            origin: constructor.location.clone(),
+                            variant: ValueConstructorVariant::Record {
+                                name: constructor.name.clone(),
+                                field_map: field_map.clone(),
+                            },
+                        },
+                    )?;
+                }
+
+                typer.insert_variable(
+                    constructor.name.clone(),
+                    ValueConstructorVariant::Record {
+                        name: constructor.name.clone(),
+                        field_map,
+                    },
+                    typ,
+                );
+            }
+            Ok(Statement::CustomType {
+                doc,
+                location,
+                public,
+                opaque,
+                name,
+                args,
+                constructors,
+            })
+        }
+
+        Statement::ExternalType {
+            doc,
+            location,
+            public,
+            name,
+            args,
+        } => {
+            // Check contained types are valid
+            let mut hydrator = Hydrator::new();
+            for arg in args.iter() {
+                let var = TypeAst::Var {
+                    location: location.clone(),
+                    name: arg.to_string(),
+                };
+                hydrator.type_from_ast(&var, typer)?;
+            }
+            Ok(Statement::ExternalType {
+                doc,
+                location,
+                public,
+                name,
+                args,
+            })
+        }
+
+        Statement::Import {
+            location,
+            module,
+            as_name,
+            unqualified,
+        } => Ok(Statement::Import {
+            location,
+            module,
+            as_name,
+            unqualified,
+        }),
+
+        Statement::ModuleConstant {
+            doc,
+            location,
+            name,
+            annotation,
+            public,
+            value,
+            ..
+        } => {
+            let mut hydrator = Hydrator::new();
+            let typed_expr = typer.infer_const(&annotation, *value, &mut hydrator)?;
+            let typ = typed_expr.typ();
+
+            typer.insert_module_value(
+                &name,
+                ValueConstructor {
+                    public,
+                    origin: location.clone(),
+                    variant: ValueConstructorVariant::ModuleConstant {
+                        literal: typed_expr.clone(),
+                    },
+                    typ: typ.clone(),
+                },
+            )?;
+
+            Ok(Statement::ModuleConstant {
+                doc,
+                location,
+                name,
+                annotation,
+                public,
+                value: Box::new(typed_expr),
+                typ,
+            })
+        }
+    }
 }
 
 fn infer_bit_string_segment_option<UntypedValue, TypedValue, Typer>(
