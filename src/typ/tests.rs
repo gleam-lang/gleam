@@ -1548,24 +1548,6 @@ fn infer_module_test() {
         ],
     );
 
-    // type variables are not shared between custom types and external functions
-    assert_infer!(
-        "
-        pub type Box(a) { Box(inner: a) }
-        pub fn get_box(x: Box(Box(a))) { x.inner }
-        external fn id(a) -> a = \"\" \"\"
-        pub fn i(x) { id(x) }
-        pub fn a() { id(1) }
-        pub fn b() { id(1.0) }",
-        vec![
-            ("Box", "fn(a) -> Box(a)"),
-            ("a", "fn() -> Int"),
-            ("b", "fn() -> Float"),
-            ("get_box", "fn(Box(Box(a))) -> Box(a)"),
-            ("i", "fn(a) -> a"),
-        ],
-    );
-
     assert_infer!(
         "pub external fn len(List(a)) -> Int = \"\" \"\"",
         vec![("len", "fn(List(a)) -> Int")],
