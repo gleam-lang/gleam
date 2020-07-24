@@ -12,9 +12,18 @@ pub trait Documentable<'a> {
     fn to_doc(self) -> Document<'a>;
 }
 
-impl<'a, 'b> Documentable<'a> for &'b str {
+impl<'a> Documentable<'a> for Cow<'a, str> {
     fn to_doc(self) -> Document<'a> {
-        Document::Text(Cow::Owned(self.to_string()))
+        match self {
+            Cow::Owned(this) => this.to_doc(),
+            Cow::Borrowed(this) => this.to_doc(),
+        }
+    }
+}
+
+impl<'a> Documentable<'a> for &'a str {
+    fn to_doc(self) -> Document<'a> {
+        Document::Text(Cow::Borrowed(self))
     }
 }
 

@@ -13,6 +13,7 @@ use crate::{
 };
 use heck::{CamelCase, SnakeCase};
 use itertools::Itertools;
+use std::borrow::Cow;
 use std::char;
 use std::default::Default;
 use std::sync::Arc;
@@ -161,7 +162,7 @@ pub fn module(module: &TypedModule) -> String {
 
                 _ => None,
             })
-            .map(|(n, a)| atom(n.as_ref()).append("/").append(a))
+            .map(|(n, a)| atom(Cow::Owned(n)).append("/").append(a))
             .intersperse(", ".to_doc()),
     );
 
@@ -192,7 +193,7 @@ pub fn module(module: &TypedModule) -> String {
         .format(80)
 }
 
-fn statement<'a>(statement: &TypedStatement, module: &[String]) -> Option<Document<'a>> {
+fn statement<'a>(statement: &'a TypedStatement, module: &[String]) -> Option<Document<'a>> {
     match statement {
         Statement::TypeAlias { .. } => None,
         Statement::CustomType { .. } => None,
@@ -220,13 +221,23 @@ fn statement<'a>(statement: &TypedStatement, module: &[String]) -> Option<Docume
     }
 }
 
-fn mod_fun<'a>(name: &str, args: &[TypedArg], body: &TypedExpr, module: &[String]) -> Document<'a> {
+fn mod_fun<'a>(
+    name: &'a str,
+    args: &[TypedArg],
+    body: &'a TypedExpr,
+    module: &[String],
+) -> Document<'a> {
     let mut env = Env::new(module);
 
-    atom(name)
+    atom(Cow::Borrowed(name))
         .append(fun_args(args, &mut env))
         .append(" ->")
-        .append(line().append(expr(body, &mut env)).nest(INDENT).group())
+        .append(
+            line()
+                .append(expr(Cow::Borrowed(body), &mut env))
+                .nest(INDENT)
+                .group(),
+        )
         .append(".")
 }
 
@@ -239,8 +250,11 @@ fn fun_args<'a>(args: &[TypedArg], env: &mut Env) -> Document<'a> {
     }))
 }
 
-fn call_args<'a>(args: &[CallArg<TypedExpr>], env: &mut Env) -> Document<'a> {
-    wrap_args(args.into_iter().map(|arg| wrap_expr(&arg.value, env)))
+fn call_args<'a>(args: &'a [CallArg<TypedExpr>], env: &mut Env) -> Document<'a> {
+    wrap_args(
+        args.into_iter()
+            .map(|arg| wrap_expr(Cow::Borrowed(&arg.value), env)),
+    )
 }
 
 fn wrap_args<'a, I>(args: I) -> Document<'a>
@@ -255,7 +269,7 @@ where
         .group()
 }
 
-fn atom<'a>(value: &str) -> Document<'a> {
+fn atom<'a>(value: Cow<'a, str>) -> Document<'a> {
     use regex::Regex;
     lazy_static! {
         static ref RE: Regex = Regex::new(r"^[a-z][a-z0-9_@]*$").unwrap();
@@ -263,7 +277,7 @@ fn atom<'a>(value: &str) -> Document<'a> {
 
     match value {
         // Escape because of keyword collision
-        value if is_reserved_word(value) => format!("'{}'", value).to_doc(),
+        value if is_reserved_word(value.as_ref()) => format!("'{}'", value).to_doc(),
 
         // No need to escape
         _ if RE.is_match(&value) => value.to_doc(),
@@ -273,7 +287,7 @@ fn atom<'a>(value: &str) -> Document<'a> {
     }
 }
 
-fn string<'a>(value: &str) -> Document<'a> {
+fn string<'a>(value: &'a str) -> Document<'a> {
     value.to_doc().surround("<<\"", "\"/utf8>>")
 }
 
@@ -292,7 +306,7 @@ fn bit_string<'a>(elems: impl Iterator<Item = Document<'a>>) -> Document<'a> {
 }
 
 fn const_segment<'a>(
-    value: &TypedConstant,
+    value: &'a TypedConstant,
     options: Vec<BitStringSegmentOption<TypedConstant>>,
     env: &mut Env,
 ) -> Document<'a> {
@@ -302,23 +316,27 @@ fn const_segment<'a>(
 
         // As normal
         Constant::Int { .. } | Constant::Float { .. } | Constant::BitString { .. } => {
-            const_inline(value, env)
+            const_inline(Cow::Borrowed(value), env)
         }
 
         // Wrap anything else in parentheses
-        value => const_inline(value, env).surround("(", ")"),
+        value => const_inline(Cow::Borrowed(value), env).surround("(", ")"),
     };
 
-    let size = |value: &TypedConstant, env: &mut Env| match value {
-        Constant::Int { .. } => Some(":".to_doc().append(const_inline(value, env))),
+    let size = |value: TypedConstant, env: &mut Env| match value {
+        Constant::Int { .. } => Some(":".to_doc().append(const_inline(Cow::Owned(value), env))),
         _ => Some(
             ":".to_doc()
-                .append(const_inline(value, env).surround("(", ")")),
+                .append(const_inline(Cow::Owned(value), env).surround("(", ")")),
         ),
     };
 
-    let unit = |value: &TypedConstant, env: &mut Env| match value {
-        Constant::Int { .. } => Some("unit:".to_doc().append(const_inline(value, env))),
+    let unit = |value: TypedConstant, env: &mut Env| match value {
+        Constant::Int { .. } => Some(
+            "unit:"
+                .to_doc()
+                .append(const_inline(Cow::Owned(value), env)),
+        ),
         _ => None,
     };
 
@@ -326,7 +344,7 @@ fn const_segment<'a>(
 }
 
 fn expr_segment<'a>(
-    value: &TypedExpr,
+    value: &'a TypedExpr,
     options: Vec<BitStringSegmentOption<TypedExpr>>,
     env: &mut Env,
 ) -> Document<'a> {
@@ -338,21 +356,24 @@ fn expr_segment<'a>(
         TypedExpr::Int { .. }
         | TypedExpr::Float { .. }
         | TypedExpr::Var { .. }
-        | TypedExpr::BitString { .. } => expr(value, env),
+        | TypedExpr::BitString { .. } => expr(Cow::Borrowed(value), env),
 
         // Wrap anything else in parentheses
-        value => expr(value, env).surround("(", ")"),
+        value => expr(Cow::Borrowed(value), env).surround("(", ")"),
     };
 
-    let size = |value: &TypedExpr, env: &mut Env| match value {
+    let size = |value: TypedExpr, env: &mut Env| match value {
         TypedExpr::Int { .. } | TypedExpr::Var { .. } => {
-            Some(":".to_doc().append(expr(value, env)))
+            Some(":".to_doc().append(expr(Cow::Owned(value), env)))
         }
-        _ => Some(":".to_doc().append(expr(value, env).surround("(", ")"))),
+        _ => Some(
+            ":".to_doc()
+                .append(expr(Cow::Owned(value), env).surround("(", ")")),
+        ),
     };
 
-    let unit = |value: &TypedExpr, env: &mut Env| match value {
-        TypedExpr::Int { .. } => Some("unit:".to_doc().append(expr(value, env))),
+    let unit = |value: TypedExpr, env: &mut Env| match value {
+        TypedExpr::Int { .. } => Some("unit:".to_doc().append(expr(Cow::Owned(value), env))),
         _ => None,
     };
 
@@ -360,7 +381,7 @@ fn expr_segment<'a>(
 }
 
 fn pattern_segment<'a>(
-    value: &TypedPattern,
+    value: &'a TypedPattern,
     options: Vec<BitStringSegmentOption<TypedPattern>>,
     env: &mut Env,
 ) -> Document<'a> {
@@ -372,16 +393,18 @@ fn pattern_segment<'a>(
         Pattern::Discard { .. }
         | Pattern::Var { .. }
         | Pattern::Int { .. }
-        | Pattern::Float { .. } => pattern(value, env),
+        | Pattern::Float { .. } => pattern(Cow::Borrowed(value), env),
 
         // No other pattern variants are allowed in pattern bit string segments
         _ => crate::error::fatal_compiler_bug("Pattern segment match not recognised"),
     };
 
-    let size = |value: &TypedPattern, env: &mut Env| Some(":".to_doc().append(pattern(value, env)));
+    let size = |value: TypedPattern, env: &mut Env| {
+        Some(":".to_doc().append(pattern(Cow::Owned(value), env)))
+    };
 
-    let unit = |value: &TypedPattern, env: &mut Env| match value {
-        Pattern::Int { .. } => Some("unit:".to_doc().append(pattern(value, env))),
+    let unit = |value: TypedPattern, env: &mut Env| match value {
+        Pattern::Int { .. } => Some("unit:".to_doc().append(pattern(Cow::Owned(value), env))),
         _ => None,
     };
 
@@ -396,14 +419,15 @@ fn bit_string_segment<'a, Value, SizeToDoc, UnitToDoc>(
     env: &mut Env,
 ) -> Document<'a>
 where
-    SizeToDoc: FnMut(&Value, &mut Env) -> Option<Document<'a>>,
-    UnitToDoc: FnMut(&Value, &mut Env) -> Option<Document<'a>>,
+    Value: 'a,
+    SizeToDoc: FnMut(Value, &mut Env) -> Option<Document<'a>>,
+    UnitToDoc: FnMut(Value, &mut Env) -> Option<Document<'a>>,
 {
     let mut size: Option<Document> = None;
     let mut unit: Option<Document> = None;
     let mut others = Vec::new();
 
-    options.iter().for_each(|option| match option {
+    options.into_iter().for_each(|option| match option {
         BitStringSegmentOption::Invalid { .. } => (),
         BitStringSegmentOption::Integer { .. } => others.push("integer"),
         BitStringSegmentOption::Float { .. } => others.push("float"),
@@ -420,8 +444,8 @@ where
         BitStringSegmentOption::Big { .. } => others.push("big"),
         BitStringSegmentOption::Little { .. } => others.push("little"),
         BitStringSegmentOption::Native { .. } => others.push("native"),
-        BitStringSegmentOption::Size { value, .. } => size = size_to_doc(value, env),
-        BitStringSegmentOption::Unit { value, .. } => unit = unit_to_doc(value, env),
+        BitStringSegmentOption::Size { value, .. } => size = size_to_doc(*value, env),
+        BitStringSegmentOption::Unit { value, .. } => unit = unit_to_doc(*value, env),
     });
 
     document = document.append(size);
@@ -441,15 +465,20 @@ where
     document
 }
 
-fn seq<'a>(first: &TypedExpr, then: &TypedExpr, env: &mut Env) -> Document<'a> {
+fn seq<'a>(first: &'a TypedExpr, then: &'a TypedExpr, env: &mut Env) -> Document<'a> {
     force_break()
-        .append(expr(first, env))
+        .append(expr(Cow::Borrowed(first), env))
         .append(",")
         .append(line())
-        .append(expr(then, env))
+        .append(expr(Cow::Borrowed(then), env))
 }
 
-fn bin_op<'a>(name: &BinOp, left: &TypedExpr, right: &TypedExpr, env: &mut Env) -> Document<'a> {
+fn bin_op<'a>(
+    name: &BinOp,
+    left: &'a TypedExpr,
+    right: &'a TypedExpr,
+    env: &mut Env,
+) -> Document<'a> {
     let op = match name {
         BinOp::And => "andalso",
         BinOp::Or => "orelse",
@@ -471,13 +500,13 @@ fn bin_op<'a>(name: &BinOp, left: &TypedExpr, right: &TypedExpr, env: &mut Env) 
     };
 
     let left_expr = match left {
-        TypedExpr::BinOp { .. } => expr(left, env).surround("(", ")"),
-        _ => expr(left, env),
+        TypedExpr::BinOp { .. } => expr(Cow::Borrowed(left), env).surround("(", ")"),
+        _ => expr(Cow::Borrowed(left), env),
     };
 
     let right_expr = match right {
-        TypedExpr::BinOp { .. } => expr(right, env).surround("(", ")"),
-        _ => expr(right, env),
+        TypedExpr::BinOp { .. } => expr(Cow::Borrowed(right), env).surround("(", ")"),
+        _ => expr(Cow::Borrowed(right), env),
     };
 
     left_expr
@@ -487,7 +516,7 @@ fn bin_op<'a>(name: &BinOp, left: &TypedExpr, right: &TypedExpr, env: &mut Env) 
         .append(right_expr)
 }
 
-fn pipe<'a>(value: &TypedExpr, fun: &TypedExpr, env: &mut Env) -> Document<'a> {
+fn pipe<'a>(value: &TypedExpr, fun: &'a TypedExpr, env: &mut Env) -> Document<'a> {
     let arg = CallArg {
         label: None,
         location: Default::default(),
@@ -498,16 +527,16 @@ fn pipe<'a>(value: &TypedExpr, fun: &TypedExpr, env: &mut Env) -> Document<'a> {
 }
 
 fn try_<'a>(
-    value: &TypedExpr,
-    pat: &TypedPattern,
-    then: &TypedExpr,
+    value: &'a TypedExpr,
+    pat: &'a TypedPattern,
+    then: &'a TypedExpr,
     env: &mut Env,
 ) -> Document<'a> {
     let try_error_name = "gleam@try_error";
 
     "case "
         .to_doc()
-        .append(expr(value, env))
+        .append(expr(Cow::Borrowed(value), env))
         .append(" of")
         .append(
             line()
@@ -521,9 +550,9 @@ fn try_<'a>(
         .append(
             line()
                 .append("{ok, ")
-                .append(pattern(pat, env))
+                .append(pattern(Cow::Borrowed(pat), env))
                 .append("} ->")
-                .append(line().append(expr(then, env)).nest(INDENT))
+                .append(line().append(expr(Cow::Borrowed(then), env)).nest(INDENT))
                 .nest(INDENT),
         )
         .append(line())
@@ -532,25 +561,25 @@ fn try_<'a>(
 }
 
 fn let_<'a>(
-    value: &TypedExpr,
-    pat: &TypedPattern,
-    then: &TypedExpr,
+    value: &'a TypedExpr,
+    pat: &'a TypedPattern,
+    then: &'a TypedExpr,
     env: &mut Env,
 ) -> Document<'a> {
-    let body = expr(value, env);
-    pattern(pat, env)
+    let body = expr(Cow::Borrowed(value), env);
+    pattern(Cow::Borrowed(pat), env)
         .append(" = ")
         .append(body)
         .append(",")
         .append(line())
-        .append(expr(then, env))
+        .append(expr(Cow::Borrowed(then), env))
 }
 
-fn pattern<'a>(p: &TypedPattern, env: &mut Env) -> Document<'a> {
-    match p {
+fn pattern<'a>(p: Cow<'a, TypedPattern>, env: &mut Env) -> Document<'a> {
+    match p.as_ref() {
         Pattern::Nil { .. } => "[]".to_doc(),
 
-        Pattern::Let { name, pattern: p } => pattern(p, env)
+        Pattern::Let { name, pattern: p } => pattern(Cow::Borrowed(p), env)
             .append(" = ")
             .append(env.next_local_var_name(name.to_string())),
 
@@ -574,7 +603,9 @@ fn pattern<'a>(p: &TypedPattern, env: &mut Env) -> Document<'a> {
             ..
         } => tag_tuple_pattern(name, args, env),
 
-        Pattern::Tuple { elems, .. } => tuple(elems.into_iter().map(|p| pattern(p, env))),
+        Pattern::Tuple { elems, .. } => {
+            tuple(elems.into_iter().map(|p| pattern(Cow::Borrowed(p), env)))
+        }
 
         Pattern::BitString { segments, .. } => bit_string(
             segments
@@ -592,39 +623,52 @@ fn float<'a>(value: &str) -> Document<'a> {
     }
 }
 
-fn pattern_list_cons<'a>(head: &TypedPattern, tail: &TypedPattern, env: &mut Env) -> Document<'a> {
-    list_cons(head, tail, env, pattern, |expr| match expr {
+fn pattern_list_cons<'a>(
+    head: &'a TypedPattern,
+    tail: &'a TypedPattern,
+    env: &mut Env,
+) -> Document<'a> {
+    list_cons(head, tail, env, pattern, |expr| match expr.as_ref() {
         Pattern::Nil { .. } => ListType::Nil,
 
-        Pattern::Cons { head, tail, .. } => ListType::Cons { head, tail },
+        Pattern::Cons { head, tail, .. } => {
+            let (head, tail) = (Cow::Borrowed(head.as_ref()), Cow::Borrowed(tail.as_ref()));
+            ListType::Cons { head, tail }
+        }
 
-        other => ListType::NotList(other),
+        other => ListType::NotList(Cow::Borrowed(other)),
     })
 }
 
-fn expr_list_cons<'a>(head: &TypedExpr, tail: &TypedExpr, env: &mut Env) -> Document<'a> {
-    list_cons(head, tail, env, wrap_expr, |expr| match expr {
+fn expr_list_cons<'a>(head: &'a TypedExpr, tail: &'a TypedExpr, env: &mut Env) -> Document<'a> {
+    list_cons(head, tail, env, wrap_expr, |expr| match expr.as_ref() {
         TypedExpr::ListNil { .. } => ListType::Nil,
 
-        TypedExpr::ListCons { head, tail, .. } => ListType::Cons { head, tail },
+        TypedExpr::ListCons { head, tail, .. } => {
+            let (head, tail) = (Cow::Borrowed(head.as_ref()), Cow::Borrowed(tail.as_ref()));
+            ListType::Cons { head, tail }
+        }
 
-        other => ListType::NotList(other),
+        other => ListType::NotList(Cow::Borrowed(other)),
     })
 }
 
 fn list_cons<'a, ToDoc, Categorise, Elem>(
-    head: Elem,
-    tail: Elem,
+    head: &'a Elem,
+    tail: &'a Elem,
     env: &mut Env,
     to_doc: ToDoc,
     categorise_element: Categorise,
 ) -> Document<'a>
 where
-    ToDoc: Fn(Elem, &mut Env) -> Document<'a>,
-    Categorise: Fn(Elem) -> ListType<Elem, Elem>,
+    Elem: Clone,
+    ToDoc: Fn(Cow<'a, Elem>, &mut Env) -> Document<'a>,
+    Categorise: Fn(Cow<Elem>) -> ListType<Cow<Elem>, Cow<Elem>>,
 {
-    let mut elems = vec![head];
-    let final_tail = collect_cons(tail, &mut elems, categorise_element);
+    // TODO: investigate to remove this clone
+    let mut elems = vec![Cow::Borrowed(head)];
+    let final_tail =
+        collect_cons::<_, Elem, Elem>(Cow::Borrowed(tail), &mut elems, categorise_element);
 
     let elems = concat(
         elems
@@ -642,9 +686,11 @@ where
     elems.to_doc().nest_current().surround("[", "]").group()
 }
 
-fn collect_cons<F, E, T>(e: T, elems: &mut Vec<E>, f: F) -> Option<T>
+fn collect_cons<'a, F, E, T>(e: Cow<'a, T>, elems: &mut Vec<Cow<'a, E>>, f: F) -> Option<Cow<'a, T>>
 where
-    F: Fn(T) -> ListType<E, T>,
+    T: Clone,
+    E: Clone,
+    F: Fn(Cow<'a, T>) -> ListType<Cow<'a, E>, Cow<'a, T>>,
 {
     match f(e) {
         ListType::Nil => None,
@@ -664,7 +710,7 @@ enum ListType<E, T> {
     NotList(T),
 }
 
-fn var<'a>(name: &str, constructor: &ValueConstructor, env: &mut Env) -> Document<'a> {
+fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env) -> Document<'a> {
     match &constructor.variant {
         ValueConstructorVariant::Record {
             name: record_name, ..
@@ -673,25 +719,27 @@ fn var<'a>(name: &str, constructor: &ValueConstructor, env: &mut Env) -> Documen
                 let chars = incrementing_args_list(args.len());
                 "fun("
                     .to_doc()
-                    .append(chars.as_str())
+                    .append(chars.clone())
                     .append(") -> {")
                     .append(record_name.to_snake_case())
                     .append(", ")
                     .append(chars)
                     .append("} end")
             }
-            _ => atom(record_name.to_snake_case().as_str()),
+            _ => atom(Cow::Owned(record_name.to_snake_case())),
         },
 
         ValueConstructorVariant::LocalVariable => env.local_var_name(name.to_string()),
 
-        ValueConstructorVariant::ModuleConstant { literal } => const_inline(literal, env),
+        ValueConstructorVariant::ModuleConstant { literal } => {
+            const_inline(Cow::Borrowed(literal), env)
+        }
 
         ValueConstructorVariant::ModuleFn {
             arity, ref module, ..
         } if module.as_slice() == env.module => "fun "
             .to_doc()
-            .append(atom(name))
+            .append(atom(Cow::Borrowed(name)))
             .append("/")
             .append(*arity),
 
@@ -704,23 +752,25 @@ fn var<'a>(name: &str, constructor: &ValueConstructor, env: &mut Env) -> Documen
             .to_doc()
             .append(module.join("@"))
             .append(":")
-            .append(atom(name))
+            .append(atom(Cow::Borrowed(name)))
             .append("/")
             .append(*arity),
     }
 }
 
-fn const_inline<'a>(literal: &TypedConstant, env: &mut Env) -> Document<'a> {
-    match literal {
+fn const_inline<'a>(literal: Cow<'a, TypedConstant>, env: &mut Env) -> Document<'a> {
+    match literal.as_ref() {
         Constant::Int { value, .. } => value.to_string().to_doc(),
         Constant::Float { value, .. } => value.to_string().to_doc(),
         Constant::String { value, .. } => string(value),
-        Constant::Tuple { elements, .. } => tuple(elements.iter().map(|e| const_inline(e, env))),
+        Constant::Tuple { elements, .. } => {
+            tuple(elements.iter().map(|e| const_inline(Cow::Borrowed(e), env)))
+        }
 
         Constant::List { elements, .. } => {
             let elements = elements
                 .iter()
-                .map(|e| const_inline(e, env))
+                .map(|e| const_inline(Cow::Borrowed(e), env))
                 .intersperse(delim(","));
             concat(elements).nest_current().surround("[", "]").group()
         }
@@ -733,10 +783,12 @@ fn const_inline<'a>(literal: &TypedConstant, env: &mut Env) -> Document<'a> {
 
         Constant::Record { tag, args, .. } => {
             if args.is_empty() {
-                atom(tag.to_snake_case().as_str())
+                atom(Cow::Owned(tag.to_snake_case()))
             } else {
-                let args = args.into_iter().map(|a| const_inline(&a.value, env));
-                let tag = atom(tag.to_snake_case().as_str());
+                let args = args
+                    .into_iter()
+                    .map(|a| const_inline(Cow::Borrowed(&a.value), env));
+                let tag = atom(Cow::Owned(tag.to_snake_case()));
                 tuple(std::iter::once(tag).chain(args))
             }
         }
@@ -745,20 +797,22 @@ fn const_inline<'a>(literal: &TypedConstant, env: &mut Env) -> Document<'a> {
 
 fn tag_tuple_pattern<'a>(
     name: &str,
-    args: &[CallArg<TypedPattern>],
+    args: &'a [CallArg<TypedPattern>],
     env: &mut Env,
 ) -> Document<'a> {
     if args.is_empty() {
-        atom(name.to_snake_case().as_str())
+        atom(Cow::Owned(name.to_snake_case()))
     } else {
         tuple(
-            std::iter::once(atom(name.to_snake_case().as_str()))
-                .chain(args.into_iter().map(|p| pattern(&p.value, env))),
+            std::iter::once(atom(Cow::Owned(name.to_snake_case()))).chain(
+                args.into_iter()
+                    .map(|p| pattern(Cow::Borrowed(&p.value), env)),
+            ),
         )
     }
 }
 
-fn clause<'a>(clause: &TypedClause, env: &mut Env) -> Document<'a> {
+fn clause<'a>(clause: &'a TypedClause, env: &mut Env) -> Document<'a> {
     let Clause {
         guard,
         pattern: pat,
@@ -781,13 +835,13 @@ fn clause<'a>(clause: &TypedClause, env: &mut Env) -> Document<'a> {
                 let p = patterns
                     .get(0)
                     .gleam_expect("Single pattern clause printing");
-                pattern(p, env)
+                pattern(Cow::Borrowed(p), env)
             } else {
-                tuple(patterns.iter().map(|p| pattern(p, env)))
+                tuple(patterns.iter().map(|p| pattern(Cow::Borrowed(p), env)))
             };
 
             if then_doc == Document::Nil {
-                then_doc = expr(then, env);
+                then_doc = expr(Cow::Borrowed(then), env);
             }
 
             patterns_doc.append(
@@ -801,14 +855,14 @@ fn clause<'a>(clause: &TypedClause, env: &mut Env) -> Document<'a> {
     concat(docs)
 }
 
-fn optional_clause_guard<'a>(guard: Option<&TypedClauseGuard>, env: &mut Env) -> Document<'a> {
+fn optional_clause_guard<'a>(guard: Option<&'a TypedClauseGuard>, env: &mut Env) -> Document<'a> {
     match guard {
         Some(guard) => " when ".to_doc().append(bare_clause_guard(guard, env)),
         None => nil(),
     }
 }
 
-fn bare_clause_guard<'a>(guard: &TypedClauseGuard, env: &mut Env) -> Document<'a> {
+fn bare_clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env) -> Document<'a> {
     match guard {
         ClauseGuard::Or { left, right, .. } => clause_guard(left.as_ref(), env)
             .append(" orelse ")
@@ -862,11 +916,11 @@ fn bare_clause_guard<'a>(guard: &TypedClauseGuard, env: &mut Env) -> Document<'a
         // ClauseGuard::Vars are local variables
         ClauseGuard::Var { name, .. } => env.local_var_name(name.to_string()),
 
-        ClauseGuard::Constant(constant) => const_inline(constant, env),
+        ClauseGuard::Constant(constant) => const_inline(Cow::Borrowed(constant), env),
     }
 }
 
-fn clause_guard<'a>(guard: &TypedClauseGuard, env: &mut Env) -> Document<'a> {
+fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env) -> Document<'a> {
     match guard {
         // Binary ops are wrapped in parens
         ClauseGuard::Or { .. }
@@ -890,7 +944,7 @@ fn clause_guard<'a>(guard: &TypedClauseGuard, env: &mut Env) -> Document<'a> {
     }
 }
 
-fn clauses<'a>(cs: &[TypedClause], env: &mut Env) -> Document<'a> {
+fn clauses<'a>(cs: &'a [TypedClause], env: &mut Env) -> Document<'a> {
     concat(
         cs.into_iter()
             .map(|c| {
@@ -903,14 +957,18 @@ fn clauses<'a>(cs: &[TypedClause], env: &mut Env) -> Document<'a> {
     )
 }
 
-fn case<'a>(subjects: &[TypedExpr], cs: &[TypedClause], env: &mut Env) -> Document<'a> {
+fn case<'a>(subjects: &'a [TypedExpr], cs: &'a [TypedClause], env: &mut Env) -> Document<'a> {
     let subjects_doc = if subjects.len() == 1 {
         let subject = subjects
             .get(0)
             .gleam_expect("erl case printing of single subject");
-        wrap_expr(subject, env).group()
+        wrap_expr(Cow::Borrowed(subject), env).group()
     } else {
-        tuple(subjects.into_iter().map(|e| wrap_expr(e, env)))
+        tuple(
+            subjects
+                .into_iter()
+                .map(|e| wrap_expr(Cow::Borrowed(e), env)),
+        )
     };
     "case "
         .to_doc()
@@ -922,7 +980,7 @@ fn case<'a>(subjects: &[TypedExpr], cs: &[TypedClause], env: &mut Env) -> Docume
         .group()
 }
 
-fn call<'a>(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env) -> Document<'a> {
+fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>], env: &mut Env) -> Document<'a> {
     match fun {
         TypedExpr::ModuleSelect {
             constructor: ModuleValueConstructor::Record { name, .. },
@@ -936,8 +994,10 @@ fn call<'a>(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env) -> Docu
                 },
             ..
         } => tuple(
-            std::iter::once(atom(name.to_snake_case().as_str()))
-                .chain(args.into_iter().map(|arg| expr(&arg.value, env))),
+            std::iter::once(atom(Cow::Owned(name.to_snake_case()))).chain(
+                args.into_iter()
+                    .map(|arg| expr(Cow::Borrowed(&arg.value), env)),
+            ),
         ),
 
         TypedExpr::Var {
@@ -949,11 +1009,11 @@ fn call<'a>(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env) -> Docu
             ..
         } => {
             if module.as_slice() == env.module {
-                atom(name).append(call_args(args, env))
+                atom(Cow::Borrowed(name)).append(call_args(args, env))
             } else {
-                atom(module.join("@").as_str())
+                atom(Cow::Owned(module.join("@")))
                     .append(":")
-                    .append(atom(name))
+                    .append(atom(Cow::Borrowed(name)))
                     .append(call_args(args, env))
             }
         }
@@ -963,12 +1023,12 @@ fn call<'a>(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env) -> Docu
             label,
             constructor: ModuleValueConstructor::Fn,
             ..
-        } => atom(module_name.join("@").as_str())
+        } => atom(Cow::Owned(module_name.join("@")))
             .append(":")
-            .append(atom(label.as_str()))
+            .append(atom(Cow::Borrowed(label)))
             .append(call_args(args, env)),
 
-        call @ TypedExpr::Call { .. } => expr(call, env)
+        call @ TypedExpr::Call { .. } => expr(Cow::Borrowed(call), env)
             .surround("(", ")")
             .append(call_args(args, env)),
 
@@ -1000,19 +1060,19 @@ fn call<'a>(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env) -> Docu
             }
         }
 
-        fun @ TypedExpr::Fn { .. } => expr(fun, env)
+        fun @ TypedExpr::Fn { .. } => expr(Cow::Borrowed(fun), env)
             .surround("(", ")")
             .append(call_args(args, env)),
 
-        TypedExpr::RecordAccess { .. } => expr(fun, env)
+        TypedExpr::RecordAccess { .. } => expr(Cow::Borrowed(fun), env)
             .surround("(", ")")
             .append(call_args(args, env)),
 
-        TypedExpr::TupleIndex { .. } => expr(fun, env)
+        TypedExpr::TupleIndex { .. } => expr(Cow::Borrowed(fun), env)
             .surround("(", ")")
             .append(call_args(args, env)),
 
-        other => expr(other, env).append(call_args(args, env)),
+        other => expr(Cow::Borrowed(other), env).append(call_args(args, env)),
     }
 }
 
@@ -1028,16 +1088,16 @@ fn begin_end<'a>(document: Document<'a>) -> Document<'a> {
 
 /// Same as expr, expect it wraps seq, let, etc in begin end
 ///
-fn wrap_expr<'a>(expression: &TypedExpr, env: &mut Env) -> Document<'a> {
-    match &expression {
+fn wrap_expr<'a>(expression: Cow<'a, TypedExpr>, env: &mut Env) -> Document<'a> {
+    match expression.as_ref() {
         TypedExpr::Seq { .. } => begin_end(expr(expression, env)),
         TypedExpr::Let { .. } => begin_end(expr(expression, env)),
         _ => expr(expression, env),
     }
 }
 
-fn expr<'a>(expression: &TypedExpr, env: &mut Env) -> Document<'a> {
-    match expression {
+fn expr<'a>(expression: Cow<'a, TypedExpr>, env: &mut Env) -> Document<'a> {
+    match expression.as_ref() {
         TypedExpr::ListNil { .. } => "[]".to_doc(),
         TypedExpr::Todo { label: None, .. } => "erlang:error({gleam_error, todo})".to_doc(),
         TypedExpr::Todo { label: Some(l), .. } => l
@@ -1046,31 +1106,31 @@ fn expr<'a>(expression: &TypedExpr, env: &mut Env) -> Document<'a> {
             .surround("erlang:error({gleam_error, todo, \"", "\"})"),
         TypedExpr::Int { value, .. } => value.as_str().to_doc(),
         TypedExpr::Float { value, .. } => float(value.as_ref()),
-        TypedExpr::String { value, .. } => string(value),
-        TypedExpr::Seq { first, then, .. } => seq(first, then, env),
-        TypedExpr::Pipe { left, right, .. } => pipe(left, right, env),
+        TypedExpr::String { value, .. } => string(&value),
+        TypedExpr::Seq { first, then, .. } => seq(&first, &then, env),
+        TypedExpr::Pipe { left, right, .. } => pipe(&left, &right, env),
 
-        TypedExpr::TupleIndex { tuple, index, .. } => tuple_index(tuple, *index, env),
+        TypedExpr::TupleIndex { tuple, index, .. } => tuple_index(&tuple, *index, env),
 
         TypedExpr::Var {
             name, constructor, ..
-        } => var(name, constructor, env),
+        } => var(&name, &constructor, env),
 
-        TypedExpr::Fn { args, body, .. } => fun(args, body, env),
+        TypedExpr::Fn { args, body, .. } => fun(&args, &body, env),
 
-        TypedExpr::ListCons { head, tail, .. } => expr_list_cons(head, tail, env),
+        TypedExpr::ListCons { head, tail, .. } => expr_list_cons(&head, &tail, env),
 
-        TypedExpr::Call { fun, args, .. } => call(fun, args, env),
+        TypedExpr::Call { fun, args, .. } => call(&fun, &args, env),
 
         TypedExpr::ModuleSelect {
             constructor: ModuleValueConstructor::Record { name, arity: 0 },
             ..
-        } => atom(name.to_snake_case().as_str()),
+        } => atom(Cow::Owned(name.to_snake_case())),
 
         TypedExpr::ModuleSelect {
             constructor: ModuleValueConstructor::Constant { literal },
             ..
-        } => const_inline(literal, env),
+        } => const_inline(Cow::Borrowed(literal), env),
 
         TypedExpr::ModuleSelect {
             constructor: ModuleValueConstructor::Record { name, arity },
@@ -1079,9 +1139,10 @@ fn expr<'a>(expression: &TypedExpr, env: &mut Env) -> Document<'a> {
             let chars = incrementing_args_list(*arity);
             "fun("
                 .to_doc()
-                .append(chars.as_str())
+                // TODO: explain why this clone is mandatory
+                .append(chars.clone())
                 .append(") -> {")
-                .append(name.to_snake_case().as_str())
+                .append(name.to_snake_case())
                 .append(", ")
                 .append(chars)
                 .append("} end")
@@ -1093,9 +1154,9 @@ fn expr<'a>(expression: &TypedExpr, env: &mut Env) -> Document<'a> {
             module_name,
             constructor: ModuleValueConstructor::Fn,
             ..
-        } => module_select_fn(typ.clone(), module_name, label),
+        } => module_select_fn(typ.clone(), &module_name, &label),
 
-        TypedExpr::RecordAccess { record, index, .. } => tuple_index(record, index + 1, env),
+        TypedExpr::RecordAccess { record, index, .. } => tuple_index(&record, index + 1, env),
 
         TypedExpr::Let {
             value,
@@ -1103,24 +1164,26 @@ fn expr<'a>(expression: &TypedExpr, env: &mut Env) -> Document<'a> {
             then,
             kind: BindingKind::Try,
             ..
-        } => try_(value, pattern, then, env),
+        } => try_(&value, &pattern, &then, env),
 
         TypedExpr::Let {
             value,
             pattern,
             then,
             ..
-        } => let_(value, pattern, then, env),
+        } => let_(&value, &pattern, &then, env),
 
         TypedExpr::Case {
             subjects, clauses, ..
-        } => case(subjects, clauses.as_slice(), env),
+        } => case(&subjects, clauses.as_slice(), env),
 
         TypedExpr::BinOp {
             name, left, right, ..
-        } => bin_op(&name, left, right, env),
+        } => bin_op(&name, &left, &right, env),
 
-        TypedExpr::Tuple { elems, .. } => tuple(elems.into_iter().map(|e| wrap_expr(e, env))),
+        TypedExpr::Tuple { elems, .. } => {
+            tuple(elems.into_iter().map(|e| wrap_expr(Cow::Borrowed(e), env)))
+        }
 
         TypedExpr::BitString { segments, .. } => bit_string(
             segments
@@ -1130,25 +1193,25 @@ fn expr<'a>(expression: &TypedExpr, env: &mut Env) -> Document<'a> {
     }
 }
 
-fn tuple_index<'a>(tuple: &TypedExpr, index: u64, env: &mut Env) -> Document<'a> {
+fn tuple_index<'a>(tuple: &'a TypedExpr, index: u64, env: &mut Env) -> Document<'a> {
     use std::iter::once;
     let index_doc = format!("{}", (index + 1)).to_doc();
-    let tuple_doc = expr(tuple, env);
+    let tuple_doc = expr(Cow::Borrowed(tuple), env);
     let iter = once(index_doc).chain(once(tuple_doc));
     "erlang:element".to_doc().append(wrap_args(iter))
 }
 
 fn module_select_fn<'a>(
     typ: Arc<crate::typ::Type>,
-    module_name: &[String],
-    label: &str,
+    module_name: &'a [String],
+    label: &'a str,
 ) -> Document<'a> {
     match crate::typ::collapse_links(typ).as_ref() {
         crate::typ::Type::Fn { args, .. } => "fun "
             .to_doc()
             .append(module_name.join("@"))
             .append(":")
-            .append(atom(label))
+            .append(atom(Cow::Borrowed(label)))
             .append("/")
             .append(args.len()),
 
@@ -1161,11 +1224,15 @@ fn module_select_fn<'a>(
     }
 }
 
-fn fun<'a>(args: &[TypedArg], body: &TypedExpr, env: &mut Env) -> Document<'a> {
+fn fun<'a>(args: &'a [TypedArg], body: &'a TypedExpr, env: &mut Env) -> Document<'a> {
     "fun"
         .to_doc()
         .append(fun_args(args, env).append(" ->"))
-        .append(break_("", " ").append(expr(body, env)).nest(INDENT))
+        .append(
+            break_("", " ")
+                .append(expr(Cow::Borrowed(body), env))
+                .nest(INDENT),
+        )
         .append(break_("", " "))
         .append("end")
         .group()
@@ -1179,15 +1246,15 @@ fn incrementing_args_list(arity: usize) -> String {
         .collect()
 }
 
-fn external_fun<'a>(name: &str, module: &str, fun: &str, arity: usize) -> Document<'a> {
+fn external_fun<'a>(name: &'a str, module: &'a str, fun: &'a str, arity: usize) -> Document<'a> {
     let chars: String = incrementing_args_list(arity);
 
-    atom(name)
+    atom(Cow::Borrowed(name))
         .append(format!("({}) ->", chars))
         .append(line())
-        .append(atom(module))
+        .append(atom(Cow::Borrowed(module)))
         .append(":")
-        .append(atom(fun))
+        .append(atom(Cow::Borrowed(fun)))
         .append(format!("({}).", chars))
         .nest(INDENT)
 }
