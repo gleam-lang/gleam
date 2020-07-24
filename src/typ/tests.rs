@@ -2895,6 +2895,18 @@ fn x() {
             }),
         },
     );
+
+    // Type vars must be declared
+    // https://github.com/gleam-lang/gleam/issues/734
+    assert_error!(
+        r#"type A(a) { A };
+           type B = a"#,
+        sort_options(Error::UnknownLabels {
+            unknown: vec![("c".to_string(), SrcSpan { start: 60, end: 66 })],
+            valid: vec!["a".to_string(), "b".to_string()],
+            supplied: vec!["a".to_string()],
+        })
+    );
 }
 
 #[test]
