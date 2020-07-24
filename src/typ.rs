@@ -356,6 +356,9 @@ pub struct Typer<'a> {
     current_module: &'a [String],
     uid: usize,
     level: usize,
+    // TODO: Maybe remove this and merge it into the hashmap that is passed into the type_from_ast
+    // function? As that is were we track what type vars came from annotations. Need to check if
+    // the usage of it becomes awkward or not.
     annotated_generic_types: im::HashSet<usize>,
     importable_modules: &'a HashMap<String, (Origin, Module)>,
     imported_modules: HashMap<String, (Origin, Module)>,
@@ -3137,6 +3140,12 @@ fn register_types(
 
         _ => {}
     }
+
+    // Wipe clean all memory of any types specifically being annotations
+    // as outside of the statement they're defined in they should not have
+    // different behaviour to any other type.
+    typer.annotated_generic_types.clear();
+
     Ok(())
 }
 

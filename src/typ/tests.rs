@@ -1395,6 +1395,7 @@ fn infer_error_test() {
 fn infer_module_test() {
     macro_rules! assert_infer {
         ($src:expr, $module:expr $(,)?) => {
+            println!(">>>>>> infer_module_test assert_infer:\n\n{}\n\n\n", $src);
             let (src, _) = crate::parser::strip_extra($src);
             let ast = crate::grammar::ModuleParser::new()
                 .parse(&src)
@@ -1786,7 +1787,7 @@ pub opaque type Cat {
         }
 
         pub fn create_float_box(value: Float) {
-            let x: Box(x) = Box(value)
+            let x: Box(Float) = Box(value)
             x
         }",
         vec![
@@ -2553,8 +2554,6 @@ fn main() {
         },
     );
 
-    // Cases were we can't so easily check for equality-
-    // i.e. because the contents of the error are non-deterministic.
     assert_error!("fn inc(x: a) { x + 1 }");
 
     // Type variables are shared between function annotations and let annotations within their body
@@ -2578,7 +2577,7 @@ fn main() {
                 module: vec!["my_module".to_string()],
                 name: "Box".to_string(),
                 args: vec![Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Generic { id: 11 })),
+                    typ: Arc::new(RefCell::new(TypeVar::Generic { id: 17 })),
                 })]
             }),
             given: Arc::new(Type::App {
@@ -2886,10 +2885,10 @@ fn x() {
     assert_error!(
         r#"type A(a) { A };
            type B = a"#,
-        sort_options(Error::UnknownLabels {
-            unknown: vec![("c".to_string(), SrcSpan { start: 60, end: 66 })],
-            valid: vec!["a".to_string(), "b".to_string()],
-            supplied: vec!["a".to_string()],
+        sort_options(Error::UnknownType {
+            location: SrcSpan { start: 37, end: 38 },
+            name: "a".to_string(),
+            types: env_types_with(&["A"]),
         })
     );
 }
