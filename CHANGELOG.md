@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The `get_package` method has been added.
+
 ## v1.1.1 - 2020-07-20
 
 - Updated generated protobuffer deserialisation code.
