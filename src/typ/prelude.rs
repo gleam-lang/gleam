@@ -1,4 +1,4 @@
-use super::{Type, TypeConstructor, Typer, ValueConstructorVariant};
+use super::{Environment, Type, TypeConstructor, ValueConstructorVariant};
 use crate::error::GleamExpect;
 use std::sync::Arc;
 
@@ -91,7 +91,7 @@ pub fn utf_codepoint() -> Arc<Type> {
     })
 }
 
-pub fn register_prelude<'a>(mut typer: Typer<'a>) -> Typer<'a> {
+pub fn register_prelude<'a>(mut typer: Environment<'a>) -> Environment<'a> {
     typer
         .insert_type_constructor(
             "Int".to_string(),
