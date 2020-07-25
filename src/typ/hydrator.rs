@@ -43,7 +43,11 @@ impl Hydrator {
 
     /// Construct a Type from an AST Type annotation.
     ///
-    pub fn type_from_ast(&mut self, ast: &TypeAst, typer: &mut Typer) -> Result<Arc<Type>, Error> {
+    pub fn type_from_ast<'a>(
+        &mut self,
+        ast: &TypeAst,
+        environment: &mut Environment<'a>,
+    ) -> Result<Arc<Type>, Error> {
         match ast {
             TypeAst::Constructor {
                 location,
@@ -54,7 +58,7 @@ impl Hydrator {
                 // Hydrate the type argument AST into types
                 let mut argument_types = Vec::with_capacity(args.len());
                 for t in args {
-                    let typ = self.type_from_ast(t, typer)?;
+                    let typ = self.type_from_ast(t, environment)?;
                     argument_types.push((t.location(), typ));
                 }
 
@@ -63,7 +67,7 @@ impl Hydrator {
                     parameters,
                     typ: return_type,
                     ..
-                } = typer
+                } = environment
                     .get_type_constructor(module, name)
                     .map_err(|e| convert_get_type_constructor_error(e, &location))?
                     .clone();
@@ -82,16 +86,16 @@ impl Hydrator {
                 let mut type_vars = hashmap![];
                 let mut parameter_types = Vec::with_capacity(parameters.len());
                 for typ in parameters {
-                    parameter_types.push(typer.instantiate(typ, 0, &mut type_vars));
+                    parameter_types.push(environment.instantiate(typ, 0, &mut type_vars));
                 }
-                let return_type = typer.instantiate(return_type, 0, &mut type_vars);
+                let return_type = environment.instantiate(return_type, 0, &mut type_vars);
 
                 // Unify argument types with instantiated parameter types so that the correct types
                 // are inserted into the return type
                 for (parameter, (location, argument)) in
                     parameter_types.iter().zip(argument_types.iter())
                 {
-                    typer
+                    environment
                         .unify(parameter.clone(), argument.clone())
                         .map_err(|e| convert_unify_error(e, &location))?;
                 }
@@ -102,16 +106,16 @@ impl Hydrator {
             TypeAst::Tuple { elems, .. } => Ok(tuple(
                 elems
                     .iter()
-                    .map(|t| self.type_from_ast(t, typer))
+                    .map(|t| self.type_from_ast(t, environment))
                     .collect::<Result<_, _>>()?,
             )),
 
             TypeAst::Fn { args, retrn, .. } => {
                 let args = args
                     .iter()
-                    .map(|t| self.type_from_ast(t, typer))
+                    .map(|t| self.type_from_ast(t, environment))
                     .collect::<Result<_, _>>()?;
-                let retrn = self.type_from_ast(retrn, typer)?;
+                let retrn = self.type_from_ast(retrn, environment)?;
                 Ok(fn_(args, retrn))
             }
 
@@ -121,8 +125,9 @@ impl Hydrator {
 
                     None => match self.new_type_behaviour {
                         NewTypeAction::MakeGeneric => {
-                            let var = typer.new_generic_var();
-                            self.created_type_variable_ids.insert(typer.previous_uid());
+                            let var = environment.new_generic_var();
+                            self.created_type_variable_ids
+                                .insert(environment.previous_uid());
                             self.created_type_variables
                                 .insert(name.clone(), var.clone());
                             Ok(var)
@@ -130,7 +135,11 @@ impl Hydrator {
                         NewTypeAction::Disallow => Err(Error::UnknownType {
                             name: name.to_string(),
                             location: location.clone(),
-                            types: typer.module_types.keys().map(|t| t.to_string()).collect(),
+                            types: environment
+                                .module_types
+                                .keys()
+                                .map(|t| t.to_string())
+                                .collect(),
                         }),
                     },
                 }

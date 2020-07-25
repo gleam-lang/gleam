@@ -5,7 +5,7 @@ use super::*;
 use std::sync::Arc;
 
 pub struct PatternTyper<'a, 'b> {
-    typer: &'a mut Typer<'b>,
+    environment: &'a mut Environment<'b>,
     level: usize,
     mode: PatternMode,
     initial_pattern_vars: HashSet<String>,
@@ -17,9 +17,9 @@ enum PatternMode {
 }
 
 impl<'a, 'b> PatternTyper<'a, 'b> {
-    pub fn new(typer: &'a mut Typer<'b>, level: usize) -> Self {
+    pub fn new(environment: &'a mut Environment<'b>, level: usize) -> Self {
         Self {
-            typer,
+            environment,
             level,
             mode: PatternMode::Initial,
             initial_pattern_vars: HashSet::new(),
@@ -35,7 +35,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     });
                 }
                 self.initial_pattern_vars.insert(name.to_string());
-                self.typer.insert_variable(
+                self.environment.insert_variable(
                     name.to_string(),
                     ValueConstructorVariant::LocalVariable,
                     typ,
@@ -43,11 +43,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 Ok(())
             }
 
-            PatternMode::Alternative => match self.typer.local_values.get(name) {
+            PatternMode::Alternative => match self.environment.local_values.get(name) {
                 // This variable was defined in the Initial multi-pattern
                 Some(initial) if self.initial_pattern_vars.contains(name) => {
                     let initial_typ = initial.typ.clone();
-                    self.typer.unify(initial_typ, typ)
+                    self.environment.unify(initial_typ, typ)
                 }
 
                 // This variable was not defined in the Initial multi-pattern
@@ -157,7 +157,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
     /// When we have an assignment or a case expression we unify the pattern with the
     /// inferred type of the subject in order to determine what variables to insert
-    /// into the typer (or to detect a type error).
+    /// into the environment (or to detect a type error).
     ///
     pub fn unify(
         &mut self,
@@ -174,23 +174,24 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             }
 
             Pattern::VarCall { name, location, .. } => {
-                let ValueConstructor { typ, .. } =
-                    self.typer.get_variable(&name).cloned().ok_or_else(|| {
-                        Error::UnknownVariable {
-                            location: location.clone(),
-                            name: name.to_string(),
-                            variables: self
-                                .typer
-                                .local_values
-                                .keys()
-                                .map(|t| t.to_string())
-                                .collect(),
-                        }
+                let ValueConstructor { typ, .. } = self
+                    .environment
+                    .get_variable(&name)
+                    .cloned()
+                    .ok_or_else(|| Error::UnknownVariable {
+                        location: location.clone(),
+                        name: name.to_string(),
+                        variables: self
+                            .environment
+                            .local_values
+                            .keys()
+                            .map(|t| t.to_string())
+                            .collect(),
                     })?;
-                let typ = self
-                    .typer
-                    .instantiate(typ, self.typer.level, &mut hashmap![]);
-                self.typer
+                let typ =
+                    self.environment
+                        .instantiate(typ, self.environment.level, &mut hashmap![]);
+                self.environment
                     .unify(int(), typ.clone())
                     .map_err(|e| convert_unify_error(e, &location))?;
 
@@ -208,29 +209,29 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             }
 
             Pattern::Int { location, value } => {
-                self.typer
+                self.environment
                     .unify(typ, int())
                     .map_err(|e| convert_unify_error(e, &location))?;
                 Ok(Pattern::Int { location, value })
             }
 
             Pattern::Float { location, value } => {
-                self.typer
+                self.environment
                     .unify(typ, float())
                     .map_err(|e| convert_unify_error(e, &location))?;
                 Ok(Pattern::Float { location, value })
             }
 
             Pattern::String { location, value } => {
-                self.typer
+                self.environment
                     .unify(typ, string())
                     .map_err(|e| convert_unify_error(e, &location))?;
                 Ok(Pattern::String { location, value })
             }
 
             Pattern::Nil { location } => {
-                let typ2 = list(self.typer.new_unbound_var(self.level));
-                self.typer
+                let typ2 = list(self.environment.new_unbound_var(self.level));
+                self.environment
                     .unify(typ, typ2)
                     .map_err(|e| convert_unify_error(e, &location))?;
                 Ok(Pattern::Nil { location })
@@ -240,7 +241,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 location,
                 head,
                 tail,
-            } => match typ.get_app_args(true, &[], "List", 1, self.typer) {
+            } => match typ.get_app_args(true, &[], "List", 1, self.environment) {
                 Some(args) => {
                     let head = Box::new(self.unify(*head, args[0].clone())?);
                     let tail = Box::new(self.unify(*tail, typ)?);
@@ -253,7 +254,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 }
 
                 None => Err(Error::CouldNotUnify {
-                    given: list(self.typer.new_unbound_var(self.level)),
+                    given: list(self.environment.new_unbound_var(self.level)),
                     expected: typ.clone(),
                     location,
                 }),
@@ -279,9 +280,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
                 Type::Var { .. } => {
                     let elems_types = (0..(elems.len()))
-                        .map(|_| self.typer.new_unbound_var(self.level))
+                        .map(|_| self.environment.new_unbound_var(self.level))
                         .collect();
-                    self.typer
+                    self.environment
                         .unify(tuple(elems_types), typ.clone())
                         .map_err(|e| convert_unify_error(e, &location))?;
                     self.unify(Pattern::Tuple { elems, location }, typ)
@@ -289,7 +290,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
                 _ => {
                     let elems_types = (0..(elems.len()))
-                        .map(|_| self.typer.new_unbound_var(self.level))
+                        .map(|_| self.environment.new_unbound_var(self.level))
                         .collect();
 
                     Err(Error::CouldNotUnify {
@@ -313,7 +314,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 ..
             } => {
                 let cons = self
-                    .typer
+                    .environment
                     .get_value_constructor(module.as_ref(), &name)
                     .map_err(|e| convert_get_value_constructor_error(e, &location))?;
 
@@ -384,7 +385,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 };
 
                 let instantiated_constructor_type =
-                    self.typer
+                    self.environment
                         .instantiate(constructor_typ, self.level, &mut hashmap![]);
                 match &*instantiated_constructor_type {
                     Type::Fn { args, retrn } => {
@@ -406,7 +407,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                     })
                                 })
                                 .collect::<Result<Vec<_>, _>>()?;
-                            self.typer
+                            self.environment
                                 .unify(typ, retrn.clone())
                                 .map_err(|e| convert_unify_error(e, &location))?;
                             Ok(Pattern::Constructor {
@@ -428,7 +429,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
                     Type::App { .. } => {
                         if pattern_args.is_empty() {
-                            self.typer
+                            self.environment
                                 .unify(typ, instantiated_constructor_type)
                                 .map_err(|e| convert_unify_error(e, &location))?;
                             Ok(Pattern::Constructor {

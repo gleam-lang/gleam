@@ -151,7 +151,7 @@ fn infer_test() {
             let ast = crate::grammar::ExprSequenceParser::new()
                 .parse($src)
                 .expect("syntax error");
-            let result = Typer::new(&[], &HashMap::new(), &mut vec![])
+            let result = ExprTyper::new(&mut Environment::new(&[], &HashMap::new(), &mut vec![]))
                 .infer(ast)
                 .expect("should successfully infer");
             assert_eq!(
@@ -413,7 +413,7 @@ macro_rules! assert_error {
         let ast = crate::grammar::ExprSequenceParser::new()
             .parse($src)
             .expect("syntax error");
-        let result = Typer::new(&[], &HashMap::new(), &mut vec![])
+        let result = ExprTyper::new(&mut Environment::new(&[], &HashMap::new(), &mut vec![]))
             .infer(ast)
             .expect_err("should infer an error");
         assert_eq!(($src, sort_options($error)), ($src, sort_options(result)));
@@ -2965,7 +2965,7 @@ fn env_types_with(things: &[&str]) -> Vec<String> {
 }
 
 fn env_types() -> Vec<String> {
-    Typer::new(&[], &HashMap::new(), &mut vec![])
+    Environment::new(&[], &HashMap::new(), &mut vec![])
         .module_types
         .keys()
         .map(|s| s.to_string())
@@ -2981,7 +2981,7 @@ fn env_vars_with(things: &[&str]) -> Vec<String> {
 }
 
 fn env_vars() -> Vec<String> {
-    Typer::new(&[], &HashMap::new(), &mut vec![])
+    Environment::new(&[], &HashMap::new(), &mut vec![])
         .local_values
         .keys()
         .map(|s| s.to_string())
