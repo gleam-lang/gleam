@@ -2,6 +2,7 @@
 ///! and variables bindings.
 ///!
 use super::*;
+use crate::ast::UntypedPatternBitStringSegment;
 use std::sync::Arc;
 
 pub struct PatternTyper<'a, 'b> {
