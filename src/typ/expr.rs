@@ -7,21 +7,21 @@ use crate::ast::{
     UntypedExpr, UntypedExprBitStringSegment, UntypedMultiPattern, UntypedPattern,
 };
 
-pub struct ExprTyper<'a> {
-    environment: &'a mut Environment<'a>,
+pub struct ExprTyper<'a, 'b> {
+    environment: &'a mut Environment<'b>,
 
     // Type hydrator for creating types from annotations
     hydrator: Hydrator,
 }
 
-impl<'a> Typer for ExprTyper<'a> {
+impl<'a, 'b> Typer for ExprTyper<'a, 'b> {
     fn get_environment(&mut self) -> &mut Environment {
-        &mut self.environment
+        self.environment
     }
 }
 
-impl<'a> ExprTyper<'a> {
-    pub fn new(environment: &'a mut Environment<'a>) -> Self {
+impl<'a, 'b> ExprTyper<'a, 'b> {
+    pub fn new(environment: &'a mut Environment<'b>) -> Self {
         Self {
             hydrator: Hydrator::new(),
             environment,
@@ -239,7 +239,7 @@ impl<'a> ExprTyper<'a> {
     ) -> Result<TypedExpr, Error> {
         let left = Box::new(self.infer(left)?);
         let right = Box::new(self.infer(right)?);
-        let typ = self.new_unbound_var(self.level);
+        let typ = self.new_unbound_var(self.environment.level);
         let fn_typ = Arc::new(Type::Fn {
             args: vec![left.typ()],
             retrn: typ.clone(),
@@ -258,19 +258,19 @@ impl<'a> ExprTyper<'a> {
     fn infer_nil(&mut self, location: SrcSpan) -> Result<TypedExpr, Error> {
         Ok(TypedExpr::ListNil {
             location,
-            typ: list(self.new_unbound_var(self.level)),
+            typ: list(self.new_unbound_var(self.environment.level)),
         })
     }
 
     fn infer_todo(&mut self, location: SrcSpan, label: Option<String>) -> Result<TypedExpr, Error> {
-        self.warnings.push(Warning::Todo {
+        self.environment.warnings.push(Warning::Todo {
             location: location.clone(),
         });
 
         Ok(TypedExpr::Todo {
             location,
             label,
-            typ: self.new_unbound_var(self.level),
+            typ: self.new_unbound_var(self.environment.level),
         })
     }
 
@@ -304,9 +304,11 @@ impl<'a> ExprTyper<'a> {
 
         match first.typ().as_ref() {
             typ if typ.is_result() => {
-                self.warnings.push(Warning::ImplicitlyDiscardedResult {
-                    location: first.location().clone(),
-                });
+                self.environment
+                    .warnings
+                    .push(Warning::ImplicitlyDiscardedResult {
+                        location: first.location().clone(),
+                    });
             }
 
             _ => {}
@@ -350,7 +352,7 @@ impl<'a> ExprTyper<'a> {
         let typ = annotation
             .clone()
             .map(|t| self.type_from_ast(&t))
-            .unwrap_or_else(|| Ok(self.new_unbound_var(self.level)))?;
+            .unwrap_or_else(|| Ok(self.new_unbound_var(self.environment.level)))?;
         Ok(Arg {
             names,
             location,
@@ -425,7 +427,9 @@ impl<'a> ExprTyper<'a> {
         access_location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         match container {
-            UntypedExpr::Var { name, location, .. } if !self.local_values.contains_key(&name) => {
+            UntypedExpr::Var { name, location, .. }
+                if !self.environment.local_values.contains_key(&name) =>
+            {
                 self.infer_module_access(name.as_ref(), label, &location, access_location)
             }
 
@@ -618,8 +622,8 @@ impl<'a> ExprTyper<'a> {
     ) -> Result<TypedExpr, Error> {
         let value = self.in_new_scope(|value_typer| value_typer.infer(value))?;
 
-        let try_value_type = self.new_unbound_var(self.level);
-        let try_error_type = self.new_unbound_var(self.level);
+        let try_value_type = self.new_unbound_var(self.environment.level);
+        let try_error_type = self.new_unbound_var(self.environment.level);
 
         let value_typ = match kind {
             // Ensure that the value is a result if this is a `try` binding
@@ -633,11 +637,11 @@ impl<'a> ExprTyper<'a> {
             _ => value.typ(),
         };
 
-        let value_typ = generalise(value_typ, self.level + 1);
+        let value_typ = generalise(value_typ, self.environment.level + 1);
 
         // Ensure the pattern matches the type of the value
-        let pattern =
-            pattern::PatternTyper::new(self, self.level).unify(pattern, value_typ.clone())?;
+        let pattern = pattern::PatternTyper::new(self.environment, self.environment.level)
+            .unify(pattern, value_typ.clone())?;
 
         // Check the type of the following code
         let then = self.infer(then)?;
@@ -645,7 +649,7 @@ impl<'a> ExprTyper<'a> {
 
         // Ensure that a Result with the right error type is returned for `try`
         if kind == BindingKind::Try {
-            let value = self.new_unbound_var(self.level);
+            let value = self.new_unbound_var(self.environment.level);
             self.unify(result(value, try_error_type), typ.clone())
                 .map_err(|e| convert_unify_error(e, then.try_binding_location()))?;
         }
@@ -654,7 +658,7 @@ impl<'a> ExprTyper<'a> {
         if let Some(ann) = annotation {
             let ann_typ = self
                 .type_from_ast(ann)
-                .map(|t| self.instantiate(t, self.level, &mut hashmap![]))?;
+                .map(|t| self.instantiate(t, self.environment.level, &mut hashmap![]))?;
             self.unify(ann_typ, value_typ)
                 .map_err(|e| convert_unify_error(e, value.location()))?;
         }
@@ -680,7 +684,7 @@ impl<'a> ExprTyper<'a> {
         let mut subject_types = Vec::with_capacity(subjects_count);
         let mut typed_clauses = Vec::with_capacity(clauses.len());
 
-        let return_type = self.new_unbound_var(self.level);
+        let return_type = self.new_unbound_var(self.environment.level);
 
         for subject in subjects.into_iter() {
             let (subject, subject_type) = self.in_new_scope(|subject_typer| {
@@ -752,7 +756,8 @@ impl<'a> ExprTyper<'a> {
         subjects: &[Arc<Type>],
         location: &SrcSpan,
     ) -> Result<(TypedMultiPattern, Vec<TypedMultiPattern>), Error> {
-        let mut pattern_typer = pattern::PatternTyper::new(self, self.level);
+        let mut pattern_typer =
+            pattern::PatternTyper::new(self.environment, self.environment.level);
         let typed_pattern = pattern_typer.infer_multi_pattern(pattern, subjects, &location)?;
 
         // Each case clause has one or more patterns that may match the
@@ -1048,18 +1053,20 @@ impl<'a> ExprTyper<'a> {
         select_location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         let (module_name, constructor) = {
-            let module_info =
-                self.imported_modules
-                    .get(&*module_alias)
-                    .ok_or_else(|| Error::UnknownModule {
-                        name: module_alias.to_string(),
-                        location: module_location.clone(),
-                        imported_modules: self
-                            .imported_modules
-                            .keys()
-                            .map(|t| t.to_string())
-                            .collect(),
-                    })?;
+            let module_info = self
+                .environment
+                .imported_modules
+                .get(&*module_alias)
+                .ok_or_else(|| Error::UnknownModule {
+                    name: module_alias.to_string(),
+                    location: module_location.clone(),
+                    imported_modules: self
+                        .environment
+                        .imported_modules
+                        .keys()
+                        .map(|t| t.to_string())
+                        .collect(),
+                })?;
 
             let constructor =
                 module_info
@@ -1083,7 +1090,7 @@ impl<'a> ExprTyper<'a> {
 
         Ok(TypedExpr::ModuleSelect {
             label,
-            typ: self.instantiate(constructor.typ, self.level, &mut hashmap![]),
+            typ: self.instantiate(constructor.typ, self.environment.level, &mut hashmap![]),
             location: select_location,
             module_name,
             module_alias: module_alias.to_string(),
@@ -1129,12 +1136,15 @@ impl<'a> ExprTyper<'a> {
         // Check to see if it's a Type that can have accessible fields
         let accessors = match collapse_links(record.typ()).as_ref() {
             // A type in the current module which may have fields
-            Type::App { module, name, .. } if module.as_slice() == self.current_module => {
-                self.accessors.get(name)
+            Type::App { module, name, .. }
+                if module.as_slice() == self.environment.current_module =>
+            {
+                self.environment.accessors.get(name)
             }
 
             // A type in another module which may have fields
             Type::App { module, name, .. } => self
+                .environment
                 .importable_modules
                 .get(&module.join("/"))
                 .and_then(|module| module.1.accessors.get(name)),
@@ -1289,9 +1299,14 @@ impl<'a> ExprTyper<'a> {
             .ok_or_else(|| Error::UnknownVariable {
                 location: location.clone(),
                 name: name.to_string(),
-                variables: self.local_values.keys().map(|t| t.to_string()).collect(),
+                variables: self
+                    .environment
+                    .local_values
+                    .keys()
+                    .map(|t| t.to_string())
+                    .collect(),
             })?;
-        let typ = self.instantiate(typ, self.level, &mut hashmap![]);
+        let typ = self.instantiate(typ, self.environment.level, &mut hashmap![]);
         Ok(ValueConstructor {
             public,
             variant,
@@ -1302,7 +1317,7 @@ impl<'a> ExprTyper<'a> {
 
     // TODO: extract the type annotation checking into a infer_module_const
     // function that uses this function internally
-    fn infer_const(
+    pub fn infer_const(
         &mut self,
         annotation: &Option<TypeAst>,
         value: UntypedConstant,
@@ -1378,8 +1393,9 @@ impl<'a> ExprTyper<'a> {
                     None => assert_no_labelled_arguments(&args)?,
                 }
 
-                let (mut args_types, return_type) = match_fun_type(fun.typ(), args.len(), self)
-                    .map_err(|e| convert_not_fun_error(e, fun.location(), &location))?;
+                let (mut args_types, return_type) =
+                    match_fun_type(fun.typ(), args.len(), self.environment)
+                        .map_err(|e| convert_not_fun_error(e, fun.location(), &location))?;
                 let args = args_types
                     .iter_mut()
                     .zip(args)
@@ -1475,5 +1491,100 @@ impl<'a> ExprTyper<'a> {
         };
 
         Ok(self.get_value_constructor(module, name)?.field_map())
+    }
+
+    pub fn do_infer_call(
+        &mut self,
+        fun: UntypedExpr,
+        args: Vec<CallArg<UntypedExpr>>,
+        location: &SrcSpan,
+    ) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
+        let fun = self.infer(fun)?;
+        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, location)?;
+        Ok((fun, args, typ))
+    }
+
+    pub fn do_infer_call_with_known_fun(
+        &mut self,
+        fun: TypedExpr,
+        mut args: Vec<CallArg<UntypedExpr>>,
+        location: &SrcSpan,
+    ) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
+        // Check to see if the function accepts labelled arguments
+        match self
+            .get_field_map(&fun)
+            .map_err(|e| convert_get_value_constructor_error(e, location))?
+        {
+            // The fun has a field map so labelled arguments may be present and need to be reordered.
+            Some(field_map) => field_map.reorder(&mut args, location)?,
+
+            // The fun has no field map and so we error if arguments have been labelled
+            None => assert_no_labelled_arguments(&args)?,
+        }
+
+        // Extract the type of the fun, ensuring it actually is a function
+        let (mut args_types, return_type) = match_fun_type(fun.typ(), args.len(), self.environment)
+            .map_err(|e| convert_not_fun_error(e, fun.location(), location))?;
+
+        // Ensure that the given args have the correct types
+        let args = args_types
+            .iter_mut()
+            .zip(args)
+            .map(|(typ, arg): (&mut Arc<Type>, _)| {
+                let CallArg {
+                    label,
+                    value,
+                    location,
+                } = arg;
+                let value = self.infer(value)?;
+                self.unify(typ.clone(), value.typ())
+                    .map_err(|e| convert_unify_error(e, value.location()))?;
+                Ok(CallArg {
+                    label,
+                    value,
+                    location,
+                })
+            })
+            .collect::<Result<_, _>>()?;
+        Ok((fun, args, return_type))
+    }
+
+    pub fn do_infer_fn(
+        &mut self,
+        args: Vec<UntypedArg>,
+        body: UntypedExpr,
+        return_annotation: &Option<TypeAst>,
+    ) -> Result<(Vec<TypedArg>, TypedExpr), Error> {
+        // Construct an initial type for each argument of the function- either an unbound type variable
+        // or a type provided by an annotation.
+        let args: Vec<_> = args
+            .into_iter()
+            .map(|arg| self.infer_arg(arg))
+            .collect::<Result<_, _>>()?;
+
+        let body = self.in_new_scope(|body_typer| {
+            for (arg, t) in args.iter().zip(args.iter().map(|arg| arg.typ.clone())) {
+                match &arg.names {
+                    ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => body_typer
+                        .insert_variable(
+                            name.to_string(),
+                            ValueConstructorVariant::LocalVariable,
+                            t,
+                        ),
+                    ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => (),
+                };
+            }
+
+            body_typer.infer(body)
+        })?;
+
+        // Check that any return type annotation is accurate.
+        if let Some(ann) = return_annotation {
+            let ret_typ = self.type_from_ast(ann)?;
+            self.unify(ret_typ, body.typ())
+                .map_err(|e| convert_unify_error(e, body.location()))?;
+        }
+
+        Ok((args, body))
     }
 }

@@ -352,21 +352,21 @@ pub fn infer_module(
     // We process imports first so that anything imported can be referenced
     // anywhere in the module.
     for s in module.statements.iter() {
-        environment.register_import(s)?;
+        register_import(s, &mut environment)?;
     }
 
     // Register types so they can be used in constructors and functions
     // earlier in the module.
     for s in module.statements.iter() {
-        environment.register_types(s, module_name)?;
+        register_types(s, module_name, &mut environment)?;
     }
 
     // Infer the types of each statement in the module
-    let statements = module
-        .statements
-        .into_iter()
-        .map(|s| infer_statement(s, module_name, &mut environment))
-        .collect::<Result<Vec<_>, Error>>()?;
+    let mut statements = Vec::with_capacity(module.statements.len());
+    for statement in module.statements {
+        let statement = infer_statement(statement, module_name, &mut environment)?;
+        statements.push(statement);
+    }
 
     // Remove private and imported types and values to create the public interface
     environment
@@ -410,7 +410,7 @@ pub fn infer_module(
 fn infer_statement<'a>(
     s: UntypedStatement,
     module_name: &Vec<String>,
-    environment: &mut Environment<'a>,
+    environment: &'a mut Environment<'a>,
 ) -> Result<TypedStatement, Error> {
     match s {
         Statement::Fn {
@@ -454,12 +454,7 @@ fn infer_statement<'a>(
 
             // Infer the type
             let (typ, args, body) = environment.in_new_scope(|environment| {
-                // TODO
-                // typer.annotated_type_vars.clear();
-                let (args, body) = environment.do_infer_fn(args, body, &return_annotation)?;
-                let args_types = args.iter().map(|a| a.typ.clone()).collect();
-                let typ = fn_(args_types, body.typ());
-                Ok((typ, args, body))
+                do_infer_fn(args, body, return_annotation, environment)
             })?;
 
             // Assert that the inferred type matches the type of any recursive call
@@ -522,14 +517,14 @@ fn infer_statement<'a>(
             fun,
             ..
         } => {
-            environment.reset_hydrator();
+            let mut hydrator = Hydrator::new();
             // Construct type of function from AST
             let (return_type, typ, field_map) = environment.in_new_scope(|environment| {
-                let return_type = environment.type_from_ast(&retrn)?;
+                let return_type = hydrator.type_from_ast(&retrn, environment)?;
                 let mut args_types = Vec::with_capacity(args.len());
                 let mut field_map = FieldMap::new(args.len());
                 for (i, arg) in args.iter().enumerate() {
-                    let t = environment.type_from_ast(&arg.typ)?;
+                    let t = hydrator.type_from_ast(&arg.typ, environment)?;
                     args_types.push(t);
                     if let Some(label) = &arg.label {
                         field_map
@@ -643,7 +638,7 @@ fn infer_statement<'a>(
                 let mut field_map = FieldMap::new(constructor.args.len());
                 let mut args_types = Vec::with_capacity(constructor.args.len());
                 for (i, (label, arg, ..)) in constructor.args.iter().enumerate() {
-                    let t = environment.type_from_ast(&arg)?;
+                    let t = hydrator.type_from_ast(&arg, environment)?;
                     args_types.push(t);
                     if let Some(label) = label {
                         field_map
@@ -742,8 +737,7 @@ fn infer_statement<'a>(
             value,
             ..
         } => {
-            let mut hydrator = Hydrator::new();
-            let typed_expr = environment.infer_const(&annotation, *value)?;
+            let typed_expr = ExprTyper::new(environment).infer_const(&annotation, *value)?;
             let typ = typed_expr.typ();
 
             environment.insert_module_value(
@@ -1034,4 +1028,260 @@ fn generalise(t: Arc<Type>, ctx_level: usize) -> Arc<Type> {
                 .collect(),
         ),
     }
+}
+
+fn make_type_vars(
+    args: &[String],
+    location: &SrcSpan,
+    hydrator: &mut Hydrator,
+    environment: &mut Environment,
+) -> Result<Vec<Arc<Type>>, Error> {
+    args.iter()
+        .map(|arg| TypeAst::Var {
+            location: location.clone(),
+            name: arg.to_string(),
+        })
+        .map(|ast| hydrator.type_from_ast(&ast, environment))
+        .collect::<Result<_, _>>()
+}
+
+fn custom_type_accessors(
+    constructors: &[RecordConstructor],
+    hydrator: &mut Hydrator,
+    environment: &mut Environment,
+) -> Result<Option<HashMap<String, RecordAccessor>>, Error> {
+    // Get the constructor for this custom type.
+    let args = match constructors {
+        [constructor] if !constructor.args.is_empty() => &constructor.args,
+        // If there is not exactly 1 constructor we return as we cannot
+        // build any constructors.
+        _ => return Ok(None),
+    };
+
+    let mut fields = HashMap::with_capacity(args.len());
+    hydrator.disallow_new_type_variables();
+    for (index, (label, arg, ..)) in args.iter().enumerate() {
+        if let Some(label) = label {
+            let typ = hydrator.type_from_ast(arg, environment)?;
+            fields.insert(
+                label.to_string(),
+                RecordAccessor {
+                    index: index as u64,
+                    label: label.to_string(),
+                    typ,
+                },
+            );
+        }
+    }
+    Ok(Some(fields))
+}
+
+/// Iterate over a module, registering any new types created by the module into the typer
+pub fn register_types(
+    statement: &UntypedStatement,
+    module: &[String],
+    environment: &mut Environment,
+) -> Result<(), Error> {
+    match statement {
+        Statement::ExternalType {
+            name,
+            public,
+            args,
+            location,
+            ..
+        } => {
+            let hydrator = Hydrator::new();
+            let parameters = make_type_vars(args, location, &mut hydrator, environment)?;
+            let typ = Arc::new(Type::App {
+                public: *public,
+                module: module.to_owned(),
+                name: name.clone(),
+                args: parameters.clone(),
+            });
+
+            environment.insert_type_constructor(
+                name.clone(),
+                TypeConstructor {
+                    origin: location.clone(),
+                    module: module.to_owned(),
+                    public: *public,
+                    parameters,
+                    typ,
+                },
+            )?;
+        }
+
+        Statement::CustomType {
+            name,
+            public,
+            opaque,
+            args,
+            constructors,
+            location,
+            ..
+        } => {
+            let hydrator = Hydrator::new();
+            let parameters = make_type_vars(args, location, &mut hydrator, environment)?;
+            let typ = Arc::new(Type::App {
+                public: *public,
+                module: module.to_owned(),
+                name: name.clone(),
+                args: parameters.clone(),
+            });
+
+            environment.insert_type_constructor(
+                name.clone(),
+                TypeConstructor {
+                    origin: location.clone(),
+                    module: module.to_owned(),
+                    public: *public,
+                    parameters,
+                    typ: typ.clone(),
+                },
+            )?;
+
+            // If the custom type only has a single constructor then we can access the
+            // fields using the record.field syntax, so store any fields accessors.
+            if let Some(accessors) =
+                custom_type_accessors(constructors.as_slice(), &mut hydrator, environment)?
+            {
+                let map = AccessorsMap {
+                    public: (*public && !*opaque),
+                    accessors,
+                    typ: typ.clone(),
+                };
+                environment.insert_accessors(name.as_ref(), map)
+            }
+        }
+
+        Statement::TypeAlias {
+            location,
+            public,
+            args,
+            alias: name,
+            resolved_type,
+            ..
+        } => {
+            // Register the paramerterised types
+            let hydrator = Hydrator::new();
+            let parameters = make_type_vars(args, location, &mut hydrator, environment)?;
+
+            // Disallow creation of new types outside the paramerterised types
+            hydrator.disallow_new_type_variables();
+
+            // Create the type that the alias resolves to
+            let typ = hydrator.type_from_ast(&resolved_type, environment)?;
+            environment.insert_type_constructor(
+                name.clone(),
+                TypeConstructor {
+                    origin: location.clone(),
+                    module: module.to_owned(),
+                    public: *public,
+                    parameters,
+                    typ,
+                },
+            )?;
+        }
+
+        _ => {}
+    }
+
+    Ok(())
+}
+
+pub fn register_import(s: &UntypedStatement, environment: &mut Environment) -> Result<(), Error> {
+    match s {
+        Statement::Import {
+            module,
+            as_name,
+            unqualified,
+            ..
+        } => {
+            // Find imported module
+            let module_info = environment
+                .importable_modules
+                .get(&module.join("/"))
+                .gleam_expect("Typer could not find a module being imported.");
+
+            // Determine local alias of imported module
+            let module_name = match &as_name {
+                None => module[module.len() - 1].clone(),
+                Some(name) => name.clone(),
+            };
+
+            // Insert unqualified imports into scope
+            for UnqualifiedImport {
+                name,
+                location,
+                as_name,
+            } in unqualified
+            {
+                let mut imported = false;
+
+                let imported_name = match &as_name {
+                    None => name,
+                    Some(alias) => alias,
+                };
+
+                if let Some(value) = module_info.1.values.get(name) {
+                    environment.insert_variable(
+                        imported_name.clone(),
+                        value.variant.clone(),
+                        value.typ.clone(),
+                    );
+                    imported = true;
+                }
+
+                if let Some(typ) = module_info.1.types.get(name) {
+                    match environment.insert_type_constructor(imported_name.clone(), typ.clone()) {
+                        Ok(_) => (),
+                        Err(e) => return Err(e),
+                    }
+
+                    imported = true;
+                }
+
+                if !imported {
+                    return Err(Error::UnknownModuleField {
+                        location: location.clone(),
+                        name: name.clone(),
+                        module_name: module.clone(),
+                        value_constructors: module_info
+                            .1
+                            .values
+                            .keys()
+                            .map(|t| t.to_string())
+                            .collect(),
+                        type_constructors: module_info
+                            .1
+                            .types
+                            .keys()
+                            .map(|t| t.to_string())
+                            .collect(),
+                    });
+                }
+            }
+
+            // Insert imported module into scope
+            // TODO: use a refernce to the module to avoid copying
+            environment
+                .imported_modules
+                .insert(module_name, module_info.clone());
+            Ok(())
+        }
+
+        _ => Ok(()),
+    }
+}
+
+fn do_infer_fn<'a, 'b>(
+    args: Vec<UntypedArg>,
+    body: UntypedExpr,
+    return_annotation: Option<TypeAst>,
+    environment: &'b mut Environment<'a>,
+) -> Result<(Arc<Type>, Vec<TypedArg>, TypedExpr), Error> {
+    let (args, body) = ExprTyper::new(environment).do_infer_fn(args, body, &return_annotation)?;
+    let args_types = args.iter().map(|a| a.typ.clone()).collect();
+    let typ = fn_(args_types, body.typ());
+    Ok((typ, args, body))
 }
