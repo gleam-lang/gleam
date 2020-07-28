@@ -250,7 +250,7 @@ pub enum PatternConstructor {
 }
 
 pub trait Typer {
-    fn get_environment(&mut self) -> &mut Environment;
+    fn with_environment<T>(&mut self, f: impl FnOnce(&mut Environment) -> T) -> T;
 
     fn instantiate(
         &mut self,
@@ -258,31 +258,15 @@ pub trait Typer {
         ctx_level: usize,
         ids: &mut im::HashMap<usize, Arc<Type>>,
     ) -> Arc<Type> {
-        self.get_environment().instantiate(t, ctx_level, ids)
+        self.with_environment(|e| e.instantiate(t, ctx_level, ids))
     }
 
     fn new_unbound_var(&mut self, level: usize) -> Arc<Type> {
-        self.get_environment().new_unbound_var(level)
+        self.with_environment(|e| e.new_unbound_var(level))
     }
 
     fn unify(&mut self, t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
-        self.get_environment().unify(t1, t2)
-    }
-
-    fn get_variable(&self, name: &str) -> Option<&ValueConstructor> {
-        self.get_environment().get_variable(name)
-    }
-
-    fn get_value_constructor(
-        &self,
-        module: Option<&String>,
-        name: &str,
-    ) -> Result<&ValueConstructor, GetValueConstructorError> {
-        self.get_environment().get_value_constructor(module, name)
-    }
-
-    fn get_module_const(&self, name: &str) -> Option<&ValueConstructor> {
-        self.get_environment().get_module_const(name)
+        self.with_environment(|e| e.unify(t1, t2))
     }
 }
 

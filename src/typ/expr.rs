@@ -15,8 +15,8 @@ pub struct ExprTyper<'a, 'b> {
 }
 
 impl<'a, 'b> Typer for ExprTyper<'a, 'b> {
-    fn get_environment(&mut self) -> &mut Environment {
-        self.environment
+    fn with_environment<T>(&mut self, f: impl FnOnce(&mut Environment) -> T) -> T {
+        f(self.environment)
     }
 }
 
@@ -1293,8 +1293,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             origin,
             typ,
         } = self
+            .environment
             .get_variable(name)
-            .or_else(|| self.get_module_const(name))
+            .or_else(|| self.environment.get_module_const(name))
             .cloned()
             .ok_or_else(|| Error::UnknownVariable {
                 location: location.clone(),
@@ -1490,7 +1491,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             _ => return Ok(None),
         };
 
-        Ok(self.get_value_constructor(module, name)?.field_map())
+        Ok(self
+            .environment
+            .get_value_constructor(module, name)?
+            .field_map())
     }
 
     pub fn do_infer_call(
