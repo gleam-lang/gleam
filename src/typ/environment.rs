@@ -8,8 +8,6 @@ pub struct Environment<'a> {
     pub level: usize,
     pub importable_modules: &'a HashMap<String, (Origin, Module)>,
     pub imported_modules: HashMap<String, (Origin, Module)>,
-    // TODO: I think we can remove this and refer to the hydrator in future
-    pub annotated_generic_types: im::HashSet<usize>,
 
     // Values defined in the current function (or the prelude)
     pub local_values: im::HashMap<String, ValueConstructor>,
@@ -36,7 +34,6 @@ impl<'a> Environment<'a> {
         let typer = Self {
             uid: 0,
             level: 1,
-            annotated_generic_types: im::HashSet::new(),
             module_types: HashMap::new(),
             module_values: HashMap::new(),
             imported_modules: HashMap::new(),
@@ -51,7 +48,6 @@ impl<'a> Environment<'a> {
 }
 
 pub struct ScopeResetData {
-    annotated_generic_types: im::HashSet<usize>,
     local_values: im::HashMap<String, ValueConstructor>,
 }
 
@@ -71,18 +67,13 @@ impl<'a> Environment<'a> {
 
     pub fn open_new_scope(&mut self) -> ScopeResetData {
         let local_values = self.local_values.clone();
-        let annotated_generic_types = self.annotated_generic_types.clone();
         self.level += 1;
-        ScopeResetData {
-            annotated_generic_types,
-            local_values,
-        }
+        ScopeResetData { local_values }
     }
 
     pub fn close_scope(&mut self, data: ScopeResetData) {
         self.level -= 1;
         self.local_values = data.local_values;
-        self.annotated_generic_types = data.annotated_generic_types;
     }
 
     pub fn next_uid(&mut self) -> usize {
