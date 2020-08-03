@@ -41,6 +41,10 @@ impl Hydrator {
         self.new_type_behaviour = NewTypeAction::Disallow
     }
 
+    pub fn is_created_generic_type(&self, id: &usize) -> bool {
+        self.created_type_variable_ids.contains(id)
+    }
+
     /// Construct a Type from an AST Type annotation.
     ///
     pub fn type_from_ast<'a>(
@@ -86,9 +90,10 @@ impl Hydrator {
                 let mut type_vars = hashmap![];
                 let mut parameter_types = Vec::with_capacity(parameters.len());
                 for typ in parameters {
-                    parameter_types.push(environment.instantiate(typ, 0, &mut type_vars));
+                    let t = environment.instantiate(typ, 0, &mut type_vars, &self);
+                    parameter_types.push(t);
                 }
-                let return_type = environment.instantiate(return_type, 0, &mut type_vars);
+                let return_type = environment.instantiate(return_type, 0, &mut type_vars, &self);
 
                 // Unify argument types with instantiated parameter types so that the correct types
                 // are inserted into the return type

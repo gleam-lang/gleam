@@ -8,6 +8,7 @@ pub struct Environment<'a> {
     pub level: usize,
     pub importable_modules: &'a HashMap<String, (Origin, Module)>,
     pub imported_modules: HashMap<String, (Origin, Module)>,
+    // TODO: I think we can remove this and refer to the hydrator in future
     pub annotated_generic_types: im::HashSet<usize>,
 
     // Values defined in the current function (or the prelude)
@@ -49,32 +50,39 @@ impl<'a> Environment<'a> {
     }
 }
 
-impl<'a> Environment<'a> {
-    pub fn in_new_scope<T, O: FnOnce(&mut Self) -> Result<T, Error>>(
-        &mut self,
-        process_scope: O,
-    ) -> Result<T, Error> {
-        // Record initial scope state
-        let initial_local_values = self.local_values.clone();
-        // TODO: introduce scope for the hydrator
-        // let initial_annotated_type_vars = self.annotated_type_vars.clone();
-        let initial_annotated_generic_types = self.annotated_generic_types.clone();
+pub struct ScopeResetData {
+    annotated_generic_types: im::HashSet<usize>,
+    local_values: im::HashMap<String, ValueConstructor>,
+}
 
-        // Create state for new scope
-        self.level += 1;
+impl<'a> Environment<'a> {
+    pub fn in_new_scope<T>(&mut self, process_scope: impl FnOnce(&mut Self) -> T) -> T {
+        // Record initial scope state
+        let initial = self.open_new_scope();
 
         // Process scope
         let result = process_scope(self);
 
-        // Discard local state now scope is over
-        self.level -= 1;
-        self.local_values = initial_local_values;
-        // TODO
-        // self.annotated_type_vars = initial_annotated_type_vars;
-        self.annotated_generic_types = initial_annotated_generic_types;
+        self.close_scope(initial);
 
         // Return result of typing the scope
         result
+    }
+
+    pub fn open_new_scope(&mut self) -> ScopeResetData {
+        let local_values = self.local_values.clone();
+        let annotated_generic_types = self.annotated_generic_types.clone();
+        self.level += 1;
+        ScopeResetData {
+            annotated_generic_types,
+            local_values,
+        }
+    }
+
+    pub fn close_scope(&mut self, data: ScopeResetData) {
+        self.level -= 1;
+        self.local_values = data.local_values;
+        self.annotated_generic_types = data.annotated_generic_types;
     }
 
     pub fn next_uid(&mut self) -> usize {
@@ -282,6 +290,7 @@ impl<'a> Environment<'a> {
         t: Arc<Type>,
         ctx_level: usize,
         ids: &mut im::HashMap<usize, Arc<Type>>,
+        hydrator: &Hydrator,
     ) -> Arc<Type> {
         match &*t {
             Type::App {
@@ -292,7 +301,7 @@ impl<'a> Environment<'a> {
             } => {
                 let args = args
                     .iter()
-                    .map(|t| self.instantiate(t.clone(), ctx_level, ids))
+                    .map(|t| self.instantiate(t.clone(), ctx_level, ids, hydrator))
                     .collect();
                 Arc::new(Type::App {
                     public: *public,
@@ -304,14 +313,16 @@ impl<'a> Environment<'a> {
 
             Type::Var { typ } => {
                 match &*typ.borrow() {
-                    TypeVar::Link { typ } => return self.instantiate(typ.clone(), ctx_level, ids),
+                    TypeVar::Link { typ } => {
+                        return self.instantiate(typ.clone(), ctx_level, ids, hydrator)
+                    }
 
                     TypeVar::Unbound { .. } => return Arc::new(Type::Var { typ: typ.clone() }),
 
                     TypeVar::Generic { id } => match ids.get(id) {
                         Some(t) => return t.clone(),
                         None => {
-                            if !self.annotated_generic_types.contains(id) {
+                            if !hydrator.is_created_generic_type(id) {
                                 // Check this in the hydrator, i.e. is it a created type
                                 let v = self.new_unbound_var(ctx_level);
                                 ids.insert(*id, v.clone());
@@ -325,15 +336,15 @@ impl<'a> Environment<'a> {
 
             Type::Fn { args, retrn, .. } => fn_(
                 args.iter()
-                    .map(|t| self.instantiate(t.clone(), ctx_level, ids))
+                    .map(|t| self.instantiate(t.clone(), ctx_level, ids, hydrator))
                     .collect(),
-                self.instantiate(retrn.clone(), ctx_level, ids),
+                self.instantiate(retrn.clone(), ctx_level, ids, hydrator),
             ),
 
             Type::Tuple { elems } => tuple(
                 elems
                     .iter()
-                    .map(|t| self.instantiate(t.clone(), ctx_level, ids))
+                    .map(|t| self.instantiate(t.clone(), ctx_level, ids, hydrator))
                     .collect(),
             ),
         }

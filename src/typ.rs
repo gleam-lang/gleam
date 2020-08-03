@@ -252,15 +252,6 @@ pub enum PatternConstructor {
 pub trait Typer {
     fn with_environment<T>(&mut self, f: impl FnOnce(&mut Environment) -> T) -> T;
 
-    fn instantiate(
-        &mut self,
-        t: Arc<Type>,
-        ctx_level: usize,
-        ids: &mut im::HashMap<usize, Arc<Type>>,
-    ) -> Arc<Type> {
-        self.with_environment(|e| e.instantiate(t, ctx_level, ids))
-    }
-
     fn new_unbound_var(&mut self, level: usize) -> Arc<Type> {
         self.with_environment(|e| e.new_unbound_var(level))
     }
@@ -391,10 +382,10 @@ pub fn infer_module(
     })
 }
 
-fn infer_statement<'a>(
+fn infer_statement(
     s: UntypedStatement,
     module_name: &Vec<String>,
-    environment: &'a mut Environment<'a>,
+    environment: &mut Environment,
 ) -> Result<TypedStatement, Error> {
     match s {
         Statement::Fn {
@@ -438,7 +429,7 @@ fn infer_statement<'a>(
 
             // Infer the type
             let (typ, args, body) = environment.in_new_scope(|environment| {
-                do_infer_fn(args, body, return_annotation, environment)
+                do_infer_fn(args, body, &return_annotation, environment)
             })?;
 
             // Assert that the inferred type matches the type of any recursive call
@@ -1074,7 +1065,7 @@ pub fn register_types(
             location,
             ..
         } => {
-            let hydrator = Hydrator::new();
+            let mut hydrator = Hydrator::new();
             let parameters = make_type_vars(args, location, &mut hydrator, environment)?;
             let typ = Arc::new(Type::App {
                 public: *public,
@@ -1104,7 +1095,7 @@ pub fn register_types(
             location,
             ..
         } => {
-            let hydrator = Hydrator::new();
+            let mut hydrator = Hydrator::new();
             let parameters = make_type_vars(args, location, &mut hydrator, environment)?;
             let typ = Arc::new(Type::App {
                 public: *public,
@@ -1147,7 +1138,7 @@ pub fn register_types(
             ..
         } => {
             // Register the paramerterised types
-            let hydrator = Hydrator::new();
+            let mut hydrator = Hydrator::new();
             let parameters = make_type_vars(args, location, &mut hydrator, environment)?;
 
             // Disallow creation of new types outside the paramerterised types
@@ -1261,10 +1252,10 @@ pub fn register_import(s: &UntypedStatement, environment: &mut Environment) -> R
 fn do_infer_fn<'a, 'b>(
     args: Vec<UntypedArg>,
     body: UntypedExpr,
-    return_annotation: Option<TypeAst>,
+    return_annotation: &Option<TypeAst>,
     environment: &'b mut Environment<'a>,
 ) -> Result<(Arc<Type>, Vec<TypedArg>, TypedExpr), Error> {
-    let (args, body) = ExprTyper::new(environment).do_infer_fn(args, body, &return_annotation)?;
+    let (args, body) = ExprTyper::new(environment).do_infer_fn(args, body, return_annotation)?;
     let args_types = args.iter().map(|a| a.typ.clone()).collect();
     let typ = fn_(args_types, body.typ());
     Ok((typ, args, body))
