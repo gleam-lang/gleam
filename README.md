@@ -73,6 +73,7 @@ development.
 - [Lars Wikman](https://github.com/lawik)
 - [Mario Vellandi](https://github.com/mvellandi)
 - [Matthew Cheely](https://github.com/MattCheely)
+- [Michael Jones](https://github.com/michaeljones)
 - [Mike R](https://github.com/mroach)
 - [Milad](https://github.com/slashmili)
 - [Parker Selbert](https://github.com/sorentwo)
