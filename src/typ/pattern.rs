@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 pub struct PatternTyper<'a, 'b> {
     environment: &'a mut Environment<'b>,
+    hydrator: &'a Hydrator,
     level: usize,
     mode: PatternMode,
     initial_pattern_vars: HashSet<String>,
@@ -18,9 +19,10 @@ enum PatternMode {
 }
 
 impl<'a, 'b> PatternTyper<'a, 'b> {
-    pub fn new(environment: &'a mut Environment<'b>, level: usize) -> Self {
+    pub fn new(environment: &'a mut Environment<'b>, hydrator: &'a Hydrator, level: usize) -> Self {
         Self {
             environment,
+            hydrator,
             level,
             mode: PatternMode::Initial,
             initial_pattern_vars: HashSet::new(),
@@ -189,9 +191,12 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             .map(|t| t.to_string())
                             .collect(),
                     })?;
-                let typ =
-                    self.environment
-                        .instantiate(typ, self.environment.level, &mut hashmap![]);
+                let typ = self.environment.instantiate(
+                    typ,
+                    self.environment.level,
+                    &mut hashmap![],
+                    &self.hydrator,
+                );
                 self.environment
                     .unify(int(), typ.clone())
                     .map_err(|e| convert_unify_error(e, &location))?;
@@ -385,9 +390,12 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     ),
                 };
 
-                let instantiated_constructor_type =
-                    self.environment
-                        .instantiate(constructor_typ, self.level, &mut hashmap![]);
+                let instantiated_constructor_type = self.environment.instantiate(
+                    constructor_typ,
+                    self.level,
+                    &mut hashmap![],
+                    &self.hydrator,
+                );
                 match &*instantiated_constructor_type {
                     Type::Fn { args, retrn } => {
                         if args.len() == pattern_args.len() {

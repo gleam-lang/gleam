@@ -28,12 +28,31 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn reset_hydrator(&mut self) {
-        self.hydrator = Hydrator::new();
+    // TODO: create new scope for the hydrator too
+    pub fn in_new_scope<T>(&mut self, process_scope: impl FnOnce(&mut Self) -> T) -> T {
+        // Create new scope
+        let environment_reset_data = self.environment.open_new_scope();
+
+        // Process the scope
+        let result = process_scope(self);
+
+        // Close scope, discarding any scope local state
+        self.environment.close_scope(environment_reset_data);
+        result
     }
 
     pub fn type_from_ast(&mut self, ast: &TypeAst) -> Result<Arc<Type>, Error> {
         self.hydrator.type_from_ast(ast, self.environment)
+    }
+
+    fn instantiate(
+        &mut self,
+        t: Arc<Type>,
+        ctx_level: usize,
+        ids: &mut im::HashMap<usize, Arc<Type>>,
+    ) -> Arc<Type> {
+        self.environment
+            .instantiate(t, ctx_level, ids, &self.hydrator)
     }
 
     /// Crawl the AST, annotating each node with the inferred type or
@@ -640,8 +659,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let value_typ = generalise(value_typ, self.environment.level + 1);
 
         // Ensure the pattern matches the type of the value
-        let pattern = pattern::PatternTyper::new(self.environment, self.environment.level)
-            .unify(pattern, value_typ.clone())?;
+        let pattern =
+            pattern::PatternTyper::new(self.environment, &self.hydrator, self.environment.level)
+                .unify(pattern, value_typ.clone())?;
 
         // Check the type of the following code
         let then = self.infer(then)?;
@@ -689,7 +709,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         for subject in subjects.into_iter() {
             let (subject, subject_type) = self.in_new_scope(|subject_typer| {
                 let subject = subject_typer.infer(subject)?;
-                let subject_type = generalise(subject.typ(), subject_typer.level);
+                let subject_type = generalise(subject.typ(), subject_typer.environment.level);
 
                 Ok((subject, subject_type))
             })?;
@@ -757,7 +777,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: &SrcSpan,
     ) -> Result<(TypedMultiPattern, Vec<TypedMultiPattern>), Error> {
         let mut pattern_typer =
-            pattern::PatternTyper::new(self.environment, self.environment.level);
+            pattern::PatternTyper::new(self.environment, &self.hydrator, self.environment.level);
         let typed_pattern = pattern_typer.infer_multi_pattern(pattern, subjects, &location)?;
 
         // Each case clause has one or more patterns that may match the
@@ -1569,12 +1589,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let body = self.in_new_scope(|body_typer| {
             for (arg, t) in args.iter().zip(args.iter().map(|arg| arg.typ.clone())) {
                 match &arg.names {
-                    ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => body_typer
-                        .insert_variable(
+                    ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
+                        body_typer.environment.insert_variable(
                             name.to_string(),
                             ValueConstructorVariant::LocalVariable,
                             t,
-                        ),
+                        )
+                    }
                     ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => (),
                 };
             }

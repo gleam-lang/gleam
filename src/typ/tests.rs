@@ -409,14 +409,13 @@ fn infer_test() {
 
 macro_rules! assert_error {
     ($src:expr, $error:expr $(,)?) => {
-        println!("\n\n{}", $src);
         let ast = crate::grammar::ExprSequenceParser::new()
             .parse($src)
             .expect("syntax error");
         let result = ExprTyper::new(&mut Environment::new(&[], &HashMap::new(), &mut vec![]))
             .infer(ast)
             .expect_err("should infer an error");
-        assert_eq!(($src, sort_options($error)), ($src, sort_options(result)));
+        assert_eq!(($src, sort_options($error)), ($src, sort_options(result)),);
     };
 }
 
@@ -1395,7 +1394,6 @@ fn infer_error_test() {
 fn infer_module_test() {
     macro_rules! assert_infer {
         ($src:expr, $module:expr $(,)?) => {
-            println!(">>>>>> infer_module_test assert_infer:\n\n{}\n\n\n", $src);
             let (src, _) = crate::parser::strip_extra($src);
             let ast = crate::grammar::ModuleParser::new()
                 .parse(&src)
@@ -2577,7 +2575,7 @@ fn main() {
                 module: vec!["my_module".to_string()],
                 name: "Box".to_string(),
                 args: vec![Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Generic { id: 17 })),
+                    typ: Arc::new(RefCell::new(TypeVar::Generic { id: 11 })),
                 })]
             }),
             given: Arc::new(Type::App {
