@@ -15,6 +15,8 @@
 - Records can be updated using the spread syntax.
 - Fixed a bug where type parameters can leak between different type
   definitions in a module.
+- Markdown tables, footnotes, strikethroughs, and tasklists are now supported
+  in documentation.
 
 ## v0.10.1 - 2020-07-15
 
