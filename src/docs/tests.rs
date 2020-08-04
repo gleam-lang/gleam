@@ -1,5 +1,5 @@
 use super::*;
-use crate::{config::PackageConfig, file::OutputFile, project::Input};
+use crate::{config::PackageConfig, fs::OutputFile, project::Input};
 
 #[test]
 fn module_docs_test() {
@@ -7,7 +7,7 @@ fn module_docs_test() {
 //// module comment
 
 /// A constant value
-pub const hello = "test" 
+pub const hello = "test"
 
 /// doc comment
 // regular comment

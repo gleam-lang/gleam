@@ -1,5 +1,5 @@
 use super::*;
-use crate::{erl, file::OutputFile};
+use crate::{erl, fs::OutputFile};
 use std::sync::Arc;
 
 #[test]
