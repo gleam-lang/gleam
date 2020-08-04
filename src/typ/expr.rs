@@ -28,16 +28,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    // TODO: create new scope for the hydrator too
     pub fn in_new_scope<T>(&mut self, process_scope: impl FnOnce(&mut Self) -> T) -> T {
         // Create new scope
         let environment_reset_data = self.environment.open_new_scope();
+        let hydrator_reset_data = self.hydrator.open_new_scope();
 
         // Process the scope
         let result = process_scope(self);
 
         // Close scope, discarding any scope local state
         self.environment.close_scope(environment_reset_data);
+        self.hydrator.close_scope(hydrator_reset_data);
         result
     }
 

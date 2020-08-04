@@ -21,6 +21,11 @@ pub struct Hydrator {
     new_type_behaviour: NewTypeAction,
 }
 
+pub struct ScopeResetData {
+    created_type_variables: im::HashMap<String, Arc<Type>>,
+    created_type_variable_ids: im::HashSet<usize>,
+}
+
 impl Hydrator {
     pub fn new() -> Self {
         Self {
@@ -28,6 +33,20 @@ impl Hydrator {
             created_type_variable_ids: im::hashset![],
             new_type_behaviour: NewTypeAction::MakeGeneric,
         }
+    }
+
+    pub fn open_new_scope(&mut self) -> ScopeResetData {
+        let created_type_variables = self.created_type_variables.clone();
+        let created_type_variable_ids = self.created_type_variable_ids.clone();
+        ScopeResetData {
+            created_type_variables,
+            created_type_variable_ids,
+        }
+    }
+
+    pub fn close_scope(&mut self, data: ScopeResetData) {
+        self.created_type_variables = data.created_type_variables;
+        self.created_type_variable_ids = data.created_type_variable_ids;
     }
 
     pub fn register_type_as_created(&mut self, name: String, typ: Arc<Type>) {
