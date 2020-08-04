@@ -12,6 +12,9 @@
 - The formatter style has been improved to use a trailing comma on imports
   broken over multiple lines.
 - The performance of the formatter has been improved.
+- Records can be updated using the spread syntax.
+- Fixed a bug where type parameters can leak between different type
+  definitions in a module.
 
 ## v0.10.1 - 2020-07-15
 
@@ -20,7 +23,6 @@
 - The error message for a duplicate module member now shows the location of
   both definitions.
 - Fix compiler bug where labelled arguments were being reordered incorrectly.
-- Support updating records with a new spread syntax
 
 # v0.10.0 - 2020-07-01
 
