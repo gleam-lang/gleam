@@ -6,7 +6,7 @@ use crate::{
     },
     config::PackageConfig,
     error::{self, Error, GleamExpect},
-    file, grammar, parser, typ,
+    grammar, parser, typ,
     warning::Warning,
 };
 use std::collections::HashMap;
@@ -77,9 +77,9 @@ impl<'a> PackageCompiler<'a> {
         let package_path = self
             .root
             .default_build_lib_package_source_path(&self.config.name, origin);
-        for path in file::gleam_files(&package_path) {
+        for path in crate::fs::gleam_files(&package_path) {
             let name = module_name(&package_path, &path);
-            let code = file::read(&path)?;
+            let code = crate::fs::read(&path)?;
             self.sources.push(Source {
                 name,
                 path,

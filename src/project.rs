@@ -7,7 +7,7 @@ use crate::{
     build::Origin,
     config::{self, PackageConfig},
     error::{Error, FileIOAction, FileKind, GleamExpect},
-    file, typ,
+    typ,
     warning::Warning,
 };
 use source_tree::SourceTree;
@@ -193,7 +193,7 @@ pub fn collect_source(
         Err(_) => return Ok(()),
     };
 
-    for path in file::gleam_files(&src_dir) {
+    for path in crate::fs::gleam_files(&src_dir) {
         let src = std::fs::read_to_string(&path).map_err(|err| Error::FileIO {
             action: FileIOAction::Read,
             kind: FileKind::File,

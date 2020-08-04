@@ -32,7 +32,7 @@ use crate::{
     config::{self, PackageConfig},
     erl,
     error::{Error, FileIOAction, FileKind, GleamExpect},
-    file::{self, OutputFile},
+    fs::OutputFile,
     grammar, parser, typ,
 };
 use itertools::Itertools;
@@ -56,7 +56,7 @@ pub fn main(root_config: PackageConfig, path: PathBuf) -> Result<HashMap<String,
 
     tracing::info!("Writing generated Erlang source code to disc");
     for package in packages.values() {
-        file::write_outputs(package.outputs.as_slice())?;
+        crate::fs::write_outputs(package.outputs.as_slice())?;
     }
 
     tracing::info!("Compiling Erlang source code to BEAM bytecode");
@@ -96,7 +96,7 @@ fn compile_erlang_to_beam(
     let escript_path = root.build_path().join("compile_escript.erl");
     let escript_source = std::include_str!("build/compile_escript.erl").to_string();
 
-    file::write_output(&OutputFile {
+    crate::fs::write_output(&OutputFile {
         path: escript_path.clone(),
         text: escript_source,
     })?;
@@ -130,13 +130,13 @@ fn copy_root_package_to_build(
     let path = &root.root;
 
     // Reset _build dir
-    file::delete_dir(&target)?;
-    file::mkdir(&target)?;
+    crate::fs::delete_dir(&target)?;
+    crate::fs::mkdir(&target)?;
 
     // Copy source files across
-    file::copy(path.join("gleam.toml"), target.join("gleam.toml"))?;
-    file::copy_dir(path.join("src"), &target)?;
-    file::copy_dir(path.join("test"), &target)?;
+    crate::fs::copy(path.join("gleam.toml"), target.join("gleam.toml"))?;
+    crate::fs::copy_dir(path.join("src"), &target)?;
+    crate::fs::copy_dir(path.join("test"), &target)?;
 
     Ok(())
 }

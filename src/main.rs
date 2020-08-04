@@ -10,8 +10,8 @@ mod docs;
 mod erl;
 mod error;
 mod eunit;
-mod file;
 mod format;
+mod fs;
 mod new;
 mod parser;
 mod pretty;
@@ -208,13 +208,13 @@ fn command_build(root: String) -> Result<(), Error> {
     let output_files = erl::generate_erlang(analysed.as_slice());
 
     // Reset output directory
-    file::delete_dir(&root.join(project::OUTPUT_DIR_NAME))?;
+    fs::delete_dir(&root.join(project::OUTPUT_DIR_NAME))?;
 
     // Print warnings
     warning::print_all(analysed.as_slice());
 
     // Delete the gen directory before generating the newly compiled files
-    file::write_outputs(output_files.as_slice())?;
+    fs::write_outputs(output_files.as_slice())?;
 
     println!("Done!");
 

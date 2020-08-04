@@ -1,7 +1,6 @@
 use crate::{
     build::{self, project_root::ProjectRoot},
     error::{Error, GleamExpect},
-    file,
 };
 use std::path::PathBuf;
 use std::process::Command;
@@ -21,7 +20,7 @@ pub fn command(root_string: String) -> Result<(), Error> {
     let mut command = Command::new("erl");
 
     // Specify locations of .beam files
-    for entry in file::read_dir(root.default_build_lib_path())?.filter_map(Result::ok) {
+    for entry in crate::fs::read_dir(root.default_build_lib_path())?.filter_map(Result::ok) {
         command.arg("-pa");
         command.arg(entry.path().join("ebin"));
     }

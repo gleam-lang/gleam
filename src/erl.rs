@@ -4,7 +4,7 @@ mod tests;
 use crate::{
     ast::*,
     error::GleamExpect,
-    file::OutputFile,
+    fs::OutputFile,
     pretty::*,
     project::{self, Analysed},
     typ::{

@@ -1,7 +1,7 @@
 use crate::{
     build::{self, project_root::ProjectRoot, Origin},
     error::Error,
-    file::{self, OutputFile},
+    fs::OutputFile,
 };
 use itertools::Itertools;
 use std::{path::PathBuf, process::Command};
@@ -46,7 +46,7 @@ pub fn command(root_string: String) -> Result<(), Error> {
     ];
 
     eunit_files.iter().try_for_each(|file| {
-        file::write_output(&OutputFile {
+        crate::fs::write_output(&OutputFile {
             path: file.path.clone(),
             text: file.content.to_owned(),
         })
@@ -74,7 +74,7 @@ pub fn command(root_string: String) -> Result<(), Error> {
     let mut command = Command::new("escript");
     command.arg(root.build_path().join("eunit_runner.erl"));
 
-    let ebin_paths: String = file::read_dir(root.default_build_lib_path())?
+    let ebin_paths: String = crate::fs::read_dir(root.default_build_lib_path())?
         .filter_map(Result::ok)
         .map(|entry| entry.path().join("ebin").as_path().display().to_string())
         .join(",");

@@ -1,7 +1,4 @@
-use crate::{
-    error::{Error, FileIOAction, FileKind, GleamExpect},
-    file,
-};
+use crate::error::{Error, FileIOAction, FileKind, GleamExpect};
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Write;
@@ -41,11 +38,11 @@ pub fn create(
     let workflows_dir = github_dir.join("workflows");
 
     // Create directories
-    file::mkdir(&root_dir)?;
-    file::mkdir(&src_dir)?;
-    file::mkdir(&test_dir)?;
-    file::mkdir(&github_dir)?;
-    file::mkdir(&workflows_dir)?;
+    crate::fs::mkdir(&root_dir)?;
+    crate::fs::mkdir(&src_dir)?;
+    crate::fs::mkdir(&test_dir)?;
+    crate::fs::mkdir(&github_dir)?;
+    crate::fs::mkdir(&workflows_dir)?;
 
     // write files
     write(root_dir.join("LICENSE"), APACHE_2)?;

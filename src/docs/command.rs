@@ -1,7 +1,7 @@
 use crate::{
     cli,
     error::{Error, GleamExpect},
-    file, project,
+    project,
 };
 use bytes::Bytes;
 use hexpm::Client;
@@ -50,8 +50,8 @@ pub fn build(project_root: impl AsRef<Path>, to: Option<String>) -> Result<(), E
     let (config, outputs) = super::build_project(&project_root, &output_dir)?;
 
     // Write
-    crate::file::delete_dir(&output_dir)?;
-    file::write_outputs(outputs.as_slice())?;
+    crate::fs::delete_dir(&output_dir)?;
+    crate::fs::write_outputs(outputs.as_slice())?;
 
     println!(
         "\nThe docs for {package} have been rendered to {output_dir}",
@@ -69,7 +69,7 @@ pub fn publish(project_root: impl AsRef<Path>, version: String) -> Result<(), Er
     let (config, outputs) = super::build_project(&project_root, &output_dir)?;
 
     // Create gzipped tarball of docs
-    let archive = file::create_tar_archive(outputs)?;
+    let archive = crate::fs::create_tar_archive(outputs)?;
 
     // Start event loop so we can run async functions to call the Hex API
     let mut runtime =

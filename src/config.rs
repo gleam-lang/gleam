@@ -1,7 +1,4 @@
-use crate::{
-    error::{Error, FileIOAction, FileKind},
-    file,
-};
+use crate::error::{Error, FileIOAction, FileKind};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -50,7 +47,7 @@ pub struct DocsPage {
 
 pub fn read_project_config(root: impl AsRef<Path>) -> Result<PackageConfig, Error> {
     let config_path = root.as_ref().join("gleam.toml");
-    let toml = file::read(&config_path)?;
+    let toml = crate::fs::read(&config_path)?;
     toml::from_str(&toml).map_err(|e| Error::FileIO {
         action: FileIOAction::Parse,
         kind: FileKind::File,

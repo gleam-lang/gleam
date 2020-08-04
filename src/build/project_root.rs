@@ -2,7 +2,6 @@ use crate::{
     build::Origin,
     config::{self, PackageConfig},
     error::Error,
-    file,
 };
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -37,7 +36,8 @@ impl ProjectRoot {
         root_name: &str,
     ) -> Result<HashMap<String, PackageConfig>, Error> {
         let mut configs = HashMap::with_capacity(25);
-        for dir_entry in file::read_dir(self.default_build_lib_path())?.filter_map(Result::ok) {
+        for dir_entry in crate::fs::read_dir(self.default_build_lib_path())?.filter_map(Result::ok)
+        {
             let config = config::read_project_config(dir_entry.path())?;
             if config.name != root_name {
                 configs.insert(config.name.clone(), config);

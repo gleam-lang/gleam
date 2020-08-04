@@ -2,7 +2,7 @@ use crate::{
     build::{project_root::ProjectRoot, Module},
     config::PackageConfig,
     erl,
-    file::{self, OutputFile},
+    fs::OutputFile,
 };
 use itertools::Itertools;
 use std::collections::HashMap;

@@ -6,8 +6,9 @@ use crate::{
     ast::{Statement, TypedStatement},
     config::{DocsPage, PackageConfig},
     error::{Error, GleamExpect},
-    file::OutputFile,
-    format, pretty,
+    format,
+    fs::OutputFile,
+    pretty,
     project::{self, Analysed, ModuleOrigin},
 };
 use askama::Template;
