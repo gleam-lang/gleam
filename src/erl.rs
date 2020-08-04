@@ -1002,14 +1002,12 @@ fn call(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env) -> Document
 }
 
 fn record_update(spread: &TypedExpr, args: &[TypedRecordUpdateArg], env: &mut Env) -> Document {
-    use std::convert::TryInto;
     use std::iter::once;
 
     args.iter().fold(expr(spread, env), |tuple_doc, arg| {
         // Increment the index by 2, because the first element
         // is the name of the record, so our fields are 2-indexed
-        let index: u64 = arg.index.try_into().unwrap();
-        let index_doc = format!("{}", (index + 2)).to_doc();
+        let index_doc = (arg.index + 2).to_doc();
         let value_doc = expr(&arg.value, env);
 
         let iter = once(index_doc)
