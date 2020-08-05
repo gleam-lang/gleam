@@ -21,6 +21,8 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use butcher::Butcher;
+
 pub trait HasType {
     fn typ(&self) -> Arc<Type>;
 }
@@ -285,7 +287,7 @@ impl FieldMap {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Butcher, Debug, Clone, PartialEq)]
 pub enum ValueConstructorVariant {
     /// A locally defined variable or function parameter
     LocalVariable,
@@ -297,14 +299,18 @@ pub enum ValueConstructorVariant {
 
     /// A function belonging to the module
     ModuleFn {
+        #[butcher(as_deref)]
         name: String,
         field_map: Option<FieldMap>,
+        #[butcher(as_deref)]
         module: Vec<String>,
+        #[butcher(copy)]
         arity: usize,
     },
 
     /// A constructor for a custom type
     Record {
+        #[butcher(as_deref)]
         name: String,
         field_map: Option<FieldMap>,
     },
@@ -330,11 +336,18 @@ impl ValueConstructorVariant {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Butcher, Debug, Clone, PartialEq)]
 pub enum ModuleValueConstructor {
-    Record { name: String, arity: usize },
+    Record {
+        #[butcher(as_deref)]
+        name: String,
+        #[butcher(copy)]
+        arity: usize,
+    },
     Fn,
-    Constant { literal: TypedConstant },
+    Constant {
+        literal: TypedConstant,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -345,9 +358,12 @@ pub struct Module {
     pub accessors: HashMap<String, AccessorsMap>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Butcher, Debug, Clone, PartialEq)]
 pub enum PatternConstructor {
-    Record { name: String },
+    Record {
+        #[butcher(as_deref)]
+        name: String,
+    },
 }
 
 #[derive(Debug)]
@@ -2560,11 +2576,14 @@ pub struct TypeConstructor {
     pub typ: Arc<Type>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Butcher, Debug, Clone, PartialEq)]
 pub struct ValueConstructor {
+    #[butcher(copy)]
     pub public: bool,
     pub origin: SrcSpan,
+    #[butcher(rebutcher)]
     pub variant: ValueConstructorVariant,
+    #[butcher(copy)]
     pub typ: Arc<Type>,
 }
 

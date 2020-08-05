@@ -2,14 +2,16 @@ mod constant;
 mod typed;
 mod untyped;
 
-pub use self::typed::TypedExpr;
+pub use self::typed::{ButcheredTypedExpr, TypedExpr};
 pub use self::untyped::UntypedExpr;
 
-pub use self::constant::{Constant, TypedConstant, UntypedConstant};
+pub use self::constant::{ButcheredConstant, Constant, TypedConstant, UntypedConstant};
 
 use crate::typ::{self, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor};
 use itertools::Itertools;
 use std::sync::Arc;
+
+use butcher::Butcher;
 
 pub const CAPTURE_VARIABLE: &str = "gleam@capture_variable";
 
@@ -321,7 +323,7 @@ impl BinOp {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Butcher, Debug, PartialEq, Clone)]
 pub struct CallArg<A> {
     pub label: Option<String>,
     pub location: SrcSpan,
@@ -337,10 +339,11 @@ pub type TypedClause = Clause<TypedExpr, PatternConstructor, Arc<typ::Type>, Str
 
 pub type UntypedClause = Clause<UntypedExpr, (), (), ()>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Butcher, Debug, Clone, PartialEq)]
 pub struct Clause<Expr, PatternConstructor, Type, RecordTag> {
     pub location: SrcSpan,
     pub pattern: MultiPattern<PatternConstructor, Type>,
+    #[butcher(as_deref, MultiPattern<PatternConstructor, Type>: Clone)]
     pub alternative_patterns: Vec<MultiPattern<PatternConstructor, Type>>,
     pub guard: Option<ClauseGuard<Type, RecordTag>>,
     pub then: Expr,
@@ -349,83 +352,108 @@ pub struct Clause<Expr, PatternConstructor, Type, RecordTag> {
 pub type UntypedClauseGuard = ClauseGuard<(), ()>;
 pub type TypedClauseGuard = ClauseGuard<Arc<typ::Type>, String>;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Butcher, Debug, PartialEq, Clone)]
 pub enum ClauseGuard<Type, RecordTag> {
     Equals {
         location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
+        #[butcher(unbox)]
+        left: Box<ClauseGuard<Type, RecordTag>>,
+        #[butcher(unbox)]
+        right: Box<ClauseGuard<Type, RecordTag>>,
     },
 
     NotEquals {
         location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
+        #[butcher(unbox)]
+        left: Box<ClauseGuard<Type, RecordTag>>,
+        #[butcher(unbox)]
+        right: Box<ClauseGuard<Type, RecordTag>>,
     },
 
     GtInt {
         location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
+        #[butcher(unbox)]
+        left: Box<ClauseGuard<Type, RecordTag>>,
+        #[butcher(unbox)]
+        right: Box<ClauseGuard<Type, RecordTag>>,
     },
 
     GtEqInt {
         location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
+        #[butcher(unbox)]
+        left: Box<ClauseGuard<Type, RecordTag>>,
+        #[butcher(unbox)]
+        right: Box<ClauseGuard<Type, RecordTag>>,
     },
 
     LtInt {
         location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
+        #[butcher(unbox)]
+        left: Box<ClauseGuard<Type, RecordTag>>,
+        #[butcher(unbox)]
+        right: Box<ClauseGuard<Type, RecordTag>>,
     },
 
     LtEqInt {
         location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
+        #[butcher(unbox)]
+        left: Box<ClauseGuard<Type, RecordTag>>,
+        #[butcher(unbox)]
+        right: Box<ClauseGuard<Type, RecordTag>>,
     },
 
     GtFloat {
         location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
+        #[butcher(unbox)]
+        left: Box<ClauseGuard<Type, RecordTag>>,
+        #[butcher(unbox)]
+        right: Box<ClauseGuard<Type, RecordTag>>,
     },
 
     GtEqFloat {
         location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
+        #[butcher(unbox)]
+        left: Box<ClauseGuard<Type, RecordTag>>,
+        #[butcher(unbox)]
+        right: Box<ClauseGuard<Type, RecordTag>>,
     },
 
     LtFloat {
         location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
+        #[butcher(unbox)]
+        left: Box<ClauseGuard<Type, RecordTag>>,
+        #[butcher(unbox)]
+        right: Box<ClauseGuard<Type, RecordTag>>,
     },
 
     LtEqFloat {
         location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
+        #[butcher(unbox)]
+        left: Box<ClauseGuard<Type, RecordTag>>,
+        #[butcher(unbox)]
+        right: Box<ClauseGuard<Type, RecordTag>>,
     },
 
     Or {
         location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
+        #[butcher(unbox)]
+        left: Box<ClauseGuard<Type, RecordTag>>,
+        #[butcher(unbox)]
+        right: Box<ClauseGuard<Type, RecordTag>>,
     },
 
     And {
         location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
+        #[butcher(unbox)]
+        left: Box<ClauseGuard<Type, RecordTag>>,
+        #[butcher(unbox)]
+        right: Box<ClauseGuard<Type, RecordTag>>,
     },
 
     Var {
         location: SrcSpan,
         typ: Type,
+        #[butcher(as_deref)]
         name: String,
     },
 
@@ -484,40 +512,48 @@ pub struct SrcSpan {
 pub type UntypedPattern = Pattern<(), ()>;
 pub type TypedPattern = Pattern<PatternConstructor, Arc<typ::Type>>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Butcher, Debug, Clone, PartialEq)]
 pub enum Pattern<Constructor, Type> {
     Int {
         location: SrcSpan,
+        #[butcher(as_deref)]
         value: String,
     },
 
     Float {
         location: SrcSpan,
+        #[butcher(as_deref)]
         value: String,
     },
 
     String {
         location: SrcSpan,
+        #[butcher(as_deref)]
         value: String,
     },
 
     Var {
         location: SrcSpan,
+        #[butcher(as_deref)]
         name: String,
     },
 
     VarCall {
         location: SrcSpan,
+        #[butcher(as_deref)]
         name: String,
         typ: Type,
     },
 
     Let {
+        #[butcher(as_deref)]
         name: String,
-        pattern: Box<Self>,
+        #[butcher(unbox)]
+        pattern: Box<Pattern<Constructor, Type>>,
     },
 
     Discard {
+        #[butcher(as_deref)]
         name: String,
         location: SrcSpan,
     },
@@ -528,27 +564,34 @@ pub enum Pattern<Constructor, Type> {
 
     Cons {
         location: SrcSpan,
-        head: Box<Self>,
-        tail: Box<Self>,
+        #[butcher(unbox)]
+        head: Box<Pattern<Constructor, Type>>,
+        #[butcher(unbox)]
+        tail: Box<Pattern<Constructor, Type>>,
     },
 
     Constructor {
         location: SrcSpan,
+        #[butcher(as_deref)]
         name: String,
-        args: Vec<CallArg<Self>>,
+        #[butcher(as_deref, CallArg<Pattern<Constructor, Type>>: Clone)]
+        args: Vec<CallArg<Pattern<Constructor, Type>>>,
         module: Option<String>,
         constructor: Constructor,
+        #[butcher(copy)]
         with_spread: bool,
     },
 
     Tuple {
         location: SrcSpan,
-        elems: Vec<Self>,
+        #[butcher(as_deref, Pattern<Constructor, Type>: Clone)]
+        elems: Vec<Pattern<Constructor, Type>>,
     },
 
     BitString {
         location: SrcSpan,
-        segments: Vec<BitStringSegment<Self, Type>>,
+        #[butcher(as_deref, BitStringSegment<Pattern<Constructor, Type>, Type>: Clone)]
+        segments: Vec<BitStringSegment<Pattern<Constructor, Type>, Type>>,
     },
 }
 
@@ -605,15 +648,17 @@ pub type UntypedConstantBitStringSegment = BitStringSegment<UntypedConstant, ()>
 pub type UntypedPatternBitStringSegment = BitStringSegment<UntypedPattern, ()>;
 pub type TypedPatternBitStringSegment = BitStringSegment<TypedPattern, Arc<typ::Type>>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Butcher, Debug, Clone, PartialEq)]
 pub struct BitStringSegment<Value, Type> {
     pub location: SrcSpan,
+    #[butcher(unbox)]
     pub value: Box<Value>,
+    #[butcher(as_deref, Value: Clone)]
     pub options: Vec<BitStringSegmentOption<Value>>,
     pub typ: Type,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Butcher, Debug, PartialEq, Clone)]
 pub enum BitStringSegmentOption<Value> {
     Binary {
         location: SrcSpan,
@@ -677,18 +722,23 @@ pub enum BitStringSegmentOption<Value> {
 
     Size {
         location: SrcSpan,
+        #[butcher(unbox)]
         value: Box<Value>,
+        #[butcher(copy)]
         short_form: bool,
     },
 
     Unit {
         location: SrcSpan,
+        #[butcher(unbox)]
         value: Box<Value>,
+        #[butcher(copy)]
         short_form: bool,
     },
 
     Invalid {
         location: SrcSpan,
+        #[butcher(as_deref)]
         label: String,
     },
 }

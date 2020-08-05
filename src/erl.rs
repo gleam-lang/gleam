@@ -8,7 +8,8 @@ use crate::{
     pretty::*,
     project::{self, Analysed},
     typ::{
-        ModuleValueConstructor, PatternConstructor, Type, ValueConstructor, ValueConstructorVariant,
+        ButcheredModuleValueConstructor, ButcheredPatternConstructor, ButcheredValueConstructor,
+        ButcheredValueConstructorVariant, PatternConstructor, Type, ValueConstructor,
     },
 };
 use heck::{CamelCase, SnakeCase};
@@ -17,6 +18,9 @@ use std::borrow::Cow;
 use std::char;
 use std::default::Default;
 use std::sync::Arc;
+
+use butcher::iterator::IntoCowIterator;
+use butcher::Butcher;
 
 const INDENT: isize = 4;
 
@@ -250,10 +254,10 @@ fn fun_args<'a>(args: &[TypedArg], env: &mut Env) -> Document<'a> {
     }))
 }
 
-fn call_args<'a>(args: &'a [CallArg<TypedExpr>], env: &mut Env) -> Document<'a> {
+fn call_args<'a>(args: Cow<'a, [CallArg<TypedExpr>]>, env: &mut Env) -> Document<'a> {
     wrap_args(
-        args.into_iter()
-            .map(|arg| wrap_expr(Cow::Borrowed(&arg.value), env)),
+        args.into_cow_iter()
+            .map(|arg| wrap_expr(CallArg::butcher(arg).value, env)),
     )
 }
 
@@ -287,7 +291,7 @@ fn atom<'a>(value: Cow<'a, str>) -> Document<'a> {
     }
 }
 
-fn string<'a>(value: &'a str) -> Document<'a> {
+fn string<'a>(value: Cow<'a, str>) -> Document<'a> {
     value.to_doc().surround("<<\"", "\"/utf8>>")
 }
 
@@ -306,37 +310,33 @@ fn bit_string<'a>(elems: impl Iterator<Item = Document<'a>>) -> Document<'a> {
 }
 
 fn const_segment<'a>(
-    value: &'a TypedConstant,
-    options: Vec<BitStringSegmentOption<TypedConstant>>,
+    value: Cow<'a, TypedConstant>,
+    options: Cow<'a, [BitStringSegmentOption<TypedConstant>]>,
     env: &mut Env,
 ) -> Document<'a> {
-    let document = match value {
+    let document = match value.as_ref() {
         // Skip the normal <<value/utf8>> surrounds
         Constant::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
 
         // As normal
         Constant::Int { .. } | Constant::Float { .. } | Constant::BitString { .. } => {
-            const_inline(Cow::Borrowed(value), env)
+            const_inline(value, env)
         }
 
         // Wrap anything else in parentheses
-        value => const_inline(Cow::Borrowed(value), env).surround("(", ")"),
+        _ => const_inline(value, env).surround("(", ")"),
     };
 
-    let size = |value: TypedConstant, env: &mut Env| match value {
-        Constant::Int { .. } => Some(":".to_doc().append(const_inline(Cow::Owned(value), env))),
+    let size = |value: Cow<'a, TypedConstant>, env: &mut Env| match value.as_ref() {
+        Constant::Int { .. } => Some(":".to_doc().append(const_inline(value, env))),
         _ => Some(
             ":".to_doc()
-                .append(const_inline(Cow::Owned(value), env).surround("(", ")")),
+                .append(const_inline(value, env).surround("(", ")")),
         ),
     };
 
-    let unit = |value: TypedConstant, env: &mut Env| match value {
-        Constant::Int { .. } => Some(
-            "unit:"
-                .to_doc()
-                .append(const_inline(Cow::Owned(value), env)),
-        ),
+    let unit = |value: Cow<'a, TypedConstant>, env: &mut Env| match value.as_ref() {
+        Constant::Int { .. } => Some("unit:".to_doc().append(const_inline(value, env))),
         _ => None,
     };
 
@@ -344,36 +344,39 @@ fn const_segment<'a>(
 }
 
 fn expr_segment<'a>(
-    value: &'a TypedExpr,
-    options: Vec<BitStringSegmentOption<TypedExpr>>,
+    value: Cow<'a, TypedExpr>,
+    options: Cow<'a, [BitStringSegmentOption<TypedExpr>]>,
     env: &mut Env,
 ) -> Document<'a> {
-    let document = match value {
+    let document = match TypedExpr::butcher(value) {
         // Skip the normal <<value/utf8>> surrounds
-        TypedExpr::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
+        ButcheredTypedExpr::String { value, .. } => value.to_doc().surround("\"", "\""),
 
         // As normal
-        TypedExpr::Int { .. }
-        | TypedExpr::Float { .. }
-        | TypedExpr::Var { .. }
-        | TypedExpr::BitString { .. } => expr(Cow::Borrowed(value), env),
+        value @ ButcheredTypedExpr::Int { .. }
+        | value @ ButcheredTypedExpr::Float { .. }
+        | value @ ButcheredTypedExpr::Var { .. }
+        | value @ ButcheredTypedExpr::BitString { .. } => {
+            let value = TypedExpr::unbutcher(value);
+            expr(Cow::Owned(value), env)
+        }
 
         // Wrap anything else in parentheses
-        value => expr(Cow::Borrowed(value), env).surround("(", ")"),
-    };
-
-    let size = |value: TypedExpr, env: &mut Env| match value {
-        TypedExpr::Int { .. } | TypedExpr::Var { .. } => {
-            Some(":".to_doc().append(expr(Cow::Owned(value), env)))
+        value => {
+            let value = TypedExpr::unbutcher(value);
+            expr(Cow::Owned(value), env).surround("(", ")")
         }
-        _ => Some(
-            ":".to_doc()
-                .append(expr(Cow::Owned(value), env).surround("(", ")")),
-        ),
     };
 
-    let unit = |value: TypedExpr, env: &mut Env| match value {
-        TypedExpr::Int { .. } => Some("unit:".to_doc().append(expr(Cow::Owned(value), env))),
+    let size = |value: Cow<'a, TypedExpr>, env: &mut Env| match value.as_ref() {
+        TypedExpr::Int { .. } | TypedExpr::Var { .. } => {
+            Some(":".to_doc().append(expr(value, env)))
+        }
+        _ => Some(":".to_doc().append(expr(value, env).surround("(", ")"))),
+    };
+
+    let unit = |value: Cow<'a, TypedExpr>, env: &mut Env| match value.as_ref() {
+        TypedExpr::Int { .. } => Some("unit:".to_doc().append(expr(value, env))),
         _ => None,
     };
 
@@ -381,30 +384,33 @@ fn expr_segment<'a>(
 }
 
 fn pattern_segment<'a>(
-    value: &'a TypedPattern,
-    options: Vec<BitStringSegmentOption<TypedPattern>>,
+    value: Cow<'a, TypedPattern>,
+    options: Cow<'a, [BitStringSegmentOption<TypedPattern>]>,
     env: &mut Env,
 ) -> Document<'a> {
-    let document = match value {
+    let document = match Pattern::butcher(value) {
         // Skip the normal <<value/utf8>> surrounds
-        Pattern::String { value, .. } => value.as_str().to_doc().surround("\"", "\""),
+        ButcheredPattern::String { value, .. } => value.to_doc().surround("\"", "\""),
 
         // As normal
-        Pattern::Discard { .. }
-        | Pattern::Var { .. }
-        | Pattern::Int { .. }
-        | Pattern::Float { .. } => pattern(Cow::Borrowed(value), env),
+        value @ ButcheredPattern::Discard { .. }
+        | value @ ButcheredPattern::Var { .. }
+        | value @ ButcheredPattern::Int { .. }
+        | value @ ButcheredPattern::Float { .. } => {
+            let value = Pattern::unbutcher(value);
+            pattern(Cow::Owned(value), env)
+        }
 
         // No other pattern variants are allowed in pattern bit string segments
         _ => crate::error::fatal_compiler_bug("Pattern segment match not recognised"),
     };
 
-    let size = |value: TypedPattern, env: &mut Env| {
-        Some(":".to_doc().append(pattern(Cow::Owned(value), env)))
+    let size = |value: Cow<'a, TypedPattern>, env: &mut Env| {
+        Some(":".to_doc().append(pattern(value, env)))
     };
 
-    let unit = |value: TypedPattern, env: &mut Env| match value {
-        Pattern::Int { .. } => Some("unit:".to_doc().append(pattern(Cow::Owned(value), env))),
+    let unit = |value: Cow<'a, TypedPattern>, env: &mut Env| match value.as_ref() {
+        Pattern::Int { .. } => Some("unit:".to_doc().append(pattern(value, env))),
         _ => None,
     };
 
@@ -413,40 +419,42 @@ fn pattern_segment<'a>(
 
 fn bit_string_segment<'a, Value, SizeToDoc, UnitToDoc>(
     mut document: Document<'a>,
-    options: Vec<BitStringSegmentOption<Value>>,
+    options: Cow<'a, [BitStringSegmentOption<Value>]>,
     mut size_to_doc: SizeToDoc,
     mut unit_to_doc: UnitToDoc,
     env: &mut Env,
 ) -> Document<'a>
 where
-    Value: 'a,
-    SizeToDoc: FnMut(Value, &mut Env) -> Option<Document<'a>>,
-    UnitToDoc: FnMut(Value, &mut Env) -> Option<Document<'a>>,
+    Value: Clone + 'a,
+    SizeToDoc: FnMut(Cow<'a, Value>, &mut Env) -> Option<Document<'a>>,
+    UnitToDoc: FnMut(Cow<'a, Value>, &mut Env) -> Option<Document<'a>>,
 {
     let mut size: Option<Document> = None;
     let mut unit: Option<Document> = None;
     let mut others = Vec::new();
 
-    options.into_iter().for_each(|option| match option {
-        BitStringSegmentOption::Invalid { .. } => (),
-        BitStringSegmentOption::Integer { .. } => others.push("integer"),
-        BitStringSegmentOption::Float { .. } => others.push("float"),
-        BitStringSegmentOption::Binary { .. } => others.push("binary"),
-        BitStringSegmentOption::BitString { .. } => others.push("bitstring"),
-        BitStringSegmentOption::UTF8 { .. } => others.push("utf8"),
-        BitStringSegmentOption::UTF16 { .. } => others.push("utf16"),
-        BitStringSegmentOption::UTF32 { .. } => others.push("utf32"),
-        BitStringSegmentOption::UTF8Codepoint { .. } => others.push("utf8"),
-        BitStringSegmentOption::UTF16Codepoint { .. } => others.push("utf16"),
-        BitStringSegmentOption::UTF32Codepoint { .. } => others.push("utf32"),
-        BitStringSegmentOption::Signed { .. } => others.push("signed"),
-        BitStringSegmentOption::Unsigned { .. } => others.push("unsigned"),
-        BitStringSegmentOption::Big { .. } => others.push("big"),
-        BitStringSegmentOption::Little { .. } => others.push("little"),
-        BitStringSegmentOption::Native { .. } => others.push("native"),
-        BitStringSegmentOption::Size { value, .. } => size = size_to_doc(*value, env),
-        BitStringSegmentOption::Unit { value, .. } => unit = unit_to_doc(*value, env),
-    });
+    options
+        .into_cow_iter()
+        .for_each(|option| match BitStringSegmentOption::butcher(option) {
+            ButcheredBitStringSegmentOption::Invalid { .. } => (),
+            ButcheredBitStringSegmentOption::Integer { .. } => others.push("integer"),
+            ButcheredBitStringSegmentOption::Float { .. } => others.push("float"),
+            ButcheredBitStringSegmentOption::Binary { .. } => others.push("binary"),
+            ButcheredBitStringSegmentOption::BitString { .. } => others.push("bitstring"),
+            ButcheredBitStringSegmentOption::UTF8 { .. } => others.push("utf8"),
+            ButcheredBitStringSegmentOption::UTF16 { .. } => others.push("utf16"),
+            ButcheredBitStringSegmentOption::UTF32 { .. } => others.push("utf32"),
+            ButcheredBitStringSegmentOption::UTF8Codepoint { .. } => others.push("utf8"),
+            ButcheredBitStringSegmentOption::UTF16Codepoint { .. } => others.push("utf16"),
+            ButcheredBitStringSegmentOption::UTF32Codepoint { .. } => others.push("utf32"),
+            ButcheredBitStringSegmentOption::Signed { .. } => others.push("signed"),
+            ButcheredBitStringSegmentOption::Unsigned { .. } => others.push("unsigned"),
+            ButcheredBitStringSegmentOption::Big { .. } => others.push("big"),
+            ButcheredBitStringSegmentOption::Little { .. } => others.push("little"),
+            ButcheredBitStringSegmentOption::Native { .. } => others.push("native"),
+            ButcheredBitStringSegmentOption::Size { value, .. } => size = size_to_doc(value, env),
+            ButcheredBitStringSegmentOption::Unit { value, .. } => unit = unit_to_doc(value, env),
+        });
 
     document = document.append(size);
 
@@ -465,18 +473,18 @@ where
     document
 }
 
-fn seq<'a>(first: &'a TypedExpr, then: &'a TypedExpr, env: &mut Env) -> Document<'a> {
+fn seq<'a>(first: Cow<'a, TypedExpr>, then: Cow<'a, TypedExpr>, env: &mut Env) -> Document<'a> {
     force_break()
-        .append(expr(Cow::Borrowed(first), env))
+        .append(expr(first, env))
         .append(",")
         .append(line())
-        .append(expr(Cow::Borrowed(then), env))
+        .append(expr(then, env))
 }
 
 fn bin_op<'a>(
     name: &BinOp,
-    left: &'a TypedExpr,
-    right: &'a TypedExpr,
+    left: Cow<'a, TypedExpr>,
+    right: Cow<'a, TypedExpr>,
     env: &mut Env,
 ) -> Document<'a> {
     let op = match name {
@@ -499,14 +507,14 @@ fn bin_op<'a>(
         BinOp::ModuloInt => "rem",
     };
 
-    let left_expr = match left {
-        TypedExpr::BinOp { .. } => expr(Cow::Borrowed(left), env).surround("(", ")"),
-        _ => expr(Cow::Borrowed(left), env),
+    let left_expr = match left.as_ref() {
+        TypedExpr::BinOp { .. } => expr(left, env).surround("(", ")"),
+        _ => expr(left, env),
     };
 
-    let right_expr = match right {
-        TypedExpr::BinOp { .. } => expr(Cow::Borrowed(right), env).surround("(", ")"),
-        _ => expr(Cow::Borrowed(right), env),
+    let right_expr = match right.as_ref() {
+        TypedExpr::BinOp { .. } => expr(right, env).surround("(", ")"),
+        _ => expr(right, env),
     };
 
     left_expr
@@ -516,27 +524,28 @@ fn bin_op<'a>(
         .append(right_expr)
 }
 
-fn pipe<'a>(value: &TypedExpr, fun: &'a TypedExpr, env: &mut Env) -> Document<'a> {
+fn pipe<'a>(value: &TypedExpr, fun: Cow<'a, TypedExpr>, env: &mut Env) -> Document<'a> {
     let arg = CallArg {
         label: None,
         location: Default::default(),
         // TODO: remove this clone
         value: value.clone(),
     };
-    call(fun, &[arg], env)
+    let args = vec![arg];
+    call(fun, Cow::Owned(args), env)
 }
 
 fn try_<'a>(
-    value: &'a TypedExpr,
-    pat: &'a TypedPattern,
-    then: &'a TypedExpr,
+    value: Cow<'a, TypedExpr>,
+    pat: Cow<'a, TypedPattern>,
+    then: Cow<'a, TypedExpr>,
     env: &mut Env,
 ) -> Document<'a> {
     let try_error_name = "gleam@try_error";
 
     "case "
         .to_doc()
-        .append(expr(Cow::Borrowed(value), env))
+        .append(expr(value, env))
         .append(" of")
         .append(
             line()
@@ -550,9 +559,9 @@ fn try_<'a>(
         .append(
             line()
                 .append("{ok, ")
-                .append(pattern(Cow::Borrowed(pat), env))
+                .append(pattern(pat, env))
                 .append("} ->")
-                .append(line().append(expr(Cow::Borrowed(then), env)).nest(INDENT))
+                .append(line().append(expr(then, env)).nest(INDENT))
                 .nest(INDENT),
         )
         .append(line())
@@ -561,56 +570,63 @@ fn try_<'a>(
 }
 
 fn let_<'a>(
-    value: &'a TypedExpr,
-    pat: &'a TypedPattern,
-    then: &'a TypedExpr,
+    value: Cow<'a, TypedExpr>,
+    pat: Cow<'a, TypedPattern>,
+    then: Cow<'a, TypedExpr>,
     env: &mut Env,
 ) -> Document<'a> {
-    let body = expr(Cow::Borrowed(value), env);
-    pattern(Cow::Borrowed(pat), env)
+    let body = expr(value, env);
+    pattern(pat, env)
         .append(" = ")
         .append(body)
         .append(",")
         .append(line())
-        .append(expr(Cow::Borrowed(then), env))
+        .append(expr(then, env))
 }
 
 fn pattern<'a>(p: Cow<'a, TypedPattern>, env: &mut Env) -> Document<'a> {
-    match p.as_ref() {
-        Pattern::Nil { .. } => "[]".to_doc(),
+    match Pattern::butcher(p) {
+        ButcheredPattern::Nil { .. } => "[]".to_doc(),
 
-        Pattern::Let { name, pattern: p } => pattern(Cow::Borrowed(p), env)
+        ButcheredPattern::Let { name, pattern: p } => pattern(p, env)
             .append(" = ")
             .append(env.next_local_var_name(name.to_string())),
 
-        Pattern::Cons { head, tail, .. } => pattern_list_cons(head, tail, env),
+        ButcheredPattern::Cons { head, tail, .. } => pattern_list_cons(head, tail, env),
 
-        Pattern::Discard { name, .. } => name.as_str().to_doc(),
+        ButcheredPattern::Discard { name, .. } => name.to_doc(),
 
-        Pattern::Var { name, .. } => env.next_local_var_name(name.to_string()),
+        ButcheredPattern::Var { name, .. } => env.next_local_var_name(name.to_string()),
 
-        Pattern::VarCall { name, .. } => env.local_var_name(name.to_string()),
+        ButcheredPattern::VarCall { name, .. } => env.local_var_name(name.to_string()),
 
-        Pattern::Int { value, .. } => value.as_str().to_doc(),
+        ButcheredPattern::Int { value, .. } => value.to_doc(),
 
-        Pattern::Float { value, .. } => float(value.as_ref()),
+        ButcheredPattern::Float { value, .. } => float(value.as_ref()),
 
-        Pattern::String { value, .. } => string(value),
+        ButcheredPattern::String { value, .. } => string(value),
 
-        Pattern::Constructor {
-            args,
-            constructor: PatternConstructor::Record { name },
-            ..
-        } => tag_tuple_pattern(name, args, env),
-
-        Pattern::Tuple { elems, .. } => {
-            tuple(elems.into_iter().map(|p| pattern(Cow::Borrowed(p), env)))
+        ButcheredPattern::Constructor {
+            args, constructor, ..
+        } => {
+            let constructor = PatternConstructor::butcher(constructor);
+            let ButcheredPatternConstructor::Record { name } = constructor;
+            tag_tuple_pattern(name.as_ref(), args, env)
         }
 
-        Pattern::BitString { segments, .. } => bit_string(
+        ButcheredPattern::Tuple { elems, .. } => {
+            tuple(elems.into_cow_iter().map(|p| pattern(p, env)))
+        }
+
+        ButcheredPattern::BitString { segments, .. } => bit_string(
             segments
-                .into_iter()
-                .map(|s| pattern_segment(&s.value, s.options.clone(), env)),
+                .into_cow_iter()
+                .map(|s| {
+                    let ButcheredBitStringSegment { value, options, .. } =
+                        BitStringSegment::butcher(s);
+                    (value, options)
+                })
+                .map(|(value, options)| pattern_segment(value, options, env)),
         ),
     }
 }
@@ -619,43 +635,56 @@ fn float<'a>(value: &str) -> Document<'a> {
     if value.ends_with(".") {
         format!("{}0", value).to_doc()
     } else {
+        // TODO: remove this to_string call
         value.to_string().to_doc()
     }
 }
 
 fn pattern_list_cons<'a>(
-    head: &'a TypedPattern,
-    tail: &'a TypedPattern,
+    head: Cow<'a, TypedPattern>,
+    tail: Cow<'a, TypedPattern>,
     env: &mut Env,
 ) -> Document<'a> {
-    list_cons(head, tail, env, pattern, |expr| match expr.as_ref() {
-        Pattern::Nil { .. } => ListType::Nil,
+    list_cons(head, tail, env, pattern, |expr| {
+        match Pattern::butcher(expr) {
+            ButcheredPattern::Nil { .. } => ListType::Nil,
 
-        Pattern::Cons { head, tail, .. } => {
-            let (head, tail) = (Cow::Borrowed(head.as_ref()), Cow::Borrowed(tail.as_ref()));
-            ListType::Cons { head, tail }
+            ButcheredPattern::Cons { head, tail, .. } => ListType::Cons { head, tail },
+
+            expr => {
+                let expr = Pattern::unbutcher(expr);
+                ListType::NotList(Cow::Owned(expr))
+            }
         }
-
-        other => ListType::NotList(Cow::Borrowed(other)),
     })
 }
 
-fn expr_list_cons<'a>(head: &'a TypedExpr, tail: &'a TypedExpr, env: &mut Env) -> Document<'a> {
-    list_cons(head, tail, env, wrap_expr, |expr| match expr.as_ref() {
-        TypedExpr::ListNil { .. } => ListType::Nil,
+fn expr_list_cons<'a>(
+    head: Cow<'a, TypedExpr>,
+    tail: Cow<'a, TypedExpr>,
+    env: &mut Env,
+) -> Document<'a> {
+    list_cons(
+        head,
+        tail,
+        env,
+        wrap_expr,
+        |expr| match TypedExpr::butcher(expr) {
+            ButcheredTypedExpr::ListNil { .. } => ListType::Nil,
 
-        TypedExpr::ListCons { head, tail, .. } => {
-            let (head, tail) = (Cow::Borrowed(head.as_ref()), Cow::Borrowed(tail.as_ref()));
-            ListType::Cons { head, tail }
-        }
+            ButcheredTypedExpr::ListCons { head, tail, .. } => ListType::Cons { head, tail },
 
-        other => ListType::NotList(Cow::Borrowed(other)),
-    })
+            expr => {
+                let expr = TypedExpr::unbutcher(expr);
+                ListType::NotList(Cow::Owned(expr))
+            }
+        },
+    )
 }
 
 fn list_cons<'a, ToDoc, Categorise, Elem>(
-    head: &'a Elem,
-    tail: &'a Elem,
+    head: Cow<'a, Elem>,
+    tail: Cow<'a, Elem>,
     env: &mut Env,
     to_doc: ToDoc,
     categorise_element: Categorise,
@@ -665,10 +694,8 @@ where
     ToDoc: Fn(Cow<'a, Elem>, &mut Env) -> Document<'a>,
     Categorise: Fn(Cow<Elem>) -> ListType<Cow<Elem>, Cow<Elem>>,
 {
-    // TODO: investigate to remove this clone
-    let mut elems = vec![Cow::Borrowed(head)];
-    let final_tail =
-        collect_cons::<_, Elem, Elem>(Cow::Borrowed(tail), &mut elems, categorise_element);
+    let mut elems = vec![head];
+    let final_tail = collect_cons::<_, Elem, Elem>(tail, &mut elems, categorise_element);
 
     let elems = concat(
         elems
@@ -710,11 +737,17 @@ enum ListType<E, T> {
     NotList(T),
 }
 
-fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env) -> Document<'a> {
-    match &constructor.variant {
-        ValueConstructorVariant::Record {
+fn var<'a>(
+    name: Cow<'a, str>,
+    constructor: Cow<'a, ValueConstructor>,
+    env: &mut Env,
+) -> Document<'a> {
+    let ButcheredValueConstructor { variant, typ, .. } = ValueConstructor::butcher(constructor);
+
+    match variant {
+        ButcheredValueConstructorVariant::Record {
             name: record_name, ..
-        } => match &*constructor.typ {
+        } => match typ.as_ref() {
             Type::Fn { args, .. } => {
                 let chars = incrementing_args_list(args.len());
                 "fun("
@@ -729,21 +762,17 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env) -> D
             _ => atom(Cow::Owned(record_name.to_snake_case())),
         },
 
-        ValueConstructorVariant::LocalVariable => env.local_var_name(name.to_string()),
+        ButcheredValueConstructorVariant::LocalVariable => env.local_var_name(name.to_string()),
 
-        ValueConstructorVariant::ModuleConstant { literal } => {
-            const_inline(Cow::Borrowed(literal), env)
+        ButcheredValueConstructorVariant::ModuleConstant { literal } => const_inline(literal, env),
+
+        ButcheredValueConstructorVariant::ModuleFn { arity, module, .. }
+            if module.as_ref() == env.module =>
+        {
+            "fun ".to_doc().append(atom(name)).append("/").append(arity)
         }
 
-        ValueConstructorVariant::ModuleFn {
-            arity, ref module, ..
-        } if module.as_slice() == env.module => "fun "
-            .to_doc()
-            .append(atom(Cow::Borrowed(name)))
-            .append("/")
-            .append(*arity),
-
-        ValueConstructorVariant::ModuleFn {
+        ButcheredValueConstructorVariant::ModuleFn {
             arity,
             module,
             name,
@@ -752,42 +781,48 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env) -> D
             .to_doc()
             .append(module.join("@"))
             .append(":")
-            .append(atom(Cow::Borrowed(name)))
+            .append(atom(name))
             .append("/")
-            .append(*arity),
+            .append(arity),
     }
 }
 
 fn const_inline<'a>(literal: Cow<'a, TypedConstant>, env: &mut Env) -> Document<'a> {
-    match literal.as_ref() {
-        Constant::Int { value, .. } => value.to_string().to_doc(),
-        Constant::Float { value, .. } => value.to_string().to_doc(),
-        Constant::String { value, .. } => string(value),
-        Constant::Tuple { elements, .. } => {
-            tuple(elements.iter().map(|e| const_inline(Cow::Borrowed(e), env)))
+    match Constant::butcher(literal) {
+        ButcheredConstant::Int { value, .. } => value.to_doc(),
+        ButcheredConstant::Float { value, .. } => value.to_doc(),
+        ButcheredConstant::String { value, .. } => string(value),
+        ButcheredConstant::Tuple { elements, .. } => {
+            tuple(elements.into_cow_iter().map(|e| const_inline(e, env)))
         }
 
-        Constant::List { elements, .. } => {
+        ButcheredConstant::List { elements, .. } => {
             let elements = elements
-                .iter()
-                .map(|e| const_inline(Cow::Borrowed(e), env))
+                .into_cow_iter()
+                .map(|e| const_inline(e, env))
                 .intersperse(delim(","));
             concat(elements).nest_current().surround("[", "]").group()
         }
 
-        Constant::BitString { segments, .. } => bit_string(
+        ButcheredConstant::BitString { segments, .. } => bit_string(
             segments
-                .into_iter()
-                .map(|s| const_segment(&s.value, s.options.clone(), env)),
+                .into_cow_iter()
+                .map(|s| {
+                    let ButcheredBitStringSegment { value, options, .. } =
+                        BitStringSegment::butcher(s);
+                    (value, options)
+                })
+                .map(|(value, options)| const_segment(value, options, env)),
         ),
 
-        Constant::Record { tag, args, .. } => {
+        ButcheredConstant::Record { tag, args, .. } => {
             if args.is_empty() {
                 atom(Cow::Owned(tag.to_snake_case()))
             } else {
                 let args = args
-                    .into_iter()
-                    .map(|a| const_inline(Cow::Borrowed(&a.value), env));
+                    .into_cow_iter()
+                    .map(|a| CallArg::butcher(a).value)
+                    .map(|value| const_inline(value, env));
                 let tag = atom(Cow::Owned(tag.to_snake_case()));
                 tuple(std::iter::once(tag).chain(args))
             }
@@ -797,7 +832,7 @@ fn const_inline<'a>(literal: Cow<'a, TypedConstant>, env: &mut Env) -> Document<
 
 fn tag_tuple_pattern<'a>(
     name: &str,
-    args: &'a [CallArg<TypedPattern>],
+    args: Cow<'a, [CallArg<TypedPattern>]>,
     env: &mut Env,
 ) -> Document<'a> {
     if args.is_empty() {
@@ -805,21 +840,22 @@ fn tag_tuple_pattern<'a>(
     } else {
         tuple(
             std::iter::once(atom(Cow::Owned(name.to_snake_case()))).chain(
-                args.into_iter()
-                    .map(|p| pattern(Cow::Borrowed(&p.value), env)),
+                args.into_cow_iter()
+                    .map(|p| CallArg::butcher(p).value)
+                    .map(|value| pattern(value, env)),
             ),
         )
     }
 }
 
-fn clause<'a>(clause: &'a TypedClause, env: &mut Env) -> Document<'a> {
-    let Clause {
+fn clause<'a>(clause: Cow<'a, TypedClause>, env: &mut Env) -> Document<'a> {
+    let ButcheredClause {
         guard,
         pattern: pat,
         alternative_patterns,
         then,
         ..
-    } = clause;
+    } = TypedClause::butcher(clause);
 
     // These are required to get the alternative patterns working properly.
     // Simply rendering the duplicate erlang clauses breaks the variable rewriting
@@ -827,25 +863,33 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env) -> Document<'a> {
     let erlang_vars = env.erl_function_scope_vars.clone();
 
     let docs = std::iter::once(pat)
-        .chain(alternative_patterns.into_iter())
-        .map(|patterns| {
+        .chain(alternative_patterns.into_cow_iter())
+        .map(move |patterns| {
             env.erl_function_scope_vars = erlang_vars.clone();
 
             let patterns_doc = if patterns.len() == 1 {
                 let p = patterns
                     .get(0)
-                    .gleam_expect("Single pattern clause printing");
-                pattern(Cow::Borrowed(p), env)
+                    .gleam_expect("Single pattern clause printing")
+                    // TODO: investigate this clone
+                    .clone();
+                pattern(Cow::Owned(p), env)
             } else {
-                tuple(patterns.iter().map(|p| pattern(Cow::Borrowed(p), env)))
+                tuple(patterns.into_cow_iter().map(|p| pattern(p, env)))
             };
 
             if then_doc == Document::Nil {
-                then_doc = expr(Cow::Borrowed(then), env);
+                // TODO: explain why this clone is necessary (1)
+                let then = Cow::Owned(then.as_ref().to_owned());
+                then_doc = expr(then, env);
             }
 
+            // A clone is done for the same reason as the previous one (see (1))
+            let guard = Cow::Owned(guard.as_ref().to_owned());
+            let guard = to_option_cow(guard);
+
             patterns_doc.append(
-                optional_clause_guard(guard.as_ref(), env)
+                optional_clause_guard(guard, env)
                     .append(" ->")
                     .append(line().append(then_doc.clone()).nest(INDENT).group()),
             )
@@ -855,73 +899,84 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env) -> Document<'a> {
     concat(docs)
 }
 
-fn optional_clause_guard<'a>(guard: Option<&'a TypedClauseGuard>, env: &mut Env) -> Document<'a> {
+fn to_option_cow<'a, T: Clone>(data: Cow<'a, Option<T>>) -> Option<Cow<'a, T>> {
+    match data {
+        Cow::Owned(None) | Cow::Borrowed(None) => None,
+        Cow::Owned(Some(data)) => Some(Cow::Owned(data)),
+        Cow::Borrowed(Some(data)) => Some(Cow::Borrowed(data)),
+    }
+}
+
+fn optional_clause_guard<'a>(
+    guard: Option<Cow<'a, TypedClauseGuard>>,
+    env: &mut Env,
+) -> Document<'a> {
     match guard {
         Some(guard) => " when ".to_doc().append(bare_clause_guard(guard, env)),
         None => nil(),
     }
 }
 
-fn bare_clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env) -> Document<'a> {
-    match guard {
-        ClauseGuard::Or { left, right, .. } => clause_guard(left.as_ref(), env)
+fn bare_clause_guard<'a>(guard: Cow<'a, TypedClauseGuard>, env: &mut Env) -> Document<'a> {
+    match TypedClauseGuard::butcher(guard) {
+        ButcheredClauseGuard::Or { left, right, .. } => clause_guard(left, env)
             .append(" orelse ")
-            .append(clause_guard(right.as_ref(), env)),
+            .append(clause_guard(right, env)),
 
-        ClauseGuard::And { left, right, .. } => clause_guard(left.as_ref(), env)
+        ButcheredClauseGuard::And { left, right, .. } => clause_guard(left, env)
             .append(" andalso ")
-            .append(clause_guard(right.as_ref(), env)),
+            .append(clause_guard(right, env)),
 
-        ClauseGuard::Equals { left, right, .. } => clause_guard(left.as_ref(), env)
+        ButcheredClauseGuard::Equals { left, right, .. } => clause_guard(left, env)
             .append(" =:= ")
-            .append(clause_guard(right.as_ref(), env)),
+            .append(clause_guard(right, env)),
 
-        ClauseGuard::NotEquals { left, right, .. } => clause_guard(left.as_ref(), env)
+        ButcheredClauseGuard::NotEquals { left, right, .. } => clause_guard(left, env)
             .append(" =/= ")
-            .append(clause_guard(right.as_ref(), env)),
+            .append(clause_guard(right, env)),
 
-        ClauseGuard::GtInt { left, right, .. } => clause_guard(left.as_ref(), env)
+        ButcheredClauseGuard::GtInt { left, right, .. } => clause_guard(left, env)
             .append(" > ")
-            .append(clause_guard(right.as_ref(), env)),
+            .append(clause_guard(right, env)),
 
-        ClauseGuard::GtEqInt { left, right, .. } => clause_guard(left.as_ref(), env)
+        ButcheredClauseGuard::GtEqInt { left, right, .. } => clause_guard(left, env)
             .append(" >= ")
-            .append(clause_guard(right.as_ref(), env)),
+            .append(clause_guard(right, env)),
 
-        ClauseGuard::LtInt { left, right, .. } => clause_guard(left.as_ref(), env)
+        ButcheredClauseGuard::LtInt { left, right, .. } => clause_guard(left, env)
             .append(" < ")
-            .append(clause_guard(right.as_ref(), env)),
+            .append(clause_guard(right, env)),
 
-        ClauseGuard::LtEqInt { left, right, .. } => clause_guard(left.as_ref(), env)
+        ButcheredClauseGuard::LtEqInt { left, right, .. } => clause_guard(left, env)
             .append(" =< ")
-            .append(clause_guard(right.as_ref(), env)),
+            .append(clause_guard(right, env)),
 
-        ClauseGuard::GtFloat { left, right, .. } => clause_guard(left.as_ref(), env)
+        ButcheredClauseGuard::GtFloat { left, right, .. } => clause_guard(left, env)
             .append(" > ")
-            .append(clause_guard(right.as_ref(), env)),
+            .append(clause_guard(right, env)),
 
-        ClauseGuard::GtEqFloat { left, right, .. } => clause_guard(left.as_ref(), env)
+        ButcheredClauseGuard::GtEqFloat { left, right, .. } => clause_guard(left, env)
             .append(" >= ")
-            .append(clause_guard(right.as_ref(), env)),
+            .append(clause_guard(right, env)),
 
-        ClauseGuard::LtFloat { left, right, .. } => clause_guard(left.as_ref(), env)
+        ButcheredClauseGuard::LtFloat { left, right, .. } => clause_guard(left, env)
             .append(" < ")
-            .append(clause_guard(right.as_ref(), env)),
+            .append(clause_guard(right, env)),
 
-        ClauseGuard::LtEqFloat { left, right, .. } => clause_guard(left.as_ref(), env)
+        ButcheredClauseGuard::LtEqFloat { left, right, .. } => clause_guard(left, env)
             .append(" =< ")
-            .append(clause_guard(right.as_ref(), env)),
+            .append(clause_guard(right, env)),
 
         // Only local variables are supported and the typer ensures that all
         // ClauseGuard::Vars are local variables
-        ClauseGuard::Var { name, .. } => env.local_var_name(name.to_string()),
+        ButcheredClauseGuard::Var { name, .. } => env.local_var_name(name.to_string()),
 
-        ClauseGuard::Constant(constant) => const_inline(Cow::Borrowed(constant), env),
+        ButcheredClauseGuard::Constant(constant) => const_inline(constant, env),
     }
 }
 
-fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env) -> Document<'a> {
-    match guard {
+fn clause_guard<'a>(guard: Cow<'a, TypedClauseGuard>, env: &mut Env) -> Document<'a> {
+    match guard.as_ref() {
         // Binary ops are wrapped in parens
         ClauseGuard::Or { .. }
         | ClauseGuard::And { .. }
@@ -944,9 +999,9 @@ fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env) -> Document<'a> 
     }
 }
 
-fn clauses<'a>(cs: &'a [TypedClause], env: &mut Env) -> Document<'a> {
+fn clauses<'a>(cs: Cow<'a, [TypedClause]>, env: &mut Env) -> Document<'a> {
     concat(
-        cs.into_iter()
+        cs.into_cow_iter()
             .map(|c| {
                 let vars = env.current_scope_vars.clone();
                 let erl = clause(c, env);
@@ -957,18 +1012,19 @@ fn clauses<'a>(cs: &'a [TypedClause], env: &mut Env) -> Document<'a> {
     )
 }
 
-fn case<'a>(subjects: &'a [TypedExpr], cs: &'a [TypedClause], env: &mut Env) -> Document<'a> {
+fn case<'a>(
+    subjects: Cow<'a, [TypedExpr]>,
+    cs: Cow<'a, [TypedClause]>,
+    env: &mut Env,
+) -> Document<'a> {
     let subjects_doc = if subjects.len() == 1 {
         let subject = subjects
             .get(0)
-            .gleam_expect("erl case printing of single subject");
-        wrap_expr(Cow::Borrowed(subject), env).group()
+            .gleam_expect("erl case printing of single subject")
+            .clone(); // TODO: remove this clone, match on subjects instead
+        wrap_expr(Cow::Owned(subject), env).group()
     } else {
-        tuple(
-            subjects
-                .into_iter()
-                .map(|e| wrap_expr(Cow::Borrowed(e), env)),
-        )
+        tuple(subjects.into_cow_iter().map(|e| wrap_expr(e, env)))
     };
     "case "
         .to_doc()
@@ -980,68 +1036,76 @@ fn case<'a>(subjects: &'a [TypedExpr], cs: &'a [TypedClause], env: &mut Env) -> 
         .group()
 }
 
-fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>], env: &mut Env) -> Document<'a> {
-    match fun {
-        TypedExpr::ModuleSelect {
-            constructor: ModuleValueConstructor::Record { name, .. },
+fn call<'a>(
+    fun: Cow<'a, TypedExpr>,
+    args: Cow<'a, [CallArg<TypedExpr>]>,
+    env: &mut Env,
+) -> Document<'a> {
+    match TypedExpr::butcher(fun) {
+        ButcheredTypedExpr::ModuleSelect {
+            constructor: ButcheredModuleValueConstructor::Record { name, .. },
             ..
         }
-        | TypedExpr::Var {
+        | ButcheredTypedExpr::Var {
             constructor:
-                ValueConstructor {
-                    variant: ValueConstructorVariant::Record { name, .. },
+                ButcheredValueConstructor {
+                    variant: ButcheredValueConstructorVariant::Record { name, .. },
                     ..
                 },
             ..
         } => tuple(
             std::iter::once(atom(Cow::Owned(name.to_snake_case()))).chain(
-                args.into_iter()
-                    .map(|arg| expr(Cow::Borrowed(&arg.value), env)),
+                args.into_cow_iter()
+                    .map(|arg| expr(CallArg::butcher(arg).value, env)),
             ),
         ),
 
-        TypedExpr::Var {
+        ButcheredTypedExpr::Var {
             constructor:
-                ValueConstructor {
-                    variant: ValueConstructorVariant::ModuleFn { module, name, .. },
+                ButcheredValueConstructor {
+                    variant: ButcheredValueConstructorVariant::ModuleFn { module, name, .. },
                     ..
                 },
             ..
         } => {
-            if module.as_slice() == env.module {
-                atom(Cow::Borrowed(name)).append(call_args(args, env))
+            if module.as_ref() == env.module {
+                atom(name).append(call_args(args, env))
             } else {
                 atom(Cow::Owned(module.join("@")))
                     .append(":")
-                    .append(atom(Cow::Borrowed(name)))
+                    .append(atom(name))
                     .append(call_args(args, env))
             }
         }
 
-        TypedExpr::ModuleSelect {
+        ButcheredTypedExpr::ModuleSelect {
             module_name,
             label,
-            constructor: ModuleValueConstructor::Fn,
+            constructor: ButcheredModuleValueConstructor::Fn,
             ..
         } => atom(Cow::Owned(module_name.join("@")))
             .append(":")
-            .append(atom(Cow::Borrowed(label)))
+            .append(atom(label))
             .append(call_args(args, env)),
 
-        call @ TypedExpr::Call { .. } => expr(Cow::Borrowed(call), env)
-            .surround("(", ")")
-            .append(call_args(args, env)),
+        call @ ButcheredTypedExpr::Call { .. } => {
+            let call = TypedExpr::unbutcher(call);
 
-        TypedExpr::Fn {
+            expr(Cow::Owned(call), env)
+                .surround("(", ")")
+                .append(call_args(args, env))
+        }
+
+        ButcheredTypedExpr::Fn {
             is_capture: true,
             body,
             ..
         } => {
-            if let TypedExpr::Call {
+            if let ButcheredTypedExpr::Call {
                 fun,
                 args: inner_args,
                 ..
-            } = body.as_ref()
+            } = TypedExpr::butcher(body)
             {
                 // TODO: this is a mess of cloning.
                 let merged_args = inner_args
@@ -1054,25 +1118,41 @@ fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>], env: &mut Env) -
                         _ => a.clone(),
                     })
                     .collect::<Vec<_>>();
-                call(fun, merged_args.as_slice(), env)
+                call(fun, Cow::Owned(merged_args), env)
             } else {
                 unreachable!()
             }
         }
 
-        fun @ TypedExpr::Fn { .. } => expr(Cow::Borrowed(fun), env)
-            .surround("(", ")")
-            .append(call_args(args, env)),
+        fun @ ButcheredTypedExpr::Fn { .. } => {
+            let fun = TypedExpr::unbutcher(fun);
 
-        TypedExpr::RecordAccess { .. } => expr(Cow::Borrowed(fun), env)
-            .surround("(", ")")
-            .append(call_args(args, env)),
+            expr(Cow::Owned(fun), env)
+                .surround("(", ")")
+                .append(call_args(args, env))
+        }
 
-        TypedExpr::TupleIndex { .. } => expr(Cow::Borrowed(fun), env)
-            .surround("(", ")")
-            .append(call_args(args, env)),
+        fun @ ButcheredTypedExpr::RecordAccess { .. } => {
+            let fun = TypedExpr::unbutcher(fun);
 
-        other => expr(Cow::Borrowed(other), env).append(call_args(args, env)),
+            expr(Cow::Owned(fun), env)
+                .surround("(", ")")
+                .append(call_args(args, env))
+        }
+
+        fun @ ButcheredTypedExpr::TupleIndex { .. } => {
+            let fun = TypedExpr::unbutcher(fun);
+
+            expr(Cow::Owned(fun), env)
+                .surround("(", ")")
+                .append(call_args(args, env))
+        }
+
+        other => {
+            let other = TypedExpr::unbutcher(other);
+
+            expr(Cow::Owned(other), env).append(call_args(args, env))
+        }
     }
 }
 
@@ -1097,121 +1177,133 @@ fn wrap_expr<'a>(expression: Cow<'a, TypedExpr>, env: &mut Env) -> Document<'a> 
 }
 
 fn expr<'a>(expression: Cow<'a, TypedExpr>, env: &mut Env) -> Document<'a> {
-    match expression.as_ref() {
-        TypedExpr::ListNil { .. } => "[]".to_doc(),
-        TypedExpr::Todo { label: None, .. } => "erlang:error({gleam_error, todo})".to_doc(),
-        TypedExpr::Todo { label: Some(l), .. } => l
-            .as_str()
-            .to_doc()
-            .surround("erlang:error({gleam_error, todo, \"", "\"})"),
-        TypedExpr::Int { value, .. } => value.as_str().to_doc(),
-        TypedExpr::Float { value, .. } => float(value.as_ref()),
-        TypedExpr::String { value, .. } => string(&value),
-        TypedExpr::Seq { first, then, .. } => seq(&first, &then, env),
-        TypedExpr::Pipe { left, right, .. } => pipe(&left, &right, env),
-
-        TypedExpr::TupleIndex { tuple, index, .. } => tuple_index(&tuple, *index, env),
-
-        TypedExpr::Var {
-            name, constructor, ..
-        } => var(&name, &constructor, env),
-
-        TypedExpr::Fn { args, body, .. } => fun(&args, &body, env),
-
-        TypedExpr::ListCons { head, tail, .. } => expr_list_cons(&head, &tail, env),
-
-        TypedExpr::Call { fun, args, .. } => call(&fun, &args, env),
-
-        TypedExpr::ModuleSelect {
-            constructor: ModuleValueConstructor::Record { name, arity: 0 },
-            ..
-        } => atom(Cow::Owned(name.to_snake_case())),
-
-        TypedExpr::ModuleSelect {
-            constructor: ModuleValueConstructor::Constant { literal },
-            ..
-        } => const_inline(Cow::Borrowed(literal), env),
-
-        TypedExpr::ModuleSelect {
-            constructor: ModuleValueConstructor::Record { name, arity },
-            ..
-        } => {
-            let chars = incrementing_args_list(*arity);
-            "fun("
+    match TypedExpr::butcher(expression) {
+        ButcheredTypedExpr::ListNil { .. } => "[]".to_doc(),
+        ButcheredTypedExpr::Todo { label, .. } => match label {
+            Cow::Owned(None) | Cow::Borrowed(None) => "erlang:error({gleam_error, todo})".to_doc(),
+            Cow::Owned(Some(l)) => l
                 .to_doc()
-                // TODO: explain why this clone is mandatory
-                .append(chars.clone())
-                .append(") -> {")
-                .append(name.to_snake_case())
-                .append(", ")
-                .append(chars)
-                .append("} end")
+                .surround("erlang:error({gleam_error, todo, \"", "\"})"),
+            Cow::Borrowed(Some(l)) => l
+                .as_str()
+                .to_doc()
+                .surround("erlang:error({gleam_error, todo, \"", "\"})"),
+        },
+        ButcheredTypedExpr::Int { value, .. } => value.to_doc(),
+        ButcheredTypedExpr::Float { value, .. } => float(value.as_ref()),
+        ButcheredTypedExpr::String { value, .. } => string(value),
+        ButcheredTypedExpr::Seq { first, then, .. } => seq(first, then, env),
+        ButcheredTypedExpr::Pipe { left, right, .. } => pipe(&left, right, env),
+
+        ButcheredTypedExpr::TupleIndex { tuple, index, .. } => tuple_index(tuple, *index, env),
+
+        ButcheredTypedExpr::Var {
+            name, constructor, ..
+        } => {
+            let constructor = ValueConstructor::unbutcher(constructor);
+            var(name, Cow::Owned(constructor), env)
         }
 
-        TypedExpr::ModuleSelect {
+        ButcheredTypedExpr::Fn { args, body, .. } => fun(args, body, env),
+
+        ButcheredTypedExpr::ListCons { head, tail, .. } => expr_list_cons(head, tail, env),
+
+        ButcheredTypedExpr::Call { fun, args, .. } => call(fun, args, env),
+
+        ButcheredTypedExpr::ModuleSelect {
             typ,
             label,
             module_name,
-            constructor: ModuleValueConstructor::Fn,
+            constructor,
             ..
-        } => module_select_fn(typ.clone(), &module_name, &label),
+        } => {
+            match constructor {
+                ButcheredModuleValueConstructor::Record { name, arity: 0 } => {
+                    atom(Cow::Owned(name.to_snake_case()))
+                }
 
-        TypedExpr::RecordAccess { record, index, .. } => tuple_index(&record, index + 1, env),
+                ButcheredModuleValueConstructor::Constant { literal } => const_inline(literal, env),
 
-        TypedExpr::Let {
+                ButcheredModuleValueConstructor::Record { name, arity } => {
+                    let chars = incrementing_args_list(arity);
+                    "fun("
+                        .to_doc()
+                        // TODO: explain why this clone is mandatory
+                        .append(chars.clone())
+                        .append(") -> {")
+                        .append(name.to_snake_case())
+                        .append(", ")
+                        .append(chars)
+                        .append("} end")
+                }
+
+                ButcheredModuleValueConstructor::Fn => module_select_fn(typ, module_name, label),
+            }
+        }
+
+        ButcheredTypedExpr::RecordAccess { record, index, .. } => {
+            tuple_index(record, index.as_ref() + 1, env)
+        }
+
+        ButcheredTypedExpr::Let {
             value,
             pattern,
             then,
             kind: BindingKind::Try,
             ..
-        } => try_(&value, &pattern, &then, env),
+        } => try_(value, pattern, then, env),
 
-        TypedExpr::Let {
+        ButcheredTypedExpr::Let {
             value,
             pattern,
             then,
             ..
-        } => let_(&value, &pattern, &then, env),
+        } => let_(value, pattern, then, env),
 
-        TypedExpr::Case {
+        ButcheredTypedExpr::Case {
             subjects, clauses, ..
-        } => case(&subjects, clauses.as_slice(), env),
+        } => case(subjects, clauses, env),
 
-        TypedExpr::BinOp {
+        ButcheredTypedExpr::BinOp {
             name, left, right, ..
-        } => bin_op(&name, &left, &right, env),
+        } => bin_op(&name, left, right, env),
 
-        TypedExpr::Tuple { elems, .. } => {
-            tuple(elems.into_iter().map(|e| wrap_expr(Cow::Borrowed(e), env)))
+        ButcheredTypedExpr::Tuple { elems, .. } => {
+            tuple(elems.into_cow_iter().map(|e| wrap_expr(e, env)))
         }
 
-        TypedExpr::BitString { segments, .. } => bit_string(
+        ButcheredTypedExpr::BitString { segments, .. } => bit_string(
             segments
-                .into_iter()
-                .map(|s| expr_segment(&s.value, s.options.clone(), env)),
+                .into_cow_iter()
+                .map(|s| {
+                    let ButcheredBitStringSegment { value, options, .. } =
+                        BitStringSegment::butcher(s);
+                    (value, options)
+                })
+                .map(|(value, options)| expr_segment(value, options, env)),
         ),
     }
 }
 
-fn tuple_index<'a>(tuple: &'a TypedExpr, index: u64, env: &mut Env) -> Document<'a> {
+fn tuple_index<'a>(tuple: Cow<'a, TypedExpr>, index: u64, env: &mut Env) -> Document<'a> {
     use std::iter::once;
     let index_doc = format!("{}", (index + 1)).to_doc();
-    let tuple_doc = expr(Cow::Borrowed(tuple), env);
+    let tuple_doc = expr(tuple, env);
     let iter = once(index_doc).chain(once(tuple_doc));
     "erlang:element".to_doc().append(wrap_args(iter))
 }
 
 fn module_select_fn<'a>(
     typ: Arc<crate::typ::Type>,
-    module_name: &'a [String],
-    label: &'a str,
+    module_name: Cow<'a, [String]>,
+    label: Cow<'a, str>,
 ) -> Document<'a> {
     match crate::typ::collapse_links(typ).as_ref() {
         crate::typ::Type::Fn { args, .. } => "fun "
             .to_doc()
             .append(module_name.join("@"))
             .append(":")
-            .append(atom(Cow::Borrowed(label)))
+            .append(atom(label))
             .append("/")
             .append(args.len()),
 
@@ -1224,15 +1316,11 @@ fn module_select_fn<'a>(
     }
 }
 
-fn fun<'a>(args: &'a [TypedArg], body: &'a TypedExpr, env: &mut Env) -> Document<'a> {
+fn fun<'a>(args: Cow<'a, [TypedArg]>, body: Cow<'a, TypedExpr>, env: &mut Env) -> Document<'a> {
     "fun"
         .to_doc()
-        .append(fun_args(args, env).append(" ->"))
-        .append(
-            break_("", " ")
-                .append(expr(Cow::Borrowed(body), env))
-                .nest(INDENT),
-        )
+        .append(fun_args(&args, env).append(" ->"))
+        .append(break_("", " ").append(expr(body, env)).nest(INDENT))
         .append(break_("", " "))
         .append("end")
         .group()

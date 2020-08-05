@@ -1,136 +1,186 @@
 use super::*;
 use crate::typ::{HasType, Type};
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Butcher, Debug, PartialEq, Clone)]
 pub enum TypedExpr {
     Int {
         location: SrcSpan,
+        #[butcher(copy)]
         typ: Arc<Type>,
+        #[butcher(as_deref)]
         value: String,
     },
 
     Float {
         location: SrcSpan,
+        #[butcher(copy)]
         typ: Arc<Type>,
+        #[butcher(as_deref)]
         value: String,
     },
 
     String {
         location: SrcSpan,
+        #[butcher(copy)]
         typ: Arc<Type>,
+        #[butcher(as_deref)]
         value: String,
     },
 
     Seq {
+        #[butcher(copy)]
         typ: Arc<Type>,
-        first: Box<Self>,
-        then: Box<Self>,
+        #[butcher(unbox)]
+        first: Box<TypedExpr>,
+        #[butcher(unbox)]
+        then: Box<TypedExpr>,
     },
 
     Var {
         location: SrcSpan,
+        #[butcher(rebutcher)]
         constructor: ValueConstructor,
+        #[butcher(as_deref)]
         name: String,
     },
 
     Fn {
         location: SrcSpan,
+        #[butcher(copy)]
         typ: Arc<Type>,
+        #[butcher(copy)]
         is_capture: bool,
+        #[butcher(as_deref)]
         args: Vec<Arg<Arc<Type>>>,
-        body: Box<Self>,
+        #[butcher(unbox)]
+        body: Box<TypedExpr>,
         return_annotation: Option<TypeAst>,
     },
 
     ListNil {
         location: SrcSpan,
+        #[butcher(copy)]
         typ: Arc<Type>,
     },
 
     ListCons {
         location: SrcSpan,
+        #[butcher(copy)]
         typ: Arc<Type>,
-        head: Box<Self>,
-        tail: Box<Self>,
+        #[butcher(unbox)]
+        head: Box<TypedExpr>,
+        #[butcher(unbox)]
+        tail: Box<TypedExpr>,
     },
 
     Call {
         location: SrcSpan,
+        #[butcher(copy)]
         typ: Arc<Type>,
-        fun: Box<Self>,
-        args: Vec<CallArg<Self>>,
+        #[butcher(unbox)]
+        fun: Box<TypedExpr>,
+        #[butcher(as_deref)]
+        args: Vec<CallArg<TypedExpr>>,
     },
 
     BinOp {
         location: SrcSpan,
+        #[butcher(copy)]
         typ: Arc<Type>,
         name: BinOp,
-        left: Box<Self>,
-        right: Box<Self>,
+        #[butcher(unbox)]
+        left: Box<TypedExpr>,
+        #[butcher(unbox)]
+        right: Box<TypedExpr>,
     },
 
     Pipe {
         location: SrcSpan,
+        #[butcher(copy)]
         typ: Arc<Type>,
-        left: Box<Self>,
-        right: Box<Self>,
+        #[butcher(unbox)]
+        left: Box<TypedExpr>,
+        #[butcher(unbox)]
+        right: Box<TypedExpr>,
     },
 
     Let {
         location: SrcSpan,
+        #[butcher(copy)]
         typ: Arc<Type>,
-        value: Box<Self>,
+        #[butcher(unbox)]
+        value: Box<TypedExpr>,
         pattern: Pattern<PatternConstructor, Arc<Type>>,
-        then: Box<Self>,
+        #[butcher(unbox)]
+        then: Box<TypedExpr>,
+        #[butcher(copy)]
         kind: BindingKind,
     },
 
     Case {
         location: SrcSpan,
+        #[butcher(copy)]
         typ: Arc<Type>,
-        subjects: Vec<Self>,
-        clauses: Vec<Clause<Self, PatternConstructor, Arc<Type>, String>>,
+        #[butcher(as_deref)]
+        subjects: Vec<TypedExpr>,
+        #[butcher(as_deref)]
+        clauses: Vec<Clause<TypedExpr, PatternConstructor, Arc<Type>, String>>,
     },
 
     RecordAccess {
         location: SrcSpan,
+        #[butcher(copy)]
         typ: Arc<Type>,
+        #[butcher(as_deref)]
         label: String,
         index: u64,
-        record: Box<Self>,
+        #[butcher(unbox)]
+        record: Box<TypedExpr>,
     },
 
     ModuleSelect {
         location: SrcSpan,
+        #[butcher(copy)]
         typ: Arc<Type>,
+        #[butcher(as_deref)]
         label: String,
+        #[butcher(as_deref)]
         module_name: Vec<String>,
+        #[butcher(as_deref)]
         module_alias: String,
+        #[butcher(rebutcher)]
         constructor: ModuleValueConstructor,
     },
 
     Tuple {
         location: SrcSpan,
+        #[butcher(copy)]
         typ: Arc<Type>,
-        elems: Vec<Self>,
+        #[butcher(as_deref)]
+        elems: Vec<TypedExpr>,
     },
 
     TupleIndex {
         location: SrcSpan,
+        #[butcher(copy)]
         typ: Arc<Type>,
         index: u64,
-        tuple: Box<Self>,
+        #[butcher(unbox)]
+        tuple: Box<TypedExpr>,
     },
 
     Todo {
         location: SrcSpan,
         label: Option<String>,
+        #[butcher(copy)]
         typ: Arc<Type>,
     },
 
     BitString {
         location: SrcSpan,
+        #[butcher(copy)]
         typ: Arc<Type>,
+        #[butcher(as_deref)]
         segments: Vec<TypedExprBitStringSegment>,
     },
 }
