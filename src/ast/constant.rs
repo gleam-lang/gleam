@@ -4,46 +4,54 @@ use crate::typ::HasType;
 pub type TypedConstant = Constant<Arc<Type>, String>;
 pub type UntypedConstant = Constant<(), ()>;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Butcher, Debug, PartialEq, Clone)]
 pub enum Constant<T, RecordTag> {
     Int {
         location: SrcSpan,
+        #[butcher(as_deref)]
         value: String,
     },
 
     Float {
         location: SrcSpan,
+        #[butcher(as_deref)]
         value: String,
     },
 
     String {
         location: SrcSpan,
+        #[butcher(as_deref)]
         value: String,
     },
 
     Tuple {
         location: SrcSpan,
-        elements: Vec<Self>,
+        #[butcher(as_deref, T: Clone, RecordTag: Clone)]
+        elements: Vec<Constant<T, RecordTag>>,
     },
 
     List {
         location: SrcSpan,
-        elements: Vec<Self>,
+        #[butcher(as_deref, T: Clone, RecordTag: Clone)]
+        elements: Vec<Constant<T, RecordTag>>,
         typ: T,
     },
 
     Record {
         location: SrcSpan,
         module: Option<String>,
+        #[butcher(as_deref)]
         name: String,
-        args: Vec<CallArg<Self>>,
+        #[butcher(as_deref, T: Clone, RecordTag: Clone)]
+        args: Vec<CallArg<Constant<T, RecordTag>>>,
         tag: RecordTag,
         typ: T,
     },
 
     BitString {
         location: SrcSpan,
-        segments: Vec<BitStringSegment<Self, T>>,
+        #[butcher(as_deref, T: Clone, RecordTag: Clone)]
+        segments: Vec<BitStringSegment<Constant<T, RecordTag>, T>>,
     },
 }
 

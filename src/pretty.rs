@@ -6,66 +6,77 @@
 
 use im::vector::Vector;
 
-pub trait Documentable {
-    fn to_doc(self) -> Document;
+use std::borrow::Cow;
+
+pub trait Documentable<'a> {
+    fn to_doc(self) -> Document<'a>;
 }
 
-impl Documentable for &str {
-    fn to_doc(self) -> Document {
-        Document::Text(self.to_string())
+impl<'a> Documentable<'a> for Cow<'a, str> {
+    fn to_doc(self) -> Document<'a> {
+        match self {
+            Cow::Owned(this) => this.to_doc(),
+            Cow::Borrowed(this) => this.to_doc(),
+        }
     }
 }
 
-impl Documentable for String {
-    fn to_doc(self) -> Document {
-        Document::Text(self)
+impl<'a> Documentable<'a> for &'a str {
+    fn to_doc(self) -> Document<'a> {
+        Document::Text(Cow::Borrowed(self))
     }
 }
 
-impl Documentable for isize {
-    fn to_doc(self) -> Document {
-        Document::Text(format!("{}", self))
+impl<'a> Documentable<'a> for String {
+    fn to_doc(self) -> Document<'a> {
+        Document::Text(Cow::Owned(self))
     }
 }
 
-impl Documentable for i64 {
-    fn to_doc(self) -> Document {
-        Document::Text(format!("{}", self))
+impl<'a> Documentable<'a> for isize {
+    fn to_doc(self) -> Document<'a> {
+        Document::Text(Cow::Owned(format!("{}", self)))
     }
 }
 
-impl Documentable for usize {
-    fn to_doc(self) -> Document {
-        Document::Text(format!("{}", self))
+impl<'a> Documentable<'a> for i64 {
+    fn to_doc(self) -> Document<'a> {
+        Document::Text(Cow::Owned(format!("{}", self)))
     }
 }
 
-impl Documentable for f64 {
-    fn to_doc(self) -> Document {
-        Document::Text(format!("{:?}", self))
+impl<'a> Documentable<'a> for usize {
+    fn to_doc(self) -> Document<'a> {
+        Document::Text(Cow::Owned(format!("{}", self)))
     }
 }
 
-impl Documentable for u64 {
-    fn to_doc(self) -> Document {
-        Document::Text(format!("{:?}", self))
+impl<'a> Documentable<'a> for f64 {
+    fn to_doc(self) -> Document<'a> {
+        Document::Text(Cow::Owned(format!("{:?}", self)))
     }
 }
 
-impl Documentable for Document {
-    fn to_doc(self) -> Document {
+impl<'a> Documentable<'a> for u64 {
+    fn to_doc(self) -> Document<'a> {
+        Document::Text(Cow::Owned(format!("{:?}", self)))
+    }
+}
+
+impl<'a> Documentable<'a> for Document<'a> {
+    fn to_doc(self) -> Document<'a> {
         self
     }
 }
 
-impl Documentable for Vec<Document> {
-    fn to_doc(self) -> Document {
+impl<'a> Documentable<'a> for Vec<Document<'a>> {
+    fn to_doc(self) -> Document<'a> {
         concat(self.into_iter())
     }
 }
 
-impl<D: Documentable> Documentable for Option<D> {
-    fn to_doc(self) -> Document {
+impl<'a, D: Documentable<'a>> Documentable<'a> for Option<D> {
+    fn to_doc(self) -> Document<'a> {
         match self {
             Some(d) => d.to_doc(),
             None => Document::Nil,
@@ -73,7 +84,7 @@ impl<D: Documentable> Documentable for Option<D> {
     }
 }
 
-pub fn concat(mut docs: impl Iterator<Item = Document>) -> Document {
+pub fn concat<'a>(mut docs: impl Iterator<Item = Document<'a>>) -> Document<'a> {
     let init = docs.next().unwrap_or_else(|| nil());
     docs.fold(init, |acc, doc| {
         Document::Cons(Box::new(acc), Box::new(doc))
@@ -81,7 +92,7 @@ pub fn concat(mut docs: impl Iterator<Item = Document>) -> Document {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Document {
+pub enum Document<'a> {
     /// Returns a document entity used to represent nothingness
     Nil,
 
@@ -92,25 +103,28 @@ pub enum Document {
     ForceBreak,
 
     /// May break contained document based on best fit, thus flex break
-    FlexBreak(Box<Document>),
+    FlexBreak(Box<Document<'a>>),
 
     /// Renders `broken` if group is broken, `unbroken` otherwise
-    Break { broken: String, unbroken: String },
+    Break {
+        broken: Cow<'a, str>,
+        unbroken: Cow<'a, str>,
+    },
 
     /// Join 2 documents together
-    Cons(Box<Document>, Box<Document>),
+    Cons(Box<Document<'a>>, Box<Document<'a>>),
 
     /// Nests the given document by the given indent
-    Nest(isize, Box<Document>),
+    Nest(isize, Box<Document<'a>>),
 
     /// Nests the given document to the current cursor position
-    NestCurrent(Box<Document>),
+    NestCurrent(Box<Document<'a>>),
 
     /// Nests the given document to the current cursor position
-    Group(Box<Document>),
+    Group(Box<Document<'a>>),
 
     /// A string to render
-    Text(String),
+    Text(Cow<'a, str>),
 }
 
 #[derive(Debug, Clone)]
@@ -160,7 +174,7 @@ fn fits(mut limit: isize, mut docs: Vector<(isize, Mode, Document)>) -> bool {
     }
 }
 
-pub fn format(limit: isize, doc: Document) -> String {
+pub fn format<'a>(limit: isize, doc: Document<'a>) -> String {
     let mut buffer = String::new();
     fmt(
         &mut buffer,
@@ -187,11 +201,11 @@ fn fmt(b: &mut String, limit: isize, mut width: isize, mut docs: Vector<(isize, 
             Document::Break { broken, unbroken } => {
                 width = match mode {
                     Mode::Unbroken => {
-                        b.push_str(unbroken.as_str());
+                        b.push_str(unbroken.as_ref());
                         width + unbroken.len() as isize
                     }
                     Mode::Broken => {
-                        b.push_str(broken.as_str());
+                        b.push_str(broken.as_ref());
                         b.push_str("\n");
                         b.push_str(" ".repeat(indent as usize).as_str());
                         indent as isize
@@ -201,7 +215,7 @@ fn fmt(b: &mut String, limit: isize, mut width: isize, mut docs: Vector<(isize, 
 
             Document::Text(s) => {
                 width += s.len() as isize;
-                b.push_str(s.as_str());
+                b.push_str(&s);
             }
 
             Document::Cons(left, right) => {
@@ -220,14 +234,14 @@ fn fmt(b: &mut String, limit: isize, mut width: isize, mut docs: Vector<(isize, 
             Document::Group(doc) => {
                 docs.push_front((indent, Mode::Unbroken, (*doc).clone()));
                 if !fits(limit - width, docs.clone()) {
-                    docs[0] = (indent, Mode::Broken, (*doc).clone());
+                    docs[0] = (indent, Mode::Broken, *doc);
                 }
             }
 
             Document::FlexBreak(doc) => {
                 docs.push_front((indent, Mode::Unbroken, (*doc).clone()));
                 if !fits(limit - width, docs.clone()) {
-                    docs[0] = (indent, Mode::Broken, (*doc).clone());
+                    docs[0] = (indent, Mode::Broken, *doc);
                 }
             }
         }
@@ -238,6 +252,8 @@ fn fmt(b: &mut String, limit: isize, mut width: isize, mut docs: Vector<(isize, 
 fn fits_test() {
     use self::Document::*;
     use self::Mode::*;
+
+    use std::borrow::Cow::*;
 
     // Negative limits never fit
     assert!(!fits(-1, vector![]));
@@ -256,8 +272,8 @@ fn fits_test() {
             0,
             Broken,
             Break {
-                broken: "12".to_string(),
-                unbroken: "".to_string()
+                broken: Borrowed("12"),
+                unbroken: Borrowed("")
             }
         )]
     ));
@@ -269,8 +285,8 @@ fn fits_test() {
             0,
             Unbroken,
             Break {
-                broken: "".to_string(),
-                unbroken: "123".to_string()
+                broken: Borrowed(""),
+                unbroken: Borrowed("123")
             }
         )]
     ));
@@ -280,8 +296,8 @@ fn fits_test() {
             0,
             Unbroken,
             Break {
-                broken: "".to_string(),
-                unbroken: "123".to_string()
+                broken: Borrowed(""),
+                unbroken: Borrowed("123")
             }
         )]
     ));
@@ -291,10 +307,10 @@ fn fits_test() {
     assert!(fits(0, vector![(0, Unbroken, Line(100))]));
 
     // String fits if smaller than limit
-    assert!(fits(5, vector![(0, Broken, Text("Hello".to_string()))]));
-    assert!(fits(5, vector![(0, Unbroken, Text("Hello".to_string()))]));
-    assert!(!fits(4, vector![(0, Broken, Text("Hello".to_string()))]));
-    assert!(!fits(4, vector![(0, Unbroken, Text("Hello".to_string()))]));
+    assert!(fits(5, vector![(0, Broken, Text(Borrowed("Hello")))]));
+    assert!(fits(5, vector![(0, Unbroken, Text(Borrowed("Hello")))]));
+    assert!(!fits(4, vector![(0, Broken, Text(Borrowed("Hello")))]));
+    assert!(!fits(4, vector![(0, Unbroken, Text(Borrowed("Hello")))]));
 
     // Cons fits if combined smaller than limit
     assert!(fits(
@@ -302,10 +318,7 @@ fn fits_test() {
         vector![(
             0,
             Broken,
-            Cons(
-                Box::new(Text("1".to_string())),
-                Box::new(Text("2".to_string()))
-            )
+            Cons(Box::new(Text(Borrowed("1"))), Box::new(Text(Borrowed("2"))))
         )]
     ));
     assert!(fits(
@@ -313,10 +326,7 @@ fn fits_test() {
         vector![(
             0,
             Unbroken,
-            Cons(
-                Box::new(Text("1".to_string())),
-                Box::new(Text("2".to_string()))
-            )
+            Cons(Box::new(Text(Borrowed("1"))), Box::new(Text(Borrowed("2"))))
         )]
     ));
     assert!(!fits(
@@ -324,10 +334,7 @@ fn fits_test() {
         vector![(
             0,
             Broken,
-            Cons(
-                Box::new(Text("1".to_string())),
-                Box::new(Text("2".to_string()))
-            )
+            Cons(Box::new(Text(Borrowed("1"))), Box::new(Text(Borrowed("2"))))
         )]
     ));
     assert!(!fits(
@@ -335,60 +342,58 @@ fn fits_test() {
         vector![(
             0,
             Unbroken,
-            Cons(
-                Box::new(Text("1".to_string())),
-                Box::new(Text("2".to_string()))
-            )
+            Cons(Box::new(Text(Borrowed("1"))), Box::new(Text(Borrowed("2"))))
         )]
     ));
 
     // Nest fits if combined smaller than limit
     assert!(fits(
         2,
-        vector![(0, Broken, Nest(1, Box::new(Text("12".to_string())),))]
+        vector![(0, Broken, Nest(1, Box::new(Text(Borrowed("12"))),))]
     ));
     assert!(fits(
         2,
-        vector![(0, Unbroken, Nest(1, Box::new(Text("12".to_string())),))]
+        vector![(0, Unbroken, Nest(1, Box::new(Text(Borrowed("12"))),))]
     ));
     assert!(!fits(
         1,
-        vector![(0, Broken, Nest(1, Box::new(Text("12".to_string())),))]
+        vector![(0, Broken, Nest(1, Box::new(Text(Borrowed("12"))),))]
     ));
     assert!(!fits(
         1,
-        vector![(0, Unbroken, Nest(1, Box::new(Text("12".to_string()))))]
+        vector![(0, Unbroken, Nest(1, Box::new(Text(Borrowed("12")))))]
     ));
 
     // Nest fits if combined smaller than limit
     assert!(fits(
         2,
-        vector![(0, Broken, NestCurrent(Box::new(Text("12".to_string())),))]
+        vector![(0, Broken, NestCurrent(Box::new(Text(Borrowed("12"))),))]
     ));
     assert!(fits(
         2,
-        vector![(0, Unbroken, NestCurrent(Box::new(Text("12".to_string())),))]
+        vector![(0, Unbroken, NestCurrent(Box::new(Text(Borrowed("12"))),))]
     ));
     assert!(!fits(
         1,
-        vector![(0, Broken, NestCurrent(Box::new(Text("12".to_string())),))]
+        vector![(0, Broken, NestCurrent(Box::new(Text(Borrowed("12"))),))]
     ));
     assert!(!fits(
         1,
-        vector![(0, Unbroken, NestCurrent(Box::new(Text("12".to_string()))))]
+        vector![(0, Unbroken, NestCurrent(Box::new(Text(Borrowed("12")))))]
     ));
 }
 
 #[test]
 fn format_test() {
     use self::Document::*;
+    use std::borrow::Cow::*;
 
-    let doc = Text("Hi".to_string());
+    let doc = Text(Borrowed("Hi"));
     assert_eq!("Hi".to_string(), format(10, doc));
 
     let doc = Cons(
-        Box::new(Text("Hi".to_string())),
-        Box::new(Text(", world!".to_string())),
+        Box::new(Text(Borrowed("Hi"))),
+        Box::new(Text(Borrowed(", world!"))),
     );
     assert_eq!("Hi, world!".to_string(), format(10, doc));
 
@@ -396,31 +401,31 @@ fn format_test() {
     assert_eq!("".to_string(), format(10, doc));
 
     let doc = Break {
-        broken: "broken".to_string(),
-        unbroken: "unbroken".to_string(),
+        broken: Borrowed("broken"),
+        unbroken: Borrowed("unbroken"),
     };
     assert_eq!("unbroken".to_string(), format(10, doc));
 
     let doc = Break {
-        broken: "broken".to_string(),
-        unbroken: "unbroken".to_string(),
+        broken: Borrowed("broken"),
+        unbroken: Borrowed("unbroken"),
     };
     assert_eq!("broken\n".to_string(), format(5, doc));
 
     let doc = Nest(
         2,
         Box::new(Cons(
-            Box::new(Text("1".to_string())),
-            Box::new(Cons(Box::new(Line(1)), Box::new(Text("2".to_string())))),
+            Box::new(Text(Borrowed("1"))),
+            Box::new(Cons(Box::new(Line(1)), Box::new(Text(Borrowed("2"))))),
         )),
     );
     assert_eq!("1\n  2".to_string(), format(1, doc));
 
     let doc = Cons(
-        Box::new(Text("111".to_string())),
+        Box::new(Text(Borrowed("111"))),
         Box::new(NestCurrent(Box::new(Cons(
             Box::new(Line(1)),
-            Box::new(Text("2".to_string())),
+            Box::new(Text(Borrowed("2"))),
         )))),
     );
     assert_eq!("111\n   2".to_string(), format(1, doc));
@@ -428,61 +433,61 @@ fn format_test() {
     let doc = Cons(
         Box::new(ForceBreak),
         Box::new(Break {
-            broken: "broken".to_string(),
-            unbroken: "unbroken".to_string(),
+            broken: Borrowed("broken"),
+            unbroken: Borrowed("unbroken"),
         }),
     );
     assert_eq!("broken\n".to_string(), format(100, doc));
 }
 
-pub fn nil() -> Document {
+pub fn nil() -> Document<'static> {
     Document::Nil
 }
 
-pub fn line() -> Document {
+pub fn line() -> Document<'static> {
     Document::Line(1)
 }
 
-pub fn lines(i: usize) -> Document {
+pub fn lines(i: usize) -> Document<'static> {
     Document::Line(i)
 }
 
-pub fn force_break() -> Document {
+pub fn force_break() -> Document<'static> {
     Document::ForceBreak
 }
 
-pub fn break_(broken: &str, unbroken: &str) -> Document {
+pub fn break_<'a>(broken: &'a str, unbroken: &'a str) -> Document<'a> {
     Document::Break {
-        broken: broken.to_string(),
-        unbroken: unbroken.to_string(),
+        broken: Cow::Borrowed(broken),
+        unbroken: Cow::Borrowed(unbroken),
     }
 }
 
-pub fn delim(d: &str) -> Document {
+pub fn delim<'a>(d: &'a str) -> Document<'a> {
     Document::Break {
-        broken: d.to_string(),
-        unbroken: format!("{} ", d),
+        broken: Cow::Borrowed(d),
+        unbroken: Cow::Owned(format!("{} ", d)),
     }
 }
 
-impl Document {
-    pub fn group(self) -> Document {
+impl<'a> Document<'a> {
+    pub fn group(self) -> Document<'a> {
         Document::Group(Box::new(self))
     }
 
-    pub fn flex_break(self) -> Document {
+    pub fn flex_break(self) -> Document<'a> {
         Document::FlexBreak(Box::new(self))
     }
 
-    pub fn nest(self, indent: isize) -> Document {
+    pub fn nest(self, indent: isize) -> Document<'a> {
         Document::Nest(indent, Box::new(self))
     }
 
-    pub fn nest_current(self) -> Document {
+    pub fn nest_current(self) -> Document<'a> {
         Document::NestCurrent(Box::new(self))
     }
 
-    pub fn append(self, x: impl Documentable) -> Document {
+    pub fn append(self, x: impl Documentable<'a>) -> Document<'a> {
         Document::Cons(Box::new(self), Box::new(x.to_doc()))
     }
 
@@ -490,7 +495,11 @@ impl Document {
         format(limit, self)
     }
 
-    pub fn surround(self, open: impl Documentable, closed: impl Documentable) -> Document {
+    pub fn surround(
+        self,
+        open: impl Documentable<'a>,
+        closed: impl Documentable<'a>,
+    ) -> Document<'a> {
         open.to_doc().append(self).append(closed)
     }
 }
