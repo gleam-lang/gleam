@@ -5,6 +5,8 @@ authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2018"
 
 [dependencies]
+# Working with Cow
+butcher = "0.5"
 # OS SIGINT and SIGTERM signal handling
 ctrlc = { version = "3.0", features = ["termination"] }
 # Command line interface
