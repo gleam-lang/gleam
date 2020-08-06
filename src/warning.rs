@@ -58,7 +58,11 @@ impl Warning {
                         location: location.clone(),
                     };
                     write(buffer, diagnostic, Severity::Warning);
-                    writeln!(buffer, "The Record Update in this code is no fields are given.").unwrap();
+                    writeln!(
+                        buffer,
+                        "The Record Update in this code is no fields are given."
+                    )
+                    .unwrap();
                 }
             },
         }

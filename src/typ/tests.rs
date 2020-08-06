@@ -2978,7 +2978,10 @@ fn main() { let _ = foo(); 5 }",
             present
         }",
         Warning::NoFieldsRecordUpdate {
-            location: SrcSpan { start: 183, end: 197 }
+            location: SrcSpan {
+                start: 183,
+                end: 197
+            }
         }
     );
 }
