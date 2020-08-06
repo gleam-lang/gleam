@@ -2952,6 +2952,35 @@ fn main() { foo(); 5 }",
 fn foo() { Ok(5) }
 fn main() { let _ = foo(); 5 }",
     );
+
+    // Some fields are given in a record update do not emit warnings
+    assert_no_warnings!(
+        "
+        pub type Person {
+            Person(name: String, age: Int)
+        };
+        pub fn update_person() {
+            let past = Person(\"Quinn\", 27)
+            let present = Person(..past, name: \"Santi\")
+            present
+        }",
+    );
+
+    // No fields are given in a record update emit warnings
+    assert_warning!(
+        "
+        pub type Person {
+            Person(name: String, age: Int)
+        };
+        pub fn update_person() {
+            let past = Person(\"Quinn\", 27)
+            let present = Person(..past)
+            present
+        }",
+        Warning::NoFieldsRecordUpdate {
+            location: SrcSpan { start: 183, end: 197 }
+        }
+    );
 }
 
 fn env_types_with(things: &[&str]) -> Vec<String> {
