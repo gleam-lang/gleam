@@ -162,7 +162,7 @@ impl<'a> Formatter<'a> {
 
             Statement::CustomType {
                 name,
-                args,
+                parameters,
                 public,
                 constructors,
                 location,
@@ -172,7 +172,7 @@ impl<'a> Formatter<'a> {
                 *public,
                 *opaque,
                 name,
-                args.as_slice(),
+                parameters.as_slice(),
                 constructors,
                 location,
             ),
