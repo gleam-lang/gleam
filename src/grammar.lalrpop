@@ -55,7 +55,7 @@ StatementCustomType: UntypedStatement = {
         public: p.is_some(),
         opaque: o.is_some(),
         name: t.0,
-        args: t.1,
+        parameters: t.1,
         constructors: cs,
     }
 }
