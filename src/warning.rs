@@ -49,6 +49,21 @@ impl Warning {
                     write(buffer, diagnostic, Severity::Warning);
                     writeln!(buffer, "The Result value returned by this code is not being used, so any error is being silently ignored. Check for an error with a case statement, or assign it to the variable _ if you are sure the error does not matter.").unwrap();
                 }
+                NoFieldsRecordUpdate { location } => {
+                    let diagnostic = Diagnostic {
+                        title: "No fields are given in a record update".to_string(),
+                        label: "".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: location.clone(),
+                    };
+                    write(buffer, diagnostic, Severity::Warning);
+                    writeln!(
+                        buffer,
+                        "The Record Update in this code is no fields are given."
+                    )
+                    .unwrap();
+                }
             },
         }
     }

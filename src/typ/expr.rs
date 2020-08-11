@@ -1289,6 +1289,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     )
                     .collect::<Result<_, _>>()?;
 
+                if args.is_empty() {
+                    self.environment
+                        .warnings
+                        .push(Warning::NoFieldsRecordUpdate {
+                            location: location.clone(),
+                        });
+                }
+
                 return Ok(TypedExpr::RecordUpdate {
                     location,
                     typ: spread.typ(),
