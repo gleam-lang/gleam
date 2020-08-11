@@ -2767,6 +2767,64 @@ fn main() {
 ]
 "#
     );
+
+    //
+    // Concise wrapping of simple bit strings
+    //
+
+    assert_format!(
+        "pub fn main() {
+  <<
+    100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400,
+    1500, 1600, 1700, 1800, 1900, 2000,
+  >>
+}
+"
+    );
+
+    assert_format!(
+        "pub fn main() {
+  <<
+    1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.00, 11.0, 12.0, 13.0, 14.0,
+    15.0, 16.0, 17.0, 18.0, 19.0, 2.00,
+  >>
+}
+"
+    );
+
+    assert_format!(
+        r#"pub fn main() {
+  <<
+    "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+    "ten", "eleven", "twelve",
+  >>
+}
+"#
+    );
+
+    assert_format!(
+        "const values = <<
+  100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400,
+  1500, 1600, 1700, 1800, 1900, 2000,
+>>
+"
+    );
+
+    assert_format!(
+        "const values = <<
+  1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.00, 11.0, 12.0, 13.0, 14.0,
+  15.0, 16.0, 17.0, 18.0, 19.0, 2.00,
+>>
+"
+    );
+
+    assert_format!(
+        r#"const values = <<
+  "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+  "eleven", "twelve",
+>>
+"#
+    );
 }
 
 #[test]

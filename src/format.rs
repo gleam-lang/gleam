@@ -269,6 +269,7 @@ impl<'a> Formatter<'a> {
                 segments
                     .iter()
                     .map(|s| bit_string_segment(s, |e| self.const_expr(e))),
+                segments.iter().all(|s| s.value.is_simple()),
             ),
 
             Constant::Record {
@@ -628,6 +629,7 @@ impl<'a> Formatter<'a> {
                 segments
                     .iter()
                     .map(|s| bit_string_segment(s, |e| self.expr(e))),
+                segments.iter().all(|s| s.value.is_simple_constant()),
             ),
             UntypedExpr::RecordUpdate {
                 constructor,
@@ -1119,6 +1121,7 @@ impl<'a> Formatter<'a> {
                 segments
                     .iter()
                     .map(|s| bit_string_segment(s, |e| self.pattern(e))),
+                false,
             ),
         };
         commented(doc, comments)
@@ -1349,9 +1352,14 @@ where
     (elems, tail)
 }
 
-fn bit_string<'a>(segments: impl Iterator<Item = Document>) -> Document {
+fn bit_string<'a>(segments: impl Iterator<Item = Document>, is_simple: bool) -> Document {
+    let comma = if is_simple {
+        delim(",").flex_break()
+    } else {
+        delim(",")
+    };
     break_("<<", "<<")
-        .append(concat(segments.intersperse(delim(","))))
+        .append(concat(segments.intersperse(comma)))
         .nest(INDENT)
         .append(break_(",", ""))
         .append(">>")
