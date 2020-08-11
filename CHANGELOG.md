@@ -12,7 +12,8 @@
 - The formatter style has been improved to use a trailing comma on imports
   broken over multiple lines.
 - The performance of the formatter has been improved.
-- Records can be updated using the spread syntax.
+- Records can be updated using the spread syntax. A warning is emitted if no
+  fields are updated when using this syntax.
 - Fixed a bug where type parameters can leak between different type
   definitions in a module.
 - Markdown tables, footnotes, strikethroughs, and tasklists are now supported
