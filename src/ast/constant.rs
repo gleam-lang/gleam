@@ -81,6 +81,13 @@ impl<A, B> Constant<A, B> {
             Constant::BitString { location, .. } => location,
         }
     }
+
+    pub fn is_simple(&self) -> bool {
+        match self {
+            Self::Int { .. } | Self::Float { .. } | Self::String { .. } => true,
+            _ => false,
+        }
+    }
 }
 
 impl<A, B> HasLocation for Constant<A, B> {
