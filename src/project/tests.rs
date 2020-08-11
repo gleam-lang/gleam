@@ -1039,6 +1039,42 @@ main(Arg1, Arg2, Arg3) ->
                 },
             ]),
         },
+
+        // Bug: https://github.com/gleam-lang/gleam/issues/752
+        Case {
+            input: vec![
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/one.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "pub type One(a) { One(a) }".to_string(),
+                },
+                Input {
+                    origin: ModuleOrigin::Src,
+                    path: PathBuf::from("/src/two.gleam"),
+                    source_base_path: PathBuf::from("/src"),
+                    src: "import one.{One} pub type Two(b) { Two(thing: One(Int)) }"
+                        .to_string(),
+                },
+            ],
+            expected: Ok(vec![
+                OutputFile {
+                    path: PathBuf::from("/gen/src/one.erl"),
+                    text: "-module(one).\n-compile(no_auto_import).\n\n\n"
+                        .to_string(),
+                },
+                OutputFile {
+                    path: PathBuf::from("/gen/src/two_Two.hrl"),
+                    text: "-record(two, {thing}).\n"
+                        .to_string(),
+                },
+                OutputFile {
+                    path: PathBuf::from("/gen/src/two.erl"),
+                    text: "-module(two).\n-compile(no_auto_import).\n\n\n"
+                        .to_string(),
+                },
+            ]),
+        },
     ];
 
     for Case { input, expected } in cases.into_iter() {

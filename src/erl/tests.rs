@@ -23,8 +23,13 @@ fn integration_test() {
                 .parse($src)
                 .expect("syntax error");
             ast.name = vec!["the_app".to_string()];
-            let ast = crate::typ::infer_module(ast, &std::collections::HashMap::new(), &mut vec![])
-                .expect("should successfully infer");
+            let ast = crate::typ::infer_module(
+                &mut 0,
+                ast,
+                &std::collections::HashMap::new(),
+                &mut vec![],
+            )
+            .expect("should successfully infer");
             let output = module(&ast);
             assert_eq!(($src, output), ($src, $erl.to_string()));
         };
@@ -557,7 +562,7 @@ pub fn bitstring_discard(x: String) -> Bool {
  case x {
   <<_:utf8, rest:binary>> -> True
    _ -> False
- } 
+ }
 }
                     "#,
         r#"-module(the_app).
@@ -581,7 +586,7 @@ pub fn bitstring_discard(x: String) -> Bool {
  case x {
   <<_Discardme:utf8, rest:binary>> -> True
    _ -> False
- } 
+ }
 }
                     "#,
         r#"-module(the_app).

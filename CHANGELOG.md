@@ -18,6 +18,7 @@
   definitions in a module.
 - Markdown tables, footnotes, strikethroughs, and tasklists are now supported
   in documentation.
+- Fixed a bug where generic types may be incorrectly unified.
 
 ## v0.10.1 - 2020-07-15
 

@@ -1035,6 +1035,39 @@ main() ->\n    fun(A, B) -> {c, A, B} end.\n"
             modules: vec!["one".to_string(), "three".to_string(), "two".to_string()],
         }),
     );
+
+    // Bug: https://github.com/gleam-lang/gleam/issues/752
+    assert_erlang_compile!(
+        vec![
+            Source {
+                origin: Origin::Src,
+                path: PathBuf::from("/src/one.gleam"),
+                name: "one".to_string(),
+                code: "pub type One(a) { One(a) }".to_string(),
+            },
+            Source {
+                origin: Origin::Src,
+                path: PathBuf::from("/src/two.gleam"),
+                name: "two".to_string(),
+                code: "import one.{One} pub type Two(b) { Two(thing: One(Int)) }".to_string(),
+            },
+        ],
+        Ok(vec![
+            package_app_file(&["one", "two"]),
+            OutputFile {
+                path: PathBuf::from("_build/default/lib/the_package/src/one.erl",),
+                text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+            },
+            OutputFile {
+                path: PathBuf::from("_build/default/lib/the_package/src/two.erl",),
+                text: "-module(two).\n-compile(no_auto_import).\n\n\n".to_string(),
+            },
+            OutputFile {
+                path: PathBuf::from("_build/default/lib/the_package/src/two_Two.hrl",),
+                text: "-record(two, {thing}).\n".to_string(),
+            },
+        ]),
+    );
 }
 
 #[test]

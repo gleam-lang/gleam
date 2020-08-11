@@ -98,6 +98,7 @@ fn type_check(
 ) -> Result<Vec<Module>, Error> {
     let mut warnings = vec![];
     let mut modules = Vec::with_capacity(parsed_modules.len());
+    let mut uid = 0;
 
     for name in sequence {
         let Parsed {
@@ -112,10 +113,12 @@ fn type_check(
 
         tracing::trace!(module = ?name, "Type checking");
         let ast =
-            typ::infer_module(ast, module_types, &mut warnings).map_err(|error| Error::Type {
-                path: path.clone(),
-                src: code.clone(),
-                error,
+            typ::infer_module(&mut uid, ast, module_types, &mut warnings).map_err(|error| {
+                Error::Type {
+                    path: path.clone(),
+                    src: code.clone(),
+                    error,
+                }
             })?;
 
         module_types.insert(name.clone(), (origin, ast.type_info.clone()));

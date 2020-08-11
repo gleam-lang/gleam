@@ -316,11 +316,12 @@ impl ValueConstructor {
 /// returning an error.
 ///
 pub fn infer_module(
+    uid: &mut usize,
     module: UntypedModule,
     modules: &HashMap<String, (Origin, Module)>,
     warnings: &mut Vec<Warning>,
 ) -> Result<TypedModule, Error> {
-    let mut environment = Environment::new(module.name.as_slice(), modules, warnings);
+    let mut environment = Environment::new(uid, module.name.as_slice(), modules, warnings);
     let module_name = &module.name;
 
     // Register any modules, types, and values being imported
@@ -1253,11 +1254,11 @@ pub fn register_import(s: &UntypedStatement, environment: &mut Environment) -> R
     }
 }
 
-fn do_infer_fn<'a, 'b>(
+fn do_infer_fn(
     args: Vec<UntypedArg>,
     body: UntypedExpr,
     return_annotation: &Option<TypeAst>,
-    environment: &'b mut Environment<'a>,
+    environment: &mut Environment,
 ) -> Result<(Arc<Type>, Vec<TypedArg>, TypedExpr), Error> {
     let (args, body) = ExprTyper::new(environment).do_infer_fn(args, body, return_annotation)?;
     let args_types = args.iter().map(|a| a.typ.clone()).collect();
