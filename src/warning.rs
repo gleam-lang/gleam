@@ -72,6 +72,21 @@ variable _ if you are sure the error does not matter.")
 record without modification. Add some fields or remove this update.")
                     .unwrap();
                 }
+
+                AllFieldsRecordUpdate { location } => {
+                    let diagnostic = Diagnostic {
+                        title: "Redundant record update".to_string(),
+                        label: "".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: location.clone(),
+                    };
+                    write(buffer, diagnostic, Severity::Warning);
+                    writeln!(buffer,
+"All fields have been given in this record update, so it does not need to be
+be an update. Remove the update or remove fields that need to be copied.")
+                    .unwrap();
+                }
             },
         }
     }

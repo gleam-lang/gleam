@@ -2997,6 +2997,25 @@ fn main() { let _ = foo(); 5 }",
             }
         }
     );
+
+    // All fields given in a record update emits warnings
+    assert_warning!(
+        "
+        pub type Person {
+            Person(name: String, age: Int)
+        };
+        pub fn update_person() {
+            let past = Person(\"Quinn\", 27)
+            let present = Person(..past, name: \"Quinn\", age: 28)
+            present
+        }",
+        Warning::AllFieldsRecordUpdate {
+            location: SrcSpan {
+                start: 183,
+                end: 221
+            }
+        }
+    );
 }
 
 fn env_types_with(things: &[&str]) -> Vec<String> {

@@ -220,6 +220,8 @@ pub enum Warning {
     ImplicitlyDiscardedResult { location: SrcSpan },
 
     NoFieldsRecordUpdate { location: SrcSpan },
+
+    AllFieldsRecordUpdate { location: SrcSpan },
 }
 
 #[derive(Debug, PartialEq)]
