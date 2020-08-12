@@ -551,7 +551,7 @@ fn pattern(p: &TypedPattern, env: &mut Env) -> Document {
 
         Pattern::VarCall { name, .. } => env.local_var_name(name.to_string()),
 
-        Pattern::Int { value, .. } => value.as_str().to_doc(),
+        Pattern::Int { value, .. } => int(value.as_ref()),
 
         Pattern::Float { value, .. } => float(value.as_ref()),
 
@@ -574,11 +574,11 @@ fn pattern(p: &TypedPattern, env: &mut Env) -> Document {
 }
 
 fn float(value: &str) -> Document {
+    let mut value = value.replace("_", "");
     if value.ends_with(".") {
-        format!("{}0", value).to_doc()
-    } else {
-        value.to_string().to_doc()
+        value.push('0')
     }
+    value.to_doc()
 }
 
 fn pattern_list_cons(head: &TypedPattern, tail: &TypedPattern, env: &mut Env) -> Document {
@@ -699,10 +699,14 @@ fn var(name: &str, constructor: &ValueConstructor, env: &mut Env) -> Document {
     }
 }
 
+fn int(value: &str) -> Document {
+    value.replace("_", "").to_doc()
+}
+
 fn const_inline(literal: &TypedConstant, env: &mut Env) -> Document {
     match literal {
-        Constant::Int { value, .. } => value.to_string().to_doc(),
-        Constant::Float { value, .. } => value.to_string().to_doc(),
+        Constant::Int { value, .. } => int(value),
+        Constant::Float { value, .. } => float(value),
         Constant::String { value, .. } => string(value),
         Constant::Tuple { elements, .. } => tuple(elements.iter().map(|e| const_inline(e, env))),
 
@@ -1046,7 +1050,7 @@ fn expr(expression: &TypedExpr, env: &mut Env) -> Document {
             .clone()
             .to_doc()
             .surround("erlang:error({gleam_error, todo, \"", "\"})"),
-        TypedExpr::Int { value, .. } => value.as_str().to_doc(),
+        TypedExpr::Int { value, .. } => int(value.as_ref()),
         TypedExpr::Float { value, .. } => float(value.as_ref()),
         TypedExpr::String { value, .. } => string(value),
         TypedExpr::Seq { first, then, .. } => seq(first, then, env),

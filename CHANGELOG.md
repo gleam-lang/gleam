@@ -23,6 +23,7 @@
 - Markdown tables, footnotes, strikethroughs, and tasklists are now supported
   in documentation.
 - Fixed a bug where generic types may be incorrectly unified.
+- Ints and floats can now be written with underscores for clarity.
 
 ## v0.10.1 - 2020-07-15
 

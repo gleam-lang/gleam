@@ -1909,4 +1909,58 @@ main() ->
     NewP.
 "#,
     );
+
+    // Numbers with underscores
+
+    assert_erl!(
+        r#"
+fn main() {
+  100_000
+  100_000.00101
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main() ->
+    100000,
+    100000.00101.
+"#,
+    );
+
+    assert_erl!(
+        r#"
+const i = 100_000
+const f = 100_000.00101
+fn main() {
+  i
+  f
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main() ->
+    100000,
+    100000.00101.
+"#,
+    );
+
+    assert_erl!(
+        r#"
+fn main() {
+  assert 100_000 = 1
+  assert 100_000.00101 = 1.
+  1
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main() ->
+    100000 = 1,
+    100000.00101 = 1.0,
+    1.
+"#,
+    );
 }

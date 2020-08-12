@@ -4,9 +4,10 @@ use std::str::FromStr;
 
 use crate::ast::{
     UntypedExpr, UntypedArg, Arg, UntypedModule, Module, UntypedStatement, Statement, TypeAst,
-    UntypedPattern, BinOp, Clause, UntypedClause, RecordConstructor, Pattern, RecordUpdateSpread, UntypedRecordUpdateArg, CallArg,
-    ExternalFnArg, ArgNames, UnqualifiedImport, UntypedClauseGuard, ClauseGuard, BindingKind,
-    BitStringSegment, BitStringSegmentOption, Constant, UntypedConstant,
+    UntypedPattern, BinOp, Clause, UntypedClause, RecordConstructor, Pattern, RecordUpdateSpread,
+    UntypedRecordUpdateArg, CallArg, ExternalFnArg, ArgNames, UnqualifiedImport, Constant,
+    UntypedConstant, UntypedClauseGuard, ClauseGuard, BindingKind, BitStringSegment,
+    BitStringSegmentOption,
 };
 use crate::parser::*;
 use lalrpop_util::ParseError;
@@ -736,11 +737,11 @@ String: UntypedExpr = {
 }
 
 PositiveIntLiteral: String = {
-    <pos:r"[0-9]+"> => pos.to_string()
+    <pos:r"[0-9](_*[0-9])*"> => pos.to_string()
 }
 
 NegativeIntLiteral: String = {
-    <neg:r"-[0-9]+"> => neg.to_string()
+    <neg:r"-[0-9](_*[0-9])*"> => neg.to_string()
 }
 
 IntLiteral: String = {
@@ -760,7 +761,7 @@ Int: UntypedExpr = {
 }
 
 FloatLiteral: String = {
-    <f:r"-?[0-9]+\.[0-9]*"> => f.to_string()
+    <f:r"-?[0-9](_*[0-9])*\.[0-9]*"> => f.to_string()
 }
 
 Float: UntypedExpr = {

@@ -183,6 +183,13 @@ fn infer_test() {
     assert_infer!("4 <= 1", "Bool");
     assert_infer!("4 < 1", "Bool");
 
+    // Numbers with _'s
+    assert_infer!("1000_000", "Int");
+    assert_infer!("1_000", "Int");
+    assert_infer!("1_000.", "Float");
+    assert_infer!("10_000.001", "Float");
+    assert_infer!("100_000.", "Float");
+
     // let
     assert_infer!("let x = 1 2", "Int");
     assert_infer!("let x = 1 x", "Int");
