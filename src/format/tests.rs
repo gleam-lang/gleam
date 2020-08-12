@@ -2679,7 +2679,10 @@ pub const float = 3.14
 "
     );
 
+    //
     // Record update
+    //
+
     assert_format!(
         "pub type Counter {
   Counter(a: Int, b: Int)
@@ -2824,6 +2827,34 @@ fn main() {
   "eleven", "twelve",
 >>
 "#
+    );
+
+    //
+    // Labelled argument comments
+    //
+
+    assert_format!(
+        "fn main() {
+  Emulator(
+    // one
+    one: 1,
+    // two
+    two: 1,
+  )
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  my_func(
+    // one
+    one: 1,
+    // two
+    two: 1,
+  )
+}
+"
     );
 }
 

@@ -921,7 +921,10 @@ impl<'a> Formatter<'a> {
 
     fn call_arg(&mut self, arg: &CallArg<UntypedExpr>) -> Document {
         match &arg.label {
-            Some(s) => s.clone().to_doc().append(": "),
+            Some(s) => commented(
+                s.clone().to_doc().append(": "),
+                self.pop_comments(arg.location.start),
+            ),
             None => nil(),
         }
         .append(self.wrap_expr(&arg.value))
