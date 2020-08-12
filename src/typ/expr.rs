@@ -1297,6 +1297,14 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                         });
                 }
 
+                if args.len() == field_map.arity {
+                    self.environment
+                        .warnings
+                        .push(Warning::AllFieldsRecordUpdate {
+                            location: location.clone(),
+                        });
+                }
+
                 return Ok(TypedExpr::RecordUpdate {
                     location,
                     typ: spread.typ(),
