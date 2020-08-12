@@ -66,10 +66,10 @@ impl Hydrator {
 
     /// Construct a Type from an AST Type annotation.
     ///
-    pub fn type_from_ast<'a>(
+    pub fn type_from_ast<'a, 'b>(
         &mut self,
         ast: &TypeAst,
-        environment: &mut Environment<'a>,
+        environment: &mut Environment<'a, 'b>,
     ) -> Result<Arc<Type>, Error> {
         match ast {
             TypeAst::Constructor {
@@ -110,6 +110,7 @@ impl Hydrator {
                 let mut parameter_types = Vec::with_capacity(parameters.len());
                 for typ in parameters {
                     let t = environment.instantiate(typ, 0, &mut type_vars, &self);
+
                     parameter_types.push(t);
                 }
                 let return_type = environment.instantiate(return_type, 0, &mut type_vars, &self);
@@ -145,7 +146,10 @@ impl Hydrator {
 
             TypeAst::Var { name, location, .. } => {
                 match self.created_type_variables.get(name.as_str()) {
-                    Some(var) => Ok(var.clone()),
+                    Some(var) => {
+                        println!("already known type variable");
+                        Ok(var.clone())
+                    }
 
                     None => match self.new_type_behaviour {
                         NewTypeAction::MakeGeneric => {

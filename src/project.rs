@@ -102,6 +102,7 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
     let mut source_tree = SourceTree::new(inputs)?;
     let mut modules_type_infos = HashMap::new();
     let mut compiled_modules = Vec::with_capacity(module_count);
+    let mut uid = 0;
 
     struct Out {
         source_base_path: PathBuf,
@@ -126,7 +127,7 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
         println!("Compiling {}", name_string.as_str());
 
         let mut warnings = vec![];
-        let result = crate::typ::infer_module(module, &modules_type_infos, &mut warnings);
+        let result = crate::typ::infer_module(&mut uid, module, &modules_type_infos, &mut warnings);
         let warnings = warnings
             .into_iter()
             .map(|warning| Warning::Type {

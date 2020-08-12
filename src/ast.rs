@@ -170,8 +170,7 @@ pub enum Statement<T, Expr, ConstantRecordTag> {
     CustomType {
         location: SrcSpan,
         name: String,
-        // TODO: rename to parameters
-        args: Vec<String>,
+        parameters: Vec<String>,
         public: bool,
         constructors: Vec<RecordConstructor>,
         doc: Option<String>,

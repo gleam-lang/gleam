@@ -218,6 +218,8 @@ pub enum Warning {
     Todo { location: SrcSpan },
 
     ImplicitlyDiscardedResult { location: SrcSpan },
+
+    NoFieldsRecordUpdate { location: SrcSpan },
 }
 
 #[derive(Debug, PartialEq)]

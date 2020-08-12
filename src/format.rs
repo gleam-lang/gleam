@@ -162,7 +162,7 @@ impl<'a> Formatter<'a> {
 
             Statement::CustomType {
                 name,
-                args,
+                parameters,
                 public,
                 constructors,
                 location,
@@ -172,7 +172,7 @@ impl<'a> Formatter<'a> {
                 *public,
                 *opaque,
                 name,
-                args.as_slice(),
+                parameters.as_slice(),
                 constructors,
                 location,
             ),
@@ -249,10 +249,15 @@ impl<'a> Formatter<'a> {
             Constant::String { value, .. } => value.as_str().to_doc().surround("\"", "\""),
 
             Constant::List { elements, .. } => {
+                let comma = if elements.iter().all(|e| e.is_simple()) {
+                    || delim(",").flex_break()
+                } else {
+                    || delim(",")
+                };
                 let elements = elements
                     .iter()
                     .map(|e| self.const_expr(e))
-                    .intersperse(delim(","));
+                    .intersperse(comma());
                 list(concat(elements), None)
             }
 
@@ -264,6 +269,7 @@ impl<'a> Formatter<'a> {
                 segments
                     .iter()
                     .map(|s| bit_string_segment(s, |e| self.const_expr(e))),
+                segments.iter().all(|s| s.value.is_simple()),
             ),
 
             Constant::Record {
@@ -627,6 +633,7 @@ impl<'a> Formatter<'a> {
                 segments
                     .iter()
                     .map(|s| bit_string_segment(s, |e| self.expr(e))),
+                segments.iter().all(|s| s.value.is_simple_constant()),
             ),
             UntypedExpr::RecordUpdate {
                 constructor,
@@ -1018,12 +1025,12 @@ impl<'a> Formatter<'a> {
 
     fn list_cons(&mut self, head: &'a UntypedExpr, tail: &'a UntypedExpr) -> Document<'a> {
         let (elems, tail) = list_cons(head, tail, categorise_list_expr);
-        let elems = concat(
-            elems
-                .iter()
-                .map(|e| self.wrap_expr(e))
-                .intersperse(delim(",")),
-        );
+        let comma = if tail.is_none() && elems.iter().all(|e| e.is_simple_constant()) {
+            || delim(",").flex_break()
+        } else {
+            || delim(",")
+        };
+        let elems = concat(elems.iter().map(|e| self.wrap_expr(e)).intersperse(comma()));
         let tail = tail.map(|e| self.expr(e));
         list(elems, tail)
     }
@@ -1133,6 +1140,7 @@ impl<'a> Formatter<'a> {
                 segments
                     .iter()
                     .map(|s| bit_string_segment(s, |e| self.pattern(e))),
+                false,
             ),
         };
         commented(doc, comments)
@@ -1362,9 +1370,14 @@ where
     (elems, tail)
 }
 
-fn bit_string<'a>(segments: impl Iterator<Item = Document<'a>>) -> Document<'a> {
+fn bit_string<'a>(segments: impl Iterator<Item = Document<'a>>, is_simple: bool) -> Document<'a> {
+    let comma = if is_simple {
+        delim(",").flex_break()
+    } else {
+        delim(",")
+    };
     break_("<<", "<<")
-        .append(concat(segments.intersperse(delim(","))))
+        .append(concat(segments.intersperse(comma)))
         .nest(INDENT)
         .append(break_(",", ""))
         .append(">>")

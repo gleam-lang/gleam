@@ -335,11 +335,12 @@ impl ValueConstructor {
 /// returning an error.
 ///
 pub fn infer_module(
+    uid: &mut usize,
     module: UntypedModule,
     modules: &HashMap<String, (Origin, Module)>,
     warnings: &mut Vec<Warning>,
 ) -> Result<TypedModule, Error> {
-    let mut environment = Environment::new(module.name.as_slice(), modules, warnings);
+    let mut environment = Environment::new(uid, module.name.as_slice(), modules, warnings);
     let module_name = &module.name;
 
     // Register any modules, types, and values being imported
@@ -606,7 +607,7 @@ fn infer_statement(
             public,
             opaque,
             name,
-            args,
+            parameters,
             constructors,
         } => {
             let mut hydrator = Hydrator::new();
@@ -621,7 +622,11 @@ fn infer_statement(
 
             // Insert the parameter types (previously created in `register_types`) into the
             // type environment so that the constructor can reference them.
-            for (typ, name) in return_type_constructor.parameters.iter().zip(args.iter()) {
+            for (typ, name) in return_type_constructor
+                .parameters
+                .iter()
+                .zip(parameters.iter())
+            {
                 hydrator.register_type_as_created(name.clone(), typ.clone());
             }
 
@@ -680,7 +685,7 @@ fn infer_statement(
                 public,
                 opaque,
                 name,
-                args,
+                parameters,
                 constructors,
             })
         }
@@ -1109,13 +1114,13 @@ pub fn register_types(
             name,
             public,
             opaque,
-            args,
+            parameters,
             constructors,
             location,
             ..
         } => {
             let mut hydrator = Hydrator::new();
-            let parameters = make_type_vars(args, location, &mut hydrator, environment)?;
+            let parameters = make_type_vars(parameters, location, &mut hydrator, environment)?;
             let typ = Arc::new(Type::App {
                 public: *public,
                 module: module.to_owned(),
@@ -1268,11 +1273,11 @@ pub fn register_import(s: &UntypedStatement, environment: &mut Environment) -> R
     }
 }
 
-fn do_infer_fn<'a, 'b>(
+fn do_infer_fn(
     args: Vec<UntypedArg>,
     body: UntypedExpr,
     return_annotation: &Option<TypeAst>,
-    environment: &'b mut Environment<'a>,
+    environment: &mut Environment,
 ) -> Result<(Arc<Type>, Vec<TypedArg>, TypedExpr), Error> {
     let (args, body) = ExprTyper::new(environment).do_infer_fn(args, body, return_annotation)?;
     let args_types = args.iter().map(|a| a.typ.clone()).collect();

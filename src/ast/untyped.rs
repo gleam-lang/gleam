@@ -155,4 +155,11 @@ impl UntypedExpr {
             _ => std::u8::MAX,
         }
     }
+
+    pub fn is_simple_constant(&self) -> bool {
+        match self {
+            Self::String { .. } | Self::Int { .. } | Self::Float { .. } => true,
+            _ => false,
+        }
+    }
 }

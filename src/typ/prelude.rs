@@ -91,7 +91,7 @@ pub fn utf_codepoint() -> Arc<Type> {
     })
 }
 
-pub fn register_prelude<'a>(mut typer: Environment<'a>) -> Environment<'a> {
+pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'a, 'b> {
     typer
         .insert_type_constructor(
             "Int".to_string(),

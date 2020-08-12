@@ -11,12 +11,16 @@
   labels they have already supplied.
 - The formatter style has been improved to use a trailing comma on imports
   broken over multiple lines.
+- The formatter style has been improved to wrap lists and bit strings over as
+  few lines as possible if the elements are Ints, Floats, or Strings.
 - The performance of the formatter has been improved.
-- Records can be updated using the spread syntax.
+- Records can be updated using the spread syntax. A warning is emitted if no
+  fields are updated when using this syntax.
 - Fixed a bug where type parameters can leak between different type
   definitions in a module.
 - Markdown tables, footnotes, strikethroughs, and tasklists are now supported
   in documentation.
+- Fixed a bug where generic types may be incorrectly unified.
 
 ## v0.10.1 - 2020-07-15
 

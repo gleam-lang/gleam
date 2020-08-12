@@ -2,9 +2,9 @@ use super::*;
 use std::collections::HashMap;
 
 #[derive(Debug)]
-pub struct Environment<'a> {
+pub struct Environment<'a, 'b> {
     pub current_module: &'a [String],
-    pub uid: usize,
+    pub uid: &'b mut usize,
     pub level: usize,
     pub importable_modules: &'a HashMap<String, (Origin, Module)>,
     pub imported_modules: HashMap<String, (Origin, Module)>,
@@ -25,14 +25,15 @@ pub struct Environment<'a> {
     pub warnings: &'a mut Vec<Warning>,
 }
 
-impl<'a> Environment<'a> {
+impl<'a, 'b> Environment<'a, 'b> {
     pub fn new(
+        uid: &'b mut usize,
         current_module: &'a [String],
         importable_modules: &'a HashMap<String, (Origin, Module)>,
         warnings: &'a mut Vec<Warning>,
     ) -> Self {
         let typer = Self {
-            uid: 0,
+            uid,
             level: 1,
             module_types: HashMap::new(),
             module_values: HashMap::new(),
@@ -51,7 +52,7 @@ pub struct ScopeResetData {
     local_values: im::HashMap<String, ValueConstructor>,
 }
 
-impl<'a> Environment<'a> {
+impl<'a, 'b> Environment<'a, 'b> {
     pub fn in_new_scope<T>(&mut self, process_scope: impl FnOnce(&mut Self) -> T) -> T {
         // Record initial scope state
         let initial = self.open_new_scope();
@@ -77,13 +78,13 @@ impl<'a> Environment<'a> {
     }
 
     pub fn next_uid(&mut self) -> usize {
-        let i = self.uid;
-        self.uid += 1;
+        let i = *self.uid;
+        *self.uid += 1;
         i
     }
 
     pub fn previous_uid(&self) -> usize {
-        self.uid - 1
+        *self.uid - 1
     }
 
     /// Create a new unbound type that is a specific type, we just don't

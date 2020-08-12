@@ -5,8 +5,8 @@ use super::*;
 use crate::ast::UntypedPatternBitStringSegment;
 use std::sync::Arc;
 
-pub struct PatternTyper<'a, 'b> {
-    environment: &'a mut Environment<'b>,
+pub struct PatternTyper<'a, 'b, 'c> {
+    environment: &'a mut Environment<'b, 'c>,
     hydrator: &'a Hydrator,
     level: usize,
     mode: PatternMode,
@@ -18,8 +18,12 @@ enum PatternMode {
     Alternative,
 }
 
-impl<'a, 'b> PatternTyper<'a, 'b> {
-    pub fn new(environment: &'a mut Environment<'b>, hydrator: &'a Hydrator, level: usize) -> Self {
+impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
+    pub fn new(
+        environment: &'a mut Environment<'b, 'c>,
+        hydrator: &'a Hydrator,
+        level: usize,
+    ) -> Self {
         Self {
             environment,
             hydrator,

@@ -7,21 +7,21 @@ use crate::ast::{
     UntypedExpr, UntypedExprBitStringSegment, UntypedMultiPattern, UntypedPattern,
 };
 
-pub struct ExprTyper<'a, 'b> {
-    environment: &'a mut Environment<'b>,
+pub struct ExprTyper<'a, 'b, 'c> {
+    environment: &'a mut Environment<'b, 'c>,
 
     // Type hydrator for creating types from annotations
     hydrator: Hydrator,
 }
 
-impl<'a, 'b> Typer for ExprTyper<'a, 'b> {
+impl<'a, 'b, 'c> Typer for ExprTyper<'a, 'b, 'c> {
     fn with_environment<T>(&mut self, f: impl FnOnce(&mut Environment) -> T) -> T {
         f(self.environment)
     }
 }
 
-impl<'a, 'b> ExprTyper<'a, 'b> {
-    pub fn new(environment: &'a mut Environment<'b>) -> Self {
+impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
+    pub fn new(environment: &'a mut Environment<'b, 'c>) -> Self {
         Self {
             hydrator: Hydrator::new(),
             environment,
@@ -1288,6 +1288,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         },
                     )
                     .collect::<Result<_, _>>()?;
+
+                if args.is_empty() {
+                    self.environment
+                        .warnings
+                        .push(Warning::NoFieldsRecordUpdate {
+                            location: location.clone(),
+                        });
+                }
 
                 return Ok(TypedExpr::RecordUpdate {
                     location,
