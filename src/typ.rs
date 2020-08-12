@@ -1213,7 +1213,11 @@ pub fn register_import(s: &UntypedStatement, environment: &mut Environment) -> R
                 }
 
                 if let Some(typ) = module_info.1.types.get(name) {
-                    match environment.insert_type_constructor(imported_name.clone(), typ.clone()) {
+                    let typ_info = TypeConstructor {
+                        origin: location.clone(),
+                        ..typ.clone()
+                    };
+                    match environment.insert_type_constructor(imported_name.clone(), typ_info) {
                         Ok(_) => (),
                         Err(e) => return Err(e),
                     }
