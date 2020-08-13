@@ -211,6 +211,10 @@ pub enum Error {
         location: SrcSpan,
         label: String,
     },
+
+    UnexpectedTypeHole {
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, PartialEq, Clone)]

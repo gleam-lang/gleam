@@ -26,6 +26,8 @@
 - Ints and floats can now be written with underscores for clarity.
 - The warning for a `todo` now includes the required type of the
   not-yet-implented expression.
+- Holes can be used in type annotations to specify part of a type, leaving the
+  rest for inference.
 
 ## v0.10.1 - 2020-07-15
 

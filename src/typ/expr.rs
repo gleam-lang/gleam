@@ -22,8 +22,10 @@ impl<'a, 'b, 'c> Typer for ExprTyper<'a, 'b, 'c> {
 
 impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
     pub fn new(environment: &'a mut Environment<'b, 'c>) -> Self {
+        let mut hydrator = Hydrator::new();
+        hydrator.permit_holes(true);
         Self {
-            hydrator: Hydrator::new(),
+            hydrator,
             environment,
         }
     }

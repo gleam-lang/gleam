@@ -413,6 +413,26 @@ pub external type Four
 
     assert_format!(
         r#"fn main() {
+  fn() {
+    let x: Box(_) = call()
+    x
+  }
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  fn() {
+    let x: Box(_whatever) = call()
+    x
+  }
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
   fn(_) {
     1
     2

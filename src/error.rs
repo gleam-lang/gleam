@@ -1196,7 +1196,25 @@ signed, unsigned, big, little, native, size, unit",
                     )
                     .unwrap();
                 }
+
+                UnexpectedTypeHole { location } => {
+                    let diagnostic = Diagnostic {
+                        title: "Unexpected type hole".to_string(),
+                        label: "".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: location.clone(),
+                    };
+                    write(buffer, diagnostic, Severity::Error);
+
+                    writeln!(
+                        buffer,
+                        "We need to know the exact type here so type holes are not permitted.",
+                    )
+                    .unwrap();
+                }
             },
+
             Error::Parse { path, src, error } => {
                 use lalrpop_util::ParseError::*;
 

@@ -214,6 +214,8 @@ fn infer_test() {
         "let tuple(5.0, [..x]): tuple(Float, List(Int)) = tuple(5.0, [1,2,3]) x",
         "List(Int)",
     );
+    assert_infer!("let x: List(_) = [] x", "List(a)");
+    assert_infer!("let x: List(_) = [1] x", "List(Int)");
 
     // list
     assert_infer!("[]", "List(a)");
@@ -2908,6 +2910,38 @@ fn x() {
             name: "a".to_string(),
             types: env_types_with(&["A"]),
         })
+    );
+
+    //
+    // Type holes cannot be used when decaring types or external functions
+    //
+
+    assert_error!(
+        r#"type A { A(_) };"#,
+        Error::UnexpectedTypeHole {
+            location: SrcSpan { start: 11, end: 12 },
+        },
+    );
+
+    assert_error!(
+        r#"external fn main() -> List(_) = "" """#,
+        Error::UnexpectedTypeHole {
+            location: SrcSpan { start: 27, end: 28 },
+        },
+    );
+
+    assert_error!(
+        r#"external fn main(List(_)) -> Nil = "" """#,
+        Error::UnexpectedTypeHole {
+            location: SrcSpan { start: 22, end: 23 },
+        },
+    );
+
+    assert_error!(
+        r#"type X = List(_)"#,
+        Error::UnexpectedTypeHole {
+            location: SrcSpan { start: 14, end: 15 },
+        },
     );
 }
 

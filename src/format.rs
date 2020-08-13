@@ -361,6 +361,8 @@ impl<'a> Formatter<'a> {
 
     fn type_ast(&mut self, t: &TypeAst) -> Document {
         match t {
+            TypeAst::Hole { name, .. } => name.clone().to_doc(),
+
             TypeAst::Constructor {
                 name, args, module, ..
             } => self.type_ast_constructor(module, name, args),

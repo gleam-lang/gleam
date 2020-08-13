@@ -125,15 +125,21 @@ pub enum TypeAst {
         location: SrcSpan,
         elems: Vec<Self>,
     },
+
+    Hole {
+        location: SrcSpan,
+        name: String,
+    },
 }
 
 impl TypeAst {
     pub fn location(&self) -> &SrcSpan {
         match self {
-            TypeAst::Fn { location, .. } => location,
-            TypeAst::Var { location, .. } => location,
-            TypeAst::Tuple { location, .. } => location,
-            TypeAst::Constructor { location, .. } => location,
+            TypeAst::Fn { location, .. }
+            | TypeAst::Var { location, .. }
+            | TypeAst::Hole { location, .. }
+            | TypeAst::Tuple { location, .. }
+            | TypeAst::Constructor { location, .. } => location,
         }
     }
 }

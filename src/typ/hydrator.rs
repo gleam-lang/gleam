@@ -19,6 +19,7 @@ pub struct Hydrator {
     created_type_variables: im::HashMap<String, Arc<Type>>,
     created_type_variable_ids: im::HashSet<usize>,
     permit_new_type_variables: bool,
+    permit_holes: bool,
 }
 
 pub struct ScopeResetData {
@@ -32,6 +33,7 @@ impl Hydrator {
             created_type_variables: im::hashmap![],
             created_type_variable_ids: im::hashset![],
             permit_new_type_variables: true,
+            permit_holes: false,
         }
     }
 
@@ -58,6 +60,10 @@ impl Hydrator {
 
     pub fn disallow_new_type_variables(&mut self) {
         self.permit_new_type_variables = false
+    }
+
+    pub fn permit_holes(&mut self, flag: bool) {
+        self.permit_holes = flag
     }
 
     pub fn is_created_generic_type(&self, id: &usize) -> bool {
@@ -168,6 +174,14 @@ impl Hydrator {
                     }),
                 }
             }
+
+            TypeAst::Hole { .. } if self.permit_holes => {
+                Ok(environment.new_unbound_var(environment.level))
+            }
+
+            TypeAst::Hole { location, .. } => Err(Error::UnexpectedTypeHole {
+                location: location.clone(),
+            }),
         }
     }
 }
