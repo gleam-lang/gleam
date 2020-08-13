@@ -1,6 +1,7 @@
 use crate::{
     cli,
     diagnostic::{write, Diagnostic, Severity},
+    typ::pretty::Printer,
 };
 use std::path::PathBuf;
 use termcolor::Buffer;
@@ -27,7 +28,7 @@ impl Warning {
 
         match self {
             Warning::Type { path, src, warning } => match warning {
-                Todo { location } => {
+                Todo { location, typ } => {
                     let diagnostic = Diagnostic {
                         title: "Todo found".to_string(),
                         label: "".to_string(),
@@ -36,9 +37,13 @@ impl Warning {
                         location: location.clone(),
                     };
                     write(buffer, diagnostic, Severity::Warning);
+                    let mut printer = Printer::new();
+
                     writeln!(buffer,
-"This code will crash if it is run. Be sure to remove this todo before running
-your program.")
+"I think this should be an `{}`.
+
+This code will crash if it is run. Be sure to remove this todo before running
+your program.", printer.pretty_print(typ, 0))
                     .unwrap();
                 }
 

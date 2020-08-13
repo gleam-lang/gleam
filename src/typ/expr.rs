@@ -283,14 +283,16 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
     }
 
     fn infer_todo(&mut self, location: SrcSpan, label: Option<String>) -> Result<TypedExpr, Error> {
+        let typ = self.new_unbound_var(self.environment.level);
         self.environment.warnings.push(Warning::Todo {
             location: location.clone(),
+            typ: typ.clone(),
         });
 
         Ok(TypedExpr::Todo {
             location,
             label,
-            typ: self.new_unbound_var(self.environment.level),
+            typ,
         })
     }
 
