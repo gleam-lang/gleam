@@ -24,6 +24,8 @@
   in documentation.
 - Fixed a bug where generic types may be incorrectly unified.
 - Ints and floats can now be written with underscores for clarity.
+- The warning for a `todo` now includes the required type of the
+  not-yet-implented expression.
 
 ## v0.10.1 - 2020-07-15
 
