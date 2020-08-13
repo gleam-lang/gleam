@@ -2952,7 +2952,10 @@ fn infer_module_warning_test() {
     assert_warning!(
         "fn main() { 1 == todo }",
         Warning::Todo {
-            location: SrcSpan { start: 17, end: 21 }
+            location: SrcSpan { start: 17, end: 21 },
+            typ: Arc::new(Type::Var {
+                typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() })),
+            }),
         },
     );
 

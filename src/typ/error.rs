@@ -215,7 +215,10 @@ pub enum Error {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Warning {
-    Todo { location: SrcSpan },
+    Todo {
+        location: SrcSpan,
+        typ: Arc<Type>,
+    },
 
     ImplicitlyDiscardedResult { location: SrcSpan },
 
