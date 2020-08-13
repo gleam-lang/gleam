@@ -39,11 +39,14 @@ impl Warning {
                     write(buffer, diagnostic, Severity::Warning);
                     let mut printer = Printer::new();
 
-                    writeln!(buffer,
-"I think this should be an `{}`.
+                    writeln!(
+                        buffer,
+                        "I think this should be an `{}`.
 
 This code will crash if it is run. Be sure to remove this todo before running
-your program.", printer.pretty_print(typ, 0))
+your program.",
+                        printer.pretty_print(typ, 0)
+                    )
                     .unwrap();
                 }
 
