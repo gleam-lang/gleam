@@ -18,7 +18,7 @@ use std::sync::Arc;
 pub struct Hydrator {
     created_type_variables: im::HashMap<String, Arc<Type>>,
     created_type_variable_ids: im::HashSet<usize>,
-    new_type_behaviour: NewTypeAction,
+    permit_new_type_variables: bool,
 }
 
 pub struct ScopeResetData {
@@ -31,7 +31,7 @@ impl Hydrator {
         Self {
             created_type_variables: im::hashmap![],
             created_type_variable_ids: im::hashset![],
-            new_type_behaviour: NewTypeAction::MakeGeneric,
+            permit_new_type_variables: true,
         }
     }
 
@@ -57,7 +57,7 @@ impl Hydrator {
     }
 
     pub fn disallow_new_type_variables(&mut self) {
-        self.new_type_behaviour = NewTypeAction::Disallow
+        self.permit_new_type_variables = false
     }
 
     pub fn is_created_generic_type(&self, id: &usize) -> bool {
@@ -146,38 +146,28 @@ impl Hydrator {
 
             TypeAst::Var { name, location, .. } => {
                 match self.created_type_variables.get(name.as_str()) {
-                    Some(var) => {
-                        println!("already known type variable");
-                        Ok(var.clone())
+                    Some(var) => Ok(var.clone()),
+
+                    None if self.permit_new_type_variables => {
+                        let var = environment.new_generic_var();
+                        self.created_type_variable_ids
+                            .insert(environment.previous_uid());
+                        self.created_type_variables
+                            .insert(name.clone(), var.clone());
+                        Ok(var)
                     }
 
-                    None => match self.new_type_behaviour {
-                        NewTypeAction::MakeGeneric => {
-                            let var = environment.new_generic_var();
-                            self.created_type_variable_ids
-                                .insert(environment.previous_uid());
-                            self.created_type_variables
-                                .insert(name.clone(), var.clone());
-                            Ok(var)
-                        }
-                        NewTypeAction::Disallow => Err(Error::UnknownType {
-                            name: name.to_string(),
-                            location: location.clone(),
-                            types: environment
-                                .module_types
-                                .keys()
-                                .map(|t| t.to_string())
-                                .collect(),
-                        }),
-                    },
+                    None => Err(Error::UnknownType {
+                        name: name.to_string(),
+                        location: location.clone(),
+                        types: environment
+                            .module_types
+                            .keys()
+                            .map(|t| t.to_string())
+                            .collect(),
+                    }),
                 }
             }
         }
     }
-}
-
-#[derive(Debug, Clone, Copy)]
-enum NewTypeAction {
-    Disallow,
-    MakeGeneric,
 }
