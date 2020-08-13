@@ -1005,8 +1005,16 @@ PatternBitStringSegmentOption: BitStringSegmentOption<UntypedPattern> = {
 Type: TypeAst = {
     TypeConstructor => <>,
     TypeTuple => <>,
+    TypeHole => <>,
     TypeVar => <>,
     TypeFn => <>,
+}
+
+TypeHole: TypeAst = {
+    <s:@L> <name:DiscardName> <e:@L> => TypeAst::Hole {
+        location: location(s, e),
+        name,
+    }
 }
 
 TypeTuple: TypeAst = {
