@@ -533,11 +533,6 @@ impl<'a> Formatter<'a> {
             BindingKind::Assert => "assert ",
         };
 
-        let line = if self.pop_empty_lines(then.start_byte_index()) {
-            lines(2)
-        } else {
-            line()
-        };
         force_break()
             .append(keyword)
             .append(self.pattern(pattern))
@@ -548,7 +543,11 @@ impl<'a> Formatter<'a> {
             )
             .append(" = ")
             .append(self.hanging_expr(value))
-            .append(line)
+            .append(if self.pop_empty_lines(then.start_byte_index()) {
+                lines(2)
+            } else {
+                line()
+            })
             .append(self.expr(then))
     }
 

@@ -1286,6 +1286,18 @@ World"
 
     assert_format!(
         r#"fn main() {
+  let y = case x {
+    1 -> 1
+
+    _ -> 0
+  }
+  y
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
   let x = fn(x) { x }
   x
 }

@@ -15,6 +15,7 @@
   few lines as possible if the elements are Ints, Floats, or Strings.
 - The formatter style has been improved to preserve comments on labelled
   call arguments.
+- The formatter style has been improved to preserve empty lines in assignments.
 - The performance of the formatter has been improved.
 - Records can be updated using the spread syntax. A warning is emitted if no
   fields are updated when using this syntax.
