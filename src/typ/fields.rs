@@ -1,6 +1,7 @@
 use super::Error;
 use crate::ast::{CallArg, SrcSpan};
-use std::collections::HashMap;
+use itertools::Itertools;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FieldMap {
@@ -43,6 +44,7 @@ impl FieldMap {
 
         if self.arity != args.len() {
             return Err(Error::IncorrectArity {
+                labels: self.incorrect_arity_labels(args),
                 location: location.clone(),
                 expected: self.arity,
                 given: args.len(),
@@ -114,5 +116,20 @@ impl FieldMap {
         } else {
             Ok(())
         }
+    }
+
+    pub fn incorrect_arity_labels<A>(&self, args: &Vec<CallArg<A>>) -> Vec<String> {
+        let mut given = HashSet::with_capacity(args.len());
+        for arg in args {
+            if let Some(label) = &arg.label {
+                given.insert(label.as_ref());
+            }
+        }
+        self.fields
+            .keys()
+            .map(|f| f.clone())
+            .filter(|f| !given.contains(f.as_str()))
+            .sorted()
+            .collect()
     }
 }

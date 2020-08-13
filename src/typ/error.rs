@@ -66,6 +66,7 @@ pub enum Error {
         location: SrcSpan,
         expected: usize,
         given: usize,
+        labels: Vec<String>,
     },
 
     UnnecessarySpreadOperator {
@@ -345,6 +346,7 @@ pub fn convert_not_fun_error(
 ) -> Error {
     match e {
         MatchFunTypeError::IncorrectArity { expected, given } => Error::IncorrectArity {
+            labels: vec![],
             location: call_location.clone(),
             expected,
             given,

@@ -274,6 +274,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 Type::Tuple { elems: type_elems } => {
                     if elems.len() != type_elems.len() {
                         return Err(Error::IncorrectArity {
+                            labels: vec![],
                             location,
                             expected: type_elems.len(),
                             given: elems.len(),
@@ -433,6 +434,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                             })
                         } else {
                             Err(Error::IncorrectArity {
+                                labels: vec![],
                                 location,
                                 expected: args.len(),
                                 given: pattern_args.len(),
@@ -455,6 +457,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                             })
                         } else {
                             Err(Error::IncorrectArity {
+                                labels: vec![],
                                 location,
                                 expected: 0,
                                 given: pattern_args.len(),

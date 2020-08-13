@@ -715,6 +715,7 @@ fn infer_error_test() {
     assert_error!(
         "let id = fn(x) { x } id()",
         Error::IncorrectArity {
+            labels: vec![],
             location: SrcSpan { start: 21, end: 25 },
             expected: 1,
             given: 0,
@@ -724,6 +725,7 @@ fn infer_error_test() {
     assert_error!(
         "let id = fn(x) { x } id(1, 2)",
         Error::IncorrectArity {
+            labels: vec![],
             location: SrcSpan { start: 21, end: 29 },
             expected: 1,
             given: 2,
@@ -883,6 +885,7 @@ fn infer_error_test() {
     assert_error!(
         "let True(x) = 1 x",
         Error::IncorrectArity {
+            labels: vec![],
             location: SrcSpan { start: 4, end: 11 },
             expected: 0,
             given: 1,
@@ -892,6 +895,7 @@ fn infer_error_test() {
     assert_error!(
         "let Ok(1, x) = 1 x",
         Error::IncorrectArity {
+            labels: vec![],
             location: SrcSpan { start: 4, end: 12 },
             expected: 1,
             given: 2,
@@ -1198,6 +1202,7 @@ fn infer_error_test() {
     assert_error!(
         "case tuple(1, 2) { tuple(1, _, _, _) -> 1 }",
         Error::IncorrectArity {
+            labels: vec![],
             location: SrcSpan { start: 19, end: 36 },
             expected: 2,
             given: 4,
@@ -2540,6 +2545,7 @@ fn main() {
                         case X(1, 2.0) { x if x == X(1) -> 1 }
                     }"#,
         Error::IncorrectArity {
+            labels: vec!["a".to_string(), "b".to_string()],
             location: SrcSpan {
                 start: 111,
                 end: 115
@@ -2634,6 +2640,7 @@ fn main() {
         "fn x(x, y) { x }
          fn main() { 1 |> x() }",
         Error::IncorrectArity {
+            labels: vec![],
             location: SrcSpan { start: 40, end: 46 },
             expected: 2,
             given: 0,

@@ -688,6 +688,7 @@ Found type:
                 }
 
                 IncorrectArity {
+                    labels,
                     location,
                     expected,
                     given,
@@ -700,6 +701,19 @@ Found type:
                         location: location.clone(),
                     };
                     write(buffer, diagnostic, Severity::Error);
+                    if !labels.is_empty() {
+                        let labels = labels
+                            .iter()
+                            .map(|p| format!("  - {}", p))
+                            .sorted()
+                            .join("\n");
+                        writeln!(
+                            buffer,
+                            "This call accepts these additional labelled arguments:\n\n{}\n",
+                            labels,
+                        )
+                        .unwrap();
+                    }
                 }
 
                 UnnecessarySpreadOperator { location, arity } => {
@@ -1383,12 +1397,12 @@ but it cannot be found.",
                 write_project(buffer, diagnostic);
             }
             Error::Format { problem_files } => {
-                let mut files: Vec<_> = problem_files
+                let files: Vec<_> = problem_files
                     .iter()
                     .flat_map(|formatted| formatted.source.to_str())
                     .map(|p| format!("  - {}", p))
+                    .sorted()
                     .collect();
-                files.sort();
                 let mut label = files.iter().join("\n");
                 label.push('\n');
                 let diagnostic = ProjectErrorDiagnostic {
