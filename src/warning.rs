@@ -112,6 +112,23 @@ be an update. Remove the update or remove fields that need to be copied.")
                     )
                     .unwrap();
                 }
+
+                UnusedConstructor { location, name } => {
+                    let diagnostic = Diagnostic {
+                        title: "Unused constructor".to_string(),
+                        label: "".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: location.clone(),
+                    };
+                    write(buffer, diagnostic, Severity::Warning);
+                    writeln!(
+                        buffer,
+                        "The constructor {} is never used, it can be safely removed.",
+                        name
+                    )
+                    .unwrap();
+                }
             },
         }
     }

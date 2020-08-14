@@ -1328,6 +1328,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         name: &str,
         location: &SrcSpan,
     ) -> Result<ValueConstructor, Error> {
+        // Look in the local scope for a binding with this name
         let ValueConstructor {
             public,
             variant,
@@ -1348,6 +1349,11 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                     .map(|t| t.to_string())
                     .collect(),
             })?;
+
+        // Register the value as seen for detection of unused values
+        self.environment.value_used(name);
+
+        // Instantiate generic variables into unbound variables for this usage
         let typ = self.instantiate(typ, self.environment.level, &mut hashmap![]);
         Ok(ValueConstructor {
             public,

@@ -345,7 +345,7 @@ pub fn infer_module(
     }
 
     // Generate warnings for unused items
-    environment.convert_unused_types_to_warnings();
+    environment.convert_unused_to_warnings();
 
     // Remove private and imported types and values to create the public interface
     environment
@@ -1220,7 +1220,8 @@ pub fn register_import(s: &UntypedStatement, environment: &mut Environment) -> R
                 as_name,
             } in unqualified
             {
-                let mut imported = false;
+                let mut type_imported = false;
+                let mut value_imported = false;
 
                 let imported_name = match &as_name {
                     None => name,
@@ -1234,7 +1235,7 @@ pub fn register_import(s: &UntypedStatement, environment: &mut Environment) -> R
                         value.variant.clone(),
                         value.typ.clone(),
                     );
-                    imported = true;
+                    value_imported = true;
                 }
 
                 // Register the unqualified import if it is a type constructor
@@ -1244,17 +1245,25 @@ pub fn register_import(s: &UntypedStatement, environment: &mut Environment) -> R
                         ..typ.clone()
                     };
                     match environment.insert_type_constructor(imported_name.clone(), typ_info) {
-                        Ok(_) => environment
-                            .unused_private_types
-                            .insert(name.clone(), location.clone()),
+                        Ok(_) => (),
                         Err(e) => return Err(e),
                     };
 
-                    imported = true;
+                    type_imported = true;
                 }
 
-                // Error if no type or value was found with that name
-                if !imported {
+                if value_imported && type_imported {
+                    environment
+                        .unused_private_mixed_constructors
+                        .insert(imported_name.clone(), location.clone());
+                } else if type_imported {
+                    environment
+                        .unused_private_types
+                        .insert(imported_name.clone(), location.clone());
+                } else if value_imported {
+                    ()
+                } else {
+                    // Error if no type or value was found with that name
                     return Err(Error::UnknownModuleField {
                         location: location.clone(),
                         name: name.clone(),

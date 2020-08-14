@@ -21,8 +21,16 @@ pub struct Environment<'a, 'b> {
     // Accessors defined in the current module
     pub accessors: HashMap<String, AccessorsMap>,
 
-    // Types that have imported or privately defined but have not yet been used
+    // Type constructors that have imported or privately defined
+    // but have not yet been used.
     pub unused_private_types: HashMap<String, SrcSpan>,
+
+    // Constructors that have imported or privately defined but
+    // have not yet been used.
+    // This hashmap contains names shared by a type constructor
+    // AND a value constructor.
+    // i.e. type X { X }
+    pub unused_private_mixed_constructors: HashMap<String, SrcSpan>,
 
     // Warnings
     pub warnings: &'a mut Vec<Warning>,
@@ -39,6 +47,7 @@ impl<'a, 'b> Environment<'a, 'b> {
             uid,
             level: 1,
             unused_private_types: HashMap::new(),
+            unused_private_mixed_constructors: HashMap::new(),
             module_types: HashMap::new(),
             module_values: HashMap::new(),
             imported_modules: HashMap::new(),
@@ -471,9 +480,22 @@ impl<'a, 'b> Environment<'a, 'b> {
         }
     }
 
-    pub fn convert_unused_types_to_warnings(&mut self) {
+    pub fn convert_unused_to_warnings(&mut self) {
         for (name, location) in self.unused_private_types.drain() {
             self.warnings.push(Warning::UnusedType { name, location })
         }
+        for (name, location) in self.unused_private_mixed_constructors.drain() {
+            self.warnings
+                .push(Warning::UnusedConstructor { name, location })
+        }
+    }
+
+    pub fn type_used(&mut self, name: &str) {
+        self.unused_private_mixed_constructors.remove(name);
+        self.unused_private_types.remove(name);
+    }
+
+    pub fn value_used(&mut self, name: &str) {
+        self.unused_private_mixed_constructors.remove(name);
     }
 }

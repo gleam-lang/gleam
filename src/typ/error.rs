@@ -229,6 +229,8 @@ pub enum Warning {
     AllFieldsRecordUpdate { location: SrcSpan },
 
     UnusedType { location: SrcSpan, name: String },
+
+    UnusedConstructor { location: SrcSpan, name: String },
 }
 
 #[derive(Debug, PartialEq)]

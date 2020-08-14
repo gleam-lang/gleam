@@ -105,7 +105,7 @@ impl Hydrator {
                 // We do not track use of qualified type constructors as they may be
                 // used in another module.
                 if module.is_none() {
-                    environment.unused_private_types.remove(name.as_str());
+                    environment.type_used(name.as_str());
                 }
 
                 // Ensure that the correct number of arguments have been given to the constructor
