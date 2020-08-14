@@ -3087,13 +3087,23 @@ fn unused_type_warnings_test() {
         }
     );
 
+    assert_warning!(
+        "type X = Int",
+        Warning::UnusedType {
+            name: "X".to_string(),
+            location: SrcSpan { start: 0, end: 12 }
+        }
+    );
+
     // Pub types are not warned for
     assert_no_warnings!("pub type Y { Y }");
     assert_no_warnings!("pub external type Y");
+    assert_no_warnings!("pub type Y = Int");
 
     // Used typed are not warned for
     assert_no_warnings!("type Y { Y } fn run(x: Y) { x }");
     assert_no_warnings!("external type Y fn run(x: Y) { x }");
+    assert_no_warnings!("type Y = Int fn run(x: Y) { x }");
 }
 
 fn env_types_with(things: &[&str]) -> Vec<String> {

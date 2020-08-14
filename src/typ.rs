@@ -1178,6 +1178,13 @@ pub fn register_types(
                     typ,
                 },
             )?;
+
+            // Keep track of private types so we can tell if they are later unused
+            if !public {
+                environment
+                    .unused_private_types
+                    .insert(name.clone(), location.clone());
+            }
         }
 
         _ => {}
