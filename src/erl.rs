@@ -937,13 +937,14 @@ fn call(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env) -> Document
                 },
             ..
         } => {
+            let args = call_args(args, env);
             if module.as_slice() == env.module {
-                atom(name.to_string()).append(call_args(args, env))
+                atom(name.to_string()).append(args)
             } else {
                 atom(module.join("@"))
                     .append(":")
                     .append(atom(name.to_string()))
-                    .append(call_args(args, env))
+                    .append(args)
             }
         }
 
@@ -952,14 +953,13 @@ fn call(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env) -> Document
             label,
             constructor: ModuleValueConstructor::Fn,
             ..
-        } => atom(module_name.join("@"))
-            .append(":")
-            .append(atom(label.to_string()))
-            .append(call_args(args, env)),
-
-        call @ TypedExpr::Call { .. } => expr(call, env)
-            .surround("(", ")")
-            .append(call_args(args, env)),
+        } => {
+            let args = call_args(args, env);
+            atom(module_name.join("@"))
+                .append(":")
+                .append(atom(label.to_string()))
+                .append(args)
+        }
 
         TypedExpr::Fn {
             is_capture: true,
@@ -985,23 +985,22 @@ fn call(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env) -> Document
                     .collect::<Vec<_>>();
                 call(fun, merged_args.as_slice(), env)
             } else {
-                unreachable!()
+                crate::error::fatal_compiler_bug("Erl printing: Capture was not a call")
             }
         }
 
-        fun @ TypedExpr::Fn { .. } => expr(fun, env)
-            .surround("(", ")")
-            .append(call_args(args, env)),
+        TypedExpr::Call { .. }
+        | TypedExpr::Fn { .. }
+        | TypedExpr::RecordAccess { .. }
+        | TypedExpr::TupleIndex { .. } => {
+            let args = call_args(args, env);
+            expr(fun, env).surround("(", ")").append(args)
+        }
 
-        TypedExpr::RecordAccess { .. } => expr(fun, env)
-            .surround("(", ")")
-            .append(call_args(args, env)),
-
-        TypedExpr::TupleIndex { .. } => expr(fun, env)
-            .surround("(", ")")
-            .append(call_args(args, env)),
-
-        other => expr(other, env).append(call_args(args, env)),
+        other => {
+            let args = call_args(args, env);
+            expr(other, env).append(args)
+        }
     }
 }
 

@@ -1963,4 +1963,34 @@ main() ->
     1.
 "#,
     );
+
+    // https://github.com/gleam-lang/gleam/issues/762
+    assert_erl!(
+        r#"
+fn main(x) {
+  fn(x) { x }(x)
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main(X) ->
+    (fun(X1) -> X1 end)(X).
+"#,
+    );
+
+    assert_erl!(
+        r#"
+fn main(x) {
+  x
+  |> fn(x) { x }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main(X) ->
+    (fun(X1) -> X1 end)(X).
+"#,
+    );
 }

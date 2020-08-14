@@ -30,6 +30,8 @@
 - Holes can be used in type annotations to specify part of a type, leaving the
   rest for inference.
 - The incorrect arity error now prints any missing labelled arguments.
+- Fixed a bug where Erlang variables could be generated with incorrect names
+  when directly calling an anonymous function.
 
 ## v0.10.1 - 2020-07-15
 
