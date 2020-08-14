@@ -68,6 +68,7 @@ development.
 - [Ingmar Gagen](https://github.com/igagen)
 - [Ivar Vong](https://github.com/ivarvong)
 - [James MacAulay](https://github.com/jamesmacaulay)
+- [Jechol Lee](https://github.com/jechol)
 - [John Palgut](https://github.com/Jwsonic)
 - [José Valim](https://github.com/josevalim)
 - [Lars Wikman](https://github.com/lawik)
