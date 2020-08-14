@@ -2952,44 +2952,38 @@ fn x() {
     );
 }
 
+macro_rules! assert_warning {
+    ($src:expr, $warning:expr $(,)?) => {
+        let (src, _) = crate::parser::strip_extra($src);
+        let mut ast = crate::grammar::ModuleParser::new()
+            .parse(&src)
+            .expect("syntax error");
+        ast.name = vec!["my_module".to_string()];
+        let mut warnings = vec![];
+        let _ = infer_module(&mut 0, ast, &HashMap::new(), &mut warnings);
+
+        assert!(!warnings.is_empty());
+        assert_eq!($warning, warnings[0]);
+    };
+}
+
+macro_rules! assert_no_warnings {
+    ($src:expr $(,)?) => {
+        let (src, _) = crate::parser::strip_extra($src);
+        let mut ast = crate::grammar::ModuleParser::new()
+            .parse(&src)
+            .expect("syntax error");
+        ast.name = vec!["my_module".to_string()];
+        let expected: Vec<Warning> = vec![];
+        let mut warnings = vec![];
+        let _ = infer_module(&mut 0, ast, &HashMap::new(), &mut warnings);
+
+        assert_eq!(expected, warnings);
+    };
+}
+
 #[test]
-fn infer_module_warning_test() {
-    macro_rules! assert_warning {
-        ($src:expr, $warning:expr $(,)?) => {
-            let (src, _) = crate::parser::strip_extra($src);
-            let mut ast = crate::grammar::ModuleParser::new()
-                .parse(&src)
-                .expect("syntax error");
-            ast.name = vec!["my_module".to_string()];
-            let mut warnings = vec![];
-            let _ = infer_module(&mut 0, ast, &HashMap::new(), &mut warnings);
-
-            assert!(!warnings.is_empty());
-            assert_eq!($warning, warnings[0]);
-        };
-    }
-
-    macro_rules! assert_no_warnings {
-        ($src:expr $(,)?) => {
-            let (src, _) = crate::parser::strip_extra($src);
-            let mut ast = crate::grammar::ModuleParser::new()
-                .parse(&src)
-                .expect("syntax error");
-            ast.name = vec!["my_module".to_string()];
-            let mut warnings = vec![];
-            let _ = infer_module(&mut 0, ast, &HashMap::new(), &mut warnings);
-
-            assert!(warnings.is_empty());
-        };
-    }
-
-    // New list prepend syntax does not emit a warning
-    assert_no_warnings!("fn main() { [1 ..[2, 3]] }",);
-
-    // New list tail pattern matching syntax does not emit a warning
-    assert_no_warnings!("fn main() { let x = [] ; case x { [x, ..] -> 1 } }",);
-
-    // Todos emit warnings
+fn todo_warning_test() {
     assert_warning!(
         "fn main() { 1 == todo }",
         Warning::Todo {
@@ -2999,7 +2993,10 @@ fn infer_module_warning_test() {
             }),
         },
     );
+}
 
+#[test]
+fn result_discard_warning_test() {
     // Implicitly discarded Results emit warnings
     assert_warning!(
         "
@@ -3016,7 +3013,10 @@ fn main() { foo(); 5 }",
 fn foo() { Ok(5) }
 fn main() { let _ = foo(); 5 }",
     );
+}
 
+#[test]
+fn record_update_warnings_test() {
     // Some fields are given in a record update do not emit warnings
     assert_no_warnings!(
         "
@@ -3067,6 +3067,33 @@ fn main() { let _ = foo(); 5 }",
             }
         }
     );
+}
+
+#[test]
+fn unused_type_warnings_test() {
+    assert_warning!(
+        "type Y { Y }",
+        Warning::UnusedType {
+            name: "Y".to_string(),
+            location: SrcSpan { start: 0, end: 7 }
+        }
+    );
+
+    assert_warning!(
+        "external type X",
+        Warning::UnusedType {
+            name: "X".to_string(),
+            location: SrcSpan { start: 0, end: 15 }
+        }
+    );
+
+    // Pub types are not warned for
+    assert_no_warnings!("pub type Y { Y }");
+    assert_no_warnings!("pub external type Y");
+
+    // Used typed are not warned for
+    assert_no_warnings!("type Y { Y } fn run(x: Y) { x }");
+    assert_no_warnings!("external type Y fn run(x: Y) { x }");
 }
 
 fn env_types_with(things: &[&str]) -> Vec<String> {

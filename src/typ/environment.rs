@@ -21,6 +21,9 @@ pub struct Environment<'a, 'b> {
     // Accessors defined in the current module
     pub accessors: HashMap<String, AccessorsMap>,
 
+    // Types that have imported or privately defined but have not yet been used
+    pub unused_private_types: HashMap<String, SrcSpan>,
+
     // Warnings
     pub warnings: &'a mut Vec<Warning>,
 }
@@ -35,6 +38,7 @@ impl<'a, 'b> Environment<'a, 'b> {
         let typer = Self {
             uid,
             level: 1,
+            unused_private_types: HashMap::new(),
             module_types: HashMap::new(),
             module_values: HashMap::new(),
             imported_modules: HashMap::new(),
@@ -464,6 +468,12 @@ impl<'a, 'b> Environment<'a, 'b> {
                 expected: t1.clone(),
                 given: t2.clone(),
             }),
+        }
+    }
+
+    pub fn convert_unused_types_to_warnings(&mut self) {
+        for (name, location) in self.unused_private_types.drain() {
+            self.warnings.push(Warning::UnusedType { name, location })
         }
     }
 }

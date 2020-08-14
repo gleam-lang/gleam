@@ -227,6 +227,8 @@ pub enum Warning {
     NoFieldsRecordUpdate { location: SrcSpan },
 
     AllFieldsRecordUpdate { location: SrcSpan },
+
+    UnusedType { location: SrcSpan, name: String },
 }
 
 #[derive(Debug, PartialEq)]

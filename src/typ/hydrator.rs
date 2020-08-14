@@ -101,6 +101,13 @@ impl Hydrator {
                     .map_err(|e| convert_get_type_constructor_error(e, &location))?
                     .clone();
 
+                // Register the type constructor as being used if it is unqualifed.
+                // We do not track use of qualified type constructors as they may be
+                // used in another module.
+                if module.is_none() {
+                    environment.unused_private_types.remove(name.as_str());
+                }
+
                 // Ensure that the correct number of arguments have been given to the constructor
                 if args.len() != parameters.len() {
                     return Err(Error::IncorrectTypeArity {

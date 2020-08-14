@@ -32,6 +32,7 @@
 - The incorrect arity error now prints any missing labelled arguments.
 - Fixed a bug where Erlang variables could be generated with incorrect names
   when directly calling an anonymous function.
+- A warning is emitted when a type is imported or created but not used.
 
 ## v0.10.1 - 2020-07-15
 
