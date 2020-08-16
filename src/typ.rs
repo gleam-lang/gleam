@@ -1142,13 +1142,6 @@ pub fn register_types(
                 };
                 environment.insert_accessors(name.as_ref(), map)
             }
-
-            // Keep track of private types so we can tell if they are later unused
-            if !public {
-                environment
-                    .unused_private_types
-                    .insert(name.clone(), location.clone());
-            }
         }
 
         Statement::TypeAlias {

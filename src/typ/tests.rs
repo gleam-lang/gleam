@@ -3072,14 +3072,6 @@ fn record_update_warnings_test() {
 #[test]
 fn unused_type_warnings_test() {
     assert_warning!(
-        "type Y { Y }",
-        Warning::UnusedType {
-            name: "Y".to_string(),
-            location: SrcSpan { start: 0, end: 7 }
-        }
-    );
-
-    assert_warning!(
         "external type X",
         Warning::UnusedType {
             name: "X".to_string(),
@@ -3096,12 +3088,10 @@ fn unused_type_warnings_test() {
     );
 
     // Pub types are not warned for
-    assert_no_warnings!("pub type Y { Y }");
     assert_no_warnings!("pub external type Y");
     assert_no_warnings!("pub type Y = Int");
 
     // Used typed are not warned for
-    assert_no_warnings!("type Y { Y } fn run(x: Y) { x }");
     assert_no_warnings!("external type Y fn run(x: Y) { x }");
     assert_no_warnings!("type Y = Int fn run(x: Y) { x }");
 }
