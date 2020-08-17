@@ -533,14 +533,15 @@ impl<'a> Formatter<'a> {
             BindingKind::Assert => "assert ",
         };
 
+        let pattern = self.pattern(pattern);
+
+        let annotation = annotation
+            .as_ref()
+            .map(|a| ": ".to_doc().append(self.type_ast(a)));
+
         force_break()
             .append(keyword)
-            .append(self.pattern(pattern))
-            .append(
-                annotation
-                    .as_ref()
-                    .map(|a| ": ".to_doc().append(self.type_ast(a))),
-            )
+            .append(pattern.append(annotation).group())
             .append(" = ")
             .append(self.hanging_expr(value))
             .append(if self.pop_empty_lines(then.start_byte_index()) {

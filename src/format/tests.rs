@@ -1,15 +1,21 @@
 use super::*;
 
+macro_rules! assert_format {
+    ($src:expr $(,)?) => {
+        println!("\n\n\n{}", $src);
+        let src = $src.to_string();
+        assert_eq!(src, pretty($src).unwrap());
+    };
+}
+
+macro_rules! assert_format_rewrite {
+    ($src:expr, $output:expr  $(,)?) => {
+        assert_eq!(pretty($src).unwrap(), $output);
+    };
+}
+
 #[test]
 fn module_test() {
-    macro_rules! assert_format {
-        ($src:expr $(,)?) => {
-            println!("\n\n\n{}", $src);
-            let src = $src.to_string();
-            assert_eq!(src, pretty($src).unwrap());
-        };
-    }
-
     //
     // Imports
     //
@@ -2892,12 +2898,6 @@ fn main() {
 
 #[test]
 fn module_rewrites_test() {
-    macro_rules! assert_format_rewrite {
-        ($src:expr, $output:expr  $(,)?) => {
-            assert_eq!(pretty($src).unwrap(), $output);
-        };
-    }
-
     // Module comments are moved to the top
     assert_format_rewrite!(
         "//// One
@@ -2970,3 +2970,44 @@ fn main() {
 ",
     );
 }
+
+// #[test]
+// fn assignments_break_value_first_test() {
+//     // https://github.com/gleam-lang/gleam/issues/748
+//
+//     assert_format!(
+//         r#"fn main() {
+//   assert Ok(1) = [
+//     100000000000000000000000000000,
+//     200000000000000000000000000000,
+//     300000000000000000000000000000,
+//   ]
+//   Nil
+// }
+// "#
+//     );
+//
+//     assert_format!(
+//         r#"fn main() {
+//   assert <<11, 2, 4, 5, 6>> = [
+//     100000000000000000000000000000,
+//     200000000000000000000000000000,
+//     300000000000000000000000000000,
+//   ]
+//   Nil
+// }
+// "#
+//     );
+//
+//     assert_format!(
+//         r#"fn main() {
+//   assert [11, 2, 4, 5, 6] = [
+//     100000000000000000000000000000,
+//     200000000000000000000000000000,
+//     300000000000000000000000000000,
+//   ]
+//   Nil
+// }
+// "#
+//     );
+// }
