@@ -77,7 +77,7 @@ impl<'a> Env<'a> {
                 name.to_camel_case().to_doc()
             }
             Some(0) => name.to_camel_case().to_doc(),
-            Some(n) => name.to_camel_case().to_doc().append(*n),
+            Some(n) => name.to_camel_case().to_doc().append("@").append(*n),
         }
     }
 

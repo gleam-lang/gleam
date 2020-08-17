@@ -63,8 +63,8 @@ go() ->
 
 go() ->
     Y = 1,
-    Y1 = 2,
-    Y1.
+    Y@1 = 2,
+    Y@1.
 "#,
     );
 
@@ -79,8 +79,8 @@ go() ->
 
 go() ->
     Y = 1,
-    Y1 = 2,
-    Y1.
+    Y@1 = 2,
+    Y@1.
 "#,
     );
 
@@ -227,8 +227,8 @@ tail(List) ->
 
 x() ->
     X = 1,
-    X1 = X + 1,
-    X1.
+    X@1 = X + 1,
+    X@1.
 "#,
     );
 
@@ -433,7 +433,7 @@ fn go(a) {
 go(A) ->
     case A of
         99 ->
-            A1 = A,
+            A@1 = A,
             1;
 
         _ ->
@@ -454,8 +454,8 @@ fn go(a) {
 -compile(no_auto_import).
 
 go(A) ->
-    A1 = A + 1,
-    A1.
+    A@1 = A + 1,
+    A@1.
 "#,
     );
 
@@ -471,8 +471,8 @@ fn go(a) {
 -compile(no_auto_import).
 
 go(A) ->
-    A1 = 1,
-    A1.
+    A@1 = 1,
+    A@1.
 "#,
     );
 
@@ -550,8 +550,8 @@ main(Args) ->
             A = 1,
             A
     end,
-    A1 = 2,
-    A1.
+    A@1 = 2,
+    A@1.
 "#,
     );
     // https://github.com/gleam-lang/gleam/issues/704
@@ -1413,7 +1413,7 @@ main() ->
         {error, GleamTryError} -> {error, GleamTryError};
         {ok, A} ->
             case {ok, 2} of
-                {error, GleamTryError1} -> {error, GleamTryError1};
+                {error, GleamTryError@1} -> {error, GleamTryError@1};
                 {ok, B} ->
                     {ok, A + B}
             end
@@ -1757,12 +1757,12 @@ test() ->
     DuplicateName = 1,
     case 1 of
         1 ->
-            DuplicateName1 = DuplicateName + 1,
-            DuplicateName1;
+            DuplicateName@1 = DuplicateName + 1,
+            DuplicateName@1;
 
         2 ->
-            DuplicateName1 = DuplicateName + 1,
-            DuplicateName1
+            DuplicateName@1 = DuplicateName + 1,
+            DuplicateName@1
     end.
 "#,
     );
@@ -1975,7 +1975,7 @@ fn main(x) {
 -compile(no_auto_import).
 
 main(X) ->
-    (fun(X1) -> X1 end)(X).
+    (fun(X@1) -> X@1 end)(X).
 "#,
     );
 
@@ -1990,7 +1990,7 @@ fn main(x) {
 -compile(no_auto_import).
 
 main(X) ->
-    (fun(X1) -> X1 end)(X).
+    (fun(X@1) -> X@1 end)(X).
 "#,
     );
 }
