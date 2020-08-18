@@ -1003,14 +1003,10 @@ pub const int_value = 42
                     source_base_path: PathBuf::from("/src"),
                     src: "import one.{string_value, float_value, int_value}
 pub fn main(arg1, arg2, arg3) {
-    case tuple(arg1, arg2, arg3) {
-        tuple(
-        x,
-        y,
-        z,
-        ) if x == string_value && y >. float_value && z == int_value -> 1
-        _ -> 0
-    }
+  case tuple(arg1, arg2, arg3) {
+    tuple(x, y, z,) if x == string_value && y >. float_value && z == int_value -> 1
+    _ -> 0
+  }
 }"
                         .to_string(),
                 },
@@ -1026,9 +1022,7 @@ pub fn main(arg1, arg2, arg3) {
                     text: "-module(two).\n-compile(no_auto_import).\n\n-export([main/3]).\n
 main(Arg1, Arg2, Arg3) ->
     case {Arg1, Arg2, Arg3} of
-        {X,
-         Y,
-         Z} when ((X =:= <<\"constant value\"/utf8>>) andalso (Y > 3.14)) andalso (Z =:= 42) ->
+        {X, Y, Z} when ((X =:= <<\"constant value\"/utf8>>) andalso (Y > 3.14)) andalso (Z =:= 42) ->
             1;
 
         _ ->

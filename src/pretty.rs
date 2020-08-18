@@ -15,8 +15,6 @@
 #[cfg(test)]
 mod tests;
 
-use im::vector::Vector;
-
 pub trait Documentable {
     fn to_doc(self) -> Document;
 }
@@ -130,7 +128,7 @@ enum Mode {
     Unbroken,
 }
 
-fn fits(mut limit: isize, mut docs: Vector<(isize, Mode, Document)>) -> bool {
+fn fits(mut limit: isize, mut docs: im::Vector<(isize, Mode, Document)>) -> bool {
     loop {
         if limit < 0 {
             return false;
@@ -178,12 +176,17 @@ pub fn format(limit: isize, doc: Document) -> String {
         &mut buffer,
         limit,
         0,
-        vector![(0, Mode::Unbroken, Document::Group(Box::new(doc)))],
+        im::vector![(0, Mode::Unbroken, Document::Group(Box::new(doc)))],
     );
     buffer
 }
 
-fn fmt(b: &mut String, limit: isize, mut width: isize, mut docs: Vector<(isize, Mode, Document)>) {
+fn fmt(
+    b: &mut String,
+    limit: isize,
+    mut width: isize,
+    mut docs: im::Vector<(isize, Mode, Document)>,
+) {
     while let Some((indent, mode, document)) = docs.pop_front() {
         match document {
             Document::Nil | Document::ForceBreak => (),
@@ -229,17 +232,13 @@ fn fmt(b: &mut String, limit: isize, mut width: isize, mut docs: Vector<(isize, 
                 docs.push_front((width, mode, *doc));
             }
 
-            Document::Group(doc) => {
-                docs.push_front((indent, Mode::Unbroken, *doc));
-                if !fits(limit - width, docs.clone()) {
-                    let _ = std::mem::replace(&mut docs[0].1, Mode::Broken);
-                }
-            }
-
-            Document::FlexBreak(doc) => {
-                docs.push_front((indent, Mode::Unbroken, (*doc).clone()));
-                if !fits(limit - width, docs.clone()) {
-                    docs[0] = (indent, Mode::Broken, (*doc).clone());
+            Document::Group(doc) | Document::FlexBreak(doc) => {
+                // TODO: don't clone the doc
+                let group_docs = im::vector![(indent, Mode::Unbroken, (*doc).clone())];
+                if fits(limit - width, group_docs) {
+                    docs.push_front((indent, Mode::Unbroken, *doc));
+                } else {
+                    docs.push_front((indent, Mode::Broken, *doc));
                 }
             }
         }

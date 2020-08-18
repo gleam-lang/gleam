@@ -2,7 +2,7 @@ use super::*;
 
 macro_rules! assert_format {
     ($src:expr $(,)?) => {
-        println!("\n\n\n{}", $src);
+        // println!("\n\n\n{}", $src);
         let src = $src.to_string();
         assert_eq!(src, pretty($src).unwrap());
     };
@@ -15,11 +15,7 @@ macro_rules! assert_format_rewrite {
 }
 
 #[test]
-fn module_test() {
-    //
-    // Imports
-    //
-
+fn imports() {
     assert_format!("\n");
     assert_format!("import one\n");
     assert_format!("import one\nimport two\n");
@@ -31,13 +27,24 @@ fn module_test() {
     assert_format!("import one/two/three as free\n");
     assert_format!("import one/two/three.{thunk} as free\n");
     assert_format!("import one/two/three.{thunk as funky} as free\n");
-    assert_format!("import my/cool/module.{\n  Ane, Bwo, Chree, Dour, Eive, Fix, Geven, Hight, Iine, Jen, Kleven, Lwelve,\n  Mhirteen, Nifteen, Oixteen,\n}\n");
-    assert_format!("import gleam/result.{\n  Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, Abcde,\n  End,\n}\n");
+    assert_format!(
+        "import my/cool/module.{
+  Ane, Bwo, Chree, Dour, Eive, Fix, Geven, Hight, Iine, Jen, Kleven, Lwelve, Mhirteen,
+  Nifteen, Oixteen,
+}
+"
+    );
+    assert_format!(
+        "import gleam/result.{
+  Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, Abcde,
+  End,
+}
+"
+    );
+}
 
-    //
-    // Multiple statements
-    //
-
+#[test]
+fn multiple_statements_test() {
     assert_format!(
         r#"import one
 import two
@@ -52,22 +59,20 @@ pub external type Three
 pub external type Four
 "#
     );
+}
 
-    //
-    // External types
-    //
-
+#[test]
+fn external_types() {
     assert_format!("external type Private\n");
     assert_format!("external type Box(a)\n");
     assert_format!("external type Box(a, b, zero)\n");
     assert_format!("pub external type Private\n");
     assert_format!("pub external type Box(a)\n");
     assert_format!("pub external type Box(a, b, zero)\n");
+}
 
-    //
-    // External fn
-    //
-
+#[test]
+fn external_functions() {
     assert_format!(
         r#"external fn main() -> Int =
   "app" "main"
@@ -115,18 +120,17 @@ pub external type Four
     );
 
     assert_format!(
-        r#"external fn erl_filter(
-  fn(key, value) -> Bool,
-  Map(key, value),
-) -> Map(key, value) =
+        r#"external fn erl_filter(fn(key, value) -> Bool, Map(key, value)) -> Map(
+  key,
+  value,
+) =
   "maps" "filter"
 "#
     );
+}
 
-    //
-    // Type aliases
-    //
-
+#[test]
+fn type_alias() {
     assert_format!(
         "type Option(a) =
   Result(a, Nil)
@@ -289,11 +293,10 @@ pub external type Four
   )
 "
     );
+}
 
-    //
-    // Custom types
-    //
-
+#[test]
+fn custom_types() {
     assert_format!(
         "type WowThisTypeHasJustTheLongestName(
   some_long_type_variable,
@@ -361,11 +364,10 @@ pub external type Four
 }
 "
     );
+}
 
-    //
-    // Expr::Fn
-    //
-
+#[test]
+fn expr_fn() {
     assert_format!(
         r#"fn main() {
   fn(x) { x }
@@ -475,11 +477,10 @@ pub external type Four
 }
 "#
     );
+}
 
-    //
-    // Call exprs
-    //
-
+#[test]
+fn expr_call() {
     assert_format!(
         r#"fn main() {
   run()
@@ -534,10 +535,57 @@ pub external type Four
 "#
     );
 
-    //
-    // Tuple
-    //
+    assert_format!(
+        "fn main() {
+  succ(1)
+}
+"
+    );
 
+    assert_format!(
+        "fn main() {
+  add(1)(2)(3)
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  Ok(1)
+}
+"
+    );
+
+    assert_format!(
+        "fn main() {
+  Ok(
+    1,
+    {
+      1
+      2
+    },
+  )
+}
+"
+    );
+
+    assert_format!(
+        r#"fn main() {
+  Person("Al", is_cool: VeryTrue)
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  Person(name: "Al", is_cool: VeryTrue)
+}
+"#
+    );
+}
+
+#[test]
+fn expr_tuple() {
     assert_format!(
         r#"fn main(one, two, three) {
   tuple(
@@ -561,10 +609,50 @@ pub external type Four
 "#
     );
 
-    //
-    // Fn
-    //
+    assert_format!(
+        r#"fn main() {
+  tuple()
+}
+"#
+    );
 
+    assert_format!(
+        r#"fn main() {
+  tuple(1)
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  tuple(1, 2)
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  tuple(1, 2, 3)
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  tuple(
+    really_long_variable_name,
+    really_long_variable_name,
+    really_long_variable_name,
+    really_long_variable_name,
+    really_long_variable_name,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn statement_fn() {
     assert_format!(
         r#"fn main(one, two, three) {
   Nil
@@ -659,11 +747,10 @@ pub external type Four
 }
 "#
     );
+}
 
-    //
-    // Binary operators
-    //
-
+#[test]
+fn binary_operators() {
     assert_format!(
         r#"fn main() {
   True && False
@@ -810,11 +897,10 @@ pub external type Four
 }
 "#
     );
+}
 
-    //
-    // Int
-    //
-
+#[test]
+fn expr_int() {
     assert_format!(
         r#"fn main() {
   1
@@ -835,11 +921,10 @@ pub external type Four
 }
 "#
     );
+}
 
-    //
-    // Float
-    //
-
+#[test]
+fn expr_float() {
     assert_format!(
         r#"fn main() {
   1.0
@@ -860,11 +945,10 @@ pub external type Four
 }
 "#
     );
+}
 
-    //
-    // String
-    //
-
+#[test]
+fn expr_string() {
     assert_format!(
         r#"fn main() {
   "Hello"
@@ -887,11 +971,9 @@ World"
 }
 "#
     );
-
-    //
-    // Seq
-    //
-
+}
+#[test]
+fn expr_seq() {
     assert_format!(
         r#"fn main() {
   1
@@ -908,32 +990,15 @@ World"
 }
 "#
     );
-
-    //
-    // Var
-    //
-
-    assert_format!(
-        r#"fn main() {
-  one
 }
-"#
-    );
-
-    //
-    // ListNil
-    //
-
+#[test]
+fn expr_lists() {
     assert_format!(
         "fn main() {
   []
 }
 "
     );
-
-    //
-    // ListCons
-    //
 
     assert_format!(
         "fn main() {
@@ -1047,63 +1112,10 @@ World"
 }
 "
     );
-
-    //
-    // Call
-    //
-
-    assert_format!(
-        "fn main() {
-  succ(1)
 }
-"
-    );
 
-    assert_format!(
-        "fn main() {
-  add(1)(2)(3)
-}
-"
-    );
-
-    assert_format!(
-        "fn main() {
-  Ok(1)
-}
-"
-    );
-
-    assert_format!(
-        "fn main() {
-  Ok(
-    1,
-    {
-      1
-      2
-    },
-  )
-}
-"
-    );
-
-    assert_format!(
-        r#"fn main() {
-  Person("Al", is_cool: VeryTrue)
-}
-"#
-    );
-
-    assert_format!(
-        r#"fn main() {
-  Person(name: "Al", is_cool: VeryTrue)
-}
-"#
-    );
-
-    //
-    // Pipe
-    //
-
+#[test]
+fn expr_pipe() {
     assert_format!(
         r#"fn main() {
   1
@@ -1236,11 +1248,10 @@ World"
 }
 "#
     );
+}
 
-    //
-    // Let
-    //
-
+#[test]
+fn expr_let() {
     assert_format!(
         r#"fn main() {
   let x = 1
@@ -1359,11 +1370,11 @@ World"
 }
 "#
     );
+}
 
-    //
+#[test]
+fn pattern_simple() {
     // Pattern::Float
-    //
-
     assert_format!(
         r#"fn main() {
   let 1 = 1
@@ -1372,10 +1383,7 @@ World"
 "#
     );
 
-    //
     // Pattern::String
-    //
-
     assert_format!(
         r#"fn main() {
   let 1.0 = 1
@@ -1384,10 +1392,7 @@ World"
 "#
     );
 
-    //
     // Pattern::Var
-    //
-
     assert_format!(
         r#"fn main() {
   let x = 1
@@ -1396,11 +1401,10 @@ World"
 }
 "#
     );
+}
 
-    //
-    // Pattern::Let
-    //
-
+#[test]
+fn pattern_let() {
     assert_format!(
         r#"fn main() {
   let x as y = 1
@@ -1416,11 +1420,10 @@ World"
 }
 "#
     );
+}
 
-    //
-    // Pattern::Discard
-    //
-
+#[test]
+fn pattern_discard() {
     assert_format!(
         r#"fn main() {
   let _ = 1
@@ -1436,11 +1439,10 @@ World"
 }
 "#
     );
+}
 
-    //
-    // Pattern::Nil
-    //
-
+#[test]
+fn pattern_lists() {
     assert_format!(
         r#"fn main() {
   let [] = 1
@@ -1448,10 +1450,6 @@ World"
 }
 "#
     );
-
-    //
-    // Pattern::Cons
-    //
 
     assert_format!(
         r#"fn main() {
@@ -1490,11 +1488,10 @@ World"
 }
 "#
     );
+}
 
-    //
-    // Pattern::Constructor
-    //
-
+#[test]
+fn pattern_constructor() {
     assert_format!(
         r#"fn main() {
   let True = 1
@@ -1545,19 +1542,15 @@ World"
 
     assert_format!(
         r#"fn main() {
-  let Person(
-    age: really_long_variable_name,
-    name: really_long_variable_name,
-  ) = 1
+  let Person(age: really_long_variable_name, name: really_long_variable_name) = 1
   Nil
 }
 "#
     );
+}
 
-    //
-    // Pattern::Tuple
-    //
-
+#[test]
+fn pattern_tuple() {
     assert_format!(
         r#"fn main() {
   let tuple() = 1
@@ -1589,11 +1582,10 @@ World"
 }
 "#
     );
+}
 
-    //
-    // Block causes
-    //
-
+#[test]
+fn expr_case() {
     assert_format!(
         r#"fn main() {
   case 1 {
@@ -1619,10 +1611,6 @@ World"
 }
 "#
     );
-
-    //
-    // Case
-    //
 
     assert_format!(
         r#"fn do() {
@@ -1664,11 +1652,10 @@ World"
 }
 "
     );
+}
 
-    //
-    // Nested case
-    //
-
+#[test]
+fn expr_case_nested() {
     assert_format!(
         r#"fn main() {
   case 1 {
@@ -1692,11 +1679,10 @@ World"
 }
 "#
     );
+}
 
-    //
-    // Case then fn
-    //
-
+#[test]
+fn expr_case_then_fn() {
     assert_format!(
         r#"fn main() {
   case 1 {
@@ -1719,11 +1705,10 @@ World"
 }
 "#
     );
+}
 
-    //
-    // Multiple subjects
-    //
-
+#[test]
+fn expr_case_multiple_subjects() {
     assert_format!(
         r#"fn main() {
   case 1 {
@@ -1743,11 +1728,10 @@ World"
 }
 "#
     );
+}
 
-    //
-    // Alternative patterns
-    //
-
+#[test]
+fn expr_case_alternative_patterns() {
     assert_format!(
         r#"fn main() {
   case 1 {
@@ -1768,11 +1752,10 @@ World"
 }
 "#
     );
+}
 
-    //
-    // Clause guards
-    //
-
+#[test]
+fn expr_case_clause_guards() {
     assert_format!(
         r#"fn main() {
   case 1 {
@@ -1852,11 +1835,10 @@ pub fn main() {
 }
 "#
     );
+}
 
-    //
-    // FieldAccess
-    //
-
+#[test]
+fn field_access() {
     assert_format!(
         r#"fn main() {
   one.two
@@ -1870,56 +1852,10 @@ pub fn main() {
 }
 "#
     );
-
-    //
-    // Tuple
-    //
-
-    assert_format!(
-        r#"fn main() {
-  tuple()
 }
-"#
-    );
 
-    assert_format!(
-        r#"fn main() {
-  tuple(1)
-}
-"#
-    );
-
-    assert_format!(
-        r#"fn main() {
-  tuple(1, 2)
-}
-"#
-    );
-
-    assert_format!(
-        r#"fn main() {
-  tuple(1, 2, 3)
-}
-"#
-    );
-
-    assert_format!(
-        r#"fn main() {
-  tuple(
-    really_long_variable_name,
-    really_long_variable_name,
-    really_long_variable_name,
-    really_long_variable_name,
-    really_long_variable_name,
-  )
-}
-"#
-    );
-
-    //
-    // TupleIndex
-    //
-
+#[test]
+fn tuple_access() {
     assert_format!(
         r#"fn main() {
   tup.0
@@ -1947,11 +1883,10 @@ pub fn main() {
 }
 "#
     );
+}
 
-    //
-    // Todo
-    //
-
+#[test]
+fn expr_todo() {
     assert_format!(
         "fn main() {
   todo
@@ -1965,10 +1900,10 @@ pub fn main() {
 }
 "#
     );
+}
 
-    //
-    // Doc comments
-    //
+#[test]
+fn doc_comments_test() {
     assert_format!(
         "/// one
 fn main() {
@@ -2035,11 +1970,10 @@ type Whatever {
 }
 "#
     );
+}
 
-    //
-    // Comments
-    //
-
+#[test]
+fn comments() {
     assert_format!(
         r#"import one
 
@@ -2264,11 +2198,10 @@ type Whatever {
 }
 "
     );
+}
 
-    //
-    // Trailing comments
-    //
-
+#[test]
+fn trailing_comments() {
     assert_format!(
         "fn main() {
   x
@@ -2296,11 +2229,10 @@ type Whatever {
 // ok!
 "
     );
+}
 
-    //
-    // Commented function arguments
-    //
-
+#[test]
+fn commented_fn_arguments() {
     assert_format!(
         "fn main(
   // comment
@@ -2323,10 +2255,20 @@ type Whatever {
 "
     );
 
-    //
-    // Commented bin op expressions
-    //
+    assert_format!(
+        "pub external fn main(
+  // comment1
+  argument1: Type,
+  // comment2
+  argument2: Type,
+) -> Int =
+  \"\" \"\"
+"
+    );
+}
 
+#[test]
+fn commented_binop() {
     assert_format!(
         "fn main() {
   1 + // hello
@@ -2344,26 +2286,10 @@ type Whatever {
 }
 "
     );
+}
 
-    //
-    // Commented external function arguments
-    //
-
-    assert_format!(
-        "pub external fn main(
-  // comment1
-  argument1: Type,
-  // comment2
-  argument2: Type,
-) -> Int =
-  \"\" \"\"
-"
-    );
-
-    //
-    // Commented type constructors
-    //
-
+#[test]
+fn commented_constructors() {
     assert_format!(
         "pub type Number {
   // 1
@@ -2419,19 +2345,10 @@ type Whatever {
 }
 "
     );
+}
 
-    //
-    // Commented type constructor arguments
-    //
-
-    //
-    // Commented type constructor parameters
-    //
-
-    //
-    // Function captures
-    //
-
+#[test]
+fn function_captures_test() {
     assert_format!(
         "pub fn main() {
   run(_)
@@ -2452,8 +2369,10 @@ type Whatever {
 }
 "
     );
+}
 
-    // Formats the operator spread syntax
+#[test]
+fn pattern_record_spread() {
     assert_format!(
         "type Triple {
   Triple(a: Int, b: Int, c: Int)
@@ -2476,19 +2395,18 @@ fn main() {
 fn main() {
   let triple = Triple(1, 2, 3)
   let Triple(
-    really_long_variable_name_a,
-    c: really_long_variable_name_c,
+    really_really_long_variable_name_a,
+    c: really_really_long_variable_name_c,
     ..,
   ) = triple
-  really_long_variable_name_c
+  really_really_long_variable_name_c
 }
 "
     );
+}
 
-    //
-    // Empty lines
-    //
-
+#[test]
+fn empty_lines() {
     assert_format!(
         "pub fn main() {
   1
@@ -2555,11 +2473,10 @@ fn main() {
 }
 "
     );
+}
 
-    //
-    // Module docs
-    //
-
+#[test]
+fn modules_docs() {
     assert_format!(
         "//// One
 //// Two
@@ -2586,11 +2503,10 @@ type X {
 // Hello
 "
     );
+}
 
-    //
-    // Binary operator precedence
-    //
-
+#[test]
+fn binary_operator_precedence() {
     assert_format!(
         "fn main() {
   { 1 + 2 } * 3
@@ -2665,7 +2581,10 @@ pub fn two() {
 }
 ",
     );
+}
 
+#[test]
+fn expr_bit_string() {
     // BitString construction
 
     assert_format!(
@@ -2701,11 +2620,10 @@ pub fn two() {
 }
 ",
     );
+}
 
-    //
-    // Module level constants
-    //
-
+#[test]
+fn module_constants() {
     assert_format!(
         "pub const str = \"a string\"
 
@@ -2716,11 +2634,10 @@ pub const int = 4
 pub const float = 3.14
 "
     );
+}
 
-    //
-    // Record update
-    //
-
+#[test]
+fn record_update() {
     assert_format!(
         "pub type Counter {
   Counter(a: Int, b: Int)
@@ -2750,16 +2667,15 @@ fn main() {
 }
 "
     );
+}
 
-    //
-    // Concise wrapping of simple lists
-    //
-
+#[test]
+fn concise_wrapping_of_simple_lists() {
     assert_format!(
         "pub fn main() {
   [
-    100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400,
-    1500, 1600, 1700, 1800, 1900, 2000,
+    100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500,
+    1600, 1700, 1800, 1900, 2000,
   ]
 }
 "
@@ -2768,8 +2684,8 @@ fn main() {
     assert_format!(
         "pub fn main() {
   [
-    1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.00, 11.0, 12.0, 13.0, 14.0,
-    15.0, 16.0, 17.0, 18.0, 19.0, 2.00,
+    1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.00, 11.0, 12.0, 13.0, 14.0, 15.0,
+    16.0, 17.0, 18.0, 19.0, 2.00,
   ]
 }
 "
@@ -2778,8 +2694,8 @@ fn main() {
     assert_format!(
         r#"pub fn main() {
   [
-    "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
-    "ten", "eleven", "twelve",
+    "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+    "eleven", "twelve",
   ]
 }
 "#
@@ -2787,16 +2703,16 @@ fn main() {
 
     assert_format!(
         "const values = [
-  100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400,
-  1500, 1600, 1700, 1800, 1900, 2000,
+  100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500,
+  1600, 1700, 1800, 1900, 2000,
 ]
 "
     );
 
     assert_format!(
         "const values = [
-  1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.00, 11.0, 12.0, 13.0, 14.0,
-  15.0, 16.0, 17.0, 18.0, 19.0, 2.00,
+  1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.00, 11.0, 12.0, 13.0, 14.0, 15.0,
+  16.0, 17.0, 18.0, 19.0, 2.00,
 ]
 "
     );
@@ -2808,16 +2724,15 @@ fn main() {
 ]
 "#
     );
+}
 
-    //
-    // Concise wrapping of simple bit strings
-    //
-
+#[test]
+fn concise_wrapping_of_simple_bit_strings() {
     assert_format!(
         "pub fn main() {
   <<
-    100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400,
-    1500, 1600, 1700, 1800, 1900, 2000,
+    100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500,
+    1600, 1700, 1800, 1900, 2000,
   >>
 }
 "
@@ -2826,8 +2741,8 @@ fn main() {
     assert_format!(
         "pub fn main() {
   <<
-    1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.00, 11.0, 12.0, 13.0, 14.0,
-    15.0, 16.0, 17.0, 18.0, 19.0, 2.00,
+    1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.00, 11.0, 12.0, 13.0, 14.0, 15.0,
+    16.0, 17.0, 18.0, 19.0, 2.00,
   >>
 }
 "
@@ -2836,8 +2751,8 @@ fn main() {
     assert_format!(
         r#"pub fn main() {
   <<
-    "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
-    "ten", "eleven", "twelve",
+    "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+    "eleven", "twelve",
   >>
 }
 "#
@@ -2845,16 +2760,16 @@ fn main() {
 
     assert_format!(
         "const values = <<
-  100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400,
-  1500, 1600, 1700, 1800, 1900, 2000,
+  100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500,
+  1600, 1700, 1800, 1900, 2000,
 >>
 "
     );
 
     assert_format!(
         "const values = <<
-  1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.00, 11.0, 12.0, 13.0, 14.0,
-  15.0, 16.0, 17.0, 18.0, 19.0, 2.00,
+  1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.00, 11.0, 12.0, 13.0, 14.0, 15.0,
+  16.0, 17.0, 18.0, 19.0, 2.00,
 >>
 "
     );
@@ -2866,11 +2781,10 @@ fn main() {
 >>
 "#
     );
+}
 
-    //
-    // Labelled argument comments
-    //
-
+#[test]
+fn commented_labelled_arguments() {
     assert_format!(
         "fn main() {
   Emulator(
@@ -2971,43 +2885,42 @@ fn main() {
     );
 }
 
-// #[test]
-// fn assignments_break_value_first_test() {
-//     // https://github.com/gleam-lang/gleam/issues/748
-//
-//     assert_format!(
-//         r#"fn main() {
-//   assert Ok(1) = [
-//     100000000000000000000000000000,
-//     200000000000000000000000000000,
-//     300000000000000000000000000000,
-//   ]
-//   Nil
-// }
-// "#
-//     );
-//
-//     assert_format!(
-//         r#"fn main() {
-//   assert <<11, 2, 4, 5, 6>> = [
-//     100000000000000000000000000000,
-//     200000000000000000000000000000,
-//     300000000000000000000000000000,
-//   ]
-//   Nil
-// }
-// "#
-//     );
-//
-//     assert_format!(
-//         r#"fn main() {
-//   assert [11, 2, 4, 5, 6] = [
-//     100000000000000000000000000000,
-//     200000000000000000000000000000,
-//     300000000000000000000000000000,
-//   ]
-//   Nil
-// }
-// "#
-//     );
-// }
+#[test]
+// https://github.com/gleam-lang/gleam/issues/748
+fn assignments_break_value_first_test() {
+    assert_format!(
+        r#"fn main() {
+  assert Ok(1) = [
+    100000000000000000000000000000,
+    200000000000000000000000000000,
+    300000000000000000000000000000,
+  ]
+  Nil
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  assert <<11, 2, 4, 5, 6>> = [
+    100000000000000000000000000000,
+    200000000000000000000000000000,
+    300000000000000000000000000000,
+  ]
+  Nil
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  assert [11, 2, 4, 5, 6] = [
+    100000000000000000000000000000,
+    200000000000000000000000000000,
+    300000000000000000000000000000,
+  ]
+  Nil
+}
+"#
+    );
+}

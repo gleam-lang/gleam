@@ -200,31 +200,27 @@ fn format_test() {
     assert_eq!("broken\n".to_string(), format(100, doc));
 }
 
-// #[test]
-// fn next_break_fits_let_test() {
-//     let elems = break_("", "").append("1").nest(2).append(break_("", ""));
-//
-//     let list = "[".to_doc().append(elems).append("]").group();
-//
-//     let doc = list.clone().next_break_fits().append(" = ").append(list);
-//
-//     println!("{:?}", doc);
-//
-//     assert_eq!(
-//         "[1] = [
-//   1
-// ]",
-//         format(7, doc.clone())
-//     );
-//
-//     assert_eq!(
-//         "[
-//   1
-// ] = [
-//   1
-// ]",
-//         format(2, doc.clone())
-//     );
-//
-//     assert_eq!("[1] = [1]", format(16, doc.clone()));
-// }
+#[test]
+fn let_left_side_fits_test() {
+    let elems = break_("", "").append("1").nest(2).append(break_("", ""));
+    let list = "[".to_doc().append(elems).append("]").group();
+    let doc = list.clone().append(" = ").append(list);
+
+    assert_eq!(
+        "[1] = [
+  1
+]",
+        format(7, doc.clone())
+    );
+
+    assert_eq!(
+        "[
+  1
+] = [
+  1
+]",
+        format(2, doc.clone())
+    );
+
+    assert_eq!("[1] = [1]", format(16, doc.clone()));
+}
