@@ -1694,12 +1694,7 @@ pub fn main(arg) {
 main(Arg) ->
     _ = [1, 2, 3],
     case Arg of
-        {W,
-         X,
-         Y,
-         Z} when (((W =:= {1,
-                           2.0,
-                           <<"3"/utf8>>}) andalso (X =:= <<"constant value"/utf8>>)) andalso (Y > 3.14)) andalso (Z =:= 42) ->
+        {W, X, Y, Z} when (((W =:= {1, 2.0, <<"3"/utf8>>}) andalso (X =:= <<"constant value"/utf8>>)) andalso (Y > 3.14)) andalso (Z =:= 42) ->
             1;
 
         _ ->
