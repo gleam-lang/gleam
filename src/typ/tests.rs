@@ -1,4 +1,121 @@
+use super::test_helpers::*;
 use super::*;
+
+macro_rules! assert_infer {
+    ($src:expr, $typ:expr $(,)?) => {
+        println!("\n{}\n", $src);
+        let mut printer = pretty::Printer::new();
+        let ast = crate::grammar::ExprSequenceParser::new()
+            .parse($src)
+            .expect("syntax error");
+
+        let result = ExprTyper::new(&mut Environment::new(
+            &mut 0,
+            &[],
+            &HashMap::new(),
+            &mut vec![],
+        ))
+        .infer(ast)
+        .expect("should successfully infer");
+        assert_eq!(
+            ($src, printer.pretty_print(result.typ().as_ref(), 0),),
+            ($src, $typ.to_string()),
+        );
+    };
+}
+
+macro_rules! assert_module_error {
+    ($src:expr, $error:expr $(,)?) => {
+        let (src, _) = crate::parser::strip_extra($src);
+        let mut ast = crate::grammar::ModuleParser::new()
+            .parse(&src)
+            .expect("syntax error");
+        ast.name = vec!["my_module".to_string()];
+        let ast = infer_module(&mut 0, ast, &HashMap::new(), &mut vec![])
+            .expect_err("should infer an error");
+        assert_eq!(($src, sort_options($error)), ($src, sort_options(ast)));
+    };
+
+    ($src:expr) => {
+        let ast = crate::grammar::ModuleParser::new()
+            .parse($src)
+            .expect("syntax error");
+        infer_module(&mut 0, ast, &HashMap::new(), &mut vec![]).expect_err("should infer an error");
+    };
+}
+
+macro_rules! assert_error {
+    ($src:expr, $error:expr $(,)?) => {
+        let ast = crate::grammar::ExprSequenceParser::new()
+            .parse($src)
+            .expect("syntax error");
+        let result = ExprTyper::new(&mut Environment::new(
+            &mut 0,
+            &[],
+            &HashMap::new(),
+            &mut vec![],
+        ))
+        .infer(ast)
+        .expect_err("should infer an error");
+        assert_eq!(($src, sort_options($error)), ($src, sort_options(result)),);
+    };
+}
+
+macro_rules! assert_module_infer {
+    ($src:expr, $module:expr $(,)?) => {
+        let (src, _) = crate::parser::strip_extra($src);
+        let ast = crate::grammar::ModuleParser::new()
+            .parse(&src)
+            .expect("syntax error");
+        let ast = infer_module(&mut 0, ast, &HashMap::new(), &mut vec![])
+            .expect("should successfully infer");
+        let mut constructors: Vec<(_, _)> = ast
+            .type_info
+            .values
+            .iter()
+            .map(|(k, v)| {
+                let mut printer = pretty::Printer::new();
+                (k.clone(), printer.pretty_print(&v.typ, 0))
+            })
+            .collect();
+        constructors.sort();
+        let expected: Vec<_> = $module
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect();
+        assert_eq!(($src, constructors), ($src, expected));
+    };
+}
+
+macro_rules! assert_warning {
+    ($src:expr, $warning:expr $(,)?) => {
+        let (src, _) = crate::parser::strip_extra($src);
+        let mut ast = crate::grammar::ModuleParser::new()
+            .parse(&src)
+            .expect("syntax error");
+        ast.name = vec!["my_module".to_string()];
+        let mut warnings = vec![];
+        let _ = infer_module(&mut 0, ast, &HashMap::new(), &mut warnings);
+
+        assert!(!warnings.is_empty());
+        assert_eq!($warning, warnings[0]);
+    };
+}
+
+macro_rules! assert_no_warnings {
+    ($src:expr $(,)?) => {
+        let (src, _) = crate::parser::strip_extra($src);
+        let mut ast = crate::grammar::ModuleParser::new()
+            .parse(&src)
+            .expect("syntax error");
+        ast.name = vec!["my_module".to_string()];
+        let expected: Vec<Warning> = vec![];
+        let mut warnings = vec![];
+        let _ = infer_module(&mut 0, ast, &HashMap::new(), &mut warnings);
+
+        assert_eq!(expected, warnings);
+    };
+}
 
 #[test]
 fn field_map_reorder_test() {
@@ -144,30 +261,7 @@ fn infer_module_type_retention_test() {
 }
 
 #[test]
-fn infer_test() {
-    macro_rules! assert_infer {
-        ($src:expr, $typ:expr $(,)?) => {
-            println!("\n{}\n", $src);
-            let mut printer = pretty::Printer::new();
-            let ast = crate::grammar::ExprSequenceParser::new()
-                .parse($src)
-                .expect("syntax error");
-
-            let result = ExprTyper::new(&mut Environment::new(
-                &mut 0,
-                &[],
-                &HashMap::new(),
-                &mut vec![],
-            ))
-            .infer(ast)
-            .expect("should successfully infer");
-            assert_eq!(
-                ($src, printer.pretty_print(result.typ().as_ref(), 0),),
-                ($src, $typ.to_string()),
-            );
-        };
-    }
-
+fn simple_exprs() {
     assert_infer!("True", "Bool");
     assert_infer!("False", "Bool");
     assert_infer!("1", "Int");
@@ -190,7 +284,19 @@ fn infer_test() {
     assert_infer!("10_000.001", "Float");
     assert_infer!("100_000.", "Float");
 
-    // let
+    // Nil
+    assert_infer!("Nil", "Nil");
+
+    // todo
+    assert_infer!("todo", "a");
+    assert_infer!("1 == todo", "Bool");
+    assert_infer!("todo != 1", "Bool");
+    assert_infer!("todo + 1", "Int");
+    assert_infer!("todo(\"test\") + 1", "Int");
+}
+
+#[test]
+fn let_() {
     assert_infer!("let x = 1 2", "Int");
     assert_infer!("let x = 1 x", "Int");
     assert_infer!("let x = 2.0 x", "Float");
@@ -217,108 +323,6 @@ fn infer_test() {
     assert_infer!("let x: List(_) = [] x", "List(a)");
     assert_infer!("let x: List(_) = [1] x", "List(Int)");
 
-    // list
-    assert_infer!("[]", "List(a)");
-    assert_infer!("[1]", "List(Int)");
-    assert_infer!("[1, 2, 3]", "List(Int)");
-    assert_infer!("[[]]", "List(List(a))");
-    assert_infer!("[[1.0, 2.0]]", "List(List(Float))");
-    assert_infer!("[fn(x) { x }]", "List(fn(a) -> a)");
-    assert_infer!("[fn(x) { x + 1 }]", "List(fn(Int) -> Int)");
-    assert_infer!("[fn(x) { x }, fn(x) { x + 1 }]", "List(fn(Int) -> Int)");
-    assert_infer!("[fn(x) { x + 1 }, fn(x) { x }]", "List(fn(Int) -> Int)");
-    assert_infer!("[[], []]", "List(List(a))");
-    assert_infer!("[[], [1]]", "List(List(Int))");
-
-    assert_infer!("[1, ..[2, ..[]]]", "List(Int)");
-    assert_infer!("[fn(x) { x }, ..[]]", "List(fn(a) -> a)");
-    assert_infer!("let x = [1, ..[]] [2, ..x]", "List(Int)");
-
-    // Trailing commas
-    assert_infer!("[1, ..[2, ..[],]]", "List(Int)");
-    assert_infer!("[fn(x) { x },..[]]", "List(fn(a) -> a)");
-
-    assert_infer!("let f = fn(x) { x } [f, f]", "List(fn(a) -> a)");
-    assert_infer!("[tuple([], [])]", "List(tuple(List(a), List(b)))");
-
-    // anon structs
-    assert_infer!("tuple(1)", "tuple(Int)");
-    assert_infer!("tuple(1, 2.0)", "tuple(Int, Float)");
-    assert_infer!("tuple(1, 2.0, 3)", "tuple(Int, Float, Int)");
-    assert_infer!(
-        "tuple(1, 2.0, tuple(1, 1))",
-        "tuple(Int, Float, tuple(Int, Int))",
-    );
-
-    // fn
-    assert_infer!("fn(x) { x }", "fn(a) -> a");
-    assert_infer!("fn(x) { x }", "fn(a) -> a");
-    assert_infer!("fn(x, y) { x }", "fn(a, b) -> a");
-    assert_infer!("fn(x, y) { [] }", "fn(a, b) -> List(c)");
-    assert_infer!("let x = 1.0 1", "Int");
-    assert_infer!("let id = fn(x) { x } id(1)", "Int");
-    assert_infer!("let x = fn() { 1.0 } x()", "Float");
-    assert_infer!("fn(x) { x }(1)", "Int");
-    assert_infer!("fn() { 1 }", "fn() -> Int");
-    assert_infer!("fn() { 1.1 }", "fn() -> Float");
-    assert_infer!("fn(x) { 1.1 }", "fn(a) -> Float");
-    assert_infer!("fn(x) { x }", "fn(a) -> a");
-    assert_infer!("let x = fn(x) { 1.1 } x", "fn(a) -> Float");
-    assert_infer!("fn(x, y, z) { 1 }", "fn(a, b, c) -> Int");
-    assert_infer!("fn(x) { let y = x y }", "fn(a) -> a");
-    assert_infer!("let id = fn(x) { x } id(1)", "Int");
-    assert_infer!(
-        "let constant = fn(x) { fn(y) { x } } let one = constant(1) one(2.0)",
-        "Int",
-    );
-    assert_infer!("fn(f) { f(1) }", "fn(fn(Int) -> a) -> a");
-    assert_infer!("fn(f, x) { f(x) }", "fn(fn(a) -> b, a) -> b");
-    assert_infer!("fn(f) { fn(x) { f(x) } }", "fn(fn(a) -> b) -> fn(a) -> b");
-    assert_infer!(
-        "fn(f) { fn(x) { fn(y) { f(x, y) } } }",
-        "fn(fn(a, b) -> c) -> fn(a) -> fn(b) -> c",
-    );
-    assert_infer!(
-        "fn(f) { fn(x, y) { f(x)(y) } }",
-        "fn(fn(a) -> fn(b) -> c) -> fn(a, b) -> c",
-    );
-    assert_infer!(
-        "fn(f) { fn(x) { let ff = f ff(x) } }",
-        "fn(fn(a) -> b) -> fn(a) -> b",
-    );
-    assert_infer!(
-        "fn(f) { fn(x, y) { let ff = f(x) ff(y) } }",
-        "fn(fn(a) -> fn(b) -> c) -> fn(a, b) -> c",
-    );
-    assert_infer!("fn(x) { fn(y) { x } }", "fn(a) -> fn(b) -> a");
-    assert_infer!("fn(f) { f() }", "fn(fn() -> a) -> a");
-    assert_infer!("fn(f, x) { f(f(x)) }", "fn(fn(a) -> a, a) -> a");
-    assert_infer!(
-        "let id = fn(a) { a } fn(x) { x(id) }",
-        "fn(fn(fn(a) -> a) -> b) -> b",
-    );
-    assert_infer!("let add = fn(x, y) { x + y } add(_, 2)", "fn(Int) -> Int");
-    assert_infer!("fn(x) { tuple(1, x) }", "fn(a) -> tuple(Int, a)");
-    assert_infer!("fn(x, y) { tuple(x, y) }", "fn(a, b) -> tuple(a, b)");
-    assert_infer!("fn(x) { tuple(x, x) }", "fn(a) -> tuple(a, a)");
-    assert_infer!("fn(x) -> Int { x }", "fn(Int) -> Int");
-    assert_infer!("fn(x) -> a { x }", "fn(a) -> a");
-    assert_infer!("fn() -> Int { 2 }", "fn() -> Int");
-
-    // case
-    assert_infer!("case 1 { a -> 1 }", "Int");
-    assert_infer!("case 1 { a -> 1.0 b -> 2.0 c -> 3.0 }", "Float");
-    assert_infer!("case 1 { a -> a }", "Int");
-    assert_infer!("case 1 { 1 -> 10 2 -> 20 x -> x * 10 }", "Int");
-    assert_infer!("case 2.0 { 2.0 -> 1 x -> 0 }", "Int");
-    assert_infer!(r#"case "ok" { "ko" -> 1 x -> 0 }"#, "Int");
-
-    // Multiple subject case
-    assert_infer!("case 1, 2.0 { a, b -> a }", "Int");
-    assert_infer!("case 1, 2.0 { a, b -> b }", "Float");
-    assert_infer!("case 1, 2.0, 3 { a, b, c -> a + c }", "Int");
-
-    // let
     assert_infer!("let [] = [] 1", "Int");
     assert_infer!("let [a] = [1] a", "Int");
     assert_infer!("let [a, 2] = [1] a", "Int");
@@ -357,22 +361,127 @@ fn infer_test() {
         "Result(Int, Nil)"
     );
     assert_infer!("try x = Error(Nil) Ok(x + 1)", "Result(Int, Nil)");
+}
 
-    // Nil
-    assert_infer!("Nil", "Nil");
+#[test]
+fn lists() {
+    assert_infer!("[]", "List(a)");
+    assert_infer!("[1]", "List(Int)");
+    assert_infer!("[1, 2, 3]", "List(Int)");
+    assert_infer!("[[]]", "List(List(a))");
+    assert_infer!("[[1.0, 2.0]]", "List(List(Float))");
+    assert_infer!("[fn(x) { x }]", "List(fn(a) -> a)");
+    assert_infer!("[fn(x) { x + 1 }]", "List(fn(Int) -> Int)");
+    assert_infer!("[fn(x) { x }, fn(x) { x + 1 }]", "List(fn(Int) -> Int)");
+    assert_infer!("[fn(x) { x + 1 }, fn(x) { x }]", "List(fn(Int) -> Int)");
+    assert_infer!("[[], []]", "List(List(a))");
+    assert_infer!("[[], [1]]", "List(List(Int))");
 
-    // todo
-    assert_infer!("todo", "a");
-    assert_infer!("1 == todo", "Bool");
-    assert_infer!("todo != 1", "Bool");
-    assert_infer!("todo + 1", "Int");
-    assert_infer!("todo(\"test\") + 1", "Int");
+    assert_infer!("[1, ..[2, ..[]]]", "List(Int)");
+    assert_infer!("[fn(x) { x }, ..[]]", "List(fn(a) -> a)");
+    assert_infer!("let x = [1, ..[]] [2, ..x]", "List(Int)");
 
-    // tuple index
+    // Trailing commas
+    assert_infer!("[1, ..[2, ..[],]]", "List(Int)");
+    assert_infer!("[fn(x) { x },..[]]", "List(fn(a) -> a)");
+
+    assert_infer!("let f = fn(x) { x } [f, f]", "List(fn(a) -> a)");
+    assert_infer!("[tuple([], [])]", "List(tuple(List(a), List(b)))");
+}
+
+#[test]
+fn tuples() {
+    assert_infer!("tuple(1)", "tuple(Int)");
+    assert_infer!("tuple(1, 2.0)", "tuple(Int, Float)");
+    assert_infer!("tuple(1, 2.0, 3)", "tuple(Int, Float, Int)");
+    assert_infer!(
+        "tuple(1, 2.0, tuple(1, 1))",
+        "tuple(Int, Float, tuple(Int, Int))",
+    );
+}
+
+#[test]
+fn expr_fn() {
+    assert_infer!("fn(x) { x }", "fn(a) -> a");
+    assert_infer!("fn(x) { x }", "fn(a) -> a");
+    assert_infer!("fn(x, y) { x }", "fn(a, b) -> a");
+    assert_infer!("fn(x, y) { [] }", "fn(a, b) -> List(c)");
+    assert_infer!("let x = 1.0 1", "Int");
+    assert_infer!("let id = fn(x) { x } id(1)", "Int");
+    assert_infer!("let x = fn() { 1.0 } x()", "Float");
+    assert_infer!("fn(x) { x }(1)", "Int");
+    assert_infer!("fn() { 1 }", "fn() -> Int");
+    assert_infer!("fn() { 1.1 }", "fn() -> Float");
+    assert_infer!("fn(x) { 1.1 }", "fn(a) -> Float");
+    assert_infer!("fn(x) { x }", "fn(a) -> a");
+    assert_infer!("let x = fn(x) { 1.1 } x", "fn(a) -> Float");
+    assert_infer!("fn(x, y, z) { 1 }", "fn(a, b, c) -> Int");
+    assert_infer!("fn(x) { let y = x y }", "fn(a) -> a");
+    assert_infer!("let id = fn(x) { x } id(1)", "Int");
+    assert_infer!(
+        "let constant = fn(x) { fn(y) { x } } let one = constant(1) one(2.0)",
+        "Int",
+    );
+
+    assert_infer!("fn(f) { f(1) }", "fn(fn(Int) -> a) -> a");
+    assert_infer!("fn(f, x) { f(x) }", "fn(fn(a) -> b, a) -> b");
+    assert_infer!("fn(f) { fn(x) { f(x) } }", "fn(fn(a) -> b) -> fn(a) -> b");
+    assert_infer!(
+        "fn(f) { fn(x) { fn(y) { f(x, y) } } }",
+        "fn(fn(a, b) -> c) -> fn(a) -> fn(b) -> c",
+    );
+    assert_infer!(
+        "fn(f) { fn(x, y) { f(x)(y) } }",
+        "fn(fn(a) -> fn(b) -> c) -> fn(a, b) -> c",
+    );
+    assert_infer!(
+        "fn(f) { fn(x) { let ff = f ff(x) } }",
+        "fn(fn(a) -> b) -> fn(a) -> b",
+    );
+    assert_infer!(
+        "fn(f) { fn(x, y) { let ff = f(x) ff(y) } }",
+        "fn(fn(a) -> fn(b) -> c) -> fn(a, b) -> c",
+    );
+    assert_infer!("fn(x) { fn(y) { x } }", "fn(a) -> fn(b) -> a");
+    assert_infer!("fn(f) { f() }", "fn(fn() -> a) -> a");
+    assert_infer!("fn(f, x) { f(f(x)) }", "fn(fn(a) -> a, a) -> a");
+    assert_infer!(
+        "let id = fn(a) { a } fn(x) { x(id) }",
+        "fn(fn(fn(a) -> a) -> b) -> b",
+    );
+
+    assert_infer!("let add = fn(x, y) { x + y } add(_, 2)", "fn(Int) -> Int");
+    assert_infer!("fn(x) { tuple(1, x) }", "fn(a) -> tuple(Int, a)");
+    assert_infer!("fn(x, y) { tuple(x, y) }", "fn(a, b) -> tuple(a, b)");
+    assert_infer!("fn(x) { tuple(x, x) }", "fn(a) -> tuple(a, a)");
+    assert_infer!("fn(x) -> Int { x }", "fn(Int) -> Int");
+    assert_infer!("fn(x) -> a { x }", "fn(a) -> a");
+    assert_infer!("fn() -> Int { 2 }", "fn() -> Int");
+}
+
+#[test]
+fn case() {
+    assert_infer!("case 1 { a -> 1 }", "Int");
+    assert_infer!("case 1 { a -> 1.0 b -> 2.0 c -> 3.0 }", "Float");
+    assert_infer!("case 1 { a -> a }", "Int");
+    assert_infer!("case 1 { 1 -> 10 2 -> 20 x -> x * 10 }", "Int");
+    assert_infer!("case 2.0 { 2.0 -> 1 x -> 0 }", "Int");
+    assert_infer!(r#"case "ok" { "ko" -> 1 x -> 0 }"#, "Int");
+
+    // Multiple subject case
+    assert_infer!("case 1, 2.0 { a, b -> a }", "Int");
+    assert_infer!("case 1, 2.0 { a, b -> b }", "Float");
+    assert_infer!("case 1, 2.0, 3 { a, b, c -> a + c }", "Int");
+}
+
+#[test]
+fn tuple_index() {
     assert_infer!("tuple(1, 2.0).0", "Int");
     assert_infer!("tuple(1, 2.0).1", "Float");
+}
 
-    // pipe |>
+#[test]
+fn pipe() {
     assert_infer!("1 |> fn(x) { x }", "Int");
     assert_infer!("1.0 |> fn(x) { x }", "Float");
     assert_infer!("let id = fn(x) { x } 1 |> id", "Int");
@@ -386,8 +495,10 @@ fn infer_test() {
         "let add = fn(x, _, _) { fn(y) { y + x } } 1 |> add(1, 2, 3)",
         "Int"
     );
+}
 
-    // BitStrings
+#[test]
+fn bit_strings() {
     assert_infer!("let <<x>> = <<1>> x", "Int");
     assert_infer!("let <<x>> = <<1>> x", "Int");
     assert_infer!("let <<x:float>> = <<1>> x", "Float");
@@ -421,29 +532,24 @@ fn infer_test() {
         "let x = <<<<1>>:bit_string, <<2>>:bit_string>> x",
         "BitString"
     );
-}
 
-macro_rules! assert_error {
-    ($src:expr, $error:expr $(,)?) => {
-        let ast = crate::grammar::ExprSequenceParser::new()
-            .parse($src)
-            .expect("syntax error");
-        let result = ExprTyper::new(&mut Environment::new(
-            &mut 0,
-            &[],
-            &HashMap::new(),
-            &mut vec![],
-        ))
-        .infer(ast)
-        .expect_err("should infer an error");
-        assert_eq!(($src, sort_options($error)), ($src, sort_options(result)),);
-    };
+    assert_module_error!(
+        "fn x() { \"test\" }
+
+fn main() {
+    let a = <<1:size(x())>>
+    a
+}",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 52, end: 55 },
+            expected: int(),
+            given: string(),
+        },
+    );
 }
 
 #[test]
 fn infer_bit_string_error_test() {
-    // Values
-
     assert_error!(
         "case <<1>> { <<2.0, a>> -> 1 }",
         Error::CouldNotUnify {
@@ -648,7 +754,7 @@ fn infer_bit_string_error_test() {
 }
 
 #[test]
-fn infer_error_test() {
+fn binop_unification_errors() {
     assert_error!(
         "1 + 1.0",
         Error::CouldNotUnify {
@@ -695,6 +801,26 @@ fn infer_error_test() {
     );
 
     assert_error!(
+        "fn() { 1 } == fn(x) { x + 1 }",
+        Error::CouldNotUnify {
+            location: SrcSpan { start: 14, end: 29 },
+            expected: Arc::new(Type::Fn {
+                args: vec![],
+                retrn: int(),
+            }),
+            given: Arc::new(Type::Fn {
+                args: vec![Arc::new(Type::Var {
+                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() })),
+                })],
+                retrn: int(),
+            }),
+        },
+    );
+}
+
+#[test]
+fn unknown_variable() {
+    assert_error!(
         "x",
         Error::UnknownVariable {
             location: SrcSpan { start: 0, end: 1 },
@@ -712,6 +838,27 @@ fn infer_error_test() {
         },
     );
 
+    assert_error!(
+        "case 1 { x -> 1 1 -> x }",
+        Error::UnknownVariable {
+            location: SrcSpan { start: 21, end: 22 },
+            name: "x".to_string(),
+            variables: env_vars(),
+        },
+    );
+
+    assert_error!(
+        "let add = fn(x, y) { x + y } 1 |> add(unknown)",
+        Error::UnknownVariable {
+            location: SrcSpan { start: 38, end: 45 },
+            name: "unknown".to_string(),
+            variables: env_vars_with(&["add"]),
+        },
+    );
+}
+
+#[test]
+fn incorrect_arity_error() {
     assert_error!(
         "let id = fn(x) { x } id()",
         Error::IncorrectArity {
@@ -731,7 +878,10 @@ fn infer_error_test() {
             given: 2,
         },
     );
+}
 
+#[test]
+fn case_clause_unification_error() {
     assert_error!(
         "case 1 { a -> 1 b -> 2.0 }",
         Error::CouldNotUnify {
@@ -776,24 +926,10 @@ fn infer_error_test() {
             given: int(),
         },
     );
+}
 
-    assert_error!(
-        "fn() { 1 } == fn(x) { x + 1 }",
-        Error::CouldNotUnify {
-            location: SrcSpan { start: 14, end: 29 },
-            expected: Arc::new(Type::Fn {
-                args: vec![],
-                retrn: int(),
-            }),
-            given: Arc::new(Type::Fn {
-                args: vec![Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() })),
-                })],
-                retrn: int(),
-            }),
-        },
-    );
-
+#[test]
+fn annotated_functions_unification_error() {
     assert_error!(
         "let f = fn(x: Int) { x } f(1.0)",
         Error::CouldNotUnify {
@@ -820,16 +956,10 @@ fn infer_error_test() {
             given: int(),
         },
     );
+}
 
-    assert_error!(
-        "case 1 { x -> 1 1 -> x }",
-        Error::UnknownVariable {
-            location: SrcSpan { start: 21, end: 22 },
-            name: "x".to_string(),
-            variables: env_vars(),
-        },
-    );
-
+#[test]
+fn the_rest() {
     assert_error!(
         "case tuple(1, 2, 3) { x if x == tuple(1, 1.0) -> 1 }",
         Error::CouldNotUnify {
@@ -1283,15 +1413,6 @@ fn infer_error_test() {
     );
 
     assert_error!(
-        "let add = fn(x, y) { x + y } 1 |> add(unknown)",
-        Error::UnknownVariable {
-            location: SrcSpan { start: 38, end: 45 },
-            name: "unknown".to_string(),
-            variables: env_vars_with(&["add"]),
-        },
-    );
-
-    assert_error!(
         "try x = Error(1) try y = Error(1.) Ok(x)",
         Error::CouldNotUnify {
             location: SrcSpan { start: 17, end: 34 },
@@ -1418,33 +1539,7 @@ fn infer_error_test() {
 
 #[test]
 fn infer_module_test() {
-    macro_rules! assert_infer {
-        ($src:expr, $module:expr $(,)?) => {
-            let (src, _) = crate::parser::strip_extra($src);
-            let ast = crate::grammar::ModuleParser::new()
-                .parse(&src)
-                .expect("syntax error");
-            let ast = infer_module(&mut 0, ast, &HashMap::new(), &mut vec![])
-                .expect("should successfully infer");
-            let mut constructors: Vec<(_, _)> = ast
-                .type_info
-                .values
-                .iter()
-                .map(|(k, v)| {
-                    let mut printer = pretty::Printer::new();
-                    (k.clone(), printer.pretty_print(&v.typ, 0))
-                })
-                .collect();
-            constructors.sort();
-            let expected: Vec<_> = $module
-                .into_iter()
-                .map(|(k, v)| (k.to_string(), v.to_string()))
-                .collect();
-            assert_eq!(($src, constructors), ($src, expected));
-        };
-    }
-
-    assert_infer!(
+    assert_module_infer!(
         "pub fn repeat(i, x) {
            case i {
              0 -> []
@@ -1454,13 +1549,13 @@ fn infer_module_test() {
         vec![("repeat", "fn(Int, a) -> List(a)")],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "fn private() { 1 }
          pub fn public() { 1 }",
         vec![("public", "fn() -> Int")],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "pub type Is { Yes No }
          pub fn yes() { Yes }
          pub fn no() { No }",
@@ -1472,13 +1567,13 @@ fn infer_module_test() {
         ],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "pub type Num { I(Int) }
          pub fn one() { I(1) }",
         vec![("I", "fn(Int) -> Num"), ("one", "fn() -> Num")],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "pub fn id(x) { x }
          pub fn float() { id(1.0) }
          pub fn int() { id(1) }",
@@ -1489,7 +1584,7 @@ fn infer_module_test() {
         ],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "pub type Box(a) { Box(a) }
         pub fn int() { Box(1) }
         pub fn float() { Box(1.0) }",
@@ -1500,71 +1595,71 @@ fn infer_module_test() {
         ],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "pub type Singleton { Singleton }
         pub fn go(x) { let Singleton = x 1 }",
         vec![("Singleton", "Singleton"), ("go", "fn(Singleton) -> Int")],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "pub type Box(a) { Box(a) }
         pub fn unbox(x) { let Box(a) = x a }",
         vec![("Box", "fn(a) -> Box(a)"), ("unbox", "fn(Box(a)) -> a")],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "pub type I { I(Int) }
         pub fn open(x) { case x { I(i) -> i  } }",
         vec![("I", "fn(Int) -> I"), ("open", "fn(I) -> Int")],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "pub fn status() { 1 } pub fn list_of(x) { [x] }",
         vec![("list_of", "fn(a) -> List(a)"), ("status", "fn() -> Int")],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "pub external fn go(String) -> String = \"\" \"\"",
         vec![("go", "fn(String) -> String")],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "pub external fn go(Int) -> Float = \"\" \"\"",
         vec![("go", "fn(Int) -> Float")],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "pub external fn go(Int) -> Int = \"\" \"\"",
         vec![("go", "fn(Int) -> Int")],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "pub external fn ok() -> fn(Int) -> Int = \"\" \"\"",
         vec![("ok", "fn() -> fn(Int) -> Int")],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "pub external fn go(Int) -> b = \"\" \"\"",
         vec![("go", "fn(Int) -> a")],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "pub external fn go(Bool) -> b = \"\" \"\"",
         vec![("go", "fn(Bool) -> a")],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "pub external fn go(List(a)) -> a = \"\" \"\"",
         vec![("go", "fn(List(a)) -> a")],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "external fn go(Int) -> b = \"\" \"\"
         pub fn x() { go(1) }",
         vec![("x", "fn() -> a")],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "external fn id(a) -> a = \"\" \"\"
         pub fn i(x) { id(x) }
         pub fn a() { id(1) }
@@ -1576,24 +1671,24 @@ fn infer_module_test() {
         ],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "pub external fn len(List(a)) -> Int = \"\" \"\"",
         vec![("len", "fn(List(a)) -> Int")],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "pub external type Connection\n
          pub external fn is_open(Connection) -> Bool = \"\" \"\"",
         vec![("is_open", "fn(Connection) -> Bool")],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "pub external type Pair(thing, thing)\n
          pub external fn pair(a) -> Pair(a, a) = \"\" \"\"",
         vec![("pair", "fn(a) -> Pair(a, a)")],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "pub fn one() { 1 }
          pub fn zero() { one() - 1 }
          pub fn two() { one() + zero() }",
@@ -1604,7 +1699,7 @@ fn infer_module_test() {
         ],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "pub fn one() { 1 }
          pub fn zero() { one() - 1 }
          pub fn two() { one() + zero() }",
@@ -1616,31 +1711,31 @@ fn infer_module_test() {
     );
 
     // Type annotations
-    assert_infer!("pub fn go(x: Int) { x }", vec![("go", "fn(Int) -> Int")],);
-    assert_infer!("pub fn go(x: b) -> b { x }", vec![("go", "fn(a) -> a")],);
-    assert_infer!("pub fn go(x) -> b { x }", vec![("go", "fn(a) -> a")],);
-    assert_infer!("pub fn go(x: b) { x }", vec![("go", "fn(a) -> a")],);
-    assert_infer!(
+    assert_module_infer!("pub fn go(x: Int) { x }", vec![("go", "fn(Int) -> Int")],);
+    assert_module_infer!("pub fn go(x: b) -> b { x }", vec![("go", "fn(a) -> a")],);
+    assert_module_infer!("pub fn go(x) -> b { x }", vec![("go", "fn(a) -> a")],);
+    assert_module_infer!("pub fn go(x: b) { x }", vec![("go", "fn(a) -> a")],);
+    assert_module_infer!(
         "pub fn go(x: List(b)) -> List(b) { x }",
         vec![("go", "fn(List(a)) -> List(a)")],
     );
-    assert_infer!(
+    assert_module_infer!(
         "pub fn go(x: List(b)) { x }",
         vec![("go", "fn(List(a)) -> List(a)")],
     );
-    assert_infer!(
+    assert_module_infer!(
         "pub fn go(x: List(String)) { x }",
         vec![("go", "fn(List(String)) -> List(String)")],
     );
-    assert_infer!("pub fn go(x: b, y: c) { x }", vec![("go", "fn(a, b) -> a")],);
-    assert_infer!("pub fn go(x) -> Int { x }", vec![("go", "fn(Int) -> Int")],);
+    assert_module_infer!("pub fn go(x: b, y: c) { x }", vec![("go", "fn(a, b) -> a")],);
+    assert_module_infer!("pub fn go(x) -> Int { x }", vec![("go", "fn(Int) -> Int")],);
 
-    assert_infer!(
+    assert_module_infer!(
         "type Html = String
          pub fn go() { 1 }",
         vec![("go", "fn() -> Int")],
     );
-    assert_infer!(
+    assert_module_infer!(
         "pub fn length(list) {
            case list {
            [] -> 0
@@ -1651,15 +1746,15 @@ fn infer_module_test() {
     );
 
     // Structs
-    assert_infer!(
+    assert_module_infer!(
         "pub type Box { Box(boxed: Int) }",
         vec![("Box", "fn(Int) -> Box")]
     );
-    assert_infer!(
+    assert_module_infer!(
         "pub type Tup(a, b) { Tup(first: a, second: b) }",
         vec![("Tup", "fn(a, b) -> Tup(a, b)")]
     );
-    assert_infer!(
+    assert_module_infer!(
         "pub type Tup(a, b, c) { Tup(first: a, second: b, third: c) }
          pub fn third(t) { let Tup(_ , _, third: a) = t a }",
         vec![
@@ -1667,7 +1762,7 @@ fn infer_module_test() {
             ("third", "fn(Tup(a, b, c)) -> c"),
         ],
     );
-    assert_infer!(
+    assert_module_infer!(
         "pub type Box(x) { Box(label: String, contents: x) }
          pub fn id(x: Box(y)) { x }",
         vec![
@@ -1677,54 +1772,54 @@ fn infer_module_test() {
     );
 
     // Anon structs
-    assert_infer!(
+    assert_module_infer!(
         "pub fn ok(x) { tuple(1, x) }",
         vec![("ok", "fn(a) -> tuple(Int, a)")],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "pub external fn ok(Int) -> tuple(Int, Int) = \"\" \"\"",
         vec![("ok", "fn(Int) -> tuple(Int, Int)")],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "pub external fn go(tuple(a, c)) -> c = \"\" \"\"",
         vec![("go", "fn(tuple(a, b)) -> b")],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "pub fn always(ignore _a, return b) { b }",
         vec![("always", "fn(a, b) -> b")],
     );
 
     // Using types before they are defined
 
-    assert_infer!(
+    assert_module_infer!(
         "pub type I { I(Num) } pub type Num { Num }",
         vec![("I", "fn(Num) -> I"), ("Num", "Num")]
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "pub type I { I(Num) } pub external type Num",
         vec![("I", "fn(Num) -> I")]
     );
 
     // We can create an aliases
-    assert_infer!(
+    assert_module_infer!(
         "type IntString = Result(Int, String)
          pub fn ok_one() -> IntString { Ok(1) }",
         vec![("ok_one", "fn() -> Result(Int, String)")]
     );
 
     // We can create an alias with the same name as a built in type
-    assert_infer!(
+    assert_module_infer!(
         "type Int = Float
          pub fn ok_one() -> Int { 1.0 }",
         vec![("ok_one", "fn() -> Float")]
     );
 
     // We can access fields on custom types with only one record
-    assert_infer!(
+    assert_module_infer!(
         "
 pub type Person { Person(name: String, age: Int) }
 pub fn get_age(person: Person) { person.age }
@@ -1737,7 +1832,7 @@ pub fn get_name(person: Person) { person.name }",
     );
 
     // We can access fields on custom types with only one record
-    assert_infer!(
+    assert_module_infer!(
         "
 pub type One { One(name: String) }
 pub type Two { Two(one: One) }
@@ -1750,7 +1845,7 @@ pub fn get(x: Two) { x.one.name }",
     );
 
     // Field access correctly handles type parameters
-    assert_infer!(
+    assert_module_infer!(
         "
 pub type Box(a) { Box(inner: a) }
 pub fn get_box(x: Box(Box(a))) { x.inner }
@@ -1770,7 +1865,7 @@ pub fn get_string(x: Box(String)) { x.inner }
     );
 
     // Field access works before type is defined
-    assert_infer!(
+    assert_module_infer!(
         "
 pub fn name(cat: Cat) {
   cat.name
@@ -1783,7 +1878,7 @@ pub opaque type Cat {
     );
 
     // We can annotate let with custom types
-    assert_infer!(
+    assert_module_infer!(
         "
         pub type Person {
             Person(name: String, age: Int)
@@ -1799,7 +1894,7 @@ pub opaque type Cat {
         ]
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "
         pub type Box(inner) {
             Box(inner)
@@ -1823,7 +1918,7 @@ pub opaque type Cat {
 
     // Opaque type constructors are available in the module where they are defined
     // but are not exported
-    assert_infer!(
+    assert_module_infer!(
         "
 pub opaque type One { One(name: String) }
 pub fn get(x: One) { x.name }",
@@ -1831,7 +1926,7 @@ pub fn get(x: One) { x.name }",
     );
 
     // Type variables are shared between function annotations and function annotations within their body
-    assert_infer!(
+    assert_module_infer!(
         "
         pub type Box(a) {
             Box(value: a)
@@ -1846,7 +1941,7 @@ pub fn get(x: One) { x.name }",
     );
 
     // Type variables are shared between function annotations and let annotations within their body
-    assert_infer!(
+    assert_module_infer!(
         "
         pub type Box(a) {
             Box(value: a)
@@ -1862,7 +1957,7 @@ pub fn get(x: One) { x.name }",
     );
 
     // Module constants
-    assert_infer!(
+    assert_module_infer!(
         "
     pub const test_int1 = 123
     pub const test_int2: Int = 321
@@ -1880,7 +1975,7 @@ pub fn get(x: One) { x.name }",
         ],
     );
 
-    assert_infer!(
+    assert_module_infer!(
         "
 pub type Box {
   Box(a: Nil, b: Int, c: Int, d: Int)
@@ -1896,7 +1991,7 @@ pub fn main() {
     );
 
     // No arguments given to a record update
-    assert_infer!(
+    assert_module_infer!(
         "
         pub type Person {
             Person(name: String, age: Int)
@@ -1911,7 +2006,7 @@ pub fn main() {
     );
 
     // Some arguments given to a record update
-    assert_infer!(
+    assert_module_infer!(
         "
         pub type Person {
             Person(name: String, age: Int)
@@ -1926,7 +2021,7 @@ pub fn main() {
     );
 
     // All arguments given in order to a record update
-    assert_infer!(
+    assert_module_infer!(
         "
         pub type Person {
             Person(name: String, age: Int)
@@ -1941,7 +2036,7 @@ pub fn main() {
     );
 
     // All arguments given out of order to a record update
-    assert_infer!(
+    assert_module_infer!(
         "
         pub type Person {
             Person(name: String, age: Int)
@@ -1956,7 +2051,7 @@ pub fn main() {
     );
 
     // A record update with polymorphic types
-    assert_infer!(
+    assert_module_infer!(
         "
         pub type Box(a, b) {
             Box(left: a, right: b)
@@ -1975,7 +2070,7 @@ pub fn main() {
     );
 
     // A record update with unannotated polymorphic types
-    assert_infer!(
+    assert_module_infer!(
         "
         pub type Box(a, b) {
             Box(left: a, right: b)
@@ -1993,28 +2088,7 @@ pub fn main() {
 
 #[test]
 fn infer_module_error_test() {
-    macro_rules! assert_error {
-        ($src:expr, $error:expr $(,)?) => {
-            let (src, _) = crate::parser::strip_extra($src);
-            let mut ast = crate::grammar::ModuleParser::new()
-                .parse(&src)
-                .expect("syntax error");
-            ast.name = vec!["my_module".to_string()];
-            let ast = infer_module(&mut 0, ast, &HashMap::new(), &mut vec![])
-                .expect_err("should infer an error");
-            assert_eq!(($src, sort_options($error)), ($src, sort_options(ast)));
-        };
-
-        ($src:expr) => {
-            let ast = crate::grammar::ModuleParser::new()
-                .parse($src)
-                .expect("syntax error");
-            infer_module(&mut 0, ast, &HashMap::new(), &mut vec![])
-                .expect_err("should infer an error");
-        };
-    }
-
-    assert_error!(
+    assert_module_error!(
         "fn go() { 1 + 2.0 }",
         Error::CouldNotUnify {
             location: SrcSpan { start: 14, end: 17 },
@@ -2023,7 +2097,7 @@ fn infer_module_error_test() {
         }
     );
 
-    assert_error!(
+    assert_module_error!(
         "fn go() { 1 + 2.0 }",
         Error::CouldNotUnify {
             location: SrcSpan { start: 14, end: 17 },
@@ -2032,7 +2106,7 @@ fn infer_module_error_test() {
         }
     );
 
-    assert_error!(
+    assert_module_error!(
         "
 fn id(x: a, y: a) { x }
 pub fn x() { id(1, 1.0) }
@@ -2044,7 +2118,7 @@ pub fn x() { id(1, 1.0) }
         }
     );
 
-    assert_error!(
+    assert_module_error!(
         "
 fn bar() -> Int {
     5
@@ -2070,7 +2144,7 @@ fn demo() {
         },
     );
 
-    assert_error!(
+    assert_module_error!(
         "
 fn bar(x: Int) -> Int {
     x * 5
@@ -2099,7 +2173,7 @@ fn demo() {
         },
     );
 
-    assert_error!(
+    assert_module_error!(
         "fn main() { let x: String = 5 x }",
         Error::CouldNotUnify {
             location: SrcSpan { start: 28, end: 29 },
@@ -2108,7 +2182,7 @@ fn demo() {
         },
     );
 
-    assert_error!(
+    assert_module_error!(
         "fn main() { assert 5: Int = \"\" 5 }",
         Error::CouldNotUnify {
             location: SrcSpan { start: 19, end: 20 },
@@ -2117,7 +2191,7 @@ fn demo() {
         },
     );
 
-    assert_error!(
+    assert_module_error!(
         "fn main() { let x: tuple(x, x) = tuple(5, 5.0) x }",
         Error::CouldNotUnify {
             location: SrcSpan { start: 33, end: 46 },
@@ -2133,7 +2207,7 @@ fn demo() {
         },
     );
 
-    assert_error!(
+    assert_module_error!(
         "fn main() { let [1, 2, ..x]: List(String) = [1,2,3] x }",
         Error::CouldNotUnify {
             location: SrcSpan { start: 44, end: 51 },
@@ -2142,7 +2216,7 @@ fn demo() {
         },
     );
 
-    assert_error!(
+    assert_module_error!(
         "fn main() {
             let tuple(y, [..x]): tuple(x, List(x)) = tuple(\"foo\", [1,2,3])
             x
@@ -2161,7 +2235,7 @@ fn demo() {
         },
     );
 
-    assert_error!(
+    assert_module_error!(
         "
         pub type Box(inner) {
             Box(inner)
@@ -2191,7 +2265,7 @@ fn demo() {
         },
     );
 
-    assert_error!(
+    assert_module_error!(
         "
         pub type Person {
             Person(name: String, age: Int)
@@ -2211,7 +2285,7 @@ fn demo() {
         },
     );
 
-    assert_error!(
+    assert_module_error!(
         "external fn go(List(a, b)) -> a = \"\" \"\"",
         Error::IncorrectTypeArity {
             location: SrcSpan { start: 15, end: 25 },
@@ -2222,7 +2296,7 @@ fn demo() {
     );
 
     // We cannot declare two functions with the same name in a module
-    assert_error!(
+    assert_module_error!(
         "fn dupe() { 1 }
          fn dupe() { 2 }",
         Error::DuplicateName {
@@ -2233,7 +2307,7 @@ fn demo() {
     );
 
     // We cannot declare two functions with the same name in a module
-    assert_error!(
+    assert_module_error!(
         "fn dupe() { 1 }
          fn dupe(x) { x }",
         Error::DuplicateName {
@@ -2244,7 +2318,7 @@ fn demo() {
     );
 
     // We cannot declare two functions with the same name in a module
-    assert_error!(
+    assert_module_error!(
         "fn dupe() { 1 }
          external fn dupe(x) -> x = \"\" \"\"",
         Error::DuplicateName {
@@ -2255,7 +2329,7 @@ fn demo() {
     );
 
     // We cannot declare two functions with the same name in a module
-    assert_error!(
+    assert_module_error!(
         "external fn dupe(x) -> x = \"\" \"\"
          fn dupe() { 1 }",
         Error::DuplicateName {
@@ -2266,7 +2340,7 @@ fn demo() {
     );
 
     // We cannot declare two type constructors with the same name in a module
-    assert_error!(
+    assert_module_error!(
         "type Box { Box(x: Int) }
          type Boxy { Box(Int) }",
         Error::DuplicateName {
@@ -2277,7 +2351,7 @@ fn demo() {
     );
 
     // We cannot declare two type constructors with the same name in a module
-    assert_error!(
+    assert_module_error!(
         "type Boxy { Box(Int) }
          type Box { Box(x: Int) }",
         Error::DuplicateName {
@@ -2288,7 +2362,7 @@ fn demo() {
     );
 
     // We cannot declare two type constructors with the same name in a module
-    assert_error!(
+    assert_module_error!(
         "type Boxy { Box(Int) Box(Float) }",
         Error::DuplicateName {
             location: SrcSpan { start: 21, end: 31 },
@@ -2298,7 +2372,7 @@ fn demo() {
     );
 
     // We cannot declare two types with the same name in a module
-    assert_error!(
+    assert_module_error!(
         "type DupType { A }
          type DupType { B }",
         Error::DuplicateTypeName {
@@ -2308,7 +2382,7 @@ fn demo() {
         }
     );
 
-    assert_error!(
+    assert_module_error!(
         r#"external type PrivateType
            pub external fn leak_type() -> PrivateType = "" """#,
         Error::PrivateTypeLeak {
@@ -2322,7 +2396,7 @@ fn demo() {
         }
     );
 
-    assert_error!(
+    assert_module_error!(
         r#"external type PrivateType
            external fn go() -> PrivateType = "" ""
            pub fn leak_type() { go() }"#,
@@ -2340,7 +2414,7 @@ fn demo() {
         }
     );
 
-    assert_error!(
+    assert_module_error!(
         r#"external type PrivateType
            external fn go() -> PrivateType = "" ""
            pub fn leak_type() { [go()] }"#,
@@ -2358,7 +2432,7 @@ fn demo() {
         }
     );
 
-    assert_error!(
+    assert_module_error!(
         r#"external type PrivateType
                     pub external fn go(PrivateType) -> Int = "" """#,
         Error::PrivateTypeLeak {
@@ -2372,7 +2446,7 @@ fn demo() {
         }
     );
 
-    assert_error!(
+    assert_module_error!(
         r#"external type PrivateType
            pub type LeakType { Variant(PrivateType) }"#,
         Error::PrivateTypeLeak {
@@ -2386,7 +2460,7 @@ fn demo() {
         }
     );
 
-    assert_error!(
+    assert_module_error!(
         r#"fn id(x) { x } fn y() { id(x: 4) }"#,
         Error::UnexpectedLabelledArg {
             label: "x".to_string(),
@@ -2394,7 +2468,7 @@ fn demo() {
         }
     );
 
-    assert_error!(
+    assert_module_error!(
         r#"type X { X(a: Int, b: Int, c: Int) }
                     fn x() { X(b: 1, a: 1, 1) }"#,
         Error::PositionalArgumentAfterLabelled {
@@ -2402,7 +2476,7 @@ fn demo() {
         }
     );
 
-    assert_error!(
+    assert_module_error!(
         r#"type Thing { Thing(unknown: x) }"#,
         Error::UnknownType {
             location: SrcSpan { start: 28, end: 29 },
@@ -2411,7 +2485,7 @@ fn demo() {
         }
     );
 
-    assert_error!(
+    assert_module_error!(
         r#"fn one() { 1 }
            fn main() { case 1 { _ if one -> 1 } }"#,
         Error::NonLocalClauseGuardVariable {
@@ -2421,7 +2495,7 @@ fn demo() {
     );
 
     // We cannot refer to unknown types in an alias
-    assert_error!(
+    assert_module_error!(
         "type IntMap = IllMap(Int, Int)",
         Error::UnknownType {
             location: SrcSpan { start: 14, end: 30 },
@@ -2431,7 +2505,7 @@ fn demo() {
     );
 
     // We cannot refer to unknown types in an alias
-    assert_error!(
+    assert_module_error!(
         "type IntMap = Map(Inf, Int)",
         Error::UnknownType {
             location: SrcSpan { start: 18, end: 21 },
@@ -2441,7 +2515,7 @@ fn demo() {
     );
 
     // We cannot reuse an alias name in the same module
-    assert_error!(
+    assert_module_error!(
         "type X = Int type X = Int",
         Error::DuplicateTypeName {
             location: SrcSpan { start: 13, end: 25 },
@@ -2451,7 +2525,7 @@ fn demo() {
     );
 
     // We cannot use undeclared type vars in a type alias
-    assert_error!(
+    assert_module_error!(
         "type X = List(a)",
         Error::UnknownType {
             location: SrcSpan { start: 14, end: 15 },
@@ -2461,7 +2535,7 @@ fn demo() {
     );
 
     // An unknown field should report the possible fields' labels
-    assert_error!(
+    assert_module_error!(
         "
 pub type Box(a) { Box(inner: a) }
 pub fn main(box: Box(Int)) { box.unknown }
@@ -2480,7 +2554,7 @@ pub fn main(box: Box(Int)) { box.unknown }
     );
 
     // An unknown field should report the possible fields' labels
-    assert_error!(
+    assert_module_error!(
         "
 pub type Box(a) { Box(inner: a) }
 pub fn main(box: Box(Box(Int))) { box.inner.unknown }
@@ -2502,7 +2576,7 @@ pub fn main(box: Box(Box(Int))) { box.inner.unknown }
         },
     );
 
-    assert_error!(
+    assert_module_error!(
         "
 type Triple {
     Triple(a: Int, b: Int, c: Int)
@@ -2523,7 +2597,7 @@ fn main() {
     );
 
     // Duplicate var in record
-    assert_error!(
+    assert_module_error!(
         r#"type X { X(a: Int, b: Int, c: Int) }
                     fn x() {
                         case X(1,2,3) { X(x, y, x) -> 1 }
@@ -2539,7 +2613,7 @@ fn main() {
 
     // Constructor in guard clause errors
 
-    assert_error!(
+    assert_module_error!(
         r#"type X { X(a: Int, b: Float) }
                     fn x() {
                         case X(1, 2.0) { x if x == X(1) -> 1 }
@@ -2555,7 +2629,7 @@ fn main() {
         },
     );
 
-    assert_error!(
+    assert_module_error!(
         r#"type X { X(a: Int, b: Float) }
                     fn x() {
                         case X(1, 2.0) { x if x == X(2.0, 1) -> 1 }
@@ -2580,10 +2654,10 @@ fn main() {
         },
     );
 
-    assert_error!("fn inc(x: a) { x + 1 }");
+    assert_module_error!("fn inc(x: a) { x + 1 }");
 
     // Type variables are shared between function annotations and let annotations within their body
-    assert_error!(
+    assert_module_error!(
         "
         pub type Box(a) {
             Box(value: a)
@@ -2616,27 +2690,12 @@ fn main() {
             }),
         },
     );
+}
 
-    // Bit strings
-
-    assert_error!(
-        "fn x() { \"test\" }
-
-fn main() {
-    let a = <<1:size(x())>>
-    a
-}",
-        Error::CouldNotUnify {
-            location: SrcSpan { start: 52, end: 55 },
-            expected: int(),
-            given: string(),
-        },
-    );
-
-    // Correct pipe arity error location
+#[test]
+fn correct_pipe_arity_error_location() {
     // https://github.com/gleam-lang/gleam/issues/672
-
-    assert_error!(
+    assert_module_error!(
         "fn x(x, y) { x }
          fn main() { 1 |> x() }",
         Error::IncorrectArity {
@@ -2646,9 +2705,11 @@ fn main() {
             given: 0,
         },
     );
+}
 
-    // Module constants
-    assert_error!(
+#[test]
+fn module_constants() {
+    assert_module_error!(
         "pub const group_id: Int = \"42\"",
         Error::CouldNotUnify {
             location: SrcSpan { start: 26, end: 30 },
@@ -2657,7 +2718,7 @@ fn main() {
         }
     );
 
-    assert_error!(
+    assert_module_error!(
         "pub const numbers: List(Int) = [1, 2, 2.3]",
         Error::CouldNotUnify {
             location: SrcSpan { start: 38, end: 41 },
@@ -2666,7 +2727,7 @@ fn main() {
         }
     );
 
-    assert_error!(
+    assert_module_error!(
         "pub const numbers: List(Int) = [1.1, 2.2, 3.3]",
         Error::CouldNotUnify {
             location: SrcSpan { start: 31, end: 46 },
@@ -2679,7 +2740,7 @@ fn main() {
         }
     );
 
-    assert_error!(
+    assert_module_error!(
         "pub const pair: tuple(Int, Float) = tuple(4.1, 1)",
         Error::CouldNotUnify {
             location: SrcSpan { start: 36, end: 49 },
@@ -2688,7 +2749,7 @@ fn main() {
         }
     );
 
-    assert_error!(
+    assert_module_error!(
         "const pair = tuple(1, 2.0)
          fn main() { 1 == pair }",
         Error::CouldNotUnify {
@@ -2698,7 +2759,7 @@ fn main() {
         },
     );
 
-    assert_error!(
+    assert_module_error!(
         "const pair = [1, 1.0]",
         Error::CouldNotUnify {
             location: SrcSpan { start: 17, end: 20 },
@@ -2706,10 +2767,11 @@ fn main() {
             given: float(),
         },
     );
+}
 
-    // Unknown label
-
-    assert_error!(
+#[test]
+fn unknown_label() {
+    assert_module_error!(
         r#"type X { X(a: Int, b: Float) }
 fn x() {
     let x = X(a: 1, c: 2.0)
@@ -2721,9 +2783,12 @@ fn x() {
             supplied: vec!["a".to_string()],
         })
     );
+}
 
+#[test]
+fn module_update() {
     // A variable of the wrong type given to a record update
-    assert_error!(
+    assert_module_error!(
         "
         pub type Person {
             Person(name: String, age: Int)
@@ -2757,7 +2822,7 @@ fn x() {
     );
 
     // An undefined variable given to a record update
-    assert_error!(
+    assert_module_error!(
         "
         pub type Person {
             Person(name: String, age: Int)
@@ -2776,7 +2841,7 @@ fn x() {
     );
 
     // An unknown field given to a record update
-    assert_error!(
+    assert_module_error!(
         "
         pub type Person {
             Person(name: String)
@@ -2801,7 +2866,7 @@ fn x() {
     );
 
     // An unknown record constructor being used in a record update
-    assert_error!(
+    assert_module_error!(
         "
         pub type Person {
             Person(name: String, age: Int)
@@ -2820,7 +2885,7 @@ fn x() {
     );
 
     // Something other than a record constructor being used in a record update
-    assert_error!(
+    assert_module_error!(
         "
         pub type Person {
             Person(name: String, age: Int)
@@ -2838,7 +2903,7 @@ fn x() {
     );
 
     // A record update with a constructor returned from an expression
-    assert_error!(
+    assert_module_error!(
         "
         pub type Person {
             Person(name: String, age: Int)
@@ -2856,7 +2921,7 @@ fn x() {
     );
 
     // A record update on polymorphic types with a field of the wrong type
-    assert_error!(
+    assert_module_error!(
         "
         pub type Box(a) {
             Box(value: a, i: Int)
@@ -2885,7 +2950,7 @@ fn x() {
     );
 
     // A record update on polymorphic types with generic fields of the wrong type
-    assert_error!(
+    assert_module_error!(
         "
         pub type Box(a) {
             Box(value: a, i: Int)
@@ -2906,10 +2971,12 @@ fn x() {
             }),
         },
     );
+}
 
-    // Type vars must be declared
+#[test]
+fn type_vars_must_be_declared() {
     // https://github.com/gleam-lang/gleam/issues/734
-    assert_error!(
+    assert_module_error!(
         r#"type A(a) { A };
            type B = a"#,
         sort_options(Error::UnknownType {
@@ -2918,68 +2985,38 @@ fn x() {
             types: env_types_with(&["A"]),
         })
     );
+}
 
-    //
+#[test]
+fn type_holes() {
     // Type holes cannot be used when decaring types or external functions
-    //
-
-    assert_error!(
+    assert_module_error!(
         r#"type A { A(_) };"#,
         Error::UnexpectedTypeHole {
             location: SrcSpan { start: 11, end: 12 },
         },
     );
 
-    assert_error!(
+    assert_module_error!(
         r#"external fn main() -> List(_) = "" """#,
         Error::UnexpectedTypeHole {
             location: SrcSpan { start: 27, end: 28 },
         },
     );
 
-    assert_error!(
+    assert_module_error!(
         r#"external fn main(List(_)) -> Nil = "" """#,
         Error::UnexpectedTypeHole {
             location: SrcSpan { start: 22, end: 23 },
         },
     );
 
-    assert_error!(
+    assert_module_error!(
         r#"type X = List(_)"#,
         Error::UnexpectedTypeHole {
             location: SrcSpan { start: 14, end: 15 },
         },
     );
-}
-
-macro_rules! assert_warning {
-    ($src:expr, $warning:expr $(,)?) => {
-        let (src, _) = crate::parser::strip_extra($src);
-        let mut ast = crate::grammar::ModuleParser::new()
-            .parse(&src)
-            .expect("syntax error");
-        ast.name = vec!["my_module".to_string()];
-        let mut warnings = vec![];
-        let _ = infer_module(&mut 0, ast, &HashMap::new(), &mut warnings);
-
-        assert!(!warnings.is_empty());
-        assert_eq!($warning, warnings[0]);
-    };
-}
-
-macro_rules! assert_no_warnings {
-    ($src:expr $(,)?) => {
-        let (src, _) = crate::parser::strip_extra($src);
-        let mut ast = crate::grammar::ModuleParser::new()
-            .parse(&src)
-            .expect("syntax error");
-        ast.name = vec!["my_module".to_string()];
-        let expected: Vec<Warning> = vec![];
-        let mut warnings = vec![];
-        let _ = infer_module(&mut 0, ast, &HashMap::new(), &mut warnings);
-
-        assert_eq!(expected, warnings);
-    };
 }
 
 #[test]
@@ -3094,81 +3131,4 @@ fn unused_type_warnings_test() {
     // Used typed are not warned for
     assert_no_warnings!("external type Y fn run(x: Y) { x }");
     assert_no_warnings!("type Y = Int fn run(x: Y) { x }");
-}
-
-fn env_types_with(things: &[&str]) -> Vec<String> {
-    let mut types: Vec<_> = env_types();
-    for thing in things {
-        types.push(thing.to_string());
-    }
-    types
-}
-
-fn env_types() -> Vec<String> {
-    Environment::new(&mut 0, &[], &HashMap::new(), &mut vec![])
-        .module_types
-        .keys()
-        .map(|s| s.to_string())
-        .collect()
-}
-
-fn env_vars_with(things: &[&str]) -> Vec<String> {
-    let mut types: Vec<_> = env_vars();
-    for thing in things {
-        types.push(thing.to_string());
-    }
-    types
-}
-
-fn env_vars() -> Vec<String> {
-    Environment::new(&mut 0, &[], &HashMap::new(), &mut vec![])
-        .local_values
-        .keys()
-        .map(|s| s.to_string())
-        .collect()
-}
-
-fn sort_options(e: Error) -> Error {
-    match e {
-        Error::UnknownType {
-            location,
-            name,
-            mut types,
-        } => {
-            types.sort();
-            Error::UnknownType {
-                location,
-                name,
-                types,
-            }
-        }
-
-        Error::UnknownVariable {
-            location,
-            name,
-            mut variables,
-        } => {
-            variables.sort();
-            Error::UnknownVariable {
-                location,
-                name,
-                variables,
-            }
-        }
-
-        Error::UnknownLabels {
-            unknown,
-            mut valid,
-            supplied,
-        } => {
-            valid.sort();
-            Error::UnknownLabels {
-                unknown,
-                valid,
-                supplied,
-            }
-        }
-
-        _ => e,
-    }
 }
