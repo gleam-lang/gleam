@@ -962,6 +962,7 @@ impl<'a> Formatter<'a> {
             | UntypedExpr::Fn { .. }
             | UntypedExpr::Case { .. }
             | UntypedExpr::Tuple { .. }
+            | UntypedExpr::ListCons { .. }
             | UntypedExpr::BitString { .. }
             | UntypedExpr::RecordUpdate { .. } => self.expr(expr),
 
