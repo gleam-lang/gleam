@@ -263,7 +263,8 @@ impl<'a> Formatter<'a> {
 
             Constant::Tuple { elements, .. } => "tuple"
                 .to_doc()
-                .append(wrap_args(elements.iter().map(|e| self.const_expr(e)))),
+                .append(wrap_args(elements.iter().map(|e| self.const_expr(e))))
+                .group(),
 
             Constant::BitString { segments, .. } => bit_string(
                 segments
@@ -294,7 +295,8 @@ impl<'a> Formatter<'a> {
             } => name
                 .to_string()
                 .to_doc()
-                .append(wrap_args(args.iter().map(|a| self.constant_call_arg(a)))),
+                .append(wrap_args(args.iter().map(|a| self.constant_call_arg(a))))
+                .group(),
 
             Constant::Record {
                 name,
@@ -306,7 +308,8 @@ impl<'a> Formatter<'a> {
                 .to_doc()
                 .append(".")
                 .append(name.to_string())
-                .append(wrap_args(args.iter().map(|a| self.constant_call_arg(a)))),
+                .append(wrap_args(args.iter().map(|a| self.constant_call_arg(a))))
+                .group(),
         }
     }
 
@@ -405,7 +408,7 @@ impl<'a> Formatter<'a> {
     }
 
     fn fn_args<A>(&mut self, args: &[Arg<A>]) -> Document {
-        wrap_args(args.iter().map(|e| self.fn_arg(e)))
+        wrap_args(args.iter().map(|e| self.fn_arg(e))).group()
     }
 
     fn fn_arg<A>(&mut self, arg: &Arg<A>) -> Document {
@@ -468,8 +471,7 @@ impl<'a> Formatter<'a> {
             .group()
             .append(name.to_string())
             .append(self.external_fn_args(args))
-            .append(" -> ".to_doc())
-            .append(self.type_ast(retrn))
+            .append(" -> ".to_doc().append(self.type_ast(retrn)).group())
     }
 
     fn expr_fn(
@@ -600,7 +602,8 @@ impl<'a> Formatter<'a> {
 
             UntypedExpr::Call { fun, args, .. } => self
                 .expr(fun)
-                .append(wrap_args(args.iter().map(|a| self.call_arg(a)))),
+                .append(wrap_args(args.iter().map(|a| self.call_arg(a))))
+                .group(),
 
             UntypedExpr::BinOp {
                 name, left, right, ..
@@ -625,7 +628,8 @@ impl<'a> Formatter<'a> {
 
             UntypedExpr::Tuple { elems, .. } => "tuple"
                 .to_doc()
-                .append(wrap_args(elems.iter().map(|e| self.wrap_expr(e)))),
+                .append(wrap_args(elems.iter().map(|e| self.wrap_expr(e))))
+                .group(),
 
             UntypedExpr::BitString { segments, .. } => bit_string(
                 segments
@@ -683,7 +687,7 @@ impl<'a> Formatter<'a> {
         let spread_doc = "..".to_doc().append(spread.clone().name.to_doc());
         let arg_docs = args.into_iter().map(|a| self.record_update_arg(a));
         let all_arg_docs = once(spread_doc).chain(arg_docs);
-        constructor_doc.append(wrap_args(all_arg_docs))
+        constructor_doc.append(wrap_args(all_arg_docs)).group()
     }
 
     pub fn bin_op(&mut self, name: &BinOp, left: &UntypedExpr, right: &UntypedExpr) -> Document {
@@ -760,11 +764,11 @@ impl<'a> Formatter<'a> {
         } else if hole_in_first_position {
             // x |> fun(_, 2, 3)
             self.expr(fun)
-                .append(wrap_args(args.iter().skip(1).map(|a| self.call_arg(a))))
+                .append(wrap_args(args.iter().skip(1).map(|a| self.call_arg(a))).group())
         } else {
             // x |> fun(1, _, 3)
             self.expr(fun)
-                .append(wrap_args(args.iter().map(|a| self.call_arg(a))))
+                .append(wrap_args(args.iter().map(|a| self.call_arg(a))).group())
         }
     }
 
@@ -772,7 +776,7 @@ impl<'a> Formatter<'a> {
         match call {
             UntypedExpr::Call { fun, args, .. } => self
                 .expr(fun)
-                .append(wrap_args(args.iter().map(|a| self.call_arg(a)))),
+                .append(wrap_args(args.iter().map(|a| self.call_arg(a))).group()),
 
             // The body of a capture being not a fn shouldn't be possible...
             _ => crate::error::fatal_compiler_bug(
@@ -785,12 +789,15 @@ impl<'a> Formatter<'a> {
         let comments = self.pop_comments(constructor.location.start);
         let doc_comments = self.doc_comments(constructor.location.start);
 
-        let doc =
-            if constructor.args.is_empty() {
-                constructor.name.clone().to_doc()
-            } else {
-                constructor.name.to_string().to_doc().append(wrap_args(
-                    constructor.args.iter().map(|(label, typ, arg_location)| {
+        let doc = if constructor.args.is_empty() {
+            constructor.name.clone().to_doc()
+        } else {
+            constructor
+                .name
+                .to_string()
+                .to_doc()
+                .append(wrap_args(constructor.args.iter().map(
+                    |(label, typ, arg_location)| {
                         let arg_comments = self.pop_comments(arg_location.start);
                         let arg = match label {
                             Some(l) => l
@@ -805,9 +812,10 @@ impl<'a> Formatter<'a> {
                             self.doc_comments(arg_location.start).append(arg).group(),
                             arg_comments,
                         )
-                    }),
-                ))
-            };
+                    },
+                )))
+                .group()
+        };
 
         commented(doc_comments.append(doc).group(), comments)
     }
@@ -1079,7 +1087,7 @@ impl<'a> Formatter<'a> {
             } => name
                 .to_string()
                 .to_doc()
-                .append(wrap_args(args.iter().map(|a| self.pattern_call_arg(a)))),
+                .append(wrap_args(args.iter().map(|a| self.pattern_call_arg(a))).group()),
 
             Pattern::Constructor {
                 name,
@@ -1102,7 +1110,7 @@ impl<'a> Formatter<'a> {
                 .to_doc()
                 .append(".")
                 .append(name.to_string())
-                .append(wrap_args(args.iter().map(|a| self.pattern_call_arg(a)))),
+                .append(wrap_args(args.iter().map(|a| self.pattern_call_arg(a))).group()),
 
             Pattern::Constructor {
                 name,
@@ -1121,7 +1129,8 @@ impl<'a> Formatter<'a> {
 
             Pattern::Tuple { elems, .. } => "tuple"
                 .to_doc()
-                .append(wrap_args(elems.iter().map(|e| self.pattern(e)))),
+                .append(wrap_args(elems.iter().map(|e| self.pattern(e))))
+                .group(),
 
             Pattern::BitString { segments, .. } => bit_string(
                 segments
@@ -1323,7 +1332,6 @@ where
         .nest(INDENT)
         .append(break_(",", ""))
         .append(")")
-        .group()
 }
 
 pub fn wrap_args_with_spread<I>(args: I) -> Document

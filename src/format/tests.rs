@@ -120,10 +120,10 @@ fn external_functions() {
     );
 
     assert_format!(
-        r#"external fn erl_filter(fn(key, value) -> Bool, Map(key, value)) -> Map(
-  key,
-  value,
-) =
+        r#"external fn erl_filter(
+  fn(key, value) -> Bool,
+  Map(key, value),
+) -> Map(key, value) =
   "maps" "filter"
 "#
     );
