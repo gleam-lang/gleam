@@ -972,8 +972,6 @@ impl<'a> Formatter<'a> {
             | UntypedExpr::ListCons { .. }
             | UntypedExpr::BitString { .. } => " ".to_doc().append(self.expr(expr)).group(),
 
-            UntypedExpr::Pipe { .. } => " ".to_doc().append(self.expr(expr)).nest(INDENT).group(),
-
             _ => break_("", " ").append(self.expr(expr)).nest(INDENT).group(),
         }
     }

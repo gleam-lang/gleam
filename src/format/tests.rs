@@ -1170,7 +1170,8 @@ fn expr_pipe() {
 
     assert_format!(
         r#"fn main() {
-  let x = 1
+  let x =
+    1
     |> succ
     |> succ
   x
