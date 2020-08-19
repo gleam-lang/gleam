@@ -72,7 +72,7 @@ fn external_types() {
 }
 
 #[test]
-fn external_functions() {
+fn external_fn() {
     assert_format!(
         r#"external fn main() -> Int =
   "app" "main"
@@ -125,6 +125,13 @@ fn external_functions() {
   Map(key, value),
 ) -> Map(key, value) =
   "maps" "filter"
+"#
+    );
+
+    assert_format!(
+        r#"///
+external fn x(a, b, c) -> tuple(a, b, c) =
+  "" ""
 "#
     );
 }
@@ -293,6 +300,13 @@ fn type_alias() {
   )
 "
     );
+
+    assert_format!(
+        "///
+type Many(a) =
+  List(a)
+"
+    );
 }
 
 #[test]
@@ -361,6 +375,14 @@ fn custom_types() {
     assert_format!(
         "pub opaque type X {
   X
+}
+"
+    );
+
+    assert_format!(
+        "///
+pub type Option(a) {
+  None
 }
 "
     );
@@ -746,6 +768,27 @@ fn statement_fn() {
   Nil
 }
 "#
+    );
+
+    assert_format!(
+        "fn order(
+  first: Set(member),
+  second: Set(member),
+) -> tuple(Set(member), Set(member)) {
+  Nil
+}
+"
+    );
+
+    assert_format!(
+        "///
+pub fn try_map(
+  over list: List(a),
+  with fun: fn(a) -> Result(b, e),
+) -> Result(List(b), e) {
+  Nil
+}
+"
     );
 }
 

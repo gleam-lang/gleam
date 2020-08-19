@@ -150,7 +150,7 @@ impl<'a> Formatter<'a> {
                 return_annotation,
                 end_location,
                 ..
-            } => self.fn_(public, name, args, return_annotation, body, *end_location),
+            } => self.statement_fn(public, name, args, return_annotation, body, *end_location),
 
             Statement::TypeAlias {
                 alias,
@@ -395,20 +395,16 @@ impl<'a> Formatter<'a> {
         args: &[String],
         typ: &TypeAst,
     ) -> Document {
-        pub_(public)
-            .append("type ")
-            .append(name.to_string())
-            .append(if args.is_empty() {
-                nil()
-            } else {
-                wrap_args(args.iter().map(|e| e.clone().to_doc()))
-            })
-            .append(" =")
-            .append(line().append(self.type_ast(typ)).group().nest(INDENT))
-    }
+        let head = pub_(public).append("type ").append(name);
 
-    fn fn_args<A>(&mut self, args: &[Arg<A>]) -> Document {
-        wrap_args(args.iter().map(|e| self.fn_arg(e))).group()
+        let head = if args.is_empty() {
+            head
+        } else {
+            head.append(wrap_args(args.iter().map(|e| e.clone().to_doc())).group())
+        };
+
+        head.append(" =")
+            .append(line().append(self.type_ast(typ)).group().nest(INDENT))
     }
 
     fn fn_arg<A>(&mut self, arg: &Arg<A>) -> Document {
@@ -421,7 +417,7 @@ impl<'a> Formatter<'a> {
         commented(doc, comments)
     }
 
-    fn fn_(
+    fn statement_fn(
         &mut self,
         public: &bool,
         name: &str,
@@ -434,13 +430,14 @@ impl<'a> Formatter<'a> {
         let head = pub_(*public)
             .append("fn ")
             .append(name)
-            .append(self.fn_args(args));
+            .append(wrap_args(args.iter().map(|e| self.fn_arg(e))));
 
         // Add return annotation
         let head = match return_annotation {
             Some(anno) => head.append(" -> ").append(self.type_ast(anno)),
             None => head,
-        };
+        }
+        .group();
 
         // Format body
         let body = self.expr(body);
@@ -468,10 +465,10 @@ impl<'a> Formatter<'a> {
         pub_(public)
             .to_doc()
             .append("external fn ")
-            .group()
             .append(name.to_string())
             .append(self.external_fn_args(args))
-            .append(" -> ".to_doc().append(self.type_ast(retrn)).group())
+            .append(" -> ".to_doc().append(self.type_ast(retrn)))
+            .group()
     }
 
     fn expr_fn(
@@ -480,7 +477,7 @@ impl<'a> Formatter<'a> {
         return_annotation: Option<&TypeAst>,
         body: &UntypedExpr,
     ) -> Document {
-        let args = self.fn_args(args);
+        let args = wrap_args(args.iter().map(|e| self.fn_arg(e))).group();
         let body = match body {
             UntypedExpr::Case { .. } => force_break().append(self.expr(body)),
             _ => self.expr(body),
@@ -839,6 +836,7 @@ impl<'a> Formatter<'a> {
                 name.to_string()
                     .to_doc()
                     .append(wrap_args(args.iter().map(|e| e.clone().to_doc())))
+                    .group()
             })
             .append(" {")
             .append(concat(constructors.into_iter().map(|c| {
@@ -892,7 +890,7 @@ impl<'a> Formatter<'a> {
             .append(printer.print(return_type.as_ref()))
     }
 
-    // Like fn_args but will always print the types, even if they were implicit in the original source
+    // Will always print the types, even if they were implicit in the original source
     pub fn docs_fn_args(
         &mut self,
         args: &[TypedArg],
