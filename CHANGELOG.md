@@ -38,6 +38,8 @@
 - Fixed a bug in the pretty printer which prevented the formatter from
   rendering sub-expressions in a single line when later code would not fit on
   the same line.
+- The formatter style has been improved to render some single argument calls
+  in a more compact style.
 
 ## v0.10.1 - 2020-07-15
 

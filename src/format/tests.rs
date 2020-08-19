@@ -607,6 +607,63 @@ fn expr_call() {
 }
 
 #[test]
+fn compact_single_argument_call() {
+    assert_format!(
+        r#"fn main() {
+  thingy(fn(x) {
+    1
+    2
+  })
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  thingy([
+    // ok!
+    one(),
+    two(),
+  ])
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  thingy(<<
+    // ok!
+    one(),
+    two(),
+  >>)
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  thingy(tuple(
+    // ok!
+    one(),
+    two(),
+  ))
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
+  thingy(wiggle(my_function(
+    // ok!
+    one(),
+    two(),
+  )))
+}
+"#
+    );
+}
+
+#[test]
 fn expr_tuple() {
     assert_format!(
         r#"fn main(one, two, three) {

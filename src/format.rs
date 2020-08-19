@@ -597,10 +597,7 @@ impl<'a> Formatter<'a> {
 
             UntypedExpr::ListCons { head, tail, .. } => self.list_cons(head, tail),
 
-            UntypedExpr::Call { fun, args, .. } => self
-                .expr(fun)
-                .append(wrap_args(args.iter().map(|a| self.call_arg(a))))
-                .group(),
+            UntypedExpr::Call { fun, args, .. } => self.call(fun, args),
 
             UntypedExpr::BinOp {
                 name, left, right, ..
@@ -642,6 +639,34 @@ impl<'a> Formatter<'a> {
             } => self.record_update(constructor, spread, args),
         };
         commented(document, comments)
+    }
+
+    fn call(&mut self, fun: &UntypedExpr, args: &Vec<CallArg<UntypedExpr>>) -> Document {
+        fn is_breakable(expr: &UntypedExpr) -> bool {
+            match expr {
+                UntypedExpr::Fn { .. }
+                | UntypedExpr::Call { .. }
+                | UntypedExpr::Tuple { .. }
+                | UntypedExpr::ListCons { .. }
+                | UntypedExpr::BitString { .. } => true,
+
+                _ => false,
+            }
+        }
+
+        match &**args {
+            [arg] if is_breakable(&arg.value) => self
+                .expr(fun)
+                .append("(")
+                .append(self.call_arg(arg))
+                .append(")")
+                .group(),
+
+            _ => self
+                .expr(fun)
+                .append(wrap_args(args.iter().map(|a| self.call_arg(a))))
+                .group(),
+        }
     }
 
     pub fn case(&mut self, subjects: &[UntypedExpr], clauses: &[UntypedClause]) -> Document {
