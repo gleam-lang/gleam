@@ -544,7 +544,7 @@ impl<'a> Formatter<'a> {
         force_break()
             .append(keyword)
             .append(pattern.append(annotation).group())
-            .append(" = ")
+            .append(" =")
             .append(self.hanging_expr(value))
             .append(if self.pop_empty_lines(then.start_byte_index()) {
                 lines(2)
@@ -959,22 +959,22 @@ impl<'a> Formatter<'a> {
 
     fn hanging_expr(&mut self, expr: &UntypedExpr) -> Document {
         match expr {
-            UntypedExpr::Seq { .. } | UntypedExpr::Let { .. } => "{"
+            UntypedExpr::Seq { .. } | UntypedExpr::Let { .. } => " {"
                 .to_doc()
                 .append(line().append(self.expr(expr)).nest(INDENT).group())
                 .append(line())
                 .append(force_break())
                 .append("}"),
 
-            UntypedExpr::Call { .. }
-            | UntypedExpr::Fn { .. }
+            UntypedExpr::Fn { .. }
             | UntypedExpr::Case { .. }
             | UntypedExpr::Tuple { .. }
             | UntypedExpr::ListCons { .. }
-            | UntypedExpr::BitString { .. }
-            | UntypedExpr::RecordUpdate { .. } => self.expr(expr),
+            | UntypedExpr::BitString { .. } => " ".to_doc().append(self.expr(expr)).group(),
 
-            _ => self.expr(expr).nest(INDENT),
+            UntypedExpr::Pipe { .. } => " ".to_doc().append(self.expr(expr)).nest(INDENT).group(),
+
+            _ => break_("", " ").append(self.expr(expr)).nest(INDENT).group(),
         }
     }
 
@@ -1002,7 +1002,7 @@ impl<'a> Formatter<'a> {
         } else {
             lines(1).append(clause_doc)
         }
-        .append(" -> ")
+        .append(" ->")
         .append(self.hanging_expr(&clause.then))
     }
 

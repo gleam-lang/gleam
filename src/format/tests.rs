@@ -1363,9 +1363,8 @@ fn expr_let() {
 
     assert_format!(
         r#"fn main() {
-  let dict = map.from_list(
-    [tuple("a", 0), tuple("b", 1), tuple("c", 2), tuple("d", 3)],
-  )
+  let dict =
+    map.from_list([tuple("a", 0), tuple("b", 1), tuple("c", 2), tuple("d", 3)])
   1
 }
 "#
@@ -1542,7 +1541,8 @@ fn pattern_constructor() {
 
     assert_format!(
         r#"fn main() {
-  let Person(age: really_long_variable_name, name: really_long_variable_name) = 1
+  let Person(age: really_long_variable_name, name: really_long_variable_name) =
+    1
   Nil
 }
 "#
@@ -2659,10 +2659,11 @@ fn main() {
 
 fn main() {
   let c = Counter(0)
-  let c = Counter(
-    ..c,
-    loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong: 1,
-  )
+  let c =
+    Counter(
+      ..c,
+      loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong: 1,
+    )
   c
 }
 "
