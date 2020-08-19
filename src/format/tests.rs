@@ -1760,10 +1760,11 @@ fn expr_case_nested() {
     assert_format!(
         r#"fn main() {
   case 1 {
-    1 -> case x {
-      1 -> 1
-      _ -> 0
-    }
+    1 ->
+      case x {
+        1 -> 1
+        _ -> 0
+      }
     1 -> 1
   }
 }
@@ -1773,9 +1774,10 @@ fn expr_case_nested() {
     assert_format!(
         r#"fn main() {
   case list {
-    [x] -> case x {
-      _ -> 1
-    }
+    [x] ->
+      case x {
+        _ -> 1
+      }
   }
 }
 "#

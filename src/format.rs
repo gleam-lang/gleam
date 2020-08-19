@@ -542,7 +542,7 @@ impl<'a> Formatter<'a> {
             .append(keyword)
             .append(pattern.append(annotation).group())
             .append(" =")
-            .append(self.hanging_expr(value))
+            .append(self.assigned_value(value))
             .append(if self.pop_empty_lines(then.start_byte_index()) {
                 lines(2)
             } else {
@@ -980,7 +980,7 @@ impl<'a> Formatter<'a> {
         .append(index)
     }
 
-    fn hanging_expr(&mut self, expr: &UntypedExpr) -> Document {
+    fn case_clause_value(&mut self, expr: &UntypedExpr) -> Document {
         match expr {
             UntypedExpr::Seq { .. } | UntypedExpr::Let { .. } => " {"
                 .to_doc()
@@ -990,12 +990,20 @@ impl<'a> Formatter<'a> {
                 .append("}"),
 
             UntypedExpr::Fn { .. }
-            | UntypedExpr::Case { .. }
             | UntypedExpr::Tuple { .. }
             | UntypedExpr::ListCons { .. }
             | UntypedExpr::BitString { .. } => " ".to_doc().append(self.expr(expr)).group(),
 
+            UntypedExpr::Case { .. } => line().append(self.expr(expr)).nest(INDENT).group(),
+
             _ => break_("", " ").append(self.expr(expr)).nest(INDENT).group(),
+        }
+    }
+
+    fn assigned_value(&mut self, expr: &UntypedExpr) -> Document {
+        match expr {
+            UntypedExpr::Case { .. } => " ".to_doc().append(self.expr(expr)).group(),
+            _ => self.case_clause_value(expr),
         }
     }
 
@@ -1024,7 +1032,7 @@ impl<'a> Formatter<'a> {
             lines(1).append(clause_doc)
         }
         .append(" ->")
-        .append(self.hanging_expr(&clause.then))
+        .append(self.case_clause_value(&clause.then))
     }
 
     pub fn external_type(&mut self, public: bool, name: &str, args: &[String]) -> Document {
