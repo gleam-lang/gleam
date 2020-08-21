@@ -40,6 +40,7 @@
   the same line.
 - The formatter style has been improved to render some single argument calls
   in a more compact style.
+- Gleam now supports hex, octal, and binary literals.
 
 ## v0.10.1 - 2020-07-15
 

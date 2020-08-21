@@ -68,6 +68,25 @@ go() ->
 "#,
     );
 
+    // hex, octal, and binary literals
+    assert_erl!(
+        r#"fn go() {
+    let fifteen = 0xF
+    let nine = 0o11
+    let ten = 0b1010
+  fifteen
+}"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+go() ->
+    Fifteen = 16#F,
+    Nine = 8#11,
+    Ten = 2#1010,
+    Fifteen.
+"#,
+    );
+
     assert_erl!(
         r#"fn go() {
   assert y = 1

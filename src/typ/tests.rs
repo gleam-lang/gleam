@@ -293,6 +293,11 @@ fn simple_exprs() {
     assert_infer!("todo != 1", "Bool");
     assert_infer!("todo + 1", "Int");
     assert_infer!("todo(\"test\") + 1", "Int");
+
+    // hex, octal, and binary literals
+    assert_infer!("0xF", "Int");
+    assert_infer!("0o11", "Int");
+    assert_infer!("0b1010", "Int");
 }
 
 #[test]
@@ -1961,6 +1966,9 @@ pub fn get(x: One) { x.name }",
         "
     pub const test_int1 = 123
     pub const test_int2: Int = 321
+    pub const test_int3 = 0xE
+    pub const test_int4 = 0o10
+    pub const test_int5 = 0o10011
     pub const test_float: Float = 4.2
     pub const test_string = \"hey!\"
     pub const test_list = [1,2,3]
@@ -1969,6 +1977,9 @@ pub fn get(x: One) { x.name }",
             ("test_float", "Float"),
             ("test_int1", "Int"),
             ("test_int2", "Int"),
+            ("test_int3", "Int"),
+            ("test_int4", "Int"),
+            ("test_int5", "Int"),
             ("test_list", "List(Int)"),
             ("test_string", "String"),
             ("test_tuple", "tuple(String, Int)"),

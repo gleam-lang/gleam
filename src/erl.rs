@@ -700,7 +700,12 @@ fn var(name: &str, constructor: &ValueConstructor, env: &mut Env) -> Document {
 }
 
 fn int(value: &str) -> Document {
-    value.replace("_", "").to_doc()
+    value
+        .replace("_", "")
+        .replace("0x", "16#")
+        .replace("0o", "8#")
+        .replace("0b", "2#")
+        .to_doc()
 }
 
 fn const_inline(literal: &TypedConstant, env: &mut Env) -> Document {
