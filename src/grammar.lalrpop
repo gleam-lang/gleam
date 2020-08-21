@@ -744,9 +744,24 @@ NegativeIntLiteral: String = {
     <neg:r"-[0-9](_*[0-9])*"> => neg.to_string()
 }
 
+BinaryIntLiteral: String = {
+    <pos:r"0b[0-1](_*[0-1])*"> => pos.to_string()
+}
+
+OctalIntLiteral: String = {
+    <pos:r"0o[0-7](_*[0-7])*"> => pos.to_string()
+}
+
+HexIntLiteral: String = {
+    <pos:r"0x[0-9A-Fa-f](_*[0-9A-Fa-f])*"> => pos.to_string()
+}
+
 IntLiteral: String = {
     PositiveIntLiteral => <>,
     NegativeIntLiteral => <>,
+    BinaryIntLiteral => <>,
+    OctalIntLiteral => <>,
+    HexIntLiteral => <>,
 }
 
 PositiveRawInt: u64 = {
