@@ -41,6 +41,7 @@
 - The formatter style has been improved to render some single argument calls
   in a more compact style.
 - Gleam now supports hex, octal, and binary literals.
+- Rebar3 hex packages now include `gleam.toml` and `gen`.
 
 ## v0.10.1 - 2020-07-15
 

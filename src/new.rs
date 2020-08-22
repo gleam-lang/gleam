@@ -198,6 +198,7 @@ fn app_src(name: &str, description: &str, is_application: bool) -> String {
   {{env,[]}},
   {{modules, []}},
 
+  {{include_files, ["gleam.toml", "gen"]}},
   {{licenses, ["Apache 2.0"]}},
   {{links, []}}
 ]}}.
