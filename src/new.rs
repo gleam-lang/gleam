@@ -491,7 +491,7 @@ fn rebar_config(insert: &str) -> String {
 {{project_plugins, [rebar_gleam]}}.
 
 {{deps, [
-    {{gleam_stdlib, "0.10.1"}}
+    {{gleam_stdlib, "0.11.0"}}
 ]}}.
 "#,
         insert

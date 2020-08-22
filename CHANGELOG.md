@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.11.0-rc1 - 2020-08-22
 
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
@@ -42,6 +42,7 @@
   in a more compact style.
 - Gleam now supports hex, octal, and binary literals.
 - Rebar3 hex packages now include `gleam.toml` and `gen`.
+- Newly generated projects use stdlib v0.11.0.
 
 ## v0.10.1 - 2020-07-15
 
