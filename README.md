@@ -64,6 +64,7 @@ development.
 - [Guilherme Pasqualino](https://github.com/ggpasqualino)
 - [Hasan YILDIZ](https://github.com/hsnyildiz)
 - [Hendrik Richter](https://github.com/hendi)
+- [Herdy Handoko](https://github.com/hhandoko)
 - [Hécate](https://github.com/Kleidukos)
 - [Ingmar Gagen](https://github.com/igagen)
 - [Ivar Vong](https://github.com/ivarvong)
