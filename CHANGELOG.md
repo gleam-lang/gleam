@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Gleam can now compile Gleam projects without an external build tool.
+- Gleam can now run eunit without an external build tool.
+- Gleam can now run an Erlang shell without an external build tool.
+
 ## v0.11.0-rc2 - 2020-08-24
 
 - The formatter style has been improved to render some single argument calls
@@ -7,9 +13,6 @@
 
 ## v0.11.0-rc1 - 2020-08-22
 
-- Gleam can now compile Gleam projects without an external build tool.
-- Gleam can now run eunit without an external build tool.
-- Gleam can now run an Erlang shell without an external build tool.
 - Field access now works before the custom type is defined.
 - The error message returned by the compiler when the user tries to use unknown
   labelled arguments now handles multiple labels at once, and does not suggest
