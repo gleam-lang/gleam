@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.11.0-rc2 - Unreleased
+## v0.11.0-rc2 - 2020-08-24
 
 - The formatter style has been improved to render some single argument calls
   in a more compact style.

@@ -15,8 +15,11 @@ jobs:
       - id: create_archive
         run: |
           ARCHIVE=gleam-$TAG_NAME-macos.tar.gz
-          tar -czvf $ARCHIVE -C target/release gleam
-          echo ::set-output name=ASSET::$ARCHIVE
+          cd target/release
+          tar -czvf $ARCHIVE gleam
+          ls -lh
+          echo ::set-output name=ASSET_NAME::$ARCHIVE
+          echo ::set-output name=ASSET_PATH::$PWD/$ARCHIVE
         env:
           TAG_NAME: ${{ github.event.release.tag_name }}
       - uses: actions/upload-release-asset@v1.0.1
@@ -24,8 +27,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ steps.create_archive.outputs.ASSET }}
-          asset_name: ${{ steps.create_archive.outputs.ASSET }}
+          asset_path: ${{ steps.create_archive.outputs.ASSET_PATH }}
+          asset_name: ${{ steps.create_archive.outputs.ASSET_NAME }}
           asset_content_type: application/gzip
 
   build_release_linux:
