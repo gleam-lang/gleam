@@ -1504,6 +1504,24 @@ fn pattern_simple() {
 }
 
 #[test]
+fn breakable_pattern() {
+    assert_format!(
+        r#"fn main() {
+  let Ok(Thingybob(
+    one: one,
+    two: two,
+    three: three,
+    four: four,
+    five: five,
+    six: six,
+  )) = 1
+  Nil
+}
+"#
+    );
+}
+
+#[test]
 fn pattern_let() {
     assert_format!(
         r#"fn main() {

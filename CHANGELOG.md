@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.11.0-rc2 - Unreleased
+
+- The formatter style has been improved to render some single argument calls
+  in a more compact style.
+
 ## v0.11.0-rc1 - 2020-08-22
 
 - Gleam can now compile Gleam projects without an external build tool.

@@ -641,6 +641,47 @@ impl<'a> Formatter<'a> {
         commented(document, comments)
     }
 
+    fn pattern_constructor(
+        &mut self,
+        name: &str,
+        args: &[CallArg<UntypedPattern>],
+        module: &Option<String>,
+        with_spread: bool,
+    ) -> Document {
+        fn is_breakable(expr: &UntypedPattern) -> bool {
+            match expr {
+                Pattern::Tuple { .. } | Pattern::Cons { .. } | Pattern::BitString { .. } => true,
+                Pattern::Constructor { args, .. } => !args.is_empty(),
+                _ => false,
+            }
+        }
+
+        let name = match module {
+            Some(m) => m.to_string().to_doc().append(".").append(name.to_string()),
+            None => name.to_string().to_doc(),
+        };
+
+        if args.is_empty() {
+            name
+        } else if with_spread {
+            name.append(wrap_args_with_spread(
+                args.iter().map(|a| self.pattern_call_arg(a)),
+            ))
+        } else {
+            match &*args {
+                [arg] if is_breakable(&arg.value) => name
+                    .append("(")
+                    .append(self.pattern_call_arg(arg))
+                    .append(")")
+                    .group(),
+
+                _ => name
+                    .append(wrap_args(args.iter().map(|a| self.pattern_call_arg(a))))
+                    .group(),
+            }
+        }
+    }
+
     fn call(&mut self, fun: &UntypedExpr, args: &Vec<CallArg<UntypedExpr>>) -> Document {
         fn is_breakable(expr: &UntypedExpr) -> bool {
             match expr {
@@ -1096,65 +1137,10 @@ impl<'a> Formatter<'a> {
             Pattern::Constructor {
                 name,
                 args,
-                module: None,
+                module,
+                with_spread,
                 ..
-            } if args.is_empty() => name.to_string().to_doc(),
-
-            Pattern::Constructor {
-                name,
-                args,
-                module: Some(m),
-                ..
-            } if args.is_empty() => m.to_string().to_doc().append(".").append(name.to_string()),
-
-            Pattern::Constructor {
-                name,
-                args,
-                module: None,
-                with_spread: false,
-                ..
-            } => name
-                .to_string()
-                .to_doc()
-                .append(wrap_args(args.iter().map(|a| self.pattern_call_arg(a))).group()),
-
-            Pattern::Constructor {
-                name,
-                args,
-                module: None,
-                with_spread: true,
-                ..
-            } => name.to_string().to_doc().append(wrap_args_with_spread(
-                args.iter().map(|a| self.pattern_call_arg(a)),
-            )),
-
-            Pattern::Constructor {
-                name,
-                args,
-                module: Some(m),
-                with_spread: false,
-                ..
-            } => m
-                .to_string()
-                .to_doc()
-                .append(".")
-                .append(name.to_string())
-                .append(wrap_args(args.iter().map(|a| self.pattern_call_arg(a))).group()),
-
-            Pattern::Constructor {
-                name,
-                args,
-                module: Some(m),
-                with_spread: true,
-                ..
-            } => m
-                .to_string()
-                .to_doc()
-                .append(".")
-                .append(name.to_string())
-                .append(wrap_args_with_spread(
-                    args.iter().map(|a| self.pattern_call_arg(a)),
-                )),
+            } => self.pattern_constructor(name, args, module, *with_spread),
 
             Pattern::Tuple { elems, .. } => "tuple"
                 .to_doc()
