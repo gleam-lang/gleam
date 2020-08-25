@@ -80,6 +80,7 @@ development.
 - [Milad](https://github.com/slashmili)
 - [Parker Selbert](https://github.com/sorentwo)
 - [Quinn Wilton](http://quinnwilton.com/)
+- [Raphael Megzari](https://github.com/happysalada)
 - [Sean Jensen-Grey](https://github.com/seanjensengrey)
 - [Shritesh Bhattarai](https://github.com/shritesh)
 - [Wojtek Mach](https://github.com/wojtekmach)
