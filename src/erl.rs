@@ -321,7 +321,7 @@ fn const_segment(
         _ => None,
     };
 
-    bit_string_segment(document, options, size, unit, env)
+    bit_string_segment(document, options, size, unit, false, env)
 }
 
 fn expr_segment(
@@ -329,15 +329,22 @@ fn expr_segment(
     options: Vec<BitStringSegmentOption<TypedExpr>>,
     env: &mut Env,
 ) -> Document {
+    let mut value_is_a_variable = false;
+
     let document = match value {
         // Skip the normal <<value/utf8>> surrounds
         TypedExpr::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
 
         // As normal
-        TypedExpr::Int { .. }
-        | TypedExpr::Float { .. }
-        | TypedExpr::Var { .. }
-        | TypedExpr::BitString { .. } => expr(value, env),
+        TypedExpr::Int { .. } | TypedExpr::Float { .. } | TypedExpr::BitString { .. } => {
+            expr(value, env)
+        }
+
+        // Return value as normal, but set flag
+        TypedExpr::Var { .. } => {
+            value_is_a_variable = true;
+            expr(value, env)
+        }
 
         // Wrap anything else in parentheses
         value => expr(value, env).surround("(", ")"),
@@ -355,7 +362,7 @@ fn expr_segment(
         _ => None,
     };
 
-    bit_string_segment(document, options, size, unit, env)
+    bit_string_segment(document, options, size, unit, value_is_a_variable, env)
 }
 
 fn pattern_segment(
@@ -384,7 +391,7 @@ fn pattern_segment(
         _ => None,
     };
 
-    bit_string_segment(document, options, size, unit, env)
+    bit_string_segment(document, options, size, unit, false, env)
 }
 
 fn bit_string_segment<Value, SizeToDoc, UnitToDoc>(
@@ -392,6 +399,7 @@ fn bit_string_segment<Value, SizeToDoc, UnitToDoc>(
     options: Vec<BitStringSegmentOption<Value>>,
     mut size_to_doc: SizeToDoc,
     mut unit_to_doc: UnitToDoc,
+    value_is_a_variable: bool,
     env: &mut Env,
 ) -> Document
 where
@@ -402,15 +410,24 @@ where
     let mut unit: Option<Document> = None;
     let mut others = Vec::new();
 
+    // Erlang only allows valid codepoint integers to be used as values for utf segments
+    // We want to support <<string_var:utf8>> for all string variables, but <<StringVar/utf8>> is invalid
+    // To work around this we use the binary type specifier for these segments instead
+    let override_type = if value_is_a_variable {
+        Some("binary")
+    } else {
+        None
+    };
+
     options.iter().for_each(|option| match option {
         BitStringSegmentOption::Invalid { .. } => (),
         BitStringSegmentOption::Integer { .. } => others.push("integer"),
         BitStringSegmentOption::Float { .. } => others.push("float"),
         BitStringSegmentOption::Binary { .. } => others.push("binary"),
         BitStringSegmentOption::BitString { .. } => others.push("bitstring"),
-        BitStringSegmentOption::UTF8 { .. } => others.push("utf8"),
-        BitStringSegmentOption::UTF16 { .. } => others.push("utf16"),
-        BitStringSegmentOption::UTF32 { .. } => others.push("utf32"),
+        BitStringSegmentOption::UTF8 { .. } => others.push(override_type.unwrap_or("utf8")),
+        BitStringSegmentOption::UTF16 { .. } => others.push(override_type.unwrap_or("utf16")),
+        BitStringSegmentOption::UTF32 { .. } => others.push(override_type.unwrap_or("utf32")),
         BitStringSegmentOption::UTF8Codepoint { .. } => others.push("utf8"),
         BitStringSegmentOption::UTF16Codepoint { .. } => others.push("utf16"),
         BitStringSegmentOption::UTF32Codepoint { .. } => others.push("utf32"),

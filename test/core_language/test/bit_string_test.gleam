@@ -74,3 +74,11 @@ pub fn codepoint_conversion_test() {
 
   should.equal(snake_int, 128013)
 }
+
+pub fn string_variable_test() {
+  let x = "x"
+  let y = <<x:utf8, "ß↑e̊":utf8>>
+  let <<z:8, _:binary>> = y
+
+  should.equal(z, 120) // x is unicode codepoint 120
+}
