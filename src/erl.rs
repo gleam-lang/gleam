@@ -1192,13 +1192,16 @@ fn module_select_fn(typ: Arc<crate::typ::Type>, module_name: &[String], label: &
 }
 
 fn fun(args: &[TypedArg], body: &TypedExpr, env: &mut Env) -> Document {
-    "fun"
+    let current_scope_vars = env.current_scope_vars.clone();
+    let doc = "fun"
         .to_doc()
         .append(fun_args(args, env).append(" ->"))
         .append(break_("", " ").append(expr(body, env)).nest(INDENT))
         .append(break_("", " "))
         .append("end")
-        .group()
+        .group();
+    env.current_scope_vars = current_scope_vars;
+    doc
 }
 
 fn incrementing_args_list(arity: usize) -> String {

@@ -14,27 +14,100 @@ fn record_definition_test() {
     );
 }
 
+macro_rules! assert_erl {
+    ($src:expr, $erl:expr $(,)?) => {
+        println!("\n\n\n{}\n", $src);
+        let mut ast = crate::grammar::ModuleParser::new()
+            .parse($src)
+            .expect("syntax error");
+        ast.name = vec!["the_app".to_string()];
+        let ast =
+            crate::typ::infer_module(&mut 0, ast, &std::collections::HashMap::new(), &mut vec![])
+                .expect("should successfully infer");
+        let output = module(&ast);
+        assert_eq!(($src, output), ($src, $erl.to_string()));
+    };
+}
+
+#[test]
+fn variable_rewrite() {
+    // https://github.com/gleam-lang/gleam/issues/333
+    assert_erl!(
+        r#"
+fn go(a) {
+  case a {
+    99 -> {
+      let a = a
+      1
+    }
+    _ -> a
+  }
+}
+
+                    "#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+go(A) ->
+    case A of
+        99 ->
+            A@1 = A,
+            1;
+
+        _ ->
+            A
+    end.
+"#,
+    );
+
+    // https://github.com/gleam-lang/gleam/issues/772
+    assert_erl!(
+        "fn main(board) {
+  fn(board) { board }
+  board
+}",
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main(Board) ->
+    fun(Board@1) -> Board@1 end,
+    Board.
+"#,
+    );
+
+    // https://github.com/gleam-lang/gleam/issues/762
+    assert_erl!(
+        r#"
+fn main(x) {
+  fn(x) { x }(x)
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main(X) ->
+    (fun(X@1) -> X@1 end)(X).
+"#,
+    );
+
+    assert_erl!(
+        r#"
+fn main(x) {
+  x
+  |> fn(x) { x }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main(X) ->
+    (fun(X@1) -> X@1 end)(X).
+"#,
+    );
+}
+
 #[test]
 fn integration_test() {
-    macro_rules! assert_erl {
-        ($src:expr, $erl:expr $(,)?) => {
-            println!("\n\n\n{}\n", $src);
-            let mut ast = crate::grammar::ModuleParser::new()
-                .parse($src)
-                .expect("syntax error");
-            ast.name = vec!["the_app".to_string()];
-            let ast = crate::typ::infer_module(
-                &mut 0,
-                ast,
-                &std::collections::HashMap::new(),
-                &mut vec![],
-            )
-            .expect("should successfully infer");
-            let output = module(&ast);
-            assert_eq!(($src, output), ($src, $erl.to_string()));
-        };
-    }
-
     assert_erl!(
         r#"fn go() {
 let x = tuple(100000000000000000, tuple(2000000000, 3000000000000, 40000000000), 50000, 6000000000)
@@ -432,35 +505,6 @@ x() ->
 "#,
     );
 
-    // https://github.com/gleam-lang/gleam/issues/333
-    assert_erl!(
-        r#"
-fn go(a) {
-  case a {
-    99 -> {
-      let a = a
-      1
-    }
-    _ -> a
-  }
-}
-
-                    "#,
-        r#"-module(the_app).
--compile(no_auto_import).
-
-go(A) ->
-    case A of
-        99 ->
-            A@1 = A,
-            1;
-
-        _ ->
-            A
-    end.
-"#,
-    );
-
     assert_erl!(
         r#"
 fn go(a) {
@@ -573,6 +617,10 @@ main(Args) ->
     A@1.
 "#,
     );
+}
+
+#[test]
+fn bit_string_discard() {
     // https://github.com/gleam-lang/gleam/issues/704
 
     assert_erl!(
@@ -1975,36 +2023,6 @@ main() ->
     100000 = 1,
     100000.00101 = 1.0,
     1.
-"#,
-    );
-
-    // https://github.com/gleam-lang/gleam/issues/762
-    assert_erl!(
-        r#"
-fn main(x) {
-  fn(x) { x }(x)
-}
-"#,
-        r#"-module(the_app).
--compile(no_auto_import).
-
-main(X) ->
-    (fun(X@1) -> X@1 end)(X).
-"#,
-    );
-
-    assert_erl!(
-        r#"
-fn main(x) {
-  x
-  |> fn(x) { x }
-}
-"#,
-        r#"-module(the_app).
--compile(no_auto_import).
-
-main(X) ->
-    (fun(X@1) -> X@1 end)(X).
 "#,
     );
 }
