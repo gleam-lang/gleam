@@ -321,7 +321,7 @@ fn const_segment(
         _ => None,
     };
 
-    bit_string_segment(document, options, size, unit, false, env)
+    bit_string_segment(document, options, size, unit, true, env)
 }
 
 fn expr_segment(
@@ -329,22 +329,20 @@ fn expr_segment(
     options: Vec<BitStringSegmentOption<TypedExpr>>,
     env: &mut Env,
 ) -> Document {
-    let mut value_is_a_variable = false;
+    let mut value_is_a_string_literal = false;
 
     let document = match value {
-        // Skip the normal <<value/utf8>> surrounds
-        TypedExpr::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
+        // Skip the normal <<value/utf8>> surrounds and set the string literal flag
+        TypedExpr::String { value, .. } => {
+            value_is_a_string_literal = true;
+            value.clone().to_doc().surround("\"", "\"")
+        }
 
         // As normal
-        TypedExpr::Int { .. } | TypedExpr::Float { .. } | TypedExpr::BitString { .. } => {
-            expr(value, env)
-        }
-
-        // Return value as normal, but set flag
-        TypedExpr::Var { .. } => {
-            value_is_a_variable = true;
-            expr(value, env)
-        }
+        TypedExpr::Int { .. }
+        | TypedExpr::Float { .. }
+        | TypedExpr::Var { .. }
+        | TypedExpr::BitString { .. } => expr(value, env),
 
         // Wrap anything else in parentheses
         value => expr(value, env).surround("(", ")"),
@@ -362,7 +360,14 @@ fn expr_segment(
         _ => None,
     };
 
-    bit_string_segment(document, options, size, unit, value_is_a_variable, env)
+    bit_string_segment(
+        document,
+        options,
+        size,
+        unit,
+        value_is_a_string_literal,
+        env,
+    )
 }
 
 fn pattern_segment(
@@ -391,7 +396,7 @@ fn pattern_segment(
         _ => None,
     };
 
-    bit_string_segment(document, options, size, unit, false, env)
+    bit_string_segment(document, options, size, unit, true, env)
 }
 
 fn bit_string_segment<Value, SizeToDoc, UnitToDoc>(
@@ -399,7 +404,7 @@ fn bit_string_segment<Value, SizeToDoc, UnitToDoc>(
     options: Vec<BitStringSegmentOption<Value>>,
     mut size_to_doc: SizeToDoc,
     mut unit_to_doc: UnitToDoc,
-    value_is_a_variable: bool,
+    value_is_a_string_literal: bool,
     env: &mut Env,
 ) -> Document
 where
@@ -413,7 +418,7 @@ where
     // Erlang only allows valid codepoint integers to be used as values for utf segments
     // We want to support <<string_var:utf8>> for all string variables, but <<StringVar/utf8>> is invalid
     // To work around this we use the binary type specifier for these segments instead
-    let override_type = if value_is_a_variable {
+    let override_type = if !value_is_a_string_literal {
         Some("binary")
     } else {
         None

@@ -5,7 +5,7 @@
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
-- Bit strings now allow string variables as segment values.
+- Bit strings now support non-literal strings as segment values.
 
 ## v0.11.0-rc2 - 2020-08-24
 

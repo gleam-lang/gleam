@@ -75,10 +75,22 @@ pub fn codepoint_conversion_test() {
   should.equal(snake_int, 128013)
 }
 
-pub fn string_variable_test() {
-  let x = "x"
-  let y = <<x:utf8, "ß↑e̊":utf8>>
-  let <<z:8, _:binary>> = y
+type StringHaver {
+  StringHaver(value: String)
+}
 
-  should.equal(z, 120) // x is unicode codepoint 120
+pub fn non_literal_strings_test() {
+  let v = "x"
+  let t = tuple("y")
+  let c = StringHaver(value: "z")
+  let f = fn() { "ß" }
+
+  let y = <<v:utf8, t.0:utf8, c.value:utf8, f():utf8, "↑":utf8>>
+  let <<var_out:8, tuple_out:8, custom_type_out:8, function_out:16, literal_out:24>> = y
+
+  should.equal(var_out, 120)
+  should.equal(tuple_out, 121)
+  should.equal(custom_type_out, 122)
+  should.equal(function_out, 50079) // "ß" is encoded as C3 9F in utf8
+  should.equal(literal_out, 14845585) // "↑" is encoded as E2 86 91 in utf8
 }
