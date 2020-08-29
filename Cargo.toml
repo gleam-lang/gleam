@@ -66,6 +66,7 @@ tracing = "0.1"
 tracing-subscriber = "0.2"
 
 [build-dependencies]
+serde_derive = "1.0"
 lalrpop = { version = "0.19", features = ["lexer"] }
 
 [dev-dependencies]
