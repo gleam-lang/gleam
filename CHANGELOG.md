@@ -6,6 +6,8 @@
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 
+- The format for printed types in error messages has been improved.
+
 ## v0.11.0 - 2020-08-28
 
 #### [Release Blog Post](https://lpil.uk/blog/gleam-v0.11-released/)

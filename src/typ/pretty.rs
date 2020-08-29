@@ -1,7 +1,12 @@
 use super::{Type, TypeVar};
-use crate::pretty::*;
+use crate::pretty::{nil, *};
 use itertools::Itertools;
 use std::sync::Arc;
+
+#[cfg(test)]
+use super::*;
+#[cfg(test)]
+use std::cell::RefCell;
 
 const INDENT: isize = 2;
 
@@ -48,8 +53,13 @@ impl Printer {
             Type::Fn { args, retrn } => "fn("
                 .to_doc()
                 .append(self.args_to_gleam_doc(args.as_slice()))
-                .append(") -> ")
-                .append(self.print(retrn)),
+                .append(") ->")
+                .append(
+                    break_("", " ")
+                        .append(self.print(retrn))
+                        .nest(INDENT)
+                        .group(),
+                ),
 
             Type::Var { typ, .. } => self.type_var_doc(&*typ.borrow()),
 
@@ -101,15 +111,18 @@ impl Printer {
     fn args_to_gleam_doc(&mut self, args: &[Arc<Type>]) -> Document {
         match args.len() {
             0 => nil(),
-            _ => args
-                .iter()
-                .map(|t| self.print(t).group())
-                .intersperse(break_(",", ", "))
-                .collect::<Vec<_>>()
-                .to_doc()
-                .nest(INDENT)
-                .append(break_(",", ""))
-                .group(),
+            _ => {
+                let args = concat(
+                    args.iter()
+                        .map(|t| self.print(t).group())
+                        .intersperse(break_(",", ", ")),
+                );
+                break_("", "")
+                    .append(args)
+                    .nest(INDENT)
+                    .append(break_(",", ""))
+                    .group()
+            }
         }
     }
 }
@@ -199,9 +212,6 @@ fn next_letter_test() {
 
 #[test]
 fn pretty_print_test() {
-    use std::cell::RefCell;
-    use std::sync::Arc;
-
     macro_rules! assert_string {
         ($src:expr, $typ:expr $(,)?) => {
             let mut printer = Printer::new();
@@ -306,4 +316,103 @@ fn pretty_print_test() {
         ),
         "fn(a) -> b",
     );
+}
+
+#[test]
+fn function_test() {
+    assert_eq!(pretty_print(fn_(vec![], int())), "fn() -> Int");
+
+    assert_eq!(
+        pretty_print(fn_(vec![int(), int(), int()], int())),
+        "fn(Int, Int, Int) -> Int"
+    );
+
+    assert_eq!(
+        pretty_print(fn_(
+            vec![
+                float(),
+                float(),
+                float(),
+                float(),
+                float(),
+                float(),
+                float(),
+                float(),
+                float(),
+                float(),
+                float(),
+                float(),
+                float()
+            ],
+            float()
+        )),
+        "fn(
+  Float,
+  Float,
+  Float,
+  Float,
+  Float,
+  Float,
+  Float,
+  Float,
+  Float,
+  Float,
+  Float,
+  Float,
+  Float,
+) -> Float"
+    );
+
+    assert_eq!(
+        pretty_print(fn_(
+            vec![
+                tuple(vec![float(), float(), float(), float(), float(), float()]),
+                float(),
+                float(),
+                float(),
+                float(),
+                float(),
+                float(),
+                float()
+            ],
+            float()
+        )),
+        "fn(
+  tuple(Float, Float, Float, Float, Float, Float),
+  Float,
+  Float,
+  Float,
+  Float,
+  Float,
+  Float,
+  Float,
+) -> Float"
+    );
+
+    assert_eq!(
+        pretty_print(fn_(
+            vec![tuple(vec![
+                float(),
+                float(),
+                float(),
+                float(),
+                float(),
+                float()
+            ]),],
+            tuple(vec![
+                tuple(vec![float(), float(), float(), float(), float(), float()]),
+                tuple(vec![float(), float(), float(), float(), float(), float()]),
+            ]),
+        )),
+        "fn(tuple(Float, Float, Float, Float, Float, Float)) ->
+  tuple(
+    tuple(Float, Float, Float, Float, Float, Float),
+    tuple(Float, Float, Float, Float, Float, Float),
+  )"
+    );
+}
+
+#[cfg(test)]
+fn pretty_print(typ: Arc<Type>) -> String {
+    Printer::new().pretty_print(&typ, 0)
 }
