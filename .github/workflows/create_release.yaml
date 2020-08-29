@@ -9,7 +9,6 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2.0.0
-      - run: curl https://sh.rustup.rs -sSf | sh -s -- -y
       - run: $HOME/.cargo/bin/cargo build --release
       - run: target/release/gleam --version
       - id: create_archive
@@ -64,10 +63,6 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2.0.0
-      - name: Install Rust stable
-        run: |
-          rustup toolchain update --no-self-update stable
-          rustup default stable
       - name: Build Gleam
         run: |
           cargo build --release
