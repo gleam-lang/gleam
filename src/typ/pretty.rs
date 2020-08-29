@@ -50,6 +50,7 @@ impl Printer {
                         .append(")")
                 }
             }
+
             Type::Fn { args, retrn } => "fn("
                 .to_doc()
                 .append(self.args_to_gleam_doc(args.as_slice()))

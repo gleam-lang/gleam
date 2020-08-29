@@ -374,8 +374,9 @@ impl<'a> Formatter<'a> {
                 .to_string()
                 .to_doc()
                 .append(self.type_arguments(args))
-                .append(" -> ")
-                .append(self.type_ast(retrn)),
+                .group()
+                .append(" ->")
+                .append(break_("", " ").append(self.type_ast(retrn)).nest(INDENT)),
 
             TypeAst::Var { name, .. } => name.clone().to_doc(),
 

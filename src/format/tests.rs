@@ -198,24 +198,25 @@ fn type_alias() {
     element,
     element,
     element,
-  ) -> tuple(
-    element,
-    element,
-    element,
-    element,
-    element,
-    element,
-    element,
-    element,
-    element,
-    element,
-    element,
-    element,
-    element,
-    element,
-    element,
-    element,
-  )
+  ) ->
+    tuple(
+      element,
+      element,
+      element,
+      element,
+      element,
+      element,
+      element,
+      element,
+      element,
+      element,
+      element,
+      element,
+      element,
+      element,
+      element,
+      element,
+    )
 "
     );
 
@@ -3042,5 +3043,15 @@ fn assignments_break_value_first_test() {
   Nil
 }
 "#
+    );
+}
+
+#[test]
+fn function_type_type() {
+    assert_format!(
+        "type F =
+  fn(some, really, long, set, of, arguments) ->
+    tuple(some, really, long, set, of, arguments)
+"
     );
 }

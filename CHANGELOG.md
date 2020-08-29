@@ -6,6 +6,9 @@
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 
+- The formatter style has been improved to render function type arguments on
+  a single line when possible, even if the return type will not fit on a
+  single line.
 - The format for printed types in error messages has been improved.
 
 ## v0.11.0 - 2020-08-28
