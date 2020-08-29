@@ -65,6 +65,7 @@ development.
  - [David McKay](https://github.com/rawkode)
  - [Eric Meadows-Jönsson](https://github.com/ericmj)
  - [Erik Terpstra](https://github.com/eterps)
+ - [Florian Kraft](https://github.com/floriank)
  - [Guilherme Pasqualino](https://github.com/ggpasqualino)
  - [Hasan YILDIZ](https://github.com/hsnyildiz)
  - [Hendrik Richter](https://github.com/hendi)
