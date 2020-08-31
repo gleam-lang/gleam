@@ -683,6 +683,16 @@ fn compact_single_argument_call() {
 }
 "#
     );
+
+    assert_format!(
+        r#"fn main() {
+  thingy({
+    let x = 1
+    x
+  })
+}
+"#
+    );
 }
 
 #[test]

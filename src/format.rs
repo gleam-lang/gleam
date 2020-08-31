@@ -690,6 +690,7 @@ impl<'a> Formatter<'a> {
             match expr {
                 UntypedExpr::Fn { .. }
                 | UntypedExpr::Seq { .. }
+                | UntypedExpr::Let { .. }
                 | UntypedExpr::Call { .. }
                 | UntypedExpr::Case { .. }
                 | UntypedExpr::Tuple { .. }
