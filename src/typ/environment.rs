@@ -144,20 +144,8 @@ impl<'a, 'b> Environment<'a, 'b> {
     /// Insert a value into the current module.
     /// Errors if the module already has a value with that name.
     ///
-    pub fn insert_module_value(
-        &mut self,
-        name: &str,
-        value: ValueConstructor,
-    ) -> Result<(), Error> {
-        let location = value.origin.clone();
-        match self.module_values.insert(name.to_string(), value) {
-            None => Ok(()),
-            Some(previous) => Err(Error::DuplicateName {
-                location,
-                previous_location: previous.origin,
-                name: name.to_string(),
-            }),
-        }
+    pub fn insert_module_value(&mut self, name: &str, value: ValueConstructor) {
+        self.module_values.insert(name.to_string(), value);
     }
 
     /// Lookup a variable in the current scope.

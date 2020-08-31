@@ -539,27 +539,6 @@ go(A) ->
 "#,
     );
 
-    assert_erl!(
-        r#"
-fn id(x) {
-  x
-}
-
-fn main() {
-  id(id)
-}
-"#,
-        r#"-module(the_app).
--compile(no_auto_import).
-
-id(X) ->
-    X.
-
-main() ->
-    id(fun id/1).
-"#,
-    );
-
     // https://github.com/gleam-lang/gleam/issues/358
     assert_erl!(
         r#"
@@ -2051,4 +2030,31 @@ main() ->
     X.
 "#,
     );
+}
+
+#[test]
+fn recursive_type() {
+    // TODO: we should be able to generalise `id` and we should be
+    // able to handle recursive types. Either of these type features
+    // would make this module type check OK.
+    //     assert_erl!(
+    //         r#"
+    // fn id(x) {
+    //   x
+    // }
+    //
+    // fn main() {
+    //   id(id)
+    // }
+    // "#,
+    //         r#"-module(the_app).
+    // -compile(no_auto_import).
+    //
+    // id(X) ->
+    //     X.
+    //
+    // main() ->
+    //     id(fun id/1).
+    // "#,
+    //     );
 }
