@@ -79,6 +79,13 @@ impl Type {
         }
     }
 
+    pub fn return_type(&self) -> Option<Arc<Type>> {
+        match self {
+            Type::Fn { retrn, .. } => Some(retrn.clone()),
+            _ => None,
+        }
+    }
+
     /// Get the args for the type if the type is a specific Type::App.
     /// Returns None if the type is not a Type::App or is an incorrect Type:App
     ///
@@ -325,6 +332,8 @@ pub fn infer_module(
 ) -> Result<TypedModule, Error> {
     let mut environment = Environment::new(uid, module.name.as_slice(), modules, warnings);
     let module_name = &module.name;
+    let mut type_names = HashMap::with_capacity(module.statements.len());
+    let mut value_names = HashMap::with_capacity(module.statements.len());
 
     // Register any modules, types, and values being imported
     // We process imports first so that anything imported can be referenced
@@ -336,15 +345,26 @@ pub fn infer_module(
     // Register types so they can be used in constructors and functions
     // earlier in the module.
     for s in module.statements.iter() {
-        register_types(s, module_name, &mut environment)?;
+        register_types(s, module_name, &mut type_names, &mut environment)?;
+    }
+
+    // Register values so they can be used in functions earlier in the module.
+    for s in module.statements.iter() {
+        register_values(s, module_name, &mut value_names, &mut environment)?;
     }
 
     // Infer the types of each statement in the module
     let mut statements = Vec::with_capacity(module.statements.len());
     for statement in module.statements {
-        let statement = infer_statement(statement, module_name, &mut environment)?;
+        let statement = infer_statement(statement, &mut environment)?;
         statements.push(statement);
     }
+
+    // Generalise functions now that the entire module has been inferred
+    let statements = statements
+        .into_iter()
+        .map(|s| generalise_statement(s, module_name, &mut environment))
+        .collect::<Result<_, _>>()?;
 
     // Generate warnings for unused items
     environment.convert_unused_to_warnings();
@@ -388,23 +408,51 @@ pub fn infer_module(
     })
 }
 
-fn infer_statement(
-    s: UntypedStatement,
+fn assert_unique_value_name<'a>(
+    names: &mut HashMap<&'a str, &'a SrcSpan>,
+    name: &'a str,
+    location: &'a SrcSpan,
+) -> Result<(), Error> {
+    match names.insert(name, location) {
+        Some(previous_location) => Err(Error::DuplicateName {
+            name: name.to_string(),
+            previous_location: previous_location.clone(),
+            location: location.clone(),
+        }),
+        None => Ok(()),
+    }
+}
+
+fn assert_unique_type_name<'a>(
+    names: &mut HashMap<&'a str, &'a SrcSpan>,
+    name: &'a str,
+    location: &'a SrcSpan,
+) -> Result<(), Error> {
+    match names.insert(name, location) {
+        Some(previous_location) => Err(Error::DuplicateTypeName {
+            name: name.to_string(),
+            previous_location: previous_location.clone(),
+            location: location.clone(),
+        }),
+        None => Ok(()),
+    }
+}
+
+fn register_values<'a>(
+    s: &'a UntypedStatement,
     module_name: &Vec<String>,
+    names: &mut HashMap<&'a str, &'a SrcSpan>,
     environment: &mut Environment,
-) -> Result<TypedStatement, Error> {
+) -> Result<(), Error> {
     match s {
         Statement::Fn {
-            doc,
-            location,
             name,
-            public,
             args,
-            body,
-            return_annotation,
-            end_location,
+            location,
             ..
         } => {
+            assert_unique_value_name(names, name, location)?;
+
             let level = 1;
 
             let mut field_map = FieldMap::new(args.len());
@@ -420,45 +468,10 @@ fn infer_statement(
             }
             let field_map = field_map.into_option();
 
-            // Register a var for the function so that it can call itself recursively
-            let rec = environment.new_unbound_var(level + 1);
-            environment.insert_variable(
-                name.clone(),
-                ValueConstructorVariant::ModuleFn {
-                    name: name.clone(),
-                    field_map: field_map.clone(),
-                    module: module_name.clone(),
-                    arity: args.len(),
-                },
-                rec.clone(),
-            );
+            // TODO: construct type using the type annotations on the function
+            // TODO: test annotations
 
-            // Infer the type
-            let (typ, args, body) = environment.in_new_scope(|environment| {
-                do_infer_fn(args, body, &return_annotation, environment)
-            })?;
-
-            // Assert that the inferred type matches the type of any recursive call
-            environment
-                .unify(rec, typ.clone())
-                .map_err(|e| convert_unify_error(e, &location))?;
-            let typ = generalise(typ, level);
-
-            // Insert the function into the module's interface
-            environment.insert_module_value(
-                &name,
-                ValueConstructor {
-                    public,
-                    origin: location.clone(),
-                    typ: typ.clone(),
-                    variant: ValueConstructorVariant::ModuleFn {
-                        name: name.clone(),
-                        field_map: field_map.clone(),
-                        module: module_name.clone(),
-                        arity: args.len(),
-                    },
-                },
-            )?;
+            let typ = environment.new_unbound_var(level + 1);
 
             // Insert the function into the environment
             environment.insert_variable(
@@ -471,24 +484,9 @@ fn infer_statement(
                 },
                 typ,
             );
-
-            let statement: TypedStatement = Statement::Fn {
-                doc,
-                location,
-                name,
-                public,
-                args,
-                end_location,
-                return_annotation,
-                return_type: body.typ(),
-                body,
-            };
-
-            Ok(statement)
         }
 
         Statement::ExternalFn {
-            doc,
             location,
             name,
             public,
@@ -498,9 +496,11 @@ fn infer_statement(
             fun,
             ..
         } => {
-            let mut hydrator = Hydrator::new();
+            assert_unique_value_name(names, name, location)?;
+
             // Construct type of function from AST
-            let (return_type, typ, field_map) = environment.in_new_scope(|environment| {
+            let mut hydrator = Hydrator::new();
+            let (typ, field_map) = environment.in_new_scope(|environment| {
                 let return_type = hydrator.type_from_ast(&retrn, environment)?;
                 let mut args_types = Vec::with_capacity(args.len());
                 let mut field_map = FieldMap::new(args.len());
@@ -517,16 +517,16 @@ fn infer_statement(
                     }
                 }
                 let field_map = field_map.into_option();
-                let typ = fn_(args_types, return_type.clone());
+                let typ = fn_(args_types, return_type);
 
-                Ok((return_type, typ, field_map))
+                Ok((typ, field_map))
             })?;
 
             // Insert function into module
             environment.insert_module_value(
                 &name,
                 ValueConstructor {
-                    public,
+                    public: *public,
                     typ: typ.clone(),
                     origin: location.clone(),
                     variant: ValueConstructorVariant::ModuleFn {
@@ -536,7 +536,7 @@ fn infer_statement(
                         arity: args.len(),
                     },
                 },
-            )?;
+            );
 
             // Insert function into module's internal scope
             environment.insert_variable(
@@ -549,6 +549,220 @@ fn infer_statement(
                 },
                 typ,
             );
+        }
+
+        Statement::CustomType {
+            location,
+            public,
+            opaque,
+            name,
+            parameters,
+            constructors,
+            ..
+        } => {
+            let mut hydrator = Hydrator::new();
+            hydrator.disallow_new_type_variables();
+
+            // This custom type was inserted into the module types in the `register_types`
+            // pass, so we can expect this type to exist already.
+            let return_type_constructor = environment
+                .module_types
+                .get(name)
+                .gleam_expect("Type for custom type not found in register_values");
+
+            // Insert the parameter types (previously created in `register_types`) into the
+            // type environment so that the constructor can reference them.
+            for (typ, name) in return_type_constructor
+                .parameters
+                .iter()
+                .zip(parameters.iter())
+            {
+                hydrator.register_type_as_created(name.clone(), typ.clone());
+            }
+
+            let retrn = return_type_constructor.typ.clone();
+
+            // Check and register constructors
+            for constructor in constructors.iter() {
+                assert_unique_value_name(names, &constructor.name, &constructor.location)?;
+
+                let mut field_map = FieldMap::new(constructor.args.len());
+                let mut args_types = Vec::with_capacity(constructor.args.len());
+                for (i, (label, arg, ..)) in constructor.args.iter().enumerate() {
+                    let t = hydrator.type_from_ast(&arg, environment)?;
+                    args_types.push(t);
+                    if let Some(label) = label {
+                        field_map
+                            .insert(label.clone(), i)
+                            .map_err(|_| Error::DuplicateField {
+                                label: label.to_string(),
+                                location: location.clone(),
+                            })?;
+                    }
+                }
+                let field_map = field_map.into_option();
+                // Insert constructor function into module scope
+                let typ = match constructor.args.len() {
+                    0 => retrn.clone(),
+                    _ => fn_(args_types, retrn.clone()),
+                };
+
+                if !opaque {
+                    environment.insert_module_value(
+                        &constructor.name,
+                        ValueConstructor {
+                            public: *public,
+                            typ: typ.clone(),
+                            origin: constructor.location.clone(),
+                            variant: ValueConstructorVariant::Record {
+                                name: constructor.name.clone(),
+                                field_map: field_map.clone(),
+                            },
+                        },
+                    );
+                }
+
+                environment.insert_variable(
+                    constructor.name.clone(),
+                    ValueConstructorVariant::Record {
+                        name: constructor.name.clone(),
+                        field_map,
+                    },
+                    typ,
+                );
+            }
+        }
+
+        _ => (),
+    }
+    Ok(())
+}
+
+fn generalise_statement(
+    s: TypedStatement,
+    module_name: &Vec<String>,
+    environment: &mut Environment,
+) -> Result<TypedStatement, Error> {
+    match s {
+        Statement::Fn {
+            doc,
+            location,
+            name,
+            public,
+            args,
+            body,
+            return_annotation,
+            end_location,
+            return_type,
+        } => {
+            let level = 1;
+
+            // Lookup the inferred function information
+            let function = environment
+                .get_variable(name.as_str())
+                .gleam_expect("Could not find preregistered type for function");
+            let field_map = function.field_map().cloned();
+            let typ = function.typ.clone();
+
+            // Generalise the function
+            let typ = generalise(typ, level);
+
+            // Insert the function into the module's interface
+            environment.insert_module_value(
+                &name,
+                ValueConstructor {
+                    public,
+                    origin: location.clone(),
+                    typ,
+                    variant: ValueConstructorVariant::ModuleFn {
+                        name: name.clone(),
+                        field_map,
+                        module: module_name.clone(),
+                        arity: args.len(),
+                    },
+                },
+            );
+
+            Ok(Statement::Fn {
+                doc,
+                location,
+                name,
+                public,
+                args,
+                end_location,
+                return_annotation,
+                return_type,
+                body,
+            })
+        }
+
+        statement => Ok(statement),
+    }
+}
+
+fn infer_statement(
+    s: UntypedStatement,
+    environment: &mut Environment,
+) -> Result<TypedStatement, Error> {
+    match s {
+        Statement::Fn {
+            doc,
+            location,
+            name,
+            public,
+            args,
+            body,
+            return_annotation,
+            end_location,
+            ..
+        } => {
+            let preregistered_type = environment
+                .get_variable(name.as_str())
+                .gleam_expect("Could not find preregistered type for function")
+                .typ
+                .clone();
+
+            // Infer the type
+            let (typ, args, body) = environment.in_new_scope(|environment| {
+                do_infer_fn(args, body, &return_annotation, environment)
+            })?;
+
+            // TODO: do we need to do this?
+            // Assert that the inferred type matches the type of any recursive call
+            environment
+                .unify(preregistered_type, typ.clone())
+                .map_err(|e| convert_unify_error(e, &location))?;
+
+            Ok(Statement::Fn {
+                doc,
+                location,
+                name,
+                public,
+                args,
+                end_location,
+                return_annotation,
+                return_type: body.typ(),
+                body,
+            })
+        }
+
+        Statement::ExternalFn {
+            doc,
+            location,
+            name,
+            public,
+            args,
+            retrn,
+            module,
+            fun,
+            ..
+        } => {
+            let return_type = environment
+                .get_variable(name.as_str())
+                .gleam_expect("Could not find preregistered external fn")
+                .typ
+                .return_type()
+                .gleam_expect("External fn's registered type was not a fn");
             Ok(Statement::ExternalFn {
                 return_type,
                 doc,
@@ -595,86 +809,15 @@ fn infer_statement(
             name,
             parameters,
             constructors,
-        } => {
-            let mut hydrator = Hydrator::new();
-            hydrator.disallow_new_type_variables();
-
-            // This custom type was inserted into the module types in the `register_types`
-            // pass, so we can expect this type to exist already.
-            let return_type_constructor = environment
-                .module_types
-                .get(&name)
-                .gleam_expect("Type for custom type not found on constructor infer pass");
-
-            // Insert the parameter types (previously created in `register_types`) into the
-            // type environment so that the constructor can reference them.
-            for (typ, name) in return_type_constructor
-                .parameters
-                .iter()
-                .zip(parameters.iter())
-            {
-                hydrator.register_type_as_created(name.clone(), typ.clone());
-            }
-
-            let retrn = return_type_constructor.typ.clone();
-
-            // Check and register constructors
-            for constructor in constructors.iter() {
-                let mut field_map = FieldMap::new(constructor.args.len());
-                let mut args_types = Vec::with_capacity(constructor.args.len());
-                for (i, (label, arg, ..)) in constructor.args.iter().enumerate() {
-                    let t = hydrator.type_from_ast(&arg, environment)?;
-                    args_types.push(t);
-                    if let Some(label) = label {
-                        field_map
-                            .insert(label.clone(), i)
-                            .map_err(|_| Error::DuplicateField {
-                                label: label.to_string(),
-                                location: location.clone(),
-                            })?;
-                    }
-                }
-                let field_map = field_map.into_option();
-                // Insert constructor function into module scope
-                let typ = match constructor.args.len() {
-                    0 => retrn.clone(),
-                    _ => fn_(args_types, retrn.clone()),
-                };
-
-                if !opaque {
-                    environment.insert_module_value(
-                        &constructor.name,
-                        ValueConstructor {
-                            public,
-                            typ: typ.clone(),
-                            origin: constructor.location.clone(),
-                            variant: ValueConstructorVariant::Record {
-                                name: constructor.name.clone(),
-                                field_map: field_map.clone(),
-                            },
-                        },
-                    )?;
-                }
-
-                environment.insert_variable(
-                    constructor.name.clone(),
-                    ValueConstructorVariant::Record {
-                        name: constructor.name.clone(),
-                        field_map,
-                    },
-                    typ,
-                );
-            }
-            Ok(Statement::CustomType {
-                doc,
-                location,
-                public,
-                opaque,
-                name,
-                parameters,
-                constructors,
-            })
-        }
+        } => Ok(Statement::CustomType {
+            doc,
+            location,
+            public,
+            opaque,
+            name,
+            parameters,
+            constructors,
+        }),
 
         Statement::ExternalType {
             doc,
@@ -735,7 +878,7 @@ fn infer_statement(
                     },
                     typ: typ.clone(),
                 },
-            )?;
+            );
 
             Ok(Statement::ModuleConstant {
                 doc,
@@ -1062,9 +1205,10 @@ fn custom_type_accessors(
 }
 
 /// Iterate over a module, registering any new types created by the module into the typer
-pub fn register_types(
-    statement: &UntypedStatement,
+pub fn register_types<'a>(
+    statement: &'a UntypedStatement,
     module: &[String],
+    names: &mut HashMap<&'a str, &'a SrcSpan>,
     environment: &mut Environment,
 ) -> Result<(), Error> {
     match statement {
@@ -1075,6 +1219,9 @@ pub fn register_types(
             location,
             ..
         } => {
+            assert_unique_type_name(names, name, location)?;
+
+            // Build a type from the type AST
             let mut hydrator = Hydrator::new();
             let parameters = make_type_vars(args, location, &mut hydrator, environment)?;
             let typ = Arc::new(Type::App {
@@ -1084,6 +1231,7 @@ pub fn register_types(
                 args: parameters.clone(),
             });
 
+            // Insert into the module scope
             environment.insert_type_constructor(
                 name.clone(),
                 TypeConstructor {
@@ -1112,6 +1260,9 @@ pub fn register_types(
             location,
             ..
         } => {
+            assert_unique_type_name(names, name, location)?;
+
+            // Build a type from the type AST
             let mut hydrator = Hydrator::new();
             let parameters = make_type_vars(parameters, location, &mut hydrator, environment)?;
             let typ = Arc::new(Type::App {
@@ -1154,6 +1305,8 @@ pub fn register_types(
             resolved_type,
             ..
         } => {
+            assert_unique_type_name(names, name, location)?;
+
             // Register the paramerterised types
             let mut hydrator = Hydrator::new();
             let parameters = make_type_vars(args, location, &mut hydrator, environment)?;

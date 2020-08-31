@@ -63,6 +63,7 @@ macro_rules! assert_error {
 
 macro_rules! assert_module_infer {
     ($src:expr, $module:expr $(,)?) => {
+        println!("\n\n\n\n\n\n{}", $src);
         let (src, _) = crate::parser::strip_extra($src);
         let ast = crate::grammar::ModuleParser::new()
             .parse(&src)
@@ -1579,7 +1580,7 @@ fn infer_module_test() {
     );
 
     assert_module_infer!(
-        "pub fn id(x) { x }
+        "pub fn id(x: x) { x }
          pub fn float() { id(1.0) }
          pub fn int() { id(1) }",
         vec![
@@ -2306,93 +2307,6 @@ fn demo() {
         }
     );
 
-    // We cannot declare two functions with the same name in a module
-    assert_module_error!(
-        "fn dupe() { 1 }
-         fn dupe() { 2 }",
-        Error::DuplicateName {
-            location: SrcSpan { start: 25, end: 34 },
-            previous_location: SrcSpan { start: 0, end: 9 },
-            name: "dupe".to_string(),
-        }
-    );
-
-    // We cannot declare two functions with the same name in a module
-    assert_module_error!(
-        "fn dupe() { 1 }
-         fn dupe(x) { x }",
-        Error::DuplicateName {
-            location: SrcSpan { start: 25, end: 35 },
-            previous_location: SrcSpan { start: 0, end: 9 },
-            name: "dupe".to_string(),
-        }
-    );
-
-    // We cannot declare two functions with the same name in a module
-    assert_module_error!(
-        "fn dupe() { 1 }
-         external fn dupe(x) -> x = \"\" \"\"",
-        Error::DuplicateName {
-            location: SrcSpan { start: 25, end: 57 },
-            previous_location: SrcSpan { start: 0, end: 9 },
-            name: "dupe".to_string(),
-        }
-    );
-
-    // We cannot declare two functions with the same name in a module
-    assert_module_error!(
-        "external fn dupe(x) -> x = \"\" \"\"
-         fn dupe() { 1 }",
-        Error::DuplicateName {
-            location: SrcSpan { start: 42, end: 51 },
-            previous_location: SrcSpan { start: 0, end: 32 },
-            name: "dupe".to_string(),
-        }
-    );
-
-    // We cannot declare two type constructors with the same name in a module
-    assert_module_error!(
-        "type Box { Box(x: Int) }
-         type Boxy { Box(Int) }",
-        Error::DuplicateName {
-            location: SrcSpan { start: 46, end: 54 },
-            previous_location: SrcSpan { start: 11, end: 22 },
-            name: "Box".to_string(),
-        }
-    );
-
-    // We cannot declare two type constructors with the same name in a module
-    assert_module_error!(
-        "type Boxy { Box(Int) }
-         type Box { Box(x: Int) }",
-        Error::DuplicateName {
-            location: SrcSpan { start: 43, end: 54 },
-            previous_location: SrcSpan { start: 12, end: 20 },
-            name: "Box".to_string(),
-        }
-    );
-
-    // We cannot declare two type constructors with the same name in a module
-    assert_module_error!(
-        "type Boxy { Box(Int) Box(Float) }",
-        Error::DuplicateName {
-            location: SrcSpan { start: 21, end: 31 },
-            previous_location: SrcSpan { start: 12, end: 20 },
-            name: "Box".to_string(),
-        }
-    );
-
-    // We cannot declare two types with the same name in a module
-    assert_module_error!(
-        "type DupType { A }
-         type DupType { B }",
-        Error::DuplicateTypeName {
-            location: SrcSpan { start: 28, end: 41 },
-            previous_location: SrcSpan { start: 0, end: 13 },
-            name: "DupType".to_string(),
-        }
-    );
-
     assert_module_error!(
         r#"external type PrivateType
            pub external fn leak_type() -> PrivateType = "" """#,
@@ -2522,16 +2436,6 @@ fn demo() {
             location: SrcSpan { start: 18, end: 21 },
             name: "Inf".to_string(),
             types: env_types(),
-        }
-    );
-
-    // We cannot reuse an alias name in the same module
-    assert_module_error!(
-        "type X = Int type X = Int",
-        Error::DuplicateTypeName {
-            location: SrcSpan { start: 13, end: 25 },
-            previous_location: SrcSpan { start: 0, end: 12 },
-            name: "X".to_string(),
         }
     );
 
@@ -2700,6 +2604,121 @@ fn main() {
                 })]
             }),
         },
+    );
+}
+
+#[test]
+fn duplicate_functions_test() {
+    // We cannot declare two functions with the same name in a module
+    assert_module_error!(
+        "fn dupe() { 1 }
+         fn dupe() { 2 }",
+        Error::DuplicateName {
+            location: SrcSpan { start: 25, end: 34 },
+            previous_location: SrcSpan { start: 0, end: 9 },
+            name: "dupe".to_string(),
+        }
+    );
+
+    // Different types to force a unify error if we don't detect the
+    // duplicate during refactoring.
+    assert_module_error!(
+        "fn dupe() { 1 }
+         fn dupe() { 2.0 }",
+        Error::DuplicateName {
+            location: SrcSpan { start: 25, end: 34 },
+            previous_location: SrcSpan { start: 0, end: 9 },
+            name: "dupe".to_string(),
+        }
+    );
+
+    assert_module_error!(
+        "fn dupe() { 1 }
+         fn dupe(x) { x }",
+        Error::DuplicateName {
+            location: SrcSpan { start: 25, end: 35 },
+            previous_location: SrcSpan { start: 0, end: 9 },
+            name: "dupe".to_string(),
+        }
+    );
+
+    assert_module_error!(
+        "fn dupe() { 1 }
+         external fn dupe(x) -> x = \"\" \"\"",
+        Error::DuplicateName {
+            location: SrcSpan { start: 25, end: 57 },
+            previous_location: SrcSpan { start: 0, end: 9 },
+            name: "dupe".to_string(),
+        }
+    );
+
+    assert_module_error!(
+        "external fn dupe(x) -> x = \"\" \"\"
+         fn dupe() { 1 }",
+        Error::DuplicateName {
+            location: SrcSpan { start: 42, end: 51 },
+            previous_location: SrcSpan { start: 0, end: 32 },
+            name: "dupe".to_string(),
+        }
+    );
+}
+
+#[test]
+fn duplicate_constructors() {
+    // We cannot declare two type constructors with the same name in a module
+    assert_module_error!(
+        "type Box { Box(x: Int) }
+         type Boxy { Box(Int) }",
+        Error::DuplicateName {
+            location: SrcSpan { start: 46, end: 54 },
+            previous_location: SrcSpan { start: 11, end: 22 },
+            name: "Box".to_string(),
+        }
+    );
+
+    // We cannot declare two type constructors with the same name in a module
+    assert_module_error!(
+        "type Boxy { Box(Int) }
+         type Box { Box(x: Int) }",
+        Error::DuplicateName {
+            location: SrcSpan { start: 43, end: 54 },
+            previous_location: SrcSpan { start: 12, end: 20 },
+            name: "Box".to_string(),
+        }
+    );
+
+    // We cannot declare two type constructors with the same name in a module
+    assert_module_error!(
+        "type Boxy { Box(Int) Box(Float) }",
+        Error::DuplicateName {
+            location: SrcSpan { start: 21, end: 31 },
+            previous_location: SrcSpan { start: 12, end: 20 },
+            name: "Box".to_string(),
+        }
+    );
+}
+
+#[test]
+fn duplicate_type_names() {
+    // We cannot reuse an alias name in the same module
+    assert_module_error!(
+        "type X = Int type X = Int",
+        Error::DuplicateTypeName {
+            location: SrcSpan { start: 13, end: 25 },
+            previous_location: SrcSpan { start: 0, end: 12 },
+            name: "X".to_string(),
+        }
+    );
+
+    // We cannot declare two types with the same name in a module
+    assert_module_error!(
+        "type DupType { A }
+         type DupType { B }",
+        Error::DuplicateTypeName {
+            location: SrcSpan { start: 28, end: 41 },
+            previous_location: SrcSpan { start: 0, end: 13 },
+            name: "DupType".to_string(),
+        }
     );
 }
 
@@ -3142,4 +3161,70 @@ fn unused_type_warnings_test() {
     // Used typed are not warned for
     assert_no_warnings!("external type Y fn run(x: Y) { x }");
     assert_no_warnings!("type Y = Int fn run(x: Y) { x }");
+}
+
+#[test]
+fn functions_used_before_definition() {
+    assert_module_infer!(
+        "pub fn a() { b() }
+         pub fn b() { 1 }",
+        vec![("a", "fn() -> Int"), ("b", "fn() -> Int")],
+    );
+
+    assert_module_infer!(
+        "pub fn a() { b() + c() }
+         fn b() { 1 }
+         fn c() { 1 }",
+        vec![("a", "fn() -> Int")],
+    );
+
+    assert_module_infer!(
+        "fn b() { 1 }
+         pub fn a() { b() + c() }
+         fn c() { 1 }",
+        vec![("a", "fn() -> Int")],
+    );
+
+    assert_module_infer!(
+        "pub fn a() { Thing }
+         pub type Thing { Thing }",
+        vec![("Thing", "Thing"), ("a", "fn() -> Thing"),],
+    );
+
+    assert_module_infer!(
+        "pub fn a() { b()  }
+         external fn b() -> Int = \"\" \"\"",
+        vec![("a", "fn() -> Int")],
+    );
+}
+
+#[test]
+fn mutual_recursion() {
+    assert_module_infer!(
+        "pub fn a() { b() }
+         fn b() { a() }",
+        vec![("a", "fn() -> a")],
+    );
+
+    assert_module_infer!(
+        "pub fn a() { b() }
+         fn b() { a() + 1 }",
+        vec![("a", "fn() -> Int")],
+    );
+}
+
+#[test]
+fn eager_function_generalisation() {
+    // TODO: We should be able to tell in `id` that it is safe to generalise x
+    // before unifying it in the later functions (which causes a type error)
+    // assert_module_infer!(
+    //     "pub fn id(x) { x }
+    //      pub fn float() { id(1.0) }
+    //      pub fn int() { id(1) }",
+    //     vec![
+    //         ("float", "fn() -> Float"),
+    //         ("id", "fn(a) -> a"),
+    //         ("int", "fn() -> Int"),
+    //     ],
+    // );
 }
