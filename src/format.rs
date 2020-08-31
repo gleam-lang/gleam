@@ -690,6 +690,7 @@ impl<'a> Formatter<'a> {
             match expr {
                 UntypedExpr::Fn { .. }
                 | UntypedExpr::Call { .. }
+                | UntypedExpr::Case { .. }
                 | UntypedExpr::Tuple { .. }
                 | UntypedExpr::ListCons { .. }
                 | UntypedExpr::BitString { .. } => true,

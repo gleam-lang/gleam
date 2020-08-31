@@ -662,6 +662,16 @@ fn compact_single_argument_call() {
 }
 "#
     );
+
+    assert_format!(
+        r#"fn main() {
+  thingy(case x {
+    1 -> 1
+    _ -> 0
+  })
+}
+"#
+    );
 }
 
 #[test]
