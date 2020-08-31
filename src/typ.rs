@@ -19,10 +19,10 @@ pub use prelude::*;
 use crate::{
     ast::{
         self, ArgNames, BitStringSegment, BitStringSegmentOption, CallArg, Constant, Pattern,
-        RecordConstructor, SrcSpan, Statement, TypeAst, TypedArg, TypedConstant, TypedExpr,
-        TypedModule, TypedPattern, TypedPatternBitStringSegment, TypedRecordUpdateArg,
-        TypedStatement, UnqualifiedImport, UntypedArg, UntypedExpr, UntypedModule,
-        UntypedMultiPattern, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement,
+        RecordConstructor, SrcSpan, Statement, TypeAst, TypedConstant, TypedExpr, TypedModule,
+        TypedPattern, TypedPatternBitStringSegment, TypedRecordUpdateArg, TypedStatement,
+        UnqualifiedImport, UntypedExpr, UntypedModule, UntypedMultiPattern, UntypedPattern,
+        UntypedRecordUpdateArg, UntypedStatement,
     },
     bit_string::BinaryTypeSpecifier,
     build::Origin,
@@ -82,6 +82,13 @@ impl Type {
     pub fn return_type(&self) -> Option<Arc<Type>> {
         match self {
             Type::Fn { retrn, .. } => Some(retrn.clone()),
+            _ => None,
+        }
+    }
+
+    pub fn fn_types(&self) -> Option<(Vec<Arc<Type>>, Arc<Type>)> {
+        match self {
+            Type::Fn { args, retrn, .. } => Some((args.clone(), retrn.clone())),
             _ => None,
         }
     }
@@ -449,11 +456,10 @@ fn register_values<'a>(
             name,
             args,
             location,
+            return_annotation,
             ..
         } => {
             assert_unique_value_name(names, name, location)?;
-
-            let level = 1;
 
             let mut field_map = FieldMap::new(args.len());
             for (i, arg) in args.iter().enumerate() {
@@ -468,10 +474,14 @@ fn register_values<'a>(
             }
             let field_map = field_map.into_option();
 
-            // TODO: construct type using the type annotations on the function
-            // TODO: test annotations
-
-            let typ = environment.new_unbound_var(level + 1);
+            // Construct type from annotations
+            let mut hydrator = Hydrator::new();
+            let arg_types = args
+                .iter()
+                .map(|arg| hydrator.type_from_option_ast(&arg.annotation, environment))
+                .collect::<Result<_, _>>()?;
+            let return_type = hydrator.type_from_option_ast(return_annotation, environment)?;
+            let typ = fn_(arg_types, return_type);
 
             // Insert the function into the environment
             environment.insert_variable(
@@ -721,10 +731,27 @@ fn infer_statement(
                 .gleam_expect("Could not find preregistered type for function")
                 .typ
                 .clone();
+            let (args_types, return_type) = preregistered_type
+                .fn_types()
+                .gleam_expect("Preregistered type for fn was not a fn");
 
-            // Infer the type
+            dbg!(&preregistered_type);
+
+            // Infer the type using the preregistered args + return types as a starting point
             let (typ, args, body) = environment.in_new_scope(|environment| {
-                do_infer_fn(args, body, &return_annotation, environment)
+                let args = args
+                    .into_iter()
+                    .zip(args_types.iter())
+                    .map(|(a, t)| a.set_type(t.clone()))
+                    .collect();
+                let (args, body) = ExprTyper::new(environment).infer_fn_with_known_types(
+                    args,
+                    body,
+                    Some(return_type),
+                )?;
+                let args_types = args.iter().map(|a| a.typ.clone()).collect();
+                let typ = fn_(args_types, body.typ());
+                Ok((typ, args, body))
             })?;
 
             // Assert that the inferred type matches the type of any recursive call
@@ -1441,16 +1468,4 @@ pub fn register_import(s: &UntypedStatement, environment: &mut Environment) -> R
 
         _ => Ok(()),
     }
-}
-
-fn do_infer_fn(
-    args: Vec<UntypedArg>,
-    body: UntypedExpr,
-    return_annotation: &Option<TypeAst>,
-    environment: &mut Environment,
-) -> Result<(Arc<Type>, Vec<TypedArg>, TypedExpr), Error> {
-    let (args, body) = ExprTyper::new(environment).do_infer_fn(args, body, return_annotation)?;
-    let args_types = args.iter().map(|a| a.typ.clone()).collect();
-    let typ = fn_(args_types, body.typ());
-    Ok((typ, args, body))
 }

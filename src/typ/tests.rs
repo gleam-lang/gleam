@@ -63,7 +63,7 @@ macro_rules! assert_error {
 
 macro_rules! assert_module_infer {
     ($src:expr, $module:expr $(,)?) => {
-        println!("\n\n\n\n\n\n{}", $src);
+        // println!("\n\n\n\n\n\n{}", $src);
         let (src, _) = crate::parser::strip_extra($src);
         let ast = crate::grammar::ModuleParser::new()
             .parse(&src)
@@ -1556,6 +1556,21 @@ fn infer_module_test() {
     );
 
     assert_module_infer!(
+        "type Html = String
+         pub fn go() { 1 }",
+        vec![("go", "fn() -> Int")],
+    );
+    assert_module_infer!(
+        "pub fn length(list) {
+           case list {
+           [] -> 0
+           [x .. xs] -> length(xs) + 1
+           }
+        }",
+        vec![("length", "fn(List(a)) -> Int")],
+    );
+
+    assert_module_infer!(
         "fn private() { 1 }
          pub fn public() { 1 }",
         vec![("public", "fn() -> Int")],
@@ -1577,17 +1592,6 @@ fn infer_module_test() {
         "pub type Num { I(Int) }
          pub fn one() { I(1) }",
         vec![("I", "fn(Int) -> Num"), ("one", "fn() -> Num")],
-    );
-
-    assert_module_infer!(
-        "pub fn id(x: x) { x }
-         pub fn float() { id(1.0) }
-         pub fn int() { id(1) }",
-        vec![
-            ("float", "fn() -> Float"),
-            ("id", "fn(a) -> a"),
-            ("int", "fn() -> Int"),
-        ],
     );
 
     assert_module_infer!(
@@ -1716,41 +1720,6 @@ fn infer_module_test() {
         ],
     );
 
-    // Type annotations
-    assert_module_infer!("pub fn go(x: Int) { x }", vec![("go", "fn(Int) -> Int")],);
-    assert_module_infer!("pub fn go(x: b) -> b { x }", vec![("go", "fn(a) -> a")],);
-    assert_module_infer!("pub fn go(x) -> b { x }", vec![("go", "fn(a) -> a")],);
-    assert_module_infer!("pub fn go(x: b) { x }", vec![("go", "fn(a) -> a")],);
-    assert_module_infer!(
-        "pub fn go(x: List(b)) -> List(b) { x }",
-        vec![("go", "fn(List(a)) -> List(a)")],
-    );
-    assert_module_infer!(
-        "pub fn go(x: List(b)) { x }",
-        vec![("go", "fn(List(a)) -> List(a)")],
-    );
-    assert_module_infer!(
-        "pub fn go(x: List(String)) { x }",
-        vec![("go", "fn(List(String)) -> List(String)")],
-    );
-    assert_module_infer!("pub fn go(x: b, y: c) { x }", vec![("go", "fn(a, b) -> a")],);
-    assert_module_infer!("pub fn go(x) -> Int { x }", vec![("go", "fn(Int) -> Int")],);
-
-    assert_module_infer!(
-        "type Html = String
-         pub fn go() { 1 }",
-        vec![("go", "fn() -> Int")],
-    );
-    assert_module_infer!(
-        "pub fn length(list) {
-           case list {
-           [] -> 0
-           [x .. xs] -> length(xs) + 1
-           }
-        }",
-        vec![("length", "fn(List(a)) -> Int")],
-    );
-
     // Structs
     assert_module_infer!(
         "pub type Box { Box(boxed: Int) }",
@@ -1766,14 +1735,6 @@ fn infer_module_test() {
         vec![
             ("Tup", "fn(a, b, c) -> Tup(a, b, c)"),
             ("third", "fn(Tup(a, b, c)) -> c"),
-        ],
-    );
-    assert_module_infer!(
-        "pub type Box(x) { Box(label: String, contents: x) }
-         pub fn id(x: Box(y)) { x }",
-        vec![
-            ("Box", "fn(String, a) -> Box(a)"),
-            ("id", "fn(Box(a)) -> Box(a)"),
         ],
     );
 
@@ -2546,14 +2507,9 @@ fn main() {
 
     assert_module_error!(
         r#"type X { X(a: Int, b: Float) }
-                    fn x() {
-                        case X(1, 2.0) { x if x == X(2.0, 1) -> 1 }
-                    }"#,
+           fn x() { case X(1, 2.0) { x if x == X(2.0, 1) -> 1 } }"#,
         Error::CouldNotUnify {
-            location: SrcSpan {
-                start: 113,
-                end: 116
-            },
+            location: SrcSpan { start: 80, end: 83 },
             expected: Arc::new(Type::App {
                 public: true,
                 module: vec![],
@@ -2568,8 +2524,6 @@ fn main() {
             }),
         },
     );
-
-    assert_module_error!("fn inc(x: a) { x + 1 }");
 
     // Type variables are shared between function annotations and let annotations within their body
     assert_module_error!(
@@ -2845,7 +2799,7 @@ fn module_update() {
                 module: vec!["my_module".to_string()],
                 name: "Box".to_string(),
                 args: vec![Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Generic { id: 9 })),
+                    typ: Arc::new(RefCell::new(TypeVar::Generic { id: 11 })),
                 })]
             }),
         },
@@ -2994,10 +2948,10 @@ fn module_update() {
                 end: 158,
             },
             expected: Arc::new(Type::Var {
-                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 9 })),
+                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 12 })),
             }),
             given: Arc::new(Type::Var {
-                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 11 })),
+                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 14 })),
             }),
         },
     );
@@ -3227,4 +3181,52 @@ fn eager_function_generalisation() {
     //         ("int", "fn() -> Int"),
     //     ],
     // );
+}
+
+#[test]
+fn type_annotations() {
+    // OK!
+
+    assert_module_infer!(
+        "pub type Box(x) { Box(label: String, contents: x) }
+         pub fn id(x: Box(y)) { x }",
+        vec![
+            ("Box", "fn(String, a) -> Box(a)"),
+            ("id", "fn(Box(a)) -> Box(a)"),
+        ],
+    );
+
+    assert_module_infer!("pub fn go(x: Int) { x }", vec![("go", "fn(Int) -> Int")],);
+    assert_module_infer!("pub fn go(x: b) -> b { x }", vec![("go", "fn(a) -> a")],);
+    assert_module_infer!("pub fn go(x) -> b { x }", vec![("go", "fn(a) -> a")],);
+    assert_module_infer!("pub fn go(x: b) { x }", vec![("go", "fn(a) -> a")],);
+    assert_module_infer!(
+        "pub fn go(x: List(b)) -> List(b) { x }",
+        vec![("go", "fn(List(a)) -> List(a)")],
+    );
+    assert_module_infer!(
+        "pub fn go(x: List(b)) { x }",
+        vec![("go", "fn(List(a)) -> List(a)")],
+    );
+    assert_module_infer!(
+        "pub fn go(x: List(String)) { x }",
+        vec![("go", "fn(List(String)) -> List(String)")],
+    );
+    assert_module_infer!("pub fn go(x: b, y: c) { x }", vec![("go", "fn(a, b) -> a")],);
+    assert_module_infer!("pub fn go(x) -> Int { x }", vec![("go", "fn(Int) -> Int")],);
+
+    assert_module_infer!(
+        "pub fn id(x: x) { x }
+         pub fn float() { id(1.0) }
+         pub fn int() { id(1) }",
+        vec![
+            ("float", "fn() -> Float"),
+            ("id", "fn(a) -> a"),
+            ("int", "fn() -> Int"),
+        ],
+    );
+
+    // Errors
+
+    assert_module_error!("fn inc(x: a) { x + 1 }");
 }

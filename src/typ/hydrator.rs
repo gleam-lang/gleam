@@ -70,6 +70,17 @@ impl Hydrator {
         self.created_type_variable_ids.contains(id)
     }
 
+    pub fn type_from_option_ast<'a, 'b>(
+        &mut self,
+        ast: &Option<TypeAst>,
+        environment: &mut Environment<'a, 'b>,
+    ) -> Result<Arc<Type>, Error> {
+        match ast {
+            Some(ast) => self.type_from_ast(&ast, environment),
+            None => Ok(environment.new_unbound_var(environment.level)),
+        }
+    }
+
     /// Construct a Type from an AST Type annotation.
     ///
     pub fn type_from_ast<'a, 'b>(
