@@ -14,6 +14,8 @@
   when no fields are given.
 - Fixed a bug where assigning the result of a block to a variable would
   generate incorrect Erlang.
+- The formatter style has been improved for function calls that take a single
+  block as an argument.
 
 ## v0.11.0 - 2020-08-28
 
