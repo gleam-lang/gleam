@@ -689,6 +689,7 @@ impl<'a> Formatter<'a> {
         fn is_breakable(expr: &UntypedExpr) -> bool {
             match expr {
                 UntypedExpr::Fn { .. }
+                | UntypedExpr::Seq { .. }
                 | UntypedExpr::Call { .. }
                 | UntypedExpr::Case { .. }
                 | UntypedExpr::Tuple { .. }

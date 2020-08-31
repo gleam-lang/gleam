@@ -672,6 +672,17 @@ fn compact_single_argument_call() {
 }
 "#
     );
+
+    assert_format!(
+        r#"fn main() {
+  thingy({
+    1
+    2
+    3
+  })
+}
+"#
+    );
 }
 
 #[test]
