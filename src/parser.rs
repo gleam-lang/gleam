@@ -497,3 +497,10 @@ pub fn make_call(
         }),
     }
 }
+
+pub fn is_gleam_reserved_word(s: &str) -> bool {
+    match s {
+        "pub" | "fn" | "import" | "as" | "type" | "extern" | "case" | "try" | "assert" => true,
+        _ => false,
+    }
+}

@@ -139,6 +139,18 @@ pub enum Error {
         command: String,
         err: Option<std::io::ErrorKind>,
     },
+
+    InvalidProjectName {
+        name: String,
+        reason: InvalidProjectNameReason,
+    },
+}
+
+#[derive(Debug, PartialEq)]
+pub enum InvalidProjectNameReason {
+    Format,
+    ErlangReservedWord,
+    GleamReservedWord,
 }
 
 #[derive(Debug, PartialEq)]
@@ -223,6 +235,29 @@ impl Error {
             .expect("error pretty buffer write space before");
 
         match self {
+            Error::InvalidProjectName { name, reason } => {
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Invalid project name".to_string(),
+                    label: format!(
+                        "We were not able to create your project as `{}` is
+{}
+
+Please try again with a different project name.",
+                        name,
+                        match reason {
+                            InvalidProjectNameReason::ErlangReservedWord =>
+                                "a reserved word in Erlang.",
+                            InvalidProjectNameReason::GleamReservedWord =>
+                                "a reserved word in Gleam.",
+                            InvalidProjectNameReason::Format =>
+                                "does not have the correct format. Project names must start
+with a lowercase latter and may only contain lowercase letters
+and underscores.",
+                        }
+                    ),
+                };
+                write_project(buffer, diagnostic);
+            }
             Error::ShellCommand { command, err: None } => {
                 let diagnostic = ProjectErrorDiagnostic {
                     title: "Shell command failure".to_string(),

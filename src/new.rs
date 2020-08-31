@@ -1,4 +1,4 @@
-use crate::error::{Error, FileIOAction, FileKind, GleamExpect};
+use crate::error::{Error, FileIOAction, FileKind, GleamExpect, InvalidProjectNameReason};
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Write;
@@ -20,14 +20,7 @@ pub fn create(
     path: Option<String>,
     version: &'static str,
 ) -> Result<(), Error> {
-    if !regex::Regex::new("^[a-z_]+$")
-        .gleam_expect("new name regex could not be compiled")
-        .is_match(&name)
-    {
-        // TODO
-        println!("error: Project name may only contain lowercase letters and underscores");
-        std::process::exit(1);
-    }
+    let name = validate_name(name)?;
 
     let description = description.unwrap_or_else(|| String::from("A Gleam program"));
     let path = path.unwrap_or_else(|| name.clone());
@@ -509,4 +502,28 @@ fn app_rebar_config(name: &str) -> String {
 "#,
         name
     ))
+}
+
+fn validate_name(name: String) -> Result<String, Error> {
+    if crate::erl::is_erlang_reserved_word(name.as_str()) {
+        Err(Error::InvalidProjectName {
+            name,
+            reason: InvalidProjectNameReason::ErlangReservedWord,
+        })
+    } else if crate::parser::is_gleam_reserved_word(name.as_str()) {
+        Err(Error::InvalidProjectName {
+            name,
+            reason: InvalidProjectNameReason::GleamReservedWord,
+        })
+    } else if !regex::Regex::new("^[a-z_]+$")
+        .gleam_expect("new name regex could not be compiled")
+        .is_match(&name)
+    {
+        Err(Error::InvalidProjectName {
+            name,
+            reason: InvalidProjectNameReason::Format,
+        })
+    } else {
+        Ok(name)
+    }
 }

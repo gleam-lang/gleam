@@ -118,7 +118,7 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
 
 pub fn record_definition(name: &str, fields: &[&str]) -> String {
     let name = &name.to_snake_case();
-    let escaped_name = if is_reserved_word(name) {
+    let escaped_name = if is_erlang_reserved_word(name) {
         format!("'{}'", name)
     } else {
         format!("{}", name)
@@ -126,7 +126,7 @@ pub fn record_definition(name: &str, fields: &[&str]) -> String {
     use std::fmt::Write;
     let mut buffer = format!("-record({}, {{", escaped_name);
     for field in fields.iter().intersperse(&", ") {
-        let escaped_field = if is_reserved_word(field) {
+        let escaped_field = if is_erlang_reserved_word(field) {
             format!("'{}'", field)
         } else {
             format!("{}", field)
@@ -265,7 +265,7 @@ fn atom(value: String) -> Document {
 
     match &*value {
         // Escape because of keyword collision
-        value if is_reserved_word(value) => format!("'{}'", value).to_doc(),
+        value if is_erlang_reserved_word(value) => format!("'{}'", value).to_doc(),
 
         // No need to escape
         _ if RE.is_match(&value) => value.to_doc(),
@@ -1232,7 +1232,7 @@ fn external_fun(name: &str, module: &str, fun: &str, arity: usize) -> Document {
         .nest(INDENT)
 }
 
-fn is_reserved_word(name: &str) -> bool {
+pub fn is_erlang_reserved_word(name: &str) -> bool {
     return match name {
         "!" | "receive" | "bnot" | "div" | "rem" | "band" | "bor" | "bxor" | "bsl" | "bsr"
         | "not" | "and" | "or" | "xor" | "orelse" | "andalso" | "when" | "end" | "fun" | "try"
