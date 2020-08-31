@@ -16,6 +16,7 @@
   generate incorrect Erlang.
 - The formatter style has been improved for function calls that take a single
   block as an argument.
+- Reserved words are no longer incorrectly permitted as project names.
 
 ## v0.11.0 - 2020-08-28
 
