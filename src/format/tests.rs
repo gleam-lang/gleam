@@ -2525,6 +2525,15 @@ fn main() {
 }
 "
     );
+
+    // https://github.com/gleam-lang/gleam/issues/776
+    assert_format!(
+        "fn main() {
+  let Triple(..) = triple()
+  1
+}
+"
+    );
 }
 
 #[test]

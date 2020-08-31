@@ -662,7 +662,9 @@ impl<'a> Formatter<'a> {
             None => name.to_string().to_doc(),
         };
 
-        if args.is_empty() {
+        if args.is_empty() && with_spread {
+            name.append("(..)")
+        } else if args.is_empty() {
             name
         } else if with_spread {
             name.append(wrap_args_with_spread(
