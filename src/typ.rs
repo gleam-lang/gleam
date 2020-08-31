@@ -727,7 +727,6 @@ fn infer_statement(
                 do_infer_fn(args, body, &return_annotation, environment)
             })?;
 
-            // TODO: do we need to do this?
             // Assert that the inferred type matches the type of any recursive call
             environment
                 .unify(preregistered_type, typ.clone())
