@@ -2026,3 +2026,29 @@ main() ->
 "#,
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/777
+#[test]
+fn block_assignment() {
+    assert_erl!(
+        r#"
+fn main() {
+  let x = {
+    1
+    2
+  }
+  x
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main() ->
+    X = begin
+        1,
+        2
+    end,
+    X.
+"#,
+    );
+}

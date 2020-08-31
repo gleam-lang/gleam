@@ -239,7 +239,10 @@ fn fun_args(args: &[TypedArg], env: &mut Env) -> Document {
 }
 
 fn call_args(args: &[CallArg<TypedExpr>], env: &mut Env) -> Document {
-    wrap_args(args.into_iter().map(|arg| wrap_expr(&arg.value, env)))
+    wrap_args(
+        args.into_iter()
+            .map(|arg| maybe_block_expr(&arg.value, env)),
+    )
 }
 
 fn wrap_args<I>(args: I) -> Document
@@ -548,7 +551,7 @@ fn try_(value: &TypedExpr, pat: &TypedPattern, then: &TypedExpr, env: &mut Env) 
 }
 
 fn let_(value: &TypedExpr, pat: &TypedPattern, then: &TypedExpr, env: &mut Env) -> Document {
-    let body = expr(value, env);
+    let body = maybe_block_expr(value, env);
     pattern(pat, env)
         .append(" = ")
         .append(body)
@@ -614,7 +617,7 @@ fn pattern_list_cons(head: &TypedPattern, tail: &TypedPattern, env: &mut Env) ->
 }
 
 fn expr_list_cons(head: &TypedExpr, tail: &TypedExpr, env: &mut Env) -> Document {
-    list_cons(head, tail, env, wrap_expr, |expr| match expr {
+    list_cons(head, tail, env, maybe_block_expr, |expr| match expr {
         TypedExpr::ListNil { .. } => ListType::Nil,
 
         TypedExpr::ListCons { head, tail, .. } => ListType::Cons { head, tail },
@@ -924,9 +927,9 @@ fn case(subjects: &[TypedExpr], cs: &[TypedClause], env: &mut Env) -> Document {
         let subject = subjects
             .get(0)
             .gleam_expect("erl case printing of single subject");
-        wrap_expr(subject, env).group()
+        maybe_block_expr(subject, env).group()
     } else {
-        tuple(subjects.into_iter().map(|e| wrap_expr(e, env)))
+        tuple(subjects.into_iter().map(|e| maybe_block_expr(e, env)))
     };
     "case "
         .to_doc()
@@ -1060,10 +1063,9 @@ fn begin_end(document: Document) -> Document {
 
 /// Same as expr, expect it wraps seq, let, etc in begin end
 ///
-fn wrap_expr(expression: &TypedExpr, env: &mut Env) -> Document {
+fn maybe_block_expr(expression: &TypedExpr, env: &mut Env) -> Document {
     match &expression {
-        TypedExpr::Seq { .. } => begin_end(expr(expression, env)),
-        TypedExpr::Let { .. } => begin_end(expr(expression, env)),
+        TypedExpr::Seq { .. } | TypedExpr::Let { .. } => begin_end(expr(expression, env)),
         _ => expr(expression, env),
     }
 }
@@ -1071,11 +1073,14 @@ fn wrap_expr(expression: &TypedExpr, env: &mut Env) -> Document {
 fn expr(expression: &TypedExpr, env: &mut Env) -> Document {
     match expression {
         TypedExpr::ListNil { .. } => "[]".to_doc(),
+
         TypedExpr::Todo { label: None, .. } => "erlang:error({gleam_error, todo})".to_doc(),
+
         TypedExpr::Todo { label: Some(l), .. } => l
             .clone()
             .to_doc()
             .surround("erlang:error({gleam_error, todo, \"", "\"})"),
+
         TypedExpr::Int { value, .. } => int(value.as_ref()),
         TypedExpr::Float { value, .. } => float(value.as_ref()),
         TypedExpr::String { value, .. } => string(value),
@@ -1154,7 +1159,9 @@ fn expr(expression: &TypedExpr, env: &mut Env) -> Document {
             name, left, right, ..
         } => bin_op(&name, left, right, env),
 
-        TypedExpr::Tuple { elems, .. } => tuple(elems.into_iter().map(|e| wrap_expr(e, env))),
+        TypedExpr::Tuple { elems, .. } => {
+            tuple(elems.into_iter().map(|e| maybe_block_expr(e, env)))
+        }
 
         TypedExpr::BitString { segments, .. } => bit_string(
             segments
