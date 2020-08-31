@@ -1606,13 +1606,27 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         body: UntypedExpr,
         return_annotation: &Option<TypeAst>,
     ) -> Result<(Vec<TypedArg>, TypedExpr), Error> {
-        // Construct an initial type for each argument of the function- either an unbound type variable
-        // or a type provided by an annotation.
+        // Construct an initial type for each argument of the function- either an unbound
+        // type variable or a type provided by an annotation.
         let args: Vec<_> = args
             .into_iter()
             .map(|arg| self.infer_arg(arg))
             .collect::<Result<_, _>>()?;
 
+        let return_type = match return_annotation {
+            Some(ann) => Some(self.type_from_ast(ann)?),
+            None => None,
+        };
+
+        self.infer_fn_with_known_types(args, body, return_type)
+    }
+
+    pub fn infer_fn_with_known_types(
+        &mut self,
+        args: Vec<TypedArg>,
+        body: UntypedExpr,
+        return_type: Option<Arc<Type>>,
+    ) -> Result<(Vec<TypedArg>, TypedExpr), Error> {
         let body = self.in_new_scope(|body_typer| {
             for (arg, t) in args.iter().zip(args.iter().map(|arg| arg.typ.clone())) {
                 match &arg.names {
@@ -1630,10 +1644,9 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             body_typer.infer(body)
         })?;
 
-        // Check that any return type annotation is accurate.
-        if let Some(ann) = return_annotation {
-            let ret_typ = self.type_from_ast(ann)?;
-            self.unify(ret_typ, body.typ())
+        // Check that any return type type is accurate.
+        if let Some(return_type) = return_type {
+            self.unify(return_type, body.typ())
                 .map_err(|e| convert_unify_error(e, body.location()))?;
         }
 

@@ -74,6 +74,17 @@ pub struct Arg<T> {
     pub typ: T,
 }
 
+impl<A> Arg<A> {
+    pub fn set_type<B>(self, t: B) -> Arg<B> {
+        Arg {
+            typ: t,
+            names: self.names,
+            location: self.location,
+            annotation: self.annotation,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum ArgNames {
     Discard { name: String },
