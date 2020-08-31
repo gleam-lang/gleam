@@ -10,6 +10,10 @@
   a single line when possible, even if the return type will not fit on a
   single line.
 - The format for printed types in error messages has been improved.
+- Fixed a bug where the formatter would strip a constructor pattern spread
+  when no fields are given.
+- Fixed a bug where assigning the result of a block to a variable would
+  generate incorrect Erlang.
 
 ## v0.11.0 - 2020-08-28
 
