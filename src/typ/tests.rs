@@ -3231,3 +3231,24 @@ fn type_annotations() {
 
     assert_module_error!("fn inc(x: a) { x + 1 }");
 }
+
+#[test]
+fn early_function_generalisation() {
+    assert_module_infer!(
+        "pub fn id(x) { x }
+         pub fn int() { id(1) }",
+        vec![("id", "fn(a) -> a"), ("int", "fn() -> Int")],
+    );
+
+    assert_module_infer!(
+        "pub fn id(x) { x }
+         pub fn int() { id(1) }
+         pub fn float() { id(1.0) }
+         ",
+        vec![
+            ("float", "fn() -> Float"),
+            ("id", "fn(a) -> a"),
+            ("int", "fn() -> Int"),
+        ],
+    );
+}
