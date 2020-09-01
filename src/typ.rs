@@ -356,14 +356,21 @@ pub fn infer_module(
     }
 
     // Register values so they can be used in functions earlier in the module.
+    let mut fn_hydrators = HashMap::with_capacity(module.statements.len());
     for s in module.statements.iter() {
-        register_values(s, module_name, &mut value_names, &mut environment)?;
+        register_values(
+            s,
+            module_name,
+            &mut fn_hydrators,
+            &mut value_names,
+            &mut environment,
+        )?;
     }
 
     // Infer the types of each statement in the module
     let mut statements = Vec::with_capacity(module.statements.len());
     for statement in module.statements {
-        let statement = infer_statement(statement, &mut environment)?;
+        let statement = infer_statement(statement, &mut fn_hydrators, &mut environment)?;
         statements.push(statement);
     }
 
@@ -448,6 +455,7 @@ fn assert_unique_type_name<'a>(
 fn register_values<'a>(
     s: &'a UntypedStatement,
     module_name: &Vec<String>,
+    fn_hydrators: &mut HashMap<String, Hydrator>,
     names: &mut HashMap<&'a str, &'a SrcSpan>,
     environment: &mut Environment,
 ) -> Result<(), Error> {
@@ -461,6 +469,7 @@ fn register_values<'a>(
         } => {
             assert_unique_value_name(names, name, location)?;
 
+            // Create the field map so we can reorder labels for usage of this function
             let mut field_map = FieldMap::new(args.len());
             for (i, arg) in args.iter().enumerate() {
                 if let ArgNames::NamedLabelled { label, .. } = &arg.names {
@@ -482,6 +491,11 @@ fn register_values<'a>(
                 .collect::<Result<_, _>>()?;
             let return_type = hydrator.type_from_option_ast(return_annotation, environment)?;
             let typ = fn_(arg_types, return_type);
+
+            // Keep track of which types we create from annotations so we can know
+            // which generic types not to instantiate later when performing
+            // inference of the function body.
+            fn_hydrators.insert(name.clone(), hydrator);
 
             // Insert the function into the environment
             environment.insert_variable(
@@ -712,6 +726,7 @@ fn generalise_statement(
 
 fn infer_statement(
     s: UntypedStatement,
+    fn_hydrators: &mut HashMap<String, Hydrator>,
     environment: &mut Environment,
 ) -> Result<TypedStatement, Error> {
     match s {
@@ -744,11 +759,12 @@ fn infer_statement(
                     .zip(args_types.iter())
                     .map(|(a, t)| a.set_type(t.clone()))
                     .collect();
-                let (args, body) = ExprTyper::new(environment).infer_fn_with_known_types(
-                    args,
-                    body,
-                    Some(return_type),
-                )?;
+                let mut expr_typer = ExprTyper::new(environment);
+                expr_typer.hydrator = fn_hydrators
+                    .remove(name.as_str())
+                    .gleam_expect("Could not find hydrator for fn");
+                let (args, body) =
+                    expr_typer.infer_fn_with_known_types(args, body, Some(return_type))?;
                 let args_types = args.iter().map(|a| a.typ.clone()).collect();
                 let typ = fn_(args_types, body.typ());
                 Ok((typ, args, body))

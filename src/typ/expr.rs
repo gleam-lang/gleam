@@ -11,7 +11,7 @@ pub struct ExprTyper<'a, 'b, 'c> {
     environment: &'a mut Environment<'b, 'c>,
 
     // Type hydrator for creating types from annotations
-    hydrator: Hydrator,
+    pub hydrator: Hydrator,
 }
 
 impl<'a, 'b, 'c> Typer for ExprTyper<'a, 'b, 'c> {
