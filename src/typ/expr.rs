@@ -12,6 +12,11 @@ pub struct ExprTyper<'a, 'b, 'c> {
 
     // Type hydrator for creating types from annotations
     pub hydrator: Hydrator,
+
+    // We keep track of whether any ungeneralised functions have been used
+    // to determine whether it is safe to generalise this expression after
+    // it has been inferred.
+    pub ungeneralised_function_used: bool,
 }
 
 impl<'a, 'b, 'c> Typer for ExprTyper<'a, 'b, 'c> {
@@ -27,6 +32,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         Self {
             hydrator,
             environment,
+            ungeneralised_function_used: false,
         }
     }
 
@@ -1349,6 +1355,12 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                     .map(|t| t.to_string())
                     .collect(),
             })?;
+
+        // Note whether we are using an ungeneralised function
+        if let ValueConstructorVariant::ModuleFn { .. } = &variant {
+            let is_ungeneralised = self.environment.ungeneralised_functions.contains(name);
+            self.ungeneralised_function_used = self.ungeneralised_function_used || is_ungeneralised;
+        }
 
         // Register the value as seen for detection of unused values
         self.environment.value_used(name);

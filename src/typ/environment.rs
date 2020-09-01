@@ -34,6 +34,11 @@ pub struct Environment<'a, 'b> {
 
     // Warnings
     pub warnings: &'a mut Vec<Warning>,
+
+    // Functions that have not yet been inferred then generalised.
+    // We use this to determine whether functions that call this one
+    // can safely be generalised.
+    pub ungeneralised_functions: HashSet<String>,
 }
 
 impl<'a, 'b> Environment<'a, 'b> {
@@ -48,6 +53,7 @@ impl<'a, 'b> Environment<'a, 'b> {
             level: 1,
             unused_private_types: HashMap::new(),
             unused_private_mixed_constructors: HashMap::new(),
+            ungeneralised_functions: HashSet::new(),
             module_types: HashMap::new(),
             module_values: HashMap::new(),
             imported_modules: HashMap::new(),

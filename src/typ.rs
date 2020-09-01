@@ -370,7 +370,8 @@ pub fn infer_module(
     // Infer the types of each statement in the module
     let mut statements = Vec::with_capacity(module.statements.len());
     for statement in module.statements {
-        let statement = infer_statement(statement, &mut fn_hydrators, &mut environment)?;
+        let statement =
+            infer_statement(statement, module_name, &mut fn_hydrators, &mut environment)?;
         statements.push(statement);
     }
 
@@ -468,6 +469,7 @@ fn register_values<'a>(
             ..
         } => {
             assert_unique_value_name(names, name, location)?;
+            environment.ungeneralised_functions.insert(name.to_string());
 
             // Create the field map so we can reorder labels for usage of this function
             let mut field_map = FieldMap::new(args.len());
@@ -679,8 +681,6 @@ fn generalise_statement(
             end_location,
             return_type,
         } => {
-            let level = 1;
-
             // Lookup the inferred function information
             let function = environment
                 .get_variable(name.as_str())
@@ -688,8 +688,13 @@ fn generalise_statement(
             let field_map = function.field_map().cloned();
             let typ = function.typ.clone();
 
-            // Generalise the function
-            let typ = generalise(typ, level);
+            // Generalise the function if not already done so
+            let typ = if environment.ungeneralised_functions.remove(name.as_str()) {
+                let level = 1;
+                generalise(typ, level)
+            } else {
+                typ
+            };
 
             // Insert the function into the module's interface
             environment.insert_module_value(
@@ -726,6 +731,7 @@ fn generalise_statement(
 
 fn infer_statement(
     s: UntypedStatement,
+    module_name: &Vec<String>,
     fn_hydrators: &mut HashMap<String, Hydrator>,
     environment: &mut Environment,
 ) -> Result<TypedStatement, Error> {
@@ -741,39 +747,58 @@ fn infer_statement(
             end_location,
             ..
         } => {
-            let preregistered_type = environment
+            let preregistered_fn = environment
                 .get_variable(name.as_str())
-                .gleam_expect("Could not find preregistered type for function")
-                .typ
-                .clone();
+                .gleam_expect("Could not find preregistered type for function");
+            let field_map = preregistered_fn.field_map().cloned();
+            let preregistered_type = preregistered_fn.typ.clone();
             let (args_types, return_type) = preregistered_type
                 .fn_types()
                 .gleam_expect("Preregistered type for fn was not a fn");
 
-            dbg!(&preregistered_type);
-
             // Infer the type using the preregistered args + return types as a starting point
-            let (typ, args, body) = environment.in_new_scope(|environment| {
-                let args = args
-                    .into_iter()
-                    .zip(args_types.iter())
-                    .map(|(a, t)| a.set_type(t.clone()))
-                    .collect();
-                let mut expr_typer = ExprTyper::new(environment);
-                expr_typer.hydrator = fn_hydrators
-                    .remove(name.as_str())
-                    .gleam_expect("Could not find hydrator for fn");
-                let (args, body) =
-                    expr_typer.infer_fn_with_known_types(args, body, Some(return_type))?;
-                let args_types = args.iter().map(|a| a.typ.clone()).collect();
-                let typ = fn_(args_types, body.typ());
-                Ok((typ, args, body))
-            })?;
+            let (typ, args, body, safe_to_generalise) =
+                environment.in_new_scope(|environment| {
+                    let args = args
+                        .into_iter()
+                        .zip(args_types.iter())
+                        .map(|(a, t)| a.set_type(t.clone()))
+                        .collect();
+                    let mut expr_typer = ExprTyper::new(environment);
+                    expr_typer.hydrator = fn_hydrators
+                        .remove(name.as_str())
+                        .gleam_expect("Could not find hydrator for fn");
+                    let (args, body) =
+                        expr_typer.infer_fn_with_known_types(args, body, Some(return_type))?;
+                    let args_types = args.iter().map(|a| a.typ.clone()).collect();
+                    let typ = fn_(args_types, body.typ());
+                    let safe_to_generalise = !expr_typer.ungeneralised_function_used;
+                    Ok((typ, args, body, safe_to_generalise))
+                })?;
 
             // Assert that the inferred type matches the type of any recursive call
             environment
                 .unify(preregistered_type, typ.clone())
                 .map_err(|e| convert_unify_error(e, &location))?;
+
+            // Generalise the function if safe to do so
+            let typ = if safe_to_generalise {
+                environment.ungeneralised_functions.remove(name.as_str());
+                let typ = generalise(typ, 0);
+                environment.insert_variable(
+                    name.clone(),
+                    ValueConstructorVariant::ModuleFn {
+                        name: name.clone(),
+                        field_map,
+                        module: module_name.clone(),
+                        arity: args.len(),
+                    },
+                    typ.clone(),
+                );
+                typ
+            } else {
+                typ
+            };
 
             Ok(Statement::Fn {
                 doc,
@@ -783,7 +808,9 @@ fn infer_statement(
                 args,
                 end_location,
                 return_annotation,
-                return_type: body.typ(),
+                return_type: typ
+                    .return_type()
+                    .gleam_expect("Could not find return type for fn"),
                 body,
             })
         }
