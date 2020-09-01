@@ -6,6 +6,9 @@
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 
+- Fixed a bug where an imported constructor would emit an unused constructor
+  warning when only used in pattern matching.
+
 ## v0.11.1 - 2020-08-31
 
 - The formatter style has been improved to render function type arguments on
