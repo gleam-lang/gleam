@@ -2546,7 +2546,7 @@ fn main() {
                 module: vec!["my_module".to_string()],
                 name: "Box".to_string(),
                 args: vec![Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Generic { id: 11 })),
+                    typ: Arc::new(RefCell::new(TypeVar::Generic { id: 10 })),
                 })]
             }),
             given: Arc::new(Type::App {
@@ -2554,7 +2554,7 @@ fn main() {
                 module: vec!["my_module".to_string()],
                 name: "Box".to_string(),
                 args: vec![Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Generic { id: 9 })),
+                    typ: Arc::new(RefCell::new(TypeVar::Generic { id: 8 })),
                 })]
             }),
         },
@@ -2799,7 +2799,7 @@ fn module_update() {
                 module: vec!["my_module".to_string()],
                 name: "Box".to_string(),
                 args: vec![Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Generic { id: 11 })),
+                    typ: Arc::new(RefCell::new(TypeVar::Generic { id: 8 })),
                 })]
             }),
         },
@@ -2948,10 +2948,10 @@ fn module_update() {
                 end: 158,
             },
             expected: Arc::new(Type::Var {
-                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 12 })),
+                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 8 })),
             }),
             given: Arc::new(Type::Var {
-                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 14 })),
+                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 10 })),
             }),
         },
     );
