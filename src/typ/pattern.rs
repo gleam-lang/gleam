@@ -324,6 +324,9 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 with_spread,
                 ..
             } => {
+                // Register the value as seen for detection of unused values
+                self.environment.value_used(name.as_str());
+
                 let cons = self
                     .environment
                     .get_value_constructor(module.as_ref(), &name)
