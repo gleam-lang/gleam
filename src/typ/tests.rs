@@ -1,5 +1,6 @@
 use super::test_helpers::*;
 use super::*;
+use crate::ast::UntypedExpr;
 
 macro_rules! assert_infer {
     ($src:expr, $typ:expr $(,)?) => {

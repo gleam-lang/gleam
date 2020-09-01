@@ -21,7 +21,7 @@ use crate::{
         self, ArgNames, BitStringSegment, BitStringSegmentOption, CallArg, Constant, Pattern,
         RecordConstructor, SrcSpan, Statement, TypeAst, TypedConstant, TypedExpr, TypedModule,
         TypedPattern, TypedPatternBitStringSegment, TypedRecordUpdateArg, TypedStatement,
-        UnqualifiedImport, UntypedExpr, UntypedModule, UntypedMultiPattern, UntypedPattern,
+        UnqualifiedImport, UntypedModule, UntypedMultiPattern, UntypedPattern,
         UntypedRecordUpdateArg, UntypedStatement,
     },
     bit_string::BinaryTypeSpecifier,
