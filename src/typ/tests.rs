@@ -3169,22 +3169,6 @@ fn mutual_recursion() {
 }
 
 #[test]
-fn eager_function_generalisation() {
-    // TODO: We should be able to tell in `id` that it is safe to generalise x
-    // before unifying it in the later functions (which causes a type error)
-    // assert_module_infer!(
-    //     "pub fn id(x) { x }
-    //      pub fn float() { id(1.0) }
-    //      pub fn int() { id(1) }",
-    //     vec![
-    //         ("float", "fn() -> Float"),
-    //         ("id", "fn(a) -> a"),
-    //         ("int", "fn() -> Int"),
-    //     ],
-    // );
-}
-
-#[test]
 fn type_annotations() {
     // OK!
 
