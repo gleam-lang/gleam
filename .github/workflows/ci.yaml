@@ -1,0 +1,113 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+jobs:
+  test:
+    name: test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        toolchain: [stable]
+        build: [linux, linux-musl, macos, win]
+        include:
+        - build: linux
+          os: ubuntu-latest
+          target: x86_64-unknown-linux-gnu
+          use-cross: false
+        - build: linux-musl
+          os: ubuntu-latest
+          target: x86_64-unknown-linux-musl
+          use-cross: true
+        - build: macos
+          os: macos-latest
+          target: x86_64-apple-darwin
+          use-cross: false
+        - build: win
+          os: windows-latest
+          target: x86_64-pc-windows-msvc
+          use-cross: false
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: ${{ matrix.toolchain }}
+        target: ${{ matrix.target }}
+        profile: minimal
+        override: true
+
+    - name: Build binary
+      uses: actions-rs/cargo@v1
+      with:
+        use-cross: ${{ matrix.use-cross }}
+        command: build
+        args: --release --target ${{ matrix.target }}
+
+    - name: Run tests
+      uses: actions-rs/cargo@v1
+      with:
+        use-cross: ${{ matrix.use-cross }}
+        command: test
+        args: --workspace --target ${{ matrix.target }}
+
+    - name: Upload artifact (Ubuntu)
+      if: matrix.build == 'linux'
+      uses: actions/upload-artifact@v2
+      with:
+        name: gleam
+        path: target/${{ matrix.target }}/release/gleam
+
+  rustfmt:
+    name: rustfmt
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+        profile: minimal
+        components: rustfmt
+
+    - name: Check formatting
+      run: cargo fmt --all -- --check
+
+  test-core-language:
+    name: test-core-language
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2.0.0
+
+    - name: Install Erlang
+      uses: gleam-lang/setup-erlang@v1.1.0
+      with:
+        otp-version: 22.1
+
+    - name: Download test artifact
+      uses: actions/download-artifact@v2
+      with:
+        name: gleam
+        path: ./test/core_language
+
+    # Artifacts remove permissions
+    - name: Setup gleam compiler
+      run: |
+        chmod +x ./gleam
+        sed -i 's/cargo run --/.\/gleam/' rebar.config
+      working-directory: ./test/core_language
+
+    - run: rebar3 install_deps
+      working-directory: ./test/core_language
+
+    - run: rebar3 eunit
+      working-directory: ./test/core_language
