@@ -341,6 +341,7 @@ pub fn infer_module(
     let module_name = &module.name;
     let mut type_names = HashMap::with_capacity(module.statements.len());
     let mut value_names = HashMap::with_capacity(module.statements.len());
+    let mut hydrators = HashMap::with_capacity(module.statements.len());
 
     // Register any modules, types, and values being imported
     // We process imports first so that anything imported can be referenced
@@ -352,16 +353,21 @@ pub fn infer_module(
     // Register types so they can be used in constructors and functions
     // earlier in the module.
     for s in module.statements.iter() {
-        register_types(s, module_name, &mut type_names, &mut environment)?;
+        register_types(
+            s,
+            module_name,
+            &mut hydrators,
+            &mut type_names,
+            &mut environment,
+        )?;
     }
 
     // Register values so they can be used in functions earlier in the module.
-    let mut fn_hydrators = HashMap::with_capacity(module.statements.len());
     for s in module.statements.iter() {
         register_values(
             s,
             module_name,
-            &mut fn_hydrators,
+            &mut hydrators,
             &mut value_names,
             &mut environment,
         )?;
@@ -370,8 +376,7 @@ pub fn infer_module(
     // Infer the types of each statement in the module
     let mut statements = Vec::with_capacity(module.statements.len());
     for statement in module.statements {
-        let statement =
-            infer_statement(statement, module_name, &mut fn_hydrators, &mut environment)?;
+        let statement = infer_statement(statement, module_name, &mut hydrators, &mut environment)?;
         statements.push(statement);
     }
 
@@ -456,7 +461,7 @@ fn assert_unique_type_name<'a>(
 fn register_values<'a>(
     s: &'a UntypedStatement,
     module_name: &Vec<String>,
-    fn_hydrators: &mut HashMap<String, Hydrator>,
+    hydrators: &mut HashMap<String, Hydrator>,
     names: &mut HashMap<&'a str, &'a SrcSpan>,
     environment: &mut Environment,
 ) -> Result<(), Error> {
@@ -497,7 +502,7 @@ fn register_values<'a>(
             // Keep track of which types we create from annotations so we can know
             // which generic types not to instantiate later when performing
             // inference of the function body.
-            fn_hydrators.insert(name.clone(), hydrator);
+            hydrators.insert(name.clone(), hydrator);
 
             // Insert the function into the environment
             environment.insert_variable(
@@ -582,12 +587,20 @@ fn register_values<'a>(
             public,
             opaque,
             name,
-            parameters,
             constructors,
             ..
         } => {
-            let mut hydrator = Hydrator::new();
+            let mut hydrator = hydrators
+                .remove(name.as_str())
+                .gleam_expect("Could not find hydrator for register_values customt type");
             hydrator.disallow_new_type_variables();
+
+            let typ = environment
+                .module_types
+                .get(name)
+                .gleam_expect("Type for custom type not found in register_values")
+                .typ
+                .clone();
 
             // If the custom type only has a single constructor then we can access the
             // fields using the record.field syntax, so store any fields accessors.
@@ -599,34 +612,10 @@ fn register_values<'a>(
                     accessors,
                     // TODO: improve the ownership here so that we can use the
                     // `return_type_constructor` below rather than looking it up twice.
-                    typ: environment
-                        .module_types
-                        .get(name)
-                        .gleam_expect("Type for custom type not found in register_values")
-                        .typ
-                        .clone(),
+                    typ: typ.clone(),
                 };
                 environment.insert_accessors(name.as_ref(), map)
             }
-
-            // This custom type was inserted into the module types in the `register_types`
-            // pass, so we can expect this type to exist already.
-            let return_type_constructor = environment
-                .module_types
-                .get(name)
-                .gleam_expect("Type for custom type not found in register_values");
-
-            // Insert the parameter types (previously created in `register_types`) into the
-            // type environment so that the constructor can reference them.
-            for (typ, name) in return_type_constructor
-                .parameters
-                .iter()
-                .zip(parameters.iter())
-            {
-                hydrator.register_type_as_created(name.clone(), typ.clone());
-            }
-
-            let retrn = return_type_constructor.typ.clone();
 
             // Check and register constructors
             for constructor in constructors.iter() {
@@ -649,8 +638,8 @@ fn register_values<'a>(
                 let field_map = field_map.into_option();
                 // Insert constructor function into module scope
                 let typ = match constructor.args.len() {
-                    0 => retrn.clone(),
-                    _ => fn_(args_types, retrn.clone()),
+                    0 => typ.clone(),
+                    _ => fn_(args_types, typ.clone()),
                 };
 
                 if !opaque {
@@ -752,7 +741,7 @@ fn generalise_statement(
 fn infer_statement(
     s: UntypedStatement,
     module_name: &Vec<String>,
-    fn_hydrators: &mut HashMap<String, Hydrator>,
+    hydrators: &mut HashMap<String, Hydrator>,
     environment: &mut Environment,
 ) -> Result<TypedStatement, Error> {
     match s {
@@ -785,7 +774,7 @@ fn infer_statement(
                         .map(|(a, t)| a.set_type(t.clone()))
                         .collect();
                     let mut expr_typer = ExprTyper::new(environment);
-                    expr_typer.hydrator = fn_hydrators
+                    expr_typer.hydrator = hydrators
                         .remove(name.as_str())
                         .gleam_expect("Could not find hydrator for fn");
                     let (args, body) =
@@ -1297,6 +1286,7 @@ fn custom_type_accessors(
 pub fn register_types<'a>(
     statement: &'a UntypedStatement,
     module: &[String],
+    hydrators: &mut HashMap<String, Hydrator>,
     names: &mut HashMap<&'a str, &'a SrcSpan>,
     environment: &mut Environment,
 ) -> Result<(), Error> {
@@ -1358,6 +1348,7 @@ pub fn register_types<'a>(
                 name: name.clone(),
                 args: parameters.clone(),
             });
+            hydrators.insert(name.to_string(), hydrator);
 
             environment.insert_type_constructor(
                 name.clone(),

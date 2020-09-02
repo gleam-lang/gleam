@@ -51,13 +51,6 @@ impl Hydrator {
         self.created_type_variable_ids = data.created_type_variable_ids;
     }
 
-    pub fn register_type_as_created(&mut self, name: String, typ: Arc<Type>) {
-        // Note we don't record the id. This is OK currently as we only
-        // use this for custom type constructors, but in future we may
-        // want to do this.
-        self.created_type_variables.insert(name, typ);
-    }
-
     pub fn disallow_new_type_variables(&mut self) {
         self.permit_new_type_variables = false
     }

@@ -318,16 +318,9 @@ impl<'a, 'b> Environment<'a, 'b> {
 
                     TypeVar::Unbound { .. } => return Arc::new(Type::Var { typ: typ.clone() }),
 
-                    // TODO: I think the problem is that we no longer have the same hydrator
-                    // creating the args for the function as is being used to type check the
-                    // function so we are converting a generic type into an unbound one,
-                    // causing a type error.
                     TypeVar::Generic { id } => match ids.get(id) {
                         Some(t) => return t.clone(),
                         None => {
-                            dbg!(&id);
-                            dbg!(hydrator.is_created_generic_type(id));
-
                             if !hydrator.is_created_generic_type(id) {
                                 // Check this in the hydrator, i.e. is it a created type
                                 let v = self.new_unbound_var(ctx_level);
