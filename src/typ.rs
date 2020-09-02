@@ -589,6 +589,26 @@ fn register_values<'a>(
             let mut hydrator = Hydrator::new();
             hydrator.disallow_new_type_variables();
 
+            // If the custom type only has a single constructor then we can access the
+            // fields using the record.field syntax, so store any fields accessors.
+            if let Some(accessors) =
+                custom_type_accessors(constructors.as_slice(), &mut hydrator, environment)?
+            {
+                let map = AccessorsMap {
+                    public: (*public && !*opaque),
+                    accessors,
+                    // TODO: improve the ownership here so that we can use the
+                    // `return_type_constructor` below rather than looking it up twice.
+                    typ: environment
+                        .module_types
+                        .get(name)
+                        .gleam_expect("Type for custom type not found in register_values")
+                        .typ
+                        .clone(),
+                };
+                environment.insert_accessors(name.as_ref(), map)
+            }
+
             // This custom type was inserted into the module types in the `register_types`
             // pass, so we can expect this type to exist already.
             let return_type_constructor = environment
@@ -1323,9 +1343,7 @@ pub fn register_types<'a>(
         Statement::CustomType {
             name,
             public,
-            opaque,
             parameters,
-            constructors,
             location,
             ..
         } => {
@@ -1351,19 +1369,6 @@ pub fn register_types<'a>(
                     typ: typ.clone(),
                 },
             )?;
-
-            // If the custom type only has a single constructor then we can access the
-            // fields using the record.field syntax, so store any fields accessors.
-            if let Some(accessors) =
-                custom_type_accessors(constructors.as_slice(), &mut hydrator, environment)?
-            {
-                let map = AccessorsMap {
-                    public: (*public && !*opaque),
-                    accessors,
-                    typ: typ.clone(),
-                };
-                environment.insert_accessors(name.as_ref(), map)
-            }
         }
 
         Statement::TypeAlias {

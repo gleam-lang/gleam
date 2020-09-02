@@ -3154,6 +3154,21 @@ fn functions_used_before_definition() {
 }
 
 #[test]
+fn types_used_before_definition() {
+    assert_module_infer!(
+        "pub type Y { Y(X) }
+         pub external type X",
+        vec![("Y", "fn(X) -> Y")],
+    );
+
+    assert_module_infer!(
+        "pub type Y { Y(x: X) }
+         pub external type X",
+        vec![("Y", "fn(X) -> Y")],
+    );
+}
+
+#[test]
 fn mutual_recursion() {
     assert_module_infer!(
         "pub fn a() { b() }
