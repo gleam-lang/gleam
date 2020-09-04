@@ -57,6 +57,7 @@ development.
 
  - [Arian Daneshvar](https://github.com/bees)
  - [Ben Myles](https://github.com/benmyles)
+ - [Bernardo Amorim](https://github.com/bamorim)
  - [Bryan Paxton](https://github.com/starbelly)
  - [Christian Meunier](https://github.com/tlvenn)
  - [Clever Bunny LTD](https://github.com/cleverbunny)
