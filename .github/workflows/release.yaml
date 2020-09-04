@@ -1,0 +1,88 @@
+name: release
+on:
+  push:
+    tags:
+      - 'v*'
+jobs:
+  create-release:
+    name: create-release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.release.outputs.upload_url }}
+    steps:
+      - name: Create GitHub release
+        id: release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          draft: true
+
+  build-release:
+    name: build-release
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        build: [linux, macos, win]
+        toolchain: [stable]
+        include:
+        - build: linux
+          os: ubuntu-latest
+          target: x86_64-unknown-linux-musl
+          use-cross: true
+        - build: macos
+          os: macos-latest
+          target: x86_64-apple-darwin
+          use-cross: false
+        - build: win
+          os: windows-latest
+          target: x86_64-pc-windows-msvc
+          use-cross: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          target: ${{ matrix.target }}
+          profile: minimal
+          override: true
+
+      - name: Build release binary
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: ${{ matrix.use-cross }}
+          command: build
+          args: --release --target ${{ matrix.target }}
+
+      - name: Build archive
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/}"
+          staging="gleam-$VERSION-${{ matrix.build }}"
+          mkdir -p "$staging"
+
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            cp "target/${{ matrix.target }}/release/gleam.exe" "$staging/"
+            7z a "$staging.zip" "$staging"
+            echo "::set-env name=ASSET::$staging.zip"
+          else
+            cp "target/${{ matrix.target }}/release/gleam" "$staging/"
+            tar -czvf "$staging.tar.gz" "$staging"
+            echo "::set-env name=ASSET::$staging.tar.gz"
+          fi
+
+      - name: Upload release archive
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ${{ env.ASSET }}
+          asset_name: ${{ env.ASSET }}
+          asset_content_type: application/gzip
