@@ -216,6 +216,11 @@ pub enum Error {
     UnexpectedTypeHole {
         location: SrcSpan,
     },
+
+    UTFVarInBitStringSegment {
+        location: SrcSpan,
+        option: String,
+    },
 }
 
 #[derive(Debug, PartialEq, Clone)]

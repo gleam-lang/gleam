@@ -148,10 +148,15 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
 
         let typ = {
             match &*value {
-                Pattern::Var { .. } => typed_segment.match_typ().unwrap_or_else(|| int()),
-                _ => typed_segment.construction_typ().unwrap_or_else(|| int()),
+                Pattern::Var { .. } if typed_segment.typ() == Some(string()) => {
+                    Err(Error::UTFVarInBitStringSegment {
+                        location: location.clone(),
+                        option: typed_segment.typ.unwrap().label(),
+                    })
+                }
+                _ => Ok(typed_segment.typ().unwrap_or_else(|| int())),
             }
-        };
+        }?;
         let typed_value = self.unify(*value, typ.clone())?;
 
         Ok(BitStringSegment {

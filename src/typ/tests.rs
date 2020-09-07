@@ -514,21 +514,14 @@ fn bit_strings() {
     assert_infer!("let <<x:bit_string>> = <<1>> x", "BitString");
     assert_infer!("let <<x:bits>> = <<1>> x", "BitString");
 
-    assert_infer!("let <<x:utf8>> = <<1>> x", "UtfCodepoint");
-    assert_infer!("let <<x:utf16>> = <<1>> x", "UtfCodepoint");
-    assert_infer!("let <<x:utf32>> = <<1>> x", "UtfCodepoint");
-    assert_infer!("let <<x:utf8>> = <<1>> <<x:utf8_codepoint>>", "BitString");
+    assert_infer!("let <<x:utf8_codepoint>> = <<128013:32>> x", "UtfCodepoint");
     assert_infer!(
-        "let <<x:utf16>> = <<1>> x <<x:utf16_codepoint>>",
-        "BitString"
+        "let <<x:utf16_codepoint>> = <<128013:32>> x",
+        "UtfCodepoint"
     );
     assert_infer!(
-        "let <<x:utf32>> = <<1>> x <<x:utf32_codepoint>>",
-        "BitString"
-    );
-    assert_infer!(
-        "let <<x:utf8>> = <<128013:32>> <<x:utf32_codepoint>>",
-        "BitString"
+        "let <<x:utf32_codepoint>> = <<128013:32>> x",
+        "UtfCodepoint"
     );
 
     assert_infer!(
@@ -552,6 +545,30 @@ fn main() {
             expected: int(),
             given: string(),
         },
+    );
+
+    assert_error!(
+        "let <<x:utf8>> = <<1>> x",
+        Error::UTFVarInBitStringSegment {
+            location: SrcSpan { start: 6, end: 12 },
+            option: "utf8".to_string(),
+        }
+    );
+
+    assert_error!(
+        "let <<x:utf16>> = <<1>> x",
+        Error::UTFVarInBitStringSegment {
+            location: SrcSpan { start: 6, end: 13 },
+            option: "utf16".to_string(),
+        }
+    );
+
+    assert_error!(
+        "let <<x:utf32>> = <<1>> x",
+        Error::UTFVarInBitStringSegment {
+            location: SrcSpan { start: 6, end: 13 },
+            option: "utf32".to_string(),
+        }
     );
 }
 
@@ -585,9 +602,9 @@ fn infer_bit_string_error_test() {
     );
 
     assert_error!(
-        "case <<1>> { <<a:utf16>> if a == \"test\" -> 1 }",
+        "case <<1>> { <<a:utf16_codepoint>> if a == \"test\" -> 1 }",
         Error::CouldNotUnify {
-            location: SrcSpan { start: 28, end: 39 },
+            location: SrcSpan { start: 38, end: 49 },
             expected: utf_codepoint(),
             given: string(),
         },

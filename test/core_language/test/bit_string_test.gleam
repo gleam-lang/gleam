@@ -69,7 +69,7 @@ pub fn emoji_test() {
 }
 
 pub fn codepoint_conversion_test() {
-  let <<snake:utf8>> = <<"🐍":utf8>>
+  let <<snake:utf8_codepoint>> = <<"🐍":utf8>>
   let <<snake_int:32>> = <<snake:utf32_codepoint>>
 
   should.equal(snake_int, 128013)

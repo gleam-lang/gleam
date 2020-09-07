@@ -1575,7 +1575,7 @@ main() ->
     assert_erl!(
         r#"fn main() {
   let a = <<"test":utf8>>
-  let <<b:utf8, "st":utf8>> = a
+  let <<b:utf8_codepoint, "st":utf8>> = a
   b
 }
 "#,
