@@ -1262,6 +1262,27 @@ signed, unsigned, big, little, native, size, unit",
                     )
                     .unwrap();
                 }
+
+                UTFVarInBitStringSegment { location, option } => {
+                    let diagnostic = Diagnostic {
+                        title: "Incorrect type specifier in bit string segment".to_string(),
+                        label: "".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: location.clone(),
+                    };
+                    write(buffer, diagnostic, Severity::Error);
+
+                    writeln!(
+                        buffer,
+                        "The `{}` type specifier can only be used for construction e.g. <<\"hello\":{}>>.
+When matching you need to use the `{}_codepoint` specifier instead.",
+                        option,
+                        option,
+                        option,
+                    )
+                    .unwrap();
+                }
             },
 
             Error::Parse { path, src, error } => {

@@ -569,7 +569,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
 
         let type_specifier = BinaryTypeSpecifier::new(&options, false)
             .map_err(|e| convert_binary_error(e, &location))?;
-        let typ = type_specifier.construction_typ().unwrap_or_else(|| int());
+        let typ = type_specifier.typ().unwrap_or_else(|| int());
 
         self.unify(typ.clone(), value.typ())
             .map_err(|e| convert_unify_error(e, value.location()))?;

@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct BinaryTypeSpecifier<T> {
-    typ: Option<BitStringSegmentOption<T>>,
+    pub typ: Option<BitStringSegmentOption<T>>,
     signedness: Option<BitStringSegmentOption<T>>,
     endianness: Option<BitStringSegmentOption<T>>,
     unit: Option<BitStringSegmentOption<T>>,
@@ -137,7 +137,7 @@ impl<T> BinaryTypeSpecifier<T> {
         }
     }
 
-    pub fn construction_typ(&self) -> Option<Arc<Type>> {
+    pub fn typ(&self) -> Option<Arc<Type>> {
         match self.typ {
             Some(BitStringSegmentOption::Integer { .. }) => Some(crate::typ::int()),
             Some(BitStringSegmentOption::Float { .. }) => Some(crate::typ::float()),
@@ -146,26 +146,6 @@ impl<T> BinaryTypeSpecifier<T> {
             Some(BitStringSegmentOption::UTF8 { .. }) => Some(crate::typ::string()),
             Some(BitStringSegmentOption::UTF16 { .. }) => Some(crate::typ::string()),
             Some(BitStringSegmentOption::UTF32 { .. }) => Some(crate::typ::string()),
-            Some(BitStringSegmentOption::UTF8Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
-            Some(BitStringSegmentOption::UTF16Codepoint { .. }) => {
-                Some(crate::typ::utf_codepoint())
-            }
-            Some(BitStringSegmentOption::UTF32Codepoint { .. }) => {
-                Some(crate::typ::utf_codepoint())
-            }
-            _ => None,
-        }
-    }
-
-    pub fn match_typ(&self) -> Option<Arc<Type>> {
-        match self.typ {
-            Some(BitStringSegmentOption::Integer { .. }) => Some(crate::typ::int()),
-            Some(BitStringSegmentOption::Float { .. }) => Some(crate::typ::float()),
-            Some(BitStringSegmentOption::Binary { .. }) => Some(crate::typ::bit_string()),
-            Some(BitStringSegmentOption::BitString { .. }) => Some(crate::typ::bit_string()),
-            Some(BitStringSegmentOption::UTF8 { .. }) => Some(crate::typ::utf_codepoint()),
-            Some(BitStringSegmentOption::UTF16 { .. }) => Some(crate::typ::utf_codepoint()),
-            Some(BitStringSegmentOption::UTF32 { .. }) => Some(crate::typ::utf_codepoint()),
             Some(BitStringSegmentOption::UTF8Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
             Some(BitStringSegmentOption::UTF16Codepoint { .. }) => {
                 Some(crate::typ::utf_codepoint())
