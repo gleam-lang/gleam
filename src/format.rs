@@ -249,7 +249,7 @@ impl<'a> Formatter<'a> {
             Constant::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
 
             Constant::List { elements, .. } => {
-                let comma = if elements.iter().all(|e| e.is_simple()) {
+                let comma: fn() -> Document = if elements.iter().all(|e| e.is_simple()) {
                     || delim(",").flex_break()
                 } else {
                     || delim(",")
@@ -1095,11 +1095,12 @@ impl<'a> Formatter<'a> {
 
     fn list_cons(&mut self, head: &UntypedExpr, tail: &UntypedExpr) -> Document {
         let (elems, tail) = list_cons(head, tail, categorise_list_expr);
-        let comma = if tail.is_none() && elems.iter().all(|e| e.is_simple_constant()) {
-            || delim(",").flex_break()
-        } else {
-            || delim(",")
-        };
+        let comma: fn() -> Document =
+            if tail.is_none() && elems.iter().all(|e| e.is_simple_constant()) {
+                || delim(",").flex_break()
+            } else {
+                || delim(",")
+            };
         let elems = concat(elems.iter().map(|e| self.wrap_expr(e)).intersperse(comma()));
         let tail = tail.map(|e| self.expr(e));
         list(elems, tail)
