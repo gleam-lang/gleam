@@ -84,6 +84,7 @@ development.
  - [Michael Jones](https://github.com/michaeljones)
  - [Mike Roach](https://github.com/mroach)
  - [Milad](https://github.com/slashmili)
+ - [Nick Reynolds](https://github.com/ndreynolds)
  - [Parker Selbert](https://github.com/sorentwo)
  - [Raphael Megzari](https://github.com/happysalada)
  - [Sean Jensen-Grey](https://github.com/seanjensengrey)
