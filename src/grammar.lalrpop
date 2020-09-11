@@ -1094,7 +1094,7 @@ UpName: String = {
 }
 
 DiscardName: String = {
-    <v:r"_[A-Za-z_]*"> => v.to_string()
+    <v:r"_[a-z][0-9a-z_]*"> => v.to_string()
 }
 
 AnyName: String = {
