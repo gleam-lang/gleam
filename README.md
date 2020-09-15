@@ -87,6 +87,7 @@ development.
  - [Milad](https://github.com/slashmili)
  - [Nick Reynolds](https://github.com/ndreynolds)
  - [Parker Selbert](https://github.com/sorentwo)
+ - [Pete Jodo](https://github.com/PeteJodo)
  - [Raphael Megzari](https://github.com/happysalada)
  - [René Klačan](https://github.com/reneklacan)
  - [Sean Jensen-Grey](https://github.com/seanjensengrey)
