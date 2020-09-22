@@ -71,6 +71,7 @@ development.
  - [Guilherme Pasqualino](https://github.com/ggpasqualino)
  - [Hendrik Richter](https://github.com/hendi)
  - [Herdy Handoko](https://github.com/hhandoko)
+ - [human154](https://github.com/human154)
  - [Ingmar Gagen](https://github.com/igagen)
  - [Ivar Vong](https://github.com/ivarvong)
  - [James MacAulay](https://github.com/jamesmacaulay)
