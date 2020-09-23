@@ -368,6 +368,9 @@ fn let_() {
         "Result(Int, Nil)"
     );
     assert_infer!("try x = Error(Nil) Ok(x + 1)", "Result(Int, Nil)");
+
+    // https://github.com/gleam-lang/gleam/issues/786
+    assert_infer!("let _x0 = 1 2", "Int");
 }
 
 #[test]

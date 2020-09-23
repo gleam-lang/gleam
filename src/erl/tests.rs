@@ -630,7 +630,7 @@ bitstring_discard(X) ->
         r#"
 pub fn bitstring_discard(x: String) -> Bool {
  case x {
-  <<_Discardme:utf8, rest:binary>> -> True
+  <<_discardme:utf8, rest:binary>> -> True
    _ -> False
  }
 }
@@ -642,7 +642,7 @@ pub fn bitstring_discard(x: String) -> Bool {
 
 bitstring_discard(X) ->
     case X of
-        <<_Discardme/utf8, Rest/binary>> ->
+        <<_discardme/utf8, Rest/binary>> ->
             true;
 
         _ ->
