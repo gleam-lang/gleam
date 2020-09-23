@@ -7,6 +7,9 @@
 - Gleam can now run an Erlang shell without an external build tool.
 - The utf8, utf16, and utf32 type specifiers are now only available in bit
   string construction, matching must be done with the codepoint versions.
+- Functions may now be called before they are defined in a module. This
+  enabled mutually recursive functions!
+- Discarded variable names may now include numbers.
 
 ## v0.11.2 - 2020-09-01
 
