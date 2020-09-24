@@ -37,11 +37,11 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2.0.0
-      - name: Cache Rust dependencies
-        uses: actions/cache@v1.1.2
-        with:
-          path: target
-          key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
+      # - name: Cache Rust dependencies
+      #   uses: actions/cache@v1.1.2
+      #   with:
+      #     path: target
+      #     key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
       - run: $HOME/.cargo/bin/cargo test
       - run: $HOME/.cargo/bin/cargo build --release
       - run: target/release/gleam --version
