@@ -21,28 +21,6 @@ scalable concurrent systems. It compiles to [Erlang](http://www.erlang.org/)
 and has straightforward interop with other BEAM languages such as Erlang,
 Elixir and LFE.
 
-It looks like this:
-
-```rust
-pub type Tree(value) {
-  Leaf(value)
-  Branch(Tree(value), Tree(value))
-};
-
-pub fn any(tree: Tree(a), check: fn(a) -> Bool) -> Bool {
-  case tree {
-    Leaf(i) -> check(i)
-    Branch(left, right) -> any(left, check) || any(right, check)
-  }
-}
-
-pub fn has_even_leaf(tree: Tree(Int)) -> Bool {
-  any(tree, fn(i) {
-    i % 2 == 0
-  })
-}
-```
-
 For more information see the Gleam website: [https://gleam.run](https://gleam.run).
 
 ## Sponsors
