@@ -70,6 +70,7 @@ development.
  - [Pete Jodo](https://github.com/PeteJodo)
  - [Raphael Megzari](https://github.com/happysalada)
  - [René Klačan](https://github.com/reneklacan)
+ - [Scott Wey](https://github.com/scottwey)
  - [Sean Jensen-Grey](https://github.com/seanjensengrey)
  - [Shritesh Bhattarai](https://github.com/shritesh)
  - [Tristan Sloughter](https://github.com/tsloughter)
