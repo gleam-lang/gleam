@@ -39,6 +39,7 @@ development.
  - [Bernardo Amorim](https://github.com/bamorim)
  - [Bryan Paxton](https://github.com/starbelly)
  - [Christian Meunier](https://github.com/tlvenn)
+ - [clangley](https://github.com/clangley)
  - [Clever Bunny LTD](https://github.com/cleverbunny)
  - [Cole Lawrence](https://github.com/colelawrence)
  - [Dave Lucia](https://github.com/davydog187)
