@@ -21,28 +21,6 @@ scalable concurrent systems. It compiles to [Erlang](http://www.erlang.org/)
 and has straightforward interop with other BEAM languages such as Erlang,
 Elixir and LFE.
 
-It looks like this:
-
-```rust
-pub type Tree(value) {
-  Leaf(value)
-  Branch(Tree(value), Tree(value))
-};
-
-pub fn any(tree: Tree(a), check: fn(a) -> Bool) -> Bool {
-  case tree {
-    Leaf(i) -> check(i)
-    Branch(left, right) -> any(left, check) || any(right, check)
-  }
-}
-
-pub fn has_even_leaf(tree: Tree(Int)) -> Bool {
-  any(tree, fn(i) {
-    i % 2 == 0
-  })
-}
-```
-
 For more information see the Gleam website: [https://gleam.run](https://gleam.run).
 
 ## Sponsors
@@ -61,6 +39,7 @@ development.
  - [Bernardo Amorim](https://github.com/bamorim)
  - [Bryan Paxton](https://github.com/starbelly)
  - [Christian Meunier](https://github.com/tlvenn)
+ - [clangley](https://github.com/clangley)
  - [Clever Bunny LTD](https://github.com/cleverbunny)
  - [Cole Lawrence](https://github.com/colelawrence)
  - [Dave Lucia](https://github.com/davydog187)
@@ -91,6 +70,7 @@ development.
  - [Pete Jodo](https://github.com/PeteJodo)
  - [Raphael Megzari](https://github.com/happysalada)
  - [René Klačan](https://github.com/reneklacan)
+ - [Scott Wey](https://github.com/scottwey)
  - [Sean Jensen-Grey](https://github.com/seanjensengrey)
  - [Shritesh Bhattarai](https://github.com/shritesh)
  - [Tristan Sloughter](https://github.com/tsloughter)
