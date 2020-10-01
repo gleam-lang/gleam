@@ -10,6 +10,7 @@
 - Functions may now be called before they are defined in a module. This
   enabled mutually recursive functions!
 - Discarded variable names may now include numbers.
+- Fixed a bug where discarded variables might generate incorrect Erlang.
 
 ## v0.11.2 - 2020-09-01
 
