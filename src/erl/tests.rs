@@ -104,6 +104,23 @@ main(X) ->
     (fun(X@1) -> X@1 end)(X).
 "#,
     );
+
+    // https://github.com/gleam-lang/gleam/issues/788
+    assert_erl!(
+        r#"fn go() {
+  let _r = 1
+  let _r = 2
+  Nil
+}"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+go() ->
+    _ = 1,
+    _ = 2,
+    nil.
+"#,
+    );
 }
 
 #[test]
@@ -642,7 +659,7 @@ pub fn bitstring_discard(x: String) -> Bool {
 
 bitstring_discard(X) ->
     case X of
-        <<_discardme/utf8, Rest/binary>> ->
+        <<_/utf8, Rest/binary>> ->
             true;
 
         _ ->

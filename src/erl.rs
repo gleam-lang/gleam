@@ -570,7 +570,7 @@ fn pattern(p: &TypedPattern, env: &mut Env) -> Document {
 
         Pattern::Cons { head, tail, .. } => pattern_list_cons(head, tail, env),
 
-        Pattern::Discard { name, .. } => name.clone().to_doc(),
+        Pattern::Discard { .. } => "_".to_doc(),
 
         Pattern::Var { name, .. } => env.next_local_var_name(name.to_string()),
 
