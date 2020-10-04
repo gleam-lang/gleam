@@ -11,6 +11,8 @@
   enabled mutually recursive functions!
 - Discarded variable names may now include numbers.
 - Fixed a bug where discarded variables might generate incorrect Erlang.
+- New projects are created with version 1.0.2 of the setup-gleam GitHub
+  action.
 
 ## v0.11.2 - 2020-09-01
 
