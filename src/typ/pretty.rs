@@ -296,7 +296,7 @@ fn pretty_print_test() {
         "a",
     );
     assert_string!(
-        crate::typ::fn_(
+        fn_(
             vec![Arc::new(Type::Var {
                 typ: Arc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 78 })),
             })],
@@ -307,7 +307,7 @@ fn pretty_print_test() {
         "fn(a) -> b",
     );
     assert_string!(
-        crate::typ::fn_(
+        fn_(
             vec![Arc::new(Type::Var {
                 typ: Arc::new(RefCell::new(TypeVar::Generic { id: 78 })),
             })],

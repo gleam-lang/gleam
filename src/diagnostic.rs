@@ -46,12 +46,8 @@ pub fn write_diagnostic(mut buffer: &mut Buffer, d: MultiLineDiagnostic, severit
         .labels
         .iter()
         .map(|l| {
-            Label::new(
-                l.style,
-                file_id,
-                (l.location.start as usize)..(l.location.end as usize),
-            )
-            .with_message(l.label.clone())
+            Label::new(l.style, file_id, (l.location.start)..(l.location.end))
+                .with_message(l.label.clone())
         })
         .collect();
 

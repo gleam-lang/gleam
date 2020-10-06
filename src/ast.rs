@@ -225,7 +225,7 @@ pub enum Statement<T, Expr, ConstantRecordTag> {
         public: bool,
         name: String,
         annotation: Option<TypeAst>,
-        value: Box<constant::Constant<T, ConstantRecordTag>>,
+        value: Box<Constant<T, ConstantRecordTag>>,
         typ: T,
     },
 }
@@ -369,9 +369,9 @@ pub struct TypedRecordUpdateArg {
 pub type MultiPattern<PatternConstructor, Type> = Vec<Pattern<PatternConstructor, Type>>;
 
 pub type UntypedMultiPattern = MultiPattern<(), ()>;
-pub type TypedMultiPattern = MultiPattern<PatternConstructor, Arc<typ::Type>>;
+pub type TypedMultiPattern = MultiPattern<PatternConstructor, Arc<Type>>;
 
-pub type TypedClause = Clause<TypedExpr, PatternConstructor, Arc<typ::Type>, String>;
+pub type TypedClause = Clause<TypedExpr, PatternConstructor, Arc<Type>, String>;
 
 pub type UntypedClause = Clause<UntypedExpr, (), (), ()>;
 
@@ -385,7 +385,7 @@ pub struct Clause<Expr, PatternConstructor, Type, RecordTag> {
 }
 
 pub type UntypedClauseGuard = ClauseGuard<(), ()>;
-pub type TypedClauseGuard = ClauseGuard<Arc<typ::Type>, String>;
+pub type TypedClauseGuard = ClauseGuard<Arc<Type>, String>;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum ClauseGuard<Type, RecordTag> {
@@ -500,7 +500,7 @@ impl<A, B> ClauseGuard<A, B> {
 }
 
 impl TypedClauseGuard {
-    pub fn typ(&self) -> Arc<typ::Type> {
+    pub fn typ(&self) -> Arc<Type> {
         match self {
             ClauseGuard::Var { typ, .. } => typ.clone(),
             ClauseGuard::TupleIndex { typ, .. } => typ.clone(),
@@ -529,7 +529,7 @@ pub struct SrcSpan {
 }
 
 pub type UntypedPattern = Pattern<(), ()>;
-pub type TypedPattern = Pattern<PatternConstructor, Arc<typ::Type>>;
+pub type TypedPattern = Pattern<PatternConstructor, Arc<Type>>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Pattern<Constructor, Type> {
@@ -644,13 +644,13 @@ pub enum BindingKind {
 // BitStrings
 
 pub type UntypedExprBitStringSegment = BitStringSegment<UntypedExpr, ()>;
-pub type TypedExprBitStringSegment = BitStringSegment<TypedExpr, Arc<typ::Type>>;
+pub type TypedExprBitStringSegment = BitStringSegment<TypedExpr, Arc<Type>>;
 
 pub type UntypedConstantBitStringSegment = BitStringSegment<UntypedConstant, ()>;
-// pub type TypedConstantBitStringSegment = BitStringSegment<TypedConstant, Arc<typ::Type>>;
+// pub type TypedConstantBitStringSegment = BitStringSegment<TypedConstant, Arc<Type>>;
 
 pub type UntypedPatternBitStringSegment = BitStringSegment<UntypedPattern, ()>;
-pub type TypedPatternBitStringSegment = BitStringSegment<TypedPattern, Arc<typ::Type>>;
+pub type TypedPatternBitStringSegment = BitStringSegment<TypedPattern, Arc<Type>>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BitStringSegment<Value, Type> {

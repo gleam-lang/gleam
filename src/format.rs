@@ -40,7 +40,7 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    pub fn with_comments(comments: &'a ModuleComments) -> Self {
+    pub fn with_comments(comments: &'a ModuleComments<'_>) -> Self {
         Self {
             comments: comments.comments.as_slice(),
             doc_comments: comments.doc_comments.as_slice(),

@@ -207,7 +207,7 @@ impl HasLocation for TypedExpr {
 }
 
 impl TypedExpr {
-    fn typ(&self) -> Arc<typ::Type> {
+    fn typ(&self) -> Arc<Type> {
         match self {
             Self::Fn { typ, .. } => typ.clone(),
             Self::ListNil { typ, .. } => typ.clone(),
@@ -234,7 +234,7 @@ impl TypedExpr {
 }
 
 impl HasType for TypedExpr {
-    fn typ(&self) -> Arc<typ::Type> {
+    fn typ(&self) -> Arc<Type> {
         self.typ()
     }
 }

@@ -102,7 +102,7 @@ impl Type {
         module: &[String],
         name: &str,
         arity: usize,
-        environment: &mut Environment,
+        environment: &mut Environment<'_, '_>,
     ) -> Option<Vec<Arc<Type>>> {
         match self {
             Type::App {
@@ -266,7 +266,7 @@ pub enum PatternConstructor {
 }
 
 pub trait Typer {
-    fn with_environment<T>(&mut self, f: impl FnOnce(&mut Environment) -> T) -> T;
+    fn with_environment<T>(&mut self, f: impl FnOnce(&mut Environment<'_, '_>) -> T) -> T;
 
     fn new_unbound_var(&mut self, level: usize) -> Arc<Type> {
         self.with_environment(|e| e.new_unbound_var(level))
@@ -463,7 +463,7 @@ fn register_values<'a>(
     module_name: &Vec<String>,
     hydrators: &mut HashMap<String, Hydrator>,
     names: &mut HashMap<&'a str, &'a SrcSpan>,
-    environment: &mut Environment,
+    environment: &mut Environment<'_, '_>,
 ) -> Result<(), Error> {
     match s {
         Statement::Fn {
@@ -676,7 +676,7 @@ fn register_values<'a>(
 fn generalise_statement(
     s: TypedStatement,
     module_name: &Vec<String>,
-    environment: &mut Environment,
+    environment: &mut Environment<'_, '_>,
 ) -> Result<TypedStatement, Error> {
     match s {
         Statement::Fn {
@@ -742,7 +742,7 @@ fn infer_statement(
     s: UntypedStatement,
     module_name: &Vec<String>,
     hydrators: &mut HashMap<String, Hydrator>,
-    environment: &mut Environment,
+    environment: &mut Environment<'_, '_>,
 ) -> Result<TypedStatement, Error> {
     match s {
         Statement::Fn {
@@ -1134,7 +1134,7 @@ fn update_levels(typ: Arc<Type>, own_level: usize, own_id: usize) -> Result<(), 
 fn match_fun_type(
     typ: Arc<Type>,
     arity: usize,
-    environment: &mut Environment,
+    environment: &mut Environment<'_, '_>,
 ) -> Result<(Vec<Arc<Type>>, Arc<Type>), MatchFunTypeError> {
     if let Type::Var { typ } = &*typ {
         let new_value = match &*typ.borrow() {
@@ -1240,7 +1240,7 @@ fn make_type_vars(
     args: &[String],
     location: &SrcSpan,
     hydrator: &mut Hydrator,
-    environment: &mut Environment,
+    environment: &mut Environment<'_, '_>,
 ) -> Result<Vec<Arc<Type>>, Error> {
     args.iter()
         .map(|arg| TypeAst::Var {
@@ -1254,7 +1254,7 @@ fn make_type_vars(
 fn custom_type_accessors(
     constructors: &[RecordConstructor],
     hydrator: &mut Hydrator,
-    environment: &mut Environment,
+    environment: &mut Environment<'_, '_>,
 ) -> Result<Option<HashMap<String, RecordAccessor>>, Error> {
     // Get the constructor for this custom type.
     let args = match constructors {
@@ -1288,7 +1288,7 @@ pub fn register_types<'a>(
     module: &[String],
     hydrators: &mut HashMap<String, Hydrator>,
     names: &mut HashMap<&'a str, &'a SrcSpan>,
-    environment: &mut Environment,
+    environment: &mut Environment<'_, '_>,
 ) -> Result<(), Error> {
     match statement {
         Statement::ExternalType {
@@ -1406,7 +1406,10 @@ pub fn register_types<'a>(
     Ok(())
 }
 
-pub fn register_import(s: &UntypedStatement, environment: &mut Environment) -> Result<(), Error> {
+pub fn register_import(
+    s: &UntypedStatement,
+    environment: &mut Environment<'_, '_>,
+) -> Result<(), Error> {
     match s {
         Statement::Import {
             module,
@@ -1473,9 +1476,7 @@ pub fn register_import(s: &UntypedStatement, environment: &mut Environment) -> R
                     environment
                         .unused_private_types
                         .insert(imported_name.clone(), location.clone());
-                } else if value_imported {
-                    ()
-                } else {
+                } else if !value_imported {
                     // Error if no type or value was found with that name
                     return Err(Error::UnknownModuleField {
                         location: location.clone(),
