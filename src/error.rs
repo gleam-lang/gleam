@@ -464,21 +464,19 @@ Second: {}",
                             "This constructor does not accept any labelled arguments."
                         )
                         .unwrap();
-                    } else {
-                        if other_labels.is_empty() {
-                            writeln!(
+                    } else if other_labels.is_empty() {
+                        writeln!(
                                 buffer,
                                 "You have already supplied all the labelled arguments that this constructor accepts."
                             )
                             .unwrap();
-                        } else {
-                            writeln!(
-                                buffer,
-                                "The other labelled arguments that this constructor accepts are `{}`.",
-                                other_labels.iter().join("`, `")
-                            )
-                            .unwrap();
-                        }
+                    } else {
+                        writeln!(
+                            buffer,
+                            "The other labelled arguments that this constructor accepts are `{}`.",
+                            other_labels.iter().join("`, `")
+                        )
+                        .unwrap();
                     }
                 }
 

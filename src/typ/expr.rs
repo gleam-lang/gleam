@@ -20,7 +20,7 @@ pub struct ExprTyper<'a, 'b, 'c> {
 }
 
 impl<'a, 'b, 'c> Typer for ExprTyper<'a, 'b, 'c> {
-    fn with_environment<T>(&mut self, f: impl FnOnce(&mut Environment) -> T) -> T {
+    fn with_environment<T>(&mut self, f: impl FnOnce(&mut Environment<'_, '_>) -> T) -> T {
         f(self.environment)
     }
 }

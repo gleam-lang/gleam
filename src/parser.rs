@@ -3,10 +3,7 @@ use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
-    TooManyHolesInCapture {
-        location: crate::ast::SrcSpan,
-        count: usize,
-    },
+    TooManyHolesInCapture { location: SrcSpan, count: usize },
 }
 
 pub type LalrpopError = lalrpop_util::ParseError<usize, (usize, String), Error>;
@@ -184,7 +181,7 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
 fn chomp_newlines(
     buffer: &mut String,
     position: usize,
-    comments: &mut ModuleComments,
+    comments: &mut ModuleComments<'_>,
     chars: &mut std::iter::Peekable<unicode_segmentation::GraphemeIndices<'_>>,
 ) {
     match chars.peek() {
@@ -418,12 +415,12 @@ fn main() {
     );
 }
 
-pub fn location(start: usize, end: usize) -> crate::ast::SrcSpan {
-    crate::ast::SrcSpan { start, end }
+pub fn location(start: usize, end: usize) -> SrcSpan {
+    SrcSpan { start, end }
 }
 
 pub fn attach_doc_comments<'a, A, B, C, D>(
-    module: &mut crate::ast::Module<A, B, C, D>,
+    module: &mut Module<A, B, C, D>,
     mut comments: &'a [Comment<'a>],
 ) {
     for statement in &mut module.statements {
@@ -444,7 +441,7 @@ pub fn attach_doc_comments<'a, A, B, C, D>(
 
 pub fn make_call(
     fun: UntypedExpr,
-    args: Vec<Result<CallArg<UntypedExpr>, (crate::ast::SrcSpan, Option<String>)>>,
+    args: Vec<Result<CallArg<UntypedExpr>, (SrcSpan, Option<String>)>>,
     s: usize,
     e: usize,
 ) -> Result<UntypedExpr, Error> {
@@ -460,7 +457,7 @@ pub fn make_call(
                     location: Default::default(),
                     value: UntypedExpr::Var {
                         location,
-                        name: crate::ast::CAPTURE_VARIABLE.to_string(),
+                        name: CAPTURE_VARIABLE.to_string(),
                     },
                 }
             }
@@ -483,7 +480,7 @@ pub fn make_call(
                 location: location(0, 0),
                 annotation: None,
                 names: ArgNames::Named {
-                    name: crate::ast::CAPTURE_VARIABLE.to_string(),
+                    name: CAPTURE_VARIABLE.to_string(),
                 },
                 typ: (),
             }],

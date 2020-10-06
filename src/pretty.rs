@@ -209,7 +209,7 @@ fn fmt(
                         b.push_str(broken.as_str());
                         b.push_str("\n");
                         b.push_str(" ".repeat(indent as usize).as_str());
-                        indent as isize
+                        indent
                     }
                 };
             }
