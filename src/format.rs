@@ -1236,6 +1236,12 @@ impl<'a> Formatter<'a> {
 
             ClauseGuard::Var { name, .. } => name.to_string().to_doc(),
 
+            ClauseGuard::TupleIndex { tuple, index, .. } => self
+                .clause_guard(tuple.as_ref())
+                .append(".")
+                .append(index.to_string())
+                .to_doc(),
+
             ClauseGuard::Constant(constant) => self.const_expr(constant),
         }
     }

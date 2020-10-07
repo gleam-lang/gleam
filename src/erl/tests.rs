@@ -2075,3 +2075,33 @@ main() ->
 "#,
     );
 }
+
+#[test]
+fn tuple_access_in_guard() {
+    assert_erl!(
+        r#"
+fn main() {
+    let key = 10
+    let x = [tuple(10, 2), tuple(1, 2)]
+    case x {
+        [first, ..rest] if first.0 == key -> "ok"
+        _ -> "ko"
+    }
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+main() ->
+    Key = 10,
+    X = [{10, 2}, {1, 2}],
+    case X of
+        [First | Rest] when erlang:element(1, First) =:= Key ->
+            <<"ok"/utf8>>;
+
+        _ ->
+            <<"ko"/utf8>>
+    end.
+"#,
+    );
+}
