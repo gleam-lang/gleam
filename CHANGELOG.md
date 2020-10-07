@@ -11,6 +11,7 @@
   enabled mutually recursive functions!
 - Discarded variable names may now include numbers.
 - Fixed a bug where discarded variables might generate incorrect Erlang.
+- Added support tuple access in clause guards. 
 
 ## v0.11.2 - 2020-09-01
 
