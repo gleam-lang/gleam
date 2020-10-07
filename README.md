@@ -61,6 +61,7 @@ development.
  - [Mario Vellandi](https://github.com/mvellandi)
  - [mario](https://github.com/mario-mazo)
  - [Mark Markaryan](https://github.com/markmark206)
+ - [Mark Spink](https://github.com/codebay)
  - [Matthew Cheely](https://github.com/MattCheely)
  - [Michael Jones](https://github.com/michaeljones)
  - [Mike Roach](https://github.com/mroach)
