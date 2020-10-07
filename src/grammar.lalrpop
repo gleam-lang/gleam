@@ -499,9 +499,17 @@ ClauseGuard4: UntypedClauseGuard = {
         right: Box::new(right),
     },
 
+    <name:ClauseGuard5> <s:@L> "." <index:PositiveRawInt> <e:@L> => ClauseGuard::TupleIndex {
+        location: location(s, e),
+        index,
+        typ: (),
+        tuple: Box::new(name),
+    },
+
     ClauseGuard5 => <>,
 }
 
+#[inline]
 ClauseGuard5: UntypedClauseGuard = {
     Constant => ClauseGuard::Constant(<>),
 

@@ -467,6 +467,13 @@ pub enum ClauseGuard<Type, RecordTag> {
         name: String,
     },
 
+    TupleIndex {
+        location: SrcSpan,
+        index: u64,
+        typ: Type,
+        tuple: Box<Self>,
+    },
+
     Constant(Constant<Type, RecordTag>),
 }
 
@@ -477,6 +484,7 @@ impl<A, B> ClauseGuard<A, B> {
             ClauseGuard::Or { location, .. } => location,
             ClauseGuard::And { location, .. } => location,
             ClauseGuard::Var { location, .. } => location,
+            ClauseGuard::TupleIndex { location, .. } => location,
             ClauseGuard::Equals { location, .. } => location,
             ClauseGuard::NotEquals { location, .. } => location,
             ClauseGuard::GtInt { location, .. } => location,
@@ -495,6 +503,7 @@ impl TypedClauseGuard {
     pub fn typ(&self) -> Arc<typ::Type> {
         match self {
             ClauseGuard::Var { typ, .. } => typ.clone(),
+            ClauseGuard::TupleIndex { typ, .. } => typ.clone(),
             ClauseGuard::Constant(constant) => constant.typ(),
 
             ClauseGuard::Or { .. }

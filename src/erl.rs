@@ -881,8 +881,18 @@ fn bare_clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
         // ClauseGuard::Vars are local variables
         ClauseGuard::Var { name, .. } => env.local_var_name(name.to_string()),
 
+        ClauseGuard::TupleIndex { tuple, index, .. } => tuple_index_inline(tuple, *index, env),
+
         ClauseGuard::Constant(constant) => const_inline(constant, env),
     }
+}
+
+fn tuple_index_inline(tuple: &TypedClauseGuard, index: u64, env: &mut Env) -> Document {
+    use std::iter::once;
+    let index_doc = format!("{}", (index + 1)).to_doc();
+    let tuple_doc = bare_clause_guard(tuple, env);
+    let iter = once(index_doc).chain(once(tuple_doc));
+    "erlang:element".to_doc().append(wrap_args(iter))
 }
 
 fn clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
@@ -905,7 +915,9 @@ fn clause_guard(guard: &TypedClauseGuard, env: &mut Env) -> Document {
             .append(")"),
 
         // Values are not wrapped
-        ClauseGuard::Constant(_) | ClauseGuard::Var { .. } => bare_clause_guard(guard, env),
+        ClauseGuard::Constant(_) | ClauseGuard::Var { .. } | ClauseGuard::TupleIndex { .. } => {
+            bare_clause_guard(guard, env)
+        }
     }
 }
 
