@@ -66,35 +66,32 @@ pub enum Type {
 
 impl Type {
     pub fn is_result(&self) -> bool {
-        match self {
-            Type::App { name, module, .. } if "Result" == name && module.is_empty() => true,
-            _ => false,
-        }
+        matches!(self, Self::App { name, module, .. } if "Result" == name && module.is_empty())
     }
 
     pub fn is_unbound(&self) -> bool {
         match self {
-            Type::Var { typ } => typ.borrow().is_unbound(),
+            Self::Var { typ } => typ.borrow().is_unbound(),
             _ => false,
         }
     }
 
-    pub fn return_type(&self) -> Option<Arc<Type>> {
+    pub fn return_type(&self) -> Option<Arc<Self>> {
         match self {
-            Type::Fn { retrn, .. } => Some(retrn.clone()),
+            Self::Fn { retrn, .. } => Some(retrn.clone()),
             _ => None,
         }
     }
 
-    pub fn fn_types(&self) -> Option<(Vec<Arc<Type>>, Arc<Type>)> {
+    pub fn fn_types(&self) -> Option<(Vec<Arc<Self>>, Arc<Self>)> {
         match self {
-            Type::Fn { args, retrn, .. } => Some((args.clone(), retrn.clone())),
+            Self::Fn { args, retrn, .. } => Some((args.clone(), retrn.clone())),
             _ => None,
         }
     }
 
-    /// Get the args for the type if the type is a specific Type::App.
-    /// Returns None if the type is not a Type::App or is an incorrect Type:App
+    /// Get the args for the type if the type is a specific `Type::App`.
+    /// Returns None if the type is not a `Type::App` or is an incorrect `Type:App`
     ///
     pub fn get_app_args(
         &self,
@@ -103,9 +100,9 @@ impl Type {
         name: &str,
         arity: usize,
         environment: &mut Environment<'_, '_>,
-    ) -> Option<Vec<Arc<Type>>> {
+    ) -> Option<Vec<Arc<Self>>> {
         match self {
-            Type::App {
+            Self::App {
                 module: m,
                 name: n,
                 args,
@@ -118,7 +115,7 @@ impl Type {
                 }
             }
 
-            Type::Var { typ } => {
+            Self::Var { typ } => {
                 let args: Vec<_> = match &*typ.borrow() {
                     TypeVar::Link { typ } => {
                         return typ.get_app_args(public, module, name, arity, environment);
@@ -133,7 +130,7 @@ impl Type {
 
                 // TODO: use the real type here rather than making a copy
                 *typ.borrow_mut() = TypeVar::Link {
-                    typ: Arc::new(Type::App {
+                    typ: Arc::new(Self::App {
                         name: name.to_string(),
                         module: module.to_owned(),
                         args: args.clone(),
@@ -147,19 +144,19 @@ impl Type {
         }
     }
 
-    pub fn find_private_type(&self) -> Option<Type> {
+    pub fn find_private_type(&self) -> Option<Self> {
         match self {
-            Type::App { public: false, .. } => Some(self.clone()),
+            Self::App { public: false, .. } => Some(self.clone()),
 
-            Type::App { args, .. } => args.iter().find_map(|t| t.find_private_type()),
+            Self::App { args, .. } => args.iter().find_map(|t| t.find_private_type()),
 
-            Type::Tuple { elems, .. } => elems.iter().find_map(|t| t.find_private_type()),
+            Self::Tuple { elems, .. } => elems.iter().find_map(|t| t.find_private_type()),
 
-            Type::Fn { retrn, args, .. } => retrn
+            Self::Fn { retrn, args, .. } => retrn
                 .find_private_type()
                 .or_else(|| args.iter().find_map(|t| t.find_private_type())),
 
-            Type::Var { typ, .. } => match &*typ.borrow() {
+            Self::Var { typ, .. } => match &*typ.borrow() {
                 TypeVar::Unbound { .. } => None,
 
                 TypeVar::Generic { .. } => None,
@@ -171,7 +168,7 @@ impl Type {
 
     pub fn fn_arity(&self) -> Option<usize> {
         match self {
-            Type::Fn { args, .. } => Some(args.len()),
+            Self::Fn { args, .. } => Some(args.len()),
             _ => None,
         }
     }
@@ -228,19 +225,16 @@ pub enum ValueConstructorVariant {
 impl ValueConstructorVariant {
     fn to_module_value_constructor(&self) -> ModuleValueConstructor {
         match self {
-            ValueConstructorVariant::Record { name, field_map } => ModuleValueConstructor::Record {
+            Self::Record { name, field_map } => ModuleValueConstructor::Record {
                 name: name.clone(),
                 arity: field_map.as_ref().map_or(0, |fm| fm.arity),
             },
 
-            ValueConstructorVariant::ModuleConstant { literal } => {
-                ModuleValueConstructor::Constant {
-                    literal: literal.clone(),
-                }
-            }
+            Self::ModuleConstant { literal } => ModuleValueConstructor::Constant {
+                literal: literal.clone(),
+            },
 
-            ValueConstructorVariant::LocalVariable { .. }
-            | ValueConstructorVariant::ModuleFn { .. } => ModuleValueConstructor::Fn,
+            Self::LocalVariable { .. } | Self::ModuleFn { .. } => ModuleValueConstructor::Fn,
         }
     }
 }
@@ -286,10 +280,7 @@ pub enum TypeVar {
 
 impl TypeVar {
     pub fn is_unbound(&self) -> bool {
-        match self {
-            TypeVar::Unbound { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::Unbound { .. })
     }
 }
 
@@ -460,7 +451,7 @@ fn assert_unique_type_name<'a>(
 
 fn register_values<'a>(
     s: &'a UntypedStatement,
-    module_name: &Vec<String>,
+    module_name: &[String],
     hydrators: &mut HashMap<String, Hydrator>,
     names: &mut HashMap<&'a str, &'a SrcSpan>,
     environment: &mut Environment<'_, '_>,
@@ -510,7 +501,7 @@ fn register_values<'a>(
                 ValueConstructorVariant::ModuleFn {
                     name: name.clone(),
                     field_map,
-                    module: module_name.clone(),
+                    module: module_name.to_vec(),
                     arity: args.len(),
                 },
                 typ,
@@ -532,7 +523,7 @@ fn register_values<'a>(
             // Construct type of function from AST
             let mut hydrator = Hydrator::new();
             let (typ, field_map) = environment.in_new_scope(|environment| {
-                let return_type = hydrator.type_from_ast(&retrn, environment)?;
+                let return_type = hydrator.type_from_ast(retrn, environment)?;
                 let mut args_types = Vec::with_capacity(args.len());
                 let mut field_map = FieldMap::new(args.len());
                 for (i, arg) in args.iter().enumerate() {
@@ -555,7 +546,7 @@ fn register_values<'a>(
 
             // Insert function into module
             environment.insert_module_value(
-                &name,
+                name,
                 ValueConstructor {
                     public: *public,
                     typ: typ.clone(),
@@ -624,7 +615,7 @@ fn register_values<'a>(
                 let mut field_map = FieldMap::new(constructor.args.len());
                 let mut args_types = Vec::with_capacity(constructor.args.len());
                 for (i, (label, arg, ..)) in constructor.args.iter().enumerate() {
-                    let t = hydrator.type_from_ast(&arg, environment)?;
+                    let t = hydrator.type_from_ast(arg, environment)?;
                     args_types.push(t);
                     if let Some(label) = label {
                         field_map
@@ -675,7 +666,7 @@ fn register_values<'a>(
 
 fn generalise_statement(
     s: TypedStatement,
-    module_name: &Vec<String>,
+    module_name: &[String],
     environment: &mut Environment<'_, '_>,
 ) -> Result<TypedStatement, Error> {
     match s {
@@ -715,7 +706,7 @@ fn generalise_statement(
                     variant: ValueConstructorVariant::ModuleFn {
                         name: name.clone(),
                         field_map,
-                        module: module_name.clone(),
+                        module: module_name.to_vec(),
                         arity: args.len(),
                     },
                 },
@@ -740,7 +731,7 @@ fn generalise_statement(
 
 fn infer_statement(
     s: UntypedStatement,
-    module_name: &Vec<String>,
+    module_name: &[String],
     hydrators: &mut HashMap<String, Hydrator>,
     environment: &mut Environment<'_, '_>,
 ) -> Result<TypedStatement, Error> {
@@ -799,7 +790,7 @@ fn infer_statement(
                     ValueConstructorVariant::ModuleFn {
                         name: name.clone(),
                         field_map,
-                        module: module_name.clone(),
+                        module: module_name.to_vec(),
                         arity: args.len(),
                     },
                     typ.clone(),
@@ -1357,7 +1348,7 @@ pub fn register_types<'a>(
                     module: module.to_owned(),
                     public: *public,
                     parameters,
-                    typ: typ.clone(),
+                    typ,
                 },
             )?;
         }
@@ -1380,7 +1371,7 @@ pub fn register_types<'a>(
             hydrator.disallow_new_type_variables();
 
             // Create the type that the alias resolves to
-            let typ = hydrator.type_from_ast(&resolved_type, environment)?;
+            let typ = hydrator.type_from_ast(resolved_type, environment)?;
             environment.insert_type_constructor(
                 name.clone(),
                 TypeConstructor {

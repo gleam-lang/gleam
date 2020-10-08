@@ -19,7 +19,7 @@ pub enum Warning {
 
 impl Warning {
     pub fn pretty(&self, buffer: &mut Buffer) {
-        use crate::typ::Warning::*;
+        use crate::typ::Warning;
         use std::io::Write;
 
         buffer
@@ -27,8 +27,8 @@ impl Warning {
             .expect("error pretty buffer write space before");
 
         match self {
-            Warning::Type { path, src, warning } => match warning {
-                Todo { location, typ } => {
+            Self::Type { path, src, warning } => match warning {
+                Warning::Todo { location, typ } => {
                     let diagnostic = Diagnostic {
                         title: "Todo found".to_string(),
                         label: "".to_string(),
@@ -50,7 +50,7 @@ your program.",
                     .unwrap();
                 }
 
-                ImplicitlyDiscardedResult { location } => {
+                Warning::ImplicitlyDiscardedResult { location } => {
                     let diagnostic = Diagnostic {
                         title: "Unused result value".to_string(),
                         label: "".to_string(),
@@ -66,7 +66,7 @@ variable _ if you are sure the error does not matter.")
                     .unwrap();
                 }
 
-                NoFieldsRecordUpdate { location } => {
+                Warning::NoFieldsRecordUpdate { location } => {
                     let diagnostic = Diagnostic {
                         title: "Fieldless record update".to_string(),
                         label: "".to_string(),
@@ -81,7 +81,7 @@ record without modification. Add some fields or remove this update.")
                     .unwrap();
                 }
 
-                AllFieldsRecordUpdate { location } => {
+                Warning::AllFieldsRecordUpdate { location } => {
                     let diagnostic = Diagnostic {
                         title: "Redundant record update".to_string(),
                         label: "".to_string(),
@@ -96,7 +96,7 @@ be an update. Remove the update or remove fields that need to be copied.")
                     .unwrap();
                 }
 
-                UnusedType { location, name } => {
+                Warning::UnusedType { location, name } => {
                     let diagnostic = Diagnostic {
                         title: "Unused type".to_string(),
                         label: "".to_string(),
@@ -113,7 +113,7 @@ be an update. Remove the update or remove fields that need to be copied.")
                     .unwrap();
                 }
 
-                UnusedConstructor { location, name } => {
+                Warning::UnusedConstructor { location, name } => {
                     let diagnostic = Diagnostic {
                         title: "Unused constructor".to_string(),
                         label: "".to_string(),

@@ -69,7 +69,7 @@ impl Hydrator {
         environment: &mut Environment<'a, 'b>,
     ) -> Result<Arc<Type>, Error> {
         match ast {
-            Some(ast) => self.type_from_ast(&ast, environment),
+            Some(ast) => self.type_from_ast(ast, environment),
             None => Ok(environment.new_unbound_var(environment.level)),
         }
     }
@@ -102,7 +102,7 @@ impl Hydrator {
                     ..
                 } = environment
                     .get_type_constructor(module, name)
-                    .map_err(|e| convert_get_type_constructor_error(e, &location))?
+                    .map_err(|e| convert_get_type_constructor_error(e, location))?
                     .clone();
 
                 // Register the type constructor as being used if it is unqualifed.
@@ -126,11 +126,11 @@ impl Hydrator {
                 let mut type_vars = hashmap![];
                 let mut parameter_types = Vec::with_capacity(parameters.len());
                 for typ in parameters {
-                    let t = environment.instantiate(typ, 0, &mut type_vars, &self);
+                    let t = environment.instantiate(typ, 0, &mut type_vars, self);
 
                     parameter_types.push(t);
                 }
-                let return_type = environment.instantiate(return_type, 0, &mut type_vars, &self);
+                let return_type = environment.instantiate(return_type, 0, &mut type_vars, self);
 
                 // Unify argument types with instantiated parameter types so that the correct types
                 // are inserted into the return type
@@ -139,7 +139,7 @@ impl Hydrator {
                 {
                     environment
                         .unify(parameter.clone(), argument.clone())
-                        .map_err(|e| convert_unify_error(e, &location))?;
+                        .map_err(|e| convert_unify_error(e, location))?;
                 }
 
                 Ok(return_type)

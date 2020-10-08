@@ -112,12 +112,9 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
             .map(|s| self.infer_pattern_segment(s, false))
             .collect::<Result<Vec<_>, _>>()?;
 
-        match last_segment {
-            Some(s) => {
-                let typed_last_segment = self.infer_pattern_segment(s, true)?;
-                typed_segments.push(typed_last_segment)
-            }
-            None => (),
+        if let Some(s) = last_segment {
+            let typed_last_segment = self.infer_pattern_segment(s, true)?;
+            typed_segments.push(typed_last_segment)
         }
 
         Ok(TypedPattern::BitString {
@@ -154,7 +151,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                         option: typed_segment.typ.unwrap().label(),
                     })
                 }
-                _ => Ok(typed_segment.typ().unwrap_or_else(|| int())),
+                _ => Ok(typed_segment.typ().unwrap_or_else(int)),
             }
         }?;
         let typed_value = self.unify(*value, typ.clone())?;
@@ -204,7 +201,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                     typ,
                     self.environment.level,
                     &mut hashmap![],
-                    &self.hydrator,
+                    self.hydrator,
                 );
                 self.environment
                     .unify(int(), typ.clone())
@@ -311,7 +308,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
 
                     Err(Error::CouldNotUnify {
                         given: tuple(elems_types),
-                        expected: typ.clone(),
+                        expected: typ,
                         location,
                     })
                 }
@@ -407,7 +404,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                     constructor_typ,
                     self.level,
                     &mut hashmap![],
-                    &self.hydrator,
+                    self.hydrator,
                 );
                 match &*instantiated_constructor_type {
                     Type::Fn { args, retrn } => {

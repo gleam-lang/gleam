@@ -51,8 +51,8 @@ impl FieldMap {
             });
         }
 
-        for i in 0..args.len() {
-            match &args[i].label {
+        for arg in args.iter() {
+            match &arg.label {
                 Some(_) => {
                     labelled_arguments_given = true;
                 }
@@ -60,7 +60,7 @@ impl FieldMap {
                 None => {
                     if labelled_arguments_given {
                         return Err(Error::PositionalArgumentAfterLabelled {
-                            location: args[i].location.clone(),
+                            location: arg.location.clone(),
                         });
                     }
                 }
@@ -75,7 +75,7 @@ impl FieldMap {
 
                 // Not a labelled argument
                 None => {
-                    i = i + 1;
+                    i += 1;
                     continue;
                 }
             };
@@ -83,7 +83,7 @@ impl FieldMap {
             let position = match self.fields.get(label) {
                 None => {
                     unknown_labels.push((label.clone(), location.clone()));
-                    i = i + 1;
+                    i += 1;
                     continue;
                 }
 
@@ -93,7 +93,7 @@ impl FieldMap {
             // If the argument is already in the right place
             if position == i {
                 seen_labels.insert(label.clone());
-                i = i + 1;
+                i += 1;
             } else {
                 if seen_labels.contains(label) {
                     return Err(Error::DuplicateArgument {
@@ -107,18 +107,18 @@ impl FieldMap {
             }
         }
 
-        if unknown_labels.len() > 0 {
+        if unknown_labels.is_empty() {
+            Ok(())
+        } else {
             Err(Error::UnknownLabels {
                 valid: self.fields.keys().map(|t| t.to_string()).collect(),
                 unknown: unknown_labels,
                 supplied: seen_labels.into_iter().collect(),
             })
-        } else {
-            Ok(())
         }
     }
 
-    pub fn incorrect_arity_labels<A>(&self, args: &Vec<CallArg<A>>) -> Vec<String> {
+    pub fn incorrect_arity_labels<A>(&self, args: &[CallArg<A>]) -> Vec<String> {
         let mut given = HashSet::with_capacity(args.len());
         for arg in args {
             if let Some(label) = &arg.label {
@@ -127,7 +127,7 @@ impl FieldMap {
         }
         self.fields
             .keys()
-            .map(|f| f.clone())
+            .cloned()
             .filter(|f| !given.contains(f.as_str()))
             .sorted()
             .collect()

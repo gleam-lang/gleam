@@ -166,11 +166,7 @@ impl<'a, 'b> Environment<'a, 'b> {
         self.module_values
             .get(name)
             .filter(|ValueConstructor { variant, .. }| {
-                if let ValueConstructorVariant::ModuleConstant { .. } = variant {
-                    true
-                } else {
-                    false
-                }
+                matches!(variant, ValueConstructorVariant::ModuleConstant { .. })
             })
     }
 

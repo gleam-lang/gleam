@@ -911,7 +911,7 @@ impl<'a> Formatter<'a> {
                     .group()
             })
             .append(" {")
-            .append(concat(constructors.into_iter().map(|c| {
+            .append(concat(constructors.iter().map(|c| {
                 if self.pop_empty_lines(c.location.start) {
                     lines(2)
                 } else {
@@ -1120,7 +1120,7 @@ impl<'a> Formatter<'a> {
             Pattern::VarCall { name, .. } => name.to_string().to_doc(),
 
             Pattern::Let { name, pattern, .. } => self
-                .pattern(&pattern)
+                .pattern(pattern)
                 .append(" as ")
                 .append(name.to_string()),
 
@@ -1352,7 +1352,7 @@ where
     I: Iterator<Item = Document>,
 {
     let mut args = args.peekable();
-    if let None = args.peek() {
+    if args.peek().is_none() {
         return "()".to_doc();
     }
     break_("(", "(")
@@ -1367,7 +1367,7 @@ where
     I: Iterator<Item = Document>,
 {
     let mut args = args.peekable();
-    if let None = args.peek() {
+    if args.peek().is_none() {
         return "()".to_doc();
     }
 
@@ -1394,7 +1394,7 @@ where
     (elems, tail)
 }
 
-fn bit_string<'a>(segments: impl Iterator<Item = Document>, is_simple: bool) -> Document {
+fn bit_string(segments: impl Iterator<Item = Document>, is_simple: bool) -> Document {
     let comma = if is_simple {
         delim(",").flex_break()
     } else {
@@ -1415,7 +1415,7 @@ fn list(elems: Document, tail: Option<Document>) -> Document {
         None => doc.nest(INDENT).append(break_(",", "")),
 
         // Don't print tail if it is a discard
-        Some(Document::Text(t)) if t == "_".to_string() => doc
+        Some(Document::Text(t)) if t == *"_" => doc
             .append(break_(",", ", "))
             .append("..")
             .nest(INDENT)
@@ -1469,7 +1469,7 @@ fn printed_comments<'a>(comments: impl Iterator<Item = &'a str>) -> Option<Docum
 fn commented<'a>(doc: Document, comments: impl Iterator<Item = &'a str>) -> Document {
     match printed_comments(comments) {
         Some(comments) => comments.append(force_break()).append(line()).append(doc),
-        _ => doc,
+        None => doc,
     }
 }
 
@@ -1481,9 +1481,9 @@ where
     ToDoc: FnMut(&Value) -> Document,
 {
     match segment {
-        BitStringSegment { value, options, .. } if options.is_empty() => to_doc(&value),
+        BitStringSegment { value, options, .. } if options.is_empty() => to_doc(value),
 
-        BitStringSegment { value, options, .. } => to_doc(&value).append(":").append(concat(
+        BitStringSegment { value, options, .. } => to_doc(value).append(":").append(concat(
             options
                 .iter()
                 .map(|o| segment_option(o, |e| to_doc(e)))

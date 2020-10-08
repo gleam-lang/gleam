@@ -9,8 +9,8 @@
 //!
 //! ## Extensions
 //!
-//! - ForceBreak from Prettier.
-//! - FlexBreak from Elixir.
+//! - `ForceBreak` from Prettier.
+//! - `FlexBreak` from Elixir.
 
 #[cfg(test)]
 mod tests;
@@ -83,7 +83,7 @@ impl<D: Documentable> Documentable for Option<D> {
 }
 
 pub fn concat(mut docs: impl Iterator<Item = Document>) -> Document {
-    let init = docs.next().unwrap_or_else(|| nil());
+    let init = docs.next().unwrap_or_else(nil);
     docs.fold(init, |acc, doc| {
         Document::Cons(Box::new(acc), Box::new(doc))
     })
@@ -276,31 +276,31 @@ pub fn delim(d: &str) -> Document {
 }
 
 impl Document {
-    pub fn group(self) -> Document {
-        Document::Group(Box::new(self))
+    pub fn group(self) -> Self {
+        Self::Group(Box::new(self))
     }
 
-    pub fn flex_break(self) -> Document {
-        Document::FlexBreak(Box::new(self))
+    pub fn flex_break(self) -> Self {
+        Self::FlexBreak(Box::new(self))
     }
 
-    pub fn nest(self, indent: isize) -> Document {
-        Document::Nest(indent, Box::new(self))
+    pub fn nest(self, indent: isize) -> Self {
+        Self::Nest(indent, Box::new(self))
     }
 
-    pub fn nest_current(self) -> Document {
-        Document::NestCurrent(Box::new(self))
+    pub fn nest_current(self) -> Self {
+        Self::NestCurrent(Box::new(self))
     }
 
-    pub fn append(self, x: impl Documentable) -> Document {
-        Document::Cons(Box::new(self), Box::new(x.to_doc()))
+    pub fn append(self, x: impl Documentable) -> Self {
+        Self::Cons(Box::new(self), Box::new(x.to_doc()))
     }
 
     pub fn format(self, limit: isize) -> String {
         format(limit, self)
     }
 
-    pub fn surround(self, open: impl Documentable, closed: impl Documentable) -> Document {
+    pub fn surround(self, open: impl Documentable, closed: impl Documentable) -> Self {
         open.to_doc().append(self).append(closed)
     }
 }
