@@ -76,7 +76,7 @@ impl Printer {
 
             TypeVar::Unbound { id, .. } => self.type_var_doc(&TypeVar::Generic { id: *id }),
 
-            TypeVar::Generic { id, .. } => match self.names.get(&id) {
+            TypeVar::Generic { id, .. } => match self.names.get(id) {
                 Some(n) => n.clone().to_doc(),
                 None => {
                     let n = self.next_letter();

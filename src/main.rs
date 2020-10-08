@@ -7,7 +7,8 @@
     clippy::empty_enum,
     clippy::enum_glob_use,
     clippy::mem_forget,
-    clippy::use_self,
+    // TODO: enable once the false positive bug is solved
+    // clippy::use_self,
     clippy::filter_map_next,
     clippy::needless_continue,
     clippy::needless_borrow,
@@ -64,6 +65,9 @@ mod warning;
 lalrpop_mod!(
     #[allow(
         clippy::all,
+        clippy::use_self,
+        clippy::option_option,
+        clippy::inefficient_to_string,
         dead_code,
         deprecated,
         unused_parens,

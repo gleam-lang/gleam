@@ -569,7 +569,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
 
         let type_specifier = BinaryTypeSpecifier::new(&options, false)
             .map_err(|e| convert_binary_error(e, &location))?;
-        let typ = type_specifier.typ().unwrap_or_else(|| int());
+        let typ = type_specifier.typ().unwrap_or_else(int);
 
         self.unify(typ.clone(), value.typ())
             .map_err(|e| convert_unify_error(e, value.location()))?;
@@ -662,7 +662,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 let e = try_error_type.clone();
                 self.unify(result(v, e), value.typ())
                     .map_err(|e| convert_unify_error(e, value.location()))?;
-                try_value_type.clone()
+                try_value_type
             }
             _ => value.typ(),
         };
@@ -789,7 +789,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
     ) -> Result<(TypedMultiPattern, Vec<TypedMultiPattern>), Error> {
         let mut pattern_typer =
             pattern::PatternTyper::new(self.environment, &self.hydrator, self.environment.level);
-        let typed_pattern = pattern_typer.infer_multi_pattern(pattern, subjects, &location)?;
+        let typed_pattern = pattern_typer.infer_multi_pattern(pattern, subjects, location)?;
 
         // Each case clause has one or more patterns that may match the
         // subject in order for the clause to be selected, so we must type
@@ -797,7 +797,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         let mut typed_alternatives = Vec::with_capacity(alternatives.len());
         for m in alternatives {
             typed_alternatives
-                .push(pattern_typer.infer_alternative_multi_pattern(m, subjects, &location)?);
+                .push(pattern_typer.infer_alternative_multi_pattern(m, subjects, location)?);
         }
 
         Ok((typed_pattern, typed_alternatives))
@@ -1221,9 +1221,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         .ok_or_else(|| unknown_field(vec![]))?;
 
         // Find the accessor, if the type has one with the same label
-        let RecordAccessor {
-            index, label, typ, ..
-        } = accessors
+        let RecordAccessor { index, label, typ } = accessors
             .accessors
             .get(&label)
             .ok_or_else(|| {
@@ -1294,7 +1292,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                     self.instantiate(retrn.clone(), self.environment.level, &mut hashmap![]);
 
                 // Check that the spread variable unifies with the return type of the constructor
-                self.unify(return_type.clone(), spread.typ())
+                self.unify(return_type, spread.typ())
                     .map_err(|e| convert_unify_error(e, spread.location()))?;
 
                 let args: Vec<TypedRecordUpdateArg> = args
@@ -1304,7 +1302,6 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                              label,
                              value,
                              location,
-                             ..
                          }| {
                             let value = self.infer(value.clone())?;
                             let spread_field = self.infer_known_record_access(
@@ -1525,7 +1522,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
 
         // Check type annotation is accurate.
         if let Some(ann) = annotation {
-            let const_ann = self.type_from_ast(&ann)?;
+            let const_ann = self.type_from_ast(ann)?;
             self.unify(const_ann, inferred.typ())
                 .map_err(|e| convert_unify_error(e, inferred.location()))?;
         };

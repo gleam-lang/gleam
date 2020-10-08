@@ -44,15 +44,15 @@ pub enum ModuleOrigin {
 impl ModuleOrigin {
     pub fn dir_name(&self) -> &'static str {
         match self {
-            ModuleOrigin::Src | ModuleOrigin::Dependency => "src",
-            ModuleOrigin::Test => "test",
+            Self::Src | Self::Dependency => "src",
+            Self::Test => "test",
         }
     }
 
     pub fn to_origin(&self) -> Origin {
         match self {
-            ModuleOrigin::Test => Origin::Test,
-            ModuleOrigin::Src | ModuleOrigin::Dependency => Origin::Src,
+            Self::Test => Origin::Test,
+            Self::Src | Self::Dependency => Origin::Src,
         }
     }
 }

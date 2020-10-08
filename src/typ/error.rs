@@ -419,9 +419,9 @@ pub fn convert_binary_error(e: crate::bit_string::Error, location: &SrcSpan) -> 
             previous_location,
             name,
         } => Error::ConflictingBinarySignednessOptions {
-            location: location.clone(),
-            previous_location: previous_location.clone(),
-            name: name.clone(),
+            location,
+            previous_location,
+            name,
         },
 
         BinaryError::ConflictingEndiannessOptions {
@@ -429,9 +429,9 @@ pub fn convert_binary_error(e: crate::bit_string::Error, location: &SrcSpan) -> 
             previous_location,
             name,
         } => Error::ConflictingBinaryEndiannessOptions {
-            location: location.clone(),
-            previous_location: previous_location.clone(),
-            name: name.clone(),
+            location,
+            previous_location,
+            name,
         },
 
         BinaryError::ConflictingTypeOptions {
@@ -439,31 +439,30 @@ pub fn convert_binary_error(e: crate::bit_string::Error, location: &SrcSpan) -> 
             previous_location,
             name,
         } => Error::ConflictingBinaryTypeOptions {
-            location: location.clone(),
-            previous_location: previous_location.clone(),
-            name: name.clone(),
+            location,
+            previous_location,
+            name,
         },
 
         BinaryError::ConflictingSizeOptions {
             location,
             previous_location,
         } => Error::ConflictingBinarySizeOptions {
-            location: location.clone(),
-            previous_location: previous_location.clone(),
+            location,
+            previous_location,
         },
 
         BinaryError::ConflictingUnitOptions {
             location,
             previous_location,
         } => Error::ConflictingBinaryUnitOptions {
-            location: location.clone(),
-            previous_location: previous_location.clone(),
+            location,
+            previous_location,
         },
 
-        BinaryError::TypeDoesNotAllowUnit { location, typ } => Error::BinaryTypeDoesNotAllowUnit {
-            location: location.clone(),
-            typ: typ.clone(),
-        },
+        BinaryError::TypeDoesNotAllowUnit { location, typ } => {
+            Error::BinaryTypeDoesNotAllowUnit { location, typ }
+        }
 
         BinaryError::SegmentMustHaveSize => Error::BinarySegmentMustHaveSize {
             location: location.clone(),

@@ -184,15 +184,12 @@ fn chomp_newlines(
     comments: &mut ModuleComments<'_>,
     chars: &mut std::iter::Peekable<unicode_segmentation::GraphemeIndices<'_>>,
 ) {
-    match chars.peek() {
-        Some((_, "\n")) => {
-            comments.empty_lines.push(position + 1);
-            while let Some((_, "\n")) = chars.peek() {
-                buffer.push('\n');
-                chars.next();
-            }
+    if let Some((_, "\n")) = chars.peek() {
+        comments.empty_lines.push(position + 1);
+        while let Some((_, "\n")) = chars.peek() {
+            buffer.push('\n');
+            chars.next();
         }
-        _ => (),
     }
 }
 
@@ -439,9 +436,12 @@ pub fn attach_doc_comments<'a, A, B, C, D>(
     }
 }
 
+type ArgInfo = (SrcSpan, Option<String>);
+
 pub fn make_call(
     fun: UntypedExpr,
-    args: Vec<Result<CallArg<UntypedExpr>, (SrcSpan, Option<String>)>>,
+    // TODO: this abuse of Result is grim. Define an appropriate enum
+    args: Vec<Result<CallArg<UntypedExpr>, ArgInfo>>,
     s: usize,
     e: usize,
 ) -> Result<UntypedExpr, Error> {

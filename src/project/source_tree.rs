@@ -13,7 +13,7 @@ pub struct SourceTree {
 
 impl SourceTree {
     pub fn new(inputs: Vec<Input>) -> Result<Self, Error> {
-        let mut graph: SourceTree = Default::default();
+        let mut graph: Self = Default::default();
         for input in inputs.into_iter() {
             graph.insert(input)?;
         }
@@ -84,7 +84,7 @@ impl SourceTree {
             let module_index = self.indexes.get(&module_name).gleam_expect(
                 "SourceTree.calculate_dependencies(): Unable to find module index for name",
             );
-            let module = self.modules.get(&module_index).gleam_expect(
+            let module = self.modules.get(module_index).gleam_expect(
                 "SourceTree.calculate_dependencies(): Unable to find module for index",
             );
 
@@ -105,7 +105,7 @@ impl SourceTree {
                 if module.origin == ModuleOrigin::Src
                     && self
                         .modules
-                        .get(&dep_index)
+                        .get(dep_index)
                         .gleam_expect("SourceTree.calculate_dependencies(): Unable to find module for dep index")
                         .origin
                         == ModuleOrigin::Test
@@ -119,8 +119,7 @@ impl SourceTree {
                     });
                 }
 
-                self.graph
-                    .add_edge(dep_index.clone(), module_index.clone(), ());
+                self.graph.add_edge(*dep_index, *module_index, ());
             }
         }
         Ok(())
@@ -155,7 +154,7 @@ impl SourceTree {
         module.documentation = comments
             .module_comments
             .iter()
-            .map(|s| s.to_string())
+            .map(|s| (*s).to_string())
             .collect();
 
         // Store the name
