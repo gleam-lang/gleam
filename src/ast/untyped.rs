@@ -157,9 +157,6 @@ impl UntypedExpr {
     }
 
     pub fn is_simple_constant(&self) -> bool {
-        match self {
-            Self::String { .. } | Self::Int { .. } | Self::Float { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::String { .. } | Self::Int { .. } | Self::Float { .. })
     }
 }

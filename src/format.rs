@@ -14,7 +14,7 @@ use std::sync::Arc;
 const INDENT: isize = 2;
 
 pub fn pretty(src: &str) -> Result<String, crate::parser::LalrpopError> {
-    let (stripped_src, comments) = crate::parser::strip_extra(src.as_ref());
+    let (stripped_src, comments) = crate::parser::strip_extra(src);
     let ast = crate::grammar::ModuleParser::new()
         .parse(&stripped_src)
         .map_err(|e| e.map_token(|crate::grammar::Token(a, b)| (a, b.to_string())))?;
@@ -112,12 +112,12 @@ impl<'a> Formatter<'a> {
 
         let doc_comments = concat(
             self.doc_comments
-                .into_iter()
+                .iter()
                 .map(|comment| line().append("///").append(comment.content)),
         );
         let comments = concat(
             self.comments
-                .into_iter()
+                .iter()
                 .map(|comment| line().append("//").append(comment.content)),
         );
 
@@ -125,7 +125,7 @@ impl<'a> Formatter<'a> {
             let comments = self
                 .module_comments
                 .iter()
-                .map(|s| "////".to_doc().append(s.to_string()).append(line()));
+                .map(|s| "////".to_doc().append((*s).to_string()).append(line()));
             concat(comments).append(line())
         } else {
             nil()
@@ -422,7 +422,7 @@ impl<'a> Formatter<'a> {
         &mut self,
         public: &bool,
         name: &str,
-        args: &Vec<UntypedArg>,
+        args: &[UntypedArg],
         return_annotation: &Option<TypeAst>,
         body: &UntypedExpr,
         end_location: usize,
@@ -488,7 +488,7 @@ impl<'a> Formatter<'a> {
 
         let header = match return_annotation {
             None => header,
-            Some(t) => header.append(" -> ").append(self.type_ast(&t)),
+            Some(t) => header.append(" -> ").append(self.type_ast(t)),
         };
 
         header
@@ -685,9 +685,9 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    fn call(&mut self, fun: &UntypedExpr, args: &Vec<CallArg<UntypedExpr>>) -> Document {
+    fn call(&mut self, fun: &UntypedExpr, args: &[CallArg<UntypedExpr>]) -> Document {
         fn is_breakable(expr: &UntypedExpr) -> bool {
-            match expr {
+            matches!(expr,
                 UntypedExpr::Fn { .. }
                 | UntypedExpr::Seq { .. }
                 | UntypedExpr::Let { .. }
@@ -695,13 +695,11 @@ impl<'a> Formatter<'a> {
                 | UntypedExpr::Case { .. }
                 | UntypedExpr::Tuple { .. }
                 | UntypedExpr::ListCons { .. }
-                | UntypedExpr::BitString { .. } => true,
-
-                _ => false,
-            }
+                | UntypedExpr::BitString { .. }
+            )
         }
 
-        match &**args {
+        match args {
             [arg] if is_breakable(&arg.value) => self
                 .expr(fun)
                 .append("(")
@@ -719,17 +717,12 @@ impl<'a> Formatter<'a> {
     pub fn case(&mut self, subjects: &[UntypedExpr], clauses: &[UntypedClause]) -> Document {
         let subjects_doc = concat(
             subjects
-                .into_iter()
+                .iter()
                 .map(|s| self.expr(s))
                 .intersperse(", ".to_doc()),
         );
 
-        let clauses_doc = concat(
-            clauses
-                .into_iter()
-                .enumerate()
-                .map(|(i, c)| self.clause(c, i)),
-        );
+        let clauses_doc = concat(clauses.iter().enumerate().map(|(i, c)| self.clause(c, i)));
 
         "case "
             .to_doc()
@@ -754,7 +747,7 @@ impl<'a> Formatter<'a> {
         use std::iter::once;
         let constructor_doc = self.expr(constructor);
         let spread_doc = "..".to_doc().append(spread.clone().name.to_doc());
-        let arg_docs = args.into_iter().map(|a| self.record_update_arg(a));
+        let arg_docs = args.iter().map(|a| self.record_update_arg(a));
         let all_arg_docs = once(spread_doc).chain(arg_docs);
         constructor_doc.append(wrap_args(all_arg_docs)).group()
     }
@@ -903,7 +896,7 @@ impl<'a> Formatter<'a> {
             .to_doc()
             .append(if opaque { "opaque type " } else { "type " })
             .append(if args.is_empty() {
-                name.clone().to_doc()
+                name.to_string().to_doc()
             } else {
                 name.to_string()
                     .to_doc()
@@ -937,7 +930,7 @@ impl<'a> Formatter<'a> {
             .to_doc()
             .append("opaque type ")
             .append(if args.is_empty() {
-                name.clone().to_doc()
+                name.to_string().to_doc()
             } else {
                 name.to_string()
                     .to_doc()
