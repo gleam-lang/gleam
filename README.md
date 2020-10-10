@@ -42,6 +42,7 @@ development.
  - [clangley](https://github.com/clangley)
  - [Clever Bunny LTD](https://github.com/cleverbunny)
  - [Cole Lawrence](https://github.com/colelawrence)
+ - [Dan Mueller](https://github.com/unthought)
  - [Dave Lucia](https://github.com/davydog187)
  - [David McKay](https://github.com/rawkode)
  - [Eric Meadows-Jönsson](https://github.com/ericmj)
