@@ -12,10 +12,7 @@ pub struct BinaryTypeSpecifier<T> {
 }
 
 impl<T> BinaryTypeSpecifier<T> {
-    pub fn new(
-        options: &Vec<BitStringSegmentOption<T>>,
-        must_have_size: bool,
-    ) -> Result<Self, Error>
+    pub fn new(options: &[BitStringSegmentOption<T>], must_have_size: bool) -> Result<Self, Error>
     where
         T: Clone,
     {
@@ -198,11 +195,10 @@ pub enum Error {
 
 impl<A> BitStringSegmentOption<A> {
     pub fn unit_is_allowed(&self) -> bool {
-        match self {
+        !matches!(self,
             BitStringSegmentOption::UTF8 { .. }
             | BitStringSegmentOption::UTF16 { .. }
-            | BitStringSegmentOption::UTF32 { .. } => false,
-            _ => true,
-        }
+            | BitStringSegmentOption::UTF32 { .. }
+        )
     }
 }

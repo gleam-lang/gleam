@@ -83,10 +83,7 @@ impl<A, B> Constant<A, B> {
     }
 
     pub fn is_simple(&self) -> bool {
-        match self {
-            Self::Int { .. } | Self::Float { .. } | Self::String { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::Int { .. } | Self::Float { .. } | Self::String { .. })
     }
 }
 

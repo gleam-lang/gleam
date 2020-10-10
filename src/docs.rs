@@ -35,7 +35,7 @@ pub fn build_project(
     pages.extend(config.docs.pages.to_vec());
 
     // Generate HTML
-    let outputs = generate_html(&config, analysed.as_slice(), &pages, &output_dir);
+    let outputs = generate_html(&config, analysed.as_slice(), &pages, output_dir);
     Ok((config, outputs))
 }
 
@@ -145,7 +145,7 @@ pub fn generate_html(
     files
 }
 
-fn function<'a>(statement: &'a TypedStatement) -> Option<Function<'a>> {
+fn function(statement: &TypedStatement) -> Option<Function<'_>> {
     let mut formatter = format::Formatter::new();
     match statement {
         Statement::ExternalFn {
@@ -192,7 +192,7 @@ fn render_markdown(text: &str) -> String {
     s
 }
 
-fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
+fn type_(statement: &TypedStatement) -> Option<Type<'_>> {
     let mut formatter = format::Formatter::new();
     match statement {
         Statement::ExternalType {
@@ -230,7 +230,7 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
             )),
             documentation: markdown_documentation(doc),
             constructors: cs
-                .into_iter()
+                .iter()
                 .map(|constructor| TypeConstructor {
                     definition: print(formatter.record_constructor(constructor)),
                     documentation: markdown_documentation(&constructor.documentation),
@@ -271,7 +271,7 @@ fn type_<'a>(statement: &'a TypedStatement) -> Option<Type<'a>> {
     }
 }
 
-fn constant<'a>(statement: &'a TypedStatement) -> Option<Constant<'a>> {
+fn constant(statement: &TypedStatement) -> Option<Constant<'_>> {
     let mut formatter = format::Formatter::new();
     match statement {
         Statement::ModuleConstant {

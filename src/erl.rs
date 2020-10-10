@@ -37,7 +37,7 @@ pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
             .join(origin.dir_name());
         let erl_module_name = name.join("@");
 
-        for (name, text) in records(&ast).into_iter() {
+        for (name, text) in records(ast).into_iter() {
             files.push(OutputFile {
                 path: gen_dir.join(format!("{}_{}.hrl", erl_module_name, name)),
                 text,
@@ -46,7 +46,7 @@ pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
 
         files.push(OutputFile {
             path: gen_dir.join(format!("{}.erl", erl_module_name)),
-            text: module(&ast),
+            text: module(ast),
         });
     }
 
@@ -112,7 +112,7 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
             }
             Some((&constructor.name, fields))
         })
-        .map(|(name, fields)| (name.as_ref(), record_definition(&name, &fields[..])))
+        .map(|(name, fields)| (name.as_ref(), record_definition(name, &fields[..])))
         .collect()
 }
 
@@ -121,7 +121,7 @@ pub fn record_definition(name: &str, fields: &[&str]) -> String {
     let escaped_name = if is_erlang_reserved_word(name) {
         format!("'{}'", name)
     } else {
-        format!("{}", name)
+        name.to_string()
     };
     use std::fmt::Write;
     let mut buffer = format!("-record({}, {{", escaped_name);
@@ -129,7 +129,7 @@ pub fn record_definition(name: &str, fields: &[&str]) -> String {
         let escaped_field = if is_erlang_reserved_word(field) {
             format!("'{}'", field)
         } else {
-            format!("{}", field)
+            (*field).to_string()
         };
         write!(buffer, "{}", escaped_field).unwrap();
     }
@@ -168,7 +168,7 @@ pub fn module(module: &TypedModule) -> String {
         module
             .statements
             .iter()
-            .flat_map(|s| statement(s, &module_name))
+            .flat_map(|s| statement(s, module_name))
             .intersperse(lines(2)),
     );
 
@@ -230,7 +230,7 @@ fn mod_fun(name: &str, args: &[TypedArg], body: &TypedExpr, module: &[String]) -
 }
 
 fn fun_args(args: &[TypedArg], env: &mut Env<'_>) -> Document {
-    wrap_args(args.into_iter().map(|a| match &a.names {
+    wrap_args(args.iter().map(|a| match &a.names {
         ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => "_".to_doc(),
         ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
             env.next_local_var_name(name.to_string())
@@ -239,10 +239,7 @@ fn fun_args(args: &[TypedArg], env: &mut Env<'_>) -> Document {
 }
 
 fn call_args(args: &[CallArg<TypedExpr>], env: &mut Env<'_>) -> Document {
-    wrap_args(
-        args.into_iter()
-            .map(|arg| maybe_block_expr(&arg.value, env)),
-    )
+    wrap_args(args.iter().map(|arg| maybe_block_expr(&arg.value, env)))
 }
 
 fn wrap_args<I>(args: I) -> Document
@@ -589,11 +586,11 @@ fn pattern(p: &TypedPattern, env: &mut Env<'_>) -> Document {
             ..
         } => tag_tuple_pattern(name, args, env),
 
-        Pattern::Tuple { elems, .. } => tuple(elems.into_iter().map(|p| pattern(p, env))),
+        Pattern::Tuple { elems, .. } => tuple(elems.iter().map(|p| pattern(p, env))),
 
         Pattern::BitString { segments, .. } => bit_string(
             segments
-                .into_iter()
+                .iter()
                 .map(|s| pattern_segment(&s.value, s.options.clone(), env)),
         ),
     }
@@ -601,7 +598,7 @@ fn pattern(p: &TypedPattern, env: &mut Env<'_>) -> Document {
 
 fn float(value: &str) -> Document {
     let mut value = value.replace("_", "");
-    if value.ends_with(".") {
+    if value.ends_with('.') {
         value.push('0')
     }
     value.to_doc()
@@ -751,7 +748,7 @@ fn const_inline(literal: &TypedConstant, env: &mut Env<'_>) -> Document {
 
         Constant::BitString { segments, .. } => bit_string(
             segments
-                .into_iter()
+                .iter()
                 .map(|s| const_segment(&s.value, s.options.clone(), env)),
         ),
 
@@ -759,7 +756,7 @@ fn const_inline(literal: &TypedConstant, env: &mut Env<'_>) -> Document {
             if args.is_empty() {
                 atom(tag.to_snake_case())
             } else {
-                let args = args.into_iter().map(|a| const_inline(&a.value, env));
+                let args = args.iter().map(|a| const_inline(&a.value, env));
                 let tag = atom(tag.to_snake_case());
                 tuple(std::iter::once(tag).chain(args))
             }
@@ -773,7 +770,7 @@ fn tag_tuple_pattern(name: &str, args: &[CallArg<TypedPattern>], env: &mut Env<'
     } else {
         tuple(
             std::iter::once(atom(name.to_snake_case()))
-                .chain(args.into_iter().map(|p| pattern(&p.value, env))),
+                .chain(args.iter().map(|p| pattern(&p.value, env))),
         )
     }
 }
@@ -793,7 +790,7 @@ fn clause(clause: &TypedClause, env: &mut Env<'_>) -> Document {
     let erlang_vars = env.erl_function_scope_vars.clone();
 
     let docs = std::iter::once(pat)
-        .chain(alternative_patterns.into_iter())
+        .chain(alternative_patterns.iter())
         .map(|patterns| {
             env.erl_function_scope_vars = erlang_vars.clone();
 
@@ -924,7 +921,7 @@ fn clause_guard(guard: &TypedClauseGuard, env: &mut Env<'_>) -> Document {
 
 fn clauses(cs: &[TypedClause], env: &mut Env<'_>) -> Document {
     concat(
-        cs.into_iter()
+        cs.iter()
             .map(|c| {
                 let vars = env.current_scope_vars.clone();
                 let erl = clause(c, env);
@@ -942,7 +939,7 @@ fn case(subjects: &[TypedExpr], cs: &[TypedClause], env: &mut Env<'_>) -> Docume
             .gleam_expect("erl case printing of single subject");
         maybe_block_expr(subject, env).group()
     } else {
-        tuple(subjects.into_iter().map(|e| maybe_block_expr(e, env)))
+        tuple(subjects.iter().map(|e| maybe_block_expr(e, env)))
     };
     "case "
         .to_doc()
@@ -969,7 +966,7 @@ fn call(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env<'_>) -> Docu
             ..
         } => tuple(
             std::iter::once(atom(name.to_snake_case()))
-                .chain(args.into_iter().map(|arg| expr(&arg.value, env))),
+                .chain(args.iter().map(|arg| expr(&arg.value, env))),
         ),
 
         TypedExpr::Var {
@@ -1170,15 +1167,13 @@ fn expr(expression: &TypedExpr, env: &mut Env<'_>) -> Document {
 
         TypedExpr::BinOp {
             name, left, right, ..
-        } => bin_op(&name, left, right, env),
+        } => bin_op(name, left, right, env),
 
-        TypedExpr::Tuple { elems, .. } => {
-            tuple(elems.into_iter().map(|e| maybe_block_expr(e, env)))
-        }
+        TypedExpr::Tuple { elems, .. } => tuple(elems.iter().map(|e| maybe_block_expr(e, env))),
 
         TypedExpr::BitString { segments, .. } => bit_string(
             segments
-                .into_iter()
+                .iter()
                 .map(|s| expr_segment(&s.value, s.options.clone(), env)),
         ),
     }
@@ -1246,10 +1241,28 @@ fn external_fun(name: &str, module: &str, fun: &str, arity: usize) -> Document {
 }
 
 pub fn is_erlang_reserved_word(name: &str) -> bool {
-    match name {
-        "!" | "receive" | "bnot" | "div" | "rem" | "band" | "bor" | "bxor" | "bsl" | "bsr"
-        | "not" | "and" | "or" | "xor" | "orelse" | "andalso" | "when" | "end" | "fun" | "try"
-        | "catch" | "after" => true,
-        _ => false,
-    }
+    matches!(
+        name,
+        "!" | "receive"
+            | "bnot"
+            | "div"
+            | "rem"
+            | "band"
+            | "bor"
+            | "bxor"
+            | "bsl"
+            | "bsr"
+            | "not"
+            | "and"
+            | "or"
+            | "xor"
+            | "orelse"
+            | "andalso"
+            | "when"
+            | "end"
+            | "fun"
+            | "try"
+            | "catch"
+            | "after"
+    )
 }

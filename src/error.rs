@@ -227,7 +227,7 @@ fn did_you_mean(name: &str, options: &mut Vec<String>, alt: &'static str) -> Str
 
 impl Error {
     pub fn pretty(&self, buffer: &mut Buffer) {
-        use crate::typ::Error::*;
+        use crate::typ::Error as TypeError;
         use std::io::Write;
 
         buffer
@@ -426,13 +426,13 @@ Second: {}",
             }
 
             Error::Type { path, src, error } => match error {
-                UnknownLabels {
+                TypeError::UnknownLabels {
                     unknown,
                     valid,
                     supplied,
                 } => {
                     let mut other_labels = valid
-                        .into_iter()
+                        .iter()
                         .cloned()
                         .filter(|label| !supplied.contains(label))
                         .collect();
@@ -480,7 +480,7 @@ Second: {}",
                     }
                 }
 
-                UnexpectedLabelledArg { location, label } => {
+                TypeError::UnexpectedLabelledArg { location, label } => {
                     let diagnostic = Diagnostic {
                         title: "Unexpected labelled argument".to_string(),
                         label: "".to_string(),
@@ -499,7 +499,7 @@ Please remove the label `{}`.",
                     .unwrap();
                 }
 
-                PositionalArgumentAfterLabelled { location } => {
+                TypeError::PositionalArgumentAfterLabelled { location } => {
                     let diagnostic = Diagnostic {
                         title: "Unexpected positional argument".to_string(),
                         label: "".to_string(),
@@ -517,7 +517,7 @@ also be labelled.",
                     .unwrap();
                 }
 
-                DuplicateName {
+                TypeError::DuplicateName {
                     location,
                     name: fun,
                     previous_location,
@@ -543,7 +543,7 @@ also be labelled.",
                     write_diagnostic(buffer, diagnostic, Severity::Error);
                 }
 
-                DuplicateTypeName {
+                TypeError::DuplicateTypeName {
                     name,
                     location,
                     previous_location,
@@ -569,7 +569,7 @@ also be labelled.",
                     write_diagnostic(buffer, diagnostic, Severity::Error);
                 }
 
-                DuplicateField { location, label } => {
+                TypeError::DuplicateField { location, label } => {
                     let diagnostic = Diagnostic {
                         title: "Duplicate field".to_string(),
                         label: "".to_string(),
@@ -586,7 +586,7 @@ also be labelled.",
                     .unwrap();
                 }
 
-                DuplicateArgument { location, label } => {
+                TypeError::DuplicateArgument { location, label } => {
                     let diagnostic = Diagnostic {
                         title: "Duplicate argument".to_string(),
                         label: "".to_string(),
@@ -603,7 +603,7 @@ also be labelled.",
                     .unwrap();
                 }
 
-                RecursiveType { location } => {
+                TypeError::RecursiveType { location } => {
                     let diagnostic = Diagnostic {
                         title: "Recursive type".to_string(),
                         label: "".to_string(),
@@ -614,7 +614,7 @@ also be labelled.",
                     write(buffer, diagnostic, Severity::Error);
                 }
 
-                NotFn { location, typ } => {
+                TypeError::NotFn { location, typ } => {
                     let diagnostic = Diagnostic {
                         title: "Type mismatch".to_string(),
                         label: "".to_string(),
@@ -633,7 +633,7 @@ also be labelled.",
                     .unwrap();
                 }
 
-                UnknownField {
+                TypeError::UnknownField {
                     location,
                     typ,
                     label,
@@ -674,7 +674,7 @@ also be labelled.",
                     }
                 }
 
-                CouldNotUnify {
+                TypeError::CouldNotUnify {
                     location,
                     expected,
                     given,
@@ -704,7 +704,7 @@ Found type:
                     .unwrap();
                 }
 
-                IncorrectTypeArity {
+                TypeError::IncorrectTypeArity {
                     location,
                     expected,
                     given,
@@ -720,7 +720,7 @@ Found type:
                     write(buffer, diagnostic, Severity::Error);
                 }
 
-                IncorrectArity {
+                TypeError::IncorrectArity {
                     labels,
                     location,
                     expected,
@@ -749,7 +749,7 @@ Found type:
                     }
                 }
 
-                UnnecessarySpreadOperator { location, arity } => {
+                TypeError::UnnecessarySpreadOperator { location, arity } => {
                     let diagnostic = Diagnostic {
                         title: "Unnecessary spread operator".to_string(),
                         label: format!(""),
@@ -767,7 +767,7 @@ Found type:
                     .unwrap();
                 }
 
-                UnknownType {
+                TypeError::UnknownType {
                     location,
                     name,
                     types,
@@ -789,7 +789,7 @@ Found type:
                     .unwrap();
                 }
 
-                UnknownVariable {
+                TypeError::UnknownVariable {
                     location,
                     variables,
                     name,
@@ -806,7 +806,7 @@ Found type:
                     writeln!(buffer, "The name `{}` is not in scope here.", name).unwrap();
                 }
 
-                PrivateTypeLeak { location, leaked } => {
+                TypeError::PrivateTypeLeak { location, leaked } => {
                     let diagnostic = Diagnostic {
                         title: "Private type used in public interface".to_string(),
                         label: "".to_string(),
@@ -834,7 +834,7 @@ Private types can only be used within the module that defines them.",
                     .unwrap();
                 }
 
-                UnknownModule {
+                TypeError::UnknownModule {
                     location,
                     name,
                     imported_modules,
@@ -856,7 +856,7 @@ Private types can only be used within the module that defines them.",
                     .unwrap();
                 }
 
-                UnknownModuleType {
+                TypeError::UnknownModuleType {
                     location,
                     name,
                     module_name,
@@ -880,7 +880,7 @@ Private types can only be used within the module that defines them.",
                     .unwrap();
                 }
 
-                UnknownModuleValue {
+                TypeError::UnknownModuleValue {
                     location,
                     name,
                     module_name,
@@ -904,7 +904,7 @@ Private types can only be used within the module that defines them.",
                     .unwrap();
                 }
 
-                UnknownModuleField {
+                TypeError::UnknownModuleField {
                     location,
                     name,
                     module_name,
@@ -933,7 +933,7 @@ Private types can only be used within the module that defines them.",
                     .unwrap();
                 }
 
-                IncorrectNumClausePatterns {
+                TypeError::IncorrectNumClausePatterns {
                     location,
                     expected,
                     given,
@@ -955,7 +955,7 @@ Each clause must have a pattern for every subject value.",
                     .unwrap();
                 }
 
-                NonLocalClauseGuardVariable { location, name } => {
+                TypeError::NonLocalClauseGuardVariable { location, name } => {
                     let diagnostic = Diagnostic {
                         title: "Invalid guard variable".to_string(),
                         label: "is not locally defined".to_string(),
@@ -973,7 +973,7 @@ argument to the function. The variable `{}` is not defined locally.",
                     .unwrap();
                 }
 
-                ExtraVarInAlternativePattern { location, name } => {
+                TypeError::ExtraVarInAlternativePattern { location, name } => {
                     let diagnostic = Diagnostic {
                         title: "Extra alternative pattern variable".to_string(),
                         label: "has not been previously defined".to_string(),
@@ -991,7 +991,7 @@ pattern. This variable `{}` has not been previously defined.",
                     .unwrap();
                 }
 
-                DuplicateVarInPattern { location, name } => {
+                TypeError::DuplicateVarInPattern { location, name } => {
                     let diagnostic = Diagnostic {
                         title: "Duplicate variable in pattern".to_string(),
                         label: "has already been used".to_string(),
@@ -1011,7 +1011,7 @@ please use a guard clause instead e.g. (x, y) if x == y -> ...",
                     .unwrap();
                 }
 
-                OutOfBoundsTupleIndex {
+                TypeError::OutOfBoundsTupleIndex {
                     location, size: 0, ..
                 } => {
                     let diagnostic = Diagnostic {
@@ -1029,7 +1029,7 @@ please use a guard clause instead e.g. (x, y) if x == y -> ...",
                     .unwrap();
                 }
 
-                OutOfBoundsTupleIndex {
+                TypeError::OutOfBoundsTupleIndex {
                     location,
                     index,
                     size,
@@ -1053,7 +1053,7 @@ please use a guard clause instead e.g. (x, y) if x == y -> ...",
                     .unwrap();
                 }
 
-                NotATuple { location, given } => {
+                TypeError::NotATuple { location, given } => {
                     let diagnostic = Diagnostic {
                         title: "Type mismatch".to_string(),
                         label: "is not a tuple".to_string(),
@@ -1074,7 +1074,7 @@ please use a guard clause instead e.g. (x, y) if x == y -> ...",
                     .unwrap();
                 }
 
-                NotATupleUnbound { location } => {
+                TypeError::NotATupleUnbound { location } => {
                     let diagnostic = Diagnostic {
                         title: "Type mismatch".to_string(),
                         label: "what type is this?".to_string(),
@@ -1092,7 +1092,7 @@ about this type yet. Please add some type annotations so we can continue.",
                     .unwrap();
                 }
 
-                RecordAccessUnknownType { location } => {
+                TypeError::RecordAccessUnknownType { location } => {
                     let diagnostic = Diagnostic {
                         title: "Unknown type for record access".to_string(),
                         label: "I don't know what type this is".to_string(),
@@ -1112,7 +1112,7 @@ and try again.
                     .unwrap();
                 }
 
-                ConflictingBinaryTypeOptions { location, name, .. } => {
+                TypeError::ConflictingBinaryTypeOptions { location, name, .. } => {
                     let diagnostic = Diagnostic {
                         title: "Duplicate bit string type option".to_string(),
                         label: "given here".to_string(),
@@ -1124,7 +1124,7 @@ and try again.
                     writeln!(buffer, "This segment already has the type {}", name).unwrap();
                 }
 
-                ConflictingBinarySignednessOptions { location, name, .. } => {
+                TypeError::ConflictingBinarySignednessOptions { location, name, .. } => {
                     let diagnostic = Diagnostic {
                         title: "Duplicate bit string signedness".to_string(),
                         label: "redefined here".to_string(),
@@ -1136,7 +1136,7 @@ and try again.
                     writeln!(buffer, "This segment already has a signedness of {}", name).unwrap();
                 }
 
-                ConflictingBinaryEndiannessOptions { location, name, .. } => {
+                TypeError::ConflictingBinaryEndiannessOptions { location, name, .. } => {
                     let diagnostic = Diagnostic {
                         title: "Duplicate bit string endianness".to_string(),
                         label: "redefined here".to_string(),
@@ -1148,7 +1148,7 @@ and try again.
                     writeln!(buffer, "This segment already has an endianness of {}", name).unwrap();
                 }
 
-                ConflictingBinarySizeOptions { location, .. } => {
+                TypeError::ConflictingBinarySizeOptions { location, .. } => {
                     let diagnostic = Diagnostic {
                         title: "Duplicate bit string size".to_string(),
                         label: "redefined here".to_string(),
@@ -1160,7 +1160,7 @@ and try again.
                     writeln!(buffer, "This segment already has a size",).unwrap();
                 }
 
-                ConflictingBinaryUnitOptions { location, .. } => {
+                TypeError::ConflictingBinaryUnitOptions { location, .. } => {
                     let diagnostic = Diagnostic {
                         title: "Duplicate bit string unit".to_string(),
                         label: "redefined here".to_string(),
@@ -1172,7 +1172,7 @@ and try again.
                     writeln!(buffer, "This segment already has a unit",).unwrap();
                 }
 
-                BinaryTypeDoesNotAllowUnit { location, typ, .. } => {
+                TypeError::BinaryTypeDoesNotAllowUnit { location, typ, .. } => {
                     let diagnostic = Diagnostic {
                         title: "Unit cannot be specified for given type".to_string(),
                         label: "".to_string(),
@@ -1190,7 +1190,7 @@ This segment has a type of {}.",
                     .unwrap();
                 }
 
-                BinarySegmentMustHaveSize { location, .. } => {
+                TypeError::BinarySegmentMustHaveSize { location, .. } => {
                     let diagnostic = Diagnostic {
                         title: "Bit string segment without required size".to_string(),
                         label: "specified here".to_string(),
@@ -1207,7 +1207,7 @@ at the end of a bin pattern",
                     .unwrap();
                 }
 
-                InvalidBinarySegmentOption { label, location } => {
+                TypeError::InvalidBinarySegmentOption { label, location } => {
                     let diagnostic = Diagnostic {
                         title: "Invalid bit string segment option".to_string(),
                         label: "specified here".to_string(),
@@ -1227,7 +1227,7 @@ signed, unsigned, big, little, native, size, unit",
                     .unwrap();
                 }
 
-                RecordUpdateInvalidConstructor { location } => {
+                TypeError::RecordUpdateInvalidConstructor { location } => {
                     let diagnostic = Diagnostic {
                         title: "Invalid record constructor".to_string(),
                         label: "This is not a record constructor".to_string(),
@@ -1244,7 +1244,7 @@ signed, unsigned, big, little, native, size, unit",
                     .unwrap();
                 }
 
-                UnexpectedTypeHole { location } => {
+                TypeError::UnexpectedTypeHole { location } => {
                     let diagnostic = Diagnostic {
                         title: "Unexpected type hole".to_string(),
                         label: "".to_string(),
@@ -1261,7 +1261,7 @@ signed, unsigned, big, little, native, size, unit",
                     .unwrap();
                 }
 
-                UTFVarInBitStringSegment { location, option } => {
+                TypeError::UTFVarInBitStringSegment { location, option } => {
                     let diagnostic = Diagnostic {
                         title: "Incorrect type specifier in bit string segment".to_string(),
                         label: "".to_string(),
@@ -1283,93 +1283,89 @@ When matching you need to use the `{}_codepoint` specifier instead.",
                 }
             },
 
-            Error::Parse { path, src, error } => {
-                use lalrpop_util::ParseError::*;
-
-                match error {
-                    UnrecognizedToken {
-                        token: (start, _, end),
-                        expected,
-                    } => {
-                        let diagnostic = Diagnostic {
-                            title: "Syntax error".to_string(),
-                            label: "Unexpected token".to_string(),
-                            file: path.to_str().unwrap().to_string(),
-                            src: src.to_string(),
-                            location: crate::ast::SrcSpan {
-                                start: *start,
-                                end: *end,
-                            },
-                        };
-                        write(buffer, diagnostic, Severity::Error);
-                        writeln!(buffer, "Expected one of {}", expected.join(", "))
-                            .expect("error pretty buffer write");
-                    }
-
-                    UnrecognizedEOF { .. } => {
-                        let diagnostic = Diagnostic {
-                            title: "Syntax error".to_string(),
-                            label: "Unexpected end of file".to_string(),
-                            file: path.to_str().unwrap().to_string(),
-                            src: src.to_string(),
-                            location: crate::ast::SrcSpan {
-                                start: src.len() - 2,
-                                end: src.len() - 1,
-                            },
-                        };
-                        write(buffer, diagnostic, Severity::Error);
-                    }
-
-                    InvalidToken { location } => {
-                        let diagnostic = Diagnostic {
-                            title: "Syntax error".to_string(),
-                            label: "Unknown token".to_string(),
-                            file: path.to_str().unwrap().to_string(),
-                            src: src.to_string(),
-                            location: crate::ast::SrcSpan {
-                                start: *location,
-                                end: *location + 1,
-                            },
-                        };
-                        write(buffer, diagnostic, Severity::Error);
-                        writeln!(
-                            buffer,
-                            "I don't know what this character means. Is it a typo?"
-                        )
+            Error::Parse { path, src, error } => match error {
+                lalrpop_util::ParseError::UnrecognizedToken {
+                    token: (start, _, end),
+                    expected,
+                } => {
+                    let diagnostic = Diagnostic {
+                        title: "Syntax error".to_string(),
+                        label: "Unexpected token".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: crate::ast::SrcSpan {
+                            start: *start,
+                            end: *end,
+                        },
+                    };
+                    write(buffer, diagnostic, Severity::Error);
+                    writeln!(buffer, "Expected one of {}", expected.join(", "))
                         .expect("error pretty buffer write");
-                    }
+                }
 
-                    ExtraToken { .. } => unimplemented!(),
+                lalrpop_util::ParseError::UnrecognizedEOF { .. } => {
+                    let diagnostic = Diagnostic {
+                        title: "Syntax error".to_string(),
+                        label: "Unexpected end of file".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: crate::ast::SrcSpan {
+                            start: src.len() - 2,
+                            end: src.len() - 1,
+                        },
+                    };
+                    write(buffer, diagnostic, Severity::Error);
+                }
 
-                    User { error } => {
-                        use crate::parser::Error;
-                        match error {
-                            Error::TooManyHolesInCapture { location, count } => {
-                                let diagnostic = Diagnostic {
-                                    title: "Invalid capture".to_string(),
-                                    label: "".to_string(),
-                                    file: path.to_str().unwrap().to_string(),
-                                    src: src.to_string(),
-                                    location: location.clone(),
-                                };
-                                write(buffer, diagnostic, Severity::Error);
-                                let chars: String = (97..(97 + count))
-                                    .map(|x| x as u8 as char)
-                                    .map(|c| c.to_string())
-                                    .intersperse(", ".to_string())
-                                    .collect();
-                                writeln!(
+                lalrpop_util::ParseError::InvalidToken { location } => {
+                    let diagnostic = Diagnostic {
+                        title: "Syntax error".to_string(),
+                        label: "Unknown token".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: crate::ast::SrcSpan {
+                            start: *location,
+                            end: *location + 1,
+                        },
+                    };
+                    write(buffer, diagnostic, Severity::Error);
+                    writeln!(
+                        buffer,
+                        "I don't know what this character means. Is it a typo?"
+                    )
+                    .expect("error pretty buffer write");
+                }
+
+                lalrpop_util::ParseError::ExtraToken { .. } => unimplemented!(),
+
+                lalrpop_util::ParseError::User { error } => {
+                    use crate::parser::Error;
+                    match error {
+                        Error::TooManyHolesInCapture { location, count } => {
+                            let diagnostic = Diagnostic {
+                                title: "Invalid capture".to_string(),
+                                label: "".to_string(),
+                                file: path.to_str().unwrap().to_string(),
+                                src: src.to_string(),
+                                location: location.clone(),
+                            };
+                            write(buffer, diagnostic, Severity::Error);
+                            let chars: String = (97..(97 + count))
+                                .map(|x| x as u8 as char)
+                                .map(|c| c.to_string())
+                                .intersperse(", ".to_string())
+                                .collect();
+                            writeln!(
                                     buffer,
                                     "The function capture syntax can only be used with a single _ argument,
 but this one uses {}. Rewrite this using the fn({}) {{ ... }} syntax.",
                                     count, chars
                                 )
                                 .expect("error pretty buffer write");
-                            }
                         }
                     }
                 }
-            }
+            },
 
             Error::ImportCycle { modules } => {
                 crate::diagnostic::write_title(buffer, "Import cycle");
@@ -1478,25 +1474,33 @@ but it cannot be found.",
 }
 
 fn std_io_error_kind_text(kind: &std::io::ErrorKind) -> String {
-    use std::io::ErrorKind::*;
+    use std::io::ErrorKind;
     match kind {
-        NotFound => "Could not find the stdio stream".to_string(),
-        PermissionDenied => "Permission was denied".to_string(),
-        ConnectionRefused => "Connection was refused".to_string(),
-        ConnectionReset => "Connection was reset".to_string(),
-        ConnectionAborted => "Connection was aborted".to_string(),
-        NotConnected => "Was not connected".to_string(),
-        AddrInUse => "The stream was already in use".to_string(),
-        AddrNotAvailable => "The stream was not available".to_string(),
-        BrokenPipe => "The pipe was broken".to_string(),
-        AlreadyExists => "A handle to the stream already exists".to_string(),
-        WouldBlock => "This operation would block when it was requested not to".to_string(),
-        InvalidInput => "Some parameter was invalid".to_string(),
-        InvalidData => "The data was invalid.  Check that the encoding is UTF-8".to_string(),
-        TimedOut => "The operation timed out".to_string(),
-        WriteZero => "An attempt was made to write, but all bytes could not be written".to_string(),
-        Interrupted => "The operation was interrupted".to_string(),
-        UnexpectedEof => "The end of file was reached before it was expected".to_string(),
+        ErrorKind::NotFound => "Could not find the stdio stream".to_string(),
+        ErrorKind::PermissionDenied => "Permission was denied".to_string(),
+        ErrorKind::ConnectionRefused => "Connection was refused".to_string(),
+        ErrorKind::ConnectionReset => "Connection was reset".to_string(),
+        ErrorKind::ConnectionAborted => "Connection was aborted".to_string(),
+        ErrorKind::NotConnected => "Was not connected".to_string(),
+        ErrorKind::AddrInUse => "The stream was already in use".to_string(),
+        ErrorKind::AddrNotAvailable => "The stream was not available".to_string(),
+        ErrorKind::BrokenPipe => "The pipe was broken".to_string(),
+        ErrorKind::AlreadyExists => "A handle to the stream already exists".to_string(),
+        ErrorKind::WouldBlock => {
+            "This operation would block when it was requested not to".to_string()
+        }
+        ErrorKind::InvalidInput => "Some parameter was invalid".to_string(),
+        ErrorKind::InvalidData => {
+            "The data was invalid.  Check that the encoding is UTF-8".to_string()
+        }
+        ErrorKind::TimedOut => "The operation timed out".to_string(),
+        ErrorKind::WriteZero => {
+            "An attempt was made to write, but all bytes could not be written".to_string()
+        }
+        ErrorKind::Interrupted => "The operation was interrupted".to_string(),
+        ErrorKind::UnexpectedEof => {
+            "The end of file was reached before it was expected".to_string()
+        }
         _ => "An unknown error occurred".to_string(),
     }
 }

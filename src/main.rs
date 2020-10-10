@@ -22,7 +22,6 @@
     clippy::lossy_float_literal,
     clippy::rest_pat_in_fully_bound_structs,
     clippy::fn_params_excessive_bools,
-    clippy::exit,
     clippy::inefficient_to_string,
     clippy::linkedlist,
     clippy::macro_use_imports,
