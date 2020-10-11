@@ -108,6 +108,23 @@ enum Command {
     #[structopt(name = "docs", about = "Render HTML documentation for a project")]
     Docs(Docs),
 
+    #[structopt(name = "init", about = "Create a new project in an existing directory")]
+    Init {
+        #[structopt(long = "description", help = "description of the project")]
+        description: Option<String>,
+
+        #[structopt(help = "location of the project root")]
+        project_root: Option<String>,
+
+        #[structopt(
+            long = "template",
+            possible_values = &new::Template::VARIANTS,
+            case_insensitive = true,
+            default_value = "lib"
+        )]
+        template: new::Template,
+    },
+
     #[structopt(name = "new", about = "Create a new project")]
     New {
         #[structopt(help = "name of the project")]
@@ -214,6 +231,12 @@ fn main() {
             files,
             check,
         } => format::command::run(stdin, check, files),
+
+        Command::Init {
+            description,
+            project_root,
+            template,
+        } => new::init(template, description, project_root, VERSION),
 
         Command::New {
             name,

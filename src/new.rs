@@ -2,8 +2,7 @@ use crate::error::{Error, FileIOAction, FileKind, GleamExpect, InvalidProjectNam
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Write;
-use std::path::Path;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use strum_macros::{Display, EnumString, EnumVariantNames};
 
 #[derive(Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames)]
@@ -11,6 +10,90 @@ use strum_macros::{Display, EnumString, EnumVariantNames};
 pub enum Template {
     Lib,
     App,
+}
+
+pub fn init(
+    template: Template,
+    description: Option<String>,
+    path: Option<String>,
+    version: &'static str,
+) -> Result<(), Error> {
+    let path = path.unwrap_or_else(|| String::from("."));
+    let root_dir = Path::new(&path);
+
+    if !root_dir.is_dir() {
+        return Err(Error::FileIO {
+            action: FileIOAction::Create,
+            kind: FileKind::Directory,
+            path: root_dir.clone().to_path_buf(),
+            err: Some(String::from("This path was not a directory.")),
+        });
+    }
+
+    let name = validate_name(
+        root_dir
+            .file_name()
+            .expect("This directory does not have a valid name for a project.")
+            .to_os_string()
+            .into_string()
+            .expect("This directory does not have a valid name for a project."),
+    )?;
+
+    let description = description.unwrap_or_else(|| String::from("A Gleam program"));
+
+    let src_dir = root_dir.join("src");
+    let test_dir = root_dir.join("test");
+    let github_dir = root_dir.join(".github");
+    let workflows_dir = github_dir.join("workflows");
+
+    // Create directories
+    crate::fs::mkdir(&root_dir)?;
+    crate::fs::mkdir(&src_dir)?;
+    crate::fs::mkdir(&test_dir)?;
+    crate::fs::mkdir(&github_dir)?;
+    crate::fs::mkdir(&workflows_dir)?;
+
+    // write files
+    write(root_dir.join("LICENSE"), APACHE_2)?;
+    write(root_dir.join(".gitignore"), GITIGNORE)?;
+    write(root_dir.join("README.md"), &readme(&name, &description))?;
+    write(root_dir.join("gleam.toml"), &gleam_toml(&name))?;
+    write(test_dir.join(format!("{}_test.gleam", name)), &test(&name))?;
+    write(src_dir.join(format!("{}.gleam", name)), &src(&name))?;
+    write(workflows_dir.join("test.yml"), &github_ci(version))?;
+
+    match template {
+        Template::Lib => {
+            write(root_dir.join("rebar.config"), &rebar_config(""))?;
+            write(
+                src_dir.join(format!("{}.app.src", name)),
+                &app_src(&name, &description, false),
+            )?;
+        }
+
+        Template::App => {
+            write(root_dir.join("rebar.config"), &app_rebar_config(&name))?;
+            write(src_dir.join(format!("{}_app.erl", name)), &src_app(&name))?;
+            write(
+                src_dir.join(format!("{}.app.src", name)),
+                &app_src(&name, &description, true),
+            )?;
+        }
+    }
+
+    // Print success message
+    println!(
+        "
+Your Gleam project \"{}\" has been successfully created.
+The rebar3 program can be used to compile and test it.
+
+    cd {}
+    rebar3 eunit
+",
+        name,
+        root_dir.to_str().expect("Unable to display path")
+    );
+    Ok(())
 }
 
 pub fn create(
