@@ -56,8 +56,9 @@ pub fn create(
         }
 
         Template::App => {
+            crate::fs::mkdir(&src_dir.join(&name))?;
             write(root_dir.join("rebar.config"), &app_rebar_config(&name))?;
-            write(src_dir.join(format!("{}_app.erl", name)), &src_app(&name))?;
+            write(src_dir.join(&name).join("application.gleam"), &src_app())?;
             write(
                 src_dir.join(format!("{}.app.src", name)),
                 &app_src(&name, &description, true),
@@ -200,35 +201,28 @@ fn app_src(name: &str, description: &str, is_application: bool) -> String {
     )
 }
 
-fn src_app(name: &str) -> String {
+fn src_app() -> String {
     format!(
-        r#"-module({}_app).
+        r#"import gleam/otp/supervisor.{{ApplicationStartMode, ErlangStartResult}}
+import gleam/dynamic.{{Dynamic}}
 
--behaviour(application).
--behaviour(supervisor).
+fn init(children) {{
+  children
+}}
 
--export([start/2, stop/1, init/1]).
+pub fn start(
+  _mode: ApplicationStartMode,
+  _args: List(Dynamic),
+) -> ErlangStartResult {{
+  init
+  |> supervisor.start
+  |> supervisor.to_erlang_start_result
+}}
 
-start(_StartType, _StartArgs) ->
-    supervisor:start_link({{local, ?MODULE}}, ?MODULE, []).
-
-stop(_State) ->
-    ok.
-
-%% child_spec() = #{{id => child_id(),       % mandatory
-%%                  start => mfargs(),       % mandatory
-%%                  restart => restart(),    % optional
-%%                  shutdown => shutdown(),  % optional
-%%                  type => worker(),        % optional
-%%                  modules => modules()}}   % optional
-init([]) ->
-    SupFlags = #{{strategy => one_for_all,
-                 intensity => 0,
-                 period => 1}},
-    ChildSpecs = [],
-    {{ok, {{SupFlags, ChildSpecs}}}}.
+pub fn stop(_state: Dynamic) {{
+  supervisor.application_stopped()
+}}
 "#,
-        name
     )
 }
 
@@ -484,7 +478,8 @@ fn rebar_config(insert: &str) -> String {
 {{project_plugins, [rebar_gleam]}}.
 
 {{deps, [
-    {{gleam_stdlib, "0.11.0"}}
+    {{gleam_stdlib, "0.11.0"}},
+    {{gleam_otp, {{git, "https://github.com/gleam-lang/otp", {{branch, "main"}}}}}}
 ]}}.
 "#,
         insert

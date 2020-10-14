@@ -11,9 +11,10 @@
   enabled mutually recursive functions!
 - Discarded variable names may now include numbers.
 - Fixed a bug where discarded variables might generate incorrect Erlang.
-- Added support tuple access in clause guards. 
+- Added support tuple access in clause guards.
 - New projects are created with version 1.0.2 of the setup-gleam GitHub
   action.
+- New application projects are now created used Gleam's type safe OTP.
 
 ## v0.11.2 - 2020-09-01
 
