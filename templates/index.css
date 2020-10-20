@@ -21,9 +21,10 @@
   --accent: var(--pink);
 
   /* Sizes */
-  --content-width: 680px;
+  --header-height: 60px;
   --sidebar-width: 240px;
   --sidebar-width-inverted: -240px;
+  --sidebar-top-height: 320px;
   --gap: 24px;
   --small-gap: calc(var(--gap) / 2);
   --tiny-gap: calc(var(--small-gap) / 2);
@@ -49,6 +50,11 @@ html {
   position: relative;
   min-height: 100vh;
   word-break: break-word;
+}
+
+html {
+  /* This is necessary so hash targets appear below the fixed header */
+  scroll-padding-top: 100px;
 }
 
 a,
@@ -102,23 +108,27 @@ p code {
 
 .page {
   display: flex;
-  justify-content: flex-start;
 }
 
 .content {
-  width: var(--content-width);
-  max-width: 100%;
-  padding: 0 var(--gap);
+  margin-left: var(--sidebar-width);
+  padding: calc(var(--header-height) + var(--gap)) var(--gap) 0 var(--gap);
+  width: calc(100% - var(--sidebar-width));
 }
 
 /* Page header */
 
 .page-header {
+  height: var(--header-height);
   color: black;
   color: var(--hard-black);
   background-color: var(--pink);
   padding: var(--small-gap) var(--gap);
   margin-bottom: var(--gap);
+  position: fixed;
+  left: 0px;
+  right: 0px;
+  top: 0px;
 }
 
 .page-header h2 {
@@ -136,11 +146,16 @@ p code {
 
 .sidebar {
   background-color: var(--background);
-  width: var(--sidebar-width);
-  padding: 0 var(--gap);
   font-size: 0.95rem;
   transition: transform 0.5s ease;
   z-index: 100;
+  max-height: calc(100vh - var(--header-height) - var(--gap));
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  top: calc(var(--header-height) + var(--gap));
+  width: var(--sidebar-width);
+  padding-left: var(--gap);
 }
 
 .sidebar h2 {
@@ -162,6 +177,18 @@ p code {
   display: none;
   transition: opacity 1s ease;
   opacity: 0;
+}
+
+.sidebar-top {
+  max-height: var(--sidebar-top-height);
+  position: relative;
+  overflow-y: auto;
+}
+
+.sidebar-bottom {
+  padding-top: var(--gap);
+  position: relative;
+  overflow-y: auto;
 }
 
 /* Module members (types, functions) */
@@ -246,12 +273,13 @@ p code {
 
   .content {
     width: unset;
+    margin-left: unset;
   }
 
   .sidebar {
-    padding: var(--gap);
-    position: absolute;
+    position: fixed;
     height: 100vh;
+    max-height: unset;
     top: 0;
     transform: translate(var(--sidebar-width-inverted));
     overflow: visible;
@@ -275,5 +303,13 @@ p code {
     left: calc(var(--small-gap) + var(--sidebar-width));
     height: var(--sidebar-toggle-size);
     width: var(--sidebar-toggle-size);
+  }
+
+  .sidebar-top {
+    padding-top: var(--gap);
+  }
+
+  .sidebar-bottom {
+    padding-top: var(--gap);
   }
 }
