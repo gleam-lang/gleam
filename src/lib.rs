@@ -459,7 +459,7 @@ impl AuthenticatedClient {
         let url = self
             .api_base
             .join(format!("packages/{}/releases/{}/docs", package_name, version).as_str())
-            .expect("building remove_docs url");
+            .expect("building publish_docs url");
 
         let response = self
             .http_client()
