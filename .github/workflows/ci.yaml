@@ -11,13 +11,13 @@ jobs:
     strategy:
       matrix:
         toolchain: [stable]
-        build: [linux, linux-musl, macos, win]
+        build: [linux-amd64, linux-musl-amd64, macos, windows]
         include:
-        - build: linux
+        - build: linux-amd64
           os: ubuntu-latest
           target: x86_64-unknown-linux-gnu
           use-cross: false
-        - build: linux-musl
+        - build: linux-musl-amd64
           os: ubuntu-latest
           target: x86_64-unknown-linux-musl
           use-cross: true
@@ -25,7 +25,7 @@ jobs:
           os: macos-latest
           target: x86_64-apple-darwin
           use-cross: false
-        - build: win
+        - build: windows
           os: windows-latest
           target: x86_64-pc-windows-msvc
           use-cross: false
