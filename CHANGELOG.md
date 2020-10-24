@@ -5,6 +5,9 @@
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
+
+## v0.12.0-rc1 - 2020-10-24
+
 - The utf8, utf16, and utf32 type specifiers are now only available in bit
   string construction, matching must be done with the codepoint versions.
 - Functions may now be called before they are defined in a module. This
