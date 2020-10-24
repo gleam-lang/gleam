@@ -104,7 +104,7 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
                     None => buffer.push_str(c),
                 },
 
-                "\n" => {
+                "\r\n" | "\n" => {
                     buffer.push_str(c);
                     chomp_newlines(&mut buffer, outer_char_no, &mut comments, &mut chars);
                 }
@@ -129,7 +129,7 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
             },
 
             Mode::Comment(kind, start) => match c {
-                "\n" => {
+                "\r\n" | "\n" => {
                     mode = Mode::Normal;
                     let content_start = match &kind {
                         Kind::Module => start + 4,
@@ -145,7 +145,7 @@ pub fn strip_extra(src: &str) -> (String, ModuleComments<'_>) {
                         Kind::Doc => comments.doc_comments.push(comment),
                         Kind::Regular => comments.comments.push(comment),
                     };
-                    buffer.push('\n');
+                    buffer.push_str(c);
 
                     chomp_newlines(&mut buffer, start, &mut comments, &mut chars)
                 }
@@ -184,30 +184,31 @@ fn chomp_newlines(
     comments: &mut ModuleComments<'_>,
     chars: &mut std::iter::Peekable<unicode_segmentation::GraphemeIndices<'_>>,
 ) {
-    if let Some((_, "\n")) = chars.peek() {
+    if let Some((_, "\n")) | Some((_, "\r\n")) = chars.peek() {
         comments.empty_lines.push(position + 1);
-        while let Some((_, "\n")) = chars.peek() {
-            buffer.push('\n');
+        while let Some((_, grapheme @ "\r\n")) | Some((_, grapheme @ "\n")) = chars.peek() {
+            buffer.push_str(grapheme);
             chars.next();
         }
     }
 }
 
+#[cfg(test)]
+macro_rules! assert_stripped {
+    ($input:expr, $out:expr $(,)?) => {
+        println!("\n\n{:?}", $input);
+        assert_eq!($out, strip_extra($input).0.as_str());
+    };
+    ($input:expr, $out:expr, $comments:expr $(,)?) => {
+        println!("\n\n{:?}", $input);
+        let (stripped, comments) = strip_extra($input);
+        assert_eq!($out, stripped.as_str());
+        assert_eq!($comments, comments);
+    };
+}
+
 #[test]
 fn strip_extra_test() {
-    macro_rules! assert_stripped {
-        ($input:expr, $out:expr $(,)?) => {
-            println!("\n\n{:?}", $input);
-            assert_eq!($out, strip_extra($input).0.as_str());
-        };
-        ($input:expr, $out:expr, $comments:expr $(,)?) => {
-            println!("\n\n{:?}", $input);
-            let (stripped, comments) = strip_extra($input);
-            assert_eq!($out, stripped.as_str());
-            assert_eq!($comments, comments);
-        };
-    };
-
     assert_stripped!("", "");
     assert_stripped!(" ; ", "   ");
     assert_stripped!("//\n", "  \n");
@@ -410,6 +411,11 @@ fn main() {
             empty_lines: vec![25, 43],
         }
     );
+}
+
+#[test]
+fn strip_extra_windows_line_endings_test() {
+    assert_stripped!("// hi\r\n1", "     \r\n1");
 }
 
 pub fn location(start: usize, end: usize) -> SrcSpan {
