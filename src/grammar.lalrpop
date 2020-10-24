@@ -606,9 +606,14 @@ RecordUpdateArg: UntypedRecordUpdateArg = {
     },
 }
 
-CallArg: Result<CallArg<UntypedExpr>, (crate::ast::SrcSpan, Option<String>)> = {
-    <s:@L> <label:(<VarName> ":")?> <value:OpOrSimpleExpr> <e:@L> => Ok(CallArg { label, value, location: location(s, e) }),
-    <s:@L> <label:(<VarName> ":")?> DiscardName <e:@L> => Err((location(s, e), label)),
+CallArg: ParserArg = {
+    <s:@L> <label:(<VarName> ":")?> <value:OpOrSimpleExpr> <e:@L> => {
+        ParserArg::Arg(CallArg { label, value, location: location(s, e) })
+    },
+
+    <s:@L> <label:(<VarName> ":")?> DiscardName <e:@L> => {
+        ParserArg::Hole { location: location(s, e), label }
+    },
 }
 
 Tuple: UntypedExpr = {

@@ -442,12 +442,17 @@ pub fn attach_doc_comments<'a, A, B, C, D>(
     }
 }
 
-type ArgInfo = (SrcSpan, Option<String>);
+pub enum ParserArg {
+    Arg(CallArg<UntypedExpr>),
+    Hole {
+        location: SrcSpan,
+        label: Option<String>,
+    },
+}
 
 pub fn make_call(
     fun: UntypedExpr,
-    // TODO: this abuse of Result is grim. Define an appropriate enum
-    args: Vec<Result<CallArg<UntypedExpr>, ArgInfo>>,
+    args: Vec<ParserArg>,
     s: usize,
     e: usize,
 ) -> Result<UntypedExpr, Error> {
@@ -455,12 +460,12 @@ pub fn make_call(
     let args = args
         .into_iter()
         .map(|a| match a {
-            Ok(arg) => arg,
-            Err((location, label)) => {
+            ParserArg::Arg(arg) => arg,
+            ParserArg::Hole { location, label } => {
                 num_holes += 1;
                 CallArg {
                     label,
-                    location: Default::default(),
+                    location: location.clone(),
                     value: UntypedExpr::Var {
                         location,
                         name: CAPTURE_VARIABLE.to_string(),
