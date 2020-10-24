@@ -15,6 +15,8 @@
 - New projects are created with version 1.0.2 of the setup-gleam GitHub
   action.
 - New application projects are now created used Gleam's type safe OTP.
+- Comments are now correctly handled on platforms that use \r\n line endings,
+  such as Windows.
 
 ## v0.11.2 - 2020-09-01
 
