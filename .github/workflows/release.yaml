@@ -64,17 +64,17 @@ jobs:
         shell: bash
         run: |
           VERSION="${GITHUB_REF#refs/tags/}"
-          staging="gleam-$VERSION-${{ matrix.build }}"
-          mkdir -p "$staging"
 
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            cp "target/${{ matrix.target }}/release/gleam.exe" "$staging/"
-            7z a "$staging.zip" "$staging"
-            echo "::set-env name=ASSET::$staging.zip"
+            ARCHIVE="gleam-$VERSION-${{ matrix.build }}.zip"
+            cp "target/${{ matrix.target }}/release/gleam.exe" "gleam.exe"
+            7z a "$ARCHIVE.zip" "gleam.exe"
+            echo "::set-env name=ASSET::$ARCHIVE"
           else
-            cp "target/${{ matrix.target }}/release/gleam" "$staging/"
-            tar -czvf "$staging.tar.gz" "$staging"
-            echo "::set-env name=ASSET::$staging.tar.gz"
+            ARCHIVE="gleam-$VERSION-${{ matrix.build }}.tar.gz"
+            cp "target/${{ matrix.target }}/release/gleam" "gleam"
+            tar -czvf "$ARCHIVE" "gleam"
+            echo "::set-env name=ASSET::$ARCHIVE"
           fi
 
       - name: Upload release archive
