@@ -56,7 +56,7 @@ jobs:
         args: --workspace --target ${{ matrix.target }}
 
     - name: Upload artifact (Ubuntu)
-      if: matrix.build == 'linux'
+      if: matrix.build == 'linux-amd64'
       uses: actions/upload-artifact@v2
       with:
         name: gleam
