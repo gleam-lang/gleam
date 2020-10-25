@@ -145,7 +145,7 @@ p code {
 .sidebar {
   background-color: var(--background);
   font-size: 0.95rem;
-  max-height: calc(100vh - var(--header-height) - var(--gap));
+  max-height: calc(100vh - var(--header-height));
   overflow-y: auto;
   padding-top: var(--gap);
   padding-bottom: var(--gap);
@@ -211,35 +211,25 @@ p code {
 
 .pride {
   width: 100%;
-  display: flex;
+  display: none;
   flex-direction: row;
   position: absolute;
   bottom: 0;
   z-index: 100;
 }
 
-.pride.show div {
-  opacity: 1;
+.show-pride .pride {
+  display: flex;
 }
 
-.pride.show a {
-  display: none;
-}
-
-.pride a {
-  position: absolute;
-  bottom: 5px;
-  right: 5px;
-  font-size: 0.9rem;
-  text-decoration: none;
-  cursor: normal;
+.show-pride .sidebar {
+  margin-bottom: var(--gap);
 }
 
 .pride div {
   flex: 1;
   text-align: center;
   padding: var(--tiny-gap);
-  opacity: 0;
 }
 
 .pride .white {
@@ -250,6 +240,19 @@ p code {
 }
 .pride .blue {
   background-color: var(--boi-blue);
+}
+
+.pride-button {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  opacity: 0.2;
+  font-size: 0.9rem;
+}
+
+.pride-button {
+  text-decoration: none;
+  cursor: default;
 }
 
 /* Small displays */

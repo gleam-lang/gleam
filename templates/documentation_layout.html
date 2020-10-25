@@ -67,13 +67,15 @@
       </main>
     </div>
 
-    <footer class="pride" onclick="document.querySelector('.pride').classList.toggle('show')">
+
+    <script>const pride = () => document.querySelector('body').classList.toggle('show-pride')</script>
+    <a class="pride-button" onclick="pride()">✨</a>
+    <footer class="pride" onclick="pride()">
       <div class="blue">Lucy</div>
       <div class="pink">says</div>
       <div class="white">trans</div>
       <div class="pink">rights</div>
       <div class="blue">✨</div>
-      <a>✨</a>
     </footer>
   </body>
 </html>
