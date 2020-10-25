@@ -175,7 +175,7 @@ jobs:
 
 fn app_src(name: &str, description: &str, is_application: bool) -> String {
     let module = if is_application {
-        format!("\n  {{mod, {{{}_app, []}}}},", name)
+        format!("\n  {{mod, {{{}@application, []}}}},", name)
     } else {
         "".to_string()
     };

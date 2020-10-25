@@ -8,6 +8,8 @@
 
 - The rendered module documentation sidebar can now scroll independently to
   the page.
+- Application projects now have the correct `mod` value in the generated
+  `.app.src`.
 
 ## v0.12.0-rc3 - 2020-10-24
 ## v0.12.0-rc2 - 2020-10-24
