@@ -123,7 +123,6 @@ p code {
   color: var(--hard-black);
   background-color: var(--pink);
   padding: var(--small-gap) var(--gap);
-  margin-bottom: var(--gap);
   position: fixed;
   left: 0px;
   right: 0px;
@@ -148,10 +147,11 @@ p code {
   font-size: 0.95rem;
   max-height: calc(100vh - var(--header-height) - var(--gap));
   overflow-y: auto;
+  padding-top: var(--gap);
   padding-bottom: var(--gap);
   padding-left: var(--gap);
   position: fixed;
-  top: calc(var(--header-height) + var(--gap));
+  top: var(--header-height);
   transition: transform 0.5s ease;
   width: var(--sidebar-width);
   z-index: 100;
@@ -267,8 +267,6 @@ p code {
     height: 100vh;
     max-height: unset;
     overflow: visible;
-    padding-bottom: var(--gap);
-    padding-top: var(--gap);
     top: 0;
     transform: translate(var(--sidebar-width-inverted));
   }
