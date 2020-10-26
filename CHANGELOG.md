@@ -10,6 +10,7 @@
   the page.
 - Application projects now have the correct `mod` value in the generated
   `.app.src`.
+- Records without fields can now be used in module constants.
 
 ## v0.12.0-rc3 - 2020-10-24
 ## v0.12.0-rc2 - 2020-10-24

@@ -1444,6 +1444,38 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 module,
                 location,
                 name,
+                args,
+                ..
+            } if args.is_empty() => {
+                let constructor = self.infer_value_constructor(&name, &location)?;
+
+                let tag = match &constructor.variant {
+                    ValueConstructorVariant::Record { name, .. } => name.clone(),
+
+                    ValueConstructorVariant::ModuleFn { .. }
+                    | ValueConstructorVariant::LocalVariable => {
+                        return Err(Error::NonLocalClauseGuardVariable { location, name })
+                    }
+
+                    ValueConstructorVariant::ModuleConstant { literal } => {
+                        return Ok(literal.clone())
+                    }
+                };
+
+                Ok(Constant::Record {
+                    module,
+                    location,
+                    name,
+                    args: vec![],
+                    typ: constructor.typ,
+                    tag,
+                })
+            }
+
+            Constant::Record {
+                module,
+                location,
+                name,
                 mut args,
                 ..
             } => {

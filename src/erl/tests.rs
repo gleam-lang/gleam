@@ -2105,3 +2105,20 @@ main() ->
 "#,
     );
 }
+
+#[test]
+fn record_constants() {
+    assert_erl!(
+        "pub type Test { A }
+const test = A
+pub fn a() { A }",
+        "-module(the_app).
+-compile(no_auto_import).
+
+-export([a/0]).
+
+a() ->
+    a.
+"
+    );
+}
