@@ -2778,7 +2778,17 @@ fn custom_type_module_constants() {
     assert_module_infer!(
         "pub type Test { A }
         pub const test = A",
-        vec![("A", "Test"), ("test", "Test"),],
+        vec![("A", "Test"), ("test", "Test")],
+    );
+
+    assert_module_error!(
+        r#"type X { X }
+        const x = unknown.X"#,
+        sort_options(Error::UnknownModule {
+            location: SrcSpan { start: 1, end: 2 },
+            name: "unknown".to_string(),
+            imported_modules: vec![],
+        })
     );
 }
 
