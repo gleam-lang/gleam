@@ -1944,31 +1944,6 @@ pub fn get(x: One) { x.name }",
         ]
     );
 
-    // Module constants
-    assert_module_infer!(
-        "
-    pub const test_int1 = 123
-    pub const test_int2: Int = 321
-    pub const test_int3 = 0xE
-    pub const test_int4 = 0o10
-    pub const test_int5 = 0o10011
-    pub const test_float: Float = 4.2
-    pub const test_string = \"hey!\"
-    pub const test_list = [1,2,3]
-    pub const test_tuple = tuple(\"yes!\", 42)",
-        vec![
-            ("test_float", "Float"),
-            ("test_int1", "Int"),
-            ("test_int2", "Int"),
-            ("test_int3", "Int"),
-            ("test_int4", "Int"),
-            ("test_int5", "Int"),
-            ("test_list", "List(Int)"),
-            ("test_string", "String"),
-            ("test_tuple", "tuple(String, Int)"),
-        ],
-    );
-
     assert_module_infer!(
         "
 pub type Box {
@@ -2771,6 +2746,39 @@ fn module_constants() {
             expected: int(),
             given: float(),
         },
+    );
+
+    assert_module_infer!(
+        "
+    pub const test_int1 = 123
+    pub const test_int2: Int = 321
+    pub const test_int3 = 0xE
+    pub const test_int4 = 0o10
+    pub const test_int5 = 0o10011
+    pub const test_float: Float = 4.2
+    pub const test_string = \"hey!\"
+    pub const test_list = [1,2,3]
+    pub const test_tuple = tuple(\"yes!\", 42)",
+        vec![
+            ("test_float", "Float"),
+            ("test_int1", "Int"),
+            ("test_int2", "Int"),
+            ("test_int3", "Int"),
+            ("test_int4", "Int"),
+            ("test_int5", "Int"),
+            ("test_list", "List(Int)"),
+            ("test_string", "String"),
+            ("test_tuple", "tuple(String, Int)"),
+        ],
+    );
+}
+
+#[test]
+fn custom_type_module_constants() {
+    assert_module_infer!(
+        "pub type Test { A }
+        pub const test = A",
+        vec![("A", "Test"), ("test", "Test"),],
     );
 }
 
