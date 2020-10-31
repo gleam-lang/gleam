@@ -68,7 +68,7 @@ jobs:
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             ARCHIVE="gleam-$VERSION-${{ matrix.build }}.zip"
             cp "target/${{ matrix.target }}/release/gleam.exe" "gleam.exe"
-            7z a "$ARCHIVE.zip" "gleam.exe"
+            7z a "$ARCHIVE" "gleam.exe"
             echo "::set-env name=ASSET::$ARCHIVE"
           else
             ARCHIVE="gleam-$VERSION-${{ matrix.build }}.tar.gz"
