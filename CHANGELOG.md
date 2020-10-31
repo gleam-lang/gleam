@@ -6,6 +6,10 @@
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 
+## v0.12.0 - 2020-10-31
+
+#### [Release Blog Post](https://gleam.run/news/gleam-v0.12-and-gleam-otp-v0.1-released/)
+
 ## v0.12.0-rc4 - 2020-10-31
 
 - The rendered module documentation sidebar can now scroll independently to
