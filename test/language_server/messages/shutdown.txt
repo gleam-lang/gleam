@@ -1,0 +1,7 @@
+Content-Length: 63
+
+{
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "shutdown"
+}

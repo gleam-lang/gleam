@@ -1,0 +1,16 @@
+Content-Length: 280
+
+{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "textDocument/formatting",
+    "params": {
+        "textDocument": {
+            "uri": "file:///tmp/gleam_sample.gleam"
+        },
+        "options": {
+            "tabSize": 4,
+            "insertSpaces": true
+        }
+    }
+}

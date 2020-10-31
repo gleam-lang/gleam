@@ -1,0 +1,6 @@
+Content-Length: 53
+
+{
+    "jsonrpc": "2.0",
+    "method": "initialized"
+}

@@ -1,0 +1,18 @@
+Content-Length: 319
+
+{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+        "processId": null,
+        "rootUri": null,
+        "capabilities": {
+            "textDocument": {
+                "formatting": {
+                    "dynamicRegistration": false
+                }
+            }
+        }
+    }
+}
