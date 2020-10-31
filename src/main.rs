@@ -53,6 +53,7 @@ mod error;
 mod eunit;
 mod format;
 mod fs;
+mod language_server;
 mod new;
 mod parser;
 mod pretty;
@@ -162,6 +163,15 @@ enum Command {
         #[structopt(help = "location of the project root", default_value = ".")]
         project_root: String,
     },
+
+    #[structopt(
+        name = "language-server",
+        about = "Start the Gleam language server",
+    )]
+    LanguageServer {
+        #[structopt(help = "location of the project root", default_value = ".")]
+        project_root: String,
+    },
 }
 
 #[derive(StructOpt, Debug)]
@@ -225,6 +235,8 @@ fn main() {
         Command::Shell { project_root } => shell::command(project_root),
 
         Command::Eunit { project_root } => eunit::command(project_root),
+
+        Command::LanguageServer { project_root } => language_server::command(project_root),
     };
 
     match result {

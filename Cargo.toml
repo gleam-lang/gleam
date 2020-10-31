@@ -64,6 +64,11 @@ fs_extra = "1.1"
 # Logging
 tracing = "0.1"
 tracing-subscriber = "0.2"
+# Language server support
+lsp-server = "0.4.0"
+lsp-types = { version = "0.83.0", features = ["proposed"] }
+# JSON parsing
+serde_json = "1.0.59"
 
 [build-dependencies]
 serde_derive = "1.0"
