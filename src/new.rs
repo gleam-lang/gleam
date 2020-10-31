@@ -479,7 +479,7 @@ fn rebar_config(insert: &str) -> String {
 
 {{deps, [
     {{gleam_stdlib, "0.11.0"}},
-    {{gleam_otp, {{git, "https://github.com/gleam-lang/otp", {{branch, "main"}}}}}}
+    {{gleam_otp, "0.1.0"}}
 ]}}.
 "#,
         insert
