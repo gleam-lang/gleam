@@ -6,11 +6,15 @@
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 
+## v0.12.0-rc4 - 2020-10-31
+
 - The rendered module documentation sidebar can now scroll independently to
   the page.
 - Application projects now have the correct `mod` value in the generated
   `.app.src`.
 - Records without fields can now be used in module constants.
+- New application projects are now created used Gleam's type safe OTP pulled
+  from Hex.
 
 ## v0.12.0-rc3 - 2020-10-24
 ## v0.12.0-rc2 - 2020-10-24
