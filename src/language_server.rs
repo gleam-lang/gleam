@@ -1,77 +1,62 @@
 pub(crate) mod format;
 
-use crate::error::Error::LSPError;
-use crate::language_server::format::format_doc;
+use crate::language_server::format::format;
 
-use lsp_types::{
-    request::Formatting, InitializeParams, ServerCapabilities,
-};
+use tokio::runtime::Runtime;
 
-use lsp_server::{Connection, Message, Request, RequestId, Response};
+use tower_lsp::jsonrpc::{ Error, ErrorCode, Result };
+use tower_lsp::lsp_types::*;
+use tower_lsp::{Client, LanguageServer, LspService, Server};
 
-#[allow(unused_variables)]
-pub fn command(project_root: String) -> Result<(), crate::error::Error> {
-    match run_language_server() {
-        Ok(()) => Ok(()),
-        Err(e) => Err(LSPError(e.to_string())),
+#[derive(Debug)]
+struct ServerBackend {
+    client: Client,
+}
+
+#[tower_lsp::async_trait]
+impl LanguageServer for ServerBackend {
+    async fn initialize(&self, _params: InitializeParams) -> Result<InitializeResult> {
+        let mut result = InitializeResult::default();
+        result.capabilities.document_formatting_provider = Some(true);
+        Ok(result)
     }
-}
+    async fn formatting(&self, params: DocumentFormattingParams) -> Result<Option<Vec<TextEdit>>> {
+        let doc_uri = params.text_document.uri;
 
-fn run_language_server() -> Result<(), Box<dyn std::error::Error + Sync + Send>> {
-    tracing::info!("Starting language server");
+        if(doc_uri.scheme() != "file") {
+            return Err(Error::new(ErrorCode::InvalidParams));
+        }
 
-    let (connection, io_threads) = Connection::stdio();
+        let doc_contents = match std::fs::read_to_string(doc_uri.path()) {
+            Ok(contents) => contents,
+            Err(io_error) => return Err(Error { code: ErrorCode::InternalError, message: io_error.to_string(), data: None }),
+        };
 
-    let capabilities = serde_json::to_value(&ServerCapabilities::default()).unwrap();
-    let init_params_json = connection.initialize(capabilities)?;
-    let initialization_params = serde_json::from_value(init_params_json)?;
-
-    lsp_loop(&connection, &initialization_params)?;
-
-    io_threads.join()?;
-
-    tracing::info!("Shutting down language server");
-
-    Ok(())
-}
-
-#[allow(unused_variables)]
-fn lsp_loop(connection: &Connection, params: &InitializeParams) -> Result<(), Box<dyn std::error::Error + Sync + Send>> {
-    for message in &connection.receiver {
-        match message {
-            Message::Request(request) => {
-                tracing::info!("Received request: {:?}", request);
-                if connection.handle_shutdown(&request)? {
-                    return Ok(())
-                }
-
-                match cast::<Formatting>(request) {
-                    Ok((id, params)) => {
-                        let result = format_doc(params.text_document, params.options);
-                        let result = serde_json::to_value(&result).unwrap();
-                        let response = Response { id, result: Some(result), error: None };
-                        connection.sender.send(Message::Response(response))?;
-                        continue;
-                    }
-                    Err(req) => req,
-                };
-            }
-            Message::Response(response) => {
-                tracing::info!("Received response: {:?}", response);
-            }
-            Message::Notification(notification) => {
-                tracing::info!("Received notification: {:?}", notification);
-            }
+        match format(doc_contents) {
+            Ok(x) => Ok(Some(x)),
+            Err(s) => Err(Error { code: ErrorCode::ParseError, message: s, data: None }),
         }
     }
-
-    Ok(())
+    async fn shutdown(&self) -> Result<()> {
+        Ok(())
+    }
 }
 
-fn cast<R>(req: Request) -> Result<(RequestId, R::Params), Request>
-where
-    R: lsp_types::request::Request,
-    R::Params: serde::de::DeserializeOwned,
-{
-    req.extract(R::METHOD)
+pub fn command() -> std::result::Result<(), crate::error::Error> {
+
+    let mut rt = Runtime::new().unwrap();
+
+    let stdin = tokio::io::stdin();
+    let stdout = tokio::io::stdout();
+
+    let (service, messages) = LspService::new(|client| ServerBackend { client });
+
+    rt.block_on(async {
+        Server::new(stdin, stdout)
+                .interleave(messages)
+                .serve(service)
+                .await;
+    });
+
+    Ok(())
 }

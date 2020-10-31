@@ -168,10 +168,7 @@ enum Command {
         name = "language-server",
         about = "Start the Gleam language server",
     )]
-    LanguageServer {
-        #[structopt(help = "location of the project root", default_value = ".")]
-        project_root: String,
-    },
+    LanguageServer,
 }
 
 #[derive(StructOpt, Debug)]
@@ -236,7 +233,7 @@ fn main() {
 
         Command::Eunit { project_root } => eunit::command(project_root),
 
-        Command::LanguageServer { project_root } => language_server::command(project_root),
+        Command::LanguageServer => language_server::command(),
     };
 
     match result {

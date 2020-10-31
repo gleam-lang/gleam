@@ -144,8 +144,6 @@ pub enum Error {
         name: String,
         reason: InvalidProjectNameReason,
     },
-
-    LSPError(String),
 }
 
 #[derive(Debug, PartialEq)]
@@ -1462,18 +1460,6 @@ but it cannot be found.",
                     label,
                 };
 
-                write_project(buffer, diagnostic);
-            }
-            Error::LSPError(err_string) => {
-                let diagnostic = ProjectErrorDiagnostic {
-                    title: "Language Server Error".to_string(),
-                    label: format!("There was a problem when running the language server.
-
-The error was:
-    {}",
-                        err_string
-                    ),
-                };
                 write_project(buffer, diagnostic);
             }
         }

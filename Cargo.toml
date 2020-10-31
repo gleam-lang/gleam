@@ -52,7 +52,7 @@ hexpm = "1.1"
 # Allow user to type in sensitive information without showing it in the shell
 rpassword = "5.0"
 # Async runtime
-tokio = "0.2"
+tokio = { version = "0.2", features = ["io-std", "rt-threaded"] }
 # Creation of tar file archives
 tar = "0.4"
 # gzip compression
@@ -65,8 +65,7 @@ fs_extra = "1.1"
 tracing = "0.1"
 tracing-subscriber = "0.2"
 # Language server support
-lsp-server = "0.4.0"
-lsp-types = { version = "0.83.0", features = ["proposed"] }
+tower-lsp = "0.13.3"
 # JSON parsing
 serde_json = "1.0.59"
 

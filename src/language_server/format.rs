@@ -1,7 +1,8 @@
-use lsp_types::{
+use tower_lsp::lsp_types::{
     Position, Range, TextDocumentIdentifier, FormattingOptions, TextEdit,
 };
 
+#[allow(dead_code)]
 pub(crate) fn format_doc(doc: TextDocumentIdentifier, _options: FormattingOptions) -> Result<Vec<TextEdit>, String> {
     if doc.uri.scheme() != "file" {
         return Err("Invalid URI scheme".to_string());
@@ -13,7 +14,6 @@ pub(crate) fn format_doc(doc: TextDocumentIdentifier, _options: FormattingOption
     format(file_contents)
 }
 
-#[allow(dead_code)]
 pub(crate) fn format(src: String) -> Result<Vec<TextEdit>, String> {
     let original = src;
     let formatted = crate::format::pretty(&original).map_err(|_| "Parse error")?;
@@ -33,7 +33,6 @@ pub(crate) fn format(src: String) -> Result<Vec<TextEdit>, String> {
     }
 }
 
-#[allow(dead_code)]
 fn get_final_position(text: &str) -> Position {
     let line_count = text.lines().fold(0u64, |acc, _| acc + 1u64);
     let last_line_index = text.rfind("\n").unwrap_or(0usize);
