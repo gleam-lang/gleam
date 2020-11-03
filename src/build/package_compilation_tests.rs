@@ -1068,6 +1068,41 @@ main() ->\n    fun(A, B) -> {c, A, B} end.\n"
             },
         ]),
     );
+
+    // Discriminate between imported functions, and fields, when shadowing a name:
+    // https://github.com/gleam-lang/gleam/issues/807
+    assert_erlang_compile!(
+        vec![
+            Source {
+                origin: Origin::Src,
+                path: PathBuf::from("/src/power.gleam"),
+                name: "power".to_string(),
+                code: "pub type Power { Power(value: Int) } pub fn to_int(p: Power) { p.value * 9000 }"
+                    .to_string(),
+            },
+            Source {
+                origin: Origin::Src,
+                path: PathBuf::from("/src/main.gleam"),
+                name: "main".to_string(),
+                code: "import power.{Power} pub fn main(power: Power) { power.to_int(power) }".to_string(),
+            },
+        ],
+        Ok(vec![
+            package_app_file(&["main", "power"]),
+            OutputFile {
+                path: PathBuf::from("_build/default/lib/the_package/src/main.erl",),
+                text: "-module(main).\n-compile(no_auto_import).\n\n-export([main/1]).\n\nmain(Power) ->\n    power:to_int(Power).\n".to_string(),
+            },
+            OutputFile {
+                path: PathBuf::from("_build/default/lib/the_package/src/power.erl",),
+                text: "-module(power).\n-compile(no_auto_import).\n\n-export([to_int/1]).\n\nto_int(P) ->\n    erlang:element(2, P) * 9000.\n".to_string(),
+            },
+            OutputFile {
+                path: PathBuf::from("_build/default/lib/the_package/src/power_Power.hrl",),
+                text: "-record(power, {value}).\n".to_string(),
+            },
+        ]),
+    );
 }
 
 #[test]
