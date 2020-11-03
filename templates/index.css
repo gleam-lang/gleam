@@ -24,6 +24,7 @@
   --accent: var(--pink);
 
   /* Sizes */
+  --content-width: 680px;
   --header-height: 60px;
   --sidebar-width: 240px;
   --sidebar-width-inverted: -240px;
@@ -116,6 +117,7 @@ p code {
   margin-left: var(--sidebar-width);
   padding: calc(var(--header-height) + var(--gap)) var(--gap) 0 var(--gap);
   width: calc(100% - var(--sidebar-width));
+  max-width: var(--content-width);
 }
 
 /* Page header */
@@ -283,6 +285,7 @@ table tr:nth-child(2n) {
 
   .content {
     width: unset;
+    max-width: unset;
     margin-left: unset;
   }
 
