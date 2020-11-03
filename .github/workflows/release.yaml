@@ -69,12 +69,12 @@ jobs:
             ARCHIVE="gleam-$VERSION-${{ matrix.build }}.zip"
             cp "target/${{ matrix.target }}/release/gleam.exe" "gleam.exe"
             7z a "$ARCHIVE" "gleam.exe"
-            echo "::set-env name=ASSET::$ARCHIVE"
+            echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
           else
             ARCHIVE="gleam-$VERSION-${{ matrix.build }}.tar.gz"
             cp "target/${{ matrix.target }}/release/gleam" "gleam"
             tar -czvf "$ARCHIVE" "gleam"
-            echo "::set-env name=ASSET::$ARCHIVE"
+            echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
           fi
 
       - name: Upload release archive
