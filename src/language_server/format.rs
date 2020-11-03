@@ -2,18 +2,6 @@ use tower_lsp::lsp_types::{
     Position, Range, TextDocumentIdentifier, FormattingOptions, TextEdit,
 };
 
-#[allow(dead_code)]
-pub(crate) fn format_doc(doc: TextDocumentIdentifier, _options: FormattingOptions) -> Result<Vec<TextEdit>, String> {
-    if doc.uri.scheme() != "file" {
-        return Err("Invalid URI scheme".to_string());
-    }
-
-    let file_path = doc.uri.to_file_path().map_err(|_| "Invalid path")?;
-    let file_contents = std::fs::read_to_string(&file_path).map_err(|_| "File read error")?;
-
-    format(file_contents)
-}
-
 pub(crate) fn format(src: String) -> Result<Vec<TextEdit>, String> {
     let original = src;
     let formatted = crate::format::pretty(&original).map_err(|_| "Parse error")?;
