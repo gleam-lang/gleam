@@ -456,14 +456,26 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         label: String,
         access_location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        match container {
-            UntypedExpr::Var { name, location, .. }
-                if !self.environment.local_values.contains_key(&name) =>
-            {
-                self.infer_module_access(name.as_ref(), label, &location, access_location)
-            }
+        // Attempt to infer the container as a record access. If that fails, we may be shadowing the name
+        // of an imported module, so attempt to infer the container as a module access.
+        match self.infer_record_access(container.clone(), label.clone(), access_location.clone()) {
+            Ok(record_access) => Ok(record_access),
+            Err(err) => match container {
+                UntypedExpr::Var { name, location, .. } => {
+                    let module_access =
+                        self.infer_module_access(name.as_ref(), label, &location, access_location);
 
-            _ => self.infer_record_access(container, label, access_location),
+                    // If the name is in the environment, use the original error from
+                    // inferring the record access, so that we can suggest possible
+                    // misspellings of field names
+                    if self.environment.local_values.contains_key(&name) {
+                        module_access.map_err(|_| err)
+                    } else {
+                        module_access
+                    }
+                }
+                _ => Err(err),
+            },
         }
     }
 
