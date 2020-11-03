@@ -144,6 +144,10 @@ pub enum Error {
         name: String,
         reason: InvalidProjectNameReason,
     },
+
+    LspIoError {
+        err: std::io::ErrorKind,
+    },
 }
 
 #[derive(Debug, PartialEq)]
@@ -1460,6 +1464,17 @@ but it cannot be found.",
                     label,
                 };
 
+                write_project(buffer, diagnostic);
+            }
+            Error::LspIoError { err } => {
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Language server failure".to_string(),
+                    label: format!("There was a problem starting the language server:
+                    
+The error given was:\n\n    {}\n",
+                        std_io_error_kind_text(err),
+                    ),
+                };
                 write_project(buffer, diagnostic);
             }
         }

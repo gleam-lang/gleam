@@ -1,6 +1,9 @@
 mod format;
+mod vfs;
 
-use crate::language_server::format::format;
+use crate::error::Error::LspIoError;
+use self::format::format;
+use self::vfs::VFS;
 
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::runtime::Runtime;
@@ -15,13 +18,18 @@ use std::sync::RwLock;
 #[derive(Debug)]
 struct ServerBackend {
     client: Client,
+    vfs: VFS,
 
     did_shutdown: Arc<RwLock<bool>>,
 }
 
 impl ServerBackend {
-    fn new(client: Client, did_shutdown: Arc<RwLock<bool>>) -> ServerBackend {
-        ServerBackend { client, did_shutdown }
+    fn new(client: Client, vfs: VFS, did_shutdown: Arc<RwLock<bool>>) -> ServerBackend {
+        ServerBackend { 
+            client,
+            vfs,
+            did_shutdown,
+        }
     }
 }
 
@@ -34,12 +42,8 @@ impl LanguageServer for ServerBackend {
     }
     async fn formatting(&self, params: DocumentFormattingParams) -> Result<Option<Vec<TextEdit>>> {
         let doc_uri = params.text_document.uri;
-
-        if(doc_uri.scheme() != "file") {
-            return Err(Error::new(ErrorCode::InvalidParams));
-        }
-
-        let doc_contents = match std::fs::read_to_string(doc_uri.path()) {
+        
+        let doc_contents = match self.vfs.get_file_contents(&doc_uri) {
             Ok(contents) => contents,
             Err(io_error) => return Err(Error { code: ErrorCode::InternalError, message: io_error.to_string(), data: None }),
         };
@@ -61,7 +65,7 @@ impl LanguageServer for ServerBackend {
 
 // Runs the language server with the given input and output streams.
 // Returns true if the server shutdown safely before exiting, otherwise false.
-fn run_server<I,O>(stdin: I, stdout: O) -> bool
+fn run_server<I,O>(stdin: I, stdout: O) -> std::io::Result<bool>
 where
     I: AsyncRead + Unpin,
     O: AsyncWrite,
@@ -70,7 +74,9 @@ where
 
     let did_shutdown = Arc::new(RwLock::new(false));
 
-    let (service, messages) = LspService::new(|client| ServerBackend::new(client, did_shutdown.clone()));
+    let vfs = VFS::new()?;
+
+    let (service, messages) = LspService::new(|client| ServerBackend::new(client, vfs, did_shutdown.clone()));
 
     rt.block_on(async {
         Server::new(stdin, stdout)
@@ -79,13 +85,13 @@ where
                 .await;
                 
         if let Ok(did_shutdown_value) = did_shutdown.read() {
-            *did_shutdown_value
+            Ok(*did_shutdown_value)
         } else {
             // If read is not Ok, the lock is poisoned - writer panicked
             // while the cell was locked for writing. We have to assume
             // in that case that the shutdown failed.
 
-            false
+            Ok(false)
         }
     })
 }
@@ -94,7 +100,10 @@ pub fn command() -> std::result::Result<i32, crate::error::Error> {
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
  
-    let shutdown_before_exiting = run_server(stdin, stdout);
+    let shutdown_before_exiting = match run_server(stdin, stdout) {
+        Ok(b) => b,
+        Err(err) => return Err(LspIoError { err: err.kind() }),
+    };
 
     if shutdown_before_exiting {
         Ok(0)

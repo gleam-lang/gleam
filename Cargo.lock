@@ -111,6 +111,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-compression"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9021768bcce77296b64648cc7a7460e3df99979b97ed5c925c38d1cc83778d98"
+dependencies = [
+ "bytes",
+ "flate2",
+ "futures-core",
+ "memchr",
+ "pin-project-lite",
+]
+
+[[package]]
 name = "async-trait"
 version = "0.1.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -734,6 +747,7 @@ dependencies = [
  "pretty_assertions",
  "pulldown-cmark",
  "regex",
+ "reqwest",
  "rpassword",
  "serde",
  "serde_derive",
@@ -1627,6 +1641,7 @@ version = "0.10.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e9eaa17ac5d7b838b7503d118fa16ad88f440498bf9ffe5424e621f93190d61e"
 dependencies = [
+ "async-compression",
  "base64",
  "bytes",
  "encoding_rs",
