@@ -204,6 +204,8 @@ enum Docs {
 fn main() {
     initialise_logger();
 
+    let mut exit_code = 0;
+
     let result = match Command::from_args() {
         Command::Build { project_root } => command_build(project_root),
 
@@ -233,12 +235,13 @@ fn main() {
 
         Command::Eunit { project_root } => eunit::command(project_root),
 
-        Command::LanguageServer => language_server::command(),
+        Command::LanguageServer => language_server::command().map(|code| { exit_code = code; }),
     };
 
     match result {
         Ok(_) => {
             tracing::info!("Successfully completed");
+            std::process::exit(exit_code);
         }
         Err(error) => {
             tracing::error!(error = ?error, "Failed");
