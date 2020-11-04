@@ -3,12 +3,14 @@ use std::io;
 use std::io::ErrorKind;
 use std::sync::RwLock;
 
+use super::document::Document;
+
 use reqwest::blocking::Client;
 use tower_lsp::lsp_types::Url;
 
 #[derive(Debug)]
 pub struct VFS {
-    overlays: RwLock<HashMap<Url, String>>,
+    overlays: RwLock<HashMap<Url, RwLock<Document>>>,
 
     http_client: Client,
 }
@@ -28,23 +30,68 @@ impl VFS {
         )
     }
 
-    pub fn get_file_contents(&self, uri: &Url) -> io::Result<String> {
+    pub fn get_document_contents(&self, uri: &Url) -> io::Result<String> {
         {
             let hm = self.overlays.read().unwrap();
 
-            if let Some(contents) = hm.get(uri) {
-                return Ok(contents.clone());
+            if let Some(doc_lock) = hm.get(uri) {
+                let document = doc_lock.read().unwrap();
+                return Ok(document.contents().to_string());
             };
         }
 
         let contents = self.read_file_from_uri(uri)?;
-        self.replace_file(uri, &contents);
+        self.create_document(uri, &contents);
         Ok(contents)
     }
 
-    pub fn replace_file(&self, uri: &Url, contents: &str) {
+    pub fn modify_document<F>(&self, uri: &Url, f: F) -> Option<()>
+    where
+        F: Fn(&mut Document)
+    {
+        let hm = self.overlays.read().unwrap();
+        
+        match hm.get(uri) {
+            Some(doc_lock) => {
+                let document = &mut *doc_lock.write().unwrap();
+
+                f(document);
+                Some(())
+            },
+            None => None,
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn with_document<F, R>(&self, uri: &Url, f: F) -> Option<R>
+    where
+        F: Fn(&Document) -> R
+    {
+        let hm = self.overlays.read().unwrap();
+
+        match hm.get(uri) {
+            Some(doc_lock) => {
+                let document = &*doc_lock.read().unwrap();
+
+                Some(f(document))
+            },
+            None => None,
+        }
+    }
+
+    pub fn create_document(&self, uri: &Url, contents: &str) {
         let mut hm = self.overlays.write().unwrap();
-        hm.insert(uri.clone(), contents.to_string());
+
+        let doc = Document::new(contents.to_string());
+        let doc_lock = RwLock::new(doc);
+
+        hm.insert(uri.clone(), doc_lock);
+    }
+
+    pub fn evict_document(&self, uri: &Url) {
+        let mut hm = self.overlays.write().unwrap();
+
+        hm.remove(uri);
     }
 
     fn read_file_from_uri(&self, uri: &Url) -> io::Result<String> {

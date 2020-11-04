@@ -1,5 +1,5 @@
 use tower_lsp::lsp_types::{
-    Position, Range, TextDocumentIdentifier, FormattingOptions, TextEdit,
+    Position, Range, TextEdit,
 };
 
 pub(crate) fn format(src: String) -> Result<Vec<TextEdit>, String> {

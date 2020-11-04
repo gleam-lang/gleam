@@ -1,3 +1,4 @@
+mod document;
 mod format;
 mod vfs;
 
@@ -40,10 +41,21 @@ impl LanguageServer for ServerBackend {
         result.capabilities.document_formatting_provider = Some(true);
         Ok(result)
     }
+    async fn did_open(&self, params: DidOpenTextDocumentParams) {
+        self.vfs.create_document(&params.text_document.uri, &params.text_document.text);
+    }
+    async fn did_change(&self, params: DidChangeTextDocumentParams) {
+        // TODO: validate versioned changes
+
+        self.vfs.modify_document(&params.text_document.uri, |doc| doc.apply_content_changes(params.content_changes.clone()));
+    }
+    async fn did_close(&self, params: DidCloseTextDocumentParams) {
+        self.vfs.evict_document(&params.text_document.uri);
+    }
     async fn formatting(&self, params: DocumentFormattingParams) -> Result<Option<Vec<TextEdit>>> {
         let doc_uri = params.text_document.uri;
         
-        let doc_contents = match self.vfs.get_file_contents(&doc_uri) {
+        let doc_contents = match self.vfs.get_document_contents(&doc_uri) {
             Ok(contents) => contents,
             Err(io_error) => return Err(Error { code: ErrorCode::InternalError, message: io_error.to_string(), data: None }),
         };
