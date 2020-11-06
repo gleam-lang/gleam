@@ -17,7 +17,11 @@ impl Document {
     pub fn apply_content_changes(&mut self, content_changes: &[TextDocumentContentChangeEvent]) {
         self.version += 1;
 
-        self.contents = content_changes.iter().fold(self.contents().to_string(), |contents, change| apply_content_change(&contents,change));
+        self.contents = content_changes
+            .iter()
+            .fold(self.contents().to_string(), |contents, change| {
+                apply_content_change(&contents, change)
+            });
     }
 
     pub fn contents(&self) -> &str {
@@ -32,36 +36,33 @@ fn apply_content_change(contents: &str, change: &TextDocumentContentChangeEvent)
 
             let start_line = range.start.line as usize;
             let end_line = range.end.line as usize;
-        
             let start_col = range.start.character as usize;
             let end_col = range.end.character as usize;
-        
             let unchanged_init = lines[..start_line].join("\n");
-            let unchanged_tail = lines[end_line+1..].join("\n");
-        
+            let unchanged_tail = lines[end_line + 1..].join("\n");
             let changed_head = &lines[start_line][..start_col];
             let changed_last = &lines[end_line][end_col..];
-            
-            format!("{}{}{}{}{}{}{}",
+
+            format!(
+                "{}{}{}{}{}{}{}",
                 unchanged_init,
                 if unchanged_init.is_empty() { "" } else { "\n" },
                 changed_head,
                 change.text,
                 changed_last,
                 if unchanged_tail.is_empty() { "" } else { "\n" },
-                unchanged_tail)
-        },
-        None => {
-            change.text.clone()
+                unchanged_tail
+            )
         }
-    }    
+        None => change.text.clone(),
+    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
 
-    use tower_lsp::lsp_types::{ Position, Range };
+    use tower_lsp::lsp_types::{Position, Range};
 
     #[test]
     fn apply_content_change_no_range_replaces_all_text() {
@@ -80,13 +81,16 @@ mod test {
 
     #[test]
     fn apply_content_change_empty_range_inserts_text() {
-        let comma_pos = Position{
+        let comma_pos = Position {
             line: 0u64,
             character: 5u64,
         };
 
         let change = TextDocumentContentChangeEvent {
-            range: Some(Range { start: comma_pos, end: comma_pos }),
+            range: Some(Range {
+                start: comma_pos,
+                end: comma_pos,
+            }),
             range_length: None,
             text: ",".to_string(),
         };
@@ -100,17 +104,20 @@ mod test {
 
     #[test]
     fn apply_content_change_empty_text_deletes_range() {
-        let comma_start = Position{
+        let comma_start = Position {
             line: 0u64,
             character: 5u64,
         };
-        let comma_end = Position{
+        let comma_end = Position {
             line: 0u64,
             character: 6u64,
         };
 
         let change = TextDocumentContentChangeEvent {
-            range: Some(Range { start: comma_start, end: comma_end }),
+            range: Some(Range {
+                start: comma_start,
+                end: comma_end,
+            }),
             range_length: None,
             text: "".to_string(),
         };
@@ -124,16 +131,19 @@ mod test {
 
     #[test]
     fn apply_content_change_replaces_range() {
-        let range_start = Position{
+        let range_start = Position {
             line: 0u64,
             character: 7u64,
         };
-        let range_end = Position{
+        let range_end = Position {
             line: 0u64,
             character: 12u64,
         };
         let change = TextDocumentContentChangeEvent {
-            range: Some(Range { start: range_start, end: range_end }),
+            range: Some(Range {
+                start: range_start,
+                end: range_end,
+            }),
             range_length: None,
             text: "everyone".to_string(),
         };
@@ -147,17 +157,20 @@ mod test {
 
     #[test]
     fn apply_content_change_replaces_range_multiline() {
-        let range_start = Position{
+        let range_start = Position {
             line: 2u64,
             character: 0u64,
         };
-        let range_end = Position{
+        let range_end = Position {
             line: 3u64,
             character: 1u64,
         };
 
         let change = TextDocumentContentChangeEvent {
-            range: Some(Range { start: range_start, end: range_end }),
+            range: Some(Range {
+                start: range_start,
+                end: range_end,
+            }),
             range_length: None,
             text: "3, 4".to_string(),
         };
@@ -170,17 +183,23 @@ mod test {
 
     #[test]
     fn apply_content_changes_second_insert_comes_first() {
-        let insert_pos = Position{
+        let insert_pos = Position {
             line: 0u64,
             character: 0u64,
         };
         let change_1 = TextDocumentContentChangeEvent {
-            range: Some(Range { start: insert_pos, end: insert_pos }),
+            range: Some(Range {
+                start: insert_pos,
+                end: insert_pos,
+            }),
             range_length: None,
             text: "b".to_string(),
         };
         let change_2 = TextDocumentContentChangeEvent {
-            range: Some(Range { start: insert_pos, end: insert_pos }),
+            range: Some(Range {
+                start: insert_pos,
+                end: insert_pos,
+            }),
             range_length: None,
             text: "a".to_string(),
         };

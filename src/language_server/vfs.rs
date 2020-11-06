@@ -22,12 +22,10 @@ impl VFS {
             .build()
             .map_err(categorise_reqwest_error)?;
 
-        Ok(
-            VFS {
-                overlays: RwLock::new(HashMap::new()),
-                http_client: client,
-            }
-        )
+        Ok(VFS {
+            overlays: RwLock::new(HashMap::new()),
+            http_client: client,
+        })
     }
 
     pub fn get_document_contents(&self, uri: &Url) -> io::Result<String> {
@@ -47,17 +45,16 @@ impl VFS {
 
     pub fn modify_document<F>(&self, uri: &Url, f: F) -> Option<()>
     where
-        F: Fn(&mut Document)
+        F: Fn(&mut Document),
     {
         let hm = self.overlays.read().unwrap();
-        
         match hm.get(uri) {
             Some(doc_lock) => {
                 let document = &mut *doc_lock.write().unwrap();
 
                 f(document);
                 Some(())
-            },
+            }
             None => None,
         }
     }
@@ -65,7 +62,7 @@ impl VFS {
     #[allow(dead_code)]
     pub fn with_document<F, R>(&self, uri: &Url, f: F) -> Option<R>
     where
-        F: Fn(&Document) -> R
+        F: Fn(&Document) -> R,
     {
         let hm = self.overlays.read().unwrap();
 
@@ -74,7 +71,7 @@ impl VFS {
                 let document = &*doc_lock.read().unwrap();
 
                 Some(f(document))
-            },
+            }
             None => None,
         }
     }
@@ -96,27 +93,33 @@ impl VFS {
 
     fn read_file_from_uri(&self, uri: &Url) -> io::Result<String> {
         let scheme = uri.scheme();
-    
         if scheme == "file" {
             if uri.host_str().unwrap_or("localhost") != "localhost" {
                 let contents = std::fs::read_to_string(uri.path())?;
-    
                 return Ok(contents);
             } else {
-                return Err(io::Error::new(ErrorKind::AddrNotAvailable, "Remote host on file URI"));
+                return Err(io::Error::new(
+                    ErrorKind::AddrNotAvailable,
+                    "Remote host on file URI",
+                ));
             };
         };
-        
         if scheme == "http" || scheme == "https" {
-            let response = self.http_client.get(uri.as_str()).send().map_err(categorise_reqwest_error)?;
-    
+            let response = self
+                .http_client
+                .get(uri.as_str())
+                .send()
+                .map_err(categorise_reqwest_error)?;
             match response.error_for_status() {
                 Ok(res) => return res.text().map_err(categorise_reqwest_error),
                 Err(error) => return Err(categorise_reqwest_error(error)),
             };
         };
-        
-        Err(io::Error::new(ErrorKind::AddrNotAvailable, format!("Unsupported URI scheme: {}", scheme))) 
+
+        Err(io::Error::new(
+            ErrorKind::AddrNotAvailable,
+            format!("Unsupported URI scheme: {}", scheme),
+        ))
     }
 }
 

@@ -1469,7 +1469,8 @@ but it cannot be found.",
             Error::LspIoError { err } => {
                 let diagnostic = ProjectErrorDiagnostic {
                     title: "Language server failure".to_string(),
-                    label: format!("There was a problem starting the language server:
+                    label: format!(
+                        "There was a problem starting the language server:
                     
 The error given was:\n\n    {}\n",
                         std_io_error_kind_text(err),
