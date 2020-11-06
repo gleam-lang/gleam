@@ -14,7 +14,7 @@ impl Document {
         }
     }
 
-    pub fn apply_content_changes(&mut self, content_changes: Vec<TextDocumentContentChangeEvent>) {
+    pub fn apply_content_changes(&mut self, content_changes: &[TextDocumentContentChangeEvent]) {
         self.version += 1;
 
         self.contents = content_changes.iter().fold(self.contents().to_string(), |contents, change| apply_content_change(&contents,change));
@@ -166,5 +166,29 @@ mod test {
         let expected = "a\nb\n3, 4\ne";
 
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn apply_content_changes_second_insert_comes_first() {
+        let insert_pos = Position{
+            line: 0u64,
+            character: 0u64,
+        };
+        let change_1 = TextDocumentContentChangeEvent {
+            range: Some(Range { start: insert_pos, end: insert_pos }),
+            range_length: None,
+            text: "b".to_string(),
+        };
+        let change_2 = TextDocumentContentChangeEvent {
+            range: Some(Range { start: insert_pos, end: insert_pos }),
+            range_length: None,
+            text: "a".to_string(),
+        };
+        let mut original = Document::new("cdefg".to_string());
+        let expected = "abcdefg";
+        let changes = vec![change_1, change_2];
+        original.apply_content_changes(&changes);
+
+        assert_eq!(original.contents(), expected);
     }
 }

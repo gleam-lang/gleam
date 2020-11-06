@@ -47,7 +47,7 @@ impl LanguageServer for ServerBackend {
     async fn did_change(&self, params: DidChangeTextDocumentParams) {
         // TODO: validate versioned changes
 
-        self.vfs.modify_document(&params.text_document.uri, |doc| doc.apply_content_changes(params.content_changes.clone()));
+        self.vfs.modify_document(&params.text_document.uri, |doc| doc.apply_content_changes(&params.content_changes));
     }
     async fn did_close(&self, params: DidCloseTextDocumentParams) {
         self.vfs.evict_document(&params.text_document.uri);
