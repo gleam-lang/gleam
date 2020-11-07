@@ -7,6 +7,7 @@
 - Gleam can now run an Erlang shell without an external build tool.
 - The compiler can now discriminate between record access and module access
   for shadowed names
+- Check new project names against Erlang standard library modules to avoid clashes.
 
 ## v0.12.0 - 2020-10-31
 
