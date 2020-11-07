@@ -150,6 +150,7 @@ pub enum Error {
 pub enum InvalidProjectNameReason {
     Format,
     ErlangReservedWord,
+    ErlangStandardLibraryModule,
     GleamReservedWord,
 }
 
@@ -247,6 +248,8 @@ Please try again with a different project name.",
                         match reason {
                             InvalidProjectNameReason::ErlangReservedWord =>
                                 "a reserved word in Erlang.",
+                            InvalidProjectNameReason::ErlangStandardLibraryModule =>
+                                "a standard library module in Erlang.",
                             InvalidProjectNameReason::GleamReservedWord =>
                                 "a reserved word in Gleam.",
                             InvalidProjectNameReason::Format =>
