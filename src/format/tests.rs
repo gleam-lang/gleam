@@ -2623,6 +2623,20 @@ fn empty_lines() {
 "
     );
 
+    // Lines with only spaces are treated as empty
+    assert_format_rewrite!(
+        "pub fn main() {
+  let x = 1\n    \n  x
+}
+",
+        "pub fn main() {
+  let x = 1
+
+  x
+}
+"
+    );
+
     assert_format!(
         "pub fn main() {
   let inc = fn(a) { a + 1 }
