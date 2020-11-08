@@ -184,12 +184,23 @@ fn chomp_newlines(
     comments: &mut ModuleComments<'_>,
     chars: &mut std::iter::Peekable<unicode_segmentation::GraphemeIndices<'_>>,
 ) {
-    if let Some((_, "\n")) | Some((_, "\r\n")) = chars.peek() {
-        comments.empty_lines.push(position + 1);
-        while let Some((_, grapheme @ "\r\n")) | Some((_, grapheme @ "\n")) = chars.peek() {
-            buffer.push_str(grapheme);
-            chars.next();
+    let mut found_new_line = false;
+    // Consume all spaces and new lines - mark this line as empty if we find at least one new line
+    // This considers a line to be empty if it only has spaces
+    while let Some((_, grapheme @ "\r\n"))
+    | Some((_, grapheme @ "\n"))
+    | Some((_, grapheme @ " ")) = chars.peek()
+    {
+        if let "\n" | "\r\n" = *grapheme {
+            found_new_line = true
         }
+
+        buffer.push_str(grapheme);
+        chars.next();
+    }
+
+    if found_new_line {
+        comments.empty_lines.push(position + 1);
     }
 }
 
