@@ -9,6 +9,7 @@
   for shadowed names
 - Check new project names against Erlang standard library modules to avoid clashes.
 - Formatter changed to treat lines with only spaces as empty.
+- Improve clarity of HTML table display in documentation.
 
 ## v0.12.0 - 2020-10-31
 
