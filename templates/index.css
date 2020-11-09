@@ -8,6 +8,7 @@
   --hot-pink: #d900b8;
   --white: #fff;
   --pink-white: #fff8fe;
+  --mid-grey: #dfe2e5;
   --light-grey: #f5f5f5;
   --boi-blue: #a6f0fc;
 
@@ -17,6 +18,8 @@
   --accented-background: var(--pink-white);
   --code-border: var(--pink);
   --code-background: var(--light-grey);
+  --table-border: var(--mid-grey);
+  --table-background: var(--pink-white);
   --links: var(--hot-pink);
   --accent: var(--pink);
 
@@ -205,6 +208,23 @@ p code {
 
 .constructor-name {
   margin-bottom: 0;
+}
+
+/* Tables */
+
+table {
+  border-spacing: 0;
+  border-collapse: collapse;
+}
+
+table td,
+table th {
+  padding: 6px 13px;
+  border: 1px solid var(--table-border);
+}
+
+table tr:nth-child(2n) {
+  background-color: var(--table-background);
 }
 
 /* Footer */
