@@ -566,6 +566,45 @@ fn bin_op(name: &BinOp, left: &TypedExpr, right: &TypedExpr, env: &mut Env<'_>) 
         .append(right_expr)
 }
 
+fn js_bin_op(name: &BinOp, left: &TypedExpr, right: &TypedExpr, env: &mut Env<'_>) -> Document {
+    let op = match name {
+        BinOp::And => "&&",
+        BinOp::Or => "||",
+        BinOp::LtInt | BinOp::LtFloat => "<",
+        BinOp::LtEqInt | BinOp::LtEqFloat => "=<",
+        BinOp::Eq => "===",
+        BinOp::NotEq => "!==",
+        BinOp::GtInt | BinOp::GtFloat => ">",
+        BinOp::GtEqInt | BinOp::GtEqFloat => ">=",
+        BinOp::AddInt => "+",
+        BinOp::AddFloat => "+",
+        BinOp::SubInt => "-",
+        BinOp::SubFloat => "-",
+        BinOp::MultInt => "*",
+        BinOp::MultFloat => "*",
+        // BinOp::DivInt => "div",
+        // BinOp::DivFloat => "/",
+        BinOp::ModuloInt => "%",
+        _ => unimplemented!("needs parseInt")
+    };
+
+    let left_expr = match left {
+        TypedExpr::BinOp { .. } => js_expr(left, env).surround("(", ")"),
+        _ => js_expr(left, env),
+    };
+
+    let right_expr = match right {
+        TypedExpr::BinOp { .. } => js_expr(right, env).surround("(", ")"),
+        _ => js_expr(right, env),
+    };
+
+    left_expr
+        .append(break_("", " "))
+        .append(op)
+        .append(" ")
+        .append(right_expr)
+}
+
 fn pipe(value: &TypedExpr, fun: &TypedExpr, env: &mut Env<'_>) -> Document {
     let arg = CallArg {
         label: None,
@@ -1137,14 +1176,43 @@ fn maybe_block_expr(expression: &TypedExpr, env: &mut Env<'_>) -> Document {
     }
 }
 
-fn js_expr(expression: &TypedExpr, _env: &mut Env<'_>) -> Document {
+fn js_expr(expression: &TypedExpr, env: &mut Env<'_>) -> Document {
     match expression {
 
         TypedExpr::Todo { label, .. } => {
             "throw ".to_doc()
             .append(label.clone().unwrap_or("todo".to_string()).to_doc().surround("\"", "\""))
         },
-        _ => unimplemented!()
+        // js supports same hex encoding 0x12
+        TypedExpr::Int { value, .. } => value.replace("_", "").to_doc(),
+        // TypedExpr::Call { fun, args, .. } => {
+        //     match fun {
+        //         TypedExpr::ModuleSelect {
+        //             constructor: ModuleValueConstructor::Record { name, .. },
+        //             ..
+        //         }
+        //         | TypedExpr::Var {
+        //             constructor:
+        //                 ValueConstructor {
+        //                     variant: ValueConstructorVariant::Record { name, .. },
+        //                     ..
+        //                 },
+        //             ..
+        //         } => "{}".to_doc(),
+        //         _ => unimplemented!("lots of fun types")
+        //     }
+        //     // println!("{:?}", args);
+        //     // println!("{:?}", fun);
+        //     // // fun.name.to_snake_case()
+        //     // unimplemented!()
+        // },
+        TypedExpr::BinOp {
+            name, left, right, ..
+        } => js_bin_op(name, left, right, env),
+        e => {
+            println!("{:?}", e);
+            unimplemented!()
+        }
     }
 }
 
