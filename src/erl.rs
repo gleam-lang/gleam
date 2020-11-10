@@ -48,6 +48,12 @@ pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
             path: gen_dir.join(format!("{}.erl", erl_module_name)),
             text: module(ast),
         });
+
+        files.push(OutputFile {
+            // TODO js module names instead
+            path: gen_dir.join(format!("{}.js", erl_module_name)),
+            text: js_module(ast),
+        });
     }
 
     files
@@ -137,6 +143,22 @@ pub fn record_definition(name: &str, fields: &[&str]) -> String {
     buffer
 }
 
+
+pub fn js_module(module: &TypedModule) -> String {
+    // Not sure why statements need a module_name
+    let module_name = module.name.as_slice();
+    let statements = concat(
+        module
+        .statements
+        .iter()
+        .flat_map(|s| js_statement(s, module_name))
+        .intersperse(lines(2)),
+    );
+    statements
+    .append(line())
+    .format(80)
+}
+
 pub fn module(module: &TypedModule) -> String {
     let module_name = module.name.as_slice();
     let exports = concat(
@@ -189,6 +211,41 @@ pub fn module(module: &TypedModule) -> String {
         .append(statements)
         .append(line())
         .format(80)
+}
+
+
+fn js_statement(statement: &TypedStatement, module: &[String]) -> Option<Document> {
+    let mut env = Env::new(module);
+
+    match statement {
+        Statement::CustomType { .. } => None,
+        Statement::Fn {
+            args, name, body, public, ..
+        } => {
+            let fun_args = wrap_args(args.iter().map(|a| match &a.names {
+                ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => "_".to_doc(),
+                ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
+                    name.clone().to_doc()
+                }
+            }));
+
+            let prefix = if *public { "export function " } else { "function "};
+            let print = prefix.to_doc()
+                .append(name.to_string())
+                .append(fun_args)
+                .append(" {")
+                .append(line().append(js_expr(body, &mut env)).nest(INDENT).group())
+                .append(line())
+                .append("}");
+
+            // Some("".to_doc().append(fun_args).append(name.clone().to_doc()))
+            Some(print)
+        },
+        s => {
+            println!("{:?}", s);
+            unimplemented!()
+        }
+    }
 }
 
 fn statement(statement: &TypedStatement, module: &[String]) -> Option<Document> {
@@ -1077,6 +1134,17 @@ fn maybe_block_expr(expression: &TypedExpr, env: &mut Env<'_>) -> Document {
     match &expression {
         TypedExpr::Seq { .. } | TypedExpr::Let { .. } => begin_end(expr(expression, env)),
         _ => expr(expression, env),
+    }
+}
+
+fn js_expr(expression: &TypedExpr, _env: &mut Env<'_>) -> Document {
+    match expression {
+
+        TypedExpr::Todo { label, .. } => {
+            "throw ".to_doc()
+            .append(label.clone().unwrap_or("todo".to_string()).to_doc().surround("\"", "\""))
+        },
+        _ => unimplemented!()
     }
 }
 
