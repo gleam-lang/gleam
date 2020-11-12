@@ -35,7 +35,10 @@ impl Default for BuildTool {
 
 #[derive(Deserialize, Default, Debug, PartialEq)]
 pub struct Docs {
+    #[serde(default)]
     pub pages: Vec<DocsPage>,
+    #[serde(default)]
+    pub links: Vec<DocsLink>,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Clone)]
@@ -43,6 +46,12 @@ pub struct DocsPage {
     pub title: String,
     pub path: String,
     pub source: PathBuf,
+}
+
+#[derive(Deserialize, Debug, PartialEq, Clone)]
+pub struct DocsLink {
+    pub title: String,
+    pub href: String,
 }
 
 pub fn read_project_config(root: impl AsRef<Path>) -> Result<PackageConfig, Error> {

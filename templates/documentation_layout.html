@@ -44,10 +44,10 @@
         {% endif %}
 
         {% if !links.is_empty() %}
-        <h2>Pages</h2>
+        <h2>Links</h2>
         <ul>
         {% for link in links %}
-          <li><a href="{{ unnest }}/{{ link.path }}">{{ link.name }}</a></li>
+          <li><a href="{{ link.path }}">{{ link.name }}</a></li>
         {% endfor %}
         </ul>
         {% endif %}
