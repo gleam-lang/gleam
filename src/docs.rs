@@ -56,7 +56,15 @@ pub fn generate_html(
         })
         .collect::<Vec<_>>();
 
-    let links = &[];
+    let links = &project_config
+        .docs
+        .links
+        .iter()
+        .map(|doc_link| Link {
+            name: doc_link.title.clone(),
+            path: doc_link.href.clone(),
+        })
+        .collect::<Vec<Link>>()[..];
 
     // index.css
     let num_asset_files = 1;
