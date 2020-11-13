@@ -44,6 +44,7 @@ development.
  - [Dan Mueller](https://github.com/unthought)
  - [Dave Lucia](https://github.com/davydog187)
  - [David McKay](https://github.com/rawkode)
+ - [Dennis Dang](https://github.com/dangdennis)
  - [Eric Meadows-Jönsson](https://github.com/ericmj)
  - [Erik Terpstra](https://github.com/eterps)
  - [Florian Kraft](https://github.com/floriank)
