@@ -104,7 +104,16 @@ fn write(path: PathBuf, contents: &str) -> Result<(), Error> {
 }
 
 fn gleam_toml(name: &str) -> String {
-    format!("name = \"{}\"\n", name)
+    format!(
+        r#"name = "{}"
+
+# [docs]
+# links = [
+#   {{ title = 'GitHub', href = 'https://github.com/username/project_name' }}
+# ]
+"#,
+        name
+    )
 }
 
 fn readme(name: &str, description: &str) -> String {
