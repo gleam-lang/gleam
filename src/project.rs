@@ -28,6 +28,7 @@ pub struct Input {
 pub struct Analysed {
     pub ast: TypedModule,
     pub name: Vec<String>,
+    pub path: PathBuf,
     pub origin: ModuleOrigin,
     pub type_info: typ::Module,
     pub source_base_path: PathBuf,
@@ -108,6 +109,7 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
         source_base_path: PathBuf,
         name_string: String,
         name: Vec<String>,
+        path: PathBuf,
         origin: ModuleOrigin,
         ast: TypedModule,
         warnings: Vec<Warning>,
@@ -151,6 +153,7 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
         compiled_modules.push(Out {
             name,
             name_string,
+            path,
             source_base_path,
             origin,
             ast,
@@ -164,6 +167,7 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
             let Out {
                 name,
                 source_base_path,
+                path,
                 name_string,
                 origin,
                 ast,
@@ -172,6 +176,7 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
             Analysed {
                 ast,
                 name,
+                path,
                 source_base_path,
                 origin,
                 type_info: modules_type_infos
