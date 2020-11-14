@@ -138,6 +138,26 @@ p code {
   margin: 0;
 }
 
+/* Version selector */
+
+#project-version form {
+  display: inline;
+}
+
+#project-version select {
+  cursor: pointer;
+  border: none;
+  appearance: none;
+  outline: 0px transparent;
+  background-color: transparent;
+  padding: 0.6rem 0.6rem;
+  font-size: 0.9rem;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28"><path transform="rotate(90, 13, 14)" d="m3,3l0,22l20,-11l-20,-11z"/></svg>');
+  background-position: 100% 55%;
+  background-size: 0.5rem 0.5rem;
+  background-repeat: no-repeat;
+}
+
 /* Module doc */
 
 .module-name {
