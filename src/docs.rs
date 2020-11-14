@@ -114,37 +114,8 @@ pub fn generate_html(
         let name = module.name.join("/");
 
         // Read module src & create line number lookup structure
-        let src = std::fs::read_to_string(&module.path).unwrap_or_default();
-        let codespan_file = codespan_reporting::files::SimpleFile::new(name.clone(), src);
-
-        let source_url = |location: &SrcSpan| match &project_config.version {
-            Some(version) => match &project_config.repository {
-                Repository::GitHub { url } => {
-                    let start_line = codespan_file
-                        .line_index((), location.start)
-                        .unwrap_or_default()
-                        + 1;
-                    let end_line = codespan_file
-                        .line_index((), location.end)
-                        .unwrap_or_default()
-                        + 1;
-
-                    let relative_path = module
-                        .path
-                        .strip_prefix(&project_root)
-                        .map(|path| path.to_str())
-                        .unwrap_or_default()
-                        .unwrap_or_default();
-                    format!(
-                        "{}/blob/{}/{}#L{}-L{}",
-                        &url, &version, &relative_path, start_line, end_line,
-                    )
-                }
-                Repository::Other { url } => url.clone(),
-                Repository::None => "".to_string(),
-            },
-            None => "".to_string(),
-        };
+        let source_link_generator =
+            build_source_link_generator(&project_root, project_config, &module.path, &name);
 
         let template = ModuleTemplate {
             unnest: module.name.iter().map(|_| "..").intersperse("/").collect(),
@@ -161,7 +132,7 @@ pub fn generate_html(
                     .ast
                     .statements
                     .iter()
-                    .flat_map(|statement| function(source_url, &statement))
+                    .flat_map(|statement| function(&source_link_generator, &statement))
                     .collect();
                 f.sort();
                 f
@@ -200,8 +171,79 @@ pub fn generate_html(
     files
 }
 
+fn build_source_link_generator(
+    project_root: impl AsRef<Path>,
+    project_config: &PackageConfig,
+    module_path: &PathBuf,
+    name: &String,
+) -> Box<dyn SourceLinkGenerator> {
+    match (&project_config.version, &project_config.repository) {
+        (Some(version), Repository::GitHub { url }) => {
+            let relative_path = module_path
+                .strip_prefix(&project_root)
+                .map(|path| path.to_str())
+                .unwrap_or_default()
+                .unwrap_or_default();
+
+            let src = std::fs::read_to_string(&module_path).unwrap_or_default();
+            let codespan_file = codespan_reporting::files::SimpleFile::new(name.clone(), src);
+
+            Box::new(GitHubSourceLinkGenerator {
+                codespan_file,
+                relative_path: relative_path.to_string(),
+                url: url.clone(),
+                version: version.clone(),
+            })
+        }
+        // If we either don't have a version or aren't dealing with a GitHub repository then we
+        // can't generate source code links so we generate empty strings for the urls
+        _ => Box::new(EmptySourceLinkGenerator {}),
+    }
+}
+
+trait SourceLinkGenerator {
+    fn url(&self, location: &SrcSpan) -> String;
+}
+
+// Creates empty strings for the urls which are then ignored by the template
+struct EmptySourceLinkGenerator {}
+
+impl SourceLinkGenerator for EmptySourceLinkGenerator {
+    fn url(&self, _location: &SrcSpan) -> String {
+        String::new()
+    }
+}
+
+// Creates links to the GitHub repository with the #LN-LM anchor syntax for linking directly to a
+// range of line numbers
+struct GitHubSourceLinkGenerator {
+    codespan_file: codespan_reporting::files::SimpleFile<String, String>,
+    url: String,
+    version: String,
+    relative_path: String,
+}
+
+impl SourceLinkGenerator for GitHubSourceLinkGenerator {
+    fn url(&self, location: &SrcSpan) -> String {
+        let start_line = self
+            .codespan_file
+            .line_index((), location.start)
+            .unwrap_or_default()
+            + 1;
+        let end_line = self
+            .codespan_file
+            .line_index((), location.end)
+            .unwrap_or_default()
+            + 1;
+        format!(
+            "{}/blob/{}/{}#L{}-L{}",
+            &self.url, &self.version, &self.relative_path, start_line, end_line,
+        )
+    }
+}
+
 fn function<'a>(
-    source_url: impl Fn(&SrcSpan) -> String,
+    source_link_generator: &Box<dyn SourceLinkGenerator>,
     statement: &'a TypedStatement,
 ) -> Option<Function<'a>> {
     let mut formatter = format::Formatter::new();
@@ -218,7 +260,7 @@ fn function<'a>(
             name,
             signature: print(formatter.external_fn_signature(true, name, args, retrn)),
             documentation: markdown_documentation(doc),
-            source_url: source_url(location),
+            source_url: source_link_generator.url(location),
         }),
 
         Statement::Fn {
@@ -233,7 +275,7 @@ fn function<'a>(
             name,
             documentation: markdown_documentation(doc),
             signature: print(formatter.docs_fn_signature(true, name, args, ret.clone())),
-            source_url: source_url(location),
+            source_url: source_link_generator.url(location),
         }),
 
         _ => None,
