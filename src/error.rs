@@ -144,6 +144,10 @@ pub enum Error {
         name: String,
         reason: InvalidProjectNameReason,
     },
+
+    UnableToFindProjectRoot {
+        path: String,
+    },
 }
 
 #[derive(Debug, PartialEq)]
@@ -258,6 +262,13 @@ with a lowercase latter and may only contain lowercase letters
 and underscores.",
                         }
                     ),
+                };
+                write_project(buffer, diagnostic);
+            }
+            Error::UnableToFindProjectRoot { path } => {
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Invalid project root".to_string(),
+                    label: format!("We were unable to find the project root:\n\n  {}", path),
                 };
                 write_project(buffer, diagnostic);
             }

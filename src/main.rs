@@ -200,7 +200,12 @@ fn main() {
     let result = match Command::from_args() {
         Command::Build { project_root } => command_build(project_root),
 
-        Command::Docs(Docs::Build { project_root, to }) => docs::command::build(project_root, to),
+        Command::Docs(Docs::Build { project_root, to }) => PathBuf::from(&project_root)
+            .canonicalize()
+            .map_err(|_| Error::UnableToFindProjectRoot {
+                path: project_root.clone(),
+            })
+            .and_then(|project_root| docs::command::build(project_root, to)),
 
         Command::Docs(Docs::Publish {
             project_root,

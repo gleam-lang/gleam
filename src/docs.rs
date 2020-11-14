@@ -36,11 +36,18 @@ pub fn build_project(
     pages.extend(config.docs.pages.to_vec());
 
     // Generate HTML
-    let outputs = generate_html(&config, analysed.as_slice(), &pages, output_dir);
+    let outputs = generate_html(
+        project_root,
+        &config,
+        analysed.as_slice(),
+        &pages,
+        output_dir,
+    );
     Ok((config, outputs))
 }
 
 pub fn generate_html(
+    project_root: impl AsRef<Path>,
     project_config: &PackageConfig,
     analysed: &[Analysed],
     docspages: &[DocsPage],
@@ -110,23 +117,33 @@ pub fn generate_html(
         let src = std::fs::read_to_string(&module.path).unwrap_or_default();
         let codespan_file = codespan_reporting::files::SimpleFile::new(name.clone(), src);
 
-        let source_url = |location: &SrcSpan| match &project_config.repository {
-            Repository::GitHub { url } => {
-                let start_line = codespan_file
-                    .line_index((), location.start)
-                    .unwrap_or_default()
-                    + 1;
-                let end_line = codespan_file
-                    .line_index((), location.end)
-                    .unwrap_or_default()
-                    + 1;
-                format!(
-                    "{}/blob/main/src/{}.gleam#L{}-L{}",
-                    &url, &name, start_line, end_line,
-                )
-            }
-            Repository::Other { url } => url.clone(),
-            Repository::None => "".to_string(),
+        let source_url = |location: &SrcSpan| match &project_config.version {
+            Some(version) => match &project_config.repository {
+                Repository::GitHub { url } => {
+                    let start_line = codespan_file
+                        .line_index((), location.start)
+                        .unwrap_or_default()
+                        + 1;
+                    let end_line = codespan_file
+                        .line_index((), location.end)
+                        .unwrap_or_default()
+                        + 1;
+
+                    let relative_path = module
+                        .path
+                        .strip_prefix(&project_root)
+                        .map(|path| path.to_str())
+                        .unwrap_or_default()
+                        .unwrap_or_default();
+                    format!(
+                        "{}/blob/{}/{}#L{}-L{}",
+                        &url, &version, &relative_path, start_line, end_line,
+                    )
+                }
+                Repository::Other { url } => url.clone(),
+                Repository::None => "".to_string(),
+            },
+            None => "".to_string(),
         };
 
         let template = ModuleTemplate {
