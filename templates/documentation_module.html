@@ -95,11 +95,16 @@
  </a>
  {% for function in functions %}
  <div class="member">
-    <a href="#{{ function.name }}">
-      <h2 id="{{ function.name }}" class="member-name">
-        {{ function.name }}
+    <div class="member-name">
+      <h2 id="{{ function.name }}">
+        <a href="#{{ function.name }}">
+            {{ function.name }}
+        </a>
       </h2>
-    </a>
+      <a href="https://github.com/gleam-lang/http/blob/main/src/{{ module_name }}.gleam#L{{ function.start_line }}-L{{ function.end_line}}">
+        &lt;/&gt;
+      </a>
+    </div>
     <pre>{{ function.signature }}</pre>
     <div class="rendered-markdown">{{ function.documentation|safe }}</div>
   </div>

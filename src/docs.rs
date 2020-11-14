@@ -12,6 +12,7 @@ use crate::{
     project::{self, Analysed, ModuleOrigin},
 };
 use askama::Template;
+use codespan_reporting::files::Files;
 use itertools::Itertools;
 use std::path::{Path, PathBuf};
 
@@ -104,6 +105,21 @@ pub fn generate_html(
     // Generate module documentation pages
     for module in modules {
         let name = module.name.join("/");
+
+        // Reconstruct path to module file
+        let mut extended_name = module.name.clone();
+        let last_element = extended_name.len() - 1;
+        extended_name[last_element] = extended_name[last_element].clone() + ".gleam";
+
+        let mut path = module.source_base_path.clone();
+        for segment in extended_name {
+            path.push(segment);
+        }
+
+        // Read module src & create line number lookup structure
+        let src = std::fs::read_to_string(&path).unwrap_or_default();
+        let codespan_file = codespan_reporting::files::SimpleFile::new(name.clone(), src);
+
         let template = ModuleTemplate {
             unnest: module.name.iter().map(|_| "..").intersperse("/").collect(),
             links,
@@ -115,7 +131,12 @@ pub fn generate_html(
             module_name: name,
             project_version: "", // TODO
             functions: {
-                let mut f: Vec<_> = module.ast.statements.iter().flat_map(function).collect();
+                let mut f: Vec<_> = module
+                    .ast
+                    .statements
+                    .iter()
+                    .flat_map(|statement| function(&codespan_file, &statement))
+                    .collect();
                 f.sort();
                 f
             },
@@ -153,7 +174,10 @@ pub fn generate_html(
     files
 }
 
-fn function(statement: &TypedStatement) -> Option<Function<'_>> {
+fn function<'a>(
+    codespan_file: &codespan_reporting::files::SimpleFile<String, String>,
+    statement: &'a TypedStatement,
+) -> Option<Function<'a>> {
     let mut formatter = format::Formatter::new();
     match statement {
         Statement::ExternalFn {
@@ -162,11 +186,20 @@ fn function(statement: &TypedStatement) -> Option<Function<'_>> {
             doc,
             retrn,
             args,
+            location,
             ..
         } => Some(Function {
             name,
             signature: print(formatter.external_fn_signature(true, name, args, retrn)),
             documentation: markdown_documentation(doc),
+            start_line: codespan_file
+                .line_index((), location.start)
+                .unwrap_or_default()
+                + 1,
+            end_line: codespan_file
+                .line_index((), location.end)
+                .unwrap_or_default()
+                + 1,
         }),
 
         Statement::Fn {
@@ -175,11 +208,20 @@ fn function(statement: &TypedStatement) -> Option<Function<'_>> {
             doc,
             args,
             return_type: ret,
+            location,
             ..
         } => Some(Function {
             name,
             documentation: markdown_documentation(doc),
             signature: print(formatter.docs_fn_signature(true, name, args, ret.clone())),
+            start_line: codespan_file
+                .line_index((), location.start)
+                .unwrap_or_default()
+                + 1,
+            end_line: codespan_file
+                .line_index((), location.end)
+                .unwrap_or_default()
+                + 1,
         }),
 
         _ => None,
@@ -313,6 +355,8 @@ struct Function<'a> {
     name: &'a str,
     signature: String,
     documentation: String,
+    start_line: usize,
+    end_line: usize,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]

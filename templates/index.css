@@ -200,9 +200,19 @@ p code {
 }
 
 .member-name {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   border-left: 4px solid var(--accent);
   padding: var(--small-gap) var(--gap);
   background-color: var(--accented-background);
+}
+
+.member-name h2 {
+  margin: 0;
+}
+
+.member-name h2 a {
   color: var(--text);
 }
 
