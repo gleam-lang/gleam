@@ -3,8 +3,8 @@ pub(crate) mod command;
 mod tests;
 
 use crate::{
-    ast::{Statement, TypedStatement},
-    config::{DocsPage, PackageConfig},
+    ast::{SrcSpan, Statement, TypedStatement},
+    config::{DocsPage, PackageConfig, Repository},
     error::{Error, GleamExpect},
     format,
     fs::OutputFile,
@@ -110,6 +110,25 @@ pub fn generate_html(
         let src = std::fs::read_to_string(&module.path).unwrap_or_default();
         let codespan_file = codespan_reporting::files::SimpleFile::new(name.clone(), src);
 
+        let source_url = |location: &SrcSpan| match &project_config.repository {
+            Repository::GitHub { url } => {
+                let start_line = codespan_file
+                    .line_index((), location.start)
+                    .unwrap_or_default()
+                    + 1;
+                let end_line = codespan_file
+                    .line_index((), location.end)
+                    .unwrap_or_default()
+                    + 1;
+                format!(
+                    "{}/blob/main/src/{}.gleam#L{}-L{}",
+                    &url, &name, start_line, end_line,
+                )
+            }
+            Repository::Other { url } => url.clone(),
+            Repository::None => "".to_string(),
+        };
+
         let template = ModuleTemplate {
             unnest: module.name.iter().map(|_| "..").intersperse("/").collect(),
             links,
@@ -125,7 +144,7 @@ pub fn generate_html(
                     .ast
                     .statements
                     .iter()
-                    .flat_map(|statement| function(&codespan_file, &statement))
+                    .flat_map(|statement| function(source_url, &statement))
                     .collect();
                 f.sort();
                 f
@@ -165,7 +184,7 @@ pub fn generate_html(
 }
 
 fn function<'a>(
-    codespan_file: &codespan_reporting::files::SimpleFile<String, String>,
+    source_url: impl Fn(&SrcSpan) -> String,
     statement: &'a TypedStatement,
 ) -> Option<Function<'a>> {
     let mut formatter = format::Formatter::new();
@@ -182,14 +201,7 @@ fn function<'a>(
             name,
             signature: print(formatter.external_fn_signature(true, name, args, retrn)),
             documentation: markdown_documentation(doc),
-            start_line: codespan_file
-                .line_index((), location.start)
-                .unwrap_or_default()
-                + 1,
-            end_line: codespan_file
-                .line_index((), location.end)
-                .unwrap_or_default()
-                + 1,
+            source_url: source_url(location),
         }),
 
         Statement::Fn {
@@ -204,14 +216,7 @@ fn function<'a>(
             name,
             documentation: markdown_documentation(doc),
             signature: print(formatter.docs_fn_signature(true, name, args, ret.clone())),
-            start_line: codespan_file
-                .line_index((), location.start)
-                .unwrap_or_default()
-                + 1,
-            end_line: codespan_file
-                .line_index((), location.end)
-                .unwrap_or_default()
-                + 1,
+            source_url: source_url(location),
         }),
 
         _ => None,
@@ -345,8 +350,7 @@ struct Function<'a> {
     name: &'a str,
     signature: String,
     documentation: String,
-    start_line: usize,
-    end_line: usize,
+    source_url: String,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]

@@ -18,6 +18,8 @@ pub struct PackageConfig {
     pub dependencies: HashMap<String, String>,
     #[serde(default)]
     pub otp_start_module: Option<String>,
+    #[serde(default)]
+    pub repository: Repository,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
@@ -30,6 +32,20 @@ pub enum BuildTool {
 impl Default for BuildTool {
     fn default() -> Self {
         Self::Other
+    }
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
+#[serde(tag = "type")]
+pub enum Repository {
+    GitHub { url: String },
+    Other { url: String },
+    None,
+}
+
+impl Default for Repository {
+    fn default() -> Self {
+        Self::None
     }
 }
 
