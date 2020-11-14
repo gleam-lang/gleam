@@ -101,9 +101,11 @@
             {{ function.name }}
         </a>
       </h2>
-      <a href="https://github.com/gleam-lang/http/blob/main/src/{{ module_name }}.gleam#L{{ function.start_line }}-L{{ function.end_line}}">
+      {% if !function.source_url.is_empty() %}
+      <a href="{{ function.source_url }}">
         &lt;/&gt;
       </a>
+      {% endif %}
     </div>
     <pre>{{ function.signature }}</pre>
     <div class="rendered-markdown">{{ function.documentation|safe }}</div>
