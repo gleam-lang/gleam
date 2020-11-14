@@ -106,18 +106,8 @@ pub fn generate_html(
     for module in modules {
         let name = module.name.join("/");
 
-        // Reconstruct path to module file
-        let mut extended_name = module.name.clone();
-        let last_element = extended_name.len() - 1;
-        extended_name[last_element] = extended_name[last_element].clone() + ".gleam";
-
-        let mut path = module.source_base_path.clone();
-        for segment in extended_name {
-            path.push(segment);
-        }
-
         // Read module src & create line number lookup structure
-        let src = std::fs::read_to_string(&path).unwrap_or_default();
+        let src = std::fs::read_to_string(&module.path).unwrap_or_default();
         let codespan_file = codespan_reporting::files::SimpleFile::new(name.clone(), src);
 
         let template = ModuleTemplate {
