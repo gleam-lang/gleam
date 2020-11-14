@@ -180,7 +180,7 @@ enum Docs {
         #[structopt(help = "location of the project root", default_value = ".")]
         project_root: String,
 
-        #[structopt(help = "the version to publish ah", long = "version")]
+        #[structopt(help = "the version to publish", long = "version")]
         version: String,
     },
 
@@ -189,7 +189,7 @@ enum Docs {
         #[structopt(help = "the name of the package", long = "package")]
         package: String,
 
-        #[structopt(help = "the version to remove the docs of", long = "version")]
+        #[structopt(help = "the version of the docs to remove", long = "version")]
         version: String,
     },
 }
