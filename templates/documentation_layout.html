@@ -5,11 +5,15 @@
     <meta name="viewport" content="width=device-width" />
     <title>{{ page_title }}</title>
     <link rel="stylesheet" href="{{ unnest }}/index.css" type="text/css" />
+    <!-- The docs_config.js file is provided by HexDocs and shared
+         between multiple versions of the same package. -->
+    <script src="{{ unnest }}/docs_config.js"></script>
   </head>
   <body>
     <header class="page-header">
       <h2>
-        {{ project_name }}<!-- - {{ project_version }} -->
+        {{ project_name }}
+        <span id="project-version"> - v{{ project_version }} </span>
       </h2>
     </header>
 
@@ -77,5 +81,29 @@
       <div class="pink">rights</div>
       <div class="blue">✨</div>
     </footer>
+
+    <script>
+      if (typeof versionNodes !== 'undefined') {
+        const versionElement = document.getElementById('project-version')
+        const currentVersion = "v{{ project_version }}"
+        if (!versionNodes.find(element => element.version === currentVersion)) {
+          versionNodes.unshift({ version: currentVersion, url: '#' })
+        }
+        const versionsDropdown = `
+          <form autocomplete="off">
+            <select onchange="window.location.href = this.value">
+              ${versionNodes.map(element =>
+                `
+                <option value="${element.url}" ${element.version === currentVersion ? "selected disabled" : ""}>
+                  ${element.version}
+                </option>
+                `
+              ).join('')}
+            </select>
+          </form>
+          `
+        versionElement.innerHTML = versionsDropdown
+      }
+    </script>
   </body>
 </html>
