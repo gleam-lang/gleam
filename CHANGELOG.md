@@ -15,7 +15,6 @@
 - The formatter now correctly treats lines of only whitespace as empty.
 - The styling of tables in rendered HTML documentation has been improved.
 - Rendered HTML documentation has regained its max-width styling.
-- Records defined in other modules can now be used in module constants.
 
 ## v0.12.0 - 2020-10-31
 
