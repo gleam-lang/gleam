@@ -1419,7 +1419,16 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 .environment
                 .imported_modules
                 .get(module)
-                .ok_or_else(|| todo!("mod not found"))?
+                .ok_or_else(|| Error::UnknownModule {
+                    location: location.clone(),
+                    name: module.to_string(),
+                    imported_modules: self
+                        .environment
+                        .imported_modules
+                        .keys()
+                        .map(|t| t.to_string())
+                        .collect(),
+                })?
                 .1
                 .values
                 .get(name)

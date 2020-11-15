@@ -522,7 +522,7 @@ impl TypedClauseGuard {
     }
 }
 
-#[derive(Debug, PartialEq, Default, Clone)]
+#[derive(Debug, PartialEq, Default, Clone, Copy)]
 pub struct SrcSpan {
     pub start: usize,
     pub end: usize,
