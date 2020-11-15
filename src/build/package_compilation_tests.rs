@@ -1,45 +1,44 @@
 use super::*;
 use crate::{
+    ast::SrcSpan,
     build::{
         package_compiler::{PackageCompiler, Source},
         project_root::ProjectRoot,
         Origin,
     },
     config::{BuildTool, Docs, PackageConfig},
-    erl,
+    erl, typ,
 };
 use std::{path::PathBuf, sync::Arc};
 
-#[test]
-fn package_compiler_test() {
-    macro_rules! assert_erlang_compile {
-        ($sources:expr, $expected_output:expr  $(,)?) => {
-            let mut modules = HashMap::new();
-            let config = PackageConfig {
-                dependencies: HashMap::new(),
-                description: "the description".to_string(),
-                version: Some("1.1.0".to_string()),
-                name: "the_package".to_string(),
-                docs: Default::default(),
-                otp_start_module: None,
-                tool: BuildTool::Gleam,
-            };
-            let root = ProjectRoot::new(PathBuf::new());
-            let mut compiler = PackageCompiler::new(&root, config);
-            compiler.sources = $sources;
-            compiler.print_progress = false;
-            let outputs = compiler
-                .compile(&mut modules, &mut HashMap::with_capacity(4))
-                .map(get_sorted_outputs)
-                .map_err(|e| normalise_error(e));
-            assert_eq!($expected_output, outputs);
+macro_rules! assert_erlang_compile {
+    ($sources:expr, $expected_output:expr  $(,)?) => {
+        let mut modules = HashMap::new();
+        let config = PackageConfig {
+            dependencies: HashMap::new(),
+            description: "the description".to_string(),
+            version: Some("1.1.0".to_string()),
+            name: "the_package".to_string(),
+            docs: Default::default(),
+            otp_start_module: None,
+            tool: BuildTool::Gleam,
         };
-    }
+        let root = ProjectRoot::new(PathBuf::new());
+        let mut compiler = PackageCompiler::new(&root, config);
+        compiler.sources = $sources;
+        compiler.print_progress = false;
+        let outputs = compiler
+            .compile(&mut modules, &mut HashMap::with_capacity(4))
+            .map(get_sorted_outputs)
+            .map_err(|e| normalise_error(e));
+        assert_eq!($expected_output, outputs);
+    };
+}
 
-    fn package_app_file(modules: &[&str]) -> OutputFile {
-        OutputFile {
-            text: format!(
-                r#"{{application, the_package, [
+fn package_app_file(modules: &[&str]) -> OutputFile {
+    OutputFile {
+        text: format!(
+            r#"{{application, the_package, [
     {{vsn, "1.1.0"}}
     {{applications, []}},
     {{description, "the description"}},
@@ -47,12 +46,14 @@ fn package_compiler_test() {
     {{registered, []}},
 ]}}.
 "#,
-                modules.join(",\n               ")
-            ),
-            path: PathBuf::from("_build/default/lib/the_package/ebin/the_package.app"),
-        }
+            modules.join(",\n               ")
+        ),
+        path: PathBuf::from("_build/default/lib/the_package/ebin/the_package.app"),
     }
+}
 
+#[test]
+fn package_compiler_test() {
     assert_erlang_compile!(vec![], Ok(vec![package_app_file(&[])]));
 
     assert_erlang_compile!(
@@ -1091,17 +1092,121 @@ main() ->\n    fun(A, B) -> {c, A, B} end.\n"
             package_app_file(&["main", "power"]),
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/main.erl",),
-                text: "-module(main).\n-compile(no_auto_import).\n\n-export([main/1]).\n\nmain(Power) ->\n    power:to_int(Power).\n".to_string(),
+                text: "-module(main).\n-compile(no_auto_import).\n\n-export([main/1]).\n
+main(Power) ->\n    power:to_int(Power).\n".to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/power.erl",),
-                text: "-module(power).\n-compile(no_auto_import).\n\n-export([to_int/1]).\n\nto_int(P) ->\n    erlang:element(2, P) * 9000.\n".to_string(),
+                text: "-module(power).\n-compile(no_auto_import).\n\n-export([to_int/1]).\n
+to_int(P) ->\n    erlang:element(2, P) * 9000.\n".to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/power_Power.hrl",),
                 text: "-record(power, {value}).\n".to_string(),
             },
         ]),
+    );
+}
+
+#[test]
+fn imported_module_consts() {
+    assert_erlang_compile!(
+        vec![
+            Source {
+                origin: Origin::Src,
+                path: PathBuf::from("/src/one.gleam"),
+                name: "one".to_string(),
+                code: "pub type Test { A }".to_string(),
+            },
+            Source {
+                origin: Origin::Src,
+                path: PathBuf::from("/src/two.gleam"),
+                name: "two".to_string(),
+                code: "import one
+pub const test = one.A
+fn x() { test }"
+                    .to_string(),
+            },
+        ],
+        Ok(vec![
+            package_app_file(&["one", "two"]),
+            OutputFile {
+                path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
+                text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+            },
+            OutputFile {
+                path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
+                text: "-module(two).\n-compile(no_auto_import).\n
+x() ->\n    a.\n"
+                    .to_string(),
+            }
+        ]),
+    );
+
+    //     assert_erlang_compile!(
+    //         vec![
+    //             Source {
+    //                 origin: Origin::Src,
+    //                 path: PathBuf::from("/src/one.gleam"),
+    //                 name: "one".to_string(),
+    //                 code: "pub type A { A } pub type B { B(A) }".to_string(),
+    //             },
+    //             Source {
+    //                 origin: Origin::Src,
+    //                 path: PathBuf::from("/src/two.gleam"),
+    //                 name: "two".to_string(),
+    //                 code: "import one
+    // pub const test = one.B(one.A)
+    // fn x() { test }"
+    //                     .to_string(),
+    //             },
+    //         ],
+    //         Ok(vec![
+    //             package_app_file(&["one", "two"]),
+    //             OutputFile {
+    //                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
+    //                 text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+    //             },
+    //             OutputFile {
+    //                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
+    //                 text: "-module(two).\n-compile(no_auto_import).\n
+    // x() ->\n    {b, a}.\n"
+    //                     .to_string(),
+    //             }
+    //         ]),
+    //     );
+
+    assert_erlang_compile!(
+        vec![
+            Source {
+                origin: Origin::Src,
+                path: PathBuf::from("/src/one.gleam"),
+                name: "one".to_string(),
+                code: "".to_string(),
+            },
+            Source {
+                origin: Origin::Src,
+                path: PathBuf::from("/src/two.gleam"),
+                name: "two".to_string(),
+                code: "import one
+pub const test = one.A
+fn x() { test }"
+                    .to_string(),
+            },
+        ],
+        Err(Error::Type {
+            path: PathBuf::from("/src/two.gleam"),
+            src: "import one
+pub const test = one.A
+fn x() { test }"
+                .to_string(),
+            error: typ::Error::UnknownModuleValue {
+                location: SrcSpan { start: 28, end: 33 },
+                module_name: vec!["one".to_string()],
+                name: "A".to_string(),
+                value_constructors: vec![]
+            }
+        })
     );
 }
 
