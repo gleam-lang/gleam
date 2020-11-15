@@ -85,7 +85,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
         // If there are N subjects the multi-pattern is expected to be N patterns
         if subjects.len() != multi_pattern.len() {
             return Err(Error::IncorrectNumClausePatterns {
-                location: location.clone(),
+                location: *location,
                 expected: subjects.len(),
                 given: multi_pattern.len(),
             });
@@ -147,7 +147,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
             match &*value {
                 Pattern::Var { .. } if typed_segment.typ() == Some(string()) => {
                     Err(Error::UTFVarInBitStringSegment {
-                        location: location.clone(),
+                        location,
                         option: typed_segment.typ.unwrap().label(),
                     })
                 }
@@ -188,7 +188,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                     .get_variable(&name)
                     .cloned()
                     .ok_or_else(|| Error::UnknownVariable {
-                        location: location.clone(),
+                        location,
                         name: name.to_string(),
                         variables: self
                             .environment

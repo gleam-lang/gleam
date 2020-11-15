@@ -34,7 +34,7 @@ impl Warning {
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Warning);
                     let mut printer = Printer::new();
@@ -56,7 +56,7 @@ your program.",
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Warning);
                     writeln!(buffer,
@@ -72,7 +72,7 @@ variable _ if you are sure the error does not matter.")
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Warning);
                     writeln!(buffer,
@@ -87,7 +87,7 @@ record without modification. Add some fields or remove this update.")
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Warning);
                     writeln!(buffer,
@@ -102,7 +102,7 @@ be an update. Remove the update or remove fields that need to be copied.")
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Warning);
                     writeln!(
@@ -119,7 +119,7 @@ be an update. Remove the update or remove fields that need to be copied.")
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Warning);
                     writeln!(

@@ -263,7 +263,7 @@ pub fn convert_get_value_constructor_error(
 ) -> Error {
     match e {
         GetValueConstructorError::UnknownVariable { name, variables } => Error::UnknownVariable {
-            location: location.clone(),
+            location: *location,
             name,
             variables,
         },
@@ -272,7 +272,7 @@ pub fn convert_get_value_constructor_error(
             name,
             imported_modules,
         } => Error::UnknownModule {
-            location: location.clone(),
+            location: *location,
             name,
             imported_modules,
         },
@@ -282,7 +282,7 @@ pub fn convert_get_value_constructor_error(
             module_name,
             value_constructors,
         } => Error::UnknownModuleValue {
-            location: location.clone(),
+            location: *location,
             name,
             module_name,
             value_constructors,
@@ -315,7 +315,7 @@ pub fn convert_get_type_constructor_error(e: GetTypeConstructorError, location: 
             name,
             type_constructors,
         } => Error::UnknownType {
-            location: location.clone(),
+            location: *location,
             name,
             types: type_constructors,
         },
@@ -324,7 +324,7 @@ pub fn convert_get_type_constructor_error(e: GetTypeConstructorError, location: 
             name,
             imported_modules,
         } => Error::UnknownModule {
-            location: location.clone(),
+            location: *location,
             name,
             imported_modules,
         },
@@ -334,7 +334,7 @@ pub fn convert_get_type_constructor_error(e: GetTypeConstructorError, location: 
             module_name,
             type_constructors,
         } => Error::UnknownModuleType {
-            location: location.clone(),
+            location: *location,
             name,
             module_name,
             type_constructors,
@@ -465,7 +465,7 @@ pub fn convert_binary_error(e: crate::bit_string::Error, location: &SrcSpan) -> 
         }
 
         BinaryError::SegmentMustHaveSize => Error::BinarySegmentMustHaveSize {
-            location: location.clone(),
+            location: *location,
         },
     }
 }
@@ -473,23 +473,23 @@ pub fn convert_binary_error(e: crate::bit_string::Error, location: &SrcSpan) -> 
 pub fn convert_unify_error(e: UnifyError, location: &SrcSpan) -> Error {
     match e {
         UnifyError::CouldNotUnify { expected, given } => Error::CouldNotUnify {
-            location: location.clone(),
+            location: *location,
             expected,
             given,
         },
 
         UnifyError::ExtraVarInAlternativePattern { name } => Error::ExtraVarInAlternativePattern {
-            location: location.clone(),
+            location: *location,
             name,
         },
 
         UnifyError::DuplicateVarInPattern { name } => Error::DuplicateVarInPattern {
-            location: location.clone(),
+            location: *location,
             name,
         },
 
         UnifyError::RecursiveType => Error::RecursiveType {
-            location: location.clone(),
+            location: *location,
         },
     }
 }

@@ -115,7 +115,7 @@ impl Hydrator {
                 // Ensure that the correct number of arguments have been given to the constructor
                 if args.len() != parameters.len() {
                     return Err(Error::IncorrectTypeArity {
-                        location: location.clone(),
+                        location: *location,
                         name: name.to_string(),
                         expected: parameters.len(),
                         given: args.len(),
@@ -176,7 +176,7 @@ impl Hydrator {
 
                     None => Err(Error::UnknownType {
                         name: name.to_string(),
-                        location: location.clone(),
+                        location: *location,
                         types: environment
                             .module_types
                             .keys()
@@ -191,7 +191,7 @@ impl Hydrator {
             }
 
             TypeAst::Hole { location, .. } => Err(Error::UnexpectedTypeHole {
-                location: location.clone(),
+                location: *location,
             }),
         }
     }

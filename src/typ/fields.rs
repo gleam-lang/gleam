@@ -45,7 +45,7 @@ impl FieldMap {
         if self.arity != args.len() {
             return Err(Error::IncorrectArity {
                 labels: self.incorrect_arity_labels(args),
-                location: location.clone(),
+                location: *location,
                 expected: self.arity,
                 given: args.len(),
             });
@@ -82,7 +82,7 @@ impl FieldMap {
 
             let position = match self.fields.get(label) {
                 None => {
-                    unknown_labels.push((label.clone(), location.clone()));
+                    unknown_labels.push((label.clone(), *location));
                     i += 1;
                     continue;
                 }
@@ -97,7 +97,7 @@ impl FieldMap {
             } else {
                 if seen_labels.contains(label) {
                     return Err(Error::DuplicateArgument {
-                        location: location.clone(),
+                        location: *location,
                         label: label.to_string(),
                     });
                 }

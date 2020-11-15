@@ -428,7 +428,7 @@ fn assert_unique_value_name<'a>(
         Some(previous_location) => Err(Error::DuplicateName {
             name: name.to_string(),
             previous_location: previous_location.clone(),
-            location: location.clone(),
+            location: *location,
         }),
         None => Ok(()),
     }
@@ -443,7 +443,7 @@ fn assert_unique_type_name<'a>(
         Some(previous_location) => Err(Error::DuplicateTypeName {
             name: name.to_string(),
             previous_location: previous_location.clone(),
-            location: location.clone(),
+            location: *location,
         }),
         None => Ok(()),
     }
@@ -475,7 +475,7 @@ fn register_values<'a>(
                         .insert(label.clone(), i)
                         .map_err(|_| Error::DuplicateField {
                             label: label.to_string(),
-                            location: location.clone(),
+                            location: *location,
                         })?;
                 }
             }
@@ -534,7 +534,7 @@ fn register_values<'a>(
                             .insert(label.clone(), i)
                             .map_err(|_| Error::DuplicateField {
                                 label: label.to_string(),
-                                location: location.clone(),
+                                location: *location,
                             })?;
                     }
                 }
@@ -550,7 +550,7 @@ fn register_values<'a>(
                 ValueConstructor {
                     public: *public,
                     typ: typ.clone(),
-                    origin: location.clone(),
+                    origin: *location,
                     variant: ValueConstructorVariant::ModuleFn {
                         name: fun.clone(),
                         field_map: field_map.clone(),
@@ -622,7 +622,7 @@ fn register_values<'a>(
                             .insert(label.clone(), i)
                             .map_err(|_| Error::DuplicateField {
                                 label: label.to_string(),
-                                location: location.clone(),
+                                location: *location,
                             })?;
                     }
                 }
@@ -701,7 +701,7 @@ fn generalise_statement(
                 &name,
                 ValueConstructor {
                     public,
-                    origin: location.clone(),
+                    origin: location,
                     typ,
                     variant: ValueConstructorVariant::ModuleFn {
                         name: name.clone(),
@@ -899,7 +899,7 @@ fn infer_statement(
             let mut hydrator = Hydrator::new();
             for arg in args.iter() {
                 let var = TypeAst::Var {
-                    location: location.clone(),
+                    location,
                     name: arg.to_string(),
                 };
                 hydrator.type_from_ast(&var, environment)?;
@@ -941,7 +941,7 @@ fn infer_statement(
                 &name,
                 ValueConstructor {
                     public,
-                    origin: location.clone(),
+                    origin: location,
                     variant: ValueConstructorVariant::ModuleConstant {
                         literal: typed_expr.clone(),
                     },
@@ -1235,7 +1235,7 @@ fn make_type_vars(
 ) -> Result<Vec<Arc<Type>>, Error> {
     args.iter()
         .map(|arg| TypeAst::Var {
-            location: location.clone(),
+            location: *location,
             name: arg.to_string(),
         })
         .map(|ast| hydrator.type_from_ast(&ast, environment))
@@ -1305,7 +1305,7 @@ pub fn register_types<'a>(
             environment.insert_type_constructor(
                 name.clone(),
                 TypeConstructor {
-                    origin: location.clone(),
+                    origin: *location,
                     module: module.to_owned(),
                     public: *public,
                     parameters,
@@ -1317,7 +1317,7 @@ pub fn register_types<'a>(
             if !public {
                 environment
                     .unused_private_types
-                    .insert(name.clone(), location.clone());
+                    .insert(name.clone(), *location);
             }
         }
 
@@ -1344,7 +1344,7 @@ pub fn register_types<'a>(
             environment.insert_type_constructor(
                 name.clone(),
                 TypeConstructor {
-                    origin: location.clone(),
+                    origin: *location,
                     module: module.to_owned(),
                     public: *public,
                     parameters,
@@ -1375,7 +1375,7 @@ pub fn register_types<'a>(
             environment.insert_type_constructor(
                 name.clone(),
                 TypeConstructor {
-                    origin: location.clone(),
+                    origin: *location,
                     module: module.to_owned(),
                     public: *public,
                     parameters,
@@ -1387,7 +1387,7 @@ pub fn register_types<'a>(
             if !public {
                 environment
                     .unused_private_types
-                    .insert(name.clone(), location.clone());
+                    .insert(name.clone(), *location);
             }
         }
 
@@ -1448,7 +1448,7 @@ pub fn register_import(
                 // Register the unqualified import if it is a type constructor
                 if let Some(typ) = module_info.1.types.get(name) {
                     let typ_info = TypeConstructor {
-                        origin: location.clone(),
+                        origin: *location,
                         ..typ.clone()
                     };
                     match environment.insert_type_constructor(imported_name.clone(), typ_info) {
@@ -1462,15 +1462,15 @@ pub fn register_import(
                 if value_imported && type_imported {
                     environment
                         .unused_private_mixed_constructors
-                        .insert(imported_name.clone(), location.clone());
+                        .insert(imported_name.clone(), *location);
                 } else if type_imported {
                     environment
                         .unused_private_types
-                        .insert(imported_name.clone(), location.clone());
+                        .insert(imported_name.clone(), *location);
                 } else if !value_imported {
                     // Error if no type or value was found with that name
                     return Err(Error::UnknownModuleField {
-                        location: location.clone(),
+                        location: *location,
                         name: name.clone(),
                         module_name: module.clone(),
                         value_constructors: module_info

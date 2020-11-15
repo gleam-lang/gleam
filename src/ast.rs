@@ -41,7 +41,7 @@ impl<A, B, C, D> Module<A, B, C, D> {
             .flat_map(|s| match s {
                 Statement::Import {
                     module, location, ..
-                } => Some((module.join("/"), location.clone())),
+                } => Some((module.join("/"), *location)),
                 _ => None,
             })
             .collect()

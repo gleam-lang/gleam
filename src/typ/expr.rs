@@ -212,7 +212,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
     ) -> Result<TypedExpr, Error> {
         let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, &location)?;
         let fun = TypedExpr::Call {
-            location: location.clone(),
+            location,
             typ,
             args,
             fun: Box::new(fun),
@@ -293,7 +293,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
     fn infer_todo(&mut self, location: SrcSpan, label: Option<String>) -> Result<TypedExpr, Error> {
         let typ = self.new_unbound_var(self.environment.level);
         self.environment.warnings.push(Warning::Todo {
-            location: location.clone(),
+            location,
             typ: typ.clone(),
         });
 
@@ -492,7 +492,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 let typ = elems
                     .get(index as usize)
                     .ok_or_else(|| Error::OutOfBoundsTupleIndex {
-                        location: location.clone(),
+                        location,
                         index,
                         size: elems.len(),
                     })?
@@ -870,7 +870,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                         let typ = elems
                             .get(index as usize)
                             .ok_or_else(|| Error::OutOfBoundsTupleIndex {
-                                location: location.clone(),
+                                location,
                                 index,
                                 size: elems.len(),
                             })?
@@ -1207,7 +1207,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         // Error constructor helper function
         let unknown_field = |fields| Error::UnknownField {
             typ: record.typ(),
-            location: location.clone(),
+            location,
             label: label.clone(),
             fields,
         };
@@ -1319,7 +1319,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                             let spread_field = self.infer_known_record_access(
                                 spread.clone(),
                                 label.to_string(),
-                                location.clone(),
+                               *location,
                             )?;
 
                             // Check that the update argument unifies with the corresponding
@@ -1334,7 +1334,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                                     "Failed to lookup record field after successfully inferring that field",
                                 ),
                                 Some(p) => Ok(TypedRecordUpdateArg {
-                                    location: location.clone(),
+                                    location:*location,
                                     label: label.to_string(),
                                     value,
                                     index: *p,
@@ -1347,17 +1347,13 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 if args.is_empty() {
                     self.environment
                         .warnings
-                        .push(Warning::NoFieldsRecordUpdate {
-                            location: location.clone(),
-                        });
+                        .push(Warning::NoFieldsRecordUpdate { location });
                 }
 
                 if args.len() == field_map.arity {
                     self.environment
                         .warnings
-                        .push(Warning::AllFieldsRecordUpdate {
-                            location: location.clone(),
-                        });
+                        .push(Warning::AllFieldsRecordUpdate { location });
                 }
 
                 return Ok(TypedExpr::RecordUpdate {
@@ -1389,7 +1385,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                     .or_else(|| self.environment.get_module_const(name))
                     .cloned()
                     .ok_or_else(|| Error::UnknownVariable {
-                        location: location.clone(),
+                        location: *location,
                         name: name.to_string(),
                         variables: self
                             .environment
@@ -1421,7 +1417,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                     .imported_modules
                     .get(module_name)
                     .ok_or_else(|| Error::UnknownModule {
-                        location: location.clone(),
+                        location: *location,
                         name: module_name.to_string(),
                         imported_modules: self
                             .environment
@@ -1436,7 +1432,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                     .get(name)
                     .cloned()
                     .ok_or_else(|| Error::UnknownModuleValue {
-                        location: location.clone(),
+                        location: *location,
                         module_name: vec![module_name.to_string()],
                         name: name.to_string(),
                         value_constructors: module.values.keys().map(|t| t.to_string()).collect(),
@@ -1566,12 +1562,12 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                         typ: constructor.typ.clone(),
                         module_alias: module_name.clone(),
                         constructor: constructor.variant.to_module_value_constructor(),
-                        location: location.clone(),
+                        location,
                     },
 
                     None => TypedExpr::Var {
                         constructor,
-                        location: location.clone(),
+                        location,
                         name: name.clone(),
                     },
                 };

@@ -476,7 +476,7 @@ pub fn make_call(
                 num_holes += 1;
                 CallArg {
                     label,
-                    location: location.clone(),
+                    location,
                     value: UntypedExpr::Var {
                         location,
                         name: CAPTURE_VARIABLE.to_string(),

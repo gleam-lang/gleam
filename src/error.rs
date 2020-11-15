@@ -365,7 +365,7 @@ This was error from the Hex client library:
                     label: "Imported here".to_string(),
                     file: path.to_str().unwrap().to_string(),
                     src: src.to_string(),
-                    location: location.clone(),
+                    location: *location,
                 };
                 write(buffer, diagnostic, Severity::Error);
                 writeln!(
@@ -454,7 +454,7 @@ Second: {}",
                             .iter()
                             .map(|(label, location)| DiagnosticLabel {
                                 label: did_you_mean(label, &mut other_labels, "Unexpected label"),
-                                location: location.clone(),
+                                location: *location,
                                 style: LabelStyle::Primary,
                             })
                             .collect(),
@@ -489,7 +489,7 @@ Second: {}",
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     writeln!(
@@ -508,7 +508,7 @@ Please remove the label `{}`.",
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     writeln!(
@@ -533,7 +533,7 @@ also be labelled.",
                         labels: vec![
                             DiagnosticLabel {
                                 label: "redefined here".to_string(),
-                                location: location.clone(),
+                                location: *location,
                                 style: LabelStyle::Primary,
                             },
                             DiagnosticLabel {
@@ -559,7 +559,7 @@ also be labelled.",
                         labels: vec![
                             DiagnosticLabel {
                                 label: "redefined here".to_string(),
-                                location: location.clone(),
+                                location: *location,
                                 style: LabelStyle::Primary,
                             },
                             DiagnosticLabel {
@@ -578,7 +578,7 @@ also be labelled.",
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     writeln!(
@@ -595,7 +595,7 @@ also be labelled.",
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     writeln!(
@@ -612,7 +612,7 @@ also be labelled.",
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                 }
@@ -623,7 +623,7 @@ also be labelled.",
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     let mut printer = Printer::new();
@@ -652,7 +652,7 @@ also be labelled.",
                         ),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     let mut printer = Printer::new();
@@ -687,7 +687,7 @@ also be labelled.",
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     let mut printer = Printer::new();
@@ -718,7 +718,7 @@ Found type:
                         label: format!("expected {} arguments, got {}", expected, given),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                 }
@@ -734,7 +734,7 @@ Found type:
                         label: format!("expected {} arguments, got {}", expected, given),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     if !labels.is_empty() {
@@ -758,7 +758,7 @@ Found type:
                         label: format!(""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
 
@@ -781,7 +781,7 @@ Found type:
                         label: did_you_mean(name, &mut types, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     writeln!(
@@ -803,7 +803,7 @@ Found type:
                         label: did_you_mean(name, &mut variables, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     writeln!(buffer, "The name `{}` is not in scope here.", name).unwrap();
@@ -815,7 +815,7 @@ Found type:
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     let mut printer = Printer::new();
@@ -848,7 +848,7 @@ Private types can only be used within the module that defines them.",
                         label: did_you_mean(name, &mut imported_modules, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     writeln!(
@@ -871,7 +871,7 @@ Private types can only be used within the module that defines them.",
                         label: did_you_mean(name, &mut type_constructors, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     writeln!(
@@ -895,7 +895,7 @@ Private types can only be used within the module that defines them.",
                         label: did_you_mean(name, &mut value_constructors, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     writeln!(
@@ -924,7 +924,7 @@ Private types can only be used within the module that defines them.",
                         label: did_you_mean(name, &mut options, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     writeln!(
@@ -946,7 +946,7 @@ Private types can only be used within the module that defines them.",
                         label: format!("expected {} patterns, got {}", expected, given),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     writeln!(
@@ -964,7 +964,7 @@ Each clause must have a pattern for every subject value.",
                         label: "is not locally defined".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     writeln!(
@@ -982,7 +982,7 @@ argument to the function. The variable `{}` is not defined locally.",
                         label: "has not been previously defined".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     writeln!(
@@ -1000,7 +1000,7 @@ pattern. This variable `{}` has not been previously defined.",
                         label: "has already been used".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
 
@@ -1022,7 +1022,7 @@ please use a guard clause instead e.g. (x, y) if x == y -> ...",
                         label: "this index is too large".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     writeln!(
@@ -1042,7 +1042,7 @@ please use a guard clause instead e.g. (x, y) if x == y -> ...",
                         label: "this index is too large".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     writeln!(
@@ -1062,7 +1062,7 @@ please use a guard clause instead e.g. (x, y) if x == y -> ...",
                         label: "is not a tuple".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     let mut printer = Printer::new();
@@ -1083,7 +1083,7 @@ please use a guard clause instead e.g. (x, y) if x == y -> ...",
                         label: "what type is this?".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
 
@@ -1101,7 +1101,7 @@ about this type yet. Please add some type annotations so we can continue.",
                         label: "I don't know what type this is".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
 
@@ -1121,7 +1121,7 @@ and try again.
                         label: "given here".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     writeln!(buffer, "This segment already has the type {}", name).unwrap();
@@ -1133,7 +1133,7 @@ and try again.
                         label: "redefined here".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     writeln!(buffer, "This segment already has a signedness of {}", name).unwrap();
@@ -1145,7 +1145,7 @@ and try again.
                         label: "redefined here".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     writeln!(buffer, "This segment already has an endianness of {}", name).unwrap();
@@ -1157,7 +1157,7 @@ and try again.
                         label: "redefined here".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     writeln!(buffer, "This segment already has a size",).unwrap();
@@ -1169,7 +1169,7 @@ and try again.
                         label: "redefined here".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     writeln!(buffer, "This segment already has a unit",).unwrap();
@@ -1181,7 +1181,7 @@ and try again.
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     writeln!(
@@ -1199,7 +1199,7 @@ This segment has a type of {}.",
                         label: "specified here".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     writeln!(
@@ -1216,7 +1216,7 @@ at the end of a bin pattern",
                         label: "specified here".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
                     writeln!(
@@ -1236,7 +1236,7 @@ signed, unsigned, big, little, native, size, unit",
                         label: "This is not a record constructor".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
 
@@ -1253,7 +1253,7 @@ signed, unsigned, big, little, native, size, unit",
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
 
@@ -1270,7 +1270,7 @@ signed, unsigned, big, little, native, size, unit",
                         label: "".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: location.clone(),
+                        location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
 
@@ -1350,7 +1350,7 @@ When matching you need to use the `{}_codepoint` specifier instead.",
                                 label: "".to_string(),
                                 file: path.to_str().unwrap().to_string(),
                                 src: src.to_string(),
-                                location: location.clone(),
+                                location: *location,
                             };
                             write(buffer, diagnostic, Severity::Error);
                             let chars: String = (97..(97 + count))
@@ -1417,7 +1417,7 @@ cycle to continue."
                     label: did_you_mean(import, &mut modules, ""),
                     file: path.to_str().unwrap().to_string(),
                     src: src.to_string(),
-                    location: location.clone(),
+                    location: *location,
                 };
                 write(buffer, diagnostic, Severity::Error);
                 writeln!(

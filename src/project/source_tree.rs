@@ -99,7 +99,7 @@ impl SourceTree {
                         .values()
                         .map(|m| m.module.name_string())
                         .collect(),
-                    location: location.clone(),
+                    location,
                 })?;
 
                 if module.origin == ModuleOrigin::Src
