@@ -53,7 +53,7 @@ pub fn build(
     name: &String,
 ) -> Box<dyn SourceLinks> {
     match (&project_config.version, &project_config.repository) {
-        (Some(version), Repository::GitHub { url }) => {
+        (Some(version), Repository::GitHub { user, repo }) => {
             let relative_path = module_path
                 .strip_prefix(&project_root)
                 .map(|path| path.to_str())
@@ -66,7 +66,7 @@ pub fn build(
             Box::new(GitHubSourceLinks {
                 codespan_file,
                 relative_path: relative_path.to_string(),
-                url: url.clone(),
+                url: format!("https://github.com/{}/{}", &user, &repo),
                 version: version.clone(),
             })
         }
