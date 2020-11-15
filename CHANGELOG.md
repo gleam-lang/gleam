@@ -5,6 +5,9 @@
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
+
+## v0.12.1 - 2020-11-15
+
 - The compiler can now discriminate between record access and module access
   for shadowed names
 - The `new` command will no longer permit projects to be made with names that
