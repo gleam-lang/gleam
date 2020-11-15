@@ -1415,25 +1415,33 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             }
 
             // Look in an imported module for a binding with this name
-            Some(module) => self
-                .environment
-                .imported_modules
-                .get(module)
-                .ok_or_else(|| Error::UnknownModule {
-                    location: location.clone(),
-                    name: module.to_string(),
-                    imported_modules: self
-                        .environment
-                        .imported_modules
-                        .keys()
-                        .map(|t| t.to_string())
-                        .collect(),
-                })?
-                .1
-                .values
-                .get(name)
-                .cloned()
-                .ok_or_else(|| todo!("value not found in module"))?,
+            Some(module_name) => {
+                let module = &self
+                    .environment
+                    .imported_modules
+                    .get(module_name)
+                    .ok_or_else(|| Error::UnknownModule {
+                        location: location.clone(),
+                        name: module_name.to_string(),
+                        imported_modules: self
+                            .environment
+                            .imported_modules
+                            .keys()
+                            .map(|t| t.to_string())
+                            .collect(),
+                    })?
+                    .1;
+                module
+                    .values
+                    .get(name)
+                    .cloned()
+                    .ok_or_else(|| Error::UnknownModuleValue {
+                        location: location.clone(),
+                        module_name: vec![module_name.to_string()],
+                        name: name.to_string(),
+                        value_constructors: module.values.keys().map(|t| t.to_string()).collect(),
+                    })?
+            }
         };
 
         let ValueConstructor {
