@@ -7,10 +7,11 @@
 - Gleam can now run an Erlang shell without an external build tool.
 - The compiler can now discriminate between record access and module access
   for shadowed names
-- Check new project names against Erlang standard library modules to avoid clashes.
-- Formatter changed to treat lines with only spaces as empty.
-- Improve clarity of HTML table display in documentation.
-- Provide example 'links' section in new gleam.toml files.
+- The `new` command will no longer permit projects to be made with names that
+  clash with Erlang standard library modules.
+- The formatter now correctly treats lines of only whitespace as empty.
+- The styling of tables in rendered HTML documentation has been improved.
+- Rendered HTML documentation has regained its max-width styling.
 
 ## v0.12.0 - 2020-10-31
 
