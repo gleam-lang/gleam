@@ -442,7 +442,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         })
     }
     fn infer_var(&mut self, name: String, location: SrcSpan) -> Result<TypedExpr, Error> {
-        let constructor = self.infer_value_constructor(&name, &location)?;
+        let constructor = self.infer_value_constructor(&None, &name, &location)?;
         Ok(TypedExpr::Var {
             constructor,
             location,
@@ -836,7 +836,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
     fn infer_clause_guard(&mut self, guard: UntypedClauseGuard) -> Result<TypedClauseGuard, Error> {
         match guard {
             ClauseGuard::Var { location, name, .. } => {
-                let constructor = self.infer_value_constructor(&name, &location)?;
+                let constructor = self.infer_value_constructor(&None, &name, &location)?;
 
                 // We cannot support all values in guard expressions as the BEAM does not
                 match &constructor.variant {
@@ -1376,39 +1376,63 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
 
     fn infer_value_constructor(
         &mut self,
+        module: &Option<String>,
         name: &str,
         location: &SrcSpan,
     ) -> Result<ValueConstructor, Error> {
-        // Look in the local scope for a binding with this name
+        let constructor = match module {
+            // Look in the local scope for a binding with this name
+            None => {
+                let constructor = self
+                    .environment
+                    .get_variable(name)
+                    .or_else(|| self.environment.get_module_const(name))
+                    .cloned()
+                    .ok_or_else(|| Error::UnknownVariable {
+                        location: location.clone(),
+                        name: name.to_string(),
+                        variables: self
+                            .environment
+                            .local_values
+                            .keys()
+                            .map(|t| t.to_string())
+                            .collect(),
+                    })?;
+
+                // Note whether we are using an ungeneralised function so that we can
+                // tell if it is safe to generalise this function after inference has
+                // completed.
+                if matches!(&constructor.variant, ValueConstructorVariant::ModuleFn { .. }) {
+                    let is_ungeneralised = self.environment.ungeneralised_functions.contains(name);
+                    self.ungeneralised_function_used =
+                        self.ungeneralised_function_used || is_ungeneralised;
+                }
+
+                // Register the value as seen for detection of unused values
+                self.environment.value_used(name);
+
+                constructor
+            }
+
+            // Look in an imported module for a binding with this name
+            Some(module) => self
+                .environment
+                .imported_modules
+                .get(module)
+                .ok_or_else(|| todo!("mod not found"))?
+                .1
+                .values
+                .get(name)
+                .cloned()
+                .ok_or_else(|| todo!("value not found in module"))?,
+        };
+
         let ValueConstructor {
             public,
             variant,
             origin,
             typ,
-        } = self
-            .environment
-            .get_variable(name)
-            .or_else(|| self.environment.get_module_const(name))
-            .cloned()
-            .ok_or_else(|| Error::UnknownVariable {
-                location: location.clone(),
-                name: name.to_string(),
-                variables: self
-                    .environment
-                    .local_values
-                    .keys()
-                    .map(|t| t.to_string())
-                    .collect(),
-            })?;
-
-        // Note whether we are using an ungeneralised function
-        if matches!(&variant, ValueConstructorVariant::ModuleFn { .. }) {
-            let is_ungeneralised = self.environment.ungeneralised_functions.contains(name);
-            self.ungeneralised_function_used = self.ungeneralised_function_used || is_ungeneralised;
-        }
-
-        // Register the value as seen for detection of unused values
-        self.environment.value_used(name);
+        } = constructor;
 
         // Instantiate generic variables into unbound variables for this usage
         let typ = self.instantiate(typ, self.environment.level, &mut hashmap![]);
@@ -1459,7 +1483,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 args,
                 ..
             } if args.is_empty() => {
-                let constructor = self.infer_value_constructor(&name, &location)?;
+                let constructor = self.infer_value_constructor(&module, &name, &location)?;
 
                 let tag = match &constructor.variant {
                     ValueConstructorVariant::Record { name, .. } => name.clone(),
@@ -1491,7 +1515,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 mut args,
                 ..
             } => {
-                let constructor = self.infer_value_constructor(&name, &location)?;
+                let constructor = self.infer_value_constructor(&module, &name, &location)?;
 
                 let tag = match &constructor.variant {
                     ValueConstructorVariant::Record { name, .. } => name.clone(),
