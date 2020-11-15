@@ -2785,7 +2785,7 @@ fn custom_type_module_constants() {
         r#"type X { X }
         const x = unknown.X"#,
         sort_options(Error::UnknownModule {
-            location: SrcSpan { start: 1, end: 2 },
+            location: SrcSpan { start: 31, end: 40 },
             name: "unknown".to_string(),
             imported_modules: vec![],
         })
