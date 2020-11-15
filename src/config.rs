@@ -38,7 +38,7 @@ impl Default for BuildTool {
 #[derive(Deserialize, Debug, PartialEq)]
 #[serde(tag = "type")]
 pub enum Repository {
-    GitHub { url: String },
+    GitHub { user: String, repo: String },
     Other { url: String },
     None,
 }
