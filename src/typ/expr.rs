@@ -1550,10 +1550,30 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 // Pretty much all the other infer functions operate on UntypedExpr
                 // or TypedExpr rather than ClauseGuard. To make things easier we
                 // build the TypedExpr equivalent of the constructor and use that
-                let fun = TypedExpr::Var {
-                    constructor,
-                    location: location.clone(),
-                    name: name.clone(),
+                // TODO: resvisit this. It is rather awkward at present how we
+                // have to convert to this other data structure.
+                let fun = match &module {
+                    Some(module_name) => TypedExpr::ModuleSelect {
+                        label: name.clone(),
+                        module_name: self
+                            .environment
+                            .importable_modules
+                            .get(module_name)
+                            .gleam_expect("Failed to find previously located module import")
+                            .1
+                            .name
+                            .clone(),
+                        typ: constructor.typ.clone(),
+                        module_alias: module_name.clone(),
+                        constructor: constructor.variant.to_module_value_constructor(),
+                        location: location.clone(),
+                    },
+
+                    None => TypedExpr::Var {
+                        constructor,
+                        location: location.clone(),
+                        name: name.clone(),
+                    },
                 };
 
                 // This is basically the same code as do_infer_call_with_known_fun()

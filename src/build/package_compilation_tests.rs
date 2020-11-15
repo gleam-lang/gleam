@@ -1069,23 +1069,29 @@ main() ->\n    fun(A, B) -> {c, A, B} end.\n"
             },
         ]),
     );
+}
 
-    // Discriminate between imported functions, and fields, when shadowing a name:
-    // https://github.com/gleam-lang/gleam/issues/807
+#[test]
+// Discriminate between imported functions, and fields, when shadowing a name:
+// https://github.com/gleam-lang/gleam/issues/807
+fn variable_module_name_collide() {
     assert_erlang_compile!(
         vec![
             Source {
                 origin: Origin::Src,
                 path: PathBuf::from("/src/power.gleam"),
                 name: "power".to_string(),
-                code: "pub type Power { Power(value: Int) } pub fn to_int(p: Power) { p.value * 9000 }"
+                code: "pub type Power { Power(value: Int) } 
+pub fn to_int(p: Power) { p.value * 9000 }"
                     .to_string(),
             },
             Source {
                 origin: Origin::Src,
                 path: PathBuf::from("/src/main.gleam"),
                 name: "main".to_string(),
-                code: "import power.{Power} pub fn main(power: Power) { power.to_int(power) }".to_string(),
+                code: "import power.{Power}
+pub fn main(power: Power) { power.to_int(power) }"
+                    .to_string(),
             },
         ],
         Ok(vec![
@@ -1093,12 +1099,14 @@ main() ->\n    fun(A, B) -> {c, A, B} end.\n"
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/main.erl",),
                 text: "-module(main).\n-compile(no_auto_import).\n\n-export([main/1]).\n
-main(Power) ->\n    power:to_int(Power).\n".to_string(),
+main(Power) ->\n    power:to_int(Power).\n"
+                    .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/power.erl",),
                 text: "-module(power).\n-compile(no_auto_import).\n\n-export([to_int/1]).\n
-to_int(P) ->\n    erlang:element(2, P) * 9000.\n".to_string(),
+to_int(P) ->\n    erlang:element(2, P) * 9000.\n"
+                    .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/power_Power.hrl",),
@@ -1143,38 +1151,38 @@ x() ->\n    a.\n"
         ]),
     );
 
-    //     assert_erlang_compile!(
-    //         vec![
-    //             Source {
-    //                 origin: Origin::Src,
-    //                 path: PathBuf::from("/src/one.gleam"),
-    //                 name: "one".to_string(),
-    //                 code: "pub type A { A } pub type B { B(A) }".to_string(),
-    //             },
-    //             Source {
-    //                 origin: Origin::Src,
-    //                 path: PathBuf::from("/src/two.gleam"),
-    //                 name: "two".to_string(),
-    //                 code: "import one
-    // pub const test = one.B(one.A)
-    // fn x() { test }"
-    //                     .to_string(),
-    //             },
-    //         ],
-    //         Ok(vec![
-    //             package_app_file(&["one", "two"]),
-    //             OutputFile {
-    //                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-    //                 text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
-    //             },
-    //             OutputFile {
-    //                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-    //                 text: "-module(two).\n-compile(no_auto_import).\n
-    // x() ->\n    {b, a}.\n"
-    //                     .to_string(),
-    //             }
-    //         ]),
-    //     );
+    assert_erlang_compile!(
+        vec![
+            Source {
+                origin: Origin::Src,
+                path: PathBuf::from("/src/one.gleam"),
+                name: "one".to_string(),
+                code: "pub type A { A } pub type B { B(A) }".to_string(),
+            },
+            Source {
+                origin: Origin::Src,
+                path: PathBuf::from("/src/two.gleam"),
+                name: "two".to_string(),
+                code: "import one
+pub const test = one.B(one.A)
+fn x() { test }"
+                    .to_string(),
+            },
+        ],
+        Ok(vec![
+            package_app_file(&["one", "two"]),
+            OutputFile {
+                path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
+                text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+            },
+            OutputFile {
+                path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
+                text: "-module(two).\n-compile(no_auto_import).\n
+x() ->\n    {b, a}.\n"
+                    .to_string(),
+            }
+        ]),
+    );
 
     assert_erlang_compile!(
         vec![
