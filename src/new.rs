@@ -211,8 +211,7 @@ fn app_src(name: &str, description: &str, is_application: bool) -> String {
 }
 
 fn src_app() -> String {
-    format!(
-        r#"import gleam/otp/supervisor.{{ApplicationStartMode, ErlangStartResult}}
+    r#"import gleam/otp/supervisor.{{ApplicationStartMode, ErlangStartResult}}
 import gleam/dynamic.{{Dynamic}}
 
 fn init(children) {{
@@ -231,8 +230,8 @@ pub fn start(
 pub fn stop(_state: Dynamic) {{
   supervisor.application_stopped()
 }}
-"#,
-    )
+"#
+    .to_string()
 }
 
 fn src(name: &str) -> String {
