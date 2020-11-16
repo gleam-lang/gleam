@@ -10,6 +10,7 @@ use crate::{
     typ,
     warning::Warning,
 };
+use regex::Regex;
 use source_tree::SourceTree;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -71,6 +72,8 @@ pub struct Module {
 pub fn read_and_analyse(root: impl AsRef<Path>) -> Result<(PackageConfig, Vec<Analysed>), Error> {
     let project_config = config::read_project_config(&root)?;
     let mut srcs = vec![];
+
+    check_app_file_version_matches(&root, &project_config)?;
 
     let root = root.as_ref();
     let lib_dir = root.join("_build").join("default").join("lib");
@@ -222,4 +225,36 @@ pub fn collect_source(
         })
     }
     Ok(())
+}
+
+fn check_app_file_version_matches(
+    root: impl AsRef<Path>,
+    project_config: &PackageConfig,
+) -> Result<(), Error> {
+    let mut app_src_path = root.as_ref().to_path_buf();
+    app_src_path.push("src");
+    app_src_path.push(format!("{}.app.src", &project_config.name));
+
+    let contents = std::fs::read_to_string(&app_src_path)
+        .map_err(|err| Error::FileIO {
+            action: FileIOAction::Read,
+            kind: FileKind::File,
+            err: Some(err.to_string()),
+            path: app_src_path.clone(),
+        })?
+        // Remove all new lines so we can regex easily across the content
+        .replace("\n", "");
+
+    // Search for the vsn line & extract the text in double quotes
+    let re = Regex::new("\\{ *vsn *, *\"([^\"]*)\" *\\}").unwrap();
+    let caps = re.captures(&contents).unwrap();
+
+    if caps.get(1).unwrap().as_str() == project_config.version {
+        Ok(())
+    } else {
+        Err(Error::VersionDoesNotMatch {
+            toml_ver: project_config.version.clone(),
+            app_ver: caps.get(1).unwrap().as_str().to_string(),
+        })
+    }
 }
