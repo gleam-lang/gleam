@@ -148,6 +148,11 @@ pub enum Error {
     UnableToFindProjectRoot {
         path: String,
     },
+
+    VersionDoesNotMatch {
+        toml_ver: String,
+        app_ver: String,
+    },
 }
 
 #[derive(Debug, PartialEq)]
@@ -269,6 +274,14 @@ and underscores.",
                 let diagnostic = ProjectErrorDiagnostic {
                     title: "Invalid project root".to_string(),
                     label: format!("We were unable to find the project root:\n\n  {}", path),
+                };
+                write_project(buffer, diagnostic);
+            }
+            Error::VersionDoesNotMatch { toml_ver, app_ver } => {
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Version does not match".to_string(),
+                    label:
+                        format!("The version in gleam.toml \"{}\" does not match the version in your app.src file \"{}\"", toml_ver, app_ver),
                 };
                 write_project(buffer, diagnostic);
             }
