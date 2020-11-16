@@ -44,6 +44,7 @@ pub fn complicated_fun(
         docs: Default::default(),
         tool: Default::default(),
         version: Default::default(),
+        repository: Default::default(),
         description: Default::default(),
         dependencies: Default::default(),
         otp_start_module: None,
@@ -51,7 +52,13 @@ pub fn complicated_fun(
 
     let analysed = crate::project::analysed(vec![input]).expect("Compilation failed");
 
-    let output_files = generate_html(&config, analysed.as_slice(), &[], &PathBuf::from("/docs"));
+    let output_files = generate_html(
+        PathBuf::from("."),
+        &config,
+        analysed.as_slice(),
+        &[],
+        &PathBuf::from("/docs"),
+    );
     let module_page = output_files
         .iter()
         .find(|page| page.path == PathBuf::from("/docs/test/index.html"))
