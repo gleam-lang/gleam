@@ -100,7 +100,7 @@ pub fn generate_html(
             modules: &modules_links,
             project_name: &project_config.name,
             page_title: &project_config.name,
-            project_version: "", // TODO
+            project_version: &project_config.version,
             content: render_markdown(&content),
         };
 
@@ -126,7 +126,7 @@ pub fn generate_html(
             project_name: &project_config.name,
             page_title: &format!("{} - {}", name, project_config.name),
             module_name: name,
-            project_version: "", // TODO
+            project_version: &project_config.version,
             functions: {
                 let mut f: Vec<_> = module
                     .ast

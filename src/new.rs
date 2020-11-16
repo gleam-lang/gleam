@@ -104,8 +104,10 @@ fn write(path: PathBuf, contents: &str) -> Result<(), Error> {
 }
 
 fn gleam_toml(name: &str) -> String {
+    // version should match the one generated in app_src below
     format!(
         r#"name = "{}"
+version = "1.0.0"
 
 # [docs]
 # links = [
@@ -188,6 +190,7 @@ fn app_src(name: &str, description: &str, is_application: bool) -> String {
     } else {
         "".to_string()
     };
+    // Version should match the one generated in gleam_toml above
     format!(
         r#"{{application, {},
  [{{description, "{}"}},
