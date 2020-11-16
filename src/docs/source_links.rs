@@ -1,9 +1,10 @@
 use crate::{
     ast::SrcSpan,
     config::{PackageConfig, Repository},
+    project::Analysed,
 };
 use codespan_reporting::files::Files;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub trait SourceLinks {
     fn url(&self, location: &SrcSpan) -> Option<String>;
@@ -49,19 +50,21 @@ impl SourceLinks for GitHubSourceLinks {
 pub fn build(
     project_root: impl AsRef<Path>,
     project_config: &PackageConfig,
-    module_path: &PathBuf,
-    name: &String,
+    module: &Analysed,
 ) -> Box<dyn SourceLinks> {
     match (&project_config.version, &project_config.repository) {
         (Some(version), Repository::GitHub { user, repo }) => {
-            let relative_path = module_path
+            let relative_path = module
+                .path
                 .strip_prefix(&project_root)
                 .map(|path| path.to_str())
                 .unwrap_or_default()
                 .unwrap_or_default();
 
-            let src = std::fs::read_to_string(&module_path).unwrap_or_default();
-            let codespan_file = codespan_reporting::files::SimpleFile::new(name.clone(), src);
+            let codespan_file = codespan_reporting::files::SimpleFile::new(
+                module.name.join("/"),
+                module.src.clone(),
+            );
 
             Box::new(GitHubSourceLinks {
                 codespan_file,

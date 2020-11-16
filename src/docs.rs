@@ -115,7 +115,7 @@ pub fn generate_html(
         let name = module.name.join("/");
 
         // Read module src & create line number lookup structure
-        let source_links = source_links::build(&project_root, project_config, &module.path, &name);
+        let source_links = source_links::build(&project_root, project_config, &module);
 
         let template = ModuleTemplate {
             unnest: module.name.iter().map(|_| "..").intersperse("/").collect(),
