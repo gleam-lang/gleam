@@ -27,6 +27,7 @@ pub struct Input {
 #[derive(Debug, PartialEq)]
 pub struct Analysed {
     pub ast: TypedModule,
+    pub src: String,
     pub name: Vec<String>,
     pub path: PathBuf,
     pub origin: ModuleOrigin,
@@ -112,6 +113,7 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
         path: PathBuf,
         origin: ModuleOrigin,
         ast: TypedModule,
+        src: String,
         warnings: Vec<Warning>,
     }
 
@@ -157,6 +159,7 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
             source_base_path,
             origin,
             ast,
+            src,
             warnings,
         });
     }
@@ -171,10 +174,12 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
                 name_string,
                 origin,
                 ast,
+                src,
                 warnings,
             } = out;
             Analysed {
                 ast,
+                src,
                 name,
                 path,
                 source_base_path,
