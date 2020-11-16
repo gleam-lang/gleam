@@ -6,7 +6,7 @@ use crate::{
         project_root::ProjectRoot,
         Origin,
     },
-    config::{BuildTool, Docs, PackageConfig},
+    config::{BuildTool, Docs, PackageConfig, Repository},
     erl, typ,
 };
 use std::{path::PathBuf, sync::Arc};
@@ -17,8 +17,9 @@ macro_rules! assert_erlang_compile {
         let config = PackageConfig {
             dependencies: HashMap::new(),
             description: "the description".to_string(),
-            version: Some("1.1.0".to_string()),
+            version: "1.1.0".to_string(),
             name: "the_package".to_string(),
+            repository: Repository::None,
             docs: Default::default(),
             otp_start_module: None,
             tool: BuildTool::Gleam,
@@ -1239,8 +1240,9 @@ fn config_compilation_test() {
         PackageConfig {
             dependencies: HashMap::new(),
             description: "".to_string(),
-            version: None,
+            version: "1.0.0".to_string(),
             name: "the_package".to_string(),
+            repository: Repository::None,
             docs: Default::default(),
             otp_start_module: None,
             tool: BuildTool::Gleam,
@@ -1252,6 +1254,7 @@ fn config_compilation_test() {
         vec![],
         vec![OutputFile {
             text: r#"{application, the_package, [
+    {vsn, "1.0.0"}
     {applications, []},
     {description, ""},
     {modules, []},
@@ -1265,7 +1268,7 @@ fn config_compilation_test() {
 
     // Version is included if given
     let mut config = make_config();
-    config.version = Some("1.3.5".to_string());
+    config.version = "1.3.5".to_string();
     assert_config_compile!(
         config,
         vec![],
@@ -1291,6 +1294,7 @@ fn config_compilation_test() {
         vec![],
         vec![OutputFile {
             text: r#"{application, the_package, [
+    {vsn, "1.0.0"}
     {applications, []},
     {description, "Very exciting"},
     {modules, []},
@@ -1318,6 +1322,7 @@ fn config_compilation_test() {
         vec![],
         vec![OutputFile {
             text: r#"{application, the_package, [
+    {vsn, "1.0.0"}
     {applications, [gleam_otp,
                     gleam_stdlib,
                     midas,
