@@ -138,12 +138,22 @@ pub fn generate_html(
                 f
             },
             types: {
-                let mut t: Vec<_> = module.ast.statements.iter().flat_map(type_).collect();
+                let mut t: Vec<_> = module
+                    .ast
+                    .statements
+                    .iter()
+                    .flat_map(|statement| type_(&source_links, &statement))
+                    .collect();
                 t.sort();
                 t
             },
             constants: {
-                let mut c: Vec<_> = module.ast.statements.iter().flat_map(constant).collect();
+                let mut c: Vec<_> = module
+                    .ast
+                    .statements
+                    .iter()
+                    .flat_map(|statement| constant(&source_links, &statement))
+                    .collect();
                 c.sort();
                 c
             },
@@ -225,7 +235,10 @@ fn render_markdown(text: &str) -> String {
     s
 }
 
-fn type_(statement: &TypedStatement) -> Option<Type<'_>> {
+fn type_<'a>(
+    source_links: &Box<dyn SourceLinks>,
+    statement: &'a TypedStatement,
+) -> Option<Type<'a>> {
     let mut formatter = format::Formatter::new();
     match statement {
         Statement::ExternalType {
@@ -233,12 +246,14 @@ fn type_(statement: &TypedStatement) -> Option<Type<'_>> {
             name,
             doc,
             args,
+            location,
             ..
         } => Some(Type {
             name,
             definition: print(formatter.external_type(true, name.as_str(), args)),
             documentation: markdown_documentation(doc),
             constructors: vec![],
+            source_url: source_links.url(location).unwrap_or_default(),
         }),
 
         Statement::CustomType {
@@ -269,6 +284,7 @@ fn type_(statement: &TypedStatement) -> Option<Type<'_>> {
                     documentation: markdown_documentation(&constructor.documentation),
                 })
                 .collect(),
+            source_url: source_links.url(location).unwrap_or_default(),
         }),
 
         Statement::CustomType {
@@ -284,6 +300,7 @@ fn type_(statement: &TypedStatement) -> Option<Type<'_>> {
             definition: print(formatter.docs_opaque_custom_type(true, name, parameters, location)),
             documentation: markdown_documentation(doc),
             constructors: vec![],
+            source_url: source_links.url(location).unwrap_or_default(),
         }),
 
         Statement::TypeAlias {
@@ -292,19 +309,24 @@ fn type_(statement: &TypedStatement) -> Option<Type<'_>> {
             resolved_type: typ,
             doc,
             args,
+            location,
             ..
         } => Some(Type {
             name,
             definition: print(formatter.type_alias(true, name, args, typ)),
             documentation: markdown_documentation(doc),
             constructors: vec![],
+            source_url: source_links.url(location).unwrap_or_default(),
         }),
 
         _ => None,
     }
 }
 
-fn constant(statement: &TypedStatement) -> Option<Constant<'_>> {
+fn constant<'a>(
+    source_links: &Box<dyn SourceLinks>,
+    statement: &'a TypedStatement,
+) -> Option<Constant<'a>> {
     let mut formatter = format::Formatter::new();
     match statement {
         Statement::ModuleConstant {
@@ -312,11 +334,13 @@ fn constant(statement: &TypedStatement) -> Option<Constant<'_>> {
             doc,
             name,
             value,
+            location,
             ..
         } => Some(Constant {
             name,
             definition: print(formatter.docs_const_expr(true, name, value)),
             documentation: markdown_documentation(doc),
+            source_url: source_links.url(location).unwrap_or_default(),
         }),
 
         _ => None,
@@ -353,6 +377,7 @@ struct Type<'a> {
     definition: String,
     documentation: String,
     constructors: Vec<TypeConstructor>,
+    source_url: String,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
@@ -360,6 +385,7 @@ struct Constant<'a> {
     name: &'a str,
     definition: String,
     documentation: String,
+    source_url: String,
 }
 
 #[derive(Template)]

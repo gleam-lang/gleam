@@ -41,11 +41,18 @@
 
   {% for typ in types %}
   <div class="member">
-    <a href="#{{ typ.name }}">
-      <h2 id="{{ typ.name }}" class="member-name">
-        {{ typ.name }}
+    <div class="member-name">
+      <h2 id="{{ typ.name }}">
+        <a href="#{{ typ.name }}">
+            {{ typ.name }}
+        </a>
       </h2>
-    </a>
+      {% if !typ.source_url.is_empty() %}
+      <a href="{{ typ.source_url }}">
+        &lt;/&gt;
+      </a>
+      {% endif %}
+    </div>
     <div class="custom-type-constructors">
       <div class="rendered-markdown">{{ typ.documentation|safe }}</div>
       <pre>{{ typ.definition }}</pre>
@@ -76,11 +83,18 @@
 
   {% for constant in constants %}
   <div class="member">
-    <a href="#{{ constant.name }}">
-      <h2 id="{{ constant.name }}" class="member-name">
-        {{ constant.name }}
+    <div class="member-name">
+      <h2 id="{{ constant.name }}">
+        <a href="#{{ constant.name }}">
+            {{ constant.name }}
+        </a>
       </h2>
-    </a>
+      {% if !constant.source_url.is_empty() %}
+      <a href="{{ constant.source_url }}">
+        &lt;/&gt;
+      </a>
+      {% endif %}
+    </div>
     <pre>{{ constant.definition }}</pre>
     <div class="rendered-markdown">{{ constant.documentation|safe }}</div>
   </div>
