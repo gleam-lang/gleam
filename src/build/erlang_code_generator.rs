@@ -75,10 +75,7 @@ impl<'a> ErlangCodeGenerator<'a> {
             Some(module) => tuple("mod", format!("'{}'", module).as_str()),
         };
 
-        let version = match &self.config.version {
-            None => "".to_string(),
-            Some(version) => tuple("vsn", format!("\"{}\"", version).as_str()),
-        };
+        let version = tuple("vsn", format!("\"{}\"", &self.config.version).as_str());
 
         let mut modules: Vec<_> = self
             .modules

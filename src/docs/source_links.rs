@@ -52,8 +52,8 @@ pub fn build(
     project_config: &PackageConfig,
     module: &Analysed,
 ) -> Box<dyn SourceLinks> {
-    match (&project_config.version, &project_config.repository) {
-        (Some(version), Repository::GitHub { user, repo }) => {
+    match &project_config.repository {
+        Repository::GitHub { user, repo } => {
             let relative_path = module
                 .path
                 .strip_prefix(&project_root)
@@ -70,7 +70,7 @@ pub fn build(
                 codespan_file,
                 relative_path: relative_path.to_string(),
                 url: format!("https://github.com/{}/{}", &user, &repo),
-                version: version.clone(),
+                version: project_config.version.clone(),
             })
         }
         // If we either don't have a version or aren't dealing with a GitHub repository then we

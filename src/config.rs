@@ -6,8 +6,7 @@ use std::path::{Path, PathBuf};
 #[derive(Deserialize, Debug, PartialEq, Default)]
 pub struct PackageConfig {
     pub name: String,
-    #[serde(default)]
-    pub version: Option<String>,
+    pub version: String,
     #[serde(default)]
     pub description: String,
     #[serde(default)]
