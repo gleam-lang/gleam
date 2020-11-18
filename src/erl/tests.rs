@@ -492,8 +492,8 @@ fn create_user(user_id) { User(age: 22, id: user_id, name: "") }
         r#"-module(the_app).
 -compile(no_auto_import).
 
-create_user(UserId) ->
-    {user, UserId, <<""/utf8>>, 22}.
+create_user(User_id) ->
+    {user, User_id, <<""/utf8>>, 22}.
 "#,
     );
 
@@ -1333,8 +1333,8 @@ fn main() {
 
 main() ->
     Triple = {triple, 1, 2, 3},
-    {triple, TheA, _, _} = Triple,
-    TheA.
+    {triple, The_a, _, _} = Triple,
+    The_a.
 "#,
     );
 
@@ -1356,8 +1356,8 @@ fn main() {
 
 main() ->
     Triple = {triple, 1, 2, 3},
-    {triple, _, TheB, _} = Triple,
-    TheB.
+    {triple, _, The_b, _} = Triple,
+    The_b.
 "#,
     );
 
@@ -1379,8 +1379,8 @@ fn main() {
 
 main() ->
     Triple = {triple, 1, 2, 3},
-    {triple, TheA, _, TheC} = Triple,
-    TheC.
+    {triple, The_a, _, The_c} = Triple,
+    The_c.
 "#,
     );
 
@@ -1404,8 +1404,8 @@ fn main() {
 main() ->
     Triple = {triple, 1, 2, 3},
     case Triple of
-        {triple, _, TheB, _} ->
-            TheB
+        {triple, _, The_b, _} ->
+            The_b
     end.
 "#,
     );
@@ -1473,10 +1473,10 @@ fn main() {
 
 main() ->
     case {ok, 1} of
-        {error, GleamTryError} -> {error, GleamTryError};
+        {error, Gleam@try_error} -> {error, Gleam@try_error};
         {ok, A} ->
             case {ok, 2} of
-                {error, GleamTryError@1} -> {error, GleamTryError@1};
+                {error, Gleam@try_error@1} -> {error, Gleam@try_error@1};
                 {ok, B} ->
                     {ok, A + B}
             end
@@ -1812,15 +1812,15 @@ pub fn test() {
 -export([test/0]).
 
 test() ->
-    DuplicateName = 1,
+    Duplicate_name = 1,
     case 1 of
         1 ->
-            DuplicateName@1 = DuplicateName + 1,
-            DuplicateName@1;
+            Duplicate_name@1 = Duplicate_name + 1,
+            Duplicate_name@1;
 
         2 ->
-            DuplicateName@1 = DuplicateName + 1,
-            DuplicateName@1
+            Duplicate_name@1 = Duplicate_name + 1,
+            Duplicate_name@1
     end.
 "#,
     );
@@ -1840,11 +1840,11 @@ pub fn test() {
 
 test() ->
     case {ok, 1} of
-        {ok, DuplicateName} ->
-            DuplicateName;
+        {ok, Duplicate_name} ->
+            Duplicate_name;
 
-        {error, DuplicateName} ->
-            DuplicateName
+        {error, Duplicate_name} ->
+            Duplicate_name
     end.
 "#,
     );
@@ -1865,13 +1865,13 @@ pub fn test() {
 -export([test/0]).
 
 test() ->
-    DuplicateName = 1,
+    Duplicate_name = 1,
     case 1 of
-        1 when DuplicateName =:= 1 ->
-            DuplicateName;
+        1 when Duplicate_name =:= 1 ->
+            Duplicate_name;
 
-        2 when DuplicateName =:= 1 ->
-            DuplicateName
+        2 when Duplicate_name =:= 1 ->
+            Duplicate_name
     end.
 "#,
     );
@@ -1921,8 +1921,8 @@ fn main() {
 
 main() ->
     P = {person, <<"Quinn"/utf8>>, 27},
-    NewP = erlang:setelement(3, P, 28),
-    NewP.
+    New_p = erlang:setelement(3, P, 28),
+    New_p.
 "#,
     );
 
@@ -1942,8 +1942,8 @@ fn main() {
 
 main() ->
     P = {person, <<"Quinn"/utf8>>, 27},
-    NewP = erlang:setelement(3, P, erlang:element(3, P) + 1),
-    NewP.
+    New_p = erlang:setelement(3, P, erlang:element(3, P) + 1),
+    New_p.
 "#,
     );
 
@@ -1963,8 +1963,8 @@ fn main() {
 
 main() ->
     P = {person, <<"Quinn"/utf8>>, 27},
-    NewP = erlang:setelement(2, erlang:setelement(3, P, 28), <<"Riley"/utf8>>),
-    NewP.
+    New_p = erlang:setelement(2, erlang:setelement(3, P, 28), <<"Riley"/utf8>>),
+    New_p.
 "#,
     );
 
@@ -2119,6 +2119,31 @@ pub fn a() { A }",
 
 a() ->
     a.
+"
+    );
+}
+
+#[test]
+fn variable_name_underscores_preserved() {
+    assert_erl!(
+        "pub fn a(name_: String) -> String {
+    let name__ = name_
+    let name = name__
+    let one_1 = 1
+    let one1 = one_1
+    name
+}",
+        "-module(the_app).
+-compile(no_auto_import).
+
+-export([a/1]).
+
+a(Name_) ->
+    Name__ = Name_,
+    Name = Name__,
+    One_1 = 1,
+    One1 = One_1,
+    Name.
 "
     );
 }

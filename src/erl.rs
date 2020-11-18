@@ -11,7 +11,7 @@ use crate::{
         ModuleValueConstructor, PatternConstructor, Type, ValueConstructor, ValueConstructorVariant,
     },
 };
-use heck::{CamelCase, SnakeCase};
+use heck::SnakeCase;
 use itertools::Itertools;
 use std::char;
 use std::default::Default;
@@ -74,10 +74,10 @@ impl<'a> Env<'a> {
             None => {
                 self.current_scope_vars.insert(name.clone(), 0);
                 self.erl_function_scope_vars.insert(name.clone(), 0);
-                name.to_camel_case().to_doc()
+                variable_name(name).to_doc()
             }
-            Some(0) => name.to_camel_case().to_doc(),
-            Some(n) => name.to_camel_case().to_doc().append("@").append(*n),
+            Some(0) => variable_name(name).to_doc(),
+            Some(n) => variable_name(name).to_doc().append("@").append(*n),
         }
     }
 
@@ -1238,6 +1238,14 @@ fn external_fun(name: &str, module: &str, fun: &str, arity: usize) -> Document {
         .append(atom(fun.to_string()))
         .append(format!("({}).", chars))
         .nest(INDENT)
+}
+
+fn variable_name(name: String) -> String {
+    let mut c = name.chars();
+    match c.next() {
+        None => String::new(),
+        Some(f) => f.to_uppercase().chain(c).collect(),
+    }
 }
 
 pub fn is_erlang_reserved_word(name: &str) -> bool {
