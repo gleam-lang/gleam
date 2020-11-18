@@ -75,8 +75,6 @@ impl<'a> ErlangCodeGenerator<'a> {
             Some(module) => tuple("mod", format!("'{}'", module).as_str()),
         };
 
-        let version = tuple("vsn", format!("\"{}\"", &self.config.version).as_str());
-
         let mut modules: Vec<_> = self
             .modules
             .iter()
@@ -91,7 +89,8 @@ impl<'a> ErlangCodeGenerator<'a> {
 
         let text = format!(
             r#"{{application, {package}, [
-{start_module}{version}    {{applications, [{applications}]}},
+{start_module}    {{vsn, "{version}"}},
+    {{applications, [{applications}]}},
     {{description, "{description}"}},
     {{modules, [{modules}]}},
     {{registered, []}},
@@ -102,7 +101,7 @@ impl<'a> ErlangCodeGenerator<'a> {
             modules = modules,
             package = self.config.name,
             start_module = start_module,
-            version = version,
+            version = self.config.version,
         );
 
         OutputFile { path, text }
@@ -110,5 +109,5 @@ impl<'a> ErlangCodeGenerator<'a> {
 }
 
 fn tuple(key: &str, value: &str) -> String {
-    format!("    {{{}, {}}}\n", key, value)
+    format!("    {{{}, {}}},\n", key, value)
 }

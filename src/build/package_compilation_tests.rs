@@ -40,7 +40,7 @@ fn package_app_file(modules: &[&str]) -> OutputFile {
     OutputFile {
         text: format!(
             r#"{{application, the_package, [
-    {{vsn, "1.1.0"}}
+    {{vsn, "1.1.0"}},
     {{applications, []}},
     {{description, "the description"}},
     {{modules, [{}]}},
@@ -1254,7 +1254,7 @@ fn config_compilation_test() {
         vec![],
         vec![OutputFile {
             text: r#"{application, the_package, [
-    {vsn, "1.0.0"}
+    {vsn, "1.0.0"},
     {applications, []},
     {description, ""},
     {modules, []},
@@ -1274,7 +1274,7 @@ fn config_compilation_test() {
         vec![],
         vec![OutputFile {
             text: r#"{application, the_package, [
-    {vsn, "1.3.5"}
+    {vsn, "1.3.5"},
     {applications, []},
     {description, ""},
     {modules, []},
@@ -1294,7 +1294,7 @@ fn config_compilation_test() {
         vec![],
         vec![OutputFile {
             text: r#"{application, the_package, [
-    {vsn, "1.0.0"}
+    {vsn, "1.0.0"},
     {applications, []},
     {description, "Very exciting"},
     {modules, []},
@@ -1322,7 +1322,7 @@ fn config_compilation_test() {
         vec![],
         vec![OutputFile {
             text: r#"{application, the_package, [
-    {vsn, "1.0.0"}
+    {vsn, "1.0.0"},
     {applications, [gleam_otp,
                     gleam_stdlib,
                     midas,
