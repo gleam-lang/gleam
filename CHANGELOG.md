@@ -7,6 +7,8 @@
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 - Records defined in other modules can now be used in module constants.
+- Documentation can link from functions, types & constants to their source
+  code definitions on popular project hosting sites.
 
 ## v0.12.1 - 2020-11-15
 
