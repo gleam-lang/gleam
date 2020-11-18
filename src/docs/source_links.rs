@@ -23,7 +23,8 @@ impl SourceLinks for NoSourceLinks {
 // range of line numbers
 struct GitHubSourceLinks {
     codespan_file: codespan_reporting::files::SimpleFile<String, String>,
-    url: String,
+    user: String,
+    repo: String,
     version: String,
     relative_path: String,
 }
@@ -41,8 +42,66 @@ impl SourceLinks for GitHubSourceLinks {
             .unwrap_or_default()
             + 1;
         Some(format!(
-            "{}/blob/{}/{}#L{}-L{}",
-            &self.url, &self.version, &self.relative_path, start_line, end_line,
+            "https://github.com/{}/{}/blob/{}/{}#L{}-L{}",
+            &self.user, &self.repo, &self.version, &self.relative_path, start_line, end_line,
+        ))
+    }
+}
+
+// Creates links to the GitLab repository with the #LN-M anchor syntax for linking directly to a
+// range of line numbers
+struct GitLabSourceLinks {
+    codespan_file: codespan_reporting::files::SimpleFile<String, String>,
+    user: String,
+    repo: String,
+    version: String,
+    relative_path: String,
+}
+
+impl SourceLinks for GitLabSourceLinks {
+    fn url(&self, location: &SrcSpan) -> Option<String> {
+        let start_line = self
+            .codespan_file
+            .line_index((), location.start)
+            .unwrap_or_default()
+            + 1;
+        let end_line = self
+            .codespan_file
+            .line_index((), location.end)
+            .unwrap_or_default()
+            + 1;
+        Some(format!(
+            "https://gitlab.com/{}/{}/-/blob/{}/{}#L{}-{}",
+            &self.user, &self.repo, &self.version, &self.relative_path, start_line, end_line,
+        ))
+    }
+}
+
+// Creates links to the BitBucket repository with the #lines-M:N anchor syntax for linking directly
+// to a range of line numbers
+struct BitBucketSourceLinks {
+    codespan_file: codespan_reporting::files::SimpleFile<String, String>,
+    user: String,
+    repo: String,
+    version: String,
+    relative_path: String,
+}
+
+impl SourceLinks for BitBucketSourceLinks {
+    fn url(&self, location: &SrcSpan) -> Option<String> {
+        let start_line = self
+            .codespan_file
+            .line_index((), location.start)
+            .unwrap_or_default()
+            + 1;
+        let end_line = self
+            .codespan_file
+            .line_index((), location.end)
+            .unwrap_or_default()
+            + 1;
+        Some(format!(
+            "https://bitbucket.com/{}/{}/src/{}/{}#lines-{}:{}",
+            &self.user, &self.repo, &self.version, &self.relative_path, start_line, end_line,
         ))
     }
 }
@@ -69,7 +128,50 @@ pub fn build(
             Box::new(GitHubSourceLinks {
                 codespan_file,
                 relative_path: relative_path.to_string(),
-                url: format!("https://github.com/{}/{}", &user, &repo),
+                user: user.clone(),
+                repo: repo.clone(),
+                version: project_config.version.clone(),
+            })
+        }
+        Repository::GitLab { user, repo } => {
+            let relative_path = module
+                .path
+                .strip_prefix(&project_root)
+                .map(|path| path.to_str())
+                .unwrap_or_default()
+                .unwrap_or_default();
+
+            let codespan_file = codespan_reporting::files::SimpleFile::new(
+                module.name.join("/"),
+                module.src.clone(),
+            );
+
+            Box::new(GitLabSourceLinks {
+                codespan_file,
+                relative_path: relative_path.to_string(),
+                user: user.clone(),
+                repo: repo.clone(),
+                version: project_config.version.clone(),
+            })
+        }
+        Repository::BitBucket { user, repo } => {
+            let relative_path = module
+                .path
+                .strip_prefix(&project_root)
+                .map(|path| path.to_str())
+                .unwrap_or_default()
+                .unwrap_or_default();
+
+            let codespan_file = codespan_reporting::files::SimpleFile::new(
+                module.name.join("/"),
+                module.src.clone(),
+            );
+
+            Box::new(BitBucketSourceLinks {
+                codespan_file,
+                relative_path: relative_path.to_string(),
+                user: user.clone(),
+                repo: repo.clone(),
                 version: project_config.version.clone(),
             })
         }

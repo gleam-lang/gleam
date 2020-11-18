@@ -38,7 +38,9 @@ impl Default for BuildTool {
 #[serde(tag = "type")]
 pub enum Repository {
     GitHub { user: String, repo: String },
-    Other { url: String },
+    GitLab { user: String, repo: String },
+    BitBucket { user: String, repo: String },
+    Custom { url: String },
     None,
 }
 
