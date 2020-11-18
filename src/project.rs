@@ -235,26 +235,30 @@ fn check_app_file_version_matches(
     app_src_path.push("src");
     app_src_path.push(format!("{}.app.src", &project_config.name));
 
-    let contents = std::fs::read_to_string(&app_src_path)
-        .map_err(|err| Error::FileIO {
-            action: FileIOAction::Read,
-            kind: FileKind::File,
-            err: Some(err.to_string()),
-            path: app_src_path.clone(),
-        })?
+    let re =
+        Regex::new("\\{ *vsn *, *\"([^\"]*)\" *\\}").gleam_expect("Could not compile vsn regex");
+
+    std::fs::read_to_string(&app_src_path)
         // Remove all new lines so we can regex easily across the content
-        .replace("\n", "");
-
-    // Search for the vsn line & extract the text in double quotes
-    let re = Regex::new("\\{ *vsn *, *\"([^\"]*)\" *\\}").unwrap();
-    let caps = re.captures(&contents).unwrap();
-
-    if caps.get(1).unwrap().as_str() == project_config.version {
-        Ok(())
-    } else {
-        Err(Error::VersionDoesNotMatch {
-            toml_ver: project_config.version.clone(),
-            app_ver: caps.get(1).unwrap().as_str().to_string(),
+        .map(|contents| contents.replace("\n", ""))
+        .ok()
+        .and_then(|contents| {
+            // Extract the vsn if we can
+            re.captures(&contents)
+                .and_then(|captures| captures.get(1))
+                .map(|capture| capture.as_str().to_string())
         })
-    }
+        .map(|version| {
+            if version == project_config.version {
+                Ok(())
+            } else {
+                // Error if we've found the version and it doesn't match
+                Err(Error::VersionDoesNotMatch {
+                    toml_ver: project_config.version.clone(),
+                    app_ver: version.to_string(),
+                })
+            }
+        })
+        // Don't mind if we never found the version
+        .unwrap_or(Ok(()))
 }
