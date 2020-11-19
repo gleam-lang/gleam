@@ -4,7 +4,7 @@ use crate::{
     project::Analysed,
 };
 use codespan_reporting::files::Files;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub trait SourceLinks {
     fn url(&self, location: &SrcSpan) -> Option<String>;
@@ -31,16 +31,7 @@ struct GitHubSourceLinks {
 
 impl SourceLinks for GitHubSourceLinks {
     fn url(&self, location: &SrcSpan) -> Option<String> {
-        let start_line = self
-            .codespan_file
-            .line_index((), location.start)
-            .unwrap_or_default()
-            + 1;
-        let end_line = self
-            .codespan_file
-            .line_index((), location.end)
-            .unwrap_or_default()
-            + 1;
+        let (start_line, end_line) = get_lines(&self.codespan_file, location);
         Some(format!(
             "https://github.com/{}/{}/blob/{}/{}#L{}-L{}",
             &self.user, &self.repo, &self.version, &self.relative_path, start_line, end_line,
@@ -60,16 +51,7 @@ struct GitLabSourceLinks {
 
 impl SourceLinks for GitLabSourceLinks {
     fn url(&self, location: &SrcSpan) -> Option<String> {
-        let start_line = self
-            .codespan_file
-            .line_index((), location.start)
-            .unwrap_or_default()
-            + 1;
-        let end_line = self
-            .codespan_file
-            .line_index((), location.end)
-            .unwrap_or_default()
-            + 1;
+        let (start_line, end_line) = get_lines(&self.codespan_file, location);
         Some(format!(
             "https://gitlab.com/{}/{}/-/blob/{}/{}#L{}-{}",
             &self.user, &self.repo, &self.version, &self.relative_path, start_line, end_line,
@@ -89,21 +71,28 @@ struct BitBucketSourceLinks {
 
 impl SourceLinks for BitBucketSourceLinks {
     fn url(&self, location: &SrcSpan) -> Option<String> {
-        let start_line = self
-            .codespan_file
-            .line_index((), location.start)
-            .unwrap_or_default()
-            + 1;
-        let end_line = self
-            .codespan_file
-            .line_index((), location.end)
-            .unwrap_or_default()
-            + 1;
+        let (start_line, end_line) = get_lines(&self.codespan_file, location);
         Some(format!(
             "https://bitbucket.com/{}/{}/src/{}/{}#lines-{}:{}",
             &self.user, &self.repo, &self.version, &self.relative_path, start_line, end_line,
         ))
     }
+}
+
+fn get_lines(
+    codespan_file: &codespan_reporting::files::SimpleFile<String, String>,
+    location: &SrcSpan,
+) -> (usize, usize) {
+    let start_line = codespan_file
+        .line_index((), location.start)
+        .unwrap_or_default()
+        + 1;
+    let end_line = codespan_file
+        .line_index((), location.end)
+        .unwrap_or_default()
+        + 1;
+
+    (start_line, end_line)
 }
 
 pub fn build(
@@ -113,13 +102,6 @@ pub fn build(
 ) -> Box<dyn SourceLinks> {
     match &project_config.repository {
         Repository::GitHub { user, repo } => {
-            let relative_path = module
-                .path
-                .strip_prefix(&project_root)
-                .map(|path| path.to_str())
-                .unwrap_or_default()
-                .unwrap_or_default();
-
             let codespan_file = codespan_reporting::files::SimpleFile::new(
                 module.name.join("/"),
                 module.src.clone(),
@@ -127,20 +109,13 @@ pub fn build(
 
             Box::new(GitHubSourceLinks {
                 codespan_file,
-                relative_path: relative_path.to_string(),
+                relative_path: get_relative_path(project_root, &module.path),
                 user: user.clone(),
                 repo: repo.clone(),
                 version: project_config.version.clone(),
             })
         }
         Repository::GitLab { user, repo } => {
-            let relative_path = module
-                .path
-                .strip_prefix(&project_root)
-                .map(|path| path.to_str())
-                .unwrap_or_default()
-                .unwrap_or_default();
-
             let codespan_file = codespan_reporting::files::SimpleFile::new(
                 module.name.join("/"),
                 module.src.clone(),
@@ -148,20 +123,13 @@ pub fn build(
 
             Box::new(GitLabSourceLinks {
                 codespan_file,
-                relative_path: relative_path.to_string(),
+                relative_path: get_relative_path(project_root, &module.path),
                 user: user.clone(),
                 repo: repo.clone(),
                 version: project_config.version.clone(),
             })
         }
         Repository::BitBucket { user, repo } => {
-            let relative_path = module
-                .path
-                .strip_prefix(&project_root)
-                .map(|path| path.to_str())
-                .unwrap_or_default()
-                .unwrap_or_default();
-
             let codespan_file = codespan_reporting::files::SimpleFile::new(
                 module.name.join("/"),
                 module.src.clone(),
@@ -169,7 +137,7 @@ pub fn build(
 
             Box::new(BitBucketSourceLinks {
                 codespan_file,
-                relative_path: relative_path.to_string(),
+                relative_path: get_relative_path(project_root, &module.path),
                 user: user.clone(),
                 repo: repo.clone(),
                 version: project_config.version.clone(),
@@ -179,4 +147,12 @@ pub fn build(
         // can't generate source code links
         _ => Box::new(NoSourceLinks {}),
     }
+}
+
+fn get_relative_path(project_root: impl AsRef<Path>, path: &PathBuf) -> String {
+    path.strip_prefix(&project_root)
+        .map(|path| path.to_str())
+        .unwrap_or_default()
+        .unwrap_or_default()
+        .to_string()
 }
