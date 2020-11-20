@@ -263,7 +263,7 @@ Please try again with a different project name.",
                                 "a reserved word in Gleam.",
                             InvalidProjectNameReason::Format =>
                                 "does not have the correct format. Project names must start
-with a lowercase latter and may only contain lowercase letters
+with a lowercase letter and may only contain lowercase letters
 and underscores.",
                         }
                     ),
