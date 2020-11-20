@@ -148,6 +148,7 @@ p code {
   cursor: pointer;
   border: none;
   appearance: none;
+  -webkit-appearance: none;
   outline: 0px transparent;
   background-color: transparent;
   padding: 0.6rem 0.6rem;
