@@ -9,6 +9,7 @@
 - Records defined in other modules can now be used in module constants.
 - Documentation can link from functions, types & constants to their source
   code definitions on popular project hosting sites.
+- Documentation hosted on HexDocs now has a version selector.
 
 ## v0.12.1 - 2020-11-15
 
