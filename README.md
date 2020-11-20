@@ -56,6 +56,7 @@ development.
  - [Ivar Vong](https://github.com/ivarvong)
  - [James MacAulay](https://github.com/jamesmacaulay)
  - [Jechol Lee](https://github.com/jechol)
+ - [jiangplus](https://github.com/jiangplus)
  - [Joe Corkerton](https://github.com/joecorkerton)
  - [John Palgut](https://github.com/Jwsonic)
  - [José Valim](https://github.com/josevalim)
