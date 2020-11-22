@@ -1,9 +1,9 @@
 use crate::{build::Module, codegen::CodeGenerator, config::PackageConfig, erl, fs::OutputFile};
 use std::path::PathBuf;
 
-// TODO: test
 /// A code generator that creates a .hrl Erlang header file containing a record
 /// definition for each Gleam custom type with all named fields in the package.
+#[derive(Debug)]
 pub struct ErlangRecordHeaders {
     output_directory: PathBuf,
 }
@@ -18,8 +18,6 @@ impl CodeGenerator for ErlangRecordHeaders {
 }
 
 impl ErlangRecordHeaders {
-    // TODO
-    #[allow(unused)]
     pub fn new(output_directory: PathBuf) -> Self {
         Self { output_directory }
     }

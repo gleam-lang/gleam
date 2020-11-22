@@ -2,8 +2,8 @@ use crate::{build::Module, codegen::CodeGenerator, config::PackageConfig, fs::Ou
 use itertools::Itertools;
 use std::path::PathBuf;
 
-// TODO: test
 /// A code generator that creates a .app Erlang application file for the package
+#[derive(Debug)]
 pub struct ErlangApp {
     output_directory: PathBuf,
 }
@@ -49,8 +49,6 @@ impl CodeGenerator for ErlangApp {
 }
 
 impl ErlangApp {
-    // TODO
-    #[allow(unused)]
     pub fn new(output_directory: PathBuf) -> Self {
         Self { output_directory }
     }

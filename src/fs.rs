@@ -84,7 +84,7 @@ pub fn write_output(file: &OutputFile) -> Result<(), Error> {
     Ok(())
 }
 
-fn is_gleam_path(path: &PathBuf, dir: &PathBuf) -> bool {
+fn is_gleam_path(path: &PathBuf, dir: impl AsRef<Path>) -> bool {
     use regex::Regex;
     lazy_static! {
         static ref RE: Regex = Regex::new(
@@ -129,8 +129,8 @@ fn is_gleam_path_test() {
     ));
 }
 
-pub fn gleam_files(dir: &PathBuf) -> impl Iterator<Item = PathBuf> + '_ {
-    walkdir::WalkDir::new(dir.clone())
+pub fn gleam_files(dir: &Path) -> impl Iterator<Item = PathBuf> + '_ {
+    walkdir::WalkDir::new(dir)
         .follow_links(true)
         .into_iter()
         .filter_map(Result::ok)

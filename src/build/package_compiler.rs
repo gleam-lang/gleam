@@ -1,37 +1,40 @@
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
-    build::{
-        dep_tree, erlang_code_generator::ErlangCodeGenerator, project_root::ProjectRoot, Module,
-        Origin, Package,
-    },
+    build::{dep_tree, project_root::ProjectRoot, Module, Origin, Package},
+    codegen::CodeGenerator,
     config::PackageConfig,
     error::{self, Error, GleamExpect},
     grammar, parser, typ,
     warning::Warning,
 };
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
-pub struct PackageCompiler<'a> {
-    pub root: &'a ProjectRoot,
+pub struct PackageCompiler {
     pub config: PackageConfig,
     pub sources: Vec<Source>,
     pub print_progress: bool,
+    pub code_generators: Vec<Box<dyn CodeGenerator>>,
 }
 
 // TODO: ensure this is not a duplicate module
 // TODO: tests
 // Including cases for:
 // - modules that don't import anything
-impl<'a> PackageCompiler<'a> {
-    pub fn new(root: &'a ProjectRoot, config: PackageConfig) -> Self {
+impl PackageCompiler {
+    pub fn new(config: PackageConfig) -> Self {
         Self {
-            root,
             config,
             sources: vec![],
             print_progress: true,
+            code_generators: vec![],
         }
+    }
+
+    pub fn with_code_generator(mut self, code_generator: Box<dyn CodeGenerator>) -> Self {
+        self.code_generators.push(code_generator);
+        self
     }
 
     pub fn compile(
@@ -42,12 +45,18 @@ impl<'a> PackageCompiler<'a> {
         if self.print_progress {
             crate::cli::print_compiling(self.config.name.as_str());
         }
+        let Self {
+            sources,
+            code_generators,
+            config,
+            ..
+        } = self;
 
-        let span = tracing::info_span!("compile", package = self.config.name.as_str());
+        let span = tracing::info_span!("compile", package = config.name.as_str());
         let _enter = span.enter();
 
         tracing::info!("Parsing source code");
-        let parsed_modules = parse_sources(self.sources, already_defined_modules)?;
+        let parsed_modules = parse_sources(sources, already_defined_modules)?;
 
         // Determine order in which modules are to be processed
         let sequence =
@@ -58,27 +67,30 @@ impl<'a> PackageCompiler<'a> {
         let modules = type_check(sequence, parsed_modules, existing_modules)?;
 
         tracing::info!("Generating Erlang source code");
-        let outputs =
-            ErlangCodeGenerator::new(&self.root, &self.config, modules.as_slice()).render();
+        let outputs = code_generators
+            .iter()
+            .flat_map(|code_generator| code_generator.render(&config, modules.as_slice()))
+            .collect();
 
         Ok(Package {
-            config: self.config,
+            config,
             modules,
             outputs,
         })
     }
 
-    pub fn read_package_source_files(&mut self, origin: Origin) -> Result<(), Error> {
+    pub fn read_package_source_files(
+        &mut self,
+        package_path: &Path,
+        origin: Origin,
+    ) -> Result<(), Error> {
         let span =
             tracing::info_span!("load", package = self.config.name.as_str(), origin = ?origin);
         let _enter = span.enter();
 
         tracing::info!("Reading source code");
-        let package_path = self
-            .root
-            .default_build_lib_package_source_path(&self.config.name, origin);
-        for path in crate::fs::gleam_files(&package_path) {
-            let name = module_name(&package_path, &path);
+        for path in crate::fs::gleam_files(package_path) {
+            let name = module_name(package_path, &path);
             let code = crate::fs::read(&path)?;
             self.sources.push(Source {
                 name,
@@ -219,7 +231,7 @@ fn parse_source(src: &str, name: &str, path: &PathBuf) -> Result<UntypedModule, 
     Ok(module)
 }
 
-fn module_name(package_path: &PathBuf, full_module_path: &PathBuf) -> String {
+fn module_name(package_path: &Path, full_module_path: &Path) -> String {
     // /path/to/project/_build/default/lib/the_package/src/my/module.gleam
 
     // my/module.gleam
