@@ -15,7 +15,6 @@
 // - no Erlang generation
 
 mod dep_tree;
-mod erlang_code_generator;
 mod package_compiler;
 mod project_compiler;
 pub mod project_root;
@@ -25,10 +24,7 @@ mod package_compilation_tests;
 
 use crate::{
     ast::TypedModule,
-    build::{
-        erlang_code_generator::ErlangCodeGenerator, project_compiler::ProjectCompiler,
-        project_root::ProjectRoot,
-    },
+    build::{project_compiler::ProjectCompiler, project_root::ProjectRoot},
     config::{self, PackageConfig},
     erl,
     error::{Error, FileIOAction, FileKind, GleamExpect},

@@ -2,6 +2,7 @@ use crate::{
     build::{
         dep_tree, package_compiler::PackageCompiler, project_root::ProjectRoot, Origin, Package,
     },
+    codegen::{ErlangApp, ErlangModules, ErlangRecordHeaders},
     config::PackageConfig,
     error::{Error, GleamExpect},
     typ,
@@ -41,7 +42,7 @@ impl<'a> ProjectCompiler<'a> {
 
     pub fn compile(mut self) -> Result<HashMap<String, Package>, Error> {
         // Determine package processing order
-        let sequence = order_packges(&self.configs)?;
+        let sequence = order_packages(&self.configs)?;
 
         // Read and type check deps packages
         for name in sequence.into_iter() {
@@ -66,12 +67,27 @@ impl<'a> ProjectCompiler<'a> {
         config: PackageConfig,
         locations: SourceLocations,
     ) -> Result<(), Error> {
-        let mut compiler = PackageCompiler::new(self.root, config);
+        let codegen_app =
+            ErlangApp::new(self.root.default_build_lib_package_ebin_path(&config.name));
+        let codegen_records =
+            ErlangRecordHeaders::new(self.root.default_build_lib_package_src_path(&config.name));
+        let codegen_modules =
+            ErlangModules::new(self.root.default_build_lib_package_src_path(&config.name));
+        let mut compiler = PackageCompiler::new(config)
+            .with_code_generator(Box::new(codegen_app))
+            .with_code_generator(Box::new(codegen_records))
+            .with_code_generator(Box::new(codegen_modules));
 
         // Read source files
-        compiler.read_package_source_files(Origin::Src)?;
+        compiler.read_package_source_files(
+            &self.root.default_build_lib_package_src_path(&name),
+            Origin::Src,
+        )?;
         if locations == SourceLocations::SrcAndTest {
-            compiler.read_package_source_files(Origin::Test)?;
+            compiler.read_package_source_files(
+                &self.root.default_build_lib_package_test_path(&name),
+                Origin::Test,
+            )?;
         }
 
         // Parse and type check
@@ -87,7 +103,7 @@ enum SourceLocations {
     SrcAndTest,
 }
 
-fn order_packges(configs: &HashMap<String, PackageConfig>) -> Result<Vec<String>, Error> {
+fn order_packages(configs: &HashMap<String, PackageConfig>) -> Result<Vec<String>, Error> {
     dep_tree::toposort_deps(configs.values().map(package_deps_for_graph).collect())
         .map_err(convert_deps_tree_error)
 }

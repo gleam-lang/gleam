@@ -1,9 +1,9 @@
 use crate::{build::Module, codegen::CodeGenerator, config::PackageConfig, erl, fs::OutputFile};
 use std::path::PathBuf;
 
-// TODO: test
 /// A code generator that creates a .erl Erlang module for each Gleam module in
 /// the package.
+#[derive(Debug)]
 pub struct ErlangModules {
     output_directory: PathBuf,
 }
@@ -18,8 +18,6 @@ impl CodeGenerator for ErlangModules {
 }
 
 impl ErlangModules {
-    // TODO
-    #[allow(unused)]
     pub fn new(output_directory: PathBuf) -> Self {
         Self { output_directory }
     }

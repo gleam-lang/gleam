@@ -6,6 +6,7 @@ use crate::{
         project_root::ProjectRoot,
         Origin,
     },
+    codegen::{ErlangApp, ErlangModules, ErlangRecordHeaders},
     config::{BuildTool, Docs, PackageConfig, Repository},
     erl, typ,
 };
@@ -24,8 +25,16 @@ macro_rules! assert_erlang_compile {
             otp_start_module: None,
             tool: BuildTool::Gleam,
         };
-        let root = ProjectRoot::new(PathBuf::new());
-        let mut compiler = PackageCompiler::new(&root, config);
+        // TODO: add codegen
+        let codegen_app = ErlangApp::new(PathBuf::from("_build/default/lib/the_package/ebin"));
+        let codegen_records =
+            ErlangRecordHeaders::new(PathBuf::from("_build/default/lib/the_package/src"));
+        let codegen_modules =
+            ErlangModules::new(PathBuf::from("_build/default/lib/the_package/src"));
+        let mut compiler = PackageCompiler::new(config)
+            .with_code_generator(Box::new(codegen_app))
+            .with_code_generator(Box::new(codegen_records))
+            .with_code_generator(Box::new(codegen_modules));
         compiler.sources = $sources;
         compiler.print_progress = false;
         let outputs = compiler
@@ -105,7 +114,7 @@ fn package_compiler_test() {
         vec![Source {
             name: "one".to_string(),
             origin: Origin::Src,
-            path: PathBuf::from("test/one.gleam"),
+            path: PathBuf::from("src/one.gleam"),
             code: "".to_string(),
         }],
         Ok(vec![
@@ -247,11 +256,11 @@ unbox(X) ->\n    {box, I} = X,\n    I.\n"
         Ok(vec![
             package_app_file(&["one", "two"]),
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/test/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
                 text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/test/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
                 text: "-module(two).\n-compile(no_auto_import).\n\n-export([box/1]).\n
 box(X) ->\n    {box, X}.\n"
                     .to_string(),
@@ -1225,7 +1234,15 @@ fn config_compilation_test() {
         ($config:expr, $sources:expr, $expected_output:expr $(,)?) => {
             let mut modules = HashMap::new();
             let root = ProjectRoot::new(PathBuf::new());
-            let mut compiler = PackageCompiler::new(&root, $config);
+            let codegen_app = ErlangApp::new(PathBuf::from("_build/default/lib/the_package/ebin"));
+            let codegen_records =
+                ErlangRecordHeaders::new(PathBuf::from("_build/default/lib/the_package/src"));
+            let codegen_modules =
+                ErlangModules::new(PathBuf::from("_build/default/lib/the_package/src"));
+            let mut compiler = PackageCompiler::new($config)
+                .with_code_generator(Box::new(codegen_app))
+                .with_code_generator(Box::new(codegen_records))
+                .with_code_generator(Box::new(codegen_modules));
             compiler.print_progress = false;
             compiler.sources = $sources;
             let outputs = compiler
