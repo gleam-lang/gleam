@@ -25,7 +25,6 @@ macro_rules! assert_erlang_compile {
             otp_start_module: None,
             tool: BuildTool::Gleam,
         };
-        // TODO: add codegen
         let codegen_app = ErlangApp::new(PathBuf::from("_build/default/lib/the_package/ebin"));
         let codegen_records =
             ErlangRecordHeaders::new(PathBuf::from("_build/default/lib/the_package/src"));
