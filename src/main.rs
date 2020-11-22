@@ -45,6 +45,7 @@ mod ast;
 mod bit_string;
 mod build;
 mod cli;
+mod codegen;
 mod config;
 mod diagnostic;
 mod docs;
