@@ -35,7 +35,7 @@ impl Default for BuildTool {
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
-#[serde(tag = "type")]
+#[serde(tag = "type", rename_all = "lowercase")]
 pub enum Repository {
     GitHub { user: String, repo: String },
     GitLab { user: String, repo: String },
