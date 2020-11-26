@@ -20,7 +20,7 @@ fn imports() {
     assert_format!("import one\n");
     assert_format!("import one\nimport two\n");
     assert_format!("import one/two/three\n");
-    assert_format!("import one/two/three\nimport four/five\n");
+    assert_format!("import four/five\nimport one/two/three\n");
     assert_format!("import one.{fun, fun2, fun3}\n");
     assert_format!("import one.{One, Two, fun1, fun2}\n");
     assert_format!("import one.{main as entrypoint}\n");
@@ -41,14 +41,31 @@ fn imports() {
 }
 "
     );
+    assert_format_rewrite!(
+        "// comment for b_module
+import b_module
+// two lines of
+// comments for c_module
+import c_module
+// comment for a_module
+import a_module",
+        "// comment for a_module
+import a_module
+// comment for b_module
+import b_module
+// two lines of
+// comments for c_module
+import c_module
+"
+    )
 }
 
 #[test]
 fn multiple_statements_test() {
     assert_format!(
         r#"import one
-import two
 import three
+import two
 
 pub external type One
 

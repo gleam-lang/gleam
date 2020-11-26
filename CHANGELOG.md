@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- gleam format now sorts imports alphabetically
 - Variable names now only have 1st letter capitalized when converted to erlang.
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.

@@ -85,11 +85,11 @@ impl<'a> Formatter<'a> {
         for statement in module.statements.iter() {
             let start = statement.location().start;
             match statement {
-                Statement::Import { .. } => {
+                Statement::Import { module, .. } => {
                     has_imports = true;
                     let comments = self.pop_comments(start);
                     let statement = self.statement(statement);
-                    imports.push(commented(statement, comments))
+                    imports.push((module, commented(statement, comments)))
                 }
 
                 _other => {
@@ -101,7 +101,8 @@ impl<'a> Formatter<'a> {
             }
         }
 
-        let imports = concat(imports.into_iter().intersperse(line()));
+        imports.sort_by(|(mod_l, _), (mod_r, _)| mod_l.cmp(mod_r));
+        let imports = concat(imports.into_iter().map(|(_, doc)| doc).intersperse(line()));
         let declarations = concat(declarations.into_iter().intersperse(lines(2)));
 
         let sep = if has_imports && has_declarations {
