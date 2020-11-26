@@ -79,5 +79,6 @@ development.
  - [Sean Jensen-Grey](https://github.com/seanjensengrey)
  - [Shritesh Bhattarai](https://github.com/shritesh)
  - [Tomochika Hara](https://github.com/thara)
+ - [Topher Hunt](https://github.com/topherhunt)
  - [Tristan Sloughter](https://github.com/tsloughter)
  - [Wojtek Mach](https://github.com/wojtekmach)
