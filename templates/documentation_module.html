@@ -48,7 +48,7 @@
         </a>
       </h2>
       {% if !typ.source_url.is_empty() %}
-      <a href="{{ typ.source_url }}">
+      <a href="{{ typ.source_url|safe }}">
         &lt;/&gt;
       </a>
       {% endif %}
@@ -90,7 +90,7 @@
         </a>
       </h2>
       {% if !constant.source_url.is_empty() %}
-      <a href="{{ constant.source_url }}">
+      <a href="{{ constant.source_url|safe }}">
         &lt;/&gt;
       </a>
       {% endif %}
@@ -116,7 +116,7 @@
         </a>
       </h2>
       {% if !function.source_url.is_empty() %}
-      <a href="{{ function.source_url }}">
+      <a href="{{ function.source_url|safe }}">
         &lt;/&gt;
       </a>
       {% endif %}
