@@ -42,6 +42,7 @@
 )]
 
 mod ast;
+mod bindata_capnp;
 mod bit_string;
 mod build;
 mod cli;
