@@ -192,6 +192,7 @@ pub struct AccessorsMap {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct RecordAccessor {
+    // TODO: smaller int. Doesn't need to be this big
     pub index: u64,
     pub label: String,
     pub typ: Arc<Type>,

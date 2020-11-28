@@ -27,9 +27,10 @@ codespan-reporting = "0.9"
 termcolor = "1.0"
 # Initialize complex static values at runtime
 lazy_static = "1.3"
-# toml parsing
+# Data (de)serialisation
 serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
+# toml config file parsing
 toml = "0.5"
 # Levenshtein string distance for typo suggestions
 strsim = "0.10"
@@ -64,9 +65,15 @@ fs_extra = "1.1"
 # Logging
 tracing = "0.1"
 tracing-subscriber = "0.2"
+# Cap'n Proto binary format runtime
+capnp = "0.13.6"
 
 [build-dependencies]
+# Data (de)serialisation
 serde_derive = "1.0"
+# Cap'n Proto binary format codegen
+capnpc = "0.13.1"
+# Parser generator
 lalrpop = { version = "0.19", features = ["lexer"] }
 
 [dev-dependencies]
