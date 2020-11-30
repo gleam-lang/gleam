@@ -33,7 +33,7 @@ impl SourceLinks for GitHubSourceLinks {
     fn url(&self, location: &SrcSpan) -> Option<String> {
         let (start_line, end_line) = get_lines(&self.codespan_file, location);
         Some(format!(
-            "https://github.com/{}/{}/blob/{}/{}#L{}-L{}",
+            "https://github.com/{}/{}/blob/v{}/{}#L{}-L{}",
             &self.user, &self.repo, &self.version, &self.relative_path, start_line, end_line,
         ))
     }
@@ -53,7 +53,7 @@ impl SourceLinks for GitLabSourceLinks {
     fn url(&self, location: &SrcSpan) -> Option<String> {
         let (start_line, end_line) = get_lines(&self.codespan_file, location);
         Some(format!(
-            "https://gitlab.com/{}/{}/-/blob/{}/{}#L{}-{}",
+            "https://gitlab.com/{}/{}/-/blob/v{}/{}#L{}-{}",
             &self.user, &self.repo, &self.version, &self.relative_path, start_line, end_line,
         ))
     }
@@ -73,7 +73,7 @@ impl SourceLinks for BitBucketSourceLinks {
     fn url(&self, location: &SrcSpan) -> Option<String> {
         let (start_line, end_line) = get_lines(&self.codespan_file, location);
         Some(format!(
-            "https://bitbucket.com/{}/{}/src/{}/{}#lines-{}:{}",
+            "https://bitbucket.com/{}/{}/src/v{}/{}#lines-{}:{}",
             &self.user, &self.repo, &self.version, &self.relative_path, start_line, end_line,
         ))
     }
