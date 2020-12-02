@@ -10,6 +10,7 @@
 - Documentation can link from functions, types & constants to their source
   code definitions on popular project hosting sites.
 - Documentation hosted on HexDocs now has a version selector.
+- Fixed a bug where the `app` project template rendered invalid code.
 
 ## v0.12.1 - 2020-11-15
 

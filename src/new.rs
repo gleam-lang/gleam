@@ -214,25 +214,25 @@ fn app_src(name: &str, description: &str, is_application: bool) -> String {
 }
 
 fn src_app() -> String {
-    r#"import gleam/otp/supervisor.{{ApplicationStartMode, ErlangStartResult}}
-import gleam/dynamic.{{Dynamic}}
+    r#"import gleam/otp/supervisor.{ApplicationStartMode, ErlangStartResult}
+import gleam/dynamic.{Dynamic}
 
-fn init(children) {{
+fn init(children) {
   children
-}}
+}
 
 pub fn start(
   _mode: ApplicationStartMode,
   _args: List(Dynamic),
-) -> ErlangStartResult {{
+) -> ErlangStartResult {
   init
   |> supervisor.start
   |> supervisor.to_erlang_start_result
-}}
+}
 
-pub fn stop(_state: Dynamic) {{
+pub fn stop(_state: Dynamic) {
   supervisor.application_stopped()
-}}
+}
 "#
     .to_string()
 }
