@@ -210,7 +210,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         left: UntypedExpr,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, &location)?;
+        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, location)?;
         let fun = TypedExpr::Call {
             location,
             typ,
@@ -219,10 +219,10 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         };
         let args = vec![CallArg {
             label: None,
-            location: left.location().clone(),
+            location: left.location(),
             value: left,
         }];
-        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, &location)?;
+        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, location)?;
         Ok(TypedExpr::Call {
             location,
             typ,
@@ -238,18 +238,18 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         args: Vec<CallArg<UntypedExpr>>,
         left: UntypedExpr,
     ) -> Result<TypedExpr, Error> {
-        let location = left.location().clone();
+        let location = left.location();
         let mut new_args = Vec::with_capacity(args.len() + 1);
         new_args.push(CallArg {
             label: None,
-            location: left.location().clone(),
+            location,
             value: left,
         });
         for arg in args {
             new_args.push(arg.clone());
         }
 
-        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, new_args, &location)?;
+        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, new_args, location)?;
         Ok(TypedExpr::Call {
             location,
             typ,
@@ -273,7 +273,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             retrn: typ.clone(),
         });
         self.unify(right.typ(), fn_typ)
-            .map_err(|e| convert_unify_error(e, &location))?;
+            .map_err(|e| convert_unify_error(e, location))?;
 
         Ok(TypedExpr::Pipe {
             location,
@@ -337,7 +337,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 self.environment
                     .warnings
                     .push(Warning::ImplicitlyDiscardedResult {
-                        location: first.location().clone(),
+                        location: first.location(),
                     });
             }
 
@@ -397,7 +397,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         args: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        let (fun, args, typ) = self.do_infer_call(fun, args, &location)?;
+        let (fun, args, typ) = self.do_infer_call(fun, args, location)?;
         Ok(TypedExpr::Call {
             location,
             typ,
@@ -415,7 +415,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         let head = self.infer(head)?;
         let tail = self.infer(tail)?;
         self.unify(tail.typ(), list(head.typ()))
-            .map_err(|e| convert_unify_error(e, &location))?;
+            .map_err(|e| convert_unify_error(e, location))?;
 
         Ok(TypedExpr::ListCons {
             location,
@@ -458,7 +458,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
     ) -> Result<TypedExpr, Error> {
         // Attempt to infer the container as a record access. If that fails, we may be shadowing the name
         // of an imported module, so attempt to infer the container as a module access.
-        match self.infer_record_access(container.clone(), label.clone(), access_location.clone()) {
+        match self.infer_record_access(container.clone(), label.clone(), access_location) {
             Ok(record_access) => Ok(record_access),
             Err(err) => match container {
                 UntypedExpr::Var { name, location, .. } => {
@@ -506,11 +506,11 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             }
 
             typ if typ.is_unbound() => Err(Error::NotATupleUnbound {
-                location: tuple.location().clone(),
+                location: tuple.location(),
             }),
 
             _ => Err(Error::NotATuple {
-                location: tuple.location().clone(),
+                location: tuple.location(),
                 given: tuple.typ(),
             }),
         }
@@ -884,11 +884,11 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                     }
 
                     typ if typ.is_unbound() => Err(Error::NotATupleUnbound {
-                        location: tuple.location().clone(),
+                        location: tuple.location(),
                     }),
 
                     _ => Err(Error::NotATuple {
-                        location: tuple.location().clone(),
+                        location: tuple.location(),
                         given: tuple.typ(),
                     }),
                 }
@@ -941,7 +941,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 let left = self.infer_clause_guard(*left)?;
                 let right = self.infer_clause_guard(*right)?;
                 self.unify(left.typ(), right.typ())
-                    .map_err(|e| convert_unify_error(e, &location))?;
+                    .map_err(|e| convert_unify_error(e, location))?;
                 Ok(ClauseGuard::Equals {
                     location,
                     left: Box::new(left),
@@ -958,7 +958,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 let left = self.infer_clause_guard(*left)?;
                 let right = self.infer_clause_guard(*right)?;
                 self.unify(left.typ(), right.typ())
-                    .map_err(|e| convert_unify_error(e, &location))?;
+                    .map_err(|e| convert_unify_error(e, location))?;
                 Ok(ClauseGuard::NotEquals {
                     location,
                     left: Box::new(left),
@@ -1138,7 +1138,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 .get(&*module_alias)
                 .ok_or_else(|| Error::UnknownModule {
                     name: module_alias.to_string(),
-                    location: module_location.clone(),
+                    location: *module_location,
                     imported_modules: self
                         .environment
                         .imported_modules
@@ -1154,7 +1154,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                     .get(&label)
                     .ok_or_else(|| Error::UnknownModuleValue {
                         name: label.clone(),
-                        location: select_location.clone(),
+                        location: select_location,
                         module_name: module_info.1.name.clone(),
                         value_constructors: module_info
                             .1
@@ -1200,7 +1200,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         // If we don't yet know the type of the record then we cannot use any accessors
         if record.typ().is_unbound() {
             return Err(Error::RecordAccessUnknownType {
-                location: record.location().clone(),
+                location: record.location(),
             });
         }
 
@@ -1278,7 +1278,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
 
             constructor => {
                 return Err(Error::RecordUpdateInvalidConstructor {
-                    location: constructor.location().clone(),
+                    location: constructor.location(),
                 })
             }
         };
@@ -1286,7 +1286,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         let value_constructor = self
             .environment
             .get_value_constructor(module.as_ref(), &name)
-            .map_err(|e| convert_get_value_constructor_error(e, &location))?
+            .map_err(|e| convert_get_value_constructor_error(e, location))?
             .clone();
 
         if let ValueConstructor {
@@ -1366,7 +1366,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         };
 
         Err(Error::RecordUpdateInvalidConstructor {
-            location: constructor.location().clone(),
+            location: constructor.location(),
         })
     }
 
@@ -1578,10 +1578,10 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 // Potentially this could be improved later
                 match self
                     .get_field_map(&fun)
-                    .map_err(|e| convert_get_value_constructor_error(e, &location))?
+                    .map_err(|e| convert_get_value_constructor_error(e, location))?
                 {
                     // The fun has a field map so labelled arguments may be present and need to be reordered.
-                    Some(field_map) => field_map.reorder(&mut args, &location)?,
+                    Some(field_map) => field_map.reorder(&mut args, location)?,
 
                     // The fun has no field map and so we error if arguments have been labelled
                     None => assert_no_labelled_arguments(&args)?,
@@ -1589,7 +1589,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
 
                 let (mut args_types, return_type) =
                     match_fun_type(fun.typ(), args.len(), self.environment)
-                        .map_err(|e| convert_not_fun_error(e, fun.location(), &location))?;
+                        .map_err(|e| convert_not_fun_error(e, fun.location(), location))?;
                 let args = args_types
                     .iter_mut()
                     .zip(args)
@@ -1694,7 +1694,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         &mut self,
         fun: UntypedExpr,
         args: Vec<CallArg<UntypedExpr>>,
-        location: &SrcSpan,
+        location: SrcSpan,
     ) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
         let fun = self.infer(fun)?;
         let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, location)?;
@@ -1705,7 +1705,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         &mut self,
         fun: TypedExpr,
         mut args: Vec<CallArg<UntypedExpr>>,
-        location: &SrcSpan,
+        location: SrcSpan,
     ) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
         // Check to see if the function accepts labelled arguments
         match self

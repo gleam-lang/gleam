@@ -427,7 +427,7 @@ fn assert_unique_value_name<'a>(
     match names.insert(name, location) {
         Some(previous_location) => Err(Error::DuplicateName {
             name: name.to_string(),
-            previous_location: previous_location.clone(),
+            previous_location: *previous_location,
             location: *location,
         }),
         None => Ok(()),
@@ -442,7 +442,7 @@ fn assert_unique_type_name<'a>(
     match names.insert(name, location) {
         Some(previous_location) => Err(Error::DuplicateTypeName {
             name: name.to_string(),
-            previous_location: previous_location.clone(),
+            previous_location: *previous_location,
             location: *location,
         }),
         None => Ok(()),
@@ -639,7 +639,7 @@ fn register_values<'a>(
                         ValueConstructor {
                             public: *public,
                             typ: typ.clone(),
-                            origin: constructor.location.clone(),
+                            origin: constructor.location,
                             variant: ValueConstructorVariant::Record {
                                 name: constructor.name.clone(),
                                 field_map: field_map.clone(),
@@ -779,7 +779,7 @@ fn infer_statement(
             // Assert that the inferred type matches the type of any recursive call
             environment
                 .unify(preregistered_type, typ.clone())
-                .map_err(|e| convert_unify_error(e, &location))?;
+                .map_err(|e| convert_unify_error(e, location))?;
 
             // Generalise the function if safe to do so
             let typ = if safe_to_generalise {
@@ -1053,7 +1053,7 @@ fn assert_no_labelled_arguments<A>(args: &[CallArg<A>]) -> Result<(), Error> {
     for arg in args {
         if let Some(label) = &arg.label {
             return Err(Error::UnexpectedLabelledArg {
-                location: arg.location.clone(),
+                location: arg.location,
                 label: label.to_string(),
             });
         }

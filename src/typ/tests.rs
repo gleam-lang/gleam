@@ -141,7 +141,7 @@ fn field_map_reorder_test() {
                 arity: self.arity,
                 fields: self.fields,
             };
-            let location = &SrcSpan { start: 0, end: 0 };
+            let location = SrcSpan { start: 0, end: 0 };
             assert_eq!(self.expected_result, fm.reorder(&mut args, location));
             assert_eq!(self.expected_args, args);
         }

@@ -496,7 +496,7 @@ pub fn make_call(
 
         // An anon function using the capture syntax run(_, 1, 2)
         1 => Ok(UntypedExpr::Fn {
-            location: call.location().clone(),
+            location: call.location(),
             is_capture: true,
             args: vec![Arg {
                 location: location(0, 0),
@@ -511,7 +511,7 @@ pub fn make_call(
         }),
 
         count => Err(Error::TooManyHolesInCapture {
-            location: call.location().clone(),
+            location: call.location(),
             count,
         }),
     }

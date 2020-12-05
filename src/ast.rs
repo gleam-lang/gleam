@@ -14,7 +14,7 @@ use std::sync::Arc;
 pub const CAPTURE_VARIABLE: &str = "gleam@capture_variable";
 
 pub trait HasLocation {
-    fn location(&self) -> &SrcSpan;
+    fn location(&self) -> SrcSpan;
 }
 
 pub type TypedModule = Module<Arc<Type>, TypedExpr, typ::Module, String>;
@@ -144,13 +144,13 @@ pub enum TypeAst {
 }
 
 impl TypeAst {
-    pub fn location(&self) -> &SrcSpan {
+    pub fn location(&self) -> SrcSpan {
         match self {
             TypeAst::Fn { location, .. }
             | TypeAst::Var { location, .. }
             | TypeAst::Hole { location, .. }
             | TypeAst::Tuple { location, .. }
-            | TypeAst::Constructor { location, .. } => location,
+            | TypeAst::Constructor { location, .. } => *location,
         }
     }
 }
@@ -478,23 +478,23 @@ pub enum ClauseGuard<Type, RecordTag> {
 }
 
 impl<A, B> ClauseGuard<A, B> {
-    pub fn location(&self) -> &SrcSpan {
+    pub fn location(&self) -> SrcSpan {
         match self {
             ClauseGuard::Constant(constant) => constant.location(),
-            ClauseGuard::Or { location, .. } => location,
-            ClauseGuard::And { location, .. } => location,
-            ClauseGuard::Var { location, .. } => location,
-            ClauseGuard::TupleIndex { location, .. } => location,
-            ClauseGuard::Equals { location, .. } => location,
-            ClauseGuard::NotEquals { location, .. } => location,
-            ClauseGuard::GtInt { location, .. } => location,
-            ClauseGuard::GtEqInt { location, .. } => location,
-            ClauseGuard::LtInt { location, .. } => location,
-            ClauseGuard::LtEqInt { location, .. } => location,
-            ClauseGuard::GtFloat { location, .. } => location,
-            ClauseGuard::GtEqFloat { location, .. } => location,
-            ClauseGuard::LtFloat { location, .. } => location,
-            ClauseGuard::LtEqFloat { location, .. } => location,
+            ClauseGuard::Or { location, .. }
+            | ClauseGuard::And { location, .. }
+            | ClauseGuard::Var { location, .. }
+            | ClauseGuard::TupleIndex { location, .. }
+            | ClauseGuard::Equals { location, .. }
+            | ClauseGuard::NotEquals { location, .. }
+            | ClauseGuard::GtInt { location, .. }
+            | ClauseGuard::GtEqInt { location, .. }
+            | ClauseGuard::LtInt { location, .. }
+            | ClauseGuard::LtEqInt { location, .. }
+            | ClauseGuard::GtFloat { location, .. }
+            | ClauseGuard::GtEqFloat { location, .. }
+            | ClauseGuard::LtFloat { location, .. }
+            | ClauseGuard::LtEqFloat { location, .. } => *location,
         }
     }
 }
@@ -600,20 +600,20 @@ pub enum Pattern<Constructor, Type> {
 }
 
 impl<A, B> Pattern<A, B> {
-    pub fn location(&self) -> &SrcSpan {
+    pub fn location(&self) -> SrcSpan {
         match self {
             Pattern::Let { pattern, .. } => pattern.location(),
-            Pattern::Int { location, .. } => location,
-            Pattern::Var { location, .. } => location,
-            Pattern::VarCall { location, .. } => location,
-            Pattern::Nil { location, .. } => location,
-            Pattern::Cons { location, .. } => location,
-            Pattern::Float { location, .. } => location,
-            Pattern::Discard { location, .. } => location,
-            Pattern::String { location, .. } => location,
-            Pattern::Tuple { location, .. } => location,
-            Pattern::Constructor { location, .. } => location,
-            Pattern::BitString { location, .. } => location,
+            Pattern::Int { location, .. }
+            | Pattern::Var { location, .. }
+            | Pattern::VarCall { location, .. }
+            | Pattern::Nil { location, .. }
+            | Pattern::Cons { location, .. }
+            | Pattern::Float { location, .. }
+            | Pattern::Discard { location, .. }
+            | Pattern::String { location, .. }
+            | Pattern::Tuple { location, .. }
+            | Pattern::Constructor { location, .. }
+            | Pattern::BitString { location, .. } => *location,
         }
     }
 
@@ -750,26 +750,26 @@ pub enum SegmentOptionCategory {
 }
 
 impl<A> BitStringSegmentOption<A> {
-    pub fn location(&self) -> &SrcSpan {
+    pub fn location(&self) -> SrcSpan {
         match self {
-            BitStringSegmentOption::Binary { location } => location,
-            BitStringSegmentOption::Integer { location } => location,
-            BitStringSegmentOption::Float { location } => location,
-            BitStringSegmentOption::BitString { location } => location,
-            BitStringSegmentOption::UTF8 { location } => location,
-            BitStringSegmentOption::UTF16 { location } => location,
-            BitStringSegmentOption::UTF32 { location } => location,
-            BitStringSegmentOption::UTF8Codepoint { location } => location,
-            BitStringSegmentOption::UTF16Codepoint { location } => location,
-            BitStringSegmentOption::UTF32Codepoint { location } => location,
-            BitStringSegmentOption::Signed { location } => location,
-            BitStringSegmentOption::Unsigned { location } => location,
-            BitStringSegmentOption::Big { location } => location,
-            BitStringSegmentOption::Little { location } => location,
-            BitStringSegmentOption::Native { location } => location,
-            BitStringSegmentOption::Size { location, .. } => location,
-            BitStringSegmentOption::Unit { location, .. } => location,
-            BitStringSegmentOption::Invalid { location, .. } => location,
+            BitStringSegmentOption::Binary { location }
+            | BitStringSegmentOption::Integer { location }
+            | BitStringSegmentOption::Float { location }
+            | BitStringSegmentOption::BitString { location }
+            | BitStringSegmentOption::UTF8 { location }
+            | BitStringSegmentOption::UTF16 { location }
+            | BitStringSegmentOption::UTF32 { location }
+            | BitStringSegmentOption::UTF8Codepoint { location }
+            | BitStringSegmentOption::UTF16Codepoint { location }
+            | BitStringSegmentOption::UTF32Codepoint { location }
+            | BitStringSegmentOption::Signed { location }
+            | BitStringSegmentOption::Unsigned { location }
+            | BitStringSegmentOption::Big { location }
+            | BitStringSegmentOption::Little { location }
+            | BitStringSegmentOption::Native { location }
+            | BitStringSegmentOption::Size { location, .. }
+            | BitStringSegmentOption::Unit { location, .. }
+            | BitStringSegmentOption::Invalid { location, .. } => *location,
         }
     }
 

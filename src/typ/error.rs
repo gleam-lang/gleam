@@ -259,11 +259,11 @@ pub enum GetValueConstructorError {
 
 pub fn convert_get_value_constructor_error(
     e: GetValueConstructorError,
-    location: &SrcSpan,
+    location: SrcSpan,
 ) -> Error {
     match e {
         GetValueConstructorError::UnknownVariable { name, variables } => Error::UnknownVariable {
-            location: *location,
+            location,
             name,
             variables,
         },
@@ -272,7 +272,7 @@ pub fn convert_get_value_constructor_error(
             name,
             imported_modules,
         } => Error::UnknownModule {
-            location: *location,
+            location,
             name,
             imported_modules,
         },
@@ -282,7 +282,7 @@ pub fn convert_get_value_constructor_error(
             module_name,
             value_constructors,
         } => Error::UnknownModuleValue {
-            location: *location,
+            location,
             name,
             module_name,
             value_constructors,
@@ -350,19 +350,19 @@ pub enum MatchFunTypeError {
 
 pub fn convert_not_fun_error(
     e: MatchFunTypeError,
-    fn_location: &SrcSpan,
-    call_location: &SrcSpan,
+    fn_location: SrcSpan,
+    call_location: SrcSpan,
 ) -> Error {
     match e {
         MatchFunTypeError::IncorrectArity { expected, given } => Error::IncorrectArity {
             labels: vec![],
-            location: call_location.clone(),
+            location: call_location,
             expected,
             given,
         },
 
         MatchFunTypeError::NotFn { typ } => Error::NotFn {
-            location: fn_location.clone(),
+            location: fn_location,
             typ,
         },
     }
@@ -470,26 +470,22 @@ pub fn convert_binary_error(e: crate::bit_string::Error, location: &SrcSpan) -> 
     }
 }
 
-pub fn convert_unify_error(e: UnifyError, location: &SrcSpan) -> Error {
+pub fn convert_unify_error(e: UnifyError, location: SrcSpan) -> Error {
     match e {
         UnifyError::CouldNotUnify { expected, given } => Error::CouldNotUnify {
-            location: *location,
+            location,
             expected,
             given,
         },
 
-        UnifyError::ExtraVarInAlternativePattern { name } => Error::ExtraVarInAlternativePattern {
-            location: *location,
-            name,
-        },
+        UnifyError::ExtraVarInAlternativePattern { name } => {
+            Error::ExtraVarInAlternativePattern { location, name }
+        }
 
-        UnifyError::DuplicateVarInPattern { name } => Error::DuplicateVarInPattern {
-            location: *location,
-            name,
-        },
+        UnifyError::DuplicateVarInPattern { name } => {
+            Error::DuplicateVarInPattern { location, name }
+        }
 
-        UnifyError::RecursiveType => Error::RecursiveType {
-            location: *location,
-        },
+        UnifyError::RecursiveType => Error::RecursiveType { location },
     }
 }

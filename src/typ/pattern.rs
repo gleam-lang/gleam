@@ -178,7 +178,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
 
             Pattern::Var { name, location } => {
                 self.insert_variable(name.as_ref(), typ)
-                    .map_err(|e| convert_unify_error(e, &location))?;
+                    .map_err(|e| convert_unify_error(e, location))?;
                 Ok(Pattern::Var { name, location })
             }
 
@@ -205,7 +205,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 );
                 self.environment
                     .unify(int(), typ.clone())
-                    .map_err(|e| convert_unify_error(e, &location))?;
+                    .map_err(|e| convert_unify_error(e, location))?;
 
                 Ok(Pattern::VarCall {
                     name,
@@ -227,21 +227,21 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
             Pattern::Int { location, value } => {
                 self.environment
                     .unify(typ, int())
-                    .map_err(|e| convert_unify_error(e, &location))?;
+                    .map_err(|e| convert_unify_error(e, location))?;
                 Ok(Pattern::Int { location, value })
             }
 
             Pattern::Float { location, value } => {
                 self.environment
                     .unify(typ, float())
-                    .map_err(|e| convert_unify_error(e, &location))?;
+                    .map_err(|e| convert_unify_error(e, location))?;
                 Ok(Pattern::Float { location, value })
             }
 
             Pattern::String { location, value } => {
                 self.environment
                     .unify(typ, string())
-                    .map_err(|e| convert_unify_error(e, &location))?;
+                    .map_err(|e| convert_unify_error(e, location))?;
                 Ok(Pattern::String { location, value })
             }
 
@@ -249,7 +249,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 let typ2 = list(self.environment.new_unbound_var(self.level));
                 self.environment
                     .unify(typ, typ2)
-                    .map_err(|e| convert_unify_error(e, &location))?;
+                    .map_err(|e| convert_unify_error(e, location))?;
                 Ok(Pattern::Nil { location })
             }
 
@@ -301,7 +301,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                         .collect();
                     self.environment
                         .unify(tuple(elems_types), typ.clone())
-                        .map_err(|e| convert_unify_error(e, &location))?;
+                        .map_err(|e| convert_unify_error(e, location))?;
                     self.unify(Pattern::Tuple { elems, location }, typ)
                 }
 
@@ -336,7 +336,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 let cons = self
                     .environment
                     .get_value_constructor(module.as_ref(), &name)
-                    .map_err(|e| convert_get_value_constructor_error(e, &location))?;
+                    .map_err(|e| convert_get_value_constructor_error(e, location))?;
 
                 match cons.field_map() {
                     // The fun has a field map so labelled arguments may be present and need to be reordered.
@@ -385,7 +385,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                             }
                         }
 
-                        field_map.reorder(&mut pattern_args, &location)?
+                        field_map.reorder(&mut pattern_args, location)?
                     }
 
                     // The fun has no field map and so we error if arguments have been labelled
@@ -432,7 +432,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                                 .collect::<Result<Vec<_>, _>>()?;
                             self.environment
                                 .unify(typ, retrn.clone())
-                                .map_err(|e| convert_unify_error(e, &location))?;
+                                .map_err(|e| convert_unify_error(e, location))?;
                             Ok(Pattern::Constructor {
                                 location,
                                 module,
@@ -455,7 +455,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                         if pattern_args.is_empty() {
                             self.environment
                                 .unify(typ, instantiated_constructor_type)
-                                .map_err(|e| convert_unify_error(e, &location))?;
+                                .map_err(|e| convert_unify_error(e, location))?;
                             Ok(Pattern::Constructor {
                                 location,
                                 module,

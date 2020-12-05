@@ -139,7 +139,7 @@ impl Hydrator {
                 {
                     environment
                         .unify(parameter.clone(), argument.clone())
-                        .map_err(|e| convert_unify_error(e, location))?;
+                        .map_err(|e| convert_unify_error(e, *location))?;
                 }
 
                 Ok(return_type)

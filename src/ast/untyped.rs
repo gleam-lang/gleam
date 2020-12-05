@@ -115,27 +115,27 @@ pub enum UntypedExpr {
 }
 
 impl UntypedExpr {
-    pub fn location(&self) -> &SrcSpan {
+    pub fn location(&self) -> SrcSpan {
         match self {
             Self::Seq { then, .. } => then.location(),
             Self::Let { then, .. } => then.location(),
             Self::Pipe { right, .. } => right.location(),
-            Self::Fn { location, .. } => location,
-            Self::Var { location, .. } => location,
-            Self::Int { location, .. } => location,
-            Self::Todo { location, .. } => location,
-            Self::Case { location, .. } => location,
-            Self::Call { location, .. } => location,
-            Self::Float { location, .. } => location,
-            Self::BinOp { location, .. } => location,
-            Self::Tuple { location, .. } => location,
-            Self::String { location, .. } => location,
-            Self::ListNil { location, .. } => location,
-            Self::ListCons { location, .. } => location,
-            Self::TupleIndex { location, .. } => location,
-            Self::FieldAccess { location, .. } => location,
-            Self::BitString { location, .. } => location,
-            Self::RecordUpdate { location, .. } => location,
+            Self::Fn { location, .. }
+            | Self::Var { location, .. }
+            | Self::Int { location, .. }
+            | Self::Todo { location, .. }
+            | Self::Case { location, .. }
+            | Self::Call { location, .. }
+            | Self::Float { location, .. }
+            | Self::BinOp { location, .. }
+            | Self::Tuple { location, .. }
+            | Self::String { location, .. }
+            | Self::ListNil { location, .. }
+            | Self::ListCons { location, .. }
+            | Self::TupleIndex { location, .. }
+            | Self::FieldAccess { location, .. }
+            | Self::BitString { location, .. }
+            | Self::RecordUpdate { location, .. } => *location,
         }
     }
 

@@ -32,8 +32,8 @@ impl<T> BinaryTypeSpecifier<T> {
                 }
 
                 (Category::Type, Self { typ: Some(t), .. }) => Err(Error::ConflictingTypeOptions {
-                    previous_location: t.location().clone(),
-                    location: option.location().clone(),
+                    previous_location: t.location(),
+                    location: option.location(),
                     name: t.label(),
                 }),
 
@@ -54,8 +54,8 @@ impl<T> BinaryTypeSpecifier<T> {
                         ..
                     },
                 ) => Err(Error::ConflictingSignednessOptions {
-                    previous_location: s.location().clone(),
-                    location: option.location().clone(),
+                    previous_location: s.location(),
+                    location: option.location(),
                     name: s.label(),
                 }),
 
@@ -76,8 +76,8 @@ impl<T> BinaryTypeSpecifier<T> {
                         ..
                     },
                 ) => Err(Error::ConflictingEndiannessOptions {
-                    previous_location: e.location().clone(),
-                    location: option.location().clone(),
+                    previous_location: e.location(),
+                    location: option.location(),
                     name: e.label(),
                 }),
 
@@ -88,8 +88,8 @@ impl<T> BinaryTypeSpecifier<T> {
 
                 (Category::Size, Self { size: Some(s), .. }) => {
                     Err(Error::ConflictingSizeOptions {
-                        previous_location: s.location().clone(),
-                        location: option.location().clone(),
+                        previous_location: s.location(),
+                        location: option.location(),
                     })
                 }
 
@@ -100,8 +100,8 @@ impl<T> BinaryTypeSpecifier<T> {
 
                 (Category::Unit, Self { unit: Some(u), .. }) => {
                     Err(Error::ConflictingUnitOptions {
-                        previous_location: u.location().clone(),
-                        location: option.location().clone(),
+                        previous_location: u.location(),
+                        location: option.location(),
                     })
                 }
 
@@ -115,7 +115,7 @@ impl<T> BinaryTypeSpecifier<T> {
                 unit: Some(u),
                 ..
             } if !t.unit_is_allowed() => Err(Error::TypeDoesNotAllowUnit {
-                location: u.location().clone(),
+                location: u.location(),
                 typ: t.label(),
             }),
 

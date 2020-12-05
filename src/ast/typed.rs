@@ -143,65 +143,63 @@ pub enum TypedExpr {
 }
 
 impl TypedExpr {
-    pub fn location(&self) -> &SrcSpan {
+    pub fn location(&self) -> SrcSpan {
         match self {
-            Self::Let { then, .. } => then.location(),
-            Self::Seq { then, .. } => then.location(),
-            Self::Fn { location, .. } => location,
-            Self::Int { location, .. } => location,
-            Self::Var { location, .. } => location,
-            Self::Todo { location, .. } => location,
-            Self::Case { location, .. } => location,
-            Self::Call { location, .. } => location,
-            Self::Pipe { location, .. } => location,
-            Self::Float { location, .. } => location,
-            Self::BinOp { location, .. } => location,
-            Self::Tuple { location, .. } => location,
-            Self::String { location, .. } => location,
-            Self::ListNil { location, .. } => location,
-            Self::ListCons { location, .. } => location,
-            Self::TupleIndex { location, .. } => location,
-            Self::ModuleSelect { location, .. } => location,
-            Self::RecordAccess { location, .. } => location,
-            Self::BitString { location, .. } => location,
-            Self::RecordUpdate { location, .. } => location,
+            Self::Let { then, .. } | Self::Seq { then, .. } => then.location(),
+            Self::Fn { location, .. }
+            | Self::Int { location, .. }
+            | Self::Var { location, .. }
+            | Self::Todo { location, .. }
+            | Self::Case { location, .. }
+            | Self::Call { location, .. }
+            | Self::Pipe { location, .. }
+            | Self::Float { location, .. }
+            | Self::BinOp { location, .. }
+            | Self::Tuple { location, .. }
+            | Self::String { location, .. }
+            | Self::ListNil { location, .. }
+            | Self::ListCons { location, .. }
+            | Self::TupleIndex { location, .. }
+            | Self::ModuleSelect { location, .. }
+            | Self::RecordAccess { location, .. }
+            | Self::BitString { location, .. }
+            | Self::RecordUpdate { location, .. } => *location,
         }
     }
 
-    pub fn try_binding_location(&self) -> &SrcSpan {
+    pub fn try_binding_location(&self) -> SrcSpan {
         match self {
             Self::Let {
                 kind: BindingKind::Try,
                 location,
                 ..
-            } => location,
+            }
+            | Self::Fn { location, .. }
+            | Self::Int { location, .. }
+            | Self::Var { location, .. }
+            | Self::Todo { location, .. }
+            | Self::Case { location, .. }
+            | Self::Call { location, .. }
+            | Self::Pipe { location, .. }
+            | Self::Float { location, .. }
+            | Self::BinOp { location, .. }
+            | Self::Tuple { location, .. }
+            | Self::String { location, .. }
+            | Self::ListNil { location, .. }
+            | Self::ListCons { location, .. }
+            | Self::TupleIndex { location, .. }
+            | Self::ModuleSelect { location, .. }
+            | Self::RecordAccess { location, .. }
+            | Self::BitString { location, .. }
+            | Self::RecordUpdate { location, .. } => *location,
 
-            Self::Let { then, .. } => then.try_binding_location(),
-            Self::Seq { then, .. } => then.try_binding_location(),
-            Self::Fn { location, .. } => location,
-            Self::Int { location, .. } => location,
-            Self::Var { location, .. } => location,
-            Self::Todo { location, .. } => location,
-            Self::Case { location, .. } => location,
-            Self::Call { location, .. } => location,
-            Self::Pipe { location, .. } => location,
-            Self::Float { location, .. } => location,
-            Self::BinOp { location, .. } => location,
-            Self::Tuple { location, .. } => location,
-            Self::String { location, .. } => location,
-            Self::ListNil { location, .. } => location,
-            Self::ListCons { location, .. } => location,
-            Self::TupleIndex { location, .. } => location,
-            Self::ModuleSelect { location, .. } => location,
-            Self::RecordAccess { location, .. } => location,
-            Self::BitString { location, .. } => location,
-            Self::RecordUpdate { location, .. } => location,
+            Self::Let { then, .. } | Self::Seq { then, .. } => then.try_binding_location(),
         }
     }
 }
 
 impl HasLocation for TypedExpr {
-    fn location(&self) -> &SrcSpan {
+    fn location(&self) -> SrcSpan {
         self.location()
     }
 }

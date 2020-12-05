@@ -70,15 +70,15 @@ impl HasType for TypedConstant {
 }
 
 impl<A, B> Constant<A, B> {
-    pub fn location(&self) -> &SrcSpan {
+    pub fn location(&self) -> SrcSpan {
         match self {
-            Constant::Int { location, .. } => location,
-            Constant::List { location, .. } => location,
-            Constant::Float { location, .. } => location,
-            Constant::Tuple { location, .. } => location,
-            Constant::String { location, .. } => location,
-            Constant::Record { location, .. } => location,
-            Constant::BitString { location, .. } => location,
+            Constant::Int { location, .. }
+            | Constant::List { location, .. }
+            | Constant::Float { location, .. }
+            | Constant::Tuple { location, .. }
+            | Constant::String { location, .. }
+            | Constant::Record { location, .. }
+            | Constant::BitString { location, .. } => *location,
         }
     }
 
@@ -88,7 +88,7 @@ impl<A, B> Constant<A, B> {
 }
 
 impl<A, B> HasLocation for Constant<A, B> {
-    fn location(&self) -> &SrcSpan {
+    fn location(&self) -> SrcSpan {
         self.location()
     }
 }
