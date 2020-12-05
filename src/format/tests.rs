@@ -2351,6 +2351,31 @@ type Whatever {
 }
 "
     );
+
+    assert_format!(
+        "pub type Spec {
+  Spec(
+    // Hello
+    hello: Int,
+    // World
+    world: Int,
+  )
+}
+"
+    );
+
+    assert_format!(
+        "/// ß↑e̊
+///
+pub fn one() {
+  1
+}
+
+pub fn two() {
+  2
+}
+",
+    );
 }
 
 #[test]
@@ -2732,30 +2757,23 @@ fn binary_operator_precedence() {
 }
 "
     );
+}
 
+// https://github.com/gleam-lang/gleam/issues/868
+#[test]
+fn precedence_rhs() {
     assert_format!(
-        "pub type Spec {
-  Spec(
-    // Hello
-    hello: Int,
-    // World
-    world: Int,
-  )
+        "fn main() {
+  True != { a == b }
 }
 "
     );
 
     assert_format!(
-        "/// ß↑e̊
-///
-pub fn one() {
-  1
+        "fn main() {
+  True != { a == { b != c } }
 }
-
-pub fn two() {
-  2
-}
-",
+"
     );
 }
 

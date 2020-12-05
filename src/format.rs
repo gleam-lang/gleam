@@ -760,7 +760,7 @@ impl<'a> Formatter<'a> {
         let right = self.expr(right);
         self.operator_side(left, precedence, left_precedence)
             .append(name)
-            .append(self.operator_side(right, precedence, right_precedence))
+            .append(self.operator_side(right, precedence, right_precedence - 1))
     }
 
     pub fn operator_side(&mut self, doc: Document, op: u8, side: u8) -> Document {
