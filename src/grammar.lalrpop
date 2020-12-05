@@ -543,7 +543,7 @@ FieldAccess: UntypedExpr = {
 }
 
 Fn: UntypedExpr = {
-    <s:@L> "fn(" <a:Comma<FnArg>> ")" <return_annotation:("->" <Type>)?> "{" <b:ExprSequence> "}" <e:@L> => UntypedExpr::Fn {
+    <s:@L> "fn" "(" <a:Comma<FnArg>> ")" <return_annotation:("->" <Type>)?> "{" <b:ExprSequence> "}" <e:@L> => UntypedExpr::Fn {
         location: location(s, e),
         is_capture: false,
         args: a,
@@ -1090,7 +1090,7 @@ TypeVar: TypeAst = {
 }
 
 TypeFn: TypeAst = {
-    <s:@L> "fn(" <args:Comma<Type>> ")" "->" <retrn:Type> <e:@L> => TypeAst::Fn {
+    <s:@L> "fn" "(" <args:Comma<Type>> ")" "->" <retrn:Type> <e:@L> => TypeAst::Fn {
         location: location(s, e),
         retrn: Box::new(retrn),
         args,
