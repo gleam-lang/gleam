@@ -1,0 +1,1 @@
+ignore = ["src/bindata.capnp.rs"]
