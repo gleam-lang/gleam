@@ -2147,3 +2147,29 @@ a(Name_) ->
 "
     );
 }
+
+#[test]
+fn pattern_as() {
+    assert_erl!(
+        "pub fn a(x) {
+  case x {
+    Ok(1 as y) -> 1
+    _ -> 0
+  }
+}",
+        "-module(the_app).
+-compile(no_auto_import).
+
+-export([a/1]).
+
+a(X) ->
+    case X of
+        {ok, 1 = Y} ->
+            1;
+
+        _ ->
+            0
+    end.
+"
+    );
+}
