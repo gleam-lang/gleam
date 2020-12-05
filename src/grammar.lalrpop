@@ -1090,7 +1090,7 @@ TypeVar: TypeAst = {
 }
 
 TypeFn: TypeAst = {
-    <s:@L> "fn(" <args:Comma<Type>> ")" "->" <retrn:Type> <e:@L> => TypeAst::Fn {
+    <s:@L> "fn" "(" <args:Comma<Type>> ")" "->" <retrn:Type> <e:@L> => TypeAst::Fn {
         location: location(s, e),
         retrn: Box::new(retrn),
         args,
