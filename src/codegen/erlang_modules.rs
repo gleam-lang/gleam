@@ -24,7 +24,7 @@ impl ErlangModules {
 
     pub fn render_module(&self, module: &Module) -> OutputFile {
         let erl_name = module.name.replace("/", "@");
-        let text = erl::module(&module.ast);
+        let text = erl::module(&module.ast, &[]);
         let name = format!("{}.erl", erl_name);
         tracing::trace!(name = ?name, "Generated Erlang module");
         let path = self.output_directory.join(name);

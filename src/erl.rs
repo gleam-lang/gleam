@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests;
+mod typespec;
 
 use crate::{
     ast::*,
@@ -37,16 +38,19 @@ pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
             .join(origin.dir_name());
         let erl_module_name = name.join("@");
 
+        let mut record_filenames: Vec<String> = Vec::new();
+
         for (name, text) in records(ast).into_iter() {
-            files.push(OutputFile {
-                path: gen_dir.join(format!("{}_{}.hrl", erl_module_name, name)),
-                text,
-            })
+            let path = gen_dir.join(format!("{}_{}.hrl", erl_module_name, name));
+            if let Some(filename) = path.to_str() {
+                record_filenames.push(filename.to_string());
+            }
+            files.push(OutputFile { path, text })
         }
 
         files.push(OutputFile {
             path: gen_dir.join(format!("{}.erl", erl_module_name)),
-            text: module(ast),
+            text: module(ast, &record_filenames),
         });
     }
 
@@ -102,6 +106,8 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
             _ => &[],
         })
         .filter(|constructor| !constructor.args.is_empty())
+        // Extract record field names and filter out any constructors that have unnamed fields as
+        // they don't qualify as records
         .flat_map(|constructor| {
             let mut fields = Vec::with_capacity(constructor.args.len());
             for (label, ..) in constructor.args.iter() {
@@ -117,12 +123,7 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
 }
 
 pub fn record_definition(name: &str, fields: &[&str]) -> String {
-    let name = &name.to_snake_case();
-    let escaped_name = if is_erlang_reserved_word(name) {
-        format!("'{}'", name)
-    } else {
-        name.to_string()
-    };
+    let escaped_name = typespec::type_name_to_atom(name);
     use std::fmt::Write;
     let mut buffer = format!("-record({}, {{", escaped_name);
     for field in fields.iter().intersperse(&", ") {
@@ -137,7 +138,7 @@ pub fn record_definition(name: &str, fields: &[&str]) -> String {
     buffer
 }
 
-pub fn module(module: &TypedModule) -> String {
+pub fn module(module: &TypedModule, import_filenames: &[String]) -> String {
     let module_name = module.name.as_slice();
     let exports = concat(
         module
@@ -164,6 +165,8 @@ pub fn module(module: &TypedModule) -> String {
             .intersperse(", ".to_doc()),
     );
 
+    let type_exports = typespec::type_exports(&module);
+
     let statements = concat(
         module
             .statements
@@ -172,10 +175,19 @@ pub fn module(module: &TypedModule) -> String {
             .intersperse(lines(2)),
     );
 
+    let imports = concat(
+        import_filenames
+            .iter()
+            .map(|filename| format!("-include(\"{}\").", filename).to_doc())
+            .intersperse(line()),
+    );
+
     format!("-module({}).", module_name.join("@"))
         .to_doc()
         .append(line())
         .append("-compile(no_auto_import).")
+        .append(lines(2))
+        .append(imports)
         .append(lines(2))
         .append(if exports == nil() {
             nil()
@@ -183,6 +195,15 @@ pub fn module(module: &TypedModule) -> String {
             "-export(["
                 .to_doc()
                 .append(exports)
+                .append("]).")
+                .append(lines(2))
+        })
+        .append(if type_exports == nil() {
+            nil()
+        } else {
+            "-export_type(["
+                .to_doc()
+                .append(type_exports)
                 .append("]).")
                 .append(lines(2))
         })
@@ -194,14 +215,27 @@ pub fn module(module: &TypedModule) -> String {
 fn statement(statement: &TypedStatement, module: &[String]) -> Option<Document> {
     match statement {
         Statement::TypeAlias { .. } => None,
-        Statement::CustomType { .. } => None,
         Statement::Import { .. } => None,
         Statement::ExternalType { .. } => None,
         Statement::ModuleConstant { .. } => None,
+        Statement::CustomType {
+            name,
+            parameters,
+            constructors,
+            ..
+        } => Some(typespec::type_(&name, &parameters, &constructors)),
 
         Statement::Fn {
-            args, name, body, ..
-        } => Some(mod_fun(name.as_ref(), args.as_slice(), body, module)),
+            args,
+            name,
+            body,
+            return_type,
+            ..
+        } => Some(
+            typespec::fun_spec(name.as_ref(), args.as_slice(), &*return_type)
+                .append(line())
+                .append(mod_fun(name.as_ref(), args.as_slice(), body, module)),
+        ),
 
         Statement::ExternalFn { public: false, .. } => None,
         Statement::ExternalFn {
@@ -209,13 +243,18 @@ fn statement(statement: &TypedStatement, module: &[String]) -> Option<Document> 
             module,
             args,
             name,
+            return_type,
             ..
-        } => Some(external_fun(
-            name.as_ref(),
-            module.as_ref(),
-            fun.as_ref(),
-            args.len(),
-        )),
+        } => Some(
+            typespec::external_fun_spec(name.as_ref(), args.as_slice(), &*return_type)
+                .append(line())
+                .append(external_fun(
+                    name.as_ref(),
+                    module.as_ref(),
+                    fun.as_ref(),
+                    args.len(),
+                )),
+        ),
     }
 }
 
