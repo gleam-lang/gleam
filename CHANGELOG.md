@@ -12,6 +12,11 @@
 - Documentation hosted on HexDocs now has a version selector.
 - Fixed a bug where the `app` project template rendered invalid code.
 - Newly generated projects use stdlib v0.12.0.
+- Named subexpressions in patterns now render correct Erlang.
+- The anonymous function syntax now successfully parses with whitespace
+  between `fn` and `(`.
+- Fixed a bug where the formatter would incorrectly remove blocks around some
+  binary operators.
 
 ## v0.12.1 - 2020-11-15
 
