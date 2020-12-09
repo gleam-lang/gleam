@@ -519,9 +519,8 @@ pub fn make_call(
 
 pub fn is_gleam_reserved_word(s: &str) -> bool {
     match s {
-        "pub" | "fn" | "import" | "as" | "type" | "extern" | "case" | "let" | "try" | "assert" => {
-            true
-        }
+        "pub" | "fn" | "import" | "as" | "type" | "external" | "case" | "let" | "try"
+        | "assert" => true,
         _ => false,
     }
 }
