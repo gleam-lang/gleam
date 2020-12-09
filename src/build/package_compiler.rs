@@ -228,13 +228,11 @@ fn parse_source(src: &str, name: &str, path: &PathBuf) -> Result<UntypedModule, 
     let (cleaned, comments) = parser::strip_extra(src);
 
     // Parse source into AST
-    let mut module = grammar::ModuleParser::new()
-        .parse(&cleaned)
-        .map_err(|e| Error::Parse {
-            path: path.clone(),
-            src: src.to_string(),
-            error: e.map_token(|crate::grammar::Token(a, b)| (a, b.to_string())),
-        })?;
+    let mut module = crate::parse::parse_module(&cleaned).map_err(|error| Error::Compile {
+        path: path.clone(),
+        src: src.to_string(),
+        error,
+    })?;
 
     // Attach documentation
     parser::attach_doc_comments(&mut module, &comments.doc_comments);

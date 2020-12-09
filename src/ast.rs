@@ -56,8 +56,7 @@ fn module_dependencies_test() {
             ("bar".to_string(), SrcSpan { start: 18, end: 21 }),
             ("foo_bar".to_string(), SrcSpan { start: 29, end: 36 }),
         ],
-        crate::grammar::ModuleParser::new()
-            .parse("import foo import bar import foo_bar")
+        crate::parse::parse_module("import foo import bar import foo_bar")
             .expect("syntax error")
             .dependencies()
     );
@@ -631,6 +630,11 @@ impl<A, B> Pattern<A, B> {
 
             _ => self,
         }
+    }
+}
+impl<A, B> HasLocation for Pattern<A, B> {
+    fn location(&self) -> SrcSpan {
+        self.location()
     }
 }
 

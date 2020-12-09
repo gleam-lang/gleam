@@ -12,10 +12,10 @@ pub struct SourceTree {
 }
 
 impl SourceTree {
-    pub fn new(inputs: Vec<Input>) -> Result<Self, Error> {
+    pub fn new(inputs: Vec<Input>, use_alt_parser: bool) -> Result<Self, Error> {
         let mut graph: Self = Default::default();
         for input in inputs.into_iter() {
-            graph.insert(input)?;
+            graph.insert(input, use_alt_parser)?;
         }
         graph.calculate_dependencies()?;
         Ok(graph)
@@ -125,7 +125,7 @@ impl SourceTree {
         Ok(())
     }
 
-    fn insert(&mut self, input: Input) -> Result<(), Error> {
+    fn insert(&mut self, input: Input, use_alt_parser: bool) -> Result<(), Error> {
         // Determine the module name
         let name = input
             .path
@@ -141,13 +141,21 @@ impl SourceTree {
 
         // Parse the source
         let (cleaned, comments) = parser::strip_extra(&input.src);
-        let mut module = crate::grammar::ModuleParser::new()
-            .parse(&cleaned)
-            .map_err(|e| Error::Parse {
+        let mut module = if use_alt_parser {
+            crate::parse::parse_module(&cleaned).map_err(|e| Error::Compile {
                 path: input.path.clone(),
                 src: input.src.clone(),
-                error: e.map_token(|crate::grammar::Token(a, b)| (a, b.to_string())),
-            })?;
+                error: e,
+            })?
+        } else {
+            crate::grammar::ModuleParser::new()
+                .parse(&cleaned)
+                .map_err(|e| Error::Parse {
+                    path: input.path.clone(),
+                    src: input.src.clone(),
+                    error: e.map_token(|crate::grammar::Token(a, b)| (a, b.to_string())),
+                })?
+        };
 
         // Annotate statements with their inline documentation
         parser::attach_doc_comments(&mut module, &comments.doc_comments);

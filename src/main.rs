@@ -56,6 +56,7 @@ mod format;
 mod fs;
 mod metadata;
 mod new;
+mod parse;
 mod parser;
 mod pretty;
 mod project;
@@ -113,6 +114,11 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 enum Command {
     #[structopt(name = "build", about = "Compile a project")]
     Build {
+        #[structopt(help = "location of the project root", default_value = ".")]
+        project_root: String,
+    },
+
+    Compile {
         #[structopt(help = "location of the project root", default_value = ".")]
         project_root: String,
     },
@@ -247,7 +253,8 @@ fn main() {
     initialise_logger();
 
     let result = match Command::from_args() {
-        Command::Build { project_root } => command_build(project_root),
+        Command::Build { project_root } => command_build(project_root, false),
+        Command::Compile { project_root } => command_build(project_root, true),
 
         Command::Docs(Docs::Build { project_root, to }) => docs::command::build(project_root, to),
 
@@ -290,7 +297,7 @@ fn main() {
     }
 }
 
-fn command_build(root: String) -> Result<(), Error> {
+fn command_build(root: String, use_alt_parser: bool) -> Result<(), Error> {
     let root = PathBuf::from(&root);
     let config = config::read_project_config(&root)?;
 
@@ -300,7 +307,7 @@ fn command_build(root: String) -> Result<(), Error> {
     }
 
     // Read and type check project
-    let (_config, analysed) = project::read_and_analyse(&root)?;
+    let (_config, analysed) = project::read_and_analyse(&root, use_alt_parser)?;
 
     // Generate Erlang code
     let output_files = erl::generate_erlang(analysed.as_slice());

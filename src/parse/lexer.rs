@@ -1,0 +1,725 @@
+use crate::parse::error::{LexicalError, LexicalErrorType};
+use crate::parse::token::Tok;
+use std::char;
+
+// ideas:
+// * look up 2 / 3 char tokens like keywords
+//   * perf test
+// * track nesting per type and lex error on invalid nesting
+//   * useful?
+
+pub struct Lexer<T: Iterator<Item = (usize, char)>> {
+    chars: T,
+    nesting: usize, // Amount of (), [], or {}
+    pending: Vec<Spanned>,
+    chr0: Option<char>,
+    chr1: Option<char>,
+    loc0: usize,
+    loc1: usize,
+    location: usize,
+}
+pub type Spanned = (usize, Tok, usize);
+pub type LexResult = Result<Spanned, LexicalError>;
+
+pub fn str_to_keyword(word: &str) -> Option<Tok> {
+    // Alphabetical keywords:
+    match word {
+        "as" => Some(Tok::As),
+        "assert" => Some(Tok::Assert),
+        "case" => Some(Tok::Case),
+        "const" => Some(Tok::Const),
+        "external" => Some(Tok::External),
+        "fn" => Some(Tok::Fn),
+        "if" => Some(Tok::If),
+        "import" => Some(Tok::Import),
+        "let" => Some(Tok::Let),
+        "opaque" => Some(Tok::Opaque),
+        "pub" => Some(Tok::Pub),
+        "todo" => Some(Tok::Todo),
+        "try" => Some(Tok::Try),
+        "tuple" => Some(Tok::Tuple),
+        "type" => Some(Tok::Type),
+        _ => None,
+    }
+}
+
+pub fn make_tokenizer<'a>(source: &'a str) -> impl Iterator<Item = LexResult> + 'a {
+    let nlh = NewlineHandler::new(source.char_indices());
+    Lexer::new(nlh)
+}
+
+// The newline handler is an iterator which collapses different newline
+// types into \n always.
+pub struct NewlineHandler<T: Iterator<Item = (usize, char)>> {
+    source: T,
+    chr0: Option<(usize, char)>,
+    chr1: Option<(usize, char)>,
+}
+
+impl<T> NewlineHandler<T>
+where
+    T: Iterator<Item = (usize, char)>,
+{
+    pub fn new(source: T) -> Self {
+        let mut nlh = NewlineHandler {
+            source,
+            chr0: None,
+            chr1: None,
+        };
+        nlh.shift();
+        nlh.shift();
+        nlh
+    }
+
+    fn shift(&mut self) -> Option<(usize, char)> {
+        let result = self.chr0;
+        self.chr0 = self.chr1;
+        self.chr1 = self.source.next();
+        result
+    }
+}
+
+impl<T> Iterator for NewlineHandler<T>
+where
+    T: Iterator<Item = (usize, char)>,
+{
+    type Item = (usize, char);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // Collapse \r\n into \n
+        while let Some((i, '\r')) = self.chr0 {
+            if let Some((_, '\n')) = self.chr1 {
+                // Transform windows EOL into \n
+                self.shift();
+            } else {
+                // Transform MAC EOL into \n
+                self.chr0 = Some((i, '\n'))
+            }
+        }
+
+        self.shift()
+    }
+}
+
+impl<T> Lexer<T>
+where
+    T: Iterator<Item = (usize, char)>,
+{
+    pub fn new(input: T) -> Self {
+        let mut lxr = Lexer {
+            chars: input,
+            nesting: 0,
+            pending: Vec::new(),
+            location: 0,
+            chr0: None,
+            chr1: None,
+            loc0: 0,
+            loc1: 0,
+        };
+        lxr.next_char();
+        lxr.next_char();
+        lxr.location = 0;
+        lxr
+    }
+
+    // This is the main entry point. Call this function to retrieve the next token.
+    // This function is used by the iterator implementation.
+    fn inner_next(&mut self) -> LexResult {
+        // top loop, keep on processing, until we have something pending.
+        while self.pending.is_empty() {
+            self.consume_normal()?;
+        }
+
+        Ok(self.pending.remove(0))
+    }
+
+    // Take a look at the next character, if any, and decide upon the next steps.
+    fn consume_normal(&mut self) -> Result<(), LexicalError> {
+        // Check if we have some character:
+        if let Some(c) = self.chr0 {
+            if self.is_upname_start(c) {
+                let name = self.lex_upname()?;
+                self.emit(name)
+            } else if self.is_name_start(c) {
+                let name = self.lex_name()?;
+                self.emit(name);
+            } else if self.is_number_start(c, self.chr1) {
+                let num = self.lex_number()?;
+                self.emit(num);
+            } else {
+                self.consume_character(c)?;
+            }
+        } else {
+            // We reached end of file.
+            let tok_pos = self.get_pos();
+
+            // First of all, we need all nestings to be finished.
+            if self.nesting > 0 {
+                return Err(LexicalError {
+                    error: LexicalErrorType::NestingLeftOpen,
+                    location: tok_pos,
+                });
+            }
+
+            self.emit((tok_pos, Tok::EndOfFile, tok_pos));
+        }
+
+        Ok(())
+    }
+
+    fn consume_character(&mut self, c: char) -> Result<(), LexicalError> {
+        match c {
+            '"' => {
+                let string = self.lex_string()?;
+                self.emit(string);
+            }
+            '=' => {
+                let tok_start = self.get_pos();
+                self.next_char();
+                match self.chr0 {
+                    Some('=') => {
+                        self.next_char();
+                        let tok_end = self.get_pos();
+                        self.emit((tok_start, Tok::EqualEqual, tok_end));
+                    }
+                    _ => {
+                        let tok_end = self.get_pos();
+                        self.emit((tok_start, Tok::Equal, tok_end));
+                    }
+                }
+            }
+            '+' => {
+                let tok_start = self.get_pos();
+                self.next_char();
+                if let Some('.') = self.chr0 {
+                    self.next_char();
+                    let tok_end = self.get_pos();
+                    self.emit((tok_start, Tok::PlusDot, tok_end));
+                } else {
+                    let tok_end = self.get_pos();
+                    self.emit((tok_start, Tok::Plus, tok_end));
+                }
+            }
+            '*' => {
+                let tok_start = self.get_pos();
+                self.next_char();
+                match self.chr0 {
+                    Some('.') => {
+                        self.next_char();
+                        let tok_end = self.get_pos();
+                        self.emit((tok_start, Tok::StarDot, tok_end));
+                    }
+                    _ => {
+                        let tok_end = self.get_pos();
+                        self.emit((tok_start, Tok::Star, tok_end));
+                    }
+                }
+            }
+            '/' => {
+                let tok_start = self.get_pos();
+                self.next_char();
+                match self.chr0 {
+                    Some('.') => {
+                        self.next_char();
+                        let tok_end = self.get_pos();
+                        self.emit((tok_start, Tok::SlashDot, tok_end));
+                    }
+                    Some('/') => {
+                        self.next_char();
+                        self.lex_comment();
+                    }
+                    _ => {
+                        let tok_end = self.get_pos();
+                        self.emit((tok_start, Tok::Slash, tok_end));
+                    }
+                }
+            }
+            '%' => {
+                let tok_start = self.get_pos();
+                self.next_char();
+                let tok_end = self.get_pos();
+                self.emit((tok_start, Tok::Percent, tok_end));
+            }
+            '|' => {
+                let tok_start = self.get_pos();
+                self.next_char();
+                if let Some('|') = self.chr0 {
+                    self.next_char();
+                    let tok_end = self.get_pos();
+                    self.emit((tok_start, Tok::VbarVbar, tok_end));
+                } else if let Some('>') = self.chr0 {
+                    self.next_char();
+                    let tok_end = self.get_pos();
+                    self.emit((tok_start, Tok::Pipe, tok_end));
+                } else {
+                    let tok_end = self.get_pos();
+                    self.emit((tok_start, Tok::Vbar, tok_end));
+                }
+            }
+            '&' => {
+                let tok_start = self.get_pos();
+                self.next_char();
+                if let Some('&') = self.chr0 {
+                    self.next_char();
+                    let tok_end = self.get_pos();
+                    self.emit((tok_start, Tok::AmperAmper, tok_end));
+                } else {
+                    return Err(LexicalError {
+                        error: LexicalErrorType::UnrecognizedToken { tok: '&' },
+                        location: tok_start,
+                    });
+                }
+            }
+            '-' => {
+                let tok_start = self.get_pos();
+                self.next_char();
+                match self.chr0 {
+                    Some('.') => {
+                        self.next_char();
+                        let tok_end = self.get_pos();
+                        self.emit((tok_start, Tok::MinusDot, tok_end));
+                    }
+                    Some('>') => {
+                        self.next_char();
+                        let tok_end = self.get_pos();
+                        self.emit((tok_start, Tok::RArrow, tok_end));
+                    }
+                    _ => {
+                        let tok_end = self.get_pos();
+                        self.emit((tok_start, Tok::Minus, tok_end));
+                    }
+                }
+            }
+            '!' => {
+                let tok_start = self.get_pos();
+                self.next_char();
+                if let Some('=') = self.chr0 {
+                    self.next_char();
+                    let tok_end = self.get_pos();
+                    self.emit((tok_start, Tok::NotEqual, tok_end));
+                } else {
+                    return Err(LexicalError {
+                        error: LexicalErrorType::UnrecognizedToken { tok: '!' },
+                        location: tok_start,
+                    });
+                }
+            }
+            '(' => {
+                self.eat_single_char(Tok::Lpar);
+                self.nesting += 1;
+            }
+            ')' => {
+                self.eat_single_char(Tok::Rpar);
+                if self.nesting == 0 {
+                    return Err(LexicalError {
+                        error: LexicalErrorType::NoNestingToClose,
+                        location: self.get_pos(),
+                    });
+                }
+                self.nesting -= 1;
+            }
+            '[' => {
+                let tok_start = self.get_pos();
+                if let Some(']') = self.chr1 {
+                    self.next_char();
+                    self.next_char();
+                    let tok_end = self.get_pos();
+                    self.emit((tok_start, Tok::ListNil, tok_end));
+                } else {
+                    self.eat_single_char(Tok::Lsqb);
+                    self.nesting += 1;
+                }
+            }
+            ']' => {
+                self.eat_single_char(Tok::Rsqb);
+                if self.nesting == 0 {
+                    return Err(LexicalError {
+                        error: LexicalErrorType::NoNestingToClose,
+                        location: self.get_pos(),
+                    });
+                }
+                self.nesting -= 1;
+            }
+            '{' => {
+                self.eat_single_char(Tok::Lbrace);
+                self.nesting += 1;
+            }
+            '}' => {
+                self.eat_single_char(Tok::Rbrace);
+                if self.nesting == 0 {
+                    return Err(LexicalError {
+                        error: LexicalErrorType::NoNestingToClose,
+                        location: self.get_pos(),
+                    });
+                }
+                self.nesting -= 1;
+            }
+            ':' => {
+                self.eat_single_char(Tok::Colon);
+            }
+            '<' => {
+                let tok_start = self.get_pos();
+                self.next_char();
+                match self.chr0 {
+                    Some('<') => {
+                        self.next_char();
+                        let tok_end = self.get_pos();
+                        self.emit((tok_start, Tok::LtLt, tok_end));
+                    }
+                    Some('.') => {
+                        self.next_char();
+                        let tok_end = self.get_pos();
+                        self.emit((tok_start, Tok::LessDot, tok_end));
+                    }
+                    Some('=') => {
+                        self.next_char();
+                        match self.chr0 {
+                            Some('.') => {
+                                self.next_char();
+                                let tok_end = self.get_pos();
+                                self.emit((tok_start, Tok::LessEqualDot, tok_end));
+                            }
+                            _ => {
+                                let tok_end = self.get_pos();
+                                self.emit((tok_start, Tok::LessEqual, tok_end));
+                            }
+                        }
+                    }
+                    _ => {
+                        let tok_end = self.get_pos();
+                        self.emit((tok_start, Tok::Less, tok_end));
+                    }
+                }
+            }
+            '>' => {
+                let tok_start = self.get_pos();
+                self.next_char();
+                match self.chr0 {
+                    Some('>') => {
+                        self.next_char();
+                        let tok_end = self.get_pos();
+                        self.emit((tok_start, Tok::GtGt, tok_end));
+                    }
+                    Some('.') => {
+                        self.next_char();
+                        let tok_end = self.get_pos();
+                        self.emit((tok_start, Tok::GreaterDot, tok_end));
+                    }
+                    Some('=') => {
+                        self.next_char();
+                        match self.chr0 {
+                            Some('.') => {
+                                self.next_char();
+                                let tok_end = self.get_pos();
+                                self.emit((tok_start, Tok::GreaterEqualDot, tok_end));
+                            }
+                            _ => {
+                                let tok_end = self.get_pos();
+                                self.emit((tok_start, Tok::GreaterEqual, tok_end));
+                            }
+                        }
+                    }
+                    _ => {
+                        let tok_end = self.get_pos();
+                        self.emit((tok_start, Tok::Greater, tok_end));
+                    }
+                }
+            }
+            ',' => {
+                self.eat_single_char(Tok::Comma);
+            }
+            '.' => {
+                let tok_start = self.get_pos();
+                self.next_char();
+                if let Some('.') = &self.chr0 {
+                    self.next_char();
+                    let tok_end = self.get_pos();
+                    self.emit((tok_start, Tok::DotDot, tok_end));
+                } else {
+                    let tok_end = self.get_pos();
+                    self.emit((tok_start, Tok::Dot, tok_end));
+                }
+            }
+            ' ' | '\n' | '\t' | '\x0C' => {
+                // Skip whitespaces
+                self.next_char();
+            }
+
+            c => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::UnrecognizedToken { tok: c },
+                    location,
+                });
+            }
+        }
+
+        Ok(())
+    }
+
+    // Lexer helper functions:
+    // this can be either a reserved word, or a name
+    fn lex_name(&mut self) -> LexResult {
+        let mut name = String::new();
+        let start_pos = self.get_pos();
+
+        while self.is_name_continuation() {
+            name.push(self.next_char().unwrap());
+        }
+        let end_pos = self.get_pos();
+
+        if let Some(tok) = str_to_keyword(&name) {
+            Ok((start_pos, tok, end_pos))
+        } else if name.starts_with('_') {
+            Ok((start_pos, Tok::DiscardName { name }, end_pos))
+        } else {
+            Ok((start_pos, Tok::Name { name }, end_pos))
+        }
+    }
+    // A type name or constructor
+    fn lex_upname(&mut self) -> LexResult {
+        let mut name = String::new();
+        let start_pos = self.get_pos();
+
+        while self.is_upname_continuation() {
+            name.push(self.next_char().unwrap());
+        }
+        let end_pos = self.get_pos();
+
+        if let Some(tok) = str_to_keyword(&name) {
+            Ok((start_pos, tok, end_pos))
+        } else {
+            Ok((start_pos, Tok::UpName { name }, end_pos))
+        }
+    }
+
+    fn lex_number(&mut self) -> LexResult {
+        let start_pos = self.get_pos();
+        if self.chr0 == Some('0') {
+            if self.chr1 == Some('x') || self.chr1 == Some('X') {
+                // Hex!
+                self.next_char();
+                self.next_char();
+                self.lex_number_radix(start_pos, 16)
+            } else if self.chr1 == Some('o') || self.chr1 == Some('O') {
+                // Octal!
+                self.next_char();
+                self.next_char();
+                self.lex_number_radix(start_pos, 8)
+            } else if self.chr1 == Some('b') || self.chr1 == Some('B') {
+                // Binary!
+                self.next_char();
+                self.next_char();
+                self.lex_number_radix(start_pos, 2)
+            } else {
+                self.lex_normal_number()
+            }
+        } else {
+            self.lex_normal_number()
+        }
+    }
+
+    // Lex a hex/octal/decimal/binary number without a decimal point.
+    fn lex_number_radix(&mut self, start_pos: usize, radix: u32) -> LexResult {
+        let num = self.radix_run(radix);
+        let value = match radix {
+            10 => num,
+            x => format!("{}#{}", x, num),
+        };
+        let end_pos = self.get_pos();
+        Ok((start_pos, Tok::Int { value }, end_pos))
+    }
+
+    // Lex a normal number, that is, no octal, hex or binary number.
+    // This function cannot be reached without the head of the stream being either 0-9 or '-', 0-9
+    fn lex_normal_number(&mut self) -> LexResult {
+        let start_pos = self.get_pos();
+        let mut value = String::new();
+        // consume negative sign
+        if self.chr0 == Some('-') {
+            value.push(self.next_char().unwrap());
+        }
+        // consume first run of digits
+        value.push_str(&self.radix_run(10));
+
+        // If float:
+        if self.chr0 == Some('.') {
+            value.push(self.next_char().unwrap());
+            value.push_str(&self.radix_run(10));
+            let end_pos = self.get_pos();
+            Ok((start_pos, Tok::Float { value }, end_pos))
+        } else {
+            let end_pos = self.get_pos();
+            Ok((start_pos, Tok::Int { value }, end_pos))
+        }
+    }
+
+    // Consume a sequence of numbers with the given radix,
+    // the digits can be decorated with underscores
+    // like this: '1_2_3_4' == '1234'
+    fn radix_run(&mut self, radix: u32) -> String {
+        let mut value_text = String::new();
+
+        loop {
+            if let Some(c) = self.take_number(radix) {
+                value_text.push(c);
+            } else if self.chr0 == Some('_') && Lexer::<T>::is_digit_of_radix(self.chr1, radix) {
+                self.next_char();
+            } else {
+                break;
+            }
+        }
+        value_text
+    }
+
+    // Consume a single character with the given radix.
+    fn take_number(&mut self, radix: u32) -> Option<char> {
+        let take_char = Lexer::<T>::is_digit_of_radix(self.chr0, radix);
+
+        if take_char {
+            Some(self.next_char().unwrap())
+        } else {
+            None
+        }
+    }
+
+    // Test if a digit is of a certain radix.
+    fn is_digit_of_radix(c: Option<char>, radix: u32) -> bool {
+        match radix {
+            2 => matches!(c, Some('0'..='1')),
+            8 => matches!(c, Some('0'..='7')),
+            10 => matches!(c, Some('0'..='9')),
+            16 => matches!(c, Some('0'..='9') | Some('a'..='f') | Some('A'..='F')),
+            other => unimplemented!("Radix not implemented: {}", other),
+        }
+    }
+
+    // Skip everything until end of line
+    fn lex_comment(&mut self) {
+        while Some('\n') != self.chr0 && None != self.chr0 {
+            self.next_char();
+        }
+    }
+
+    fn lex_string(&mut self) -> LexResult {
+        let start_pos = self.get_pos();
+        // advance past the first quote
+        let _ = self.next_char();
+        let mut string_content = String::new();
+
+        loop {
+            match self.next_char() {
+                Some('\\') => {
+                    if self.chr0 == Some('"') {
+                        string_content.push('\\');
+                        string_content.push('"');
+                        self.next_char();
+                    } else if self.chr0 == Some('\\') {
+                        string_content.push('\\');
+                        string_content.push('\\');
+                        self.next_char();
+                    } else {
+                        string_content.push('\\');
+                    }
+                }
+                Some('"') => break,
+                Some(c) => string_content.push(c),
+                None => {
+                    return Err(LexicalError {
+                        error: LexicalErrorType::UnexpectedStringEnd,
+                        location: start_pos,
+                    });
+                }
+            }
+        }
+        let end_pos = self.get_pos();
+
+        let tok = Tok::String {
+            value: string_content,
+        };
+
+        Ok((start_pos, tok, end_pos))
+    }
+
+    fn is_name_start(&self, c: char) -> bool {
+        matches!(c, '_' | 'a'..='z')
+    }
+    fn is_upname_start(&self, c: char) -> bool {
+        matches!(c, 'A'..='Z')
+    }
+    fn is_number_start(&self, c: char, c1: Option<char>) -> bool {
+        match c {
+            '0'..='9' => true,
+            '-' => matches!(c1, Some('0'..='9')),
+            _ => false,
+        }
+    }
+
+    fn is_name_continuation(&self) -> bool {
+        self.chr0
+            .map(|c| matches!(c, '_' | '0'..='9' | 'a'..='z'))
+            .unwrap_or(false)
+    }
+
+    fn is_upname_continuation(&self) -> bool {
+        self.chr0
+            .map(|c| matches!(c, '0'..='9' | 'a'..='z' | 'A'..='Z'))
+            .unwrap_or(false)
+    }
+
+    // advance the stream and emit a token
+    fn eat_single_char(&mut self, ty: Tok) {
+        let tok_start = self.get_pos();
+        self.next_char().unwrap();
+        let tok_end = self.get_pos();
+        self.emit((tok_start, ty, tok_end));
+    }
+
+    // Helper function to go to the next character coming up.
+    fn next_char(&mut self) -> Option<char> {
+        let c = self.chr0;
+        let nxt = match self.chars.next() {
+            Some((loc, c)) => {
+                self.loc0 = self.loc1;
+                self.loc1 = loc;
+                Some(c)
+            }
+            None => {
+                // EOF needs a single advance
+                self.loc0 = self.loc1;
+                self.loc1 = self.loc1 + 1;
+                None
+            }
+        };
+        self.chr0 = self.chr1;
+        self.chr1 = nxt;
+        c
+    }
+
+    // Helper function to retrieve the current position.
+    fn get_pos(&self) -> usize {
+        self.loc0
+    }
+
+    // Helper function to emit a lexed token to the queue of tokens.
+    fn emit(&mut self, spanned: Spanned) {
+        self.pending.push(spanned);
+    }
+}
+
+impl<T> Iterator for Lexer<T>
+where
+    T: Iterator<Item = (usize, char)>,
+{
+    type Item = LexResult;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let token = self.inner_next();
+        tracing::trace!("Lex token {:?}", token,);
+
+        match token {
+            Ok((_, Tok::EndOfFile, _)) => None,
+            r => Some(r),
+        }
+    }
+}
