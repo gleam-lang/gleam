@@ -69,7 +69,10 @@ pub struct Module {
     module: crate::ast::UntypedModule,
 }
 
-pub fn read_and_analyse(root: impl AsRef<Path>) -> Result<(PackageConfig, Vec<Analysed>), Error> {
+pub fn read_and_analyse(
+    root: impl AsRef<Path>,
+    use_alt_parser: bool,
+) -> Result<(PackageConfig, Vec<Analysed>), Error> {
     let project_config = config::read_project_config(&root)?;
     let mut srcs = vec![];
 
@@ -97,14 +100,14 @@ pub fn read_and_analyse(root: impl AsRef<Path>) -> Result<(PackageConfig, Vec<An
     collect_source(root.join("test"), ModuleOrigin::Test, &mut srcs)?;
 
     // Analyse source
-    let analysed = analysed(srcs)?;
+    let analysed = analysed(srcs, use_alt_parser)?;
 
     Ok((project_config, analysed))
 }
 
-pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
+pub fn analysed(inputs: Vec<Input>, use_alt_parser: bool) -> Result<Vec<Analysed>, Error> {
     let module_count = inputs.len();
-    let mut source_tree = SourceTree::new(inputs)?;
+    let mut source_tree = SourceTree::new(inputs, use_alt_parser)?;
     let mut modules_type_infos = HashMap::new();
     let mut compiled_modules = Vec::with_capacity(module_count);
     let mut uid = 0;

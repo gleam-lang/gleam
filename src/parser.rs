@@ -6,8 +6,6 @@ pub enum Error {
     TooManyHolesInCapture { location: SrcSpan, count: usize },
 }
 
-pub type LalrpopError = lalrpop_util::ParseError<usize, (usize, String), Error>;
-
 #[derive(Debug, PartialEq)]
 pub struct ModuleComments<'a> {
     pub module_comments: Vec<&'a str>,
@@ -518,9 +516,22 @@ pub fn make_call(
 }
 
 pub fn is_gleam_reserved_word(s: &str) -> bool {
-    match s {
-        "pub" | "fn" | "import" | "as" | "type" | "external" | "case" | "let" | "try"
-        | "assert" | "opaque" | "tuple" | "const" | "todo" => true,
-        _ => false,
-    }
+    matches!(
+        s,
+        "pub"
+            | "fn"
+            | "import"
+            | "as"
+            | "type"
+            | "external"
+            | "case"
+            | "let"
+            | "try"
+            | "assert"
+            | "opaque"
+            | "tuple"
+            | "const"
+            | "todo"
+            | "if",
+    )
 }

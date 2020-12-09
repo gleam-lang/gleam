@@ -50,7 +50,7 @@ pub fn complicated_fun(
         otp_start_module: None,
     };
 
-    let analysed = crate::project::analysed(vec![input]).expect("Compilation failed");
+    let analysed = crate::project::analysed(vec![input], true).expect("Compilation failed");
 
     let output_files = generate_html(
         PathBuf::from("."),

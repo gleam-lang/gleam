@@ -6,9 +6,7 @@ macro_rules! assert_infer {
     ($src:expr, $typ:expr $(,)?) => {
         println!("\n{}\n", $src);
         let mut printer = pretty::Printer::new();
-        let ast = crate::grammar::ExprSequenceParser::new()
-            .parse($src)
-            .expect("syntax error");
+        let ast = crate::parse::parse_expression_sequence($src).expect("syntax error");
 
         let result = ExprTyper::new(&mut Environment::new(
             &mut 0,
@@ -28,9 +26,7 @@ macro_rules! assert_infer {
 macro_rules! assert_module_error {
     ($src:expr, $error:expr $(,)?) => {
         let (src, _) = crate::parser::strip_extra($src);
-        let mut ast = crate::grammar::ModuleParser::new()
-            .parse(&src)
-            .expect("syntax error");
+        let mut ast = crate::parse::parse_module(&src).expect("syntax error");
         ast.name = vec!["my_module".to_string()];
         let ast = infer_module(&mut 0, ast, &HashMap::new(), &mut vec![])
             .expect_err("should infer an error");
@@ -38,18 +34,14 @@ macro_rules! assert_module_error {
     };
 
     ($src:expr) => {
-        let ast = crate::grammar::ModuleParser::new()
-            .parse($src)
-            .expect("syntax error");
+        let ast = crate::parse::parse_module($src).expect("syntax error");
         infer_module(&mut 0, ast, &HashMap::new(), &mut vec![]).expect_err("should infer an error");
     };
 }
 
 macro_rules! assert_error {
     ($src:expr, $error:expr $(,)?) => {
-        let ast = crate::grammar::ExprSequenceParser::new()
-            .parse($src)
-            .expect("syntax error");
+        let ast = crate::parse::parse_expression_sequence($src).expect("syntax error");
         let result = ExprTyper::new(&mut Environment::new(
             &mut 0,
             &[],
@@ -65,9 +57,7 @@ macro_rules! assert_error {
 macro_rules! assert_module_infer {
     ($src:expr, $module:expr $(,)?) => {
         let (src, _) = crate::parser::strip_extra($src);
-        let ast = crate::grammar::ModuleParser::new()
-            .parse(&src)
-            .expect("syntax error");
+        let ast = crate::parse::parse_module(&src).expect("syntax error");
         let ast = infer_module(&mut 0, ast, &HashMap::new(), &mut vec![])
             .expect("should successfully infer");
         let mut constructors: Vec<(_, _)> = ast
@@ -91,9 +81,7 @@ macro_rules! assert_module_infer {
 macro_rules! assert_warning {
     ($src:expr, $warning:expr $(,)?) => {
         let (src, _) = crate::parser::strip_extra($src);
-        let mut ast = crate::grammar::ModuleParser::new()
-            .parse(&src)
-            .expect("syntax error");
+        let mut ast = crate::parse::parse_module(&src).expect("syntax error");
         ast.name = vec!["my_module".to_string()];
         let mut warnings = vec![];
         let _ = infer_module(&mut 0, ast, &HashMap::new(), &mut warnings);
@@ -106,9 +94,7 @@ macro_rules! assert_warning {
 macro_rules! assert_no_warnings {
     ($src:expr $(,)?) => {
         let (src, _) = crate::parser::strip_extra($src);
-        let mut ast = crate::grammar::ModuleParser::new()
-            .parse(&src)
-            .expect("syntax error");
+        let mut ast = crate::parse::parse_module(&src).expect("syntax error");
         ast.name = vec!["my_module".to_string()];
         let expected: Vec<Warning> = vec![];
         let mut warnings = vec![];
@@ -846,15 +832,6 @@ fn binop_unification_errors() {
 
 #[test]
 fn unknown_variable() {
-    assert_error!(
-        "x",
-        Error::UnknownVariable {
-            location: SrcSpan { start: 0, end: 1 },
-            name: "x".to_string(),
-            variables: env_vars(),
-        },
-    );
-
     assert_error!(
         "x",
         Error::UnknownVariable {
@@ -2664,8 +2641,8 @@ fn duplicate_type_names() {
         "type DupType { A }
          type DupType { B }",
         Error::DuplicateTypeName {
-            location: SrcSpan { start: 28, end: 41 },
-            previous_location: SrcSpan { start: 0, end: 13 },
+            location: SrcSpan { start: 28, end: 40 },
+            previous_location: SrcSpan { start: 0, end: 12 },
             name: "DupType".to_string(),
         }
     );

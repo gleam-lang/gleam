@@ -13,11 +13,9 @@ use std::sync::Arc;
 
 const INDENT: isize = 2;
 
-pub fn pretty(src: &str) -> Result<String, crate::parser::LalrpopError> {
+pub fn pretty(src: &str) -> Result<String, crate::parse::error::ParseError> {
     let (stripped_src, comments) = crate::parser::strip_extra(src);
-    let ast = crate::grammar::ModuleParser::new()
-        .parse(&stripped_src)
-        .map_err(|e| e.map_token(|crate::grammar::Token(a, b)| (a, b.to_string())))?;
+    let ast = crate::parse::parse_module(&stripped_src)?;
     let mut formatter = Formatter::with_comments(&comments);
     Ok(pretty_module(&ast, &mut formatter))
 }

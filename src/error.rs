@@ -1,3 +1,4 @@
+use crate::parse::error::ParseErrorType;
 use crate::{
     cli,
     diagnostic::{
@@ -71,6 +72,12 @@ pub enum Error {
         path: PathBuf,
         src: Src,
         error: lalrpop_util::ParseError<usize, (usize, String), crate::parser::Error>,
+    },
+
+    Compile {
+        path: PathBuf,
+        src: Src,
+        error: crate::parse::error::ParseError,
     },
 
     Type {
@@ -1311,6 +1318,143 @@ When matching you need to use the `{}_codepoint` specifier instead.",
                     .unwrap();
                 }
             },
+
+            Error::Compile { path, src, error } => {
+                let crate::parse::error::ParseError { location, error } = error;
+
+                let (label, extra) = match error {
+                    ParseErrorType::ExpectedExpr => (
+                        "I was expecting an expression after this.",
+                        vec![]
+                    ),
+                    ParseErrorType::ExpectedName => (
+                        "I was expecting a name here.",
+                        vec![]
+                    ),
+                    ParseErrorType::ExpectedPattern => (
+                        "I was expecting a pattern after this.",
+                        vec!["See: https://gleam.run/book/tour/patterns".to_string()]
+                    ),
+                    ParseErrorType::ExpectedType => (
+                        "I was expecting a type after this.",
+                        vec!["See: https://gleam.run/book/tour/type-annotations".to_string()]
+                    ),
+                    ParseErrorType::ExpectedUpName => (
+                        "I was expecting a type name here.",
+                        vec![]
+                    ),
+                    ParseErrorType::ExpectedValue => (
+                        "I was expecting a value after this.",
+                        vec!["See: https://gleam.run/book/tour/patterns".to_string()]
+                    ),
+                    ParseErrorType::ExtraSeparator => (
+                        "This is an extra delimiter.",
+                        vec!["Hint: Try removing it?".to_string()]
+                    ),
+                    ParseErrorType::ExprLparStart=> (
+                        "This paren cannot be understood here.",
+                        vec!["Hint: To group expressions in gleam use \"{\" and \"}\"".to_string()]
+                    ),
+                    ParseErrorType::ExprTailBinding=> (
+                        "A variable binding cannot be the last expression.",
+                        vec!["Hint: Try using the value?".to_string()]
+                    ),
+                    ParseErrorType::IncorrectName => (
+                        "I'm expecting a lowercase name here.",
+                        vec![ "Hint: Variable and module names start with a lowercase letter, and can contain a-z, 0-9, or _.".to_string()]
+                    ),
+                    ParseErrorType::IncorrectUpName => (
+                        "I'm expecting a type name here.",
+                        vec![ "Hint: Type names start with a uppercase letter, and can contain a-z, A-Z, or 0-9.".to_string()]
+                    ),
+                    ParseErrorType::InvalidTailPattern => (
+                        "This part of a list pattern can only be a name or a discard.",
+                        vec!["See: https://gleam.run/book/tour/patterns".to_string()]
+                    ),
+                    ParseErrorType::InvalidTupleAccess => (
+                        "This integer is not valid for tuple access.",
+                        vec!["Hint: Only non negative integer literals like 0, or 1_000 can be used.".to_string()]
+                    ),
+                    ParseErrorType::LexError { error: lex_err } => lex_err.to_parse_error_info(),
+                    ParseErrorType::ListNilNotAllowed=> (
+                        "Hint: Empty list is not allowed here.",
+                        vec![]
+                    ),
+                    ParseErrorType::NoCaseClause => (
+                        "This case expression has no clauses.",
+                        vec!["See: https://gleam.run/book/tour/case-expressions".to_string()]
+                    ),
+                    ParseErrorType::NoConstructors => (
+                        "Custom types must have at least 1 constructor.",
+                        vec!["See: https://gleam.run/book/tour/custom-types".to_string()]
+                    ),
+                    ParseErrorType::NotConstType => (
+                        "This type is not allowed in module constants.",
+                        vec!["See: https://gleam.run/book/tour/constants".to_string()]
+                    ),
+                    ParseErrorType::NoExpression=> (
+                        "There must be an expression in here.",
+                        vec!["Hint: Put an expression in there or remove the brackets.".to_string()]
+                    ),
+                    ParseErrorType::NoValueAfterEqual => (
+                        "I was expectin to see a value after this equals sign.",
+                        vec![]
+                    ),
+                    ParseErrorType::OpaqueTypeAlias => (
+                        "Type Aliases cannot be opaque",
+                        vec!["See: https://gleam.run/book/tour/type-aliases".to_string()]
+                    ),
+                    ParseErrorType::OpNakedRight => (
+                        "This operator has no value on its right side.",
+                        vec!["Hint: Remove it or put a value after it.".to_string()]
+                    ),
+                    ParseErrorType::TooManyArgHoles => (
+                        "There is more than 1 argument hole in this function call.",
+                        vec!["Hint: Function calls can have at most one argument hole.".to_string(),
+                             "See: https://gleam.run/book/tour/functions".to_string()
+                            ]
+                    ),
+                    ParseErrorType::UnexpectedEOF => (
+                        "The module ended unexpectedly.",
+                        vec![]
+                    ),
+                    ParseErrorType::UnexpectedReservedWord => (
+                        "This is a reserved word.",
+                        vec!["Hint: I was expecting to see a name here.".to_string(), "See: https://gleam.run/book/tour/reserved-words".to_string()]
+                    ),
+                    ParseErrorType::UnexpectedToken { expected } => {
+                        let mut messages = expected.clone();
+                        messages
+                            .first_mut()
+                            .map(|s| *s = format!("Expected one of: {}", *s));
+
+                        ( "I was not expecting this.",
+                          messages
+                        )
+                    }
+                };
+
+                let adjusted_location = if error == &ParseErrorType::UnexpectedEOF {
+                    crate::ast::SrcSpan {
+                        start: src.len() - 1,
+                        end: src.len() - 1,
+                    }
+                } else {
+                    *location
+                };
+
+                let diagnostic = Diagnostic {
+                    title: "Syntax error".to_string(),
+                    label: label.to_string(),
+                    location: adjusted_location,
+                    file: path.to_str().unwrap().to_string(),
+                    src: src.to_string(),
+                };
+                write(buffer, diagnostic, Severity::Error);
+                if !extra.is_empty() {
+                    writeln!(buffer, "{}", extra.join("\n")).expect("error pretty buffer write");
+                }
+            }
 
             Error::Parse { path, src, error } => match error {
                 lalrpop_util::ParseError::UnrecognizedToken {

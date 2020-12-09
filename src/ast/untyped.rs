@@ -160,3 +160,9 @@ impl UntypedExpr {
         matches!(self, Self::String { .. } | Self::Int { .. } | Self::Float { .. })
     }
 }
+
+impl HasLocation for UntypedExpr {
+    fn location(&self) -> SrcSpan {
+        self.location()
+    }
+}
