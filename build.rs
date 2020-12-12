@@ -2,8 +2,8 @@ fn main() {
     lalrpop::process_root().unwrap();
 
     // capnpc::CompilerCommand::new()
-    //     .file("src/bindata.capnp")
-    //     .output_path("./")
+    //     .file("schema.capnp")
+    //     .output_path("generated/")
     //     .run()
-    //     .expect("compiling src/bindata.capnp");
+    //     .expect("compiling schema.capnp");
 }
