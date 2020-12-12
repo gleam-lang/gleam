@@ -28,8 +28,7 @@
     clippy::option_option,
     clippy::verbose_file_reads,
     clippy::unnested_or_patterns,
-    rust_2018_idioms,
-    future_incompatible,
+    // rust_2018_idioms,
     missing_debug_implementations,
     missing_copy_implementations,
     trivial_casts,
@@ -38,11 +37,11 @@
     nonstandard_style,
     unused_import_braces,
     unused_qualifications,
+    // TODO: Fix all examples that violate this
     // unused_results
 )]
 
 mod ast;
-mod bindata_capnp;
 mod bit_string;
 mod build;
 mod cli;
@@ -76,6 +75,11 @@ lalrpop_mod!(
     )]
     grammar
 );
+
+mod schema_capnp {
+    #![allow(dead_code, unused_qualifications)]
+    include!("../generated/schema_capnp.rs");
+}
 
 #[macro_use]
 extern crate im;

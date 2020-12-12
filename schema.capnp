@@ -3,7 +3,7 @@
 # This Cap'n Proto schema is compiled into Rust code for use in the compiler.
 #
 # We don't want the compiler build to depend on the Cap'n Proto compiler so 
-# the Cap'n Proto to Rust build step is commentted out in `src/build.rs`.
+# the Cap'n Proto to Rust build step is commented out in `build.rs`.
 
 struct Map(Key, Value) {
   entries @0 :List(Entry);
