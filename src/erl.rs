@@ -16,11 +16,12 @@ use heck::SnakeCase;
 use itertools::Itertools;
 use std::char;
 use std::default::Default;
+use std::path::Path;
 use std::sync::Arc;
 
 const INDENT: isize = 4;
 
-pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
+pub fn generate_erlang(analysed: &[Analysed], project_path: impl AsRef<Path>) -> Vec<OutputFile> {
     let mut files = Vec::with_capacity(analysed.len() * 2);
 
     for Analysed {
@@ -40,9 +41,15 @@ pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
 
         let mut record_filenames: Vec<String> = Vec::new();
 
+        // Write our record definitions to file and store the file path so we can include it into
+        // our generated erlang module code
         for (name, text) in records(ast).into_iter() {
             let path = gen_dir.join(format!("{}_{}.hrl", erl_module_name, name));
-            if let Some(filename) = path.to_str() {
+            if let Some(filename) = path
+                .strip_prefix(&project_path)
+                .ok()
+                .and_then(|path| path.to_str())
+            {
                 record_filenames.push(filename.to_string());
             }
             files.push(OutputFile { path, text })

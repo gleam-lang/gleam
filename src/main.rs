@@ -199,7 +199,12 @@ fn main() {
     initialise_logger();
 
     let result = match Command::from_args() {
-        Command::Build { project_root } => command_build(project_root),
+        Command::Build { project_root } => PathBuf::from(&project_root)
+            .canonicalize()
+            .map_err(|_| Error::UnableToFindProjectRoot {
+                path: project_root.clone(),
+            })
+            .and_then(|project_root| command_build(project_root)),
 
         Command::Docs(Docs::Build { project_root, to }) => PathBuf::from(&project_root)
             .canonicalize()
@@ -245,8 +250,7 @@ fn main() {
     }
 }
 
-fn command_build(root: String) -> Result<(), Error> {
-    let root = PathBuf::from(&root);
+fn command_build(root: PathBuf) -> Result<(), Error> {
     let config = config::read_project_config(&root)?;
 
     // Use new build tool
@@ -258,7 +262,7 @@ fn command_build(root: String) -> Result<(), Error> {
     let (_config, analysed) = project::read_and_analyse(&root)?;
 
     // Generate Erlang code
-    let output_files = erl::generate_erlang(analysed.as_slice());
+    let output_files = erl::generate_erlang(analysed.as_slice(), &root);
 
     // Reset output directory
     fs::delete_dir(&root.join(project::OUTPUT_DIR_NAME))?;
