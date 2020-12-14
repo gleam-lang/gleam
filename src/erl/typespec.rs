@@ -44,23 +44,24 @@ pub fn type_name_to_atom(name: &str) -> String {
     }
 }
 
-/* Generate an erlang '-type' line for this custom type. There are three options for entries:
+/** Generate an erlang '-type' line for this custom type. There are three options for entries:
 
-   1. Basic constructors with no arguments that we convert to a single atom
+    1. Basic constructors with no arguments that we convert to a single atom
 
-        -type option(A) :: ... | none
+         -type option(A) :: ... | none
 
-   2. Constructors where all the arguments are labelled, which we treat as records, and output a
-      type which uses the record definition that has already been output and included in this file:
+    2. Constructors where all the arguments are labelled, which we treat as records, and output a
+       type which uses the record definition that has already been output and included in this
+       file:
 
-        -type queue(Element) :: #queue{in :: Element, out :: Element} | ..
+         -type queue(Element) :: #queue{in :: Element, out :: Element} | ..
 
-      We declare and pass through any type parameters so that the type has the right number of
-      arguments and the type parameters are used.
+       We declare and pass through any type parameters so that the type has the right number of
+       arguments and the type parameters are used.
 
-   3. Constructors some or all of the arguments are not labelled, which are output as tag tuples:
+    3. Constructors some or all of the arguments are not labelled, which are output as tag tuples:
 
-        -type option(A) :: {some, A} | ..
+         -type option(A) :: {some, A} | ..
 */
 pub fn type_(name: &str, _parameters: &[String], constructors: &[RecordConstructor]) -> Document {
     let found_parameters = extract_params_from_constructors(constructors);
