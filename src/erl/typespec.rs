@@ -115,15 +115,9 @@ fn non_record_type(constructor: &RecordConstructor) -> Document {
         .surround("{", "}")
 }
 
+/// Return true if the constructor has arguments and they are all labelled, ie. is a record.
 fn is_record(constructor: &RecordConstructor) -> bool {
-    for (label, ..) in constructor.args.iter() {
-        match label {
-            Some(_) => return true,
-            None => return false,
-        }
-    }
-
-    false
+    (!constructor.args.is_empty()) && constructor.args.iter().all(|(label, ..)| label.is_some())
 }
 
 fn type_record_definition(args: &[(Option<String>, TypeAst, SrcSpan)]) -> Document {
