@@ -155,7 +155,7 @@ pub enum Error {
     },
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum InvalidProjectNameReason {
     Format,
     ErlangReservedWord,
@@ -163,7 +163,7 @@ pub enum InvalidProjectNameReason {
     GleamReservedWord,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum StandardIOAction {
     Read,
 }
@@ -176,7 +176,7 @@ impl StandardIOAction {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum FileIOAction {
     Open,
     Copy,
@@ -203,7 +203,7 @@ impl FileIOAction {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FileKind {
     File,
     Directory,

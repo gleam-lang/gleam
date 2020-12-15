@@ -50,11 +50,6 @@ pub fn main(root_config: PackageConfig, path: PathBuf) -> Result<HashMap<String,
     tracing::info!("Compiling packages");
     let packages = ProjectCompiler::new(&root, root_config, configs).compile()?;
 
-    tracing::info!("Writing generated Erlang source code to disc");
-    for package in packages.values() {
-        crate::fs::write_outputs(package.outputs.as_slice())?;
-    }
-
     tracing::info!("Compiling Erlang source code to BEAM bytecode");
     compile_erlang_to_beam(&root, &packages)?;
 
@@ -65,7 +60,6 @@ pub fn main(root_config: PackageConfig, path: PathBuf) -> Result<HashMap<String,
 pub struct Package {
     pub config: PackageConfig,
     pub modules: Vec<Module>,
-    pub outputs: Vec<OutputFile>,
 }
 
 #[derive(Debug)]

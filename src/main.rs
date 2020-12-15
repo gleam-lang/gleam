@@ -94,7 +94,12 @@ extern crate lalrpop_util;
 #[macro_use]
 extern crate lazy_static;
 
-use crate::error::Error;
+pub use self::{
+    codegen::CodeGenerator,
+    error::{Error, GleamExpect},
+    warning::Warning,
+};
+
 use std::path::PathBuf;
 use structopt::clap::AppSettings;
 use structopt::StructOpt;

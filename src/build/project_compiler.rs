@@ -4,8 +4,8 @@ use crate::{
     },
     codegen::{ErlangApp, ErlangModules, ErlangRecordHeaders},
     config::PackageConfig,
-    error::{Error, GleamExpect},
-    typ,
+    fs::FileSystemAccessor,
+    typ, Error, GleamExpect,
 };
 use std::{collections::HashMap, path::PathBuf};
 
@@ -73,7 +73,7 @@ impl<'a> ProjectCompiler<'a> {
             ErlangRecordHeaders::new(self.root.default_build_lib_package_src_path(&config.name));
         let codegen_modules =
             ErlangModules::new(self.root.default_build_lib_package_src_path(&config.name));
-        let mut compiler = PackageCompiler::new(config)
+        let mut compiler = PackageCompiler::new(config, FileSystemAccessor::boxed())
             .with_code_generator(Box::new(codegen_app))
             .with_code_generator(Box::new(codegen_records))
             .with_code_generator(Box::new(codegen_modules));

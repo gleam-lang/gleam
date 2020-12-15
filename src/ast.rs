@@ -280,7 +280,7 @@ pub struct ExternalFnArg {
     pub typ: TypeAst,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum BinOp {
     // Boolean logic
     And,
@@ -739,7 +739,7 @@ pub enum BitStringSegmentOption<Value> {
         label: String,
     },
 }
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum SegmentOptionCategory {
     Type,
     Endianness,

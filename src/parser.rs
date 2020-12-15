@@ -1,7 +1,7 @@
 use crate::ast::*;
 use unicode_segmentation::UnicodeSegmentation;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Error {
     TooManyHolesInCapture { location: SrcSpan, count: usize },
 }

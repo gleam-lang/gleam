@@ -13,6 +13,84 @@ pub struct OutputFile {
     pub path: PathBuf,
 }
 
+/// A trait used to write files.
+/// Typically we use an implementation that writes to the file system,
+/// but in tests and in other places other implementations may be used.
+pub trait FileWriter: Debug {
+    fn open<'a>(&self, path: &'a Path) -> Result<Writer<'a>, Error>;
+}
+
+/// A FileWriter implementation that writes to the file system.
+#[derive(Debug)]
+pub struct FileSystemAccessor;
+
+impl FileSystemAccessor {
+    pub fn new() -> Self {
+        Self
+    }
+
+    pub fn boxed() -> Box<Self> {
+        Box::new(Self::new())
+    }
+}
+
+impl FileWriter for FileSystemAccessor {
+    fn open<'a>(&self, path: &'a Path) -> Result<Writer<'a>, Error> {
+        tracing::trace!("Writing file {:?}", path);
+
+        let dir_path = path.parent().ok_or_else(|| Error::FileIO {
+            action: FileIOAction::FindParent,
+            kind: FileKind::Directory,
+            path: path.to_path_buf(),
+            err: None,
+        })?;
+
+        std::fs::create_dir_all(dir_path).map_err(|e| Error::FileIO {
+            action: FileIOAction::Create,
+            kind: FileKind::Directory,
+            path: dir_path.to_path_buf(),
+            err: Some(e.to_string()),
+        })?;
+
+        let file = File::create(&path).map_err(|e| Error::FileIO {
+            action: FileIOAction::Create,
+            kind: FileKind::File,
+            path: path.to_path_buf(),
+            err: Some(e.to_string()),
+        })?;
+
+        Ok(Writer::new(path, Box::new(file)))
+    }
+}
+
+// TODO: Remove this when the Rust compiler stops incorrectly suggesting this
+// could be derived. It can't because Write doesn't implement Debug
+#[allow(missing_debug_implementations)]
+/// A wrapper around a Write implementing object that has Gleam's error handling.
+pub struct Writer<'a> {
+    path: &'a Path,
+    inner: Box<dyn Write>,
+}
+
+impl<'a> Writer<'a> {
+    pub fn new(path: &'a Path, inner: Box<dyn Write>) -> Self {
+        Self { path, inner }
+    }
+
+    /// A wrapper around write that has Gleam's error handling.
+    pub fn write(&'a mut self, bytes: &[u8]) -> Result<(), Error> {
+        self.inner
+            .write(bytes)
+            .map_err(|error| Error::FileIO {
+                action: FileIOAction::WriteTo,
+                kind: FileKind::File,
+                path: self.path.to_path_buf(),
+                err: Some(error.to_string()),
+            })
+            .map(|_| ())
+    }
+}
+
 pub fn delete_dir(dir: &PathBuf) -> Result<(), Error> {
     tracing::trace!("Deleting directory {:?}", dir);
     if dir.exists() {
