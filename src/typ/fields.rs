@@ -9,6 +9,7 @@ pub struct FieldMap {
     pub fields: HashMap<String, usize>,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct DuplicateField;
 
 impl FieldMap {

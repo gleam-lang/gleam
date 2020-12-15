@@ -22,6 +22,7 @@ pub struct Hydrator {
     permit_holes: bool,
 }
 
+#[derive(Debug)]
 pub struct ScopeResetData {
     created_type_variables: im::HashMap<String, Arc<Type>>,
     created_type_variable_ids: im::HashSet<usize>,

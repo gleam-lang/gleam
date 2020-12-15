@@ -1,4 +1,4 @@
-use crate::{build::Module, codegen::CodeGenerator, config::PackageConfig, fs::OutputFile};
+use crate::{build::Module, config::PackageConfig, fs::FileWriter, CodeGenerator, Error};
 use itertools::Itertools;
 use std::path::PathBuf;
 
@@ -9,7 +9,12 @@ pub struct ErlangApp {
 }
 
 impl CodeGenerator for ErlangApp {
-    fn render(&self, config: &PackageConfig, modules: &[Module]) -> Vec<OutputFile> {
+    fn render(
+        &self,
+        writer: &dyn FileWriter,
+        config: &PackageConfig,
+        modules: &[Module],
+    ) -> Result<(), Error> {
         let path = self.output_directory.join(format!("{}.app", &config.name));
 
         let start_module = match &config.otp_start_module {
@@ -44,7 +49,7 @@ impl CodeGenerator for ErlangApp {
             version = config.version,
         );
 
-        vec![OutputFile { path, text }]
+        writer.open(&path)?.write(text.as_bytes())
     }
 }
 

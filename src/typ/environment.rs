@@ -67,6 +67,7 @@ impl<'a, 'b> Environment<'a, 'b> {
     }
 }
 
+#[derive(Debug)]
 pub struct ScopeResetData {
     local_values: im::HashMap<String, ValueConstructor>,
 }

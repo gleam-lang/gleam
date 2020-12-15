@@ -21,7 +21,7 @@ pub struct PackageConfig {
     pub repository: Repository,
 }
 
-#[derive(Deserialize, Debug, PartialEq)]
+#[derive(Deserialize, Debug, PartialEq, Clone, Copy)]
 #[serde(rename_all = "kebab-case")]
 pub enum BuildTool {
     Gleam,

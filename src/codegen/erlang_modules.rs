@@ -1,4 +1,4 @@
-use crate::{build::Module, codegen::CodeGenerator, config::PackageConfig, erl, fs::OutputFile};
+use crate::{build::Module, config::PackageConfig, erl, fs::FileWriter, CodeGenerator, Error};
 use std::path::PathBuf;
 
 /// A code generator that creates a .erl Erlang module for each Gleam module in
@@ -9,25 +9,27 @@ pub struct ErlangModules {
 }
 
 impl CodeGenerator for ErlangModules {
-    fn render(&self, _config: &PackageConfig, modules: &[Module]) -> Vec<OutputFile> {
-        modules
-            .iter()
-            .map(|module| self.render_module(module))
-            .collect()
+    fn render(
+        &self,
+        writer: &dyn FileWriter,
+        _config: &PackageConfig,
+        modules: &[Module],
+    ) -> Result<(), Error> {
+        for module in modules {
+            let erl_name = module.name.replace("/", "@");
+            let text = erl::module(&module.ast);
+            let name = format!("{}.erl", erl_name);
+            tracing::trace!(name = ?name, "Generated Erlang module");
+            writer
+                .open(self.output_directory.join(name).as_path())?
+                .write(text.as_bytes())?;
+        }
+        Ok(())
     }
 }
 
 impl ErlangModules {
     pub fn new(output_directory: PathBuf) -> Self {
         Self { output_directory }
-    }
-
-    pub fn render_module(&self, module: &Module) -> OutputFile {
-        let erl_name = module.name.replace("/", "@");
-        let text = erl::module(&module.ast);
-        let name = format!("{}.erl", erl_name);
-        tracing::trace!(name = ?name, "Generated Erlang module");
-        let path = self.output_directory.join(name);
-        OutputFile { path, text }
     }
 }

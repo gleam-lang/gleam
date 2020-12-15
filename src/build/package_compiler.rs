@@ -1,11 +1,10 @@
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
     build::{dep_tree, project_root::ProjectRoot, Module, Origin, Package},
-    codegen::CodeGenerator,
     config::PackageConfig,
-    error::{self, Error, GleamExpect},
-    grammar, parser, typ,
-    warning::Warning,
+    error,
+    fs::FileWriter,
+    grammar, parser, typ, CodeGenerator, Error, GleamExpect, Warning,
 };
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -16,6 +15,7 @@ pub struct PackageCompiler {
     pub sources: Vec<Source>,
     pub print_progress: bool,
     pub code_generators: Vec<Box<dyn CodeGenerator>>,
+    pub writer: Box<dyn FileWriter>,
 }
 
 // TODO: ensure this is not a duplicate module
@@ -23,9 +23,10 @@ pub struct PackageCompiler {
 // Including cases for:
 // - modules that don't import anything
 impl PackageCompiler {
-    pub fn new(config: PackageConfig) -> Self {
+    pub fn new(config: PackageConfig, writer: Box<dyn FileWriter>) -> Self {
         Self {
             config,
+            writer,
             sources: vec![],
             print_progress: true,
             code_generators: vec![],
@@ -66,17 +67,12 @@ impl PackageCompiler {
         tracing::info!("Type checking modules");
         let modules = type_check(sequence, parsed_modules, existing_modules)?;
 
-        tracing::info!("Generating Erlang source code");
-        let outputs = code_generators
-            .iter()
-            .flat_map(|code_generator| code_generator.render(&config, modules.as_slice()))
-            .collect();
+        tracing::info!("Running code generators");
+        for code_generator in code_generators {
+            code_generator.render(self.writer.as_ref(), &config, modules.as_slice())?;
+        }
 
-        Ok(Package {
-            config,
-            modules,
-            outputs,
-        })
+        Ok(Package { config, modules })
     }
 
     pub fn read_package_source_files(
