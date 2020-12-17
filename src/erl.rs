@@ -232,15 +232,34 @@ fn statement(
         Statement::ExternalType { .. } => None,
         Statement::ModuleConstant { .. } => None,
         Statement::CustomType {
+            public: true,
             name,
             parameters,
             constructors,
             ..
         } => {
-            if used_types.contains(&typespec::TypeRef {
+            // Always output public types
+            Some(typespec::type_(&name, &parameters, &constructors))
+        }
+
+        Statement::CustomType {
+            public: false,
+            name,
+            parameters,
+            constructors,
+            ..
+        } => {
+            // Only output private types if we have found evidence of them being used in function
+            // specs that we're going to output
+            let used_with_no_module = used_types.contains(&typespec::TypeRef {
                 name: name.clone(),
-                module: current_module.to_vec(),
-            }) {
+                module: None,
+            });
+            let used_with_current_module = used_types.contains(&typespec::TypeRef {
+                name: name.clone(),
+                module: Some(current_module.to_vec()),
+            });
+            if used_with_no_module || used_with_current_module {
                 Some(typespec::type_(&name, &parameters, &constructors))
             } else {
                 None

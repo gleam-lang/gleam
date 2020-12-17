@@ -11,7 +11,7 @@ use itertools::Itertools;
 #[derive(Debug, PartialEq)]
 pub struct TypeRef {
     pub name: String,
-    pub module: Vec<String>,
+    pub module: Option<Vec<String>>,
 }
 
 pub fn extract_types(module: &TypedModule) -> Vec<TypeRef> {
@@ -32,12 +32,19 @@ pub fn extract_types(module: &TypedModule) -> Vec<TypeRef> {
                 type_refs
             }),
 
-            Statement::ExternalFn { .. } =>
-            // TODO: Extract TypeRefs from ExternalFn - Not sure the best way to do this within an
-            // accessible Type value on the ExternalFnArg
-            {
-                None
-            }
+            Statement::ExternalFn {
+                public: true,
+                args,
+                return_type,
+                ..
+            } => Some({
+                let mut type_refs = extract_type_refs_from_external_args(&args);
+                match extract_type_refs_from_type(&return_type) {
+                    Some(type_ref) => type_refs.push(type_ref),
+                    None => {}
+                }
+                type_refs
+            }),
             _ => None,
         })
         .flatten()
@@ -329,8 +336,39 @@ fn extract_type_refs_from_type(typ: &Type) -> Option<TypeRef> {
     match &typ {
         Type::App { name, module, .. } => Some(TypeRef {
             name: name.clone(),
-            module: module.clone(),
+            module: Some(module.clone()),
         }),
         _ => None,
+    }
+}
+
+fn extract_type_refs_from_external_args(args: &[ExternalFnArg]) -> Vec<TypeRef> {
+    args.iter()
+        .flat_map(|arg| extract_type_refs_from_type_ast(&arg.typ))
+        .collect()
+}
+
+fn extract_type_refs_from_type_ast(typ: &TypeAst) -> Vec<TypeRef> {
+    match &typ {
+        TypeAst::Constructor {
+            name, module, args, ..
+        } => {
+            let mut type_refs = vec![TypeRef {
+                name: name.clone(),
+                // TODO: This is probably wrong - I'm not sure how this 'module' field compares to the
+                // Type::App 'module' field
+                module: module.clone().map(|module| vec![module]),
+            }];
+
+            let from_args = args
+                .iter()
+                .map(|arg| extract_type_refs_from_type_ast(&arg))
+                .flatten()
+                .collect::<Vec<TypeRef>>();
+
+            type_refs.extend(from_args);
+            type_refs
+        }
+        _ => Vec::new(),
     }
 }
