@@ -138,29 +138,49 @@ fn type_record_definition(args: &[(Option<String>, TypeAst, SrcSpan)]) -> Docume
 }
 
 // Generates the spec for a regular Gleam function
-pub fn fun_spec(name: &str, args: &[TypedArg], return_type: &Type) -> Document {
+pub fn fun_spec(module: &[String], name: &str, args: &[TypedArg], return_type: &Type) -> Document {
     "-spec "
         .to_doc()
         .append(atom(name.to_string()))
-        .append(spec_args(args))
+        .append(spec_args(args, module))
         .append(" -> ")
-        .append(typ_to_erl(return_type))
+        .append(typ_to_erl(return_type, module))
         .append(".")
 }
 
-fn spec_args(args: &[TypedArg]) -> Document {
-    wrap_args(args.iter().map(|a| typ_to_erl(&*a.typ)))
+fn spec_args(args: &[TypedArg], module: &[String]) -> Document {
+    wrap_args(args.iter().map(|a| typ_to_erl(&*a.typ, module)))
 }
 
-fn typ_to_erl(typ: &Type) -> Document {
+fn typ_to_erl(typ: &Type, current_module: &[String]) -> Document {
     match typ {
-        Type::App { name, .. } => name.to_snake_case().to_doc(),
+        Type::App { name, module, .. } => {
+            if module.is_empty() {
+                name.to_snake_case().to_doc()
+            } else {
+                if current_module == &module[..] {
+                    name.to_snake_case().to_doc()
+                } else {
+                    module
+                        .join("@")
+                        .to_doc()
+                        .append(":")
+                        .append(name.to_snake_case().to_doc())
+                        .append("()")
+                }
+            }
+        }
         _ => "term".to_doc(),
     }
 }
 
 // Generates the spec for an external Gleam function that wraps an erlang one
-pub fn external_fun_spec(name: &str, args: &[ExternalFnArg], return_type: &Type) -> Document {
+pub fn external_fun_spec(
+    module: &[String],
+    name: &str,
+    args: &[ExternalFnArg],
+    return_type: &Type,
+) -> Document {
     // Find all parameters used in the return type - these are the only ones we can show in the
     // args otherwise they are flagged as unused
     let return_type_params = extract_params_from_type(return_type);
@@ -169,7 +189,7 @@ pub fn external_fun_spec(name: &str, args: &[ExternalFnArg], return_type: &Type)
         .append(atom(name.to_string()))
         .append(external_spec_args(args, &return_type_params))
         .append(" -> ")
-        .append(typ_to_erl(return_type))
+        .append(typ_to_erl(return_type, module))
         .append(".")
 }
 

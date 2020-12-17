@@ -219,7 +219,7 @@ pub fn module(module: &TypedModule, import_filenames: &[String]) -> String {
         .format(80)
 }
 
-fn statement(statement: &TypedStatement, module: &[String]) -> Option<Document> {
+fn statement(statement: &TypedStatement, current_module: &[String]) -> Option<Document> {
     match statement {
         Statement::TypeAlias { .. } => None,
         Statement::Import { .. } => None,
@@ -239,9 +239,19 @@ fn statement(statement: &TypedStatement, module: &[String]) -> Option<Document> 
             return_type,
             ..
         } => Some(
-            typespec::fun_spec(name.as_ref(), args.as_slice(), &*return_type)
-                .append(line())
-                .append(mod_fun(name.as_ref(), args.as_slice(), body, module)),
+            typespec::fun_spec(
+                current_module,
+                name.as_ref(),
+                args.as_slice(),
+                &*return_type,
+            )
+            .append(line())
+            .append(mod_fun(
+                name.as_ref(),
+                args.as_slice(),
+                body,
+                current_module,
+            )),
         ),
 
         Statement::ExternalFn { public: false, .. } => None,
@@ -253,14 +263,19 @@ fn statement(statement: &TypedStatement, module: &[String]) -> Option<Document> 
             return_type,
             ..
         } => Some(
-            typespec::external_fun_spec(name.as_ref(), args.as_slice(), &*return_type)
-                .append(line())
-                .append(external_fun(
-                    name.as_ref(),
-                    module.as_ref(),
-                    fun.as_ref(),
-                    args.len(),
-                )),
+            typespec::external_fun_spec(
+                current_module,
+                name.as_ref(),
+                args.as_slice(),
+                &*return_type,
+            )
+            .append(line())
+            .append(external_fun(
+                name.as_ref(),
+                module.as_ref(),
+                fun.as_ref(),
+                args.len(),
+            )),
         ),
     }
 }
