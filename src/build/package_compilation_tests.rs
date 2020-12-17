@@ -8,7 +8,9 @@ use crate::{
     },
     codegen::{ErlangApp, ErlangModules, ErlangRecordHeaders},
     config::{BuildTool, Docs, PackageConfig, Repository},
-    erl, typ,
+    erl,
+    fs::test::FilesChannel,
+    typ,
 };
 use std::{path::PathBuf, sync::Arc};
 
@@ -30,7 +32,8 @@ macro_rules! assert_erlang_compile {
             ErlangRecordHeaders::new(PathBuf::from("_build/default/lib/the_package/src"));
         let codegen_modules =
             ErlangModules::new(PathBuf::from("_build/default/lib/the_package/src"));
-        let mut compiler = PackageCompiler::new(config)
+        let (file_writer, file_receiver) = FilesChannel::new();
+        let mut compiler = PackageCompiler::new(config, Box::new(file_writer))
             .with_code_generator(Box::new(codegen_app))
             .with_code_generator(Box::new(codegen_records))
             .with_code_generator(Box::new(codegen_modules));
@@ -38,7 +41,11 @@ macro_rules! assert_erlang_compile {
         compiler.print_progress = false;
         let outputs = compiler
             .compile(&mut modules, &mut HashMap::with_capacity(4))
-            .map(get_sorted_outputs)
+            .map(|_| {
+                let mut outputs = FilesChannel::recv_utf8_files(&file_receiver).unwrap();
+                outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
+                outputs
+            })
             .map_err(|e| normalise_error(e));
         assert_eq!($expected_output, outputs);
     };
@@ -1238,16 +1245,18 @@ fn config_compilation_test() {
                 ErlangRecordHeaders::new(PathBuf::from("_build/default/lib/the_package/src"));
             let codegen_modules =
                 ErlangModules::new(PathBuf::from("_build/default/lib/the_package/src"));
-            let mut compiler = PackageCompiler::new($config)
+            let (file_writer, file_receiver) = FilesChannel::new();
+            let mut compiler = PackageCompiler::new($config, Box::new(file_writer))
                 .with_code_generator(Box::new(codegen_app))
                 .with_code_generator(Box::new(codegen_records))
                 .with_code_generator(Box::new(codegen_modules));
             compiler.print_progress = false;
             compiler.sources = $sources;
-            let outputs = compiler
+            compiler
                 .compile(&mut modules, &mut HashMap::with_capacity(4))
-                .map(get_sorted_outputs)
                 .expect("Should compile OK");
+            let mut outputs = FilesChannel::recv_utf8_files(&file_receiver).unwrap();
+            outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
             assert_eq!($expected_output, outputs);
         };
     };
@@ -1362,10 +1371,4 @@ fn normalise_error(e: Error) -> Error {
         }
         e => e,
     }
-}
-
-fn get_sorted_outputs(package: Package) -> Vec<OutputFile> {
-    let mut outputs = package.outputs;
-    outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
-    outputs
 }

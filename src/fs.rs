@@ -318,3 +318,72 @@ pub fn copy_dir(path: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) ->
         })
         .map(|_| ())
 }
+
+#[cfg(test)]
+pub mod test {
+    use super::*;
+    use std::{
+        cell::RefCell,
+        rc::Rc,
+        sync::mpsc::{self, Receiver, Sender},
+    };
+
+    #[derive(Debug, Clone)]
+    pub struct FilesChannel(Sender<(PathBuf, InMemoryFile)>);
+
+    impl FilesChannel {
+        pub fn new() -> (Self, Receiver<(PathBuf, InMemoryFile)>) {
+            let (sender, receiver) = mpsc::channel();
+            (Self(sender), receiver)
+        }
+
+        pub fn recv_utf8_files(
+            receiver: &Receiver<(PathBuf, InMemoryFile)>,
+        ) -> Result<Vec<OutputFile>, ()> {
+            receiver
+                .try_iter()
+                .map(|(path, file)| {
+                    Ok(OutputFile {
+                        path,
+                        text: String::from_utf8(file.into_contents()?).map_err(|_| ())?,
+                    })
+                })
+                .collect()
+        }
+    }
+
+    impl FileWriter for FilesChannel {
+        fn open<'a>(&self, path: &'a Path) -> Result<Writer<'a>, Error> {
+            let file = InMemoryFile::new();
+            let _ = self.0.send((path.to_path_buf(), file.clone()));
+            Ok(Writer::new(path, Box::new(file)))
+        }
+    }
+
+    #[derive(Debug, Default, Clone)]
+    pub struct InMemoryFile {
+        contents: Rc<RefCell<Vec<u8>>>,
+    }
+
+    impl InMemoryFile {
+        pub fn new() -> Self {
+            Default::default()
+        }
+
+        pub fn into_contents(self) -> Result<Vec<u8>, ()> {
+            Rc::try_unwrap(self.contents)
+                .map_err(|_| ())
+                .map(|cell| cell.into_inner())
+        }
+    }
+
+    impl Write for InMemoryFile {
+        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+            self.contents.borrow_mut().write(buf)
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            self.contents.borrow_mut().flush()
+        }
+    }
+}
