@@ -8,6 +8,42 @@ use crate::{
 use heck::{CamelCase, SnakeCase};
 use itertools::Itertools;
 
+#[derive(Debug, PartialEq)]
+pub struct TypeRef {
+    pub name: String,
+    pub module: Vec<String>,
+}
+
+pub fn extract_types(module: &TypedModule) -> Vec<TypeRef> {
+    module
+        .statements
+        .iter()
+        .flat_map(|s| match s {
+            Statement::Fn {
+                args, return_type, ..
+            } => Some({
+                // TODO: Find a better way to combine these - Chaining iterators didn't seem to
+                // work
+                let mut type_refs = extract_type_refs_from_args(&args);
+                match extract_type_refs_from_type(&return_type) {
+                    Some(type_ref) => type_refs.push(type_ref),
+                    None => {}
+                }
+                type_refs
+            }),
+
+            Statement::ExternalFn { .. } =>
+            // TODO: Extract TypeRefs from ExternalFn - Not sure the best way to do this within an
+            // accessible Type value on the ExternalFnArg
+            {
+                None
+            }
+            _ => None,
+        })
+        .flatten()
+        .collect()
+}
+
 // Creates the contents of the `export_type([..])` line
 pub fn type_exports(module: &TypedModule) -> Document {
     concat(
@@ -279,5 +315,22 @@ fn extract_params_from_type(typ: &Type) -> Vec<String> {
     match typ {
         Type::App { name, .. } => vec![name.to_camel_case()],
         _ => Vec::new(),
+    }
+}
+
+// Extract Type functions
+fn extract_type_refs_from_args(args: &[TypedArg]) -> Vec<TypeRef> {
+    args.iter()
+        .flat_map(|arg| extract_type_refs_from_type(&*arg.typ))
+        .collect()
+}
+
+fn extract_type_refs_from_type(typ: &Type) -> Option<TypeRef> {
+    match &typ {
+        Type::App { name, module, .. } => Some(TypeRef {
+            name: name.clone(),
+            module: module.clone(),
+        }),
+        _ => None,
     }
 }

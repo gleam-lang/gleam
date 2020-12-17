@@ -174,11 +174,13 @@ pub fn module(module: &TypedModule, import_filenames: &[String]) -> String {
 
     let type_exports = typespec::type_exports(&module);
 
+    let used_types = typespec::extract_types(&module);
+
     let statements = concat(
         module
             .statements
             .iter()
-            .flat_map(|s| statement(s, module_name))
+            .flat_map(|s| statement(s, &used_types, module_name))
             .intersperse(lines(2)),
     );
 
@@ -219,7 +221,11 @@ pub fn module(module: &TypedModule, import_filenames: &[String]) -> String {
         .format(80)
 }
 
-fn statement(statement: &TypedStatement, current_module: &[String]) -> Option<Document> {
+fn statement(
+    statement: &TypedStatement,
+    used_types: &[typespec::TypeRef],
+    current_module: &[String],
+) -> Option<Document> {
     match statement {
         Statement::TypeAlias { .. } => None,
         Statement::Import { .. } => None,
@@ -230,7 +236,16 @@ fn statement(statement: &TypedStatement, current_module: &[String]) -> Option<Do
             parameters,
             constructors,
             ..
-        } => Some(typespec::type_(&name, &parameters, &constructors)),
+        } => {
+            if used_types.contains(&typespec::TypeRef {
+                name: name.clone(),
+                module: current_module.to_vec(),
+            }) {
+                Some(typespec::type_(&name, &parameters, &constructors))
+            } else {
+                None
+            }
+        }
 
         Statement::Fn {
             args,
