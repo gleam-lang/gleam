@@ -137,10 +137,14 @@ pub fn type_(name: &str, _parameters: &[String], constructors: &[RecordConstruct
 }
 
 fn record_type(constructor: &RecordConstructor) -> Document {
-    let name = constructor.name.to_snake_case();
-    let contents = type_record_definition(&constructor.args);
-
-    "#".to_doc().append(name).append(contents)
+    concat(
+        constructor
+            .args
+            .iter()
+            .map(|(_, ast, ..)| type_ast_name(&ast, None))
+            .intersperse(", ".to_doc()),
+    )
+    .surround("{", "}")
 }
 
 fn non_record_type(constructor: &RecordConstructor) -> Document {
@@ -162,22 +166,6 @@ fn non_record_type(constructor: &RecordConstructor) -> Document {
 /// Return true if the constructor has arguments and they are all labelled, ie. is a record.
 fn is_record(constructor: &RecordConstructor) -> bool {
     (!constructor.args.is_empty()) && constructor.args.iter().all(|(label, ..)| label.is_some())
-}
-
-fn type_record_definition(args: &[(Option<String>, TypeAst, SrcSpan)]) -> Document {
-    concat(
-        args.iter()
-            .map(|(label, ast, ..)| {
-                label
-                    .clone()
-                    .unwrap_or("".to_string())
-                    .to_doc()
-                    .append(" :: ")
-                    .append(type_ast_name(&ast, None))
-            })
-            .intersperse(", ".to_doc()),
-    )
-    .surround("{", "}")
 }
 
 // Generates the spec for a regular Gleam function
