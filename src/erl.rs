@@ -16,12 +16,11 @@ use heck::SnakeCase;
 use itertools::Itertools;
 use std::char;
 use std::default::Default;
-use std::path::Path;
 use std::sync::Arc;
 
 const INDENT: isize = 4;
 
-pub fn generate_erlang(analysed: &[Analysed], project_path: impl AsRef<Path>) -> Vec<OutputFile> {
+pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
     let mut files = Vec::with_capacity(analysed.len() * 2);
 
     for Analysed {
@@ -39,25 +38,16 @@ pub fn generate_erlang(analysed: &[Analysed], project_path: impl AsRef<Path>) ->
             .join(origin.dir_name());
         let erl_module_name = name.join("@");
 
-        let mut record_filenames: Vec<String> = Vec::new();
-
         // Write our record definitions to file and store the file path so we can include it into
         // our generated erlang module code
         for (name, text) in records(ast).into_iter() {
             let path = gen_dir.join(format!("{}_{}.hrl", erl_module_name, name));
-            if let Some(filename) = path
-                .strip_prefix(&project_path)
-                .ok()
-                .and_then(|path| path.to_str())
-            {
-                record_filenames.push(filename.to_string());
-            }
             files.push(OutputFile { path, text })
         }
 
         files.push(OutputFile {
             path: gen_dir.join(format!("{}.erl", erl_module_name)),
-            text: module(ast, &record_filenames),
+            text: module(ast),
         });
     }
 
@@ -145,7 +135,7 @@ pub fn record_definition(name: &str, fields: &[&str]) -> String {
     buffer
 }
 
-pub fn module(module: &TypedModule, import_filenames: &[String]) -> String {
+pub fn module(module: &TypedModule) -> String {
     let module_name = module.name.as_slice();
     let exports = concat(
         module
@@ -173,7 +163,6 @@ pub fn module(module: &TypedModule, import_filenames: &[String]) -> String {
     );
 
     let type_exports = typespec::type_exports(&module);
-
     let used_types = typespec::extract_types(&module);
 
     let statements = concat(
@@ -184,19 +173,10 @@ pub fn module(module: &TypedModule, import_filenames: &[String]) -> String {
             .intersperse(lines(2)),
     );
 
-    let imports = concat(
-        import_filenames
-            .iter()
-            .map(|filename| format!("-include(\"{}\").", filename).to_doc())
-            .intersperse(line()),
-    );
-
     format!("-module({}).", module_name.join("@"))
         .to_doc()
         .append(line())
         .append("-compile(no_auto_import).")
-        .append(lines(2))
-        .append(imports)
         .append(lines(2))
         .append(if exports == nil() {
             nil()

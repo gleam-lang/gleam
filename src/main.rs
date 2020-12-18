@@ -262,7 +262,7 @@ fn command_build(root: PathBuf) -> Result<(), Error> {
     let (_config, analysed) = project::read_and_analyse(&root)?;
 
     // Generate Erlang code
-    let output_files = erl::generate_erlang(analysed.as_slice(), &root);
+    let output_files = erl::generate_erlang(analysed.as_slice());
 
     // Reset output directory
     fs::delete_dir(&root.join(project::OUTPUT_DIR_NAME))?;
