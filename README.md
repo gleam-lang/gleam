@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="img/gleam-logo-readme.png" alt="Gleam logo">
+  <img src="images/gleam-logo-readme.png" alt="Gleam logo">
 </p>
 
 <h1 align="center">
