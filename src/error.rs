@@ -63,6 +63,8 @@ impl<T, E: Debug> GleamExpect<T> for Result<T, E> {
     }
 }
 
+pub type Result<Ok, Err = Error> = std::result::Result<Ok, Err>;
+
 #[derive(Debug, PartialEq)]
 pub enum Error {
     Parse {

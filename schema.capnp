@@ -5,12 +5,9 @@
 # We don't want the compiler build to depend on the Cap'n Proto compiler so 
 # the Cap'n Proto to Rust build step is commented out in `build.rs`.
 
-struct Map(Key, Value) {
-  entries @0 :List(Entry);
-  struct Entry {
-    key @0 :Key;
-    value @1 :Value;
-  }
+struct Property(Value) {
+  key @0 :Text;
+  value @1 :Value;
 }
 
 struct Option(Value) {
@@ -21,15 +18,20 @@ struct Option(Value) {
 }
 
 struct Module {
-  name @0 :Text;
-  types @1 :Map(Text, Type);
-  values @2 :Map(Text, ValueConstructor);
-  accessors @3 :Map(Text, AccessorsMap);
+  name @0 :List(Text);
+  types @1 :List(Property(TypeConstructor));
+  values @2 :List(Property(ValueConstructor));
+  accessors @3 :List(Property(AccessorsMap));
+}
+
+struct TypeConstructor {
+  type @0 :Type;
+  parameters @1 :List(Type);
 }
 
 struct AccessorsMap {
   type @0 :Type;
-  accessors @1 :Map(Text, RecordAccessor);
+  accessors @1 :List(Property(RecordAccessor));
 
   struct RecordAccessor {
     type @0 :Type;
@@ -89,7 +91,7 @@ struct BoxedUInt16 {
 
 struct FieldMap {
   arity @0 :UInt32;
-  fields @1 :Map(Text, BoxedUInt16);
+  fields @1 :List(Property(BoxedUInt16));
 }
 
 struct Constant {

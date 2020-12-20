@@ -54,6 +54,7 @@ mod error;
 mod eunit;
 mod format;
 mod fs;
+mod metadata;
 mod new;
 mod parser;
 mod pretty;
@@ -96,7 +97,7 @@ extern crate lazy_static;
 
 pub use self::{
     codegen::CodeGenerator,
-    error::{Error, GleamExpect},
+    error::{Error, GleamExpect, Result},
     warning::Warning,
 };
 
@@ -181,6 +182,7 @@ enum Command {
     )]
     CompilePackage(CompilePackage),
 }
+
 #[derive(StructOpt, Debug)]
 #[structopt(flatten)]
 struct CompilePackage {

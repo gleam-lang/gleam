@@ -79,15 +79,31 @@ impl<'a> Writer<'a> {
 
     /// A wrapper around write that has Gleam's error handling.
     pub fn write(&'a mut self, bytes: &[u8]) -> Result<(), Error> {
-        self.inner
-            .write(bytes)
-            .map_err(|error| Error::FileIO {
-                action: FileIOAction::WriteTo,
-                kind: FileKind::File,
-                path: self.path.to_path_buf(),
-                err: Some(error.to_string()),
-            })
-            .map(|_| ())
+        let result = self.inner.write(bytes);
+        self.wrap_result(result)
+    }
+
+    pub fn wrap_result(&self, result: std::io::Result<usize>) -> crate::Result<()> {
+        self.convert_err(result.map(|_| ()))
+    }
+
+    pub fn convert_err<T, E: std::error::Error>(&self, result: Result<T, E>) -> crate::Result<T> {
+        result.map_err(|error| Error::FileIO {
+            action: FileIOAction::WriteTo,
+            kind: FileKind::File,
+            path: self.path.to_path_buf(),
+            err: Some(error.to_string()),
+        })
+    }
+}
+
+impl<'a> Write for Writer<'a> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.inner.write(buf)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.flush()
     }
 }
 
