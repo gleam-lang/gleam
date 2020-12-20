@@ -173,6 +173,31 @@ enum Command {
         #[structopt(help = "location of the project root", default_value = ".")]
         project_root: String,
     },
+
+    #[structopt(
+        name = "compile-package",
+        about = "Compile a single Gleam package",
+        setting = AppSettings::Hidden,
+    )]
+    CompilePackage(CompilePackage),
+}
+#[derive(StructOpt, Debug)]
+#[structopt(flatten)]
+struct CompilePackage {
+    #[structopt(help = "The name of the package being compiled", long = "name")]
+    name: String,
+
+    #[structopt(help = "The path to the package source code", long = "src")]
+    src_path: PathBuf,
+
+    #[structopt(help = "The path to the package test code", long = "test")]
+    test_path: Option<PathBuf>,
+
+    #[structopt(help = "Where to write compiled code and metadata to", long = "out")]
+    out_path: PathBuf,
+
+    #[structopt(help = "A path to a compiled dependency library", long = "lib")]
+    libraries: Vec<PathBuf>,
 }
 
 #[derive(StructOpt, Debug)]
@@ -241,6 +266,10 @@ fn main() {
         Command::Shell { project_root } => shell::command(project_root),
 
         Command::Eunit { project_root } => eunit::command(project_root),
+
+        Command::CompilePackage(_) => {
+            todo!()
+        }
     };
 
     match result {
