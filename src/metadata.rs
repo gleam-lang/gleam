@@ -4,20 +4,27 @@
 // TODO: remove
 #![allow(unused)]
 
+use std::{cell::RefCell, collections::HashMap, sync::Arc};
+
 use crate::{
     fs::Writer,
     schema_capnp::{module, property, type_, type_constructor},
-    typ::{self, TypeConstructor},
-    GleamExpect,
+    typ::{self, Type, TypeConstructor, TypeVar},
 };
 
 pub struct ModuleBuilder<'a> {
     data: &'a typ::Module,
+    next_type_var_id: u16,
+    type_var_id_map: HashMap<usize, u16>,
 }
 
 impl<'a> ModuleBuilder<'a> {
     pub fn new(data: &'a typ::Module) -> Self {
-        Self { data }
+        Self {
+            data,
+            next_type_var_id: 0,
+            type_var_id_map: HashMap::new(),
+        }
     }
 
     pub fn write(mut self, mut writer: &mut Writer) -> crate::Result<()> {
@@ -52,8 +59,65 @@ impl<'a> ModuleBuilder<'a> {
     fn build_type_constructor(
         &mut self,
         mut builder: type_constructor::Builder,
-        type_: &TypeConstructor,
+        constructor: &TypeConstructor,
     ) {
+        let type_builder = builder.init_type();
+        self.build_type(type_builder, &constructor.typ);
         todo!()
+    }
+
+    fn build_type(&mut self, mut builder: type_::Builder, type_: &Type) {
+        match type_ {
+            Type::Fn { args, retrn } => {
+                let mut fun = builder.init_fn();
+                self.build_types(
+                    fun.reborrow().init_arguments(args.len() as u32),
+                    args.as_slice(),
+                );
+                self.build_type(fun.init_return(), retrn.as_ref())
+            }
+
+            Type::App { name, args, .. } => {
+                let mut app = builder.init_app();
+                app.set_name(name.as_str());
+                self.build_types(app.init_parameters(args.len() as u32), args.as_slice());
+            }
+
+            Type::Tuple { elems } => self.build_types(
+                builder.init_tuple().init_elements(elems.len() as u32),
+                elems.as_slice(),
+            ),
+
+            Type::Var { typ } => match &*typ.borrow() {
+                TypeVar::Link { typ } => self.build_type(builder, &*typ),
+                TypeVar::Generic { id } => self.build_type_var(builder.init_var(), *id),
+                TypeVar::Unbound { id, .. } => crate::error::fatal_compiler_bug(
+                    "Unexpected unbound var when serialising module metadata",
+                ),
+            },
+        }
+    }
+
+    fn build_types(
+        &mut self,
+        mut builder: capnp::struct_list::Builder<type_::Owned>,
+        types: &[Arc<Type>],
+    ) {
+        for (i, type_) in types.iter().enumerate() {
+            self.build_type(builder.reborrow().get(i as u32), type_.as_ref());
+        }
+    }
+
+    fn build_type_var(&mut self, mut builder: type_::var::Builder, id: usize) {
+        let serialised_id = match self.type_var_id_map.get(&id) {
+            Some(id) => *id,
+            None => {
+                let new_id = self.next_type_var_id;
+                self.next_type_var_id += 1;
+                let _ = self.type_var_id_map.insert(id, new_id);
+                new_id
+            }
+        };
+        builder.set_id(serialised_id);
     }
 }
