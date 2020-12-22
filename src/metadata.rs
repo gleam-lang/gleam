@@ -6,10 +6,12 @@
 
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
+use typ::ValueConstructorVariant;
+
 use crate::{
     fs::Writer,
-    schema_capnp::{module, property, type_, type_constructor},
-    typ::{self, Type, TypeConstructor, TypeVar},
+    schema_capnp::*,
+    typ::{self, Type, TypeConstructor, TypeVar, ValueConstructor},
 };
 
 pub struct ModuleBuilder<'a> {
@@ -33,7 +35,7 @@ impl<'a> ModuleBuilder<'a> {
         let mut module = message.init_root::<module::Builder>();
         self.set_name(&mut module);
         self.set_module_types(&mut module);
-        // add_module_values(data,&mut module);
+        self.set_module_values(&mut module);
         // add_module_accessors(data,&mut module);
 
         let result = capnp::serialize_packed::write_message(&mut writer, &message);
@@ -56,13 +58,42 @@ impl<'a> ModuleBuilder<'a> {
         }
     }
 
+    fn set_module_values(&mut self, module: &mut module::Builder) {
+        let mut values = module.reborrow().init_values(self.data.values.len() as u32);
+        for (i, (name, value)) in self.data.values.iter().enumerate() {
+            let mut property = values.reborrow().get(i as u32);
+            property.set_key(name);
+            self.build_value_constructor(property.init_value(), value)
+        }
+    }
+
     fn build_type_constructor(
         &mut self,
         mut builder: type_constructor::Builder,
         constructor: &TypeConstructor,
     ) {
-        let type_builder = builder.init_type();
+        let type_builder = builder.reborrow().init_type();
         self.build_type(type_builder, &constructor.typ);
+        self.build_types(
+            builder.init_parameters(constructor.parameters.len() as u32),
+            constructor.parameters.as_slice(),
+        );
+    }
+
+    fn build_value_constructor(
+        &mut self,
+        mut builder: value_constructor::Builder,
+        constructor: &ValueConstructor,
+    ) {
+        self.build_type(builder.reborrow().init_type(), &constructor.typ);
+        self.build_value_constructor_variant(builder.init_variant(), &constructor.variant);
+    }
+
+    fn build_value_constructor_variant(
+        &mut self,
+        mut builder: value_constructor_variant::Builder,
+        constructor: &ValueConstructorVariant,
+    ) {
         todo!()
     }
 
