@@ -14,6 +14,7 @@ mod tests;
 pub use environment::*;
 pub use error::{Error, Warning};
 pub use expr::*;
+pub use fields::FieldMap;
 pub use prelude::*;
 
 use crate::{
@@ -34,7 +35,6 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use error::*;
-use fields::FieldMap;
 use hydrator::Hydrator;
 
 pub trait HasType {

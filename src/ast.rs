@@ -647,7 +647,7 @@ pub type UntypedExprBitStringSegment = BitStringSegment<UntypedExpr, ()>;
 pub type TypedExprBitStringSegment = BitStringSegment<TypedExpr, Arc<Type>>;
 
 pub type UntypedConstantBitStringSegment = BitStringSegment<UntypedConstant, ()>;
-// pub type TypedConstantBitStringSegment = BitStringSegment<TypedConstant, Arc<Type>>;
+pub type TypedConstantBitStringSegment = BitStringSegment<TypedConstant, Arc<Type>>;
 
 pub type UntypedPatternBitStringSegment = BitStringSegment<UntypedPattern, ()>;
 pub type TypedPatternBitStringSegment = BitStringSegment<TypedPattern, Arc<Type>>;
@@ -659,6 +659,8 @@ pub struct BitStringSegment<Value, Type> {
     pub options: Vec<BitStringSegmentOption<Value>>,
     pub typ: Type,
 }
+
+pub type TypedConstantBitStringSegmentOption = BitStringSegmentOption<TypedConstant>;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum BitStringSegmentOption<Value> {
