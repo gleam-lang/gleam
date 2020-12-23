@@ -4,6 +4,8 @@
 #
 # We don't want the compiler build to depend on the Cap'n Proto compiler so 
 # the Cap'n Proto to Rust build step is commented out in `build.rs`.
+#
+# This schema is not considered a stable API and may change at any time.
 
 struct Property(Value) {
   key @0 :Text;
@@ -32,11 +34,11 @@ struct TypeConstructor {
 struct AccessorsMap {
   type @0 :Type;
   accessors @1 :List(Property(RecordAccessor));
+}
 
-  struct RecordAccessor {
-    type @0 :Type;
-    index @1 :UInt16;
-  }
+struct RecordAccessor {
+  type @0 :Type;
+  index @1 :UInt16;
 }
 
 struct Type {
@@ -72,7 +74,7 @@ struct ValueConstructorVariant {
 
     moduleFn :group {
       name @1 :Text;
-      fieldMap @2 :FieldMap;
+      fieldMap @2 :Option(FieldMap);
       module @3 :List(Text);
       arity @4 :UInt16;
     }
@@ -106,14 +108,12 @@ struct Constant {
   }
 
   record :group {
-    module @6 :Option(Text);
-    name @7 :Text;
-    args @8 :List(Constant);
-    tag @9 :Text;
-    typ @10 :Type;
+    args @6 :List(Constant);
+    tag @7 :Text;
+    typ @8 :Type;
   }
 
-  bitString @11 :List(BitStringSegment);
+  bitString @9 :List(BitStringSegment);
 }
 
 struct BitStringSegment {
