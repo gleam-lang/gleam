@@ -366,8 +366,21 @@ pub fn infer_module(
     }
 
     // Infer the types of each statement in the module
+    // We first infer all the constants so they can be used in functions defined
+    // anywhere in the module.
     let mut statements = Vec::with_capacity(module.statements.len());
+    let mut not_consts = vec![];
     for statement in module.statements {
+        if matches!(statement, Statement::ModuleConstant { .. }) {
+            let statement =
+                infer_statement(statement, module_name, &mut hydrators, &mut environment)?;
+            statements.push(statement);
+        } else {
+            not_consts.push(statement)
+        }
+    }
+
+    for statement in not_consts {
         let statement = infer_statement(statement, module_name, &mut hydrators, &mut environment)?;
         statements.push(statement);
     }

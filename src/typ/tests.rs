@@ -64,7 +64,6 @@ macro_rules! assert_error {
 
 macro_rules! assert_module_infer {
     ($src:expr, $module:expr $(,)?) => {
-        // println!("\n\n\n\n\n\n{}", $src);
         let (src, _) = crate::parser::strip_extra($src);
         let ast = crate::grammar::ModuleParser::new()
             .parse(&src)
@@ -3203,6 +3202,15 @@ fn types_used_before_definition() {
         "pub type Y { Y(x: X) }
          pub external type X",
         vec![("Y", "fn(X) -> Y")],
+    );
+}
+
+#[test]
+fn consts_used_before_definition() {
+    assert_module_infer!(
+        "pub fn a() { b }
+        const b = 1",
+        vec![("a", "fn() -> Int")],
     );
 }
 
