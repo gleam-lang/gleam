@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
 pub struct PackageCompiler {
-    pub config: PackageConfig,
+    pub name: String,
     pub sources: Vec<Source>,
     pub print_progress: bool,
     pub code_generators: Vec<Box<dyn CodeGenerator>>,
@@ -23,9 +23,9 @@ pub struct PackageCompiler {
 // Including cases for:
 // - modules that don't import anything
 impl PackageCompiler {
-    pub fn new(config: PackageConfig, writer: Box<dyn FileWriter>) -> Self {
+    pub fn new(name: String, writer: Box<dyn FileWriter>) -> Self {
         Self {
-            config,
+            name,
             writer,
             sources: vec![],
             print_progress: true,
@@ -44,16 +44,16 @@ impl PackageCompiler {
         already_defined_modules: &mut HashMap<String, PathBuf>,
     ) -> Result<Package, Error> {
         if self.print_progress {
-            crate::cli::print_compiling(self.config.name.as_str());
+            crate::cli::print_compiling(self.name.as_str());
         }
         let Self {
             sources,
             code_generators,
-            config,
+            name,
             ..
         } = self;
 
-        let span = tracing::info_span!("compile", package = config.name.as_str());
+        let span = tracing::info_span!("compile", package = name.as_str());
         let _enter = span.enter();
 
         tracing::info!("Parsing source code");
@@ -69,10 +69,10 @@ impl PackageCompiler {
 
         tracing::info!("Running code generators");
         for code_generator in code_generators {
-            code_generator.render(self.writer.as_ref(), &config, modules.as_slice())?;
+            code_generator.render(self.writer.as_ref(), modules.as_slice())?;
         }
 
-        Ok(Package { config, modules })
+        Ok(Package { name, modules })
     }
 
     pub fn read_package_source_files(
@@ -80,8 +80,7 @@ impl PackageCompiler {
         package_path: &Path,
         origin: Origin,
     ) -> Result<(), Error> {
-        let span =
-            tracing::info_span!("load", package = self.config.name.as_str(), origin = ?origin);
+        let span = tracing::info_span!("load", package = self.name.as_str(), origin = ?origin);
         let _enter = span.enter();
 
         tracing::info!("Reading source code");
