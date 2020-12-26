@@ -13,7 +13,6 @@ use std::path::{Path, PathBuf};
 pub struct PackageCompiler {
     pub name: String,
     pub sources: Vec<Source>,
-    pub print_progress: bool,
     pub code_generators: Vec<Box<dyn CodeGenerator>>,
     pub writer: Box<dyn FileWriter>,
 }
@@ -28,7 +27,6 @@ impl PackageCompiler {
             name,
             writer,
             sources: vec![],
-            print_progress: true,
             code_generators: vec![],
         }
     }
@@ -43,9 +41,6 @@ impl PackageCompiler {
         existing_modules: &mut HashMap<String, (Origin, typ::Module)>,
         already_defined_modules: &mut HashMap<String, PathBuf>,
     ) -> Result<Package, Error> {
-        if self.print_progress {
-            crate::cli::print_compiling(self.name.as_str());
-        }
         let Self {
             sources,
             code_generators,
@@ -71,6 +66,8 @@ impl PackageCompiler {
         for code_generator in code_generators {
             code_generator.render(self.writer.as_ref(), modules.as_slice())?;
         }
+
+        // TODO: write metadata
 
         Ok(Package { name, modules })
     }

@@ -1,29 +1,33 @@
-use crate::{CompilePackage, Result};
-// build::PackageCompiler,
-// codegen::{ErlangModules, ErlangRecordHeaders},
-// fs::FileSystemAccessor,
+use crate::{
+    build::{Origin, PackageCompiler},
+    codegen::{ErlangModules, ErlangRecordHeaders},
+    fs::FileSystemAccessor,
+    CompilePackage, Result,
+};
+use std::collections::HashMap;
 
 pub fn command(options: CompilePackage) -> Result<()> {
-    // let codegen_records = ErlangRecordHeaders::new(options.out_path);
-    // let codegen_modules = ErlangModules::new(options.out_path);
-    // let mut compiler = PackageCompiler::new(config, FileSystemAccessor::boxed())
-    //     .with_code_generator(Box::new(codegen_records))
-    //     .with_code_generator(Box::new(codegen_modules));
+    // TODO: Load precompiled libraries
+    tracing::info!("Reading precompiled module metadata files");
+    let mut type_manifests = HashMap::new();
+    let mut defined_modules = HashMap::new();
 
-    // // Read source files
-    // compiler.read_package_source_files(
-    //     &self.root.default_build_lib_package_src_path(&name),
-    //     Origin::Src,
-    // )?;
-    // if locations == SourceLocations::SrcAndTest {
-    //     compiler.read_package_source_files(
-    //         &self.root.default_build_lib_package_test_path(&name),
-    //         Origin::Test,
-    //     )?;
-    // }
+    // Prepare package compile
+    let codegen_records = ErlangRecordHeaders::new(options.out_path.clone());
+    let codegen_modules = ErlangModules::new(options.out_path.clone());
+    let mut compiler = PackageCompiler::new(options.name.clone(), FileSystemAccessor::boxed())
+        .with_code_generator(Box::new(codegen_records))
+        .with_code_generator(Box::new(codegen_modules));
 
-    // // Parse and type check
-    // let compiled = compiler.compile(&mut self.type_manifests, &mut self.defined_modules)?;
-    // self.packages.insert(name, compiled);
+    // Read source files
+    tracing::info!("Reading source files");
+    compiler.read_package_source_files(&options.src_path, Origin::Src)?;
+    if let Some(path) = &options.test_path {
+        compiler.read_package_source_files(path, Origin::Test)?;
+    }
+
+    // TODO: Parse and type check
+    let compiled = compiler.compile(&mut type_manifests, &mut defined_modules)?;
+
     Ok(())
 }

@@ -26,7 +26,6 @@ macro_rules! assert_erlang_compile {
             .with_code_generator(Box::new(codegen_records))
             .with_code_generator(Box::new(codegen_modules));
         compiler.sources = $sources;
-        compiler.print_progress = false;
         let outputs = compiler
             .compile(&mut modules, &mut HashMap::with_capacity(4))
             .map(|_| {
