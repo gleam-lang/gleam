@@ -96,14 +96,14 @@ extern crate lalrpop_util;
 extern crate lazy_static;
 
 pub use self::{
-    codegen::CodeGenerator,
     error::{Error, GleamExpect, Result},
     warning::Warning,
 };
 
+use self::build::package_compiler;
+
 use std::path::PathBuf;
-use structopt::clap::AppSettings;
-use structopt::StructOpt;
+use structopt::{clap::AppSettings, StructOpt};
 use strum::VariantNames;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -200,6 +200,17 @@ pub struct CompilePackage {
 
     #[structopt(help = "A path to a compiled dependency library", long = "lib")]
     libraries: Vec<PathBuf>,
+}
+
+impl CompilePackage {
+    pub fn into_package_compiler_options(self) -> package_compiler::Options {
+        package_compiler::Options {
+            name: self.name,
+            src_path: self.src_path,
+            test_path: self.test_path,
+            out_path: self.out_path,
+        }
+    }
 }
 
 #[derive(StructOpt, Debug)]

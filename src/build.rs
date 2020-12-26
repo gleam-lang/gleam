@@ -15,7 +15,7 @@
 
 pub mod compile_package;
 mod dep_tree;
-mod package_compiler;
+pub mod package_compiler;
 mod project_compiler;
 pub mod project_root;
 

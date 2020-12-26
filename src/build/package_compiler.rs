@@ -1,19 +1,44 @@
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
     build::{dep_tree, project_root::ProjectRoot, Module, Origin, Package},
+    codegen::Erlang,
     config::PackageConfig,
     error,
     fs::FileWriter,
-    grammar, parser, typ, CodeGenerator, Error, GleamExpect, Warning,
+    grammar, parser, typ, Error, GleamExpect, Result, Warning,
 };
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
-pub struct PackageCompiler {
+pub struct Options {
     pub name: String,
+    pub src_path: PathBuf,
+    pub test_path: Option<PathBuf>,
+    pub out_path: PathBuf,
+}
+
+impl Options {
+    pub fn into_compiler(self, writer: Box<dyn FileWriter>) -> Result<PackageCompiler> {
+        tracing::info!("Reading source files");
+        let mut compiler = PackageCompiler {
+            options: self,
+            sources: vec![],
+            writer,
+        };
+        // TODO: Move this loading into the PackageCompiler so that we don't need to clone these paths
+        compiler.read_package_source_files(&compiler.options.src_path.clone(), Origin::Src)?;
+        if let Some(path) = &compiler.options.test_path.clone() {
+            compiler.read_package_source_files(path, Origin::Test)?;
+        }
+        Ok(compiler)
+    }
+}
+
+#[derive(Debug)]
+pub struct PackageCompiler {
+    pub options: Options,
     pub sources: Vec<Source>,
-    pub code_generators: Vec<Box<dyn CodeGenerator>>,
     pub writer: Box<dyn FileWriter>,
 }
 
@@ -22,37 +47,25 @@ pub struct PackageCompiler {
 // Including cases for:
 // - modules that don't import anything
 impl PackageCompiler {
-    pub fn new(name: String, writer: Box<dyn FileWriter>) -> Self {
+    pub fn new(options: Options, writer: Box<dyn FileWriter>) -> Self {
         Self {
-            name,
+            options,
             writer,
             sources: vec![],
-            code_generators: vec![],
         }
     }
 
-    pub fn with_code_generator(mut self, code_generator: Box<dyn CodeGenerator>) -> Self {
-        self.code_generators.push(code_generator);
-        self
-    }
-
     pub fn compile(
-        self,
+        mut self,
         existing_modules: &mut HashMap<String, (Origin, typ::Module)>,
         already_defined_modules: &mut HashMap<String, PathBuf>,
     ) -> Result<Package, Error> {
-        let Self {
-            sources,
-            code_generators,
-            name,
-            ..
-        } = self;
-
-        let span = tracing::info_span!("compile", package = name.as_str());
+        let span = tracing::info_span!("compile", package = self.options.name.as_str());
         let _enter = span.enter();
 
         tracing::info!("Parsing source code");
-        let parsed_modules = parse_sources(sources, already_defined_modules)?;
+        let parsed_modules =
+            parse_sources(std::mem::take(&mut self.sources), already_defined_modules)?;
 
         // Determine order in which modules are to be processed
         let sequence =
@@ -62,14 +75,15 @@ impl PackageCompiler {
         tracing::info!("Type checking modules");
         let modules = type_check(sequence, parsed_modules, existing_modules)?;
 
-        tracing::info!("Running code generators");
-        for code_generator in code_generators {
-            code_generator.render(self.writer.as_ref(), modules.as_slice())?;
-        }
+        tracing::info!("Performing code generation");
+        self.perform_codegen(modules.as_slice())?;
 
         // TODO: write metadata
 
-        Ok(Package { name, modules })
+        Ok(Package {
+            name: self.options.name,
+            modules,
+        })
     }
 
     pub fn read_package_source_files(
@@ -77,7 +91,8 @@ impl PackageCompiler {
         package_path: &Path,
         origin: Origin,
     ) -> Result<(), Error> {
-        let span = tracing::info_span!("load", package = self.name.as_str(), origin = ?origin);
+        let span =
+            tracing::info_span!("load", package = self.options.name.as_str(), origin = ?origin);
         let _enter = span.enter();
 
         tracing::info!("Reading source code");
@@ -91,6 +106,12 @@ impl PackageCompiler {
                 origin,
             });
         }
+        Ok(())
+    }
+
+    fn perform_codegen(&self, modules: &[Module]) -> Result<()> {
+        // TODO: don't clone this path
+        Erlang::new(self.options.out_path.clone()).render(self.writer.as_ref(), modules)?;
         Ok(())
     }
 }

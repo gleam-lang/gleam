@@ -2,11 +2,11 @@ use super::*;
 use crate::{
     ast::SrcSpan,
     build::{
-        package_compiler::{PackageCompiler, Source},
+        package_compiler::{Options, PackageCompiler, Source},
         project_root::ProjectRoot,
         Origin,
     },
-    codegen::{ErlangModules, ErlangRecordHeaders},
+    codegen,
     config::{BuildTool, Docs, PackageConfig, Repository},
     erl,
     fs::test::FilesChannel,
@@ -17,14 +17,14 @@ use std::{path::PathBuf, sync::Arc};
 macro_rules! assert_erlang_compile {
     ($sources:expr, $expected_output:expr  $(,)?) => {
         let mut modules = HashMap::new();
-        let codegen_records =
-            ErlangRecordHeaders::new(PathBuf::from("_build/default/lib/the_package/src"));
-        let codegen_modules =
-            ErlangModules::new(PathBuf::from("_build/default/lib/the_package/src"));
+        let options = Options {
+            name: "the_package".to_string(),
+            src_path: PathBuf::from("_build/default/lib/the_package/src"),
+            out_path: PathBuf::from("_build/default/lib/the_package/src"),
+            test_path: None,
+        };
         let (file_writer, file_receiver) = FilesChannel::new();
-        let mut compiler = PackageCompiler::new("the_package".to_string(), Box::new(file_writer))
-            .with_code_generator(Box::new(codegen_records))
-            .with_code_generator(Box::new(codegen_modules));
+        let mut compiler = PackageCompiler::new(options, Box::new(file_writer));
         compiler.sources = $sources;
         let outputs = compiler
             .compile(&mut modules, &mut HashMap::with_capacity(4))
@@ -1180,10 +1180,7 @@ fn x() { test }"
 //             let codegen_modules =
 //                 ErlangModules::new(PathBuf::from("_build/default/lib/the_package/src"));
 //             let (file_writer, file_receiver) = FilesChannel::new();
-//             let mut compiler = PackageCompiler::new($config, Box::new(file_writer))
-//                 .with_code_generator(Box::new(codegen_app))
-//                 .with_code_generator(Box::new(codegen_records))
-//                 .with_code_generator(Box::new(codegen_modules));
+//             let mut compiler = PackageCompiler::new($config, Box::new(file_writer));
 //             compiler.print_progress = false;
 //             compiler.sources = $sources;
 //             compiler

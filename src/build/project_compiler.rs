@@ -2,12 +2,14 @@ use crate::{
     build::{
         dep_tree, package_compiler::PackageCompiler, project_root::ProjectRoot, Origin, Package,
     },
-    codegen::{ErlangModules, ErlangRecordHeaders},
+    codegen,
     config::PackageConfig,
     fs::FileSystemAccessor,
     typ, Error, GleamExpect,
 };
 use std::{collections::HashMap, path::PathBuf};
+
+use super::package_compiler;
 
 #[derive(Debug)]
 pub struct ProjectCompiler<'a> {
@@ -68,26 +70,22 @@ impl<'a> ProjectCompiler<'a> {
         locations: SourceLocations,
     ) -> Result<(), Error> {
         crate::cli::print_compiling(name.as_str());
+        let test_path = match locations {
+            SourceLocations::SrcAndTest => {
+                Some(self.root.default_build_lib_package_test_path(&name))
+            }
+            _ => None,
+        };
 
-        let codegen_records =
-            ErlangRecordHeaders::new(self.root.default_build_lib_package_src_path(&config.name));
-        let codegen_modules =
-            ErlangModules::new(self.root.default_build_lib_package_src_path(&config.name));
-        let mut compiler = PackageCompiler::new(config.name.clone(), FileSystemAccessor::boxed())
-            .with_code_generator(Box::new(codegen_records))
-            .with_code_generator(Box::new(codegen_modules));
+        let options = package_compiler::Options {
+            src_path: self.root.default_build_lib_package_src_path(&name),
+            // TODO: this isn't the right location. We may want multiple output locations.
+            out_path: self.root.default_build_lib_package_src_path(&name),
+            test_path,
+            name: name.clone(),
+        };
 
-        // Read source files
-        compiler.read_package_source_files(
-            &self.root.default_build_lib_package_src_path(&name),
-            Origin::Src,
-        )?;
-        if locations == SourceLocations::SrcAndTest {
-            compiler.read_package_source_files(
-                &self.root.default_build_lib_package_test_path(&name),
-                Origin::Test,
-            )?;
-        }
+        let mut compiler = options.into_compiler(FileSystemAccessor::boxed())?;
 
         // Parse and type check
         let compiled = compiler.compile(&mut self.type_manifests, &mut self.defined_modules)?;
