@@ -67,6 +67,8 @@ impl<'a> ProjectCompiler<'a> {
         config: PackageConfig,
         locations: SourceLocations,
     ) -> Result<(), Error> {
+        crate::cli::print_compiling(name.as_str());
+
         let codegen_records =
             ErlangRecordHeaders::new(self.root.default_build_lib_package_src_path(&config.name));
         let codegen_modules =
