@@ -2,7 +2,7 @@ use crate::{
     build::{
         dep_tree, package_compiler::PackageCompiler, project_root::ProjectRoot, Origin, Package,
     },
-    codegen::{ErlangApp, ErlangModules, ErlangRecordHeaders},
+    codegen::{ErlangModules, ErlangRecordHeaders},
     config::PackageConfig,
     fs::FileSystemAccessor,
     typ, Error, GleamExpect,
@@ -67,14 +67,11 @@ impl<'a> ProjectCompiler<'a> {
         config: PackageConfig,
         locations: SourceLocations,
     ) -> Result<(), Error> {
-        let codegen_app =
-            ErlangApp::new(self.root.default_build_lib_package_ebin_path(&config.name));
         let codegen_records =
             ErlangRecordHeaders::new(self.root.default_build_lib_package_src_path(&config.name));
         let codegen_modules =
             ErlangModules::new(self.root.default_build_lib_package_src_path(&config.name));
-        let mut compiler = PackageCompiler::new(config, FileSystemAccessor::boxed())
-            .with_code_generator(Box::new(codegen_app))
+        let mut compiler = PackageCompiler::new(config.name.clone(), FileSystemAccessor::boxed())
             .with_code_generator(Box::new(codegen_records))
             .with_code_generator(Box::new(codegen_modules));
 

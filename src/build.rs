@@ -56,7 +56,7 @@ pub fn main(root_config: PackageConfig, path: PathBuf) -> Result<HashMap<String,
 
 #[derive(Debug)]
 pub struct Package {
-    pub config: PackageConfig,
+    pub name: String,
     pub modules: Vec<Module>,
 }
 

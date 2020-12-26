@@ -1,4 +1,4 @@
-use crate::{build::Module, config::PackageConfig, erl, fs::FileWriter, CodeGenerator, Error};
+use crate::{build::Module, erl, fs::FileWriter, CodeGenerator, Error};
 use std::path::PathBuf;
 
 /// A code generator that creates a .erl Erlang module for each Gleam module in
@@ -9,12 +9,7 @@ pub struct ErlangModules {
 }
 
 impl CodeGenerator for ErlangModules {
-    fn render(
-        &self,
-        writer: &dyn FileWriter,
-        _config: &PackageConfig,
-        modules: &[Module],
-    ) -> Result<(), Error> {
+    fn render(&self, writer: &dyn FileWriter, modules: &[Module]) -> Result<(), Error> {
         for module in modules {
             let erl_name = module.name.replace("/", "@");
             let text = erl::module(&module.ast);
