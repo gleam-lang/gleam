@@ -185,7 +185,7 @@ enum Command {
 
 #[derive(StructOpt, Debug)]
 #[structopt(flatten)]
-struct CompilePackage {
+pub struct CompilePackage {
     #[structopt(help = "The name of the package being compiled", long = "name")]
     name: String,
 
@@ -269,9 +269,7 @@ fn main() {
 
         Command::Eunit { project_root } => eunit::command(project_root),
 
-        Command::CompilePackage(_) => {
-            todo!()
-        }
+        Command::CompilePackage(opts) => build::compile_package::command(opts),
     };
 
     match result {
