@@ -9,11 +9,11 @@
 // TODO: Full .app generation
 // TODO: Validate config.otp_start_module does not contain '
 // TODO: Validate config.otp_start_module has a start function
-// TODO: Support flexible compiler interface for use by rebar3 + mix
 // - custom output paths
 // - no .app generation
 // - no Erlang generation
 
+pub mod compile_package;
 mod dep_tree;
 mod package_compiler;
 mod project_compiler;
@@ -21,6 +21,8 @@ pub mod project_root;
 
 #[cfg(test)]
 mod package_compilation_tests;
+
+pub use self::package_compiler::PackageCompiler;
 
 use crate::{
     ast::TypedModule,
@@ -32,11 +34,7 @@ use crate::{
     grammar, parser, typ,
 };
 use itertools::Itertools;
-use std::collections::HashMap;
-use std::ffi::OsString;
-use std::fs::DirEntry;
-use std::path::PathBuf;
-use std::process;
+use std::{collections::HashMap, ffi::OsString, fs::DirEntry, path::PathBuf, process};
 
 pub fn main(root_config: PackageConfig, path: PathBuf) -> Result<HashMap<String, Package>, Error> {
     let root = ProjectRoot::new(path);
