@@ -23,7 +23,6 @@ impl Options {
         self,
         writer: Writer,
     ) -> Result<PackageCompiler<Writer>> {
-        tracing::info!("Reading source files");
         let mut compiler = PackageCompiler {
             options: self,
             sources: vec![],
@@ -88,7 +87,7 @@ impl<Writer: FileWriter> PackageCompiler<Writer> {
     pub fn read_source_files(&mut self) -> Result<()> {
         let span = tracing::info_span!("load", package = self.options.name.as_str());
         let _enter = span.enter();
-        tracing::info!("Reading source code");
+        tracing::info!("Reading source files");
 
         // Src
         for path in crate::fs::gleam_files(&self.options.src_path) {
