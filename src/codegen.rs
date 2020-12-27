@@ -15,7 +15,7 @@ impl<'a> Erlang<'a> {
         Self { output_directory }
     }
 
-    pub fn render(&self, writer: &dyn FileWriter, modules: &[Module]) -> Result<()> {
+    pub fn render(&self, writer: &impl FileWriter, modules: &[Module]) -> Result<()> {
         for module in modules {
             let erl_name = module.name.replace("/", "@");
             self.erlang_module(writer, module, erl_name.as_str())?;
@@ -26,7 +26,7 @@ impl<'a> Erlang<'a> {
 
     fn erlang_module(
         &self,
-        writer: &dyn FileWriter,
+        writer: &impl FileWriter,
         module: &Module,
         erl_name: &str,
     ) -> Result<()> {
