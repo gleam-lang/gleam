@@ -38,10 +38,15 @@ pub fn remove(package: String, version: String) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn build(project_root: impl AsRef<Path>, to: Option<String>) -> Result<(), Error> {
+pub fn build(project_root: String, to: Option<String>) -> Result<(), Error> {
+    let project_root = PathBuf::from(&project_root).canonicalize().map_err(|_| {
+        Error::UnableToFindProjectRoot {
+            path: project_root.clone(),
+        }
+    })?;
+
     let output_dir = to.map(PathBuf::from).unwrap_or_else(|| {
         project_root
-            .as_ref()
             .join(project::OUTPUT_DIR_NAME)
             .join(DOCS_DIR_NAME)
     });
