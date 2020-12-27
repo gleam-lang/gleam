@@ -118,9 +118,7 @@ impl<Writer: FileWriter> PackageCompiler<Writer> {
     }
 
     fn perform_codegen(&self, modules: &[Module]) -> Result<()> {
-        // TODO: don't clone this path
-        Erlang::new(self.options.out_path.clone()).render(&self.writer, modules)?;
-        Ok(())
+        Erlang::new(self.options.out_path.as_path()).render(&self.writer, modules)
     }
 }
 

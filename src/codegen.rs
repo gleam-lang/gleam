@@ -1,17 +1,17 @@
 mod erlang_app;
 
 use crate::{build::Module, erl, fs::FileWriter, Result};
-use std::{fmt::Debug, path::PathBuf};
+use std::{fmt::Debug, path::Path};
 
 /// A code generator that creates a .erl Erlang module for each Gleam module in
 /// the package.
 #[derive(Debug)]
-pub struct Erlang {
-    output_directory: PathBuf,
+pub struct Erlang<'a> {
+    output_directory: &'a Path,
 }
 
-impl Erlang {
-    pub fn new(output_directory: PathBuf) -> Self {
+impl<'a> Erlang<'a> {
+    pub fn new(output_directory: &'a Path) -> Self {
         Self { output_directory }
     }
 
