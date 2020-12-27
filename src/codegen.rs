@@ -1,10 +1,9 @@
-mod erlang_app;
-
-use crate::{build::Module, erl, fs::FileWriter, Result};
+use crate::{build::Module, config::PackageConfig, erl, fs::FileWriter, Result};
+use itertools::Itertools;
 use std::{fmt::Debug, path::Path};
 
-/// A code generator that creates a .erl Erlang module for each Gleam module in
-/// the package.
+/// A code generator that creates a .erl Erlang module and record header files
+/// for each Gleam module in the package.
 #[derive(Debug)]
 pub struct Erlang<'a> {
     output_directory: &'a Path,
@@ -54,5 +53,68 @@ impl<'a> Erlang<'a> {
                 .write(text.as_bytes())?;
         }
         Ok(())
+    }
+}
+
+/// A code generator that creates a .app Erlang application file for the package
+#[derive(Debug)]
+pub struct ErlangApp<'a> {
+    output_directory: &'a Path,
+}
+
+impl<'a> ErlangApp<'a> {
+    // TODO: use
+    #[allow(unused)]
+    pub fn new(output_directory: &'a Path) -> Self {
+        Self { output_directory }
+    }
+
+    // TODO: use
+    #[allow(unused)]
+    pub fn render(
+        &self,
+        writer: &impl FileWriter,
+        config: &PackageConfig,
+        modules: &[Module],
+    ) -> Result<()> {
+        fn tuple(key: &str, value: &str) -> String {
+            format!("    {{{}, {}}},\n", key, value)
+        }
+
+        let path = self.output_directory.join(format!("{}.app", &config.name));
+
+        let start_module = match &config.otp_start_module {
+            None => "".to_string(),
+            Some(module) => tuple("mod", format!("'{}'", module).as_str()),
+        };
+
+        let modules = modules
+            .iter()
+            .map(|m| m.name.replace("/", "@"))
+            .sorted()
+            .join(",\n               ");
+
+        let mut applications: Vec<_> = config.dependencies.iter().map(|m| m.0).collect();
+        applications.sort();
+        let applications = applications.into_iter().join(",\n                    ");
+
+        let text = format!(
+            r#"{{application, {package}, [
+{start_module}    {{vsn, "{version}"}},
+    {{applications, [{applications}]}},
+    {{description, "{description}"}},
+    {{modules, [{modules}]}},
+    {{registered, []}},
+]}}.
+"#,
+            applications = applications,
+            description = config.description,
+            modules = modules,
+            package = config.name,
+            start_module = start_module,
+            version = config.version,
+        );
+
+        writer.open(&path)?.write(text.as_bytes())
     }
 }

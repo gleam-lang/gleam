@@ -1167,132 +1167,135 @@ fn x() { test }"
     );
 }
 
-// TODO: Test generation of .app files.
-// #[test]
-// fn config_compilation_test() {
-//     macro_rules! assert_config_compile {
-//         ($config:expr, $sources:expr, $expected_output:expr $(,)?) => {
-//             let mut modules = HashMap::new();
-//             let root = ProjectRoot::new(PathBuf::new());
-//             let codegen_app = ErlangApp::new(PathBuf::from("_build/default/lib/the_package/ebin"));
-//             let codegen_records =
-//                 ErlangRecordHeaders::new(PathBuf::from("_build/default/lib/the_package/src"));
-//             let codegen_modules =
-//                 ErlangModules::new(PathBuf::from("_build/default/lib/the_package/src"));
-//             let (file_writer, file_receiver) = FilesChannel::new();
-//             let mut compiler = PackageCompiler::new($config, Box::new(file_writer));
-//             compiler.print_progress = false;
-//             compiler.sources = $sources;
-//             compiler
-//                 .compile(&mut modules, &mut HashMap::with_capacity(4))
-//                 .expect("Should compile OK");
-//             let mut outputs = FilesChannel::recv_utf8_files(&file_receiver).unwrap();
-//             outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
-//             assert_eq!($expected_output, outputs);
-//         };
-//     };
+#[test]
+fn config_compilation_test() {
+    macro_rules! assert_config_compile {
+        ($config:expr, $sources:expr, $expected_output:expr $(,)?) => {
+            let config = $config;
+            let mut modules = HashMap::new();
+            let root = ProjectRoot::new(PathBuf::new());
+            let (file_writer, file_receiver) = FilesChannel::new();
+            let options = package_compiler::Options {
+                name: config.name.clone(),
+                src_path: PathBuf::from("src"),
+                out_path: PathBuf::from("out"),
+                test_path: None,
+            };
+            let mut compiler = PackageCompiler::new(options, file_writer.clone());
+            compiler.sources = $sources;
+            let compiled = compiler
+                .compile(&mut modules, &mut HashMap::with_capacity(4))
+                .expect("Should compile OK");
+            codegen::ErlangApp::new(&PathBuf::from("_build/default/lib/the_package/ebin"))
+                .render(&file_writer, &config, compiled.modules.as_slice())
+                .unwrap();
+            let mut outputs = FilesChannel::recv_utf8_files(&file_receiver).unwrap();
+            outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
+            assert_eq!($expected_output, outputs);
+        };
+    };
 
-//     fn make_config() -> PackageConfig {
-//         PackageConfig {
-//             dependencies: HashMap::new(),
-//             description: "".to_string(),
-//             version: "1.0.0".to_string(),
-//             name: "the_package".to_string(),
-//             repository: Repository::None,
-//             docs: Default::default(),
-//             otp_start_module: None,
-//             tool: BuildTool::Gleam,
-//         }
-//     }
+    fn make_config() -> PackageConfig {
+        PackageConfig {
+            dependencies: HashMap::new(),
+            description: "".to_string(),
+            version: "1.0.0".to_string(),
+            name: "the_package".to_string(),
+            repository: Repository::None,
+            docs: Default::default(),
+            otp_start_module: None,
+            tool: BuildTool::Gleam,
+        }
+    }
 
-//     assert_config_compile!(
-//         make_config(),
-//         vec![],
-//         vec![OutputFile {
-//             text: r#"{application, the_package, [
-//     {vsn, "1.0.0"},
-//     {applications, []},
-//     {description, ""},
-//     {modules, []},
-//     {registered, []},
-// ]}.
-// "#
-//             .to_string(),
-//             path: PathBuf::from("_build/default/lib/the_package/ebin/the_package.app"),
-//         }]
-//     );
+    assert_config_compile!(
+        make_config(),
+        vec![],
+        vec![OutputFile {
+            text: r#"{application, the_package, [
+    {vsn, "1.0.0"},
+    {applications, []},
+    {description, ""},
+    {modules, []},
+    {registered, []},
+]}.
+"#
+            .to_string(),
+            path: PathBuf::from("_build/default/lib/the_package/ebin/the_package.app"),
+        }]
+    );
 
-//     // Version is included if given
-//     let mut config = make_config();
-//     config.version = "1.3.5".to_string();
-//     assert_config_compile!(
-//         config,
-//         vec![],
-//         vec![OutputFile {
-//             text: r#"{application, the_package, [
-//     {vsn, "1.3.5"},
-//     {applications, []},
-//     {description, ""},
-//     {modules, []},
-//     {registered, []},
-// ]}.
-// "#
-//             .to_string(),
-//             path: PathBuf::from("_build/default/lib/the_package/ebin/the_package.app"),
-//         }]
-//     );
+    // Version is included if given
+    let mut config = make_config();
+    config.version = "1.3.5".to_string();
+    assert_config_compile!(
+        config,
+        vec![],
+        vec![OutputFile {
+            text: r#"{application, the_package, [
+    {vsn, "1.3.5"},
+    {applications, []},
+    {description, ""},
+    {modules, []},
+    {registered, []},
+]}.
+"#
+            .to_string(),
+            path: PathBuf::from("_build/default/lib/the_package/ebin/the_package.app"),
+        }]
+    );
 
-//     // We can specify a description
-//     let mut config = make_config();
-//     config.description = "Very exciting".to_string();
-//     assert_config_compile!(
-//         config,
-//         vec![],
-//         vec![OutputFile {
-//             text: r#"{application, the_package, [
-//     {vsn, "1.0.0"},
-//     {applications, []},
-//     {description, "Very exciting"},
-//     {modules, []},
-//     {registered, []},
-// ]}.
-// "#
-//             .to_string(),
-//             path: PathBuf::from("_build/default/lib/the_package/ebin/the_package.app"),
-//         }]
-//     );
+    // We can specify a description
+    let mut config = make_config();
+    config.description = "Very exciting".to_string();
+    assert_config_compile!(
+        config,
+        vec![],
+        vec![OutputFile {
+            text: r#"{application, the_package, [
+    {vsn, "1.0.0"},
+    {applications, []},
+    {description, "Very exciting"},
+    {modules, []},
+    {registered, []},
+]}.
+"#
+            .to_string(),
+            path: PathBuf::from("_build/default/lib/the_package/ebin/the_package.app"),
+        }]
+    );
 
-//     // Deps applications are listed
-//     let mut config = make_config();
-//     config.dependencies = [
-//         ("gleam_stdlib", "1.0.0"),
-//         ("gleam_otp", "1.0.0"),
-//         ("midas", "1.0.0"),
-//         ("simple_json", "1.0.0"),
-//     ]
-//     .into_iter()
-//     .map(|(a, b)| (a.to_string(), b.to_string()))
-//     .collect();
-//     assert_config_compile!(
-//         config,
-//         vec![],
-//         vec![OutputFile {
-//             text: r#"{application, the_package, [
-//     {vsn, "1.0.0"},
-//     {applications, [gleam_otp,
-//                     gleam_stdlib,
-//                     midas,
-//                     simple_json]},
-//     {description, ""},
-//     {modules, []},
-//     {registered, []},
-// ]}.
-// "#
-//             .to_string(),
-//             path: PathBuf::from("_build/default/lib/the_package/ebin/the_package.app"),
-//         }]
-//     );
-// }
+    // Deps applications are listed
+    let mut config = make_config();
+    config.dependencies = [
+        ("gleam_stdlib", "1.0.0"),
+        ("gleam_otp", "1.0.0"),
+        ("midas", "1.0.0"),
+        ("simple_json", "1.0.0"),
+    ]
+    .into_iter()
+    .map(|(a, b)| (a.to_string(), b.to_string()))
+    .collect();
+    assert_config_compile!(
+        config,
+        vec![],
+        vec![OutputFile {
+            text: r#"{application, the_package, [
+    {vsn, "1.0.0"},
+    {applications, [gleam_otp,
+                    gleam_stdlib,
+                    midas,
+                    simple_json]},
+    {description, ""},
+    {modules, []},
+    {registered, []},
+]}.
+"#
+            .to_string(),
+            path: PathBuf::from("_build/default/lib/the_package/ebin/the_package.app"),
+        }]
+    );
+}
 
 fn normalise_error(e: Error) -> Error {
     match e {
