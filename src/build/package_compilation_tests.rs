@@ -24,7 +24,7 @@ macro_rules! assert_erlang_compile {
             test_path: None,
         };
         let (file_writer, file_receiver) = FilesChannel::new();
-        let mut compiler = PackageCompiler::new(options, Box::new(file_writer));
+        let mut compiler = PackageCompiler::new(options, file_writer);
         compiler.sources = $sources;
         let outputs = compiler
             .compile(&mut modules, &mut HashMap::with_capacity(4))
