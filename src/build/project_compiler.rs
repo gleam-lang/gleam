@@ -1,3 +1,5 @@
+use codegen::ErlangApp;
+
 use crate::{
     build::{
         dep_tree, package_compiler::PackageCompiler, project_root::ProjectRoot, Origin, Package,
@@ -77,18 +79,25 @@ impl<'a> ProjectCompiler<'a> {
             _ => None,
         };
 
+        // TODO: this isn't the right location. We may want multiple output locations.
+        let out_path = self.root.default_build_lib_package_src_path(&name);
         let options = package_compiler::Options {
             src_path: self.root.default_build_lib_package_src_path(&name),
-            // TODO: this isn't the right location. We may want multiple output locations.
-            out_path: self.root.default_build_lib_package_src_path(&name),
+            out_path: out_path.clone(),
             test_path,
             name: name.clone(),
         };
 
         let mut compiler = options.into_compiler(FileSystemAccessor::new())?;
 
-        // Parse and type check
+        // Compile project
         let compiled = compiler.compile(&mut self.type_manifests, &mut self.defined_modules)?;
+        ErlangApp::new(out_path.as_path()).render(
+            &FileSystemAccessor::new(),
+            &config,
+            compiled.modules.as_slice(),
+        )?;
+
         self.packages.insert(name, compiled);
         Ok(())
     }

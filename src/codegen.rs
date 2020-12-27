@@ -63,14 +63,10 @@ pub struct ErlangApp<'a> {
 }
 
 impl<'a> ErlangApp<'a> {
-    // TODO: use
-    #[allow(unused)]
     pub fn new(output_directory: &'a Path) -> Self {
         Self { output_directory }
     }
 
-    // TODO: use
-    #[allow(unused)]
     pub fn render(
         &self,
         writer: &impl FileWriter,
