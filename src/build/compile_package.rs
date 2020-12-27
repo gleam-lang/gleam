@@ -13,7 +13,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
 
     let mut compiler = options
         .into_package_compiler_options()
-        .into_compiler(FileSystemAccessor::boxed())?
+        .into_compiler(FileSystemAccessor::new())?
         .compile(&mut type_manifests, &mut defined_modules)?;
 
     Ok(())

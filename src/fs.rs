@@ -28,10 +28,6 @@ impl FileSystemAccessor {
     pub fn new() -> Self {
         Self
     }
-
-    pub fn boxed() -> Box<Self> {
-        Box::new(Self::new())
-    }
 }
 
 impl FileWriter for FileSystemAccessor {

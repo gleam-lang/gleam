@@ -19,7 +19,10 @@ pub struct Options {
 }
 
 impl Options {
-    pub fn into_compiler(self, writer: Box<dyn FileWriter>) -> Result<PackageCompiler> {
+    pub fn into_compiler<Writer: FileWriter>(
+        self,
+        writer: Writer,
+    ) -> Result<PackageCompiler<Writer>> {
         tracing::info!("Reading source files");
         let mut compiler = PackageCompiler {
             options: self,
@@ -36,18 +39,18 @@ impl Options {
 }
 
 #[derive(Debug)]
-pub struct PackageCompiler {
+pub struct PackageCompiler<Writer: FileWriter> {
     pub options: Options,
     pub sources: Vec<Source>,
-    pub writer: Box<dyn FileWriter>,
+    pub writer: Writer,
 }
 
 // TODO: ensure this is not a duplicate module
 // TODO: tests
 // Including cases for:
 // - modules that don't import anything
-impl PackageCompiler {
-    pub fn new(options: Options, writer: Box<dyn FileWriter>) -> Self {
+impl<Writer: FileWriter> PackageCompiler<Writer> {
+    pub fn new(options: Options, writer: Writer) -> Self {
         Self {
             options,
             writer,
@@ -111,7 +114,7 @@ impl PackageCompiler {
 
     fn perform_codegen(&self, modules: &[Module]) -> Result<()> {
         // TODO: don't clone this path
-        Erlang::new(self.options.out_path.clone()).render(self.writer.as_ref(), modules)?;
+        Erlang::new(self.options.out_path.clone()).render(&self.writer, modules)?;
         Ok(())
     }
 }

@@ -85,7 +85,7 @@ impl<'a> ProjectCompiler<'a> {
             name: name.clone(),
         };
 
-        let mut compiler = options.into_compiler(FileSystemAccessor::boxed())?;
+        let mut compiler = options.into_compiler(FileSystemAccessor::new())?;
 
         // Parse and type check
         let compiled = compiler.compile(&mut self.type_manifests, &mut self.defined_modules)?;
