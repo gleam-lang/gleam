@@ -29,11 +29,7 @@ impl Options {
             sources: vec![],
             writer,
         };
-        // TODO: Move this loading into the PackageCompiler so that we don't need to clone these paths
-        compiler.read_package_source_files(&compiler.options.src_path.clone(), Origin::Src)?;
-        if let Some(path) = &compiler.options.test_path.clone() {
-            compiler.read_package_source_files(path, Origin::Test)?;
-        }
+        compiler.read_source_files()?;
         Ok(compiler)
     }
 }
@@ -89,25 +85,35 @@ impl<Writer: FileWriter> PackageCompiler<Writer> {
         })
     }
 
-    pub fn read_package_source_files(
-        &mut self,
-        package_path: &Path,
-        origin: Origin,
-    ) -> Result<(), Error> {
-        let span =
-            tracing::info_span!("load", package = self.options.name.as_str(), origin = ?origin);
+    pub fn read_source_files(&mut self) -> Result<()> {
+        let span = tracing::info_span!("load", package = self.options.name.as_str());
         let _enter = span.enter();
-
         tracing::info!("Reading source code");
-        for path in crate::fs::gleam_files(package_path) {
-            let name = module_name(package_path, &path);
+
+        // Src
+        for path in crate::fs::gleam_files(&self.options.src_path) {
+            let name = module_name(&self.options.src_path, &path);
             let code = crate::fs::read(&path)?;
             self.sources.push(Source {
                 name,
                 path,
                 code,
-                origin,
+                origin: Origin::Src,
             });
+        }
+
+        // Test
+        if let Some(test_path) = &self.options.test_path {
+            for path in crate::fs::gleam_files(test_path) {
+                let name = module_name(test_path, &path);
+                let code = crate::fs::read(&path)?;
+                self.sources.push(Source {
+                    name,
+                    path,
+                    code,
+                    origin: Origin::Test,
+                });
+            }
         }
         Ok(())
     }
