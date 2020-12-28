@@ -159,7 +159,7 @@ where
                     Some((_, Tok::Type, _)) => self.parse_external_type(start, true),
                     Some((_, Tok::Fn, _)) => self.parse_external_fn(start, true),
                     _ => {
-                        self.next_tok_unexpected(vec!["A type of function definition".to_string()])?
+                        self.next_tok_unexpected(vec!["A type or function definition".to_string()])?
                     }
                 }
             }
