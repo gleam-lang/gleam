@@ -1367,6 +1367,13 @@ When matching you need to use the `{}_codepoint` specifier instead.",
                         "I'm expecting a type name here.",
                         vec![ "Hint: Type names start with a uppercase letter, and can contain a-z, A-Z, or 0-9.".to_string()]
                     ),
+                    ParseErrorType::InvalidBitStringSegment => (
+                        "This is not a valid BitString segment option.",
+                        vec![ "Hint: Valid BitString segment options are:".to_string(),
+                        "binary, int, float, bit_string, utf8, utf16, utf32, utf8_codepoint, utf16_codepoint".to_string(),
+                        "utf32_codepoint, signed, unsigned, big, little, native, size, unit".to_string(),
+                        "See: https://gleam.run/book/tour/bit-strings".to_string()]
+                    ),
                     ParseErrorType::InvalidTailPattern => (
                         "This part of a list pattern can only be a name or a discard.",
                         vec!["See: https://gleam.run/book/tour/patterns".to_string()]
