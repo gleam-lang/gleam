@@ -22,19 +22,20 @@ pub struct ParseError {
 
 #[derive(Debug, PartialEq)]
 pub enum ParseErrorType {
-    ExpectedExpr,       // after "->" in a case clause
-    ExpectedName,       // any token used when a Name was expected
-    ExpectedPattern,    // after ':' where a pattern is expected
-    ExpectedType,       // after ':' or '->' where a type annotation is expected
-    ExpectedUpName,     // any token used when a UpName was expected
-    ExpectedValue,      // no value after "="
-    ExprLparStart,      // it seems "(" was used to start an expression
-    ExprTailBinding,    // a binding in the tail position of an expression sequence
-    ExtraSeparator,     // tuple(1,,) <- the 2nd comma is an extra separator
-    IncorrectName,      // UpName or DiscardName used when Name was expected
-    IncorrectUpName,    // Name or DiscardName used when UpName was expected
-    InvalidTailPattern, // only name and _name are allowed after ".." in list pattern
-    InvalidTupleAccess, // only positive int literals for tuple access
+    ExpectedExpr,            // after "->" in a case clause
+    ExpectedName,            // any token used when a Name was expected
+    ExpectedPattern,         // after ':' where a pattern is expected
+    ExpectedType,            // after ':' or '->' where a type annotation is expected
+    ExpectedUpName,          // any token used when a UpName was expected
+    ExpectedValue,           // no value after "="
+    ExprLparStart,           // it seems "(" was used to start an expression
+    ExprTailBinding,         // a binding in the tail position of an expression sequence
+    ExtraSeparator,          // tuple(1,,) <- the 2nd comma is an extra separator
+    IncorrectName,           // UpName or DiscardName used when Name was expected
+    IncorrectUpName,         // Name or DiscardName used when UpName was expected
+    InvalidBitStringSegment, // <<7:hello>> `hello` is an invalid bitstring segment
+    InvalidTailPattern,      // only name and _name are allowed after ".." in list pattern
+    InvalidTupleAccess,      // only positive int literals for tuple access
     LexError { error: LexicalError },
     ListNilNotAllowed, // [] is not allowed here
     NoConstructors,    // A type "A {}" must have at least one constructor

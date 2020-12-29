@@ -15,6 +15,41 @@
 //     * One or more Expressions
 //     * A Binding followed by at least one more Expression Sequences
 //
+// Naming Conventions:
+//   parse_x
+//      Parse a specific part of the grammar, not erroring if it cannot.
+//      Generally returns `Result<Option<A>, ParseError>`, note the inner Option
+//
+//   expect_x
+//      Parse a generic or specific part of the grammar, erroring if it cannot.
+//      Generally returns `Result<A, ParseError>`, note no inner Option
+//
+//   maybe_x
+//      Parse a generic part of the grammar, do not error if it cannot.
+//      Returns either `Result<Option<A>>` or `Option<A>` depending on call
+//      context but never errors.
+//
+//
+// Operator Precedence Parsing:
+//   Needs to take place in expressions and in clause guards.
+//   It is accomplished using the Simple Precedence Parser algoithm.
+//   See: https://en.wikipedia.org/wiki/Simple_precedence_parser
+//
+//   It relies or the operator grammar being in the general form:
+//   e ::= expr op expr | expr
+//   Which just means that exprs  and operators always alternate, starting with an expr
+//
+//   The gist of the algorithm is:
+//   Create 2 stacks, one to hold expressions, and one to hold un-reduced operators.
+//   While consuming the input stream, if an expression is encountered add it to the top
+//   of the expression stack. If an operator is encountered, compare its precedence to the
+//   top of the operator stack and perform the appropriate action, which is either using it
+//   to reduce 2 expressions on the top of the expression stack or put it on the top of the
+//   operator stack. When the end of the input is reached, attempt to reduce all of the
+//   expressions down to a single expression(or no expression) using the remaining operators
+//   on the operator stack. If there are any operators left, or more than 1 expression left
+//   this is a syntax error. But the here implementation shouldn't need to handle that case
+//   as the outer parser ensures the correct structure.
 //
 pub mod error;
 mod lexer;
@@ -26,6 +61,7 @@ use crate::ast::{
     UntypedClauseGuard, UntypedConstant, UntypedExpr, UntypedModule, UntypedPattern,
     UntypedRecordUpdateArg, UntypedStatement,
 };
+use crate::error::fatal_compiler_bug;
 use crate::parser::ParserArg;
 use error::{LexicalError, ParseError, ParseErrorType};
 use lexer::{LexResult, Spanned};
@@ -45,7 +81,6 @@ pub fn parse_module(src: &str) -> Result<UntypedModule, ParseError> {
 //
 // Test Interface
 //
-
 #[allow(dead_code)]
 pub fn parse_expression_sequence(src: &str) -> Result<UntypedExpr, ParseError> {
     let lex = lexer::make_tokenizer(src);
@@ -93,7 +128,15 @@ where
         })
     }
 
-    fn ensure_no_errors<A>(&mut self, statements: Result<A, ParseError>) -> Result<A, ParseError> {
+    // The way the parser is currenly implemented, it cannot exit immediately while advancing
+    // the token stream upon seing a LexError. That is to avoid having to put `?` all over the
+    // place and instead we collect LexErrors in `self.lex_errors` and attempt to continue parsing.
+    // Once parsing has returned we want to surface an error in the order:
+    // 1) LexError, 2) ParseError, 3) More Tokens Left
+    fn ensure_no_errors(
+        &mut self,
+        statements: Result<Vec<UntypedStatement>, ParseError>,
+    ) -> Result<Vec<UntypedStatement>, ParseError> {
         self.lex_errors.reverse();
         if let Some(error) = self.lex_errors.pop() {
             // Lex errors first
@@ -205,7 +248,7 @@ where
     // Parse Expressions
     //
 
-    // expmples:
+    // examples:
     //   unit
     //   unit op unit
     //   unit op unit pipe unit(call)
@@ -262,7 +305,7 @@ where
     //   True
     //   fn() { "hi" }
     //   unit().unit().unit()
-    //   A(.., tuple(1))
+    //   A(a.., label: tuple(1))
     //   { expression_sequence }
     fn parse_expression_unit(&mut self) -> Result<Option<UntypedExpr>, ParseError> {
         let mut expr = match self.tok0.take() {
@@ -550,7 +593,6 @@ where
     //
     //   In order to parse an expr sequence, you must try to parse an expr, if it is a binding
     //   you MUST parse another expr, if it is some other expr, you MAY parse another expr
-    //   and there are 3 results, either a Let (binding), Seq (non binding multiple) or the expr itself
     fn parse_expression_seq(&mut self) -> Result<Option<(UntypedExpr, usize)>, ParseError> {
         // binding
         if let Some((start, kind)) = self.maybe_binding_start() {
@@ -1041,8 +1083,6 @@ where
         }
     }
 
-    // Parse Record Update Arg
-    //
     // examples:
     //   a: expr
     fn parse_record_update_arg(&mut self) -> Result<Option<UntypedRecordUpdateArg>, ParseError> {
@@ -1156,7 +1196,7 @@ where
         }
     }
 
-    // Parse a single external function param
+    // Parse a single external function definition param
     //
     // examples:
     //   A
@@ -1314,7 +1354,6 @@ where
         }
     }
 
-    // Parse External Type
     // Starts after "type"
     //
     // examples:
@@ -1421,8 +1460,6 @@ where
         }
     }
 
-    // Parse an expected type name and args:
-    //
     // examples:
     //   A
     //   A(one, two)
@@ -1438,8 +1475,6 @@ where
         }
     }
 
-    // Parse type constructor args
-    //
     // examples:
     //   *no args*
     //   ()
@@ -1508,7 +1543,7 @@ where
         }
     }
 
-    // Parse the type part of a type annotation, same as above minus the ":"
+    // Parse the type part of a type annotation, same as `parse_type_annotation` minus the ":"
     fn parse_type(&mut self, for_const: bool) -> Result<Option<TypeAst>, ParseError> {
         match self.tok0.take() {
             // Type hole
@@ -1625,7 +1660,7 @@ where
         }
     }
 
-    // For parsing a delim separated "list" of types, for tuple, constructor, and function
+    // For parsing a comma separated "list" of types, for tuple, constructor, and function
     fn parse_types(&mut self, for_const: bool) -> Result<Vec<TypeAst>, ParseError> {
         let elems = Parser::series_of(
             self,
@@ -1960,9 +1995,9 @@ where
     // patern (: option)?
     fn parse_bit_string_segment<A>(
         &mut self,
-        value_parser: &dyn Fn(&mut Self) -> Result<Option<A>, ParseError>,
-        arg_parser: &dyn Fn(&mut Self) -> Result<A, ParseError>,
-        to_int_segment: &dyn Fn(String, usize, usize) -> A,
+        value_parser: &impl Fn(&mut Self) -> Result<Option<A>, ParseError>,
+        arg_parser: &impl Fn(&mut Self) -> Result<A, ParseError>,
+        to_int_segment: &impl Fn(String, usize, usize) -> A,
     ) -> Result<Option<BitStringSegment<A, ()>>, ParseError>
     where
         A: HasLocation,
@@ -2002,8 +2037,8 @@ where
     //   utf8
     fn parse_bit_string_segment_option<A>(
         &mut self,
-        arg_parser: &dyn Fn(&mut Self) -> Result<A, ParseError>,
-        to_int_segment: &dyn Fn(String, usize, usize) -> A,
+        arg_parser: &impl Fn(&mut Self) -> Result<A, ParseError>,
+        to_int_segment: &impl Fn(String, usize, usize) -> A,
     ) -> Result<Option<BitStringSegmentOption<A>>, ParseError> {
         match self.next_tok() {
             // named segment
@@ -2030,7 +2065,12 @@ where
                         })),
                     }
                 } else {
-                    Ok(Some(bit_string_literal(name, SrcSpan { start, end })))
+                    str_to_bit_string_segment_option(&name, SrcSpan { start, end })
+                        .ok_or(ParseError {
+                            error: ParseErrorType::InvalidBitStringSegment,
+                            location: SrcSpan { start, end },
+                        })
+                        .map(|v| Some(v))
                 }
             }
             // int segment
@@ -2088,7 +2128,7 @@ where
     fn expect_one(&mut self, wanted: &Tok) -> Result<(usize, usize), ParseError> {
         match self.maybe_one(wanted) {
             Some((start, end)) => Ok((start, end)),
-            None => self.next_tok_unexpected(vec![what_was_expected(wanted)]),
+            None => self.next_tok_unexpected(vec![wanted.to_string()]),
         }
     }
 
@@ -2161,7 +2201,7 @@ where
     // Parse a series by repeating a parser, and possibly a separator
     fn series_of<A>(
         &mut self,
-        parser: &dyn Fn(&mut Self) -> Result<Option<A>, ParseError>,
+        parser: &impl Fn(&mut Self) -> Result<Option<A>, ParseError>,
         sep: Option<&Tok>,
     ) -> Result<Vec<A>, ParseError> {
         let mut results = vec![];
@@ -2262,17 +2302,17 @@ where
     }
 }
 
-// Operator Parsing / Precedence
+// Operator Precedence Parsing
 //
 // Higher number means higher precedence.
 // All operators are left associative.
 
-// Simple-Op-Parser, handle seeing an operator or end
+// Simple-Precedence-Parser, handle seeing an operator or end
 fn handle_op<A>(
     next_op: Option<(Spanned, u8)>,
     opstack: &mut Vec<(Spanned, u8)>,
     estack: &mut Vec<A>,
-    do_reduce: &dyn Fn(Spanned, &mut Vec<A>),
+    do_reduce: &impl Fn(Spanned, &mut Vec<A>),
 ) -> Result<Option<A>, ParseError> {
     let mut next_op = next_op;
     loop {
@@ -2282,7 +2322,7 @@ fn handle_op<A>(
                     if estack.is_empty() {
                         return Ok(Some(fin));
                     } else {
-                        panic!(parser_panic_text("Expression not fully reduced."))
+                        fatal_compiler_bug("Expression not fully reduced.")
                     }
                 } else {
                     return Ok(None);
@@ -2351,25 +2391,25 @@ fn tok_to_binop(t: &Tok) -> Option<BinOp> {
         _ => None,
     }
 }
-// Simple-Op-Parser, perform reduction for expression
+// Simple-Precedence-Parser, perform reduction for expression
 fn do_reduce_expression(op: Spanned, estack: &mut Vec<UntypedExpr>) {
     match (estack.pop(), estack.pop()) {
         (Some(er), Some(el)) => {
             let new_e = expr_op_reduction(op, el, er);
             estack.push(new_e);
         }
-        _ => panic!(parser_panic_text("Tried to reduce withot 2 expressions")),
+        _ => fatal_compiler_bug("Tried to reduce without 2 expressions"),
     }
 }
 
-// Simple-Op-Parser, perform reduction for clause guard
+// Simple-Precedence-Parser, perform reduction for clause guard
 fn do_reduce_clause_guard(op: Spanned, estack: &mut Vec<UntypedClauseGuard>) {
     match (estack.pop(), estack.pop()) {
         (Some(er), Some(el)) => {
             let new_e = clause_guard_reduction(op, el, er);
             estack.push(new_e);
         }
-        _ => panic!(parser_panic_text("Tried to reduce without 2 guards")),
+        _ => fatal_compiler_bug("Tried to reduce without 2 guards"),
     }
 }
 
@@ -2394,7 +2434,7 @@ fn expr_op_reduction(op: Spanned, l: UntypedExpr, r: UntypedExpr) -> UntypedExpr
             right: Box::new(r),
         }
     } else {
-        panic!(parser_panic_text("Token could not be converted to binop."))
+        fatal_compiler_bug("Token could not be converted to binop.")
     }
 }
 
@@ -2482,19 +2522,8 @@ fn clause_guard_reduction(
             right,
         },
 
-        _ => panic!(parser_panic_text(
-            "Token could not be converted to Guard Op."
-        )),
+        _ => fatal_compiler_bug("Token could not be converted to Guard Op."),
     }
-}
-
-fn parser_panic_text(message: &str) -> String {
-    format!(
-        "UH OH, looks like you've run into a compiler error. \
-Please report it along with a description of what caused it! \
-Reason: {}",
-        message
-    )
 }
 
 // Bitstring Parse Helpers
@@ -2523,30 +2552,29 @@ fn bit_string_const_int(value: String, start: usize, end: usize) -> UntypedConst
     }
 }
 
-// Question: parse error here?
-fn bit_string_literal<A>(lit: String, location: SrcSpan) -> BitStringSegmentOption<A> {
-    match lit.as_str() {
-        "binary" => BitStringSegmentOption::Binary { location },
-        "bytes" => BitStringSegmentOption::Binary { location },
-        "int" => BitStringSegmentOption::Integer { location },
-        "float" => BitStringSegmentOption::Float { location },
-        "bit_string" => BitStringSegmentOption::BitString { location },
-        "bits" => BitStringSegmentOption::BitString { location },
-        "utf8" => BitStringSegmentOption::UTF8 { location },
-        "utf16" => BitStringSegmentOption::UTF16 { location },
-        "utf32" => BitStringSegmentOption::UTF32 { location },
-        "utf8_codepoint" => BitStringSegmentOption::UTF8Codepoint { location },
-        "utf16_codepoint" => BitStringSegmentOption::UTF16Codepoint { location },
-        "utf32_codepoint" => BitStringSegmentOption::UTF32Codepoint { location },
-        "signed" => BitStringSegmentOption::Signed { location },
-        "unsigned" => BitStringSegmentOption::Unsigned { location },
-        "big" => BitStringSegmentOption::Big { location },
-        "little" => BitStringSegmentOption::Little { location },
-        "native" => BitStringSegmentOption::Native { location },
-        _ => BitStringSegmentOption::Invalid {
-            label: lit,
-            location,
-        },
+fn str_to_bit_string_segment_option<A>(
+    lit: &str,
+    location: SrcSpan,
+) -> Option<BitStringSegmentOption<A>> {
+    match lit {
+        "binary" => Some(BitStringSegmentOption::Binary { location }),
+        "bytes" => Some(BitStringSegmentOption::Binary { location }),
+        "int" => Some(BitStringSegmentOption::Integer { location }),
+        "float" => Some(BitStringSegmentOption::Float { location }),
+        "bit_string" => Some(BitStringSegmentOption::BitString { location }),
+        "bits" => Some(BitStringSegmentOption::BitString { location }),
+        "utf8" => Some(BitStringSegmentOption::UTF8 { location }),
+        "utf16" => Some(BitStringSegmentOption::UTF16 { location }),
+        "utf32" => Some(BitStringSegmentOption::UTF32 { location }),
+        "utf8_codepoint" => Some(BitStringSegmentOption::UTF8Codepoint { location }),
+        "utf16_codepoint" => Some(BitStringSegmentOption::UTF16Codepoint { location }),
+        "utf32_codepoint" => Some(BitStringSegmentOption::UTF32Codepoint { location }),
+        "signed" => Some(BitStringSegmentOption::Signed { location }),
+        "unsigned" => Some(BitStringSegmentOption::Unsigned { location }),
+        "big" => Some(BitStringSegmentOption::Big { location }),
+        "little" => Some(BitStringSegmentOption::Little { location }),
+        "native" => Some(BitStringSegmentOption::Native { location }),
+        _ => None,
     }
 }
 
@@ -2560,24 +2588,6 @@ fn parse_error<T>(error: ParseErrorType, location: SrcSpan) -> Result<T, ParseEr
 //
 // Misc Helpers
 //
-
-// When expecting a token and we get something else, this lookup is used
-// to show the user what we were looking for
-// could move this to a Display impl?
-fn what_was_expected(t: &Tok) -> String {
-    let todo = format!("TODO {:?}", t);
-    match t {
-        Tok::Lbrace => "\"{\"",
-        Tok::Rbrace => "\"}\"",
-        Tok::Lpar => "\"(\"",
-        Tok::Rpar => "\")\"",
-        Tok::Equal => "\"=\"",
-        Tok::Type => "the word \"type\"",
-        Tok::RArrow => "\"->\"",
-        _ => &todo,
-    }
-    .to_string()
-}
 
 // useful for checking if a user tried to enter a reserved word as a name
 fn is_reserved_word(tok: Tok) -> bool {
