@@ -25,10 +25,8 @@
 //      Generally returns `Result<A, ParseError>`, note no inner Option
 //
 //   maybe_x
-//      Parse a generic part of the grammar, do not error if it cannot.
-//      Returns either `Result<Option<A>>` or `Option<A>` depending on call
-//      context but never errors.
-//
+//      Parse a generic part of the grammar. Returning `None` if it cannot.
+//      Returns `Some(x)` and advances the token stream if it can.
 //
 // Operator Precedence Parsing:
 //   Needs to take place in expressions and in clause guards.
@@ -1086,7 +1084,7 @@ where
     // examples:
     //   a: expr
     fn parse_record_update_arg(&mut self) -> Result<Option<UntypedRecordUpdateArg>, ParseError> {
-        if let Some((start, label, _)) = self.maybe_name()? {
+        if let Some((start, label, _)) = self.maybe_name() {
             self.expect_one(&Tok::Colon)?;
             let value = self.parse_expression()?;
             if let Some(value) = value {
@@ -1343,7 +1341,7 @@ where
                 location,
                 value,
             })))
-        } else if let Some((start, _, end)) = self.maybe_discard_name()? {
+        } else if let Some((start, _, end)) = self.maybe_discard_name() {
             let mut location = SrcSpan { start, end };
             if label.is_some() {
                 location.start = start
@@ -1395,7 +1393,7 @@ where
             let constructors = Parser::series_of(
                 self,
                 &|p| {
-                    if let Some((c_s, c_n, c_e)) = Parser::maybe_upname(p)? {
+                    if let Some((c_s, c_n, c_e)) = Parser::maybe_upname(p) {
                         let (args, args_e) = Parser::parse_type_constructor_args(p)?;
                         let end = args_e.max(c_e);
                         Ok(Some(RecordConstructor {
@@ -1466,7 +1464,7 @@ where
     fn expect_type_name(&mut self) -> Result<(usize, String, Vec<String>, usize), ParseError> {
         let (start, upname, end) = self.expect_upname()?;
         if self.maybe_one(&Tok::Lpar).is_some() {
-            let args = Parser::series_of(self, &Parser::maybe_name, Some(&Tok::Comma))?;
+            let args = Parser::series_of(self, &|p| Ok(Parser::maybe_name(p)), Some(&Tok::Comma))?;
             let (_, par_e) = self.expect_one(&Tok::Rpar)?;
             let args2 = args.into_iter().map(|(_, a, _)| a).collect();
             Ok((start, upname, args2, par_e))
@@ -2222,46 +2220,43 @@ where
     }
 
     // If next token is a Name, consume it and return relevant info, otherwise, return none
-    // don't error in here. Result type is for combinator ease
-    fn maybe_name(&mut self) -> Result<Option<(usize, String, usize)>, ParseError> {
+    fn maybe_name(&mut self) -> Option<(usize, String, usize)> {
         match self.tok0.take() {
             Some((s, Tok::Name { name }, e)) => {
                 self.next_tok();
-                Ok(Some((s, name, e)))
+                Some((s, name, e))
             }
             t0 => {
                 self.tok0 = t0;
-                Ok(None)
+                None
             }
         }
     }
 
     // if next token is an UpName, consume it and return relevant info, otherwise, return none
-    // don't error in here. Result type is for combinator ease
-    fn maybe_upname(&mut self) -> Result<Option<(usize, String, usize)>, ParseError> {
+    fn maybe_upname(&mut self) -> Option<(usize, String, usize)> {
         match self.tok0.take() {
             Some((s, Tok::UpName { name }, e)) => {
                 self.next_tok();
-                Ok(Some((s, name, e)))
+                Some((s, name, e))
             }
             t0 => {
                 self.tok0 = t0;
-                Ok(None)
+                None
             }
         }
     }
 
     // if next token is a DiscardName, consume it and return relevant info, otherwise, return none
-    // don't error in here. Result type is for combinator ease
-    fn maybe_discard_name(&mut self) -> Result<Option<(usize, String, usize)>, ParseError> {
+    fn maybe_discard_name(&mut self) -> Option<(usize, String, usize)> {
         match self.tok0.take() {
             Some((s, Tok::DiscardName { name }, e)) => {
                 self.next_tok();
-                Ok(Some((s, name, e)))
+                Some((s, name, e))
             }
             t0 => {
                 self.tok0 = t0;
-                Ok(None)
+                None
             }
         }
     }
