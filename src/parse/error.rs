@@ -9,8 +9,6 @@ pub struct LexicalError {
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum LexicalErrorType {
     UnexpectedStringEnd,
-    NestingLeftOpen,
-    NoNestingToClose,
     UnrecognizedToken { tok: char },
 }
 
@@ -57,14 +55,6 @@ impl LexicalError {
             LexicalErrorType::UnexpectedStringEnd => {
                 ("The string starting here was left open.", vec![])
             }
-            LexicalErrorType::NestingLeftOpen => (
-                "A bracket of some kind was left open.",
-                vec!["Hint: Close it :)".to_string()],
-            ),
-            LexicalErrorType::NoNestingToClose => (
-                "There is no corresponding openening bracket for this.",
-                vec!["Hint: Remove it?".to_string()],
-            ),
             LexicalErrorType::UnrecognizedToken { .. } => (
                 "I can't figure out what to do with this character.",
                 vec!["Hint: Is it a typo?".to_string()],

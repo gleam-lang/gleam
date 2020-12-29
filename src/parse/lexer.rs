@@ -2,15 +2,8 @@ use crate::parse::error::{LexicalError, LexicalErrorType};
 use crate::parse::token::Tok;
 use std::char;
 
-// ideas:
-// * look up 2 / 3 char tokens like keywords
-//   * perf test
-// * track nesting per type and lex error on invalid nesting
-//   * useful?
-
 pub struct Lexer<T: Iterator<Item = (usize, char)>> {
     chars: T,
-    nesting: usize, // Amount of (), [], or {}
     pending: Vec<Spanned>,
     chr0: Option<char>,
     chr1: Option<char>,
@@ -108,7 +101,6 @@ where
     pub fn new(input: T) -> Self {
         let mut lxr = Lexer {
             chars: input,
-            nesting: 0,
             pending: Vec::new(),
             location: 0,
             chr0: None,
@@ -152,15 +144,6 @@ where
         } else {
             // We reached end of file.
             let tok_pos = self.get_pos();
-
-            // First of all, we need all nestings to be finished.
-            if self.nesting > 0 {
-                return Err(LexicalError {
-                    error: LexicalErrorType::NestingLeftOpen,
-                    location: tok_pos,
-                });
-            }
-
             self.emit((tok_pos, Tok::EndOfFile, tok_pos));
         }
 
@@ -306,17 +289,9 @@ where
             }
             '(' => {
                 self.eat_single_char(Tok::Lpar);
-                self.nesting += 1;
             }
             ')' => {
                 self.eat_single_char(Tok::Rpar);
-                if self.nesting == 0 {
-                    return Err(LexicalError {
-                        error: LexicalErrorType::NoNestingToClose,
-                        location: self.get_pos(),
-                    });
-                }
-                self.nesting -= 1;
             }
             '[' => {
                 let tok_start = self.get_pos();
@@ -327,32 +302,16 @@ where
                     self.emit((tok_start, Tok::ListNil, tok_end));
                 } else {
                     self.eat_single_char(Tok::Lsqb);
-                    self.nesting += 1;
                 }
             }
             ']' => {
                 self.eat_single_char(Tok::Rsqb);
-                if self.nesting == 0 {
-                    return Err(LexicalError {
-                        error: LexicalErrorType::NoNestingToClose,
-                        location: self.get_pos(),
-                    });
-                }
-                self.nesting -= 1;
             }
             '{' => {
                 self.eat_single_char(Tok::Lbrace);
-                self.nesting += 1;
             }
             '}' => {
                 self.eat_single_char(Tok::Rbrace);
-                if self.nesting == 0 {
-                    return Err(LexicalError {
-                        error: LexicalErrorType::NoNestingToClose,
-                        location: self.get_pos(),
-                    });
-                }
-                self.nesting -= 1;
             }
             ':' => {
                 self.eat_single_char(Tok::Colon);
