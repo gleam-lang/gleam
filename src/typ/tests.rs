@@ -624,22 +624,6 @@ fn infer_bit_string_error_test() {
     // Options
 
     assert_error!(
-        "let x = <<1:invalid>> x",
-        Error::InvalidBinarySegmentOption {
-            location: SrcSpan { start: 12, end: 19 },
-            label: "invalid".to_string(),
-        },
-    );
-
-    assert_error!(
-        "case <<1>> { <<1:binary-wrong>> -> 1 }",
-        Error::InvalidBinarySegmentOption {
-            location: SrcSpan { start: 24, end: 29 },
-            label: "wrong".to_string(),
-        },
-    );
-
-    assert_error!(
         "let x = <<1:int-binary>> x",
         Error::ConflictingBinaryTypeOptions {
             previous_location: SrcSpan { start: 12, end: 15 },
