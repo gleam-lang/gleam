@@ -228,7 +228,7 @@ fn parse_source(src: &str, name: &str, path: &PathBuf) -> Result<UntypedModule, 
     let (cleaned, comments) = parser::strip_extra(src);
 
     // Parse source into AST
-    let mut module = crate::parse::parse_module(&cleaned).map_err(|error| Error::Compile {
+    let mut module = crate::parse::parse_module(&cleaned).map_err(|error| Error::Parse {
         path: path.clone(),
         src: src.to_string(),
         error,

@@ -68,7 +68,7 @@ pub type Result<Ok, Err = Error> = std::result::Result<Ok, Err>;
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
-    Compile {
+    Parse {
         path: PathBuf,
         src: Src,
         error: crate::parse::error::ParseError,
@@ -1313,7 +1313,7 @@ When matching you need to use the `{}_codepoint` specifier instead.",
                 }
             },
 
-            Error::Compile { path, src, error } => {
+            Error::Parse { path, src, error } => {
                 let crate::parse::error::ParseError { location, error } = error;
 
                 let (label, extra) = match error {

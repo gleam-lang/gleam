@@ -112,7 +112,7 @@ fn format_file(path: PathBuf) -> Result<Formatted, Error> {
         err: Some(e.to_string()),
     })?;
 
-    let formatted = crate::format::pretty(src.as_ref()).map_err(|error| Error::Compile {
+    let formatted = crate::format::pretty(src.as_ref()).map_err(|error| Error::Parse {
         path: path.clone(),
         src: src.clone(),
         error,
@@ -135,7 +135,7 @@ pub fn read_and_format_stdin() -> Result<Formatted, Error> {
             err: Some(e.kind()),
         })?;
 
-    let formatted = crate::format::pretty(src.as_ref()).map_err(|error| Error::Compile {
+    let formatted = crate::format::pretty(src.as_ref()).map_err(|error| Error::Parse {
         path: PathBuf::from("<standard input>"),
         src: src.clone(),
         error,

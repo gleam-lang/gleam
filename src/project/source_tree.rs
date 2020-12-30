@@ -141,7 +141,7 @@ impl SourceTree {
 
         // Parse the source
         let (cleaned, comments) = parser::strip_extra(&input.src);
-        let mut module = crate::parse::parse_module(&cleaned).map_err(|e| Error::Compile {
+        let mut module = crate::parse::parse_module(&cleaned).map_err(|e| Error::Parse {
             path: input.path.clone(),
             src: input.src.clone(),
             error: e,
