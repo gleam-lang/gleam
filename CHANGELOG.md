@@ -20,6 +20,7 @@
 - Constants can now be defined after they are used in functions
 - The parser has been rewitten from scratch, dramatically improving error 
   messages and compilation times.
+- `1-1` and `a-1` are now parsed as `1 - 1` and `a - 1`
 
 ## v0.12.1 - 2020-11-15
 
