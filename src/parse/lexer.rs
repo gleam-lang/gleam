@@ -129,17 +129,26 @@ where
     fn consume_normal(&mut self) -> Result<(), LexicalError> {
         // Check if we have some character:
         if let Some(c) = self.chr0 {
+            let mut check_for_minus = false;
             if self.is_upname_start(c) {
                 let name = self.lex_upname()?;
                 self.emit(name)
             } else if self.is_name_start(c) {
+                check_for_minus = true;
                 let name = self.lex_name()?;
                 self.emit(name);
             } else if self.is_number_start(c, self.chr1) {
+                check_for_minus = true;
                 let num = self.lex_number()?;
                 self.emit(num);
             } else {
                 self.consume_character(c)?;
+            }
+            if check_for_minus {
+                // We want to lex `1-1` and `x-1` as `1 - 1` and `x - 1`
+                if Some('-') == self.chr0 && self.is_number_start('-', self.chr1) {
+                    self.eat_single_char(Tok::Minus);
+                }
             }
         } else {
             // We reached end of file.

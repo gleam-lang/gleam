@@ -11,3 +11,13 @@ pub fn bases_test() {
   should.equal(x, 15)
   should.equal(y, 15)
 }
+
+pub fn minus_lexing_test() {
+  // 1-1 should lex as 1 - 1
+  should.equal({1-1}, 0)
+  // a-1 should lex as a - 1
+  let a = 1
+  should.equal({a-1}, 0)
+  // 1- 1 should lex as 1 - 1
+  should.equal({1- 1}, 0)
+}
