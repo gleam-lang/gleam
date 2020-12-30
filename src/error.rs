@@ -1404,7 +1404,7 @@ When matching you need to use the `{}_codepoint` specifier instead.",
                         vec!["Hint: Put an expression in there or remove the brackets.".to_string()]
                     ),
                     ParseErrorType::NoValueAfterEqual => (
-                        "I was expectin to see a value after this equals sign.",
+                        "I was expecting to see a value after this equals sign.",
                         vec![]
                     ),
                     ParseErrorType::OpaqueTypeAlias => (
