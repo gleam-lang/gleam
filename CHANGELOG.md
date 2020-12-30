@@ -18,8 +18,8 @@
 - Fixed a bug where the formatter would incorrectly remove blocks around some
   binary operators.
 - Constants can now be defined after they are used in functions
-- Error messages have been improoved.
-- Compilation times have been improoved.
+- Error messages have been improved.
+- Compilation times have been improved.
 
 ## v0.12.1 - 2020-11-15
 
