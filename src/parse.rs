@@ -35,18 +35,18 @@
 //
 //   It relies or the operator grammar being in the general form:
 //   e ::= expr op expr | expr
-//   Which just means that exprs  and operators always alternate, starting with an expr
+//   Which just means that exprs and operators always alternate, starting with an expr
 //
 //   The gist of the algorithm is:
 //   Create 2 stacks, one to hold expressions, and one to hold un-reduced operators.
 //   While consuming the input stream, if an expression is encountered add it to the top
 //   of the expression stack. If an operator is encountered, compare its precedence to the
-//   top of the operator stack and perform the appropriate action, which is either using it
-//   to reduce 2 expressions on the top of the expression stack or put it on the top of the
-//   operator stack. When the end of the input is reached, attempt to reduce all of the
+//   top of the operator stack and perform the appropriate action, which is either using an
+//   operator to reduce 2 expressions on the top of the expression stack or put it on the top
+//   of the operator stack. When the end of the input is reached, attempt to reduce all of the
 //   expressions down to a single expression(or no expression) using the remaining operators
 //   on the operator stack. If there are any operators left, or more than 1 expression left
-//   this is a syntax error. But the here implementation shouldn't need to handle that case
+//   this is a syntax error. But the implementation here shouldn't need to handle that case
 //   as the outer parser ensures the correct structure.
 //
 pub mod error;
