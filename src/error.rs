@@ -68,12 +68,6 @@ pub type Result<Ok, Err = Error> = std::result::Result<Ok, Err>;
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
-    Parse {
-        path: PathBuf,
-        src: Src,
-        error: lalrpop_util::ParseError<usize, (usize, String), crate::parser::Error>,
-    },
-
     Compile {
         path: PathBuf,
         src: Src,
@@ -1462,90 +1456,6 @@ When matching you need to use the `{}_codepoint` specifier instead.",
                     writeln!(buffer, "{}", extra.join("\n")).expect("error pretty buffer write");
                 }
             }
-
-            Error::Parse { path, src, error } => match error {
-                lalrpop_util::ParseError::UnrecognizedToken {
-                    token: (start, _, end),
-                    expected,
-                } => {
-                    let diagnostic = Diagnostic {
-                        title: "Syntax error".to_string(),
-                        label: "Unexpected token".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: crate::ast::SrcSpan {
-                            start: *start,
-                            end: *end,
-                        },
-                    };
-                    write(buffer, diagnostic, Severity::Error);
-                    writeln!(buffer, "Expected one of {}", expected.join(", "))
-                        .expect("error pretty buffer write");
-                }
-
-                lalrpop_util::ParseError::UnrecognizedEOF { .. } => {
-                    let diagnostic = Diagnostic {
-                        title: "Syntax error".to_string(),
-                        label: "Unexpected end of file".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: crate::ast::SrcSpan {
-                            start: src.len() - 2,
-                            end: src.len() - 1,
-                        },
-                    };
-                    write(buffer, diagnostic, Severity::Error);
-                }
-
-                lalrpop_util::ParseError::InvalidToken { location } => {
-                    let diagnostic = Diagnostic {
-                        title: "Syntax error".to_string(),
-                        label: "Unknown token".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: crate::ast::SrcSpan {
-                            start: *location,
-                            end: *location + 1,
-                        },
-                    };
-                    write(buffer, diagnostic, Severity::Error);
-                    writeln!(
-                        buffer,
-                        "I don't know what this character means. Is it a typo?"
-                    )
-                    .expect("error pretty buffer write");
-                }
-
-                lalrpop_util::ParseError::ExtraToken { .. } => unimplemented!(),
-
-                lalrpop_util::ParseError::User { error } => {
-                    use crate::parser::Error;
-                    match error {
-                        Error::TooManyHolesInCapture { location, count } => {
-                            let diagnostic = Diagnostic {
-                                title: "Invalid capture".to_string(),
-                                label: "".to_string(),
-                                file: path.to_str().unwrap().to_string(),
-                                src: src.to_string(),
-                                location: *location,
-                            };
-                            write(buffer, diagnostic, Severity::Error);
-                            let chars: String = (97..(97 + count))
-                                .map(|x| x as u8 as char)
-                                .map(|c| c.to_string())
-                                .intersperse(", ".to_string())
-                                .collect();
-                            writeln!(
-                                    buffer,
-                                    "The function capture syntax can only be used with a single _ argument,
-but this one uses {}. Rewrite this using the fn({}) {{ ... }} syntax.",
-                                    count, chars
-                                )
-                                .expect("error pretty buffer write");
-                        }
-                    }
-                }
-            },
 
             Error::ImportCycle { modules } => {
                 crate::diagnostic::write_title(buffer, "Import cycle");

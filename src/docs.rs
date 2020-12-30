@@ -24,7 +24,7 @@ pub fn build_project(
     output_dir: &PathBuf,
 ) -> Result<(PackageConfig, Vec<OutputFile>), Error> {
     // Read and type check project
-    let (config, analysed) = project::read_and_analyse(&project_root, false)?;
+    let (config, analysed) = project::read_and_analyse(&project_root)?;
 
     // Initialize pages with the README
     let mut pages = vec![DocsPage {

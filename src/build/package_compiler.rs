@@ -5,7 +5,7 @@ use crate::{
     config::PackageConfig,
     error,
     fs::FileWriter,
-    grammar, parser, typ, Error, GleamExpect, Result, Warning,
+    parser, typ, Error, GleamExpect, Result, Warning,
 };
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};

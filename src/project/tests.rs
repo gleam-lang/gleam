@@ -1072,8 +1072,7 @@ main(Arg1, Arg2, Arg3) ->
     ];
 
     for Case { input, expected } in cases.into_iter() {
-        let actual =
-            analysed(input, true).map(|analysed| erl::generate_erlang(analysed.as_slice()));
+        let actual = analysed(input).map(|analysed| erl::generate_erlang(analysed.as_slice()));
         assert_eq!(expected, actual);
     }
 }

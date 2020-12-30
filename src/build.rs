@@ -31,7 +31,7 @@ use crate::{
     erl,
     error::{Error, FileIOAction, FileKind, GleamExpect},
     fs::OutputFile,
-    grammar, parser, typ,
+    parser, typ,
 };
 use itertools::Itertools;
 use std::{collections::HashMap, ffi::OsString, fs::DirEntry, path::PathBuf, process};
