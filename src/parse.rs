@@ -79,7 +79,7 @@ pub fn parse_module(src: &str) -> Result<UntypedModule, ParseError> {
 //
 // Test Interface
 //
-#[allow(dead_code)]
+#[cfg(test)]
 pub fn parse_expression_sequence(src: &str) -> Result<UntypedExpr, ParseError> {
     let lex = lexer::make_tokenizer(src);
     let mut parser = Parser::new(lex);
