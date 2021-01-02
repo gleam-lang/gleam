@@ -103,6 +103,15 @@ impl<'a> Write for Writer<'a> {
     }
 }
 
+impl<'a> std::fmt::Write for Writer<'a> {
+    fn write_str(&mut self, s: &str) -> std::fmt::Result {
+        self.inner
+            .write(s.as_bytes())
+            .map(|_| ())
+            .map_err(|_| std::fmt::Error)
+    }
+}
+
 pub fn delete_dir(dir: &PathBuf) -> Result<(), Error> {
     tracing::trace!("Deleting directory {:?}", dir);
     if dir.exists() {

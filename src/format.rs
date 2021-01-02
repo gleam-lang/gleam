@@ -13,7 +13,10 @@ use std::sync::Arc;
 
 const INDENT: isize = 2;
 
-pub fn pretty(src: &str) -> Result<String, crate::parse::error::ParseError> {
+pub fn pretty(
+    writer: impl std::fmt::Write,
+    src: &str,
+) -> Result<(), crate::parse::error::ParseError> {
     let (module, extra) = crate::parse::parse_module(&src)?;
     let intermediate = Intermediate {
         comments: extra
@@ -34,8 +37,10 @@ pub fn pretty(src: &str) -> Result<String, crate::parse::error::ParseError> {
             .collect(),
     };
 
-    let mut formatter = Formatter::with_comments(&intermediate);
-    Ok(pretty_module(&module, &mut formatter))
+    Formatter::with_comments(&intermediate)
+        .module(&module)
+        .pretty_print(80, writer);
+    Ok(())
 }
 
 struct Intermediate<'a> {
@@ -1272,10 +1277,6 @@ impl<'a> Formatter<'a> {
                 .append(self.const_expr(&arg.value)),
         }
     }
-}
-
-pub fn pretty_module(m: &UntypedModule, formatter: &mut Formatter<'_>) -> String {
-    format(80, formatter.module(m))
 }
 
 impl Documentable for &ArgNames {
