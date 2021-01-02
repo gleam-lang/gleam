@@ -25,6 +25,11 @@ fn process_stdin(check: bool) -> Result<()> {
     let mut out = String::new();
     crate::format::pretty(&mut out, src.as_str())?;
 
+    if !check {
+        print!("{}", out);
+        return Ok(());
+    }
+
     if src != out {
         return Err(Error::Format {
             problem_files: vec![Unformatted {
@@ -36,9 +41,6 @@ fn process_stdin(check: bool) -> Result<()> {
         });
     }
 
-    if !check {
-        print!("{}", out);
-    }
     Ok(())
 }
 
