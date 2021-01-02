@@ -51,6 +51,11 @@ pub enum Tok {
     DotDot,     // '..'
     ListNil,    // '[]'
     EndOfFile,
+    // Extra
+    CommentNormal,
+    CommentDoc,
+    CommentModule,
+    EmptyLine,
     // Keywords (alphabetically):
     As,
     Assert,
@@ -140,6 +145,10 @@ impl fmt::Display for Tok {
             Tok::DotDot => "..",
             Tok::ListNil => "[]",
             Tok::EndOfFile => "EOF",
+            Tok::CommentNormal => "//",
+            Tok::CommentDoc => "///",
+            Tok::CommentModule => "////",
+            Tok::EmptyLine => "EMPTYLINE",
             Tok::As => "as",
             Tok::Assert => "assert",
             Tok::Case => "case",

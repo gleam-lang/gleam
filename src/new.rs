@@ -521,7 +521,7 @@ fn validate_name(name: String) -> Result<String, Error> {
             name,
             reason: InvalidProjectNameReason::ErlangStandardLibraryModule,
         })
-    } else if crate::parser::is_gleam_reserved_word(name.as_str()) {
+    } else if crate::parse::lexer::str_to_keyword(name.as_str()).is_some() {
         Err(Error::InvalidProjectName {
             name,
             reason: InvalidProjectNameReason::GleamReservedWord,

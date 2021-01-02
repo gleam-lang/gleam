@@ -1,6 +1,5 @@
 use super::{GleamExpect, Input, Module, ModuleOrigin};
 use crate::error::Error;
-use crate::parser;
 use petgraph::{algo::Cycle, graph::NodeIndex, Direction};
 use std::collections::{HashMap, HashSet};
 
@@ -129,7 +128,7 @@ impl SourceTree {
         // Determine the module name
         let name = input
             .path
-            .strip_prefix(input.source_base_path.clone())
+            .strip_prefix(&input.source_base_path)
             .unwrap()
             .parent()
             .unwrap()
@@ -140,20 +139,12 @@ impl SourceTree {
             .replace("\\", "/");
 
         // Parse the source
-        let (cleaned, comments) = parser::strip_extra(&input.src);
-        let mut module = crate::parse::parse_module(&cleaned).map_err(|e| Error::Parse {
-            path: input.path.clone(),
-            src: input.src.clone(),
-            error: e,
-        })?;
-
-        // Annotate statements with their inline documentation
-        parser::attach_doc_comments(&mut module, &comments.doc_comments);
-        module.documentation = comments
-            .module_comments
-            .iter()
-            .map(|s| (*s).to_string())
-            .collect();
+        let (mut module, module_extra) =
+            crate::parse::parse_module(&input.src).map_err(|e| Error::Parse {
+                path: input.path.clone(),
+                src: input.src.clone(),
+                error: e,
+            })?;
 
         // Store the name
         module.name = name.split('/').map(|s| s.to_string()).collect();
@@ -179,6 +170,7 @@ impl SourceTree {
                 origin: input.origin,
                 source_base_path: input.source_base_path,
                 module,
+                module_extra,
             },
         );
         Ok(())

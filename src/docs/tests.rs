@@ -50,7 +50,10 @@ pub fn complicated_fun(
         otp_start_module: None,
     };
 
-    let analysed = crate::project::analysed(vec![input]).expect("Compilation failed");
+    let mut analysed = crate::project::analysed(vec![input]).expect("Compilation failed");
+    analysed
+        .iter_mut()
+        .for_each(|a| a.attach_doc_and_module_comments());
 
     let output_files = generate_html(
         PathBuf::from("."),

@@ -25,8 +25,7 @@ macro_rules! assert_infer {
 
 macro_rules! assert_module_error {
     ($src:expr, $error:expr $(,)?) => {
-        let (src, _) = crate::parser::strip_extra($src);
-        let mut ast = crate::parse::parse_module(&src).expect("syntax error");
+        let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my_module".to_string()];
         let ast = infer_module(&mut 0, ast, &HashMap::new(), &mut vec![])
             .expect_err("should infer an error");
@@ -34,7 +33,7 @@ macro_rules! assert_module_error {
     };
 
     ($src:expr) => {
-        let ast = crate::parse::parse_module($src).expect("syntax error");
+        let (ast, _) = crate::parse::parse_module($src).expect("syntax error");
         infer_module(&mut 0, ast, &HashMap::new(), &mut vec![]).expect_err("should infer an error");
     };
 }
@@ -56,8 +55,7 @@ macro_rules! assert_error {
 
 macro_rules! assert_module_infer {
     ($src:expr, $module:expr $(,)?) => {
-        let (src, _) = crate::parser::strip_extra($src);
-        let ast = crate::parse::parse_module(&src).expect("syntax error");
+        let (ast, _) = crate::parse::parse_module($src).expect("syntax error");
         let ast = infer_module(&mut 0, ast, &HashMap::new(), &mut vec![])
             .expect("should successfully infer");
         let mut constructors: Vec<(_, _)> = ast
@@ -80,8 +78,7 @@ macro_rules! assert_module_infer {
 
 macro_rules! assert_warning {
     ($src:expr, $warning:expr $(,)?) => {
-        let (src, _) = crate::parser::strip_extra($src);
-        let mut ast = crate::parse::parse_module(&src).expect("syntax error");
+        let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my_module".to_string()];
         let mut warnings = vec![];
         let _ = infer_module(&mut 0, ast, &HashMap::new(), &mut warnings);
@@ -93,8 +90,7 @@ macro_rules! assert_warning {
 
 macro_rules! assert_no_warnings {
     ($src:expr $(,)?) => {
-        let (src, _) = crate::parser::strip_extra($src);
-        let mut ast = crate::parse::parse_module(&src).expect("syntax error");
+        let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my_module".to_string()];
         let expected: Vec<Warning> = vec![];
         let mut warnings = vec![];

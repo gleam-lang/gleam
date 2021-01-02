@@ -43,8 +43,6 @@ strum_macros = "0.19"
 askama = "0.10"
 # Markdown in docs
 pulldown-cmark = "0.7"
-# Support unicode in gleam source
-unicode-segmentation = "1.6"
 # Check for tty
 atty = "0.2"
 # Hex package manager client

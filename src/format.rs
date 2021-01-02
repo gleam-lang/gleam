@@ -4,7 +4,7 @@ mod tests;
 
 use crate::{
     ast::*,
-    parser::{Comment, ModuleComments},
+    parse::extra::Comment,
     pretty::*,
     typ::{self, Type},
 };
@@ -14,17 +14,42 @@ use std::sync::Arc;
 const INDENT: isize = 2;
 
 pub fn pretty(src: &str) -> Result<String, crate::parse::error::ParseError> {
-    let (stripped_src, comments) = crate::parser::strip_extra(src);
-    let ast = crate::parse::parse_module(&stripped_src)?;
-    let mut formatter = Formatter::with_comments(&comments);
-    Ok(pretty_module(&ast, &mut formatter))
+    let (module, extra) = crate::parse::parse_module(&src)?;
+    let intermediate = Intermediate {
+        comments: extra
+            .comments
+            .iter()
+            .map(|span| Comment::from((span, src)))
+            .collect(),
+        doc_comments: extra
+            .doc_comments
+            .iter()
+            .map(|span| Comment::from((span, src)))
+            .collect(),
+        empty_lines: &extra.empty_lines,
+        module_comments: extra
+            .module_comments
+            .iter()
+            .map(|span| Comment::from((span, src)))
+            .collect(),
+    };
+
+    let mut formatter = Formatter::with_comments(&intermediate);
+    Ok(pretty_module(&module, &mut formatter))
+}
+
+struct Intermediate<'a> {
+    comments: Vec<Comment<'a>>,
+    doc_comments: Vec<Comment<'a>>,
+    module_comments: Vec<Comment<'a>>,
+    empty_lines: &'a [usize],
 }
 
 #[derive(Debug, Clone)]
 pub struct Formatter<'a> {
     comments: &'a [Comment<'a>],
     doc_comments: &'a [Comment<'a>],
-    module_comments: &'a [&'a str],
+    module_comments: &'a [Comment<'a>],
     empty_lines: &'a [usize],
 }
 
@@ -38,25 +63,25 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    pub fn with_comments(comments: &'a ModuleComments<'_>) -> Self {
+    fn with_comments(extra: &'a Intermediate<'a>) -> Self {
         Self {
-            comments: comments.comments.as_slice(),
-            doc_comments: comments.doc_comments.as_slice(),
-            empty_lines: comments.empty_lines.as_slice(),
-            module_comments: comments.module_comments.as_slice(),
+            comments: extra.comments.as_slice(),
+            doc_comments: extra.doc_comments.as_slice(),
+            module_comments: extra.module_comments.as_slice(),
+            empty_lines: &extra.empty_lines,
         }
     }
 
     // Pop comments that occur before a byte-index in the source
     fn pop_comments(&mut self, limit: usize) -> impl Iterator<Item = &'a str> {
-        let (popped, rest) = crate::parser::take_before(self.comments, limit);
+        let (popped, rest) = comments_before(self.comments, limit);
         self.comments = rest;
         popped
     }
 
     // Pop doc comments that occur before a byte-index in the source
     fn pop_doc_comments(&mut self, limit: usize) -> impl Iterator<Item = &'a str> {
-        let (popped, rest) = crate::parser::take_before(self.doc_comments, limit);
+        let (popped, rest) = comments_before(self.doc_comments, limit);
         self.doc_comments = rest;
         popped
     }
@@ -1541,4 +1566,16 @@ where
             ..
         } => to_doc(value.as_ref()),
     }
+}
+
+pub fn comments_before<'a>(
+    comments: &'a [Comment<'a>],
+    limit: usize,
+) -> (impl Iterator<Item = &'a str>, &'a [Comment<'a>]) {
+    let end = comments
+        .iter()
+        .position(|c| c.start > limit)
+        .unwrap_or(comments.len());
+    let popped = comments[0..end].iter().map(|c| c.content);
+    (popped, &comments[end..])
 }
