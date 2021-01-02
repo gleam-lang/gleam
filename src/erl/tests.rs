@@ -22,7 +22,8 @@ macro_rules! assert_erl {
         let ast =
             crate::typ::infer_module(&mut 0, ast, &std::collections::HashMap::new(), &mut vec![])
                 .expect("should successfully infer");
-        let output = module(&ast);
+        let mut output = String::new();
+        module(&ast, &mut output);
         assert_eq!(($src, output), ($src, $erl.to_string()));
     };
 }

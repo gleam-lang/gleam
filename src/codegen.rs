@@ -29,12 +29,11 @@ impl<'a> Erlang<'a> {
         module: &Module,
         erl_name: &str,
     ) -> Result<()> {
-        let text = erl::module(&module.ast);
         let name = format!("{}.erl", erl_name);
+        let path = self.output_directory.join(&name);
+        let mut file = writer.open(path.as_path())?;
+        erl::module(&module.ast, &mut file);
         tracing::trace!(name = ?name, "Generated Erlang module");
-        writer
-            .open(self.output_directory.join(name).as_path())?
-            .write(text.as_bytes())?;
 
         Ok(())
     }

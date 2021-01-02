@@ -3,14 +3,17 @@ use super::*;
 macro_rules! assert_format {
     ($src:expr $(,)?) => {
         // println!("\n\n\n{}", $src);
-        let src = $src.to_string();
-        assert_eq!(src, pretty($src).unwrap());
+        let mut out = String::new();
+        pretty(&mut out, $src).unwrap();
+        assert_eq!($src, out);
     };
 }
 
 macro_rules! assert_format_rewrite {
     ($src:expr, $output:expr  $(,)?) => {
-        assert_eq!(pretty($src).unwrap(), $output);
+        let mut out = String::new();
+        pretty(&mut out, $src).unwrap();
+        assert_eq!(out, $output);
     };
 }
 

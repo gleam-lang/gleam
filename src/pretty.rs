@@ -15,6 +15,9 @@
 #[cfg(test)]
 mod tests;
 
+use crate::error::GleamExpect;
+use std::fmt::Write;
+
 pub trait Documentable {
     fn to_doc(self) -> Document;
 }
@@ -170,19 +173,8 @@ fn fits(mut limit: isize, mut docs: im::Vector<(isize, Mode, Document)>) -> bool
     }
 }
 
-pub fn format(limit: isize, doc: Document) -> String {
-    let mut buffer = String::new();
-    fmt(
-        &mut buffer,
-        limit,
-        0,
-        im::vector![(0, Mode::Unbroken, Document::Group(Box::new(doc)))],
-    );
-    buffer
-}
-
 fn fmt(
-    b: &mut String,
+    mut b: impl Write,
     limit: isize,
     mut width: isize,
     mut docs: im::Vector<(isize, Mode, Document)>,
@@ -193,22 +185,25 @@ fn fmt(
 
             Document::Line(i) => {
                 for _ in 0..i {
-                    b.push_str("\n");
+                    b.write_str("\n").gleam_expect("Format writing");
                 }
-                b.push_str(" ".repeat(indent as usize).as_str());
+                b.write_str(" ".repeat(indent as usize).as_str())
+                    .gleam_expect("Format writing");
                 width = indent;
             }
 
             Document::Break { broken, unbroken } => {
                 width = match mode {
                     Mode::Unbroken => {
-                        b.push_str(unbroken.as_str());
+                        b.write_str(unbroken.as_str())
+                            .gleam_expect("Format writing");
                         width + unbroken.len() as isize
                     }
                     Mode::Broken => {
-                        b.push_str(broken.as_str());
-                        b.push_str("\n");
-                        b.push_str(" ".repeat(indent as usize).as_str());
+                        b.write_str(broken.as_str()).gleam_expect("Format writing");
+                        b.write_str("\n").gleam_expect("Format writing");
+                        b.write_str(" ".repeat(indent as usize).as_str())
+                            .gleam_expect("Format writing");
                         indent
                     }
                 };
@@ -216,7 +211,7 @@ fn fmt(
 
             Document::Text(s) => {
                 width += s.len() as isize;
-                b.push_str(s.as_str());
+                b.write_str(s.as_str()).gleam_expect("Format writing");
             }
 
             Document::Cons(left, right) => {
@@ -296,11 +291,19 @@ impl Document {
         Self::Cons(Box::new(self), Box::new(x.to_doc()))
     }
 
-    pub fn format(self, limit: isize) -> String {
-        format(limit, self)
+    pub fn to_pretty_string(self, limit: isize) -> String {
+        let mut buffer = String::new();
+        self.pretty_print(limit, &mut buffer);
+        buffer
     }
 
     pub fn surround(self, open: impl Documentable, closed: impl Documentable) -> Self {
         open.to_doc().append(self).append(closed)
+    }
+
+    // TODO: return a result
+    pub fn pretty_print(self, limit: isize, writer: impl Write) {
+        let docs = im::vector![(0, Mode::Unbroken, Document::Group(Box::new(self)))];
+        fmt(writer, limit, 0, docs);
     }
 }

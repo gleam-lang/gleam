@@ -124,7 +124,7 @@ pub enum Error {
     },
 
     Format {
-        problem_files: Vec<crate::format::command::Formatted>,
+        problem_files: Vec<crate::format::command::Unformatted>,
     },
 
     Hex(String),

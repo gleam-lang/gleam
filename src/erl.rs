@@ -44,9 +44,11 @@ pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
             })
         }
 
+        let mut text = String::new();
+        module(ast, &mut text);
         files.push(OutputFile {
             path: gen_dir.join(format!("{}.erl", erl_module_name)),
-            text: module(ast),
+            text,
         });
     }
 
@@ -137,7 +139,7 @@ pub fn record_definition(name: &str, fields: &[&str]) -> String {
     buffer
 }
 
-pub fn module(module: &TypedModule) -> String {
+pub fn module(module: &TypedModule, writer: impl std::fmt::Write) {
     let module_name = module.name.as_slice();
     let exports = concat(
         module
@@ -188,7 +190,7 @@ pub fn module(module: &TypedModule) -> String {
         })
         .append(statements)
         .append(line())
-        .format(80)
+        .pretty_print(80, writer)
 }
 
 fn statement(statement: &TypedStatement, module: &[String]) -> Option<Document> {

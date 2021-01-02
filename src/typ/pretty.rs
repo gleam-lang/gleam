@@ -34,7 +34,7 @@ impl Printer {
             .to_doc()
             .append(self.print(typ))
             .nest(initial_indent as isize)
-            .format(80)
+            .to_pretty_string(80)
     }
 
     pub fn print(&mut self, typ: &Type) -> Document {
