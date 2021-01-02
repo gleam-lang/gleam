@@ -6,7 +6,7 @@ mod tests;
 use crate::{
     ast::{Statement, TypedStatement},
     config::{DocsPage, PackageConfig},
-    docs::source_links::SourceLinks,
+    docs::source_links::SourceLinker,
     error::{Error, GleamExpect},
     format,
     fs::OutputFile,
@@ -125,7 +125,7 @@ pub fn generate_html(
         let name = module.name.join("/");
 
         // Read module src & create line number lookup structure
-        let source_links = source_links::build(&project_root, project_config, &module);
+        let source_links = SourceLinker::new(&project_root, project_config, &module);
 
         let template = ModuleTemplate {
             unnest: module.name.iter().map(|_| "..").intersperse("/").collect(),
@@ -192,7 +192,7 @@ pub fn generate_html(
 }
 
 fn function<'a>(
-    source_links: &Box<dyn SourceLinks>,
+    source_links: &SourceLinker,
     statement: &'a TypedStatement,
 ) -> Option<Function<'a>> {
     let mut formatter = format::Formatter::new();
@@ -209,7 +209,7 @@ fn function<'a>(
             name,
             signature: print(formatter.external_fn_signature(true, name, args, retrn)),
             documentation: markdown_documentation(doc),
-            source_url: source_links.url(location).unwrap_or_default(),
+            source_url: source_links.url(location),
         }),
 
         Statement::Fn {
@@ -224,7 +224,7 @@ fn function<'a>(
             name,
             documentation: markdown_documentation(doc),
             signature: print(formatter.docs_fn_signature(true, name, args, ret.clone())),
-            source_url: source_links.url(location).unwrap_or_default(),
+            source_url: source_links.url(location),
         }),
 
         _ => None,
@@ -245,10 +245,7 @@ fn render_markdown(text: &str) -> String {
     s
 }
 
-fn type_<'a>(
-    source_links: &Box<dyn SourceLinks>,
-    statement: &'a TypedStatement,
-) -> Option<Type<'a>> {
+fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Option<Type<'a>> {
     let mut formatter = format::Formatter::new();
     match statement {
         Statement::ExternalType {
@@ -263,7 +260,7 @@ fn type_<'a>(
             definition: print(formatter.external_type(true, name.as_str(), args)),
             documentation: markdown_documentation(doc),
             constructors: vec![],
-            source_url: source_links.url(location).unwrap_or_default(),
+            source_url: source_links.url(location),
         }),
 
         Statement::CustomType {
@@ -294,7 +291,7 @@ fn type_<'a>(
                     documentation: markdown_documentation(&constructor.documentation),
                 })
                 .collect(),
-            source_url: source_links.url(location).unwrap_or_default(),
+            source_url: source_links.url(location),
         }),
 
         Statement::CustomType {
@@ -310,7 +307,7 @@ fn type_<'a>(
             definition: print(formatter.docs_opaque_custom_type(true, name, parameters, location)),
             documentation: markdown_documentation(doc),
             constructors: vec![],
-            source_url: source_links.url(location).unwrap_or_default(),
+            source_url: source_links.url(location),
         }),
 
         Statement::TypeAlias {
@@ -326,7 +323,7 @@ fn type_<'a>(
             definition: print(formatter.type_alias(true, name, args, typ)),
             documentation: markdown_documentation(doc),
             constructors: vec![],
-            source_url: source_links.url(location).unwrap_or_default(),
+            source_url: source_links.url(location),
         }),
 
         _ => None,
@@ -334,7 +331,7 @@ fn type_<'a>(
 }
 
 fn constant<'a>(
-    source_links: &Box<dyn SourceLinks>,
+    source_links: &SourceLinker,
     statement: &'a TypedStatement,
 ) -> Option<Constant<'a>> {
     let mut formatter = format::Formatter::new();
@@ -350,7 +347,7 @@ fn constant<'a>(
             name,
             definition: print(formatter.docs_const_expr(true, name, value)),
             documentation: markdown_documentation(doc),
-            source_url: source_links.url(location).unwrap_or_default(),
+            source_url: source_links.url(location),
         }),
 
         _ => None,
