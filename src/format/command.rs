@@ -23,11 +23,7 @@ pub fn run(stdin: bool, check: bool, files: Vec<String>) -> Result<()> {
 fn process_stdin(check: bool) -> Result<()> {
     let src = read_stdin()?;
     let mut out = String::new();
-    crate::format::pretty(&mut out, src.as_str()).map_err(|error| Error::Parse {
-        path: PathBuf::from("<standard input>"),
-        src: src.clone(),
-        error,
-    })?;
+    crate::format::pretty(&mut out, src.as_str())?;
 
     if src != out {
         return Err(Error::Format {
@@ -87,38 +83,30 @@ pub fn unformatted_files(files: Vec<String>) -> Result<Vec<Unformatted>> {
 
         if path.is_dir() {
             for path in crate::fs::gleam_files_excluding_gitignore(&path).into_iter() {
-                let file = format_file(path)?;
-                if file.input != file.output {
-                    problem_files.push(file);
-                }
+                format_file(&mut problem_files, path)?;
             }
         } else {
-            let file = format_file(path)?;
-            if file.input != file.output {
-                problem_files.push(file);
-            }
+            format_file(&mut problem_files, path)?;
         }
     }
 
     Ok(problem_files)
 }
 
-fn format_file(path: PathBuf) -> Result<Unformatted> {
+fn format_file(problem_files: &mut Vec<Unformatted>, path: PathBuf) -> Result<()> {
     let src = crate::fs::read(&path)?;
-
     let mut output = String::new();
-    crate::format::pretty(&mut output, src.as_str()).map_err(|error| Error::Parse {
-        path: path.clone(),
-        src: src.clone(),
-        error,
-    })?;
+    crate::format::pretty(&mut output, src.as_str())?;
 
-    Ok(Unformatted {
-        source: path.clone(),
-        destination: path,
-        input: src,
-        output,
-    })
+    if src != output {
+        problem_files.push(Unformatted {
+            source: path.clone(),
+            destination: path,
+            input: src,
+            output,
+        });
+    }
+    Ok(())
 }
 
 pub fn read_stdin() -> Result<String> {

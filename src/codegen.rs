@@ -1,4 +1,4 @@
-use crate::{build::Module, config::PackageConfig, erl, fs::FileWriter, Result};
+use crate::{build::Module, config::PackageConfig, erl, fs::FileSystemWriter, Result};
 use itertools::Itertools;
 use std::{fmt::Debug, path::Path};
 
@@ -14,7 +14,7 @@ impl<'a> Erlang<'a> {
         Self { output_directory }
     }
 
-    pub fn render(&self, writer: &impl FileWriter, modules: &[Module]) -> Result<()> {
+    pub fn render(&self, writer: &impl FileSystemWriter, modules: &[Module]) -> Result<()> {
         for module in modules {
             let erl_name = module.name.replace("/", "@");
             self.erlang_module(writer, module, erl_name.as_str())?;
@@ -25,22 +25,21 @@ impl<'a> Erlang<'a> {
 
     fn erlang_module(
         &self,
-        writer: &impl FileWriter,
+        writer: &impl FileSystemWriter,
         module: &Module,
         erl_name: &str,
     ) -> Result<()> {
         let name = format!("{}.erl", erl_name);
         let path = self.output_directory.join(&name);
         let mut file = writer.open(path.as_path())?;
-        erl::module(&module.ast, &mut file);
+        let res = erl::module(&module.ast, &mut file);
         tracing::trace!(name = ?name, "Generated Erlang module");
-
-        Ok(())
+        res
     }
 
     fn erlang_record_headers(
         &self,
-        writer: &dyn FileWriter,
+        writer: &dyn FileSystemWriter,
         module: &Module,
         erl_name: &str,
     ) -> Result<()> {
@@ -68,7 +67,7 @@ impl<'a> ErlangApp<'a> {
 
     pub fn render(
         &self,
-        writer: &impl FileWriter,
+        writer: &impl FileSystemWriter,
         config: &PackageConfig,
         modules: &[Module],
     ) -> Result<()> {

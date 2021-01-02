@@ -4,12 +4,13 @@ mod tests;
 use crate::{
     ast::*,
     error::GleamExpect,
-    fs::OutputFile,
+    fs::{OutputFile, Utf8Writer},
     pretty::*,
     project::{self, Analysed},
     typ::{
         ModuleValueConstructor, PatternConstructor, Type, ValueConstructor, ValueConstructorVariant,
     },
+    Result,
 };
 use heck::SnakeCase;
 use itertools::Itertools;
@@ -45,7 +46,7 @@ pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
         }
 
         let mut text = String::new();
-        module(ast, &mut text);
+        module(ast, &mut text).gleam_expect("Buffer writing failed");
         files.push(OutputFile {
             path: gen_dir.join(format!("{}.erl", erl_module_name)),
             text,
@@ -139,7 +140,7 @@ pub fn record_definition(name: &str, fields: &[&str]) -> String {
     buffer
 }
 
-pub fn module(module: &TypedModule, writer: impl std::fmt::Write) {
+pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> {
     let module_name = module.name.as_slice();
     let exports = concat(
         module
