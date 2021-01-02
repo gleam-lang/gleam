@@ -218,7 +218,8 @@ where
                     }
                     Some('/') => {
                         self.next_char();
-                        self.lex_comment();
+                        let comment = self.lex_comment()?;
+                        self.emit(comment);
                     }
                     _ => {
                         let tok_end = self.get_pos();
@@ -408,8 +409,25 @@ where
                     self.emit((tok_start, Tok::Dot, tok_end));
                 }
             }
-            ' ' | '\n' | '\t' | '\x0C' => {
-                // Skip whitespaces
+            '\n' => {
+                self.next_char();
+                let tok_start = self.get_pos();
+                while let Some(c) = self.chr0 {
+                    match c {
+                        ' ' | '\t' | '\x0C' => {
+                            self.next_char();
+                        }
+                        '\n' => {
+                            let tok_end = self.get_pos();
+                            self.emit((tok_start, Tok::EmptyLine, tok_end));
+                            break;
+                        }
+                        _ => break,
+                    }
+                }
+            }
+            ' ' | '\t' | '\x0C' | ';' => {
+                // Skip whitespaces and semicolons
                 self.next_char();
             }
 
@@ -562,11 +580,30 @@ where
         }
     }
 
-    // Skip everything until end of line
-    fn lex_comment(&mut self) {
+    // There are 3 kinds of comments
+    // 2 slash, normal
+    // 3 slash, document
+    // 4 slash, module
+    // this function is entered after 2 slashes
+    fn lex_comment(&mut self) -> LexResult {
+        let kind = match (self.chr0, self.chr1) {
+            (Some('/'), Some('/')) => {
+                self.next_char();
+                self.next_char();
+                Tok::CommentModule
+            }
+            (Some('/'), _) => {
+                self.next_char();
+                Tok::CommentDoc
+            }
+            _ => Tok::CommentNormal,
+        };
+        let start_pos = self.get_pos();
         while Some('\n') != self.chr0 && None != self.chr0 {
             self.next_char();
         }
+        let end_pos = self.get_pos();
+        Ok((start_pos, kind, end_pos))
     }
 
     fn lex_string(&mut self) -> LexResult {

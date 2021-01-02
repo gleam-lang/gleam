@@ -26,6 +26,16 @@ pub fn build_project(
     // Read and type check project
     let (config, analysed) = project::read_and_analyse(&project_root)?;
 
+    // Attach documentation to Src modules
+    let analysed: Vec<Analysed> = analysed
+        .into_iter()
+        .filter(|a| a.origin == ModuleOrigin::Src)
+        .map(|mut a| {
+            a.attach_doc_and_module_comments();
+            a
+        })
+        .collect();
+
     // Initialize pages with the README
     let mut pages = vec![DocsPage {
         title: "README".to_string(),
@@ -54,7 +64,7 @@ pub fn generate_html(
     docspages: &[DocsPage],
     output_dir: &PathBuf,
 ) -> Vec<OutputFile> {
-    let modules = analysed.iter().filter(|m| m.origin == ModuleOrigin::Src);
+    let modules = analysed.iter();
 
     // Define user-supplied (or README) pages
     let pages = docspages

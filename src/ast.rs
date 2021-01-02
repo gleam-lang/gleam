@@ -8,7 +8,6 @@ pub use self::untyped::UntypedExpr;
 pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
 use crate::typ::{self, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor};
-use itertools::Itertools;
 use std::sync::Arc;
 
 pub const CAPTURE_VARIABLE: &str = "gleam@capture_variable";
@@ -50,15 +49,16 @@ impl<A, B, C, D> Module<A, B, C, D> {
 
 #[test]
 fn module_dependencies_test() {
+    let (module, _) =
+        crate::parse::parse_module("import foo import bar import foo_bar").expect("syntax error");
+
     assert_eq!(
         vec![
             ("foo".to_string(), SrcSpan { start: 7, end: 10 }),
             ("bar".to_string(), SrcSpan { start: 18, end: 21 }),
             ("foo_bar".to_string(), SrcSpan { start: 29, end: 36 }),
         ],
-        crate::parse::parse_module("import foo import bar import foo_bar")
-            .expect("syntax error")
-            .dependencies()
+        module.dependencies()
     );
 }
 
@@ -101,13 +101,8 @@ pub struct RecordConstructor {
 }
 
 impl RecordConstructor {
-    pub fn put_doc<'a>(&mut self, new_doc: impl Iterator<Item = &'a str>) {
-        let mut new_doc = new_doc.peekable();
-        if new_doc.peek().is_none() {
-            return;
-        }
-
-        self.documentation = Some(new_doc.join("\n"));
+    pub fn put_doc(&mut self, new_doc: String) {
+        self.documentation = Some(new_doc);
     }
 }
 
@@ -242,24 +237,16 @@ impl<A, B, C> Statement<A, B, C> {
         }
     }
 
-    pub fn put_doc<'a>(&mut self, new_doc: impl Iterator<Item = &'a str>) {
-        let mut new_doc = new_doc.peekable();
-        if new_doc.peek().is_none() {
-            return;
-        }
-
-        let new_doc = Some(new_doc.join("\n"));
-
+    pub fn put_doc(&mut self, new_doc: String) {
         match self {
             Statement::Import { .. } => (),
-
             Statement::Fn { doc, .. }
             | Statement::TypeAlias { doc, .. }
             | Statement::CustomType { doc, .. }
             | Statement::ExternalFn { doc, .. }
             | Statement::ExternalType { doc, .. }
             | Statement::ModuleConstant { doc, .. } => {
-                let _ = std::mem::replace(doc, new_doc);
+                let _ = std::mem::replace(doc, Some(new_doc));
             }
         }
     }

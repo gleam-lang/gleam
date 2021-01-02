@@ -3,16 +3,18 @@ mod source_tree;
 mod tests;
 
 use crate::{
-    ast::TypedModule,
+    ast::{SrcSpan, TypedModule},
     build::Origin,
     config::{self, PackageConfig},
     error::{Error, FileIOAction, FileKind, GleamExpect},
+    parse::extra::Comment,
     typ,
     warning::Warning,
 };
 use regex::Regex;
 use source_tree::SourceTree;
 use std::collections::HashMap;
+use std::iter::Peekable;
 use std::path::{Path, PathBuf};
 
 pub const OUTPUT_DIR_NAME: &str = "gen";
@@ -35,6 +37,63 @@ pub struct Analysed {
     pub type_info: typ::Module,
     pub source_base_path: PathBuf,
     pub warnings: Vec<Warning>,
+    pub module_extra: crate::parse::extra::ModuleExtra,
+}
+impl Analysed {
+    pub fn attach_doc_and_module_comments(&mut self) {
+        // Module Comments
+        self.ast.documentation = self
+            .module_extra
+            .module_comments
+            .iter()
+            .map(|span| Comment::from((span, self.src.as_str())).content.to_string())
+            .collect();
+
+        // Doc Comments
+        let mut doc_comments = self.module_extra.doc_comments.iter().peekable();
+        for statement in &mut self.ast.statements {
+            let docs: Vec<&str> = comments_before(
+                &mut doc_comments,
+                statement.location().start,
+                self.src.as_str(),
+            );
+            if !docs.is_empty() {
+                let doc = docs.join("\n");
+                statement.put_doc(doc);
+            }
+
+            if let crate::ast::Statement::CustomType { constructors, .. } = statement {
+                for constructor in constructors {
+                    let docs: Vec<&str> = comments_before(
+                        &mut doc_comments,
+                        constructor.location.start,
+                        self.src.as_str(),
+                    );
+                    if !docs.is_empty() {
+                        let doc = docs.join("\n");
+                        constructor.put_doc(doc);
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn comments_before<'a>(
+    comment_spans: &mut Peekable<impl Iterator<Item = &'a SrcSpan>>,
+    byte: usize,
+    src: &'a str,
+) -> Vec<&'a str> {
+    let mut comments = vec![];
+    while let Some(SrcSpan { start, .. }) = comment_spans.peek() {
+        if start <= &byte {
+            let comment = comment_spans.next().unwrap();
+            comments.push(Comment::from((comment, src)).content)
+        } else {
+            break;
+        }
+    }
+    comments
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -67,6 +126,7 @@ pub struct Module {
     source_base_path: PathBuf,
     origin: ModuleOrigin,
     module: crate::ast::UntypedModule,
+    module_extra: crate::parse::extra::ModuleExtra,
 }
 
 pub fn read_and_analyse(root: impl AsRef<Path>) -> Result<(PackageConfig, Vec<Analysed>), Error> {
@@ -118,6 +178,7 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
         ast: TypedModule,
         src: String,
         warnings: Vec<Warning>,
+        module_extra: crate::parse::extra::ModuleExtra,
     }
 
     for Module {
@@ -126,6 +187,7 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
         module,
         origin,
         source_base_path,
+        module_extra,
     } in source_tree.consume()?
     {
         let name = module.name.clone();
@@ -164,6 +226,7 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
             ast,
             src,
             warnings,
+            module_extra,
         });
     }
 
@@ -179,6 +242,7 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
                 ast,
                 src,
                 warnings,
+                module_extra,
             } = out;
             Analysed {
                 ast,
@@ -192,6 +256,7 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
                     .gleam_expect("project::compile(): Merging module type info")
                     .1,
                 warnings,
+                module_extra,
             }
         })
         .collect())

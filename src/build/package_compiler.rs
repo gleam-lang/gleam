@@ -5,7 +5,7 @@ use crate::{
     config::PackageConfig,
     error,
     fs::FileWriter,
-    parser, typ, Error, GleamExpect, Result, Warning,
+    typ, Error, GleamExpect, Result, Warning,
 };
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -197,7 +197,16 @@ fn parse_sources(
             path,
             origin,
         } = source;
-        let ast = parse_source(code.as_str(), name.as_str(), &path)?;
+        let (mut ast, _) =
+            crate::parse::parse_module(code.as_str()).map_err(|error| Error::Parse {
+                path: path.clone(),
+                src: code.clone(),
+                error,
+            })?;
+
+        // Store the name
+        ast.name = name.as_str().split("/").map(String::from).collect(); // TODO: store the module name as a string
+
         let module = Parsed {
             origin,
             path,
@@ -221,31 +230,6 @@ fn parse_sources(
         parsed_modules.insert(module.name.clone(), module);
     }
     Ok(parsed_modules)
-}
-
-fn parse_source(src: &str, name: &str, path: &PathBuf) -> Result<UntypedModule, Error> {
-    // Strip comments, etc
-    let (cleaned, comments) = parser::strip_extra(src);
-
-    // Parse source into AST
-    let mut module = crate::parse::parse_module(&cleaned).map_err(|error| Error::Parse {
-        path: path.clone(),
-        src: src.to_string(),
-        error,
-    })?;
-
-    // Attach documentation
-    parser::attach_doc_comments(&mut module, &comments.doc_comments);
-    module.documentation = comments
-        .module_comments
-        .iter()
-        .map(|s| s.to_string())
-        .collect();
-
-    // Store the name
-    module.name = name.split("/").map(String::from).collect(); // TODO: store the module name as a string
-
-    Ok(module)
 }
 
 fn module_name(package_path: &Path, full_module_path: &Path) -> String {

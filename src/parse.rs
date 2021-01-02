@@ -50,17 +50,18 @@
 //   as the outer parser ensures the correct structure.
 //
 pub mod error;
-mod lexer;
+pub mod extra;
+pub mod lexer;
 mod token;
 use crate::ast::{
     Arg, ArgNames, BinOp, BindingKind, BitStringSegment, BitStringSegmentOption, CallArg, Clause,
     ClauseGuard, Constant, ExternalFnArg, HasLocation, Module, Pattern, RecordConstructor,
     RecordUpdateSpread, SrcSpan, Statement, TypeAst, UnqualifiedImport, UntypedArg, UntypedClause,
     UntypedClauseGuard, UntypedConstant, UntypedExpr, UntypedModule, UntypedPattern,
-    UntypedRecordUpdateArg, UntypedStatement,
+    UntypedRecordUpdateArg, UntypedStatement, CAPTURE_VARIABLE,
 };
 use crate::error::fatal_compiler_bug;
-use crate::parser::ParserArg;
+use crate::parse::extra::ModuleExtra;
 use error::{LexicalError, ParseError, ParseErrorType};
 use lexer::{LexResult, Spanned};
 use std::cmp::Ordering;
@@ -70,10 +71,11 @@ use token::Tok;
 //
 // Public Interface
 //
-pub fn parse_module(src: &str) -> Result<UntypedModule, ParseError> {
+pub fn parse_module(src: &str) -> Result<(UntypedModule, ModuleExtra), ParseError> {
     let lex = lexer::make_tokenizer(src);
     let mut parser = Parser::new(lex);
-    parser.parse_module()
+    let module = parser.parse_module()?;
+    Ok((module, parser.extra))
 }
 
 //
@@ -98,21 +100,23 @@ pub struct Parser<T: Iterator<Item = LexResult>> {
     lex_errors: Vec<LexicalError>,
     tok0: Option<Spanned>,
     tok1: Option<Spanned>,
+    extra: ModuleExtra,
 }
 impl<T> Parser<T>
 where
     T: Iterator<Item = LexResult>,
 {
     pub fn new(input: T) -> Self {
-        let mut lxr = Parser {
+        let mut parser = Parser {
             tokens: input,
             lex_errors: vec![],
             tok0: None,
             tok1: None,
+            extra: ModuleExtra::new(),
         };
-        lxr.next_tok();
-        lxr.next_tok();
-        lxr
+        parser.next_tok();
+        parser.next_tok();
+        parser
     }
 
     fn parse_module(&mut self) -> Result<UntypedModule, ParseError> {
@@ -563,7 +567,7 @@ where
                     // Call
                     let args = self.parse_fn_args()?;
                     let (_, end) = self.expect_one(&Tok::Rpar)?;
-                    match crate::parser::make_call(expr, args, start, end) {
+                    match make_call(expr, args, start, end) {
                         Ok(e) => expr = e,
                         Err(_) => {
                             return parse_error(
@@ -2278,17 +2282,37 @@ where
     fn next_tok(&mut self) -> Option<Spanned> {
         let t = self.tok0.take();
         let mut nxt;
-        match self.tokens.next() {
-            // die on lex error
-            Some(Err(err)) => {
-                nxt = None;
-                self.lex_errors.push(err);
-            }
-            Some(Ok(tok)) => {
-                nxt = Some(tok);
-            }
-            None => {
-                nxt = None;
+        loop {
+            match self.tokens.next() {
+                // gather and skip extra
+                Some(Ok((s, Tok::EmptyLine, _))) => {
+                    self.extra.empty_lines.push(s);
+                }
+                Some(Ok((start, Tok::CommentNormal, end))) => {
+                    self.extra.comments.push(SrcSpan { start, end });
+                }
+                Some(Ok((start, Tok::CommentDoc, end))) => {
+                    self.extra.doc_comments.push(SrcSpan { start, end });
+                }
+                Some(Ok((start, Tok::CommentModule, end))) => {
+                    self.extra.module_comments.push(SrcSpan { start, end });
+                }
+
+                // die on lex error
+                Some(Err(err)) => {
+                    nxt = None;
+                    self.lex_errors.push(err);
+                    break;
+                }
+
+                Some(Ok(tok)) => {
+                    nxt = Some(tok);
+                    break;
+                }
+                None => {
+                    nxt = None;
+                    break;
+                }
             }
         }
         self.tok0 = self.tok1.take();
@@ -2604,4 +2628,66 @@ fn is_reserved_word(tok: Tok) -> bool {
             | Tok::Tuple
             | Tok::Type
     ]
+}
+
+// Parsing a function call into the appropriate structure
+pub enum ParserArg {
+    Arg(CallArg<UntypedExpr>),
+    Hole {
+        location: SrcSpan,
+        label: Option<String>,
+    },
+}
+
+pub fn make_call(
+    fun: UntypedExpr,
+    args: Vec<ParserArg>,
+    start: usize,
+    end: usize,
+) -> Result<UntypedExpr, ParseError> {
+    let mut num_holes = 0;
+    let args = args
+        .into_iter()
+        .map(|a| match a {
+            ParserArg::Arg(arg) => arg,
+            ParserArg::Hole { location, label } => {
+                num_holes += 1;
+                CallArg {
+                    label,
+                    location,
+                    value: UntypedExpr::Var {
+                        location,
+                        name: CAPTURE_VARIABLE.to_string(),
+                    },
+                }
+            }
+        })
+        .collect();
+    let call = UntypedExpr::Call {
+        location: SrcSpan { start, end },
+        fun: Box::new(fun),
+        args,
+    };
+    match num_holes {
+        // A normal call
+        0 => Ok(call),
+
+        // An anon function using the capture syntax run(_, 1, 2)
+        1 => Ok(UntypedExpr::Fn {
+            location: call.location(),
+            is_capture: true,
+            args: vec![Arg {
+                location: SrcSpan { start: 0, end: 0 },
+                annotation: None,
+                names: ArgNames::Named {
+                    name: CAPTURE_VARIABLE.to_string(),
+                },
+                typ: (),
+            }],
+            body: Box::new(call),
+            return_annotation: None,
+        }),
+
+        _ => parse_error(ParseErrorType::TooManyArgHoles, call.location()),
+    }
 }

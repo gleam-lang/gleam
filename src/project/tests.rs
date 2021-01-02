@@ -73,7 +73,7 @@ fn compile_test() {
             expected: Err(Error::SrcImportingTest {
                 path: PathBuf::from("/src/one.gleam"),
                 src: "import two".to_string(),
-                location: crate::ast::SrcSpan { start: 7, end: 10 },
+                location: SrcSpan { start: 7, end: 10 },
                 src_module: "one".to_string(),
                 test_module: "two".to_string(),
             }),
@@ -889,7 +889,7 @@ fn main() { one.C }"
                 path: PathBuf::from("/src/two.gleam"),
                 src: "import one\nfn main() { one.C }".to_string(),
                 error: crate::typ::Error::UnknownModuleValue {
-                    location: crate::ast::SrcSpan {
+                    location: SrcSpan {
                         start: 26,
                         end: 28,
                     },
@@ -923,7 +923,7 @@ fn test(t: one.T) { t.a }"
                 path: PathBuf::from("/src/two.gleam"),
                 src: "import one\nfn test(t: one.T) { t.a }".to_string(),
                 error: crate::typ::Error::UnknownField {
-                    location: crate::ast::SrcSpan {
+                    location: SrcSpan {
                         start: 32,
                         end: 34,
                     },

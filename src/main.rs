@@ -57,7 +57,6 @@ mod fs;
 mod metadata;
 mod new;
 mod parse;
-mod parser;
 mod pretty;
 mod project;
 mod shell;

@@ -17,7 +17,7 @@ fn record_definition_test() {
 macro_rules! assert_erl {
     ($src:expr, $erl:expr $(,)?) => {
         println!("\n\n\n{}\n", $src);
-        let mut ast = crate::parse::parse_module($src).expect("syntax error");
+        let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["the_app".to_string()];
         let ast =
             crate::typ::infer_module(&mut 0, ast, &std::collections::HashMap::new(), &mut vec![])
