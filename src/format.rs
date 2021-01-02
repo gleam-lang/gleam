@@ -4,20 +4,23 @@ mod tests;
 
 use crate::{
     ast::*,
+    fs::Utf8Writer,
     parse::extra::Comment,
     pretty::*,
     typ::{self, Type},
+    Error, Result,
 };
 use itertools::Itertools;
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 const INDENT: isize = 2;
 
-pub fn pretty(
-    writer: impl std::fmt::Write,
-    src: &str,
-) -> Result<(), crate::parse::error::ParseError> {
-    let (module, extra) = crate::parse::parse_module(&src)?;
+pub fn pretty(writer: &mut impl Utf8Writer, src: &str) -> Result<()> {
+    let (module, extra) = crate::parse::parse_module(&src).map_err(|error| Error::Parse {
+        path: PathBuf::from("<standard input>"),
+        src: src.to_string(),
+        error,
+    })?;
     let intermediate = Intermediate {
         comments: extra
             .comments
@@ -39,8 +42,7 @@ pub fn pretty(
 
     Formatter::with_comments(&intermediate)
         .module(&module)
-        .pretty_print(80, writer);
-    Ok(())
+        .pretty_print(80, writer)
 }
 
 struct Intermediate<'a> {

@@ -4,7 +4,7 @@ use crate::{
     codegen::Erlang,
     config::PackageConfig,
     error,
-    fs::FileWriter,
+    fs::FileSystemWriter,
     typ, Error, GleamExpect, Result, Warning,
 };
 use std::collections::HashMap;
@@ -19,7 +19,7 @@ pub struct Options {
 }
 
 impl Options {
-    pub fn into_compiler<Writer: FileWriter>(
+    pub fn into_compiler<Writer: FileSystemWriter>(
         self,
         writer: Writer,
     ) -> Result<PackageCompiler<Writer>> {
@@ -34,7 +34,7 @@ impl Options {
 }
 
 #[derive(Debug)]
-pub struct PackageCompiler<Writer: FileWriter> {
+pub struct PackageCompiler<Writer: FileSystemWriter> {
     pub options: Options,
     pub sources: Vec<Source>,
     pub writer: Writer,
@@ -44,7 +44,7 @@ pub struct PackageCompiler<Writer: FileWriter> {
 // TODO: tests
 // Including cases for:
 // - modules that don't import anything
-impl<Writer: FileWriter> PackageCompiler<Writer> {
+impl<Writer: FileSystemWriter> PackageCompiler<Writer> {
     pub fn new(options: Options, writer: Writer) -> Self {
         Self {
             options,
