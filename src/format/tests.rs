@@ -1056,6 +1056,11 @@ fn expr_int() {
 }
 "#
     );
+
+    assert_format!("fn a() {\n  1_234_567\n}\n");
+    assert_format!("fn a() {\n  0xCA_B0_05E\n}\n");
+    assert_format!("fn a() {\n  0b10_10_0001\n}\n");
+    assert_format!("fn a() {\n  0o12_34_567\n}\n");
 }
 
 #[test]

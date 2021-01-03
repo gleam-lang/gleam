@@ -67,6 +67,8 @@ use lexer::{LexResult, Spanned};
 use std::cmp::Ordering;
 use std::str::FromStr;
 use token::Tok;
+#[cfg(test)]
+mod tests;
 
 //
 // Public Interface
@@ -85,7 +87,9 @@ pub fn parse_module(src: &str) -> Result<(UntypedModule, ModuleExtra), ParseErro
 pub fn parse_expression_sequence(src: &str) -> Result<UntypedExpr, ParseError> {
     let lex = lexer::make_tokenizer(src);
     let mut parser = Parser::new(lex);
-    if let Some((e, _)) = parser.parse_expression_seq()? {
+    let expr = parser.parse_expression_seq();
+    let expr = parser.ensure_no_errors(expr)?;
+    if let Some((e, _)) = expr {
         Ok(e)
     } else {
         parse_error(ParseErrorType::ExpectedExpr, SrcSpan { start: 0, end: 0 })
@@ -135,10 +139,10 @@ where
     // place and instead we collect LexErrors in `self.lex_errors` and attempt to continue parsing.
     // Once parsing has returned we want to surface an error in the order:
     // 1) LexError, 2) ParseError, 3) More Tokens Left
-    fn ensure_no_errors(
+    fn ensure_no_errors<A>(
         &mut self,
-        statements: Result<Vec<UntypedStatement>, ParseError>,
-    ) -> Result<Vec<UntypedStatement>, ParseError> {
+        parse_result: Result<A, ParseError>,
+    ) -> Result<A, ParseError> {
         self.lex_errors.reverse();
         if let Some(error) = self.lex_errors.pop() {
             // Lex errors first
@@ -150,9 +154,9 @@ where
                     end: location,
                 },
             )
-        } else if statements.is_err() {
+        } else if parse_result.is_err() {
             // Then parse errors
-            statements
+            parse_result
         } else if let Some((start, _, end)) = self.next_tok() {
             // there are still more tokens
             let expected = vec!["An import, const, type, or function.".to_string()];
@@ -162,7 +166,7 @@ where
             )
         } else {
             // no errors
-            statements
+            parse_result
         }
     }
 
