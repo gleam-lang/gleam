@@ -1,6 +1,11 @@
+// TODO: change all the iterator taking functions to loops
+// TODO: Move from String to str where possible
+// TODO: Swap append for some kind of sequence macro that builds a Document::Vec
+// TODO: Remove Cons?
+// TODO: Remove Text?
+
 use super::{Type, TypeVar};
 use crate::pretty::{nil, *};
-use itertools::Itertools;
 use std::sync::Arc;
 
 #[cfg(test)]
@@ -25,7 +30,7 @@ impl Printer {
 
     /// Render a Type as a well formatted string.
     ///
-    pub fn pretty_print(&mut self, typ: &Type, initial_indent: usize) -> String {
+    pub fn pretty_print<'a>(&'a mut self, typ: &'a Type, initial_indent: usize) -> String {
         let mut buffer = String::with_capacity(initial_indent);
         for _ in 0..initial_indent {
             buffer.push(' ');
@@ -37,7 +42,7 @@ impl Printer {
             .to_pretty_string(80)
     }
 
-    pub fn print(&mut self, typ: &Type) -> Document {
+    pub fn print<'a>(&'a mut self, typ: &'a Type) -> Document<'a> {
         match typ {
             Type::App { name, args, .. } => {
                 if args.is_empty() {
@@ -70,7 +75,7 @@ impl Printer {
         }
     }
 
-    fn type_var_doc(&mut self, typ: &TypeVar) -> Document {
+    fn type_var_doc<'a>(&'a mut self, typ: &'a TypeVar) -> Document<'a> {
         match typ {
             TypeVar::Link { ref typ, .. } => self.print(typ),
 
@@ -109,17 +114,19 @@ impl Printer {
         chars.into_iter().rev().collect()
     }
 
-    fn args_to_gleam_doc(&mut self, args: &[Arc<Type>]) -> Document {
+    fn args_to_gleam_doc<'a>(&'a mut self, args: &'a [Arc<Type>]) -> Document<'a> {
         match args.len() {
             0 => nil(),
-            _ => {
-                let args = concat(
-                    args.iter()
-                        .map(|t| self.print(t).group())
-                        .intersperse(break_(",", ", ")),
-                );
+            len => {
+                let mut docs = Vec::with_capacity(len * 2 - 1);
+                for (i, type_) in args.iter().enumerate() {
+                    if i != 0 {
+                        docs.push(break_(",", ", "));
+                    }
+                    docs.push(self.print(type_).group());
+                }
                 break_("", "")
-                    .append(args)
+                    .append(docs)
                     .nest(INDENT)
                     .append(break_(",", ""))
                     .group()

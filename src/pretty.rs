@@ -17,66 +17,66 @@ mod tests;
 
 use crate::{fs::Utf8Writer, GleamExpect, Result};
 
-pub trait Documentable {
-    fn to_doc(self) -> Document;
+pub trait Documentable<'a> {
+    fn to_doc(self) -> Document<'a>;
 }
 
-impl Documentable for &str {
-    fn to_doc(self) -> Document {
+impl<'a> Documentable<'a> for &str {
+    fn to_doc(self) -> Document<'a> {
         Document::Text(self.to_string())
     }
 }
 
-impl Documentable for String {
-    fn to_doc(self) -> Document {
+impl<'a> Documentable<'a> for String {
+    fn to_doc(self) -> Document<'a> {
         Document::Text(self)
     }
 }
 
-impl Documentable for isize {
-    fn to_doc(self) -> Document {
+impl<'a> Documentable<'a> for isize {
+    fn to_doc(self) -> Document<'a> {
         Document::Text(format!("{}", self))
     }
 }
 
-impl Documentable for i64 {
-    fn to_doc(self) -> Document {
+impl<'a> Documentable<'a> for i64 {
+    fn to_doc(self) -> Document<'a> {
         Document::Text(format!("{}", self))
     }
 }
 
-impl Documentable for usize {
-    fn to_doc(self) -> Document {
+impl<'a> Documentable<'a> for usize {
+    fn to_doc(self) -> Document<'a> {
         Document::Text(format!("{}", self))
     }
 }
 
-impl Documentable for f64 {
-    fn to_doc(self) -> Document {
+impl<'a> Documentable<'a> for f64 {
+    fn to_doc(self) -> Document<'a> {
         Document::Text(format!("{:?}", self))
     }
 }
 
-impl Documentable for u64 {
-    fn to_doc(self) -> Document {
+impl<'a> Documentable<'a> for u64 {
+    fn to_doc(self) -> Document<'a> {
         Document::Text(format!("{:?}", self))
     }
 }
 
-impl Documentable for Document {
-    fn to_doc(self) -> Document {
+impl<'a> Documentable<'a> for Document<'a> {
+    fn to_doc(self) -> Document<'a> {
         self
     }
 }
 
-impl Documentable for Vec<Document> {
-    fn to_doc(self) -> Document {
-        concat(self.into_iter())
+impl<'a> Documentable<'a> for Vec<Document<'a>> {
+    fn to_doc(self) -> Document<'a> {
+        Document::Vec(self)
     }
 }
 
-impl<D: Documentable> Documentable for Option<D> {
-    fn to_doc(self) -> Document {
+impl<'a, D: Documentable<'a>> Documentable<'a> for Option<D> {
+    fn to_doc(self) -> Document<'a> {
         match self {
             Some(d) => d.to_doc(),
             None => Document::Nil,
@@ -84,15 +84,12 @@ impl<D: Documentable> Documentable for Option<D> {
     }
 }
 
-pub fn concat(mut docs: impl Iterator<Item = Document>) -> Document {
-    let init = docs.next().unwrap_or_else(nil);
-    docs.fold(init, |acc, doc| {
-        Document::Cons(Box::new(acc), Box::new(doc))
-    })
+pub fn concat<'a>(mut docs: impl Iterator<Item = Document<'a>>) -> Document<'a> {
+    Document::Vec(docs.collect())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Document {
+pub enum Document<'a> {
     /// Returns a document entity used to represent nothingness
     Nil,
 
@@ -103,28 +100,34 @@ pub enum Document {
     ForceBreak,
 
     /// May break contained document based on best fit, thus flex break
-    FlexBreak(Box<Document>),
+    FlexBreak(Box<Self>),
 
     /// Renders `broken` if group is broken, `unbroken` otherwise
     Break { broken: String, unbroken: String },
 
     /// Join 2 documents together
-    Cons(Box<Document>, Box<Document>),
+    Cons(Box<Self>, Box<Self>),
+
+    /// Join multiple documents together
+    Vec(Vec<Self>),
 
     /// Nests the given document by the given indent
-    Nest(isize, Box<Document>),
+    Nest(isize, Box<Self>),
 
     /// Nests the given document to the current cursor position
-    NestCurrent(Box<Document>),
+    NestCurrent(Box<Self>),
 
     /// Nests the given document to the current cursor position
-    Group(Box<Document>),
+    Group(Box<Self>),
 
     /// A string to render
     Text(String),
+
+    /// A str to render
+    Str(&'a str),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 enum Mode {
     Broken,
     Unbroken,
@@ -155,6 +158,8 @@ fn fits(mut limit: isize, mut docs: im::Vector<(isize, Mode, Document)>) -> bool
 
             Document::Group(doc) => docs.push_front((indent, Mode::Unbroken, *doc)),
 
+            Document::Str(s) => limit -= s.len() as isize,
+
             Document::Text(s) => limit -= s.len() as isize,
 
             Document::Break { unbroken, .. } => match mode {
@@ -165,8 +170,14 @@ fn fits(mut limit: isize, mut docs: im::Vector<(isize, Mode, Document)>) -> bool
             Document::FlexBreak(doc) => docs.push_front((indent, mode, *doc)),
 
             Document::Cons(left, right) => {
-                docs.push_front((indent, mode.clone(), *right));
+                docs.push_front((indent, mode, *right));
                 docs.push_front((indent, mode, *left));
+            }
+
+            Document::Vec(vec) => {
+                for doc in vec.into_iter() {
+                    docs.push_front((indent, mode, doc));
+                }
             }
         }
     }
@@ -210,9 +221,20 @@ fn fmt(
                 writer.str_write(s.as_str())?;
             }
 
+            Document::Str(s) => {
+                width += s.len() as isize;
+                writer.str_write(s)?;
+            }
+
             Document::Cons(left, right) => {
-                docs.push_front((indent, mode.clone(), *right));
+                docs.push_front((indent, mode, *right));
                 docs.push_front((indent, mode, *left));
+            }
+
+            Document::Vec(vec) => {
+                for doc in vec.into_iter() {
+                    docs.push_front((indent, mode, doc));
+                }
             }
 
             Document::Nest(i, doc) => {
@@ -237,37 +259,37 @@ fn fmt(
     Ok(())
 }
 
-pub fn nil() -> Document {
+pub fn nil<'a>() -> Document<'a> {
     Document::Nil
 }
 
-pub fn line() -> Document {
+pub fn line<'a>() -> Document<'a> {
     Document::Line(1)
 }
 
-pub fn lines(i: usize) -> Document {
+pub fn lines<'a>(i: usize) -> Document<'a> {
     Document::Line(i)
 }
 
-pub fn force_break() -> Document {
+pub fn force_break<'a>() -> Document<'a> {
     Document::ForceBreak
 }
 
-pub fn break_(broken: &str, unbroken: &str) -> Document {
+pub fn break_<'a>(broken: &str, unbroken: &str) -> Document<'a> {
     Document::Break {
         broken: broken.to_string(),
         unbroken: unbroken.to_string(),
     }
 }
 
-pub fn delim(d: &str) -> Document {
+pub fn delim<'a>(d: &str) -> Document<'a> {
     Document::Break {
         broken: d.to_string(),
         unbroken: format!("{} ", d),
     }
 }
 
-impl Document {
+impl<'a> Document<'a> {
     pub fn group(self) -> Self {
         Self::Group(Box::new(self))
     }
@@ -284,7 +306,7 @@ impl Document {
         Self::NestCurrent(Box::new(self))
     }
 
-    pub fn append(self, x: impl Documentable) -> Self {
+    pub fn append(self, x: impl Documentable<'a>) -> Self {
         Self::Cons(Box::new(self), Box::new(x.to_doc()))
     }
 
@@ -295,7 +317,7 @@ impl Document {
         buffer
     }
 
-    pub fn surround(self, open: impl Documentable, closed: impl Documentable) -> Self {
+    pub fn surround(self, open: impl Documentable<'a>, closed: impl Documentable<'a>) -> Self {
         open.to_doc().append(self).append(closed)
     }
 
