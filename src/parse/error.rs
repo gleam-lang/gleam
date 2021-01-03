@@ -8,7 +8,10 @@ pub struct LexicalError {
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum LexicalErrorType {
-    UnexpectedStringEnd,
+    DigitOutOfRadix,       // 0x012 , 2 is out of radix
+    NumTrailingUnderscore, // 1_000_ is not allowed
+    RadixIntNoValue,       // 0x, 0x, 0o without a value
+    UnexpectedStringEnd,   // Unterminated string literal
     UnrecognizedToken { tok: char },
 }
 
@@ -52,6 +55,14 @@ pub enum ParseErrorType {
 impl LexicalError {
     pub fn to_parse_error_info(&self) -> (&str, Vec<String>) {
         match self.error {
+            LexicalErrorType::DigitOutOfRadix => {
+                ("This digit is too big for the specified radix.", vec![])
+            }
+            LexicalErrorType::NumTrailingUnderscore => (
+                "Numbers cannot have a trailing underscore.",
+                vec!["Hint: remove it.".to_string()],
+            ),
+            LexicalErrorType::RadixIntNoValue => ("This integer has no value.", vec![]),
             LexicalErrorType::UnexpectedStringEnd => {
                 ("The string starting here was left open.", vec![])
             }

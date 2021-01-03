@@ -481,39 +481,57 @@ where
 
     fn lex_number(&mut self) -> LexResult {
         let start_pos = self.get_pos();
-        if self.chr0 == Some('0') {
+        let num = if self.chr0 == Some('0') {
             if self.chr1 == Some('x') || self.chr1 == Some('X') {
                 // Hex!
                 self.next_char();
                 self.next_char();
-                self.lex_number_radix(start_pos, 16)
+                self.lex_number_radix(start_pos, 16, "0x")?
             } else if self.chr1 == Some('o') || self.chr1 == Some('O') {
                 // Octal!
                 self.next_char();
                 self.next_char();
-                self.lex_number_radix(start_pos, 8)
+                self.lex_number_radix(start_pos, 8, "0o")?
             } else if self.chr1 == Some('b') || self.chr1 == Some('B') {
                 // Binary!
                 self.next_char();
                 self.next_char();
-                self.lex_number_radix(start_pos, 2)
+                self.lex_number_radix(start_pos, 2, "0b")?
             } else {
-                self.lex_normal_number()
+                self.lex_normal_number()?
             }
         } else {
-            self.lex_normal_number()
+            self.lex_normal_number()?
+        };
+
+        if Some('_') == self.chr0 {
+            Err(LexicalError {
+                error: LexicalErrorType::NumTrailingUnderscore,
+                location: self.get_pos(),
+            })
+        } else {
+            Ok(num)
         }
     }
 
     // Lex a hex/octal/decimal/binary number without a decimal point.
-    fn lex_number_radix(&mut self, start_pos: usize, radix: u32) -> LexResult {
+    fn lex_number_radix(&mut self, start_pos: usize, radix: u32, prefix: &str) -> LexResult {
         let num = self.radix_run(radix);
-        let value = match radix {
-            10 => num,
-            x => format!("{}#{}", x, num),
-        };
-        let end_pos = self.get_pos();
-        Ok((start_pos, Tok::Int { value }, end_pos))
+        if num.is_empty() {
+            Err(LexicalError {
+                error: LexicalErrorType::RadixIntNoValue,
+                location: self.get_pos() - 1,
+            })
+        } else if radix < 16 && Lexer::<T>::is_digit_of_radix(self.chr0, 16) {
+            Err(LexicalError {
+                error: LexicalErrorType::DigitOutOfRadix,
+                location: self.get_pos(),
+            })
+        } else {
+            let value = format!("{}{}", prefix, num);
+            let end_pos = self.get_pos();
+            Ok((start_pos, Tok::Int { value }, end_pos))
+        }
     }
 
     // Lex a normal number, that is, no octal, hex or binary number.
@@ -550,6 +568,7 @@ where
             if let Some(c) = self.take_number(radix) {
                 value_text.push(c);
             } else if self.chr0 == Some('_') && Lexer::<T>::is_digit_of_radix(self.chr1, radix) {
+                value_text.push('_');
                 self.next_char();
             } else {
                 break;
