@@ -47,18 +47,120 @@ pub fn pretty(writer: &mut impl Utf8Writer, src: &str) -> Result<()> {
 
 macro_rules! map_intersperse {
     ($self:expr, $method:ident, $args:expr, $delim:expr) => {{
-        let mut args = $args.iter().peekable();
-        if args.peek().is_none() {
+        map_intersperse!($self, $method, $args, $delim, 0)
+    }};
+
+    ($self:expr, $method:ident, $args:expr, $delim:expr, $skip:expr) => {{
+        let mut args = $args;
+        if args.is_empty() {
             return "()".to_doc();
         }
-        let mut args_doc = Vec::with_capacity(args.len() * 2 - 1);
-        for (i, a) in args.enumerate() {
+        let mut args_doc = Vec::with_capacity((args.len() - $skip) * 2 - 1);
+        for (i, a) in args.iter().skip($skip).enumerate() {
             if i != 0 {
                 args_doc.push($delim);
                 args_doc.push($self.$method(a));
             }
         }
         args_doc
+    }};
+}
+
+macro_rules! bit_string {
+    ($self:expr, $method:ident, $segments:expr, $is_simple:expr) => {{
+        let comma = if $is_simple {
+            delim(",").flex_break()
+        } else {
+            delim(",")
+        };
+        let mut docs = Vec::with_capacity($segments.len() * 2);
+        for (i, segment) in $segments.iter().enumerate() {
+            if i != 0 {
+                docs.push(comma);
+                docs.push(bit_string_segment!($self, $method, segment));
+            }
+        }
+        break_("<<", "<<")
+            .append(docs)
+            .nest(INDENT)
+            .append(break_(",", ""))
+            .append(">>")
+            .group()
+    }};
+}
+
+macro_rules! bit_string_segment {
+    ($self:expr, $method:ident, $segment:expr) => {{
+        let BitStringSegment { value, options, .. } = $segment;
+        if options.is_empty() {
+            return $self.$method(value);
+        }
+        let docs = Vec::with_capacity(options.len() * 2 + 2);
+        docs.push($self.$method(value));
+        docs.push(":".to_doc());
+        for (i, e) in options.iter().enumerate() {
+            if i != 0 {
+                docs.push("-".to_doc());
+            }
+            docs.push(segment_option!($self, $method, e));
+        }
+        docs.to_doc()
+    }};
+}
+
+macro_rules! segment_option {
+    ($self:expr, $method:ident, $option:expr) => {{
+        match $option {
+            BitStringSegmentOption::Invalid { label, .. } => label.clone().to_doc(),
+
+            BitStringSegmentOption::Binary { .. } => "binary".to_doc(),
+            BitStringSegmentOption::Integer { .. } => "int".to_doc(),
+            BitStringSegmentOption::Float { .. } => "float".to_doc(),
+            BitStringSegmentOption::BitString { .. } => "bit_string".to_doc(),
+            BitStringSegmentOption::UTF8 { .. } => "utf8".to_doc(),
+            BitStringSegmentOption::UTF16 { .. } => "utf16".to_doc(),
+            BitStringSegmentOption::UTF32 { .. } => "utf32".to_doc(),
+            BitStringSegmentOption::UTF8Codepoint { .. } => "utf8_codepoint".to_doc(),
+            BitStringSegmentOption::UTF16Codepoint { .. } => "utf16_codepoint".to_doc(),
+            BitStringSegmentOption::UTF32Codepoint { .. } => "utf32_codepoint".to_doc(),
+            BitStringSegmentOption::Signed { .. } => "signed".to_doc(),
+            BitStringSegmentOption::Unsigned { .. } => "unsigned".to_doc(),
+            BitStringSegmentOption::Big { .. } => "big".to_doc(),
+            BitStringSegmentOption::Little { .. } => "little".to_doc(),
+            BitStringSegmentOption::Native { .. } => "native".to_doc(),
+
+            BitStringSegmentOption::Size {
+                value,
+                short_form: false,
+                ..
+            } => "size"
+                .to_doc()
+                .append("(")
+                .append($self.$method(value.as_ref()))
+                .append(")"),
+
+            BitStringSegmentOption::Size {
+                value,
+                short_form: true,
+                ..
+            } => $self.$method(value.as_ref()),
+
+            BitStringSegmentOption::Unit {
+                value,
+                short_form: false,
+                ..
+            } => "unit"
+                .to_doc()
+                .append("(")
+                .append($self.$method(value.as_ref()))
+                .append(")"),
+
+            BitStringSegmentOption::Unit {
+                value,
+                short_form: true,
+                ..
+            } => $self.$method(value.as_ref()),
+        }
     }};
 }
 
@@ -70,6 +172,11 @@ macro_rules! wrap_args {
 
     ($self:expr, $method:ident, $args:expr, $delim:expr) => {{
         let args_doc = map_intersperse!($self, $method, $args, $delim);
+        wrap_args_doc(args_doc)
+    }};
+
+    ($self:expr, $method:ident, $args:expr, $delim:expr, $skip:expr) => {{
+        let args_doc = map_intersperse!($self, $method, $args, $delim, $skip);
         wrap_args_doc(args_doc)
     }};
 }
@@ -308,16 +415,13 @@ impl<'a> Formatter<'a> {
             Constant::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
 
             Constant::List { elements, .. } => {
-                let comma: fn() -> Document<'a> = if elements.iter().all(|e| e.is_simple()) {
-                    || delim(",").flex_break()
+                let comma = if elements.iter().all(|e| e.is_simple()) {
+                    delim(",").flex_break()
                 } else {
-                    || delim(",")
+                    delim(",")
                 };
-                let elements = elements
-                    .iter()
-                    .map(|e| self.const_expr(e))
-                    .intersperse(comma());
-                list(concat(elements), None)
+                let elements = map_intersperse!(self, const_expr, elements, comma).to_doc();
+                list(elements, None)
             }
 
             Constant::Tuple { elements, .. } => "tuple"
@@ -325,12 +429,10 @@ impl<'a> Formatter<'a> {
                 .append(wrap_args!(self, const_expr, elements))
                 .group(),
 
-            Constant::BitString { segments, .. } => bit_string(
-                segments
-                    .iter()
-                    .map(|s| bit_string_segment(s, |e| self.const_expr(e))),
-                segments.iter().all(|s| s.value.is_simple()),
-            ),
+            Constant::BitString { segments, .. } => {
+                let simple = segments.iter().all(|s| s.value.is_simple());
+                bit_string!(self, const_expr, segments, simple)
+            }
 
             Constant::Record {
                 name,
@@ -544,7 +646,7 @@ impl<'a> Formatter<'a> {
         return_annotation: Option<&'a TypeAst>,
         body: &'a UntypedExpr,
     ) -> Document<'a> {
-        let args = wrap_args(args.iter().map(|e| self.fn_arg(e))).group();
+        let args = wrap_args!(self, fn_arg, args).group();
         let body = match body {
             UntypedExpr::Case { .. } => force_break().append(self.expr(body)),
             _ => self.expr(body),
@@ -689,15 +791,14 @@ impl<'a> Formatter<'a> {
 
             UntypedExpr::Tuple { elems, .. } => "tuple"
                 .to_doc()
-                .append(wrap_args(elems.iter().map(|e| self.wrap_expr(e))))
+                .append(wrap_args!(self, wrap_expr, elems))
                 .group(),
 
-            UntypedExpr::BitString { segments, .. } => bit_string(
-                segments
-                    .iter()
-                    .map(|s| bit_string_segment(s, |e| self.expr(e))),
-                segments.iter().all(|s| s.value.is_simple_constant()),
-            ),
+            UntypedExpr::BitString { segments, .. } => {
+                let simple = segments.iter().all(|s| s.value.is_simple_constant());
+                bit_string!(self, expr, segments, simple)
+            }
+
             UntypedExpr::RecordUpdate {
                 constructor,
                 spread,
@@ -733,9 +834,7 @@ impl<'a> Formatter<'a> {
         } else if args.is_empty() {
             name
         } else if with_spread {
-            name.append(wrap_args_with_spread(
-                args.iter().map(|a| self.pattern_call_arg(a)),
-            ))
+            name.append(self.wrap_pattern_args_with_spread(args))
         } else {
             match &*args {
                 [arg] if is_breakable(&arg.value) => name
@@ -745,7 +844,7 @@ impl<'a> Formatter<'a> {
                     .group(),
 
                 _ => name
-                    .append(wrap_args(args.iter().map(|a| self.pattern_call_arg(a))))
+                    .append(wrap_args!(self, pattern_call_arg, args))
                     .group(),
             }
         }
@@ -775,7 +874,7 @@ impl<'a> Formatter<'a> {
 
             _ => self
                 .expr(fun)
-                .append(wrap_args(args.iter().map(|a| self.call_arg(a))))
+                .append(wrap_args!(self, call_arg, args))
                 .group(),
         }
     }
@@ -785,14 +884,11 @@ impl<'a> Formatter<'a> {
         subjects: &'a [UntypedExpr],
         clauses: &'a [UntypedClause],
     ) -> Document<'a> {
-        let subjects_doc = concat(
-            subjects
-                .iter()
-                .map(|s| self.expr(s))
-                .intersperse(", ".to_doc()),
-        );
-
-        let clauses_doc = concat(clauses.iter().enumerate().map(|(i, c)| self.clause(c, i)));
+        let subjects_doc = map_intersperse!(self, expr, subjects, ", ".to_doc());
+        let mut clauses_doc = Vec::with_capacity(clauses.len());
+        for (i, c) in clauses.iter().enumerate() {
+            clauses_doc.push(self.clause(c, i));
+        }
 
         "case "
             .to_doc()
@@ -814,12 +910,13 @@ impl<'a> Formatter<'a> {
         spread: &'a RecordUpdateSpread,
         args: &'a [UntypedRecordUpdateArg],
     ) -> Document<'a> {
-        use std::iter::once;
         let constructor_doc = self.expr(constructor);
-        let spread_doc = "..".to_doc().append(spread.clone().name.to_doc());
-        let arg_docs = args.iter().map(|a| self.record_update_arg(a));
-        let all_arg_docs = once(spread_doc).chain(arg_docs);
-        constructor_doc.append(wrap_args(all_arg_docs)).group()
+        let mut all_arg_docs = Vec::with_capacity(args.len() + 1);
+        all_arg_docs.push("..".to_doc().append(spread.clone().name.to_doc()));
+        for a in args {
+            all_arg_docs.push(self.record_update_arg(a));
+        }
+        constructor_doc.append(wrap_args_doc(all_arg_docs)).group()
     }
 
     pub fn bin_op(
@@ -906,11 +1003,11 @@ impl<'a> Formatter<'a> {
         } else if hole_in_first_position {
             // x |> fun(_, 2, 3)
             self.expr(fun)
-                .append(wrap_args(args.iter().skip(1).map(|a| self.call_arg(a))).group())
+                .append(wrap_args!(self, call_arg, args, delim(","), 1).group())
         } else {
             // x |> fun(1, _, 3)
             self.expr(fun)
-                .append(wrap_args(args.iter().map(|a| self.call_arg(a))).group())
+                .append(wrap_args!(self, call_arg, args).group())
         }
     }
 
@@ -918,13 +1015,33 @@ impl<'a> Formatter<'a> {
         match call {
             UntypedExpr::Call { fun, args, .. } => self
                 .expr(fun)
-                .append(wrap_args(args.iter().map(|a| self.call_arg(a))).group()),
+                .append(wrap_args!(self, call_arg, args).group()),
 
             // The body of a capture being not a fn shouldn't be possible...
             _ => crate::error::fatal_compiler_bug(
                 "Function capture body found not to be a call in the formatter",
             ),
         }
+    }
+
+    pub fn record_constructor_arg(
+        &'a mut self,
+        (label, typ, arg_location): &'a (Option<String>, TypeAst, SrcSpan),
+    ) -> Document<'a> {
+        let arg_comments = self.pop_comments(arg_location.start);
+        let arg = match label {
+            Some(l) => l
+                .to_string()
+                .to_doc()
+                .append(": ")
+                .append(self.type_ast(typ)),
+            None => self.type_ast(typ),
+        };
+
+        commented(
+            self.doc_comments(arg_location.start).append(arg).group(),
+            arg_comments,
+        )
     }
 
     pub fn record_constructor(&'a mut self, constructor: &'a RecordConstructor) -> Document<'a> {
@@ -938,24 +1055,7 @@ impl<'a> Formatter<'a> {
                 .name
                 .to_string()
                 .to_doc()
-                .append(wrap_args(constructor.args.iter().map(
-                    |(label, typ, arg_location)| {
-                        let arg_comments = self.pop_comments(arg_location.start);
-                        let arg = match label {
-                            Some(l) => l
-                                .to_string()
-                                .to_doc()
-                                .append(": ")
-                                .append(self.type_ast(typ)),
-                            None => self.type_ast(typ),
-                        };
-
-                        commented(
-                            self.doc_comments(arg_location.start).append(arg).group(),
-                            arg_comments,
-                        )
-                    },
-                )))
+                .append(wrap_args!(self, record_constructor_arg, constructor.args))
                 .group()
         };
 
@@ -972,30 +1072,32 @@ impl<'a> Formatter<'a> {
         location: &'a SrcSpan,
     ) -> Document<'a> {
         self.pop_empty_lines(location.start);
-        pub_(public)
-            .to_doc()
+        let doc = pub_(public)
             .append(if opaque { "opaque type " } else { "type " })
             .append(if args.is_empty() {
                 name.to_string().to_doc()
             } else {
                 name.to_string()
                     .to_doc()
-                    .append(wrap_args(args.iter().map(|e| e.clone().to_doc())))
+                    .append(wrap_args!(self, str_doc, args))
                     .group()
             })
-            .append(" {")
-            .append(concat(constructors.iter().map(|c| {
-                if self.pop_empty_lines(c.location.start) {
-                    lines(2)
-                } else {
-                    line()
-                }
-                .append(self.record_constructor(c))
-                .nest(INDENT)
-                .group()
-            })))
-            .append(line())
-            .append("}")
+            .append(" {");
+
+        let doc_constructors = Vec::with_capacity(constructors.len() * 2);
+        for c in constructors {
+            let doc = if self.pop_empty_lines(c.location.start) {
+                lines(2)
+            } else {
+                line()
+            }
+            .append(self.record_constructor(c))
+            .nest(INDENT)
+            .group();
+            doc_constructors.push(doc);
+        }
+
+        doc.append(doc_constructors).append(line()).append("}")
     }
 
     pub fn docs_opaque_custom_type(
@@ -1014,7 +1116,7 @@ impl<'a> Formatter<'a> {
             } else {
                 name.to_string()
                     .to_doc()
-                    .append(wrap_args(args.iter().map(|e| e.clone().to_doc())))
+                    .append(wrap_args!(self, str_doc, args))
             })
     }
 
@@ -1041,12 +1143,24 @@ impl<'a> Formatter<'a> {
         args: &'a [TypedArg],
         printer: &'a mut typ::pretty::Printer,
     ) -> Document<'a> {
-        wrap_args(args.iter().map(|arg| {
-            arg.names
-                .to_doc()
-                .append(": ".to_doc().append(printer.print(&arg.typ)))
-                .group()
-        }))
+        let mut args = args.iter().peekable();
+        if args.peek().is_none() {
+            return "()".to_doc();
+        }
+        let mut args_doc = Vec::with_capacity(args.len() * 2 - 1);
+        for (i, arg) in args.enumerate() {
+            if i != 0 {
+                args_doc.push(delim(","));
+                args_doc.push(
+                    arg.names
+                        .to_doc()
+                        .append(": ".to_doc().append(printer.print(&arg.typ)))
+                        .group(),
+                );
+            }
+        }
+
+        wrap_args_doc(args_doc)
     }
 
     fn external_fn_arg(&'a mut self, arg: &'a ExternalFnArg) -> Document<'a> {
@@ -1056,7 +1170,7 @@ impl<'a> Formatter<'a> {
     }
 
     fn external_fn_args(&'a mut self, args: &'a [ExternalFnArg]) -> Document<'a> {
-        wrap_args(args.iter().map(|e| self.external_fn_arg(e)))
+        wrap_args!(self, external_fn_arg, args)
     }
 
     fn wrap_expr(&'a mut self, expr: &'a UntypedExpr) -> Document<'a> {
@@ -1127,18 +1241,32 @@ impl<'a> Formatter<'a> {
         }
     }
 
+    fn clause_pattern(&'a mut self, patterns: &'a [UntypedPattern]) -> Document<'a> {
+        let mut docs = Vec::with_capacity(patterns.len() * 2 - 1);
+        for (i, p) in patterns.iter().enumerate() {
+            if i != 0 {
+                docs.push(", ".to_doc());
+                docs.push(self.pattern(p));
+            }
+        }
+        docs.to_doc()
+    }
+
     fn clause(&'a mut self, clause: &'a UntypedClause, index: usize) -> Document<'a> {
         let space_before = self.pop_empty_lines(clause.location.start);
         let after_position = clause.location.end;
-        let clause_doc = concat(
-            std::iter::once(&clause.pattern)
-                .chain(clause.alternative_patterns.iter())
-                .map(|patterns| wrap_args!(self, pattern, patterns, ", ".to_doc()))
-                .intersperse(" | ".to_doc()),
-        );
+        let mut clause_docs = Vec::with_capacity(clause.alternative_patterns.len() * 2 + 1);
+        clause_docs.push(self.clause_pattern(&clause.pattern));
+        for p in clause.alternative_patterns {
+            clause_docs.push(" | ".to_doc());
+            clause_docs.push(self.clause_pattern(p.as_slice()));
+        }
         let clause_doc = match &clause.guard {
-            None => clause_doc,
-            Some(guard) => clause_doc.append(" if ").append(self.clause_guard(guard)),
+            None => clause_docs.to_doc(),
+            Some(guard) => clause_docs
+                .to_doc()
+                .append(" if ")
+                .append(self.clause_guard(guard)),
         };
 
         // Remove any unused empty lines within the clause
@@ -1167,7 +1295,7 @@ impl<'a> Formatter<'a> {
             .append(if args.is_empty() {
                 nil()
             } else {
-                wrap_args(args.iter().map(|e| e.clone().to_doc()))
+                wrap_args!(self, str_doc, args)
             })
     }
 
@@ -1236,15 +1364,10 @@ impl<'a> Formatter<'a> {
 
             Pattern::Tuple { elems, .. } => "tuple"
                 .to_doc()
-                .append(wrap_args(elems.iter().map(|e| self.pattern(e))))
+                .append(wrap_args!(self, pattern, elems))
                 .group(),
 
-            Pattern::BitString { segments, .. } => bit_string(
-                segments
-                    .iter()
-                    .map(|s| bit_string_segment(s, |e| self.pattern(e))),
-                false,
-            ),
+            Pattern::BitString { segments, .. } => bit_string!(self, pattern, segments, false),
         };
         commented(doc, comments)
     }
@@ -1341,6 +1464,32 @@ impl<'a> Formatter<'a> {
                 .append(self.const_expr(&arg.value)),
         }
     }
+
+    pub fn wrap_pattern_args_with_spread(
+        &'a mut self,
+        args: &'a [CallArg<UntypedPattern>],
+    ) -> Document<'a> {
+        if args.is_empty() {
+            return "()".to_doc();
+        }
+
+        let mut docs = Vec::with_capacity(args.len() * 2 + 3);
+        docs.push(break_("(", "("));
+        for (i, a) in args.iter().enumerate() {
+            if i != 0 {
+                docs.push(delim(","));
+                docs.push(self.pattern_call_arg(a));
+            }
+        }
+        docs.push(break_(",", ", "));
+        docs.push("..".to_doc());
+
+        Document::Vec(docs)
+            .nest(INDENT)
+            .append(break_(",", ""))
+            .append(")")
+            .group()
+    }
 }
 
 fn wrap_args_doc(args_doc: Vec<Document<'_>>) -> Document<'_> {
@@ -1436,25 +1585,6 @@ fn categorise_list_pattern(expr: &UntypedPattern) -> ListType<&UntypedPattern, &
     }
 }
 
-pub fn wrap_args_with_spread<'a, I>(args: I) -> Document<'a>
-where
-    I: Iterator<Item = Document<'a>> + 'a,
-{
-    let mut args = args.peekable();
-    if args.peek().is_none() {
-        return "()".to_doc();
-    }
-
-    break_("(", "(")
-        .append(concat(args.intersperse(delim(","))))
-        .append(break_(",", ", "))
-        .append("..")
-        .nest(INDENT)
-        .append(break_(",", ""))
-        .append(")")
-        .group()
-}
-
 fn list_cons<Categorise, Elem>(
     head: Elem,
     tail: Elem,
@@ -1466,23 +1596,6 @@ where
     let mut elems = vec![head];
     let tail = collect_cons(tail, &mut elems, categorise_element);
     (elems, tail)
-}
-
-fn bit_string<'a>(
-    segments: impl Iterator<Item = Document<'a>> + 'a,
-    is_simple: bool,
-) -> Document<'a> {
-    let comma = if is_simple {
-        delim(",").flex_break()
-    } else {
-        delim(",")
-    };
-    break_("<<", "<<")
-        .append(concat(segments.intersperse(comma)))
-        .nest(INDENT)
-        .append(break_(",", ""))
-        .append(">>")
-        .group()
 }
 
 fn list<'a>(elems: Document<'a>, tail: Option<Document<'a>>) -> Document<'a> {
@@ -1547,85 +1660,6 @@ fn commented<'a>(doc: Document<'a>, comments: impl Iterator<Item = &'a str> + 'a
     match printed_comments(comments) {
         Some(comments) => comments.append(force_break()).append(line()).append(doc),
         None => doc,
-    }
-}
-
-fn bit_string_segment<'a, Value, Type, ToDoc: 'a>(
-    segment: &'a BitStringSegment<Value, Type>,
-    mut to_doc: ToDoc,
-) -> Document
-where
-    ToDoc: FnMut(&Value) -> Document<'a>,
-{
-    match segment {
-        BitStringSegment { value, options, .. } if options.is_empty() => to_doc(value),
-
-        BitStringSegment { value, options, .. } => to_doc(value).append(":").append(concat(
-            options
-                .iter()
-                .map(|o| segment_option(o, |e| to_doc(e)))
-                .intersperse("-".to_doc()),
-        )),
-    }
-}
-
-fn segment_option<'a, ToDoc, Value>(
-    option: &'a BitStringSegmentOption<Value>,
-    mut to_doc: ToDoc,
-) -> Document
-where
-    ToDoc: FnMut(&Value) -> Document<'a>,
-{
-    match option {
-        BitStringSegmentOption::Invalid { label, .. } => label.clone().to_doc(),
-
-        BitStringSegmentOption::Binary { .. } => "binary".to_doc(),
-        BitStringSegmentOption::Integer { .. } => "int".to_doc(),
-        BitStringSegmentOption::Float { .. } => "float".to_doc(),
-        BitStringSegmentOption::BitString { .. } => "bit_string".to_doc(),
-        BitStringSegmentOption::UTF8 { .. } => "utf8".to_doc(),
-        BitStringSegmentOption::UTF16 { .. } => "utf16".to_doc(),
-        BitStringSegmentOption::UTF32 { .. } => "utf32".to_doc(),
-        BitStringSegmentOption::UTF8Codepoint { .. } => "utf8_codepoint".to_doc(),
-        BitStringSegmentOption::UTF16Codepoint { .. } => "utf16_codepoint".to_doc(),
-        BitStringSegmentOption::UTF32Codepoint { .. } => "utf32_codepoint".to_doc(),
-        BitStringSegmentOption::Signed { .. } => "signed".to_doc(),
-        BitStringSegmentOption::Unsigned { .. } => "unsigned".to_doc(),
-        BitStringSegmentOption::Big { .. } => "big".to_doc(),
-        BitStringSegmentOption::Little { .. } => "little".to_doc(),
-        BitStringSegmentOption::Native { .. } => "native".to_doc(),
-
-        BitStringSegmentOption::Size {
-            value,
-            short_form: false,
-            ..
-        } => "size"
-            .to_doc()
-            .append("(")
-            .append(to_doc(value.as_ref()))
-            .append(")"),
-
-        BitStringSegmentOption::Size {
-            value,
-            short_form: true,
-            ..
-        } => to_doc(value.as_ref()),
-
-        BitStringSegmentOption::Unit {
-            value,
-            short_form: false,
-            ..
-        } => "unit"
-            .to_doc()
-            .append("(")
-            .append(to_doc(value.as_ref()))
-            .append(")"),
-
-        BitStringSegmentOption::Unit {
-            value,
-            short_form: true,
-            ..
-        } => to_doc(value.as_ref()),
     }
 }
 
