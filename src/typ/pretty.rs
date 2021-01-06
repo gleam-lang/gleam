@@ -30,7 +30,7 @@ impl Printer {
 
     /// Render a Type as a well formatted string.
     ///
-    pub fn pretty_print<'a>(&'a mut self, typ: &'a Type, initial_indent: usize) -> String {
+    pub fn pretty_print<'a, 'b>(&'b mut self, typ: &'a Type, initial_indent: usize) -> String {
         let mut buffer = String::with_capacity(initial_indent);
         for _ in 0..initial_indent {
             buffer.push(' ');
@@ -42,7 +42,7 @@ impl Printer {
             .to_pretty_string(80)
     }
 
-    pub fn print<'a>(&'a mut self, typ: &'a Type) -> Document<'a> {
+    pub fn print<'a, 'b>(&'b mut self, typ: &'a Type) -> Document<'a> {
         match typ {
             Type::App { name, args, .. } => {
                 if args.is_empty() {
@@ -75,7 +75,7 @@ impl Printer {
         }
     }
 
-    fn type_var_doc<'a>(&'a mut self, typ: &'a TypeVar) -> Document<'a> {
+    fn type_var_doc<'a, 'b>(&'b mut self, typ: &'a TypeVar) -> Document<'a> {
         match typ {
             TypeVar::Link { ref typ, .. } => self.print(typ),
 
@@ -114,7 +114,7 @@ impl Printer {
         chars.into_iter().rev().collect()
     }
 
-    fn args_to_gleam_doc<'a>(&'a mut self, args: &'a [Arc<Type>]) -> Document<'a> {
+    fn args_to_gleam_doc<'a, 'b>(&'b mut self, args: &'a [Arc<Type>]) -> Document<'a> {
         match args.len() {
             0 => nil(),
             len => {

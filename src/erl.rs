@@ -56,6 +56,74 @@ pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
     files
 }
 
+macro_rules! map_intersperse {
+    ($env:expr, $method:ident, $elems:expr, $delim:expr) => {{
+        let mut docs = Vec::with_capacity($elems.len() * 2 - 1);
+        for (i, a) in $elems.iter().enumerate() {
+            if i != 0 {
+                docs.push($delim);
+                docs.push($method(a, $env));
+            }
+        }
+        docs.to_doc()
+    }};
+}
+
+macro_rules! collection {
+    ($env:expr, $method:ident, $elems:expr, $open:expr, $close:expr) => {{
+        map_intersperse!($env, $method, $elems, delim(","))
+            .nest_current()
+            .surround($open, $close)
+            .group()
+    }};
+}
+
+macro_rules! tag_tuple {
+    ($env:expr, $method:ident, $tag:expr,$elems:expr) => {{
+        let mut docs = Vec::with_capacity($elems.len() * 2 + 1);
+        docs.push(atom($tag));
+        for (i, a) in $elems.iter().enumerate() {
+            docs.push(delim(","));
+            docs.push($method(a, $env));
+        }
+        docs.to_doc()
+    }};
+}
+
+macro_rules! tuple {
+    ($env:expr, $method:ident, $elems:expr) => {{
+        collection!($env, $method, $elems, "{", "}")
+    }};
+}
+
+macro_rules! bit_string {
+    ($env:expr, $method:ident, $elems:expr) => {{
+        collection!($env, $method, $elems, "<<", ">>")
+    }};
+}
+
+macro_rules! wrap_args {
+    ($env:expr, $method:ident, $elems:expr) => {{
+        let mut docs = Vec::with_capacity($elems.len() * 2 - 1);
+        for (i, a) in $elems.iter().enumerate() {
+            if i != 0 {
+                docs.push(delim(","));
+                docs.push($method(a, $env));
+            }
+        }
+        wrap_args_docs(docs)
+    }};
+}
+
+fn wrap_args_docs<'a>(docs: Vec<Document<'a>>) -> Document<'a> {
+    break_("", "")
+        .append(docs)
+        .nest(INDENT)
+        .append(break_("", ""))
+        .surround("(", ")")
+        .group()
+}
+
 #[derive(Debug, Clone)]
 struct Env<'a> {
     module: &'a [String],
@@ -238,28 +306,24 @@ fn mod_fun<'a>(
 }
 
 fn fun_args<'a>(args: &'a [TypedArg], env: &'a mut Env<'a>) -> Document<'a> {
-    wrap_args(args.iter().map(|a| match &a.names {
+    wrap_args!(env, fun_arg, args)
+}
+
+fn fun_arg<'a>(arg: &'a TypedArg, env: &'a mut Env<'a>) -> Document<'a> {
+    match &arg.names {
         ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => "_".to_doc(),
         ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
             env.next_local_var_name(name.to_string())
         }
-    }))
+    }
 }
 
 fn call_args<'a>(args: &'a [CallArg<TypedExpr>], env: &'a mut Env<'a>) -> Document<'a> {
-    wrap_args(args.iter().map(|arg| maybe_block_expr(&arg.value, env)))
+    wrap_args!(env, call_arg_expr, args)
 }
 
-fn wrap_args<'a, I>(args: I) -> Document<'a>
-where
-    I: Iterator<Item = Document<'a>>,
-{
-    break_("", "")
-        .append(concat(args.intersperse(delim(","))))
-        .nest(INDENT)
-        .append(break_("", ""))
-        .surround("(", ")")
-        .group()
+fn call_arg_expr<'a>(arg: &'a CallArg<TypedExpr>, env: &'a mut Env<'a>) -> Document<'a> {
+    maybe_block_expr(&arg.value, env)
 }
 
 fn atom<'a>(value: String) -> Document<'a> {
@@ -284,26 +348,12 @@ fn string<'a>(value: &'a str) -> Document<'a> {
     value.to_doc().surround("<<\"", "\"/utf8>>")
 }
 
-fn tuple<'a>(elems: impl Iterator<Item = Document<'a>>) -> Document<'a> {
-    concat(elems.intersperse(delim(",")))
-        .nest_current()
-        .surround("{", "}")
-        .group()
-}
-
-fn bit_string<'a>(elems: impl Iterator<Item = Document<'a>>) -> Document<'a> {
-    concat(elems.intersperse(delim(",")))
-        .nest_current()
-        .surround("<<", ">>")
-        .group()
-}
-
 fn const_segment<'a>(
-    value: &'a TypedConstant,
-    options: Vec<BitStringSegmentOption<TypedConstant>>,
+    segment: &'a TypedConstantBitStringSegment,
     env: &'a mut Env<'a>,
 ) -> Document<'a> {
-    let document = match value {
+    let BitStringSegment { value, options, .. } = segment;
+    let document = match value.as_ref() {
         // Skip the normal <<value/utf8>> surrounds
         Constant::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
 
@@ -332,14 +382,11 @@ fn const_segment<'a>(
     bit_string_segment(document, options, size, unit, true, env)
 }
 
-fn expr_segment<'a>(
-    value: &'a TypedExpr,
-    options: Vec<BitStringSegmentOption<TypedExpr>>,
-    env: &'a mut Env<'a>,
-) -> Document<'a> {
+fn expr_segment<'a>(segment: &'a TypedExprBitStringSegment, env: &'a mut Env<'a>) -> Document<'a> {
+    let BitStringSegment { value, options, .. } = segment;
     let mut value_is_a_string_literal = false;
 
-    let document = match value {
+    let document = match value.as_ref() {
         // Skip the normal <<value/utf8>> surrounds and set the string literal flag
         TypedExpr::String { value, .. } => {
             value_is_a_string_literal = true;
@@ -379,11 +426,11 @@ fn expr_segment<'a>(
 }
 
 fn pattern_segment<'a>(
-    value: &'a TypedPattern,
-    options: Vec<BitStringSegmentOption<TypedPattern>>,
+    segment: &'a TypedPatternBitStringSegment,
     env: &'a mut Env<'a>,
 ) -> Document<'a> {
-    let document = match value {
+    let BitStringSegment { value, options, .. } = segment;
+    let document = match value.as_ref() {
         // Skip the normal <<value/utf8>> surrounds
         Pattern::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
 
@@ -411,7 +458,7 @@ fn pattern_segment<'a>(
 
 fn bit_string_segment<'a, Value, SizeToDoc, UnitToDoc>(
     mut document: Document<'a>,
-    options: Vec<BitStringSegmentOption<Value>>,
+    options: &'a [BitStringSegmentOption<Value>],
     mut size_to_doc: SizeToDoc,
     mut unit_to_doc: UnitToDoc,
     value_is_a_string_literal: bool,
@@ -435,26 +482,28 @@ where
         None
     };
 
-    options.iter().for_each(|option| match option {
-        BitStringSegmentOption::Invalid { .. } => (),
-        BitStringSegmentOption::Integer { .. } => others.push("integer"),
-        BitStringSegmentOption::Float { .. } => others.push("float"),
-        BitStringSegmentOption::Binary { .. } => others.push("binary"),
-        BitStringSegmentOption::BitString { .. } => others.push("bitstring"),
-        BitStringSegmentOption::UTF8 { .. } => others.push(override_type.unwrap_or("utf8")),
-        BitStringSegmentOption::UTF16 { .. } => others.push(override_type.unwrap_or("utf16")),
-        BitStringSegmentOption::UTF32 { .. } => others.push(override_type.unwrap_or("utf32")),
-        BitStringSegmentOption::UTF8Codepoint { .. } => others.push("utf8"),
-        BitStringSegmentOption::UTF16Codepoint { .. } => others.push("utf16"),
-        BitStringSegmentOption::UTF32Codepoint { .. } => others.push("utf32"),
-        BitStringSegmentOption::Signed { .. } => others.push("signed"),
-        BitStringSegmentOption::Unsigned { .. } => others.push("unsigned"),
-        BitStringSegmentOption::Big { .. } => others.push("big"),
-        BitStringSegmentOption::Little { .. } => others.push("little"),
-        BitStringSegmentOption::Native { .. } => others.push("native"),
-        BitStringSegmentOption::Size { value, .. } => size = size_to_doc(value, env),
-        BitStringSegmentOption::Unit { value, .. } => unit = unit_to_doc(value, env),
-    });
+    for option in options {
+        match option {
+            BitStringSegmentOption::Invalid { .. } => (),
+            BitStringSegmentOption::Integer { .. } => others.push("integer"),
+            BitStringSegmentOption::Float { .. } => others.push("float"),
+            BitStringSegmentOption::Binary { .. } => others.push("binary"),
+            BitStringSegmentOption::BitString { .. } => others.push("bitstring"),
+            BitStringSegmentOption::UTF8 { .. } => others.push(override_type.unwrap_or("utf8")),
+            BitStringSegmentOption::UTF16 { .. } => others.push(override_type.unwrap_or("utf16")),
+            BitStringSegmentOption::UTF32 { .. } => others.push(override_type.unwrap_or("utf32")),
+            BitStringSegmentOption::UTF8Codepoint { .. } => others.push("utf8"),
+            BitStringSegmentOption::UTF16Codepoint { .. } => others.push("utf16"),
+            BitStringSegmentOption::UTF32Codepoint { .. } => others.push("utf32"),
+            BitStringSegmentOption::Signed { .. } => others.push("signed"),
+            BitStringSegmentOption::Unsigned { .. } => others.push("unsigned"),
+            BitStringSegmentOption::Big { .. } => others.push("big"),
+            BitStringSegmentOption::Little { .. } => others.push("little"),
+            BitStringSegmentOption::Native { .. } => others.push("native"),
+            BitStringSegmentOption::Size { value, .. } => size = size_to_doc(value, env),
+            BitStringSegmentOption::Unit { value, .. } => unit = unit_to_doc(value, env),
+        }
+    }
 
     document = document.append(size);
 
@@ -611,13 +660,9 @@ fn pattern<'a>(p: &'a TypedPattern, env: &'a mut Env<'a>) -> Document<'a> {
             ..
         } => tag_tuple_pattern(name, args, env),
 
-        Pattern::Tuple { elems, .. } => tuple(elems.iter().map(|p| pattern(p, env))),
+        Pattern::Tuple { elems, .. } => tuple!(env, pattern, elems),
 
-        Pattern::BitString { segments, .. } => bit_string(
-            segments
-                .iter()
-                .map(|s| pattern_segment(&s.value, s.options.clone(), env)),
-        ),
+        Pattern::BitString { segments, .. } => bit_string!(env, pattern_segment, segments),
     }
 }
 
@@ -671,20 +716,24 @@ where
     let mut elems = vec![head];
     let final_tail = collect_cons(tail, &mut elems, categorise_element);
 
-    let elems = concat(
-        elems
-            .into_iter()
-            .map(|e| to_doc(e, env))
-            .intersperse(delim(",")),
-    );
+    let mut elems_docs = Vec::with_capacity(elems.len() * 2 + 2);
+    for (i, elem) in elems.iter().enumerate() {
+        if i != 0 {
+            elems_docs.push(delim(","))
+        }
+        elems_docs.push(to_doc(*elem, env))
+    }
 
-    let elems = if let Some(final_tail) = final_tail {
-        elems.append(delim(" |")).append(to_doc(final_tail, env))
-    } else {
-        elems
-    };
+    if let Some(final_tail) = final_tail {
+        elems_docs.push(delim(" |"));
+        elems_docs.push(to_doc(final_tail, env));
+    }
 
-    elems.to_doc().nest_current().surround("[", "]").group()
+    elems_docs
+        .to_doc()
+        .nest_current()
+        .surround("[", "]")
+        .group()
 }
 
 fn collect_cons<F, E, T>(e: T, elems: &mut Vec<E>, f: F) -> Option<T>
@@ -769,32 +818,31 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &'a mut Env<'a>) -> Documen
         Constant::Int { value, .. } => int(value),
         Constant::Float { value, .. } => float(value),
         Constant::String { value, .. } => string(value),
-        Constant::Tuple { elements, .. } => tuple(elements.iter().map(|e| const_inline(e, env))),
+        Constant::Tuple { elements, .. } => tuple!(env, const_inline, elements),
 
         Constant::List { elements, .. } => {
-            let elements = elements
-                .iter()
-                .map(|e| const_inline(e, env))
-                .intersperse(delim(","));
-            concat(elements).nest_current().surround("[", "]").group()
+            map_intersperse!(env, const_inline, elements, delim(","))
+                .nest_current()
+                .surround("[", "]")
+                .group()
         }
 
-        Constant::BitString { segments, .. } => bit_string(
-            segments
-                .iter()
-                .map(|s| const_segment(&s.value, s.options.clone(), env)),
-        ),
+        Constant::BitString { segments, .. } => {
+            bit_string!(env, const_segment, segments)
+        }
 
         Constant::Record { tag, args, .. } => {
             if args.is_empty() {
                 atom(tag.to_snake_case())
             } else {
-                let args = args.iter().map(|a| const_inline(&a.value, env));
-                let tag = atom(tag.to_snake_case());
-                tuple(std::iter::once(tag).chain(args))
+                tag_tuple!(env, arg_const_inline, tag.to_snake_case(), args)
             }
         }
     }
+}
+
+fn arg_const_inline<'a>(arg: &'a CallArg<TypedConstant>, env: &'a mut Env<'a>) -> Document<'a> {
+    const_inline(&arg.value, env)
 }
 
 fn tag_tuple_pattern<'a>(
@@ -805,11 +853,12 @@ fn tag_tuple_pattern<'a>(
     if args.is_empty() {
         atom(name.to_snake_case())
     } else {
-        tuple(
-            std::iter::once(atom(name.to_snake_case()))
-                .chain(args.iter().map(|p| pattern(&p.value, env))),
-        )
+        tag_tuple!(env, call_arg_pattern, name.to_snake_case(), args)
     }
+}
+
+fn call_arg_pattern<'a>(arg: &'a CallArg<TypedPattern>, env: &'a mut Env<'a>) -> Document<'a> {
+    pattern(&arg.value, env)
 }
 
 fn clause<'a>(clause: &'a TypedClause, env: &'a mut Env<'a>) -> Document<'a> {
@@ -826,33 +875,57 @@ fn clause<'a>(clause: &'a TypedClause, env: &'a mut Env<'a>) -> Document<'a> {
     let mut then_doc = Document::Nil;
     let erlang_vars = env.erl_function_scope_vars.clone();
 
-    let docs = std::iter::once(pat)
-        .chain(alternative_patterns.iter())
-        .map(|patterns| {
-            env.erl_function_scope_vars = erlang_vars.clone();
+    let docs = Vec::with_capacity(alternative_patterns.len() * 2 + 1);
+    docs.push(alt_patterns(
+        pat,
+        erlang_vars,
+        guard,
+        then,
+        &mut then_doc,
+        env,
+    ));
+    for patterns in alternative_patterns {
+        docs.push(";".to_doc().append(lines(2)));
+        docs.push(alt_patterns(
+            patterns,
+            erlang_vars,
+            guard,
+            then,
+            &mut then_doc,
+            env,
+        ));
+    }
+    docs.to_doc()
+}
 
-            let patterns_doc = if patterns.len() == 1 {
-                let p = patterns
-                    .get(0)
-                    .gleam_expect("Single pattern clause printing");
-                pattern(p, env)
-            } else {
-                tuple(patterns.iter().map(|p| pattern(p, env)))
-            };
+fn alt_patterns<'a>(
+    patterns: &'a TypedMultiPattern,
+    erlang_vars: im::HashMap<String, usize>,
+    guard: &'a Option<TypedClauseGuard>,
+    then: &'a TypedExpr,
+    then_doc: &'a mut Document<'a>,
+    env: &'a mut Env<'a>,
+) -> Document<'a> {
+    env.erl_function_scope_vars = erlang_vars.clone();
 
-            if then_doc == Document::Nil {
-                then_doc = expr(then, env);
-            }
+    let patterns_doc = if patterns.len() == 1 {
+        let p = patterns
+            .get(0)
+            .gleam_expect("Single pattern clause printing");
+        pattern(p, env)
+    } else {
+        tuple!(env, pattern, patterns)
+    };
 
-            patterns_doc.append(
-                optional_clause_guard(guard.as_ref(), env)
-                    .append(" ->")
-                    .append(line().append(then_doc.clone()).nest(INDENT).group()),
-            )
-        })
-        .intersperse(";".to_doc().append(lines(2)));
+    if &Document::Nil == then_doc {
+        *then_doc = expr(then, env);
+    }
 
-    concat(docs)
+    patterns_doc.append(
+        optional_clause_guard(guard.as_ref(), env)
+            .append(" ->")
+            .append(line().append(then_doc.clone()).nest(INDENT).group()),
+    )
 }
 
 fn optional_clause_guard<'a>(
@@ -930,11 +1003,11 @@ fn tuple_index_inline<'a>(
     index: u64,
     env: &'a mut Env<'a>,
 ) -> Document<'a> {
-    use std::iter::once;
-    let index_doc = format!("{}", (index + 1)).to_doc();
-    let tuple_doc = bare_clause_guard(tuple, env);
-    let iter = once(index_doc).chain(once(tuple_doc));
-    "erlang:element".to_doc().append(wrap_args(iter))
+    "erlang:element".to_doc().append(wrap_args_docs(vec![
+        format!("{}", (index + 1)).to_doc(),
+        delim(","),
+        bare_clause_guard(tuple, env),
+    ]))
 }
 
 fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &'a mut Env<'a>) -> Document<'a> {
@@ -964,16 +1037,14 @@ fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &'a mut Env<'a>) -> Docume
 }
 
 fn clauses<'a>(cs: &'a [TypedClause], env: &'a mut Env<'a>) -> Document<'a> {
-    concat(
-        cs.iter()
-            .map(|c| {
-                let vars = env.current_scope_vars.clone();
-                let erl = clause(c, env);
-                env.current_scope_vars = vars; // Reset the known variables now the clauses' scope has ended
-                erl
-            })
-            .intersperse(";".to_doc().append(lines(2))),
-    )
+    map_intersperse!(env, clause_with_reset, cs, ";".to_doc().append(lines(2)))
+}
+
+fn clause_with_reset<'a>(c: &'a TypedClause, env: &'a mut Env<'a>) -> Document<'a> {
+    let vars = env.current_scope_vars.clone();
+    let erl = clause(c, env);
+    env.current_scope_vars = vars; // Reset the known variables now the clauses' scope has ended
+    erl
 }
 
 fn case<'a>(
@@ -987,7 +1058,7 @@ fn case<'a>(
             .gleam_expect("erl case printing of single subject");
         maybe_block_expr(subject, env).group()
     } else {
-        tuple(subjects.iter().map(|e| maybe_block_expr(e, env)))
+        tuple!(env, maybe_block_expr, subjects)
     };
     "case "
         .to_doc()
@@ -1016,10 +1087,7 @@ fn call<'a>(
                     ..
                 },
             ..
-        } => tuple(
-            std::iter::once(atom(name.to_snake_case()))
-                .chain(args.iter().map(|arg| expr(&arg.value, env))),
-        ),
+        } => tag_tuple!(env, call_arg_expr, name.to_snake_case(), args),
 
         TypedExpr::Var {
             constructor:
@@ -1102,8 +1170,9 @@ fn record_update<'a>(
     env: &'a mut Env<'a>,
 ) -> Document<'a> {
     use std::iter::once;
+    let mut tuple_doc = expr(spread, env);
 
-    args.iter().fold(expr(spread, env), |tuple_doc, arg| {
+    for arg in args {
         // Increment the index by 2, because the first element
         // is the name of the record, so our fields are 2-indexed
         let index_doc = (arg.index + 2).to_doc();
@@ -1111,10 +1180,13 @@ fn record_update<'a>(
 
         let iter = once(index_doc)
             .chain(once(tuple_doc))
-            .chain(once(value_doc));
+            .chain(once(value_doc))
+            .intersperse(delim(","))
+            .collect();
 
-        "erlang:setelement".to_doc().append(wrap_args(iter))
-    })
+        tuple_doc = "erlang:setelement".to_doc().append(wrap_args_docs(iter));
+    }
+    tuple_doc
 }
 
 /// Wrap a document in begin end
@@ -1225,13 +1297,9 @@ fn expr<'a>(expression: &'a TypedExpr, env: &'a mut Env<'a>) -> Document<'a> {
             name, left, right, ..
         } => bin_op(name, left, right, env),
 
-        TypedExpr::Tuple { elems, .. } => tuple(elems.iter().map(|e| maybe_block_expr(e, env))),
+        TypedExpr::Tuple { elems, .. } => tuple!(env, maybe_block_expr, elems),
 
-        TypedExpr::BitString { segments, .. } => bit_string(
-            segments
-                .iter()
-                .map(|s| expr_segment(&s.value, s.options.clone(), env)),
-        ),
+        TypedExpr::BitString { segments, .. } => bit_string!(env, expr_segment, segments),
     }
 }
 
@@ -1239,8 +1307,8 @@ fn tuple_index<'a>(tuple: &'a TypedExpr, index: u64, env: &'a mut Env<'a>) -> Do
     use std::iter::once;
     let index_doc = format!("{}", (index + 1)).to_doc();
     let tuple_doc = expr(tuple, env);
-    let iter = once(index_doc).chain(once(tuple_doc));
-    "erlang:element".to_doc().append(wrap_args(iter))
+    let iter = once(index_doc).chain(once(tuple_doc)).collect();
+    "erlang:element".to_doc().append(wrap_args_docs(iter))
 }
 
 fn module_select_fn<'a>(typ: Arc<Type>, module_name: &'a [String], label: &'a str) -> Document<'a> {
