@@ -45,6 +45,35 @@ pub fn pretty(writer: &mut impl Utf8Writer, src: &str) -> Result<()> {
         .pretty_print(80, writer)
 }
 
+macro_rules! map_intersperse {
+    ($self:expr, $method:ident, $args:expr, $delim:expr) => {{
+        let mut args = $args.iter().peekable();
+        if args.peek().is_none() {
+            return "()".to_doc();
+        }
+        let mut args_doc = Vec::with_capacity(args.len() * 2 - 1);
+        for (i, a) in args.enumerate() {
+            if i != 0 {
+                args_doc.push($delim);
+                args_doc.push($self.$method(a));
+            }
+        }
+        args_doc
+    }};
+}
+
+macro_rules! wrap_args {
+    ($self:expr, $method:ident, $args:expr) => {{
+        let args_doc = map_intersperse!($self, $method, $args, delim(","));
+        wrap_args_doc(args_doc)
+    }};
+
+    ($self:expr, $method:ident, $args:expr, $delim:expr) => {{
+        let args_doc = map_intersperse!($self, $method, $args, $delim);
+        wrap_args_doc(args_doc)
+    }};
+}
+
 struct Intermediate<'a> {
     comments: Vec<Comment<'a>>,
     doc_comments: Vec<Comment<'a>>,
@@ -293,7 +322,7 @@ impl<'a> Formatter<'a> {
 
             Constant::Tuple { elements, .. } => "tuple"
                 .to_doc()
-                .append(wrap_args(elements.iter().map(|e| self.const_expr(e))))
+                .append(wrap_args!(self, const_expr, elements))
                 .group(),
 
             Constant::BitString { segments, .. } => bit_string(
@@ -325,7 +354,7 @@ impl<'a> Formatter<'a> {
             } => name
                 .to_string()
                 .to_doc()
-                .append(wrap_args(args.iter().map(|a| self.constant_call_arg(a))))
+                .append(wrap_args!(self, constant_call_arg, args))
                 .group(),
 
             Constant::Record {
@@ -338,7 +367,7 @@ impl<'a> Formatter<'a> {
                 .to_doc()
                 .append(".")
                 .append(name.to_string())
-                .append(wrap_args(args.iter().map(|a| self.constant_call_arg(a))))
+                .append(wrap_args!(self, constant_call_arg, args))
                 .group(),
         }
     }
@@ -393,7 +422,7 @@ impl<'a> Formatter<'a> {
         if args.is_empty() {
             head
         } else {
-            head.append(self.type_arguments(args))
+            head.append(wrap_args!(self, type_ast, args))
         }
     }
 
@@ -408,20 +437,22 @@ impl<'a> Formatter<'a> {
             TypeAst::Fn { args, retrn, .. } => "fn"
                 .to_string()
                 .to_doc()
-                .append(self.type_arguments(args))
+                .append(wrap_args!(self, type_ast, args))
                 .group()
                 .append(" ->")
                 .append(break_("", " ").append(self.type_ast(retrn)).nest(INDENT)),
 
             TypeAst::Var { name, .. } => name.clone().to_doc(),
 
-            TypeAst::Tuple { elems, .. } => "tuple".to_doc().append(self.type_arguments(elems)),
+            TypeAst::Tuple { elems, .. } => {
+                "tuple".to_doc().append(wrap_args!(self, type_ast, elems))
+            }
         }
         .group()
     }
 
-    fn type_arguments(&'a mut self, args: &'a [TypeAst]) -> Document<'a> {
-        wrap_args(args.iter().map(|t| self.type_ast(t)))
+    pub fn str_doc(&'a self, s: &'a str) -> Document<'a> {
+        s.to_doc()
     }
 
     pub fn type_alias(
@@ -436,7 +467,7 @@ impl<'a> Formatter<'a> {
         let head = if args.is_empty() {
             head
         } else {
-            head.append(wrap_args(args.iter().map(|e| e.clone().to_doc())).group())
+            head.append(wrap_args!(self, str_doc, args).group())
         };
 
         head.append(" =")
@@ -466,7 +497,7 @@ impl<'a> Formatter<'a> {
         let head = pub_(public)
             .append("fn ")
             .append(name)
-            .append(wrap_args(args.iter().map(|e| self.fn_arg(e))));
+            .append(wrap_args!(self, fn_arg, args));
 
         // Add return annotation
         let head = match return_annotation {
@@ -1102,7 +1133,7 @@ impl<'a> Formatter<'a> {
         let clause_doc = concat(
             std::iter::once(&clause.pattern)
                 .chain(clause.alternative_patterns.iter())
-                .map(|p| concat(p.iter().map(|p| self.pattern(p)).intersperse(", ".to_doc())))
+                .map(|patterns| wrap_args!(self, pattern, patterns, ", ".to_doc()))
                 .intersperse(" | ".to_doc()),
         );
         let clause_doc = match &clause.guard {
@@ -1148,9 +1179,15 @@ impl<'a> Formatter<'a> {
             } else {
                 || delim(",")
             };
-        let elems = concat(elems.iter().map(|e| self.wrap_expr(e)).intersperse(comma()));
+        let mut elem_docs = Vec::with_capacity(elems.len() * 2 - 1);
+        for (i, e) in elems.iter().enumerate() {
+            if i != 0 {
+                elem_docs.push(comma());
+                elem_docs.push(self.wrap_expr(e));
+            }
+        }
         let tail = tail.map(|e| self.expr(e));
-        list(elems, tail)
+        list(Document::Vec(elem_docs), tail)
     }
 
     fn pattern(&'a mut self, pattern: &'a UntypedPattern) -> Document<'a> {
@@ -1306,6 +1343,14 @@ impl<'a> Formatter<'a> {
     }
 }
 
+fn wrap_args_doc(args_doc: Vec<Document<'_>>) -> Document<'_> {
+    break_("(", "(")
+        .append(args_doc)
+        .nest(INDENT)
+        .append(break_(",", ""))
+        .append(")")
+}
+
 impl<'a> Documentable<'a> for &'a ArgNames {
     fn to_doc(self) -> Document<'a> {
         match self {
@@ -1389,21 +1434,6 @@ fn categorise_list_pattern(expr: &UntypedPattern) -> ListType<&UntypedPattern, &
 
         other => ListType::NotList(other),
     }
-}
-
-pub fn wrap_args<'a, I>(args: I) -> Document<'a>
-where
-    I: Iterator<Item = Document<'a>> + 'a,
-{
-    let mut args = args.peekable();
-    if args.peek().is_none() {
-        return "()".to_doc();
-    }
-    break_("(", "(")
-        .append(concat(args.intersperse(delim(","))))
-        .nest(INDENT)
-        .append(break_(",", ""))
-        .append(")")
 }
 
 pub fn wrap_args_with_spread<'a, I>(args: I) -> Document<'a>
