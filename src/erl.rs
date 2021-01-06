@@ -180,7 +180,7 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
         .append(line())
         .append("-compile(no_auto_import).")
         .append(lines(2))
-        .append(if exports == nil() {
+        .append(if exports.is_nil() {
             nil()
         } else {
             "-export(["

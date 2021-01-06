@@ -84,11 +84,8 @@ impl<D: Documentable> Documentable for Option<D> {
     }
 }
 
-pub fn concat(mut docs: impl Iterator<Item = Document>) -> Document {
-    let init = docs.next().unwrap_or_else(nil);
-    docs.fold(init, |acc, doc| {
-        Document::Cons(Box::new(acc), Box::new(doc))
-    })
+pub fn concat(docs: impl Iterator<Item = Document>) -> Document {
+    Document::Vec(docs.collect())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -108,8 +105,8 @@ pub enum Document {
     /// Renders `broken` if group is broken, `unbroken` otherwise
     Break { broken: String, unbroken: String },
 
-    /// Join 2 documents together
-    Cons(Box<Document>, Box<Document>),
+    /// Join multiple documents together
+    Vec(Vec<Document>),
 
     /// Nests the given document by the given indent
     Nest(isize, Box<Document>),
@@ -164,9 +161,10 @@ fn fits(mut limit: isize, mut docs: im::Vector<(isize, Mode, Document)>) -> bool
 
             Document::FlexBreak(doc) => docs.push_front((indent, mode, *doc)),
 
-            Document::Cons(left, right) => {
-                docs.push_front((indent, mode.clone(), *right));
-                docs.push_front((indent, mode, *left));
+            Document::Vec(vec) => {
+                for doc in vec.into_iter().rev() {
+                    docs.push_front((indent, mode.clone(), doc));
+                }
             }
         }
     }
@@ -210,9 +208,10 @@ fn fmt(
                 writer.str_write(s.as_str())?;
             }
 
-            Document::Cons(left, right) => {
-                docs.push_front((indent, mode.clone(), *right));
-                docs.push_front((indent, mode, *left));
+            Document::Vec(vec) => {
+                for doc in vec.into_iter().rev() {
+                    docs.push_front((indent, mode.clone(), doc));
+                }
             }
 
             Document::Nest(i, doc) => {
@@ -284,8 +283,14 @@ impl Document {
         Self::NestCurrent(Box::new(self))
     }
 
-    pub fn append(self, x: impl Documentable) -> Self {
-        Self::Cons(Box::new(self), Box::new(x.to_doc()))
+    pub fn append(self, second: impl Documentable) -> Self {
+        match self {
+            Self::Vec(mut vec) => {
+                vec.push(second.to_doc());
+                Self::Vec(vec)
+            }
+            first => Self::Vec(vec![first, second.to_doc()]),
+        }
     }
 
     pub fn to_pretty_string(self, limit: isize) -> String {
@@ -297,6 +302,20 @@ impl Document {
 
     pub fn surround(self, open: impl Documentable, closed: impl Documentable) -> Self {
         open.to_doc().append(self).append(closed)
+    }
+
+    pub fn is_nil(&self) -> bool {
+        match self {
+            Document::Nil => true,
+            Document::Line(_) => false,
+            Document::ForceBreak => false,
+            Document::Break { .. } => false,
+            Document::Vec(vec) => vec.is_empty(),
+            Document::Nest(_, _) => false,
+            Document::NestCurrent(_) => false,
+            Document::Text(s) => s.is_empty(),
+            Document::Group(doc) | Document::FlexBreak(doc) => doc.is_nil(),
+        }
     }
 
     // TODO: return a result

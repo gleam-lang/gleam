@@ -67,10 +67,7 @@ fn fits_test() {
         vector![(
             0,
             Broken,
-            Cons(
-                Box::new(Text("1".to_string())),
-                Box::new(Text("2".to_string()))
-            )
+            Text("1".to_string()).append(Text("2".to_string()))
         )]
     ));
     assert!(fits(
@@ -78,10 +75,7 @@ fn fits_test() {
         vector![(
             0,
             Unbroken,
-            Cons(
-                Box::new(Text("1".to_string())),
-                Box::new(Text("2".to_string()))
-            )
+            Text("1".to_string()).append(Text("2".to_string()))
         )]
     ));
     assert!(!fits(
@@ -89,10 +83,7 @@ fn fits_test() {
         vector![(
             0,
             Broken,
-            Cons(
-                Box::new(Text("1".to_string())),
-                Box::new(Text("2".to_string()))
-            )
+            Text("1".to_string()).append(Text("2".to_string()))
         )]
     ));
     assert!(!fits(
@@ -100,10 +91,7 @@ fn fits_test() {
         vector![(
             0,
             Unbroken,
-            Cons(
-                Box::new(Text("1".to_string())),
-                Box::new(Text("2".to_string()))
-            )
+            Text("1".to_string()).append(Text("2".to_string()))
         )]
     ));
 
@@ -149,10 +137,7 @@ fn format_test() {
     let doc = Text("Hi".to_string());
     assert_eq!("Hi".to_string(), doc.to_pretty_string(10));
 
-    let doc = Cons(
-        Box::new(Text("Hi".to_string())),
-        Box::new(Text(", world!".to_string())),
-    );
+    let doc = Text("Hi".to_string()).append(Text(", world!".to_string()));
     assert_eq!("Hi, world!".to_string(), doc.to_pretty_string(10));
 
     let doc = Nil;
@@ -174,29 +159,18 @@ fn format_test() {
 
     let doc = Nest(
         2,
-        Box::new(Cons(
-            Box::new(Text("1".to_string())),
-            Box::new(Cons(Box::new(Line(1)), Box::new(Text("2".to_string())))),
-        )),
+        Box::new(Text("1".to_string()).append(Line(1).append(Text("2".to_string())))),
     );
     assert_eq!("1\n  2".to_string(), doc.to_pretty_string(1));
 
-    let doc = Cons(
-        Box::new(Text("111".to_string())),
-        Box::new(NestCurrent(Box::new(Cons(
-            Box::new(Line(1)),
-            Box::new(Text("2".to_string())),
-        )))),
-    );
+    let doc = Text("111".to_string())
+        .append(NestCurrent(Box::new(Line(1).append(Text("2".to_string())))));
     assert_eq!("111\n   2".to_string(), doc.to_pretty_string(1));
 
-    let doc = Cons(
-        Box::new(ForceBreak),
-        Box::new(Break {
-            broken: "broken".to_string(),
-            unbroken: "unbroken".to_string(),
-        }),
-    );
+    let doc = ForceBreak.append(Break {
+        broken: "broken".to_string(),
+        unbroken: "unbroken".to_string(),
+    });
     assert_eq!("broken\n".to_string(), doc.to_pretty_string(100));
 }
 
