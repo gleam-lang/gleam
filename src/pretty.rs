@@ -307,12 +307,12 @@ impl Document {
     pub fn is_nil(&self) -> bool {
         match self {
             Document::Nil => true,
-            Document::Line(_) => false,
-            Document::ForceBreak => false,
-            Document::Break { .. } => false,
+            Document::Line(_)
+            | Document::ForceBreak
+            | Document::Break { .. }
+            | Document::Nest(_, _)
+            | Document::NestCurrent(_) => false,
             Document::Vec(vec) => vec.is_empty(),
-            Document::Nest(_, _) => false,
-            Document::NestCurrent(_) => false,
             Document::Text(s) => s.is_empty(),
             Document::Group(doc) | Document::FlexBreak(doc) => doc.is_nil(),
         }

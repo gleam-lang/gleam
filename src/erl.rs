@@ -475,6 +475,11 @@ fn seq(first: &TypedExpr, then: &TypedExpr, env: &mut Env<'_>) -> Document {
 }
 
 fn bin_op(name: &BinOp, left: &TypedExpr, right: &TypedExpr, env: &mut Env<'_>) -> Document {
+    let div_zero = match name {
+        BinOp::DivInt | BinOp::ModuloInt => Some("0"),
+        BinOp::DivFloat => Some("0.0"),
+        _ => None,
+    };
     let op = match name {
         BinOp::And => "andalso",
         BinOp::Or => "orelse",
@@ -505,11 +510,39 @@ fn bin_op(name: &BinOp, left: &TypedExpr, right: &TypedExpr, env: &mut Env<'_>) 
         _ => expr(right, env),
     };
 
-    left_expr
-        .append(break_("", " "))
-        .append(op)
-        .append(" ")
-        .append(right_expr)
+    let div = |left: Document, right: Document| {
+        left.append(break_("", " "))
+            .append(op)
+            .append(" ")
+            .append(right)
+    };
+
+    match div_zero {
+        Some(_) if right.non_zero_compile_time_number() => div(left_expr, right_expr),
+        None => div(left_expr, right_expr),
+
+        Some(zero) => {
+            let denominator = "gleam@denominator";
+            "case "
+                .to_doc()
+                .append(right_expr)
+                .append(" of")
+                .append(
+                    line()
+                        .append(zero)
+                        .append(" -> ")
+                        .append(zero)
+                        .append(";")
+                        .append(line())
+                        .append(env.next_local_var_name(denominator.to_string()))
+                        .append(" -> ")
+                        .append(div(left_expr, env.local_var_name(denominator.to_string())))
+                        .nest(INDENT),
+                )
+                .append(line())
+                .append("end")
+        }
+    }
 }
 
 fn pipe(value: &TypedExpr, fun: &TypedExpr, env: &mut Env<'_>) -> Document {
