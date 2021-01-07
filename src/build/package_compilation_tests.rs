@@ -472,7 +472,7 @@ x(P) ->\n    {point, X, _} = P,\n    X.\n"
                 origin: Origin::Src,
                 path: PathBuf::from("/src/one.gleam"),
                 name: "one".to_string(),
-                code: "pub fn div(top x, bottom y) { x/y }".to_string(),
+                code: "pub fn div(top x, bottom y) { x%y }".to_string(),
             },
             Source {
                 origin: Origin::Src,
@@ -487,7 +487,11 @@ x(P) ->\n    {point, X, _} = P,\n    X.\n"
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
                 text: "-module(one).\n-compile(no_auto_import).\n\n-export([\'div\'/2]).\n
-'div'(X, Y) ->\n    X div Y.\n"
+'div'(X, Y) ->
+    case Y of
+        0 -> 0;
+        Gleam@denominator -> X rem Gleam@denominator
+    end.\n"
                     .to_string(),
             },
             OutputFile {

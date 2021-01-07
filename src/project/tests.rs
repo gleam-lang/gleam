@@ -443,7 +443,11 @@ x(P) ->\n    {point, X, _} = P,\n    X.\n"
                 OutputFile {
                     path: PathBuf::from("/gen/src/one.erl"),
                     text: "-module(one).\n-compile(no_auto_import).\n\n-export([\'div\'/2]).\n
-'div'(X, Y) ->\n    X div Y.\n"
+'div'(X, Y) ->
+    case Y of
+        0 -> 0;
+        Gleam@denominator -> X div Gleam@denominator
+    end.\n"
                         .to_string(),
                 },
                 OutputFile {

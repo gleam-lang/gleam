@@ -271,8 +271,9 @@ go() ->
 
     assert_erl!(
         r#"fn and(x, y) { x && y }
-                    fn or(x, y) { x || y }
-                    fn modulo(x, y) { x % y }
+fn or(x, y) { x || y }
+fn modulo(x, y) { x % y }
+fn fdiv(x, y) { x /. y }
             "#,
         r#"-module(the_app).
 -compile(no_auto_import).
@@ -284,7 +285,16 @@ go() ->
     X orelse Y.
 
 modulo(X, Y) ->
-    X rem Y.
+    case Y of
+        0 -> 0;
+        Gleam@denominator -> X rem Gleam@denominator
+    end.
+
+fdiv(X, Y) ->
+    case Y of
+        0.0 -> 0.0;
+        Gleam@denominator -> X / Gleam@denominator
+    end.
 "#,
     );
 

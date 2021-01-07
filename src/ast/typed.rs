@@ -143,6 +143,17 @@ pub enum TypedExpr {
 }
 
 impl TypedExpr {
+    pub fn non_zero_compile_time_number(&self) -> bool {
+        use regex::Regex;
+        lazy_static! {
+            static ref NON_ZERO: Regex = Regex::new(r"[1-9]").unwrap();
+        }
+        match self {
+            Self::Int { value, .. } | Self::Float { value, .. } => NON_ZERO.is_match(value),
+            _ => false,
+        }
+    }
+
     pub fn location(&self) -> SrcSpan {
         match self {
             Self::Let { then, .. } | Self::Seq { then, .. } => then.location(),
