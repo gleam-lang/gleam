@@ -94,13 +94,17 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[derive(StructOpt, Debug)]
 #[structopt(global_settings = &[AppSettings::ColoredHelp, AppSettings::VersionlessSubcommands])]
 enum Command {
-    #[structopt(name = "build", about = "Compile a project")]
+    #[structopt(
+        name = "build",
+        about = "Compile a project",
+        setting = AppSettings::Hidden,
+    )]
     Build {
         #[structopt(help = "location of the project root", default_value = ".")]
         project_root: String,
     },
 
-    #[structopt(name = "docs", about = "Render HTML documentation for a project")]
+    #[structopt(name = "docs", about = "Render HTML documentation")]
     Docs(Docs),
 
     #[structopt(name = "new", about = "Create a new project")]
