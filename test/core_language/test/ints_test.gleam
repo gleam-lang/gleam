@@ -21,3 +21,10 @@ pub fn minus_lexing_test() {
   // 1- 1 should lex as 1 - 1
   should.equal({1- 1}, 0)
 }
+
+pub fn division_by_zero_test() {
+  should.equal(1 / 1, 1)
+  should.equal(1 / 0, 0)
+  should.equal(3 % 2, 1)
+  should.equal(3 % 0, 0)
+}
