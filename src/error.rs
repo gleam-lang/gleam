@@ -708,6 +708,7 @@ also be labelled.",
                     location,
                     expected,
                     given,
+                    note,
                 } => {
                     let diagnostic = Diagnostic {
                         title: "Type mismatch".to_string(),
@@ -717,8 +718,10 @@ also be labelled.",
                         location: *location,
                     };
                     write(buffer, diagnostic, Severity::Error);
+                    if let Some(note) = note {
+                        writeln!(buffer, "{}\n", note).unwrap();
+                    }
                     let mut printer = Printer::new();
-
                     writeln!(
                         buffer,
                         "Expected type:
@@ -727,7 +730,7 @@ also be labelled.",
 
 Found type:
 
-{}",
+{}\n",
                         printer.pretty_print(expected, 4),
                         printer.pretty_print(given, 4),
                     )
