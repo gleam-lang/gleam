@@ -184,12 +184,17 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
     ) -> Result<TypedExpr, Error> {
         match right {
             // left |> right(..args)
-            UntypedExpr::Call { fun, args, .. } => {
+            UntypedExpr::Call {
+                fun,
+                args,
+                location,
+                ..
+            } => {
                 let fun = self.infer(*fun)?;
                 match fun.typ().fn_arity() {
                     // Rewrite as right(left, ..args)
                     Some(arity) if arity == args.len() + 1 => {
-                        self.infer_insert_pipe(fun, args, left)
+                        self.infer_insert_pipe(fun, args, left, location)
                     }
 
                     // Rewrite as right(..args)(left)
@@ -237,8 +242,12 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         fun: TypedExpr,
         args: Vec<CallArg<UntypedExpr>>,
         left: UntypedExpr,
+        right_call_location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        let location = left.location();
+        let location = SrcSpan {
+            start: left.location().start,
+            end: right_call_location.end,
+        };
         let mut new_args = Vec::with_capacity(args.len() + 1);
         new_args.push(CallArg {
             label: None,
@@ -250,6 +259,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         }
 
         let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, new_args, location)?;
+        // TODO: Preserve the fact this is a pipe instead of making it a Call
         Ok(TypedExpr::Call {
             location,
             typ,
@@ -743,8 +753,10 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
 
         for clause in clauses.into_iter() {
             let typed_clause = self.infer_clause(clause, &subject_types)?;
+            // TODO: Add contextual information saying that this is when
+            // attempting to unify with the previous clause
             self.unify(return_type.clone(), typed_clause.then.typ())
-                .map_err(|e| convert_unify_error(e, typed_clause.then.location()))?;
+                .map_err(|e| convert_unify_error(e, typed_clause.location()))?;
             typed_clauses.push(typed_clause);
         }
         Ok(TypedExpr::Case {

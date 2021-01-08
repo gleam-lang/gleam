@@ -370,6 +370,19 @@ pub struct Clause<Expr, PatternConstructor, Type, RecordTag> {
     pub then: Expr,
 }
 
+impl TypedClause {
+    pub fn location(&self) -> SrcSpan {
+        SrcSpan {
+            start: self
+                .pattern
+                .get(0)
+                .map(|p| p.location().start)
+                .unwrap_or_default(),
+            end: self.then.location().end,
+        }
+    }
+}
+
 pub type UntypedClauseGuard = ClauseGuard<(), ()>;
 pub type TypedClauseGuard = ClauseGuard<Arc<Type>, String>;
 
