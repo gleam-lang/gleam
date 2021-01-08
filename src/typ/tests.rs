@@ -868,7 +868,7 @@ fn case_clause_unification_error() {
     assert_error!(
         "case 1 { a -> 1 b -> 2.0 }",
         Error::CouldNotUnify {
-            location: SrcSpan { start: 21, end: 24 },
+            location: SrcSpan { start: 16, end: 24 },
             expected: int(),
             given: float(),
         },
@@ -2636,7 +2636,7 @@ fn correct_pipe_arity_error_location() {
          fn main() { 1 |> x() }",
         Error::IncorrectArity {
             labels: vec![],
-            location: SrcSpan { start: 40, end: 46 },
+            location: SrcSpan { start: 43, end: 46 },
             expected: 2,
             given: 0,
         },
@@ -3252,5 +3252,33 @@ fn early_function_generalisation() {
             ("id", "fn(a) -> a"),
             ("int", "fn() -> Int"),
         ],
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/892
+#[test]
+fn case_clause_pipe_diagnostic() {
+    assert_module_error!(
+        r#"
+pub fn change(x: String) -> String {
+    ""
+}
+
+pub fn parse(input: BitString) -> String {
+  case input {
+    <<>> -> 1
+    <<"(":utf8, b:binary>> ->
+      parse(input)
+      |> change
+  }
+}"#,
+        Error::CouldNotUnify {
+            location: SrcSpan {
+                start: 124,
+                end: 184,
+            },
+            expected: int(),
+            given: string(),
+        }
     );
 }
