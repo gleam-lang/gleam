@@ -83,6 +83,7 @@ pub enum Error {
 
     CouldNotUnify {
         location: SrcSpan,
+        note: Option<&'static str>,
         expected: Arc<Type>,
         given: Arc<Type>,
     },
@@ -370,12 +371,33 @@ pub fn convert_not_fun_error(
 
 pub fn flip_unify_error(e: UnifyError) -> UnifyError {
     match e {
-        UnifyError::CouldNotUnify { expected, given } => UnifyError::CouldNotUnify {
+        UnifyError::CouldNotUnify {
+            expected,
+            given,
+            note,
+        } => UnifyError::CouldNotUnify {
             expected: given,
             given: expected,
+            note,
         },
         other => other,
     }
+}
+
+#[test]
+fn flip_unify_error_test() {
+    assert_eq!(
+        UnifyError::CouldNotUnify {
+            expected: crate::typ::int(),
+            given: crate::typ::float(),
+            note: Some("whatever"),
+        },
+        flip_unify_error(UnifyError::CouldNotUnify {
+            expected: crate::typ::float(),
+            given: crate::typ::int(),
+            note: Some("whatever"),
+        })
+    );
 }
 
 pub fn unify_enclosed_type(
@@ -385,13 +407,34 @@ pub fn unify_enclosed_type(
 ) -> Result<(), UnifyError> {
     // If types cannot unify, show the type error with the enclosing types, e1 and e2.
     match result {
-        Err(UnifyError::CouldNotUnify { .. }) => Err(UnifyError::CouldNotUnify {
+        Err(UnifyError::CouldNotUnify { note, .. }) => Err(UnifyError::CouldNotUnify {
             expected: e1,
             given: e2,
+            note,
         }),
 
         _ => result,
     }
+}
+
+#[test]
+fn unify_enclosed_type_test() {
+    assert_eq!(
+        Err(UnifyError::CouldNotUnify {
+            expected: crate::typ::int(),
+            given: crate::typ::float(),
+            note: Some("whatever")
+        }),
+        unify_enclosed_type(
+            crate::typ::int(),
+            crate::typ::float(),
+            Err(UnifyError::CouldNotUnify {
+                expected: crate::typ::string(),
+                given: crate::typ::bit_string(),
+                note: Some("whatever")
+            })
+        )
+    );
 }
 
 #[derive(Debug, PartialEq)]
@@ -399,6 +442,7 @@ pub enum UnifyError {
     CouldNotUnify {
         expected: Arc<Type>,
         given: Arc<Type>,
+        note: Option<&'static str>,
     },
 
     ExtraVarInAlternativePattern {
@@ -410,6 +454,44 @@ pub enum UnifyError {
     },
 
     RecursiveType,
+}
+
+impl UnifyError {
+    pub fn with_note(self, note: &'static str) -> Self {
+        match self {
+            Self::CouldNotUnify {
+                expected, given, ..
+            } => Self::CouldNotUnify {
+                expected,
+                given,
+                note: Some(note),
+            },
+            other => other,
+        }
+    }
+
+    pub fn to_error(self, location: SrcSpan) -> Error {
+        match self {
+            Self::CouldNotUnify {
+                expected,
+                given,
+                note,
+            } => Error::CouldNotUnify {
+                location,
+                expected,
+                given,
+                note,
+            },
+
+            Self::ExtraVarInAlternativePattern { name } => {
+                Error::ExtraVarInAlternativePattern { location, name }
+            }
+
+            Self::DuplicateVarInPattern { name } => Error::DuplicateVarInPattern { location, name },
+
+            Self::RecursiveType => Error::RecursiveType { location },
+        }
+    }
 }
 
 pub fn convert_binary_error(e: crate::bit_string::Error, location: &SrcSpan) -> Error {
@@ -471,21 +553,5 @@ pub fn convert_binary_error(e: crate::bit_string::Error, location: &SrcSpan) -> 
 }
 
 pub fn convert_unify_error(e: UnifyError, location: SrcSpan) -> Error {
-    match e {
-        UnifyError::CouldNotUnify { expected, given } => Error::CouldNotUnify {
-            location,
-            expected,
-            given,
-        },
-
-        UnifyError::ExtraVarInAlternativePattern { name } => {
-            Error::ExtraVarInAlternativePattern { location, name }
-        }
-
-        UnifyError::DuplicateVarInPattern { name } => {
-            Error::DuplicateVarInPattern { location, name }
-        }
-
-        UnifyError::RecursiveType => Error::RecursiveType { location },
-    }
+    e.to_error(location)
 }

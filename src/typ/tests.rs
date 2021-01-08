@@ -528,6 +528,7 @@ fn main() {
             location: SrcSpan { start: 52, end: 55 },
             expected: int(),
             given: string(),
+            note: None,
         },
     );
 
@@ -561,6 +562,7 @@ fn infer_bit_string_error_test() {
     assert_error!(
         "case <<1>> { <<2.0, a>> -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 15, end: 18 },
             expected: int(),
             given: float(),
@@ -570,6 +572,7 @@ fn infer_bit_string_error_test() {
     assert_error!(
         "case <<1>> { <<a:float>> if a > 1 -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 28, end: 29 },
             expected: int(),
             given: float(),
@@ -579,6 +582,7 @@ fn infer_bit_string_error_test() {
     assert_error!(
         "case <<1>> { <<a:binary>> if a > 1 -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 29, end: 30 },
             expected: int(),
             given: bit_string(),
@@ -588,6 +592,7 @@ fn infer_bit_string_error_test() {
     assert_error!(
         "case <<1>> { <<a:utf16_codepoint>> if a == \"test\" -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 38, end: 49 },
             expected: utf_codepoint(),
             given: string(),
@@ -729,6 +734,7 @@ fn infer_bit_string_error_test() {
     assert_error!(
         "let x = <<1:size(\"1\")>> x",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 17, end: 20 },
             expected: int(),
             given: string(),
@@ -738,6 +744,7 @@ fn infer_bit_string_error_test() {
     assert_error!(
         "let a = 2.0 case <<1>> { <<1:size(a)>> -> a }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 34, end: 35 },
             expected: int(),
             given: float(),
@@ -750,6 +757,7 @@ fn binop_unification_errors() {
     assert_error!(
         "1 + 1.0",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 4, end: 7 },
             expected: int(),
             given: float(),
@@ -759,6 +767,7 @@ fn binop_unification_errors() {
     assert_error!(
         "1 +. 1.0",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 0, end: 1 },
             expected: float(),
             given: int(),
@@ -768,6 +777,7 @@ fn binop_unification_errors() {
     assert_error!(
         "1 == 1.0",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 5, end: 8 },
             expected: int(),
             given: float(),
@@ -777,6 +787,7 @@ fn binop_unification_errors() {
     assert_error!(
         "1 > 1.0",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 4, end: 7 },
             expected: int(),
             given: float(),
@@ -786,6 +797,7 @@ fn binop_unification_errors() {
     assert_error!(
         "1.0 >. 1",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 7, end: 8 },
             expected: float(),
             given: int(),
@@ -795,6 +807,7 @@ fn binop_unification_errors() {
     assert_error!(
         "fn() { 1 } == fn(x) { x + 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 14, end: 29 },
             expected: Arc::new(Type::Fn {
                 args: vec![],
@@ -868,6 +881,7 @@ fn case_clause_unification_error() {
     assert_error!(
         "case 1 { a -> 1 b -> 2.0 }",
         Error::CouldNotUnify {
+            note: Some(CLAUSE_UNIFY_NOTE),
             location: SrcSpan { start: 16, end: 24 },
             expected: int(),
             given: float(),
@@ -877,6 +891,7 @@ fn case_clause_unification_error() {
     assert_error!(
         "case 1.0 { 1 -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 11, end: 12 },
             expected: float(),
             given: int(),
@@ -886,6 +901,7 @@ fn case_clause_unification_error() {
     assert_error!(
         "case 1 { 1.0 -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 9, end: 12 },
             expected: int(),
             given: float(),
@@ -895,6 +911,7 @@ fn case_clause_unification_error() {
     assert_error!(
         "case 1, 2.0 { a, b -> a + b }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 26, end: 27 },
             expected: int(),
             given: float(),
@@ -904,6 +921,7 @@ fn case_clause_unification_error() {
     assert_error!(
         "case 1, 2.0 { a, b -> a 1, 2 -> 0 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 27, end: 28 },
             expected: float(),
             given: int(),
@@ -916,6 +934,7 @@ fn annotated_functions_unification_error() {
     assert_error!(
         "let f = fn(x: Int) { x } f(1.0)",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 27, end: 30 },
             expected: int(),
             given: float(),
@@ -925,6 +944,7 @@ fn annotated_functions_unification_error() {
     assert_error!(
         "fn() -> Int { 2.0 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 14, end: 17 },
             expected: int(),
             given: float(),
@@ -934,6 +954,7 @@ fn annotated_functions_unification_error() {
     assert_error!(
         "fn(x: Int) -> Float { x }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 22, end: 23 },
             expected: float(),
             given: int(),
@@ -946,6 +967,7 @@ fn the_rest() {
     assert_error!(
         "case tuple(1, 2, 3) { x if x == tuple(1, 1.0) -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 27, end: 45 },
             expected: tuple(vec![int(), int(), int()]),
             given: tuple(vec![int(), float()]),
@@ -955,6 +977,7 @@ fn the_rest() {
     assert_error!(
         "case [1] { x if x == [1, 2.0] -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 25, end: 28 },
             expected: int(),
             given: float(),
@@ -964,6 +987,7 @@ fn the_rest() {
     assert_error!(
         "case tuple(1, 2) { x if x == tuple(1, 1.0) -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 24, end: 42 },
             expected: tuple(vec![int(), int()]),
             given: tuple(vec![int(), float()]),
@@ -973,6 +997,7 @@ fn the_rest() {
     assert_error!(
         "case 1 { x if x == tuple() -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 14, end: 26 },
             expected: int(),
             given: tuple(vec![]),
@@ -1028,6 +1053,7 @@ fn the_rest() {
     assert_error!(
         "tuple(1, 2) == tuple(1, 2, 3)",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 15, end: 29 },
             expected: tuple(vec![int(), int()]),
             given: tuple(vec![int(), int(), int()])
@@ -1037,6 +1063,7 @@ fn the_rest() {
     assert_error!(
         "tuple(1.0, 2, 3) == tuple(1, 2, 3)",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 20, end: 34 },
             expected: tuple(vec![float(), int(), int()]),
             given: tuple(vec![int(), int(), int()]),
@@ -1046,6 +1073,7 @@ fn the_rest() {
     assert_error!(
         "let tuple(a, b) = 1 a",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 4, end: 15 },
             expected: int(),
             given: tuple(vec![
@@ -1062,6 +1090,7 @@ fn the_rest() {
     assert_error!(
         "[1.0] == [1]",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 9, end: 12 },
             expected: list(Arc::new(Type::Var {
                 typ: Arc::new(RefCell::new(TypeVar::Link { typ: float() }))
@@ -1075,6 +1104,7 @@ fn the_rest() {
     assert_error!(
         "let x = 1 let y = 1.0 case x { _ if x == y -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 36, end: 42 },
             expected: int(),
             given: float(),
@@ -1084,6 +1114,7 @@ fn the_rest() {
     assert_error!(
         "let x = 1.0 let y = 1 case x { _ if x == y -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 36, end: 42 },
             expected: float(),
             given: int(),
@@ -1093,6 +1124,7 @@ fn the_rest() {
     assert_error!(
         "let x = 1.0 case x { _ if x -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 26, end: 27 },
             expected: bool(),
             given: float(),
@@ -1102,6 +1134,7 @@ fn the_rest() {
     assert_error!(
         "case tuple(1, 1.0) { tuple(x, _) | tuple(_, x) -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 44, end: 45 },
             expected: int(),
             given: float(),
@@ -1111,6 +1144,7 @@ fn the_rest() {
     assert_error!(
         "case [3.33], 1 { x, y if x > y -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 25, end: 26 },
             expected: int(),
             given: list(float())
@@ -1120,6 +1154,7 @@ fn the_rest() {
     assert_error!(
         "case 1, 2.22, \"three\" { x, _, y if x > y -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 39, end: 40 },
             expected: int(),
             given: string()
@@ -1129,6 +1164,7 @@ fn the_rest() {
     assert_error!(
         "case [3.33], 1 { x, y if x >= y -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 25, end: 26 },
             expected: int(),
             given: list(float())
@@ -1138,6 +1174,7 @@ fn the_rest() {
     assert_error!(
         "case 1, 2.22, \"three\" { x, _, y if x >= y -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 40, end: 41 },
             expected: int(),
             given: string()
@@ -1147,6 +1184,7 @@ fn the_rest() {
     assert_error!(
         "case [3.33], 1 { x, y if x < y -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 25, end: 26 },
             expected: int(),
             given: list(float())
@@ -1156,6 +1194,7 @@ fn the_rest() {
     assert_error!(
         "case 1, 2.22, \"three\" { x, _, y if x < y -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 39, end: 40 },
             expected: int(),
             given: string()
@@ -1165,6 +1204,7 @@ fn the_rest() {
     assert_error!(
         "case [3.33], 1 { x, y if x <= y -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 25, end: 26 },
             expected: int(),
             given: list(float())
@@ -1174,6 +1214,7 @@ fn the_rest() {
     assert_error!(
         "case 1, 2.22, \"three\" { x, _, y if x <= y -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 40, end: 41 },
             expected: int(),
             given: string()
@@ -1183,6 +1224,7 @@ fn the_rest() {
     assert_error!(
         "case [3], 1.1 { x, y if x >. y -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 24, end: 25 },
             expected: float(),
             given: list(int())
@@ -1192,6 +1234,7 @@ fn the_rest() {
     assert_error!(
         "case 2.22, 1, \"three\" { x, _, y if x >. y -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 40, end: 41 },
             expected: float(),
             given: string()
@@ -1201,6 +1244,7 @@ fn the_rest() {
     assert_error!(
         "case [3], 1.1 { x, y if x >=. y -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 24, end: 25 },
             expected: float(),
             given: list(int())
@@ -1210,6 +1254,7 @@ fn the_rest() {
     assert_error!(
         "case 2.22, 1, \"three\" { x, _, y if x >=. y -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 41, end: 42 },
             expected: float(),
             given: string()
@@ -1219,6 +1264,7 @@ fn the_rest() {
     assert_error!(
         "case [3], 1.1 { x, y if x <. y -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 24, end: 25 },
             expected: float(),
             given: list(int())
@@ -1228,6 +1274,7 @@ fn the_rest() {
     assert_error!(
         "case 2.22, 1, \"three\" { x, _, y if x <. y -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 40, end: 41 },
             expected: float(),
             given: string()
@@ -1237,6 +1284,7 @@ fn the_rest() {
     assert_error!(
         "case [3], 1.1 { x, y if x <=. y -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 24, end: 25 },
             expected: float(),
             given: list(int())
@@ -1246,6 +1294,7 @@ fn the_rest() {
     assert_error!(
         "case 2.22, 1, \"three\" { x, _, y if x <=. y -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 41, end: 42 },
             expected: float(),
             given: string()
@@ -1255,6 +1304,7 @@ fn the_rest() {
     assert_error!(
         "case 1 { x if x == \"x\" -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 14, end: 22 },
             expected: int(),
             given: string()
@@ -1264,6 +1314,7 @@ fn the_rest() {
     assert_error!(
         "case [1] { [x] | x -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 17, end: 18 },
             expected: int(),
             given: list(int()),
@@ -1273,6 +1324,7 @@ fn the_rest() {
     assert_error!(
         "case [1] { [x] | [] as x -> 1 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 17, end: 19 },
             expected: int(),
             given: list(int()),
@@ -1398,6 +1450,7 @@ fn the_rest() {
     assert_error!(
         "try x = Error(1) try y = Error(1.) Ok(x)",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 17, end: 34 },
             expected: result(
                 Arc::new(Type::Var {
@@ -1429,6 +1482,7 @@ fn the_rest() {
     assert_error!(
         "try x = Error(1) Error(1.)",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 17, end: 26 },
             expected: result(
                 Arc::new(Type::Var {
@@ -1456,6 +1510,7 @@ fn the_rest() {
     assert_error!(
         "try x = Error(1) 1",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 17, end: 18 },
             expected: result(
                 Arc::new(Type::Var {
@@ -1472,6 +1527,7 @@ fn the_rest() {
     assert_error!(
         "try y = Error(1) try z = Error(1.) Ok(1)",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 17, end: 34 },
             expected: result(
                 Arc::new(Type::Var {
@@ -1495,6 +1551,7 @@ fn the_rest() {
     assert_error!(
         r#"try x = Error(1) Error("Not this one") Error("This one")"#,
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 39, end: 56 },
             expected: result(
                 Arc::new(Type::Var {
@@ -2016,6 +2073,7 @@ fn infer_module_error_test() {
     assert_module_error!(
         "fn go() { 1 + 2.0 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 14, end: 17 },
             expected: int(),
             given: float(),
@@ -2025,6 +2083,7 @@ fn infer_module_error_test() {
     assert_module_error!(
         "fn go() { 1 + 2.0 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 14, end: 17 },
             expected: int(),
             given: float(),
@@ -2037,6 +2096,7 @@ fn id(x: a, y: a) { x }
 pub fn x() { id(1, 1.0) }
                 ",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 44, end: 47 },
             expected: int(),
             given: float(),
@@ -2057,6 +2117,7 @@ fn demo() {
     run(bar)
 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 91, end: 94 },
             expected: Arc::new(Type::Fn {
                 args: vec![],
@@ -2083,6 +2144,7 @@ fn demo() {
     run(bar)
 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan {
                 start: 110,
                 end: 113
@@ -2101,6 +2163,7 @@ fn demo() {
     assert_module_error!(
         "fn main() { let x: String = 5 x }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 28, end: 29 },
             expected: string(),
             given: int(),
@@ -2110,6 +2173,7 @@ fn demo() {
     assert_module_error!(
         "fn main() { assert 5: Int = \"\" 5 }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 19, end: 20 },
             expected: string(),
             given: int(),
@@ -2119,6 +2183,7 @@ fn demo() {
     assert_module_error!(
         "fn main() { let x: tuple(x, x) = tuple(5, 5.0) x }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 33, end: 46 },
             expected: tuple(vec![
                 Arc::new(Type::Var {
@@ -2135,6 +2200,7 @@ fn demo() {
     assert_module_error!(
         "fn main() { let [1, 2, ..x]: List(String) = [1,2,3] x }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 44, end: 51 },
             expected: list(string()),
             given: list(int()),
@@ -2147,6 +2213,7 @@ fn demo() {
             x
         }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 65, end: 86 },
             expected: tuple(vec![
                 Arc::new(Type::Var {
@@ -2171,6 +2238,7 @@ fn demo() {
             x
         }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan {
                 start: 141,
                 end: 151
@@ -2201,6 +2269,7 @@ fn demo() {
             x
         }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan {
                 start: 179,
                 end: 182
@@ -2461,6 +2530,7 @@ fn main() {
         r#"type X { X(a: Int, b: Float) }
            fn x() { case X(1, 2.0) { x if x == X(2.0, 1) -> 1 } }"#,
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 80, end: 83 },
             expected: Arc::new(Type::App {
                 public: true,
@@ -2489,6 +2559,7 @@ fn main() {
             5
         }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan {
                 start: 172,
                 end: 176
@@ -2648,6 +2719,7 @@ fn module_constants() {
     assert_module_error!(
         "pub const group_id: Int = \"42\"",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 26, end: 30 },
             expected: int(),
             given: string(),
@@ -2657,6 +2729,7 @@ fn module_constants() {
     assert_module_error!(
         "pub const numbers: List(Int) = [1, 2, 2.3]",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 38, end: 41 },
             expected: int(),
             given: float(),
@@ -2666,6 +2739,7 @@ fn module_constants() {
     assert_module_error!(
         "pub const numbers: List(Int) = [1.1, 2.2, 3.3]",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 31, end: 46 },
             expected: list(Arc::new(Type::Var {
                 typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() }))
@@ -2679,6 +2753,7 @@ fn module_constants() {
     assert_module_error!(
         "pub const pair: tuple(Int, Float) = tuple(4.1, 1)",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 36, end: 49 },
             expected: tuple(vec![int(), float()]),
             given: tuple(vec![float(), int()]),
@@ -2689,6 +2764,7 @@ fn module_constants() {
         "const pair = tuple(1, 2.0)
          fn main() { 1 == pair }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 53, end: 57 },
             expected: int(),
             given: tuple(vec![int(), float()]),
@@ -2698,6 +2774,7 @@ fn module_constants() {
     assert_module_error!(
         "const pair = [1, 1.0]",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan { start: 17, end: 20 },
             expected: int(),
             given: float(),
@@ -2779,6 +2856,7 @@ fn module_update() {
             Person(..box)
         }",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan {
                 start: 216,
                 end: 221
@@ -2909,6 +2987,7 @@ fn module_update() {
             Box(..box, value: value)
         };",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan {
                 start: 160,
                 end: 165,
@@ -2938,6 +3017,7 @@ fn module_update() {
             Box(..box, value: value)
         };",
         Error::CouldNotUnify {
+            note: None,
             location: SrcSpan {
                 start: 153,
                 end: 158,
@@ -3273,6 +3353,7 @@ pub fn parse(input: BitString) -> String {
   }
 }"#,
         Error::CouldNotUnify {
+            note: Some(CLAUSE_UNIFY_NOTE),
             location: SrcSpan {
                 start: 124,
                 end: 184,
