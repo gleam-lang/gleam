@@ -3,6 +3,10 @@
 ## Unreleased
 
 - The `get_package` method has been added.
+- Update tokio to 1.0
+- Update reqwest to 0.11
+- Update url to 2.2
+- Update bytes to 1.0
 
 ## v1.1.1 - 2020-07-20
 

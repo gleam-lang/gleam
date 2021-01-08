@@ -5,7 +5,7 @@ mod tests;
 
 use crate::proto::{signed::Signed, versions::Versions};
 use async_trait::async_trait;
-use bytes::buf::ext::BufExt;
+use bytes::buf::Buf;
 use flate2::read::GzDecoder;
 use lazy_static::lazy_static;
 use regex::Regex;
