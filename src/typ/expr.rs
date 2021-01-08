@@ -757,8 +757,6 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
 
         for clause in clauses.into_iter() {
             let typed_clause = self.infer_clause(clause, &subject_types)?;
-            // TODO: Add contextual information saying that this is when
-            // attempting to unify with the previous clause
             self.unify(return_type.clone(), typed_clause.then.typ())
                 .map_err(|e| {
                     e.with_note(CLAUSE_UNIFY_NOTE)
