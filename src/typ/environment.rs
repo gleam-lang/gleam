@@ -400,7 +400,7 @@ impl<'a, 'b> Environment<'a, 'b> {
                 Action::CouldNotUnify => Err(UnifyError::CouldNotUnify {
                     expected: t1.clone(),
                     given: t2,
-                    note: None,
+                    situation: None,
                 }),
             };
         }
@@ -456,21 +456,21 @@ impl<'a, 'b> Environment<'a, 'b> {
                         .map_err(|_| UnifyError::CouldNotUnify {
                             expected: t1.clone(),
                             given: t2.clone(),
-                            note: None,
+                            situation: None,
                         })?;
                 }
                 self.unify(retrn1.clone(), retrn2.clone())
                     .map_err(|_| UnifyError::CouldNotUnify {
                         expected: t1.clone(),
                         given: t2.clone(),
-                        note: None,
+                        situation: None,
                     })
             }
 
             (_, _) => Err(UnifyError::CouldNotUnify {
                 expected: t1.clone(),
                 given: t2.clone(),
-                note: None,
+                situation: None,
             }),
         }
     }

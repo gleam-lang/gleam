@@ -272,7 +272,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 None => Err(Error::CouldNotUnify {
                     given: list(self.environment.new_unbound_var(self.level)),
                     expected: typ.clone(),
-                    note: None,
+                    situation: None,
                     location,
                 }),
             },
@@ -314,7 +314,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                     Err(Error::CouldNotUnify {
                         given: tuple(elems_types),
                         expected: typ,
-                        note: None,
+                        situation: None,
                         location,
                     })
                 }

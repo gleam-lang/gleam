@@ -83,7 +83,7 @@ pub enum Error {
 
     CouldNotUnify {
         location: SrcSpan,
-        note: Option<&'static str>,
+        situation: Option<UnifyErrorSituation>,
         expected: Arc<Type>,
         given: Arc<Type>,
     },
@@ -374,11 +374,11 @@ pub fn flip_unify_error(e: UnifyError) -> UnifyError {
         UnifyError::CouldNotUnify {
             expected,
             given,
-            note,
+            situation: note,
         } => UnifyError::CouldNotUnify {
             expected: given,
             given: expected,
-            note,
+            situation: note,
         },
         other => other,
     }
@@ -390,12 +390,12 @@ fn flip_unify_error_test() {
         UnifyError::CouldNotUnify {
             expected: crate::typ::int(),
             given: crate::typ::float(),
-            note: Some("whatever"),
+            situation: Some(UnifyErrorSituation::CaseClauseMismatch),
         },
         flip_unify_error(UnifyError::CouldNotUnify {
             expected: crate::typ::float(),
             given: crate::typ::int(),
-            note: Some("whatever"),
+            situation: Some(UnifyErrorSituation::CaseClauseMismatch),
         })
     );
 }
@@ -407,10 +407,12 @@ pub fn unify_enclosed_type(
 ) -> Result<(), UnifyError> {
     // If types cannot unify, show the type error with the enclosing types, e1 and e2.
     match result {
-        Err(UnifyError::CouldNotUnify { note, .. }) => Err(UnifyError::CouldNotUnify {
+        Err(UnifyError::CouldNotUnify {
+            situation: note, ..
+        }) => Err(UnifyError::CouldNotUnify {
             expected: e1,
             given: e2,
-            note,
+            situation: note,
         }),
 
         _ => result,
@@ -423,7 +425,7 @@ fn unify_enclosed_type_test() {
         Err(UnifyError::CouldNotUnify {
             expected: crate::typ::int(),
             given: crate::typ::float(),
-            note: Some("whatever")
+            situation: Some(UnifyErrorSituation::CaseClauseMismatch)
         }),
         unify_enclosed_type(
             crate::typ::int(),
@@ -431,10 +433,26 @@ fn unify_enclosed_type_test() {
             Err(UnifyError::CouldNotUnify {
                 expected: crate::typ::string(),
                 given: crate::typ::bit_string(),
-                note: Some("whatever")
+                situation: Some(UnifyErrorSituation::CaseClauseMismatch)
             })
         )
     );
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UnifyErrorSituation {
+    CaseClauseMismatch,
+}
+
+impl UnifyErrorSituation {
+    pub fn description(&self) -> &'static str {
+        match self {
+            Self::CaseClauseMismatch => {
+                "This case clause was found to return a different type than the previous
+one, but all case clauses must return the same type."
+            }
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -442,7 +460,7 @@ pub enum UnifyError {
     CouldNotUnify {
         expected: Arc<Type>,
         given: Arc<Type>,
-        note: Option<&'static str>,
+        situation: Option<UnifyErrorSituation>,
     },
 
     ExtraVarInAlternativePattern {
@@ -457,17 +475,21 @@ pub enum UnifyError {
 }
 
 impl UnifyError {
-    pub fn with_note(self, note: &'static str) -> Self {
+    pub fn with_unify_error_situation(self, situation: UnifyErrorSituation) -> Self {
         match self {
             Self::CouldNotUnify {
                 expected, given, ..
             } => Self::CouldNotUnify {
                 expected,
                 given,
-                note: Some(note),
+                situation: Some(situation),
             },
             other => other,
         }
+    }
+
+    pub fn case_clause_mismatch(self) -> Self {
+        self.with_unify_error_situation(UnifyErrorSituation::CaseClauseMismatch)
     }
 
     pub fn to_error(self, location: SrcSpan) -> Error {
@@ -475,12 +497,12 @@ impl UnifyError {
             Self::CouldNotUnify {
                 expected,
                 given,
-                note,
+                situation: note,
             } => Error::CouldNotUnify {
                 location,
                 expected,
                 given,
-                note,
+                situation: note,
             },
 
             Self::ExtraVarInAlternativePattern { name } => {

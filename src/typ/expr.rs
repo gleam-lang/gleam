@@ -7,10 +7,6 @@ use crate::ast::{
     UntypedExpr, UntypedExprBitStringSegment, UntypedMultiPattern, UntypedPattern,
 };
 
-pub(crate) const CLAUSE_UNIFY_NOTE: &str =
-    "This case clause was found to return a different type than the previous
-one, but all case clauses must return the same type.";
-
 pub struct ExprTyper<'a, 'b, 'c> {
     environment: &'a mut Environment<'b, 'c>,
 
@@ -758,10 +754,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         for clause in clauses.into_iter() {
             let typed_clause = self.infer_clause(clause, &subject_types)?;
             self.unify(return_type.clone(), typed_clause.then.typ())
-                .map_err(|e| {
-                    e.with_note(CLAUSE_UNIFY_NOTE)
-                        .to_error(typed_clause.location())
-                })?;
+                .map_err(|e| e.case_clause_mismatch().to_error(typed_clause.location()))?;
             typed_clauses.push(typed_clause);
         }
         Ok(TypedExpr::Case {
