@@ -437,6 +437,7 @@ fn unify_enclosed_type_test() {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnifyErrorSituation {
     CaseClauseMismatch,
+    ReturnAnnotationMismatch,
 }
 
 impl UnifyErrorSituation {
@@ -445,6 +446,10 @@ impl UnifyErrorSituation {
             Self::CaseClauseMismatch => {
                 "This case clause was found to return a different type than the previous
 one, but all case clauses must return the same type."
+            }
+            Self::ReturnAnnotationMismatch => {
+                "The type of this returned value doesn't match the return type 
+annotation of this function."
             }
         }
     }
@@ -485,6 +490,10 @@ impl UnifyError {
 
     pub fn case_clause_mismatch(self) -> Self {
         self.with_unify_error_situation(UnifyErrorSituation::CaseClauseMismatch)
+    }
+
+    pub fn return_annotation_mismatch(self) -> Self {
+        self.with_unify_error_situation(UnifyErrorSituation::ReturnAnnotationMismatch)
     }
 
     pub fn to_error(self, location: SrcSpan) -> Error {

@@ -944,7 +944,7 @@ fn annotated_functions_unification_error() {
     assert_error!(
         "fn() -> Int { 2.0 }",
         Error::CouldNotUnify {
-            situation: None,
+            situation: Some(UnifyErrorSituation::ReturnAnnotationMismatch),
             location: SrcSpan { start: 14, end: 17 },
             expected: int(),
             given: float(),
@@ -954,7 +954,7 @@ fn annotated_functions_unification_error() {
     assert_error!(
         "fn(x: Int) -> Float { x }",
         Error::CouldNotUnify {
-            situation: None,
+            situation: Some(UnifyErrorSituation::ReturnAnnotationMismatch),
             location: SrcSpan { start: 22, end: 23 },
             expected: float(),
             given: int(),

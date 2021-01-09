@@ -1803,7 +1803,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         // Check that any return type type is accurate.
         if let Some(return_type) = return_type {
             self.unify(return_type, body.typ())
-                .map_err(|e| convert_unify_error(e, body.location()))?;
+                .map_err(|e| e.return_annotation_mismatch().to_error(body.location()))?;
         }
 
         Ok((args, body))
