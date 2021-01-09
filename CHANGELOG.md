@@ -21,6 +21,12 @@
 - The parser has been rewitten from scratch, dramatically improving error 
   messages and compilation times.
 - `1-1` and `a-1` are now parsed as `1 - 1` and `a - 1`
+- Further information has been added to the error messages when a function
+  returns the wrong type.
+- Further information has been added to the error messages when case clauses
+  return different types.
+- Fixed a bug where imported record constructors without labels used as an
+  anonymous function generates incorrect Erlang.
 
 ## v0.12.1 - 2020-11-15
 
