@@ -894,7 +894,7 @@ fn main() { one.C }"
                 src: "import one\nfn main() { one.C }".to_string(),
                 error: crate::typ::Error::UnknownModuleValue {
                     location: SrcSpan {
-                        start: 26,
+                        start: 23,
                         end: 28,
                     },
                     name: "C".to_string(),
@@ -928,7 +928,7 @@ fn test(t: one.T) { t.a }"
                 src: "import one\nfn test(t: one.T) { t.a }".to_string(),
                 error: crate::typ::Error::UnknownField {
                     location: SrcSpan {
-                        start: 32,
+                        start: 31,
                         end: 34,
                     },
                     typ: Arc::new(crate::typ::Type::App {
