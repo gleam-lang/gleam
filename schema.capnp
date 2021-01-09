@@ -163,10 +163,6 @@ struct BitStringSegmentOption {
       value @17 :Constant;
       shortForm @18 :Bool;
     }
-
-    invalid :group {
-      label @19 :Text;
-    }
   }
 }
 

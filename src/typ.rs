@@ -984,10 +984,6 @@ where
     Typer: FnMut(UntypedValue, Arc<Type>) -> Result<TypedValue, Error>,
 {
     match segment_option {
-        BitStringSegmentOption::Invalid {
-            label, location, ..
-        } => Err(Error::InvalidBinarySegmentOption { label, location }),
-
         BitStringSegmentOption::Size {
             value,
             location,
