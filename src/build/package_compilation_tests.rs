@@ -925,7 +925,7 @@ main() ->\n    fun(A, B) -> {c, A, B} end.\n"
             path: PathBuf::from("/src/two.gleam"),
             src: "import one fn main() { one.C }".to_string(),
             error: crate::typ::Error::UnknownModuleValue {
-                location: crate::ast::SrcSpan { start: 23, end: 28 },
+                location: crate::ast::SrcSpan { start: 26, end: 28 },
                 name: "C".to_string(),
                 module_name: vec!["one".to_string(),],
                 value_constructors: vec![],
@@ -954,7 +954,7 @@ main() ->\n    fun(A, B) -> {c, A, B} end.\n"
             path: PathBuf::from("/src/two.gleam"),
             src: "import one fn test(t: one.T) { t.a }".to_string(),
             error: crate::typ::Error::UnknownField {
-                location: crate::ast::SrcSpan { start: 31, end: 34 },
+                location: crate::ast::SrcSpan { start: 32, end: 34 },
                 typ: Arc::new(crate::typ::Type::App {
                     public: true,
                     module: vec!["one".to_string(),],

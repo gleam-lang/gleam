@@ -468,6 +468,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
     ) -> Result<TypedExpr, Error> {
         // Attempt to infer the container as a record access. If that fails, we may be shadowing the name
         // of an imported module, so attempt to infer the container as a module access.
+        // TODO: Remove this cloning
         match self.infer_record_access(container.clone(), label.clone(), access_location) {
             Ok(record_access) => Ok(record_access),
             Err(err) => match container {
@@ -502,7 +503,10 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 let typ = elems
                     .get(index as usize)
                     .ok_or_else(|| Error::OutOfBoundsTupleIndex {
-                        location,
+                        location: SrcSpan {
+                            start: tuple.location().end,
+                            end: location.end,
+                        },
                         index,
                         size: elems.len(),
                     })?
@@ -1164,7 +1168,10 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                     .get(&label)
                     .ok_or_else(|| Error::UnknownModuleValue {
                         name: label.clone(),
-                        location: select_location,
+                        location: SrcSpan {
+                            start: module_location.end,
+                            end: select_location.end,
+                        },
                         module_name: module_info.1.name.clone(),
                         value_constructors: module_info
                             .1
@@ -1217,7 +1224,10 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         // Error constructor helper function
         let unknown_field = |fields| Error::UnknownField {
             typ: record.typ(),
-            location,
+            location: SrcSpan {
+                start: record.location().end,
+                end: location.end,
+            },
             label: label.clone(),
             fields,
         };
