@@ -1043,7 +1043,7 @@ fn the_rest() {
     assert_error!(
         "let x = 1 x.whatever",
         Error::UnknownField {
-            location: SrcSpan { start: 11, end: 20 },
+            location: SrcSpan { start: 10, end: 20 },
             typ: int(),
             label: "whatever".to_string(),
             fields: vec![],
@@ -1405,7 +1405,7 @@ fn the_rest() {
     assert_error!(
         "tuple(0, 1).2",
         Error::OutOfBoundsTupleIndex {
-            location: SrcSpan { start: 11, end: 13 },
+            location: SrcSpan { start: 0, end: 13 },
             index: 2,
             size: 2
         },
@@ -1438,7 +1438,7 @@ fn the_rest() {
     assert_error!(
         "fn(a: a) { a.field }",
         Error::UnknownField {
-            location: SrcSpan { start: 12, end: 18 },
+            location: SrcSpan { start: 11, end: 18 },
             label: "field".to_string(),
             fields: vec![],
             typ: Arc::new(Type::Var {
@@ -2438,7 +2438,7 @@ pub type Box(a) { Box(inner: a) }
 pub fn main(box: Box(Int)) { box.unknown }
 ",
         Error::UnknownField {
-            location: SrcSpan { start: 67, end: 75 },
+            location: SrcSpan { start: 64, end: 75 },
             label: "unknown".to_string(),
             fields: vec!["inner".to_string()],
             typ: Arc::new(Type::App {
@@ -2457,7 +2457,7 @@ pub type Box(a) { Box(inner: a) }
 pub fn main(box: Box(Box(Int))) { box.inner.unknown }
     ",
         Error::UnknownField {
-            location: SrcSpan { start: 78, end: 86 },
+            location: SrcSpan { start: 69, end: 86 },
             label: "unknown".to_string(),
             fields: vec!["inner".to_string()],
             typ: Arc::new(Type::Var {

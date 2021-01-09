@@ -493,7 +493,8 @@ where
 
         // field access and call can stack up
         loop {
-            if let Some((start, _)) = self.maybe_one(&Tok::Dot) {
+            if let Some((_, _)) = self.maybe_one(&Tok::Dot) {
+                let start = expr.location().start;
                 // field access
                 match self.tok0.take() {
                     // tuple access
