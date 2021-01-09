@@ -2,10 +2,13 @@
 
 ## Unreleased
 
-- Variable names now only have 1st letter capitalized when converted to erlang.
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
+
+## v0.13.0-rc1 - 2020-01-09
+
+- Variable names now only have 1st letter capitalized when converted to erlang.
 - Records defined in other modules can now be used in module constants.
 - Documentation can link from functions, types & constants to their source
   code definitions on popular project hosting sites.
