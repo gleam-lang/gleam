@@ -8,7 +8,8 @@ use crate::{
     pretty::*,
     project::{self, Analysed},
     typ::{
-        ModuleValueConstructor, PatternConstructor, Type, ValueConstructor, ValueConstructorVariant,
+        ModuleValueConstructor, PatternConstructor, Type, TypeVar, ValueConstructor,
+        ValueConstructorVariant,
     },
     Result,
 };
@@ -153,30 +154,108 @@ pub fn record_definition(name: &str, fields: &[&str]) -> String {
 
 pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> {
     let module_name = module.name.as_slice();
-    let exports = concat(
-        module
-            .statements
-            .iter()
-            .flat_map(|s| match s {
-                Statement::Fn {
-                    public: true,
-                    name,
-                    args,
-                    ..
-                } => Some((name.clone(), args.len())),
+    let mut exports = vec![];
+    let mut type_defs = vec![];
+    let mut type_exports = vec![];
+    for s in &module.statements {
+        match s {
+            Statement::Fn {
+                public: true,
+                name,
+                args,
+                ..
+            } => exports.push(atom(name.to_string()).append("/").append(args.len())),
+            Statement::ExternalFn {
+                public: true,
+                name,
+                args,
+                ..
+            } => exports.push(atom(name.to_string()).append("/").append(args.len())),
+            Statement::CustomType {
+                name,
+                parameters,
+                public,
+                constructors,
+                opaque,
+                ..
+            } => {
+                // Type Exports
+                if *public {
+                    type_exports.push(
+                        name.to_snake_case()
+                            .to_doc()
+                            .append("/")
+                            .append(parameters.len()),
+                    )
+                }
+                // Type definitions
+                let constructors = concat(
+                    constructors
+                        .iter()
+                        .map(|c| {
+                            // TODO more constructor stuff
+                            // {name, values, values, ...}
+                            let name = c.name.to_snake_case().to_doc();
+                            let constructor = if c.args.is_empty() {
+                                name
+                            } else {
+                                name.append(", ").append(concat(
+                                    c.args
+                                        .iter()
+                                        .map(|a| a.1.to_erlang_type_def())
+                                        .intersperse(", ".to_doc()),
+                                ))
+                            };
+                            "{".to_doc().append(constructor).append("}")
+                        })
+                        .intersperse(" | ".to_doc()),
+                )
+                .append(".");
+                let params = concat(
+                    parameters
+                        .iter()
+                        .map(|p| variable_name(p).to_doc())
+                        .intersperse(", ".to_doc()),
+                );
+                let doc = if *opaque { "-opaque " } else { "-type " }
+                    .to_doc()
+                    .append(name.to_snake_case())
+                    .append("(")
+                    .append(params)
+                    .append(") :: ")
+                    .append(constructors);
+                type_defs.push(doc);
+            }
 
-                Statement::ExternalFn {
-                    public: true,
-                    name,
-                    args,
-                    ..
-                } => Some((name.clone(), args.len())),
+            _ => {}
+        }
+    }
 
-                _ => None,
-            })
-            .map(|(n, a)| atom(n).append("/").append(a))
-            .intersperse(", ".to_doc()),
-    );
+    let exports = if exports.is_empty() {
+        nil()
+    } else {
+        "-export(["
+            .to_doc()
+            .append(concat(exports.into_iter().intersperse(", ".to_doc())))
+            .append("]).")
+            .append(lines(2))
+    };
+
+    let type_exports = if type_exports.is_empty() {
+        nil()
+    } else {
+        "-export_type(["
+            .to_doc()
+            .append(concat(type_exports.into_iter().intersperse(", ".to_doc())))
+            .append("]).")
+            .append(lines(2))
+    };
+
+    let type_defs = if type_defs.is_empty() {
+        nil()
+    } else {
+        concat(type_defs.into_iter().intersperse(line())).append(lines(2))
+    };
 
     let statements = concat(
         module
@@ -193,15 +272,9 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
         .append(line())
         .append("-compile(no_auto_import).")
         .append(lines(2))
-        .append(if exports.is_nil() {
-            nil()
-        } else {
-            "-export(["
-                .to_doc()
-                .append(exports)
-                .append("]).")
-                .append(lines(2))
-        })
+        .append(exports)
+        .append(type_exports)
+        .append(type_defs)
         .append(statements)
         .append(line())
         .pretty_print(80, writer)
@@ -216,8 +289,18 @@ fn statement<'a>(statement: &'a TypedStatement, module: &'a [String]) -> Option<
         Statement::ModuleConstant { .. } => None,
 
         Statement::Fn {
-            args, name, body, ..
-        } => Some(mod_fun(name.as_ref(), args.as_slice(), body, module)),
+            args,
+            name,
+            body,
+            return_type,
+            ..
+        } => Some(mod_fun(
+            name.as_ref(),
+            args.as_slice(),
+            body,
+            module,
+            return_type,
+        )),
 
         Statement::ExternalFn { public: false, .. } => None,
         Statement::ExternalFn {
@@ -240,10 +323,28 @@ fn mod_fun<'a>(
     args: &'a [TypedArg],
     body: &'a TypedExpr,
     module: &'a [String],
+    return_type: &'a Arc<Type>,
 ) -> Document<'a> {
     let mut env = Env::new(module);
+    // Type Spec
+    // pub type TypedArg = Arg<Arc<Type>>;
+    let return_spec = (&**return_type).to_erlang_type_spec();
+    let args_spec = concat(
+        args.iter()
+            .map(|a| (a.typ).to_erlang_type_spec())
+            .intersperse(", ".to_doc()),
+    );
+    let spec = "-spec "
+        .to_doc()
+        .append(name)
+        .append("(")
+        .append(args_spec)
+        .append(") -> ")
+        .append(return_spec)
+        .append(".")
+        .append(line());
 
-    atom(name.to_string())
+    spec.append(atom(name.to_string()))
         .append(fun_args(args, &mut env))
         .append(" ->")
         .append(line().append(expr(body, &mut env)).nest(INDENT).group())
@@ -1338,7 +1439,7 @@ fn external_fun<'a>(name: &str, module: &str, fun: &str, arity: usize) -> Docume
         .nest(INDENT)
 }
 
-fn variable_name(name: String) -> String {
+fn variable_name(name: &str) -> String {
     let mut c = name.chars();
     match c.next() {
         None => String::new(),
@@ -1442,4 +1543,164 @@ pub fn is_erlang_standard_library_module(name: &str) -> bool {
             | "win32reg"
             | "zip"
     )
+}
+
+impl TypeAst {
+    pub fn to_erlang_type_def(&self) -> Document {
+        // reference : https://erlang.org/doc/reference_manual/typespec.html
+        match self {
+            TypeAst::Var { name, .. } | TypeAst::Hole { name, .. } => variable_name(name).to_doc(),
+            TypeAst::Tuple { elems, .. } => "{"
+                .to_doc()
+                .append(concat(
+                    elems
+                        .iter()
+                        .map(|e| e.to_erlang_type_def())
+                        .intersperse(", ".to_doc()),
+                ))
+                .append("}"),
+
+            TypeAst::Constructor {
+                module, name, args, ..
+            } => {
+                let args = if args.is_empty() {
+                    nil()
+                } else {
+                    concat(
+                        args.iter()
+                            .map(|a| a.to_erlang_type_def())
+                            .intersperse(", ".to_doc()),
+                    )
+                };
+                if let Some(mod_name) = &module {
+                    let t = mod_name
+                        .clone()
+                        .to_doc()
+                        .append(".")
+                        .append(atom(name.clone()));
+                    if args.is_nil() {
+                        t.append("()")
+                    } else {
+                        t.append("(").append(args).append(")")
+                    }
+                } else {
+                    match name.as_str() {
+                        // TODO: more builtins ? Result?
+                        "Int" => "integer()".to_doc(),
+                        "String" => "string()".to_doc(),
+                        "Bool" => "boolean()".to_doc(),
+                        "Float" => "float()".to_doc(),
+                        "List" => "list(".to_doc().append(args).append(")"),
+                        _ => variable_name(name).to_doc(),
+                    }
+                }
+            }
+
+            TypeAst::Fn { args, retrn, .. } => {
+                let retrn = retrn.to_erlang_type_def();
+                let args = concat(
+                    args.iter()
+                        .map(|a| a.to_erlang_type_def())
+                        .intersperse(", ".to_doc()),
+                );
+                "fun(("
+                    .to_doc()
+                    .append(args)
+                    .append(") -> ")
+                    .append(retrn)
+                    .append(")")
+            }
+        }
+    }
+}
+
+impl Type {
+    pub fn to_erlang_type_spec(&self) -> Document {
+        tracing::trace!("spec_for_type: {:?}", &self);
+        match self {
+            Self::Var { typ } => match &*Arc::as_ref(typ).borrow() {
+                TypeVar::Generic { .. } => "any()".to_doc(),
+                TypeVar::Link { typ } => typ.to_erlang_type_spec(),
+                TypeVar::Unbound { .. } => "any()".to_doc(),
+            },
+            Self::App {
+                name, module, args, ..
+            } => {
+                if module.is_empty() {
+                    // built-ins
+                    // TODO: more builtins?
+                    match name.as_ref() {
+                        "Int" => "integer()".to_doc(),
+                        "String" => "binary()".to_doc(),
+                        "Bool" => "boolean()".to_doc(),
+                        "Float" => "float()".to_doc(),
+                        "List" => {
+                            let arg0 = args[0].to_erlang_type_spec();
+                            "list(".to_doc().append(arg0).append(")")
+                        }
+                        "Result" => {
+                            let arg0 = args[0].to_erlang_type_spec();
+                            let arg1 = args[1].to_erlang_type_spec();
+                            "{ok, "
+                                .to_doc()
+                                .append(arg0)
+                                .append("} | {error, ")
+                                .append(arg1)
+                                .append("}")
+                        }
+                        name => name.to_snake_case().to_doc().append("()"),
+                    }
+                } else {
+                    let args = concat(
+                        args.iter()
+                            .map(|a| a.to_erlang_type_spec())
+                            .intersperse(", ".to_doc()),
+                    );
+                    let mod_name = concat(
+                        module
+                            .iter()
+                            .map(|m| m.to_snake_case().to_doc())
+                            .intersperse(".".to_doc()),
+                    );
+
+                    mod_name
+                        .append(":")
+                        .append(name.to_snake_case())
+                        .append("(")
+                        .append(args)
+                        .append(")")
+                }
+            }
+
+            Self::Fn {
+                args,  //: Vec<Arc<Type>>,
+                retrn, //: Arc<Type>,
+            } => {
+                let args = concat(
+                    args.iter()
+                        .map(|a| a.to_erlang_type_spec())
+                        .intersperse(", ".to_doc()),
+                );
+                let retrn = retrn.to_erlang_type_spec();
+                "fun(("
+                    .to_doc()
+                    .append(args)
+                    .append(") -> ")
+                    .append(retrn)
+                    .append(")")
+            }
+
+            Self::Tuple {
+                elems, //Vec<Arc<Type>>,
+            } => {
+                let elems = concat(
+                    elems
+                        .iter()
+                        .map(|e| e.to_erlang_type_spec())
+                        .intersperse(", ".to_doc()),
+                );
+                "{".to_doc().append(elems).append("}")
+            }
+        }
+    }
 }
