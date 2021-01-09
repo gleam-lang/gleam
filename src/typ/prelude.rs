@@ -110,6 +110,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
         ValueConstructorVariant::Record {
             name: "True".to_string(),
             field_map: None,
+            arity: 0,
         },
         bool(),
     );
@@ -118,6 +119,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
         ValueConstructorVariant::Record {
             name: "False".to_string(),
             field_map: None,
+            arity: 0,
         },
         bool(),
     );
@@ -193,6 +195,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
         "Nil".to_string(),
         ValueConstructorVariant::Record {
             name: "Nil".to_string(),
+            arity: 0,
             field_map: None,
         },
         nil(),
@@ -243,6 +246,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
         ValueConstructorVariant::Record {
             name: "Ok".to_string(),
             field_map: None,
+            arity: 1,
         },
         fn_(vec![ok.clone()], result(ok, error)),
     );
@@ -254,6 +258,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
         ValueConstructorVariant::Record {
             name: "Error".to_string(),
             field_map: None,
+            arity: 1,
         },
         fn_(vec![error.clone()], result(ok, error)),
     );

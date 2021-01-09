@@ -81,7 +81,8 @@ struct ValueConstructorVariant {
 
     record :group {
       name @5 :Text;
-      fieldMap @6 :Option(FieldMap);
+      arity @6 :UInt16;
+      fieldMap @7 :Option(FieldMap);
     }
   }
 }

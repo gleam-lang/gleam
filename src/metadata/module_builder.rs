@@ -137,9 +137,14 @@ impl<'a> ModuleBuilder<'a> {
                 self.build_constant(builder.init_module_constant(), literal)
             }
 
-            ValueConstructorVariant::Record { name, field_map } => {
+            ValueConstructorVariant::Record {
+                name,
+                field_map,
+                arity,
+            } => {
                 let mut builder = builder.init_record();
                 builder.set_name(name);
+                builder.set_arity(*arity as u16);
                 self.build_optional_field_map(builder.init_field_map(), field_map);
             }
 

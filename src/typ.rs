@@ -219,6 +219,7 @@ pub enum ValueConstructorVariant {
     /// A constructor for a custom type
     Record {
         name: String,
+        arity: usize,
         field_map: Option<FieldMap>,
     },
 }
@@ -226,9 +227,9 @@ pub enum ValueConstructorVariant {
 impl ValueConstructorVariant {
     fn to_module_value_constructor(&self) -> ModuleValueConstructor {
         match self {
-            Self::Record { name, field_map } => ModuleValueConstructor::Record {
+            Self::Record { name, arity, .. } => ModuleValueConstructor::Record {
                 name: name.clone(),
-                arity: field_map.as_ref().map_or(0, |fm| fm.arity),
+                arity: *arity,
             },
 
             Self::ModuleConstant { literal } => ModuleValueConstructor::Constant {
@@ -656,6 +657,7 @@ fn register_values<'a>(
                             origin: constructor.location,
                             variant: ValueConstructorVariant::Record {
                                 name: constructor.name.clone(),
+                                arity: constructor.args.len(),
                                 field_map: field_map.clone(),
                             },
                         },
@@ -666,6 +668,7 @@ fn register_values<'a>(
                     constructor.name.clone(),
                     ValueConstructorVariant::Record {
                         name: constructor.name.clone(),
+                        arity: constructor.args.len(),
                         field_map,
                     },
                     typ,

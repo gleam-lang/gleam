@@ -1172,6 +1172,40 @@ fn x() { test }"
 }
 
 #[test]
+fn imported_type_constructor_used_as_function() {
+    assert_erlang_compile!(
+        vec![
+            Source {
+                origin: Origin::Src,
+                path: PathBuf::from("/src/one.gleam"),
+                name: "one".to_string(),
+                code: "pub type A { A(String) }".to_string(),
+            },
+            Source {
+                origin: Origin::Src,
+                path: PathBuf::from("/src/two.gleam"),
+                name: "two".to_string(),
+                code: "import one
+fn x() { one.A }"
+                    .to_string(),
+            },
+        ],
+        Ok(vec![
+            OutputFile {
+                path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
+                text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+            },
+            OutputFile {
+                path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
+                text: "-module(two).\n-compile(no_auto_import).\n
+x() ->\n    fun(A) -> {a, A} end.\n"
+                    .to_string(),
+            }
+        ]),
+    );
+}
+
+#[test]
 fn config_compilation_test() {
     macro_rules! assert_config_compile {
         ($config:expr, $sources:expr, $expected_output:expr $(,)?) => {
