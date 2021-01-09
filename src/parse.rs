@@ -2065,10 +2065,10 @@ where
                             value: Box::new(value),
                             short_form: false,
                         })),
-                        _ => Ok(Some(BitStringSegmentOption::Invalid {
-                            label: name,
-                            location: SrcSpan { start, end },
-                        })),
+                        _ => parse_error(
+                            ParseErrorType::InvalidBitStringSegment,
+                            SrcSpan { start, end },
+                        ),
                     }
                 } else {
                     str_to_bit_string_segment_option(&name, SrcSpan { start, end })

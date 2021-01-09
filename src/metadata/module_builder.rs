@@ -290,8 +290,6 @@ impl<'a> ModuleBuilder<'a> {
                 self.build_constant(builder.reborrow().init_value(), value);
                 builder.set_short_form(*short_form);
             }
-
-            Opt::Invalid { label, .. } => builder.init_invalid().set_label(label),
         }
     }
 

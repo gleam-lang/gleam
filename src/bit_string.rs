@@ -104,8 +104,6 @@ impl<T> BinaryTypeSpecifier<T> {
                         location: option.location(),
                     })
                 }
-
-                _ => Ok(bts),
             }
         })?;
 

@@ -1519,8 +1519,6 @@ where
     ToDoc: FnMut(&Value) -> Document,
 {
     match option {
-        BitStringSegmentOption::Invalid { label, .. } => label.clone().to_doc(),
-
         BitStringSegmentOption::Binary { .. } => "binary".to_doc(),
         BitStringSegmentOption::Integer { .. } => "int".to_doc(),
         BitStringSegmentOption::Float { .. } => "float".to_doc(),

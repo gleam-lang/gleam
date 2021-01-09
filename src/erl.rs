@@ -429,7 +429,6 @@ where
     };
 
     options.iter().for_each(|option| match option {
-        BitStringSegmentOption::Invalid { .. } => (),
         BitStringSegmentOption::Integer { .. } => others.push("integer"),
         BitStringSegmentOption::Float { .. } => others.push("float"),
         BitStringSegmentOption::Binary { .. } => others.push("binary"),

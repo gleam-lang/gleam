@@ -1240,26 +1240,6 @@ at the end of a bin pattern",
                     .unwrap();
                 }
 
-                TypeError::InvalidBinarySegmentOption { label, location } => {
-                    let diagnostic = Diagnostic {
-                        title: "Invalid bit string segment option".to_string(),
-                        label: "specified here".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write(buffer, diagnostic, Severity::Error);
-                    writeln!(
-                        buffer,
-                        "{} is not a valid option for a bit string segment.
-Valid options are: binary, int, float, bit_string,
-utf8, utf16, utf32, utf8_codepoint, utf16_codepoint, utf32_codepoint,
-signed, unsigned, big, little, native, size, unit",
-                        label
-                    )
-                    .unwrap();
-                }
-
                 TypeError::RecordUpdateInvalidConstructor { location } => {
                     let diagnostic = Diagnostic {
                         title: "Invalid record constructor".to_string(),

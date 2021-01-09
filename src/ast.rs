@@ -739,11 +739,6 @@ pub enum BitStringSegmentOption<Value> {
         value: Box<Value>,
         short_form: bool,
     },
-
-    Invalid {
-        location: SrcSpan,
-        label: String,
-    },
 }
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum SegmentOptionCategory {
@@ -752,7 +747,6 @@ pub enum SegmentOptionCategory {
     Signedness,
     Size,
     Unit,
-    Error,
 }
 
 impl<A> BitStringSegmentOption<A> {
@@ -774,8 +768,7 @@ impl<A> BitStringSegmentOption<A> {
             | BitStringSegmentOption::Little { location }
             | BitStringSegmentOption::Native { location }
             | BitStringSegmentOption::Size { location, .. }
-            | BitStringSegmentOption::Unit { location, .. }
-            | BitStringSegmentOption::Invalid { location, .. } => *location,
+            | BitStringSegmentOption::Unit { location, .. } => *location,
         }
     }
 
@@ -798,7 +791,6 @@ impl<A> BitStringSegmentOption<A> {
             BitStringSegmentOption::Native { .. } => SegmentOptionCategory::Endianness,
             BitStringSegmentOption::Size { .. } => SegmentOptionCategory::Size,
             BitStringSegmentOption::Unit { .. } => SegmentOptionCategory::Unit,
-            BitStringSegmentOption::Invalid { .. } => SegmentOptionCategory::Error,
         }
     }
 
@@ -821,7 +813,6 @@ impl<A> BitStringSegmentOption<A> {
             BitStringSegmentOption::Native { .. } => "native".to_string(),
             BitStringSegmentOption::Size { .. } => "size".to_string(),
             BitStringSegmentOption::Unit { .. } => "unit".to_string(),
-            BitStringSegmentOption::Invalid { label, .. } => label.clone(),
         }
     }
 }

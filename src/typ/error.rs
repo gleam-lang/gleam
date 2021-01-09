@@ -209,11 +209,6 @@ pub enum Error {
         location: SrcSpan,
     },
 
-    InvalidBinarySegmentOption {
-        location: SrcSpan,
-        label: String,
-    },
-
     UnexpectedTypeHole {
         location: SrcSpan,
     },
