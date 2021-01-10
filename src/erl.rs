@@ -345,7 +345,7 @@ fn mod_fun<'a>(
 ) -> Document<'a> {
     let mut env = Env::new(module);
     let args_spec = args.iter().map(|a| a.typ.to_erlang_type_spec());
-    let return_spec = (&**return_type).to_erlang_type_spec();
+    let return_spec = return_type.to_erlang_type_spec();
     let spec = fun_spec(name, args_spec, return_spec);
 
     spec.append(atom(name.to_string()))
@@ -385,6 +385,7 @@ fn fun_spec(name: &str, args: impl Iterator<Item = Document>, retrn: Document) -
         .append(retrn)
         .append(".")
         .append(line())
+        .group()
 }
 
 fn atom<'a>(value: String) -> Document<'a> {
@@ -1449,16 +1450,17 @@ fn external_fun<'a>(
     let return_spec = retrn.to_erlang_type_def();
     let spec = fun_spec(name, args_spec, return_spec);
 
-    spec.append(atom(name.to_string()))
-        .append(format!("({}) ->", chars))
-        .append(line())
-        .append(atom(module.to_string()))
-        .append(":")
-        .append(atom(fun.to_string()))
-        .append("(")
-        .append(Document::String(chars))
-        .append(").")
-        .nest(INDENT)
+    spec.append(atom(name.to_string())).append(
+        format!("({}) ->", chars)
+            .to_doc()
+            .append(line())
+            .append(atom(module.to_string()))
+            .append(":")
+            .append(atom(fun.to_string()))
+            .append(format!("({}).", chars))
+            .nest(INDENT)
+            .group(),
+    )
 }
 
 fn variable_name(name: &str) -> String {
@@ -1570,6 +1572,8 @@ pub fn is_erlang_standard_library_module(name: &str) -> bool {
 impl TypeAst {
     pub fn to_erlang_type_def(&self) -> Document {
         // reference : https://erlang.org/doc/reference_manual/typespec.html
+        tracing::trace!("to_erlang_type_def of:{:?}", &self);
+
         match self {
             TypeAst::Var { name, .. } | TypeAst::Hole { name, .. } => variable_name(name).to_doc(),
             TypeAst::Tuple { elems, .. } => tuple(elems.iter().map(|e| e.to_erlang_type_def())),
@@ -1585,7 +1589,7 @@ impl TypeAst {
                         .clone()
                         .to_doc()
                         .append(".")
-                        .append(atom(name.clone()))
+                        .append(name.to_snake_case())
                         .append("(")
                         .append(concat(arg_list))
                         .append(")")
