@@ -41,6 +41,9 @@
     // unused_results
 )]
 
+#[macro_use]
+mod pretty;
+
 mod ast;
 mod bit_string;
 mod build;
@@ -57,7 +60,6 @@ mod fs;
 mod metadata;
 mod new;
 mod parse;
-mod pretty;
 mod project;
 mod shell;
 mod typ;

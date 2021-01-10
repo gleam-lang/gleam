@@ -17,6 +17,19 @@ mod tests;
 
 use crate::{fs::Utf8Writer, GleamExpect, Result};
 
+macro_rules! docvec {
+    () => {
+        Document::Vec(Vec::new())
+    };
+
+    ($($x:expr),+ $(,)?) => {
+        Document::Vec(vec![$($x.to_doc()),+])
+    };
+}
+
+/// Coerce a value into a Document.
+/// Note we do not implement this for String as a slight pressure to favour str
+/// over String.
 pub trait Documentable<'a> {
     fn to_doc(self) -> Document<'a>;
 }
@@ -24,12 +37,6 @@ pub trait Documentable<'a> {
 impl<'a> Documentable<'a> for &'a str {
     fn to_doc(self) -> Document<'a> {
         Document::Str(self)
-    }
-}
-
-impl<'a> Documentable<'a> for String {
-    fn to_doc(self) -> Document<'a> {
-        Document::String(self)
     }
 }
 

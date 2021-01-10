@@ -44,10 +44,9 @@ impl Printer {
         match typ {
             Type::App { name, args, .. } => {
                 if args.is_empty() {
-                    name.clone().to_doc()
+                    Document::String(name.clone())
                 } else {
-                    name.clone()
-                        .to_doc()
+                    Document::String(name.clone())
                         .append("(")
                         .append(self.args_to_gleam_doc(args.as_slice()))
                         .append(")")
@@ -82,11 +81,11 @@ impl Printer {
 
     pub fn generic_type_var<'a>(&mut self, id: usize) -> Document<'a> {
         match self.names.get(&id) {
-            Some(n) => n.clone().to_doc(),
+            Some(n) => Document::String(n.clone()),
             None => {
                 let n = self.next_letter();
                 self.names.insert(id, n.clone());
-                n.to_doc()
+                Document::String(n)
             }
         }
     }

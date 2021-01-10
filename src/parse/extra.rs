@@ -1,5 +1,4 @@
 use crate::ast::SrcSpan;
-use std::fmt;
 
 #[derive(Debug, PartialEq)]
 pub struct ModuleExtra {
@@ -24,12 +23,6 @@ impl ModuleExtra {
 pub struct Comment<'a> {
     pub start: usize,
     pub content: &'a str,
-}
-
-impl fmt::Display for Comment<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.content)
-    }
 }
 
 impl<'a> From<(&SrcSpan, &'a str)> for Comment<'a> {
