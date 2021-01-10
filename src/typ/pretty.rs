@@ -37,7 +37,10 @@ impl Printer {
             .to_pretty_string(80)
     }
 
-    pub fn print(&mut self, typ: &Type) -> Document {
+    // TODO: have this function return a Document that borrows from the Type.
+    // Is this possible? The lifetime would have to go through the Arc<Refcell<Type>>
+    // for TypeVar::Link'd types.
+    pub fn print<'a>(&mut self, typ: &Type) -> Document<'a> {
         match typ {
             Type::App { name, args, .. } => {
                 if args.is_empty() {
@@ -70,20 +73,21 @@ impl Printer {
         }
     }
 
-    fn type_var_doc(&mut self, typ: &TypeVar) -> Document {
+    fn type_var_doc<'a>(&mut self, typ: &TypeVar) -> Document<'a> {
         match typ {
             TypeVar::Link { ref typ, .. } => self.print(typ),
+            TypeVar::Unbound { id, .. } | TypeVar::Generic { id, .. } => self.generic_type_var(*id),
+        }
+    }
 
-            TypeVar::Unbound { id, .. } => self.type_var_doc(&TypeVar::Generic { id: *id }),
-
-            TypeVar::Generic { id, .. } => match self.names.get(id) {
-                Some(n) => n.clone().to_doc(),
-                None => {
-                    let n = self.next_letter();
-                    self.names.insert(*id, n.clone());
-                    n.to_doc()
-                }
-            },
+    pub fn generic_type_var<'a>(&mut self, id: usize) -> Document<'a> {
+        match self.names.get(&id) {
+            Some(n) => n.clone().to_doc(),
+            None => {
+                let n = self.next_letter();
+                self.names.insert(id, n.clone());
+                n.to_doc()
+            }
         }
     }
 
@@ -109,7 +113,7 @@ impl Printer {
         chars.into_iter().rev().collect()
     }
 
-    fn args_to_gleam_doc(&mut self, args: &[Arc<Type>]) -> Document {
+    fn args_to_gleam_doc<'a>(&mut self, args: &[Arc<Type>]) -> Document<'a> {
         match args.len() {
             0 => nil(),
             _ => {

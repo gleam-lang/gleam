@@ -63,8 +63,8 @@ struct Env<'a> {
     erl_function_scope_vars: im::HashMap<String, usize>,
 }
 
-impl<'a> Env<'a> {
-    pub fn new(module: &'a [String]) -> Self {
+impl<'env> Env<'env> {
+    pub fn new(module: &'env [String]) -> Self {
         Self {
             current_scope_vars: Default::default(),
             erl_function_scope_vars: Default::default(),
@@ -72,7 +72,7 @@ impl<'a> Env<'a> {
         }
     }
 
-    pub fn local_var_name(&mut self, name: String) -> Document {
+    pub fn local_var_name<'a>(&mut self, name: String) -> Document<'a> {
         match self.current_scope_vars.get(&name) {
             None => {
                 self.current_scope_vars.insert(name.clone(), 0);
@@ -84,7 +84,7 @@ impl<'a> Env<'a> {
         }
     }
 
-    pub fn next_local_var_name(&mut self, name: String) -> Document {
+    pub fn next_local_var_name<'a>(&mut self, name: String) -> Document<'a> {
         let next = self.erl_function_scope_vars.get(&name).map_or(0, |i| i + 1);
         self.erl_function_scope_vars.insert(name.clone(), next);
         self.current_scope_vars.insert(name.clone(), next);
@@ -194,7 +194,7 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
         .pretty_print(80, writer)
 }
 
-fn statement(statement: &TypedStatement, module: &[String]) -> Option<Document> {
+fn statement<'a>(statement: &TypedStatement, module: &[String]) -> Option<Document<'a>> {
     match statement {
         Statement::TypeAlias { .. } => None,
         Statement::CustomType { .. } => None,
@@ -222,7 +222,7 @@ fn statement(statement: &TypedStatement, module: &[String]) -> Option<Document> 
     }
 }
 
-fn mod_fun(name: &str, args: &[TypedArg], body: &TypedExpr, module: &[String]) -> Document {
+fn mod_fun<'a>(name: &str, args: &[TypedArg], body: &TypedExpr, module: &[String]) -> Document<'a> {
     let mut env = Env::new(module);
 
     atom(name.to_string())
@@ -232,7 +232,7 @@ fn mod_fun(name: &str, args: &[TypedArg], body: &TypedExpr, module: &[String]) -
         .append(".")
 }
 
-fn fun_args(args: &[TypedArg], env: &mut Env<'_>) -> Document {
+fn fun_args<'a>(args: &[TypedArg], env: &mut Env<'_>) -> Document<'a> {
     wrap_args(args.iter().map(|a| match &a.names {
         ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => "_".to_doc(),
         ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
@@ -241,13 +241,13 @@ fn fun_args(args: &[TypedArg], env: &mut Env<'_>) -> Document {
     }))
 }
 
-fn call_args(args: &[CallArg<TypedExpr>], env: &mut Env<'_>) -> Document {
+fn call_args<'a>(args: &[CallArg<TypedExpr>], env: &mut Env<'_>) -> Document<'a> {
     wrap_args(args.iter().map(|arg| maybe_block_expr(&arg.value, env)))
 }
 
-fn wrap_args<I>(args: I) -> Document
+fn wrap_args<'a, I>(args: I) -> Document<'a>
 where
-    I: Iterator<Item = Document>,
+    I: Iterator<Item = Document<'a>>,
 {
     break_("", "")
         .append(concat(args.intersperse(delim(","))))
@@ -257,7 +257,7 @@ where
         .group()
 }
 
-fn atom(value: String) -> Document {
+fn atom<'a>(value: String) -> Document<'a> {
     use regex::Regex;
     lazy_static! {
         static ref RE: Regex = Regex::new(r"^[a-z][a-z0-9_@]*$").unwrap();
@@ -275,29 +275,29 @@ fn atom(value: String) -> Document {
     }
 }
 
-fn string(value: &str) -> Document {
+fn string<'a>(value: &str) -> Document<'a> {
     value.to_doc().surround("<<\"", "\"/utf8>>")
 }
 
-fn tuple(elems: impl Iterator<Item = Document>) -> Document {
+fn tuple<'a>(elems: impl Iterator<Item = Document<'a>>) -> Document<'a> {
     concat(elems.intersperse(delim(",")))
         .nest_current()
         .surround("{", "}")
         .group()
 }
 
-fn bit_string(elems: impl Iterator<Item = Document>) -> Document {
+fn bit_string<'a>(elems: impl Iterator<Item = Document<'a>>) -> Document<'a> {
     concat(elems.intersperse(delim(",")))
         .nest_current()
         .surround("<<", ">>")
         .group()
 }
 
-fn const_segment(
+fn const_segment<'a>(
     value: &TypedConstant,
     options: Vec<BitStringSegmentOption<TypedConstant>>,
     env: &mut Env<'_>,
-) -> Document {
+) -> Document<'a> {
     let document = match value {
         // Skip the normal <<value/utf8>> surrounds
         Constant::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
@@ -327,11 +327,11 @@ fn const_segment(
     bit_string_segment(document, options, size, unit, true, env)
 }
 
-fn expr_segment(
+fn expr_segment<'a>(
     value: &TypedExpr,
     options: Vec<BitStringSegmentOption<TypedExpr>>,
     env: &mut Env<'_>,
-) -> Document {
+) -> Document<'a> {
     let mut value_is_a_string_literal = false;
 
     let document = match value {
@@ -373,11 +373,11 @@ fn expr_segment(
     )
 }
 
-fn pattern_segment(
+fn pattern_segment<'a>(
     value: &TypedPattern,
     options: Vec<BitStringSegmentOption<TypedPattern>>,
     env: &mut Env<'_>,
-) -> Document {
+) -> Document<'a> {
     let document = match value {
         // Skip the normal <<value/utf8>> surrounds
         Pattern::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
@@ -403,20 +403,20 @@ fn pattern_segment(
     bit_string_segment(document, options, size, unit, true, env)
 }
 
-fn bit_string_segment<Value, SizeToDoc, UnitToDoc>(
-    mut document: Document,
+fn bit_string_segment<'a, Value, SizeToDoc, UnitToDoc>(
+    mut document: Document<'a>,
     options: Vec<BitStringSegmentOption<Value>>,
     mut size_to_doc: SizeToDoc,
     mut unit_to_doc: UnitToDoc,
     value_is_a_string_literal: bool,
     env: &mut Env<'_>,
-) -> Document
+) -> Document<'a>
 where
-    SizeToDoc: FnMut(&Value, &mut Env<'_>) -> Option<Document>,
-    UnitToDoc: FnMut(&Value, &mut Env<'_>) -> Option<Document>,
+    SizeToDoc: FnMut(&Value, &mut Env<'_>) -> Option<Document<'a>>,
+    UnitToDoc: FnMut(&Value, &mut Env<'_>) -> Option<Document<'a>>,
 {
-    let mut size: Option<Document> = None;
-    let mut unit: Option<Document> = None;
+    let mut size: Option<Document<'a>> = None;
+    let mut unit: Option<Document<'a>> = None;
     let mut others = Vec::new();
 
     // Erlang only allows valid codepoint integers to be used as values for utf segments
@@ -465,7 +465,7 @@ where
     document
 }
 
-fn seq(first: &TypedExpr, then: &TypedExpr, env: &mut Env<'_>) -> Document {
+fn seq<'a>(first: &TypedExpr, then: &TypedExpr, env: &mut Env<'_>) -> Document<'a> {
     force_break()
         .append(expr(first, env))
         .append(",")
@@ -473,7 +473,12 @@ fn seq(first: &TypedExpr, then: &TypedExpr, env: &mut Env<'_>) -> Document {
         .append(expr(then, env))
 }
 
-fn bin_op(name: &BinOp, left: &TypedExpr, right: &TypedExpr, env: &mut Env<'_>) -> Document {
+fn bin_op<'a>(
+    name: &BinOp,
+    left: &TypedExpr,
+    right: &TypedExpr,
+    env: &mut Env<'_>,
+) -> Document<'a> {
     let div_zero = match name {
         BinOp::DivInt | BinOp::ModuloInt => Some("0"),
         BinOp::DivFloat => Some("0.0"),
@@ -509,7 +514,7 @@ fn bin_op(name: &BinOp, left: &TypedExpr, right: &TypedExpr, env: &mut Env<'_>) 
         _ => expr(right, env),
     };
 
-    let div = |left: Document, right: Document| {
+    let div = |left: Document<'a>, right: Document<'a>| {
         left.append(break_("", " "))
             .append(op)
             .append(" ")
@@ -544,7 +549,7 @@ fn bin_op(name: &BinOp, left: &TypedExpr, right: &TypedExpr, env: &mut Env<'_>) 
     }
 }
 
-fn pipe(value: &TypedExpr, fun: &TypedExpr, env: &mut Env<'_>) -> Document {
+fn pipe<'a>(value: &TypedExpr, fun: &TypedExpr, env: &mut Env<'_>) -> Document<'a> {
     let arg = CallArg {
         label: None,
         location: Default::default(),
@@ -554,7 +559,12 @@ fn pipe(value: &TypedExpr, fun: &TypedExpr, env: &mut Env<'_>) -> Document {
     call(fun, &[arg], env)
 }
 
-fn try_(value: &TypedExpr, pat: &TypedPattern, then: &TypedExpr, env: &mut Env<'_>) -> Document {
+fn try_<'a>(
+    value: &TypedExpr,
+    pat: &TypedPattern,
+    then: &TypedExpr,
+    env: &mut Env<'_>,
+) -> Document<'a> {
     let try_error_name = "gleam@try_error";
 
     "case "
@@ -583,7 +593,12 @@ fn try_(value: &TypedExpr, pat: &TypedPattern, then: &TypedExpr, env: &mut Env<'
         .group()
 }
 
-fn let_(value: &TypedExpr, pat: &TypedPattern, then: &TypedExpr, env: &mut Env<'_>) -> Document {
+fn let_<'a>(
+    value: &TypedExpr,
+    pat: &TypedPattern,
+    then: &TypedExpr,
+    env: &mut Env<'_>,
+) -> Document<'a> {
     let body = maybe_block_expr(value, env);
     pattern(pat, env)
         .append(" = ")
@@ -593,7 +608,7 @@ fn let_(value: &TypedExpr, pat: &TypedPattern, then: &TypedExpr, env: &mut Env<'
         .append(expr(then, env))
 }
 
-fn pattern(p: &TypedPattern, env: &mut Env<'_>) -> Document {
+fn pattern<'a>(p: &TypedPattern, env: &mut Env<'_>) -> Document<'a> {
     match p {
         Pattern::Nil { .. } => "[]".to_doc(),
 
@@ -631,7 +646,7 @@ fn pattern(p: &TypedPattern, env: &mut Env<'_>) -> Document {
     }
 }
 
-fn float(value: &str) -> Document {
+fn float<'a>(value: &str) -> Document<'a> {
     let mut value = value.replace("_", "");
     if value.ends_with('.') {
         value.push('0')
@@ -639,7 +654,11 @@ fn float(value: &str) -> Document {
     value.to_doc()
 }
 
-fn pattern_list_cons(head: &TypedPattern, tail: &TypedPattern, env: &mut Env<'_>) -> Document {
+fn pattern_list_cons<'a>(
+    head: &TypedPattern,
+    tail: &TypedPattern,
+    env: &mut Env<'_>,
+) -> Document<'a> {
     list_cons(head, tail, env, pattern, |expr| match expr {
         Pattern::Nil { .. } => ListType::Nil,
 
@@ -649,7 +668,7 @@ fn pattern_list_cons(head: &TypedPattern, tail: &TypedPattern, env: &mut Env<'_>
     })
 }
 
-fn expr_list_cons(head: &TypedExpr, tail: &TypedExpr, env: &mut Env<'_>) -> Document {
+fn expr_list_cons<'a>(head: &TypedExpr, tail: &TypedExpr, env: &mut Env<'_>) -> Document<'a> {
     list_cons(head, tail, env, maybe_block_expr, |expr| match expr {
         TypedExpr::ListNil { .. } => ListType::Nil,
 
@@ -659,15 +678,15 @@ fn expr_list_cons(head: &TypedExpr, tail: &TypedExpr, env: &mut Env<'_>) -> Docu
     })
 }
 
-fn list_cons<ToDoc, Categorise, Elem>(
+fn list_cons<'a, ToDoc, Categorise, Elem>(
     head: Elem,
     tail: Elem,
     env: &mut Env<'_>,
     to_doc: ToDoc,
     categorise_element: Categorise,
-) -> Document
+) -> Document<'a>
 where
-    ToDoc: Fn(Elem, &mut Env<'_>) -> Document,
+    ToDoc: Fn(Elem, &mut Env<'_>) -> Document<'a>,
     Categorise: Fn(Elem) -> ListType<Elem, Elem>,
 {
     let mut elems = vec![head];
@@ -711,7 +730,7 @@ enum ListType<E, T> {
     NotList(T),
 }
 
-fn var(name: &str, constructor: &ValueConstructor, env: &mut Env<'_>) -> Document {
+fn var<'a>(name: &str, constructor: &ValueConstructor, env: &mut Env<'_>) -> Document<'a> {
     match &constructor.variant {
         ValueConstructorVariant::Record {
             name: record_name, ..
@@ -757,7 +776,7 @@ fn var(name: &str, constructor: &ValueConstructor, env: &mut Env<'_>) -> Documen
     }
 }
 
-fn int(value: &str) -> Document {
+fn int<'a>(value: &str) -> Document<'a> {
     value
         .replace("_", "")
         .replace("0x", "16#")
@@ -766,7 +785,7 @@ fn int(value: &str) -> Document {
         .to_doc()
 }
 
-fn const_inline(literal: &TypedConstant, env: &mut Env<'_>) -> Document {
+fn const_inline<'a>(literal: &TypedConstant, env: &mut Env<'_>) -> Document<'a> {
     match literal {
         Constant::Int { value, .. } => int(value),
         Constant::Float { value, .. } => float(value),
@@ -799,7 +818,11 @@ fn const_inline(literal: &TypedConstant, env: &mut Env<'_>) -> Document {
     }
 }
 
-fn tag_tuple_pattern(name: &str, args: &[CallArg<TypedPattern>], env: &mut Env<'_>) -> Document {
+fn tag_tuple_pattern<'a>(
+    name: &str,
+    args: &[CallArg<TypedPattern>],
+    env: &mut Env<'_>,
+) -> Document<'a> {
     if args.is_empty() {
         atom(name.to_snake_case())
     } else {
@@ -810,7 +833,7 @@ fn tag_tuple_pattern(name: &str, args: &[CallArg<TypedPattern>], env: &mut Env<'
     }
 }
 
-fn clause(clause: &TypedClause, env: &mut Env<'_>) -> Document {
+fn clause<'a>(clause: &TypedClause, env: &mut Env<'_>) -> Document<'a> {
     let Clause {
         guard,
         pattern: pat,
@@ -853,14 +876,14 @@ fn clause(clause: &TypedClause, env: &mut Env<'_>) -> Document {
     concat(docs)
 }
 
-fn optional_clause_guard(guard: Option<&TypedClauseGuard>, env: &mut Env<'_>) -> Document {
+fn optional_clause_guard<'a>(guard: Option<&TypedClauseGuard>, env: &mut Env<'_>) -> Document<'a> {
     match guard {
         Some(guard) => " when ".to_doc().append(bare_clause_guard(guard, env)),
         None => nil(),
     }
 }
 
-fn bare_clause_guard(guard: &TypedClauseGuard, env: &mut Env<'_>) -> Document {
+fn bare_clause_guard<'a>(guard: &TypedClauseGuard, env: &mut Env<'_>) -> Document<'a> {
     match guard {
         ClauseGuard::Or { left, right, .. } => clause_guard(left.as_ref(), env)
             .append(" orelse ")
@@ -920,7 +943,7 @@ fn bare_clause_guard(guard: &TypedClauseGuard, env: &mut Env<'_>) -> Document {
     }
 }
 
-fn tuple_index_inline(tuple: &TypedClauseGuard, index: u64, env: &mut Env<'_>) -> Document {
+fn tuple_index_inline<'a>(tuple: &TypedClauseGuard, index: u64, env: &mut Env<'_>) -> Document<'a> {
     use std::iter::once;
     let index_doc = format!("{}", (index + 1)).to_doc();
     let tuple_doc = bare_clause_guard(tuple, env);
@@ -928,7 +951,7 @@ fn tuple_index_inline(tuple: &TypedClauseGuard, index: u64, env: &mut Env<'_>) -
     "erlang:element".to_doc().append(wrap_args(iter))
 }
 
-fn clause_guard(guard: &TypedClauseGuard, env: &mut Env<'_>) -> Document {
+fn clause_guard<'a>(guard: &TypedClauseGuard, env: &mut Env<'_>) -> Document<'a> {
     match guard {
         // Binary ops are wrapped in parens
         ClauseGuard::Or { .. }
@@ -954,7 +977,7 @@ fn clause_guard(guard: &TypedClauseGuard, env: &mut Env<'_>) -> Document {
     }
 }
 
-fn clauses(cs: &[TypedClause], env: &mut Env<'_>) -> Document {
+fn clauses<'a>(cs: &[TypedClause], env: &mut Env<'_>) -> Document<'a> {
     concat(
         cs.iter()
             .map(|c| {
@@ -967,7 +990,7 @@ fn clauses(cs: &[TypedClause], env: &mut Env<'_>) -> Document {
     )
 }
 
-fn case(subjects: &[TypedExpr], cs: &[TypedClause], env: &mut Env<'_>) -> Document {
+fn case<'a>(subjects: &[TypedExpr], cs: &[TypedClause], env: &mut Env<'_>) -> Document<'a> {
     let subjects_doc = if subjects.len() == 1 {
         let subject = subjects
             .get(0)
@@ -986,7 +1009,7 @@ fn case(subjects: &[TypedExpr], cs: &[TypedClause], env: &mut Env<'_>) -> Docume
         .group()
 }
 
-fn call(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env<'_>) -> Document {
+fn call<'a>(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env<'_>) -> Document<'a> {
     match fun {
         TypedExpr::ModuleSelect {
             constructor: ModuleValueConstructor::Record { name, .. },
@@ -1079,7 +1102,11 @@ fn call(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env<'_>) -> Docu
     }
 }
 
-fn record_update(spread: &TypedExpr, args: &[TypedRecordUpdateArg], env: &mut Env<'_>) -> Document {
+fn record_update<'a>(
+    spread: &TypedExpr,
+    args: &[TypedRecordUpdateArg],
+    env: &mut Env<'_>,
+) -> Document<'a> {
     use std::iter::once;
 
     args.iter().fold(expr(spread, env), |tuple_doc, arg| {
@@ -1098,7 +1125,7 @@ fn record_update(spread: &TypedExpr, args: &[TypedRecordUpdateArg], env: &mut En
 
 /// Wrap a document in begin end
 ///
-fn begin_end(document: Document) -> Document {
+fn begin_end<'a>(document: Document<'a>) -> Document<'a> {
     force_break()
         .append("begin")
         .append(line().append(document).nest(INDENT))
@@ -1108,14 +1135,14 @@ fn begin_end(document: Document) -> Document {
 
 /// Same as expr, expect it wraps seq, let, etc in begin end
 ///
-fn maybe_block_expr(expression: &TypedExpr, env: &mut Env<'_>) -> Document {
+fn maybe_block_expr<'a>(expression: &TypedExpr, env: &mut Env<'_>) -> Document<'a> {
     match &expression {
         TypedExpr::Seq { .. } | TypedExpr::Let { .. } => begin_end(expr(expression, env)),
         _ => expr(expression, env),
     }
 }
 
-fn expr(expression: &TypedExpr, env: &mut Env<'_>) -> Document {
+fn expr<'a>(expression: &TypedExpr, env: &mut Env<'_>) -> Document<'a> {
     match expression {
         TypedExpr::ListNil { .. } => "[]".to_doc(),
 
@@ -1214,7 +1241,7 @@ fn expr(expression: &TypedExpr, env: &mut Env<'_>) -> Document {
     }
 }
 
-fn tuple_index(tuple: &TypedExpr, index: u64, env: &mut Env<'_>) -> Document {
+fn tuple_index<'a>(tuple: &TypedExpr, index: u64, env: &mut Env<'_>) -> Document<'a> {
     use std::iter::once;
     let index_doc = format!("{}", (index + 1)).to_doc();
     let tuple_doc = expr(tuple, env);
@@ -1222,7 +1249,7 @@ fn tuple_index(tuple: &TypedExpr, index: u64, env: &mut Env<'_>) -> Document {
     "erlang:element".to_doc().append(wrap_args(iter))
 }
 
-fn module_select_fn(typ: Arc<Type>, module_name: &[String], label: &str) -> Document {
+fn module_select_fn<'a>(typ: Arc<Type>, module_name: &[String], label: &str) -> Document<'a> {
     match crate::typ::collapse_links(typ).as_ref() {
         crate::typ::Type::Fn { args, .. } => "fun "
             .to_doc()
@@ -1241,7 +1268,7 @@ fn module_select_fn(typ: Arc<Type>, module_name: &[String], label: &str) -> Docu
     }
 }
 
-fn fun(args: &[TypedArg], body: &TypedExpr, env: &mut Env<'_>) -> Document {
+fn fun<'a>(args: &[TypedArg], body: &TypedExpr, env: &mut Env<'_>) -> Document<'a> {
     let current_scope_vars = env.current_scope_vars.clone();
     let doc = "fun"
         .to_doc()
@@ -1262,7 +1289,7 @@ fn incrementing_args_list(arity: usize) -> String {
         .collect()
 }
 
-fn external_fun(name: &str, module: &str, fun: &str, arity: usize) -> Document {
+fn external_fun<'a>(name: &str, module: &str, fun: &str, arity: usize) -> Document<'a> {
     let chars: String = incrementing_args_list(arity);
 
     atom(name.to_string())
