@@ -23,43 +23,43 @@ pub trait Documentable {
 
 impl Documentable for &str {
     fn to_doc(self) -> Document {
-        Document::Text(self.to_string())
+        Document::String(self.to_string())
     }
 }
 
 impl Documentable for String {
     fn to_doc(self) -> Document {
-        Document::Text(self)
+        Document::String(self)
     }
 }
 
 impl Documentable for isize {
     fn to_doc(self) -> Document {
-        Document::Text(format!("{}", self))
+        Document::String(format!("{}", self))
     }
 }
 
 impl Documentable for i64 {
     fn to_doc(self) -> Document {
-        Document::Text(format!("{}", self))
+        Document::String(format!("{}", self))
     }
 }
 
 impl Documentable for usize {
     fn to_doc(self) -> Document {
-        Document::Text(format!("{}", self))
+        Document::String(format!("{}", self))
     }
 }
 
 impl Documentable for f64 {
     fn to_doc(self) -> Document {
-        Document::Text(format!("{:?}", self))
+        Document::String(format!("{:?}", self))
     }
 }
 
 impl Documentable for u64 {
     fn to_doc(self) -> Document {
-        Document::Text(format!("{:?}", self))
+        Document::String(format!("{:?}", self))
     }
 }
 
@@ -118,7 +118,7 @@ pub enum Document {
     Group(Box<Document>),
 
     /// A string to render
-    Text(String),
+    String(String),
 }
 
 #[derive(Debug, Clone)]
@@ -152,7 +152,7 @@ fn fits(mut limit: isize, mut docs: im::Vector<(isize, Mode, Document)>) -> bool
 
             Document::Group(doc) => docs.push_front((indent, Mode::Unbroken, *doc)),
 
-            Document::Text(s) => limit -= s.len() as isize,
+            Document::String(s) => limit -= s.len() as isize,
 
             Document::Break { unbroken, .. } => match mode {
                 Mode::Broken => return true,
@@ -203,7 +203,7 @@ fn fmt(
                 };
             }
 
-            Document::Text(s) => {
+            Document::String(s) => {
                 width += s.len() as isize;
                 writer.str_write(s.as_str())?;
             }
@@ -313,7 +313,7 @@ impl Document {
             | Document::Nest(_, _)
             | Document::NestCurrent(_) => false,
             Document::Vec(vec) => vec.is_empty(),
-            Document::Text(s) => s.is_empty(),
+            Document::String(s) => s.is_empty(),
             Document::Group(doc) | Document::FlexBreak(doc) => doc.is_nil(),
         }
     }
