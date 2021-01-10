@@ -21,9 +21,9 @@ pub trait Documentable<'a> {
     fn to_doc(self) -> Document<'a>;
 }
 
-impl<'a> Documentable<'a> for &str {
+impl<'a> Documentable<'a> for &'a str {
     fn to_doc(self) -> Document<'a> {
-        Document::String(self.to_string())
+        Document::Str(self)
     }
 }
 
