@@ -56,6 +56,17 @@ pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
     files
 }
 
+fn module_name_join<'a>(module: &'a [String]) -> Document<'a> {
+    let mut name = Vec::with_capacity(module.len() * 2);
+    for (i, segment) in module.iter().enumerate() {
+        if i != 0 {
+            name.push("@".to_doc())
+        }
+        name.push(segment.to_doc())
+    }
+    name.to_doc()
+}
+
 #[derive(Debug, Clone)]
 struct Env<'a> {
     module: &'a [String],
@@ -77,10 +88,10 @@ impl<'env> Env<'env> {
             None => {
                 self.current_scope_vars.insert(name.clone(), 0);
                 self.erl_function_scope_vars.insert(name.clone(), 0);
-                variable_name(name).to_doc()
+                Document::String(variable_name(name))
             }
-            Some(0) => variable_name(name).to_doc(),
-            Some(n) => variable_name(name).to_doc().append("@").append(*n),
+            Some(0) => Document::String(variable_name(name)),
+            Some(n) => Document::String(variable_name(name)).append("@").append(*n),
         }
     }
 
@@ -175,8 +186,10 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
             .intersperse(lines(2)),
     );
 
-    format!("-module({}).", module_name.join("@"))
+    "-module("
         .to_doc()
+        .append(module_name_join(module_name))
+        .append(").")
         .append(line())
         .append("-compile(no_auto_import).")
         .append(lines(2))
@@ -258,6 +271,7 @@ where
         .group()
 }
 
+// TODO: Take a reference, not a string. May need two versions
 fn atom<'a>(value: String) -> Document<'a> {
     use regex::Regex;
     lazy_static! {
@@ -266,13 +280,13 @@ fn atom<'a>(value: String) -> Document<'a> {
 
     match &*value {
         // Escape because of keyword collision
-        value if is_erlang_reserved_word(value) => format!("'{}'", value).to_doc(),
+        value if is_erlang_reserved_word(value) => Document::String(format!("'{}'", value)),
 
         // No need to escape
-        _ if RE.is_match(&value) => value.to_doc(),
+        _ if RE.is_match(&value) => Document::String(value),
 
         // Escape because of characters contained
-        _ => value.to_doc().surround("'", "'"),
+        _ => Document::String(value).surround("'", "'"),
     }
 }
 
@@ -301,7 +315,7 @@ fn const_segment<'a>(
 ) -> Document<'a> {
     let document = match value {
         // Skip the normal <<value/utf8>> surrounds
-        Constant::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
+        Constant::String { value, .. } => value.to_doc().surround("\"", "\""),
 
         // As normal
         Constant::Int { .. } | Constant::Float { .. } | Constant::BitString { .. } => {
@@ -339,7 +353,7 @@ fn expr_segment<'a>(
         // Skip the normal <<value/utf8>> surrounds and set the string literal flag
         TypedExpr::String { value, .. } => {
             value_is_a_string_literal = true;
-            value.clone().to_doc().surround("\"", "\"")
+            value.to_doc().surround("\"", "\"")
         }
 
         // As normal
@@ -381,7 +395,7 @@ fn pattern_segment<'a>(
 ) -> Document<'a> {
     let document = match value {
         // Skip the normal <<value/utf8>> surrounds
-        Pattern::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
+        Pattern::String { value, .. } => value.to_doc().surround("\"", "\""),
 
         // As normal
         Pattern::Discard { .. }
@@ -429,36 +443,41 @@ where
         None
     };
 
-    for option in options {
+    for (i, option) in options.iter().enumerate() {
+        use BitStringSegmentOption as Opt;
+        if i != 0 && !matches!(option, Opt::Size {..}|Opt::Unit{..}) {
+            others.push("-".to_doc());
+        }
         match option {
-            BitStringSegmentOption::Integer { .. } => others.push("integer"),
-            BitStringSegmentOption::Float { .. } => others.push("float"),
-            BitStringSegmentOption::Binary { .. } => others.push("binary"),
-            BitStringSegmentOption::BitString { .. } => others.push("bitstring"),
-            BitStringSegmentOption::UTF8 { .. } => others.push(override_type.unwrap_or("utf8")),
-            BitStringSegmentOption::UTF16 { .. } => others.push(override_type.unwrap_or("utf16")),
-            BitStringSegmentOption::UTF32 { .. } => others.push(override_type.unwrap_or("utf32")),
-            BitStringSegmentOption::UTF8Codepoint { .. } => others.push("utf8"),
-            BitStringSegmentOption::UTF16Codepoint { .. } => others.push("utf16"),
-            BitStringSegmentOption::UTF32Codepoint { .. } => others.push("utf32"),
-            BitStringSegmentOption::Signed { .. } => others.push("signed"),
-            BitStringSegmentOption::Unsigned { .. } => others.push("unsigned"),
-            BitStringSegmentOption::Big { .. } => others.push("big"),
-            BitStringSegmentOption::Little { .. } => others.push("little"),
-            BitStringSegmentOption::Native { .. } => others.push("native"),
-            BitStringSegmentOption::Size { value, .. } => size = size_to_doc(value, env),
-            BitStringSegmentOption::Unit { value, .. } => unit = unit_to_doc(value, env),
+            Opt::UTF8 { .. } => others.push(override_type.unwrap_or("utf8").to_doc()),
+            Opt::UTF16 { .. } => others.push(override_type.unwrap_or("utf16").to_doc()),
+            Opt::UTF32 { .. } => others.push(override_type.unwrap_or("utf32").to_doc()),
+            Opt::Integer { .. } => others.push("integer".to_doc()),
+            Opt::Float { .. } => others.push("float".to_doc()),
+            Opt::Binary { .. } => others.push("binary".to_doc()),
+            Opt::BitString { .. } => others.push("bitstring".to_doc()),
+            Opt::UTF8Codepoint { .. } => others.push("utf8".to_doc()),
+            Opt::UTF16Codepoint { .. } => others.push("utf16".to_doc()),
+            Opt::UTF32Codepoint { .. } => others.push("utf32".to_doc()),
+            Opt::Signed { .. } => others.push("signed".to_doc()),
+            Opt::Unsigned { .. } => others.push("unsigned".to_doc()),
+            Opt::Big { .. } => others.push("big".to_doc()),
+            Opt::Little { .. } => others.push("little".to_doc()),
+            Opt::Native { .. } => others.push("native".to_doc()),
+            Opt::Size { value, .. } => size = size_to_doc(value, env),
+            Opt::Unit { value, .. } => unit = unit_to_doc(value, env),
         }
     }
 
     document = document.append(size);
+    let others_is_empty = others.is_empty();
 
     if !others.is_empty() {
-        document = document.append("/").append(others.join("-"));
+        document = document.append("/").append(others);
     }
 
     if unit.is_some() {
-        if !others.is_empty() {
+        if !others_is_empty {
             document = document.append("-").append(unit)
         } else {
             document = document.append("/").append(unit)
@@ -648,7 +667,7 @@ fn float<'a>(value: &str) -> Document<'a> {
     if value.ends_with('.') {
         value.push('0')
     }
-    value.to_doc()
+    Document::String(value)
 }
 
 fn pattern_list_cons<'a>(
@@ -738,11 +757,11 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'_>) 
                 let chars = incrementing_args_list(args.len());
                 "fun("
                     .to_doc()
-                    .append(chars.clone())
+                    .append(Document::String(chars.clone()))
                     .append(") -> {")
-                    .append(record_name.to_snake_case())
+                    .append(Document::String(record_name.to_snake_case()))
                     .append(", ")
-                    .append(chars)
+                    .append(Document::String(chars))
                     .append("} end")
             }
             _ => atom(record_name.to_snake_case()),
@@ -767,7 +786,7 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'_>) 
             ..
         } => "fun "
             .to_doc()
-            .append(module.join("@"))
+            .append(module_name_join(module))
             .append(":")
             .append(atom(name.to_string()))
             .append("/")
@@ -776,12 +795,13 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'_>) 
 }
 
 fn int<'a>(value: &str) -> Document<'a> {
-    value
-        .replace("_", "")
-        .replace("0x", "16#")
-        .replace("0o", "8#")
-        .replace("0b", "2#")
-        .to_doc()
+    Document::String(
+        value
+            .replace("_", "")
+            .replace("0x", "16#")
+            .replace("0o", "8#")
+            .replace("0b", "2#"),
+    )
 }
 
 fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'_>) -> Document<'a> {
@@ -951,7 +971,7 @@ fn tuple_index_inline<'a>(
     env: &mut Env<'_>,
 ) -> Document<'a> {
     use std::iter::once;
-    let index_doc = format!("{}", (index + 1)).to_doc();
+    let index_doc = Document::String(format!("{}", (index + 1)));
     let tuple_doc = bare_clause_guard(tuple, env);
     let iter = once(index_doc).chain(once(tuple_doc));
     "erlang:element".to_doc().append(wrap_args(iter))
@@ -1163,10 +1183,9 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'_>) -> Document<'a> {
 
         TypedExpr::Todo { label: None, .. } => "erlang:error({gleam_error, todo})".to_doc(),
 
-        TypedExpr::Todo { label: Some(l), .. } => l
-            .clone()
-            .to_doc()
-            .surround("erlang:error({gleam_error, todo, \"", "\"})"),
+        TypedExpr::Todo { label: Some(l), .. } => {
+            docvec!["erlang:error({gleam_error, todo, \"", l, "\"})"]
+        }
 
         TypedExpr::Int { value, .. } => int(value.as_ref()),
         TypedExpr::Float { value, .. } => float(value.as_ref()),
@@ -1203,11 +1222,11 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'_>) -> Document<'a> {
             let chars = incrementing_args_list(*arity);
             "fun("
                 .to_doc()
-                .append(chars.clone())
+                .append(Document::String(chars.clone()))
                 .append(") -> {")
-                .append(name.to_snake_case())
+                .append(Document::String(name.to_snake_case()))
                 .append(", ")
-                .append(chars)
+                .append(Document::String(chars))
                 .append("} end")
         }
 
@@ -1258,27 +1277,25 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'_>) -> Document<'a> {
 
 fn tuple_index<'a>(tuple: &'a TypedExpr, index: u64, env: &mut Env<'_>) -> Document<'a> {
     use std::iter::once;
-    let index_doc = format!("{}", (index + 1)).to_doc();
+    let index_doc = Document::String(format!("{}", (index + 1)));
     let tuple_doc = expr(tuple, env);
     let iter = once(index_doc).chain(once(tuple_doc));
     "erlang:element".to_doc().append(wrap_args(iter))
 }
 
-fn module_select_fn<'a>(typ: Arc<Type>, module_name: &[String], label: &str) -> Document<'a> {
+fn module_select_fn<'a>(typ: Arc<Type>, module_name: &'a [String], label: &'a str) -> Document<'a> {
     match crate::typ::collapse_links(typ).as_ref() {
         crate::typ::Type::Fn { args, .. } => "fun "
             .to_doc()
-            .append(module_name.join("@"))
+            .append(module_name_join(module_name))
             .append(":")
             .append(atom(label.to_string()))
             .append("/")
             .append(args.len()),
 
-        _ => module_name
-            .join("@")
-            .to_doc()
+        _ => module_name_join(module_name)
             .append(":")
-            .append(label.to_string())
+            .append(atom(label.to_string()))
             .append("()"),
     }
 }
@@ -1308,12 +1325,16 @@ fn external_fun<'a>(name: &str, module: &str, fun: &str, arity: usize) -> Docume
     let chars: String = incrementing_args_list(arity);
 
     atom(name.to_string())
-        .append(format!("({}) ->", chars))
+        .append("(")
+        .append(Document::String(chars.clone()))
+        .append(") ->")
         .append(line())
         .append(atom(module.to_string()))
         .append(":")
         .append(atom(fun.to_string()))
-        .append(format!("({}).", chars))
+        .append("(")
+        .append(Document::String(chars))
+        .append(").")
         .nest(INDENT)
 }
 

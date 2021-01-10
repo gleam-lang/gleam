@@ -140,22 +140,24 @@ impl<'comments> Formatter<'comments> {
             nil()
         };
 
-        let doc_comments = concat(
-            self.doc_comments
-                .iter()
-                .map(|comment| line().append("///").append(comment.content.to_string())),
-        );
-        let comments = concat(
-            self.comments
-                .iter()
-                .map(|comment| line().append("//").append(comment.content.to_string())),
-        );
+        let doc_comments = concat(self.doc_comments.iter().map(|comment| {
+            line()
+                .append("///")
+                .append(Document::String(comment.content.to_string()))
+        }));
+        let comments = concat(self.comments.iter().map(|comment| {
+            line()
+                .append("//")
+                .append(Document::String(comment.content.to_string()))
+        }));
 
         let module_comments = if !self.module_comments.is_empty() {
-            let comments = self
-                .module_comments
-                .iter()
-                .map(|s| "////".to_doc().append((*s).to_string()).append(line()));
+            let comments = self.module_comments.iter().map(|s| {
+                "////"
+                    .to_doc()
+                    .append(Document::String(s.content.to_string()))
+                    .append(line())
+            });
             concat(comments).append(line())
         } else {
             nil()
@@ -219,8 +221,11 @@ impl<'comments> Formatter<'comments> {
                 .external_fn_signature(*public, name, args, retrn)
                 .append(" =")
                 .append(line())
-                .append(format!("  \"{}\" ", module))
-                .append(format!("\"{}\"", fun)),
+                .append("  \"")
+                .append(module.as_str())
+                .append("\" \"")
+                .append(fun.as_str())
+                .append("\""),
 
             Statement::ExternalType {
                 public, name, args, ..
@@ -231,9 +236,9 @@ impl<'comments> Formatter<'comments> {
                 as_name,
                 unqualified,
                 ..
-            } => nil()
-                .append("import ")
-                .append(module.join("/"))
+            } => "import "
+                .to_doc()
+                .append(Document::String(module.join("/")))
                 .append(if unqualified.is_empty() {
                     nil()
                 } else {
@@ -250,7 +255,7 @@ impl<'comments> Formatter<'comments> {
                     ".{".to_doc().append(unqualified).append("}")
                 })
                 .append(if let Some(name) = as_name {
-                    format!(" as {}", name).to_doc()
+                    docvec![" as ", name]
                 } else {
                     nil()
                 }),
@@ -262,7 +267,7 @@ impl<'comments> Formatter<'comments> {
                 value,
                 ..
             } => {
-                let head = pub_(*public).append("const ").append(name.to_string());
+                let head = pub_(*public).append("const ").append(name.as_str());
                 let head = match annotation {
                     None => head,
                     Some(t) => head.append(": ").append(self.type_ast(t)),
@@ -274,9 +279,9 @@ impl<'comments> Formatter<'comments> {
 
     fn const_expr<'a, A, B>(&mut self, value: &'a Constant<A, B>) -> Document<'a> {
         match value {
-            Constant::Int { value, .. } | Constant::Float { value, .. } => value.clone().to_doc(),
+            Constant::Int { value, .. } | Constant::Float { value, .. } => value.to_doc(),
 
-            Constant::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
+            Constant::String { value, .. } => value.to_doc().surround("\"", "\""),
 
             Constant::List { elements, .. } => {
                 let comma: fn() -> Document<'a> = if elements.iter().all(|e| e.is_simple()) {
@@ -308,14 +313,14 @@ impl<'comments> Formatter<'comments> {
                 args,
                 module: None,
                 ..
-            } if args.is_empty() => name.to_string().to_doc(),
+            } if args.is_empty() => name.to_doc(),
 
             Constant::Record {
                 name,
                 args,
                 module: Some(m),
                 ..
-            } if args.is_empty() => m.to_string().to_doc().append(".").append(name.to_string()),
+            } if args.is_empty() => m.to_doc().append(".").append(name.as_str()),
 
             Constant::Record {
                 name,
@@ -323,7 +328,6 @@ impl<'comments> Formatter<'comments> {
                 module: None,
                 ..
             } => name
-                .to_string()
                 .to_doc()
                 .append(wrap_args(args.iter().map(|a| self.constant_call_arg(a))))
                 .group(),
@@ -334,10 +338,9 @@ impl<'comments> Formatter<'comments> {
                 module: Some(m),
                 ..
             } => m
-                .to_string()
                 .to_doc()
                 .append(".")
-                .append(name.to_string())
+                .append(name.as_str())
                 .append(wrap_args(args.iter().map(|a| self.constant_call_arg(a))))
                 .group(),
         }
@@ -353,7 +356,7 @@ impl<'comments> Formatter<'comments> {
 
         pub_(public)
             .append("const ")
-            .append(name.to_string())
+            .append(name)
             .append(": ")
             .append(printer.print(value.typ().as_ref()))
             .append(" = ")
@@ -371,7 +374,7 @@ impl<'comments> Formatter<'comments> {
             None => nil(),
             Some(_) => concat(
                 comments
-                    .map(|c| "///".to_doc().append(c.to_string()))
+                    .map(|c| "///".to_doc().append(Document::String(c.to_string())))
                     .intersperse(line()),
             )
             .append(force_break())
@@ -387,7 +390,7 @@ impl<'comments> Formatter<'comments> {
     ) -> Document<'a> {
         let head = match module {
             None => name.to_doc(),
-            Some(qualifier) => qualifier.to_string().to_doc().append(".").append(name),
+            Some(qualifier) => qualifier.to_doc().append(".").append(name),
         };
 
         if args.is_empty() {
@@ -399,21 +402,20 @@ impl<'comments> Formatter<'comments> {
 
     fn type_ast<'a>(&mut self, t: &'a TypeAst) -> Document<'a> {
         match t {
-            TypeAst::Hole { name, .. } => name.clone().to_doc(),
+            TypeAst::Hole { name, .. } => name.to_doc(),
 
             TypeAst::Constructor {
                 name, args, module, ..
             } => self.type_ast_constructor(module, name, args),
 
             TypeAst::Fn { args, retrn, .. } => "fn"
-                .to_string()
                 .to_doc()
                 .append(self.type_arguments(args))
                 .group()
                 .append(" ->")
                 .append(break_("", " ").append(self.type_ast(retrn)).nest(INDENT)),
 
-            TypeAst::Var { name, .. } => name.clone().to_doc(),
+            TypeAst::Var { name, .. } => name.to_doc(),
 
             TypeAst::Tuple { elems, .. } => "tuple".to_doc().append(self.type_arguments(elems)),
         }
@@ -436,7 +438,7 @@ impl<'comments> Formatter<'comments> {
         let head = if args.is_empty() {
             head
         } else {
-            head.append(wrap_args(args.iter().map(|e| e.clone().to_doc())).group())
+            head.append(wrap_args(args.iter().map(|e| e.to_doc())).group())
         };
 
         head.append(" =")
@@ -501,7 +503,7 @@ impl<'comments> Formatter<'comments> {
         pub_(public)
             .to_doc()
             .append("external fn ")
-            .append(name.to_string())
+            .append(name)
             .append(self.external_fn_args(args))
             .append(" -> ".to_doc().append(self.type_ast(retrn)))
             .group()
@@ -593,7 +595,7 @@ impl<'comments> Formatter<'comments> {
         let document = match expr {
             UntypedExpr::Todo { label: None, .. } => "todo".to_doc(),
 
-            UntypedExpr::Todo { label: Some(l), .. } => ["todo", "(\"", l, "\")"].join("").to_doc(),
+            UntypedExpr::Todo { label: Some(l), .. } => docvec!["todo(\"", l, "\")"],
 
             UntypedExpr::Pipe {
                 left,
@@ -602,17 +604,17 @@ impl<'comments> Formatter<'comments> {
                 ..
             } => self.pipe(left, right, location.start),
 
-            UntypedExpr::Int { value, .. } => value.clone().to_doc(),
+            UntypedExpr::Int { value, .. } => value.to_doc(),
 
-            UntypedExpr::Float { value, .. } => value.clone().to_doc(),
+            UntypedExpr::Float { value, .. } => value.to_doc(),
 
-            UntypedExpr::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
+            UntypedExpr::String { value, .. } => value.to_doc().surround("\"", "\""),
 
             UntypedExpr::Seq { first, then, .. } => self.seq(first, then),
 
             UntypedExpr::Var { name, .. } if name == CAPTURE_VARIABLE => "_".to_doc(),
 
-            UntypedExpr::Var { name, .. } => name.clone().to_doc(),
+            UntypedExpr::Var { name, .. } => name.to_doc(),
 
             UntypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
 
@@ -654,7 +656,7 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::FieldAccess {
                 label, container, ..
-            } => self.expr(container).append(".").append(label.clone()),
+            } => self.expr(container).append(".").append(label.as_str()),
 
             UntypedExpr::Tuple { elems, .. } => "tuple"
                 .to_doc()
@@ -693,8 +695,8 @@ impl<'comments> Formatter<'comments> {
         }
 
         let name = match module {
-            Some(m) => m.to_string().to_doc().append(".").append(name.to_string()),
-            None => name.to_string().to_doc(),
+            Some(m) => m.to_doc().append(".").append(name),
+            None => name.to_doc(),
         };
 
         if args.is_empty() && with_spread {
@@ -785,7 +787,7 @@ impl<'comments> Formatter<'comments> {
     ) -> Document<'a> {
         use std::iter::once;
         let constructor_doc = self.expr(constructor);
-        let spread_doc = "..".to_doc().append(spread.clone().name.to_doc());
+        let spread_doc = "..".to_doc().append(spread.name.to_doc());
         let arg_docs = args.iter().map(|a| self.record_update_arg(a));
         let all_arg_docs = once(spread_doc).chain(arg_docs);
         constructor_doc.append(wrap_args(all_arg_docs)).group()
@@ -901,21 +903,16 @@ impl<'comments> Formatter<'comments> {
         let doc_comments = self.doc_comments(constructor.location.start);
 
         let doc = if constructor.args.is_empty() {
-            constructor.name.clone().to_doc()
+            constructor.name.to_doc()
         } else {
             constructor
                 .name
-                .to_string()
                 .to_doc()
                 .append(wrap_args(constructor.args.iter().map(
                     |(label, typ, arg_location)| {
                         let arg_comments = self.pop_comments(arg_location.start);
                         let arg = match label {
-                            Some(l) => l
-                                .to_string()
-                                .to_doc()
-                                .append(": ")
-                                .append(self.type_ast(typ)),
+                            Some(l) => l.to_doc().append(": ").append(self.type_ast(typ)),
                             None => self.type_ast(typ),
                         };
 
@@ -945,11 +942,10 @@ impl<'comments> Formatter<'comments> {
             .to_doc()
             .append(if opaque { "opaque type " } else { "type " })
             .append(if args.is_empty() {
-                name.to_string().to_doc()
+                name.to_doc()
             } else {
-                name.to_string()
-                    .to_doc()
-                    .append(wrap_args(args.iter().map(|e| e.clone().to_doc())))
+                name.to_doc()
+                    .append(wrap_args(args.iter().map(|e| e.as_str().to_doc())))
                     .group()
             })
             .append(" {")
@@ -979,11 +975,10 @@ impl<'comments> Formatter<'comments> {
             .to_doc()
             .append("opaque type ")
             .append(if args.is_empty() {
-                name.to_string().to_doc()
+                name.to_doc()
             } else {
-                name.to_string()
-                    .to_doc()
-                    .append(wrap_args(args.iter().map(|e| e.clone().to_doc())))
+                name.to_doc()
+                    .append(wrap_args(args.iter().map(|e| e.as_str().to_doc())))
             })
     }
 
@@ -1044,7 +1039,7 @@ impl<'comments> Formatter<'comments> {
     fn call_arg<'a>(&mut self, arg: &'a CallArg<UntypedExpr>) -> Document<'a> {
         match &arg.label {
             Some(s) => commented(
-                s.clone().to_doc().append(": "),
+                s.to_doc().append(": "),
                 self.pop_comments(arg.location.start),
             ),
             None => nil(),
@@ -1054,7 +1049,6 @@ impl<'comments> Formatter<'comments> {
 
     fn record_update_arg<'a>(&mut self, arg: &'a UntypedRecordUpdateArg) -> Document<'a> {
         arg.label
-            .clone()
             .to_doc()
             .append(": ")
             .append(self.wrap_expr(&arg.value))
@@ -1132,11 +1126,11 @@ impl<'comments> Formatter<'comments> {
     ) -> Document<'a> {
         pub_(public)
             .append("external type ")
-            .append(name.to_string())
+            .append(name)
             .append(if args.is_empty() {
                 nil()
             } else {
-                wrap_args(args.iter().map(|e| e.clone().to_doc()))
+                wrap_args(args.iter().map(|e| e.to_doc()))
             })
     }
 
@@ -1156,22 +1150,21 @@ impl<'comments> Formatter<'comments> {
     fn pattern<'a>(&mut self, pattern: &'a UntypedPattern) -> Document<'a> {
         let comments = self.pop_comments(pattern.location().start);
         let doc = match pattern {
-            Pattern::Int { value, .. } => value.clone().to_doc(),
+            Pattern::Int { value, .. } => value.to_doc(),
 
-            Pattern::Float { value, .. } => value.clone().to_doc(),
+            Pattern::Float { value, .. } => value.to_doc(),
 
-            Pattern::String { value, .. } => value.clone().to_doc().surround("\"", "\""),
+            Pattern::String { value, .. } => value.to_doc().surround("\"", "\""),
 
-            Pattern::Var { name, .. } => name.to_string().to_doc(),
+            Pattern::Var { name, .. } => name.to_doc(),
 
-            Pattern::VarCall { name, .. } => name.to_string().to_doc(),
+            Pattern::VarCall { name, .. } => name.to_doc(),
 
-            Pattern::Let { name, pattern, .. } => self
-                .pattern(pattern)
-                .append(" as ")
-                .append(name.to_string()),
+            Pattern::Let { name, pattern, .. } => {
+                self.pattern(pattern).append(" as ").append(name.as_str())
+            }
 
-            Pattern::Discard { name, .. } => name.to_string().to_doc(),
+            Pattern::Discard { name, .. } => name.to_doc(),
 
             Pattern::Nil { .. } => "[]".to_doc(),
 
@@ -1213,7 +1206,7 @@ impl<'comments> Formatter<'comments> {
 
     fn pattern_call_arg<'a>(&mut self, arg: &'a CallArg<UntypedPattern>) -> Document<'a> {
         match &arg.label {
-            Some(s) => s.clone().to_doc().append(": "),
+            Some(s) => s.to_doc().append(": "),
             None => nil(),
         }
         .append(self.pattern(&arg.value))
@@ -1281,12 +1274,12 @@ impl<'comments> Formatter<'comments> {
                 .append(" <=. ")
                 .append(self.clause_guard(right.as_ref())),
 
-            ClauseGuard::Var { name, .. } => name.to_string().to_doc(),
+            ClauseGuard::Var { name, .. } => name.to_doc(),
 
             ClauseGuard::TupleIndex { tuple, index, .. } => self
                 .clause_guard(tuple.as_ref())
                 .append(".")
-                .append(index.to_string())
+                .append(*index)
                 .to_doc(),
 
             ClauseGuard::Constant(constant) => self.const_expr(constant),
@@ -1296,11 +1289,7 @@ impl<'comments> Formatter<'comments> {
     fn constant_call_arg<'a, A, B>(&mut self, arg: &'a CallArg<Constant<A, B>>) -> Document<'a> {
         match &arg.label {
             None => self.const_expr(&arg.value),
-            Some(s) => s
-                .clone()
-                .to_doc()
-                .append(": ")
-                .append(self.const_expr(&arg.value)),
+            Some(s) => s.to_doc().append(": ").append(self.const_expr(&arg.value)),
         }
     }
 }
@@ -1308,12 +1297,11 @@ impl<'comments> Formatter<'comments> {
 impl<'a> Documentable<'a> for &'a ArgNames {
     fn to_doc(self) -> Document<'a> {
         match self {
-            ArgNames::Discard { name } => name.to_string(),
-            ArgNames::LabelledDiscard { label, name } => format!("{} {}", label, name),
-            ArgNames::Named { name } => name.to_string(),
-            ArgNames::NamedLabelled { name, label } => format!("{} {}", label, name),
+            ArgNames::Named { name } | ArgNames::Discard { name } => name.as_str().to_doc(),
+            ArgNames::LabelledDiscard { label, name } | ArgNames::NamedLabelled { label, name } => {
+                docvec![label, " ", name]
+            }
         }
-        .to_doc()
     }
 }
 
@@ -1327,9 +1315,9 @@ fn pub_(public: bool) -> Document<'static> {
 
 impl<'a> Documentable<'a> for &'a UnqualifiedImport {
     fn to_doc(self) -> Document<'a> {
-        self.name.clone().to_doc().append(match &self.as_name {
+        self.name.to_doc().append(match &self.as_name {
             None => nil(),
-            Some(s) => " as ".to_doc().append(s.clone()),
+            Some(s) => " as ".to_doc().append(s.as_str()),
         })
     }
 }
@@ -1505,7 +1493,7 @@ fn printed_comments<'a, 'comments>(
         None => None,
         Some(_) => Some(concat(
             comments
-                .map(|c| "//".to_doc().append(c.to_string()))
+                .map(|c| "//".to_doc().append(Document::String(c.to_string())))
                 .intersperse(line()),
         )),
     }
