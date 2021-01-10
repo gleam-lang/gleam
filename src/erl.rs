@@ -194,7 +194,7 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
         .pretty_print(80, writer)
 }
 
-fn statement<'a>(statement: &TypedStatement, module: &[String]) -> Option<Document<'a>> {
+fn statement<'a>(statement: &'a TypedStatement, module: &'a [String]) -> Option<Document<'a>> {
     match statement {
         Statement::TypeAlias { .. } => None,
         Statement::CustomType { .. } => None,
@@ -222,7 +222,12 @@ fn statement<'a>(statement: &TypedStatement, module: &[String]) -> Option<Docume
     }
 }
 
-fn mod_fun<'a>(name: &str, args: &[TypedArg], body: &TypedExpr, module: &[String]) -> Document<'a> {
+fn mod_fun<'a>(
+    name: &'a str,
+    args: &'a [TypedArg],
+    body: &'a TypedExpr,
+    module: &'a [String],
+) -> Document<'a> {
     let mut env = Env::new(module);
 
     atom(name.to_string())
@@ -232,17 +237,13 @@ fn mod_fun<'a>(name: &str, args: &[TypedArg], body: &TypedExpr, module: &[String
         .append(".")
 }
 
-fn fun_args<'a>(args: &[TypedArg], env: &mut Env<'_>) -> Document<'a> {
+fn fun_args<'a>(args: &'a [TypedArg], env: &mut Env<'_>) -> Document<'a> {
     wrap_args(args.iter().map(|a| match &a.names {
         ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => "_".to_doc(),
         ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
             env.next_local_var_name(name.to_string())
         }
     }))
-}
-
-fn call_args<'a>(args: &[CallArg<TypedExpr>], env: &mut Env<'_>) -> Document<'a> {
-    wrap_args(args.iter().map(|arg| maybe_block_expr(&arg.value, env)))
 }
 
 fn wrap_args<'a, I>(args: I) -> Document<'a>
@@ -275,7 +276,7 @@ fn atom<'a>(value: String) -> Document<'a> {
     }
 }
 
-fn string<'a>(value: &str) -> Document<'a> {
+fn string<'a>(value: &'a str) -> Document<'a> {
     value.to_doc().surround("<<\"", "\"/utf8>>")
 }
 
@@ -294,8 +295,8 @@ fn bit_string<'a>(elems: impl Iterator<Item = Document<'a>>) -> Document<'a> {
 }
 
 fn const_segment<'a>(
-    value: &TypedConstant,
-    options: Vec<BitStringSegmentOption<TypedConstant>>,
+    value: &'a TypedConstant,
+    options: &'a [BitStringSegmentOption<TypedConstant>],
     env: &mut Env<'_>,
 ) -> Document<'a> {
     let document = match value {
@@ -311,7 +312,7 @@ fn const_segment<'a>(
         value => const_inline(value, env).surround("(", ")"),
     };
 
-    let size = |value: &TypedConstant, env: &mut Env<'_>| match value {
+    let size = |value: &'a TypedConstant, env: &mut Env<'_>| match value {
         Constant::Int { .. } => Some(":".to_doc().append(const_inline(value, env))),
         _ => Some(
             ":".to_doc()
@@ -319,7 +320,7 @@ fn const_segment<'a>(
         ),
     };
 
-    let unit = |value: &TypedConstant, env: &mut Env<'_>| match value {
+    let unit = |value: &'a TypedConstant, env: &mut Env<'_>| match value {
         Constant::Int { .. } => Some("unit:".to_doc().append(const_inline(value, env))),
         _ => None,
     };
@@ -328,8 +329,8 @@ fn const_segment<'a>(
 }
 
 fn expr_segment<'a>(
-    value: &TypedExpr,
-    options: Vec<BitStringSegmentOption<TypedExpr>>,
+    value: &'a TypedExpr,
+    options: &'a [BitStringSegmentOption<TypedExpr>],
     env: &mut Env<'_>,
 ) -> Document<'a> {
     let mut value_is_a_string_literal = false;
@@ -351,14 +352,14 @@ fn expr_segment<'a>(
         value => expr(value, env).surround("(", ")"),
     };
 
-    let size = |value: &TypedExpr, env: &mut Env<'_>| match value {
+    let size = |value: &'a TypedExpr, env: &mut Env<'_>| match value {
         TypedExpr::Int { .. } | TypedExpr::Var { .. } => {
             Some(":".to_doc().append(expr(value, env)))
         }
         _ => Some(":".to_doc().append(expr(value, env).surround("(", ")"))),
     };
 
-    let unit = |value: &TypedExpr, env: &mut Env<'_>| match value {
+    let unit = |value: &'a TypedExpr, env: &mut Env<'_>| match value {
         TypedExpr::Int { .. } => Some("unit:".to_doc().append(expr(value, env))),
         _ => None,
     };
@@ -374,8 +375,8 @@ fn expr_segment<'a>(
 }
 
 fn pattern_segment<'a>(
-    value: &TypedPattern,
-    options: Vec<BitStringSegmentOption<TypedPattern>>,
+    value: &'a TypedPattern,
+    options: &'a [BitStringSegmentOption<TypedPattern>],
     env: &mut Env<'_>,
 ) -> Document<'a> {
     let document = match value {
@@ -393,9 +394,9 @@ fn pattern_segment<'a>(
     };
 
     let size =
-        |value: &TypedPattern, env: &mut Env<'_>| Some(":".to_doc().append(pattern(value, env)));
+        |value: &'a TypedPattern, env: &mut Env<'_>| Some(":".to_doc().append(pattern(value, env)));
 
-    let unit = |value: &TypedPattern, env: &mut Env<'_>| match value {
+    let unit = |value: &'a TypedPattern, env: &mut Env<'_>| match value {
         Pattern::Int { .. } => Some("unit:".to_doc().append(pattern(value, env))),
         _ => None,
     };
@@ -403,17 +404,17 @@ fn pattern_segment<'a>(
     bit_string_segment(document, options, size, unit, true, env)
 }
 
-fn bit_string_segment<'a, Value, SizeToDoc, UnitToDoc>(
+fn bit_string_segment<'a, Value: 'a, SizeToDoc, UnitToDoc>(
     mut document: Document<'a>,
-    options: Vec<BitStringSegmentOption<Value>>,
+    options: &'a [BitStringSegmentOption<Value>],
     mut size_to_doc: SizeToDoc,
     mut unit_to_doc: UnitToDoc,
     value_is_a_string_literal: bool,
     env: &mut Env<'_>,
 ) -> Document<'a>
 where
-    SizeToDoc: FnMut(&Value, &mut Env<'_>) -> Option<Document<'a>>,
-    UnitToDoc: FnMut(&Value, &mut Env<'_>) -> Option<Document<'a>>,
+    SizeToDoc: FnMut(&'a Value, &mut Env<'_>) -> Option<Document<'a>>,
+    UnitToDoc: FnMut(&'a Value, &mut Env<'_>) -> Option<Document<'a>>,
 {
     let mut size: Option<Document<'a>> = None;
     let mut unit: Option<Document<'a>> = None;
@@ -428,25 +429,27 @@ where
         None
     };
 
-    options.iter().for_each(|option| match option {
-        BitStringSegmentOption::Integer { .. } => others.push("integer"),
-        BitStringSegmentOption::Float { .. } => others.push("float"),
-        BitStringSegmentOption::Binary { .. } => others.push("binary"),
-        BitStringSegmentOption::BitString { .. } => others.push("bitstring"),
-        BitStringSegmentOption::UTF8 { .. } => others.push(override_type.unwrap_or("utf8")),
-        BitStringSegmentOption::UTF16 { .. } => others.push(override_type.unwrap_or("utf16")),
-        BitStringSegmentOption::UTF32 { .. } => others.push(override_type.unwrap_or("utf32")),
-        BitStringSegmentOption::UTF8Codepoint { .. } => others.push("utf8"),
-        BitStringSegmentOption::UTF16Codepoint { .. } => others.push("utf16"),
-        BitStringSegmentOption::UTF32Codepoint { .. } => others.push("utf32"),
-        BitStringSegmentOption::Signed { .. } => others.push("signed"),
-        BitStringSegmentOption::Unsigned { .. } => others.push("unsigned"),
-        BitStringSegmentOption::Big { .. } => others.push("big"),
-        BitStringSegmentOption::Little { .. } => others.push("little"),
-        BitStringSegmentOption::Native { .. } => others.push("native"),
-        BitStringSegmentOption::Size { value, .. } => size = size_to_doc(value, env),
-        BitStringSegmentOption::Unit { value, .. } => unit = unit_to_doc(value, env),
-    });
+    for option in options {
+        match option {
+            BitStringSegmentOption::Integer { .. } => others.push("integer"),
+            BitStringSegmentOption::Float { .. } => others.push("float"),
+            BitStringSegmentOption::Binary { .. } => others.push("binary"),
+            BitStringSegmentOption::BitString { .. } => others.push("bitstring"),
+            BitStringSegmentOption::UTF8 { .. } => others.push(override_type.unwrap_or("utf8")),
+            BitStringSegmentOption::UTF16 { .. } => others.push(override_type.unwrap_or("utf16")),
+            BitStringSegmentOption::UTF32 { .. } => others.push(override_type.unwrap_or("utf32")),
+            BitStringSegmentOption::UTF8Codepoint { .. } => others.push("utf8"),
+            BitStringSegmentOption::UTF16Codepoint { .. } => others.push("utf16"),
+            BitStringSegmentOption::UTF32Codepoint { .. } => others.push("utf32"),
+            BitStringSegmentOption::Signed { .. } => others.push("signed"),
+            BitStringSegmentOption::Unsigned { .. } => others.push("unsigned"),
+            BitStringSegmentOption::Big { .. } => others.push("big"),
+            BitStringSegmentOption::Little { .. } => others.push("little"),
+            BitStringSegmentOption::Native { .. } => others.push("native"),
+            BitStringSegmentOption::Size { value, .. } => size = size_to_doc(value, env),
+            BitStringSegmentOption::Unit { value, .. } => unit = unit_to_doc(value, env),
+        }
+    }
 
     document = document.append(size);
 
@@ -465,7 +468,7 @@ where
     document
 }
 
-fn seq<'a>(first: &TypedExpr, then: &TypedExpr, env: &mut Env<'_>) -> Document<'a> {
+fn seq<'a>(first: &'a TypedExpr, then: &'a TypedExpr, env: &mut Env<'_>) -> Document<'a> {
     force_break()
         .append(expr(first, env))
         .append(",")
@@ -474,9 +477,9 @@ fn seq<'a>(first: &TypedExpr, then: &TypedExpr, env: &mut Env<'_>) -> Document<'
 }
 
 fn bin_op<'a>(
-    name: &BinOp,
-    left: &TypedExpr,
-    right: &TypedExpr,
+    name: &'a BinOp,
+    left: &'a TypedExpr,
+    right: &'a TypedExpr,
     env: &mut Env<'_>,
 ) -> Document<'a> {
     let div_zero = match name {
@@ -549,20 +552,14 @@ fn bin_op<'a>(
     }
 }
 
-fn pipe<'a>(value: &TypedExpr, fun: &TypedExpr, env: &mut Env<'_>) -> Document<'a> {
-    let arg = CallArg {
-        label: None,
-        location: Default::default(),
-        // TODO: remove this clone
-        value: value.clone(),
-    };
-    call(fun, &[arg], env)
+fn pipe<'a>(value: &'a TypedExpr, fun: &'a TypedExpr, env: &mut Env<'_>) -> Document<'a> {
+    docs_args_call(fun, vec![expr(value, env)], env)
 }
 
 fn try_<'a>(
-    value: &TypedExpr,
-    pat: &TypedPattern,
-    then: &TypedExpr,
+    value: &'a TypedExpr,
+    pat: &'a TypedPattern,
+    then: &'a TypedExpr,
     env: &mut Env<'_>,
 ) -> Document<'a> {
     let try_error_name = "gleam@try_error";
@@ -594,9 +591,9 @@ fn try_<'a>(
 }
 
 fn let_<'a>(
-    value: &TypedExpr,
-    pat: &TypedPattern,
-    then: &TypedExpr,
+    value: &'a TypedExpr,
+    pat: &'a TypedPattern,
+    then: &'a TypedExpr,
     env: &mut Env<'_>,
 ) -> Document<'a> {
     let body = maybe_block_expr(value, env);
@@ -608,7 +605,7 @@ fn let_<'a>(
         .append(expr(then, env))
 }
 
-fn pattern<'a>(p: &TypedPattern, env: &mut Env<'_>) -> Document<'a> {
+fn pattern<'a>(p: &'a TypedPattern, env: &mut Env<'_>) -> Document<'a> {
     match p {
         Pattern::Nil { .. } => "[]".to_doc(),
 
@@ -641,7 +638,7 @@ fn pattern<'a>(p: &TypedPattern, env: &mut Env<'_>) -> Document<'a> {
         Pattern::BitString { segments, .. } => bit_string(
             segments
                 .iter()
-                .map(|s| pattern_segment(&s.value, s.options.clone(), env)),
+                .map(|s| pattern_segment(&s.value, s.options.as_slice(), env)),
         ),
     }
 }
@@ -655,8 +652,8 @@ fn float<'a>(value: &str) -> Document<'a> {
 }
 
 fn pattern_list_cons<'a>(
-    head: &TypedPattern,
-    tail: &TypedPattern,
+    head: &'a TypedPattern,
+    tail: &'a TypedPattern,
     env: &mut Env<'_>,
 ) -> Document<'a> {
     list_cons(head, tail, env, pattern, |expr| match expr {
@@ -668,7 +665,7 @@ fn pattern_list_cons<'a>(
     })
 }
 
-fn expr_list_cons<'a>(head: &TypedExpr, tail: &TypedExpr, env: &mut Env<'_>) -> Document<'a> {
+fn expr_list_cons<'a>(head: &'a TypedExpr, tail: &'a TypedExpr, env: &mut Env<'_>) -> Document<'a> {
     list_cons(head, tail, env, maybe_block_expr, |expr| match expr {
         TypedExpr::ListNil { .. } => ListType::Nil,
 
@@ -678,7 +675,7 @@ fn expr_list_cons<'a>(head: &TypedExpr, tail: &TypedExpr, env: &mut Env<'_>) -> 
     })
 }
 
-fn list_cons<'a, ToDoc, Categorise, Elem>(
+fn list_cons<'a, ToDoc, Categorise, Elem: 'a>(
     head: Elem,
     tail: Elem,
     env: &mut Env<'_>,
@@ -710,7 +707,7 @@ where
     elems.to_doc().nest_current().surround("[", "]").group()
 }
 
-fn collect_cons<F, E, T>(e: T, elems: &mut Vec<E>, f: F) -> Option<T>
+fn collect_cons<'a, F, E, T>(e: T, elems: &'a mut Vec<E>, f: F) -> Option<T>
 where
     F: Fn(T) -> ListType<E, T>,
 {
@@ -732,7 +729,7 @@ enum ListType<E, T> {
     NotList(T),
 }
 
-fn var<'a>(name: &str, constructor: &ValueConstructor, env: &mut Env<'_>) -> Document<'a> {
+fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'_>) -> Document<'a> {
     match &constructor.variant {
         ValueConstructorVariant::Record {
             name: record_name, ..
@@ -787,7 +784,7 @@ fn int<'a>(value: &str) -> Document<'a> {
         .to_doc()
 }
 
-fn const_inline<'a>(literal: &TypedConstant, env: &mut Env<'_>) -> Document<'a> {
+fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'_>) -> Document<'a> {
     match literal {
         Constant::Int { value, .. } => int(value),
         Constant::Float { value, .. } => float(value),
@@ -805,7 +802,7 @@ fn const_inline<'a>(literal: &TypedConstant, env: &mut Env<'_>) -> Document<'a> 
         Constant::BitString { segments, .. } => bit_string(
             segments
                 .iter()
-                .map(|s| const_segment(&s.value, s.options.clone(), env)),
+                .map(|s| const_segment(&s.value, s.options.as_slice(), env)),
         ),
 
         Constant::Record { tag, args, .. } => {
@@ -821,8 +818,8 @@ fn const_inline<'a>(literal: &TypedConstant, env: &mut Env<'_>) -> Document<'a> 
 }
 
 fn tag_tuple_pattern<'a>(
-    name: &str,
-    args: &[CallArg<TypedPattern>],
+    name: &'a str,
+    args: &'a [CallArg<TypedPattern>],
     env: &mut Env<'_>,
 ) -> Document<'a> {
     if args.is_empty() {
@@ -835,7 +832,7 @@ fn tag_tuple_pattern<'a>(
     }
 }
 
-fn clause<'a>(clause: &TypedClause, env: &mut Env<'_>) -> Document<'a> {
+fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'_>) -> Document<'a> {
     let Clause {
         guard,
         pattern: pat,
@@ -878,14 +875,17 @@ fn clause<'a>(clause: &TypedClause, env: &mut Env<'_>) -> Document<'a> {
     concat(docs)
 }
 
-fn optional_clause_guard<'a>(guard: Option<&TypedClauseGuard>, env: &mut Env<'_>) -> Document<'a> {
+fn optional_clause_guard<'a>(
+    guard: Option<&'a TypedClauseGuard>,
+    env: &mut Env<'_>,
+) -> Document<'a> {
     match guard {
         Some(guard) => " when ".to_doc().append(bare_clause_guard(guard, env)),
         None => nil(),
     }
 }
 
-fn bare_clause_guard<'a>(guard: &TypedClauseGuard, env: &mut Env<'_>) -> Document<'a> {
+fn bare_clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'_>) -> Document<'a> {
     match guard {
         ClauseGuard::Or { left, right, .. } => clause_guard(left.as_ref(), env)
             .append(" orelse ")
@@ -945,7 +945,11 @@ fn bare_clause_guard<'a>(guard: &TypedClauseGuard, env: &mut Env<'_>) -> Documen
     }
 }
 
-fn tuple_index_inline<'a>(tuple: &TypedClauseGuard, index: u64, env: &mut Env<'_>) -> Document<'a> {
+fn tuple_index_inline<'a>(
+    tuple: &'a TypedClauseGuard,
+    index: u64,
+    env: &mut Env<'_>,
+) -> Document<'a> {
     use std::iter::once;
     let index_doc = format!("{}", (index + 1)).to_doc();
     let tuple_doc = bare_clause_guard(tuple, env);
@@ -953,7 +957,7 @@ fn tuple_index_inline<'a>(tuple: &TypedClauseGuard, index: u64, env: &mut Env<'_
     "erlang:element".to_doc().append(wrap_args(iter))
 }
 
-fn clause_guard<'a>(guard: &TypedClauseGuard, env: &mut Env<'_>) -> Document<'a> {
+fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'_>) -> Document<'a> {
     match guard {
         // Binary ops are wrapped in parens
         ClauseGuard::Or { .. }
@@ -979,7 +983,7 @@ fn clause_guard<'a>(guard: &TypedClauseGuard, env: &mut Env<'_>) -> Document<'a>
     }
 }
 
-fn clauses<'a>(cs: &[TypedClause], env: &mut Env<'_>) -> Document<'a> {
+fn clauses<'a>(cs: &'a [TypedClause], env: &mut Env<'_>) -> Document<'a> {
     concat(
         cs.iter()
             .map(|c| {
@@ -992,7 +996,7 @@ fn clauses<'a>(cs: &[TypedClause], env: &mut Env<'_>) -> Document<'a> {
     )
 }
 
-fn case<'a>(subjects: &[TypedExpr], cs: &[TypedClause], env: &mut Env<'_>) -> Document<'a> {
+fn case<'a>(subjects: &'a [TypedExpr], cs: &'a [TypedClause], env: &mut Env<'_>) -> Document<'a> {
     let subjects_doc = if subjects.len() == 1 {
         let subject = subjects
             .get(0)
@@ -1011,7 +1015,21 @@ fn case<'a>(subjects: &[TypedExpr], cs: &[TypedClause], env: &mut Env<'_>) -> Do
         .group()
 }
 
-fn call<'a>(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env<'_>) -> Document<'a> {
+fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>], env: &mut Env<'_>) -> Document<'a> {
+    docs_args_call(
+        fun,
+        args.iter()
+            .map(|arg| maybe_block_expr(&arg.value, env))
+            .collect(),
+        env,
+    )
+}
+
+fn docs_args_call<'a>(
+    fun: &'a TypedExpr,
+    mut args: Vec<Document<'a>>,
+    env: &mut Env<'_>,
+) -> Document<'a> {
     match fun {
         TypedExpr::ModuleSelect {
             constructor: ModuleValueConstructor::Record { name, .. },
@@ -1024,10 +1042,7 @@ fn call<'a>(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env<'_>) -> 
                     ..
                 },
             ..
-        } => tuple(
-            std::iter::once(atom(name.to_snake_case()))
-                .chain(args.iter().map(|arg| expr(&arg.value, env))),
-        ),
+        } => tuple(std::iter::once(atom(name.to_snake_case())).chain(args.into_iter())),
 
         TypedExpr::Var {
             constructor:
@@ -1037,7 +1052,7 @@ fn call<'a>(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env<'_>) -> 
                 },
             ..
         } => {
-            let args = call_args(args, env);
+            let args = wrap_args(args.into_iter());
             if module.as_slice() == env.module {
                 atom(name.to_string()).append(args)
             } else {
@@ -1054,7 +1069,7 @@ fn call<'a>(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env<'_>) -> 
             constructor: ModuleValueConstructor::Fn,
             ..
         } => {
-            let args = call_args(args, env);
+            let args = wrap_args(args.into_iter());
             atom(module_name.join("@"))
                 .append(":")
                 .append(atom(label.to_string()))
@@ -1072,18 +1087,16 @@ fn call<'a>(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env<'_>) -> 
                 ..
             } = body.as_ref()
             {
-                // TODO: this is a mess of cloning.
-                let merged_args = inner_args
-                    .iter()
-                    .map(|a| match &a.value {
-                        TypedExpr::Var { name, .. } if name == CAPTURE_VARIABLE => args
-                            .get(0)
-                            .gleam_expect("Erl printing: capture call replacing arg")
-                            .clone(),
-                        _ => a.clone(),
-                    })
-                    .collect::<Vec<_>>();
-                call(fun, merged_args.as_slice(), env)
+                let mut merged_args = Vec::with_capacity(inner_args.len());
+                for arg in inner_args.iter() {
+                    match &arg.value {
+                        TypedExpr::Var { name, .. } if name == CAPTURE_VARIABLE => {
+                            merged_args.push(args.swap_remove(0))
+                        }
+                        e => merged_args.push(expr(e, env)),
+                    }
+                }
+                docs_args_call(fun, merged_args, env)
             } else {
                 crate::error::fatal_compiler_bug("Erl printing: Capture was not a call")
             }
@@ -1093,20 +1106,20 @@ fn call<'a>(fun: &TypedExpr, args: &[CallArg<TypedExpr>], env: &mut Env<'_>) -> 
         | TypedExpr::Fn { .. }
         | TypedExpr::RecordAccess { .. }
         | TypedExpr::TupleIndex { .. } => {
-            let args = call_args(args, env);
+            let args = wrap_args(args.into_iter());
             expr(fun, env).surround("(", ")").append(args)
         }
 
         other => {
-            let args = call_args(args, env);
+            let args = wrap_args(args.into_iter());
             expr(other, env).append(args)
         }
     }
 }
 
 fn record_update<'a>(
-    spread: &TypedExpr,
-    args: &[TypedRecordUpdateArg],
+    spread: &'a TypedExpr,
+    args: &'a [TypedRecordUpdateArg],
     env: &mut Env<'_>,
 ) -> Document<'a> {
     use std::iter::once;
@@ -1137,14 +1150,14 @@ fn begin_end<'a>(document: Document<'a>) -> Document<'a> {
 
 /// Same as expr, expect it wraps seq, let, etc in begin end
 ///
-fn maybe_block_expr<'a>(expression: &TypedExpr, env: &mut Env<'_>) -> Document<'a> {
+fn maybe_block_expr<'a>(expression: &'a TypedExpr, env: &mut Env<'_>) -> Document<'a> {
     match &expression {
         TypedExpr::Seq { .. } | TypedExpr::Let { .. } => begin_end(expr(expression, env)),
         _ => expr(expression, env),
     }
 }
 
-fn expr<'a>(expression: &TypedExpr, env: &mut Env<'_>) -> Document<'a> {
+fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'_>) -> Document<'a> {
     match expression {
         TypedExpr::ListNil { .. } => "[]".to_doc(),
 
@@ -1238,12 +1251,12 @@ fn expr<'a>(expression: &TypedExpr, env: &mut Env<'_>) -> Document<'a> {
         TypedExpr::BitString { segments, .. } => bit_string(
             segments
                 .iter()
-                .map(|s| expr_segment(&s.value, s.options.clone(), env)),
+                .map(|s| expr_segment(&s.value, s.options.as_slice(), env)),
         ),
     }
 }
 
-fn tuple_index<'a>(tuple: &TypedExpr, index: u64, env: &mut Env<'_>) -> Document<'a> {
+fn tuple_index<'a>(tuple: &'a TypedExpr, index: u64, env: &mut Env<'_>) -> Document<'a> {
     use std::iter::once;
     let index_doc = format!("{}", (index + 1)).to_doc();
     let tuple_doc = expr(tuple, env);
@@ -1270,7 +1283,7 @@ fn module_select_fn<'a>(typ: Arc<Type>, module_name: &[String], label: &str) -> 
     }
 }
 
-fn fun<'a>(args: &[TypedArg], body: &TypedExpr, env: &mut Env<'_>) -> Document<'a> {
+fn fun<'a>(args: &'a [TypedArg], body: &'a TypedExpr, env: &mut Env<'_>) -> Document<'a> {
     let current_scope_vars = env.current_scope_vars.clone();
     let doc = "fun"
         .to_doc()

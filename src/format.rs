@@ -143,12 +143,12 @@ impl<'comments> Formatter<'comments> {
         let doc_comments = concat(
             self.doc_comments
                 .iter()
-                .map(|comment| line().append("///").append(comment.content)),
+                .map(|comment| line().append("///").append(comment.content.to_string())),
         );
         let comments = concat(
             self.comments
                 .iter()
-                .map(|comment| line().append("//").append(comment.content)),
+                .map(|comment| line().append("//").append(comment.content.to_string())),
         );
 
         let module_comments = if !self.module_comments.is_empty() {
@@ -371,7 +371,7 @@ impl<'comments> Formatter<'comments> {
             None => nil(),
             Some(_) => concat(
                 comments
-                    .map(|c| "///".to_doc().append(c))
+                    .map(|c| "///".to_doc().append(c.to_string()))
                     .intersperse(line()),
             )
             .append(force_break())
@@ -1505,7 +1505,7 @@ fn printed_comments<'a, 'comments>(
         None => None,
         Some(_) => Some(concat(
             comments
-                .map(|c| "//".to_doc().append(c))
+                .map(|c| "//".to_doc().append(c.to_string()))
                 .intersperse(line()),
         )),
     }
