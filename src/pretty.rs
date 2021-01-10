@@ -104,7 +104,7 @@ pub enum Document<'a> {
 
     /// Renders `broken` if group is broken, `unbroken` otherwise
     // TODO: str not string
-    Break { broken: String, unbroken: String },
+    Break { broken: &'a str, unbroken: &'a str },
 
     /// Join multiple documents together
     Vec(Vec<Self>),
@@ -198,11 +198,11 @@ fn fmt(
             Document::Break { broken, unbroken } => {
                 width = match mode {
                     Mode::Unbroken => {
-                        writer.str_write(unbroken.as_str())?;
+                        writer.str_write(unbroken)?;
                         width + unbroken.len() as isize
                     }
                     Mode::Broken => {
-                        writer.str_write(broken.as_str())?;
+                        writer.str_write(broken)?;
                         writer.str_write("\n")?;
                         for _ in 0..indent {
                             writer.str_write(" ")?;
@@ -266,18 +266,8 @@ pub fn force_break<'a>() -> Document<'a> {
     Document::ForceBreak
 }
 
-pub fn break_<'a>(broken: &str, unbroken: &str) -> Document<'a> {
-    Document::Break {
-        broken: broken.to_string(),
-        unbroken: unbroken.to_string(),
-    }
-}
-
-pub fn delim(d: &str) -> Document {
-    Document::Break {
-        broken: d.to_string(),
-        unbroken: format!("{} ", d),
-    }
+pub fn break_<'a>(broken: &'a str, unbroken: &'a str) -> Document<'a> {
+    Document::Break { broken, unbroken }
 }
 
 impl<'a> Document<'a> {

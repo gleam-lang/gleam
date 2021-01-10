@@ -241,7 +241,7 @@ impl<'comments> Formatter<'comments> {
                         .iter()
                         .sorted_by(|a, b| a.name.cmp(&b.name))
                         .map(|e| e.to_doc())
-                        .intersperse(delim(",").flex_break());
+                        .intersperse(break_(",", ", ").flex_break());
                     let unqualified = break_("", "")
                         .append(concat(unqualified))
                         .nest(INDENT)
@@ -280,9 +280,9 @@ impl<'comments> Formatter<'comments> {
 
             Constant::List { elements, .. } => {
                 let comma: fn() -> Document<'a> = if elements.iter().all(|e| e.is_simple()) {
-                    || delim(",").flex_break()
+                    || break_(",", ", ").flex_break()
                 } else {
-                    || delim(",")
+                    || break_(",", ", ")
                 };
                 let elements = elements
                     .iter()
@@ -531,7 +531,7 @@ impl<'comments> Formatter<'comments> {
                 break_(" {", " { ")
                     .append(body)
                     .nest(INDENT)
-                    .append(delim(""))
+                    .append(break_("", " "))
                     .append("}"),
             )
             .group()
@@ -809,7 +809,7 @@ impl<'comments> Formatter<'comments> {
 
     pub fn operator_side<'a>(&mut self, doc: Document<'a>, op: u8, side: u8) -> Document<'a> {
         if op > side {
-            delim("{")
+            break_("{", "{ ")
                 .append(doc)
                 .nest(INDENT)
                 .append(break_("", " "))
@@ -1144,9 +1144,9 @@ impl<'comments> Formatter<'comments> {
         let (elems, tail) = list_cons(head, tail, categorise_list_expr);
         let comma: fn() -> Document<'a> =
             if tail.is_none() && elems.iter().all(|e| e.is_simple_constant()) {
-                || delim(",").flex_break()
+                || break_(",", ", ").flex_break()
             } else {
-                || delim(",")
+                || break_(",", ", ")
             };
         let elems = concat(elems.iter().map(|e| self.wrap_expr(e)).intersperse(comma()));
         let tail = tail.map(|e| self.expr(e));
@@ -1182,7 +1182,7 @@ impl<'comments> Formatter<'comments> {
                     elems
                         .iter()
                         .map(|e| self.pattern(e))
-                        .intersperse(delim(",")),
+                        .intersperse(break_(",", ", ")),
                 );
                 let tail = tail.map(|e| self.pattern(e));
                 list(elems, tail)
@@ -1399,7 +1399,7 @@ where
         return "()".to_doc();
     }
     break_("(", "(")
-        .append(concat(args.intersperse(delim(","))))
+        .append(concat(args.intersperse(break_(",", ", "))))
         .nest(INDENT)
         .append(break_(",", ""))
         .append(")")
@@ -1415,7 +1415,7 @@ where
     }
 
     break_("(", "(")
-        .append(concat(args.intersperse(delim(","))))
+        .append(concat(args.intersperse(break_(",", ", "))))
         .append(break_(",", ", "))
         .append("..")
         .nest(INDENT)
@@ -1439,9 +1439,9 @@ where
 
 fn bit_string<'a>(segments: impl Iterator<Item = Document<'a>>, is_simple: bool) -> Document<'a> {
     let comma = if is_simple {
-        delim(",").flex_break()
+        break_(",", ", ").flex_break()
     } else {
-        delim(",")
+        break_(",", ", ")
     };
     break_("<<", "<<")
         .append(concat(segments.intersperse(comma)))
