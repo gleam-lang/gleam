@@ -250,7 +250,7 @@ where
     I: Iterator<Item = Document<'a>>,
 {
     break_("", "")
-        .append(concat(args.intersperse(delim(","))))
+        .append(concat(args.intersperse(break_(",", ", "))))
         .nest(INDENT)
         .append(break_("", ""))
         .surround("(", ")")
@@ -280,14 +280,14 @@ fn string<'a>(value: &str) -> Document<'a> {
 }
 
 fn tuple<'a>(elems: impl Iterator<Item = Document<'a>>) -> Document<'a> {
-    concat(elems.intersperse(delim(",")))
+    concat(elems.intersperse(break_(",", ", ")))
         .nest_current()
         .surround("{", "}")
         .group()
 }
 
 fn bit_string<'a>(elems: impl Iterator<Item = Document<'a>>) -> Document<'a> {
-    concat(elems.intersperse(delim(",")))
+    concat(elems.intersperse(break_(",", ", ")))
         .nest_current()
         .surround("<<", ">>")
         .group()
@@ -696,11 +696,13 @@ where
         elems
             .into_iter()
             .map(|e| to_doc(e, env))
-            .intersperse(delim(",")),
+            .intersperse(break_(",", ", ")),
     );
 
     let elems = if let Some(final_tail) = final_tail {
-        elems.append(delim(" |")).append(to_doc(final_tail, env))
+        elems
+            .append(break_(" |", " | "))
+            .append(to_doc(final_tail, env))
     } else {
         elems
     };
@@ -796,7 +798,7 @@ fn const_inline<'a>(literal: &TypedConstant, env: &mut Env<'_>) -> Document<'a> 
             let elements = elements
                 .iter()
                 .map(|e| const_inline(e, env))
-                .intersperse(delim(","));
+                .intersperse(break_(",", ", "));
             concat(elements).nest_current().surround("[", "]").group()
         }
 

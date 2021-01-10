@@ -21,8 +21,8 @@ fn fits_test() {
             0,
             Broken,
             Break {
-                broken: "12".to_string(),
-                unbroken: "".to_string()
+                broken: "12",
+                unbroken: "",
             }
         )]
     ));
@@ -34,8 +34,8 @@ fn fits_test() {
             0,
             Unbroken,
             Break {
-                broken: "".to_string(),
-                unbroken: "123".to_string()
+                broken: "",
+                unbroken: "123",
             }
         )]
     ));
@@ -45,8 +45,8 @@ fn fits_test() {
             0,
             Unbroken,
             Break {
-                broken: "".to_string(),
-                unbroken: "123".to_string()
+                broken: "",
+                unbroken: "123",
             }
         )]
     ));
@@ -151,15 +151,15 @@ fn format_test() {
     assert_eq!("".to_string(), doc.to_pretty_string(10));
 
     let doc = Break {
-        broken: "broken".to_string(),
-        unbroken: "unbroken".to_string(),
+        broken: "broken",
+        unbroken: "unbroken",
     }
     .group();
     assert_eq!("unbroken".to_string(), doc.to_pretty_string(10));
 
     let doc = Break {
-        broken: "broken".to_string(),
-        unbroken: "unbroken".to_string(),
+        broken: "broken",
+        unbroken: "unbroken",
     }
     .group();
     assert_eq!("broken\n".to_string(), doc.to_pretty_string(5));
@@ -176,8 +176,8 @@ fn format_test() {
     assert_eq!("111\n   2".to_string(), doc.to_pretty_string(1));
 
     let doc = ForceBreak.append(Break {
-        broken: "broken".to_string(),
-        unbroken: "unbroken".to_string(),
+        broken: "broken",
+        unbroken: "unbroken",
     });
     assert_eq!("broken\n".to_string(), doc.to_pretty_string(100));
 }
