@@ -443,9 +443,9 @@ where
         None
     };
 
-    for (i, option) in options.iter().enumerate() {
+    for option in options.iter() {
         use BitStringSegmentOption as Opt;
-        if i != 0 && !matches!(option, Opt::Size {..}|Opt::Unit{..}) {
+        if !others.is_empty() && !matches!(option, Opt::Size {..}|Opt::Unit{..}) {
             others.push("-".to_doc());
         }
         match option {
