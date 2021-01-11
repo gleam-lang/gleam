@@ -1596,7 +1596,8 @@ impl TypeAst {
                 } else {
                     match name.as_str() {
                         // TODO: more builtins ?
-                        "Int" => "integer()".to_doc(),
+                        "Nil" => "[]".to_doc(),
+                        "Int" | "UtfCodepoint" => "integer()".to_doc(),
                         "String" => "unicode::unicode_binary()".to_doc(),
                         "Bool" => "boolean()".to_doc(),
                         "Float" => "float()".to_doc(),
@@ -1654,7 +1655,8 @@ impl Type {
                     // built-ins
                     // TODO: more builtins?
                     match name.as_ref() {
-                        "Int" => "integer()".to_doc(),
+                        "Nil" => "[]".to_doc(),
+                        "Int" | "UtfCodepoint" => "integer()".to_doc(),
                         "String" => "unicode::unicode_binary()".to_doc(),
                         "Bool" => "boolean()".to_doc(),
                         "Float" => "float()".to_doc(),
