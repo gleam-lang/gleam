@@ -1643,7 +1643,7 @@ impl TypeAst {
 impl Type {
     pub fn to_erlang_type_spec(&self) -> Document {
         match self {
-            Self::Var { typ } => match &*Arc::as_ref(typ).borrow() {
+            Self::Var { typ } => match &*typ.borrow() {
                 TypeVar::Generic { .. } | TypeVar::Unbound { .. } => "any()".to_doc(),
                 TypeVar::Link { typ } => typ.to_erlang_type_spec(),
             },
