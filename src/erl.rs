@@ -324,14 +324,14 @@ fn statement<'a>(statement: &'a TypedStatement, module: &'a [String]) -> Option<
             module,
             args,
             name,
-            retrn,
+            return_type,
             ..
         } => Some(external_fun(
             name.as_ref(),
             module.as_ref(),
             fun.as_ref(),
             args.as_ref(),
-            &retrn,
+            &return_type,
         )),
     }
 }
@@ -1438,16 +1438,16 @@ fn incrementing_args_list(arity: usize) -> String {
 }
 
 fn external_fun<'a>(
-    name: &str,
-    module: &str,
-    fun: &str,
-    args: &[ExternalFnArg],
-    retrn: &TypeAst,
+    name: &'a str,
+    module: &'a str,
+    fun: &'a str,
+    args: &'a [ExternalFnArg],
+    return_type: &'a Type,
 ) -> Document<'a> {
     let chars: String = incrementing_args_list(args.len());
 
     let args_spec = args.iter().map(|a| a.typ.to_erlang_type_def());
-    let return_spec = retrn.to_erlang_type_def();
+    let return_spec = return_type.to_erlang_type_spec();
     let spec = fun_spec(name, args_spec, return_spec);
 
     spec.append(atom(name.to_string())).append(
@@ -1585,11 +1585,9 @@ impl TypeAst {
                     .map(|a| a.to_erlang_type_def())
                     .intersperse(", ".to_doc());
                 if let Some(mod_name) = &module {
-                    mod_name
-                        .clone()
-                        .to_doc()
-                        .append(".")
-                        .append(name.to_snake_case())
+                    Document::String(mod_name.clone())
+                        .append(":")
+                        .append(Document::String(name.to_snake_case()))
                         .append("(")
                         .append(concat(arg_list))
                         .append(")")
@@ -1598,7 +1596,7 @@ impl TypeAst {
                         // TODO: more builtins ?
                         "Nil" => "[]".to_doc(),
                         "Int" | "UtfCodepoint" => "integer()".to_doc(),
-                        "String" => "unicode::unicode_binary()".to_doc(),
+                        "String" => "unicode:unicode_binary()".to_doc(),
                         "Bool" => "boolean()".to_doc(),
                         "Float" => "float()".to_doc(),
                         "List" => "list(".to_doc().append(concat(arg_list)).append(")"),
@@ -1657,7 +1655,7 @@ impl Type {
                     match name.as_ref() {
                         "Nil" => "[]".to_doc(),
                         "Int" | "UtfCodepoint" => "integer()".to_doc(),
-                        "String" => "unicode::unicode_binary()".to_doc(),
+                        "String" => "unicode:unicode_binary()".to_doc(),
                         "Bool" => "boolean()".to_doc(),
                         "Float" => "float()".to_doc(),
                         "BitString" => "bitstring()".to_doc(),
