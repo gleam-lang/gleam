@@ -6,6 +6,10 @@
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 
+## v0.13.0-rc2 - 2020-01-12
+
+- The `version` property in `gleam.toml` is now optional again.
+
 ## v0.13.0-rc1 - 2020-01-09
 
 - Variable names now only have 1st letter capitalized when converted to erlang.
