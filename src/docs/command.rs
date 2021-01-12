@@ -38,7 +38,7 @@ pub fn remove(package: String, version: String) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn build(project_root: String, to: Option<String>) -> Result<(), Error> {
+pub fn build(project_root: String, version: String, to: Option<String>) -> Result<(), Error> {
     let project_root = PathBuf::from(&project_root).canonicalize().map_err(|_| {
         Error::UnableToFindProjectRoot {
             path: project_root.clone(),
@@ -52,7 +52,7 @@ pub fn build(project_root: String, to: Option<String>) -> Result<(), Error> {
     });
 
     // Build
-    let (config, outputs) = super::build_project(&project_root, &output_dir)?;
+    let (config, outputs) = super::build_project(&project_root, version, &output_dir)?;
 
     // Write
     crate::fs::delete_dir(&output_dir)?;
@@ -71,7 +71,7 @@ pub fn publish(project_root: impl AsRef<Path>, version: String) -> Result<(), Er
     let output_dir = PathBuf::new();
 
     // Build
-    let (config, outputs) = super::build_project(&project_root, &output_dir)?;
+    let (config, outputs) = super::build_project(&project_root, version.clone(), &output_dir)?;
 
     // Create gzipped tarball of docs
     let archive = crate::fs::create_tar_archive(outputs)?;

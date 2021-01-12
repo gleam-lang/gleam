@@ -21,10 +21,12 @@ const MAX_COLUMNS: isize = 65;
 
 pub fn build_project(
     project_root: impl AsRef<Path>,
+    version: String,
     output_dir: &PathBuf,
 ) -> Result<(PackageConfig, Vec<OutputFile>), Error> {
     // Read and type check project
-    let (config, analysed) = project::read_and_analyse(&project_root)?;
+    let (mut config, analysed) = project::read_and_analyse(&project_root)?;
+    config.version = version;
 
     // Attach documentation to Src modules
     let analysed: Vec<Analysed> = analysed

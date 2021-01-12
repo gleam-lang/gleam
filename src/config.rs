@@ -3,9 +3,14 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+fn default_version() -> String {
+    "1.0.0".to_string()
+}
+
 #[derive(Deserialize, Debug, PartialEq, Default)]
 pub struct PackageConfig {
     pub name: String,
+    #[serde(default = "default_version")]
     pub version: String,
     #[serde(default)]
     pub description: String,

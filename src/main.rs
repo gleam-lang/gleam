@@ -211,6 +211,9 @@ enum Docs {
 
         #[structopt(help = "the directory to write the docs to", long = "to")]
         to: Option<String>,
+
+        #[structopt(help = "the version to publish", long = "version")]
+        version: String,
     },
 
     #[structopt(name = "publish", about = "Publish HTML docs to HexDocs")]
@@ -238,7 +241,11 @@ fn main() {
     let result = match Command::from_args() {
         Command::Build { project_root } => command_build(project_root),
 
-        Command::Docs(Docs::Build { project_root, to }) => docs::command::build(project_root, to),
+        Command::Docs(Docs::Build {
+            project_root,
+            version,
+            to,
+        }) => docs::command::build(project_root, version, to),
 
         Command::Docs(Docs::Publish {
             project_root,
