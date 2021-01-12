@@ -27,6 +27,7 @@ pub fn build_project(
     // Read and type check project
     let (mut config, analysed) = project::read_and_analyse(&project_root)?;
     config.version = version;
+    check_app_file_version_matches(&project_root, &config)?;
 
     // Attach documentation to Src modules
     let analysed: Vec<Analysed> = analysed
@@ -425,4 +426,40 @@ struct ModuleTemplate<'a> {
     types: Vec<Type<'a>>,
     constants: Vec<Constant<'a>>,
     documentation: String,
+}
+
+fn check_app_file_version_matches(
+    root: impl AsRef<Path>,
+    project_config: &PackageConfig,
+) -> Result<(), Error> {
+    let mut app_src_path = root.as_ref().to_path_buf();
+    app_src_path.push("src");
+    app_src_path.push(format!("{}.app.src", &project_config.name));
+
+    let re = regex::Regex::new("\\{ *vsn *, *\"([^\"]*)\" *\\}")
+        .gleam_expect("Could not compile vsn regex");
+
+    std::fs::read_to_string(&app_src_path)
+        // Remove all new lines so we can regex easily across the content
+        .map(|contents| contents.replace("\n", ""))
+        .ok()
+        .and_then(|contents| {
+            // Extract the vsn if we can
+            re.captures(&contents)
+                .and_then(|captures| captures.get(1))
+                .map(|capture| capture.as_str().to_string())
+        })
+        .map(|version| {
+            if version == project_config.version {
+                Ok(())
+            } else {
+                // Error if we've found the version and it doesn't match
+                Err(Error::VersionDoesNotMatch {
+                    toml_ver: project_config.version.clone(),
+                    app_ver: version.to_string(),
+                })
+            }
+        })
+        // Don't mind if we never found the version
+        .unwrap_or(Ok(()))
 }

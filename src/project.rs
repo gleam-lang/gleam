@@ -11,7 +11,6 @@ use crate::{
     typ,
     warning::Warning,
 };
-use regex::Regex;
 use source_tree::SourceTree;
 use std::collections::HashMap;
 use std::iter::Peekable;
@@ -132,9 +131,6 @@ pub struct Module {
 pub fn read_and_analyse(root: impl AsRef<Path>) -> Result<(PackageConfig, Vec<Analysed>), Error> {
     let project_config = config::read_project_config(&root)?;
     let mut srcs = vec![];
-
-    check_app_file_version_matches(&root, &project_config)?;
-
     let root = root.as_ref();
     let lib_dir = root.join("_build").join("default").join("lib");
     let checkouts_dir = root.join("_checkouts");
@@ -290,40 +286,4 @@ pub fn collect_source(
         })
     }
     Ok(())
-}
-
-fn check_app_file_version_matches(
-    root: impl AsRef<Path>,
-    project_config: &PackageConfig,
-) -> Result<(), Error> {
-    let mut app_src_path = root.as_ref().to_path_buf();
-    app_src_path.push("src");
-    app_src_path.push(format!("{}.app.src", &project_config.name));
-
-    let re =
-        Regex::new("\\{ *vsn *, *\"([^\"]*)\" *\\}").gleam_expect("Could not compile vsn regex");
-
-    std::fs::read_to_string(&app_src_path)
-        // Remove all new lines so we can regex easily across the content
-        .map(|contents| contents.replace("\n", ""))
-        .ok()
-        .and_then(|contents| {
-            // Extract the vsn if we can
-            re.captures(&contents)
-                .and_then(|captures| captures.get(1))
-                .map(|capture| capture.as_str().to_string())
-        })
-        .map(|version| {
-            if version == project_config.version {
-                Ok(())
-            } else {
-                // Error if we've found the version and it doesn't match
-                Err(Error::VersionDoesNotMatch {
-                    toml_ver: project_config.version.clone(),
-                    app_ver: version.to_string(),
-                })
-            }
-        })
-        // Don't mind if we never found the version
-        .unwrap_or(Ok(()))
 }
