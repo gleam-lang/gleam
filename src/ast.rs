@@ -190,6 +190,7 @@ pub enum Statement<T, Expr, ConstantRecordTag> {
         location: SrcSpan,
         public: bool,
         args: Vec<ExternalFnArg>,
+        typed_args: Vec<Arg<T>>,
         name: String,
         retrn: TypeAst,
         return_type: T,
