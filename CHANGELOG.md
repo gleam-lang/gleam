@@ -5,6 +5,7 @@
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
+- New Gleam projects use stdlib v0.13.0.
 
 ## v0.13.0-rc2 - 2020-01-12
 
