@@ -6,6 +6,10 @@
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 
+## v0.13.1 - 2020-01-13
+
+- Fix off-by-one error in message messages.
+
 ## v0.13.0 - 2020-01-13
 
 - New Gleam projects use stdlib v0.13.0.
