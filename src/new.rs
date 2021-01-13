@@ -48,7 +48,7 @@ pub fn create(
 
     match template {
         Template::Lib => {
-            write(root_dir.join("rebar.config"), &rebar_config(""))?;
+            write(root_dir.join("rebar.config"), &rebar_config("", ""))?;
             write(
                 src_dir.join(format!("{}.app.src", name)),
                 &app_src(&name, &description, false),
@@ -477,7 +477,7 @@ logs
 rebar3.crashdump
 ";
 
-fn rebar_config(insert: &str) -> String {
+fn rebar_config(insert: &str, extra_deps: &str) -> String {
     format!(
         r#"{{erl_opts, [debug_info]}}.
 {{src_dirs, ["src", "gen/src"]}}.
@@ -485,29 +485,32 @@ fn rebar_config(insert: &str) -> String {
 {{profiles, [
     {{test, [{{src_dirs, ["src", "test", "gen/src", "gen/test"]}}]}}
 ]}}.
-{}
+{insert}
 {{project_plugins, [rebar_gleam]}}.
 
 {{deps, [
-    {{gleam_stdlib, "0.12.0"}},
-    {{gleam_otp, "0.1.0"}}
+    {{gleam_stdlib, "0.13.0"}}{extra_deps}
 ]}}.
 "#,
-        insert
+        insert = insert,
+        extra_deps = extra_deps
     )
 }
 
 fn app_rebar_config(name: &str) -> String {
-    rebar_config(&format!(
-        r#"
+    rebar_config(
+        &format!(
+            r#"
 {{shell, [
     % {{config, "config/sys.config"}},
     {{apps, [{}]}}
 ]}}.
 
 "#,
-        name
-    ))
+            name
+        ),
+        ",\n    {gleam_otp, \"0.1.0\"}",
+    )
 }
 
 fn validate_name(name: String) -> Result<String, Error> {
