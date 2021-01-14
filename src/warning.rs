@@ -66,6 +66,20 @@ variable _ if you are sure the error does not matter.")
                     .unwrap();
                 }
 
+                Warning::UnusedLiteral { location } => {
+                    let diagnostic = Diagnostic {
+                        title: "Unused literal".to_string(),
+                        label: "".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: *location,
+                    };
+                    write(buffer, diagnostic, Severity::Warning);
+                    writeln!(buffer,
+"The literal expression in this code is not being used, so its value is being silently ignored. Use it in an expression or remove it entirely if it is unneeded.")
+                    .unwrap();
+                }
+
                 Warning::NoFieldsRecordUpdate { location } => {
                     let diagnostic = Diagnostic {
                         title: "Fieldless record update".to_string(),

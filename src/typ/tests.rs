@@ -3112,6 +3112,64 @@ fn main() { let _ = foo(); 5 }",
 }
 
 #[test]
+fn unused_literal_warning_test() {
+    // Test int
+    assert_warning!(
+        "fn main() { 1; 2 }",
+        Warning::UnusedLiteral {
+            location: SrcSpan { start: 12, end: 13 }
+        }
+    );
+    // Test float
+    assert_warning!(
+        "fn main() { 1.0; 2 }",
+        Warning::UnusedLiteral {
+            location: SrcSpan { start: 12, end: 15 }
+        }
+    );
+    // Test string
+    assert_warning!(
+        "
+    fn main() { 
+        \"1\"; 2 
+    }",
+        Warning::UnusedLiteral {
+            location: SrcSpan { start: 26, end: 29 }
+        }
+    );
+    // Test bit string
+    assert_warning!(
+        "
+    fn main() { 
+        <<3>>; 2 
+    }",
+        Warning::UnusedLiteral {
+            location: SrcSpan { start: 26, end: 31 }
+        }
+    );
+    // Test tuple
+    assert_warning!(
+        "
+    fn main() { 
+        tuple(1.0, \"Hello world\"); 2 
+    }",
+        Warning::UnusedLiteral {
+            location: SrcSpan { start: 26, end: 51 }
+        }
+    );
+    // Test list
+    assert_warning!(
+        "
+    fn main() { 
+        [1, 2, 3]; 2 
+    }",
+        Warning::UnusedLiteral {
+            location: SrcSpan { start: 26, end: 35 }
+        }
+    );
+}
+
+#[test]
 fn record_update_warnings_test() {
     // Some fields are given in a record update do not emit warnings
     assert_no_warnings!(

@@ -159,6 +159,10 @@ impl UntypedExpr {
     pub fn is_simple_constant(&self) -> bool {
         matches!(self, Self::String { .. } | Self::Int { .. } | Self::Float { .. })
     }
+
+    pub fn is_literal(&self) -> bool {
+        matches!(self, Self::Int {..} | Self::Float {..} | Self::ListNil {..} | Self::ListCons {..} | Self::Tuple {..} | Self::String {.. } | Self::BitString {..})
+    }
 }
 
 impl HasLocation for UntypedExpr {

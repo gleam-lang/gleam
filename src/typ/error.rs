@@ -225,6 +225,8 @@ pub enum Warning {
 
     ImplicitlyDiscardedResult { location: SrcSpan },
 
+    UnusedLiteral { location: SrcSpan },
+
     NoFieldsRecordUpdate { location: SrcSpan },
 
     AllFieldsRecordUpdate { location: SrcSpan },
