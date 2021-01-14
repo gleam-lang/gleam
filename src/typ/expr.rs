@@ -339,19 +339,21 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
     }
 
     fn infer_seq(&mut self, first: UntypedExpr, then: UntypedExpr) -> Result<TypedExpr, Error> {
+        if first.is_simple_constant() {
+            self.environment.warnings.push(Warning::UnusedLiteral {
+                location: first.location(),
+            });
+        }
+
         let first = self.infer(first)?;
         let then = self.infer(then)?;
 
-        match first.typ().as_ref() {
-            typ if typ.is_result() => {
-                self.environment
-                    .warnings
-                    .push(Warning::ImplicitlyDiscardedResult {
-                        location: first.location(),
-                    });
-            }
-
-            _ => {}
+        if first.typ().as_ref().is_result() {
+            self.environment
+                .warnings
+                .push(Warning::ImplicitlyDiscardedResult {
+                    location: first.location(),
+                });
         }
 
         Ok(TypedExpr::Seq {
