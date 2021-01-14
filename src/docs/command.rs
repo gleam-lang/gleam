@@ -12,7 +12,7 @@ static DOCS_DIR_NAME: &str = "docs";
 
 pub fn remove(package: String, version: String) -> Result<(), Error> {
     // Start event loop so we can run async functions to call the Hex API
-    let mut runtime =
+    let runtime =
         tokio::runtime::Runtime::new().gleam_expect("Unable to start Tokio async runtime");
 
     // Get login creds from user
@@ -77,7 +77,7 @@ pub fn publish(project_root: impl AsRef<Path>, version: String) -> Result<(), Er
     let archive = crate::fs::create_tar_archive(outputs)?;
 
     // Start event loop so we can run async functions to call the Hex API
-    let mut runtime =
+    let runtime =
         tokio::runtime::Runtime::new().gleam_expect("Unable to start Tokio async runtime");
 
     // Get login creds from user
