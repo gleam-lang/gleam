@@ -75,8 +75,10 @@ variable _ if you are sure the error does not matter.")
                         location: *location,
                     };
                     write(buffer, diagnostic, Severity::Warning);
-                    writeln!(buffer,
-"The literal expression in this code is not being used, so its value is being silently ignored. Use it in an expression or remove it entirely if it is unneeded.")
+                    writeln!(
+                        buffer,
+                        "This value is never used, it can be safely deleted."
+                    )
                     .unwrap();
                 }
 
