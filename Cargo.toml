@@ -6,70 +6,70 @@ edition = "2018"
 
 [dependencies]
 # OS SIGINT and SIGTERM signal handling
-ctrlc = { version = "3.0", features = ["termination"] }
+ctrlc = { version = "3.1.7", features = ["termination"] }
 # Command line interface
-clap = "2"
-structopt = "0.3"
+clap = "2.33.3"
+structopt = "0.3.21"
 # Immutable data structures
-im = "15"
+im = "15.0.0"
 # Extra iter methods
-itertools = "0.9"
+itertools = "0.10.0"
 # String case conversion
-heck = "0.3"
+heck = "0.3.2"
 # Parsing
-regex = "1.1"
+regex = "1.4.3"
 # Graph data structures
-petgraph = "0.5"
+petgraph = "0.5.1"
 # Pretty error messages
-codespan = "0.9"
-codespan-reporting = "0.9"
-termcolor = "1.0"
+codespan = "0.9" # Upgrade when https://github.com/brendanzab/codespan/pull/310 is released
+codespan-reporting = "0.9" # Upgrade when https://github.com/brendanzab/codespan/pull/310 is released
+termcolor = "1.1.2"
 # Initialize complex static values at runtime
-lazy_static = "1.3"
+lazy_static = "1.4.0"
 # Data (de)serialisation
-serde = { version = "1.0", features = ["derive"] }
-serde_derive = "1.0"
+serde = { version = "1.0.119", features = ["derive"] }
+serde_derive = "1.0.119"
 # toml config file parsing
-toml = "0.5"
+toml = "0.5.8"
 # Levenshtein string distance for typo suggestions
-strsim = "0.10"
+strsim = "0.10.0"
 # Recursively traversing directories
-ignore = "0.4"
-walkdir = "2"
+ignore = "0.4.17"
+walkdir = "2.3.1"
 # Enum trait impl macros
-strum = "0.19"
-strum_macros = "0.19"
+strum = "0.20.0"
+strum_macros = "0.20.1"
 # Doc rendering
-askama = "0.10"
+askama = "0.10.5"
 # Markdown in docs
-pulldown-cmark = "0.7"
+pulldown-cmark = "0.8.0"
 # Check for tty
-atty = "0.2"
+atty = "0.2.14"
 # Hex package manager client
-hexpm = "1.1"
+hexpm = "1.1.1"
 # Allow user to type in sensitive information without showing it in the shell
-rpassword = "5.0"
+rpassword = "5.0.0"
 # Async runtime
-tokio = "0.2"
+tokio = { version = "1.0.1", features = ["rt", "rt-multi-thread"] }
 # Creation of tar file archives
-tar = "0.4"
+tar = "0.4.30"
 # gzip compression
-flate2 = "1.0"
+flate2 = "1.0.19"
 # Byte array data type
-bytes = "0.5"
+bytes = "0.5" # Upgrade when https://github.com/gleam-lang/hexpm-rust/commit/8209402d8096aa51a077eb5500bab2a9656743d3 is released
 # Further file system functions (i.e. copy directory)
-fs_extra = "1.1"
+fs_extra = "1.2.0"
 # Logging
-tracing = "0.1"
-tracing-subscriber = "0.2"
+tracing = "0.1.22"
+tracing-subscriber = "0.2.15"
 # Cap'n Proto binary format runtime
 capnp = "0.13.6"
 
 [build-dependencies]
 # Data (de)serialisation
-serde_derive = "1.0"
+serde_derive = "1.0.119"
 # Cap'n Proto binary format codegen
 capnpc = "0.13.1"
 
 [dev-dependencies]
-pretty_assertions = "0.6"
+pretty_assertions = "0.6.1"
