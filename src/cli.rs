@@ -6,7 +6,7 @@ pub fn ask(question: &str) -> Result<String, Error> {
     print!("{}: ", question);
     std::io::stdout().flush().unwrap();
     let mut answer = String::new();
-    std::io::stdin()
+    let _ = std::io::stdin()
         .read_line(&mut answer)
         .map_err(|e| Error::StandardIO {
             action: StandardIOAction::Read,

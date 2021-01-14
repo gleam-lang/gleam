@@ -11,7 +11,7 @@ pub fn command(root_string: String) -> Result<(), Error> {
     let config = root.root_config()?;
 
     // Build project
-    build::main(config, root_path)?;
+    let _ = build::main(config, root_path)?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell
     ctrlc::set_handler(move || {}).gleam_expect("Error setting Ctrl-C handler");
@@ -21,8 +21,8 @@ pub fn command(root_string: String) -> Result<(), Error> {
 
     // Specify locations of .beam files
     for entry in crate::fs::read_dir(root.default_build_lib_path())?.filter_map(Result::ok) {
-        command.arg("-pa");
-        command.arg(entry.path().join("ebin"));
+        let _ = command.arg("-pa");
+        let _ = command.arg(entry.path().join("ebin"));
     }
 
     crate::cli::print_running("erl");

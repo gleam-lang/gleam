@@ -168,9 +168,11 @@ impl Hydrator {
 
                     None if self.permit_new_type_variables => {
                         let var = environment.new_generic_var();
-                        self.created_type_variable_ids
+                        let _ = self
+                            .created_type_variable_ids
                             .insert(environment.previous_uid());
-                        self.created_type_variables
+                        let _ = self
+                            .created_type_variables
                             .insert(name.clone(), var.clone());
                         Ok(var)
                     }

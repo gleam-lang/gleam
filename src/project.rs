@@ -208,7 +208,7 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
             error,
         })?;
 
-        modules_type_infos.insert(
+        let _ = modules_type_infos.insert(
             name_string.clone(),
             (origin.to_origin(), ast.type_info.clone()),
         );

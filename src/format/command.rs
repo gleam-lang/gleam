@@ -113,7 +113,7 @@ fn format_file(problem_files: &mut Vec<Unformatted>, path: PathBuf) -> Result<()
 
 pub fn read_stdin() -> Result<String> {
     let mut src = String::new();
-    std::io::stdin()
+    let _ = std::io::stdin()
         .read_to_string(&mut src)
         .map_err(|e| Error::StandardIO {
             action: StandardIOAction::Read,

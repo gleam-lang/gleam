@@ -1408,7 +1408,7 @@ When matching you need to use the `{}_codepoint` specifier instead.",
                     ),
                     ParseErrorType::UnexpectedToken { expected } => {
                         let mut messages = expected.clone();
-                        messages
+                        let _ = messages
                             .first_mut()
                             .map(|s| *s = format!("Expected one of: {}", *s));
 

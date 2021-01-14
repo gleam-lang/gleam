@@ -54,25 +54,25 @@ pub fn command(root_string: String) -> Result<(), Error> {
 
     // compile eunit runner dependencies in the build path
     let mut compile_command = Command::new("erlc");
-    compile_command.arg("-o");
-    compile_command.arg(root.build_path());
+    let _ = compile_command.arg("-o");
+    let _ = compile_command.arg(root.build_path());
 
     eunit_files
         .iter()
         .filter(|&file| file.should_be_compiled)
         .for_each(|file| {
-            compile_command.arg(file.path.clone());
+            let _ = compile_command.arg(file.path.clone());
         });
 
     tracing::trace!("Running OS process {:?}", compile_command);
-    compile_command.status().map_err(|e| Error::ShellCommand {
+    let _ = compile_command.status().map_err(|e| Error::ShellCommand {
         command: "erlc".to_string(),
         err: Some(e.kind()),
     })?;
 
     // Prepare the escript command for running tests
     let mut command = Command::new("escript");
-    command.arg(root.build_path().join("eunit_runner.erl"));
+    let _ = command.arg(root.build_path().join("eunit_runner.erl"));
 
     let ebin_paths: String = crate::fs::read_dir(root.default_build_lib_path())?
         .filter_map(Result::ok)
@@ -80,8 +80,8 @@ pub fn command(root_string: String) -> Result<(), Error> {
         .join(",");
 
     // we supply two parameters to the escript. First is a comma seperated
-    command.arg(ebin_paths);
-    command.arg(test_modules);
+    let _ = command.arg(ebin_paths);
+    let _ = command.arg(test_modules);
 
     // Run the shell
     tracing::trace!("Running OS process {:?}", command);

@@ -543,7 +543,7 @@ impl<'comments> Formatter<'comments> {
         force_break()
             .append({
                 let doc = self.expr(first).group();
-                self.pop_empty_lines(first.location().end);
+                let _ = self.pop_empty_lines(first.location().end);
                 doc
             })
             .append(if self.pop_empty_lines(then.start_byte_index()) {
@@ -562,7 +562,7 @@ impl<'comments> Formatter<'comments> {
         kind: BindingKind,
         annotation: &'a Option<TypeAst>,
     ) -> Document<'a> {
-        self.pop_empty_lines(pattern.location().end);
+        let _ = self.pop_empty_lines(pattern.location().end);
 
         let keyword = match kind {
             BindingKind::Let => "let ",
@@ -937,7 +937,7 @@ impl<'comments> Formatter<'comments> {
         constructors: &'a [RecordConstructor],
         location: &'a SrcSpan,
     ) -> Document<'a> {
-        self.pop_empty_lines(location.start);
+        let _ = self.pop_empty_lines(location.start);
         pub_(public)
             .to_doc()
             .append(if opaque { "opaque type " } else { "type " })
@@ -970,7 +970,7 @@ impl<'comments> Formatter<'comments> {
         args: &'a [String],
         location: &'a SrcSpan,
     ) -> Document<'a> {
-        self.pop_empty_lines(location.start);
+        let _ = self.pop_empty_lines(location.start);
         pub_(public)
             .to_doc()
             .append("opaque type ")
@@ -1105,7 +1105,7 @@ impl<'comments> Formatter<'comments> {
         };
 
         // Remove any unused empty lines within the clause
-        self.pop_empty_lines(after_position);
+        let _ = self.pop_empty_lines(after_position);
 
         if index == 0 {
             clause_doc

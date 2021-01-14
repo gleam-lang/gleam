@@ -84,7 +84,7 @@ impl Printer {
             Some(n) => Document::String(n.clone()),
             None => {
                 let n = self.next_letter();
-                self.names.insert(id, n.clone());
+                let _ = self.names.insert(id, n.clone());
                 Document::String(n)
             }
         }
