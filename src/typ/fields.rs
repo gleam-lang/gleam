@@ -93,7 +93,7 @@ impl FieldMap {
 
             // If the argument is already in the right place
             if position == i {
-                seen_labels.insert(label.clone());
+                let _ = seen_labels.insert(label.clone());
                 i += 1;
             } else {
                 if seen_labels.contains(label) {
@@ -102,7 +102,7 @@ impl FieldMap {
                         label: label.to_string(),
                     });
                 }
-                seen_labels.insert(label.clone());
+                let _ = seen_labels.insert(label.clone());
 
                 args.swap(position, i);
             }
@@ -123,7 +123,7 @@ impl FieldMap {
         let mut given = HashSet::with_capacity(args.len());
         for arg in args {
             if let Some(label) = &arg.label {
-                given.insert(label.as_ref());
+                let _ = given.insert(label.as_ref());
             }
         }
         self.fields

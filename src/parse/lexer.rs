@@ -59,8 +59,8 @@ where
             chr0: None,
             chr1: None,
         };
-        nlh.shift();
-        nlh.shift();
+        let _ = nlh.shift();
+        let _ = nlh.shift();
         nlh
     }
 
@@ -83,7 +83,7 @@ where
         while let Some((i, '\r')) = self.chr0 {
             if let Some((_, '\n')) = self.chr1 {
                 // Transform windows EOL into \n
-                self.shift();
+                let _ = self.shift();
             } else {
                 // Transform MAC EOL into \n
                 self.chr0 = Some((i, '\n'))
@@ -108,8 +108,8 @@ where
             loc0: 0,
             loc1: 0,
         };
-        lxr.next_char();
-        lxr.next_char();
+        let _ = lxr.next_char();
+        let _ = lxr.next_char();
         lxr.location = 0;
         lxr
     }
@@ -167,10 +167,10 @@ where
             }
             '=' => {
                 let tok_start = self.get_pos();
-                self.next_char();
+                let _ = self.next_char();
                 match self.chr0 {
                     Some('=') => {
-                        self.next_char();
+                        let _ = self.next_char();
                         let tok_end = self.get_pos();
                         self.emit((tok_start, Tok::EqualEqual, tok_end));
                     }
@@ -182,9 +182,9 @@ where
             }
             '+' => {
                 let tok_start = self.get_pos();
-                self.next_char();
+                let _ = self.next_char();
                 if let Some('.') = self.chr0 {
-                    self.next_char();
+                    let _ = self.next_char();
                     let tok_end = self.get_pos();
                     self.emit((tok_start, Tok::PlusDot, tok_end));
                 } else {
@@ -194,10 +194,10 @@ where
             }
             '*' => {
                 let tok_start = self.get_pos();
-                self.next_char();
+                let _ = self.next_char();
                 match self.chr0 {
                     Some('.') => {
-                        self.next_char();
+                        let _ = self.next_char();
                         let tok_end = self.get_pos();
                         self.emit((tok_start, Tok::StarDot, tok_end));
                     }
@@ -209,15 +209,15 @@ where
             }
             '/' => {
                 let tok_start = self.get_pos();
-                self.next_char();
+                let _ = self.next_char();
                 match self.chr0 {
                     Some('.') => {
-                        self.next_char();
+                        let _ = self.next_char();
                         let tok_end = self.get_pos();
                         self.emit((tok_start, Tok::SlashDot, tok_end));
                     }
                     Some('/') => {
-                        self.next_char();
+                        let _ = self.next_char();
                         let comment = self.lex_comment()?;
                         self.emit(comment);
                     }
@@ -229,19 +229,19 @@ where
             }
             '%' => {
                 let tok_start = self.get_pos();
-                self.next_char();
+                let _ = self.next_char();
                 let tok_end = self.get_pos();
                 self.emit((tok_start, Tok::Percent, tok_end));
             }
             '|' => {
                 let tok_start = self.get_pos();
-                self.next_char();
+                let _ = self.next_char();
                 if let Some('|') = self.chr0 {
-                    self.next_char();
+                    let _ = self.next_char();
                     let tok_end = self.get_pos();
                     self.emit((tok_start, Tok::VbarVbar, tok_end));
                 } else if let Some('>') = self.chr0 {
-                    self.next_char();
+                    let _ = self.next_char();
                     let tok_end = self.get_pos();
                     self.emit((tok_start, Tok::Pipe, tok_end));
                 } else {
@@ -251,9 +251,9 @@ where
             }
             '&' => {
                 let tok_start = self.get_pos();
-                self.next_char();
+                let _ = self.next_char();
                 if let Some('&') = self.chr0 {
-                    self.next_char();
+                    let _ = self.next_char();
                     let tok_end = self.get_pos();
                     self.emit((tok_start, Tok::AmperAmper, tok_end));
                 } else {
@@ -265,15 +265,15 @@ where
             }
             '-' => {
                 let tok_start = self.get_pos();
-                self.next_char();
+                let _ = self.next_char();
                 match self.chr0 {
                     Some('.') => {
-                        self.next_char();
+                        let _ = self.next_char();
                         let tok_end = self.get_pos();
                         self.emit((tok_start, Tok::MinusDot, tok_end));
                     }
                     Some('>') => {
-                        self.next_char();
+                        let _ = self.next_char();
                         let tok_end = self.get_pos();
                         self.emit((tok_start, Tok::RArrow, tok_end));
                     }
@@ -285,9 +285,9 @@ where
             }
             '!' => {
                 let tok_start = self.get_pos();
-                self.next_char();
+                let _ = self.next_char();
                 if let Some('=') = self.chr0 {
-                    self.next_char();
+                    let _ = self.next_char();
                     let tok_end = self.get_pos();
                     self.emit((tok_start, Tok::NotEqual, tok_end));
                 } else {
@@ -306,8 +306,8 @@ where
             '[' => {
                 let tok_start = self.get_pos();
                 if let Some(']') = self.chr1 {
-                    self.next_char();
-                    self.next_char();
+                    let _ = self.next_char();
+                    let _ = self.next_char();
                     let tok_end = self.get_pos();
                     self.emit((tok_start, Tok::ListNil, tok_end));
                 } else {
@@ -328,23 +328,23 @@ where
             }
             '<' => {
                 let tok_start = self.get_pos();
-                self.next_char();
+                let _ = self.next_char();
                 match self.chr0 {
                     Some('<') => {
-                        self.next_char();
+                        let _ = self.next_char();
                         let tok_end = self.get_pos();
                         self.emit((tok_start, Tok::LtLt, tok_end));
                     }
                     Some('.') => {
-                        self.next_char();
+                        let _ = self.next_char();
                         let tok_end = self.get_pos();
                         self.emit((tok_start, Tok::LessDot, tok_end));
                     }
                     Some('=') => {
-                        self.next_char();
+                        let _ = self.next_char();
                         match self.chr0 {
                             Some('.') => {
-                                self.next_char();
+                                let _ = self.next_char();
                                 let tok_end = self.get_pos();
                                 self.emit((tok_start, Tok::LessEqualDot, tok_end));
                             }
@@ -362,23 +362,23 @@ where
             }
             '>' => {
                 let tok_start = self.get_pos();
-                self.next_char();
+                let _ = self.next_char();
                 match self.chr0 {
                     Some('>') => {
-                        self.next_char();
+                        let _ = self.next_char();
                         let tok_end = self.get_pos();
                         self.emit((tok_start, Tok::GtGt, tok_end));
                     }
                     Some('.') => {
-                        self.next_char();
+                        let _ = self.next_char();
                         let tok_end = self.get_pos();
                         self.emit((tok_start, Tok::GreaterDot, tok_end));
                     }
                     Some('=') => {
-                        self.next_char();
+                        let _ = self.next_char();
                         match self.chr0 {
                             Some('.') => {
-                                self.next_char();
+                                let _ = self.next_char();
                                 let tok_end = self.get_pos();
                                 self.emit((tok_start, Tok::GreaterEqualDot, tok_end));
                             }
@@ -399,9 +399,9 @@ where
             }
             '.' => {
                 let tok_start = self.get_pos();
-                self.next_char();
+                let _ = self.next_char();
                 if let Some('.') = &self.chr0 {
-                    self.next_char();
+                    let _ = self.next_char();
                     let tok_end = self.get_pos();
                     self.emit((tok_start, Tok::DotDot, tok_end));
                 } else {
@@ -410,12 +410,12 @@ where
                 }
             }
             '\n' => {
-                self.next_char();
+                let _ = self.next_char();
                 let tok_start = self.get_pos();
                 while let Some(c) = self.chr0 {
                     match c {
                         ' ' | '\t' | '\x0C' => {
-                            self.next_char();
+                            let _ = self.next_char();
                         }
                         '\n' => {
                             let tok_end = self.get_pos();
@@ -428,7 +428,7 @@ where
             }
             ' ' | '\t' | '\x0C' | ';' => {
                 // Skip whitespaces and semicolons
-                self.next_char();
+                let _ = self.next_char();
             }
 
             c => {
@@ -484,18 +484,18 @@ where
         let num = if self.chr0 == Some('0') {
             if self.chr1 == Some('x') || self.chr1 == Some('X') {
                 // Hex!
-                self.next_char();
-                self.next_char();
+                let _ = self.next_char();
+                let _ = self.next_char();
                 self.lex_number_radix(start_pos, 16, "0x")?
             } else if self.chr1 == Some('o') || self.chr1 == Some('O') {
                 // Octal!
-                self.next_char();
-                self.next_char();
+                let _ = self.next_char();
+                let _ = self.next_char();
                 self.lex_number_radix(start_pos, 8, "0o")?
             } else if self.chr1 == Some('b') || self.chr1 == Some('B') {
                 // Binary!
-                self.next_char();
-                self.next_char();
+                let _ = self.next_char();
+                let _ = self.next_char();
                 self.lex_number_radix(start_pos, 2, "0b")?
             } else {
                 self.lex_normal_number()?
@@ -569,7 +569,7 @@ where
                 value_text.push(c);
             } else if self.chr0 == Some('_') && Lexer::<T>::is_digit_of_radix(self.chr1, radix) {
                 value_text.push('_');
-                self.next_char();
+                let _ = self.next_char();
             } else {
                 break;
             }
@@ -607,19 +607,19 @@ where
     fn lex_comment(&mut self) -> LexResult {
         let kind = match (self.chr0, self.chr1) {
             (Some('/'), Some('/')) => {
-                self.next_char();
-                self.next_char();
+                let _ = self.next_char();
+                let _ = self.next_char();
                 Tok::CommentModule
             }
             (Some('/'), _) => {
-                self.next_char();
+                let _ = self.next_char();
                 Tok::CommentDoc
             }
             _ => Tok::CommentNormal,
         };
         let start_pos = self.get_pos();
         while Some('\n') != self.chr0 && None != self.chr0 {
-            self.next_char();
+            let _ = self.next_char();
         }
         let end_pos = self.get_pos();
         Ok((start_pos, kind, end_pos))
@@ -637,11 +637,11 @@ where
                     if self.chr0 == Some('"') {
                         string_content.push('\\');
                         string_content.push('"');
-                        self.next_char();
+                        let _ = self.next_char();
                     } else if self.chr0 == Some('\\') {
                         string_content.push('\\');
                         string_content.push('\\');
-                        self.next_char();
+                        let _ = self.next_char();
                     } else {
                         string_content.push('\\');
                     }
@@ -694,7 +694,7 @@ where
     // advance the stream and emit a token
     fn eat_single_char(&mut self, ty: Tok) {
         let tok_start = self.get_pos();
-        self.next_char().unwrap();
+        let _ = self.next_char().unwrap();
         let tok_end = self.get_pos();
         self.emit((tok_start, ty, tok_end));
     }

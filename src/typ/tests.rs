@@ -34,7 +34,7 @@ macro_rules! assert_module_error {
 
     ($src:expr) => {
         let (ast, _) = crate::parse::parse_module($src).expect("syntax error");
-        infer_module(&mut 0, ast, &HashMap::new(), &mut vec![]).expect_err("should infer an error");
+        let _ = infer_module(&mut 0, ast, &HashMap::new(), &mut vec![]).expect_err("should infer an error");
     };
 }
 

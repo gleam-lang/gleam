@@ -35,7 +35,7 @@ impl SourceTree {
     fn import_cycle(&mut self, cycle: Cycle<NodeIndex>) -> Error {
         let origin = cycle.node_id();
         let mut path = vec![];
-        self.find_cycle(origin, origin, &mut path, &mut HashSet::new());
+        let _ = self.find_cycle(origin, origin, &mut path, &mut HashSet::new());
         let modules: Vec<_> = path
             .iter()
             .map(|index| {
@@ -57,7 +57,7 @@ impl SourceTree {
         path: &mut Vec<NodeIndex>,
         seen: &mut HashSet<NodeIndex>,
     ) -> bool {
-        seen.insert(parent);
+        let _ = seen.insert(parent);
         for node in self.graph.neighbors_directed(parent, Direction::Outgoing) {
             if node == origin {
                 path.push(node);
@@ -118,7 +118,7 @@ impl SourceTree {
                     });
                 }
 
-                self.graph.add_edge(*dep_index, *module_index, ());
+                let _ = self.graph.add_edge(*dep_index, *module_index, ());
             }
         }
         Ok(())
@@ -161,8 +161,8 @@ impl SourceTree {
 
         // Register the module
         let index = self.graph.add_node(name.clone());
-        self.indexes.insert(name, index);
-        self.modules.insert(
+        let _ = self.indexes.insert(name, index);
+        let _ = self.modules.insert(
             index,
             Module {
                 src: input.src,

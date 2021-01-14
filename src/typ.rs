@@ -480,7 +480,7 @@ fn register_values<'a>(
             ..
         } => {
             assert_unique_value_name(names, name, location)?;
-            environment.ungeneralised_functions.insert(name.to_string());
+            let _ = environment.ungeneralised_functions.insert(name.to_string());
 
             // Create the field map so we can reorder labels for usage of this function
             let mut field_map = FieldMap::new(args.len());
@@ -508,7 +508,7 @@ fn register_values<'a>(
             // Keep track of which types we create from annotations so we can know
             // which generic types not to instantiate later when performing
             // inference of the function body.
-            hydrators.insert(name.clone(), hydrator);
+            let _ = hydrators.insert(name.clone(), hydrator);
 
             // Insert the function into the environment
             environment.insert_variable(
@@ -800,7 +800,7 @@ fn infer_statement(
 
             // Generalise the function if safe to do so
             let typ = if safe_to_generalise {
-                environment.ungeneralised_functions.remove(name.as_str());
+                let _ = environment.ungeneralised_functions.remove(name.as_str());
                 let typ = generalise(typ, 0);
                 environment.insert_variable(
                     name.clone(),
@@ -919,7 +919,7 @@ fn infer_statement(
                     location,
                     name: arg.to_string(),
                 };
-                hydrator.type_from_ast(&var, environment)?;
+                let _ = hydrator.type_from_ast(&var, environment)?;
             }
             Ok(Statement::ExternalType {
                 doc,
@@ -1273,7 +1273,7 @@ fn custom_type_accessors(
     for (index, (label, arg, ..)) in args.iter().enumerate() {
         if let Some(label) = label {
             let typ = hydrator.type_from_ast(arg, environment)?;
-            fields.insert(
+            let _ = fields.insert(
                 label.to_string(),
                 RecordAccessor {
                     index: index as u64,
@@ -1328,7 +1328,7 @@ pub fn register_types<'a>(
 
             // Keep track of private types so we can tell if they are later unused
             if !public {
-                environment
+                let _ = environment
                     .unused_private_types
                     .insert(name.clone(), *location);
             }
@@ -1352,7 +1352,7 @@ pub fn register_types<'a>(
                 name: name.clone(),
                 args: parameters.clone(),
             });
-            hydrators.insert(name.to_string(), hydrator);
+            let _ = hydrators.insert(name.to_string(), hydrator);
 
             environment.insert_type_constructor(
                 name.clone(),
@@ -1398,7 +1398,7 @@ pub fn register_types<'a>(
 
             // Keep track of private types so we can tell if they are later unused
             if !public {
-                environment
+                let _ = environment
                     .unused_private_types
                     .insert(name.clone(), *location);
             }
@@ -1473,11 +1473,11 @@ pub fn register_import(
                 }
 
                 if value_imported && type_imported {
-                    environment
+                    let _ = environment
                         .unused_private_mixed_constructors
                         .insert(imported_name.clone(), *location);
                 } else if type_imported {
-                    environment
+                    let _ = environment
                         .unused_private_types
                         .insert(imported_name.clone(), *location);
                 } else if !value_imported {
@@ -1504,7 +1504,7 @@ pub fn register_import(
 
             // Insert imported module into scope
             // TODO: use a refernce to the module to avoid copying
-            environment
+            let _ = environment
                 .imported_modules
                 .insert(module_name, module_info.clone());
             Ok(())

@@ -37,8 +37,7 @@
     nonstandard_style,
     unused_import_braces,
     unused_qualifications,
-    // TODO: Fix all examples that violate this
-    // unused_results
+    unused_results
 )]
 
 #[macro_use]

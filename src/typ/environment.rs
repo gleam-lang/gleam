@@ -137,7 +137,7 @@ impl<'a, 'b> Environment<'a, 'b> {
         variant: ValueConstructorVariant,
         typ: Arc<Type>,
     ) {
-        self.local_values.insert(
+        let _ = self.local_values.insert(
             name,
             ValueConstructor {
                 public: false,
@@ -152,7 +152,7 @@ impl<'a, 'b> Environment<'a, 'b> {
     /// Errors if the module already has a value with that name.
     ///
     pub fn insert_module_value(&mut self, name: &str, value: ValueConstructor) {
-        self.module_values.insert(name.to_string(), value);
+        let _ = self.module_values.insert(name.to_string(), value);
     }
 
     /// Lookup a variable in the current scope.
@@ -276,7 +276,7 @@ impl<'a, 'b> Environment<'a, 'b> {
     }
 
     pub fn insert_accessors(&mut self, type_name: &str, accessors: AccessorsMap) {
-        self.accessors.insert(type_name.to_string(), accessors);
+        let _ = self.accessors.insert(type_name.to_string(), accessors);
     }
 
     /// Instantiate converts generic variables into unbound ones.
@@ -321,7 +321,7 @@ impl<'a, 'b> Environment<'a, 'b> {
                             if !hydrator.is_created_generic_type(id) {
                                 // Check this in the hydrator, i.e. is it a created type
                                 let v = self.new_unbound_var(ctx_level);
-                                ids.insert(*id, v.clone());
+                                let _ = ids.insert(*id, v.clone());
                                 return v;
                             }
                         }
@@ -486,11 +486,11 @@ impl<'a, 'b> Environment<'a, 'b> {
     }
 
     pub fn type_used(&mut self, name: &str) {
-        self.unused_private_mixed_constructors.remove(name);
-        self.unused_private_types.remove(name);
+        let _ = self.unused_private_mixed_constructors.remove(name);
+        let _ = self.unused_private_types.remove(name);
     }
 
     pub fn value_used(&mut self, name: &str) {
-        self.unused_private_mixed_constructors.remove(name);
+        let _ = self.unused_private_mixed_constructors.remove(name);
     }
 }

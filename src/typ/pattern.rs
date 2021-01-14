@@ -41,7 +41,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                         name: name.to_string(),
                     });
                 }
-                self.initial_pattern_vars.insert(name.to_string());
+                let _ = self.initial_pattern_vars.insert(name.to_string());
                 self.environment.insert_variable(
                     name.to_string(),
                     ValueConstructorVariant::LocalVariable,

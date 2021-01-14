@@ -86,8 +86,8 @@ impl<'env> Env<'env> {
     pub fn local_var_name<'a>(&mut self, name: String) -> Document<'a> {
         match self.current_scope_vars.get(&name) {
             None => {
-                self.current_scope_vars.insert(name.clone(), 0);
-                self.erl_function_scope_vars.insert(name.clone(), 0);
+                let _ = self.current_scope_vars.insert(name.clone(), 0);
+                let _ = self.erl_function_scope_vars.insert(name.clone(), 0);
                 Document::String(variable_name(name))
             }
             Some(0) => Document::String(variable_name(name)),
@@ -97,8 +97,8 @@ impl<'env> Env<'env> {
 
     pub fn next_local_var_name<'a>(&mut self, name: String) -> Document<'a> {
         let next = self.erl_function_scope_vars.get(&name).map_or(0, |i| i + 1);
-        self.erl_function_scope_vars.insert(name.clone(), next);
-        self.current_scope_vars.insert(name.clone(), next);
+        let _ = self.erl_function_scope_vars.insert(name.clone(), next);
+        let _ = self.current_scope_vars.insert(name.clone(), next);
         self.local_var_name(name)
     }
 }
