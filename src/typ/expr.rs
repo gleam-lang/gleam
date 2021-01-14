@@ -339,7 +339,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
     }
 
     fn infer_seq(&mut self, first: UntypedExpr, then: UntypedExpr) -> Result<TypedExpr, Error> {
-        if first.is_simple_constant() {
+        if first.is_literal() {
             self.environment.warnings.push(Warning::UnusedLiteral {
                 location: first.location(),
             });
