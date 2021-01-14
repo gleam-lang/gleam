@@ -6,6 +6,10 @@
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 
+## v0.13.2 - 2020-01-14
+
+- `ring` dep upgraded to enable compilation on Apple M1 ARM processors.
+
 ## v0.13.1 - 2020-01-13
 
 - Fix off-by-one error in message messages.
