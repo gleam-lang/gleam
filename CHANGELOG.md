@@ -17,6 +17,8 @@
 
 ## v0.13.0 - 2020-01-13
 
+#### [Release Blog Post](https://gleam.run/news/gleam-v0.13-released/)
+
 - New Gleam projects use stdlib v0.13.0.
 
 ## v0.13.0-rc2 - 2020-01-12
