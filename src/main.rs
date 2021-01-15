@@ -109,24 +109,7 @@ enum Command {
     Docs(Docs),
 
     #[structopt(name = "new", about = "Create a new project")]
-    New {
-        #[structopt(help = "name of the project")]
-        name: String,
-
-        #[structopt(long = "description", help = "description of the project")]
-        description: Option<String>,
-
-        #[structopt(help = "location of the project root")]
-        project_root: Option<String>,
-
-        #[structopt(
-            long = "template",
-            possible_values = &new::Template::VARIANTS,
-            case_insensitive = true,
-            default_value = "lib"
-        )]
-        template: new::Template,
-    },
+    New(NewOptions),
 
     #[structopt(name = "format", about = "Format source code")]
     Format {
@@ -169,6 +152,31 @@ enum Command {
         setting = AppSettings::Hidden,
     )]
     CompilePackage(CompilePackage),
+}
+
+#[derive(StructOpt, Debug)]
+#[structopt(flatten)]
+pub struct NewOptions {
+    #[structopt(help = "name of the project")]
+    pub name: String,
+
+    #[structopt(
+        long = "description",
+        help = "description of the project",
+        default_value = "A Gleam project"
+    )]
+    pub description: String,
+
+    #[structopt(help = "location of the project root")]
+    pub project_root: Option<String>,
+
+    #[structopt(
+            long = "template",
+            possible_values = &new::Template::VARIANTS,
+            case_insensitive = true,
+            default_value = "lib"
+        )]
+    pub template: new::Template,
 }
 
 #[derive(StructOpt, Debug)]
@@ -259,12 +267,7 @@ fn main() {
             check,
         } => format::command::run(stdin, check, files),
 
-        Command::New {
-            name,
-            description,
-            project_root,
-            template,
-        } => new::create(template, name, description, project_root, VERSION),
+        Command::New(options) => new::create(options, VERSION),
 
         Command::Shell { project_root } => shell::command(project_root),
 
