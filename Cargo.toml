@@ -63,13 +63,13 @@ fs_extra = "1.2.0"
 tracing = "0.1.22"
 tracing-subscriber = "0.2.15"
 # Cap'n Proto binary format runtime
-capnp = "0.13.6"
+capnp = "0.14.0"
 
 [build-dependencies]
 # Data (de)serialisation
 serde_derive = "1.0.119"
 # Cap'n Proto binary format codegen
-capnpc = "0.13.1"
+capnpc = "0.14.2"
 
 [dev-dependencies]
 pretty_assertions = "0.6.1"
