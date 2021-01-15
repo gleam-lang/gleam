@@ -176,16 +176,16 @@ enum Command {
 #[structopt(flatten)]
 pub struct CompilePackage {
     #[structopt(help = "The name of the package being compiled", long = "name")]
-    name: String,
+    package_name: String,
 
-    #[structopt(help = "The path to the package source code", long = "src")]
-    src_path: PathBuf,
+    #[structopt(help = "A directory of source Gleam code", long = "src")]
+    src_directory: PathBuf,
 
-    #[structopt(help = "The path to the package test code", long = "test")]
-    test_path: Option<PathBuf>,
+    #[structopt(help = "A directory of test Gleam code", long = "test")]
+    test_directory: Option<PathBuf>,
 
-    #[structopt(help = "Where to write compiled code and metadata to", long = "out")]
-    out_path: PathBuf,
+    #[structopt(help = "A directory to write compiled code to", long = "out")]
+    output_directory: PathBuf,
 
     #[structopt(help = "A path to a compiled dependency library", long = "lib")]
     libraries: Vec<PathBuf>,
@@ -194,10 +194,10 @@ pub struct CompilePackage {
 impl CompilePackage {
     pub fn into_package_compiler_options(self) -> package_compiler::Options {
         package_compiler::Options {
-            name: self.name,
-            src_path: self.src_path,
-            test_path: self.test_path,
-            out_path: self.out_path,
+            name: self.package_name,
+            src_path: self.src_directory,
+            test_path: self.test_directory,
+            out_path: self.output_directory,
         }
     }
 }
