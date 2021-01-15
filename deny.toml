@@ -1,0 +1,58 @@
+targets = []
+
+# https://embarkstudios.github.io/cargo-deny/checks/advisories/cfg.html
+[advisories]
+db-path = "~/.cargo/advisory-db"
+db-urls = ["https://github.com/rustsec/advisory-db"]
+vulnerability = "deny"
+unmaintained = "warn"
+yanked = "warn"
+notice = "warn"
+ignore = ["RUSTSEC-2020-0041", "RUSTSEC-2020-0095", "RUSTSEC-2020-0016"]
+
+# https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
+[licenses]
+unlicensed = "deny"
+allow = ["MIT", "Apache-2.0", "BSD-3-Clause", "MPL-2.0", "ISC", "OpenSSL"]
+default = "deny"
+confidence-threshold = 0.8
+
+[[licenses.clarify]]
+name = "ring"
+version = "*"
+expression = "MIT AND ISC AND OpenSSL"
+license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
+
+[licenses.private]
+ignore = false
+registries = []
+
+# https://embarkstudios.github.io/cargo-deny/checks/bans/cfg.html
+[bans]
+multiple-versions = "warn"
+wildcards = "allow"
+highlight = "all"
+allow = []
+deny = []
+skip = [
+    { name = "ansi_term", version = "=0.11.0" },
+    { name = "bytes", version = "=0.5.6" },
+    { name = "cfg-if", version = "=0.1.10" },
+    { name = "nom", version = "=5.1.2" },
+    { name = "pin-project", version = "=0.4.27" },
+    { name = "pin-project-internal", version = "=0.4.27" },
+    { name = "pin-project-lite", version = "=0.1.11" },
+    { name = "rand_core", version = "=0.5.1" },
+    { name = "redox_syscall", version = "0.1.57" },
+    { name = "strsim", version = "=0.8.0" },
+    { name = "tokio", version = "=0.2.24" },
+    { name = "winapi", version = "=0.2.8" },
+]
+skip-tree = []
+
+# https://embarkstudios.github.io/cargo-deny/checks/sources/cfg.html
+[sources]
+unknown-registry = "warn"
+unknown-git = "warn"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

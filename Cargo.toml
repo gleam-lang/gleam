@@ -3,6 +3,7 @@ name = "gleam"
 version = "0.13.2"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2018"
+license-file = "LICENSE"
 
 [dependencies]
 # OS SIGINT and SIGTERM signal handling
