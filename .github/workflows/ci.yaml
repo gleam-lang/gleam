@@ -99,15 +99,22 @@ jobs:
         name: gleam
         path: ./test/core_language
 
-    # Artifacts remove permissions
-    - name: Setup gleam compiler
+    - name: Configure ./test/core_language to use Gleam binary
       run: |
+        echo $PWD/ >> $GITHUB_PATH
         chmod +x ./gleam
-        sed -i 's/cargo run --/.\/gleam/' rebar.config
-      working-directory: ./test/core_language
-
-    - run: rebar3 install_deps
+        sed -i 's/cargo run --/gleam/' rebar.config
       working-directory: ./test/core_language
 
     - run: rebar3 eunit
       working-directory: ./test/core_language
+
+    # Test app template
+    - run: gleam new app_project --template=app
+    - run: rebar3 eunit
+      working-directory: ./app_project
+
+    # Test lib template
+    - run: gleam new lib_project --template=lib
+    - run: rebar3 eunit
+      working-directory: ./lib_project
