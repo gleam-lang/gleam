@@ -80,6 +80,27 @@ jobs:
     - name: Check formatting
       run: cargo fmt --all -- --check
 
+  cargo_deny:
+    name: Cargo deny
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: ${{ matrix.toolchain }}
+        target: ${{ matrix.target }}
+        profile: minimal
+        override: true
+    - run: |
+        set -e
+        curl -L https://github.com/EmbarkStudios/cargo-deny/releases/download/0.8.5/cargo-deny-0.8.5-x86_64-unknown-linux-musl.tar.gz | tar xzf -
+        mv cargo-deny-*-x86_64-unknown-linux-musl/cargo-deny cargo-deny
+        echo `pwd` >> $GITHUB_PATH
+    - run: cargo deny check
+
   test-core-language:
     name: test-core-language
     needs: test
