@@ -161,7 +161,7 @@ impl UntypedExpr {
     }
 
     pub fn is_literal(&self) -> bool {
-        matches!(self, 
+        matches!(self,
             Self::Int { .. } | Self::Float { .. } | Self::ListNil { .. } | Self::ListCons { .. }
             | Self::Tuple { .. } | Self::String { .. } | Self::BitString { .. })
     }
