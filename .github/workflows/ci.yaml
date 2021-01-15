@@ -90,10 +90,9 @@ jobs:
     - name: Install Rust toolchain
       uses: actions-rs/toolchain@v1
       with:
-        toolchain: ${{ matrix.toolchain }}
-        target: ${{ matrix.target }}
-        profile: minimal
+        toolchain: stable
         override: true
+        profile: minimal
     - run: |
         set -e
         curl -L https://github.com/EmbarkStudios/cargo-deny/releases/download/0.8.5/cargo-deny-0.8.5-x86_64-unknown-linux-musl.tar.gz | tar xzf -
