@@ -38,6 +38,7 @@ development.
  - [Arian Daneshvar](https://github.com/bees)
  - [Ben Myles](https://github.com/benmyles)
  - [Bernardo Amorim](https://github.com/bamorim)
+ - [Chew Choon Keat](https://github.com/choonkeat)
  - [Christian Meunier](https://github.com/tlvenn)
  - [clangley](https://github.com/clangley)
  - [Clever Bunny LTD](https://github.com/cleverbunny)
