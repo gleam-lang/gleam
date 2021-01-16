@@ -3,7 +3,7 @@ name = "gleam"
 version = "0.13.2"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2018"
-license-file = "LICENSE"
+license-file = "LICENCE"
 
 [dependencies]
 # OS SIGINT and SIGTERM signal handling
@@ -24,7 +24,7 @@ petgraph = "0.5.1"
 # Pretty error messages
 codespan = "0.9" # Upgrade when https://github.com/brendanzab/codespan/pull/310 is released
 codespan-reporting = "0.9" # Upgrade when https://github.com/brendanzab/codespan/pull/310 is released
-termcolor = "1.1.2"
+termcolor = "1.1.2" 
 # Initialize complex static values at runtime
 lazy_static = "1.4.0"
 # Data (de)serialisation
