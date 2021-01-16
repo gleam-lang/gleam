@@ -96,10 +96,10 @@ jobs:
       - name: Authenticate with github container registry
         run: echo "${{ secrets.CR_PAT }}" | docker login https://ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Build docker image
+      - name: Build elixir image
         run: docker build --file Dockerfile.elixir --tag gleam-elixir .
 
-      - name: Push image
+      - name: Push elixir image
         run: |
           IMAGE_ID=ghcr.io/${{ github.repository }}/gleam-elixir
 
