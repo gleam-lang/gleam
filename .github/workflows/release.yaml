@@ -93,11 +93,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Build docker image
-        run: docker build --file Dockerfile.elixir --tag gleam-elixir .
-
       - name: Authenticate with github container registry
         run: echo "${{ secrets.CR_PAT }}" | docker login https://ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build docker image
+        run: docker build --file Dockerfile.elixir --tag gleam-elixir .
 
       - name: Push image
         run: |
