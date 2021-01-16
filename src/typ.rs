@@ -277,7 +277,7 @@ pub trait Typer {
 pub enum TypeVar {
     Unbound { id: usize, level: usize },
     Link { typ: Arc<Type> },
-    Generic { id: usize },
+    Generic { id: usize, name: String },
 }
 
 impl TypeVar {
@@ -482,7 +482,6 @@ fn register_values<'a>(
             assert_unique_value_name(names, name, location)?;
             let _ = environment.ungeneralised_functions.insert(name.to_string());
 
-            tracing::trace!("FUN: {:?} -- {:?}", &name, &return_annotation);
             // Create the field map so we can reorder labels for usage of this function
             let mut field_map = FieldMap::new(args.len());
             for (i, arg) in args.iter().enumerate() {
@@ -545,7 +544,7 @@ fn register_values<'a>(
                 let mut args_types = Vec::with_capacity(args.len());
                 let mut field_map = FieldMap::new(args.len());
                 for (i, arg) in args.iter().enumerate() {
-                    let t = hydrator.type_from_ast(&arg.typ, environment)?;
+                    let t = hydrator.type_from_ast(&arg.annotation, environment)?;
                     args_types.push(t);
                     if let Some(label) = &arg.label {
                         field_map
@@ -841,73 +840,33 @@ fn infer_statement(
             location,
             name,
             public,
-            mut args,
+            args,
             retrn,
             module,
             fun,
             ..
         } => {
-            tracing::trace!("EXTERNAL FN: {:?} -- {:?}", &name, &args);
-
-            for a in args.iter_mut() {
-                if let TypeAst::Constructor {
-                    location,
-                    module,
-                    name,
-                    args,
-                } = &a.typ
-                {
-                    if let Ok(TypeConstructor { module, .. }) =
-                        environment.get_type_constructor(&module, &name)
-                    {
-                        a.typ = TypeAst::Constructor {
-                            location: location.clone(),
-                            name: name.clone(),
-                            args: args.clone(),
-                            module: module.first().map(|s| s.to_string()),
-                        };
-                        // tracing::trace!("THE ARG: {:?} -- {:?}", &name, &t);
-                    }
-                }
-            }
-            /////////
-            // let preregistered_fn = environment
-            //     .get_variable(name.as_str())
-            //     .gleam_expect("Could not find preregistered type for function");
-            // // let field_map = preregistered_fn.field_map().cloned();
-            // let preregistered_type = preregistered_fn.typ.clone();
-            // let (args_types, _return_type) = preregistered_type
-            //     .fn_types()
-            //     .gleam_expect("Preregistered type for external_fn was not a fn");
-
-            // Infer the type using the preregistered args + return types as a starting point
-            // let (typ, args, body, safe_to_generalise) =
-            // let typed_args = environment.in_new_scope(|_environment| {
-            //     let args = typed_args
-            //         .into_iter()
-            //         .zip(args_types.iter())
-            //         .map(|(a, t)| a.set_type(t.clone()))
-            //         .collect();
-            // let mut expr_typer = ExprTyper::new(environment);
-            // expr_typer.hydrator = hydrators
-            //     .remove(name.as_str())
-            //     .gleam_expect("Could not find hydrator for fn");
-            // let (args, body) =
-            //     expr_typer.infer_fn_with_known_types(args, body, Some(return_type))?;
-            // let args_types = args.iter().map(|a| a.typ.clone()).collect();
-            // let typ = fn_(args_types, body.typ());
-            // let safe_to_generalise = !expr_typer.ungeneralised_function_used;
-            // Ok((typ, args, body, safe_to_generalise))
-            // Ok(args)
-            // })?;
-
-            //////
-            let return_type = environment
+            // look up the function in the environment by name
+            let preregistered_fn = environment
                 .get_variable(name.as_str())
-                .gleam_expect("Could not find preregistered external fn")
-                .typ
-                .return_type()
-                .gleam_expect("External fn's registered type was not a fn");
+                .gleam_expect("Could not find preregistered type for function");
+            // a map of args just names and positions
+            // let field_map = preregistered_fn.field_map().cloned();
+            // return type I think
+            let preregistered_type = preregistered_fn.typ.clone();
+
+            // well here's the arg types and the return type
+            let (args_types, return_type) = preregistered_type
+                .fn_types()
+                .gleam_expect("Preregistered type for fn was not a fn");
+
+            // assign the args args
+            let args = args
+                .into_iter()
+                .zip(args_types.iter())
+                .map(|(a, t)| a.set_type(t.clone()))
+                .collect();
+
             Ok(Statement::ExternalFn {
                 return_type,
                 doc,
@@ -915,7 +874,6 @@ fn infer_statement(
                 name,
                 public,
                 args,
-                typed_args: vec![],
                 retrn,
                 module,
                 fun,
@@ -955,15 +913,53 @@ fn infer_statement(
             name,
             parameters,
             constructors,
-        } => Ok(Statement::CustomType {
-            doc,
-            location,
-            public,
-            opaque,
-            name,
-            parameters,
-            constructors,
-        }),
+        } => {
+            let constructors = constructors
+                .into_iter()
+                .map(
+                    |RecordConstructor {
+                         location,
+                         name,
+                         args,
+                         documentation,
+                     }| {
+                        let preregistered_fn = environment
+                            .get_variable(name.as_str())
+                            .gleam_expect("Could not find preregistered type for function");
+                        println!("VAR: {:?}", preregistered_fn);
+                        let preregistered_type = preregistered_fn.typ.clone();
+
+                        let args = if let Some((args_types, _return_type)) =
+                            preregistered_type.fn_types()
+                        {
+                            args.into_iter()
+                                .zip(args_types.iter())
+                                .map(|((name, ast, span, _), t)| (name, ast, span, t.clone()))
+                                .collect()
+                        } else {
+                            vec![]
+                        };
+
+                        RecordConstructor {
+                            location,
+                            name,
+                            args,
+                            documentation,
+                        }
+                    },
+                )
+                .collect();
+
+            Ok(Statement::CustomType {
+                doc,
+                location,
+                public,
+                opaque,
+                name,
+                parameters,
+                constructors,
+            })
+        }
 
         Statement::ExternalType {
             doc,
@@ -1315,8 +1311,8 @@ fn make_type_vars(
         .collect::<Result<_, _>>()
 }
 
-fn custom_type_accessors(
-    constructors: &[RecordConstructor],
+fn custom_type_accessors<A>(
+    constructors: &[RecordConstructor<A>],
     hydrator: &mut Hydrator,
     environment: &mut Environment<'_, '_>,
 ) -> Result<Option<HashMap<String, RecordAccessor>>, Error> {

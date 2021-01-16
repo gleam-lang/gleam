@@ -64,6 +64,8 @@ fn module_dependencies_test() {
 
 pub type TypedArg = Arg<Arc<Type>>;
 pub type UntypedArg = Arg<()>;
+pub type TypedExternalFnArg = ExternalFnArg<Arc<Type>>;
+pub type UntypedExternalFnArg = ExternalFnArg<()>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Arg<T> {
@@ -84,6 +86,17 @@ impl<A> Arg<A> {
     }
 }
 
+impl<A> ExternalFnArg<A> {
+    pub fn set_type<B>(self, t: B) -> ExternalFnArg<B> {
+        ExternalFnArg {
+            location: self.location,
+            label: self.label,
+            annotation: self.annotation,
+            typ: t,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum ArgNames {
     Discard { name: String },
@@ -93,14 +106,14 @@ pub enum ArgNames {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct RecordConstructor {
+pub struct RecordConstructor<T> {
     pub location: SrcSpan,
     pub name: String,
-    pub args: Vec<(Option<String>, TypeAst, SrcSpan)>,
+    pub args: Vec<(Option<String>, TypeAst, SrcSpan, T)>,
     pub documentation: Option<String>,
 }
 
-impl RecordConstructor {
+impl<A> RecordConstructor<A> {
     pub fn put_doc(&mut self, new_doc: String) {
         self.documentation = Some(new_doc);
     }
@@ -181,7 +194,7 @@ pub enum Statement<T, Expr, ConstantRecordTag> {
         name: String,
         parameters: Vec<String>,
         public: bool,
-        constructors: Vec<RecordConstructor>,
+        constructors: Vec<RecordConstructor<T>>,
         doc: Option<String>,
         opaque: bool,
     },
@@ -189,8 +202,7 @@ pub enum Statement<T, Expr, ConstantRecordTag> {
     ExternalFn {
         location: SrcSpan,
         public: bool,
-        args: Vec<ExternalFnArg>,
-        typed_args: Vec<Arg<T>>,
+        args: Vec<ExternalFnArg<T>>,
         name: String,
         retrn: TypeAst,
         return_type: T,
@@ -261,10 +273,11 @@ pub struct UnqualifiedImport {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ExternalFnArg {
+pub struct ExternalFnArg<T> {
     pub location: SrcSpan,
     pub label: Option<String>,
-    pub typ: TypeAst,
+    pub annotation: TypeAst,
+    pub typ: T,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

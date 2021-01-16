@@ -222,8 +222,8 @@ fn function<'a>(
             ..
         } => Some(Function {
             name,
-            signature: print(formatter.external_fn_signature(true, name, args, retrn)),
             documentation: markdown_documentation(doc),
+            signature: print(formatter.external_fn_signature(true, name, args.as_slice(), retrn)),
             source_url: source_links.url(location),
         }),
 
