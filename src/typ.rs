@@ -601,7 +601,7 @@ fn register_values<'a>(
         } => {
             let mut hydrator = hydrators
                 .remove(name.as_str())
-                .gleam_expect("Could not find hydrator for register_values customt type");
+                .gleam_expect("Could not find hydrator for register_values custom type");
             hydrator.disallow_new_type_variables();
 
             let typ = environment
@@ -913,6 +913,7 @@ fn infer_statement(
             name,
             parameters,
             constructors,
+            ..
         } => {
             let constructors = constructors
                 .into_iter()
@@ -926,7 +927,7 @@ fn infer_statement(
                         let preregistered_fn = environment
                             .get_variable(name.as_str())
                             .gleam_expect("Could not find preregistered type for function");
-                        println!("VAR: {:?}", preregistered_fn);
+                        println!("VAR: {:?} {:?}", name, preregistered_fn);
                         let preregistered_type = preregistered_fn.typ.clone();
 
                         let args = if let Some((args_types, _return_type)) =
@@ -949,6 +950,11 @@ fn infer_statement(
                     },
                 )
                 .collect();
+            let typed_parameters = environment
+                .get_type_constructor(&None, &name)
+                .gleam_expect("Could not find preregistered type constructor ")
+                .parameters
+                .clone();
 
             Ok(Statement::CustomType {
                 doc,
@@ -958,6 +964,7 @@ fn infer_statement(
                 name,
                 parameters,
                 constructors,
+                typed_parameters,
             })
         }
 

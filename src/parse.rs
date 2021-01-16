@@ -1448,6 +1448,7 @@ where
                     name,
                     parameters,
                     constructors,
+                    typed_parameters: vec![],
                 }))
             }
         } else if let Some((eq_s, eq_e)) = self.maybe_one(&Tok::Equal) {

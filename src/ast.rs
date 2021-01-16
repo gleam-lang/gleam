@@ -197,6 +197,7 @@ pub enum Statement<T, Expr, ConstantRecordTag> {
         constructors: Vec<RecordConstructor<T>>,
         doc: Option<String>,
         opaque: bool,
+        typed_parameters: Vec<T>,
     },
 
     ExternalFn {
