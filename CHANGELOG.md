@@ -6,6 +6,8 @@
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 - New projects no longer include a licence file by default.
+- New projects can be created using the new `escript` template to generate a
+  command line tool style program.
 - A warning is emitted when a literal value is constructed but not used.
 
 ## v0.13.2 - 2020-01-14
