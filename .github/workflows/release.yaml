@@ -99,12 +99,15 @@ jobs:
       - name: Build elixir image
         run: docker build --file Dockerfile.elixir --tag gleam-elixir .
 
-      - name: Push elixir image
+      - name: Build erlang image
+        run: docker build --file Dockerfile.erlang --tag gleam-erlang .
+
+      - name: Push images
         run: |
-          IMAGE_ID=ghcr.io/${{ github.repository }}/gleam-elixir
+          IMAGE_ID_BASE=ghcr.io/${{ github.repository }}/gleam
 
           # Change all uppercase to lowercase
-          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          IMAGE_ID_BASE=$(echo $IMAGE_ID_BASE | tr '[A-Z]' '[a-z]')
 
           # Strip git ref prefix from version
           VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
@@ -115,8 +118,11 @@ jobs:
           # Use Docker `latest` tag convention
           [ "$VERSION" == "master" ] && VERSION=latest
 
-          echo IMAGE_ID=$IMAGE_ID
+          echo IMAGE_ID_BASE=$IMAGE_ID_BASE
           echo VERSION=$VERSION
 
-          docker tag gleam-elixir $IMAGE_ID:$VERSION
-          docker push $IMAGE_ID:$VERSION
+          docker tag gleam-elixir $IMAGE_ID_BASE-elixir:$VERSION
+          docker push $IMAGE_ID_BASE-elixir:$VERSION
+
+          docker tag gleam-erlang $IMAGE_ID_BASE-erlang:$VERSION
+          docker push $IMAGE_ID_BASE-erlang:$VERSION
