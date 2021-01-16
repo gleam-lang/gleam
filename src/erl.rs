@@ -344,7 +344,7 @@ fn mod_fun<'a>(
     return_type: &'a Arc<Type>,
 ) -> Document<'a> {
     let mut env = Env::new(module);
-    let args_spec = args.iter().map(|a| a.to_erlang_type_spec());
+    let args_spec = args.iter().map(|a| a.typ.to_erlang_type_spec());
     let return_spec = return_type.to_erlang_type_spec();
     let spec = fun_spec(name, args_spec, return_spec);
 
@@ -1567,23 +1567,6 @@ pub fn is_erlang_standard_library_module(name: &str) -> bool {
             | "win32reg"
             | "zip"
     )
-}
-
-impl TypedArg {
-    pub fn to_erlang_type_spec(&self) -> Document<'static> {
-        match *self.typ {
-            Type::Var { .. } => {
-                if let Some(TypeAst::Var { name, .. }) = &self.annotation {
-                    Document::String(name.to_string())
-                } else {
-                    crate::error::fatal_compiler_bug(
-                        "Tried to render a typespec for a variable with no name.",
-                    )
-                }
-            }
-            _ => self.typ.to_erlang_type_spec(),
-        }
-    }
 }
 
 impl Type {
