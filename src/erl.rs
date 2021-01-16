@@ -1572,12 +1572,9 @@ pub fn is_erlang_standard_library_module(name: &str) -> bool {
 impl Type {
     pub fn to_erlang_type_spec(&self) -> Document {
         match self {
-            // Self::Var { .. } => crate::error::fatal_compiler_bug(
-            //     "Type::Var cannot be printed to an erlang type spec.",
-            // ),
             Self::Var { typ } => match &*typ.borrow() {
-                TypeVar::Generic { .. } | TypeVar::Unbound { .. } => "any()".to_doc(),
-                TypeVar::Link { typ } => typ.to_erlang_type_spec(),
+                TypeVar::Generic { id, .. } | TypeVar::Unbound { id, .. } => id_to_name(*id),
+                TypeVar::Link { typ } => Type::to_erlang_type_spec(typ),
             },
 
             Self::App {
@@ -1654,4 +1651,16 @@ impl Type {
             Self::Tuple { elems } => tuple(elems.iter().map(|e| e.to_erlang_type_spec())),
         }
     }
+}
+
+// When rendering a type variable to an erlang type spec we need all type variables with the
+// same id to end up with the same name in the erlang source.
+// This function maps ids to A-Z then AA-AZ, but then AAA - AAZ, rather than BA-BZ etc.
+// This is because to properly cycle through the alphabet we have to convert the usize to base 26
+// and then use the chars A-Z to render the base 26 number. Maybe this is a todo, maybe it's not
+// worth it?
+fn id_to_name(id: usize) -> Document<'static> {
+    let base = id / 26;
+    let letter = std::char::from_u32((id % 26 + 65) as u32).unwrap_or('A');
+    Document::String(format!("{:A>1$}", letter, base))
 }
