@@ -277,7 +277,7 @@ pub trait Typer {
 pub enum TypeVar {
     Unbound { id: usize, level: usize },
     Link { typ: Arc<Type> },
-    Generic { id: usize, name: String },
+    Generic { id: usize },
 }
 
 impl TypeVar {
