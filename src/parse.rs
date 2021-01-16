@@ -57,8 +57,8 @@ use crate::ast::{
     Arg, ArgNames, BinOp, BindingKind, BitStringSegment, BitStringSegmentOption, CallArg, Clause,
     ClauseGuard, Constant, ExternalFnArg, HasLocation, Module, Pattern, RecordConstructor,
     RecordUpdateSpread, SrcSpan, Statement, TypeAst, UnqualifiedImport, UntypedArg, UntypedClause,
-    UntypedClauseGuard, UntypedConstant, UntypedExpr, UntypedModule, UntypedPattern,
-    UntypedRecordUpdateArg, UntypedStatement, CAPTURE_VARIABLE,
+    UntypedClauseGuard, UntypedConstant, UntypedExpr, UntypedExternalFnArg, UntypedModule,
+    UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, CAPTURE_VARIABLE,
 };
 use crate::error::fatal_compiler_bug;
 use crate::parse::extra::ModuleExtra;
@@ -1203,7 +1203,6 @@ where
                 public,
                 name,
                 args,
-                typed_args,
                 module,
                 fun,
                 retrn,
@@ -1225,7 +1224,7 @@ where
     // examples:
     //   A
     //   a: A
-    fn parse_external_fn_param(&mut self) -> Result<Option<ExternalFnArg>, ParseError> {
+    fn parse_external_fn_param(&mut self) -> Result<Option<UntypedExternalFnArg>, ParseError> {
         let mut start = 0;
         let mut label = None;
         let mut end = 0;
@@ -1248,18 +1247,20 @@ where
             (Some(_), None) => {
                 parse_error(ParseErrorType::ExpectedType, SrcSpan { start: end, end })
             }
-            (None, Some(typ)) => Ok(Some(ExternalFnArg {
-                location: typ.location(),
+            (None, Some(annotation)) => Ok(Some(ExternalFnArg {
+                location: annotation.location(),
                 label: None,
-                typ,
+                annotation,
+                typ: (),
             })),
 
-            (Some(_), Some(typ)) => {
-                let end = typ.location().end;
+            (Some(_), Some(annotation)) => {
+                let end = annotation.location().end;
                 Ok(Some(ExternalFnArg {
                     location: SrcSpan { start, end },
                     label,
-                    typ,
+                    annotation,
+                    typ: (),
                 }))
             }
         }
@@ -1505,7 +1506,7 @@ where
     //   (a, b)
     fn parse_type_constructor_args(
         &mut self,
-    ) -> Result<(Vec<(Option<String>, TypeAst, SrcSpan)>, usize), ParseError> {
+    ) -> Result<(Vec<(Option<String>, TypeAst, SrcSpan, ())>, usize), ParseError> {
         if self.maybe_one(&Tok::Lpar).is_some() {
             let args = Parser::series_of(
                 self,
@@ -1515,7 +1516,7 @@ where
                         let _ = Parser::next_tok(p);
                         match Parser::parse_type(p, false)? {
                             Some(type_ast) => {
-                                Ok(Some((Some(name), type_ast, SrcSpan { start, end })))
+                                Ok(Some((Some(name), type_ast, SrcSpan { start, end }, ())))
                             }
                             None => {
                                 parse_error(ParseErrorType::ExpectedType, SrcSpan { start, end })
@@ -1528,7 +1529,7 @@ where
                         match Parser::parse_type(p, false)? {
                             Some(type_ast) => {
                                 let type_location = type_ast.location();
-                                Ok(Some((None, type_ast, type_location)))
+                                Ok(Some((None, type_ast, type_location, ())))
                             }
                             None => Ok(None),
                         }

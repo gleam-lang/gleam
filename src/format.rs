@@ -218,7 +218,7 @@ impl<'comments> Formatter<'comments> {
                 fun,
                 ..
             } => self
-                .external_fn_signature(*public, name, args, retrn)
+                .external_fn_signature(*public, name, args.as_slice(), retrn)
                 .append(" =")
                 .append(line())
                 .append("  \"")
@@ -493,11 +493,11 @@ impl<'comments> Formatter<'comments> {
             .append("}")
     }
 
-    pub fn external_fn_signature<'a>(
+    pub fn external_fn_signature<'a, A>(
         &mut self,
         public: bool,
         name: &'a str,
-        args: &'a [ExternalFnArg],
+        args: &'a [ExternalFnArg<A>],
         retrn: &'a TypeAst,
     ) -> Document<'a> {
         pub_(public)
@@ -898,7 +898,10 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    pub fn record_constructor<'a>(&mut self, constructor: &'a RecordConstructor) -> Document<'a> {
+    pub fn record_constructor<'a, A>(
+        &mut self,
+        constructor: &'a RecordConstructor<A>,
+    ) -> Document<'a> {
         let comments = self.pop_comments(constructor.location.start);
         let doc_comments = self.doc_comments(constructor.location.start);
 
@@ -909,7 +912,7 @@ impl<'comments> Formatter<'comments> {
                 .name
                 .to_doc()
                 .append(wrap_args(constructor.args.iter().map(
-                    |(label, typ, arg_location)| {
+                    |(label, typ, arg_location, _)| {
                         let arg_comments = self.pop_comments(arg_location.start);
                         let arg = match label {
                             Some(l) => l.to_doc().append(": ").append(self.type_ast(typ)),
@@ -928,13 +931,13 @@ impl<'comments> Formatter<'comments> {
         commented(doc_comments.append(doc).group(), comments)
     }
 
-    pub fn custom_type<'a>(
+    pub fn custom_type<'a, A>(
         &mut self,
         public: bool,
         opaque: bool,
         name: &'a str,
         args: &'a [String],
-        constructors: &'a [RecordConstructor],
+        constructors: &'a [RecordConstructor<A>],
         location: &'a SrcSpan,
     ) -> Document<'a> {
         let _ = self.pop_empty_lines(location.start);
@@ -1013,13 +1016,13 @@ impl<'comments> Formatter<'comments> {
         }))
     }
 
-    fn external_fn_arg<'a>(&mut self, arg: &'a ExternalFnArg) -> Document<'a> {
+    fn external_fn_arg<'a, A>(&mut self, arg: &'a ExternalFnArg<A>) -> Document<'a> {
         let comments = self.pop_comments(arg.location.start);
-        let doc = label(&arg.label).append(self.type_ast(&arg.typ));
+        let doc = label(&arg.label).append(self.type_ast(&arg.annotation));
         commented(doc.group(), comments)
     }
 
-    fn external_fn_args<'a>(&mut self, args: &'a [ExternalFnArg]) -> Document<'a> {
+    fn external_fn_args<'a, A>(&mut self, args: &'a [ExternalFnArg<A>]) -> Document<'a> {
         wrap_args(args.iter().map(|e| self.external_fn_arg(e)))
     }
 
