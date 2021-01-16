@@ -18,6 +18,7 @@ const PROJECT_VERSION: &'static str = "1.0.0";
 pub enum Template {
     Lib,
     App,
+    Escript,
 }
 
 #[derive(Debug)]
@@ -63,10 +64,10 @@ impl Creator {
             Template::Lib => {
                 self.gitignore()?;
                 self.github_ci()?;
-                self.readme()?;
+                self.lib_readme()?;
                 self.gleam_toml()?;
                 self.lib_rebar_config()?;
-                self.app_src()?;
+                self.erlang_app_src()?;
                 self.src_module()?;
                 self.test_module()?;
             }
@@ -74,17 +75,53 @@ impl Creator {
                 crate::fs::mkdir(&self.src.join(&self.options.name))?;
                 self.gitignore()?;
                 self.github_ci()?;
-                self.readme()?;
+                self.app_readme()?;
                 self.gleam_toml()?;
                 self.app_rebar_config()?;
-                self.app_src()?;
+                self.erlang_app_src()?;
                 self.src_module()?;
                 self.src_application_module()?;
+                self.test_module()?;
+            }
+            Template::Escript => {
+                self.gitignore()?;
+                self.github_ci()?;
+                self.escript_readme()?;
+                self.gleam_toml()?;
+                self.lib_rebar_config()?;
+                self.erlang_app_src()?;
+                self.src_escript_module()?;
                 self.test_module()?;
             }
         }
 
         Ok(())
+    }
+
+    fn src_escript_module(&self) -> Result<()> {
+        write(
+            self.src.join(format!("{}.gleam", self.options.name)),
+            &format!(
+                r#"import gleam/list
+import gleam/io
+
+pub external type CharList
+
+pub fn main(args: List(CharList)) {{
+  let _args = list.map(args, char_list_to_string)
+  io.println(hello_world())
+}}
+
+pub fn hello_world() -> String {{
+  "Hello, from {}!"
+}}
+
+external fn char_list_to_string(CharList) -> String =
+  "erlang" "list_to_binary"
+"#,
+                self.options.name
+            ),
+        )
     }
 
     fn src_application_module(&self) -> Result<()> {
@@ -178,7 +215,7 @@ pub fn stop(_state: Dynamic) {
         )
     }
 
-    fn app_src(&self) -> Result<()> {
+    fn erlang_app_src(&self) -> Result<()> {
         let module = match self.options.template {
             Template::App => format!("\n  {{mod, {{{}@application, []}}}},", self.options.name),
             _ => "".to_string(),
@@ -237,7 +274,7 @@ rebar3.crashdump
         )
     }
 
-    fn readme(&self) -> Result<()> {
+    fn app_readme(&self) -> Result<()> {
         write(
             self.root.join("README.md"),
             &format!(
@@ -248,9 +285,58 @@ rebar3.crashdump
 ## Quick start
 
 ```sh
-# Build the project
-rebar3 compile
+# Run the eunit tests
+rebar3 eunit
 
+# Run the Erlang REPL
+rebar3 shell
+```
+"#,
+                name = self.options.name,
+                description = self.options.description
+            ),
+        )
+    }
+
+    fn escript_readme(&self) -> Result<()> {
+        write(
+            self.root.join("README.md"),
+            &format!(
+                r#"# {name}
+
+{description}
+
+## Quick start
+
+```sh
+# Run the eunit tests
+rebar3 eunit
+
+# Run the Erlang REPL
+rebar3 shell
+
+# Build and run the escript
+rebar3 escriptize
+_build/default/bin/{name}
+```
+"#,
+                name = self.options.name,
+                description = self.options.description
+            ),
+        )
+    }
+
+    fn lib_readme(&self) -> Result<()> {
+        write(
+            self.root.join("README.md"),
+            &format!(
+                r#"# {name}
+
+{description}
+
+## Quick start
+
+```sh
 # Run the eunit tests
 rebar3 eunit
 
