@@ -1,0 +1,15 @@
+FROM rust:1.49.0 AS build
+
+COPY . /usr/src/gleam-src
+
+RUN set -xe \
+        && cd /usr/src/gleam-src \
+        && make install \
+        && rm -rf /usr/src/gleam-src
+
+FROM elixir:1.11.3
+
+COPY --from=build /usr/local/cargo/bin/gleam /bin
+RUN gleam --version
+
+CMD ["gleam"]
