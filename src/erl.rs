@@ -197,6 +197,7 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
                 parameters,
                 public,
                 constructors,
+                typed_parameters,
                 opaque,
                 ..
             } => {
@@ -228,9 +229,9 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
                 .group()
                 .append(".");
                 let params = concat(
-                    parameters
+                    typed_parameters
                         .iter()
-                        .map(|p| variable_name(p).to_doc())
+                        .map(|p| p.to_erlang_type_spec())
                         .intersperse(", ".to_doc()),
                 );
                 let doc = if *opaque { "-opaque " } else { "-type " }
