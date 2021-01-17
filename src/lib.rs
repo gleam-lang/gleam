@@ -8,6 +8,7 @@ use async_trait::async_trait;
 use bytes::buf::Buf;
 use flate2::read::GzDecoder;
 use lazy_static::lazy_static;
+use protobuf::Message;
 use regex::Regex;
 use reqwest::StatusCode;
 use serde::Deserialize;
@@ -99,13 +100,13 @@ pub trait Client {
             .reader();
 
         let mut body = GzDecoder::new(body);
-        let signed = protobuf::parse_from_reader::<Signed>(&mut body)
+        let signed = Signed::parse_from_reader(&mut body)
             .map_err(GetRepositoryVersionsError::DecodeFailed)?;
 
         let payload = verify_payload(signed, public_key)
             .map_err(|_| GetRepositoryVersionsError::IncorrectPayloadSignature)?;
 
-        let versions = protobuf::parse_from_bytes::<Versions>(&payload)
+        let versions = Versions::parse_from_bytes(&payload)
             .map_err(GetRepositoryVersionsError::DecodeFailed)?
             .take_packages()
             .into_iter()
@@ -147,13 +148,12 @@ pub trait Client {
             .reader();
 
         let mut body = GzDecoder::new(body);
-        let signed = protobuf::parse_from_reader::<Signed>(&mut body)
-            .map_err(GetPackageError::DecodeFailed)?;
+        let signed = Signed::parse_from_reader(&mut body).map_err(GetPackageError::DecodeFailed)?;
 
         let payload = verify_payload(signed, public_key)
             .map_err(|_| GetPackageError::IncorrectPayloadSignature)?;
 
-        let mut package = protobuf::parse_from_bytes::<proto::package::Package>(&payload)
+        let mut package = proto::package::Package::parse_from_bytes(&payload)
             .map_err(GetPackageError::DecodeFailed)?;
 
         let package = Package {
@@ -557,8 +557,9 @@ fn validate_package_and_version(package: &str, version: &str) -> Result<(), ()> 
 // https://github.com/hexpm/specifications/blob/master/registry-v2.md#signing
 //
 fn verify_payload(mut signed: Signed, pem_public_key: &[u8]) -> Result<Vec<u8>, ()> {
-    let (_, pem) = x509_parser::pem::pem_to_der(pem_public_key).map_err(|_| ())?;
-    let (_, spki) = x509_parser::parse_subject_public_key_info(&pem.contents).map_err(|_| ())?;
+    let (_, pem) = x509_parser::pem::parse_x509_pem(pem_public_key).map_err(|_| ())?;
+    let (_, spki) =
+        x509_parser::prelude::SubjectPublicKeyInfo::from_der(&pem.contents).map_err(|_| ())?;
     let payload = signed.take_payload();
     let verification = ring::signature::UnparsedPublicKey::new(
         &ring::signature::RSA_PKCS1_2048_8192_SHA512,

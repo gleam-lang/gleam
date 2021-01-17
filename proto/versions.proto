@@ -2,12 +2,12 @@ syntax = "proto2";
 
 message Versions {
   // All packages in the repository
-  repeated Package packages = 1;
+  repeated VersionsPackage packages = 1;
   // Name of repository
   required string repository = 2;
 }
 
-message Package {
+message VersionsPackage {
   // Package name
   required string name = 1;
   // All released versions of the package

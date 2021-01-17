@@ -128,7 +128,7 @@ async fn remove_docs_success() {
 
     let mock = mockito::mock(
         "DELETE",
-        format!("/packages/{}/releases/{}/docs", package, version).as_ref(),
+        format!("/packages/{}/releases/{}/docs", package, version).as_str(),
     )
     .expect(1)
     .match_header("authorization", token)
@@ -155,7 +155,7 @@ async fn remove_docs_unknown_package_version() {
 
     let mock = mockito::mock(
         "DELETE",
-        format!("/packages/{}/releases/{}/docs", package, version).as_ref(),
+        format!("/packages/{}/releases/{}/docs", package, version).as_str(),
     )
     .expect(1)
     .match_header("authorization", token)
@@ -185,7 +185,7 @@ async fn remove_docs_rate_limted() {
 
     let mock = mockito::mock(
         "DELETE",
-        format!("/packages/{}/releases/{}/docs", package, version).as_ref(),
+        format!("/packages/{}/releases/{}/docs", package, version).as_str(),
     )
     .expect(1)
     .match_header("authorization", token)
@@ -215,7 +215,7 @@ async fn remove_docs_invalid_token() {
 
     let mock = mockito::mock(
         "DELETE",
-        format!("/packages/{}/releases/{}/docs", package, version).as_ref(),
+        format!("/packages/{}/releases/{}/docs", package, version).as_str(),
     )
     .expect(1)
     .match_header("authorization", token)
@@ -252,7 +252,7 @@ async fn remove_docs_forbidden() {
 
     let mock = mockito::mock(
         "DELETE",
-        format!("/packages/{}/releases/{}/docs", package, version).as_ref(),
+        format!("/packages/{}/releases/{}/docs", package, version).as_str(),
     )
     .expect(1)
     .match_header("authorization", token)
@@ -305,7 +305,7 @@ async fn publish_docs_success() {
 
     let mock = mockito::mock(
         "POST",
-        format!("/packages/{}/releases/{}/docs", package, version).as_ref(),
+        format!("/packages/{}/releases/{}/docs", package, version).as_str(),
     )
     .expect(1)
     .match_header("authorization", token)
@@ -363,7 +363,7 @@ async fn publish_docs_not_found() {
 
     let mock = mockito::mock(
         "POST",
-        format!("/packages/{}/releases/{}/docs", package, version).as_ref(),
+        format!("/packages/{}/releases/{}/docs", package, version).as_str(),
     )
     .expect(1)
     .match_header("authorization", token)
@@ -391,7 +391,7 @@ async fn publish_docs_rate_limit() {
 
     let mock = mockito::mock(
         "POST",
-        format!("/packages/{}/releases/{}/docs", package, version).as_ref(),
+        format!("/packages/{}/releases/{}/docs", package, version).as_str(),
     )
     .expect(1)
     .match_header("authorization", token)
@@ -419,7 +419,7 @@ async fn publish_docs_invalid_api_token() {
 
     let mock = mockito::mock(
         "POST",
-        format!("/packages/{}/releases/{}/docs", package, version).as_ref(),
+        format!("/packages/{}/releases/{}/docs", package, version).as_str(),
     )
     .expect(1)
     .match_header("authorization", token)
@@ -457,7 +457,7 @@ async fn publish_docs_forbidden() {
 
     let mock = mockito::mock(
         "POST",
-        format!("/packages/{}/releases/{}/docs", package, version).as_ref(),
+        format!("/packages/{}/releases/{}/docs", package, version).as_str(),
     )
     .expect(1)
     .match_header("authorization", token)
