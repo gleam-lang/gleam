@@ -1435,7 +1435,10 @@ where
             if constructors.is_empty() {
                 parse_error(ParseErrorType::NoConstructors, SrcSpan { start, end })
             } else if inline && constructors.len() != 1 {
-                parse_error(ParseErrorType::InlineTooManyConstructors, SrcSpan { start, end })
+                parse_error(
+                    ParseErrorType::InlineTooManyConstructors,
+                    SrcSpan { start, end },
+                )
             } else {
                 Ok(Some(Statement::CustomType {
                     doc: None,
