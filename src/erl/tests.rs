@@ -47,6 +47,7 @@ fn go(a) {
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec go(integer()) -> integer().
 go(A) ->
     case A of
         99 ->
@@ -132,6 +133,10 @@ let x = tuple(100000000000000000, tuple(2000000000, 3000000000000, 40000000000),
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec go() -> {integer(),
+               {integer(), integer(), integer()},
+               integer(),
+               integer()}.
 go() ->
     X = {100000000000000000,
          {2000000000, 3000000000000, 40000000000},
@@ -642,6 +647,7 @@ pub fn bitstring_discard(x: String) -> Bool {
 
 -export([bitstring_discard/1]).
 
+-spec bitstring_discard(unicode:unicode_binary()) -> boolean().
 bitstring_discard(X) ->
     case X of
         <<_/utf8, Rest/binary>> ->
@@ -666,6 +672,7 @@ pub fn bitstring_discard(x: String) -> Bool {
 
 -export([bitstring_discard/1]).
 
+-spec bitstring_discard(unicode:unicode_binary()) -> boolean().
 bitstring_discard(X) ->
     case X of
         <<_/utf8, Rest/binary>> ->
@@ -691,6 +698,7 @@ pub fn main(args) {
 
 -export([main/1]).
 
+-spec main(H) -> integer().
 main(Args) ->
     case Args of
         X when X =:= Args ->
@@ -716,6 +724,7 @@ pub fn main(args) {
 
 -export([main/1]).
 
+-spec main(H) -> integer().
 main(Args) ->
     case Args of
         X when (X =/= X) =:= (Args =:= Args) ->
@@ -741,6 +750,7 @@ pub fn main(args) {
 
 -export([main/1]).
 
+-spec main(boolean()) -> integer().
 main(Args) ->
     case Args of
         X when (X andalso X) orelse ((X =:= X) andalso X) ->
@@ -766,6 +776,7 @@ pub fn main() {
 
 -export([main/0]).
 
+-spec main() -> integer().
 main() ->
     case {1, 0} of
         {X, Y} when X > Y ->
@@ -791,6 +802,7 @@ pub fn main() {
 
 -export([main/0]).
 
+-spec main() -> integer().
 main() ->
     case {1, 0} of
         {X, Y} when X >= Y ->
@@ -2101,6 +2113,7 @@ fn main() {
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec main() -> unicode:unicode_binary().
 main() ->
     Key = 10,
     X = [{10, 2}, {1, 2}],
@@ -2147,6 +2160,7 @@ fn variable_name_underscores_preserved() {
 
 -export([a/1]).
 
+-spec a(unicode:unicode_binary()) -> unicode:unicode_binary().
 a(Name_) ->
     Name__ = Name_,
     Name = Name__,

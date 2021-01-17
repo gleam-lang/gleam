@@ -539,8 +539,6 @@ fn register_values<'a>(
             let mut hydrator = Hydrator::new();
             let (typ, field_map) = environment.in_new_scope(|environment| {
                 let return_type = hydrator.type_from_ast(retrn, environment)?;
-                tracing::trace!("INSERTING : {:?} -- {:?}", &name, &return_type);
-
                 let mut args_types = Vec::with_capacity(args.len());
                 let mut field_map = FieldMap::new(args.len());
                 for (i, arg) in args.iter().enumerate() {
@@ -846,27 +844,18 @@ fn infer_statement(
             fun,
             ..
         } => {
-            // look up the function in the environment by name
             let preregistered_fn = environment
                 .get_variable(name.as_str())
                 .gleam_expect("Could not find preregistered type for function");
-            // a map of args just names and positions
-            // let field_map = preregistered_fn.field_map().cloned();
-            // return type I think
             let preregistered_type = preregistered_fn.typ.clone();
-
-            // well here's the arg types and the return type
             let (args_types, return_type) = preregistered_type
                 .fn_types()
                 .gleam_expect("Preregistered type for fn was not a fn");
-
-            // assign the args args
             let args = args
                 .into_iter()
                 .zip(args_types.iter())
                 .map(|(a, t)| a.set_type(t.clone()))
                 .collect();
-
             Ok(Statement::ExternalFn {
                 return_type,
                 doc,
@@ -927,7 +916,6 @@ fn infer_statement(
                         let preregistered_fn = environment
                             .get_variable(name.as_str())
                             .gleam_expect("Could not find preregistered type for function");
-                        println!("VAR: {:?} {:?}", name, preregistered_fn);
                         let preregistered_type = preregistered_fn.typ.clone();
 
                         let args = if let Some((args_types, _return_type)) =
