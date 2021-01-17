@@ -1467,6 +1467,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             variant,
             origin,
             typ,
+            inline_to,
         } = constructor;
 
         // Instantiate generic variables into unbound variables for this usage
@@ -1475,6 +1476,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             public,
             variant,
             origin,
+            inline_to,
             typ,
         })
     }

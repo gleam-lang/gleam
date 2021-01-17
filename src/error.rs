@@ -1372,6 +1372,10 @@ When matching you need to use the `{}_codepoint` specifier instead.",
                         "Custom types must have at least 1 constructor.",
                         vec!["See: https://gleam.run/book/tour/custom-types".to_string()]
                     ),
+                    ParseErrorType::InlineTooManyConstructors => (
+                        "Inline types must have only one constructor.",
+                        vec![]
+                ),
                     ParseErrorType::NotConstType => (
                         "This type is not allowed in module constants.",
                         vec!["See: https://gleam.run/book/tour/constants".to_string()]
@@ -1387,6 +1391,10 @@ When matching you need to use the `{}_codepoint` specifier instead.",
                     ParseErrorType::OpaqueTypeAlias => (
                         "Type Aliases cannot be opaque",
                         vec!["See: https://gleam.run/book/tour/type-aliases".to_string()]
+                    ),
+                    ParseErrorType::InlineTypeAlias => (
+                        "Type Aliases cannot be inline",
+                        vec![]
                     ),
                     ParseErrorType::OpNakedRight => (
                         "This operator has no value on its right side.",

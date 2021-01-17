@@ -227,18 +227,30 @@ where
             // Custom Types, and Type Aliases
             (Some((start, Tok::Type, _)), _) => {
                 let _ = self.next_tok();
-                self.parse_custom_type(start, false, false)
+                self.parse_custom_type(start, false, false, false)
             }
             (Some((start, Tok::Pub, _)), Some((_, Tok::Opaque, _))) => {
                 let _ = self.next_tok();
                 let _ = self.next_tok();
+                let inline =
+                    if let (Tok::Inline, _) = self.expect_one_of(vec![Tok::Type, Tok::Inline])? {
+                        let _ = self.expect_one(&Tok::Type)?;
+                        true
+                    } else {
+                        false
+                    };
+                self.parse_custom_type(start, true, true, inline)
+            }
+            (Some((start, Tok::Pub, _)), Some((_, Tok::Inline, _))) => {
+                let _ = self.next_tok();
+                let _ = self.next_tok();
                 let _ = self.expect_one(&Tok::Type)?;
-                self.parse_custom_type(start, true, true)
+                self.parse_custom_type(start, true, false, true)
             }
             (Some((start, Tok::Pub, _)), Some((_, Tok::Type, _))) => {
                 let _ = self.next_tok();
                 let _ = self.next_tok();
-                self.parse_custom_type(start, true, false)
+                self.parse_custom_type(start, true, false, false)
             }
 
             (t0, _) => {
@@ -1395,6 +1407,7 @@ where
         start: usize,
         public: bool,
         opaque: bool,
+        inline: bool,
     ) -> Result<Option<UntypedStatement>, ParseError> {
         let (_, name, parameters, end) = self.expect_type_name()?;
         if self.maybe_one(&Tok::Lbrace).is_some() {
@@ -1421,12 +1434,15 @@ where
             let _ = self.expect_one(&Tok::Rbrace)?;
             if constructors.is_empty() {
                 parse_error(ParseErrorType::NoConstructors, SrcSpan { start, end })
+            } else if inline && constructors.len() != 1 {
+                parse_error(ParseErrorType::InlineTooManyConstructors, SrcSpan { start, end })
             } else {
                 Ok(Some(Statement::CustomType {
                     doc: None,
                     location: SrcSpan { start, end },
                     public,
                     opaque,
+                    inline,
                     name,
                     parameters,
                     constructors,
@@ -1434,7 +1450,7 @@ where
             }
         } else if let Some((eq_s, eq_e)) = self.maybe_one(&Tok::Equal) {
             // Type Alias
-            if !opaque {
+            if !opaque && !inline {
                 if let Some(t) = self.parse_type(false)? {
                     let type_end = t.location().end;
                     Ok(Some(Statement::TypeAlias {
@@ -1459,7 +1475,11 @@ where
                     )
                 }
             } else {
-                parse_error(ParseErrorType::OpaqueTypeAlias, SrcSpan { start, end })
+                if opaque {
+                    parse_error(ParseErrorType::OpaqueTypeAlias, SrcSpan { start, end })
+                } else {
+                    parse_error(ParseErrorType::InlineTypeAlias, SrcSpan { start, end })
+                }
             }
         } else {
             // Stared defining a custom type or type alias, didn't supply any {} or =
@@ -2139,6 +2159,17 @@ where
         }
     }
 
+    // Expect one of multiple possible tokens, advances the token stream
+    fn expect_one_of(&mut self, toks: Vec<Tok>) -> Result<(Tok, (usize, usize)), ParseError> {
+        match self.maybe_one_of(toks.clone()) {
+            Some((tok, (start, end))) => Ok((tok, (start, end))),
+            None => {
+                let expected = toks.iter().map(|t| t.to_string()).collect::<Vec<_>>();
+                self.next_tok_unexpected(expected)
+            }
+        }
+    }
+
     // Expect a Name else a token dependent helpful error
     fn expect_name(&mut self) -> Result<(usize, String, usize), ParseError> {
         let t = self.next_tok();
@@ -2198,6 +2229,20 @@ where
                 Some((s, e))
             }
 
+            t0 => {
+                self.tok0 = t0;
+                None
+            }
+        }
+    }
+
+    // If the next token matches one of the requested, consume it and return (start, end)
+    fn maybe_one_of(&mut self, toks: Vec<Tok>) -> Option<(Tok, (usize, usize))> {
+        match self.tok0.take() {
+            Some((s, t, e)) if toks.contains(&t) => {
+                let _ = self.next_tok();
+                return Some((t, (s, e)));
+            }
             t0 => {
                 self.tok0 = t0;
                 None
@@ -2627,6 +2672,7 @@ fn is_reserved_word(tok: Tok) -> bool {
             | Tok::Import
             | Tok::Let
             | Tok::Opaque
+            | Tok::Inline
             | Tok::Pub
             | Tok::Todo
             | Tok::Try

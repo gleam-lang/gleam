@@ -293,6 +293,7 @@ pub struct TypeConstructor {
     pub module: Vec<String>,
     pub parameters: Vec<Arc<Type>>,
     pub typ: Arc<Type>,
+    pub inline_to: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -301,6 +302,7 @@ pub struct ValueConstructor {
     pub origin: SrcSpan,
     pub variant: ValueConstructorVariant,
     pub typ: Arc<Type>,
+    pub inline_to: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -572,6 +574,7 @@ fn register_values<'a>(
                         module: vec![module.clone()],
                         arity: args.len(),
                     },
+                    inline_to: None,
                 },
             );
 
@@ -592,6 +595,7 @@ fn register_values<'a>(
             location,
             public,
             opaque,
+            inline,
             name,
             constructors,
             ..
@@ -649,6 +653,11 @@ fn register_values<'a>(
                 };
 
                 if !opaque {
+                    let inline_to = if *inline {
+                        Some(constructor.name.clone())
+                    } else {
+                        None
+                    };
                     environment.insert_module_value(
                         &constructor.name,
                         ValueConstructor {
@@ -660,6 +669,7 @@ fn register_values<'a>(
                                 arity: constructor.args.len(),
                                 field_map: field_map.clone(),
                             },
+                            inline_to,
                         },
                     );
                 }
@@ -726,6 +736,7 @@ fn generalise_statement(
                         module: module_name.to_vec(),
                         arity: args.len(),
                     },
+                    inline_to: None,
                 },
             );
 
@@ -892,6 +903,7 @@ fn infer_statement(
             location,
             public,
             opaque,
+            inline,
             name,
             parameters,
             constructors,
@@ -900,6 +912,7 @@ fn infer_statement(
             location,
             public,
             opaque,
+            inline,
             name,
             parameters,
             constructors,
@@ -963,6 +976,7 @@ fn infer_statement(
                         literal: typed_expr.clone(),
                     },
                     typ: typ.clone(),
+                    inline_to: None,
                 },
             );
 
@@ -1321,6 +1335,7 @@ pub fn register_types<'a>(
                     origin: *location,
                     module: module.to_owned(),
                     public: *public,
+                    inline_to: None,
                     parameters,
                     typ,
                 },
@@ -1339,6 +1354,8 @@ pub fn register_types<'a>(
             public,
             parameters,
             location,
+            constructors,
+            inline,
             ..
         } => {
             assert_unique_type_name(names, name, location)?;
@@ -1354,6 +1371,12 @@ pub fn register_types<'a>(
             });
             let _ = hydrators.insert(name.to_string(), hydrator);
 
+            let inline_to = if *inline {
+                Some(constructors[0].name.clone())
+            } else {
+                None
+            };
+
             environment.insert_type_constructor(
                 name.clone(),
                 TypeConstructor {
@@ -1362,6 +1385,7 @@ pub fn register_types<'a>(
                     public: *public,
                     parameters,
                     typ,
+                    inline_to,
                 },
             )?;
         }
@@ -1385,12 +1409,14 @@ pub fn register_types<'a>(
 
             // Create the type that the alias resolves to
             let typ = hydrator.type_from_ast(resolved_type, environment)?;
+
             environment.insert_type_constructor(
                 name.clone(),
                 TypeConstructor {
                     origin: *location,
                     module: module.to_owned(),
                     public: *public,
+                    inline_to: None,
                     parameters,
                     typ,
                 },

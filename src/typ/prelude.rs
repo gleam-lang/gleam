@@ -100,6 +100,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
                 typ: int(),
                 origin: Default::default(),
                 module: vec![],
+                inline_to: None,
                 public: true,
             },
         )
@@ -129,6 +130,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
             TypeConstructor {
                 origin: Default::default(),
                 parameters: vec![],
+                inline_to: None,
                 typ: bool(),
                 module: vec![],
                 public: true,
@@ -145,6 +147,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
                 parameters: vec![list_parameter.clone()],
                 typ: list(list_parameter),
                 module: vec![],
+                inline_to: None,
                 public: true,
             },
         )
@@ -158,6 +161,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
                 parameters: vec![],
                 typ: float(),
                 module: vec![],
+                inline_to: None,
                 public: true,
             },
         )
@@ -171,6 +175,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
                 parameters: vec![],
                 typ: string(),
                 module: vec![],
+                inline_to: None,
                 public: true,
             },
         )
@@ -186,6 +191,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
                 parameters: vec![result_value.clone(), result_error.clone()],
                 typ: result(result_value, result_error),
                 module: vec![],
+                inline_to: None,
                 public: true,
             },
         )
@@ -207,6 +213,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
                 origin: Default::default(),
                 parameters: vec![],
                 typ: nil(),
+                inline_to: None,
                 module: vec![],
                 public: true,
             },
@@ -221,6 +228,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
                 parameters: vec![],
                 typ: bit_string(),
                 module: vec![],
+                inline_to: None,
                 public: true,
             },
         )
@@ -234,6 +242,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
                 parameters: vec![],
                 typ: utf_codepoint(),
                 module: vec![],
+                inline_to: None,
                 public: true,
             },
         )

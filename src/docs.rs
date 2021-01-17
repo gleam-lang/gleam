@@ -269,6 +269,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
         Statement::CustomType {
             public: true,
             opaque: false,
+            inline: false,
             name,
             parameters,
             doc,
@@ -280,6 +281,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
             // TODO: Don't use the same printer for docs as for the formatter
             definition: print(formatter.custom_type(
                 true,
+                false,
                 false,
                 name,
                 parameters,
@@ -300,6 +302,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
         Statement::CustomType {
             public: true,
             opaque: true,
+            inline: false,
             name,
             parameters,
             doc,
@@ -308,6 +311,22 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
         } => Some(Type {
             name,
             definition: print(formatter.docs_opaque_custom_type(true, name, parameters, location)),
+            documentation: markdown_documentation(doc),
+            constructors: vec![],
+            source_url: source_links.url(location),
+        }),
+        Statement::CustomType {
+            public: true,
+            opaque: false,
+            inline: true,
+            name,
+            parameters,
+            doc,
+            location,
+            ..
+        } => Some(Type {
+            name,
+            definition: print(formatter.docs_inline_custom_type(true, name, parameters, location)),
             documentation: markdown_documentation(doc),
             constructors: vec![],
             source_url: source_links.url(location),

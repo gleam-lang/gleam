@@ -40,12 +40,14 @@ pub enum ParseErrorType {
     LexError { error: LexicalError },
     ListNilNotAllowed, // [] is not allowed here
     NoConstructors,    // A type "A {}" must have at least one constructor
+    InlineTooManyConstructors, // An inline type must only have one constructor
     NoCaseClause,      // a case with no claueses
     NoExpression,      // between "{" and "}" in expression position, there must be an expression
     NoValueAfterEqual, // = <something other than a value>
     NotConstType,      // :fn(), name, _  are not valid const types
     OpNakedRight,      // Operator with no value to the right
     OpaqueTypeAlias,   // Type aliases cannot be opaque
+    InlineTypeAlias,   // Type aliases cannot be inline
     TooManyArgHoles,   // a function call can have at most 1 arg hole
     UnexpectedEOF,
     UnexpectedReservedWord, // reserved word used when a name was expected

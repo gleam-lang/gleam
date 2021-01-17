@@ -199,10 +199,12 @@ impl<'comments> Formatter<'comments> {
                 constructors,
                 location,
                 opaque,
+                inline,
                 ..
             } => self.custom_type(
                 *public,
                 *opaque,
+                *inline,
                 name,
                 parameters.as_slice(),
                 constructors,
@@ -932,6 +934,7 @@ impl<'comments> Formatter<'comments> {
         &mut self,
         public: bool,
         opaque: bool,
+        inlined: bool,
         name: &'a str,
         args: &'a [String],
         constructors: &'a [RecordConstructor],
@@ -940,7 +943,15 @@ impl<'comments> Formatter<'comments> {
         let _ = self.pop_empty_lines(location.start);
         pub_(public)
             .to_doc()
-            .append(if opaque { "opaque type " } else { "type " })
+            .append(if inlined && opaque {
+                "opaque inline type "
+            } else if inlined {
+                "inline type "
+            } else if opaque {
+                "opaque type "
+            } else {
+                "type "
+            })
             .append(if args.is_empty() {
                 name.to_doc()
             } else {
@@ -974,6 +985,25 @@ impl<'comments> Formatter<'comments> {
         pub_(public)
             .to_doc()
             .append("opaque type ")
+            .append(if args.is_empty() {
+                name.to_doc()
+            } else {
+                name.to_doc()
+                    .append(wrap_args(args.iter().map(|e| e.as_str().to_doc())))
+            })
+    }
+
+    pub fn docs_inline_custom_type<'a>(
+        &mut self,
+        public: bool,
+        name: &'a str,
+        args: &'a [String],
+        location: &'a SrcSpan,
+    ) -> Document<'a> {
+        let _ = self.pop_empty_lines(location.start);
+        pub_(public)
+            .to_doc()
+            .append("inline type ")
             .append(if args.is_empty() {
                 name.to_doc()
             } else {

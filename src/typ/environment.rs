@@ -144,6 +144,7 @@ impl<'a, 'b> Environment<'a, 'b> {
                 origin: Default::default(), // TODO: use the real one
                 variant,
                 typ,
+                inline_to: None,
             },
         );
     }
@@ -201,18 +202,20 @@ impl<'a, 'b> Environment<'a, 'b> {
         name: &str,
     ) -> Result<&TypeConstructor, GetTypeConstructorError> {
         match module_alias {
-            None => {
-                self.module_types
-                    .get(name)
-                    .ok_or_else(|| GetTypeConstructorError::UnknownType {
-                        name: name.to_string(),
-                        type_constructors: self
-                            .module_types
-                            .keys()
-                            .map(|t| t.to_string())
-                            .collect(),
-                    })
-            }
+            None => self
+                .module_types
+                .get(name)
+                .ok_or_else(|| GetTypeConstructorError::UnknownType {
+                    name: name.to_string(),
+                    type_constructors: self.module_types.keys().map(|t| t.to_string()).collect(),
+                })
+                .and_then(|tc| {
+                    if let Some(inlined) = tc.inline_to.clone() {
+                        self.get_type_constructor(&None, &inlined)
+                    } else {
+                        Ok(tc)
+                    }
+                }),
 
             Some(m) => {
                 let module = &self.imported_modules.get(m).ok_or_else(|| {
@@ -234,6 +237,13 @@ impl<'a, 'b> Environment<'a, 'b> {
                         module_name: module.1.name.clone(),
                         type_constructors: module.1.types.keys().map(|t| t.to_string()).collect(),
                     })
+                    .and_then(|tc| {
+                        if let Some(inlined) = tc.inline_to.clone() {
+                            self.get_type_constructor(&None, &inlined)
+                        } else {
+                            Ok(tc)
+                        }
+                    })
             }
         }
     }
@@ -246,12 +256,20 @@ impl<'a, 'b> Environment<'a, 'b> {
         name: &str,
     ) -> Result<&ValueConstructor, GetValueConstructorError> {
         match module {
-            None => self.local_values.get(name).ok_or_else(|| {
-                GetValueConstructorError::UnknownVariable {
+            None => self
+                .local_values
+                .get(name)
+                .ok_or_else(|| GetValueConstructorError::UnknownVariable {
                     name: name.to_string(),
                     variables: self.local_values.keys().map(|t| t.to_string()).collect(),
-                }
-            }),
+                })
+                .and_then(|vc| {
+                    if let Some(inlined) = vc.inline_to.clone() {
+                        self.get_value_constructor(None, &inlined)
+                    } else {
+                        Ok(vc)
+                    }
+                }),
 
             Some(module) => {
                 let module = self.imported_modules.get(&*module).ok_or_else(|| {
@@ -264,13 +282,22 @@ impl<'a, 'b> Environment<'a, 'b> {
                             .collect(),
                     }
                 })?;
-                module.1.values.get(&*name).ok_or_else(|| {
-                    GetValueConstructorError::UnknownModuleValue {
+                module
+                    .1
+                    .values
+                    .get(&*name)
+                    .ok_or_else(|| GetValueConstructorError::UnknownModuleValue {
                         name: name.to_string(),
                         module_name: module.1.name.clone(),
                         value_constructors: module.1.values.keys().map(|t| t.to_string()).collect(),
-                    }
-                })
+                    })
+                    .and_then(|vc| {
+                        if let Some(inlined) = vc.inline_to.clone() {
+                            self.get_value_constructor(None, &inlined)
+                        } else {
+                            Ok(vc)
+                        }
+                    })
             }
         }
     }

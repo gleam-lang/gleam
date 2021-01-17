@@ -27,6 +27,7 @@ pub fn str_to_keyword(word: &str) -> Option<Tok> {
         "import" => Some(Tok::Import),
         "let" => Some(Tok::Let),
         "opaque" => Some(Tok::Opaque),
+        "inline" => Some(Tok::Inline),
         "pub" => Some(Tok::Pub),
         "todo" => Some(Tok::Todo),
         "try" => Some(Tok::Try),
