@@ -8,12 +8,19 @@ vulnerability = "deny"
 unmaintained = "warn"
 yanked = "warn"
 notice = "warn"
-ignore = ["RUSTSEC-2020-0041", "RUSTSEC-2020-0095", "RUSTSEC-2020-0016"]
+ignore = [
+    # https://rustsec.org/advisories/RUSTSEC-2020-0041.html
+    # sized-chunks: Multiple soundness issues in Chunk and InlineArray
+    "RUSTSEC-2020-0041", 
+    # https://rustsec.org/advisories/RUSTSEC-2020-0095.html
+    # difference is unmaintained
+    "RUSTSEC-2020-0095", 
+]
 
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
 [licenses]
 unlicensed = "deny"
-allow = ["MIT", "Apache-2.0", "BSD-3-Clause", "MPL-2.0", "ISC", "OpenSSL"]
+allow = ["MIT", "Apache-2.0", "MPL-2.0", "ISC", "OpenSSL"]
 default = "deny"
 confidence-threshold = 0.8
 
@@ -38,15 +45,11 @@ skip = [
     { name = "ansi_term", version = "=0.11.0" },
     { name = "bytes", version = "=0.5.6" },
     { name = "cfg-if", version = "=0.1.10" },
-    { name = "nom", version = "=5.1.2" },
     { name = "pin-project", version = "=0.4.27" },
     { name = "pin-project-internal", version = "=0.4.27" },
-    { name = "pin-project-lite", version = "=0.1.11" },
     { name = "rand_core", version = "=0.5.1" },
     { name = "redox_syscall", version = "0.1.57" },
     { name = "strsim", version = "=0.8.0" },
-    { name = "tokio", version = "=0.2.24" },
-    { name = "winapi", version = "=0.2.8" },
 ]
 skip-tree = []
 

@@ -47,7 +47,7 @@ pulldown-cmark = "0.8.0"
 # Check for tty
 atty = "0.2.14"
 # Hex package manager client
-hexpm = "1.1.1"
+hexpm = "1.2.0"
 # Allow user to type in sensitive information without showing it in the shell
 rpassword = "5.0.0"
 # Async runtime
