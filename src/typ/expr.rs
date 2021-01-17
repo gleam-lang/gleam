@@ -858,7 +858,8 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 match &constructor.variant {
                     ValueConstructorVariant::LocalVariable => (),
                     ValueConstructorVariant::ModuleFn { .. }
-                    | ValueConstructorVariant::Record { .. } => {
+                    | ValueConstructorVariant::Record { .. }
+                    | ValueConstructorVariant::Inline { .. } => {
                         return Err(Error::NonLocalClauseGuardVariable { location, name })
                     }
 
@@ -1467,7 +1468,6 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             variant,
             origin,
             typ,
-            inline_to,
         } = constructor;
 
         // Instantiate generic variables into unbound variables for this usage
@@ -1476,7 +1476,6 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             public,
             variant,
             origin,
-            inline_to,
             typ,
         })
     }
@@ -1523,7 +1522,8 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 let constructor = self.infer_value_constructor(&module, &name, &location)?;
 
                 let tag = match &constructor.variant {
-                    ValueConstructorVariant::Record { name, .. } => name.clone(),
+                    ValueConstructorVariant::Record { name, .. }
+                    | ValueConstructorVariant::Inline { name, .. } => name.clone(),
 
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::LocalVariable => {
@@ -1555,7 +1555,8 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 let constructor = self.infer_value_constructor(&module, &name, &location)?;
 
                 let tag = match &constructor.variant {
-                    ValueConstructorVariant::Record { name, .. } => name.clone(),
+                    ValueConstructorVariant::Record { name, .. }
+                    | ValueConstructorVariant::Inline { name, .. } => name.clone(),
 
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::LocalVariable => {

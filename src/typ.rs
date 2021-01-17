@@ -222,15 +222,24 @@ pub enum ValueConstructorVariant {
         arity: usize,
         field_map: Option<FieldMap>,
     },
+
+    /// A constructor for an inline custom type
+    Inline {
+        name: String,
+        arity: usize,
+        field_map: Option<FieldMap>,
+    },
 }
 
 impl ValueConstructorVariant {
     fn to_module_value_constructor(&self) -> ModuleValueConstructor {
         match self {
-            Self::Record { name, arity, .. } => ModuleValueConstructor::Record {
-                name: name.clone(),
-                arity: *arity,
-            },
+            Self::Record { name, arity, .. } | Self::Inline { name, arity, .. } => {
+                ModuleValueConstructor::Record {
+                    name: name.clone(),
+                    arity: *arity,
+                }
+            }
 
             Self::ModuleConstant { literal } => ModuleValueConstructor::Constant {
                 literal: literal.clone(),
@@ -293,7 +302,6 @@ pub struct TypeConstructor {
     pub module: Vec<String>,
     pub parameters: Vec<Arc<Type>>,
     pub typ: Arc<Type>,
-    pub inline_to: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -302,7 +310,6 @@ pub struct ValueConstructor {
     pub origin: SrcSpan,
     pub variant: ValueConstructorVariant,
     pub typ: Arc<Type>,
-    pub inline_to: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -574,7 +581,6 @@ fn register_values<'a>(
                         module: vec![module.clone()],
                         arity: args.len(),
                     },
-                    inline_to: None,
                 },
             );
 
@@ -653,10 +659,18 @@ fn register_values<'a>(
                 };
 
                 if !opaque {
-                    let inline_to = if *inline {
-                        Some(constructor.name.clone())
+                    let variant = if *inline {
+                        ValueConstructorVariant::Inline {
+                            name: constructor.name.clone(),
+                            arity: constructor.args.len(),
+                            field_map: field_map.clone(),
+                        }
                     } else {
-                        None
+                        ValueConstructorVariant::Record {
+                            name: constructor.name.clone(),
+                            arity: constructor.args.len(),
+                            field_map: field_map.clone(),
+                        }
                     };
                     environment.insert_module_value(
                         &constructor.name,
@@ -664,12 +678,7 @@ fn register_values<'a>(
                             public: *public,
                             typ: typ.clone(),
                             origin: constructor.location,
-                            variant: ValueConstructorVariant::Record {
-                                name: constructor.name.clone(),
-                                arity: constructor.args.len(),
-                                field_map: field_map.clone(),
-                            },
-                            inline_to,
+                            variant,
                         },
                     );
                 }
@@ -736,7 +745,6 @@ fn generalise_statement(
                         module: module_name.to_vec(),
                         arity: args.len(),
                     },
-                    inline_to: None,
                 },
             );
 
@@ -976,7 +984,6 @@ fn infer_statement(
                         literal: typed_expr.clone(),
                     },
                     typ: typ.clone(),
-                    inline_to: None,
                 },
             );
 
@@ -1335,7 +1342,6 @@ pub fn register_types<'a>(
                     origin: *location,
                     module: module.to_owned(),
                     public: *public,
-                    inline_to: None,
                     parameters,
                     typ,
                 },
@@ -1354,8 +1360,6 @@ pub fn register_types<'a>(
             public,
             parameters,
             location,
-            constructors,
-            inline,
             ..
         } => {
             assert_unique_type_name(names, name, location)?;
@@ -1371,12 +1375,6 @@ pub fn register_types<'a>(
             });
             let _ = hydrators.insert(name.to_string(), hydrator);
 
-            let inline_to = if *inline {
-                Some(constructors[0].name.clone())
-            } else {
-                None
-            };
-
             environment.insert_type_constructor(
                 name.clone(),
                 TypeConstructor {
@@ -1385,7 +1383,6 @@ pub fn register_types<'a>(
                     public: *public,
                     parameters,
                     typ,
-                    inline_to,
                 },
             )?;
         }
@@ -1416,7 +1413,6 @@ pub fn register_types<'a>(
                     origin: *location,
                     module: module.to_owned(),
                     public: *public,
-                    inline_to: None,
                     parameters,
                     typ,
                 },

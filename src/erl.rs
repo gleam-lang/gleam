@@ -752,6 +752,9 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'_>) 
     match &constructor.variant {
         ValueConstructorVariant::Record {
             name: record_name, ..
+        }
+        | ValueConstructorVariant::Inline {
+            name: record_name, ..
         } => match &*constructor.typ {
             Type::Fn { args, .. } => {
                 let chars = incrementing_args_list(args.len());

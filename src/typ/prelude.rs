@@ -1,7 +1,6 @@
 use super::{Environment, Type, TypeConstructor, ValueConstructorVariant};
 use crate::error::GleamExpect;
 use std::sync::Arc;
-
 pub fn int() -> Arc<Type> {
     Arc::new(Type::App {
         public: true,
@@ -10,7 +9,6 @@ pub fn int() -> Arc<Type> {
         args: vec![],
     })
 }
-
 pub fn float() -> Arc<Type> {
     Arc::new(Type::App {
         args: vec![],
@@ -19,7 +17,6 @@ pub fn float() -> Arc<Type> {
         module: vec![],
     })
 }
-
 pub fn bool() -> Arc<Type> {
     Arc::new(Type::App {
         args: vec![],
@@ -28,7 +25,6 @@ pub fn bool() -> Arc<Type> {
         module: vec![],
     })
 }
-
 pub fn string() -> Arc<Type> {
     Arc::new(Type::App {
         args: vec![],
@@ -37,7 +33,6 @@ pub fn string() -> Arc<Type> {
         module: vec![],
     })
 }
-
 pub fn nil() -> Arc<Type> {
     Arc::new(Type::App {
         args: vec![],
@@ -46,7 +41,6 @@ pub fn nil() -> Arc<Type> {
         module: vec![],
     })
 }
-
 pub fn list(t: Arc<Type>) -> Arc<Type> {
     Arc::new(Type::App {
         public: true,
@@ -55,7 +49,6 @@ pub fn list(t: Arc<Type>) -> Arc<Type> {
         args: vec![t],
     })
 }
-
 pub fn result(a: Arc<Type>, e: Arc<Type>) -> Arc<Type> {
     Arc::new(Type::App {
         public: true,
@@ -64,15 +57,12 @@ pub fn result(a: Arc<Type>, e: Arc<Type>) -> Arc<Type> {
         args: vec![a, e],
     })
 }
-
 pub fn tuple(elems: Vec<Arc<Type>>) -> Arc<Type> {
     Arc::new(Type::Tuple { elems })
 }
-
 pub fn fn_(args: Vec<Arc<Type>>, retrn: Arc<Type>) -> Arc<Type> {
     Arc::new(Type::Fn { retrn, args })
 }
-
 pub fn bit_string() -> Arc<Type> {
     Arc::new(Type::App {
         args: vec![],
@@ -81,7 +71,6 @@ pub fn bit_string() -> Arc<Type> {
         module: vec![],
     })
 }
-
 pub fn utf_codepoint() -> Arc<Type> {
     Arc::new(Type::App {
         args: vec![],
@@ -90,7 +79,6 @@ pub fn utf_codepoint() -> Arc<Type> {
         module: vec![],
     })
 }
-
 pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'a, 'b> {
     typer
         .insert_type_constructor(
@@ -100,12 +88,10 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
                 typ: int(),
                 origin: Default::default(),
                 module: vec![],
-                inline_to: None,
                 public: true,
             },
         )
         .gleam_expect("prelude inserting Int type");
-
     typer.insert_variable(
         "True".to_string(),
         ValueConstructorVariant::Record {
@@ -130,14 +116,12 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
             TypeConstructor {
                 origin: Default::default(),
                 parameters: vec![],
-                inline_to: None,
                 typ: bool(),
                 module: vec![],
                 public: true,
             },
         )
         .gleam_expect("prelude inserting Bool type");
-
     let list_parameter = typer.new_generic_var();
     typer
         .insert_type_constructor(
@@ -147,12 +131,10 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
                 parameters: vec![list_parameter.clone()],
                 typ: list(list_parameter),
                 module: vec![],
-                inline_to: None,
                 public: true,
             },
         )
         .gleam_expect("prelude inserting List type");
-
     typer
         .insert_type_constructor(
             "Float".to_string(),
@@ -161,12 +143,10 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
                 parameters: vec![],
                 typ: float(),
                 module: vec![],
-                inline_to: None,
                 public: true,
             },
         )
         .gleam_expect("prelude inserting Float type");
-
     typer
         .insert_type_constructor(
             "String".to_string(),
@@ -175,12 +155,10 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
                 parameters: vec![],
                 typ: string(),
                 module: vec![],
-                inline_to: None,
                 public: true,
             },
         )
         .gleam_expect("prelude inserting String type");
-
     let result_value = typer.new_generic_var();
     let result_error = typer.new_generic_var();
     typer
@@ -191,12 +169,10 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
                 parameters: vec![result_value.clone(), result_error.clone()],
                 typ: result(result_value, result_error),
                 module: vec![],
-                inline_to: None,
                 public: true,
             },
         )
         .gleam_expect("prelude inserting Result type");
-
     typer.insert_variable(
         "Nil".to_string(),
         ValueConstructorVariant::Record {
@@ -213,13 +189,11 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
                 origin: Default::default(),
                 parameters: vec![],
                 typ: nil(),
-                inline_to: None,
                 module: vec![],
                 public: true,
             },
         )
         .gleam_expect("prelude inserting Nil type");
-
     typer
         .insert_type_constructor(
             "BitString".to_string(),
@@ -228,12 +202,10 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
                 parameters: vec![],
                 typ: bit_string(),
                 module: vec![],
-                inline_to: None,
                 public: true,
             },
         )
         .gleam_expect("prelude inserting BitString type");
-
     typer
         .insert_type_constructor(
             "UtfCodepoint".to_string(),
@@ -242,12 +214,10 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
                 parameters: vec![],
                 typ: utf_codepoint(),
                 module: vec![],
-                inline_to: None,
                 public: true,
             },
         )
         .gleam_expect("prelude inserting UTF Codepoint type");
-
     let ok = typer.new_generic_var();
     let error = typer.new_generic_var();
     typer.insert_variable(
@@ -259,7 +229,6 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
         },
         fn_(vec![ok.clone()], result(ok, error)),
     );
-
     let ok = typer.new_generic_var();
     let error = typer.new_generic_var();
     typer.insert_variable(
@@ -271,6 +240,5 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
         },
         fn_(vec![error.clone()], result(ok, error)),
     );
-
     typer
 }

@@ -141,6 +141,11 @@ impl<'a> ModuleBuilder<'a> {
                 name,
                 field_map,
                 arity,
+            }
+            | ValueConstructorVariant::Inline {
+                name,
+                field_map,
+                arity,
             } => {
                 let mut builder = builder.init_record();
                 builder.set_name(name);
