@@ -7,6 +7,7 @@
 - Update reqwest to 0.11
 - Update url to 2.2
 - Update bytes to 1.0
+- The generated protobuf code has been regenerated.
 
 ## v1.1.1 - 2020-07-20
 
