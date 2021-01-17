@@ -138,3 +138,12 @@ jobs:
     - run: gleam new lib_project --template=lib
     - run: rebar3 eunit
       working-directory: ./lib_project
+
+    # Test escript template
+    - run: gleam new escript_project --template=escript
+    - run: rebar3 eunit
+      working-directory: ./escript_project
+    - run: rebar3 escriptize
+      working-directory: ./escript_project
+    - run: _build/default/bin/escript_project
+      working-directory: ./escript_project
