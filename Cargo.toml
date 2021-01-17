@@ -57,7 +57,7 @@ tar = "0.4.30"
 # gzip compression
 flate2 = "1.0.19"
 # Byte array data type
-bytes = "0.5" # Upgrade when https://github.com/gleam-lang/hexpm-rust/commit/8209402d8096aa51a077eb5500bab2a9656743d3 is released
+bytes = "1.0"
 # Further file system functions (i.e. copy directory)
 fs_extra = "1.2.0"
 # Logging
