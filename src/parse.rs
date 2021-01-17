@@ -233,7 +233,7 @@ where
                 let _ = self.next_tok();
                 let _ = self.next_tok();
                 let inline =
-                    if let (Tok::Inline, _) = self.expect_one_of(vec![Tok::Type, Tok::Inline])? {
+                    if let (Tok::Inline, _) = self.expect_one_of(&[Tok::Type, Tok::Inline])? {
                         let _ = self.expect_one(&Tok::Type)?;
                         true
                     } else {
@@ -2163,7 +2163,7 @@ where
     }
 
     // Expect one of multiple possible tokens, advances the token stream
-    fn expect_one_of(&mut self, toks: Vec<Tok>) -> Result<(Tok, (usize, usize)), ParseError> {
+    fn expect_one_of(&mut self, toks: &[Tok]) -> Result<(Tok, (usize, usize)), ParseError> {
         match self.maybe_one_of(toks.clone()) {
             Some((tok, (start, end))) => Ok((tok, (start, end))),
             None => {
@@ -2240,7 +2240,7 @@ where
     }
 
     // If the next token matches one of the requested, consume it and return (start, end)
-    fn maybe_one_of(&mut self, toks: Vec<Tok>) -> Option<(Tok, (usize, usize))> {
+    fn maybe_one_of(&mut self, toks: &[Tok]) -> Option<(Tok, (usize, usize))> {
         match self.tok0.take() {
             Some((s, t, e)) if toks.contains(&t) => {
                 let _ = self.next_tok();
