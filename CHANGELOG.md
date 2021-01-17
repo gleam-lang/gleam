@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.2.0 - 2020-01-17
 
 - The `get_package` method has been added.
 - Update tokio to 1.0
