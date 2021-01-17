@@ -1053,15 +1053,33 @@ pub fn main(power: Power) { power.to_int(power) }"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/main.erl",),
-                text: "-module(main).\n-compile(no_auto_import).\n\n-export([main/1]).\n
-main(Power) ->\n    power:to_int(Power).\n"
-                    .to_string(),
+                text: "-module(main).
+-compile(no_auto_import).
+
+-export([main/1]).
+
+-spec main(power:power()) -> integer().
+main(Power) ->
+    power:to_int(Power).
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/power.erl",),
-                text: "-module(power).\n-compile(no_auto_import).\n\n-export([to_int/1]).\n
-to_int(P) ->\n    erlang:element(2, P) * 9000.\n"
-                    .to_string(),
+                text: "-module(power).
+-compile(no_auto_import).
+
+-export([to_int/1]).
+
+-export_type([power/0]).
+
+-type power() :: {power, integer()}.
+
+-spec to_int(power:power()) -> integer().
+to_int(P) ->
+    erlang:element(2, P) * 9000.
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/power_Power.hrl",),
