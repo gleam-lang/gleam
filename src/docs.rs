@@ -5,7 +5,7 @@ mod tests;
 
 use crate::{
     ast::{Statement, TypedStatement},
-    config::{DocsPage, PackageConfig},
+    config::{DocsPage, PackageConfig, Repository},
     docs::source_links::SourceLinker,
     error::{Error, GleamExpect},
     format,
@@ -78,7 +78,7 @@ pub fn generate_html(
         })
         .collect::<Vec<_>>();
 
-    let links = &project_config
+    let doc_links = &project_config
         .docs
         .links
         .iter()
@@ -88,6 +88,30 @@ pub fn generate_html(
         })
         .collect::<Vec<Link>>()[..];
 
+    let repo_link = match &project_config.repository {
+        Repository::GitHub { repo, .. }
+        | Repository::GitLab { repo, .. }
+        | Repository::BitBucket { repo, .. } => Some(Link {
+            name: "Repository".to_string(),
+            path: repo.clone(),
+        }),
+        Repository::Custom { url } => Some(Link {
+            name: "Repository".to_string(),
+            path: url.clone(),
+        }),
+        Repository::None => None,
+    }
+    .into_iter()
+    .collect::<Vec<Link>>();
+
+    let links = &doc_links
+        .iter()
+        .chain(repo_link.iter())
+        .map(|doc_link| Link {
+            name: doc_link.name.clone(),
+            path: doc_link.path.clone(),
+        })
+        .collect::<Vec<Link>>();
     // index.css
     let num_asset_files = 1;
     let mut files = Vec::with_capacity(analysed.len() + pages.len() + 1 + num_asset_files);
