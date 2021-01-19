@@ -37,7 +37,16 @@
     nonstandard_style,
     unused_import_braces,
     unused_qualifications,
-    unused_results
+    unused_results,
+    // Safety
+    unsafe_code,
+    clippy::unimplemented,
+    clippy::expect_used,
+    clippy::unwrap_used,
+    clippy::ok_expect,
+    clippy::integer_division,
+    clippy::indexing_slicing,
+    clippy::mem_forget
 )]
 
 #[macro_use]
