@@ -138,7 +138,7 @@ enum Mode {
     Unbroken,
 }
 
-fn fits(mut limit: isize, mut docs: im::Vector<(isize, Mode, Document)>) -> bool {
+fn fits(mut limit: isize, mut docs: im::Vector<(isize, Mode, Document<'_>)>) -> bool {
     loop {
         if limit < 0 {
             return false;
@@ -186,7 +186,7 @@ fn fmt(
     writer: &mut impl Utf8Writer,
     limit: isize,
     mut width: isize,
-    mut docs: im::Vector<(isize, Mode, Document)>,
+    mut docs: im::Vector<(isize, Mode, Document<'_>)>,
 ) -> Result<()> {
     while let Some((indent, mode, document)) = docs.pop_front() {
         match document {

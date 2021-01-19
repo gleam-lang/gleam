@@ -1512,9 +1512,9 @@ fn commented<'a, 'comments>(
 fn bit_string_segment<Value, Type, ToDoc>(
     segment: &BitStringSegment<Value, Type>,
     mut to_doc: ToDoc,
-) -> Document
+) -> Document<'_>
 where
-    ToDoc: FnMut(&Value) -> Document,
+    ToDoc: FnMut(&Value) -> Document<'_>,
 {
     match segment {
         BitStringSegment { value, options, .. } if options.is_empty() => to_doc(value),
@@ -1531,9 +1531,9 @@ where
 fn segment_option<ToDoc, Value>(
     option: &BitStringSegmentOption<Value>,
     mut to_doc: ToDoc,
-) -> Document
+) -> Document<'_>
 where
-    ToDoc: FnMut(&Value) -> Document,
+    ToDoc: FnMut(&Value) -> Document<'_>,
 {
     match option {
         BitStringSegmentOption::Binary { .. } => "binary".to_doc(),

@@ -28,7 +28,7 @@
     clippy::option_option,
     clippy::verbose_file_reads,
     clippy::unnested_or_patterns,
-    // rust_2018_idioms,
+    rust_2018_idioms,
     missing_debug_implementations,
     missing_copy_implementations,
     trivial_casts,

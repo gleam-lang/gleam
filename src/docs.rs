@@ -357,7 +357,7 @@ fn constant<'a>(
     }
 }
 
-fn print(doc: pretty::Document) -> String {
+fn print(doc: pretty::Document<'_>) -> String {
     doc.to_pretty_string(MAX_COLUMNS)
 }
 

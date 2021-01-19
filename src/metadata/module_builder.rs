@@ -32,7 +32,7 @@ impl<'a> ModuleBuilder<'a> {
     pub fn write(mut self, mut writer: impl Writer) -> crate::Result<()> {
         let mut message = capnp::message::Builder::new_default();
 
-        let mut module = message.init_root::<module::Builder>();
+        let mut module = message.init_root::<module::Builder<'_>>();
         self.set_name(&mut module);
         self.set_module_types(&mut module);
         self.set_module_values(&mut module);
@@ -42,7 +42,7 @@ impl<'a> ModuleBuilder<'a> {
         writer.convert_err(result)
     }
 
-    fn set_module_accessors(&mut self, module: &mut module::Builder) {
+    fn set_module_accessors(&mut self, module: &mut module::Builder<'_>) {
         let mut builder = module
             .reborrow()
             .init_accessors(self.data.accessors.len() as u32);
@@ -55,7 +55,7 @@ impl<'a> ModuleBuilder<'a> {
 
     fn build_accessors_map(
         &mut self,
-        mut builder: accessors_map::Builder,
+        mut builder: accessors_map::Builder<'_>,
         accessors: &AccessorsMap,
     ) {
         self.build_type(builder.reborrow().init_type(), accessors.typ.as_ref());
@@ -69,21 +69,21 @@ impl<'a> ModuleBuilder<'a> {
 
     fn build_record_accessor(
         &mut self,
-        mut builder: record_accessor::Builder,
+        mut builder: record_accessor::Builder<'_>,
         accessor: &RecordAccessor,
     ) {
         self.build_type(builder.reborrow().init_type(), accessor.typ.as_ref());
         builder.set_index(accessor.index as u16);
     }
 
-    fn set_name(&mut self, module: &mut module::Builder) {
+    fn set_name(&mut self, module: &mut module::Builder<'_>) {
         let mut name = module.reborrow().init_name(self.data.name.len() as u32);
         for (i, s) in self.data.name.iter().enumerate() {
             name.set(i as u32, s);
         }
     }
 
-    fn set_module_types(&mut self, module: &mut module::Builder) {
+    fn set_module_types(&mut self, module: &mut module::Builder<'_>) {
         let mut types = module.reborrow().init_types(self.data.types.len() as u32);
         for (i, (name, type_)) in self.data.types.iter().enumerate() {
             let mut property = types.reborrow().get(i as u32);
@@ -92,7 +92,7 @@ impl<'a> ModuleBuilder<'a> {
         }
     }
 
-    fn set_module_values(&mut self, module: &mut module::Builder) {
+    fn set_module_values(&mut self, module: &mut module::Builder<'_>) {
         let mut values = module.reborrow().init_values(self.data.values.len() as u32);
         for (i, (name, value)) in self.data.values.iter().enumerate() {
             let mut property = values.reborrow().get(i as u32);
@@ -103,7 +103,7 @@ impl<'a> ModuleBuilder<'a> {
 
     fn build_type_constructor(
         &mut self,
-        mut builder: type_constructor::Builder,
+        mut builder: type_constructor::Builder<'_>,
         constructor: &TypeConstructor,
     ) {
         let type_builder = builder.reborrow().init_type();
@@ -116,7 +116,7 @@ impl<'a> ModuleBuilder<'a> {
 
     fn build_value_constructor(
         &mut self,
-        mut builder: value_constructor::Builder,
+        mut builder: value_constructor::Builder<'_>,
         constructor: &ValueConstructor,
     ) {
         self.build_type(builder.reborrow().init_type(), &constructor.typ);
@@ -125,7 +125,7 @@ impl<'a> ModuleBuilder<'a> {
 
     fn build_value_constructor_variant(
         &mut self,
-        mut builder: value_constructor_variant::Builder,
+        mut builder: value_constructor_variant::Builder<'_>,
         constructor: &ValueConstructorVariant,
     ) {
         match constructor {
@@ -170,7 +170,7 @@ impl<'a> ModuleBuilder<'a> {
 
     fn build_optional_field_map(
         &mut self,
-        mut builder: option::Builder<field_map::Owned>,
+        mut builder: option::Builder<'_, field_map::Owned>,
         field_map: &Option<FieldMap>,
     ) {
         match field_map {
@@ -179,7 +179,7 @@ impl<'a> ModuleBuilder<'a> {
         };
     }
 
-    fn build_field_map(&mut self, mut builder: field_map::Builder, field_map: &FieldMap) {
+    fn build_field_map(&mut self, mut builder: field_map::Builder<'_>, field_map: &FieldMap) {
         builder.set_arity(field_map.arity as u32);
         let mut builder = builder.init_fields(field_map.fields.len() as u32);
         for (i, (name, position)) in field_map.fields.iter().enumerate() {
@@ -189,7 +189,7 @@ impl<'a> ModuleBuilder<'a> {
         }
     }
 
-    fn build_constant(&mut self, mut builder: constant::Builder, constant: &TypedConstant) {
+    fn build_constant(&mut self, mut builder: constant::Builder<'_>, constant: &TypedConstant) {
         match constant {
             Constant::Int { value, .. } => builder.set_int(value),
             Constant::Float { value, .. } => builder.set_float(value),
@@ -232,7 +232,7 @@ impl<'a> ModuleBuilder<'a> {
 
     fn build_constants(
         &mut self,
-        mut builder: capnp::struct_list::Builder<constant::Owned>,
+        mut builder: capnp::struct_list::Builder<'_, constant::Owned>,
         constant: &[TypedConstant],
     ) {
         for (i, constant) in constant.iter().enumerate() {
@@ -242,7 +242,7 @@ impl<'a> ModuleBuilder<'a> {
 
     fn build_bit_string_segment(
         &mut self,
-        mut builder: bit_string_segment::Builder,
+        mut builder: bit_string_segment::Builder<'_>,
         segment: &TypedConstantBitStringSegment,
     ) {
         self.build_constant(builder.reborrow().init_value(), &segment.value);
@@ -259,7 +259,7 @@ impl<'a> ModuleBuilder<'a> {
 
     fn build_bit_string_segment_option(
         &mut self,
-        mut builder: bit_string_segment_option::Builder,
+        mut builder: bit_string_segment_option::Builder<'_>,
         option: &TypedConstantBitStringSegmentOption,
     ) {
         use crate::ast::TypedConstantBitStringSegmentOption as Opt;
@@ -298,7 +298,7 @@ impl<'a> ModuleBuilder<'a> {
         }
     }
 
-    fn build_type(&mut self, mut builder: type_::Builder, type_: &Type) {
+    fn build_type(&mut self, mut builder: type_::Builder<'_>, type_: &Type) {
         match type_ {
             Type::Fn { args, retrn } => {
                 let mut fun = builder.init_fn();
@@ -332,7 +332,7 @@ impl<'a> ModuleBuilder<'a> {
 
     fn build_types(
         &mut self,
-        mut builder: capnp::struct_list::Builder<type_::Owned>,
+        mut builder: capnp::struct_list::Builder<'_, type_::Owned>,
         types: &[Arc<Type>],
     ) {
         for (i, type_) in types.iter().enumerate() {
@@ -340,7 +340,7 @@ impl<'a> ModuleBuilder<'a> {
         }
     }
 
-    fn build_type_var(&mut self, mut builder: type_::var::Builder, id: usize) {
+    fn build_type_var(&mut self, mut builder: type_::var::Builder<'_>, id: usize) {
         let serialised_id = match self.type_var_id_map.get(&id) {
             Some(id) => *id,
             None => {
