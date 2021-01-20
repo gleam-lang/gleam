@@ -78,15 +78,10 @@ pub fn generate_html(
         })
         .collect::<Vec<_>>();
 
-    let doc_links = &project_config
-        .docs
-        .links
-        .iter()
-        .map(|doc_link| Link {
-            name: doc_link.title.clone(),
-            path: doc_link.href.clone(),
-        })
-        .collect::<Vec<Link>>()[..];
+    let doc_links = project_config.docs.links.iter().map(|doc_link| Link {
+        name: doc_link.title.to_string(),
+        path: doc_link.href.to_string(),
+    });
 
     let repo_link = match &project_config.repository {
         Repository::GitHub { repo, .. }
@@ -100,14 +95,10 @@ pub fn generate_html(
             path: url.clone(),
         }),
         Repository::None => None,
-    }
-    .into_iter()
-    .collect::<Vec<Link>>();
+    };
 
     let links = doc_links
-        .iter()
-        .chain(repo_link.iter())
-        .cloned()
+        .chain(repo_link.into_iter())
         .collect::<Vec<Link>>();
     // index.css
     let num_asset_files = 1;
