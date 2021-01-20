@@ -828,6 +828,7 @@ pub fn main() {
 
 -export([main/0]).
 
+-spec main() -> integer().
 main() ->
     case {1, 0} of
         {X, Y} when X < Y ->
@@ -853,6 +854,7 @@ pub fn main() {
 
 -export([main/0]).
 
+-spec main() -> integer().
 main() ->
     case {1, 0} of
         {X, Y} when X =< Y ->
@@ -878,6 +880,7 @@ pub fn main() {
 
 -export([main/0]).
 
+-spec main() -> integer().
 main() ->
     case {1.0, 0.1} of
         {X, Y} when X > Y ->
@@ -903,6 +906,7 @@ pub fn main() {
 
 -export([main/0]).
 
+-spec main() -> integer().
 main() ->
     case {1.0, 0.1} of
         {X, Y} when X >= Y ->
@@ -929,6 +933,7 @@ pub fn main() {
 
 -export([main/0]).
 
+-spec main() -> integer().
 main() ->
     X = 0.123,
     case X of
@@ -955,6 +960,7 @@ pub fn main() {
 
 -export([main/0]).
 
+-spec main() -> integer().
 main() ->
     X = 0.123,
     case X of
@@ -978,6 +984,7 @@ pub fn main() {
 
 -export([main/0]).
 
+-spec main() -> integer().
 main() ->
     X = 0.123,
     case X of
@@ -1000,6 +1007,7 @@ pub fn main(x) {
 
 -export([main/1]).
 
+-spec main(list(integer())) -> integer().
 main(X) ->
     case X of
         _ when X =:= [1, 2, 3] ->
@@ -1023,6 +1031,7 @@ pub fn main() {
 
 -export([main/0]).
 
+-spec main() -> integer().
 main() ->
     X = 0,
     case X of
@@ -1052,6 +1061,7 @@ pub fn main() {
 
 -export([main/0]).
 
+-spec main() -> integer().
 main() ->
     X = {1, 2, 3},
     case X of
@@ -1080,6 +1090,7 @@ pub fn main() {
 
 -export([main/0]).
 
+-spec main() -> integer().
 main() ->
     X = {1, 2, 3},
     case X of
@@ -1111,6 +1122,7 @@ pub fn main() {
 
 -export([main/0]).
 
+-spec main() -> integer().
 main() ->
     X = 0,
     case X of
@@ -1134,6 +1146,7 @@ pub fn main() {
 
 -export([main/0]).
 
+-spec main() -> integer().
 main() ->
     X = 0,
     case X of
@@ -1158,6 +1171,7 @@ pub fn main() {
 
 -export([main/0]).
 
+-spec main() -> integer().
 main() ->
     case <<"test"/utf8>> of
         X when X =:= <<"test"/utf8>> ->
@@ -1186,6 +1200,9 @@ main() ->
 
 -export([main/0]).
 
+-type test() :: {test, integer(), float()}.
+
+-spec main() -> integer().
 main() ->
     X = {test, 1, 3.0},
     case X of
@@ -1220,6 +1237,7 @@ pub fn main() {
 
 -export([main/0]).
 
+-spec main() -> integer().
 main() ->
     case {0.1, 1.0} of
         {X, Y} when X < Y ->
@@ -1245,6 +1263,7 @@ pub fn main() {
 
 -export([main/0]).
 
+-spec main() -> integer().
 main() ->
     case {0.1, 1.0} of
         {X, Y} when X =< Y ->
@@ -1270,6 +1289,7 @@ pub fn main(args) {
 
 -export([main/1]).
 
+-spec main(list(boolean())) -> integer().
 main(Args) ->
     case Args of
         [X] when X ->
@@ -1295,6 +1315,7 @@ pub fn main() {
 
 -export([main/0]).
 
+-spec main() -> I.
 main() ->
     erlang:error({gleam_error, todo}).
 "#,
@@ -1311,6 +1332,7 @@ pub fn main() {
 
 -export([main/0]).
 
+-spec main() -> I.
 main() ->
     erlang:error({gleam_error, todo, "testing"}).
 "#,
@@ -1328,9 +1350,15 @@ pub fn get_name(person: Person) { person.name }
 
 -export([get_age/1, get_name/1]).
 
+-export_type([person/0]).
+
+-type person() :: {person, unicode:unicode_binary(), integer()}.
+
+-spec get_age(the_app:person()) -> integer().
 get_age(Person) ->
     erlang:element(3, Person).
 
+-spec get_name(the_app:person()) -> unicode:unicode_binary().
 get_name(Person) ->
     erlang:element(2, Person).
 "#,
@@ -1352,6 +1380,9 @@ fn main() {
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-type triple() :: {triple, integer(), integer(), integer()}.
+
+-spec main() -> integer().
 main() ->
     Triple = {triple, 1, 2, 3},
     {triple, The_a, _, _} = Triple,
@@ -1375,6 +1406,9 @@ fn main() {
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-type triple() :: {triple, integer(), integer(), integer()}.
+
+-spec main() -> integer().
 main() ->
     Triple = {triple, 1, 2, 3},
     {triple, _, The_b, _} = Triple,
@@ -1398,6 +1432,9 @@ fn main() {
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-type triple() :: {triple, integer(), integer(), integer()}.
+
+-spec main() -> integer().
 main() ->
     Triple = {triple, 1, 2, 3},
     {triple, The_a, _, The_c} = Triple,
@@ -1422,6 +1459,9 @@ fn main() {
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-type triple() :: {triple, integer(), integer(), integer()}.
+
+-spec main() -> integer().
 main() ->
     Triple = {triple, 1, 2, 3},
     case Triple of
@@ -1441,6 +1481,7 @@ pub fn apply(f: fn(a) -> b, a: a) { a |> f }
 
 -export([apply/2]).
 
+-spec apply(fun((H) -> I), H) -> I.
 apply(F, A) ->
     F(A).
 "#,
@@ -1456,6 +1497,7 @@ pub fn apply(f: fn(a, Int) -> b, a: a) { a |> f(1) }
 
 -export([apply/2]).
 
+-spec apply(fun((H, integer()) -> I), H) -> I.
 apply(F, A) ->
     F(A, 1).
 "#,
@@ -1473,6 +1515,7 @@ fn main() {
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec main() -> integer().
 main() ->
     A = (2 * (3 + 1)) div 2,
     B = (5 + ((3 div 3) * 2)) - (6 * 4),
@@ -1492,6 +1535,7 @@ fn main() {
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec main() -> {ok, integer()} | {error, R}.
 main() ->
     case {ok, 1} of
         {error, Gleam@try_error} -> {error, Gleam@try_error};
