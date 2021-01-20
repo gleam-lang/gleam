@@ -104,13 +104,10 @@ pub fn generate_html(
     .into_iter()
     .collect::<Vec<Link>>();
 
-    let links = &doc_links
+    let links = doc_links
         .iter()
         .chain(repo_link.iter())
-        .map(|doc_link| Link {
-            name: doc_link.name.clone(),
-            path: doc_link.path.clone(),
-        })
+        .cloned()
         .collect::<Vec<Link>>();
     // index.css
     let num_asset_files = 1;
@@ -132,7 +129,7 @@ pub fn generate_html(
 
         let temp = PageTemplate {
             unnest: ".".to_string(),
-            links,
+            links: &links,
             pages: &pages,
             modules: &modules_links,
             project_name: &project_config.name,
@@ -156,7 +153,7 @@ pub fn generate_html(
 
         let template = ModuleTemplate {
             unnest: module.name.iter().map(|_| "..").intersperse("/").collect(),
-            links,
+            links: &links,
             pages: &pages,
             documentation: render_markdown(module.ast.documentation.iter().join("\n").as_str()),
             modules: modules_links.as_slice(),
@@ -385,7 +382,7 @@ fn print(doc: pretty::Document) -> String {
     doc.to_pretty_string(MAX_COLUMNS)
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
 struct Link {
     name: String,
     path: String,
