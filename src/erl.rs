@@ -16,6 +16,7 @@ use crate::{
 use heck::SnakeCase;
 use itertools::Itertools;
 use std::char;
+use std::collections::HashMap;
 use std::default::Default;
 use std::sync::Arc;
 
@@ -219,7 +220,7 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
                             if c.args.is_empty() {
                                 name
                             } else {
-                                let args = c.args.iter().map(|a| a.3.to_erlang_type_spec());
+                                let args = c.args.iter().map(|a| a.3.to_erlang_type_spec(None));
                                 tuple(std::iter::once(name).chain(args))
                             }
                         })
@@ -231,7 +232,7 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
                 let params = concat(
                     typed_parameters
                         .iter()
-                        .map(|p| p.to_erlang_type_spec())
+                        .map(|p| p.to_erlang_type_spec(None))
                         .intersperse(", ".to_doc()),
                 );
                 let doc = if *opaque { "-opaque " } else { "-type " }
@@ -345,8 +346,11 @@ fn mod_fun<'a>(
     return_type: &'a Arc<Type>,
 ) -> Document<'a> {
     let mut env = Env::new(module);
-    let args_spec = args.iter().map(|a| a.typ.to_erlang_type_spec());
-    let return_spec = return_type.to_erlang_type_spec();
+    let var_usages = collect_type_var_usages(args, return_type);
+    let args_spec = args
+        .iter()
+        .map(|a| a.typ.to_erlang_type_spec(Some(&var_usages)));
+    let return_spec = return_type.to_erlang_type_spec(Some(&var_usages));
     let spec = fun_spec(name, args_spec, return_spec);
 
     spec.append(atom(name.to_string()))
@@ -1447,8 +1451,8 @@ fn external_fun<'a>(
 ) -> Document<'a> {
     let chars: String = incrementing_args_list(args.len());
 
-    let args_spec = args.iter().map(|a| a.typ.to_erlang_type_spec());
-    let return_spec = return_type.to_erlang_type_spec();
+    let args_spec = args.iter().map(|a| a.typ.to_erlang_type_spec(None));
+    let return_spec = return_type.to_erlang_type_spec(None);
     let spec = fun_spec(name, args_spec, return_spec);
 
     spec.append(atom(name.to_string())).append(
@@ -1583,12 +1587,45 @@ pub fn is_erlang_standard_library_module(name: &str) -> bool {
     )
 }
 
+// A TypeVar can either be rendered as an actual type variable such as `A` or `B`,
+// or it can be rendered as `any()` depending on how many usages it has. If it
+// has only 1 usage it is an `any()` type. If it has more than 1 usage it is a
+// type variable. This function gathers usages for this determination.
+//
+//   Examples:
+//     fn(a) -> String       // `a` is `any()`
+//     fn() -> Result(a, b)  // `a` and `b` are `any()`
+//     fn(a) -> a            // `a` is a type var
+fn collect_type_var_usages<'a>(
+    args: &'a [TypedArg],
+    return_type: &'a Arc<Type>,
+) -> HashMap<usize, usize> {
+    let mut ids = HashMap::new();
+    for arg in args {
+        arg.typ.type_var_ids(&mut ids);
+    }
+    return_type.type_var_ids(&mut ids);
+    ids
+}
+
 impl Type {
-    pub fn to_erlang_type_spec(&self) -> Document {
+    pub fn to_erlang_type_spec(
+        &self,
+        var_usages: Option<&HashMap<usize, usize>>,
+    ) -> Document<'static> {
         match self {
             Self::Var { typ } => match &*typ.borrow() {
-                TypeVar::Generic { id, .. } | TypeVar::Unbound { id, .. } => id_to_type_var(*id),
-                TypeVar::Link { typ } => Type::to_erlang_type_spec(typ),
+                TypeVar::Generic { id, .. } | TypeVar::Unbound { id, .. } => match var_usages {
+                    Some(usages) => {
+                        if usages.get(&*id) == Some(&1) {
+                            "any()".to_doc()
+                        } else {
+                            id_to_type_var(*id)
+                        }
+                    }
+                    None => id_to_type_var(*id),
+                },
+                TypeVar::Link { typ } => Type::to_erlang_type_spec(typ, var_usages),
             },
 
             Self::App {
@@ -1605,12 +1642,12 @@ impl Type {
                         "Float" => "float()".to_doc(),
                         "BitString" => "bitstring()".to_doc(),
                         "List" => {
-                            let arg0 = args[0].to_erlang_type_spec();
+                            let arg0 = args[0].to_erlang_type_spec(var_usages);
                             "list(".to_doc().append(arg0).append(")")
                         }
                         "Result" => {
-                            let arg_ok = args[0].to_erlang_type_spec();
-                            let arg_err = args[1].to_erlang_type_spec();
+                            let arg_ok = args[0].to_erlang_type_spec(var_usages);
+                            let arg_err = args[1].to_erlang_type_spec(var_usages);
                             concat(
                                 vec![
                                     tuple(vec!["ok".to_doc(), arg_ok].into_iter()),
@@ -1631,7 +1668,7 @@ impl Type {
                 } else {
                     let args = concat(
                         args.iter()
-                            .map(|a| a.to_erlang_type_spec())
+                            .map(|a| a.to_erlang_type_spec(var_usages))
                             .intersperse(", ".to_doc()),
                     );
                     let mod_name = concat(
@@ -1651,10 +1688,10 @@ impl Type {
             Self::Fn { args, retrn } => {
                 let args = concat(
                     args.iter()
-                        .map(|a| a.to_erlang_type_spec())
+                        .map(|a| a.to_erlang_type_spec(var_usages))
                         .intersperse(", ".to_doc()),
                 );
-                let retrn = retrn.to_erlang_type_spec();
+                let retrn = retrn.to_erlang_type_spec(var_usages);
                 "fun(("
                     .to_doc()
                     .append(args)
@@ -1662,7 +1699,35 @@ impl Type {
                     .append(retrn)
                     .append(")")
             }
-            Self::Tuple { elems } => tuple(elems.iter().map(|e| e.to_erlang_type_spec())),
+            Self::Tuple { elems } => tuple(elems.iter().map(|e| e.to_erlang_type_spec(var_usages))),
+        }
+    }
+    pub fn type_var_ids(&self, ids: &mut HashMap<usize, usize>) {
+        match self {
+            Self::Var { typ } => match &*typ.borrow() {
+                TypeVar::Generic { id, .. } | TypeVar::Unbound { id, .. } => {
+                    let count = ids.entry(*id).or_insert(0);
+                    *count += 1;
+                }
+                TypeVar::Link { typ } => Type::type_var_ids(typ, ids),
+            },
+
+            Self::App { args, .. } => {
+                for arg in args {
+                    arg.type_var_ids(ids)
+                }
+            }
+            Self::Fn { args, retrn } => {
+                for arg in args {
+                    arg.type_var_ids(ids)
+                }
+                retrn.type_var_ids(ids);
+            }
+            Self::Tuple { elems } => {
+                for elem in elems {
+                    elem.type_var_ids(ids)
+                }
+            }
         }
     }
 }
