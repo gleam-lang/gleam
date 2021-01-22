@@ -175,7 +175,7 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
             Statement::ExternalType { name, args, .. } => {
                 // Type Exports
                 type_exports.push(
-                    Document::String(name.to_snake_case())
+                    Document::String(erl_safe_type_name(name.to_snake_case()))
                         .append("/")
                         .append(args.len()),
                 );
@@ -187,7 +187,7 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
                 );
                 let doc = "-type "
                     .to_doc()
-                    .append(name.to_snake_case())
+                    .append(Document::String(erl_safe_type_name(name.to_snake_case())))
                     .append("(")
                     .append(args)
                     .append(") :: any().");
@@ -229,7 +229,7 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
                 };
                 // Type Exports
                 type_exports.push(
-                    Document::String(name.to_snake_case())
+                    Document::String(erl_safe_type_name(name.to_snake_case()))
                         .append("/")
                         .append(typed_parameters.len()),
                 );
@@ -260,7 +260,7 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
                 );
                 let doc = if *opaque { "-opaque " } else { "-type " }
                     .to_doc()
-                    .append(name.to_snake_case())
+                    .append(Document::String(erl_safe_type_name(name.to_snake_case())))
                     .append("(")
                     .append(params)
                     .append(") :: ")
@@ -1650,6 +1650,54 @@ fn collect_type_var_usages<'a>(
     ids
 }
 
+fn erl_safe_type_name(name: String) -> String {
+    let built_ins = vec![
+        "any",
+        "none",
+        "pid",
+        "port",
+        "reference",
+        "float",
+        "fun",
+        "integer",
+        "list",
+        "nonempty_improper_list",
+        "tuple",
+        "term",
+        "binary",
+        "bitstring",
+        "boolean",
+        "byte",
+        "char",
+        "nil",
+        "number",
+        "list",
+        "maybe_improper_list",
+        "nonempty_list",
+        "string",
+        "nonempty_string",
+        "iodata",
+        "iolist",
+        "map",
+        "function",
+        "module",
+        "mfa",
+        "arity",
+        "identifier",
+        "node",
+        "timeout",
+        "no_return",
+        "non_neg_integer",
+        "pos_integer",
+        "neg_integer",
+    ];
+    if built_ins.contains(&name.as_str()) {
+        format!("gleam@{}", name)
+    } else {
+        name
+    }
+}
+
 impl Type {
     pub fn to_erlang_type_spec(
         &self,
@@ -1717,7 +1765,7 @@ impl Type {
                     );
                     mod_name
                         .append(":")
-                        .append(name.to_snake_case())
+                        .append(Document::String(erl_safe_type_name(name.to_snake_case())))
                         .append("(")
                         .append(args)
                         .append(")")
