@@ -56,9 +56,10 @@ mod token;
 use crate::ast::{
     Arg, ArgNames, BinOp, BindingKind, BitStringSegment, BitStringSegmentOption, CallArg, Clause,
     ClauseGuard, Constant, ExternalFnArg, HasLocation, Module, Pattern, RecordConstructor,
-    RecordUpdateSpread, SrcSpan, Statement, TypeAst, UnqualifiedImport, UntypedArg, UntypedClause,
-    UntypedClauseGuard, UntypedConstant, UntypedExpr, UntypedExternalFnArg, UntypedModule,
-    UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, CAPTURE_VARIABLE,
+    RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement, TypeAst, UnqualifiedImport,
+    UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedExpr,
+    UntypedExternalFnArg, UntypedModule, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement,
+    CAPTURE_VARIABLE,
 };
 use crate::error::fatal_compiler_bug;
 use crate::parse::extra::ModuleExtra;
@@ -1507,7 +1508,7 @@ where
     //   (a, b)
     fn parse_type_constructor_args(
         &mut self,
-    ) -> Result<(Vec<(Option<String>, TypeAst, SrcSpan, ())>, usize), ParseError> {
+    ) -> Result<(Vec<RecordConstructorArg<()>>, usize), ParseError> {
         if self.maybe_one(&Tok::Lpar).is_some() {
             let args = Parser::series_of(
                 self,
@@ -1516,9 +1517,12 @@ where
                         let _ = Parser::next_tok(p);
                         let _ = Parser::next_tok(p);
                         match Parser::parse_type(p, false)? {
-                            Some(type_ast) => {
-                                Ok(Some((Some(name), type_ast, SrcSpan { start, end }, ())))
-                            }
+                            Some(type_ast) => Ok(Some(RecordConstructorArg {
+                                label: Some(name),
+                                ast: type_ast,
+                                location: SrcSpan { start, end },
+                                typ: (),
+                            })),
                             None => {
                                 parse_error(ParseErrorType::ExpectedType, SrcSpan { start, end })
                             }
@@ -1530,7 +1534,12 @@ where
                         match Parser::parse_type(p, false)? {
                             Some(type_ast) => {
                                 let type_location = type_ast.location();
-                                Ok(Some((None, type_ast, type_location, ())))
+                                Ok(Some(RecordConstructorArg {
+                                    label: None,
+                                    ast: type_ast,
+                                    location: type_location,
+                                    typ: (),
+                                }))
                             }
                             None => Ok(None),
                         }

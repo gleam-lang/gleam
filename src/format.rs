@@ -912,15 +912,20 @@ impl<'comments> Formatter<'comments> {
                 .name
                 .to_doc()
                 .append(wrap_args(constructor.args.iter().map(
-                    |(label, typ, arg_location, _)| {
-                        let arg_comments = self.pop_comments(arg_location.start);
+                    |RecordConstructorArg {
+                         label,
+                         ast,
+                         location,
+                         ..
+                     }| {
+                        let arg_comments = self.pop_comments(location.start);
                         let arg = match label {
-                            Some(l) => l.to_doc().append(": ").append(self.type_ast(typ)),
-                            None => self.type_ast(typ),
+                            Some(l) => l.to_doc().append(": ").append(self.type_ast(ast)),
+                            None => self.type_ast(ast),
                         };
 
                         commented(
-                            self.doc_comments(arg_location.start).append(arg).group(),
+                            self.doc_comments(location.start).append(arg).group(),
                             arg_comments,
                         )
                     },

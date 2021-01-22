@@ -440,7 +440,6 @@ go(X) ->
 -compile(no_auto_import).
 
 -export([go/0]).
-
 -export_type([thing/0]).
 
 -type thing() :: any().
@@ -659,7 +658,6 @@ make() ->
 -compile(no_auto_import).
 
 -export([id/1]).
-
 -export_type([empty/0]).
 
 -type empty() :: empty.
@@ -705,7 +703,6 @@ make() ->
 -compile(no_auto_import).
 
 -export([id/1]).
-
 -export_type([empty/0]).
 
 -type empty() :: empty.
@@ -1021,7 +1018,7 @@ fn main() { C }"
 
 -export_type([t/1]).
 
--type t(H) :: {c, integer(), integer()}.
+-type t(H) :: {c, integer(), integer()} | {gleam_phantom, H}.
 
 
 ".to_string(),
@@ -1031,7 +1028,7 @@ fn main() { C }"
                     text: "-module(two).
 -compile(no_auto_import).
 
--spec main() -> fun((integer(), integer()) -> one:t(Q)).
+-spec main() -> fun((integer(), integer()) -> one:t(any())).
 main() ->
     fun(A, B) -> {c, A, B} end.
 ".to_string(),
@@ -1067,7 +1064,6 @@ main() ->
 -compile(no_auto_import).
 
 -export([id/1]).
-
 -export_type([t/0]).
 
 -type t() :: {x, integer()}.
@@ -1120,7 +1116,7 @@ fn main() { one.C }"
 
 -export_type([t/1]).
 
--type t(H) :: {c, integer(), integer()}.
+-type t(H) :: {c, integer(), integer()} | {gleam_phantom, H}.
 
 
 ".to_string(),
@@ -1130,7 +1126,7 @@ fn main() { one.C }"
                     text: "-module(two).
 -compile(no_auto_import).
 
--spec main() -> fun((integer(), integer()) -> one:t(Q)).
+-spec main() -> fun((integer(), integer()) -> one:t(any())).
 main() ->
     fun(A, B) -> {c, A, B} end.
 ".to_string(),
@@ -1357,7 +1353,7 @@ main(Arg1, Arg2, Arg3) ->
 
 -export_type([two/1]).
 
--type two(P) :: {two, one:one(integer())}.
+-type two(P) :: {two, one:one(integer())} | {gleam_phantom, P}.
 
 
 ".to_string(),
