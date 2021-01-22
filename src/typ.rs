@@ -264,6 +264,7 @@ pub struct Module {
 #[derive(Debug, Clone, PartialEq)]
 pub enum PatternConstructor {
     Record { name: String },
+    Inline,
 }
 
 pub trait Typer {

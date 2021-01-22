@@ -1006,6 +1006,23 @@ argument to the function. The variable `{}` is not defined locally.",
                     .unwrap();
                 }
 
+                TypeError::InlineTypeClauseGuard { location, name } => {
+                    let diagnostic = Diagnostic {
+                        title: "Invalid guard type".to_string(),
+                        label: "is inline".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: *location,
+                    };
+                    write(buffer, diagnostic, Severity::Error);
+                    writeln!(
+                        buffer,
+                        "Inline types must not be used as clause guards. Make {} non-inline, or use a different clause guard.",
+                        name
+                    )
+                    .unwrap();
+                }
+
                 TypeError::ExtraVarInAlternativePattern { location, name } => {
                     let diagnostic = Diagnostic {
                         title: "Extra alternative pattern variable".to_string(),

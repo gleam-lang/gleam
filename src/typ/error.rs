@@ -139,6 +139,11 @@ pub enum Error {
         name: String,
     },
 
+    InlineTypeClauseGuard {
+        location: SrcSpan,
+        name: String,
+    },
+
     ExtraVarInAlternativePattern {
         location: SrcSpan,
         name: String,

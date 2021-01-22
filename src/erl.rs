@@ -652,6 +652,12 @@ fn pattern<'a>(p: &'a TypedPattern, env: &mut Env<'_>) -> Document<'a> {
             ..
         } => tag_tuple_pattern(name, args, env),
 
+        Pattern::Constructor {
+            args: _args,
+            constructor: PatternConstructor::Inline,
+            ..
+        } => todo!(),
+
         Pattern::Tuple { elems, .. } => tuple(elems.iter().map(|p| pattern(p, env))),
 
         Pattern::BitString { segments, .. } => bit_string(
@@ -767,7 +773,7 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'_>) 
             _ => atom(record_name.to_snake_case()),
         },
 
-        ValueConstructorVariant::Inline => todo!(),
+        ValueConstructorVariant::Inline => "fun(A) -> A end".to_doc(),
 
         ValueConstructorVariant::LocalVariable => env.local_var_name(name.to_string()),
 
@@ -1077,10 +1083,13 @@ fn docs_args_call<'a>(
                     ..
                 },
             ..
-        } => args
-            .get(0)
-            .gleam_expect("No arguments for inline type call")
-            .clone(),
+        } => {
+            if args.is_empty() {
+                crate::error::fatal_compiler_bug("No arguments for inline type call")
+            } else {
+                args.swap_remove(0)
+            }
+        }
 
         TypedExpr::Var {
             constructor:
@@ -1236,7 +1245,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'_>) -> Document<'a> {
         TypedExpr::ModuleSelect {
             constructor: ModuleValueConstructor::Inline,
             ..
-        } => todo!(),
+        } => "fun(A) -> A end".to_doc(),
 
         TypedExpr::ModuleSelect {
             constructor: ModuleValueConstructor::Record { name, arity },

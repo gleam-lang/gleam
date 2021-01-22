@@ -399,7 +399,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                     ValueConstructorVariant::Record { ref name, .. } => {
                         PatternConstructor::Record { name: name.clone() }
                     }
-                    ValueConstructorVariant::Inline => todo!(),
+                    ValueConstructorVariant::Inline => PatternConstructor::Inline,
                     ValueConstructorVariant::LocalVariable
                     | ValueConstructorVariant::ModuleConstant { .. }
                     | ValueConstructorVariant::ModuleFn { .. } => crate::error::fatal_compiler_bug(

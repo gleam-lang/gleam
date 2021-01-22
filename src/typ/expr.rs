@@ -1524,7 +1524,9 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 let tag = match &constructor.variant {
                     ValueConstructorVariant::Record { name, .. } => name.clone(),
 
-                    ValueConstructorVariant::Inline => todo!(),
+                    ValueConstructorVariant::Inline => {
+                        return Err(Error::InlineTypeClauseGuard { location, name })
+                    }
 
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::LocalVariable => {
@@ -1558,7 +1560,9 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 let tag = match &constructor.variant {
                     ValueConstructorVariant::Record { name, .. } => name.clone(),
 
-                    ValueConstructorVariant::Inline => todo!(),
+                    ValueConstructorVariant::Inline => {
+                        return Err(Error::InlineTypeClauseGuard { location, name })
+                    }
 
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::LocalVariable => {
