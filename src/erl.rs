@@ -120,7 +120,7 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
         .filter(|constructor| !constructor.args.is_empty())
         .flat_map(|constructor| {
             let mut fields = Vec::with_capacity(constructor.args.len());
-            for (label, ..) in constructor.args.iter() {
+            for RecordConstructorArg { label, .. } in constructor.args.iter() {
                 match label {
                     Some(s) => fields.push(&**s),
                     None => return None,
@@ -195,20 +195,46 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
             }
             Statement::CustomType {
                 name,
-                parameters,
                 public,
                 constructors,
                 typed_parameters,
                 opaque,
                 ..
             } => {
+                // Erlang doesn't allow phantom type variables in type definitions but gleam does
+                // so we check the type declaratinon against its constroctors and generate a phantom
+                // value that uses the unused type variables.
+                let type_var_usages =
+                    collect_type_var_usages(HashMap::new(), typed_parameters.iter().map(|a| a));
+                let mut constructor_var_usages = HashMap::new();
+                for c in constructors {
+                    constructor_var_usages = collect_type_var_usages(
+                        constructor_var_usages,
+                        c.args.iter().map(|a| &a.typ),
+                    );
+                }
+                let mut phantom_vars = vec![];
+                for (id, _) in type_var_usages.into_iter() {
+                    if constructor_var_usages.get(&id) == None {
+                        phantom_vars.push(Type::Var {
+                            typ: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: id })),
+                        })
+                    }
+                }
+                let phantom_vars_constructor = if phantom_vars.is_empty() {
+                    None
+                } else {
+                    Some(tuple(std::iter::once("gleam_phantom".to_doc()).chain(
+                        phantom_vars.iter().map(|pv| pv.to_erlang_type_spec(None)),
+                    )))
+                };
                 // Type Exports
                 if *public {
                     type_exports.push(
                         name.to_snake_case()
                             .to_doc()
                             .append("/")
-                            .append(parameters.len()),
+                            .append(typed_parameters.len()),
                     )
                 }
                 // Type definitions
@@ -220,10 +246,11 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
                             if c.args.is_empty() {
                                 name
                             } else {
-                                let args = c.args.iter().map(|a| a.3.to_erlang_type_spec(None));
+                                let args = c.args.iter().map(|a| a.typ.to_erlang_type_spec(None));
                                 tuple(std::iter::once(name).chain(args))
                             }
                         })
+                        .chain(phantom_vars_constructor.into_iter())
                         .intersperse(break_(" |", " | ")),
                 )
                 .nest(INDENT)
@@ -249,30 +276,36 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
         }
     }
 
-    let exports = if exports.is_empty() {
-        nil()
-    } else {
-        "-export(["
+    let exports = match (!exports.is_empty(), !type_exports.is_empty()) {
+        (false, false) => nil(),
+        (true, false) => "-export(["
             .to_doc()
             .append(concat(exports.into_iter().intersperse(", ".to_doc())))
             .append("]).")
-            .append(lines(2))
-    };
+            .append(lines(2)),
 
-    let type_exports = if type_exports.is_empty() {
-        nil()
-    } else {
-        "-export_type(["
+        (true, true) => "-export(["
+            .to_doc()
+            .append(concat(exports.into_iter().intersperse(", ".to_doc())))
+            .append("]).")
+            .append(line())
+            .append("-export_type([")
             .to_doc()
             .append(concat(type_exports.into_iter().intersperse(", ".to_doc())))
             .append("]).")
-            .append(lines(2))
+            .append(lines(2)),
+
+        (false, true) => "-export_type(["
+            .to_doc()
+            .append(concat(type_exports.into_iter().intersperse(", ".to_doc())))
+            .append("]).")
+            .append(lines(2)),
     };
 
     let type_defs = if type_defs.is_empty() {
         nil()
     } else {
-        concat(type_defs.into_iter().intersperse(line())).append(lines(2))
+        concat(type_defs.into_iter().intersperse(lines(2))).append(lines(2))
     };
 
     let statements = concat(
@@ -291,7 +324,6 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
         .append("-compile(no_auto_import).")
         .append(lines(2))
         .append(exports)
-        .append(type_exports)
         .append(type_defs)
         .append(statements)
         .append(line())
@@ -346,7 +378,10 @@ fn mod_fun<'a>(
     return_type: &'a Arc<Type>,
 ) -> Document<'a> {
     let mut env = Env::new(module);
-    let var_usages = collect_type_var_usages(args, return_type);
+    let var_usages = collect_type_var_usages(
+        HashMap::new(),
+        std::iter::once(return_type).chain(args.iter().map(|a| &a.typ)),
+    );
     let args_spec = args
         .iter()
         .map(|a| a.typ.to_erlang_type_spec(Some(&var_usages)));
@@ -1447,12 +1482,17 @@ fn external_fun<'a>(
     module: &'a str,
     fun: &'a str,
     args: &'a [TypedExternalFnArg],
-    return_type: &'a Type,
+    return_type: &'a Arc<Type>,
 ) -> Document<'a> {
     let chars: String = incrementing_args_list(args.len());
-
-    let args_spec = args.iter().map(|a| a.typ.to_erlang_type_spec(None));
-    let return_spec = return_type.to_erlang_type_spec(None);
+    let var_usages = collect_type_var_usages(
+        HashMap::new(),
+        std::iter::once(return_type).chain(args.iter().map(|a| &a.typ)),
+    );
+    let args_spec = args
+        .iter()
+        .map(|a| a.typ.to_erlang_type_spec(Some(&var_usages)));
+    let return_spec = return_type.to_erlang_type_spec(Some(&var_usages));
     let spec = fun_spec(name, args_spec, return_spec);
 
     spec.append(atom(name.to_string())).append(
@@ -1478,15 +1518,22 @@ fn variable_name(name: &str) -> String {
 
 // When rendering a type variable to an erlang type spec we need all type variables with the
 // same id to end up with the same name in the generated erlang.
-// This function maps ids to A-Z then AA-AZ, but then AAA - AAZ, rather than BA-BZ etc.
-// This effectively gives us 52 type vars per file until they start looking weird.
-// This is because to properly cycle through the alphabet we have to convert the usize to base 26.
-// If we need more we can always modulus one more time and that'll give us 26*26 good looking vars.
-// Alternatively we could have the id itself after a character like, `A0` and `A24`.
+// This function converts a usize into base 26 A-Z for this purpose.
 fn id_to_type_var(id: usize) -> Document<'static> {
-    let base = id / 26;
-    let letter = std::char::from_u32((id % 26 + 65) as u32).unwrap();
-    Document::String(format!("{:A>1$}", letter, base))
+    if id < 26 {
+        let mut name = "".to_string();
+        name.push(std::char::from_u32((id % 26 + 65) as u32).unwrap());
+        return Document::String(name);
+    }
+    let mut name = vec![];
+    let mut last_char = id;
+    while last_char >= 26 {
+        name.push(std::char::from_u32((last_char % 26 + 65) as u32).unwrap());
+        last_char = last_char / 26;
+    }
+    name.push(std::char::from_u32((last_char % 26 + 64) as u32).unwrap());
+    name.reverse();
+    Document::String(name.into_iter().collect::<String>())
 }
 
 pub fn is_erlang_reserved_word(name: &str) -> bool {
@@ -1597,14 +1644,13 @@ pub fn is_erlang_standard_library_module(name: &str) -> bool {
 //     fn() -> Result(a, b)  // `a` and `b` are `any()`
 //     fn(a) -> a            // `a` is a type var
 fn collect_type_var_usages<'a>(
-    args: &'a [TypedArg],
-    return_type: &'a Arc<Type>,
+    mut ids: HashMap<usize, usize>,
+    types: impl Iterator<Item = &'a Arc<Type>>,
 ) -> HashMap<usize, usize> {
-    let mut ids = HashMap::new();
-    for arg in args {
-        arg.typ.type_var_ids(&mut ids);
+    for typ in types {
+        typ.type_var_ids(&mut ids);
     }
-    return_type.type_var_ids(&mut ids);
+    // return_type.type_var_ids(&mut ids);
     ids
 }
 
@@ -1616,13 +1662,11 @@ impl Type {
         match self {
             Self::Var { typ } => match &*typ.borrow() {
                 TypeVar::Generic { id, .. } | TypeVar::Unbound { id, .. } => match var_usages {
-                    Some(usages) => {
-                        if usages.get(&*id) == Some(&1) {
-                            "any()".to_doc()
-                        } else {
-                            id_to_type_var(*id)
-                        }
-                    }
+                    Some(usages) => match usages.get(&*id) {
+                        Some(&0) => Document::Nil,
+                        Some(&1) => "any()".to_doc(),
+                        _ => id_to_type_var(*id),
+                    },
                     None => id_to_type_var(*id),
                 },
                 TypeVar::Link { typ } => Type::to_erlang_type_spec(typ, var_usages),
@@ -1632,8 +1676,6 @@ impl Type {
                 name, module, args, ..
             } => {
                 if module.is_empty() {
-                    // built-ins
-                    // TODO: more builtins?
                     match name.as_ref() {
                         "Nil" => "nil()".to_doc(),
                         "Int" | "UtfCodepoint" => "integer()".to_doc(),

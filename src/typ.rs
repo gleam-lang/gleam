@@ -20,9 +20,9 @@ pub use prelude::*;
 use crate::{
     ast::{
         self, ArgNames, BitStringSegment, BitStringSegmentOption, CallArg, Constant, Pattern,
-        RecordConstructor, SrcSpan, Statement, TypeAst, TypedConstant, TypedExpr, TypedModule,
-        TypedPattern, TypedPatternBitStringSegment, TypedRecordUpdateArg, TypedStatement,
-        UnqualifiedImport, UntypedModule, UntypedMultiPattern, UntypedPattern,
+        RecordConstructor, RecordConstructorArg, SrcSpan, Statement, TypeAst, TypedConstant,
+        TypedExpr, TypedModule, TypedPattern, TypedPatternBitStringSegment, TypedRecordUpdateArg,
+        TypedStatement, UnqualifiedImport, UntypedModule, UntypedMultiPattern, UntypedPattern,
         UntypedRecordUpdateArg, UntypedStatement,
     },
     bit_string::BinaryTypeSpecifier,
@@ -630,8 +630,10 @@ fn register_values<'a>(
 
                 let mut field_map = FieldMap::new(constructor.args.len());
                 let mut args_types = Vec::with_capacity(constructor.args.len());
-                for (i, (label, arg, ..)) in constructor.args.iter().enumerate() {
-                    let t = hydrator.type_from_ast(arg, environment)?;
+                for (i, RecordConstructorArg { label, ast, .. }) in
+                    constructor.args.iter().enumerate()
+                {
+                    let t = hydrator.type_from_ast(ast, environment)?;
                     args_types.push(t);
                     if let Some(label) = label {
                         field_map
@@ -923,7 +925,24 @@ fn infer_statement(
                         {
                             args.into_iter()
                                 .zip(args_types.iter())
-                                .map(|((name, ast, span, _), t)| (name, ast, span, t.clone()))
+                                .map(
+                                    |(
+                                        RecordConstructorArg {
+                                            label,
+                                            ast,
+                                            location,
+                                            ..
+                                        },
+                                        t,
+                                    )| {
+                                        RecordConstructorArg {
+                                            label,
+                                            ast,
+                                            location,
+                                            typ: t.clone(),
+                                        }
+                                    },
+                                )
                                 .collect()
                         } else {
                             vec![]
@@ -1321,9 +1340,9 @@ fn custom_type_accessors<A>(
 
     let mut fields = HashMap::with_capacity(args.len());
     hydrator.disallow_new_type_variables();
-    for (index, (label, arg, ..)) in args.iter().enumerate() {
+    for (index, RecordConstructorArg { label, ast, .. }) in args.iter().enumerate() {
         if let Some(label) = label {
-            let typ = hydrator.type_from_ast(arg, environment)?;
+            let typ = hydrator.type_from_ast(ast, environment)?;
             let _ = fields.insert(
                 label.to_string(),
                 RecordAccessor {

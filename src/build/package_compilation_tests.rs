@@ -50,7 +50,12 @@ fn package_compiler_test() {
             origin: Origin::Src,
         }],
         Ok(vec![OutputFile {
-            text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+            text: "-module(one).
+-compile(no_auto_import).
+
+
+"
+            .to_string(),
             path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
         },])
     );
@@ -72,11 +77,21 @@ fn package_compiler_test() {
         ],
         Ok(vec![
             OutputFile {
-                text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                text: "-module(one).
+-compile(no_auto_import).
+
+
+"
+                .to_string(),
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
             },
             OutputFile {
-                text: "-module(two).\n-compile(no_auto_import).\n\n\n".to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+
+"
+                .to_string(),
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
             },
         ])
@@ -91,7 +106,12 @@ fn package_compiler_test() {
         }],
         Ok(vec![OutputFile {
             path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-            text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+            text: "-module(one).
+-compile(no_auto_import).
+
+
+"
+            .to_string(),
         },]),
     );
 
@@ -139,11 +159,21 @@ fn package_compiler_test() {
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-                text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                text: "-module(one).
+-compile(no_auto_import).
+
+
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).\n-compile(no_auto_import).\n\n\n".to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+
+"
+                .to_string(),
             },
         ]),
     );
@@ -166,11 +196,21 @@ fn package_compiler_test() {
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-                text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                text: "-module(one).
+-compile(no_auto_import).
+
+
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).\n-compile(no_auto_import).\n\n\n".to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+
+"
+                .to_string(),
             },
         ]),
     );
@@ -193,13 +233,30 @@ fn package_compiler_test() {
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-                text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                text: "-module(one).
+-compile(no_auto_import).
+
+-export_type([box/0]).
+
+-type box() :: {box, integer()}.
+
+
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).\n-compile(no_auto_import).\n\n-export([unbox/1]).\n
-unbox(X) ->\n    {box, I} = X,\n    I.\n"
-                    .to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+-export([unbox/1]).
+
+-spec unbox(one:box()) -> integer().
+unbox(X) ->
+    {box, I} = X,
+    I.
+"
+                .to_string(),
             },
         ]),
     );
@@ -222,13 +279,29 @@ unbox(X) ->\n    {box, I} = X,\n    I.\n"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-                text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                text: "-module(one).
+-compile(no_auto_import).
+
+-export_type([box/0]).
+
+-type box() :: {box, integer()}.
+
+
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).\n-compile(no_auto_import).\n\n-export([box/1]).\n
-box(X) ->\n    {box, X}.\n"
-                    .to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+-export([box/1]).
+
+-spec box(integer()) -> one:box().
+box(X) ->
+    {box, X}.
+"
+                .to_string(),
             },
         ]),
     );
@@ -242,7 +315,16 @@ box(X) ->\n    {box, X}.\n"
         }],
         Ok(vec![OutputFile {
             path: PathBuf::from("_build/default/lib/the_package/src/one@two.erl"),
-            text: "-module(one@two).\n-compile(no_auto_import).\n\n\n".to_string(),
+            text: "-module(one@two).
+-compile(no_auto_import).
+
+-export_type([box/0]).
+
+-type box() :: box.
+
+
+"
+            .to_string(),
         }]),
     );
 
@@ -264,13 +346,29 @@ box(X) ->\n    {box, X}.\n"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-                text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                text: "-module(one).
+-compile(no_auto_import).
+
+-export_type([box/0]).
+
+-type box() :: box.
+
+
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).\n-compile(no_auto_import).\n\n-export([box/0]).\n
-box() ->\n    box.\n"
-                    .to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+-export([box/0]).
+
+-spec box() -> one:box().
+box() ->
+    box.
+"
+                .to_string(),
             },
         ]),
     );
@@ -293,17 +391,29 @@ box() ->\n    box.\n"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-                text: "-module(one).\n-compile(no_auto_import).\n\n-export([go/0]).\n
+                text: "-module(one).
+-compile(no_auto_import).
+
+-export([go/0]).
+
+-spec go() -> integer().
 go() ->
-    1.\n"
-                    .to_string(),
+    1.
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).\n-compile(no_auto_import).\n\n-export([call/0]).\n
+                text: "-module(two).
+-compile(no_auto_import).
+
+-export([call/0]).
+
+-spec call() -> integer().
 call() ->
-    one:go().\n"
-                    .to_string(),
+    one:go().
+"
+                .to_string(),
             },
         ]),
     );
@@ -320,19 +430,38 @@ call() ->
                 origin: Origin::Src,
                 path: PathBuf::from("/src/two.gleam"),
                 name: "two".to_string(),
-                code: "import nested/one\npub fn go(x) { let one.Box(y) = x y }".to_string(),
+                code: "import nested/one
+pub fn go(x) { let one.Box(y) = x y }"
+                    .to_string(),
             },
         ],
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/nested@one.erl"),
-                text: "-module(nested@one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                text: "-module(nested@one).
+-compile(no_auto_import).
+
+-export_type([box/0]).
+
+-type box() :: {box, integer()}.
+
+
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).\n-compile(no_auto_import).\n\n-export([go/1]).
-\ngo(X) ->\n    {box, Y} = X,\n    Y.\n"
-                    .to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+-export([go/1]).
+
+-spec go(nested@one:box()) -> integer().
+go(X) ->
+    {box, Y} = X,
+    Y.
+"
+                .to_string(),
             },
         ]),
     );
@@ -349,20 +478,38 @@ call() ->
                 origin: Origin::Src,
                 path: PathBuf::from("/src/two.gleam"),
                 name: "two".to_string(),
-                code: "import nested/one as thingy\npub fn go(x) { let thingy.Box(y) = x y }"
+                code: "import nested/one as thingy
+pub fn go(x) { let thingy.Box(y) = x y }"
                     .to_string(),
             },
         ],
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/nested@one.erl"),
-                text: "-module(nested@one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                text: "-module(nested@one).
+-compile(no_auto_import).
+
+-export_type([box/0]).
+
+-type box() :: {box, integer()}.
+
+
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).\n-compile(no_auto_import).\n\n-export([go/1]).
-\ngo(X) ->\n    {box, Y} = X,\n    Y.\n"
-                    .to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+-export([go/1]).
+
+-spec go(nested@one:box()) -> integer().
+go(X) ->
+    {box, Y} = X,
+    Y.
+"
+                .to_string(),
             },
         ]),
     );
@@ -390,18 +537,40 @@ call() ->
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/nested@one.erl"),
-                text: "-module(nested@one).\n-compile(no_auto_import).\n
--export([go/0]).\n\ngo() ->\n    1.\n"
-                    .to_string(),
+                text: "-module(nested@one).
+-compile(no_auto_import).
+
+-export([go/0]).
+-export_type([thing/0]).
+
+-type thing() :: any().
+
+-spec go() -> integer().
+go() ->
+    1.
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).\n-compile(no_auto_import).\n
--export([go/0, thing/0, call_thing/0]).\n
-go() ->\n    nested@one:go().\n
-thing() ->\n    thing:new().\n
-call_thing() ->\n    thing:new().\n"
-                    .to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+-export([go/0, thing/0, call_thing/0]).
+
+-spec go() -> integer().
+go() ->
+    nested@one:go().
+
+-spec thing() -> nested@one:thing().
+thing() ->
+    thing:new().
+
+-spec call_thing() -> nested@one:thing().
+call_thing() ->
+    thing:new().
+"
+                .to_string(),
             },
         ]),
     );
@@ -449,18 +618,38 @@ call_thing() ->\n    thing:new().\n"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-                text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                text: "-module(one).
+-compile(no_auto_import).
+
+-export_type([point/0]).
+
+-type point() :: {point, integer(), integer()}.
+
+
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one_Point.hrl"),
-                text: "-record(point, {x, y}).\n".to_string(),
+                text: "-record(point, {x, y}).
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).\n-compile(no_auto_import).\n
-make() ->\n    {point, 1, 4}.\n
-x(P) ->\n    {point, X, _} = P,\n    X.\n"
-                    .to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+-spec make() -> one:point().
+make() ->
+    {point, 1, 4}.
+
+-spec x(one:point()) -> integer().
+x(P) ->
+    {point, X, _} = P,
+    X.
+"
+                .to_string(),
             },
         ]),
     );
@@ -486,19 +675,30 @@ x(P) ->\n    {point, X, _} = P,\n    X.\n"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-                text: "-module(one).\n-compile(no_auto_import).\n\n-export([\'div\'/2]).\n
+                text: "-module(one).
+-compile(no_auto_import).
+
+-export([\'div\'/2]).
+
+-spec \'div\'(integer(), integer()) -> integer().
 'div'(X, Y) ->
     case Y of
         0 -> 0;
         Gleam@denominator -> X rem Gleam@denominator
-    end.\n"
-                    .to_string(),
+    end.
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).\n-compile(no_auto_import).\n
-run() ->\n    one:'div'(2, one:'div'(2, 4)).\n"
-                    .to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+-spec run() -> integer().
+run() ->
+    one:'div'(2, one:'div'(2, 4)).
+"
+                .to_string(),
             },
         ]),
     );
@@ -523,13 +723,25 @@ run() ->\n    one:'div'(2, one:'div'(2, 4)).\n"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-                text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                text: "-module(one).
+-compile(no_auto_import).
+
+-export_type([empty/0]).\n\n-type empty() :: empty.
+
+
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).\n-compile(no_auto_import).\n
-make() ->\n    empty.\n"
-                    .to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+-spec make() -> one:empty().
+make() ->
+    empty.
+"
+                .to_string(),
             },
         ]),
     );
@@ -552,15 +764,30 @@ make() ->\n    empty.\n"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-                text: "-module(one).\n-compile(no_auto_import).\n\n-export([id/1]).\n
-id(X) ->\n    X.\n"
-                    .to_string(),
+                text: "-module(one).
+-compile(no_auto_import).
+
+-export([id/1]).
+-export_type([empty/0]).
+
+-type empty() :: empty.
+
+-spec id(H) -> H.
+id(X) ->
+    X.
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).\n-compile(no_auto_import).\n
-make() ->\n    one:id(empty).\n"
-                    .to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+-spec make() -> one:empty().
+make() ->
+    one:id(empty).
+"
+                .to_string(),
             },
         ]),
     );
@@ -584,16 +811,30 @@ make() ->\n    one:id(empty).\n"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-                text: "-module(one).\n-compile(no_auto_import).\n
--export([id/1]).\n
-id(X) ->\n    X.\n"
-                    .to_string(),
+                text: "-module(one).
+-compile(no_auto_import).
+
+-export([id/1]).
+-export_type([empty/0]).
+
+-type empty() :: empty.
+
+-spec id(H) -> H.
+id(X) ->
+    X.
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).\n-compile(no_auto_import).\n
-make() ->\n    one:id(empty).\n"
-                    .to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+-spec make() -> one:empty().
+make() ->
+    one:id(empty).
+"
+                .to_string(),
             },
         ]),
     );
@@ -616,16 +857,27 @@ make() ->\n    one:id(empty).\n"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-                text: "-module(one).\n-compile(no_auto_import).\n
--export(['receive'/0]).\n
-'receive'() ->\n    1.\n"
-                    .to_string(),
+                text: "-module(one).
+-compile(no_auto_import).
+
+-export(['receive'/0]).
+
+-spec \'receive\'() -> integer().
+'receive'() ->
+    1.
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).\n-compile(no_auto_import).\n
-funky() ->\n    fun one:'receive'/0.\n"
-                    .to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+-spec funky() -> fun(() -> integer()).
+funky() ->
+    fun one:'receive'/0.
+"
+                .to_string(),
             },
         ]),
     );
@@ -648,16 +900,27 @@ funky() ->\n    fun one:'receive'/0.\n"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-                text: "-module(one).\n-compile(no_auto_import).\n
--export(['receive'/0]).\n
-'receive'() ->\n    1.\n"
-                    .to_string(),
+                text: "-module(one).
+-compile(no_auto_import).
+
+-export(['receive'/0]).
+
+-spec \'receive\'() -> integer().
+'receive'() ->
+    1.
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).\n-compile(no_auto_import).\n
-funky() ->\n    fun one:'receive'/0.\n"
-                    .to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+-spec funky() -> fun(() -> integer()).
+funky() ->
+    fun one:'receive'/0.
+"
+                .to_string(),
             },
         ]),
     );
@@ -681,16 +944,27 @@ funky() ->\n    fun one:'receive'/0.\n"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-                text: "-module(one).\n-compile(no_auto_import).\n
--export(['receive'/1]).\n
-'receive'(X) ->\n    X.\n"
-                    .to_string(),
+                text: "-module(one).
+-compile(no_auto_import).
+
+-export(['receive'/1]).
+
+-spec \'receive\'(H) -> H.
+'receive'(X) ->
+    X.
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).\n-compile(no_auto_import).\n
-funky() ->\n    one:'receive'(1).\n"
-                    .to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+-spec funky() -> integer().
+funky() ->
+    one:'receive'(1).
+"
+                .to_string(),
             },
         ]),
     );
@@ -718,19 +992,39 @@ funky() ->\n    one:'receive'(1).\n"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-                text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                text: "-module(one).
+-compile(no_auto_import).
+
+-export_type([person/0]).
+
+-type person() :: {person, unicode:unicode_binary(), integer()}.
+
+
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one_Person.hrl"),
-                text: "-record(person, {name, age}).\n".to_string(),
+                text: "-record(person, {name, age}).
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).\n-compile(no_auto_import).\n
--export([get_age/1, get_name/1]).\n
-get_age(Person) ->\n    erlang:element(3, Person).\n
-get_name(Person) ->\n    erlang:element(2, Person).\n"
-                    .to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+-export([get_age/1, get_name/1]).
+
+-spec get_age(one:person()) -> integer().
+get_age(Person) ->
+    erlang:element(3, Person).
+
+-spec get_name(one:person()) -> unicode:unicode_binary().
+get_name(Person) ->
+    erlang:element(2, Person).
+"
+                .to_string(),
             },
         ]),
     );
@@ -754,15 +1048,31 @@ get_name(Person) ->\n    erlang:element(2, Person).\n"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-                text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                text: "-module(one).
+-compile(no_auto_import).
+
+-export_type([person/0]).
+
+-type person() :: {person, unicode:unicode_binary(), integer()}.
+
+
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one_Person.hrl"),
-                text: "-record(person, {name, age}).\n".to_string(),
+                text: "-record(person, {name, age}).
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).\n-compile(no_auto_import).\n\n\n".to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+
+"
+                .to_string(),
             },
         ]),
     );
@@ -786,15 +1096,29 @@ get_name(Person) ->\n    erlang:element(2, Person).\n"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-                text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                text: "-module(one).
+-compile(no_auto_import).
+
+-export_type([person/0]).\n\n-type person() :: {person, unicode:unicode_binary(), integer()}.
+
+
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one_Person.hrl"),
-                text: "-record(person, {name, age}).\n".to_string(),
+                text: "-record(person, {name, age}).
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).\n-compile(no_auto_import).\n\n\n".to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+
+"
+                .to_string(),
             },
         ]),
     );
@@ -818,17 +1142,31 @@ get_name(Person) ->\n    erlang:element(2, Person).\n"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-                text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                text: "-module(one).
+-compile(no_auto_import).
+
+-export_type([t/1]).\n\n-type t(H) :: {c, integer(), integer()} | {gleam_phantom, H}.
+
+
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one_C.hrl"),
-                text: "-record(c, {a, b}).\n".to_string(),
+                text: "-record(c, {a, b}).
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).\n-compile(no_auto_import).\n
-main() ->\n    fun(A, B) -> {c, A, B} end.\n"
-                    .to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+-spec main() -> fun((integer(), integer()) -> one:t(any())).
+main() ->
+    fun(A, B) -> {c, A, B} end.
+"
+                .to_string(),
             },
         ]),
     );
@@ -852,20 +1190,36 @@ main() ->\n    fun(A, B) -> {c, A, B} end.\n"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-                text: "-module(one).\n-compile(no_auto_import).\n
--export([id/1]).\n
-id(X) ->\n    X.\n"
-                    .to_string(),
+                text: "-module(one).
+-compile(no_auto_import).
+
+-export([id/1]).
+-export_type([t/0]).
+
+-type t() :: {x, integer()}.
+
+-spec id(H) -> H.
+id(X) ->
+    X.
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one_X.hrl"),
-                text: "-record(x, {x}).\n".to_string(),
+                text: "-record(x, {x}).
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).\n-compile(no_auto_import).\n
-make() ->\n    one:id(fun(A) -> {x, A} end).\n"
-                    .to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+-spec make() -> fun((integer()) -> one:t()).
+make() ->
+    one:id(fun(A) -> {x, A} end).
+"
+                .to_string(),
             },
         ]),
     );
@@ -889,17 +1243,33 @@ make() ->\n    one:id(fun(A) -> {x, A} end).\n"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-                text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                text: "-module(one).
+-compile(no_auto_import).
+
+-export_type([t/1]).
+
+-type t(H) :: {c, integer(), integer()} | {gleam_phantom, H}.
+
+
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one_C.hrl"),
-                text: "-record(c, {a, b}).\n".to_string(),
+                text: "-record(c, {a, b}).
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).\n-compile(no_auto_import).\n
-main() ->\n    fun(A, B) -> {c, A, B} end.\n"
-                    .to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+-spec main() -> fun((integer(), integer()) -> one:t(any())).
+main() ->
+    fun(A, B) -> {c, A, B} end.
+"
+                .to_string(),
             },
         ]),
     );
@@ -1013,15 +1383,35 @@ main() ->\n    fun(A, B) -> {c, A, B} end.\n"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl",),
-                text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                text: "-module(one).
+-compile(no_auto_import).
+
+-export_type([one/1]).
+
+-type one(H) :: {one, H}.
+
+
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl",),
-                text: "-module(two).\n-compile(no_auto_import).\n\n\n".to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+-export_type([two/1]).
+
+-type two(P) :: {two, one:one(integer())} | {gleam_phantom, P}.
+
+
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two_Two.hrl",),
-                text: "-record(two, {thing}).\n".to_string(),
+                text: "-record(two, {thing}).
+"
+                .to_string(),
             },
         ]),
     );
@@ -1070,7 +1460,6 @@ main(Power) ->
 -compile(no_auto_import).
 
 -export([to_int/1]).
-
 -export_type([power/0]).
 
 -type power() :: {power, integer()}.
@@ -1083,7 +1472,9 @@ to_int(P) ->
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/power_Power.hrl",),
-                text: "-record(power, {value}).\n".to_string(),
+                text: "-record(power, {value}).
+"
+                .to_string(),
             },
         ]),
     );
@@ -1112,13 +1503,27 @@ fn x() { test }"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-                text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                text: "-module(one).
+-compile(no_auto_import).
+
+-export_type([test/0]).
+
+-type test() :: a.
+
+
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).\n-compile(no_auto_import).\n
-x() ->\n    a.\n"
-                    .to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+-spec x() -> one:test().
+x() ->
+    a.
+"
+                .to_string(),
             }
         ]),
     );
@@ -1144,13 +1549,29 @@ fn x() { test }"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-                text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                text: "-module(one).
+-compile(no_auto_import).
+
+-export_type([a/0, b/0]).
+
+-type a() :: a.
+
+-type b() :: {b, one:a()}.
+
+
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).\n-compile(no_auto_import).\n
-x() ->\n    {b, a}.\n"
-                    .to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+-spec x() -> one:b().
+x() ->
+    {b, a}.
+"
+                .to_string(),
             }
         ]),
     );
@@ -1211,13 +1632,27 @@ fn x() { one.A }"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-                text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
+                text: "-module(one).
+-compile(no_auto_import).
+
+-export_type([a/0]).
+
+-type a() :: {a, unicode:unicode_binary()}.
+
+
+"
+                .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).\n-compile(no_auto_import).\n
-x() ->\n    fun(A) -> {a, A} end.\n"
-                    .to_string(),
+                text: "-module(two).
+-compile(no_auto_import).
+
+-spec x() -> fun((unicode:unicode_binary()) -> one:a()).
+x() ->
+    fun(A) -> {a, A} end.
+"
+                .to_string(),
             }
         ]),
     );

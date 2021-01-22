@@ -109,7 +109,7 @@ pub enum ArgNames {
 pub struct RecordConstructor<T> {
     pub location: SrcSpan,
     pub name: String,
-    pub args: Vec<(Option<String>, TypeAst, SrcSpan, T)>,
+    pub args: Vec<RecordConstructorArg<T>>,
     pub documentation: Option<String>,
 }
 
@@ -117,6 +117,14 @@ impl<A> RecordConstructor<A> {
     pub fn put_doc(&mut self, new_doc: String) {
         self.documentation = Some(new_doc);
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct RecordConstructorArg<T> {
+    pub label: Option<String>,
+    pub ast: TypeAst,
+    pub location: SrcSpan,
+    pub typ: T,
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -69,6 +69,7 @@ go(A) ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec main(H) -> H.
 main(Board) ->
     fun(Board@1) -> Board@1 end,
     Board.
@@ -85,6 +86,7 @@ fn main(x) {
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec main(H) -> H.
 main(X) ->
     (fun(X@1) -> X@1 end)(X).
 "#,
@@ -100,6 +102,7 @@ fn main(x) {
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec main(K) -> K.
 main(X) ->
     (fun(X@1) -> X@1 end)(X).
 "#,
@@ -115,6 +118,7 @@ main(X) ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec go() -> nil().
 go() ->
     _ = 1,
     _ = 2,
@@ -155,6 +159,7 @@ go() ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec go() -> integer().
 go() ->
     Y = 1,
     Y@1 = 2,
@@ -173,6 +178,7 @@ go() ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec go() -> integer().
 go() ->
     Fifteen = 16#F,
     Nine = 8#11,
@@ -190,6 +196,7 @@ go() ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec go() -> integer().
 go() ->
     Y = 1,
     Y@1 = 2,
@@ -204,6 +211,7 @@ go() ->
 
 -export([t/0]).
 
+-spec t() -> boolean().
 t() ->
     true.
 "#,
@@ -215,6 +223,11 @@ t() ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-export_type([money/0]).
+
+-type money() :: {pound, integer()}.
+
+-spec pound(integer()) -> the_app:money().
 pound(X) ->
     {pound, X}.
 "#,
@@ -225,6 +238,7 @@ pound(X) ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec loop() -> any().
 loop() ->
     loop().
 "#,
@@ -237,6 +251,7 @@ loop() ->
 
 -export([run/0]).
 
+-spec run() -> integer().
 run() ->
     'Elixir.MyApp':run().
 "#,
@@ -250,9 +265,11 @@ run() ->
 
 -export([go/0]).
 
+-spec inc(integer()) -> integer().
 inc(X) ->
     X + 1.
 
+-spec go() -> integer().
 go() ->
     inc(inc(inc(1))).
 "#,
@@ -266,9 +283,11 @@ go() ->
 
 -export([go/0]).
 
+-spec add(integer(), integer()) -> integer().
 add(X, Y) ->
     X + Y.
 
+-spec go() -> integer().
 go() ->
     add(add(2, add(1, 1)), 3).
 "#,
@@ -283,18 +302,22 @@ fn fdiv(x, y) { x /. y }
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec 'and'(boolean(), boolean()) -> boolean().
 'and'(X, Y) ->
     X andalso Y.
 
+-spec 'or'(boolean(), boolean()) -> boolean().
 'or'(X, Y) ->
     X orelse Y.
 
+-spec modulo(integer(), integer()) -> integer().
 modulo(X, Y) ->
     case Y of
         0 -> 0;
         Gleam@denominator -> X rem Gleam@denominator
     end.
 
+-spec fdiv(float(), float()) -> float().
 fdiv(X, Y) ->
     case Y of
         0.0 -> 0.0;
@@ -310,6 +333,7 @@ fdiv(X, Y) ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec second(list(integer())) -> integer().
 second(List) ->
     case List of
         [X, Y] ->
@@ -319,6 +343,7 @@ second(List) ->
             1
     end.
 
+-spec tail(list(P)) -> list(P).
 tail(List) ->
     case List of
         [X | Xs] ->
@@ -335,6 +360,7 @@ tail(List) ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec tail(list(K)) -> K.
 tail(List) ->
     case List of
         [X | _] ->
@@ -348,6 +374,7 @@ tail(List) ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec x() -> integer().
 x() ->
     X = 1,
     X@1 = X + 1,
@@ -363,9 +390,11 @@ x() ->
 
 -export(['receive'/0, 'catch'/1]).
 
+-spec 'receive'() -> integer().
 'receive'() ->
     'try':'and'().
 
+-spec 'catch'(any()) -> integer().
 'catch'(X) ->
     'try':'and'().
 "#,
@@ -377,6 +406,7 @@ x() ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec x() -> boolean().
 x() ->
     1.0 < 2.3.
 "#,
@@ -388,6 +418,9 @@ x() ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-type pair(H, I) :: {pair, H, I}.
+
+-spec x() -> the_app:pair(float(), float()).
 x() ->
     {pair, 1, 2},
     {pair, 3.0, 4.0}.
@@ -399,6 +432,9 @@ x() ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-type null() :: null.
+
+-spec x() -> the_app:null().
 x() ->
     null.
 "#,
@@ -410,6 +446,9 @@ x() ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-type point() :: {point, integer(), integer()}.
+
+-spec y() -> the_app:point().
 y() ->
     ((fun() -> fun(A, B) -> {point, A, B} end end)())(4, 6).
 "#,
@@ -421,6 +460,9 @@ y() ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-type point() :: {point, integer(), integer()}.
+
+-spec x() -> the_app:point().
 x() ->
     {point, 4, 6},
     {point, 9, 1}.
@@ -432,6 +474,9 @@ x() ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-type point() :: {point, integer(), integer()}.
+
+-spec x(the_app:point()) -> integer().
 x(Y) ->
     {point, A, B} = Y,
     A.
@@ -445,6 +490,7 @@ x(Y) ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec x() -> integer().
 x() ->
     m:f(1, 2),
     m:f(4, 3).
@@ -461,9 +507,11 @@ x() ->
 
 -export([go/2]).
 
+-spec go(integer(), integer()) -> integer().
 go(A, B) ->
     m:f(A, B).
 
+-spec x() -> integer().
 x() ->
     m:f(1, 2),
     m:f(4, 3).
@@ -477,6 +525,7 @@ x() ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec x() -> fun((integer(), integer()) -> integer()).
 x() ->
     fun m:f/2.
 "#,
@@ -488,9 +537,11 @@ x() ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec go(H, any()) -> H.
 go(Xx, Yy) ->
     Xx.
 
+-spec x() -> integer().
 x() ->
     go(1, 2),
     go(4, 3).
@@ -506,6 +557,9 @@ fn create_user(user_id) { User(age: 22, id: user_id, name: "") }
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-type user() :: {user, integer(), unicode:unicode_binary(), integer()}.
+
+-spec create_user(integer()) -> the_app:user().
 create_user(User_id) ->
     {user, User_id, <<""/utf8>>, 22}.
 "#,
@@ -516,6 +570,7 @@ create_user(User_id) ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec run() -> integer().
 run() ->
     case {1, 2} of
         {A, B} ->
@@ -530,6 +585,9 @@ run() ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-type x() :: {x, integer(), float()}.
+
+-spec x() -> the_app:x().
 x() ->
     {x, 1, 2.0},
     {x, 4, 3.0}.
@@ -547,6 +605,7 @@ fn go(a) {
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec go(integer()) -> integer().
 go(A) ->
     A@1 = A + 1,
     A@1.
@@ -564,6 +623,7 @@ fn go(a) {
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec go(any()) -> integer().
 go(A) ->
     A@1 = 1,
     A@1.
@@ -589,10 +649,15 @@ pub fn main() {
 -compile(no_auto_import).
 
 -export([factory/2, main/0]).
+-export_type([box/0]).
 
+-type box() :: {box, integer()}.
+
+-spec factory(fun((I) -> M), I) -> M.
 factory(F, I) ->
     F(I).
 
+-spec main() -> the_app:box().
 main() ->
     factory(fun(A) -> {box, A} end, 0).
 "#,
@@ -617,6 +682,7 @@ pub fn main(args) {
 
 -export([main/1]).
 
+-spec main(any()) -> integer().
 main(Args) ->
     case Args of
         _ ->
@@ -698,7 +764,7 @@ pub fn main(args) {
 
 -export([main/1]).
 
--spec main(H) -> integer().
+-spec main(any()) -> integer().
 main(Args) ->
     case Args of
         X when X =:= Args ->
@@ -724,7 +790,7 @@ pub fn main(args) {
 
 -export([main/1]).
 
--spec main(H) -> integer().
+-spec main(any()) -> integer().
 main(Args) ->
     case Args of
         X when (X =/= X) =:= (Args =:= Args) ->
@@ -1315,7 +1381,7 @@ pub fn main() {
 
 -export([main/0]).
 
--spec main() -> I.
+-spec main() -> any().
 main() ->
     erlang:error({gleam_error, todo}).
 "#,
@@ -1332,7 +1398,7 @@ pub fn main() {
 
 -export([main/0]).
 
--spec main() -> I.
+-spec main() -> any().
 main() ->
     erlang:error({gleam_error, todo, "testing"}).
 "#,
@@ -1349,7 +1415,6 @@ pub fn get_name(person: Person) { person.name }
 -compile(no_auto_import).
 
 -export([get_age/1, get_name/1]).
-
 -export_type([person/0]).
 
 -type person() :: {person, unicode:unicode_binary(), integer()}.
@@ -1535,7 +1600,7 @@ fn main() {
         r#"-module(the_app).
 -compile(no_auto_import).
 
--spec main() -> {ok, integer()} | {error, R}.
+-spec main() -> {ok, integer()} | {error, any()}.
 main() ->
     case {ok, 1} of
         {error, Gleam@try_error} -> {error, Gleam@try_error};
@@ -1563,6 +1628,9 @@ fn main() {
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-type fn_box() :: {fn_box, fun((integer()) -> integer())}.
+
+-spec main() -> integer().
 main() ->
     B = {fn_box, fun(X) -> X end},
     (erlang:element(2, B))(5).
@@ -1581,6 +1649,7 @@ fn main() {
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec main() -> integer().
 main() ->
     T = {fun(X) -> X end},
     (erlang:element(1, T))(5).
@@ -1603,6 +1672,7 @@ main() ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec main() -> bitstring().
 main() ->
     A = 1,
     Simple = <<1, A>>,
@@ -1627,9 +1697,11 @@ fn main() {
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec x() -> integer().
 x() ->
     2.
 
+-spec main() -> bitstring().
 main() ->
     A = 1,
     B = <<A:(A * 2)/unit:2, A:(3 + x())/unit:1>>,
@@ -1647,6 +1719,7 @@ main() ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec main() -> integer().
 main() ->
     A = 1,
     <<B, 1>> = <<1, A>>,
@@ -1664,6 +1737,7 @@ main() ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec main() -> integer().
 main() ->
     A = <<"test"/utf8>>,
     <<B/utf8, "st"/utf8>> = A,
@@ -1681,9 +1755,11 @@ fn main() {
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec x() -> integer().
 x() ->
     1.
 
+-spec main() -> bitstring().
 main() ->
     A = <<(x())/integer>>,
     A.
@@ -1706,6 +1782,7 @@ pub fn main(arg) {
 
 -export([main/1]).
 
+-spec main(unicode:unicode_binary()) -> integer().
 main(Arg) ->
     case Arg of
         _ when Arg =:= <<"constant value"/utf8>> ->
@@ -1733,6 +1810,7 @@ pub fn main(arg) {
 
 -export([main/1]).
 
+-spec main(bitstring()) -> integer().
 main(Arg) ->
     case Arg of
         _ when Arg =:= <<1, "ok"/utf8, 3, 4:50>> ->
@@ -1760,6 +1838,7 @@ pub fn main(arg) {
 
 -export([main/1]).
 
+-spec main({integer(), float()}) -> integer().
 main(Arg) ->
     case Arg of
         _ when Arg =:= {1, 2.0} ->
@@ -1787,6 +1866,7 @@ pub fn main(arg) {
 
 -export([main/1]).
 
+-spec main(float()) -> integer().
 main(Arg) ->
     case Arg of
         _ when Arg > 3.14 ->
@@ -1819,6 +1899,12 @@ pub fn main(arg) {
 
 -export([main/1]).
 
+-spec main(
+    {{integer(), float(), unicode:unicode_binary()},
+     unicode:unicode_binary(),
+     float(),
+     integer()}
+) -> integer().
 main(Arg) ->
     _ = [1, 2, 3],
     case Arg of
@@ -1847,6 +1933,7 @@ pub fn main(arg) {
 
 -export([main/1]).
 
+-spec main(list(integer())) -> integer().
 main(Arg) ->
     case Arg of
         _ when Arg =:= [1, 2, 3] ->
@@ -1876,6 +1963,7 @@ pub fn test() {
 
 -export([test/0]).
 
+-spec test() -> integer().
 test() ->
     Duplicate_name = 1,
     case 1 of
@@ -1903,6 +1991,7 @@ pub fn test() {
 
 -export([test/0]).
 
+-spec test() -> integer().
 test() ->
     case {ok, 1} of
         {ok, Duplicate_name} ->
@@ -1929,6 +2018,7 @@ pub fn test() {
 
 -export([test/0]).
 
+-spec test() -> integer().
 test() ->
     Duplicate_name = 1,
     case 1 of
@@ -1958,6 +2048,7 @@ pub fn main(arg) {
 
 -export([main/1]).
 
+-spec main({ok, integer()} | {error, any()}) -> integer().
 main(Arg) ->
     _ = {ok, 1},
     case Arg of
@@ -1984,6 +2075,11 @@ fn main() {
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-export_type([person/0]).
+
+-type person() :: {person, unicode:unicode_binary(), integer()}.
+
+-spec main() -> the_app:person().
 main() ->
     P = {person, <<"Quinn"/utf8>>, 27},
     New_p = erlang:setelement(3, P, 28),
@@ -2005,6 +2101,11 @@ fn main() {
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-export_type([person/0]).
+
+-type person() :: {person, unicode:unicode_binary(), integer()}.
+
+-spec main() -> the_app:person().
 main() ->
     P = {person, <<"Quinn"/utf8>>, 27},
     New_p = erlang:setelement(3, P, erlang:element(3, P) + 1),
@@ -2026,6 +2127,11 @@ fn main() {
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-export_type([person/0]).
+
+-type person() :: {person, unicode:unicode_binary(), integer()}.
+
+-spec main() -> the_app:person().
 main() ->
     P = {person, <<"Quinn"/utf8>>, 27},
     New_p = erlang:setelement(2, erlang:setelement(3, P, 28), <<"Riley"/utf8>>),
@@ -2045,6 +2151,7 @@ fn main() {
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec main() -> float().
 main() ->
     100000,
     100000.00101.
@@ -2063,6 +2170,7 @@ fn main() {
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec main() -> float().
 main() ->
     100000,
     100000.00101.
@@ -2080,6 +2188,7 @@ fn main() {
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec main() -> integer().
 main() ->
     100000 = 1,
     100000.00101 = 1.0,
@@ -2104,6 +2213,7 @@ fn main() {
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec main() -> integer().
 main() ->
     X = begin
         1,
@@ -2132,9 +2242,11 @@ fn main() {
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-spec id(H) -> H.
 id(X) ->
     X.
 
+-spec main() -> fun((L) -> L).
 main() ->
     id(fun id/1).
 "#,
@@ -2182,7 +2294,11 @@ pub fn a() { A }",
 -compile(no_auto_import).
 
 -export([a/0]).
+-export_type([test/0]).
 
+-type test() :: a.
+
+-spec a() -> the_app:test().
 a() ->
     a.
 "
@@ -2229,6 +2345,7 @@ fn pattern_as() {
 
 -export([a/1]).
 
+-spec a({ok, integer()} | {error, any()}) -> integer().
 a(X) ->
     case X of
         {ok, 1 = Y} ->
