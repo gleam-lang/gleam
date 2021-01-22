@@ -179,18 +179,31 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
                         .append("/")
                         .append(args.len()),
                 );
+                // phantom variant
+                let phantom = if args.is_empty() {
+                    nil()
+                } else {
+                    " | ".to_doc().append(tuple(
+                        std::iter::once("gleam_phantom".to_doc())
+                            .chain(args.iter().map(|a| Document::String(variable_name(a)))),
+                    ))
+                };
+
                 // Type definition
                 let args = concat(
                     args.iter()
                         .map(|p| variable_name(p).to_doc())
                         .intersperse(", ".to_doc()),
                 );
+
                 let doc = "-type "
                     .to_doc()
                     .append(Document::String(erl_safe_type_name(name.to_snake_case())))
                     .append("(")
                     .append(args)
-                    .append(") :: any().");
+                    .append(") :: any()")
+                    .append(phantom)
+                    .append(".");
                 type_defs.push(doc);
             }
             Statement::CustomType {
