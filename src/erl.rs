@@ -1666,6 +1666,7 @@ fn collect_type_var_usages<'a>(
 fn erl_safe_type_name(name: String) -> String {
     let built_ins = vec![
         "any",
+        "atom",
         "none",
         "pid",
         "port",
