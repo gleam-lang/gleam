@@ -1522,8 +1522,9 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 let constructor = self.infer_value_constructor(&module, &name, &location)?;
 
                 let tag = match &constructor.variant {
-                    ValueConstructorVariant::Record { name, .. }
-                    | ValueConstructorVariant::Inline { name, .. } => name.clone(),
+                    ValueConstructorVariant::Record { name, .. } => name.clone(),
+
+                    ValueConstructorVariant::Inline => todo!(),
 
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::LocalVariable => {
@@ -1555,8 +1556,9 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 let constructor = self.infer_value_constructor(&module, &name, &location)?;
 
                 let tag = match &constructor.variant {
-                    ValueConstructorVariant::Record { name, .. }
-                    | ValueConstructorVariant::Inline { name, .. } => name.clone(),
+                    ValueConstructorVariant::Record { name, .. } => name.clone(),
+
+                    ValueConstructorVariant::Inline => todo!(),
 
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::LocalVariable => {

@@ -396,10 +396,10 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
 
                 let constructor_typ = cons.typ.clone();
                 let constructor = match cons.variant {
-                    ValueConstructorVariant::Record { ref name, .. }
-                    | ValueConstructorVariant::Inline { ref name, .. } => {
+                    ValueConstructorVariant::Record { ref name, .. } => {
                         PatternConstructor::Record { name: name.clone() }
                     }
+                    ValueConstructorVariant::Inline => todo!(),
                     ValueConstructorVariant::LocalVariable
                     | ValueConstructorVariant::ModuleConstant { .. }
                     | ValueConstructorVariant::ModuleFn { .. } => crate::error::fatal_compiler_bug(

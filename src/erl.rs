@@ -752,9 +752,6 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'_>) 
     match &constructor.variant {
         ValueConstructorVariant::Record {
             name: record_name, ..
-        }
-        | ValueConstructorVariant::Inline {
-            name: record_name, ..
         } => match &*constructor.typ {
             Type::Fn { args, .. } => {
                 let chars = incrementing_args_list(args.len());
@@ -769,6 +766,8 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'_>) 
             }
             _ => atom(record_name.to_snake_case()),
         },
+
+        ValueConstructorVariant::Inline => todo!(),
 
         ValueConstructorVariant::LocalVariable => env.local_var_name(name.to_string()),
 
@@ -1067,6 +1066,22 @@ fn docs_args_call<'a>(
             ..
         } => tuple(std::iter::once(atom(name.to_snake_case())).chain(args.into_iter())),
 
+        TypedExpr::ModuleSelect {
+            constructor: ModuleValueConstructor::Inline,
+            ..
+        }
+        | TypedExpr::Var {
+            constructor:
+                ValueConstructor {
+                    variant: ValueConstructorVariant::Inline,
+                    ..
+                },
+            ..
+        } => args
+            .get(0)
+            .gleam_expect("No arguments for inline type call")
+            .clone(),
+
         TypedExpr::Var {
             constructor:
                 ValueConstructor {
@@ -1217,6 +1232,11 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'_>) -> Document<'a> {
             constructor: ModuleValueConstructor::Constant { literal },
             ..
         } => const_inline(literal, env),
+
+        TypedExpr::ModuleSelect {
+            constructor: ModuleValueConstructor::Inline,
+            ..
+        } => todo!(),
 
         TypedExpr::ModuleSelect {
             constructor: ModuleValueConstructor::Record { name, arity },

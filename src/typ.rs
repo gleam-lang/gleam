@@ -224,22 +224,17 @@ pub enum ValueConstructorVariant {
     },
 
     /// A constructor for an inline custom type
-    Inline {
-        name: String,
-        arity: usize,
-        field_map: Option<FieldMap>,
-    },
+    Inline,
 }
 
 impl ValueConstructorVariant {
     fn to_module_value_constructor(&self) -> ModuleValueConstructor {
         match self {
-            Self::Record { name, arity, .. } | Self::Inline { name, arity, .. } => {
-                ModuleValueConstructor::Record {
-                    name: name.clone(),
-                    arity: *arity,
-                }
-            }
+            Self::Record { name, arity, .. } => ModuleValueConstructor::Record {
+                name: name.clone(),
+                arity: *arity,
+            },
+            Self::Inline => ModuleValueConstructor::Inline,
 
             Self::ModuleConstant { literal } => ModuleValueConstructor::Constant {
                 literal: literal.clone(),
@@ -254,6 +249,7 @@ impl ValueConstructorVariant {
 pub enum ModuleValueConstructor {
     Record { name: String, arity: usize },
     Fn,
+    Inline,
     Constant { literal: TypedConstant },
 }
 
@@ -660,11 +656,7 @@ fn register_values<'a>(
 
                 if !opaque {
                     let variant = if *inline {
-                        ValueConstructorVariant::Inline {
-                            name: constructor.name.clone(),
-                            arity: constructor.args.len(),
-                            field_map: field_map.clone(),
-                        }
+                        ValueConstructorVariant::Inline
                     } else {
                         ValueConstructorVariant::Record {
                             name: constructor.name.clone(),

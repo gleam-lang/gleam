@@ -1477,12 +1477,10 @@ where
                         },
                     )
                 }
+            } else if opaque {
+                parse_error(ParseErrorType::OpaqueTypeAlias, SrcSpan { start, end })
             } else {
-                if opaque {
-                    parse_error(ParseErrorType::OpaqueTypeAlias, SrcSpan { start, end })
-                } else {
-                    parse_error(ParseErrorType::InlineTypeAlias, SrcSpan { start, end })
-                }
+                parse_error(ParseErrorType::InlineTypeAlias, SrcSpan { start, end })
             }
         } else {
             // Stared defining a custom type or type alias, didn't supply any {} or =
