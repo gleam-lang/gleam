@@ -560,7 +560,6 @@ fn register_values<'a>(
             })?;
 
             // Insert function into module
-
             environment.insert_module_value(
                 name,
                 ValueConstructor {
