@@ -172,13 +172,13 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
                 args,
                 ..
             } => exports.push(atom(name.to_string()).append("/").append(args.len())),
-            Statement::ExternalType {
-                public, name, args, ..
-            } => {
+            Statement::ExternalType { name, args, .. } => {
                 // Type Exports
-                if *public {
-                    type_exports.push(name.to_snake_case().to_doc().append("/").append(args.len()))
-                }
+                type_exports.push(
+                    Document::String(name.to_snake_case())
+                        .append("/")
+                        .append(args.len()),
+                );
                 // Type definition
                 let args = concat(
                     args.iter()
@@ -195,7 +195,6 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
             }
             Statement::CustomType {
                 name,
-                public,
                 constructors,
                 typed_parameters,
                 opaque,
@@ -229,14 +228,11 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
                     )))
                 };
                 // Type Exports
-                if *public {
-                    type_exports.push(
-                        name.to_snake_case()
-                            .to_doc()
-                            .append("/")
-                            .append(typed_parameters.len()),
-                    )
-                }
+                type_exports.push(
+                    Document::String(name.to_snake_case())
+                        .append("/")
+                        .append(typed_parameters.len()),
+                );
                 // Type definitions
                 let constructors = concat(
                     constructors

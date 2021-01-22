@@ -418,6 +418,8 @@ x() ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-export_type([pair/2]).
+
 -type pair(H, I) :: {pair, H, I}.
 
 -spec x() -> the_app:pair(float(), float()).
@@ -431,6 +433,8 @@ x() ->
         r#"type Null { Null } fn x() { Null }"#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export_type([null/0]).
 
 -type null() :: null.
 
@@ -446,6 +450,8 @@ x() ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-export_type([point/0]).
+
 -type point() :: {point, integer(), integer()}.
 
 -spec y() -> the_app:point().
@@ -460,6 +466,8 @@ y() ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-export_type([point/0]).
+
 -type point() :: {point, integer(), integer()}.
 
 -spec x() -> the_app:point().
@@ -473,6 +481,8 @@ x() ->
         r#"type Point { Point(x: Int, y: Int) } fn x(y) { let Point(a, b) = y a }"#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export_type([point/0]).
 
 -type point() :: {point, integer(), integer()}.
 
@@ -557,6 +567,8 @@ fn create_user(user_id) { User(age: 22, id: user_id, name: "") }
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-export_type([user/0]).
+
 -type user() :: {user, integer(), unicode:unicode_binary(), integer()}.
 
 -spec create_user(integer()) -> the_app:user().
@@ -584,6 +596,8 @@ run() ->
                     fn x() { X(x: 1, y: 2.) X(y: 3., x: 4) }"#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export_type([x/0]).
 
 -type x() :: {x, integer(), float()}.
 
@@ -1265,6 +1279,7 @@ main() ->
 -compile(no_auto_import).
 
 -export([main/0]).
+-export_type([test/0]).
 
 -type test() :: {test, integer(), float()}.
 
@@ -1445,6 +1460,8 @@ fn main() {
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-export_type([triple/0]).
+
 -type triple() :: {triple, integer(), integer(), integer()}.
 
 -spec main() -> integer().
@@ -1470,6 +1487,8 @@ fn main() {
 "#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export_type([triple/0]).
 
 -type triple() :: {triple, integer(), integer(), integer()}.
 
@@ -1497,6 +1516,8 @@ fn main() {
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-export_type([triple/0]).
+
 -type triple() :: {triple, integer(), integer(), integer()}.
 
 -spec main() -> integer().
@@ -1523,6 +1544,8 @@ fn main() {
 "#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export_type([triple/0]).
 
 -type triple() :: {triple, integer(), integer(), integer()}.
 
@@ -1627,6 +1650,8 @@ fn main() {
 "#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export_type([fn_box/0]).
 
 -type fn_box() :: {fn_box, fun((integer()) -> integer())}.
 
