@@ -1659,7 +1659,6 @@ fn collect_type_var_usages<'a>(
     for typ in types {
         typ.type_var_ids(&mut ids);
     }
-    // return_type.type_var_ids(&mut ids);
     ids
 }
 
