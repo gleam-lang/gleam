@@ -95,7 +95,6 @@ code {
 }
 
 pre {
-  padding: var(--small-gap) var(--gap);
   margin: var(--gap) 0;
   background: var(--code-background);
   border-radius: 1px;
