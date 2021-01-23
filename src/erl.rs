@@ -1667,7 +1667,7 @@ fn collect_type_var_usages<'a>(
     ids
 }
 
-fn erl_safe_type_name(name: String) -> String {
+fn erl_safe_type_name(mut name: String) -> String {
     if matches!(
         name.as_str(),
         "any"
@@ -1709,10 +1709,9 @@ fn erl_safe_type_name(name: String) -> String {
             | "pos_integer"
             | "neg_integer"
     ) {
-        format!("gleam@{}", name)
-    } else {
-        name
+        name.push('_');
     }
+    name
 }
 
 impl Type {

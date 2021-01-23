@@ -2377,3 +2377,19 @@ a(X) ->
 "
     );
 }
+
+#[test]
+fn build_in_erlang_type_escaping() {
+    assert_erl!(
+        "pub external type Map",
+        "-module(the_app).
+-compile(no_auto_import).
+
+-export_type([map_/0]).
+
+-type map_() :: any().
+
+
+"
+    );
+}
