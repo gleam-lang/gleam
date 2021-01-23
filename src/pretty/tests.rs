@@ -1,5 +1,5 @@
-use super::Document::*;
-use super::Mode::*;
+use super::Document::{Break, ForceBreak, Line, Nest, NestCurrent, Nil, String};
+use super::Mode::{Broken, Unbroken};
 use super::*;
 
 #[test]

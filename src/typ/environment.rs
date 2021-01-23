@@ -181,7 +181,7 @@ impl<'a, 'b> Environment<'a, 'b> {
         info: TypeConstructor,
     ) -> Result<(), Error> {
         let name = type_name.clone();
-        let location = info.origin.clone();
+        let location = info.origin;
         match self.module_types.insert(type_name, info) {
             None => Ok(()),
             Some(prelude_type) if prelude_type.module.is_empty() => Ok(()),

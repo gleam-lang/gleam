@@ -50,7 +50,7 @@ pub fn complicated_fun(
         otp_start_module: None,
     };
 
-    let mut analysed = crate::project::analysed(vec![input]).expect("Compilation failed");
+    let mut analysed = crate::project::analysed(vec![input]).gleam_expect("Compilation failed");
     analysed
         .iter_mut()
         .for_each(|a| a.attach_doc_and_module_comments());
@@ -65,7 +65,7 @@ pub fn complicated_fun(
     let module_page = output_files
         .iter()
         .find(|page| page.path == PathBuf::from("/docs/test/index.html"))
-        .expect("Missing docs page");
+        .gleam_expect("Missing docs page");
 
     // Comments
     module_page.should_contain("module comment");

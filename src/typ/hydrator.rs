@@ -28,14 +28,20 @@ pub struct ScopeResetData {
     created_type_variable_ids: im::HashSet<usize>,
 }
 
-impl Hydrator {
-    pub fn new() -> Self {
+impl Default for Hydrator {
+    fn default() -> Self {
         Self {
             created_type_variables: im::hashmap![],
             created_type_variable_ids: im::hashset![],
             permit_new_type_variables: true,
             permit_holes: false,
         }
+    }
+}
+
+impl Hydrator {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn open_new_scope(&mut self) -> ScopeResetData {

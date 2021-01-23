@@ -146,7 +146,7 @@ impl TypedExpr {
     pub fn non_zero_compile_time_number(&self) -> bool {
         use regex::Regex;
         lazy_static! {
-            static ref NON_ZERO: Regex = Regex::new(r"[1-9]").unwrap();
+            static ref NON_ZERO: Regex = Regex::new(r"[1-9]").gleam_expect("Invalid regular expression");
         }
         match self {
             Self::Int { value, .. } | Self::Float { value, .. } => NON_ZERO.is_match(value),

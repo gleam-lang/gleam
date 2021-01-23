@@ -498,6 +498,7 @@ impl UnifyError {
         self.with_unify_error_situation(UnifyErrorSituation::ReturnAnnotationMismatch)
     }
 
+    #[allow(clippy::wrong_self_convention)]
     pub fn to_error(self, location: SrcSpan) -> Error {
         match self {
             Self::CouldNotUnify {

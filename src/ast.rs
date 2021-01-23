@@ -7,6 +7,7 @@ pub use self::untyped::UntypedExpr;
 
 pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
+use crate::GleamExpect;
 use crate::typ::{self, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor};
 use std::sync::Arc;
 
@@ -50,7 +51,7 @@ impl<A, B, C, D> Module<A, B, C, D> {
 #[test]
 fn module_dependencies_test() {
     let (module, _) =
-        crate::parse::parse_module("import foo import bar import foo_bar").expect("syntax error");
+        crate::parse::parse_module("import foo import bar import foo_bar").gleam_expect("syntax error");
 
     assert_eq!(
         vec![

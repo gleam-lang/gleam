@@ -2,7 +2,7 @@ use super::*;
 
 pub fn env_types_with(things: &[&str]) -> Vec<String> {
     let mut types: Vec<_> = env_types();
-    for thing in things {
+    for &thing in things {
         types.push(thing.to_string());
     }
     types
@@ -18,7 +18,7 @@ pub fn env_types() -> Vec<String> {
 
 pub fn env_vars_with(things: &[&str]) -> Vec<String> {
     let mut types: Vec<_> = env_vars();
-    for thing in things {
+    for &thing in things {
         types.push(thing.to_string());
     }
     types

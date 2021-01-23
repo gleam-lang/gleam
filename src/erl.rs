@@ -33,7 +33,7 @@ pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
     {
         let gen_dir = source_base_path
             .parent()
-            .unwrap()
+            .gleam_expect("The source base path terminates in a root or prefix")
             .join(project::OUTPUT_DIR_NAME)
             .join(origin.dir_name());
         let erl_module_name = name.join("@");
@@ -56,7 +56,7 @@ pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
     files
 }
 
-fn module_name_join<'a>(module: &'a [String]) -> Document<'a> {
+fn module_name_join(module: &[String]) -> Document<'_> {
     let mut name = Vec::with_capacity(module.len() * 2);
     for (i, segment) in module.iter().enumerate() {
         if i != 0 {
@@ -275,7 +275,7 @@ where
 fn atom<'a>(value: String) -> Document<'a> {
     use regex::Regex;
     lazy_static! {
-        static ref RE: Regex = Regex::new(r"^[a-z][a-z0-9_@]*$").unwrap();
+        static ref RE: Regex = Regex::new(r"^[a-z][a-z0-9_@]*$").gleam_expect("Invalid regular expression");
     }
 
     match &*value {
@@ -290,7 +290,7 @@ fn atom<'a>(value: String) -> Document<'a> {
     }
 }
 
-fn string<'a>(value: &'a str) -> Document<'a> {
+fn string(value: &str) -> Document<'_> {
     value.to_doc().surround("<<\"", "\"/utf8>>")
 }
 
@@ -726,7 +726,7 @@ where
     elems.to_doc().nest_current().surround("[", "]").group()
 }
 
-fn collect_cons<'a, F, E, T>(e: T, elems: &'a mut Vec<E>, f: F) -> Option<T>
+fn collect_cons<F, E, T>(e: T, elems: &mut Vec<E>, f: F) -> Option<T>
 where
     F: Fn(T) -> ListType<E, T>,
 {
@@ -1160,7 +1160,7 @@ fn record_update<'a>(
 
 /// Wrap a document in begin end
 ///
-fn begin_end<'a>(document: Document<'a>) -> Document<'a> {
+fn begin_end(document: Document<'_>) -> Document<'_> {
     force_break()
         .append("begin")
         .append(line().append(document).nest(INDENT))

@@ -1,10 +1,13 @@
 use crate::error::{Error, StandardIOAction};
+use crate::GleamExpect;
 use std::io::Write;
 use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
 
 pub fn ask(question: &str) -> Result<String, Error> {
     print!("{}: ", question);
-    std::io::stdout().flush().unwrap();
+    std::io::stdout()
+        .flush()
+        .gleam_expect("Stdout::flush() failed to flush");
     let mut answer = String::new();
     let _ = std::io::stdin()
         .read_line(&mut answer)
@@ -38,11 +41,15 @@ pub fn print_green_prefix(prefix: &str, text: &str) {
     let mut buffer = buffer_writer.buffer();
     buffer
         .set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Green)))
-        .unwrap();
-    write!(buffer, "{}", prefix).unwrap();
-    buffer.set_color(&ColorSpec::new()).unwrap();
-    writeln!(buffer, " {}", text).unwrap();
-    buffer_writer.print(&buffer).unwrap();
+        .gleam_expect("BufferWriter::set_color() failed to set color");
+    write!(buffer, "{}", prefix).gleam_expect("BufferWriter::write() failed to write");
+    buffer
+        .set_color(&ColorSpec::new())
+        .gleam_expect("BufferWriter::set_color() failed to set color");
+    writeln!(buffer, " {}", text).gleam_expect("BufferWriter::write() failed to write");
+    buffer_writer
+        .print(&buffer)
+        .gleam_expect("BufferWriter::print() failed to print");
 }
 
 pub fn stderr_buffer_writer() -> BufferWriter {

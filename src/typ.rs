@@ -408,7 +408,7 @@ pub fn infer_module(
     for (_, value) in environment.module_values.iter() {
         if let Some(leaked) = value.typ.find_private_type() {
             return Err(Error::PrivateTypeLeak {
-                location: value.origin.clone(),
+                location: value.origin,
                 leaked,
             });
         }
@@ -1429,7 +1429,7 @@ pub fn register_import(
 
             // Determine local alias of imported module
             let module_name = match &as_name {
-                None => module[module.len() - 1].clone(),
+                None => module.get(module.len() - 1).gleam_expect("module did not have a last element").clone(),
                 Some(name) => name.clone(),
             };
 

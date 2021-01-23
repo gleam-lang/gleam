@@ -20,7 +20,7 @@ pub trait FileSystemWriter: Debug {
     fn open<'a>(&self, path: &'a Path) -> Result<WrappedWriter<'a>, Error>;
 }
 
-/// A FileWriter implementation that writes to the file system.
+/// A `FileWriter` implementation that writes to the file system.
 #[derive(Debug)]
 pub struct FileSystemAccessor;
 
@@ -60,7 +60,7 @@ impl FileSystemWriter for FileSystemAccessor {
 }
 
 pub trait Utf8Writer: std::fmt::Write {
-    /// A wrapper around fmt::Write that has Gleam's error handling.
+    /// A wrapper around `fmt::Write` that has Gleam's error handling.
     fn str_write(&mut self, str: &str) -> Result<(), Error> {
         let res = self.write_str(str);
         self.wrap_result(res)
@@ -85,7 +85,7 @@ impl Utf8Writer for String {
 }
 
 pub trait Writer: Write + Utf8Writer {
-    /// A wrapper around io::Write that has Gleam's error handling.
+    /// A wrapper around `io::Write` that has Gleam's error handling.
     fn write(&mut self, bytes: &[u8]) -> Result<(), Error> {
         let res = std::io::Write::write(self, bytes);
         self.wrap_result(res)

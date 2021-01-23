@@ -73,7 +73,7 @@ fn line_starts(src: &str) -> Vec<usize> {
 }
 
 // get the line number for a byte index
-fn line_no(line_starts: &Vec<usize>, byte_index: usize) -> usize {
+fn line_no(line_starts: &[usize], byte_index: usize) -> usize {
     line_starts
         .binary_search(&byte_index)
         .unwrap_or_else(|next_line| next_line - 1)

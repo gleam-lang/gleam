@@ -85,7 +85,10 @@ macro_rules! assert_warning {
         let _ = infer_module(&mut 0, ast, &HashMap::new(), &mut warnings);
 
         assert!(!warnings.is_empty());
-        assert_eq!($warning, warnings[0]);
+        assert_eq!(
+            &($warning),
+            warnings.get(0).gleam_expect("warnings is empty")
+        );
     };
 }
 
@@ -230,8 +233,8 @@ fn infer_module_type_retention_test() {
         type_info: (),
     };
     let mut uid = 0;
-    let module =
-        infer_module(&mut uid, module, &HashMap::new(), &mut vec![]).expect("Should infer OK");
+    let module = infer_module(&mut uid, module, &HashMap::new(), &mut vec![])
+        .gleam_expect("Should infer OK");
 
     assert_eq!(
         module.type_info,

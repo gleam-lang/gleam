@@ -15,6 +15,7 @@ use termcolor::Buffer;
 pub type Src = String;
 pub type Name = String;
 
+#[allow(clippy::expect_used)]
 pub fn fatal_compiler_bug(msg: &str) -> ! {
     let buffer_writer = cli::stderr_buffer_writer();
     let mut buffer = buffer_writer.buffer();
@@ -22,11 +23,15 @@ pub fn fatal_compiler_bug(msg: &str) -> ! {
     use termcolor::{Color, ColorSpec, WriteColor};
     buffer
         .set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Red)))
-        .unwrap();
-    write!(buffer, "error").unwrap();
-    buffer.set_color(ColorSpec::new().set_bold(true)).unwrap();
-    write!(buffer, ": Fatal compiler bug!\n\n").unwrap();
-    buffer.set_color(&ColorSpec::new()).unwrap();
+        .expect("Buffer::set_color() failed");
+    write!(buffer, "error").gleam_expect("write!() failed");
+    buffer
+        .set_color(ColorSpec::new().set_bold(true))
+        .expect("Buffer::set_color() failed");
+    write!(buffer, ": Fatal compiler bug!\n\n").gleam_expect("write!() failed");
+    buffer
+        .set_color(&ColorSpec::new())
+        .expect("write!() failed");
     writeln!(
         buffer,
         "This is a bug in the Gleam compiler, sorry!
@@ -37,8 +42,10 @@ with this information and the code that produces the crash:
 {}",
         msg
     )
-    .unwrap();
-    buffer_writer.print(&buffer).unwrap();
+    .expect("writeln!() failed");
+    buffer_writer
+        .print(&buffer)
+        .expect("BufferWriter::print() failed");
     std::process::exit(1);
 }
 
@@ -229,7 +236,7 @@ fn did_you_mean(name: &str, options: &mut Vec<String>, alt: &'static str) -> Str
     options.sort_by(|a, b| {
         strsim::levenshtein(a, name)
             .partial_cmp(&strsim::levenshtein(b, name))
-            .unwrap()
+            .gleam_expect("usizes were not comparable")
     });
 
     match options.get(0) {
@@ -239,13 +246,14 @@ fn did_you_mean(name: &str, options: &mut Vec<String>, alt: &'static str) -> Str
 }
 
 impl Error {
+    #[allow( clippy::unwrap_used)]
     pub fn pretty(&self, buffer: &mut Buffer) {
         use crate::typ::Error as TypeError;
         use std::io::Write;
 
         buffer
             .write_all(b"\n")
-            .expect("error pretty buffer write space before");
+            .gleam_expect("error pretty buffer write space before");
 
         match self {
             Error::InvalidProjectName { name, reason } => {
@@ -343,7 +351,7 @@ to a tar archive.
 This was error from the tar library:
 
     {}",
-                        path.to_str().unwrap(),
+                        path.to_str().gleam_expect("Path was not valid Unicode"),
                         err.to_string()
                     ),
                 };
@@ -390,7 +398,10 @@ This was error from the Hex client library:
                 let diagnostic = Diagnostic {
                     title: "App importing test module".to_string(),
                     label: "Imported here".to_string(),
-                    file: path.to_str().unwrap().to_string(),
+                    file: path
+                        .to_str()
+                        .gleam_expect("Path was not valid Unicode")
+                        .to_string(),
                     src: src.to_string(),
                     location: *location,
                 };
@@ -403,7 +414,7 @@ Test modules are not included in production builds so test modules
 cannot import them. Perhaps move the `{}` module to the src directory.",
                     src_module, test_module, test_module,
                 )
-                .unwrap();
+                .gleam_expect("writeln!() failed");
             }
 
             Error::DuplicateModule {
@@ -419,8 +430,8 @@ cannot import them. Perhaps move the `{}` module to the src directory.",
 First:  {}
 Second: {}",
                         module,
-                        first.to_str().expect("pretty error print PathBuf to_str"),
-                        second.to_str().expect("pretty error print PathBuf to_str"),
+                        first.to_str().gleam_expect("pretty error print PathBuf to_str"),
+                        second.to_str().gleam_expect("pretty error print PathBuf to_str"),
                     ),
                 };
                 write_project(buffer, diagnostic);
@@ -475,7 +486,10 @@ Second: {}",
 
                     let diagnostic = MultiLineDiagnostic {
                         title: title.to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         labels: unknown
                             .iter()
@@ -493,20 +507,20 @@ Second: {}",
                             buffer,
                             "This constructor does not accept any labelled arguments."
                         )
-                        .unwrap();
+                        .gleam_expect("writeln!() failed");
                     } else if other_labels.is_empty() {
                         writeln!(
                                 buffer,
                                 "You have already supplied all the labelled arguments that this constructor accepts."
                             )
-                            .unwrap();
+                            .gleam_expect("writeln!() failed");
                     } else {
                         writeln!(
                             buffer,
                             "The other labelled arguments that this constructor accepts are `{}`.",
                             other_labels.iter().join("`, `")
                         )
-                        .unwrap();
+                        .gleam_expect("writelen!() failed");
                     }
                 }
 
@@ -514,7 +528,10 @@ Second: {}",
                     let diagnostic = Diagnostic {
                         title: "Unexpected labelled argument".to_string(),
                         label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -526,14 +543,17 @@ This argument has been given a label but the constructor does not expect any.
 Please remove the label `{}`.",
                         label
                     )
-                    .unwrap();
+                    .gleam_expect("writeln!() failed");
                 }
 
                 TypeError::PositionalArgumentAfterLabelled { location } => {
                     let diagnostic = Diagnostic {
                         title: "Unexpected positional argument".to_string(),
                         label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -544,7 +564,7 @@ Please remove the label `{}`.",
 Once a labelled argument has been supplied all following arguments must
 also be labelled.",
                     )
-                    .unwrap();
+                    .gleam_expect("writeln!() failed");
                 }
 
                 TypeError::DuplicateName {
@@ -555,7 +575,10 @@ also be labelled.",
                 } => {
                     let diagnostic = MultiLineDiagnostic {
                         title: format!("Duplicate function definition with name `{}`", fun),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         labels: vec![
                             DiagnosticLabel {
@@ -565,7 +588,7 @@ also be labelled.",
                             },
                             DiagnosticLabel {
                                 label: "previously defined here".to_string(),
-                                location: previous_location.clone(),
+                                location: *previous_location,
                                 style: LabelStyle::Secondary,
                             },
                         ],
@@ -581,7 +604,10 @@ also be labelled.",
                 } => {
                     let diagnostic = MultiLineDiagnostic {
                         title: format!("Duplicate type definition with name `{}`", name),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         labels: vec![
                             DiagnosticLabel {
@@ -591,7 +617,7 @@ also be labelled.",
                             },
                             DiagnosticLabel {
                                 label: "previously defined here".to_string(),
-                                location: previous_location.clone(),
+                                location: *previous_location,
                                 style: LabelStyle::Secondary,
                             },
                         ],
@@ -603,7 +629,10 @@ also be labelled.",
                     let diagnostic = Diagnostic {
                         title: "Duplicate field".to_string(),
                         label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -620,7 +649,10 @@ also be labelled.",
                     let diagnostic = Diagnostic {
                         title: "Duplicate argument".to_string(),
                         label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -637,7 +669,10 @@ also be labelled.",
                     let diagnostic = Diagnostic {
                         title: "Recursive type".to_string(),
                         label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -648,7 +683,10 @@ also be labelled.",
                     let diagnostic = Diagnostic {
                         title: "Type mismatch".to_string(),
                         label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -677,7 +715,10 @@ also be labelled.",
                             &mut fields,
                             "This field does not exist",
                         ),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -713,7 +754,10 @@ also be labelled.",
                     let diagnostic = Diagnostic {
                         title: "Type mismatch".to_string(),
                         label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -746,7 +790,10 @@ Found type:
                     let diagnostic = Diagnostic {
                         title: "Incorrect arity".to_string(),
                         label: format!("expected {} arguments, got {}", expected, given),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -762,7 +809,10 @@ Found type:
                     let diagnostic = Diagnostic {
                         title: "Incorrect arity".to_string(),
                         label: format!("expected {} arguments, got {}", expected, given),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -786,7 +836,10 @@ Found type:
                     let diagnostic = Diagnostic {
                         title: "Unnecessary spread operator".to_string(),
                         label: format!(""),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -809,7 +862,10 @@ Found type:
                     let diagnostic = Diagnostic {
                         title: "Unknown type".to_string(),
                         label: did_you_mean(name, &mut types, ""),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -831,7 +887,10 @@ Found type:
                     let diagnostic = Diagnostic {
                         title: "Unknown variable".to_string(),
                         label: did_you_mean(name, &mut variables, ""),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -843,7 +902,10 @@ Found type:
                     let diagnostic = Diagnostic {
                         title: "Private type used in public interface".to_string(),
                         label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -876,7 +938,10 @@ Private types can only be used within the module that defines them.",
                     let diagnostic = Diagnostic {
                         title: "Unknown module".to_string(),
                         label: did_you_mean(name, &mut imported_modules, ""),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -899,7 +964,10 @@ Private types can only be used within the module that defines them.",
                     let diagnostic = Diagnostic {
                         title: "Unknown module type".to_string(),
                         label: did_you_mean(name, &mut type_constructors, ""),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -923,7 +991,10 @@ Private types can only be used within the module that defines them.",
                     let diagnostic = Diagnostic {
                         title: "Unknown module field".to_string(),
                         label: did_you_mean(name, &mut value_constructors, ""),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -952,7 +1023,10 @@ Private types can only be used within the module that defines them.",
                     let diagnostic = Diagnostic {
                         title: "Unknown module field".to_string(),
                         label: did_you_mean(name, &mut options, ""),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -974,7 +1048,10 @@ Private types can only be used within the module that defines them.",
                     let diagnostic = Diagnostic {
                         title: "Incorrect number of patterns".to_string(),
                         label: format!("expected {} patterns, got {}", expected, given),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -992,7 +1069,10 @@ Each clause must have a pattern for every subject value.",
                     let diagnostic = Diagnostic {
                         title: "Invalid guard variable".to_string(),
                         label: "is not locally defined".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -1010,7 +1090,10 @@ argument to the function. The variable `{}` is not defined locally.",
                     let diagnostic = Diagnostic {
                         title: "Extra alternative pattern variable".to_string(),
                         label: "has not been previously defined".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -1028,7 +1111,10 @@ pattern. This variable `{}` has not been previously defined.",
                     let diagnostic = Diagnostic {
                         title: "Duplicate variable in pattern".to_string(),
                         label: "has already been used".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -1050,7 +1136,10 @@ please use a guard clause instead e.g. (x, y) if x == y -> ...",
                     let diagnostic = Diagnostic {
                         title: "Out of bounds tuple index".to_string(),
                         label: "this index is too large".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -1070,7 +1159,10 @@ please use a guard clause instead e.g. (x, y) if x == y -> ...",
                     let diagnostic = Diagnostic {
                         title: "Out of bounds tuple index".to_string(),
                         label: "this index is too large".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -1090,7 +1182,10 @@ please use a guard clause instead e.g. (x, y) if x == y -> ...",
                     let diagnostic = Diagnostic {
                         title: "Type mismatch".to_string(),
                         label: "is not a tuple".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -1111,7 +1206,10 @@ please use a guard clause instead e.g. (x, y) if x == y -> ...",
                     let diagnostic = Diagnostic {
                         title: "Type mismatch".to_string(),
                         label: "what type is this?".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -1129,7 +1227,10 @@ about this type yet. Please add some type annotations so we can continue.",
                     let diagnostic = Diagnostic {
                         title: "Unknown type for record access".to_string(),
                         label: "I don't know what type this is".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -1149,7 +1250,10 @@ and try again.
                     let diagnostic = Diagnostic {
                         title: "Duplicate bit string type option".to_string(),
                         label: "given here".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -1161,7 +1265,10 @@ and try again.
                     let diagnostic = Diagnostic {
                         title: "Duplicate bit string signedness".to_string(),
                         label: "redefined here".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -1173,7 +1280,10 @@ and try again.
                     let diagnostic = Diagnostic {
                         title: "Duplicate bit string endianness".to_string(),
                         label: "redefined here".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -1185,7 +1295,10 @@ and try again.
                     let diagnostic = Diagnostic {
                         title: "Duplicate bit string size".to_string(),
                         label: "redefined here".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -1197,7 +1310,10 @@ and try again.
                     let diagnostic = Diagnostic {
                         title: "Duplicate bit string unit".to_string(),
                         label: "redefined here".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -1209,7 +1325,10 @@ and try again.
                     let diagnostic = Diagnostic {
                         title: "Unit cannot be specified for given type".to_string(),
                         label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -1227,7 +1346,10 @@ This segment has a type of {}.",
                     let diagnostic = Diagnostic {
                         title: "Bit string segment without required size".to_string(),
                         label: "specified here".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -1244,7 +1366,10 @@ at the end of a bin pattern",
                     let diagnostic = Diagnostic {
                         title: "Invalid record constructor".to_string(),
                         label: "This is not a record constructor".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -1261,7 +1386,10 @@ at the end of a bin pattern",
                     let diagnostic = Diagnostic {
                         title: "Unexpected type hole".to_string(),
                         label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -1278,7 +1406,10 @@ at the end of a bin pattern",
                     let diagnostic = Diagnostic {
                         title: "Incorrect type specifier in bit string segment".to_string(),
                         label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("Path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -1431,12 +1562,15 @@ When matching you need to use the `{}_codepoint` specifier instead.",
                     title: "Syntax error".to_string(),
                     label: label.to_string(),
                     location: adjusted_location,
-                    file: path.to_str().unwrap().to_string(),
+                    file: path
+                        .to_str()
+                        .gleam_expect("Path was not valid Unicode")
+                        .to_string(),
                     src: src.to_string(),
                 };
                 write(buffer, diagnostic, Severity::Error);
                 if !extra.is_empty() {
-                    writeln!(buffer, "{}", extra.join("\n")).expect("error pretty buffer write");
+                    writeln!(buffer, "{}", extra.join("\n")).gleam_expect("error pretty buffer write");
                 }
             }
 
@@ -1485,7 +1619,10 @@ cycle to continue."
                 let diagnostic = Diagnostic {
                     title: "Unknown import".to_string(),
                     label: did_you_mean(import, &mut modules, ""),
-                    file: path.to_str().unwrap().to_string(),
+                    file: path
+                        .to_str()
+                        .gleam_expect("Path was not valid Unicode")
+                        .to_string(),
                     src: src.to_string(),
                     location: *location,
                 };
@@ -1496,7 +1633,7 @@ cycle to continue."
 but it cannot be found.",
                     module, import
                 )
-                .expect("error pretty buffer write");
+                .gleam_expect("error pretty buffer write");
             }
 
             Error::StandardIO { action, err } => {
@@ -1542,7 +1679,9 @@ but it cannot be found.",
         let buffer_writer = cli::stderr_buffer_writer();
         let mut buffer = buffer_writer.buffer();
         self.pretty(&mut buffer);
-        buffer_writer.print(&buffer).unwrap();
+        buffer_writer
+            .print(&buffer)
+            .gleam_expect("BufferWriter::print() failed to print");
     }
 }
 
@@ -1595,9 +1734,11 @@ fn import_cycle(buffer: &mut Buffer, modules: &[String]) {
         write!(buffer, "    │    ").unwrap();
         buffer
             .set_color(ColorSpec::new().set_fg(Some(Color::Cyan)))
-            .unwrap();
-        writeln!(buffer, "{}", name).unwrap();
-        buffer.set_color(&ColorSpec::new()).unwrap();
+            .gleam_expect("Buffer::set_color() failed");
+        writeln!(buffer, "{}", name).gleam_expect("Buffer::write failed");
+        buffer
+            .set_color(&ColorSpec::new())
+            .gleam_expect("Buffer::write failed");
     }
-    writeln!(buffer, "    └─────┘\n").unwrap();
+    writeln!(buffer, "    └─────┘\n").gleam_expect("Buffer::write failed");
 }

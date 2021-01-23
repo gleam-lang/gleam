@@ -1,3 +1,4 @@
+use crate::GleamExpect;
 use crate::{
     cli,
     diagnostic::{write, Diagnostic, Severity},
@@ -24,7 +25,7 @@ impl Warning {
 
         buffer
             .write_all(b"\n")
-            .expect("error pretty buffer write space before");
+            .gleam_expect("Buffer::write() could not write");
 
         match self {
             Self::Type { path, src, warning } => match warning {
@@ -32,7 +33,10 @@ impl Warning {
                     let diagnostic = Diagnostic {
                         title: "Todo found".to_string(),
                         label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -54,7 +58,10 @@ your program.",
                     let diagnostic = Diagnostic {
                         title: "Unused result value".to_string(),
                         label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -70,7 +77,10 @@ variable _ if you are sure the error does not matter.")
                     let diagnostic = Diagnostic {
                         title: "Unused literal".to_string(),
                         label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -86,7 +96,10 @@ variable _ if you are sure the error does not matter.")
                     let diagnostic = Diagnostic {
                         title: "Fieldless record update".to_string(),
                         label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -101,7 +114,10 @@ record without modification. Add some fields or remove this update.")
                     let diagnostic = Diagnostic {
                         title: "Redundant record update".to_string(),
                         label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -116,7 +132,10 @@ be an update. Remove the update or remove fields that need to be copied.")
                     let diagnostic = Diagnostic {
                         title: "Unused type".to_string(),
                         label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -133,7 +152,10 @@ be an update. Remove the update or remove fields that need to be copied.")
                     let diagnostic = Diagnostic {
                         title: "Unused constructor".to_string(),
                         label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
+                        file: path
+                            .to_str()
+                            .gleam_expect("path was not valid Unicode")
+                            .to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
@@ -153,7 +175,7 @@ be an update. Remove the update or remove fields that need to be copied.")
         let buffer_writer = cli::stderr_buffer_writer();
         let mut buffer = buffer_writer.buffer();
         self.pretty(&mut buffer);
-        buffer_writer.print(&buffer).unwrap();
+        buffer_writer.print(&buffer).gleam_expect("BufferWriter::print() failed to print");
     }
 }
 

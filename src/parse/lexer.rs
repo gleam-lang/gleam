@@ -1,3 +1,4 @@
+use crate::GleamExpect;
 use crate::parse::error::{LexicalError, LexicalErrorType};
 use crate::parse::token::Tok;
 use std::char;
@@ -36,7 +37,7 @@ pub fn str_to_keyword(word: &str) -> Option<Tok> {
     }
 }
 
-pub fn make_tokenizer<'a>(source: &'a str) -> impl Iterator<Item = LexResult> + 'a {
+pub fn make_tokenizer(source: &str) -> impl Iterator<Item = LexResult> + '_ {
     let nlh = NewlineHandler::new(source.char_indices());
     Lexer::new(nlh)
 }
@@ -450,7 +451,7 @@ where
         let start_pos = self.get_pos();
 
         while self.is_name_continuation() {
-            name.push(self.next_char().unwrap());
+            name.push(self.next_char().gleam_expect("Lexer::next_char() failed"));
         }
         let end_pos = self.get_pos();
 
@@ -462,13 +463,14 @@ where
             Ok((start_pos, Tok::Name { name }, end_pos))
         }
     }
+
     // A type name or constructor
     fn lex_upname(&mut self) -> LexResult {
         let mut name = String::new();
         let start_pos = self.get_pos();
 
         while self.is_upname_continuation() {
-            name.push(self.next_char().unwrap());
+            name.push(self.next_char().gleam_expect("Lexer::next_char() failed"));
         }
         let end_pos = self.get_pos();
 
@@ -541,14 +543,14 @@ where
         let mut value = String::new();
         // consume negative sign
         if self.chr0 == Some('-') {
-            value.push(self.next_char().unwrap());
+            value.push(self.next_char().gleam_expect("Lexer::next_char() failed"));
         }
         // consume first run of digits
         value.push_str(&self.radix_run(10));
 
         // If float:
         if self.chr0 == Some('.') {
-            value.push(self.next_char().unwrap());
+            value.push(self.next_char().gleam_expect("Lexer::next_char() failed"));
             value.push_str(&self.radix_run(10));
             let end_pos = self.get_pos();
             Ok((start_pos, Tok::Float { value }, end_pos))
@@ -582,13 +584,14 @@ where
         let take_char = Lexer::<T>::is_digit_of_radix(self.chr0, radix);
 
         if take_char {
-            Some(self.next_char().unwrap())
+            self.next_char()
         } else {
             None
         }
     }
 
     // Test if a digit is of a certain radix.
+    #[allow(clippy::unimplemented)]
     fn is_digit_of_radix(c: Option<char>, radix: u32) -> bool {
         match radix {
             2 => matches!(c, Some('0'..='1')),
@@ -694,7 +697,9 @@ where
     // advance the stream and emit a token
     fn eat_single_char(&mut self, ty: Tok) {
         let tok_start = self.get_pos();
-        let _ = self.next_char().unwrap();
+        let _ = self
+            .next_char()
+            .gleam_expect("Lexer::next_char() failed to advance");
         let tok_end = self.get_pos();
         self.emit((tok_start, ty, tok_end));
     }
@@ -711,7 +716,7 @@ where
             None => {
                 // EOF needs a single advance
                 self.loc0 = self.loc1;
-                self.loc1 = self.loc1 + 1;
+                self.loc1 += 1;
                 None
             }
         };

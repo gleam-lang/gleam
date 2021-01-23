@@ -1,4 +1,5 @@
 use super::Error;
+use crate::GleamExpect;
 use crate::ast::{CallArg, SrcSpan};
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
@@ -70,9 +71,12 @@ impl FieldMap {
 
         let mut i = 0;
         while i < args.len() {
-            let (label, location) = match &args[i].label {
+            let (label, location) = match &args.get(i).gleam_expect("could not get args[i]").label {
                 // A labelled argument, we may need to reposition it in the array vector
-                Some(l) => (l, &args[i].location),
+                Some(l) => (
+                    l,
+                    &args.get(i).gleam_expect("could not get args[i]").location,
+                ),
 
                 // Not a labelled argument
                 None => {

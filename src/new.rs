@@ -8,10 +8,10 @@ use std::io::Write;
 use std::path::PathBuf;
 use strum_macros::{Display, EnumString, EnumVariantNames};
 
-const GLEAM_STDLIB_VERSION: &'static str = "0.13.0";
-const GLEAM_OTP_VERSION: &'static str = "0.1.0";
-const ERLANG_OTP_VERSION: &'static str = "22.1";
-const PROJECT_VERSION: &'static str = "1.0.0";
+const GLEAM_STDLIB_VERSION: &str = "0.13.0";
+const GLEAM_OTP_VERSION: &str = "0.1.0";
+const ERLANG_OTP_VERSION: &str = "22.1";
+const PROJECT_VERSION: &str = "1.0.0";
 
 #[derive(Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy)]
 #[strum(serialize_all = "kebab_case")]
@@ -445,7 +445,7 @@ The rebar3 program can be used to compile and test it.
     rebar3 eunit
 ",
         creator.options.name,
-        creator.root.to_str().expect("Unable to display path")
+        creator.root.to_str().gleam_expect("Unable to display path")
     );
     Ok(())
 }
@@ -453,7 +453,7 @@ The rebar3 program can be used to compile and test it.
 fn write(path: PathBuf, contents: &str) -> Result<()> {
     println!(
         "* creating {}",
-        path.to_str().expect("Unable to display write path")
+        path.to_str().gleam_expect("Unable to display write path")
     );
     let mut f = File::create(&*path).map_err(|err| Error::FileIO {
         kind: FileKind::File,

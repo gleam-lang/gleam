@@ -148,7 +148,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 Pattern::Var { .. } if typed_segment.typ() == Some(string()) => {
                     Err(Error::UTFVarInBitStringSegment {
                         location,
-                        option: typed_segment.typ.unwrap().label(),
+                        option: typed_segment.typ.gleam_expect("typed_segment lacked a type").label(),
                     })
                 }
                 _ => Ok(typed_segment.typ().unwrap_or_else(int)),
@@ -259,7 +259,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 tail,
             } => match typ.get_app_args(true, &[], "List", 1, self.environment) {
                 Some(args) => {
-                    let head = Box::new(self.unify(*head, args[0].clone())?);
+                    let head = Box::new(self.unify(*head, args.get(0).gleam_expect("args is empty").clone())?);
                     let tail = Box::new(self.unify(*tail, typ)?);
 
                     Ok(Pattern::Cons {
@@ -377,9 +377,9 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                                 let new_call_arg = CallArg {
                                     value: Pattern::Discard {
                                         name: "_".to_string(),
-                                        location: spread_location.clone(),
+                                        location: spread_location,
                                     },
-                                    location: spread_location.clone(),
+                                    location: spread_location,
                                     label: None,
                                 };
 

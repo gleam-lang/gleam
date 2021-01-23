@@ -1,3 +1,4 @@
+use crate::GleamExpect;
 use crate::ast::SrcSpan;
 
 #[derive(Debug, PartialEq)]
@@ -29,7 +30,10 @@ impl<'a> From<(&SrcSpan, &'a str)> for Comment<'a> {
     fn from(src: (&SrcSpan, &'a str)) -> Comment<'a> {
         Comment {
             start: src.0.start,
-            content: &src.1[src.0.start..src.0.end],
+            content: src
+                .1
+                .get(src.0.start..src.0.end)
+                .gleam_expect("(src.0.start..src.0.end) is out of bounds for src.1"),
         }
     }
 }

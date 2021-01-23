@@ -6,7 +6,6 @@
     clippy::todo,
     clippy::empty_enum,
     clippy::enum_glob_use,
-    clippy::mem_forget,
     // TODO: enable once the false positive bug is solved
     // clippy::use_self,
     clippy::filter_map_next,
@@ -14,7 +13,6 @@
     clippy::needless_borrow,
     clippy::match_wildcard_for_single_variants,
     clippy::if_let_mutex,
-    clippy::mismatched_target_os,
     clippy::await_holding_lock,
     clippy::match_on_vec_items,
     clippy::imprecise_flops,
@@ -33,7 +31,6 @@
     missing_copy_implementations,
     trivial_casts,
     trivial_numeric_casts,
-    unstable_features,
     nonstandard_style,
     unused_import_braces,
     unused_qualifications,
@@ -43,7 +40,6 @@
     clippy::unimplemented,
     clippy::expect_used,
     clippy::unwrap_used,
-    clippy::ok_expect,
     clippy::integer_division,
     clippy::indexing_slicing,
     clippy::mem_forget

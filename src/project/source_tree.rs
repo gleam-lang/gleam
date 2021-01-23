@@ -129,12 +129,17 @@ impl SourceTree {
         let name = input
             .path
             .strip_prefix(&input.source_base_path)
-            .unwrap()
+            .gleam_expect("the path does not start with the source base path")
             .parent()
-            .unwrap()
-            .join(input.path.file_stem().unwrap())
+            .gleam_expect("the stripped path terminates in root or a prefix")
+            .join(
+                input
+                    .path
+                    .file_stem()
+                    .gleam_expect("the path did not have a filename"),
+            )
             .to_str()
-            .unwrap()
+            .gleam_expect("the path is not valid Unicode")
             .to_string()
             .replace("\\", "/");
 
