@@ -1668,48 +1668,47 @@ fn collect_type_var_usages<'a>(
 }
 
 fn erl_safe_type_name(name: String) -> String {
-    let built_ins = vec![
-        "any",
-        "atom",
-        "none",
-        "pid",
-        "port",
-        "reference",
-        "float",
-        "fun",
-        "integer",
-        "list",
-        "nonempty_improper_list",
-        "tuple",
-        "term",
-        "binary",
-        "bitstring",
-        "boolean",
-        "byte",
-        "char",
-        "nil",
-        "number",
-        "list",
-        "maybe_improper_list",
-        "nonempty_list",
-        "string",
-        "nonempty_string",
-        "iodata",
-        "iolist",
-        "map",
-        "function",
-        "module",
-        "mfa",
-        "arity",
-        "identifier",
-        "node",
-        "timeout",
-        "no_return",
-        "non_neg_integer",
-        "pos_integer",
-        "neg_integer",
-    ];
-    if built_ins.contains(&name.as_str()) {
+    if matches!(
+        name.as_str(),
+        "any"
+            | "atom"
+            | "none"
+            | "pid"
+            | "port"
+            | "reference"
+            | "float"
+            | "fun"
+            | "integer"
+            | "list"
+            | "nonempty_improper_list"
+            | "tuple"
+            | "term"
+            | "binary"
+            | "bitstring"
+            | "boolean"
+            | "byte"
+            | "char"
+            | "nil"
+            | "number"
+            | "maybe_improper_list"
+            | "nonempty_list"
+            | "string"
+            | "nonempty_string"
+            | "iodata"
+            | "iolist"
+            | "map"
+            | "function"
+            | "module"
+            | "mfa"
+            | "arity"
+            | "identifier"
+            | "node"
+            | "timeout"
+            | "no_return"
+            | "non_neg_integer"
+            | "pos_integer"
+            | "neg_integer"
+    ) {
         format!("gleam@{}", name)
     } else {
         name
