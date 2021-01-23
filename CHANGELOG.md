@@ -10,6 +10,7 @@
   command line tool style program.
 - A warning is emitted when a literal value is constructed but not used.
 - Automatically generate a link to repository in docs if available.
+- Gleam now generates erlang typespecs.
 
 ## v0.13.2 - 2020-01-14
 
@@ -44,7 +45,7 @@
 - Fixed a bug where the formatter would incorrectly remove blocks around some
   binary operators.
 - Constants can now be defined after they are used in functions
-- The parser has been rewitten from scratch, dramatically improving error 
+- The parser has been rewitten from scratch, dramatically improving error
   messages and compilation times.
 - `1-1` and `a-1` are now parsed as `1 - 1` and `a - 1`
 - Further information has been added to the error messages when a function
@@ -79,7 +80,9 @@
   from Hex.
 
 ## v0.12.0-rc3 - 2020-10-24
+
 ## v0.12.0-rc2 - 2020-10-24
+
 ## v0.12.0-rc1 - 2020-10-24
 
 - The utf8, utf16, and utf32 type specifiers are now only available in bit

@@ -92,8 +92,10 @@ impl<'env> Env<'env> {
                 let _ = self.erl_function_scope_vars.insert(name.clone(), 0);
                 Document::String(variable_name(&name))
             }
-            Some(0) => Document::String(variable_name(name)),
-            Some(n) => Document::String(variable_name(name)).append("@").append(*n),
+            Some(0) => Document::String(variable_name(&name)),
+            Some(n) => Document::String(variable_name(&name))
+                .append("@")
+                .append(*n),
         }
     }
 
@@ -192,7 +194,7 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
                 // Type definition
                 let args = concat(
                     args.iter()
-                        .map(|p| variable_name(p).to_doc())
+                        .map(|p| Document::String(variable_name(p)))
                         .intersperse(", ".to_doc()),
                 );
 
@@ -251,7 +253,7 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
                     constructors
                         .iter()
                         .map(|c| {
-                            let name = c.name.to_snake_case().to_doc();
+                            let name = Document::String(c.name.to_snake_case());
                             if c.args.is_empty() {
                                 name
                             } else {
@@ -425,7 +427,11 @@ where
         .group()
 }
 
-fn fun_spec(name: &str, args: impl Iterator<Item = Document>, retrn: Document) -> Document {
+fn fun_spec<'a>(
+    name: &str,
+    args: impl Iterator<Item = Document<'a>>,
+    retrn: Document<'a>,
+) -> Document<'a> {
     "-spec "
         .to_doc()
         .append(atom(name.to_string()))
@@ -1505,13 +1511,12 @@ fn external_fun<'a>(
     let spec = fun_spec(name, args_spec, return_spec);
 
     spec.append(atom(name.to_string())).append(
-        format!("({}) ->", chars)
-            .to_doc()
+        Document::String(format!("({}) ->", chars))
             .append(line())
             .append(atom(module.to_string()))
             .append(":")
             .append(atom(fun.to_string()))
-            .append(format!("({}).", chars))
+            .append(Document::String(format!("({}).", chars)))
             .nest(INDENT)
             .group(),
     )
