@@ -997,7 +997,7 @@ funky() ->
 
 -export_type([person/0]).
 
--type person() :: {person, unicode:unicode_binary(), integer()}.
+-type person() :: {person, binary(), integer()}.
 
 
 "
@@ -1020,7 +1020,7 @@ funky() ->
 get_age(Person) ->
     erlang:element(3, Person).
 
--spec get_name(one:person()) -> unicode:unicode_binary().
+-spec get_name(one:person()) -> binary().
 get_name(Person) ->
     erlang:element(2, Person).
 "
@@ -1053,7 +1053,7 @@ get_name(Person) ->
 
 -export_type([person/0]).
 
--type person() :: {person, unicode:unicode_binary(), integer()}.
+-type person() :: {person, binary(), integer()}.
 
 
 "
@@ -1099,7 +1099,7 @@ get_name(Person) ->
                 text: "-module(one).
 -compile(no_auto_import).
 
--export_type([person/0]).\n\n-type person() :: {person, unicode:unicode_binary(), integer()}.
+-export_type([person/0]).\n\n-type person() :: {person, binary(), integer()}.
 
 
 "
@@ -1637,7 +1637,7 @@ fn x() { one.A }"
 
 -export_type([a/0]).
 
--type a() :: {a, unicode:unicode_binary()}.
+-type a() :: {a, binary()}.
 
 
 "
@@ -1648,7 +1648,7 @@ fn x() { one.A }"
                 text: "-module(two).
 -compile(no_auto_import).
 
--spec x() -> fun((unicode:unicode_binary()) -> one:a()).
+-spec x() -> fun((binary()) -> one:a()).
 x() ->
     fun(A) -> {a, A} end.
 "

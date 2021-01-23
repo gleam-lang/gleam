@@ -881,7 +881,7 @@ pub fn get_name(person: Person) { person.name }"
 
 -export_type([person/0]).
 
--type person() :: {person, unicode:unicode_binary(), integer()}.
+-type person() :: {person, binary(), integer()}.
 
 
 ".to_string(),
@@ -897,7 +897,7 @@ pub fn get_name(person: Person) { person.name }"
 get_age(Person) ->
     erlang:element(3, Person).
 
--spec get_name(one:person()) -> unicode:unicode_binary().
+-spec get_name(one:person()) -> binary().
 get_name(Person) ->
     erlang:element(2, Person).
 ".to_string(),
@@ -935,7 +935,7 @@ type Two = one.Person"
 
 -export_type([person/0]).
 
--type person() :: {person, unicode:unicode_binary(), integer()}.
+-type person() :: {person, binary(), integer()}.
 
 
 ".to_string(),
@@ -976,7 +976,7 @@ type Two = Person"
 
 -export_type([person/0]).
 
--type person() :: {person, unicode:unicode_binary(), integer()}.
+-type person() :: {person, binary(), integer()}.
 
 
 ".to_string(),
@@ -1297,7 +1297,7 @@ pub fn main(arg1, arg2, arg3) {
 
 -export([main/3]).
 
--spec main(unicode:unicode_binary(), float(), integer()) -> integer().
+-spec main(binary(), float(), integer()) -> integer().
 main(Arg1, Arg2, Arg3) ->
     case {Arg1, Arg2, Arg3} of
         {X, Y, Z} when ((X =:= <<\"constant value\"/utf8>>) andalso (Y > 3.14)) andalso (Z =:= 42) ->

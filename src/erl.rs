@@ -1738,9 +1738,9 @@ impl Type {
             } => {
                 if module.is_empty() {
                     match name.as_ref() {
-                        "Nil" => "nil()".to_doc(),
+                        "Nil" => "nil".to_doc(),
                         "Int" | "UtfCodepoint" => "integer()".to_doc(),
-                        "String" => "unicode:unicode_binary()".to_doc(),
+                        "String" => "binary()".to_doc(),
                         "Bool" => "boolean()".to_doc(),
                         "Float" => "float()".to_doc(),
                         "BitString" => "bitstring()".to_doc(),

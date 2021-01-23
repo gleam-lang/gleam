@@ -16,7 +16,7 @@ fn record_definition_test() {
 
 macro_rules! assert_erl {
     ($src:expr, $erl:expr $(,)?) => {
-        println!("\n\n\n{}\n", $src);
+        // println!("\n\n\n{}\n", $src);
         let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["the_app".to_string()];
         let ast =
@@ -118,7 +118,7 @@ main(X) ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
--spec go() -> nil().
+-spec go() -> nil.
 go() ->
     _ = 1,
     _ = 2,
@@ -569,7 +569,7 @@ fn create_user(user_id) { User(age: 22, id: user_id, name: "") }
 
 -export_type([user/0]).
 
--type user() :: {user, integer(), unicode:unicode_binary(), integer()}.
+-type user() :: {user, integer(), binary(), integer()}.
 
 -spec create_user(integer()) -> the_app:user().
 create_user(User_id) ->
@@ -727,7 +727,7 @@ pub fn bitstring_discard(x: String) -> Bool {
 
 -export([bitstring_discard/1]).
 
--spec bitstring_discard(unicode:unicode_binary()) -> boolean().
+-spec bitstring_discard(binary()) -> boolean().
 bitstring_discard(X) ->
     case X of
         <<_/utf8, Rest/binary>> ->
@@ -752,7 +752,7 @@ pub fn bitstring_discard(x: String) -> Bool {
 
 -export([bitstring_discard/1]).
 
--spec bitstring_discard(unicode:unicode_binary()) -> boolean().
+-spec bitstring_discard(binary()) -> boolean().
 bitstring_discard(X) ->
     case X of
         <<_/utf8, Rest/binary>> ->
@@ -1432,13 +1432,13 @@ pub fn get_name(person: Person) { person.name }
 -export([get_age/1, get_name/1]).
 -export_type([person/0]).
 
--type person() :: {person, unicode:unicode_binary(), integer()}.
+-type person() :: {person, binary(), integer()}.
 
 -spec get_age(the_app:person()) -> integer().
 get_age(Person) ->
     erlang:element(3, Person).
 
--spec get_name(the_app:person()) -> unicode:unicode_binary().
+-spec get_name(the_app:person()) -> binary().
 get_name(Person) ->
     erlang:element(2, Person).
 "#,
@@ -1807,7 +1807,7 @@ pub fn main(arg) {
 
 -export([main/1]).
 
--spec main(unicode:unicode_binary()) -> integer().
+-spec main(binary()) -> integer().
 main(Arg) ->
     case Arg of
         _ when Arg =:= <<"constant value"/utf8>> ->
@@ -1924,12 +1924,7 @@ pub fn main(arg) {
 
 -export([main/1]).
 
--spec main(
-    {{integer(), float(), unicode:unicode_binary()},
-     unicode:unicode_binary(),
-     float(),
-     integer()}
-) -> integer().
+-spec main({{integer(), float(), binary()}, binary(), float(), integer()}) -> integer().
 main(Arg) ->
     _ = [1, 2, 3],
     case Arg of
@@ -2102,7 +2097,7 @@ fn main() {
 
 -export_type([person/0]).
 
--type person() :: {person, unicode:unicode_binary(), integer()}.
+-type person() :: {person, binary(), integer()}.
 
 -spec main() -> the_app:person().
 main() ->
@@ -2128,7 +2123,7 @@ fn main() {
 
 -export_type([person/0]).
 
--type person() :: {person, unicode:unicode_binary(), integer()}.
+-type person() :: {person, binary(), integer()}.
 
 -spec main() -> the_app:person().
 main() ->
@@ -2154,7 +2149,7 @@ fn main() {
 
 -export_type([person/0]).
 
--type person() :: {person, unicode:unicode_binary(), integer()}.
+-type person() :: {person, binary(), integer()}.
 
 -spec main() -> the_app:person().
 main() ->
@@ -2294,7 +2289,7 @@ fn main() {
         r#"-module(the_app).
 -compile(no_auto_import).
 
--spec main() -> unicode:unicode_binary().
+-spec main() -> binary().
 main() ->
     Key = 10,
     X = [{10, 2}, {1, 2}],
@@ -2345,7 +2340,7 @@ fn variable_name_underscores_preserved() {
 
 -export([a/1]).
 
--spec a(unicode:unicode_binary()) -> unicode:unicode_binary().
+-spec a(binary()) -> binary().
 a(Name_) ->
     Name__ = Name_,
     Name = Name__,
