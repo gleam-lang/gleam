@@ -55,7 +55,7 @@
     </div>
     <div class="custom-type-constructors">
       <div class="rendered-markdown">{{ typ.documentation|safe }}</div>
-      <pre>{{ typ.definition }}</pre>
+      <pre><code class="language-gleam hljs gleam">{{ typ.definition }}</code></pre>
       {% if !typ.constructors.is_empty() %}
       <h3>
         Constructors
@@ -63,7 +63,7 @@
       <ul>
         {% for constructor in typ.constructors %}
         <li>
-          <code class="constructor-name">{{ constructor.definition }}</code>
+          <code class="constructor-name language-gleam hljs gleam">{{ constructor.definition }}</code>
           {{ constructor.documentation|safe }}
         </li>
         {% endfor %}
@@ -95,7 +95,7 @@
       </a>
       {% endif %}
     </div>
-    <pre>{{ constant.definition }}</pre>
+    <pre><code class="language-gleam hljs gleam">{{ constant.definition }}</code></pre>
     <div class="rendered-markdown">{{ constant.documentation|safe }}</div>
   </div>
   {% endfor %}
@@ -121,7 +121,7 @@
       </a>
       {% endif %}
     </div>
-    <pre>{{ function.signature }}</pre>
+    <pre><code class="language-gleam hljs gleam">{{ function.signature }}</code></pre>
     <div class="rendered-markdown">{{ function.documentation|safe }}</div>
   </div>
   {% endfor %}
