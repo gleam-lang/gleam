@@ -100,8 +100,10 @@ pub fn generate_html(
     let links = doc_links
         .chain(repo_link.into_iter())
         .collect::<Vec<Link>>();
+
     // index.css
-    let num_asset_files = 1;
+    // highlightjs-gleam.js
+    let num_asset_files = 2;
     let mut files = Vec::with_capacity(analysed.len() + pages.len() + 1 + num_asset_files);
 
     let mut modules_links: Vec<_> = modules
@@ -201,6 +203,11 @@ pub fn generate_html(
     files.push(OutputFile {
         path: output_dir.join("index.css"),
         text: std::include_str!("../templates/index.css").to_string(),
+    });
+
+    files.push(OutputFile {
+        path: output_dir.join("highlightjs-gleam.js"),
+        text: std::include_str!("../templates/highlightjs-gleam.js").to_string(),
     });
 
     files
