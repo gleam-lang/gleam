@@ -29,7 +29,7 @@ impl ModuleDecoder {
     pub fn read_module(&mut self, reader: impl BufRead) -> Result<Module> {
         let message_reader =
             capnp::serialize_packed::read_message(reader, capnp::message::ReaderOptions::new())?;
-        let module = message_reader.get_root::<schema::module::Reader>()?;
+        let module = message_reader.get_root::<schema::module::Reader<'_>>()?;
 
         Ok(Module {
             name: self.name(&module)?,
@@ -39,7 +39,7 @@ impl ModuleDecoder {
         })
     }
 
-    fn name(&self, module: &schema::module::Reader) -> Result<Vec<String>> {
+    fn name(&self, module: &schema::module::Reader<'_>) -> Result<Vec<String>> {
         let name = module
             .get_name()?
             .iter()
@@ -48,15 +48,24 @@ impl ModuleDecoder {
         Ok(name)
     }
 
-    fn types(&self, module: &schema::module::Reader) -> Result<HashMap<String, TypeConstructor>> {
+    fn types(
+        &self,
+        module: &schema::module::Reader<'_>,
+    ) -> Result<HashMap<String, TypeConstructor>> {
         todo!()
     }
 
-    fn values(&self, module: &schema::module::Reader) -> Result<HashMap<String, ValueConstructor>> {
+    fn values(
+        &self,
+        module: &schema::module::Reader<'_>,
+    ) -> Result<HashMap<String, ValueConstructor>> {
         todo!()
     }
 
-    fn accessors(&self, module: &schema::module::Reader) -> Result<HashMap<String, AccessorsMap>> {
+    fn accessors(
+        &self,
+        module: &schema::module::Reader<'_>,
+    ) -> Result<HashMap<String, AccessorsMap>> {
         todo!()
     }
 }
