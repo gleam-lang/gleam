@@ -1174,22 +1174,6 @@ where
         let (_, name, _) = self.expect_name()?;
         let _ = self.expect_one(&Tok::Lpar)?;
         let args = Parser::series_of(self, &Parser::parse_external_fn_param, Some(&Tok::Comma))?;
-        let typed_args = args
-            .clone()
-            .into_iter()
-            .map(|a| Arg {
-                names: if let Some(name) = a.label {
-                    ArgNames::Named { name }
-                } else {
-                    ArgNames::Discard {
-                        name: "".to_string(),
-                    }
-                },
-                location: a.location,
-                annotation: Some(a.typ),
-                typ: (),
-            })
-            .collect();
         let _ = self.expect_one(&Tok::Rpar)?;
         let (arr_s, arr_e) = self.expect_one(&Tok::RArrow)?;
         let return_annotation = self.parse_type(false)?;
