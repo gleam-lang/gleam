@@ -42,7 +42,7 @@ jobs:
       - name: Build container image
         run: docker build --file containers/${{ matrix.base-image }}.dockerfile --tag the-image .
 
-      - name: BuilPush image
+      - name: Push image
         run: |
           IMAGE_ID_BASE=ghcr.io/${{ github.repository }}/gleam
 
@@ -56,7 +56,7 @@ jobs:
           [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
 
           # Prepare the tag
-          TAG=$IMAGE_ID_BASE:$VERSION-{{ $matrix.base-image }}
+          TAG=$IMAGE_ID_BASE:$VERSION-${{ matrix.base-image }}
           echo TAG=$TAG
 
           # Push the image to the registry under the tag
