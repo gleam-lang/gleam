@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests;
 
+use crate::error::fatal_compiler_bug;
 use crate::{
     ast::*,
     error::GleamExpect,
@@ -404,7 +405,7 @@ fn pattern_segment<'a>(
         | Pattern::Float { .. } => pattern(value, env),
 
         // No other pattern variants are allowed in pattern bit string segments
-        _ => crate::error::fatal_compiler_bug("Pattern segment match not recognised"),
+        _ => fatal_compiler_bug("Pattern segment match not recognised"),
     };
 
     let size =
@@ -445,7 +446,7 @@ where
 
     for option in options.iter() {
         use BitStringSegmentOption as Opt;
-        if !others.is_empty() && !matches!(option, Opt::Size {..}|Opt::Unit{..}) {
+        if !others.is_empty() && !matches!(option, Opt::Size { .. } | Opt::Unit { .. }) {
             others.push("-".to_doc());
         }
         match option {
@@ -653,10 +654,16 @@ fn pattern<'a>(p: &'a TypedPattern, env: &mut Env<'_>) -> Document<'a> {
         } => tag_tuple_pattern(name, args, env),
 
         Pattern::Constructor {
-            args: _args,
+            args,
             constructor: PatternConstructor::Inline,
             ..
-        } => todo!(),
+        } => {
+            if args.is_empty() {
+                fatal_compiler_bug("No arguments for an inline type pattern")
+            } else {
+                pattern(&args.swap_remove(0).value, env)
+            }
+        }
 
         Pattern::Tuple { elems, .. } => tuple(elems.iter().map(|p| pattern(p, env))),
 
@@ -1085,7 +1092,7 @@ fn docs_args_call<'a>(
             ..
         } => {
             if args.is_empty() {
-                crate::error::fatal_compiler_bug("No arguments for inline type call")
+                fatal_compiler_bug("No arguments for inline type call")
             } else {
                 args.swap_remove(0)
             }
@@ -1145,7 +1152,7 @@ fn docs_args_call<'a>(
                 }
                 docs_args_call(fun, merged_args, env)
             } else {
-                crate::error::fatal_compiler_bug("Erl printing: Capture was not a call")
+                fatal_compiler_bug("Erl printing: Capture was not a call")
             }
         }
 
