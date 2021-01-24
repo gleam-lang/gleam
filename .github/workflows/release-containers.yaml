@@ -56,7 +56,7 @@ jobs:
           [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
 
           # Prepare the tag
-          TAG=$IMAGE_ID_BASE-{{ $matrix.base-image }}:$VERSION
+          TAG=$IMAGE_ID_BASE:$VERSION-{{ $matrix.base-image }}
           echo TAG=$TAG
 
           # Push the image to the registry under the tag
