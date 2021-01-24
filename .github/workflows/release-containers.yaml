@@ -8,20 +8,34 @@ jobs:
   publish-release-container-images:
     name: publish-release-container-images
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        base-image:
+          - scratch
+          - erlang
+          - erlang-slim
+          - erlang-alpine
+          - elixir
+          - elixir-slim
+          - elixir-alpine
+
     steps: 
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Authenticate with github container registry
+      - name: Authenticate with GitHub container registry
         run: echo "${{ secrets.CONTAINER_REGISTRY_PERSONAL_ACCESS_TOKEN }}" | docker login https://ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Build elixir image
-        run: docker build --file Dockerfile.elixir --tag gleam-elixir .
+      - name: Download Gleam archive from GitHub release
+        run: curl -Lo gleam.tar.gz https://github.com/{{ $github.repository }}/releases/download/${{ github.ref }}/gleam-${{ github.ref }}-linux-amd64.tar.gz
 
-      - name: Build erlang image
-        run: docker build --file Dockerfile.erlang --tag gleam-erlang .
+      - name: Unpack Gleam binary from archive
+        run: tar xf gleam.tar.gz
 
-      - name: Push images
+      - name: Build container image
+        run: docker build --file containers/${{ matrix.base-image }}.dockerfile --tag the-image .
+
+      - name: Push image
         run: |
           IMAGE_ID_BASE=ghcr.io/${{ github.repository }}/gleam
 
@@ -34,14 +48,10 @@ jobs:
           # Strip "v" prefix from tag name
           [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
 
-          # Use Docker `latest` tag convention
-          [ "$VERSION" == "master" ] && VERSION=latest
+          # Prepare the tag
+          TAG=$IMAGE_ID_BASE-{{ $matrix.base-image }}:$VERSION
+          echo TAG=$TAG
 
-          echo IMAGE_ID_BASE=$IMAGE_ID_BASE
-          echo VERSION=$VERSION
-
-          docker tag gleam-elixir $IMAGE_ID_BASE-elixir:$VERSION
-          docker push $IMAGE_ID_BASE-elixir:$VERSION
-
-          docker tag gleam-erlang $IMAGE_ID_BASE-erlang:$VERSION
-          docker push $IMAGE_ID_BASE-erlang:$VERSION
+          # Push the image to the registry under the tag
+          docker tag the-image $TAG
+          docker push $TAG
