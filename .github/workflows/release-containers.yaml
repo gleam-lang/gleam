@@ -5,8 +5,8 @@ on:
       - "published"
 
 jobs:
-  publish-release-container-images:
-    name: publish-release-container-images
+  publish-container-images:
+    name: publish-container-images
     runs-on: ubuntu-latest
     strategy:
       matrix:
