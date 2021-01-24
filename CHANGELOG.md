@@ -13,6 +13,7 @@
 - Gleam now generates Erlang typespecs.
 - Code in HTML documentation is has highlighted syntax.
 - Gleam now only supports `\r`, `\n`, `\t`, `\"`, and `\\` string escapes.
+- A set of OCI container images are built automatically for each release.
 
 ## v0.13.2 - 2020-01-14
 
