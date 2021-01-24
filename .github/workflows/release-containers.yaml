@@ -27,7 +27,7 @@ jobs:
         run: echo "${{ secrets.CONTAINER_REGISTRY_PERSONAL_ACCESS_TOKEN }}" | docker login https://ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Download Gleam archive from GitHub release
-        run: curl -Lo gleam.tar.gz https://github.com/{{ $github.repository }}/releases/download/${{ github.ref }}/gleam-${{ github.ref }}-linux-amd64.tar.gz
+        run: curl -Lo gleam.tar.gz https://github.com/${{ github.repository }}/releases/download/${{ github.ref }}/gleam-${{ github.ref }}-linux-amd64.tar.gz
 
       - name: Unpack Gleam binary from archive
         run: tar xf gleam.tar.gz
