@@ -634,16 +634,26 @@ where
         loop {
             match self.next_char() {
                 Some('\\') => {
-                    if self.chr0 == Some('"') {
-                        string_content.push('\\');
-                        string_content.push('"');
-                        let _ = self.next_char();
-                    } else if self.chr0 == Some('\\') {
-                        string_content.push('\\');
-                        string_content.push('\\');
-                        let _ = self.next_char();
+                    let slash_pos = self.get_pos() - 1;
+                    if let Some(c) = self.chr0 {
+                        match c {
+                            'n' | 'r' | 't' | '"' | '\\' => {
+                                let _ = self.next_char();
+                                string_content.push('\\');
+                                string_content.push(c);
+                            }
+                            _ => {
+                                return Err(LexicalError {
+                                    error: LexicalErrorType::BadStringEscape,
+                                    location: slash_pos,
+                                });
+                            }
+                        }
                     } else {
-                        string_content.push('\\');
+                        return Err(LexicalError {
+                            error: LexicalErrorType::BadStringEscape,
+                            location: slash_pos,
+                        });
                     }
                 }
                 Some('"') => break,

@@ -8,9 +8,10 @@ pub struct LexicalError {
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum LexicalErrorType {
+    BadStringEscape,       // string contains an unescaped slash
     DigitOutOfRadix,       // 0x012 , 2 is out of radix
     NumTrailingUnderscore, // 1_000_ is not allowed
-    RadixIntNoValue,       // 0x, 0x, 0o without a value
+    RadixIntNoValue,       // 0x, 0b, 0o without a value
     UnexpectedStringEnd,   // Unterminated string literal
     UnrecognizedToken { tok: char },
 }
@@ -55,6 +56,13 @@ pub enum ParseErrorType {
 impl LexicalError {
     pub fn to_parse_error_info(&self) -> (&str, Vec<String>) {
         match self.error {
+            LexicalErrorType::BadStringEscape => (
+                "This is an unescaped backslash.",
+                vec![
+                    "Hint: Add another backslash before it.".to_string(),
+                    "See: https://gleam.run/book/tour/strings.html#escape-sequences".to_string(),
+                ],
+            ),
             LexicalErrorType::DigitOutOfRadix => {
                 ("This digit is too big for the specified radix.", vec![])
             }

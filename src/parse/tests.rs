@@ -63,3 +63,34 @@ fn int_tests() {
         }
     );
 }
+
+#[test]
+fn string_tests() {
+    // bad character escape
+    assert_error!(
+        r#""\g""#,
+        ParseError {
+            error: ParseErrorType::LexError {
+                error: LexicalError {
+                    error: LexicalErrorType::BadStringEscape,
+                    location: 1,
+                }
+            },
+            location: SrcSpan { start: 1, end: 1 },
+        }
+    );
+
+    // still bad character escape
+    assert_error!(
+        r#""\\\g""#,
+        ParseError {
+            error: ParseErrorType::LexError {
+                error: LexicalError {
+                    error: LexicalErrorType::BadStringEscape,
+                    location: 3,
+                }
+            },
+            location: SrcSpan { start: 3, end: 3 },
+        }
+    );
+}

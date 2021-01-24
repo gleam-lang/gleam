@@ -2393,3 +2393,22 @@ fn build_in_erlang_type_escaping() {
 "
     );
 }
+
+#[test]
+fn allowed_string_escapes() {
+    assert_erl!(
+        r#"fn a() { "\n" "\r" "\t" "\\" "\"" "\\^" }"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-spec a() -> binary().
+a() ->
+    <<"\n"/utf8>>,
+    <<"\r"/utf8>>,
+    <<"\t"/utf8>>,
+    <<"\\"/utf8>>,
+    <<"\""/utf8>>,
+    <<"\\^"/utf8>>.
+"#
+    );
+}
