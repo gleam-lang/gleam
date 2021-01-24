@@ -10,7 +10,8 @@
   command line tool style program.
 - A warning is emitted when a literal value is constructed but not used.
 - Automatically generate a link to repository in docs if available.
-- Gleam now generates erlang typespecs.
+- Gleam now generates Erlang typespecs.
+- Code in HTML documentation is has highlighted syntax.
 
 ## v0.13.2 - 2020-01-14
 
