@@ -100,12 +100,8 @@ impl Tok {
 impl fmt::Display for Tok {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
-            Tok::Name { name } => name,
-            Tok::UpName { name } => name,
-            Tok::DiscardName { name } => name,
-            Tok::Int { value } => value,
-            Tok::Float { value } => value,
-            Tok::String { value } => value,
+            Tok::Name { name } | Tok::UpName { name } | Tok::DiscardName { name } => name,
+            Tok::Int { value } | Tok::Float { value } | Tok::String { value } => value,
             Tok::Lpar => "(",
             Tok::Rpar => ")",
             Tok::Lsqb => "[",

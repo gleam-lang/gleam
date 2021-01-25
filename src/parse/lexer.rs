@@ -1,6 +1,6 @@
-use crate::GleamExpect;
 use crate::parse::error::{LexicalError, LexicalErrorType};
 use crate::parse::token::Tok;
+use crate::GleamExpect;
 use std::char;
 
 pub struct Lexer<T: Iterator<Item = (usize, char)>> {
@@ -131,14 +131,14 @@ where
         // Check if we have some character:
         if let Some(c) = self.chr0 {
             let mut check_for_minus = false;
-            if self.is_upname_start(c) {
+            if Self::is_upname_start(c) {
                 let name = self.lex_upname()?;
                 self.emit(name)
-            } else if self.is_name_start(c) {
+            } else if Self::is_name_start(c) {
                 check_for_minus = true;
-                let name = self.lex_name()?;
+                let name = self.lex_name();
                 self.emit(name);
-            } else if self.is_number_start(c, self.chr1) {
+            } else if Self::is_number_start(c, self.chr1) {
                 check_for_minus = true;
                 let num = self.lex_number()?;
                 self.emit(num);
@@ -147,7 +147,7 @@ where
             }
             if check_for_minus {
                 // We want to lex `1-1` and `x-1` as `1 - 1` and `x - 1`
-                if Some('-') == self.chr0 && self.is_number_start('-', self.chr1) {
+                if Some('-') == self.chr0 && Self::is_number_start('-', self.chr1) {
                     self.eat_single_char(Tok::Minus);
                 }
             }
@@ -160,6 +160,7 @@ where
         Ok(())
     }
 
+    #[allow(clippy::too_many_lines)]
     fn consume_character(&mut self, c: char) -> Result<(), LexicalError> {
         match c {
             '"' => {
@@ -169,16 +170,13 @@ where
             '=' => {
                 let tok_start = self.get_pos();
                 let _ = self.next_char();
-                match self.chr0 {
-                    Some('=') => {
-                        let _ = self.next_char();
-                        let tok_end = self.get_pos();
-                        self.emit((tok_start, Tok::EqualEqual, tok_end));
-                    }
-                    _ => {
-                        let tok_end = self.get_pos();
-                        self.emit((tok_start, Tok::Equal, tok_end));
-                    }
+                if let Some('=') = self.chr0 {
+                    let _ = self.next_char();
+                    let tok_end = self.get_pos();
+                    self.emit((tok_start, Tok::EqualEqual, tok_end));
+                } else {
+                    let tok_end = self.get_pos();
+                    self.emit((tok_start, Tok::Equal, tok_end));
                 }
             }
             '+' => {
@@ -196,16 +194,13 @@ where
             '*' => {
                 let tok_start = self.get_pos();
                 let _ = self.next_char();
-                match self.chr0 {
-                    Some('.') => {
-                        let _ = self.next_char();
-                        let tok_end = self.get_pos();
-                        self.emit((tok_start, Tok::StarDot, tok_end));
-                    }
-                    _ => {
-                        let tok_end = self.get_pos();
-                        self.emit((tok_start, Tok::Star, tok_end));
-                    }
+                if let Some('.') = self.chr0 {
+                    let _ = self.next_char();
+                    let tok_end = self.get_pos();
+                    self.emit((tok_start, Tok::StarDot, tok_end));
+                } else {
+                    let tok_end = self.get_pos();
+                    self.emit((tok_start, Tok::Star, tok_end));
                 }
             }
             '/' => {
@@ -219,7 +214,7 @@ where
                     }
                     Some('/') => {
                         let _ = self.next_char();
-                        let comment = self.lex_comment()?;
+                        let comment = self.lex_comment();
                         self.emit(comment);
                     }
                     _ => {
@@ -343,16 +338,13 @@ where
                     }
                     Some('=') => {
                         let _ = self.next_char();
-                        match self.chr0 {
-                            Some('.') => {
-                                let _ = self.next_char();
-                                let tok_end = self.get_pos();
-                                self.emit((tok_start, Tok::LessEqualDot, tok_end));
-                            }
-                            _ => {
-                                let tok_end = self.get_pos();
-                                self.emit((tok_start, Tok::LessEqual, tok_end));
-                            }
+                        if let Some('.') = self.chr0 {
+                            let _ = self.next_char();
+                            let tok_end = self.get_pos();
+                            self.emit((tok_start, Tok::LessEqualDot, tok_end));
+                        } else {
+                            let tok_end = self.get_pos();
+                            self.emit((tok_start, Tok::LessEqual, tok_end));
                         }
                     }
                     _ => {
@@ -377,16 +369,13 @@ where
                     }
                     Some('=') => {
                         let _ = self.next_char();
-                        match self.chr0 {
-                            Some('.') => {
-                                let _ = self.next_char();
-                                let tok_end = self.get_pos();
-                                self.emit((tok_start, Tok::GreaterEqualDot, tok_end));
-                            }
-                            _ => {
-                                let tok_end = self.get_pos();
-                                self.emit((tok_start, Tok::GreaterEqual, tok_end));
-                            }
+                        if let Some('.') = self.chr0 {
+                            let _ = self.next_char();
+                            let tok_end = self.get_pos();
+                            self.emit((tok_start, Tok::GreaterEqualDot, tok_end));
+                        } else {
+                            let tok_end = self.get_pos();
+                            self.emit((tok_start, Tok::GreaterEqual, tok_end));
                         }
                     }
                     _ => {
@@ -446,7 +435,7 @@ where
 
     // Lexer helper functions:
     // this can be either a reserved word, or a name
-    fn lex_name(&mut self) -> LexResult {
+    fn lex_name(&mut self) -> Spanned {
         let mut name = String::new();
         let start_pos = self.get_pos();
 
@@ -456,11 +445,11 @@ where
         let end_pos = self.get_pos();
 
         if let Some(tok) = str_to_keyword(&name) {
-            Ok((start_pos, tok, end_pos))
+            (start_pos, tok, end_pos)
         } else if name.starts_with('_') {
-            Ok((start_pos, Tok::DiscardName { name }, end_pos))
+            (start_pos, Tok::DiscardName { name }, end_pos)
         } else {
-            Ok((start_pos, Tok::Name { name }, end_pos))
+            (start_pos, Tok::Name { name }, end_pos)
         }
     }
 
@@ -474,11 +463,10 @@ where
         }
         let end_pos = self.get_pos();
 
-        if let Some(tok) = str_to_keyword(&name) {
-            Ok((start_pos, tok, end_pos))
-        } else {
-            Ok((start_pos, Tok::UpName { name }, end_pos))
-        }
+        str_to_keyword(&name).map_or_else(
+            || Ok((start_pos, Tok::UpName { name }, end_pos)),
+            |tok| Ok((start_pos, tok, end_pos)),
+        )
     }
 
     fn lex_number(&mut self) -> LexResult {
@@ -500,10 +488,10 @@ where
                 let _ = self.next_char();
                 self.lex_number_radix(start_pos, 2, "0b")?
             } else {
-                self.lex_normal_number()?
+                self.lex_normal_number()
             }
         } else {
-            self.lex_normal_number()?
+            self.lex_normal_number()
         };
 
         if Some('_') == self.chr0 {
@@ -538,7 +526,7 @@ where
 
     // Lex a normal number, that is, no octal, hex or binary number.
     // This function cannot be reached without the head of the stream being either 0-9 or '-', 0-9
-    fn lex_normal_number(&mut self) -> LexResult {
+    fn lex_normal_number(&mut self) -> Spanned {
         let start_pos = self.get_pos();
         let mut value = String::new();
         // consume negative sign
@@ -553,10 +541,10 @@ where
             value.push(self.next_char().gleam_expect("Lexer::next_char() failed"));
             value.push_str(&self.radix_run(10));
             let end_pos = self.get_pos();
-            Ok((start_pos, Tok::Float { value }, end_pos))
+            (start_pos, Tok::Float { value }, end_pos)
         } else {
             let end_pos = self.get_pos();
-            Ok((start_pos, Tok::Int { value }, end_pos))
+            (start_pos, Tok::Int { value }, end_pos)
         }
     }
 
@@ -607,7 +595,7 @@ where
     // 3 slash, document
     // 4 slash, module
     // this function is entered after 2 slashes
-    fn lex_comment(&mut self) -> LexResult {
+    fn lex_comment(&mut self) -> Spanned {
         let kind = match (self.chr0, self.chr1) {
             (Some('/'), Some('/')) => {
                 let _ = self.next_char();
@@ -625,7 +613,7 @@ where
             let _ = self.next_char();
         }
         let end_pos = self.get_pos();
-        Ok((start_pos, kind, end_pos))
+        (start_pos, kind, end_pos)
     }
 
     fn lex_string(&mut self) -> LexResult {
@@ -668,13 +656,15 @@ where
         Ok((start_pos, tok, end_pos))
     }
 
-    fn is_name_start(&self, c: char) -> bool {
+    fn is_name_start(c: char) -> bool {
         matches!(c, '_' | 'a'..='z')
     }
-    fn is_upname_start(&self, c: char) -> bool {
+
+    fn is_upname_start(c: char) -> bool {
         matches!(c, 'A'..='Z')
     }
-    fn is_number_start(&self, c: char, c1: Option<char>) -> bool {
+
+    fn is_number_start(c: char, c1: Option<char>) -> bool {
         match c {
             '0'..='9' => true,
             '-' => matches!(c1, Some('0'..='9')),
@@ -684,14 +674,12 @@ where
 
     fn is_name_continuation(&self) -> bool {
         self.chr0
-            .map(|c| matches!(c, '_' | '0'..='9' | 'a'..='z'))
-            .unwrap_or(false)
+            .map_or(false, |c| matches!(c, '_' | '0'..='9' | 'a'..='z'))
     }
 
     fn is_upname_continuation(&self) -> bool {
         self.chr0
-            .map(|c| matches!(c, '0'..='9' | 'a'..='z' | 'A'..='Z'))
-            .unwrap_or(false)
+            .map_or(false, |c| matches!(c, '0'..='9' | 'a'..='z' | 'A'..='Z'))
     }
 
     // advance the stream and emit a token
@@ -707,18 +695,15 @@ where
     // Helper function to go to the next character coming up.
     fn next_char(&mut self) -> Option<char> {
         let c = self.chr0;
-        let nxt = match self.chars.next() {
-            Some((loc, c)) => {
-                self.loc0 = self.loc1;
-                self.loc1 = loc;
-                Some(c)
-            }
-            None => {
-                // EOF needs a single advance
-                self.loc0 = self.loc1;
-                self.loc1 += 1;
-                None
-            }
+        let nxt = if let Some((loc, c)) = self.chars.next() {
+            self.loc0 = self.loc1;
+            self.loc1 = loc;
+            Some(c)
+        } else {
+            // EOF needs a single advance
+            self.loc0 = self.loc1;
+            self.loc1 += 1;
+            None
         };
         self.chr0 = self.chr1;
         self.chr1 = nxt;

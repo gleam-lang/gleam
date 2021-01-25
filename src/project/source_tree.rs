@@ -11,10 +11,10 @@ pub struct SourceTree {
 }
 
 impl SourceTree {
-    pub fn new(inputs: Vec<Input>) -> Result<Self, Error> {
-        let mut graph: Self = Default::default();
-        for input in inputs.into_iter() {
-            graph.insert(input)?;
+    pub fn new(inputs: &[Input]) -> Result<Self, Error> {
+        let mut graph: Self = Self::default();
+        for input in inputs {
+            graph.insert(input.clone())?;
         }
         graph.calculate_dependencies()?;
         Ok(graph)
@@ -22,7 +22,7 @@ impl SourceTree {
 
     pub fn consume(&mut self) -> Result<impl Iterator<Item = Module> + '_, Error> {
         let iter = petgraph::algo::toposort(&self.graph, None)
-            .map_err(|e| self.import_cycle(e))?
+            .map_err(|e| self.import_cycle(&e))?
             .into_iter()
             .map(move |i| {
                 self.modules
@@ -32,7 +32,7 @@ impl SourceTree {
         Ok(iter)
     }
 
-    fn import_cycle(&mut self, cycle: Cycle<NodeIndex>) -> Error {
+    fn import_cycle(&mut self, cycle: &Cycle<NodeIndex>) -> Error {
         let origin = cycle.node_id();
         let mut path = vec![];
         let _ = self.find_cycle(origin, origin, &mut path, &mut HashSet::new());
@@ -152,7 +152,10 @@ impl SourceTree {
             })?;
 
         // Store the name
-        module.name = name.split('/').map(|s| s.to_string()).collect();
+        module.name = name
+            .split('/')
+            .map(std::string::ToString::to_string)
+            .collect();
 
         // Check to see if we already have a module with this name
         if let Some(Module { path, .. }) = self.indexes.get(&name).and_then(|i| self.modules.get(i))

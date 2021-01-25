@@ -27,8 +27,13 @@ pub fn command(root_string: String) -> Result<(), Error> {
     let test_modules = packages
         .into_iter()
         .flat_map(|(_, p)| p.modules.into_iter())
-        .filter(|m| m.origin == Origin::Test)
-        .map(|m| m.name.replace("/", "@"))
+        .filter_map(|m| {
+            if m.origin == Origin::Test {
+                Some(m.name.replace("/", "@"))
+            } else {
+                None
+            }
+        })
         .join(",");
 
     // Prepare eunit runner and its dependencies.
@@ -75,8 +80,13 @@ pub fn command(root_string: String) -> Result<(), Error> {
     let _ = command.arg(root.build_path().join("eunit_runner.erl"));
 
     let ebin_paths: String = crate::fs::read_dir(root.default_build_lib_path())?
-        .filter_map(Result::ok)
-        .map(|entry| entry.path().join("ebin").as_path().display().to_string())
+        .filter_map(|entry| {
+            if let Ok(entry) = entry {
+                Some(entry.path().join("ebin").as_path().display().to_string())
+            } else {
+                None
+            }
+        })
         .join(",");
 
     // we supply two parameters to the escript. First is a comma seperated

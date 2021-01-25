@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use super::*;
 use crate::{config::PackageConfig, fs::OutputFile, project::Input};
 
@@ -41,19 +43,19 @@ pub fn complicated_fun(
 
     let config = PackageConfig {
         name: "test".to_string(),
-        docs: Default::default(),
-        tool: Default::default(),
-        version: Default::default(),
-        repository: Default::default(),
-        description: Default::default(),
-        dependencies: Default::default(),
+        docs: crate::config::Docs::default(),
+        tool: crate::config::BuildTool::default(),
+        version: String::default(),
+        repository: crate::config::Repository::default(),
+        description: String::default(),
+        dependencies: std::collections::HashMap::default(),
         otp_start_module: None,
     };
 
-    let mut analysed = crate::project::analysed(vec![input]).gleam_expect("Compilation failed");
+    let mut analysed = crate::project::analysed(&[input]).gleam_expect("Compilation failed");
     analysed
         .iter_mut()
-        .for_each(|a| a.attach_doc_and_module_comments());
+        .for_each(crate::project::Analysed::attach_doc_and_module_comments);
 
     let output_files = generate_html(
         PathBuf::from("."),

@@ -1,4 +1,4 @@
-use super::*;
+use super::{Arc, BitStringSegment, CallArg, HasLocation, SrcSpan, Type};
 use crate::typ::HasType;
 
 pub type TypedConstant = Constant<Arc<Type>, String>;
@@ -53,11 +53,10 @@ impl TypedConstant {
             Constant::Int { .. } => crate::typ::int(),
             Constant::Float { .. } => crate::typ::float(),
             Constant::String { .. } => crate::typ::string(),
-            Constant::List { typ, .. } => typ.clone(),
-            Constant::Record { typ, .. } => typ.clone(),
+            Constant::List { typ, .. } | Constant::Record { typ, .. } => typ.clone(),
             Constant::BitString { .. } => crate::typ::bit_string(),
             Constant::Tuple { elements, .. } => {
-                crate::typ::tuple(elements.iter().map(|e| e.typ()).collect())
+                crate::typ::tuple(elements.iter().map(Constant::typ).collect())
             }
         }
     }
@@ -83,7 +82,10 @@ impl<A, B> Constant<A, B> {
     }
 
     pub fn is_simple(&self) -> bool {
-        matches!(self, Self::Int { .. } | Self::Float { .. } | Self::String { .. })
+        matches!(
+            self,
+            Self::Int { .. } | Self::Float { .. } | Self::String { .. }
+        )
     }
 }
 

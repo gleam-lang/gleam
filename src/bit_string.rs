@@ -12,6 +12,7 @@ pub struct BinaryTypeSpecifier<T> {
 }
 
 impl<T> BinaryTypeSpecifier<T> {
+    #[allow(clippy::too_many_lines)]
     pub fn new(options: &[BitStringSegmentOption<T>], must_have_size: bool) -> Result<Self, Error>
     where
         T: Clone,
@@ -136,16 +137,14 @@ impl<T> BinaryTypeSpecifier<T> {
         match self.typ {
             Some(BitStringSegmentOption::Integer { .. }) => Some(crate::typ::int()),
             Some(BitStringSegmentOption::Float { .. }) => Some(crate::typ::float()),
-            Some(BitStringSegmentOption::Binary { .. }) => Some(crate::typ::bit_string()),
-            Some(BitStringSegmentOption::BitString { .. }) => Some(crate::typ::bit_string()),
-            Some(BitStringSegmentOption::UTF8 { .. }) => Some(crate::typ::string()),
-            Some(BitStringSegmentOption::UTF16 { .. }) => Some(crate::typ::string()),
-            Some(BitStringSegmentOption::UTF32 { .. }) => Some(crate::typ::string()),
-            Some(BitStringSegmentOption::UTF8Codepoint { .. }) => Some(crate::typ::utf_codepoint()),
-            Some(BitStringSegmentOption::UTF16Codepoint { .. }) => {
-                Some(crate::typ::utf_codepoint())
-            }
-            Some(BitStringSegmentOption::UTF32Codepoint { .. }) => {
+            Some(BitStringSegmentOption::Binary { .. })
+            | Some(BitStringSegmentOption::BitString { .. }) => Some(crate::typ::bit_string()),
+            Some(BitStringSegmentOption::UTF8 { .. })
+            | Some(BitStringSegmentOption::UTF16 { .. })
+            | Some(BitStringSegmentOption::UTF32 { .. }) => Some(crate::typ::string()),
+            Some(BitStringSegmentOption::UTF8Codepoint { .. })
+            | Some(BitStringSegmentOption::UTF16Codepoint { .. })
+            | Some(BitStringSegmentOption::UTF32Codepoint { .. }) => {
                 Some(crate::typ::utf_codepoint())
             }
             _ => None,
@@ -193,10 +192,11 @@ pub enum Error {
 
 impl<A> BitStringSegmentOption<A> {
     pub fn unit_is_allowed(&self) -> bool {
-        !matches!(self,
+        !matches!(
+            self,
             BitStringSegmentOption::UTF8 { .. }
-            | BitStringSegmentOption::UTF16 { .. }
-            | BitStringSegmentOption::UTF32 { .. }
+                | BitStringSegmentOption::UTF16 { .. }
+                | BitStringSegmentOption::UTF32 { .. }
         )
     }
 }

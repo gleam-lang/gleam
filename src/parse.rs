@@ -290,8 +290,8 @@ where
                         Some(((op_s, t, op_e), p)),
                         &mut opstack,
                         &mut estack,
-                        &do_reduce_expression,
-                    )?;
+                        &|op, vec| do_reduce_expression(&op, vec),
+                    );
                 } else {
                     // Is not Op
                     self.tok0 = Some((op_s, t, op_e));
@@ -302,7 +302,9 @@ where
             }
         }
 
-        handle_op(None, &mut opstack, &mut estack, &do_reduce_expression)
+        Ok(handle_op(None, &mut opstack, &mut estack, &|op, vec| {
+            do_reduce_expression(&op, vec)
+        }))
     }
 
     // examples:
@@ -313,6 +315,7 @@ where
     //   unit().unit().unit()
     //   A(a.., label: tuple(1))
     //   { expression_sequence }
+    #[allow(clippy::too_many_lines)]
     fn parse_expression_unit(&mut self) -> Result<Option<UntypedExpr>, ParseError> {
         let mut expr = match self.tok0.take() {
             Some((start, Tok::String { value }, end)) => {
@@ -472,12 +475,11 @@ where
                     );
                 } else if clauses.is_empty() {
                     return parse_error(ParseErrorType::NoCaseClause, SrcSpan { start, end });
-                } else {
-                    UntypedExpr::Case {
-                        location: SrcSpan { start, end },
-                        subjects,
-                        clauses,
-                    }
+                }
+                UntypedExpr::Case {
+                    location: SrcSpan { start, end },
+                    subjects,
+                    clauses,
                 }
             }
 
@@ -515,16 +517,8 @@ where
                         }
                     }
 
-                    Some((_, Tok::Name { name: label }, end)) => {
-                        let _ = self.next_tok();
-                        expr = UntypedExpr::FieldAccess {
-                            location: SrcSpan { start, end },
-                            label,
-                            container: Box::new(expr),
-                        }
-                    }
-
-                    Some((_, Tok::UpName { name: label }, end)) => {
+                    Some((_, Tok::Name { name: label }, end))
+                    | Some((_, Tok::UpName { name: label }, end)) => {
                         let _ = self.next_tok();
                         expr = UntypedExpr::FieldAccess {
                             location: SrcSpan { start, end },
@@ -680,6 +674,7 @@ where
     }
 
     // The left side of an "=" or a "->"
+    #[allow(clippy::too_many_lines)]
     fn parse_pattern(&mut self) -> Result<Option<UntypedPattern>, ParseError> {
         let pattern = match self.tok0.take() {
             // Pattern::Var or Pattern::Constructor start
@@ -848,26 +843,29 @@ where
             let guard = self.parse_case_clause_guard(false)?;
             let (arr_s, arr_e) = self.expect_one(&Tok::RArrow)?;
             let then = self.parse_expression()?;
-            if let Some(then) = then {
-                Ok(Some(Clause {
-                    location: SrcSpan {
-                        start: lead.location().start,
-                        end: then.location().end,
-                    },
-                    pattern: patterns,
-                    alternative_patterns,
-                    guard,
-                    then,
-                }))
-            } else {
-                parse_error(
-                    ParseErrorType::ExpectedExpr,
-                    SrcSpan {
-                        start: arr_s,
-                        end: arr_e,
-                    },
-                )
-            }
+            then.map_or_else(
+                || {
+                    parse_error(
+                        ParseErrorType::ExpectedExpr,
+                        SrcSpan {
+                            start: arr_s,
+                            end: arr_e,
+                        },
+                    )
+                },
+                |then| {
+                    Ok(Some(Clause {
+                        location: SrcSpan {
+                            start: lead.location().start,
+                            end: then.location().end,
+                        },
+                        pattern: patterns.clone(),
+                        alternative_patterns,
+                        guard,
+                        then,
+                    }))
+                },
+            )
         } else {
             Ok(None)
         }
@@ -914,8 +912,8 @@ where
                             Some(((op_s, t, op_e), *p)),
                             &mut opstack,
                             &mut estack,
-                            &do_reduce_clause_guard,
-                        )?;
+                            &|op, vec| do_reduce_clause_guard(&op, vec),
+                        );
                     } else {
                         // Is not Op
                         self.tok0 = Some((op_s, t, op_e));
@@ -924,7 +922,9 @@ where
                 }
             }
 
-            handle_op(None, &mut opstack, &mut estack, &do_reduce_clause_guard)
+            Ok(handle_op(None, &mut opstack, &mut estack, &|op, vec| {
+                do_reduce_clause_guard(&op, vec)
+            }))
         } else {
             Ok(None)
         }
@@ -989,12 +989,10 @@ where
             }
             t0 => {
                 self.tok0 = t0;
-                if let Some(const_val) = self.parse_const_value()? {
-                    // Constant
-                    Ok(Some(ClauseGuard::Constant(const_val)))
-                } else {
-                    Ok(None)
-                }
+                self.parse_const_value()?.map_or_else(
+                    || Ok(None),
+                    |const_val| Ok(Some(ClauseGuard::Constant(const_val))),
+                )
             }
         }
     }
@@ -1054,38 +1052,42 @@ where
             (Some((start, Tok::Name { name }, _)), Some((col_s, Tok::Colon, col_e))) => {
                 let _ = self.next_tok();
                 let _ = self.next_tok();
-                if let Some(value) = self.parse_pattern()? {
-                    Ok(Some(CallArg {
-                        location: SrcSpan {
-                            start,
-                            end: value.location().end,
-                        },
-                        label: Some(name),
-                        value,
-                    }))
-                } else {
-                    parse_error(
-                        ParseErrorType::ExpectedPattern,
-                        SrcSpan {
-                            start: col_s,
-                            end: col_e,
-                        },
-                    )
-                }
+                self.parse_pattern()?.map_or_else(
+                    || {
+                        parse_error(
+                            ParseErrorType::ExpectedPattern,
+                            SrcSpan {
+                                start: col_s,
+                                end: col_e,
+                            },
+                        )
+                    },
+                    |value| {
+                        Ok(Some(CallArg {
+                            location: SrcSpan {
+                                start,
+                                end: value.location().end,
+                            },
+                            label: Some(name),
+                            value,
+                        }))
+                    },
+                )
             }
             // unnamed arg
             (t0, t1) => {
                 self.tok0 = t0;
                 self.tok1 = t1;
-                if let Some(value) = self.parse_pattern()? {
-                    Ok(Some(CallArg {
-                        location: value.location(),
-                        label: None,
-                        value,
-                    }))
-                } else {
-                    Ok(None)
-                }
+                self.parse_pattern()?.map_or_else(
+                    || Ok(None),
+                    |value| {
+                        Ok(Some(CallArg {
+                            location: value.location(),
+                            label: None,
+                            value,
+                        }))
+                    },
+                )
             }
         }
     }
@@ -1140,10 +1142,10 @@ where
         let _ = self.expect_one(&Tok::Lbrace)?;
         if let Some((body, _)) = self.parse_expression_seq()? {
             let (_, rbr_e) = self.expect_one(&Tok::Rbrace)?;
-            let end = return_annotation
-                .as_ref()
-                .map(|l| l.location().end)
-                .unwrap_or_else(|| if is_anon { rbr_e } else { rpar_e });
+            let end = return_annotation.as_ref().map_or_else(
+                || if is_anon { rbr_e } else { rpar_e },
+                |l| l.location().end,
+            );
             Ok(Some(Statement::Fn {
                 doc: None,
                 location: SrcSpan { start, end },
@@ -1180,27 +1182,30 @@ where
         let (_, module, _) = self.expect_string()?;
         let (_, fun, end) = self.expect_string()?;
 
-        if let Some(retrn) = return_annotation {
-            Ok(Some(Statement::ExternalFn {
-                doc: None,
-                location: SrcSpan { start, end },
-                public,
-                name,
-                args,
-                module,
-                fun,
-                retrn,
-                return_type: (),
-            }))
-        } else {
-            parse_error(
-                ParseErrorType::ExpectedType,
-                SrcSpan {
-                    start: arr_s,
-                    end: arr_e,
-                },
-            )
-        }
+        return_annotation.map_or_else(
+            || {
+                parse_error(
+                    ParseErrorType::ExpectedType,
+                    SrcSpan {
+                        start: arr_s,
+                        end: arr_e,
+                    },
+                )
+            },
+            |retrn| {
+                Ok(Some(Statement::ExternalFn {
+                    doc: None,
+                    location: SrcSpan { start, end },
+                    public,
+                    name,
+                    args,
+                    module,
+                    fun,
+                    retrn,
+                    return_type: (),
+                }))
+            },
+        )
     }
 
     // Parse a single external function definition param
@@ -1292,12 +1297,13 @@ where
                 return Ok(None);
             }
         };
-        let annotation = if let Some(a) = self.parse_type_annotation(&Tok::Colon, false)? {
-            end = a.location().end;
-            Some(a)
-        } else {
-            None
-        };
+        let annotation = self.parse_type_annotation(&Tok::Colon, false)?.map_or_else(
+            || None,
+            |a| {
+                end = a.location().end;
+                Some(a)
+            },
+        );
         Ok(Some(Arg {
             location: SrcSpan { start, end },
             typ: (),
@@ -1434,32 +1440,35 @@ where
             }
         } else if let Some((eq_s, eq_e)) = self.maybe_one(&Tok::Equal) {
             // Type Alias
-            if !opaque {
-                if let Some(t) = self.parse_type(false)? {
-                    let type_end = t.location().end;
-                    Ok(Some(Statement::TypeAlias {
-                        doc: None,
-                        location: SrcSpan {
-                            start,
-                            end: type_end,
-                        },
-                        public,
-                        alias: name,
-                        args: parameters,
-                        resolved_type: t,
-                        typ: (),
-                    }))
-                } else {
-                    parse_error(
-                        ParseErrorType::ExpectedType,
-                        SrcSpan {
-                            start: eq_s,
-                            end: eq_e,
-                        },
-                    )
-                }
-            } else {
+            if opaque {
                 parse_error(ParseErrorType::OpaqueTypeAlias, SrcSpan { start, end })
+            } else {
+                self.parse_type(false)?.map_or_else(
+                    || {
+                        parse_error(
+                            ParseErrorType::ExpectedType,
+                            SrcSpan {
+                                start: eq_s,
+                                end: eq_e,
+                            },
+                        )
+                    },
+                    |t| {
+                        let type_end = t.location().end;
+                        Ok(Some(Statement::TypeAlias {
+                            doc: None,
+                            location: SrcSpan {
+                                start,
+                                end: type_end,
+                            },
+                            public,
+                            alias: name,
+                            args: parameters,
+                            resolved_type: t,
+                            typ: (),
+                        }))
+                    },
+                )
             }
         } else {
             // Stared defining a custom type or type alias, didn't supply any {} or =
@@ -1589,25 +1598,27 @@ where
                     )?;
                     let _ = self.expect_one(&Tok::Rpar)?;
                     let (arr_s, arr_e) = self.expect_one(&Tok::RArrow)?;
-                    let retrn = self.parse_type(for_const)?;
-                    if let Some(retrn) = retrn {
-                        Ok(Some(TypeAst::Fn {
-                            location: SrcSpan {
-                                start,
-                                end: retrn.location().end,
-                            },
-                            retrn: Box::new(retrn),
-                            args,
-                        }))
-                    } else {
-                        parse_error(
-                            ParseErrorType::ExpectedType,
-                            SrcSpan {
-                                start: arr_s,
-                                end: arr_e,
-                            },
-                        )
-                    }
+                    self.parse_type(for_const)?.map_or_else(
+                        || {
+                            parse_error(
+                                ParseErrorType::ExpectedType,
+                                SrcSpan {
+                                    start: arr_s,
+                                    end: arr_e,
+                                },
+                            )
+                        },
+                        |retrn| {
+                            Ok(Some(TypeAst::Fn {
+                                location: SrcSpan {
+                                    start,
+                                    end: retrn.location().end,
+                                },
+                                retrn: Box::new(retrn),
+                                args,
+                            }))
+                        },
+                    )
                 }
             }
 
@@ -1790,25 +1801,29 @@ where
         let annotation = self.parse_type_annotation(&Tok::Colon, true)?;
 
         let (eq_s, eq_e) = self.expect_one(&Tok::Equal)?;
-        if let Some(value) = self.parse_const_value()? {
-            Ok(Some(Statement::ModuleConstant {
-                doc: None,
-                location: SrcSpan { start, end: 0 },
-                public,
-                name,
-                annotation,
-                value: Box::new(value),
-                typ: (),
-            }))
-        } else {
-            parse_error(
-                ParseErrorType::NoValueAfterEqual,
-                SrcSpan {
-                    start: eq_s,
-                    end: eq_e,
-                },
-            )
-        }
+
+        self.parse_const_value()?.map_or_else(
+            || {
+                parse_error(
+                    ParseErrorType::NoValueAfterEqual,
+                    SrcSpan {
+                        start: eq_s,
+                        end: eq_e,
+                    },
+                )
+            },
+            |value| {
+                Ok(Some(Statement::ModuleConstant {
+                    doc: None,
+                    location: SrcSpan { start, end: 0 },
+                    public,
+                    name,
+                    annotation,
+                    value: Box::new(value),
+                    typ: (),
+                }))
+            },
+        )
     }
 
     // examples:
@@ -2022,8 +2037,7 @@ where
             };
             let end = options
                 .last()
-                .map(|o| o.location().end)
-                .unwrap_or_else(|| value.location().end);
+                .map_or_else(|| value.location().end, |o| o.location().end);
             Ok(Some(BitStringSegment {
                 location: SrcSpan {
                     start: value.location().start,
@@ -2151,7 +2165,7 @@ where
                     parse_error(ParseErrorType::IncorrectName, SrcSpan { start, end })
                 } else if let Tok::DiscardName { .. } = tok {
                     parse_error(ParseErrorType::IncorrectName, SrcSpan { start, end })
-                } else if is_reserved_word(tok) {
+                } else if is_reserved_word(&tok) {
                     parse_error(
                         ParseErrorType::UnexpectedReservedWord,
                         SrcSpan { start, end },
@@ -2338,19 +2352,18 @@ fn handle_op<A>(
     opstack: &mut Vec<(Spanned, u8)>,
     estack: &mut Vec<A>,
     do_reduce: &impl Fn(Spanned, &mut Vec<A>),
-) -> Result<Option<A>, ParseError> {
+) -> Option<A> {
     let mut next_op = next_op;
     loop {
         match (opstack.pop(), next_op.take()) {
             (None, None) => {
                 if let Some(fin) = estack.pop() {
                     if estack.is_empty() {
-                        return Ok(Some(fin));
-                    } else {
-                        fatal_compiler_bug("Expression not fully reduced.")
+                        return Some(fin);
                     }
+                    fatal_compiler_bug("Expression not fully reduced.")
                 } else {
-                    return Ok(None);
+                    return None;
                 }
             }
 
@@ -2361,23 +2374,23 @@ fn handle_op<A>(
 
             (Some((op, _)), None) => do_reduce(op, estack),
 
-            (Some((opl, pl)), Some((opr, pr))) => {
+            (Some((op_left, pl)), Some((op_right, pr))) => {
                 match pl.cmp(&pr) {
                     // all ops are left associative
                     Ordering::Greater | Ordering::Equal => {
-                        do_reduce(opl, estack);
-                        next_op = Some((opr, pr));
+                        do_reduce(op_left, estack);
+                        next_op = Some((op_right, pr));
                     }
                     Ordering::Less => {
-                        opstack.push((opl, pl));
-                        opstack.push((opr, pr));
+                        opstack.push((op_left, pl));
+                        opstack.push((op_right, pr));
                         break;
                     }
                 }
             }
         }
     }
-    Ok(None)
+    None
 }
 
 fn precedence(t: &Tok) -> Option<u8> {
@@ -2417,7 +2430,7 @@ fn tok_to_binop(t: &Tok) -> Option<BinOp> {
     }
 }
 // Simple-Precedence-Parser, perform reduction for expression
-fn do_reduce_expression(op: Spanned, estack: &mut Vec<UntypedExpr>) {
+fn do_reduce_expression(op: &Spanned, estack: &mut Vec<UntypedExpr>) {
     match (estack.pop(), estack.pop()) {
         (Some(er), Some(el)) => {
             let new_e = expr_op_reduction(op, el, er);
@@ -2428,7 +2441,7 @@ fn do_reduce_expression(op: Spanned, estack: &mut Vec<UntypedExpr>) {
 }
 
 // Simple-Precedence-Parser, perform reduction for clause guard
-fn do_reduce_clause_guard(op: Spanned, estack: &mut Vec<UntypedClauseGuard>) {
+fn do_reduce_clause_guard(op: &Spanned, estack: &mut Vec<UntypedClauseGuard>) {
     match (estack.pop(), estack.pop()) {
         (Some(er), Some(el)) => {
             let new_e = clause_guard_reduction(op, el, er);
@@ -2438,7 +2451,7 @@ fn do_reduce_clause_guard(op: Spanned, estack: &mut Vec<UntypedClauseGuard>) {
     }
 }
 
-fn expr_op_reduction(op: Spanned, l: UntypedExpr, r: UntypedExpr) -> UntypedExpr {
+fn expr_op_reduction(op: &Spanned, l: UntypedExpr, r: UntypedExpr) -> UntypedExpr {
     if op.1 == Tok::Pipe {
         UntypedExpr::Pipe {
             location: SrcSpan {
@@ -2448,23 +2461,24 @@ fn expr_op_reduction(op: Spanned, l: UntypedExpr, r: UntypedExpr) -> UntypedExpr
             left: Box::new(l),
             right: Box::new(r),
         }
-    } else if let Some(bin_op) = tok_to_binop(&op.1) {
-        UntypedExpr::BinOp {
-            location: SrcSpan {
-                start: l.location().start,
-                end: r.location().end,
-            },
-            name: bin_op,
-            left: Box::new(l),
-            right: Box::new(r),
-        }
     } else {
-        fatal_compiler_bug("Token could not be converted to binop.")
+        tok_to_binop(&op.1).map_or_else(
+            || fatal_compiler_bug("Token could not be converted to binop."),
+            |bin_op| UntypedExpr::BinOp {
+                location: SrcSpan {
+                    start: l.location().start,
+                    end: r.location().end,
+                },
+                name: bin_op,
+                left: Box::new(l),
+                right: Box::new(r),
+            },
+        )
     }
 }
 
 fn clause_guard_reduction(
-    op: Spanned,
+    op: &Spanned,
     l: UntypedClauseGuard,
     r: UntypedClauseGuard,
 ) -> UntypedClauseGuard {
@@ -2582,12 +2596,10 @@ fn str_to_bit_string_segment_option<A>(
     location: SrcSpan,
 ) -> Option<BitStringSegmentOption<A>> {
     match lit {
-        "binary" => Some(BitStringSegmentOption::Binary { location }),
-        "bytes" => Some(BitStringSegmentOption::Binary { location }),
+        "binary" | "bytes" => Some(BitStringSegmentOption::Binary { location }),
         "int" => Some(BitStringSegmentOption::Integer { location }),
         "float" => Some(BitStringSegmentOption::Float { location }),
-        "bit_string" => Some(BitStringSegmentOption::BitString { location }),
-        "bits" => Some(BitStringSegmentOption::BitString { location }),
+        "bit_string" | "bits" => Some(BitStringSegmentOption::BitString { location }),
         "utf8" => Some(BitStringSegmentOption::UTF8 { location }),
         "utf16" => Some(BitStringSegmentOption::UTF16 { location }),
         "utf32" => Some(BitStringSegmentOption::UTF32 { location }),
@@ -2615,9 +2627,9 @@ fn parse_error<T>(error: ParseErrorType, location: SrcSpan) -> Result<T, ParseEr
 //
 
 // useful for checking if a user tried to enter a reserved word as a name
-fn is_reserved_word(tok: Tok) -> bool {
+fn is_reserved_word(tok: &Tok) -> bool {
     matches![
-        tok,
+        *tok,
         Tok::As
             | Tok::Assert
             | Tok::Case

@@ -1,4 +1,5 @@
 use super::{Environment, Type, TypeConstructor, ValueConstructorVariant};
+use crate::ast::SrcSpan;
 use crate::error::GleamExpect;
 use std::sync::Arc;
 
@@ -91,6 +92,7 @@ pub fn utf_codepoint() -> Arc<Type> {
     })
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'a, 'b> {
     typer
         .insert_type_constructor(
@@ -98,7 +100,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
             TypeConstructor {
                 parameters: vec![],
                 typ: int(),
-                origin: Default::default(),
+                origin: SrcSpan::default(),
                 module: vec![],
                 public: true,
             },
@@ -127,7 +129,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
         .insert_type_constructor(
             "Bool".to_string(),
             TypeConstructor {
-                origin: Default::default(),
+                origin: SrcSpan::default(),
                 parameters: vec![],
                 typ: bool(),
                 module: vec![],
@@ -141,7 +143,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
         .insert_type_constructor(
             "List".to_string(),
             TypeConstructor {
-                origin: Default::default(),
+                origin: SrcSpan::default(),
                 parameters: vec![list_parameter.clone()],
                 typ: list(list_parameter),
                 module: vec![],
@@ -154,7 +156,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
         .insert_type_constructor(
             "Float".to_string(),
             TypeConstructor {
-                origin: Default::default(),
+                origin: SrcSpan::default(),
                 parameters: vec![],
                 typ: float(),
                 module: vec![],
@@ -167,7 +169,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
         .insert_type_constructor(
             "String".to_string(),
             TypeConstructor {
-                origin: Default::default(),
+                origin: SrcSpan::default(),
                 parameters: vec![],
                 typ: string(),
                 module: vec![],
@@ -182,7 +184,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
         .insert_type_constructor(
             "Result".to_string(),
             TypeConstructor {
-                origin: Default::default(),
+                origin: SrcSpan::default(),
                 parameters: vec![result_value.clone(), result_error.clone()],
                 typ: result(result_value, result_error),
                 module: vec![],
@@ -204,7 +206,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
         .insert_type_constructor(
             "Nil".to_string(),
             TypeConstructor {
-                origin: Default::default(),
+                origin: SrcSpan::default(),
                 parameters: vec![],
                 typ: nil(),
                 module: vec![],
@@ -217,7 +219,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
         .insert_type_constructor(
             "BitString".to_string(),
             TypeConstructor {
-                origin: Default::default(),
+                origin: SrcSpan::default(),
                 parameters: vec![],
                 typ: bit_string(),
                 module: vec![],
@@ -230,7 +232,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
         .insert_type_constructor(
             "UtfCodepoint".to_string(),
             TypeConstructor {
-                origin: Default::default(),
+                origin: SrcSpan::default(),
                 parameters: vec![],
                 typ: utf_codepoint(),
                 module: vec![],

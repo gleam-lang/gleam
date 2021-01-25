@@ -1,4 +1,8 @@
-use super::*;
+use super::{
+    Arc, Arg, BinOp, BindingKind, CallArg, Clause, GleamExpect, HasLocation,
+    ModuleValueConstructor, Pattern, PatternConstructor, SrcSpan, TypeAst,
+    TypedExprBitStringSegment, TypedRecordUpdateArg, ValueConstructor,
+};
 use crate::typ::{HasType, Type};
 
 #[derive(Debug, PartialEq, Clone)]
@@ -146,7 +150,8 @@ impl TypedExpr {
     pub fn non_zero_compile_time_number(&self) -> bool {
         use regex::Regex;
         lazy_static! {
-            static ref NON_ZERO: Regex = Regex::new(r"[1-9]").gleam_expect("Invalid regular expression");
+            static ref NON_ZERO: Regex =
+                Regex::new(r"[1-9]").gleam_expect("Invalid regular expression");
         }
         match self {
             Self::Int { value, .. } | Self::Float { value, .. } => NON_ZERO.is_match(value),
@@ -218,26 +223,26 @@ impl HasLocation for TypedExpr {
 impl TypedExpr {
     fn typ(&self) -> Arc<Type> {
         match self {
-            Self::Fn { typ, .. } => typ.clone(),
-            Self::ListNil { typ, .. } => typ.clone(),
-            Self::Let { typ, .. } => typ.clone(),
-            Self::Int { typ, .. } => typ.clone(),
             Self::Seq { then, .. } => then.typ(),
-            Self::Todo { typ, .. } => typ.clone(),
-            Self::Case { typ, .. } => typ.clone(),
-            Self::ListCons { typ, .. } => typ.clone(),
-            Self::Call { typ, .. } => typ.clone(),
-            Self::Pipe { typ, .. } => typ.clone(),
-            Self::Float { typ, .. } => typ.clone(),
-            Self::BinOp { typ, .. } => typ.clone(),
-            Self::Tuple { typ, .. } => typ.clone(),
-            Self::String { typ, .. } => typ.clone(),
-            Self::TupleIndex { typ, .. } => typ.clone(),
             Self::Var { constructor, .. } => constructor.typ.clone(),
-            Self::ModuleSelect { typ, .. } => typ.clone(),
-            Self::RecordAccess { typ, .. } => typ.clone(),
-            Self::BitString { typ, .. } => typ.clone(),
-            Self::RecordUpdate { typ, .. } => typ.clone(),
+            Self::Fn { typ, .. }
+            | Self::ListNil { typ, .. }
+            | Self::Let { typ, .. }
+            | Self::Int { typ, .. }
+            | Self::Todo { typ, .. }
+            | Self::Case { typ, .. }
+            | Self::ListCons { typ, .. }
+            | Self::Call { typ, .. }
+            | Self::Pipe { typ, .. }
+            | Self::Float { typ, .. }
+            | Self::BinOp { typ, .. }
+            | Self::Tuple { typ, .. }
+            | Self::String { typ, .. }
+            | Self::TupleIndex { typ, .. }
+            | Self::ModuleSelect { typ, .. }
+            | Self::RecordAccess { typ, .. }
+            | Self::BitString { typ, .. }
+            | Self::RecordUpdate { typ, .. } => typ.clone(),
         }
     }
 }

@@ -15,14 +15,14 @@ use crate::{
 };
 use askama::Template;
 use itertools::Itertools;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 const MAX_COLUMNS: isize = 65;
 
 pub fn build_project(
     project_root: impl AsRef<Path>,
     version: String,
-    output_dir: &PathBuf,
+    output_dir: &Path,
 ) -> Result<(PackageConfig, Vec<OutputFile>), Error> {
     // Read and type check project
     let (mut config, analysed) = project::read_and_analyse(&project_root)?;
@@ -32,10 +32,13 @@ pub fn build_project(
     // Attach documentation to Src modules
     let analysed: Vec<Analysed> = analysed
         .into_iter()
-        .filter(|a| a.origin == ModuleOrigin::Src)
-        .map(|mut a| {
-            a.attach_doc_and_module_comments();
-            a
+        .filter_map(|mut a| {
+            if a.origin == ModuleOrigin::Src {
+                a.attach_doc_and_module_comments();
+                Some(a)
+            } else {
+                None
+            }
         })
         .collect();
 
@@ -55,17 +58,18 @@ pub fn build_project(
         &config,
         analysed.as_slice(),
         &pages,
-        output_dir,
+        &output_dir.to_path_buf(),
     );
     Ok((config, outputs))
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn generate_html(
     project_root: impl AsRef<Path>,
     project_config: &PackageConfig,
     analysed: &[Analysed],
     docspages: &[DocsPage],
-    output_dir: &PathBuf,
+    output_dir: &Path,
 ) -> Vec<OutputFile> {
     let modules = analysed.iter();
 
@@ -143,7 +147,8 @@ pub fn generate_html(
         let source_links = SourceLinker::new(&project_root, project_config, module);
 
         let template = ModuleTemplate {
-            unnest: module.name.iter().map(|_| "..").intersperse("/").collect(),
+            unnest: itertools::Itertools::intersperse(module.name.iter().map(|_| ".."), "/")
+                .collect(),
             links: &links,
             pages: &pages,
             documentation: render_markdown(module.ast.documentation.iter().join("\n").as_str()),
@@ -184,8 +189,8 @@ pub fn generate_html(
             },
         };
 
-        let mut path = output_dir.clone();
-        for segment in module.name.iter() {
+        let mut path = output_dir.to_path_buf();
+        for segment in &module.name {
             path.push(segment)
         }
         path.push("index.html");
@@ -238,7 +243,12 @@ fn function<'a>(
         } => Some(Function {
             name,
             documentation: markdown_documentation(doc),
-            signature: print(formatter.docs_fn_signature(true, name, args, ret.clone())),
+            signature: print(format::Formatter::docs_fn_signature(
+                true,
+                name,
+                args,
+                &ret.clone(),
+            )),
             source_url: source_links.url(location),
         }),
 
@@ -273,7 +283,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
             ..
         } => Some(Type {
             name,
-            definition: print(formatter.external_type(true, name.as_str(), args)),
+            definition: print(format::Formatter::external_type(true, name.as_str(), args)),
             documentation: markdown_documentation(doc),
             constructors: vec![],
             source_url: source_links.url(location),

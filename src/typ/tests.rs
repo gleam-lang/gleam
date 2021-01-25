@@ -1,5 +1,10 @@
-use super::test_helpers::*;
-use super::*;
+use super::error::UnifyErrorSituation;
+use super::test_helpers::{env_types, env_types_with, env_vars, env_vars_with, sort_options};
+use super::{
+    bit_string, bool, float, infer_module, int, list, nil, pretty, result, string, tuple,
+    utf_codepoint, Arc, CallArg, Environment, Error, ExprTyper, FieldMap, GleamExpect, HasType,
+    HashMap, Module, RefCell, SrcSpan, Type, TypeVar, UntypedModule, Warning,
+};
 use crate::ast::UntypedExpr;
 
 macro_rules! assert_infer {
@@ -64,7 +69,7 @@ macro_rules! assert_module_infer {
             .values
             .iter()
             .map(|(k, v)| {
-                let mut printer = pretty::Printer::new();
+                let mut printer = super::pretty::Printer::new();
                 (k.clone(), printer.pretty_print(&v.typ, 0))
             })
             .collect();
@@ -82,7 +87,7 @@ macro_rules! assert_warning {
         let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my_module".to_string()];
         let mut warnings = vec![];
-        let _ = infer_module(&mut 0, ast, &HashMap::new(), &mut warnings);
+        let _typ = infer_module(&mut 0, ast, &HashMap::new(), &mut warnings);
 
         assert!(!warnings.is_empty());
         assert_eq!(
@@ -98,19 +103,15 @@ macro_rules! assert_no_warnings {
         ast.name = vec!["my_module".to_string()];
         let expected: Vec<Warning> = vec![];
         let mut warnings = vec![];
-        let _ = infer_module(&mut 0, ast, &HashMap::new(), &mut warnings);
+        let _typ = infer_module(&mut 0, ast, &HashMap::new(), &mut warnings);
 
         assert_eq!(expected, warnings);
     };
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn field_map_reorder_test() {
-    let int = |value: &str| UntypedExpr::Int {
-        value: value.to_string(),
-        location: SrcSpan { start: 0, end: 0 },
-    };
-
     struct Case {
         arity: usize,
         fields: HashMap<String, usize>,
@@ -132,6 +133,11 @@ fn field_map_reorder_test() {
         }
     }
 
+    let int = |value: &str| UntypedExpr::Int {
+        value: value.to_string(),
+        location: SrcSpan { start: 0, end: 0 },
+    };
+
     Case {
         arity: 0,
         fields: HashMap::new(),
@@ -146,17 +152,17 @@ fn field_map_reorder_test() {
         fields: HashMap::new(),
         args: vec![
             CallArg {
-                location: Default::default(),
+                location: SrcSpan::default(),
                 label: None,
                 value: int("1"),
             },
             CallArg {
-                location: Default::default(),
+                location: SrcSpan::default(),
                 label: None,
                 value: int("2"),
             },
             CallArg {
-                location: Default::default(),
+                location: SrcSpan::default(),
                 label: None,
                 value: int("3"),
             },
@@ -164,17 +170,17 @@ fn field_map_reorder_test() {
         expected_result: Ok(()),
         expected_args: vec![
             CallArg {
-                location: Default::default(),
+                location: SrcSpan::default(),
                 label: None,
                 value: int("1"),
             },
             CallArg {
-                location: Default::default(),
+                location: SrcSpan::default(),
                 label: None,
                 value: int("2"),
             },
             CallArg {
-                location: Default::default(),
+                location: SrcSpan::default(),
                 label: None,
                 value: int("3"),
             },
@@ -187,17 +193,17 @@ fn field_map_reorder_test() {
         fields: [("last".to_string(), 2)].iter().cloned().collect(),
         args: vec![
             CallArg {
-                location: Default::default(),
+                location: SrcSpan::default(),
                 label: None,
                 value: int("1"),
             },
             CallArg {
-                location: Default::default(),
+                location: SrcSpan::default(),
                 label: None,
                 value: int("2"),
             },
             CallArg {
-                location: Default::default(),
+                location: SrcSpan::default(),
                 label: Some("last".to_string()),
                 value: int("3"),
             },
@@ -205,17 +211,17 @@ fn field_map_reorder_test() {
         expected_result: Ok(()),
         expected_args: vec![
             CallArg {
-                location: Default::default(),
+                location: SrcSpan::default(),
                 label: None,
                 value: int("1"),
             },
             CallArg {
-                location: Default::default(),
+                location: SrcSpan::default(),
                 label: None,
                 value: int("2"),
             },
             CallArg {
-                location: Default::default(),
+                location: SrcSpan::default(),
                 label: Some("last".to_string()),
                 value: int("3"),
             },
@@ -562,6 +568,7 @@ fn main() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn infer_bit_string_error_test() {
     assert_error!(
         "case <<1>> { <<2.0, a>> -> 1 }",
@@ -967,6 +974,7 @@ fn annotated_functions_unification_error() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn the_rest() {
     assert_error!(
         "case tuple(1, 2, 3) { x if x == tuple(1, 1.0) -> 1 }",
@@ -1582,6 +1590,7 @@ fn the_rest() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn infer_module_test() {
     assert_module_infer!(
         "pub fn repeat(i, x) {
@@ -2073,6 +2082,7 @@ pub fn main() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn infer_module_error_test() {
     assert_module_error!(
         "fn go() { 1 + 2.0 }",
@@ -2846,6 +2856,7 @@ fn x() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn module_update() {
     // A variable of the wrong type given to a record update
     assert_module_error!(

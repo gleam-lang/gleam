@@ -144,13 +144,13 @@ impl<'a> std::fmt::Write for WrappedWriter<'a> {
     }
 }
 
-pub fn delete_dir(dir: &PathBuf) -> Result<(), Error> {
+pub fn delete_dir(dir: &Path) -> Result<(), Error> {
     tracing::trace!("Deleting directory {:?}", dir);
     if dir.exists() {
         std::fs::remove_dir_all(&dir).map_err(|e| Error::FileIO {
             action: FileIOAction::Delete,
             kind: FileKind::Directory,
-            path: dir.clone(),
+            path: dir.to_path_buf(),
             err: Some(e.to_string()),
         })?;
     } else {
@@ -215,7 +215,7 @@ pub fn write_output(file: &OutputFile) -> Result<(), Error> {
     Ok(())
 }
 
-fn is_gleam_path(path: &PathBuf, dir: impl AsRef<Path>) -> bool {
+fn is_gleam_path(path: &Path, dir: impl AsRef<Path>) -> bool {
     use regex::Regex;
     lazy_static! {
         static ref RE: Regex = Regex::new(
@@ -265,20 +265,30 @@ pub fn gleam_files(dir: &Path) -> impl Iterator<Item = PathBuf> + '_ {
         .follow_links(true)
         .into_iter()
         .filter_map(Result::ok)
-        .filter(|e| e.file_type().is_file())
-        .map(|d| d.path().to_path_buf())
+        .filter_map(|e| {
+            if e.file_type().is_file() {
+                Some(e.path().to_path_buf())
+            } else {
+                None
+            }
+        })
         .filter(move |d| is_gleam_path(d, dir))
 }
 
-pub fn gleam_files_excluding_gitignore(dir: &PathBuf) -> impl Iterator<Item = PathBuf> + '_ {
+pub fn gleam_files_excluding_gitignore(dir: &Path) -> impl Iterator<Item = PathBuf> + '_ {
     ignore::WalkBuilder::new(&dir)
         .follow_links(true)
         .require_git(false)
         .build()
         .into_iter()
         .filter_map(Result::ok)
-        .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
-        .map(|d| d.into_path())
+        .filter_map(|e| {
+            if e.file_type().map_or(false, |t| t.is_file()) {
+                Some(e.into_path())
+            } else {
+                None
+            }
+        })
         .filter(move |d| is_gleam_path(d, dir))
 }
 
@@ -420,13 +430,13 @@ pub mod test {
 
     impl InMemoryFile {
         pub fn new() -> Self {
-            Default::default()
+            InMemoryFile::default()
         }
 
         pub fn into_contents(self) -> Result<Vec<u8>, ()> {
             Rc::try_unwrap(self.contents)
                 .map_err(|_| ())
-                .map(|cell| cell.into_inner())
+                .map(RefCell::into_inner)
         }
     }
 

@@ -1,5 +1,5 @@
-use crate::GleamExpect;
 use crate::ast::SrcSpan;
+use crate::GleamExpect;
 
 #[derive(Debug, PartialEq)]
 pub struct ModuleExtra {

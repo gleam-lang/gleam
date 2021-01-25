@@ -1,4 +1,9 @@
-use super::*;
+use super::{
+    flip_unify_error, fn_, register_prelude, tuple, unify_enclosed_type, update_levels,
+    AccessorsMap, Arc, Error, GetTypeConstructorError, GetValueConstructorError, HashSet, Hydrator,
+    Module, Origin, RefCell, SrcSpan, Type, TypeConstructor, TypeVar, UnifyError, ValueConstructor,
+    ValueConstructorVariant, Warning,
+};
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -141,7 +146,7 @@ impl<'a, 'b> Environment<'a, 'b> {
             name,
             ValueConstructor {
                 public: false,
-                origin: Default::default(), // TODO: use the real one
+                origin: SrcSpan::default(), // TODO: use the real one
                 variant,
                 typ,
             },
@@ -209,7 +214,7 @@ impl<'a, 'b> Environment<'a, 'b> {
                         type_constructors: self
                             .module_types
                             .keys()
-                            .map(|t| t.to_string())
+                            .map(std::string::ToString::to_string)
                             .collect(),
                     })
             }
@@ -221,7 +226,7 @@ impl<'a, 'b> Environment<'a, 'b> {
                         imported_modules: self
                             .importable_modules
                             .keys()
-                            .map(|t| t.to_string())
+                            .map(std::string::ToString::to_string)
                             .collect(),
                     }
                 })?;
@@ -232,7 +237,12 @@ impl<'a, 'b> Environment<'a, 'b> {
                     .ok_or_else(|| GetTypeConstructorError::UnknownModuleType {
                         name: name.to_string(),
                         module_name: module.1.name.clone(),
-                        type_constructors: module.1.types.keys().map(|t| t.to_string()).collect(),
+                        type_constructors: module
+                            .1
+                            .types
+                            .keys()
+                            .map(std::string::ToString::to_string)
+                            .collect(),
                     })
             }
         }
@@ -249,7 +259,11 @@ impl<'a, 'b> Environment<'a, 'b> {
             None => self.local_values.get(name).ok_or_else(|| {
                 GetValueConstructorError::UnknownVariable {
                     name: name.to_string(),
-                    variables: self.local_values.keys().map(|t| t.to_string()).collect(),
+                    variables: self
+                        .local_values
+                        .keys()
+                        .map(std::string::ToString::to_string)
+                        .collect(),
                 }
             }),
 
@@ -260,7 +274,7 @@ impl<'a, 'b> Environment<'a, 'b> {
                         imported_modules: self
                             .importable_modules
                             .keys()
-                            .map(|t| t.to_string())
+                            .map(std::string::ToString::to_string)
                             .collect(),
                     }
                 })?;
@@ -268,7 +282,12 @@ impl<'a, 'b> Environment<'a, 'b> {
                     GetValueConstructorError::UnknownModuleValue {
                         name: name.to_string(),
                         module_name: module.1.name.clone(),
-                        value_constructors: module.1.values.keys().map(|t| t.to_string()).collect(),
+                        value_constructors: module
+                            .1
+                            .values
+                            .keys()
+                            .map(std::string::ToString::to_string)
+                            .collect(),
                     }
                 })
             }
@@ -283,12 +302,12 @@ impl<'a, 'b> Environment<'a, 'b> {
     ///
     pub fn instantiate(
         &mut self,
-        t: Arc<Type>,
+        t: &Arc<Type>,
         ctx_level: usize,
         ids: &mut im::HashMap<usize, Arc<Type>>,
         hydrator: &Hydrator,
     ) -> Arc<Type> {
-        match &*t {
+        match &**t {
             Type::App {
                 public,
                 name,
@@ -297,7 +316,7 @@ impl<'a, 'b> Environment<'a, 'b> {
             } => {
                 let args = args
                     .iter()
-                    .map(|t| self.instantiate(t.clone(), ctx_level, ids, hydrator))
+                    .map(|t| self.instantiate(t, ctx_level, ids, hydrator))
                     .collect();
                 Arc::new(Type::App {
                     public: *public,
@@ -310,7 +329,7 @@ impl<'a, 'b> Environment<'a, 'b> {
             Type::Var { typ } => {
                 match &*typ.borrow() {
                     TypeVar::Link { typ } => {
-                        return self.instantiate(typ.clone(), ctx_level, ids, hydrator)
+                        return self.instantiate(typ, ctx_level, ids, hydrator)
                     }
 
                     TypeVar::Unbound { .. } => return Arc::new(Type::Var { typ: typ.clone() }),
@@ -318,10 +337,10 @@ impl<'a, 'b> Environment<'a, 'b> {
                     TypeVar::Generic { id } => match ids.get(id) {
                         Some(t) => return t.clone(),
                         None => {
-                            if !hydrator.is_created_generic_type(id) {
+                            if !hydrator.is_created_generic_type(*id) {
                                 // Check this in the hydrator, i.e. is it a created type
                                 let v = self.new_unbound_var(ctx_level);
-                                let _ = ids.insert(*id, v.clone());
+                                let _old = ids.insert(*id, v.clone());
                                 return v;
                             }
                         }
@@ -332,15 +351,15 @@ impl<'a, 'b> Environment<'a, 'b> {
 
             Type::Fn { args, retrn, .. } => fn_(
                 args.iter()
-                    .map(|t| self.instantiate(t.clone(), ctx_level, ids, hydrator))
+                    .map(|t| self.instantiate(t, ctx_level, ids, hydrator))
                     .collect(),
-                self.instantiate(retrn.clone(), ctx_level, ids, hydrator),
+                self.instantiate(retrn, ctx_level, ids, hydrator),
             ),
 
             Type::Tuple { elems } => tuple(
                 elems
                     .iter()
-                    .map(|t| self.instantiate(t.clone(), ctx_level, ids, hydrator))
+                    .map(|t| self.instantiate(t, ctx_level, ids, hydrator))
                     .collect(),
             ),
         }
@@ -351,6 +370,7 @@ impl<'a, 'b> Environment<'a, 'b> {
     ///
     /// It two types are found to not be the same an error is returned.
     ///
+    #[allow(clippy::too_many_lines)]
     pub fn unify(&mut self, t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
         if t1 == t2 {
             return Ok(());
@@ -374,14 +394,14 @@ impl<'a, 'b> Environment<'a, 'b> {
                 TypeVar::Link { typ } => Action::Unify(typ.clone()),
 
                 TypeVar::Unbound { id, level } => {
-                    update_levels(t2.clone(), *level, *id)?;
+                    update_levels(&t2, *level, *id)?;
                     Action::Link
                 }
 
                 TypeVar::Generic { id } => {
-                    if let Type::Var { typ } = &*t2 {
-                        if typ.borrow().is_unbound() {
-                            *typ.borrow_mut() = TypeVar::Generic { id: *id };
+                    if let Type::Var { typ: var_typ } = &*t2 {
+                        if var_typ.borrow().is_unbound() {
+                            *var_typ.borrow_mut() = TypeVar::Generic { id: *id };
                             return Ok(());
                         }
                     }

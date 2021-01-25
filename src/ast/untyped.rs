@@ -1,4 +1,7 @@
-use super::*;
+use super::{
+    Arg, BinOp, BindingKind, CallArg, Clause, HasLocation, Pattern, RecordUpdateSpread, SrcSpan,
+    TypeAst, UntypedExprBitStringSegment, UntypedRecordUpdateArg,
+};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum UntypedExpr {
@@ -117,8 +120,7 @@ pub enum UntypedExpr {
 impl UntypedExpr {
     pub fn location(&self) -> SrcSpan {
         match self {
-            Self::Seq { then, .. } => then.location(),
-            Self::Let { then, .. } => then.location(),
+            Self::Seq { then, .. } | Self::Let { then, .. } => then.location(),
             Self::Pipe { right, .. } => right.location(),
             Self::Fn { location, .. }
             | Self::Var { location, .. }
@@ -157,13 +159,23 @@ impl UntypedExpr {
     }
 
     pub fn is_simple_constant(&self) -> bool {
-        matches!(self, Self::String { .. } | Self::Int { .. } | Self::Float { .. })
+        matches!(
+            self,
+            Self::String { .. } | Self::Int { .. } | Self::Float { .. }
+        )
     }
 
     pub fn is_literal(&self) -> bool {
-        matches!(self,
-            Self::Int { .. } | Self::Float { .. } | Self::ListNil { .. } | Self::ListCons { .. }
-            | Self::Tuple { .. } | Self::String { .. } | Self::BitString { .. })
+        matches!(
+            self,
+            Self::Int { .. }
+                | Self::Float { .. }
+                | Self::ListNil { .. }
+                | Self::ListCons { .. }
+                | Self::Tuple { .. }
+                | Self::String { .. }
+                | Self::BitString { .. }
+        )
     }
 }
 

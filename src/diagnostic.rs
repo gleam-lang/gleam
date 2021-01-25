@@ -85,7 +85,7 @@ pub fn write_title(buffer: &mut Buffer, title: &str) {
         .gleam_expect("Buffer::set_color() failed to set color");
 }
 
-pub fn write_project(buffer: &mut Buffer, d: ProjectErrorDiagnostic) {
+pub fn write_project(buffer: &mut Buffer, d: &ProjectErrorDiagnostic) {
     use std::io::Write;
     use termcolor::{ColorSpec, WriteColor};
     write_title(buffer, d.title.as_ref());

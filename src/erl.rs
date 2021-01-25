@@ -1,11 +1,17 @@
 #[cfg(test)]
 mod tests;
 
+use crate::truncate;
 use crate::{
-    ast::*,
+    ast::{
+        ArgNames, BinOp, BindingKind, BitStringSegmentOption, CallArg, Clause, ClauseGuard,
+        Constant, Pattern, Statement, TypedArg, TypedClause, TypedClauseGuard, TypedConstant,
+        TypedExpr, TypedModule, TypedPattern, TypedRecordUpdateArg, TypedStatement,
+        CAPTURE_VARIABLE,
+    },
     error::GleamExpect,
     fs::{OutputFile, Utf8Writer},
-    pretty::*,
+    pretty::{break_, concat, force_break, line, lines, nil, Document, Documentable},
     project::{self, Analysed},
     typ::{
         ModuleValueConstructor, PatternConstructor, Type, ValueConstructor, ValueConstructorVariant,
@@ -38,10 +44,10 @@ pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
             .join(origin.dir_name());
         let erl_module_name = name.join("@");
 
-        for (name, text) in records(ast).into_iter() {
+        for (name, text) in &records(ast) {
             files.push(OutputFile {
                 path: gen_dir.join(format!("{}_{}.hrl", erl_module_name, name)),
-                text,
+                text: text.clone(),
             })
         }
 
@@ -60,11 +66,11 @@ fn module_name_join(module: &[String]) -> Document<'_> {
     let mut name = Vec::with_capacity(module.len() * 2);
     for (i, segment) in module.iter().enumerate() {
         if i != 0 {
-            name.push("@".to_doc())
+            name.push("@".into_doc())
         }
-        name.push(segment.to_doc())
+        name.push(segment.into_doc())
     }
-    name.to_doc()
+    name.into_doc()
 }
 
 #[derive(Debug, Clone)]
@@ -77,17 +83,17 @@ struct Env<'a> {
 impl<'env> Env<'env> {
     pub fn new(module: &'env [String]) -> Self {
         Self {
-            current_scope_vars: Default::default(),
-            erl_function_scope_vars: Default::default(),
+            current_scope_vars: im::HashMap::default(),
+            erl_function_scope_vars: im::HashMap::default(),
             module,
         }
     }
 
-    pub fn local_var_name<'a>(&mut self, name: String) -> Document<'a> {
-        match self.current_scope_vars.get(&name) {
+    pub fn local_var_name<'a>(&mut self, name: &str) -> Document<'a> {
+        match self.current_scope_vars.get(&name.to_owned()) {
             None => {
-                let _ = self.current_scope_vars.insert(name.clone(), 0);
-                let _ = self.erl_function_scope_vars.insert(name.clone(), 0);
+                let _ = self.current_scope_vars.insert(name.to_owned(), 0);
+                let _ = self.erl_function_scope_vars.insert(name.to_owned(), 0);
                 Document::String(variable_name(name))
             }
             Some(0) => Document::String(variable_name(name)),
@@ -95,10 +101,13 @@ impl<'env> Env<'env> {
         }
     }
 
-    pub fn next_local_var_name<'a>(&mut self, name: String) -> Document<'a> {
-        let next = self.erl_function_scope_vars.get(&name).map_or(0, |i| i + 1);
-        let _ = self.erl_function_scope_vars.insert(name.clone(), next);
-        let _ = self.current_scope_vars.insert(name.clone(), next);
+    pub fn next_local_var_name<'a>(&mut self, name: &str) -> Document<'a> {
+        let next = self
+            .erl_function_scope_vars
+            .get(&name.to_owned())
+            .map_or(0, |i| i + 1);
+        let _ = self.erl_function_scope_vars.insert(name.to_owned(), next);
+        let _ = self.current_scope_vars.insert(name.to_owned(), next);
         self.local_var_name(name)
     }
 }
@@ -115,10 +124,12 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
             } => &constructors[..],
             _ => &[],
         })
-        .filter(|constructor| !constructor.args.is_empty())
         .flat_map(|constructor| {
+            if constructor.args.is_empty() {
+                return None;
+            }
             let mut fields = Vec::with_capacity(constructor.args.len());
-            for (label, ..) in constructor.args.iter() {
+            for (label, ..) in &constructor.args {
                 match label {
                     Some(s) => fields.push(&**s),
                     None => return None,
@@ -131,15 +142,15 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
 }
 
 pub fn record_definition(name: &str, fields: &[&str]) -> String {
+    use std::fmt::Write;
     let name = &name.to_snake_case();
     let escaped_name = if is_erlang_reserved_word(name) {
         format!("'{}'", name)
     } else {
         name.to_string()
     };
-    use std::fmt::Write;
     let mut buffer = format!("-record({}, {{", escaped_name);
-    for field in fields.iter().intersperse(&", ") {
+    for field in Itertools::intersperse(fields.iter(), &", ") {
         let escaped_field = if is_erlang_reserved_word(field) {
             format!("'{}'", field)
         } else {
@@ -153,7 +164,7 @@ pub fn record_definition(name: &str, fields: &[&str]) -> String {
 
 pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> {
     let module_name = module.name.as_slice();
-    let exports = concat(
+    let exports = concat(Itertools::intersperse(
         module
             .statements
             .iter()
@@ -174,20 +185,20 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
 
                 _ => None,
             })
-            .map(|(n, a)| atom(n).append("/").append(a))
-            .intersperse(", ".to_doc()),
-    );
+            .map(|(n, a)| atom(n).append("/").append(a)),
+        ", ".into_doc(),
+    ));
 
-    let statements = concat(
+    let statements = concat(Itertools::intersperse(
         module
             .statements
             .iter()
-            .flat_map(|s| statement(s, module_name))
-            .intersperse(lines(2)),
-    );
+            .flat_map(|s| statement(s, module_name)),
+        lines(2),
+    ));
 
     "-module("
-        .to_doc()
+        .into_doc()
         .append(module_name_join(module_name))
         .append(").")
         .append(line())
@@ -197,7 +208,7 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
             nil()
         } else {
             "-export(["
-                .to_doc()
+                .into_doc()
                 .append(exports)
                 .append("]).")
                 .append(lines(2))
@@ -209,26 +220,26 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
 
 fn statement<'a>(statement: &'a TypedStatement, module: &'a [String]) -> Option<Document<'a>> {
     match statement {
-        Statement::TypeAlias { .. } => None,
-        Statement::CustomType { .. } => None,
-        Statement::Import { .. } => None,
-        Statement::ExternalType { .. } => None,
-        Statement::ModuleConstant { .. } => None,
+        Statement::TypeAlias { .. }
+        | Statement::CustomType { .. }
+        | Statement::Import { .. }
+        | Statement::ExternalType { .. }
+        | Statement::ModuleConstant { .. }
+        | Statement::ExternalFn { public: false, .. } => None,
 
         Statement::Fn {
             args, name, body, ..
         } => Some(mod_fun(name.as_ref(), args.as_slice(), body, module)),
 
-        Statement::ExternalFn { public: false, .. } => None,
         Statement::ExternalFn {
             fun,
-            module,
+            module: external_module,
             args,
             name,
             ..
         } => Some(external_fun(
             name.as_ref(),
-            module.as_ref(),
+            external_module.as_ref(),
             fun.as_ref(),
             args.len(),
         )),
@@ -252,9 +263,9 @@ fn mod_fun<'a>(
 
 fn fun_args<'a>(args: &'a [TypedArg], env: &mut Env<'_>) -> Document<'a> {
     wrap_args(args.iter().map(|a| match &a.names {
-        ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => "_".to_doc(),
+        ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => "_".into_doc(),
         ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
-            env.next_local_var_name(name.to_string())
+            env.next_local_var_name(name)
         }
     }))
 }
@@ -264,7 +275,7 @@ where
     I: Iterator<Item = Document<'a>>,
 {
     break_("", "")
-        .append(concat(args.intersperse(break_(",", ", "))))
+        .append(concat(Itertools::intersperse(args, break_(",", ", "))))
         .nest(INDENT)
         .append(break_("", ""))
         .surround("(", ")")
@@ -275,7 +286,8 @@ where
 fn atom<'a>(value: String) -> Document<'a> {
     use regex::Regex;
     lazy_static! {
-        static ref RE: Regex = Regex::new(r"^[a-z][a-z0-9_@]*$").gleam_expect("Invalid regular expression");
+        static ref RE: Regex =
+            Regex::new(r"^[a-z][a-z0-9_@]*$").gleam_expect("Invalid regular expression");
     }
 
     match &*value {
@@ -291,18 +303,18 @@ fn atom<'a>(value: String) -> Document<'a> {
 }
 
 fn string(value: &str) -> Document<'_> {
-    value.to_doc().surround("<<\"", "\"/utf8>>")
+    value.into_doc().surround("<<\"", "\"/utf8>>")
 }
 
 fn tuple<'a>(elems: impl Iterator<Item = Document<'a>>) -> Document<'a> {
-    concat(elems.intersperse(break_(",", ", ")))
+    concat(Itertools::intersperse(elems, break_(",", ", ")))
         .nest_current()
         .surround("{", "}")
         .group()
 }
 
 fn bit_string<'a>(elems: impl Iterator<Item = Document<'a>>) -> Document<'a> {
-    concat(elems.intersperse(break_(",", ", ")))
+    concat(Itertools::intersperse(elems, break_(",", ", ")))
         .nest_current()
         .surround("<<", ">>")
         .group()
@@ -315,7 +327,7 @@ fn const_segment<'a>(
 ) -> Document<'a> {
     let document = match value {
         // Skip the normal <<value/utf8>> surrounds
-        Constant::String { value, .. } => value.to_doc().surround("\"", "\""),
+        Constant::String { value, .. } => value.into_doc().surround("\"", "\""),
 
         // As normal
         Constant::Int { .. } | Constant::Float { .. } | Constant::BitString { .. } => {
@@ -327,15 +339,15 @@ fn const_segment<'a>(
     };
 
     let size = |value: &'a TypedConstant, env: &mut Env<'_>| match value {
-        Constant::Int { .. } => Some(":".to_doc().append(const_inline(value, env))),
+        Constant::Int { .. } => Some(":".into_doc().append(const_inline(value, env))),
         _ => Some(
-            ":".to_doc()
+            ":".into_doc()
                 .append(const_inline(value, env).surround("(", ")")),
         ),
     };
 
     let unit = |value: &'a TypedConstant, env: &mut Env<'_>| match value {
-        Constant::Int { .. } => Some("unit:".to_doc().append(const_inline(value, env))),
+        Constant::Int { .. } => Some("unit:".into_doc().append(const_inline(value, env))),
         _ => None,
     };
 
@@ -353,7 +365,7 @@ fn expr_segment<'a>(
         // Skip the normal <<value/utf8>> surrounds and set the string literal flag
         TypedExpr::String { value, .. } => {
             value_is_a_string_literal = true;
-            value.to_doc().surround("\"", "\"")
+            value.into_doc().surround("\"", "\"")
         }
 
         // As normal
@@ -368,13 +380,13 @@ fn expr_segment<'a>(
 
     let size = |value: &'a TypedExpr, env: &mut Env<'_>| match value {
         TypedExpr::Int { .. } | TypedExpr::Var { .. } => {
-            Some(":".to_doc().append(expr(value, env)))
+            Some(":".into_doc().append(expr(value, env)))
         }
-        _ => Some(":".to_doc().append(expr(value, env).surround("(", ")"))),
+        _ => Some(":".into_doc().append(expr(value, env).surround("(", ")"))),
     };
 
     let unit = |value: &'a TypedExpr, env: &mut Env<'_>| match value {
-        TypedExpr::Int { .. } => Some("unit:".to_doc().append(expr(value, env))),
+        TypedExpr::Int { .. } => Some("unit:".into_doc().append(expr(value, env))),
         _ => None,
     };
 
@@ -395,7 +407,7 @@ fn pattern_segment<'a>(
 ) -> Document<'a> {
     let document = match value {
         // Skip the normal <<value/utf8>> surrounds
-        Pattern::String { value, .. } => value.to_doc().surround("\"", "\""),
+        Pattern::String { value, .. } => value.into_doc().surround("\"", "\""),
 
         // As normal
         Pattern::Discard { .. }
@@ -407,11 +419,12 @@ fn pattern_segment<'a>(
         _ => crate::error::fatal_compiler_bug("Pattern segment match not recognised"),
     };
 
-    let size =
-        |value: &'a TypedPattern, env: &mut Env<'_>| Some(":".to_doc().append(pattern(value, env)));
+    let size = |value: &'a TypedPattern, env: &mut Env<'_>| {
+        Some(":".into_doc().append(pattern(value, env)))
+    };
 
     let unit = |value: &'a TypedPattern, env: &mut Env<'_>| match value {
-        Pattern::Int { .. } => Some("unit:".to_doc().append(pattern(value, env))),
+        Pattern::Int { .. } => Some("unit:".into_doc().append(pattern(value, env))),
         _ => None,
     };
 
@@ -437,33 +450,33 @@ where
     // Erlang only allows valid codepoint integers to be used as values for utf segments
     // We want to support <<string_var:utf8>> for all string variables, but <<StringVar/utf8>> is invalid
     // To work around this we use the binary type specifier for these segments instead
-    let override_type = if !value_is_a_string_literal {
-        Some("binary")
-    } else {
+    let override_type = if value_is_a_string_literal {
         None
+    } else {
+        Some("binary")
     };
 
     for option in options.iter() {
         use BitStringSegmentOption as Opt;
-        if !others.is_empty() && !matches!(option, Opt::Size {..}|Opt::Unit{..}) {
-            others.push("-".to_doc());
+        if !others.is_empty() && !matches!(option, Opt::Size { .. } | Opt::Unit { .. }) {
+            others.push("-".into_doc());
         }
         match option {
-            Opt::UTF8 { .. } => others.push(override_type.unwrap_or("utf8").to_doc()),
-            Opt::UTF16 { .. } => others.push(override_type.unwrap_or("utf16").to_doc()),
-            Opt::UTF32 { .. } => others.push(override_type.unwrap_or("utf32").to_doc()),
-            Opt::Integer { .. } => others.push("integer".to_doc()),
-            Opt::Float { .. } => others.push("float".to_doc()),
-            Opt::Binary { .. } => others.push("binary".to_doc()),
-            Opt::BitString { .. } => others.push("bitstring".to_doc()),
-            Opt::UTF8Codepoint { .. } => others.push("utf8".to_doc()),
-            Opt::UTF16Codepoint { .. } => others.push("utf16".to_doc()),
-            Opt::UTF32Codepoint { .. } => others.push("utf32".to_doc()),
-            Opt::Signed { .. } => others.push("signed".to_doc()),
-            Opt::Unsigned { .. } => others.push("unsigned".to_doc()),
-            Opt::Big { .. } => others.push("big".to_doc()),
-            Opt::Little { .. } => others.push("little".to_doc()),
-            Opt::Native { .. } => others.push("native".to_doc()),
+            Opt::UTF8 { .. } => others.push(override_type.unwrap_or("utf8").into_doc()),
+            Opt::UTF16 { .. } => others.push(override_type.unwrap_or("utf16").into_doc()),
+            Opt::UTF32 { .. } => others.push(override_type.unwrap_or("utf32").into_doc()),
+            Opt::Integer { .. } => others.push("integer".into_doc()),
+            Opt::Float { .. } => others.push("float".into_doc()),
+            Opt::Binary { .. } => others.push("binary".into_doc()),
+            Opt::BitString { .. } => others.push("bitstring".into_doc()),
+            Opt::UTF8Codepoint { .. } => others.push("utf8".into_doc()),
+            Opt::UTF16Codepoint { .. } => others.push("utf16".into_doc()),
+            Opt::UTF32Codepoint { .. } => others.push("utf32".into_doc()),
+            Opt::Signed { .. } => others.push("signed".into_doc()),
+            Opt::Unsigned { .. } => others.push("unsigned".into_doc()),
+            Opt::Big { .. } => others.push("big".into_doc()),
+            Opt::Little { .. } => others.push("little".into_doc()),
+            Opt::Native { .. } => others.push("native".into_doc()),
             Opt::Size { value, .. } => size = size_to_doc(value, env),
             Opt::Unit { value, .. } => unit = unit_to_doc(value, env),
         }
@@ -477,11 +490,9 @@ where
     }
 
     if unit.is_some() {
-        if !others_is_empty {
-            document = document.append("-").append(unit)
-        } else {
-            document = document.append("/").append(unit)
-        }
+        document = document
+            .append(if others_is_empty { "/" } else { "-" })
+            .append(unit)
     }
 
     document
@@ -515,12 +526,9 @@ fn bin_op<'a>(
         BinOp::NotEq => "/=",
         BinOp::GtInt | BinOp::GtFloat => ">",
         BinOp::GtEqInt | BinOp::GtEqFloat => ">=",
-        BinOp::AddInt => "+",
-        BinOp::AddFloat => "+",
-        BinOp::SubInt => "-",
-        BinOp::SubFloat => "-",
-        BinOp::MultInt => "*",
-        BinOp::MultFloat => "*",
+        BinOp::AddInt | BinOp::AddFloat => "+",
+        BinOp::SubInt | BinOp::SubFloat => "-",
+        BinOp::MultInt | BinOp::MultFloat => "*",
         BinOp::DivInt => "div",
         BinOp::DivFloat => "/",
         BinOp::ModuloInt => "rem",
@@ -550,7 +558,7 @@ fn bin_op<'a>(
         Some(zero) => {
             let denominator = "gleam@denominator";
             "case "
-                .to_doc()
+                .into_doc()
                 .append(right_expr)
                 .append(" of")
                 .append(
@@ -560,9 +568,9 @@ fn bin_op<'a>(
                         .append(zero)
                         .append(";")
                         .append(line())
-                        .append(env.next_local_var_name(denominator.to_string()))
+                        .append(env.next_local_var_name(denominator))
                         .append(" -> ")
-                        .append(div(left_expr, env.local_var_name(denominator.to_string())))
+                        .append(div(left_expr, env.local_var_name(denominator)))
                         .nest(INDENT),
                 )
                 .append(line())
@@ -584,15 +592,15 @@ fn try_<'a>(
     let try_error_name = "gleam@try_error";
 
     "case "
-        .to_doc()
+        .into_doc()
         .append(expr(value, env))
         .append(" of")
         .append(
             line()
                 .append("{error, ")
-                .append(env.next_local_var_name(try_error_name.to_string()))
+                .append(env.next_local_var_name(try_error_name))
                 .append("} -> {error, ")
-                .append(env.local_var_name(try_error_name.to_string()))
+                .append(env.local_var_name(try_error_name))
                 .append("};")
                 .nest(INDENT),
         )
@@ -626,19 +634,19 @@ fn let_<'a>(
 
 fn pattern<'a>(p: &'a TypedPattern, env: &mut Env<'_>) -> Document<'a> {
     match p {
-        Pattern::Nil { .. } => "[]".to_doc(),
+        Pattern::Nil { .. } => "[]".into_doc(),
 
         Pattern::Let { name, pattern: p } => pattern(p, env)
             .append(" = ")
-            .append(env.next_local_var_name(name.to_string())),
+            .append(env.next_local_var_name(name)),
 
         Pattern::Cons { head, tail, .. } => pattern_list_cons(head, tail, env),
 
-        Pattern::Discard { .. } => "_".to_doc(),
+        Pattern::Discard { .. } => "_".into_doc(),
 
-        Pattern::Var { name, .. } => env.next_local_var_name(name.to_string()),
+        Pattern::Var { name, .. } => env.next_local_var_name(name),
 
-        Pattern::VarCall { name, .. } => env.local_var_name(name.to_string()),
+        Pattern::VarCall { name, .. } => env.local_var_name(name),
 
         Pattern::Int { value, .. } => int(value.as_ref()),
 
@@ -694,6 +702,7 @@ fn expr_list_cons<'a>(head: &'a TypedExpr, tail: &'a TypedExpr, env: &mut Env<'_
     })
 }
 
+#[allow(clippy::option_if_let_else)]
 fn list_cons<'a, ToDoc, Categorise, Elem: 'a>(
     head: Elem,
     tail: Elem,
@@ -708,12 +717,10 @@ where
     let mut elems = vec![head];
     let final_tail = collect_cons(tail, &mut elems, categorise_element);
 
-    let elems = concat(
-        elems
-            .into_iter()
-            .map(|e| to_doc(e, env))
-            .intersperse(break_(",", ", ")),
-    );
+    let elems = concat(Itertools::intersperse(
+        elems.into_iter().map(|e| to_doc(e, env)),
+        break_(",", ", "),
+    ));
 
     let elems = if let Some(final_tail) = final_tail {
         elems
@@ -723,7 +730,7 @@ where
         elems
     };
 
-    elems.to_doc().nest_current().surround("[", "]").group()
+    elems.into_doc().nest_current().surround("[", "]").group()
 }
 
 fn collect_cons<F, E, T>(e: T, elems: &mut Vec<E>, f: F) -> Option<T>
@@ -756,7 +763,7 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'_>) 
             Type::Fn { args, .. } => {
                 let chars = incrementing_args_list(args.len());
                 "fun("
-                    .to_doc()
+                    .into_doc()
                     .append(Document::String(chars.clone()))
                     .append(") -> {")
                     .append(Document::String(record_name.to_snake_case()))
@@ -767,14 +774,14 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'_>) 
             _ => atom(record_name.to_snake_case()),
         },
 
-        ValueConstructorVariant::LocalVariable => env.local_var_name(name.to_string()),
+        ValueConstructorVariant::LocalVariable => env.local_var_name(name),
 
         ValueConstructorVariant::ModuleConstant { literal } => const_inline(literal, env),
 
         ValueConstructorVariant::ModuleFn {
             arity, ref module, ..
         } if module.as_slice() == env.module => "fun "
-            .to_doc()
+            .into_doc()
             .append(atom(name.to_string()))
             .append("/")
             .append(*arity),
@@ -782,13 +789,13 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'_>) 
         ValueConstructorVariant::ModuleFn {
             arity,
             module,
-            name,
+            name: fn_name,
             ..
         } => "fun "
-            .to_doc()
+            .into_doc()
             .append(module_name_join(module))
             .append(":")
-            .append(atom(name.to_string()))
+            .append(atom(fn_name.to_string()))
             .append("/")
             .append(*arity),
     }
@@ -812,10 +819,10 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'_>) -> Document<'
         Constant::Tuple { elements, .. } => tuple(elements.iter().map(|e| const_inline(e, env))),
 
         Constant::List { elements, .. } => {
-            let elements = elements
-                .iter()
-                .map(|e| const_inline(e, env))
-                .intersperse(break_(",", ", "));
+            let elements = Itertools::intersperse(
+                elements.iter().map(|e| const_inline(e, env)),
+                break_(",", ", "),
+            );
             concat(elements).nest_current().surround("[", "]").group()
         }
 
@@ -866,31 +873,33 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'_>) -> Document<'a> {
     let mut then_doc = Document::Nil;
     let erlang_vars = env.erl_function_scope_vars.clone();
 
-    let docs = std::iter::once(pat)
-        .chain(alternative_patterns.iter())
-        .map(|patterns| {
-            env.erl_function_scope_vars = erlang_vars.clone();
+    let docs = Itertools::intersperse(
+        std::iter::once(pat)
+            .chain(alternative_patterns.iter())
+            .map(|patterns| {
+                env.erl_function_scope_vars = erlang_vars.clone();
 
-            let patterns_doc = if patterns.len() == 1 {
-                let p = patterns
-                    .get(0)
-                    .gleam_expect("Single pattern clause printing");
-                pattern(p, env)
-            } else {
-                tuple(patterns.iter().map(|p| pattern(p, env)))
-            };
+                let patterns_doc = if patterns.len() == 1 {
+                    let p = patterns
+                        .get(0)
+                        .gleam_expect("Single pattern clause printing");
+                    pattern(p, env)
+                } else {
+                    tuple(patterns.iter().map(|p| pattern(p, env)))
+                };
 
-            if then_doc == Document::Nil {
-                then_doc = expr(then, env);
-            }
+                if then_doc == Document::Nil {
+                    then_doc = expr(then, env);
+                }
 
-            patterns_doc.append(
-                optional_clause_guard(guard.as_ref(), env)
-                    .append(" ->")
-                    .append(line().append(then_doc.clone()).nest(INDENT).group()),
-            )
-        })
-        .intersperse(";".to_doc().append(lines(2)));
+                patterns_doc.append(
+                    optional_clause_guard(guard.as_ref(), env)
+                        .append(" ->")
+                        .append(line().append(then_doc.clone()).nest(INDENT).group()),
+                )
+            }),
+        ";".into_doc().append(lines(2)),
+    );
 
     concat(docs)
 }
@@ -900,7 +909,7 @@ fn optional_clause_guard<'a>(
     env: &mut Env<'_>,
 ) -> Document<'a> {
     match guard {
-        Some(guard) => " when ".to_doc().append(bare_clause_guard(guard, env)),
+        Some(guard) => " when ".into_doc().append(bare_clause_guard(guard, env)),
         None => nil(),
     }
 }
@@ -923,41 +932,33 @@ fn bare_clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'_>) -> Docu
             .append(" =/= ")
             .append(clause_guard(right.as_ref(), env)),
 
-        ClauseGuard::GtInt { left, right, .. } => clause_guard(left.as_ref(), env)
-            .append(" > ")
-            .append(clause_guard(right.as_ref(), env)),
+        ClauseGuard::GtInt { left, right, .. } | ClauseGuard::GtFloat { left, right, .. } => {
+            clause_guard(left.as_ref(), env)
+                .append(" > ")
+                .append(clause_guard(right.as_ref(), env))
+        }
 
-        ClauseGuard::GtEqInt { left, right, .. } => clause_guard(left.as_ref(), env)
-            .append(" >= ")
-            .append(clause_guard(right.as_ref(), env)),
+        ClauseGuard::GtEqInt { left, right, .. } | ClauseGuard::GtEqFloat { left, right, .. } => {
+            clause_guard(left.as_ref(), env)
+                .append(" >= ")
+                .append(clause_guard(right.as_ref(), env))
+        }
 
-        ClauseGuard::LtInt { left, right, .. } => clause_guard(left.as_ref(), env)
-            .append(" < ")
-            .append(clause_guard(right.as_ref(), env)),
+        ClauseGuard::LtInt { left, right, .. } | ClauseGuard::LtFloat { left, right, .. } => {
+            clause_guard(left.as_ref(), env)
+                .append(" < ")
+                .append(clause_guard(right.as_ref(), env))
+        }
 
-        ClauseGuard::LtEqInt { left, right, .. } => clause_guard(left.as_ref(), env)
-            .append(" =< ")
-            .append(clause_guard(right.as_ref(), env)),
-
-        ClauseGuard::GtFloat { left, right, .. } => clause_guard(left.as_ref(), env)
-            .append(" > ")
-            .append(clause_guard(right.as_ref(), env)),
-
-        ClauseGuard::GtEqFloat { left, right, .. } => clause_guard(left.as_ref(), env)
-            .append(" >= ")
-            .append(clause_guard(right.as_ref(), env)),
-
-        ClauseGuard::LtFloat { left, right, .. } => clause_guard(left.as_ref(), env)
-            .append(" < ")
-            .append(clause_guard(right.as_ref(), env)),
-
-        ClauseGuard::LtEqFloat { left, right, .. } => clause_guard(left.as_ref(), env)
-            .append(" =< ")
-            .append(clause_guard(right.as_ref(), env)),
+        ClauseGuard::LtEqInt { left, right, .. } | ClauseGuard::LtEqFloat { left, right, .. } => {
+            clause_guard(left.as_ref(), env)
+                .append(" =< ")
+                .append(clause_guard(right.as_ref(), env))
+        }
 
         // Only local variables are supported and the typer ensures that all
         // ClauseGuard::Vars are local variables
-        ClauseGuard::Var { name, .. } => env.local_var_name(name.to_string()),
+        ClauseGuard::Var { name, .. } => env.local_var_name(name),
 
         ClauseGuard::TupleIndex { tuple, index, .. } => tuple_index_inline(tuple, *index, env),
 
@@ -974,7 +975,7 @@ fn tuple_index_inline<'a>(
     let index_doc = Document::String(format!("{}", (index + 1)));
     let tuple_doc = bare_clause_guard(tuple, env);
     let iter = once(index_doc).chain(once(tuple_doc));
-    "erlang:element".to_doc().append(wrap_args(iter))
+    "erlang:element".into_doc().append(wrap_args(iter))
 }
 
 fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'_>) -> Document<'a> {
@@ -992,7 +993,7 @@ fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'_>) -> Document<
         | ClauseGuard::GtEqFloat { .. }
         | ClauseGuard::LtFloat { .. }
         | ClauseGuard::LtEqFloat { .. } => "("
-            .to_doc()
+            .into_doc()
             .append(bare_clause_guard(guard, env))
             .append(")"),
 
@@ -1004,16 +1005,15 @@ fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'_>) -> Document<
 }
 
 fn clauses<'a>(cs: &'a [TypedClause], env: &mut Env<'_>) -> Document<'a> {
-    concat(
-        cs.iter()
-            .map(|c| {
-                let vars = env.current_scope_vars.clone();
-                let erl = clause(c, env);
-                env.current_scope_vars = vars; // Reset the known variables now the clauses' scope has ended
-                erl
-            })
-            .intersperse(";".to_doc().append(lines(2))),
-    )
+    concat(Itertools::intersperse(
+        cs.iter().map(|c| {
+            let vars = env.current_scope_vars.clone();
+            let erl = clause(c, env);
+            env.current_scope_vars = vars; // Reset the known variables now the clauses' scope has ended
+            erl
+        }),
+        ";".into_doc().append(lines(2)),
+    ))
 }
 
 fn case<'a>(subjects: &'a [TypedExpr], cs: &'a [TypedClause], env: &mut Env<'_>) -> Document<'a> {
@@ -1026,7 +1026,7 @@ fn case<'a>(subjects: &'a [TypedExpr], cs: &'a [TypedClause], env: &mut Env<'_>)
         tuple(subjects.iter().map(|e| maybe_block_expr(e, env)))
     };
     "case "
-        .to_doc()
+        .into_doc()
         .append(subjects_doc)
         .append(" of")
         .append(line().append(clauses(cs, env)).nest(INDENT))
@@ -1102,7 +1102,7 @@ fn docs_args_call<'a>(
             ..
         } => {
             if let TypedExpr::Call {
-                fun,
+                fun: call_fun,
                 args: inner_args,
                 ..
             } = body.as_ref()
@@ -1116,7 +1116,7 @@ fn docs_args_call<'a>(
                         e => merged_args.push(expr(e, env)),
                     }
                 }
-                docs_args_call(fun, merged_args, env)
+                docs_args_call(call_fun, merged_args, env)
             } else {
                 crate::error::fatal_compiler_bug("Erl printing: Capture was not a call")
             }
@@ -1147,14 +1147,14 @@ fn record_update<'a>(
     args.iter().fold(expr(spread, env), |tuple_doc, arg| {
         // Increment the index by 2, because the first element
         // is the name of the record, so our fields are 2-indexed
-        let index_doc = (arg.index + 2).to_doc();
+        let index_doc = (arg.index + 2).into_doc();
         let value_doc = expr(&arg.value, env);
 
         let iter = once(index_doc)
             .chain(once(tuple_doc))
             .chain(once(value_doc));
 
-        "erlang:setelement".to_doc().append(wrap_args(iter))
+        "erlang:setelement".into_doc().append(wrap_args(iter))
     })
 }
 
@@ -1179,9 +1179,9 @@ fn maybe_block_expr<'a>(expression: &'a TypedExpr, env: &mut Env<'_>) -> Documen
 
 fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'_>) -> Document<'a> {
     match expression {
-        TypedExpr::ListNil { .. } => "[]".to_doc(),
+        TypedExpr::ListNil { .. } => "[]".into_doc(),
 
-        TypedExpr::Todo { label: None, .. } => "erlang:error({gleam_error, todo})".to_doc(),
+        TypedExpr::Todo { label: None, .. } => "erlang:error({gleam_error, todo})".into_doc(),
 
         TypedExpr::Todo { label: Some(l), .. } => {
             docvec!["erlang:error({gleam_error, todo, \"", l, "\"})"]
@@ -1221,7 +1221,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'_>) -> Document<'a> {
         } => {
             let chars = incrementing_args_list(*arity);
             "fun("
-                .to_doc()
+                .into_doc()
                 .append(Document::String(chars.clone()))
                 .append(") -> {")
                 .append(Document::String(name.to_snake_case()))
@@ -1280,13 +1280,13 @@ fn tuple_index<'a>(tuple: &'a TypedExpr, index: u64, env: &mut Env<'_>) -> Docum
     let index_doc = Document::String(format!("{}", (index + 1)));
     let tuple_doc = expr(tuple, env);
     let iter = once(index_doc).chain(once(tuple_doc));
-    "erlang:element".to_doc().append(wrap_args(iter))
+    "erlang:element".into_doc().append(wrap_args(iter))
 }
 
 fn module_select_fn<'a>(typ: Arc<Type>, module_name: &'a [String], label: &'a str) -> Document<'a> {
     match crate::typ::collapse_links(typ).as_ref() {
         crate::typ::Type::Fn { args, .. } => "fun "
-            .to_doc()
+            .into_doc()
             .append(module_name_join(module_name))
             .append(":")
             .append(atom(label.to_string()))
@@ -1303,7 +1303,7 @@ fn module_select_fn<'a>(typ: Arc<Type>, module_name: &'a [String], label: &'a st
 fn fun<'a>(args: &'a [TypedArg], body: &'a TypedExpr, env: &mut Env<'_>) -> Document<'a> {
     let current_scope_vars = env.current_scope_vars.clone();
     let doc = "fun"
-        .to_doc()
+        .into_doc()
         .append(fun_args(args, env).append(" ->"))
         .append(break_("", " ").append(expr(body, env)).nest(INDENT))
         .append(break_("", " "))
@@ -1314,11 +1314,13 @@ fn fun<'a>(args: &'a [TypedArg], body: &'a TypedExpr, env: &mut Env<'_>) -> Docu
 }
 
 fn incrementing_args_list(arity: usize) -> String {
-    (65..(65 + arity))
-        .map(|x| x as u8 as char)
-        .map(|c| c.to_string())
-        .intersperse(", ".to_string())
-        .collect()
+    Itertools::intersperse(
+        (65..(65 + arity))
+            .map(|x| char::from(truncate!(x, u8)))
+            .map(|c| c.to_string()),
+        ", ".to_string(),
+    )
+    .collect()
 }
 
 fn external_fun<'a>(name: &str, module: &str, fun: &str, arity: usize) -> Document<'a> {
@@ -1338,7 +1340,7 @@ fn external_fun<'a>(name: &str, module: &str, fun: &str, arity: usize) -> Docume
         .nest(INDENT)
 }
 
-fn variable_name(name: String) -> String {
+fn variable_name(name: &str) -> String {
     let mut c = name.chars();
     match c.next() {
         None => String::new(),

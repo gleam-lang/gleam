@@ -3,7 +3,7 @@ use crate::{
     config::{PackageConfig, Repository},
     project::Analysed,
 };
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub struct SourceLinker {
     line_starts: Vec<usize>,
@@ -80,7 +80,7 @@ fn line_no(line_starts: &[usize], byte_index: usize) -> usize {
         + 1
 }
 
-fn get_path_in_repo(project_root: impl AsRef<Path>, path: &PathBuf) -> String {
+fn get_path_in_repo(project_root: impl AsRef<Path>, path: &Path) -> String {
     path.strip_prefix(&project_root)
         .ok()
         .and_then(Path::to_str)

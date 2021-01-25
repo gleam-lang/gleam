@@ -63,10 +63,10 @@ fn check_files(files: Vec<String>) -> Result<()> {
 }
 
 fn format_files(files: Vec<String>) -> Result<()> {
-    for file in unformatted_files(files)?.into_iter() {
+    for file in &unformatted_files(files)? {
         crate::fs::write_output(&OutputFile {
-            path: file.destination,
-            text: file.output,
+            path: file.destination.clone(),
+            text: file.output.clone(),
         })?;
     }
     Ok(())
@@ -84,7 +84,7 @@ pub fn unformatted_files(files: Vec<String>) -> Result<Vec<Unformatted>> {
         })?;
 
         if path.is_dir() {
-            for path in crate::fs::gleam_files_excluding_gitignore(&path).into_iter() {
+            for path in crate::fs::gleam_files_excluding_gitignore(&path) {
                 format_file(&mut problem_files, path)?;
             }
         } else {

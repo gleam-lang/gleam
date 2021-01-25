@@ -12,7 +12,7 @@ pub fn env_types() -> Vec<String> {
     Environment::new(&mut 0, &[], &HashMap::new(), &mut vec![])
         .module_types
         .keys()
-        .map(|s| s.to_string())
+        .map(std::string::ToString::to_string)
         .collect()
 }
 
@@ -28,7 +28,7 @@ pub fn env_vars() -> Vec<String> {
     Environment::new(&mut 0, &[], &HashMap::new(), &mut vec![])
         .local_values
         .keys()
-        .map(|s| s.to_string())
+        .map(std::string::ToString::to_string)
         .collect()
 }
 

@@ -19,6 +19,7 @@ pub enum Warning {
 }
 
 impl Warning {
+    #[allow(clippy::too_many_lines)]
     pub fn pretty(&self, buffer: &mut Buffer) {
         use crate::typ::Warning;
         use std::io::Write;
@@ -175,13 +176,15 @@ be an update. Remove the update or remove fields that need to be copied.")
         let buffer_writer = cli::stderr_buffer_writer();
         let mut buffer = buffer_writer.buffer();
         self.pretty(&mut buffer);
-        buffer_writer.print(&buffer).gleam_expect("BufferWriter::print() failed to print");
+        buffer_writer
+            .print(&buffer)
+            .gleam_expect("BufferWriter::print() failed to print");
     }
 }
 
 pub fn print_all(analysed: &[crate::project::Analysed]) {
-    for a in analysed.iter() {
-        for w in a.warnings.iter() {
+    for a in analysed {
+        for w in &a.warnings {
             w.pretty_print()
         }
     }

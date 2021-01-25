@@ -3,6 +3,7 @@ use super::Mode::{Broken, Unbroken};
 use super::*;
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn fits_test() {
     // Negative limits never fit
     assert!(!fits(-1, vector![]));
@@ -185,7 +186,7 @@ fn format_test() {
 #[test]
 fn let_left_side_fits_test() {
     let elems = break_("", "").append("1").nest(2).append(break_("", ""));
-    let list = "[".to_doc().append(elems).append("]").group();
+    let list = "[".into_doc().append(elems).append("]").group();
     let doc = list.clone().append(" = ").append(list);
 
     assert_eq!(

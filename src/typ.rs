@@ -34,7 +34,11 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use error::*;
+use error::{
+    convert_binary_error, convert_get_type_constructor_error, convert_get_value_constructor_error,
+    convert_not_fun_error, convert_unify_error, flip_unify_error, unify_enclosed_type,
+    GetTypeConstructorError, GetValueConstructorError, MatchFunTypeError, UnifyError,
+};
 use hydrator::Hydrator;
 
 pub trait HasType {
@@ -70,23 +74,26 @@ impl Type {
     }
 
     pub fn is_unbound(&self) -> bool {
-        match self {
-            Self::Var { typ } => typ.borrow().is_unbound(),
-            _ => false,
+        if let Self::Var { typ } = self {
+            typ.borrow().is_unbound()
+        } else {
+            false
         }
     }
 
     pub fn return_type(&self) -> Option<Arc<Self>> {
-        match self {
-            Self::Fn { retrn, .. } => Some(retrn.clone()),
-            _ => None,
+        if let Self::Fn { retrn, .. } = self {
+            Some(retrn.clone())
+        } else {
+            None
         }
     }
 
     pub fn fn_types(&self) -> Option<(Vec<Arc<Self>>, Arc<Self>)> {
-        match self {
-            Self::Fn { args, retrn, .. } => Some((args.clone(), retrn.clone())),
-            _ => None,
+        if let Self::Fn { args, retrn, .. } = self {
+            Some((args.clone(), retrn.clone()))
+        } else {
+            None
         }
     }
 
@@ -157,9 +164,7 @@ impl Type {
                 .or_else(|| args.iter().find_map(|t| t.find_private_type())),
 
             Self::Var { typ, .. } => match &*typ.borrow() {
-                TypeVar::Unbound { .. } => None,
-
-                TypeVar::Generic { .. } => None,
+                TypeVar::Unbound { .. } | TypeVar::Generic { .. } => None,
 
                 TypeVar::Link { typ, .. } => typ.find_private_type(),
             },
@@ -167,9 +172,10 @@ impl Type {
     }
 
     pub fn fn_arity(&self) -> Option<usize> {
-        match self {
-            Self::Fn { args, .. } => Some(args.len()),
-            _ => None,
+        if let Self::Fn { args, .. } = self {
+            Some(args.len())
+        } else {
+            None
         }
     }
 }
@@ -339,15 +345,15 @@ pub fn infer_module(
     // Register any modules, types, and values being imported
     // We process imports first so that anything imported can be referenced
     // anywhere in the module.
-    for s in module.statements.iter() {
+    for s in &module.statements {
         register_import(s, &mut environment)?;
     }
 
     // Register types so they can be used in constructors and functions
     // earlier in the module.
-    for s in module.statements.iter() {
+    for statement in &module.statements {
         register_types(
-            s,
+            statement,
             module_name,
             &mut hydrators,
             &mut type_names,
@@ -356,7 +362,7 @@ pub fn infer_module(
     }
 
     // Register values so they can be used in functions earlier in the module.
-    for s in module.statements.iter() {
+    for s in &module.statements {
         register_values(
             s,
             module_name,
@@ -371,18 +377,27 @@ pub fn infer_module(
     // anywhere in the module.
     let mut statements = Vec::with_capacity(module.statements.len());
     let mut not_consts = vec![];
-    for statement in module.statements {
+    for statement in &module.statements {
         if matches!(statement, Statement::ModuleConstant { .. }) {
-            let statement =
-                infer_statement(statement, module_name, &mut hydrators, &mut environment)?;
+            let statement = infer_statement(
+                statement.clone(),
+                module_name,
+                &mut hydrators,
+                &mut environment,
+            )?;
             statements.push(statement);
         } else {
-            not_consts.push(statement)
+            not_consts.push(statement.clone())
         }
     }
 
-    for statement in not_consts {
-        let statement = infer_statement(statement, module_name, &mut hydrators, &mut environment)?;
+    for statement in &not_consts {
+        let statement = infer_statement(
+            statement.clone(),
+            module_name,
+            &mut hydrators,
+            &mut environment,
+        )?;
         statements.push(statement);
     }
 
@@ -390,7 +405,7 @@ pub fn infer_module(
     let statements = statements
         .into_iter()
         .map(|s| generalise_statement(s, module_name, &mut environment))
-        .collect::<Result<_, _>>()?;
+        .collect::<Vec<_>>();
 
     // Generate warnings for unused items
     environment.convert_unused_to_warnings();
@@ -405,7 +420,7 @@ pub fn infer_module(
         .retain(|_, accessors| accessors.public);
 
     // Ensure no exported values have private types in their type signature
-    for (_, value) in environment.module_values.iter() {
+    for value in environment.module_values.values() {
         if let Some(leaked) = value.typ.find_private_type() {
             return Err(Error::PrivateTypeLeak {
                 location: value.origin,
@@ -463,6 +478,8 @@ fn assert_unique_type_name<'a>(
         None => Ok(()),
     }
 }
+
+#[allow(clippy::too_many_lines)]
 
 fn register_values<'a>(
     s: &'a UntypedStatement,
@@ -685,7 +702,7 @@ fn generalise_statement(
     s: TypedStatement,
     module_name: &[String],
     environment: &mut Environment<'_, '_>,
-) -> Result<TypedStatement, Error> {
+) -> TypedStatement {
     match s {
         Statement::Fn {
             doc,
@@ -708,7 +725,7 @@ fn generalise_statement(
             // Generalise the function if not already done so
             let typ = if environment.ungeneralised_functions.remove(name.as_str()) {
                 let level = 1;
-                generalise(typ, level)
+                generalise(&typ, level)
             } else {
                 typ
             };
@@ -729,7 +746,7 @@ fn generalise_statement(
                 },
             );
 
-            Ok(Statement::Fn {
+            Statement::Fn {
                 doc,
                 location,
                 name,
@@ -739,13 +756,14 @@ fn generalise_statement(
                 return_annotation,
                 return_type,
                 body,
-            })
+            }
         }
 
-        statement => Ok(statement),
+        statement => statement,
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn infer_statement(
     s: UntypedStatement,
     module_name: &[String],
@@ -801,7 +819,7 @@ fn infer_statement(
             // Generalise the function if safe to do so
             let typ = if safe_to_generalise {
                 let _ = environment.ungeneralised_functions.remove(name.as_str());
-                let typ = generalise(typ, 0);
+                let typ = generalise(&typ, 0);
                 environment.insert_variable(
                     name.clone(),
                     ValueConstructorVariant::ModuleFn {
@@ -914,12 +932,12 @@ fn infer_statement(
         } => {
             // Check contained types are valid
             let mut hydrator = Hydrator::new();
-            for arg in args.iter() {
+            for arg in &args {
                 let var = TypeAst::Var {
                     location,
-                    name: arg.to_string(),
+                    name: arg.to_owned(),
                 };
-                let _ = hydrator.type_from_ast(&var, environment)?;
+                let _ty = hydrator.type_from_ast(&var, environment)?;
             }
             Ok(Statement::ExternalType {
                 doc,
@@ -1082,10 +1100,10 @@ fn assert_no_labelled_arguments<A>(args: &[CallArg<A>]) -> Result<(), Error> {
 /// of updating the levels of the type variables appearing within
 /// the type, thus ensuring the type will be correctly generalized.
 ///
-fn update_levels(typ: Arc<Type>, own_level: usize, own_id: usize) -> Result<(), UnifyError> {
-    if let Type::Var { typ } = &*typ {
+fn update_levels(typ: &Arc<Type>, own_level: usize, own_id: usize) -> Result<(), UnifyError> {
+    if let Type::Var { typ } = &**typ {
         let new_value = match &*typ.borrow() {
-            TypeVar::Link { typ, .. } => return update_levels(typ.clone(), own_level, own_id),
+            TypeVar::Link { typ, .. } => return update_levels(typ, own_level, own_id),
 
             TypeVar::Unbound { id, level } => {
                 if id == &own_id {
@@ -1109,24 +1127,24 @@ fn update_levels(typ: Arc<Type>, own_level: usize, own_id: usize) -> Result<(), 
         return Ok(());
     }
 
-    match &*typ {
+    match &**typ {
         Type::App { args, .. } => {
             for arg in args.iter() {
-                update_levels(arg.clone(), own_level, own_id)?
+                update_levels(arg, own_level, own_id)?
             }
             Ok(())
         }
 
         Type::Fn { args, retrn } => {
             for arg in args.iter() {
-                update_levels(arg.clone(), own_level, own_id)?;
+                update_levels(arg, own_level, own_id)?;
             }
-            update_levels(retrn.clone(), own_level, own_id)
+            update_levels(retrn, own_level, own_id)
         }
 
         Type::Tuple { elems, .. } => {
             for elem in elems.iter() {
-                update_levels(elem.clone(), own_level, own_id)?
+                update_levels(elem, own_level, own_id)?
             }
             Ok(())
         }
@@ -1164,13 +1182,13 @@ fn match_fun_type(
     }
 
     if let Type::Fn { args, retrn } = &*typ {
-        return if args.len() != arity {
+        return if args.len() == arity {
+            Ok((args.clone(), retrn.clone()))
+        } else {
             Err(MatchFunTypeError::IncorrectArity {
                 expected: args.len(),
                 given: arity,
             })
-        } else {
-            Ok((args.clone(), retrn.clone()))
         };
     }
 
@@ -1180,8 +1198,8 @@ fn match_fun_type(
 /// Takes a level and a type and turns all type variables within the type that have
 /// level higher than the input level into generalized (polymorphic) type variables.
 ///
-fn generalise(t: Arc<Type>, ctx_level: usize) -> Arc<Type> {
-    match &*t {
+fn generalise(t: &Arc<Type>, ctx_level: usize) -> Arc<Type> {
+    match &**t {
         Type::Var { typ } => {
             let new_var = match &*typ.borrow() {
                 TypeVar::Unbound { id, level } => {
@@ -1190,12 +1208,11 @@ fn generalise(t: Arc<Type>, ctx_level: usize) -> Arc<Type> {
                         return Arc::new(Type::Var {
                             typ: Arc::new(RefCell::new(TypeVar::Generic { id })),
                         });
-                    } else {
-                        Some(TypeVar::Unbound { id, level: *level })
                     }
+                    Some(TypeVar::Unbound { id, level: *level })
                 }
 
-                TypeVar::Link { typ } => return generalise(typ.clone(), ctx_level),
+                TypeVar::Link { typ } => return generalise(typ, ctx_level),
 
                 TypeVar::Generic { .. } => None,
             };
@@ -1212,10 +1229,7 @@ fn generalise(t: Arc<Type>, ctx_level: usize) -> Arc<Type> {
             name,
             args,
         } => {
-            let args = args
-                .iter()
-                .map(|t| generalise(t.clone(), ctx_level))
-                .collect();
+            let args = args.iter().map(|t| generalise(t, ctx_level)).collect();
             Arc::new(Type::App {
                 public: *public,
                 module: module.clone(),
@@ -1225,18 +1239,11 @@ fn generalise(t: Arc<Type>, ctx_level: usize) -> Arc<Type> {
         }
 
         Type::Fn { args, retrn } => fn_(
-            args.iter()
-                .map(|t| generalise(t.clone(), ctx_level))
-                .collect(),
-            generalise(retrn.clone(), ctx_level),
+            args.iter().map(|t| generalise(t, ctx_level)).collect(),
+            generalise(retrn, ctx_level),
         ),
 
-        Type::Tuple { elems } => tuple(
-            elems
-                .iter()
-                .map(|t| generalise(t.clone(), ctx_level))
-                .collect(),
-        ),
+        Type::Tuple { elems } => tuple(elems.iter().map(|t| generalise(t, ctx_level)).collect()),
     }
 }
 
@@ -1429,7 +1436,10 @@ pub fn register_import(
 
             // Determine local alias of imported module
             let module_name = match &as_name {
-                None => module.get(module.len() - 1).gleam_expect("module did not have a last element").clone(),
+                None => module
+                    .get(module.len() - 1)
+                    .gleam_expect("module did not have a last element")
+                    .clone(),
                 Some(name) => name.clone(),
             };
 
@@ -1490,13 +1500,13 @@ pub fn register_import(
                             .1
                             .values
                             .keys()
-                            .map(|t| t.to_string())
+                            .map(std::string::ToString::to_string)
                             .collect(),
                         type_constructors: module_info
                             .1
                             .types
                             .keys()
-                            .map(|t| t.to_string())
+                            .map(std::string::ToString::to_string)
                             .collect(),
                     });
                 }

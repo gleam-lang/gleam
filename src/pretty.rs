@@ -15,6 +15,7 @@
 #[cfg(test)]
 mod tests;
 
+use crate::wrap;
 use crate::{fs::Utf8Writer, GleamExpect, Result};
 
 macro_rules! docvec {
@@ -23,7 +24,7 @@ macro_rules! docvec {
     };
 
     ($($x:expr),+ $(,)?) => {
-        Document::Vec(vec![$($x.to_doc()),+])
+        Document::Vec(vec![$($x.into_doc()),+])
     };
 }
 
@@ -31,61 +32,61 @@ macro_rules! docvec {
 /// Note we do not implement this for String as a slight pressure to favour str
 /// over String.
 pub trait Documentable<'a> {
-    fn to_doc(self) -> Document<'a>;
+    fn into_doc(self) -> Document<'a>;
 }
 
 impl<'a> Documentable<'a> for &'a str {
-    fn to_doc(self) -> Document<'a> {
+    fn into_doc(self) -> Document<'a> {
         Document::Str(self)
     }
 }
 
 impl<'a> Documentable<'a> for isize {
-    fn to_doc(self) -> Document<'a> {
+    fn into_doc(self) -> Document<'a> {
         Document::String(format!("{}", self))
     }
 }
 
 impl<'a> Documentable<'a> for i64 {
-    fn to_doc(self) -> Document<'a> {
+    fn into_doc(self) -> Document<'a> {
         Document::String(format!("{}", self))
     }
 }
 
 impl<'a> Documentable<'a> for usize {
-    fn to_doc(self) -> Document<'a> {
+    fn into_doc(self) -> Document<'a> {
         Document::String(format!("{}", self))
     }
 }
 
 impl<'a> Documentable<'a> for f64 {
-    fn to_doc(self) -> Document<'a> {
+    fn into_doc(self) -> Document<'a> {
         Document::String(format!("{:?}", self))
     }
 }
 
 impl<'a> Documentable<'a> for u64 {
-    fn to_doc(self) -> Document<'a> {
+    fn into_doc(self) -> Document<'a> {
         Document::String(format!("{:?}", self))
     }
 }
 
 impl<'a> Documentable<'a> for Document<'a> {
-    fn to_doc(self) -> Document<'a> {
+    fn into_doc(self) -> Document<'a> {
         self
     }
 }
 
 impl<'a> Documentable<'a> for Vec<Document<'a>> {
-    fn to_doc(self) -> Document<'a> {
+    fn into_doc(self) -> Document<'a> {
         Document::Vec(self)
     }
 }
 
 impl<'a, D: Documentable<'a>> Documentable<'a> for Option<D> {
-    fn to_doc(self) -> Document<'a> {
+    fn into_doc(self) -> Document<'a> {
         match self {
-            Some(d) => d.to_doc(),
+            Some(d) => d.into_doc(),
             None => Document::Nil,
         }
     }
@@ -144,9 +145,10 @@ fn fits(mut limit: isize, mut docs: im::Vector<(isize, Mode, Document<'_>)>) -> 
             return false;
         };
 
-        let (indent, mode, document) = match docs.pop_front() {
-            Some(x) => x,
-            None => return true,
+        let (indent, mode, document) = if let Some(x) = docs.pop_front() {
+            x
+        } else {
+            return true;
         };
 
         match document {
@@ -159,19 +161,19 @@ fn fits(mut limit: isize, mut docs: im::Vector<(isize, Mode, Document<'_>)>) -> 
             Document::Nest(i, doc) => docs.push_front((i + indent, mode, *doc)),
 
             // TODO: Remove
-            Document::NestCurrent(doc) => docs.push_front((indent, mode, *doc)),
+            Document::NestCurrent(doc) | Document::FlexBreak(doc) => {
+                docs.push_front((indent, mode, *doc))
+            }
 
             Document::Group(doc) => docs.push_front((indent, Mode::Unbroken, *doc)),
 
-            Document::Str(s) => limit -= s.len() as isize,
-            Document::String(s) => limit -= s.len() as isize,
+            Document::Str(s) => limit -= wrap!(s.len(), isize),
+            Document::String(s) => limit -= wrap!(s.len(), isize),
 
             Document::Break { unbroken, .. } => match mode {
                 Mode::Broken => return true,
-                Mode::Unbroken => limit -= unbroken.len() as isize,
+                Mode::Unbroken => limit -= wrap!(unbroken.len(), isize),
             },
-
-            Document::FlexBreak(doc) => docs.push_front((indent, mode, *doc)),
 
             Document::Vec(vec) => {
                 for doc in vec.into_iter().rev() {
@@ -206,7 +208,7 @@ fn fmt(
                 width = match mode {
                     Mode::Unbroken => {
                         writer.str_write(unbroken)?;
-                        width + unbroken.len() as isize
+                        width + wrap!(unbroken.len(), isize)
                     }
                     Mode::Broken => {
                         writer.str_write(broken)?;
@@ -220,12 +222,12 @@ fn fmt(
             }
 
             Document::String(s) => {
-                width += s.len() as isize;
+                width += wrap!(s.len(), isize);
                 writer.str_write(s.as_str())?;
             }
 
             Document::Str(s) => {
-                width += s.len() as isize;
+                width += wrap!(s.len(), isize);
                 writer.str_write(s)?;
             }
 
@@ -297,10 +299,10 @@ impl<'a> Document<'a> {
     pub fn append(self, second: impl Documentable<'a>) -> Self {
         match self {
             Self::Vec(mut vec) => {
-                vec.push(second.to_doc());
+                vec.push(second.into_doc());
                 Self::Vec(vec)
             }
-            first => Self::Vec(vec![first, second.to_doc()]),
+            first => Self::Vec(vec![first, second.into_doc()]),
         }
     }
 
@@ -313,7 +315,7 @@ impl<'a> Document<'a> {
     }
 
     pub fn surround(self, open: impl Documentable<'a>, closed: impl Documentable<'a>) -> Self {
-        open.to_doc().append(self).append(closed)
+        open.into_doc().append(self).append(closed)
     }
 
     pub fn is_nil(&self) -> bool {

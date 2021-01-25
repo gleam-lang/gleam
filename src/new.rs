@@ -488,15 +488,15 @@ fn validate_name(name: &str) -> Result<(), Error> {
             name: name.to_string(),
             reason: InvalidProjectNameReason::GleamReservedWord,
         })
-    } else if !regex::Regex::new("^[a-z_]+$")
+    } else if regex::Regex::new("^[a-z_]+$")
         .gleam_expect("new name regex could not be compiled")
         .is_match(name)
     {
+        Ok(())
+    } else {
         Err(Error::InvalidProjectName {
             name: name.to_string(),
             reason: InvalidProjectNameReason::Format,
         })
-    } else {
-        Ok(())
     }
 }

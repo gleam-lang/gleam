@@ -1,6 +1,6 @@
 use super::Error;
-use crate::GleamExpect;
 use crate::ast::{CallArg, SrcSpan};
+use crate::GleamExpect;
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 
@@ -116,7 +116,11 @@ impl FieldMap {
             Ok(())
         } else {
             Err(Error::UnknownLabels {
-                valid: self.fields.keys().map(|t| t.to_string()).collect(),
+                valid: self
+                    .fields
+                    .keys()
+                    .map(std::string::ToString::to_string)
+                    .collect(),
                 unknown: unknown_labels,
                 supplied: seen_labels.into_iter().collect(),
             })

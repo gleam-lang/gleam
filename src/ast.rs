@@ -7,8 +7,8 @@ pub use self::untyped::UntypedExpr;
 
 pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
-use crate::GleamExpect;
 use crate::typ::{self, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor};
+use crate::GleamExpect;
 use std::sync::Arc;
 
 pub const CAPTURE_VARIABLE: &str = "gleam@capture_variable";
@@ -50,8 +50,8 @@ impl<A, B, C, D> Module<A, B, C, D> {
 
 #[test]
 fn module_dependencies_test() {
-    let (module, _) =
-        crate::parse::parse_module("import foo import bar import foo_bar").gleam_expect("syntax error");
+    let (module, _) = crate::parse::parse_module("import foo import bar import foo_bar")
+        .gleam_expect("syntax error");
 
     assert_eq!(
         vec![
@@ -300,7 +300,7 @@ pub enum BinOp {
 }
 
 impl BinOp {
-    pub fn precedence(&self) -> u8 {
+    pub fn precedence(self) -> u8 {
         match self {
             Self::Or => 1,
 
@@ -502,8 +502,7 @@ impl<A, B> ClauseGuard<A, B> {
 impl TypedClauseGuard {
     pub fn typ(&self) -> Arc<Type> {
         match self {
-            ClauseGuard::Var { typ, .. } => typ.clone(),
-            ClauseGuard::TupleIndex { typ, .. } => typ.clone(),
+            ClauseGuard::Var { typ, .. } | ClauseGuard::TupleIndex { typ, .. } => typ.clone(),
             ClauseGuard::Constant(constant) => constant.typ(),
 
             ClauseGuard::Or { .. }
@@ -775,21 +774,22 @@ impl<A> BitStringSegmentOption<A> {
 
     pub fn category(&self) -> SegmentOptionCategory {
         match self {
-            BitStringSegmentOption::Binary { .. } => SegmentOptionCategory::Type,
-            BitStringSegmentOption::Integer { .. } => SegmentOptionCategory::Type,
-            BitStringSegmentOption::Float { .. } => SegmentOptionCategory::Type,
-            BitStringSegmentOption::BitString { .. } => SegmentOptionCategory::Type,
-            BitStringSegmentOption::UTF8 { .. } => SegmentOptionCategory::Type,
-            BitStringSegmentOption::UTF16 { .. } => SegmentOptionCategory::Type,
-            BitStringSegmentOption::UTF32 { .. } => SegmentOptionCategory::Type,
-            BitStringSegmentOption::UTF8Codepoint { .. } => SegmentOptionCategory::Type,
-            BitStringSegmentOption::UTF16Codepoint { .. } => SegmentOptionCategory::Type,
-            BitStringSegmentOption::UTF32Codepoint { .. } => SegmentOptionCategory::Type,
-            BitStringSegmentOption::Signed { .. } => SegmentOptionCategory::Signedness,
-            BitStringSegmentOption::Unsigned { .. } => SegmentOptionCategory::Signedness,
-            BitStringSegmentOption::Big { .. } => SegmentOptionCategory::Endianness,
-            BitStringSegmentOption::Little { .. } => SegmentOptionCategory::Endianness,
-            BitStringSegmentOption::Native { .. } => SegmentOptionCategory::Endianness,
+            BitStringSegmentOption::Binary { .. }
+            | BitStringSegmentOption::Integer { .. }
+            | BitStringSegmentOption::Float { .. }
+            | BitStringSegmentOption::BitString { .. }
+            | BitStringSegmentOption::UTF8 { .. }
+            | BitStringSegmentOption::UTF16 { .. }
+            | BitStringSegmentOption::UTF32 { .. }
+            | BitStringSegmentOption::UTF8Codepoint { .. }
+            | BitStringSegmentOption::UTF16Codepoint { .. }
+            | BitStringSegmentOption::UTF32Codepoint { .. } => SegmentOptionCategory::Type,
+            BitStringSegmentOption::Signed { .. } | BitStringSegmentOption::Unsigned { .. } => {
+                SegmentOptionCategory::Signedness
+            }
+            BitStringSegmentOption::Big { .. }
+            | BitStringSegmentOption::Little { .. }
+            | BitStringSegmentOption::Native { .. } => SegmentOptionCategory::Endianness,
             BitStringSegmentOption::Size { .. } => SegmentOptionCategory::Size,
             BitStringSegmentOption::Unit { .. } => SegmentOptionCategory::Unit,
         }

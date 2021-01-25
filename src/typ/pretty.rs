@@ -1,10 +1,11 @@
 use super::{Type, TypeVar};
-use crate::pretty::{nil, *};
+use crate::pretty::{break_, concat, nil, Document, Documentable};
+use crate::{truncate, wrap};
 use itertools::Itertools;
 use std::sync::Arc;
 
 #[cfg(test)]
-use super::*;
+use super::{float, fn_, int, tuple};
 #[cfg(test)]
 use std::cell::RefCell;
 
@@ -31,9 +32,9 @@ impl Printer {
             buffer.push(' ');
         }
         buffer
-            .to_doc()
+            .into_doc()
             .append(self.print(typ))
-            .nest(initial_indent as isize)
+            .nest(wrap!(initial_indent, isize))
             .to_pretty_string(80)
     }
 
@@ -54,7 +55,7 @@ impl Printer {
             }
 
             Type::Fn { args, retrn } => "fn("
-                .to_doc()
+                .into_doc()
                 .append(self.args_to_gleam_doc(args.as_slice()))
                 .append(") ->")
                 .append(
@@ -79,14 +80,14 @@ impl Printer {
         }
     }
 
+    #[allow(clippy::option_if_let_else)]
     pub fn generic_type_var<'a>(&mut self, id: usize) -> Document<'a> {
-        match self.names.get(&id) {
-            Some(n) => Document::String(n.clone()),
-            None => {
-                let n = self.next_letter();
-                let _ = self.names.insert(id, n.clone());
-                Document::String(n)
-            }
+        if let Some(n) = self.names.get(&id) {
+            Document::String(n.clone())
+        } else {
+            let n = self.next_letter();
+            let _ = self.names.insert(id, n.clone());
+            Document::String(n)
         }
     }
 
@@ -100,7 +101,7 @@ impl Printer {
         loop {
             n = rest % alphabet_length;
             rest /= alphabet_length;
-            chars.push((n as u8 + char_offset) as char);
+            chars.push((truncate!(n, u8) + char_offset) as char);
 
             if rest == 0 {
                 break;
@@ -113,20 +114,18 @@ impl Printer {
     }
 
     fn args_to_gleam_doc<'a>(&mut self, args: &[Arc<Type>]) -> Document<'a> {
-        match args.len() {
-            0 => nil(),
-            _ => {
-                let args = concat(
-                    args.iter()
-                        .map(|t| self.print(t).group())
-                        .intersperse(break_(",", ", ")),
-                );
-                break_("", "")
-                    .append(args)
-                    .nest(INDENT)
-                    .append(break_(",", ""))
-                    .group()
-            }
+        if args.is_empty() {
+            nil()
+        } else {
+            let args = concat(Itertools::intersperse(
+                args.iter().map(|t| self.print(t).group()),
+                break_(",", ", "),
+            ));
+            break_("", "")
+                .append(args)
+                .nest(INDENT)
+                .append(break_(",", ""))
+                .group()
         }
     }
 }
@@ -215,6 +214,7 @@ fn next_letter_test() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn pretty_print_test() {
     macro_rules! assert_string {
         ($src:expr, $typ:expr $(,)?) => {
@@ -324,15 +324,15 @@ fn pretty_print_test() {
 
 #[test]
 fn function_test() {
-    assert_eq!(pretty_print(fn_(vec![], int())), "fn() -> Int");
+    assert_eq!(pretty_print(&fn_(vec![], int())), "fn() -> Int");
 
     assert_eq!(
-        pretty_print(fn_(vec![int(), int(), int()], int())),
+        pretty_print(&fn_(vec![int(), int(), int()], int())),
         "fn(Int, Int, Int) -> Int"
     );
 
     assert_eq!(
-        pretty_print(fn_(
+        pretty_print(&fn_(
             vec![
                 float(),
                 float(),
@@ -368,7 +368,7 @@ fn function_test() {
     );
 
     assert_eq!(
-        pretty_print(fn_(
+        pretty_print(&fn_(
             vec![
                 tuple(vec![float(), float(), float(), float(), float(), float()]),
                 float(),
@@ -394,7 +394,7 @@ fn function_test() {
     );
 
     assert_eq!(
-        pretty_print(fn_(
+        pretty_print(&fn_(
             vec![tuple(vec![
                 float(),
                 float(),
@@ -417,6 +417,6 @@ fn function_test() {
 }
 
 #[cfg(test)]
-fn pretty_print(typ: Arc<Type>) -> String {
-    Printer::new().pretty_print(&typ, 0)
+fn pretty_print(typ: &Arc<Type>) -> String {
+    Printer::new().pretty_print(typ, 0)
 }

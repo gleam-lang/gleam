@@ -1,7 +1,14 @@
 ///! Type inference and checking of patterns used in case expressions
 ///! and variables bindings.
 ///!
-use super::*;
+use super::{
+    assert_no_labelled_arguments, collapse_links, convert_binary_error,
+    convert_get_value_constructor_error, convert_unify_error, float,
+    infer_bit_string_segment_option, int, list, string, tuple, BinaryTypeSpecifier,
+    BitStringSegment, CallArg, Environment, Error, GleamExpect, HashSet, Hydrator, Pattern,
+    PatternConstructor, SrcSpan, Type, TypedPattern, TypedPatternBitStringSegment, UnifyError,
+    UntypedMultiPattern, UntypedPattern, ValueConstructor, ValueConstructorVariant,
+};
 use crate::ast::UntypedPatternBitStringSegment;
 use std::sync::Arc;
 
@@ -148,7 +155,10 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 Pattern::Var { .. } if typed_segment.typ() == Some(string()) => {
                     Err(Error::UTFVarInBitStringSegment {
                         location,
-                        option: typed_segment.typ.gleam_expect("typed_segment lacked a type").label(),
+                        option: typed_segment
+                            .typ
+                            .gleam_expect("typed_segment lacked a type")
+                            .label(),
                     })
                 }
                 _ => Ok(typed_segment.typ().unwrap_or_else(int)),
@@ -168,6 +178,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
     /// inferred type of the subject in order to determine what variables to insert
     /// into the environment (or to detect a type error).
     ///
+    #[allow(clippy::too_many_lines)]
     pub fn unify(
         &mut self,
         pattern: UntypedPattern,
@@ -194,11 +205,11 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                             .environment
                             .local_values
                             .keys()
-                            .map(|t| t.to_string())
+                            .map(std::string::ToString::to_string)
                             .collect(),
                     })?;
                 let typ = self.environment.instantiate(
-                    typ,
+                    &typ,
                     self.environment.level,
                     &mut hashmap![],
                     self.hydrator,
@@ -259,7 +270,9 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 tail,
             } => match typ.get_app_args(true, &[], "List", 1, self.environment) {
                 Some(args) => {
-                    let head = Box::new(self.unify(*head, args.get(0).gleam_expect("args is empty").clone())?);
+                    let head = Box::new(
+                        self.unify(*head, args.get(0).gleam_expect("args is empty").clone())?,
+                    );
                     let tail = Box::new(self.unify(*tail, typ)?);
 
                     Ok(Pattern::Cons {
@@ -407,7 +420,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 };
 
                 let instantiated_constructor_type = self.environment.instantiate(
-                    constructor_typ,
+                    &constructor_typ,
                     self.level,
                     &mut hashmap![],
                     self.hydrator,

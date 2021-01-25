@@ -43,7 +43,7 @@ impl<'a> Erlang<'a> {
         module: &Module,
         erl_name: &str,
     ) -> Result<()> {
-        for (name, text) in erl::records(&module.ast).into_iter() {
+        for (name, text) in &erl::records(&module.ast) {
             let name = format!("{}_{}.hrl", erl_name, name);
             tracing::trace!(name = ?name, "Generated Erlang header");
             writer

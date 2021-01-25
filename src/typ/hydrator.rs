@@ -1,4 +1,7 @@
-use super::*;
+use super::{
+    convert_get_type_constructor_error, convert_unify_error, fn_, tuple, Environment, Error, Type,
+    TypeConstructor,
+};
 use crate::ast::TypeAst;
 use std::sync::Arc;
 
@@ -66,8 +69,8 @@ impl Hydrator {
         self.permit_holes = flag
     }
 
-    pub fn is_created_generic_type(&self, id: &usize) -> bool {
-        self.created_type_variable_ids.contains(id)
+    pub fn is_created_generic_type(&self, id: usize) -> bool {
+        self.created_type_variable_ids.contains(&id)
     }
 
     pub fn type_from_option_ast<'a, 'b>(
@@ -133,11 +136,11 @@ impl Hydrator {
                 let mut type_vars = hashmap![];
                 let mut parameter_types = Vec::with_capacity(parameters.len());
                 for typ in parameters {
-                    let t = environment.instantiate(typ, 0, &mut type_vars, self);
+                    let t = environment.instantiate(&typ, 0, &mut type_vars, self);
 
                     parameter_types.push(t);
                 }
-                let return_type = environment.instantiate(return_type, 0, &mut type_vars, self);
+                let return_type = environment.instantiate(&return_type, 0, &mut type_vars, self);
 
                 // Unify argument types with instantiated parameter types so that the correct types
                 // are inserted into the return type
@@ -174,10 +177,10 @@ impl Hydrator {
 
                     None if self.permit_new_type_variables => {
                         let var = environment.new_generic_var();
-                        let _ = self
+                        let _old = self
                             .created_type_variable_ids
                             .insert(environment.previous_uid());
-                        let _ = self
+                        let _old = self
                             .created_type_variables
                             .insert(name.clone(), var.clone());
                         Ok(var)
@@ -189,7 +192,7 @@ impl Hydrator {
                         types: environment
                             .module_types
                             .keys()
-                            .map(|t| t.to_string())
+                            .map(std::string::ToString::to_string)
                             .collect(),
                     }),
                 }

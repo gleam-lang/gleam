@@ -17,21 +17,21 @@ pub type Name = String;
 
 #[allow(clippy::expect_used)]
 pub fn fatal_compiler_bug(msg: &str) -> ! {
-    let buffer_writer = cli::stderr_buffer_writer();
-    let mut buffer = buffer_writer.buffer();
     use std::io::Write;
     use termcolor::{Color, ColorSpec, WriteColor};
+    let buffer_writer = cli::stderr_buffer_writer();
+    let mut buffer = buffer_writer.buffer();
     buffer
         .set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Red)))
         .expect("Buffer::set_color() failed");
-    write!(buffer, "error").gleam_expect("write!() failed");
+    write!(buffer, "error").gleam_expect("Buffer::write() failed");
     buffer
         .set_color(ColorSpec::new().set_bold(true))
         .expect("Buffer::set_color() failed");
-    write!(buffer, ": Fatal compiler bug!\n\n").gleam_expect("write!() failed");
+    write!(buffer, ": Fatal compiler bug!\n\n").gleam_expect("Buffer::write() failed");
     buffer
         .set_color(&ColorSpec::new())
-        .expect("write!() failed");
+        .expect("Buffer::set_color() failed");
     writeln!(
         buffer,
         "This is a bug in the Gleam compiler, sorry!
@@ -42,7 +42,7 @@ with this information and the code that produces the crash:
 {}",
         msg
     )
-    .expect("writeln!() failed");
+    .expect("Buffer::write() failed");
     buffer_writer
         .print(&buffer)
         .expect("BufferWriter::print() failed");
@@ -179,7 +179,7 @@ pub enum StandardIOAction {
 }
 
 impl StandardIOAction {
-    fn text(&self) -> &'static str {
+    fn text(self) -> &'static str {
         match self {
             StandardIOAction::Read => "read from",
         }
@@ -199,7 +199,7 @@ pub enum FileIOAction {
 }
 
 impl FileIOAction {
-    fn text(&self) -> &'static str {
+    fn text(self) -> &'static str {
         match self {
             FileIOAction::Open => "open",
             FileIOAction::Copy => "copy",
@@ -220,7 +220,7 @@ pub enum FileKind {
 }
 
 impl FileKind {
-    fn text(&self) -> &'static str {
+    fn text(self) -> &'static str {
         match self {
             FileKind::File => "file",
             FileKind::Directory => "directory",
@@ -246,7 +246,7 @@ fn did_you_mean(name: &str, options: &mut Vec<String>, alt: &'static str) -> Str
 }
 
 impl Error {
-    #[allow( clippy::unwrap_used)]
+    #[allow(clippy::unwrap_used, clippy::too_many_lines)]
     pub fn pretty(&self, buffer: &mut Buffer) {
         use crate::typ::Error as TypeError;
         use std::io::Write;
@@ -279,14 +279,14 @@ and underscores.",
                         }
                     ),
                 };
-                write_project(buffer, diagnostic);
+                write_project(buffer, &diagnostic);
             }
             Error::UnableToFindProjectRoot { path } => {
                 let diagnostic = ProjectErrorDiagnostic {
                     title: "Invalid project root".to_string(),
                     label: format!("We were unable to find the project root:\n\n  {}", path),
                 };
-                write_project(buffer, diagnostic);
+                write_project(buffer, &diagnostic);
             }
             Error::VersionDoesNotMatch { toml_ver, app_ver } => {
                 let diagnostic = ProjectErrorDiagnostic {
@@ -294,7 +294,7 @@ and underscores.",
                     label:
                         format!("The version in gleam.toml \"{}\" does not match the version in your app.src file \"{}\"", toml_ver, app_ver),
                 };
-                write_project(buffer, diagnostic);
+                write_project(buffer, &diagnostic);
             }
             Error::ShellCommand { command, err: None } => {
                 let diagnostic = ProjectErrorDiagnostic {
@@ -304,7 +304,7 @@ and underscores.",
                         command
                     ),
                 };
-                write_project(buffer, diagnostic);
+                write_project(buffer, &diagnostic);
             }
 
             Error::ShellCommand {
@@ -320,10 +320,10 @@ The error from the shell command library was:
 
     {}",
                         command,
-                        std_io_error_kind_text(err)
+                        std_io_error_kind_text(*err)
                     ),
                 };
-                write_project(buffer, diagnostic);
+                write_project(buffer, &diagnostic);
             }
 
             Error::Gzip(detail) => {
@@ -338,7 +338,7 @@ This was error from the gzip library:
                         detail
                     ),
                 };
-                write_project(buffer, diagnostic);
+                write_project(buffer, &diagnostic);
             }
 
             Error::Tar { path, err } => {
@@ -355,7 +355,7 @@ This was error from the tar library:
                         err.to_string()
                     ),
                 };
-                write_project(buffer, diagnostic);
+                write_project(buffer, &diagnostic);
             }
 
             Error::TarFinish(detail) => {
@@ -370,7 +370,7 @@ This was error from the tar library:
                         detail
                     ),
                 };
-                write_project(buffer, diagnostic);
+                write_project(buffer, &diagnostic);
             }
 
             Error::Hex(detail) => {
@@ -385,7 +385,7 @@ This was error from the Hex client library:
                         detail
                     ),
                 };
-                write_project(buffer, diagnostic);
+                write_project(buffer, &diagnostic);
             }
 
             Error::SrcImportingTest {
@@ -430,11 +430,15 @@ cannot import them. Perhaps move the `{}` module to the src directory.",
 First:  {}
 Second: {}",
                         module,
-                        first.to_str().gleam_expect("pretty error print PathBuf to_str"),
-                        second.to_str().gleam_expect("pretty error print PathBuf to_str"),
+                        first
+                            .to_str()
+                            .gleam_expect("pretty error print PathBuf to_str"),
+                        second
+                            .to_str()
+                            .gleam_expect("pretty error print PathBuf to_str"),
                     ),
                 };
-                write_project(buffer, diagnostic);
+                write_project(buffer, &diagnostic);
             }
 
             Error::FileIO {
@@ -463,7 +467,7 @@ Second: {}",
                         err,
                     ),
                 };
-                write_project(buffer, diagnostic);
+                write_project(buffer, &diagnostic);
             }
 
             Error::Type { path, src, error } => match error {
@@ -1018,7 +1022,7 @@ Private types can only be used within the module that defines them.",
                     let mut options: Vec<String> = type_constructors
                         .iter()
                         .chain(value_constructors.iter())
-                        .map(|s| s.to_string())
+                        .map(std::string::ToString::to_string)
                         .collect();
                     let diagnostic = Diagnostic {
                         title: "Unknown module field".to_string(),
@@ -1570,7 +1574,8 @@ When matching you need to use the `{}_codepoint` specifier instead.",
                 };
                 write(buffer, diagnostic, Severity::Error);
                 if !extra.is_empty() {
-                    writeln!(buffer, "{}", extra.join("\n")).gleam_expect("error pretty buffer write");
+                    writeln!(buffer, "{}", extra.join("\n"))
+                        .gleam_expect("error pretty buffer write");
                 }
             }
 
@@ -1640,7 +1645,7 @@ but it cannot be found.",
                 let err = match err {
                     Some(e) => format!(
                         "\nThe error message from the stdio library was:\n\n    {}\n",
-                        std_io_error_kind_text(e)
+                        std_io_error_kind_text(*e)
                     ),
                     None => "".to_string(),
                 };
@@ -1654,7 +1659,7 @@ but it cannot be found.",
                         err,
                     ),
                 };
-                write_project(buffer, diagnostic);
+                write_project(buffer, &diagnostic);
             }
             Error::Format { problem_files } => {
                 let files: Vec<_> = problem_files
@@ -1670,7 +1675,7 @@ but it cannot be found.",
                     label,
                 };
 
-                write_project(buffer, diagnostic);
+                write_project(buffer, &diagnostic);
             }
         }
     }
@@ -1685,7 +1690,7 @@ but it cannot be found.",
     }
 }
 
-fn std_io_error_kind_text(kind: &std::io::ErrorKind) -> String {
+fn std_io_error_kind_text(kind: std::io::ErrorKind) -> String {
     use std::io::ErrorKind;
     match kind {
         ErrorKind::NotFound => "Could not find the stdio stream".to_string(),
@@ -1717,6 +1722,7 @@ fn std_io_error_kind_text(kind: &std::io::ErrorKind) -> String {
     }
 }
 
+#[allow(clippy::non_ascii_literal)]
 fn import_cycle(buffer: &mut Buffer, modules: &[String]) {
     use std::io::Write;
     use termcolor::{Color, ColorSpec, WriteColor};

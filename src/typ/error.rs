@@ -237,6 +237,7 @@ pub enum Warning {
 }
 
 #[derive(Debug, PartialEq)]
+#[allow(clippy::pub_enum_variant_names)]
 pub enum GetValueConstructorError {
     UnknownVariable {
         name: String,
@@ -289,6 +290,7 @@ pub fn convert_get_value_constructor_error(
 }
 
 #[derive(Debug, PartialEq)]
+#[allow(clippy::pub_enum_variant_names)]
 pub enum GetTypeConstructorError {
     UnknownType {
         name: String,
@@ -443,7 +445,7 @@ pub enum UnifyErrorSituation {
 }
 
 impl UnifyErrorSituation {
-    pub fn description(&self) -> &'static str {
+    pub fn description(self) -> &'static str {
         match self {
             Self::CaseClauseMismatch => {
                 "This case clause was found to return a different type than the previous

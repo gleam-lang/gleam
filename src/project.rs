@@ -13,12 +13,13 @@ use crate::{
 };
 use source_tree::SourceTree;
 use std::collections::HashMap;
+use std::ffi::OsStr;
 use std::iter::Peekable;
 use std::path::{Path, PathBuf};
 
 pub const OUTPUT_DIR_NAME: &str = "gen";
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Input {
     pub source_base_path: PathBuf,
     pub path: PathBuf,
@@ -86,7 +87,9 @@ fn comments_before<'a>(
     let mut comments = vec![];
     while let Some(SrcSpan { start, .. }) = comment_spans.peek() {
         if start <= &byte {
-            let comment = comment_spans.next().gleam_expect("reached end of comment_spans");
+            let comment = comment_spans
+                .next()
+                .gleam_expect("reached end of comment_spans");
             comments.push(Comment::from((comment, src)).content)
         } else {
             break;
@@ -138,33 +141,35 @@ pub fn read_and_analyse(root: impl AsRef<Path>) -> Result<(PackageConfig, Vec<An
 
     for project_dir in [lib_dir, checkouts_dir, mix_lib_dir]
         .iter()
-        .filter_map(|d| std::fs::read_dir(d).ok())
-        .flat_map(|d| d.filter_map(Result::ok))
-        .map(|d| d.path())
-        .filter(|p| {
-            p.file_name().and_then(|os_string| os_string.to_str()) != Some(&project_config.name)
+        .filter_map(|d| {
+            if let Ok(d) = std::fs::read_dir(d) {
+                Some(d.filter_map(Result::ok))
+            } else {
+                None
+            }
         })
+        .flatten()
+        .map(|d| d.path())
+        .filter(|p| p.file_name().and_then(OsStr::to_str) != Some(&project_config.name))
     {
-        collect_source(project_dir.join("src"), ModuleOrigin::Dependency, &mut srcs)?;
+        collect_source(
+            &project_dir.join("src"),
+            &ModuleOrigin::Dependency,
+            &mut srcs,
+        )?;
     }
 
     // Collect source code from top level project
-    collect_source(root.join("src"), ModuleOrigin::Src, &mut srcs)?;
-    collect_source(root.join("test"), ModuleOrigin::Test, &mut srcs)?;
+    collect_source(&root.join("src"), &ModuleOrigin::Src, &mut srcs)?;
+    collect_source(&root.join("test"), &ModuleOrigin::Test, &mut srcs)?;
 
     // Analyse source
-    let analysed = analysed(srcs)?;
+    let analysed = analysed(&srcs)?;
 
     Ok((project_config, analysed))
 }
 
-pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
-    let module_count = inputs.len();
-    let mut source_tree = SourceTree::new(inputs)?;
-    let mut modules_type_infos = HashMap::new();
-    let mut compiled_modules = Vec::with_capacity(module_count);
-    let mut uid = 0;
-
+pub fn analysed(inputs: &[Input]) -> Result<Vec<Analysed>, Error> {
     struct Out {
         source_base_path: PathBuf,
         name_string: String,
@@ -176,6 +181,12 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
         warnings: Vec<Warning>,
         module_extra: crate::parse::extra::ModuleExtra,
     }
+
+    let module_count = inputs.len();
+    let mut source_tree = SourceTree::new(inputs)?;
+    let mut modules_type_infos = HashMap::new();
+    let mut compiled_modules = Vec::with_capacity(module_count);
+    let mut uid = 0;
 
     for Module {
         src,
@@ -259,8 +270,8 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
 }
 
 pub fn collect_source(
-    src_dir: PathBuf,
-    origin: ModuleOrigin,
+    src_dir: &Path,
+    origin: &ModuleOrigin,
     srcs: &mut Vec<Input>,
 ) -> Result<(), Error> {
     let src_dir = match src_dir.canonicalize() {

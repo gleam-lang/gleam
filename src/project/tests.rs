@@ -3,6 +3,7 @@ use crate::{erl, fs::OutputFile};
 use std::sync::Arc;
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn compile_test() {
     struct Case {
         input: Vec<Input>,
@@ -1075,8 +1076,9 @@ main(Arg1, Arg2, Arg3) ->
         },
     ];
 
-    for Case { input, expected } in cases.into_iter() {
-        let actual = analysed(input).map(|analysed| erl::generate_erlang(analysed.as_slice()));
-        assert_eq!(expected, actual);
+    for Case { input, expected } in &cases {
+        let actual =
+            analysed(&input.clone()).map(|analysed| erl::generate_erlang(analysed.as_slice()));
+        assert_eq!(expected, &actual);
     }
 }

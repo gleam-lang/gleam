@@ -1,31 +1,20 @@
 #![deny(warnings)]
 #![warn(
     clippy::all,
-    clippy::doc_markdown,
+    clippy::pedantic,
     clippy::dbg_macro,
     clippy::todo,
-    clippy::empty_enum,
     clippy::enum_glob_use,
     // TODO: enable once the false positive bug is solved
     // clippy::use_self,
-    clippy::filter_map_next,
     clippy::needless_continue,
     clippy::needless_borrow,
-    clippy::match_wildcard_for_single_variants,
     clippy::if_let_mutex,
-    clippy::await_holding_lock,
     clippy::match_on_vec_items,
-    clippy::imprecise_flops,
-    clippy::suboptimal_flops,
     clippy::lossy_float_literal,
     clippy::rest_pat_in_fully_bound_structs,
-    clippy::fn_params_excessive_bools,
     clippy::inefficient_to_string,
-    clippy::linkedlist,
-    clippy::macro_use_imports,
-    clippy::option_option,
     clippy::verbose_file_reads,
-    clippy::unnested_or_patterns,
     rust_2018_idioms,
     missing_debug_implementations,
     missing_copy_implementations,
@@ -44,6 +33,7 @@
     clippy::indexing_slicing,
     clippy::mem_forget
 )]
+#![allow(clippy::module_name_repetitions, clippy::non_ascii_literal)]
 
 #[macro_use]
 mod pretty;
@@ -70,7 +60,12 @@ mod typ;
 mod warning;
 
 mod schema_capnp {
-    #![allow(dead_code, unused_qualifications)]
+    #![allow(
+        dead_code,
+        unused_qualifications,
+        clippy::unseparated_literal_suffix,
+        clippy::used_underscore_binding
+    )]
     include!("../generated/schema_capnp.rs");
 }
 
@@ -204,6 +199,7 @@ pub struct CompilePackage {
 }
 
 impl CompilePackage {
+    #[must_use]
     pub fn into_package_compiler_options(self) -> package_compiler::Options {
         package_compiler::Options {
             name: self.package_name,
@@ -251,20 +247,22 @@ fn main() {
     initialise_logger();
 
     let result = match Command::from_args() {
-        Command::Build { project_root } => command_build(project_root),
+        Command::Build { project_root } => command_build(&project_root),
 
         Command::Docs(Docs::Build {
             project_root,
             version,
             to,
-        }) => docs::command::build(project_root, version, to),
+        }) => docs::command::build(&project_root, &version, to),
 
         Command::Docs(Docs::Publish {
             project_root,
             version,
-        }) => docs::command::publish(project_root, version),
+        }) => docs::command::publish(project_root, &version),
 
-        Command::Docs(Docs::Remove { package, version }) => docs::command::remove(package, version),
+        Command::Docs(Docs::Remove { package, version }) => {
+            docs::command::remove(&package, &version)
+        }
 
         Command::Format {
             stdin,
@@ -293,7 +291,7 @@ fn main() {
     }
 }
 
-fn command_build(root: String) -> Result<(), Error> {
+fn command_build(root: &str) -> Result<(), Error> {
     let root = PathBuf::from(&root);
     let config = config::read_project_config(&root)?;
 
@@ -303,7 +301,7 @@ fn command_build(root: String) -> Result<(), Error> {
     }
 
     // Read and type check project
-    let (_config, analysed) = project::read_and_analyse(&root)?;
+    let (_, analysed) = project::read_and_analyse(&root)?;
 
     // Generate Erlang code
     let output_files = erl::generate_erlang(analysed.as_slice());
@@ -328,4 +326,22 @@ fn initialise_logger() {
         .with_target(false)
         .without_time()
         .init();
+}
+
+/// Explicitly truncates a larger int type to a smaller int type
+#[macro_export]
+macro_rules! truncate {
+    ($input:expr, $ty:ident) => {{
+        use std::convert::TryFrom;
+        $ty::try_from($input).unwrap_or($ty::MAX)
+    }};
+}
+
+/// Explicitly wraps an unsigned int type to a signed int type
+#[macro_export]
+macro_rules! wrap {
+    ($input:expr, $ty:ident) => {{
+        use std::convert::TryFrom;
+        $ty::try_from($input).unwrap_or(-1)
+    }};
 }
