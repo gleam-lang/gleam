@@ -148,6 +148,7 @@ impl<'a> ModuleBuilder<'a> {
                 self.build_optional_field_map(builder.init_field_map(), field_map);
             }
 
+            // TODO: serialize
             ValueConstructorVariant::Inline => {}
 
             ValueConstructorVariant::ModuleFn {
