@@ -370,7 +370,7 @@ impl<'a, 'b> Environment<'a, 'b> {
     ///
     /// It two types are found to not be the same an error is returned.
     ///
-    #[allow(clippy::too_many_lines)]
+    
     pub fn unify(&mut self, t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
         if t1 == t2 {
             return Ok(());

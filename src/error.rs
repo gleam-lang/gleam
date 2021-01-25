@@ -246,7 +246,7 @@ fn did_you_mean(name: &str, options: &mut Vec<String>, alt: &'static str) -> Str
 }
 
 impl Error {
-    #[allow(clippy::unwrap_used, clippy::too_many_lines)]
+    #[allow(clippy::unwrap_used)]
     pub fn pretty(&self, buffer: &mut Buffer) {
         use crate::typ::Error as TypeError;
         use std::io::Write;
@@ -1722,7 +1722,6 @@ fn std_io_error_kind_text(kind: std::io::ErrorKind) -> String {
     }
 }
 
-#[allow(clippy::non_ascii_literal)]
 fn import_cycle(buffer: &mut Buffer, modules: &[String]) {
     use std::io::Write;
     use termcolor::{Color, ColorSpec, WriteColor};

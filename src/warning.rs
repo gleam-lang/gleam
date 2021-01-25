@@ -19,7 +19,6 @@ pub enum Warning {
 }
 
 impl Warning {
-    #[allow(clippy::too_many_lines)]
     pub fn pretty(&self, buffer: &mut Buffer) {
         use crate::typ::Warning;
         use std::io::Write;

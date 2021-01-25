@@ -315,7 +315,6 @@ where
     //   unit().unit().unit()
     //   A(a.., label: tuple(1))
     //   { expression_sequence }
-    #[allow(clippy::too_many_lines)]
     fn parse_expression_unit(&mut self) -> Result<Option<UntypedExpr>, ParseError> {
         let mut expr = match self.tok0.take() {
             Some((start, Tok::String { value }, end)) => {
@@ -674,7 +673,6 @@ where
     }
 
     // The left side of an "=" or a "->"
-    #[allow(clippy::too_many_lines)]
     fn parse_pattern(&mut self) -> Result<Option<UntypedPattern>, ParseError> {
         let pattern = match self.tok0.take() {
             // Pattern::Var or Pattern::Constructor start

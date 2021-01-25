@@ -140,7 +140,7 @@ external fn x(a, b, c) -> tuple(a, b, c) =
 }
 
 #[test]
-#[allow(clippy::too_many_lines)]
+
 fn type_alias() {
     assert_format!(
         "type Option(a) =
@@ -886,7 +886,7 @@ pub fn try_map(
 }
 
 #[test]
-#[allow(clippy::too_many_lines)]
+
 fn binary_operators() {
     assert_format!(
         r#"fn main() {
@@ -1135,7 +1135,7 @@ fn expr_seq() {
     );
 }
 #[test]
-#[allow(clippy::too_many_lines)]
+
 fn expr_lists() {
     assert_format!(
         "fn main() {
@@ -1259,7 +1259,7 @@ fn expr_lists() {
 }
 
 #[test]
-#[allow(clippy::too_many_lines)]
+
 fn expr_pipe() {
     assert_format!(
         r#"fn main() {
@@ -1397,7 +1397,7 @@ fn expr_pipe() {
 }
 
 #[test]
-#[allow(clippy::too_many_lines)]
+
 fn expr_let() {
     assert_format!(
         r#"fn main() {
@@ -2140,7 +2140,6 @@ type Whatever {
 }
 
 #[test]
-#[allow(clippy::too_many_lines, clippy::non_ascii_literal)]
 fn comments() {
     assert_format!(
         r#"import one

@@ -12,7 +12,6 @@ pub struct BinaryTypeSpecifier<T> {
 }
 
 impl<T> BinaryTypeSpecifier<T> {
-    #[allow(clippy::too_many_lines)]
     pub fn new(options: &[BitStringSegmentOption<T>], must_have_size: bool) -> Result<Self, Error>
     where
         T: Clone,

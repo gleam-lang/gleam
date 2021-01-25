@@ -92,7 +92,7 @@ pub fn utf_codepoint() -> Arc<Type> {
     })
 }
 
-#[allow(clippy::too_many_lines)]
+
 pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'a, 'b> {
     typer
         .insert_type_constructor(

@@ -3,7 +3,7 @@ use super::Mode::{Broken, Unbroken};
 use super::*;
 
 #[test]
-#[allow(clippy::too_many_lines)]
+
 fn fits_test() {
     // Negative limits never fit
     assert!(!fits(-1, vector![]));

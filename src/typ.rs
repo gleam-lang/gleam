@@ -479,8 +479,6 @@ fn assert_unique_type_name<'a>(
     }
 }
 
-#[allow(clippy::too_many_lines)]
-
 fn register_values<'a>(
     s: &'a UntypedStatement,
     module_name: &[String],
@@ -763,7 +761,6 @@ fn generalise_statement(
     }
 }
 
-#[allow(clippy::too_many_lines)]
 fn infer_statement(
     s: UntypedStatement,
     module_name: &[String],

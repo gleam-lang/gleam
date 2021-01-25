@@ -214,7 +214,7 @@ fn next_letter_test() {
 }
 
 #[test]
-#[allow(clippy::too_many_lines)]
+
 fn pretty_print_test() {
     macro_rules! assert_string {
         ($src:expr, $typ:expr $(,)?) => {

@@ -63,7 +63,6 @@ pub fn build_project(
     Ok((config, outputs))
 }
 
-#[allow(clippy::too_many_lines)]
 pub fn generate_html(
     project_root: impl AsRef<Path>,
     project_config: &PackageConfig,

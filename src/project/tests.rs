@@ -3,7 +3,7 @@ use crate::{erl, fs::OutputFile};
 use std::sync::Arc;
 
 #[test]
-#[allow(clippy::too_many_lines)]
+
 fn compile_test() {
     struct Case {
         input: Vec<Input>,

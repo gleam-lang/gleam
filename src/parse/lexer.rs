@@ -160,7 +160,6 @@ where
         Ok(())
     }
 
-    #[allow(clippy::too_many_lines)]
     fn consume_character(&mut self, c: char) -> Result<(), LexicalError> {
         match c {
             '"' => {

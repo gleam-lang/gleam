@@ -123,7 +123,6 @@ go() ->
 }
 
 #[test]
-#[allow(clippy::too_many_lines)]
 fn integration_test() {
     assert_erl!(
         r#"fn go() {
@@ -626,7 +625,6 @@ main(Args) ->
 }
 
 #[test]
-#[allow(clippy::too_many_lines)]
 fn bit_string_discard() {
     // https://github.com/gleam-lang/gleam/issues/704
 

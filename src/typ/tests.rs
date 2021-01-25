@@ -110,7 +110,7 @@ macro_rules! assert_no_warnings {
 }
 
 #[test]
-#[allow(clippy::too_many_lines)]
+
 fn field_map_reorder_test() {
     struct Case {
         arity: usize,
@@ -568,7 +568,7 @@ fn main() {
 }
 
 #[test]
-#[allow(clippy::too_many_lines)]
+
 fn infer_bit_string_error_test() {
     assert_error!(
         "case <<1>> { <<2.0, a>> -> 1 }",
@@ -974,7 +974,7 @@ fn annotated_functions_unification_error() {
 }
 
 #[test]
-#[allow(clippy::too_many_lines)]
+
 fn the_rest() {
     assert_error!(
         "case tuple(1, 2, 3) { x if x == tuple(1, 1.0) -> 1 }",
@@ -1590,7 +1590,7 @@ fn the_rest() {
 }
 
 #[test]
-#[allow(clippy::too_many_lines)]
+
 fn infer_module_test() {
     assert_module_infer!(
         "pub fn repeat(i, x) {
@@ -2082,7 +2082,7 @@ pub fn main() {
 }
 
 #[test]
-#[allow(clippy::too_many_lines)]
+
 fn infer_module_error_test() {
     assert_module_error!(
         "fn go() { 1 + 2.0 }",
@@ -2856,7 +2856,7 @@ fn x() {
 }
 
 #[test]
-#[allow(clippy::too_many_lines)]
+
 fn module_update() {
     // A variable of the wrong type given to a record update
     assert_module_error!(

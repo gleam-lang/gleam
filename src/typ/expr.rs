@@ -850,7 +850,6 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         }
     }
 
-    #[allow(clippy::too_many_lines)]
     fn infer_clause_guard(&mut self, guard: UntypedClauseGuard) -> Result<TypedClauseGuard, Error> {
         match guard {
             ClauseGuard::Var { location, name, .. } => {
@@ -1493,7 +1492,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
 
     // TODO: extract the type annotation checking into a infer_module_const
     // function that uses this function internally
-    #[allow(clippy::too_many_lines)]
+
     pub fn infer_const(
         &mut self,
         annotation: &Option<TypeAst>,

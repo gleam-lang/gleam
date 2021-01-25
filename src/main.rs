@@ -33,7 +33,7 @@
     clippy::indexing_slicing,
     clippy::mem_forget
 )]
-#![allow(clippy::module_name_repetitions, clippy::non_ascii_literal)]
+#![allow(clippy::module_name_repetitions, clippy::non_ascii_literal, clippy::too_many_lines)]
 
 #[macro_use]
 mod pretty;
