@@ -1,23 +1,23 @@
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::convert::TryFrom;
-use std::sync::Arc;
+use std::{cell::RefCell, collections::HashMap, convert::TryFrom, sync::Arc};
 
-use crate::ast::{
-    BitStringSegmentOption, Constant, TypedConstant, TypedConstantBitStringSegment,
-    TypedConstantBitStringSegmentOption, TypedExprBitStringSegment,
+use crate::{
+    ast::{
+        BitStringSegmentOption, Constant, TypedConstant, TypedConstantBitStringSegment,
+        TypedConstantBitStringSegmentOption, TypedExprBitStringSegment,
+    },
+    fs::Writer,
+    num_util::{to_u16, to_u32},
+    schema_capnp::{
+        accessors_map, bit_string_segment, bit_string_segment_option, constant, field_map, module,
+        option, record_accessor, type_, type_constructor, value_constructor,
+        value_constructor_variant,
+    },
+    typ::{
+        self, AccessorsMap, FieldMap, RecordAccessor, Type, TypeConstructor, TypeVar,
+        ValueConstructor, ValueConstructorVariant,
+    },
+    GleamExpect,
 };
-use crate::fs::Writer;
-use crate::num_util::{to_u16, to_u32};
-use crate::schema_capnp::{
-    accessors_map, bit_string_segment, bit_string_segment_option, constant, field_map, module,
-    option, record_accessor, type_, type_constructor, value_constructor, value_constructor_variant,
-};
-use crate::typ::{
-    self, AccessorsMap, FieldMap, RecordAccessor, Type, TypeConstructor, TypeVar, ValueConstructor,
-    ValueConstructorVariant,
-};
-use crate::GleamExpect;
 
 pub struct ModuleBuilder<'a> {
     data: &'a typ::Module,

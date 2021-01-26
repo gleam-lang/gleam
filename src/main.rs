@@ -36,7 +36,8 @@
 #![allow(
     clippy::module_name_repetitions,
     clippy::non_ascii_literal,
-    clippy::too_many_lines
+    clippy::too_many_lines,
+    clippy::explicit_into_iter_loop
 )]
 
 #[macro_use]

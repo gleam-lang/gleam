@@ -178,7 +178,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
     /// inferred type of the subject in order to determine what variables to insert
     /// into the environment (or to detect a type error).
     ///
-    
+
     pub fn unify(
         &mut self,
         pattern: UntypedPattern,
