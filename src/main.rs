@@ -33,7 +33,11 @@
     clippy::indexing_slicing,
     clippy::mem_forget
 )]
-#![allow(clippy::module_name_repetitions, clippy::non_ascii_literal, clippy::too_many_lines)]
+#![allow(
+    clippy::module_name_repetitions,
+    clippy::non_ascii_literal,
+    clippy::too_many_lines
+)]
 
 #[macro_use]
 mod pretty;
@@ -53,6 +57,7 @@ mod format;
 mod fs;
 mod metadata;
 mod new;
+mod num_util;
 mod parse;
 mod project;
 mod shell;
@@ -326,22 +331,4 @@ fn initialise_logger() {
         .with_target(false)
         .without_time()
         .init();
-}
-
-/// Explicitly truncates a larger int type to a smaller int type
-#[macro_export]
-macro_rules! truncate {
-    ($input:expr, $ty:ident) => {{
-        use std::convert::TryFrom;
-        $ty::try_from($input).unwrap_or($ty::MAX)
-    }};
-}
-
-/// Explicitly wraps an unsigned int type to a signed int type
-#[macro_export]
-macro_rules! wrap {
-    ($input:expr, $ty:ident) => {{
-        use std::convert::TryFrom;
-        $ty::try_from($input).unwrap_or(-1)
-    }};
 }

@@ -14,7 +14,7 @@ use crate::ast::{
     UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedConstantBitStringSegment,
     UntypedExpr, UntypedExprBitStringSegment, UntypedMultiPattern, UntypedPattern,
 };
-use crate::truncate;
+use crate::num_util::to_usize;
 
 pub struct ExprTyper<'a, 'b, 'c> {
     environment: &'a mut Environment<'b, 'c>,
@@ -513,7 +513,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         match tuple.typ().as_ref() {
             Type::Tuple { elems } => {
                 let typ = elems
-                    .get(truncate!(index, usize))
+                    .get(to_usize(index))
                     .ok_or_else(|| Error::OutOfBoundsTupleIndex {
                         location: SrcSpan {
                             start: tuple.location().end,
@@ -885,7 +885,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 match tuple.typ().as_ref() {
                     Type::Tuple { elems } => {
                         let typ = elems
-                            .get(truncate!(index, usize))
+                            .get(to_usize(index))
                             .ok_or_else(|| Error::OutOfBoundsTupleIndex {
                                 location,
                                 index,

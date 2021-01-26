@@ -8,7 +8,7 @@ use crate::{
     config::{DocsPage, PackageConfig, Repository},
     docs::source_links::SourceLinker,
     error::{Error, GleamExpect},
-    format,
+    format::Formatter,
     fs::OutputFile,
     pretty,
     project::{self, Analysed, ModuleOrigin},
@@ -214,7 +214,7 @@ fn function<'a>(
     source_links: &SourceLinker,
     statement: &'a TypedStatement,
 ) -> Option<Function<'a>> {
-    let mut formatter = format::Formatter::new();
+    let mut formatter = Formatter::new();
     match statement {
         Statement::ExternalFn {
             public: true,
@@ -242,12 +242,7 @@ fn function<'a>(
         } => Some(Function {
             name,
             documentation: markdown_documentation(doc),
-            signature: print(format::Formatter::docs_fn_signature(
-                true,
-                name,
-                args,
-                &ret.clone(),
-            )),
+            signature: print(Formatter::docs_fn_signature(true, name, args, &ret.clone())),
             source_url: source_links.url(location),
         }),
 
@@ -262,16 +257,19 @@ fn markdown_documentation(doc: &Option<String>) -> String {
     }
 }
 
-#[allow(clippy::integer_division)]
 fn render_markdown(text: &str) -> String {
-    let mut s = String::with_capacity(text.len() * 3 / 2);
+    let mut s = String::with_capacity(
+        (3 * text.len())
+            .checked_div(2)
+            .gleam_expect("Somehow 2 turned out to be 0"),
+    );
     let p = pulldown_cmark::Parser::new_ext(&*text, pulldown_cmark::Options::all());
     pulldown_cmark::html::push_html(&mut s, p);
     s
 }
 
 fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Option<Type<'a>> {
-    let mut formatter = format::Formatter::new();
+    let mut formatter = Formatter::new();
     match statement {
         Statement::ExternalType {
             public: true,
@@ -282,7 +280,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
             ..
         } => Some(Type {
             name,
-            definition: print(format::Formatter::external_type(true, name.as_str(), args)),
+            definition: print(Formatter::external_type(true, name.as_str(), args)),
             documentation: markdown_documentation(doc),
             constructors: vec![],
             source_url: source_links.url(location),
@@ -359,7 +357,7 @@ fn constant<'a>(
     source_links: &SourceLinker,
     statement: &'a TypedStatement,
 ) -> Option<Constant<'a>> {
-    let mut formatter = format::Formatter::new();
+    let mut formatter = Formatter::new();
     match statement {
         Statement::ModuleConstant {
             public: true,

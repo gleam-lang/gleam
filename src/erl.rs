@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests;
 
-use crate::truncate;
+use crate::num_util::to_u8;
 use crate::{
     ast::{
         ArgNames, BinOp, BindingKind, BitStringSegmentOption, CallArg, Clause, ClauseGuard,
@@ -1316,7 +1316,7 @@ fn fun<'a>(args: &'a [TypedArg], body: &'a TypedExpr, env: &mut Env<'_>) -> Docu
 fn incrementing_args_list(arity: usize) -> String {
     Itertools::intersperse(
         (65..(65 + arity))
-            .map(|x| char::from(truncate!(x, u8)))
+            .map(|x| char::from(to_u8(x)))
             .map(|c| c.to_string()),
         ", ".to_string(),
     )

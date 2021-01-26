@@ -8,6 +8,7 @@ use crate::ast::{
     TypedConstantBitStringSegmentOption, TypedExprBitStringSegment,
 };
 use crate::fs::Writer;
+use crate::num_util::{to_u16, to_u32};
 use crate::schema_capnp::{
     accessors_map, bit_string_segment, bit_string_segment_option, constant, field_map, module,
     option, record_accessor, type_, type_constructor, value_constructor, value_constructor_variant,
@@ -16,7 +17,7 @@ use crate::typ::{
     self, AccessorsMap, FieldMap, RecordAccessor, Type, TypeConstructor, TypeVar, ValueConstructor,
     ValueConstructorVariant,
 };
-use crate::{truncate, GleamExpect};
+use crate::GleamExpect;
 
 pub struct ModuleBuilder<'a> {
     data: &'a typ::Module,
@@ -49,9 +50,9 @@ impl<'a> ModuleBuilder<'a> {
     fn set_module_accessors(&mut self, module: &mut module::Builder<'_>) {
         let mut builder = module
             .reborrow()
-            .init_accessors(truncate!(self.data.accessors.len(), u32));
+            .init_accessors(to_u32(self.data.accessors.len()));
         for (i, (key, map)) in self.data.accessors.iter().enumerate() {
-            let mut property = builder.reborrow().get(truncate!(i, u32));
+            let mut property = builder.reborrow().get(to_u32(i));
             property.set_key(key);
             self.build_accessors_map(property.init_value(), map);
         }
@@ -63,9 +64,9 @@ impl<'a> ModuleBuilder<'a> {
         accessors: &AccessorsMap,
     ) {
         self.build_type(builder.reborrow().init_type(), accessors.typ.as_ref());
-        let mut builder = builder.init_accessors(truncate!(accessors.accessors.len(), u32));
+        let mut builder = builder.init_accessors(to_u32(accessors.accessors.len()));
         for (i, (name, accessor)) in accessors.accessors.iter().enumerate() {
-            let mut property = builder.reborrow().get(truncate!(i, u32));
+            let mut property = builder.reborrow().get(to_u32(i));
             property.set_key(name);
             self.build_record_accessor(property.init_value(), accessor)
         }
@@ -77,24 +78,20 @@ impl<'a> ModuleBuilder<'a> {
         accessor: &RecordAccessor,
     ) {
         self.build_type(builder.reborrow().init_type(), accessor.typ.as_ref());
-        builder.set_index(truncate!(accessor.index, u16));
+        builder.set_index(to_u16(accessor.index));
     }
 
     fn set_name(&mut self, module: &mut module::Builder<'_>) {
-        let mut name = module
-            .reborrow()
-            .init_name(truncate!(self.data.name.len(), u32));
+        let mut name = module.reborrow().init_name(to_u32(self.data.name.len()));
         for (i, s) in self.data.name.iter().enumerate() {
-            name.set(truncate!(i, u32), s);
+            name.set(to_u32(i), s);
         }
     }
 
     fn set_module_types(&mut self, module: &mut module::Builder<'_>) {
-        let mut types = module
-            .reborrow()
-            .init_types(truncate!(self.data.types.len(), u32));
+        let mut types = module.reborrow().init_types(to_u32(self.data.types.len()));
         for (i, (name, type_)) in self.data.types.iter().enumerate() {
-            let mut property = types.reborrow().get(truncate!(i, u32));
+            let mut property = types.reborrow().get(to_u32(i));
             property.set_key(name);
             self.build_type_constructor(property.init_value(), type_)
         }
@@ -103,9 +100,9 @@ impl<'a> ModuleBuilder<'a> {
     fn set_module_values(&mut self, module: &mut module::Builder<'_>) {
         let mut values = module
             .reborrow()
-            .init_values(truncate!(self.data.values.len(), u32));
+            .init_values(to_u32(self.data.values.len()));
         for (i, (name, value)) in self.data.values.iter().enumerate() {
-            let mut property = values.reborrow().get(truncate!(i, u32));
+            let mut property = values.reborrow().get(to_u32(i));
             property.set_key(name);
             self.build_value_constructor(property.init_value(), value)
         }
@@ -119,7 +116,7 @@ impl<'a> ModuleBuilder<'a> {
         let type_builder = builder.reborrow().init_type();
         self.build_type(type_builder, &constructor.typ);
         self.build_types(
-            builder.init_parameters(truncate!(constructor.parameters.len(), u32)),
+            builder.init_parameters(to_u32(constructor.parameters.len())),
             constructor.parameters.as_slice(),
         );
     }
@@ -154,7 +151,7 @@ impl<'a> ModuleBuilder<'a> {
             } => {
                 let mut builder = builder.init_record();
                 builder.set_name(name);
-                builder.set_arity(truncate!(*arity, u16));
+                builder.set_arity(to_u16(*arity));
                 Self::build_optional_field_map(builder.init_field_map(), field_map);
             }
 
@@ -168,14 +165,12 @@ impl<'a> ModuleBuilder<'a> {
                 builder.set_name(name);
                 Self::build_optional_field_map(builder.reborrow().init_field_map(), field_map);
                 {
-                    let mut builder = builder
-                        .reborrow()
-                        .init_module(truncate!(self.data.name.len(), u32));
+                    let mut builder = builder.reborrow().init_module(to_u32(self.data.name.len()));
                     for (i, s) in module.iter().enumerate() {
-                        builder.set(truncate!(i, u32), s);
+                        builder.set(to_u32(i), s);
                     }
                 }
-                builder.set_arity(truncate!(*arity, u16));
+                builder.set_arity(to_u16(*arity));
             }
         }
     }
@@ -191,14 +186,12 @@ impl<'a> ModuleBuilder<'a> {
     }
 
     fn build_field_map(mut builder: field_map::Builder<'_>, field_map: &FieldMap) {
-        builder.set_arity(truncate!(field_map.arity, u32));
-        let mut builder = builder.init_fields(truncate!(field_map.fields.len(), u32));
+        builder.set_arity(to_u32(field_map.arity));
+        let mut builder = builder.init_fields(to_u32(field_map.fields.len()));
         for (i, (name, position)) in field_map.fields.iter().enumerate() {
-            let mut field = builder
-                .reborrow()
-                .get(truncate!(field_map.fields.len(), u32));
+            let mut field = builder.reborrow().get(to_u32(field_map.fields.len()));
             field.set_key(name);
-            field.init_value().set_value(truncate!(*position, u16));
+            field.init_value().set_value(to_u16(*position));
         }
     }
 
@@ -209,37 +202,32 @@ impl<'a> ModuleBuilder<'a> {
             Constant::String { value, .. } => builder.set_string(value),
 
             Constant::Tuple { elements, .. } => self.build_constants(
-                builder.init_tuple(truncate!(elements.len(), u32)),
+                builder.init_tuple(to_u32(elements.len())),
                 elements.as_slice(),
             ),
 
             Constant::List { elements, typ, .. } => {
                 let mut builder = builder.init_list();
                 self.build_constants(
-                    builder
-                        .reborrow()
-                        .init_elements(truncate!(elements.len(), u32)),
+                    builder.reborrow().init_elements(to_u32(elements.len())),
                     elements.as_slice(),
                 );
                 self.build_type(builder.init_type(), typ);
             }
 
             Constant::BitString { segments, .. } => {
-                let mut builder = builder.init_bit_string(truncate!(segments.len(), u32));
+                let mut builder = builder.init_bit_string(to_u32(segments.len()));
                 for (i, segment) in segments.iter().enumerate() {
-                    self.build_bit_string_segment(
-                        builder.reborrow().get(truncate!(i, u32)),
-                        segment,
-                    );
+                    self.build_bit_string_segment(builder.reborrow().get(to_u32(i)), segment);
                 }
             }
 
             Constant::Record { args, tag, typ, .. } => {
                 let mut builder = builder.init_record();
                 {
-                    let mut builder = builder.reborrow().init_args(truncate!(args.len(), u32));
+                    let mut builder = builder.reborrow().init_args(to_u32(args.len()));
                     for (i, arg) in args.iter().enumerate() {
-                        self.build_constant(builder.reborrow().get(truncate!(i, u32)), &arg.value);
+                        self.build_constant(builder.reborrow().get(to_u32(i)), &arg.value);
                     }
                 }
                 builder.reborrow().set_tag(tag);
@@ -254,7 +242,7 @@ impl<'a> ModuleBuilder<'a> {
         constant: &[TypedConstant],
     ) {
         for (i, constant) in constant.iter().enumerate() {
-            self.build_constant(builder.reborrow().get(truncate!(i, u32)), constant);
+            self.build_constant(builder.reborrow().get(to_u32(i)), constant);
         }
     }
 
@@ -267,12 +255,9 @@ impl<'a> ModuleBuilder<'a> {
         {
             let mut builder = builder
                 .reborrow()
-                .init_options(truncate!(segment.options.len(), u32));
+                .init_options(to_u32(segment.options.len()));
             for (i, option) in segment.options.iter().enumerate() {
-                self.build_bit_string_segment_option(
-                    builder.reborrow().get(truncate!(i, u32)),
-                    option,
-                );
+                self.build_bit_string_segment_option(builder.reborrow().get(to_u32(i)), option);
             }
         }
         self.build_type(builder.init_type(), &segment.typ);
@@ -324,7 +309,7 @@ impl<'a> ModuleBuilder<'a> {
             Type::Fn { args, retrn } => {
                 let mut fun = builder.init_fn();
                 self.build_types(
-                    fun.reborrow().init_arguments(truncate!(args.len(), u32)),
+                    fun.reborrow().init_arguments(to_u32(args.len())),
                     args.as_slice(),
                 );
                 self.build_type(fun.init_return(), retrn.as_ref())
@@ -333,16 +318,11 @@ impl<'a> ModuleBuilder<'a> {
             Type::App { name, args, .. } => {
                 let mut app = builder.init_app();
                 app.set_name(name.as_str());
-                self.build_types(
-                    app.init_parameters(truncate!(args.len(), u32)),
-                    args.as_slice(),
-                );
+                self.build_types(app.init_parameters(to_u32(args.len())), args.as_slice());
             }
 
             Type::Tuple { elems } => self.build_types(
-                builder
-                    .init_tuple()
-                    .init_elements(truncate!(elems.len(), u32)),
+                builder.init_tuple().init_elements(to_u32(elems.len())),
                 elems.as_slice(),
             ),
 
@@ -362,7 +342,7 @@ impl<'a> ModuleBuilder<'a> {
         types: &[Arc<Type>],
     ) {
         for (i, type_) in types.iter().enumerate() {
-            self.build_type(builder.reborrow().get(truncate!(i, u32)), type_.as_ref());
+            self.build_type(builder.reborrow().get(to_u32(i)), type_.as_ref());
         }
     }
 

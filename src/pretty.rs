@@ -15,7 +15,7 @@
 #[cfg(test)]
 mod tests;
 
-use crate::wrap;
+use crate::num_util::to_isize;
 use crate::{fs::Utf8Writer, GleamExpect, Result};
 
 macro_rules! docvec {
@@ -167,12 +167,12 @@ fn fits(mut limit: isize, mut docs: im::Vector<(isize, Mode, Document<'_>)>) -> 
 
             Document::Group(doc) => docs.push_front((indent, Mode::Unbroken, *doc)),
 
-            Document::Str(s) => limit -= wrap!(s.len(), isize),
-            Document::String(s) => limit -= wrap!(s.len(), isize),
+            Document::Str(s) => limit -= to_isize(s.len()),
+            Document::String(s) => limit -= to_isize(s.len()),
 
             Document::Break { unbroken, .. } => match mode {
                 Mode::Broken => return true,
-                Mode::Unbroken => limit -= wrap!(unbroken.len(), isize),
+                Mode::Unbroken => limit -= to_isize(unbroken.len()),
             },
 
             Document::Vec(vec) => {
@@ -208,7 +208,7 @@ fn fmt(
                 width = match mode {
                     Mode::Unbroken => {
                         writer.str_write(unbroken)?;
-                        width + wrap!(unbroken.len(), isize)
+                        width + to_isize(unbroken.len())
                     }
                     Mode::Broken => {
                         writer.str_write(broken)?;
@@ -222,12 +222,12 @@ fn fmt(
             }
 
             Document::String(s) => {
-                width += wrap!(s.len(), isize);
+                width += to_isize(s.len());
                 writer.str_write(s.as_str())?;
             }
 
             Document::Str(s) => {
-                width += wrap!(s.len(), isize);
+                width += to_isize(s.len());
                 writer.str_write(s)?;
             }
 

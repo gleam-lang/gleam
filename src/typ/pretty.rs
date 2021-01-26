@@ -1,6 +1,6 @@
 use super::{Type, TypeVar};
+use crate::num_util::{to_isize, to_u8};
 use crate::pretty::{break_, concat, nil, Document, Documentable};
-use crate::{truncate, wrap};
 use itertools::Itertools;
 use std::sync::Arc;
 
@@ -34,7 +34,7 @@ impl Printer {
         buffer
             .into_doc()
             .append(self.print(typ))
-            .nest(wrap!(initial_indent, isize))
+            .nest(to_isize(initial_indent))
             .to_pretty_string(80)
     }
 
@@ -101,7 +101,7 @@ impl Printer {
         loop {
             n = rest % alphabet_length;
             rest /= alphabet_length;
-            chars.push((truncate!(n, u8) + char_offset) as char);
+            chars.push(char::from(to_u8(n) + char_offset));
 
             if rest == 0 {
                 break;
