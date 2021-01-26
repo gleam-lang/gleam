@@ -78,17 +78,17 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
     ///
     pub fn infer(&mut self, expr: UntypedExpr) -> Result<TypedExpr, Error> {
         match expr {
-            UntypedExpr::ListNil { location, .. } => Ok(self.infer_nil(location)),
+            UntypedExpr::ListNil { location, .. } => Ok(self.make_nil(location)),
 
             UntypedExpr::Todo {
                 location, label, ..
-            } => Ok(self.infer_todo(location, label)),
+            } => Ok(self.make_todo(location, label)),
 
             UntypedExpr::Var { location, name, .. } => self.infer_var(name, location),
 
             UntypedExpr::Int {
                 location, value, ..
-            } => Ok(Self::infer_int(value, location)),
+            } => Ok(Self::make_int(value, location)),
 
             UntypedExpr::Seq { first, then, .. } => self.infer_seq(*first, *then),
 
@@ -98,11 +98,11 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
 
             UntypedExpr::Float {
                 location, value, ..
-            } => Ok(Self::infer_float(value, location)),
+            } => Ok(Self::make_float(value, location)),
 
             UntypedExpr::String {
                 location, value, ..
-            } => Ok(Self::infer_string(value, location)),
+            } => Ok(Self::make_string(value, location)),
 
             UntypedExpr::Pipe {
                 left,
@@ -302,14 +302,14 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         })
     }
 
-    fn infer_nil(&mut self, location: SrcSpan) -> TypedExpr {
+    fn make_nil(&mut self, location: SrcSpan) -> TypedExpr {
         TypedExpr::ListNil {
             location,
             typ: list(self.new_unbound_var(self.environment.level)),
         }
     }
 
-    fn infer_todo(&mut self, location: SrcSpan, label: Option<String>) -> TypedExpr {
+    fn make_todo(&mut self, location: SrcSpan, label: Option<String>) -> TypedExpr {
         let typ = self.new_unbound_var(self.environment.level);
         self.environment.warnings.push(Warning::Todo {
             location,
@@ -323,7 +323,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         }
     }
 
-    fn infer_string(value: String, location: SrcSpan) -> TypedExpr {
+    fn make_string(value: String, location: SrcSpan) -> TypedExpr {
         TypedExpr::String {
             location,
             value,
@@ -331,7 +331,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         }
     }
 
-    fn infer_int(value: String, location: SrcSpan) -> TypedExpr {
+    fn make_int(value: String, location: SrcSpan) -> TypedExpr {
         TypedExpr::Int {
             location,
             value,
@@ -339,7 +339,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         }
     }
 
-    fn infer_float(value: String, location: SrcSpan) -> TypedExpr {
+    fn make_float(value: String, location: SrcSpan) -> TypedExpr {
         TypedExpr::Float {
             location,
             value,
