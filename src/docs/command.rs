@@ -5,7 +5,7 @@ use crate::{
 };
 use bytes::Bytes;
 use hexpm::Client;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 static TOKEN_NAME: &str = concat!(env!("CARGO_PKG_NAME"), " (", env!("CARGO_PKG_VERSION"), ")");
 static DOCS_DIR_NAME: &str = "docs";
@@ -67,7 +67,13 @@ pub fn build(project_root: String, version: String, to: Option<String>) -> Resul
     Ok(())
 }
 
-pub fn publish(project_root: impl AsRef<Path>, version: String) -> Result<(), Error> {
+pub fn publish(project_root: String, version: String) -> Result<(), Error> {
+    let project_root = PathBuf::from(&project_root).canonicalize().map_err(|_| {
+        Error::UnableToFindProjectRoot {
+            path: project_root.clone(),
+        }
+    })?;
+
     let output_dir = PathBuf::new();
 
     // Build
