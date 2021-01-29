@@ -595,9 +595,12 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             .map(infer_option)
             .collect::<Result<Vec<_>, _>>()?;
 
-        let type_specifier = BinaryTypeSpecifier::new(&options, false)
-            .map_err(|e| convert_binary_error(e, &location))?;
-        let typ = type_specifier.typ().unwrap_or_else(int);
+        let typ = crate::bit_string::type_options_for_value(&options).map_err(|error| {
+            Error::BitStringSegmentError {
+                error: error.error,
+                location: error.location,
+            }
+        })?;
 
         self.unify(typ.clone(), value.typ())
             .map_err(|e| convert_unify_error(e, value.location()))?;

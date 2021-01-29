@@ -140,18 +140,21 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
             .map(|o| infer_bit_string_segment_option(o, |value, typ| self.unify(value, typ)))
             .collect::<Result<Vec<_>, _>>()?;
 
-        let typed_segment = BinaryTypeSpecifier::new(&options, !is_last_segment)
-            .map_err(|e| convert_binary_error(e, &location))?;
+        let segment_type = bit_string::type_options_for_pattern(&options, !is_last_segment)
+            .map_err(|error| Error::BitStringSegmentError {
+                error: error.error,
+                location: error.location,
+            })?;
 
         let typ = {
             match &*value {
-                Pattern::Var { .. } if typed_segment.typ() == Some(string()) => {
-                    Err(Error::UTFVarInBitStringSegment {
-                        location,
-                        option: typed_segment.typ.unwrap().label(),
+                Pattern::Var { .. } if segment_type == string() => {
+                    Err(Error::BitStringSegmentError {
+                        error: bit_string::ErrorType::VaribleUTFSegmentInPatten,
+                        location: location,
                     })
                 }
-                _ => Ok(typed_segment.typ().unwrap_or_else(int)),
+                _ => Ok(segment_type),
             }
         }?;
         let typed_value = self.unify(*value, typ.clone())?;

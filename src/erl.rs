@@ -18,6 +18,7 @@ use itertools::Itertools;
 use std::char;
 use std::collections::HashMap;
 use std::default::Default;
+use std::str::FromStr;
 use std::sync::Arc;
 
 const INDENT: isize = 4;
@@ -505,10 +506,7 @@ fn const_segment<'a>(
         ),
     };
 
-    let unit = |value: &'a TypedConstant, env: &mut Env<'_>| match value {
-        Constant::Int { .. } => Some("unit:".to_doc().append(const_inline(value, env))),
-        _ => None,
-    };
+    let unit = |value: &'a usize| Some(Document::String(format!("unit:{}", value)));
 
     bit_string_segment(document, options, size, unit, true, env)
 }
@@ -537,17 +535,23 @@ fn expr_segment<'a>(
         value => expr(value, env).surround("(", ")"),
     };
 
-    let size = |value: &'a TypedExpr, env: &mut Env<'_>| match value {
-        TypedExpr::Int { .. } | TypedExpr::Var { .. } => {
-            Some(":".to_doc().append(expr(value, env)))
+    let size = |expression: &'a TypedExpr, env: &mut Env<'_>| match expression {
+        TypedExpr::Int { value, .. } => {
+            let v = value.replace("_", "");
+            let v = u64::from_str(&v).unwrap_or(0);
+            Some(Document::String(format!(":{}", v)))
         }
-        _ => Some(":".to_doc().append(expr(value, env).surround("(", ")"))),
+
+        _ => {
+            let inner_expr = expr(expression, env).surround("(", ")");
+            // The value of size must be a non-negative integer, we use lists:max here to ensure
+            // it is at least 0;
+            let value_guard = ":(lists:max([".to_doc().append(inner_expr).append(", 0]))");
+            Some(value_guard)
+        }
     };
 
-    let unit = |value: &'a TypedExpr, env: &mut Env<'_>| match value {
-        TypedExpr::Int { .. } => Some("unit:".to_doc().append(expr(value, env))),
-        _ => None,
-    };
+    let unit = |value: &'a usize| Some(Document::String(format!("unit:{}", value)));
 
     bit_string_segment(
         document,
@@ -581,10 +585,7 @@ fn pattern_segment<'a>(
     let size =
         |value: &'a TypedPattern, env: &mut Env<'_>| Some(":".to_doc().append(pattern(value, env)));
 
-    let unit = |value: &'a TypedPattern, env: &mut Env<'_>| match value {
-        Pattern::Int { .. } => Some("unit:".to_doc().append(pattern(value, env))),
-        _ => None,
-    };
+    let unit = |value: &'a usize| Some(Document::String(format!("unit:{}", value)));
 
     bit_string_segment(document, options, size, unit, true, env)
 }
@@ -599,7 +600,7 @@ fn bit_string_segment<'a, Value: 'a, SizeToDoc, UnitToDoc>(
 ) -> Document<'a>
 where
     SizeToDoc: FnMut(&'a Value, &mut Env<'_>) -> Option<Document<'a>>,
-    UnitToDoc: FnMut(&'a Value, &mut Env<'_>) -> Option<Document<'a>>,
+    UnitToDoc: FnMut(&'a usize) -> Option<Document<'a>>,
 {
     let mut size: Option<Document<'a>> = None;
     let mut unit: Option<Document<'a>> = None;
@@ -636,7 +637,7 @@ where
             Opt::Little { .. } => others.push("little".to_doc()),
             Opt::Native { .. } => others.push("native".to_doc()),
             Opt::Size { value, .. } => size = size_to_doc(value, env),
-            Opt::Unit { value, .. } => unit = unit_to_doc(value, env),
+            Opt::Unit { value, .. } => unit = unit_to_doc(value),
         }
     }
 

@@ -1687,9 +1687,9 @@ main() ->
         r#"fn main() {
   let a = 1
   let simple = <<1, a>>
-  let complex = <<4:int-unsigned-big, 5.0:little-float, 6:native-int-signed>>
+  let complex = <<4:int-big, 5.0:little-float, 6:native-int>>
   let <<7:2, 8:size(3), b:binary-size(4)>> = <<1>>
-  let <<c:unit(1), d:binary-size(2)-unit(2)>> = <<1>>
+  let <<c:8-unit(1), d:binary-size(2)-unit(2)>> = <<1>>
 
   simple
 }
@@ -1701,11 +1701,9 @@ main() ->
 main() ->
     A = 1,
     Simple = <<1, A>>,
-    Complex = <<4/integer-unsigned-big,
-                5.0/little-float,
-                6/native-integer-signed>>,
+    Complex = <<4/integer-big, 5.0/little-float, 6/native-integer>>,
     <<7:2, 8:3, B:4/binary>> = <<1>>,
-    <<C/unit:1, D:2/binary-unit:2>> = <<1>>,
+    <<C:8/unit:1, D:2/binary-unit:2>> = <<1>>,
     Simple.
 "#,
     );
@@ -1713,7 +1711,7 @@ main() ->
     assert_erl!(
         r#"fn x() { 2 }
 fn main() {
-  let a = 1
+  let a = -1
   let b = <<a:unit(2)-size(a * 2), a:size(3 + x())-unit(1)>>
 
   b
@@ -1728,8 +1726,11 @@ x() ->
 
 -spec main() -> bitstring().
 main() ->
-    A = 1,
-    B = <<A:(A * 2)/unit:2, A:(3 + x())/unit:1>>,
+    A = -1,
+    B = <<A:(lists:max([(A
+          * 2), 0]))/unit:2,
+          A:(lists:max([(3
+          + x()), 0]))/unit:1>>,
     B.
 "#,
     );

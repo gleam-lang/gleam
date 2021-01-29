@@ -1,6 +1,6 @@
 use crate::parse::error::ParseErrorType;
 use crate::{
-    cli,
+    bit_string, cli,
     diagnostic::{
         write, write_diagnostic, write_project, Diagnostic, DiagnosticLabel, LabelStyle,
         MultiLineDiagnostic, ProjectErrorDiagnostic, Severity,
@@ -1186,99 +1186,98 @@ and try again.
                     .unwrap();
                 }
 
-                TypeError::ConflictingBinaryTypeOptions { location, name, .. } => {
-                    let diagnostic = Diagnostic {
-                        title: "Duplicate bit string type option".to_string(),
-                        label: "given here".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write(buffer, diagnostic, Severity::Error);
-                    writeln!(buffer, "This segment already has the type {}", name).unwrap();
-                }
+                TypeError::BitStringSegmentError { error, location } => {
+                    let (label, mut extra) = match error {
+                        bit_string::ErrorType::ConflictingTypeOptions { existing_type } => (
+                            "This is an extra type specifier.",
+                            vec![format!("Hint: This segment already has the type {}.", existing_type)],
+                        ),
 
-                TypeError::ConflictingBinarySignednessOptions { location, name, .. } => {
-                    let diagnostic = Diagnostic {
-                        title: "Duplicate bit string signedness".to_string(),
-                        label: "redefined here".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write(buffer, diagnostic, Severity::Error);
-                    writeln!(buffer, "This segment already has a signedness of {}", name).unwrap();
-                }
+                        bit_string::ErrorType::ConflictingSignednessOptions {
+                            existing_signed
+                        } => (
+                            "This is an extra signedness specifier.",
+                            vec![format!(
+                                "Hint: This segment already has a signedness of {}.",
+                                existing_signed
+                            )],
+                        ),
 
-                TypeError::ConflictingBinaryEndiannessOptions { location, name, .. } => {
-                    let diagnostic = Diagnostic {
-                        title: "Duplicate bit string endianness".to_string(),
-                        label: "redefined here".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write(buffer, diagnostic, Severity::Error);
-                    writeln!(buffer, "This segment already has an endianness of {}", name).unwrap();
-                }
+                        bit_string::ErrorType::ConflictingEndiannessOptions {
+                            existing_endianness
+                        } => (
+                            "This is an extra endianness specifier.",
+                            vec![format!(
+                                "Hint: This segment already has an endianness of {}.",
+                                existing_endianness
+                            )],
+                        ),
 
-                TypeError::ConflictingBinarySizeOptions { location, .. } => {
-                    let diagnostic = Diagnostic {
-                        title: "Duplicate bit string size".to_string(),
-                        label: "redefined here".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write(buffer, diagnostic, Severity::Error);
-                    writeln!(buffer, "This segment already has a size",).unwrap();
-                }
+                        bit_string::ErrorType::ConflictingSizeOptions => (
+                            "This is an extra size specifier.",
+                            vec!["Hint: This segment already has a size.".to_string()],
+                        ),
 
-                TypeError::ConflictingBinaryUnitOptions { location, .. } => {
-                    let diagnostic = Diagnostic {
-                        title: "Duplicate bit string unit".to_string(),
-                        label: "redefined here".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write(buffer, diagnostic, Severity::Error);
-                    writeln!(buffer, "This segment already has a unit",).unwrap();
-                }
+                        bit_string::ErrorType::ConflictingUnitOptions => (
+                            "This is an extra unit specifier.",
+                            vec!["Hint: A BitString segment can have at most 1 unit.".to_string()],
+                        ),
 
-                TypeError::BinaryTypeDoesNotAllowUnit { location, typ, .. } => {
-                    let diagnostic = Diagnostic {
-                        title: "Unit cannot be specified for given type".to_string(),
-                        label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write(buffer, diagnostic, Severity::Error);
-                    writeln!(
-                        buffer,
-                        "No unit specifier must be given for the types utf8, utf16, and utf32.
-This segment has a type of {}.",
-                        typ
-                    )
-                    .unwrap();
-                }
+                        bit_string::ErrorType::FloatWithSize => (
+                            "Size cannot be used with float.",
+                            vec!["Hint: floats have an exact size of 64 bits.".to_string()],
+                        ),
 
-                TypeError::BinarySegmentMustHaveSize { location, .. } => {
+                        bit_string::ErrorType::InvalidEndianness => (
+                            "this option is invalid here.",
+                            vec!["Hint: signed and unsigned can only be used with int, float, utf16 and utf32 types.".to_string()],
+                        ),
+
+                        bit_string::ErrorType::OptionNotAllowedInValue => (
+                            "This option is only allowed in BitString patterns.",
+                            vec!["Hint: This option has no effect in BitString values.".to_string()],
+                        ),
+
+                        bit_string::ErrorType::SignednessUsedOnNonInt { typ } => (
+                            "signedness is only valid with int types.",
+                            vec![format!("Hint: This segment has a type of {}", typ)],
+                        ),
+                        bit_string::ErrorType::TypeDoesNotAllowSize { typ } => (
+                            "size cannot be specified here",
+                            vec![format!("Hint: {} segments have an autoatic size.", typ)],
+                        ),
+                        bit_string::ErrorType::TypeDoesNotAllowUnit { typ } => (
+                            "unit cannot be specified here",
+                            vec![format!("Hint: {} segments are sized based on their value and cannot have a unit.", typ)],
+                        ),
+                        bit_string::ErrorType::VaribleUTFSegmentInPatten => (
+                            "this cannot be a variable",
+                            vec![format!("Hint: in patterns utf8, utf16, and utf32  must be an exact string.")],
+                        ),
+                        bit_string::ErrorType::SegmentMustHaveSize => (
+                            "This segment has no size",
+                            vec!["Hint: Bit string segments without a size are only allowed at the end of a bin pattern."
+                                .to_string()],
+                        ),
+                        bit_string::ErrorType::UnitMustHaveSize => (
+                            "This needs an explicit size",
+                            vec!["Hint: If you specify unit() you must also specify size()."
+                                .to_string()],
+                        ),
+                    };
                     let diagnostic = Diagnostic {
-                        title: "Bit string segment without required size".to_string(),
-                        label: "specified here".to_string(),
+                        title: "BitString Segment Error".to_string(),
+                        label: label.to_string(),
+                        location: *location,
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
-                        location: *location,
                     };
+                    extra.push("See: https://gleam.run/book/tour/bit-strings.html".to_string());
                     write(buffer, diagnostic, Severity::Error);
-                    writeln!(
-                        buffer,
-                        "Bit string segments without a size are only allowed
-at the end of a bin pattern",
-                    )
-                    .unwrap();
+                    if !extra.is_empty() {
+                        writeln!(buffer, "{}", extra.join("\n"))
+                            .expect("error pretty buffer write");
+                    }
                 }
 
                 TypeError::RecordUpdateInvalidConstructor { location } => {
@@ -1311,27 +1310,6 @@ at the end of a bin pattern",
                     writeln!(
                         buffer,
                         "We need to know the exact type here so type holes are not permitted.",
-                    )
-                    .unwrap();
-                }
-
-                TypeError::UTFVarInBitStringSegment { location, option } => {
-                    let diagnostic = Diagnostic {
-                        title: "Incorrect type specifier in bit string segment".to_string(),
-                        label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write(buffer, diagnostic, Severity::Error);
-
-                    writeln!(
-                        buffer,
-                        "The `{}` type specifier can only be used for construction e.g. <<\"hello\":{}>>.
-When matching you need to use the `{}_codepoint` specifier instead.",
-                        option,
-                        option,
-                        option,
                     )
                     .unwrap();
                 }
@@ -1392,6 +1370,11 @@ When matching you need to use the `{}_codepoint` specifier instead.",
                         "utf32_codepoint, signed, unsigned, big, little, native, size, unit".to_string(),
                         "See: https://gleam.run/book/tour/bit-strings".to_string()]
                     ),
+                    ParseErrorType::InvalidBitStringUnit => (
+                        "This is not a valid BitString unit value.",
+                        vec!["Hint: unit must be an integer literal >= 1 and <= 256".to_string(),
+                        "See: https://gleam.run/book/tour/bit-strings".to_string()]
+                    ),
                     ParseErrorType::InvalidTailPattern => (
                         "This part of a list pattern can only be a name or a discard.",
                         vec!["See: https://gleam.run/book/tour/patterns".to_string()]
@@ -1401,9 +1384,13 @@ When matching you need to use the `{}_codepoint` specifier instead.",
                         vec!["Hint: Only non negative integer literals like 0, or 1_000 can be used.".to_string()]
                     ),
                     ParseErrorType::LexError { error: lex_err } => lex_err.to_parse_error_info(),
-                    ParseErrorType::ListNilNotAllowed=> (
-                        "Hint: Empty list is not allowed here.",
+                    ParseErrorType::ListNilNotAllowed => (
+                        "Empty list is not allowed here.",
                         vec![]
+                    ),
+                    ParseErrorType::NestedBitStringPattern => (
+                        "BitString patterns cannot be nested.",
+                        vec!["See: https://gleam.run/book/tour/patterns".to_string()]
                     ),
                     ParseErrorType::NoCaseClause => (
                         "This case expression has no clauses.",
