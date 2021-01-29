@@ -301,12 +301,15 @@ impl<'a> ModuleEncoder<'a> {
                 builder.set_short_form(*short_form);
             }
 
-            Opt::Unit {
-                value, short_form, ..
-            } => {
+            Opt::Unit { value, location } => {
                 let mut builder = builder.init_unit();
-                self.build_constant(builder.reborrow().init_value(), value);
-                builder.set_short_form(*short_form);
+                self.build_constant(
+                    builder.reborrow().init_value(),
+                    &Constant::Int {
+                        value: format!("{}", value),
+                        location: *location,
+                    },
+                );
             }
         }
     }

@@ -759,17 +759,8 @@ pub enum BitStringSegmentOption<Value> {
 
     Unit {
         location: SrcSpan,
-        value: Box<Value>,
-        short_form: bool,
+        value: Box<usize>,
     },
-}
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum SegmentOptionCategory {
-    Type,
-    Endianness,
-    Signedness,
-    Size,
-    Unit,
 }
 
 impl<A> BitStringSegmentOption<A> {
@@ -792,28 +783,6 @@ impl<A> BitStringSegmentOption<A> {
             | BitStringSegmentOption::Native { location }
             | BitStringSegmentOption::Size { location, .. }
             | BitStringSegmentOption::Unit { location, .. } => *location,
-        }
-    }
-
-    pub fn category(&self) -> SegmentOptionCategory {
-        match self {
-            BitStringSegmentOption::Binary { .. } => SegmentOptionCategory::Type,
-            BitStringSegmentOption::Integer { .. } => SegmentOptionCategory::Type,
-            BitStringSegmentOption::Float { .. } => SegmentOptionCategory::Type,
-            BitStringSegmentOption::BitString { .. } => SegmentOptionCategory::Type,
-            BitStringSegmentOption::UTF8 { .. } => SegmentOptionCategory::Type,
-            BitStringSegmentOption::UTF16 { .. } => SegmentOptionCategory::Type,
-            BitStringSegmentOption::UTF32 { .. } => SegmentOptionCategory::Type,
-            BitStringSegmentOption::UTF8Codepoint { .. } => SegmentOptionCategory::Type,
-            BitStringSegmentOption::UTF16Codepoint { .. } => SegmentOptionCategory::Type,
-            BitStringSegmentOption::UTF32Codepoint { .. } => SegmentOptionCategory::Type,
-            BitStringSegmentOption::Signed { .. } => SegmentOptionCategory::Signedness,
-            BitStringSegmentOption::Unsigned { .. } => SegmentOptionCategory::Signedness,
-            BitStringSegmentOption::Big { .. } => SegmentOptionCategory::Endianness,
-            BitStringSegmentOption::Little { .. } => SegmentOptionCategory::Endianness,
-            BitStringSegmentOption::Native { .. } => SegmentOptionCategory::Endianness,
-            BitStringSegmentOption::Size { .. } => SegmentOptionCategory::Size,
-            BitStringSegmentOption::Unit { .. } => SegmentOptionCategory::Unit,
         }
     }
 

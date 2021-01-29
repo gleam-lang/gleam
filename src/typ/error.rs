@@ -1,9 +1,13 @@
-use crate::{ast::SrcSpan, bit_string::Error as BinaryError, typ::Type};
+use crate::{ast::SrcSpan, typ::Type};
 
 use std::sync::Arc;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Error {
+    BitStringSegmentError {
+        error: crate::bit_string::ErrorType,
+        location: SrcSpan,
+    },
     UnknownLabels {
         unknown: Vec<(String, SrcSpan)>,
         valid: Vec<String>,
@@ -172,50 +176,8 @@ pub enum Error {
         location: SrcSpan,
     },
 
-    ConflictingBinaryTypeOptions {
-        previous_location: SrcSpan,
-        location: SrcSpan,
-        name: String,
-    },
-
-    ConflictingBinarySignednessOptions {
-        previous_location: SrcSpan,
-        location: SrcSpan,
-        name: String,
-    },
-
-    ConflictingBinaryEndiannessOptions {
-        previous_location: SrcSpan,
-        location: SrcSpan,
-        name: String,
-    },
-
-    ConflictingBinarySizeOptions {
-        previous_location: SrcSpan,
-        location: SrcSpan,
-    },
-
-    ConflictingBinaryUnitOptions {
-        previous_location: SrcSpan,
-        location: SrcSpan,
-    },
-
-    BinaryTypeDoesNotAllowUnit {
-        location: SrcSpan,
-        typ: String,
-    },
-
-    BinarySegmentMustHaveSize {
-        location: SrcSpan,
-    },
-
     UnexpectedTypeHole {
         location: SrcSpan,
-    },
-
-    UTFVarInBitStringSegment {
-        location: SrcSpan,
-        option: String,
     },
 }
 
@@ -519,64 +481,6 @@ impl UnifyError {
 
             Self::RecursiveType => Error::RecursiveType { location },
         }
-    }
-}
-
-pub fn convert_binary_error(e: crate::bit_string::Error, location: &SrcSpan) -> Error {
-    match e {
-        BinaryError::ConflictingSignednessOptions {
-            location,
-            previous_location,
-            name,
-        } => Error::ConflictingBinarySignednessOptions {
-            location,
-            previous_location,
-            name,
-        },
-
-        BinaryError::ConflictingEndiannessOptions {
-            location,
-            previous_location,
-            name,
-        } => Error::ConflictingBinaryEndiannessOptions {
-            location,
-            previous_location,
-            name,
-        },
-
-        BinaryError::ConflictingTypeOptions {
-            location,
-            previous_location,
-            name,
-        } => Error::ConflictingBinaryTypeOptions {
-            location,
-            previous_location,
-            name,
-        },
-
-        BinaryError::ConflictingSizeOptions {
-            location,
-            previous_location,
-        } => Error::ConflictingBinarySizeOptions {
-            location,
-            previous_location,
-        },
-
-        BinaryError::ConflictingUnitOptions {
-            location,
-            previous_location,
-        } => Error::ConflictingBinaryUnitOptions {
-            location,
-            previous_location,
-        },
-
-        BinaryError::TypeDoesNotAllowUnit { location, typ } => {
-            Error::BinaryTypeDoesNotAllowUnit { location, typ }
-        }
-
-        BinaryError::SegmentMustHaveSize => Error::BinarySegmentMustHaveSize {
-            location: *location,
-        },
     }
 }
 

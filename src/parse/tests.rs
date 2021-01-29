@@ -94,3 +94,32 @@ fn string_tests() {
         }
     );
 }
+
+#[test]
+fn bit_string_tests() {
+    // non int value in BitString unit option
+    assert_error!(
+        "let x = <<1:unit(0)>> x",
+        ParseError {
+            error: ParseErrorType::InvalidBitStringUnit,
+            location: SrcSpan { start: 17, end: 18 }
+        }
+    );
+
+    assert_error!(
+        "let x = <<1:unit(257)>> x",
+        ParseError {
+            error: ParseErrorType::InvalidBitStringUnit,
+            location: SrcSpan { start: 17, end: 20 }
+        }
+    );
+
+    // patterns cannot be nested
+    assert_error!(
+        "case <<>> { <<<<1>>:bit_string>> -> 1 }",
+        ParseError {
+            error: ParseErrorType::NestedBitStringPattern,
+            location: SrcSpan { start: 14, end: 19 }
+        }
+    );
+}

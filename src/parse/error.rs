@@ -36,18 +36,20 @@ pub enum ParseErrorType {
     IncorrectName,           // UpName or DiscardName used when Name was expected
     IncorrectUpName,         // Name or DiscardName used when UpName was expected
     InvalidBitStringSegment, // <<7:hello>> `hello` is an invalid bitstring segment
+    InvalidBitStringUnit,    // in <<1:unit(x)>> x must be 1 <= x <= 256
     InvalidTailPattern,      // only name and _name are allowed after ".." in list pattern
     InvalidTupleAccess,      // only positive int literals for tuple access
     LexError { error: LexicalError },
-    ListNilNotAllowed, // [] is not allowed here
-    NoConstructors,    // A type "A {}" must have at least one constructor
-    NoCaseClause,      // a case with no claueses
-    NoExpression,      // between "{" and "}" in expression position, there must be an expression
+    ListNilNotAllowed,      // [] is not allowed here
+    NestedBitStringPattern, // <<<<1>>, 2>>, <<1>> is not allowed in there
+    NoConstructors,         // A type "A {}" must have at least one constructor
+    NoCaseClause,           // a case with no claueses
+    NoExpression, // between "{" and "}" in expression position, there must be an expression
     NoValueAfterEqual, // = <something other than a value>
-    NotConstType,      // :fn(), name, _  are not valid const types
-    OpNakedRight,      // Operator with no value to the right
-    OpaqueTypeAlias,   // Type aliases cannot be opaque
-    TooManyArgHoles,   // a function call can have at most 1 arg hole
+    NotConstType, // :fn(), name, _  are not valid const types
+    OpNakedRight, // Operator with no value to the right
+    OpaqueTypeAlias, // Type aliases cannot be opaque
+    TooManyArgHoles, // a function call can have at most 1 arg hole
     UnexpectedEOF,
     UnexpectedReservedWord, // reserved word used when a name was expected
     UnexpectedToken { expected: Vec<String> },

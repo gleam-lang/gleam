@@ -25,7 +25,7 @@ use crate::{
         TypedStatement, UnqualifiedImport, UntypedModule, UntypedMultiPattern, UntypedPattern,
         UntypedRecordUpdateArg, UntypedStatement,
     },
-    bit_string::BinaryTypeSpecifier,
+    bit_string,
     build::Origin,
     error::GleamExpect,
 };
@@ -1071,19 +1071,11 @@ where
         }
 
         BitStringSegmentOption::Unit {
-            value,
+            value, location, ..
+        } => Ok(BitStringSegmentOption::Unit {
             location,
-            short_form,
-            ..
-        } => {
-            let value = type_check(*value, int())?;
-
-            Ok(BitStringSegmentOption::Unit {
-                location,
-                short_form,
-                value: Box::new(value),
-            })
-        }
+            value: value,
+        }),
 
         BitStringSegmentOption::Binary { location } => {
             Ok(BitStringSegmentOption::Binary { location })

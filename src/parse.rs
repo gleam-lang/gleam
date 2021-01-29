@@ -752,7 +752,12 @@ where
                     &|s| {
                         Parser::parse_bit_string_segment(
                             s,
-                            &Parser::parse_pattern,
+                            &|s| match Parser::parse_pattern(s) {
+                                Ok(Some(Pattern::BitString { location, .. })) => {
+                                    parse_error(ParseErrorType::NestedBitStringPattern, location)
+                                }
+                                x => x,
+                            },
                             &Parser::expect_bit_string_pattern_segment_arg,
                             &bit_string_pattern_int,
                         )
@@ -2064,20 +2069,47 @@ where
             Some((start, Tok::Name { name }, end)) => {
                 if self.maybe_one(&Tok::Lpar).is_some() {
                     // named function segment
-                    let value = arg_parser(self)?;
-                    let (_, end) = self.expect_one(&Tok::Rpar)?;
                     match name.as_str() {
-                        "unit" => Ok(Some(BitStringSegmentOption::Unit {
-                            location: SrcSpan { start, end },
-                            value: Box::new(value),
-                            short_form: false,
-                        })),
+                        "unit" => {
+                            if let Some((int_s, Tok::Int { value, .. }, int_e)) = self.next_tok() {
+                                let (_, end) = self.expect_one(&Tok::Rpar)?;
+                                let v = value.replace("_", "");
+                                usize::from_str(&v)
+                                    .ok()
+                                    .and_then(|units| {
+                                        if units >= 1 && units <= 256 {
+                                            Some(units)
+                                        } else {
+                                            None
+                                        }
+                                    })
+                                    .and_then(|units| {
+                                        Some(Some(BitStringSegmentOption::Unit {
+                                            location: SrcSpan { start, end },
+                                            value: Box::new(units),
+                                        }))
+                                    })
+                                    .ok_or_else(|| ParseError {
+                                        error: ParseErrorType::InvalidBitStringUnit,
+                                        location: SrcSpan {
+                                            start: int_s,
+                                            end: int_e,
+                                        },
+                                    })
+                            } else {
+                                self.next_tok_unexpected(vec!["positive integer".to_string()])
+                            }
+                        }
 
-                        "size" => Ok(Some(BitStringSegmentOption::Size {
-                            location: SrcSpan { start, end },
-                            value: Box::new(value),
-                            short_form: false,
-                        })),
+                        "size" => {
+                            let value = arg_parser(self)?;
+                            let (_, end) = self.expect_one(&Tok::Rpar)?;
+                            Ok(Some(BitStringSegmentOption::Size {
+                                location: SrcSpan { start, end },
+                                value: Box::new(value),
+                                short_form: false,
+                            }))
+                        }
                         _ => parse_error(
                             ParseErrorType::InvalidBitStringSegment,
                             SrcSpan { start, end },

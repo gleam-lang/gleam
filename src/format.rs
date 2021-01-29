@@ -1576,21 +1576,11 @@ where
             ..
         } => to_doc(value.as_ref()),
 
-        BitStringSegmentOption::Unit {
-            value,
-            short_form: false,
-            ..
-        } => "unit"
+        BitStringSegmentOption::Unit { value, .. } => "unit"
             .to_doc()
             .append("(")
-            .append(to_doc(value.as_ref()))
+            .append(Document::String(format!("{}", value)))
             .append(")"),
-
-        BitStringSegmentOption::Unit {
-            value,
-            short_form: true,
-            ..
-        } => to_doc(value.as_ref()),
     }
 }
 
