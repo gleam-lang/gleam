@@ -57,7 +57,7 @@ impl LexicalError {
     pub fn to_parse_error_info(&self) -> (&str, Vec<String>) {
         match self.error {
             LexicalErrorType::BadStringEscape => (
-                "This is an unescaped backslash.",
+                "I don't understand this escape code",
                 vec![
                     "Hint: Add another backslash before it.".to_string(),
                     "See: https://gleam.run/book/tour/strings.html#escape-sequences".to_string(),

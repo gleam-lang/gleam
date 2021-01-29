@@ -637,7 +637,7 @@ where
                     let slash_pos = self.get_pos() - 1;
                     if let Some(c) = self.chr0 {
                         match c {
-                            'n' | 'r' | 't' | '"' | '\\' => {
+                            'f' | 'n' | 'r' | 't' | '"' | '\\' => {
                                 let _ = self.next_char();
                                 string_content.push('\\');
                                 string_content.push(c);
