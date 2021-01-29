@@ -44,7 +44,7 @@ jobs:
 
       - name: Push image
         run: |
-          IMAGE_ID_BASE=ghcr.io/${{ github.repository }}/gleam
+          IMAGE_ID_BASE=ghcr.io/${{ github.repository }}/gleam-${{ matrix.base-image }}
 
           # Change all uppercase to lowercase
           IMAGE_ID_BASE=$(echo $IMAGE_ID_BASE | tr '[A-Z]' '[a-z]')
@@ -56,7 +56,7 @@ jobs:
           [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
 
           # Prepare the tag
-          TAG=$IMAGE_ID_BASE:$VERSION-${{ matrix.base-image }}
+          TAG=$IMAGE_ID_BASE:$VERSION
           echo TAG=$TAG
 
           # Push the image to the registry under the tag
