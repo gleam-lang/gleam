@@ -102,4 +102,9 @@ hljs.registerLanguage("gleam", function (hljs) {
     ],
   };
 });
-hljs.initHighlightingOnLoad();
+document.querySelectorAll("pre code").forEach((block) => {
+  if (block.className === "") {
+    block.classList.add("gleam");
+  }
+  hljs.highlightBlock(block);
+});

@@ -9,9 +9,6 @@
          between multiple versions of the same package. -->
     <script src="{{ unnest }}/docs_config.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@10.5.0/styles/atom-one-light.min.css">
-    <script src="https://unpkg.com/@highlightjs/cdn-assets@10.5.0/highlight.min.js"></script>
-    <script src="https://unpkg.com/@highlightjs/cdn-assets@10.5.0/languages/erlang.min.js"></script>
-    <script src="{{ unnest }}/highlightjs-gleam.js"></script>
   </head>
   <body>
     <header class="page-header">
@@ -75,7 +72,6 @@
       </main>
     </div>
 
-
     <script>const pride = () => document.querySelector('body').classList.toggle('show-pride')</script>
     <a class="pride-button" onclick="pride()">✨</a>
     <footer class="pride" onclick="pride()">
@@ -86,6 +82,9 @@
       <div class="blue">✨</div>
     </footer>
 
+    <script src="https://unpkg.com/@highlightjs/cdn-assets@10.5.0/highlight.min.js"></script>
+    <script src="https://unpkg.com/@highlightjs/cdn-assets@10.5.0/languages/erlang.min.js"></script>
+    <script src="{{ unnest }}/highlightjs-gleam.js"></script>
     <script>
       if (typeof versionNodes !== 'undefined') {
         const versionElement = document.getElementById('project-version')
