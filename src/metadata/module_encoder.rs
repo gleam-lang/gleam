@@ -15,13 +15,13 @@ use crate::{
     },
 };
 
-pub struct ModuleBuilder<'a> {
+pub struct ModuleEncoder<'a> {
     data: &'a typ::Module,
     next_type_var_id: u16,
     type_var_id_map: HashMap<usize, u16>,
 }
 
-impl<'a> ModuleBuilder<'a> {
+impl<'a> ModuleEncoder<'a> {
     pub fn new(data: &'a typ::Module) -> Self {
         Self {
             data,
