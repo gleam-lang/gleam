@@ -10,10 +10,10 @@ pub use self::module_builder::ModuleBuilder;
 
 use crate::{
     schema_capnp as schema,
-    typ::{AccessorsMap, Module, TypeConstructor, ValueConstructor},
+    typ::{AccessorsMap, Module, Type, TypeConstructor, ValueConstructor},
     Result,
 };
-use std::{collections::HashMap, io::BufRead};
+use std::{collections::HashMap, io::BufRead, sync::Arc};
 
 #[derive(Debug, Default)]
 pub struct ModuleDecoder {
@@ -32,39 +32,60 @@ impl ModuleDecoder {
         let module = message_reader.get_root::<schema::module::Reader<'_>>()?;
 
         Ok(Module {
-            name: self.name(&module)?,
-            types: self.types(&module)?,
-            values: self.values(&module)?,
-            accessors: self.accessors(&module)?,
+            name: name(&module)?,
+            types: self.module_types(&module)?,
+            values: self.module_values(&module)?,
+            accessors: self.module_accessors(&module)?,
         })
     }
 
-    fn name(&self, module: &schema::module::Reader<'_>) -> Result<Vec<String>> {
-        let name = module
-            .get_name()?
-            .iter()
-            .map(|s| s.map(String::from))
-            .collect::<Result<_, _>>()?;
-        Ok(name)
+    fn module_types(
+        &mut self,
+        reader: &schema::module::Reader<'_>,
+    ) -> Result<HashMap<String, TypeConstructor>> {
+        let types_reader = reader.get_types()?;
+        let mut types = HashMap::with_capacity(types_reader.len() as usize);
+        for prop in types_reader.into_iter() {
+            let name = prop.get_key()?;
+            let type_ = self.type_constructor(&prop.get_value()?)?;
+            let _ = types.insert(name.to_string(), type_);
+        }
+        Ok(types)
     }
 
-    fn types(
-        &self,
-        module: &schema::module::Reader<'_>,
-    ) -> Result<HashMap<String, TypeConstructor>> {
+    fn type_constructor(
+        &mut self,
+        reader: &schema::type_constructor::Reader<'_>,
+    ) -> Result<TypeConstructor> {
+        let type_ = self.type_(&reader.get_type()?)?;
+        let reader = reader.get_parameters()?;
+        let mut parameters = Vec::with_capacity(reader.len() as usize);
+        for reader in reader.into_iter() {
+            parameters.push(self.type_(&reader)?);
+        }
+        Ok(TypeConstructor {
+            public: true,
+            origin: Default::default(),
+            module: todo!("The module isn't stored in the proto yet"),
+            parameters,
+            typ: type_,
+        })
+    }
+
+    fn type_(&mut self, reader: &schema::type_::Reader<'_>) -> Result<Arc<Type>> {
         todo!()
     }
 
-    fn values(
+    fn module_values(
         &self,
-        module: &schema::module::Reader<'_>,
+        reader: &schema::module::Reader<'_>,
     ) -> Result<HashMap<String, ValueConstructor>> {
         todo!()
     }
 
-    fn accessors(
+    fn module_accessors(
         &self,
-        module: &schema::module::Reader<'_>,
+        reader: &schema::module::Reader<'_>,
     ) -> Result<HashMap<String, AccessorsMap>> {
         todo!()
     }
@@ -106,3 +127,12 @@ impl ModuleDecoder {
 //         Ok(())
 //     }
 // }
+
+fn name(module: &schema::module::Reader<'_>) -> Result<Vec<String>> {
+    let name = module
+        .get_name()?
+        .iter()
+        .map(|s| s.map(String::from))
+        .collect::<Result<_, _>>()?;
+    Ok(name)
+}
