@@ -29,6 +29,7 @@ struct Module {
 struct TypeConstructor {
   type @0 :Type;
   parameters @1 :List(Type);
+  module @2 :List(Text);
 }
 
 struct AccessorsMap {
@@ -45,20 +46,21 @@ struct Type {
   union {
     app :group {
       name @0 :Text;
-      parameters @1 :List(Type);
+      module @1 :List(Text);
+      parameters @2 :List(Type);
     }
 
     fn :group {
-      arguments @2 :List(Type);
-      return @3 :Type;
+      arguments @3 :List(Type);
+      return @4 :Type;
     }
 
     var :group {
-      id @4 :UInt16;
+      id @5 :UInt16;
     }
 
     tuple :group {
-      elements @5 :List(Type);
+      elements @6 :List(Type);
     }
   }
 }

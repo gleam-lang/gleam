@@ -630,6 +630,13 @@ pub mod type_constructor {
     pub fn has_parameters(&self) -> bool {
       !self.reader.get_pointer_field(1).is_null()
     }
+    #[inline]
+    pub fn get_module(self) -> ::capnp::Result<::capnp::text_list::Reader<'a>> {
+      ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(2), ::core::option::Option::None)
+    }
+    pub fn has_module(&self) -> bool {
+      !self.reader.get_pointer_field(2).is_null()
+    }
   }
 
   pub struct Builder<'a> { builder: ::capnp::private::layout::StructBuilder<'a> }
@@ -710,6 +717,21 @@ pub mod type_constructor {
     pub fn has_parameters(&self) -> bool {
       !self.builder.get_pointer_field(1).is_null()
     }
+    #[inline]
+    pub fn get_module(self) -> ::capnp::Result<::capnp::text_list::Builder<'a>> {
+      ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(2), ::core::option::Option::None)
+    }
+    #[inline]
+    pub fn set_module(&mut self, value: ::capnp::text_list::Reader<'a>) -> ::capnp::Result<()> {
+      ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(2), value, false)
+    }
+    #[inline]
+    pub fn init_module(self, size: u32) -> ::capnp::text_list::Builder<'a> {
+      ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(2), size)
+    }
+    pub fn has_module(&self) -> bool {
+      !self.builder.get_pointer_field(2).is_null()
+    }
   }
 
   pub struct Pipeline { _typeless: ::capnp::any_pointer::Pipeline }
@@ -725,7 +747,7 @@ pub mod type_constructor {
   }
   mod _private {
     use capnp::private::layout;
-    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 0, pointers: 2 };
+    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 0, pointers: 3 };
     pub const TYPE_ID: u64 = 0xb1fb_6d62_e00b_6d7a;
   }
 }
@@ -1169,6 +1191,7 @@ pub mod type_ {
       self.builder.set_data_field::<u16>(0, 0);
       self.builder.get_pointer_field(0).clear();
       self.builder.get_pointer_field(1).clear();
+      self.builder.get_pointer_field(2).clear();
       ::capnp::traits::FromStructBuilder::new(self.builder)
     }
     #[inline]
@@ -1228,7 +1251,7 @@ pub mod type_ {
   }
   mod _private {
     use capnp::private::layout;
-    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 2 };
+    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 3 };
     pub const TYPE_ID: u64 = 0x82f6_802e_4097_0700;
   }
   pub enum Which<A0,A1,A2,A3> {
@@ -1294,11 +1317,18 @@ pub mod type_ {
         !self.reader.get_pointer_field(0).is_null()
       }
       #[inline]
-      pub fn get_parameters(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::type_::Owned>> {
+      pub fn get_module(self) -> ::capnp::Result<::capnp::text_list::Reader<'a>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(1), ::core::option::Option::None)
       }
-      pub fn has_parameters(&self) -> bool {
+      pub fn has_module(&self) -> bool {
         !self.reader.get_pointer_field(1).is_null()
+      }
+      #[inline]
+      pub fn get_parameters(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::type_::Owned>> {
+        ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(2), ::core::option::Option::None)
+      }
+      pub fn has_parameters(&self) -> bool {
+        !self.reader.get_pointer_field(2).is_null()
       }
     }
 
@@ -1366,19 +1396,34 @@ pub mod type_ {
         !self.builder.get_pointer_field(0).is_null()
       }
       #[inline]
-      pub fn get_parameters(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a,crate::schema_capnp::type_::Owned>> {
+      pub fn get_module(self) -> ::capnp::Result<::capnp::text_list::Builder<'a>> {
         ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(1), ::core::option::Option::None)
       }
       #[inline]
-      pub fn set_parameters(&mut self, value: ::capnp::struct_list::Reader<'a,crate::schema_capnp::type_::Owned>) -> ::capnp::Result<()> {
+      pub fn set_module(&mut self, value: ::capnp::text_list::Reader<'a>) -> ::capnp::Result<()> {
         ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(1), value, false)
       }
       #[inline]
-      pub fn init_parameters(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::type_::Owned> {
+      pub fn init_module(self, size: u32) -> ::capnp::text_list::Builder<'a> {
         ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(1), size)
       }
-      pub fn has_parameters(&self) -> bool {
+      pub fn has_module(&self) -> bool {
         !self.builder.get_pointer_field(1).is_null()
+      }
+      #[inline]
+      pub fn get_parameters(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a,crate::schema_capnp::type_::Owned>> {
+        ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(2), ::core::option::Option::None)
+      }
+      #[inline]
+      pub fn set_parameters(&mut self, value: ::capnp::struct_list::Reader<'a,crate::schema_capnp::type_::Owned>) -> ::capnp::Result<()> {
+        ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(2), value, false)
+      }
+      #[inline]
+      pub fn init_parameters(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::type_::Owned> {
+        ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(2), size)
+      }
+      pub fn has_parameters(&self) -> bool {
+        !self.builder.get_pointer_field(2).is_null()
       }
     }
 
@@ -1392,7 +1437,7 @@ pub mod type_ {
     }
     mod _private {
       use capnp::private::layout;
-      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 2 };
+      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 3 };
       pub const TYPE_ID: u64 = 0xd41c_0e5a_6b35_9470;
     }
   }
@@ -1552,7 +1597,7 @@ pub mod type_ {
     }
     mod _private {
       use capnp::private::layout;
-      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 2 };
+      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 3 };
       pub const TYPE_ID: u64 = 0x82f2_798c_7760_b76b;
     }
   }
@@ -1677,7 +1722,7 @@ pub mod type_ {
     }
     mod _private {
       use capnp::private::layout;
-      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 2 };
+      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 3 };
       pub const TYPE_ID: u64 = 0xccda_0e73_1fe2_8436;
     }
   }
@@ -1812,7 +1857,7 @@ pub mod type_ {
     }
     mod _private {
       use capnp::private::layout;
-      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 2 };
+      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 3 };
       pub const TYPE_ID: u64 = 0x8c17_e20c_8015_d83d;
     }
   }

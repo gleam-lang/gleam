@@ -1,5 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
+use capnp::text_list;
 use typ::{AccessorsMap, RecordAccessor};
 
 use crate::{
@@ -83,6 +84,12 @@ impl<'a> ModuleBuilder<'a> {
         }
     }
 
+    fn build_module_name(&mut self, mut builder: capnp::text_list::Builder<'_>, module: &[String]) {
+        for (i, s) in module.iter().enumerate() {
+            builder.set(i as u32, s);
+        }
+    }
+
     fn set_module_types(&mut self, module: &mut module::Builder<'_>) {
         let mut types = module.reborrow().init_types(self.data.types.len() as u32);
         for (i, (name, type_)) in self.data.types.iter().enumerate() {
@@ -109,8 +116,14 @@ impl<'a> ModuleBuilder<'a> {
         let type_builder = builder.reborrow().init_type();
         self.build_type(type_builder, &constructor.typ);
         self.build_types(
-            builder.init_parameters(constructor.parameters.len() as u32),
+            builder
+                .reborrow()
+                .init_parameters(constructor.parameters.len() as u32),
             constructor.parameters.as_slice(),
+        );
+        self.build_module_name(
+            builder.init_module(constructor.module.len() as u32),
+            constructor.module.as_slice(),
         );
     }
 
@@ -309,10 +322,16 @@ impl<'a> ModuleBuilder<'a> {
                 self.build_type(fun.init_return(), retrn.as_ref())
             }
 
-            Type::App { name, args, .. } => {
+            Type::App {
+                name, args, module, ..
+            } => {
                 let mut app = builder.init_app();
                 app.set_name(name.as_str());
-                self.build_types(app.init_parameters(args.len() as u32), args.as_slice());
+                self.build_types(
+                    app.reborrow().init_parameters(args.len() as u32),
+                    args.as_slice(),
+                );
+                self.build_module_name(app.init_module(module.len() as u32), module.as_slice());
             }
 
             Type::Tuple { elems } => self.build_types(
