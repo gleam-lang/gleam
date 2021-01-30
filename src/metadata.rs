@@ -4,9 +4,12 @@
 // TODO: remove
 #![allow(unused)]
 
-mod module_builder;
+mod module_encoder;
 
-pub use self::module_builder::ModuleBuilder;
+#[cfg(test)]
+mod tests;
+
+pub use self::module_encoder::ModuleEncoder;
 
 use crate::{
     schema_capnp as schema,
@@ -26,13 +29,13 @@ impl ModuleDecoder {
         Default::default()
     }
 
-    pub fn read_module(&mut self, reader: impl BufRead) -> Result<Module> {
+    pub fn read(&mut self, reader: impl BufRead) -> Result<Module> {
         let message_reader =
             capnp::serialize_packed::read_message(reader, capnp::message::ReaderOptions::new())?;
         let module = message_reader.get_root::<schema::module::Reader<'_>>()?;
 
         Ok(Module {
-            name: name(&module)?,
+            name: name(&module.get_name()?)?,
             types: self.module_types(&module)?,
             values: self.module_values(&module)?,
             accessors: self.module_accessors(&module)?,
@@ -58,6 +61,7 @@ impl ModuleDecoder {
         reader: &schema::type_constructor::Reader<'_>,
     ) -> Result<TypeConstructor> {
         let type_ = self.type_(&reader.get_type()?)?;
+        let module = name(&reader.get_module()?)?;
         let reader = reader.get_parameters()?;
         let mut parameters = Vec::with_capacity(reader.len() as usize);
         for reader in reader.into_iter() {
@@ -66,28 +70,59 @@ impl ModuleDecoder {
         Ok(TypeConstructor {
             public: true,
             origin: Default::default(),
-            module: todo!("The module isn't stored in the proto yet"),
+            module,
             parameters,
             typ: type_,
         })
     }
 
+    fn types(
+        &mut self,
+        reader: &capnp::struct_list::Reader<'_, schema::type_::Owned>,
+    ) -> Result<Vec<Arc<Type>>> {
+        let mut types = Vec::with_capacity(reader.len() as usize);
+        for reader in reader.into_iter() {
+            types.push(self.type_(&reader)?);
+        }
+        Ok(types)
+    }
+
     fn type_(&mut self, reader: &schema::type_::Reader<'_>) -> Result<Arc<Type>> {
-        todo!()
+        use schema::type_::Which;
+        match reader.which()? {
+            Which::App(reader) => self.type_app(&reader),
+            Which::Fn(_) => todo!(),
+            Which::Var(_) => todo!(),
+            Which::Tuple(_) => todo!(),
+        }
+    }
+
+    fn type_app(&mut self, reader: &schema::type_::app::Reader<'_>) -> Result<Arc<Type>> {
+        let module = name(&reader.get_module()?)?;
+        let name = reader.get_name()?.to_string();
+        let args = self.types(&reader.get_parameters()?)?;
+        Ok(Arc::new(Type::App {
+            public: true,
+            module,
+            name,
+            args,
+        }))
     }
 
     fn module_values(
         &self,
         reader: &schema::module::Reader<'_>,
     ) -> Result<HashMap<String, ValueConstructor>> {
-        todo!()
+        // TODO
+        Ok(HashMap::new())
     }
 
     fn module_accessors(
         &self,
         reader: &schema::module::Reader<'_>,
     ) -> Result<HashMap<String, AccessorsMap>> {
-        todo!()
+        // TODO
+        Ok(HashMap::new())
     }
 }
 
@@ -128,11 +163,9 @@ impl ModuleDecoder {
 //     }
 // }
 
-fn name(module: &schema::module::Reader<'_>) -> Result<Vec<String>> {
-    let name = module
-        .get_name()?
+fn name(module: &capnp::text_list::Reader<'_>) -> Result<Vec<String>> {
+    Ok(module
         .iter()
         .map(|s| s.map(String::from))
-        .collect::<Result<_, _>>()?;
-    Ok(name)
+        .collect::<Result<_, _>>()?)
 }

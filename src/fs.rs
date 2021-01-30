@@ -439,4 +439,27 @@ pub mod test {
             self.contents.borrow_mut().flush()
         }
     }
+
+    impl std::fmt::Write for InMemoryFile {
+        fn write_str(&mut self, s: &str) -> std::fmt::Result {
+            self.contents
+                .borrow_mut()
+                .write(s.as_bytes())
+                .map(|_| ())
+                .map_err(|_| std::fmt::Error)
+        }
+    }
+
+    impl Utf8Writer for InMemoryFile {
+        fn convert_err<T, E: std::error::Error>(&self, result: Result<T, E>) -> crate::Result<T> {
+            result.map_err(|error| Error::FileIO {
+                action: FileIOAction::WriteTo,
+                kind: FileKind::File,
+                path: PathBuf::from("<in memory test file>"),
+                err: Some(error.to_string()),
+            })
+        }
+    }
+
+    impl Writer for InMemoryFile {}
 }

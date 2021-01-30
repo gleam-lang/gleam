@@ -170,6 +170,14 @@ impl From<capnp::Error> for Error {
     }
 }
 
+impl From<capnp::NotInSchema> for Error {
+    fn from(error: capnp::NotInSchema) -> Self {
+        Error::MetadataDecodeError {
+            error: Some(error.to_string()),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum InvalidProjectNameReason {
     Format,
