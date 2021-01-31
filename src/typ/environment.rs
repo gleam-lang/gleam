@@ -111,22 +111,13 @@ impl<'a, 'b> Environment<'a, 'b> {
     /// know which one yet.
     ///
     pub fn new_unbound_var(&mut self, level: usize) -> Arc<Type> {
-        Arc::new(Type::Var {
-            typ: Arc::new(RefCell::new(TypeVar::Unbound {
-                id: self.next_uid(),
-                level,
-            })),
-        })
+        unbound_var(self.next_uid(), level)
     }
 
     /// Create a new generic type that can stand in for any type.
     ///
     pub fn new_generic_var(&mut self) -> Arc<Type> {
-        Arc::new(Type::Var {
-            typ: Arc::new(RefCell::new(TypeVar::Generic {
-                id: self.next_uid(),
-            })),
-        })
+        generic_var(self.next_uid())
     }
 
     /// Insert a variable in the current scope.

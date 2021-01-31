@@ -1,6 +1,6 @@
-use super::{Environment, Type, TypeConstructor, ValueConstructorVariant};
+use super::{Environment, Type, TypeConstructor, TypeVar, ValueConstructorVariant};
 use crate::error::GleamExpect;
-use std::sync::Arc;
+use std::{cell::RefCell, sync::Arc};
 
 pub fn int() -> Arc<Type> {
     Arc::new(Type::App {
@@ -88,6 +88,18 @@ pub fn utf_codepoint() -> Arc<Type> {
         public: true,
         name: "UtfCodepoint".to_string(),
         module: vec![],
+    })
+}
+
+pub fn generic_var(id: usize) -> Arc<Type> {
+    Arc::new(Type::Var {
+        typ: Arc::new(RefCell::new(TypeVar::Generic { id })),
+    })
+}
+
+pub fn unbound_var(id: usize, level: usize) -> Arc<Type> {
+    Arc::new(Type::Var {
+        typ: Arc::new(RefCell::new(TypeVar::Unbound { id, level })),
     })
 }
 

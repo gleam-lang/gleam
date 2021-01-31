@@ -28,7 +28,10 @@ struct Module {
 
 struct TypeConstructor {
   type @0 :Type;
-  parameters @1 :List(Type);
+  # TODO: convert this to an int as we only need to reconstruct type vars, 
+  # not other types
+  # TODO: test
+  parameters @1 :List(Type); 
   module @2 :List(Text);
 }
 
