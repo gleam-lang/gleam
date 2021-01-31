@@ -41,7 +41,8 @@
     clippy::default_trait_access,
     unstable_name_collisions,
     clippy::map_unwrap_or,
-    clippy::redundant_closure_for_method_calls
+    clippy::redundant_closure_for_method_calls,
+    clippy::shadow_unrelated
 )]
 
 #[macro_use]
