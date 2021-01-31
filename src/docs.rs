@@ -146,8 +146,7 @@ pub fn generate_html(
         let source_links = SourceLinker::new(&project_root, project_config, module);
 
         let template = ModuleTemplate {
-            unnest: itertools::Itertools::intersperse(module.name.iter().map(|_| ".."), "/")
-                .collect(),
+            unnest: module.name.iter().map(|_| "..").intersperse("/").collect(),
             links: &links,
             pages: &pages,
             documentation: render_markdown(module.ast.documentation.iter().join("\n").as_str()),

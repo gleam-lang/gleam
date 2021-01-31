@@ -147,7 +147,7 @@ pub fn record_definition(name: &str, fields: &[&str]) -> String {
         name.to_string()
     };
     let mut buffer = format!("-record({}, {{", escaped_name);
-    for field in Itertools::intersperse(fields.iter(), &", ") {
+    for field in fields.iter().intersperse(&", ") {
         let escaped_field = if is_erlang_reserved_word(field) {
             format!("'{}'", field)
         } else {
@@ -161,7 +161,7 @@ pub fn record_definition(name: &str, fields: &[&str]) -> String {
 
 pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> {
     let module_name = module.name.as_slice();
-    let exports = concat(Itertools::intersperse(
+    let exports = concat(
         module
             .statements
             .iter()
@@ -182,17 +182,17 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
 
                 _ => None,
             })
-            .map(|(n, a)| atom(n).append("/").append(a)),
-        ", ".into_doc(),
-    ));
+            .map(|(n, a)| atom(n).append("/").append(a))
+            .intersperse(", ".into_doc()),
+    );
 
-    let statements = concat(Itertools::intersperse(
+    let statements = concat(
         module
             .statements
             .iter()
-            .flat_map(|s| statement(s, module_name)),
-        lines(2),
-    ));
+            .flat_map(|s| statement(s, module_name))
+            .intersperse(lines(2)),
+    );
 
     "-module("
         .into_doc()
@@ -272,7 +272,7 @@ where
     I: Iterator<Item = Document<'a>>,
 {
     break_("", "")
-        .append(concat(Itertools::intersperse(args, break_(",", ", "))))
+        .append(concat(args.intersperse(break_(",", ", "))))
         .nest(INDENT)
         .append(break_("", ""))
         .surround("(", ")")
@@ -304,14 +304,14 @@ fn string(value: &str) -> Document<'_> {
 }
 
 fn tuple<'a>(elems: impl Iterator<Item = Document<'a>>) -> Document<'a> {
-    concat(Itertools::intersperse(elems, break_(",", ", ")))
+    concat(elems.intersperse(break_(",", ", ")))
         .nest_current()
         .surround("{", "}")
         .group()
 }
 
 fn bit_string<'a>(elems: impl Iterator<Item = Document<'a>>) -> Document<'a> {
-    concat(Itertools::intersperse(elems, break_(",", ", ")))
+    concat(elems.intersperse(break_(",", ", ")))
         .nest_current()
         .surround("<<", ">>")
         .group()
@@ -714,10 +714,12 @@ where
     let mut elems = vec![head];
     let final_tail = collect_cons(tail, &mut elems, categorise_element);
 
-    let elems = concat(Itertools::intersperse(
-        elems.into_iter().map(|e| to_doc(e, env)),
-        break_(",", ", "),
-    ));
+    let elems = concat(
+        elems
+            .into_iter()
+            .map(|e| to_doc(e, env))
+            .intersperse(break_(",", ", ")),
+    );
 
     let elems = if let Some(final_tail) = final_tail {
         elems
@@ -816,10 +818,10 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'_>) -> Document<'
         Constant::Tuple { elements, .. } => tuple(elements.iter().map(|e| const_inline(e, env))),
 
         Constant::List { elements, .. } => {
-            let elements = Itertools::intersperse(
-                elements.iter().map(|e| const_inline(e, env)),
-                break_(",", ", "),
-            );
+            let elements = elements
+                .iter()
+                .map(|e| const_inline(e, env))
+                .intersperse(break_(",", ", "));
             concat(elements).nest_current().surround("[", "]").group()
         }
 
@@ -870,33 +872,31 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'_>) -> Document<'a> {
     let mut then_doc = Document::Nil;
     let erlang_vars = env.erl_function_scope_vars.clone();
 
-    let docs = Itertools::intersperse(
-        std::iter::once(pat)
-            .chain(alternative_patterns.iter())
-            .map(|patterns| {
-                env.erl_function_scope_vars = erlang_vars.clone();
+    let docs = std::iter::once(pat)
+        .chain(alternative_patterns.iter())
+        .map(|patterns| {
+            env.erl_function_scope_vars = erlang_vars.clone();
 
-                let patterns_doc = if patterns.len() == 1 {
-                    let p = patterns
-                        .get(0)
-                        .gleam_expect("Single pattern clause printing");
-                    pattern(p, env)
-                } else {
-                    tuple(patterns.iter().map(|p| pattern(p, env)))
-                };
+            let patterns_doc = if patterns.len() == 1 {
+                let p = patterns
+                    .get(0)
+                    .gleam_expect("Single pattern clause printing");
+                pattern(p, env)
+            } else {
+                tuple(patterns.iter().map(|p| pattern(p, env)))
+            };
 
-                if then_doc == Document::Nil {
-                    then_doc = expr(then, env);
-                }
+            if then_doc == Document::Nil {
+                then_doc = expr(then, env);
+            }
 
-                patterns_doc.append(
-                    optional_clause_guard(guard.as_ref(), env)
-                        .append(" ->")
-                        .append(line().append(then_doc.clone()).nest(INDENT).group()),
-                )
-            }),
-        ";".into_doc().append(lines(2)),
-    );
+            patterns_doc.append(
+                optional_clause_guard(guard.as_ref(), env)
+                    .append(" ->")
+                    .append(line().append(then_doc.clone()).nest(INDENT).group()),
+            )
+        })
+        .intersperse(";".into_doc().append(lines(2)));
 
     concat(docs)
 }
@@ -1002,15 +1002,16 @@ fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'_>) -> Document<
 }
 
 fn clauses<'a>(cs: &'a [TypedClause], env: &mut Env<'_>) -> Document<'a> {
-    concat(Itertools::intersperse(
-        cs.iter().map(|c| {
-            let vars = env.current_scope_vars.clone();
-            let erl = clause(c, env);
-            env.current_scope_vars = vars; // Reset the known variables now the clauses' scope has ended
-            erl
-        }),
-        ";".into_doc().append(lines(2)),
-    ))
+    concat(
+        cs.iter()
+            .map(|c| {
+                let vars = env.current_scope_vars.clone();
+                let erl = clause(c, env);
+                env.current_scope_vars = vars; // Reset the known variables now the clauses' scope has ended
+                erl
+            })
+            .intersperse(";".into_doc().append(lines(2))),
+    )
 }
 
 fn case<'a>(subjects: &'a [TypedExpr], cs: &'a [TypedClause], env: &mut Env<'_>) -> Document<'a> {
@@ -1311,13 +1312,11 @@ fn fun<'a>(args: &'a [TypedArg], body: &'a TypedExpr, env: &mut Env<'_>) -> Docu
 }
 
 fn incrementing_args_list(arity: usize) -> String {
-    Itertools::intersperse(
-        (65..(65 + arity))
-            .map(|x| char::from(to_u8(x)))
-            .map(|c| c.to_string()),
-        ", ".to_string(),
-    )
-    .collect()
+    (65..(65 + arity))
+        .map(|x| char::from(to_u8(x)))
+        .map(|c| c.to_string())
+        .intersperse(", ".to_string())
+        .collect()
 }
 
 fn external_fun<'a>(name: &str, module: &str, fun: &str, arity: usize) -> Document<'a> {

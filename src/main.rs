@@ -38,7 +38,8 @@
     clippy::non_ascii_literal,
     clippy::too_many_lines,
     clippy::explicit_into_iter_loop,
-    clippy::default_trait_access
+    clippy::default_trait_access,
+    unstable_name_collisions
 )]
 
 #[macro_use]

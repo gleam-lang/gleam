@@ -117,8 +117,8 @@ impl Printer {
         if args.is_empty() {
             nil()
         } else {
-            let args = concat(Itertools::intersperse(
-                args.iter().map(|t| self.print(t).group()),
+            let args = concat(
+                args.iter().map(|t| self.print(t).group()).intersperse(
                 break_(",", ", "),
             ));
             break_("", "")
