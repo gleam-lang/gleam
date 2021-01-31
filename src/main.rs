@@ -39,7 +39,9 @@
     clippy::too_many_lines,
     clippy::explicit_into_iter_loop,
     clippy::default_trait_access,
-    unstable_name_collisions
+    unstable_name_collisions,
+    clippy::map_unwrap_or,
+    clippy::redundant_closure_for_method_calls
 )]
 
 #[macro_use]

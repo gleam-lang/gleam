@@ -49,7 +49,7 @@ pub fn complicated_fun(
     let mut analysed = crate::project::analysed(&[input]).gleam_expect("Compilation failed");
     analysed
         .iter_mut()
-        .for_each(crate::project::Analysed::attach_doc_and_module_comments);
+        .for_each(|a| a.attach_doc_and_module_comments());
 
     let output_files = generate_html(
         PathBuf::from("."),
