@@ -37,7 +37,8 @@
     clippy::module_name_repetitions,
     clippy::non_ascii_literal,
     clippy::too_many_lines,
-    clippy::explicit_into_iter_loop
+    clippy::explicit_into_iter_loop,
+    clippy::default_trait_access
 )]
 
 #[macro_use]

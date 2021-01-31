@@ -43,13 +43,7 @@ pub fn complicated_fun(
 
     let config = PackageConfig {
         name: "test".to_string(),
-        docs: crate::config::Docs::default(),
-        tool: crate::config::BuildTool::default(),
-        version: String::default(),
-        repository: crate::config::Repository::default(),
-        description: String::default(),
-        dependencies: std::collections::HashMap::default(),
-        otp_start_module: None,
+        ..Default::default()
     };
 
     let mut analysed = crate::project::analysed(&[input]).gleam_expect("Compilation failed");
