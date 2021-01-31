@@ -306,8 +306,7 @@ impl<'a> Document<'a> {
         }
     }
 
-    #[allow(clippy::wrong_self_convention)]
-    pub fn to_pretty_string(self, limit: isize) -> String {
+    pub fn into_pretty_string(self, limit: isize) -> String {
         let mut buffer = String::new();
         self.pretty_print(limit, &mut buffer)
             .gleam_expect("Writing to string buffer failed");

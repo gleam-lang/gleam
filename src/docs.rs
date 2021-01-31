@@ -377,7 +377,7 @@ fn constant<'a>(
 }
 
 fn print(doc: pretty::Document<'_>) -> String {
-    doc.to_pretty_string(MAX_COLUMNS)
+    doc.into_pretty_string(MAX_COLUMNS)
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]

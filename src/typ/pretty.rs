@@ -35,7 +35,7 @@ impl Printer {
             .into_doc()
             .append(self.print(typ))
             .nest(to_isize(initial_indent))
-            .to_pretty_string(80)
+            .into_pretty_string(80)
     }
 
     // TODO: have this function return a Document that borrows from the Type.

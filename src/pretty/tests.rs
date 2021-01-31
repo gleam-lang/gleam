@@ -143,44 +143,44 @@ fn fits_test() {
 #[test]
 fn format_test() {
     let doc = String("Hi".to_string());
-    assert_eq!("Hi".to_string(), doc.to_pretty_string(10));
+    assert_eq!("Hi".to_string(), doc.into_pretty_string(10));
 
     let doc = String("Hi".to_string()).append(String(", world!".to_string()));
-    assert_eq!("Hi, world!".to_string(), doc.to_pretty_string(10));
+    assert_eq!("Hi, world!".to_string(), doc.into_pretty_string(10));
 
     let doc = Nil;
-    assert_eq!("".to_string(), doc.to_pretty_string(10));
+    assert_eq!("".to_string(), doc.into_pretty_string(10));
 
     let doc = Break {
         broken: "broken",
         unbroken: "unbroken",
     }
     .group();
-    assert_eq!("unbroken".to_string(), doc.to_pretty_string(10));
+    assert_eq!("unbroken".to_string(), doc.into_pretty_string(10));
 
     let doc = Break {
         broken: "broken",
         unbroken: "unbroken",
     }
     .group();
-    assert_eq!("broken\n".to_string(), doc.to_pretty_string(5));
+    assert_eq!("broken\n".to_string(), doc.into_pretty_string(5));
 
     let doc = Nest(
         2,
         Box::new(String("1".to_string()).append(Line(1).append(String("2".to_string())))),
     );
-    assert_eq!("1\n  2".to_string(), doc.to_pretty_string(1));
+    assert_eq!("1\n  2".to_string(), doc.into_pretty_string(1));
 
     let doc = String("111".to_string()).append(NestCurrent(Box::new(
         Line(1).append(String("2".to_string())),
     )));
-    assert_eq!("111\n   2".to_string(), doc.to_pretty_string(1));
+    assert_eq!("111\n   2".to_string(), doc.into_pretty_string(1));
 
     let doc = ForceBreak.append(Break {
         broken: "broken",
         unbroken: "unbroken",
     });
-    assert_eq!("broken\n".to_string(), doc.to_pretty_string(100));
+    assert_eq!("broken\n".to_string(), doc.into_pretty_string(100));
 }
 
 #[test]
@@ -193,7 +193,7 @@ fn let_left_side_fits_test() {
         "[1] = [
   1
 ]",
-        doc.clone().to_pretty_string(7)
+        doc.clone().into_pretty_string(7)
     );
 
     assert_eq!(
@@ -202,8 +202,8 @@ fn let_left_side_fits_test() {
 ] = [
   1
 ]",
-        doc.clone().to_pretty_string(2)
+        doc.clone().into_pretty_string(2)
     );
 
-    assert_eq!("[1] = [1]", doc.clone().to_pretty_string(16));
+    assert_eq!("[1] = [1]", doc.clone().into_pretty_string(16));
 }

@@ -761,7 +761,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         for clause in clauses {
             let typed_clause = self.infer_clause(clause.clone(), &subject_types)?;
             self.unify(return_type.clone(), typed_clause.then.typ())
-                .map_err(|e| e.case_clause_mismatch().to_error(typed_clause.location()))?;
+                .map_err(|e| e.case_clause_mismatch().into_error(typed_clause.location()))?;
             typed_clauses.push(typed_clause);
         }
         Ok(TypedExpr::Case {
@@ -1827,7 +1827,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         // Check that any return type type is accurate.
         if let Some(return_type) = return_type {
             self.unify(return_type, body.typ())
-                .map_err(|e| e.return_annotation_mismatch().to_error(body.location()))?;
+                .map_err(|e| e.return_annotation_mismatch().into_error(body.location()))?;
         }
 
         Ok((args, body))

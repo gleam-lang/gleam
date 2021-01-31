@@ -500,8 +500,7 @@ impl UnifyError {
         self.with_unify_error_situation(UnifyErrorSituation::ReturnAnnotationMismatch)
     }
 
-    #[allow(clippy::wrong_self_convention)]
-    pub fn to_error(self, location: SrcSpan) -> Error {
+    pub fn into_error(self, location: SrcSpan) -> Error {
         match self {
             Self::CouldNotUnify {
                 expected,
@@ -584,5 +583,5 @@ pub fn convert_binary_error(e: crate::bit_string::Error, location: &SrcSpan) -> 
 }
 
 pub fn convert_unify_error(e: UnifyError, location: SrcSpan) -> Error {
-    e.to_error(location)
+    e.into_error(location)
 }
