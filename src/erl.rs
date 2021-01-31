@@ -90,7 +90,7 @@ impl<'env> Env<'env> {
     }
 
     pub fn local_var_name<'a>(&mut self, name: &str) -> Document<'a> {
-        match self.current_scope_vars.get(&name.to_owned()) {
+        match self.current_scope_vars.get(name) {
             None => {
                 let _ = self.current_scope_vars.insert(name.to_owned(), 0);
                 let _ = self.erl_function_scope_vars.insert(name.to_owned(), 0);
@@ -102,10 +102,7 @@ impl<'env> Env<'env> {
     }
 
     pub fn next_local_var_name<'a>(&mut self, name: &str) -> Document<'a> {
-        let next = self
-            .erl_function_scope_vars
-            .get(&name.to_owned())
-            .map_or(0, |i| i + 1);
+        let next = self.erl_function_scope_vars.get(name).map_or(0, |i| i + 1);
         let _ = self.erl_function_scope_vars.insert(name.to_owned(), next);
         let _ = self.current_scope_vars.insert(name.to_owned(), next);
         self.local_var_name(name)

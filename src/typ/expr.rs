@@ -1258,7 +1258,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         // Find the accessor, if the type has one with the same label
         let RecordAccessor { index, label, typ } = accessors
             .accessors
-            .get(&label.to_owned())
+            .get(label)
             .ok_or_else(|| {
                 unknown_field(
                     accessors
