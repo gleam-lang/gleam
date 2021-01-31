@@ -13,15 +13,15 @@ pub use self::module_encoder::ModuleEncoder;
 
 use crate::{
     schema_capnp as schema,
-    typ::{AccessorsMap, Module, Type, TypeConstructor, ValueConstructor},
+    typ::{self, AccessorsMap, Module, Type, TypeConstructor, ValueConstructor},
     Result,
 };
 use std::{collections::HashMap, io::BufRead, sync::Arc};
 
 #[derive(Debug, Default)]
 pub struct ModuleDecoder {
-    next_type_var_id: u64,
-    type_var_id_map: HashMap<usize, u64>,
+    next_type_var_id: usize,
+    type_var_id_map: HashMap<usize, usize>,
 }
 
 impl ModuleDecoder {
@@ -91,9 +91,9 @@ impl ModuleDecoder {
         use schema::type_::Which;
         match reader.which()? {
             Which::App(reader) => self.type_app(&reader),
-            Which::Fn(_) => todo!(),
-            Which::Var(_) => todo!(),
-            Which::Tuple(_) => todo!(),
+            Which::Fn(reader) => self.type_fn(&reader),
+            Which::Tuple(reader) => self.type_tuple(&reader),
+            Which::Var(reader) => self.type_var(&reader),
         }
     }
 
@@ -107,6 +107,31 @@ impl ModuleDecoder {
             name,
             args,
         }))
+    }
+
+    fn type_fn(&mut self, reader: &schema::type_::fn_::Reader<'_>) -> Result<Arc<Type>> {
+        let retrn = self.type_(&reader.get_return()?)?;
+        let args = self.types(&reader.get_arguments()?)?;
+        Ok(Arc::new(Type::Fn { args, retrn }))
+    }
+
+    fn type_tuple(&mut self, reader: &schema::type_::tuple::Reader<'_>) -> Result<Arc<Type>> {
+        let elems = self.types(&reader.get_elements()?)?;
+        Ok(Arc::new(Type::Tuple { elems }))
+    }
+
+    fn type_var(&mut self, reader: &schema::type_::var::Reader<'_>) -> Result<Arc<Type>> {
+        let serialized_id = reader.get_id() as usize;
+        let id = match self.type_var_id_map.get(&serialized_id) {
+            Some(id) => *id,
+            None => {
+                let new_id = self.next_type_var_id;
+                self.next_type_var_id += 1;
+                let _ = self.type_var_id_map.insert(serialized_id, new_id);
+                new_id
+            }
+        };
+        Ok(typ::generic_var(id))
     }
 
     fn module_values(
@@ -125,43 +150,6 @@ impl ModuleDecoder {
         Ok(HashMap::new())
     }
 }
-
-//     pub fn print_address_book() -> ::capnp::Result<()> {
-//         let stdin = ::std::io::stdin();
-//         let message_reader = serialize_packed::read_message(&mut stdin.lock(),
-//                                                             ::capnp::message::ReaderOptions::new())?;
-//         let address_book = message_reader.get_root::<address_book::Reader>()?;
-
-//         for person in address_book.get_people()?.iter() {
-//             println!("{}: {}", person.get_name()?, person.get_email()?);
-//             for phone in person.get_phones()?.iter() {
-//                 let type_name = match phone.get_type() {
-//                     Ok(person::phone_number::Type::Mobile) => "mobile",
-//                     Ok(person::phone_number::Type::Home) => "home",
-//                     Ok(person::phone_number::Type::Work) => "work",
-//                     Err(::capnp::NotInSchema(_)) => "UNKNOWN",
-//                 };
-//                 println!("  {} phone: {}", type_name, phone.get_number()?);
-//             }
-//             match person.get_employment().which() {
-//                 Ok(person::employment::Unemployed(())) => {
-//                     println!("  unemployed");
-//                 }
-//                 Ok(person::employment::Employer(employer)) => {
-//                     println!("  employer: {}", employer?);
-//                 }
-//                 Ok(person::employment::School(school)) => {
-//                     println!("  student at: {}", school?);
-//                 }
-//                 Ok(person::employment::SelfEmployed(())) => {
-//                     println!("  self-employed");
-//                 }
-//                 Err(::capnp::NotInSchema(_)) => { }
-//             }
-//         }
-//         Ok(())
-//     }
-// }
 
 fn name(module: &capnp::text_list::Reader<'_>) -> Result<Vec<String>> {
     Ok(module
