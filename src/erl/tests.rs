@@ -1727,10 +1727,8 @@ x() ->
 -spec main() -> bitstring().
 main() ->
     A = -1,
-    B = <<A:(lists:max([(A
-          * 2), 0]))/unit:2,
-          A:(lists:max([(3
-          + x()), 0]))/unit:1>>,
+    B = <<A:(lists:max([(A * 2), 0]))/unit:2,
+          A:(lists:max([(3 + x()), 0]))/unit:1>>,
     B.
 "#,
     );

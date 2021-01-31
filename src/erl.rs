@@ -546,7 +546,11 @@ fn expr_segment<'a>(
             let inner_expr = expr(expression, env).surround("(", ")");
             // The value of size must be a non-negative integer, we use lists:max here to ensure
             // it is at least 0;
-            let value_guard = ":(lists:max([".to_doc().append(inner_expr).append(", 0]))");
+            let value_guard = ":(lists:max(["
+                .to_doc()
+                .append(inner_expr)
+                .append(", 0]))")
+                .group();
             Some(value_guard)
         }
     };
