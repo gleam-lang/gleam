@@ -123,3 +123,21 @@ fn bit_string_tests() {
         }
     );
 }
+
+#[test]
+fn name_tests() {
+    assert_error!(
+        "let xS = 1",
+        ParseError {
+            error: ParseErrorType::LexError {
+                error: LexicalError {
+                    error: LexicalErrorType::CamelCaseName {
+                        name: "xS".to_string()
+                    },
+                    location: SrcSpan { start: 4, end: 6 },
+                }
+            },
+            location: SrcSpan { start: 4, end: 6 },
+        }
+    );
+}

@@ -1,12 +1,13 @@
 use crate::ast::SrcSpan;
+use heck::SnakeCase;
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct LexicalError {
     pub error: LexicalErrorType,
     pub location: SrcSpan,
 }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum LexicalErrorType {
     BadStringEscape,       // string contains an unescaped slash
     DigitOutOfRadix,       // 0x012 , 2 is out of radix
@@ -14,6 +15,7 @@ pub enum LexicalErrorType {
     RadixIntNoValue,       // 0x, 0b, 0o without a value
     UnexpectedStringEnd,   // Unterminated string literal
     UnrecognizedToken { tok: char },
+    CamelCaseName { name: String },
 }
 
 #[derive(Debug, PartialEq)]
@@ -57,7 +59,7 @@ pub enum ParseErrorType {
 
 impl LexicalError {
     pub fn to_parse_error_info(&self) -> (&str, Vec<String>) {
-        match self.error {
+        match &self.error {
             LexicalErrorType::BadStringEscape => (
                 "I don't understand this escape code",
                 vec![
@@ -80,6 +82,13 @@ impl LexicalError {
                 "I can't figure out what to do with this character.",
                 vec!["Hint: Is it a typo?".to_string()],
             ),
+	        LexicalErrorType::CamelCaseName { name } => (
+		        "This is not a valid name.",
+		        vec![
+			        "Hint: In Gleam names must start with a lowercase letter and contain only lowercase letters, numbers, and '_'.".to_string(),
+			        format!("Try: {}", name.to_snake_case())
+		        ]
+	        ),
         }
     }
 }
