@@ -3,7 +3,7 @@ use crate::ast::SrcSpan;
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct LexicalError {
     pub error: LexicalErrorType,
-    pub location: usize,
+    pub location: SrcSpan,
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]

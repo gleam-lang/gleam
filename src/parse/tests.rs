@@ -17,7 +17,7 @@ fn int_tests() {
             error: ParseErrorType::LexError {
                 error: LexicalError {
                     error: LexicalErrorType::DigitOutOfRadix,
-                    location: 4,
+                    location: SrcSpan { start: 4, end: 4 },
                 }
             },
             location: SrcSpan { start: 4, end: 4 },
@@ -30,7 +30,7 @@ fn int_tests() {
             error: ParseErrorType::LexError {
                 error: LexicalError {
                     error: LexicalErrorType::DigitOutOfRadix,
-                    location: 9,
+                    location: SrcSpan { start: 9, end: 9 },
                 }
             },
             location: SrcSpan { start: 9, end: 9 },
@@ -43,7 +43,7 @@ fn int_tests() {
             error: ParseErrorType::LexError {
                 error: LexicalError {
                     error: LexicalErrorType::RadixIntNoValue,
-                    location: 1,
+                    location: SrcSpan { start: 1, end: 1 },
                 }
             },
             location: SrcSpan { start: 1, end: 1 },
@@ -56,7 +56,7 @@ fn int_tests() {
             error: ParseErrorType::LexError {
                 error: LexicalError {
                     error: LexicalErrorType::NumTrailingUnderscore,
-                    location: 5,
+                    location: SrcSpan { start: 5, end: 5 },
                 }
             },
             location: SrcSpan { start: 5, end: 5 },
@@ -73,7 +73,7 @@ fn string_tests() {
             error: ParseErrorType::LexError {
                 error: LexicalError {
                     error: LexicalErrorType::BadStringEscape,
-                    location: 1,
+                    location: SrcSpan { start: 1, end: 1 },
                 }
             },
             location: SrcSpan { start: 1, end: 1 },
@@ -87,7 +87,7 @@ fn string_tests() {
             error: ParseErrorType::LexError {
                 error: LexicalError {
                     error: LexicalErrorType::BadStringEscape,
-                    location: 3,
+                    location: SrcSpan { start: 3, end: 3 },
                 }
             },
             location: SrcSpan { start: 3, end: 3 },

@@ -148,13 +148,7 @@ where
         if let Some(error) = self.lex_errors.pop() {
             // Lex errors first
             let location = error.location;
-            parse_error(
-                ParseErrorType::LexError { error },
-                SrcSpan {
-                    start: location,
-                    end: location,
-                },
-            )
+            parse_error(ParseErrorType::LexError { error }, location)
         } else if parse_result.is_err() {
             // Then parse errors
             parse_result
