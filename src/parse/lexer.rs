@@ -1,3 +1,4 @@
+use crate::ast::SrcSpan;
 use crate::parse::error::{LexicalError, LexicalErrorType};
 use crate::parse::token::Tok;
 use std::char;
@@ -259,7 +260,10 @@ where
                 } else {
                     return Err(LexicalError {
                         error: LexicalErrorType::UnrecognizedToken { tok: '&' },
-                        location: tok_start,
+                        location: SrcSpan {
+                            start: tok_start,
+                            end: tok_start,
+                        },
                     });
                 }
             }
@@ -293,7 +297,10 @@ where
                 } else {
                     return Err(LexicalError {
                         error: LexicalErrorType::UnrecognizedToken { tok: '!' },
-                        location: tok_start,
+                        location: SrcSpan {
+                            start: tok_start,
+                            end: tok_start,
+                        },
                     });
                 }
             }
@@ -435,7 +442,10 @@ where
                 let location = self.get_pos();
                 return Err(LexicalError {
                     error: LexicalErrorType::UnrecognizedToken { tok: c },
-                    location,
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
                 });
             }
         }
@@ -505,9 +515,13 @@ where
         };
 
         if Some('_') == self.chr0 {
+            let location = self.get_pos();
             Err(LexicalError {
                 error: LexicalErrorType::NumTrailingUnderscore,
-                location: self.get_pos(),
+                location: SrcSpan {
+                    start: location,
+                    end: location,
+                },
             })
         } else {
             Ok(num)
@@ -518,14 +532,22 @@ where
     fn lex_number_radix(&mut self, start_pos: usize, radix: u32, prefix: &str) -> LexResult {
         let num = self.radix_run(radix);
         if num.is_empty() {
+            let location = self.get_pos() - 1;
             Err(LexicalError {
                 error: LexicalErrorType::RadixIntNoValue,
-                location: self.get_pos() - 1,
+                location: SrcSpan {
+                    start: location,
+                    end: location,
+                },
             })
         } else if radix < 16 && Lexer::<T>::is_digit_of_radix(self.chr0, 16) {
+            let location = self.get_pos();
             Err(LexicalError {
                 error: LexicalErrorType::DigitOutOfRadix,
-                location: self.get_pos(),
+                location: SrcSpan {
+                    start: location,
+                    end: location,
+                },
             })
         } else {
             let value = format!("{}{}", prefix, num);
@@ -645,14 +667,20 @@ where
                             _ => {
                                 return Err(LexicalError {
                                     error: LexicalErrorType::BadStringEscape,
-                                    location: slash_pos,
+                                    location: SrcSpan {
+                                        start: slash_pos,
+                                        end: slash_pos,
+                                    },
                                 });
                             }
                         }
                     } else {
                         return Err(LexicalError {
                             error: LexicalErrorType::BadStringEscape,
-                            location: slash_pos,
+                            location: SrcSpan {
+                                start: slash_pos,
+                                end: slash_pos,
+                            },
                         });
                     }
                 }
@@ -661,7 +689,10 @@ where
                 None => {
                     return Err(LexicalError {
                         error: LexicalErrorType::UnexpectedStringEnd,
-                        location: start_pos,
+                        location: SrcSpan {
+                            start: start_pos,
+                            end: start_pos,
+                        },
                     });
                 }
             }
