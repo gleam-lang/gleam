@@ -1,5 +1,6 @@
 use super::*;
 use std::collections::HashMap;
+use std::collections::VecDeque;
 
 #[derive(Debug)]
 pub struct Environment<'a, 'b> {
@@ -21,17 +22,6 @@ pub struct Environment<'a, 'b> {
     // Accessors defined in the current module
     pub accessors: HashMap<String, AccessorsMap>,
 
-    // Type constructors that have imported or privately defined
-    // but have not yet been used.
-    pub unused_private_types: HashMap<String, SrcSpan>,
-
-    // Constructors that have imported or privately defined but
-    // have not yet been used.
-    // This hashmap contains names shared by a type constructor
-    // AND a value constructor.
-    // i.e. type X { X }
-    pub unused_private_mixed_constructors: HashMap<String, SrcSpan>,
-
     // Warnings
     pub warnings: &'a mut Vec<Warning>,
 
@@ -39,6 +29,25 @@ pub struct Environment<'a, 'b> {
     // We use this to determine whether functions that call this one
     // can safely be generalised.
     pub ungeneralised_functions: HashSet<String>,
+
+    // value_usages is a stack of value scopes. When a value is used
+    // it crawls up the scope stack for a value with that name and
+    // increments its usage.
+    pub value_usages: VecDeque<HashMap<String, (ValueKind, SrcSpan, usize)>>,
+}
+
+// For Keeping track of value usages and knowing which error to display.
+#[derive(Debug, Clone)]
+pub enum ValueKind {
+    PrivateConstant,
+    PrivateConstructor(String),
+    PrivateFunction,
+    ImportedConstructor,
+    ImportedType,
+    ImportedTypeAndConstructor,
+    ImportedValue,
+    PrivateType,
+    Variable,
 }
 
 impl<'a, 'b> Environment<'a, 'b> {
@@ -48,11 +57,11 @@ impl<'a, 'b> Environment<'a, 'b> {
         importable_modules: &'a HashMap<String, (Origin, Module)>,
         warnings: &'a mut Vec<Warning>,
     ) -> Self {
+        let mut value_usages = VecDeque::new();
+        value_usages.push_front(HashMap::new());
         let typer = Self {
             uid,
             level: 1,
-            unused_private_types: HashMap::new(),
-            unused_private_mixed_constructors: HashMap::new(),
             ungeneralised_functions: HashSet::new(),
             module_types: HashMap::new(),
             module_values: HashMap::new(),
@@ -62,6 +71,7 @@ impl<'a, 'b> Environment<'a, 'b> {
             importable_modules,
             current_module,
             warnings,
+            value_usages,
         };
         register_prelude(typer)
     }
@@ -88,12 +98,15 @@ impl<'a, 'b> Environment<'a, 'b> {
 
     pub fn open_new_scope(&mut self) -> ScopeResetData {
         let local_values = self.local_values.clone();
+        self.value_usages.push_front(HashMap::new());
         self.level += 1;
         ScopeResetData { local_values }
     }
 
     pub fn close_scope(&mut self, data: ScopeResetData) {
         self.level -= 1;
+        let unused = self.value_usages.pop_front().unwrap();
+        self.handle_unused_local_values(unused);
         self.local_values = data.local_values;
     }
 
@@ -127,12 +140,13 @@ impl<'a, 'b> Environment<'a, 'b> {
         name: String,
         variant: ValueConstructorVariant,
         typ: Arc<Type>,
+        origin: SrcSpan,
     ) {
         let _ = self.local_values.insert(
             name,
             ValueConstructor {
                 public: false,
-                origin: Default::default(), // TODO: use the real one
+                origin,
                 variant,
                 typ,
             },
@@ -154,7 +168,8 @@ impl<'a, 'b> Environment<'a, 'b> {
 
     /// Lookup a module constant in the current scope.
     ///
-    pub fn get_module_const(&self, name: &str) -> Option<&ValueConstructor> {
+    pub fn get_module_const(&mut self, name: &str) -> Option<&ValueConstructor> {
+        self.increment_usage(name);
         self.module_values
             .get(name)
             .filter(|ValueConstructor { variant, .. }| {
@@ -467,21 +482,113 @@ impl<'a, 'b> Environment<'a, 'b> {
     }
 
     pub fn convert_unused_to_warnings(&mut self) {
-        for (name, location) in self.unused_private_types.drain() {
-            self.warnings.push(Warning::UnusedType { name, location })
+        let unused = self.value_usages.pop_front().unwrap();
+        self.handle_unused_local_values(unused);
+    }
+
+    fn handle_unused_local_values(&mut self, unused: HashMap<String, (ValueKind, SrcSpan, usize)>) {
+        for val in unused {
+            match val {
+                (name, (ValueKind::ImportedType, location, 0)) => {
+                    self.warnings.push(Warning::UnusedType {
+                        name,
+                        imported: true,
+                        location,
+                    })
+                }
+                (name, (ValueKind::ImportedConstructor, location, 0)) => {
+                    self.warnings.push(Warning::UnusedConstructor {
+                        name,
+                        imported: true,
+                        location,
+                    })
+                }
+                (name, (ValueKind::ImportedTypeAndConstructor, location, 0)) => {
+                    self.warnings.push(Warning::UnusedType {
+                        name,
+                        imported: true,
+                        location,
+                    })
+                }
+                (name, (ValueKind::PrivateConstant, location, 0)) => self
+                    .warnings
+                    .push(Warning::UnusedPrivateModuleConstant { name, location }),
+                (name, (ValueKind::PrivateConstructor(_), location, 0)) => {
+                    self.warnings.push(Warning::UnusedConstructor {
+                        name,
+                        imported: false,
+                        location,
+                    })
+                }
+                (name, (ValueKind::PrivateFunction, location, 0)) => self
+                    .warnings
+                    .push(Warning::UnusedPrivateFunction { name, location }),
+                (name, (ValueKind::PrivateType, location, 0)) => {
+                    self.warnings.push(Warning::UnusedType {
+                        name,
+                        imported: false,
+                        location,
+                    })
+                }
+                (name, (ValueKind::ImportedValue, location, 0)) => self
+                    .warnings
+                    .push(Warning::UnusedImportedValue { name, location }),
+
+                (name, (ValueKind::Variable, location, 0)) => self
+                    .warnings
+                    .push(Warning::UnusedVariable { name, location }),
+
+                _ => {}
+            };
         }
-        for (name, location) in self.unused_private_mixed_constructors.drain() {
-            self.warnings
-                .push(Warning::UnusedConstructor { name, location })
+    }
+
+    pub fn init_value_usage(&mut self, name: String, kind: ValueKind, location: SrcSpan) {
+        match self
+            .value_usages
+            .front_mut()
+            .unwrap()
+            .insert(name.to_string(), (kind, location, 0))
+        {
+            Some((kind, location, 0)) => {
+                // a value was overwritten in the top most scope without being used
+                let mut unused = HashMap::with_capacity(1);
+                let _ = unused.insert(name, (kind, location, 0));
+                self.handle_unused_local_values(unused);
+            }
+            _ => {}
         }
     }
 
     pub fn type_used(&mut self, name: &str) {
-        let _ = self.unused_private_mixed_constructors.remove(name);
-        let _ = self.unused_private_types.remove(name);
+        self.increment_usage(name);
     }
 
     pub fn value_used(&mut self, name: &str) {
-        let _ = self.unused_private_mixed_constructors.remove(name);
+        self.increment_usage(name);
+    }
+
+    fn increment_usage(&mut self, name: &str) {
+        let mut val_found = false;
+        let mut cascade = None;
+        for scope in self.value_usages.iter_mut() {
+            if !val_found {
+                match scope.get_mut(name) {
+                    Some((ValueKind::PrivateConstructor(type_name), _, usages)) => {
+                        val_found = true;
+                        cascade = Some(type_name.clone());
+                        *usages += 1;
+                    }
+                    Some(val @ (_, _, _)) => {
+                        val_found = true;
+                        val.2 = val.2 + 1;
+                    }
+                    None => {}
+                }
+            }
+        }
+        if let Some(cascade) = cascade {
+            self.increment_usage(&cascade)
+        };
     }
 }

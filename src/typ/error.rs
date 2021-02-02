@@ -183,19 +183,58 @@ pub enum Error {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Warning {
-    Todo { location: SrcSpan, typ: Arc<Type> },
+    Todo {
+        location: SrcSpan,
+        typ: Arc<Type>,
+    },
 
-    ImplicitlyDiscardedResult { location: SrcSpan },
+    ImplicitlyDiscardedResult {
+        location: SrcSpan,
+    },
 
-    UnusedLiteral { location: SrcSpan },
+    UnusedLiteral {
+        location: SrcSpan,
+    },
 
-    NoFieldsRecordUpdate { location: SrcSpan },
+    NoFieldsRecordUpdate {
+        location: SrcSpan,
+    },
 
-    AllFieldsRecordUpdate { location: SrcSpan },
+    AllFieldsRecordUpdate {
+        location: SrcSpan,
+    },
 
-    UnusedType { location: SrcSpan, name: String },
+    UnusedType {
+        location: SrcSpan,
+        imported: bool,
+        name: String,
+    },
 
-    UnusedConstructor { location: SrcSpan, name: String },
+    UnusedConstructor {
+        location: SrcSpan,
+        imported: bool,
+        name: String,
+    },
+
+    UnusedImportedValue {
+        location: SrcSpan,
+        name: String,
+    },
+
+    UnusedPrivateModuleConstant {
+        location: SrcSpan,
+        name: String,
+    },
+
+    UnusedPrivateFunction {
+        location: SrcSpan,
+        name: String,
+    },
+
+    UnusedVariable {
+        location: SrcSpan,
+        name: String,
+    },
 }
 
 #[derive(Debug, PartialEq)]

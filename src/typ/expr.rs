@@ -1404,21 +1404,23 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         let constructor = match module {
             // Look in the local scope for a binding with this name
             None => {
-                let constructor = self
-                    .environment
-                    .get_variable(name)
-                    .or_else(|| self.environment.get_module_const(name))
-                    .cloned()
-                    .ok_or_else(|| Error::UnknownVariable {
-                        location: *location,
-                        name: name.to_string(),
-                        variables: self
-                            .environment
-                            .local_values
-                            .keys()
-                            .map(|t| t.to_string())
-                            .collect(),
-                    })?;
+                let constructor = match self.environment.get_variable(name) {
+                    Some(var) => Ok(var.clone()),
+                    None => self
+                        .environment
+                        .get_module_const(name)
+                        .cloned()
+                        .ok_or_else(|| Error::UnknownVariable {
+                            location: *location,
+                            name: name.to_string(),
+                            variables: self
+                                .environment
+                                .local_values
+                                .keys()
+                                .map(|t| t.to_string())
+                                .collect(),
+                        }),
+                }?;
 
                 // Note whether we are using an ungeneralised function so that we can
                 // tell if it is safe to generalise this function after inference has
@@ -1806,7 +1808,13 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                             name.to_string(),
                             ValueConstructorVariant::LocalVariable,
                             t,
-                        )
+                            arg.location.clone(),
+                        );
+                        body_typer.environment.init_value_usage(
+                            name.to_string(),
+                            ValueKind::Variable,
+                            arg.location.clone(),
+                        );
                     }
                     ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => (),
                 };

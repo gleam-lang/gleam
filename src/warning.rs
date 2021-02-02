@@ -112,27 +112,96 @@ be an update. Remove the update or remove fields that need to be copied.")
                     .unwrap();
                 }
 
-                Warning::UnusedType { location, name } => {
+                Warning::UnusedType {
+                    location, imported, ..
+                } => {
+                    let title = if *imported {
+                        "Unused Imported Type".to_string()
+                    } else {
+                        "Unused Private Type".to_string()
+                    };
+                    let label = if *imported {
+                        "This imported type is never used.".to_string()
+                    } else {
+                        "This private type is never used.".to_string()
+                    };
+
                     let diagnostic = Diagnostic {
-                        title: "Unused type".to_string(),
-                        label: "".to_string(),
+                        title,
+                        label,
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: *location,
                     };
                     write(buffer, diagnostic, Severity::Warning);
-                    writeln!(
-                        buffer,
-                        "The type {} is never used, it can be safely removed.",
-                        name
-                    )
-                    .unwrap();
+                    writeln!(buffer, "Hint: You can safely remove it.",).unwrap();
                 }
 
-                Warning::UnusedConstructor { location, name } => {
+                Warning::UnusedConstructor {
+                    location, imported, ..
+                } => {
+                    let title = if *imported {
+                        "Unused Imported Item".to_string()
+                    } else {
+                        "Unused Private Type Constructor".to_string()
+                    };
+                    let label = if *imported {
+                        "This imported type constructor is never used.".to_string()
+                    } else {
+                        "This private type constructor is never used.".to_string()
+                    };
+
                     let diagnostic = Diagnostic {
-                        title: "Unused constructor".to_string(),
-                        label: "".to_string(),
+                        title,
+                        label,
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: *location,
+                    };
+                    write(buffer, diagnostic, Severity::Warning);
+                    writeln!(buffer, "Hint: You can safely remove it.",).unwrap();
+                }
+
+                Warning::UnusedImportedValue { location, .. } => {
+                    let diagnostic = Diagnostic {
+                        title: "Unused Imported Value".to_string(),
+                        label: "This imported value is never used.".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: *location,
+                    };
+                    write(buffer, diagnostic, Severity::Warning);
+                    writeln!(buffer, "Hint: You can safely remove it.").unwrap();
+                }
+
+                Warning::UnusedPrivateModuleConstant { location, .. } => {
+                    let diagnostic = Diagnostic {
+                        title: "Unused Private Constant".to_string(),
+                        label: "This private constant is never used.".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: *location,
+                    };
+                    write(buffer, diagnostic, Severity::Warning);
+                    writeln!(buffer, "Hint: You can safely remove it.").unwrap();
+                }
+
+                Warning::UnusedPrivateFunction { location, .. } => {
+                    let diagnostic = Diagnostic {
+                        title: "Unused Private Function".to_string(),
+                        label: "This private function is never used.".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: *location,
+                    };
+                    write(buffer, diagnostic, Severity::Warning);
+                    writeln!(buffer, "Hint: You can safely remove it.").unwrap();
+                }
+
+                Warning::UnusedVariable { location, name, .. } => {
+                    let diagnostic = Diagnostic {
+                        title: "Unused Variable".to_string(),
+                        label: "This variable is never used.".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: *location,
@@ -140,7 +209,7 @@ be an update. Remove the update or remove fields that need to be copied.")
                     write(buffer, diagnostic, Severity::Warning);
                     writeln!(
                         buffer,
-                        "The constructor {} is never used, it can be safely removed.",
+                        "Hint: you can ignore it with an underscore: `_{}`.",
                         name
                     )
                     .unwrap();

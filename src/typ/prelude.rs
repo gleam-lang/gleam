@@ -125,6 +125,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
             arity: 0,
         },
         bool(),
+        Default::default(),
     );
     typer.insert_variable(
         "False".to_string(),
@@ -134,6 +135,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
             arity: 0,
         },
         bool(),
+        Default::default(),
     );
     typer
         .insert_type_constructor(
@@ -211,6 +213,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
             field_map: None,
         },
         nil(),
+        Default::default(),
     );
     typer
         .insert_type_constructor(
@@ -261,6 +264,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
             arity: 1,
         },
         fn_(vec![ok.clone()], result(ok, error)),
+        Default::default(),
     );
 
     let ok = typer.new_generic_var();
@@ -273,6 +277,7 @@ pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'
             arity: 1,
         },
         fn_(vec![error.clone()], result(ok, error)),
+        Default::default(),
     );
 
     typer

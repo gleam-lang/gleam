@@ -583,6 +583,7 @@ pub enum Pattern<Constructor, Type> {
 
     Let {
         name: String,
+        location: SrcSpan,
         pattern: Box<Self>,
     },
 
