@@ -33,7 +33,15 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
         }
     }
 
-    fn insert_variable(&mut self, name: &str, typ: Arc<Type>) -> Result<(), UnifyError> {
+    fn insert_variable(
+        &mut self,
+        name: &str,
+        typ: Arc<Type>,
+        location: SrcSpan,
+    ) -> Result<(), UnifyError> {
+        self.environment
+            .init_value_usage(name.to_string(), ValueKind::Variable, location.clone());
+
         match self.mode {
             PatternMode::Initial => {
                 if self.initial_pattern_vars.contains(name) {
@@ -46,6 +54,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                     name.to_string(),
                     ValueConstructorVariant::LocalVariable,
                     typ,
+                    location,
                 );
                 Ok(())
             }
@@ -180,7 +189,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
             Pattern::Discard { name, location } => Ok(Pattern::Discard { name, location }),
 
             Pattern::Var { name, location } => {
-                self.insert_variable(name.as_ref(), typ)
+                self.insert_variable(name.as_ref(), typ, location)
                     .map_err(|e| convert_unify_error(e, location))?;
                 Ok(Pattern::Var { name, location })
             }
@@ -217,13 +226,18 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 })
             }
 
-            Pattern::Let { name, pattern } => {
-                self.insert_variable(name.as_ref(), typ.clone())
+            Pattern::Let {
+                name,
+                pattern,
+                location,
+            } => {
+                self.insert_variable(name.as_ref(), typ.clone(), location)
                     .map_err(|e| convert_unify_error(e, pattern.location()))?;
                 let pattern = self.unify(*pattern, typ)?;
                 Ok(Pattern::Let {
                     name,
                     pattern: Box::new(pattern),
+                    location,
                 })
             }
 

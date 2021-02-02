@@ -804,7 +804,9 @@ fn pattern<'a>(p: &'a TypedPattern, env: &mut Env<'_>) -> Document<'a> {
     match p {
         Pattern::Nil { .. } => "[]".to_doc(),
 
-        Pattern::Let { name, pattern: p } => pattern(p, env)
+        Pattern::Let {
+            name, pattern: p, ..
+        } => pattern(p, env)
             .append(" = ")
             .append(env.next_local_var_name(name.to_string())),
 

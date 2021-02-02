@@ -477,6 +477,7 @@ fn register_values<'a>(
             args,
             location,
             return_annotation,
+            public,
             ..
         } => {
             assert_unique_value_name(names, name, location)?;
@@ -520,7 +521,15 @@ fn register_values<'a>(
                     arity: args.len(),
                 },
                 typ,
+                location.clone(),
             );
+            if !public {
+                environment.init_value_usage(
+                    name.clone(),
+                    ValueKind::PrivateFunction,
+                    location.clone(),
+                );
+            }
         }
 
         Statement::ExternalFn {
@@ -585,7 +594,15 @@ fn register_values<'a>(
                     field_map,
                 },
                 typ,
+                location.clone(),
             );
+            if !public {
+                environment.init_value_usage(
+                    name.clone(),
+                    ValueKind::PrivateFunction,
+                    location.clone(),
+                );
+            }
         }
 
         Statement::CustomType {
@@ -666,6 +683,14 @@ fn register_values<'a>(
                     );
                 }
 
+                if !public {
+                    environment.init_value_usage(
+                        constructor.name.clone(),
+                        ValueKind::PrivateConstructor(name.clone()),
+                        constructor.location.clone(),
+                    );
+                }
+
                 environment.insert_variable(
                     constructor.name.clone(),
                     ValueConstructorVariant::Record {
@@ -674,6 +699,7 @@ fn register_values<'a>(
                         field_map,
                     },
                     typ,
+                    constructor.location.clone(),
                 );
             }
         }
@@ -813,6 +839,7 @@ fn infer_statement(
                         arity: args.len(),
                     },
                     typ.clone(),
+                    location.clone(),
                 );
                 typ
             } else {
@@ -1389,9 +1416,8 @@ pub fn register_types<'a>(
 
             // Keep track of private types so we can tell if they are later unused
             if !public {
-                let _ = environment
-                    .unused_private_types
-                    .insert(name.clone(), *location);
+                let _ =
+                    environment.init_value_usage(name.clone(), ValueKind::PrivateType, *location);
             }
         }
 
@@ -1425,6 +1451,11 @@ pub fn register_types<'a>(
                     typ,
                 },
             )?;
+            // Keep track of private types so we can tell if they are later unused
+            if !public {
+                let _ =
+                    environment.init_value_usage(name.clone(), ValueKind::PrivateType, *location);
+            }
         }
 
         Statement::TypeAlias {
@@ -1459,9 +1490,8 @@ pub fn register_types<'a>(
 
             // Keep track of private types so we can tell if they are later unused
             if !public {
-                let _ = environment
-                    .unused_private_types
-                    .insert(name.clone(), *location);
+                let _ =
+                    environment.init_value_usage(name.clone(), ValueKind::PrivateType, *location);
             }
         }
 
@@ -1503,6 +1533,7 @@ pub fn register_import(
             {
                 let mut type_imported = false;
                 let mut value_imported = false;
+                let mut variant = None;
 
                 let imported_name = match &as_name {
                     None => name,
@@ -1515,7 +1546,9 @@ pub fn register_import(
                         imported_name.clone(),
                         value.variant.clone(),
                         value.typ.clone(),
+                        location.clone(),
                     );
+                    variant = Some(&value.variant);
                     value_imported = true;
                 }
 
@@ -1534,13 +1567,31 @@ pub fn register_import(
                 }
 
                 if value_imported && type_imported {
-                    let _ = environment
-                        .unused_private_mixed_constructors
-                        .insert(imported_name.clone(), *location);
+                    let _ = environment.init_value_usage(
+                        imported_name.to_string(),
+                        ValueKind::ImportedTypeAndConstructor,
+                        *location,
+                    );
                 } else if type_imported {
-                    let _ = environment
-                        .unused_private_types
-                        .insert(imported_name.clone(), *location);
+                    let _ = environment.init_value_usage(
+                        imported_name.to_string(),
+                        ValueKind::ImportedType,
+                        *location,
+                    );
+                } else if value_imported {
+                    let _ = match variant {
+                        Some(&ValueConstructorVariant::Record { .. }) => environment
+                            .init_value_usage(
+                                imported_name.to_string(),
+                                ValueKind::ImportedConstructor,
+                                *location,
+                            ),
+                        _ => environment.init_value_usage(
+                            imported_name.to_string(),
+                            ValueKind::ImportedValue,
+                            *location,
+                        ),
+                    };
                 } else if !value_imported {
                     // Error if no type or value was found with that name
                     return Err(Error::UnknownModuleField {

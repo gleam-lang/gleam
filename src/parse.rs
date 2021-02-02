@@ -821,9 +821,10 @@ where
 
         if let Some((_, Tok::As, _)) = self.tok0 {
             let _ = self.next_tok();
-            let (_, name, _) = self.expect_name()?;
+            let (start, name, end) = self.expect_name()?;
             Ok(Some(Pattern::Let {
                 name,
+                location: SrcSpan { start, end },
                 pattern: Box::new(pattern),
             }))
         } else {
@@ -1795,7 +1796,7 @@ where
     //   const a:Int = 1
     //   pub const a:Int = 1
     fn parse_module_const(&mut self, public: bool) -> Result<Option<UntypedStatement>, ParseError> {
-        let (start, name, _) = self.expect_name()?;
+        let (start, name, end) = self.expect_name()?;
 
         let annotation = self.parse_type_annotation(&Tok::Colon, true)?;
 
@@ -1803,7 +1804,7 @@ where
         if let Some(value) = self.parse_const_value()? {
             Ok(Some(Statement::ModuleConstant {
                 doc: None,
-                location: SrcSpan { start, end: 0 },
+                location: SrcSpan { start, end },
                 public,
                 name,
                 annotation,
