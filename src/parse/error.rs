@@ -1,4 +1,5 @@
 use crate::ast::SrcSpan;
+use heck::CamelCase;
 use heck::SnakeCase;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -17,6 +18,7 @@ pub enum LexicalErrorType {
     UnrecognizedToken { tok: char },
     BadName { name: String },
     BadDiscardName { name: String },
+    BadUpname { name: String },
 }
 
 #[derive(Debug, PartialEq)]
@@ -96,6 +98,14 @@ impl LexicalError {
                 vec![
                     "Hint: Discard names start with _ and contain a-z, 0-9, or _.".to_string(),
                     format!("Try: _{}", name.to_snake_case()),
+                ],
+            ),
+            LexicalErrorType::BadUpname { name } => (
+                "This is not a valid upname.",
+                vec![
+                    "Hint: Upnames start with an uppercase letter and contain".to_string(),
+                    "only lowercase letters, numbers, and uppercase letters.".to_string(),
+                    format!("Try: {}", name.to_camel_case()),
                 ],
             ),
         }

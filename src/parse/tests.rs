@@ -155,4 +155,19 @@ fn name_tests() {
             location: SrcSpan { start: 4, end: 7 },
         }
     );
+
+    assert_error!(
+        "type S_m = String",
+        ParseError {
+            error: ParseErrorType::LexError {
+                error: LexicalError {
+                    error: LexicalErrorType::BadUpname {
+                        name: "S_m".to_string()
+                    },
+                    location: SrcSpan { start: 5, end: 8 },
+                }
+            },
+            location: SrcSpan { start: 5, end: 8 },
+        }
+    );
 }

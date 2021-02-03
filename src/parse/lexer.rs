@@ -506,6 +506,22 @@ where
         while self.is_upname_continuation() {
             name.push(self.next_char().unwrap());
         }
+
+        // Finish lexing the upname and return an error if an underscore is used
+        if self.is_name_error_continuation() {
+            while self.is_name_error_continuation() {
+                name.push(self.next_char().unwrap())
+            }
+            let end_pos = self.get_pos();
+            return Err(LexicalError {
+                error: LexicalErrorType::BadUpname { name: name },
+                location: SrcSpan {
+                    start: start_pos,
+                    end: end_pos,
+                },
+            });
+        }
+
         let end_pos = self.get_pos();
 
         if let Some(tok) = str_to_keyword(&name) {
