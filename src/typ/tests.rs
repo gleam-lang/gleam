@@ -3235,8 +3235,8 @@ fn main() { foo(); 5 }",
     // Explicitly discarded Results do not emit warnings
     assert_no_warnings!(
         "
-fn foo() { Ok(5) }
-fn main() { let _ = foo(); 5 }",
+pub fn foo() { Ok(5) }
+pub fn main() { let _ = foo(); 5 }",
     );
 }
 
@@ -3353,7 +3353,8 @@ fn record_update_warnings_test() {
 }
 
 #[test]
-fn unused_type_warnings_test() {
+fn unused_private_type_warnings_test() {
+    // External type
     assert_warning!(
         "external type X",
         Warning::UnusedType {
@@ -3362,7 +3363,10 @@ fn unused_type_warnings_test() {
             imported: false
         }
     );
+    assert_no_warnings!("pub external type Y");
+    assert_no_warnings!("external type Y pub fn run(x: Y) { x }");
 
+    // Type alias
     assert_warning!(
         "type X = Int",
         Warning::UnusedType {
@@ -3372,13 +3376,95 @@ fn unused_type_warnings_test() {
         }
     );
 
-    // Pub types are not warned for
-    assert_no_warnings!("pub external type Y");
     assert_no_warnings!("pub type Y = Int");
+    assert_no_warnings!("type Y = Int pub fn run(x: Y) { x }");
 
-    // Used typed are not warned for
-    assert_no_warnings!("external type Y fn run(x: Y) { x }");
-    assert_no_warnings!("type Y = Int fn run(x: Y) { x }");
+    // Custom type
+    assert_warning!(
+        "type X { X }",
+        Warning::UnusedConstructor {
+            name: "X".to_string(),
+            location: SrcSpan { start: 9, end: 10 },
+            imported: false
+        }
+    );
+    assert_no_warnings!("pub type X { X }");
+    assert_no_warnings!("type X { X } pub fn a() { let b = X case b { X -> 1 } }");
+}
+
+#[test]
+fn unused_private_fn_warnings_test() {
+    assert_warning!(
+        "fn a() { 1 }",
+        Warning::UnusedPrivateFunction {
+            name: "a".to_string(),
+            location: SrcSpan { start: 0, end: 6 },
+        }
+    );
+
+    assert_no_warnings!("pub fn a() { 1 }");
+    assert_no_warnings!("fn a() { 1 } pub fn b() { a }");
+}
+
+#[test]
+fn unused_private_const_warnings_test() {
+    assert_warning!(
+        "const a = 1",
+        Warning::UnusedPrivateModuleConstant {
+            name: "a".to_string(),
+            location: SrcSpan { start: 6, end: 7 },
+        }
+    );
+
+    assert_no_warnings!("pub const a = 1");
+    assert_no_warnings!("const a = 1 pub fn b() { a }");
+}
+
+#[test]
+fn unused_variable_warnings_test() {
+    // function argument
+    assert_warning!(
+        "pub fn a(b) { 1 }",
+        Warning::UnusedVariable {
+            name: "b".to_string(),
+            location: SrcSpan { start: 9, end: 10 },
+        }
+    );
+
+    assert_no_warnings!("pub fn a(b) { b }");
+
+    // Simple let
+    assert_warning!(
+        "pub fn a() { let b = 1 5 }",
+        Warning::UnusedVariable {
+            name: "b".to_string(),
+            location: SrcSpan { start: 17, end: 18 },
+        }
+    );
+
+    assert_no_warnings!("pub fn a() { let b = 1 b }");
+
+    // Shadowing let
+    assert_warning!(
+        "pub fn a() { let b = 1 let b = 2 b }",
+        Warning::UnusedVariable {
+            name: "b".to_string(),
+            location: SrcSpan { start: 17, end: 18 },
+        }
+    );
+
+    assert_no_warnings!("pub fn a() { let b = 1 let b = b + 1 b }");
+
+    // Destructure
+    assert_warning!(
+        "pub fn a(b) { case b { tuple(c, _) -> 5 } }",
+        Warning::UnusedVariable {
+            name: "c".to_string(),
+            location: SrcSpan { start: 29, end: 30 },
+        }
+    );
+
+    assert_no_warnings!("pub fn a(b) { case b { tuple(c, _) -> c } }");
 }
 
 #[test]

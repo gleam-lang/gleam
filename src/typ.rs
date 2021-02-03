@@ -1054,6 +1054,10 @@ fn infer_statement(
                 },
             );
 
+            if !public {
+                environment.init_usage(name.clone(), EntityKind::PrivateConstant, location);
+            }
+
             Ok(Statement::ModuleConstant {
                 doc,
                 location,
