@@ -3358,7 +3358,8 @@ fn unused_type_warnings_test() {
         "external type X",
         Warning::UnusedType {
             name: "X".to_string(),
-            location: SrcSpan { start: 0, end: 15 }
+            location: SrcSpan { start: 0, end: 15 },
+            imported: false
         }
     );
 
@@ -3366,7 +3367,8 @@ fn unused_type_warnings_test() {
         "type X = Int",
         Warning::UnusedType {
             name: "X".to_string(),
-            location: SrcSpan { start: 0, end: 12 }
+            location: SrcSpan { start: 0, end: 12 },
+            imported: false
         }
     );
 

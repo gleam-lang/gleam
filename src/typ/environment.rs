@@ -1,6 +1,5 @@
 use super::*;
 use std::collections::HashMap;
-use std::collections::VecDeque;
 
 #[derive(Debug)]
 pub struct Environment<'a, 'b> {
@@ -30,17 +29,18 @@ pub struct Environment<'a, 'b> {
     // can safely be generalised.
     pub ungeneralised_functions: HashSet<String>,
 
-    // value_usages is a stack of value scopes. When a value is used
-    // it crawls up the scope stack for a value with that name and
-    // increments its usage.
-    pub value_usages: VecDeque<HashMap<String, (ValueKind, SrcSpan, usize)>>,
+    // entity_usages is a stack of scopes. When an entity is created it is
+    // added to the top scope. When an entity is used we crawl down the scope
+    // stack for an entity with that name and increments its usage.
+    pub entity_usages: Vec<HashMap<String, (EntityKind, SrcSpan, usize)>>,
 }
 
-// For Keeping track of value usages and knowing which error to display.
+/// For Keeping track of entity usages and knowing which error to display.
 #[derive(Debug, Clone)]
-pub enum ValueKind {
+pub enum EntityKind {
     PrivateConstant,
-    PrivateConstructor(String),
+    // String here is the type constructors type name
+    PrivateTypeConstructor(String),
     PrivateFunction,
     ImportedConstructor,
     ImportedType,
@@ -57,8 +57,8 @@ impl<'a, 'b> Environment<'a, 'b> {
         importable_modules: &'a HashMap<String, (Origin, Module)>,
         warnings: &'a mut Vec<Warning>,
     ) -> Self {
-        let mut value_usages = VecDeque::new();
-        value_usages.push_front(HashMap::new());
+        let mut entity_usages = vec![];
+        entity_usages.push(HashMap::new());
         let typer = Self {
             uid,
             level: 1,
@@ -71,7 +71,7 @@ impl<'a, 'b> Environment<'a, 'b> {
             importable_modules,
             current_module,
             warnings,
-            value_usages,
+            entity_usages,
         };
         register_prelude(typer)
     }
@@ -98,15 +98,18 @@ impl<'a, 'b> Environment<'a, 'b> {
 
     pub fn open_new_scope(&mut self) -> ScopeResetData {
         let local_values = self.local_values.clone();
-        self.value_usages.push_front(HashMap::new());
+        self.entity_usages.push(HashMap::new());
         self.level += 1;
         ScopeResetData { local_values }
     }
 
     pub fn close_scope(&mut self, data: ScopeResetData) {
         self.level -= 1;
-        let unused = self.value_usages.pop_front().unwrap();
-        self.handle_unused_local_values(unused);
+        let unused = self
+            .entity_usages
+            .pop()
+            .gleam_expect("There was no top entity scope.");
+        self.handle_unused(unused);
         self.local_values = data.local_values;
     }
 
@@ -481,114 +484,110 @@ impl<'a, 'b> Environment<'a, 'b> {
         }
     }
 
-    pub fn convert_unused_to_warnings(&mut self) {
-        let unused = self.value_usages.pop_front().unwrap();
-        self.handle_unused_local_values(unused);
-    }
-
-    fn handle_unused_local_values(&mut self, unused: HashMap<String, (ValueKind, SrcSpan, usize)>) {
-        for val in unused {
-            match val {
-                (name, (ValueKind::ImportedType, location, 0)) => {
-                    self.warnings.push(Warning::UnusedType {
-                        name,
-                        imported: true,
-                        location,
-                    })
-                }
-                (name, (ValueKind::ImportedConstructor, location, 0)) => {
-                    self.warnings.push(Warning::UnusedConstructor {
-                        name,
-                        imported: true,
-                        location,
-                    })
-                }
-                (name, (ValueKind::ImportedTypeAndConstructor, location, 0)) => {
-                    self.warnings.push(Warning::UnusedType {
-                        name,
-                        imported: true,
-                        location,
-                    })
-                }
-                (name, (ValueKind::PrivateConstant, location, 0)) => self
-                    .warnings
-                    .push(Warning::UnusedPrivateModuleConstant { name, location }),
-                (name, (ValueKind::PrivateConstructor(_), location, 0)) => {
-                    self.warnings.push(Warning::UnusedConstructor {
-                        name,
-                        imported: false,
-                        location,
-                    })
-                }
-                (name, (ValueKind::PrivateFunction, location, 0)) => self
-                    .warnings
-                    .push(Warning::UnusedPrivateFunction { name, location }),
-                (name, (ValueKind::PrivateType, location, 0)) => {
-                    self.warnings.push(Warning::UnusedType {
-                        name,
-                        imported: false,
-                        location,
-                    })
-                }
-                (name, (ValueKind::ImportedValue, location, 0)) => self
-                    .warnings
-                    .push(Warning::UnusedImportedValue { name, location }),
-
-                (name, (ValueKind::Variable, location, 0)) => self
-                    .warnings
-                    .push(Warning::UnusedVariable { name, location }),
-
-                _ => {}
-            };
-        }
-    }
-
-    pub fn init_value_usage(&mut self, name: String, kind: ValueKind, location: SrcSpan) {
+    /// Inserts an entity at the current scope for usage tracking.
+    pub fn init_usage(&mut self, name: String, kind: EntityKind, location: SrcSpan) {
         match self
-            .value_usages
-            .front_mut()
-            .unwrap()
+            .entity_usages
+            .last_mut()
+            .gleam_expect("Attempted to access non-existant entity usages scope")
             .insert(name.to_string(), (kind, location, 0))
         {
             Some((kind, location, 0)) => {
                 // a value was overwritten in the top most scope without being used
                 let mut unused = HashMap::with_capacity(1);
                 let _ = unused.insert(name, (kind, location, 0));
-                self.handle_unused_local_values(unused);
+                self.handle_unused(unused);
             }
             _ => {}
         }
     }
 
-    pub fn type_used(&mut self, name: &str) {
-        self.increment_usage(name);
-    }
-
-    pub fn value_used(&mut self, name: &str) {
-        self.increment_usage(name);
-    }
-
-    fn increment_usage(&mut self, name: &str) {
-        let mut val_found = false;
+    /// Increments an entity's usage in the current or nearest enclosing scope
+    pub fn increment_usage(&mut self, name: &str) {
         let mut cascade = None;
-        for scope in self.value_usages.iter_mut() {
-            if !val_found {
-                match scope.get_mut(name) {
-                    Some((ValueKind::PrivateConstructor(type_name), _, usages)) => {
-                        val_found = true;
+        for scope in self.entity_usages.iter_mut().rev() {
+            match scope.get_mut(name) {
+                Some((EntityKind::PrivateTypeConstructor(type_name), _, usages)) => {
+                    // If a type constructor is used, we consider
+                    // its type also used
+                    if type_name != name {
                         cascade = Some(type_name.clone());
-                        *usages += 1;
                     }
-                    Some(val @ (_, _, _)) => {
-                        val_found = true;
-                        val.2 = val.2 + 1;
-                    }
-                    None => {}
+                    *usages += 1;
+                    break;
                 }
+                Some(val) => {
+                    val.2 = val.2 + 1;
+                    break;
+                }
+                None => {}
             }
         }
         if let Some(cascade) = cascade {
             self.increment_usage(&cascade)
         };
+    }
+
+    /// Converts entities with a usage count of 0 to warnings
+    pub fn convert_unused_to_warnings(&mut self) {
+        let unused = self.entity_usages.pop().unwrap();
+        self.handle_unused(unused);
+    }
+
+    fn handle_unused(&mut self, unused: HashMap<String, (EntityKind, SrcSpan, usize)>) {
+        for val in unused {
+            match val {
+                (name, (EntityKind::ImportedType, location, 0)) => {
+                    self.warnings.push(Warning::UnusedType {
+                        name,
+                        imported: true,
+                        location,
+                    })
+                }
+                (name, (EntityKind::ImportedConstructor, location, 0)) => {
+                    self.warnings.push(Warning::UnusedConstructor {
+                        name,
+                        imported: true,
+                        location,
+                    })
+                }
+                (name, (EntityKind::ImportedTypeAndConstructor, location, 0)) => {
+                    self.warnings.push(Warning::UnusedType {
+                        name,
+                        imported: true,
+                        location,
+                    })
+                }
+                (name, (EntityKind::PrivateConstant, location, 0)) => self
+                    .warnings
+                    .push(Warning::UnusedPrivateModuleConstant { name, location }),
+                (name, (EntityKind::PrivateTypeConstructor(_), location, 0)) => {
+                    self.warnings.push(Warning::UnusedConstructor {
+                        name,
+                        imported: false,
+                        location,
+                    })
+                }
+                (name, (EntityKind::PrivateFunction, location, 0)) => self
+                    .warnings
+                    .push(Warning::UnusedPrivateFunction { name, location }),
+                (name, (EntityKind::PrivateType, location, 0)) => {
+                    self.warnings.push(Warning::UnusedType {
+                        name,
+                        imported: false,
+                        location,
+                    })
+                }
+                (name, (EntityKind::ImportedValue, location, 0)) => self
+                    .warnings
+                    .push(Warning::UnusedImportedValue { name, location }),
+
+                (name, (EntityKind::Variable, location, 0)) => self
+                    .warnings
+                    .push(Warning::UnusedVariable { name, location }),
+
+                _ => {}
+            };
+        }
     }
 }

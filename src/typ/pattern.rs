@@ -40,7 +40,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
         location: SrcSpan,
     ) -> Result<(), UnifyError> {
         self.environment
-            .init_value_usage(name.to_string(), ValueKind::Variable, location.clone());
+            .init_usage(name.to_string(), EntityKind::Variable, location);
 
         match self.mode {
             PatternMode::Initial => {
@@ -350,7 +350,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 ..
             } => {
                 // Register the value as seen for detection of unused values
-                self.environment.value_used(name.as_str());
+                self.environment.increment_usage(name.as_str());
 
                 let cons = self
                     .environment

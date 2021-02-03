@@ -116,9 +116,9 @@ be an update. Remove the update or remove fields that need to be copied.")
                     location, imported, ..
                 } => {
                     let title = if *imported {
-                        "Unused Imported Type".to_string()
+                        "Unused imported type".to_string()
                     } else {
-                        "Unused Private Type".to_string()
+                        "Unused private type".to_string()
                     };
                     let label = if *imported {
                         "This imported type is never used.".to_string()
@@ -141,9 +141,9 @@ be an update. Remove the update or remove fields that need to be copied.")
                     location, imported, ..
                 } => {
                     let title = if *imported {
-                        "Unused Imported Item".to_string()
+                        "Unused imported item".to_string()
                     } else {
-                        "Unused Private Type Constructor".to_string()
+                        "Unused private type constructor".to_string()
                     };
                     let label = if *imported {
                         "This imported type constructor is never used.".to_string()
@@ -164,7 +164,7 @@ be an update. Remove the update or remove fields that need to be copied.")
 
                 Warning::UnusedImportedValue { location, .. } => {
                     let diagnostic = Diagnostic {
-                        title: "Unused Imported Value".to_string(),
+                        title: "Unused imported value".to_string(),
                         label: "This imported value is never used.".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
@@ -176,7 +176,7 @@ be an update. Remove the update or remove fields that need to be copied.")
 
                 Warning::UnusedPrivateModuleConstant { location, .. } => {
                     let diagnostic = Diagnostic {
-                        title: "Unused Private Constant".to_string(),
+                        title: "Unused private constant".to_string(),
                         label: "This private constant is never used.".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
@@ -188,7 +188,7 @@ be an update. Remove the update or remove fields that need to be copied.")
 
                 Warning::UnusedPrivateFunction { location, .. } => {
                     let diagnostic = Diagnostic {
-                        title: "Unused Private Function".to_string(),
+                        title: "Unused private function".to_string(),
                         label: "This private function is never used.".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
@@ -200,7 +200,7 @@ be an update. Remove the update or remove fields that need to be copied.")
 
                 Warning::UnusedVariable { location, name, .. } => {
                     let diagnostic = Diagnostic {
-                        title: "Unused Variable".to_string(),
+                        title: "Unused variable".to_string(),
                         label: "This variable is never used.".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
