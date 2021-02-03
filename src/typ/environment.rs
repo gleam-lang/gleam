@@ -492,8 +492,10 @@ impl<'a, 'b> Environment<'a, 'b> {
             .gleam_expect("Attempted to access non-existant entity usages scope")
             .insert(name.to_string(), (kind, location, 0))
         {
+            // PrivateTypes can be overwritten by a constructor with the same name
+            Some((EntityKind::PrivateType, _, _)) => {}
             Some((kind, location, 0)) => {
-                // a value was overwritten in the top most scope without being used
+                // an entity was overwritten in the top most scope without being used
                 let mut unused = HashMap::with_capacity(1);
                 let _ = unused.insert(name, (kind, location, 0));
                 self.handle_unused(unused);
