@@ -463,14 +463,14 @@ where
             name.push(self.next_char().unwrap());
         }
 
-        // Throw a lexical error if a name is in "camel case".
-        if self.is_upname_continuation() {
-            while self.is_upname_continuation() {
+        // Finish lexing the name and return an error if an uppercase letter is used
+        if self.is_name_error_continuation() {
+            while self.is_name_error_continuation() {
                 name.push(self.next_char().unwrap())
             }
             let end_pos = self.get_pos();
             return Err(LexicalError {
-                error: LexicalErrorType::CamelCaseName { name: name },
+                error: LexicalErrorType::BadName { name: name },
                 location: SrcSpan {
                     start: start_pos,
                     end: end_pos,
@@ -745,6 +745,12 @@ where
     fn is_upname_continuation(&self) -> bool {
         self.chr0
             .map(|c| matches!(c, '0'..='9' | 'a'..='z' | 'A'..='Z'))
+            .unwrap_or(false)
+    }
+
+    fn is_name_error_continuation(&self) -> bool {
+        self.chr0
+            .map(|c| matches!(c, '_' | '0'..='9' | 'a'..='z' | 'A'..='Z'))
             .unwrap_or(false)
     }
 

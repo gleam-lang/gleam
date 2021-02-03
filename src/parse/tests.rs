@@ -131,7 +131,7 @@ fn name_tests() {
         ParseError {
             error: ParseErrorType::LexError {
                 error: LexicalError {
-                    error: LexicalErrorType::CamelCaseName {
+                    error: LexicalErrorType::BadName {
                         name: "xS".to_string()
                     },
                     location: SrcSpan { start: 4, end: 6 },
