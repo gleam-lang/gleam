@@ -1432,7 +1432,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 }
 
                 // Register the value as seen for detection of unused values
-                self.environment.value_used(name);
+                self.environment.increment_usage(name);
 
                 constructor
             }
@@ -1810,10 +1810,10 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                             t,
                             arg.location.clone(),
                         );
-                        body_typer.environment.init_value_usage(
+                        body_typer.environment.init_usage(
                             name.to_string(),
-                            ValueKind::Variable,
-                            arg.location.clone(),
+                            EntityKind::Variable,
+                            arg.location,
                         );
                     }
                     ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => (),
