@@ -15,7 +15,7 @@ pub enum LexicalErrorType {
     RadixIntNoValue,       // 0x, 0b, 0o without a value
     UnexpectedStringEnd,   // Unterminated string literal
     UnrecognizedToken { tok: char },
-    CamelCaseName { name: String },
+    BadName { name: String },
 }
 
 #[derive(Debug, PartialEq)]
@@ -82,7 +82,7 @@ impl LexicalError {
                 "I can't figure out what to do with this character.",
                 vec!["Hint: Is it a typo?".to_string()],
             ),
-	        LexicalErrorType::CamelCaseName { name } => (
+	        LexicalErrorType::BadName { name } => (
 		        "This is not a valid name.",
 		        vec![
 			        "Hint: In Gleam names must start with a lowercase letter and contain only lowercase letters, numbers, and '_'.".to_string(),
