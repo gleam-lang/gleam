@@ -16,6 +16,7 @@ pub enum LexicalErrorType {
     UnexpectedStringEnd,   // Unterminated string literal
     UnrecognizedToken { tok: char },
     BadName { name: String },
+    BadDiscardName { name: String },
 }
 
 #[derive(Debug, PartialEq)]
@@ -82,13 +83,21 @@ impl LexicalError {
                 "I can't figure out what to do with this character.",
                 vec!["Hint: Is it a typo?".to_string()],
             ),
-	        LexicalErrorType::BadName { name } => (
-		        "This is not a valid name.",
-		        vec![
-			        "Hint: In Gleam names must start with a lowercase letter and contain only lowercase letters, numbers, and '_'.".to_string(),
-			        format!("Try: {}", name.to_snake_case())
-		        ]
-	        ),
+            LexicalErrorType::BadName { name } => (
+                "This is not a valid name.",
+                vec![
+                    "Hint: Names start with a lowercase letter and contain a-z, 0-9, or _."
+                        .to_string(),
+                    format!("Try: {}", name.to_snake_case()),
+                ],
+            ),
+            LexicalErrorType::BadDiscardName { name } => (
+                "This is not a valid discard name.",
+                vec![
+                    "Hint: Discard names start with _ and contain a-z, 0-9, or _.".to_string(),
+                    format!("Try: _{}", name.to_snake_case()),
+                ],
+            ),
         }
     }
 }

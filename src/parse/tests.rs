@@ -140,4 +140,19 @@ fn name_tests() {
             location: SrcSpan { start: 4, end: 6 },
         }
     );
+
+    assert_error!(
+        "let _xS = 1",
+        ParseError {
+            error: ParseErrorType::LexError {
+                error: LexicalError {
+                    error: LexicalErrorType::BadDiscardName {
+                        name: "_xS".to_string()
+                    },
+                    location: SrcSpan { start: 4, end: 7 },
+                }
+            },
+            location: SrcSpan { start: 4, end: 7 },
+        }
+    );
 }

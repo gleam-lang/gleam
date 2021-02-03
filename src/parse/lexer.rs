@@ -469,13 +469,23 @@ where
                 name.push(self.next_char().unwrap())
             }
             let end_pos = self.get_pos();
-            return Err(LexicalError {
-                error: LexicalErrorType::BadName { name: name },
-                location: SrcSpan {
-                    start: start_pos,
-                    end: end_pos,
-                },
-            });
+            if name.starts_with('_') {
+                return Err(LexicalError {
+                    error: LexicalErrorType::BadDiscardName { name: name },
+                    location: SrcSpan {
+                        start: start_pos,
+                        end: end_pos,
+                    },
+                });
+            } else {
+                return Err(LexicalError {
+                    error: LexicalErrorType::BadName { name: name },
+                    location: SrcSpan {
+                        start: start_pos,
+                        end: end_pos,
+                    },
+                });
+            }
         }
 
         let end_pos = self.get_pos();
