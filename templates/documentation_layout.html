@@ -2,42 +2,119 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ page_title }}</title>
     <link rel="stylesheet" href="{{ unnest }}/index.css" type="text/css" />
     <!-- The docs_config.js file is provided by HexDocs and shared
          between multiple versions of the same package. -->
     <script src="{{ unnest }}/docs_config.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@10.5.0/styles/atom-one-light.min.css">
+    <link id="syntax-theme" rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@10.5.0/styles/atom-one-light.min.css">
   </head>
-  <body>
+  <body class="prewrap-off theme-light drawer-closed">
+    <script>
+      "use strict";
+
+      /* {option: {
+       *   update: () => {...},
+       *   value: "default"
+       *   callback: (value) => {...}, // optional
+       * }, ...}
+       */
+      const gleamConfig = {
+        prewrap: {
+          update: function() {
+            return "off" === Gleam.getProperty("prewrap") ? "on" : "off";
+          },
+          value: "off"
+        },
+        theme: {
+          update: function() {
+            return (
+              "light" === Gleam.getProperty("theme")
+              ? "dark"
+              : "light"
+            );
+          },
+          value:
+            window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light",
+          callback: function(value) {
+            const syntaxThemes = {
+              dark: "atom-one-dark",
+              light: "atom-one-light"
+            };
+            const syntaxTheme = document.querySelector("#syntax-theme");
+            const hrefParts = syntaxTheme.href.match(
+              /^(.*?)([^/\\#?]+?)((?:\.min)?\.css.*)$/i
+            );
+            if (syntaxThemes[value] !== hrefParts[2]) {
+              hrefParts[2] = syntaxThemes[value];
+              hrefParts.shift();
+              syntaxTheme.href = hrefParts.join("");
+            }
+          }
+        }
+      };
+    </script>
+
+    <script>
+      "use strict";
+
+      /* Initialise options before any content loads */
+      void function() {
+        for (const property in gleamConfig) {
+          let value;
+
+          try {
+            value = localStorage.getItem("Gleam." + property);
+
+            if (value.startsWith('"') && value.endsWith('"')) {
+              localStorage.setItem(
+                "Gleam." + property,
+                value.slice(1, value.length - 1)
+              );
+            }
+          }
+          catch (_error) {}
+
+          const defaultValue = gleamConfig[property].value;
+          try {
+            value = localStorage.getItem("Gleam." + property);
+          }
+          catch(_error) {}
+          if (-1 < [null, undefined].indexOf(value)) {
+            value = defaultValue;
+          }
+          const bodyClasses = document.body.classList;
+          bodyClasses.remove(property + "-" + defaultValue);
+          bodyClasses.add(property + "-" + value);
+          try {
+            gleamConfig[property].callback(value);
+          }
+          catch(_error) {}
+        }
+      }();
+    </script>
+
     <header class="page-header">
+      <button class="sidebar-toggle" alt="Toggle Menu" title="Toggle Menu" tabindex="0">
+        <svg class="label label-closed icon icon-menu"><use xlink:href="#icon-menu"></use></svg>
+        <svg class="label label-open icon icon-x-circle"><use xlink:href="#icon-x-circle"></use></svg>
+      </button>
+
       <h2>
-        {{ project_name }}
+        <a href="{{ unnest }}/">{{ project_name }}</a>
         <span id="project-version"> - v{{ project_version }} </span>
       </h2>
     </header>
 
     <div class="page">
       <nav class="sidebar">
-        <a class="sidebar-toggle" href="#" tabindex="0">
-          <svg
-            aria-hidden="true"
-            focusable="false"
-            data-prefix="fas"
-            data-icon="bars"
-            class="svg-inline--fa fa-bars fa-w-14"
-            role="img"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 448 512"
-            >
-            <path
-              fill="#fff"
-              d="M16 132h416c8.837 0 16-7.163 16-16V76c0-8.837-7.163-16-16-16H16C7.163 60 0 67.163 0 76v40c0 8.837 7.163 16 16 16zm0 160h416c8.837 0 16-7.163 16-16v-40c0-8.837-7.163-16-16-16H16c-8.837 0-16 7.163-16 16v40c0 8.837 7.163 16 16 16zm0 160h416c8.837 0 16-7.163 16-16v-40c0-8.837-7.163-16-16-16H16c-8.837 0-16 7.163-16 16v40c0 8.837 7.163 16 16 16z"
-              >
-            </path>
-          </svg>
-        </a>
+        <button class="sidebar-toggle" alt="Toggle Menu" title="Toggle Menu" tabindex="1">
+          <svg class="label label-closed icon icon-menu"><use xlink:href="#icon-menu"></use></svg>
+          <svg class="label label-open icon icon-x-circle"><use xlink:href="#icon-x-circle"></use></svg>
+        </button>
 
         {% if !pages.is_empty() %}
         <h2>Pages</h2>
@@ -65,6 +142,29 @@
         </ul>
 
         {% block sidebar_content %}{% endblock %}
+
+        <div class="display-controls">
+          <button class="control control-prewrap toggle toggle-left" id="prewrap-toggle" alt="Toggle Pre-Wrap" title="Toggle Pre-Wrap">
+            <span class="label label-left">
+              <svg class="icon icon-more-horizontal"><use xlink:href="#icon-more-horizontal"></use></svg>
+              <svg class="icon icon-toggle-left"><use xlink:href="#icon-toggle-left"></use></svg>
+            </span>
+            <span class="label label-right">
+              <svg class="icon icon-more-vertical"><use xlink:href="#icon-more-vertical"></use></svg>
+              <svg class="icon icon-toggle-right"><use xlink:href="#icon-toggle-right"></use></svg>
+            </span>
+          </button>
+          <button class="control control-theme toggle toggle-left" id="theme-toggle" alt="Toggle Theme" title="Toggle Theme">
+            <span class="label label-left">
+              <svg class="icon icon-sun"><use xlink:href="#icon-sun"></use></svg>
+              <svg class="icon icon-toggle-left"><use xlink:href="#icon-toggle-left"></use></svg>
+            </span>
+            <span class="label label-right">
+              <svg class="icon icon-moon"><use xlink:href="#icon-moon"></use></svg>
+              <svg class="icon icon-toggle-right"><use xlink:href="#icon-toggle-right"></use></svg>
+            </span>
+          </button>
+        </div>
       </nav>
 
       <main class="content">
@@ -82,9 +182,35 @@
       <div class="blue">✨</div>
     </footer>
 
+    <svg class="svg-lib" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><defs>
+        <symbol id="icon-menu" viewBox="0 0 24 24"><path d="M3 13h18c0.552 0 1-0.448 1-1s-0.448-1-1-1h-18c-0.552 0-1 0.448-1 1s0.448 1 1 1zM3 7h18c0.552 0 1-0.448 1-1s-0.448-1-1-1h-18c-0.552 0-1 0.448-1 1s0.448 1 1 1zM3 19h18c0.552 0 1-0.448 1-1s-0.448-1-1-1h-18c-0.552 0-1 0.448-1 1s0.448 1 1 1z"></path></symbol>
+
+        <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M21.996 12.882c0.022-0.233-0.038-0.476-0.188-0.681-0.325-0.446-0.951-0.544-1.397-0.219-0.95 0.693-2.060 1.086-3.188 1.162-1.368 0.092-2.765-0.283-3.95-1.158-1.333-0.985-2.139-2.415-2.367-3.935s0.124-3.124 1.109-4.456c0.142-0.191 0.216-0.435 0.191-0.691-0.053-0.55-0.542-0.952-1.092-0.898-2.258 0.22-4.314 1.18-5.895 2.651-1.736 1.615-2.902 3.847-3.137 6.386-0.254 2.749 0.631 5.343 2.266 7.311s4.022 3.313 6.772 3.567 5.343-0.631 7.311-2.266 3.313-4.022 3.567-6.772zM19.567 14.674c-0.49 1.363-1.335 2.543-2.416 3.441-1.576 1.309-3.648 2.016-5.848 1.813s-4.108-1.278-5.417-2.854-2.016-3.648-1.813-5.848c0.187-2.032 1.117-3.814 2.507-5.106 0.782-0.728 1.71-1.3 2.731-1.672-0.456 1.264-0.577 2.606-0.384 3.899 0.303 2.023 1.38 3.934 3.156 5.247 1.578 1.167 3.448 1.668 5.272 1.545 0.752-0.050 1.496-0.207 2.21-0.465z"></path></symbol>
+
+        <symbol id="icon-more-horizontal" viewBox="0 0 24 24"><path d="M14 12c0-0.552-0.225-1.053-0.586-1.414s-0.862-0.586-1.414-0.586-1.053 0.225-1.414 0.586-0.586 0.862-0.586 1.414 0.225 1.053 0.586 1.414 0.862 0.586 1.414 0.586 1.053-0.225 1.414-0.586 0.586-0.862 0.586-1.414zM21 12c0-0.552-0.225-1.053-0.586-1.414s-0.862-0.586-1.414-0.586-1.053 0.225-1.414 0.586-0.586 0.862-0.586 1.414 0.225 1.053 0.586 1.414 0.862 0.586 1.414 0.586 1.053-0.225 1.414-0.586 0.586-0.862 0.586-1.414zM7 12c0-0.552-0.225-1.053-0.586-1.414s-0.862-0.586-1.414-0.586-1.053 0.225-1.414 0.586-0.586 0.862-0.586 1.414 0.225 1.053 0.586 1.414 0.862 0.586 1.414 0.586 1.053-0.225 1.414-0.586 0.586-0.862 0.586-1.414z"></path></symbol>
+
+        <symbol id="icon-more-vertical" viewBox="0 0 24 24"><path d="M14 12c0-0.552-0.225-1.053-0.586-1.414s-0.862-0.586-1.414-0.586-1.053 0.225-1.414 0.586-0.586 0.862-0.586 1.414 0.225 1.053 0.586 1.414 0.862 0.586 1.414 0.586 1.053-0.225 1.414-0.586 0.586-0.862 0.586-1.414zM14 5c0-0.552-0.225-1.053-0.586-1.414s-0.862-0.586-1.414-0.586-1.053 0.225-1.414 0.586-0.586 0.862-0.586 1.414 0.225 1.053 0.586 1.414 0.862 0.586 1.414 0.586 1.053-0.225 1.414-0.586 0.586-0.862 0.586-1.414zM14 19c0-0.552-0.225-1.053-0.586-1.414s-0.862-0.586-1.414-0.586-1.053 0.225-1.414 0.586-0.586 0.862-0.586 1.414 0.225 1.053 0.586 1.414 0.862 0.586 1.414 0.586 1.053-0.225 1.414-0.586 0.586-0.862 0.586-1.414z"></path></symbol>
+
+        <symbol id="icon-star" viewBox="0 0 24 24"><path d="M12.897 1.557c-0.092-0.189-0.248-0.352-0.454-0.454-0.495-0.244-1.095-0.041-1.339 0.454l-2.858 5.789-6.391 0.935c-0.208 0.029-0.411 0.127-0.571 0.291-0.386 0.396-0.377 1.029 0.018 1.414l4.623 4.503-1.091 6.362c-0.036 0.207-0.006 0.431 0.101 0.634 0.257 0.489 0.862 0.677 1.351 0.42l5.714-3.005 5.715 3.005c0.186 0.099 0.408 0.139 0.634 0.101 0.544-0.093 0.91-0.61 0.817-1.155l-1.091-6.362 4.623-4.503c0.151-0.146 0.259-0.344 0.292-0.572 0.080-0.546-0.298-1.054-0.845-1.134l-6.39-0.934zM12 4.259l2.193 4.444c0.151 0.305 0.436 0.499 0.752 0.547l4.906 0.717-3.549 3.457c-0.244 0.238-0.341 0.569-0.288 0.885l0.837 4.883-4.386-2.307c-0.301-0.158-0.647-0.148-0.931 0l-4.386 2.307 0.837-4.883c0.058-0.336-0.059-0.661-0.288-0.885l-3.549-3.457 4.907-0.718c0.336-0.049 0.609-0.26 0.752-0.546z"></path></symbol>
+
+        <symbol id="icon-sun" viewBox="0 0 24 24"><path d="M18 12c0-1.657-0.673-3.158-1.757-4.243s-2.586-1.757-4.243-1.757-3.158 0.673-4.243 1.757-1.757 2.586-1.757 4.243 0.673 3.158 1.757 4.243 2.586 1.757 4.243 1.757 3.158-0.673 4.243-1.757 1.757-2.586 1.757-4.243zM16 12c0 1.105-0.447 2.103-1.172 2.828s-1.723 1.172-2.828 1.172-2.103-0.447-2.828-1.172-1.172-1.723-1.172-2.828 0.447-2.103 1.172-2.828 1.723-1.172 2.828-1.172 2.103 0.447 2.828 1.172 1.172 1.723 1.172 2.828zM11 1v2c0 0.552 0.448 1 1 1s1-0.448 1-1v-2c0-0.552-0.448-1-1-1s-1 0.448-1 1zM11 21v2c0 0.552 0.448 1 1 1s1-0.448 1-1v-2c0-0.552-0.448-1-1-1s-1 0.448-1 1zM3.513 4.927l1.42 1.42c0.391 0.391 1.024 0.391 1.414 0s0.391-1.024 0-1.414l-1.42-1.42c-0.391-0.391-1.024-0.391-1.414 0s-0.391 1.024 0 1.414zM17.653 19.067l1.42 1.42c0.391 0.391 1.024 0.391 1.414 0s0.391-1.024 0-1.414l-1.42-1.42c-0.391-0.391-1.024-0.391-1.414 0s-0.391 1.024 0 1.414zM1 13h2c0.552 0 1-0.448 1-1s-0.448-1-1-1h-2c-0.552 0-1 0.448-1 1s0.448 1 1 1zM21 13h2c0.552 0 1-0.448 1-1s-0.448-1-1-1h-2c-0.552 0-1 0.448-1 1s0.448 1 1 1zM4.927 20.487l1.42-1.42c0.391-0.391 0.391-1.024 0-1.414s-1.024-0.391-1.414 0l-1.42 1.42c-0.391 0.391-0.391 1.024 0 1.414s1.024 0.391 1.414 0zM19.067 6.347l1.42-1.42c0.391-0.391 0.391-1.024 0-1.414s-1.024-0.391-1.414 0l-1.42 1.42c-0.391 0.391-0.391 1.024 0 1.414s1.024 0.391 1.414 0z"></path></symbol>
+
+        <symbol id="icon-tag" viewBox="0 0 24 24"><path d="M21.297 14.117c0.583-0.586 0.874-1.352 0.874-2.115 0.001-0.764-0.29-1.532-0.874-2.12l-8.59-8.59c-0.181-0.18-0.431-0.292-0.707-0.292h-10c-0.552 0-1 0.448-1 1v10c0 0.256 0.098 0.512 0.293 0.708l8.592 8.582c0.586 0.585 1.356 0.878 2.122 0.877s1.536-0.294 2.12-0.879zM19.883 12.703l-7.17 7.17c-0.196 0.196-0.45 0.294-0.707 0.294s-0.512-0.097-0.707-0.292l-8.299-8.29v-8.585h8.586l8.297 8.297c0.192 0.193 0.289 0.447 0.289 0.704s-0.097 0.509-0.289 0.702zM7 8c0.552 0 1-0.448 1-1s-0.448-1-1-1-1 0.448-1 1 0.448 1 1 1z"></path></symbol>
+
+        <symbol id="icon-toggle-left" viewBox="0 0 24 24"><path d="M8 4c-2.209 0-4.21 0.897-5.657 2.343s-2.343 3.448-2.343 5.657 0.897 4.21 2.343 5.657 3.448 2.343 5.657 2.343h8c2.209 0 4.21-0.897 5.657-2.343s2.343-3.448 2.343-5.657-0.897-4.21-2.343-5.657-3.448-2.343-5.657-2.343zM8 6h8c1.657 0 3.156 0.67 4.243 1.757s1.757 2.586 1.757 4.243-0.67 3.156-1.757 4.243-2.586 1.757-4.243 1.757h-8c-1.657 0-3.156-0.67-4.243-1.757s-1.757-2.586-1.757-4.243 0.67-3.156 1.757-4.243 2.586-1.757 4.243-1.757zM12 12c0-1.104-0.449-2.106-1.172-2.828s-1.724-1.172-2.828-1.172-2.106 0.449-2.828 1.172-1.172 1.724-1.172 2.828 0.449 2.106 1.172 2.828 1.724 1.172 2.828 1.172 2.106-0.449 2.828-1.172 1.172-1.724 1.172-2.828zM10 12c0 0.553-0.223 1.051-0.586 1.414s-0.861 0.586-1.414 0.586-1.051-0.223-1.414-0.586-0.586-0.861-0.586-1.414 0.223-1.051 0.586-1.414 0.861-0.586 1.414-0.586 1.051 0.223 1.414 0.586 0.586 0.861 0.586 1.414z"></path></symbol>
+
+        <symbol id="icon-toggle-right" viewBox="0 0 24 24"><path d="M8 4c-2.209 0-4.21 0.897-5.657 2.343s-2.343 3.448-2.343 5.657 0.897 4.21 2.343 5.657 3.448 2.343 5.657 2.343h8c2.209 0 4.21-0.897 5.657-2.343s2.343-3.448 2.343-5.657-0.897-4.21-2.343-5.657-3.448-2.343-5.657-2.343zM8 6h8c1.657 0 3.156 0.67 4.243 1.757s1.757 2.586 1.757 4.243-0.67 3.156-1.757 4.243-2.586 1.757-4.243 1.757h-8c-1.657 0-3.156-0.67-4.243-1.757s-1.757-2.586-1.757-4.243 0.67-3.156 1.757-4.243 2.586-1.757 4.243-1.757zM20 12c0-1.104-0.449-2.106-1.172-2.828s-1.724-1.172-2.828-1.172-2.106 0.449-2.828 1.172-1.172 1.724-1.172 2.828 0.449 2.106 1.172 2.828 1.724 1.172 2.828 1.172 2.106-0.449 2.828-1.172 1.172-1.724 1.172-2.828zM18 12c0 0.553-0.223 1.051-0.586 1.414s-0.861 0.586-1.414 0.586-1.051-0.223-1.414-0.586-0.586-0.861-0.586-1.414 0.223-1.051 0.586-1.414 0.861-0.586 1.414-0.586 1.051 0.223 1.414 0.586 0.586 0.861 0.586 1.414z"></path></symbol>
+
+        <symbol id="icon-x-circle" viewBox="0 0 24 24"><path d="M23 12c0-3.037-1.232-5.789-3.222-7.778s-4.741-3.222-7.778-3.222-5.789 1.232-7.778 3.222-3.222 4.741-3.222 7.778 1.232 5.789 3.222 7.778 4.741 3.222 7.778 3.222 5.789-1.232 7.778-3.222 3.222-4.741 3.222-7.778zM21 12c0 2.486-1.006 4.734-2.636 6.364s-3.878 2.636-6.364 2.636-4.734-1.006-6.364-2.636-2.636-3.878-2.636-6.364 1.006-4.734 2.636-6.364 3.878-2.636 6.364-2.636 4.734 1.006 6.364 2.636 2.636 3.878 2.636 6.364zM8.293 9.707l2.293 2.293-2.293 2.293c-0.391 0.391-0.391 1.024 0 1.414s1.024 0.391 1.414 0l2.293-2.293 2.293 2.293c0.391 0.391 1.024 0.391 1.414 0s0.391-1.024 0-1.414l-2.293-2.293 2.293-2.293c0.391-0.391 0.391-1.024 0-1.414s-1.024-0.391-1.414 0l-2.293 2.293-2.293-2.293c-0.391-0.391-1.024-0.391-1.414 0s-0.391 1.024 0 1.414z"></path></symbol>
+    </svg>
+
     <script src="https://unpkg.com/@highlightjs/cdn-assets@10.5.0/highlight.min.js"></script>
+
     <script src="https://unpkg.com/@highlightjs/cdn-assets@10.5.0/languages/erlang.min.js"></script>
+    <script src="https://unpkg.com/@highlightjs/cdn-assets@10.5.0/languages/elixir.min.js"></script>
+
     <script src="{{ unnest }}/highlightjs-gleam.js"></script>
+
     <script>
       if (typeof versionNodes !== 'undefined') {
         const versionElement = document.getElementById('project-version')
@@ -103,10 +229,14 @@
                 `
               ).join('')}
             </select>
+
+            <svg class="icon icon-tag"><use xlink:href="#icon-tag"></use></svg>
           </form>
           `
         versionElement.innerHTML = versionsDropdown
       }
     </script>
+
+    <script src="{{ unnest }}/gleam.js"></script>
   </body>
 </html>
