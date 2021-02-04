@@ -35,7 +35,9 @@
   --sidebar-toggle-size: 33px;
 
   /* etc */
-  --shadow: 0 0 0 1px rgba(50, 50, 93, .075), 0 0 1px #e9ecef,
+  --shadow:
+    0 0 0 1px rgba(50, 50, 93, .075),
+    0 0 1px #e9ecef,
     0 2px 4px -2px rgba(138, 141, 151, .6);
   --nav-shadow: 0 0 6px 2px rgba(0, 0, 0, .1);
 }
@@ -519,6 +521,10 @@ body.theme-dark {
   --links: var(--pink);
   --text: var(--taupe-mono-1);
 
+  --shadow:
+    0 0 0 1px rgba(50, 50, 93, .075),
+    0 0 1px var(--fg-shade-3),
+    0 2px 4px -2px rgba(138, 141, 151, .2);
   --nav-shadow: 0 0 5px 5px rgba(0, 0, 0, .1);
 }
 
