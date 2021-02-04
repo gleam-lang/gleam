@@ -16,6 +16,7 @@
 - A set of OCI container images are built automatically for each release.
 - New compile time checks for invalid bit string literals and patterns have 
   been added.
+- Better error messages for malformed names.
 
 ## v0.13.2 - 2020-01-14
 
