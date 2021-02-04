@@ -30,7 +30,9 @@
 {% endblock %}
 
 {% block content %}
-<h1 class="module-name">{{ module_name }}</h1>
+<a class="page-title" href="#module-name">
+  <h1 id="module-name" class="module-name">{{ module_name }}</h1>
+</a>
 {{ documentation|safe }}
 
 {% if !types.is_empty() %}
@@ -60,10 +62,11 @@
       <h3>
         Constructors
       </h3>
-      <ul>
+      <ul class="constructor-list">
         {% for constructor in typ.constructors %}
-        <li>
-          <code class="constructor-name hljs gleam">{{ constructor.definition }}</code>
+        <li class="constructor-item">
+          <svg class="icon icon-star"><use xlink:href="#icon-star"></use></svg>
+          <pre class="constructor-name"><code class="hljs gleam">{{ constructor.definition }}</code></pre>
           {{ constructor.documentation|safe }}
         </li>
         {% endfor %}

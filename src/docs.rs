@@ -197,6 +197,11 @@ pub fn generate_html(
     });
 
     files.push(OutputFile {
+        path: output_dir.join("gleam.js"),
+        text: std::include_str!("../templates/gleam.js").to_string(),
+    });
+
+    files.push(OutputFile {
         path: output_dir.join("highlightjs-gleam.js"),
         text: std::include_str!("../templates/highlightjs-gleam.js").to_string(),
     });
