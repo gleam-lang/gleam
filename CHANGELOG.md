@@ -21,25 +21,25 @@
 - Fixed a bug where piping a block can render invalid Erlang.
 - New compile time warnings on unused types, functions and variables.
 
-## v0.13.2 - 2020-01-14
+## v0.13.2 - 2021-01-14
 
 - `ring` dep upgraded to enable compilation on Apple M1 ARM processors.
 
-## v0.13.1 - 2020-01-13
+## v0.13.1 - 2021-01-13
 
 - Fix off-by-one error in message messages.
 
-## v0.13.0 - 2020-01-13
+## v0.13.0 - 2021-01-13
 
 #### [Release Blog Post](https://gleam.run/news/gleam-v0.13-released/)
 
 - New Gleam projects use stdlib v0.13.0.
 
-## v0.13.0-rc2 - 2020-01-12
+## v0.13.0-rc2 - 2021-01-12
 
 - The `version` property in `gleam.toml` is now optional again.
 
-## v0.13.0-rc1 - 2020-01-09
+## v0.13.0-rc1 - 2021-01-09
 
 - Variable names now only have 1st letter capitalized when converted to erlang.
 - Records defined in other modules can now be used in module constants.
