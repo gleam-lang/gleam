@@ -748,7 +748,7 @@ fn bin_op<'a>(
 }
 
 fn pipe<'a>(value: &'a TypedExpr, fun: &'a TypedExpr, env: &mut Env<'_>) -> Document<'a> {
-    docs_args_call(fun, vec![expr(value, env)], env)
+    docs_args_call(fun, vec![maybe_block_expr(value, env)], env)
 }
 
 fn try_<'a>(

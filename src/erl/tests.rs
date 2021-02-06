@@ -2411,3 +2411,34 @@ a() ->
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/952
+#[test]
+fn block_expr_into_pipe() {
+    assert_erl!(
+        r#"fn id(a) { a }
+fn main() {
+  {
+    let x = 1
+    x
+  }
+  |> id
+}"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-spec id(H) -> H.
+id(A) ->
+    A.
+
+-spec main() -> integer().
+main() ->
+    id(
+        begin
+            X = 1,
+            X
+        end
+    ).
+"#
+    );
+}
