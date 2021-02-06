@@ -1398,7 +1398,11 @@ pub fn main() {
 
 -spec main() -> any().
 main() ->
-    erlang:error({gleam_error, todo}).
+    erlang:error(#{gleam_error => todo, 
+                   message => <<"This has not yet been implemented">>}).
+                   module => <<"the_app">>,
+                   function => <<"main">>,
+                   line => 3}).
 "#,
     );
 
@@ -1415,7 +1419,11 @@ pub fn main() {
 
 -spec main() -> any().
 main() ->
-    erlang:error({gleam_error, todo, "testing"}).
+    erlang:error(#{gleam_error => todo, 
+                   message => <<"testing">>,
+                   module => <<"the_app">>,
+                   function => <<"main">>,
+                   line => 3}).
 "#,
     );
 
