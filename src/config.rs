@@ -49,6 +49,24 @@ pub enum Repository {
     None,
 }
 
+impl Repository {
+    pub fn url(&self) -> Option<String> {
+        match self {
+            Repository::GitHub { repo, user } => {
+                Some(format!("https://github.com/{}/{}", user, repo))
+            }
+            Repository::GitLab { repo, user } => {
+                Some(format!("https://gitlab.com/{}/{}", user, repo))
+            }
+            Repository::BitBucket { repo, user } => {
+                Some(format!("https://bitbucket.com/{}/{}", user, repo))
+            }
+            Repository::Custom { url } => Some(url.clone()),
+            Repository::None => None,
+        }
+    }
+}
+
 impl Default for Repository {
     fn default() -> Self {
         Self::None

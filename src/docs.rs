@@ -5,7 +5,7 @@ mod tests;
 
 use crate::{
     ast::{Statement, TypedStatement},
-    config::{DocsPage, PackageConfig, Repository},
+    config::{DocsPage, PackageConfig},
     docs::source_links::SourceLinker,
     error::{Error, GleamExpect},
     format,
@@ -83,19 +83,10 @@ pub fn generate_html(
         path: doc_link.href.to_string(),
     });
 
-    let repo_link = match &project_config.repository {
-        Repository::GitHub { repo, .. }
-        | Repository::GitLab { repo, .. }
-        | Repository::BitBucket { repo, .. } => Some(Link {
-            name: "Repository".to_string(),
-            path: repo.clone(),
-        }),
-        Repository::Custom { url } => Some(Link {
-            name: "Repository".to_string(),
-            path: url.clone(),
-        }),
-        Repository::None => None,
-    };
+    let repo_link = project_config.repository.url().map(|path| Link {
+        name: "Repository".to_string(),
+        path,
+    });
 
     let links = doc_links
         .chain(repo_link.into_iter())
