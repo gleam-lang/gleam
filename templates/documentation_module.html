@@ -4,53 +4,55 @@
 {% if !types.is_empty() %}
 <h2>Types</h2>
 <ul>
-    {% for typ in types %}
-    <li><a href="#{{ typ.name }}">{{ typ.name }}</a></li>
-    {% endfor %}
+  {% for typ in types %}
+  <li><a href="#{{ typ.name }}">{{ typ.name }}</a></li>
+  {% endfor %}
 </ul>
 {% endif %}
 
 {% if !constants.is_empty() %}
 <h2>Constants</h2>
 <ul>
-    {% for constant in constants %}
-    <li><a href="#{{ constant.name }}">{{ constant.name }}</a></li>
-    {% endfor %}
+  {% for constant in constants %}
+  <li><a href="#{{ constant.name }}">{{ constant.name }}</a></li>
+  {% endfor %}
 </ul>
 {% endif %}
 
 {% if !functions.is_empty() %}
 <h2>Functions</h2>
 <ul>
-    {% for function in functions %}
-    <li><a href="#{{ function.name }}">{{ function.name }}</a></li>
-    {% endfor %}
+  {% for function in functions %}
+  <li><a href="#{{ function.name }}">{{ function.name }}</a></li>
+  {% endfor %}
 </ul>
 {% endif %}
 {% endblock %}
 
 {% block content %}
-<a href="#module-name">
-  <h1 id="module-name" class="module-name">{{ module_name }}</h1>
-</a>
+<h1 id="module-name" class="module-name">
+  <a href="#module-name">{{ module_name }}</a>
+  <svg class="icon icon-gleam-chasse"><use xlink:href="#icon-gleam-chasse"></use></svg>
+</h1>
 {{ documentation|safe }}
 
 {% if !types.is_empty() %}
 <section class="module-members">
-  <a href="#module-types">
-    <h1 id="module-types" class="module-member-kind">Types</h1>
-  </a>
+  <h1 id="module-types" class="module-member-kind">
+    <a href="#module-types">Types</a>
+    <svg class="icon icon-gleam-chasse-2"><use xlink:href="#icon-gleam-chasse-2"></use></svg>
+  </h1>
 
   {% for typ in types %}
   <div class="member">
     <div class="member-name">
       <h2 id="{{ typ.name }}">
         <a href="#{{ typ.name }}">
-            {{ typ.name }}
+          {{ typ.name }}
         </a>
       </h2>
       {% if !typ.source_url.is_empty() %}
-      <a href="{{ typ.source_url|safe }}">
+      <a class="member-source" alt="View Source" title="View Source" href="{{ typ.source_url|safe }}">
         &lt;/&gt;
       </a>
       {% endif %}
@@ -80,20 +82,21 @@
 
 {% if !constants.is_empty() %}
 <section class="module-members">
-  <a href="#module-constants">
-    <h1 id="module-constants" class="module-member-kind">Constants</h1>
-  </a>
+  <h1 id="module-constants" class="module-member-kind">
+    <a href="#module-constants">Constants</a>
+    <svg class="icon icon-gleam-chasse-2"><use xlink:href="#icon-gleam-chasse-2"></use></svg>
+  </h1>
 
   {% for constant in constants %}
   <div class="member">
     <div class="member-name">
       <h2 id="{{ constant.name }}">
         <a href="#{{ constant.name }}">
-            {{ constant.name }}
+          {{ constant.name }}
         </a>
       </h2>
       {% if !constant.source_url.is_empty() %}
-      <a href="{{ constant.source_url|safe }}">
+      <a class="member-source" alt="View Source" title="View Source" href="{{ constant.source_url|safe }}">
         &lt;/&gt;
       </a>
       {% endif %}
@@ -107,19 +110,20 @@
 
 {% if !functions.is_empty() %}
 <section class="module-members">
- <a href="#module-functions">
-   <h1 id="module-functions" class="module-member-kind">Functions</h1>
- </a>
- {% for function in functions %}
- <div class="member">
+  <h1 id="module-functions" class="module-member-kind">
+    <a href="#module-functions">Functions</a>
+    <svg class="icon icon-gleam-chasse-2"><use xlink:href="#icon-gleam-chasse-2"></use></svg>
+  </h1>
+  {% for function in functions %}
+  <div class="member">
     <div class="member-name">
       <h2 id="{{ function.name }}">
         <a href="#{{ function.name }}">
-            {{ function.name }}
+          {{ function.name }}
         </a>
       </h2>
       {% if !function.source_url.is_empty() %}
-      <a href="{{ function.source_url|safe }}">
+      <a class="member-source" alt="View Source" title="View Source" href="{{ function.source_url|safe }}">
         &lt;/&gt;
       </a>
       {% endif %}

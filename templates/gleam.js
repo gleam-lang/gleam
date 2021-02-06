@@ -191,6 +191,14 @@ window.Gleam = function() {
     window.addEventListener("hashchange", function(_event) {
       self.scrollToHash();
     });
+
+    document.querySelectorAll(`
+      .module-name > a,
+      .member-name a[href^='#']
+    `).forEach(function(title) {
+      title.innerHTML =
+        title.innerHTML.replaceAll(/([A-Z])|([_/])/g, "$2<wbr>$1");
+    });
   };
 
   /* Initialise */
