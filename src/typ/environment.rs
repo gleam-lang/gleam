@@ -31,15 +31,15 @@ pub struct Environment<'a, 'b> {
 
     // entity_usages is a stack of scopes. When an entity is created it is
     // added to the top scope. When an entity is used we crawl down the scope
-    // stack for an entity with that name and increments its usage.
-    pub entity_usages: Vec<HashMap<String, (EntityKind, SrcSpan, usize)>>,
+    // stack for an entity with that name and mark it as used.
+    pub entity_usages: Vec<HashMap<String, (EntityKind, SrcSpan, bool)>>,
 }
 
 /// For Keeping track of entity usages and knowing which error to display.
 #[derive(Debug, Clone)]
 pub enum EntityKind {
     PrivateConstant,
-    // String here is the type constructors type name
+    // String here is the type constructor's type name
     PrivateTypeConstructor(String),
     PrivateFunction,
     ImportedConstructor,
@@ -490,14 +490,14 @@ impl<'a, 'b> Environment<'a, 'b> {
             .entity_usages
             .last_mut()
             .gleam_expect("Attempted to access non-existant entity usages scope")
-            .insert(name.to_string(), (kind, location, 0))
+            .insert(name.to_string(), (kind, location, false))
         {
             // PrivateTypes can be overwritten by a constructor with the same name
             Some((EntityKind::PrivateType, _, _)) => {}
-            Some((kind, location, 0)) => {
+            Some((kind, location, false)) => {
                 // an entity was overwritten in the top most scope without being used
                 let mut unused = HashMap::with_capacity(1);
-                let _ = unused.insert(name, (kind, location, 0));
+                let _ = unused.insert(name, (kind, location, false));
                 self.handle_unused(unused);
             }
             _ => {}
@@ -515,11 +515,11 @@ impl<'a, 'b> Environment<'a, 'b> {
                     if type_name != name {
                         cascade = Some(type_name.clone());
                     }
-                    *usages += 1;
+                    *usages = true;
                     break;
                 }
                 Some(val) => {
-                    val.2 = val.2 + 1;
+                    val.2 = true;
                     break;
                 }
                 None => {}
@@ -532,59 +532,62 @@ impl<'a, 'b> Environment<'a, 'b> {
 
     /// Converts entities with a usage count of 0 to warnings
     pub fn convert_unused_to_warnings(&mut self) {
-        let unused = self.entity_usages.pop().unwrap();
+        let unused = self
+            .entity_usages
+            .pop()
+            .gleam_expect("Expected a bottom level of entity usages.");
         self.handle_unused(unused);
     }
 
-    fn handle_unused(&mut self, unused: HashMap<String, (EntityKind, SrcSpan, usize)>) {
+    fn handle_unused(&mut self, unused: HashMap<String, (EntityKind, SrcSpan, bool)>) {
         for val in unused {
             match val {
-                (name, (EntityKind::ImportedType, location, 0)) => {
+                (name, (EntityKind::ImportedType, location, false)) => {
                     self.warnings.push(Warning::UnusedType {
                         name,
                         imported: true,
                         location,
                     })
                 }
-                (name, (EntityKind::ImportedConstructor, location, 0)) => {
+                (name, (EntityKind::ImportedConstructor, location, false)) => {
                     self.warnings.push(Warning::UnusedConstructor {
                         name,
                         imported: true,
                         location,
                     })
                 }
-                (name, (EntityKind::ImportedTypeAndConstructor, location, 0)) => {
+                (name, (EntityKind::ImportedTypeAndConstructor, location, false)) => {
                     self.warnings.push(Warning::UnusedType {
                         name,
                         imported: true,
                         location,
                     })
                 }
-                (name, (EntityKind::PrivateConstant, location, 0)) => self
+                (name, (EntityKind::PrivateConstant, location, false)) => self
                     .warnings
                     .push(Warning::UnusedPrivateModuleConstant { name, location }),
-                (name, (EntityKind::PrivateTypeConstructor(_), location, 0)) => {
+                (name, (EntityKind::PrivateTypeConstructor(_), location, false)) => {
                     self.warnings.push(Warning::UnusedConstructor {
                         name,
                         imported: false,
                         location,
                     })
                 }
-                (name, (EntityKind::PrivateFunction, location, 0)) => self
+                (name, (EntityKind::PrivateFunction, location, false)) => self
                     .warnings
                     .push(Warning::UnusedPrivateFunction { name, location }),
-                (name, (EntityKind::PrivateType, location, 0)) => {
+                (name, (EntityKind::PrivateType, location, false)) => {
                     self.warnings.push(Warning::UnusedType {
                         name,
                         imported: false,
                         location,
                     })
                 }
-                (name, (EntityKind::ImportedValue, location, 0)) => self
+                (name, (EntityKind::ImportedValue, location, false)) => self
                     .warnings
                     .push(Warning::UnusedImportedValue { name, location }),
 
-                (name, (EntityKind::Variable, location, 0)) => self
+                (name, (EntityKind::Variable, location, false)) => self
                     .warnings
                     .push(Warning::UnusedVariable { name, location }),
 
