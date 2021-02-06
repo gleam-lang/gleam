@@ -14,11 +14,12 @@
 - Code in HTML documentation is has highlighted syntax.
 - Gleam now only supports `\r`, `\n`, `\t`, `\"`, and `\\` string escapes.
 - A set of OCI container images are built automatically for each release.
-- New compile time checks for invalid bit string literals and patterns have 
+- New compile time checks for invalid bit string literals and patterns have
   been added.
 - The error messages for syntax errors in names have been improved.
 - Fixed a bug where the repo URL would render incorrectly in HTML docs.
 - Fixed a bug where piping a block can render invalid Erlang.
+- New compile time warnings on unused types, functions and variables.
 
 ## v0.13.2 - 2020-01-14
 
