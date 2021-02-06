@@ -15,6 +15,9 @@ ignore = [
     # https://rustsec.org/advisories/RUSTSEC-2020-0095.html
     # difference is unmaintained
     "RUSTSEC-2020-0095", 
+    # https://rustsec.org/advisories/RUSTSEC-2020-0096.html
+    # `TreeFocus` that unconditionally implements `Send` and `Sync`
+    "RUSTSEC-2020-0096", 
 ]
 
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
@@ -43,7 +46,6 @@ allow = []
 deny = []
 skip = [
     { name = "ansi_term", version = "=0.11.0" },
-    { name = "bytes", version = "=0.5.6" },
     { name = "cfg-if", version = "=0.1.10" },
     { name = "pin-project", version = "=0.4.27" },
     { name = "pin-project-internal", version = "=0.4.27" },
