@@ -22,8 +22,8 @@ regex = "1.4.3"
 # Graph data structures
 petgraph = "0.5.1"
 # Pretty error messages
-codespan = "0.9" # Upgrade when https://github.com/brendanzab/codespan/pull/310 is released
-codespan-reporting = "0.9" # Upgrade when https://github.com/brendanzab/codespan/pull/310 is released
+codespan = "0.11"
+codespan-reporting = "0.11"
 termcolor = "1.1.2" 
 # Initialize complex static values at runtime
 lazy_static = "1.4.0"

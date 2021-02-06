@@ -1,6 +1,5 @@
-use codespan::{FileId, Files};
 pub use codespan_reporting::diagnostic::{LabelStyle, Severity};
-use codespan_reporting::{diagnostic::Label, term::emit};
+use codespan_reporting::{diagnostic::Label, files::SimpleFile, term::emit};
 use termcolor::Buffer;
 
 pub struct DiagnosticLabel {
@@ -39,14 +38,13 @@ pub fn write(buffer: &mut Buffer, d: Diagnostic, severity: Severity) {
 }
 
 pub fn write_diagnostic(mut buffer: &mut Buffer, d: MultiLineDiagnostic, severity: Severity) {
-    let mut files = Files::new();
-    let file_id: FileId = files.add(d.file, d.src);
+    let file = SimpleFile::new(d.file, d.src);
 
-    let labels: Vec<Label<FileId>> = d
+    let labels = d
         .labels
         .iter()
         .map(|l| {
-            Label::new(l.style, file_id, (l.location.start)..(l.location.end))
+            Label::new(l.style, (), (l.location.start)..(l.location.end))
                 .with_message(l.label.clone())
         })
         .collect();
@@ -56,7 +54,7 @@ pub fn write_diagnostic(mut buffer: &mut Buffer, d: MultiLineDiagnostic, severit
         .with_labels(labels);
 
     let config = codespan_reporting::term::Config::default();
-    emit(&mut buffer, &config, &files, &diagnostic).unwrap();
+    emit(&mut buffer, &config, &file, &diagnostic).unwrap();
 }
 
 /// Describes an error encountered while compiling the project (eg. a name collision
