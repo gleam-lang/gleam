@@ -1,12 +1,13 @@
 use crate::{
     ast::SrcSpan,
     config::{PackageConfig, Repository},
+    line_numbers::LineNumbers,
     project::Analysed,
 };
 use std::path::{Path, PathBuf};
 
 pub struct SourceLinker {
-    line_starts: Vec<usize>,
+    line_numbers: LineNumbers,
     url_pattern: Option<(String, String)>,
 }
 
@@ -44,40 +45,21 @@ impl SourceLinker {
         };
 
         SourceLinker {
-            line_starts: if url_pattern.is_some() {
-                line_starts(&module.src)
-            } else {
-                vec![]
-            },
+            line_numbers: LineNumbers::new(&module.src),
             url_pattern,
         }
     }
     pub fn url(&self, span: &SrcSpan) -> String {
         match &self.url_pattern {
             Some((base, line_sep)) => {
-                let start_line = line_no(&self.line_starts, span.start);
-                let end_line = line_no(&self.line_starts, span.end);
+                let start_line = self.line_numbers.line_number(span.start);
+                let end_line = self.line_numbers.line_number(span.end);
                 format!("{}{}{}{}", base, start_line, line_sep, end_line)
             }
 
             None => "".to_string(),
         }
     }
-}
-
-// get all the line start byte offsets for a str
-fn line_starts(src: &str) -> Vec<usize> {
-    std::iter::once(0)
-        .chain(src.match_indices('\n').map(|(i, _)| i + 1))
-        .collect()
-}
-
-// get the line number for a byte index
-fn line_no(line_starts: &Vec<usize>, byte_index: usize) -> usize {
-    line_starts
-        .binary_search(&byte_index)
-        .unwrap_or_else(|next_line| next_line - 1)
-        + 1
 }
 
 fn get_path_in_repo(project_root: impl AsRef<Path>, path: &PathBuf) -> String {

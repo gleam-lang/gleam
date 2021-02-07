@@ -65,6 +65,7 @@ mod error;
 mod eunit;
 mod format;
 mod fs;
+mod line_numbers;
 mod metadata;
 mod new;
 mod parse;
