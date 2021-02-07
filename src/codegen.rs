@@ -1,4 +1,7 @@
-use crate::{build::Module, config::PackageConfig, erl, fs::FileSystemWriter, Result};
+use crate::{
+    build::Module, config::PackageConfig, erl, fs::FileSystemWriter, line_numbers::LineNumbers,
+    Result,
+};
 use itertools::Itertools;
 use std::{fmt::Debug, path::Path};
 
@@ -32,7 +35,8 @@ impl<'a> Erlang<'a> {
         let name = format!("{}.erl", erl_name);
         let path = self.output_directory.join(&name);
         let mut file = writer.open(path.as_path())?;
-        let res = erl::module(&module.ast, &mut file);
+        let line_numbers = LineNumbers::new(module.code.as_str());
+        let res = erl::module(&module.ast, &line_numbers, &mut file);
         tracing::trace!(name = ?name, "Generated Erlang module");
         res
     }

@@ -23,7 +23,8 @@ macro_rules! assert_erl {
             crate::typ::infer_module(&mut 0, ast, &std::collections::HashMap::new(), &mut vec![])
                 .expect("should successfully infer");
         let mut output = String::new();
-        module(&ast, &mut output).unwrap();
+        let line_numbers = LineNumbers::new($src);
+        module(&ast, &line_numbers, &mut output).unwrap();
         assert_eq!(($src, output), ($src, $erl.to_string()));
     };
 }
@@ -1398,7 +1399,11 @@ pub fn main() {
 
 -spec main() -> any().
 main() ->
-    erlang:error({gleam_error, todo}).
+    erlang:error(#{gleam_error => todo,
+                   message => <<"This has not yet been implemented"/utf8>>,
+                   module => <<"the_app"/utf8>>,
+                   function => <<"main"/utf8>>,
+                   line => 3}).
 "#,
     );
 
@@ -1415,7 +1420,11 @@ pub fn main() {
 
 -spec main() -> any().
 main() ->
-    erlang:error({gleam_error, todo, "testing"}).
+    erlang:error(#{gleam_error => todo,
+                   message => <<"testing"/utf8>>,
+                   module => <<"the_app"/utf8>>,
+                   function => <<"main"/utf8>>,
+                   line => 3}).
 "#,
     );
 

@@ -1,3 +1,6 @@
+// TODO: Refactor this module to be methods on structs rather than free
+// functions with a load of arguments
+
 #[cfg(test)]
 mod tests;
 
@@ -5,6 +8,7 @@ use crate::{
     ast::*,
     error::GleamExpect,
     fs::{OutputFile, Utf8Writer},
+    line_numbers::LineNumbers,
     pretty::*,
     project::{self, Analysed},
     typ::{
@@ -31,6 +35,7 @@ pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
         origin,
         source_base_path,
         ast,
+        src,
         ..
     } in analysed
     {
@@ -49,7 +54,8 @@ pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
         }
 
         let mut text = String::new();
-        module(ast, &mut text).gleam_expect("Buffer writing failed");
+        let line_numbers = LineNumbers::new(src);
+        module(ast, &line_numbers, &mut text).gleam_expect("Buffer writing failed");
         files.push(OutputFile {
             path: gen_dir.join(format!("{}.erl", erl_module_name)),
             text,
@@ -73,15 +79,23 @@ fn module_name_join<'a>(module: &'a [String]) -> Document<'a> {
 #[derive(Debug, Clone)]
 struct Env<'a> {
     module: &'a [String],
+    function: &'a str,
+    line_numbers: &'a LineNumbers,
     current_scope_vars: im::HashMap<String, usize>,
     erl_function_scope_vars: im::HashMap<String, usize>,
 }
 
 impl<'env> Env<'env> {
-    pub fn new(module: &'env [String]) -> Self {
+    pub fn new(
+        module: &'env [String],
+        function: &'env str,
+        line_numbers: &'env LineNumbers,
+    ) -> Self {
         Self {
             current_scope_vars: Default::default(),
             erl_function_scope_vars: Default::default(),
+            line_numbers,
+            function,
             module,
         }
     }
@@ -156,7 +170,11 @@ pub fn record_definition(name: &str, fields: &[&str]) -> String {
     buffer
 }
 
-pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> {
+pub fn module(
+    module: &TypedModule,
+    line_numbers: &LineNumbers,
+    writer: &mut impl Utf8Writer,
+) -> Result<()> {
     let module_name = module.name.as_slice();
     let mut exports = vec![];
     let mut type_defs = vec![];
@@ -169,12 +187,14 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
                 args,
                 ..
             } => exports.push(atom(name.to_string()).append("/").append(args.len())),
+
             Statement::ExternalFn {
                 public: true,
                 name,
                 args,
                 ..
             } => exports.push(atom(name.to_string()).append("/").append(args.len())),
+
             Statement::ExternalType { name, args, .. } => {
                 // Type Exports
                 type_exports.push(
@@ -209,6 +229,7 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
                     .append(".");
                 type_defs.push(doc);
             }
+
             Statement::CustomType {
                 name,
                 constructors,
@@ -324,7 +345,7 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
         module
             .statements
             .iter()
-            .flat_map(|s| statement(s, module_name))
+            .flat_map(|s| statement(s, module_name, line_numbers))
             .intersperse(lines(2)),
     );
 
@@ -342,7 +363,11 @@ pub fn module(module: &TypedModule, writer: &mut impl Utf8Writer) -> Result<()> 
         .pretty_print(80, writer)
 }
 
-fn statement<'a>(statement: &'a TypedStatement, module: &'a [String]) -> Option<Document<'a>> {
+fn statement<'a>(
+    statement: &'a TypedStatement,
+    module: &'a [String],
+    line_numbers: &'a LineNumbers,
+) -> Option<Document<'a>> {
     match statement {
         Statement::TypeAlias { .. } => None,
         Statement::CustomType { .. } => None,
@@ -362,6 +387,7 @@ fn statement<'a>(statement: &'a TypedStatement, module: &'a [String]) -> Option<
             body,
             module,
             return_type,
+            line_numbers,
         )),
 
         Statement::ExternalFn { public: false, .. } => None,
@@ -388,8 +414,9 @@ fn mod_fun<'a>(
     body: &'a TypedExpr,
     module: &'a [String],
     return_type: &'a Arc<Type>,
+    line_numbers: &'a LineNumbers,
 ) -> Document<'a> {
-    let mut env = Env::new(module);
+    let mut env = Env::new(module, name, line_numbers);
     let var_usages = collect_type_var_usages(
         HashMap::new(),
         std::iter::once(return_type).chain(args.iter().map(|a| &a.typ)),
@@ -407,7 +434,7 @@ fn mod_fun<'a>(
         .append(".")
 }
 
-fn fun_args<'a>(args: &'a [TypedArg], env: &mut Env<'_>) -> Document<'a> {
+fn fun_args<'a>(args: &'a [TypedArg], env: &mut Env<'a>) -> Document<'a> {
     wrap_args(args.iter().map(|a| match &a.names {
         ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => "_".to_doc(),
         ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
@@ -483,7 +510,7 @@ fn bit_string<'a>(elems: impl Iterator<Item = Document<'a>>) -> Document<'a> {
 fn const_segment<'a>(
     value: &'a TypedConstant,
     options: &'a [BitStringSegmentOption<TypedConstant>],
-    env: &mut Env<'_>,
+    env: &mut Env<'a>,
 ) -> Document<'a> {
     let document = match value {
         // Skip the normal <<value/utf8>> surrounds
@@ -498,7 +525,7 @@ fn const_segment<'a>(
         value => const_inline(value, env).surround("(", ")"),
     };
 
-    let size = |value: &'a TypedConstant, env: &mut Env<'_>| match value {
+    let size = |value: &'a TypedConstant, env: &mut Env<'a>| match value {
         Constant::Int { .. } => Some(":".to_doc().append(const_inline(value, env))),
         _ => Some(
             ":".to_doc()
@@ -514,7 +541,7 @@ fn const_segment<'a>(
 fn expr_segment<'a>(
     value: &'a TypedExpr,
     options: &'a [BitStringSegmentOption<TypedExpr>],
-    env: &mut Env<'_>,
+    env: &mut Env<'a>,
 ) -> Document<'a> {
     let mut value_is_a_string_literal = false;
 
@@ -535,7 +562,7 @@ fn expr_segment<'a>(
         value => expr(value, env).surround("(", ")"),
     };
 
-    let size = |expression: &'a TypedExpr, env: &mut Env<'_>| match expression {
+    let size = |expression: &'a TypedExpr, env: &mut Env<'a>| match expression {
         TypedExpr::Int { value, .. } => {
             let v = value.replace("_", "");
             let v = u64::from_str(&v).unwrap_or(0);
@@ -570,7 +597,7 @@ fn expr_segment<'a>(
 fn pattern_segment<'a>(
     value: &'a TypedPattern,
     options: &'a [BitStringSegmentOption<TypedPattern>],
-    env: &mut Env<'_>,
+    env: &mut Env<'a>,
 ) -> Document<'a> {
     let document = match value {
         // Skip the normal <<value/utf8>> surrounds
@@ -587,7 +614,7 @@ fn pattern_segment<'a>(
     };
 
     let size =
-        |value: &'a TypedPattern, env: &mut Env<'_>| Some(":".to_doc().append(pattern(value, env)));
+        |value: &'a TypedPattern, env: &mut Env<'a>| Some(":".to_doc().append(pattern(value, env)));
 
     let unit = |value: &'a usize| Some(Document::String(format!("unit:{}", value)));
 
@@ -600,10 +627,10 @@ fn bit_string_segment<'a, Value: 'a, SizeToDoc, UnitToDoc>(
     mut size_to_doc: SizeToDoc,
     mut unit_to_doc: UnitToDoc,
     value_is_a_string_literal: bool,
-    env: &mut Env<'_>,
+    env: &mut Env<'a>,
 ) -> Document<'a>
 where
-    SizeToDoc: FnMut(&'a Value, &mut Env<'_>) -> Option<Document<'a>>,
+    SizeToDoc: FnMut(&'a Value, &mut Env<'a>) -> Option<Document<'a>>,
     UnitToDoc: FnMut(&'a usize) -> Option<Document<'a>>,
 {
     let mut size: Option<Document<'a>> = None;
@@ -663,7 +690,7 @@ where
     document
 }
 
-fn seq<'a>(first: &'a TypedExpr, then: &'a TypedExpr, env: &mut Env<'_>) -> Document<'a> {
+fn seq<'a>(first: &'a TypedExpr, then: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
     force_break()
         .append(expr(first, env))
         .append(",")
@@ -675,7 +702,7 @@ fn bin_op<'a>(
     name: &'a BinOp,
     left: &'a TypedExpr,
     right: &'a TypedExpr,
-    env: &mut Env<'_>,
+    env: &mut Env<'a>,
 ) -> Document<'a> {
     let div_zero = match name {
         BinOp::DivInt | BinOp::ModuloInt => Some("0"),
@@ -747,7 +774,7 @@ fn bin_op<'a>(
     }
 }
 
-fn pipe<'a>(value: &'a TypedExpr, fun: &'a TypedExpr, env: &mut Env<'_>) -> Document<'a> {
+fn pipe<'a>(value: &'a TypedExpr, fun: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
     docs_args_call(fun, vec![maybe_block_expr(value, env)], env)
 }
 
@@ -755,7 +782,7 @@ fn try_<'a>(
     value: &'a TypedExpr,
     pat: &'a TypedPattern,
     then: &'a TypedExpr,
-    env: &mut Env<'_>,
+    env: &mut Env<'a>,
 ) -> Document<'a> {
     let try_error_name = "gleam@try_error";
 
@@ -789,7 +816,7 @@ fn let_<'a>(
     value: &'a TypedExpr,
     pat: &'a TypedPattern,
     then: &'a TypedExpr,
-    env: &mut Env<'_>,
+    env: &mut Env<'a>,
 ) -> Document<'a> {
     let body = maybe_block_expr(value, env);
     pattern(pat, env)
@@ -800,7 +827,7 @@ fn let_<'a>(
         .append(expr(then, env))
 }
 
-fn pattern<'a>(p: &'a TypedPattern, env: &mut Env<'_>) -> Document<'a> {
+fn pattern<'a>(p: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a> {
     match p {
         Pattern::Nil { .. } => "[]".to_doc(),
 
@@ -851,7 +878,7 @@ fn float<'a>(value: &str) -> Document<'a> {
 fn pattern_list_cons<'a>(
     head: &'a TypedPattern,
     tail: &'a TypedPattern,
-    env: &mut Env<'_>,
+    env: &mut Env<'a>,
 ) -> Document<'a> {
     list_cons(head, tail, env, pattern, |expr| match expr {
         Pattern::Nil { .. } => ListType::Nil,
@@ -862,7 +889,7 @@ fn pattern_list_cons<'a>(
     })
 }
 
-fn expr_list_cons<'a>(head: &'a TypedExpr, tail: &'a TypedExpr, env: &mut Env<'_>) -> Document<'a> {
+fn expr_list_cons<'a>(head: &'a TypedExpr, tail: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
     list_cons(head, tail, env, maybe_block_expr, |expr| match expr {
         TypedExpr::ListNil { .. } => ListType::Nil,
 
@@ -875,12 +902,12 @@ fn expr_list_cons<'a>(head: &'a TypedExpr, tail: &'a TypedExpr, env: &mut Env<'_
 fn list_cons<'a, ToDoc, Categorise, Elem: 'a>(
     head: Elem,
     tail: Elem,
-    env: &mut Env<'_>,
+    env: &mut Env<'a>,
     to_doc: ToDoc,
     categorise_element: Categorise,
 ) -> Document<'a>
 where
-    ToDoc: Fn(Elem, &mut Env<'_>) -> Document<'a>,
+    ToDoc: Fn(Elem, &mut Env<'a>) -> Document<'a>,
     Categorise: Fn(Elem) -> ListType<Elem, Elem>,
 {
     let mut elems = vec![head];
@@ -926,7 +953,7 @@ enum ListType<E, T> {
     NotList(T),
 }
 
-fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'_>) -> Document<'a> {
+fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) -> Document<'a> {
     match &constructor.variant {
         ValueConstructorVariant::Record {
             name: record_name, ..
@@ -982,7 +1009,7 @@ fn int<'a>(value: &str) -> Document<'a> {
     )
 }
 
-fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'_>) -> Document<'a> {
+fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'a> {
     match literal {
         Constant::Int { value, .. } => int(value),
         Constant::Float { value, .. } => float(value),
@@ -1018,7 +1045,7 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'_>) -> Document<'
 fn tag_tuple_pattern<'a>(
     name: &'a str,
     args: &'a [CallArg<TypedPattern>],
-    env: &mut Env<'_>,
+    env: &mut Env<'a>,
 ) -> Document<'a> {
     if args.is_empty() {
         atom(name.to_snake_case())
@@ -1030,7 +1057,7 @@ fn tag_tuple_pattern<'a>(
     }
 }
 
-fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'_>) -> Document<'a> {
+fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
     let Clause {
         guard,
         pattern: pat,
@@ -1075,7 +1102,7 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'_>) -> Document<'a> {
 
 fn optional_clause_guard<'a>(
     guard: Option<&'a TypedClauseGuard>,
-    env: &mut Env<'_>,
+    env: &mut Env<'a>,
 ) -> Document<'a> {
     match guard {
         Some(guard) => " when ".to_doc().append(bare_clause_guard(guard, env)),
@@ -1083,7 +1110,7 @@ fn optional_clause_guard<'a>(
     }
 }
 
-fn bare_clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'_>) -> Document<'a> {
+fn bare_clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<'a> {
     match guard {
         ClauseGuard::Or { left, right, .. } => clause_guard(left.as_ref(), env)
             .append(" orelse ")
@@ -1146,7 +1173,7 @@ fn bare_clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'_>) -> Docu
 fn tuple_index_inline<'a>(
     tuple: &'a TypedClauseGuard,
     index: u64,
-    env: &mut Env<'_>,
+    env: &mut Env<'a>,
 ) -> Document<'a> {
     use std::iter::once;
     let index_doc = Document::String(format!("{}", (index + 1)));
@@ -1155,7 +1182,7 @@ fn tuple_index_inline<'a>(
     "erlang:element".to_doc().append(wrap_args(iter))
 }
 
-fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'_>) -> Document<'a> {
+fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<'a> {
     match guard {
         // Binary ops are wrapped in parens
         ClauseGuard::Or { .. }
@@ -1181,7 +1208,7 @@ fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'_>) -> Document<
     }
 }
 
-fn clauses<'a>(cs: &'a [TypedClause], env: &mut Env<'_>) -> Document<'a> {
+fn clauses<'a>(cs: &'a [TypedClause], env: &mut Env<'a>) -> Document<'a> {
     concat(
         cs.iter()
             .map(|c| {
@@ -1194,7 +1221,7 @@ fn clauses<'a>(cs: &'a [TypedClause], env: &mut Env<'_>) -> Document<'a> {
     )
 }
 
-fn case<'a>(subjects: &'a [TypedExpr], cs: &'a [TypedClause], env: &mut Env<'_>) -> Document<'a> {
+fn case<'a>(subjects: &'a [TypedExpr], cs: &'a [TypedClause], env: &mut Env<'a>) -> Document<'a> {
     let subjects_doc = if subjects.len() == 1 {
         let subject = subjects
             .get(0)
@@ -1213,7 +1240,7 @@ fn case<'a>(subjects: &'a [TypedExpr], cs: &'a [TypedClause], env: &mut Env<'_>)
         .group()
 }
 
-fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>], env: &mut Env<'_>) -> Document<'a> {
+fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>], env: &mut Env<'a>) -> Document<'a> {
     docs_args_call(
         fun,
         args.iter()
@@ -1226,7 +1253,7 @@ fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>], env: &mut Env<'_
 fn docs_args_call<'a>(
     fun: &'a TypedExpr,
     mut args: Vec<Document<'a>>,
-    env: &mut Env<'_>,
+    env: &mut Env<'a>,
 ) -> Document<'a> {
     match fun {
         TypedExpr::ModuleSelect {
@@ -1318,7 +1345,7 @@ fn docs_args_call<'a>(
 fn record_update<'a>(
     spread: &'a TypedExpr,
     args: &'a [TypedRecordUpdateArg],
-    env: &mut Env<'_>,
+    env: &mut Env<'a>,
 ) -> Document<'a> {
     use std::iter::once;
 
@@ -1348,22 +1375,64 @@ fn begin_end<'a>(document: Document<'a>) -> Document<'a> {
 
 /// Same as expr, expect it wraps seq, let, etc in begin end
 ///
-fn maybe_block_expr<'a>(expression: &'a TypedExpr, env: &mut Env<'_>) -> Document<'a> {
+fn maybe_block_expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
     match &expression {
         TypedExpr::Seq { .. } | TypedExpr::Let { .. } => begin_end(expr(expression, env)),
         _ => expr(expression, env),
     }
 }
 
-fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'_>) -> Document<'a> {
+fn todo<'a>(message: &'a Option<String>, location: SrcSpan, env: &mut Env<'a>) -> Document<'a> {
+    let message = match message {
+        Some(message) => message,
+        None => "This has not yet been implemented",
+    };
+    let fields = vec![("message", string(message))];
+    erlang_error("todo", location, fields, env)
+}
+
+fn erlang_error<'a>(
+    name: &'a str,
+    location: SrcSpan,
+    fields: Vec<(&'a str, Document<'a>)>,
+    env: &Env<'a>,
+) -> Document<'a> {
+    let mut fields_doc = docvec!["gleam_error => ", name];
+    for (key, value) in fields.into_iter() {
+        fields_doc = fields_doc
+            .append(",")
+            .append(line())
+            .append(key)
+            .append(" => ")
+            .append(value);
+    }
+    let fields_doc = fields_doc
+        .append(",")
+        .append(line())
+        .append("module => ")
+        .append(Document::String(env.module.join("/")).surround("<<\"", "\"/utf8>>"))
+        .append(",")
+        .append(line())
+        .append("function => ")
+        .append(string(env.function))
+        .append(",")
+        .append(line())
+        .append("line => ")
+        .append(env.line_numbers.line_number(location.start));
+    let error = "#{"
+        .to_doc()
+        .append(fields_doc.group().nest_current())
+        .append("}");
+    docvec!["erlang:error", wrap_args(std::iter::once(error.group()))]
+}
+
+fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
     match expression {
         TypedExpr::ListNil { .. } => "[]".to_doc(),
 
-        TypedExpr::Todo { label: None, .. } => "erlang:error({gleam_error, todo})".to_doc(),
-
-        TypedExpr::Todo { label: Some(l), .. } => {
-            docvec!["erlang:error({gleam_error, todo, \"", l, "\"})"]
-        }
+        TypedExpr::Todo {
+            label, location, ..
+        } => todo(label, *location, env),
 
         TypedExpr::Int { value, .. } => int(value.as_ref()),
         TypedExpr::Float { value, .. } => float(value.as_ref()),
@@ -1453,7 +1522,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'_>) -> Document<'a> {
     }
 }
 
-fn tuple_index<'a>(tuple: &'a TypedExpr, index: u64, env: &mut Env<'_>) -> Document<'a> {
+fn tuple_index<'a>(tuple: &'a TypedExpr, index: u64, env: &mut Env<'a>) -> Document<'a> {
     use std::iter::once;
     let index_doc = Document::String(format!("{}", (index + 1)));
     let tuple_doc = expr(tuple, env);
@@ -1478,7 +1547,7 @@ fn module_select_fn<'a>(typ: Arc<Type>, module_name: &'a [String], label: &'a st
     }
 }
 
-fn fun<'a>(args: &'a [TypedArg], body: &'a TypedExpr, env: &mut Env<'_>) -> Document<'a> {
+fn fun<'a>(args: &'a [TypedArg], body: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
     let current_scope_vars = env.current_scope_vars.clone();
     let doc = "fun"
         .to_doc()

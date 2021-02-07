@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct LineNumbers {
     line_starts: Vec<usize>,
 }
