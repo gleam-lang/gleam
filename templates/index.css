@@ -211,13 +211,15 @@ p code {
 /* Version selector */
 
 #project-version {
+  --half-small-gap: calc(var(--small-gap) / 2);
   flex-shrink: 0;
   font-size: .9rem;
   font-weight: normal;
+  margin-left: var(--half-small-gap);
 }
 
 #project-version > span {
-  padding-left: var(--small-gap);
+  padding-left: var(--half-small-gap);
 }
 
 #project-version form {
@@ -229,7 +231,7 @@ p code {
 #project-version select {
   appearance: none;
   -webkit-appearance: none;
-  padding: .6rem 1.25rem .6rem var(--small-gap);
+  padding: .6rem 1.25rem .6rem var(--half-small-gap);
   position: relative;
   z-index: 1;
 }
