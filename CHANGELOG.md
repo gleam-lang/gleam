@@ -20,6 +20,8 @@
 - Fixed a bug where the repo URL would render incorrectly in HTML docs.
 - Fixed a bug where piping a block can render invalid Erlang.
 - New compile time warnings on unused types, functions and variables.
+- The runtime error emitted by the `todo` keyword now carries additional
+  information.
 
 ## v0.13.2 - 2021-01-14
 
