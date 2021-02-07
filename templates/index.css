@@ -212,6 +212,7 @@ p code {
 
 #project-version {
   --half-small-gap: calc(var(--small-gap) / 2);
+  --icon-size: .75em;
   flex-shrink: 0;
   font-size: .9rem;
   font-weight: normal;
@@ -231,7 +232,7 @@ p code {
 #project-version select {
   appearance: none;
   -webkit-appearance: none;
-  padding: .6rem 1.25rem .6rem var(--half-small-gap);
+  padding: .6rem calc(1.3 * var(--icon-size)) .6rem var(--half-small-gap);
   position: relative;
   z-index: 1;
 }
@@ -241,8 +242,8 @@ p code {
 }
 
 #project-version .icon {
-  font-size: 1.15em;
-  margin-left: -1.15em;
+  font-size: var(--icon-size);
+  margin-left: calc(-1.65 * var(--icon-size));
 }
 
 /* Module doc */
@@ -258,6 +259,7 @@ p code {
 }
 
 .module-name > .icon-gleam-chasse,
+.module-member-kind > .icon-gleam-chasse,
 .module-member-kind > .icon-gleam-chasse-2 {
   color: var(--pink);
   display: block;
