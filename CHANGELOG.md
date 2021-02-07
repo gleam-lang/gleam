@@ -25,6 +25,7 @@
 - Fixed a bug where bit string patterns would not correctly unify with the
   subject being pattern matches on.
 - Documentation dark mode.
+- `--warnings-as-errors` flag added to `gleam build` command.
 
 ## v0.13.2 - 2021-01-14
 

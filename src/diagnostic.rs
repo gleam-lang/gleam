@@ -7,6 +7,8 @@ pub struct DiagnosticLabel {
     pub location: crate::ast::SrcSpan,
     pub label: String,
 }
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct Diagnostic {
     pub file: String,
     pub location: crate::ast::SrcSpan,

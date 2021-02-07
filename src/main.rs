@@ -113,6 +113,11 @@ enum Command {
     Build {
         #[structopt(help = "location of the project root", default_value = ".")]
         project_root: String,
+        #[structopt(
+            help = "Emit compile time warnings as errors",
+            long = "warnings-as-errors"
+        )]
+        warnings_as_errors: bool,
     },
 
     #[structopt(name = "docs", about = "Render HTML documentation")]
@@ -256,7 +261,10 @@ fn main() {
     initialise_logger();
 
     let result = match Command::from_args() {
-        Command::Build { project_root } => command_build(project_root),
+        Command::Build {
+            project_root,
+            warnings_as_errors,
+        } => command_build(project_root, warnings_as_errors),
 
         Command::Docs(Docs::Build {
             project_root,
@@ -298,7 +306,7 @@ fn main() {
     }
 }
 
-fn command_build(root: String) -> Result<(), Error> {
+fn command_build(root: String, warnings_as_errors: bool) -> Result<(), Error> {
     let root = PathBuf::from(&root);
     let config = config::read_project_config(&root)?;
 
@@ -313,11 +321,15 @@ fn command_build(root: String) -> Result<(), Error> {
     // Generate Erlang code
     let output_files = erl::generate_erlang(analysed.as_slice());
 
+    // Print warnings or exit if warnings_as_errors and warnings
+    if warnings_as_errors {
+        warning::as_errors(analysed.as_slice())?;
+    } else {
+        warning::print_all(analysed.as_slice());
+    }
+
     // Reset output directory
     fs::delete_dir(&root.join(project::OUTPUT_DIR_NAME))?;
-
-    // Print warnings
-    warning::print_all(analysed.as_slice());
 
     // Delete the gen directory before generating the newly compiled files
     fs::write_outputs(output_files.as_slice())?;
