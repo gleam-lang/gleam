@@ -1,8 +1,11 @@
 use crate::{
     cli,
     diagnostic::{write, Diagnostic, Severity},
+    error::Error,
+    typ,
     typ::pretty::Printer,
 };
+use std::io::Write;
 use std::path::PathBuf;
 use termcolor::Buffer;
 
@@ -18,101 +21,75 @@ pub enum Warning {
 }
 
 impl Warning {
-    pub fn pretty(&self, buffer: &mut Buffer) {
-        use crate::typ::Warning;
-        use std::io::Write;
-
-        buffer
-            .write_all(b"\n")
-            .expect("error pretty buffer write space before");
-
+    pub fn to_diagnostic(&self) -> (Diagnostic, String) {
         match self {
             Self::Type { path, src, warning } => match warning {
-                Warning::Todo { location, typ } => {
-                    let diagnostic = Diagnostic {
-                        title: "Todo found".to_string(),
-                        label: "".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write(buffer, diagnostic, Severity::Warning);
+                typ::Warning::Todo { location, typ } => {
                     let mut printer = Printer::new();
-
-                    writeln!(
-                        buffer,
-                        "I think this should be an `{}`.
+                    (
+                        Diagnostic {
+                            title: "Todo found".to_string(),
+                            label: "Todo found".to_string(),
+                            file: path.to_str().unwrap().to_string(),
+                            src: src.to_string(),
+                            location: *location,
+                        },
+                        format!(
+                            "Hint: I think its type is `{}`.
 
 This code will crash if it is run. Be sure to remove this todo before running
 your program.",
-                        printer.pretty_print(typ, 0)
+                            printer.pretty_print(typ, 0)
+                        ),
                     )
-                    .unwrap();
                 }
 
-                Warning::ImplicitlyDiscardedResult { location } => {
-                    let diagnostic = Diagnostic {
+                typ::Warning::ImplicitlyDiscardedResult { location } => (
+                    Diagnostic {
                         title: "Unused result value".to_string(),
-                        label: "".to_string(),
+                        label: "The Result value created here is unused".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: *location,
-                    };
-                    write(buffer, diagnostic, Severity::Warning);
-                    writeln!(buffer,
-"The Result value returned by this code is not being used, so any error is being
-silently ignored. Check for an error with a case statement, or assign it to the
-variable _ if you are sure the error does not matter.")
-                    .unwrap();
-                }
+                    },
+                    "Hint: If you are sure you don't need it you can assign it to `_`".to_string(),
+                ),
 
-                Warning::UnusedLiteral { location } => {
-                    let diagnostic = Diagnostic {
+                typ::Warning::UnusedLiteral { location } => (
+                    Diagnostic {
                         title: "Unused literal".to_string(),
-                        label: "".to_string(),
+                        label: "This value is never used".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: *location,
-                    };
-                    write(buffer, diagnostic, Severity::Warning);
-                    writeln!(
-                        buffer,
-                        "This value is never used, it can be safely deleted."
-                    )
-                    .unwrap();
-                }
+                    },
+                    "Hint: You can safely remove it.".to_string(),
+                ),
 
-                Warning::NoFieldsRecordUpdate { location } => {
-                    let diagnostic = Diagnostic {
+                typ::Warning::NoFieldsRecordUpdate { location } => (
+                    Diagnostic {
                         title: "Fieldless record update".to_string(),
-                        label: "".to_string(),
+                        label: "This record update doesn't change any fields.".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: *location,
-                    };
-                    write(buffer, diagnostic, Severity::Warning);
-                    writeln!(buffer,
-"No fields have been changed in this record update, so it returns the original
-record without modification. Add some fields or remove this update.")
-                    .unwrap();
-                }
+                    },
+                    "Hint: Add some fields to change or replace it with the record itself. "
+                        .to_string(),
+                ),
 
-                Warning::AllFieldsRecordUpdate { location } => {
-                    let diagnostic = Diagnostic {
+                typ::Warning::AllFieldsRecordUpdate { location } => (
+                    Diagnostic {
                         title: "Redundant record update".to_string(),
-                        label: "".to_string(),
+                        label: "This record update specifies all fields".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: *location,
-                    };
-                    write(buffer, diagnostic, Severity::Warning);
-                    writeln!(buffer,
-"All fields have been given in this record update, so it does not need to be
-be an update. Remove the update or remove fields that need to be copied.")
-                    .unwrap();
-                }
+                    },
+                    "Hint: It is better style to use the record creation syntax.".to_string(),
+                ),
 
-                Warning::UnusedType {
+                typ::Warning::UnusedType {
                     location, imported, ..
                 } => {
                     let title = if *imported {
@@ -126,18 +103,19 @@ be an update. Remove the update or remove fields that need to be copied.")
                         "This private type is never used.".to_string()
                     };
 
-                    let diagnostic = Diagnostic {
-                        title,
-                        label,
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write(buffer, diagnostic, Severity::Warning);
-                    writeln!(buffer, "Hint: You can safely remove it.",).unwrap();
+                    (
+                        Diagnostic {
+                            title,
+                            label,
+                            file: path.to_str().unwrap().to_string(),
+                            src: src.to_string(),
+                            location: *location,
+                        },
+                        "Hint: You can safely remove it.".to_string(),
+                    )
                 }
 
-                Warning::UnusedConstructor {
+                typ::Warning::UnusedConstructor {
                     location, imported, ..
                 } => {
                     let title = if *imported {
@@ -151,70 +129,73 @@ be an update. Remove the update or remove fields that need to be copied.")
                         "This private type constructor is never used.".to_string()
                     };
 
-                    let diagnostic = Diagnostic {
-                        title,
-                        label,
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write(buffer, diagnostic, Severity::Warning);
-                    writeln!(buffer, "Hint: You can safely remove it.",).unwrap();
+                    (
+                        Diagnostic {
+                            title,
+                            label,
+                            file: path.to_str().unwrap().to_string(),
+                            src: src.to_string(),
+                            location: *location,
+                        },
+                        "Hint: You can safely remove it.".to_string(),
+                    )
                 }
 
-                Warning::UnusedImportedValue { location, .. } => {
-                    let diagnostic = Diagnostic {
+                typ::Warning::UnusedImportedValue { location, .. } => (
+                    Diagnostic {
                         title: "Unused imported value".to_string(),
                         label: "This imported value is never used.".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: *location,
-                    };
-                    write(buffer, diagnostic, Severity::Warning);
-                    writeln!(buffer, "Hint: You can safely remove it.").unwrap();
-                }
+                    },
+                    "Hint: You can safely remove it.".to_string(),
+                ),
 
-                Warning::UnusedPrivateModuleConstant { location, .. } => {
-                    let diagnostic = Diagnostic {
+                typ::Warning::UnusedPrivateModuleConstant { location, .. } => (
+                    Diagnostic {
                         title: "Unused private constant".to_string(),
                         label: "This private constant is never used.".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: *location,
-                    };
-                    write(buffer, diagnostic, Severity::Warning);
-                    writeln!(buffer, "Hint: You can safely remove it.").unwrap();
-                }
+                    },
+                    "Hint: You can safely remove it.".to_string(),
+                ),
 
-                Warning::UnusedPrivateFunction { location, .. } => {
-                    let diagnostic = Diagnostic {
+                typ::Warning::UnusedPrivateFunction { location, .. } => (
+                    Diagnostic {
                         title: "Unused private function".to_string(),
                         label: "This private function is never used.".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: *location,
-                    };
-                    write(buffer, diagnostic, Severity::Warning);
-                    writeln!(buffer, "Hint: You can safely remove it.").unwrap();
-                }
+                    },
+                    "Hint: You can safely remove it.".to_string(),
+                ),
 
-                Warning::UnusedVariable { location, name, .. } => {
-                    let diagnostic = Diagnostic {
+                typ::Warning::UnusedVariable { location, name, .. } => (
+                    Diagnostic {
                         title: "Unused variable".to_string(),
                         label: "This variable is never used.".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: *location,
-                    };
-                    write(buffer, diagnostic, Severity::Warning);
-                    writeln!(
-                        buffer,
-                        "Hint: you can ignore it with an underscore: `_{}`.",
-                        name
-                    )
-                    .unwrap();
-                }
+                    },
+                    format!("Hint: you can ignore it with an underscore: `_{}`.", name),
+                ),
             },
+        }
+    }
+
+    pub fn pretty(&self, buffer: &mut Buffer) {
+        buffer
+            .write_all(b"\n")
+            .expect("error pretty buffer write space before");
+        let (diagnostic, extra) = self.to_diagnostic();
+        write(buffer, diagnostic, Severity::Warning);
+        if !extra.is_empty() {
+            writeln!(buffer, "{}", extra).unwrap();
         }
     }
 
@@ -231,5 +212,22 @@ pub fn print_all(analysed: &[crate::project::Analysed]) {
         for w in a.warnings.iter() {
             w.pretty_print()
         }
+    }
+}
+
+pub fn as_errors(analysed: &[crate::project::Analysed]) -> Result<(), Error> {
+    let mut warnings = vec![];
+    for a in analysed.iter() {
+        for w in a.warnings.iter() {
+            warnings.push(w.to_diagnostic());
+        }
+    }
+
+    if warnings.is_empty() {
+        Ok(())
+    } else {
+        Err(Error::GenericFileDiagnostics {
+            diagnostics: warnings,
+        })
     }
 }

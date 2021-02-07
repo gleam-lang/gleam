@@ -160,6 +160,10 @@ pub enum Error {
     MetadataDecodeError {
         error: Option<String>,
     },
+
+    GenericFileDiagnostics {
+        diagnostics: Vec<(Diagnostic, String)>,
+    },
 }
 
 impl From<capnp::Error> for Error {
@@ -1562,6 +1566,15 @@ but it cannot be found.",
                 };
 
                 write_project(buffer, diagnostic);
+            }
+
+            Error::GenericFileDiagnostics { diagnostics } => {
+                for (diagnostic, extra) in diagnostics {
+                    write(buffer, diagnostic.clone(), Severity::Error);
+                    if !extra.is_empty() {
+                        writeln!(buffer, "{}\n", extra).expect("error pretty buffer write");
+                    }
+                }
             }
         }
     }
