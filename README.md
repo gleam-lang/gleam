@@ -70,6 +70,7 @@ Thank you to our top sponsors! Gleam would not be possible without you.
  - [John Palgut](https://github.com/Jwsonic)
  - [José Valim](https://github.com/josevalim)
  - [João Veiga](https://github.com/jveiga)
+ - [Kapp Technology](https://github.com/kapp-technology)
  - [Lars Wikman](https://github.com/lawik)
  - [Mario Vellandi](https://github.com/mvellandi)
  - [mario](https://github.com/mario-mazo)
