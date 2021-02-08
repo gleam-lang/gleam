@@ -18,6 +18,7 @@ use itertools::Itertools;
 use std::path::{Path, PathBuf};
 
 const MAX_COLUMNS: isize = 65;
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub fn build_project(
     project_root: impl AsRef<Path>,
@@ -112,6 +113,7 @@ pub fn generate_html(
         let content = std::fs::read_to_string(&page.source).unwrap_or_default();
 
         let temp = PageTemplate {
+            gleam_version: VERSION,
             unnest: ".".to_string(),
             links: &links,
             pages: &pages,
@@ -136,6 +138,7 @@ pub fn generate_html(
         let source_links = SourceLinker::new(&project_root, project_config, &module);
 
         let template = ModuleTemplate {
+            gleam_version: VERSION,
             unnest: module.name.iter().map(|_| "..").intersperse("/").collect(),
             links: &links,
             pages: &pages,
@@ -416,6 +419,7 @@ struct Constant<'a> {
 #[derive(Template)]
 #[template(path = "documentation_page.html")]
 struct PageTemplate<'a> {
+    gleam_version: &'a str,
     unnest: String,
     page_title: &'a str,
     project_name: &'a str,
@@ -429,6 +433,7 @@ struct PageTemplate<'a> {
 #[derive(Template)]
 #[template(path = "documentation_module.html")]
 struct ModuleTemplate<'a> {
+    gleam_version: &'a str,
     unnest: String,
     page_title: &'a str,
     module_name: String,

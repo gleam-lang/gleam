@@ -22,6 +22,7 @@
 - New compile time warnings on unused types, functions and variables.
 - The runtime error emitted by the `todo` keyword now carries additional
   information.
+- Documentation dark mode.
 
 ## v0.13.2 - 2021-01-14
 
