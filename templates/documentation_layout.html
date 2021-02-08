@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ page_title }}</title>
-    <link rel="stylesheet" href="{{ unnest }}/index.css" type="text/css" />
+    <link rel="stylesheet" href="{{ unnest }}/index.css?v={{ gleam_version }}" type="text/css" />
     <!-- The docs_config.js file is provided by HexDocs and shared
          between multiple versions of the same package. -->
     <script src="{{ unnest }}/docs_config.js"></script>
@@ -262,8 +262,8 @@
 
     <script src="https://unpkg.com/@highlightjs/cdn-assets@10.5.0/languages/elixir.min.js"></script>
 
-    <script src="{{ unnest }}/highlightjs-gleam.js"></script>
+    <script src="{{ unnest }}/highlightjs-gleam.js?v={{ gleam_version }}"></script>
 
-    <script src="{{ unnest }}/gleam.js"></script>
+    <script src="{{ unnest }}/gleam.js?v={{ gleam_version }}"></script>
   </body>
 </html>
