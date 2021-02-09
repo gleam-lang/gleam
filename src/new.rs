@@ -174,7 +174,7 @@ pub fn stop(_state: Dynamic) {
     {{test, [{{src_dirs, ["src", "test", "gen/src", "gen/test"]}}]}}
 ]}}.
 
-{{project_plugins, [rebar_gleam]}}.
+{{project_plugins, [rebar_gleam, rebar3_hex]}}.
 
 {{deps, [
     {{gleam_stdlib, "{stdlib}"}}
