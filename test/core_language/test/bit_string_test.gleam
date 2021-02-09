@@ -21,12 +21,9 @@ pub fn integer_to_binary_test() {
 
 // Sizes
 pub fn size_variable_from_match_test() {
-  let <<
-    name_size:8,
-    name:binary-size(name_size),
-    " the ":utf8,
-    species:binary,
-  >> = <<5, "Frank the Walrus":utf8>>
+  let <<name_size:8, name:binary-size(name_size), " the ":utf8, species:binary>> = <<
+    5, "Frank the Walrus":utf8,
+  >>
 
   should.equal(name, <<"Frank":utf8>>)
   should.equal(species, <<"Walrus":utf8>>)
@@ -48,7 +45,7 @@ pub fn units_test() {
 
 // Strings
 pub fn string_test() {
-  let a = "test"
+  let a = <<"test":utf8>>
   let <<b:2-binary, "st":utf8>> = a
 
   should.equal(b, <<"te":utf8>>)
@@ -86,11 +83,19 @@ pub fn non_literal_strings_test() {
   let f = fn() { "ß" }
 
   let y = <<v:utf8, t.0:utf8, c.value:utf8, f():utf8, "↑":utf8>>
-  let <<var_out:8, tuple_out:8, custom_type_out:8, function_out:16, literal_out:24>> = y
+  let <<
+    var_out:8,
+    tuple_out:8,
+    custom_type_out:8,
+    function_out:16,
+    literal_out:24,
+  >> = y
 
   should.equal(var_out, 120)
   should.equal(tuple_out, 121)
   should.equal(custom_type_out, 122)
-  should.equal(function_out, 50079) // "ß" is encoded as C3 9F in utf8
-  should.equal(literal_out, 14845585) // "↑" is encoded as E2 86 91 in utf8
+  should.equal(function_out, 50079)
+  // "ß" is encoded as C3 9F in utf8
+  should.equal(literal_out, 14845585)
+  // "↑" is encoded as E2 86 91 in utf8
 }
