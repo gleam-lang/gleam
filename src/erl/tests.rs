@@ -765,7 +765,10 @@ bitstring_discard(X) ->
     end.
 "#,
     );
+}
 
+#[test]
+fn clause_guards() {
     // Clause guards
     assert_erl!(
         r#"
@@ -1387,7 +1390,10 @@ main(Args) ->
     end.
 "#,
     );
+}
 
+#[test]
+fn todo_expr() {
     assert_erl!(
         r#"
 pub fn main() {
@@ -1429,7 +1435,10 @@ main() ->
                    line => 3}).
 "#,
     );
+}
 
+#[test]
+fn record_accessors() {
     // We can use record accessors for types with only one constructor
     assert_erl!(
         r#"
@@ -1454,7 +1463,10 @@ get_name(Person) ->
     erlang:element(2, Person).
 "#,
     );
+}
 
+#[test]
+fn record_spread() {
     // Test binding to a record field with the spread operator
     assert_erl!(
         r#"
@@ -1569,7 +1581,10 @@ main() ->
     end.
 "#,
     );
+}
 
+#[test]
+fn clever_pipe_rewriting() {
     // a |> b
     assert_erl!(
         r#"
@@ -1601,7 +1616,10 @@ apply(F, A) ->
     F(A, 1).
 "#,
     );
+}
 
+#[test]
+fn binop_parens() {
     // Parentheses are added for binop subexpressions
     assert_erl!(
         r#"
@@ -1621,8 +1639,10 @@ main() ->
     B.
 "#,
     );
+}
 
-    // try
+#[test]
+fn try_expr() {
     assert_erl!(
         r#"
 fn main() {
@@ -1647,7 +1667,10 @@ main() ->
     end.
 "#,
     );
+}
 
+#[test]
+fn field_access_function_call() {
     // Parentheses are added when calling functions returned by record access
     assert_erl!(
         r#"
@@ -1691,9 +1714,10 @@ main() ->
     (erlang:element(1, T))(5).
 "#,
     );
+}
 
-    // BitStrings
-
+#[test]
+fn bit_strings() {
     assert_erl!(
         r#"fn main() {
   let a = 1
@@ -1800,7 +1824,10 @@ main() ->
     A.
 "#,
     );
+}
 
+#[test]
+fn constants_in_guards() {
     assert_erl!(
         r#"
 pub const string_value = "constant value"
@@ -1974,7 +2001,10 @@ main(Arg) ->
     end.
 "#,
     );
+}
 
+#[test]
+fn alternative_patterns() {
     // reassigning name in alternative patterns
     assert_erl!(
         r#"
@@ -2090,7 +2120,10 @@ main(Arg) ->
     end.
 "#,
     );
+}
 
+#[test]
+fn record_updates() {
     // Record updates
     assert_erl!(
         r#"
@@ -2168,9 +2201,10 @@ main() ->
     New_p.
 "#,
     );
+}
 
-    // Numbers with underscores
-
+#[test]
+fn numbers_with_underscores() {
     assert_erl!(
         r#"
 fn main() {
