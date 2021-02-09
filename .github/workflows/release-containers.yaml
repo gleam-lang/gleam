@@ -52,6 +52,7 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
           tag-sha: true
+          tag-latest: false
           tag-semver: |
             {{version}}-${{ matrix.base-image }}
             {{major}}.{{minor}}-${{ matrix.base-image }}
