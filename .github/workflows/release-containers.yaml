@@ -46,19 +46,15 @@ jobs:
       - name: Unpack Gleam binary from archive
         run: tar xf gleam.tar.gz
 
-      - name: Build container image
-        run: docker build --file containers/${{ matrix.base-image }}.dockerfile --tag the-image .
-
       - name: Prepare container meta information
         id: container_meta
         uses: crazy-max/ghaction-docker-meta@v1
         with:
-          images: ghcr.io/${{ github.repository }}-${{ matrix.base-image }}
+          images: ghcr.io/${{ github.repository }}
           tag-sha: true
           tag-semver: |
-            {{version}}
-            {{major}}.{{minor}}
-            {{major}}
+            {{version}}-${{ matrix.base-image }}
+            {{major}}.{{minor}}-${{ matrix.base-image }}
 
       - name: Build and push
         uses: docker/build-push-action@v2
