@@ -716,7 +716,7 @@ fn bit_string_discard() {
 
     assert_erl!(
         r#"
-pub fn bitstring_discard(x: String) -> Bool {
+pub fn bitstring_discard(x) -> Bool {
  case x {
   <<_:utf8, rest:binary>> -> True
    _ -> False
@@ -728,7 +728,7 @@ pub fn bitstring_discard(x: String) -> Bool {
 
 -export([bitstring_discard/1]).
 
--spec bitstring_discard(binary()) -> boolean().
+-spec bitstring_discard(bitstring()) -> boolean().
 bitstring_discard(X) ->
     case X of
         <<_/utf8, Rest/binary>> ->
@@ -739,9 +739,10 @@ bitstring_discard(X) ->
     end.
 "#,
     );
+
     assert_erl!(
         r#"
-pub fn bitstring_discard(x: String) -> Bool {
+pub fn bitstring_discard(x) -> Bool {
  case x {
   <<_discardme:utf8, rest:binary>> -> True
    _ -> False
@@ -753,7 +754,7 @@ pub fn bitstring_discard(x: String) -> Bool {
 
 -export([bitstring_discard/1]).
 
--spec bitstring_discard(binary()) -> boolean().
+-spec bitstring_discard(bitstring()) -> boolean().
 bitstring_discard(X) ->
     case X of
         <<_/utf8, Rest/binary>> ->
@@ -764,6 +765,7 @@ bitstring_discard(X) ->
     end.
 "#,
     );
+
     // Clause guards
     assert_erl!(
         r#"

@@ -338,6 +338,9 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
             },
 
             Pattern::BitString { location, segments } => {
+                self.environment
+                    .unify(typ, bit_string())
+                    .map_err(|e| convert_unify_error(e, location))?;
                 self.infer_pattern_bit_string(segments, location)
             }
 

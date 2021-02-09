@@ -3638,3 +3638,17 @@ pub fn parse(input: BitString) -> String {
         }
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/970
+#[test]
+fn bitstring_pattern_unification() {
+    assert_module_infer!(
+        "pub fn m(x) { case x { <<>> -> Nil _ -> Nil} }",
+        vec![("m", "fn(BitString) -> Nil")],
+    );
+
+    assert_module_infer!(
+        "pub fn m(x) { case x { <<>> -> Nil _ -> Nil} }",
+        vec![("m", "fn(BitString) -> Nil")],
+    );
+}
