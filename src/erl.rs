@@ -260,9 +260,13 @@ pub fn module(
                 let phantom_vars_constructor = if phantom_vars.is_empty() {
                     None
                 } else {
-                    Some(tuple(std::iter::once("gleam_phantom".to_doc()).chain(
-                        phantom_vars.iter().map(|pv| pv.to_erlang_type_spec(None)),
-                    )))
+                    Some(tuple(
+                        std::iter::once("gleam_phantom".to_doc()).chain(
+                            phantom_vars
+                                .iter()
+                                .map(|pv| TypePrinter::print_without_usages(pv)),
+                        ),
+                    ))
                 };
                 // Type Exports
                 type_exports.push(
@@ -279,7 +283,10 @@ pub fn module(
                             if c.args.is_empty() {
                                 name
                             } else {
-                                let args = c.args.iter().map(|a| a.typ.to_erlang_type_spec(None));
+                                let args = c
+                                    .args
+                                    .iter()
+                                    .map(|a| TypePrinter::print_without_usages(&a.typ));
                                 tuple(std::iter::once(name).chain(args))
                             }
                         })
@@ -292,7 +299,7 @@ pub fn module(
                 let params = concat(
                     typed_parameters
                         .iter()
-                        .map(|p| p.to_erlang_type_spec(None))
+                        .map(|a| TypePrinter::print_without_usages(a))
                         .intersperse(", ".to_doc()),
                 );
                 let doc = if *opaque { "-opaque " } else { "-type " }
@@ -421,10 +428,9 @@ fn mod_fun<'a>(
         HashMap::new(),
         std::iter::once(return_type).chain(args.iter().map(|a| &a.typ)),
     );
-    let args_spec = args
-        .iter()
-        .map(|a| a.typ.to_erlang_type_spec(Some(&var_usages)));
-    let return_spec = return_type.to_erlang_type_spec(Some(&var_usages));
+    let type_printer = TypePrinter::new(&var_usages);
+    let args_spec = args.iter().map(|a| type_printer.print(&a.typ));
+    let return_spec = type_printer.print(return_type);
     let spec = fun_spec(name, args_spec, return_spec);
 
     spec.append(atom(name.to_string()))
@@ -1580,10 +1586,9 @@ fn external_fun<'a>(
         HashMap::new(),
         std::iter::once(return_type).chain(args.iter().map(|a| &a.typ)),
     );
-    let args_spec = args
-        .iter()
-        .map(|a| a.typ.to_erlang_type_spec(Some(&var_usages)));
-    let return_spec = return_type.to_erlang_type_spec(Some(&var_usages));
+    let type_printer = TypePrinter::new(&var_usages);
+    let args_spec = args.iter().map(|a| type_printer.print(&a.typ));
+    let return_spec = type_printer.print(return_type);
     let spec = fun_spec(name, args_spec, return_spec);
 
     spec.append(atom(name.to_string())).append(
@@ -1738,9 +1743,37 @@ fn collect_type_var_usages<'a>(
     types: impl Iterator<Item = &'a Arc<Type>>,
 ) -> HashMap<usize, usize> {
     for typ in types {
-        typ.type_var_ids(&mut ids);
+        type_var_ids(typ, &mut ids);
     }
     ids
+}
+
+fn type_var_ids(type_: &Type, ids: &mut HashMap<usize, usize>) {
+    match type_ {
+        Type::Var { typ } => match &*typ.borrow() {
+            TypeVar::Generic { id, .. } | TypeVar::Unbound { id, .. } => {
+                let count = ids.entry(*id).or_insert(0);
+                *count += 1;
+            }
+            TypeVar::Link { typ } => type_var_ids(typ, ids),
+        },
+        Type::App { args, .. } => {
+            for arg in args {
+                type_var_ids(&arg, ids)
+            }
+        }
+        Type::Fn { args, retrn } => {
+            for arg in args {
+                type_var_ids(arg, ids)
+            }
+            type_var_ids(&retrn, ids);
+        }
+        Type::Tuple { elems } => {
+            for elem in elems {
+                type_var_ids(elem, ids)
+            }
+        }
+    }
 }
 
 fn erl_safe_type_name(mut name: String) -> String {
@@ -1790,122 +1823,125 @@ fn erl_safe_type_name(mut name: String) -> String {
     name
 }
 
-impl Type {
-    pub fn to_erlang_type_spec(
-        &self,
-        var_usages: Option<&HashMap<usize, usize>>,
-    ) -> Document<'static> {
-        match self {
-            Self::Var { typ } => match &*typ.borrow() {
-                TypeVar::Generic { id, .. } | TypeVar::Unbound { id, .. } => match var_usages {
-                    Some(usages) => match usages.get(&*id) {
-                        Some(&0) => Document::Nil,
-                        Some(&1) => "any()".to_doc(),
-                        _ => id_to_type_var(*id),
-                    },
-                    None => id_to_type_var(*id),
-                },
-                TypeVar::Link { typ } => Type::to_erlang_type_spec(typ, var_usages),
-            },
+#[derive(Debug)]
+struct TypePrinter<'a> {
+    var_usages: Option<&'a HashMap<usize, usize>>,
+}
 
-            Self::App {
-                name, module, args, ..
-            } => {
-                if module.is_empty() {
-                    match name.as_ref() {
-                        "Nil" => "nil".to_doc(),
-                        "Int" | "UtfCodepoint" => "integer()".to_doc(),
-                        "String" => "binary()".to_doc(),
-                        "Bool" => "boolean()".to_doc(),
-                        "Float" => "float()".to_doc(),
-                        "BitString" => "bitstring()".to_doc(),
-                        "List" => {
-                            let arg0 = args[0].to_erlang_type_spec(var_usages);
-                            "list(".to_doc().append(arg0).append(")")
-                        }
-                        "Result" => {
-                            let arg_ok = args[0].to_erlang_type_spec(var_usages);
-                            let arg_err = args[1].to_erlang_type_spec(var_usages);
-                            concat(
-                                vec![
-                                    tuple(vec!["ok".to_doc(), arg_ok].into_iter()),
-                                    tuple(vec!["error".to_doc(), arg_err].into_iter()),
-                                ]
-                                .into_iter()
-                                .intersperse(break_(" |", " | ")),
-                            )
-                            .nest(INDENT)
-                            .group()
-                        }
-                        // Getting here sholud mean we either forgot a built-in type or there is a
-                        // compiler error
-                        name => crate::error::fatal_compiler_bug(
-                            format!("{} is not a built-in type.", name).as_str(),
-                        ),
-                    }
-                } else {
-                    let args = concat(
-                        args.iter()
-                            .map(|a| a.to_erlang_type_spec(var_usages))
-                            .intersperse(", ".to_doc()),
-                    );
-                    let mod_name = concat(
-                        module
-                            .iter()
-                            .map(|m| Document::String(m.to_snake_case()))
-                            .intersperse("@".to_doc()),
-                    );
-                    mod_name
-                        .append(":")
-                        .append(Document::String(erl_safe_type_name(name.to_snake_case())))
-                        .append("(")
-                        .append(args)
-                        .append(")")
-                }
-            }
-            Self::Fn { args, retrn } => {
-                let args = concat(
-                    args.iter()
-                        .map(|a| a.to_erlang_type_spec(var_usages))
-                        .intersperse(", ".to_doc()),
-                );
-                let retrn = retrn.to_erlang_type_spec(var_usages);
-                "fun(("
-                    .to_doc()
-                    .append(args)
-                    .append(") -> ")
-                    .append(retrn)
-                    .append(")")
-            }
-            Self::Tuple { elems } => tuple(elems.iter().map(|e| e.to_erlang_type_spec(var_usages))),
+impl<'a> TypePrinter<'a> {
+    pub fn new(var_usages: &'a HashMap<usize, usize>) -> Self {
+        Self {
+            var_usages: Some(var_usages),
         }
     }
-    pub fn type_var_ids(&self, ids: &mut HashMap<usize, usize>) {
-        match self {
-            Self::Var { typ } => match &*typ.borrow() {
-                TypeVar::Generic { id, .. } | TypeVar::Unbound { id, .. } => {
-                    let count = ids.entry(*id).or_insert(0);
-                    *count += 1;
-                }
-                TypeVar::Link { typ } => Type::type_var_ids(typ, ids),
-            },
 
-            Self::App { args, .. } => {
-                for arg in args {
-                    arg.type_var_ids(ids)
-                }
-            }
-            Self::Fn { args, retrn } => {
-                for arg in args {
-                    arg.type_var_ids(ids)
-                }
-                retrn.type_var_ids(ids);
-            }
-            Self::Tuple { elems } => {
-                for elem in elems {
-                    elem.type_var_ids(ids)
-                }
-            }
+    pub fn print_without_usages(type_: &Type) -> Document<'static> {
+        Self { var_usages: None }.print(type_)
+    }
+
+    pub fn print(&self, type_: &Type) -> Document<'static> {
+        match type_ {
+            Type::Var { typ } => self.print_var(&*typ.borrow()),
+
+            Type::App {
+                name, module, args, ..
+            } if module.is_empty() => self.print_prelude_type(name.as_str(), args.as_slice()),
+
+            Type::App {
+                name, module, args, ..
+            } => self.print_type_app(module.as_slice(), name.as_str(), args.as_slice()),
+
+            Type::Fn { args, retrn } => self.print_fn(args.as_slice(), &retrn),
+
+            Type::Tuple { elems } => tuple(elems.iter().map(|e| self.print(e))),
         }
+    }
+
+    fn print_var(&self, type_: &TypeVar) -> Document<'static> {
+        match type_ {
+            TypeVar::Generic { id, .. } | TypeVar::Unbound { id, .. } => match &self.var_usages {
+                Some(usages) => match usages.get(&*id) {
+                    Some(&0) => Document::Nil,
+                    Some(&1) => "any()".to_doc(),
+                    _ => id_to_type_var(*id),
+                },
+                None => id_to_type_var(*id),
+            },
+            TypeVar::Link { typ } => self.print(typ),
+        }
+    }
+
+    fn print_prelude_type(&self, name: &str, args: &[Arc<Type>]) -> Document<'static> {
+        match name {
+            "Nil" => "nil".to_doc(),
+            "Int" | "UtfCodepoint" => "integer()".to_doc(),
+            "String" => "binary()".to_doc(),
+            "Bool" => "boolean()".to_doc(),
+            "Float" => "float()".to_doc(),
+            "BitString" => "bitstring()".to_doc(),
+            "List" => {
+                let arg0 = self.print(&args[0]);
+                "list(".to_doc().append(arg0).append(")")
+            }
+            "Result" => {
+                let arg_ok = self.print(&args[0]);
+                let arg_err = self.print(&args[1]);
+                concat(
+                    vec![
+                        tuple(vec!["ok".to_doc(), arg_ok].into_iter()),
+                        tuple(vec!["error".to_doc(), arg_err].into_iter()),
+                    ]
+                    .into_iter()
+                    .intersperse(break_(" |", " | ")),
+                )
+                .nest(INDENT)
+                .group()
+            }
+            // Getting here sholud mean we either forgot a built-in type or there is a
+            // compiler error
+            name => crate::error::fatal_compiler_bug(
+                format!("{} is not a built-in type.", name).as_str(),
+            ),
+        }
+    }
+
+    fn print_type_app(
+        &self,
+        module: &[String],
+        name: &str,
+        args: &[Arc<Type>],
+    ) -> Document<'static> {
+        let args = concat(
+            args.iter()
+                .map(|a| self.print(a))
+                .intersperse(", ".to_doc()),
+        );
+        let mod_name = concat(
+            module
+                .iter()
+                .map(|m| Document::String(m.to_snake_case()))
+                .intersperse("@".to_doc()),
+        );
+        mod_name
+            .append(":")
+            .append(Document::String(erl_safe_type_name(name.to_snake_case())))
+            .append("(")
+            .append(args)
+            .append(")")
+    }
+
+    fn print_fn(&self, args: &[Arc<Type>], retrn: &Type) -> Document<'static> {
+        let args = concat(
+            args.iter()
+                .map(|a| self.print(a))
+                .intersperse(", ".to_doc()),
+        );
+        let retrn = self.print(retrn);
+        "fun(("
+            .to_doc()
+            .append(args)
+            .append(") -> ")
+            .append(retrn)
+            .append(")")
     }
 }

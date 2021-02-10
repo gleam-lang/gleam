@@ -315,22 +315,6 @@ impl<'a> Document<'a> {
         open.to_doc().append(self).append(closed)
     }
 
-    pub fn is_nil(&self) -> bool {
-        match self {
-            Document::Nil => true,
-            Document::Line(_)
-            | Document::ForceBreak
-            | Document::Break { .. }
-            | Document::Nest(_, _)
-            | Document::NestCurrent(_) => false,
-            Document::Vec(vec) => vec.is_empty(),
-            Document::Str(s) => s.is_empty(),
-            Document::String(s) => s.is_empty(),
-            Document::Group(doc) | Document::FlexBreak(doc) => doc.is_nil(),
-        }
-    }
-
-    // TODO: return a result
     pub fn pretty_print(self, limit: isize, writer: &mut impl Utf8Writer) -> Result<()> {
         let docs = im::vector![(0, Mode::Unbroken, Document::Group(Box::new(self)))];
         fmt(writer, limit, 0, docs)?;
