@@ -264,7 +264,7 @@ pub fn module(
                         std::iter::once("gleam_phantom".to_doc()).chain(
                             phantom_vars
                                 .iter()
-                                .map(|pv| TypePrinter::print_without_usages(pv)),
+                                .map(|pv| TypePrinter::new(module.name.as_slice()).print(pv)),
                         ),
                     ))
                 };
@@ -283,10 +283,9 @@ pub fn module(
                             if c.args.is_empty() {
                                 name
                             } else {
-                                let args = c
-                                    .args
-                                    .iter()
-                                    .map(|a| TypePrinter::print_without_usages(&a.typ));
+                                let args = c.args.iter().map(|a| {
+                                    TypePrinter::new(module.name.as_slice()).print(&a.typ)
+                                });
                                 tuple(std::iter::once(name).chain(args))
                             }
                         })
@@ -299,7 +298,7 @@ pub fn module(
                 let params = concat(
                     typed_parameters
                         .iter()
-                        .map(|a| TypePrinter::print_without_usages(a))
+                        .map(|a| TypePrinter::new(module.name.as_slice()).print(a))
                         .intersperse(", ".to_doc()),
                 );
                 let doc = if *opaque { "-opaque " } else { "-type " }
@@ -352,7 +351,7 @@ pub fn module(
         module
             .statements
             .iter()
-            .flat_map(|s| statement(s, module_name, line_numbers))
+            .flat_map(|s| statement(module.name.as_slice(), s, module_name, line_numbers))
             .intersperse(lines(2)),
     );
 
@@ -371,6 +370,7 @@ pub fn module(
 }
 
 fn statement<'a>(
+    current_module: &'a [String],
     statement: &'a TypedStatement,
     module: &'a [String],
     line_numbers: &'a LineNumbers,
@@ -406,6 +406,7 @@ fn statement<'a>(
             return_type,
             ..
         } => Some(external_fun(
+            current_module,
             name.as_ref(),
             module.as_ref(),
             fun.as_ref(),
@@ -428,7 +429,7 @@ fn mod_fun<'a>(
         HashMap::new(),
         std::iter::once(return_type).chain(args.iter().map(|a| &a.typ)),
     );
-    let type_printer = TypePrinter::new(&var_usages);
+    let type_printer = TypePrinter::new(module).with_var_usages(&var_usages);
     let args_spec = args.iter().map(|a| type_printer.print(&a.typ));
     let return_spec = type_printer.print(return_type);
     let spec = fun_spec(name, args_spec, return_spec);
@@ -1575,6 +1576,7 @@ fn incrementing_args_list(arity: usize) -> String {
 }
 
 fn external_fun<'a>(
+    current_module: &'a [String],
     name: &'a str,
     module: &'a str,
     fun: &'a str,
@@ -1586,7 +1588,7 @@ fn external_fun<'a>(
         HashMap::new(),
         std::iter::once(return_type).chain(args.iter().map(|a| &a.typ)),
     );
-    let type_printer = TypePrinter::new(&var_usages);
+    let type_printer = TypePrinter::new(current_module).with_var_usages(&var_usages);
     let args_spec = args.iter().map(|a| type_printer.print(&a.typ));
     let return_spec = type_printer.print(return_type);
     let spec = fun_spec(name, args_spec, return_spec);
@@ -1825,18 +1827,21 @@ fn erl_safe_type_name(mut name: String) -> String {
 
 #[derive(Debug)]
 struct TypePrinter<'a> {
+    current_module: &'a [String],
     var_usages: Option<&'a HashMap<usize, usize>>,
 }
 
 impl<'a> TypePrinter<'a> {
-    pub fn new(var_usages: &'a HashMap<usize, usize>) -> Self {
+    fn new(current_module: &'a [String]) -> Self {
         Self {
-            var_usages: Some(var_usages),
+            current_module,
+            var_usages: None,
         }
     }
 
-    pub fn print_without_usages(type_: &Type) -> Document<'static> {
-        Self { var_usages: None }.print(type_)
+    pub fn with_var_usages(mut self, var_usages: &'a HashMap<usize, usize>) -> Self {
+        self.var_usages = Some(var_usages);
+        self
     }
 
     pub fn print(&self, type_: &Type) -> Document<'static> {
@@ -1886,16 +1891,9 @@ impl<'a> TypePrinter<'a> {
             "Result" => {
                 let arg_ok = self.print(&args[0]);
                 let arg_err = self.print(&args[1]);
-                concat(
-                    vec![
-                        tuple(vec!["ok".to_doc(), arg_ok].into_iter()),
-                        tuple(vec!["error".to_doc(), arg_err].into_iter()),
-                    ]
-                    .into_iter()
-                    .intersperse(break_(" |", " | ")),
-                )
-                .nest(INDENT)
-                .group()
+                let ok = tuple(vec!["ok".to_doc(), arg_ok].into_iter());
+                let error = tuple(vec!["error".to_doc(), arg_err].into_iter());
+                docvec![ok, break_(" |", " | "), error].nest(INDENT).group()
             }
             // Getting here sholud mean we either forgot a built-in type or there is a
             // compiler error
@@ -1916,18 +1914,21 @@ impl<'a> TypePrinter<'a> {
                 .map(|a| self.print(a))
                 .intersperse(", ".to_doc()),
         );
-        let mod_name = concat(
+        let name = Document::String(erl_safe_type_name(name.to_snake_case()));
+        if self.current_module == module {
+            docvec![name, "(", args, ")"]
+        } else {
+            docvec![self.print_module_name(module), ":", name, "(", args, ")"]
+        }
+    }
+
+    fn print_module_name(&self, module: &[String]) -> Document<'static> {
+        concat(
             module
                 .iter()
                 .map(|m| Document::String(m.to_snake_case()))
                 .intersperse("@".to_doc()),
-        );
-        mod_name
-            .append(":")
-            .append(Document::String(erl_safe_type_name(name.to_snake_case())))
-            .append("(")
-            .append(args)
-            .append(")")
+        )
     }
 
     fn print_fn(&self, args: &[Arc<Type>], retrn: &Type) -> Document<'static> {

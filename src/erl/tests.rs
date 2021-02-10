@@ -228,7 +228,7 @@ t() ->
 
 -type money() :: {pound, integer()}.
 
--spec pound(integer()) -> the_app:money().
+-spec pound(integer()) -> money().
 pound(X) ->
     {pound, X}.
 "#,
@@ -423,7 +423,7 @@ x() ->
 
 -type pair(H, I) :: {pair, H, I}.
 
--spec x() -> the_app:pair(float(), float()).
+-spec x() -> pair(float(), float()).
 x() ->
     {pair, 1, 2},
     {pair, 3.0, 4.0}.
@@ -439,7 +439,7 @@ x() ->
 
 -type null() :: null.
 
--spec x() -> the_app:null().
+-spec x() -> null().
 x() ->
     null.
 "#,
@@ -455,7 +455,7 @@ x() ->
 
 -type point() :: {point, integer(), integer()}.
 
--spec y() -> the_app:point().
+-spec y() -> point().
 y() ->
     ((fun() -> fun(A, B) -> {point, A, B} end end)())(4, 6).
 "#,
@@ -471,7 +471,7 @@ y() ->
 
 -type point() :: {point, integer(), integer()}.
 
--spec x() -> the_app:point().
+-spec x() -> point().
 x() ->
     {point, 4, 6},
     {point, 9, 1}.
@@ -487,7 +487,7 @@ x() ->
 
 -type point() :: {point, integer(), integer()}.
 
--spec x(the_app:point()) -> integer().
+-spec x(point()) -> integer().
 x(Y) ->
     {point, A, B} = Y,
     A.
@@ -572,7 +572,7 @@ fn create_user(user_id) { User(age: 22, id: user_id, name: "") }
 
 -type user() :: {user, integer(), binary(), integer()}.
 
--spec create_user(integer()) -> the_app:user().
+-spec create_user(integer()) -> user().
 create_user(User_id) ->
     {user, User_id, <<""/utf8>>, 22}.
 "#,
@@ -602,7 +602,7 @@ run() ->
 
 -type x() :: {x, integer(), float()}.
 
--spec x() -> the_app:x().
+-spec x() -> x().
 x() ->
     {x, 1, 2.0},
     {x, 4, 3.0}.
@@ -672,7 +672,7 @@ pub fn main() {
 factory(F, I) ->
     F(I).
 
--spec main() -> the_app:box().
+-spec main() -> box().
 main() ->
     factory(fun(A) -> {box, A} end, 0).
 "#,
@@ -1454,11 +1454,11 @@ pub fn get_name(person: Person) { person.name }
 
 -type person() :: {person, binary(), integer()}.
 
--spec get_age(the_app:person()) -> integer().
+-spec get_age(person()) -> integer().
 get_age(Person) ->
     erlang:element(3, Person).
 
--spec get_name(the_app:person()) -> binary().
+-spec get_name(person()) -> binary().
 get_name(Person) ->
     erlang:element(2, Person).
 "#,
@@ -2142,7 +2142,7 @@ fn main() {
 
 -type person() :: {person, binary(), integer()}.
 
--spec main() -> the_app:person().
+-spec main() -> person().
 main() ->
     P = {person, <<"Quinn"/utf8>>, 27},
     New_p = erlang:setelement(3, P, 28),
@@ -2168,7 +2168,7 @@ fn main() {
 
 -type person() :: {person, binary(), integer()}.
 
--spec main() -> the_app:person().
+-spec main() -> person().
 main() ->
     P = {person, <<"Quinn"/utf8>>, 27},
     New_p = erlang:setelement(3, P, erlang:element(3, P) + 1),
@@ -2194,7 +2194,7 @@ fn main() {
 
 -type person() :: {person, binary(), integer()}.
 
--spec main() -> the_app:person().
+-spec main() -> person().
 main() ->
     P = {person, <<"Quinn"/utf8>>, 27},
     New_p = erlang:setelement(2, erlang:setelement(3, P, 28), <<"Riley"/utf8>>),
@@ -2362,7 +2362,7 @@ pub fn a() { A }",
 
 -type test() :: a.
 
--spec a() -> the_app:test().
+-spec a() -> test().
 a() ->
     a.
 "

@@ -1464,7 +1464,7 @@ main(Power) ->
 
 -type power() :: {power, integer()}.
 
--spec to_int(power:power()) -> integer().
+-spec to_int(power()) -> integer().
 to_int(P) ->
     erlang:element(2, P) * 9000.
 "
@@ -1556,7 +1556,7 @@ fn x() { test }"
 
 -type a() :: a.
 
--type b() :: {b, one:a()}.
+-type b() :: {b, a()}.
 
 
 "
