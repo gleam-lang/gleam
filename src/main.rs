@@ -321,11 +321,14 @@ fn command_build(root: String, warnings_as_errors: bool) -> Result<(), Error> {
     // Generate Erlang code
     let output_files = erl::generate_erlang(analysed.as_slice());
 
-    // Print warnings or exit if warnings_as_errors and warnings
-    if warnings_as_errors {
-        warning::as_errors(analysed.as_slice())?;
-    } else {
-        warning::print_all(analysed.as_slice());
+    // Print warnings
+    let warning_count = warning::print_all(analysed.as_slice());
+
+    //exit if warnings_as_errors and warnings
+    if warnings_as_errors && warning_count > 0 {
+        return Err(Error::ForbiddenWarnings {
+            count: warning_count,
+        });
     }
 
     // Reset output directory
