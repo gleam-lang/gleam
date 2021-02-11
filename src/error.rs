@@ -161,8 +161,8 @@ pub enum Error {
         error: Option<String>,
     },
 
-    GenericFileDiagnostics {
-        diagnostics: Vec<(Diagnostic, String)>,
+    ForbiddenWarnings {
+        count: usize,
     },
 }
 
@@ -1568,13 +1568,18 @@ but it cannot be found.",
                 write_project(buffer, diagnostic);
             }
 
-            Error::GenericFileDiagnostics { diagnostics } => {
-                for (diagnostic, extra) in diagnostics {
-                    write(buffer, diagnostic.clone(), Severity::Error);
-                    if !extra.is_empty() {
-                        writeln!(buffer, "{}\n", extra).expect("error pretty buffer write");
-                    }
-                }
+            Error::ForbiddenWarnings { count } => {
+                let word_warning = match count {
+                    1 => "warning",
+                    _ => "warnings",
+                };
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: format!("{} {} generated.", count, word_warning),
+                    label: "Your project was compiled with the `--warnings-as-errors` flag.
+Fix the warnings and try again!"
+                        .to_string(),
+                };
+                write_project(buffer, diagnostic);
             }
         }
     }

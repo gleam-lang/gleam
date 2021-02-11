@@ -1,7 +1,6 @@
 use crate::{
     cli,
     diagnostic::{write, Diagnostic, Severity},
-    error::Error,
     typ,
     typ::pretty::Printer,
 };
@@ -207,27 +206,13 @@ your program.",
     }
 }
 
-pub fn print_all(analysed: &[crate::project::Analysed]) {
+pub fn print_all(analysed: &[crate::project::Analysed]) -> usize {
+    let mut warning_count = 0;
     for a in analysed.iter() {
         for w in a.warnings.iter() {
-            w.pretty_print()
+            w.pretty_print();
+            warning_count += 1;
         }
     }
-}
-
-pub fn as_errors(analysed: &[crate::project::Analysed]) -> Result<(), Error> {
-    let mut warnings = vec![];
-    for a in analysed.iter() {
-        for w in a.warnings.iter() {
-            warnings.push(w.to_diagnostic());
-        }
-    }
-
-    if warnings.is_empty() {
-        Ok(())
-    } else {
-        Err(Error::GenericFileDiagnostics {
-            diagnostics: warnings,
-        })
-    }
+    warning_count
 }
