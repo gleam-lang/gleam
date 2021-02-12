@@ -25,6 +25,7 @@
 - Fixed a bug where bit string patterns would not correctly unify with the
   subject being pattern matches on.
 - Documentation dark mode.
+- Fixed a bug where some app.src properties were incorrectly named.
 
 ## v0.13.2 - 2021-01-14
 
