@@ -724,15 +724,16 @@ impl<'comments> Formatter<'comments> {
 
     fn call<'a>(&mut self, fun: &'a UntypedExpr, args: &'a [CallArg<UntypedExpr>]) -> Document<'a> {
         fn is_breakable(expr: &UntypedExpr) -> bool {
-            matches!(expr,
+            matches!(
+                expr,
                 UntypedExpr::Fn { .. }
-                | UntypedExpr::Seq { .. }
-                | UntypedExpr::Let { .. }
-                | UntypedExpr::Call { .. }
-                | UntypedExpr::Case { .. }
-                | UntypedExpr::Tuple { .. }
-                | UntypedExpr::ListCons { .. }
-                | UntypedExpr::BitString { .. }
+                    | UntypedExpr::Seq { .. }
+                    | UntypedExpr::Let { .. }
+                    | UntypedExpr::Call { .. }
+                    | UntypedExpr::Case { .. }
+                    | UntypedExpr::Tuple { .. }
+                    | UntypedExpr::ListCons { .. }
+                    | UntypedExpr::BitString { .. }
             )
         }
 

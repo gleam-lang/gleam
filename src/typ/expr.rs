@@ -1425,7 +1425,10 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 // Note whether we are using an ungeneralised function so that we can
                 // tell if it is safe to generalise this function after inference has
                 // completed.
-                if matches!(&constructor.variant, ValueConstructorVariant::ModuleFn { .. }) {
+                if matches!(
+                    &constructor.variant,
+                    ValueConstructorVariant::ModuleFn { .. }
+                ) {
                     let is_ungeneralised = self.environment.ungeneralised_functions.contains(name);
                     self.ungeneralised_function_used =
                         self.ungeneralised_function_used || is_ungeneralised;
