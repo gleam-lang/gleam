@@ -241,7 +241,7 @@ pub fn stop(_state: Dynamic) {
   {{links, []}}
 ]}}.
 "#,
-                self.options.name, PROJECT_VERSION, &self.options.description, module,
+                self.options.name, &self.options.description, PROJECT_VERSION, module,
             ),
         )
     }
