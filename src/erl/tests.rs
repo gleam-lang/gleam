@@ -2490,6 +2490,7 @@ main() ->
 
 #[test]
 fn assert() {
+    // One var
     assert_erl!(
         r#"fn go() {
   assert Ok(y) = Ok(1)
@@ -2500,12 +2501,12 @@ fn assert() {
 
 -spec go() -> integer().
 go() ->
-    {ok, Y@1} = case {ok, 1} of
-        {ok, Y} = Assert@ -> Assert@;
-        Assert@@1 ->
+    Y@1 = case {ok, 1} of
+        {ok, Y} -> Y;
+        Gleam@Assert ->
             erlang:error(#{gleam_error => assert,
                            message => <<"Assertion pattern match failed"/utf8>>,
-                           value => Assert@@1,
+                           value => Gleam@Assert,
                            module => <<"the_app"/utf8>>,
                            function => <<"go"/utf8>>,
                            line => 2})
@@ -2514,6 +2515,57 @@ go() ->
 "#,
     );
 
+    // More vars
+    assert_erl!(
+        r#"fn go(x) {
+  assert [1, a, b, c] = x
+  [a, b, c]
+}"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-spec go(list(integer())) -> list(integer()).
+go(X) ->
+    {A@1, B@1, C@1} = case X of
+        [1, A, B, C] -> {A, B, C};
+        Gleam@Assert ->
+            erlang:error(#{gleam_error => assert,
+                           message => <<"Assertion pattern match failed"/utf8>>,
+                           value => Gleam@Assert,
+                           module => <<"the_app"/utf8>>,
+                           function => <<"go"/utf8>>,
+                           line => 2})
+    end,
+    [A@1, B@1, C@1].
+"#,
+    );
+
+    // Pattern::Let
+    assert_erl!(
+        r#"fn go(x) {
+  assert [1 as a, b, c] = x
+  [a, b, c]
+}"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-spec go(list(integer())) -> list(integer()).
+go(X) ->
+    {A@1, B@1, C@1} = case X of
+        [1 = A, B, C] -> {A, B, C};
+        Gleam@Assert ->
+            erlang:error(#{gleam_error => assert,
+                           message => <<"Assertion pattern match failed"/utf8>>,
+                           value => Gleam@Assert,
+                           module => <<"the_app"/utf8>>,
+                           function => <<"go"/utf8>>,
+                           line => 2})
+    end,
+    [A@1, B@1, C@1].
+"#,
+    );
+
+    // Following asserts use appropriate variable rewrites
     assert_erl!(
         r#"fn go() {
   assert Ok(y) = Ok(1)
@@ -2525,22 +2577,22 @@ go() ->
 
 -spec go() -> integer().
 go() ->
-    {ok, Y@1} = case {ok, 1} of
-        {ok, Y} = Assert@ -> Assert@;
-        Assert@@1 ->
+    Y@1 = case {ok, 1} of
+        {ok, Y} -> Y;
+        Gleam@Assert ->
             erlang:error(#{gleam_error => assert,
                            message => <<"Assertion pattern match failed"/utf8>>,
-                           value => Assert@@1,
+                           value => Gleam@Assert,
                            module => <<"the_app"/utf8>>,
                            function => <<"go"/utf8>>,
                            line => 2})
     end,
-    {ok, Y@3} = case {ok, 1} of
-        {ok, Y@2} = Assert@@2 -> Assert@@2;
-        Assert@@3 ->
+    Y@3 = case {ok, 1} of
+        {ok, Y@2} -> Y@2;
+        Gleam@Assert@1 ->
             erlang:error(#{gleam_error => assert,
                            message => <<"Assertion pattern match failed"/utf8>>,
-                           value => Assert@@3,
+                           value => Gleam@Assert@1,
                            module => <<"the_app"/utf8>>,
                            function => <<"go"/utf8>>,
                            line => 3})
