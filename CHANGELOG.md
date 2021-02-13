@@ -22,6 +22,8 @@
 - New compile time warnings on unused types, functions and variables.
 - The runtime error emitted by the `todo` keyword now carries additional
   information.
+- The runtime error emitted by the `assert` keyword now carries additional
+  information.
 - Fixed a bug where bit string patterns would not correctly unify with the
   subject being pattern matches on.
 - Documentation dark mode.
