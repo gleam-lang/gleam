@@ -190,8 +190,8 @@ go() ->
 
     assert_erl!(
         r#"fn go() {
-  assert y = 1
-  assert y = 2
+  let y = 1
+  let y = 2
   y
 }"#,
         r#"-module(the_app).
@@ -2244,8 +2244,8 @@ main() ->
     assert_erl!(
         r#"
 fn main() {
-  assert 100_000 = 1
-  assert 100_000.00101 = 1.
+  let 100_000 = 1
+  let 100_000.00101 = 1.
   1
 }
 "#,
@@ -2485,5 +2485,67 @@ main() ->
         end
     ).
 "#
+    );
+}
+
+#[test]
+fn assert() {
+    assert_erl!(
+        r#"fn go() {
+  assert Ok(y) = Ok(1)
+  y
+}"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-spec go() -> integer().
+go() ->
+    {ok, Y@1} = case {ok, 1} of
+        {ok, Y} = Assert@ -> Assert@;
+        Assert@@1 ->
+            erlang:error(#{gleam_error => assert,
+                           message => <<"Assertion pattern match failed"/utf8>>,
+                           value => Assert@@1,
+                           module => <<"the_app"/utf8>>,
+                           function => <<"go"/utf8>>,
+                           line => 2})
+    end,
+    Y@1.
+"#,
+    );
+
+    assert_erl!(
+        r#"fn go() {
+  assert Ok(y) = Ok(1)
+  assert Ok(y) = Ok(1)
+  y
+}"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-spec go() -> integer().
+go() ->
+    {ok, Y@1} = case {ok, 1} of
+        {ok, Y} = Assert@ -> Assert@;
+        Assert@@1 ->
+            erlang:error(#{gleam_error => assert,
+                           message => <<"Assertion pattern match failed"/utf8>>,
+                           value => Assert@@1,
+                           module => <<"the_app"/utf8>>,
+                           function => <<"go"/utf8>>,
+                           line => 2})
+    end,
+    {ok, Y@3} = case {ok, 1} of
+        {ok, Y@2} = Assert@@2 -> Assert@@2;
+        Assert@@3 ->
+            erlang:error(#{gleam_error => assert,
+                           message => <<"Assertion pattern match failed"/utf8>>,
+                           value => Assert@@3,
+                           module => <<"the_app"/utf8>>,
+                           function => <<"go"/utf8>>,
+                           line => 3})
+    end,
+    Y@3.
+"#,
     );
 }

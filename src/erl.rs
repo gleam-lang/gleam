@@ -100,24 +100,22 @@ impl<'env> Env<'env> {
         }
     }
 
-    pub fn local_var_name<'a>(&mut self, name: String) -> Document<'a> {
-        match self.current_scope_vars.get(&name) {
+    pub fn local_var_name<'a>(&mut self, name: &str) -> Document<'a> {
+        match self.current_scope_vars.get(name) {
             None => {
-                let _ = self.current_scope_vars.insert(name.clone(), 0);
-                let _ = self.erl_function_scope_vars.insert(name.clone(), 0);
-                Document::String(variable_name(&name))
+                let _ = self.current_scope_vars.insert(name.to_string(), 0);
+                let _ = self.erl_function_scope_vars.insert(name.to_string(), 0);
+                Document::String(variable_name(name))
             }
-            Some(0) => Document::String(variable_name(&name)),
-            Some(n) => Document::String(variable_name(&name))
-                .append("@")
-                .append(*n),
+            Some(0) => Document::String(variable_name(name)),
+            Some(n) => Document::String(variable_name(name)).append("@").append(*n),
         }
     }
 
-    pub fn next_local_var_name<'a>(&mut self, name: String) -> Document<'a> {
-        let next = self.erl_function_scope_vars.get(&name).map_or(0, |i| i + 1);
-        let _ = self.erl_function_scope_vars.insert(name.clone(), next);
-        let _ = self.current_scope_vars.insert(name.clone(), next);
+    pub fn next_local_var_name<'a>(&mut self, name: &str) -> Document<'a> {
+        let next = self.erl_function_scope_vars.get(name).map_or(0, |i| i + 1);
+        let _ = self.erl_function_scope_vars.insert(name.to_string(), next);
+        let _ = self.current_scope_vars.insert(name.to_string(), next);
         self.local_var_name(name)
     }
 }
@@ -445,7 +443,7 @@ fn fun_args<'a>(args: &'a [TypedArg], env: &mut Env<'a>) -> Document<'a> {
     wrap_args(args.iter().map(|a| match &a.names {
         ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => "_".to_doc(),
         ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
-            env.next_local_var_name(name.to_string())
+            env.next_local_var_name(name)
         }
     }))
 }
@@ -770,9 +768,9 @@ fn bin_op<'a>(
                         .append(zero)
                         .append(";")
                         .append(line())
-                        .append(env.next_local_var_name(denominator.to_string()))
+                        .append(env.next_local_var_name(denominator))
                         .append(" -> ")
-                        .append(div(left_expr, env.local_var_name(denominator.to_string())))
+                        .append(div(left_expr, env.local_var_name(denominator)))
                         .nest(INDENT),
                 )
                 .append(line())
@@ -800,9 +798,9 @@ fn try_<'a>(
         .append(
             line()
                 .append("{error, ")
-                .append(env.next_local_var_name(try_error_name.to_string()))
+                .append(env.next_local_var_name(try_error_name))
                 .append("} -> {error, ")
-                .append(env.local_var_name(try_error_name.to_string()))
+                .append(env.local_var_name(try_error_name))
                 .append("};")
                 .nest(INDENT),
         )
@@ -817,6 +815,50 @@ fn try_<'a>(
         .append(line())
         .append("end")
         .group()
+}
+
+fn assert<'a>(
+    value: &'a TypedExpr,
+    pat: &'a TypedPattern,
+    then: &'a TypedExpr,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    let var = "Assert@";
+    let body = maybe_block_expr(value, env);
+    let clauses = docvec![
+        pattern(pat, env),
+        " = ",
+        env.next_local_var_name(var),
+        " -> ",
+        env.local_var_name(var),
+        ";",
+        line(),
+        env.next_local_var_name(var),
+        " ->",
+        docvec![
+            line(),
+            erlang_error(
+                "assert",
+                "Assertion pattern match failed",
+                pat.location(),
+                vec![("value", env.local_var_name(var))],
+                env,
+            )
+            .nest(INDENT)
+        ]
+        .nest(INDENT)
+    ];
+    docvec![
+        pattern(pat, env),
+        " = case ",
+        body,
+        " of",
+        docvec![line(), clauses].nest(INDENT),
+        line(),
+        "end,",
+        line(),
+        expr(then, env),
+    ]
 }
 
 fn let_<'a>(
@@ -842,15 +884,15 @@ fn pattern<'a>(p: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a> {
             name, pattern: p, ..
         } => pattern(p, env)
             .append(" = ")
-            .append(env.next_local_var_name(name.to_string())),
+            .append(env.next_local_var_name(name)),
 
         Pattern::Cons { head, tail, .. } => pattern_list_cons(head, tail, env),
 
         Pattern::Discard { .. } => "_".to_doc(),
 
-        Pattern::Var { name, .. } => env.next_local_var_name(name.to_string()),
+        Pattern::Var { name, .. } => env.next_local_var_name(name),
 
-        Pattern::VarCall { name, .. } => env.local_var_name(name.to_string()),
+        Pattern::VarCall { name, .. } => env.local_var_name(name),
 
         Pattern::Int { value, .. } => int(value.as_ref()),
 
@@ -979,7 +1021,7 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
             _ => atom(record_name.to_snake_case()),
         },
 
-        ValueConstructorVariant::LocalVariable => env.local_var_name(name.to_string()),
+        ValueConstructorVariant::LocalVariable => env.local_var_name(name),
 
         ValueConstructorVariant::ModuleConstant { literal } => const_inline(literal, env),
 
@@ -1169,7 +1211,7 @@ fn bare_clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Docu
 
         // Only local variables are supported and the typer ensures that all
         // ClauseGuard::Vars are local variables
-        ClauseGuard::Var { name, .. } => env.local_var_name(name.to_string()),
+        ClauseGuard::Var { name, .. } => env.local_var_name(name.as_str()),
 
         ClauseGuard::TupleIndex { tuple, index, .. } => tuple_index_inline(tuple, *index, env),
 
@@ -1394,17 +1436,24 @@ fn todo<'a>(message: &'a Option<String>, location: SrcSpan, env: &mut Env<'a>) -
         Some(message) => message,
         None => "This has not yet been implemented",
     };
-    let fields = vec![("message", string(message))];
-    erlang_error("todo", location, fields, env)
+    erlang_error("todo", message, location, vec![], env)
 }
 
 fn erlang_error<'a>(
     name: &'a str,
+    message: &'a str,
     location: SrcSpan,
     fields: Vec<(&'a str, Document<'a>)>,
     env: &Env<'a>,
 ) -> Document<'a> {
-    let mut fields_doc = docvec!["gleam_error => ", name];
+    let mut fields_doc = docvec![
+        "gleam_error => ",
+        name,
+        ",",
+        line(),
+        "message => ",
+        string(message)
+    ];
     for (key, value) in fields.into_iter() {
         fields_doc = fields_doc
             .append(",")
@@ -1508,6 +1557,15 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
             value,
             pattern,
             then,
+            kind: BindingKind::Assert,
+            ..
+        } => assert(value, pattern, then, env),
+
+        TypedExpr::Let {
+            value,
+            pattern,
+            then,
+            kind: BindingKind::Let,
             ..
         } => let_(value, pattern, then, env),
 
