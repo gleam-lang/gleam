@@ -575,7 +575,7 @@ pub enum Pattern<Constructor, Type> {
         name: String,
     },
 
-    VarCall {
+    VarUsage {
         location: SrcSpan,
         name: String,
         typ: Type,
@@ -628,7 +628,7 @@ impl<A, B> Pattern<A, B> {
             Pattern::Let { pattern, .. } => pattern.location(),
             Pattern::Int { location, .. }
             | Pattern::Var { location, .. }
-            | Pattern::VarCall { location, .. }
+            | Pattern::VarUsage { location, .. }
             | Pattern::Nil { location, .. }
             | Pattern::Cons { location, .. }
             | Pattern::Float { location, .. }

@@ -26,7 +26,9 @@ pub(super) fn to_doc<'a>(
 
         Pattern::Discard { .. } => "_".to_doc(),
 
-        Pattern::VarCall { name, .. } | Pattern::Var { name, .. } => {
+        Pattern::VarUsage { name, .. } => env.local_var_name(name),
+
+        Pattern::Var { name, .. } => {
             vars.push(name);
             env.next_local_var_name(name)
         }

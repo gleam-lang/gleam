@@ -1167,7 +1167,7 @@ impl<'comments> Formatter<'comments> {
 
             Pattern::Var { name, .. } => name.to_doc(),
 
-            Pattern::VarCall { name, .. } => name.to_doc(),
+            Pattern::VarUsage { name, .. } => name.to_doc(),
 
             Pattern::Let { name, pattern, .. } => {
                 self.pattern(pattern).append(" as ").append(name.as_str())
