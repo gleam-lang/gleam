@@ -1,6 +1,7 @@
 // TODO: Refactor this module to be methods on structs rather than free
 // functions with a load of arguments
 
+mod pattern;
 #[cfg(test)]
 mod tests;
 
@@ -19,6 +20,7 @@ use crate::{
 };
 use heck::SnakeCase;
 use itertools::Itertools;
+use pattern::pattern;
 use std::char;
 use std::collections::HashMap;
 use std::default::Default;
@@ -599,33 +601,6 @@ fn expr_segment<'a>(
     )
 }
 
-fn pattern_segment<'a>(
-    value: &'a TypedPattern,
-    options: &'a [BitStringSegmentOption<TypedPattern>],
-    env: &mut Env<'a>,
-) -> Document<'a> {
-    let document = match value {
-        // Skip the normal <<value/utf8>> surrounds
-        Pattern::String { value, .. } => value.to_doc().surround("\"", "\""),
-
-        // As normal
-        Pattern::Discard { .. }
-        | Pattern::Var { .. }
-        | Pattern::Int { .. }
-        | Pattern::Float { .. } => pattern(value, env),
-
-        // No other pattern variants are allowed in pattern bit string segments
-        _ => crate::error::fatal_compiler_bug("Pattern segment match not recognised"),
-    };
-
-    let size =
-        |value: &'a TypedPattern, env: &mut Env<'a>| Some(":".to_doc().append(pattern(value, env)));
-
-    let unit = |value: &'a usize| Some(Document::String(format!("unit:{}", value)));
-
-    bit_string_segment(document, options, size, unit, true, env)
-}
-
 fn bit_string_segment<'a, Value: 'a, SizeToDoc, UnitToDoc>(
     mut document: Document<'a>,
     options: &'a [BitStringSegmentOption<Value>],
@@ -823,14 +798,13 @@ fn assert<'a>(
     then: &'a TypedExpr,
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    let var = "Assert@";
+    let mut vars: Vec<&str> = vec![];
+    let var = "Gleam@Assert";
     let body = maybe_block_expr(value, env);
     let clauses = docvec![
-        pattern(pat, env),
-        " = ",
-        env.next_local_var_name(var),
+        pattern::to_doc(pat, &mut vars, env),
         " -> ",
-        env.local_var_name(var),
+        assert_return(vars.as_slice(), env),
         ";",
         line(),
         env.next_local_var_name(var),
@@ -849,7 +823,7 @@ fn assert<'a>(
         .nest(INDENT)
     ];
     docvec![
-        pattern(pat, env),
+        assert_assign(vars.as_slice(), env),
         " = case ",
         body,
         " of",
@@ -859,6 +833,20 @@ fn assert<'a>(
         line(),
         expr(then, env),
     ]
+}
+
+fn assert_return<'a>(vars: &[&str], env: &mut Env<'a>) -> Document<'a> {
+    match vars {
+        [v] => env.local_var_name(v),
+        _ => tuple(vars.iter().map(|v| env.local_var_name(v))),
+    }
+}
+
+fn assert_assign<'a>(vars: &[&str], env: &mut Env<'a>) -> Document<'a> {
+    match vars {
+        [v] => env.next_local_var_name(v),
+        _ => tuple(vars.iter().map(|v| env.next_local_var_name(v))),
+    }
 }
 
 fn let_<'a>(
@@ -876,66 +864,12 @@ fn let_<'a>(
         .append(expr(then, env))
 }
 
-fn pattern<'a>(p: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a> {
-    match p {
-        Pattern::Nil { .. } => "[]".to_doc(),
-
-        Pattern::Let {
-            name, pattern: p, ..
-        } => pattern(p, env)
-            .append(" = ")
-            .append(env.next_local_var_name(name)),
-
-        Pattern::Cons { head, tail, .. } => pattern_list_cons(head, tail, env),
-
-        Pattern::Discard { .. } => "_".to_doc(),
-
-        Pattern::Var { name, .. } => env.next_local_var_name(name),
-
-        Pattern::VarCall { name, .. } => env.local_var_name(name),
-
-        Pattern::Int { value, .. } => int(value.as_ref()),
-
-        Pattern::Float { value, .. } => float(value.as_ref()),
-
-        Pattern::String { value, .. } => string(value),
-
-        Pattern::Constructor {
-            args,
-            constructor: PatternConstructor::Record { name },
-            ..
-        } => tag_tuple_pattern(name, args, env),
-
-        Pattern::Tuple { elems, .. } => tuple(elems.iter().map(|p| pattern(p, env))),
-
-        Pattern::BitString { segments, .. } => bit_string(
-            segments
-                .iter()
-                .map(|s| pattern_segment(&s.value, s.options.as_slice(), env)),
-        ),
-    }
-}
-
 fn float<'a>(value: &str) -> Document<'a> {
     let mut value = value.replace("_", "");
     if value.ends_with('.') {
         value.push('0')
     }
     Document::String(value)
-}
-
-fn pattern_list_cons<'a>(
-    head: &'a TypedPattern,
-    tail: &'a TypedPattern,
-    env: &mut Env<'a>,
-) -> Document<'a> {
-    list_cons(head, tail, env, pattern, |expr| match expr {
-        Pattern::Nil { .. } => ListType::Nil,
-
-        Pattern::Cons { head, tail, .. } => ListType::Cons { head, tail },
-
-        other => ListType::NotList(other),
-    })
 }
 
 fn expr_list_cons<'a>(head: &'a TypedExpr, tail: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
@@ -968,11 +902,12 @@ where
             .map(|e| to_doc(e, env))
             .intersperse(break_(",", ", ")),
     );
+    list(elems, final_tail.map(|e| to_doc(e, env)))
+}
 
-    let elems = if let Some(final_tail) = final_tail {
-        elems
-            .append(break_(" |", " | "))
-            .append(to_doc(final_tail, env))
+fn list<'a>(elems: Document<'a>, tail: Option<Document<'a>>) -> Document<'a> {
+    let elems = if let Some(final_tail) = tail {
+        elems.append(break_(" |", " | ")).append(final_tail)
     } else {
         elems
     };
@@ -1088,21 +1023,6 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
                 tuple(std::iter::once(tag).chain(args))
             }
         }
-    }
-}
-
-fn tag_tuple_pattern<'a>(
-    name: &'a str,
-    args: &'a [CallArg<TypedPattern>],
-    env: &mut Env<'a>,
-) -> Document<'a> {
-    if args.is_empty() {
-        atom(name.to_snake_case())
-    } else {
-        tuple(
-            std::iter::once(atom(name.to_snake_case()))
-                .chain(args.iter().map(|p| pattern(&p.value, env))),
-        )
     }
 }
 
