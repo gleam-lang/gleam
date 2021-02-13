@@ -238,13 +238,14 @@ fn type_options<T>(
 }
 
 fn is_unicode<T>(opt: &BitStringSegmentOption<T>) -> bool {
-    matches!(opt,
+    matches!(
+        opt,
         BitStringSegmentOption::UTF8 { .. }
-        | BitStringSegmentOption::UTF16 { .. }
-        | BitStringSegmentOption::UTF32 { .. }
-        | BitStringSegmentOption::UTF8Codepoint { .. }
-        | BitStringSegmentOption::UTF16Codepoint { .. }
-        | BitStringSegmentOption::UTF32Codepoint { .. }
+            | BitStringSegmentOption::UTF16 { .. }
+            | BitStringSegmentOption::UTF32 { .. }
+            | BitStringSegmentOption::UTF8Codepoint { .. }
+            | BitStringSegmentOption::UTF16Codepoint { .. }
+            | BitStringSegmentOption::UTF32Codepoint { .. }
     )
 }
 

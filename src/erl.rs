@@ -655,7 +655,7 @@ where
 
     for option in options.iter() {
         use BitStringSegmentOption as Opt;
-        if !others.is_empty() && !matches!(option, Opt::Size {..}|Opt::Unit{..}) {
+        if !others.is_empty() && !matches!(option, Opt::Size { .. } | Opt::Unit { .. }) {
             others.push("-".to_doc());
         }
         match option {

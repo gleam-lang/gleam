@@ -26,6 +26,7 @@
   subject being pattern matches on.
 - Documentation dark mode.
 - `--warnings-as-errors` flag added to `gleam build` command.
+- Fixed a bug where some app.src properties were incorrectly named.
 
 ## v0.13.2 - 2021-01-14
 

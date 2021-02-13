@@ -224,10 +224,10 @@ pub fn stop(_state: Dynamic) {
         write(
             self.src.join(format!("{}.app.src", self.options.name)),
             &format!(
-                r#"{{application, {},
- [{{description, "{}"}},
-  {{vsn, "{}"}},
-  {{registered, []}},{}
+                r#"{{application, {application},
+ [{{description, "{description}"}},
+  {{vsn, "{version}"}},
+  {{registered, []}},{module}
   {{applications,
    [kernel,
     stdlib,
@@ -241,7 +241,10 @@ pub fn stop(_state: Dynamic) {
   {{links, []}}
 ]}}.
 "#,
-                self.options.name, PROJECT_VERSION, &self.options.description, module,
+                application = self.options.name,
+                description = &self.options.description,
+                version = PROJECT_VERSION,
+                module = module,
             ),
         )
     }
