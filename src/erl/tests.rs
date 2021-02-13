@@ -768,6 +768,26 @@ bitstring_discard(X) ->
 }
 
 #[test]
+fn bit_string_declare_and_use_var() {
+    assert_erl!(
+        r#"pub fn go(x) {
+  let <<name_size:8, name:binary-size(name_size)>> = x
+  name
+}"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([go/1]).
+
+-spec go(bitstring()) -> bitstring().
+go(X) ->
+    <<Name_size:8, Name:Name_size/binary>> = X,
+    Name.
+"#,
+    );
+}
+
+#[test]
 fn clause_guards() {
     // Clause guards
     assert_erl!(
@@ -2600,4 +2620,6 @@ go() ->
     Y@3.
 "#,
     );
+
+    // TODO: patterns that are just vars don't render a case expression
 }

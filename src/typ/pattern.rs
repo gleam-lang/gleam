@@ -194,7 +194,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 Ok(Pattern::Var { name, location })
             }
 
-            Pattern::VarCall { name, location, .. } => {
+            Pattern::VarUsage { name, location, .. } => {
                 let ValueConstructor { typ, .. } = self
                     .environment
                     .get_variable(&name)
@@ -219,7 +219,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                     .unify(int(), typ.clone())
                     .map_err(|e| convert_unify_error(e, location))?;
 
-                Ok(Pattern::VarCall {
+                Ok(Pattern::VarUsage {
                     name,
                     location,
                     typ,

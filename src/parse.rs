@@ -2135,7 +2135,7 @@ where
 
     fn expect_bit_string_pattern_segment_arg(&mut self) -> Result<UntypedPattern, ParseError> {
         match self.next_tok() {
-            Some((start, Tok::Name { name }, end)) => Ok(Pattern::VarCall {
+            Some((start, Tok::Name { name }, end)) => Ok(Pattern::VarUsage {
                 location: SrcSpan { start, end },
                 name,
                 typ: (),
