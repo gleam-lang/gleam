@@ -3652,3 +3652,15 @@ fn bitstring_pattern_unification() {
         vec![("m", "fn(BitString) -> Nil")],
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/978
+#[test]
+fn bit_pattern_var_use() {
+    assert_no_warnings!(
+        "
+pub fn main(x) {
+  let <<name_size:8, name:binary-size(name_size)>> = x
+  name
+}",
+    );
+}

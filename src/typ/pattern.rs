@@ -209,6 +209,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                             .map(|t| t.to_string())
                             .collect(),
                     })?;
+                self.environment.increment_usage(name.as_str());
                 let typ = self.environment.instantiate(
                     typ,
                     self.environment.level,
