@@ -22,16 +22,20 @@ hljs.registerLanguage("gleam", function (hljs) {
     className: "number",
     variants: [
       {
-        begin: "\\b0b([01_]+)",
+        // binary
+        begin: "\\b0[bB](?:_?[01]+)+",
       },
       {
-        begin: "\\b0o([0-7_]+)",
+        // octal
+        begin: "\\b0[oO](?:_?[0-7]+)+",
       },
       {
-        begin: "\\b0x([A-Fa-f0-9_]+)",
+        // hex
+        begin: "\\b0[xX](?:_?[0-9a-fA-F]+)+",
       },
       {
-        begin: "\\b(\\d[\\d_]*(\\.[0-9_]+)?([eE][+-]?[0-9_]+)?)",
+        // dec, float
+        begin: "\\b\\d(?:_?\\d+)*(?:\\.(?:\\d(?:_?\\d+)*)*)?",
       },
     ],
     relevance: 0,
@@ -44,7 +48,7 @@ hljs.registerLanguage("gleam", function (hljs) {
       hljs.C_LINE_COMMENT_MODE,
       STRING,
       {
-        // bitstrings
+        // bit string
         begin: "<<",
         end: ">>",
         contains: [
@@ -55,10 +59,11 @@ hljs.registerLanguage("gleam", function (hljs) {
               "utf8_codepoint utf16_codepoint utf32_codepoint signed unsigned " +
               "big little native unit size",
           },
+          KEYWORDS,
           STRING,
-          NUMBER,
           NAME,
           DISCARD_NAME,
+          NUMBER,
         ],
         relevance: 10,
       },
@@ -70,7 +75,7 @@ hljs.registerLanguage("gleam", function (hljs) {
         contains: [
           {
             className: "title",
-            begin: "[a-zA-Z0-9_]\\w*",
+            begin: "[a-z][a-z0-9_]*\\w*",
             relevance: 0,
           },
         ],
@@ -82,27 +87,21 @@ hljs.registerLanguage("gleam", function (hljs) {
       {
         // Type names and constructors
         className: "title",
-        begin: "\\b[A-Z][A-Za-z0-9_]*\\b",
+        begin: "\\b[A-Z][A-Za-z0-9]*\\b",
         relevance: 0,
       },
       {
-        // float operators
         className: "operator",
-        begin: "(\\+\\.|-\\.|\\*\\.|/\\.|<\\.|>\\.)",
-        relevance: 10,
-      },
-      {
-        className: "operator",
-        begin: "(->|\\|>|<<|>>|\\+|-|\\*|/|>=|<=|<|<|%|\\.\\.|\\|=|==|!=)",
+        begin: "[+\\-*/%!=<>&|.]+",
         relevance: 0,
       },
-      NUMBER,
       NAME,
       DISCARD_NAME,
+      NUMBER,
     ],
   };
 });
-document.querySelectorAll("pre code").forEach((block) => {
+document.querySelectorAll("pre code").forEach(block => {
   if (block.className === "") {
     block.classList.add("gleam");
   }
