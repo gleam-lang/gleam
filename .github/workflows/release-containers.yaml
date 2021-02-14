@@ -33,12 +33,29 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
-      - name: Download Gleam archive from GitHub release
+      - name: Build version and tags
+        id: versions
         run: |
           # Strip git ref prefix from version
-          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+          V_VERSION=$(echo "${{ github.ref }}" | sed -e 's|.*/\(.*\)|\1|')
 
-          # Download archive
+          # Strip `v` prefix from version
+          BARE_VERSION=$(echo "$V_VERSION" | sed -e 's|^v/\(.*\)|\1|')
+
+          # Build version with platform
+          PLATFORM_VERSION=$BARE_VERSION-${{ matrix.base-image }}
+
+          # Build container tag
+          TAG=ghcr.io/${{ github.repository }}:$PLATFORM_VERSION
+
+          echo "::set-output name=v_version::$V_VERSION"
+          echo "::set-output name=bare_version::$BARE_VERSION"
+          echo "::set-output name=platform_version::$PLATFORM_VERSION"
+          echo "::set-output name=container_tag::$TAG"
+
+      - name: Download Gleam archive from GitHub release
+        run: |
+          VERSION=${{ steps.versions.outputs.v_version }}
           URL=https://github.com/${{ github.repository }}/releases/download/$VERSION/gleam-$VERSION-linux-amd64.tar.gz
           echo Downloading $URL
           curl -Lo gleam.tar.gz $URL
@@ -46,22 +63,16 @@ jobs:
       - name: Unpack Gleam binary from archive
         run: tar xf gleam.tar.gz
 
-      - name: Prepare container meta information
-        id: container_meta
-        uses: crazy-max/ghaction-docker-meta@v1
-        with:
-          images: ghcr.io/${{ github.repository }}
-          tag-sha: true
-          tag-latest: false
-          tag-semver: |
-            {{version}}-${{ matrix.base-image }}
-            {{major}}.{{minor}}-${{ matrix.base-image }}
-
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
           context: .
           file: containers/${{ matrix.base-image }}.dockerfile
           push: true
-          tags: ${{ steps.container_meta.outputs.tags }}
-          labels: ${{ steps.container_meta.outputs.labels }}
+          tags: ${{ steps.versions.outputs.container_tag }}
+          labels: |
+            org.opencontainers.image.title=gleam
+            org.opencontainers.image.url=https://gleam.run
+            org.opencontainers.image.source=https://github.com/gleam-lang/gleam
+            org.opencontainers.image.version=${{ steps.versions.outputs.platform_version }}
+            org.opencontainers.image.licenses=Apache-2.0

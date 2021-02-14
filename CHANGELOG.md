@@ -5,12 +5,15 @@
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
+
+## v0.14.0-rc1 - 2021-02-14
+
+- Gleam now generates Erlang typespecs.
 - New projects no longer include a licence file by default.
 - New projects can be created using the new `escript` template to generate a
   command line tool style program.
 - A warning is emitted when a literal value is constructed but not used.
 - Automatically generate a link to repository in docs if available.
-- Gleam now generates Erlang typespecs.
 - Code in HTML documentation is has highlighted syntax.
 - Gleam now only supports `\r`, `\n`, `\t`, `\"`, and `\\` string escapes.
 - A set of OCI container images are built automatically for each release.
