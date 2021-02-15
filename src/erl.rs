@@ -661,7 +661,8 @@ fn pattern<'a>(p: &'a TypedPattern, env: &mut Env<'_>) -> Document<'a> {
             if args.is_empty() {
                 fatal_compiler_bug("No arguments for an inline type pattern")
             } else {
-                pattern(&args.swap_remove(0).value, env)
+                let arg = &args[0];
+                pattern(&arg.value, env)
             }
         }
 

@@ -216,6 +216,17 @@ pound(X) ->
     );
 
     assert_erl!(
+        r#"pub inline type Money { Pound(Int) }
+                    fn pound(x) { Pound(x) }"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+pound(X) ->
+    {pound, X}.
+"#,
+    );
+
+    assert_erl!(
         r#"fn loop() { loop() }"#,
         r#"-module(the_app).
 -compile(no_auto_import).
