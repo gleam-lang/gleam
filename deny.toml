@@ -50,7 +50,6 @@ skip = [
     { name = "pin-project", version = "=0.4.27" },
     { name = "pin-project-internal", version = "=0.4.27" },
     { name = "rand_core", version = "=0.5.1" },
-    { name = "redox_syscall", version = "0.1.57" },
     { name = "strsim", version = "=0.8.0" },
 ]
 skip-tree = []
