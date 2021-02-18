@@ -6,6 +6,8 @@
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 
+## v0.14.0-rc2 - 2021-02-18
+
 - New projects are created with `gleam_stdlib` v0.14.0.
 
 ## v0.14.0-rc1 - 2021-02-14
