@@ -95,3 +95,4 @@ Thank you to our top sponsors! Gleam would not be possible without you.
  - [Topher Hunt](https://github.com/topherhunt)
  - [Tristan Sloughter](https://github.com/tsloughter)
  - [Wojtek Mach](https://github.com/wojtekmach)
+ - [Yu Matsuzawa](https://github.com/ymtszw)
