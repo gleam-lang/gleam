@@ -289,7 +289,7 @@ pub struct ExternalFnArg<T> {
     pub typ: T,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BinOp {
     // Boolean logic
     And,

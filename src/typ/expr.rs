@@ -620,7 +620,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         right: UntypedExpr,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        let (input_type, output_type) = match name {
+        let (input_type, output_type) = match &name {
             BinOp::Eq | BinOp::NotEq => {
                 let left = self.infer(left)?;
                 let right = self.infer(right)?;
@@ -658,10 +658,10 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
 
         let left = self.infer(left)?;
         self.unify(input_type.clone(), left.typ())
-            .map_err(|e| convert_unify_error(e, left.location()))?;
+            .map_err(|e| e.operator_situation(name).to_error(left.location()))?;
         let right = self.infer(right)?;
         self.unify(input_type, right.typ())
-            .map_err(|e| convert_unify_error(e, right.location()))?;
+            .map_err(|e| e.operator_situation(name).to_error(right.location()))?;
 
         Ok(TypedExpr::BinOp {
             location,
