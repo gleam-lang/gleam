@@ -83,7 +83,7 @@ pub fn non_literal_strings_test() {
   let f = fn() { "ß" }
 
   let y = <<v:utf8, t.0:utf8, c.value:utf8, f():utf8, "↑":utf8>>
-  let <<
+  assert <<
     var_out:8,
     tuple_out:8,
     custom_type_out:8,

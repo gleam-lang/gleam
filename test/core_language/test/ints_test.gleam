@@ -10,6 +10,7 @@ pub fn bases_test() {
 
   should.equal(x, 15)
   should.equal(y, 15)
+  should.equal(hex_int, 15)
 }
 
 pub fn minus_lexing_test() {
