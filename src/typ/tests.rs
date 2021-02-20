@@ -1,7 +1,9 @@
 use super::test_helpers::*;
 use super::*;
-use crate::ast::UntypedExpr;
-use crate::bit_string;
+use crate::{
+    ast::{BinOp, UntypedExpr},
+    bit_string,
+};
 
 macro_rules! assert_infer {
     ($src:expr, $typ:expr $(,)?) => {
@@ -886,7 +888,7 @@ fn binop_unification_errors() {
     assert_error!(
         "1 + 1.0",
         Error::CouldNotUnify {
-            situation: None,
+            situation: Some(UnifyErrorSituation::Operator(BinOp::AddInt)),
             location: SrcSpan { start: 4, end: 7 },
             expected: int(),
             given: float(),
@@ -896,7 +898,7 @@ fn binop_unification_errors() {
     assert_error!(
         "1 +. 1.0",
         Error::CouldNotUnify {
-            situation: None,
+            situation: Some(UnifyErrorSituation::Operator(BinOp::AddFloat)),
             location: SrcSpan { start: 0, end: 1 },
             expected: float(),
             given: int(),
@@ -916,7 +918,7 @@ fn binop_unification_errors() {
     assert_error!(
         "1 > 1.0",
         Error::CouldNotUnify {
-            situation: None,
+            situation: Some(UnifyErrorSituation::Operator(BinOp::GtInt)),
             location: SrcSpan { start: 4, end: 7 },
             expected: int(),
             given: float(),
@@ -926,7 +928,7 @@ fn binop_unification_errors() {
     assert_error!(
         "1.0 >. 1",
         Error::CouldNotUnify {
-            situation: None,
+            situation: Some(UnifyErrorSituation::Operator(BinOp::GtFloat)),
             location: SrcSpan { start: 7, end: 8 },
             expected: float(),
             given: int(),
@@ -1040,7 +1042,7 @@ fn case_clause_unification_error() {
     assert_error!(
         "case 1, 2.0 { a, b -> a + b }",
         Error::CouldNotUnify {
-            situation: None,
+            situation: Some(UnifyErrorSituation::Operator(BinOp::AddInt)),
             location: SrcSpan { start: 26, end: 27 },
             expected: int(),
             given: float(),
@@ -2202,7 +2204,7 @@ fn infer_module_error_test() {
     assert_module_error!(
         "fn go() { 1 + 2.0 }",
         Error::CouldNotUnify {
-            situation: None,
+            situation: Some(UnifyErrorSituation::Operator(BinOp::AddInt)),
             location: SrcSpan { start: 14, end: 17 },
             expected: int(),
             given: float(),
@@ -2212,7 +2214,7 @@ fn infer_module_error_test() {
     assert_module_error!(
         "fn go() { 1 + 2.0 }",
         Error::CouldNotUnify {
-            situation: None,
+            situation: Some(UnifyErrorSituation::Operator(BinOp::AddInt)),
             location: SrcSpan { start: 14, end: 17 },
             expected: int(),
             given: float(),

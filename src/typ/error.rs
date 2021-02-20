@@ -1,4 +1,7 @@
-use crate::{ast::SrcSpan, typ::Type};
+use crate::{
+    ast::{BinOp, SrcSpan},
+    typ::Type,
+};
 
 use std::sync::Arc;
 
@@ -441,6 +444,7 @@ fn unify_enclosed_type_test() {
 pub enum UnifyErrorSituation {
     CaseClauseMismatch,
     ReturnAnnotationMismatch,
+    Operator(BinOp),
 }
 
 impl UnifyErrorSituation {
@@ -453,6 +457,9 @@ one, but all case clauses must return the same type."
             Self::ReturnAnnotationMismatch => {
                 "The type of this returned value doesn't match the return type 
 annotation of this function."
+            }
+            Self::Operator(_op) => {
+                todo!()
             }
         }
     }
@@ -497,6 +504,10 @@ impl UnifyError {
 
     pub fn return_annotation_mismatch(self) -> Self {
         self.with_unify_error_situation(UnifyErrorSituation::ReturnAnnotationMismatch)
+    }
+
+    pub fn operator_situation(self, binop: BinOp) -> Self {
+        self.with_unify_error_situation(UnifyErrorSituation::Operator(binop))
     }
 
     pub fn to_error(self, location: SrcSpan) -> Error {
