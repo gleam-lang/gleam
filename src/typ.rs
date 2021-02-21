@@ -12,7 +12,7 @@ mod test_helpers;
 mod tests;
 
 pub use environment::*;
-pub use error::{Error, Warning};
+pub use error::{Error, UnifyErrorSituation, Warning};
 pub use expr::*;
 pub use fields::FieldMap;
 pub use prelude::*;
@@ -87,6 +87,20 @@ impl Type {
         match self {
             Self::Fn { args, retrn, .. } => Some((args.clone(), retrn.clone())),
             _ => None,
+        }
+    }
+
+    pub fn is_int(&self) -> bool {
+        match self {
+            Self::App { module, name, .. } => module.is_empty() && name == "Int",
+            _ => false,
+        }
+    }
+
+    pub fn is_float(&self) -> bool {
+        match self {
+            Self::App { module, name, .. } => module.is_empty() && name == "Float",
+            _ => false,
         }
     }
 

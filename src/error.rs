@@ -1,11 +1,11 @@
-use crate::parse::error::ParseErrorType;
+use crate::{ast::BinOp, parse::error::ParseErrorType, typ::Type};
 use crate::{
     bit_string, cli,
     diagnostic::{
         write, write_diagnostic, write_project, Diagnostic, DiagnosticLabel, LabelStyle,
         MultiLineDiagnostic, ProjectErrorDiagnostic, Severity,
     },
-    typ::pretty::Printer,
+    typ::{pretty::Printer, UnifyErrorSituation},
 };
 use itertools::Itertools;
 use std::fmt::Debug;
@@ -263,12 +263,11 @@ fn did_you_mean(name: &str, options: &mut Vec<String>, alt: &'static str) -> Str
 }
 
 impl Error {
-    pub fn pretty(&self, buffer: &mut Buffer) {
+    pub fn pretty(&self, buf: &mut Buffer) {
         use crate::typ::Error as TypeError;
         use std::io::Write;
 
-        buffer
-            .write_all(b"\n")
+        buf.write_all(b"\n")
             .expect("error pretty buffer write space before");
 
         match self {
@@ -279,10 +278,10 @@ impl Error {
 of the Gleam dependency modules."
                         .to_string(),
                 };
-                write_project(buffer, diagnostic);
+                write_project(buf, diagnostic);
                 if let Some(error) = error {
                     writeln!(
-                        buffer,
+                        buf,
                         "\nThe error from the decoder library was:
 
     {}",
@@ -315,7 +314,7 @@ and underscores.",
                         }
                     ),
                 };
-                write_project(buffer, diagnostic);
+                write_project(buf, diagnostic);
             }
 
             Error::UnableToFindProjectRoot { path } => {
@@ -323,7 +322,7 @@ and underscores.",
                     title: "Invalid project root".to_string(),
                     label: format!("We were unable to find the project root:\n\n  {}", path),
                 };
-                write_project(buffer, diagnostic);
+                write_project(buf, diagnostic);
             }
             Error::VersionDoesNotMatch { toml_ver, app_ver } => {
                 let diagnostic = ProjectErrorDiagnostic {
@@ -331,7 +330,7 @@ and underscores.",
                     label:
                         format!("The version in gleam.toml \"{}\" does not match the version in your app.src file \"{}\"", toml_ver, app_ver),
                 };
-                write_project(buffer, diagnostic);
+                write_project(buf, diagnostic);
             }
             Error::ShellCommand { command, err: None } => {
                 let diagnostic = ProjectErrorDiagnostic {
@@ -341,7 +340,7 @@ and underscores.",
                         command
                     ),
                 };
-                write_project(buffer, diagnostic);
+                write_project(buf, diagnostic);
             }
 
             Error::ShellCommand {
@@ -360,7 +359,7 @@ The error from the shell command library was:
                         std_io_error_kind_text(err)
                     ),
                 };
-                write_project(buffer, diagnostic);
+                write_project(buf, diagnostic);
             }
 
             Error::Gzip(detail) => {
@@ -375,7 +374,7 @@ This was error from the gzip library:
                         detail
                     ),
                 };
-                write_project(buffer, diagnostic);
+                write_project(buf, diagnostic);
             }
 
             Error::Tar { path, err } => {
@@ -392,7 +391,7 @@ This was error from the tar library:
                         err.to_string()
                     ),
                 };
-                write_project(buffer, diagnostic);
+                write_project(buf, diagnostic);
             }
 
             Error::TarFinish(detail) => {
@@ -407,7 +406,7 @@ This was error from the tar library:
                         detail
                     ),
                 };
-                write_project(buffer, diagnostic);
+                write_project(buf, diagnostic);
             }
 
             Error::Hex(detail) => {
@@ -422,7 +421,7 @@ This was error from the Hex client library:
                         detail
                     ),
                 };
-                write_project(buffer, diagnostic);
+                write_project(buf, diagnostic);
             }
 
             Error::SrcImportingTest {
@@ -439,9 +438,9 @@ This was error from the Hex client library:
                     src: src.to_string(),
                     location: *location,
                 };
-                write(buffer, diagnostic, Severity::Error);
+                write(buf, diagnostic, Severity::Error);
                 writeln!(
-                    buffer,
+                    buf,
                     "The application module `{}` is importing the test module `{}`.
 
 Test modules are not included in production builds so test modules
@@ -468,7 +467,7 @@ Second: {}",
                         second.to_str().expect("pretty error print PathBuf to_str"),
                     ),
                 };
-                write_project(buffer, diagnostic);
+                write_project(buf, diagnostic);
             }
 
             Error::FileIO {
@@ -497,7 +496,7 @@ Second: {}",
                         err,
                     ),
                 };
-                write_project(buffer, diagnostic);
+                write_project(buf, diagnostic);
             }
 
             Error::Type { path, src, error } => match error {
@@ -531,23 +530,23 @@ Second: {}",
                             })
                             .collect(),
                     };
-                    write_diagnostic(buffer, diagnostic, Severity::Error);
+                    write_diagnostic(buf, diagnostic, Severity::Error);
 
                     if valid.is_empty() {
                         writeln!(
-                            buffer,
+                            buf,
                             "This constructor does not accept any labelled arguments."
                         )
                         .unwrap();
                     } else if other_labels.is_empty() {
                         writeln!(
-                                buffer,
+                                buf,
                                 "You have already supplied all the labelled arguments that this constructor accepts."
                             )
                             .unwrap();
                     } else {
                         writeln!(
-                            buffer,
+                            buf,
                             "The other labelled arguments that this constructor accepts are `{}`.",
                             other_labels.iter().join("`, `")
                         )
@@ -563,9 +562,9 @@ Second: {}",
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
                     writeln!(
-                        buffer,
+                        buf,
                         "
 This argument has been given a label but the constructor does not expect any.
 Please remove the label `{}`.",
@@ -582,9 +581,9 @@ Please remove the label `{}`.",
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
                     writeln!(
-                        buffer,
+                        buf,
                         "This unlablled argument has been supplied after a labelled argument.
 Once a labelled argument has been supplied all following arguments must
 also be labelled.",
@@ -615,7 +614,7 @@ also be labelled.",
                             },
                         ],
                     };
-                    write_diagnostic(buffer, diagnostic, Severity::Error);
+                    write_diagnostic(buf, diagnostic, Severity::Error);
                 }
 
                 TypeError::DuplicateTypeName {
@@ -641,7 +640,7 @@ also be labelled.",
                             },
                         ],
                     };
-                    write_diagnostic(buffer, diagnostic, Severity::Error);
+                    write_diagnostic(buf, diagnostic, Severity::Error);
                 }
 
                 TypeError::DuplicateField { location, label } => {
@@ -652,9 +651,9 @@ also be labelled.",
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
                     writeln!(
-                        buffer,
+                        buf,
                         "The field `{}` has already been defined. Rename this field.",
                         label
                     )
@@ -669,9 +668,9 @@ also be labelled.",
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
                     writeln!(
-                        buffer,
+                        buf,
                         "The labelled argument `{}` has already been supplied.",
                         label
                     )
@@ -686,7 +685,7 @@ also be labelled.",
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
                 }
 
                 TypeError::NotFn { location, typ } => {
@@ -697,11 +696,11 @@ also be labelled.",
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
                     let mut printer = Printer::new();
 
                     writeln!(
-                        buffer,
+                        buf,
                         "This value is being called as a function but its type is:\n\n{}",
                         printer.pretty_print(typ, 4)
                     )
@@ -726,11 +725,11 @@ also be labelled.",
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
                     let mut printer = Printer::new();
 
                     writeln!(
-                        buffer,
+                        buf,
                         "The value has this type:
 
 {}
@@ -740,12 +739,47 @@ also be labelled.",
                     .unwrap();
 
                     if fields.is_empty() {
-                        writeln!(buffer, "It does not have any fields.",).unwrap();
+                        writeln!(buf, "It does not have any fields.",).unwrap();
                     } else {
-                        write!(buffer, "It has these fields:\n\n").unwrap();
+                        write!(buf, "It has these fields:\n\n").unwrap();
                         for field in fields {
-                            writeln!(buffer, "    .{}", field).unwrap();
+                            writeln!(buf, "    .{}", field).unwrap();
                         }
+                    }
+                }
+
+                TypeError::CouldNotUnify {
+                    location,
+                    expected,
+                    given,
+                    situation: Some(UnifyErrorSituation::Operator(op)),
+                } => {
+                    let diagnostic = Diagnostic {
+                        title: "Type mismatch".to_string(),
+                        label: "".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: *location,
+                    };
+                    write(buf, diagnostic, Severity::Error);
+                    let mut printer = Printer::new();
+                    writeln!(
+                        buf,
+                        "The {op} operator expects arguments of this type:
+
+{expected}
+
+But this argument has this type:
+
+{given}\n",
+                        op = op.name(),
+                        expected = printer.pretty_print(expected, 4),
+                        given = printer.pretty_print(given, 4),
+                    )
+                    .unwrap();
+                    if let Some((alt, t)) = hint_alternative_operator(&op, given.as_ref()) {
+                        writeln!(buf, "Hint: the {} operator can be used with {}s\n", alt, t)
+                            .unwrap();
                     }
                 }
 
@@ -762,13 +796,13 @@ also be labelled.",
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
-                    if let Some(situation) = situation {
-                        writeln!(buffer, "{}\n", situation.description()).unwrap();
+                    write(buf, diagnostic, Severity::Error);
+                    if let Some(description) = situation.and_then(|s| s.description()) {
+                        writeln!(buf, "{}\n", description).unwrap();
                     }
                     let mut printer = Printer::new();
                     writeln!(
-                        buffer,
+                        buf,
                         "Expected type:
 
 {}
@@ -795,7 +829,7 @@ Found type:
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
                 }
 
                 TypeError::IncorrectArity {
@@ -811,7 +845,7 @@ Found type:
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
                     if !labels.is_empty() {
                         let labels = labels
                             .iter()
@@ -819,7 +853,7 @@ Found type:
                             .sorted()
                             .join("\n");
                         writeln!(
-                            buffer,
+                            buf,
                             "This call accepts these additional labelled arguments:\n\n{}\n",
                             labels,
                         )
@@ -835,10 +869,10 @@ Found type:
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
 
                     writeln!(
-                        buffer,
+                        buf,
                         "This record has {} fields and you have already assigned variables to all of them.",
                         arity
                     )
@@ -858,9 +892,9 @@ Found type:
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
                     writeln!(
-                        buffer,
+                        buf,
                         "The type `{}` is not defined or imported in this module.",
                         name
                     )
@@ -880,8 +914,8 @@ Found type:
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
-                    writeln!(buffer, "The name `{}` is not in scope here.", name).unwrap();
+                    write(buf, diagnostic, Severity::Error);
+                    writeln!(buf, "The name `{}` is not in scope here.", name).unwrap();
                 }
 
                 TypeError::PrivateTypeLeak { location, leaked } => {
@@ -892,7 +926,7 @@ Found type:
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
                     let mut printer = Printer::new();
 
                     // TODO: be more precise.
@@ -901,7 +935,7 @@ Found type:
                     // - is taken as an argument by this public enum constructor
                     // etc
                     writeln!(
-                        buffer,
+                        buf,
                         "The following type is private, but is being used by this public export.
 
 {}
@@ -925,13 +959,8 @@ Private types can only be used within the module that defines them.",
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
-                    writeln!(
-                        buffer,
-                        "No module has been imported with the name `{}`.",
-                        name
-                    )
-                    .unwrap();
+                    write(buf, diagnostic, Severity::Error);
+                    writeln!(buf, "No module has been imported with the name `{}`.", name).unwrap();
                 }
 
                 TypeError::UnknownModuleType {
@@ -948,9 +977,9 @@ Private types can only be used within the module that defines them.",
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
                     writeln!(
-                        buffer,
+                        buf,
                         "The module `{}` does not have a `{}` type.",
                         module_name.join("/"),
                         name
@@ -972,9 +1001,9 @@ Private types can only be used within the module that defines them.",
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
                     writeln!(
-                        buffer,
+                        buf,
                         "The module `{}` does not have a `{}` field.",
                         module_name.join("/"),
                         name
@@ -1001,9 +1030,9 @@ Private types can only be used within the module that defines them.",
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
                     writeln!(
-                        buffer,
+                        buf,
                         "The module `{}` does not have a `{}` field.",
                         module_name.join("/"),
                         name
@@ -1023,9 +1052,9 @@ Private types can only be used within the module that defines them.",
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
                     writeln!(
-                        buffer,
+                        buf,
                         "This case expression has {} subjects, but this pattern matches {}.
 Each clause must have a pattern for every subject value.",
                         expected, given
@@ -1041,9 +1070,9 @@ Each clause must have a pattern for every subject value.",
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
                     writeln!(
-                        buffer,
+                        buf,
                         "Variables used in guards must be either defined in the function, or be an
 argument to the function. The variable `{}` is not defined locally.",
                         name
@@ -1059,9 +1088,9 @@ argument to the function. The variable `{}` is not defined locally.",
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
                     writeln!(
-                        buffer,
+                        buf,
                         "All alternative patterns must define the same variables as the initial
 pattern. This variable `{}` has not been previously defined.",
                         name
@@ -1077,10 +1106,10 @@ pattern. This variable `{}` has not been previously defined.",
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
 
                     writeln!(
-                        buffer,
+                        buf,
                         "Variables can only be used once per pattern. This variable {} appears multiple times.
 If you used the same variable twice deliberately in order to check for equality
 please use a guard clause instead e.g. (x, y) if x == y -> ...",
@@ -1099,9 +1128,9 @@ please use a guard clause instead e.g. (x, y) if x == y -> ...",
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
                     writeln!(
-                        buffer,
+                        buf,
                         "This tuple has no elements so it cannot be indexed at all!"
                     )
                     .unwrap();
@@ -1119,9 +1148,9 @@ please use a guard clause instead e.g. (x, y) if x == y -> ...",
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
                     writeln!(
-                        buffer,
+                        buf,
                         "The index being accessed for this tuple is {}, but this tuple has
 {} elements so the highest valid index is {}.",
                         index,
@@ -1139,11 +1168,11 @@ please use a guard clause instead e.g. (x, y) if x == y -> ...",
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
                     let mut printer = Printer::new();
 
                     writeln!(
-                        buffer,
+                        buf,
                         "To index into this value it needs to be a tuple, however it has this type:
 
 {}",
@@ -1160,10 +1189,10 @@ please use a guard clause instead e.g. (x, y) if x == y -> ...",
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
 
                     writeln!(
-                        buffer,
+                        buf,
                         "To index into a tuple we need to know it size, but we don't know anything
 about this type yet. Please add some type annotations so we can continue.",
                     )
@@ -1178,10 +1207,10 @@ about this type yet. Please add some type annotations so we can continue.",
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
 
                     writeln!(
-                        buffer,
+                        buf,
                         "In order to access a record field we need to know what type it is, but
 I can't tell the type here. Try adding type annotations to your function
 and try again.
@@ -1277,10 +1306,9 @@ and try again.
                         src: src.to_string(),
                     };
                     extra.push("See: https://gleam.run/book/tour/bit-strings.html".to_string());
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
                     if !extra.is_empty() {
-                        writeln!(buffer, "{}", extra.join("\n"))
-                            .expect("error pretty buffer write");
+                        writeln!(buf, "{}", extra.join("\n")).expect("error pretty buffer write");
                     }
                 }
 
@@ -1292,10 +1320,10 @@ and try again.
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
 
                     writeln!(
-                        buffer,
+                        buf,
                         "You are attempting to update a record using a value that is not a record constructor",
                     )
                     .unwrap();
@@ -1309,10 +1337,10 @@ and try again.
                         src: src.to_string(),
                         location: *location,
                     };
-                    write(buffer, diagnostic, Severity::Error);
+                    write(buf, diagnostic, Severity::Error);
 
                     writeln!(
-                        buffer,
+                        buf,
                         "We need to know the exact type here so type holes are not permitted.",
                     )
                     .unwrap();
@@ -1466,23 +1494,23 @@ and try again.
                     file: path.to_str().unwrap().to_string(),
                     src: src.to_string(),
                 };
-                write(buffer, diagnostic, Severity::Error);
+                write(buf, diagnostic, Severity::Error);
                 if !extra.is_empty() {
-                    writeln!(buffer, "{}", extra.join("\n")).expect("error pretty buffer write");
+                    writeln!(buf, "{}", extra.join("\n")).expect("error pretty buffer write");
                 }
             }
 
             Error::ImportCycle { modules } => {
-                crate::diagnostic::write_title(buffer, "Import cycle");
+                crate::diagnostic::write_title(buf, "Import cycle");
                 writeln!(
-                    buffer,
+                    buf,
                     "The import statements for these modules form a cycle:\n"
                 )
                 .unwrap();
-                import_cycle(buffer, modules.as_ref());
+                import_cycle(buf, modules.as_ref());
 
                 writeln!(
-                    buffer,
+                    buf,
                     "Gleam doesn't support import cycles like these, please break the
 cycle to continue."
                 )
@@ -1490,15 +1518,11 @@ cycle to continue."
             }
 
             Error::PackageCycle { packages } => {
-                crate::diagnostic::write_title(buffer, "Dependency cycle");
+                crate::diagnostic::write_title(buf, "Dependency cycle");
+                writeln!(buf, "The dependencies for these packages form a cycle:\n").unwrap();
+                import_cycle(buf, packages.as_ref());
                 writeln!(
-                    buffer,
-                    "The dependencies for these packages form a cycle:\n"
-                )
-                .unwrap();
-                import_cycle(buffer, packages.as_ref());
-                writeln!(
-                    buffer,
+                    buf,
                     "Gleam doesn't support dependency cycles like these, please break the
 cycle to continue."
                 )
@@ -1521,9 +1545,9 @@ cycle to continue."
                     src: src.to_string(),
                     location: *location,
                 };
-                write(buffer, diagnostic, Severity::Error);
+                write(buf, diagnostic, Severity::Error);
                 writeln!(
-                    buffer,
+                    buf,
                     "The module `{}` is trying to import the module `{}`,
 but it cannot be found.",
                     module, import
@@ -1549,7 +1573,7 @@ but it cannot be found.",
                         err,
                     ),
                 };
-                write_project(buffer, diagnostic);
+                write_project(buf, diagnostic);
             }
             Error::Format { problem_files } => {
                 let files: Vec<_> = problem_files
@@ -1565,7 +1589,7 @@ but it cannot be found.",
                     label,
                 };
 
-                write_project(buffer, diagnostic);
+                write_project(buf, diagnostic);
             }
 
             Error::ForbiddenWarnings { count } => {
@@ -1579,7 +1603,7 @@ but it cannot be found.",
 Fix the warnings and try again!"
                         .to_string(),
                 };
-                write_project(buffer, diagnostic);
+                write_project(buf, diagnostic);
             }
         }
     }
@@ -1646,4 +1670,28 @@ fn import_cycle(buffer: &mut Buffer, modules: &[String]) {
         buffer.set_color(&ColorSpec::new()).unwrap();
     }
     writeln!(buffer, "    └─────┘\n").unwrap();
+}
+
+fn hint_alternative_operator(op: &BinOp, given: &Type) -> Option<(&'static str, &'static str)> {
+    match op {
+        BinOp::AddInt if given.is_float() => Some(("+.", "Float")),
+        BinOp::DivInt if given.is_float() => Some(("/.", "Float")),
+        BinOp::GtEqInt if given.is_float() => Some((">=", "Float")),
+        BinOp::GtInt if given.is_float() => Some((">", "Float")),
+        BinOp::LtEqInt if given.is_float() => Some(("<=.", "Float")),
+        BinOp::LtInt if given.is_float() => Some(("<.", "Float")),
+        BinOp::MultInt if given.is_float() => Some(("*.", "Float")),
+        BinOp::SubInt if given.is_float() => Some(("-.", "Float")),
+
+        BinOp::AddFloat if given.is_int() => Some(("+", "Int")),
+        BinOp::DivFloat if given.is_int() => Some(("/", "Int")),
+        BinOp::GtEqFloat if given.is_int() => Some((">=.", "Int")),
+        BinOp::GtFloat if given.is_int() => Some((">.", "Int")),
+        BinOp::LtEqFloat if given.is_int() => Some(("<=", "Int")),
+        BinOp::LtFloat if given.is_int() => Some(("<", "Int")),
+        BinOp::MultFloat if given.is_int() => Some(("*", "Int")),
+        BinOp::SubFloat if given.is_int() => Some(("-", "Int")),
+
+        _ => None,
+    }
 }
