@@ -6,6 +6,11 @@
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 
+## Unreleased
+
+- The error message for binary operators has been given more detail and
+  hints.
+
 ## v0.14.0 - 2021-02-18
 
 #### [Release Blog Post](https://gleam.run/news/gleam-v0.14-released/)
