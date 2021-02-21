@@ -345,6 +345,32 @@ impl BinOp {
             Self::MultInt | Self::MultFloat | Self::DivInt | Self::DivFloat | Self::ModuloInt => 7,
         }
     }
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::And => "&&",
+            Self::Or => "||",
+            Self::LtInt => "<",
+            Self::LtEqInt => "<=",
+            Self::LtFloat => "<.",
+            Self::LtEqFloat => "<=.",
+            Self::Eq => "==",
+            Self::NotEq => "!=",
+            Self::GtEqInt => ">=",
+            Self::GtInt => ">",
+            Self::GtEqFloat => ">=.",
+            Self::GtFloat => ">.",
+            Self::AddInt => "+",
+            Self::AddFloat => "+.",
+            Self::SubInt => "-",
+            Self::SubFloat => "-.",
+            Self::MultInt => "*",
+            Self::MultFloat => "*.",
+            Self::DivInt => "/",
+            Self::DivFloat => "/.",
+            Self::ModuloInt => "%",
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]

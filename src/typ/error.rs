@@ -448,19 +448,17 @@ pub enum UnifyErrorSituation {
 }
 
 impl UnifyErrorSituation {
-    pub fn description(&self) -> &'static str {
+    pub fn description(&self) -> Option<&'static str> {
         match self {
-            Self::CaseClauseMismatch => {
+            Self::CaseClauseMismatch => Some(
                 "This case clause was found to return a different type than the previous
-one, but all case clauses must return the same type."
-            }
-            Self::ReturnAnnotationMismatch => {
+one, but all case clauses must return the same type.",
+            ),
+            Self::ReturnAnnotationMismatch => Some(
                 "The type of this returned value doesn't match the return type 
-annotation of this function."
-            }
-            Self::Operator(_op) => {
-                todo!()
-            }
+annotation of this function.",
+            ),
+            Self::Operator(_op) => None,
         }
     }
 }
