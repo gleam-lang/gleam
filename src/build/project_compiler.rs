@@ -7,7 +7,7 @@ use crate::{
     codegen,
     config::PackageConfig,
     fs::FileSystemAccessor,
-    typ, Error, GleamExpect,
+    typ, warning, Error, GleamExpect, Warning,
 };
 use std::{collections::HashMap, path::PathBuf};
 
@@ -21,6 +21,7 @@ pub struct ProjectCompiler<'a> {
     packages: HashMap<String, Package>,
     type_manifests: HashMap<String, (Origin, typ::Module)>,
     defined_modules: HashMap<String, PathBuf>,
+    warnings: Vec<Warning>,
 }
 
 // TODO: test top level package has test modules compiled
@@ -38,6 +39,7 @@ impl<'a> ProjectCompiler<'a> {
             packages: HashMap::with_capacity(configs.len()),
             type_manifests: HashMap::with_capacity(estimated_number_of_modules),
             defined_modules: HashMap::with_capacity(estimated_number_of_modules),
+            warnings: Vec::new(),
             root_config,
             configs,
             root,
@@ -91,7 +93,11 @@ impl<'a> ProjectCompiler<'a> {
         let mut compiler = options.into_compiler(FileSystemAccessor::new())?;
 
         // Compile project
-        let compiled = compiler.compile(&mut self.type_manifests, &mut self.defined_modules)?;
+        let compiled = compiler.compile(
+            &mut self.warnings,
+            &mut self.type_manifests,
+            &mut self.defined_modules,
+        )?;
         ErlangApp::new(out_path.as_path()).render(
             &FileSystemAccessor::new(),
             &config,
