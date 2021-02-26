@@ -10,6 +10,8 @@
 
 - The error message for binary operators has been given more detail and
   hints.
+- Fixed a bug where alternative patterns would incorrectly report unused
+  variables.
 
 ## v0.14.0 - 2021-02-18
 
