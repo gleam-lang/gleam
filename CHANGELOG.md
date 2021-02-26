@@ -12,6 +12,8 @@
   hints.
 - Fixed a bug where alternative patterns would incorrectly report unused
   variables.
+- Fixed a bug where private types shadowed shadowed by values would
+  incorrectly report unused variables.
 
 ## v0.14.0 - 2021-02-18
 
