@@ -1701,6 +1701,27 @@ pub external fn use_type(Port) -> Nil =
             .to_string(),
         },
     ]);
+
+    assert_no_warnings!(vec![
+        Source {
+            origin: Origin::Src,
+            path: PathBuf::from("/src/one.gleam"),
+            name: "one".to_string(),
+            code: "pub type Port { Port }".to_string(),
+        },
+        Source {
+            origin: Origin::Src,
+            path: PathBuf::from("/src/two.gleam"),
+            name: "two".to_string(),
+            code: r#"import one.{Port}
+type Shadowing { Port }
+
+pub external fn use_type(Port) -> Nil =
+  "" ""
+"#
+            .to_string(),
+        },
+    ]);
 }
 
 #[test]

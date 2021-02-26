@@ -492,8 +492,14 @@ impl<'a, 'b> Environment<'a, 'b> {
             .gleam_expect("Attempted to access non-existant entity usages scope")
             .insert(name.to_string(), (kind, location, false))
         {
-            // PrivateTypes can be overwritten by a constructor with the same name
-            Some((EntityKind::PrivateType, _, _)) => {}
+            // Private types can be shadowed by a constructor with the same name
+            //
+            // TODO: Improve this so that we can tell if an imported overriden
+            // type is actually used or not by tracking whether usages apply to
+            // the value or type scope
+            Some((EntityKind::ImportedTypeAndConstructor, _, _))
+            | Some((EntityKind::ImportedType, _, _))
+            | Some((EntityKind::PrivateType, _, _)) => {}
             Some((kind, location, false)) => {
                 // an entity was overwritten in the top most scope without being used
                 let mut unused = HashMap::with_capacity(1);
