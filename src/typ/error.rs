@@ -3,7 +3,7 @@ use crate::{
     typ::Type,
 };
 
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Error {
@@ -238,6 +238,16 @@ pub enum Warning {
         location: SrcSpan,
         name: String,
     },
+}
+
+impl Warning {
+    pub fn to_warning(self, path: PathBuf, src: String) -> crate::Warning {
+        crate::Warning::Type {
+            path,
+            src,
+            warning: self,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]

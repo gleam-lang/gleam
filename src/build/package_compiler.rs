@@ -55,6 +55,7 @@ impl<Writer: FileSystemWriter> PackageCompiler<Writer> {
 
     pub fn compile(
         mut self,
+        warnings: &mut Vec<Warning>,
         existing_modules: &mut HashMap<String, (Origin, typ::Module)>,
         already_defined_modules: &mut HashMap<String, PathBuf>,
     ) -> Result<Package, Error> {
@@ -71,7 +72,7 @@ impl<Writer: FileSystemWriter> PackageCompiler<Writer> {
                 .map_err(convert_deps_tree_error)?;
 
         tracing::info!("Type checking modules");
-        let modules = type_check(sequence, parsed_modules, existing_modules)?;
+        let modules = type_check(sequence, parsed_modules, existing_modules, warnings)?;
 
         tracing::info!("Performing code generation");
         self.perform_codegen(modules.as_slice())?;
@@ -126,8 +127,8 @@ fn type_check(
     sequence: Vec<String>,
     mut parsed_modules: HashMap<String, Parsed>,
     module_types: &mut HashMap<String, (Origin, typ::Module)>,
+    warnings: &mut Vec<Warning>,
 ) -> Result<Vec<Module>, Error> {
-    let mut warnings = vec![];
     let mut modules = Vec::with_capacity(parsed_modules.len());
     let mut uid = 0;
 
@@ -143,17 +144,27 @@ fn type_check(
             .gleam_expect("Getting parsed module for name");
 
         tracing::trace!(module = ?name, "Type checking");
-        let ast =
-            typ::infer_module(&mut uid, ast, module_types, &mut warnings).map_err(|error| {
-                Error::Type {
-                    path: path.clone(),
-                    src: code.clone(),
-                    error,
-                }
-            })?;
+        let mut type_warnings = Vec::new();
+        let ast = typ::infer_module(&mut uid, ast, module_types, &mut type_warnings).map_err(
+            |error| Error::Type {
+                path: path.clone(),
+                src: code.clone(),
+                error,
+            },
+        )?;
 
+        // Register any warnings emitted as type warnings
+        let type_warnings = type_warnings
+            .into_iter()
+            .map(|w| w.to_warning(path.clone(), code.clone()));
+        warnings.extend(type_warnings);
+
+        // Register the types from this module so they can be imported into
+        // other modules.
         module_types.insert(name.clone(), (origin, ast.type_info.clone()));
 
+        // Register the successfully type checked module data so that it can be
+        // used for code generation
         modules.push(Module {
             origin,
             name,
@@ -162,8 +173,6 @@ fn type_check(
             path,
         });
     }
-
-    // TODO: do something with warnings
 
     Ok(modules)
 }

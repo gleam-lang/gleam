@@ -27,7 +27,7 @@ macro_rules! assert_erlang_compile {
         let mut compiler = PackageCompiler::new(options, file_writer);
         compiler.sources = $sources;
         let outputs = compiler
-            .compile(&mut modules, &mut HashMap::with_capacity(4))
+            .compile(&mut vec![], &mut modules, &mut HashMap::with_capacity(4))
             .map(|_| {
                 let mut outputs = FilesChannel::recv_utf8_files(&file_receiver).unwrap();
                 outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
@@ -35,6 +35,26 @@ macro_rules! assert_erlang_compile {
             })
             .map_err(|e| normalise_error(e));
         assert_eq!($expected_output, outputs);
+    };
+}
+
+macro_rules! assert_no_warnings {
+    ($sources:expr $(,)?) => {
+        let mut modules = HashMap::new();
+        let options = Options {
+            name: "the_package".to_string(),
+            src_path: PathBuf::from("_build/default/lib/the_package/src"),
+            out_path: PathBuf::from("_build/default/lib/the_package/src"),
+            test_path: None,
+        };
+        let mut warnings = vec![];
+        let (file_writer, _file_receiver) = FilesChannel::new();
+        let mut compiler = PackageCompiler::new(options, file_writer);
+        compiler.sources = $sources;
+        let outputs = compiler
+            .compile(&mut warnings, &mut modules, &mut HashMap::with_capacity(4))
+            .unwrap();
+        assert_eq!(vec![] as Vec<crate::Warning>, warnings);
     };
 }
 
@@ -1658,6 +1678,31 @@ x() ->
     );
 }
 
+// https://github.com/gleam-lang/otp/pull/22
+#[test]
+fn import_shadowed_name_warnings() {
+    assert_no_warnings!(vec![
+        Source {
+            origin: Origin::Src,
+            path: PathBuf::from("/src/one.gleam"),
+            name: "one".to_string(),
+            code: "pub external type Port".to_string(),
+        },
+        Source {
+            origin: Origin::Src,
+            path: PathBuf::from("/src/two.gleam"),
+            name: "two".to_string(),
+            code: r#"import one.{Port}
+type Shadowing { Port }
+
+pub external fn use_type(Port) -> Nil =
+  "" ""
+"#
+            .to_string(),
+        },
+    ]);
+}
+
 #[test]
 fn config_compilation_test() {
     macro_rules! assert_config_compile {
@@ -1675,7 +1720,7 @@ fn config_compilation_test() {
             let mut compiler = PackageCompiler::new(options, file_writer.clone());
             compiler.sources = $sources;
             let compiled = compiler
-                .compile(&mut modules, &mut HashMap::with_capacity(4))
+                .compile(&mut vec![], &mut modules, &mut HashMap::with_capacity(4))
                 .expect("Should compile OK");
             codegen::ErlangApp::new(&PathBuf::from("_build/default/lib/the_package/ebin"))
                 .render(&file_writer, &config, compiled.modules.as_slice())
