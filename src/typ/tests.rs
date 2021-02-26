@@ -3666,3 +3666,17 @@ pub fn main(x) {
 }",
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/989
+#[test]
+fn alternative_case_clause_pattern_variable_usage() {
+    assert_no_warnings!(
+        "
+pub fn main(s) {
+  case s {
+    [a] | [a, _] -> a
+    _ -> 0 
+  }
+}"
+    );
+}

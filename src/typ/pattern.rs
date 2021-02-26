@@ -39,17 +39,23 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
         typ: Arc<Type>,
         location: SrcSpan,
     ) -> Result<(), UnifyError> {
-        self.environment
-            .init_usage(name.to_string(), EntityKind::Variable, location);
-
         match self.mode {
             PatternMode::Initial => {
+                // Register usage for the unused variable detection
+                self.environment
+                    .init_usage(name.to_string(), EntityKind::Variable, location);
+                // Ensure there are no duplicate variable names in the pattern
                 if self.initial_pattern_vars.contains(name) {
                     return Err(UnifyError::DuplicateVarInPattern {
                         name: name.to_string(),
                     });
                 }
+                // Record that this variable originated in this pattern so any
+                // following alternative patterns can be checked to ensure they
+                // have the same variables.
                 let _ = self.initial_pattern_vars.insert(name.to_string());
+                // And now insert the variable for use in the code that comes
+                // after the pattern.
                 self.environment.insert_variable(
                     name.to_string(),
                     ValueConstructorVariant::LocalVariable,
