@@ -103,6 +103,13 @@ pub fn unbound_var(id: usize, level: usize) -> Arc<Type> {
     })
 }
 
+#[cfg(test)]
+pub fn link(type_: Arc<Type>) -> Arc<Type> {
+    Arc::new(Type::Var {
+        typ: Arc::new(RefCell::new(TypeVar::Link { typ: type_ })),
+    })
+}
+
 pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'a, 'b> {
     typer
         .insert_type_constructor(

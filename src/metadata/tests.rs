@@ -126,3 +126,32 @@ fn module_with_generic_type() {
 
     assert_eq!(roundtrip(&make(t7, t8)), make(t0, t1));
 }
+
+#[test]
+fn module_with_type_links() {
+    let linked_type = typ::link(typ::int());
+    let type_ = typ::int();
+
+    fn make(type_: Arc<Type>) -> Module {
+        Module {
+            name: vec!["a".to_string()],
+            types: [(
+                "SomeType".to_string(),
+                TypeConstructor {
+                    typ: type_,
+                    public: true,
+                    origin: Default::default(),
+                    module: vec!["a".to_string()],
+                    parameters: vec![],
+                },
+            )]
+            .iter()
+            .cloned()
+            .collect(),
+            values: HashMap::new(),
+            accessors: HashMap::new(),
+        }
+    }
+
+    assert_eq!(roundtrip(&make(linked_type)), make(type_));
+}

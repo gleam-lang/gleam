@@ -13,7 +13,10 @@ pub use self::module_encoder::ModuleEncoder;
 
 use crate::{
     schema_capnp as schema,
-    typ::{self, AccessorsMap, Module, Type, TypeConstructor, ValueConstructor},
+    typ::{
+        self, AccessorsMap, FieldMap, Module, Type, TypeConstructor, ValueConstructor,
+        ValueConstructorVariant,
+    },
     Result,
 };
 use std::{collections::HashMap, io::BufRead, sync::Arc};
@@ -135,11 +138,65 @@ impl ModuleDecoder {
     }
 
     fn module_values(
-        &self,
+        &mut self,
         reader: &schema::module::Reader<'_>,
     ) -> Result<HashMap<String, ValueConstructor>> {
+        let reader = reader.get_values()?;
+        let mut values = HashMap::with_capacity(reader.len() as usize);
+        for prop in reader.into_iter() {
+            let name = prop.get_key()?;
+            let value = self.value_constructor(&prop.get_value()?)?;
+            let _ = values.insert(name.to_string(), value);
+        }
+        Ok(values)
+    }
+
+    // TODO: test
+    fn value_constructor(
+        &mut self,
+        reader: &schema::value_constructor::Reader<'_>,
+    ) -> Result<ValueConstructor> {
+        let type_ = self.type_(&reader.get_type()?)?;
+        let variant = self.value_constructor_variant(&reader.get_variant()?)?;
+        Ok(ValueConstructor {
+            public: true,
+            origin: Default::default(),
+            typ: type_,
+            variant,
+        })
+    }
+
+    fn value_constructor_variant(
+        &self,
+        reader: &schema::value_constructor_variant::Reader<'_>,
+    ) -> Result<ValueConstructorVariant> {
+        use schema::value_constructor_variant::Which;
+        match reader.which()? {
+            Which::ModuleConstant(reader) => todo!(),
+            Which::ModuleFn(reader) => self.module_fn_variant(&reader),
+            Which::Record(reader) => todo!(),
+        }
+    }
+
+    // TODO: test
+    fn module_fn_variant(
+        &self,
+        reader: &schema::value_constructor_variant::module_fn::Reader<'_>,
+    ) -> Result<ValueConstructorVariant> {
+        Ok(ValueConstructorVariant::ModuleFn {
+            name: reader.get_name()?.to_string(),
+            module: name(&reader.get_module()?)?,
+            arity: reader.get_arity() as usize,
+            field_map: self.field_map(&reader.get_field_map()?)?,
+        })
+    }
+
+    fn field_map(
+        &self,
+        reader: &schema::option::Reader<'_, schema::field_map::Owned>,
+    ) -> Result<Option<FieldMap>> {
         // TODO
-        Ok(HashMap::new())
+        todo!()
     }
 
     fn module_accessors(
