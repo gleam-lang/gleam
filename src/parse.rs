@@ -420,14 +420,14 @@ where
                 match self.parse_function(start, false, true)? {
                     Some(Statement::Fn {
                         location,
-                        args,
+                        arguments: args,
                         body,
                         return_annotation,
                         ..
                     }) => UntypedExpr::Fn {
                         location,
                         is_capture: false,
-                        args,
+                        arguments: args,
                         body: Box::new(body),
                         return_annotation,
                     },
@@ -561,7 +561,7 @@ where
                         location: SrcSpan { start, end },
                         constructor: Box::new(expr),
                         spread,
-                        args,
+                        arguments: args,
                     };
                 } else {
                     // Call
@@ -953,10 +953,10 @@ where
                                         end: int_e,
                                     },
                                     index,
-                                    typ: (),
+                                    type_: (),
                                     tuple: Box::new(ClauseGuard::Var {
                                         location: SrcSpan { start, end },
-                                        typ: (),
+                                        type_: (),
                                         name,
                                     }),
                                 }))
@@ -976,7 +976,7 @@ where
                 } else {
                     Ok(Some(ClauseGuard::Var {
                         location: SrcSpan { start, end },
-                        typ: (),
+                        type_: (),
                         name,
                     }))
                 }
@@ -1013,7 +1013,7 @@ where
         }
         Ok(Pattern::Constructor {
             location: SrcSpan { start, end },
-            args,
+            arguments: args,
             module: module.map(|(_, n, _)| n),
             name,
             with_spread,
@@ -1151,7 +1151,7 @@ where
                 end_location: rbr_e - 1,
                 public,
                 name,
-                args,
+                arguments: args,
                 body,
                 return_type: (),
                 return_annotation,
@@ -1187,10 +1187,10 @@ where
                 location: SrcSpan { start, end },
                 public,
                 name,
-                args,
+                arguments: args,
                 module,
                 fun,
-                retrn,
+                return_: retrn,
                 return_type: (),
             }))
         } else {
@@ -1236,7 +1236,7 @@ where
                 location: annotation.location(),
                 label: None,
                 annotation,
-                typ: (),
+                type_: (),
             })),
 
             (Some(_), Some(annotation)) => {
@@ -1245,7 +1245,7 @@ where
                     location: SrcSpan { start, end },
                     label,
                     annotation,
-                    typ: (),
+                    type_: (),
                 }))
             }
         }
@@ -1379,7 +1379,7 @@ where
             location: SrcSpan { start, end },
             public,
             name,
-            args,
+            arguments: args,
             doc: None,
         }))
     }
@@ -1411,7 +1411,7 @@ where
                         Ok(Some(RecordConstructor {
                             location: SrcSpan { start: c_s, end },
                             name: c_n,
-                            args,
+                            arguments: args,
                             documentation: None,
                         }))
                     } else {
@@ -1449,9 +1449,9 @@ where
                         },
                         public,
                         alias: name,
-                        args: parameters,
-                        resolved_type: t,
-                        typ: (),
+                        parameters,
+                        type_ast: t,
+                        type_: (),
                     }))
                 } else {
                     parse_error(
@@ -1505,7 +1505,7 @@ where
                                 label: Some(name),
                                 ast: type_ast,
                                 location: SrcSpan { start, end },
-                                typ: (),
+                                type_: (),
                             })),
                             None => {
                                 parse_error(ParseErrorType::ExpectedType, SrcSpan { start, end })
@@ -1522,7 +1522,7 @@ where
                                     label: None,
                                     ast: type_ast,
                                     location: type_location,
-                                    typ: (),
+                                    type_: (),
                                 }))
                             }
                             None => Ok(None),
@@ -1607,8 +1607,8 @@ where
                                 start,
                                 end: retrn.location().end,
                             },
-                            retrn: Box::new(retrn),
-                            args,
+                            return_: Box::new(retrn),
+                            arguments: args,
                         }))
                     } else {
                         parse_error(
@@ -1667,14 +1667,14 @@ where
                 location: SrcSpan { start, end: par_e },
                 module,
                 name,
-                args,
+                arguments: args,
             }))
         } else {
             Ok(Some(TypeAst::Constructor {
                 location: SrcSpan { start, end },
                 module,
                 name,
-                args: vec![],
+                arguments: vec![],
             }))
         }
     }
@@ -1809,7 +1809,7 @@ where
                 name,
                 annotation,
                 value: Box::new(value),
-                typ: (),
+                type_: (),
             }))
         } else {
             parse_error(
@@ -2041,7 +2041,7 @@ where
                     end,
                 },
                 value: Box::new(value),
-                typ: (),
+                type_: (),
                 options,
             }))
         } else {
@@ -2138,7 +2138,7 @@ where
             Some((start, Tok::Name { name }, end)) => Ok(Pattern::VarUsage {
                 location: SrcSpan { start, end },
                 name,
-                typ: (),
+                type_: (),
             }),
             Some((start, Tok::Int { value }, end)) => Ok(Pattern::Int {
                 location: SrcSpan { start, end },
@@ -2710,7 +2710,7 @@ pub fn make_call(
     let call = UntypedExpr::Call {
         location: SrcSpan { start, end },
         fun: Box::new(fun),
-        args,
+        arguments: args,
     };
     match num_holes {
         // A normal call
@@ -2720,7 +2720,7 @@ pub fn make_call(
         1 => Ok(UntypedExpr::Fn {
             location: call.location(),
             is_capture: true,
-            args: vec![Arg {
+            arguments: vec![Arg {
                 location: SrcSpan { start: 0, end: 0 },
                 annotation: None,
                 names: ArgNames::Named {

@@ -64,7 +64,7 @@ impl Printer {
                         .group(),
                 ),
 
-            Type::Var { typ, .. } => self.type_var_doc(&*typ.borrow()),
+            Type::Var { type_: typ, .. } => self.type_var_doc(&*typ.borrow()),
 
             Type::Tuple { elems, .. } => self
                 .args_to_gleam_doc(elems.as_slice())
@@ -74,7 +74,7 @@ impl Printer {
 
     fn type_var_doc<'a>(&mut self, typ: &TypeVar) -> Document<'a> {
         match typ {
-            TypeVar::Link { ref typ, .. } => self.print(typ),
+            TypeVar::Link { type_: ref typ, .. } => self.print(typ),
             TypeVar::Unbound { id, .. } | TypeVar::Generic { id, .. } => self.generic_type_var(*id),
         }
     }
@@ -281,8 +281,8 @@ fn pretty_print_test() {
     );
     assert_string!(
         Type::Var {
-            typ: Arc::new(RefCell::new(TypeVar::Link {
-                typ: Arc::new(Type::App {
+            type_: Arc::new(RefCell::new(TypeVar::Link {
+                type_: Arc::new(Type::App {
                     args: vec![],
                     module: vec!["whatever".to_string()],
                     name: "Int".to_string(),
@@ -294,17 +294,17 @@ fn pretty_print_test() {
     );
     assert_string!(
         Type::Var {
-            typ: Arc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 2231 })),
+            type_: Arc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 2231 })),
         },
         "a",
     );
     assert_string!(
         fn_(
             vec![Arc::new(Type::Var {
-                typ: Arc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 78 })),
+                type_: Arc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 78 })),
             })],
             Arc::new(Type::Var {
-                typ: Arc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 2 })),
+                type_: Arc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 2 })),
             }),
         ),
         "fn(a) -> b",
@@ -312,10 +312,10 @@ fn pretty_print_test() {
     assert_string!(
         fn_(
             vec![Arc::new(Type::Var {
-                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 78 })),
+                type_: Arc::new(RefCell::new(TypeVar::Generic { id: 78 })),
             })],
             Arc::new(Type::Var {
-                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 2 })),
+                type_: Arc::new(RefCell::new(TypeVar::Generic { id: 2 })),
             }),
         ),
         "fn(a) -> b",

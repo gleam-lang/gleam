@@ -30,7 +30,7 @@ pub enum UntypedExpr {
     Fn {
         location: SrcSpan,
         is_capture: bool,
-        args: Vec<Arg<()>>,
+        arguments: Vec<Arg<()>>,
         body: Box<Self>,
         return_annotation: Option<TypeAst>,
     },
@@ -48,7 +48,7 @@ pub enum UntypedExpr {
     Call {
         location: SrcSpan,
         fun: Box<Self>,
-        args: Vec<CallArg<Self>>,
+        arguments: Vec<CallArg<Self>>,
     },
 
     BinOp {
@@ -110,7 +110,7 @@ pub enum UntypedExpr {
         location: SrcSpan,
         constructor: Box<Self>,
         spread: RecordUpdateSpread,
-        args: Vec<UntypedRecordUpdateArg>,
+        arguments: Vec<UntypedRecordUpdateArg>,
     },
 }
 

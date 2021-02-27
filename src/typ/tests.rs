@@ -20,7 +20,7 @@ macro_rules! assert_infer {
         .infer(ast)
         .expect("should successfully infer");
         assert_eq!(
-            ($src, printer.pretty_print(result.typ().as_ref(), 0),),
+            ($src, printer.pretty_print(result.type_().as_ref(), 0),),
             ($src, $typ.to_string()),
         );
     };
@@ -68,7 +68,7 @@ macro_rules! assert_module_infer {
             .iter()
             .map(|(k, v)| {
                 let mut printer = pretty::Printer::new();
-                (k.clone(), printer.pretty_print(&v.typ, 0))
+                (k.clone(), printer.pretty_print(&v.type_, 0))
             })
             .collect();
         constructors.sort();
@@ -946,7 +946,7 @@ fn binop_unification_errors() {
             }),
             given: Arc::new(Type::Fn {
                 args: vec![Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() })),
+                    type_: Arc::new(RefCell::new(TypeVar::Link { type_: int() })),
                 })],
                 retrn: int(),
             }),
@@ -1209,10 +1209,10 @@ fn the_rest() {
             expected: int(),
             given: tuple(vec![
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Unbound { id: 9, level: 1 })),
+                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 9, level: 1 })),
                 }),
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Unbound { id: 10, level: 1 })),
+                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 10, level: 1 })),
                 })
             ]),
         },
@@ -1224,10 +1224,10 @@ fn the_rest() {
             situation: None,
             location: SrcSpan { start: 9, end: 12 },
             expected: list(Arc::new(Type::Var {
-                typ: Arc::new(RefCell::new(TypeVar::Link { typ: float() }))
+                type_: Arc::new(RefCell::new(TypeVar::Link { type_: float() }))
             })),
             given: list(Arc::new(Type::Var {
-                typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() }))
+                type_: Arc::new(RefCell::new(TypeVar::Link { type_: int() }))
             }))
         },
     );
@@ -1573,7 +1573,7 @@ fn the_rest() {
             label: "field".to_string(),
             fields: vec![],
             typ: Arc::new(Type::Var {
-                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 7 })),
+                type_: Arc::new(RefCell::new(TypeVar::Generic { id: 7 })),
             }),
         },
     );
@@ -1585,26 +1585,26 @@ fn the_rest() {
             location: SrcSpan { start: 17, end: 34 },
             expected: result(
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Link {
-                        typ: Arc::new(Type::Var {
-                            typ: Arc::new(RefCell::new(TypeVar::Unbound { id: 8, level: 1 }))
+                    type_: Arc::new(RefCell::new(TypeVar::Link {
+                        type_: Arc::new(Type::Var {
+                            type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 8, level: 1 }))
                         })
                     })),
                 }),
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() })),
+                    type_: Arc::new(RefCell::new(TypeVar::Link { type_: int() })),
                 }),
             ),
             given: result(
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Link {
-                        typ: Arc::new(Type::Var {
-                            typ: Arc::new(RefCell::new(TypeVar::Unbound { id: 8, level: 1 }))
+                    type_: Arc::new(RefCell::new(TypeVar::Link {
+                        type_: Arc::new(Type::Var {
+                            type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 8, level: 1 }))
                         })
                     })),
                 }),
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: float() })),
+                    type_: Arc::new(RefCell::new(TypeVar::Link { type_: float() })),
                 }),
             ),
         },
@@ -1617,22 +1617,22 @@ fn the_rest() {
             location: SrcSpan { start: 17, end: 26 },
             expected: result(
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Link {
-                        typ: Arc::new(Type::Var {
-                            typ: Arc::new(RefCell::new(TypeVar::Unbound { id: 12, level: 1 }))
+                    type_: Arc::new(RefCell::new(TypeVar::Link {
+                        type_: Arc::new(Type::Var {
+                            type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 12, level: 1 }))
                         })
                     })),
                 }),
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() })),
+                    type_: Arc::new(RefCell::new(TypeVar::Link { type_: int() })),
                 }),
             ),
             given: result(
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Unbound { id: 12, level: 1 }))
+                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 12, level: 1 }))
                 }),
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: float() })),
+                    type_: Arc::new(RefCell::new(TypeVar::Link { type_: float() })),
                 }),
             ),
         },
@@ -1645,10 +1645,10 @@ fn the_rest() {
             location: SrcSpan { start: 17, end: 18 },
             expected: result(
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Unbound { id: 11, level: 1 }))
+                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 11, level: 1 }))
                 }),
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() })),
+                    type_: Arc::new(RefCell::new(TypeVar::Link { type_: int() })),
                 }),
             ),
             given: int(),
@@ -1662,18 +1662,18 @@ fn the_rest() {
             location: SrcSpan { start: 17, end: 34 },
             expected: result(
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() }))
+                    type_: Arc::new(RefCell::new(TypeVar::Link { type_: int() }))
                 }),
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() })),
+                    type_: Arc::new(RefCell::new(TypeVar::Link { type_: int() })),
                 }),
             ),
             given: result(
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() }))
+                    type_: Arc::new(RefCell::new(TypeVar::Link { type_: int() }))
                 }),
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: float() })),
+                    type_: Arc::new(RefCell::new(TypeVar::Link { type_: float() })),
                 }),
             ),
         },
@@ -1686,22 +1686,22 @@ fn the_rest() {
             location: SrcSpan { start: 39, end: 56 },
             expected: result(
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Link {
-                        typ: Arc::new(Type::Var {
-                            typ: Arc::new(RefCell::new(TypeVar::Unbound { id: 14, level: 1 }))
+                    type_: Arc::new(RefCell::new(TypeVar::Link {
+                        type_: Arc::new(Type::Var {
+                            type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 14, level: 1 }))
                         })
                     }))
                 }),
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() })),
+                    type_: Arc::new(RefCell::new(TypeVar::Link { type_: int() })),
                 }),
             ),
             given: result(
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Unbound { id: 14, level: 1 }))
+                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 14, level: 1 }))
                 }),
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Link { typ: string() })),
+                    type_: Arc::new(RefCell::new(TypeVar::Link { type_: string() })),
                 }),
             ),
         },
@@ -2318,10 +2318,10 @@ fn demo() {
             location: SrcSpan { start: 33, end: 46 },
             expected: tuple(vec![
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Generic { id: 10 }))
+                    type_: Arc::new(RefCell::new(TypeVar::Generic { id: 10 }))
                 }),
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Generic { id: 10 }))
+                    type_: Arc::new(RefCell::new(TypeVar::Generic { id: 10 }))
                 })
             ]),
             given: tuple(vec![int(), float()]),
@@ -2348,10 +2348,10 @@ fn demo() {
             location: SrcSpan { start: 65, end: 86 },
             expected: tuple(vec![
                 Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Generic { id: 11 }))
+                    type_: Arc::new(RefCell::new(TypeVar::Generic { id: 11 }))
                 }),
                 list(Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Generic { id: 11 }))
+                    type_: Arc::new(RefCell::new(TypeVar::Generic { id: 11 }))
                 }))
             ]),
             given: tuple(vec![string(), list(int())]),
@@ -2592,8 +2592,8 @@ pub fn main(box: Box(Box(Int))) { box.inner.unknown }
             label: "unknown".to_string(),
             fields: vec!["inner".to_string()],
             typ: Arc::new(Type::Var {
-                typ: Arc::new(RefCell::new(TypeVar::Link {
-                    typ: Arc::new(Type::App {
+                type_: Arc::new(RefCell::new(TypeVar::Link {
+                    type_: Arc::new(Type::App {
                         args: vec![int()],
                         public: true,
                         module: vec!["my_module".to_string()],
@@ -2700,7 +2700,7 @@ fn main() {
                 module: vec!["my_module".to_string()],
                 name: "Box".to_string(),
                 args: vec![Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Generic { id: 10 })),
+                    type_: Arc::new(RefCell::new(TypeVar::Generic { id: 10 })),
                 })]
             }),
             given: Arc::new(Type::App {
@@ -2708,7 +2708,7 @@ fn main() {
                 module: vec!["my_module".to_string()],
                 name: "Box".to_string(),
                 args: vec![Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Generic { id: 8 })),
+                    type_: Arc::new(RefCell::new(TypeVar::Generic { id: 8 })),
                 })]
             }),
         },
@@ -2873,10 +2873,10 @@ fn module_constants() {
             situation: None,
             location: SrcSpan { start: 31, end: 46 },
             expected: list(Arc::new(Type::Var {
-                typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() }))
+                type_: Arc::new(RefCell::new(TypeVar::Link { type_: int() }))
             })),
             given: list(Arc::new(Type::Var {
-                typ: Arc::new(RefCell::new(TypeVar::Link { typ: float() }))
+                type_: Arc::new(RefCell::new(TypeVar::Link { type_: float() }))
             }))
         }
     );
@@ -3003,7 +3003,7 @@ fn module_update() {
                 module: vec!["my_module".to_string()],
                 name: "Box".to_string(),
                 args: vec![Arc::new(Type::Var {
-                    typ: Arc::new(RefCell::new(TypeVar::Generic { id: 8 })),
+                    type_: Arc::new(RefCell::new(TypeVar::Generic { id: 8 })),
                 })]
             }),
         },
@@ -3154,10 +3154,10 @@ fn module_update() {
                 end: 158,
             },
             expected: Arc::new(Type::Var {
-                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 8 })),
+                type_: Arc::new(RefCell::new(TypeVar::Generic { id: 8 })),
             }),
             given: Arc::new(Type::Var {
-                typ: Arc::new(RefCell::new(TypeVar::Generic { id: 10 })),
+                type_: Arc::new(RefCell::new(TypeVar::Generic { id: 10 })),
             }),
         },
     );
@@ -3216,7 +3216,7 @@ fn todo_warning_test() {
         Warning::Todo {
             location: SrcSpan { start: 17, end: 21 },
             typ: Arc::new(Type::Var {
-                typ: Arc::new(RefCell::new(TypeVar::Link { typ: int() })),
+                type_: Arc::new(RefCell::new(TypeVar::Link { type_: int() })),
             }),
         },
     );

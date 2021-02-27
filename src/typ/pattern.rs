@@ -68,7 +68,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
             PatternMode::Alternative => match self.environment.local_values.get(name) {
                 // This variable was defined in the Initial multi-pattern
                 Some(initial) if self.initial_pattern_vars.contains(name) => {
-                    let initial_typ = initial.typ.clone();
+                    let initial_typ = initial.type_.clone();
                     self.environment.unify(initial_typ, typ)
                 }
 
@@ -178,7 +178,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
             location,
             value: Box::new(typed_value),
             options,
-            typ,
+            type_: typ,
         })
     }
 
@@ -201,7 +201,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
             }
 
             Pattern::VarUsage { name, location, .. } => {
-                let ValueConstructor { typ, .. } = self
+                let ValueConstructor { type_: typ, .. } = self
                     .environment
                     .get_variable(&name)
                     .cloned()
@@ -229,7 +229,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 Ok(Pattern::VarUsage {
                     name,
                     location,
-                    typ,
+                    type_: typ,
                 })
             }
 
@@ -355,7 +355,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 location,
                 module,
                 name,
-                args: mut pattern_args,
+                arguments: mut pattern_args,
                 with_spread,
                 ..
             } => {
@@ -421,7 +421,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                     None => assert_no_labelled_arguments(&pattern_args)?,
                 }
 
-                let constructor_typ = cons.typ.clone();
+                let constructor_typ = cons.type_.clone();
                 let constructor = match cons.variant {
                     ValueConstructorVariant::Record { ref name, .. } => {
                         PatternConstructor::Record { name: name.clone() }
@@ -466,7 +466,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                                 location,
                                 module,
                                 name,
-                                args: pattern_args,
+                                arguments: pattern_args,
                                 constructor,
                                 with_spread,
                             })
@@ -489,7 +489,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                                 location,
                                 module,
                                 name,
-                                args: vec![],
+                                arguments: vec![],
                                 constructor,
                                 with_spread,
                             })

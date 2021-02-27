@@ -222,8 +222,8 @@ fn function<'a>(
             public: true,
             name,
             doc,
-            retrn,
-            args,
+            return_: retrn,
+            arguments: args,
             location,
             ..
         } => Some(Function {
@@ -237,7 +237,7 @@ fn function<'a>(
             public: true,
             name,
             doc,
-            args,
+            arguments: args,
             return_type: ret,
             location,
             ..
@@ -273,7 +273,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
             public: true,
             name,
             doc,
-            args,
+            arguments: args,
             location,
             ..
         } => Some(Type {
@@ -334,9 +334,9 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
         Statement::TypeAlias {
             public: true,
             alias: name,
-            resolved_type: typ,
+            type_ast: typ,
             doc,
-            args,
+            parameters: args,
             location,
             ..
         } => Some(Type {

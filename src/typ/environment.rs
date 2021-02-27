@@ -151,7 +151,7 @@ impl<'a, 'b> Environment<'a, 'b> {
                 public: false,
                 origin,
                 variant,
-                typ,
+                type_: typ,
             },
         );
     }
@@ -316,13 +316,13 @@ impl<'a, 'b> Environment<'a, 'b> {
                 })
             }
 
-            Type::Var { typ } => {
+            Type::Var { type_: typ } => {
                 match &*typ.borrow() {
-                    TypeVar::Link { typ } => {
+                    TypeVar::Link { type_: typ } => {
                         return self.instantiate(typ.clone(), ctx_level, ids, hydrator)
                     }
 
-                    TypeVar::Unbound { .. } => return Arc::new(Type::Var { typ: typ.clone() }),
+                    TypeVar::Unbound { .. } => return Arc::new(Type::Var { type_: typ.clone() }),
 
                     TypeVar::Generic { id } => match ids.get(id) {
                         Some(t) => return t.clone(),
@@ -336,7 +336,7 @@ impl<'a, 'b> Environment<'a, 'b> {
                         }
                     },
                 }
-                Arc::new(Type::Var { typ: typ.clone() })
+                Arc::new(Type::Var { type_: typ.clone() })
             }
 
             Type::Fn { args, retrn, .. } => fn_(
@@ -366,13 +366,13 @@ impl<'a, 'b> Environment<'a, 'b> {
         }
 
         // Collapse right hand side type links. Left hand side will be collapsed in the next block.
-        if let Type::Var { typ } = &*t2 {
-            if let TypeVar::Link { typ } = &*typ.borrow() {
+        if let Type::Var { type_: typ } = &*t2 {
+            if let TypeVar::Link { type_: typ } = &*typ.borrow() {
                 return self.unify(t1, typ.clone());
             }
         }
 
-        if let Type::Var { typ } = &*t1 {
+        if let Type::Var { type_: typ } = &*t1 {
             enum Action {
                 Unify(Arc<Type>),
                 CouldNotUnify,
@@ -380,7 +380,7 @@ impl<'a, 'b> Environment<'a, 'b> {
             }
 
             let action = match &*typ.borrow() {
-                TypeVar::Link { typ } => Action::Unify(typ.clone()),
+                TypeVar::Link { type_: typ } => Action::Unify(typ.clone()),
 
                 TypeVar::Unbound { id, level } => {
                     update_levels(t2.clone(), *level, *id)?;
@@ -388,7 +388,7 @@ impl<'a, 'b> Environment<'a, 'b> {
                 }
 
                 TypeVar::Generic { id } => {
-                    if let Type::Var { typ } = &*t2 {
+                    if let Type::Var { type_: typ } = &*t2 {
                         if typ.borrow().is_unbound() {
                             *typ.borrow_mut() = TypeVar::Generic { id: *id };
                             return Ok(());
@@ -400,7 +400,7 @@ impl<'a, 'b> Environment<'a, 'b> {
 
             return match action {
                 Action::Link => {
-                    *typ.borrow_mut() = TypeVar::Link { typ: t2 };
+                    *typ.borrow_mut() = TypeVar::Link { type_: t2 };
                     Ok(())
                 }
 

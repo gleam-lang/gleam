@@ -176,7 +176,7 @@ impl<'comments> Formatter<'comments> {
         match statement {
             Statement::Fn {
                 name,
-                args,
+                arguments: args,
                 body,
                 public,
                 return_annotation,
@@ -186,8 +186,8 @@ impl<'comments> Formatter<'comments> {
 
             Statement::TypeAlias {
                 alias,
-                args,
-                resolved_type,
+                parameters: args,
+                type_ast: resolved_type,
                 public,
                 ..
             } => self.type_alias(*public, alias, args, resolved_type),
@@ -211,9 +211,9 @@ impl<'comments> Formatter<'comments> {
 
             Statement::ExternalFn {
                 public,
-                args,
+                arguments: args,
                 name,
-                retrn,
+                return_: retrn,
                 module,
                 fun,
                 ..
@@ -228,7 +228,10 @@ impl<'comments> Formatter<'comments> {
                 .append("\""),
 
             Statement::ExternalType {
-                public, name, args, ..
+                public,
+                name,
+                arguments: args,
+                ..
             } => self.external_type(*public, name, args),
 
             Statement::Import {
@@ -358,7 +361,7 @@ impl<'comments> Formatter<'comments> {
             .append("const ")
             .append(name)
             .append(": ")
-            .append(printer.print(value.typ().as_ref()))
+            .append(printer.print(value.type_().as_ref()))
             .append(" = ")
             .append(self.const_expr(value))
     }
@@ -405,10 +408,17 @@ impl<'comments> Formatter<'comments> {
             TypeAst::Hole { name, .. } => name.to_doc(),
 
             TypeAst::Constructor {
-                name, args, module, ..
+                name,
+                arguments: args,
+                module,
+                ..
             } => self.type_ast_constructor(module, name, args),
 
-            TypeAst::Fn { args, retrn, .. } => "fn"
+            TypeAst::Fn {
+                arguments: args,
+                return_: retrn,
+                ..
+            } => "fn"
                 .to_doc()
                 .append(self.type_arguments(args))
                 .group()
@@ -626,7 +636,7 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::Fn {
                 return_annotation,
-                args,
+                arguments: args,
                 body,
                 ..
             } => self.expr_fn(args.as_slice(), return_annotation.as_ref(), body.as_ref()),
@@ -635,7 +645,11 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::ListCons { head, tail, .. } => self.list_cons(head, tail),
 
-            UntypedExpr::Call { fun, args, .. } => self.call(fun, args),
+            UntypedExpr::Call {
+                fun,
+                arguments: args,
+                ..
+            } => self.call(fun, args),
 
             UntypedExpr::BinOp {
                 name, left, right, ..
@@ -672,7 +686,7 @@ impl<'comments> Formatter<'comments> {
             UntypedExpr::RecordUpdate {
                 constructor,
                 spread,
-                args,
+                arguments: args,
                 ..
             } => self.record_update(constructor, spread, args),
         };
@@ -689,7 +703,9 @@ impl<'comments> Formatter<'comments> {
         fn is_breakable(expr: &UntypedPattern) -> bool {
             match expr {
                 Pattern::Tuple { .. } | Pattern::Cons { .. } | Pattern::BitString { .. } => true,
-                Pattern::Constructor { args, .. } => !args.is_empty(),
+                Pattern::Constructor {
+                    arguments: args, ..
+                } => !args.is_empty(),
                 _ => false,
             }
         }
@@ -858,7 +874,11 @@ impl<'comments> Formatter<'comments> {
 
     fn pipe_capture_right_hand_side<'a>(&mut self, fun: &'a UntypedExpr) -> Document<'a> {
         let (fun, args) = match fun {
-            UntypedExpr::Call { fun, args, .. } => (fun, args),
+            UntypedExpr::Call {
+                fun,
+                arguments: args,
+                ..
+            } => (fun, args),
             _ => crate::error::fatal_compiler_bug(
                 "Function capture found not to have a function call body when formatting",
             ),
@@ -888,7 +908,11 @@ impl<'comments> Formatter<'comments> {
 
     fn fn_capture<'a>(&mut self, call: &'a UntypedExpr) -> Document<'a> {
         match call {
-            UntypedExpr::Call { fun, args, .. } => self
+            UntypedExpr::Call {
+                fun,
+                arguments: args,
+                ..
+            } => self
                 .expr(fun)
                 .append(wrap_args(args.iter().map(|a| self.call_arg(a))).group()),
 
@@ -906,13 +930,13 @@ impl<'comments> Formatter<'comments> {
         let comments = self.pop_comments(constructor.location.start);
         let doc_comments = self.doc_comments(constructor.location.start);
 
-        let doc = if constructor.args.is_empty() {
+        let doc = if constructor.arguments.is_empty() {
             constructor.name.to_doc()
         } else {
             constructor
                 .name
                 .to_doc()
-                .append(wrap_args(constructor.args.iter().map(
+                .append(wrap_args(constructor.arguments.iter().map(
                     |RecordConstructorArg {
                          label,
                          ast,
@@ -1192,7 +1216,7 @@ impl<'comments> Formatter<'comments> {
 
             Pattern::Constructor {
                 name,
-                args,
+                arguments: args,
                 module,
                 with_spread,
                 ..

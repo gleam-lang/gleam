@@ -59,7 +59,7 @@ impl<'a> ModuleEncoder<'a> {
         mut builder: accessors_map::Builder<'_>,
         accessors: &AccessorsMap,
     ) {
-        self.build_type(builder.reborrow().init_type(), accessors.typ.as_ref());
+        self.build_type(builder.reborrow().init_type(), accessors.type_.as_ref());
         let mut builder = builder.init_accessors(accessors.accessors.len() as u32);
         for (i, (name, accessor)) in accessors.accessors.iter().enumerate() {
             let mut property = builder.reborrow().get(i as u32);
@@ -73,7 +73,7 @@ impl<'a> ModuleEncoder<'a> {
         mut builder: record_accessor::Builder<'_>,
         accessor: &RecordAccessor,
     ) {
-        self.build_type(builder.reborrow().init_type(), accessor.typ.as_ref());
+        self.build_type(builder.reborrow().init_type(), accessor.type_.as_ref());
         builder.set_index(accessor.index as u16);
     }
 
@@ -132,7 +132,7 @@ impl<'a> ModuleEncoder<'a> {
         mut builder: value_constructor::Builder<'_>,
         constructor: &ValueConstructor,
     ) {
-        self.build_type(builder.reborrow().init_type(), &constructor.typ);
+        self.build_type(builder.reborrow().init_type(), &constructor.type_);
         self.build_value_constructor_variant(builder.init_variant(), &constructor.variant);
     }
 
@@ -267,7 +267,7 @@ impl<'a> ModuleEncoder<'a> {
                 self.build_bit_string_segment_option(builder.reborrow().get(i as u32), option);
             }
         }
-        self.build_type(builder.init_type(), &segment.typ);
+        self.build_type(builder.init_type(), &segment.type_);
     }
 
     fn build_bit_string_segment_option(
@@ -342,8 +342,8 @@ impl<'a> ModuleEncoder<'a> {
                 elems.as_slice(),
             ),
 
-            Type::Var { typ } => match &*typ.borrow() {
-                TypeVar::Link { typ } => self.build_type(builder, &*typ),
+            Type::Var { type_: typ } => match &*typ.borrow() {
+                TypeVar::Link { type_: typ } => self.build_type(builder, &*typ),
                 TypeVar::Generic { id } => self.build_type_var(builder.init_var(), *id),
                 TypeVar::Unbound { id, .. } => crate::error::fatal_compiler_bug(
                     "Unexpected unbound var when serialising module metadata",

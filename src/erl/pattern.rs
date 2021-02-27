@@ -40,7 +40,7 @@ pub(super) fn to_doc<'a>(
         Pattern::String { value, .. } => string(value),
 
         Pattern::Constructor {
-            args,
+            arguments: args,
             constructor: PatternConstructor::Record { name },
             ..
         } => tag_tuple_pattern(name, args, vars, env),

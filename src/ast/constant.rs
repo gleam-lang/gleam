@@ -48,7 +48,7 @@ pub enum Constant<T, RecordTag> {
 }
 
 impl TypedConstant {
-    pub fn typ(&self) -> Arc<Type> {
+    pub fn type_(&self) -> Arc<Type> {
         match self {
             Constant::Int { .. } => crate::typ::int(),
             Constant::Float { .. } => crate::typ::float(),
@@ -57,15 +57,15 @@ impl TypedConstant {
             Constant::Record { typ, .. } => typ.clone(),
             Constant::BitString { .. } => crate::typ::bit_string(),
             Constant::Tuple { elements, .. } => {
-                crate::typ::tuple(elements.iter().map(|e| e.typ()).collect())
+                crate::typ::tuple(elements.iter().map(|e| e.type_()).collect())
             }
         }
     }
 }
 
 impl HasType for TypedConstant {
-    fn typ(&self) -> Arc<Type> {
-        self.typ()
+    fn type_(&self) -> Arc<Type> {
+        self.type_()
     }
 }
 

@@ -87,7 +87,7 @@ impl Hydrator {
                 location,
                 module,
                 name,
-                args,
+                arguments: args,
             } => {
                 // Hydrate the type argument AST into types
                 let mut argument_types = Vec::with_capacity(args.len());
@@ -153,7 +153,11 @@ impl Hydrator {
                     .collect::<Result<_, _>>()?,
             )),
 
-            TypeAst::Fn { args, retrn, .. } => {
+            TypeAst::Fn {
+                arguments: args,
+                return_: retrn,
+                ..
+            } => {
                 let args = args
                     .iter()
                     .map(|t| self.type_from_ast(t, environment))

@@ -92,7 +92,7 @@ impl<A> ExternalFnArg<A> {
             location: self.location,
             label: self.label,
             annotation: self.annotation,
-            typ: t,
+            type_: t,
         }
     }
 }
@@ -109,7 +109,7 @@ pub enum ArgNames {
 pub struct RecordConstructor<T> {
     pub location: SrcSpan,
     pub name: String,
-    pub args: Vec<RecordConstructorArg<T>>,
+    pub arguments: Vec<RecordConstructorArg<T>>,
     pub documentation: Option<String>,
 }
 
@@ -124,7 +124,7 @@ pub struct RecordConstructorArg<T> {
     pub label: Option<String>,
     pub ast: TypeAst,
     pub location: SrcSpan,
-    pub typ: T,
+    pub type_: T,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -133,13 +133,13 @@ pub enum TypeAst {
         location: SrcSpan,
         module: Option<String>,
         name: String,
-        args: Vec<Self>,
+        arguments: Vec<Self>,
     },
 
     Fn {
         location: SrcSpan,
-        args: Vec<Self>,
-        retrn: Box<Self>,
+        arguments: Vec<Self>,
+        return_: Box<Self>,
     },
 
     Var {
@@ -179,7 +179,7 @@ pub enum Statement<T, Expr, ConstantRecordTag> {
         end_location: usize,
         location: SrcSpan,
         name: String,
-        args: Vec<Arg<T>>,
+        arguments: Vec<Arg<T>>,
         body: Expr,
         public: bool,
         return_annotation: Option<TypeAst>,
@@ -190,9 +190,9 @@ pub enum Statement<T, Expr, ConstantRecordTag> {
     TypeAlias {
         location: SrcSpan,
         alias: String,
-        args: Vec<String>,
-        resolved_type: TypeAst,
-        typ: T,
+        parameters: Vec<String>,
+        type_ast: TypeAst,
+        type_: T,
         public: bool,
         doc: Option<String>,
     },
@@ -211,9 +211,9 @@ pub enum Statement<T, Expr, ConstantRecordTag> {
     ExternalFn {
         location: SrcSpan,
         public: bool,
-        args: Vec<ExternalFnArg<T>>,
+        arguments: Vec<ExternalFnArg<T>>,
         name: String,
-        retrn: TypeAst,
+        return_: TypeAst,
         return_type: T,
         module: String,
         fun: String,
@@ -224,7 +224,7 @@ pub enum Statement<T, Expr, ConstantRecordTag> {
         location: SrcSpan,
         public: bool,
         name: String,
-        args: Vec<String>,
+        arguments: Vec<String>,
         doc: Option<String>,
     },
 
@@ -242,7 +242,7 @@ pub enum Statement<T, Expr, ConstantRecordTag> {
         name: String,
         annotation: Option<TypeAst>,
         value: Box<Constant<T, ConstantRecordTag>>,
-        typ: T,
+        type_: T,
     },
 }
 
@@ -286,7 +286,7 @@ pub struct ExternalFnArg<T> {
     pub location: SrcSpan,
     pub label: Option<String>,
     pub annotation: TypeAst,
-    pub typ: T,
+    pub type_: T,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -511,14 +511,14 @@ pub enum ClauseGuard<Type, RecordTag> {
 
     Var {
         location: SrcSpan,
-        typ: Type,
+        type_: Type,
         name: String,
     },
 
     TupleIndex {
         location: SrcSpan,
         index: u64,
-        typ: Type,
+        type_: Type,
         tuple: Box<Self>,
     },
 
@@ -548,11 +548,11 @@ impl<A, B> ClauseGuard<A, B> {
 }
 
 impl TypedClauseGuard {
-    pub fn typ(&self) -> Arc<Type> {
+    pub fn type_(&self) -> Arc<Type> {
         match self {
-            ClauseGuard::Var { typ, .. } => typ.clone(),
-            ClauseGuard::TupleIndex { typ, .. } => typ.clone(),
-            ClauseGuard::Constant(constant) => constant.typ(),
+            ClauseGuard::Var { type_, .. } => type_.clone(),
+            ClauseGuard::TupleIndex { type_, .. } => type_.clone(),
+            ClauseGuard::Constant(constant) => constant.type_(),
 
             ClauseGuard::Or { .. }
             | ClauseGuard::And { .. }
@@ -604,7 +604,7 @@ pub enum Pattern<Constructor, Type> {
     VarUsage {
         location: SrcSpan,
         name: String,
-        typ: Type,
+        type_: Type,
     },
 
     Let {
@@ -631,7 +631,7 @@ pub enum Pattern<Constructor, Type> {
     Constructor {
         location: SrcSpan,
         name: String,
-        args: Vec<CallArg<Self>>,
+        arguments: Vec<CallArg<Self>>,
         module: Option<String>,
         constructor: Constructor,
         with_spread: bool,
@@ -711,7 +711,7 @@ pub struct BitStringSegment<Value, Type> {
     pub location: SrcSpan,
     pub value: Box<Value>,
     pub options: Vec<BitStringSegmentOption<Value>>,
-    pub typ: Type,
+    pub type_: Type,
 }
 
 pub type TypedConstantBitStringSegmentOption = BitStringSegmentOption<TypedConstant>;

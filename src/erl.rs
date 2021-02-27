@@ -134,10 +134,10 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
             } => &constructors[..],
             _ => &[],
         })
-        .filter(|constructor| !constructor.args.is_empty())
+        .filter(|constructor| !constructor.arguments.is_empty())
         .flat_map(|constructor| {
-            let mut fields = Vec::with_capacity(constructor.args.len());
-            for RecordConstructorArg { label, .. } in constructor.args.iter() {
+            let mut fields = Vec::with_capacity(constructor.arguments.len());
+            for RecordConstructorArg { label, .. } in constructor.arguments.iter() {
                 match label {
                     Some(s) => fields.push(&**s),
                     None => return None,
@@ -184,18 +184,22 @@ pub fn module(
             Statement::Fn {
                 public: true,
                 name,
-                args,
+                arguments: args,
                 ..
             } => exports.push(atom(name.to_string()).append("/").append(args.len())),
 
             Statement::ExternalFn {
                 public: true,
                 name,
-                args,
+                arguments: args,
                 ..
             } => exports.push(atom(name.to_string()).append("/").append(args.len())),
 
-            Statement::ExternalType { name, args, .. } => {
+            Statement::ExternalType {
+                name,
+                arguments: args,
+                ..
+            } => {
                 // Type Exports
                 type_exports.push(
                     Document::String(erl_safe_type_name(name.to_snake_case()))
@@ -246,14 +250,14 @@ pub fn module(
                 for c in constructors {
                     constructor_var_usages = collect_type_var_usages(
                         constructor_var_usages,
-                        c.args.iter().map(|a| &a.typ),
+                        c.arguments.iter().map(|a| &a.type_),
                     );
                 }
                 let mut phantom_vars = vec![];
                 for (id, _) in type_var_usages.into_iter() {
                     if constructor_var_usages.get(&id) == None {
                         phantom_vars.push(Type::Var {
-                            typ: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: id })),
+                            type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: id })),
                         })
                     }
                 }
@@ -280,11 +284,11 @@ pub fn module(
                         .iter()
                         .map(|c| {
                             let name = Document::String(c.name.to_snake_case());
-                            if c.args.is_empty() {
+                            if c.arguments.is_empty() {
                                 name
                             } else {
-                                let args = c.args.iter().map(|a| {
-                                    TypePrinter::new(module.name.as_slice()).print(&a.typ)
+                                let args = c.arguments.iter().map(|a| {
+                                    TypePrinter::new(module.name.as_slice()).print(&a.type_)
                                 });
                                 tuple(std::iter::once(name).chain(args))
                             }
@@ -383,7 +387,7 @@ fn statement<'a>(
         Statement::ModuleConstant { .. } => None,
 
         Statement::Fn {
-            args,
+            arguments: args,
             name,
             body,
             return_type,
@@ -401,7 +405,7 @@ fn statement<'a>(
         Statement::ExternalFn {
             fun,
             module,
-            args,
+            arguments: args,
             name,
             return_type,
             ..
@@ -941,7 +945,7 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
     match &constructor.variant {
         ValueConstructorVariant::Record {
             name: record_name, ..
-        } => match &*constructor.typ {
+        } => match &*constructor.type_ {
             Type::Fn { args, .. } => {
                 let chars = incrementing_args_list(args.len());
                 "fun("
@@ -1564,10 +1568,10 @@ fn external_fun<'a>(
     let chars: String = incrementing_args_list(args.len());
     let var_usages = collect_type_var_usages(
         HashMap::new(),
-        std::iter::once(return_type).chain(args.iter().map(|a| &a.typ)),
+        std::iter::once(return_type).chain(args.iter().map(|a| &a.type_)),
     );
     let type_printer = TypePrinter::new(current_module).with_var_usages(&var_usages);
-    let args_spec = args.iter().map(|a| type_printer.print(&a.typ));
+    let args_spec = args.iter().map(|a| type_printer.print(&a.type_));
     let return_spec = type_printer.print(return_type);
     let spec = fun_spec(name, args_spec, return_spec);
 
@@ -1730,12 +1734,12 @@ fn collect_type_var_usages<'a>(
 
 fn type_var_ids(type_: &Type, ids: &mut HashMap<usize, usize>) {
     match type_ {
-        Type::Var { typ } => match &*typ.borrow() {
+        Type::Var { type_: typ } => match &*typ.borrow() {
             TypeVar::Generic { id, .. } | TypeVar::Unbound { id, .. } => {
                 let count = ids.entry(*id).or_insert(0);
                 *count += 1;
             }
-            TypeVar::Link { typ } => type_var_ids(typ, ids),
+            TypeVar::Link { type_: typ } => type_var_ids(typ, ids),
         },
         Type::App { args, .. } => {
             for arg in args {
@@ -1824,7 +1828,7 @@ impl<'a> TypePrinter<'a> {
 
     pub fn print(&self, type_: &Type) -> Document<'static> {
         match type_ {
-            Type::Var { typ } => self.print_var(&*typ.borrow()),
+            Type::Var { type_: typ } => self.print_var(&*typ.borrow()),
 
             Type::App {
                 name, module, args, ..
@@ -1850,7 +1854,7 @@ impl<'a> TypePrinter<'a> {
                 },
                 None => id_to_type_var(*id),
             },
-            TypeVar::Link { typ } => self.print(typ),
+            TypeVar::Link { type_: typ } => self.print(typ),
         }
     }
 

@@ -161,7 +161,7 @@ impl ModuleDecoder {
         Ok(ValueConstructor {
             public: true,
             origin: Default::default(),
-            typ: type_,
+            type_,
             variant,
         })
     }

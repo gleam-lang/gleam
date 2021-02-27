@@ -216,13 +216,13 @@ impl HasLocation for TypedExpr {
 }
 
 impl TypedExpr {
-    fn typ(&self) -> Arc<Type> {
+    fn type_(&self) -> Arc<Type> {
         match self {
             Self::Fn { typ, .. } => typ.clone(),
             Self::ListNil { typ, .. } => typ.clone(),
             Self::Let { typ, .. } => typ.clone(),
             Self::Int { typ, .. } => typ.clone(),
-            Self::Seq { then, .. } => then.typ(),
+            Self::Seq { then, .. } => then.type_(),
             Self::Todo { typ, .. } => typ.clone(),
             Self::Case { typ, .. } => typ.clone(),
             Self::ListCons { typ, .. } => typ.clone(),
@@ -233,7 +233,7 @@ impl TypedExpr {
             Self::Tuple { typ, .. } => typ.clone(),
             Self::String { typ, .. } => typ.clone(),
             Self::TupleIndex { typ, .. } => typ.clone(),
-            Self::Var { constructor, .. } => constructor.typ.clone(),
+            Self::Var { constructor, .. } => constructor.type_.clone(),
             Self::ModuleSelect { typ, .. } => typ.clone(),
             Self::RecordAccess { typ, .. } => typ.clone(),
             Self::BitString { typ, .. } => typ.clone(),
@@ -243,7 +243,7 @@ impl TypedExpr {
 }
 
 impl HasType for TypedExpr {
-    fn typ(&self) -> Arc<Type> {
-        self.typ()
+    fn type_(&self) -> Arc<Type> {
+        self.type_()
     }
 }
