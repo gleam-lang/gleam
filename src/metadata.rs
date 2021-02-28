@@ -9,6 +9,8 @@ mod module_encoder;
 #[cfg(test)]
 mod tests;
 
+use capnp::struct_list;
+
 pub use self::module_encoder::ModuleEncoder;
 
 use crate::{
@@ -178,7 +180,6 @@ impl ModuleDecoder {
         }
     }
 
-    // TODO: test
     fn module_fn_variant(
         &self,
         reader: &schema::value_constructor_variant::module_fn::Reader<'_>,
@@ -195,8 +196,33 @@ impl ModuleDecoder {
         &self,
         reader: &schema::option::Reader<'_, schema::field_map::Owned>,
     ) -> Result<Option<FieldMap>> {
-        // TODO
-        todo!()
+        use schema::option::Which;
+        Ok(match reader.which()? {
+            Which::None(_) => None,
+            Which::Some(reader) => Some({
+                let reader = reader?;
+                FieldMap {
+                    arity: reader.get_arity() as usize,
+                    fields: self.field_map_fields(&reader.get_fields()?)?,
+                }
+            }),
+        })
+    }
+
+    fn field_map_fields(
+        &self,
+        reader: &capnp::struct_list::Reader<
+            '_,
+            schema::property::Owned<schema::boxed_u_int16::Owned>,
+        >,
+    ) -> Result<HashMap<String, usize>> {
+        let mut fields = HashMap::with_capacity(reader.len() as usize);
+        for prop in reader.into_iter() {
+            let name = prop.get_key()?;
+            let index = prop.get_value()?.get_value();
+            let _ = fields.insert(name.to_string(), index as usize);
+        }
+        Ok(fields)
     }
 
     fn module_accessors(

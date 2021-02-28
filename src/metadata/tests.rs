@@ -31,7 +31,7 @@ fn empty_module() {
 fn module_with_app_type() {
     let module = Module {
         name: vec!["a".to_string(), "b".to_string()],
-        types: [(
+        types: vec![(
             "ListIntType".to_string(),
             TypeConstructor {
                 typ: typ::list(typ::int()),
@@ -41,8 +41,7 @@ fn module_with_app_type() {
                 parameters: vec![],
             },
         )]
-        .iter()
-        .cloned()
+        .into_iter()
         .collect(),
         values: HashMap::new(),
         accessors: HashMap::new(),
@@ -54,7 +53,7 @@ fn module_with_app_type() {
 fn module_with_fn_type() {
     let module = Module {
         name: vec!["a".to_string(), "b".to_string()],
-        types: [(
+        types: vec![(
             "FnType".to_string(),
             TypeConstructor {
                 typ: typ::fn_(vec![typ::nil(), typ::float()], typ::int()),
@@ -64,8 +63,7 @@ fn module_with_fn_type() {
                 parameters: vec![],
             },
         )]
-        .iter()
-        .cloned()
+        .into_iter()
         .collect(),
         values: HashMap::new(),
         accessors: HashMap::new(),
@@ -77,7 +75,7 @@ fn module_with_fn_type() {
 fn module_with_tuple_type() {
     let module = Module {
         name: vec!["a".to_string(), "b".to_string()],
-        types: [(
+        types: vec![(
             "TupleType".to_string(),
             TypeConstructor {
                 typ: typ::tuple(vec![typ::nil(), typ::float(), typ::int()]),
@@ -87,8 +85,7 @@ fn module_with_tuple_type() {
                 parameters: vec![],
             },
         )]
-        .iter()
-        .cloned()
+        .into_iter()
         .collect(),
         values: HashMap::new(),
         accessors: HashMap::new(),
@@ -106,7 +103,7 @@ fn module_with_generic_type() {
     fn make(t1: Arc<Type>, t2: Arc<Type>) -> Module {
         Module {
             name: vec!["a".to_string(), "b".to_string()],
-            types: [(
+            types: vec![(
                 "TupleType".to_string(),
                 TypeConstructor {
                     typ: typ::tuple(vec![t1.clone(), t1.clone(), t2.clone()]),
@@ -116,8 +113,7 @@ fn module_with_generic_type() {
                     parameters: vec![t1, t2],
                 },
             )]
-            .iter()
-            .cloned()
+            .into_iter()
             .collect(),
             values: HashMap::new(),
             accessors: HashMap::new(),
@@ -135,7 +131,7 @@ fn module_with_type_links() {
     fn make(type_: Arc<Type>) -> Module {
         Module {
             name: vec!["a".to_string()],
-            types: [(
+            types: vec![(
                 "SomeType".to_string(),
                 TypeConstructor {
                     typ: type_,
@@ -145,8 +141,7 @@ fn module_with_type_links() {
                     parameters: vec![],
                 },
             )]
-            .iter()
-            .cloned()
+            .into_iter()
             .collect(),
             values: HashMap::new(),
             accessors: HashMap::new(),
@@ -154,4 +149,63 @@ fn module_with_type_links() {
     }
 
     assert_eq!(roundtrip(&make(linked_type)), make(type_));
+}
+
+#[test]
+fn module_fn_value() {
+    let module = Module {
+        name: vec!["a".to_string()],
+        types: HashMap::new(),
+        accessors: HashMap::new(),
+        values: vec![(
+            "one".to_string(),
+            ValueConstructor {
+                public: true,
+                origin: Default::default(),
+                type_: typ::int(),
+                variant: ValueConstructorVariant::ModuleFn {
+                    name: "one".to_string(),
+                    field_map: None,
+                    module: vec!["a".to_string()],
+                    arity: 5,
+                },
+            },
+        )]
+        .into_iter()
+        .collect(),
+    };
+
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn module_fn_value_with_field_map() {
+    let module = Module {
+        name: vec!["a".to_string()],
+        types: HashMap::new(),
+        accessors: HashMap::new(),
+        values: vec![(
+            "one".to_string(),
+            ValueConstructor {
+                public: true,
+                origin: Default::default(),
+                type_: typ::int(),
+                variant: ValueConstructorVariant::ModuleFn {
+                    name: "one".to_string(),
+                    field_map: Some(FieldMap {
+                        arity: 20,
+                        fields: vec![("ok".to_string(), 5), ("ko".to_string(), 7)]
+                            .into_iter()
+                            .collect(),
+                    }),
+                    module: vec!["a".to_string()],
+                    arity: 5,
+                },
+            },
+        )]
+        .into_iter()
+        .collect(),
+    };
+
+    assert_eq!(roundtrip(&module), module);
 }
