@@ -5,6 +5,9 @@
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
+
+## v0.14.2 - 2021-03-02
+
 - Project names can now contain numbers.
 
 ## v0.14.1 - 2021-02-27
