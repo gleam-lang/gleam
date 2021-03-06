@@ -777,9 +777,8 @@ But this argument has this type:
                         given = printer.pretty_print(given, 4),
                     )
                     .unwrap();
-                    if let Some((alt, t)) = hint_alternative_operator(&op, given.as_ref()) {
-                        writeln!(buf, "Hint: the {} operator can be used with {}s\n", alt, t)
-                            .unwrap();
+                    if let Some(t) = hint_alternative_operator(&op, given.as_ref()) {
+                        writeln!(buf, "Hint: {}\n", t).unwrap();
                     }
                 }
 
@@ -1672,26 +1671,37 @@ fn import_cycle(buffer: &mut Buffer, modules: &[String]) {
     writeln!(buffer, "    └─────┘\n").unwrap();
 }
 
-fn hint_alternative_operator(op: &BinOp, given: &Type) -> Option<(&'static str, &'static str)> {
+fn hint_alternative_operator(op: &BinOp, given: &Type) -> Option<String> {
     match op {
-        BinOp::AddInt if given.is_float() => Some(("+.", "Float")),
-        BinOp::DivInt if given.is_float() => Some(("/.", "Float")),
-        BinOp::GtEqInt if given.is_float() => Some((">=", "Float")),
-        BinOp::GtInt if given.is_float() => Some((">", "Float")),
-        BinOp::LtEqInt if given.is_float() => Some(("<=.", "Float")),
-        BinOp::LtInt if given.is_float() => Some(("<.", "Float")),
-        BinOp::MultInt if given.is_float() => Some(("*.", "Float")),
-        BinOp::SubInt if given.is_float() => Some(("-.", "Float")),
+        BinOp::AddInt if given.is_float() => Some(hint_numeric_message("+.", "Float")),
+        BinOp::DivInt if given.is_float() => Some(hint_numeric_message("/.", "Float")),
+        BinOp::GtEqInt if given.is_float() => Some(hint_numeric_message(">=", "Float")),
+        BinOp::GtInt if given.is_float() => Some(hint_numeric_message(">", "Float")),
+        BinOp::LtEqInt if given.is_float() => Some(hint_numeric_message("<=.", "Float")),
+        BinOp::LtInt if given.is_float() => Some(hint_numeric_message("<.", "Float")),
+        BinOp::MultInt if given.is_float() => Some(hint_numeric_message("*.", "Float")),
+        BinOp::SubInt if given.is_float() => Some(hint_numeric_message("-.", "Float")),
 
-        BinOp::AddFloat if given.is_int() => Some(("+", "Int")),
-        BinOp::DivFloat if given.is_int() => Some(("/", "Int")),
-        BinOp::GtEqFloat if given.is_int() => Some((">=.", "Int")),
-        BinOp::GtFloat if given.is_int() => Some((">.", "Int")),
-        BinOp::LtEqFloat if given.is_int() => Some(("<=", "Int")),
-        BinOp::LtFloat if given.is_int() => Some(("<", "Int")),
-        BinOp::MultFloat if given.is_int() => Some(("*", "Int")),
-        BinOp::SubFloat if given.is_int() => Some(("-", "Int")),
+        BinOp::AddFloat if given.is_int() => Some(hint_numeric_message("+", "Int")),
+        BinOp::DivFloat if given.is_int() => Some(hint_numeric_message("/", "Int")),
+        BinOp::GtEqFloat if given.is_int() => Some(hint_numeric_message(">=.", "Int")),
+        BinOp::GtFloat if given.is_int() => Some(hint_numeric_message(">.", "Int")),
+        BinOp::LtEqFloat if given.is_int() => Some(hint_numeric_message("<=", "Int")),
+        BinOp::LtFloat if given.is_int() => Some(hint_numeric_message("<", "Int")),
+        BinOp::MultFloat if given.is_int() => Some(hint_numeric_message("*", "Int")),
+        BinOp::SubFloat if given.is_int() => Some(hint_numeric_message("-", "Int")),
+
+        BinOp::AddInt if given.is_string() => Some(hint_string_message()),
+        BinOp::AddFloat if given.is_string() => Some(hint_string_message()),
 
         _ => None,
     }
+}
+
+fn hint_numeric_message(alt: &str, type_: &str) -> String {
+    format!("the {} operator can be used with {}s\n", alt, type_)
+}
+
+fn hint_string_message() -> String {
+    "String can be concatted using `string.concat` from stdlib".to_string()
 }

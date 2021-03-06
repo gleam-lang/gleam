@@ -104,6 +104,13 @@ impl Type {
         }
     }
 
+    pub fn is_string(&self) -> bool {
+        match self {
+            Self::App { module, name, .. } => module.is_empty() && name == "String",
+            _ => false,
+        }
+    }
+
     /// Get the args for the type if the type is a specific `Type::App`.
     /// Returns None if the type is not a `Type::App` or is an incorrect `Type:App`
     ///
