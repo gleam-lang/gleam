@@ -14,7 +14,7 @@ use capnp::struct_list;
 pub use self::module_encoder::ModuleEncoder;
 
 use crate::{
-    schema_capnp as schema,
+    schema_capnp::*,
     typ::{
         self, AccessorsMap, FieldMap, Module, Type, TypeConstructor, ValueConstructor,
         ValueConstructorVariant,
@@ -37,7 +37,7 @@ impl ModuleDecoder {
     pub fn read(&mut self, reader: impl BufRead) -> Result<Module> {
         let message_reader =
             capnp::serialize_packed::read_message(reader, capnp::message::ReaderOptions::new())?;
-        let module = message_reader.get_root::<schema::module::Reader<'_>>()?;
+        let module = message_reader.get_root::<module::Reader<'_>>()?;
 
         Ok(Module {
             name: name(&module.get_name()?)?,
@@ -49,7 +49,7 @@ impl ModuleDecoder {
 
     fn module_types(
         &mut self,
-        reader: &schema::module::Reader<'_>,
+        reader: &module::Reader<'_>,
     ) -> Result<HashMap<String, TypeConstructor>> {
         let types_reader = reader.get_types()?;
         let mut types = HashMap::with_capacity(types_reader.len() as usize);
@@ -63,7 +63,7 @@ impl ModuleDecoder {
 
     fn type_constructor(
         &mut self,
-        reader: &schema::type_constructor::Reader<'_>,
+        reader: &type_constructor::Reader<'_>,
     ) -> Result<TypeConstructor> {
         let type_ = self.type_(&reader.get_type()?)?;
         let module = name(&reader.get_module()?)?;
@@ -83,7 +83,7 @@ impl ModuleDecoder {
 
     fn types(
         &mut self,
-        reader: &capnp::struct_list::Reader<'_, schema::type_::Owned>,
+        reader: &capnp::struct_list::Reader<'_, type_::Owned>,
     ) -> Result<Vec<Arc<Type>>> {
         let mut types = Vec::with_capacity(reader.len() as usize);
         for reader in reader.into_iter() {
@@ -92,8 +92,8 @@ impl ModuleDecoder {
         Ok(types)
     }
 
-    fn type_(&mut self, reader: &schema::type_::Reader<'_>) -> Result<Arc<Type>> {
-        use schema::type_::Which;
+    fn type_(&mut self, reader: &type_::Reader<'_>) -> Result<Arc<Type>> {
+        use type_::Which;
         match reader.which()? {
             Which::App(reader) => self.type_app(&reader),
             Which::Fn(reader) => self.type_fn(&reader),
@@ -102,7 +102,7 @@ impl ModuleDecoder {
         }
     }
 
-    fn type_app(&mut self, reader: &schema::type_::app::Reader<'_>) -> Result<Arc<Type>> {
+    fn type_app(&mut self, reader: &type_::app::Reader<'_>) -> Result<Arc<Type>> {
         let module = name(&reader.get_module()?)?;
         let name = reader.get_name()?.to_string();
         let args = self.types(&reader.get_parameters()?)?;
@@ -114,18 +114,18 @@ impl ModuleDecoder {
         }))
     }
 
-    fn type_fn(&mut self, reader: &schema::type_::fn_::Reader<'_>) -> Result<Arc<Type>> {
+    fn type_fn(&mut self, reader: &type_::fn_::Reader<'_>) -> Result<Arc<Type>> {
         let retrn = self.type_(&reader.get_return()?)?;
         let args = self.types(&reader.get_arguments()?)?;
         Ok(Arc::new(Type::Fn { args, retrn }))
     }
 
-    fn type_tuple(&mut self, reader: &schema::type_::tuple::Reader<'_>) -> Result<Arc<Type>> {
+    fn type_tuple(&mut self, reader: &type_::tuple::Reader<'_>) -> Result<Arc<Type>> {
         let elems = self.types(&reader.get_elements()?)?;
         Ok(Arc::new(Type::Tuple { elems }))
     }
 
-    fn type_var(&mut self, reader: &schema::type_::var::Reader<'_>) -> Result<Arc<Type>> {
+    fn type_var(&mut self, reader: &type_::var::Reader<'_>) -> Result<Arc<Type>> {
         let serialized_id = reader.get_id() as usize;
         let id = match self.type_var_id_map.get(&serialized_id) {
             Some(id) => *id,
@@ -141,7 +141,7 @@ impl ModuleDecoder {
 
     fn module_values(
         &mut self,
-        reader: &schema::module::Reader<'_>,
+        reader: &module::Reader<'_>,
     ) -> Result<HashMap<String, ValueConstructor>> {
         let reader = reader.get_values()?;
         let mut values = HashMap::with_capacity(reader.len() as usize);
@@ -156,7 +156,7 @@ impl ModuleDecoder {
     // TODO: test
     fn value_constructor(
         &mut self,
-        reader: &schema::value_constructor::Reader<'_>,
+        reader: &value_constructor::Reader<'_>,
     ) -> Result<ValueConstructor> {
         let type_ = self.type_(&reader.get_type()?)?;
         let variant = self.value_constructor_variant(&reader.get_variant()?)?;
@@ -170,19 +170,20 @@ impl ModuleDecoder {
 
     fn value_constructor_variant(
         &self,
-        reader: &schema::value_constructor_variant::Reader<'_>,
+        reader: &value_constructor_variant::Reader<'_>,
     ) -> Result<ValueConstructorVariant> {
-        use schema::value_constructor_variant::Which;
+        use value_constructor_variant::Which;
         match reader.which()? {
+            // TODO
             Which::ModuleConstant(reader) => todo!(),
             Which::ModuleFn(reader) => self.module_fn_variant(&reader),
-            Which::Record(reader) => todo!(),
+            Which::Record(reader) => self.record(&reader),
         }
     }
 
     fn module_fn_variant(
         &self,
-        reader: &schema::value_constructor_variant::module_fn::Reader<'_>,
+        reader: &value_constructor_variant::module_fn::Reader<'_>,
     ) -> Result<ValueConstructorVariant> {
         Ok(ValueConstructorVariant::ModuleFn {
             name: reader.get_name()?.to_string(),
@@ -192,11 +193,19 @@ impl ModuleDecoder {
         })
     }
 
-    fn field_map(
+    fn record(
         &self,
-        reader: &schema::option::Reader<'_, schema::field_map::Owned>,
-    ) -> Result<Option<FieldMap>> {
-        use schema::option::Which;
+        reader: &value_constructor_variant::record::Reader<'_>,
+    ) -> Result<ValueConstructorVariant> {
+        Ok(ValueConstructorVariant::Record {
+            name: reader.get_name()?.to_string(),
+            arity: reader.get_arity() as usize,
+            field_map: self.field_map(&reader.get_field_map()?)?,
+        })
+    }
+
+    fn field_map(&self, reader: &option::Reader<'_, field_map::Owned>) -> Result<Option<FieldMap>> {
+        use option::Which;
         Ok(match reader.which()? {
             Which::None(_) => None,
             Which::Some(reader) => Some({
@@ -211,10 +220,7 @@ impl ModuleDecoder {
 
     fn field_map_fields(
         &self,
-        reader: &capnp::struct_list::Reader<
-            '_,
-            schema::property::Owned<schema::boxed_u_int16::Owned>,
-        >,
+        reader: &capnp::struct_list::Reader<'_, property::Owned<boxed_u_int16::Owned>>,
     ) -> Result<HashMap<String, usize>> {
         let mut fields = HashMap::with_capacity(reader.len() as usize);
         for prop in reader.into_iter() {
@@ -227,7 +233,7 @@ impl ModuleDecoder {
 
     fn module_accessors(
         &self,
-        reader: &schema::module::Reader<'_>,
+        reader: &module::Reader<'_>,
     ) -> Result<HashMap<String, AccessorsMap>> {
         // TODO
         Ok(HashMap::new())

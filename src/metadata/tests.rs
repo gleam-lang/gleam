@@ -209,3 +209,60 @@ fn module_fn_value_with_field_map() {
 
     assert_eq!(roundtrip(&module), module);
 }
+
+#[test]
+fn record_value() {
+    let module = Module {
+        name: vec!["a".to_string()],
+        types: HashMap::new(),
+        accessors: HashMap::new(),
+        values: vec![(
+            "one".to_string(),
+            ValueConstructor {
+                public: true,
+                origin: Default::default(),
+                type_: typ::int(),
+                variant: ValueConstructorVariant::Record {
+                    name: "one".to_string(),
+                    field_map: None,
+                    arity: 5,
+                },
+            },
+        )]
+        .into_iter()
+        .collect(),
+    };
+
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn record_value_with_field_map() {
+    let module = Module {
+        name: vec!["a".to_string()],
+        types: HashMap::new(),
+        accessors: HashMap::new(),
+        values: vec![(
+            "one".to_string(),
+            ValueConstructor {
+                public: true,
+                origin: Default::default(),
+                type_: typ::int(),
+                variant: ValueConstructorVariant::Record {
+                    name: "one".to_string(),
+                    field_map: Some(FieldMap {
+                        arity: 20,
+                        fields: vec![("ok".to_string(), 5), ("ko".to_string(), 7)]
+                            .into_iter()
+                            .collect(),
+                    }),
+                    arity: 5,
+                },
+            },
+        )]
+        .into_iter()
+        .collect(),
+    };
+
+    assert_eq!(roundtrip(&module), module);
+}
