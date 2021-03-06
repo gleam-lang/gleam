@@ -43,6 +43,7 @@ struct AccessorsMap {
 struct RecordAccessor {
   type @0 :Type;
   index @1 :UInt16;
+  label @2 :Text;
 }
 
 struct Type {

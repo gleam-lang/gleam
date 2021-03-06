@@ -266,3 +266,62 @@ fn record_value_with_field_map() {
 
     assert_eq!(roundtrip(&module), module);
 }
+
+#[test]
+fn accessors() {
+    let module = Module {
+        name: vec!["a".to_string()],
+        types: HashMap::new(),
+        values: HashMap::new(),
+        accessors: vec![
+            (
+                "one".to_string(),
+                AccessorsMap {
+                    public: true,
+                    type_: typ::int(),
+                    accessors: vec![
+                        (
+                            "a".to_string(),
+                            RecordAccessor {
+                                index: 6,
+                                label: "siiixxx".to_string(),
+                                type_: typ::nil(),
+                            },
+                        ),
+                        (
+                            "a".to_string(),
+                            RecordAccessor {
+                                index: 5,
+                                label: "fiveee".to_string(),
+                                type_: typ::float(),
+                            },
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                },
+            ),
+            (
+                "two".to_string(),
+                AccessorsMap {
+                    public: true,
+                    type_: typ::int(),
+                    accessors: vec![(
+                        "a".to_string(),
+                        RecordAccessor {
+                            index: 1,
+                            label: "ok".to_string(),
+                            type_: typ::float(),
+                        },
+                    )]
+                    .into_iter()
+                    .collect(),
+                },
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    };
+
+    assert_eq!(roundtrip(&module), module);
+}

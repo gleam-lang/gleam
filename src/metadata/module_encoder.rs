@@ -1,8 +1,3 @@
-use std::{cell::RefCell, collections::HashMap, sync::Arc};
-
-use capnp::text_list;
-use typ::{AccessorsMap, RecordAccessor};
-
 use crate::{
     ast::{
         BitStringSegmentOption, Constant, TypedConstant, TypedConstantBitStringSegment,
@@ -11,9 +6,12 @@ use crate::{
     fs::Writer,
     schema_capnp::*,
     typ::{
-        self, FieldMap, Type, TypeConstructor, TypeVar, ValueConstructor, ValueConstructorVariant,
+        self, AccessorsMap, FieldMap, RecordAccessor, Type, TypeConstructor, TypeVar,
+        ValueConstructor, ValueConstructorVariant,
     },
 };
+use capnp::text_list;
+use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
 pub struct ModuleEncoder<'a> {
     data: &'a typ::Module,
@@ -74,6 +72,7 @@ impl<'a> ModuleEncoder<'a> {
         accessor: &RecordAccessor,
     ) {
         self.build_type(builder.reborrow().init_type(), accessor.type_.as_ref());
+        builder.reborrow().set_label(&accessor.label);
         builder.set_index(accessor.index as u16);
     }
 

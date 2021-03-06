@@ -16,8 +16,8 @@ pub use self::module_encoder::ModuleEncoder;
 use crate::{
     schema_capnp::*,
     typ::{
-        self, AccessorsMap, FieldMap, Module, Type, TypeConstructor, ValueConstructor,
-        ValueConstructorVariant,
+        self, AccessorsMap, FieldMap, Module, RecordAccessor, Type, TypeConstructor,
+        ValueConstructor, ValueConstructorVariant,
     },
     Result,
 };
@@ -232,11 +232,46 @@ impl ModuleDecoder {
     }
 
     fn module_accessors(
-        &self,
+        &mut self,
         reader: &module::Reader<'_>,
     ) -> Result<HashMap<String, AccessorsMap>> {
-        // TODO
-        Ok(HashMap::new())
+        let reader = reader.get_accessors()?;
+        let mut accessors = HashMap::with_capacity(reader.len() as usize);
+        for prop in reader.into_iter() {
+            let name = prop.get_key()?;
+            let accessor = self.accessors_map(&prop.get_value()?)?;
+            let _ = accessors.insert(name.to_string(), accessor);
+        }
+        Ok(accessors)
+    }
+
+    fn accessors_map(&mut self, reader: &accessors_map::Reader<'_>) -> Result<AccessorsMap> {
+        Ok(AccessorsMap {
+            public: true,
+            type_: self.type_(&reader.get_type()?)?,
+            accessors: self.accessors(&reader.get_accessors()?)?,
+        })
+    }
+
+    fn accessors(
+        &mut self,
+        reader: &capnp::struct_list::Reader<'_, property::Owned<record_accessor::Owned>>,
+    ) -> Result<HashMap<String, RecordAccessor>> {
+        let mut accessors = HashMap::with_capacity(reader.len() as usize);
+        for prop in reader.into_iter() {
+            let name = prop.get_key()?;
+            let accessor = self.record_accessor(&prop.get_value()?)?;
+            let _ = accessors.insert(name.to_string(), accessor);
+        }
+        Ok(accessors)
+    }
+
+    fn record_accessor(&mut self, reader: &record_accessor::Reader<'_>) -> Result<RecordAccessor> {
+        Ok(RecordAccessor {
+            index: reader.get_index() as u64,
+            label: reader.get_label()?.to_string(),
+            type_: self.type_(&reader.get_type()?)?,
+        })
     }
 }
 

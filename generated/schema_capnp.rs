@@ -969,6 +969,13 @@ pub mod record_accessor {
     pub fn get_index(self) -> u16 {
       self.reader.get_data_field::<u16>(0)
     }
+    #[inline]
+    pub fn get_label(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
+      ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(1), ::core::option::Option::None)
+    }
+    pub fn has_label(&self) -> bool {
+      !self.reader.get_pointer_field(1).is_null()
+    }
   }
 
   pub struct Builder<'a> { builder: ::capnp::private::layout::StructBuilder<'a> }
@@ -1042,6 +1049,21 @@ pub mod record_accessor {
     pub fn set_index(&mut self, value: u16)  {
       self.builder.set_data_field::<u16>(0, value);
     }
+    #[inline]
+    pub fn get_label(self) -> ::capnp::Result<::capnp::text::Builder<'a>> {
+      ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(1), ::core::option::Option::None)
+    }
+    #[inline]
+    pub fn set_label(&mut self, value: ::capnp::text::Reader<'_>)  {
+      self.builder.get_pointer_field(1).set_text(value);
+    }
+    #[inline]
+    pub fn init_label(self, size: u32) -> ::capnp::text::Builder<'a> {
+      self.builder.get_pointer_field(1).init_text(size)
+    }
+    pub fn has_label(&self) -> bool {
+      !self.builder.get_pointer_field(1).is_null()
+    }
   }
 
   pub struct Pipeline { _typeless: ::capnp::any_pointer::Pipeline }
@@ -1057,7 +1079,7 @@ pub mod record_accessor {
   }
   mod _private {
     use capnp::private::layout;
-    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 1 };
+    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 2 };
     pub const TYPE_ID: u64 = 0xae5a_01ad_db56_c89e;
   }
 }
