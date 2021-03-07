@@ -25,7 +25,7 @@ use crate::{
 use std::{collections::HashMap, io::BufRead, sync::Arc};
 
 macro_rules! read_vec {
-    ($reader:expr, $self:expr,$method:ident) => {{
+    ($reader:expr, $self:expr, $method:ident) => {{
         let reader = $reader;
         let mut vec = Vec::with_capacity(reader.len() as usize);
         for reader in reader.into_iter() {
@@ -33,6 +33,19 @@ macro_rules! read_vec {
             vec.push(value);
         }
         vec
+    }};
+}
+
+macro_rules! read_hashmap {
+    ($reader:expr, $self:expr, $method:ident) => {{
+        let reader = $reader;
+        let mut map = HashMap::with_capacity(reader.len() as usize);
+        for prop in reader.into_iter() {
+            let name = prop.get_key()?;
+            let type_ = $self.$method(&prop.get_value()?)?;
+            let _ = map.insert(name.to_string(), type_);
+        }
+        map
     }};
 }
 
@@ -50,28 +63,14 @@ impl ModuleDecoder {
     pub fn read(&mut self, reader: impl BufRead) -> Result<Module> {
         let message_reader =
             capnp::serialize_packed::read_message(reader, capnp::message::ReaderOptions::new())?;
-        let module = message_reader.get_root::<module::Reader<'_>>()?;
+        let reader = message_reader.get_root::<module::Reader<'_>>()?;
 
         Ok(Module {
-            name: name(&module.get_name()?)?,
-            types: self.module_types(&module)?,
-            values: self.module_values(&module)?,
-            accessors: self.module_accessors(&module)?,
+            name: name(&reader.get_name()?)?,
+            types: read_hashmap!(reader.get_types()?, self, type_constructor),
+            values: read_hashmap!(reader.get_values()?, self, value_constructor),
+            accessors: read_hashmap!(reader.get_accessors()?, self, accessors_map),
         })
-    }
-
-    fn module_types(
-        &mut self,
-        reader: &module::Reader<'_>,
-    ) -> Result<HashMap<String, TypeConstructor>> {
-        let types_reader = reader.get_types()?;
-        let mut types = HashMap::with_capacity(types_reader.len() as usize);
-        for prop in types_reader.into_iter() {
-            let name = prop.get_key()?;
-            let type_ = self.type_constructor(&prop.get_value()?)?;
-            let _ = types.insert(name.to_string(), type_);
-        }
-        Ok(types)
     }
 
     fn type_constructor(
@@ -134,20 +133,6 @@ impl ModuleDecoder {
             }
         };
         Ok(typ::generic_var(id))
-    }
-
-    fn module_values(
-        &mut self,
-        reader: &module::Reader<'_>,
-    ) -> Result<HashMap<String, ValueConstructor>> {
-        let reader = reader.get_values()?;
-        let mut values = HashMap::with_capacity(reader.len() as usize);
-        for prop in reader.into_iter() {
-            let name = prop.get_key()?;
-            let value = self.value_constructor(&prop.get_value()?)?;
-            let _ = values.insert(name.to_string(), value);
-        }
-        Ok(values)
     }
 
     fn value_constructor(
@@ -309,58 +294,22 @@ impl ModuleDecoder {
                 let reader = reader?;
                 FieldMap {
                     arity: reader.get_arity() as usize,
-                    fields: self.field_map_fields(&reader.get_fields()?)?,
+                    fields: read_hashmap!(&reader.get_fields()?, self, usize),
                 }
             }),
         })
     }
 
-    fn field_map_fields(
-        &self,
-        reader: &capnp::struct_list::Reader<'_, property::Owned<boxed_u_int16::Owned>>,
-    ) -> Result<HashMap<String, usize>> {
-        let mut fields = HashMap::with_capacity(reader.len() as usize);
-        for prop in reader.into_iter() {
-            let name = prop.get_key()?;
-            let index = prop.get_value()?.get_value();
-            let _ = fields.insert(name.to_string(), index as usize);
-        }
-        Ok(fields)
-    }
-
-    fn module_accessors(
-        &mut self,
-        reader: &module::Reader<'_>,
-    ) -> Result<HashMap<String, AccessorsMap>> {
-        let reader = reader.get_accessors()?;
-        let mut accessors = HashMap::with_capacity(reader.len() as usize);
-        for prop in reader.into_iter() {
-            let name = prop.get_key()?;
-            let accessor = self.accessors_map(&prop.get_value()?)?;
-            let _ = accessors.insert(name.to_string(), accessor);
-        }
-        Ok(accessors)
+    fn usize(&self, i: &boxed_u_int16::Reader<'_>) -> Result<usize> {
+        Ok(i.get_value() as usize)
     }
 
     fn accessors_map(&mut self, reader: &accessors_map::Reader<'_>) -> Result<AccessorsMap> {
         Ok(AccessorsMap {
             public: true,
             type_: self.type_(&reader.get_type()?)?,
-            accessors: self.accessors(&reader.get_accessors()?)?,
+            accessors: read_hashmap!(&reader.get_accessors()?, self, record_accessor),
         })
-    }
-
-    fn accessors(
-        &mut self,
-        reader: &capnp::struct_list::Reader<'_, property::Owned<record_accessor::Owned>>,
-    ) -> Result<HashMap<String, RecordAccessor>> {
-        let mut accessors = HashMap::with_capacity(reader.len() as usize);
-        for prop in reader.into_iter() {
-            let name = prop.get_key()?;
-            let accessor = self.record_accessor(&prop.get_value()?)?;
-            let _ = accessors.insert(name.to_string(), accessor);
-        }
-        Ok(accessors)
     }
 
     fn record_accessor(&mut self, reader: &record_accessor::Reader<'_>) -> Result<RecordAccessor> {
