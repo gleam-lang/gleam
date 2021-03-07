@@ -1703,5 +1703,6 @@ fn hint_numeric_message(alt: &str, type_: &str) -> String {
 }
 
 fn hint_string_message() -> String {
-    "String can be concatted using `string.concat` from stdlib".to_string()
+    "Strings can be joined using the `append` or `concat` functions from
+the `gleam/string` module".to_string()
 }
