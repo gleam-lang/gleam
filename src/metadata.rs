@@ -14,6 +14,7 @@ use capnp::struct_list;
 pub use self::module_encoder::ModuleEncoder;
 
 use crate::{
+    ast::{CallArg, Constant, TypedConstant},
     schema_capnp::*,
     typ::{
         self, AccessorsMap, FieldMap, Module, RecordAccessor, Type, TypeConstructor,
@@ -153,7 +154,6 @@ impl ModuleDecoder {
         Ok(values)
     }
 
-    // TODO: test
     fn value_constructor(
         &mut self,
         reader: &value_constructor::Reader<'_>,
@@ -168,17 +168,125 @@ impl ModuleDecoder {
         })
     }
 
-    fn value_constructor_variant(
+    fn constant(&mut self, reader: &constant::Reader<'_>) -> Result<TypedConstant> {
+        use constant::Which;
+        match reader.which()? {
+            Which::Int(reader) => self.constant_int(&reader?),
+            Which::Float(reader) => self.constant_float(&reader?),
+            Which::String(reader) => self.constant_string(&reader?),
+            Which::Tuple(reader) => self.constant_tuple(&reader?),
+            Which::List(reader) => self.constant_list(&reader),
+            Which::Record(reader) => self.constant_record(&reader),
+            Which::BitString(reader) => self.constant_bit_string(&reader?),
+        }
+    }
+
+    // TODO: test
+    fn constant_int(&self, value: &str) -> Result<TypedConstant> {
+        Ok(Constant::Int {
+            location: Default::default(),
+            value: value.to_string(),
+        })
+    }
+
+    // TODO: test
+    fn constant_float(&self, value: &str) -> Result<TypedConstant> {
+        Ok(Constant::Float {
+            location: Default::default(),
+            value: value.to_string(),
+        })
+    }
+
+    // TODO: test
+    fn constant_string(&self, value: &str) -> Result<TypedConstant> {
+        Ok(Constant::String {
+            location: Default::default(),
+            value: value.to_string(),
+        })
+    }
+
+    // TODO: test
+    fn constant_tuple(
+        &mut self,
+        reader: &capnp::struct_list::Reader<'_, constant::Owned>,
+    ) -> Result<TypedConstant> {
+        let mut elements = Vec::with_capacity(reader.len() as usize);
+        for reader in reader.into_iter() {
+            elements.push(self.constant(&reader)?)
+        }
+        Ok(Constant::Tuple {
+            location: Default::default(),
+            elements,
+        })
+    }
+
+    // TODO: test
+    fn constant_list(&mut self, reader: &constant::list::Reader<'_>) -> Result<TypedConstant> {
+        let type_ = self.type_(&reader.get_type()?)?;
+        let reader = reader.get_elements()?;
+        let mut elements = Vec::with_capacity(reader.len() as usize);
+        for reader in reader.into_iter() {
+            elements.push(self.constant(&reader)?);
+        }
+        Ok(Constant::List {
+            location: Default::default(),
+            elements,
+            typ: type_,
+        })
+    }
+
+    // TODO: test
+    fn constant_record(&mut self, reader: &constant::record::Reader<'_>) -> Result<TypedConstant> {
+        let type_ = self.type_(&reader.get_typ()?)?;
+        let tag = reader.get_tag()?.to_string();
+        let reader = reader.get_args()?;
+        let mut args = Vec::with_capacity(reader.len() as usize);
+        for reader in reader.into_iter() {
+            let value = self.constant(&reader)?;
+            args.push(CallArg {
+                label: Default::default(),
+                location: Default::default(),
+                value,
+            });
+        }
+        Ok(Constant::Record {
+            location: Default::default(),
+            module: Default::default(),
+            name: Default::default(),
+            args,
+            tag,
+            typ: type_,
+        })
+    }
+
+    // TODO: test
+    fn constant_bit_string(
         &self,
+        reader: &capnp::struct_list::Reader<'_, bit_string_segment::Owned>,
+    ) -> Result<TypedConstant> {
+        todo!()
+    }
+
+    // TODO: test
+    fn value_constructor_variant(
+        &mut self,
         reader: &value_constructor_variant::Reader<'_>,
     ) -> Result<ValueConstructorVariant> {
         use value_constructor_variant::Which;
         match reader.which()? {
-            // TODO
-            Which::ModuleConstant(reader) => todo!(),
+            Which::ModuleConstant(reader) => self.module_constant_variant(&reader?),
             Which::ModuleFn(reader) => self.module_fn_variant(&reader),
             Which::Record(reader) => self.record(&reader),
         }
+    }
+
+    fn module_constant_variant(
+        &mut self,
+        reader: &constant::Reader<'_>,
+    ) -> Result<ValueConstructorVariant> {
+        Ok(ValueConstructorVariant::ModuleConstant {
+            literal: self.constant(reader)?,
+        })
     }
 
     fn module_fn_variant(
