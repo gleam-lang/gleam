@@ -24,6 +24,18 @@ use crate::{
 };
 use std::{collections::HashMap, io::BufRead, sync::Arc};
 
+macro_rules! read_vec {
+    ($reader:expr, $self:expr,$method:ident) => {{
+        let reader = $reader;
+        let mut vec = Vec::with_capacity(reader.len() as usize);
+        for reader in reader.into_iter() {
+            let value = $self.$method(&reader)?;
+            vec.push(value);
+        }
+        vec
+    }};
+}
+
 #[derive(Debug, Default)]
 pub struct ModuleDecoder {
     next_type_var_id: usize,
@@ -68,29 +80,13 @@ impl ModuleDecoder {
     ) -> Result<TypeConstructor> {
         let type_ = self.type_(&reader.get_type()?)?;
         let module = name(&reader.get_module()?)?;
-        let reader = reader.get_parameters()?;
-        let mut parameters = Vec::with_capacity(reader.len() as usize);
-        for reader in reader.into_iter() {
-            parameters.push(self.type_(&reader)?);
-        }
         Ok(TypeConstructor {
             public: true,
             origin: Default::default(),
             module,
-            parameters,
+            parameters: read_vec!(reader.get_parameters()?, self, type_),
             typ: type_,
         })
-    }
-
-    fn types(
-        &mut self,
-        reader: &capnp::struct_list::Reader<'_, type_::Owned>,
-    ) -> Result<Vec<Arc<Type>>> {
-        let mut types = Vec::with_capacity(reader.len() as usize);
-        for reader in reader.into_iter() {
-            types.push(self.type_(&reader)?);
-        }
-        Ok(types)
     }
 
     fn type_(&mut self, reader: &type_::Reader<'_>) -> Result<Arc<Type>> {
@@ -106,7 +102,7 @@ impl ModuleDecoder {
     fn type_app(&mut self, reader: &type_::app::Reader<'_>) -> Result<Arc<Type>> {
         let module = name(&reader.get_module()?)?;
         let name = reader.get_name()?.to_string();
-        let args = self.types(&reader.get_parameters()?)?;
+        let args = read_vec!(&reader.get_parameters()?, self, type_);
         Ok(Arc::new(Type::App {
             public: true,
             module,
@@ -117,12 +113,12 @@ impl ModuleDecoder {
 
     fn type_fn(&mut self, reader: &type_::fn_::Reader<'_>) -> Result<Arc<Type>> {
         let retrn = self.type_(&reader.get_return()?)?;
-        let args = self.types(&reader.get_arguments()?)?;
+        let args = read_vec!(&reader.get_arguments()?, self, type_);
         Ok(Arc::new(Type::Fn { args, retrn }))
     }
 
     fn type_tuple(&mut self, reader: &type_::tuple::Reader<'_>) -> Result<Arc<Type>> {
-        let elems = self.types(&reader.get_elements()?)?;
+        let elems = read_vec!(&reader.get_elements()?, self, type_);
         Ok(Arc::new(Type::Tuple { elems }))
     }
 
@@ -210,27 +206,18 @@ impl ModuleDecoder {
         &mut self,
         reader: &capnp::struct_list::Reader<'_, constant::Owned>,
     ) -> Result<TypedConstant> {
-        let mut elements = Vec::with_capacity(reader.len() as usize);
-        for reader in reader.into_iter() {
-            elements.push(self.constant(&reader)?)
-        }
         Ok(Constant::Tuple {
             location: Default::default(),
-            elements,
+            elements: read_vec!(reader, self, constant),
         })
     }
 
     // TODO: test
     fn constant_list(&mut self, reader: &constant::list::Reader<'_>) -> Result<TypedConstant> {
         let type_ = self.type_(&reader.get_type()?)?;
-        let reader = reader.get_elements()?;
-        let mut elements = Vec::with_capacity(reader.len() as usize);
-        for reader in reader.into_iter() {
-            elements.push(self.constant(&reader)?);
-        }
         Ok(Constant::List {
             location: Default::default(),
-            elements,
+            elements: read_vec!(reader.get_elements()?, self, constant),
             typ: type_,
         })
     }
@@ -239,16 +226,7 @@ impl ModuleDecoder {
     fn constant_record(&mut self, reader: &constant::record::Reader<'_>) -> Result<TypedConstant> {
         let type_ = self.type_(&reader.get_typ()?)?;
         let tag = reader.get_tag()?.to_string();
-        let reader = reader.get_args()?;
-        let mut args = Vec::with_capacity(reader.len() as usize);
-        for reader in reader.into_iter() {
-            let value = self.constant(&reader)?;
-            args.push(CallArg {
-                label: Default::default(),
-                location: Default::default(),
-                value,
-            });
-        }
+        let args = read_vec!(reader.get_args()?, self, constant_call_arg);
         Ok(Constant::Record {
             location: Default::default(),
             module: Default::default(),
@@ -256,6 +234,17 @@ impl ModuleDecoder {
             args,
             tag,
             typ: type_,
+        })
+    }
+
+    fn constant_call_arg(
+        &mut self,
+        reader: &constant::Reader<'_>,
+    ) -> Result<CallArg<TypedConstant>> {
+        Ok(CallArg {
+            label: Default::default(),
+            location: Default::default(),
+            value: self.constant(reader)?,
         })
     }
 
