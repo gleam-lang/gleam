@@ -5,6 +5,7 @@
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
+- Added an error hint when joining string using the `+` or `+.` operator.
 
 ## v0.14.2 - 2021-03-02
 
