@@ -1704,5 +1704,6 @@ fn hint_numeric_message(alt: &str, type_: &str) -> String {
 
 fn hint_string_message() -> String {
     "Strings can be joined using the `append` or `concat` functions from
-the `gleam/string` module".to_string()
+the `gleam/string` module"
+        .to_string()
 }
