@@ -10,6 +10,7 @@
   <a href="https://github.com/gleam-lang/gleam/releases"><img src="https://img.shields.io/github/release/gleam-lang/gleam" alt="GitHub release"></a>
   <a href="https://discord.gg/Fm8Pwmy"><img src="https://img.shields.io/discord/768594524158427167?color=blue" alt="Discord chat"></a>
   <a><img src="https://github.com/gleam-lang/gleam/workflows/ci/badge.svg?branch=main"></a>
+  <a href="https://gitpod.io/#https://github.com/gleam-lang/gleam"><img src="https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod"></a>
 </p>
 
 
