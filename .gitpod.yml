@@ -1,0 +1,16 @@
+image:
+  file: .gitpod.Dockerfile
+
+# See: https://www.gitpod.io/docs/config-start-tasks/
+tasks:
+  - init: cargo build && make
+    command: cargo watch -x run
+
+# See: https://www.gitpod.io/docs/prebuilds/#configure-the-github-app
+github:
+  prebuilds:
+    master: true
+    branches: true
+    pullRequests: true
+    pullRequestsFromForks: true
+    addCheck: true

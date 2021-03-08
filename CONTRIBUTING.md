@@ -38,6 +38,12 @@ Code changes to Gleam are welcomed via the process below.
 4. Once the changes have been approved the code will be rebased into the
    `main` branch.
 
+## Hacking on Gleam in Gitpod
+
+If you have a web browser, you can get a fully pre-configured Gleam development environment in one click:
+
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/gleam-lang/gleam)
+
 ## Local development
 
 To run the compiler tests.
