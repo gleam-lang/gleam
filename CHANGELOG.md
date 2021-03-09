@@ -6,6 +6,7 @@
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 - Added an error hint when joining string using the `+` or `+.` operator.
+- New projects are created with `setup-erlang` v1.1.2 and Erlang/OTP v23.2.
 
 ## v0.14.2 - 2021-03-02
 

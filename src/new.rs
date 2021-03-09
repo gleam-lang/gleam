@@ -10,7 +10,7 @@ use strum_macros::{Display, EnumString, EnumVariantNames};
 
 const GLEAM_STDLIB_VERSION: &'static str = "0.14.0";
 const GLEAM_OTP_VERSION: &'static str = "0.1.0";
-const ERLANG_OTP_VERSION: &'static str = "22.1";
+const ERLANG_OTP_VERSION: &'static str = "23.2";
 const PROJECT_VERSION: &'static str = "1.0.0";
 
 #[derive(Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy)]
@@ -382,7 +382,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2.0.0
-      - uses: gleam-lang/setup-erlang@v1.1.0
+      - uses: gleam-lang/setup-erlang@v1.1.2
         with:
           otp-version: {}
       - uses: gleam-lang/setup-gleam@v1.0.2
