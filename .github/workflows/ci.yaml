@@ -109,9 +109,9 @@ jobs:
       uses: actions/checkout@v2.0.0
 
     - name: Install Erlang
-      uses: gleam-lang/setup-erlang@v1.1.0
+      uses: gleam-lang/setup-erlang@v1.1.2
       with:
-        otp-version: 22.1
+        otp-version: 23.2
 
     - name: Download test artifact
       uses: actions/download-artifact@v2
