@@ -295,18 +295,18 @@ of the Gleam dependency modules."
                 let diagnostic = ProjectErrorDiagnostic {
                     title: "Invalid project name".to_string(),
                     label: format!(
-                        "We were not able to create your project as `{}` is
+                        "We were not able to create your project as `{}`
 {}
 
 Please try again with a different project name.",
                         name,
                         match reason {
                             InvalidProjectNameReason::ErlangReservedWord =>
-                                "a reserved word in Erlang.",
+                                "is a reserved word in Erlang.",
                             InvalidProjectNameReason::ErlangStandardLibraryModule =>
-                                "a standard library module in Erlang.",
+                                "is a standard library module in Erlang.",
                             InvalidProjectNameReason::GleamReservedWord =>
-                                "a reserved word in Gleam.",
+                                "is a reserved word in Gleam.",
                             InvalidProjectNameReason::Format =>
                                 "does not have the correct format. Project names must start
 with a lowercase letter and may only contain lowercase letters,
