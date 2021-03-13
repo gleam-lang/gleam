@@ -267,7 +267,7 @@ impl ModuleDecoder {
             Which::Binary(reader) => BitStringSegmentOption::Binary {
                 location: Default::default(),
             },
-            Which::Integer(_) => BitStringSegmentOption::Integer {
+            Which::Integer(_) => BitStringSegmentOption::Int {
                 location: Default::default(),
             },
             Which::Float(_) => BitStringSegmentOption::Float {

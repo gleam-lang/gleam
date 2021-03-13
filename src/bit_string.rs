@@ -40,16 +40,16 @@ impl<T> SegmentOptionCategories<'_, T> {
 
     fn segment_type(&self) -> Arc<Type> {
         match self.typ {
-            Some(BitStringSegmentOption::Integer { .. }) => crate::typ::int(),
+            Some(BitStringSegmentOption::Int { .. }) => crate::typ::int(),
             Some(BitStringSegmentOption::Float { .. }) => crate::typ::float(),
             Some(BitStringSegmentOption::Binary { .. }) => crate::typ::bit_string(),
             Some(BitStringSegmentOption::BitString { .. }) => crate::typ::bit_string(),
-            Some(BitStringSegmentOption::UTF8 { .. }) => crate::typ::string(),
-            Some(BitStringSegmentOption::UTF16 { .. }) => crate::typ::string(),
-            Some(BitStringSegmentOption::UTF32 { .. }) => crate::typ::string(),
-            Some(BitStringSegmentOption::UTF8Codepoint { .. }) => crate::typ::utf_codepoint(),
-            Some(BitStringSegmentOption::UTF16Codepoint { .. }) => crate::typ::utf_codepoint(),
-            Some(BitStringSegmentOption::UTF32Codepoint { .. }) => crate::typ::utf_codepoint(),
+            Some(BitStringSegmentOption::Utf8 { .. }) => crate::typ::string(),
+            Some(BitStringSegmentOption::Utf16 { .. }) => crate::typ::string(),
+            Some(BitStringSegmentOption::Utf32 { .. }) => crate::typ::string(),
+            Some(BitStringSegmentOption::Utf8Codepoint { .. }) => crate::typ::utf_codepoint(),
+            Some(BitStringSegmentOption::Utf16Codepoint { .. }) => crate::typ::utf_codepoint(),
+            Some(BitStringSegmentOption::Utf32Codepoint { .. }) => crate::typ::utf_codepoint(),
             None => crate::typ::int(),
             Some(_) => crate::error::fatal_compiler_bug(
                 "Tried to type a non type kind BitString segment option.",
@@ -68,15 +68,15 @@ fn type_options<T>(
     for option in input_options.iter() {
         match option {
             BitStringSegmentOption::Binary { .. }
-            | BitStringSegmentOption::Integer { .. }
+            | BitStringSegmentOption::Int { .. }
             | BitStringSegmentOption::Float { .. }
             | BitStringSegmentOption::BitString { .. }
-            | BitStringSegmentOption::UTF8 { .. }
-            | BitStringSegmentOption::UTF16 { .. }
-            | BitStringSegmentOption::UTF32 { .. }
-            | BitStringSegmentOption::UTF8Codepoint { .. }
-            | BitStringSegmentOption::UTF16Codepoint { .. }
-            | BitStringSegmentOption::UTF32Codepoint { .. } => {
+            | BitStringSegmentOption::Utf8 { .. }
+            | BitStringSegmentOption::Utf16 { .. }
+            | BitStringSegmentOption::Utf32 { .. }
+            | BitStringSegmentOption::Utf8Codepoint { .. }
+            | BitStringSegmentOption::Utf16Codepoint { .. }
+            | BitStringSegmentOption::Utf32Codepoint { .. } => {
                 if let Some(previous) = categories.typ {
                     return err(
                         ErrorType::ConflictingTypeOptions {
@@ -165,9 +165,9 @@ fn type_options<T>(
     if let Some(endian) = categories.endian {
         match categories.typ {
             None
-            | Some(BitStringSegmentOption::Integer { .. })
-            | Some(BitStringSegmentOption::UTF16 { .. })
-            | Some(BitStringSegmentOption::UTF32 { .. })
+            | Some(BitStringSegmentOption::Int { .. })
+            | Some(BitStringSegmentOption::Utf16 { .. })
+            | Some(BitStringSegmentOption::Utf32 { .. })
             | Some(BitStringSegmentOption::Float { .. }) => {}
 
             _ => return err(ErrorType::InvalidEndianness, endian.location()),
@@ -176,7 +176,7 @@ fn type_options<T>(
 
     // signed and unsigned can only be used with int types
     match categories.typ {
-        None | Some(BitStringSegmentOption::Integer { .. }) => {}
+        None | Some(BitStringSegmentOption::Int { .. }) => {}
 
         Some(opt) => {
             if let Some(sign) = categories.signed {
@@ -240,12 +240,12 @@ fn type_options<T>(
 fn is_unicode<T>(opt: &BitStringSegmentOption<T>) -> bool {
     matches!(
         opt,
-        BitStringSegmentOption::UTF8 { .. }
-            | BitStringSegmentOption::UTF16 { .. }
-            | BitStringSegmentOption::UTF32 { .. }
-            | BitStringSegmentOption::UTF8Codepoint { .. }
-            | BitStringSegmentOption::UTF16Codepoint { .. }
-            | BitStringSegmentOption::UTF32Codepoint { .. }
+        BitStringSegmentOption::Utf8 { .. }
+            | BitStringSegmentOption::Utf16 { .. }
+            | BitStringSegmentOption::Utf32 { .. }
+            | BitStringSegmentOption::Utf8Codepoint { .. }
+            | BitStringSegmentOption::Utf16Codepoint { .. }
+            | BitStringSegmentOption::Utf32Codepoint { .. }
     )
 }
 

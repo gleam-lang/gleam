@@ -1124,30 +1124,28 @@ where
         BitStringSegmentOption::Binary { location } => {
             Ok(BitStringSegmentOption::Binary { location })
         }
-        BitStringSegmentOption::Integer { location } => {
-            Ok(BitStringSegmentOption::Integer { location })
-        }
+        BitStringSegmentOption::Int { location } => Ok(BitStringSegmentOption::Int { location }),
         BitStringSegmentOption::Float { location } => {
             Ok(BitStringSegmentOption::Float { location })
         }
         BitStringSegmentOption::BitString { location } => {
             Ok(BitStringSegmentOption::BitString { location })
         }
-        BitStringSegmentOption::UTF8 { location } => Ok(BitStringSegmentOption::UTF8 { location }),
-        BitStringSegmentOption::UTF16 { location } => {
-            Ok(BitStringSegmentOption::UTF16 { location })
+        BitStringSegmentOption::Utf8 { location } => Ok(BitStringSegmentOption::Utf8 { location }),
+        BitStringSegmentOption::Utf16 { location } => {
+            Ok(BitStringSegmentOption::Utf16 { location })
         }
-        BitStringSegmentOption::UTF32 { location } => {
-            Ok(BitStringSegmentOption::UTF32 { location })
+        BitStringSegmentOption::Utf32 { location } => {
+            Ok(BitStringSegmentOption::Utf32 { location })
         }
-        BitStringSegmentOption::UTF8Codepoint { location } => {
-            Ok(BitStringSegmentOption::UTF8Codepoint { location })
+        BitStringSegmentOption::Utf8Codepoint { location } => {
+            Ok(BitStringSegmentOption::Utf8Codepoint { location })
         }
-        BitStringSegmentOption::UTF16Codepoint { location } => {
-            Ok(BitStringSegmentOption::UTF16Codepoint { location })
+        BitStringSegmentOption::Utf16Codepoint { location } => {
+            Ok(BitStringSegmentOption::Utf16Codepoint { location })
         }
-        BitStringSegmentOption::UTF32Codepoint { location } => {
-            Ok(BitStringSegmentOption::UTF32Codepoint { location })
+        BitStringSegmentOption::Utf32Codepoint { location } => {
+            Ok(BitStringSegmentOption::Utf32Codepoint { location })
         }
         BitStringSegmentOption::Signed { location } => {
             Ok(BitStringSegmentOption::Signed { location })

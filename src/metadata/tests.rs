@@ -505,7 +505,7 @@ fn constant_bit_string_float() {
 
 #[test]
 fn constant_bit_string_int() {
-    let module = bit_string_segment_option_module(BitStringSegmentOption::Integer {
+    let module = bit_string_segment_option_module(BitStringSegmentOption::Int {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);

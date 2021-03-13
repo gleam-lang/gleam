@@ -636,16 +636,16 @@ where
             others.push("-".to_doc());
         }
         match option {
-            Opt::UTF8 { .. } => others.push(override_type.unwrap_or("utf8").to_doc()),
-            Opt::UTF16 { .. } => others.push(override_type.unwrap_or("utf16").to_doc()),
-            Opt::UTF32 { .. } => others.push(override_type.unwrap_or("utf32").to_doc()),
-            Opt::Integer { .. } => others.push("integer".to_doc()),
+            Opt::Utf8 { .. } => others.push(override_type.unwrap_or("utf8").to_doc()),
+            Opt::Utf16 { .. } => others.push(override_type.unwrap_or("utf16").to_doc()),
+            Opt::Utf32 { .. } => others.push(override_type.unwrap_or("utf32").to_doc()),
+            Opt::Int { .. } => others.push("integer".to_doc()),
             Opt::Float { .. } => others.push("float".to_doc()),
             Opt::Binary { .. } => others.push("binary".to_doc()),
             Opt::BitString { .. } => others.push("bitstring".to_doc()),
-            Opt::UTF8Codepoint { .. } => others.push("utf8".to_doc()),
-            Opt::UTF16Codepoint { .. } => others.push("utf16".to_doc()),
-            Opt::UTF32Codepoint { .. } => others.push("utf32".to_doc()),
+            Opt::Utf8Codepoint { .. } => others.push("utf8".to_doc()),
+            Opt::Utf16Codepoint { .. } => others.push("utf16".to_doc()),
+            Opt::Utf32Codepoint { .. } => others.push("utf32".to_doc()),
             Opt::Signed { .. } => others.push("signed".to_doc()),
             Opt::Unsigned { .. } => others.push("unsigned".to_doc()),
             Opt::Big { .. } => others.push("big".to_doc()),

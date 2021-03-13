@@ -722,7 +722,7 @@ pub enum BitStringSegmentOption<Value> {
         location: SrcSpan,
     },
 
-    Integer {
+    Int {
         location: SrcSpan,
     },
 
@@ -734,27 +734,27 @@ pub enum BitStringSegmentOption<Value> {
         location: SrcSpan,
     },
 
-    UTF8 {
+    Utf8 {
         location: SrcSpan,
     },
 
-    UTF16 {
+    Utf16 {
         location: SrcSpan,
     },
 
-    UTF32 {
+    Utf32 {
         location: SrcSpan,
     },
 
-    UTF8Codepoint {
+    Utf8Codepoint {
         location: SrcSpan,
     },
 
-    UTF16Codepoint {
+    Utf16Codepoint {
         location: SrcSpan,
     },
 
-    UTF32Codepoint {
+    Utf32Codepoint {
         location: SrcSpan,
     },
 
@@ -794,15 +794,15 @@ impl<A> BitStringSegmentOption<A> {
     pub fn location(&self) -> SrcSpan {
         match self {
             BitStringSegmentOption::Binary { location }
-            | BitStringSegmentOption::Integer { location }
+            | BitStringSegmentOption::Int { location }
             | BitStringSegmentOption::Float { location }
             | BitStringSegmentOption::BitString { location }
-            | BitStringSegmentOption::UTF8 { location }
-            | BitStringSegmentOption::UTF16 { location }
-            | BitStringSegmentOption::UTF32 { location }
-            | BitStringSegmentOption::UTF8Codepoint { location }
-            | BitStringSegmentOption::UTF16Codepoint { location }
-            | BitStringSegmentOption::UTF32Codepoint { location }
+            | BitStringSegmentOption::Utf8 { location }
+            | BitStringSegmentOption::Utf16 { location }
+            | BitStringSegmentOption::Utf32 { location }
+            | BitStringSegmentOption::Utf8Codepoint { location }
+            | BitStringSegmentOption::Utf16Codepoint { location }
+            | BitStringSegmentOption::Utf32Codepoint { location }
             | BitStringSegmentOption::Signed { location }
             | BitStringSegmentOption::Unsigned { location }
             | BitStringSegmentOption::Big { location }
@@ -816,15 +816,15 @@ impl<A> BitStringSegmentOption<A> {
     pub fn label(&self) -> String {
         match self {
             BitStringSegmentOption::Binary { .. } => "binary".to_string(),
-            BitStringSegmentOption::Integer { .. } => "int".to_string(),
+            BitStringSegmentOption::Int { .. } => "int".to_string(),
             BitStringSegmentOption::Float { .. } => "float".to_string(),
             BitStringSegmentOption::BitString { .. } => "bit_string".to_string(),
-            BitStringSegmentOption::UTF8 { .. } => "utf8".to_string(),
-            BitStringSegmentOption::UTF16 { .. } => "utf16".to_string(),
-            BitStringSegmentOption::UTF32 { .. } => "utf32".to_string(),
-            BitStringSegmentOption::UTF8Codepoint { .. } => "utf8_codepoint".to_string(),
-            BitStringSegmentOption::UTF16Codepoint { .. } => "utf16_codepoint".to_string(),
-            BitStringSegmentOption::UTF32Codepoint { .. } => "utf32_codepoint".to_string(),
+            BitStringSegmentOption::Utf8 { .. } => "utf8".to_string(),
+            BitStringSegmentOption::Utf16 { .. } => "utf16".to_string(),
+            BitStringSegmentOption::Utf32 { .. } => "utf32".to_string(),
+            BitStringSegmentOption::Utf8Codepoint { .. } => "utf8_codepoint".to_string(),
+            BitStringSegmentOption::Utf16Codepoint { .. } => "utf16_codepoint".to_string(),
+            BitStringSegmentOption::Utf32Codepoint { .. } => "utf32_codepoint".to_string(),
             BitStringSegmentOption::Signed { .. } => "signed".to_string(),
             BitStringSegmentOption::Unsigned { .. } => "unsigned".to_string(),
             BitStringSegmentOption::Big { .. } => "big".to_string(),
