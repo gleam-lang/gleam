@@ -3984,7 +3984,7 @@ pub mod bit_string_segment_option {
     #[inline]
     pub fn init_unit(self, ) -> crate::schema_capnp::bit_string_segment_option::unit::Builder<'a> {
       self.builder.set_data_field::<u16>(0, 16);
-      self.builder.get_pointer_field(0).clear();
+      self.builder.set_data_field::<u32>(1, 0u32);
       self.builder.set_bool_field(16, false);
       ::capnp::traits::FromStructBuilder::new(self.builder)
     }
@@ -4313,11 +4313,8 @@ pub mod bit_string_segment_option {
         self.reader.total_size()
       }
       #[inline]
-      pub fn get_value(self) -> ::capnp::Result<crate::schema_capnp::constant::Reader<'a>> {
-        ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
-      }
-      pub fn has_value(&self) -> bool {
-        !self.reader.get_pointer_field(0).is_null()
+      pub fn get_value(self) -> u32 {
+        self.reader.get_data_field::<u32>(1)
       }
       #[inline]
       pub fn get_short_form(self) -> bool {
@@ -4374,19 +4371,12 @@ pub mod bit_string_segment_option {
         self.builder.into_reader().total_size()
       }
       #[inline]
-      pub fn get_value(self) -> ::capnp::Result<crate::schema_capnp::constant::Builder<'a>> {
-        ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(0), ::core::option::Option::None)
+      pub fn get_value(self) -> u32 {
+        self.builder.get_data_field::<u32>(1)
       }
       #[inline]
-      pub fn set_value(&mut self, value: crate::schema_capnp::constant::Reader<'_>) -> ::capnp::Result<()> {
-        ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(0), value, false)
-      }
-      #[inline]
-      pub fn init_value(self, ) -> crate::schema_capnp::constant::Builder<'a> {
-        ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), 0)
-      }
-      pub fn has_value(&self) -> bool {
-        !self.builder.get_pointer_field(0).is_null()
+      pub fn set_value(&mut self, value: u32)  {
+        self.builder.set_data_field::<u32>(1, value);
       }
       #[inline]
       pub fn get_short_form(self) -> bool {
@@ -4405,9 +4395,6 @@ pub mod bit_string_segment_option {
       }
     }
     impl Pipeline  {
-      pub fn get_value(&self) -> crate::schema_capnp::constant::Pipeline {
-        ::capnp::capability::FromTypelessPipeline::new(self._typeless.get_pointer_field(0))
-      }
     }
     mod _private {
       use capnp::private::layout;

@@ -14,7 +14,10 @@ use capnp::struct_list;
 pub use self::module_encoder::ModuleEncoder;
 
 use crate::{
-    ast::{CallArg, Constant, TypedConstant},
+    ast::{
+        BitStringSegment, BitStringSegmentOption, CallArg, Constant, TypedConstant,
+        TypedConstantBitStringSegment, TypedConstantBitStringSegmentOption,
+    },
     schema_capnp::*,
     typ::{
         self, AccessorsMap, FieldMap, Module, RecordAccessor, Type, TypeConstructor,
@@ -233,15 +236,67 @@ impl ModuleDecoder {
         })
     }
 
-    // TODO: test
     fn constant_bit_string(
-        &self,
+        &mut self,
         reader: &capnp::struct_list::Reader<'_, bit_string_segment::Owned>,
     ) -> Result<TypedConstant> {
-        todo!()
+        Ok(Constant::BitString {
+            location: Default::default(),
+            segments: read_vec!(reader, self, bit_string_segment),
+        })
     }
 
-    // TODO: test
+    fn bit_string_segment(
+        &mut self,
+        reader: &bit_string_segment::Reader<'_>,
+    ) -> Result<TypedConstantBitStringSegment> {
+        Ok(BitStringSegment {
+            location: Default::default(),
+            type_: self.type_(&reader.get_type()?)?,
+            value: Box::new(self.constant(&reader.get_value()?)?),
+            options: read_vec!(reader.get_options()?, self, bit_string_segment_option),
+        })
+    }
+
+    fn bit_string_segment_option(
+        &mut self,
+        reader: &bit_string_segment_option::Reader<'_>,
+    ) -> Result<TypedConstantBitStringSegmentOption> {
+        use bit_string_segment_option::Which;
+        Ok(match reader.which()? {
+            Which::Binary(reader) => BitStringSegmentOption::Binary {
+                location: Default::default(),
+            },
+            Which::Integer(_) => BitStringSegmentOption::Integer {
+                location: Default::default(),
+            },
+            Which::Float(_) => BitStringSegmentOption::Float {
+                location: Default::default(),
+            },
+            Which::Bitstring(reader) => todo!(),
+            Which::Utf8(reader) => todo!(),
+            Which::Utf16(reader) => todo!(),
+            Which::Utf32(reader) => todo!(),
+            Which::Utf8Codepoint(reader) => todo!(),
+            Which::Utf16Codepoint(reader) => todo!(),
+            Which::Utf32Codepoint(reader) => todo!(),
+            Which::Signed(reader) => todo!(),
+            Which::Unsigned(reader) => todo!(),
+            Which::Big(reader) => todo!(),
+            Which::Little(reader) => todo!(),
+            Which::Native(reader) => todo!(),
+            Which::Size(reader) => BitStringSegmentOption::Size {
+                location: Default::default(),
+                short_form: reader.get_short_form(),
+                value: Box::new(self.constant(&reader.get_value()?)?),
+            },
+            Which::Unit(reader) => BitStringSegmentOption::Unit {
+                location: Default::default(),
+                value: Box::new(reader.get_value() as usize),
+            },
+        })
+    }
+
     fn value_constructor_variant(
         &mut self,
         reader: &value_constructor_variant::Reader<'_>,

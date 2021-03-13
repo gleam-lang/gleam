@@ -1,3 +1,5 @@
+use clap::value_t;
+
 use super::*;
 use crate::{
     fs::test::InMemoryFile,
@@ -25,17 +27,27 @@ fn constant_module(constant: TypedConstant) -> Module {
                 public: true,
                 origin: Default::default(),
                 type_: typ::int(),
-                variant: ValueConstructorVariant::ModuleConstant {
-                    literal: Constant::Int {
-                        location: Default::default(),
-                        value: "100".to_string(),
-                    },
-                },
+                variant: ValueConstructorVariant::ModuleConstant { literal: constant },
             },
         )]
         .into_iter()
         .collect(),
     }
+}
+
+fn bit_string_segment_option_module(option: TypedConstantBitStringSegmentOption) -> Module {
+    constant_module(Constant::BitString {
+        location: Default::default(),
+        segments: vec![BitStringSegment {
+            location: Default::default(),
+            value: Box::new(Constant::Int {
+                location: Default::default(),
+                value: "1".to_string(),
+            }),
+            options: vec![option],
+            type_: typ::int(),
+        }],
+    })
 }
 
 #[test]
@@ -410,6 +422,131 @@ fn constant_tuple() {
     assert_eq!(roundtrip(&module), module);
 }
 
-// Which::List(reader) => self.constant_list(&reader),
-// Which::Record(reader) => self.constant_record(&reader),
-// Which::BitString(reader) => self.constant_bit_string(&reader?),
+#[test]
+fn constant_list() {
+    let module = constant_module(Constant::List {
+        location: Default::default(),
+        typ: typ::int(),
+        elements: vec![
+            Constant::Int {
+                location: Default::default(),
+                value: "1".to_string(),
+            },
+            Constant::Int {
+                location: Default::default(),
+                value: "2".to_string(),
+            },
+            Constant::Int {
+                location: Default::default(),
+                value: "3".to_string(),
+            },
+        ],
+    });
+
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn constant_record() {
+    let module = constant_module(Constant::Record {
+        location: Default::default(),
+        module: None,
+        name: "".to_string(),
+        args: vec![
+            CallArg {
+                label: None,
+                location: Default::default(),
+                value: Constant::Float {
+                    location: Default::default(),
+                    value: "0.0".to_string(),
+                },
+            },
+            CallArg {
+                label: None,
+                location: Default::default(),
+                value: Constant::Int {
+                    location: Default::default(),
+                    value: "1".to_string(),
+                },
+            },
+        ],
+        tag: "thetag".to_string(),
+        typ: typ::int(),
+    });
+
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn constant_bit_string() {
+    let module = constant_module(Constant::BitString {
+        location: Default::default(),
+        segments: vec![],
+    });
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn constant_bit_string_unit() {
+    let module = bit_string_segment_option_module(BitStringSegmentOption::Unit {
+        location: Default::default(),
+        value: Box::new(1),
+    });
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn constant_bit_string_float() {
+    let module = bit_string_segment_option_module(BitStringSegmentOption::Float {
+        location: Default::default(),
+    });
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn constant_bit_string_int() {
+    let module = bit_string_segment_option_module(BitStringSegmentOption::Integer {
+        location: Default::default(),
+    });
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn constant_bit_string_size() {
+    let module = bit_string_segment_option_module(BitStringSegmentOption::Size {
+        location: Default::default(),
+        value: Box::new(Constant::Int {
+            location: Default::default(),
+            value: "1".to_string(),
+        }),
+        short_form: false,
+    });
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn constant_bit_string_size_short_form() {
+    let module = bit_string_segment_option_module(BitStringSegmentOption::Size {
+        location: Default::default(),
+        value: Box::new(Constant::Int {
+            location: Default::default(),
+            value: "1".to_string(),
+        }),
+        short_form: true,
+    });
+    assert_eq!(roundtrip(&module), module);
+}
+
+// Which::Bitstring(reader) => todo!(),
+// Which::Utf8(reader) => todo!(),
+// Which::Utf16(reader) => todo!(),
+// Which::Utf32(reader) => todo!(),
+// Which::Utf8Codepoint(reader) => todo!(),
+// Which::Utf16Codepoint(reader) => todo!(),
+// Which::Utf32Codepoint(reader) => todo!(),
+// Which::Signed(reader) => todo!(),
+// Which::Unsigned(reader) => todo!(),
+// Which::Big(reader) => todo!(),
+// Which::Little(reader) => todo!(),
+// Which::Native(reader) => todo!(),
+// Which::Unit(reader) => todo!(),
