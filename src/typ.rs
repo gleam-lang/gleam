@@ -828,7 +828,7 @@ fn infer_statement(
                         .gleam_expect("Could not find hydrator for fn");
                     let (args, body) =
                         expr_typer.infer_fn_with_known_types(args, body, Some(return_type))?;
-                    let args_types = args.iter().map(|a| a.typ.clone()).collect();
+                    let args_types = args.iter().map(|a| a.type_.clone()).collect();
                     let typ = fn_(args_types, body.type_());
                     let safe_to_generalise = !expr_typer.ungeneralised_function_used;
                     Ok((typ, args, body, safe_to_generalise))

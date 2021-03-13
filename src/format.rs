@@ -1041,7 +1041,7 @@ impl<'comments> Formatter<'comments> {
         wrap_args(args.iter().map(|arg| {
             arg.names
                 .to_doc()
-                .append(": ".to_doc().append(printer.print(&arg.typ)))
+                .append(": ".to_doc().append(printer.print(&arg.type_)))
                 .group()
         }))
     }

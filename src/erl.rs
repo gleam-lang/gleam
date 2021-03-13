@@ -431,10 +431,10 @@ fn mod_fun<'a>(
     let mut env = Env::new(module, name, line_numbers);
     let var_usages = collect_type_var_usages(
         HashMap::new(),
-        std::iter::once(return_type).chain(args.iter().map(|a| &a.typ)),
+        std::iter::once(return_type).chain(args.iter().map(|a| &a.type_)),
     );
     let type_printer = TypePrinter::new(module).with_var_usages(&var_usages);
-    let args_spec = args.iter().map(|a| type_printer.print(&a.typ));
+    let args_spec = args.iter().map(|a| type_printer.print(&a.type_));
     let return_spec = type_printer.print(return_type);
     let spec = fun_spec(name, args_spec, return_spec);
 

@@ -1303,7 +1303,7 @@ where
         };
         Ok(Some(Arg {
             location: SrcSpan { start, end },
-            typ: (),
+            type_: (),
             names,
             annotation,
         }))
@@ -2720,7 +2720,7 @@ pub fn make_call(
                 names: ArgNames::Named {
                     name: CAPTURE_VARIABLE.to_string(),
                 },
-                typ: (),
+                type_: (),
             }],
             body: Box::new(call),
             return_annotation: None,

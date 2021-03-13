@@ -72,13 +72,13 @@ pub struct Arg<T> {
     pub names: ArgNames,
     pub location: SrcSpan,
     pub annotation: Option<TypeAst>,
-    pub typ: T,
+    pub type_: T,
 }
 
 impl<A> Arg<A> {
     pub fn set_type<B>(self, t: B) -> Arg<B> {
         Arg {
-            typ: t,
+            type_: t,
             names: self.names,
             location: self.location,
             annotation: self.annotation,

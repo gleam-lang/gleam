@@ -372,7 +372,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         let (args, body) = self.do_infer_fn(args, body, &return_annotation)?;
-        let args_types = args.iter().map(|a| a.typ.clone()).collect();
+        let args_types = args.iter().map(|a| a.type_.clone()).collect();
         let typ = fn_(args_types, body.type_());
         Ok(TypedExpr::Fn {
             location,
@@ -399,7 +399,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             names,
             location,
             annotation,
-            typ,
+            type_: typ,
         })
     }
 
@@ -1809,7 +1809,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         return_type: Option<Arc<Type>>,
     ) -> Result<(Vec<TypedArg>, TypedExpr), Error> {
         let body = self.in_new_scope(|body_typer| {
-            for (arg, t) in args.iter().zip(args.iter().map(|arg| arg.typ.clone())) {
+            for (arg, t) in args.iter().zip(args.iter().map(|arg| arg.type_.clone())) {
                 match &arg.names {
                     ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
                         body_typer.environment.insert_variable(
