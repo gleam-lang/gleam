@@ -2069,28 +2069,22 @@ where
                             if let Some((int_s, Tok::Int { value, .. }, int_e)) = self.next_tok() {
                                 let (_, end) = self.expect_one(&Tok::Rpar)?;
                                 let v = value.replace("_", "");
-                                usize::from_str(&v)
-                                    .ok()
-                                    .and_then(|units| {
-                                        if units >= 1 && units <= 256 {
-                                            Some(units)
-                                        } else {
-                                            None
-                                        }
-                                    })
-                                    .and_then(|units| {
-                                        Some(Some(BitStringSegmentOption::Unit {
+                                match u8::from_str(&v) {
+                                    Ok(units) if units > 0 => {
+                                        Ok(Some(BitStringSegmentOption::Unit {
                                             location: SrcSpan { start, end },
                                             value: units,
                                         }))
-                                    })
-                                    .ok_or_else(|| ParseError {
+                                    }
+
+                                    _ => Err(ParseError {
                                         error: ParseErrorType::InvalidBitStringUnit,
                                         location: SrcSpan {
                                             start: int_s,
                                             end: int_e,
                                         },
-                                    })
+                                    }),
+                                }
                             } else {
                                 self.next_tok_unexpected(vec!["positive integer".to_string()])
                             }

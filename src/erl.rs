@@ -544,7 +544,7 @@ fn const_segment<'a>(
         ),
     };
 
-    let unit = |value: &'a usize| Some(Document::String(format!("unit:{}", value)));
+    let unit = |value: &'a u8| Some(Document::String(format!("unit:{}", value)));
 
     bit_string_segment(document, options, size, unit, true, env)
 }
@@ -593,7 +593,7 @@ fn expr_segment<'a>(
         }
     };
 
-    let unit = |value: &'a usize| Some(Document::String(format!("unit:{}", value)));
+    let unit = |value: &'a u8| Some(Document::String(format!("unit:{}", value)));
 
     bit_string_segment(
         document,
@@ -615,7 +615,7 @@ fn bit_string_segment<'a, Value: 'a, SizeToDoc, UnitToDoc>(
 ) -> Document<'a>
 where
     SizeToDoc: FnMut(&'a Value, &mut Env<'a>) -> Option<Document<'a>>,
-    UnitToDoc: FnMut(&'a usize) -> Option<Document<'a>>,
+    UnitToDoc: FnMut(&'a u8) -> Option<Document<'a>>,
 {
     let mut size: Option<Document<'a>> = None;
     let mut unit: Option<Document<'a>> = None;

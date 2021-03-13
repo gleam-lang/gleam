@@ -786,7 +786,7 @@ pub enum BitStringSegmentOption<Value> {
 
     Unit {
         location: SrcSpan,
-        value: usize,
+        value: u8,
     },
 }
 

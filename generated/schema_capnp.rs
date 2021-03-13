@@ -3984,8 +3984,8 @@ pub mod bit_string_segment_option {
     #[inline]
     pub fn init_unit(self, ) -> crate::schema_capnp::bit_string_segment_option::unit::Builder<'a> {
       self.builder.set_data_field::<u16>(0, 16);
-      self.builder.set_data_field::<u32>(1, 0u32);
-      self.builder.set_bool_field(16, false);
+      self.builder.set_data_field::<u8>(2, 0u8);
+      self.builder.set_bool_field(24, false);
       ::capnp::traits::FromStructBuilder::new(self.builder)
     }
     #[inline]
@@ -4313,12 +4313,12 @@ pub mod bit_string_segment_option {
         self.reader.total_size()
       }
       #[inline]
-      pub fn get_value(self) -> u32 {
-        self.reader.get_data_field::<u32>(1)
+      pub fn get_value(self) -> u8 {
+        self.reader.get_data_field::<u8>(2)
       }
       #[inline]
       pub fn get_short_form(self) -> bool {
-        self.reader.get_bool_field(16)
+        self.reader.get_bool_field(24)
       }
     }
 
@@ -4371,20 +4371,20 @@ pub mod bit_string_segment_option {
         self.builder.into_reader().total_size()
       }
       #[inline]
-      pub fn get_value(self) -> u32 {
-        self.builder.get_data_field::<u32>(1)
+      pub fn get_value(self) -> u8 {
+        self.builder.get_data_field::<u8>(2)
       }
       #[inline]
-      pub fn set_value(&mut self, value: u32)  {
-        self.builder.set_data_field::<u32>(1, value);
+      pub fn set_value(&mut self, value: u8)  {
+        self.builder.set_data_field::<u8>(2, value);
       }
       #[inline]
       pub fn get_short_form(self) -> bool {
-        self.builder.get_bool_field(16)
+        self.builder.get_bool_field(24)
       }
       #[inline]
       pub fn set_short_form(&mut self, value: bool)  {
-        self.builder.set_bool_field(16, value);
+        self.builder.set_bool_field(24, value);
       }
     }
 

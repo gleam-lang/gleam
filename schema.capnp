@@ -169,7 +169,7 @@ struct BitStringSegmentOption {
     }
 
     unit :group {
-      value @17 :UInt32;
+      value @17 :UInt8;
       shortForm @18 :Bool;
     }
   }

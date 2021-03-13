@@ -292,7 +292,7 @@ impl ModuleDecoder {
             },
             Which::Unit(reader) => BitStringSegmentOption::Unit {
                 location: Default::default(),
-                value: reader.get_value() as usize,
+                value: reader.get_value(),
             },
         })
     }

@@ -302,7 +302,7 @@ impl<'a> ModuleEncoder<'a> {
 
             Opt::Unit { value, location } => {
                 let mut builder = builder.init_unit();
-                builder.set_value(*value as u32);
+                builder.set_value(*value);
             }
         }
     }

@@ -95,7 +95,7 @@ fn pattern_segment<'a>(
         Some(":".to_doc().append(to_doc(value, vars, env)))
     };
 
-    let unit = |value: &'a usize| Some(Document::String(format!("unit:{}", value)));
+    let unit = |value: &'a u8| Some(Document::String(format!("unit:{}", value)));
 
     bit_string_segment(document, options, size, unit, true, env)
 }
