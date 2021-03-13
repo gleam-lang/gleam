@@ -2081,7 +2081,7 @@ where
                                     .and_then(|units| {
                                         Some(Some(BitStringSegmentOption::Unit {
                                             location: SrcSpan { start, end },
-                                            value: Box::new(units),
+                                            value: units,
                                         }))
                                     })
                                     .ok_or_else(|| ParseError {

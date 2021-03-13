@@ -490,7 +490,7 @@ fn constant_bit_string() {
 fn constant_bit_string_unit() {
     let module = bit_string_segment_option_module(BitStringSegmentOption::Unit {
         location: Default::default(),
-        value: Box::new(1),
+        value: 234,
     });
     assert_eq!(roundtrip(&module), module);
 }
