@@ -5,8 +5,6 @@ use crate::{
 };
 use std::{io::BufReader, iter::FromIterator};
 
-// TODO: test type links
-
 fn roundtrip(input: &Module) -> Module {
     let mut buffer = InMemoryFile::new();
     ModuleEncoder::new(input).write(buffer.clone()).unwrap();
@@ -14,6 +12,30 @@ fn roundtrip(input: &Module) -> Module {
     ModuleDecoder::new()
         .read(BufReader::new(buffer.as_slice()))
         .unwrap()
+}
+
+fn constant_module(constant: TypedConstant) -> Module {
+    Module {
+        name: vec!["a".to_string()],
+        types: HashMap::new(),
+        accessors: HashMap::new(),
+        values: vec![(
+            "one".to_string(),
+            ValueConstructor {
+                public: true,
+                origin: Default::default(),
+                type_: typ::int(),
+                variant: ValueConstructorVariant::ModuleConstant {
+                    literal: Constant::Int {
+                        location: Default::default(),
+                        value: "100".to_string(),
+                    },
+                },
+            },
+        )]
+        .into_iter()
+        .collect(),
+    }
 }
 
 #[test]
@@ -325,3 +347,69 @@ fn accessors() {
 
     assert_eq!(roundtrip(&module), module);
 }
+
+#[test]
+fn constant_int() {
+    let module = constant_module(Constant::Int {
+        location: Default::default(),
+        value: "100".to_string(),
+    });
+
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn constant_float() {
+    let module = constant_module(Constant::Float {
+        location: Default::default(),
+        value: "1.0".to_string(),
+    });
+
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn constant_string() {
+    let module = constant_module(Constant::String {
+        location: Default::default(),
+        value: "hello".to_string(),
+    });
+
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn constant_tuple() {
+    let module = constant_module(Constant::Tuple {
+        location: Default::default(),
+        elements: vec![
+            Constant::Int {
+                location: Default::default(),
+                value: "1".to_string(),
+            },
+            Constant::Float {
+                location: Default::default(),
+                value: "1.0".to_string(),
+            },
+            Constant::Tuple {
+                location: Default::default(),
+                elements: vec![
+                    Constant::Int {
+                        location: Default::default(),
+                        value: "1".to_string(),
+                    },
+                    Constant::Float {
+                        location: Default::default(),
+                        value: "1.0".to_string(),
+                    },
+                ],
+            },
+        ],
+    });
+
+    assert_eq!(roundtrip(&module), module);
+}
+
+// Which::List(reader) => self.constant_list(&reader),
+// Which::Record(reader) => self.constant_record(&reader),
+// Which::BitString(reader) => self.constant_bit_string(&reader?),
