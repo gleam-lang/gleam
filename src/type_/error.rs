@@ -1,6 +1,6 @@
 use crate::{
     ast::{BinOp, SrcSpan},
-    typ::Type,
+    type_::Type,
 };
 
 use std::{path::PathBuf, sync::Arc};
@@ -399,13 +399,13 @@ pub fn flip_unify_error(e: UnifyError) -> UnifyError {
 fn flip_unify_error_test() {
     assert_eq!(
         UnifyError::CouldNotUnify {
-            expected: crate::typ::int(),
-            given: crate::typ::float(),
+            expected: crate::type_::int(),
+            given: crate::type_::float(),
             situation: Some(UnifyErrorSituation::CaseClauseMismatch),
         },
         flip_unify_error(UnifyError::CouldNotUnify {
-            expected: crate::typ::float(),
-            given: crate::typ::int(),
+            expected: crate::type_::float(),
+            given: crate::type_::int(),
             situation: Some(UnifyErrorSituation::CaseClauseMismatch),
         })
     );
@@ -434,16 +434,16 @@ pub fn unify_enclosed_type(
 fn unify_enclosed_type_test() {
     assert_eq!(
         Err(UnifyError::CouldNotUnify {
-            expected: crate::typ::int(),
-            given: crate::typ::float(),
+            expected: crate::type_::int(),
+            given: crate::type_::float(),
             situation: Some(UnifyErrorSituation::CaseClauseMismatch)
         }),
         unify_enclosed_type(
-            crate::typ::int(),
-            crate::typ::float(),
+            crate::type_::int(),
+            crate::type_::float(),
             Err(UnifyError::CouldNotUnify {
-                expected: crate::typ::string(),
-                given: crate::typ::bit_string(),
+                expected: crate::type_::string(),
+                given: crate::type_::bit_string(),
                 situation: Some(UnifyErrorSituation::CaseClauseMismatch)
             })
         )

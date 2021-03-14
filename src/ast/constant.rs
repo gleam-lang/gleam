@@ -1,5 +1,5 @@
 use super::*;
-use crate::typ::HasType;
+use crate::type_::HasType;
 
 pub type TypedConstant = Constant<Arc<Type>, String>;
 pub type UntypedConstant = Constant<(), ()>;
@@ -50,14 +50,14 @@ pub enum Constant<T, RecordTag> {
 impl TypedConstant {
     pub fn type_(&self) -> Arc<Type> {
         match self {
-            Constant::Int { .. } => crate::typ::int(),
-            Constant::Float { .. } => crate::typ::float(),
-            Constant::String { .. } => crate::typ::string(),
+            Constant::Int { .. } => crate::type_::int(),
+            Constant::Float { .. } => crate::type_::float(),
+            Constant::String { .. } => crate::type_::string(),
             Constant::List { typ, .. } => typ.clone(),
             Constant::Record { typ, .. } => typ.clone(),
-            Constant::BitString { .. } => crate::typ::bit_string(),
+            Constant::BitString { .. } => crate::type_::bit_string(),
             Constant::Tuple { elements, .. } => {
-                crate::typ::tuple(elements.iter().map(|e| e.type_()).collect())
+                crate::type_::tuple(elements.iter().map(|e| e.type_()).collect())
             }
         }
     }

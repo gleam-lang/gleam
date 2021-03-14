@@ -7,7 +7,7 @@ use crate::{
     fs::Utf8Writer,
     parse::extra::Comment,
     pretty::*,
-    typ::{self, Type},
+    type_::{self, Type},
     Error, Result,
 };
 use itertools::Itertools;
@@ -355,7 +355,7 @@ impl<'comments> Formatter<'comments> {
         name: &'a str,
         value: &'a TypedConstant,
     ) -> Document<'a> {
-        let mut printer = typ::pretty::Printer::new();
+        let mut printer = type_::pretty::Printer::new();
 
         pub_(public)
             .append("const ")
@@ -1022,7 +1022,7 @@ impl<'comments> Formatter<'comments> {
         args: &'a [TypedArg],
         return_type: Arc<Type>,
     ) -> Document<'a> {
-        let mut printer = typ::pretty::Printer::new();
+        let mut printer = type_::pretty::Printer::new();
 
         pub_(public)
             .append("fn ")
@@ -1036,7 +1036,7 @@ impl<'comments> Formatter<'comments> {
     pub fn docs_fn_args<'a>(
         &mut self,
         args: &'a [TypedArg],
-        printer: &mut typ::pretty::Printer,
+        printer: &mut type_::pretty::Printer,
     ) -> Document<'a> {
         wrap_args(args.iter().map(|arg| {
             arg.names

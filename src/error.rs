@@ -1,11 +1,11 @@
-use crate::{ast::BinOp, parse::error::ParseErrorType, typ::Type};
+use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
 use crate::{
     bit_string, cli,
     diagnostic::{
         write, write_diagnostic, write_project, Diagnostic, DiagnosticLabel, LabelStyle,
         MultiLineDiagnostic, ProjectErrorDiagnostic, Severity,
     },
-    typ::{pretty::Printer, UnifyErrorSituation},
+    type_::{pretty::Printer, UnifyErrorSituation},
 };
 use itertools::Itertools;
 use std::fmt::Debug;
@@ -77,7 +77,7 @@ pub enum Error {
     Type {
         path: PathBuf,
         src: Src,
-        error: crate::typ::Error,
+        error: crate::type_::Error,
     },
 
     UnknownImport {
@@ -264,7 +264,7 @@ fn did_you_mean(name: &str, options: &mut Vec<String>, alt: &'static str) -> Str
 
 impl Error {
     pub fn pretty(&self, buf: &mut Buffer) {
-        use crate::typ::Error as TypeError;
+        use crate::type_::Error as TypeError;
         use std::io::Write;
 
         buf.write_all(b"\n")

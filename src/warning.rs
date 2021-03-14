@@ -1,8 +1,8 @@
 use crate::{
     cli,
     diagnostic::{write, Diagnostic, Severity},
-    typ,
-    typ::pretty::Printer,
+    type_,
+    type_::pretty::Printer,
 };
 use std::io::Write;
 use std::path::PathBuf;
@@ -15,7 +15,7 @@ pub enum Warning {
     Type {
         path: PathBuf,
         src: Src,
-        warning: crate::typ::Warning,
+        warning: crate::type_::Warning,
     },
 }
 
@@ -23,7 +23,7 @@ impl Warning {
     pub fn to_diagnostic(&self) -> (Diagnostic, String) {
         match self {
             Self::Type { path, src, warning } => match warning {
-                typ::Warning::Todo { location, typ } => {
+                type_::Warning::Todo { location, typ } => {
                     let mut printer = Printer::new();
                     (
                         Diagnostic {
@@ -43,7 +43,7 @@ your program.",
                     )
                 }
 
-                typ::Warning::ImplicitlyDiscardedResult { location } => (
+                type_::Warning::ImplicitlyDiscardedResult { location } => (
                     Diagnostic {
                         title: "Unused result value".to_string(),
                         label: "The Result value created here is unused".to_string(),
@@ -54,7 +54,7 @@ your program.",
                     "Hint: If you are sure you don't need it you can assign it to `_`".to_string(),
                 ),
 
-                typ::Warning::UnusedLiteral { location } => (
+                type_::Warning::UnusedLiteral { location } => (
                     Diagnostic {
                         title: "Unused literal".to_string(),
                         label: "This value is never used".to_string(),
@@ -65,7 +65,7 @@ your program.",
                     "Hint: You can safely remove it.".to_string(),
                 ),
 
-                typ::Warning::NoFieldsRecordUpdate { location } => (
+                type_::Warning::NoFieldsRecordUpdate { location } => (
                     Diagnostic {
                         title: "Fieldless record update".to_string(),
                         label: "This record update doesn't change any fields.".to_string(),
@@ -77,7 +77,7 @@ your program.",
                         .to_string(),
                 ),
 
-                typ::Warning::AllFieldsRecordUpdate { location } => (
+                type_::Warning::AllFieldsRecordUpdate { location } => (
                     Diagnostic {
                         title: "Redundant record update".to_string(),
                         label: "This record update specifies all fields".to_string(),
@@ -88,7 +88,7 @@ your program.",
                     "Hint: It is better style to use the record creation syntax.".to_string(),
                 ),
 
-                typ::Warning::UnusedType {
+                type_::Warning::UnusedType {
                     location, imported, ..
                 } => {
                     let title = if *imported {
@@ -114,7 +114,7 @@ your program.",
                     )
                 }
 
-                typ::Warning::UnusedConstructor {
+                type_::Warning::UnusedConstructor {
                     location, imported, ..
                 } => {
                     let title = if *imported {
@@ -140,7 +140,7 @@ your program.",
                     )
                 }
 
-                typ::Warning::UnusedImportedValue { location, .. } => (
+                type_::Warning::UnusedImportedValue { location, .. } => (
                     Diagnostic {
                         title: "Unused imported value".to_string(),
                         label: "This imported value is never used.".to_string(),
@@ -151,7 +151,7 @@ your program.",
                     "Hint: You can safely remove it.".to_string(),
                 ),
 
-                typ::Warning::UnusedPrivateModuleConstant { location, .. } => (
+                type_::Warning::UnusedPrivateModuleConstant { location, .. } => (
                     Diagnostic {
                         title: "Unused private constant".to_string(),
                         label: "This private constant is never used.".to_string(),
@@ -162,7 +162,7 @@ your program.",
                     "Hint: You can safely remove it.".to_string(),
                 ),
 
-                typ::Warning::UnusedPrivateFunction { location, .. } => (
+                type_::Warning::UnusedPrivateFunction { location, .. } => (
                     Diagnostic {
                         title: "Unused private function".to_string(),
                         label: "This private function is never used.".to_string(),
@@ -173,7 +173,7 @@ your program.",
                     "Hint: You can safely remove it.".to_string(),
                 ),
 
-                typ::Warning::UnusedVariable { location, name, .. } => (
+                type_::Warning::UnusedVariable { location, name, .. } => (
                     Diagnostic {
                         title: "Unused variable".to_string(),
                         label: "This variable is never used.".to_string(),

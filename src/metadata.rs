@@ -18,8 +18,8 @@ use crate::{
         BitStringSegment, BitStringSegmentOption, CallArg, Constant, TypedConstant,
         TypedConstantBitStringSegment, TypedConstantBitStringSegmentOption,
     },
-    schema_capnp::*,
-    typ::{
+    schema_capnp::{self as schema, *},
+    type_::{
         self, AccessorsMap, FieldMap, Module, RecordAccessor, Type, TypeConstructor,
         ValueConstructor, ValueConstructorVariant,
     },
@@ -91,8 +91,8 @@ impl ModuleDecoder {
         })
     }
 
-    fn type_(&mut self, reader: &type_::Reader<'_>) -> Result<Arc<Type>> {
-        use type_::Which;
+    fn type_(&mut self, reader: &schema::type_::Reader<'_>) -> Result<Arc<Type>> {
+        use schema::type_::Which;
         match reader.which()? {
             Which::App(reader) => self.type_app(&reader),
             Which::Fn(reader) => self.type_fn(&reader),
@@ -101,7 +101,7 @@ impl ModuleDecoder {
         }
     }
 
-    fn type_app(&mut self, reader: &type_::app::Reader<'_>) -> Result<Arc<Type>> {
+    fn type_app(&mut self, reader: &schema::type_::app::Reader<'_>) -> Result<Arc<Type>> {
         let module = name(&reader.get_module()?)?;
         let name = reader.get_name()?.to_string();
         let args = read_vec!(&reader.get_parameters()?, self, type_);
@@ -113,18 +113,18 @@ impl ModuleDecoder {
         }))
     }
 
-    fn type_fn(&mut self, reader: &type_::fn_::Reader<'_>) -> Result<Arc<Type>> {
+    fn type_fn(&mut self, reader: &schema::type_::fn_::Reader<'_>) -> Result<Arc<Type>> {
         let retrn = self.type_(&reader.get_return()?)?;
         let args = read_vec!(&reader.get_arguments()?, self, type_);
         Ok(Arc::new(Type::Fn { args, retrn }))
     }
 
-    fn type_tuple(&mut self, reader: &type_::tuple::Reader<'_>) -> Result<Arc<Type>> {
+    fn type_tuple(&mut self, reader: &schema::type_::tuple::Reader<'_>) -> Result<Arc<Type>> {
         let elems = read_vec!(&reader.get_elements()?, self, type_);
         Ok(Arc::new(Type::Tuple { elems }))
     }
 
-    fn type_var(&mut self, reader: &type_::var::Reader<'_>) -> Result<Arc<Type>> {
+    fn type_var(&mut self, reader: &schema::type_::var::Reader<'_>) -> Result<Arc<Type>> {
         let serialized_id = reader.get_id() as usize;
         let id = match self.type_var_id_map.get(&serialized_id) {
             Some(id) => *id,
@@ -135,7 +135,7 @@ impl ModuleDecoder {
                 new_id
             }
         };
-        Ok(typ::generic_var(id))
+        Ok(type_::generic_var(id))
     }
 
     fn value_constructor(

@@ -4,8 +4,8 @@ use crate::{
         TypedConstantBitStringSegmentOption, TypedExprBitStringSegment,
     },
     fs::Writer,
-    schema_capnp::*,
-    typ::{
+    schema_capnp::{self as schema, *},
+    type_::{
         self, AccessorsMap, FieldMap, RecordAccessor, Type, TypeConstructor, TypeVar,
         ValueConstructor, ValueConstructorVariant,
     },
@@ -14,13 +14,13 @@ use capnp::text_list;
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
 pub struct ModuleEncoder<'a> {
-    data: &'a typ::Module,
+    data: &'a type_::Module,
     next_type_var_id: u16,
     type_var_id_map: HashMap<usize, u16>,
 }
 
 impl<'a> ModuleEncoder<'a> {
-    pub fn new(data: &'a typ::Module) -> Self {
+    pub fn new(data: &'a type_::Module) -> Self {
         Self {
             data,
             next_type_var_id: 0,
@@ -307,7 +307,7 @@ impl<'a> ModuleEncoder<'a> {
         }
     }
 
-    fn build_type(&mut self, mut builder: type_::Builder<'_>, type_: &Type) {
+    fn build_type(&mut self, mut builder: schema::type_::Builder<'_>, type_: &Type) {
         match type_ {
             Type::Fn { args, retrn } => {
                 let mut fun = builder.init_fn();
@@ -347,7 +347,7 @@ impl<'a> ModuleEncoder<'a> {
 
     fn build_types(
         &mut self,
-        mut builder: capnp::struct_list::Builder<'_, type_::Owned>,
+        mut builder: capnp::struct_list::Builder<'_, schema::type_::Owned>,
         types: &[Arc<Type>],
     ) {
         for (i, type_) in types.iter().enumerate() {
@@ -355,7 +355,7 @@ impl<'a> ModuleEncoder<'a> {
         }
     }
 
-    fn build_type_var(&mut self, mut builder: type_::var::Builder<'_>, id: usize) {
+    fn build_type_var(&mut self, mut builder: schema::type_::var::Builder<'_>, id: usize) {
         let serialised_id = match self.type_var_id_map.get(&id) {
             Some(id) => *id,
             None => {

@@ -1156,7 +1156,7 @@ fn main() { one.C }"
             expected: Err(Error::Type {
                 path: PathBuf::from("/src/two.gleam"),
                 src: "import one\nfn main() { one.C }".to_string(),
-                error: crate::typ::Error::UnknownModuleValue {
+                error: crate::type_::Error::UnknownModuleValue {
                     location: SrcSpan {
                         start: 26,
                         end: 28,
@@ -1190,12 +1190,12 @@ fn test(t: one.T) { t.a }"
             expected: Err(Error::Type {
                 path: PathBuf::from("/src/two.gleam"),
                 src: "import one\nfn test(t: one.T) { t.a }".to_string(),
-                error: crate::typ::Error::UnknownField {
+                error: crate::type_::Error::UnknownField {
                     location: SrcSpan {
                         start: 32,
                         end: 34,
                     },
-                    typ: Arc::new(crate::typ::Type::App {
+                    typ: Arc::new(crate::type_::Type::App {
                         public: true,
                         module: vec!["one".to_string(),],
                         name: "T".to_string(),

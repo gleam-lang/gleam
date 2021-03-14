@@ -1,5 +1,5 @@
 use crate::ast::{BitStringSegmentOption, SrcSpan};
-use crate::typ::Type;
+use crate::type_::Type;
 use std::sync::Arc;
 
 //
@@ -40,17 +40,17 @@ impl<T> SegmentOptionCategories<'_, T> {
 
     fn segment_type(&self) -> Arc<Type> {
         match self.typ {
-            Some(BitStringSegmentOption::Int { .. }) => crate::typ::int(),
-            Some(BitStringSegmentOption::Float { .. }) => crate::typ::float(),
-            Some(BitStringSegmentOption::Binary { .. }) => crate::typ::bit_string(),
-            Some(BitStringSegmentOption::BitString { .. }) => crate::typ::bit_string(),
-            Some(BitStringSegmentOption::Utf8 { .. }) => crate::typ::string(),
-            Some(BitStringSegmentOption::Utf16 { .. }) => crate::typ::string(),
-            Some(BitStringSegmentOption::Utf32 { .. }) => crate::typ::string(),
-            Some(BitStringSegmentOption::Utf8Codepoint { .. }) => crate::typ::utf_codepoint(),
-            Some(BitStringSegmentOption::Utf16Codepoint { .. }) => crate::typ::utf_codepoint(),
-            Some(BitStringSegmentOption::Utf32Codepoint { .. }) => crate::typ::utf_codepoint(),
-            None => crate::typ::int(),
+            Some(BitStringSegmentOption::Int { .. }) => crate::type_::int(),
+            Some(BitStringSegmentOption::Float { .. }) => crate::type_::float(),
+            Some(BitStringSegmentOption::Binary { .. }) => crate::type_::bit_string(),
+            Some(BitStringSegmentOption::BitString { .. }) => crate::type_::bit_string(),
+            Some(BitStringSegmentOption::Utf8 { .. }) => crate::type_::string(),
+            Some(BitStringSegmentOption::Utf16 { .. }) => crate::type_::string(),
+            Some(BitStringSegmentOption::Utf32 { .. }) => crate::type_::string(),
+            Some(BitStringSegmentOption::Utf8Codepoint { .. }) => crate::type_::utf_codepoint(),
+            Some(BitStringSegmentOption::Utf16Codepoint { .. }) => crate::type_::utf_codepoint(),
+            Some(BitStringSegmentOption::Utf32Codepoint { .. }) => crate::type_::utf_codepoint(),
+            None => crate::type_::int(),
             Some(_) => crate::error::fatal_compiler_bug(
                 "Tried to type a non type kind BitString segment option.",
             ),

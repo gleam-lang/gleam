@@ -7,7 +7,7 @@ pub use self::untyped::UntypedExpr;
 
 pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
-use crate::typ::{self, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor};
+use crate::type_::{self, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor};
 use std::sync::Arc;
 
 pub const CAPTURE_VARIABLE: &str = "gleam@capture_variable";
@@ -16,7 +16,7 @@ pub trait HasLocation {
     fn location(&self) -> SrcSpan;
 }
 
-pub type TypedModule = Module<Arc<Type>, TypedExpr, typ::Module, String>;
+pub type TypedModule = Module<Arc<Type>, TypedExpr, type_::Module, String>;
 
 pub type UntypedModule = Module<(), UntypedExpr, (), ()>;
 
@@ -565,7 +565,7 @@ impl TypedClauseGuard {
             | ClauseGuard::GtFloat { .. }
             | ClauseGuard::GtEqFloat { .. }
             | ClauseGuard::LtFloat { .. }
-            | ClauseGuard::LtEqFloat { .. } => typ::bool(),
+            | ClauseGuard::LtEqFloat { .. } => type_::bool(),
         }
     }
 }

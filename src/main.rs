@@ -71,7 +71,7 @@ mod new;
 mod parse;
 mod project;
 mod shell;
-mod typ;
+mod type_;
 mod warning;
 
 mod schema_capnp {

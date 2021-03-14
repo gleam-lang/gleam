@@ -8,7 +8,7 @@ use crate::{
     config::{self, PackageConfig},
     error::{Error, FileIOAction, FileKind, GleamExpect},
     parse::extra::Comment,
-    typ,
+    type_,
     warning::Warning,
 };
 use source_tree::SourceTree;
@@ -33,7 +33,7 @@ pub struct Analysed {
     pub name: Vec<String>,
     pub path: PathBuf,
     pub origin: ModuleOrigin,
-    pub type_info: typ::Module,
+    pub type_info: type_::Module,
     pub source_base_path: PathBuf,
     pub warnings: Vec<Warning>,
     pub module_extra: crate::parse::extra::ModuleExtra,
@@ -192,7 +192,8 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
         println!("Compiling {}", name_string.as_str());
 
         let mut warnings = vec![];
-        let result = crate::typ::infer_module(&mut uid, module, &modules_type_infos, &mut warnings);
+        let result =
+            crate::type_::infer_module(&mut uid, module, &modules_type_infos, &mut warnings);
         let warnings = warnings
             .into_iter()
             .map(|warning| Warning::Type {

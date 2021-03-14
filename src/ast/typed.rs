@@ -1,5 +1,5 @@
 use super::*;
-use crate::typ::{HasType, Type};
+use crate::type_::{HasType, Type};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TypedExpr {

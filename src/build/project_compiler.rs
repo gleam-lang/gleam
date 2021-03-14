@@ -7,7 +7,7 @@ use crate::{
     codegen,
     config::PackageConfig,
     fs::FileSystemAccessor,
-    typ, warning, Error, GleamExpect, Warning,
+    type_, warning, Error, GleamExpect, Warning,
 };
 use std::{collections::HashMap, path::PathBuf};
 
@@ -19,7 +19,7 @@ pub struct ProjectCompiler<'a> {
     root_config: PackageConfig,
     configs: HashMap<String, PackageConfig>,
     packages: HashMap<String, Package>,
-    type_manifests: HashMap<String, (Origin, typ::Module)>,
+    type_manifests: HashMap<String, (Origin, type_::Module)>,
     defined_modules: HashMap<String, PathBuf>,
     warnings: Vec<Warning>,
 }

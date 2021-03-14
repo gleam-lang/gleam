@@ -10,7 +10,7 @@ use crate::{
     config::{BuildTool, Docs, PackageConfig, Repository},
     erl,
     fs::test::FilesChannel,
-    typ,
+    type_,
 };
 use std::{path::PathBuf, sync::Arc};
 
@@ -1314,7 +1314,7 @@ main() ->
         Err(Error::Type {
             path: PathBuf::from("/src/two.gleam"),
             src: "import one fn main() { one.C }".to_string(),
-            error: crate::typ::Error::UnknownModuleValue {
+            error: crate::type_::Error::UnknownModuleValue {
                 location: crate::ast::SrcSpan { start: 26, end: 28 },
                 name: "C".to_string(),
                 module_name: vec!["one".to_string(),],
@@ -1343,9 +1343,9 @@ main() ->
         Err(Error::Type {
             path: PathBuf::from("/src/two.gleam"),
             src: "import one fn test(t: one.T) { t.a }".to_string(),
-            error: crate::typ::Error::UnknownField {
+            error: crate::type_::Error::UnknownField {
                 location: crate::ast::SrcSpan { start: 32, end: 34 },
-                typ: Arc::new(crate::typ::Type::App {
+                typ: Arc::new(crate::type_::Type::App {
                     public: true,
                     module: vec!["one".to_string(),],
                     name: "T".to_string(),
@@ -1620,7 +1620,7 @@ fn x() { test }"
 pub const test = one.A
 fn x() { test }"
                 .to_string(),
-            error: typ::Error::UnknownModuleValue {
+            error: type_::Error::UnknownModuleValue {
                 location: SrcSpan { start: 28, end: 33 },
                 module_name: vec!["one".to_string()],
                 name: "A".to_string(),

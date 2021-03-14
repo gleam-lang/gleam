@@ -12,7 +12,7 @@ use crate::{
     line_numbers::LineNumbers,
     pretty::*,
     project::{self, Analysed},
-    typ::{
+    type_::{
         ModuleValueConstructor, PatternConstructor, Type, TypeVar, ValueConstructor,
         ValueConstructorVariant,
     },
@@ -1520,8 +1520,8 @@ fn tuple_index<'a>(tuple: &'a TypedExpr, index: u64, env: &mut Env<'a>) -> Docum
 }
 
 fn module_select_fn<'a>(typ: Arc<Type>, module_name: &'a [String], label: &'a str) -> Document<'a> {
-    match crate::typ::collapse_links(typ).as_ref() {
-        crate::typ::Type::Fn { args, .. } => "fun "
+    match crate::type_::collapse_links(typ).as_ref() {
+        crate::type_::Type::Fn { args, .. } => "fun "
             .to_doc()
             .append(module_name_join(module_name))
             .append(":")

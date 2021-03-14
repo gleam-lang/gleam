@@ -20,7 +20,7 @@ macro_rules! assert_erl {
         let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["the_app".to_string()];
         let ast =
-            crate::typ::infer_module(&mut 0, ast, &std::collections::HashMap::new(), &mut vec![])
+            crate::type_::infer_module(&mut 0, ast, &std::collections::HashMap::new(), &mut vec![])
                 .expect("should successfully infer");
         let mut output = String::new();
         let line_numbers = LineNumbers::new($src);

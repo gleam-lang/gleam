@@ -5,7 +5,7 @@ use crate::{
     config::PackageConfig,
     error,
     fs::FileSystemWriter,
-    typ, Error, GleamExpect, Result, Warning,
+    type_, Error, GleamExpect, Result, Warning,
 };
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -56,7 +56,7 @@ impl<Writer: FileSystemWriter> PackageCompiler<Writer> {
     pub fn compile(
         mut self,
         warnings: &mut Vec<Warning>,
-        existing_modules: &mut HashMap<String, (Origin, typ::Module)>,
+        existing_modules: &mut HashMap<String, (Origin, type_::Module)>,
         already_defined_modules: &mut HashMap<String, PathBuf>,
     ) -> Result<Package, Error> {
         let span = tracing::info_span!("compile", package = self.options.name.as_str());
@@ -126,7 +126,7 @@ impl<Writer: FileSystemWriter> PackageCompiler<Writer> {
 fn type_check(
     sequence: Vec<String>,
     mut parsed_modules: HashMap<String, Parsed>,
-    module_types: &mut HashMap<String, (Origin, typ::Module)>,
+    module_types: &mut HashMap<String, (Origin, type_::Module)>,
     warnings: &mut Vec<Warning>,
 ) -> Result<Vec<Module>, Error> {
     let mut modules = Vec::with_capacity(parsed_modules.len());
@@ -145,7 +145,7 @@ fn type_check(
 
         tracing::trace!(module = ?name, "Type checking");
         let mut type_warnings = Vec::new();
-        let ast = typ::infer_module(&mut uid, ast, module_types, &mut type_warnings).map_err(
+        let ast = type_::infer_module(&mut uid, ast, module_types, &mut type_warnings).map_err(
             |error| Error::Type {
                 path: path.clone(),
                 src: code.clone(),
