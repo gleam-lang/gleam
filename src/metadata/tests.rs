@@ -537,16 +537,98 @@ fn constant_bit_string_size_short_form() {
     assert_eq!(roundtrip(&module), module);
 }
 
-// Which::Bitstring(reader) => todo!(),
-// Which::Utf8(reader) => todo!(),
-// Which::Utf16(reader) => todo!(),
-// Which::Utf32(reader) => todo!(),
-// Which::Utf8Codepoint(reader) => todo!(),
-// Which::Utf16Codepoint(reader) => todo!(),
-// Which::Utf32Codepoint(reader) => todo!(),
-// Which::Signed(reader) => todo!(),
-// Which::Unsigned(reader) => todo!(),
-// Which::Big(reader) => todo!(),
-// Which::Little(reader) => todo!(),
-// Which::Native(reader) => todo!(),
-// Which::Unit(reader) => todo!(),
+#[test]
+fn constant_bit_string_bit_string() {
+    let module = bit_string_segment_option_module(BitStringSegmentOption::BitString {
+        location: Default::default(),
+    });
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn constant_bit_string_utf8() {
+    let module = bit_string_segment_option_module(BitStringSegmentOption::Utf8 {
+        location: Default::default(),
+    });
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn constant_bit_string_utf16() {
+    let module = bit_string_segment_option_module(BitStringSegmentOption::Utf16 {
+        location: Default::default(),
+    });
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn constant_bit_string_utf32() {
+    let module = bit_string_segment_option_module(BitStringSegmentOption::Utf32 {
+        location: Default::default(),
+    });
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn constant_bit_string_utf8codepoint() {
+    let module = bit_string_segment_option_module(BitStringSegmentOption::Utf8Codepoint {
+        location: Default::default(),
+    });
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn constant_bit_string_utf16codepoint() {
+    let module = bit_string_segment_option_module(BitStringSegmentOption::Utf16Codepoint {
+        location: Default::default(),
+    });
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn constant_bit_string_utf32codepoint() {
+    let module = bit_string_segment_option_module(BitStringSegmentOption::Utf32Codepoint {
+        location: Default::default(),
+    });
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn constant_bit_string_signed() {
+    let module = bit_string_segment_option_module(BitStringSegmentOption::Signed {
+        location: Default::default(),
+    });
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn constant_bit_string_unsigned() {
+    let module = bit_string_segment_option_module(BitStringSegmentOption::Unsigned {
+        location: Default::default(),
+    });
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn constant_bit_string_big() {
+    let module = bit_string_segment_option_module(BitStringSegmentOption::Big {
+        location: Default::default(),
+    });
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn constant_bit_string_little() {
+    let module = bit_string_segment_option_module(BitStringSegmentOption::Little {
+        location: Default::default(),
+    });
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn constant_bit_string_native() {
+    let module = bit_string_segment_option_module(BitStringSegmentOption::Native {
+        location: Default::default(),
+    });
+    assert_eq!(roundtrip(&module), module);
+}

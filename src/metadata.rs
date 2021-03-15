@@ -165,7 +165,6 @@ impl ModuleDecoder {
         }
     }
 
-    // TODO: test
     fn constant_int(&self, value: &str) -> Result<TypedConstant> {
         Ok(Constant::Int {
             location: Default::default(),
@@ -173,7 +172,6 @@ impl ModuleDecoder {
         })
     }
 
-    // TODO: test
     fn constant_float(&self, value: &str) -> Result<TypedConstant> {
         Ok(Constant::Float {
             location: Default::default(),
@@ -181,7 +179,6 @@ impl ModuleDecoder {
         })
     }
 
-    // TODO: test
     fn constant_string(&self, value: &str) -> Result<TypedConstant> {
         Ok(Constant::String {
             location: Default::default(),
@@ -189,7 +186,6 @@ impl ModuleDecoder {
         })
     }
 
-    // TODO: test
     fn constant_tuple(
         &mut self,
         reader: &capnp::struct_list::Reader<'_, constant::Owned>,
@@ -200,7 +196,6 @@ impl ModuleDecoder {
         })
     }
 
-    // TODO: test
     fn constant_list(&mut self, reader: &constant::list::Reader<'_>) -> Result<TypedConstant> {
         let type_ = self.type_(&reader.get_type()?)?;
         Ok(Constant::List {
@@ -210,7 +205,6 @@ impl ModuleDecoder {
         })
     }
 
-    // TODO: test
     fn constant_record(&mut self, reader: &constant::record::Reader<'_>) -> Result<TypedConstant> {
         let type_ = self.type_(&reader.get_typ()?)?;
         let tag = reader.get_tag()?.to_string();
@@ -273,18 +267,42 @@ impl ModuleDecoder {
             Which::Float(_) => BitStringSegmentOption::Float {
                 location: Default::default(),
             },
-            Which::Bitstring(reader) => todo!(),
-            Which::Utf8(reader) => todo!(),
-            Which::Utf16(reader) => todo!(),
-            Which::Utf32(reader) => todo!(),
-            Which::Utf8Codepoint(reader) => todo!(),
-            Which::Utf16Codepoint(reader) => todo!(),
-            Which::Utf32Codepoint(reader) => todo!(),
-            Which::Signed(reader) => todo!(),
-            Which::Unsigned(reader) => todo!(),
-            Which::Big(reader) => todo!(),
-            Which::Little(reader) => todo!(),
-            Which::Native(reader) => todo!(),
+            Which::Bitstring(_) => BitStringSegmentOption::BitString {
+                location: Default::default(),
+            },
+            Which::Utf8(_) => BitStringSegmentOption::Utf8 {
+                location: Default::default(),
+            },
+            Which::Utf16(_) => BitStringSegmentOption::Utf16 {
+                location: Default::default(),
+            },
+            Which::Utf32(_) => BitStringSegmentOption::Utf32 {
+                location: Default::default(),
+            },
+            Which::Utf8Codepoint(_) => BitStringSegmentOption::Utf8Codepoint {
+                location: Default::default(),
+            },
+            Which::Utf16Codepoint(_) => BitStringSegmentOption::Utf16Codepoint {
+                location: Default::default(),
+            },
+            Which::Utf32Codepoint(_) => BitStringSegmentOption::Utf32Codepoint {
+                location: Default::default(),
+            },
+            Which::Signed(_) => BitStringSegmentOption::Signed {
+                location: Default::default(),
+            },
+            Which::Unsigned(_) => BitStringSegmentOption::Unsigned {
+                location: Default::default(),
+            },
+            Which::Big(_) => BitStringSegmentOption::Big {
+                location: Default::default(),
+            },
+            Which::Little(_) => BitStringSegmentOption::Little {
+                location: Default::default(),
+            },
+            Which::Native(_) => BitStringSegmentOption::Native {
+                location: Default::default(),
+            },
             Which::Size(reader) => BitStringSegmentOption::Size {
                 location: Default::default(),
                 short_form: reader.get_short_form(),
