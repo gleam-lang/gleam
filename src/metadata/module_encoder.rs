@@ -1,7 +1,6 @@
 use crate::{
     ast::{
-        BitStringSegmentOption, Constant, TypedConstant, TypedConstantBitStringSegment,
-        TypedConstantBitStringSegmentOption, TypedExprBitStringSegment,
+        Constant, TypedConstant, TypedConstantBitStringSegment, TypedConstantBitStringSegmentOption,
     },
     fs::Writer,
     schema_capnp::{self as schema, *},
@@ -10,8 +9,7 @@ use crate::{
         ValueConstructor, ValueConstructorVariant,
     },
 };
-use capnp::text_list;
-use std::{cell::RefCell, collections::HashMap, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 pub struct ModuleEncoder<'a> {
     data: &'a type_::Module,
@@ -137,7 +135,7 @@ impl<'a> ModuleEncoder<'a> {
 
     fn build_value_constructor_variant(
         &mut self,
-        mut builder: value_constructor_variant::Builder<'_>,
+        builder: value_constructor_variant::Builder<'_>,
         constructor: &ValueConstructorVariant,
     ) {
         match constructor {
@@ -300,14 +298,14 @@ impl<'a> ModuleEncoder<'a> {
                 builder.set_short_form(*short_form);
             }
 
-            Opt::Unit { value, location } => {
+            Opt::Unit { value, .. } => {
                 let mut builder = builder.init_unit();
                 builder.set_value(*value);
             }
         }
     }
 
-    fn build_type(&mut self, mut builder: schema::type_::Builder<'_>, type_: &Type) {
+    fn build_type(&mut self, builder: schema::type_::Builder<'_>, type_: &Type) {
         match type_ {
             Type::Fn { args, retrn } => {
                 let mut fun = builder.init_fn();
@@ -338,7 +336,7 @@ impl<'a> ModuleEncoder<'a> {
             Type::Var { type_: typ } => match &*typ.borrow() {
                 TypeVar::Link { type_: typ } => self.build_type(builder, &*typ),
                 TypeVar::Generic { id } => self.build_type_var(builder.init_var(), *id),
-                TypeVar::Unbound { id, .. } => crate::error::fatal_compiler_bug(
+                TypeVar::Unbound { .. } => crate::error::fatal_compiler_bug(
                     "Unexpected unbound var when serialising module metadata",
                 ),
             },

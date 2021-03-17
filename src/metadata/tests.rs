@@ -1,14 +1,18 @@
-use clap::value_t;
+use type_::{AccessorsMap, FieldMap, RecordAccessor};
 
 use super::*;
 use crate::{
+    ast::{
+        BitStringSegment, BitStringSegmentOption, CallArg, Constant, TypedConstant,
+        TypedConstantBitStringSegmentOption,
+    },
     fs::test::InMemoryFile,
-    type_::{self, TypeVar},
+    type_::{self, Module, Type, TypeConstructor, ValueConstructor, ValueConstructorVariant},
 };
-use std::{io::BufReader, iter::FromIterator};
+use std::{collections::HashMap, io::BufReader, sync::Arc};
 
 fn roundtrip(input: &Module) -> Module {
-    let mut buffer = InMemoryFile::new();
+    let buffer = InMemoryFile::new();
     ModuleEncoder::new(input).write(buffer.clone()).unwrap();
     let buffer = buffer.into_contents().unwrap();
     ModuleDecoder::new()

@@ -21,7 +21,7 @@ pub trait FileSystemWriter: Debug {
 }
 
 /// A FileWriter implementation that writes to the file system.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct FileSystemAccessor;
 
 impl FileSystemAccessor {

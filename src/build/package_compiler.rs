@@ -5,10 +5,11 @@ use crate::{
     config::PackageConfig,
     error,
     fs::FileSystemWriter,
+    metadata::ModuleEncoder,
     type_, Error, GleamExpect, Result, Warning,
 };
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::{collections::HashMap, fmt::write};
 
 #[derive(Debug)]
 pub struct Options {
@@ -27,6 +28,7 @@ impl Options {
             options: self,
             sources: vec![],
             writer,
+            write_metadata: false,
         };
         compiler.read_source_files()?;
         Ok(compiler)
@@ -38,6 +40,7 @@ pub struct PackageCompiler<Writer: FileSystemWriter> {
     pub options: Options,
     pub sources: Vec<Source>,
     pub writer: Writer,
+    pub write_metadata: bool,
 }
 
 // TODO: ensure this is not a duplicate module
@@ -50,6 +53,7 @@ impl<Writer: FileSystemWriter> PackageCompiler<Writer> {
             options,
             writer,
             sources: vec![],
+            write_metadata: false,
         }
     }
 
@@ -77,12 +81,26 @@ impl<Writer: FileSystemWriter> PackageCompiler<Writer> {
         tracing::info!("Performing code generation");
         self.perform_codegen(modules.as_slice())?;
 
-        // TODO: write metadata
+        tracing::info!("Writing package metadata to disc");
+        self.encode_and_write_metadata(&modules)?;
 
         Ok(Package {
             name: self.options.name,
             modules,
         })
+    }
+
+    fn encode_and_write_metadata(&mut self, modules: &[Module]) -> Result<()> {
+        if !self.write_metadata {
+            return Ok(());
+        }
+        for module in modules {
+            let name = format!("{}.gleam_module", &module.name);
+            tracing::trace!(name = %name, "Writing module metadata");
+            let path = self.options.out_path.join(name);
+            ModuleEncoder::new(&module.ast.type_info).write(self.writer.open(&path)?)?;
+        }
+        Ok(())
     }
 
     pub fn read_source_files(&mut self) -> Result<()> {
@@ -120,6 +138,12 @@ impl<Writer: FileSystemWriter> PackageCompiler<Writer> {
 
     fn perform_codegen(&self, modules: &[Module]) -> Result<()> {
         Erlang::new(self.options.out_path.as_path()).render(&self.writer, modules)
+    }
+
+    /// Set whether to write metadata files
+    pub fn write_metadata(mut self, write_metadata: bool) -> Self {
+        self.write_metadata = write_metadata;
+        self
     }
 }
 

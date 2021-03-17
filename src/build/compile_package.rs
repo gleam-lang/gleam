@@ -1,9 +1,9 @@
 use crate::{
     build::{Origin, PackageCompiler},
-    fs::FileSystemAccessor,
-    CompilePackage, Result,
+    fs::{FileSystemAccessor, FileSystemWriter},
+    metadata, CompilePackage, Result,
 };
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 
 pub fn command(options: CompilePackage) -> Result<()> {
     // TODO: Load precompiled libraries
@@ -12,9 +12,10 @@ pub fn command(options: CompilePackage) -> Result<()> {
     let mut defined_modules = HashMap::new();
     let mut warnings = Vec::new();
 
-    let mut compiler = options
+    let package = options
         .into_package_compiler_options()
         .into_compiler(FileSystemAccessor::new())?
+        .write_metadata(true)
         .compile(&mut warnings, &mut type_manifests, &mut defined_modules)?;
 
     // TODO: Print warnings
