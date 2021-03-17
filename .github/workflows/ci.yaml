@@ -154,6 +154,3 @@ jobs:
         sed -i 's/cargo run --/gleam/' Makefile
         make
       working-directory: ./test/compile_package0
-
-    - run: rebar3 eunit
-      working-directory: ./test/core_language
