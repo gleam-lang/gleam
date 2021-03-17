@@ -147,3 +147,13 @@ jobs:
       working-directory: ./escript_project
     - run: _build/default/bin/escript_project
       working-directory: ./escript_project
+
+    # Test compile_package0
+    - name: test/compile_package0
+      run: |
+        sed -i 's/cargo run --/gleam/' Makefile
+        make
+      working-directory: ./test/compile_package0
+
+    - run: rebar3 eunit
+      working-directory: ./test/core_language
