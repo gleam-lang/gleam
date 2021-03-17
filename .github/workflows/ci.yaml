@@ -80,8 +80,8 @@ jobs:
     - name: Check formatting
       run: cargo fmt --all -- --check
 
-  cargo_deny:
-    name: Cargo deny
+  validate-deps:
+    name: validate-deps
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
@@ -100,8 +100,8 @@ jobs:
         echo `pwd` >> $GITHUB_PATH
     - run: cargo deny check
 
-  test-core-language:
-    name: test-core-language
+  test-projects:
+    name: test-projects
     needs: test
     runs-on: ubuntu-latest
     steps:
@@ -113,44 +113,43 @@ jobs:
       with:
         otp-version: 23.2
 
-    - name: Download test artifact
+    - name: Download Gleam binary from previous job
       uses: actions/download-artifact@v2
       with:
         name: gleam
-        path: ./test/core_language
+        path: ./test
 
-    - name: Configure ./test/core_language to use Gleam binary
+    - name: Configure test projects to use Gleam binary
       run: |
         echo $PWD/ >> $GITHUB_PATH
         chmod +x ./gleam
-        sed -i 's/cargo run --/gleam/' rebar.config
+        sed -i 's/cargo run --/gleam/' */rebar.config */Makefile
+      working-directory: ./test
+
+    - name: test/core_language
+      run: rebar3 eunit
       working-directory: ./test/core_language
 
-    - run: rebar3 eunit
-      working-directory: ./test/core_language
-
-    # Test app template
-    - run: gleam new app_project --template=app
-    - run: rebar3 eunit
-      working-directory: ./app_project
-
-    # Test lib template
-    - run: gleam new lib_project --template=lib
-    - run: rebar3 eunit
-      working-directory: ./lib_project
-
-    # Test escript template
-    - run: gleam new escript_project --template=escript
-    - run: rebar3 eunit
-      working-directory: ./escript_project
-    - run: rebar3 escriptize
-      working-directory: ./escript_project
-    - run: _build/default/bin/escript_project
-      working-directory: ./escript_project
-
-    # Test compile_package0
     - name: test/compile_package0
-      run: |
-        sed -i 's/cargo run --/gleam/' Makefile
-        make
+      run: make
       working-directory: ./test/compile_package0
+
+    - name: Test app template
+      run: |
+        gleam new app_project --template=app
+        cd app_project
+        rebar3 eunit
+
+    - name: Test lib template
+      run: |
+        gleam new lib_project --template=lib
+        cd lib_project
+        rebar3 eunit
+
+    - name: Test escript template
+      run: |
+        gleam new escript_project --template=escript
+        cd escript_project
+        rebar3 eunit
+        rebar3 escriptize
+        _build/default/bin/escript_project
