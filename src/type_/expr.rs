@@ -1587,7 +1587,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                         label: name.clone(),
                         module_name: self
                             .environment
-                            .importable_modules
+                            .imported_modules
                             .get(module_name)
                             .gleam_expect("Failed to find previously located module import")
                             .1

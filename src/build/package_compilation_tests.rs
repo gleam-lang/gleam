@@ -1863,3 +1863,50 @@ fn normalise_error(e: Error) -> Error {
         e => e,
     }
 }
+
+// https://github.com/gleam-lang/gleam/issues/922#issuecomment-803272624
+#[test]
+fn qualified_constant_with_nested_module() {
+    assert_erlang_compile!(
+        vec![
+            Source {
+                origin: Origin::Src,
+                path: PathBuf::from("/src/one/two.gleam"),
+                name: "one/two".to_string(),
+                code: "pub type A { A }".to_string(),
+            },
+            Source {
+                origin: Origin::Src,
+                path: PathBuf::from("/src/two.gleam"),
+                name: "two".to_string(),
+                code: r#"import one/two
+const x = two.A"#
+                    .to_string(),
+            },
+        ],
+        Ok(vec![
+            OutputFile {
+                path: PathBuf::from("_build/default/lib/the_package/src/one@two.erl"),
+                text: "-module(one@two).
+-compile(no_auto_import).
+
+-export_type([a/0]).
+
+-type a() :: a.
+
+
+"
+                .to_string(),
+            },
+            OutputFile {
+                path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
+                text: "-module(two).
+-compile(no_auto_import).
+
+
+"
+                .to_string(),
+            }
+        ]),
+    );
+}
