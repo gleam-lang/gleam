@@ -95,7 +95,7 @@ impl<Writer: FileSystemWriter> PackageCompiler<Writer> {
             return Ok(());
         }
         for module in modules {
-            let name = format!("{}.gleam_module", &module.name);
+            let name = format!("{}.gleam_module", &module.name.replace('/', "@"));
             tracing::trace!(name = %name, "Writing module metadata");
             let path = self.options.out_path.join(name);
             ModuleEncoder::new(&module.ast.type_info).write(self.writer.open(&path)?)?;
