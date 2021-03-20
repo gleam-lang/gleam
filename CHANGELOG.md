@@ -7,6 +7,8 @@
 - Gleam can now run an Erlang shell without an external build tool.
 - Added an error hint when joining string using the `+` or `+.` operator.
 - New projects are created with `setup-erlang` v1.1.2 and Erlang/OTP v23.2.
+- Fixed a bug where the compiler would be unable to locate an imported module
+  if a value from a nested module is used in a qualified fashion.
 
 ## v0.14.2 - 2021-03-02
 
