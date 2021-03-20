@@ -1,9 +1,10 @@
 use crate::error::{Error, FileIOAction, FileKind, GleamExpect};
 use flate2::{write::GzEncoder, Compression};
 use std::{
+    ffi::OsStr,
     fmt::Debug,
     fs::File,
-    io::Write,
+    io::{BufRead, BufReader, Write},
     path::{Path, PathBuf},
 };
 
@@ -333,6 +334,16 @@ pub fn read_dir(path: impl AsRef<Path> + Debug) -> Result<std::fs::ReadDir, Erro
     })
 }
 
+pub fn gleam_modules_metadata_paths(
+    path: impl AsRef<Path> + Debug,
+) -> Result<impl Iterator<Item = PathBuf>, Error> {
+    Ok(read_dir(path)?
+        .into_iter()
+        .filter_map(Result::ok)
+        .map(|f| f.path())
+        .filter(|p| p.extension().and_then(OsStr::to_str) == Some("gleam_module")))
+}
+
 pub fn read(path: impl AsRef<Path> + Debug) -> Result<String, Error> {
     tracing::trace!("Reading file {:?}", path);
 
@@ -342,6 +353,17 @@ pub fn read(path: impl AsRef<Path> + Debug) -> Result<String, Error> {
         path: PathBuf::from(path.as_ref()),
         err: Some(err.to_string()),
     })
+}
+
+pub fn buffered_reader<P: AsRef<Path> + Debug>(path: P) -> Result<impl BufRead, Error> {
+    tracing::trace!("Opening {:?} for reading", path);
+    let reader = File::open(&path).map_err(|err| Error::FileIO {
+        action: FileIOAction::Open,
+        kind: FileKind::File,
+        path: PathBuf::from(path.as_ref()),
+        err: Some(err.to_string()),
+    })?;
+    Ok(BufReader::new(reader))
 }
 
 pub fn copy(path: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) -> Result<(), Error> {
