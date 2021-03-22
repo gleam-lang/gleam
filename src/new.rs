@@ -237,7 +237,6 @@ pub fn stop(_state: Dynamic) {
   {{modules, []}},
 
   {{include_files, ["gleam.toml", "gen"]}},
-  {{licenses, ["Apache 2.0"]}},
   {{links, []}}
 ]}}.
 "#,
