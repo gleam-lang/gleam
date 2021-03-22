@@ -5,6 +5,8 @@
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
+- New project's `gleam.toml` has a comment that shows how to add a
+  `repository` field.
 
 ## v0.14.3 - 2021-03-20
 
