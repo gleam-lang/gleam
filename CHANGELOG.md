@@ -7,6 +7,8 @@
 - Gleam can now run an Erlang shell without an external build tool.
 - New project's `gleam.toml` has a comment that shows how to add a
   `repository` field.
+- New projects no longer include a licence field in `src/$APP.app.src` by
+  default.
 
 ## v0.14.3 - 2021-03-20
 
