@@ -110,7 +110,12 @@ impl<'env> Env<'env> {
                 Document::String(variable_name(name))
             }
             Some(0) => Document::String(variable_name(name)),
-            Some(n) => Document::String(variable_name(name)).append("@").append(*n),
+            Some(n) => {
+                use std::fmt::Write;
+                let mut name = variable_name(name);
+                write!(name, "@{}", n).gleam_expect("pushing number suffix to name");
+                Document::String(name)
+            }
         }
     }
 
