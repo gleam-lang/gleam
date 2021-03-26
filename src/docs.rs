@@ -139,7 +139,7 @@ pub fn generate_html(
 
         let template = ModuleTemplate {
             gleam_version: VERSION,
-            unnest: module.name.iter().map(|_| "..").intersperse("/").collect(),
+            unnest: Itertools::intersperse(module.name.iter().map(|_| ".."), "/").collect(),
             links: &links,
             pages: &pages,
             documentation: render_markdown(module.ast.documentation.iter().join("\n").as_str()),

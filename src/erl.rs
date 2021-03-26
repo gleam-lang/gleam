@@ -163,7 +163,7 @@ pub fn record_definition(name: &str, fields: &[&str]) -> String {
     };
     use std::fmt::Write;
     let mut buffer = format!("-record({}, {{", escaped_name);
-    for field in fields.iter().intersperse(&", ") {
+    for field in Itertools::intersperse(fields.iter(), &", ") {
         let escaped_field = if is_erlang_reserved_word(field) {
             format!("'{}'", field)
         } else {
@@ -222,11 +222,10 @@ pub fn module(
                 };
 
                 // Type definition
-                let args = concat(
-                    args.iter()
-                        .map(|p| Document::String(variable_name(p)))
-                        .intersperse(", ".to_doc()),
-                );
+                let args = concat(Itertools::intersperse(
+                    args.iter().map(|p| Document::String(variable_name(p))),
+                    ", ".to_doc(),
+                ));
 
                 let doc = "-type "
                     .to_doc()
@@ -284,7 +283,7 @@ pub fn module(
                         .append(typed_parameters.len()),
                 );
                 // Type definitions
-                let constructors = concat(
+                let constructors = concat(Itertools::intersperse(
                     constructors
                         .iter()
                         .map(|c| {
@@ -298,18 +297,18 @@ pub fn module(
                                 tuple(std::iter::once(name).chain(args))
                             }
                         })
-                        .chain(phantom_vars_constructor.into_iter())
-                        .intersperse(break_(" |", " | ")),
-                )
+                        .chain(phantom_vars_constructor.into_iter()),
+                    break_(" |", " | "),
+                ))
                 .nest(INDENT)
                 .group()
                 .append(".");
-                let params = concat(
+                let params = concat(Itertools::intersperse(
                     typed_parameters
                         .iter()
-                        .map(|a| TypePrinter::new(module.name.as_slice()).print(a))
-                        .intersperse(", ".to_doc()),
-                );
+                        .map(|a| TypePrinter::new(module.name.as_slice()).print(a)),
+                    ", ".to_doc(),
+                ));
                 let doc = if *opaque { "-opaque " } else { "-type " }
                     .to_doc()
                     .append(Document::String(erl_safe_type_name(name.to_snake_case())))
@@ -328,24 +327,36 @@ pub fn module(
         (false, false) => nil(),
         (true, false) => "-export(["
             .to_doc()
-            .append(concat(exports.into_iter().intersperse(", ".to_doc())))
+            .append(concat(Itertools::intersperse(
+                exports.into_iter(),
+                ", ".to_doc(),
+            )))
             .append("]).")
             .append(lines(2)),
 
         (true, true) => "-export(["
             .to_doc()
-            .append(concat(exports.into_iter().intersperse(", ".to_doc())))
+            .append(concat(Itertools::intersperse(
+                exports.into_iter(),
+                ", ".to_doc(),
+            )))
             .append("]).")
             .append(line())
             .append("-export_type([")
             .to_doc()
-            .append(concat(type_exports.into_iter().intersperse(", ".to_doc())))
+            .append(concat(Itertools::intersperse(
+                type_exports.into_iter(),
+                ", ".to_doc(),
+            )))
             .append("]).")
             .append(lines(2)),
 
         (false, true) => "-export_type(["
             .to_doc()
-            .append(concat(type_exports.into_iter().intersperse(", ".to_doc())))
+            .append(concat(Itertools::intersperse(
+                type_exports.into_iter(),
+                ", ".to_doc(),
+            )))
             .append("]).")
             .append(lines(2)),
     };
@@ -353,16 +364,16 @@ pub fn module(
     let type_defs = if type_defs.is_empty() {
         nil()
     } else {
-        concat(type_defs.into_iter().intersperse(lines(2))).append(lines(2))
+        concat(Itertools::intersperse(type_defs.into_iter(), lines(2))).append(lines(2))
     };
 
-    let statements = concat(
+    let statements = concat(Itertools::intersperse(
         module
             .statements
             .iter()
-            .flat_map(|s| statement(module.name.as_slice(), s, module_name, line_numbers))
-            .intersperse(lines(2)),
-    );
+            .flat_map(|s| statement(module.name.as_slice(), s, module_name, line_numbers)),
+        lines(2),
+    ));
 
     "-module("
         .to_doc()
@@ -464,7 +475,7 @@ where
     I: Iterator<Item = Document<'a>>,
 {
     break_("", "")
-        .append(concat(args.intersperse(break_(",", ", "))))
+        .append(concat(Itertools::intersperse(args, break_(",", ", "))))
         .nest(INDENT)
         .append(break_("", ""))
         .surround("(", ")")
@@ -510,14 +521,14 @@ fn string<'a>(value: &'a str) -> Document<'a> {
 }
 
 fn tuple<'a>(elems: impl Iterator<Item = Document<'a>>) -> Document<'a> {
-    concat(elems.intersperse(break_(",", ", ")))
+    concat(Itertools::intersperse(elems, break_(",", ", ")))
         .nest_current()
         .surround("{", "}")
         .group()
 }
 
 fn bit_string<'a>(elems: impl Iterator<Item = Document<'a>>) -> Document<'a> {
-    concat(elems.intersperse(break_(",", ", ")))
+    concat(Itertools::intersperse(elems, break_(",", ", ")))
         .nest_current()
         .surround("<<", ">>")
         .group()
@@ -905,12 +916,10 @@ where
     let mut elems = vec![head];
     let final_tail = collect_cons(tail, &mut elems, categorise_element);
 
-    let elems = concat(
-        elems
-            .into_iter()
-            .map(|e| to_doc(e, env))
-            .intersperse(break_(",", ", ")),
-    );
+    let elems = concat(Itertools::intersperse(
+        elems.into_iter().map(|e| to_doc(e, env)),
+        break_(",", ", "),
+    ));
     list(elems, final_tail.map(|e| to_doc(e, env)))
 }
 
@@ -1010,10 +1019,10 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
         Constant::Tuple { elements, .. } => tuple(elements.iter().map(|e| const_inline(e, env))),
 
         Constant::List { elements, .. } => {
-            let elements = elements
-                .iter()
-                .map(|e| const_inline(e, env))
-                .intersperse(break_(",", ", "));
+            let elements = Itertools::intersperse(
+                elements.iter().map(|e| const_inline(e, env)),
+                break_(",", ", "),
+            );
             concat(elements).nest_current().surround("[", "]").group()
         }
 
@@ -1049,31 +1058,33 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
     let mut then_doc = Document::Nil;
     let erlang_vars = env.erl_function_scope_vars.clone();
 
-    let docs = std::iter::once(pat)
-        .chain(alternative_patterns.iter())
-        .map(|patterns| {
-            env.erl_function_scope_vars = erlang_vars.clone();
+    let docs = Itertools::intersperse(
+        std::iter::once(pat)
+            .chain(alternative_patterns.iter())
+            .map(|patterns| {
+                env.erl_function_scope_vars = erlang_vars.clone();
 
-            let patterns_doc = if patterns.len() == 1 {
-                let p = patterns
-                    .get(0)
-                    .gleam_expect("Single pattern clause printing");
-                pattern(p, env)
-            } else {
-                tuple(patterns.iter().map(|p| pattern(p, env)))
-            };
+                let patterns_doc = if patterns.len() == 1 {
+                    let p = patterns
+                        .get(0)
+                        .gleam_expect("Single pattern clause printing");
+                    pattern(p, env)
+                } else {
+                    tuple(patterns.iter().map(|p| pattern(p, env)))
+                };
 
-            if then_doc == Document::Nil {
-                then_doc = expr(then, env);
-            }
+                if then_doc == Document::Nil {
+                    then_doc = expr(then, env);
+                }
 
-            patterns_doc.append(
-                optional_clause_guard(guard.as_ref(), env)
-                    .append(" ->")
-                    .append(line().append(then_doc.clone()).nest(INDENT).group()),
-            )
-        })
-        .intersperse(";".to_doc().append(lines(2)));
+                patterns_doc.append(
+                    optional_clause_guard(guard.as_ref(), env)
+                        .append(" ->")
+                        .append(line().append(then_doc.clone()).nest(INDENT).group()),
+                )
+            }),
+        ";".to_doc().append(lines(2)),
+    );
 
     concat(docs)
 }
@@ -1187,16 +1198,15 @@ fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<
 }
 
 fn clauses<'a>(cs: &'a [TypedClause], env: &mut Env<'a>) -> Document<'a> {
-    concat(
-        cs.iter()
-            .map(|c| {
-                let vars = env.current_scope_vars.clone();
-                let erl = clause(c, env);
-                env.current_scope_vars = vars; // Reset the known variables now the clauses' scope has ended
-                erl
-            })
-            .intersperse(";".to_doc().append(lines(2))),
-    )
+    concat(Itertools::intersperse(
+        cs.iter().map(|c| {
+            let vars = env.current_scope_vars.clone();
+            let erl = clause(c, env);
+            env.current_scope_vars = vars; // Reset the known variables now the clauses' scope has ended
+            erl
+        }),
+        ";".to_doc().append(lines(2)),
+    ))
 }
 
 fn case<'a>(subjects: &'a [TypedExpr], cs: &'a [TypedClause], env: &mut Env<'a>) -> Document<'a> {
@@ -1555,11 +1565,13 @@ fn fun<'a>(args: &'a [TypedArg], body: &'a TypedExpr, env: &mut Env<'a>) -> Docu
 }
 
 fn incrementing_args_list(arity: usize) -> String {
-    (65..(65 + arity))
-        .map(|x| x as u8 as char)
-        .map(|c| c.to_string())
-        .intersperse(", ".to_string())
-        .collect()
+    Itertools::intersperse(
+        (65..(65 + arity))
+            .map(|x| x as u8 as char)
+            .map(|c| c.to_string()),
+        ", ".to_string(),
+    )
+    .collect()
 }
 
 fn external_fun<'a>(
@@ -1896,11 +1908,10 @@ impl<'a> TypePrinter<'a> {
         name: &str,
         args: &[Arc<Type>],
     ) -> Document<'static> {
-        let args = concat(
-            args.iter()
-                .map(|a| self.print(a))
-                .intersperse(", ".to_doc()),
-        );
+        let args = concat(Itertools::intersperse(
+            args.iter().map(|a| self.print(a)),
+            ", ".to_doc(),
+        ));
         let name = Document::String(erl_safe_type_name(name.to_snake_case()));
         if self.current_module == module {
             docvec![name, "(", args, ")"]
@@ -1910,20 +1921,17 @@ impl<'a> TypePrinter<'a> {
     }
 
     fn print_module_name(&self, module: &[String]) -> Document<'static> {
-        concat(
-            module
-                .iter()
-                .map(|m| Document::String(m.to_snake_case()))
-                .intersperse("@".to_doc()),
-        )
+        concat(Itertools::intersperse(
+            module.iter().map(|m| Document::String(m.to_snake_case())),
+            "@".to_doc(),
+        ))
     }
 
     fn print_fn(&self, args: &[Arc<Type>], retrn: &Type) -> Document<'static> {
-        let args = concat(
-            args.iter()
-                .map(|a| self.print(a))
-                .intersperse(", ".to_doc()),
-        );
+        let args = concat(Itertools::intersperse(
+            args.iter().map(|a| self.print(a)),
+            ", ".to_doc(),
+        ));
         let retrn = self.print(retrn);
         "fun(("
             .to_doc()

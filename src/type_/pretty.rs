@@ -116,11 +116,10 @@ impl Printer {
         match args.len() {
             0 => nil(),
             _ => {
-                let args = concat(
-                    args.iter()
-                        .map(|t| self.print(t).group())
-                        .intersperse(break_(",", ", ")),
-                );
+                let args = concat(Itertools::intersperse(
+                    args.iter().map(|t| self.print(t).group()),
+                    break_(",", ", "),
+                ));
                 break_("", "")
                     .append(args)
                     .nest(INDENT)

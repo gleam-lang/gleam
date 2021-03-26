@@ -108,12 +108,10 @@ fn pattern_list_cons<'a>(
 ) -> Document<'a> {
     let mut elems = vec![head];
     let final_tail = collect_cons(tail, &mut elems, categorise_element);
-    let elems = concat(
-        elems
-            .into_iter()
-            .map(|e| to_doc(e, vars, env))
-            .intersperse(break_(",", ", ")),
-    );
+    let elems = concat(Itertools::intersperse(
+        elems.into_iter().map(|e| to_doc(e, vars, env)),
+        break_(",", ", "),
+    ));
     list(elems, final_tail.map(|e| to_doc(e, vars, env)))
 }
 
