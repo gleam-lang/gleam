@@ -5,6 +5,7 @@
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
+- Projects without rebar3 can be generated using the `gleam-lib` template.
 - New project's `gleam.toml` has a comment that shows how to add a
   `repository` field.
 - New projects no longer include a licence field in `src/$APP.app.src` by
