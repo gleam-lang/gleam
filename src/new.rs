@@ -18,6 +18,7 @@ const PROJECT_VERSION: &'static str = "1.0.0";
 pub enum Template {
     Lib,
     App,
+    GleamLib,
     Escript,
 }
 
@@ -71,6 +72,7 @@ impl Creator {
                 self.src_module()?;
                 self.test_module()?;
             }
+
             Template::App => {
                 crate::fs::mkdir(&self.src.join(&self.options.name))?;
                 self.gitignore()?;
@@ -83,6 +85,7 @@ impl Creator {
                 self.src_application_module()?;
                 self.test_module()?;
             }
+
             Template::Escript => {
                 self.gitignore()?;
                 self.github_ci()?;
@@ -92,6 +95,15 @@ impl Creator {
                 self.erlang_app_src()?;
                 self.src_escript_module()?;
                 self.test_module()?;
+            }
+
+            Template::GleamLib => {
+                self.gitignore()?;
+                self.gleam_github_ci()?;
+                self.gleam_lib_readme()?;
+                self.gleam_gleam_toml()?;
+                self.src_module()?;
+                self.gleam_test_module()?;
             }
         }
 
@@ -328,6 +340,31 @@ _build/default/bin/{name}
         )
     }
 
+    fn gleam_lib_readme(&self) -> Result<()> {
+        write(
+            self.root.join("README.md"),
+            &format!(
+                r#"# {name}
+
+{description}
+
+## Quick start
+
+```sh
+# Run the eunit tests
+gleam eunit
+
+# Run the Erlang REPL
+gleam shell
+```
+```
+"#,
+                name = self.options.name,
+                description = self.options.description
+            ),
+        )
+    }
+
     fn lib_readme(&self) -> Result<()> {
         write(
             self.root.join("README.md"),
@@ -359,6 +396,38 @@ this package can be installed by adding `{name}` to your `rebar.config` dependen
 "#,
                 name = self.options.name,
                 description = self.options.description
+            ),
+        )
+    }
+
+    fn gleam_github_ci(&self) -> Result<()> {
+        write(
+            self.workflows.join("test.yml"),
+            &format!(
+                r#"name: test
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2.0.0
+      - uses: gleam-lang/setup-erlang@v1.1.2
+        with:
+          otp-version: {}
+      - uses: gleam-lang/setup-gleam@v1.0.2
+        with:
+          gleam-version: {}
+      - run: gleam eunit
+      - run: gleam format --check src test
+"#,
+                ERLANG_OTP_VERSION, self.gleam_version
             ),
         )
     }
@@ -396,6 +465,20 @@ jobs:
         )
     }
 
+    fn gleam_gleam_toml(&self) -> Result<()> {
+        write(
+            self.root.join("gleam.toml"),
+            &format!(
+                r#"name = "{name}"
+tool = "gleam"
+version = "0.1.0"
+description = "A Gleam library"
+"#,
+                name = self.options.name,
+            ),
+        )
+    }
+
     fn gleam_toml(&self) -> Result<()> {
         write(
             self.root.join("gleam.toml"),
@@ -405,6 +488,22 @@ jobs:
 # repository = {{ type = "github", user = "my-user", repo = "{name}" }}
 "#,
                 name = self.options.name,
+            ),
+        )
+    }
+
+    fn gleam_test_module(&self) -> Result<()> {
+        write(
+            self.test.join(format!("{}_test.gleam", self.options.name)),
+            &format!(
+                r#"import {name}
+
+pub fn hello_world_test() {{
+  assert "Hello, from {name}!" = {name}.hello_world()
+  Nil
+}}
+"#,
+                name = self.options.name
             ),
         )
     }
