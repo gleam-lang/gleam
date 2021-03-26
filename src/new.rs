@@ -531,28 +531,27 @@ pub fn create(options: NewOptions, version: &'static str) -> Result<()> {
     let creator = Creator::new(options, version);
     creator.run()?;
 
-    // write files
+    let test_command = match &creator.options.template {
+        Template::Lib | Template::App | Template::Escript => "rebar eunit",
+        Template::GleamLib => "gleam eunit",
+    };
 
-    // Print success message
     println!(
         "
-Your Gleam project \"{}\" has been successfully created.
-The rebar3 program can be used to compile and test it.
+Your Gleam project {} has been successfully created.
+The project can be compiled and tested by running these commands:
 
     cd {}
-    rebar3 eunit
+    {}
 ",
         creator.options.name,
-        creator.root.to_str().expect("Unable to display path")
+        creator.root.to_str().expect("Unable to display path"),
+        test_command,
     );
     Ok(())
 }
 
 fn write(path: PathBuf, contents: &str) -> Result<()> {
-    println!(
-        "* creating {}",
-        path.to_str().expect("Unable to display write path")
-    );
     let mut f = File::create(&*path).map_err(|err| Error::FileIO {
         kind: FileKind::File,
         path: path.clone(),
