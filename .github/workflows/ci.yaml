@@ -165,3 +165,9 @@ jobs:
         rebar3 eunit
         rebar3 escriptize
         _build/default/bin/escript_project
+
+    - name: Test gleam-lib template
+      run: |
+        gleam new gleam_lib_project --template=gleam-lib
+        cd gleam_lib_project
+        gleam eunit
