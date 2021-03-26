@@ -126,6 +126,10 @@ jobs:
         sed -i 's/cargo run --/gleam/' */rebar.config */Makefile
       working-directory: ./test
 
+    - name: test/build_with_gleam
+      run: gleam eunit
+      working-directory: ./test/build_with_gleam
+
     - name: test/core_language
       run: rebar3 eunit
       working-directory: ./test/core_language
