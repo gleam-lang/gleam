@@ -6,6 +6,10 @@
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 - Projects without rebar3 can be generated using the `gleam-lib` template.
+
+## v0.14.4 - 2021-03-27
+
+- The Gleam compiler has been updated to compile with the new Rust v1.51.0.
 - New project's `gleam.toml` has a comment that shows how to add a
   `repository` field.
 - New projects no longer include a licence field in `src/$APP.app.src` by
