@@ -488,7 +488,7 @@ dependencies = [
 
 [[package]]
 name = "gleam"
-version = "0.14.4"
+version = "0.15.0-dev"
 dependencies = [
  "askama",
  "atty",
