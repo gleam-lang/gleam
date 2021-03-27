@@ -73,4 +73,4 @@ serde_derive = "1.0.119"
 capnpc = "0.14.2"
 
 [dev-dependencies]
-pretty_assertions = "0.6.1"
+pretty_assertions = "0.7"
