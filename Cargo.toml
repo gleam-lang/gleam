@@ -27,7 +27,7 @@ async-trait = "0.1"
 # Complex static values
 lazy_static = "1.4"
 # Text parsing with regular expressions
-regex = "1.3.7"
+regex = "1.3"
 # Byte collections
 bytes = "1"
 # Protobuf runtime
@@ -37,14 +37,14 @@ flate2 = "1.0"
 # RSA signature verification
 ring = "0.16"
 # PEM -> DER conversion
-x509-parser = "0.9.0"
+x509-parser = "0.9"
 
 [dev-dependencies]
 # HTTP mock server
-mockito = "0.28.0"
+mockito = "0.30"
 # Async runtime
 tokio = { version = "1", features = ["full"] }
 
 [build-dependencies]
 # Protobuf code generation
-protobuf-codegen-pure = "2.16.2"
+protobuf-codegen-pure = "2.16"
