@@ -34,7 +34,7 @@ bytes = "1"
 protobuf = "2.3"
 # gzip (de)compression
 flate2 = "1.0"
-# RSA signature verification
+# RSA signature and SHA256 checksum verification
 ring = "0.16"
 # PEM -> DER conversion
 x509-parser = "0.9"

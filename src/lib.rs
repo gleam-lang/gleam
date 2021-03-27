@@ -11,9 +11,10 @@ use lazy_static::lazy_static;
 use protobuf::Message;
 use regex::Regex;
 use reqwest::StatusCode;
+use ring::digest::{Context, SHA256};
 use serde::Deserialize;
 use serde_json::json;
-use std::collections::HashMap;
+use std::{collections::HashMap, io::BufReader};
 use thiserror::Error;
 
 #[async_trait]
@@ -45,13 +46,11 @@ pub trait Client {
             .basic_auth(username, Some(password))
             .json(&body)
             .send()
-            .await
-            .map_err(AuthenticateError::Http)?;
+            .await?;
 
         match response.status() {
             StatusCode::CREATED => {
-                let body: AuthenticateResponseCreated =
-                    response.json().await.map_err(AuthenticateError::Http)?;
+                let body: AuthenticateResponseCreated = response.json().await?;
                 Ok(AuthenticatedClient {
                     repository_base: self.repository_base_url().clone(),
                     api_base: self.api_base_url().clone(),
@@ -80,8 +79,7 @@ pub trait Client {
             .http_client()
             .get(self.repository_base_url().join("versions").unwrap())
             .send()
-            .await
-            .map_err(GetRepositoryVersionsError::Http)?;
+            .await?;
 
         match response.status() {
             StatusCode::OK => (),
@@ -93,21 +91,15 @@ pub trait Client {
             }
         };
 
-        let body = response
-            .bytes()
-            .await
-            .map_err(GetRepositoryVersionsError::Http)?
-            .reader();
+        let body = response.bytes().await?.reader();
 
         let mut body = GzDecoder::new(body);
-        let signed = Signed::parse_from_reader(&mut body)
-            .map_err(GetRepositoryVersionsError::DecodeFailed)?;
+        let signed = Signed::parse_from_reader(&mut body)?;
 
         let payload = verify_payload(signed, public_key)
             .map_err(|_| GetRepositoryVersionsError::IncorrectPayloadSignature)?;
 
-        let versions = Versions::parse_from_bytes(&payload)
-            .map_err(GetRepositoryVersionsError::DecodeFailed)?
+        let versions = Versions::parse_from_bytes(&payload)?
             .take_packages()
             .into_iter()
             .map(|mut n| (n.take_name(), n.take_versions().into_vec()))
@@ -127,8 +119,7 @@ pub trait Client {
                     .unwrap(),
             )
             .send()
-            .await
-            .map_err(GetPackageError::Http)?;
+            .await?;
 
         match response.status() {
             StatusCode::OK => (),
@@ -141,20 +132,15 @@ pub trait Client {
             }
         };
 
-        let body = response
-            .bytes()
-            .await
-            .map_err(GetPackageError::Http)?
-            .reader();
+        let body = response.bytes().await?.reader();
 
         let mut body = GzDecoder::new(body);
-        let signed = Signed::parse_from_reader(&mut body).map_err(GetPackageError::DecodeFailed)?;
+        let signed = Signed::parse_from_reader(&mut body)?;
 
         let payload = verify_payload(signed, public_key)
             .map_err(|_| GetPackageError::IncorrectPayloadSignature)?;
 
-        let mut package = proto::package::Package::parse_from_bytes(&payload)
-            .map_err(GetPackageError::DecodeFailed)?;
+        let mut package = proto::package::Package::parse_from_bytes(&payload)?;
 
         let package = Package {
             name: package.take_name(),
@@ -167,6 +153,64 @@ pub trait Client {
         };
 
         Ok(package)
+    }
+
+    // TODO: test
+    /// Download a version of a package as a tarball
+    ///
+    async fn get_package_tarball(
+        &self,
+        name: &str,
+        version: &str,
+        checksum: &[u8],
+    ) -> Result<Vec<u8>, GetPackageTarballError> {
+        let url = self
+            .repository_base_url()
+            .join(&format!("tarballs/{}-{}.tar", name, version))
+            .unwrap();
+        let response = self.http_client().get(url).send().await?;
+
+        match response.status() {
+            StatusCode::OK => (),
+            StatusCode::NOT_FOUND => return Err(GetPackageTarballError::NotFound),
+            status => {
+                return Err(GetPackageTarballError::UnexpectedResponse(
+                    status,
+                    response.text().await.unwrap_or_default(),
+                ));
+            }
+        };
+        let body = read_and_check_body(response.bytes().await?.reader(), checksum)?;
+        Ok(body)
+    }
+}
+
+/// Read a body and ensure it has the given sha256 digest.
+fn read_and_check_body(
+    reader: impl std::io::Read,
+    checksum: &[u8],
+) -> Result<Vec<u8>, ReadAndCheckBodyError> {
+    use std::io::Read;
+    let mut reader = BufReader::new(reader);
+    let mut context = Context::new(&SHA256);
+    let mut buffer = [0; 1024];
+    let mut body = Vec::new();
+
+    loop {
+        let count = reader.read(&mut buffer)?;
+        if count == 0 {
+            break;
+        }
+        let bytes = &buffer[..count];
+        context.update(bytes);
+        body.extend_from_slice(bytes);
+    }
+
+    let digest = context.finish();
+    if digest.as_ref() == checksum {
+        Ok(body)
+    } else {
+        Err(ReadAndCheckBodyError::IncorrectChecksum)
     }
 }
 
@@ -304,11 +348,38 @@ pub enum GetPackageError {
 }
 
 #[derive(Error, Debug)]
+pub enum GetPackageTarballError {
+    #[error(transparent)]
+    Http(#[from] reqwest::Error),
+
+    #[error("an unexpected response was sent by Hex: {0}: {1}")]
+    UnexpectedResponse(StatusCode, String),
+
+    #[error(transparent)]
+    BodyError(#[from] ReadAndCheckBodyError),
+
+    #[error("no package was found in the repository with the given name")]
+    NotFound,
+
+    #[error(transparent)]
+    DecodeFailed(#[from] protobuf::ProtobufError),
+}
+
+#[derive(Error, Debug)]
+pub enum ReadAndCheckBodyError {
+    #[error("the downloaded package did not have the expected checksum")]
+    IncorrectChecksum,
+
+    #[error("unable to read body")]
+    Io(#[from] std::io::Error),
+}
+
+#[derive(Error, Debug)]
 pub enum GetRepositoryVersionsError {
     #[error(transparent)]
     Http(#[from] reqwest::Error),
 
-    #[error("an unexpected response was sent by Hex")]
+    #[error("an unexpected response was sent by Hex: {0}: {1}")]
     UnexpectedResponse(StatusCode, String),
 
     #[error("the payload signature does not match the downloaded payload")]
@@ -367,7 +438,7 @@ pub enum AuthenticateError {
     #[error("invalid username and password combination")]
     InvalidCredentials,
 
-    #[error("an unexpected response was sent by Hex")]
+    #[error("an unexpected response was sent by Hex: {0}: {1}")]
     UnexpectedResponse(StatusCode, String),
 }
 
@@ -431,8 +502,7 @@ impl AuthenticatedClient {
             .http_client()
             .delete(url.to_string().as_str())
             .send()
-            .await
-            .map_err(RemoveDocsError::Http)?;
+            .await?;
 
         match response.status() {
             StatusCode::NO_CONTENT => Ok(()),
@@ -466,8 +536,7 @@ impl AuthenticatedClient {
             .post(url.to_string().as_str())
             .body(gzipped_tarball)
             .send()
-            .await
-            .map_err(PublishDocsError::Http)?;
+            .await?;
 
         match response.status() {
             StatusCode::CREATED => Ok(()),
@@ -503,7 +572,7 @@ pub enum RemoveDocsError<'a> {
     #[error("this account is not authorized for this action")]
     Forbidden,
 
-    #[error("an unexpected response was sent by Hex")]
+    #[error("an unexpected response was sent by Hex: {0}: {1}")]
     UnexpectedResponse(StatusCode, String),
 }
 
@@ -527,7 +596,7 @@ pub enum PublishDocsError<'a> {
     #[error("this account is not authorized for this action")]
     Forbidden,
 
-    #[error("an unexpected response was sent by Hex")]
+    #[error("an unexpected response was sent by Hex: {0}: {1}")]
     UnexpectedResponse(StatusCode, String),
 }
 
