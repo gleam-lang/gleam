@@ -647,3 +647,48 @@ async fn get_repository_versions_ok_test() {
 
     mock.assert();
 }
+
+#[tokio::test]
+async fn get_repository_tarball_ok_test() {
+    let tarball = std::include_bytes!("../test/gleam_stdlib-0.14.0.tar");
+
+    let client = UnauthenticatedClient::new();
+    let checksum =
+        base16::decode("9107f6a859cb96945ad9a099085db028ca2bebb3c8ea42eec227b51c614cc2e0").unwrap();
+    let downloaded = client
+        .get_package_tarball("gleam_stdlib", "0.14.0", &checksum)
+        .await
+        .unwrap();
+
+    assert_eq!(&downloaded, tarball);
+}
+
+#[tokio::test]
+async fn get_repository_tarball_bad_checksum_test() {
+    let client = UnauthenticatedClient::new();
+    let checksum = vec![1, 2, 3, 4, 5];
+    let err = client
+        .get_package_tarball("gleam_stdlib", "0.14.0", &checksum)
+        .await
+        .unwrap_err();
+
+    assert_eq!(
+        err.to_string(),
+        "the downloaded package did not have the expected checksum"
+    );
+}
+
+#[tokio::test]
+async fn get_repository_tarball_not_found_test() {
+    let client = UnauthenticatedClient::new();
+    let checksum = vec![1, 2, 3, 4, 5];
+    let err = client
+        .get_package_tarball("gleam_stdlib", "unknown-version", &checksum)
+        .await
+        .unwrap_err();
+
+    assert_eq!(
+        err.to_string(),
+        "no package was found in the repository with the given name"
+    );
+}

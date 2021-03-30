@@ -172,7 +172,7 @@ pub trait Client {
 
         match response.status() {
             StatusCode::OK => (),
-            StatusCode::NOT_FOUND => return Err(GetPackageTarballError::NotFound),
+            StatusCode::FORBIDDEN => return Err(GetPackageTarballError::NotFound),
             status => {
                 return Err(GetPackageTarballError::UnexpectedResponse(
                     status,

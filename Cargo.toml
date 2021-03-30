@@ -44,6 +44,8 @@ x509-parser = "0.9"
 mockito = "0.30"
 # Async runtime
 tokio = { version = "1", features = ["full"] }
+# base16 encoding
+base16 = { version = "0.2", features = ["alloc"] }
 
 [build-dependencies]
 # Protobuf code generation
