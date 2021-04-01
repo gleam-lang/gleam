@@ -6,6 +6,8 @@
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 - Projects without rebar3 can be generated using the `gleam-lib` template.
+- Syntax highlighting of Gleam code in generated HTML documentation has been
+  improved.
 
 ## v0.14.4 - 2021-03-27
 
