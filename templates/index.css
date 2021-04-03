@@ -556,6 +556,7 @@ body.theme-dark {
   --accented-background: var(--bg-shade-1);
   --background: var(--bg);
   --code-background: var(--bg-shade-2);
+  --table-background: var(--bg-mono-1);
   --hard-black: var(--taupe-mono-1);
   --links: var(--pink);
   --text: var(--taupe-mono-1);
