@@ -295,13 +295,13 @@ fn let_() {
     assert_infer!("let x = 2 let y = x y", "Int");
     assert_infer!(
         "let tuple(tuple(_, _) as x, _) = tuple(tuple(0, 1.0), []) x",
-        "tuple(Int, Float)"
+        "#(Int, Float)"
     );
     assert_infer!("let x: String = \"\" x", "String");
-    assert_infer!("let x: tuple(Int, Int) = tuple(5, 5) x", "tuple(Int, Int)",);
+    assert_infer!("let x: tuple(Int, Int) = tuple(5, 5) x", "#(Int, Int)",);
     assert_infer!(
         "let x: tuple(Int, Float) = tuple(5, 5.0) x",
-        "tuple(Int, Float)",
+        "#(Int, Float)",
     );
     assert_infer!("let [1, 2, ..x]: List(Int) = [1,2,3] x", "List(Int)",);
     assert_infer!(
@@ -325,7 +325,7 @@ fn let_() {
     assert_infer!("let _x = 1 2.0", "Float");
     assert_infer!("let _ = 1 2.0", "Float");
     assert_infer!("let tuple(tag, x) = tuple(1.0, 1) x", "Int");
-    assert_infer!("fn(x) { let tuple(a, b) = x a }", "fn(tuple(a, b)) -> a");
+    assert_infer!("fn(x) { let tuple(a, b) = x a }", "fn(#(a, b)) -> a");
 
     // assert
     assert_infer!("assert [] = [] 1", "Int");
@@ -338,7 +338,7 @@ fn let_() {
     assert_infer!("assert _x = 1 2.0", "Float");
     assert_infer!("assert _ = 1 2.0", "Float");
     assert_infer!("assert tuple(tag, x) = tuple(1.0, 1) x", "Int");
-    assert_infer!("fn(x) { assert tuple(a, b) = x a }", "fn(tuple(a, b)) -> a");
+    assert_infer!("fn(x) { assert tuple(a, b) = x a }", "fn(#(a, b)) -> a");
     assert_infer!("assert 5: Int = 5 5", "Int");
 
     // try
@@ -381,18 +381,21 @@ fn lists() {
     assert_infer!("[fn(x) { x },..[]]", "List(fn(a) -> a)");
 
     assert_infer!("let f = fn(x) { x } [f, f]", "List(fn(a) -> a)");
-    assert_infer!("[tuple([], [])]", "List(tuple(List(a), List(b)))");
+    assert_infer!("[tuple([], [])]", "List(#(List(a), List(b)))");
 }
 
 #[test]
 fn tuples() {
-    assert_infer!("tuple(1)", "tuple(Int)");
-    assert_infer!("tuple(1, 2.0)", "tuple(Int, Float)");
-    assert_infer!("tuple(1, 2.0, 3)", "tuple(Int, Float, Int)");
-    assert_infer!(
-        "tuple(1, 2.0, tuple(1, 1))",
-        "tuple(Int, Float, tuple(Int, Int))",
-    );
+    assert_infer!("tuple(1)", "#(Int)");
+    assert_infer!("tuple(1, 2.0)", "#(Int, Float)");
+    assert_infer!("tuple(1, 2.0, 3)", "#(Int, Float, Int)");
+    assert_infer!("tuple(1, 2.0, tuple(1, 1))", "#(Int, Float, #(Int, Int))",);
+
+    // new syntax
+    assert_infer!("#(1)", "#(Int)");
+    assert_infer!("#(1, 2.0)", "#(Int, Float)");
+    assert_infer!("#(1, 2.0, 3)", "#(Int, Float, Int)");
+    assert_infer!("#(1, 2.0, #(1, 1))", "#(Int, Float, #(Int, Int))",);
 }
 
 #[test]
@@ -446,9 +449,9 @@ fn expr_fn() {
     );
 
     assert_infer!("let add = fn(x, y) { x + y } add(_, 2)", "fn(Int) -> Int");
-    assert_infer!("fn(x) { tuple(1, x) }", "fn(a) -> tuple(Int, a)");
-    assert_infer!("fn(x, y) { tuple(x, y) }", "fn(a, b) -> tuple(a, b)");
-    assert_infer!("fn(x) { tuple(x, x) }", "fn(a) -> tuple(a, a)");
+    assert_infer!("fn(x) { tuple(1, x) }", "fn(a) -> #(Int, a)");
+    assert_infer!("fn(x, y) { tuple(x, y) }", "fn(a, b) -> #(a, b)");
+    assert_infer!("fn(x) { tuple(x, x) }", "fn(a) -> #(a, a)");
     assert_infer!("fn(x) -> Int { x }", "fn(Int) -> Int");
     assert_infer!("fn(x) -> a { x }", "fn(a) -> a");
     assert_infer!("fn() -> Int { 2 }", "fn() -> Int");
@@ -1906,17 +1909,17 @@ fn infer_module_test() {
     // Anon structs
     assert_module_infer!(
         "pub fn ok(x) { tuple(1, x) }",
-        vec![("ok", "fn(a) -> tuple(Int, a)")],
+        vec![("ok", "fn(a) -> #(Int, a)")],
     );
 
     assert_module_infer!(
         "pub external fn ok(Int) -> tuple(Int, Int) = \"\" \"\"",
-        vec![("ok", "fn(Int) -> tuple(Int, Int)")],
+        vec![("ok", "fn(Int) -> #(Int, Int)")],
     );
 
     assert_module_infer!(
         "pub external fn go(tuple(a, c)) -> c = \"\" \"\"",
-        vec![("go", "fn(tuple(a, b)) -> b")],
+        vec![("go", "fn(#(a, b)) -> b")],
     );
 
     assert_module_infer!(
@@ -2932,7 +2935,7 @@ fn module_constants() {
             ("test_int5", "Int"),
             ("test_list", "List(Int)"),
             ("test_string", "String"),
-            ("test_tuple", "tuple(String, Int)"),
+            ("test_tuple", "#(String, Int)"),
         ],
     );
 }

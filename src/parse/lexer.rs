@@ -416,6 +416,9 @@ where
                     self.emit((tok_start, Tok::Dot, tok_end));
                 }
             }
+            '#' => {
+                self.eat_single_char(Tok::Hash);
+            }
             '\n' => {
                 let _ = self.next_char();
                 let tok_start = self.get_pos();
