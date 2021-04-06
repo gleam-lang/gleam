@@ -10,7 +10,8 @@
   improved.
 - Fixed a bug where markdown tables in rendered HTML documentation would have
   the incorrect background colour on every other row.
-- Tuples now have a new, concise syntax variant: `#(x, y, ...)`
+- Tuples now have a new, concise syntax variant: `#(x, y, ...)`. Existing code
+  can be auto-migrated to the new syntax by running `gleam format`.
 
 ## v0.14.4 - 2021-03-27
 
