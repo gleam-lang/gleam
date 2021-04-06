@@ -37,6 +37,7 @@ pub enum Tok {
     // Other Punctuation
     Colon,
     Comma,
+    Hash, // '#'
     Equal,
     EqualEqual, // '=='
     NotEqual,   // '!='
@@ -131,6 +132,7 @@ impl fmt::Display for Tok {
             Tok::GreaterEqualDot => ">=.",
             Tok::Colon => ":",
             Tok::Comma => ",",
+            Tok::Hash => "#",
             Tok::Equal => "=",
             Tok::EqualEqual => "==",
             Tok::NotEqual => "!=",

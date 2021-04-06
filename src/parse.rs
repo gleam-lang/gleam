@@ -361,7 +361,7 @@ where
                     label,
                 }
             }
-            Some((start, Tok::Tuple, _)) => {
+            Some((start, Tok::Tuple, _)) | Some((start, Tok::Hash, _)) => {
                 let _ = self.next_tok();
                 let _ = self.expect_one(&Tok::Lpar)?;
                 let elems = Parser::series_of(self, &Parser::parse_expression, Some(&Tok::Comma))?;

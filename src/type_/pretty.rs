@@ -66,9 +66,9 @@ impl Printer {
 
             Type::Var { type_: typ, .. } => self.type_var_doc(&*typ.borrow()),
 
-            Type::Tuple { elems, .. } => self
-                .args_to_gleam_doc(elems.as_slice())
-                .surround("tuple(", ")"),
+            Type::Tuple { elems, .. } => {
+                self.args_to_gleam_doc(elems.as_slice()).surround("#(", ")")
+            }
         }
     }
 
@@ -381,7 +381,7 @@ fn function_test() {
             float()
         )),
         "fn(
-  tuple(Float, Float, Float, Float, Float, Float),
+  #(Float, Float, Float, Float, Float, Float),
   Float,
   Float,
   Float,
@@ -407,10 +407,10 @@ fn function_test() {
                 tuple(vec![float(), float(), float(), float(), float(), float()]),
             ]),
         )),
-        "fn(tuple(Float, Float, Float, Float, Float, Float)) ->
-  tuple(
-    tuple(Float, Float, Float, Float, Float, Float),
-    tuple(Float, Float, Float, Float, Float, Float),
+        "fn(#(Float, Float, Float, Float, Float, Float)) ->
+  #(
+    #(Float, Float, Float, Float, Float, Float),
+    #(Float, Float, Float, Float, Float, Float),
   )"
     );
 }
