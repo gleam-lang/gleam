@@ -12,6 +12,8 @@
   the incorrect background colour on every other row.
 - Tuples now have a new, concise syntax variant: `#(x, y, ...)`. Existing code
   can be auto-migrated to the new syntax by running `gleam format`.
+- Fixed a bug where customt type constructors with Erlang keywords as names
+  would generate invalid Erlang code.
 
 ## v0.14.4 - 2021-03-27
 

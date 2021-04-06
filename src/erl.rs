@@ -287,7 +287,7 @@ pub fn module(
                     constructors
                         .iter()
                         .map(|c| {
-                            let name = Document::String(c.name.to_snake_case());
+                            let name = atom(c.name.to_snake_case());
                             if c.arguments.is_empty() {
                                 name
                             } else {

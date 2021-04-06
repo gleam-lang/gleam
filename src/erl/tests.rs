@@ -2623,3 +2623,33 @@ go() ->
 
     // TODO: patterns that are just vars don't render a case expression
 }
+
+// https://github.com/gleam-lang/gleam/issues/1006
+#[test]
+fn keyword_constructors() {
+    assert_erl!(
+        "pub type X { Div }",
+        "-module(the_app).
+-compile(no_auto_import).
+
+-export_type([x/0]).
+
+-type x() :: 'div'.
+
+
+"
+    );
+
+    assert_erl!(
+        "pub type X { Fun(Int) }",
+        "-module(the_app).
+-compile(no_auto_import).
+
+-export_type([x/0]).
+
+-type x() :: {'fun', integer()}.
+
+
+"
+    );
+}
