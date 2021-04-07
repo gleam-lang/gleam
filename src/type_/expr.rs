@@ -1816,7 +1816,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                             name.to_string(),
                             ValueConstructorVariant::LocalVariable,
                             t,
-                            arg.location.clone(),
+                            arg.location,
                         );
                         body_typer.environment.init_usage(
                             name.to_string(),

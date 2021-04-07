@@ -66,21 +66,18 @@ fn get_path_in_repo(project_root: impl AsRef<Path>, path: &PathBuf) -> String {
     path.strip_prefix(&project_root)
         .ok()
         .and_then(to_url_path)
-        .unwrap_or("".to_string())
+        .unwrap_or_default()
 }
 
 fn to_url_path(path: &Path) -> Option<String> {
     let mut buf = String::new();
     for c in path.components() {
-        match c {
-            Component::Normal(ref s) => {
-                if let Some(s) = s.to_str() {
-                    buf.push_str(s);
-                } else {
-                    return None;
-                }
+        if let Component::Normal(s) = c {
+            if let Some(s) = s.to_str() {
+                buf.push_str(s);
+            } else {
+                return None;
             }
-            _ => {}
         }
         buf.push('/');
     }

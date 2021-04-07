@@ -29,7 +29,7 @@ use crate::{
     build::{project_compiler::ProjectCompiler, project_root::ProjectRoot},
     config::{self, PackageConfig},
     erl,
-    error::{Error, FileIOAction, FileKind, GleamExpect},
+    error::{Error, FileIoAction, FileKind, GleamExpect},
     fs::OutputFile,
     type_,
 };

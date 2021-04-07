@@ -536,7 +536,7 @@ where
                     }
                 }
             } else if self.maybe_one(&Tok::Lpar).is_some() {
-                let start = expr.location().start.clone();
+                let start = expr.location().start;
                 if let Some((dot_s, _)) = self.maybe_one(&Tok::DotDot) {
                     // Record update
                     let (_, name, name_e) = self.expect_name()?;
@@ -1635,7 +1635,7 @@ where
                     let (_, upname, upname_e) = self.expect_upname()?;
                     self.parse_type_name_finish(for_const, start, Some(mod_name), upname, upname_e)
                 } else if for_const {
-                    return parse_error(ParseErrorType::NotConstType, SrcSpan { start, end });
+                    parse_error(ParseErrorType::NotConstType, SrcSpan { start, end })
                 } else {
                     Ok(Some(TypeAst::Var {
                         location: SrcSpan { start, end },
@@ -2110,7 +2110,7 @@ where
                             error: ParseErrorType::InvalidBitStringSegment,
                             location: SrcSpan { start, end },
                         })
-                        .map(|v| Some(v))
+                        .map(Some)
                 }
             }
             // int segment
@@ -2192,7 +2192,7 @@ where
                     parse_error(ParseErrorType::ExpectedName, SrcSpan { start, end })
                 }
             }
-            None => parse_error(ParseErrorType::UnexpectedEOF, SrcSpan { start: 0, end: 0 }),
+            None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
         }
     }
 
@@ -2211,7 +2211,7 @@ where
                     parse_error(ParseErrorType::ExpectedUpName, SrcSpan { start, end })
                 }
             }
-            None => parse_error(ParseErrorType::UnexpectedEOF, SrcSpan { start: 0, end: 0 }),
+            None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
         }
     }
 
@@ -2306,7 +2306,7 @@ where
     // Error on the next token or EOF
     fn next_tok_unexpected<A>(&mut self, expected: Vec<String>) -> Result<A, ParseError> {
         match self.next_tok() {
-            None => parse_error(ParseErrorType::UnexpectedEOF, SrcSpan { start: 0, end: 0 }),
+            None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
 
             Some((start, _, end)) => parse_error(
                 ParseErrorType::UnexpectedToken { expected },

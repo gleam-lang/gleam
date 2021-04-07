@@ -16,7 +16,7 @@ use std::{path::PathBuf, sync::Arc};
 const INDENT: isize = 2;
 
 pub fn pretty(writer: &mut impl Utf8Writer, src: &str) -> Result<()> {
-    let (module, extra) = crate::parse::parse_module(&src).map_err(|error| Error::Parse {
+    let (module, extra) = crate::parse::parse_module(src).map_err(|error| Error::Parse {
         path: PathBuf::from("<standard input>"),
         src: src.to_string(),
         error,
@@ -75,7 +75,7 @@ impl<'comments> Formatter<'comments> {
             comments: extra.comments.as_slice(),
             doc_comments: extra.doc_comments.as_slice(),
             module_comments: extra.module_comments.as_slice(),
-            empty_lines: &extra.empty_lines,
+            empty_lines: extra.empty_lines,
         }
     }
 
@@ -1358,7 +1358,7 @@ impl<'a> Documentable<'a> for &'a UnqualifiedImport {
     }
 }
 
-fn label<'a>(label: &'a Option<String>) -> Document<'a> {
+fn label(label: &Option<String>) -> Document<'_> {
     match label {
         Some(s) => Document::Str(s).append(": "),
         None => nil(),

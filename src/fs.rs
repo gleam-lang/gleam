@@ -1,4 +1,4 @@
-use crate::error::{Error, FileIOAction, FileKind, GleamExpect};
+use crate::error::{Error, FileIoAction, FileKind, GleamExpect};
 use flate2::{write::GzEncoder, Compression};
 use std::{
     ffi::OsStr,
@@ -21,7 +21,7 @@ pub trait FileSystemWriter: Debug {
     fn open<'a>(&self, path: &'a Path) -> Result<WrappedWriter<'a>, Error>;
 }
 
-/// A FileWriter implementation that writes to the file system.
+/// A `FileWriter` implementation that writes to the file system.
 #[derive(Debug, Clone, Copy)]
 pub struct FileSystemAccessor;
 
@@ -35,22 +35,22 @@ impl FileSystemWriter for FileSystemAccessor {
     fn open<'a>(&self, path: &'a Path) -> Result<WrappedWriter<'a>, Error> {
         tracing::trace!("Writing file {:?}", path);
 
-        let dir_path = path.parent().ok_or_else(|| Error::FileIO {
-            action: FileIOAction::FindParent,
+        let dir_path = path.parent().ok_or_else(|| Error::FileIo {
+            action: FileIoAction::FindParent,
             kind: FileKind::Directory,
             path: path.to_path_buf(),
             err: None,
         })?;
 
-        std::fs::create_dir_all(dir_path).map_err(|e| Error::FileIO {
-            action: FileIOAction::Create,
+        std::fs::create_dir_all(dir_path).map_err(|e| Error::FileIo {
+            action: FileIoAction::Create,
             kind: FileKind::Directory,
             path: dir_path.to_path_buf(),
             err: Some(e.to_string()),
         })?;
 
-        let file = File::create(&path).map_err(|e| Error::FileIO {
-            action: FileIOAction::Create,
+        let file = File::create(&path).map_err(|e| Error::FileIo {
+            action: FileIoAction::Create,
             kind: FileKind::File,
             path: path.to_path_buf(),
             err: Some(e.to_string()),
@@ -61,7 +61,7 @@ impl FileSystemWriter for FileSystemAccessor {
 }
 
 pub trait Utf8Writer: std::fmt::Write {
-    /// A wrapper around fmt::Write that has Gleam's error handling.
+    /// A wrapper around `fmt::Write` that has Gleam's error handling.
     fn str_write(&mut self, str: &str) -> Result<(), Error> {
         let res = self.write_str(str);
         self.wrap_result(res)
@@ -76,8 +76,8 @@ pub trait Utf8Writer: std::fmt::Write {
 
 impl Utf8Writer for String {
     fn convert_err<T, E: std::error::Error>(&self, result: Result<T, E>) -> crate::Result<T> {
-        result.map_err(|error| Error::FileIO {
-            action: FileIOAction::WriteTo,
+        result.map_err(|error| Error::FileIo {
+            action: FileIoAction::WriteTo,
             kind: FileKind::File,
             path: PathBuf::from("<in memory>"),
             err: Some(error.to_string()),
@@ -86,7 +86,7 @@ impl Utf8Writer for String {
 }
 
 pub trait Writer: Write + Utf8Writer {
-    /// A wrapper around io::Write that has Gleam's error handling.
+    /// A wrapper around `io::Write` that has Gleam's error handling.
     fn write(&mut self, bytes: &[u8]) -> Result<(), Error> {
         let res = std::io::Write::write(self, bytes);
         self.wrap_result(res)
@@ -106,8 +106,8 @@ impl Writer for WrappedWriter<'_> {}
 
 impl Utf8Writer for WrappedWriter<'_> {
     fn convert_err<T, E: std::error::Error>(&self, result: Result<T, E>) -> crate::Result<T> {
-        result.map_err(|error| Error::FileIO {
-            action: FileIOAction::WriteTo,
+        result.map_err(|error| Error::FileIo {
+            action: FileIoAction::WriteTo,
             kind: FileKind::File,
             path: self.path.to_path_buf(),
             err: Some(error.to_string()),
@@ -148,8 +148,8 @@ impl<'a> std::fmt::Write for WrappedWriter<'a> {
 pub fn delete_dir(dir: &PathBuf) -> Result<(), Error> {
     tracing::trace!("Deleting directory {:?}", dir);
     if dir.exists() {
-        std::fs::remove_dir_all(&dir).map_err(|e| Error::FileIO {
-            action: FileIOAction::Delete,
+        std::fs::remove_dir_all(&dir).map_err(|e| Error::FileIo {
+            action: FileIoAction::Delete,
             kind: FileKind::Directory,
             path: dir.clone(),
             err: Some(e.to_string()),
@@ -186,29 +186,29 @@ pub fn write_output(file: &OutputFile) -> Result<(), Error> {
     let OutputFile { path, text } = file;
     tracing::trace!("Writing file {:?}", path);
 
-    let dir_path = path.parent().ok_or_else(|| Error::FileIO {
-        action: FileIOAction::FindParent,
+    let dir_path = path.parent().ok_or_else(|| Error::FileIo {
+        action: FileIoAction::FindParent,
         kind: FileKind::Directory,
         path: path.clone(),
         err: None,
     })?;
 
-    std::fs::create_dir_all(dir_path).map_err(|e| Error::FileIO {
-        action: FileIOAction::Create,
+    std::fs::create_dir_all(dir_path).map_err(|e| Error::FileIo {
+        action: FileIoAction::Create,
         kind: FileKind::Directory,
         path: dir_path.to_path_buf(),
         err: Some(e.to_string()),
     })?;
 
-    let mut f = File::create(&path).map_err(|e| Error::FileIO {
-        action: FileIOAction::Create,
+    let mut f = File::create(&path).map_err(|e| Error::FileIo {
+        action: FileIoAction::Create,
         kind: FileKind::File,
         path: path.clone(),
         err: Some(e.to_string()),
     })?;
 
-    f.write_all(text.as_bytes()).map_err(|e| Error::FileIO {
-        action: FileIOAction::WriteTo,
+    f.write_all(text.as_bytes()).map_err(|e| Error::FileIo {
+        action: FileIoAction::WriteTo,
         kind: FileKind::File,
         path: path.clone(),
         err: Some(e.to_string()),
@@ -315,10 +315,10 @@ pub fn create_tar_archive(outputs: Vec<OutputFile>) -> Result<Vec<u8>, Error> {
 pub fn mkdir(path: impl AsRef<Path> + Debug) -> Result<(), Error> {
     tracing::trace!("Creating directory {:?}", path);
 
-    std::fs::create_dir_all(&path).map_err(|err| Error::FileIO {
+    std::fs::create_dir_all(&path).map_err(|err| Error::FileIo {
         kind: FileKind::Directory,
         path: PathBuf::from(path.as_ref()),
-        action: FileIOAction::Create,
+        action: FileIoAction::Create,
         err: Some(err.to_string()),
     })
 }
@@ -326,8 +326,8 @@ pub fn mkdir(path: impl AsRef<Path> + Debug) -> Result<(), Error> {
 pub fn read_dir(path: impl AsRef<Path> + Debug) -> Result<std::fs::ReadDir, Error> {
     tracing::trace!("Reading directory {:?}", path);
 
-    std::fs::read_dir(&path).map_err(|e| Error::FileIO {
-        action: FileIOAction::Read,
+    std::fs::read_dir(&path).map_err(|e| Error::FileIo {
+        action: FileIoAction::Read,
         kind: FileKind::Directory,
         path: PathBuf::from(path.as_ref()),
         err: Some(e.to_string()),
@@ -347,8 +347,8 @@ pub fn gleam_modules_metadata_paths(
 pub fn read(path: impl AsRef<Path> + Debug) -> Result<String, Error> {
     tracing::trace!("Reading file {:?}", path);
 
-    std::fs::read_to_string(&path).map_err(|err| Error::FileIO {
-        action: FileIOAction::Read,
+    std::fs::read_to_string(&path).map_err(|err| Error::FileIo {
+        action: FileIoAction::Read,
         kind: FileKind::File,
         path: PathBuf::from(path.as_ref()),
         err: Some(err.to_string()),
@@ -357,8 +357,8 @@ pub fn read(path: impl AsRef<Path> + Debug) -> Result<String, Error> {
 
 pub fn buffered_reader<P: AsRef<Path> + Debug>(path: P) -> Result<impl BufRead, Error> {
     tracing::trace!("Opening {:?} for reading", path);
-    let reader = File::open(&path).map_err(|err| Error::FileIO {
-        action: FileIOAction::Open,
+    let reader = File::open(&path).map_err(|err| Error::FileIo {
+        action: FileIoAction::Open,
         kind: FileKind::File,
         path: PathBuf::from(path.as_ref()),
         err: Some(err.to_string()),
@@ -371,8 +371,8 @@ pub fn copy(path: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) -> Res
 
     // TODO: include the destination in the error message
     std::fs::copy(&path, &to)
-        .map_err(|err| Error::FileIO {
-            action: FileIOAction::Copy,
+        .map_err(|err| Error::FileIo {
+            action: FileIoAction::Copy,
             kind: FileKind::File,
             path: PathBuf::from(path.as_ref()),
             err: Some(err.to_string()),
@@ -385,8 +385,8 @@ pub fn copy_dir(path: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) ->
 
     // TODO: include the destination in the error message
     fs_extra::dir::copy(&path, &to, &fs_extra::dir::CopyOptions::new())
-        .map_err(|err| Error::FileIO {
-            action: FileIOAction::Copy,
+        .map_err(|err| Error::FileIo {
+            action: FileIoAction::Copy,
             kind: FileKind::Directory,
             path: PathBuf::from(path.as_ref()),
             err: Some(err.to_string()),
@@ -474,8 +474,8 @@ pub mod test {
 
     impl Utf8Writer for InMemoryFile {
         fn convert_err<T, E: std::error::Error>(&self, result: Result<T, E>) -> crate::Result<T> {
-            result.map_err(|error| Error::FileIO {
-                action: FileIOAction::WriteTo,
+            result.map_err(|error| Error::FileIo {
+                action: FileIoAction::WriteTo,
                 kind: FileKind::File,
                 path: PathBuf::from("<in memory test file>"),
                 err: Some(error.to_string()),

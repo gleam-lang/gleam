@@ -135,7 +135,7 @@ pub fn generate_html(
         let name = module.name.join("/");
 
         // Read module src & create line number lookup structure
-        let source_links = SourceLinker::new(&project_root, project_config, &module);
+        let source_links = SourceLinker::new(&project_root, project_config, module);
 
         let template = ModuleTemplate {
             gleam_version: VERSION,
@@ -153,7 +153,7 @@ pub fn generate_html(
                     .ast
                     .statements
                     .iter()
-                    .flat_map(|statement| function(&source_links, &statement))
+                    .flat_map(|statement| function(&source_links, statement))
                     .collect();
                 f.sort();
                 f
@@ -163,7 +163,7 @@ pub fn generate_html(
                     .ast
                     .statements
                     .iter()
-                    .flat_map(|statement| type_(&source_links, &statement))
+                    .flat_map(|statement| type_(&source_links, statement))
                     .collect();
                 t.sort();
                 t
@@ -173,7 +173,7 @@ pub fn generate_html(
                     .ast
                     .statements
                     .iter()
-                    .flat_map(|statement| constant(&source_links, &statement))
+                    .flat_map(|statement| constant(&source_links, statement))
                     .collect();
                 c.sort();
                 c
@@ -476,7 +476,7 @@ fn check_app_file_version_matches(
                 // Error if we've found the version and it doesn't match
                 Err(Error::VersionDoesNotMatch {
                     toml_ver: project_config.version.clone(),
-                    app_ver: version.to_string(),
+                    app_ver: version,
                 })
             }
         })

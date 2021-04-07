@@ -3,13 +3,13 @@ use super::*;
 #[test]
 fn record_definition_test() {
     assert_eq!(
-        record_definition("PetCat", &[&"name", &"is_cute",]),
+        record_definition("PetCat", &["name", "is_cute",]),
         "-record(pet_cat, {name, is_cute}).\n".to_string()
     );
 
     // Reserved words are escaped in record names and fields
     assert_eq!(
-        record_definition("div", &[&"receive", &"catch", &"unreserved"]),
+        record_definition("div", &["receive", "catch", "unreserved"]),
         "-record(\'div\', {\'receive\', \'catch\', unreserved}).\n".to_string()
     );
 }

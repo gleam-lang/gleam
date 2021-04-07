@@ -429,7 +429,7 @@ pub fn infer_module(
     for (_, value) in environment.module_values.iter() {
         if let Some(leaked) = value.type_.find_private_type() {
             return Err(Error::PrivateTypeLeak {
-                location: value.origin.clone(),
+                location: value.origin,
                 leaked,
             });
         }
@@ -542,7 +542,7 @@ fn register_values<'a>(
                     arity: args.len(),
                 },
                 typ,
-                location.clone(),
+                *location,
             );
             if !public {
                 environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
@@ -611,7 +611,7 @@ fn register_values<'a>(
                     field_map,
                 },
                 typ,
-                location.clone(),
+                *location,
             );
             if !public {
                 environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
@@ -712,7 +712,7 @@ fn register_values<'a>(
                         field_map,
                     },
                     typ,
-                    constructor.location.clone(),
+                    constructor.location,
                 );
             }
         }
@@ -852,7 +852,7 @@ fn infer_statement(
                         arity: args.len(),
                     },
                     typ.clone(),
-                    location.clone(),
+                    location,
                 );
                 typ
             } else {
@@ -1114,12 +1114,9 @@ where
             })
         }
 
-        BitStringSegmentOption::Unit {
-            value, location, ..
-        } => Ok(BitStringSegmentOption::Unit {
-            location,
-            value: value,
-        }),
+        BitStringSegmentOption::Unit { location, value } => {
+            Ok(BitStringSegmentOption::Unit { location, value })
+        }
 
         BitStringSegmentOption::Binary { location } => {
             Ok(BitStringSegmentOption::Binary { location })
@@ -1535,10 +1532,11 @@ pub fn register_import(
                 .gleam_expect("Typer could not find a module being imported.");
 
             // Determine local alias of imported module
-            let module_name = match &as_name {
-                None => module[module.len() - 1].clone(),
-                Some(name) => name.clone(),
-            };
+            let module_name = as_name
+                .as_ref()
+                .or_else(|| module.last())
+                .gleam_expect("Typer could not identify module name.")
+                .clone();
 
             // Insert unqualified imports into scope
             for UnqualifiedImport {
@@ -1562,7 +1560,7 @@ pub fn register_import(
                         imported_name.clone(),
                         value.variant.clone(),
                         value.type_.clone(),
-                        location.clone(),
+                        *location,
                     );
                     variant = Some(&value.variant);
                     value_imported = true;

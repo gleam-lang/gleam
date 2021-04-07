@@ -57,8 +57,6 @@ impl<'a, 'b> Environment<'a, 'b> {
         importable_modules: &'a HashMap<String, (Origin, Module)>,
         warnings: &'a mut Vec<Warning>,
     ) -> Self {
-        let mut entity_usages = vec![];
-        entity_usages.push(HashMap::new());
         let typer = Self {
             uid,
             level: 1,
@@ -71,7 +69,7 @@ impl<'a, 'b> Environment<'a, 'b> {
             importable_modules,
             current_module,
             warnings,
-            entity_usages,
+            entity_usages: vec![HashMap::new()],
         };
         register_prelude(typer)
     }
@@ -190,7 +188,7 @@ impl<'a, 'b> Environment<'a, 'b> {
         info: TypeConstructor,
     ) -> Result<(), Error> {
         let name = type_name.clone();
-        let location = info.origin.clone();
+        let location = info.origin;
         match self.module_types.insert(type_name, info) {
             None => Ok(()),
             Some(prelude_type) if prelude_type.module.is_empty() => Ok(()),
